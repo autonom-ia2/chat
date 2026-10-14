@@ -28,8 +28,9 @@ module Enterprise::ConversationPolicy
     assigned_to_user? || participant?
   end
 
+  # Inclui a que o robô passou e espera pessoa (#1377, opção b).
   def unassigned_conversation?
-    record.assignee_id.nil? && record.assignee_agent_bot_id.nil?
+    record.awaiting_person?
   end
 
   def custom_role_permissions?

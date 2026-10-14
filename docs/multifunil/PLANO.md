@@ -131,3 +131,78 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
 ## 9. Pendências
 
 1. Conta para o piloto do acesso por funil (Entrega 3): precisa de mais de um funil.
+
+## 10. Decisões de 09/10/2026 (Rodrigo)
+
+- **Migrations:** quantas forem precisas, sempre aditivas e com índice. Não há mais "uma migration só na Entrega 2".
+- **R15 sem chave por funil:** ganho em funil de venda promove o contato a Cliente em todas as contas (#1166). `promotes_contact` fica de fora.
+- **Criar card por API com conversa** (`POST /crm/cards`): card novo só com `new_subject`; sem ele, devolve o assunto atual (#1197).
+- **PR 5 em dois:**
+  - **5a** (#1145): "Quando usar" no funil (`crm_pipelines.when_to_use`), modo da IA na caixa (`crm_inbox_settings.subject_ai_mode`: Desligada / Sugerir / Automática), a decisão por mensagem (`crm_subject_decisions`) e o modo Automática.
+  - **5b:** o aviso "Parece um novo assunto" no painel Assuntos, com Criar e Ignorar (as sugestões já ficam gravadas pelo 5a).
+- **Nome do assunto:** o Jev só escolhe; quando o pedido é novo, o modelo maior escreve o nome ("Agentes de IA", "Seguro do Onix"). Sem nome, nada muda.
+- **Card criado sozinho pela caixa** nasce com o nome do contato: o primeiro assunto identificado dá nome a ele, em vez de criar outro card.
+- **Antes de ligar na conta 16:** medir o custo por conversa com o modo Sugerir (a correção da seção 7: a IA é o PR 5, não o PR 8).
+
+## 11. Decisões de 10/10/2026 (Rodrigo) — IA de assunto ligada (#1260)
+
+- ~~Ligada em Automática para todas, já no deploy~~ — **revisto pelo Rodrigo em 11/10**: o padrão continua
+  **Desligada**; ele liga caixa por caixa em CRM → Configurar caixas para ver o comportamento antes de ligar para
+  todos. A migration que mudava o padrão e as caixas saiu do #1262. Vale o mesmo interruptor da IA do card: só funis com
+  a IA do funil ligada e com a IA do CRM ligada na instalação.
+- **Respeita a pessoa, como a IA de etapa:**
+  - assunto escolhido por uma pessoa (foco ou aceite) → por 4 h a IA não troca nem cria sozinha: sugere;
+  - card daquele funil fechado ou arquivado na conversa nas últimas 24 h → a IA não recria sozinha: sugere;
+  - sugestão dispensada nas últimas 24 h → não volta;
+  - card nomeado por uma pessoa nunca é renomeado.
+- **Sugestão vale em Sugerir e em Automática** (#1221 passa a expirar só quando a IA de assunto ou o CRM são desligados).
+- **Custo:** medido na conta 16 depois do deploy. O OK para ligar em todas as contas é do Rodrigo, com a estimativa no PR.
+
+## 12. Decisões de 11/10/2026 (Rodrigo) — acesso por funil (#1148)
+
+- **R6 muda: não migrar.** Hoje "Agente vê apenas atribuídos" só esconde cards no CRM; lista, link, busca e tempo
+  real mostram todas as conversas da caixa. Migrar para "Só as suas" tiraria visão de conversa no deploy. Todos começam
+  em "Todos os funis, Todas"; o admin restringe na tela nova (#1149). A opção antiga continua valendo só para cards.
+- **Atribuído e participante sempre veem** a conversa, mesmo sem o funil (menção continua funcionando).
+- **O time não fura o funil:** quem chega pela equipe também passa pelo acesso por funil.
+- **Três PRs, tela por último:** A (tabelas + `Crm::Access::ConversationScope` na lista, no link e na busca), B (tempo
+  real, notificações e contadores), C (CRM e Copiloto no mesmo filtro). Sem linha configurada nada muda, então cada PR
+  entra no ar sem efeito; a tela (#1149) só depois do C. Revisão de segurança em cada PR.
+- **Busca:** quem tem acesso por funil busca pelo banco (o índice do Elasticsearch não conhece o funil do card).
+- **Card encerrado (11/10):** ganho e perdido continuam prendendo a conversa ao funil de quem estava; resolvido e
+  cancelado (funil de atendimento) soltam a conversa para a triagem, como o arquivado. Distribuição automática (PR B):
+  o rodízio só escolhe quem tem o funil do card (ou a triagem, sem card); atribuir à mão e mencionar continuam
+  liberando. A dinâmica de fechar/reabrir conversa por caixa entra na análise do PR B.
+- **Participante (11/10, depois da revisão da parte B):** quem tem acesso restrito não pode se adicionar como
+  participante nem se auto-mencionar; ao reatribuir, quem saiu deixa de ser participante (atribuição não é passe
+  vitalício). Ser mencionado por outra pessoa continua liberando. Vai em PR próprio.
+- **Card nasce depois da conversa (11/10):** o intervalo sem card é triagem (R3). Quando o card nasce, quem passa a
+  ver recebe o aviso em tempo real e o rodízio roda de novo. Vai no PR C (eventos do card).
+- **Funis visíveis (11/10, PR D):** o seletor de funil do Kanban, as etapas e o painel do CRM (relatórios e resumo da
+  Meta) mostram só os funis da pessoa; administrador vê todos. Funil da pessoa: ligado a uma caixa em que ela é membro
+  sem restrição, liberado na caixa em que ela tem restrição, ou sem caixa nenhuma (avulso). Em "Só as suas" os funis da
+  caixa aparecem no Kanban (só com os cards dela), mas não no painel, que soma os cards dos outros. Pedir o relatório de
+  outro funil responde 404; sem funil nenhum no painel, não há relatório. A soma da CTWA e a contagem por etapa contam
+  só os cards que a pessoa vê. Usuário de integração (token do n8n, MCP) não pode ter linha de acesso: o alcance dele é
+  o escopo do token. O consumo de IA continua da conta inteira (é custo, não número de funil).
+- **Dono, mexer no card e contexto da IA (11/10, Rodrigo, depois da revisão da parte C):** (a) só vira dono do card
+  quem tem o funil dele (administrador escolhe qualquer pessoa); (b) mexer no card exige o funil dele, como mover:
+  fechar, arquivar, reabrir, vincular e desvincular conversa; quem só vê o card (dono ou atendente sem o funil)
+  continua vendo, mas não altera; (c) a IA continua lendo os outros pedidos abertos da conversa (a pessoa já vê a
+  conversa de onde a informação vem). (a) e (b) em PRs próprios depois do PR D; a tela #1149 só depois deles.
+- **"Só as suas" e só triagem (11/10, Rodrigo):** quem não tem funil nenhum na caixa mexe nos cards que são dela
+  (dona do card ou atendente da conversa principal): edita, fecha, troca de etapa e põe lembrete, sem mudar de funil e
+  sem mexer no card dos outros. Vira dona pela conversa que atende (sincronização, vínculo e card criado da conversa).
+
+## 13. Decisões de 12/10/2026 (Rodrigo) — distribuição (#1150)
+
+- **Saída da triagem (R10):** quando nasce o primeiro card e quem atende tem acesso restrito na caixa, não é "Só as
+  suas" e não tem o funil do card, a conversa sai dela e vai para o rodízio de quem tem o funil; o card fica com quem
+  assumir. Quem tem o funil continua dona e atendente. Sem rodízio na caixa, a conversa fica "Não atribuída" para quem
+  tem o funil. O mesmo vale quando o card muda para um funil que a pessoa não tem. (`Crm::Access::TriageExit`)
+- **Card novo não transfere:** o dono de um card aberto que não atende a conversa entra como participante, se for
+  membro da caixa e tiver o funil do card.
+- **Outro canal (R13):** cliente com card aberto que escreve por outro canal tem a conversa ligada ao card aberto mais
+  recente e entregue ao dono dele, sem passar pela triagem; card sem dono segue a triagem.
+- **Lista de conversas:** filtro "Funil" (inclui "Sem assunto") e o item do menu passa a se chamar "Participando".
+  Protótipo em tela real antes do código.

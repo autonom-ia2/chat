@@ -1,0 +1,38 @@
+pt_BR:
+  template_fields:
+    fields:
+      cliente:
+        nome: 'Nome do cliente'
+        primeiro_nome: 'Primeiro nome do cliente'
+        telefone: 'Celular do cliente'
+        email: 'E-mail do cliente'
+        cliente_desde: 'Cliente desde'
+      empresa_cliente:
+        nome: 'Empresa do cliente'
+        cnpj: 'CNPJ da empresa do cliente'
+      negocio:
+        titulo: 'Nome do negócio'
+        funil: 'Funil'
+        etapa: 'Etapa do negócio'
+        valor: 'Valor do negócio'
+        responsavel: 'Responsável pelo atendimento'
+        prazo: 'Prazo do negócio'
+      horario:
+        data_hora: 'Dia e hora do horário'
+        data: 'Data do horário'
+        hora: 'Hora do horário'
+        link_gestao: 'Link para confirmar, mudar ou cancelar'
+      minha_empresa:
+        nome: 'Nome da sua empresa'
+        endereco: 'Endereço da sua empresa'
+        telefone: 'Telefone da sua empresa'
+        site: 'Site da sua empresa'
+      atendente:
+        nome: 'Nome de quem atende'
+      fixo: 'Texto que você escreve'
+    types:
+      texto: 'Texto'
+      data: 'Data'
+      hora: 'Hora'
+      moeda: 'Valor em dinheiro'
+      link: 'Link'

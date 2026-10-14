@@ -38,6 +38,23 @@ describe('#defaultRedirectPage', () => {
     ).toBe('accounts/2/contacts');
   });
 
+  it('sends someone without permission to the route fallback when it names one', () => {
+    const permissions = ['whatsapp_templates_view', 'custom_role'];
+    const user = {
+      accounts: [{ id: 2, status: 'active', role: 'agent', permissions }],
+    };
+    const novo = {
+      params: to.params,
+      meta: {
+        permissions: ['administrator', 'whatsapp_templates_manage'],
+        fallbackPath: 'campaigns/modelos-whatsapp',
+      },
+    };
+    expect(validateLoggedInRoutes(novo, user)).toBe(
+      'accounts/2/campaigns/modelos-whatsapp'
+    );
+  });
+
   it('keeps the company gate denied while choosing an accessible fallback for a read-only role', () => {
     const permissions = ['contact_view', 'crm_view', 'custom_role'];
     const user = {

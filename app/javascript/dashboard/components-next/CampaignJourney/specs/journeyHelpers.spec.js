@@ -441,6 +441,74 @@ describe('templateVariables (B1, B1b)', () => {
       },
     });
   });
+
+  // #1334: o cupom entra na posição do botão, sem apagar o botão de site com variável.
+  it('puts the format extras (coupon, offer, carousel) on top of the template parts', () => {
+    const template = {
+      ...TEMPLATE,
+      components: [
+        { type: 'BODY', text: 'Oi' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'URL', text: 'Ver', url: 'https://a.com/{{1}}' },
+            { type: 'COPY_CODE', example: 'A1' },
+          ],
+        },
+      ],
+    };
+    const payload = buildCampaignPayload({
+      audienceId: 1,
+      title: 'Cupom',
+      inboxId: 7,
+      scheduledAt: null,
+      template,
+      bindings: { 'button.0': { source: 'fixed', value: 'x' } },
+      defaults: {},
+      extras: {
+        buttons: [undefined, { type: 'copy_code', parameter: 'OUT15' }],
+        limited_time_offer: { expiration_time_ms: 1 },
+      },
+    });
+    const processed = payload.campaign.template_params.processed_params;
+    expect(processed.buttons[0]).toMatchObject({ type: 'url' });
+    expect(processed.buttons[1]).toEqual({
+      type: 'copy_code',
+      parameter: 'OUT15',
+    });
+    expect(processed.limited_time_offer).toEqual({ expiration_time_ms: 1 });
+  });
+
+  // #1465: o arquivo do topo escolhido na campanha vai como referência, junto do tipo; sem ele, o link vai vazio e o
+  // servidor usa o arquivo aprovado com o modelo.
+  it('sends the header file chosen in the campaign next to the media type', () => {
+    const template = {
+      ...TEMPLATE,
+      components: [
+        { type: 'HEADER', format: 'IMAGE' },
+        { type: 'BODY', text: 'Oi' },
+      ],
+    };
+    const base = {
+      audienceId: 1,
+      title: 'Topo',
+      inboxId: 7,
+      scheduledAt: null,
+      template,
+      bindings: {},
+      defaults: {},
+    };
+    const header = extras =>
+      buildCampaignPayload({ ...base, extras }).campaign.template_params
+        .processed_params.header;
+
+    expect(header({})).toEqual({ media_url: '', media_type: 'image' });
+    expect(header({ header: { media_blob: 'sig1' } })).toEqual({
+      media_url: '',
+      media_type: 'image',
+      media_blob: 'sig1',
+    });
+  });
 });
 
 describe('campaignDraft (J2, J3)', () => {
@@ -525,8 +593,16 @@ describe('journeyErrors', () => {
     expect(createErrorKey(withCode(404, 'campaign_journey_disabled'))).toBe(
       'JOURNEY_DISABLED'
     );
+    // #1456
+    expect(
+      createErrorKey(withCode(422, 'free_text_not_allowed_with_rich_template'))
+    ).toBe('FREE_TEXT_RICH_TEMPLATE');
     expect(createErrorKey(withCode(401))).toBe('NOT_ALLOWED');
     expect(createErrorKey(withCode(404))).toBe('GENERIC');
+    // #1465: o arquivo do topo escolhido na campanha não serve.
+    expect(createErrorKey(withCode(422, 'header_media_invalid'))).toBe(
+      'HEADER_MEDIA_INVALID'
+    );
   });
 });
 

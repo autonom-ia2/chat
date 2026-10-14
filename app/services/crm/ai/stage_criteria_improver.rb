@@ -2,6 +2,8 @@ class Crm::Ai::StageCriteriaImprover
   MODEL = 'gpt-6-luna'.freeze
   MAX_NAME_LENGTH = 255
   MAX_CRITERIA_LENGTH = 4000
+  # Teto de etapas por pedido: cada pedido é uma chamada paga ao modelo (#1384).
+  MAX_STAGES = 50
   SCHEMA = {
     name: 'crm_stage_criteria',
     schema: {
@@ -14,7 +16,7 @@ class Crm::Ai::StageCriteriaImprover
     'type' => 'object',
     'properties' => {
       'stages' => {
-        'type' => 'array', 'minItems' => 1,
+        'type' => 'array', 'minItems' => 1, 'maxItems' => MAX_STAGES,
         'items' => {
           'type' => 'object', 'required' => %w[name description], 'additionalProperties' => false,
           'properties' => {

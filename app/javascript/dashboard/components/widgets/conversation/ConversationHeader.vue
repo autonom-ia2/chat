@@ -10,6 +10,7 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ConversationCallButton from './ConversationCallButton.vue';
 import CrmConversationCardButton from './CrmConversationCardButton.vue';
+import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import ConversationCampaignMark from 'dashboard/components-next/CampaignJourney/ConversationCampaignMark.vue';
 import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 import wootConstants from 'dashboard/constants/globals';
@@ -19,6 +20,7 @@ import { useInbox } from 'dashboard/composables/useInbox';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 
 const props = defineProps({
   chat: {
@@ -137,6 +139,7 @@ const copyConversationId = async () => {
           >
             {{ currentContact.name }}
           </span>
+          <CustomerBadge :contact="currentContact" show-since />
           <fluent-icon
             v-if="!isHMACVerified"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
@@ -178,6 +181,7 @@ const copyConversationId = async () => {
       />
       <ConversationCallButton :inbox="inbox" :chat="currentChat" />
       <CrmConversationCardButton :chat="currentChat" />
+      <BookingInviteButton :conversation="currentChat" />
       <MoreActions :conversation-id="currentChat.id" />
     </div>
   </div>

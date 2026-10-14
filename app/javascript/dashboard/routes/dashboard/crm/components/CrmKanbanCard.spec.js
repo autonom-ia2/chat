@@ -42,6 +42,14 @@ const mountCard = (card = CONVERSATION_CARD, props = {}) =>
     },
   });
 
+describe('CrmKanbanCard value (#1498)', () => {
+  it('hides the value in a Serve pipeline', () => {
+    const card = { ...NO_CONVERSATION_CARD, value_cents: 120000 };
+    expect(mountCard(card).text()).toContain('1.200');
+    expect(mountCard(card, { comValor: false }).text()).not.toContain('1.200');
+  });
+});
+
 describe('CrmKanbanCard bubble shortcut', () => {
   it('renders the last-message bubble as a conversation button when a linked conversation exists', () => {
     const wrapper = mountCard();
@@ -230,5 +238,42 @@ describe('CrmKanbanCard bubble shortcut', () => {
     const chip = scoreChip(wrapper);
     expect(chip.text()).toContain('CRM_KANBAN.CARD.SCORE_UNSPECIFIED');
     expect(wrapper.text()).toContain('CRM_KANBAN.CARD.RESPONSIBLE_AI');
+  });
+});
+
+describe('CrmKanbanCard customer badge (#1258)', () => {
+  it('puts the badge on the person line when the card has a company', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      company: { id: 7, name: 'Ourocorretoradeseguros' },
+      contact: { id: 10, name: 'nilvandro', contact_type: 'customer' },
+    });
+
+    expect(
+      wrapper.find('[data-crm-card-person] [data-customer-badge]').exists()
+    ).toBe(true);
+    expect(wrapper.findAll('[data-customer-badge]')).toHaveLength(1);
+  });
+
+  it('follows the name on the top line when there is no company', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      contact: { id: 10, name: 'Ana Clara Souza', contact_type: 'customer' },
+    });
+
+    expect(
+      wrapper.find('[data-crm-card-identity] [data-customer-badge]').exists()
+    ).toBe(true);
+    expect(wrapper.findAll('[data-customer-badge]')).toHaveLength(1);
+  });
+
+  it('shows no badge for a lead', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      company: { id: 7, name: 'Norte Logística' },
+      contact: { id: 10, name: 'Mariana Costa', contact_type: 'lead' },
+    });
+
+    expect(wrapper.find('[data-customer-badge]').exists()).toBe(false);
   });
 });

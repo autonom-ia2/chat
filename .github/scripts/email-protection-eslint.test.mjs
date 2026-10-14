@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { violations } from './email-protection-eslint.mjs';
+import {
+  localeConfig,
+  standaloneApps,
+  violations,
+} from './email-protection-eslint.mjs';
 const result = (...messages) => [{ messages }];
 test('keeps the native dynamic-key warning without suppressing errors', () => {
   assert.deepEqual(
@@ -35,4 +39,26 @@ test('rejects fatal parser errors and ordinary lint errors', () => {
     violations(result({ severity: 2, ruleId: 'no-undef' })).length,
     1
   );
+});
+test('checks each standalone app against its own catalog only', () => {
+  const config = localeConfig(['public_booking_v2']);
+  assert.equal(
+    config.settings['vue-i18n'].localeDir,
+    './app/javascript/dashboard/i18n/locale/en/*.json'
+  );
+  assert.deepEqual(config.overrides, [
+    {
+      files: ['app/javascript/public_booking_v2/**'],
+      settings: {
+        'vue-i18n': {
+          localeDir: './app/javascript/public_booking_v2/i18n/en.json',
+        },
+      },
+    },
+  ]);
+});
+test('finds the standalone apps that carry their own catalog', () => {
+  const apps = standaloneApps();
+  assert.ok(apps.includes('public_booking_v2'));
+  assert.ok(!apps.includes('dashboard'));
 });

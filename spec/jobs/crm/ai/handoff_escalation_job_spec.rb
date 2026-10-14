@@ -44,6 +44,9 @@ RSpec.describe Crm::Ai::HandoffEscalationJob do
     expect(cycle['escalated_at']).to be_present
     expect(cycle['escalated_to']).to eq(escalation_user.id)
     expect(card.activities.where(event_type: 'ai_handoff_escalation')).to exist
+    # Uma gravação só (#1454): atribuir e passar na mesma trava não pode apagar o aviso de troca de atendente.
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+      .with(Events::Types::ASSIGNEE_CHANGED, anything, hash_including(conversation: conversation)).once
   end
 
   it 'renotifies the originally invited agent without assigning or closing the cycle' do
@@ -149,6 +152,22 @@ RSpec.describe Crm::Ai::HandoffEscalationJob do
     cycle = current_cycle(card.reload)
     expect(conversation.reload.assignee_id).to be_nil
     expect(cycle['escalated_at']).to be_blank
+  end
+
+  # Regressão do #1454: escalar não reabre conversa resolvida ou adiada (só a pendente abre, como no serviço antigo).
+  %i[resolved snoozed].each do |status|
+    it "does not reopen nor assign a #{status} conversation" do
+      conversation.update!(status: status, snoozed_until: (1.day.from_now if status == :snoozed))
+      card = create_card(
+        config: base_config.merge('escalation_action' => 'escalate', 'escalation_user_id' => escalation_user.id),
+        metadata: handoff_metadata(invited_at: 2.hours.ago)
+      )
+
+      described_class.perform_now
+
+      expect(conversation.reload).to have_attributes(status: status.to_s, assignee_id: nil)
+      expect(current_cycle(card.reload)['escalated_at']).to be_blank
+    end
   end
 
   it 'forces the escalation to an offline supervisor when prefer_online is off' do

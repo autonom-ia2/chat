@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRD Agendamento WhatsApp-first</title>
+<style>
+:root{
+  --bg:#F6F8FB; --surface:#FFFFFF; --ink:#13213A; --muted:#55627A; --line:#DCE3EE;
+  --navy:#0D2344; --brand:#2781F6; --brand-soft:#E7F0FE; --brand-ink:#0A5BC4;
+  --ok:#0B7A5A; --ok-soft:#E2F6EE; --amber:#8A5200; --amber-soft:#FFF4DB; --red:#B3263E; --red-soft:#FDEBEE;
+  --wa:#DCF8C6; --wa-bg:#ECE5DD; --code:#EEF2F8;
+  --font:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1424; --surface:#111D33; --ink:#E6ECF5; --muted:#9AA8BF; --line:#22324E;
+  --navy:#0A1A33; --brand:#5AA0FF; --brand-soft:#16294A; --brand-ink:#9CC6FF;
+  --ok:#4FD1A1; --ok-soft:#10302A; --amber:#F2B24C; --amber-soft:#2A2213; --red:#FF8FA0; --red-soft:#3A141E;
+  --wa:#1F4D3A; --wa-bg:#0F1D1A; --code:#17253F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1424; --surface:#111D33; --ink:#E6ECF5; --muted:#9AA8BF; --line:#22324E;
+  --navy:#0A1A33; --brand:#5AA0FF; --brand-soft:#16294A; --brand-ink:#9CC6FF;
+  --ok:#4FD1A1; --ok-soft:#10302A; --amber:#F2B24C; --amber-soft:#2A2213; --red:#FF8FA0; --red-soft:#3A141E;
+  --wa:#1F4D3A; --wa-bg:#0F1D1A; --code:#17253F; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 var(--font);padding-inline:16px}
+a{color:var(--brand-ink)}
+h1,h2,h3{line-height:1.15;margin:0}
+.wrap{max-width:1180px;margin:0 auto}
+.cover{background:var(--navy);color:#F2F6FC;margin-inline:-16px;padding:48px 16px 40px}
+.eyebrow{font:700 12px/1 var(--font);letter-spacing:.09em;text-transform:uppercase;color:#9FC3FF}
+.cover h1{font-size:clamp(30px,5vw,50px);font-weight:800;margin:10px 0 14px;text-wrap:balance}
+.cover .lede{max-width:70ch;color:#C9D6EA;font-size:18px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font:600 13px/1 var(--font);padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);color:#E4ECF8}
+nav.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);margin-inline:-16px;padding:0 16px}
+nav.top .wrap{display:flex;gap:4px;overflow-x:auto}
+nav.top a{padding:14px 12px;font:600 14px/1 var(--font);color:var(--muted);text-decoration:none;white-space:nowrap;min-height:44px}
+nav.top a:hover{color:var(--brand-ink)}
+section{padding:44px 0 8px;scroll-margin-top:56px}
+section>.wrap>h2{font-size:clamp(24px,3.4vw,32px);font-weight:800;margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 22px;max-width:75ch}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h3{font-size:17px;font-weight:800;margin-bottom:6px}
+.card p{margin:0;color:var(--muted);font-size:16px}
+.tag{display:inline-block;font:700 11px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:6px;background:var(--brand-soft);color:var(--brand-ink)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.amb{background:var(--amber-soft);color:var(--amber)} .tag.red{background:var(--red-soft);color:var(--red)}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:15px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--code);font-weight:700;font-size:13px;letter-spacing:.03em}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+code{font:500 13px var(--mono);background:var(--code);padding:2px 6px;border-radius:5px}
+ul.clean{margin:8px 0 0;padding-left:20px} ul.clean li{margin:4px 0}
+.note{border-left:4px solid var(--brand);background:var(--brand-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;font-size:16px}
+.note.warn{border-color:var(--amber);background:var(--amber-soft)}
+
+/* ---------- jornadas ---------- */
+.jwrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:20px;align-items:start}
+.jlist{display:flex;flex-direction:column;gap:8px;position:sticky;top:64px}
+.jbtn{display:block;text-align:left;width:100%;min-height:44px;padding:11px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;cursor:pointer;font:600 14px/1.3 var(--font)}
+.jbtn small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+.jbtn[aria-current="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+.jhead h3{font-size:24px;font-weight:800;margin:0 0 4px}
+.jhead p{margin:0 0 14px;color:var(--muted)}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;padding:0;list-style:none}
+.steps button{min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font:600 14px/1.2 var(--font);display:flex;gap:8px;align-items:center}
+.steps button b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--code);font-size:12px}
+.steps button[aria-current="step"]{border-color:var(--brand);background:var(--brand);color:#fff}
+.steps button[aria-current="step"] b{background:rgba(255,255,255,.25)}
+.stagebox{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+.stage{background:linear-gradient(180deg,var(--code),var(--bg));border:1px solid var(--line);border-radius:16px;padding:22px 14px;display:flex;justify-content:center;min-height:520px;overflow:hidden}
+.side{display:flex;flex-direction:column;gap:12px}
+.diff{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.diff h4,.accept h4{margin:0 0 6px;font:800 12px/1 var(--font);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.diff p{margin:0;font-size:16px}
+.accept{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.accept ol{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.accept li{font-size:14.5px;line-height:1.45}
+.accept li i{font-style:normal;font:700 11px var(--mono);color:var(--brand-ink);background:var(--brand-soft);padding:2px 6px;border-radius:5px;margin-right:6px}
+.accept li em{font-style:normal;font-weight:700}
+.navrow{display:flex;gap:10px;margin-top:14px}
+.navrow button{min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 14px var(--font);cursor:pointer}
+.navrow button.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.navrow button:disabled{opacity:.4;cursor:default}
+
+/* ---------- mocks ---------- */
+.phone{width:300px;background:#fff;color:#13213A;border-radius:34px;border:9px solid #1B2433;box-shadow:0 14px 34px rgba(13,35,68,.25);overflow:hidden;display:flex;flex-direction:column;min-height:470px;font:400 14px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif}
+.phone .sb{height:22px;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:11px;font-weight:700;color:#13213A}
+.phone .bd{flex:1;display:flex;flex-direction:column}
+.wahead{background:#075E54;color:#fff;padding:10px 12px;display:flex;gap:10px;align-items:center}
+.wahead .av{width:32px;height:32px;border-radius:50%;background:#34B7A7;display:grid;place-items:center;font-weight:700}
+.wahead b{display:block;font-size:14px} .wahead span{font-size:11px;opacity:.8}
+.chat{flex:1;background:#ECE5DD;padding:12px 10px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:8px 10px;border-radius:10px;font-size:13.5px;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.12);color:#13213A}
+.msg.in{background:#fff;align-self:flex-start;border-top-left-radius:2px}
+.msg.out{background:#DCF8C6;align-self:flex-end;border-top-right-radius:2px}
+.msg .lnk{color:#0A5BC4;text-decoration:underline;word-break:break-all}
+.msg small{display:block;text-align:right;color:#667;font-size:10px;margin-top:2px}
+.bk{padding:16px 16px 18px;display:flex;flex-direction:column;gap:12px}
+.bk .who{display:flex;gap:10px;align-items:center}
+.bk .av{width:40px;height:40px;border-radius:50%;background:#0D2344;color:#fff;display:grid;place-items:center;font-weight:700}
+.bk h5{margin:0;font-size:16px;font-weight:800}
+.bk .meta{font-size:12.5px;color:#55627A}
+.bk .hello{font-size:19px;font-weight:800;line-height:1.2}
+.bk .q{font-weight:800;font-size:15px}
+.days{display:flex;gap:6px}
+.day{flex:1;min-height:56px;border:1px solid #DCE3EE;border-radius:10px;text-align:center;padding:6px 0;font-size:12px;color:#55627A;background:#fff}
+.day b{display:block;font-size:17px;color:#13213A}
+.day.on{background:#2781F6;border-color:#2781F6;color:#dbe9ff}.day.on b{color:#fff}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.slot{min-height:44px;border:1px solid #2781F6;color:#0A5BC4;border-radius:10px;display:grid;place-items:center;font-weight:700;background:#fff}
+.slot.on{background:#2781F6;color:#fff}.slot.off{border-color:#DCE3EE;color:#9AA6B8;text-decoration:line-through}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:#55627A}
+.fld div{min-height:44px;border:1px solid #C9D3E3;border-radius:10px;padding:11px 12px;font-weight:500;font-size:15px;color:#13213A;background:#fff}
+.fld div.ph{color:#9AA6B8}
+.btn{min-height:48px;border-radius:12px;background:#2781F6;color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px}
+.btn.alt{background:#fff;color:#0A5BC4;border:1px solid #2781F6}
+.btn.ghost{background:#fff;color:#55627A;border:1px solid #DCE3EE;font-weight:700}
+.okmark{width:56px;height:56px;border-radius:50%;background:#E2F6EE;color:#0B7A5A;display:grid;place-items:center;font-size:30px;font-weight:800;margin:6px auto 2px}
+.center{text-align:center}
+.box{background:#F3F6FB;border-radius:12px;padding:12px 14px;font-size:14px}
+.box b{display:block;font-size:16px}
+.loc{display:flex;gap:10px;align-items:center;border:1px solid #C9D3E3;border-radius:12px;padding:10px 12px;min-height:56px;background:#fff}
+.loc.on{border-color:#2781F6;background:#E7F0FE}
+.loc .ic{width:34px;height:34px;border-radius:9px;background:#E7F0FE;display:grid;place-items:center;font-size:17px}
+.loc small{display:block;color:#55627A;font-size:12px}
+.loc .tg{margin-left:auto;font-size:11px;font-weight:700;color:#0B7A5A}
+.desk{width:100%;max-width:560px;background:#fff;color:#13213A;border:1px solid #DCE3EE;border-radius:12px;box-shadow:0 10px 28px rgba(13,35,68,.16);overflow:hidden;display:flex;min-height:470px;font:400 13.5px/1.4 -apple-system,"Segoe UI",Roboto,sans-serif}
+.desk .sd{width:54px;background:#0E1D38;display:flex;flex-direction:column;gap:10px;align-items:center;padding:12px 0}
+.desk .sd i{width:26px;height:26px;border-radius:7px;background:#1E3358;display:block}
+.desk .sd i.on{background:#2781F6}
+.desk .mn{flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:11px;min-width:0}
+.desk h5{margin:0;font-size:17px;font-weight:800}
+.desk .lead{color:#55627A;font-size:13px}
+.pbtn{display:inline-grid;place-items:center;min-height:40px;padding:0 16px;border-radius:9px;background:#2781F6;color:#fff;font-weight:700;font-size:14px}
+.pbtn.alt{background:#fff;color:#0A5BC4;border:1px solid #2781F6}
+.pbtn.gr{background:#25D366;color:#053;}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{font-size:11.5px;font-weight:700;padding:4px 8px;border-radius:999px;background:#E7F0FE;color:#0A5BC4}
+.pill.g{background:#E2F6EE;color:#0B7A5A}.pill.a{background:#FFF4DB;color:#8A5200}
+.evt{border:1px solid #DCE3EE;border-left:4px solid #2781F6;border-radius:9px;padding:9px 11px;background:#fff}
+.evt b{display:block}
+.mini{border:1px solid #DCE3EE;border-radius:10px;padding:10px 12px;background:#F8FAFD}
+.stepdots{display:flex;gap:6px}.stepdots span{height:5px;flex:1;border-radius:3px;background:#DCE3EE}.stepdots span.on{background:#2781F6}
+.hero{background:#0D2344;color:#fff;border-radius:11px;padding:13px 14px}
+.hero b{font-size:17px;display:block}.hero span{color:#C9D6EA;font-size:12.5px}
+.qr{width:74px;height:74px;background:repeating-conic-gradient(#13213A 0 25%,#fff 0 50%) 0 0/14px 14px;border:5px solid #fff;outline:1px solid #DCE3EE}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}.kv span:nth-child(odd){color:#55627A}
+footer{padding:40px 0 60px;color:var(--muted);font-size:14px}
+@media (max-width:900px){
+  .jwrap{grid-template-columns:1fr}
+  .jlist{position:static;flex-direction:row;overflow-x:auto}
+  .jbtn{min-width:190px}
+  .stagebox{grid-template-columns:1fr}
+}
+
+/* navegação das jornadas sem JavaScript */
+.rj,.rs{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.jmain>.jp,.stplist>.stp{display:none}
+.jall .on{display:none}
+#all:checked ~ .jlist .jall .on{display:inline}
+#all:checked ~ .jlist .jall .off{display:none}
+#all:checked ~ .jmain .stplist .stp{display:block}
+.sh{font:800 13px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.stp{margin-bottom:18px}
+.steps label{min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;font:600 14px/1.2 var(--font);display:flex;gap:8px;align-items:center}
+.steps label b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--code);font-size:12px}
+.jbtn{cursor:pointer}
+.nv{display:inline-grid;place-items:center;min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 14px var(--font);cursor:pointer}
+.nv.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.accept{margin-top:6px}
+.accept ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 22px}
+.stagebox{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media (max-width:900px){.stagebox{grid-template-columns:1fr}}
+
+#j1:checked ~ .jmain #p1{display:block}
+#j1:checked ~ .jlist label[for=j1]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j1:focus-visible ~ .jlist label[for=j1]{outline:3px solid var(--brand);outline-offset:2px}
+#j2:checked ~ .jmain #p2{display:block}
+#j2:checked ~ .jlist label[for=j2]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j2:focus-visible ~ .jlist label[for=j2]{outline:3px solid var(--brand);outline-offset:2px}
+#j3:checked ~ .jmain #p3{display:block}
+#j3:checked ~ .jlist label[for=j3]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j3:focus-visible ~ .jlist label[for=j3]{outline:3px solid var(--brand);outline-offset:2px}
+#j4:checked ~ .jmain #p4{display:block}
+#j4:checked ~ .jlist label[for=j4]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j4:focus-visible ~ .jlist label[for=j4]{outline:3px solid var(--brand);outline-offset:2px}
+#j5:checked ~ .jmain #p5{display:block}
+#j5:checked ~ .jlist label[for=j5]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j5:focus-visible ~ .jlist label[for=j5]{outline:3px solid var(--brand);outline-offset:2px}
+#j6:checked ~ .jmain #p6{display:block}
+#j6:checked ~ .jlist label[for=j6]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j6:focus-visible ~ .jlist label[for=j6]{outline:3px solid var(--brand);outline-offset:2px}
+#j7:checked ~ .jmain #p7{display:block}
+#j7:checked ~ .jlist label[for=j7]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j7:focus-visible ~ .jlist label[for=j7]{outline:3px solid var(--brand);outline-offset:2px}
+#j8:checked ~ .jmain #p8{display:block}
+#j8:checked ~ .jlist label[for=j8]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+#j8:focus-visible ~ .jlist label[for=j8]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s1-1:checked ~ .steps label[for=s1-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-1:checked ~ .steps label[for=s1-1] b{background:rgba(255,255,255,.25)}
+#s1-1:focus-visible ~ .steps label[for=s1-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s1-2:checked ~ .steps label[for=s1-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-2:checked ~ .steps label[for=s1-2] b{background:rgba(255,255,255,.25)}
+#s1-2:focus-visible ~ .steps label[for=s1-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s1-3:checked ~ .steps label[for=s1-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-3:checked ~ .steps label[for=s1-3] b{background:rgba(255,255,255,.25)}
+#s1-3:focus-visible ~ .steps label[for=s1-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s1-4:checked ~ .steps label[for=s1-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-4:checked ~ .steps label[for=s1-4] b{background:rgba(255,255,255,.25)}
+#s1-4:focus-visible ~ .steps label[for=s1-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-5:checked ~ .stplist .stp:nth-child(5){display:block}
+#s1-5:checked ~ .steps label[for=s1-5]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-5:checked ~ .steps label[for=s1-5] b{background:rgba(255,255,255,.25)}
+#s1-5:focus-visible ~ .steps label[for=s1-5]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-6:checked ~ .stplist .stp:nth-child(6){display:block}
+#s1-6:checked ~ .steps label[for=s1-6]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-6:checked ~ .steps label[for=s1-6] b{background:rgba(255,255,255,.25)}
+#s1-6:focus-visible ~ .steps label[for=s1-6]{outline:3px solid var(--brand);outline-offset:2px}
+#s1-7:checked ~ .stplist .stp:nth-child(7){display:block}
+#s1-7:checked ~ .steps label[for=s1-7]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s1-7:checked ~ .steps label[for=s1-7] b{background:rgba(255,255,255,.25)}
+#s1-7:focus-visible ~ .steps label[for=s1-7]{outline:3px solid var(--brand);outline-offset:2px}
+#s2-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s2-1:checked ~ .steps label[for=s2-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s2-1:checked ~ .steps label[for=s2-1] b{background:rgba(255,255,255,.25)}
+#s2-1:focus-visible ~ .steps label[for=s2-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s2-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s2-2:checked ~ .steps label[for=s2-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s2-2:checked ~ .steps label[for=s2-2] b{background:rgba(255,255,255,.25)}
+#s2-2:focus-visible ~ .steps label[for=s2-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s2-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s2-3:checked ~ .steps label[for=s2-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s2-3:checked ~ .steps label[for=s2-3] b{background:rgba(255,255,255,.25)}
+#s2-3:focus-visible ~ .steps label[for=s2-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s2-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s2-4:checked ~ .steps label[for=s2-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s2-4:checked ~ .steps label[for=s2-4] b{background:rgba(255,255,255,.25)}
+#s2-4:focus-visible ~ .steps label[for=s2-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s2-5:checked ~ .stplist .stp:nth-child(5){display:block}
+#s2-5:checked ~ .steps label[for=s2-5]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s2-5:checked ~ .steps label[for=s2-5] b{background:rgba(255,255,255,.25)}
+#s2-5:focus-visible ~ .steps label[for=s2-5]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s3-1:checked ~ .steps label[for=s3-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-1:checked ~ .steps label[for=s3-1] b{background:rgba(255,255,255,.25)}
+#s3-1:focus-visible ~ .steps label[for=s3-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s3-2:checked ~ .steps label[for=s3-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-2:checked ~ .steps label[for=s3-2] b{background:rgba(255,255,255,.25)}
+#s3-2:focus-visible ~ .steps label[for=s3-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s3-3:checked ~ .steps label[for=s3-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-3:checked ~ .steps label[for=s3-3] b{background:rgba(255,255,255,.25)}
+#s3-3:focus-visible ~ .steps label[for=s3-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s3-4:checked ~ .steps label[for=s3-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-4:checked ~ .steps label[for=s3-4] b{background:rgba(255,255,255,.25)}
+#s3-4:focus-visible ~ .steps label[for=s3-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-5:checked ~ .stplist .stp:nth-child(5){display:block}
+#s3-5:checked ~ .steps label[for=s3-5]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-5:checked ~ .steps label[for=s3-5] b{background:rgba(255,255,255,.25)}
+#s3-5:focus-visible ~ .steps label[for=s3-5]{outline:3px solid var(--brand);outline-offset:2px}
+#s3-6:checked ~ .stplist .stp:nth-child(6){display:block}
+#s3-6:checked ~ .steps label[for=s3-6]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s3-6:checked ~ .steps label[for=s3-6] b{background:rgba(255,255,255,.25)}
+#s3-6:focus-visible ~ .steps label[for=s3-6]{outline:3px solid var(--brand);outline-offset:2px}
+#s4-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s4-1:checked ~ .steps label[for=s4-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s4-1:checked ~ .steps label[for=s4-1] b{background:rgba(255,255,255,.25)}
+#s4-1:focus-visible ~ .steps label[for=s4-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s4-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s4-2:checked ~ .steps label[for=s4-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s4-2:checked ~ .steps label[for=s4-2] b{background:rgba(255,255,255,.25)}
+#s4-2:focus-visible ~ .steps label[for=s4-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s4-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s4-3:checked ~ .steps label[for=s4-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s4-3:checked ~ .steps label[for=s4-3] b{background:rgba(255,255,255,.25)}
+#s4-3:focus-visible ~ .steps label[for=s4-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s4-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s4-4:checked ~ .steps label[for=s4-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s4-4:checked ~ .steps label[for=s4-4] b{background:rgba(255,255,255,.25)}
+#s4-4:focus-visible ~ .steps label[for=s4-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s5-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s5-1:checked ~ .steps label[for=s5-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s5-1:checked ~ .steps label[for=s5-1] b{background:rgba(255,255,255,.25)}
+#s5-1:focus-visible ~ .steps label[for=s5-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s5-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s5-2:checked ~ .steps label[for=s5-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s5-2:checked ~ .steps label[for=s5-2] b{background:rgba(255,255,255,.25)}
+#s5-2:focus-visible ~ .steps label[for=s5-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s5-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s5-3:checked ~ .steps label[for=s5-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s5-3:checked ~ .steps label[for=s5-3] b{background:rgba(255,255,255,.25)}
+#s5-3:focus-visible ~ .steps label[for=s5-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s5-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s5-4:checked ~ .steps label[for=s5-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s5-4:checked ~ .steps label[for=s5-4] b{background:rgba(255,255,255,.25)}
+#s5-4:focus-visible ~ .steps label[for=s5-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s5-5:checked ~ .stplist .stp:nth-child(5){display:block}
+#s5-5:checked ~ .steps label[for=s5-5]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s5-5:checked ~ .steps label[for=s5-5] b{background:rgba(255,255,255,.25)}
+#s5-5:focus-visible ~ .steps label[for=s5-5]{outline:3px solid var(--brand);outline-offset:2px}
+#s6-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s6-1:checked ~ .steps label[for=s6-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s6-1:checked ~ .steps label[for=s6-1] b{background:rgba(255,255,255,.25)}
+#s6-1:focus-visible ~ .steps label[for=s6-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s6-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s6-2:checked ~ .steps label[for=s6-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s6-2:checked ~ .steps label[for=s6-2] b{background:rgba(255,255,255,.25)}
+#s6-2:focus-visible ~ .steps label[for=s6-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s6-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s6-3:checked ~ .steps label[for=s6-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s6-3:checked ~ .steps label[for=s6-3] b{background:rgba(255,255,255,.25)}
+#s6-3:focus-visible ~ .steps label[for=s6-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s6-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s6-4:checked ~ .steps label[for=s6-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s6-4:checked ~ .steps label[for=s6-4] b{background:rgba(255,255,255,.25)}
+#s6-4:focus-visible ~ .steps label[for=s6-4]{outline:3px solid var(--brand);outline-offset:2px}
+#s7-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s7-1:checked ~ .steps label[for=s7-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s7-1:checked ~ .steps label[for=s7-1] b{background:rgba(255,255,255,.25)}
+#s7-1:focus-visible ~ .steps label[for=s7-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s7-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s7-2:checked ~ .steps label[for=s7-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s7-2:checked ~ .steps label[for=s7-2] b{background:rgba(255,255,255,.25)}
+#s7-2:focus-visible ~ .steps label[for=s7-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s8-1:checked ~ .stplist .stp:nth-child(1){display:block}
+#s8-1:checked ~ .steps label[for=s8-1]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s8-1:checked ~ .steps label[for=s8-1] b{background:rgba(255,255,255,.25)}
+#s8-1:focus-visible ~ .steps label[for=s8-1]{outline:3px solid var(--brand);outline-offset:2px}
+#s8-2:checked ~ .stplist .stp:nth-child(2){display:block}
+#s8-2:checked ~ .steps label[for=s8-2]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s8-2:checked ~ .steps label[for=s8-2] b{background:rgba(255,255,255,.25)}
+#s8-2:focus-visible ~ .steps label[for=s8-2]{outline:3px solid var(--brand);outline-offset:2px}
+#s8-3:checked ~ .stplist .stp:nth-child(3){display:block}
+#s8-3:checked ~ .steps label[for=s8-3]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s8-3:checked ~ .steps label[for=s8-3] b{background:rgba(255,255,255,.25)}
+#s8-3:focus-visible ~ .steps label[for=s8-3]{outline:3px solid var(--brand);outline-offset:2px}
+#s8-4:checked ~ .stplist .stp:nth-child(4){display:block}
+#s8-4:checked ~ .steps label[for=s8-4]{border-color:var(--brand);background:var(--brand);color:#fff}
+#s8-4:checked ~ .steps label[for=s8-4] b{background:rgba(255,255,255,.25)}
+#s8-4:focus-visible ~ .steps label[for=s8-4]{outline:3px solid var(--brand);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <div class="wrap">
+    <div class="eyebrow">PRD · Chat2You CRM · proposta para aprovação</div>
+    <h1>Agendamento que funciona pelo WhatsApp, sem depender de Google ou Microsoft</h1>
+    <p class="lede">Hoje só agenda quem conectou uma caixa Google ou Microsoft com calendário. A proposta: qualquer conta cria a página, manda o link dentro da conversa e o cliente marca em poucos toques. A reunião acontece por vídeo ou voz no próprio WhatsApp.</p>
+    <div class="chips">
+      <span class="chip">Status: <b>proposta</b></span>
+      <span class="chip">Data: <b>09/10/2026</b></span>
+      <span class="chip">Responsável: <b>Rodrigo</b></span>
+      <span class="chip">Substitui: <b>booking_independente_prd.md</b></span>
+      <span class="chip">Entrega em <b>4 fases</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="top"><div class="wrap">
+  <a href="#resumo">Resumo</a><a href="#hoje">Hoje × proposta</a><a href="#mercado">Padrão de mercado</a><a href="#jornadas">Jornadas</a><a href="#aceite">Termos de aceite</a><a href="#fases">Fases</a><a href="#tecnico">Base técnica</a><a href="#riscos">Riscos</a><a href="#decisoes">Decisões</a>
+</div></nav>
+
+<main>
+
+<section id="resumo"><div class="wrap">
+  <h2>Resumo executivo</h2>
+  <p class="sub">Uma página de agendamento que é do cliente final, não do provedor de agenda.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag red">Problema</span><h3 style="margin-top:10px">A página só existe para quem tem Google ou Microsoft</h3><p>Três validações exigem caixa com calendário Google ou Microsoft. O formulário público exige e-mail. A caixa IMAP "Comercial" da conta de produção ficou sem agendar nada (issue #308). O lembrete da reunião só chega ao agente.</p></div>
+    <div class="card"><span class="tag">Proposta</span><h3 style="margin-top:10px">WhatsApp primeiro, calendário externo opcional</h3><p>A reunião passa a ter um <b>local</b> escolhido pelo dono da página: vídeo no WhatsApp, ligação no WhatsApp, link do agente ou presencial. Google Meet e Teams seguem para quem já usa. O agente gera o <b>link do cliente</b> em um toque, a qualquer hora, e manda no WhatsApp ou em qualquer outro canal.</p></div>
+    <div class="card"><span class="tag ok">Resultado esperado</span><h3 style="margin-top:10px">Mais reuniões marcadas, menos faltas</h3><p>Toda conta publica sua página em minutos. O cliente marca sem digitar e-mail. O cliente recebe lembrete no WhatsApp (F2). O agente vê a reunião no card e chama com um toque.</p></div>
+  </div>
+  <div class="note"><b>Por que não vídeo automático pelo WhatsApp?</b> A API oficial da Meta só oferece <b>voz</b> (vídeo consta como planejado), não gera link de chamada e exige permissão do usuário. O WAHA só recebe e rejeita chamadas. APIs não oficiais geram link, mas com risco de bloqueio do número. Por isso o agente liga pelo próprio WhatsApp no horário marcado. Isso funciona hoje, sem API.</div>
+</div></section>
+
+<section id="hoje"><div class="wrap">
+  <h2>Hoje × proposta</h2>
+  <p class="sub">Baseado na leitura do código em 09/10/2026.</p>
+  <div class="scroll"><table>
+    <tr><th>Tema</th><th>Hoje</th><th>Proposta</th></tr>
+    <tr><td>Quem pode agendar</td><td>Só inbox de e-mail Google/MS com calendário (<code>Meeting</code>, <code>AgentBookingLink</code>, <code>Creator</code>)</td><td>Qualquer conta. Provider <code>internal</code> para quem não tem calendário externo</td></tr>
+    <tr><td>Onde acontece</td><td>Meet ou Teams, gerado pelo provedor</td><td>Vídeo ou voz no WhatsApp, link do agente, presencial, e Meet/Teams quando conectado</td></tr>
+    <tr><td>Enviar o link</td><td>Só o link geral da página, copiado de uma gaveta de configuração e igual para todos</td><td>Botão "Agendar" no card e na conversa de qualquer canal: gera o link do cliente, envia na conversa ou copia para colar onde quiser</td></tr>
+    <tr><td>Dados do cliente</td><td>Nome + e-mail, com confirmação por e-mail (token de 30 min)</td><td>Link na conversa: nada a digitar. Link público: nome + WhatsApp, e-mail opcional</td></tr>
+    <tr><td>Confirmação e lembrete ao cliente</td><td>Convite <code>.ics</code> por e-mail. Lembretes só para o agente (push e e-mail)</td><td>Três avisos no WhatsApp (ao marcar, 1 dia antes e 1 hora antes) e confirmação com um toque</td></tr>
+    <tr><td>Remarcar / cancelar</td><td>Não encontrei no fluxo público (4 rotas: <code>show</code>, <code>slots</code>, <code>create</code>, <code>confirm</code>)</td><td>Link de gestão assinado, por reunião</td></tr>
+    <tr><td>Onde se configura</td><td>Botão na barra do Kanban, só na visão Calendário, com a flag ligada</td><td>Tela própria "Agendamento" em 6 passos curtos; o primeiro já deixa tudo pronto, e há prévia antes de publicar</td></tr>
+    <tr><td>Cara da página</td><td>Genérica, sem logo, foto nem cor da empresa</td><td>Logo, foto do atendente e cor da marca, com contraste corrigido sozinho</td></tr>
+    <tr><td>Quando não há horário bom</td><td>O visitante vê a página vazia e vai embora; o lead se perde</td><td>Botão "Nenhum horário serve?" cria um pedido de contato no card</td></tr>
+    <tr><td>Acompanhamento</td><td>Só o calendário</td><td>Painel com enviados, abriram, marcaram, compareceram e faltaram, mais a lista de quem não marcou</td></tr>
+    <tr><td>Quem pode configurar</td><td>Só administrador (a regra da API exige administrador); função personalizada não alcança</td><td>Administrador e funções com o módulo "Agendamento" (ver ou gerenciar). Agente comum agenda e vê só o que é dele</td></tr>
+    <tr><td>Agentes de IA</td><td>Sem ferramenta de agenda</td><td>Fase 3: IA oferece horários reais e agenda dentro da conversa</td></tr>
+  </table></div>
+</div></section>
+
+<section id="mercado"><div class="wrap">
+  <h2>O que as melhores fazem e o que adotamos</h2>
+  <p class="sub">Comparação feita em pesquisa pública em 09/10/2026. Cada ideia passou pelo mesmo filtro: serve a quem tem pouca familiaridade com tecnologia?</p>
+  <div class="scroll"><table>
+    <tr><th style="width:150px">Referência</th><th>O que faz bem</th><th>Adotamos</th></tr>
+    <tr><td>Calendly</td><td>Interface limpa, curva de aprendizado baixa e muitas integrações</td><td><b>Sim, o jeito:</b> poucos campos e uma ação por tela (F1)</td></tr>
+    <tr><td>SavvyCal</td><td>Mostra os dois calendários juntos, o que deixa a escolha de horário mais natural</td><td><b>A ideia, mais simples:</b> atalho "Mais cedo: amanhã, 10:00" (F1). Sobrepor calendários fica de fora: complicado demais para leigos</td></tr>
+    <tr><td>Cal.com</td><td>Vários locais por evento, link personalizado, redirecionamento depois de agendar, rodízio de equipe, perguntas</td><td><b>Locais e link próprio na F1.</b> Rodízio, redirecionamento e perguntas na F4, só se você pedir</td></tr>
+    <tr><td>Acuity</td><td>Pagamento e sinal para serviços, ficha de cadastro</td><td><b>Avaliar na F4.</b> Sinal ajuda contra faltas, mas exige integração de pagamento</td></tr>
+    <tr><td>Doctoralia (descrição da própria empresa)</td><td>Lembrete por e-mail, SMS ou WhatsApp, com confirmar, alterar ou cancelar em um clique</td><td><b>Sim (F2):</b> três botões grandes na página da reunião</td></tr>
+    <tr><td>CRMs para clínicas (fornecedores)</td><td>Três avisos: ao marcar, 48h antes e na manhã da consulta, com confirmação por resposta simples</td><td><b>Sim (F2):</b> ao marcar, 1 dia antes e 1 hora antes, ajustável. Confirmação por link, sem depender de o cliente digitar uma palavra</td></tr>
+  </table></div>
+  <div class="note warn"><b>Cuidado com os números.</b> Fornecedores citam cerca de 31% de faltas sem lembrete contra cerca de 17% com lembretes por e-mail e SMS, e mais conclusão em formulários com 3 a 5 campos (cerca de 71%) do que com 6 a 8 (cerca de 62%). São dados de fornecedores, sem metodologia aberta, então servem de direção. Vamos medir a nossa linha de base antes de prometer qualquer meta.</div>
+  <p class="sub" style="margin-top:12px;font-size:14px">Fontes consultadas: <a href="https://vocus.io/blog/calendly-alternatives">comparativo de alternativas ao Calendly</a> · <a href="https://cal.com/blog/tailor-your-client-s-journey-learn-how-to-enable-cal-com-s-redirect-on-booking-fe">Cal.com, redirecionamento</a> · <a href="https://lunacal.ai/blogs/calendar-scheduling-benchmarks-report">relatório de agendamento</a> · <a href="https://schedulingkit.com/hub/scheduling/how-to-create-booking-page-that-converts">página de agendamento que converte</a> · <a href="https://www.clint.digital/blog/5-automacoes-que-mais-reduzem-faltas-2026/">automações contra faltas em clínicas</a> · <a href="https://simplybook.me/br/blog/automated-appointment-reminders">lembretes automáticos</a></p>
+</div></section>
+
+<section id="jornadas"><div class="wrap">
+  <h2>Jornadas</h2>
+  <p class="sub">Escolha a jornada e clique do início ao fim. Cada etapa mostra o que muda em relação a hoje. Os termos de aceite da jornada ficam logo abaixo. Funciona sem JavaScript. Dados fictícios.</p>
+  <div class="jwrap">
+<input class="rj" type="radio" name="j" id="j1" checked aria-label="Jornada 1">
+<input class="rj" type="radio" name="j" id="j2"  aria-label="Jornada 2">
+<input class="rj" type="radio" name="j" id="j3"  aria-label="Jornada 3">
+<input class="rj" type="radio" name="j" id="j4"  aria-label="Jornada 4">
+<input class="rj" type="radio" name="j" id="j5"  aria-label="Jornada 5">
+<input class="rj" type="radio" name="j" id="j6"  aria-label="Jornada 6">
+<input class="rj" type="radio" name="j" id="j7"  aria-label="Jornada 7">
+<input class="rj" type="radio" name="j" id="j8"  aria-label="Jornada 8">
+<input class="rj" type="checkbox" id="all" aria-label="Ver todas as etapas">
+<div class="jlist">
+<label class="jbtn" for="j1">J1. Agente gera o link e o cliente agenda<small>Fase 1 · principal · Agente e cliente</small></label>
+<label class="jbtn" for="j2">J2. Cliente agenda pelo link público<small>Fase 1 · Cliente novo</small></label>
+<label class="jbtn" for="j3">J3. Admin cria a página de agendamento<small>Fase 1 · Administrador</small></label>
+<label class="jbtn" for="j4">J4. Agente atende no dia da reunião<small>Fase 1 e 2 · Agente</small></label>
+<label class="jbtn" for="j5">J5. Avisos e confirmação pelo cliente<small>Fase 2 · Cliente</small></label>
+<label class="jbtn" for="j6">J6. IA oferece horários na conversa<small>Fase 3 · Cliente e agente de IA</small></label>
+<label class="jbtn" for="j7">J7. Dono acompanha os números<small>Fase 2 · Dono ou administrador</small></label>
+<label class="jbtn" for="j8">J8. Quem pode o quê: administrador, funções e agentes<small>Fase 1 e 2 · Administrador e agentes</small></label>
+<label class="jbtn jall" for="all"><span class="off">Ver todas as etapas de uma vez</span><span class="on">Voltar a uma etapa por vez</span></label>
+</div>
+<div class="jmain">
+<div class="jp" id="p1">
+<div class="jhead"><h3 id="jornada-1">J1. Agente gera o link e o cliente agenda</h3><p>Em um toque o agente gera o link do cliente, manda no WhatsApp ou em qualquer outro canal, e o cliente escolhe sem digitar nada.</p></div>
+<input class="rs" type="radio" name="s1" id="s1-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s1" id="s1-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s1" id="s1-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s1" id="s1-4"  aria-label="Etapa 4">
+<input class="rs" type="radio" name="s1" id="s1-5"  aria-label="Etapa 5">
+<input class="rs" type="radio" name="s1" id="s1-6"  aria-label="Etapa 6">
+<input class="rs" type="radio" name="s1" id="s1-7"  aria-label="Etapa 7">
+<ol class="steps">
+<li><label for="s1-1"><b>1</b>Gera o link</label></li>
+<li><label for="s1-2"><b>2</b>Ou manda por outro canal</label></li>
+<li><label for="s1-3"><b>3</b>Cliente recebe</label></li>
+<li><label for="s1-4"><b>4</b>Escolhe o dia</label></li>
+<li><label for="s1-5"><b>5</b>Escolhe a hora</label></li>
+<li><label for="s1-6"><b>6</b>Confirma</label></li>
+<li><label for="s1-7"><b>7</b>Pronto</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 7 · Gera o link</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Marcos Lima</h5><span class="pill g">WhatsApp</span></div>
+      <div class="lead">Conversa aberta · Clínica Aurora</div>
+      <div class="mini">Marcos: Oi! Quero marcar uma conversa sobre o plano.</div>
+      <div class="mini" style="align-self:flex-end;background:#E7F0FE">Camila: Claro! Vou te mandar os horários.</div>
+      <div style="margin-top:auto" class="mini"><div class="row" style="justify-content:space-between"><span class="lead">Escreva uma mensagem…</span><span class="pbtn alt">Agendar</span></div></div>
+      <div class="mini" style="border-color:#2781F6"><b>Link de agenda para Marcos</b><div class="lead" style="margin:2px 0 6px">Página: Conversa de 30 min · vale 7 dias</div><div class="box" style="margin-bottom:8px">Oi, Marcos! Escolha o melhor horário por aqui: <b style="display:inline">[link]</b> <span style="color:#0A5BC4;font-weight:700">Editar texto</span></div><div class="row"><span class="pbtn">Enviar na conversa</span><span class="pbtn alt">Copiar link</span></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje só existe o link geral da página, copiado de uma gaveta de configuração e igual para todo mundo. Aqui o agente gera o link do cliente em um toque, a qualquer hora, na conversa ou no card.</p></div></div></div><div class="navrow"><label class="nv pri" for="s1-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 7 · Ou manda por outro canal</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Marcos Lima</h5><span class="pill">Card · Vendas</span></div>
+      <div class="mini" style="border-color:#0B7A5A"><b>Link copiado</b><div class="lead">chat.exemplo.com/b/Xk4p9Q · vale até 16/10</div></div>
+      <div class="mini"><div class="lead">Novo e-mail para marcos@exemplo.com</div><b>Escolha o melhor horário</b><div style="margin-top:6px">Oi, Marcos! Marque a nossa conversa por aqui:<br><span style="color:#0A5BC4;text-decoration:underline">chat.exemplo.com/b/Xk4p9Q</span></div></div>
+      <div class="lead">O mesmo botão "Agendar" existe no card e na conversa de qualquer canal.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: o link copiado vale em qualquer lugar, como e-mail, Instagram, SMS ou o WhatsApp pessoal. Ele continua sendo o link do Marcos.</p></div></div></div><div class="navrow"><label class="nv" for="s1-1">Etapa anterior</label><label class="nv pri" for="s1-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 7 · Cliente recebe</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd">
+      <div class="wahead"><div class="av">C</div><div><b>Clínica Aurora</b><span>online</span></div></div>
+      <div class="chat">
+        <div class="msg out">Oi! Quero marcar uma conversa sobre o plano.<small>14:02</small></div>
+        <div class="msg in">Oi, Marcos! Escolha o melhor horário por aqui:<br><span class="lnk">chat.exemplo.com/book/a1b2…</span><small>14:03</small></div>
+      </div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje o cliente recebe um link genérico, sem nome. Aqui o link já sabe quem ele é, seja qual for o canal em que chegou.</p></div></div></div><div class="navrow"><label class="nv" for="s1-2">Etapa anterior</label><label class="nv pri" for="s1-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 7 · Escolhe o dia</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Conversa de 30 min · vídeo no WhatsApp</div></div></div><div class="hello">Oi, Marcos! Qual dia fica bom?</div><div class="mini" style="border-color:#2781F6"><b>Mais cedo: terça, 13 às 15:00</b><div class="btn alt" style="margin-top:8px">Escolher este</div></div><div class="days"><div class="day ">Seg<b>12</b></div><div class="day on">Ter<b>13</b></div><div class="day ">Qua<b>14</b></div><div class="day ">Qui<b>15</b></div><div class="day ">Sex<b>16</b></div></div><div class="meta">Horário de Brasília</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje pede nome e e-mail. Aqui abre já com "Oi, Marcos" e vai direto aos dias.</p></div></div></div><div class="navrow"><label class="nv" for="s1-3">Etapa anterior</label><label class="nv pri" for="s1-5">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 5 de 7 · Escolhe a hora</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Terça, 13 de outubro</div></div></div><div class="q">Qual horário?</div><div class="slots"><div class="slot  ">09:00</div><div class="slot  off">10:30</div><div class="slot  ">14:00</div><div class="slot on ">15:00</div><div class="slot  ">16:30</div><div class="slot  ">17:00</div></div><div class="btn">Continuar</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Mesmo cálculo de horários livres de hoje; horários ocupados aparecem riscados.</p></div></div></div><div class="navrow"><label class="nv" for="s1-4">Etapa anterior</label><label class="nv pri" for="s1-6">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 6 de 7 · Confirma</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Confira antes de confirmar</div></div></div><div class="box"><b>Terça, 13 de outubro, 15:00</b>A Camila vai te chamar por vídeo no WhatsApp <b style="display:inline">(11) 91234-5678</b></div><div class="btn">Confirmar</div><div class="btn ghost">Mudar o número</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: a página diz como será a conversa. Sem verificação por e-mail porque o link foi enviado a ele.</p></div></div></div><div class="navrow"><label class="nv" for="s1-5">Etapa anterior</label><label class="nv pri" for="s1-7">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 7 de 7 · Pronto</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk center"><div class="okmark">✓</div><div class="hello">Tudo certo, Marcos!</div><div class="box" style="text-align:left"><b>Terça, 13 de outubro, 15:00</b>Vídeo no WhatsApp com a Camila</div><div class="btn alt">Salvar na minha agenda</div><div class="meta">Avisamos a Camila.</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje: "verifique seu e-mail". Aqui: confirmado na hora, mensagem na conversa e reunião no card que já existe.</p></div></div></div><div class="navrow"><label class="nv" for="s1-6">Etapa anterior</label><label class="nv pri" for="j2">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J1</h4><ol><li><i>J1-A1</i>Dado uma conversa de qualquer canal com um contato, <em>quando</em> o agente toca em "Agendar" e depois em "Enviar na conversa", <em>então</em> a mensagem com o link sai na conversa e o link identifica o contato e a conversa.</li><li><i>J1-A2</i>Dado o link válido, <em>quando</em> o cliente abre, <em>então</em> vê o nome dele e não é pedido e-mail nem verificação.</li><li><i>J1-A3</i><em>Quando</em> o cliente confirma, <em>então</em> a reunião entra no card existente, sem criar card duplicado; se o contato não tem card, cria um no funil padrão da página.</li><li><i>J1-A4</i>Do abrir o link ao confirmar, o cliente faz no máximo 4 toques (dia, hora, confirmar e, se quiser, mudar o número).</li><li><i>J1-A5</i>Dado dois clientes no mesmo horário, <em>então</em> o segundo vê "Esse horário acabou de ser reservado" com os outros horários (trava atual preservada).</li><li><i>J1-A6</i>Dado link expirado ou alterado, <em>então</em> aparece mensagem simples pedindo um novo link ao atendente, sem expor dado nenhum.</li><li><i>J1-A7</i><em>Quando</em> confirma, <em>então</em> uma mensagem de confirmação aparece na conversa (se o link foi enviado por uma conversa).</li><li><i>J1-A8</i><em>Quando</em> o agente toca em "Copiar link", no card ou na conversa, <em>então</em> o link do cliente vai para a área de transferência e pode ser colado em qualquer canal, a qualquer hora.</li><li><i>J1-A9</i>O link é curto, não adivinhável, vale 7 dias (a confirmar), o agente pode cancelá-lo e, depois de usado, vira o link de gestão da reunião (J5).</li><li><i>J1-A10</i>O card mostra o estado do link: enviado, aberto ou agendado.</li><li><i>J1-A11</i>Dado um contato sem WhatsApp cadastrado e local "vídeo no WhatsApp", <em>então</em> a página pede o número antes de confirmar.</li><li><i>J1-A12</i>O texto do convite já vem pronto, com o nome do cliente e o link, e o agente pode editar antes de enviar; o texto padrão é definido por conta.</li><li><i>J1-A13</i>A página mostra o próximo horário livre no topo com o botão "Escolher este".</li></ol></div>
+</div>
+<div class="jp" id="p2">
+<div class="jhead"><h3 id="jornada-2">J2. Cliente agenda pelo link público</h3><p>Quem chega por bio, anúncio ou QR code marca sozinho, só com nome e WhatsApp, e nunca fica sem saída.</p></div>
+<input class="rs" type="radio" name="s2" id="s2-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s2" id="s2-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s2" id="s2-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s2" id="s2-4"  aria-label="Etapa 4">
+<input class="rs" type="radio" name="s2" id="s2-5"  aria-label="Etapa 5">
+<ol class="steps">
+<li><label for="s2-1"><b>1</b>Abre a página</label></li>
+<li><label for="s2-2"><b>2</b>Escolhe a hora</label></li>
+<li><label for="s2-3"><b>3</b>Seus dados</label></li>
+<li><label for="s2-4"><b>4</b>Pronto</label></li>
+<li><label for="s2-5"><b>5</b>Sem horário bom?</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 5 · Abre a página</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Conversa de 30 min</div></div></div><div class="box"><b>Como será</b>Vídeo no WhatsApp. A Camila chama você no horário marcado.</div><div class="mini" style="border-color:#2781F6"><b>Mais cedo: amanhã, 10:00</b><div class="btn alt" style="margin-top:8px">Escolher este</div></div><div class="q">Ou escolha outro dia</div><div class="days"><div class="day ">Seg<b>12</b></div><div class="day ">Ter<b>13</b></div><div class="day on">Qua<b>14</b></div><div class="day ">Qui<b>15</b></div><div class="day ">Sex<b>16</b></div></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje exige que a página esteja ligada a uma caixa Google/MS e não tem a cara da empresa. Aqui qualquer conta publica, com logo, foto e cor, e o próximo horário livre já aparece no topo.</p></div></div></div><div class="navrow"><label class="nv pri" for="s2-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 5 · Escolhe a hora</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Quarta, 14 de outubro</div></div></div><div class="q">Qual horário?</div><div class="slots"><div class="slot  ">09:00</div><div class="slot  off">10:30</div><div class="slot on ">14:00</div><div class="slot  ">15:00</div><div class="slot  ">16:30</div><div class="slot  ">17:00</div></div><div class="btn">Continuar</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Sem mudança no cálculo de horários livres. Ganha antecedência mínima (hoje só existe o intervalo entre reuniões).</p></div></div></div><div class="navrow"><label class="nv" for="s2-1">Etapa anterior</label><label class="nv pri" for="s2-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 5 · Seus dados</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Quarta, 14 de outubro, 14:00</div></div></div><label class="fld">Seu nome<div>Ana Souza</div></label><label class="fld">Seu WhatsApp<div>+55 (11) 98888-0000</div></label><label class="fld">E-mail (se quiser)<div class="ph">voce@exemplo.com</div></label><div class="meta">Ao confirmar, você aceita receber os avisos desta conversa no WhatsApp. Você pode parar quando quiser.</div><div class="btn">Confirmar</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje: nome e e-mail obrigatórios. Aqui: só nome e WhatsApp; e-mail é opcional. O aviso sobre as mensagens aparece antes do botão.</p></div></div></div><div class="navrow"><label class="nv" for="s2-2">Etapa anterior</label><label class="nv pri" for="s2-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 5 · Pronto</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk center"><div class="okmark">✓</div><div class="hello">Agendado, Ana!</div><div class="box" style="text-align:left"><b>Quarta, 14 de outubro, 14:00</b>Vídeo no WhatsApp com a Camila</div><div class="btn">Salvar na minha agenda</div><div class="btn ghost">Falar com a Camila no WhatsApp</div><div class="meta">Enviamos a confirmação para o seu WhatsApp.</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje o cliente precisa abrir o e-mail e clicar. Aqui confirma na hora, salva na agenda dele com um toque e pode falar com a empresa.</p></div></div></div><div class="navrow"><label class="nv" for="s2-3">Etapa anterior</label><label class="nv pri" for="s2-5">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 5 de 5 · Sem horário bom?</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Conversa de 30 min</div></div></div><div class="hello">Nenhum horário serve?</div><div class="box">Sem problema. Deixe seu WhatsApp e a Camila chama você para combinar.</div><label class="fld">Seu nome<div>Ana Souza</div></label><label class="fld">Seu WhatsApp<div>+55 (11) 98888-0000</div></label><div class="btn">Pedir contato</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje, sem horário que sirva, o visitante vai embora e o lead se perde. Aqui vira um pedido de contato que chega ao card.</p></div></div></div><div class="navrow"><label class="nv" for="s2-4">Etapa anterior</label><label class="nv pri" for="j3">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J2</h4><ol><li><i>J2-A1</i>Dado uma conta sem Google/MS, <em>quando</em> o admin publica a página, <em>então</em> o link público abre e mostra horários.</li><li><i>J2-A2</i><em>Quando</em> o cliente informa nome e WhatsApp válidos, <em>então</em> a reunião é criada sem e-mail; e-mail é opcional.</li><li><i>J2-A3</i>O número é validado em formato E.164 pela biblioteca de telefone do sistema; número inválido mostra erro simples no campo.</li><li><i>J2-A4</i>Dado um bot (honeypot, time-trap, rate-limit ou captcha), <em>então</em> a tentativa é recusada sem dizer o motivo.</li><li><i>J2-A5</i>Dado o mesmo número com 2 reuniões abertas, <em>então</em> a terceira é recusada com mensagem simples.</li><li><i>J2-A6</i><em>Se</em> o envio no WhatsApp não puder sair (fora da janela e sem modelo aprovado), <em>então</em> a reunião continua confirmada, o agente é avisado e a tela de sucesso não promete mensagem que não saiu.</li><li><i>J2-A7</i>O card nasce com origem "link público" e o funil, a etapa e o responsável configurados na página.</li><li><i>J2-A8</i>A página mostra no topo o próximo horário livre com um botão "Escolher este"; o cliente chega à confirmação em até 4 toques.</li><li><i>J2-A9</i>O aviso sobre os lembretes no WhatsApp aparece antes do botão Confirmar. Toda mensagem automática tem como parar de receber, e quem parar não recebe mais.</li><li><i>J2-A10</i><em>Quando</em> o cliente toca em "Nenhum horário serve?" e informa nome e WhatsApp, <em>então</em> nasce um card com origem "pediu contato" e o agente é avisado.</li><li><i>J2-A11</i>A tela de sucesso oferece "Salvar na minha agenda" (arquivo de calendário que abre no Google, Apple e Outlook) e um botão para falar com a empresa no WhatsApp.</li><li><i>J2-A12</i>Logo, foto e cor do dono aparecem na página sem prejudicar a leitura: se a cor escolhida não tiver contraste suficiente, a página ajusta sozinha.</li></ol></div>
+</div>
+<div class="jp" id="p3">
+<div class="jhead"><h3 id="jornada-3">J3. Admin cria a página de agendamento</h3><p>Publicar a página em minutos: o primeiro passo já deixa tudo pronto, e o admin só ajusta.</p></div>
+<input class="rs" type="radio" name="s3" id="s3-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s3" id="s3-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s3" id="s3-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s3" id="s3-4"  aria-label="Etapa 4">
+<input class="rs" type="radio" name="s3" id="s3-5"  aria-label="Etapa 5">
+<input class="rs" type="radio" name="s3" id="s3-6"  aria-label="Etapa 6">
+<ol class="steps">
+<li><label for="s3-1"><b>1</b>Escolha um modelo</label></li>
+<li><label for="s3-2"><b>2</b>Conte</label></li>
+<li><label for="s3-3"><b>3</b>Onde acontece</label></li>
+<li><label for="s3-4"><b>4</b>Dias e horas</label></li>
+<li><label for="s3-5"><b>5</b>Cara e avisos</label></li>
+<li><label for="s3-6"><b>6</b>Prévia e publicar</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 6 · Escolha um modelo</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span></span><span></span><span></span><span></span><span></span></div>
+      <h5>O que você quer marcar?</h5>
+      <div class="loc on"><div class="ic">☎</div><div><b>Conversa de vendas</b><small>30 minutos · vídeo no WhatsApp</small></div><span class="tg">Mais usado</span></div>
+      <div class="loc "><div class="ic">✚</div><div><b>Consulta ou atendimento</b><small>45 minutos · no local</small></div></div>
+      <div class="loc "><div class="ic">⌂</div><div><b>Visita</b><small>60 minutos · no local do cliente</small></div></div>
+      <div class="loc "><div class="ic">＋</div><div><b>Começar do zero</b><small>Você preenche tudo</small></div></div>
+      <div style="margin-top:auto"><span class="pbtn">Usar este modelo</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje é um formulário vazio, escondido num botão da barra do Kanban. Aqui começa pronto: o modelo preenche nome, duração, local, horários e a mensagem.</p></div></div></div><div class="navrow"><label class="nv pri" for="s3-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 6 · Conte</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span class="on"></span><span></span><span></span><span></span><span></span></div>
+      <h5>Como se chama a conversa?</h5>
+      <label class="fld">Nome que o cliente vê<div>Conversa de 30 min</div></label>
+      <label class="fld">Quanto tempo dura?<div>30 minutos</div></label>
+      <label class="fld">Quem atende?<div>Camila Torres</div></label>
+      <div style="margin-top:auto"><span class="pbtn">Continuar</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Já vem preenchido pelo modelo. O admin só confere ou troca.</p></div></div></div><div class="navrow"><label class="nv" for="s3-1">Etapa anterior</label><label class="nv pri" for="s3-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 6 · Onde acontece</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span><span></span></div>
+      <h5>Onde vai ser a conversa?</h5>
+      <div class="loc on"><div class="ic">▶</div><div><b>Vídeo no WhatsApp</b><small>Você chama o cliente no horário</small></div><span class="tg">Recomendado</span></div>
+      <div class="loc "><div class="ic">☎</div><div><b>Ligação no WhatsApp</b><small>Só voz</small></div></div>
+      <div class="loc "><div class="ic">🔗</div><div><b>Meu link</b><small>Zoom, Meet ou outro que você já usa</small></div></div>
+      <div class="loc "><div class="ic">⌖</div><div><b>No local</b><small>Cliente vai até o endereço</small></div></div>
+      <div class="lead">Google Meet e Teams aparecem aqui quando você conecta uma caixa de e-mail.</div>
+      <div style="margin-top:auto"><span class="pbtn">Continuar</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje só mostra caixas Google/MS e o erro "nenhuma caixa com agenda". Aqui mostra só o que dá para usar agora.</p></div></div></div><div class="navrow"><label class="nv" for="s3-2">Etapa anterior</label><label class="nv pri" for="s3-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 6 · Dias e horas</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span></div>
+      <h5>Quando você atende?</h5>
+      <div class="row"><span class="pill g">Seg</span><span class="pill g">Ter</span><span class="pill g">Qua</span><span class="pill g">Qui</span><span class="pill g">Sex</span><span class="pill">Sáb</span><span class="pill">Dom</span></div>
+      <div class="kv"><span>Das</span><b>09:00</b><span>Até</span><b>17:00</b><span>Avisar com</span><b>2 horas de antecedência</b><span>Intervalo</span><b>10 minutos entre conversas</b><span>Feriados</span><b>Fechado (Fase 2)</b></div>
+      <div style="margin-top:auto"><span class="pbtn">Continuar</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Mesmos campos de hoje. Ganha "avisar com antecedência", que antes não existia, e (Fase 2) feriados nacionais fechados.</p></div></div></div><div class="navrow"><label class="nv" for="s3-3">Etapa anterior</label><label class="nv pri" for="s3-5">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 5 de 6 · Cara e avisos</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
+      <h5>Deixe com a sua cara</h5>
+      <div class="row"><div class="loc" style="flex:1"><div class="ic">▣</div><div><b>Logo</b><small>Enviar imagem</small></div></div><div class="loc" style="flex:1"><div class="ic">☺</div><div><b>Sua foto</b><small>Enviar imagem</small></div></div></div>
+      <div class="row"><span class="lead">Cor</span><span class="pill" style="background:#0D2344;color:#fff">Azul</span><span class="pill" style="background:#0B7A5A;color:#fff">Verde</span><span class="pill" style="background:#B3263E;color:#fff">Vermelho</span><span class="pill" style="background:#8A5200;color:#fff">Âmbar</span></div>
+      <div class="lead" style="margin-top:4px">Quando avisar o cliente no WhatsApp?</div>
+      <div class="row"><span class="pill g">Ao marcar</span><span class="pill g">1 dia antes</span><span class="pill g">1 hora antes</span></div>
+      <div style="margin-top:auto"><span class="pbtn">Ver como fica</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: a página ganha a cara da empresa e o admin escolhe quando o cliente é avisado.</p></div></div></div><div class="navrow"><label class="nv" for="s3-4">Etapa anterior</label><label class="nv pri" for="s3-6">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 6 de 6 · Prévia e publicar</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="stepdots"><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span></div>
+      <h5>Assim o cliente vai ver</h5>
+      <div class="mini"><b>Conversa de 30 min</b><div class="lead">Vídeo no WhatsApp · Seg a sex, 9h às 17h</div></div>
+      <div class="mini">Quem marcar vai para o funil <b>Vendas</b>, etapa <b>Conversa agendada</b>, com a <b>Camila</b>. <span style="color:#0A5BC4;font-weight:700">Alterar</span></div>
+      <div class="row"><div class="qr"></div><div><div class="lead">Seu link</div><b>chat.exemplo.com/book/9f3c…</b><div class="row" style="margin-top:6px"><span class="pbtn alt">Copiar link</span><span class="pbtn alt">Testar no meu WhatsApp</span></div></div></div>
+      <div style="margin-top:auto"><span class="pbtn">Publicar</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: o admin vê a página do cliente antes de publicar, confere para onde vai o lead e sai com o link e o QR code.</p></div></div></div><div class="navrow"><label class="nv" for="s3-5">Etapa anterior</label><label class="nv pri" for="j4">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J3</h4><ol><li><i>J3-A1</i>Dado uma conta sem caixa Google/MS, <em>quando</em> o admin conclui os seis passos, <em>então</em> consegue publicar e receber o link e o QR code.</li><li><i>J3-A2</i>A lista de locais mostra apenas o que está disponível na conta; Meet e Teams só aparecem com caixa conectada.</li><li><i>J3-A3</i>Todas as escolhas usam o componente <code>ChoiceSelect</code> (nenhum <code>&lt;select&gt;</code> nativo), com teclado e leitor de tela.</li><li><i>J3-A4</i>Cada passo tem uma ação principal; o admin pode voltar sem perder o que digitou.</li><li><i>J3-A5</i>A prévia é a mesma página que o cliente vê, com os dados que o admin acabou de preencher.</li><li><i>J3-A6</i>Dado a flag desligada, <em>então</em> a tela antiga continua como hoje (RA-03).</li><li><i>J3-A7</i>O acesso segue o padrão de funções personalizadas do CRM; agente comum sem função não vê a tela.</li><li><i>J3-A8</i>Ao escolher um modelo, nome, duração, local, horários e a mensagem do convite vêm preenchidos; "Começar do zero" também existe.</li><li><i>J3-A9</i>O admin envia logo e foto e escolhe uma cor entre opções prontas; a página aplica tudo e corrige sozinha qualquer cor com pouco contraste.</li><li><i>J3-A10</i>Funil, etapa e responsável já vêm com valores padrão sensatos e aparecem em uma frase na prévia, com o botão "Alterar" bem visível.</li><li><i>J3-A11</i>"Testar no meu WhatsApp" envia ao próprio admin um link igual ao do cliente.</li><li><i>J3-A12</i>Depois de publicada, há um botão "Pausar página". Página pausada mostra um aviso simples e um botão para falar no WhatsApp; nenhum horário é oferecido.</li><li><i>J3-A13</i>(Fase 2) A opção "Fechar feriados nacionais" vem ligada por padrão e o admin pode desligá-la.</li></ol></div>
+</div>
+<div class="jp" id="p4">
+<div class="jhead"><h3 id="jornada-4">J4. Agente atende no dia da reunião</h3><p>Ver quem confirmou, chamar o cliente no WhatsApp com um toque, registrar como foi e dar o próximo passo.</p></div>
+<input class="rs" type="radio" name="s4" id="s4-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s4" id="s4-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s4" id="s4-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s4" id="s4-4"  aria-label="Etapa 4">
+<ol class="steps">
+<li><label for="s4-1"><b>1</b>Agenda de hoje</label></li>
+<li><label for="s4-2"><b>2</b>Chama o cliente</label></li>
+<li><label for="s4-3"><b>3</b>Registra o resultado</label></li>
+<li><label for="s4-4"><b>4</b>Depois da conversa</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 4 · Agenda de hoje</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class="on"></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Hoje · terça, 13</h5><span class="pill">Calendário</span></div>
+      <div class="evt"><b>15:00 · Marcos Lima</b><span class="lead">Vídeo no WhatsApp · Conversa de 30 min</span><div style="margin-top:4px"><span class="pill g">Confirmou</span></div></div>
+      <div class="evt" style="border-left-color:#8A5200"><b>16:30 · Ana Souza</b><span class="lead">Ligação no WhatsApp</span><div class="row" style="margin-top:4px"><span class="pill a">Sem resposta</span><span class="pbtn alt" style="min-height:30px;font-size:12px">Lembrar</span></div></div>
+      <div class="mini" style="margin-top:auto">Lembrete: sua conversa com Marcos começa em 15 minutos.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje a reunião aparece no calendário e o lembrete push vai ao agente. Aqui cada reunião mostra o local e se o cliente confirmou (Fase 2).</p></div></div></div><div class="navrow"><label class="nv pri" for="s4-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 4 · Chama o cliente</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class="on"></i><i></i><i class=""></i></div><div class="mn">
+      <h5>Marcos Lima</h5>
+      <div class="kv"><span>Quando</span><b>Hoje, 15:00 (30 min)</b><span>Como</span><b>Vídeo no WhatsApp</b><span>Número</span><b>(11) 91234-5678</b><span>Origem</span><b>Link na conversa</b></div>
+      <div class="row"><span class="pbtn gr">Chamar no WhatsApp</span><span class="pbtn alt">Ver card</span></div>
+      <div class="lead">O WhatsApp abre a conversa. Toque no ícone de vídeo para chamar.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: botão que abre a conversa do cliente no WhatsApp. O agente toca no ícone de vídeo do próprio WhatsApp.</p></div></div></div><div class="navrow"><label class="nv" for="s4-1">Etapa anterior</label><label class="nv pri" for="s4-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 4 · Registra o resultado</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class="on"></i><i></i><i class=""></i></div><div class="mn">
+      <h5>Como foi a conversa com a Ana?</h5>
+      <div class="loc"><div class="ic">✓</div><div><b>Aconteceu</b><small>O cliente compareceu</small></div></div>
+      <div class="loc on"><div class="ic">✕</div><div><b>Cliente faltou</b><small>Vamos ajudar a marcar de novo</small></div></div>
+      <div class="mini" style="border-color:#2781F6"><b>Enviar link para a Ana marcar outro horário</b><div class="row" style="margin-top:6px"><span class="pbtn">Enviar link</span><span class="pbtn alt">Agora não</span></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Reaproveita o registro de resultado de hoje, agora em uma pergunta só. Se o cliente faltou, o agente remarca com um toque.</p></div></div></div><div class="navrow"><label class="nv" for="s4-2">Etapa anterior</label><label class="nv pri" for="s4-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 4 · Depois da conversa</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class="on"></i><i></i><i class=""></i></div><div class="mn">
+      <h5>Marcos Lima · conversa feita</h5>
+      <div class="mini"><b>Mover para a etapa "Proposta"?</b><div class="lead" style="margin:2px 0 8px">Assim ele não fica esquecido na etapa "Conversa agendada".</div><div class="row"><span class="pbtn">Mover</span><span class="pbtn alt">Agora não</span></div></div>
+      <div class="lead">Quem decide se isso é automático é o administrador, nas configurações da página.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: o sistema pergunta se o card avança de etapa. O admin pode deixar isso automático.</p></div></div></div><div class="navrow"><label class="nv" for="s4-3">Etapa anterior</label><label class="nv pri" for="j5">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J4</h4><ol><li><i>J4-A1</i>Reunião <code>internal</code> aparece no calendário e no card com horário, local e número do cliente.</li><li><i>J4-A2</i>O botão "Chamar no WhatsApp" abre a conversa com o número da reunião; o texto explica que a chamada de vídeo é iniciada no próprio WhatsApp.</li><li><i>J4-A3</i>O resultado (compareceu ou faltou) usa o serviço de resultado existente e atualiza o card.</li><li><i>J4-A4</i>O lembrete ao agente (push e e-mail) continua funcionando como hoje, sem depender de caixa de calendário.</li><li><i>J4-A5</i>(Fase 2) O card e o calendário mostram se o cliente confirmou, pediu para mudar ou não respondeu, com um botão "Lembrar" para o agente.</li><li><i>J4-A6</i>(Fase 2) Quando o cliente faltou, o botão "Enviar link para marcar outro horário" envia o link do cliente em um toque. Nada é enviado sem o agente tocar.</li><li><i>J4-A7</i>(Fase 2) Depois de "Aconteceu", o sistema oferece mover o card para a etapa escolhida pelo admin; o admin pode ligar o modo automático ou deixar sempre perguntar.</li></ol></div>
+</div>
+<div class="jp" id="p5">
+<div class="jhead"><h3 id="jornada-5">J5. Avisos e confirmação pelo cliente</h3><p>O cliente é lembrado no momento certo, confirma com um toque e, se precisar, muda ou cancela sozinho.</p></div>
+<input class="rs" type="radio" name="s5" id="s5-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s5" id="s5-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s5" id="s5-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s5" id="s5-4"  aria-label="Etapa 4">
+<input class="rs" type="radio" name="s5" id="s5-5"  aria-label="Etapa 5">
+<ol class="steps">
+<li><label for="s5-1"><b>1</b>Recebe o aviso</label></li>
+<li><label for="s5-2"><b>2</b>Sua conversa</label></li>
+<li><label for="s5-3"><b>3</b>Confirmou</label></li>
+<li><label for="s5-4"><b>4</b>Escolhe outro horário</label></li>
+<li><label for="s5-5"><b>5</b>Horário atualizado</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 5 · Recebe o aviso</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd">
+      <div class="wahead"><div class="av">C</div><div><b>Clínica Aurora</b><span>online</span></div></div>
+      <div class="chat"><div class="msg in">Oi, Marcos! Lembrando da nossa conversa amanhã, terça às 15:00, por vídeo aqui no WhatsApp.<br>Confirma ou muda aqui: <span class="lnk">chat.exemplo.com/r/7d2…</span><br><small style="text-align:left">Para parar os avisos, toque em "Parar avisos" na página.</small><small>14:00</small></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje o cliente só tem o convite por e-mail. Aqui recebe três avisos no WhatsApp: ao marcar, 1 dia antes e 1 hora antes (o admin pode ajustar).</p></div></div></div><div class="navrow"><label class="nv pri" for="s5-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 5 · Sua conversa</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Sua conversa</div></div></div><div class="box"><b>Terça, 13 de outubro, 15:00</b>Vídeo no WhatsApp com a Camila</div><div class="btn">Vou estar lá</div><div class="btn alt">Mudar o horário</div><div class="btn ghost">Cancelar</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: página própria da reunião, com um link único. Três botões grandes, um por decisão.</p></div></div></div><div class="navrow"><label class="nv" for="s5-1">Etapa anterior</label><label class="nv pri" for="s5-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 5 · Confirmou</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk center"><div class="okmark">✓</div><div class="hello">Presença confirmada</div><div class="box" style="text-align:left"><b>Terça, 13 de outubro, 15:00</b>Vídeo no WhatsApp com a Camila</div><div class="btn">Salvar na minha agenda</div><div class="meta">A Camila foi avisada.</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: um toque avisa o agente e o card passa a mostrar "Confirmou".</p></div></div></div><div class="navrow"><label class="nv" for="s5-2">Etapa anterior</label><label class="nv pri" for="s5-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 5 · Escolhe outro horário</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk"><div class="who"><div class="av">C</div><div><h5>Camila · Clínica Aurora</h5><div class="meta">Quinta, 15 de outubro</div></div></div><div class="q">Qual horário?</div><div class="slots"><div class="slot on ">09:00</div><div class="slot  off">10:30</div><div class="slot  ">14:00</div><div class="slot  ">15:00</div><div class="slot  ">16:30</div><div class="slot  ">17:00</div></div><div class="btn">Confirmar novo horário</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo. O horário antigo é liberado quando o novo é confirmado.</p></div></div></div><div class="navrow"><label class="nv" for="s5-3">Etapa anterior</label><label class="nv pri" for="s5-5">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 5 de 5 · Horário atualizado</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd"><div class="bk center"><div class="okmark">✓</div><div class="hello">Horário atualizado</div><div class="box" style="text-align:left"><b>Quinta, 15 de outubro, 09:00</b>Vídeo no WhatsApp com a Camila</div><div class="meta">Avisamos a Camila.</div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>O agente é avisado e o card mostra o histórico (horário antigo e novo).</p></div></div></div><div class="navrow"><label class="nv" for="s5-4">Etapa anterior</label><label class="nv pri" for="j6">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J5</h4><ol><li><i>J5-A1</i>A reunião gera três avisos por padrão (ao marcar, 1 dia antes e 1 hora antes); dentro da janela de 24h sai texto, fora dela sai modelo aprovado.</li><li><i>J5-A2</i>O link de gestão é único por reunião, assinado e expira depois do horário; não dá para abrir a reunião de outra pessoa.</li><li><i>J5-A3</i>Cancelar ou remarcar libera o horário antigo na hora e avisa o agente (limite: até 2 horas antes, a confirmar).</li><li><i>J5-A4</i>Falha de envio do aviso é registrada e avisa o agente; nunca cancela nem altera a reunião.</li><li><i>J5-A5</i>Número de WAHA não envia aviso fora da janela de 24h (risco de bloqueio).</li><li><i>J5-A6</i>Ao tocar em "Vou estar lá", o card passa a mostrar "Confirmou" e o agente é avisado; confirmar duas vezes não gera dois avisos.</li><li><i>J5-A7</i>"Parar avisos" interrompe todas as mensagens automáticas ao cliente e fica registrado; a reunião continua valendo.</li><li><i>J5-A8</i>O admin escolhe entre três jogos de avisos prontos (padrão: ao marcar, 1 dia antes, 1 hora antes) sem digitar horários.</li></ol></div>
+</div>
+<div class="jp" id="p6">
+<div class="jhead"><h3 id="jornada-6">J6. IA oferece horários na conversa</h3><p>O cliente pede para marcar e o agente de IA resolve na própria conversa, com horários reais.</p></div>
+<input class="rs" type="radio" name="s6" id="s6-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s6" id="s6-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s6" id="s6-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s6" id="s6-4"  aria-label="Etapa 4">
+<ol class="steps">
+<li><label for="s6-1"><b>1</b>Cliente pede</label></li>
+<li><label for="s6-2"><b>2</b>IA oferece</label></li>
+<li><label for="s6-3"><b>3</b>Cliente escolhe</label></li>
+<li><label for="s6-4"><b>4</b>Agente vê</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 4 · Cliente pede</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd">
+      <div class="wahead"><div class="av">C</div><div><b>Clínica Aurora</b><span>online</span></div></div>
+      <div class="chat"><div class="msg out">Queria marcar uma conversa essa semana<small>14:10</small></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje os agentes só coletam o pedido e passam para uma pessoa. Não existe ferramenta de agenda.</p></div></div></div><div class="navrow"><label class="nv pri" for="s6-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 4 · IA oferece</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd">
+      <div class="wahead"><div class="av">C</div><div><b>Clínica Aurora</b><span>online</span></div></div>
+      <div class="chat"><div class="msg out">Queria marcar uma conversa essa semana<small>14:10</small></div><div class="msg in">Claro! Tenho terça às 15:00, quarta às 14:00 ou quinta às 09:00. Qual prefere?<small>14:10</small></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: a IA consulta a agenda e oferece só horários livres de verdade.</p></div></div></div><div class="navrow"><label class="nv" for="s6-1">Etapa anterior</label><label class="nv pri" for="s6-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 4 · Cliente escolhe</div><div class="stagebox"><div class="stage"><div class="phone"><div class="sb"><span>9:41</span><span>5G ▮▮▮</span></div><div class="bd">
+      <div class="wahead"><div class="av">C</div><div><b>Clínica Aurora</b><span>online</span></div></div>
+      <div class="chat"><div class="msg in">Tenho terça às 15:00, quarta às 14:00 ou quinta às 09:00. Qual prefere?<small>14:10</small></div><div class="msg out">A de quarta<small>14:11</small></div><div class="msg in">Fechado! Quarta, 14 de outubro, às 14:00, por vídeo aqui no WhatsApp. Te lembro um dia antes.<small>14:11</small></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>A IA entende a resposta com o modelo; não há lista de palavras nem regra escrita à mão.</p></div></div></div><div class="navrow"><label class="nv" for="s6-2">Etapa anterior</label><label class="nv pri" for="s6-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 4 · Agente vê</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Marcos Lima</h5><span class="pill a">Agendado pela IA</span></div>
+      <div class="evt"><b>Quarta, 14 · 14:00</b><span class="lead">Vídeo no WhatsApp · 30 min</span></div>
+      <div class="mini">A IA ofereceu 3 horários e o cliente escolheu quarta às 14:00.</div>
+      <div class="row" style="margin-top:auto"><span class="pbtn alt">Assumir conversa</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>A reunião cai no card com a marca "agendada pela IA", e uma pessoa pode assumir a conversa quando quiser.</p></div></div></div><div class="navrow"><label class="nv" for="s6-3">Etapa anterior</label><label class="nv pri" for="j7">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J6</h4><ol><li><i>J6-A1</i>A IA só oferece horários que a página ofereceria ao cliente naquele momento (mesma regra de disponibilidade).</li><li><i>J6-A2</i>A intenção do cliente é interpretada pelo modelo; nenhuma lista de palavras ou expressão regular decide o que a pessoa quis dizer (RA-09).</li><li><i>J6-A3</i>Dois pedidos para o mesmo horário: o segundo recebe novas opções, nunca uma dupla reserva.</li><li><i>J6-A4</i>A reunião criada pela IA é identificável no card e uma pessoa pode assumir a conversa a qualquer momento.</li><li><i>J6-A5</i>Se a página estiver desligada ou sem horários, a IA diz isso e passa para uma pessoa.</li></ol></div>
+</div>
+<div class="jp" id="p7">
+<div class="jhead"><h3 id="jornada-7">J7. Dono acompanha os números</h3><p>Ver em cinco números se a agenda está dando resultado e quem abriu o link e não marcou.</p></div>
+<input class="rs" type="radio" name="s7" id="s7-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s7" id="s7-2"  aria-label="Etapa 2">
+<ol class="steps">
+<li><label for="s7-1"><b>1</b>Painel</label></li>
+<li><label for="s7-2"><b>2</b>Quem não marcou</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 2 · Painel</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Agendamento · últimos 30 dias</h5></div>
+      <div class="row" style="gap:6px"><div class="mini" style="flex:1;text-align:center"><b style="font-size:22px">48</b><div class="lead">Links enviados</div></div><div class="mini" style="flex:1;text-align:center"><b style="font-size:22px">31</b><div class="lead">Abriram</div></div><div class="mini" style="flex:1;text-align:center"><b style="font-size:22px">19</b><div class="lead">Marcaram</div></div></div>
+      <div class="row" style="gap:6px"><div class="mini" style="flex:1;text-align:center"><b style="font-size:22px;color:#0B7A5A">15</b><div class="lead">Compareceram</div></div><div class="mini" style="flex:1;text-align:center"><b style="font-size:22px;color:#B3263E">4</b><div class="lead">Faltaram</div></div></div>
+      <div class="mini"><b>De onde vieram os agendamentos</b><div class="kv" style="margin-top:6px"><span>Conversa</span><b>12</b><span>Link da bio</span><b>5</b><span>Anúncio</span><b>2</b></div></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje só existe o calendário. Aqui o dono vê o caminho inteiro, do link enviado até quem compareceu (dados fictícios).</p></div></div></div><div class="navrow"><label class="nv pri" for="s7-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 2 · Quem não marcou</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <h5>Abriram o link e não marcaram</h5>
+      <div class="evt"><b>Paula Reis</b><span class="lead">Abriu há 2 dias · link enviado por WhatsApp</span><div style="margin-top:6px"><span class="pbtn alt" style="min-height:32px;font-size:12px">Enviar de novo</span></div></div>
+      <div class="evt"><b>Rui Alves</b><span class="lead">Abriu há 4 dias · link enviado por e-mail</span><div style="margin-top:6px"><span class="pbtn alt" style="min-height:32px;font-size:12px">Enviar de novo</span></div></div>
+      <div class="lead">Mostramos só quem recebeu o seu link. Ninguém recebe mensagem sem você tocar.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: lista de quem abriu o link e não marcou, com um botão para mandar de novo. Uma pessoa decide, nada sai sozinho.</p></div></div></div><div class="navrow"><label class="nv" for="s7-1">Etapa anterior</label><label class="nv pri" for="j8">Próxima jornada</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J7</h4><ol><li><i>J7-A1</i>O painel mostra cinco números do período (7 ou 30 dias): links enviados, abriram, marcaram, compareceram e faltaram, com uma frase explicando cada um.</li><li><i>J7-A2</i>Os números vêm de eventos registrados (enviado, aberto, agendado, compareceu, faltou) e batem com o que aparece nos cards; o painel agregado não mostra dados pessoais.</li><li><i>J7-A3</i>Os agendamentos aparecem separados por origem: conversa, link público e pedido de contato.</li><li><i>J7-A4</i>A lista "abriram e não marcaram" tem botão "Enviar de novo" por pessoa; nada é enviado sem o agente tocar.</li><li><i>J7-A5</i>Só quem tem permissão do módulo vê o painel, no padrão de funções personalizadas.</li></ol></div>
+</div>
+<div class="jp" id="p8">
+<div class="jhead"><h3 id="jornada-8">J8. Quem pode o quê: administrador, funções e agentes</h3><p>Cada pessoa vê e faz só o que cabe a ela. Funções personalizadas ganham um módulo "Agendamento", e quem sai da equipe não deixa links ativos para trás.</p></div>
+<input class="rs" type="radio" name="s8" id="s8-1" checked aria-label="Etapa 1">
+<input class="rs" type="radio" name="s8" id="s8-2"  aria-label="Etapa 2">
+<input class="rs" type="radio" name="s8" id="s8-3"  aria-label="Etapa 3">
+<input class="rs" type="radio" name="s8" id="s8-4"  aria-label="Etapa 4">
+<ol class="steps">
+<li><label for="s8-1"><b>1</b>Módulo na função</label></li>
+<li><label for="s8-2"><b>2</b>O que cada um vê</label></li>
+<li><label for="s8-3"><b>3</b>Quando alguém sai</label></li>
+<li><label for="s8-4"><b>4</b>Meus horários</label></li>
+</ol>
+<div class="stplist">
+<div class="stp"><div class="sh">Etapa 1 de 4 · Módulo na função</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <div class="row"><h5>Função: Coordenação comercial</h5></div>
+      <div class="mini"><div class="row" style="justify-content:space-between"><b>CRM</b><span class="row" style="gap:4px"><span class="pill " style="background:#F3F6FB;color:#55627A">Sem acesso</span><span class="pill g" style="">Ver</span><span class="pill " style="background:#F3F6FB;color:#55627A">Gerenciar</span></span></div><div class="lead" style="margin-top:4px">Ver os cards e mexer nos seus</div></div>
+      <div class="mini"><div class="row" style="justify-content:space-between"><b>Agendamento</b><span class="row" style="gap:4px"><span class="pill " style="background:#F3F6FB;color:#55627A">Sem acesso</span><span class="pill " style="background:#F3F6FB;color:#55627A">Ver</span><span class="pill g" style="">Gerenciar</span></span></div><div class="lead" style="margin-top:4px">Gerenciar: cria, publica e pausa páginas. Ver: só enxerga páginas e números.</div></div>
+      <div class="mini"><div class="row" style="justify-content:space-between"><b>Campanhas</b><span class="row" style="gap:4px"><span class="pill g" style="">Sem acesso</span><span class="pill " style="background:#F3F6FB;color:#55627A">Ver</span><span class="pill " style="background:#F3F6FB;color:#55627A">Gerenciar</span></span></div></div>
+      <div class="lead">Não entram nesta linha: conectar caixas, usuários, funções, integrações e faturamento.</div>
+      <div style="margin-top:auto"><span class="pbtn">Salvar função</span></div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje só administrador cria e edita páginas de agendamento; uma função personalizada não consegue. Aqui "Agendamento" vira uma linha na tela de funções, como Campanhas e Automações.</p></div></div></div><div class="navrow"><label class="nv pri" for="s8-2">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 2 de 4 · O que cada um vê</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class=""></i><i></i><i class="on"></i></div><div class="mn">
+      <h5>Quem faz o quê</h5>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;font-size:11px;color:#55627A;font-weight:700"><span></span><span style="text-align:center">Admin</span><span style="text-align:center">Gerencia</span><span style="text-align:center">Só vê</span><span style="text-align:center">Agente</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Criar e publicar páginas</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Pausar uma página</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Ver páginas e números da equipe</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Agendar para um cliente</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Ver a própria agenda e números</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span></div>
+      <div style="display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:4px;align-items:center;font-size:12px"><b style="font-size:12px">Conectar caixas e WhatsApp</b><span style="text-align:center;font-weight:700;color:#0B7A5A">✓</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span><span style="text-align:center;font-weight:700;color:#9AA6B8">—</span></div>
+      <div class="lead">Agente é quem não tem função personalizada. "Agendar para um cliente" vale só para clientes que a pessoa já pode ver.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: as quatro pessoas típicas e o que cada uma faz. O agente comum continua agendando para os clientes dele.</p></div></div></div><div class="navrow"><label class="nv" for="s8-1">Etapa anterior</label><label class="nv pri" for="s8-3">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 3 de 4 · Quando alguém sai</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class="on"></i><i class=""></i><i></i><i class=""></i></div><div class="mn">
+      <div class="row"><h5>Atenção</h5><span class="pill a">Precisa de você</span></div>
+      <div class="mini" style="border-color:#8A5200"><b>Rui saiu da equipe</b><div class="lead" style="margin:2px 0 8px">Os links do Rui foram pausados. Ele tem 3 reuniões marcadas para os próximos dias.</div><div class="row"><span class="pbtn">Passar para a Camila</span><span class="pbtn alt">Escolher outra pessoa</span></div></div>
+      <div class="evt"><b>Qua, 14 · 14:00 · Paula Reis</b><span class="lead">Responsável: Rui (saiu)</span></div>
+      <div class="evt"><b>Qui, 15 · 09:00 · Marcos Lima</b><span class="lead">Responsável: Rui (saiu)</span></div>
+      <div class="lead">Ao passar para outra pessoa, conferimos se ela está livre nesses horários.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Hoje, se um agente sai, o link individual dele continua de pé e as reuniões ficam sem dono. Aqui o link pausa na hora e o admin recebe o aviso.</p></div></div></div><div class="navrow"><label class="nv" for="s8-2">Etapa anterior</label><label class="nv pri" for="s8-4">Próxima etapa</label></div></div>
+<div class="stp"><div class="sh">Etapa 4 de 4 · Meus horários</div><div class="stagebox"><div class="stage"><div class="desk"><div class="sd"><i></i><i class=""></i><i class="on"></i><i></i><i class=""></i></div><div class="mn">
+      <h5>Meus horários</h5>
+      <div class="row"><span class="pill g">Seg</span><span class="pill g">Ter</span><span class="pill g">Qua</span><span class="pill">Qui</span><span class="pill g">Sex</span></div>
+      <div class="kv"><span>Das</span><b>10:00</b><span>Até</span><b>16:00</b><span>Limite da página</span><b>9h às 17h</b></div>
+      <div class="loc"><div class="ic">⏸</div><div><b>Pausar a minha agenda</b><small>Ninguém marca com você até você voltar</small></div></div>
+      <div class="lead">O admin vê quando alguém pausa, mas não precisa liberar.</div></div></div></div><div class="side"><div class="diff"><h4>O que muda em relação a hoje</h4><p>Novo: cada agente ajusta só os próprios dias e horas, dentro do que a página permite, e pode pausar a própria agenda sem pedir ao admin.</p></div></div></div><div class="navrow"><label class="nv" for="s8-3">Etapa anterior</label></div></div>
+</div>
+<div class="accept"><h4>Termos de aceite · J8</h4><ol><li><i>J8-A1</i>Existe o módulo de função <code>agendamento</code> com níveis Sem acesso, Ver e Gerenciar; <code>agendamento_manage</code> implica <code>agendamento_view</code>. O checklist de chave nova do CRM é cumprido por inteiro: lista de permissões, policy, matriz da tela de funções, i18n pt_BR e en, <code>meta.permissions</code> da rota, item do menu e <code>useCanManage</code> nos botões de escrita.</li><li><i>J8-A2</i>O administrador mantém acesso total, como hoje.</li><li><i>J8-A3</i>Agente sem função não vê "Configurações › Agendamento", mas vê "Agendar" nos cards e conversas que já pode editar, a própria agenda e os próprios números.</li><li><i>J8-A4</i>Função com <code>agendamento_view</code> vê páginas e números da equipe sem poder editar: os botões de escrita ficam escondidos e a API recusa o acesso (401, padrão do sistema).</li><li><i>J8-A5</i>Função com <code>agendamento_manage</code> cria, edita, publica e pausa páginas, escolhe modelos, marca e avisos. Não inclui conectar caixas e modelos de WhatsApp, usuários, funções, integrações nem faturamento.</li><li><i>J8-A6</i>Função sem o módulo: a API recusa o acesso (401, padrão do sistema) em toda rota de gestão, mesmo conhecendo o endereço.</li><li><i>J8-A7</i>Quem gera um link de cliente só consegue para clientes e conversas que já pode ver; o agente vê e cancela só os próprios links, e admin ou <code>agendamento_view</code> vê todos.</li><li><i>J8-A8</i>A reunião tem um responsável. A agenda respeita o escopo atual de cards e o filtro "Meus ou Todos".</li><li><i>J8-A9</i><em>Quando</em> uma pessoa sai da conta, muda de função ou perde acesso ao que a página exige, <em>então</em> os links individuais dela pausam na hora e o admin recebe aviso com as reuniões futuras sem responsável.</li><li><i>J8-A10</i>(Fase 2) O admin passa as reuniões para outra pessoa com um toque; o sistema confere se a nova pessoa está livre em cada horário e avisa os conflitos, sem criar dupla reserva.</li><li><i>J8-A11</i>(Fase 2) "Meus horários": o agente ajusta só os próprios dias e horas dentro dos limites da página e pausa a própria agenda, sem precisar de <code>agendamento_manage</code>. Antes de criar, verificar se o horário por agente do SLA v2 pode ser reaproveitado.</li><li><i>J8-A12</i>O painel (J7) mostra "Meus números" ao agente e a equipe a quem tem <code>agendamento_view</code> ou é admin; a lista "abriram e não marcaram" só mostra clientes que a pessoa pode ver.</li><li><i>J8-A13</i>Os links individuais por agente funcionam sem caixa de e-mail: quem pode atender passa a ser uma pessoa da conta escolhida na página, e não mais membro da caixa.</li><li><i>J8-A14</i>Existe um teste de permissões com a matriz completa: administrador, só vê, gerencia, agente sem função e função sem o módulo, contra configuração, convite, agenda e painel.</li><li><i>J8-A15</i>O Guia da Plataforma explica quem pode o quê (<code>porques.md</code>) e <code>pnpm guia:build</code> e <code>guia:check</code> passam.</li></ol></div>
+</div>
+</div></div></div></section>
+
+<section id="aceite"><div class="wrap">
+  <h2>Termos de aceite globais</h2>
+  <p class="sub">Valem para todas as fases. Nenhuma entrega é "pronta" sem cumpri-los e sem prova. Os termos específicos de cada jornada estão ao lado dela.</p>
+  <div class="scroll"><table>
+    <tr><th style="width:84px">ID</th><th>Termo</th><th style="width:210px">Prova exigida</th></tr>
+    <tr><td><code>RA-01</code></td><td><b>Google/MS não regride.</b> Conta com caixa conectada continua criando evento nativo, Meet/Teams e sincronização, sem mudar o comportamento.</td><td>Specs existentes verdes e teste do fluxo atual</td></tr>
+    <tr><td><code>RA-02</code></td><td><b>Conta sem Google/MS publica e recebe agendamento</b> de ponta a ponta, da configuração à reunião no card.</td><td>Teste E2E em ambiente isolado</td></tr>
+    <tr><td><code>RA-03</code></td><td><b>Flag para voltar às telas antigas.</b> Construção aditiva; desligar a flag restaura o comportamento atual.</td><td>Teste com flag ligada e desligada</td></tr>
+    <tr><td><code>RA-04</code></td><td><b>Migrations aditivas e reversíveis</b>, com versão única entre PRs abertas. Aplicar em produção só com OK explícito do Rodrigo.</td><td>Conferência das PRs abertas e rollback escrito</td></tr>
+    <tr><td><code>RA-05</code></td><td><b>Segurança do público.</b> Slug e token opacos, nenhum <code>account_id</code> na URL, payload público sem dado pessoal, token assinado com expiração, rate-limit, honeypot e time-trap (já existem) e limite de reuniões abertas por número.</td><td>Specs de segurança e revisão independente</td></tr>
+    <tr><td><code>RA-06</code></td><td><b>Sem <code>&lt;select&gt;</code> nativo.</b> Escolhas usam <code>ChoiceSelect</code>. Alvos de toque de 44 px, teclado e leitor de tela.</td><td>Conferência no navegador real</td></tr>
+    <tr><td><code>RA-07</code></td><td><b>Linguagem simples.</b> Frases curtas, uma ação principal por tela, estado vazio com 1 frase + 1 botão, sem termo técnico e sem nicho (a plataforma serve Hub2You e Autonomia).</td><td>Revisão de textos pelo Rodrigo no protótipo</td></tr>
+    <tr><td><code>RA-08</code></td><td><b>Fuso correto.</b> O cliente vê o horário no fuso dele. Fuso inválido falha de forma explícita, sem cair em UTC em silêncio (resolvedor atual).</td><td>Specs com fusos distintos</td></tr>
+    <tr><td><code>RA-09</code></td><td><b>Sem regex para interpretar texto de pessoa.</b> Validação de telefone usa a biblioteca do domínio. A IA da Fase 3 decide a intenção com o modelo.</td><td>Revisão de código</td></tr>
+    <tr><td><code>RA-10</code></td><td><b>i18n e documentação.</b> pt_BR e en com paridade; Guia da Plataforma regenerado (<code>pnpm guia:build</code> e <code>guia:check</code>); artigo 10.11 da Central de Ajuda atualizado.</td><td>CI verde</td></tr>
+    <tr><td><code>RA-11</code></td><td><b>Qualidade antes de "pronto".</b> Suíte do escopo completa e lida, tester com asserts rígidos, revisor independente antes do merge e print de cada tela renderizada.</td><td>Relatório anexado à PR</td></tr>
+    <tr><td><code>RA-12</code></td><td><b>Rollback escrito antes do deploy.</b> Desligar a flag e voltar a imagem anterior; migrations aditivas dispensam reversão de banco.</td><td>Comando e ETA no PR</td></tr>
+    <tr><td><code>RA-13</code></td><td><b>Simplicidade provada com pessoas.</b> Em teste com 5 pessoas leigas, que nunca viram o sistema, pelo menos 4 concluem sozinhas, sem ajuda, o agendamento (como cliente) e a criação da página (como admin).</td><td>Relatório curto do teste</td></tr>
+    <tr><td><code>RA-14</code></td><td><b>Leitura e toque.</b> Texto de pelo menos 16 px, contraste AA, alvos de 44 px, zoom de 200% sem quebrar, leitor de tela e uma ação principal por tela.</td><td>Conferência no navegador e em aparelho</td></tr>
+    <tr><td><code>RA-15</code></td><td><b>Abre onde o cliente está.</b> Funciona no navegador interno do WhatsApp e do Instagram, no iPhone (Safari) e no Android (Chrome), sem login, sem baixar aplicativo e sem pop-up.</td><td>Print em aparelho real</td></tr>
+    <tr><td><code>RA-16</code></td><td><b>Rápida.</b> A página pública fica pronta para uso em até 3 segundos em 4G (meta proposta, a medir) e não carrega bibliotecas pesadas.</td><td>Medição registrada</td></tr>
+    <tr><td><code>RA-17</code></td><td><b>Sem beco sem saída.</b> Toda tela de erro, página pausada ou sem horário oferece uma próxima ação: outro dia, pedir contato ou falar no WhatsApp.</td><td>Teste por cenário</td></tr>
+    <tr><td><code>RA-18</code></td><td><b>Consentimento e dados mínimos (LGPD).</b> Aviso sobre as mensagens antes de confirmar; "Parar avisos" em toda mensagem automática; só nome e WhatsApp são obrigatórios; os dados não servem a outra finalidade.</td><td>Revisão de texto e teste</td></tr>
+    <tr><td><code>RA-19</code></td><td><b>Medição.</b> Eventos registrados (enviado, aberto, agendado, confirmou, compareceu, faltou), sem dado pessoal além do necessário, alimentando o painel e a linha de base de faltas.</td><td>Specs dos eventos</td></tr>
+    <tr><td><code>RA-20</code></td><td><b>Marca sem quebrar.</b> Logo, foto e cor aplicados nas telas do cliente com contraste corrigido sozinho; nada quebra quando faltam logo ou foto.</td><td>Print com e sem logo</td></tr>
+    <tr><td><code>RA-21</code></td><td><b>Permissões por pessoa.</b> Toda rota nova tem policy e entra numa matriz de testes (administrador, só vê, gerencia, agente sem função, função sem o módulo). Fica fora de qualquer função: usuários, funções, integrações, conexão de caixas, conta e faturamento.</td><td>Matriz de testes verde</td></tr>
+  </table></div>
+</div></section>
+
+<section id="fases"><div class="wrap">
+  <h2>Escopo e fases</h2>
+  <p class="sub">Cada fase entrega valor sozinha e é implantada com OK do Rodrigo.</p>
+  <div class="scroll"><table>
+    <tr><th style="width:70px">Fase</th><th>Entrega</th><th style="width:150px">Jornadas</th></tr>
+    <tr><td><b>F1</b></td><td><b>Destravar, link por cliente e primeira impressão.</b> Provider <code>internal</code>; locais (vídeo e voz no WhatsApp, link do agente, presencial); botão "Agendar" no card e na conversa (enviar na conversa ou copiar o link do cliente, com texto pronto); página pública com próximo horário livre, aviso de mensagens, "Salvar na minha agenda" e "Nenhum horário serve?"; e-mail opcional; configuração em 6 passos com modelos, marca (logo, foto, cor), prévia, "Testar no meu WhatsApp" e "Pausar página"; eventos de medição; módulo "Agendamento" nas funções personalizadas e pausa dos links de quem sai.<br><span class="tag">4 PRs sugeridas</span> back-end · página pública · link por cliente · configuração</td><td>J1, J2, J3, J4 (parte), J8 (parte)</td></tr>
+    <tr><td><b>F2</b></td><td><b>Fazer o cliente comparecer e medir.</b> Três avisos no WhatsApp; "Vou estar lá", mudar ou cancelar pelo link; status "Confirmou" no card e na agenda de hoje; "Enviar link para marcar outro horário" quando faltou; pergunta de mover etapa depois da conversa; painel de números e lista de quem não marcou; feriados nacionais fechados; várias durações por página; passar para outra pessoa as reuniões de quem saiu; "Meus horários".</td><td>J4 (resto), J5, J7, J8 (resto)</td></tr>
+    <tr><td><b>F3</b></td><td><b>Agente de IA que agenda.</b> Ferramenta nova nos agentes: oferece horários reais e cria a reunião dentro da conversa.</td><td>J6</td></tr>
+    <tr><td><b>F4</b></td><td><b>Extras, só se você pedir.</b> Rodízio entre agentes, redirecionamento depois de agendar com evento de conversão para anúncios, perguntas personalizadas, sinal de pagamento, feed ICS, "enviar 3 horários" em texto, sala de vídeo própria (Jitsi).</td><td>—</td></tr>
+  </table></div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><h3>Fora de escopo</h3><ul class="clean"><li>Vídeo automático por WhatsApp (não há API oficial)</li><li>APIs não oficiais de link de chamada</li><li>Sincronização 2-vias para reuniões <code>internal</code></li><li>Cobrança, gravação e transcrição</li></ul></div>
+    <div class="card"><h3>Métricas (a medir)</h3><ul class="clean"><li>Contas com página publicada sem Google/MS</li><li>Reuniões marcadas pelo link na conversa</li><li>Faltas (no-show) antes e depois dos lembretes</li><li>Tempo do "Agendar" até a confirmação</li><li>Pessoas leigas que concluem sozinhas (meta: 4 de 5)</li><li>Quantos abriram o link e não marcaram</li></ul><p style="margin-top:8px;font-size:14px">Metas numéricas: definir após medir a linha de base.</p></div>
+    <div class="card"><h3>Rollout</h3><ul class="clean"><li>Flag de instalação, desligada por padrão</li><li>Primeiro numa conta piloto</li><li>Rollback: desligar a flag e voltar a imagem anterior</li><li>Deploy só com OK explícito</li></ul></div>
+  </div>
+</div></section>
+
+<section id="tecnico"><div class="wrap">
+  <h2>Base técnica (resumo)</h2>
+  <p class="sub">Proposta de alto nível. O plano técnico detalhado vem depois da aprovação deste PRD.</p>
+  <div class="grid3">
+    <div class="card"><h3>Reaproveita</h3><ul class="clean"><li>Guards <code>external_event_id.blank?</code>: cancelar, remarcar e sincronizar já pulam o provedor</li><li><code>AvailabilityService</code> por agente em caixa compartilhada</li><li>Advisory lock e re-checagem do slot (anti dupla reserva)</li><li><code>MessageSender</code>: mensagem de sessão ou template conforme a janela de 24h</li><li><code>RecordOutcomeService</code> e o fluxo de resultado</li></ul></div>
+    <div class="card"><h3>Muda (aditivo)</h3><ul class="clean"><li>Enum <code>provider</code> ganha <code>internal</code>; <code>online_meeting_type</code> ganha WhatsApp vídeo/voz, link do agente e presencial</li><li><code>inbox</code> deixa de ser obrigatório em perfil e reunião (colunas já aceitam nulo)</li><li><code>MeetingGuest</code>: e-mail opcional + telefone</li><li>Perfil: locais, antecedência mínima, logo, foto e cor</li><li>Eventos do convite (enviado, aberto, agendado, confirmou, compareceu, faltou) alimentam o painel</li><li>Policy nova do módulo <code>agendamento</code> no lugar da regra só de administrador; chave nova na lista de permissões, na matriz da tela de funções e nas traduções</li><li>Tabela nova <code>crm_booking_invites</code>: código curto e opaco, perfil, contato, conversa opcional, validade, aberto em, usado em, cancelado em. Dá link curto, cancelamento e o estado "enviado, aberto, agendado" no card</li></ul></div>
+    <div class="card"><h3>Pontos a confirmar na construção</h3><ul class="clean"><li>Captcha para o link público (há <code>lib/chatwoot_captcha.rb</code> usado no cadastro)</li><li>Permissão do módulo no padrão de funções personalizadas (<code>agendamento_view</code> / <code>_manage</code>)</li><li>Texto e aprovação do template de WhatsApp na Meta</li><li>Comportamento por canal: Cloud API × WAHA</li></ul></div>
+  </div>
+</div></section>
+
+<section id="riscos"><div class="wrap">
+  <h2>Riscos</h2>
+  <div class="scroll"><table>
+    <tr><th>Risco</th><th>Impacto</th><th>Mitigação</th></tr>
+    <tr><td>Número WAHA (não oficial) enviando lembretes automáticos</td><td>Bloqueio do número</td><td>Lembrete só dentro da janela de 24h ou por Cloud API com template; limite de envios por número</td></tr>
+    <tr><td>Link público sem verificação de identidade</td><td>Agendamento falso, agente liga para quem não pediu</td><td>Honeypot, time-trap, rate-limit, captcha, no máximo 2 reuniões abertas por número, origem "link público" visível no card</td></tr>
+    <tr><td>Template do WhatsApp demora a ser aprovado</td><td>Lembrete fora da janela não sai</td><td>Fase 2 funciona com mensagem de sessão; template entra assim que aprovado; falha de envio avisa o agente e nunca desfaz a reunião</td></tr>
+    <tr><td>Link do cliente encaminhado a outra pessoa</td><td>Terceiro agenda como se fosse o cliente</td><td>Link vale 7 dias, uma reunião aberta por link, número conferido na confirmação, origem "link do cliente" no card e cancelamento pelo agente</td></tr>
+    <tr><td>Delegar demais por função</td><td>Pessoa com função acessa o que não devia</td><td>Lista fechada do que nunca se delega, policy em toda rota e matriz de testes (J8-A14, RA-21)</td></tr>
+    <tr><td>F1 grande demais atrasa a primeira entrega</td><td>Nada vai ao ar por muito tempo</td><td>4 PRs pequenas, cada uma com flag; marca e modelos podem sair numa PR final da F1 sem travar o resto</td></tr>
+    <tr><td>Cor da marca com pouco contraste</td><td>Texto ilegível na página do cliente</td><td>Cores prontas e correção automática de contraste (RA-20)</td></tr>
+    <tr><td>Mudar validações do <code>Meeting</code> afetar Google/MS</td><td>Regressão</td><td>RA-01 e provider <code>internal</code> em ramo paralelo</td></tr>
+    <tr><td>Migrations em produção</td><td>Colisão de versão ou travamento</td><td>Só aditivas; conferir PRs abertas; OK explícito para aplicar</td></tr>
+  </table></div>
+</div></section>
+
+<section id="decisoes"><div class="wrap">
+  <h2>Decisões</h2>
+  <div class="grid3">
+    <div class="card"><span class="tag ok">Fechadas</span><ul class="clean"><li><b>D1.</b> Vídeo: o agente liga pelo WhatsApp ou cola o próprio link. Sem infraestrutura nova.</li><li><b>D2.</b> Link público genérico: sem verificação por e-mail, protegido por captcha e rate-limit. Link da conversa dispensa verificação.</li><li><b>D3.</b> Este PRD substitui o <code>booking_independente_prd.md</code>; a sala própria vira F4 opcional.</li><li><b>D4.</b> O link por cliente entra na F1, porque é o maior ganho.</li></ul></div>
+    <div class="card"><span class="tag amb">Pendentes</span><ul class="clean"><li>Link do cliente: código curto com tabela (recomendado, permite cancelar e acompanhar) ou token longo sem tabela</li><li>Validade do link do cliente (proposta: 7 dias)</li><li>Nome e lugar do item no menu (proposta: Configurações › Agendamento)</li><li>Nome da flag de instalação</li><li>Texto dos modelos de WhatsApp</li><li>Até quanto tempo antes o cliente pode cancelar (proposta: 2 horas)</li><li>Limite de reuniões abertas por número (proposta: 2)</li></ul></div>
+    <div class="card"><span class="tag amb">Recomendadas, aguardam seu OK</span><ul class="clean"><li><b>D5.</b> Três avisos por padrão: ao marcar, 1 dia antes e 1 hora antes.</li><li><b>D6.</b> Na F1: modelos prontos, marca, "Nenhum horário serve?" e atalho de próximo horário.</li><li><b>D7.</b> Painel de números e lista de quem não marcou na F2.</li><li><b>D8.</b> Rodízio, conversão para anúncios, perguntas e sinal ficam na F4.</li><li><b>D9.</b> "Agendamento" vira módulo próprio nas funções (Sem acesso, Ver, Gerenciar). Agente sem função agenda para os clientes dele e vê só o dele.</li></ul></div>
+    <div class="card"><span class="tag">Próximos passos</span><ul class="clean"><li>Aprovar este PRD</li><li>Abrir a issue e o épico, com os campos do Project Autonom.ia Dev</li><li>Plano técnico da F1 com revisor independente</li><li>Construir a F1 em PRs pequenas</li></ul></div>
+  </div>
+</div></section>
+
+</main>
+<div class="wrap"><footer>Rascunho gerado a partir da leitura do código em 09/10/2026. Nada foi implantado.</footer></div>
+
+
+<script>
+// Opcional: abre a etapa indicada no endereço (#jornada-N-M). A página funciona sem este script.
+try {
+  var h = location.hash;
+  if (h.indexOf('#jornada-') === 0) {
+    var p = h.slice(9).split('-');
+    var j = document.getElementById('j' + p[0]);
+    var s = document.getElementById('s' + p[0] + '-' + (p[1] || 1));
+    if (j) j.checked = true;
+    if (s) s.checked = true;
+  }
+} catch (e) { /* sem script a página continua navegável */ }
+</script>
+</body>
+</html>

@@ -65,6 +65,43 @@ describe('#getters', () => {
     ]);
   });
 
+  it('getCardAttributes keeps only CRM card definitions', () => {
+    const state = {
+      records: [
+        {
+          attribute_display_name: 'Plan',
+          attribute_display_type: 'list',
+          attribute_key: 'plan',
+          attribute_model: 'card_attribute',
+        },
+        {
+          attribute_display_name: 'Industry',
+          attribute_display_type: 'text',
+          attribute_key: 'industry',
+          attribute_model: 'company_attribute',
+        },
+        {
+          attribute_display_name: 'Language',
+          attribute_display_type: 'text',
+          attribute_key: 'language',
+          attribute_model: 'contact_attribute',
+        },
+      ],
+    };
+    expect(getters.getCardAttributes(state)).toEqual([
+      {
+        attributeDisplayName: 'Plan',
+        attributeDisplayType: 'list',
+        attributeKey: 'plan',
+        attributeModel: 'card_attribute',
+      },
+    ]);
+    expect(getters.getContactAttributes(state)).toHaveLength(1);
+    expect(getters.getAttributesByModel(state)('contact_attribute')).toEqual([
+      state.records[2],
+    ]);
+  });
+
   it('getUIFlags', () => {
     const state = {
       uiFlags: {

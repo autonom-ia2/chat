@@ -60,6 +60,11 @@ const ERROR_KEYS = {
   token_invalid: 'TOKEN_INVALID',
   invalid_ad_account: 'INVALID_AD_ACCOUNT',
   not_connected: 'NOT_CONNECTED',
+  login_failed: 'LOGIN_FAILED',
+  login_unavailable: 'LOGIN_UNAVAILABLE',
+  missing_ads_read: 'MISSING_ADS_READ',
+  no_ad_account: 'NO_AD_ACCOUNT',
+  invalid_token: 'TOKEN_INVALID',
 };
 
 export const errorMessageKey = error => {

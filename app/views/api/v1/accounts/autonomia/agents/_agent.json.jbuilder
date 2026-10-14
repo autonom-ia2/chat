@@ -33,10 +33,16 @@ json.tone agent.tone
 # `audience`/`response_window` (#284 · Entrega 2a): público-alvo e horário de atuação (PanelTune).
 # `audience_unknown_contact`: o que fazer com conversa sem contato quando há público-alvo.
 # `faq_suggestions` (#284 · 2b): toggle da geração de sugestões de FAQ (aba Conhecimento).
+# `booking_agent_ids` (#1307): as pessoas da página liberadas para a IA, como gravadas (conferidas ao salvar; vazio =
+# todas). Id que deixou de ser da página depois continua aqui até o próximo salvar; a IA confere de novo a cada turno.
+# `booking_page_id` (#1196): a página de agendamento que liga a agenda da IA (PanelTune).
 json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id', 'confidence_threshold',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
-                                    'faq_suggestions')
+                                    'faq_suggestions', 'booking_page_id', 'booking_agent_ids')
+# #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
+# escolha da página quando é false.
+json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)
 # Revisor v2: MAPA DE TEMAS + confiança geral + resumo da base (UI de Conhecimento). Seguros de
 # expor (vêm do jsonb `config`, NUNCA de instruction/scaffold). Já estão dentro de `config`; expô-los
 # no topo dá chaves estáveis ao FE.
@@ -44,9 +50,11 @@ json.topic_map Array(agent.topic_map)
 json.knowledge_confidence agent.knowledge_confidence
 json.knowledge_summary agent.knowledge_summary
 json.enabled agent.enabled
-# #647 — canais (inboxes) ligados ao agente, lido pelo cartão. `size` usa o preload da listagem
-# (index, sem N+1) e só faz um COUNT no detalhe.
-json.channels_count agent.agent_inboxes.size
+# #647 — canais (inboxes) ligados ao agente, lido pelo cartão. Conta sobre os vínculos carregados (o preload da
+# listagem, sem N+1). #1366: só os ativos — a área desmarcada fica arquivada (deleted_at) e não é canal.
+json.channels_count(agent.agent_inboxes.count { |vinculo| vinculo.deleted_at.nil? })
+# #1366 — a tela nunca mostra "Atendendo" para quem não tem onde trabalhar. O predicado é do servidor (Agent).
+json.tem_onde_trabalhar agent.tem_onde_trabalhar?
 # IP oculto: `scaffold` JAMAIS é exposto. `instruction` só aparece em modo manual (texto do
 # próprio usuário, visível); em modo guiado a instrução é gerada pelo Construtor e permanece oculta.
 json.instruction agent.instruction if agent.manual?

@@ -90,12 +90,18 @@ describe('WhatsApp Reauthorize', () => {
       const pending = wrapper.vm.requestAuthorization();
       emitMetaEvent({
         event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+        version: 3,
         data: { waba_id: 'waba-1' },
       });
       await pending;
 
+      // #1315: the backend records which event and payload version Meta sent.
       expect(whatsappChannel.reauthorizeWhatsApp).toHaveBeenCalledWith(
-        expect.objectContaining({ is_coexistence: true })
+        expect.objectContaining({
+          is_coexistence: true,
+          signup_event: 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING',
+          signup_version: '3',
+        })
       );
     });
 
@@ -149,6 +155,8 @@ describe('WhatsApp Reauthorize', () => {
         waba_id: 'waba-9',
         phone_number_id: '',
         is_coexistence: null,
+        signup_event: 'FINISH_ONLY_WABA',
+        signup_version: '',
       });
     });
 

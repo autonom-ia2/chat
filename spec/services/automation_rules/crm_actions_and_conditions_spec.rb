@@ -36,6 +36,15 @@ RSpec.describe AutomationRules::CrmActions do
       expect { run_action('crm_create_card', [next_stage.id]) }.not_to change(Crm::Card, :count)
     end
 
+    it 'crm_create_card cria card novo quando a conversa só tem card fechado (#1197)' do
+      closed = create_card(status: :won)
+
+      expect { run_action('crm_create_card', [next_stage.id]) }.to change(Crm::Card, :count).by(1)
+      card = Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)
+      expect(card).to have_attributes(status: 'open', stage_id: next_stage.id)
+      expect(card.id).not_to eq(closed.id)
+    end
+
     it 'crm_create_card ignora etapa de outra conta' do
       other_account = create(:account)
       _, foreign_stage = create_crm_pipeline(account: other_account, user: create(:user, account: other_account))

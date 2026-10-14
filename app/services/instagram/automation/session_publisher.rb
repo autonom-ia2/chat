@@ -20,6 +20,7 @@ class Instagram::Automation::SessionPublisher
   BROWSER_ACTIONS = %w[search status authorization invite].freeze
   BROWSER_ROLE_ACTIONS = %w[status authorization invite].freeze
   BROWSER_STATUS_VALUES = %w[absent pending accepted].freeze
+  BROWSER_CANDIDATE_KEYS = %w[avatar_url id name username].freeze
   BROWSER_TIMESTAMP = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\z/
   FINGERPRINT = /\A[0-9a-f]{64}\z/
   # Pin every configuration read by SessionStore to the same locked metadata snapshot.
@@ -123,7 +124,7 @@ class Instagram::Automation::SessionPublisher
       completed = operations.complete!(request)
       response = { type: 'browser_operation', operation: 'complete', id: completed.fetch('id'),
                    request_id: completed.fetch('request_id'), state: completed.fetch('state') }
-      response[:error_code] = completed.fetch('error_code') if completed.key?('error_code')
+      response[:error_code] = browser_reply_error_code(request, completed) if completed.key?('error_code')
       response
     end
   end
@@ -222,7 +223,7 @@ class Instagram::Automation::SessionPublisher
     raise Instagram::Automation::OperatorControl::Rejected unless results.is_a?(Array) && results.length <= 100
 
     results.each do |candidate|
-      valid = candidate.is_a?(Hash) && candidate.keys.sort == %w[avatar_url id name username] &&
+      valid = candidate.is_a?(Hash) && browser_candidate_keys?(candidate) &&
               Instagram::Testers::Validation.id?(candidate['id']) &&
               Instagram::Testers::Validation.username?(candidate['username']) &&
               candidate['name'].is_a?(String) && candidate['name'].length <= 500 &&
@@ -231,12 +232,31 @@ class Instagram::Automation::SessionPublisher
     end
   end
 
+  # tester_status is optional (newer VPS) and may be null; Rails checks later
+  # that only the exact searched username carries one.
+  def browser_candidate_keys?(candidate)
+    keys = candidate.keys.sort
+    return true if keys == BROWSER_CANDIDATE_KEYS
+
+    keys == (BROWSER_CANDIDATE_KEYS + ['tester_status']).sort &&
+      [nil, *BROWSER_STATUS_VALUES].include?(candidate['tester_status'])
+  end
+
   def validate_browser_uuid!(value)
     raise Instagram::Automation::OperatorControl::Rejected unless uuid?(value)
   end
 
+  # invite_not_sent is a Rails conclusion for the UI: only Rails can prove the
+  # claim was released, and the browser validates replies against its own codes.
+  # The browser therefore never sends it and gets back the code it sent.
   def validate_browser_error_code!(value)
-    raise Instagram::Automation::OperatorControl::Rejected unless value.is_a?(String) && Instagram::Testers::Error::STATUSES.key?(value)
+    valid = value.is_a?(String) && value != 'invite_not_sent' && Instagram::Testers::Error::STATUSES.key?(value)
+    raise Instagram::Automation::OperatorControl::Rejected unless valid
+  end
+
+  def browser_reply_error_code(request, completed)
+    code = completed.fetch('error_code')
+    code == 'invite_not_sent' ? request.fetch('error_code') : code
   end
 
   def invite_permit_result(operations, request)

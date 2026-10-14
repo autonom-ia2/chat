@@ -153,6 +153,12 @@
           "LEVEL_VIEW": "Vê campanhas e resultados.",
           "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
         },
+        "WHATSAPP_TEMPLATES": {
+          "NAME": "Modelos do WhatsApp",
+          "HINT": "Mensagens que o WhatsApp aprova antes do envio",
+          "LEVEL_VIEW": "Vê os modelos e onde estão em uso.",
+          "LEVEL_MANAGE": "Cria, altera e apaga modelos no WhatsApp."
+        },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",
@@ -164,6 +170,12 @@
           "HINT": "Regras de automação",
           "LEVEL_VIEW": "Vê as regras.",
           "LEVEL_MANAGE": "Cria e altera regras."
+        },
+        "SCHEDULING": {
+          "NAME": "Agendamento",
+          "HINT": "Páginas de agendamento e seus números. Marcar horário para um cliente não precisa de permissão.",
+          "LEVEL_VIEW": "Vê as páginas de agendamento e os números.",
+          "LEVEL_MANAGE": "Cria, publica e pausa páginas de agendamento."
         },
         "LABELS": {
           "NAME": "Etiquetas",

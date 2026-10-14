@@ -35,19 +35,27 @@ module Autonomia
         # Um vínculo legado/corrompido (criado antes da validação ou por write que burla o Rails)
         # jamais pode fazer a conversa da conta A responder com agente/KB da conta B. Mismatch =>
         # comporta como "sem agente" (nil), nunca 500.
-        agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(
-          inbox_id: conversation.inbox_id, account_id: conversation.account_id
-        )
+        # QUEM responde (#1433): a porta da caixa ou, com a Fase 2 ligada, o dono da conversa (área). Ponto único.
+        agent_inbox = ::Autonomia::Agents::QuemResponde.agent_inbox(conversation)
         return if agent_inbox.nil?
 
         agent = agent_inbox.agent
         return unless agent && agent.account_id == conversation.account_id
-        return unless agent.operating?
-        return if agent.actuation_internal?
-        return if agent.config&.dig('system_key').present?
+        return unless agent.atende_cliente?
         return unless test_allowlist_permits?(conversation, agent)
 
         agent_inbox
+      end
+
+      # O espelho deste vínculo comanda a conversa (é o ai_assignee, ou a conversa está pending, legado) e ela não
+      # está à espera de pessoa: só então uma passagem nova vale. Desde o #1377 o robô segue como ai_assignee depois
+      # do `bot_handoff!` e a própria resposta dele reivindica a conversa, então "o espelho saiu" deixou de ser sinal
+      # de passagem feita; o sinal é a marca de espera, gravada pelo `bot_handoff!` na mesma gravação e apagada
+      # quando uma pessoa entra na conversa (ConversationBotHandoff). Chamar com estado fresco (dentro do with_lock).
+      def self.espelho_no_comando?(conversation, agent_inbox)
+        return false if conversation.bot_handoff_waiting?
+
+        conversation.assignee_agent_bot_id == agent_inbox.agent_bot_id || conversation.pending?
       end
 
       # GUARD-RAIL DE TESTE (aditivo, FAIL-CLOSED). Quando o agente tem

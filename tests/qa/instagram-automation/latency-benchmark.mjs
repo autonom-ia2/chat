@@ -35,6 +35,13 @@ const GRAPHQL_PATH = '/api/graphql/';
 const SEARCH_PATH = '/roles/instagram/typeahead/user/';
 const ROLES_PAGE_PATH = '/apps/10001/roles/roles/';
 const INVITE_PATH = '/apps/10001/async/instagram/roles/add/';
+// A second typeahead candidate that is already a confirmed tester, so a
+// search must never report its status (it is not the searched username).
+const OTHER_CANDIDATE = Object.freeze({
+  id: '178414000000000002',
+  username: 'latency.other',
+  name: 'Synthetic Other Candidate',
+});
 const MARK_NAMES = new Set([
   'operation_started',
   'operation_finished',
@@ -166,8 +173,12 @@ function namedScenarios(fixture) {
       typeof definition !== 'object' ||
       !['search', 'status', 'invite'].includes(definition.action) ||
       !['result', 'target'].includes(definition.target) ||
-      !['ABSENT', 'CONFIRMED'].includes(definition.roles_target_status) ||
-      !['none', 'target'].includes(definition.typeahead_entries)
+      !['ABSENT', 'PENDING', 'CONFIRMED'].includes(
+        definition.roles_target_status
+      ) ||
+      !['none', 'target', 'target_and_other'].includes(
+        definition.typeahead_entries
+      )
     )
       fail('invalid_named_scenario_definition');
   }
@@ -221,7 +232,9 @@ function rolesDocument(scenario, fixture) {
     id: fixture.target.id,
     status: definition.roles_target_status,
   };
-  const users = definition.roles_target_status === 'CONFIRMED' ? [user] : [];
+  const users = definition.roles_target_status === 'ABSENT' ? [] : [user];
+  if (definition.typeahead_entries === 'target_and_other')
+    users.push({ id: OTHER_CANDIDATE.id, status: 'CONFIRMED' });
   return {
     data: {
       get_app_roles: {
@@ -234,19 +247,23 @@ function rolesDocument(scenario, fixture) {
   };
 }
 
-function typeaheadDocument(fixture) {
-  return {
-    payload: {
-      entries: [
-        {
-          uniqueID: fixture.target.id,
-          text: fixture.target.username,
-          subtitle: fixture.target.name,
-          photo: null,
-        },
-      ],
+function typeaheadDocument(fixture, typeaheadEntries) {
+  const entries = [
+    {
+      uniqueID: fixture.target.id,
+      text: fixture.target.username,
+      subtitle: fixture.target.name,
+      photo: null,
     },
-  };
+  ];
+  if (typeaheadEntries === 'target_and_other')
+    entries.push({
+      uniqueID: OTHER_CANDIDATE.id,
+      text: OTHER_CANDIDATE.username,
+      subtitle: OTHER_CANDIDATE.name,
+      photo: null,
+    });
+  return { payload: { entries } };
 }
 
 function fixtureResponse(scenario, fixture, url, method) {
@@ -262,9 +279,10 @@ function fixtureResponse(scenario, fixture, url, method) {
   if (url.pathname === GRAPHQL_PATH)
     return jsonResponse(rolesDocument(scenario, fixture));
   if (url.pathname === SEARCH_PATH) {
-    if (fixture.scenarios[scenario]?.typeahead_entries !== 'target')
+    const typeaheadEntries = fixture.scenarios[scenario]?.typeahead_entries;
+    if (!['target', 'target_and_other'].includes(typeaheadEntries))
       return jsonResponse({ payload: { entries: [] } });
-    return jsonResponse(typeaheadDocument(fixture));
+    return jsonResponse(typeaheadDocument(fixture, typeaheadEntries));
   }
   if (url.pathname === INVITE_PATH) return jsonResponse({ payload: {} });
   return jsonResponse({ error: 'fixture_path_rejected' }, 404);
@@ -283,6 +301,22 @@ async function listen(server) {
   const address = server.address();
   if (!address || typeof address === 'string') fail('fixture_listener_invalid');
   return address.port;
+}
+
+// Long synthetic faults stop waiting when the browser drops the request, so a
+// cancelled fetch cannot keep the harness process alive after its last case.
+async function waitWhileConnected(response, milliseconds) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  response.once('close', abort);
+  try {
+    await delay(milliseconds, undefined, { signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    response.off('close', abort);
+  }
 }
 
 function closeServer(server) {
@@ -460,7 +494,11 @@ export async function createFixtureTransport(fixture, scenarioNames) {
             response.destroy();
             return;
           }
-          if (selected.delayMs) await delay(selected.delayMs);
+          if (
+            selected.delayMs &&
+            !(await waitWhileConnected(response, selected.delayMs))
+          )
+            return;
           result = { ...result, ...selected };
         }
         response.writeHead(result.status, {
@@ -470,8 +508,26 @@ export async function createFixtureTransport(fixture, scenarioNames) {
           'content-type': result.contentType || 'application/json',
           'content-length': Buffer.byteLength(result.body),
         });
+        if (result.stallBodyAfterHeadersMs) {
+          // Headers and the first body byte arrive; the rest of the body stalls.
+          const body = Buffer.from(result.body, 'utf8');
+          response.write(body.subarray(0, 1));
+          if (
+            !(await waitWhileConnected(
+              response,
+              result.stallBodyAfterHeadersMs
+            ))
+          )
+            return;
+          response.end(body.subarray(1));
+          return;
+        }
         response.end(result.body);
       } catch {
+        if (response.headersSent) {
+          response.destroy();
+          return;
+        }
         response.writeHead(500, {
           'access-control-allow-origin': '*',
           'content-type': 'application/json',

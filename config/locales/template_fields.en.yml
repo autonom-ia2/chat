@@ -1,0 +1,38 @@
+en:
+  template_fields:
+    fields:
+      cliente:
+        nome: 'Customer name'
+        primeiro_nome: 'Customer first name'
+        telefone: 'Customer mobile'
+        email: 'Customer email'
+        cliente_desde: 'Customer since'
+      empresa_cliente:
+        nome: "Customer's company"
+        cnpj: "Customer's company tax ID (CNPJ)"
+      negocio:
+        titulo: 'Deal name'
+        funil: 'Pipeline'
+        etapa: 'Deal stage'
+        valor: 'Deal value'
+        responsavel: 'Person in charge'
+        prazo: 'Deal due date'
+      horario:
+        data_hora: 'Day and time of the appointment'
+        data: 'Appointment date'
+        hora: 'Appointment time'
+        link_gestao: 'Link to confirm, change or cancel'
+      minha_empresa:
+        nome: 'Your company name'
+        endereco: 'Your company address'
+        telefone: 'Your company phone'
+        site: 'Your company website'
+      atendente:
+        nome: 'Name of who is serving'
+      fixo: 'Text you write'
+    types:
+      texto: 'Text'
+      data: 'Date'
+      hora: 'Time'
+      moeda: 'Money'
+      link: 'Link'

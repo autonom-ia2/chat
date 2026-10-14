@@ -22,13 +22,13 @@ const config = () => ({
     tone_instructions: 'Retome apenas pendências reais.',
   },
 });
-const render = async (locale = 'en') => {
+const render = async (locale = 'en', detalhe = true) => {
   CrmKanbanAPI.getAiSettings.mockResolvedValue({ data: { payload: config() } });
   CrmKanbanAPI.updateAiSettings.mockImplementation(async (_id, body) => ({
     data: { payload: body.ai_settings },
   }));
   const wrapper = mount(Panel, {
-    props: { pipelineId: 426 },
+    props: { pipelineId: 426, detalhe },
     global: {
       plugins: [
         createI18n({
@@ -44,14 +44,30 @@ const render = async (locale = 'en') => {
   return wrapper;
 };
 
+const pressedDays = wrapper =>
+  wrapper.findAll(
+    '[aria-labelledby="followup-days-label"] button[aria-pressed="true"]'
+  );
+
 describe('AI follow-up settings', () => {
-  it('keeps AI instructions in reminder mode and saves mode and weekdays', async () => {
+  it('opens on a ready-made summary with a single "Change" for the details', async () => {
+    const wrapper = await render('pt_BR', false);
+    expect(wrapper.get('[data-followup-resumo]').text()).toBe(
+      'Chamamos de volta 3 vezes: em 6 horas, em 3 dias e em 1 semana.'
+    );
+    expect(wrapper.text()).toContain('De segunda a sexta, das 8h às 20h.');
+    expect(wrapper.find('[data-followup-touch]').exists()).toBe(false);
+
+    await wrapper.get('[data-followup-alterar]').trigger('click');
+    expect(wrapper.emitted('alterar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('hides the writing style in reminder mode and saves mode and weekdays', async () => {
     const wrapper = await render();
     await wrapper.get('input[value="ai_reminder"]').setValue(true);
-    expect(wrapper.text()).toContain('No message is sent to the customer');
-    expect(wrapper.get('textarea').element.value).toBe(
-      'Retome apenas pendências reais.'
-    );
+    expect(wrapper.text()).toContain('The customer receives nothing.');
+    expect(wrapper.find('textarea').exists()).toBe(false);
     await wrapper.get('button[aria-label="Saturday"]').trigger('click');
     await wrapper.vm.saveSettings();
     expect(CrmKanbanAPI.updateAiSettings).toHaveBeenCalledWith(
@@ -76,46 +92,52 @@ describe('AI follow-up settings', () => {
         wrapper.get(`button[aria-label="${day}"]`).trigger('click')
       )
     );
-    expect(wrapper.findAll('button[aria-pressed="true"]')).toHaveLength(1);
+    expect(pressedDays(wrapper)).toHaveLength(1);
     wrapper.unmount();
   });
 
   it('retains instructions and days when switching back to automatic messages', async () => {
     const wrapper = await render();
-    await wrapper.get('input[value="ai_reminder"]').setValue(true);
     await wrapper.get('textarea').setValue('Orientação específica');
+    await wrapper.get('input[value="ai_reminder"]').setValue(true);
     await wrapper.get('input[value="auto_send"]').setValue(true);
     expect(wrapper.get('textarea').element.value).toBe('Orientação específica');
-    expect(wrapper.findAll('button[aria-pressed="true"]')).toHaveLength(5);
-    expect(wrapper.text()).toContain('Official WhatsApp');
+    expect(pressedDays(wrapper)).toHaveLength(5);
+    // #1384: sem aviso técnico nem selo por tentativa.
+    expect(wrapper.text()).not.toContain('WhatsApp');
     wrapper.unmount();
   });
+
+  it('lists the attempts in order and keeps each after the previous one', async () => {
+    const wrapper = await render();
+    expect(wrapper.findAll('[data-followup-touch]')).toHaveLength(3);
+
+    await wrapper.get('[data-vezes="1"]').trigger('click');
+    expect(wrapper.vm.form.autoFollowup.intervalsHours).toEqual([6]);
+    await wrapper.get('[data-vezes="3"]').trigger('click');
+    const intervals = wrapper.vm.form.autoFollowup.intervalsHours;
+    expect(intervals).toHaveLength(3);
+    expect(intervals[1]).toBeGreaterThan(intervals[0]);
+    expect(intervals[2]).toBeGreaterThan(intervals[1]);
+    wrapper.unmount();
+  });
+
   it('renders both actions in Portuguese without English fallback', async () => {
     const wrapper = await render('pt_BR');
-    expect(wrapper.text()).toContain('IA envia ao cliente');
-    expect(wrapper.text()).toContain('WhatsApp oficial:');
+    expect(wrapper.text()).toContain('Mandar mensagem ao cliente');
     expect(wrapper.get('button[aria-label="Segunda-feira"]').text()).toBe(
       'Seg'
     );
     await wrapper.get('input[value="ai_reminder"]').setValue(true);
-    expect(wrapper.text()).toContain('Nenhuma mensagem é enviada ao cliente.');
-    expect(wrapper.text()).toContain('Instruções para a IA');
-    expect(wrapper.text()).not.toContain('WhatsApp oficial:');
+    expect(wrapper.text()).toContain('O cliente não recebe nada.');
     expect(wrapper.text()).not.toContain('CRM_KANBAN.');
-    expect(
-      pt_BR.CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TIMELINE_TOUCH_REMINDER
-    ).toContain('lembrete para a equipe');
+    expect(wrapper.text()).not.toContain('CRM_FUNIL.');
     wrapper.unmount();
   });
 
   it('can disable a follow-up even when its hidden schedule is invalid', async () => {
-    const wrapper = await render('pt_BR');
-    const numbers = wrapper
-      .findAll('section')
-      .at(-1)
-      .findAll('input[type="number"]');
-    await numbers[4].setValue(8);
-    await numbers[5].setValue(8);
+    const wrapper = await render('pt_BR', false);
+    wrapper.vm.form.autoFollowup.intervalsHours = [8, 8, 8];
     const enabled = wrapper.findAll('input[type="checkbox"]').at(-1);
     await enabled.setValue(false);
     expect(await wrapper.vm.saveSettings()).toBe(true);
@@ -130,14 +152,12 @@ describe('AI follow-up settings', () => {
     wrapper.unmount();
   });
 
-  it('rejects fractional hours before making a save request', async () => {
+  it('rejects an attempt that is not after the previous one before saving', async () => {
     const wrapper = await render();
     CrmKanbanAPI.updateAiSettings.mockClear();
-    const numbers = wrapper
-      .findAll('section')
-      .at(-1)
-      .findAll('input[type="number"]');
-    await numbers[4].setValue(8.5);
+    wrapper.vm.form.autoFollowup.intervalsHours = [72, 72, 168];
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain('Pick a longer time');
     expect(await wrapper.vm.saveSettings()).toBe(false);
     expect(CrmKanbanAPI.updateAiSettings).not.toHaveBeenCalled();
     wrapper.unmount();

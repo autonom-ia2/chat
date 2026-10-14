@@ -58,4 +58,55 @@ RSpec.describe Autonomia::Agents::AgentInbox do
       expect(link.errors[:agent_bot]).to include('must belong to the same account')
     end
   end
+
+  # #1433 F1a — papel na caixa: a porta atende primeiro (uma por caixa); a área recebe quando alguém passa a conversa.
+  describe 'papel na caixa' do
+    let(:porta) { build_link.tap(&:save!) }
+    let(:outro_agente) { Autonomia::Agents::Agent.create!(account: account, name: 'Equipe', agent_type: 'custom') }
+    let(:bot_da_area) { AgentBot.create!(account: account, name: 'Espelho da área') }
+
+    def area(overrides = {})
+      build_link({ agent: outro_agente, agent_bot: bot_da_area, papel: 'area' }.merge(overrides))
+    end
+
+    it 'nasce porta e separa os vínculos pelos escopos .porta e .area' do
+      porta
+      vinculo_da_area = area.tap(&:save!)
+
+      expect(porta.papel).to eq('porta')
+      expect(described_class.porta).to contain_exactly(porta)
+      expect(described_class.area).to contain_exactly(vinculo_da_area)
+    end
+
+    it 'aceita só os papéis porta e area' do
+      expect(build_link(papel: 'gerente')).not_to be_valid
+    end
+
+    it 'recusa área em caixa sem porta ativa' do
+      expect(area).not_to be_valid
+
+      porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(area).not_to be_valid
+    end
+
+    it 'aceita área em caixa com porta ativa, e mais de uma área por caixa' do
+      porta
+      area.save!
+      terceiro = Autonomia::Agents::Agent.create!(account: account, name: 'Financeiro', agent_type: 'custom')
+
+      expect(area(agent: terceiro, agent_bot: AgentBot.create!(account: account, name: 'Espelho 3'))).to be_valid
+    end
+
+    it 'recusa o mesmo agente como porta e área na mesma caixa' do
+      porta
+
+      expect(area(agent: agent)).not_to be_valid
+    end
+
+    it 'continua recusando duas portas na mesma caixa' do
+      porta
+
+      expect(build_link(agent: outro_agente, agent_bot: bot_da_area)).not_to be_valid
+    end
+  end
 end

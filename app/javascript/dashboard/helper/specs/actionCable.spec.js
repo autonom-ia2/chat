@@ -10,6 +10,11 @@ vi.mock('shared/helpers/mitt', () => ({
   },
 }));
 
+vi.mock(
+  'dashboard/routes/dashboard/crm/composables/useCrmConversationStages',
+  () => ({ onCrmSubjectsChangedRemotely: vi.fn() })
+);
+
 vi.mock('dashboard/composables/useImpersonation', () => ({
   useImpersonation: () => ({
     isImpersonating: { value: false },
@@ -450,6 +455,45 @@ describe('ActionCableConnector - Copilot Tests', () => {
         BUS_EVENTS.PROSPECTING_LEAD_UPDATED,
         expect.anything()
       );
+    });
+  });
+
+  describe('autonomia build thread updated (#1367)', () => {
+    it('avisa a tela do Construtor, só da conta aberta', () => {
+      actionCable.onReceived({
+        event: 'autonomia.build_thread.updated',
+        data: { account_id: 1, id: 7 },
+      });
+      actionCable.onReceived({
+        event: 'autonomia.build_thread.updated',
+        data: { account_id: 2, id: 8 },
+      });
+
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
+      expect(mockDispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/buildThreadUpdated',
+        { account_id: 1, id: 7 }
+      );
+    });
+  });
+
+  describe('crm subjects changed (#1145)', () => {
+    it('relê os assuntos da conversa avisada, só da conta aberta', async () => {
+      const { onCrmSubjectsChangedRemotely } = await import(
+        'dashboard/routes/dashboard/crm/composables/useCrmConversationStages'
+      );
+
+      actionCable.onReceived({
+        event: 'crm.subjects.changed',
+        data: { account_id: 1, conversation_id: 42 },
+      });
+      actionCable.onReceived({
+        event: 'crm.subjects.changed',
+        data: { account_id: 2, conversation_id: 43 },
+      });
+
+      expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledTimes(1);
+      expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledWith(42);
     });
   });
 

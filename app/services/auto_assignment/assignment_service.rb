@@ -33,7 +33,9 @@ class AutoAssignment::AssignmentService
   end
 
   def unassigned_conversations(limit)
-    scope = inbox.conversations.unassigned.open
+    # Inclui as que o robô passou e seguem à espera de pessoa (#1377), menos as que o motor de entrega do CRM segura
+    # ou convidou (#1454).
+    scope = inbox.conversations.awaiting_person.outside_crm_delivery.open
 
     # Skip stale backlog with no activity beyond the age threshold
     policy = inbox.assignment_policy
@@ -75,7 +77,9 @@ class AutoAssignment::AssignmentService
     round_robin_selector.select_agent(agents)
   end
 
+  # Time e acesso por funil (#1148): o rodízio só escolhe quem pode ver a conversa (decisão do Rodrigo, 11/10).
   def filter_agents_by_team(agents, conversation)
+    agents = Crm::Access::Recipients.new(conversation).filter_members(agents) if conversation.present?
     return agents if conversation&.team_id.blank?
 
     team = conversation.team
@@ -111,7 +115,7 @@ class AutoAssignment::AssignmentService
 
     Conversation.transaction do
       locked = inbox.conversations
-                    .where(id: conversation.id).unassigned
+                    .where(id: conversation.id).awaiting_person.outside_crm_delivery
                     .lock('FOR UPDATE SKIP LOCKED')
                     .first
       next false unless locked

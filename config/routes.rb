@@ -52,6 +52,15 @@ Rails.application.routes.draw do
     # email-verified booking.
     get '/book/:slug', to: 'public_booking/pages#show', as: :public_booking_page
     get '/book/:slug/confirm', to: 'public_booking/pages#show', as: :public_booking_confirm_page
+    # Imagem de prévia do link (#1282): o `og:image` das páginas de agendamento. A versão no caminho só decide o cache.
+    get '/book/:slug/preview/:version', to: 'public_booking/preview_images#show', as: :public_booking_preview_image,
+                                        defaults: { format: :png }, constraints: { format: 'png' }
+    # Link curto próprio (#1282, #1299): `/a/<conta>/<página>` abre a página; `/a/<conta>/<página>/<pessoa>`, o link
+    # de uma pessoa. O formato antigo (`/a/<página>` e `/a/<página>/<pessoa>`) cai nas mesmas rotas: quem decide o que
+    # cada pedaço é fica em `Crm::BookingV2::ShortLink.resolve`.
+    get '/a/:first(/:second(/:third))', to: 'public_booking/pages#short', as: :public_booking_short_page
+    # Link por cliente e de gestão da reunião (#1189/#1190): sempre a página v2.
+    get '/b/:code', to: 'public_booking/pages#invite', as: :public_booking_invite_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
     # Kit do desenvolvedor do link de site (CA-1.6, #1068).
     get '/l/:code/kit', to: 'public/tracked_link_kits#show', as: :public_tracked_link_kit
@@ -230,6 +239,10 @@ Rails.application.routes.draw do
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]
             resource :overview, only: [:show]
+            get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
+            post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
+            get 'conversa_aberta', to: 'conversa_aberta#show', as: :conversa_aberta # #1335
+            post 'conversa_aberta/escrever', to: 'conversa_aberta#escrever', as: :conversa_aberta_escrever # #1335
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients
@@ -261,6 +274,11 @@ Rails.application.routes.draw do
                 post :improve_criteria
               end
             end
+            # Funil ainda não salvo (#1384): critério padrão e IA das etapas.
+            resource :stage_criteria, only: [], controller: 'stage_criteria' do
+              get :defaults
+              post :improve
+            end
             resources :stages, only: [:update, :destroy] do
               post :reorder, on: :collection
               resources :stage_automations, only: [:index, :create]
@@ -269,6 +287,7 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
@@ -305,11 +324,22 @@ Rails.application.routes.draw do
                 post :reschedule
               end
             end
+            # #1460: lembrete que repete (ver, mudar esta e as próximas, pausar, retomar, encerrar).
+            resources :follow_up_series, only: [:show, :update] do
+              member do
+                post :pause
+                post :resume
+                post :end, action: :finish
+              end
+            end
             resources :meetings, only: [:index, :create, :show, :update, :destroy] do
               member do
                 post :sync
                 post :record_outcome
                 post :summarize
+                # Dia da reunião (#1193): "Lembrar" e "Enviar link para marcar outro horário".
+                post :remind, to: 'meeting_actions#remind'
+                post :rebook_link, to: 'meeting_actions#rebook_link'
               end
               collection do
                 post :suggest_times
@@ -322,6 +352,7 @@ Rails.application.routes.draw do
             end
             resource :google_conversion_feed, only: [:create]
             resource :meta_ads_connection, only: [:show, :update, :destroy] do
+              post :facebook_login
               get :ad_accounts
               get :pixels
               post :selection
@@ -350,6 +381,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
+            post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
             get :kanban, to: 'kanban#index'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
@@ -369,6 +403,9 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            get :caixas, to: 'caixas#index'
+            get 'caixas/:inbox_id', to: 'caixas#show'
+            put 'caixas/:inbox_id', to: 'caixas#update'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate
@@ -382,12 +419,66 @@ Rails.application.routes.draw do
                 delete 'agent_links/:link_id', action: :destroy_agent_link
               end
             end
+            # Agendamento WhatsApp-first (#1187): páginas novas (page_version 2), flag crm_booking_v2 + módulo agendamento.
+            resources :booking_pages, only: [:index, :show, :create, :update, :destroy] do
+              # Passar reuniões de uma pessoa para outra (#1195): prévia sem gravar e a passagem.
+              collection do
+                get :reassign_preview
+                post :reassign
+                # Marcar pela agenda no painel (#1265): páginas que servem, horários e a reunião.
+                get :bookable, to: 'booking_page_meetings#index'
+                # Link curto (#1282): o nome está livre? Sem nome, sugere um a partir do título.
+                get :short_name, to: 'booking_page_short_names#show'
+              end
+              member do
+                get :slots, to: 'booking_page_meetings#slots'
+                post :meetings, to: 'booking_page_meetings#create'
+                post :publish
+                post :pause
+                post :preview_token
+                post :logo
+                # Logo para fundo escuro (#1295): enviar a própria, ou tirar a enviada e voltar para a gerada.
+                post :logo_dark
+                delete :logo_dark, action: :destroy_logo_dark
+                post :photo
+                # Identidade salva da conta (#1289): usar na página e salvar a partir da página.
+                post :apply_identity
+                post :save_identity
+                get :people
+                put :people, action: :update_people
+                post :test_invite
+                # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA, estado dos pedidos e criação na Meta.
+                post :notice_template_suggestions
+                get :notice_templates
+                post 'notice_templates/create', action: :create_notice_templates
+                # Texto dos avisos com IA (#1354): opções para um aviso, nada salvo.
+                post :notice_text_suggestions
+              end
+            end
+            # Meus horários (#1195): a própria pessoa ajusta dias e horas de agendamento e pausa a agenda.
+            get :my_booking_hours, to: 'my_booking_hours#show'
+            put :my_booking_hours, to: 'my_booking_hours#update'
+            # Link por cliente (#1190): botão Agendar da conversa e do card.
+            resources :booking_invites, only: [:index, :create, :destroy] do
+              member do
+                post :deliver
+                post :copied
+              end
+            end
+            # Painel de resultados do agendamento (#1194): números do período e "abriram e não marcaram".
+            resource :booking_stats, only: [:show] do
+              get :opened_not_booked
+              post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
+            end
           end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
             # membro da conta (não é admin-only como o resto de agents/). Declarado ANTES de resources
             # :agents para nunca casar com agents/:id.
             post 'agents/message_reports', to: 'agents/message_reports#create'
+            # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
+            get 'numeros_da_semana', to: 'numeros_da_semana#index'
+            get 'canais_ocupados', to: 'canais_ocupados#index'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -872,7 +963,19 @@ Rails.application.routes.draw do
 
           resources :inboxes, only: [] do
             resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
+            # Modelos do WhatsApp oficial (#1330): API do fork, controller e policy próprios.
+            resources :whatsapp_templates, only: [:index, :create, :update, :destroy], module: :inboxes do
+              member do
+                get :usage
+              end
+              post :media, on: :collection
+            end
           end
+          # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
+          resources :whatsapp_template_inboxes, only: [:index]
+          resources :whatsapp_message_prices, only: [:index]
+          # Criar com IA e Melhorar com IA na tela de Modelos (#1333): opções de texto, nada é salvo.
+          resources :whatsapp_template_suggestions, only: [:create]
 
           namespace :twitter do
             resource :authorization, only: [:create]
@@ -1173,6 +1276,24 @@ Rails.application.routes.draw do
         post 'booking/:slug/confirm', to: 'booking#confirm'
         get 'booking/:slug', to: 'booking#show'
         post 'booking/:slug', to: 'booking#create'
+      end
+
+      # Agendamento WhatsApp-first (#1187): link por cliente `/b/<code>` (#1190). Só o código opaco autoriza.
+      namespace :v2 do
+        get 'invites/:code', to: 'invites#show'
+        post 'invites/:code/viewed', to: 'invites#viewed'
+        # Gestão da reunião pelo mesmo link (#1192).
+        post 'invites/:code/confirm', to: 'invites#confirm'
+        post 'invites/:code/cancel', to: 'invites#cancel'
+        post 'invites/:code/reschedule', to: 'invites#reschedule'
+        post 'invites/:code/stop_notices', to: 'invites#stop_notices'
+        # Página pública v2 (#1189): só o slug opaco (página ou link individual) autoriza; ICS com token no caminho.
+        get 'booking/:slug/slots', to: 'booking#slots'
+        get 'booking/:slug/next_slot', to: 'booking#next_slot'
+        post 'booking/:slug/contact_request', to: 'booking#contact_request'
+        get 'booking/:slug', to: 'booking#show'
+        post 'booking/:slug', to: 'booking#create'
+        get 'ics/:token', to: 'ics#show'
       end
     end
   end

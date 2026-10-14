@@ -74,6 +74,8 @@ def validate(stack, role, env, uid, gid=None):
     if role == 'manager':
         require(env.get('INSTAGRAM_TESTER_RUNTIME_MODE') == 'vps')
         require(env.get('INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED', 'false') in ('true', 'false'))
+        require(env.get('INSTAGRAM_TESTER_SEARCH_STATUS_ENABLED', 'false') in ('true', 'false'))
+        require(env.get('INSTAGRAM_TESTER_WARM_INVITE_ENABLED', 'false') in ('true', 'false'))
         require(env.get('PATH') == '/usr/local/bin:/usr/bin:/bin')
         require(env['HOME'] == home and env['INSTAGRAM_TESTER_CHROMIUM_SANDBOX'] == 'true')
         require(env['INSTAGRAM_TESTER_BROWSER_PROFILE'] == f'{home}/profile')

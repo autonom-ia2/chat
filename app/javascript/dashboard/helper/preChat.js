@@ -32,28 +32,39 @@ export const getPlaceHolder = ({ key, placeholder }) => {
     : placeholder;
 };
 
+// Only conversation and contact attributes can be filled by the visitor before the chat starts;
+// company and CRM card attributes belong to records the widget never creates.
+const PRE_CHAT_ATTRIBUTE_MODELS = [
+  'conversation_attribute',
+  'contact_attribute',
+];
+
 export const getCustomFields = ({ standardFields, customAttributes }) => {
   let customFields = [];
   const { pre_chat_fields: preChatFields } = standardFields;
-  customAttributes.forEach(attribute => {
-    const itemExist = preChatFields.find(
-      item => item.name === attribute.attribute_key
-    );
-    if (!itemExist) {
-      customFields.push({
-        label: attribute.attribute_display_name,
-        placeholder: attribute.attribute_display_name,
-        name: attribute.attribute_key,
-        type: attribute.attribute_display_type,
-        values: attribute.attribute_values,
-        field_type: attribute.attribute_model,
-        regex_pattern: attribute.regex_pattern,
-        regex_cue: attribute.regex_cue,
-        required: false,
-        enabled: false,
-      });
-    }
-  });
+  customAttributes
+    .filter(attribute =>
+      PRE_CHAT_ATTRIBUTE_MODELS.includes(attribute.attribute_model)
+    )
+    .forEach(attribute => {
+      const itemExist = preChatFields.find(
+        item => item.name === attribute.attribute_key
+      );
+      if (!itemExist) {
+        customFields.push({
+          label: attribute.attribute_display_name,
+          placeholder: attribute.attribute_display_name,
+          name: attribute.attribute_key,
+          type: attribute.attribute_display_type,
+          values: attribute.attribute_values,
+          field_type: attribute.attribute_model,
+          regex_pattern: attribute.regex_pattern,
+          regex_cue: attribute.regex_cue,
+          required: false,
+          enabled: false,
+        });
+      }
+    });
   return customFields;
 };
 

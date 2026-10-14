@@ -55,7 +55,7 @@ module Crm
         # agente de IA no comando NÃO bloqueia mais a cadência — a guarda `native_agent_active?` foi
         # removida (contas só-IA, como a 6, PRECISAM de follow-up).
         return false unless Crm::FollowUps::MessagingWindow.new(conversation, at: @now).whatsapp_capable?
-        return false if cadence_active?(card) || cadence_spent?(card) || opted_out?(card)
+        return false if cadence_active?(card) || cadence_spent?(card) || opted_out?(card) || opt_out_undecided?(card)
         return false if pending_callback?(card)
         return false if Crm::Ai::Config.contact_followup_disabled?(conversation.contact)
         return false unless sufficient_two_way_exchange?(conversation)
@@ -114,6 +114,14 @@ module Crm
       # pediu para sair. Numa guarda de consentimento, a falha tem que ser para o lado fechado.
       def opted_out?(card)
         Crm::Ai::Config::BOOLEAN.cast(card.metadata.to_h.dig('ai', 'auto_followup_state', 'opted_out'))
+      end
+
+      # A resposta que parou a cadência ainda não foi decidida pelo modelo (pendente) ou a decisão falhou (#1317). Pode ter
+      # sido um SAIR: re-armar agora seria falhar ABERTO. Só libera com decisão "não é pedido de parar" ou com o RESET
+      # manual, que apaga o estado. Card sem a chave (anterior à decisão pelo modelo) segue a regra antiga.
+      def opt_out_undecided?(card)
+        decision = card.metadata.to_h.dig('ai', 'auto_followup_state', 'opt_out_decision')
+        decision.present? && Crm::FollowUps::OptOutDecision::CLEARED.exclude?(decision)
       end
 
       def create_first_touch(card, anchor_at)

@@ -14,6 +14,29 @@ RSpec.describe Crm::Ai::Evaluator do
     previous_attr.nil? ? ENV.delete('CRM_AI_ATTR_EXTRACTION') : ENV['CRM_AI_ATTR_EXTRACTION'] = previous_attr
   end
 
+  # #1498: funil de Atender não tem valor de venda; a IA não preenche.
+  describe 'valor achado na conversa' do
+    def preencher(card)
+      attributes = {}
+      ai = {}
+      described_class.new(card: card).send(:apply_ai_value!, ai, { amount_cents: 120_000, currency: 'BRL' }, attributes)
+      [attributes, ai]
+    end
+
+    it 'preenche num funil de Vender e não num de Atender' do
+      account, admin = create_account_and_user
+      venda, etapa_venda = create_crm_pipeline(account: account, user: admin)
+      atender, etapa_atender = create_crm_pipeline(account: account, user: admin, name: 'Suporte')
+      atender.update!(counts_as_sale: false)
+
+      card_venda = account.crm_cards.create!(pipeline: venda, stage: etapa_venda, title: 'Plano anual')
+      card_atender = account.crm_cards.create!(pipeline: atender, stage: etapa_atender, title: 'Troca')
+
+      expect(preencher(card_venda).first).to include(value_cents: 120_000)
+      expect(preencher(card_atender)).to eq([{}, {}])
+    end
+  end
+
   it 'skips when confidence is below suggestion threshold' do
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
@@ -138,37 +161,12 @@ RSpec.describe Crm::Ai::Evaluator do
     contact = create(:contact, account: account)
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
     pipeline, source_stage = create_crm_pipeline(account: account, user: admin)
-    pipeline.update!(
-      metadata: {
-        'ai' => {
-          'enabled' => true,
-          'auto_move_enabled' => true,
-          'handoff' => { 'enabled' => false }
-        }
-      }
-    )
+    pipeline.update!(metadata: { 'ai' => { 'enabled' => true, 'auto_move_enabled' => true, 'handoff' => { 'enabled' => false } } })
     target_stage = create_crm_stage(account: account, pipeline: pipeline, name: 'Em atendimento', position: 1)
-    target_stage.update!(
-      metadata: {
-        'ai_criteria' => 'Cliente precisa de atendimento humano',
-        'ai_handoff' => {
-          'enabled' => true,
-          'handoff_mode' => 'r2_direct',
-          'pool_type' => 'user',
-          'pool_id' => agent.id,
-          'prefer_online' => false
-        }
-      }
-    )
-    card = account.crm_cards.create!(
-      pipeline: pipeline,
-      stage: source_stage,
-      title: 'Lead',
-      contact: contact,
-      inbox: inbox,
-      primary_conversation: conversation,
-      currency: 'BRL'
-    )
+    handoff = { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'pool_type' => 'user', 'pool_id' => agent.id, 'prefer_online' => false }
+    target_stage.update!(metadata: { 'ai_criteria' => 'Cliente precisa de atendimento humano', 'ai_handoff' => handoff })
+    card = account.crm_cards.create!(pipeline: pipeline, stage: source_stage, title: 'Lead', contact: contact, inbox: inbox,
+                                     primary_conversation: conversation, currency: 'BRL')
 
     stub_crm_ai_credential
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
@@ -186,9 +184,9 @@ RSpec.describe Crm::Ai::Evaluator do
     )
 
     expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: false)).ordered
-                                                      .and_return(first_classifier)
+                                                     .and_return(first_classifier)
     expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(handoff_enabled: true)).ordered
-                                                      .and_return(handoff_classifier)
+                                                     .and_return(handoff_classifier)
 
     result = described_class.new(card: card).perform
 
@@ -312,8 +310,8 @@ RSpec.describe Crm::Ai::Evaluator do
       }
     )
 
-    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(attribute_schema: { contact: [], conversation: [] }))
-                                                      .and_return(classifier)
+    expect(Crm::Ai::StageClassifier).to receive(:new).with(hash_including(attribute_schema: { contact: [], conversation: [], card: [] }))
+                                                     .and_return(classifier)
     expect(Crm::Ai::AttributeExtractorApplier).not_to receive(:new)
 
     described_class.new(card: card).perform

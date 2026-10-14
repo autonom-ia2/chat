@@ -3,7 +3,7 @@ module Crm
     class Creator
       ATTRIBUTES = %i[
         pipeline_id stage_id contact_id conversation_id inbox_id owner_id team_id title description
-        value_cents currency status lost_reason source priority score expected_close_at metadata external_id
+        value_cents currency status lost_reason source priority score expected_close_at metadata external_id custom_attributes
       ].freeze
 
       def initialize(account:, user:, params:, conversation: nil)
@@ -36,7 +36,7 @@ module Crm
         card.primary_conversation = @conversation
         card.contact = @conversation.contact
         card.inbox = @conversation.inbox
-        card.owner = @conversation.assignee
+        card.owner = conversation_owner(card)
         card.team = @conversation.team
         card.source = @conversation.inbox&.channel_type
         card.title = derived_title if card.title.blank?
@@ -64,6 +64,16 @@ module Crm
         )
       end
 
+      # Acesso por funil (#1148, decisão a): o atendente só vira dono se pode ter o card (ver CardGuard#assignee_can_own?);
+      # senão o dono cai em quem cria.
+      def conversation_owner(card)
+        assignee = @conversation.assignee
+        return if assignee.nil?
+
+        guard = Crm::Access::CardGuard.new(user: @user, account: @account)
+        assignee if guard.assignee_can_own?(assignee.id, inbox_id: @conversation.inbox_id, pipeline_id: card.pipeline_id)
+      end
+
       def default_owner(card)
         return nil if @user.blank?
         return @user if card.owner_id.blank?
@@ -72,6 +82,8 @@ module Crm
       end
 
       def link_primary_conversation(card)
+        # Card criado pelo sistema não tira o assunto que uma pessoa acabou de escolher (#1260): nasce sem foco.
+        sem_foco = @user.blank? && Crm::Cards::Focus.pessoa_escolheu?(account_id: @account.id, conversation_id: card.conversation_id)
         Crm::CardConversation.find_or_create_by!(
           account: @account,
           card: card,
@@ -80,7 +92,8 @@ module Crm
           link.is_primary = true
           link.linked_by = @user
           # Card novo vira o assunto atual da conversa (#1142): com outro card já aberto nela, é deste que se trata agora.
-          link.focused_at = Time.current
+          link.focused_at = Time.current unless sem_foco
+          link.focused_by_id = @user&.id
         end
       end
 

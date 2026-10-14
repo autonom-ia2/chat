@@ -88,7 +88,8 @@ module AutomationRuleSchema::Acoes
     destinos = Autonomia::Decisor::DESTINOS.join(', ')
     'Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a ' \
       "mensagem (o corpo do e-mail também) e preenche o que estiver vazio em #{destinos} e em " \
-      "#{Autonomia::Decisor::ATRIBUTO_DE_CONTATO}<chave> de atributo de contato. Isso se configura nos campos " \
+      "#{Autonomia::Decisor::ATRIBUTO_DE_CONTATO}<chave> de atributo de contato e em " \
+      "#{Autonomia::Decisor::ATRIBUTO_DE_CARD}<chave> de atributo de card. Isso se configura nos campos " \
       'do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.'
   end
 

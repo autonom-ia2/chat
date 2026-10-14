@@ -1,0 +1,93 @@
+# Cenário mínimo de agendamento (#1187): conta, responsável, funil, cliente com WhatsApp, card e página nova.
+module BookingHelpers
+  BookingWorld = Struct.new(:account, :host, :pipeline, :stage, :contact, :card, :profile, keyword_init: true)
+
+  # Cliente só com telefone (sem e-mail), como o WhatsApp entrega.
+  def create_booking_contact(account:, name: 'Marcos Lima', phone: '+5511912345678', email: nil)
+    account.contacts.create!(name: name, phone_number: phone, email: email)
+  end
+
+  def create_booking_card(account:, pipeline:, stage:, contact:, **attrs)
+    account.crm_cards.create!(
+      { pipeline: pipeline, stage: stage, contact: contact, title: 'Marcos Lima - Agendamento', currency: 'BRL' }.merge(attrs)
+    )
+  end
+
+  # Página nova (page_version 2), sem caixa de e-mail, responsável fixo.
+  # `close_holidays: false`: os specs de agendamento viajam para segunda, 12/10/2026, que é feriado nacional (Nossa
+  # Senhora Aparecida). O padrão real (ligado) é coberto nos specs de feriado e no de ponta a ponta.
+  def create_booking_profile(account:, host:, pipeline: nil, stage: nil, **attrs)
+    account.crm_agent_booking_profiles.create!(
+      {
+        page_version: Crm::AgentBookingProfile::NEW_PAGE,
+        title: 'Conversa de 30 min',
+        duration_minutes: 30,
+        timezone: 'America/Sao_Paulo',
+        default_assignee: host,
+        default_pipeline_id: pipeline&.id,
+        default_stage_id: stage&.id,
+        locations: [{ 'type' => 'whatsapp_video' }],
+        enabled: true,
+        close_holidays: false
+      }.merge(attrs)
+    )
+  end
+
+  # Anexo posto direto, sem passar pela validação da página: como um arquivo que entrou antes de a conferência de
+  # conteúdo existir (#1303), ou por um caminho que não valida. Troca o anexo que houver. Devolve o registro relido.
+  def attach_unchecked(record, name, content, filename: 'logo.png', content_type: 'image/png')
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(content), filename: filename, content_type: content_type, identify: false)
+    ActiveStorage::Attachment.where(record: record, name: name.to_s).delete_all
+    ActiveStorage::Attachment.create!(record: record, name: name.to_s, blob: blob)
+    record.reload
+  end
+
+  def build_booking_world(account:, host_name: 'Camila Torres')
+    host = create(:user, account: account, role: :agent, name: host_name)
+    pipeline, stage = create_crm_pipeline(account: account, user: host)
+    contact = create_booking_contact(account: account)
+    card = create_booking_card(account: account, pipeline: pipeline, stage: stage, contact: contact, owner: host)
+    profile = create_booking_profile(account: account, host: host, pipeline: pipeline, stage: stage)
+    BookingWorld.new(account: account, host: host, pipeline: pipeline, stage: stage, contact: contact, card: card, profile: profile)
+  end
+
+  # Link por cliente (#1190) da página do mundo para o cliente do mundo, criado pelo responsável.
+  def create_booking_invite(world:, **attrs)
+    Crm::BookingInvite.create!(
+      { account: world.account, booking_profile: world.profile, contact: world.contact, card: world.card,
+        created_by: world.host, expires_at: 7.days.from_now }.merge(attrs)
+    )
+  end
+
+  # Reunião interna já agendada (sem provedor), para specs de disponibilidade, cancelamento e permissões.
+  def create_internal_meeting(world:, starts_at:, duration: 30, status: :scheduled, **attrs)
+    meeting = world.account.crm_meetings.new(
+      {
+        card: world.card, created_by: world.host, title: 'Conversa de 30 min', provider: :internal,
+        online_meeting_type: :whatsapp_video, status: status, timezone: 'America/Sao_Paulo',
+        starts_at: starts_at, ends_at: starts_at + duration.minutes, source: 'public_link'
+      }.merge(attrs)
+    )
+    meeting.save!
+    meeting.meeting_guests.create!(account: world.account, phone_number: world.contact.phone_number, contact: world.contact,
+                                   name: world.contact.name, guest_type: :contact_guest)
+    meeting
+  end
+
+  # Chaves de id interno (`id`, `*_id`, `*_ids`) em qualquer nível do JSON público. Confere a chave, não o valor: um id
+  # pequeno do banco de teste pode coincidir com um número legítimo do payload (duração 30, janela de 14 dias). Os specs
+  # que usam isto também comparam o payload inteiro com `eq`; as duas checagens andam juntas.
+  def internal_id_keys(payload)
+    case payload
+    when Hash
+      own = payload.keys.select { |key| key == 'id' || key.end_with?('_id', '_ids') }
+      own + payload.values.flat_map { |value| internal_id_keys(value) }
+    when Array then payload.flat_map { |item| internal_id_keys(item) }
+    else []
+    end
+  end
+end
+
+RSpec.configure do |config|
+  config.include BookingHelpers
+end

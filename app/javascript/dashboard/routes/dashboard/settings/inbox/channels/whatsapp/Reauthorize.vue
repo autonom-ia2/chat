@@ -11,6 +11,7 @@ import {
   isValidBusinessData,
   classifySignupEvent,
   coexistenceSignal,
+  signupTrace,
   COMPLETION_RESULTS,
   SIGNUP_RESULT,
 } from './utils';
@@ -99,6 +100,7 @@ const handleEmbeddedSignupEvents = async (data, authCode) => {
         waba_id: businessData.waba_id,
         phone_number_id: businessData.phone_number_id || '',
         is_coexistence: coexistenceSignal(result),
+        ...signupTrace(data),
       });
     } else {
       isRequestingAuthorization.value = false;
@@ -180,7 +182,10 @@ const createFinishEventWaiter = () => {
       window.removeEventListener('message', listener);
 
       if (COMPLETION_RESULTS.includes(result.type)) {
-        resolve(coexistenceSignal(result));
+        resolve({
+          isCoexistence: coexistenceSignal(result),
+          trace: signupTrace(data),
+        });
       } else if (result.type === SIGNUP_RESULT.CANCEL) {
         reject(
           new Error(t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.CANCELLED'))
@@ -202,7 +207,8 @@ const createFinishEventWaiter = () => {
   const cleanup = () => window.removeEventListener('message', listener);
 
   // Called once FB.login has returned the code. Resolves with the coexistence
-  // signal if Meta's terminal event arrives within FINISH_GRACE_MS, else null.
+  // signal and the event trace if Meta's terminal event arrives within
+  // FINISH_GRACE_MS, else null.
   const waitAfterCode = () => {
     let timer;
     const grace = new Promise(resolve => {
@@ -242,13 +248,14 @@ const handleLoginAndReauthorize = async () => {
     );
 
     if (hasExistingConfig) {
-      const isCoexistence = await finishWaiter.waitAfterCode();
+      const finish = await finishWaiter.waitAfterCode();
       await reauthorizeWhatsApp({
         code: authCode,
         business_id: existingConfig.business_account_id,
         waba_id: existingConfig.business_account_id,
         phone_number_id: existingConfig.phone_number_id,
-        is_coexistence: isCoexistence,
+        is_coexistence: finish ? finish.isCoexistence : null,
+        ...finish?.trace,
       });
       return false;
     }

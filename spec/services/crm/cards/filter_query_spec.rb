@@ -50,6 +50,19 @@ RSpec.describe Crm::Cards::FilterQuery do
     expect(perform('lost')).to contain_exactly(cards[:lost])
   end
 
+  it 'keeps cards closed under the previous funnel kind in the matching outcome tab (#1197)' do
+    cards = seed_cards
+    pipeline = cards[:open].pipeline
+    pipeline.update!(counts_as_sale: false)
+    resolved = account.crm_cards.create!(pipeline: pipeline, stage: cards[:open].stage, title: 'Resolvido', status: :resolved)
+    cancelled = account.crm_cards.create!(pipeline: pipeline, stage: cards[:open].stage, title: 'Cancelado', status: :cancelled)
+
+    expect(perform('resolved')).to contain_exactly(cards[:won], resolved)
+    expect(perform('won')).to contain_exactly(cards[:won], resolved)
+    expect(perform('cancelled')).to contain_exactly(cards[:lost], cancelled)
+    expect(perform('lost')).to contain_exactly(cards[:lost], cancelled)
+  end
+
   it 'returns only archived cards when result=archived' do
     cards = seed_cards
     expect(perform('archived')).to contain_exactly(cards[:archived])

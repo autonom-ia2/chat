@@ -183,9 +183,17 @@ RSpec.describe Autonomia::Store::AgentInstance do
     end
     principal.update!(native_tool_slugs: ['example_native'])
     expect(Autonomia::Agents::Tools::Registry).to receive(:find).with('example_native').and_return(native)
+    expect(Autonomia::Agents::Tools::Registry).to receive(:permitidas_para).with(instance).and_return([native])
     expect(native).to receive(:available_for?).with(instance).and_return(true)
     bound = Autonomia::Agents::Tools::Bound.for_agent(instance).first
     expect(bound.execute({ 'arguments' => '{}' })).to eq(account.id.to_s)
+  end
+
+  it 'does not inherit platform guide tools into a customer instance' do
+    guide_tool = Autonomia::Agents::Tools::Registry::DO_GUIA.first
+    principal.update!(native_tool_slugs: [guide_tool.slug])
+
+    expect(Autonomia::Agents::Tools::Bound.for_agent(instance)).to be_empty
   end
 
   it 'inherits delegation definitions but binds specialist tools and AI costs to the beneficiary' do

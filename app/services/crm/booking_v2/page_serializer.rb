@@ -1,0 +1,193 @@
+# JSON das páginas de agendamento novas (page_version 2) para a tela de Configurações › Agendamento (#1187).
+# Pessoas aparecem só por id, nome e foto: e-mail nunca sai daqui. Não lista membros de caixa (J8-A5).
+#
+# Página com um link por pessoa (`per_agent`): o endereço-base `/book/<slug-da-página>` responde 404 por desenho (o
+# cliente só marca pelo link de cada pessoa). Então `public_url` vem nulo e `links` traz um link por pessoa — só os
+# ligados de quem ainda pode atender (HostEligibility), para o admin nunca copiar e divulgar um link morto.
+#
+# Para a gaveta do agente de IA (#1305): `ai_status` ('ativa' | 'pausada' | 'sem_responsavel' | 'agenda_pausada') é
+# o mesmo estado que decide se a IA pode marcar por esta página (`InvitePages#status`, a regra única), e `recebe` diz
+# quem recebe a reunião quando ninguém está atribuído à conversa: `{ modo: 'fixo' | 'por_pessoa', nome: }` (nome de
+# exibição: no fixo, o do responsável da página; no por pessoa, o do primeiro link ativo de quem não pausou, o mesmo
+# `InvitePages#link_for` da IA; nulo sem ninguém que possa atender). `timezone` também vai no resumo. A lista passa
+# um `InvitePages` só para todas as páginas: uma consulta de elegibilidade e uma de pausas para a lista inteira.
+# `pessoas` (#1307): `[{ id, nome, ai_status }]`, quem atende a página e pode ser liberado para a IA, cada um com
+# 'ativa' ou 'agenda_pausada'; página de responsável único traz uma pessoa.
+# `duration_minutes` (#1371) também vai no resumo: a gaveta mostra quanto dura a reunião sem abrir a página inteira.
+# É coluna da própria página: não custa consulta na lista.
+class Crm::BookingV2::PageSerializer
+  include Rails.application.routes.url_helpers
+
+  def self.person(user)
+    return if user.blank?
+
+    { id: user.id, name: user.name, avatar_url: user.avatar_url }
+  end
+
+  # `upcoming_meetings_count`: a lista passa a contagem já feita em lote (AttentionReport.upcoming_counts); sem ela,
+  # conta só esta página. `paused_user_ids`: quem pausou a própria agenda (#1195), também em lote na lista.
+  # `orphaned`: `AttentionReport#orphaned` desta página.
+  def initialize(profile, attention: false, upcoming_meetings_count: nil, paused_user_ids: nil, orphaned: [], invite_pages: nil) # rubocop:disable Metrics/ParameterLists
+    @profile = profile
+    @attention = attention
+    @upcoming_meetings_count = upcoming_meetings_count
+    @paused_user_ids = paused_user_ids
+    @orphaned = orphaned
+    @invite_pages = invite_pages
+  end
+
+  def summary
+    {
+      id: profile.id, slug: profile.slug, short_name: profile.short_name, account_address: profile.booking_account_address,
+      title: profile.title, enabled: profile.enabled, public_url: public_url, links: links, locations: profile.locations,
+      assignment_mode: profile.assignment_mode, duration_minutes: profile.duration_minutes, upcoming_meetings_count: upcoming_meetings_count,
+      attention: attention, orphaned: @orphaned, paused_people: paused_people
+    }.merge(for_ai_agent)
+  end
+
+  def full
+    summary.merge(settings, branding, assignment)
+           .merge(identity: identity, preview: preview, created_at: profile.created_at&.iso8601, updated_at: profile.updated_at&.iso8601)
+  end
+
+  private
+
+  attr_reader :profile, :attention
+
+  def invite_pages
+    @invite_pages ||= Crm::BookingV2::InvitePages.new(profile.account)
+  end
+
+  # O que a gaveta do agente de IA lê (#1305): o estado pela regra única, quem recebe e o fuso.
+  def for_ai_agent
+    { ai_status: invite_pages.status(profile), recebe: recebe, timezone: profile.resolved_timezone, pessoas: pessoas }
+  end
+
+  # As pessoas que a gaveta oferece para liberar (#1307), na ordem fixa do #1305 (`InvitePages#people`): só o nome de
+  # exibição e o estado de cada uma ('ativa' | 'agenda_pausada'). Nada de e-mail ou telefone.
+  def pessoas
+    invite_pages.people(profile).map { |pessoa| { id: pessoa.user.id, nome: pessoa.user.available_name, ai_status: pessoa.status } }
+  end
+
+  # Só o nome de exibição: nada de e-mail ou telefone de quem atende.
+  def recebe
+    { modo: profile.assignment_mode_fixed? ? 'fixo' : 'por_pessoa', nome: invite_pages.receiver(profile)&.available_name }
+  end
+
+  def upcoming_meetings_count
+    @upcoming_meetings_count || Crm::BookingV2::AttentionReport.upcoming_meetings(profile).count
+  end
+
+  # Quem atende esta página e pausou a própria agenda em Meus horários (#1195): o admin vê no cartão.
+  def paused_people
+    hosts = host_users
+    paused = @paused_user_ids || paused_ids(hosts)
+    hosts.select { |user| paused.include?(user.id) }.map { |user| { id: user.id, name: user.name } }
+  end
+
+  def paused_ids(hosts)
+    Crm::AgentAvailability.where(account_id: profile.account_id, paused: true, user_id: hosts.map(&:id)).pluck(:user_id)
+  end
+
+  def host_users
+    return [profile.default_assignee].compact if profile.assignment_mode_fixed?
+
+    profile.agent_booking_links.select(&:enabled?).filter_map(&:agent)
+  end
+
+  def settings
+    {
+      description: profile.description, duration_minutes: profile.duration_minutes, slot_durations: profile.slot_durations,
+      buffer_minutes: profile.buffer_minutes, booking_window_days: profile.booking_window_days,
+      min_notice_minutes: profile.min_notice_minutes, working_hours: profile.working_hours, timezone: profile.resolved_timezone,
+      calendar_inbox_id: profile.inbox_id, invite_text: profile.invite_text, invite_ttl_days: profile.invite_ttl_days,
+      close_holidays: profile.close_holidays
+    }.merge(notices)
+  end
+
+  # Avisos no WhatsApp (#1192): caixa de avisos, jogo de avisos, modelos e prazo para o cliente mudar. Depois da
+  # reunião (#1193): `post_meeting` `{ mode: 'ask'|'auto', stage_id, pipeline_id }`.
+  def notices
+    {
+      notice_inbox_id: profile.notice_inbox_id, notice_preset: profile.notice_preset, notice_templates: profile.notice_templates,
+      cancel_until_minutes: profile.cancel_until_minutes, post_meeting: profile.post_meeting_settings,
+      notice_texts: profile.notice_texts, notice_text_setup: Crm::BookingV2::Notices::CustomTextSetup.new(profile).to_h
+    }
+  end
+
+  def branding
+    {
+      template_key: profile.template_key, brand: profile.brand, contact_phone: profile.contact_phone,
+      logo_url: attachment_url(profile.logo), logo_dark_url: attachment_url(profile.logo_dark), photo_url: attachment_url(profile.photo)
+    }
+  end
+
+  # Identidade salva da conta (#1289), para o passo "Sua marca": o que "Usar a identidade salva" traria para esta
+  # página. `saved` falso = nada salvo ainda (a tela não oferece usar).
+  def identity
+    saved = brand_identity
+    saved.data.symbolize_keys.merge(
+      saved: saved.any_for?(profile), logo_url: attachment_url(saved.logo), logo_dark_url: attachment_url(saved.logo_dark),
+      photo_url: attachment_url(saved.photo_of(saved.host_of(profile)))
+    )
+  end
+
+  # O que a prévia do painel precisa para mostrar os mesmos dias da página pública (#1289): o fuso com nome IANA e
+  # os feriados fechados, pela mesma conta da página (`Crm::BookingV2::OpenDays`).
+  def preview
+    zone = ActiveSupport::TimeZone[profile.resolved_timezone]
+    { timezone: zone&.tzinfo&.name, closed_dates: Crm::BookingV2::OpenDays.new(profile, zone).to_h[:closed_dates] }
+  end
+
+  # Como a página pública: a foto que a pessoa guardou para as páginas vem antes da foto do perfil dela.
+  def person(user)
+    data = self.class.person(user)
+    data&.merge(booking_photo_url: attachment_url(brand_identity.photo_of(user)))
+  end
+
+  def brand_identity
+    @brand_identity ||= Crm::BookingV2::BrandIdentity.new(profile.account)
+  end
+
+  def assignment
+    {
+      default_pipeline_id: profile.default_pipeline_id, default_stage_id: profile.default_stage_id,
+      host: person(profile.default_assignee), people: people
+    }
+  end
+
+  def people
+    return [person(profile.default_assignee)].compact if profile.assignment_mode_fixed?
+
+    profile.agent_booking_links.select(&:enabled?).map do |link|
+      person(link.agent).merge(link_slug: link.slug, public_url: link_url(link))
+    end
+  end
+
+  def links
+    return [] if profile.assignment_mode_fixed?
+
+    profile.agent_booking_links.select(&:enabled?).filter_map do |link|
+      next unless invite_pages.link_usable?(link)
+
+      { agent_id: link.agent_id, agent_name: link.agent.name, url: link_url(link), enabled: link.enabled }
+    end
+  end
+
+  # Link curto (`/a/<conta>/<página>/<pessoa>`) quando a página tem nome (#1282, #1299); senão o `/book/<slug>` de sempre.
+  def link_url(link)
+    Crm::BookingV2::ShortLink.url_for(profile, link: link)
+  end
+
+  def attachment_url(attachment)
+    return unless attachment&.attached?
+
+    url_for(attachment)
+  end
+
+  def public_url
+    return if profile.assignment_mode_per_agent?
+
+    Crm::BookingV2::ShortLink.url_for(profile)
+  end
+end

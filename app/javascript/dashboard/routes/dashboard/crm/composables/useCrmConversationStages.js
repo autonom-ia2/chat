@@ -61,6 +61,18 @@ export function notifyCrmSubjectsChanged(conversationId) {
   refreshCrmConversationStage(conversationId);
 }
 
+// Aviso em tempo real (#1145): o painel aberto lê de novo; o selo da lista só para conversa que já está na tela,
+// para não pedir o selo de toda conversa da caixa a cada mensagem.
+export function onCrmSubjectsChangedRemotely(conversationId) {
+  crmSubjectsChange.value = {
+    conversationId,
+    version: crmSubjectsChange.value.version + 1,
+  };
+  if (cache[conversationId] !== undefined) {
+    refreshCrmConversationStage(conversationId);
+  }
+}
+
 export function useCrmConversationStage(conversationId) {
   const idRef = toRef(conversationId);
   watch(idRef, id => enqueue(id), { immediate: true });

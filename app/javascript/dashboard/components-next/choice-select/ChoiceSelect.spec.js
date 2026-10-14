@@ -39,6 +39,13 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('aria-label')).toBe('Idioma preferido');
   });
 
+  it('dá ao botão o id pedido, para um <label for> visível', () => {
+    wrapper = mountSelect('pt_BR', { triggerId: 'campo-idioma' });
+    expect(wrapper.get('[role="combobox"]').attributes('id')).toBe(
+      'campo-idioma'
+    );
+  });
+
   it('abre com seta para baixo na opção escolhida e confirma com Enter', async () => {
     wrapper = mountSelect();
     const trigger = wrapper.get('[role="combobox"]');
@@ -336,7 +343,20 @@ describe('ChoiceSelect', () => {
       expect(style.top).toBe('144px');
       expect(style.left).toBe('30px');
       expect(style.minWidth).toBe('200px');
-      expect(style.maxHeight).toBe('320px');
+      expect(style.maxHeight).toBe('334px');
+    });
+
+    it('com muitas opções, corta a última visível ao meio para mostrar que há mais', async () => {
+      const nove = Array.from({ length: 9 }, (_, index) => ({
+        value: `v${index}`,
+        label: `Opção ${index}`,
+      }));
+      wrapper = mountSelect('v0', { options: nove });
+      await wrapper.get('[role="combobox"]').trigger('click');
+      // 9 opções não cabem em 334: sete inteiras e meia (4 + 7 × 44 + 22).
+      expect(wrapper.get('[role="listbox"]').element.style.maxHeight).toBe(
+        '334px'
+      );
     });
 
     describe('com a janela baixa', () => {
@@ -370,7 +390,8 @@ describe('ChoiceSelect', () => {
         const style = await openAt(280, 560);
         expect(style.top).toBe('');
         expect(style.bottom).toBe('284px');
-        expect(style.maxHeight).toBe('268px');
+        // 268 de espaço; para no meio da 6ª opção: 4 + 5 × 44 + 22.
+        expect(style.maxHeight).toBe('246px');
       });
 
       it('abre para baixo e limita a altura ao espaço disponível', async () => {
@@ -378,7 +399,8 @@ describe('ChoiceSelect', () => {
         const style = await openAt(200, 560);
         expect(style.bottom).toBe('');
         expect(style.top).toBe('244px');
-        expect(style.maxHeight).toBe('308px');
+        // 308 de espaço; para no meio da 7ª opção: 4 + 6 × 44 + 22.
+        expect(style.maxHeight).toBe('290px');
       });
     });
   });

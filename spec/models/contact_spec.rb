@@ -167,8 +167,8 @@ RSpec.describe Contact do
 
         resolved = account.contacts.resolved_contacts(use_crm_v2: true)
 
-        expect(resolved).to include(lead_contact)
-        expect(resolved).not_to include(customer_contact)
+        # Cliente (lead promovido no ganho, #1166) continua listado no crm_v2 (#1197).
+        expect(resolved).to include(lead_contact, customer_contact)
         expect(resolved).not_to include(visitor_contact)
       end
 
@@ -184,6 +184,13 @@ RSpec.describe Contact do
         expect(resolved).to include(contact_with_email, contact_with_phone)
         expect(resolved).not_to include(contact_without_details)
       end
+    end
+
+    it 'keeps a name-only customer in the classic list (#1197)' do
+      customer = create(:contact, account: account, name: 'Cliente só com nome', email: nil, phone_number: nil, identifier: nil)
+      customer.update!(contact_type: 'customer')
+
+      expect(account.contacts.resolved_contacts(use_crm_v2: false)).to include(customer)
     end
 
     context 'with mixed contact types' do
@@ -205,8 +212,9 @@ RSpec.describe Contact do
 
         # Test with use_crm_v2: true
         resolved_new = account.contacts.resolved_contacts(use_crm_v2: true)
-        expect(resolved_new).to include(lead_with_email, lead_without_email)
-        expect(resolved_new).not_to include(visitor_contact, customer_contact)
+        # O ganho de um card promove o lead a cliente (#1166); no crm_v2 nenhuma outra lista mostra clientes (#1197).
+        expect(resolved_new).to include(lead_with_email, lead_without_email, customer_contact)
+        expect(resolved_new).not_to include(visitor_contact)
       end
     end
   end
@@ -235,8 +243,8 @@ RSpec.describe Contact do
       end
     end
 
-    it 'aceita as três origens conhecidas' do
-      %w[prospecting email_unsubscribe manual].each do |source|
+    it 'aceita as origens conhecidas' do
+      %w[prospecting email_unsubscribe manual follow_up_reply].each do |source|
         other = create(:contact, account: account)
         other.opt_out!(source: source)
         expect(other.reload.opt_out_source).to eq(source)
@@ -296,6 +304,53 @@ RSpec.describe Contact do
       expect(contact.reload.opted_out?).to be(false)
     end
 
+    it 'release_opt_out! tira só a recusa da origem informada (chat#1325)' do
+      contact.opt_out!(source: 'manual', by: user)
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(false)
+      expect(contact.reload.opt_out_source).to eq('manual')
+
+      other = create(:contact, account: account)
+      other.opt_out!(source: 'follow_up_reply')
+      expect(other.release_opt_out!(source: 'manual', by: user)).to be(false)
+      expect(other.reload.opt_out_source).to eq('follow_up_reply')
+
+      expect(other.release_opt_out!(source: 'follow_up_reply', by: user)).to be(true)
+      expect(other.reload.opted_out?).to be(false)
+      expect { other.release_opt_out!(source: 'outra', by: user) }.to raise_error(ArgumentError)
+    end
+
+    it 'release_opt_out! passa a recusa para a origem que a herança ainda sustenta' do
+      contact.update!(email: 'ana@example.com')
+      contact.opt_out!(source: 'follow_up_reply')
+      allow(EmailSuppression).to receive(:unsubscribed?).and_return(true)
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(true)
+
+      expect(contact.reload.opt_out_source).to eq('email_unsubscribe')
+    end
+
+    # Corrida: um "sim" noutro card grava a marca enquanto a liberação espera o lock do contato. A prova é conferida
+    # depois do lock, então a recusa fica.
+    it 'release_opt_out! confere a prova com o contato travado e não apaga a marca de um "sim" concorrente' do
+      contact.opt_out!(source: 'follow_up_reply')
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      concurrent_card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Outro assunto')
+      marked = false
+      concurrent_state = { 'opted_out' => true, 'opt_out_contact_id' => contact.id }
+      allow(contact).to receive(:with_lock).and_wrap_original do |original, *args, &block|
+        unless marked
+          marked = true
+          concurrent_card.update!(metadata: { 'ai' => { 'auto_followup_state' => concurrent_state } })
+        end
+        original.call(*args, &block)
+      end
+
+      expect(contact.release_opt_out!(source: 'follow_up_reply', by: user)).to be(false)
+
+      expect(contact.reload.opt_out_source).to eq('follow_up_reply')
+    end
+
     it 'transfer_opt_out! troca só a origem gravada, mantendo a data da recusa' do
       contact.opt_out!(source: 'prospecting')
       refused_at = contact.reload.opted_out_at
@@ -326,6 +381,15 @@ RSpec.describe Contact do
       contact.reload
       expect(contact.opted_out?).to be(true)
       expect(contact.opted_out_by_id).to be_nil
+    end
+  end
+
+  describe '#push_event_data' do
+    it 'carries the customer fields, so the contact.updated event keeps the Cliente badge (#1258)' do
+      contact = create(:contact, contact_type: :customer, customer_since: Time.zone.parse('2026-03-15 12:00'))
+
+      expect(contact.push_event_data).to include(contact_type: 'customer',
+                                                 customer_since: Time.zone.parse('2026-03-15 12:00').to_i)
     end
   end
 end

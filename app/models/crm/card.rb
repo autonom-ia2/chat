@@ -101,6 +101,8 @@ class Crm::Card < ApplicationRecord
   # Ganho só existe em funil que conta como venda: quem comprou vira cliente (#1144). No modelo, para valer em todo
   # caminho que grava o ganho (fechar, criar já ganho, lote, automação).
   after_save :promote_contact_to_customer, if: -> { saved_change_to_status?(to: 'won') && contact.present? }
+  # Acesso por funil (#1148): funil, status e conversa principal do card decidem quem vê a conversa.
+  after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id]) }
 
   validates :title, presence: true
   validates :currency, presence: true
@@ -108,6 +110,7 @@ class Crm::Card < ApplicationRecord
   validates :value_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :score, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validates :metadata, jsonb_attributes_length: true
+  validates :custom_attributes, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
   validate :stage_must_belong_to_pipeline
   validate :outcome_must_match_pipeline
@@ -154,14 +157,29 @@ class Crm::Card < ApplicationRecord
     nil
   end
 
+  # O robô atribuído à conversa (#1377); sem ele, o robô ativo da caixa.
   def responsible_agent_bot
-    resolved_inbox = primary_conversation&.inbox || inbox
+    conversation_bot = primary_conversation&.ai_assignee
+    return conversation_bot if conversation_bot.is_a?(AgentBot)
+
+    active_inbox_bot(primary_conversation&.inbox || inbox)
+  end
+
+  private
+
+  def active_inbox_bot(resolved_inbox)
     return if resolved_inbox.blank?
 
     resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
   end
 
-  private
+  def invalidate_funnel_counts
+    return unless Crm::Access::AccountFlag.any?(account_id)
+
+    previous_conversation_id = saved_changes['conversation_id']&.first
+    conversation_ids = [conversation_id, previous_conversation_id] + card_conversations.pluck(:conversation_id)
+    Crm::Access::CountInvalidation.card_changed!(account_id, conversation_ids)
+  end
 
   def ensure_activity_defaults
     self.entered_stage_at ||= Time.current

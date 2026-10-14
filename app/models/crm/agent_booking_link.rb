@@ -42,7 +42,10 @@ class Crm::AgentBookingLink < ApplicationRecord
   belongs_to :account
   belongs_to :booking_profile, class_name: 'Crm::AgentBookingProfile', inverse_of: :agent_booking_links
   belongs_to :agent, class_name: 'User'
-  belongs_to :inbox
+  belongs_to :inbox, optional: true
+
+  # Imagem de prévia do link desta pessoa (#1282): `Crm::BookingV2::PreviewImage::Store`.
+  has_one_attached :preview_image
 
   before_validation :ensure_slug, on: :create
 

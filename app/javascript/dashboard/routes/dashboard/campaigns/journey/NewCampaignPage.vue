@@ -50,7 +50,6 @@ import {
   buildCampaignPayload,
   cleanDefaults,
   coverageMapping,
-  mediaHeaderOf,
   previewMessage,
   templateVariables,
 } from 'dashboard/components-next/CampaignJourney/templateVariables';
@@ -63,6 +62,29 @@ import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter
 import { JOURNEY_EDITOR_QUERY } from './journeyRedirects';
 import { smsStats } from 'dashboard/components-next/CampaignJourney/smsSegments';
 import { useJourneyChannelForms } from 'dashboard/components-next/CampaignJourney/useJourneyChannelForms';
+// Fork (Modelos do WhatsApp): ponte com a tela de Modelos, ligada pela flag whatsapp_templates_journey.
+import { useModelosNaCampanha } from '../modelos/ponte/useModelosNaCampanha';
+import PonteAvisoDoModelo from '../modelos/ponte/PonteAvisoDoModelo.vue';
+import PonteCaixasReconectar from '../modelos/ponte/PonteCaixasReconectar.vue';
+import PontePrevia from '../modelos/ponte/PontePrevia.vue';
+import PonteSemModelo from '../modelos/ponte/PonteSemModelo.vue';
+import RevisaoDoModelo from '../modelos/ponte/RevisaoDoModelo.vue';
+// Fork (Modelos do WhatsApp, #1334): o que cada formato novo pede na campanha.
+import PonteFormatoDaCampanha from '../modelos/ponte/PonteFormatoDaCampanha.vue';
+import {
+  extrasParaEnvio,
+  oQuePedir,
+  pendencias,
+  soModeloCompleto,
+} from '../modelos/helpers/formatoNaCampanha';
+import { rotuloDoCampo } from '../modelos/helpers/campos';
+import { conteudoDaMeta } from '../modelos/api/daMeta';
+// Fork (#1335, protótipo): conversa aberta — quem falou nas últimas 24 h recebe texto escrito.
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useConversaAberta } from '../modelos/janela/useConversaAberta';
+import { previa } from '../modelos/janela/textoComCampos';
+import ConversaAberta from '../modelos/janela/components/ConversaAberta.vue';
+import RevisaoDaConversaAberta from '../modelos/janela/components/RevisaoDaConversaAberta.vue';
 import {
   buildEmailPayload,
   buildSmsPayload,
@@ -79,7 +101,18 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { currentAccount } = useAccount();
-const { channels, features } = useAvailableCampaignChannels();
+const { channels: connectedChannels, features } =
+  useAvailableCampaignChannels();
+// Fork (Modelos do WhatsApp): caixas, modelos e ligações vêm da ponte quando ela está ligada.
+const ponte = useModelosNaCampanha();
+const ponteAtiva = ponte.ativa;
+const caixasParaReconectar = ponte.caixasParaReconectar;
+const channels = computed(() => {
+  const list = connectedChannels.value;
+  const official = CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL;
+  if (!ponteAtiva.value || !ponte.temCaixaConectada.value) return list;
+  return list.includes(official) ? list : [official, ...list];
+});
 
 const accountId = useMapGetter('getCurrentAccountId');
 const inboxes = useMapGetter('inboxes/getInboxes');
@@ -114,7 +147,14 @@ const update = patch => {
     'templateId' in patch && patch.templateId !== draft.value.templateId;
   draft.value = {
     ...draft.value,
-    ...(templateChanged ? { bindings: {}, defaults: {}, mediaUrl: '' } : {}),
+    ...(templateChanged
+      ? {
+          bindings: ponte.ligacoesIniciais(patch.templateId),
+          defaults: {},
+          // #1334: nada vem preenchido; o cupom de exemplo do modelo nunca vai sozinho para o público.
+          formato: {},
+        }
+      : {}),
     ...patch,
   };
 };
@@ -155,29 +195,53 @@ const cloudInboxes = computed(() =>
   )
 );
 const inboxOptions = computed(() =>
-  cloudInboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
+  ponteAtiva.value
+    ? ponte.opcoesDeCaixa.value
+    : cloudInboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
 );
-const templates = computed(() =>
-  draft.value.inboxId ? filteredTemplates.value(draft.value.inboxId) : []
-);
+const templates = computed(() => {
+  if (!draft.value.inboxId) return [];
+  return ponteAtiva.value
+    ? ponte.templates(draft.value.inboxId)
+    : filteredTemplates.value(draft.value.inboxId);
+});
 const templateOptions = computed(() =>
-  templates.value.map(template => ({
-    value: template.id,
-    label: `${template.name} · ${template.language || ''}`,
-  }))
+  ponteAtiva.value
+    ? ponte.opcoesDeModelo(draft.value.inboxId)
+    : templates.value.map(template => ({
+        value: template.id,
+        label: `${template.name} · ${template.language || ''}`,
+      }))
 );
 const template = computed(
   () => templates.value.find(item => item.id === draft.value.templateId) || null
 );
 const variables = computed(() =>
-  template.value ? templateVariables(template.value) : []
+  template.value
+    ? ponte.rotular(templateVariables(template.value), template.value.id)
+    : []
 );
-const mediaHeader = computed(() =>
-  template.value ? mediaHeaderOf(template.value) : null
+const modeloEscolhido = computed(() =>
+  ponte.modeloPorId(draft.value.templateId)
+);
+// #1456: "Como o cliente vê" é sempre o celular da tela de Modelos (topo,
+// botões, oferta, cartões). Sem a ponte, o modelo vem direto do da Meta.
+const modeloDaPrevia = computed(() => {
+  if (draft.value.channel !== CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL) return null;
+  if (modeloEscolhido.value) return modeloEscolhido.value;
+  return template.value ? conteudoDaMeta(template.value) : null;
+});
+const remetente = computed(
+  () =>
+    ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.conta
+      .nome || ''
 );
 
 const sourceLabel = binding => {
   if (binding.source === BINDING_SOURCES.COLUMN) return binding.value;
+  // Fork (Modelos do WhatsApp): campo do catálogo (#1331), pelo nome dele.
+  if (binding.source === BINDING_SOURCES.FIELD)
+    return rotuloDoCampo(t, binding.value);
   if (binding.source === BINDING_SOURCES.FIXED) return binding.value;
   return t(`${NS}.VARIABLES.CONTACT_FIELDS.${binding.value.toUpperCase()}`);
 };
@@ -208,8 +272,8 @@ const isOfficialReady = computed(
   () =>
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
-    allBound(variables.value, draft.value.bindings) &&
-    (!mediaHeader.value || Boolean(draft.value.mediaUrl.trim()))
+    // Fork (#1465): o arquivo do topo (aprovado ou escolhido) entra em formatoPendente.
+    allBound(variables.value, draft.value.bindings)
 );
 const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () => isOfficialReady.value,
@@ -219,14 +283,34 @@ const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.SMS]: () =>
     Boolean(draft.value.inboxId) && Boolean(draft.value.messageBody.trim()),
 };
-const isMessageReady = computed(
-  () =>
-    Boolean(draft.value.title.trim()) &&
-    Boolean(MESSAGE_READY[draft.value.channel]?.())
-);
 
 // ---- Review (Passo 3) ----
 const timeZone = computed(() => accountTimeZone(currentAccount.value));
+
+// Fork (#1334): cupom, validade da oferta e foto de cada cartão do carrossel.
+const pedidoDoFormato = computed(() =>
+  modeloEscolhido.value
+    ? oQuePedir(
+        modeloEscolhido.value.template,
+        modeloEscolhido.value.cartoesGuardados || [],
+        modeloEscolhido.value.topoGuardado
+      )
+    : null
+);
+const formatoPendente = computed(() =>
+  pedidoDoFormato.value &&
+  draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
+    ? pendencias(pedidoDoFormato.value, draft.value.formato || {}, {
+        timeZone: timeZone.value,
+      })
+    : []
+);
+const isMessageReady = computed(
+  () =>
+    Boolean(draft.value.title.trim()) &&
+    Boolean(MESSAGE_READY[draft.value.channel]?.()) &&
+    formatoPendente.value.length === 0
+);
 const isEmailChannel = computed(
   () => draft.value.channel === CAMPAIGN_CHANNELS.EMAIL
 );
@@ -235,10 +319,96 @@ const reach = computed(() =>
     ? reachOn(draft.value.channel, audience.value.channels)
     : 0
 );
+// Fork (#1335): conversa aberta no WhatsApp oficial. O gate é só a flag
+// campaign_open_window_text (não depende da ponte de Modelos).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const conversaAbertaLigada = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.CAMPAIGN_OPEN_WINDOW_TEXT
+  )
+);
+const comConversaAberta = computed(
+  () =>
+    conversaAbertaLigada.value &&
+    draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
+    Boolean(draft.value.inboxId) &&
+    Boolean(template.value) &&
+    // Código de acesso nunca vai como texto livre.
+    template.value.category !== 'AUTHENTICATION' &&
+    // #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
+    !soModeloCompleto(template.value)
+);
+// #1456: trocou para um modelo desses com o texto já escrito → o texto sai e a
+// tela avisa por quê. Outro modelo apaga o aviso.
+const textoDescartado = ref(false);
+watch(template, atual => {
+  if (!atual || !soModeloCompleto(atual)) {
+    textoDescartado.value = false;
+    return;
+  }
+  if (!draft.value.textoNaConversaAberta) return;
+  update({ textoNaConversaAberta: '' });
+  textoDescartado.value = true;
+});
+const conversaAberta = useConversaAberta(
+  computed(() => ({
+    publicoId: comConversaAberta.value ? draft.value.audienceId : null,
+    caixaId: comConversaAberta.value ? draft.value.inboxId : null,
+    categoria: template.value?.category || '',
+  }))
+);
+// Divulgação pelo modelo escolhido (categoria da Meta): mostra o aviso.
+const modeloDeDivulgacao = computed(
+  () => template.value?.category === 'MARKETING'
+);
+const nomeDoModelo = computed(
+  () => modeloEscolhido.value?.nome || template.value?.name || ''
+);
+// O cartão do WhatsApp oficial deixa de dizer "só para quem ainda não falou".
+const dicasDosCanais = computed(() =>
+  conversaAbertaLigada.value
+    ? {
+        [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: t(
+          'MODELOS_WHATSAPP.JANELA.CANAL_HINT'
+        ),
+      }
+    : {}
+);
+// Exemplo de cada campo na prévia: a primeira pessoa do público.
+const exemplosDoTexto = computed(() => ({
+  'cliente.primeiro_nome':
+    sample.value?.first_name || sample.value?.name?.split(' ')[0] || 'Ana',
+  'cliente.nome': sample.value?.name || 'Ana Souza',
+  'minha_empresa.nome': currentAccount.value?.name || remetente.value,
+  'minha_empresa.site': currentAccount.value?.domain || '',
+  ...Object.fromEntries(
+    conversaAberta.campos.value
+      .filter(campo => campo.chave.startsWith('publico.'))
+      .map(campo => [
+        campo.chave,
+        sample.value?.extra_values?.[campo.rotulo] || campo.rotulo,
+      ])
+  ),
+}));
+const textoDaConversaAberta = computed(() =>
+  comConversaAberta.value ? draft.value.textoNaConversaAberta || '' : ''
+);
+const textoNaRevisao = () =>
+  textoDaConversaAberta.value
+    ? t('MODELOS_WHATSAPP.JANELA.REVISAO.CONTEUDO_TEXTO', {
+        texto: previa(textoDaConversaAberta.value, exemplosDoTexto.value),
+      })
+    : '';
 const inboxName = computed(
   () =>
     (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
-      ?.name || ''
+      ?.name ||
+    // Fork: caixa vinda da ponte de Modelos.
+    ponte.caixas.value.find(caixa => caixa.id === draft.value.inboxId)?.nome ||
+    ''
 );
 const channelLabel = computed(() =>
   draft.value.channel
@@ -248,9 +418,11 @@ const channelLabel = computed(() =>
 const bindingSummary = computed(() =>
   variables.value
     .filter(({ key }) => draft.value.bindings[key])
-    .map(
-      ({ key, variable }) =>
-        `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
+    .map(({ key, variable, label }) =>
+      // Fork: com a ponte de Modelos, o nome do campo ("Nome do cliente") no lugar de {{1}}.
+      ponteAtiva.value
+        ? `${label}: ${sourceLabel(draft.value.bindings[key])}`
+        : `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
     )
     .join(' · ')
 );
@@ -294,7 +466,7 @@ const messageMain = () => {
         })
       : t(`${NS}.EMAIL.CONTENT_EMPTY`);
   }
-  return template.value?.name || '';
+  return modeloEscolhido.value?.nome || template.value?.name || '';
 };
 const reviewBlocks = computed(() => [
   {
@@ -316,7 +488,8 @@ const reviewBlocks = computed(() => [
     step: 2,
     title: t(`${NS}.REVIEW.CONTENT`),
     main: messageMain(),
-    detail: '',
+    // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+    detail: textoNaRevisao(),
   },
 ]);
 const crmTag = computed(() =>
@@ -466,6 +639,31 @@ const createAudience = () => {
   });
 };
 
+// Fork: caixa sem modelo → cria o modelo e volta para esta campanha (rascunho guardado).
+const createTemplate = () => {
+  saveDraft(accountId.value, draft.value);
+  router.push({
+    name: 'modelos_whatsapp_novo',
+    query: { from: 'campaign', caixa: String(draft.value.inboxId) },
+  });
+};
+
+// Fork: corrigir um modelo recusado guardando a campanha pela metade.
+const fixTemplate = id => {
+  saveDraft(accountId.value, draft.value);
+  router.push({ name: 'modelos_whatsapp_alterar', params: { id } });
+};
+
+// Fork: modelo ainda em análise → dá para agendar; "Enviar agora" só depois de aprovado.
+const nowBlockedReason = computed(() =>
+  ponte.emAnalise(draft.value.templateId)
+    ? t('MODELOS_WHATSAPP.PONTE.ENVIAR_AGORA_BLOQUEADO')
+    : ''
+);
+watch(nowBlockedReason, reason => {
+  if (reason && draft.value.when === 'now') update({ when: 'later' });
+});
+
 const cancel = () => {
   clearDraft(accountId.value);
   router.push({ name: 'campaigns_journey_index' });
@@ -487,7 +685,13 @@ const SUBMITTERS = {
         template: template.value,
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
-        mediaUrl: draft.value.mediaUrl,
+        extras: pedidoDoFormato.value
+          ? extrasParaEnvio(pedidoDoFormato.value, draft.value.formato || {}, {
+              timeZone: timeZone.value,
+            })
+          : {},
+        // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+        freeText: textoDaConversaAberta.value,
       })
     ),
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
@@ -657,12 +861,24 @@ const startJourney = async initial => {
   draft.value = initial;
   searchQuery.value = '';
   audienceDetail.value = null;
-  const requests = [loadAudiences(), store.dispatch('inboxes/get')];
+  const requests = [
+    loadAudiences(),
+    store.dispatch('inboxes/get'),
+    ponte.carregar(),
+  ];
   if (features.value.emailCampaigns) {
     requests.push(store.dispatch('emailSenderIdentities/get'));
   }
   const results = await Promise.allSettled(requests);
   hasLoadError.value = results[0].status === 'rejected';
+  // Fork: aberta com um modelo (?modelo=), as variáveis já vêm ligadas.
+  if (
+    ponteAtiva.value &&
+    draft.value.templateId &&
+    !Object.keys(draft.value.bindings).length
+  ) {
+    update({ bindings: ponte.ligacoesIniciais(draft.value.templateId) });
+  }
   await loadAudienceDetail();
   forms.loadEmailCampaign();
   forms.loadApiTemplates(draft.value.inboxId);
@@ -674,9 +890,11 @@ const startJourney = async initial => {
 };
 
 const continuePending = () => startJourney(pendingDraft.value);
+// Fork: vindo de Modelos com um rascunho guardado, "começar de novo" já traz o modelo.
+const freshDraft = ref(null);
 const startNew = () => {
   clearDraft(accountId.value);
-  startJourney(emptyDraft());
+  startJourney(freshDraft.value || emptyDraft());
 };
 
 // Every visit (first mount or back to the kept-alive page) reads the address first (#1093).
@@ -684,7 +902,10 @@ useOnEnter(async () => {
   isActive = true;
   submitError.value = '';
   returned.value = route.query.returned === '1';
-  const entry = journeyEntry(route.query, loadDraft(accountId.value));
+  const entry = journeyEntry(route.query, loadDraft(accountId.value), {
+    withTemplates: ponte.flagLigada.value,
+  });
+  freshDraft.value = entry.novo || null;
   if (entry.pending) {
     pendingDraft.value = entry.pending;
     isLoading.value = false;
@@ -708,7 +929,10 @@ onBeforeUnmount(() => {
   <section
     class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2"
   >
-    <div class="mx-auto w-full max-w-[90rem] p-4 sm:p-5 lg:p-8">
+    <!-- Fork: folga embaixo no celular para o botão flutuante do menu não cobrir "Voltar". -->
+    <div
+      class="mx-auto w-full max-w-[90rem] p-4 pb-24 sm:p-5 sm:pb-24 md:pb-5 lg:p-8"
+    >
       <nav
         class="mb-5 flex flex-wrap items-center gap-2 text-xs text-n-slate-11"
         :aria-label="t('CAMPAIGN_JOURNEY.LIST.BREADCRUMB')"
@@ -780,13 +1004,14 @@ onBeforeUnmount(() => {
           v-else-if="draft.step === 2 && audience"
           :audience="audience"
           :channels="channels"
+          :channel-hints="dicasDosCanais"
           :draft="draft"
           :inbox-options="inboxOptions"
           :template-options="templateOptions"
           :variables="variables"
           :columns="columns"
           :coverage="coverage"
-          :media-header="mediaHeader"
+          :field-groups="ponte.gruposDeCampos.value"
           :preview-text="previewText"
           :can-continue="isMessageReady"
           :api-form="{
@@ -818,7 +1043,65 @@ onBeforeUnmount(() => {
           @change-audience="goTo(1)"
           @back="goTo(1)"
           @continue="goTo(3)"
-        />
+        >
+          <template v-if="ponteAtiva" #caixa-aviso>
+            <PonteCaixasReconectar :caixas="caixasParaReconectar" />
+          </template>
+          <template v-if="ponteAtiva" #modelo-vazio>
+            <PonteSemModelo
+              :tem-modelos="templateOptions.length > 0"
+              :para-corrigir="ponte.recusadoParaCorrigir(draft.inboxId)"
+              @criar="createTemplate"
+              @corrigir="fixTemplate"
+            />
+          </template>
+          <template v-if="ponteAtiva" #modelo-aviso>
+            <PonteAvisoDoModelo :modelo="modeloEscolhido" />
+            <PonteFormatoDaCampanha
+              v-if="modeloEscolhido"
+              :key="modeloEscolhido.id"
+              :modelo="modeloEscolhido"
+              :valores="draft.formato || {}"
+              :caixa="draft.inboxId"
+              :time-zone="timeZone"
+              @update="formato => update({ formato })"
+            />
+          </template>
+          <template v-if="comConversaAberta || textoDescartado" #janela>
+            <p
+              v-if="textoDescartado"
+              data-texto-descartado
+              role="status"
+              class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-amber-11"
+            >
+              <span
+                class="i-lucide-info size-4 mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
+              {{ t('MODELOS_WHATSAPP.JANELA.TEXTO_DESCARTADO') }}
+            </p>
+            <ConversaAberta
+              v-else
+              :janela="conversaAberta"
+              :texto="draft.textoNaConversaAberta || ''"
+              :exemplos="exemplosDoTexto"
+              :divulgacao="modeloDeDivulgacao"
+              tem-modelo
+              @update="update"
+            />
+          </template>
+          <template v-if="modeloDaPrevia" #previa>
+            <PontePrevia
+              :modelo="modeloDaPrevia"
+              :bindings="draft.bindings"
+              :defaults="cleanDefaults(draft.defaults)"
+              :sample="sample"
+              :remetente="remetente || inboxName"
+              :valores="draft.formato || {}"
+              :time-zone="timeZone"
+            />
+          </template>
+        </StepMessage>
 
         <StepReview
           v-else-if="draft.step === 3 && audience && isMessageReady"
@@ -835,12 +1118,30 @@ onBeforeUnmount(() => {
           :time-zone="timeZone"
           :is-submitting="isSubmitting"
           :error-message="submitError"
+          :now-blocked-reason="nowBlockedReason"
           @update="update"
           @go="goTo"
           @back="goTo(2)"
           @submit="submit"
           @test-send="sendTestToMe"
-        />
+        >
+          <template v-if="modeloEscolhido || comConversaAberta" #modelo>
+            <RevisaoDaConversaAberta
+              v-if="comConversaAberta && conversaAberta.contagem.value"
+              :janela="conversaAberta"
+              :nome-do-modelo="nomeDoModelo"
+              :tem-texto="Boolean(textoDaConversaAberta)"
+            />
+            <RevisaoDoModelo
+              v-else-if="modeloEscolhido"
+              :modelo="modeloEscolhido"
+              :recebem="forms.preview.value?.receive ?? reach"
+              :formato="draft.formato || {}"
+              :pedido="pedidoDoFormato"
+              :time-zone="timeZone"
+            />
+          </template>
+        </StepReview>
       </template>
     </div>
   </section>

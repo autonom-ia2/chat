@@ -2,15 +2,20 @@ import { shallowMount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import ConfigurationPage from '../ConfigurationPage.vue';
 import SmtpSettings from '../../SmtpSettings.vue';
+import { useAlert } from 'dashboard/composables';
+
+const { runEmbeddedSignup, getInboxes } = vi.hoisted(() => ({
+  runEmbeddedSignup: vi.fn(),
+  getInboxes: vi.fn(),
+}));
 
 vi.mock('dashboard/composables', () => ({
   useAlert: vi.fn(),
 }));
 
 vi.mock('dashboard/composables/useWhatsappEmbeddedSignup', () => ({
-  useWhatsappEmbeddedSignup: () => ({
-    runEmbeddedSignup: vi.fn(),
-  }),
+  useWhatsappEmbeddedSignup: () => ({ runEmbeddedSignup }),
+  SIGNUP_TIMEOUT_CODE: 'WHATSAPP_SIGNUP_TIMEOUT',
 }));
 
 const mountComponent = inbox =>
@@ -22,6 +27,7 @@ const mountComponent = inbox =>
           getters: {
             'globalConfig/isOnChatwootCloud': () => true,
           },
+          actions: { 'inboxes/get': getInboxes },
         }),
       ],
       mocks: {
@@ -83,5 +89,27 @@ describe('ConfigurationPage', () => {
     });
 
     expect(wrapper.vm.showWhatsAppReconfigure).toBe(false);
+  });
+});
+
+// #1228: Meta may have finished the reconfigure; do not show the generic error.
+describe('ConfigurationPage WhatsApp reconfigure that Facebook did not confirm', () => {
+  it('refreshes the inboxes and says the connection was not confirmed', async () => {
+    runEmbeddedSignup.mockRejectedValueOnce(
+      Object.assign(new Error('timed out'), { code: 'WHATSAPP_SIGNUP_TIMEOUT' })
+    );
+    const wrapper = mountComponent({
+      channel_type: 'Channel::Whatsapp',
+      provider: 'whatsapp_cloud',
+      provider_config: { source: 'embedded_signup' },
+    });
+
+    await wrapper.vm.reconfigureWhatsApp();
+
+    expect(getInboxes).toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith(
+      'INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.NOT_CONFIRMED'
+    );
+    expect(wrapper.vm.isReconfiguring).toBe(false);
   });
 });

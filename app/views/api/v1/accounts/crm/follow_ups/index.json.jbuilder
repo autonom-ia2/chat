@@ -3,6 +3,7 @@ conversation_visibility = Crm::Conversations::Visibility.new(
   user: Current.user,
   account_user: Current.account_user
 )
+conversation_visibility.preload(@follow_ups.map(&:conversation))
 
 json.payload do
   json.array! @follow_ups do |follow_up|

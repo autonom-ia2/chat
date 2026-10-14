@@ -111,7 +111,8 @@ class ConversationFinder
     when 'me'
       @conversations = @conversations.assigned_to(current_user)
     when 'unassigned'
-      @conversations = @conversations.unassigned
+      # Inclui as que o robô passou e seguem à espera de pessoa (#1377, opção b).
+      @conversations = @conversations.awaiting_person
     when 'assigned'
       @conversations = @conversations.assigned
     end
@@ -172,7 +173,7 @@ class ConversationFinder
 
     counts = @conversations.unscope(:order).pick(
       Arel.sql("COUNT(*) FILTER (WHERE assignee_id = #{current_user.id})"),
-      Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NULL AND assignee_agent_bot_id IS NULL)'),
+      Arel.sql("COUNT(*) FILTER (WHERE #{Conversation::AWAITING_PERSON_SQL})"),
       Arel.sql('COUNT(*)')
     )
     counts || [0, 0, 0]
@@ -181,7 +182,7 @@ class ConversationFinder
   def legacy_count_for_all_conversations
     [
       @conversations.assigned_to(current_user).count,
-      @conversations.unassigned.count,
+      @conversations.awaiting_person.count,
       @conversations.count
     ]
   end

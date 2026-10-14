@@ -7,6 +7,8 @@ vi.mock('dashboard/api/crmKanban', () => ({
   default: {
     getConversationSubjects: vi.fn(),
     focusConversationSubject: vi.fn(),
+    acceptSubjectSuggestion: vi.fn(),
+    dismissSubjectSuggestion: vi.fn(),
   },
 }));
 vi.mock(
@@ -159,4 +161,81 @@ it('ignores a late answer from the previous conversation', async () => {
 
   expect(rows(wrapper)).toHaveLength(1);
   expect(rows(wrapper)[0].text()).toContain('Agentes de IA');
+});
+
+describe('sugestão da IA (#1145, 5b)', () => {
+  const SUGGESTION = {
+    id: 77,
+    action: 'create',
+    title: 'Plano anual',
+    pipeline_name: 'Comercial',
+    card_id: null,
+    card_title: null,
+  };
+  const button = (wrapper, attr) =>
+    wrapper
+      .findAllComponents({ name: 'NextButton' })
+      .find(item => item.attributes(attr) !== undefined);
+
+  beforeEach(() => {
+    CrmKanbanAPI.getConversationSubjects.mockResolvedValue({
+      data: { payload: SUBJECTS, suggestion: SUGGESTION },
+    });
+    CrmKanbanAPI.acceptSubjectSuggestion.mockResolvedValue({});
+    CrmKanbanAPI.dismissSubjectSuggestion.mockResolvedValue({});
+  });
+
+  it('mostra a sugestão com o nome e o funil, e Criar aceita', async () => {
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    const banner = wrapper.find('[data-crm-subject-suggestion]');
+    expect(banner.text()).toContain(
+      'CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_CREATE'
+    );
+    await button(wrapper, 'data-crm-subject-suggestion-accept').vm.$emit(
+      'click'
+    );
+    await flushPromises();
+
+    expect(CrmKanbanAPI.acceptSubjectSuggestion).toHaveBeenCalledWith(9, 77);
+    expect(notifyCrmSubjectsChanged).toHaveBeenCalledWith(9);
+  });
+
+  it('Ignorar dispensa a sugestão sem criar nada', async () => {
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    await button(wrapper, 'data-crm-subject-suggestion-dismiss').vm.$emit(
+      'click'
+    );
+    await flushPromises();
+
+    expect(CrmKanbanAPI.dismissSubjectSuggestion).toHaveBeenCalledWith(9, 77);
+    expect(CrmKanbanAPI.acceptSubjectSuggestion).not.toHaveBeenCalled();
+  });
+
+  it('quem só vê a conversa não recebe a sugestão', async () => {
+    const wrapper = mountPanel({ canManage: false });
+    await flushPromises();
+
+    expect(wrapper.find('[data-crm-subject-suggestion]').exists()).toBe(false);
+  });
+
+  it('sugestão que mudou no meio avisa e lê de novo', async () => {
+    CrmKanbanAPI.acceptSubjectSuggestion.mockRejectedValueOnce(new Error('x'));
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    await button(wrapper, 'data-crm-subject-suggestion-accept').vm.$emit(
+      'click'
+    );
+    await flushPromises();
+
+    const { useAlert } = await import('dashboard/composables');
+    expect(useAlert).toHaveBeenCalledWith(
+      'CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_ERROR'
+    );
+    expect(CrmKanbanAPI.getConversationSubjects).toHaveBeenCalledTimes(2);
+  });
 });

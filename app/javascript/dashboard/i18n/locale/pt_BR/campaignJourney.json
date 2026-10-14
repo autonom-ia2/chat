@@ -20,7 +20,8 @@
       "COMPLETED": "Concluída",
       "CANCELLED": "Cancelada",
       "FAILED": "Falhou",
-      "ALWAYS_ON": "Sempre ativa"
+      "ALWAYS_ON": "Sempre ativa",
+      "STOPPED": "Parada"
     },
     "CHOOSER": {
       "TITLE": "Por onde vai a campanha?",
@@ -29,7 +30,7 @@
       "CONNECT": "Conectar um canal",
       "HINTS": {
         "EMAIL": "Conteúdo rico, com editor e modelos.",
-        "WHATSAPP_OFFICIAL": "Modelo aprovado pela Meta. Para quem ainda não falou com você.",
+        "WHATSAPP_OFFICIAL": "Modelo aprovado pelo WhatsApp. Para quem ainda não falou com você.",
         "WHATSAPP_API": "Texto livre e mídia, uma mensagem por vez, no ritmo seguro.",
         "SMS": "Texto curto, chega em qualquer celular.",
         "LIVE_CHAT": "Mensagem automática no seu site."
@@ -319,8 +320,6 @@
         "TEMPLATE_LABEL": "Modelo aprovado",
         "TEMPLATE_PLACEHOLDER": "Escolha o modelo",
         "TEMPLATE_EMPTY": "Esta caixa ainda não tem modelo aprovado.",
-        "MEDIA_LABEL": "Link do arquivo que aparece no topo da mensagem",
-        "MEDIA_PLACEHOLDER": "https://",
         "CONTINUE": "Continuar para revisão",
         "PREVIEW_TITLE": "Como o cliente vê",
         "PREVIEW_HINT": "Prévia com o primeiro contato do público.",
@@ -365,8 +364,9 @@
         "WHEN": "Quando começa",
         "NOW": "Agora",
         "LATER": "Escolher data e hora",
-        "DATE_LABEL": "Data e hora ({zone})",
+        "DATE_LABEL": "Data e hora (fuso da conta: {zone})",
         "PAST": "Escolha uma data e hora no futuro.",
+        "PICK_DATE": "Escolha a data e a hora do envio.",
         "RECEIVE": "Vão receber",
         "ON_CHANNEL": "No público com celular",
         "LEFT_OUT": "Ficam de fora por falta de dado",
@@ -400,7 +400,21 @@
           "INVALID_SCHEDULE": "Escolha uma data e hora no futuro.",
           "FEATURE_DISABLED": "Campanhas de WhatsApp não estão ligadas nesta conta.",
           "SMS_INBOX_REQUIRED": "Escolha uma caixa de SMS conectada.",
-          "MESSAGE_TOO_LONG": "A mensagem é longa demais para SMS (no máximo 1.600 caracteres)."
+          "MESSAGE_TOO_LONG": "A mensagem é longa demais para SMS (no máximo 1.600 caracteres).",
+          "HEADER_MEDIA_REQUIRED": "Este modelo tem foto, vídeo ou documento no topo e falta o arquivo. Volte à Mensagem e escolha o arquivo.",
+          "HEADER_MEDIA_URL_INVALID": "O link do arquivo precisa ser completo, começando com https://.",
+          "HEADER_MEDIA_TYPE_MISMATCH": "O arquivo do link não é do mesmo tipo do topo do modelo (foto, vídeo ou documento).",
+          "HEADER_MEDIA_INVALID": "O arquivo do topo não serve: use foto JPG ou PNG de até 5 MB, vídeo MP4 de até 16 MB ou documento PDF de até 100 MB.",
+          "COUPON_CODE_INVALID": "O código do cupom precisa ter de 1 a 15 letras e números.",
+          "OFFER_EXPIRATION_REQUIRED": "Escolha até quando a oferta vale.",
+          "OFFER_EXPIRATION_PAST": "A data da oferta já passou. Volte e escolha uma data à frente.",
+          "CAROUSEL_CARDS_MISMATCH": "O modelo mudou a quantidade de cartões. Escolha o modelo de novo.",
+          "CAROUSEL_MEDIA_REQUIRED": "Falta a foto de um dos cartões. Escolha a foto de cada cartão.",
+          "CAROUSEL_MEDIA_INVALID": "A foto de um cartão não serve: use JPG ou PNG de até 5 MB (ou MP4 de até 16 MB para vídeo).",
+          "CAROUSEL_FIELD_REQUIRED": "Um cartão deste modelo tem campo que a campanha ainda não preenche.",
+          "FREE_TEXT_INVALID": "A mensagem escrita não pode ir assim. Volte à Mensagem e confira o texto (link só pelo botão do campo).",
+          "FREE_TEXT_DISABLED": "A mensagem escrita não está liberada nesta conta. Tire a mensagem escrita para mandar só o modelo.",
+          "FREE_TEXT_RICH_TEMPLATE": "Este modelo tem cupom, oferta com prazo ou carrossel: todos recebem o modelo completo. Volte à Mensagem e tire a mensagem escrita."
         },
         "OPTED_OUT": "Recusaram mensagens",
         "REASONS": {
@@ -538,6 +552,17 @@
       "SAVED": "Alterações salvas.",
       "ERROR": "Não foi possível salvar agora. Tente de novo.",
       "NOT_FOUND": "Esta mensagem do Chat ao vivo não foi achada."
+    },
+    "STOP_REASONS": {
+      "modelo_pausado": "modelo pausado pelo WhatsApp",
+      "modelo_recusado": "modelo recusado",
+      "modelo_em_analise": "modelo em análise",
+      "modelo_mudou": "modelo mudou",
+      "tipo_mudou": "tipo do modelo mudou",
+      "modelo_apagado": "modelo apagado",
+      "formato_nao_vai": "formato ainda não vai",
+      "nao_conferido": "não deu para conferir o modelo",
+      "outro": "parou antes de enviar"
     }
   }
 }

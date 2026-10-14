@@ -3,6 +3,7 @@ module Crm
     class ContextBuilder
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
+      MAX_OTHER_SUBJECTS = 5
       # Quantas mensagens recentes olhar para trás procurando a última fala humana que NÃO seja um
       # toque da própria IA. Ver #last_human_agent_at.
       FOLLOW_UP_SCAN_LIMIT = 20
@@ -28,19 +29,31 @@ module Crm
           },
           known_attributes: known_attributes,
           conversation_state: conversation_state,
-          temporal: temporal_context
+          temporal: temporal_context,
+          other_subjects: other_subjects
         }
       end
 
       private
 
-      # Valores JÁ salvos dos atributos customizados (contato + conversa). O classificador recebe o
+      # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
+      # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
+      def other_subjects
+        account = @card.account
+        linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
+        account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
+               .where.not(id: @card.id).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
+               .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
+      end
+
+      # Valores JÁ salvos dos atributos customizados (contato, conversa e o próprio card, #1146). O classificador recebe o
       # SCHEMA (chaves permitidas) em attribute_schema; aqui vão os VALORES atuais, para ele decidir o
       # estágio ciente do que já se sabe e não re-extrair o que não mudou.
       def known_attributes
         {
           contact: attribute_values(@card.try(:contact)),
-          conversation: attribute_values(@card.primary_conversation)
+          conversation: attribute_values(@card.primary_conversation),
+          card: attribute_values(@card)
         }
       end
 

@@ -218,7 +218,7 @@ class Whatsapp::IncomingCallService
   def broadcast_incoming(call, sdp_offer)
     contact = call.contact
     token = call.conversation.assignee&.pubsub_token
-    streams = token ? [token] : (online_agent_streams.presence || fallback_agent_streams)
+    streams = token ? [token] : (online_agent_streams(call).presence || fallback_agent_streams(call))
     broadcast(call, 'voice_call.incoming',
               streams: streams,
               direction: call.direction_label, inbox_id: call.inbox_id,
@@ -227,22 +227,20 @@ class Whatsapp::IncomingCallService
               caller: { name: contact.name, phone: contact.phone_number, avatar: contact.avatar_url })
   end
 
-  def online_agent_streams
-    inbox.available_agents.pluck('users.pubsub_token').compact
+  # Acesso por funil (#1148): a chamada não toca para quem o funil esconde.
+  def online_agent_streams(call)
+    blocked = Crm::Access::Recipients.new(call.conversation).blocked_user_ids
+    inbox.available_agents.where.not(users: { id: blocked }).pluck('users.pubsub_token').compact
   end
 
-  def fallback_agent_streams
-    user_ids = inbox.member_ids | inbox.account.administrators.ids
+  def fallback_agent_streams(call)
+    user_ids = (inbox.member_ids - Crm::Access::Recipients.new(call.conversation).blocked_user_ids) | inbox.account.administrators.ids
     User.where(id: user_ids).pluck(:pubsub_token).compact
   end
 
-  def broadcast(call, event, streams: account_streams, **extra)
+  def broadcast(call, event, streams: Crm::Access::CallStreams.for(call.conversation), **extra)
     payload = { event: event, data: base_payload(call).merge(extra) }
     streams.each { |s| ActionCable.server.broadcast(s, payload) }
-  end
-
-  def account_streams
-    ["account_#{inbox.account_id}"]
   end
 
   def base_payload(call)

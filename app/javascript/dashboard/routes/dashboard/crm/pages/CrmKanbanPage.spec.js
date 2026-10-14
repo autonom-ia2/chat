@@ -1,6 +1,9 @@
+/* eslint-disable vue/one-component-per-file -- stubs de teste da gaveta, um por cenário */
 import { flushPromises, mount } from '@vue/test-utils';
-import { defineComponent, h, ref } from 'vue';
+import { h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
+import { useAlert } from 'dashboard/composables';
+import { useEmitter } from 'dashboard/composables/emitter';
 import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import {
   KANBAN_ZOOM_CLASSES,
@@ -15,6 +18,8 @@ const route = { meta: {}, query: {}, params: {} };
 const permissions = {};
 const storeGetters = {};
 const dispatch = vi.fn();
+const push = vi.fn();
+const replace = vi.fn();
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -25,7 +30,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, replace }),
 }));
 
 vi.mock('dashboard/composables/store', () => ({
@@ -105,8 +110,18 @@ const setPermissions = overrides => {
   });
 };
 
-const setGetters = () => {
+// `bookingV2` liga a opção da conta `crm_booking_v2` (agendamento novo, #1212).
+const setGetters = ({
+  bookingV2 = false,
+  role = 'administrator',
+  keys,
+} = {}) => {
   Object.assign(storeGetters, {
+    getCurrentRole: ref(role),
+    'accounts/getAccount': ref(() => ({
+      id: 1,
+      features: { crm_booking_v2: bookingV2 },
+    })),
     'crmKanban/getPipelines': ref([PIPELINE]),
     'crmKanban/getStages': ref(
       STAGES.map(s => ({ ...s, cards: [...s.cards] }))
@@ -122,7 +137,10 @@ const setGetters = () => {
     'crmKanban/getListGroupBy': ref(''),
     'crmKanban/getListSelection': ref([]),
     'crmKanban/getSavedViews': ref([]),
-    getCurrentUser: ref({ id: 1 }),
+    getCurrentUser: ref({
+      id: 1,
+      accounts: [{ id: 1, permissions: keys || [] }],
+    }),
     getCurrentAccountId: ref(1),
     'inboxes/getInboxes': ref([]),
     'agents/getAgents': ref([]),
@@ -136,10 +154,11 @@ const mountPage = async ({
   calendarOnly = false,
   perms = {},
   stubs = {},
+  account = {},
 } = {}) => {
   route.meta = calendarOnly ? { calendarOnly: true } : {};
   setPermissions(perms);
-  setGetters();
+  setGetters(account);
   const wrapper = mount(CrmKanbanPage, {
     attachTo: document.body,
     global: {
@@ -147,7 +166,7 @@ const mountPage = async ({
         Draggable: DraggableStub,
         Spinner: true,
         ConfirmModal: true,
-        CrmCardDrawer: true,
+        CardGaveta: true,
         CrmKanbanFiltersDrawer: true,
         CrmOpportunityFromContact: true,
         CrmPipelineDrawer: true,
@@ -188,6 +207,53 @@ const openConfiguration = async wrapper => {
 
 describe('CrmKanbanPage', () => {
   let wrapper;
+
+  // #1385 — a passagem volta para o Kanban no funil de onde a pessoa saiu.
+  describe('passagem para a equipe', () => {
+    afterEach(() => {
+      route.query = {};
+      delete route.name;
+      push.mockClear();
+      replace.mockClear();
+    });
+
+    it('abre a passagem com from=crm e guarda o funil no endereço do quadro', async () => {
+      window.globalConfig.CRM_AI_ENABLED = 'true';
+      wrapper = await mountPage();
+      replace.mockClear();
+      await openConfiguration(wrapper);
+      Array.from(document.body.querySelectorAll('button'))
+        .find(
+          b => b.textContent.trim() === 'CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS'
+        )
+        .click();
+      await flushPromises();
+
+      expect(replace).toHaveBeenCalledWith({ query: { pipeline_id: '1' } });
+      // O funil fica no endereço do quadro antes de sair (voltar do navegador).
+      expect(replace.mock.invocationCallOrder[0]).toBeLessThan(
+        push.mock.invocationCallOrder[0]
+      );
+      expect(push).toHaveBeenCalledWith({
+        name: 'crm_handoff_settings_edit',
+        params: { pipelineId: 1 },
+        query: { from: 'crm' },
+      });
+    });
+
+    it('com ?pipeline_id= abre nesse funil e tira o parâmetro do endereço', async () => {
+      const outro = { id: 2, name: 'Pós-venda' };
+      dispatch.mockImplementation(async type =>
+        type === 'crmKanban/fetchPipelines' ? [PIPELINE, outro] : []
+      );
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '2', card_id: '9' };
+      wrapper = await mountPage();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/loadListPrefs', 2);
+      expect(replace).toHaveBeenCalledWith({ query: { card_id: '9' } });
+    });
+  });
 
   beforeEach(() => {
     window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
@@ -230,6 +296,72 @@ describe('CrmKanbanPage', () => {
     ).toBe(true);
   });
 
+  // Botão Agendamento do Calendário (#1212).
+  const bookingButton = () =>
+    Array.from(document.body.querySelectorAll('button')).find(
+      button =>
+        button.textContent.trim() === 'CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT'
+    );
+  const drawerShown = () =>
+    wrapper.findComponent({ name: 'CrmBookingProfilesDrawer' }).props('show');
+
+  it('com o agendamento novo ligado, o botão leva à página nova e não abre a gaveta', async () => {
+    push.mockClear();
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { bookingV2: true },
+    });
+
+    bookingButton().click();
+    await flushPromises();
+
+    expect(push).toHaveBeenCalledWith({
+      name: 'settings_booking',
+      params: { accountId: 1 },
+    });
+    expect(drawerShown()).toBe(false);
+  });
+
+  it.each(['agendamento_view', 'agendamento_manage'])(
+    'com o agendamento novo, função com %s vê o botão mesmo sem gerenciar funis',
+    async key => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        perms: { canManagePipelines: false },
+        account: { bookingV2: true, role: 'agent', keys: [key] },
+      });
+      expect(bookingButton()).toBeDefined();
+    }
+  );
+
+  it('com o agendamento novo, quem não pode ver a página não vê o botão', async () => {
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { bookingV2: true, role: 'agent', keys: ['crm_view'] },
+    });
+    expect(bookingButton()).toBeUndefined();
+  });
+
+  it('com o agendamento novo desligado, segue a gaveta antiga para quem gerencia funis, e só', async () => {
+    push.mockClear();
+    wrapper = await mountPage({
+      calendarOnly: true,
+      account: { role: 'agent', keys: ['agendamento_manage'] },
+    });
+    bookingButton().click();
+    await flushPromises();
+    expect(drawerShown()).toBe(true);
+    expect(push).not.toHaveBeenCalled();
+    wrapper.unmount();
+
+    wrapper = await mountPage({
+      calendarOnly: true,
+      perms: { canManagePipelines: false },
+      account: { role: 'agent', keys: ['agendamento_manage'] },
+    });
+    expect(bookingButton()).toBeUndefined();
+  });
+
   it('shows funnel actions on the Kanban configuration menu', async () => {
     wrapper = await mountPage();
 
@@ -266,13 +398,13 @@ describe('CrmKanbanPage', () => {
       if (type === 'crmKanban/fetchCard') return { id: payload };
       return [];
     });
-    const DrawerStub = defineComponent({
+    const DrawerStub = {
       setup(_, { expose }) {
         expose({ guardNavigation });
         return () => h('div');
       },
-    });
-    wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+    };
+    wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
     const openButtons = () =>
       wrapper
         .findAll('button')
@@ -346,9 +478,87 @@ it('loads all authorized stages for card details independently of board filters'
   await wrapper.vm.openCardDrawer({ id: 100 });
   expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchPipelineStages', 1);
   expect(
-    wrapper.findComponent({ name: 'CrmCardDrawer' }).attributes('stages')
+    wrapper.findComponent({ name: 'CardGaveta' }).attributes('stages')
   ).toBeTruthy();
   expect(wrapper.vm.cardDrawerStages).toEqual(STAGES);
+  wrapper.unmount();
+});
+
+it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', async () => {
+  const wrapper = await mountPage();
+  const [, openCard] = useEmitter.mock.calls.findLast(
+    ([eventName]) => eventName === 'CRM_OPEN_CARD'
+  );
+  dispatch.mockImplementation(async (type, payload) =>
+    type === 'crmKanban/fetchCard' ? { id: payload, pipeline_id: 1 } : []
+  );
+
+  openCard(42);
+  await flushPromises();
+
+  expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchCard', 42);
+  expect(wrapper.vm.selectedCard).toMatchObject({ id: 42 });
+  wrapper.unmount();
+});
+
+it('refreshes the messaging window and shows the template alert when creating a follow-up fails that validation', async () => {
+  const refreshMessagingWindow = vi.fn();
+  const DrawerStub = {
+    setup(_, { expose }) {
+      expose({ refreshMessagingWindow });
+      return () => h('div');
+    },
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = {
+        data: {
+          message:
+            'Metadata template fallback is required outside the messaging window',
+          attributes: ['metadata'],
+          code: 'template_fallback_required',
+        },
+      };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(refreshMessagingWindow).toHaveBeenCalledOnce();
+  expect(useAlert).toHaveBeenCalledWith(
+    'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+  );
+  wrapper.unmount();
+});
+
+it('shows the raw API message for any other follow-up creation failure', async () => {
+  const refreshMessagingWindow = vi.fn();
+  const DrawerStub = {
+    setup(_, { expose }) {
+      expose({ refreshMessagingWindow });
+      return () => h('div');
+    },
+  };
+  const wrapper = await mountPage({ stubs: { CardGaveta: DrawerStub } });
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = { data: { message: 'conversation is required' } };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(refreshMessagingWindow).not.toHaveBeenCalled();
+  expect(useAlert).toHaveBeenCalledWith('conversation is required');
   wrapper.unmount();
 });
 

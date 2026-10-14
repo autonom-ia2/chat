@@ -3,12 +3,25 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import FunilInterruptor from './funil/FunilInterruptor.vue';
+import { diasEmFaixa, tempoAte } from './funil/funil';
 
+// #1384 — "Lembretes e retornos" do funil. Abre no resumo (duas frases
+// prontas, cada uma com liga/desliga); "Alterar" leva ao detalhe das
+// tentativas, que a gaveta mostra numa tela própria (`detalhe`).
 const props = defineProps({
   pipelineId: { type: [String, Number], required: true },
+  detalhe: { type: Boolean, default: false },
+  // #1498 — num funil de Atender, "cliente que some" só aparece para quem já
+  // tinha ligado: é lembrete pensado para venda.
+  atender: { type: Boolean, default: false },
 });
 
-const { t } = useI18n();
+const emit = defineEmits(['alterar']);
+
+const { t, locale } = useI18n();
 const STALE_HOURS = 168;
 
 const isLoading = ref(false);
@@ -29,8 +42,9 @@ const form = reactive({
 });
 
 // Keep the editable interval list in sync with the requested number of touches,
-// padding new slots with sensible defaults and trimming extras.
+// padding new slots after the previous one and trimming extras.
 const FOLLOWUP_DEFAULT_INTERVALS = [20, 72, 168];
+const HOURS_PER_DAY = 24;
 const syncIntervals = () => {
   const count = Math.max(
     1,
@@ -39,11 +53,12 @@ const syncIntervals = () => {
   const next = [];
   for (let index = 0; index < count; index += 1) {
     const existing = form.autoFollowup.intervalsHours[index];
-    next.push(
-      Number.isFinite(existing)
-        ? existing
-        : (FOLLOWUP_DEFAULT_INTERVALS[index] ?? 168)
+    const previous = next[index - 1] ?? 0;
+    const fallback = Math.max(
+      FOLLOWUP_DEFAULT_INTERVALS[index] ?? 168,
+      previous + HOURS_PER_DAY
     );
+    next.push(Number.isFinite(existing) ? existing : fallback);
   }
   form.autoFollowup.maxTouches = count;
   form.autoFollowup.intervalsHours = next;
@@ -61,6 +76,8 @@ const toggleDay = day => {
     form.autoFollowup.allowedDays = [...days, day];
   }
 };
+const intervalAfterPrevious = (hours, index) =>
+  !index || hours > form.autoFollowup.intervalsHours[index - 1];
 const scheduleValid = computed(() => {
   const { allowedDays, quietHours, intervalsHours, maxTouches } =
     form.autoFollowup;
@@ -78,10 +95,100 @@ const scheduleValid = computed(() => {
       (hours, index) =>
         Number.isInteger(hours) &&
         hours > 0 &&
-        (!index || hours > intervalsHours[index - 1])
+        intervalAfterPrevious(hours, index)
     )
   );
 });
+
+// #1384: cada tentativa é "Depois de [tempo] sem resposta", escolhido numa
+// lista de tempos redondos. O servidor continua recebendo horas.
+const UX = 'CRM_FUNIL.RETORNO';
+// "Também mandar mensagem ao cliente nesse dia": o interruptor do cartão.
+const mensagemNoDia = computed({
+  get: () => form.callbackMode !== 'reminder',
+  set: valor => {
+    form.callbackMode = valor ? 'both' : 'reminder';
+  },
+});
+const HOURS_PER_WEEK = 168;
+const INTERVAL_CHOICES = [2, 4, 8, 12, 20, 24, 48, 72, 96, 120, 168, 336];
+const intervalLabel = hours => {
+  if (hours % HOURS_PER_WEEK === 0) {
+    const weeks = hours / HOURS_PER_WEEK;
+    return t('CRM_FUNIL.RETORNO.SEMANAS', { n: weeks }, weeks);
+  }
+  if (hours % HOURS_PER_DAY === 0) {
+    const days = hours / HOURS_PER_DAY;
+    return t('CRM_FUNIL.RETORNO.DIAS', { n: days }, days);
+  }
+  return t('CRM_FUNIL.RETORNO.HORAS', { n: hours }, hours);
+};
+// A lista de cada tentativa só oferece tempo depois da anterior (o valor atual
+// fica, mesmo fora da ordem, para a pessoa ver o que corrigir).
+const intervalChoices = index => {
+  const current = form.autoFollowup.intervalsHours[index];
+  const previous = index ? form.autoFollowup.intervalsHours[index - 1] : 0;
+  const values = [...new Set([...INTERVAL_CHOICES, current])]
+    .filter(Number.isFinite)
+    .filter(hours => hours > previous || hours === current)
+    .sort((a, b) => a - b);
+  return values.map(hours => ({ value: hours, label: intervalLabel(hours) }));
+};
+const setTouchInterval = (index, hours) => {
+  const next = [...form.autoFollowup.intervalsHours];
+  next[index] = hours;
+  form.autoFollowup.intervalsHours = next;
+};
+const setTouches = count => {
+  form.autoFollowup.maxTouches = count;
+  syncIntervals();
+};
+const touchOptions = [1, 2, 3];
+const hourChoices = (from, to) =>
+  Array.from({ length: to - from + 1 }, (_, index) => ({
+    value: from + index,
+    label: t('CRM_FUNIL.RETORNO.HORA', { hora: from + index }),
+  }));
+const startHourChoices = computed(() => hourChoices(0, 23));
+const endHourChoices = computed(() => hourChoices(1, 24));
+
+// O resumo de "quando o cliente para de responder" em duas frases prontas:
+// quantas vezes e quando, depois em que dias e horários.
+const listFormat = items =>
+  new Intl.ListFormat(locale.value.replace('_', '-'), {
+    style: 'long',
+    type: 'conjunction',
+  }).format(items);
+const dayName = day => t(`${UX}.DIA_NOME.${day}`);
+const followupSummary = computed(() => {
+  const { enabled, maxTouches, intervalsHours, allowedDays, quietHours } =
+    form.autoFollowup;
+  if (!enabled) return { quando: t(`${UX}.SUMIU_DESLIGADO`), onde: '' };
+  const tempos = listFormat(
+    intervalsHours.map(hours => {
+      const { chave, n } = tempoAte(hours);
+      return t(`${UX}.${chave}`, { n }, n);
+    })
+  );
+  const faixa = diasEmFaixa(allowedDays);
+  let dias = t(`${UX}.TODOS_OS_DIAS`);
+  if (faixa.tipo === 'FAIXA')
+    dias = t(`${UX}.DE_A`, { de: dayName(faixa.de), ate: dayName(faixa.ate) });
+  if (faixa.tipo === 'LISTA') dias = listFormat(faixa.dias.map(dayName));
+  return {
+    quando: t(
+      isReminder.value ? `${UX}.RESUMO_EQUIPE` : `${UX}.RESUMO_MENSAGEM`,
+      { n: maxTouches, tempos },
+      maxTouches
+    ),
+    onde: t(`${UX}.RESUMO_HORARIO`, {
+      dias: dias.charAt(0).toUpperCase() + dias.slice(1),
+      inicio: quietHours.start,
+      fim: quietHours.end,
+    }),
+  };
+});
+
 const canSave = computed(
   () =>
     !isLoading.value &&
@@ -190,6 +297,7 @@ defineExpose({
   isLoading,
   isSaving,
   loadFailed,
+  scheduleValid,
 });
 
 watch(
@@ -202,292 +310,306 @@ watch(
 </script>
 
 <template>
-  <section class="grid gap-5">
-    <div>
-      <h3 class="mb-1 text-lg font-semibold text-n-slate-12">
-        {{ t('CRM_KANBAN.PIPELINE_EDITOR.RETURNS') }}
-      </h3>
-      <p class="mb-0 text-xs leading-5 text-n-slate-11">
-        {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_HELP') }}
-      </p>
-    </div>
-
-    <p v-if="isLoading" class="mb-0 text-sm text-n-slate-11">
+  <section class="flex flex-col gap-5">
+    <p v-if="isLoading" class="mb-0 text-[0.9375rem] text-n-slate-11">
       {{ t('CRM_KANBAN.AI_SETTINGS.LOADING') }}
     </p>
 
-    <p v-else-if="loadFailed" class="mb-0 text-sm text-n-ruby-11">
+    <p v-else-if="loadFailed" class="mb-0 text-[0.9375rem] text-n-ruby-11">
       {{ t('CRM_KANBAN.AI_SETTINGS.LOAD_ERROR') }}
     </p>
 
-    <template v-else>
-      <label
-        class="flex min-h-11 items-center gap-3 rounded-xl border border-n-weak bg-n-surface-2 p-4 text-sm text-n-slate-12"
-      >
-        <input
-          :checked="form.callbackMode !== 'reminder'"
-          type="checkbox"
-          class="h-5 w-5 rounded border-n-weak"
-          @change="
-            form.callbackMode = $event.target.checked ? 'both' : 'reminder'
-          "
-        />
-        {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_BOTH') }}
-      </label>
-
+    <!-- Resumo: as duas situações em frases, já prontas. -->
+    <template v-else-if="!detalhe">
       <section
-        class="grid gap-4 rounded-2xl border border-n-slate-4 bg-n-surface-1 p-5"
+        data-callback
+        class="flex flex-col gap-4 rounded-2xl border bg-n-solid-1 p-5"
+        :class="mensagemNoDia ? 'border-n-blue-7' : 'border-n-weak'"
       >
-        <div>
-          <h4
-            class="mb-1 flex items-center gap-1.5 text-sm font-medium text-n-slate-12"
+        <label class="flex cursor-pointer items-start gap-4">
+          <span
+            class="grid size-12 shrink-0 place-items-center rounded-2xl bg-n-iris-3 text-n-iris-11"
+            aria-hidden="true"
           >
-            <span class="i-lucide-message-circle-reply text-base" />
-            {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TITLE') }}
-          </h4>
-          <p class="mb-0 text-xs leading-5 text-n-slate-11">
-            {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.AI_HELP') }}
-          </p>
-        </div>
-
-        <label class="flex min-h-11 items-center gap-3 text-sm text-n-slate-12">
-          <input
-            v-model="form.autoFollowup.enabled"
-            type="checkbox"
-            class="h-5 w-5 rounded border-n-weak"
+            <span class="i-lucide-calendar-clock size-6" />
+          </span>
+          <span class="flex min-w-0 flex-1 flex-col gap-1">
+            <span class="text-sm font-medium text-n-slate-11">
+              {{ t(`${UX}.DEPOIS_TITULO`) }}
+            </span>
+            <span
+              data-callback-resumo
+              class="text-base font-semibold leading-relaxed text-n-slate-12"
+            >
+              {{
+                t(
+                  mensagemNoDia
+                    ? `${UX}.DEPOIS_FRASE_MENSAGEM`
+                    : `${UX}.DEPOIS_FRASE`
+                )
+              }}
+            </span>
+            <span class="text-[0.9375rem] text-n-slate-11">
+              {{ t(`${UX}.DEPOIS_EXEMPLO`) }}
+            </span>
+          </span>
+          <FunilInterruptor
+            v-model="mensagemNoDia"
+            :rotulo="t(`${UX}.DEPOIS_MENSAGEM`)"
           />
-          {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.ENABLED') }}
         </label>
-
-        <template v-if="form.autoFollowup.enabled">
-          <div
-            class="grid gap-3 sm:grid-cols-2"
-            role="radiogroup"
-            :aria-label="t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.ACTION_LABEL')"
-          >
-            <label
-              v-for="mode in followupModes"
-              :key="mode"
-              class="flex min-w-0 cursor-pointer items-start gap-2 rounded-lg border p-3"
-              :class="
-                form.autoFollowup.mode === mode
-                  ? 'border-n-brand bg-n-brand/5'
-                  : 'border-n-weak bg-n-surface-2'
-              "
-            >
-              <input
-                v-model="form.autoFollowup.mode"
-                type="radio"
-                :name="`followup-mode-${pipelineId}`"
-                :value="mode"
-                class="mt-0.5 shrink-0"
-              />
-              <span class="min-w-0">
-                <span class="block text-sm font-medium text-n-slate-12">{{
-                  t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.MODES.${mode}.TITLE`)
-                }}</span>
-                <span class="mt-1 block text-xs leading-5 text-n-slate-11">{{
-                  t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.MODES.${mode}.HELP`)
-                }}</span>
-              </span>
-            </label>
-          </div>
-          <details class="rounded-xl border border-n-weak bg-n-surface-2 p-4">
-            <summary
-              class="min-h-11 cursor-pointer text-sm font-medium text-n-slate-12"
-            >
-              {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_LABEL') }}
-            </summary>
-            <div class="mt-3 grid gap-4">
-              <label class="grid gap-1">
-                <span class="text-xs text-n-slate-11">
-                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.MAX_TOUCHES') }}
-                </span>
-                <input
-                  v-model.number="form.autoFollowup.maxTouches"
-                  type="number"
-                  min="1"
-                  max="3"
-                  class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                  @change="syncIntervals"
-                />
-              </label>
-
-              <div class="grid gap-1.5">
-                <span class="text-xs text-n-slate-11">
-                  {{
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.EVALUATION_OFFSETS')
-                  }}
-                </span>
-                <div
-                  v-for="(interval, index) in form.autoFollowup.intervalsHours"
-                  :key="index"
-                  class="flex flex-wrap items-center gap-3"
-                >
-                  <span class="w-20 shrink-0 text-xs text-n-slate-11">
-                    {{
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
-                        n: index + 1,
-                      })
-                    }}
-                  </span>
-                  <input
-                    v-model.number="form.autoFollowup.intervalsHours[index]"
-                    :aria-label="
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
-                        n: index + 1,
-                      })
-                    "
-                    type="number"
-                    min="1"
-                    class="reset-base box-border h-9 w-24 shrink-0 rounded-lg border-0 bg-n-surface-2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                  />
-                  <span
-                    v-if="isReminder"
-                    class="rounded bg-n-teal-3 px-2 py-1 text-[10px] font-medium text-n-teal-11"
-                  >
-                    {{
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_BADGE')
-                    }}
-                  </span>
-                  <span
-                    v-else-if="Number(interval) < 24"
-                    class="rounded px-2 py-1 text-[10px] font-medium text-n-teal-11 bg-n-teal-3"
-                  >
-                    {{
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SESSION_BADGE')
-                    }}
-                  </span>
-                  <span
-                    v-else
-                    class="rounded px-2 py-1 text-[10px] font-medium text-n-amber-11 bg-n-amber-3"
-                  >
-                    {{
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TEMPLATE_BADGE')
-                    }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="grid gap-3">
-                <span class="text-xs text-n-slate-11">
-                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_LABEL') }}
-                </span>
-                <div class="flex flex-wrap items-end gap-3">
-                  <label class="grid gap-1">
-                    <span class="text-xs text-n-slate-11">
-                      {{
-                        t(
-                          'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_START'
-                        )
-                      }}
-                    </span>
-                    <input
-                      v-model.number="form.autoFollowup.quietHours.start"
-                      type="number"
-                      min="0"
-                      max="23"
-                      class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                    />
-                  </label>
-                  <label class="grid gap-1">
-                    <span class="text-xs text-n-slate-11">
-                      {{
-                        t(
-                          'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_END'
-                        )
-                      }}
-                    </span>
-                    <input
-                      v-model.number="form.autoFollowup.quietHours.end"
-                      type="number"
-                      min="0"
-                      max="23"
-                      class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                    />
-                  </label>
-                  <div class="grid min-w-0 gap-1">
-                    <span class="text-xs text-n-slate-11">{{
-                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
-                    }}</span>
-                    <div
-                      class="grid grid-cols-7 gap-1"
-                      role="group"
-                      :aria-label="
-                        t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
-                      "
-                    >
-                      <button
-                        v-for="day in weekdays"
-                        :key="day"
-                        type="button"
-                        :aria-pressed="
-                          form.autoFollowup.allowedDays.includes(day)
-                        "
-                        :aria-label="
-                          t(
-                            `CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_FULL.${day}`
-                          )
-                        "
-                        class="h-9 rounded-md border px-1.5 text-xs font-medium"
-                        :class="
-                          form.autoFollowup.allowedDays.includes(day)
-                            ? 'border-n-brand bg-n-brand/10 text-n-brand'
-                            : 'border-n-weak bg-n-surface-2 text-n-slate-11'
-                        "
-                        @click="toggleDay(day)"
-                      >
-                        {{
-                          t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS.${day}`)
-                        }}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_HELP') }}
-                </p>
-              </div>
-
-              <p
-                class="mb-0 flex items-start gap-1.5 rounded-lg bg-n-alpha-black2 p-3 text-xs leading-5 text-n-slate-11"
-              >
-                <span class="i-lucide-sparkles mt-0.5 shrink-0 text-sm" />
-                {{
-                  t(
-                    isReminder
-                      ? 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_INFO'
-                      : 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.OFFICIAL_INFO'
-                  )
-                }}
-              </p>
-
-              <label class="grid gap-1">
-                <span class="text-xs text-n-slate-11">
-                  {{
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.AI_INSTRUCTIONS')
-                  }}
-                </span>
-                <textarea
-                  v-model="form.autoFollowup.toneInstructions"
-                  rows="3"
-                  class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                  :placeholder="
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TONE_PLACEHOLDER')
-                  "
-                />
-              </label>
-            </div>
-          </details>
-        </template>
       </section>
 
-      <p
-        v-if="form.autoFollowup.enabled && !scheduleValid"
-        role="alert"
-        class="mb-0 text-xs text-n-ruby-11"
+      <section
+        v-if="!atender || form.autoFollowup.enabled"
+        data-auto-followup
+        class="flex flex-col gap-4 rounded-2xl border bg-n-solid-1 p-5"
+        :class="form.autoFollowup.enabled ? 'border-n-blue-7' : 'border-n-weak'"
       >
-        {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.INVALID_SCHEDULE') }}
+        <label class="flex cursor-pointer items-start gap-4">
+          <span
+            class="grid size-12 shrink-0 place-items-center rounded-2xl bg-n-blue-3 text-n-blue-11"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-rotate-ccw size-6" />
+          </span>
+          <span class="flex min-w-0 flex-1 flex-col gap-1">
+            <span class="text-sm font-medium text-n-slate-11">
+              {{ t(`${UX}.SUMIU_TITULO`) }}
+            </span>
+            <span
+              data-followup-resumo
+              class="text-base font-semibold leading-relaxed text-n-slate-12"
+            >
+              {{ followupSummary.quando }}
+            </span>
+            <span
+              v-if="followupSummary.onde"
+              class="text-[0.9375rem] text-n-slate-11"
+            >
+              {{ followupSummary.onde }}
+            </span>
+          </span>
+          <FunilInterruptor v-model="form.autoFollowup.enabled" />
+        </label>
+        <Button
+          v-if="form.autoFollowup.enabled"
+          data-followup-alterar
+          :label="t('CRM_FUNIL.ALTERAR')"
+          :aria-label="t(`${UX}.ALTERAR_SUMIU`)"
+          icon="i-lucide-pencil"
+          slate
+          faded
+          class="!min-h-11 w-fit sm:ms-16"
+          @click="emit('alterar')"
+        />
+      </section>
+    </template>
+
+    <!-- Detalhe: como, quantas vezes, quando e em que dias. -->
+    <template v-else>
+      <div
+        class="grid gap-3 sm:grid-cols-2"
+        role="radiogroup"
+        :aria-label="t(`${UX}.COMO`)"
+      >
+        <label
+          v-for="mode in followupModes"
+          :key="mode"
+          class="flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-n-brand"
+          :class="
+            form.autoFollowup.mode === mode
+              ? 'border-n-blue-8 bg-n-blue-2'
+              : 'border-n-weak bg-n-solid-1 hover:border-n-slate-7'
+          "
+        >
+          <input
+            v-model="form.autoFollowup.mode"
+            type="radio"
+            :name="`followup-mode-${pipelineId}`"
+            :value="mode"
+            class="sr-only"
+          />
+          <span
+            class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2"
+            :class="
+              form.autoFollowup.mode === mode
+                ? 'border-n-blue-9 bg-n-blue-9 text-white'
+                : 'border-n-slate-7'
+            "
+            aria-hidden="true"
+          >
+            <span
+              v-if="form.autoFollowup.mode === mode"
+              class="i-lucide-check size-3"
+            />
+          </span>
+          <span class="flex min-w-0 flex-col gap-1">
+            <span class="text-base font-semibold text-n-slate-12">
+              {{ t(`${UX}.MODOS.${mode}.TITULO`) }}
+            </span>
+            <span class="text-sm text-n-slate-11">
+              {{ t(`${UX}.MODOS.${mode}.TEXTO`) }}
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <section
+        class="flex flex-col gap-4 rounded-2xl border border-n-weak bg-n-solid-1 p-4 sm:p-5"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h5
+            id="followup-touches-label"
+            class="mb-0 text-base font-semibold text-n-slate-12"
+          >
+            {{ t(`${UX}.QUANDO`) }}
+          </h5>
+          <div
+            class="inline-flex gap-1 rounded-xl bg-n-alpha-2 p-1"
+            role="group"
+            aria-labelledby="followup-touches-label"
+          >
+            <button
+              v-for="count in touchOptions"
+              :key="count"
+              type="button"
+              :data-vezes="count"
+              :aria-pressed="form.autoFollowup.maxTouches === count"
+              class="min-h-11 rounded-lg px-4 text-[0.9375rem] font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              :class="
+                form.autoFollowup.maxTouches === count
+                  ? 'bg-n-blue-3 text-n-blue-11 shadow-sm ring-1 ring-inset ring-n-blue-7'
+                  : 'text-n-slate-11 hover:text-n-slate-12'
+              "
+              @click="setTouches(count)"
+            >
+              {{ t(`${UX}.VEZES`, { n: count }, count) }}
+            </button>
+          </div>
+        </div>
+        <ol class="m-0 flex list-none flex-col p-0">
+          <li
+            v-for="(hours, index) in form.autoFollowup.intervalsHours"
+            :key="index"
+            data-followup-touch
+            class="relative flex gap-2 pb-3 last:pb-0 sm:gap-3"
+          >
+            <span
+              v-if="index < form.autoFollowup.intervalsHours.length - 1"
+              class="absolute bottom-0 start-[1.0625rem] top-10 w-0.5 bg-n-blue-6"
+              aria-hidden="true"
+            />
+            <span
+              class="relative grid size-9 shrink-0 place-items-center rounded-full bg-n-blue-3 text-sm font-bold text-n-blue-11"
+            >
+              {{ t(`${UX}.ORDEM`, { n: index + 1 }) }}
+            </span>
+            <div
+              class="flex min-w-0 flex-1 flex-col gap-2 rounded-xl bg-n-alpha-2 p-2.5 sm:p-3"
+            >
+              <div
+                class="flex flex-wrap items-center gap-2 text-[0.9375rem] text-n-slate-12"
+              >
+                {{ t(`${UX}.SEM_RESPOSTA_POR`) }}
+                <ChoiceSelect
+                  :model-value="hours"
+                  :options="intervalChoices(index)"
+                  :aria-label="t(`${UX}.TEMPO_DA`, { n: index + 1 })"
+                  :invalid="!intervalAfterPrevious(hours, index)"
+                  class="w-28 sm:w-32"
+                  @update:model-value="setTouchInterval(index, $event)"
+                />
+              </div>
+              <p
+                v-if="!intervalAfterPrevious(hours, index)"
+                role="alert"
+                class="mb-0 text-sm text-n-ruby-11"
+              >
+                {{ t(`${UX}.DEPOIS_DA_ANTERIOR`) }}
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section
+        class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
+      >
+        <h5
+          id="followup-days-label"
+          class="mb-0 text-base font-semibold text-n-slate-12"
+        >
+          {{ t(`${UX}.DIAS_TITULO`) }}
+        </h5>
+        <div
+          class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap"
+          role="group"
+          aria-labelledby="followup-days-label"
+        >
+          <button
+            v-for="day in weekdays"
+            :key="day"
+            type="button"
+            :aria-pressed="form.autoFollowup.allowedDays.includes(day)"
+            :aria-label="
+              t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_FULL.${day}`)
+            "
+            class="min-h-11 min-w-0 rounded-xl px-2 text-[0.9375rem] font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand sm:min-w-12"
+            :class="
+              form.autoFollowup.allowedDays.includes(day)
+                ? 'bg-n-blue-3 text-n-blue-11 ring-1 ring-inset ring-n-blue-7'
+                : 'bg-n-solid-1 text-n-slate-11 ring-1 ring-inset ring-n-weak hover:ring-n-slate-7'
+            "
+            @click="toggleDay(day)"
+          >
+            {{ t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS.${day}`) }}
+          </button>
+        </div>
+        <div
+          class="flex flex-wrap items-center gap-2 text-[0.9375rem] text-n-slate-12"
+        >
+          {{ t(`${UX}.DAS`) }}
+          <ChoiceSelect
+            v-model="form.autoFollowup.quietHours.start"
+            :options="startHourChoices"
+            :aria-label="t(`${UX}.HORA_INICIO`)"
+            class="w-24"
+          />
+          {{ t(`${UX}.ATE`) }}
+          <ChoiceSelect
+            v-model="form.autoFollowup.quietHours.end"
+            :options="endHourChoices"
+            :aria-label="t(`${UX}.HORA_FIM`)"
+            class="w-24"
+          />
+        </div>
+        <p class="mb-0 text-sm text-n-slate-11">
+          {{ t(`${UX}.HORARIO_AJUDA`) }}
+        </p>
+      </section>
+
+      <label
+        v-if="!isReminder"
+        class="flex flex-col gap-1 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
+      >
+        <span class="text-base font-semibold text-n-slate-12">
+          {{ t(`${UX}.TOM`) }}
+        </span>
+        <textarea
+          v-model="form.autoFollowup.toneInstructions"
+          rows="2"
+          class="reset-base !mb-0 mt-1 w-full rounded-xl border border-n-weak bg-n-solid-1 px-3 py-2 text-base text-n-slate-12 placeholder:text-n-slate-10 focus:outline focus:outline-2 focus:outline-n-brand"
+          :placeholder="t(`${UX}.TOM_EXEMPLO`)"
+        />
+      </label>
+
+      <p
+        v-if="!scheduleValid"
+        role="alert"
+        class="mb-0 rounded-xl bg-n-ruby-2 p-3 text-[0.9375rem] text-n-ruby-11"
+      >
+        {{ t(`${UX}.INVALIDO`) }}
       </p>
     </template>
   </section>

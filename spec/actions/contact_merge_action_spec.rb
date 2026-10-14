@@ -142,6 +142,46 @@ describe ContactMergeAction do
         expect(base_contact.reload.opt_out_source).to eq('email_unsubscribe')
       end
 
+      it 'pedido de parar no follow-up vence o descadastro de e-mail e a Prospecção, e perde para a manual (chat#1325)' do
+        expect(described_class::OPT_OUT_PRECEDENCE).to eq(%w[manual follow_up_reply campaign_reply email_unsubscribe prospecting])
+        expect(described_class::OPT_OUT_PRECEDENCE).to match_array(ContactOptOut::OPT_OUT_SOURCES)
+
+        mergee_contact.opt_out!(source: 'follow_up_reply')
+        base_contact.opt_out!(source: 'email_unsubscribe')
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('follow_up_reply')
+      end
+
+      it 'pedido de parar na resposta a campanha vence o descadastro de e-mail (#1449)' do
+        mergee_contact.opt_out!(source: 'campaign_reply')
+        base_contact.opt_out!(source: 'email_unsubscribe')
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('campaign_reply')
+      end
+
+      it 'recusa manual do que fica vence o pedido de parar no follow-up do absorvido, que volta quando a manual é desfeita' do
+        pipeline, stage = create_crm_pipeline(account: account, user: admin)
+        state = { 'opted_out' => true, 'opt_out_contact_id' => mergee_contact.id }
+        card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: mergee_contact, title: 'Pediu para parar',
+                                         metadata: { 'ai' => { 'auto_followup_state' => state } })
+        base_contact.opt_out!(source: 'manual', by: admin)
+        mergee_contact.opt_out!(source: 'follow_up_reply')
+
+        contact_merge
+        expect(base_contact.reload.opt_out_source).to eq('manual')
+        expect(card.reload.metadata['ai']['auto_followup_state']['opt_out_contact_id']).to eq(base_contact.id)
+
+        base_contact.release_manual_opt_out!(by: admin)
+
+        base_contact.reload
+        expect(base_contact).to be_opted_out
+        expect(base_contact.opt_out_source).to eq('follow_up_reply')
+      end
+
       it 'desfazer a recusa do lead depois da mescla não tira a recusa manual que veio do absorvido' do
         base_contact.update!(phone_number: '+5531988887002')
         lead = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'merge-optout',
@@ -236,6 +276,37 @@ describe ContactMergeAction do
         contact_merge
 
         expect(foreign.reload.contact_id).to be_nil
+      end
+
+      it 'move os links por cliente do absorvido em vez de apagá-los (#1190)' do
+        page = create_booking_profile(account: account, host: agent)
+        invite = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: mergee_contact,
+                                            created_by: agent, expires_at: 7.days.from_now)
+        kept = Crm::BookingInvite.create!(account: account, booking_profile: page, contact: base_contact,
+                                          created_by: agent, expires_at: 7.days.from_now)
+
+        contact_merge
+
+        expect(invite.reload.contact_id).to eq(base_contact.id)
+        expect(kept.reload.contact_id).to eq(base_contact.id)
+      end
+
+      it 'passa o "parar avisos" do absorvido para o contato que fica (#1192)' do
+        stop = Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        contact_merge
+
+        expect(stop.reload.contact_id).to eq(base_contact.id)
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:contact_id)).to eq([base_contact.id])
+      end
+
+      it 'mantém uma única parada quando os dois tinham parado os avisos (#1192)' do
+        kept = Crm::BookingNoticeStop.create!(account: account, contact: base_contact, reason: 'client_link')
+        Crm::BookingNoticeStop.create!(account: account, contact: mergee_contact, reason: 'client_link')
+
+        expect { contact_merge }.not_to raise_error
+
+        expect(Crm::BookingNoticeStop.where(account_id: account.id).pluck(:id, :contact_id)).to eq([[kept.id, base_contact.id]])
       end
 
       it 'move os follow-ups do absorvido em vez de apagá-los' do

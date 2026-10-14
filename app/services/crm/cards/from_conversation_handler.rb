@@ -30,13 +30,24 @@ class Crm::Cards::FromConversationHandler
 
   private
 
+  # O assunto atual que a pessoa enxerga (#1148, parte C): o card de outro funil não é devolvido a quem não o vê.
   def existing_card
     return if @new_subject
 
-    ::Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).to_a
+    cards.find { |card| card_scope.allows?(card) }
+  end
+
+  def card_scope
+    @card_scope ||= ::Crm::Access::CardScope.new(user: @user, account: @account)
   end
 
   def create_card
+    params = merged_params.to_h.with_indifferent_access
+    guard = ::Crm::Access::CardGuard.new(user: @user, account: @account)
+    # Acesso por funil (#1148, parte C): o card novo só nasce num funil que a pessoa tem na caixa da conversa.
+    raise Pundit::NotAuthorizedError unless guard.create_allowed?(params[:pipeline_id], conversation: @conversation)
+
     ::Crm::Cards::Creator.new(
       account: @account,
       user: @user,

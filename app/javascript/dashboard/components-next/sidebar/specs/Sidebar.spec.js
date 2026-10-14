@@ -1,0 +1,232 @@
+import { shallowMount } from '@vue/test-utils';
+import { ref } from 'vue';
+import Sidebar from '../Sidebar.vue';
+
+// Onde o Agendamento aparece no menu (#1212, #1264, #1288): subgrupo do CRM,
+// entre Kanban e Dashboard, recolhível e fechado por padrão, com Calendário,
+// Páginas e links, Meus horários e Meus números; fora de Configurações. Sem a
+// flag do agendamento novo, o Calendário continua solto no CRM.
+const getters = {};
+
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ fullPath: '/', params: {} }),
+}));
+vi.mock('vuex', () => ({ useStore: () => ({ dispatch: vi.fn() }) }));
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: key => getters[key] || ref(() => 0),
+}));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    accountScopedRoute: (name, params) => ({ name, params }),
+    isOnChatwootCloud: ref(false),
+  }),
+}));
+vi.mock('dashboard/composables/useConfig', () => ({
+  useConfig: () => ({ isEnterprise: false }),
+}));
+vi.mock('dashboard/composables/utils/useKbd', () => ({
+  useKbd: () => ref(''),
+}));
+vi.mock('dashboard/composables/useBrandedSidebar', () => ({
+  useBrandedSidebar: () => ({ brandedColor: ref('') }),
+}));
+vi.mock('dashboard/composables/useRelationships', () => ({
+  useRelationships: () => ({ navigationEnabled: ref(false) }),
+}));
+vi.mock('dashboard/composables/useScrollActiveItemIntoView', () => ({
+  useScrollActiveItemIntoView: vi.fn(),
+}));
+vi.mock('../provider', async () => {
+  const { ref: flag } = await import('vue');
+  return {
+    provideSidebarContext: vi.fn(),
+    useSidebarResize: () => ({
+      sidebarWidth: flag(200),
+      isCollapsed: flag(false),
+      setSidebarWidth: vi.fn(),
+      saveWidth: vi.fn(),
+      snapToCollapsed: vi.fn(),
+      snapToExpanded: vi.fn(),
+    }),
+  };
+});
+vi.mock('../useSidebarKeyboardShortcuts', () => ({
+  useSidebarKeyboardShortcuts: vi.fn(),
+}));
+
+const seat = ({
+  role = 'administrator',
+  customRoleId = null,
+  keys = [],
+  bookingV2 = true,
+}) => {
+  Object.assign(getters, {
+    'globalConfig/get': ref({ crmKanbanEnabled: true }),
+    getCurrentAccountId: ref(9),
+    getCurrentRole: ref(role),
+    getCurrentCustomRoleId: ref(customRoleId),
+    getCurrentUser: ref({ accounts: [{ id: 9, permissions: keys }] }),
+    'accounts/getAccount': ref(() => ({
+      id: 9,
+      features: { crm_booking_v2: bookingV2 },
+    })),
+    'accounts/isFeatureEnabledonAccount': ref(() => false),
+    'inboxes/getInboxes': ref([]),
+    'labels/getLabelsOnSidebar': ref([]),
+    'teams/getMyTeams': ref([]),
+    'customViews/getContactCustomViews': ref([]),
+    'customViews/getConversationCustomViews': ref([]),
+  });
+};
+
+const childrenOf = (wrapper, group) =>
+  wrapper
+    .findAllComponents({ name: 'SidebarGroup' })
+    .find(item => item.props('name') === group)
+    ?.props('children')
+    .map(child => child.name);
+
+const schedulingOf = wrapper =>
+  wrapper
+    .findAllComponents({ name: 'SidebarGroup' })
+    .find(item => item.props('name') === 'CRM')
+    ?.props('children')
+    .find(child => child.name === 'CRM Scheduling');
+
+const mountSidebar = () =>
+  shallowMount(Sidebar, {
+    global: {
+      stubs: {
+        RouterLink: true,
+        SidebarGroup: {
+          name: 'SidebarGroup',
+          props: ['name', 'children'],
+          template: '<li />',
+        },
+      },
+    },
+  });
+
+describe('Sidebar: Agendamento no grupo CRM', () => {
+  beforeEach(() => {
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+  });
+
+  afterEach(() => {
+    delete window.globalConfig;
+  });
+
+  it('administrador vê o subgrupo entre Kanban e Dashboard, com os 4 filhos e o Calendário primeiro', () => {
+    seat({});
+    const wrapper = mountSidebar();
+    const crm = childrenOf(wrapper, 'CRM');
+    expect(crm.slice(0, 3)).toEqual([
+      'CRM Kanban',
+      'CRM Scheduling',
+      'CRM Dashboard',
+    ]);
+    expect(crm).not.toContain('CRM Calendar');
+    expect(crm).not.toContain('CRM Booking');
+
+    const scheduling = schedulingOf(wrapper);
+    expect(scheduling.label).toBe('SIDEBAR.BOOKING');
+    expect(scheduling.icon).toBe('i-lucide-calendar-clock');
+    expect(scheduling.children.map(child => child.name)).toEqual([
+      'CRM Calendar',
+      'CRM Booking',
+      'CRM My Booking Hours',
+      'CRM Booking Results',
+    ]);
+    expect(scheduling.children[0]).toMatchObject({
+      label: 'SIDEBAR.CRM_CALENDAR',
+      to: { name: 'crm_calendar_index' },
+      activeOn: ['crm_calendar_index'],
+    });
+    expect(scheduling.children[1]).toMatchObject({
+      label: 'BOOKING.PAGE.MENU',
+      to: { name: 'settings_booking' },
+      activeOn: ['settings_booking', 'settings_booking_results'],
+    });
+  });
+
+  it('o subgrupo é recolhível e nasce fechado', () => {
+    seat({});
+    expect(schedulingOf(mountSidebar())).toMatchObject({
+      collapsible: true,
+      defaultCollapsed: true,
+    });
+  });
+
+  it('agente comum com CRM vê Calendário, Meus horários e Meus números', () => {
+    seat({ role: 'agent' });
+    const wrapper = mountSidebar();
+    expect(childrenOf(wrapper, 'CRM')).not.toContain('CRM Calendar');
+    expect(schedulingOf(wrapper).children.map(child => child.name)).toEqual([
+      'CRM Calendar',
+      'CRM My Booking Hours',
+      'CRM Booking Results',
+    ]);
+  });
+
+  it('saiu do grupo Configurações', () => {
+    seat({});
+    const settings = childrenOf(mountSidebar(), 'Settings');
+    expect(settings).toContain('Settings Account Settings');
+    expect(settings).not.toContain('CRM Booking');
+    expect(settings).not.toContain('Settings Booking');
+  });
+
+  it('função só com Agendamento, sem CRM, vê o CRM só com o subgrupo, sem Kanban nem Calendário', () => {
+    seat({ role: 'agent', customRoleId: 7, keys: ['agendamento_view'] });
+    const wrapper = mountSidebar();
+    expect(childrenOf(wrapper, 'CRM')).toEqual(['CRM Scheduling']);
+    expect(schedulingOf(wrapper).children.map(child => child.name)).toEqual([
+      'CRM Booking',
+    ]);
+  });
+
+  it('flag desligada: o Calendário segue solto depois do Kanban, sem subgrupo, e a função só com Agendamento perde o CRM', () => {
+    seat({ bookingV2: false });
+    const wrapper = mountSidebar();
+    const crm = childrenOf(wrapper, 'CRM');
+    expect(crm.slice(0, 3)).toEqual([
+      'CRM Kanban',
+      'CRM Calendar',
+      'CRM Dashboard',
+    ]);
+    expect(crm).not.toContain('CRM Scheduling');
+    expect(
+      wrapper
+        .findAllComponents({ name: 'SidebarGroup' })
+        .find(item => item.props('name') === 'CRM')
+        .props('children')[1]
+    ).toEqual({
+      name: 'CRM Calendar',
+      label: 'SIDEBAR.CRM_CALENDAR',
+      to: { name: 'crm_calendar_index', params: undefined },
+      activeOn: ['crm_calendar_index'],
+    });
+
+    seat({
+      role: 'agent',
+      customRoleId: 7,
+      keys: ['agendamento_view'],
+      bookingV2: false,
+    });
+    expect(childrenOf(mountSidebar(), 'CRM')).toBeUndefined();
+  });
+
+  it('calendário desligado na instalação: o Calendário também segue solto no CRM', () => {
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
+    seat({});
+    const crm = childrenOf(mountSidebar(), 'CRM');
+    expect(crm.slice(0, 2)).toEqual(['CRM Kanban', 'CRM Calendar']);
+    expect(crm).not.toContain('CRM Scheduling');
+  });
+
+  it('função sem CRM e sem Agendamento continua sem o grupo CRM', () => {
+    seat({ role: 'agent', customRoleId: 7, keys: ['label_manage'] });
+    expect(childrenOf(mountSidebar(), 'CRM')).toBeUndefined();
+  });
+});

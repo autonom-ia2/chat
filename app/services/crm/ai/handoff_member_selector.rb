@@ -2,8 +2,8 @@ module Crm
   module Ai
     # Seletor de membro humano para handoff — lógica de seleção EXTRAÍDA (verbatim)
     # do HandoffExecutor (round-robin por carga de conversas abertas, preferência por
-    # online, match direto por nome sugerido pela IA). Usado pelo Kanban
-    # (HandoffExecutor#select_agent delega aqui).
+    # online, match direto por nome sugerido pela IA). Usado pelo motor de entrega
+    # (Crm::Entrega, #1454).
     #
     # Parâmetros:
     #   inbox          -> Inbox cujos membros formam o pool elegível
@@ -14,9 +14,14 @@ module Crm
     #   suggested_name -> nome sugerido pela IA (apenas em mode 'direct')
     #   pool_type      -> 'inbox' (default) | 'user' (restringe a um membro da inbox)
     #   pool_id        -> id do usuário quando pool_type='user'
+    #   members        -> fila já montada (Crm::Entrega::QuemCuida, #1454); sem ela, os membros da caixa que o funil
+    #                     deixa ver
     #
     # Retorna User | nil (nil = sem membro elegível).
     class HandoffMemberSelector
+      # A presença (Redis) não respondeu.
+      class PresencaIndisponivel < StandardError; end
+
       def initialize(
         inbox:,
         account_id:,
@@ -25,7 +30,9 @@ module Crm
         require_online: false,
         suggested_name: nil,
         pool_type: 'inbox',
-        pool_id: nil
+        pool_id: nil,
+        conversation: nil,
+        members: nil
       )
         @inbox = inbox
         @account_id = account_id
@@ -35,6 +42,8 @@ module Crm
         @suggested_name = suggested_name
         @pool_type = pool_type
         @pool_id = pool_id
+        @conversation = conversation
+        @members = members
       end
 
       def perform
@@ -49,13 +58,21 @@ module Crm
 
       def eligible_members
         @eligible_members ||= begin
-          members = @inbox ? @inbox.members.to_a : []
+          members = inbox_members
           if @pool_type == 'user' && @pool_id.present?
             members.select { |user| user.id == @pool_id }.presence || members
           else
             members
           end
         end
+      end
+
+      # Acesso por funil (#1148): a IA só passa a conversa para quem pode vê-la.
+      def inbox_members
+        return @members.to_a if @members
+
+        members = @inbox ? @inbox.members.to_a : []
+        @conversation ? Crm::Access::Recipients.new(@conversation).filter(members) : members
       end
 
       # direct: assign to the agent the AI matched by name (must be an inbox
@@ -107,11 +124,11 @@ module Crm
       end
 
       def online_agent_ids
-        @online_agent_ids ||= OnlineStatusTracker.get_available_users(@account_id)
-                                                 .select { |_id, status| status == 'online' }
-                                                 .keys.map(&:to_i)
-      rescue StandardError
-        []
+        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids(@account_id)
+      rescue StandardError => e
+        # Presença fora do ar não é "ninguém online": quem chama decide (o motor segura e a fila tenta de novo, #1454).
+        Rails.logger.error("[crm][entrega] presença indisponível conta=#{@account_id} erro=#{e.class}")
+        raise PresencaIndisponivel, e.class.name
       end
     end
   end

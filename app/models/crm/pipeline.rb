@@ -10,6 +10,7 @@
 #  name          :string           not null
 #  position      :integer          default(0), not null
 #  status        :integer          default("active"), not null
+#  when_to_use   :text
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
@@ -44,8 +45,20 @@ class Crm::Pipeline < ApplicationRecord
   before_validation :initialize_followup_days, on: :create
   before_save :turn_off_conversion_sync, unless: :counts_as_sale?
 
+  MAX_WHEN_TO_USE = 1_000
+  # Modelo escolhido ao criar o funil (#1498), guardado em metadata['template']. Vender tem um modelo; os outros são
+  # de Atender. Funil antigo não tem: a tela usa o primeiro modelo do tipo.
+  TEMPLATES = %w[VENDAS ATENDIMENTO POS_VENDA COBRANCA AGENDAMENTOS].freeze
+
   validates :name, presence: true
+  # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
+  validates :when_to_use, length: { maximum: MAX_WHEN_TO_USE }
   validates :metadata, jsonb_attributes_length: true
+
+  # Tipo do funil (#1498) para a IA: "sell" (Vender) ou "serve" (Atender).
+  def kind
+    counts_as_sale? ? 'sell' : 'serve'
+  end
 
   private
 

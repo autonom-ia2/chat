@@ -53,9 +53,16 @@ class AutoAssignment::AgentAssignmentService
   def reassignment_still_needed?(locked_conversation)
     bot_source = conversation.will_save_change_to_assignee_agent_bot_id? ? conversation : locked_conversation
     return false if bot_source.assignee_agent_bot_id.present?
+    # O motor de entrega do CRM está cuidando dela (segurando ou convidando, #1454): nunca duas atribuições.
+    return false if crm_delivery_pending?(locked_conversation)
 
     assignee = conversation.will_save_change_to_assignee_id? ? conversation.assignee : locked_conversation.assignee
     assignee.blank? || locked_conversation.inbox.members.exclude?(assignee)
+  end
+
+  def crm_delivery_pending?(locked_conversation)
+    source = conversation.will_save_change_to_additional_attributes? ? conversation : locked_conversation
+    source.crm_delivery_pending?
   end
 
   def online_agent_ids
@@ -68,7 +75,15 @@ class AutoAssignment::AgentAssignmentService
     # Hence taking an intersection of online agents and allowed member ids
 
     # the online user ids are string, since its from redis, allowed member ids are integer, since its from active record
-    @allowed_online_agent_ids ||= online_agent_ids & allowed_agent_ids&.map(&:to_s)
+    @allowed_online_agent_ids ||= begin
+      ids = online_agent_ids & allowed_agent_ids&.map(&:to_s)
+      ids.is_a?(Array) ? ids - funnel_blocked_ids : ids
+    end
+  end
+
+  # Acesso por funil (#1148): o rodízio só escolhe quem pode ver a conversa.
+  def funnel_blocked_ids
+    Crm::Access::Recipients.new(conversation).blocked_user_ids.map(&:to_s)
   end
 
   def round_robin_manage_service

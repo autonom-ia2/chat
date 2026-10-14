@@ -24,6 +24,13 @@ describe('CrmResultTabs', () => {
     expect(activeButton(wrapper).text()).toBe('CRM_KANBAN.DRAWER.STATUS_WON');
   });
 
+  it('keeps the outcome tab active for a status from the previous funnel kind (#1197)', () => {
+    const wrapper = mount(CrmResultTabs, {
+      props: { modelValue: 'won', pipeline: { counts_as_sale: false } },
+    });
+    expect(activeButton(wrapper).attributes('data-value')).toBe('resolved');
+  });
+
   it('marks no tab active when result is empty ("Todos")', () => {
     const wrapper = mount(CrmResultTabs, { props: { modelValue: '' } });
     expect(activeButton(wrapper)).toBeUndefined();

@@ -139,7 +139,6 @@ export const state = {
   uiFlags: {
     isFetchingPipelines: false,
     isFetchingBoard: false,
-    isBootstrapping: false,
     isSavingPipeline: false,
     isArchivingPipeline: false,
     isFetchingPipelineInboxes: false,
@@ -446,27 +445,26 @@ const cardMatchesFilters = (card, filters) => {
   return true;
 };
 
-const stageTemplates = [
-  { name: 'Novo', position: 1, color: '#2563eb', win_probability: 10 },
-  {
-    name: 'Em atendimento',
-    position: 2,
-    color: '#0891b2',
-    win_probability: 35,
-  },
-  { name: 'Proposta', position: 3, color: '#ca8a04', win_probability: 65 },
-  { name: 'Fechamento', position: 4, color: '#16a34a', win_probability: 90 },
-  { name: 'Perdido', position: 5, color: '#dc2626', win_probability: 0 },
-];
-
 const defaultPipelinePayload = pipeline => ({
   name: pipeline?.name || 'Funil Comercial',
   description: pipeline?.description || 'Funil inicial do CRM Kanban',
   is_default: pipeline?.is_default ?? true,
   position: pipeline?.position || 1,
+  // "Conta como venda" e os nomes dos desfechos (#1144): false também vai (#1197).
+  ...(pipeline?.counts_as_sale !== undefined
+    ? { counts_as_sale: pipeline.counts_as_sale }
+    : {}),
+  ...(pipeline?.outcome_labels
+    ? { outcome_labels: pipeline.outcome_labels }
+    : {}),
   ...(pipeline?.goal ? { goal: pipeline.goal } : {}),
   ...(pipeline?.meta_sync ? { meta_sync: pipeline.meta_sync } : {}),
   ...(pipeline?.google_sync ? { google_sync: pipeline.google_sync } : {}),
+  ...(pipeline?.when_to_use !== undefined
+    ? { when_to_use: pipeline.when_to_use }
+    : {}),
+  // #1498 — o modelo escolhido ao criar (Suporte, Cobrança…).
+  ...(pipeline?.template ? { template: pipeline.template } : {}),
 });
 
 const normalizeStagePayload = (stage, index) => ({
@@ -494,6 +492,8 @@ const normalizeStagePayload = (stage, index) => ({
   // Maps the stage to a native Meta funnel event (lead/qualified/opportunity/
   // negotiation) for CTWA conversion sync; null clears the classification.
   funnel_stage_type: stage.funnel_stage_type || null,
+  // #1498 — categoria da etapa vinda do modelo; sem tela.
+  ...(stage.category ? { category: stage.category } : {}),
 });
 
 export const actions = {
@@ -594,33 +594,6 @@ export const actions = {
 
   setFilters: ({ commit }, filters) => {
     commit(types.SET_CRM_KANBAN_FILTERS, filters);
-  },
-
-  bootstrapDefaultPipeline: async ({ commit, dispatch }, payload = {}) => {
-    commit(types.SET_CRM_KANBAN_UI_FLAG, { isBootstrapping: true });
-    try {
-      const response = await CrmKanbanAPI.createPipeline({
-        ...defaultPipelinePayload(payload.pipeline),
-      });
-      const pipeline = response.data.payload;
-      commit(types.ADD_CRM_KANBAN_PIPELINE, pipeline);
-      await Promise.all(
-        (payload.stages || stageTemplates).map((stage, index) =>
-          CrmKanbanAPI.createStage(
-            pipeline.id,
-            normalizeStagePayload(stage, index)
-          )
-        )
-      );
-      await dispatch('fetchPipelines');
-      await dispatch('fetchBoard', {
-        pipelineId: pipeline.id,
-        includeCounts: true,
-      });
-      return pipeline;
-    } finally {
-      commit(types.SET_CRM_KANBAN_UI_FLAG, { isBootstrapping: false });
-    }
   },
 
   savePipelineWithStages: async (
@@ -1185,6 +1158,10 @@ export const actions = {
     }
   },
 
+  syncCardContact: ({ commit }, contact) => {
+    if (!contact?.id || !('contact_type' in contact)) return;
+    commit(types.SYNC_CRM_CARD_CONTACT, contact);
+  },
   handleRealtimeCardEvent: ({ commit, state: $state }, { event, card }) => {
     if (!card?.id || !$state.board.pipeline?.id) return;
 
@@ -1268,9 +1245,6 @@ export const mutations = {
   },
   [types.SET_CRM_KANBAN_PIPELINES]($state, pipelines) {
     $state.pipelines = pipelines;
-  },
-  [types.ADD_CRM_KANBAN_PIPELINE]($state, pipeline) {
-    $state.pipelines = [pipeline, ...$state.pipelines];
   },
   [types.UPSERT_CRM_KANBAN_PIPELINE]($state, pipeline) {
     const existingIndex = $state.pipelines.findIndex(
@@ -1423,6 +1397,28 @@ export const mutations = {
         cards: (stage.cards || []).filter(card => card.id !== cardId),
       })),
     };
+  },
+  // Contato virou (ou deixou de ser) Cliente (#1258): o selo dos cards dele no quadro e na lista acompanha.
+  [types.SYNC_CRM_CARD_CONTACT]($state, contact) {
+    const sync = card =>
+      card.contact?.id === contact.id
+        ? {
+            ...card,
+            contact: {
+              ...card.contact,
+              contact_type: contact.contact_type,
+              customer_since: contact.customer_since,
+            },
+          }
+        : card;
+    $state.board = {
+      ...$state.board,
+      stages: ($state.board.stages || []).map(stage => ({
+        ...stage,
+        cards: (stage.cards || []).map(sync),
+      })),
+    };
+    $state.cardsList = ($state.cardsList || []).map(sync);
   },
 };
 

@@ -19,6 +19,15 @@ module Autonomia::Agents::StoreInstance
     !contracted_instance? || Autonomia::Store::Access.agent_allowed?(self)
   end
 
+  def operating?
+    super && store_access_allowed?
+  end
+
+  def inherited_native_tools
+    inherited = (Array(principal_agent.ferramentas_nativas) + Array(native_tool_slugs)).uniq
+    Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, inherited)
+  end
+
   def contracted_instructions
     [principal_agent.instrucao_do_sistema, '# Limites herdados', Array(principal_agent.guardrails).join("\n"),
      '# Encaminhamento herdado', principal_agent.handoff_rule, '# Complementos da conta cliente', supplemental_instruction,

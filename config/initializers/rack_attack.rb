@@ -453,6 +453,137 @@ class Rack::Attack
     req.ip if req.get? && PUBLIC_BOOKING_SLOTS_PATH.match?(req.path_without_extensions)
   end
 
+  # Link por cliente do agendamento (#1190): /public/api/v2/invites/:code (GET) e .../:code/viewed (POST). O código
+  # é a única autorização, então o limite por IP freia quem tenta adivinhar códigos. O caminho é normalizado como o
+  # roteador faz (`//` vira `/`) e comparado em pedaços, sem expressão regular.
+  PUBLIC_BOOKING_INVITES_PREFIX = '/public/api/v2/invites/'.freeze
+
+  # Pedaços depois de /public/api/v2/invites/ (["<code>"] ou ["<code>", "viewed"]); vazio para outros caminhos.
+  def self.public_booking_invite_segments(req)
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return [] unless path.start_with?(PUBLIC_BOOKING_INVITES_PREFIX)
+
+    path.delete_prefix(PUBLIC_BOOKING_INVITES_PREFIX).split('/')
+  end
+
+  throttle('public_booking_invites/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES', '30').to_i, period: 1.minute) do |req|
+    req.ip if (req.get? || req.head?) && public_booking_invite_segments(req).size == 1
+  end
+
+  throttle('public_booking_invites/viewed_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES_VIEWED', '60').to_i,
+                                               period: 1.hour) do |req|
+    segments = public_booking_invite_segments(req)
+    req.ip if req.post? && segments.size == 2 && segments.last == 'viewed'
+  end
+
+  # Gestão da reunião pelo link do convite (#1192): POST .../:code/confirm, cancel, reschedule e stop_notices. Mesma
+  # comparação em pedaços, sem expressão regular.
+  PUBLIC_BOOKING_INVITE_ACTIONS = %w[confirm cancel reschedule stop_notices].freeze
+
+  throttle('public_booking_invites/manage_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_INVITES_MANAGE', '30').to_i,
+                                               period: 1.hour) do |req|
+    segments = public_booking_invite_segments(req)
+    req.ip if req.post? && segments.size == 2 && PUBLIC_BOOKING_INVITE_ACTIONS.include?(segments.last)
+  end
+
+  # Página pública v2 (#1189): /public/api/v2/booking/:slug (GET página, POST reserva), .../slots e .../next_slot
+  # (GET), .../contact_request (POST) e /public/api/v2/ics/:token (GET). Mesmo método do convite: caminho normalizado
+  # e comparado em pedaços, sem expressão regular.
+  #
+  # Por IP e, para reserva e pedido de contato, também por página (slug). O teto por página limita o estrago de um
+  # ataque distribuído (muitos IPs) no CRM do cliente: no máximo N cards por hora/dia numa página. Contrapartida
+  # aceita (a nota do v1 acima): quem conhece o slug pode esgotar o teto e travar a página até o período virar.
+  PUBLIC_BOOKING_V2_PREFIX = '/public/api/v2/booking/'.freeze
+  PUBLIC_BOOKING_V2_ICS_PREFIX = '/public/api/v2/ics/'.freeze
+  PUBLIC_BOOKING_V2_SLOT_ACTIONS = %w[slots next_slot].freeze
+  PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR = ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR', '40').to_i
+  PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY = ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY', '20').to_i
+
+  # Pedaços do caminho depois de `prefix` (["<slug>"], ["<slug>", "slots"]...); vazio para outros caminhos.
+  def self.public_path_segments(req, prefix)
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return [] unless path.start_with?(prefix)
+
+    path.delete_prefix(prefix).split('/')
+  end
+
+  throttle('public_booking_v2/create_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2', '10').to_i, period: 1.hour) do |req|
+    req.ip if req.post? && public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX).size == 1
+  end
+
+  throttle('public_booking_v2/contact_request_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_CONTACT', '10').to_i,
+                                                   period: 1.hour) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    req.ip if req.post? && segments.size == 2 && segments.last == 'contact_request'
+  end
+
+  throttle('public_booking_v2/create_page', limit: PUBLIC_BOOKING_V2_PAGE_BOOKINGS_PER_HOUR, period: 1.hour) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    segments.first if req.post? && segments.size == 1
+  end
+
+  throttle('public_booking_v2/contact_request_page', limit: PUBLIC_BOOKING_V2_PAGE_CONTACT_REQUESTS_PER_DAY, period: 1.day) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    segments.first if req.post? && segments.size == 2 && segments.last == 'contact_request'
+  end
+
+  throttle('public_booking_v2/slots_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_SLOTS', '60').to_i, period: 1.minute) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX)
+    req.ip if (req.get? || req.head?) && segments.size == 2 && PUBLIC_BOOKING_V2_SLOT_ACTIONS.include?(segments.last)
+  end
+
+  throttle('public_booking_v2/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_V2_SHOW', '60').to_i, period: 1.minute) do |req|
+    get = req.get? || req.head?
+    req.ip if get && (public_path_segments(req, PUBLIC_BOOKING_V2_PREFIX).size == 1 ||
+                      public_path_segments(req, PUBLIC_BOOKING_V2_ICS_PREFIX).size == 1)
+  end
+
+  # Link curto e prévia do link (#1282). Mesmo método: caminho normalizado e comparado em pedaços, sem expressão regular.
+  # - `/a/<conta>`, `/a/<conta>/<página>` e `/a/<conta>/<página>/<pessoa>` (GET, #1299; o formato antigo `/a/<página>`
+  #   cabe nos mesmos tamanhos): o endereço curto é adivinhável, diferente do slug opaco de `/book`; o teto por IP (o
+  #   mesmo do GET da página na API v2) freia quem varre nomes.
+  # - `/book/<slug>/preview/<versão>.png` (GET): a imagem de prévia. Ela fica guardada e só é desenhada quando a marca
+  #   muda, mas cada pedido ainda lê o arquivo: teto por IP.
+  # - `.../crm/booking_pages/short_name` (GET, com login): "este nome está livre?". Desde o #1299 só olha as páginas
+  #   da própria conta; os tetos por IP e por conta continuam, para a tela não virar consulta em massa.
+  PUBLIC_BOOKING_SHORT_PREFIX = '/a/'.freeze
+  PUBLIC_BOOKING_PAGE_PREFIX = '/book/'.freeze
+  BOOKING_SHORT_NAME_CHECK_SUFFIX = '/crm/booking_pages/short_name'.freeze
+
+  throttle('public_booking_short/show_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_SHORT', '60').to_i, period: 1.minute) do |req|
+    req.ip if (req.get? || req.head?) && public_path_segments(req, PUBLIC_BOOKING_SHORT_PREFIX).size.between?(1, 3)
+  end
+
+  throttle('public_booking_preview/image_ip', limit: ENV.fetch('RATE_LIMIT_PUBLIC_BOOKING_PREVIEW_IMAGE', '60').to_i,
+                                              period: 1.minute) do |req|
+    segments = public_path_segments(req, PUBLIC_BOOKING_PAGE_PREFIX)
+    req.ip if (req.get? || req.head?) && segments.size == 3 && segments[1] == 'preview'
+  end
+
+  BOOKING_SHORT_NAME_CHECK_PREFIX = '/api/v1/accounts/'.freeze
+
+  # Id da conta quando o pedido é a conferência de nome livre; nil para o resto.
+  def self.booking_short_name_check_account(req)
+    return unless req.get? || req.head?
+
+    path = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions)
+    return unless path.start_with?(BOOKING_SHORT_NAME_CHECK_PREFIX) && path.end_with?(BOOKING_SHORT_NAME_CHECK_SUFFIX)
+
+    account = path.delete_prefix(BOOKING_SHORT_NAME_CHECK_PREFIX).delete_suffix(BOOKING_SHORT_NAME_CHECK_SUFFIX)
+    account if account.to_i.to_s == account
+  end
+
+  throttle('booking_short_name/check_ip', limit: ENV.fetch('RATE_LIMIT_BOOKING_SHORT_NAME_CHECK', '30').to_i, period: 1.minute) do |req|
+    req.ip if booking_short_name_check_account(req)
+  end
+
+  # Por conta também: trocar de IP não abre mais consultas para a mesma conta.
+  BOOKING_SHORT_NAME_CHECK_ACCOUNT_LIMIT = ENV.fetch('RATE_LIMIT_BOOKING_SHORT_NAME_CHECK_ACCOUNT', '120').to_i
+
+  throttle('booking_short_name/check_account', limit: BOOKING_SHORT_NAME_CHECK_ACCOUNT_LIMIT, period: 1.minute) do |req|
+    booking_short_name_check_account(req)
+  end
+
   # CRM calendar push webhooks (S7-B): public + unauthenticated. Generous per-IP cap
   # (providers batch from their own ranges) just to bound abuse — the handler only
   # verifies a secret and enqueues, never trusts the payload.

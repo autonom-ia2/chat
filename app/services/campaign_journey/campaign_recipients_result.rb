@@ -30,7 +30,8 @@ class CampaignJourney::CampaignRecipientsResult < CampaignJourney::MessageResult
     {
       id: campaign.display_id, channel: channel, name: campaign.title, status: campaign.campaign_status, processing: processing?,
       inbox: { id: campaign.inbox.id, name: campaign.inbox.name }, scheduled_at: campaign.scheduled_at,
-      template_name: campaign.template_params.to_h['name'], audience: CampaignJourney::ResultFinder.audience_of(campaign)
+      template_name: campaign.template_params.to_h['name'], audience: CampaignJourney::ResultFinder.audience_of(campaign),
+      pause: CampaignPause.open_for(campaign)&.payload # #1329: why it did not go out, while paused
     }
   end
 

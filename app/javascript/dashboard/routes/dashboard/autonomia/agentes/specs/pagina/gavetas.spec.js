@@ -1,0 +1,748 @@
+import { nextTick } from 'vue';
+import { config, mount, flushPromises } from '@vue/test-utils';
+import GavetaTestar from '../../components/pagina/GavetaTestar.vue';
+import GavetaFotoNome from '../../components/pagina/GavetaFotoNome.vue';
+import GavetaVersoes from '../../components/pagina/GavetaVersoes.vue';
+import GavetaInstrucoes from '../../components/pagina/GavetaInstrucoes.vue';
+import GavetaAgenda from '../../components/pagina/GavetaAgenda.vue';
+import { comNotaDaGaveta, semMensagens } from './i18nDaNota';
+
+const store = vi.hoisted(() => ({ dispatch: vi.fn(), getters: {} }));
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return {
+    useStore: () => store,
+    useMapGetter: () => computed(() => false),
+  };
+});
+const alerta = vi.hoisted(() => vi.fn());
+vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
+const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
+vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
+  useRoute: () => ({ path: '/app/accounts/1/agents/7', params: {} }),
+}));
+vi.mock('../../composables/usePermissoesDaJornada', async () => {
+  const { computed } = await import('vue');
+  return {
+    usePermissoesDaJornada: () => ({
+      podeAbrirAgendamento: computed(() => false),
+    }),
+  };
+});
+
+const no = seletor => document.querySelector(seletor);
+const todos = seletor => [...document.querySelectorAll(seletor)];
+const clicar = async seletor => {
+  no(seletor).click();
+  await flushPromises();
+};
+const digitar = async (seletor, valor) => {
+  const campo = no(seletor);
+  campo.value = valor;
+  campo.dispatchEvent(new Event('input'));
+  await nextTick();
+};
+
+const AGENTE = {
+  id: 7,
+  name: 'Bia',
+  agent_type: 'support',
+  mode: 'guided',
+  has_instruction: true,
+  avatar_url: '',
+};
+
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function abrir() {
+    this.setAttribute('open', '');
+  });
+  HTMLDialogElement.prototype.close = vi.fn(function fechar() {
+    this.removeAttribute('open');
+  });
+  global.URL.createObjectURL = vi.fn(() => 'blob:previa');
+  global.URL.revokeObjectURL = vi.fn();
+});
+
+beforeEach(() => {
+  store.dispatch.mockReset();
+  alerta.mockReset();
+});
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+describe('GavetaTestar (T08)', () => {
+  const montar = props =>
+    mount(GavetaTestar, {
+      attachTo: document.body,
+      props: { agente: AGENTE, nome: 'Bia', atendendo: true, ...props },
+    });
+
+  it('says nobody receives the messages and sends the question from the page', async () => {
+    store.dispatch.mockResolvedValue({ reply: 'Abrimos sim.' });
+    const wrapper = montar({ pergunta: 'Vocês abrem no sábado?' });
+    await flushPromises();
+
+    expect(document.body.textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.TESTE.NINGUEM'
+    );
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaAgents/test',
+      expect.objectContaining({ agentId: 7, message: 'Vocês abrem no sábado?' })
+    );
+    expect(todos('[data-balao]').map(b => b.textContent)).toEqual([
+      expect.stringContaining('Vocês abrem no sábado?'),
+      expect.stringContaining('Abrimos sim.'),
+    ]);
+    wrapper.unmount();
+  });
+
+  it('warns that a stopped agent can still be tested', async () => {
+    const wrapper = montar({ atendendo: false });
+    await flushPromises();
+    expect(no('[data-parado]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.TESTE.PARADO'
+    );
+    wrapper.unmount();
+  });
+
+  it('asks a ready question from the chips and focuses the field first', async () => {
+    store.dispatch.mockResolvedValue({ reply: 'R$ 59,90' });
+    const wrapper = montar();
+    await flushPromises();
+    expect(document.activeElement.tagName).toBe('TEXTAREA');
+
+    const chips = todos('[role="group"] button');
+    expect(chips.map(chip => chip.textContent.trim())).toEqual([
+      'AGENTS.JORNADA.PAGINA.TESTE.CHIPS.SUPPORT.A',
+      'AGENTS.JORNADA.PAGINA.TESTE.CHIPS.SUPPORT.B',
+      'AGENTS.JORNADA.PAGINA.TESTE.CHIPS.SUPPORT.C',
+    ]);
+    chips[0].click();
+    await flushPromises();
+    expect(store.dispatch).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
+  it('shows the failure, says it does not affect customers and retries', async () => {
+    store.dispatch
+      .mockRejectedValueOnce(new Error('500'))
+      .mockResolvedValueOnce({ reply: 'Oi!' });
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    const aviso = no('[data-aviso="falha"]');
+    expect(aviso.textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.TESTE.FALHOU_GARANTIA'
+    );
+    aviso.querySelector('button').click();
+    await flushPromises();
+    expect(no('[data-aviso]')).toBeNull();
+    expect(todos('[data-balao]')).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it('says the person is offline (not that the agent failed) and retries', async () => {
+    store.dispatch
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Network Error'), { code: 'ERR_NETWORK' })
+      )
+      .mockResolvedValueOnce({ reply: 'Oi!' });
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    const aviso = no('[data-aviso="offline"]');
+    expect(aviso.textContent).toContain('AGENTS.JORNADA.ERRO.OFFLINE');
+    expect(no('[data-aviso="falha"]')).toBeNull();
+    aviso.querySelector('button').click();
+    await flushPromises();
+    expect(no('[data-aviso]')).toBeNull();
+    expect(todos('[data-balao]')).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it('a 422 from the test says the agent does not know enough yet', async () => {
+    store.dispatch.mockRejectedValueOnce(
+      Object.assign(new Error('422'), { response: { status: 422 } })
+    );
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    expect(no('[data-aviso="incompleto"]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.TESTE.INCOMPLETO'
+    );
+    wrapper.unmount();
+  });
+
+  it('offers "Wrong answer?" only to whoever can change by chatting', async () => {
+    store.dispatch.mockResolvedValue({
+      reply: 'Abrimos sim.',
+      handoff: { should: true },
+    });
+    const sem = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    expect(no('[data-errado]')).toBeNull();
+    expect(no('[data-passaria]')).not.toBeNull();
+    sem.unmount();
+
+    const com = montar({ pergunta: 'Oi', podeMudar: true });
+    await flushPromises();
+    no('[data-errado]').click();
+    expect(com.emitted('errado')[0][0]).toEqual({
+      pergunta: 'Oi',
+      resposta: 'Abrimos sim.',
+      passaria: true,
+    });
+    com.unmount();
+  });
+
+  it('clears the test', async () => {
+    store.dispatch.mockResolvedValue({ reply: 'Oi!' });
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    await clicar('[data-limpar]');
+    expect(todos('[data-balao]')).toHaveLength(0);
+    expect(no('[data-vazio]')).not.toBeNull();
+    wrapper.unmount();
+  });
+
+  it('never shows a confidence score', async () => {
+    store.dispatch.mockResolvedValue({ reply: 'Oi!', confidence: 0.42 });
+    const wrapper = montar({ pergunta: 'Oi' });
+    await flushPromises();
+    expect(document.body.textContent).not.toContain('%');
+    expect(document.body.textContent).not.toContain('0.42');
+    wrapper.unmount();
+  });
+});
+
+describe('GavetaFotoNome (T12)', () => {
+  // Foto própria só no agente interno (copiloto da equipe); o externo usa a foto do canal.
+  const montar = props =>
+    mount(GavetaFotoNome, {
+      attachTo: document.body,
+      props: {
+        agente: {
+          ...AGENTE,
+          actuation: 'internal',
+          avatar_url: 'https://x/foto.png',
+        },
+        ...props,
+      },
+    });
+
+  describe('agente externo', () => {
+    const EXTERNO = {
+      ...AGENTE,
+      actuation: 'external',
+      avatar_url: 'https://x/propria.png',
+    };
+    const montarExterno = props =>
+      mount(GavetaFotoNome, {
+        attachTo: document.body,
+        props: { agente: EXTERNO, ...props },
+      });
+
+    it('shows the channel photo read-only and only the name to change', async () => {
+      const wrapper = montarExterno({
+        canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+        temCanal: true,
+      });
+      expect(no('[role="dialog"]').textContent).toContain('FOTO.TITULO_NOME');
+      expect(no('[data-trocar-foto]')).toBeNull();
+      expect(no('[data-tirar-foto]')).toBeNull();
+      expect(no('[data-seletor]')).toBeNull();
+      expect(no('[data-avatar] img').getAttribute('src')).toBe(
+        'https://x/whats.png'
+      );
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_DO_CANAL'
+      );
+      expect(no('[data-nota]').textContent).toContain('FOTO.NOTA');
+      wrapper.unmount();
+    });
+
+    it('saves only the name and never touches the own photo', async () => {
+      store.dispatch.mockResolvedValue({});
+      const wrapper = montarExterno({
+        canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+        temCanal: true,
+      });
+      await digitar('[data-nome]', 'Rosa');
+      await clicar('[data-salvar]');
+      expect(store.dispatch.mock.calls).toEqual([
+        ['autonomiaAgents/update', { id: 7, name: 'Rosa' }],
+      ]);
+      wrapper.unmount();
+    });
+
+    it('falls back to the own photo and says how to add one when the channel has none', () => {
+      const wrapper = montarExterno({
+        canal: { nome: 'E-mail', foto: '' },
+        temCanal: true,
+      });
+      expect(no('[data-avatar] img').getAttribute('src')).toBe(
+        'https://x/propria.png'
+      );
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_CANAL_SEM_FOTO'
+      );
+      wrapper.unmount();
+    });
+
+    it('says the photo will be the channel one when there is no channel yet', () => {
+      const wrapper = montarExterno({
+        agente: { ...EXTERNO, avatar_url: '' },
+      });
+      expect(no('[data-avatar]').textContent).toBe('B');
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_SEM_CANAL'
+      );
+      wrapper.unmount();
+    });
+
+    it('speaks of the channel in general when its name could not be read', () => {
+      const wrapper = montarExterno({ temCanal: true });
+      expect(no('[data-foto-do-canal]').textContent).toContain(
+        'FOTO.FOTO_DO_CANAL_GERAL'
+      );
+      wrapper.unmount();
+    });
+  });
+
+  describe('nota com Mudar conversando', () => {
+    beforeEach(comNotaDaGaveta);
+    afterEach(semMensagens);
+
+    it('turns "Mudar conversando" in the note into a link for who can change by chatting', async () => {
+      const wrapper = montar({ podeMudar: true });
+      const link = no('[data-nota] [data-ir-mudar]');
+      expect(link.tagName).toBe('BUTTON');
+      expect(link.className).toContain('font-semibold');
+      expect(link.className).toContain('text-n-blue-11');
+      expect(link.className).toContain('hover:underline');
+      // Área de toque de 44 px pelo ::after, sem padding que afaste o link da vírgula.
+      expect(link.className).toContain('after:-inset-y-3');
+      expect(no('[data-acao-texto]')).toBeNull();
+      await clicar('[data-ir-mudar]');
+      expect(wrapper.emitted('mudar')).toHaveLength(1);
+      expect(store.dispatch).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('keeps "Mudar conversando" in bold, with no action, without permission to change', () => {
+      const wrapper = montar();
+      expect(no('[data-ir-mudar]')).toBeNull();
+      expect(no('[data-nota] [data-acao-texto]').tagName).toBe('B');
+      expect(no('[data-nota] button')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  it('keeps "Photo and name" and "Change photo" for the internal agent', () => {
+    const wrapper = montar({
+      canal: { nome: 'WhatsApp do Centro', foto: 'https://x/whats.png' },
+    });
+    expect(no('[role="dialog"]').textContent).toContain('FOTO.TITULO');
+    expect(no('[role="dialog"]').textContent).not.toContain('TITULO_NOME');
+    expect(no('[data-trocar-foto]')).not.toBeNull();
+    expect(no('[data-avatar] img').getAttribute('src')).toBe(
+      'https://x/foto.png'
+    );
+    expect(no('[data-foto-do-canal]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('saves only the name, with a partial PATCH', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = montar();
+    await nextTick();
+    expect(document.activeElement).toBe(no('[data-nome]'));
+    await digitar('[data-nome]', 'Rosa');
+    await clicar('[data-salvar]');
+
+    expect(store.dispatch.mock.calls).toEqual([
+      ['autonomiaAgents/update', { id: 7, name: 'Rosa' }],
+    ]);
+    expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.PAGINA.FOTO.PRONTO');
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('asks for a name', async () => {
+    const wrapper = montar();
+    await digitar('[data-nome]', '   ');
+    await clicar('[data-salvar]');
+    expect(no('[data-erro-nome]').textContent).toContain('NOME_ERRO');
+    expect(store.dispatch).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('removes the photo through the avatar action', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = montar();
+    await clicar('[data-tirar-foto]');
+    await clicar('[data-salvar]');
+    expect(store.dispatch.mock.calls).toEqual([
+      ['autonomiaAgents/deleteAvatar', 7],
+    ]);
+    wrapper.unmount();
+  });
+
+  it('refuses a photo that is not JPG/PNG up to 5 MB, and uploads a valid one', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = montar();
+    const seletor = no('[data-seletor]');
+    const escolher = arquivo => {
+      Object.defineProperty(seletor, 'files', {
+        value: [arquivo],
+        configurable: true,
+      });
+      seletor.dispatchEvent(new Event('change'));
+    };
+
+    escolher(new File(['x'], 'foto.gif', { type: 'image/gif' }));
+    await nextTick();
+    expect(no('[data-erro-foto]').textContent).toContain('FOTO_ERRO');
+
+    const boa = new File(['x'], 'foto.png', { type: 'image/png' });
+    escolher(boa);
+    await nextTick();
+    expect(no('[data-erro-foto]')).toBeNull();
+    await clicar('[data-salvar]');
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaAgents/updateAvatar',
+      {
+        agentId: 7,
+        avatar: boa,
+      }
+    );
+    wrapper.unmount();
+  });
+
+  it('starts with the suggested old name and shows the standard error', async () => {
+    store.dispatch.mockRejectedValueOnce(new Error('500'));
+    const wrapper = montar({ nomeSugerido: 'Bia antiga' });
+    expect(no('[data-nome]').value).toBe('Bia antiga');
+    await clicar('[data-salvar]');
+    expect(no('[data-erro]').textContent).toContain('FOTO.ERRO_GARANTIA');
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    wrapper.unmount();
+  });
+});
+
+describe('GavetaVersoes (T13)', () => {
+  const VERSOES = [
+    { id: 3, created_at: '2026-10-09T15:42:00Z', reason: 'rollback' },
+    { id: 2, created_at: '2026-10-02T09:05:00Z', reason: 'manual_edit' },
+    { id: 1, created_at: '2026-09-28T10:00:00Z', reason: 'kb_refresh' },
+  ];
+
+  const montar = props =>
+    mount(GavetaVersoes, {
+      attachTo: document.body,
+      props: { agente: AGENTE, nome: 'Bia', podeGerenciar: true, ...props },
+    });
+
+  it('shows date, time and the reason phrase, without "In use"', async () => {
+    store.dispatch.mockResolvedValue(VERSOES);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = todos('[data-versao]');
+    expect(linhas).toHaveLength(3);
+    expect(linhas[0].textContent).toContain('VERSOES.MOTIVO.ROLLBACK');
+    expect(linhas[1].textContent).toContain('VERSOES.MOTIVO.MANUAL_EDIT');
+    expect(linhas[2].textContent).toContain('VERSOES.MOTIVO.KB_REFRESH');
+    expect(linhas[0].textContent).toContain('Oct');
+    expect(document.body.textContent).not.toContain('Em uso');
+    wrapper.unmount();
+  });
+
+  it('says which way each "Voltar" went back to (#1369)', async () => {
+    config.global.plugins[0].global.setLocaleMessage('en', {
+      AGENTS: {
+        JORNADA: {
+          PAGINA: {
+            VERSOES: {
+              MOTIVO: {
+                ROLLBACK: 'Went back to a previous way',
+                ROLLBACK_DE: 'Went back to the way from {quando}',
+              },
+            },
+          },
+        },
+      },
+    });
+    store.dispatch.mockResolvedValue([
+      {
+        id: 5,
+        created_at: '2026-10-12T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'b',
+      },
+      {
+        id: 4,
+        created_at: '2026-10-11T15:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'a',
+      },
+      {
+        id: 3,
+        created_at: '2026-10-10T15:00:00Z',
+        reason: 'kb_refresh',
+        instruction_hash: 'b',
+      },
+      {
+        id: 2,
+        created_at: '2026-10-02T09:05:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'a',
+      },
+      // Voltou a um jeito que já saiu da lista (a API guarda os 50 mais novos).
+      {
+        id: 1,
+        created_at: '2026-09-28T10:00:00Z',
+        reason: 'rollback',
+        instruction_hash: 'z',
+      },
+      // Uma segunda versão com o texto "b": a volta da versão 5 fica ambígua.
+      {
+        id: 0,
+        created_at: '2026-09-20T10:00:00Z',
+        reason: 'manual_edit',
+        instruction_hash: 'b',
+      },
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const linhas = todos('[data-versao]');
+    const quando = data =>
+      `${new Date(data).toLocaleDateString('en', { day: 'numeric', month: 'short' })}, ${new Date(data).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
+    // Ambígua (duas anteriores com o mesmo texto): frase genérica, sem data.
+    expect(linhas[0].textContent).toContain('Went back to a previous way');
+    expect(linhas[0].textContent).not.toContain('Went back to the way from');
+    // Só uma anterior com o mesmo texto: diz de quando é.
+    expect(linhas[1].textContent).toContain(
+      `Went back to the way from ${quando('2026-10-02T09:05:00Z')}`
+    );
+    expect(linhas[4].textContent).toContain('Went back to a previous way');
+    semMensagens();
+    wrapper.unmount();
+  });
+
+  it('goes back to a version after confirming', async () => {
+    store.dispatch.mockResolvedValue(VERSOES);
+    store.getters['autonomiaAgents/getInstructionVersions'] = VERSOES;
+    const wrapper = montar();
+    await flushPromises();
+
+    todos('[data-voltar]')[1].click();
+    await nextTick();
+    await clicar('[data-confirmar]');
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaAgents/restoreInstructionVersion',
+      { agentId: 7, versionId: 2 }
+    );
+    expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.PAGINA.VERSOES.PRONTO');
+    wrapper.unmount();
+  });
+
+  it('is read-only for view-only seats and says when there is nothing', async () => {
+    store.dispatch.mockResolvedValue([]);
+    const vazia = montar({ podeGerenciar: false });
+    await flushPromises();
+    expect(no('[data-vazio]')).not.toBeNull();
+    vazia.unmount();
+
+    store.dispatch.mockResolvedValue(VERSOES);
+    const leitura = montar({ podeGerenciar: false });
+    await flushPromises();
+    expect(no('[data-voltar]')).toBeNull();
+    leitura.unmount();
+  });
+
+  it('shows the standard error when the list cannot be read', async () => {
+    store.dispatch
+      .mockRejectedValueOnce(new Error('500'))
+      .mockResolvedValueOnce([]);
+    const wrapper = montar();
+    await flushPromises();
+    no('[data-erro-ler] button').click();
+    await flushPromises();
+    expect(no('[data-vazio]')).not.toBeNull();
+    wrapper.unmount();
+  });
+});
+
+describe('GavetaInstrucoes (T14)', () => {
+  const montar = agente =>
+    mount(GavetaInstrucoes, {
+      attachTo: document.body,
+      props: { agente: agente || AGENTE, nome: 'Bia' },
+    });
+
+  it('starts empty for a guided agent and never saves an empty text', async () => {
+    const wrapper = montar();
+    await nextTick();
+    expect(no('[data-instrucao]').value).toBe('');
+    expect(document.activeElement).toBe(no('[data-instrucao]'));
+    // A regra global de textarea (h-16) venceria o rows: a altura vem da própria classe.
+    expect(no('[data-instrucao]').className).toContain('h-auto');
+    expect(no('[data-instrucao]').className).toContain('min-h-[22rem]');
+    await clicar('[data-salvar]');
+    expect(no('[data-vazio]').textContent).toContain('INSTRUCOES.VAZIO');
+    expect(store.dispatch).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('saves mode and instruction together in one PATCH', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = montar();
+    await digitar('[data-instrucao]', 'Responda com frases curtas.');
+    await clicar('[data-salvar]');
+    expect(store.dispatch.mock.calls).toEqual([
+      [
+        'autonomiaAgents/update',
+        { id: 7, mode: 'manual', instruction: 'Responda com frases curtas.' },
+      ],
+    ]);
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.PAGINA.INSTRUCOES.SALVO'
+    );
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('closing without saving writes nothing', async () => {
+    const wrapper = montar();
+    await digitar('[data-instrucao]', 'Texto');
+    no('[data-fechar]').click();
+    await nextTick();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    expect(store.dispatch).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('opens the written text of a manual agent and shows the error in place', async () => {
+    store.dispatch.mockRejectedValueOnce(new Error('500'));
+    const wrapper = montar({
+      ...AGENTE,
+      mode: 'manual',
+      instruction: 'Atenda bem.',
+    });
+    expect(no('[data-instrucao]').value).toBe('Atenda bem.');
+    await clicar('[data-salvar]');
+    expect(no('[data-erro]').textContent).toContain('INSTRUCOES.ERRO_GARANTIA');
+    expect(no('[data-salvar]')).toBeNull();
+    wrapper.unmount();
+  });
+});
+
+// #1253 — Marcar reuniões. O ChoiceSelect é trocado por botões que mostram as opções e mudam o
+// v-model, para o spec conferir as escolhas sem depender do popover.
+describe('GavetaAgenda (#1253)', () => {
+  // #1370 — os cartões são rádios de verdade (BookingChoiceCards): o teste marca o rádio.
+  const PAGINAS = [
+    { id: 3, title: 'Visita', enabled: true },
+    { id: 5, title: 'Conversa', enabled: false },
+  ];
+  const montar = async (agente = {}) => {
+    const wrapper = mount(GavetaAgenda, {
+      attachTo: document.body,
+      props: {
+        agente: { ...AGENTE, config: { booking_page_id: 3 }, ...agente },
+        nome: 'Bia',
+      },
+    });
+    await flushPromises();
+    return wrapper;
+  };
+
+  beforeEach(() => {
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: PAGINAS } });
+  });
+
+  it('offers "do not book" and each page, with the saved one chosen', async () => {
+    const wrapper = await montar();
+    expect(todos('[data-choice]').map(c => c.dataset.choice)).toEqual([
+      '',
+      '3',
+      '5',
+    ]);
+    expect(no('[data-choice="3"] input').checked).toBe(true);
+    expect(no('[data-choice="3"] input').type).toBe('radio');
+    expect(no('select')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('saves only the booking page, and null for "do not book"', async () => {
+    store.dispatch.mockResolvedValue({});
+    const wrapper = await montar();
+    await clicar('[data-choice=""] input');
+    await clicar('[data-salvar]');
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 7,
+      config: { booking_page_id: null },
+    });
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.PRONTO'
+    );
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('closes without writing when nothing changed', async () => {
+    const wrapper = await montar({ config: { booking_page_id: '3' } });
+    await clicar('[data-salvar]');
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['the server refusal (422)', new Error('Você não pode escolher a página.')],
+    [
+      'a server or network failure (500)',
+      new Error('AxiosError: Request failed with status code 500'),
+    ],
+  ])(
+    'shows the fixed save error for %s and keeps the drawer open',
+    async (_caso, falha) => {
+      store.dispatch.mockRejectedValue(falha);
+      const wrapper = await montar();
+      await clicar('[data-choice="5"] input');
+      await clicar('[data-salvar]');
+      expect(alerta).not.toHaveBeenCalled();
+      const texto = no('[data-erro]').textContent;
+      expect(texto).toContain('AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.ERRO');
+      expect(texto).not.toContain('AxiosError');
+      expect(wrapper.emitted('fechar')).toBeUndefined();
+      wrapper.unmount();
+    }
+  );
+
+  // Sem página salva: com uma salva e apagada, a gaveta diz "não existe mais" (GavetaAgenda.spec.js).
+  it('says how to create a page when the account has none, without Save', async () => {
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = await montar({ config: { booking_page_id: null } });
+    expect(no('[data-sem-paginas]')).not.toBeNull();
+    expect(no('[data-salvar]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('shows the standard error with a retry when the pages cannot be read', async () => {
+    paginasApi.get
+      .mockRejectedValueOnce(new Error('500'))
+      .mockResolvedValueOnce({ data: { payload: PAGINAS } });
+    const wrapper = await montar();
+    expect(no('[data-erro-ler]').textContent).toContain(
+      'AGENTS.JORNADA.PAGINA.GAVETA_AGENDA.ERRO_LER'
+    );
+    await clicar('[data-erro-ler] button');
+    expect(no('[data-escolha]')).not.toBeNull();
+    wrapper.unmount();
+  });
+});

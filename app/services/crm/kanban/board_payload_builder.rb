@@ -24,6 +24,8 @@ class Crm::Kanban::BoardPayloadBuilder
     @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(
       cards_by_stage.values.flat_map { |cards, _has_more| cards }
     )
+    # Acesso por funil (#1148, parte C): a visibilidade das conversas do quadro (principais e vinculadas) numa consulta só.
+    @conversation_visibility.preload_cards(cards_by_stage.values.flat_map { |cards, _has_more| cards })
 
     {
       pipeline: pipeline_payload,
@@ -158,7 +160,8 @@ class Crm::Kanban::BoardPayloadBuilder
       :owner, { linked_conversations: :conversation_participants },
       { contact: Crm::Cards::CompanyResolver.contact_preload },
       { inbox: { agent_bot_inbox: :agent_bot } },
-      { primary_conversation: [:conversation_participants, :assignee, { applied_sla: :sla_policy }, { inbox: { agent_bot_inbox: :agent_bot } }] }
+      { primary_conversation: [:conversation_participants, :assignee, :ai_assignee, { applied_sla: :sla_policy },
+                               { inbox: { agent_bot_inbox: :agent_bot } }] }
     ).limit(limit_per_stage + 1).to_a
     [cards.first(limit_per_stage), cards.size > limit_per_stage]
   end

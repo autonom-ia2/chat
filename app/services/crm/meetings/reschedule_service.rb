@@ -32,6 +32,10 @@ class Crm::Meetings::RescheduleService
       rearm_reminder!
       reset_guest_rsvps!
       Crm::FollowUps::CardNextDueUpdater.update(@meeting.card)
+      # Reunião da página de agendamento nova (#1192): confirmação volta a pendente e os avisos no WhatsApp vão para o
+      # novo horário, venha a mudança do cliente, do painel ou da agenda do provedor. Na mesma transação: se o
+      # provedor falhar, nada muda.
+      Crm::BookingV2::Notices::Scheduler.meeting_moved!(@meeting)
 
       update_provider_event! unless skip_provider_call?
     end

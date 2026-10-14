@@ -5,14 +5,57 @@ subir junto o que estiver pronto, com um deploy só, em vez de um deploy de ~40 
 
 ## Como funciona hoje (desde 09/10/2026, #1173)
 
-A sessão **Orquestração de CI/CD e deploy** coordena fila, merge, deploy e limpeza do chat2you, no lugar da antiga
-sessão Automação (decisão do Rodrigo em 09/10/2026). Nenhuma sessão ou agente põe PR na fila sem a vez dada por ela.
-Merge e deploy continuam exigindo o OK explícito do Rodrigo: a Orquestração organiza, não aprova.
+A sessão **Orquestração Deploy** coordena fila, merge, deploy e limpeza do chat2you, no lugar da antiga sessão
+Automação (decisão do Rodrigo em 09/10/2026; em 10/10 ela passou a orquestrar os deploys de todos os projetos).
+Nenhuma sessão ou agente põe PR na fila sem a vez dada por ela.
+
+**O pedido do Rodrigo prevalece sempre.** Se a Orquestração estiver fora (sessão parada, sem contexto, máquina
+dormindo), o OK direto do Rodrigo libera: a sessão dona comenta no PR citando o OK dele, enfileira, e o painel
+registra. A Orquestração confere quando voltar.
+
+### Quem decide o quê
+
+| Decisão | Quem |
+|---|---|
+| Ordem da fila, composição do lote, "pode enfileirar" | Orquestração |
+| Merge de PR seguro (sem migration ou com migration só aditiva; sem infra; revisado; CI verde) | Orquestração (delegado pelo Rodrigo em 10/10) |
+| Migration que não seja só aditiva, infra/IAM, permissões, segredos, billing | Rodrigo |
+| Operação em dado de cliente, dinheiro, apagar dados ou pastas de projeto | Rodrigo |
+| Liberar funcionalidade para todas as contas | Rodrigo |
+| Qualquer coisa que o Rodrigo pedir | Rodrigo (prevalece) |
+
+### Painel da fila (Issue #1237) e rótulos
+
+O estado da fila vive na Issue fixada **#1237**, atualizada sozinha pelo workflow `fila-painel.yml` (eventos de PR, fim
+de deploy e a cada 30 min). Ela não depende de nenhuma sessão estar viva: quem precisar assumir lê ali.
+
+| Rótulo | Quem põe | Significa |
+|---|---|---|
+| `fila:pedido` | sessão dona do PR, com a CI verde | pediu vaga (preencha a seção "Pedido de vaga" no corpo do PR); um push depois disso tira o rótulo sozinho |
+| `hotfix` | Orquestração | via expressa (abaixo) |
+| `fila:validar` | o painel, ao mergear um PR com `fila:pedido` ou `hotfix` | em produção, aguardando o "ok, SHA"; a Orquestração tira depois do ok |
+
+**Liberar é enfileirar.** Não existe rótulo de "liberado": a Orquestração (ou a sessão, com OK direto do Rodrigo)
+enfileira, e o painel mostra a fila de merge e os PRs com auto-merge esperando checks. Nenhum rótulo muda na hora
+de enfileirar: o `guia-trava.yml` roda de novo em qualquer `labeled`/`unlabeled`, e um rótulo trocado nessa hora
+refaz os checks obrigatórios e segura o PR fora da fila (em 10/10 isso partiu um lote em dois deploys). Pular a trava
+por rótulo não é saída: job pulado conta como check aprovado.
+
+Rastro sem trava: PR que entra na `main` sem `fila:pedido` nem `hotfix`, e deploy disparado à mão, viram alerta
+comentado no painel. As mensagens entre sessões continuam como aviso, mas o registro é o rótulo e o painel.
+
+### Como assumir a orquestração
+
+Se a sessão Orquestração não responder, qualquer sessão pode assumir com o OK do Rodrigo: ler o painel #1237, este
+documento e o épico #1179 (registro dos lotes), e seguir daí. Nada do estado da fila fica só na memória de uma sessão.
+
+Projeto novo só entra na orquestração com o inventário de deploy preenchido no repositório dele (modelo em
+`docs/runbooks/inventario-de-deploy.md`).
 
 ### Pedido de vaga
 
-Mandado à Orquestração só com a CI verde no head atual e sem push depois. Um push depois do pedido derruba o lote
-inteiro.
+Rótulo `fila:pedido` no PR, e a seção "Pedido de vaga" no corpo do PR com os campos abaixo. Só com a CI verde no
+head atual e sem push depois: um push depois do pedido derruba o lote inteiro.
 
 | Campo | O que dizer |
 |---|---|
@@ -20,7 +63,7 @@ inteiro.
 | OK do Rodrigo | sim / não |
 | CI | verde no head atual (SHA) |
 | Migration | não / aditiva (tabela, coluna, índice `CONCURRENTLY`) / outra |
-| Guia e Central | o PR toca `lib/operator_guide`, rotas, menu, `lib/central_de_ajuda` ou `public/central-de-ajuda`? |
+| Guia e Central | o PR toca `lib/operator_guide`, rotas, menu, `lib/central_de_ajuda` ou `public/central-de-ajuda`? Rodou `pnpm guia:check`, `pnpm central:check` **e** `rails autonomia:guia:formatos:check` (este último pega controller e parâmetros; o guia:check não)? |
 | **Liberação** | sem flag (todas as contas) / flag `X` só na conta `N` como piloto, com data para decidir / flag `X` para todas |
 | Urgente | sim só se a produção está quebrada ou a `main` vermelha |
 
@@ -37,9 +80,16 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
 - Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da
   Central em dia (`pnpm guia:check`, `pnpm central:check`, `rails autonomia:guia:formatos:check`); PR empilhado só
   depois que o de baixo virar `MERGED`; e a linha "Liberação" de cada PR.
-- "Lote fechado, pode enfileirar": cada sessão roda `gh pr merge <N> --match-head-commit <sha>`. Antes disso, não.
-- Refazer CI = fechar e reabrir o PR. Não usar `gh run rerun` (reaproveita o merge ref antigo) nem mesclar a `main`
-  "para atualizar" (só se o GitHub disser `CONFLICTING`).
+- Lote fechado: a Orquestração enfileira todos de uma vez (`gh pr merge <N> --match-head-commit <sha>`), sem mexer
+  em rótulo. A sessão dona não enfileira nem dá push depois do pedido.
+- Refazer CI = fechar e reabrir o PR. `gh run rerun --failed` só quando a `main` não andou desde aquela CI (o merge
+  ref antigo ainda é o atual). Não mesclar a `main` "para atualizar" (só se o GitHub disser `CONFLICTING`).
+- **Um lote, um deploy.** A fila de merge entra na `main` grupo a grupo, e cada push disparava o seu deploy (em
+  10/10 três lotes saíram em dois deploys cada). O job "Esperar a fila de merge" dos dois deploys espera a fila
+  esvaziar (teto de 25 min) e, se houver execução de push mais nova viva ou já concluída com sucesso, sai sem
+  deployar: a mais nova sobe a `main` inteira. A trava de concorrência fica nos jobs `deploy` e `rollback`, então a
+  espera não segura o rollback. Cancelar à mão o deploy mais novo cancela também os commits que ele cobria:
+  disparar de novo pelo `workflow_dispatch`.
 
 ### Depois do deploy
 
@@ -92,10 +142,23 @@ da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache
 build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
 instância nova liga antes do build e espera a imagem chegar ao ECR, então o boot quase todo corre junto com o build.
 
+Desde o #1350 o desligamento da antiga é um job à parte, **Desligar a blue**, que roda depois do **Deploy Green** com
+sucesso e fora da trava do deploy: o próximo deploy já pode começar enquanto a antiga ainda está nos 5 min de
+rollback rápido. A política não mudou: a antiga fica ligada 5 min, depois é parada (é o rollback de um degrau), e a de
+dois deploys atrás é terminada. Antes de agir, o job relê o listener e os ponteiros `current`/`previous` do SSM: não
+para a antiga se um rollback a trouxe de volta, espera rollback em andamento acabar e não falha se um deploy mais novo
+já cuidou das instâncias. O run do deploy só termina depois desse job, mas o tráfego já está na nova desde o fim do
+**Deploy Green**: é ali que se confere o "ok, SHA".
+
 Deploy cancelado ou com falha antes da troca de tráfego (#972): se a instância nova estiver rodando o `deploy.sh`
 (migrations), ela não é terminada no meio. Ela se desliga sozinha quando ele acaba, fica parada com a tag
 `DeployCleanup=pending`, e o próximo deploy a termina. Se ela ainda estiver de pé, o próximo deploy espera até 30 min e,
 passado isso, a termina mesmo assim e segue: só uma migration de mais de 30 min é cortada.
+
+Falha antes de a imagem chegar ao ECR (build quebrado ou cancelado, #1350): a instância nova não rodou nada, então é
+terminada sempre, mesmo se a recuperação na antiga (suspender o Instagram assistido, religar o web) falhar. Essa falha
+continua falhando o job com o erro original. Todo deploy também avisa (`::warning::`, sem terminar nada) de instância
+ligada há mais de 2 h que não é a atual nem a anterior registradas.
 
 ## Regras do lote manual (25/09 a 04/10/2026)
 

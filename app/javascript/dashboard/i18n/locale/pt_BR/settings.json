@@ -346,6 +346,7 @@
     "AGENTS_HUB": "Meus agentes",
     "AGENTS_BUILDER": "Construtor de agentes",
     "PROSPECTING": "Prospecção",
+    "BOOKING": "Agendamento",
     "PROSPECTING_SEARCH": "Buscar leads",
     "PROSPECTING_LISTS": "Listas",
     "INSURANCE": "Cotação",
@@ -902,11 +903,11 @@
       },
       "CRM_HANDOFF": {
         "TITLE": "Transferir para humano (CRM)",
-        "DESCRIPTION": "Defina como a IA transfere conversas do funil para humanos.",
+        "DESCRIPTION": "Defina quando a assistente do funil chama a equipe, quem recebe e como.",
         "FEATURES": [
-          "Transferência direta ou por convite, por funil e por etapa",
-          "Destino: caixa de entrada inteira em rodízio ou pessoa específica",
-          "Se ninguém assumir: avisar de novo ou escalar para um supervisor"
+          "Na hora ou com convite, por funil e por etapa",
+          "Quem recebe: alguém da equipe ou sempre a mesma pessoa",
+          "Se ninguém aceitar: avisar de novo ou passar para outra pessoa"
         ]
       }
     },

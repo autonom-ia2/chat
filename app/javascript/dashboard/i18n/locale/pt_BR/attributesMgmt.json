@@ -11,7 +11,8 @@
     "ATTRIBUTE_MODELS": {
       "CONVERSATION": "Conversas",
       "CONTACT": "Contato",
-      "COMPANY": "Empresa"
+      "COMPANY": "Empresa",
+      "CARD": "Card do CRM"
     },
     "ATTRIBUTE_TYPES": {
       "TEXT": "Texto",
@@ -110,7 +111,8 @@
       "HEADER": "Atributos Personalizados",
       "CONVERSATION": "Conversas",
       "CONTACT": "Contato",
-      "COMPANY": "Empresa"
+      "COMPANY": "Empresa",
+      "CARD": "Card"
     },
     "LIST": {
       "TABLE_HEADER": {

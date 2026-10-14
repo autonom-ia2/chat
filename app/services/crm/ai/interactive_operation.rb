@@ -1,5 +1,6 @@
 # Somente as operações interativas migradas: autorização na execução e na leitura do resultado.
-class Crm::Ai::InteractiveOperation
+# Uma operação por tipo de IA interativa; acima do limite de linhas desde o funil não salvo (#1384).
+class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   attr_reader :context
 
   def initialize(data)
@@ -19,15 +20,16 @@ class Crm::Ai::InteractiveOperation
     when 'copilot_run', 'copilot_chat' then authorize_copilot!
     when 'agent_test', 'agent_suggest' then authorize_agent!
     when 'email_rewrite' then authorize_email!
-    when 'stage_criteria' then authorize_pipeline!
+    when 'stage_criteria', 'stage_criteria_draft' then authorize_pipeline!
     when 'meta_funnel_stages' then authorize_meta_funnel!
     when 'meta_ads_daily_action' then authorize_meta_ads_panel!
     when 'meta_ads_quote_message' then authorize_meta_ads_quote!
+    when 'whatsapp_template_suggestion' then authorize_whatsapp_templates!
     else raise ArgumentError, 'unknown_interactive_operation'
     end
   end
 
-  def perform # rubocop:disable Metrics/CyclomaticComplexity
+  def perform # rubocop:disable Metrics/CyclomaticComplexity, Metrics/AbcSize
     case @data.fetch('operation')
     when 'meeting_times', 'meeting_invite', 'meeting_summary' then meeting_result
     when 'card_summary' then card_summary
@@ -37,10 +39,12 @@ class Crm::Ai::InteractiveOperation
     when 'copilot_run', 'copilot_chat' then copilot_result
     when 'agent_test', 'agent_suggest' then playground_result
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
-    when 'stage_criteria' then Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id)).perform
+    when 'stage_criteria', 'stage_criteria_draft'
+      Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id, :pipeline_name)).perform
     when 'meta_funnel_stages' then Crm::MetaAds::StageTypeSuggester.new(pipeline: meta_funnel, language: @inputs.fetch(:language)).perform
     when 'meta_ads_daily_action' then meta_ads_daily_action
     when 'meta_ads_quote_message' then meta_ads_quote_message
+    when 'whatsapp_template_suggestion' then whatsapp_template_suggestion
     end
   end
 
@@ -75,13 +79,16 @@ class Crm::Ai::InteractiveOperation
     authorize_conversation!(conversation)
   end
 
+  # #1384: sem pipeline_id é o funil ainda não salvo — só nome e conta, nada gravado.
   def pipeline
-    @pipeline ||= @account.crm_pipelines.find(@inputs.fetch(:pipeline_id))
+    scope = @account.crm_pipelines
+    @pipeline ||= @inputs[:pipeline_id] ? scope.find(@inputs[:pipeline_id]) : scope.new(name: @inputs[:pipeline_name])
   end
 
   def authorize_pipeline!
     raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
 
+    Pundit.authorize(@context, pipeline, :create?) if pipeline.new_record?
     Pundit.authorize(@context, pipeline, :manage_ai?)
   end
 
@@ -139,6 +146,17 @@ class Crm::Ai::InteractiveOperation
   def meta_ads_quote_message
     suggester = Crm::MetaAds::QuoteMessageSuggester.new(card: card, conversation: meta_ads_conversation, language: @inputs.fetch(:language))
     { quote_message: suggester.perform }
+  end
+
+  def whatsapp_template_suggestion
+    Whatsapp::Templates::Sugestao.executar(account: @account, inputs: @inputs)
+  end
+
+  # Modelos do WhatsApp (#1333): a mesma porta do POST (as duas flags da conta e whatsapp_templates_manage).
+  def authorize_whatsapp_templates!
+    raise Pundit::NotAuthorizedError unless Whatsapp::Templates::Sugestao.liberada?(@account)
+
+    Pundit.authorize(@context, WhatsappTemplateProfile, :create?, policy_class: WhatsappTemplatePolicy)
   end
 
   def authorize_email!

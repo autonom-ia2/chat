@@ -271,6 +271,56 @@ describe('composeConversationHelper', () => {
     });
   });
 
+  describe('canStartWithWhatsappApi', () => {
+    it('is true for a WhatsApp inbox the server marked as ready', () => {
+      expect(
+        helpers.canStartWithWhatsappApi({
+          channelType: INBOX_TYPES.WHATSAPP,
+          whatsappApiStart: true,
+        })
+      ).toBe(true);
+    });
+
+    it('is false for a WhatsApp inbox without the server mark', () => {
+      expect(
+        helpers.canStartWithWhatsappApi({ channelType: INBOX_TYPES.WHATSAPP })
+      ).toBe(false);
+      expect(
+        helpers.canStartWithWhatsappApi({
+          channelType: INBOX_TYPES.WHATSAPP,
+          whatsappApiStart: false,
+        })
+      ).toBe(false);
+    });
+
+    it('is false for other channels and for no inbox', () => {
+      expect(
+        helpers.canStartWithWhatsappApi({
+          channelType: INBOX_TYPES.TWILIO,
+          whatsappApiStart: true,
+        })
+      ).toBe(false);
+      expect(helpers.canStartWithWhatsappApi(null)).toBe(false);
+    });
+
+    it('survives the merge of contactable inboxes with the inbox list', () => {
+      const [merged] = helpers.mergeInboxDetails(
+        helpers.processContactableInboxes([
+          {
+            inbox: {
+              id: 7,
+              channelType: INBOX_TYPES.WHATSAPP,
+              whatsappApiStart: true,
+            },
+            sourceId: '5511999999999',
+          },
+        ]),
+        [{ id: 7, channel_type: INBOX_TYPES.WHATSAPP, message_templates: [] }]
+      );
+      expect(helpers.canStartWithWhatsappApi(merged)).toBe(true);
+    });
+  });
+
   describe('prepareAttachmentPayload', () => {
     it('prepares direct upload files', () => {
       const files = [{ blobSignedId: 'signed1' }];

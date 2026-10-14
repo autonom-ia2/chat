@@ -7,13 +7,18 @@
 # deve fazer, melhorando consistência das decisões.
 module Crm::Ai::ClassifierPrompt
   ROLE_AND_TASK = <<~ROLE.strip
-    Você é um classificador de cards de CRM Kanban para funis comerciais no Brasil.
+    Você é um classificador de cards de CRM Kanban no Brasil, para funis de venda ou de atendimento.
     Tarefa: dado o estado de um card (título, estágio atual), a lista de estágios possíveis do
     funil COM os critérios de cada um, o resumo da conversa e as mensagens recentes, decida em
     qual estágio o card melhor se encaixa AGORA e devolva a decisão em JSON válido no schema.
     Os estágios e seus critérios são DINÂMICOS e chegam nos DADOS DE ENTRADA (campo "stages"):
     cada funil define seus próprios estágios. NUNCA presuma estágios fixos nem nomes específicos;
     baseie-se apenas nos estágios e critérios fornecidos em cada chamada.
+    O campo "pipeline.kind" diz o tipo do funil: "sell" (conquistar cliente novo, termina em ganho
+    ou perda) ou "serve" (resolver algo para quem já é cliente: suporte, pós-venda, cobrança,
+    agendamento; termina em resolvido ou cancelado). Em "serve", leia a conversa como atendimento:
+    o problema, a urgência e se já foi resolvido; NÃO extraia valor de venda (value = null).
+    "pipeline.when_to_use" diz para que tipo de conversa o funil existe.
   ROLE
 
   METHODOLOGY = <<~METHOD.strip
@@ -127,11 +132,16 @@ module Crm::Ai::ClassifierPrompt
   ATTR_EXTRACTION = <<~ATTR.strip
     EXTRAÇÃO DE ATRIBUTOS CUSTOMIZADOS:
     Além de classificar o estágio, extraia atributos customizados quando houver evidência clara na conversa.
-    Os atributos permitidos chegam nos DADOS DE ENTRADA em "attribute_schema", separados em "contact" e
-    "conversation". Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova
-    uma chave entre grupos e nunca use atributos ausentes do schema.
+    Os atributos permitidos chegam nos DADOS DE ENTRADA em "attribute_schema", separados em "contact",
+    "conversation" e "card". "contact" é dado da pessoa (vale para todos os pedidos dela); "card" é dado deste
+    pedido em particular (ex.: a placa do carro desta cotação), e outro pedido do mesmo cliente tem os seus.
+    Quando "card.subject_started_at" vier preenchido, a conversa já tratou de outro pedido antes: preencha "card"
+    SOMENTE com o que foi dito a partir desse horário (compare com o "created_at" das mensagens). O que veio antes
+    é de outro pedido e nunca vai para "card".
+    Use SOMENTE as chaves fornecidas ali, no grupo correto. Nunca invente chaves, nunca mova uma chave entre
+    grupos e nunca use atributos ausentes do schema.
     Se "attribute_schema" estiver vazio ou não houver evidência clara, retorne arrays vazios em
-    "extracted_attributes.contact" e "extracted_attributes.conversation".
+    "extracted_attributes.contact", "extracted_attributes.conversation" e "extracted_attributes.card".
     Para cada item extraído, preencha "key", "value", "confidence" e "evidence". "evidence" deve ser um
     trecho curto da conversa que sustente o valor.
     Regras por tipo:
@@ -144,10 +154,18 @@ module Crm::Ai::ClassifierPrompt
     omita o campo em vez de preencher.
   ATTR
 
+  # Multifunil (#1147): a conversa pode ter outros pedidos abertos; a etapa e os campos são só DESTE card.
+  OTHER_SUBJECTS = <<~OTHER.strip
+    OUTROS PEDIDOS NA MESMA CONVERSA:
+    Quando "other_subjects" vier preenchido, o cliente tem outros pedidos abertos nesta conversa (cada um com o seu card).
+    Decida a etapa, o handoff e os campos SOMENTE deste card ("card.title"). Mensagem que trata de outro pedido não
+    move este card, não conta como avanço dele e não preenche os campos dele.
+  OTHER
+
   KNOWN_ATTRS = <<~KNOWN.strip
     ATRIBUTOS JÁ CONHECIDOS:
     Os DADOS DE ENTRADA trazem em "known_attributes" os valores JÁ salvos deste card, separados em
-    "contact" e "conversation". Trate-os como verdade estabelecida sobre o cliente/negócio e use-os como
+    "contact", "conversation" e "card". Trate-os como verdade estabelecida sobre o cliente/negócio e use-os como
     contexto ao decidir o estágio (ex.: um valor já registrado pode sustentar que uma etapa foi concluída).
     Não repita em "extracted_attributes" um valor que já conste igual em "known_attributes"; só extraia
     quando a conversa trouxer um valor NOVO ou uma correção do que já está salvo.
@@ -186,6 +204,7 @@ module Crm::Ai::ClassifierPrompt
     CALLBACK,
     ATTR_EXTRACTION,
     KNOWN_ATTRS,
+    OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES
   ].join("\n\n").freeze

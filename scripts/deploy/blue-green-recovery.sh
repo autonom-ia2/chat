@@ -73,19 +73,165 @@ switch_listener_destination() {
   # LISTENER_SWITCH_STATUS. Failed confirmation always aborts recovery here.
 }
 
+# Estado EC2 de uma instância. Instância que a AWS já esqueceu (terminada há tempo) conta como terminated;
+# qualquer outro erro da API falha, para ninguém agir sobre um estado que não leu.
+instance_state() {
+  local error_file state status=0
+  error_file=$(mktemp)
+  state=$(aws ec2 describe-instances --instance-ids "$1" \
+    --query 'Reservations[0].Instances[0].State.Name' --output text 2>"$error_file") || status=$?
+  if [ "$status" -ne 0 ]; then
+    if grep -qF InvalidInstanceID.NotFound "$error_file"; then
+      rm -f "$error_file"
+      INSTANCE_STATE=terminated
+      return 0
+    fi
+    cat "$error_file" >&2
+    rm -f "$error_file"
+    return 1
+  fi
+  rm -f "$error_file"
+  INSTANCE_STATE="$state"
+}
+
+# #1350: a green só sai do wait_for_image do user data quando a imagem deste commit está no ECR. Sem a imagem, ela
+# não rodou o deploy.sh nem migration. Retorna 0 só com ImageNotFoundException; imagem presente ou erro = 1.
+green_image_absent() {
+  local error_file status=0
+  error_file=$(mktemp)
+  aws ecr describe-images --repository-name "$1" --image-ids "imageTag=$2" >/dev/null 2>"$error_file" || status=$?
+  if [ "$status" -ne 0 ] && grep -qF ImageNotFoundException "$error_file"; then
+    rm -f "$error_file"
+    return 0
+  fi
+  if [ "$status" -ne 0 ]; then
+    cat "$error_file" >&2
+  fi
+  rm -f "$error_file"
+  return 1
+}
+
+# #1350: termina a green que nunca recebeu a imagem e sai com o status que recebeu (o erro original da limpeza, ou
+# 0). Se a terminação falhar, o job falha mesmo que o resto tenha dado certo.
+terminate_green_without_image() {
+  local status=$1
+  trap - EXIT
+  if aws ec2 terminate-instances --instance-ids "$GREEN_INSTANCE_ID" >/dev/null; then
+    echo "Green $GREEN_INSTANCE_ID terminada: não chegou a receber a imagem (#1350)."
+  else
+    echo "blue_green_unused_green_termination_failed:$GREEN_INSTANCE_ID" >&2
+    if [ "$status" -eq 0 ]; then
+      status=1
+    fi
+  fi
+  exit "$status"
+}
+
 # The helper is shipped by the workflow, never required on an older target.
 # Failure propagates before stopping the remaining worker whenever target is online.
+# Optional $2: marker line written in the same command, so later steps know the suspension (#1540).
 suspend_instagram_assisted() {
   local script parameters command_id
   script=$(cat "$(dirname "${BASH_SOURCE[0]}")/suspend-instagram-assisted.py") || return 1
   parameters=$(jq -cn --arg script "sudo python3 - <<'INSTAGRAM_RECOVERY'
 $script
-INSTAGRAM_RECOVERY" '["set -eu", $script, "sudo systemctl daemon-reload"]') || return 1
+INSTAGRAM_RECOVERY" --arg marker "${2:-}" '{commands: (["set -eu", $script, "sudo systemctl daemon-reload"] +
+    if $marker == "" then [] else ["printf \"%s\\n\" \"" + $marker + "\" | sudo tee /opt/chatwoot/instagram-assisted-suspended >/dev/null"] end)}') || return 1
+  # JSON completo: no formato `commands=[...]` o AWS CLI não decodifica o \n do JSON e o script chega quebrado (#1406).
   command_id=$(aws ssm send-command --instance-ids "$1" \
-    --document-name AWS-RunShellScript --parameters "commands=$parameters" \
+    --document-name AWS-RunShellScript --parameters "$parameters" \
     --query 'Command.CommandId' --output text) || return 1
   aws ssm wait command-executed --command-id "$command_id" --instance-id "$1" || {
     echo "instagram_recovery_suspension_failed:$1" >&2
     return 1
   }
+}
+
+
+# Primeiro `<prefixo><código>` da entrada; código só com [a-z_]. Sem a linha, imprime vazio; malformado, falha.
+instagram_step_after() {
+  local line step='' found=''
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in "$1"*) [ -n "$found" ] || { found=1; step=${line#"$1"}; } ;; esac
+  done
+  if [ -n "$found" ]; then
+    case "$step" in ''|*[!a-z_]*) return 1 ;; esac
+  fi
+  echo "$step"
+}
+
+# Código de um check.sh que falhou: exige a sentinela (em qualquer linha: o sudo pode imprimir antes) e uma linha de
+# veredito do Instagram; quais códigos são do Instagram decide a INSTAGRAM_STEPS do coordination-preflight.sh. Veredito
+# de host ou nenhum veredito: a falha não é do Instagram. Mesma função do deploy.sh da green.
+instagram_preflight_verdict() {
+  local line ran='' step=''
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      instagram_coordination_preflight_ran) ran=1 ;;
+      "instagram_coordination_preflight_failed step="*) [ -n "$step" ] || step="${line#*step=}" ;;
+    esac
+  done
+  [ -n "$ran" ] || return 1
+  case "$step" in ''|*[!a-z_]*) return 1 ;; esac
+  echo "$step"
+}
+
+# #1540: o preflight do Instagram na green não para o deploy. Só um check.sh que rodou e falhou (status Failed, com
+# sentinela e código) suspende o Instagram assistido nela, pelo mesmo caminho da recuperação, grava o marcador,
+# reinicia o que já roda e segue com um aviso. Qualquer outro status, erro de API, de leitura ou da suspensão é fatal.
+# Deixa INSTAGRAM_GREEN_SUSPENDED=true quando a green está sem Instagram (agora ou antes deste passo).
+check_green_instagram_or_suspend() {
+  local command_id invocation status output error step host_step
+  INSTAGRAM_GREEN_SUSPENDED=false
+  command_id=$(aws ssm send-command --instance-ids "$1" --document-name AWS-RunShellScript \
+    --parameters 'commands=["set -eu","if sudo test -e /opt/chatwoot/instagram-assisted-suspended; then sudo cat /opt/chatwoot/instagram-assisted-suspended; else sudo /opt/chatwoot/igcoord/check.sh; fi"]' \
+    --query 'Command.CommandId' --output text) || return 1
+  # O waiter também falha quando o check falha; quem decide é o status lido abaixo.
+  aws ssm wait command-executed --command-id "$command_id" --instance-id "$1" || true
+  # The waiter gives up after about 100 s; a slow but legitimate check (60 s tunnel wait plus
+  # Rails boot) must not turn into a fatal "unexpected status". Keep reading until it ends.
+  # Runner-side knob (this helper runs on the GitHub runner, never on the hosts); tests use 0.
+  local deadline=$((SECONDS + ${INSTAGRAM_CHECK_WAIT_SECONDS:-600}))
+  while :; do
+    invocation=$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$1" \
+      --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' --output json) || return 1
+    status=$(printf '%s' "$invocation" | jq -er '.Status | strings') || return 1
+    case "$status" in Pending|InProgress|Delayed) ;; *) break ;; esac
+    [ "$SECONDS" -lt "$deadline" ] || break
+    sleep 10
+  done
+  case "$status" in
+    Success)
+      output=$(printf '%s' "$invocation" | jq -er '.Output | strings') || return 1
+      step=$(instagram_step_after 'INSTAGRAM_ASSISTED_SUSPENDED step=' <<<"$output") || return 1
+      if [ -n "$step" ]; then
+        INSTAGRAM_GREEN_SUSPENDED=true
+        echo "::warning::INSTAGRAM_ASSISTED_SUSPENDED step=$step instance=$1 (suspenso antes deste passo)"
+      fi
+      return 0
+      ;;
+    Failed) ;;
+    *)
+      echo "instagram_preflight_status_unexpected:$1" >&2
+      return 1
+      ;;
+  esac
+  error=$(printf '%s' "$invocation" | jq -er '.Error | strings') || return 1
+  if ! step=$(instagram_preflight_verdict <<<"$error"); then
+    host_step=$(instagram_step_after 'instagram_coordination_preflight_host_failed step=' <<<"$error") || host_step=''
+    echo "instagram_preflight_failed_without_verdict:$1 host_step=${host_step:-none}" >&2
+    return 1
+  fi
+  echo "INSTAGRAM_ASSISTED_SUSPENDED step=$step instance=$1" >&2
+  suspend_instagram_assisted "$1" "INSTAGRAM_ASSISTED_SUSPENDED step=$step" || return 1
+  # The web health loop (18 x 5 s) fits inside the ~100 s command-executed waiter below.
+  command_id=$(aws ssm send-command --instance-ids "$1" --document-name AWS-RunShellScript \
+    --parameters 'commands=["set -eu","sudo systemctl try-restart chatwoot-worker.service","sudo systemctl restart chatwoot-web.service","for i in $(seq 1 18); do curl -fsS http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+    --query 'Command.CommandId' --output text) || return 1
+  aws ssm wait command-executed --command-id "$command_id" --instance-id "$1" || {
+    echo "instagram_suspended_restart_failed:$1" >&2
+    return 1
+  }
+  INSTAGRAM_GREEN_SUSPENDED=true
+  echo "::warning::INSTAGRAM_ASSISTED_SUSPENDED step=$step instance=$1"
 }

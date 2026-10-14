@@ -8,7 +8,10 @@ class Crm::Cards::Broadcaster
     CRM_CARD_ARCHIVED
   ].freeze
 
+  # Lembrete sem card (#1461): não há card para avisar.
   def self.broadcast(card, event_name)
+    return if card.nil?
+
     new(card, event_name).perform
   end
 
@@ -66,7 +69,9 @@ class Crm::Cards::Broadcaster
     users = admin_users
     users += inbox_recipient_users if @card.inbox_id.present?
     users += standalone_owner_users if @card.inbox_id.blank?
-    users.index_by(&:id).values
+    # Acesso por funil (#1148, parte C): o card não vai a quem o funil esconde.
+    blocked = Crm::Access::Recipients.card_blocked_user_ids(@card)
+    users.index_by(&:id).values.reject { |user| blocked.include?(user.id) }
   end
 
   def admin_users

@@ -14,6 +14,7 @@ import { VOICE_CALL_PROVIDERS } from 'dashboard/helper/inbox';
 import { markCallDismissed, isLocalCall } from 'dashboard/helper/voice';
 import { VOICE_CALL_DIRECTION } from 'dashboard/components-next/message/constants';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { onCrmSubjectsChangedRemotely } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 
 const { isImpersonating } = useImpersonation();
 const UNREAD_COUNTS_REFETCH_THROTTLE_MS = 5000;
@@ -72,6 +73,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'notification.updated': this.onNotificationUpdated,
       'conversation.read': this.onConversationRead,
       'conversation.updated': this.onConversationUpdated,
+      'conversation.access_revoked': this.onConversationAccessRevoked,
       'conversation.unread_count_changed':
         this.onConversationUnreadCountChanged,
       'account.cache_invalidated': this.onCacheInvalidate,
@@ -89,6 +91,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'crm.card.moved': data => this.onCrmCardChanged('crm.card.moved', data),
       'crm.card.archived': data =>
         this.onCrmCardChanged('crm.card.archived', data),
+      'crm.subjects.changed': this.onCrmSubjectsChanged,
       'crm.follow_up.due': this.onCrmFollowUpDue,
       'crm.meta_ads.insights_updated': this.onCrmMetaAdsInsightsUpdated,
       'crm.ai_usage.created': this.onCrmAiUsageCreated,
@@ -96,6 +99,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'email_campaign.ai.failed': this.onEmailCampaignAiFailed,
       'prospecting.lead.updated': this.onProspectingLeadUpdated,
       'guide.aviso.created': this.onGuideAvisoCreated,
+      'autonomia.build_thread.updated': this.onAutonomiaBuildThreadUpdated,
     };
   }
 
@@ -181,6 +185,11 @@ class ActionCableConnector extends BaseActionCableConnector {
   onConversationUpdated = data => {
     this.app.$store.dispatch('updateConversation', data);
     this.fetchConversationStats();
+  };
+
+  // Acesso por funil (#1148): o card mudou de funil e a pessoa deixou de ver a conversa.
+  onConversationAccessRevoked = ({ id }) => {
+    this.app.$store.dispatch('removeConversationLocally', id);
   };
 
   onConversationUnreadCountChanged = () => {
@@ -352,6 +361,8 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onContactUpdate = data => {
     this.app.$store.dispatch('contacts/updateContact', data);
+    // Selo "Cliente" nos cards do CRM já carregados (#1258).
+    this.app.$store.dispatch('crmKanban/syncCardContact', data);
   };
 
   onNotificationCreated = data => {
@@ -376,6 +387,13 @@ class ActionCableConnector extends BaseActionCableConnector {
     emitter.emit(BUS_EVENTS.GUIDE_AVISO_CREATED, data);
   };
 
+  // #1367 — o turno do Construtor terminou: a tela busca a conversa na hora.
+  onAutonomiaBuildThreadUpdated = data => {
+    if (!this.isAValidEvent(data)) return;
+
+    this.app.$store.dispatch('autonomiaBuildThreads/buildThreadUpdated', data);
+  };
+
   onEnrichmentCompleted = () => {
     this.app.$store.dispatch('accounts/get', { silent: true });
   };
@@ -385,6 +403,13 @@ class ActionCableConnector extends BaseActionCableConnector {
       event,
       card: data,
     });
+  };
+
+  // Multifunil (#1145): a IA mudou os assuntos de uma conversa (criou, deu nome, trocou o atual ou sugeriu).
+  onCrmSubjectsChanged = data => {
+    if (!this.isAValidEvent(data)) return;
+
+    onCrmSubjectsChangedRemotely(data.conversation_id);
   };
 
   onCrmFollowUpDue = data => {

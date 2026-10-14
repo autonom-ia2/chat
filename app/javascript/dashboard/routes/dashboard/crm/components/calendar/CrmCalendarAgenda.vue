@@ -6,10 +6,12 @@ import { ptBR, enUS } from 'date-fns/locale';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import CrmAgendaMeetingRow from './CrmAgendaMeetingRow.vue';
 import {
   EVENT_TYPE_GROUP,
   EVENT_TYPE_META,
   eventStart,
+  isDateOnly,
   isOverdue,
   aggregateByGroup,
 } from './calendarEvents.js';
@@ -149,7 +151,9 @@ const dayLabel = date =>
   format(date, "EEEE, dd 'de' MMMM", { locale: dateFnsLocale.value });
 
 const timeLabel = event =>
-  format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
+  isDateOnly(event)
+    ? t('CRM_KANBAN.CALENDAR.ALL_DAY')
+    : format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
 
 const metaFor = event => EVENT_TYPE_META[EVENT_TYPE_GROUP(event.event_type)];
 
@@ -324,7 +328,14 @@ const onStart = () => {
               v-for="event in shownFor(group)"
               :key="`${event.event_type}-${event.id}`"
             >
+              <!-- Reunião de hoje (#1193): local, resposta do cliente e "Lembrar". -->
+              <CrmAgendaMeetingRow
+                v-if="group.group === 'meeting'"
+                :event="event"
+                @open="onEventClick"
+              />
               <button
+                v-else
                 type="button"
                 class="grid w-full grid-cols-[auto_1fr_auto] items-start gap-3 rounded-lg border border-n-weak bg-n-surface-2 p-3 text-left transition-colors hover:bg-n-alpha-2"
                 :class="{

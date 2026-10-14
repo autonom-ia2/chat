@@ -59,10 +59,19 @@ class Api::V1::Accounts::Conversations::ParticipantsController < Api::V1::Accoun
   end
 
   def validate_participant_ids
+    return render json: { error: 'Restricted agents cannot add themselves' }, status: :forbidden if self_add_blocked?
+
     invalid_ids = participants_to_be_added_ids - @conversation.inbox.assignable_agents.map(&:id)
     return if invalid_ids.empty?
 
     render json: { error: 'Invalid participant IDs' }, status: :unprocessable_entity
+  end
+
+  # Acesso por funil (#1148): participante sempre vê. Quem tem acesso restrito na caixa não se dá esse passe; ser
+  # adicionado por outra pessoa continua valendo (decisão do Rodrigo, 11/10).
+  def self_add_blocked?
+    participants_to_be_added_ids.include?(Current.user.id) &&
+      Crm::Access::ConversationScope.new(user: Current.user, account: Current.account).restricted_in?(@conversation.inbox_id)
   end
 
   def notify_unread_count_change

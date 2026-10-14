@@ -112,7 +112,6 @@ module Autonomia
       # agente com cenários de verdade (o primeiro caso real chegou a 77% do teto antigo).
       MAX_TONE_LENGTH = 1_000
       MAX_INSTRUCTION_LENGTH = 50_000
-      include Autonomia::Agents::StoreInstance
 
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }
@@ -120,6 +119,12 @@ module Autonomia
       validate :tipo_do_agente_de_cotacao_e_fixo
       validates :tone, length: { maximum: MAX_TONE_LENGTH }, allow_nil: true
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
+      # #1196 — a página da agenda da IA só pode ser página nova da própria conta.
+      validate :pagina_de_agendamento_da_conta, if: :will_save_change_to_config?
+      # Quem atende: `operating?`, `atende_cliente?` e, desde o #1366, `tem_onde_trabalhar?` (validação de ativar e parada
+      # automática). Moram juntos em Autonomia::Agents::OndeTrabalhar.
+      include ::Autonomia::Agents::OndeTrabalhar
+      include ::Autonomia::Agents::StoreInstance
 
       # #1035 — quando o agente DEIXA de atender (pausa, desliga) as conversas que estavam com ele voltam
       # para a equipe e o espelho da caixa fica inativo (conversa nova nasce sem bot); quando VOLTA a
@@ -137,6 +142,8 @@ module Autonomia
       # #312 — ferramentas NATIVAS ligadas neste agente (slugs do Tools::Registry). A nativa é
       # declarada em código; aqui só se escolhe quais ligar. Vazio = nenhuma.
       store_accessor :config, :native_tool_slugs
+      # #1196 — a página de agendamento da agenda da IA; escolhê-la liga `horarios_disponiveis` e `agendar_reuniao`.
+      store_accessor :config, :booking_page_id
       store_accessor :config, :confidence_threshold # Fase B: portão de confiança (lido no Answerer)
       # Fase D: handoff real configurável por agente (jsonb `config`, sem migração).
       # handoff_strategy ∈ Operate::HANDOFF_STRATEGIES; default conservador = 'none'
@@ -215,10 +222,12 @@ module Autonomia
       # AS FERRAMENTAS NATIVAS QUE VALEM PARA ESTE AGENTE (fatia 2 do #420). Para o Agente de Cotação, a
       # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
+      # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
       def ferramentas_nativas
-        return (Array(principal_agent.ferramentas_nativas) + Array(native_tool_slugs)).uniq if contracted_instance?
+        return inherited_native_tools if contracted_instance?
 
-        ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) || native_tool_slugs
+        ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
+          ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
       end
 
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do
@@ -318,11 +327,6 @@ module Autonomia
         true
       end
 
-      # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
-      def operating?
-        !deleted? && enabled? && active? && store_access_allowed?
-      end
-
       private
 
       def apply_builder_attributes!(attrs)
@@ -348,8 +352,9 @@ module Autonomia
         agent_inboxes.kept.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
       end
 
+      # #1433: sendo porta, solta antes as áreas da caixa (mesma ordem do InboxConnector#disconnect!).
       def release_bot_conversations
-        agent_inboxes.kept.find_each(&:release_bot_conversations!)
+        agent_inboxes.kept.find_each(&:sair_da_caixa!)
       end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução
@@ -358,6 +363,11 @@ module Autonomia
         return unless instrucao_mantida? && manual?
 
         errors.add(:mode, I18n.t('autonomia.agents.instrucao_mantida'))
+      end
+
+      # Defesa na gravação; a ferramenta confere de novo ao rodar (a página pode ser apagada depois).
+      def pagina_de_agendamento_da_conta
+        errors.add(:booking_page_id, :invalid) unless ::Autonomia::Agents::Tools::Native::Agenda.pagina_valida?(self)
       end
 
       # O TIPO É O INSUMO DA REGRA (#380, rodada 3). `instrucao_mantida?` é o tipo; se o tipo pudesse

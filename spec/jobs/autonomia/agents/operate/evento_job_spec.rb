@@ -174,7 +174,8 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
     end
 
     # FALHOU DE NOVO: o atendente é avisado pela notificação do Chatwoot (`bot_handoff!`, sob o lock, com o
-    # espelho no comando) e por uma NOTA PRIVADA com o evento. Nenhuma mensagem pública de sistema.
+    # espelho no comando) e por uma NOTA PRIVADA com o evento. Nenhuma mensagem pública de sistema. O espelho
+    # segue como ai_assignee até uma pessoa assumir (#1377).
     it 'falhou de novo: handoff, nota privada com o evento, e nenhuma mensagem publica' do
       lia_responde(nil)
       conversation.update!(ai_assignee: agent_bot, status: :pending)
@@ -187,7 +188,7 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
       nota = privadas.sole
       expect(nota.content).to include("execução #{run.id}", 'fatos do dublê: falhou', 'passada para a equipe')
       expect(nota.content_attributes).to include(evento::CHAVE => "#{run.id}:falhou")
-      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      expect(conversation.reload).to have_attributes(status: 'open', assignee_agent_bot_id: agent_bot.id)
       expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(Events::Types::CONVERSATION_BOT_HANDOFF, any_args)
       expect(Autonomia::Agents::AgentEvent.handed_off.where(agent: agent).sole.handoff_reason).to eq('ai_unavailable')
       expect(reagendados).to be_empty

@@ -8,6 +8,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import { qrSecondsLeft, formatSeconds } from 'dashboard/helper/wahaQrWindow';
+import { stoppedKeyFor, timelockEndFor } from './whatsappHybridState';
 
 // Aba "WhatsApp API" da caixa WhatsApp Oficial (chat#1067): a mesma caixa ganha um segundo
 // caminho de envio, usado quando a janela oficial de 24 horas está fechada.
@@ -22,7 +23,7 @@ const tk = (key, params) => t(`INBOX_MGMT.WHATSAPP_HYBRID.${key}`, params);
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
 const tw = (key, params) => t(`INBOX_MGMT.WAHA_CONNECTION.${key}`, params);
 
-const ORIGINS = ['human', 'bot', 'automation', 'campaign'];
+const ORIGINS = ['human', 'bot', 'automation', 'crm_follow_up', 'campaign'];
 
 const state = ref({ status: 'loading' });
 const qrDataUrl = ref('');
@@ -44,9 +45,7 @@ const connected = computed(() => Boolean(state.value.connected));
 const isExpired = computed(() =>
   ['failed', 'disconnected'].includes(state.value.status)
 );
-const stoppedKey = computed(() =>
-  state.value.status === 'disconnected' ? 'DISCONNECTED' : 'EXPIRED'
-);
+const stoppedKey = computed(() => stoppedKeyFor(state.value));
 const pairing = computed(
   () =>
     !notConnected.value &&
@@ -78,6 +77,21 @@ const cappingEnd = computed(() =>
     : '—'
 );
 
+// Limite temporário de conversas novas (chat#1480): `now` anda a cada segundo, então o aviso some na hora certa.
+const timelockEnd = computed(() => timelockEndFor(state.value, now.value));
+const timelockText = computed(() => {
+  if (!timelockEnd.value) return '';
+  if (timelockEnd.value === true) return tk('TIMELOCK.NO_END');
+  return tk('TIMELOCK.UNTIL', {
+    end: timelockEnd.value.toLocaleString([], {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  });
+});
+
 // Últimos 7 dias, por origem: o que saiu, o que falhou e o que esperou a vez.
 const statsRows = computed(() => {
   const byOrigin = state.value.stats?.by_origin || {};
@@ -108,6 +122,7 @@ const statusTone = computed(
 const statusLabel = computed(() => {
   if (notConnected.value) return tk('STATUS.NOT_CONNECTED');
   if (connected.value) return tk('STATUS.CONNECTED');
+  if (stoppedKey.value === 'REMOVED') return tk('STATUS.REMOVED');
   if (state.value.status === 'failed') return tk('STATUS.FAILED');
   if (state.value.status === 'disconnected') return tk('STATUS.DISCONNECTED');
   return tk('STATUS.AWAITING');
@@ -259,13 +274,15 @@ onBeforeUnmount(() => {
         <span
           class="size-8 text-n-slate-10"
           :class="
-            stoppedKey === 'DISCONNECTED'
-              ? 'i-lucide-unplug'
-              : 'i-lucide-timer-off'
+            stoppedKey === 'EXPIRED' ? 'i-lucide-timer-off' : 'i-lucide-unplug'
           "
         />
         <p class="mb-0 text-base font-medium text-n-slate-12">
-          {{ tw(`${stoppedKey}_TITLE`) }}
+          {{
+            stoppedKey === 'REMOVED'
+              ? tk('REMOVED_TITLE')
+              : tw(`${stoppedKey}_TITLE`)
+          }}
         </p>
         <p class="max-w-md mb-0 text-sm text-n-slate-11">
           {{ tk(`${stoppedKey}_HELP`) }}
@@ -454,6 +471,16 @@ onBeforeUnmount(() => {
           }}
         </p>
       </div>
+    </section>
+
+    <section
+      v-if="
+        connected && !wrongNumber && timelockEnd && cappingKey !== 'BLOCKED'
+      "
+      class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl text-n-amber-11 bg-n-amber-3"
+    >
+      <span class="i-lucide-hourglass size-4 mt-0.5 shrink-0" />
+      <span>{{ timelockText }}</span>
     </section>
 
     <section

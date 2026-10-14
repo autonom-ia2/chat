@@ -2,7 +2,9 @@ require 'rails_helper'
 
 RSpec.describe 'Enterprise Audit API', type: :request do
   let!(:account) { create(:account) }
-  let!(:admin) { create(:user, account: account, role: :administrator) }
+  # Nome e email fixos: a busca por pessoa casa nome/email de qualquer usuário,
+  # e o Faker às vezes sorteia algo como "Smitham" ou display_name "Jane".
+  let!(:admin) { create(:user, name: 'Admin Tester', email: 'admin@example.com', account: account, role: :administrator) }
   let!(:inbox) { create(:inbox, account: account) }
 
   describe 'GET /api/v1/accounts/{account.id}/audit_logs' do

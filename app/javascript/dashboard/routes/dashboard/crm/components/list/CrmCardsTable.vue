@@ -1,4 +1,5 @@
 <script setup>
+import { chaveDoCard, semDonosBarrados } from '../../helpers/accessErrors';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVueTable, getCoreRowModel, FlexRender } from '@tanstack/vue-table';
@@ -15,6 +16,8 @@ import {
   toDate,
 } from './cardColumns.js';
 import { buildCrmCardIdentity, crmCardIdentityLabel } from './cardIdentity.js';
+import { countsAsSale } from '../../helpers/cardOutcome';
+import { ehCobranca } from '../funil/funil';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 
 const props = defineProps({
@@ -25,6 +28,11 @@ const props = defineProps({
   stages: {
     type: Array,
     default: () => [],
+  },
+  // Quem não pode ser dono de cada card, por chaveDoCard (#1149).
+  ownerBlocked: {
+    type: Object,
+    default: () => ({}),
   },
   owners: {
     type: Array,
@@ -112,12 +120,18 @@ const cellPadX = 'px-4';
 /* TanStack table instance                                                    */
 /* -------------------------------------------------------------------------- */
 
+// #1498 — funil de Atender: sem valor na lista nem no total do grupo.
+const comValor = computed(
+  () => countsAsSale(props.pipeline) || ehCobranca(props.pipeline)
+);
+
 const columns = computed(() =>
   buildCrmCardColumns({
     t,
     stages: props.stages,
     agents: props.owners,
     includeMeta: props.showMetaColumn,
+    includeValue: comValor.value,
   })
 );
 
@@ -334,14 +348,16 @@ const toggleGroup = key => {
 };
 
 const groupTotalLabel = group =>
-  t('CRM_KANBAN.LIST.GROUP_TOTAL', {
-    count: group.count,
-    value: formatMoneyCents(
-      group.sumCents,
-      group.currency,
-      formatMoneyCents(0)
-    ),
-  });
+  comValor.value
+    ? t('CRM_KANBAN.LIST.GROUP_TOTAL', {
+        count: group.count,
+        value: formatMoneyCents(
+          group.sumCents,
+          group.currency,
+          formatMoneyCents(0)
+        ),
+      })
+    : String(group.count);
 
 /* -------------------------------------------------------------------------- */
 /* Read-only cell formatting helpers                                          */
@@ -822,7 +838,12 @@ const onRowKeydown = (event, card) => {
                       :card="row.original"
                       :field="cell.column.columnDef.meta.field"
                       :stages="stages"
-                      :owners="owners"
+                      :owners="
+                        semDonosBarrados(
+                          owners,
+                          ownerBlocked[chaveDoCard(row.original)]
+                        )
+                      "
                       :pipeline="pipeline"
                       @save="
                         value =>

@@ -32,6 +32,22 @@ RSpec.describe Conversations::EventDataPresenter do
     end
   end
 
+  it 'shows the invite of an open card that is not the current subject (#1197)' do
+    with_modified_env CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true' do
+      invited_at = 5.minutes.ago.change(usec: 0)
+      due_at = invited_at + 15.minutes
+      invited = build_card('cycle_id' => 1, 'invited_at' => invited_at.iso8601, 'pickup_due_at' => due_at.iso8601)
+      current = account.crm_cards.create!(pipeline: invited.pipeline, stage: invited.stage, inbox: inbox, contact: contact,
+                                          title: 'Assunto atual sem convite')
+      Crm::CardConversation.create!(account: account, card: current, conversation: conversation, focused_at: Time.current)
+      expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)).to eq(current)
+
+      invite = described_class.new(conversation).push_data[:handoff_invite]
+
+      expect(invite).to include(pickup_due_at: due_at.to_i)
+    end
+  end
+
   it 'omits handoff_invite once the cycle is picked up' do
     with_modified_env CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true' do
       build_card(

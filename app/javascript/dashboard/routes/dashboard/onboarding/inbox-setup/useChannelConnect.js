@@ -4,7 +4,10 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useWhatsappEmbeddedSignup } from 'dashboard/composables/useWhatsappEmbeddedSignup';
+import {
+  useWhatsappEmbeddedSignup,
+  SIGNUP_TIMEOUT_CODE,
+} from 'dashboard/composables/useWhatsappEmbeddedSignup';
 import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import googleClient from 'dashboard/api/channel/googleClient';
 import microsoftClient from 'dashboard/api/channel/microsoftClient';
@@ -72,7 +75,13 @@ export function useChannelConnect({ onInstagramConnect } = {}) {
     let credentials;
     try {
       credentials = await runEmbeddedSignup();
-    } catch {
+    } catch (error) {
+      // #1228: Meta may have finished on its side; refresh and say so plainly.
+      if (error?.code === SIGNUP_TIMEOUT_CODE) {
+        store.dispatch('inboxes/get');
+        useAlert(t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.NOT_CONFIRMED'));
+        return;
+      }
       useAlert(t('ONBOARDING_INBOX_SETUP.ERROR'));
       return;
     }

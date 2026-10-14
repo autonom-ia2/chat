@@ -3,16 +3,16 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
   GROUP_BY_OPTIONS = %w[hour day].freeze
   RESOURCE_FEATURES = {
     'Organizar cards' => %w[avaliacao_card],
-    'Lembretes de retorno' => %w[follow_up],
+    'Lembretes de retorno' => %w[follow_up follow_up_saida],
     'Criação de e-mail' => %w[email],
     'Resumos' => %w[resumo resumo_reuniao],
-    'Assistente de respostas' => %w[copilot agente_resposta],
-    'Agendamento' => %w[sugestao_horario convite],
-    'Mídia' => %w[midia],
+    'Assistente de respostas' => %w[copilot agente_resposta agente_teste],
+    'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
+    'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
-    'Construtor de agente' => %w[agente_builder],
-    'SLA' => %w[sla],
-    'Guia da Plataforma' => %w[guia guia_midia], 'Anúncios da Meta' => %w[anuncios_meta]
+    'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste],
+    'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao],
+    'Guia da Plataforma' => %w[guia guia_midia], 'Anúncios da Meta' => %w[anuncios_meta], 'Modelos do WhatsApp' => %w[modelo_redacao]
   }.freeze
   FEATURE_RESOURCES = RESOURCE_FEATURES.each_with_object({}) do |(resource, features), memo|
     features.each { |feature| memo[feature] = resource }

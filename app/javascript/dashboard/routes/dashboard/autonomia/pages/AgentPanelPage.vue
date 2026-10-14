@@ -18,6 +18,7 @@ import PanelPublish from '../components/panel/PanelPublish.vue';
 import PanelTools from '../components/panel/PanelTools.vue';
 import PanelStore from '../components/panel/PanelStore.vue';
 import PanelContracted from '../components/panel/PanelContracted.vue';
+import { ativarPedeCanal } from '../components/panel/publicacao';
 
 const props = defineProps({
   agentId: {
@@ -169,6 +170,14 @@ const isTogglingStatus = computed(() => uiFlags.value.updatingItem);
 
 const toggleStatus = async () => {
   const nextStatus = agent.value?.status === 'active' ? 'paused' : 'active';
+  // #1366 — sem onde trabalhar, ativar é escolher o canal (Publicar), nunca ligar no vazio.
+  if (ativarPedeCanal(agent.value, nextStatus)) {
+    router.push({
+      name: 'autonomia_agent_panel',
+      params: { agentId: props.agentId, tab: 'publish' },
+    });
+    return;
+  }
   try {
     await store.dispatch('autonomiaAgents/update', {
       id: Number(props.agentId),

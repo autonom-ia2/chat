@@ -19,6 +19,7 @@ import DuplicateInboxBanner from './channels/instagram/DuplicateInboxBanner.vue'
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import GoogleReauthorize from './channels/google/Reauthorize.vue';
 import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue';
+import WhatsappSwitchAccount from './channels/whatsapp/WhatsappSwitchAccount.vue';
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
@@ -84,6 +85,7 @@ export default {
     InstagramReauthorize,
     TiktokReauthorize,
     WhatsappReauthorize,
+    WhatsappSwitchAccount,
     DuplicateInboxBanner,
     Editor,
     Avatar,
@@ -652,6 +654,11 @@ export default {
       } finally {
         this.isLoadingHealth = false;
       }
+    },
+    // chat#1217: a caixa ganhou conta e número novos na Meta; recarrega os dois.
+    async onWhatsAppAccountSwitched() {
+      await this.$store.dispatch('inboxes/get');
+      await this.fetchHealthData();
     },
     goToWhatsAppConfiguration() {
       const configurationTabIndex = this.tabs.findIndex(
@@ -1500,6 +1507,12 @@ export default {
           <BotConfiguration :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-health'">
+          <!-- chat#1217: trocar a caixa de conta do WhatsApp sem perder a caixa -->
+          <WhatsappSwitchAccount
+            :inbox="inbox"
+            :health-data="healthData"
+            @switched="onWhatsAppAccountSwitched"
+          />
           <AccountHealth
             :health-data="healthData"
             :health-error="healthError"

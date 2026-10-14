@@ -5,6 +5,14 @@ export const SUCCESS_STATUSES = ['won', 'resolved'];
 export const FAILURE_STATUSES = ['lost', 'cancelled'];
 export const CLOSED_STATUSES = [...SUCCESS_STATUSES, ...FAILURE_STATUSES];
 
+// Aba de desfecho de um status, valha o tipo de funil que for (#1197): card
+// fechado antes de o funil trocar "conta como venda" continua na aba certa.
+export const outcomeGroup = status => {
+  if (SUCCESS_STATUSES.includes(status)) return 'success';
+  if (FAILURE_STATUSES.includes(status)) return 'failure';
+  return null;
+};
+
 export const countsAsSale = pipeline => pipeline?.counts_as_sale !== false;
 
 // Status que o fechamento grava neste funil.

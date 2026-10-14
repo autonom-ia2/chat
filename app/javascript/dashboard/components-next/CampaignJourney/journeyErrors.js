@@ -34,6 +34,26 @@ const CREATE_ERRORS = {
   // #1004 (api-1004.md §4)
   sms_inbox_required: 'SMS_INBOX_REQUIRED',
   message_too_long: 'MESSAGE_TOO_LONG',
+  // Fork #1382: topo com foto, vídeo ou documento (Whatsapp::Templates::HeaderMedia).
+  header_media_required: 'HEADER_MEDIA_REQUIRED',
+  header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
+  header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
+  // Fork #1465: o arquivo do topo escolhido na campanha (outra conta, tipo ou tamanho).
+  header_media_invalid: 'HEADER_MEDIA_INVALID',
+  // Fork #1334: o que o formato do modelo pede (Whatsapp::Templates::SendParams).
+  coupon_code_invalid: 'COUPON_CODE_INVALID',
+  offer_expiration_required: 'OFFER_EXPIRATION_REQUIRED',
+  offer_expiration_past: 'OFFER_EXPIRATION_PAST',
+  carousel_cards_mismatch: 'CAROUSEL_CARDS_MISMATCH',
+  carousel_media_required: 'CAROUSEL_MEDIA_REQUIRED',
+  carousel_media_invalid: 'CAROUSEL_MEDIA_INVALID',
+  carousel_button_required: 'CAROUSEL_FIELD_REQUIRED',
+  carousel_body_required: 'CAROUSEL_FIELD_REQUIRED',
+  // Fork #1335: a mensagem escrita para quem falou nas últimas 24 h.
+  free_text_invalid: 'FREE_TEXT_INVALID',
+  free_text_disabled: 'FREE_TEXT_DISABLED',
+  // Fork #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
+  free_text_not_allowed_with_rich_template: 'FREE_TEXT_RICH_TEMPLATE',
 };
 
 export const createErrorKey = error => {

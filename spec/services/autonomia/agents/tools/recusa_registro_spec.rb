@@ -221,7 +221,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'conferencia_recusou' },
         dispara: -> { bound_com_conferencia('Ainda preciso do CPF.').execute(call, delivery: delivery) }
       },
-      'bound.rb#run_http#1' => {
+      'bound.rb#recusa_http#1' => {
         espera: { motivo: 'tool_http_error', slug: 'consultar_estoque', detalhe: '503' },
         dispara: lambda {
           bound_http_que_falha_com('tool_http_error: 503 Service Unavailable').execute({ 'arguments' => '{}' }, delivery: delivery)
@@ -576,6 +576,185 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: lambda {
           bound_para(Autonomia::Agents::Tools::Native::InsuranceQuoteProposal)
             .execute({ 'name' => 'enviar_proposta_da_seguradora', 'arguments' => { seguradora: 'Porto' }.to_json })
+        }
+      }
+    }.merge(gatilhos_da_agenda)
+  end
+
+  # A agenda da IA (#1196): página escolhida no agente, agenda ligada na conta, segunda-feira 08:00 em São Paulo.
+  def agenda_pronta
+    travel_to Time.utc(2026, 10, 12, 11, 0, 0)
+    account.enable_features!('crm_booking_v2')
+    allow(Crm::Cards::Broadcaster).to receive(:broadcast)
+    mundo = build_booking_world(account: account)
+    agent.update!(config: agent.config.merge('booking_page_id' => mundo.profile.id))
+    mundo
+  end
+
+  def na_agenda(native, argumentos, entrega: delivery)
+    with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_CALENDAR_MEETINGS_ENABLED: 'true') do
+      bound_para(native).execute({ 'name' => native.slug, 'arguments' => argumentos.to_json }, delivery: entrega)
+    end
+  end
+
+  def agendar_com_telefone
+    conversation.contact.update!(phone_number: '+5521988887777')
+    na_agenda(Autonomia::Agents::Tools::Native::AgendarReuniao, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
+  end
+
+  # #1307: página com um link por pessoa e duas pessoas que podem atender (o responsável do mundo e uma colega).
+  def duas_pessoas_na_agenda
+    mundo = agenda_pronta
+    mundo.profile.update!(assignment_mode: :per_agent, default_assignee: nil)
+    [mundo.host, create(:user, account: account, role: :agent)].each do |user|
+      mundo.profile.agent_booking_links.create!(account: account, agent: user)
+    end
+    mundo
+  end
+
+  def booker_que_falha_com(codigo)
+    booker = instance_double(Crm::BookingV2::Booker)
+    allow(Crm::BookingV2::Booker).to receive(:new).and_return(booker)
+    allow(booker).to receive(:perform).and_raise(ArgumentError, codigo)
+  end
+
+  def gatilhos_da_agenda # rubocop:disable Metrics/MethodLength, Metrics/AbcSize -- um gatilho por saída da agenda
+    horarios = Autonomia::Agents::Tools::Native::HorariosDisponiveis
+    agendar = Autonomia::Agents::Tools::Native::AgendarReuniao
+    {
+      'agenda.rb#recusa_da_pagina#1' => {
+        espera: { motivo: 'agenda_sem_pagina', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta
+          agent.update_columns(config: agent.config.merge('booking_page_id' => 0)) # rubocop:disable Rails/SkipsModelValidations
+          na_agenda(horarios, {})
+        }
+      },
+      # #1305: sem ninguém para atender é motivo próprio, o mesmo `ai_status` da tela de páginas.
+      'agenda.rb#recusa_da_pagina#2' => {
+        espera: { motivo: 'agenda_sem_responsavel', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          AccountUser.find_by(account: account, user: mundo.host).destroy!
+          na_agenda(horarios, {})
+        }
+      },
+      # A página no ar, mas quem atende pausou Meus horários: a IA diz isso em vez de "sem horários".
+      'agenda.rb#recusa_da_pagina#3' => {
+        espera: { motivo: 'agenda_de_quem_atende_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = agenda_pronta
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, {})
+        }
+      },
+      'agenda.rb#recusa_da_pagina#4' => {
+        espera: { motivo: 'agenda_pagina_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta.profile.update!(enabled: false)
+          na_agenda(horarios, {})
+        }
+      },
+      # #1307: o pessoa_id que o modelo mandou não é de nenhuma pessoa liberada (forjado).
+      'agenda_com_quem.rb#recusa_da_pessoa#1' => {
+        espera: { motivo: 'agenda_pessoa_nao_liberada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(horarios, { pessoa_id: 999_999 })
+        }
+      },
+      'agenda_com_quem.rb#recusa_da_pessoa#2' => {
+        espera: { motivo: 'agenda_pessoa_pausada', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          mundo = duas_pessoas_na_agenda
+          Crm::AgentAvailability.create!(account: account, user: mundo.host, paused: true)
+          na_agenda(horarios, { pessoa_id: mundo.host.id })
+        }
+      },
+      'agenda_com_quem.rb#recusa_pessoa_obrigatoria#1' => {
+        espera: { motivo: 'agenda_pessoa_obrigatoria', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          duas_pessoas_na_agenda
+          agendar_com_telefone
+          expect(Crm::Meeting.count).to eq(0)
+        }
+      },
+      'agenda.rb#recusa_sem_horarios#1' => {
+        espera: { motivo: 'agenda_sem_horarios', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta.profile.update_columns(working_hours: { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [] }) # rubocop:disable Rails/SkipsModelValidations
+          na_agenda(horarios, {})
+        }
+      },
+      'agenda.rb#parametro_invalido#1' => {
+        espera: { motivo: 'agenda_parametro_invalido', slug: 'horarios_disponiveis' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(horarios, { data: 'amanhã cedo' })
+        }
+      },
+      'agendar_reuniao.rb#call#1' => {
+        espera: { motivo: 'agenda_sem_conversa', slug: 'agendar_reuniao', conversa: '-' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00' }, entrega: nil)
+        }
+      },
+      'agendar_reuniao.rb#call#2' => {
+        espera: { motivo: 'agenda_turno_de_evento', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          evento = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, evento: 'resultado_pronto')
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00' }, entrega: evento)
+        }
+      },
+      'agendar_reuniao.rb#recusa_do_pedido#2' => {
+        espera: { motivo: 'agenda_sem_email', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta.profile.update_columns(locations: [{ 'type' => 'google_meet' }]) # rubocop:disable Rails/SkipsModelValidations
+          conversation.contact.update!(phone_number: '+5521988887777', email: nil)
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', local: 'google_meet', cliente_confirmou: true })
+        }
+      },
+      'agendar_reuniao.rb#recusa_do_pedido#1' => {
+        espera: { motivo: 'agenda_sem_telefone', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          conversation.contact.update!(phone_number: nil)
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: true })
+        }
+      },
+      # #1305: a confirmação do cliente é decidida pelo modelo; sem `true`, nada é marcado.
+      'agendar_reuniao.rb#recusa_sem_confirmacao#1' => {
+        espera: { motivo: 'agenda_sem_confirmacao', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          na_agenda(agendar, { inicio: '2026-10-20T10:00:00-03:00', cliente_confirmou: false })
+          expect(Crm::Meeting.count).to eq(0)
+        }
+      },
+      'agendar_reuniao.rb#tratar_erro#1' => {
+        espera: { motivo: 'agenda_limite_de_reunioes', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          booker_que_falha_com('too_many_open')
+          agendar_com_telefone
+        }
+      },
+      'agendar_reuniao.rb#tratar_erro#2' => {
+        espera: { motivo: 'agenda_indisponivel', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          agenda_pronta
+          booker_que_falha_com('no_stage_configured')
+          agendar_com_telefone
+        }
+      },
+      'agendar_reuniao.rb#novas_opcoes#1' => {
+        espera: { motivo: 'agenda_horario_ocupado', slug: 'agendar_reuniao' },
+        dispara: lambda {
+          create_internal_meeting(world: agenda_pronta, starts_at: Time.iso8601('2026-10-20T10:00:00-03:00'))
+          agendar_com_telefone
+          expect(Crm::Meeting.count).to eq(1)
         }
       }
     }

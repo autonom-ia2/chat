@@ -5,6 +5,8 @@ import { useAbortableRequest } from './useAbortableRequest';
 export const INSTAGRAM_ACCEPTANCE_URL =
   'https://www.instagram.com/accounts/manage_access/';
 const VALID_STATUSES = ['absent', 'pending', 'accepted'];
+// Accepted still needs the status op: it issues the authorization attestation.
+const SEARCH_STATUSES = ['absent', 'pending'];
 const USERNAME_CHARACTERS =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._';
 
@@ -31,6 +33,9 @@ export function useInstagramTester({ disabled, returnTo }) {
   const notice = ref('');
   const sent = ref(false);
   const needsReconciliation = ref(false);
+  // Selection tokens whose search status was already shown once. Any later
+  // selection reads Meta again, so a stale search status is never reused.
+  let consumedSearchStatus = new Set();
   const available = computed(
     () => configuration.value?.enabled && configuration.value?.available
   );
@@ -78,6 +83,7 @@ export function useInstagramTester({ disabled, returnTo }) {
       unknown_status: 'STATUS_ERROR',
       invite_rejected: 'INVITE_ERROR',
       invite_unknown: 'INVITE_UNKNOWN',
+      invite_not_sent: 'INVITE_NOT_SENT',
       rate_limited: 'RATE_LIMITED',
       forbidden: 'UNAVAILABLE',
       not_enabled: 'UNAVAILABLE',
@@ -94,7 +100,9 @@ export function useInstagramTester({ disabled, returnTo }) {
       searched.value = false;
       error.value = 'INVALID_SELECTION';
     }
-    if (action === 'invite') {
+    // Rails reports invite_not_sent only after proving nothing reached Meta,
+    // so the profile stays absent and Invite stays available.
+    if (action === 'invite' && code !== 'invite_not_sent') {
       needsReconciliation.value = true;
       status.value = null;
       if (!code || code === 'invite_unknown') error.value = 'INVITE_UNKNOWN';
@@ -150,6 +158,7 @@ export function useInstagramTester({ disabled, returnTo }) {
     }
     results.value = [];
     searched.value = false;
+    consumedSearchStatus = new Set();
     return run(
       'search',
       signal => instagramClient.searchTesters(normalized, { signal }),
@@ -169,13 +178,17 @@ export function useInstagramTester({ disabled, returnTo }) {
           error.value = 'SEARCH_ERROR';
           return;
         }
-        results.value = data.results;
+        results.value = data.results.map(result =>
+          [undefined, null, ...VALID_STATUSES].includes(result.tester_status)
+            ? result
+            : { ...result, tester_status: null }
+        );
         searched.value = true;
       }
     );
   };
 
-  const checkStatus = () => {
+  const readStatus = ({ afterUnknownInvite }) => {
     if (busy.value || disabled.value || !selected.value || !available.value)
       return undefined;
     const token = selected.value.selection_token;
@@ -190,6 +203,13 @@ export function useInstagramTester({ disabled, returnTo }) {
           error.value = 'STATUS_ERROR';
           return;
         }
+        if (afterUnknownInvite && data.status === 'absent') {
+          // Meta may list a sent invite late; never re-expose Invite here.
+          status.value = null;
+          needsReconciliation.value = true;
+          error.value = 'INVITE_UNKNOWN';
+          return;
+        }
         status.value = data.status;
         authorizationAttestation.value =
           data.status === 'accepted' &&
@@ -202,17 +222,31 @@ export function useInstagramTester({ disabled, returnTo }) {
       }
     );
   };
+  const checkStatus = () => readStatus({ afterUnknownInvite: false });
 
   const selectProfile = candidate => {
     if (busy.value || disabled.value || !results.value.includes(candidate))
       return undefined;
     selected.value = candidate;
-    status.value = null;
     sent.value = false;
+    const token = candidate.selection_token;
+    if (
+      SEARCH_STATUSES.includes(candidate.tester_status) &&
+      !consumedSearchStatus.has(token)
+    ) {
+      consumedSearchStatus.add(token);
+      status.value = candidate.tester_status;
+      authorizationAttestation.value = null;
+      needsReconciliation.value = false;
+      error.value = '';
+      notice.value = '';
+      return undefined;
+    }
+    status.value = null;
     return checkStatus();
   };
 
-  const invite = () => {
+  const invite = async () => {
     if (
       busy.value ||
       disabled.value ||
@@ -221,8 +255,8 @@ export function useInstagramTester({ disabled, returnTo }) {
       status.value !== 'absent' ||
       needsReconciliation.value
     )
-      return undefined;
-    return run(
+      return;
+    await run(
       'invite',
       signal =>
         instagramClient.inviteTester(selected.value.selection_token, {
@@ -247,6 +281,12 @@ export function useInstagramTester({ disabled, returnTo }) {
         sent.value = data.invited;
       }
     );
+    // One automatic check, never a loop: the status op reconciles the marker.
+    if (error.value !== 'INVITE_UNKNOWN') return;
+    await readStatus({ afterUnknownInvite: true });
+    // A failed check proves nothing: the invite may still have reached Meta.
+    if (needsReconciliation.value && status.value === null)
+      error.value = 'INVITE_UNKNOWN';
   };
 
   const authorize = () => {

@@ -1,7 +1,10 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
-import { useWhatsappEmbeddedSignup } from 'dashboard/composables/useWhatsappEmbeddedSignup';
+import {
+  useWhatsappEmbeddedSignup,
+  SIGNUP_TIMEOUT_CODE,
+} from 'dashboard/composables/useWhatsappEmbeddedSignup';
 import whatsappChannel from 'dashboard/api/channel/whatsappChannel';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
@@ -209,6 +212,14 @@ export default {
           this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_SUCCESS')
         );
       } catch (error) {
+        // #1228: Meta may have finished on its side; refresh and say so plainly.
+        if (error?.code === SIGNUP_TIMEOUT_CODE) {
+          this.$store.dispatch('inboxes/get');
+          useAlert(
+            this.$t('INBOX_MGMT.ADD.WHATSAPP.EMBEDDED_SIGNUP.NOT_CONFIRMED')
+          );
+          return;
+        }
         useAlert(
           this.$t('INBOX_MGMT.SETTINGS_POPUP.WHATSAPP_RECONFIGURE_ERROR')
         );

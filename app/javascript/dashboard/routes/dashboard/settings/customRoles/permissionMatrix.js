@@ -120,6 +120,16 @@ export const MODULE_GROUPS = [
         icon: 'i-lucide-megaphone',
         levels: { view: 'campaign_view', manage: 'campaign_manage' },
       },
+      {
+        // Modelos de mensagem do WhatsApp oficial (#1330, #1332). Editar cria, altera e
+        // apaga na Meta; os modelos do sistema continuam só para ver.
+        key: 'WHATSAPP_TEMPLATES',
+        icon: 'i-lucide-message-square-text',
+        levels: {
+          view: 'whatsapp_templates_view',
+          manage: 'whatsapp_templates_manage',
+        },
+      },
     ],
   },
   {
@@ -141,6 +151,12 @@ export const MODULE_GROUPS = [
         icon: 'i-lucide-repeat',
         settings: true,
         levels: { view: 'automation_view', manage: 'automation_manage' },
+      },
+      {
+        key: 'SCHEDULING',
+        icon: 'i-lucide-calendar-clock',
+        settings: true,
+        levels: { view: 'agendamento_view', manage: 'agendamento_manage' },
       },
       {
         key: 'LABELS',
@@ -377,6 +393,7 @@ export const PRESETS = {
       CAMPAIGNS: LEVELS.MANAGE,
       PROSPECTING: LEVELS.MANAGE,
       LABELS: LEVELS.MANAGE,
+      WHATSAPP_TEMPLATES: LEVELS.MANAGE,
     }),
     'crm_view_reports',
   ],
@@ -408,6 +425,7 @@ export const PRESETS = {
       CAMPAIGNS: LEVELS.VIEW,
       INBOXES: LEVELS.VIEW,
       AUTOMATIONS: LEVELS.VIEW,
+      WHATSAPP_TEMPLATES: LEVELS.VIEW,
     }),
     'crm_view_reports',
   ],

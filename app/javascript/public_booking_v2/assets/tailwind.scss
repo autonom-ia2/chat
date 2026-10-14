@@ -1,0 +1,39 @@
+// scss-lint:disable SpaceAfterPropertyColon
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+@import 'shared/assets/fonts/widget_fonts';
+@import 'booking-theme';
+
+// A página segue o tema do aparelho de quem abre (#1295). Só CSS: o tema certo já vale no primeiro quadro, e o
+// fundo do documento é pintado antes de o Vue montar a tela (junto com a meta `color-scheme` do layout).
+:root {
+  @include booking-light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include booking-dark;
+  }
+}
+
+html {
+  background-color: rgb(var(--bk-page));
+}
+
+html,
+body {
+  font-family:
+    'Inter',
+    -apple-system,
+    system-ui,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Tahoma,
+    Arial,
+    sans-serif;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseController
   def events
     authorize ::Crm::FollowUp, :index?
-    render json: { payload: follow_up_events + expected_close_events + meeting_events + external_events }
+    render json: { payload: follow_up_events + series_events + expected_close_events + meeting_events + external_events }
   end
 
   # Read-only free/busy lookup for the meeting scheduler. Returns the busy
@@ -43,24 +43,23 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   def follow_up_events
-    filtered_follow_ups.order(:due_at, :id).limit(limit).map do |follow_up|
-      {
-        id: "follow_up_#{follow_up.id}",
-        event_type: "follow_up_#{follow_up.automation_mode}",
-        title: follow_up.title,
-        starts_at: follow_up.due_at&.iso8601,
-        status: follow_up.status,
-        card_id: follow_up.card_id,
-        conversation_id: visible_conversation_id(follow_up),
-        contact_id: follow_up.contact_id,
-        inbox_id: follow_up.inbox_id,
-        assignee_id: follow_up.assignee_id
-      }
+    due_follow_ups.map do |follow_up|
+      Crm::FollowUps::SeriesCalendarEvents.follow_up_event(follow_up, conversation_id: visible_conversation_id(follow_up))
     end
   end
 
+  # #1460: as próximas vezes dos lembretes que repetem (calculadas; só a próxima existe como lembrete).
+  def series_events
+    return [] if owner_id.present? && owner_id.to_i != Current.user.id
+
+    Crm::FollowUps::SeriesCalendarEvents.new(
+      scope: policy_scope(::Crm::FollowUpSeries), from: meeting_filter_time(:from), to: meeting_filter_time(:to),
+      pipeline_id: params[:pipeline_id]
+    ).events
+  end
+
   def expected_close_events
-    filtered_cards.where.not(expected_close_at: nil).order(:expected_close_at, :id).limit(limit).map do |card|
+    expected_close_cards.map do |card|
       {
         id: "expected_close_#{card.id}",
         event_type: 'expected_close',
@@ -79,7 +78,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   def meeting_events
     return [] unless Crm::Config.calendar_meetings_enabled?(Current.account)
 
-    filtered_meetings.scheduled.order(:starts_at, :id).limit(limit).map do |meeting|
+    scheduled_meetings.map do |meeting|
       {
         id: "meeting_#{meeting.id}",
         event_type: 'meeting',
@@ -95,7 +94,11 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
         provider: meeting.provider,
         online_meeting_type: meeting.online_meeting_type,
         online_meeting_url: meeting.online_meeting_url,
-        guests_count: meeting.meeting_guests.size
+        guests_count: meeting.meeting_guests.size,
+        # Página de agendamento (#1192): selo de confirmação do cliente no popover.
+        booking: meeting.booking?,
+        confirmation_status: meeting.confirmation_status,
+        notices_stopped: meeting.reminders_stopped_at.present?
       }
     end
   end
@@ -129,7 +132,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
     scope = ::Crm::FollowUps::FilterQuery.new(
       scope: policy_scope(::Crm::FollowUp),
       params: params,
-      includes: [:card, { conversation: :conversation_participants }]
+      includes: [:card, :series, { conversation: :conversation_participants }]
     ).perform
     # Hide completed/canceled follow-ups by default — they crowd out upcoming
     # ones once the date-ordered cap is reached. The calendar passes
@@ -184,6 +187,25 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   def visible_card_conversation_id(card)
     return if card.primary_conversation.blank?
     return card.conversation_id if conversation_visibility.visible?(card.primary_conversation)
+  end
+
+  # Acesso por funil (#1148, parte C): cada lista do calendário pré-carrega a visibilidade das conversas numa consulta só.
+  def due_follow_ups
+    follow_ups = filtered_follow_ups.order(:due_at, :id).limit(limit).to_a
+    conversation_visibility.preload(follow_ups.map(&:conversation))
+    follow_ups
+  end
+
+  def expected_close_cards
+    cards = filtered_cards.where.not(expected_close_at: nil).order(:expected_close_at, :id).limit(limit).to_a
+    conversation_visibility.preload(cards.map(&:primary_conversation))
+    cards
+  end
+
+  def scheduled_meetings
+    meetings = filtered_meetings.scheduled.order(:starts_at, :id).limit(limit).to_a
+    conversation_visibility.preload(meetings.filter_map(&:card).map(&:primary_conversation))
+    meetings
   end
 
   def conversation_visibility

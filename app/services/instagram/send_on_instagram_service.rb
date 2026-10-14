@@ -2,14 +2,15 @@ class Instagram::SendOnInstagramService < Instagram::BaseSendService
   # Indicador "digitando" do Instagram (sender_action typing_on/typing_off) para o id do contato.
   # Usado pela entrega humanizada do agente nativo (Autonomia). BEST-EFFORT: devolve nil em qualquer
   # erro/credencial ausente, sem levantar (typing é cosmético).
-  def send_sender_action(recipient_id, action)
+  def send_sender_action(recipient_id, action, timeout: nil)
     return if recipient_id.blank? || channel.blank?
 
     instagram_id = channel.instagram_id.presence || 'me'
     HTTParty.post(
       "https://graph.instagram.com/v22.0/#{instagram_id}/messages",
       body: { recipient: { id: recipient_id }, sender_action: action },
-      query: { access_token: channel.access_token }
+      query: { access_token: channel.access_token },
+      **{ timeout: timeout }.compact
     )
   rescue StandardError => e
     Rails.logger.warn("[instagram][typing] failed #{e.class}")

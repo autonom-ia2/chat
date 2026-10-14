@@ -6,7 +6,8 @@ class Conversations::UnreadCounts::BroadcastScope
   end
 
   def perform
-    return [conversation.account, conversation.inbox.members] if conversation.present?
+    # Acesso por funil (#1148): o contador de não lidas só vai a quem pode ver a conversa.
+    return [conversation.account, Crm::Access::Recipients.inbox_members(conversation)] if conversation.present?
 
     deleted_conversation_scope
   end

@@ -39,6 +39,18 @@ class CrmKanbanAPI extends ApiClient {
     );
   }
 
+  // Quem não pode ser dono (#1149): por card ({ cardIds }) ou por funil e caixa
+  // ({ pipelineId, inboxId }). Sem acesso por funil na conta, ninguém.
+  getOwnerOptions({ cardIds = [], pipelineId, inboxId } = {}) {
+    return axios.get(`${this.url}/cards/owner_options`, {
+      params: {
+        card_ids: cardIds,
+        pipeline_id: pipelineId || undefined,
+        inbox_id: inboxId || undefined,
+      },
+    });
+  }
+
   getInboxSettings() {
     return axios.get(`${this.url}/inbox_settings`);
   }
@@ -284,6 +296,19 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  // Multifunil 5b (#1145): responder à sugestão de assunto da IA.
+  acceptSubjectSuggestion(conversationId, suggestionId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/subject_suggestions/${suggestionId}/accept`
+    );
+  }
+
+  dismissSubjectSuggestion(conversationId, suggestionId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/subject_suggestions/${suggestionId}/dismiss`
+    );
+  }
+
   getConversationCardStages(conversationIds) {
     return axios.get(`${this.url}/conversations/card_stages`, {
       params: { conversation_ids: conversationIds },
@@ -296,6 +321,20 @@ class CrmKanbanAPI extends ApiClient {
         `${this.url}/pipelines/${pipelineId}/ai_settings/improve_criteria`,
         payload
       )
+    );
+  }
+
+  // Funil ainda não salvo (#1384): critério padrão por nome de etapa e IA antes de salvar.
+  // #1498 — `atender`: frases de funil de Atender ("Em atendimento" sem proposta).
+  getStageCriteriaDefaults(names, { atender = false } = {}) {
+    return axios.get(`${this.url}/stage_criteria/defaults`, {
+      params: { names, ...(atender ? { atender: true } : {}) },
+    });
+  }
+
+  improveDraftStageCriteria(payload) {
+    return pollAiRequest(
+      axios.post(`${this.url}/stage_criteria/improve`, payload)
     );
   }
 

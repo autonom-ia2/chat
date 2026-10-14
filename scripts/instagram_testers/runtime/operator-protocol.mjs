@@ -309,7 +309,17 @@ export function validateRequest(value) {
           value.results.length <= 100 &&
           value.results.every(
             candidate =>
-              exact(candidate, ['id', 'username', 'name', 'avatar_url']) &&
+              (exact(candidate, ['id', 'username', 'name', 'avatar_url']) ||
+                (exact(candidate, [
+                  'id',
+                  'username',
+                  'name',
+                  'avatar_url',
+                  'tester_status',
+                ]) &&
+                  [null, 'absent', 'pending', 'accepted'].includes(
+                    candidate.tester_status
+                  ))) &&
               numeric(candidate.id) &&
               username(candidate.username) &&
               typeof candidate.name === 'string' &&

@@ -13,6 +13,9 @@ module Crm
     #   - template   → a IA ESCOLHE o melhor template aprovado (TemplateCandidates); se nenhum servir
     #                  (index -1) ou a IA não quiser enviar → FALLBACK: lembrete na tela (popup).
     class CallbackRunner
+      # Texto livre pelo WhatsApp API fora das 24h, depois do template (chat#1349).
+      include Crm::FollowUps::HybridFreeForm
+
       Result = Struct.new(:status, :error, :retry_at, keyword_init: true) do
         def self.sent
           new(status: :sent)
@@ -45,9 +48,11 @@ module Crm
         skip_reason_before_compose = precondition_fallback_reason
         return Result.fallback(skip_reason_before_compose) if skip_reason_before_compose
 
+        # Fora das 24h o template vem primeiro; sem candidato nenhum e com o Híbrido pronto, vai ao texto livre.
         @send_mode = messaging_window.can_send_session_message? ? :free_form : :choose_template
         @candidates = @send_mode == :choose_template ? template_candidates : []
-        composition = compose
+        detect_hybrid_free_form
+        composition = compose_with_hybrid_retry
 
         return Result.fallback('closure') if closure?(composition)
         return Result.fallback(skip_reason) unless composable?(composition)
@@ -117,14 +122,14 @@ module Crm
           credential: resolved_credential,
           feature: 'follow_up', account: @card.account, pipeline: @card.pipeline
         )
-        @context = Crm::Ai::ContextBuilder.new(card: @card).perform
+        @context ||= Crm::Ai::ContextBuilder.new(card: @card).perform
 
         Crm::Ai::FollowUpComposer.new(
           card: @card,
           client: client,
           context: @context,
-          mode: @send_mode,
-          candidates: @candidates,
+          mode: composer_mode,
+          candidates: hybrid_free_form? ? [] : @candidates,
           purpose: :callback,
           callback_context: {
             'requested_at_text' => base_metadata['requested_at_text'],
@@ -174,9 +179,12 @@ module Crm
       # Escreve follow_up.metadata para o MessageSender pegar o ramo certo (idêntico ao AutoFollowupRunner).
       def prepare_send_metadata(composition)
         metadata = base_metadata
+        clear_hybrid_free_form_metadata(metadata)
         if @send_mode == :free_form
           metadata['message_body'] = composition['message_body'].to_s.strip
           %w[whatsapp_api_message_template_id template_name template_language template_processed_params].each { |k| metadata.delete(k) }
+        elsif hybrid_free_form?
+          apply_hybrid_free_form_metadata(metadata, composition)
         else
           apply_template_metadata(metadata, composition)
         end
@@ -185,7 +193,7 @@ module Crm
 
       def apply_template_metadata(metadata, composition)
         candidate = resolved_candidate(composition)
-        metadata['message_body'] = composition['message_body'].to_s.strip.presence || metadata['message_body']
+        metadata['message_body'] = composition['message_body'].to_s.strip.presence || Crm::FollowUps::CallbackScheduler::MESSAGE_PLACEHOLDER
         # Persist the chosen template's Meta category so the MARKETING-only 24h cap
         # can target it (api campaign templates carry no category → never capped).
         metadata['template_category'] = candidate[:category].to_s.downcase.presence
@@ -199,7 +207,8 @@ module Crm
         else
           metadata['template_name'] = candidate[:name].to_s
           metadata['template_language'] = candidate[:language].presence || 'pt_BR'
-          metadata['template_processed_params'] = composition['template_variables'].to_h.transform_values(&:to_s)
+          # O dado real do card (#1336) vence o que a IA escreveu na mesma posição.
+          metadata['template_processed_params'] = composition['template_variables'].to_h.transform_values(&:to_s).merge(candidate[:filled].to_h)
           metadata.delete('whatsapp_api_message_template_id')
         end
       end
@@ -245,7 +254,7 @@ module Crm
       end
 
       def template_candidates
-        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation).perform
+        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation, card: @card).perform
       end
 
       def messaging_window

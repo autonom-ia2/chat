@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -418,10 +418,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.string "papel", default: "porta", null: false
     t.index ["account_id"], name: "index_autonomia_agent_inboxes_on_account_id"
     t.index ["agent_bot_id"], name: "index_autonomia_agent_inboxes_on_agent_bot_id"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_inboxes_on_autonomia_agent_id"
-    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id", "autonomia_agent_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_agent_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_porta_uniq", unique: true, where: "(((papel)::text = 'porta'::text) AND (deleted_at IS NULL))"
   end
 
   create_table "autonomia_agent_instruction_versions", force: :cascade do |t|
@@ -1103,7 +1105,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.string "reconciliation_state"
     t.uuid "reconciliation_operation_id"
     t.index ["account_id"], name: "index_autonomia_store_checkout_intents_on_account_id"
-    t.index ["installation_id", "product_catalog_item_id", "next_recovery_at"], name: "idx_store_checkout_recovery", where: "(((state)::text <> 'completed'::text) AND (((state)::text <> ALL ((ARRAY['expired'::character varying, 'failed'::character varying])::text[])) OR reconciliation_requested))"
+    t.index ["installation_id", "product_catalog_item_id", "next_recovery_at"], name: "idx_store_checkout_recovery", where: "(((state)::text <> 'completed'::text) AND (((state)::text <> ALL (ARRAY[('expired'::character varying)::text, ('failed'::character varying)::text])) OR reconciliation_requested))"
     t.index ["user_id", "client_intent"], name: "idx_store_checkout_intent", unique: true
     t.index ["user_id"], name: "index_autonomia_store_checkout_intents_on_user_id"
   end
@@ -1241,6 +1243,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
   end
 
+  create_table "campaign_free_text_deliveries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.bigint "campaign_recipient_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "source_id", null: false
+    t.bigint "message_id"
+    t.datetime "fell_back_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_campaign_free_text_deliveries_on_campaign_id"
+    t.index ["campaign_recipient_id"], name: "idx_campaign_free_text_deliveries_recipient", unique: true
+    t.index ["inbox_id", "source_id"], name: "idx_campaign_free_text_deliveries_source", unique: true
+    t.index ["message_id"], name: "index_campaign_free_text_deliveries_on_message_id"
+  end
+
+  create_table "campaign_free_texts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_free_texts_on_account_id"
+    t.index ["campaign_id"], name: "index_campaign_free_texts_on_campaign_id", unique: true
+  end
+
   create_table "campaign_import_labels", force: :cascade do |t|
     t.bigint "campaign_import_id", null: false
     t.bigint "label_id"
@@ -1343,6 +1371,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["account_id"], name: "index_campaign_imports_on_account_id"
     t.index ["data_import_id"], name: "index_campaign_imports_on_data_import_id"
     t.index ["user_id"], name: "index_campaign_imports_on_user_id"
+  end
+
+  create_table "campaign_pauses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "pausable_type", null: false
+    t.bigint "pausable_id", null: false
+    t.string "source", null: false
+    t.string "reason_code", null: false
+    t.jsonb "details", default: {}, null: false
+    t.bigint "paused_by_id"
+    t.datetime "paused_at", null: false
+    t.bigint "resumed_by_id"
+    t.datetime "resumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_pauses_on_account_id"
+    t.index ["pausable_type", "pausable_id", "paused_at"], name: "idx_campaign_pauses_on_pausable"
+    t.index ["pausable_type", "pausable_id"], name: "idx_campaign_pauses_one_open", unique: true, where: "(resumed_at IS NULL)"
   end
 
   create_table "campaign_recipients", force: :cascade do |t|
@@ -1917,6 +1963,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.bigint "assignee_agent_bot_id"
     t.datetime "status_changed_at"
     t.string "ai_assignee_type"
+    t.index "(((additional_attributes -> 'crm_entrega'::text) ->> 'tentado_em'::text)) NULLS FIRST, id", name: "idx_conversations_crm_entrega_fila", where: "((additional_attributes ->> 'crm_entrega'::text) IS NOT NULL)"
     t.index "((additional_attributes ->> 'campaign_source_ids'::text)) gin_trgm_ops", name: "idx_conversations_campaign_source_ids_trgm", using: :gin
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
@@ -1978,6 +2025,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["conversation_id"], name: "index_crm_activities_on_conversation_id"
   end
 
+  create_table "crm_agent_availabilities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "working_hours", default: {}, null: false
+    t.boolean "paused", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_crm_agent_availabilities_on_account_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_crm_agent_availabilities_on_user_id"
+  end
+
   create_table "crm_agent_booking_links", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "booking_profile_id", null: false
@@ -2015,8 +2073,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "assignment_mode", default: 0, null: false
+    t.integer "page_version", default: 1, null: false
+    t.jsonb "locations", default: [], null: false
+    t.integer "min_notice_minutes", default: 0, null: false
+    t.jsonb "slot_durations", default: [], null: false
+    t.string "contact_phone"
+    t.string "template_key"
+    t.jsonb "brand", default: {}, null: false
+    t.text "invite_text"
+    t.integer "invite_ttl_days", default: 7, null: false
+    t.bigint "notice_inbox_id"
+    t.string "notice_preset", default: "standard", null: false
+    t.jsonb "notice_templates", default: {}, null: false
+    t.integer "cancel_until_minutes", default: 120, null: false
+    t.boolean "close_holidays", default: true, null: false
+    t.string "post_meeting_mode", default: "ask", null: false
+    t.bigint "post_meeting_stage_id"
+    t.string "short_name"
+    t.index ["account_id", "short_name"], name: "index_crm_agent_booking_profiles_on_account_and_short_name", unique: true
     t.index ["account_id"], name: "index_crm_agent_booking_profiles_on_account_id"
     t.index ["inbox_id"], name: "index_crm_agent_booking_profiles_on_inbox_id"
+    t.index ["notice_inbox_id"], name: "index_crm_agent_booking_profiles_on_notice_inbox_id"
+    t.index ["post_meeting_stage_id"], name: "index_crm_agent_booking_profiles_on_post_meeting_stage_id"
     t.index ["slug"], name: "index_crm_agent_booking_profiles_on_slug", unique: true
   end
 
@@ -2057,6 +2135,62 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["account_id", "feature", "created_at"], name: "idx_crm_ai_usage_account_feature_created"
   end
 
+  create_table "crm_booking_account_addresses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_booking_account_addresses_on_account_id", unique: true
+    t.index ["name"], name: "index_crm_booking_account_addresses_on_name", unique: true
+  end
+
+  create_table "crm_booking_invites", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "booking_profile_id", null: false
+    t.bigint "booking_link_id"
+    t.bigint "contact_id", null: false
+    t.bigint "card_id"
+    t.bigint "conversation_id"
+    t.bigint "created_by_id"
+    t.bigint "meeting_id"
+    t.string "code", null: false
+    t.string "channel", default: "copy", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "sent_at"
+    t.datetime "first_opened_at"
+    t.datetime "last_opened_at"
+    t.integer "open_count", default: 0, null: false
+    t.datetime "scheduled_at"
+    t.datetime "canceled_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "card_id"], name: "idx_crm_booking_invites_account_card"
+    t.index ["account_id", "contact_id"], name: "idx_crm_booking_invites_account_contact"
+    t.index ["account_id", "conversation_id"], name: "idx_crm_booking_invites_account_conversation"
+    t.index ["account_id", "created_at"], name: "idx_crm_booking_invites_account_created"
+    t.index ["account_id", "created_by_id"], name: "idx_crm_booking_invites_account_creator"
+    t.index ["account_id", "first_opened_at"], name: "idx_crm_booking_invites_account_opened", where: "(first_opened_at IS NOT NULL)"
+    t.index ["account_id", "sent_at"], name: "idx_crm_booking_invites_account_sent", where: "(sent_at IS NOT NULL)"
+    t.index ["booking_link_id"], name: "index_crm_booking_invites_on_booking_link_id"
+    t.index ["booking_profile_id"], name: "index_crm_booking_invites_on_booking_profile_id"
+    t.index ["card_id"], name: "index_crm_booking_invites_on_card_id"
+    t.index ["code"], name: "index_crm_booking_invites_on_code", unique: true
+    t.index ["contact_id"], name: "index_crm_booking_invites_on_contact_id"
+    t.index ["conversation_id"], name: "index_crm_booking_invites_on_conversation_id"
+    t.index ["created_by_id"], name: "index_crm_booking_invites_on_created_by_id"
+    t.index ["meeting_id"], name: "index_crm_booking_invites_on_meeting_id"
+  end
+
+  create_table "crm_booking_notice_stops", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "contact_id"], name: "index_crm_booking_notice_stops_on_account_id_and_contact_id", unique: true
+    t.index ["contact_id"], name: "index_crm_booking_notice_stops_on_contact_id"
+  end
+
   create_table "crm_calendar_sync_states", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -2085,6 +2219,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "focused_at"
+    t.bigint "focused_by_id"
     t.index ["account_id", "card_id", "conversation_id"], name: "idx_crm_card_conversations_unique", unique: true
     t.index ["account_id", "card_id"], name: "idx_crm_card_conversations_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_card_conversations_conversation"
@@ -2122,6 +2257,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.datetime "next_follow_up_at"
     t.datetime "closed_at"
     t.string "external_id"
+    t.jsonb "custom_attributes", default: {}, null: false
     t.index "lower((title)::text) gin_trgm_ops", name: "idx_crm_cards_title_trgm", using: :gin
     t.index ["account_id", "contact_id"], name: "idx_crm_cards_contact"
     t.index ["account_id", "conversation_id", "status", "id"], name: "idx_crm_cards_conversation"
@@ -2154,9 +2290,45 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["team_id"], name: "index_crm_cards_on_team_id"
   end
 
+  create_table "crm_follow_up_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "card_id"
+    t.bigint "contact_id"
+    t.bigint "company_id"
+    t.bigint "conversation_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.text "description"
+    t.integer "automation_mode", default: 0, null: false
+    t.integer "frequency", null: false
+    t.integer "weekdays", default: [], null: false, array: true
+    t.boolean "weekdays_only", default: false, null: false
+    t.datetime "starts_at", null: false
+    t.string "timezone", default: "UTC", null: false
+    t.integer "ends_mode", default: 0, null: false
+    t.date "ends_on"
+    t.integer "occurrences_count"
+    t.integer "status", default: 0, null: false
+    t.datetime "paused_at"
+    t.datetime "ended_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "idx_crm_follow_up_series_account_status"
+    t.index ["card_id"], name: "index_crm_follow_up_series_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_up_series_on_company_id"
+    t.index ["contact_id"], name: "index_crm_follow_up_series_on_contact_id"
+    t.index ["conversation_id"], name: "index_crm_follow_up_series_on_conversation_id"
+    t.index ["created_by_id"], name: "index_crm_follow_up_series_on_created_by_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_up_series_on_recipient_team_id"
+  end
+
   create_table "crm_follow_ups", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "card_id", null: false
+    t.bigint "card_id"
     t.bigint "conversation_id"
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -2174,6 +2346,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "series_id"
+    t.datetime "occurrence_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.bigint "company_id"
     t.index ["account_id", "assignee_id", "due_at", "status"], name: "idx_crm_followups_assignee_due"
     t.index ["account_id", "card_id"], name: "idx_crm_followups_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_followups_conversation"
@@ -2181,11 +2359,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["account_id"], name: "index_crm_follow_ups_on_account_id"
     t.index ["assignee_id"], name: "index_crm_follow_ups_on_assignee_id"
     t.index ["card_id"], name: "index_crm_follow_ups_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_ups_on_company_id"
     t.index ["contact_id"], name: "index_crm_follow_ups_on_contact_id"
     t.index ["conversation_id"], name: "index_crm_follow_ups_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_follow_ups_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_follow_ups_on_inbox_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_ups_on_recipient_team_id"
+    t.index ["series_id", "occurrence_at"], name: "idx_crm_followups_series_occurrence_uniq", unique: true, where: "(series_id IS NOT NULL)"
     t.index ["status", "due_at", "id"], name: "idx_crm_followups_due_processor"
+    t.check_constraint "card_id IS NOT NULL OR contact_id IS NOT NULL OR company_id IS NOT NULL OR created_by_id IS NOT NULL", name: "crm_follow_ups_has_owner"
   end
 
   create_table "crm_google_conversion_events", force: :cascade do |t|
@@ -2209,6 +2391,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["event_id"], name: "idx_crm_google_conv_event_id", unique: true
   end
 
+  create_table "crm_inbox_agent_accesses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id", null: false
+    t.boolean "all_pipelines", default: true, null: false
+    t.boolean "triage", default: true, null: false
+    t.boolean "only_own", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "inbox_id"], name: "idx_crm_inbox_agent_accesses_unique", unique: true
+    t.index ["inbox_id"], name: "idx_crm_inbox_agent_accesses_inbox"
+    t.index ["user_id"], name: "index_crm_inbox_agent_accesses_on_user_id"
+  end
+
+  create_table "crm_inbox_agent_pipelines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "access_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_id", "pipeline_id"], name: "idx_crm_inbox_agent_pipelines_unique", unique: true
+    t.index ["pipeline_id"], name: "index_crm_inbox_agent_pipelines_on_pipeline_id"
+  end
+
   create_table "crm_inbox_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -2219,6 +2425,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.boolean "auto_create_card", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "subject_ai_mode", default: 0, null: false
     t.index ["account_id", "crm_enabled"], name: "index_crm_inbox_settings_on_account_id_and_crm_enabled"
     t.index ["account_id", "inbox_id"], name: "index_crm_inbox_settings_on_account_id_and_inbox_id", unique: true
     t.index ["account_id"], name: "index_crm_inbox_settings_on_account_id"
@@ -2248,20 +2455,40 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.bigint "meeting_id", null: false
     t.bigint "contact_id"
     t.bigint "user_id"
-    t.string "email", null: false
+    t.string "email"
     t.string "name"
     t.integer "guest_type", default: 0, null: false
     t.integer "rsvp_status", default: 0, null: false
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "phone_number"
     t.index ["account_id", "meeting_id", "email"], name: "idx_crm_meeting_guests_unique_email", unique: true
+    t.index ["account_id", "meeting_id", "phone_number"], name: "idx_crm_meeting_guests_unique_phone", unique: true, where: "(phone_number IS NOT NULL)"
     t.index ["account_id", "meeting_id"], name: "idx_crm_meeting_guests_meeting"
     t.index ["account_id"], name: "index_crm_meeting_guests_on_account_id"
     t.index ["contact_id"], name: "idx_crm_meeting_guests_contact"
     t.index ["contact_id"], name: "index_crm_meeting_guests_on_contact_id"
     t.index ["meeting_id"], name: "index_crm_meeting_guests_on_meeting_id"
     t.index ["user_id"], name: "index_crm_meeting_guests_on_user_id"
+  end
+
+  create_table "crm_meeting_notices", force: :cascade do |t|
+    t.bigint "meeting_id", null: false
+    t.bigint "account_id", null: false
+    t.string "kind", null: false
+    t.datetime "due_at", null: false
+    t.integer "status", default: 0, null: false
+    t.string "skip_reason"
+    t.datetime "sent_at"
+    t.bigint "message_id"
+    t.integer "attempts", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sent_at"], name: "index_crm_meeting_notices_on_account_id_and_sent_at"
+    t.index ["meeting_id", "kind"], name: "index_crm_meeting_notices_on_meeting_id_and_kind", unique: true
+    t.index ["status", "due_at"], name: "index_crm_meeting_notices_on_status_and_due_at"
   end
 
   create_table "crm_meetings", force: :cascade do |t|
@@ -2286,7 +2513,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.integer "outcome"
     t.text "outcome_notes"
     t.datetime "outcome_recorded_at"
+    t.string "source"
+    t.datetime "confirmed_at"
+    t.integer "confirmation_status", default: 0, null: false
+    t.datetime "reminders_stopped_at"
+    t.bigint "conversation_id"
     t.index ["account_id", "card_id"], name: "idx_crm_meetings_card"
+    t.index ["account_id", "created_at"], name: "idx_crm_meetings_account_booked", where: "(source IS NOT NULL)"
     t.index ["account_id", "created_by_id"], name: "idx_crm_meetings_created_by"
     t.index ["account_id", "inbox_id"], name: "idx_crm_meetings_inbox"
     t.index ["account_id", "outcome", "outcome_recorded_at"], name: "idx_on_account_id_outcome_outcome_recorded_at_085cfbd511"
@@ -2294,6 +2527,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["account_id", "status"], name: "idx_crm_meetings_status"
     t.index ["account_id"], name: "index_crm_meetings_on_account_id"
     t.index ["card_id"], name: "index_crm_meetings_on_card_id"
+    t.index ["conversation_id"], name: "index_crm_meetings_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_meetings_on_created_by_id"
     t.index ["external_event_id", "provider"], name: "idx_crm_meetings_external_unique", unique: true, where: "(external_event_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_crm_meetings_on_inbox_id"
@@ -2546,6 +2780,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "counts_as_sale", default: true, null: false
+    t.text "when_to_use"
     t.index ["account_id", "is_default"], name: "index_crm_pipelines_on_account_id_and_is_default"
     t.index ["account_id", "position"], name: "index_crm_pipelines_on_account_id_and_position"
     t.index ["account_id", "status"], name: "index_crm_pipelines_on_account_id_and_status"
@@ -2634,6 +2869,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["created_by_id"], name: "index_crm_stage_automations_on_created_by_id"
     t.index ["pipeline_id"], name: "index_crm_stage_automations_on_pipeline_id"
     t.index ["stage_id"], name: "index_crm_stage_automations_on_stage_id"
+  end
+
+  create_table "crm_subject_decisions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id"
+    t.bigint "card_id"
+    t.bigint "pipeline_id"
+    t.string "action", null: false
+    t.string "state", null: false
+    t.string "mode", null: false
+    t.string "title"
+    t.float "confidence"
+    t.string "decided_by"
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_crm_subject_decisions_account_month"
+    t.index ["card_id"], name: "index_crm_subject_decisions_on_card_id"
+    t.index ["conversation_id", "message_id"], name: "idx_crm_subject_decisions_message", unique: true
+    t.index ["conversation_id", "state"], name: "idx_crm_subject_decisions_conversation_state"
+    t.index ["message_id"], name: "index_crm_subject_decisions_on_message_id"
+    t.index ["pipeline_id"], name: "index_crm_subject_decisions_on_pipeline_id"
   end
 
   create_table "csat_survey_responses", force: :cascade do |t|
@@ -3788,6 +4046,62 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_proxy_assignments", force: :cascade do |t|
+    t.string "session_name", null: false
+    t.bigint "account_id", null: false
+    t.string "pool", null: false
+    t.string "webshare_proxy_id"
+    t.string "proxy_address"
+    t.integer "proxy_port"
+    t.datetime "assigned_at", null: false
+    t.string "credential_digest"
+    t.string "origin", default: "assigned", null: false
+    t.string "previous_proxy_address"
+    t.integer "previous_proxy_port"
+    t.string "previous_webshare_proxy_id"
+    t.string "previous_credential_digest"
+    t.string "previous_pool"
+    t.bigint "previous_account_id"
+    t.string "previous_origin"
+    t.integer "apply_failures", default: 0, null: false
+    t.datetime "last_apply_failed_at"
+    t.datetime "apply_scheduled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_assignments_on_proxy_address"
+    t.index ["session_name"], name: "index_whatsapp_proxy_assignments_on_session_name", unique: true
+  end
+
+  create_table "whatsapp_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.string "pool", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
+  create_table "whatsapp_template_profiles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "waba_id", null: false
+    t.string "meta_template_id"
+    t.string "name", null: false
+    t.string "language", null: false
+    t.string "friendly_name"
+    t.jsonb "fields", default: {}, null: false
+    t.jsonb "header_media", default: {}, null: false
+    t.string "system_owner"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "waba_id"], name: "idx_whatsapp_template_profiles_waba"
+    t.index ["created_by_id"], name: "index_whatsapp_template_profiles_on_created_by_id"
+    t.index ["inbox_id", "name", "language"], name: "idx_whatsapp_template_profiles_unique", unique: true
+  end
+
   create_table "working_hours", force: :cascade do |t|
     t.bigint "inbox_id"
     t.bigint "account_id"
@@ -3901,6 +4215,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
+  add_foreign_key "campaign_free_text_deliveries", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_text_deliveries", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_pauses", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_pauses", "users", column: "paused_by_id", on_delete: :nullify
+  add_foreign_key "campaign_pauses", "users", column: "resumed_by_id", on_delete: :nullify
   add_foreign_key "campaign_recipients", "accounts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
@@ -3910,16 +4231,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_agent_availabilities", "accounts", on_delete: :cascade
+  add_foreign_key "crm_agent_availabilities", "users", on_delete: :cascade
   add_foreign_key "crm_agent_booking_links", "accounts"
   add_foreign_key "crm_agent_booking_links", "crm_agent_booking_profiles", column: "booking_profile_id"
   add_foreign_key "crm_agent_booking_links", "inboxes", on_delete: :nullify
   add_foreign_key "crm_agent_booking_links", "users", column: "agent_id"
   add_foreign_key "crm_agent_booking_profiles", "accounts"
+  add_foreign_key "crm_agent_booking_profiles", "crm_pipeline_stages", column: "post_meeting_stage_id", on_delete: :nullify
+  add_foreign_key "crm_agent_booking_profiles", "inboxes", column: "notice_inbox_id", on_delete: :nullify
   add_foreign_key "crm_agent_booking_profiles", "inboxes", on_delete: :nullify
   add_foreign_key "crm_ai_stage_suggestions", "accounts"
   add_foreign_key "crm_ai_stage_suggestions", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "from_stage_id"
   add_foreign_key "crm_ai_stage_suggestions", "crm_pipeline_stages", column: "to_stage_id"
+  add_foreign_key "crm_booking_account_addresses", "accounts", on_delete: :cascade
+  add_foreign_key "crm_booking_invites", "contacts", on_delete: :cascade
+  add_foreign_key "crm_booking_invites", "conversations", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_agent_booking_links", column: "booking_link_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_agent_booking_profiles", column: "booking_profile_id", on_delete: :cascade
+  add_foreign_key "crm_booking_invites", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "crm_meetings", column: "meeting_id", on_delete: :nullify
+  add_foreign_key "crm_booking_invites", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_booking_notice_stops", "contacts", on_delete: :cascade
   add_foreign_key "crm_calendar_sync_states", "accounts"
   add_foreign_key "crm_calendar_sync_states", "inboxes", on_delete: :nullify
   add_foreign_key "crm_card_conversations", "accounts"
@@ -3934,14 +4268,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "crm_cards", "inboxes", on_delete: :nullify
   add_foreign_key "crm_cards", "teams"
   add_foreign_key "crm_cards", "users", column: "owner_id"
+  add_foreign_key "crm_follow_up_series", "accounts"
+  add_foreign_key "crm_follow_up_series", "companies", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "contacts", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "conversations", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "teams", column: "recipient_team_id", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "users", column: "created_by_id"
   add_foreign_key "crm_follow_ups", "accounts"
+  add_foreign_key "crm_follow_ups", "companies", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "contacts", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_ups", "crm_follow_up_series", column: "series_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "inboxes", on_delete: :nullify
+  add_foreign_key "crm_follow_ups", "teams", column: "recipient_team_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "users", column: "assignee_id"
   add_foreign_key "crm_follow_ups", "users", column: "created_by_id"
   add_foreign_key "crm_google_conversion_events", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "inboxes", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_accesses", "users", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "crm_inbox_agent_accesses", column: "access_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_agent_pipelines", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
   add_foreign_key "crm_inbox_settings", "accounts"
   add_foreign_key "crm_inbox_settings", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_inbox_settings", "crm_pipelines", column: "default_pipeline_id"
@@ -3954,7 +4304,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "crm_meeting_guests", "contacts", on_delete: :cascade
   add_foreign_key "crm_meeting_guests", "crm_meetings", column: "meeting_id"
   add_foreign_key "crm_meeting_guests", "users"
+  add_foreign_key "crm_meeting_notices", "crm_meetings", column: "meeting_id", on_delete: :cascade
   add_foreign_key "crm_meetings", "accounts"
+  add_foreign_key "crm_meetings", "conversations", on_delete: :nullify
   add_foreign_key "crm_meetings", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
@@ -3993,6 +4345,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "crm_stage_automations", "crm_pipeline_stages", column: "stage_id"
   add_foreign_key "crm_stage_automations", "crm_pipelines", column: "pipeline_id"
   add_foreign_key "crm_stage_automations", "users", column: "created_by_id"
+  add_foreign_key "crm_subject_decisions", "accounts", on_delete: :cascade
+  add_foreign_key "crm_subject_decisions", "conversations", on_delete: :cascade
+  add_foreign_key "crm_subject_decisions", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_subject_decisions", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_subject_decisions", "messages", on_delete: :nullify
   add_foreign_key "ctwa_tracked_link_clicks", "accounts", on_delete: :cascade
   add_foreign_key "ctwa_tracked_link_clicks", "conversations", on_delete: :nullify
   add_foreign_key "ctwa_tracked_link_clicks", "ctwa_tracked_links", column: "tracked_link_id", on_delete: :cascade
@@ -4038,6 +4395,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_172000) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
+  add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify
   # no candidate create_trigger statement could be found, creating an adapter-specific one
   execute(<<-SQL)
 CREATE OR REPLACE FUNCTION public.email_reputation_audit_append_only()

@@ -162,20 +162,25 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     end
   end
 
+  # Only a funnel that counts as sale has revenue (#1151): a card won before its funnel
+  # became a service funnel is not a sale.
   def origin_metric_card_filters
     filters = [
       'crm_cards.account_id = ?',
       'crm_cards.status = ?',
-      'crm_cards.closed_at BETWEEN ? AND ?'
+      'crm_cards.closed_at BETWEEN ? AND ?',
+      'crm_cards.pipeline_id IN (SELECT id FROM crm_pipelines WHERE crm_pipelines.account_id = ? AND crm_pipelines.counts_as_sale)'
     ]
-    binds = [Current.account.id, Crm::Card.statuses[:won], since_time, until_time]
+    binds = [Current.account.id, Crm::Card.statuses[:won], since_time, until_time, Current.account.id]
 
     if params[:pipeline_id].present?
       filters << 'crm_cards.pipeline_id = ?'
       binds << params[:pipeline_id]
     end
+    # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
+    filters << Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition
 
-    [filters, binds]
+    [filters.compact, binds]
   end
 
   def since_time

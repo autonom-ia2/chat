@@ -3,35 +3,61 @@ module Crm
     # Headline KPIs for the selected pipeline over the period: won/lost counts
     # (via closed_at), won value by currency, open pipeline value by currency,
     # and win rate. Currencies are never summed together.
+    #
+    # Multifunil (#1151): only a funnel that counts as sale has won/lost, win rate
+    # and goal; a service funnel reports resolved/cancelled instead, and a card won
+    # before the funnel stopped counting as sale never shows up as a sale. Open work
+    # is counted three ways, since one conversation can hold several cards.
     class Summary < BaseReport
       def perform
         return empty if pipeline.blank?
 
-        won = closed_in_range.where(status: Crm::Card.statuses[:won])
-        lost = closed_in_range.where(status: Crm::Card.statuses[:lost])
-        won_count = won.count
-        lost_count = lost.count
-        decided = won_count + lost_count
-
-        {
-          pipeline: { id: pipeline.id, name: pipeline.name },
-          period: { since: since.iso8601, until: until_time.iso8601 },
-          won_count: won_count,
-          lost_count: lost_count,
-          win_rate: decided.zero? ? nil : (won_count.to_f / decided).round(4),
-          win_rate_by_value: win_rate_by_value(won, lost),
-          won_value_by_currency: currency_amount(won),
-          lost_value_by_currency: currency_amount(lost),
-          open_count: open_cards.count,
-          open_value_by_currency: currency_amount(open_cards),
-          goal: goal_payload
-        }
+        base_payload.merge(outcome_payload).merge(open_payload)
       end
 
       private
 
       def empty
         { pipeline: nil }
+      end
+
+      def base_payload
+        {
+          pipeline: { id: pipeline.id, name: pipeline.name },
+          period: { since: since.iso8601, until: until_time.iso8601 },
+          counts_as_sale: pipeline.counts_as_sale?
+        }
+      end
+
+      def outcome_payload
+        sale = pipeline.counts_as_sale?
+        won = closed_with(sale ? :won : nil)
+        lost = closed_with(sale ? :lost : nil)
+        won_count = won.count
+        lost_count = lost.count
+
+        {
+          won_count: won_count,
+          lost_count: lost_count,
+          win_rate: win_rate(won_count, lost_count),
+          win_rate_by_value: win_rate_by_value(won, lost),
+          won_value_by_currency: currency_amount(won),
+          lost_value_by_currency: currency_amount(lost),
+          resolved_count: closed_with(sale ? nil : :resolved).count,
+          cancelled_count: closed_with(sale ? nil : :cancelled).count,
+          goal: sale ? goal_payload : nil
+        }
+      end
+
+      # One conversation can hold several cards (#1141): cards, conversations and
+      # people are counted apart so 3 cards in 1 conversation read as 1 person.
+      def open_payload
+        {
+          open_count: open_cards.count,
+          open_conversations_count: open_conversations_count,
+          open_people_count: open_cards.where.not(contact_id: nil).distinct.count(:contact_id),
+          open_value_by_currency: currency_amount(open_cards)
+        }
       end
 
       def pipeline_cards
@@ -42,8 +68,22 @@ module Crm
         pipeline_cards.where(status: Crm::Card.statuses[:open])
       end
 
-      def closed_in_range
-        pipeline_cards.where(closed_at: range)
+      # Primary conversation plus every linked one; UNION drops the repeats in the database.
+      def open_conversations_count
+        primary = open_cards.where.not(conversation_id: nil).select(:conversation_id).to_sql
+        linked = Crm::CardConversation.where(account_id: account.id, card_id: open_cards.select(:id)).select(:conversation_id).to_sql
+        Crm::Card.connection.select_value("SELECT COUNT(*) FROM (#{primary} UNION #{linked}) AS open_conversations").to_i
+      end
+
+      def closed_with(status)
+        return pipeline_cards.none if status.nil?
+
+        pipeline_cards.where(closed_at: range, status: Crm::Card.statuses[status])
+      end
+
+      def win_rate(won_count, lost_count)
+        decided = won_count + lost_count
+        decided.zero? ? nil : (won_count.to_f / decided).round(4)
       end
 
       # Value-weighted win rate = won_value / (won_value + lost_value). This is a

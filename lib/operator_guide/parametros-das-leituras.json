@@ -166,6 +166,10 @@
     "controller": "api/v1/accounts/autonomia/agents/build_threads#show",
     "parametros": []
   },
+  "autonomia/canais_ocupados": {
+    "controller": "api/v1/accounts/autonomia/canais_ocupados#index",
+    "parametros": []
+  },
   "autonomia/conversations/:conversation_id/copilot/agents": {
     "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
     "parametros": []
@@ -282,6 +286,12 @@
   "autonomia/invite_connection/:inbox_id/connection": {
     "controller": "api/v1/accounts/autonomia/invite_connections#connection",
     "parametros": []
+  },
+  "autonomia/numeros_da_semana": {
+    "controller": "api/v1/accounts/autonomia/numeros_da_semana#index",
+    "parametros": [
+      "agent_id"
+    ]
   },
   "autonomia/pendencias_do_guia": {
     "controller": "api/v1/accounts/autonomia/pendencias_do_guia#index",
@@ -449,9 +459,21 @@
       "whatsapp_api_campaign_ids"
     ]
   },
+  "campaign_journey/campaign_pauses": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_pauses#index",
+    "parametros": []
+  },
   "campaign_journey/contact_origins/:id": {
     "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
     "parametros": []
+  },
+  "campaign_journey/conversa_aberta": {
+    "controller": "api/v1/accounts/campaign_journey/conversa_aberta#show",
+    "parametros": [
+      "campaign_import_id",
+      "categoria",
+      "inbox_id"
+    ]
   },
   "campaign_journey/overview": {
     "controller": "api/v1/accounts/campaign_journey/overviews#show",
@@ -1043,12 +1065,88 @@
       "until"
     ]
   },
+  "crm/booking_invites": {
+    "controller": "api/v1/accounts/crm/booking_invites#index",
+    "parametros": [
+      "card_id",
+      "contact_id",
+      "conversation_id"
+    ]
+  },
+  "crm/booking_pages": {
+    "controller": "api/v1/accounts/crm/booking_pages#index",
+    "parametros": []
+  },
+  "crm/booking_pages/:id": {
+    "controller": "api/v1/accounts/crm/booking_pages#show",
+    "parametros": []
+  },
+  "crm/booking_pages/:id/notice_templates": {
+    "controller": "api/v1/accounts/crm/booking_pages#notice_templates",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
+  "crm/booking_pages/:id/people": {
+    "controller": "api/v1/accounts/crm/booking_pages#people",
+    "parametros": []
+  },
+  "crm/booking_pages/:id/slots": {
+    "controller": "api/v1/accounts/crm/booking_page_meetings#slots",
+    "parametros": [
+      "date",
+      "duration"
+    ]
+  },
+  "crm/booking_pages/bookable": {
+    "controller": "api/v1/accounts/crm/booking_page_meetings#index",
+    "parametros": []
+  },
+  "crm/booking_pages/reassign_preview": {
+    "controller": "api/v1/accounts/crm/booking_pages#reassign_preview",
+    "parametros": [
+      "from_user_id",
+      "page_id",
+      "to_user_id"
+    ]
+  },
+  "crm/booking_pages/short_name": {
+    "controller": "api/v1/accounts/crm/booking_page_short_names#show",
+    "parametros": [
+      "name",
+      "page_id",
+      "title"
+    ]
+  },
   "crm/booking_profiles": {
     "controller": "api/v1/accounts/crm/booking_profiles#index",
     "parametros": []
   },
   "crm/booking_profiles/:id/agent_links": {
     "controller": "api/v1/accounts/crm/booking_profiles#agent_links",
+    "parametros": []
+  },
+  "crm/booking_stats": {
+    "controller": "api/v1/accounts/crm/booking_stats#show",
+    "parametros": [
+      "period",
+      "scope"
+    ]
+  },
+  "crm/booking_stats/opened_not_booked": {
+    "controller": "api/v1/accounts/crm/booking_stats#opened_not_booked",
+    "parametros": [
+      "page",
+      "period",
+      "scope"
+    ]
+  },
+  "crm/caixas": {
+    "controller": "api/v1/accounts/crm/caixas#index",
+    "parametros": []
+  },
+  "crm/caixas/:inbox_id": {
+    "controller": "api/v1/accounts/crm/caixas#show",
     "parametros": []
   },
   "crm/calendar/available_slots": {
@@ -1086,6 +1184,14 @@
       "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
     ]
   },
+  "crm/cards/owner_options": {
+    "controller": "api/v1/accounts/crm/cards#owner_options",
+    "parametros": [
+      "card_ids",
+      "inbox_id",
+      "pipeline_id"
+    ]
+  },
   "crm/cards/summaries": {
     "controller": "api/v1/accounts/crm/cards/summaries#index",
     "motivos": [
@@ -1121,6 +1227,10 @@
     "parametros": [
       "conversation_ids"
     ]
+  },
+  "crm/follow_up_series/:id": {
+    "controller": "api/v1/accounts/crm/follow_up_series#show",
+    "parametros": []
   },
   "crm/follow_ups": {
     "controller": "api/v1/accounts/crm/follow_ups#index",
@@ -1231,6 +1341,10 @@
       "until"
     ]
   },
+  "crm/my_booking_hours": {
+    "controller": "api/v1/accounts/crm/my_booking_hours#show",
+    "parametros": []
+  },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",
     "parametros": []
@@ -1331,6 +1445,13 @@
   "crm/stage_automations/:id": {
     "controller": "api/v1/accounts/crm/stage_automations#show",
     "parametros": []
+  },
+  "crm/stage_criteria/defaults": {
+    "controller": "api/v1/accounts/crm/stage_criteria#defaults",
+    "parametros": [
+      "atender",
+      "names"
+    ]
   },
   "crm/stages/:stage_id/stage_automations": {
     "controller": "api/v1/accounts/crm/stage_automations#index",
@@ -1597,6 +1718,16 @@
   },
   "inboxes/:inbox_id/whatsapp_api_message_templates": {
     "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_templates": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#index",
+    "parametros": [
+      "refresh"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_templates/:id/usage": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_templates#usage",
     "parametros": []
   },
   "instagram/testers/configuration": {
@@ -1910,6 +2041,14 @@
   },
   "whatsapp_hybrid_connections/:inbox_id": {
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#show",
+    "parametros": []
+  },
+  "whatsapp_message_prices": {
+    "controller": "api/v1/accounts/whatsapp_message_prices#index",
+    "parametros": []
+  },
+  "whatsapp_template_inboxes": {
+    "controller": "api/v1/accounts/whatsapp_template_inboxes#index",
     "parametros": []
   }
 }

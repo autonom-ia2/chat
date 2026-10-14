@@ -39,7 +39,7 @@ class Api::V1::Accounts::Crm::InboxSettingsController < Api::V1::Accounts::Crm::
   def inbox_setting_params
     parameter_set(:inbox_setting).permit(
       :crm_enabled, :default_pipeline_id, :default_stage_id, :visibility_mode,
-      :auto_create_card
+      :auto_create_card, :subject_ai_mode
     )
   end
 end

@@ -36,7 +36,15 @@ RSpec.describe Crm::Ai::ContextBuilder do
 
       known = described_class.new(card: card).perform[:known_attributes]
 
-      expect(known).to eq(contact: {}, conversation: {})
+      expect(known).to eq(contact: {}, conversation: {}, card: {})
+    end
+
+    it 'traz os campos do próprio card, separados dos da pessoa (#1146)' do
+      card.update!(custom_attributes: { 'placa' => 'ABC1D23', 'vazio' => '' })
+
+      known = described_class.new(card: card).perform[:known_attributes]
+
+      expect(known[:card]).to eq('placa' => 'ABC1D23')
     end
   end
 end

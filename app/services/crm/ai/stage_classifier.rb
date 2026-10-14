@@ -68,9 +68,10 @@ module Crm
               description: 'Atributos customizados extraídos com evidência clara. Use arrays vazios se não houver extrações.',
               properties: {
                 contact: { type: 'array', items: EXTRACTED_ATTR_ITEM },
-                conversation: { type: 'array', items: EXTRACTED_ATTR_ITEM }
+                conversation: { type: 'array', items: EXTRACTED_ATTR_ITEM },
+                card: { type: 'array', items: EXTRACTED_ATTR_ITEM }
               },
-              required: %w[contact conversation],
+              required: %w[contact conversation card],
               additionalProperties: false
             },
             score_signals: ScoreCalculator::SIGNALS_SCHEMA
@@ -121,6 +122,7 @@ module Crm
       def user_input
         {
           card: card_payload,
+          pipeline: pipeline_payload,
           stages: @stages.map { |stage| stage_payload(stage) },
           conversation_summary: @context[:summary],
           recent_messages: @context[:recent_messages],
@@ -137,7 +139,12 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.to_json
+        }.merge(other_subjects_payload).to_json
+      end
+
+      # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
+      def other_subjects_payload
+        @context[:other_subjects].present? ? { other_subjects: @context[:other_subjects] } : {}
       end
 
       # Valores já salvos, restritos às chaves do attribute_schema (conjunto pequeno definido pelo
@@ -146,7 +153,8 @@ module Crm
         known = @context[:known_attributes] || {}
         {
           contact: scope_to_schema(known[:contact], @attribute_schema[:contact]),
-          conversation: scope_to_schema(known[:conversation], @attribute_schema[:conversation])
+          conversation: scope_to_schema(known[:conversation], @attribute_schema[:conversation]),
+          card: scope_to_schema(known[:card], @attribute_schema[:card])
         }
       end
 
@@ -155,13 +163,30 @@ module Crm
         values.to_h.select { |key, _value| allowed.include?(key.to_s) }
       end
 
+      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache.
+      def pipeline_payload
+        pipeline = @card.pipeline
+        { kind: pipeline&.kind || 'sell', when_to_use: pipeline&.when_to_use.presence }.compact
+      end
+
       def card_payload
         {
           id: @card.id,
           title: @card.title,
           current_stage_id: @context[:current_stage][:id],
-          current_stage_name: @context[:current_stage][:name]
-        }
+          current_stage_name: @context[:current_stage][:name],
+          subject_started_at: subject_started_at
+        }.compact
+      end
+
+      # Conversa com mais de um pedido (#1146): o que veio antes do início deste card é de outro pedido, e os campos do
+      # card não podem herdar o dado dele (a placa do Onix no card do HB20).
+      def subject_started_at
+        conversation = @card.primary_conversation
+        return if conversation.blank?
+
+        outros = Crm::Cards::ConversationCardFinder.new(account: @card.account).all(conversation).where.not(id: @card.id)
+        @card.created_at.iso8601 if outros.exists?
       end
 
       def stage_payload(stage)

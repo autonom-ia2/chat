@@ -1,7 +1,7 @@
 class Crm::Cards::PayloadBuilder
   ATTRIBUTES = %i[
     id pipeline_id stage_id contact_id conversation_id inbox_id owner_id team_id
-    title description value_cents currency status lost_reason source priority score metadata external_id
+    title description value_cents currency status lost_reason source priority score metadata external_id custom_attributes
   ].freeze
 
   TIMESTAMP_FIELDS = %i[
@@ -212,7 +212,10 @@ class Crm::Cards::PayloadBuilder
       # server-side on update, so the drawer only sends what changed.
       location: @card.contact.location,
       additional_attributes: @card.contact.additional_attributes || {},
-      custom_attributes: @card.contact.custom_attributes || {}
+      custom_attributes: @card.contact.custom_attributes || {},
+      # Selo "Cliente" no card do Kanban (#1258).
+      contact_type: @card.contact.contact_type,
+      customer_since: @card.contact.customer_since&.to_i
     }
   end
 

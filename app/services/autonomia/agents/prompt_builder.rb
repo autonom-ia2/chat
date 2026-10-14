@@ -103,6 +103,7 @@ module Autonomia
         [
           @agent.effective_scaffold,
           @agent.instrucao_do_sistema,
+          ::Autonomia::Agents::Tools::Native::Agenda.instrucao(@agent),
           persona_block,
           guardrails_block,
           handoff_block,
@@ -223,9 +224,9 @@ module Autonomia
           'atendimento" nem cite a fonte do conhecimento — comece pela resposta ou pelo passo a passo.'
       end
 
-      # input (array estilo Responses API): histórico + CONTEXTO + DOCUMENTOS anexados + pergunta.
+      # input (array estilo Responses API): SEGMENTO DA CONTA + histórico + CONTEXTO + DOCUMENTOS anexados + pergunta.
       def input
-        messages = history_messages
+        messages = [segmento_message].compact + history_messages
         messages << context_message if @snippets.any?
         messages << documents_message if @documents.any?
         messages << user_message(@query)
@@ -273,6 +274,16 @@ module Autonomia
       # sob o MESMO teto.
       def history_messages
         PromptParts::Historico.mensagens(@history)
+      end
+
+      # SEGMENTO DA CONTA (tema 8, #1429): primeira mensagem do input, logo depois de `instructions` e antes da
+      # conversa. Só depende da conta, então o começo do pedido fica o mesmo em todo turno dela (cache). nil sem a
+      # Fase 2 ou sem bloco: o input fica igual ao de antes. Fora do Guia (agente de sistema, com explicação
+      # própria) e do Agente de Cotação (a troca da Lia vem depois, na F3 do #1545).
+      def segmento_message
+        return if @agent.config.to_h['system_key'].present? || @agent.agent_type == 'insurance_quote'
+
+        PromptParts::SegmentoDaConta.mensagem(@agent.account)
       end
 
       def context_message

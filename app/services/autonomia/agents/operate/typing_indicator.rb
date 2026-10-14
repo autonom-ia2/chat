@@ -37,19 +37,13 @@ module Autonomia
           case @channel
           when Channel::WebWidget, Channel::Api
             web_widget_typing(typing_on)
-          when Channel::Whatsapp
-            whatsapp_typing(typing_on) if external_typing_enabled?
-          when Channel::Instagram
-            instagram_typing(typing_on) if external_typing_enabled?
+          when Channel::Whatsapp, Channel::Instagram
+            channel_typing(typing_on)
           end
         rescue StandardError => e
           # Typing é cosmético: qualquer falha (rede/credencial/versão de API) NÃO pode quebrar a entrega.
           Rails.logger.warn("[autonomia][operate][typing] degraded conv=#{@conversation.id} #{e.class}")
           nil
-        end
-
-        def external_typing_enabled?
-          ::Autonomia::Agents::Config.channel_typing_enabled?
         end
 
         # Web widget: emite o evento nativo do Chatwoot. O "user" é o AgentBot-espelho (tem
@@ -62,38 +56,10 @@ module Autonomia
           )
         end
 
-        # WhatsApp Cloud: typing só faz sentido "ligar" (a Meta limpa sozinha). Precisa do wamid da
-        # última mensagem incoming do cliente; sem ela, no-op.
-        def whatsapp_typing(typing_on)
-          return unless typing_on
-          return unless @channel.respond_to?(:provider) && @channel.provider == 'whatsapp_cloud'
-
-          wamid = last_incoming_source_id
-          return if wamid.blank?
-
-          service = @channel.provider_service
-          return unless service.respond_to?(:send_typing_indicator)
-
-          service.send_typing_indicator(wamid)
-        end
-
-        # Instagram: sender_action typing_on/off para o id do contato.
-        def instagram_typing(typing_on)
-          recipient = @conversation.contact_inbox&.source_id
-          return if recipient.blank?
-
-          ::Instagram::SendOnInstagramService.new(message: latest_outgoing_or_incoming)
-                                             .send_sender_action(recipient, typing_on ? 'typing_on' : 'typing_off')
-        rescue NameError, NoMethodError
-          nil # serviço/método ausente em algum build → degrada
-        end
-
-        def last_incoming_source_id
-          @conversation.messages.incoming.where.not(source_id: [nil, '']).order(created_at: :desc).limit(1).pick(:source_id)
-        end
-
-        def latest_outgoing_or_incoming
-          @conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
+        # WhatsApp Cloud e Instagram: o envio por canal (e o gate AI_HUMANIZE_CHANNEL_TYPING) mora em
+        # Conversations::ChannelTyping::Deliverer, o mesmo objeto que atende o robô externo (chat#1442).
+        def channel_typing(typing_on)
+          ::Conversations::ChannelTyping::Deliverer.new(conversation: @conversation, typing_status: typing_on ? 'on' : 'off').perform
         end
       end
     end

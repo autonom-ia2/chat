@@ -13,7 +13,23 @@ export const BINDING_SOURCES = {
   CONTACT: 'contact',
   COLUMN: 'column',
   FIXED: 'fixed',
+  // Fork (Modelos do WhatsApp, #1332): a key of the field catalog (TemplateFields::Catalog, #1331).
+  FIELD: 'field',
 };
+
+const AUDIENCE_FIELD_PREFIX = 'publico.';
+// Catalog keys the audience rows answer for coverage; the account ones (minha_empresa.*) are
+// always present and the others are read at send time, like CampaignJourney::VariableBindings.
+const CATALOG_COVERAGE = {
+  'cliente.nome': { source: 'name' },
+  'cliente.primeiro_nome': { source: 'name' },
+  'empresa_cliente.nome': { source: 'company' },
+};
+
+const catalogCoverage = key =>
+  key.startsWith(AUDIENCE_FIELD_PREFIX)
+    ? { source: 'extra', column: key.slice(AUDIENCE_FIELD_PREFIX.length) }
+    : CATALOG_COVERAGE[key] || null;
 
 // Contact fields a variable can come from (i18n suffix under ...VARIABLES.CONTACT_FIELDS).
 export const CONTACT_FIELDS = ['first_name', 'name', 'company'];
@@ -109,12 +125,6 @@ export const templateVariables = template => {
   return [...body, ...header, ...buttons];
 };
 
-/** Media header (image, video, document) the campaign needs a link for. */
-export const mediaHeaderOf = template => {
-  const header = buildTemplateParameters(template)?.header;
-  return header && 'media_url' in header ? header : null;
-};
-
 /** Binding prefilled from a variable_suggestions item; null when there is none. */
 export const bindingFromSuggestion = suggestion => {
   const source = suggestion?.source;
@@ -154,7 +164,15 @@ export const coverageMapping = bindings =>
     Object.entries(bindings)
       .filter(([, binding]) => isBindingComplete(binding))
       .filter(([, binding]) => binding.source !== BINDING_SOURCES.FIXED)
+      .filter(
+        ([, binding]) =>
+          binding.source !== BINDING_SOURCES.FIELD ||
+          catalogCoverage(binding.value)
+      )
       .map(([key, binding]) => {
+        if (binding.source === BINDING_SOURCES.FIELD) {
+          return [key, catalogCoverage(binding.value)];
+        }
         if (binding.source === BINDING_SOURCES.COLUMN) {
           return [key, { source: 'extra', column: binding.value }];
         }
@@ -190,6 +208,28 @@ const contactValue = (field, sample) => {
  * Text the first person of the audience would get ("Como o cliente vê"). Without a sample
  * (or a value) the default text, or the bracketed label of the source, takes its place.
  */
+// Contact field, or the catalog keys a sample can answer (#1332); the rest shows the placeholder.
+const CATALOG_CONTACT_FIELDS = {
+  'cliente.nome': 'name',
+  'cliente.primeiro_nome': 'first_name',
+  'empresa_cliente.nome': 'company',
+};
+
+const sourceValue = (binding, sample) => {
+  if (binding.source !== BINDING_SOURCES.FIELD) {
+    return contactValue(binding.value, sample);
+  }
+  if (binding.value.startsWith(AUDIENCE_FIELD_PREFIX)) {
+    return (
+      sample?.extra_values?.[
+        binding.value.slice(AUDIENCE_FIELD_PREFIX.length)
+      ] || ''
+    );
+  }
+  const field = CATALOG_CONTACT_FIELDS[binding.value];
+  return field ? contactValue(field, sample) : '';
+};
+
 export const previewMessage = ({
   template,
   bindings,
@@ -204,7 +244,7 @@ export const previewMessage = ({
     const value =
       binding.source === BINDING_SOURCES.COLUMN
         ? sample?.extra_values?.[binding.value] || ''
-        : contactValue(binding.value, sample);
+        : sourceValue(binding, sample);
     return value || defaults[key] || placeholder(binding);
   };
   const variables = templateVariables(template);
@@ -226,7 +266,19 @@ export const previewMessage = ({
 };
 
 /** `template_params` in the shape the old WhatsApp dialog sends (api-993 §6). */
-export const buildTemplateParams = ({ template, bindings, mediaUrl = '' }) => {
+// Botão a botão, na posição do modelo: o que o formato preenche (cupom) por cima.
+const mergeButtons = (base = [], extra = []) =>
+  Array.from(
+    { length: Math.max(base.length, extra.length) },
+    (_, index) => extra[index] || base[index] || null
+  );
+
+// Fork (Modelos do WhatsApp, #1334): `extras` = cupom, validade da oferta e cartões do carrossel
+// (formatoNaCampanha.extrasParaEnvio), por cima das partes do modelo. #1465: o arquivo do topo
+// escolhido na campanha (`extras.header`) entra no topo, junto do tipo; sem ele, o link vai
+// vazio e o servidor usa o arquivo aprovado com o modelo.
+export const buildTemplateParams = ({ template, bindings, extras = {} }) => {
+  const { header: headerExtra, ...formatExtras } = extras;
   const processed = buildTemplateParameters(template) || {};
   const body = processed.body
     ? Object.fromEntries(
@@ -240,10 +292,7 @@ export const buildTemplateParams = ({ template, bindings, mediaUrl = '' }) => {
       )
     : undefined;
   const header = processed.header
-    ? {
-        ...processed.header,
-        ...('media_url' in processed.header ? { media_url: mediaUrl } : {}),
-      }
+    ? { ...processed.header, ...(headerExtra || {}) }
     : undefined;
   return {
     name: template.name,
@@ -254,6 +303,10 @@ export const buildTemplateParams = ({ template, bindings, mediaUrl = '' }) => {
       ...processed,
       ...(body ? { body } : {}),
       ...(header ? { header } : {}),
+      ...formatExtras,
+      ...(extras.buttons
+        ? { buttons: mergeButtons(processed.buttons, extras.buttons) }
+        : {}),
     },
   };
 };
@@ -272,15 +325,22 @@ export const buildCampaignPayload = ({
   template,
   bindings,
   defaults,
-  mediaUrl,
+  extras = {},
+  freeText = '',
 }) => ({
   campaign_import_id: audienceId,
   channel: 'whatsapp_cloud',
   campaign: {
+    // Fork (#1335): a mensagem escrita para quem falou nas últimas 24 h.
+    ...(freeText ? { free_text: freeText } : {}),
     title: title.trim(),
     inbox_id: inboxId,
     scheduled_at: scheduledAt,
-    template_params: buildTemplateParams({ template, bindings, mediaUrl }),
+    template_params: buildTemplateParams({
+      template,
+      bindings,
+      extras,
+    }),
     variable_bindings: Object.fromEntries(
       templateVariables(template).map(({ key }) => [
         key,

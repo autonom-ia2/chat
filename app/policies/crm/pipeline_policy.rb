@@ -24,8 +24,10 @@ class Crm::PipelinePolicy < ApplicationPolicy
   end
 
   class Scope < ApplicationPolicy::Scope
+    # Acesso por funil (#1148, PR D): quem tem restrição lista só os funis dela (Kanban, etapas, lista de funis).
     def resolve
-      scope.where(account_id: account.id)
+      Crm::Access::VisiblePipelines.new(user: user, account: account, account_user: account_user)
+                                   .apply(scope.where(account_id: account.id))
     end
   end
 

@@ -17,10 +17,9 @@ class Crm::FollowUps::ReminderNotifier
 
   private
 
+  # Quem recebe (#1462) e o acesso por funil (#1148, parte C): o mesmo RecipientResolver do Broadcaster.
   def recipient_users
-    users = @follow_up.card.present? ? Crm::Cards::Broadcaster.recipient_users_for(@follow_up.card) : []
-    users << @follow_up.assignee if @follow_up.assignee.present?
-    users.compact.index_by(&:id).values
+    Crm::FollowUps::RecipientResolver.new(@follow_up).users
   end
 
   def notify_user(user)

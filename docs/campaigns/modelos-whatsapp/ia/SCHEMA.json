@@ -1,0 +1,73 @@
+{
+  "_leia": "Schema estrito que o Ai::Redacao::Escrever manda ao ResponsesClient. As chaves do contrato (status, pergunta, opcoes[].texto, chaves_usadas, categoria_prevista, motivo_categoria) estão aqui com os mesmos nomes. Os campos marcados como 'extensao' existiam na versão que passou na bateria. O serviço pode devolvê-los ou descartá-los, mas o modelo precisa gerá-los (ver NOTA.md §2). O código troca \"__CHAVES_PERMITIDAS__\" pela lista chaves.permitidas (enum) e 'opcoes' por maxItems = opcoes pedido. 'base' vale para todo canal. 'whatsapp_modelo' = base + o objeto 'whatsapp' em cada opção. Para os outros canais, o 'whatsapp' fica fora do schema.",
+  "base": {
+    "name": "redacao",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "pergunta", "sugestoes", "problemas_encontrados", "opcoes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["ok", "precisa_mais_info", "nao_se_aplica"] },
+        "pergunta": { "type": ["string", "null"], "description": "precisa_mais_info: a pergunta. nao_se_aplica: o motivo, numa frase." },
+        "sugestoes": { "type": "array", "maxItems": 3, "items": { "type": "string" }, "description": "extensao: objetivos tocáveis em precisa_mais_info." },
+        "problemas_encontrados": {
+          "description": "extensao: só no modo melhorar; lista vazia no criar.",
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["trecho", "problema", "explicacao"],
+            "properties": {
+              "trecho": { "type": "string", "description": "Cópia exata da base. O código confere com include?." },
+              "problema": { "type": "string", "enum": ["promocional_em_servico", "campo_no_inicio_ou_fim", "campos_colados", "muitos_campos", "vago", "pede_dado_sensivel", "tom_ameacador", "promessa_que_o_sistema_nao_cumpre", "longo_demais", "confuso", "outro"] },
+              "explicacao": { "type": "string" }
+            }
+          }
+        },
+        "opcoes": { "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/opcao" } }
+      },
+      "$defs": {
+        "opcao": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["texto", "chaves_usadas", "o_que_mudou", "categoria_prevista", "certeza_categoria", "motivo_categoria"],
+          "properties": {
+            "texto": { "type": "string" },
+            "chaves_usadas": { "type": "array", "items": { "type": "string", "enum": ["__CHAVES_PERMITIDAS__"] } },
+            "o_que_mudou": { "type": ["string", "null"], "description": "extensao: modo melhorar; null no criar." },
+            "categoria_prevista": { "type": ["string", "null"], "enum": ["servico", "divulgacao", null], "description": "null em canal sem categoria." },
+            "certeza_categoria": { "type": ["string", "null"], "enum": ["alta", "media", "baixa", null], "description": "extensao." },
+            "motivo_categoria": { "type": ["string", "null"] }
+          }
+        }
+      }
+    }
+  },
+  "whatsapp_modelo": {
+    "_leia": "Acrescentar em $defs.opcao: 'whatsapp' em properties e em required, e os $defs abaixo.",
+    "opcao_properties": {
+      "whatsapp": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cabecalho", "rodape", "botoes", "nome_sugerido"],
+        "properties": {
+          "cabecalho": { "type": ["string", "null"] },
+          "rodape": { "type": ["string", "null"] },
+          "botoes": { "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/botao" } },
+          "nome_sugerido": { "type": "string" }
+        }
+      }
+    },
+    "defs": {
+      "botao": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tipo", "texto", "chave"],
+        "properties": {
+          "tipo": { "type": "string", "enum": ["resposta_rapida", "link", "telefone"] },
+          "texto": { "type": "string" },
+          "chave": { "type": ["string", "null"], "enum": ["__CHAVES_PERMITIDAS__", null] }
+        }
+      }
+    }
+  }
+}

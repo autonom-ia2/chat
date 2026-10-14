@@ -45,6 +45,8 @@ module Crm
         @ids.each do |id|
           card = visible_cards_by_id[id]
           next failed << { id: id, error: 'forbidden' } if card.blank?
+          # Acesso por funil (#1148): mexer no card exige o funil dele, e mover exige também o de destino.
+          next failed << { id: id, error: 'forbidden' } if forbidden?(card, target_stage)
 
           # Each card is its own transaction so a single failure (e.g. a card
           # that vanished mid-request) reports as `failed` without rolling back
@@ -82,6 +84,8 @@ module Crm
         # owner_id may be nil to unassign; an unchanged owner is a no-op.
         return if card.owner_id == owner_id&.to_i
 
+        # Acesso por funil (#1148, decisão a): só vira dono quem tem o funil do card.
+        card_guard.ensure_owner_allowed!(owner_id, inbox_id: card.inbox_id, pipeline_id: card.pipeline_id)
         card.update!(owner_id: owner_id, last_activity_at: Time.current)
         Crm::ActivityLogger.new(
           card: card, actor: @user, event_type: 'update', payload: { owner_id: card.owner_id }
@@ -120,6 +124,16 @@ module Crm
 
       # The same visible scope the CardPolicy::Scope resolves, so a bulk request
       # can only ever touch cards the caller can see one-by-one.
+      def forbidden?(card, target_stage)
+        return true unless card_guard.edit_allowed?(card)
+
+        target_stage.present? && !card_guard.move_allowed?(card, target_stage.pipeline_id)
+      end
+
+      def card_guard
+        @card_guard ||= Crm::Access::CardGuard.new(user: @user, account: @account, account_user: @account_user)
+      end
+
       def visible_scope
         Crm::Cards::VisibleScopeQuery.new(
           scope: @account.crm_cards,

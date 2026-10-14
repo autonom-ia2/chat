@@ -8,7 +8,10 @@ module Crm
     # per-card "spent" budget) and cancels the cadence if any fires; (2) decides the
     # send mode from the messaging window — INSIDE 24h => :free_form (the AI writes a
     # natural PT-BR body), OUTSIDE 24h => :choose_template (the AI picks the best
-    # APPROVED template from Crm::FollowUps::TemplateCandidates and fills its vars);
+    # APPROVED template from Crm::FollowUps::TemplateCandidates and fills its vars). OUTSIDE 24h
+    # in an Official inbox with WhatsApp Híbrido ready (chat#1349) the template still comes first; with no
+    # candidate, or when the AI declines every one (and it is not a closure), a second composition in
+    # free_form is made and the text leaves through WhatsApp API (metadata delivery_transport);
     # (3) composes via Crm::Ai::FollowUpComposer (the single brain: should_send +
     # closure detection + confidence), and applies the single gate; (4) enforces the
     # marketing-template frequency cap (1/24h/contact) by rescheduling the SAME touch
@@ -25,6 +28,9 @@ module Crm
     # sent_message_id already exists, and the with_lock around #perform serializes
     # concurrent due-sweeps.
     class AutoFollowupRunner
+      # Texto livre pelo WhatsApp API fora das 24h, depois do template (chat#1349).
+      include Crm::FollowUps::HybridFreeForm
+
       # :sent        -> message delivered, follow_up should be marked done
       # :stopped     -> a hard auto-stop fired, cadence canceled, follow_up done
       # :skipped     -> terminal no-send this cycle (no open loop / low confidence);
@@ -71,6 +77,8 @@ module Crm
       # retried forever.
       MAX_RETRIES = 3
       CONTACT_DISABLED_REASON = 'contact_disabled'.freeze
+      # Multifunil (#1147): o cliente falando de outro pedido adia a cadência deste card por um ciclo curto.
+      OTHER_SUBJECT_WAIT = 6.hours
 
       def initialize(follow_up:, now: Time.current)
         @follow_up = follow_up
@@ -82,11 +90,13 @@ module Crm
         stop_reason = auto_stop_reason
         return stop_cadence(stop_reason) if stop_reason.present?
 
+        outro = customer_replied_about_other_subject
+        return postpone_for_other_subject(outro) if outro
+
         return reschedule(compute_due(@now)) if outside_schedule?(@now)
 
-        @send_mode = delivery_mode
-        @candidates = @send_mode == :choose_template ? template_candidates : []
-        composition = compose
+        choose_delivery_mode
+        composition = compose_with_hybrid_retry
         apply_current_composition(composition)
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         # Compose failure is not a delivery failure: keep the cadence intact and
@@ -123,11 +133,14 @@ module Crm
         @now = execution_time
         stop_reason = auto_stop_reason
         return stop_cadence(stop_reason) if stop_reason.present?
+
+        outro = customer_replied_about_other_subject
+        return postpone_for_other_subject(outro) if outro
         return Result.rescheduled(@follow_up) unless Crm::Ai::Config.enabled? && config['enabled']
         return reschedule(compute_due(@now)) if outside_schedule?(@now)
         # A reminder's composition cannot become a customer message (or vice versa).
         # Also recompose if the official messaging window expired during the call.
-        return reschedule(compute_due(@now + 1.minute)) if delivery_mode != @send_mode
+        return reschedule(compute_due(@now + 1.minute)) if delivery_changed_during_composition?
 
         nil
       end
@@ -166,6 +179,27 @@ module Crm
         return :reminder if reminder_mode?
 
         messaging_window.can_send_session_message? ? :free_form : :choose_template
+      end
+
+      # Decide o modo da composição. Fora das 24h o template vem primeiro; sem candidato nenhum e com o
+      # Híbrido pronto, vai direto ao texto livre (uma chamada só).
+      def choose_delivery_mode
+        @send_mode = delivery_mode
+        @candidates = @send_mode == :choose_template ? template_candidates : []
+        detect_hybrid_free_form
+      end
+
+      # Etiqueta do modo no histórico do toque e na timeline (o transporte vai em campo à parte).
+      def send_mode_label
+        composer_mode.to_s
+      end
+
+      # A janela pode ter mudado durante a chamada à IA (inclusive o Híbrido ter caído): recompor depois.
+      def delivery_changed_during_composition?
+        base_mode = hybrid_free_form? ? :choose_template : @send_mode
+        return true if delivery_mode != base_mode
+
+        hybrid_free_form? && !messaging_window.hybrid_web_available?
       end
 
       def send_composition(composition)
@@ -237,23 +271,41 @@ module Crm
       end
 
       # A newer inbound message than the last touch we sent (or, before the first
-      # send, than when this follow-up was created) means the customer re-engaged.
+      # send, than when this follow-up was created) means the customer re-engaged — with THIS card only when
+      # it is the conversation's current subject (multifunil, #1147): a reply about another request does not stop it.
       def customer_replied_since_scheduling?
+        new_customer_reply.present? && ::Crm::Cards::CurrentSubject.card?(@card)
+      end
+
+      # The customer is talking about ANOTHER request of the same conversation: postpone this cadence, never stop it.
+      def customer_replied_about_other_subject
+        reply = new_customer_reply
+        reply if reply && !::Crm::Cards::CurrentSubject.card?(@card)
+      end
+
+      def new_customer_reply
         conversation = @follow_up.conversation
-        return false if conversation.blank?
+        return if conversation.blank?
 
         last_incoming = conversation.messages.incoming.reorder(id: :desc).first
-        return false if last_incoming.blank?
-
         baseline = reply_baseline_at
-        return false if baseline.blank?
+        return if last_incoming.blank? || baseline.blank? || last_incoming.created_at <= baseline
 
-        last_incoming.created_at > baseline
+        # The reply about another request, once postponed for, stops counting. Compared by id: a serialized time
+        # loses the microseconds and the same reply would look new forever.
+        last_incoming if last_incoming.id > state['reply_seen_message_id'].to_i
       end
 
       def reply_baseline_at
         last_sent = state['last_sent_at'].presence
         (last_sent && parse_time(last_sent)) || @follow_up.created_at
+      end
+
+      def postpone_for_other_subject(reply)
+        next_due = compute_due(@now + OTHER_SUBJECT_WAIT)
+        merge_state!('reply_seen_message_id' => reply.id)
+        log_activity('ai_followup_postponed', reason: 'other_subject', next_due_at: next_due.iso8601, touch: touch)
+        reschedule(next_due)
       end
 
       # ---- (a)/(c) compose via the AI brain + single gate ----------------------
@@ -271,14 +323,14 @@ module Crm
           credential: credential,
           feature: 'follow_up', account: @card.account, pipeline: @card.pipeline
         )
-        context = Crm::Ai::ContextBuilder.new(card: @card).perform
+        context = (@context ||= Crm::Ai::ContextBuilder.new(card: @card).perform)
 
         composition = Crm::Ai::FollowUpComposer.new(
           card: @card,
           client: client,
           context: context,
-          mode: @send_mode,
-          candidates: @candidates,
+          mode: composer_mode,
+          candidates: hybrid_free_form? ? [] : @candidates,
           # A régua de PRAZO do prompt manda comparar a idade da última fala do cliente com o
           # intervalo entre os toques. O intervalo mora aqui, no config do funil, e nunca era
           # enviado: o modelo tinha que adivinhar se o prazo já havia vencido.
@@ -309,7 +361,7 @@ module Crm
       # MARKETING HSMs or Channel::Api campaign templates). Empty in free_form mode
       # and whenever the inbox has no eligible templates.
       def template_candidates
-        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation).perform
+        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation, card: @card).perform
       end
 
       # Closure/satisfaction detected by the brain forces a hard stop of the whole
@@ -353,7 +405,9 @@ module Crm
       # Distinguishes the terminal skip reason for the drawer/timeline. closure is
       # handled separately (stop_closure); here we only reach a non-closure skip.
       def skip_reason(composition)
-        return 'no_template' if @send_mode == :choose_template && resolved_candidate(composition).blank?
+        # Recusa por mérito (nothing_to_send) não é falta de template: é "não há o que enviar agora".
+        return 'no_template' if @send_mode == :choose_template && resolved_candidate(composition).blank? &&
+                                composition['decline_reason'].to_s != 'nothing_to_send'
 
         'no_open_loop'
       end
@@ -371,18 +425,22 @@ module Crm
           'message_kind' => composition['message_kind'].to_s,
           'open_loop' => composition['open_loop'].to_s,
           'open_loop_source' => composition['open_loop_source'].to_s,
-          'confidence' => composition['confidence'].to_f
+          'confidence' => composition['confidence'].to_f,
+          'decline_reason' => composition['decline_reason'].to_s
         }
       end
 
       def prepare_send_metadata(composition)
         metadata = base_metadata.merge(decision_audit(composition))
+        clear_hybrid_free_form_metadata(metadata)
         if @send_mode == :free_form
           metadata['message_body'] = composition['message_body'].to_s.strip
           metadata.delete('whatsapp_api_message_template_id')
           metadata.delete('template_name')
           metadata.delete('template_language')
           metadata.delete('template_processed_params')
+        elsif hybrid_free_form?
+          apply_hybrid_free_form_metadata(metadata, composition)
         else
           apply_template_metadata(metadata, composition)
         end
@@ -398,7 +456,7 @@ module Crm
         # Keep a generic body so AutoSendValidator's message_body check stays
         # satisfied; MessageSender ignores it for Api and uses it only as the
         # optional native body.
-        metadata['message_body'] = composition['message_body'].to_s.strip.presence || metadata['message_body']
+        metadata['message_body'] = composition['message_body'].to_s.strip.presence || Crm::FollowUps::AutoFollowupTouchBuilder::PLACEHOLDER_BODY
         # Persist the chosen template's Meta category so the 24h frequency cap can
         # target MARKETING only (Meta's 131049 cap is marketing-scoped). Api campaign
         # templates carry no category (nil) and are therefore never capped.
@@ -419,7 +477,8 @@ module Crm
         else
           metadata['template_name'] = candidate[:name].to_s
           metadata['template_language'] = candidate[:language].presence || 'pt_BR'
-          metadata['template_processed_params'] = stringify_template_variables(composition['template_variables'])
+          # O dado real do card (#1336) vence o que a IA escreveu na mesma posição.
+          metadata['template_processed_params'] = stringify_template_variables(composition['template_variables']).merge(candidate[:filled].to_h)
           metadata.delete('whatsapp_api_message_template_id')
         end
       end
@@ -520,10 +579,18 @@ module Crm
         # A successful send clears any prior consecutive-failure streak so a later
         # touch starts its own fresh retry budget.
         reset_retries!
-        log_activity('ai_followup_sent', touch: touch, send_mode: @send_mode.to_s, message_id: message&.id)
+        log_activity('ai_followup_sent', sent_activity_payload(message))
 
         schedule_next_touch
         Result.sent(@follow_up)
+      end
+
+      # O toque pelo WhatsApp API fica explicado na timeline: o transporte e por que o template não serviu.
+      def sent_activity_payload(message)
+        payload = { touch: touch, send_mode: send_mode_label, message_id: message&.id }
+        return payload unless hybrid_free_form?
+
+        payload.merge(delivery_transport: Crm::FollowUps::MessageSender::WHATSAPP_API_TRANSPORT, hybrid_free_form_reason: @hybrid_reason)
       end
 
       def on_failed(error)
@@ -662,14 +729,20 @@ module Crm
       def record_touch!(outcome, reason = nil)
         entry = { 'touch' => touch, 'at' => @now.iso8601, 'outcome' => outcome }
         if outcome == 'sent'
-          entry['mode'] = @send_mode == :free_form ? 'free_form' : 'template'
+          entry['mode'] = @send_mode == :choose_template ? 'template' : 'free_form'
           entry['template_name'] = base_metadata['template_name'].presence if @send_mode == :choose_template
+          append_hybrid_transport(entry) if hybrid_free_form?
         end
         entry['reason'] = reason if reason.present?
 
         touches = Array(state['touches']).map(&:to_h)
         touches << entry
         merge_state!('touches' => touches)
+      end
+
+      def append_hybrid_transport(entry)
+        entry['transport'] = Crm::FollowUps::MessageSender::WHATSAPP_API_TRANSPORT
+        entry['hybrid_reason'] = @hybrid_reason
       end
 
       # ---- config / channel helpers -------------------------------------------

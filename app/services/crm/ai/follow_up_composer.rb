@@ -10,7 +10,8 @@ module Crm
     # assembles the prompt + strict JSON schema and parses the response.
     #
     # Two modes (decided by the runner from the messaging window):
-    #   :free_form      — inside the 24h window: write a natural PT-BR message_body.
+    #   :free_form      — free text allowed: inside the 24h window, or outside it when the Hybrid WhatsApp API
+    #                     is ready and no template fits (chat#1349). Write a natural PT-BR message_body.
     #   :choose_template — outside the 24h window: pick the BEST approved template
     #                      from +candidates+ (by index) and fill its variables.
     #
@@ -21,6 +22,8 @@ module Crm
     # Anti-hallucination: the model MUST cite a literal transcript line in
     # open_loop_source; if no real open loop exists it returns should_send=false.
     class FollowUpComposer
+      DECLINE_REASONS = %w[none no_fitting_template nothing_to_send].freeze
+
       COMPOSE_SCHEMA = {
         name: 'crm_ai_followup',
         schema: {
@@ -94,10 +97,16 @@ module Crm
                            'aguardando, sem pedir nada.'
             },
             tone: { type: 'string', enum: %w[friendly neutral helpful] },
-            confidence: { type: 'number', minimum: 0, maximum: 1 }
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+            decline_reason: {
+              type: 'string',
+              enum: DECLINE_REASONS,
+              description: 'Só no modo choose_template com should_send=false: no_fitting_template = há pendência real mas nenhum ' \
+                           'candidato serve; nothing_to_send = não há o que enviar agora. Nos demais casos, none.'
+            }
           },
           required: %w[should_send closure_detected open_loop open_loop_source message_body chosen_template
-                       template_variables next_action_owner message_kind tone confidence],
+                       template_variables next_action_owner message_kind tone confidence decline_reason],
           additionalProperties: false
         }
       }.freeze
@@ -163,12 +172,18 @@ module Crm
         @mode == :choose_template
       end
 
+      # #1498: o tipo do funil chega em "pipeline.kind"; em atendimento a retomada não fala de venda.
+      PIPELINE_KIND_RULE = 'O campo "pipeline.kind" diz o tipo do funil: "sell" (venda) ou "serve" (atendimento: suporte, pós-venda, ' \
+                           'cobrança, agendamento). Em "serve", não fale em proposta, orçamento nem compra: retome o atendimento (o que ' \
+                           'foi pedido ao cliente, o andamento, se já resolveu) e trate "resolvido", "já paguei" ou "não preciso mais" ' \
+                           'como encerramento.'.freeze
+
       def instructions
         return callback_instructions if @purpose == :callback
         return reminder_instructions if @mode == :reminder
 
         <<~PROMPT.strip
-          Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou".
+          Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou". #{PIPELINE_KIND_RULE}
           Responda apenas com JSON válido no schema solicitado.
 
           #{turn_owner_rules}
@@ -232,6 +247,8 @@ module Crm
       # o cliente por algo que ele não deve.
       def turn_owner_rules
         <<~RULES.strip
+          PEDIDO DESTE CARD: se "other_subjects" vier preenchido, o cliente tem outros pedidos abertos nesta conversa, cada um com o seu card. Este follow-up é SÓ sobre este card ("card.title"): o loop aberto tem de ser deste pedido; não retome nem cite os outros pedidos.
+
           PRIMEIRA PERGUNTA — de quem é a vez (next_action_owner):
           - "cliente": nós perguntamos ou pedimos algo e ele não respondeu, OU já entregamos o que ele pediu (proposta, orçamento, valor, simulação, documento) e a decisão agora é dele. Entregamos e ele sumiu = vez do cliente, mesmo sem pergunta nossa.
           - "empresa": nós prometemos algo e não entregamos, ou o cliente perguntou e não foi respondido.
@@ -260,7 +277,7 @@ module Crm
           message_body é uma sugestão de abordagem dirigida à EQUIPE: diga o que verificar ou retomar, sem inventar fatos.
           Não escreva uma mensagem como se já estivesse sendo enviada ao cliente. Não consulte templates ou janela de 24h.
           message_kind=cobranca quando a pendência for do cliente; aviso_andamento quando for da empresa ou de terceiro.
-          chosen_template deve ser zerado (index=-1, kind="native", name="", id=null, language=null); template_variables=[].
+          chosen_template deve ser zerado (index=-1, kind="native", name="", id=null, language=null); template_variables=[]; decline_reason="none".
           tone reflete a abordagem e confidence reflete a evidência e adequação de gerar o lembrete agora.
           Considere as datas da conversa e cadence.interval_hours ao avaliar prazos. Não invente prazos.
           #{@tone_instructions}
@@ -277,12 +294,14 @@ module Crm
             - Preencha template_variables com os valores posicionais ("1","2",...) que o body do template usa (ex.: "1" = primeiro nome do contato, "2" = assunto curto do loop). Apenas valores reais, nunca texto livre de template.
             - Se NENHUM candidato for adequado ao loop aberto, defina should_send=false e chosen_template.index=-1.
             - NÃO escreva message_body neste modo (deixe vazio).
+            - Quando should_send=false, preencha decline_reason: "no_fitting_template" se há pendência real mas nenhum candidato serve; "nothing_to_send" se não há o que enviar agora. Quando should_send=true, decline_reason="none".
           MODE
         else
           <<~MODE.strip
-            MODO free_form (a conversa está DENTRO da janela de 24h):
+            MODO free_form (texto livre permitido nesta conversa):
             - Se should_send=true, escreva "message_body" para reabrir a conversa: tom de quem quer ajudar uma pessoa, NÃO vendedor; sem falsa urgência; sem pedir desculpas em excesso; no máximo 2-3 linhas curtas de chat com 1 CTA suave; personalize APENAS com fatos reais (use o primeiro nome se aparecer); retome explicitamente o ponto que ficou em aberto.
             - chosen_template NÃO é usado neste modo: devolva um objeto zerado (index=-1, kind="native", name="", id=null, language=null) e template_variables vazio.
+            - decline_reason="none".
           MODE
         end
       end
@@ -301,6 +320,7 @@ module Crm
             title: @card.title,
             current_stage_name: @context[:current_stage]&.dig(:name)
           },
+          pipeline: { kind: @card.pipeline&.kind || 'sell' },
           conversation_summary: @context[:summary],
           conversation_state: @context[:conversation_state],
           temporal: @context[:temporal],
@@ -308,6 +328,7 @@ module Crm
           last_message_role: last_message_role,
           tone_instructions: @tone_instructions
         }
+        payload[:other_subjects] = @context[:other_subjects] if @context[:other_subjects].present?
         payload[:cadence] = @cadence if @cadence.present?
         payload[:candidates] = candidates_for_input if choose_template_mode?
         payload.to_json

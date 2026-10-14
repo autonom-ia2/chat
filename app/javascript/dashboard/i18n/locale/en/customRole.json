@@ -153,6 +153,12 @@
           "LEVEL_VIEW": "Sees campaigns and their results.",
           "LEVEL_MANAGE": "Creates and sends campaigns. This has a cost."
         },
+        "WHATSAPP_TEMPLATES": {
+          "NAME": "WhatsApp templates",
+          "HINT": "Messages WhatsApp approves before sending",
+          "LEVEL_VIEW": "Sees templates and where they are used.",
+          "LEVEL_MANAGE": "Creates, changes and deletes templates in WhatsApp."
+        },
         "INBOXES": {
           "NAME": "Inboxes",
           "HINT": "Channels, WhatsApp QR and members",
@@ -164,6 +170,12 @@
           "HINT": "Automation rules",
           "LEVEL_VIEW": "Sees the rules.",
           "LEVEL_MANAGE": "Creates and edits rules."
+        },
+        "SCHEDULING": {
+          "NAME": "Scheduling",
+          "HINT": "Booking pages and their numbers. Booking a time for a customer needs no permission.",
+          "LEVEL_VIEW": "Sees the booking pages and their numbers.",
+          "LEVEL_MANAGE": "Creates, publishes and pauses booking pages."
         },
         "LABELS": {
           "NAME": "Labels",

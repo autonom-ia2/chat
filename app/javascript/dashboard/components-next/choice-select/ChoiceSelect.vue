@@ -39,6 +39,8 @@ const props = defineProps({
   // toque continua com 44 px. A largura, nos dois tamanhos, é a da maior opção
   // (como no select nativo), a menos que quem usa defina outra.
   compact: { type: Boolean, default: false },
+  // id do botão, para um <label for> visível de quem usa apontar para o campo.
+  triggerId: { type: String, default: undefined },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -52,8 +54,11 @@ const modelValue = defineModel({
 });
 
 const TYPEAHEAD_MS = 600;
-const LIST_MAX_HEIGHT = 320;
+// Sete opções e meia: com mais opções, a de baixo aparece cortada ao meio, o
+// sinal de que a lista continua (4 px é o respiro do topo, py-1).
+const LIST_MAX_HEIGHT = 334;
 const OPTION_HEIGHT = 44;
+const LIST_PADDING_TOP = 4;
 const LIST_GAP = 4;
 const VIEWPORT_MARGIN = 8;
 
@@ -115,6 +120,18 @@ const medidas = computed(() =>
 // reabrir em seguida.
 const ownLabel = computed(() => root.value?.closest('label') ?? null);
 
+// Quando nem todas as opções cabem, a altura para no meio de uma opção: uma
+// linha cortada mostra que há mais embaixo. Com grupos, os rótulos mudam o
+// passo das linhas, então a altura fica como está.
+const halfRowHeight = limit => {
+  const content = flatOptions.value.length * OPTION_HEIGHT + LIST_PADDING_TOP;
+  if (props.groups.length || content <= limit) return limit;
+  const half = OPTION_HEIGHT / 2;
+  const rows = Math.floor((limit - LIST_PADDING_TOP - half) / OPTION_HEIGHT);
+  if (rows < 1) return limit;
+  return LIST_PADDING_TOP + rows * OPTION_HEIGHT + half;
+};
+
 // Coordenadas da lista (position: fixed), a partir do botão. Largura mínima é a
 // do botão; opções mais longas alargam a lista até a borda da tela. A altura é
 // limitada ao espaço do lado escolhido: a lista fixa não volta rolando a página,
@@ -133,7 +150,9 @@ const place = () => {
   const opensUpward = spaceBelow < needed && spaceAbove > spaceBelow;
   const space = opensUpward ? spaceAbove : spaceBelow;
   // Uma opção inteira no mínimo, mesmo em tela minúscula.
-  const maxHeight = Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space));
+  const maxHeight = halfRowHeight(
+    Math.max(OPTION_HEIGHT, Math.min(LIST_MAX_HEIGHT, space))
+  );
   // Em RTL a lista se alinha pela direita do botão e cresce para a esquerda.
   const rtl = getComputedStyle(trigger.value).direction === 'rtl';
   const horizontal = rtl
@@ -309,6 +328,7 @@ onClickOutside(
       {{ medida }}
     </span>
     <button
+      :id="triggerId"
       ref="trigger"
       type="button"
       role="combobox"
@@ -353,7 +373,7 @@ onClickOutside(
       :aria-label="ariaLabel"
       tabindex="-1"
       popover="manual"
-      class="reset-base fixed z-50 list-none px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
+      class="reset-base fixed z-50 list-none px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-[20.875rem] bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
       :style="listStyle"
       @pointerdown.prevent
       @click.prevent

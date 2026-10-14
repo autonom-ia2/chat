@@ -33,6 +33,60 @@ RSpec.describe Instagram::Automation::SessionPublisher do
     end
   end
 
+  describe 'browser invite completion' do
+    let(:operations) { instance_double(Instagram::Testers::BrowserOperations) }
+    let(:completion) do
+      { 'type' => 'browser_operation', 'operation' => 'complete', 'action' => 'invite', 'id' => id,
+        'request_id' => SecureRandom.uuid, 'claim' => SecureRandom.uuid, 'captured_at' => Time.current.utc.iso8601(3),
+        'target_id' => '17841400000000001', 'error_code' => 'meta_unavailable', 'write_started' => false }
+    end
+
+    before { allow(Instagram::Testers::BrowserOperations).to receive(:new).and_return(operations) }
+
+    it 'returns the browser its own code when Rails records the invite as not sent' do
+      allow(operations).to receive(:complete!).and_return(
+        'id' => id, 'request_id' => completion.fetch('request_id'), 'state' => 'failed', 'error_code' => 'invite_not_sent'
+      )
+      expect(publisher.call(completion)).to include(state: 'failed', error_code: 'meta_unavailable')
+    end
+
+    it 'rejects invite_not_sent from the browser because only Rails can prove it' do
+      expect(operations).not_to receive(:complete!)
+      expect { publisher.call(completion.merge('error_code' => 'invite_not_sent')) }
+        .to raise_error(Instagram::Automation::OperatorControl::Rejected)
+    end
+  end
+
+  describe 'browser search completion' do
+    let(:operations) { instance_double(Instagram::Testers::BrowserOperations) }
+    let(:candidate) { { 'id' => '17841400000000001', 'username' => 'demo_company', 'name' => 'Demo', 'avatar_url' => nil } }
+    let(:completion) do
+      { 'type' => 'browser_operation', 'operation' => 'complete', 'action' => 'search', 'id' => id,
+        'request_id' => SecureRandom.uuid, 'claim' => SecureRandom.uuid, 'captured_at' => Time.current.utc.iso8601(3) }
+    end
+
+    before do
+      allow(Instagram::Testers::BrowserOperations).to receive(:new).and_return(operations)
+      allow(operations).to receive(:complete!).and_return('id' => id, 'request_id' => completion.fetch('request_id'), 'state' => 'ready')
+    end
+
+    it 'accepts the legacy candidate and a candidate with a valid tester status' do
+      [candidate, *%w[absent pending accepted].map { |status| candidate.merge('tester_status' => status) },
+       candidate.merge('tester_status' => nil)].each do |result|
+        expect(publisher.call(completion.merge('results' => [result]))).to include(state: 'ready')
+      end
+    end
+
+    it 'rejects an invalid tester status or an extra candidate key before completing' do
+      expect(operations).not_to receive(:complete!)
+      [candidate.merge('tester_status' => 'CONFIRMED'), candidate.merge('tester_status' => ''),
+       candidate.merge('tester_status' => nil, 'extra' => 'x')].each do |result|
+        expect { publisher.call(completion.merge('results' => [result])) }
+          .to raise_error(Instagram::Automation::OperatorControl::Rejected)
+      end
+    end
+  end
+
   context 'with canonical saved metadata' do
     let(:metadata) do
       { 'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',

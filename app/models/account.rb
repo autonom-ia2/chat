@@ -30,6 +30,7 @@ class Account < ApplicationRecord
   include Reportable
   include Featurable
   include Autonomia::AccountProvisioningDefaults
+  include Autonomia::AgentsNiche
   include CacheKeys
   include CaptainFeaturable
   include AccountEmailRateLimitable
@@ -98,6 +99,7 @@ class Account < ApplicationRecord
   has_many :crm_cards, class_name: 'Crm::Card', dependent: :destroy_async
   has_many :crm_card_conversations, class_name: 'Crm::CardConversation', dependent: :destroy_async
   has_many :crm_follow_ups, class_name: 'Crm::FollowUp', dependent: :destroy_async
+  has_many :crm_follow_up_series, class_name: 'Crm::FollowUpSeries', dependent: :destroy_async
   has_many :crm_meetings, class_name: 'Crm::Meeting', dependent: :destroy_async
   has_many :crm_meta_conversion_events, class_name: 'Crm::MetaConversionEvent', dependent: :destroy_async
   has_many :crm_google_conversion_events, class_name: 'Crm::GoogleConversionEvent', dependent: :destroy_async
@@ -109,6 +111,11 @@ class Account < ApplicationRecord
   has_many :crm_ai_stage_suggestions, class_name: 'Crm::AiStageSuggestion', dependent: :destroy_async
   has_many :crm_agent_booking_profiles, class_name: 'Crm::AgentBookingProfile', dependent: :destroy_async
   has_many :crm_agent_booking_links, class_name: 'Crm::AgentBookingLink', dependent: :destroy_async
+  # Identidade salva das páginas de agendamento (#1289): a logo da conta. Cor, lado da logo e frase ficam em
+  # `settings['booking_identity']` (ver Crm::BookingV2::BrandIdentity).
+  has_one_attached :booking_identity_logo
+  # A logo de fundo escuro que acompanha a da identidade (#1295), quando há uma (enviada ou gerada).
+  has_one_attached :booking_identity_logo_dark
   has_many :crm_calendar_sync_states, class_name: 'Crm::CalendarSyncState', dependent: :destroy_async
   has_one :autonomia_prospecting_setting, class_name: 'Autonomia::Prospecting::Setting', dependent: :destroy_async
   has_many :autonomia_prospecting_searches, class_name: 'Autonomia::Prospecting::Search', dependent: :destroy_async

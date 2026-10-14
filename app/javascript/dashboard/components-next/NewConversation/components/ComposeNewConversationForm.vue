@@ -13,6 +13,7 @@ import {
   buildContactableInboxesList,
   prepareNewMessagePayload,
   prepareWhatsAppMessagePayload,
+  canStartWithWhatsappApi,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper.js';
 
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
@@ -96,6 +97,11 @@ const whatsappMessageTemplates = computed(() =>
     : []
 );
 
+// fork chat#1457: com o WhatsApp Híbrido pronto, o texto livre vale ao lado do modelo.
+const isWhatsappApiStart = computed(() =>
+  canStartWithWhatsappApi(props.targetInbox)
+);
+
 const inboxChannelType = computed(() => props.targetInbox?.channelType || '');
 
 const inboxMedium = computed(() => props.targetInbox?.medium || '');
@@ -109,7 +115,11 @@ const effectiveChannelType = computed(() =>
 const validationRules = computed(() => ({
   selectedContact: { required },
   targetInbox: { required },
-  message: { required: requiredIf(!inboxTypes.value.isWhatsapp) },
+  message: {
+    required: requiredIf(
+      !inboxTypes.value.isWhatsapp || isWhatsappApiStart.value
+    ),
+  },
   subject: { required: requiredIf(inboxTypes.value.isEmail) },
 }));
 
@@ -336,7 +346,7 @@ const handleSendTwilioMessage = async ({ message, templateParams }) => {
 
 const shouldShowMessageEditor = computed(() => {
   return (
-    !inboxTypes.value.isWhatsapp &&
+    (!inboxTypes.value.isWhatsapp || isWhatsappApiStart.value) &&
     !showNoInboxAlert.value &&
     !inboxTypes.value.isTwilioWhatsapp
   );
@@ -421,6 +431,14 @@ useKeyboardEvents({
         :copilot="copilot"
       />
 
+      <p
+        v-if="isWhatsappApiStart && shouldShowMessageEditor"
+        class="flex items-center gap-1.5 px-4 py-2 mb-0 text-xs text-n-slate-11"
+      >
+        <span class="i-lucide-info size-3.5 flex-shrink-0" aria-hidden="true" />
+        {{ $t('COMPOSE_NEW_CONVERSATION.FORM.WHATSAPP_API_START_HINT') }}
+      </p>
+
       <AttachmentPreviews
         v-if="state.attachedFiles.length > 0"
         :attachments="state.attachedFiles"
@@ -439,6 +457,7 @@ useKeyboardEvents({
       v-else
       :attached-files="state.attachedFiles"
       :is-whatsapp-inbox="inboxTypes.isWhatsapp"
+      :is-whatsapp-api-start="isWhatsappApiStart"
       :is-email-or-web-widget-inbox="inboxTypes.isEmailOrWebWidget"
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"

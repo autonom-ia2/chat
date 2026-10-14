@@ -14,6 +14,7 @@ import { useSidebarKeyboardShortcuts } from './useSidebarKeyboardShortcuts';
 import { useScrollActiveItemIntoView } from 'dashboard/composables/useScrollActiveItemIntoView';
 import { vOnClickOutside } from '@vueuse/components';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { ROTAS_DA_JORNADA as MODELOS_WHATSAPP_ROTAS } from 'dashboard/routes/dashboard/campaigns/modelos/constants';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 import { canAccessStore } from 'dashboard/helper/storeAccess';
@@ -35,12 +36,17 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
+import {
+  bookingSidebarGroup,
+  crmCalendarSidebarItem,
+} from 'dashboard/routes/dashboard/settings/booking/bookingAccess';
+import { agentsSidebarItems } from 'dashboard/routes/dashboard/autonomia/agentes/utils/agentsSidebar';
 import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
-import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
+import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import {
   SIDEBAR_SORT_SECTIONS,
   getSidebarSortOptions,
@@ -146,6 +152,20 @@ const hasAutonomiaAgentsFeature = computed(
 const autonomiaAgentsFlag = computed(
   () => autonomiaAgentsMasterFlag.value && hasAutonomiaAgentsFeature.value
 );
+// Nova jornada de Agentes (#1181): o menu vira um item só, "Agentes".
+const agentsJourneyOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.AUTONOMIA_AGENTS_JOURNEY
+  )
+);
+// Modelos WhatsApp, nova jornada: o mesmo item do menu abre a tela nova.
+const whatsappTemplatesJourneyOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.WHATSAPP_TEMPLATES_JOURNEY
+  )
+);
 const emailCampaignEnabled = computed(
   () =>
     globalConfig.value?.emailCampaignEnabled === true && crmKanbanEnabled.value
@@ -237,8 +257,26 @@ const canManageCrmSla = computed(() => {
   return permissions.includes(CRM_ADMIN_PERMISSION);
 });
 
+// Agendamento mora no CRM (#1212) como subgrupo (#1264): função só com
+// Agendamento vê o grupo CRM só com ele, e dentro só Páginas e links; Kanban,
+// Calendário, Meus horários e Meus números só aparecem para quem vê o CRM.
+// Com o subgrupo, o Calendário é o primeiro filho dele (#1288); sem a flag do
+// agendamento novo não há subgrupo e o Calendário segue solto no CRM.
+const crmBookingGroup = computed(() =>
+  bookingSidebarGroup({
+    account: currentAccount.value(accountId.value),
+    isAdministrator: isAdministrator.value,
+    permissions: getUserPermissions(currentUser.value, accountId.value),
+    canViewCrm: canViewCrm.value,
+    t,
+    accountScopedRoute,
+  })
+);
+
 const showCrmSidebarEntry = computed(
-  () => crmKanbanEnabled.value && canViewCrm.value
+  () =>
+    crmKanbanEnabled.value &&
+    (canViewCrm.value || crmBookingGroup.value.length > 0)
 );
 
 const hasFilteredUnreadCounts = computed(() => {
@@ -802,34 +840,12 @@ const menuItems = computed(() => {
         'automation_list',
       ],
     },
-    ...(autonomiaAgentsEnabled.value
-      ? [
-          {
-            name: 'Agents',
-            label: t('SIDEBAR.AGENTS_AUTONOMIA'),
-            icon: 'i-lucide-bot',
-            activeOn: [
-              'autonomia_agents_index',
-              'autonomia_agents_builder',
-              'autonomia_agent_panel',
-            ],
-            children: [
-              {
-                name: 'My Agents',
-                label: t('SIDEBAR.AGENTS_HUB'),
-                to: accountScopedRoute('autonomia_agents_index'),
-                activeOn: ['autonomia_agents_index', 'autonomia_agent_panel'],
-              },
-              {
-                name: 'Agent Builder',
-                label: t('SIDEBAR.AGENTS_BUILDER'),
-                to: accountScopedRoute('autonomia_agents_builder'),
-                activeOn: ['autonomia_agents_builder'],
-              },
-            ],
-          },
-        ]
-      : []),
+    ...agentsSidebarItems({
+      isVisible: autonomiaAgentsEnabled.value,
+      journeyOn: agentsJourneyOn.value,
+      t,
+      accountScopedRoute,
+    }),
     ...prospectingSidebarItems({
       isVisible: autonomiaProspectingEnabled.value,
       t,
@@ -936,18 +952,20 @@ const menuItems = computed(() => {
             label: t('SIDEBAR.CRM'),
             icon: 'i-lucide-kanban-square',
             children: [
-              {
-                name: 'CRM Kanban',
-                label: t('SIDEBAR.CRM_KANBAN'),
-                to: accountScopedRoute('crm_kanban_index'),
-                activeOn: ['crm_kanban_index'],
-              },
-              {
-                name: 'CRM Calendar',
-                label: t('SIDEBAR.CRM_CALENDAR'),
-                to: accountScopedRoute('crm_calendar_index'),
-                activeOn: ['crm_calendar_index'],
-              },
+              ...(canViewCrm.value
+                ? [
+                    {
+                      name: 'CRM Kanban',
+                      label: t('SIDEBAR.CRM_KANBAN'),
+                      to: accountScopedRoute('crm_kanban_index'),
+                      activeOn: ['crm_kanban_index'],
+                    },
+                    ...(crmBookingGroup.value.length > 0
+                      ? []
+                      : [crmCalendarSidebarItem({ t, accountScopedRoute })]),
+                  ]
+                : []),
+              ...crmBookingGroup.value,
               ...(canViewCrmReports.value
                 ? [
                     {
@@ -1119,12 +1137,19 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-        {
-          name: 'Campaign WhatsApp Templates',
-          label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
-          to: accountScopedRoute('campaigns_templates_index'),
-          activeOn: ['campaigns_templates_index'],
-        },
+        whatsappTemplatesJourneyOn.value
+          ? {
+              name: 'Campaign WhatsApp Templates',
+              label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
+              to: accountScopedRoute('modelos_whatsapp_lista'),
+              activeOn: MODELOS_WHATSAPP_ROTAS,
+            }
+          : {
+              name: 'Campaign WhatsApp Templates',
+              label: t('SIDEBAR.CAMPAIGN_WHATSAPP_TEMPLATES'),
+              to: accountScopedRoute('campaigns_templates_index'),
+              activeOn: ['campaigns_templates_index'],
+            },
         {
           name: 'WhatsApp',
           label: t('SIDEBAR.WHATSAPP_OFFICIAL'),
@@ -1241,6 +1266,9 @@ const menuItems = computed(() => {
                   'agent_capacity_policy_index',
                   'agent_capacity_policy_create',
                   'agent_capacity_policy_edit',
+                  // A passagem (#1385) mora em Atribuição para o administrador.
+                  'crm_handoff_settings_index',
+                  'crm_handoff_settings_edit',
                 ],
                 to: accountScopedRoute('assignment_policy_index'),
               },

@@ -8,7 +8,9 @@
 #   uma recusa manual não é trocada pela da Prospecção, e remover depois a da Prospecção não apaga a manual.
 # - opt_in! limpa as três colunas. Com source:, só limpa se a recusa gravada veio daquela origem.
 # - transfer_opt_out! troca a origem sem tirar a recusa, quando a origem gravada sai e outra ainda vale.
-# - Quem grava desfaz só o que é seu: o painel desfaz só a manual (release_manual_opt_out!), a Prospecção só a dela.
+# - Quem grava desfaz só o que é seu (release_opt_out!): o painel desfaz a manual e a campaign_reply (o pedido de parar
+#   que a IA reconheceu na resposta a uma campanha, #1449, que não tem outra tela), a Prospecção só a dela e o reset do
+#   follow-up de IA, no drawer do card, só a follow_up_reply (chat#1325).
 # - As três gravam sem rodar as validações do contato, para dado antigo (e-mail ou telefone fora do formato)
 #   não impedir o registro da recusa. Rodam os callbacks, então o evento de contato atualizado sai normalmente.
 # - As colunas não entram na edição comum do contato (ContactsController#permitted_params); só por estes métodos.
@@ -16,7 +18,16 @@
 module ContactOptOut
   extend ActiveSupport::Concern
 
-  OPT_OUT_SOURCES = %w[prospecting email_unsubscribe manual].freeze
+  # Uma origem por linha. Origem nova entra aqui e também em ContactMergeAction::OPT_OUT_PRECEDENCE, no rótulo da tela do
+  # contato (ContactOptOutSection.vue + i18n en/pt_BR) e, se a recusa puder ser reconhecida pelo telefone ou e-mail, em
+  # Contacts::OptOutInheritance. Cada origem tem um dono, que a desfaz com release_opt_out!(source:).
+  OPT_OUT_SOURCES = %w[
+    prospecting
+    email_unsubscribe
+    manual
+    follow_up_reply
+    campaign_reply
+  ].freeze
 
   included do
     belongs_to :opted_out_by, class_name: 'User', optional: true
@@ -61,13 +72,29 @@ module ContactOptOut
     end
   end
 
-  # Desfaz a recusa manual. Se outra origem ainda sustenta a recusa (e-mail descadastrado ou lead recusado que alcança o
-  # contato), a recusa fica com essa origem em vez de sumir e voltar sozinha na próxima edição do contato.
-  def release_manual_opt_out!(by:)
-    remaining_source = Contacts::OptOutInheritance.new(account: account).source_for(self)
-    return transfer_opt_out!(from: 'manual', to: remaining_source) if remaining_source
+  # Desfaz a recusa da origem informada, e só dela: recusa de outra origem fica como está (retorna false). Se outra origem
+  # ainda sustenta a recusa (card marcado pelo pedido de parar no follow-up, e-mail descadastrado ou lead recusado que
+  # alcança o contato), a recusa fica com essa origem em vez de sumir e voltar sozinha na próxima edição do contato. Se a
+  # própria origem ainda se sustenta (outro card do contato continua marcado), nada muda e retorna false.
+  # A prova é conferida com o contato travado: o "sim" noutro card grava o card e depois trava o contato
+  # (Crm::FollowUps::OptOutDecision), então ou ele já está visível aqui, ou grava a recusa de novo depois. Aqui só o
+  # contato é travado; os cards da prova são lidos sem lock, para nunca travar contato -> card.
+  def release_opt_out!(source:, by:)
+    source = validated_opt_out_source(source)
 
-    opt_in!(by: by, source: 'manual')
+    with_lock do
+      next false unless opted_out? && opt_out_source == source
+
+      remaining_source = Contacts::OptOutInheritance.new(account: account).source_for(self)
+      next false if remaining_source == source
+      next transfer_opt_out!(from: source, to: remaining_source) if remaining_source
+
+      opt_in!(by: by, source: source)
+    end
+  end
+
+  def release_manual_opt_out!(by:)
+    release_opt_out!(source: 'manual', by: by)
   end
 
   # A recusa gravada com a origem from continua, agora com a origem to; a data da recusa fica a original.

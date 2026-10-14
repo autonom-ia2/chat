@@ -1,6 +1,25 @@
 class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent, only: [:show, :update, :destroy, :avatar]
 
+  # #1211 — `config.native_tool_slugs` com ferramenta de outro fluxo (ou que não existe). Recusa com o
+  # slug na resposta, nunca descarte silencioso: quem pediu fica sabendo que a ferramenta não ligou.
+  # `code` separa o valor que nem é uma lista (`slugs` vazio) da lista com slug recusado.
+  class FerramentaNativaNaoPermitida < StandardError
+    attr_reader :slugs, :code
+
+    def initialize(slugs, code: 'native_tool_not_allowed')
+      @slugs = slugs
+      @code = code
+      super()
+    end
+  end
+
+  rescue_from FerramentaNativaNaoPermitida, with: :render_ferramenta_nativa_nao_permitida
+  # #1307 — liberação que não deixa ninguém da página: recusa em vez de virar "todas" em silêncio.
+  rescue_from ::Autonomia::Agents::Tools::Native::AgendaPessoas::Recusada do
+    render_unprocessable(I18n.t('autonomia.agents.booking_agent_ids_invalid'))
+  end
+
   # Andaime mínimo aplicado pelo backend em modo manual (IP oculto) — embrulha a instrução do
   # usuário com guardrails de segurança/formato/handoff. Nunca vem do params nem é exposto.
   MANUAL_SCAFFOLD = <<~SCAFFOLD.freeze
@@ -22,10 +41,15 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   def create
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if instrucao_mantida_pelo_tipo?(params.dig(:agent, :agent_type))
 
-    @agent = agents_scope.new(agent_params)
+    attrs = agent_params
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
+
+    @agent = agents_scope.new(attrs.except(:config))
+    merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
-    @agent.save!
+    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?).
+    @agent.save!(context: %i[create ativacao])
     render :show, status: :created
   end
 
@@ -40,19 +64,20 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     with_knowledge system_key builder_active_thread_id
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
+  # #1366 — status, enabled ou actuation mudando: tudo (assign + save!) com o AGENTE TRAVADO (with_lock relê o agente),
+  # para a validação de atender (Agent#tem_onde_trabalhar?) reler os vínculos depois da trava. Sem ela, um PATCH que
+  # ativa via o vínculo que uma desconexão paralela estava tirando, e a parada automática dessa desconexão via o agente
+  # ainda parado: o agente terminava atendendo sem caixa. É a mesma trava (agente → caixa) do InboxConnector.
+  # O histórico da instrução é gravado fora da trava: é best-effort e não pode envenenar a transação do save.
   def update
     rejeitar_edicao_da_instrucao_mantida
-    discard_generated_instruction_on_manual_switch
-    instruction_before = @agent.instruction
     attrs = agent_params
-    @agent.assign_attributes(attrs.except(:config))
-    merge_config!(attrs[:config]) if attrs.key?(:config)
-    return if reject_internal_with_channels
+    return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
 
-    apply_manual_scaffold
-    @agent.save!
-    record_manual_instruction_version(instruction_before)
-    render :show
+    instruction_before = ::Autonomia::Agents::Agent.muda_atendimento?(attrs) ? @agent.with_lock { salvar_update(attrs) } : salvar_update(attrs)
+    # performed?: reject_internal_with_channels já respondeu 422, sem salvar.
+    record_manual_instruction_version(instruction_before) unless performed?
+    render :show unless performed?
   end
 
   def destroy
@@ -80,6 +105,19 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   private
+
+  # -> a instrução de antes do save, ou nil quando recusou (a resposta 422 já foi renderizada).
+  def salvar_update(attrs)
+    discard_generated_instruction_on_manual_switch
+    instruction_before = @agent.instruction
+    @agent.assign_attributes(attrs.except(:config))
+    merge_config!(attrs[:config]) if attrs.key?(:config)
+    return if reject_internal_with_channels
+
+    apply_manual_scaffold
+    @agent.save!
+    instruction_before
+  end
 
   def fetch_agent
     @agent = agents_scope.find(params[:id])
@@ -159,10 +197,34 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
                    enabled status actuation]
     permitted << :instruction if manual_mode?
     permitted.push(:company_name, :supplemental_instruction) if @agent&.contracted_instance?
-    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {})
-    attrs[:config] = sanitized_config(attrs[:config]) if attrs[:config].present?
-    permit_audience_config(attrs)
-    attrs
+    # Hash simples, não Parameters: um Hash gravado dentro de Parameters volta como "não permitido" no `new` (500).
+    attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {}).to_h
+    attrs[:config] = config_conferido(attrs[:config]) if attrs[:config].present?
+    attrs.tap { |values| permit_audience_config(values) }
+  end
+
+  # #1211 — `permit(config: {})` deixava passar qualquer slug do catálogo, e o agente comum ganhava as
+  # ferramentas do Guia da Plataforma. A lista permitida é a do fluxo do agente
+  # (`Tools::Registry.permitidas_para`); `null` e lista vazia seguem aceitos (desligam todas).
+  def config_conferido(config)
+    limpo = sanitized_config(config)
+    recusar_ferramentas_de_outro_fluxo(limpo['native_tool_slugs'])
+    # #1307 — `booking_agent_ids`: só pessoas da página escolhida, desta conta, como inteiros únicos (`AgendaPessoas`).
+    limpo.merge(::Autonomia::Agents::Tools::Native::AgendaPessoas.liberacao_conferida(limpo, salvo: config_salvo, account: Current.account))
+  end
+
+  def recusar_ferramentas_de_outro_fluxo(pedidos)
+    return if pedidos.nil?
+    raise FerramentaNativaNaoPermitida.new([], code: 'native_tool_slugs_not_a_list') unless pedidos.is_a?(Array)
+
+    permitidos = ::Autonomia::Agents::Tools::Registry.permitidas_para(@agent || agents_scope.new).map(&:slug)
+    recusados = pedidos.map(&:to_s) - permitidos
+    raise FerramentaNativaNaoPermitida, recusados if recusados.any?
+  end
+
+  def render_ferramenta_nativa_nao_permitida(error)
+    render json: { error: I18n.t('autonomia.agents.native_tool_not_allowed'), code: error.code, slugs: error.slugs },
+           status: :unprocessable_entity
   end
 
   # #284 (Entrega 2a) — o público-alvo é uma árvore recursiva (grupos com arrays de hashes) que o
@@ -198,6 +260,32 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     return value.to_unsafe_h if value.respond_to?(:to_unsafe_h)
 
     value.to_h
+  end
+
+  # #1196 — escolher (ou trocar) a página de agendamento da IA pede poder ver Agendamento: administrador ou função com
+  # `agendamento_view` (`_manage` implica). Reenviar a página que já está salva (quem manda o config inteiro de volta)
+  # não é escolher.
+  # #1307: liberar pessoas da página (`booking_agent_ids`) é a mesma escolha e pede a mesma permissão.
+  def recusar_pagina_de_agendamento_sem_permissao(config)
+    return false unless config.respond_to?(:key?) && (muda_a_pagina?(config) || muda_as_pessoas?(config))
+    return false if Current.account_user&.permission_granted?('agendamento_view')
+
+    render_unprocessable(I18n.t('autonomia.agents.booking_page_forbidden'))
+    true
+  end
+
+  def muda_a_pagina?(config)
+    chave = ::Autonomia::Agents::Tools::Native::Agenda::CONFIG_KEY
+    config.key?(chave) && config[chave].to_s != (@agent ? @agent.config.to_h[chave] : nil).to_s
+  end
+
+  # O pedido cru (antes da conferência), para reenviar o que veio do GET não contar como mudança.
+  def muda_as_pessoas?(_config)
+    ::Autonomia::Agents::Tools::Native::AgendaPessoas.muda?(parameter_hash(params.dig(:agent, :config)).stringify_keys, salvo: config_salvo)
+  end
+
+  def config_salvo
+    @agent ? @agent.config.to_h : {}
   end
 
   def manual_mode?

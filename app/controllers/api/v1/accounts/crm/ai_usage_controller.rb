@@ -3,6 +3,7 @@ require 'csv'
 class Api::V1::Accounts::Crm::AiUsageController < Api::V1::Accounts::Crm::BaseController
   before_action :ensure_crm_ai_enabled
   before_action :authorize_reports
+  before_action :ensure_visible_pipeline
 
   def index
     render json: { payload: builder.perform }
@@ -23,6 +24,15 @@ class Api::V1::Accounts::Crm::AiUsageController < Api::V1::Accounts::Crm::BaseCo
 
   def authorize_reports
     authorize %i[crm report], :view?
+  end
+
+  # Acesso por funil (#1148, PR D): sem funil, o consumo é o da conta inteira (custo, não número de funil); filtrar por
+  # um funil que a pessoa não tem no painel é 404, como nos relatórios.
+  def ensure_visible_pipeline
+    return if params[:pipeline_id].blank?
+
+    visible = Crm::Access::VisiblePipelines.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    visible.apply_to_reports(Current.account.crm_pipelines).find(params[:pipeline_id]) if visible.restricted?
   end
 
   def builder

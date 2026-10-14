@@ -3,7 +3,8 @@
 class WhatsappHybrid::Connection < ApplicationRecord
   self.table_name = 'whatsapp_hybrid_connections'
 
-  ORIGINS = %w[human bot automation campaign].freeze
+  # crm_follow_up: toque do follow-up de IA ou retorno agendado do CRM (a mensagem leva crm_follow_up_id).
+  ORIGINS = %w[human bot automation campaign crm_follow_up].freeze
   STATUSES = %w[pending awaiting_scan connecting connected failed disconnected].freeze
 
   belongs_to :account

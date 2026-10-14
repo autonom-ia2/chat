@@ -2428,7 +2428,7 @@
     {
      "id": "10.07",
      "titulo": "IA do funil: ligar, critérios e extração de campos",
-     "para_que_serve": "Ligar a IA do funil, escrever os critérios de cada etapa e deixar a IA preencher campos personalizados.",
+     "para_que_serve": "Entender o que a IA do funil faz sozinha e escrever a frase de cada etapa, com ou sem sugestão.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -2502,7 +2502,7 @@
     {
      "id": "10.10",
      "titulo": "Handoff da IA: conceito, gatilho, destino e por etapa",
-     "para_que_serve": "Escolher entre 'Direto' e 'Convite', escrever o gatilho, o destino e personalizar por etapa do funil.",
+     "para_que_serve": "Escolher quando a assistente do funil chama a equipe, quem recebe, se entrega 'Na hora' ou 'Com convite', e o que muda em cada etapa.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [
@@ -2682,6 +2682,58 @@
      "fontes": [
       "porques: Usar o card CRM a partir de uma conversa",
       "porques: Gerenciar tokens de integracao do CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.17",
+     "titulo": "Página de agendamento: o cliente marca o horário sozinho",
+     "para_que_serve": "Criar, publicar e pausar a página onde o cliente marca a conversa sozinho, sem caixa de e-mail, e mandar o link ou o QR code; fechar feriados, passar reuniões para outra pessoa e Meus horários.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "settings_booking",
+      "crm_my_booking_hours",
+      "settings_booking_results",
+      "crm_booking_results"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_booking",
+      "destaque": null
+     },
+     "requer": "crm_booking_v2",
+     "prints": [],
+     "fontes": [
+      "porques: Criar e publicar a página de agendamento",
+      "porques: Quem pode o quê no Agendamento",
+      "porques: Ver os resultados do agendamento da equipe",
+      "porques: Ver meus números de agendamento"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "10.18",
+     "titulo": "Caixas no CRM: o que chega e quem cuida",
+     "para_que_serve": "Decidir, por caixa de entrada, quais funis ela atende, quem cuida de cada assunto (inclusive das conversas ainda sem assunto) e o que o sistema faz sozinho quando chega mensagem.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "crm_caixas",
+      "crm_caixa"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_caixas",
+      "destaque": null
+     },
+     "requer": "crm_configurar_caixas",
+     "prints": [],
+     "fontes": [
+      "porques: Ver as caixas no CRM",
+      "porques: Alterar o que chega numa caixa e quem cuida"
      ],
      "revisar": false,
      "nota": null
@@ -3684,6 +3736,96 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.25",
+     "titulo": "Ver os modelos de mensagem do WhatsApp e se foram aprovados",
+     "para_que_serve": "Entender a situação de cada modelo (aprovado, em análise, recusado, pausado), o tipo e o custo por envio, onde ele está em uso e as respostas grátis do mês.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_lista",
+      "modelos_whatsapp_modelo"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: ver_modelos_de_mensagem_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.26",
+     "titulo": "Criar um modelo de mensagem do WhatsApp e mandar para aprovação",
+     "para_que_serve": "Escrever o modelo com os campos, os extras e a conta do WhatsApp, conferir antes e mandar para o WhatsApp aprovar, inclusive sem sair da campanha.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_novo",
+      "modelos_whatsapp_enviado"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_novo",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: criar_modelo_de_mensagem_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.27",
+     "titulo": "Corrigir um modelo recusado ou alterar um modelo",
+     "para_que_serve": "Entender o motivo da recusa, corrigir ou alterar o modelo, pedir revisão ao WhatsApp e retomar a campanha que parou por causa dele.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_alterar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: corrigir_ou_alterar_modelo_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.28",
+     "titulo": "Usar um modelo aprovado numa campanha",
+     "para_que_serve": "Abrir a campanha de WhatsApp Oficial com o número, o modelo e os campos já escolhidos, e ver o tipo e o custo por envio na revisão.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_usar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_lista",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: usar_modelo_do_whatsapp_em_campanha"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
@@ -4484,7 +4626,7 @@
     {
      "id": "18.05",
      "titulo": "O critério de cada etapa é a instrução que a IA do funil segue",
-     "para_que_serve": "Explicar que o critério de cada etapa, no painel IA do funil, é lido pela IA para decidir quando mover um card.",
+     "para_que_serve": "Explicar que a frase de cada etapa (Quando o cliente está nesta etapa?) é lida pela IA para decidir quando mover um card.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [

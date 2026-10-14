@@ -400,7 +400,7 @@ pt_BR:
     online:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
     opt_out:
-      undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o descadastro de e-mail não se desfaz por aqui.'
+      undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe ou o pedido de parar reconhecido na resposta a uma campanha. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
   integration_apps:
     #Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:
@@ -919,6 +919,31 @@ pt_BR:
         whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
         whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
         whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'
+        whatsapp_proxy:
+          plano_esgotado: 'Proxy do WhatsApp: o plano %{plano} não tem IP do Brasil livre na fatia desta stack. A caixa %{caixa} (conta %{conta}) está sem proxy. Compre mais IPs na Webshare ou amplie a fatia.'
+          fatia_vazia: 'Proxy do WhatsApp: a fatia %{plano} desta stack está vazia, então nenhum número recebe proxy desse plano. Defina a variável da fatia.'
+          ip_da_fatia_sumiu: 'Proxy do WhatsApp: %{n} IP(s) da fatia %{plano} não estão mais na Webshare (foram trocados). Atualize a fatia desta stack.'
+          troca_desfeita: 'Proxy do WhatsApp: a troca de IP da caixa %{caixa} (conta %{conta}) para %{ip} falhou (tentativa %{n}) e a configuração anterior voltou. Vou tentar de novo mais tarde, esperando mais a cada vez.'
+          volta_falhou: 'Proxy do WhatsApp: não deu para voltar a configuração anterior da caixa %{caixa} (conta %{conta}). Confira a sessão agora.'
+          sessao_instavel_trocada: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) ficou caindo no IP %{ip}. O IP ficou 24 horas em quarentena e o número ganhou outro.'
+          sessao_instavel_de_novo: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo depois de trocar de IP hoje. Não parece ser o proxy; confira o aparelho e o motor.'
+          ip_em_quarentena: 'Proxy do WhatsApp: o IP %{ip} (%{plano}) está em quarentena por 24 horas.'
+          aparelho_desvinculado: 'Proxy do WhatsApp: em %{data}, %{n} caixa(s) pediram QR (aparelho desvinculado). Não é o proxy; nada foi trocado.'
+          troca_em_massa: 'Proxy do WhatsApp: %{n} de %{total} IPs em uso sumiram da Webshare de uma vez. Trocando no máximo 5 por rodada.'
+          plano_configurado_inexistente: 'Proxy do WhatsApp: o id de plano fixado para %{plano} não é mais um plano ativo. Usando o plano ativo; remova a variável.'
+          falha_geral: 'Proxy do WhatsApp: %{n} de %{total} sessões caíram ao mesmo tempo (%{plano}). Parece falha geral (Webshare, WhatsApp ou o motor), não IP ruim: nenhum IP foi trocado nem posto em quarentena.'
+          falha_geral_em_curso: 'Proxy do WhatsApp: a falha geral (%{plano}) já dura %{horas} horas; %{n} número(s) seguem fora. Nenhum IP foi trocado nem posto em quarentena por causa dela.'
+          falha_geral_perdida: 'Proxy do WhatsApp: o registro da falha geral (%{plano}) sumiu antes de terminar (Redis?). A contagem recomeça.'
+          sessao_fora_24h: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) está fora há mais de 24 horas. Ela não caiu de um estado conectado, então o IP não foi trocado; confira o aparelho e o motor.'
+          motor_indisponivel: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo no IP %{ip}, mas o motor não respondeu, então a troca ficou para depois.'
+          credencial_mascarada: 'Proxy do WhatsApp: o motor devolveu mascarada a credencial do proxy da caixa %{caixa} (conta %{conta}), então não dá para comparar. Nada foi regravado nem reaplicado.'
+          proxy_manual_detectado: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) passou a usar um proxy fora da Webshare (%{ip}), posto à mão. Ela deixou de ser gerenciada pela plataforma.'
+          falha_geral_fim: 'Proxy do WhatsApp: a falha geral (%{plano}) terminou. %{n} sessão(ões) ainda fora passam a ser avaliadas uma a uma.'
+          webshare_indisponivel: 'Proxy do WhatsApp: a Webshare segue falhando no plano %{plano} (%{n} erros seguidos). Nada desse plano é corrigido até ela responder.'
+          caixa_sem_proxy: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) nasceu sem proxy porque a Webshare não respondeu. Vou tentar de novo.'
+          quarentena_sem_destino: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo no IP %{ip}, mas não há IP livre para onde mover. Nada mudou.'
+          atribuicao_invalida: 'Proxy do WhatsApp: o IP novo da caixa %{caixa} (conta %{conta}) foi recusado (conta ou limite por IP). Nada mudou.'
+          teto_de_quarentena: 'Proxy do WhatsApp: o plano %{plano} já teve 3 IPs em quarentena hoje. Parei de pôr em quarentena; confira a Webshare.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
@@ -959,7 +984,11 @@ pt_BR:
       retry_unavailable: 'Não é possível reexecutar esta geração agora.'
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
+      sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
+      booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'
+      booking_agent_ids_invalid: 'Nenhuma das pessoas escolhidas atende por esta página de agendamento. Escolha pessoas da página, ou deixe vazio para usar todas.'
       operate:
         handoff_default: 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
         handoff_defaults:

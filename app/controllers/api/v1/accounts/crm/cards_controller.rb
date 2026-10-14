@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
+  rescue_from ::Crm::Access::CardGuard::OwnerWithoutFunnel, with: :render_owner_without_funnel
+
   include Crm::FilterParameters
 
   before_action :validate_crm_filter_parameters, only: %i[index export]
@@ -16,10 +18,6 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   RESULTS_PER_PAGE = 25
   MAX_RESULTS_PER_PAGE = 100
   XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'.freeze
-  # Selo da lista (#1141): conversa com mais de um card aberto mostra o assunto atual (focused_at mais recente).
-  CARD_STAGES_FOCUS_JOIN = 'LEFT JOIN crm_card_conversations crm_focus ON crm_focus.card_id = crm_cards.id ' \
-                           'AND crm_focus.account_id = crm_cards.account_id ' \
-                           'AND crm_focus.conversation_id = crm_cards.conversation_id'.freeze
 
   def index
     authorize ::Crm::Card
@@ -35,12 +33,20 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card, :export?
     export = ::Crm::Cards::XlsxExport.new(
       cards: filtered_cards, account: Current.account, user: Current.user, account_user: Current.account_user,
-      pipeline: Current.account.crm_pipelines.find_by(id: params[:pipeline_id])
+      pipeline: policy_scope(::Crm::Pipeline).find_by(id: params[:pipeline_id])
     )
     send_data export.generate, filename: export.filename, type: XLSX_CONTENT_TYPE, disposition: :attachment
   end
 
   def show; end
+
+  # Quem não pode ser dono (#1149): por card (lista e ação em lote) ou por funil e caixa (card novo).
+  def owner_options
+    authorize ::Crm::Card, :index?
+    options = ::Crm::Access::OwnerOptions.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+    cards = policy_scope(::Crm::Card).where(id: Array(params[:card_ids]).first(::Crm::Access::OwnerOptions::MAX_CARDS))
+    render json: { payload: { cards: options.for_cards(cards), blocked: options.blocked_for_new_card(params[:inbox_id], params[:pipeline_id]) } }
+  end
 
   def by_conversation
     # Chatwoot's frontend identifies conversations by display_id (per-account).
@@ -62,8 +68,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     display_ids = Array(params[:conversation_ids]).filter_map { |id| id.to_s[/\d+/]&.to_i }.uniq.first(100)
     return render(json: { payload: {} }) if display_ids.blank?
 
-    conversations = Current.account.conversations.where(display_id: display_ids)
-                           .select { |conversation| crm_visibility.visible?(conversation) }
+    conversations = Current.account.conversations.where(display_id: display_ids).to_a
+    # Acesso por funil (#1148, parte C): a regra do funil para a página inteira numa consulta só.
+    crm_visibility.preload(conversations)
+    conversations = conversations.select { |conversation| crm_visibility.visible?(conversation) }
     return render(json: { payload: {} }) if conversations.blank?
 
     render json: { payload: conversation_badges(conversations) }
@@ -105,11 +113,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update
     attributes = update_params.to_h.with_indifferent_access
     strip_ai_metadata!(attributes)
-    if attributes.present?
+    promessa = payment_promise_from(attributes)
+    return render_unprocessable('crm.invalid_payment_promise') if promessa == PROMESSA_INVALIDA
+
+    ensure_new_owner_allowed!(attributes[:owner_id]) if attributes.key?(:owner_id)
+    if attributes.present? || promessa != SEM_PROMESSA
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
-      @card.update!(attributes)
-      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
+      apply_update!(attributes, promessa: promessa)
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show
@@ -125,6 +136,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def move
     with_idempotency do
       target_stage = Current.account.crm_pipeline_stages.find(params[:stage_id])
+      ensure_move_allowed!(@card, target_stage.pipeline_id)
       @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage).perform
       broadcast_card(::Events::Types::CRM_CARD_MOVED)
       render :show
@@ -151,6 +163,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def link_conversation
     conversation = Current.account.conversations.find(params[:conversation_id])
     authorize_crm_conversation!(conversation)
+    # Acesso por funil (#1148, decisão b): vincular põe a conversa no funil do card, então a pessoa precisa ter esse
+    # funil também na caixa da conversa.
+    raise Pundit::NotAuthorizedError unless card_guard.create_allowed?(@card.pipeline_id, conversation: conversation, inbox_id: @card.inbox_id)
+
     @card = ::Crm::Cards::ConversationLinker.new(
       card: @card,
       conversation: conversation,
@@ -203,20 +219,21 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # spent (reached max_touches, was stopped, or skipped). Cancels any still-active
   # ai_followup touches, clears the cadence state to an un-armed shape so the next
   # planner sweep starts a new cycle, then broadcasts the updated card.
+  # O reset é o dono da recusa 'follow_up_reply' do contato (chat#1325). Tudo vai numa transação só, travando na ordem
+  # follow-up -> card -> contato: primeiro os toques ai_followup ativos do card (por id), depois o card, cuja marca é
+  # relida com ele travado, e por último o contato, na liberação. É a ordem do caminho principal do DueProcessor/
+  # AutoFollowupRunner (follow-up -> card) e combina com o OptOutDecision (card -> contato). O caminho de parada do
+  # runner (stop_cadence/stop_closure/skip -> cancel_pending_siblings) faz card -> toques irmãos; o cruzamento com ele
+  # pode dar deadlock, que o banco resolve abortando um dos lados, sem corromper dado. Já existia no runner (#1342).
+  # Toque criado pelo planner depois da primeira leitura não é cancelado aqui (travá-lo depois do card inverteria a
+  # ordem), e o runner não lê state['active'], então ele pode sair. Janela estreita, já existente, registrada no #1342.
   def reset_auto_followup
-    @card.follow_ups.active.find_each do |follow_up|
-      follow_up.update!(status: :canceled) if follow_up.metadata.to_h['source'] == 'ai_followup'
+    ActiveRecord::Base.transaction do
+      ai_follow_ups = @card.follow_ups.active.where("crm_follow_ups.metadata->>'source' = 'ai_followup'").order(:id).lock.to_a
+      @card.lock!
+      ai_follow_ups.each { |follow_up| follow_up.update!(status: :canceled) }
+      @contact_opt_out = reset_auto_followup_state!
     end
-
-    metadata = (@card.metadata || {}).deep_dup
-    metadata['ai'] ||= {}
-    metadata['ai']['auto_followup_state'] = {
-      'active' => false, 'spent' => false, 'touch' => 0,
-      'stopped_reason' => nil, 'opted_out' => false,
-      'next_due_at' => nil, 'last_sent_at' => nil,
-      'last_marketing_template_sent_at' => nil, 'touches' => []
-    }
-    @card.update!(metadata: metadata)
 
     ::Crm::ActivityLogger.new(
       card: @card, actor: Current.user, event_type: 'ai_followup_reset',
@@ -239,6 +256,12 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
+    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
+    # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
+    if permitted_params[:custom_attributes].present?
+      attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
+    end
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
@@ -294,16 +317,15 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # Um selo por conversa (o assunto atual) e quantos assuntos abertos ela tem, chaveados pelo display_id.
   def conversation_badges(conversations)
     display_by_global = conversations.index_by(&:id).transform_values(&:display_id)
-    multiple = Current.account.crm_pipelines.count > 1
+    multiple = multiple_pipelines?
     subjects_count = Hash.new(0)
-    badges = ::Crm::Card.open
-                        .where(account_id: Current.account.id, conversation_id: conversations.map(&:id))
-                        .where(id: policy_scope(::Crm::Card).select(:id))
-                        .joins(CARD_STAGES_FOCUS_JOIN)
-                        .order(Arel.sql('crm_focus.focused_at DESC NULLS LAST'), :id)
-                        .includes(:stage, :pipeline)
-                        .each_with_object({}) do |card, acc|
-      display_id = display_by_global[card.conversation_id]
+    # Principal ou vinculada (#1197): mesma regra do ConversationCardFinder, numa consulta para a lista toda.
+    badges = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all_for(conversations.map(&:id))
+                                                 .where(status: :open)
+                                                 .where(id: policy_scope(::Crm::Card).select(:id))
+                                                 .includes(:stage, :pipeline)
+                                                 .each_with_object({}) do |card, acc|
+      display_id = display_by_global[card.listed_conversation_id]
       next if card.stage.blank? || display_id.blank?
 
       subjects_count[display_id] += 1
@@ -321,8 +343,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       pipeline_name: card.pipeline&.name,
       stage_name: card.stage.name,
       stage_color: card.stage.color,
-      multiple_pipelines: Current.account.crm_pipelines.count > 1
+      multiple_pipelines: multiple_pipelines?
     }
+  end
+
+  # Mais de um funil que a pessoa enxerga (acesso por funil, #1148 PR D): o selo mostra o nome do funil.
+  def multiple_pipelines?
+    @multiple_pipelines = policy_scope(::Crm::Pipeline).count > 1 unless defined?(@multiple_pipelines)
+    @multiple_pipelines
   end
 
   def ai_suggestion_payload(suggestion)
@@ -361,25 +389,83 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
         next upsert_existing_card!(existing, permitted_params) if existing
 
-        @card = create_authorized_card(permitted_params)
+        @card, created = create_authorized_card(permitted_params)
         authorize @card, :show?
-        broadcast_card(::Events::Types::CRM_CARD_CREATED)
-        render :show, status: :created
+        broadcast_card(::Events::Types::CRM_CARD_CREATED) if created
+        render :show, status: created ? :created : :ok
       end
     end
   end
 
+  # Devolve [card, criado?]. Com conversation_id, segue o contrato de from_conversation (#1197): a conversa com card
+  # aberto devolve o assunto atual; card novo nela só com new_subject.
   def create_authorized_card(permitted_params)
     conversation = conversation_from_params(permitted_params)
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
+    ensure_create_allowed!(resolved_params.to_h.with_indifferent_access, conversation)
     if @registration
-      return @registration.perform do |contact|
+      card = @registration.perform do |contact|
         ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
       end
+      return [card, true]
     end
 
-    ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
+    current = current_open_card(conversation, resolved_params)
+    return [current, false] if current
+
+    [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform, true]
+  end
+
+  # O card aberto da conversa no funil pedido, que o agente enxerga. Trava a conversa (como from_conversation) para duas
+  # chamadas juntas não criarem dois cards. Com external_id a integração cuida do próprio card: cria e, nas próximas
+  # chamadas, atualiza pelo external_id. Funil diferente é outro assunto: card novo. Sem funil no pedido, o assunto atual.
+  def current_open_card(conversation, resolved_params)
+    return if conversation.blank? || resolved_params[:external_id].present?
+    return if ActiveModel::Type::Boolean.new.cast(params[:new_subject])
+
+    conversation.lock!
+    cards = ::Crm::Cards::ConversationCardFinder.new(account: Current.account).all(conversation)
+                                                .where(id: policy_scope(::Crm::Card).select(:id), status: :open)
+    cards = cards.where(pipeline_id: resolved_params[:pipeline_id]) if resolved_params[:pipeline_id].present?
+    cards.first
+  end
+
+  # Zera o estado do follow-up e, se este card estava parado a pedido do cliente, libera a recusa 'follow_up_reply' do
+  # contato que a marca prova (o gravado no "sim", mesmo que o card tenha mudado de contato depois). Só ela, nunca a de
+  # outra origem, e só quando nenhum outro card continua marcado para esse contato (Crm::FollowUps::CardOptOut,
+  # release_opt_out!). Sem isso, o card re-armado ficaria parado no runner (contact_opted_out?). Chamado com o card travado.
+  # Devolve o que aconteceu com a recusa do contato (release_follow_up_reply), para a resposta e o aviso do drawer.
+  def reset_auto_followup_state!
+    marked_contact = ::Crm::FollowUps::CardOptOut.marked_contact(@card) if ::Crm::FollowUps::CardOptOut.card_opted_out?(@card)
+    @card.update!(metadata: reset_auto_followup_metadata)
+    release_follow_up_reply(marked_contact)
+  end
+
+  # A recusa do contato vale para a conta inteira: tirá-la exige a mesma permissão do painel do contato
+  # (ContactPolicy#update?, com o override do EE), além da de IA do CRM no funil que o reset já confere. Sem ela, o reset
+  # limpa só o card e a recusa continua.
+  def release_follow_up_reply(contact)
+    return 'none' unless contact&.opt_out_source == 'follow_up_reply'
+    return 'kept_no_permission' unless policy(contact).update?
+
+    contact.release_opt_out!(source: 'follow_up_reply', by: Current.user)
+    contact.reload
+    return 'released' unless contact.opted_out?
+
+    contact.opt_out_source == 'follow_up_reply' ? 'kept_other_cards' : 'kept_other_source'
+  end
+
+  def reset_auto_followup_metadata
+    metadata = (@card.metadata || {}).deep_dup
+    metadata['ai'] ||= {}
+    metadata['ai']['auto_followup_state'] = {
+      'active' => false, 'spent' => false, 'touch' => 0,
+      'stopped_reason' => nil, 'opted_out' => false,
+      'next_due_at' => nil, 'last_sent_at' => nil,
+      'last_marketing_template_sent_at' => nil, 'touches' => []
+    }
+    metadata
   end
 
   def broadcast_card(event_name)
@@ -443,7 +529,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     parameter_set(:card).permit(
       :pipeline_id, :stage_id, :contact_id, :conversation_id, :inbox_id, :owner_id, :team_id,
       :title, :description, :value_cents, :currency, :status, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, metadata: {}, custom_attributes: {}
     )
   end
 
@@ -453,10 +539,93 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   # closed_at, and stage-move side effects). `owner_id` IS permitted so the list
   # view can inline-assign / reassign an owner (authorized via card :update? +
   # same-account validation on the model).
+  # Acesso por funil (#1148, parte C): ver Crm::Access::CardGuard.
+  def card_guard
+    @card_guard ||= ::Crm::Access::CardGuard.new(user: Current.user, account: Current.account, account_user: Current.account_user)
+  end
+
+  def ensure_move_allowed!(card, pipeline_id)
+    raise Pundit::NotAuthorizedError unless card_guard.move_allowed?(card, pipeline_id)
+  end
+
+  def ensure_create_allowed!(params, conversation)
+    return if params[:pipeline_id].blank?
+    return if card_guard.create_allowed?(params[:pipeline_id], conversation: conversation, inbox_id: params[:inbox_id])
+
+    raise Pundit::NotAuthorizedError
+  end
+
+  # Dono do card (#1148, decisão a): só quem tem o funil do card; administrador escolhe qualquer pessoa.
+  def ensure_new_owner_allowed!(owner_id, pipeline_id: @card.pipeline_id)
+    return if owner_id.to_s == @card.owner_id.to_s
+
+    card_guard.ensure_owner_allowed!(owner_id, inbox_id: @card.inbox_id, pipeline_id: pipeline_id)
+  end
+
+  def render_owner_without_funnel
+    render_unprocessable(::Crm::Access::CardGuard::OwnerWithoutFunnel::CODE)
+  end
+
+  # Recusa por funil (#1148, decisão b; #1149): quem não tem o funil do card recebe um código que a tela traduz, em
+  # vez da recusa genérica. Mesmo status de sempre.
+  def render_unauthorized(message)
+    return super if @card.nil? || card_guard.edit_allowed?(@card)
+
+    render json: { error: ::Crm::Access::CardGuard::FUNNEL_REQUIRED }, status: :unauthorized
+  end
+
+  def upsert_pipeline_id(attributes)
+    attributes['pipeline_id'].presence || Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])&.pipeline_id
+  end
+
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}
+      :priority, :score, :expected_close_at, :external_id, :owner_id, :payment_promise_at, metadata: {}, custom_attributes: {}
     )
+  end
+
+  # Cobrança (#1498): o dia em que o cliente prometeu pagar, só no formato "AAAA-MM-DD". Devolve SEM_PROMESSA quando
+  # o pedido não traz o campo, nil para tirar e PROMESSA_INVALIDA para data que não existe.
+  SEM_PROMESSA = :sem_promessa
+  PROMESSA_INVALIDA = :promessa_invalida
+
+  def payment_promise_from(attributes)
+    return SEM_PROMESSA unless attributes.key?(:payment_promise_at)
+
+    value = attributes.delete(:payment_promise_at).to_s.strip
+    return if value.empty?
+
+    date = Date.strptime(value, '%Y-%m-%d')
+    date.strftime('%Y-%m-%d') == value ? value : PROMESSA_INVALIDA
+  rescue Date::Error
+    PROMESSA_INVALIDA
+  end
+
+  def with_payment_promise(metadata, promessa)
+    metadata = (metadata || {}).deep_dup
+    promessa ? metadata.merge('payment_promise_at' => promessa) : metadata.except('payment_promise_at')
+  end
+
+  # Campos do card (#1146): o PATCH manda só o que mudou. Junta com o que já está salvo (chave com null sai), com o card
+  # travado, para duas edições ao mesmo tempo não apagarem o campo uma da outra.
+  # Promessa de pagamento (#1498): só a chave dela muda no metadata, com o card travado, para não desfazer o que a IA
+  # gravou no meio tempo; o histórico registra a data, não o metadata inteiro.
+  def apply_update!(attributes, promessa: SEM_PROMESSA)
+    ActiveRecord::Base.transaction do
+      registro = attributes.dup
+      if attributes.key?(:custom_attributes)
+        @card.lock!
+        attributes[:custom_attributes] = @card.custom_attributes.to_h.merge(attributes[:custom_attributes].to_h).compact
+      end
+      unless promessa == SEM_PROMESSA
+        @card.lock!
+        attributes[:metadata] = with_payment_promise(attributes[:metadata].presence || @card.metadata, promessa)
+        registro[:payment_promise_at] = promessa
+      end
+      @card.update!(attributes)
+      # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado.
+      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: registro).perform
+    end
   end
 end

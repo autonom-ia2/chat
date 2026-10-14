@@ -1,7 +1,9 @@
 <script setup>
 // Recusa de mensagens ativas no contato (chat#713): mostra o selo com data e origem, e marca ou desfaz pela rota
 // própria, sempre com confirmação. Resposta a quem escreve não muda; só campanhas e follow-ups automáticos respeitam.
-// Aqui só se desfaz a recusa manual: a da Prospecção e a do descadastro de e-mail saem na origem, e a tela diz onde.
+// Aqui se desfaz a recusa manual e a do pedido de parar que a IA reconheceu na resposta a uma campanha (#1449), que não
+// tem outra tela. As outras saem na origem (lead da Prospecção, reativar o follow-up no card do CRM), ou não saem
+// (descadastro de e-mail), e a tela diz onde. Origem nova entra nas listas abaixo e no i18n.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { format, fromUnixTime } from 'date-fns';
@@ -21,8 +23,20 @@ const props = defineProps({
 });
 
 const PREFIX = 'CONTACTS_LAYOUT.DETAILS.OPT_OUT';
-const KNOWN_SOURCES = ['prospecting', 'email_unsubscribe', 'manual'];
-const ORIGIN_HINT_SOURCES = ['prospecting', 'email_unsubscribe'];
+const KNOWN_SOURCES = [
+  'prospecting',
+  'email_unsubscribe',
+  'manual',
+  'follow_up_reply',
+  'campaign_reply',
+];
+const ORIGIN_HINT_SOURCES = [
+  'prospecting',
+  'email_unsubscribe',
+  'follow_up_reply',
+  'campaign_reply',
+];
+const UNDOABLE_SOURCES = ['manual', 'campaign_reply'];
 
 const { t, locale } = useI18n();
 const store = useStore();
@@ -46,7 +60,8 @@ const sourceLabel = computed(() => {
 });
 
 const canUndo = computed(
-  () => isOptedOut.value && props.contact?.optOutSource === 'manual'
+  () =>
+    isOptedOut.value && UNDOABLE_SOURCES.includes(props.contact?.optOutSource)
 );
 
 const showAction = computed(
@@ -65,7 +80,7 @@ const dialogKey = computed(() =>
 
 const openDialog = () => dialogRef.value?.open();
 
-// Desfazer a manual pode deixar a recusa de pé, com a origem que ainda vale (por exemplo, o e-mail descadastrado).
+// Desfazer pode deixar a recusa de pé, com a origem que ainda vale (por exemplo, o e-mail descadastrado).
 const resultKey = (optedOut, payload) => {
   if (optedOut) return 'MARK_SUCCESS';
   return payload?.opted_out_at ? 'UNDO_KEPT' : 'UNDO_SUCCESS';

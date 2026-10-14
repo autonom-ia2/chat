@@ -11,10 +11,22 @@ module Autonomia
       class SubmitJob < ApplicationJob
         queue_as :medium
 
+        # #1367 — aviso à tela de quem abriu a conversa: "a thread mudou, busque de novo". Só ids, nunca
+        # conteúdo; a tela continua lendo pelo `show`, que aplica o filtro de IP oculto.
+        BUILD_THREAD_UPDATED = 'autonomia.build_thread.updated'.freeze
+
         def perform(thread_id, token)
+          log_queue_wait(thread_id)
           thread = Autonomia::Agents::BuildThread.find_by(id: thread_id)
           return if thread.blank? || !active?(thread, token)
 
+          build(thread, token)
+          notify_creator(thread)
+        end
+
+        private
+
+        def build(thread, token)
           Autonomia::Agents::Builder.new(account: thread.account, build_thread: thread).run!(token)
         rescue Crm::Ai::ResponsesClient::Error => e
           fail_build(thread, token, e.message)
@@ -26,16 +38,35 @@ module Autonomia
           # nenhum sinal e passava dias achando que tinha configurado o agente.
           fields = invalid_fields(e)
           Rails.logger.error(
-            "[Autonomia::Agents::Builder::SubmitJob] apply_failed thread=#{thread_id} #{e.class}: " \
+            "[Autonomia::Agents::Builder::SubmitJob] apply_failed thread=#{thread.id} #{e.class}: " \
             "#{e.message} fields=#{fields.join(',')}"
           )
           fail_build(thread, token, 'apply_failed', fields: fields)
         rescue StandardError => e
-          Rails.logger.error("[Autonomia::Agents::Builder::SubmitJob] thread=#{thread_id} #{e.class}: #{e.message}")
+          Rails.logger.error("[Autonomia::Agents::Builder::SubmitJob] thread=#{thread.id} #{e.class}: #{e.message}")
           fail_build(thread, token, 'build_error')
         end
 
-        private
+        # #1367 — quanto o turno esperou na fila antes de começar (enqueued_at → perform). Vazio quando o
+        # job rodou sem passar pela fila (perform_now).
+        def log_queue_wait(thread_id)
+          wait_ms = enqueued_at && ((Time.current - enqueued_at) * 1000).round
+          Rails.logger.info("[Autonomia::Agents::Builder::SubmitJob] start thread=#{thread_id} queue_wait_ms=#{wait_ms}")
+        end
+
+        # #1367 (alavanca 4) — a tela de quem criou a thread fica sabendo na hora que o turno terminou,
+        # pronto ou com falha. Publicação direta no canal da pessoa, sem passar pela fila `critical` do
+        # atendimento. Melhor esforço: a consulta periódica da tela continua de reserva, então um aviso
+        # perdido só atrasa a tela, nunca derruba o turno.
+        def notify_creator(thread)
+          token = thread.created_by&.pubsub_token
+          return if token.blank?
+
+          ActionCable.server.broadcast(token, { event: BUILD_THREAD_UPDATED,
+                                                data: { account_id: thread.account_id, id: thread.id } })
+        rescue StandardError => e
+          Rails.logger.warn("[Autonomia::Agents::Builder::SubmitJob] notify_failed thread=#{thread.id} #{e.class}")
+        end
 
         def active?(thread, token)
           thread.processing? && thread.build_token == token

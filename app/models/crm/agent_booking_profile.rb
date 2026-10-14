@@ -14,6 +14,8 @@
 #  description         :text
 #  duration_minutes    :integer          default(30), not null
 #  enabled             :boolean          default(TRUE), not null
+#  invite_text         :text
+#  invite_ttl_days     :integer          default(7), not null
 #  metadata            :jsonb            not null
 #  slug                :string           not null
 #  timezone            :string
@@ -23,15 +25,20 @@
 #  updated_at          :datetime         not null
 #  account_id          :bigint           not null
 #  default_assignee_id :bigint
+#  page_version        :integer          default(1), not null
+#  short_name          :string
+#  post_meeting_mode   :string           default("ask"), not null
+#  post_meeting_stage_id :bigint
 #  default_pipeline_id :bigint
 #  default_stage_id    :bigint
 #  inbox_id            :bigint
 #
 # Indexes
 #
-#  index_crm_agent_booking_profiles_on_account_id  (account_id)
-#  index_crm_agent_booking_profiles_on_inbox_id    (inbox_id)
-#  index_crm_agent_booking_profiles_on_slug        (slug) UNIQUE
+#  index_crm_agent_booking_profiles_on_account_and_short_name  (account_id,short_name) UNIQUE
+#  index_crm_agent_booking_profiles_on_account_id              (account_id)
+#  index_crm_agent_booking_profiles_on_inbox_id                (inbox_id)
+#  index_crm_agent_booking_profiles_on_slug                    (slug) UNIQUE
 #
 # Foreign Keys
 #
@@ -39,6 +46,12 @@
 #  fk_rails_...  (inbox_id => inboxes.id) ON DELETE => nullify
 #
 class Crm::AgentBookingProfile < ApplicationRecord
+  include Crm::BookingPageSettings
+  include Crm::BookingNoticeSettings
+  include Crm::BookingNoticeTexts
+  include Crm::BookingPostMeetingSettings
+  include Crm::BookingShortName
+
   self.table_name = 'crm_agent_booking_profiles'
 
   DEFAULT_WORKING_HOURS = { 'start_hour' => 9, 'end_hour' => 17, 'weekdays' => [1, 2, 3, 4, 5] }.freeze
@@ -47,6 +60,10 @@ class Crm::AgentBookingProfile < ApplicationRecord
   MAX_BUFFER = 240
   MIN_WINDOW = 1
   MAX_WINDOW = 90
+  LEGACY_PAGE = 1
+  NEW_PAGE = 2
+  MAX_INVITE_TTL_DAYS = 30
+  MAX_INVITE_TEXT = 1000
 
   # fixed     -> one default_assignee owns every booking (original S6 behaviour).
   # per_agent -> each eligible agent shares their OWN link (agent_booking_links);
@@ -54,12 +71,14 @@ class Crm::AgentBookingProfile < ApplicationRecord
   enum assignment_mode: { fixed: 0, per_agent: 1 }, _prefix: true
 
   belongs_to :account
-  belongs_to :inbox
+  belongs_to :inbox, optional: true
   belongs_to :default_pipeline, class_name: 'Crm::Pipeline', optional: true
   belongs_to :default_stage, class_name: 'Crm::PipelineStage', optional: true
   belongs_to :default_assignee, class_name: 'User', optional: true
-  has_many :agent_booking_links, class_name: 'Crm::AgentBookingLink',
-                                 foreign_key: :booking_profile_id, inverse_of: :booking_profile, dependent: :destroy
+  # Ordem definida (#1305): "o primeiro link ativo" (quem recebe sem ninguém atribuído) é o mesmo na lista de páginas,
+  # no convite, no painel e na IA, que leem a associação em consultas diferentes.
+  has_many :agent_booking_links, -> { order(:id) }, class_name: 'Crm::AgentBookingLink',
+                                                    foreign_key: :booking_profile_id, inverse_of: :booking_profile, dependent: :destroy
 
   before_validation :ensure_slug, on: :create
   before_validation :normalize_working_hours
@@ -70,6 +89,11 @@ class Crm::AgentBookingProfile < ApplicationRecord
   validates :booking_window_days, numericality: { only_integer: true, greater_than_or_equal_to: MIN_WINDOW, less_than_or_equal_to: MAX_WINDOW }
   validates :title, length: { maximum: 255 }, allow_blank: true
   validates :metadata, jsonb_attributes_length: true
+  # Link por cliente (#1190): validade do convite em dias e texto pronto que o agente pode editar antes de enviar.
+  validates :invite_ttl_days, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: MAX_INVITE_TTL_DAYS }
+  validates :invite_text, length: { maximum: MAX_INVITE_TEXT }
+  # Página antiga (1) continua amarrada a uma caixa de calendário; a nova (2) funciona sem caixa.
+  validates :inbox, presence: true, if: :legacy_page?
   validate :inbox_must_belong_to_account
   validate :default_refs_must_belong_to_account
   validate :working_hours_must_be_sane
@@ -79,6 +103,28 @@ class Crm::AgentBookingProfile < ApplicationRecord
   validates :default_assignee_id, presence: true, if: -> { enabled? && assignment_mode_fixed? }
 
   scope :enabled, -> { where(enabled: true) }
+  scope :legacy_pages, -> { where(page_version: LEGACY_PAGE) }
+  scope :new_pages, -> { where(page_version: NEW_PAGE) }
+
+  has_one_attached :logo
+  # A logo para fundo escuro (#1295): enviada pela pessoa ou gerada da logo (Crm::BookingV2::LogoDark).
+  has_one_attached :logo_dark
+  has_one_attached :photo
+  # Imagem de prévia do link (#1282), desenhada pelo sistema: `Crm::BookingV2::PreviewImage::Store`.
+  has_one_attached :preview_image
+
+  def legacy_page?
+    page_version == LEGACY_PAGE
+  end
+
+  def new_page?
+    page_version == NEW_PAGE
+  end
+
+  # Durações que o cliente pode escolher: a principal e as extras, sem repetir, da menor para a maior.
+  def durations
+    ([duration_minutes] + Array(slot_durations).map(&:to_i)).uniq.sort
+  end
 
   def resolved_timezone
     Crm::Timezone::Resolver.new(explicit: timezone, account: account).name_or_default

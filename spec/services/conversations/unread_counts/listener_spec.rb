@@ -140,6 +140,25 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(notifier).to have_received(:perform)
   end
 
+  it 'refreshes unread counts when a bot handoff starts or stops waiting for a person (#1377)' do
+    key = Conversation::BOT_HANDOFF_WAITING_SINCE_KEY
+    changed_attributes = { 'additional_attributes' => [{}, { key => Time.current.iso8601 }] }
+    event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.conversation_updated(event)
+
+    expect(Conversations::UnreadCounts::Notifier).to have_received(:new).with(conversation, changed_attributes: changed_attributes)
+  end
+
+  it 'does not refresh unread counts for other additional attribute changes' do
+    changed_attributes = { 'additional_attributes' => [{}, { 'mail_subject' => 'Seguro auto' }] }
+    event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.conversation_updated(event)
+
+    expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
+  end
+
   it 'does not invalidate filtered counts from conversation updated events' do
     account.enable_features!(:unread_count_for_filters)
     event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: { priority: [nil, 'high'] })

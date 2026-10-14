@@ -8,11 +8,14 @@
 #  account_id         :bigint           not null
 #  agent_bot_id       :bigint           not null
 #  autonomia_agent_id :bigint           not null
+#  deleted_at         :datetime
 #  inbox_id           :bigint
+#  papel              :string           default("porta"), not null
 #
 # Indexes
 #
-#  idx_autonomia_agent_inboxes_on_inbox_uniq            (inbox_id) UNIQUE
+#  idx_autonomia_agent_inboxes_on_live_inbox_agent_uniq  (inbox_id,autonomia_agent_id) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_autonomia_agent_inboxes_on_live_porta_uniq        (inbox_id) UNIQUE WHERE (papel = 'porta' AND deleted_at IS NULL)
 #  index_autonomia_agent_inboxes_on_account_id          (account_id)
 #  index_autonomia_agent_inboxes_on_agent_bot_id        (agent_bot_id)
 #  index_autonomia_agent_inboxes_on_autonomia_agent_id  (autonomia_agent_id)
@@ -26,13 +29,26 @@
 #
 module Autonomia
   module Agents
-    # Vínculo agente nativo ↔ inbox (Fase C). UNIQUE em inbox_id garante 1 bot por inbox.
-    # `agent_bot` é o AgentBot nativo-espelho (outgoing_url NULL) usado como sender canônico
-    # da resposta outgoing — entra no fluxo de bot do core sem disparar webhook (Gabriela).
+    # Vínculo agente nativo ↔ inbox (Fase C). `agent_bot` é o AgentBot nativo-espelho (outgoing_url NULL) usado como
+    # sender canônico da resposta outgoing — entra no fluxo de bot do core sem disparar webhook (Gabriela).
+    #
+    # Papel na caixa (#1433):
+    # - porta: atende primeiro todas as conversas da caixa. Uma por caixa; o espelho dela tem o AgentBotInbox, então é
+    #   o inbox.agent_bot (InboxConnector).
+    # - area:  agente da equipe; recebe a conversa quando alguém passa (vira o ai_assignee com o espelho dele). Só em
+    #   caixa com porta ativa; espelho próprio SEM AgentBotInbox (Autonomia::Agents::Areas).
+    # Um agente tem no máximo um vínculo ativo por caixa. Quem responde a conversa: Autonomia::Agents::QuemResponde.
     class AgentInbox < ApplicationRecord
       self.table_name = 'autonomia_agent_inboxes'
 
+      PAPEIS = %w[porta area].freeze
+      # Folga sobre a janela do debounce para um turno da área ainda contar como EM ANDAMENTO: a chamada de IA (com
+      # ferramentas) e a entrega em pedaços que vêm depois do settle (#1433).
+      FOLGA_DO_TURNO = 2.minutes
+
       scope :kept, -> { where(deleted_at: nil) }
+      scope :porta, -> { where(papel: 'porta') }
+      scope :area, -> { where(papel: 'area') }
 
       belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id
       belongs_to :inbox
@@ -41,10 +57,18 @@ module Autonomia
       # Sem ele a Message perde a identidade de AgentBot-sender (garantia anti-loop).
       belongs_to :agent_bot
 
-      validates :inbox_id, uniqueness: { conditions: -> { kept } }, if: -> { deleted_at.nil? }
+      validates :papel, inclusion: { in: PAPEIS }
+      validates :inbox_id, uniqueness: { conditions: -> { kept.porta } }, if: -> { deleted_at.nil? && porta? }
+      validates :autonomia_agent_id, uniqueness: { scope: :inbox_id, conditions: -> { kept } }, if: -> { deleted_at.nil? }
+      validate :area_precisa_de_porta_ativa, if: -> { deleted_at.nil? && area? }
       # Tenancy (defesa em profundidade): o runtime resolve o vínculo só por inbox_id
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
+
+      # #1366 — o PONTO ÚNICO da parada automática: todo caminho que tira um vínculo da caixa passa por um destes dois
+      # (arquivar: desvincular a área; destroy, abaixo: desconectar a porta, caixa apagada). Saiu o último, o agente
+      # para. O SoftDelete arquiva sem callback: o agente apagado já sai parado. O destroy do próprio agente não conta.
+      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? }
 
       # Limpeza do espelho ao destruir o vínculo — centraliza o conserto de "caixa deletada"
       # E "agente deletado" num só lugar. Dispara quando o vínculo cai por:
@@ -53,6 +77,7 @@ module Autonomia
       # Sem isso, o AgentBot-espelho + AgentBotInbox vazariam (hoje só o InboxConnector#disconnect!
       # os remove). Espelho da nossa criação: outgoing_url NULL → NUNCA toca a Gabriela (webhook real).
       after_destroy :cleanup_mirror_bot
+      after_destroy :parar_agente_sem_onde_trabalhar, unless: :saindo_com_o_agente?
 
       # #1035 — liga/desliga o espelho conforme o agente atende ou não. Desligando: inativa ANTES de
       # liberar, para que nenhuma conversa nova nasça com o bot enquanto as atuais voltam para a equipe.
@@ -65,18 +90,107 @@ module Autonomia
         end
       end
 
+      def porta?
+        papel == 'porta'
+      end
+
+      def area?
+        papel == 'area'
+      end
+
       # Devolve ao humano as conversas em que o bot ainda está no comando: as `pending` da caixa e as
       # `open` que têm o espelho como ai_assignee (na caixa do espelho elas nascem open — ver
       # Conversation#set_active_bot_conversation). Mesmo caminho do disconnect manual.
-      def release_bot_conversations!
+      # Área (#1433): só as conversas do espelho dela, que voltam para a porta (as `pending` da caixa são da porta); com
+      # `porta_saindo: true`, a porta está saindo da caixa e elas vão direto para a equipe humana.
+      def release_bot_conversations!(porta_saindo: false)
         return if inbox.nil?
+        return devolver_conversas_a_porta!(porta_saindo: porta_saindo) if area?
 
         pending = inbox.conversations.where(status: :pending)
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
-        pending.or(held_by_mirror).find_each(&:bot_handoff!)
+        # Desligar não é passar a conversa: o robô sai de vez, sem ficar esperando pessoa (#1377).
+        pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
+      end
+
+      # #1433 — área só existe em caixa com porta ativa. Todo caminho que tira a porta (InboxConnector#disconnect!,
+      # SoftDelete, Agent#destroy) chama isto ANTES de soltar as conversas da porta: as áreas da caixa saem, e as
+      # conversas delas vão direto para a equipe humana. Trava a caixa, como o Areas.vincular!.
+      def soltar_areas_da_caixa!
+        return unless porta? && inbox
+
+        # Ordem agente → caixa (#1366): trava os agentes das áreas (por id) ANTES da caixa, porque cada área que sai pode
+        # parar o seu agente (parada automática), que trava o agente. Depois trava a caixa e lista de novo: um
+        # Areas.vincular! paralelo espera e depois não acha mais a porta.
+        travar_agentes_das_areas!
+        inbox.lock!
+        self.class.kept.area.where(inbox_id: inbox_id).includes(:agent).find_each do |area|
+          ::Autonomia::Agents::Areas.desvincular!(agent: area.agent, inbox: inbox, porta_saindo: true)
+        end
+      end
+
+      # O vínculo está saindo da caixa (desconectar, destroy do agente): as áreas primeiro, se for porta; depois as
+      # conversas dele.
+      def sair_da_caixa!
+        soltar_areas_da_caixa!
+        release_bot_conversations!
       end
 
       private
+
+      # A conversa aberta que a área atendia volta para o robô da caixa (a porta), pelo mesmo caminho de atribuir um
+      # robô pelo painel, e a porta responde à última mensagem do cliente que ficou sem resposta. Sem porta atendendo,
+      # porta saindo, ou conversa já à espera de pessoa: vai para a equipe humana, sem robô.
+      def devolver_conversas_a_porta!(porta_saindo:)
+        robo_da_porta = inbox.agent_bot_inbox&.active? && !porta_saindo ? inbox.agent_bot : nil
+        inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
+          if robo_da_porta.nil? || conversation.bot_handoff_waiting?
+            conversation.bot_handoff!(keep_bot: false)
+          else
+            ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: robo_da_porta.id,
+                                                   assignee_type: 'AgentBot').perform
+            responder_mensagem_pendente(conversation)
+          end
+        end
+      end
+
+      # Desmarcar ou pausar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde).
+      # Só ESSE turno é refeito pela porta: a última mensagem pública é do cliente E a marca do debounce do ReplyJob
+      # (a mesma que o settle confere) aponta para ela e é recente. Mensagem antiga sem turno nunca vira resposta nova.
+      # Enfileira depois do commit; o debounce e o `already_replied?` do Responder seguram resposta dupla.
+      def responder_mensagem_pendente(conversation)
+        ultima = conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
+        return unless ultima&.incoming? && turno_em_andamento?(conversation, ultima)
+
+        ActiveRecord.after_all_transactions_commit do
+          ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
+        end
+      end
+
+      def turno_em_andamento?(conversation, mensagem)
+        stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+        return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
+
+        janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
+        stamp['at'].to_f >= janela.ago.to_f
+      end
+
+      # Impasse que sobra (raro): dois agentes cruzados. P é porta em X e área em Y; A é porta em Y e área em X. Saindo
+      # os dois ao mesmo tempo (soft delete ou desconectar), um trava P e depois A (a área de X), o outro trava A e depois
+      # P (a área de Y). O Postgres acusa o impasse e desfaz uma das transações, sem gravar meio caminho; a API devolve
+      # 500 (ActiveRecord::Deadlocked). Sem retry automático: quem pediu tenta de novo. Também cai aqui a área criada
+      # entre esta leitura e a trava da caixa, se outra operação travar o agente dela esperando esta mesma caixa.
+      def travar_agentes_das_areas!
+        ids = self.class.kept.area.where(inbox_id: inbox_id).pluck(:autonomia_agent_id)
+        ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?
+      end
+
+      def area_precisa_de_porta_ativa
+        return if inbox_id.blank?
+        return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
+
+        errors.add(:papel, 'area requires an active porta in the inbox')
+      end
 
       def mirror_bot_inboxes
         AgentBotInbox.where(inbox_id: inbox_id, agent_bot_id: agent_bot_id)
@@ -91,6 +205,14 @@ module Autonomia
 
           errors.add(association_name, 'must belong to the same account')
         end
+      end
+
+      def parar_agente_sem_onde_trabalhar
+        agent.parar_se_sem_onde_trabalhar!(vinculo: self)
+      end
+
+      def saindo_com_o_agente?
+        destroyed_by_association&.active_record == ::Autonomia::Agents::Agent
       end
 
       def cleanup_mirror_bot
