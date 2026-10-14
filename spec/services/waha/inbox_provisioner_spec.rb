@@ -74,5 +74,67 @@ RSpec.describe Waha::InboxProvisioner do
         )
       )
     end
+
+    context 'with a Webshare proxy (#1516)' do
+      let(:proxy) { webshare_proxy(id: 9, address: '10.0.0.9') }
+      let(:assigner) { instance_double(WhatsappProxy::Assigner, for: proxy, mark_applied!: 1, release!: 1, mark_pending!: nil) }
+
+      def provision
+        described_class.new(account: account, phone: '5511999999999', api_access_token: 'account-token',
+                            client: client, config: config, proxy_assigner: assigner).perform
+      end
+
+      it 'creates the session with its own proxy and records it as applied' do
+        provision
+
+        expect(client).to have_received(:create_session).with(
+          '5511999999999', start: true, apps: anything,
+                           config: { ignore: hash_including(groups: true),
+                                     proxy: { server: '10.0.0.9:6000', username: 'user-9', password: 'senha-9' } }
+        )
+        expect(assigner).to have_received(:mark_applied!).with('5511999999999', proxy)
+      end
+
+      it 'creates the session without proxy when none is available' do
+        allow(assigner).to receive(:for).and_return(nil)
+
+        provision
+
+        expect(client).to have_received(:create_session)
+          .with('5511999999999', start: true, apps: anything, config: { ignore: hash_including(groups: true) })
+        expect(assigner).to have_received(:mark_pending!).with('5511999999999')
+      end
+
+      it 'gives the new inbox a datacenter IP through the real Assigner (fake Webshare and engine)' do
+        engine = instance_double(Waha::Client, list_sessions: [])
+        datacenter = fake_pool('datacenter', [webshare_proxy(id: 3, address: '10.0.0.3'), webshare_proxy(id: 4, address: '10.0.0.4')])
+        real = WhatsappProxy::Assigner.new(engine: engine, pools: { isp: fake_pool('isp', []), datacenter: datacenter })
+        WhatsappProxy::Assignment.create!(session_name: 'outra', account_id: create(:account).id, pool: 'datacenter',
+                                          webshare_proxy_id: '3', proxy_address: '10.0.0.3', proxy_port: 6000,
+                                          assigned_at: Time.current)
+
+        with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_API_KEY: 'k',
+                          WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.3,10.0.0.4') do
+          described_class.new(account: account, phone: '5511999999999', api_access_token: 'account-token',
+                              client: client, config: config, proxy_assigner: real).perform
+        end
+
+        expect(client).to have_received(:create_session)
+          .with('5511999999999', start: true, apps: anything, config: hash_including(proxy: hash_including(server: '10.0.0.4:6000')))
+        record = WhatsappProxy::Assignment.find_by!(session_name: '5511999999999')
+        expect(record).to have_attributes(account_id: account.id, pool: 'datacenter', origin: 'assigned')
+        expect(record.credential_digest).to be_present
+      end
+
+      it 'frees the IP and keeps the credential out of the log when the engine refuses the session' do
+        allow(Waha::Client).to receive(:new).and_return(client)
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Error, 'WAHA POST /api/sessions -> 400: [FILTERED]')
+
+        log = capture_log { expect { provision }.to raise_error(described_class::Error, 'remote_setup_failed') }
+
+        expect(assigner).to have_received(:release!).with('5511999999999')
+        expect(log).not_to include('senha-9')
+      end
+    end
   end
 end

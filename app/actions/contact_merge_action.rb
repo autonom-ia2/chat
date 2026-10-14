@@ -9,6 +9,7 @@ class ContactMergeAction
   OPT_OUT_PRECEDENCE = %w[
     manual
     follow_up_reply
+    campaign_reply
     email_unsubscribe
     prospecting
   ].freeze
@@ -143,8 +144,8 @@ class ContactMergeAction
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem
   # e autor) passa para o que fica. Se os dois recusaram, fica a origem mais firme (OPT_OUT_PRECEDENCE: a manual, o pedido
-  # de parar no follow-up, o descadastro de e-mail e, por último, a da Prospecção, que o "Desfazer" do lead solta sozinho)
-  # e a data mais antiga. Assim a mescla não apaga uma recusa manual atrás de uma da Prospecção.
+  # de parar no follow-up, o pedido de parar na resposta a campanha (#1449), o descadastro de e-mail e, por último, a da
+  # Prospecção, que o "Desfazer" do lead solta sozinho) e a data mais antiga. Assim a mescla não apaga uma recusa manual atrás de uma da Prospecção.
   def inherited_opt_out
     return {} unless @mergee_contact.opted_out?
     return opt_out_attributes(@mergee_contact) unless @base_contact.opted_out?

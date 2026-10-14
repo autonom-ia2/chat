@@ -3945,6 +3945,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_proxy_assignments", force: :cascade do |t|
+    t.string "session_name", null: false
+    t.bigint "account_id", null: false
+    t.string "pool", null: false
+    t.string "webshare_proxy_id"
+    t.string "proxy_address"
+    t.integer "proxy_port"
+    t.datetime "assigned_at", null: false
+    t.string "credential_digest"
+    t.string "origin", default: "assigned", null: false
+    t.string "previous_proxy_address"
+    t.integer "previous_proxy_port"
+    t.string "previous_webshare_proxy_id"
+    t.string "previous_credential_digest"
+    t.string "previous_pool"
+    t.bigint "previous_account_id"
+    t.string "previous_origin"
+    t.integer "apply_failures", default: 0, null: false
+    t.datetime "last_apply_failed_at"
+    t.datetime "apply_scheduled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_assignments_on_proxy_address"
+    t.index ["session_name"], name: "index_whatsapp_proxy_assignments_on_session_name", unique: true
+  end
+
+  create_table "whatsapp_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.string "pool", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
   create_table "whatsapp_template_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -4253,6 +4290,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify

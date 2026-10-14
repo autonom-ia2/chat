@@ -26,6 +26,12 @@ module TemplateFields::Format
     value&.in_time_zone(zone)&.strftime(DATE)
   end
 
+  # Dia de calendário guardado num datetime sem hora (a tela do CRM grava "AAAA-MM-DD" como 00:00 UTC, e o painel lê
+  # os 10 primeiros caracteres). Ler no fuso da conta daria o dia anterior em fuso negativo: o dia é o do UTC.
+  def calendar_date(value)
+    value&.utc&.to_date&.strftime(DATE)
+  end
+
   def time(value, zone)
     value&.in_time_zone(zone)&.strftime(TIME)
   end
