@@ -151,7 +151,7 @@ module Crm
         return stop_closure if closure?(composition)
 
         no_send = no_send_reason(composition)
-        return skip(no_send) if no_send.present?
+        return skip_or_wait_for_deadline(no_send, composition) if no_send.present?
 
         # Messages can arrive independently of the card lock. Check again at the
         # last decision point, after the audit write and before accepting an effect.
@@ -299,6 +299,34 @@ module Crm
       def reply_baseline_at
         last_sent = state['last_sent_at'].presence
         (last_sent && parse_time(last_sent)) || @follow_up.created_at
+      end
+
+      # Prazo do próprio card (chat#1522, decisão do Rodrigo em 14/10/2026). Num funil de Atender, "não há o que enviar
+      # agora" com o `expected_close_at` ainda no futuro (o cliente disse que paga no dia, por exemplo) não encerra a
+      # cadência: o mesmo toque espera até 1 dia depois da data, no primeiro horário permitido, uma vez por card. A data
+      # vem só do card, nunca da IA. Funil de Vender, card sem prazo, prazo vencido ou recusa que não é por mérito
+      # (confiança baixa, sem modelo) seguem como antes.
+      def skip_or_wait_for_deadline(reason, composition)
+        wait_until = deadline_wait_until(reason, composition)
+        return skip(reason) if wait_until.blank?
+
+        merge_state!('deadline_wait_done' => true)
+        log_activity('ai_followup_postponed', reason: 'deadline', next_due_at: wait_until.iso8601, touch: touch)
+        reschedule(wait_until)
+      end
+
+      def deadline_wait_until(reason, composition)
+        return unless reason == 'no_open_loop' && !Crm::Ai::Config::BOOLEAN.cast(composition['should_send'])
+        return if Crm::Ai::Config::BOOLEAN.cast(state['deadline_wait_done']) || @card.pipeline&.kind != 'serve'
+
+        deadline = @card.expected_close_at
+        return if deadline.blank? || deadline <= @now
+
+        # O dia é o do calendário em UTC (a tela do CRM grava "AAAA-MM-DD" como 00:00 UTC), e o dia seguinte começa no
+        # fuso do contato.
+        zone = ActiveSupport::TimeZone[resolved_timezone]
+        day_after = deadline.utc.to_date + 1
+        compute_due(zone.local(day_after.year, day_after.month, day_after.day))
       end
 
       def postpone_for_other_subject(reply)
