@@ -172,10 +172,13 @@ describe('pipeline description AI actions', () => {
       await flushPromises();
 
       const names = created.vm.form.stages.map(stage => stage.name);
+      // #1548: o modelo e a posição de cada etapa nele vão junto dos nomes.
       expect(CrmKanbanAPI.getStageCriteriaDefaults).toHaveBeenCalledWith(
         names,
         {
           atender: false,
+          template: 'VENDAS',
+          positions: [1, 2, 3, 4, 5],
         }
       );
       expect(created.vm.criteriaFor(created.vm.form.stages[0])).toBe(

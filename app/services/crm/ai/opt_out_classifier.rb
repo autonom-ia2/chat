@@ -1,11 +1,13 @@
-# Decide se a resposta do cliente ao follow-up de IA é um pedido para parar de receber mensagens (#1317).
+# Decide se a resposta do cliente a uma mensagem automática é um pedido para parar de receber mensagens: a do follow-up
+# de IA (#1317) e a da campanha do WhatsApp (#1449, CampaignJourney::OptOutReply).
 #
 # Quem decide é o modelo, não uma lista de palavras: "SAIR", "chega, não me procurem" e "vou sair agora, te respondo
 # depois" só se distinguem entendendo a frase. O modelo tem a saída explícita `nao_se_aplica` para quando não há o que
 # interpretar. O motivo vem em códigos fechados — nunca texto livre — para que o log não carregue nada da conversa.
 #
-# Pela chave de IA da conta (`CredentialResolver`), feature `follow_up_saida` na Gestão IA. Roda num job
-# (`Crm::FollowUps::OptOutDecisionJob`): uma tentativa por execução, e quem tenta de novo é o job.
+# Pela chave de IA da conta (`CredentialResolver`), com a feature de quem chama na Gestão IA (`follow_up_saida` por padrão,
+# `campanha_opt_out` na campanha). Roda num job (`Crm::FollowUps::OptOutDecisionJob`, `CampaignJourney::OptOutReplyJob`):
+# uma tentativa por execução, e quem tenta de novo é o job.
 class Crm::Ai::OptOutClassifier
   class Unavailable < StandardError; end
   class InvalidAnswer < StandardError; end
@@ -33,9 +35,13 @@ class Crm::Ai::OptOutClassifier
               properties: { pediu_para_parar: { type: 'string', enum: DECISIONS }, motivo: { type: 'string', enum: MOTIVOS } } }
   }.freeze
 
-  def initialize(account:, message:)
+  # previous_message: quem chama já sabe qual mensagem foi respondida (a campanha gravada na resposta tem id maior que
+  # ela, #1449). Sem ele, vale a última enviada antes da resposta, como no follow-up.
+  def initialize(account:, message:, feature: FEATURE, previous_message: nil)
     @account = account
     @message = message
+    @feature = feature
+    @previous_message = previous_message
   end
 
   # { decision: 'sim' | 'nao' | 'nao_se_aplica', motivo: <MOTIVOS> }. Sem texto não há o que perguntar ao modelo.
@@ -55,11 +61,11 @@ class Crm::Ai::OptOutClassifier
     credential = Crm::Ai::CredentialResolver.new(account: @account).resolve
     raise Unavailable, 'sem_credencial' if credential.blank?
 
-    Crm::Ai::ResponsesClient.new(credential: credential, feature: FEATURE, account: @account, max_retries: 0)
+    Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @account, max_retries: 0)
   end
 
   def input
-    { reply: @message.content.to_s.first(MAX_TEXT), previous_message: previous_outgoing.to_s.first(MAX_TEXT) }
+    { reply: @message.content.to_s.first(MAX_TEXT), previous_message: (@previous_message || previous_outgoing).to_s.first(MAX_TEXT) }
   end
 
   def previous_outgoing

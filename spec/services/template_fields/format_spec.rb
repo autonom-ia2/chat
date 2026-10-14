@@ -19,6 +19,12 @@ RSpec.describe TemplateFields::Format do
     expect(described_class.date(Date.new(2026, 10, 14), zone)).to eq('14/10/2026')
   end
 
+  it 'writes a calendar day saved as 00:00 UTC as that same day, with no time zone shift' do
+    expect(described_class.calendar_date(Time.utc(2026, 10, 20))).to eq('20/10/2026')
+    expect(described_class.calendar_date(Time.utc(2026, 10, 20).in_time_zone('America/Sao_Paulo'))).to eq('20/10/2026')
+    expect(described_class.calendar_date(nil)).to be_nil
+  end
+
   it 'uses the account time zone, São Paulo when it has none' do
     account = create(:account)
     expect(described_class.account_zone(account).name).to eq('America/Sao_Paulo')
