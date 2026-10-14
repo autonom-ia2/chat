@@ -20,13 +20,18 @@ pt_BR:
       invite:
         default_text: 'Oi, {nome}! Escolha o melhor horário para você: {link}'
         default_text_without_name: 'Oi! Escolha o melhor horário para você: {link}'
+        button_text: 'Oi, {nome}! Escolha o melhor horário para você no botão abaixo.'
+        button_text_without_name: 'Oi! Escolha o melhor horário para você no botão abaixo.'
+        button_label: 'Escolher horário'
       notices:
         when_format: "%d/%m às %H:%M"
-        booked: "Oi%{name}! Seu horário está marcado para %{when}. Para confirmar, mudar ou cancelar: %{link}"
-        booked_by_team: "Oi%{name}! %{booker} marcou seu horário para %{when}. Para confirmar, mudar ou cancelar: %{link}"
-        rescheduled: "Oi%{name}! Seu horário mudou para %{when}. Para confirmar, mudar ou cancelar: %{link}"
-        day_before: "Oi%{name}! Lembrete: seu horário é amanhã, %{when}. Para confirmar, mudar ou cancelar: %{link}"
-        hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when}). Para confirmar, mudar ou cancelar: %{link}"
+        booked: "Oi%{name}! Seu horário está marcado para %{when}."
+        booked_by_team: "Oi%{name}! %{booker} marcou seu horário para %{when}."
+        rescheduled: "Oi%{name}! Seu horário mudou para %{when}."
+        day_before: "Oi%{name}! Lembrete: seu horário é amanhã, %{when}."
+        hour_before: "Oi%{name}! Seu horário começa em 1 hora (%{when})."
+        manage_line: "Para confirmar, mudar ou cancelar: %{link}"
+        button_label: "Ver meu horário"
         stop_line: "Para parar estes avisos: %{link}"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
       notice_templates:
@@ -48,7 +53,6 @@ pt_BR:
           malformed: "O texto do aviso \"%{notice}\" tem um campo mal escrito. Use os botões para pôr os campos."
           bracket: "O texto do aviso \"%{notice}\" tem colchetes que não são um campo. Tire os colchetes ou use os botões para pôr os campos."
           unknown_field: "O texto do aviso \"%{notice}\" tem um campo que este aviso não preenche."
-          missing_link: "O texto do aviso \"%{notice}\" precisa do link para confirmar, mudar ou cancelar."
           missing_when: "O texto do aviso \"%{notice}\" precisa do dia e da hora."
           stop_line: "Tire do aviso \"%{notice}\" a frase para parar os avisos: o sistema já põe no fim."
       remind:

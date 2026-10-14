@@ -93,6 +93,8 @@ describe('EtapaComece', () => {
       agenteId: 9,
       nome: 'Bia',
       canal: 'WhatsApp do Centro',
+      atendia: false,
+      ultimaCaixa: false,
     });
     wrapper.unmount();
   });

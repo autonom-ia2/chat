@@ -1,5 +1,8 @@
 // #1181 — o estado que a pessoa lê no cartão e na página do agente.
-// "Atendendo" só quando o agente está ativo e ligado (mesma regra de Agent#operating? no backend).
+// "Atendendo" só quando o agente está ativo e ligado (mesma regra de Agent#operating? no backend)
+// E tem onde trabalhar (#1366, Agent#tem_onde_trabalhar? no backend, lido em `tem_onde_trabalhar`):
+// externo ativo sem canal aparece "Parado", nunca "Atendendo". O Copiloto da equipe (interno)
+// trabalha no painel, sem canal: o servidor responde true para ele.
 // Rascunho continua "Falta terminar" mesmo com instrução (DECISOES.md item 5): só começa a atender
 // quem escolheu onde. O agente de cotação mora no módulo de cotação e tem cartão próprio.
 export const ESTADO = {
@@ -11,15 +14,19 @@ export const ESTADO = {
 
 const TIPO_COTACAO = 'insurance_quote';
 
-export const estadoDoAgente = agente => {
-  if (agente?.agent_type === TIPO_COTACAO) return ESTADO.COTACAO;
+// Operação, sem o caso da cotação: a lista e a página leem daqui.
+export const estadoDeAtendimento = agente => {
   if (!agente?.status || agente.status === 'draft') {
     return ESTADO.FALTA_TERMINAR;
   }
-  if (agente.status === 'active' && agente.enabled === true) {
-    return ESTADO.ATENDENDO;
-  }
+  const ligado = agente.status === 'active' && agente.enabled === true;
+  if (ligado && agente.tem_onde_trabalhar !== false) return ESTADO.ATENDENDO;
   return ESTADO.PARADO;
+};
+
+export const estadoDoAgente = agente => {
+  if (agente?.agent_type === TIPO_COTACAO) return ESTADO.COTACAO;
+  return estadoDeAtendimento(agente);
 };
 
 // Ordem da lista (protótipo T02): quem atende, os parados, a cotação e, por último, Falta terminar.

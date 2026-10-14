@@ -14,6 +14,11 @@
 # SEMPRE, pelo sistema. Texto salvo que não passa mais na conferência, ou sem dia/hora ou link para preencher: vai o
 # padrão e fica no log (sem o texto). O aviso marcado pela equipe usa o padrão `booked_by_team`, porque ele diz quem
 # marcou e o texto próprio não tem como dizer. `appendix` e `template_values` (modelos) não mudam.
+#
+# Link de gestão (#1517): com `button: true` (`Notices::Button.allowed?`), ele vai no botão "Ver meu horário"
+# (`#rich_message`) e o texto padrão sai sem a linha do link. Texto próprio que já põe `{{horario.link_gestao}}`
+# nunca leva botão (duplicaria o link; tirar a chave deixaria a frase pela metade). Sem botão, o texto que não tem o
+# link (próprio, sem a chave) ganha a linha fixa `manage_line` antes da linha de parar: o link chega sempre.
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
   TEAM_BOOKED_KIND = 'booked'.freeze
@@ -32,16 +37,27 @@ class Crm::BookingV2::Notices::Text
     "#{invite.url}#{STOP_PARAM}"
   end
 
+  def self.manage_line(link, locale:)
+    I18n.t('crm.booking_v2.notices.manage_line', link: link, locale: locale)
+  end
+
   # page: a página do aviso (`Notices::Scheduler.profile_for`), para o texto próprio. Sem ela, o padrão.
-  def initialize(meeting:, invite:, kind:, page: nil)
+  # button: o canal mostra o botão (`Notices::Button.allowed?`).
+  def initialize(meeting:, invite:, kind:, page: nil, button: false)
     @meeting = meeting
     @invite = invite
     @kind = kind.to_s
     @page = page
+    @button = button
   end
 
   def to_s
-    "#{custom_body || default_body}\n\n#{stop_line}"
+    "#{body}\n\n#{stop_line}"
+  end
+
+  # O `content_attributes.rich_message` do botão, ou nil quando a mensagem vai só em texto.
+  def rich_message
+    Crm::BookingV2::Notices::Button.rich_message(invite.url, kind: :notice, locale: locale) if button?
   end
 
   # Depois do corpo de um modelo do canal API (que só tem variáveis de contato): dia e hora, link de gestão e a
@@ -59,13 +75,44 @@ class Crm::BookingV2::Notices::Text
 
   attr_reader :meeting, :invite, :kind, :page
 
-  def default_body
-    I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name,
-                                                 when: self.class.when_text(meeting), link: invite.url, locale: locale)
+  def body
+    return custom_body if own_link?
+    return custom_body || sentence if button?
+
+    custom_body ? "#{custom_body}\n\n#{manage_line}" : "#{sentence} #{manage_line}"
+  end
+
+  # Corpo acima do limite do botão (`Notices::Button.fits?`, a linha de parar conta): cai no texto, com a linha do link.
+  def button?
+    @button && !own_link? && Crm::BookingV2::Notices::Button.fits?("#{custom_body || sentence}\n\n#{stop_line}")
+  end
+
+  # O texto próprio sai (não caiu no padrão) e já põe o link.
+  def own_link?
+    custom_body.present? && Crm::BookingV2::Notices::CustomText.with_link?(custom_text)
+  end
+
+  # A frase do aviso padrão, sem o link.
+  def sentence
+    I18n.t("crm.booking_v2.notices.#{body_key}", name: name_part, booker: booker_name, when: self.class.when_text(meeting), locale: locale)
+  end
+
+  def manage_line
+    self.class.manage_line(invite.url, locale: locale)
+  end
+
+  def custom_text
+    page&.account_id == meeting.account_id ? page.notice_text(kind) : nil
   end
 
   def custom_body
-    text = page&.account_id == meeting.account_id ? page.notice_text(kind) : nil
+    return @custom_body if defined?(@custom_body)
+
+    @custom_body = fill_custom
+  end
+
+  def fill_custom
+    text = custom_text
     return if text.blank? || booker_name.present?
 
     body = Crm::BookingV2::Notices::CustomText.fill(text, TemplateFields::Resolver.for_meeting(meeting, invite: invite))

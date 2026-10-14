@@ -152,12 +152,26 @@ const linkQuemRecebe = computed(
           class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
           aria-hidden="true"
         />
-        {{
-          t('AGENTS.JORNADA.ONDE_QUANDO.TROCA', {
-            outro: troca.nome,
-            canal: troca.canal,
-          })
-        }}
+        <span class="flex flex-col gap-1">
+          <span>
+            {{
+              t('AGENTS.JORNADA.ONDE_QUANDO.TROCA', {
+                outro: troca.nome,
+                canal: troca.canal,
+              })
+            }}
+          </span>
+          <!-- #1366: era a última caixa dele, então ele para de atender. -->
+          <strong
+            v-if="troca.atendia && troca.ultimaCaixa"
+            data-troca-para
+            class="font-semibold"
+          >
+            {{
+              t('AGENTS.JORNADA.ONDE_QUANDO.TROCA_PARA', { outro: troca.nome })
+            }}
+          </strong>
+        </span>
       </p>
       <p v-if="semLeitura" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.SEM_LEITURA') }}

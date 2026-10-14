@@ -25,7 +25,11 @@ import {
   perguntasDeTeste,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
-import { canaisDoAgente } from '../utils/estadoDoAgente';
+import {
+  ESTADO,
+  canaisDoAgente,
+  estadoDeAtendimento,
+} from '../utils/estadoDoAgente';
 import { fecharFrase } from '../utils/pagina';
 import {
   canalSugerido,
@@ -143,7 +147,8 @@ const interno = computed(() =>
     : atuacaoPedida === ATUACAO.INTERNA
 );
 const atendendo = computed(
-  () => agente.value?.status === 'active' && agente.value?.enabled === true
+  // #1366: a mesma regra da lista: ativo, ligado e com onde trabalhar.
+  () => estadoDeAtendimento(agente.value) === ESTADO.ATENDENDO
 );
 
 // Onde atender: a leitura L2 (com quem ocupa cada caixa). Se ela falhar, as caixas livres que o

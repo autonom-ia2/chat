@@ -85,8 +85,20 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
 
       get_canais
 
-      expect(occupied_by(atendendo)).to eq('kind' => 'agent', 'agent_id' => bia.id, 'agent_name' => 'Bia', 'operating' => true)
-      expect(occupied_by(parado)).to eq('kind' => 'agent', 'agent_id' => leo.id, 'agent_name' => 'Leo', 'operating' => false)
+      expect(occupied_by(atendendo)).to eq('kind' => 'agent', 'agent_id' => bia.id, 'agent_name' => 'Bia', 'operating' => true, 'caixas' => 1)
+      expect(occupied_by(parado)).to eq('kind' => 'agent', 'agent_id' => leo.id, 'agent_name' => 'Leo', 'operating' => false, 'caixas' => 1)
+    end
+
+    it 'counts every active link of the agent, so the screen can warn when it is the last one (#1366)' do
+      primeira = create(:inbox, account: account)
+      segunda = create(:inbox, account: account)
+      bia = create_agent('Bia')
+      link_native(bia, primeira)
+      link_native(bia, segunda)
+
+      get_canais
+
+      expect(occupied_by(primeira)).to include('agent_id' => bia.id, 'caixas' => 2)
     end
 
     it 'treats a disabled agent as not answering' do

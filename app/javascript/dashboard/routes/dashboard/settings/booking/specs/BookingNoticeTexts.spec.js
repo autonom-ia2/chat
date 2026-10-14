@@ -33,12 +33,12 @@ vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({
 }));
 
 const DEFAULT_BOOKED =
-  'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}. Para confirmar, mudar ou cancelar: {{horario.link_gestao}}';
+  'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}.';
 const SETUP = {
   defaults: {
     booked: DEFAULT_BOOKED,
     rescheduled:
-      'Oi, {{cliente.primeiro_nome}}! Seu horário mudou para {{horario.data_hora}}. Para confirmar, mudar ou cancelar: {{horario.link_gestao}}',
+      'Oi, {{cliente.primeiro_nome}}! Seu horário mudou para {{horario.data_hora}}.',
   },
   fields: [
     { key: 'cliente.primeiro_nome', label: 'Primeiro nome do cliente' },
@@ -57,6 +57,8 @@ const SETUP = {
   },
   stop_line:
     'Para parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1',
+  manage_line: 'Para confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ',
+  notice_channel: 'whatsapp_cloud',
   max_length: 500,
 };
 const AI_TEXT =
@@ -72,13 +74,13 @@ const form = (extra = {}) => ({
   ...extra,
 });
 
-const mountStep = async (formValue = form()) => {
+const mountStep = async (formValue = form(), textSetup = SETUP) => {
   const wrapper = mount(StepNotices, {
     props: {
       form: formValue,
       inboxOptions: [WAHA],
       pageId: 7,
-      textSetup: SETUP,
+      textSetup,
     },
     global: {
       provide: {
@@ -112,10 +114,14 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     ).toEqual(['booked', 'rescheduled']);
     const booked = card(wrapper, 'booked');
     expect(booked.find('[data-text-input]').element.value).toBe(
-      'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário]. Para confirmar, mudar ou cancelar: [Link para confirmar, mudar ou cancelar]'
+      'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário].'
     );
     expect(booked.find('[data-text-preview]').text()).toBe(
-      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00. Para confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+    );
+    // #1517: sem o link no texto, a prévia mostra a linha que o sistema põe e avisa do botão.
+    expect(booked.find('[data-button-note]').text()).toBe(
+      'BOOKING.NOTICES.TEXTS.BUTTON_NOTE'
     );
     expect(booked.find('[data-text-origin]').text()).toBe(
       'BOOKING.NOTICES.TEXTS.DEFAULT'
@@ -149,6 +155,44 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(
       card(wrapper, 'booked').find('[data-text-input]').element.value
     ).toContain('A [Nome da sua empresa] te espera');
+  });
+
+  // #1517: a nota do botão só vale para o WhatsApp oficial e para texto sem o
+  // link; outras caixas (e sem caixa) só levam a linha do link.
+  it('a nota do botão some fora do WhatsApp oficial e com o link no texto', async () => {
+    const waha = await mountStep(form(), { ...SETUP, notice_channel: 'waha' });
+    expect(card(waha, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+    const none = await mountStep(form(), { ...SETUP, notice_channel: null });
+    expect(card(none, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+    const withLink = await mountStep(
+      form({ noticeTexts: { booked: AI_TEXT } })
+    );
+    expect(card(withLink, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+  });
+
+  // #1517: a opção da IA sem o link mostra a linha do link que o sistema põe.
+  it('a prévia da opção da IA sem o link mostra a linha do link', async () => {
+    BookingPagesAPI.noticeTextSuggestions.mockResolvedValue({
+      data: {
+        payload: {
+          options: [{ text: 'Oi! Até {{horario.data_hora}}.', keys: [] }],
+        },
+      },
+    });
+    const wrapper = await mountStep();
+
+    await card(wrapper, 'booked').find('[data-write-ai]').trigger('click');
+    await flushPromises();
+
+    expect(card(wrapper, 'booked').find('[data-ai-option] p').text()).toBe(
+      'Oi! Até 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ'
+    );
   });
 
   it('o tom escolhido nos cartões vai para a IA', async () => {
@@ -192,20 +236,20 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(textChanges).toEqual([]);
   });
 
-  it('editar troca rótulos por chaves; texto sem link mostra o erro', async () => {
+  it('editar troca rótulos por chaves; texto sem dia e hora mostra o erro', async () => {
     const wrapper = await mountStep();
 
     await card(wrapper, 'booked')
       .find('[data-text-input]')
-      .setValue('Oi! Seu horário é [Dia e hora do horário].');
+      .setValue('Oi! Mude em [Link para confirmar, mudar ou cancelar].');
     const change = lastChange(wrapper);
     expect(change).toEqual({
-      noticeTexts: { booked: 'Oi! Seu horário é {{horario.data_hora}}.' },
+      noticeTexts: { booked: 'Oi! Mude em {{horario.link_gestao}}.' },
     });
 
     await wrapper.setProps({ form: form({ noticeTexts: change.noticeTexts }) });
     expect(card(wrapper, 'booked').find('[data-text-error]').text()).toContain(
-      'BOOKING.NOTICES.TEXTS.ERRORS.MISSING_LINK'
+      'BOOKING.NOTICES.TEXTS.ERRORS.MISSING_WHEN'
     );
     expect(
       card(wrapper, 'booked')
@@ -252,10 +296,10 @@ describe('bookingNoticeTexts (#1354)', () => {
     ).toBe('Traga [documento] em {{horario.data_hora}}');
   });
 
-  it('confere como o servidor: link e dia/hora obrigatórios, só os campos do aviso, tamanho e chave malformada', () => {
+  it('confere como o servidor: dia/hora obrigatório (o link não, #1517), só os campos do aviso, tamanho e chave malformada', () => {
     expect(noticeTextProblem(AI_TEXT)).toBeNull();
     expect(noticeTextProblem('')).toBe('BLANK');
-    expect(noticeTextProblem('Dia {{horario.data_hora}}')).toBe('MISSING_LINK');
+    expect(noticeTextProblem('Dia {{horario.data_hora}}')).toBeNull();
     expect(noticeTextProblem('Link {{horario.link_gestao}}')).toBe(
       'MISSING_WHEN'
     );
@@ -281,6 +325,20 @@ describe('bookingNoticeTexts (#1354)', () => {
         'Parar: x'
       )
     ).toBe('Oi, Ana!\n\nParar: x');
+  });
+
+  it('sem o link no texto, a prévia põe a linha do link antes da de parar; com o link, fica como está (#1517)', () => {
+    expect(noticeTextPreview('Oi!', SETUP.samples, 'Parar: x', 'Link: y')).toBe(
+      'Oi!\n\nLink: y\n\nParar: x'
+    );
+    expect(
+      noticeTextPreview(
+        'Mude em {{horario.link_gestao}}',
+        SETUP.samples,
+        'Parar: x',
+        'Link: y'
+      )
+    ).toBe('Mude em https://app.test/b/AB3K9QXZ\n\nParar: x');
   });
 
   it('o formulário lê e manda só os textos escritos, e o passo não avança com texto inválido', () => {
