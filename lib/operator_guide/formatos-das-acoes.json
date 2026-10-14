@@ -406,7 +406,7 @@
     "completo": true,
     "controller": "api/v1/accounts/contacts/opt_outs#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:14",
+      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:17",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
     ],
     "sem_corpo": true
@@ -13006,7 +13006,7 @@
     "completo": true,
     "controller": "api/v1/accounts/contacts/opt_outs#create",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:9",
+      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:12",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
     ],
     "sem_corpo": true

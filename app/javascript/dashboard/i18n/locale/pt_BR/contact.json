@@ -545,6 +545,7 @@
           "EMAIL_UNSUBSCRIBE": "Descadastro de e-mail",
           "MANUAL": "Marcado pela equipe",
           "FOLLOW_UP_REPLY": "Pediu para parar no follow-up",
+          "CAMPAIGN_REPLY": "Pediu para parar ao responder uma campanha",
           "UNKNOWN": "Não informada"
         },
         "MARK": "Marcar que não quer receber",
@@ -557,7 +558,8 @@
         "ORIGIN_HINT": {
           "PROSPECTING": "Esta recusa veio da Prospecção. Ela só sai no lead, pelo \"Desfazer: pode ser contatado\".",
           "EMAIL_UNSUBSCRIBE": "Esta recusa veio do descadastro de e-mail feito pela própria pessoa e não se desfaz por aqui.",
-          "FOLLOW_UP_REPLY": "Esta recusa veio de uma resposta ao follow-up da IA pedindo para parar. Ela sai quando o \"Reativar retorno automático\" é usado em todos os cards do CRM em que a pessoa pediu para parar, mesmo que um desses cards tenha sido ligado depois a outro contato ou conversa."
+          "FOLLOW_UP_REPLY": "Esta recusa veio de uma resposta ao follow-up da IA pedindo para parar. Ela sai quando o \"Reativar retorno automático\" é usado em todos os cards do CRM em que a pessoa pediu para parar, mesmo que um desses cards tenha sido ligado depois a outro contato ou conversa.",
+          "CAMPAIGN_REPLY": "A IA reconheceu um pedido para parar na resposta desta pessoa a uma campanha do WhatsApp. Se ela não pediu, desfaça aqui."
         },
         "UNDO_DIALOG": {
           "TITLE": "Desfazer recusa",
@@ -567,7 +569,7 @@
         "API": {
           "MARK_SUCCESS": "Recusa registrada",
           "UNDO_SUCCESS": "Recusa desfeita",
-          "UNDO_KEPT": "A marca da equipe saiu, mas a recusa continua por outra origem.",
+          "UNDO_KEPT": "Esta marca saiu, mas a recusa continua por outra origem.",
           "ERROR": "Não foi possível salvar. Tente de novo."
         }
       }

@@ -115,6 +115,29 @@ RSpec.describe 'Contact opt-out API', type: :request do
       expect(contact.opt_out_source).to eq('follow_up_reply')
     end
 
+    it 'desfaz o pedido de parar reconhecido pela IA na resposta a uma campanha: é aqui que a equipe corrige (#1449)' do
+      contact.opt_out!(source: 'campaign_reply')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(contact.reload).not_to be_opted_out
+      expect(contact.opt_out_source).to be_nil
+    end
+
+    it 'desfazer o pedido na campanha com o e-mail descadastrado deixa a recusa com a origem do e-mail (#1449)' do
+      contact.update!(email: 'bia@example.com')
+      contact.opt_out!(source: 'campaign_reply')
+      unsubscribe_email!('bia@example.com')
+      expect(contact.reload.opt_out_source).to eq('campaign_reply')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+    end
+
     it 'não desfaz a recusa do descadastro de e-mail, e editar o contato depois não muda a marca' do
       contact.update!(email: 'ana@example.com')
       unsubscribe_email!('ana@example.com')
