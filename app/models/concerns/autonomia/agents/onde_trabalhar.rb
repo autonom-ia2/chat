@@ -14,8 +14,17 @@
 module Autonomia::Agents::OndeTrabalhar
   extend ActiveSupport::Concern
 
+  # Os campos que decidem se o agente atende. Mudando algum, quem grava trava o agente antes (AgentsController#update).
+  CAMPOS_DE_ATENDIMENTO = %w[status enabled actuation].freeze
+
   included do
     validate :atender_exige_onde_trabalhar, on: %i[update ativacao], if: :passa_a_atender?
+  end
+
+  class_methods do
+    def muda_atendimento?(attrs)
+      attrs.keys.map(&:to_s).intersect?(CAMPOS_DE_ATENDIMENTO)
+    end
   end
 
   # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.

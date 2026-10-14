@@ -296,15 +296,12 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  // Jornada inteira (teste, folha, começar, Pronto): mais passos que os outros casos.
-  it('starts answering only after one test answer, then activates and connects, and shows Pronto', async () => {
+  // Jornada inteira (folha, começar, Pronto): mais passos que os outros casos. #1504 — sem teste.
+  it('starts answering without any test answer, then activates and connects, and shows Pronto', async () => {
     const wrapper = await montar();
     conversaFecha();
     await flushPromises();
-    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
 
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     const comecar = wrapper.get('[data-comecar] button');
     expect(comecar.text()).toBe('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO');
     await comecar.trigger('click');
@@ -318,13 +315,35 @@ describe('AgenteCriarPage', () => {
       !passo.startsWith('autonomiaBuildThreads') &&
       !passo.startsWith('autonomiaSources');
     expect(ordem.filter(daCriacao)).toEqual([
-      'autonomiaAgents/test',
+      // #1504: sem teste obrigatório. #1366: ligar é o próprio POST do canal (ativar), e o agente é relido.
       'post:90:10:ativar',
       'autonomiaAgents/show',
     ]);
     expect(rota.atual.query.etapa).toBe('pronto');
     expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.PRONTO.TITULO');
     expect(document.activeElement.id).toBe('pronto-titulo');
+    wrapper.unmount();
+  }, 15000);
+
+  // O teste continua funcionando: a resposta vista vai junto para o Pronto.
+  it('still tests before starting, and the answer seen shows in Pronto', async () => {
+    const wrapper = await montar();
+    conversaFecha();
+    await flushPromises();
+    expect(wrapper.find('[data-teste-opcional]').exists()).toBe(true);
+
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+    expect(ordem).toContain('autonomiaAgents/test');
+    expect(wrapper.get('[data-confira]').text()).toContain(
+      'Abrimos sim, das 9h às 13h.'
+    );
+    expect(wrapper.find('[data-teste-opcional]').exists()).toBe(false);
+
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+    corpo().querySelector('[role="dialog"] [data-comecar]').click();
+    await flushPromises();
     expect(wrapper.get('[data-celular]').text()).toContain(
       'Abrimos sim, das 9h às 13h.'
     );
@@ -336,8 +355,6 @@ describe('AgenteCriarPage', () => {
       Object.assign(new Error('500'), { response: { status: 500 } })
     );
     const wrapper = await montar({ query: { agente: '90', etapa: 'confira' } });
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     await wrapper.get('[data-comecar] button').trigger('click');
     await flushPromises();
     jornada.canaisOcupados.mockClear();
@@ -387,14 +404,34 @@ describe('AgenteCriarPage', () => {
     expect(wrapper.get('[data-erro-teste]').text()).toContain(
       'AGENTS.JORNADA.CRIAR.CONFIRA.INCOMPLETO'
     );
-    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it('F5 on Comece without a test answer falls back to Confira', async () => {
+  // #1504 — a etapa Comece não exige mais uma resposta vista no teste.
+  it('F5 on Comece without a test answer stays in Comece', async () => {
+    const wrapper = await montar({ query: { agente: '90', etapa: 'comece' } });
+    expect(
+      corpo().querySelector('[role="dialog"] [data-comecar]')
+    ).not.toBeNull();
+    expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.COMECE');
+    wrapper.unmount();
+  });
+
+  it('F5 on Comece with no inbox at all falls back to Confira', async () => {
+    jornada.canaisOcupados.mockResolvedValue({ data: { payload: [] } });
     const wrapper = await montar({ query: { agente: '90', etapa: 'comece' } });
     expect(corpo().querySelector('[role="dialog"]')).toBeNull();
     expect(wrapper.find('[data-confira]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('F5 on Comece while the conversation is still open stays in Conte', async () => {
+    const wrapper = await montar({
+      query: { modelo: 'support', etapa: 'comece' },
+    });
+    expect(corpo().querySelector('[role="dialog"]')).toBeNull();
+    expect(wrapper.find('[data-confira]').exists()).toBe(false);
+    expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONTE');
     wrapper.unmount();
   });
 
@@ -458,16 +495,130 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  it('"Not now" keeps the draft and says so', async () => {
+  // #1504 — "Fazer ajustes avançados": parado (paused, não rascunho), sem caixa, e a página dele.
+  it('"Make advanced adjustments" pauses the agent without any inbox and opens its page', async () => {
     const wrapper = await montar({ query: { agente: '90' } });
-    await wrapper.get('[data-depois]').trigger('click');
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 90,
+      enabled: false,
+      status: 'paused',
+    });
+    expect(canaisApi.connect).not.toHaveBeenCalled();
+    expect(ordem.some(passo => passo.startsWith('post:'))).toBe(false);
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 90 },
+    });
+    expect(store.state['autonomiaAgents/getRecords'][0]).toMatchObject({
+      status: 'paused',
+      enabled: false,
+    });
+    expect(alerta).not.toHaveBeenCalled();
+    wrapper.unmount();
+    // A conversa estava fechada: nada de fechar de novo no servidor.
+    expect(ordem).not.toContain('autonomiaBuildThreads/completeMaterials');
+  });
+
+  it('works without any test answer, right after the conversation closes', async () => {
+    const wrapper = await montar();
+    conversaFecha();
+    await flushPromises();
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+    expect(ordem).not.toContain('autonomiaAgents/test');
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 90 },
+    });
+    wrapper.unmount();
+  });
+
+  it('stays in Confira and says nothing changed when pausing fails', async () => {
+    const wrapper = await montar({ query: { agente: '90' } });
+    falharAcao('autonomiaAgents/update', new Error('500'));
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO'
+    );
+    expect(router.push).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-confira]').exists()).toBe(true);
+    expect(
+      wrapper.get('[data-ajustes-botao]').attributes('aria-busy')
+    ).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('says nothing changed when the agent is missing, instead of doing nothing', async () => {
+    const wrapper = await montar({ query: { agente: '90' } });
+    store.state['autonomiaAgents/getRecords'] = [];
+    await flushPromises();
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO'
+    );
+    expect(
+      store.dispatch.mock.calls.some(
+        ([acao]) => acao === 'autonomiaAgents/update'
+      )
+    ).toBe(false);
+    expect(router.push).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('keeps Começar busy while the inboxes load, and starts once they arrive', async () => {
+    let responder;
+    jornada.canaisOcupados.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          responder = resolve;
+        })
+    );
+    const wrapper = await montar({ query: { agente: '90' } });
+    const botao = () => wrapper.get('[data-comecar] button');
+    expect(botao().attributes('aria-busy')).toBe('true');
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).not.toBe('comece');
+
+    responder({ data: { payload: L2 } });
+    await flushPromises();
+    expect(botao().attributes('aria-busy')).toBeUndefined();
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).toBe('comece');
+    wrapper.unmount();
+  });
+
+  it('"Back to Agents" at the top still keeps the draft as Not finished', async () => {
+    HTMLDialogElement.prototype.showModal ||= function abrir() {
+      this.open = true;
+    };
+    HTMLDialogElement.prototype.close ||= function fechar() {
+      this.open = false;
+    };
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-voltar-lista]').trigger('click');
+    const sair = [...corpo().querySelectorAll('[data-botoes] button')].find(
+      botao => botao.textContent.includes('AGENTS.JORNADA.CRIAR.SAIR.SAIR')
+    );
+    sair.click();
+    await flushPromises();
     expect(router.push).toHaveBeenCalledWith({
       name: 'autonomia_agents_index',
     });
     expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.CRIAR.SAIR.FEITO');
+    expect(
+      store.dispatch.mock.calls.some(
+        ([acao]) => acao === 'autonomiaAgents/update'
+      )
+    ).toBe(false);
     wrapper.unmount();
-    // A conversa estava fechada: nada de fechar de novo no servidor.
-    expect(ordem).not.toContain('autonomiaBuildThreads/completeMaterials');
   });
 
   // Com contexto: a pergunta e a resposta vão para o campo da conversa, e a pessoa completa o porquê.
@@ -631,11 +782,9 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  it('an internal agent starts answering without choosing an inbox', async () => {
+  it('an internal agent starts answering without choosing an inbox (and without a test)', async () => {
     prepararStore({ agente: { ...AGENTE, actuation: 'internal' } });
     const wrapper = await montar({ query: { agente: '90' } });
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     await wrapper.get('[data-comecar] button').trigger('click');
     await flushPromises();
 
@@ -768,6 +917,26 @@ describe('AgenteCriarPage', () => {
       expect(wrapper.find('[data-confira]').exists()).toBe(true);
       expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.TITULO');
       expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONFIRA');
+      wrapper.unmount();
+    });
+
+    it('"Make advanced adjustments" pauses the copilot and opens its page, with no inbox', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      expect(wrapper.find('[data-teste-opcional]').exists()).toBe(true);
+      await wrapper.get('[data-ajustes-botao]').trigger('click');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 90,
+        enabled: false,
+        status: 'paused',
+      });
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agent_panel',
+        params: { agentId: 90 },
+      });
       wrapper.unmount();
     });
 

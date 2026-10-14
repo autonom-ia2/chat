@@ -253,3 +253,33 @@ describe('useCardHistorico — texto de cada evento', () => {
     expect(describeActivity(byLink).detail).not.toContain('assistant');
   });
 });
+
+// #1498 — funil de Atender: os títulos próprios de Atender vêm antes.
+describe('useCardHistorico — funil de Atender', () => {
+  it('says "Request reopened" and "request details" instead of deal', () => {
+    const atender = ref(true);
+    const { describeActivity: descrever } = useCardHistorico({
+      t,
+      te,
+      locale: ref('en'),
+      activities: ref([]),
+      textos: () =>
+        atender.value
+          ? ['CRM_CARD.HISTORICO.EVENTO_ATENDER', 'CRM_CARD.HISTORICO.EVENTO']
+          : ['CRM_CARD.HISTORICO.EVENTO'],
+    });
+    const reabriu = activity(1, 'reopen', {});
+    const mudou = activity(2, 'update', {});
+
+    expect(descrever(reabriu).title).toBe('Request reopened');
+    expect(descrever(mudou).title).toBe('The request details changed');
+    expect(descrever(activity(3, 'move', {})).title).toBe(
+      t('CRM_CARD.HISTORICO.EVENTO.ACTIVITY_MOVE')
+    );
+
+    atender.value = false;
+    expect(descrever(reabriu).title).toBe(
+      t('CRM_KANBAN.DRAWER.ACTIVITY_REOPEN')
+    );
+  });
+});

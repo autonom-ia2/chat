@@ -477,6 +477,8 @@ const defaultPipelinePayload = pipeline => ({
   ...(pipeline?.when_to_use !== undefined
     ? { when_to_use: pipeline.when_to_use }
     : {}),
+  // #1498 — o modelo escolhido ao criar (Suporte, Cobrança…).
+  ...(pipeline?.template ? { template: pipeline.template } : {}),
 });
 
 const normalizeStagePayload = (stage, index) => ({
@@ -504,6 +506,8 @@ const normalizeStagePayload = (stage, index) => ({
   // Maps the stage to a native Meta funnel event (lead/qualified/opportunity/
   // negotiation) for CTWA conversion sync; null clears the classification.
   funnel_stage_type: stage.funnel_stage_type || null,
+  // #1498 — categoria da etapa vinda do modelo; sem tela.
+  ...(stage.category ? { category: stage.category } : {}),
 });
 
 export const actions = {

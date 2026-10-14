@@ -175,8 +175,11 @@ module Autonomia
         stamp['at'].to_f >= janela.ago.to_f
       end
 
-      # Resta uma janela: área criada entre esta leitura e a trava da caixa, cujo agente outra operação trave esperando
-      # esta mesma caixa. É rara; o Postgres acusa o impasse e desfaz uma das duas, sem gravar meio caminho.
+      # Impasse que sobra (raro): dois agentes cruzados. P é porta em X e área em Y; A é porta em Y e área em X. Saindo
+      # os dois ao mesmo tempo (soft delete ou desconectar), um trava P e depois A (a área de X), o outro trava A e depois
+      # P (a área de Y). O Postgres acusa o impasse e desfaz uma das transações, sem gravar meio caminho; a API devolve
+      # 500 (ActiveRecord::Deadlocked). Sem retry automático: quem pediu tenta de novo. Também cai aqui a área criada
+      # entre esta leitura e a trava da caixa, se outra operação travar o agente dela esperando esta mesma caixa.
       def travar_agentes_das_areas!
         ids = self.class.kept.area.where(inbox_id: inbox_id).pluck(:autonomia_agent_id)
         ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?

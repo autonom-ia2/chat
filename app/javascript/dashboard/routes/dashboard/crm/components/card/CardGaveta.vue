@@ -36,6 +36,7 @@ import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
 import { useCardRetorno } from './useCardRetorno';
 import { useCardHistorico } from './useCardHistorico';
 import { useCardDesfecho } from './useCardDesfecho';
+import { useCardTipo } from './useCardTipo';
 import { useCardConversao } from './useCardConversao';
 import { useCardCliente } from './useCardCliente';
 import { useCardNomes } from './useCardNomes';
@@ -115,6 +116,8 @@ const funil = computed(() => {
   const id = Number(card.value.pipeline_id || props.pipelineId);
   return props.pipelines.find(item => item.id === id);
 });
+// #1498 — Negócio (Vender) ou Assunto (Atender), e Cobrança.
+const jeito = useCardTipo({ t, funil });
 const etapaDoCard = computed(
   () =>
     props.stages.find(etapa => etapa.id === card.value.stage_id)?.name ||
@@ -146,7 +149,11 @@ const { porDia } = useCardHistorico({
   te,
   locale,
   activities: atividades,
-  textos: 'CRM_CARD.HISTORICO.EVENTO',
+  // #1498 — Atender tem frases próprias ("Atendimento reaberto").
+  textos: () =>
+    jeito.atender.value
+      ? ['CRM_CARD.HISTORICO.EVENTO_ATENDER', 'CRM_CARD.HISTORICO.EVENTO']
+      : ['CRM_CARD.HISTORICO.EVENTO'],
 });
 const sugestao = useSugestaoEtapa({
   t,
@@ -231,7 +238,13 @@ const descarte = useCardGuarda({
   editando,
   rascunhos: () =>
     [
-      negocio.sujo.value && editando.value && t('CRM_CARD.SAIR.NEGOCIO'),
+      negocio.sujo.value &&
+        editando.value &&
+        t(
+          jeito.atender.value
+            ? 'CRM_CARD.SAIR.ASSUNTO'
+            : 'CRM_CARD.SAIR.NEGOCIO'
+        ),
       retorno.sujo.value && t('CRM_CARD.SAIR.RETORNO'),
       donoSujo.value && t('CRM_CARD.SAIR.DONO'),
       telaCliente.value?.sujo && t('CRM_CARD.SAIR.CLIENTE'),
@@ -373,8 +386,11 @@ const {
 // A página chama o 3º argumento quando salvou: a tela volta ao resumo.
 const salvarNegocio = () => {
   if (!podeGerenciar.value || !negocio.valido.value) return;
-  emit('save', payloadDoNegocio(negocio.form), undefined, () => {
-    negocio.carregar({ ...props.card, ...payloadDoNegocio(negocio.form) });
+  const payload = payloadDoNegocio(negocio.form, {
+    cobranca: jeito.cobranca.value,
+  });
+  emit('save', payload, undefined, () => {
+    negocio.carregar({ ...props.card, ...payload });
     if (tela.value === 'negocio') voltarSemGuarda();
   });
 };
@@ -390,6 +406,7 @@ const { heroi, rodape } = useCardMoldura({
   subtitulo,
   migalha,
   nome,
+  jeito,
   etapa: etapaDoCard,
   contatoInicial: computed(() => props.initialContact),
   permissoes: { gerenciar: podeGerenciar },
@@ -549,6 +566,7 @@ defineExpose({
         :aberto="desfecho.aberto"
         :ganhar="rotuloGanhar"
         :perder="rotuloPerder"
+        :venda="venda"
         :pode-gerenciar="podeGerenciar"
         :carregando="isLoadingDetails"
         @ganhou="ganhou"
@@ -588,6 +606,7 @@ defineExpose({
                 :tem-conversa="Boolean(card.conversation?.display_id)"
                 :ocupado="isSavingFollowUp || sugestao.respondendo.value"
                 :status="desfecho.status"
+                :venda="venda"
                 @responder="abrirConversa()"
                 @feito="feito"
                 @retorno="novoRetorno"
@@ -616,7 +635,7 @@ defineExpose({
                 :pode-registros="canManageRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
-                :venda="venda"
+                :jeito="jeito"
                 @abrir="abrir"
                 @arquivar="arquivar"
                 @conversa="abrirConversa()"
@@ -651,7 +670,9 @@ defineExpose({
               v-model:urgencia="negocio.form.priority"
               v-model:atencao="negocio.form.score"
               v-model:fechar-ate="negocio.form.expectedCloseAt"
+              v-model:promessa="negocio.form.paymentPromiseAt"
               :card="card"
+              :jeito="jeito"
               :pode-gerenciar="podeGerenciar"
             />
             <TelaQuemCuida
@@ -755,6 +776,7 @@ defineExpose({
               v-else-if="tela === 'historico'"
               :dias="porDia"
               :carregando="isLoadingDetails"
+              :venda="venda"
             />
           </main>
 
@@ -771,6 +793,8 @@ defineExpose({
               :exemplo="editando ? titulo : t('CRM_CARD.LADO.CLIENTE_NOVO')"
               :formato="formato"
               :negocio="tela === 'negocio' ? negocio.form : null"
+              :atender="jeito.atender.value"
+              :cobranca="jeito.cobranca.value"
               :retorno="tela === 'retorno-novo' ? retorno.previa.value : null"
               :dono="donoNome"
               :reuniao="reuniao.reuniao.value"

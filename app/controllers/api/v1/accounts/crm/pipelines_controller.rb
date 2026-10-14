@@ -19,6 +19,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     @pipeline.save!
     update_goal!
     update_outcome_labels!
+    update_template!
     render :show, status: :created
   end
 
@@ -28,6 +29,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     update_outcome_labels!
     update_meta_sync!
     update_google_sync!
+    update_template!
     render :show
   end
 
@@ -80,6 +82,20 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
       metadata['outcome_labels'] = cleaned
     end
     @pipeline.update!(metadata: metadata)
+  end
+
+  # Modelo do funil (#1498): Suporte, Cobrança… Só um dos modelos conhecidos; outro valor é ignorado. Fica em
+  # metadata['template'], gravado à parte como a meta, para não apagar o resto do metadata.
+  # O modelo que chega dentro de metadata passa pela mesma lista: desconhecido sai.
+  def update_template!
+    metadata = (@pipeline.metadata || {}).deep_dup
+    template = params.dig(:pipeline, :template).to_s
+    if ::Crm::Pipeline::TEMPLATES.include?(template)
+      metadata['template'] = template
+    elsif metadata.key?('template') && ::Crm::Pipeline::TEMPLATES.exclude?(metadata['template'])
+      metadata.delete('template')
+    end
+    @pipeline.update!(metadata: metadata) if metadata != @pipeline.metadata
   end
 
   # Meta CAPI sync config lives in metadata['meta_sync'] and is merged in

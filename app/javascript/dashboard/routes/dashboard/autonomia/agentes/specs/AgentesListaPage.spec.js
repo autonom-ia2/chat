@@ -211,6 +211,50 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    // #1504 — quem saiu do Confira por "Fazer ajustes avançados" fica parado e sem canal: o cartão
+    // diz "Parado" e abre a página do agente (não volta para a criação).
+    it('shows an agent paused from the creation as "Parado", without inbox, opening its page', async () => {
+      prepararStore({
+        agentes: [
+          agente(7, {
+            status: 'paused',
+            enabled: false,
+            channels_count: 0,
+            name: 'Duda',
+          }),
+          agente(8, {
+            status: 'paused',
+            enabled: false,
+            channels_count: 0,
+            actuation: 'internal',
+            name: 'Copiloto',
+          }),
+        ],
+      });
+      const wrapper = await montar();
+      const cartoes = wrapper.findAll('[data-cartao]');
+      expect(cartoes).toHaveLength(2);
+      cartoes.forEach(cartao => {
+        expect(cartao.text()).toContain('AGENTS.JORNADA.STATUS.PARADO');
+        expect(cartao.text()).not.toContain(
+          'AGENTS.JORNADA.STATUS.FALTA_TERMINAR'
+        );
+        expect(cartao.find('[data-continuar]').exists()).toBe(false);
+      });
+      expect(cartoes[0].text()).toContain(
+        'AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL'
+      );
+      expect(cartoes[1].text()).toContain('AGENTS.JORNADA.CARTAO.PARADO');
+      expect(cartoes[1].text()).not.toContain('PARADO_SEM_CANAL');
+
+      await cartoes[0].get('[data-abrir]').trigger('click');
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agent_panel',
+        params: { agentId: 7 },
+      });
+      wrapper.unmount();
+    });
+
     // #1525 — a cotação leva à página do agente já na escolha de canal, não ao módulo (que voltava para cá).
     it('opens the quote agent page on the channel choice', async () => {
       prepararStore({

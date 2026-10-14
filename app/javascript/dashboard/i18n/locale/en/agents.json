@@ -1437,8 +1437,7 @@
           "TEXTO": "{nome} stays on the list as Not finished.",
           "FICAR": "Stay here",
           "SAIR": "Leave",
-          "FEITO": "{nome} stayed on the list as Not finished.",
-          "DEPOIS": "Not now, finish later"
+          "FEITO": "{nome} stayed on the list as Not finished."
         },
         "CONTE": {
           "ROTULO": "Conversation to create the agent",
@@ -1512,7 +1511,6 @@
           "DEMORA": "This is taking too long. Try again.",
           "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
           "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
-          "PERGUNTE": "Ask a question to see how {nome} answers.",
           "COMECAR_NO": "Start answering on {canal}",
           "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "COMECAR_COPILOTO": "Start helping the team",
@@ -1529,7 +1527,11 @@
             "COMO_RESPONDO": "A customer asked for a discount. How do I reply?",
             "PROXIMO_PASSO": "The customer stopped replying. What is the next step?",
             "RASCUNHO": "Draft a reply about the delivery time"
-          }
+          },
+          "TESTE_OPCIONAL": "If you like, test first: ask a question and see how {nome} answers.",
+          "AJUSTES": "Make advanced adjustments",
+          "AJUSTES_TEXTO": "{nome} stays paused until you turn it on.",
+          "AJUSTES_ERRO": "Could not open the adjustments for {nome} now. Nothing changed."
         },
         "CANAL": {
           "WHATSAPP": "WhatsApp",

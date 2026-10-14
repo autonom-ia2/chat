@@ -22,6 +22,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     # would silently drop the mapping the funnel drawer sends on stage creation.
     metadata = @stage.metadata || {}
     apply_funnel_stage_type!(metadata)
+    apply_category!(metadata)
     @stage.metadata = metadata
     authorize @stage
     @stage.save!
@@ -95,6 +96,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     incoming = stage_params[:metadata].presence
     metadata.merge!(incoming.to_h.stringify_keys) if incoming
     apply_funnel_stage_type!(metadata)
+    apply_category!(metadata)
     metadata
   end
 
@@ -112,10 +114,24 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     end
   end
 
+  # Categoria da etapa vinda do modelo (#1498): só as conhecidas; vazio ou outro valor tira. Pode vir solta ou dentro de
+  # metadata (a solta vale mais); sem nenhuma das duas, fica como está.
+  def apply_category!(metadata)
+    provided = params[:stage]&.key?(:category)
+    return unless provided || metadata.key?('category')
+
+    category = (provided ? params.dig(:stage, :category) : metadata['category']).to_s
+    if ::Crm::PipelineStage::CATEGORIES.include?(category)
+      metadata['category'] = category
+    else
+      metadata.delete('category')
+    end
+  end
+
   def apply_default_ai_criteria!(stage)
     return if Crm::Ai::Config.stage_ai_criteria(stage).present?
 
-    defaults = Crm::Ai::DefaultStageCriteria.metadata_for(stage.name)
+    defaults = Crm::Ai::DefaultStageCriteria.metadata_for(stage.name, atender: !@pipeline.counts_as_sale?)
     return if defaults.blank?
 
     stage.metadata = (stage.metadata || {}).merge(defaults)

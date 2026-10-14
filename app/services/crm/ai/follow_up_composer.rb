@@ -172,12 +172,18 @@ module Crm
         @mode == :choose_template
       end
 
+      # #1498: o tipo do funil chega em "pipeline.kind"; em atendimento a retomada não fala de venda.
+      PIPELINE_KIND_RULE = 'O campo "pipeline.kind" diz o tipo do funil: "sell" (venda) ou "serve" (atendimento: suporte, pós-venda, ' \
+                           'cobrança, agendamento). Em "serve", não fale em proposta, orçamento nem compra: retome o atendimento (o que ' \
+                           'foi pedido ao cliente, o andamento, se já resolveu) e trate "resolvido", "já paguei" ou "não preciso mais" ' \
+                           'como encerramento.'.freeze
+
       def instructions
         return callback_instructions if @purpose == :callback
         return reminder_instructions if @mode == :reminder
 
         <<~PROMPT.strip
-          Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou".
+          Você é o cérebro de follow-up em português do Brasil para retomar conversas de vendas/atendimento que ficaram paradas, "de onde a conversa parou". #{PIPELINE_KIND_RULE}
           Responda apenas com JSON válido no schema solicitado.
 
           #{turn_owner_rules}
@@ -314,6 +320,7 @@ module Crm
             title: @card.title,
             current_stage_name: @context[:current_stage]&.dig(:name)
           },
+          pipeline: { kind: @card.pipeline&.kind || 'sell' },
           conversation_summary: @context[:summary],
           conversation_state: @context[:conversation_state],
           temporal: @context[:temporal],

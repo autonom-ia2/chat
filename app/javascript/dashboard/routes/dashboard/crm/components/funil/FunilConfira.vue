@@ -17,6 +17,8 @@ const props = defineProps({
   meta: { type: [String, Number], default: '' },
   dinheiro: { type: Function, required: true },
   ia: { type: Boolean, default: false },
+  sucesso: { type: String, default: '' },
+  fracasso: { type: String, default: '' },
 });
 
 defineEmits(['etapas', 'abrir', 'alterarEtapa', 'criar']);
@@ -30,7 +32,11 @@ const acontece = computed(() => [
     n: props.etapas.length,
   }),
   ...(props.ia ? [t('CRM_FUNIL.CONFIRA.ACONTECE_2')] : []),
-  t('CRM_FUNIL.CONFIRA.ACONTECE_3'),
+  t(
+    props.venda
+      ? 'CRM_FUNIL.CONFIRA.ACONTECE_3'
+      : 'CRM_FUNIL.CONFIRA.ACONTECE_3_ATENDER'
+  ),
 ]);
 </script>
 
@@ -90,6 +96,8 @@ const acontece = computed(() => [
     :venda="venda"
     :meta="meta"
     :dinheiro="dinheiro"
+    :sucesso="sucesso"
+    :fracasso="fracasso"
     @alterar="$emit('abrir', 'sales')"
   />
   <section
