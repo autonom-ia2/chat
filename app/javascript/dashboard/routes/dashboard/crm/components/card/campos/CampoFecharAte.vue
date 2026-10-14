@@ -7,6 +7,8 @@ import CampoQuando from '../CampoQuando.vue';
 // atalhos fim do mês, em 15 e em 30 dias. Na criação e no Negócio.
 defineProps({
   somenteLeitura: { type: Boolean, default: false },
+  // #1498 — "Vencimento" e "Prometeu pagar em" na Cobrança.
+  rotulo: { type: String, default: '' },
 });
 const fecharAte = defineModel({ type: String, default: '' });
 const { t } = useI18n();
@@ -35,7 +37,7 @@ const atalhos = computed(() => [
   <CampoQuando
     v-model="fecharAte"
     :com-hora="false"
-    :rotulo="t(`${N}.FECHAR_ATE`)"
+    :rotulo="rotulo || t(`${N}.FECHAR_ATE`)"
     :atalhos="atalhos"
     :desligado="somenteLeitura"
     limpar

@@ -327,6 +327,53 @@ describe('CardGaveta (#1423)', () => {
     expect(venda.html()).toContain('CRM_CARD.RESUMO.NEGOCIO');
   });
 
+  // #1498 — achados do teste em produção (conta 16, funil trocado para Atender).
+  it('em Atender, Cancelado tem motivos e exemplo de atendimento', async () => {
+    const wrapper = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.DESFECHO.MOTIVO_ATENDER.NAO_PRECISA');
+    expect(html).toContain('CRM_CARD.DESFECHO.CANCELAR_EXEMPLO');
+    expect(html).not.toContain('CRM_CARD.DESFECHO.MOTIVO.PRECO');
+    expect(html).not.toContain('CRM_KANBAN.DRAWER.LOSE_REASON_PLACEHOLDER');
+  });
+
+  it('em Atender, editar o card fala de Assunto e não pede valor', async () => {
+    const wrapper = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    await wrapper.get('[data-card-abrir="negocio"]').trigger('click');
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.ASSUNTO.NOME');
+    expect(html).toContain('CRM_CARD.ASSUNTO.TITULO');
+    expect(html).not.toContain('CRM_CARD.NEGOCIO.NOME');
+    expect(wrapper.find('[data-campo-valor]').exists()).toBe(false);
+  });
+
+  it('na Cobrança, editar o card pede valor a receber, vencimento e promessa', async () => {
+    const wrapper = montar({
+      pipelines: [
+        {
+          id: 1,
+          name: 'Cobrança',
+          counts_as_sale: false,
+          metadata: { template: 'COBRANCA' },
+        },
+      ],
+    });
+    await flushPromises();
+    await wrapper.get('[data-card-abrir="negocio"]').trigger('click');
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.COBRANCA.VALOR');
+    expect(html).toContain('CRM_CARD.COBRANCA.FECHAR_ATE');
+    expect(wrapper.find('[data-campo-promessa]').exists()).toBe(true);
+  });
+
   it('Arquivar pede confirmação antes de arquivar (OB-03)', async () => {
     const wrapper = montar();
     await flushPromises();

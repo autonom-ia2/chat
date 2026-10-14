@@ -7,6 +7,7 @@ import CardCartao from './CardCartao.vue';
 import CardMaisDetalhes from './CardMaisDetalhes.vue';
 import { atrasado } from './proximoPasso';
 import { formatClientPhone } from '../../helpers/meetingDay';
+import { promessaDoCard } from './useCardNegocio';
 
 // #1423 — o card em quatro frases, sempre na mesma ordem: Cliente, Negócio,
 // Agenda e Conversa. Cada coisa aparece num lugar só da tela: o que já está no
@@ -32,8 +33,8 @@ const props = defineProps({
   // A conta usa empresas (feature companies).
   empresas: { type: Boolean, default: false },
   arquivando: { type: Boolean, default: false },
-  // Funil de venda: "Negócio"; fora de venda (atendimento, suporte): "Assunto".
-  venda: { type: Boolean, default: true },
+  // #1498 — Negócio (Vender) ou Assunto (Atender), e Cobrança.
+  jeito: { type: Object, required: true },
 });
 
 defineEmits(['abrir', 'arquivar', 'conversa', 'cliente']);
@@ -84,6 +85,61 @@ const sugestaoNaLinha = computed(
     props.sugestao?.to_stage_name &&
     !tiposNoPasso.value.includes('sugestao')
 );
+
+// ——— Assunto (#1498): prioridade e há quanto tempo está aberto; na
+// Cobrança, também o valor a receber, o vencimento e a promessa.
+const atender = computed(() => props.jeito.atender.value);
+const cobranca = computed(() => props.jeito.cobranca.value);
+const prioridade = computed(() =>
+  t(`CRM_CARD.URGENCIA.${URGENCIA[props.card.priority] || 'MEDIUM'}`)
+);
+const tempoAberto = computed(() =>
+  props.card.created_at ? props.jeito.tempoAberto(props.card.created_at) : ''
+);
+// "2026-10-20" é um dia, não um instante: lido na hora local.
+const diaLocal = texto => {
+  const [ano, mes, dia] = texto.slice(0, 10).split('-').map(Number);
+  return new Date(ano, mes - 1, dia);
+};
+const DIA_MS = 86400000;
+const diasDaqui = data => {
+  const hoje = new Date();
+  const a = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const b = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.round((a - b) / DIA_MS);
+};
+// "hoje", "amanhã", "ontem" ou "em 9 de outubro".
+const diaFalado = data =>
+  Math.abs(diasDaqui(data)) <= 1
+    ? props.formato.dia(data)
+    : t(`${R}.EM_DIA`, { dia: props.formato.diaCurto(data) });
+// O vencimento é um dia (o campo não tem hora): lido pela data, não como
+// instante, para não cair no dia anterior no fuso da conta.
+const vencimento = computed(() =>
+  props.card.expected_close_at
+    ? diaLocal(String(props.card.expected_close_at))
+    : null
+);
+const promessa = computed(() => {
+  const dia = promessaDoCard(props.card);
+  return dia ? diaFalado(diaLocal(dia)) : '';
+});
+const fraseCobranca = computed(() => {
+  if (!vencimento.value) return `${R}.COBRANCA_SEM_DATA`;
+  return diasDaqui(vencimento.value) < 0
+    ? `${R}.COBRANCA_VENCEU`
+    : `${R}.COBRANCA_FRASE`;
+});
+const cartaoNegocio = computed(() => {
+  if (cobranca.value)
+    return { icone: 'i-lucide-receipt', titulo: t(`${R}.ASSUNTO`) };
+  if (atender.value)
+    return {
+      icone: 'i-lucide-message-square-text',
+      titulo: t(`${R}.ASSUNTO`),
+    };
+  return { icone: 'i-lucide-briefcase-business', titulo: t(`${R}.NEGOCIO`) };
+});
 
 // ——— Agenda: reunião e retornos juntos, por data ———
 const ABERTOS = ['pending', 'overdue'];
@@ -257,13 +313,51 @@ const temConversa = computed(() =>
 
       <CardCartao
         parte="negocio"
-        icone="i-lucide-briefcase-business"
+        :icone="cartaoNegocio.icone"
         tom="bg-n-iris-3 text-n-iris-11"
-        :titulo="t(venda ? `${R}.NEGOCIO` : `${R}.ASSUNTO`)"
+        :titulo="cartaoNegocio.titulo"
         :acao="podeGerenciar ? 'alterar' : 'ver'"
         @abrir="$emit('abrir', 'negocio')"
       >
+        <p v-if="cobranca" class="mb-0" data-resumo-assunto>
+          <I18nT :keypath="fraseCobranca" tag="span" scope="global">
+            <template #titulo>
+              <strong class="font-semibold">{{ card.title }}</strong>
+            </template>
+            <template #valor>
+              <strong class="font-semibold">
+                {{ formato.dinheiro(card.value_cents, card.currency) }}
+              </strong>
+            </template>
+            <template #vencimento>
+              <strong class="font-semibold">
+                {{ vencimento ? diaFalado(vencimento) : '' }}
+              </strong>
+            </template>
+          </I18nT>
+          <template v-if="promessa">
+            {{ ' ' }}
+            <I18nT :keypath="`${R}.PROMESSA`" tag="span" scope="global">
+              <template #dia>
+                <strong class="font-semibold">{{ promessa }}</strong>
+              </template>
+            </I18nT>
+          </template>
+        </p>
+        <p v-else-if="atender" class="mb-0" data-resumo-assunto>
+          <strong class="font-semibold">{{ card.title }}.</strong>
+          {{ ' ' }}
+          <I18nT :keypath="`${R}.PRIORIDADE_TEMPO`" tag="span" scope="global">
+            <template #prioridade>
+              <strong class="font-semibold">{{ prioridade }}</strong>
+            </template>
+            <template #tempo>
+              <strong class="font-semibold">{{ tempoAberto }}</strong>
+            </template>
+          </I18nT>
+        </p>
         <I18nT
+          v-else
           :keypath="
             card.value_cents ? `${R}.NEGOCIO_FRASE` : `${R}.NEGOCIO_SEM_VALOR`
           "
@@ -450,6 +544,7 @@ const temConversa = computed(() =>
       :formato="formato"
       :pode-gerenciar="podeGerenciar"
       :arquivando="arquivando"
+      :atender="atender"
       @abrir="$emit('abrir', $event)"
       @arquivar="$emit('arquivar')"
     />

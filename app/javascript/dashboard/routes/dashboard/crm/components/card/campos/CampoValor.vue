@@ -9,6 +9,8 @@ import { MOEDAS } from '../useCardNegocio';
 // mesmo campo na criação e no Negócio (OB-06), nunca o código digitado.
 defineProps({
   somenteLeitura: { type: Boolean, default: false },
+  // #1498 — "Valor a receber" na Cobrança.
+  rotulo: { type: String, default: '' },
 });
 const valor = defineModel('valor', { type: [String, Number], default: '' });
 const moeda = defineModel('moeda', { type: String, default: 'BRL' });
@@ -26,7 +28,7 @@ const moedas = computed(() =>
 <template>
   <div class="flex flex-col gap-1" data-campo-valor>
     <span class="text-sm font-medium text-n-slate-12">
-      {{ t(`${N}.VALOR`) }}
+      {{ rotulo || t(`${N}.VALOR`) }}
     </span>
     <div class="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-2">
       <ChoiceSelect
@@ -42,7 +44,7 @@ const moedas = computed(() =>
         min="0"
         step="0.01"
         :readonly="somenteLeitura"
-        :aria-label="t(`${N}.VALOR`)"
+        :aria-label="rotulo || t(`${N}.VALOR`)"
         :placeholder="t(`${N}.VALOR_EXEMPLO`)"
       />
     </div>

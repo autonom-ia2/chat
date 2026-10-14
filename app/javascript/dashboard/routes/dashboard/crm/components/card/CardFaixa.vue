@@ -12,6 +12,8 @@ defineProps({
   ganhar: { type: String, required: true },
   perder: { type: String, required: true },
   podeGerenciar: { type: Boolean, default: false },
+  // #1498 — Atender fecha em Resolvido: um visto no lugar do troféu.
+  venda: { type: Boolean, default: true },
   carregando: { type: Boolean, default: false },
 });
 
@@ -48,7 +50,7 @@ defineEmits(['ganhou', 'perdeu']);
       <Button
         data-card-ganhou
         :label="ganhar"
-        icon="i-lucide-trophy"
+        :icon="venda ? 'i-lucide-trophy' : 'i-lucide-circle-check'"
         teal
         faded
         class="!min-h-11 justify-center"

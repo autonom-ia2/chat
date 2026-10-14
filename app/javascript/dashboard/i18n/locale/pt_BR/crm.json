@@ -564,7 +564,8 @@
       "EXPORT_TITLE": "Baixar a lista em Excel, com o funil, os filtros e a ordem atuais",
       "EXPORT_ERROR": "Não foi possível exportar a lista. Tente de novo.",
       "CREATE_INITIAL_PIPELINE": "Criar funil inicial",
-      "LOAD_MORE": "Carregar mais"
+      "LOAD_MORE": "Carregar mais",
+      "NEW_CARD_ATENDER": "Novo atendimento"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -4062,7 +4063,7 @@
   "CRM_FUNIL": {
     "ROTULO": "Funis do CRM",
     "NOVO": "Novo funil",
-    "NOVO_TEXTO": "O caminho que cada cliente faz, do primeiro oi até fechar.",
+    "NOVO_TEXTO": "O caminho que cada cliente faz, do primeiro oi até o fim.",
     "EDITAR": "Editar funil",
     "NOME": "Nome do funil",
     "NOME_FALTA": "Dê um nome ao funil.",
@@ -4092,7 +4093,7 @@
         "E5": "Fechado"
       },
       "ATENDIMENTO": {
-        "NOME": "Atendimento",
+        "NOME": "Suporte",
         "E1": "Novo pedido",
         "E2": "Em atendimento",
         "E3": "Esperando o cliente",
@@ -4100,16 +4101,33 @@
         "TEXTO": "Do pedido de ajuda até resolver."
       },
       "AGENDAMENTOS": {
-        "NOME": "Agendamentos",
-        "E1": "Novo contato",
+        "NOME": "Agendamento",
+        "E1": "Pediu horário",
         "E2": "Horário marcado",
-        "E3": "Atendido",
-        "E4": "Não veio",
+        "E3": "Precisa remarcar",
+        "E4": "Atendido",
         "TEXTO": "Do pedido de horário até o atendimento."
       },
       "TROCAR_AVISO": "Trocar para {nome} apaga as mudanças que você fez nas etapas.",
       "TROCAR_SIM": "Trocar mesmo assim",
-      "TROCAR_NAO": "Manter minhas etapas"
+      "TROCAR_NAO": "Manter minhas etapas",
+      "POS_VENDA": {
+        "NOME": "Pós-venda",
+        "TEXTO": "Da compra até o cliente dizer que está tudo certo.",
+        "E1": "Compra feita",
+        "E2": "Acompanhando",
+        "E3": "Esperando o cliente",
+        "E4": "Tudo certo"
+      },
+      "COBRANCA": {
+        "NOME": "Cobrança",
+        "TEXTO": "Do aviso de pagamento até receber.",
+        "E1": "A vencer",
+        "E2": "Atrasado",
+        "E3": "Prometeu pagar",
+        "E4": "Pago",
+        "SUCESSO": "Pago"
+      }
     },
     "ETAPAS": {
       "ROTULO": "Etapas",
@@ -4162,7 +4180,8 @@
       "ACONTECE_1": "Aparece no Kanban o quadro {nome}, com {n} colunas.",
       "ACONTECE_2": "Dá para mudar qualquer parte depois, em Editar funil.",
       "ACONTECE_3": "Depois de criar, você liga as caixas de entrada, os lembretes e os anúncios.",
-      "HEROI": "Confira e crie. Dá para mudar tudo depois."
+      "HEROI": "Confira e crie. Dá para mudar tudo depois.",
+      "ACONTECE_3_ATENDER": "Depois de criar, você liga as caixas de entrada e confere os lembretes."
     },
     "RESUMO": {
       "TEXTO": "O que este funil faz hoje. Toque em Alterar para mudar uma parte.",
@@ -4170,10 +4189,8 @@
       "FALTA_FRASE": "Falta a frase de {nomes}. | Faltam as frases de {nomes}.",
       "SOBRE": "Use quando o cliente {texto}.",
       "SOBRE_FALTA": "Falta dizer que tipo de conversa entra aqui.",
-      "VENDA": "Cada venda fechada conta no painel.",
       "META": "Meta de {valor} por mês.",
       "SEM_META": "Ainda sem meta por mês.",
-      "NAO_VENDA": "Este funil não conta como venda.",
       "RETORNO": "Se o cliente some, chamamos de volta {vezes}.",
       "RETORNO_EQUIPE": "Se o cliente some, a equipe é avisada {vezes}.",
       "ATE_VEZES": "até {n} vez | até {n} vezes",
@@ -4184,7 +4201,9 @@
       "O_GOOGLE": "o Google",
       "ANUNCIOS_DESLIGADO": "Os anúncios ainda não sabem das suas vendas.",
       "O_FACEBOOK": "o Facebook",
-      "O_INSTAGRAM": "o Instagram"
+      "O_INSTAGRAM": "o Instagram",
+      "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada venda fechada conta no painel.",
+      "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}."
     },
     "SOBRE": {
       "ROTULO": "Quando usar este funil",
@@ -4203,18 +4222,20 @@
         "TROCAR": "quer trocar ou cancelar",
         "MARCAR": "quer marcar um horário",
         "REMARCAR": "quer mudar o horário",
-        "HORARIOS": "pergunta os horários livres"
+        "HORARIOS": "pergunta os horários livres",
+        "COMO_USAR": "pergunta como usar",
+        "ACABOU_DE_COMPRAR": "acabou de comprar",
+        "ENTREGA": "pergunta da entrega",
+        "PAGAR": "quer pagar",
+        "SEGUNDA_VIA": "pede a segunda via",
+        "ATRASADO": "está com o pagamento atrasado"
       },
       "NOTA": "Anotação da equipe (se quiser)",
       "NOTA_AJUDA": "Só para a sua equipe ler. Não muda nada no funil."
     },
     "VENDAS": {
-      "ROTULO": "Vendas e meta",
       "TITULO": "Saiba quanto este funil vende",
       "TEXTO": "As vendas fechadas aqui entram no painel, junto da meta do mês.",
-      "CONTA": "Conta como venda",
-      "CONTA_SIM": "Quando um cliente fecha, entra no total de vendas.",
-      "CONTA_NAO": "Bom para atendimento e pós-venda: o cliente termina como resolvido ou cancelado.",
       "META": "Meta de vendas por mês",
       "META_AJUDA": "Aparece no painel. Deixe vazio se não tiver meta.",
       "META_EXEMPLO": "50000",
@@ -4404,7 +4425,6 @@
       "META_MES": "Meta do mês",
       "META_EXEMPLO": "{valor} vendidos até agora",
       "SEM_META": "Sem meta, o painel mostra só o total vendido.",
-      "NAO_VENDA": "Este funil fica fora do total de vendas.",
       "FIM": "Como o cliente termina",
       "RETORNO_TITULO": "Com a Ana, de exemplo",
       "RETORNO_TEXTO": "As mensagens de verdade são escritas olhando a conversa de cada cliente.",
@@ -4444,7 +4464,27 @@
       "CHEGOU_EM": "Quando chega em {nome}"
     },
     "CARREGANDO": "Carregando…",
-    "NOVO_TITULO": "Monte o caminho do cliente"
+    "NOVO_TITULO": "Monte o caminho do cliente",
+    "TIPO": {
+      "PERGUNTA": "Para que serve este funil?",
+      "AJUDA": "Escolha um. Depois vêm as etapas prontas.",
+      "VENDER": {
+        "NOME": "Vender",
+        "TEXTO": "Conquistar um cliente novo."
+      },
+      "ATENDER": {
+        "NOME": "Atender",
+        "TEXTO": "Resolver algo para quem já é cliente."
+      },
+      "MODELO": "Que tipo de atendimento?",
+      "PREVIA_TITULO": "Seu quadro aparece aqui",
+      "PREVIA_TEXTO": "Escolha para que serve o funil e mostramos as etapas prontas.",
+      "ROTULO": "Para que serve"
+    },
+    "ATENDER": {
+      "TITULO": "Como cada pedido termina",
+      "TEXTO": "Resolvido quando deu certo. Cancelado quando o cliente não precisa mais."
+    }
   },
   "CRM_CARD": {
     "FECHAR": "Fechar",
@@ -4497,7 +4537,13 @@
       },
       "GANHOU_TITULO_PADRAO": "Negócio ganho! Quanto ficou?",
       "GANHOU_CONFIRMA_PADRAO": "Marcar como ganho",
-      "CANCELOU_TEXTO": "Contar o motivo é opcional, mas ajuda a entender o que aconteceu."
+      "CANCELOU_TEXTO": "Contar o motivo é opcional, mas ajuda a entender o que aconteceu.",
+      "MOTIVO_ATENDER": {
+        "RESOLVEU": "Resolveu de outro jeito",
+        "SUMIU": "Parou de responder",
+        "NAO_PRECISA": "Não precisa mais"
+      },
+      "CANCELAR_EXEMPLO": "Por que foi cancelado?"
     },
     "ARQUIVAR": {
       "BOTAO": "Arquivar",
@@ -4597,7 +4643,15 @@
       "DESFAZER_CLIENTE": "Desfazer",
       "MARCAR_CLIENTE": "Marcar como cliente",
       "ASSUNTO_DE": "Assunto: {titulo}",
-      "ASSUNTO": "Assunto"
+      "ASSUNTO": "Assunto",
+      "COBRANCA_FRASE": "{titulo}: {valor} a receber, vence {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} a receber, sem vencimento.",
+      "PROMESSA": "Prometeu pagar {dia}.",
+      "PRIORIDADE_TEMPO": "Prioridade {prioridade}, aberto há {tempo}.",
+      "MAIS_ASSUNTO": "Mais do assunto",
+      "MAIS_DETALHES_DICA_ASSUNTO": "De onde veio, o que já aconteceu, mais do assunto e arquivar",
+      "COBRANCA_VENCEU": "{titulo}: {valor} a receber, venceu {vencimento}.",
+      "EM_DIA": "em {dia}"
     },
     "ETAPA": {
       "TELA": "Etapa",
@@ -5010,7 +5064,11 @@
           "SEARCH": "Procurar",
           "NO_COMPANIES": "Nenhuma empresa encontrada. Você pode cadastrar uma nova."
         }
-      }
+      },
+      "TITULO_2_ATENDER": "Sobre o atendimento",
+      "TEXTO_2_ATENDER": "Dê um nome ao assunto e diga em que etapa ele entra. O resto pode ficar para depois.",
+      "TITULO_2_COBRANCA": "Sobre a cobrança",
+      "TEXTO_2_COBRANCA": "Diga o que está sendo cobrado, o valor e o vencimento. O resto pode ficar para depois."
     },
     "QUANDO": {
       "OUTRO_DIA": "Escolher outro dia",
@@ -5156,6 +5214,30 @@
       "TITULO": "Mover para {etapa}?",
       "TEXTO": "{nome} muda de coluna no quadro agora.",
       "CONFIRMA": "Mover"
+    },
+    "ASSUNTO": {
+      "TELA": "Assunto",
+      "TITULO": "Sobre o pedido",
+      "TEXTO": "O que {nome} precisa e quanta pressa tem.",
+      "NOME": "Assunto",
+      "TITULO_EXEMPLO": "Ex.: Troca de tamanho",
+      "TITULO_FALTA": "Escreva o assunto.",
+      "URGENCIA": "Prioridade"
+    },
+    "COBRANCA": {
+      "TITULO": "Sobre a cobrança",
+      "TEXTO": "Quanto {nome} deve, quando vence e se prometeu pagar.",
+      "NOME": "O que está sendo cobrado",
+      "TITULO_EXEMPLO": "Ex.: Mensalidade de outubro",
+      "VALOR": "Valor a receber",
+      "FECHAR_ATE": "Vencimento",
+      "PROMESSA": "Prometeu pagar em",
+      "PROMESSA_DICA": "Se o cliente disse o dia, marque aqui. Os lembretes esperam até esse dia."
+    },
+    "TEMPO": {
+      "MINUTOS": "{n} minuto | {n} minutos",
+      "HORAS": "{n} hora | {n} horas",
+      "DIAS": "{n} dia | {n} dias"
     }
   }
 }

@@ -564,7 +564,8 @@
       "EXPORT_TITLE": "Download the list as Excel, with the current pipeline, filters and order",
       "EXPORT_ERROR": "Could not export the list. Please try again.",
       "CREATE_INITIAL_PIPELINE": "Create initial pipeline",
-      "LOAD_MORE": "Load more"
+      "LOAD_MORE": "Load more",
+      "NEW_CARD_ATENDER": "New request"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -4061,7 +4062,7 @@
   "CRM_FUNIL": {
     "ROTULO": "CRM pipelines",
     "NOVO": "New pipeline",
-    "NOVO_TEXTO": "The path each customer takes, from the first hello to closing.",
+    "NOVO_TEXTO": "The path each customer takes, from the first hello to the end.",
     "EDITAR": "Edit pipeline",
     "NOME": "Pipeline name",
     "NOME_FALTA": "Give the pipeline a name.",
@@ -4096,19 +4097,36 @@
         "E2": "In progress",
         "E3": "Waiting for customer",
         "E4": "Solved",
-        "TEXTO": "From the request for help to solving it."
+        "TEXTO": "From the request for help until it is solved."
       },
       "AGENDAMENTOS": {
         "NOME": "Appointments",
-        "E1": "New contact",
-        "E2": "Booked",
-        "E3": "Attended",
-        "E4": "No-show",
+        "E1": "Asked for a time",
+        "E2": "Time booked",
+        "E3": "Needs to reschedule",
+        "E4": "Attended",
         "TEXTO": "From the booking request to the visit."
       },
       "TROCAR_AVISO": "Switching to {nome} discards the changes you made to the stages.",
       "TROCAR_SIM": "Switch anyway",
-      "TROCAR_NAO": "Keep my stages"
+      "TROCAR_NAO": "Keep my stages",
+      "POS_VENDA": {
+        "NOME": "After-sales",
+        "TEXTO": "From the purchase until the customer says all is well.",
+        "E1": "Just bought",
+        "E2": "Following up",
+        "E3": "Waiting for the customer",
+        "E4": "All good"
+      },
+      "COBRANCA": {
+        "NOME": "Collections",
+        "TEXTO": "From the payment notice until it is paid.",
+        "E1": "Not due yet",
+        "E2": "Overdue",
+        "E3": "Promised to pay",
+        "E4": "Paid",
+        "SUCESSO": "Paid"
+      }
     },
     "ETAPAS": {
       "ROTULO": "Stages",
@@ -4161,7 +4179,8 @@
       "ACONTECE_1": "The {nome} board shows up in the Kanban, with {n} columns.",
       "ACONTECE_2": "You can change any part later, in Edit pipeline.",
       "ACONTECE_3": "After creating, you connect inboxes, reminders and ads.",
-      "HEROI": "Review and create. You can change everything later."
+      "HEROI": "Review and create. You can change everything later.",
+      "ACONTECE_3_ATENDER": "After creating it, you connect the inboxes and check the reminders."
     },
     "RESUMO": {
       "TEXTO": "What this pipeline does today. Tap Change to edit a part.",
@@ -4169,10 +4188,8 @@
       "FALTA_FRASE": "The sentence for {nomes} is missing. | The sentences for {nomes} are missing.",
       "SOBRE": "Use it when the customer {texto}.",
       "SOBRE_FALTA": "Say which kind of conversation belongs here.",
-      "VENDA": "Every closed sale counts on the dashboard.",
       "META": "Goal of {valor} a month.",
       "SEM_META": "No monthly goal yet.",
-      "NAO_VENDA": "This pipeline does not count as sales.",
       "RETORNO": "If the customer goes quiet, we reach out again {vezes}.",
       "RETORNO_EQUIPE": "If the customer goes quiet, the team is reminded {vezes}.",
       "ATE_VEZES": "up to {n} time | up to {n} times",
@@ -4183,7 +4200,9 @@
       "O_GOOGLE": "Google",
       "ANUNCIOS_DESLIGADO": "Your ads don't know about your sales yet.",
       "O_FACEBOOK": "Facebook",
-      "O_INSTAGRAM": "Instagram"
+      "O_INSTAGRAM": "Instagram",
+      "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
+      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}."
     },
     "SOBRE": {
       "ROTULO": "When to use this pipeline",
@@ -4202,18 +4221,20 @@
         "TROCAR": "wants to exchange or cancel",
         "MARCAR": "wants to book a time",
         "REMARCAR": "wants to change the time",
-        "HORARIOS": "asks which times are free"
+        "HORARIOS": "asks which times are free",
+        "COMO_USAR": "asks how to use it",
+        "ACABOU_DE_COMPRAR": "just bought",
+        "ENTREGA": "asks about the delivery",
+        "PAGAR": "wants to pay",
+        "SEGUNDA_VIA": "asks for a copy of the bill",
+        "ATRASADO": "is late on a payment"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."
     },
     "VENDAS": {
-      "ROTULO": "Sales and goal",
       "TITULO": "Know how much this pipeline sells",
       "TEXTO": "Sales closed here go to the dashboard, next to the monthly goal.",
-      "CONTA": "Counts as a sale",
-      "CONTA_SIM": "When a customer closes, it adds to total sales.",
-      "CONTA_NAO": "Good for support and after-sales: the customer ends as solved or cancelled.",
       "META": "Monthly sales goal",
       "META_AJUDA": "Shows on the dashboard. Leave it empty if you have no goal.",
       "META_EXEMPLO": "50000",
@@ -4403,7 +4424,6 @@
       "META_MES": "Monthly goal",
       "META_EXEMPLO": "{valor} sold so far",
       "SEM_META": "Without a goal, the dashboard shows only the total sold.",
-      "NAO_VENDA": "This pipeline stays out of total sales.",
       "FIM": "How the customer ends",
       "RETORNO_TITULO": "With Ana, as an example",
       "RETORNO_TEXTO": "Real messages are written from each customer's conversation.",
@@ -4443,7 +4463,27 @@
       "CHEGOU_EM": "When they reach {nome}"
     },
     "CARREGANDO": "Loading…",
-    "NOVO_TITULO": "Build the customer path"
+    "NOVO_TITULO": "Build the customer path",
+    "TIPO": {
+      "PERGUNTA": "What is this pipeline for?",
+      "AJUDA": "Pick one. The ready-made stages come next.",
+      "VENDER": {
+        "NOME": "Sell",
+        "TEXTO": "Win a new customer."
+      },
+      "ATENDER": {
+        "NOME": "Serve",
+        "TEXTO": "Solve something for an existing customer."
+      },
+      "MODELO": "What kind of service?",
+      "PREVIA_TITULO": "Your board shows up here",
+      "PREVIA_TEXTO": "Choose what the pipeline is for and we show the ready-made stages.",
+      "ROTULO": "What it is for"
+    },
+    "ATENDER": {
+      "TITULO": "How each request ends",
+      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it."
+    }
   },
   "CRM_CARD": {
     "FECHAR": "Close",
@@ -4496,7 +4536,13 @@
       },
       "GANHOU_TITULO_PADRAO": "Deal won! How much was it?",
       "GANHOU_CONFIRMA_PADRAO": "Mark as won",
-      "CANCELOU_TEXTO": "Sharing the reason is optional, but it helps understand what happened."
+      "CANCELOU_TEXTO": "Sharing the reason is optional, but it helps understand what happened.",
+      "MOTIVO_ATENDER": {
+        "RESOLVEU": "Solved another way",
+        "SUMIU": "Stopped replying",
+        "NAO_PRECISA": "No longer needed"
+      },
+      "CANCELAR_EXEMPLO": "Why was it cancelled?"
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
@@ -4596,7 +4642,15 @@
       "DESFAZER_CLIENTE": "Undo",
       "MARCAR_CLIENTE": "Mark as customer",
       "ASSUNTO_DE": "Subject: {titulo}",
-      "ASSUNTO": "Subject"
+      "ASSUNTO": "Subject",
+      "COBRANCA_FRASE": "{titulo}: {valor} due {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} due, no due date.",
+      "PROMESSA": "Promised to pay {dia}.",
+      "PRIORIDADE_TEMPO": "Priority: {prioridade}, open for {tempo}.",
+      "MAIS_ASSUNTO": "More about the subject",
+      "MAIS_DETALHES_DICA_ASSUNTO": "Where it came from, what happened, more about the subject and archive",
+      "COBRANCA_VENCEU": "{titulo}: {valor} due, was due {vencimento}.",
+      "EM_DIA": "on {dia}"
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -5009,7 +5063,11 @@
           "SEARCH": "Search",
           "NO_COMPANIES": "No company found. You can add a new one."
         }
-      }
+      },
+      "TITULO_2_ATENDER": "About the request",
+      "TEXTO_2_ATENDER": "Name the subject and choose the stage it starts in. The rest can wait.",
+      "TITULO_2_COBRANCA": "About the payment",
+      "TEXTO_2_COBRANCA": "Say what is being charged, the amount and the due date. The rest can wait."
     },
     "QUANDO": {
       "OUTRO_DIA": "Pick another day",
@@ -5155,6 +5213,30 @@
       "TITULO": "Move to {etapa}?",
       "TEXTO": "{nome} changes column on the board now.",
       "CONFIRMA": "Move"
+    },
+    "ASSUNTO": {
+      "TELA": "Subject",
+      "TITULO": "About the request",
+      "TEXTO": "What {nome} needs and how urgent it is.",
+      "NOME": "Subject",
+      "TITULO_EXEMPLO": "E.g. Size exchange",
+      "TITULO_FALTA": "Write the subject.",
+      "URGENCIA": "Priority"
+    },
+    "COBRANCA": {
+      "TITULO": "About the payment",
+      "TEXTO": "How much {nome} owes, when it is due and whether they promised to pay.",
+      "NOME": "What is being charged",
+      "TITULO_EXEMPLO": "E.g. October fee",
+      "VALOR": "Amount due",
+      "FECHAR_ATE": "Due date",
+      "PROMESSA": "Promised to pay on",
+      "PROMESSA_DICA": "If the customer named a day, mark it here. Reminders wait until that day."
+    },
+    "TEMPO": {
+      "MINUTOS": "{n} minute | {n} minutes",
+      "HORAS": "{n} hour | {n} hours",
+      "DIAS": "{n} day | {n} days"
     }
   }
 }

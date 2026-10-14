@@ -55,9 +55,11 @@ import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
   FAILURE_STATUSES,
   SUCCESS_STATUSES,
+  countsAsSale,
   outcomeLabels,
   outcomeStatuses,
 } from '../helpers/cardOutcome';
+import { ehCobranca } from '../components/funil/funil';
 import {
   buildCrmCardColumns,
   DEFAULT_COLUMN_ORDER,
@@ -206,6 +208,12 @@ const selectedPipeline = computed(() =>
   pipelines.value.find(
     pipeline => pipeline.id === Number(currentPipelineId.value)
   )
+);
+// #1498 — funil de Atender: "Novo atendimento" e cartão sem valor (a
+// Cobrança mostra o valor a receber).
+const funilDeVenda = computed(() => countsAsSale(selectedPipeline.value));
+const quadroComValor = computed(
+  () => funilDeVenda.value || ehCobranca(selectedPipeline.value)
 );
 
 const pipelineOptions = computed(() =>
@@ -1556,6 +1564,7 @@ const cardColumnDefs = computed(() =>
     // Keep the settings menu in sync with the table: the Meta column must be
     // hideable/reorderable whenever it is rendered.
     includeMeta: isMetaSyncActive.value,
+    includeValue: quadroComValor.value,
   })
 );
 
@@ -2178,7 +2187,13 @@ onUnmounted(() => {
         />
         <Button
           v-if="canManageCards && viewMode !== 'calendar'"
-          :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
+          :label="
+            t(
+              funilDeVenda
+                ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
+                : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
+            )
+          "
           icon="i-lucide-plus"
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
@@ -2540,6 +2555,7 @@ onUnmounted(() => {
               <CrmKanbanCard
                 :card="element"
                 :stage-color="stage.color"
+                :com-valor="quadroComValor"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
               />

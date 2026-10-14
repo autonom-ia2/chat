@@ -14,6 +14,9 @@ import { diasEmFaixa, tempoAte } from './funil/funil';
 const props = defineProps({
   pipelineId: { type: [String, Number], required: true },
   detalhe: { type: Boolean, default: false },
+  // #1498 — num funil de Atender, "cliente que some" só aparece para quem já
+  // tinha ligado: é lembrete pensado para venda.
+  atender: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['alterar']);
@@ -358,6 +361,7 @@ watch(
       </section>
 
       <section
+        v-if="!atender || form.autoFollowup.enabled"
         data-auto-followup
         class="flex flex-col gap-4 rounded-2xl border bg-n-solid-1 p-5"
         :class="form.autoFollowup.enabled ? 'border-n-blue-7' : 'border-n-weak'"
