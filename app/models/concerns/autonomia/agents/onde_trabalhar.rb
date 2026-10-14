@@ -33,16 +33,25 @@ module Autonomia::Agents::OndeTrabalhar
     actuation_internal? || vinculo_ativo_numa_caixa?
   end
 
-  # Saiu o último vínculo: o agente para (paused + enabled false). Chamado só pelo AgentInbox, quando um vínculo sai da
-  # caixa (destroy ou arquivamento). Sem callbacks: as conversas já foram soltas pelo vínculo, e sem vínculo ativo não há
-  # espelho para sincronizar. Validação antiga do agente não pode impedir a caixa de soltá-lo.
-  def parar_se_sem_onde_trabalhar!
-    return if deleted? || !(active? || enabled?)
+  # Saiu o último vínculo: o agente para (paused + enabled false). Chamado só pelo AgentInbox, quando `vinculo` sai da
+  # caixa (destroy ou arquivamento).
+  # - TRAVA O AGENTE antes de reler os vínculos: duas saídas ao mesmo tempo (caixas diferentes) não veem, cada uma, o
+  #   vínculo da outra e deixam o agente atendendo sem nada. Quem chama já trava o agente antes da caixa
+  #   (InboxConnector#disconnect!, Areas, AgentInbox#soltar_areas_da_caixa!, SoftDelete): a ordem é sempre agente → caixa.
+  # - `update_columns` e não `update!`: validação antiga do agente (público-alvo, tom, página da agenda gravados antes
+  #   de uma regra nova) faria o `update!` recusar, e a caixa não conseguiria soltar o agente. O que o callback do
+  #   `update!` faria (sync_mirror_bots) é chamado aqui à mão, para o espelho seguir o estado.
+  def parar_se_sem_onde_trabalhar!(vinculo: nil)
+    with_lock do
+      next if deleted? || !(active? || enabled?)
 
-    agent_inboxes.reset # o vínculo acabou de sair: lê do banco, nunca da associação carregada antes
-    return if tem_onde_trabalhar?
+      agent_inboxes.reset # o vínculo acabou de sair: lê do banco, nunca da associação carregada antes
+      next if tem_onde_trabalhar?
 
-    update_columns(status: self.class.statuses[:paused], enabled: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      update_columns(status: self.class.statuses[:paused], enabled: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      sync_mirror_bots
+      registrar_parada(vinculo)
+    end
   end
 
   private
@@ -63,6 +72,13 @@ module Autonomia::Agents::OndeTrabalhar
     return false if deleted? || !(active? && enabled?)
 
     will_save_change_to_status? || will_save_change_to_enabled? || will_save_change_to_actuation?
+  end
+
+  # Só metadados (ids e papel), nunca conteúdo: o evento existe para a página e o suporte verem por que o agente parou.
+  def registrar_parada(vinculo)
+    events.create!(account_id: account_id, event_type: :parado_sem_onde_trabalhar,
+                   metadata: { motivo: 'sem_onde_trabalhar', vinculo_id: vinculo&.id, inbox_id: vinculo&.inbox_id,
+                               papel: vinculo&.papel }.compact)
   end
 
   def atender_exige_onde_trabalhar

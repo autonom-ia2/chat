@@ -119,8 +119,10 @@ module Autonomia
       def soltar_areas_da_caixa!
         return unless porta? && inbox
 
-        # Trava a caixa antes de listar: um Areas.vincular! paralelo espera, e depois não acha mais a porta. Ordem
-        # agente -> caixa (SoftDelete) ou só caixa (Areas, disconnect!): sem ciclo.
+        # Ordem agente → caixa (#1366): trava os agentes das áreas (por id) ANTES da caixa, porque cada área que sai pode
+        # parar o seu agente (parada automática), que trava o agente. Depois trava a caixa e lista de novo: um
+        # Areas.vincular! paralelo espera e depois não acha mais a porta.
+        travar_agentes_das_areas!
         inbox.lock!
         self.class.kept.area.where(inbox_id: inbox_id).includes(:agent).find_each do |area|
           ::Autonomia::Agents::Areas.desvincular!(agent: area.agent, inbox: inbox, porta_saindo: true)
@@ -173,6 +175,13 @@ module Autonomia
         stamp['at'].to_f >= janela.ago.to_f
       end
 
+      # Resta uma janela: área criada entre esta leitura e a trava da caixa, cujo agente outra operação trave esperando
+      # esta mesma caixa. É rara; o Postgres acusa o impasse e desfaz uma das duas, sem gravar meio caminho.
+      def travar_agentes_das_areas!
+        ids = self.class.kept.area.where(inbox_id: inbox_id).pluck(:autonomia_agent_id)
+        ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?
+      end
+
       def area_precisa_de_porta_ativa
         return if inbox_id.blank?
         return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
@@ -196,7 +205,7 @@ module Autonomia
       end
 
       def parar_agente_sem_onde_trabalhar
-        agent.parar_se_sem_onde_trabalhar!
+        agent.parar_se_sem_onde_trabalhar!(vinculo: self)
       end
 
       def saindo_com_o_agente?

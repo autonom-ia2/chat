@@ -6,6 +6,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 
 import BuilderReview from '../builder/BuilderReview.vue';
+import { publicarNoCanal } from './publicacao';
 
 const props = defineProps({
   agent: {
@@ -64,11 +65,7 @@ const connectInbox = async inboxId => {
   // #1366 — conectar e ativar é um passo só no servidor (`ativar`): sem canal, o
   // agente não pode ficar ativo, e a conexão que falha não liga nada.
   try {
-    await store.dispatch('autonomiaChannels/connect', {
-      agentId: props.agentId,
-      inboxId,
-      ativar: true,
-    });
+    await publicarNoCanal(store, props.agentId, inboxId);
     goToTest();
   } catch (error) {
     useAlert(t('AGENTS.CHANNELS.CONNECT_ERROR'));

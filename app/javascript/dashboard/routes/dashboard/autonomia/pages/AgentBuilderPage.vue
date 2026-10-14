@@ -19,6 +19,7 @@ import BuilderChat from '../components/builder/BuilderChat.vue';
 import BuilderKnowledgePanel from '../components/builder/BuilderKnowledgePanel.vue';
 import BuilderReview from '../components/builder/BuilderReview.vue';
 import AgentTypePicker from '../components/AgentTypePicker.vue';
+import { publicarNoCanal } from '../components/panel/publicacao';
 
 // CONSTRUTOR — the conversational wizard, run as a SINGLE page with internal
 // steps (`conversa | revisao`) rather than separate routes, because the
@@ -363,11 +364,7 @@ const connectInbox = async inboxId => {
   // #1366 — o wizard cria em rascunho; conectar e ativar é um passo só no
   // servidor (`ativar`). Se a conexão falhar, nada foi ligado.
   try {
-    await store.dispatch('autonomiaChannels/connect', {
-      agentId: agentId.value,
-      inboxId,
-      ativar: true,
-    });
+    await publicarNoCanal(store, agentId.value, inboxId);
     router.push({
       name: 'autonomia_agent_panel',
       params: { agentId: agentId.value, tab: 'test' },

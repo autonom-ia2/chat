@@ -25,8 +25,9 @@ export const trocaNoCanal = (canais, inboxId, agenteId) => {
     agenteId: canal.occupied_by.agent_id,
     nome: canal.occupied_by.agent_name,
     canal: canal.name,
-    // #1366: sair da última caixa para o antigo; se a troca falhar, ele volta ligado só se atendia.
+    // #1366: sair da última caixa para o antigo (a tela avisa); se a troca falhar, ele volta ligado só se atendia.
     atendia: canal.occupied_by.operating === true,
+    ultimaCaixa: canal.occupied_by.caixas === 1,
   };
 };
 
