@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
+import { createPendingMessage } from 'dashboard/helper/commons';
 import {
   appendSignature,
   removeSignature,
@@ -10,6 +11,7 @@ import {
   stripUnsupportedMarkdown,
 } from 'dashboard/helper/editorHelper';
 import {
+  prepareAttachmentPayload,
   prepareNewMessagePayload,
   prepareWhatsAppMessagePayload,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
@@ -23,8 +25,11 @@ import {
   usaModelo,
 } from './novaConversa';
 
-// #1459 — a mensagem e o envio. O envio é a mesma chamada da tela antiga
+// #1459 — a mensagem e o envio. Conversa nova: a mesma chamada da tela antiga
 // (`contactConversations/create`), com os mesmos formatos de payload.
+// #1505 — continuando uma conversa (`continuar`, de useContinuarConversa), a
+// mensagem entra nela pelo mesmo caminho da resposta normal da conversa
+// (`sendMessageWithData` → MessageApi.create), nunca criando outra.
 const formVazio = () => ({
   modo: MODOS.ESCREVER,
   mensagem: '',
@@ -40,20 +45,34 @@ const formVazio = () => ({
 const formatoDe = canal =>
   getEffectiveChannelType(canal?.channelType || '', canal?.medium || '');
 
-export function useNovaConversa({ contato, canal }) {
+// O que o servidor disse sobre o erro, quando disse em texto.
+const textoDoErro = error => {
+  const doServidor =
+    error instanceof ExceptionWithMessage
+      ? error.data
+      : error?.response?.data?.error;
+  return typeof doServidor === 'string' ? doServidor : '';
+};
+
+export function useNovaConversa({ contato, canal, continuar = null }) {
   const store = useStore();
   const { t } = useI18n();
   const { fetchSignatureFlagFromUISettings } = useUISettings();
   const usuario = useMapGetter('getCurrentUser');
   const config = useMapGetter('globalConfig/get');
   const assinatura = useMapGetter('getMessageSignature');
+  const contaAtual = useMapGetter('getCurrentAccountId');
 
   const form = reactive(formVazio());
   const enviando = ref(false);
   const erro = ref('');
   const enviada = ref(null);
 
-  const tipo = computed(() => tipoDeMensagem(canal.value));
+  // A conversa em que a mensagem vai entrar (#1505), ou null para criar.
+  const destino = computed(() => continuar?.conversa.value ?? null);
+  const tipo = computed(
+    () => (destino.value && continuar.tipo.value) || tipoDeMensagem(canal.value)
+  );
   const comModelo = computed(() =>
     usaModelo({ tipo: tipo.value, modo: form.modo })
   );
@@ -62,9 +81,16 @@ export function useNovaConversa({ contato, canal }) {
       tipo.value === TIPOS.EMAIL &&
       Boolean(fetchSignatureFlagFromUISettings(canal.value?.channelType))
   );
-  const falta = computed(() =>
-    oQueFalta({ contato: contato.value, canal: canal.value, ...form })
-  );
+  const falta = computed(() => {
+    if (continuar?.esperando.value) return 'CONVERSA';
+    return oQueFalta({
+      contato: contato.value,
+      canal: canal.value,
+      ...form,
+      tipo: tipo.value,
+      comAssunto: !destino.value,
+    });
+  });
   const previa = computed(() =>
     comModelo.value ? form.textoDoModelo : form.mensagem
   );
@@ -111,45 +137,69 @@ export function useNovaConversa({ contato, canal }) {
     }
   );
 
+  // Cria a conversa com a primeira mensagem; devolve onde ela entrou.
+  const criarConversa = (params, isFromWhatsApp) => async () => {
+    const conversa = await store.dispatch('contactConversations/create', {
+      params,
+      isFromWhatsApp,
+    });
+    return { id: conversa.id, contaId: conversa.account_id, numero: null };
+  };
+
+  // Responde dentro da conversa que já existe, como a caixa de resposta. Sem
+  // `crm_card_id`: a gaveta não tem o seletor de assunto do CRM, então a
+  // mensagem fica no assunto atual da conversa, como uma resposta em conversa
+  // de um assunto só.
+  const responderNaConversa = dados => async () => {
+    const id = destino.value.displayId;
+    await store.dispatch(
+      'sendMessageWithData',
+      createPendingMessage({ conversationId: id, private: false, ...dados })
+    );
+    return { id, contaId: contaAtual.value, numero: id };
+  };
+
   // `texto` é o que a pessoa vê na confirmação: a mensagem como foi enviada.
   // Ponto único de envio: enquanto um envio está no ar, outro não sai (clique
   // duplo, Ctrl+Enter repetido, ou o seletor do Twilio confirmando de novo).
-  const despachar = async (params, isFromWhatsApp, texto) => {
+  // O retrato do envio é tirado ANTES de esperar o servidor: se a pessoa
+  // trocar de contato ou de canal no meio, a confirmação fala do que foi
+  // enviado, e o rascunho novo não é apagado.
+  const retratoDoEnvio = texto => {
+    const email = tipo.value === TIPOS.EMAIL;
+    return {
+      contatoId: contato.value?.id ?? null,
+      nome: contato.value?.name || '',
+      texto,
+      assunto: email && !destino.value ? form.assunto : '',
+      email,
+      chaveDoCanal: chaveDoCanal(canal.value),
+      caixa: canal.value?.name || '',
+      endereco: linhaDoCanal(canal.value),
+      oculta: Boolean(continuar?.oculta.value),
+    };
+  };
+
+  const despachar = async (mandar, texto) => {
     if (enviando.value) return;
     enviando.value = true;
     erro.value = '';
+    const retrato = retratoDoEnvio(texto);
     try {
-      const conversa = await store.dispatch('contactConversations/create', {
-        params,
-        isFromWhatsApp,
-      });
-      enviada.value = {
-        id: conversa.id,
-        contaId: conversa.account_id,
-        nome: contato.value?.name || '',
-        texto,
-        assunto: tipo.value === TIPOS.EMAIL ? form.assunto : '',
-        email: tipo.value === TIPOS.EMAIL,
-        chaveDoCanal: chaveDoCanal(canal.value),
-        caixa: canal.value?.name || '',
-        endereco: linhaDoCanal(canal.value),
-      };
-      limpar();
+      const onde = await mandar();
+      const { contatoId, ...confirmacao } = retrato;
+      enviada.value = { ...onde, ...confirmacao };
+      if (String(contato.value?.id ?? null) === String(contatoId)) limpar();
     } catch (error) {
-      const doServidor =
-        error instanceof ExceptionWithMessage ? error.data : '';
-      erro.value =
-        typeof doServidor === 'string' && doServidor
-          ? doServidor
-          : t('NOVA_CONVERSA.ERRO.PADRAO');
+      erro.value = textoDoErro(error) || t('NOVA_CONVERSA.ERRO.PADRAO');
     } finally {
       enviando.value = false;
     }
   };
 
   // `pronta` é o que o preenchedor de modelo entrega: { message, templateParams }.
-  const enviarPronta = pronta =>
-    despachar(
+  const criarComPronta = pronta =>
+    criarConversa(
       prepareWhatsAppMessagePayload({
         targetInbox: canal.value,
         selectedContact: contato.value,
@@ -157,12 +207,24 @@ export function useNovaConversa({ contato, canal }) {
         templateParams: pronta.templateParams,
         currentUser: usuario.value,
       }),
-      true,
+      true
+    );
+
+  // Mesmo formato do envio de mensagem pronta da caixa de resposta.
+  const responderComPronta = pronta =>
+    responderNaConversa({
+      message: pronta.message,
+      templateParams: pronta.templateParams,
+    });
+
+  const enviarPronta = pronta =>
+    despachar(
+      destino.value ? responderComPronta(pronta) : criarComPronta(pronta),
       form.textoDoModelo || pronta.pendingMessageContent || pronta.message
     );
 
-  const enviarEscrita = () =>
-    despachar(
+  const criarComEscrita = () =>
+    criarConversa(
       prepareNewMessagePayload({
         targetInbox: canal.value,
         selectedContact: contato.value,
@@ -174,7 +236,32 @@ export function useNovaConversa({ contato, canal }) {
         attachedFiles: form.anexos,
         directUploadsEnabled: Boolean(config.value.directUploadsEnabled),
       }),
-      false,
+      false
+    );
+
+  // Mesmo formato da caixa de resposta: texto, anexos e cópias do e-mail. O
+  // assunto é o da conversa, que já existe.
+  const responderComEscrita = () => {
+    const email = tipo.value === TIPOS.EMAIL;
+    const anexos = form.anexos.length
+      ? {
+          files: prepareAttachmentPayload(
+            form.anexos,
+            Boolean(config.value.directUploadsEnabled)
+          ),
+        }
+      : {};
+    return responderNaConversa({
+      message: form.mensagem,
+      ccEmails: email ? form.cc : '',
+      bccEmails: email ? form.bcc : '',
+      ...anexos,
+    });
+  };
+
+  const enviarEscrita = () =>
+    despachar(
+      destino.value ? responderComEscrita() : criarComEscrita(),
       form.mensagem
     );
 
@@ -189,6 +276,7 @@ export function useNovaConversa({ contato, canal }) {
   return {
     form,
     tipo,
+    destino,
     comModelo,
     comAssinatura,
     assinatura,

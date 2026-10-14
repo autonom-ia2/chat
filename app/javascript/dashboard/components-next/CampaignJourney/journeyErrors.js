@@ -38,6 +38,8 @@ const CREATE_ERRORS = {
   header_media_required: 'HEADER_MEDIA_REQUIRED',
   header_media_url_invalid: 'HEADER_MEDIA_URL_INVALID',
   header_media_type_mismatch: 'HEADER_MEDIA_TYPE_MISMATCH',
+  // Fork #1465: o arquivo do topo escolhido na campanha (outra conta, tipo ou tamanho).
+  header_media_invalid: 'HEADER_MEDIA_INVALID',
   // Fork #1334: o que o formato do modelo pede (Whatsapp::Templates::SendParams).
   coupon_code_invalid: 'COUPON_CODE_INVALID',
   offer_expiration_required: 'OFFER_EXPIRATION_REQUIRED',

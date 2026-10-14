@@ -1,8 +1,12 @@
+// OBSOLETO desde #1423: o card do funil trocou a gaveta com abas pelo card
+// "Resumo primeiro" (app/javascript/dashboard/routes/dashboard/crm/components/card/).
+// Os alvos abaixo (abas, "Ganhar", "Analisar agora"...) são da gaveta antiga:
+// refazer o roteiro e regravar o vídeo antes de usar.
 // Roteiro do vídeo de trajeto do artigo 10.08 — "Aceitar a sugestão da IA e
 // o lembrete de retorno". Rótulos conferidos em
 // app/javascript/dashboard/i18n/locale/pt_BR/crm.json (CRM_KANBAN.AI_CARD,
 // CRM_KANBAN.CALENDAR.CALLBACK) e em
-// app/javascript/dashboard/routes/dashboard/crm/components/CrmCardAiPanel.vue.
+// no painel de IA da gaveta antiga (removido no #1423).
 //
 // Regra do lote: a sugestão da IA nasce pelo `preparar` (um registro
 // Crm::AiStageSuggestion pendente) — o vídeo NUNCA chama a IA de verdade
@@ -79,7 +83,9 @@ export const cenas = [
     // meu explicitamente, em vez de supor qual carrega sozinho.
     legenda: 'Escolha o Funil Comercial',
     acao: 'selecionar',
-    alvo: { seletor: '.flex.flex-wrap.items-end.gap-3 > label:nth-of-type(1) select' },
+    alvo: {
+      seletor: '.flex.flex-wrap.items-end.gap-3 > label:nth-of-type(1) select',
+    },
     valor: 'Funil Comercial',
     zoom: 1.8,
     aguardarTextoDepois: 'Marcos Aurélio',
@@ -125,7 +131,9 @@ export const cenas = [
   {
     legenda: 'Ligue o Lembrete de retorno',
     acao: 'mover e clicar',
-    alvo: { seletor: 'button[role="switch"][aria-label="Lembrete de retorno"]' },
+    alvo: {
+      seletor: 'button[role="switch"][aria-label="Lembrete de retorno"]',
+    },
     zoom: 1.8,
   },
   {

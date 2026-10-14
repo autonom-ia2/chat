@@ -72,8 +72,12 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
     # O operador puxou o freio (kill-switch da conta, agente desligado, conversa fora da allowlist
     # de piloto) DEPOIS do disparo. Sem esta guarda o job seguiria cotando por até 60 tentativas
     # contra a vontade de quem desligou.
-    elsif ::Autonomia::Agents::Operate.authorized_agent_inbox(run.conversation).blank?
+    elsif (vinculo = ::Autonomia::Agents::Operate.authorized_agent_inbox(run.conversation)).blank?
       block_run(run)
+    # #1433: a conversa mudou de dono (passou para a área): quem pode falar agora é outro vínculo, e a publicação
+    # recusaria no fim (AutorizacaoDaExecucao#mesmo_vinculo?). Para já, sem consultar o portal de novo.
+    elsif dono_mudou?(run, vinculo)
+      block_run(run, 'vinculo_mudou')
     elsif run.expired? || attempt >= AsyncConfig::MAX_ATTEMPTS
       fail_run(run, native, 'prazo_esgotado')
     else
@@ -307,8 +311,13 @@ class Autonomia::Agents::Tools::AsyncRunJob < ApplicationJob
 
   # Parada por decisão do operador: sem evento e sem mensagem ao cliente. Falar aqui seria furar exatamente o
   # gate que mandou parar.
-  def block_run(run)
-    run.finish!('blocked', failure_code: 'nao_autorizado')
+  def block_run(run, code = 'nao_autorizado')
+    run.finish!('blocked', failure_code: code)
+  end
+
+  # Execução antiga, sem `agent_inbox_id`, aceita qualquer vínculo autorizado (mesma regra do mesmo_vinculo?).
+  def dono_mudou?(run, vinculo)
+    run.agent_inbox_id.present? && vinculo.id != run.agent_inbox_id
   end
 
   def retry_or_fail(run, native, attempt)

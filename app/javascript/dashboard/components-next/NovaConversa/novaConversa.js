@@ -104,9 +104,13 @@ export const usaModelo = ({ tipo, modo }) =>
 
 // O que falta para enviar, uma coisa por vez e na ordem da tela. Devolve a
 // chave do catálogo (NOVA_CONVERSA.RODAPE.FALTA.*) ou '' quando está pronto.
+// Continuando uma conversa (#1505), `tipo` vem do que a conversa permite e o
+// e-mail segue o assunto dela (`comAssunto` falso).
 export const oQueFalta = ({
   contato,
   canal,
+  tipo: tipoDado = '',
+  comAssunto = true,
   modo = MODOS.ESCREVER,
   mensagem = '',
   assunto = '',
@@ -115,7 +119,7 @@ export const oQueFalta = ({
 }) => {
   if (!contato?.id) return 'CONTATO';
   if (!canal) return 'CANAL';
-  const tipo = tipoDeMensagem(canal);
+  const tipo = tipoDado || tipoDeMensagem(canal);
   // No WhatsApp via Twilio a mensagem pronta é escolhida e enviada no
   // próprio seletor: o botão do rodapé nunca fica pronto.
   if (tipo === TIPOS.WHATSAPP_TWILIO) return 'MODELO';
@@ -123,7 +127,7 @@ export const oQueFalta = ({
     if (!modelo) return 'MODELO';
     return camposProntos ? '' : 'CAMPOS';
   }
-  if (tipo === TIPOS.EMAIL && !assunto.trim()) return 'ASSUNTO';
+  if (tipo === TIPOS.EMAIL && comAssunto && !assunto.trim()) return 'ASSUNTO';
   return mensagem.trim() ? '' : 'MENSAGEM';
 };
 

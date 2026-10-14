@@ -300,7 +300,7 @@ const subirArquivos = async (conteudo, caixa) => {
   return { topo, cartoes };
 };
 
-// Arquivo escolhido na campanha (foto ou vídeo de um cartão do carrossel, #1334):
+// Arquivo escolhido na campanha (do topo, #1465, ou de um cartão do carrossel, #1334):
 // o mesmo upload de mídia dos Modelos, com tipo e tamanho conferidos no
 // servidor. Devolve a referência que a campanha guarda.
 const subirArquivoDaCampanha = async (caixa, arquivo) => {

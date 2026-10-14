@@ -26,9 +26,9 @@ vi.mock('dashboard/composables/store', () => ({
   },
 }));
 
-// Um painel fixo qualquer (a própria CrmCardDrawer, entre outros) chamaria
+// Um painel fixo qualquer (a própria gaveta do card, CardGaveta, entre outros) chamaria
 // `useFixedPanelPresence` assim; um componente hospedeiro descartável evita
-// depender da CrmCardDrawer real (com seu próprio store/API) só para este teste.
+// depender da CardGaveta real (com seu próprio store/API) só para este teste.
 const PainelFixo = {
   props: { aberto: { type: Boolean, default: false } },
   setup(props) {
@@ -61,7 +61,7 @@ describe('AutonomiaGuideLauncher', () => {
     wrapper.unmount();
   });
 
-  // #646 — a gaveta do card do CRM (CrmCardDrawer) ocupa o mesmo canto; o
+  // #646 — a gaveta do card do CRM (CardGaveta) ocupa o mesmo canto; o
   // lançador precisa subir para não cobrir o rodapé Cancelar/Salvar dela.
   it('rises above the footer while a fixed panel is open', async () => {
     const launcher = mountLauncher();

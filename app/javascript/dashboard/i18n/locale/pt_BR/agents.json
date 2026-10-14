@@ -594,6 +594,7 @@
         "NOVA_ABA": "(abre em nova aba)",
         "NOVO_AGENTE": "Novo agente",
         "CLIENTE": "Cliente",
+        "EQUIPE": "Equipe",
         "AGENTE": "Agente",
         "ESCREVENDO": "Escrevendo…",
         "USOU": "Usou: {arquivo}",
@@ -618,6 +619,8 @@
         "EXEMPLO": "Exemplo",
         "EXEMPLO_SR": "Exemplo de conversa, não é um agente de verdade",
         "DO_MEU_JEITO": "Do meu jeito: contar com minhas palavras",
+        "COPILOTO": "Copiloto da equipe",
+        "COPILOTO_TEXTO": "Ajuda as pessoas da equipe dentro das conversas. Nunca fala com cliente.",
         "ESCOLHA": "Escolha um modelo pronto. Você conversa um pouco, testa as respostas e decide quando começar a atender.",
         "SUPPORT": {
           "TITULO": "Tirar dúvidas dos clientes",
@@ -1438,6 +1441,7 @@
         "CONTE": {
           "ROTULO": "Conversa para criar o agente",
           "INTRO": "Vou te fazer umas perguntas curtas. O agente só começa a atender quando você mandar.",
+          "INTRO_COPILOTO": "Vou te fazer umas perguntas curtas. O agente só começa a ajudar a equipe quando você mandar.",
           "CONVERSA": "Conversa",
           "ASSISTENTE": "Assistente de criação:",
           "VOCE": "Você:",
@@ -1451,6 +1455,7 @@
           "ANEXO_FRASE": "Tem um cardápio, uma tabela ou o seu site? {acao} Não é obrigatório.",
           "ANEXO_ACAO": "Mande aqui.",
           "EXEMPLO_DO_MEU_JEITO": "Ex.: responder dúvidas de preço e entrega da minha loja",
+          "EXEMPLO_COPILOTO": "Ex.: resumir as conversas e sugerir respostas para a equipe",
           "MAIS": "Quer contar mais alguma coisa? Escreva aqui.",
           "FOTO": "Mandei uma foto.",
           "TESTAR_AGORA": "Testar agora",
@@ -1478,16 +1483,20 @@
         },
         "EXEMPLO": {
           "TITULO": "Assim seus clientes vão ver",
-          "LEGENDA": "Depois de você contar, {nome} responde do jeito do seu negócio."
+          "TITULO_COPILOTO": "Assim a equipe vai usar",
+          "LEGENDA": "Depois de você contar, {nome} responde do jeito do seu negócio.",
+          "COPILOTO": "Dentro de uma conversa, alguém da equipe pede ajuda e {nome} resume, sugere o próximo passo ou rascunha uma resposta. {nome} nunca fala com cliente."
         },
         "CONFIRA": {
           "TITULO": "Teste como se fosse seu cliente",
+          "TITULO_COPILOTO": "Teste como se fosse da equipe",
           "TEXTO": "Ninguém recebe estas mensagens. É só um teste.",
           "VAZIO": "Toque numa pergunta ou escreva a sua.",
           "VAZIO_CELULAR": "Toque numa pergunta abaixo para testar.",
           "ESCREVA": "Escreva uma pergunta",
           "PERGUNTAS_ROTULO": "Perguntas para testar",
           "ATENDIDO_POR": "Atendido por {nome}",
+          "AJUDA_DA_EQUIPE": "{nome} · ajuda da equipe",
           "ESCREVENDO": "{nome} está escrevendo…",
           "LIMPAR": "Limpar teste",
           "ATUALIZADO": "Atualizado. Teste de novo.",
@@ -1497,12 +1506,15 @@
           "FOTO": "Olha esta foto.",
           "FALHA": "{nome} não respondeu agora.",
           "FALHA_GARANTIA": "Isso não afeta seus clientes.",
+          "FALHA_GARANTIA_COPILOTO": "É só um teste: ninguém recebe esta resposta.",
           "DEMORA": "Está demorando. Tente de novo.",
           "INCOMPLETO": "{nome} ainda não sabe o suficiente. Conte mais um pouco ao lado.",
           "INCOMPLETO_CELULAR": "{nome} ainda não sabe o suficiente. Conte mais um pouco.",
           "PERGUNTE": "Faça uma pergunta para ver como {nome} responde.",
           "COMECAR_NO": "Começar a atender no {canal}",
           "COMECAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
+          "COMECAR_COPILOTO": "Começar a ajudar a equipe",
+          "COMECAR_TEXTO_COPILOTO": "{nome} passa a ajudar a equipe dentro das conversas. Nunca fala com cliente.",
           "VOLTAR_CONVERSA": "Voltar à conversa",
           "PERGUNTAS": {
             "QUANTO_CUSTA": "Quanto custa?",
@@ -1511,7 +1523,10 @@
             "PEDIDO": "Quero fazer um pedido",
             "DESCONTO": "Tem desconto?",
             "AJUDA": "Oi, preciso de ajuda",
-            "TROCAR": "Quero trocar um produto"
+            "TROCAR": "Quero trocar um produto",
+            "COMO_RESPONDO": "Um cliente pediu desconto. Como respondo?",
+            "PROXIMO_PASSO": "O cliente parou de responder. Qual o próximo passo?",
+            "RASCUNHO": "Rascunhe uma resposta sobre o prazo de entrega"
           }
         },
         "CANAL": {
@@ -1526,15 +1541,17 @@
           "COMECAR": "Começar a atender",
           "TROCAR": "Trocar e começar a atender",
           "VOLTAR_TESTE": "Voltar ao teste",
-          "ERRO_INTERNO": "Não deu para começar a atender. Nada mudou: {nome} ainda não está atendendo."
+          "ERRO_INTERNO": "Não deu para começar a ajudar a equipe. Nada mudou: {nome} ainda não está ajudando."
         },
         "PRONTO": {
           "TITULO": "{nome} já está atendendo no {canal}",
           "TITULO_SEM_CANAL": "{nome} já está atendendo",
+          "TITULO_COPILOTO": "{nome} já está ajudando a equipe",
           "AGORA": "Quem mandar mensagem no {canal} agora fala com {nome}.",
           "DENTRO": "{nome} responde no {canal} só no horário de atendimento.",
           "FORA": "{nome} responde no {canal} só fora do horário de atendimento.",
           "EQUIPE": "Quando não souber, {nome} passa a conversa para a equipe.",
+          "EQUIPE_COPILOTO": "Dentro das conversas, a equipe pede ajuda a {nome}. {nome} nunca fala com cliente.",
           "TROCA": "{outro} parou de responder no {canal}.",
           "VER": "Ver {nome}"
         },

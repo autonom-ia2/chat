@@ -18,6 +18,8 @@ const props = defineProps({
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
   podeCriarPronta: { type: Boolean, default: false },
+  // #1505 — a mensagem entra numa conversa que já existe.
+  continuando: { type: Boolean, default: false },
 });
 
 defineEmits([
@@ -102,7 +104,9 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
         {{ $t(`${P}.SO_PRONTA_TITULO`) }}
       </h3>
       <p class="mb-0 text-[0.9375rem] leading-relaxed text-n-slate-11">
-        {{ $t(`${P}.SO_PRONTA_TEXTO`) }}
+        {{
+          $t(continuando ? `${P}.SO_PRONTA_CONVERSA` : `${P}.SO_PRONTA_TEXTO`)
+        }}
       </p>
     </header>
 
@@ -140,6 +144,7 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       :canal="canal"
       :assinatura="assinatura"
       :com-assinatura="comAssinatura"
+      :com-assunto="!continuando"
     />
 
     <NovaConversaAnexo

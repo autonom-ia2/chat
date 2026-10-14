@@ -1,0 +1,30 @@
+pt_BR:
+  helpers:
+    label:
+      account:
+        agents_niche: Nicho dos agentes de IA
+  autonomia_agents_niche:
+    label: Nicho dos agentes de IA
+    help: De qual base partem as instruções dos agentes novos.
+    installation_default: "Padrão desta instalação: %{niche}"
+    is_default: (padrão desta instalação)
+    warning: Trocar o nicho não muda agentes que já existem; eles só mudam pelo botão Atualizar com a nova base.
+    profile_label: Perfil em seguros
+    separator: " · "
+    niches:
+      seguros:
+        title: Seguros
+        text: Base de seguros.
+      geral:
+        title: Geral
+        text: Base geral, para qualquer negócio.
+    profiles:
+      corretora:
+        title: Corretora
+        text: Vende seguros de várias seguradoras.
+      seguradora:
+        title: Seguradora
+        text: Emite as próprias apólices.
+      insurtech:
+        title: Insurtech
+        text: Empresa de seguros digital.
