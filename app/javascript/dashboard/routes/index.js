@@ -6,6 +6,7 @@ import store from 'dashboard/store';
 import { validateLoggedInRoutes } from '../helper/routeHelpers';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import AnalyticsHelper from '../helper/AnalyticsHelper';
+import { canAccessStore } from '../helper/storeAccess';
 import AcceptInvitation from 'v3/views/auth/accept-invitation/Index.vue';
 
 const ONBOARDING_STEPS = ['account_details', 'enrichment', 'inbox_setup'];
@@ -98,6 +99,9 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
   }
 
   const routeAccountId = Number(to.params?.accountId || accountId);
+  if (to.meta?.superAdminOnly && !canAccessStore(user)) {
+    return next(frontendURL(`accounts/${routeAccountId}/dashboard`));
+  }
   const userAccount = accounts.find(a => a.id === routeAccountId);
   const isAdmin = userAccount?.role === 'administrator';
   const isActive = userAccount?.status === 'active';

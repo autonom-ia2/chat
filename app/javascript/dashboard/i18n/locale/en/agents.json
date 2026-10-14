@@ -1,5 +1,15 @@
 {
   "AGENTS": {
+    "CONTRACTED": {
+      "NAME": "Agent name",
+      "COMPANY": "Company",
+      "COMPLEMENTS": "Additional instructions",
+      "SAVE": "Save",
+      "CONFIGURE": "Configure agent",
+      "INHERITED": "Inherited from {name} (read-only)",
+      "KNOWLEDGE": "Principal knowledge: {count} sources",
+      "SUSPENDED": "The contracted agent is unavailable. Check the service authorization in the store."
+    },
     "HUB": {
       "TITLE": "My Agents",
       "SUBTITLE": "Your AI agents answer customers automatically and hand off to a human when needed.",
@@ -192,6 +202,7 @@
         "TEST": "Test",
         "KNOWLEDGE": "Knowledge",
         "TOOLS": "Tools",
+        "STORE": "Store",
         "CHANNELS": "Channels",
         "PERFORMANCE": "Performance",
         "TUNE": "Tune"

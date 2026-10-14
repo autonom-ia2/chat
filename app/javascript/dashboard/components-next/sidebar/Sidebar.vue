@@ -16,6 +16,7 @@ import { vOnClickOutside } from '@vueuse/components';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
+import { canAccessStore } from 'dashboard/helper/storeAccess';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -981,7 +982,8 @@ const menuItems = computed(() => {
           },
         ]
       : []),
-    ...(currentRole.value === 'administrator'
+    ...(currentRole.value === 'administrator' ||
+    canAccessStore(currentUser.value)
       ? [
           {
             name: 'Financial',
@@ -990,20 +992,37 @@ const menuItems = computed(() => {
             activeOn: [
               'autonomia_financial_subscription',
               'autonomia_financial_invoices',
+              'autonomia_financial_store',
             ],
             children: [
-              {
-                name: 'Subscription',
-                label: t('SIDEBAR.FINANCIAL_SUBSCRIPTION'),
-                to: accountScopedRoute('autonomia_financial_subscription'),
-                activeOn: ['autonomia_financial_subscription'],
-              },
-              {
-                name: 'Invoices',
-                label: t('SIDEBAR.FINANCIAL_INVOICES'),
-                to: accountScopedRoute('autonomia_financial_invoices'),
-                activeOn: ['autonomia_financial_invoices'],
-              },
+              ...(canAccessStore(currentUser.value)
+                ? [
+                    {
+                      name: 'Store',
+                      label: t('FINANCIAL.STORE.TITLE'),
+                      to: accountScopedRoute('autonomia_financial_store'),
+                      activeOn: ['autonomia_financial_store'],
+                    },
+                  ]
+                : []),
+              ...(currentRole.value === 'administrator'
+                ? [
+                    {
+                      name: 'Subscription',
+                      label: t('SIDEBAR.FINANCIAL_SUBSCRIPTION'),
+                      to: accountScopedRoute(
+                        'autonomia_financial_subscription'
+                      ),
+                      activeOn: ['autonomia_financial_subscription'],
+                    },
+                    {
+                      name: 'Invoices',
+                      label: t('SIDEBAR.FINANCIAL_INVOICES'),
+                      to: accountScopedRoute('autonomia_financial_invoices'),
+                      activeOn: ['autonomia_financial_invoices'],
+                    },
+                  ]
+                : []),
             ],
           },
         ]

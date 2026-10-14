@@ -118,6 +118,11 @@ module Autonomia
 
       # -> Autonomia::Agents::AnswerResult
       def answer
+        unless @agent.store_access_allowed?
+          return AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
+                                  used_knowledge: [], answered_from_knowledge: false, raw_reply: nil, error: 'store_access_denied')
+        end
+
         @conferencia_da_fala = conferencia_da_fala
         snippets = retrieve_snippets
         parsed = generate(snippets)
@@ -357,7 +362,7 @@ module Autonomia
       # fica fora da lista da Lia, e não reserva nada. As ferramentas dele também ficam fora do catálogo do agente
       # (`Builder.ferramentas_mantidas`), e por isso a consulta de CEP não aparece para a Lia sem residencial.
       def enabled_specialists
-        @enabled_specialists ||= @agent.specialists.enabled.order(:id).select do |specialist|
+        @enabled_specialists ||= @agent.effective_specialists.select do |specialist|
           ::Autonomia::Insurance::QuoteAgent::Builder.disponivel?(specialist)
         end
       end
@@ -493,6 +498,10 @@ module Autonomia
       end
 
       def agent_has_kb?
+        if @agent.contracted_instance?
+          return @agent.knowledge_agents.any? { |agent| agent.accepted_sources.exists? || agent.knowledge_confidence.to_f.positive? }
+        end
+
         @agent.accepted_sources.exists? || @agent.knowledge_confidence.to_f.positive?
       end
 

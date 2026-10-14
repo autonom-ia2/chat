@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  post '/api/autonomia/financial/store-events', to: 'webhooks/financial_store#create'
   get '/auth/autonomia', to: 'autonomia/auth#start'
   get '/auth/autonomia/callback', to: 'autonomia/auth#callback'
   get '/app/auth/callback', to: 'autonomia/auth#callback'
@@ -489,6 +490,39 @@ Rails.application.routes.draw do
               get :billing_preview
               get :invoices
               get :payments
+            end
+            scope 'financial/store', controller: :store do
+              get 'catalog', action: :catalog
+              get 'features', action: :features
+              get 'features/:feature_key/services', action: :feature_services
+              post 'features/:feature_key/services', action: :create_service
+              get 'features/:feature_key/services/:service_id/publication', action: :publication
+              put 'features/:feature_key/services/:service_id/publication', action: :publish
+              get 'agents/:agent_id/services', action: :agent_services
+              post 'agents/:agent_id/services', action: :create_service
+              get 'agents/:agent_id/services/:service_id/publication', action: :publication
+              put 'agents/:agent_id/services/:service_id/publication', action: :publish
+            end
+            scope 'financial/store', controller: :store_customer do
+              get 'subscriptions', action: :services
+              get 'eligible-accounts', action: :accounts
+              post 'activations', action: :activate
+              get 'activations/:id', action: :activation
+              post 'activations/:id/deactivate', action: :deactivate
+              post 'activations/:id/resume', action: :resume_activation
+            end
+            scope 'financial/store', controller: :store_checkout do
+              post 'checkout', action: :checkout
+              post 'checkout/resolve', action: :resolve_checkout
+              get 'checkout/:id', action: :checkout_status
+              post 'checkout/:id/reconcile', action: :reconcile_checkout
+            end
+            scope 'financial/store', controller: :store_subscription do
+              get 'subscriptions/:id/cancellation', action: :cancellation
+              post 'subscriptions/:id/cancellation', action: :schedule_cancellation
+              post 'subscriptions/:id/cancellation/resume', action: :resume_renewal
+              get 'subscription-commands/:id', action: :command
+              post 'subscription-commands/:id/retry', action: :retry_command
             end
             # Módulo Cotação (Insurance): gate ENV+conta + administrador em todo endpoint.
             namespace :insurance do

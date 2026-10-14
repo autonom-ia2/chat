@@ -112,6 +112,7 @@ module Autonomia
       # agente com cenários de verdade (o primeiro caso real chegou a 77% do teto antigo).
       MAX_TONE_LENGTH = 1_000
       MAX_INSTRUCTION_LENGTH = 50_000
+      include Autonomia::Agents::StoreInstance
 
       validates :name, presence: true
       validates :agent_type, inclusion: { in: AGENT_TYPES }
@@ -177,6 +178,8 @@ module Autonomia
       # retrieval/embedding no Answerer (agente sem base não paga embedding por mensagem nem
       # usa entries residuais). Mesmo contrato do jbuilder (`with_knowledge != false`).
       def knowledge_disabled?
+        return knowledge_agents.empty? if contracted_instance?
+
         [false, 'false'].include?(config.to_h['with_knowledge'])
       end
 
@@ -187,7 +190,7 @@ module Autonomia
       # agente não lê, e o cartão mentiria "salvo". A regra mora aqui, num predicado só; quem escreve
       # a coluna (abaixo e nos controllers) consulta este predicado, nunca o tipo direto.
       def instrucao_mantida?
-        agent_type == 'insurance_quote'
+        contracted_instance? || agent_type == 'insurance_quote'
       end
 
       # A guarda que cada escritor da coluna chama na primeira linha (`apply_builder_config!`,
@@ -204,6 +207,8 @@ module Autonomia
       # antes de as escolhas serem guardadas — a coluna, como sempre. Quem monta o prompt
       # (`PromptBuilder#instructions`) lê daqui, nunca de `instruction` direto.
       def instrucao_do_sistema
+        return contracted_instructions if contracted_instance?
+
         ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
       end
 
@@ -211,6 +216,8 @@ module Autonomia
       # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       def ferramentas_nativas
+        return (Array(principal_agent.ferramentas_nativas) + Array(native_tool_slugs)).uniq if contracted_instance?
+
         ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) || native_tool_slugs
       end
 
@@ -313,7 +320,7 @@ module Autonomia
 
       # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
       def operating?
-        !deleted? && enabled? && active?
+        !deleted? && enabled? && active? && store_access_allowed?
       end
 
       private

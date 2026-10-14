@@ -132,6 +132,39 @@ describe('#validateAuthenticateRoutePermission', () => {
       };
     });
 
+    it('blocks an account administrator from the superadmin-only store route', async () => {
+      store.getters.getCurrentUser.type = 'User';
+      store.getters.getCurrentUser.accounts[0].role = 'administrator';
+      await validateAuthenticateRoutePermission(
+        {
+          name: 'autonomia_financial_store',
+          params: { accountId: 1 },
+          meta: {
+            superAdminOnly: true,
+            permissions: ['administrator', 'agent'],
+          },
+        },
+        next
+      );
+      expect(next).toHaveBeenCalledWith('/app/accounts/1/dashboard');
+    });
+
+    it('allows a platform superadmin with an existing account membership to access the store', async () => {
+      store.getters.getCurrentUser.type = 'SuperAdmin';
+      await validateAuthenticateRoutePermission(
+        {
+          name: 'autonomia_financial_store',
+          params: { accountId: 1 },
+          meta: {
+            superAdminOnly: true,
+            permissions: ['administrator', 'agent'],
+          },
+        },
+        next
+      );
+      expect(next).toHaveBeenCalledWith();
+    });
+
     describe('when route is not accessible to current user', () => {
       it('should redirect to dashboard', async () => {
         const to = {

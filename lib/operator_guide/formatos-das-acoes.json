@@ -3413,6 +3413,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -3460,6 +3464,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -3472,9 +3480,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:162",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:174",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:147",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:111",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
@@ -9992,6 +10000,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -10039,6 +10051,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -10051,9 +10067,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:22",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:162",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:174",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:23"
     ],
     "sem_corpo": false
@@ -10368,14 +10384,16 @@
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
       },
-      "type": {},
+      "type": {
+        "tipo": "string"
+      },
       "with_knowledge": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#create",
     "modelo": "Autonomia::Agents::Agent",
     "motivos": [
-      "leitura crua sem tipo: message (repassada a @thread.append_message!), type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
+      "leitura crua sem tipo: message (repassada a @thread.append_message!), with_knowledge (repassada a @thread.persist_start_options!)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:12",
@@ -10624,6 +10642,163 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:89",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:88",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/activations": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_customer#activate",
+    "modelo": "Autonomia::Store::Entitlement",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/activations/:id/deactivate": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/store_customer#deactivate",
+    "modelo": "Autonomia::Store::Entitlement",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:80"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/financial/store/activations/:id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/store_customer#resume_activation",
+    "modelo": "Autonomia::Store::Entitlement",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:80"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/financial/store/agents/:agent_id/services": {
+    "campos": {
+      "feature_key": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store#create_service",
+    "motivos": [
+      "lê o corpo cru da requisição",
+      "leitura crua sem tipo: feature_key (repassada a ::Autonomia::Financial::StoreFeatures.target!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/checkout": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_checkout#checkout",
+    "modelo": "Autonomia::Store::CheckoutIntent",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_checkout_controller.rb:4",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/checkout/:id/reconcile": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_checkout#reconcile_checkout",
+    "modelo": "Autonomia::Store::CheckoutIntent",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_checkout_controller.rb:35",
+      "app/controllers/api/v1/accounts/autonomia/store_checkout_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/store_checkout_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/checkout/resolve": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_checkout#resolve_checkout",
+    "modelo": "Autonomia::Store::CheckoutIntent",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_checkout_controller.rb:27",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/features/:feature_key/services": {
+    "campos": {
+      "agent_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store#create_service",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/subscription-commands/:id/retry": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/store_subscription#retry_command",
+    "modelo": "Autonomia::Store::SubscriptionCommand",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:44"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/financial/store/subscriptions/:id/cancellation": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_subscription#schedule_cancellation",
+    "modelo": "Autonomia::Store::SubscriptionCommand",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:10",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/financial/store/subscriptions/:id/cancellation/resume": {
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store_subscription#resume_renewal",
+    "modelo": "Autonomia::Store::SubscriptionCommand",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/store_subscription_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/store_customer_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -20322,6 +20497,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -20369,6 +20548,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -20381,9 +20564,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:161",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:173",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:203",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:162",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:174",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:147",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:111",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:85"
@@ -20454,6 +20637,48 @@
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:26",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/financial/store/agents/:agent_id/services/:service_id/publication": {
+    "campos": {
+      "feature_key": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store#publish",
+    "motivos": [
+      "lê o corpo cru da requisição",
+      "leitura crua sem tipo: feature_key (repassada a ::Autonomia::Financial::StoreFeatures.target!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/financial/store/features/:feature_key/services/:service_id/publication": {
+    "campos": {
+      "agent_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/store#publish",
+    "motivos": [
+      "lê o corpo cru da requisição"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:64",
+      "app/controllers/api/v1/accounts/autonomia/store_controller.rb:94"
     ],
     "sem_corpo": false
   },

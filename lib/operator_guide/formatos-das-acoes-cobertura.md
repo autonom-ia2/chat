@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 557 |
-| Sem corpo | 161 |
-| Com corpo | 396 |
-| Com corpo e formato completo | 322 (81,3%) |
-| Com corpo e formato incompleto | 74 |
+| No catálogo | 570 |
+| Sem corpo | 164 |
+| Com corpo | 406 |
+| Com corpo e formato completo | 322 (79,3%) |
+| Com corpo e formato incompleto | 84 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 168 |
-| Leituras cruas tipadas | 111 de 186 |
+| Leituras cruas tipadas | 113 de 189 |
 
 ## Incompletas por motivo
 
@@ -24,10 +24,10 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 59 |
+| leitura crua sem tipo | 61 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
-| lê o corpo cru | 2 |
+| lê o corpo cru | 12 |
 | termina em código de fora do repositório | 1 |
 | a rota não tem a action | 2 |
 
@@ -46,10 +46,18 @@ Uma ação pode ter mais de um motivo.
 - `POST assignment_policies/:assignment_policy_id/inboxes` — a rota não tem a action no controller: a chamada dá erro
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
 - `POST autonomia/agents/:agent_id/tools/:id/test` — leitura crua sem tipo: params
-- `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)
+- `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), with_knowledge (repassada a @thread.persist_start_options!)
 - `POST autonomia/build_threads/:id/messages` — leitura crua sem tipo: message (repassada a @thread.append_message!)
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: message
+- `POST autonomia/financial/store/activations` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/agents/:agent_id/services` — lê o corpo cru da requisição; leitura crua sem tipo: feature_key (repassada a ::Autonomia::Financial::StoreFeatures.target!)
+- `POST autonomia/financial/store/checkout` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/checkout/:id/reconcile` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/checkout/resolve` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/features/:feature_key/services` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/subscriptions/:id/cancellation` — lê o corpo cru da requisição
+- `POST autonomia/financial/store/subscriptions/:id/cancellation/resume` — lê o corpo cru da requisição
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.broker_name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.business_hours (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new)
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)
 - `POST autonomia/prospecting/leads/campaign_segment` — leitura crua sem tipo: campaign_type, segment_name (repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new)
@@ -101,6 +109,8 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
+- `PUT autonomia/financial/store/agents/:agent_id/services/:service_id/publication` — lê o corpo cru da requisição; leitura crua sem tipo: feature_key (repassada a ::Autonomia::Financial::StoreFeatures.target!)
+- `PUT autonomia/financial/store/features/:feature_key/services/:service_id/publication` — lê o corpo cru da requisição
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PUT crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
@@ -113,7 +123,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/agents#bulk_create` emails — o código não converte nem compara o valor
 - `api/v1/accounts/articles#reorder` positions_hash — repassada a Article.update_positions
 - `api/v1/accounts/autonomia/agents/build_threads#create` message — repassada a @thread.append_message!
-- `api/v1/accounts/autonomia/agents/build_threads#create` type — repassada a @thread.persist_start_options!
 - `api/v1/accounts/autonomia/agents/build_threads#create` with_knowledge — repassada a @thread.persist_start_options!
 - `api/v1/accounts/autonomia/agents/build_threads#messages` message — repassada a @thread.append_message!
 - `api/v1/accounts/autonomia/agents/sources#create` descriptor.kind — o código não converte nem compara o valor
@@ -131,6 +140,8 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/prospecting/leads#adopt_owner` owner_name — repassada a ::Autonomia::Prospecting::OwnerAdoption.new
 - `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` campaign_type — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/prospecting/leads#create_campaign_segment` segment_name — repassada a ::Autonomia::Prospecting::SelectionCampaignSegment.new
+- `api/v1/accounts/autonomia/store#create_service` feature_key — repassada a ::Autonomia::Financial::StoreFeatures.target!
+- `api/v1/accounts/autonomia/store#publish` feature_key — repassada a ::Autonomia::Financial::StoreFeatures.target!
 - `api/v1/accounts/callbacks#facebook_pages` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#reauthorize_page` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#register_facebook_page` inbox_name — o código não converte nem compara o valor
@@ -192,8 +203,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 330 |
-| Com parâmetros conhecidos | 279 |
+| No catálogo | 342 |
+| Com parâmetros conhecidos | 291 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

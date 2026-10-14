@@ -4,7 +4,7 @@ require 'json'
 require 'net/http'
 require 'uri'
 
-# Proposed E0 API. No controllers/jobs call this client until Financial ships the scoped contract.
+# E0 contracts; E1 wires only catalog/publication through the scoped subclass.
 class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
   STORE_PATH = '/financial/internal/store'
   RESERVATIONS_PATH = '/financial/internal/usage-reservations'
@@ -33,10 +33,12 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
     payload
   end
 
-  def catalog!(page: 1, page_size: 20)
+  def catalog!(page: 1, page_size: 20, price_id: nil)
     pagination = { 'page' => page, 'pageSize' => page_size, 'totalItems' => 0, 'totalPages' => 0 }
     Autonomia::Financial::StoreContract.validate!('pagination', pagination)
-    payload = request_json(:get, "#{STORE_PATH}/catalog?page=#{page}&pageSize=#{page_size}", 'catalogResponse')
+    Autonomia::Financial::StoreContract.validate!('uuid', price_id) if price_id
+    filter = price_id ? "&servicePlanPriceId=#{price_id}" : ''
+    payload = request_json(:get, "#{STORE_PATH}/catalog?page=#{page}&pageSize=#{page_size}#{filter}", 'catalogResponse')
     validate_namespace!(payload.fetch('namespace'))
     payload.fetch('data').each do |item|
       target = item.fetch('target')
@@ -126,7 +128,8 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
 
   def request_json(method, path, schema, payload: nil, idempotency_key: nil)
     uri = URI.join(@base_uri, path)
-    request = method == :get ? Net::HTTP::Get.new(uri) : Net::HTTP::Post.new(uri)
+    request_class = { get: Net::HTTP::Get, post: Net::HTTP::Post, put: Net::HTTP::Put }.fetch(method)
+    request = request_class.new(uri)
     request['Accept'] = 'application/json'
     request['Authorization'] = "Bearer #{authorization_token}"
     request['X-Api-Key'] = @installation_api_key
@@ -135,20 +138,23 @@ class Autonomia::Financial::StoreClient < Autonomia::Financial::Client
       request['Content-Type'] = 'application/json'
       request.body = JSON.generate(payload)
     end
+    add_request_headers(request, method, path)
     response = Net::HTTP.start(uri.host, uri.port,
                                use_ssl: true, open_timeout: 5, read_timeout: 15,
                                write_timeout: 5, max_retries: 0) { |http| http.request(request) }
     parse_response(response, schema, method)
   rescue Timeout::Error, SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError
-    raise Autonomia::Financial::StoreClientError.new('TRANSPORT_ERROR', outcome: method == :post ? 'unknown' : 'failure')
+    raise Autonomia::Financial::StoreClientError.new('TRANSPORT_ERROR', outcome: method == :get ? 'failure' : 'unknown')
   end
+
+  def add_request_headers(_request, _method, _path); end
 
   def parse_response(response, schema, method)
     payload = JSON.parse(response.body.to_s)
     raise_response_error(response, payload, method) unless response.is_a?(Net::HTTPSuccess)
     Autonomia::Financial::StoreContract.validate!(schema, payload)
   rescue JSON::ParserError, Autonomia::Financial::StoreContractError
-    raise Autonomia::Financial::StoreClientError.new('INVALID_RESPONSE', outcome: method == :post ? 'unknown' : 'failure')
+    raise Autonomia::Financial::StoreClientError.new('INVALID_RESPONSE', outcome: method == :get ? 'failure' : 'unknown')
   end
 
   def raise_response_error(response, payload, method)

@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://contracts.autonomia.site/financial/store-e4.v1.json",
+  "title": "E4 — paid-period cancellation and canonical recovery",
+  "definitions": {
+    "safeVersion": {"type":"integer","minimum":1,"maximum":9007199254740991},
+    "intentKey": {"type":"string","minLength":12,"maxLength":160,"pattern":"^[a-zA-Z0-9._:-]+$"},
+    "nullableDate": {"type":["string","null"],"format":"date-time"},
+    "cancellationCommandRequest": {
+      "type":"object","additionalProperties":false,"required":["contractVersion","expectedVersion","idempotencyKey"],
+      "properties":{"contractVersion":{"const":1},"expectedVersion":{"$ref":"#/definitions/safeVersion"},"idempotencyKey":{"$ref":"#/definitions/intentKey"}}
+    },
+    "cancellationData": {
+      "type":"object","additionalProperties":false,
+      "required":["serviceSubscriptionId","subscriptionVersion","policy","status","renewalState","accessUntil","effectiveAt","canSchedule","canResume","blockingReason"],
+      "properties": {
+        "serviceSubscriptionId":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/uuid"},
+        "subscriptionVersion":{"$ref":"#/definitions/safeVersion"},"policy":{"const":"at_period_end"},
+        "status":{"enum":["active","trialing","past_due","unpaid","canceled"]},
+        "renewalState":{"enum":["renewing","non_renewal_scheduled","ended"]},
+        "accessUntil":{"$ref":"#/definitions/nullableDate"},"effectiveAt":{"$ref":"#/definitions/nullableDate"},
+        "canSchedule":{"type":"boolean"},"canResume":{"type":"boolean"},
+        "blockingReason":{"enum":[null,"trial_policy_not_defined","paid_period_unconfirmed","paid_period_expired","subscription_canceled","payment_processing"]}
+      }
+    },
+    "cancellationCapability": {
+      "type":"object","additionalProperties":false,"required":["contractVersion","namespace","buyer","data"],
+      "properties": {
+        "contractVersion":{"const":1},"namespace":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/namespace"},
+        "buyer":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/buyer"},"data":{"$ref":"#/definitions/cancellationData"}
+      }
+    },
+    "cancellationCommandResponse": {
+      "type":"object","additionalProperties":false,"required":["contractVersion","namespace","buyer","command","result","data"],
+      "properties": {
+        "contractVersion":{"const":1},"namespace":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/namespace"},
+        "buyer":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/buyer"},"data":{"$ref":"#/definitions/cancellationData"},
+        "command":{"type":"object","additionalProperties":false,"required":["id","idempotencyKey"],"properties":{
+          "id":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/uuid"},"idempotencyKey":{"$ref":"#/definitions/intentKey"}}},
+        "result":{"type":"object","additionalProperties":false,"required":["type","previousVersion","appliedVersion","canceledInvoiceIds","restoredInvoiceIds"],"properties":{
+          "type":{"enum":["subscription_non_renewal_scheduled","subscription_renewal_resumed"]},
+          "previousVersion":{"$ref":"#/definitions/safeVersion"},"appliedVersion":{"$ref":"#/definitions/safeVersion"},
+          "canceledInvoiceIds":{"type":"array","items":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/uuid"}},
+          "restoredInvoiceIds":{"type":"array","items":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/uuid"}}}}
+      }
+    },
+    "reconciliationRequest": {
+      "type":"object","additionalProperties":false,"required":["contractVersion","idempotencyKey"],
+      "properties":{"contractVersion":{"const":1},"idempotencyKey":{"$ref":"#/definitions/intentKey"}}
+    },
+    "reconciliationResponse": {
+      "type":"object","additionalProperties":false,"required":["contractVersion","namespace","buyer","operation"],
+      "properties": {
+        "contractVersion":{"const":1},"namespace":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/namespace"},
+        "buyer":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/buyer"},
+        "operation":{"type":"object","additionalProperties":false,"required":["id","state","statusUrl"],"properties":{
+          "id":{"$ref":"https://contracts.autonomia.site/financial/store-e2.v1.json#/definitions/uuid"},
+          "state":{"enum":["pending","completed","blocked"]},
+          "statusUrl":{"type":"string","pattern":"^/financial/internal/store/checkout-sessions/[0-9a-fA-F-]{36}$"}}}
+      }
+    }
+  }
+}

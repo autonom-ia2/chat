@@ -11,7 +11,9 @@ Rails.application.config.filter_parameters += [
   # Aviso de clique das páginas (#1011): formulário do cliente (lead, lead_form, lead_data) e
   # sinais da Meta. O Middleware::TrackedLinkSignalGuard já impede o corpo de virar params;
   # isto cobre qualquer outro caminho que traga essas chaves.
-  :lead, :fbc, :fbp, :page_url
+  :lead, :fbc, :fbp, :page_url,
+  :checkoutUrl, :checkout_url, :idempotencyKey, :clientIntent, :cognitoSub,
+  :instruction, :scaffold, :supplemental_instruction, :headers_config
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

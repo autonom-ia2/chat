@@ -196,6 +196,64 @@
     "controller": "api/v1/accounts/autonomia/financial#payments",
     "parametros": []
   },
+  "autonomia/financial/store/activations/:id": {
+    "controller": "api/v1/accounts/autonomia/store_customer#activation",
+    "parametros": []
+  },
+  "autonomia/financial/store/agents/:agent_id/services": {
+    "controller": "api/v1/accounts/autonomia/store#agent_services",
+    "parametros": [
+      "feature_key"
+    ]
+  },
+  "autonomia/financial/store/agents/:agent_id/services/:service_id/publication": {
+    "controller": "api/v1/accounts/autonomia/store#publication",
+    "parametros": [
+      "feature_key"
+    ]
+  },
+  "autonomia/financial/store/catalog": {
+    "controller": "api/v1/accounts/autonomia/store#catalog",
+    "parametros": []
+  },
+  "autonomia/financial/store/checkout/:id": {
+    "controller": "api/v1/accounts/autonomia/store_checkout#checkout_status",
+    "parametros": []
+  },
+  "autonomia/financial/store/eligible-accounts": {
+    "controller": "api/v1/accounts/autonomia/store_customer#accounts",
+    "parametros": []
+  },
+  "autonomia/financial/store/features": {
+    "controller": "api/v1/accounts/autonomia/store#features",
+    "parametros": []
+  },
+  "autonomia/financial/store/features/:feature_key/services": {
+    "controller": "api/v1/accounts/autonomia/store#feature_services",
+    "parametros": [
+      "agent_id"
+    ]
+  },
+  "autonomia/financial/store/features/:feature_key/services/:service_id/publication": {
+    "controller": "api/v1/accounts/autonomia/store#publication",
+    "parametros": [
+      "agent_id"
+    ]
+  },
+  "autonomia/financial/store/subscription-commands/:id": {
+    "controller": "api/v1/accounts/autonomia/store_subscription#command",
+    "parametros": []
+  },
+  "autonomia/financial/store/subscriptions": {
+    "controller": "api/v1/accounts/autonomia/store_customer#services",
+    "parametros": [
+      "serviceCatalogItemId"
+    ]
+  },
+  "autonomia/financial/store/subscriptions/:id/cancellation": {
+    "controller": "api/v1/accounts/autonomia/store_subscription#cancellation",
+    "parametros": []
+  },
   "autonomia/financial/subscription": {
     "controller": "api/v1/accounts/autonomia/financial#subscription",
     "parametros": []

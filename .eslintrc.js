@@ -13,6 +13,34 @@ module.exports = {
   ],
   overrides: [
     {
+      files: [
+        'app/javascript/dashboard/components-next/sidebar/Sidebar.vue',
+        'app/javascript/dashboard/routes/dashboard/financial/components/Store*.vue',
+        'app/javascript/dashboard/routes/dashboard/financial/pages/StoreCatalogPage.vue',
+        'app/javascript/dashboard/routes/dashboard/financial/composables/useStoreLabels.js',
+        'app/javascript/dashboard/routes/dashboard/autonomia/components/panel/PanelStore.vue',
+      ],
+      settings: {
+        'vue-i18n': {
+          localeDir: [
+            './app/javascript/dashboard/i18n/locale/*/financial.json',
+            './app/javascript/dashboard/i18n/locale/*/agents.json',
+          ],
+        },
+      },
+    },
+    {
+      files: [
+        'app/javascript/dashboard/routes/dashboard/autonomia/components/panel/PanelContracted.vue',
+        'app/javascript/dashboard/routes/dashboard/autonomia/pages/AgentPanelPage.vue',
+      ],
+      settings: {
+        'vue-i18n': {
+          localeDir: './app/javascript/dashboard/i18n/locale/*/agents.json',
+        },
+      },
+    },
+    {
       files: ['**/*.spec.{j,t}s?(x)'],
       env: {
         'vitest-globals/env': true,
