@@ -55,16 +55,8 @@ class Crm::FollowUps::SeriesMaterializer
     {
       account_id: @series.account_id, card: card, conversation_id: @series.conversation_id,
       contact_id: @series.contact_id || card&.contact_id, company_id: @series.company_id, inbox_id: card&.inbox_id,
-      assignee_id: assignee_id, created_by_id: @series.created_by_id
+      assignee_id: @series.occurrence_assignee_id, created_by_id: @series.created_by_id
     }
-  end
-
-  # O responsável segue o lembrete de uma vez só (ParamsResolver): quem cuida do card, quem atende a conversa,
-  # quem marcou. "Só eu" fica com quem marcou.
-  def assignee_id
-    return @series.created_by_id if @series.recipients_creator?
-
-    @series.card&.owner_id || @series.conversation&.assignee_id || @series.created_by_id
   end
 
   def finish_series

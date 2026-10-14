@@ -39,7 +39,7 @@ class Crm::FollowUps::SeriesCalendarEvents
   private
 
   def series_in_view
-    scope = @scope.where(status: %i[active paused]).includes(:card)
+    scope = @scope.where(status: %i[active paused]).includes(:card, :conversation)
     return scope.to_a if @pipeline_id.blank?
 
     joined = scope.left_joins(:card)
@@ -62,6 +62,8 @@ class Crm::FollowUps::SeriesCalendarEvents
       status: series.paused? ? 'paused' : 'pending',
       card_id: series.card_id,
       contact_id: series.contact_id || series.card&.contact_id,
+      # #1568: o responsável que a vez terá quando for criada, para o "Só os meus" do calendário.
+      assignee_id: series.occurrence_assignee_id,
       series_id: series.id,
       series_status: series.status,
       recurring: true,
