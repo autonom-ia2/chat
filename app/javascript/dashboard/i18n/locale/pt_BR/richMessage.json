@@ -22,6 +22,8 @@
     "LOCATION_REQUEST": {
     },
     "OPTIONS": {
+      "CHOSEN": "O cliente tocou em \"{title}\"",
+      "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
     }
   }
 }
