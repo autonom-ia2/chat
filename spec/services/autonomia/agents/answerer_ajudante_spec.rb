@@ -36,7 +36,8 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   def runner_que_responde(texto = 'A franquia é 5% da FIPE.')
-    runner = instance_double(Autonomia::Agents::Specialists::Runner, call: texto, motivo: nil, rodadas_usadas: 1)
+    runner = instance_double(Autonomia::Agents::Specialists::Runner,
+                             call: texto, motivo: nil, rodadas_usadas: 1, base_falhou?: false)
     allow(Autonomia::Agents::Specialists::Runner).to receive(:new).and_return(runner)
     runner
   end
@@ -126,6 +127,20 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(capturado[:saidas].first[:output]).to eq(Autonomia::Agents::Ajudantes::LIMITE_ATINGIDO)
       falha = Autonomia::Agents::AgentEvent.find_by!(autonomia_agent_id: ajudante.id, event_type: :consult_failed)
       expect(falha.metadata).to include('limite' => 'prazo')
+    end
+
+    it 'a consulta que começa perto do fim da resposta recebe só o tempo que resta (nunca mais que 5 min)' do
+      vinculo = vincular(joana, ajudante)
+      runner_que_responde
+      agora = 1_000.0
+      relogio = [agora, agora + 10, agora + 10, agora + 860, agora + 860]
+      allow(Autonomia::Agents::Ajudantes::Orcamento).to receive(:agora) { relogio.shift || (agora + 860) }
+      principal(chamadas: [chamada(vinculo, 'c1'), chamada(vinculo, 'c2')])
+
+      responder
+
+      expect(Autonomia::Agents::Specialists::Runner).to have_received(:new).with(hash_including(prazo: 300)).ordered
+      expect(Autonomia::Agents::Specialists::Runner).to have_received(:new).with(hash_including(prazo: 40)).ordered
     end
 
     it 'o limite é recusa, não dado de sistema (o portão do #1361 não o toma por base)' do

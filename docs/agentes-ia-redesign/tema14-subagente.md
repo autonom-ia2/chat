@@ -2,7 +2,9 @@
 
 Issue #1434 · épico #1424 · plano v4 (13/10) · protótipo rodada 3 (`70a963b461`).
 Orientação do Rodrigo (14/10): *"tente aprender com o que temos em cotação, mas simplificar para o nosso cenário"*.
-Etapa 1, só o desenho: o código começa depois da revisão.
+**Status (14/10):** desenho v2 aprovado pelo Rodrigo (as 4 recomendações da seção 12). PR1 (o motor) implementado na
+branch `feat/1434-subagente`, commits locais, revisado com ressalvas e ressalvas corrigidas; sem push. PR2 (a tela)
+ainda não começou. As seções abaixo estão atualizadas com o que foi implementado.
 
 O ajudante nunca fala com o cliente e não tem caixa. Ele pode ajudar **vários** agentes principais, e dizer quais é
 obrigatório. O principal o consulta como uma função e recebe texto de volta.
@@ -55,8 +57,9 @@ Instrução, base e ferramentas passam a vir do agente apontado, e não de texto
 | Limite | Valor | Onde mora |
 |---|---|---|
 | Rodadas do ajudante | 6 | `Runner::RODADAS_DE_FERRAMENTA`, que já existe |
-| Prazo do ajudante | 5 min por consulta | `max_segundos` do Runner quando é `delegado?` |
-| Rodadas do principal com ajudante | 6 (a mesma decisão da Lia) | `Ajudantes.rodadas_do_turno(agent)`: a Lia continua delegando ao `QuoteAgent::Builder`; o principal com ajudante ativo recebe 6 rodadas e 15 min; os demais, 1 rodada, como hoje |
+| Prazo do ajudante | o menor entre 5 min e o que resta da resposta | `max_segundos` do Runner, calculado pelo `Answerer` (`Orcamento#restante`) |
+| Espera de uma chamada do ajudante | 90 s (a Cotação segue com 180 s) | `timeout` do Runner quando é `delegado?` (`Ajudantes::SEGUNDOS_POR_CHAMADA`); sem `Timeout` |
+| Rodadas do principal com ajudante | 6 (a mesma decisão da Lia) | `Ajudantes.rodadas(agent)`: o principal com ajudante disponível recebe 6 rodadas e 15 min; sem ajudante, devolve nil e vale o de sempre (a Lia segue com `QuoteAgent::Builder.rodadas_do_turno`; os demais, 1 rodada) |
 | Consultas por resposta | 6 | Contador no `Answerer` |
 | Prazo total da resposta | 15 min | Relógio do `Answerer`, checado antes de cada consulta, e `max_segundos` do laço |
 
@@ -67,13 +70,14 @@ Instrução, base e ferramentas passam a vir do agente apontado, e não de texto
   - o principal não pode ser ajudante de ninguém.
   
   Sem cadeia, não há ciclo.
-- O Testar e o Copiloto passam a usar o mesmo `Ajudantes.rodadas_do_turno`, para mostrar o agente igual ao da produção. Hoje eles rodam com 1 rodada.
+- O Testar e o Copiloto passam a usar o mesmo `Ajudantes.rodadas`, para mostrar o agente igual ao da produção. Sem ajudante, seguem com 1 rodada, como hoje.
 
 ## 4. Telemetria
 
 - **`AgentEvent`** ganha `consulted: 6` e `consult_failed: 7`. O enum é inteiro, então não precisa de migration. Os dois entram em `NAO_ATENDIMENTO_TYPES`.
   - O evento é gravado no **ajudante**, com a conversa.
-  - Metadados: `principal_id`, `ms`, `rodadas`, `custo_usd` e, quando houver, `limite` (`consultas` ou `prazo`).
+  - Metadados de `consulted`: `principal_id`, `ms`, `rodadas` (idas do ajudante com ferramenta), `custo_usd` e, quando a busca na base falhou por erro esperado, `base: 'falhou'`.
+  - Metadados de `consult_failed`: os mesmos e `motivo` (o código da recusa do Runner). Limite atingido também é `consult_failed`, com `motivo: 'limite'` e `limite` (`consultas` ou `prazo`): a consulta não rodou, então "consultou" mentiria.
   - O custo da consulta é somado assinando `crm.ai_usage` durante a chamada do Runner, no mesmo padrão do `VigiaDeEnvio`. São cerca de 10 linhas, sem coluna nova.
 - **`turn_id` no consumo: não fazer agora.** Ele pede uma migration em `crm_ai_usage_events` e um kwarg atravessando `ResponsesClient`, `UsageRecorder`, `Answerer` e `Runner`. O `consulted` já traz conversa, custo e tempo da consulta, e a feature `agente_ajudante` separa o gasto na Gestão IA. Não é caro, mas não paga o desenho agora.
 - Não há alerta de custo. Os números para ajustar os limites saem de `consulted` e `consult_failed`.
@@ -96,7 +100,7 @@ Instrução, base e ferramentas passam a vir do agente apontado, e não de texto
 
 - A Lia não pode ser principal nem ajudante. A validação ao salvar recusa `insurance_quote` nos dois lados.
 - Os degraus novos do `Specialist` vêm **depois** de `Builder.*_mantida`, e os ramos do Runner são guardados por `delegado?`, que é sempre falso para a Lia.
-- `Ajudantes.rodadas_do_turno` devolve, para `insurance_quote`, exatamente o que `QuoteAgent::Builder.rodadas_do_turno` devolve.
+- `Ajudantes.rodadas` devolve nil para a Lia (ela nunca tem ajudante), e o Responder segue com `QuoteAgent::Builder.rodadas_do_turno`.
 - **Provas:**
   - as specs da cotação verdes, sem alteração: `specialists/runner_spec`, `runner_situacao_da_cotacao_spec`, `materia_spec`, `specialist_spec`, `spec/services/autonomia/insurance/**` e `quote_agent/builder_*`;
   - uma spec nova de **corpo idêntico**: o corpo enviado à OpenAI num turno da Lia (principal e especialista) é igual com a Fase 2 ligada e desligada, e com um ajudante vinculado a outro agente da mesma conta.
@@ -123,7 +127,7 @@ Instrução, base e ferramentas passam a vir do agente apontado, e não de texto
 - `Ajudantes.definir!` e `Ajudantes.rodadas_do_turno`;
 - os degraus do `Specialist`, os ramos do Runner, o contador e o prazo no `Answerer`;
 - os eventos;
-- `PUT agents/:id/ajuda` e os campos `ajuda` e `quando` na `_agent`;
+- `GET/PUT agents/:id/ajuda` (o "quando chamar" mora só aqui) e o campo `ajuda` (quem ele ajuda) na `_agent`;
 - tirar os ajudantes da lista do Copiloto;
 - os formatos do Guia regenerados.
 
@@ -198,7 +202,7 @@ Também entram os textos em i18n (en e pt_BR), o bloco no `porques.md` e o `guia
 
 | Risco | Mitigação |
 |---|---|
-| **Latência:** até 15 min na pior resposta | O comum é 1 ou 2 consultas de 5 a 30 s. Os 15 min são o teto, e o `consulted` mede o tempo real |
+| **Latência:** os 15 min param NOVAS consultas e rodadas, mas o que já começou termina. Pior caso real, por conta: uma chamada do ajudante espera até 3 × 90 s + 3 s (o cliente HTTP repete 2 vezes) = 273 s; uma consulta, até o prazo dela + a última rodada + o fechamento = prazo + 546 s; como o prazo da consulta é o que resta da resposta, a última consulta termina até 900 + 546 = 1.446 s; depois vem o fechamento do principal, até 3 × 180 s + 3 s = 543 s. **Pior caso: cerca de 33 min** (mais o tempo das ferramentas do ajudante). Antes da correção (consulta com 5 min fixos e 180 s por chamada) era cerca de 47 min | Prazo da consulta = o que resta da resposta; 90 s por chamada no ajudante. O comum é 1 ou 2 consultas de 5 a 30 s (na avaliação, a resposta inteira com consulta custou cerca de US$ 0,015). O `consulted` mede o tempo real. Para baixar o teto de verdade, o próximo passo seria o principal com espera menor por chamada, o que mexe no caminho de todos os agentes |
 | **Custo** | 6 consultas × 6 rodadas no pior caso. O `consulted` traz o custo, a feature fica separada, e os números iniciais caem num PR pequeno se a medição pedir |
 | **Injeção pela resposta ou pela base do ajudante** | Base e resposta cercadas como dado e truncadas. O ajudante não posta e não dispara ferramenta assíncrona. Cenário de injeção na avaliação. Nenhum filtro por palavra |
 | **Isolamento por conta** | A conta é validada ao salvar e filtrada na execução. O Runner usa a credencial da conta. Spec cruzando contas |

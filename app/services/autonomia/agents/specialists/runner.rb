@@ -62,7 +62,8 @@ class Autonomia::Agents::Specialists::Runner
   # pública e os PDFs anexados agora. O especialista os lê ANTES do bilhete — é o que faz o CPF que
   # o cliente escreveu chegar ao formulário mesmo quando o principal não o repetiu no pedido, e a
   # apólice em PDF alimentar a renovação sem ninguém digitar.
-  def initialize(specialist:, request:, delivery: nil, history: [], documents: [])
+  # `prazo` (tema 14): só o ajudante recebe, com o que resta da resposta do principal (no máximo 5 min).
+  def initialize(specialist:, request:, delivery: nil, history: [], documents: [], prazo: nil) # rubocop:disable Metrics/ParameterLists
     @specialist = specialist
     @request = request.to_s.strip
     # CONTEXTO DE ENTREGA (#313), repassado do principal. É por aqui que a ferramenta ASSÍNCRONA
@@ -71,6 +72,10 @@ class Autonomia::Agents::Specialists::Runner
     @delivery = delivery
     @history = history
     @documents = documents
+    # Tema 14: o vínculo com um ajudante muda o ciclo (`LacoDoAjudante`); a Cotação fica com nil e as constantes dela.
+    @laco_do_ajudante = if specialist.delegado?
+                          ::Autonomia::Agents::Specialists::LacoDoAjudante.new(vinculo: specialist, delivery: delivery, prazo: prazo)
+                        end
   end
 
   # -> String (sempre). Nunca nil, nunca exceção.
@@ -101,12 +106,18 @@ class Autonomia::Agents::Specialists::Runner
     @rodadas_usadas.to_i
   end
 
+  # A busca na base do ajudante falhou por um erro esperado (banco ou embedding): ele trabalhou sem a base.
+  def base_falhou?
+    @laco_do_ajudante.present? && @laco_do_ajudante.base_falhou?
+  end
+
   private
 
   def generate(credential)
     @abertas_antes = @delivery&.runs&.size.to_i
+    ajustes = ajustes_do_laco
     raw = Crm::Ai::ResponsesClient.new(
-      credential: credential, feature: etiqueta_de_consumo, account: @specialist.account
+      credential: credential, feature: ajustes[:feature], account: @specialist.account
     ).create_with_tool_executor(
       model: Autonomia::Agents::Config::ANSWERER_MODEL,
       instructions: @specialist.effective_instruction,
@@ -114,9 +125,9 @@ class Autonomia::Agents::Specialists::Runner
       schema: fatos? ? ::Autonomia::Insurance::QuoteAgent::RetornoDoEspecialista::SCHEMA : RESULT_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::ANSWERER_REASONING_EFFORT,
       tools: tool_schemas,
-      timeout: SEGUNDOS_POR_CHAMADA,
+      timeout: ajustes[:timeout],
       max_rodadas: RODADAS_DE_FERRAMENTA,
-      max_segundos: prazo_do_laco
+      max_segundos: ajustes[:max_segundos]
     ) { |calls| execute_tool_calls(calls) }
     parsed = JSON.parse(raw[:text])
     parsed.is_a?(Hash) ? parsed : nil
@@ -132,26 +143,12 @@ class Autonomia::Agents::Specialists::Runner
                                                           documents: @documents, agent: @specialist.agent,
                                                           faixa: ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(@specialist))
     pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
-    materia.mensagens + base_do_ajudante + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
+    materia.mensagens + Array(@laco_do_ajudante&.base(@request)) + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
   end
 
-  # Tema 14 (#1434): o vínculo aponta para outro agente da conta, e não é a Cotação.
-  def ajudante?
-    @specialist.delegado?
-  end
-
-  # O ajudante tem etiqueta de consumo e prazo próprios (5 min); a Cotação segue com os dela.
-  def etiqueta_de_consumo
-    ajudante? ? ::Autonomia::Agents::Specialists::Ajudante::FEATURE : FEATURE
-  end
-
-  def prazo_do_laco
-    ajudante? ? ::Autonomia::Agents::Ajudantes::PRAZO_DA_CONSULTA : SEGUNDOS_DE_FERRAMENTA
-  end
-
-  # A base do ajudante, cercada, antes do pedido. A Lia não tem: o especialista dela não busca na base.
-  def base_do_ajudante
-    ajudante? ? ::Autonomia::Agents::Specialists::Ajudante.base(@specialist, @request) : []
+  # A etiqueta de consumo e os relógios do laço: os da Cotação, ou os do ajudante (tema 14).
+  def ajustes_do_laco
+    @laco_do_ajudante&.ajustes || { feature: FEATURE, timeout: SEGUNDOS_POR_CHAMADA, max_segundos: SEGUNDOS_DE_FERRAMENTA }
   end
 
   def tool_schemas
@@ -176,17 +173,18 @@ class Autonomia::Agents::Specialists::Runner
 
   def executar(tool, call)
     assincrona = tool&.async?
-    @tentou_cotar = true if assincrona && !ajudante?
+    @tentou_cotar = true if assincrona && @laco_do_ajudante.nil?
     abertas = execucoes_do_turno
-    output = tool.present? ? tool.execute(call, delivery: entrega_das_ferramentas) : sem_ferramenta(call)
+    output = saida_da_ferramenta(tool, call)
     recusa = output if assincrona && execucoes_do_turno == abertas
     [{ type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(MAX_TOOL_OUTPUT_CHARS) }, recusa]
   end
 
-  # O ajudante nunca entrega nada ao cliente: as ferramentas dele rodam sem o contexto de entrega, e a assíncrona é
-  # recusada com erro nomeado (`async_indisponivel_nesta_superficie`). A Cotação segue com a entrega do principal.
-  def entrega_das_ferramentas
-    ajudante? ? nil : @delivery
+  def saida_da_ferramenta(tool, call)
+    return sem_ferramenta(call) if tool.blank?
+    return @laco_do_ajudante.executar(tool, call) if @laco_do_ajudante
+
+    tool.execute(call, delivery: @delivery)
   end
 
   # AS SEIS RODADAS ESGOTADAS SEM COTAÇÃO VIRAM NOTA À EQUIPE NA HORA (chat#718). Quem decide é

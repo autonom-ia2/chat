@@ -36,6 +36,23 @@ RSpec.describe Autonomia::Agents::Faq::SuggestJob, type: :job do
     described_class.new.perform(conversation.id)
   end
 
+  # Tema 14 (#1434): o ajudante consultado na conversa não é quem a atendeu.
+  it 'does not turn a helper consultation into FAQ suggestions for the helper' do
+    principal = create_agent('faq_suggestions' => true)
+    ajudante = Autonomia::Agents::Agent.create!(account: account, name: 'Regras', agent_type: 'custom', actuation: :internal,
+                                                status: :active, enabled: true, instruction: 'Regras.',
+                                                config: { 'faq_suggestions' => true })
+    Autonomia::Agents::AgentEvent.create!(agent: principal, account: account, conversation_id: conversation.id, event_type: :replied)
+    Autonomia::Agents::AgentEvent.create!(agent: ajudante, account: account, conversation_id: conversation.id, event_type: :consulted)
+    extractor = instance_double(Autonomia::Agents::Faq::Extractor, call: [])
+    allow(Autonomia::Agents::Faq::Extractor).to receive(:new).and_return(extractor)
+
+    described_class.new.perform(conversation.id)
+
+    expect(Autonomia::Agents::Faq::Extractor).to have_received(:new).with(agent: principal, conversation: conversation)
+    expect(Autonomia::Agents::Faq::Extractor).not_to have_received(:new).with(agent: ajudante, conversation: anything)
+  end
+
   it 'skips conversations that are no longer resolved' do
     create_agent('faq_suggestions' => true)
     conversation.update!(status: :open)

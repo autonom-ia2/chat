@@ -267,6 +267,16 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'invalid_tool_arguments', slug: 'consultar_auto' },
         dispara: -> { rodar_principal('name' => criar_especialista.function_name, 'call_id' => 'c1', 'arguments' => 'nao-e-json') }
       },
+      # Tema 14 (#1434): a ferramenta assíncrona do ajudante não roda; a conversa vai só para o registro.
+      'laco_do_ajudante.rb#recusar_assincrona#1' => {
+        espera: { motivo: 'ajudante_sem_entrega' },
+        dispara: lambda {
+          vinculo = vincular(agent, criar_ajudante(account))
+          register_async_tool(tool)
+          modelo_que_chama({ 'name' => tool.slug, 'call_id' => 'c1', 'arguments' => '{}' }, resposta: 'ok', dados_faltando: [])
+          Autonomia::Agents::Specialists::Runner.new(specialist: vinculo, request: 'cotar', delivery: delivery).call
+        }
+      },
       # Tema 14 (#1434): passado o prazo da resposta, a consulta ao ajudante não roda e o modelo responde com o que tem.
       'ajudantes.rb#recusar_por_limite#1' => {
         espera: { motivo: 'ajudante_limite_atingido', slug: 'consultar_regras_do_produto_auto' },

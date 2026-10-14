@@ -45,6 +45,21 @@ RSpec.describe 'Ajuda do agente (tema 14)', type: :request do
     expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
   end
 
+  it 'entrada fora do formato dá 422, nunca 500' do
+    base = { quando: 'Dúvida do Auto' }
+    [
+      { principal_ids: { 'a' => joana.id } },
+      { principal_ids: ['abc'] },
+      { principal_ids: [{ 'id' => joana.id }] },
+      { principal_ids: [joana.id], quando: { 'texto' => 'x' } }
+    ].each do |corpo|
+      put caminho, params: base.merge(corpo), headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity), "corpo #{corpo.inspect} -> #{response.status}"
+    end
+    expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
+  end
+
   it 'recusa lista vazia com 422' do
     gravar(principal_ids: [])
 

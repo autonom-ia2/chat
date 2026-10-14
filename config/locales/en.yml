@@ -579,6 +579,7 @@ en:
         ajudante_interno: 'A helper never talks to customers: it must be an internal agent.'
         profundidade: 'A helper cannot call another helper, and an internal agent cannot have helpers.'
         sem_principal: 'Choose at least one agent for this helper to help.'
+        principal_invalido: 'Choose agents from this account by their id.'
       native_tool_not_allowed: 'This agent cannot use one or more of the requested native tools. Nothing was saved.'
       escolhas_incompletas: "The Quote Agent could not build its instruction: the choice '%{campo}' is missing from its record. This cannot be fixed here — contact Autonom.ia support."
       booking_page_forbidden: 'Only people who can see Scheduling (CRM › Scheduling) can choose the booking page the AI uses.'

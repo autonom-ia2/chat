@@ -21,4 +21,10 @@ class Autonomia::Agents::Ajudantes::Orcamento
     @consultas += 1
     nil
   end
+
+  # Os segundos que a resposta ainda tem (nunca negativo). A consulta ao ajudante roda com o menor entre isto e o
+  # prazo dela, para não passar do fim da resposta.
+  def restante
+    [@prazo - (self.class.agora - @inicio), 0].max
+  end
 end

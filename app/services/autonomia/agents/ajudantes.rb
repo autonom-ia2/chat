@@ -17,6 +17,9 @@ module Autonomia::Agents::Ajudantes
   CONSULTAS_POR_RESPOSTA = 6
   PRAZO_DA_RESPOSTA = 900
   PRAZO_DA_CONSULTA = 300
+  # Espera de UMA chamada ao modelo dentro da consulta (o cliente repete até 2 vezes). Menor que os 180 s da Cotação:
+  # é o que segura o pior caso de uma consulta que começa perto do fim do prazo da resposta.
+  SEGUNDOS_POR_CHAMADA = 90
   LIMITE_ATINGIDO = 'Limite de consultas ao ajudante atingido nesta resposta. ' \
                     'Responda ao cliente com o que você já tem.'.freeze
 
@@ -25,8 +28,7 @@ module Autonomia::Agents::Ajudantes
   # -> os vínculos gravados. Recusado (com a mensagem para a tela) quando a lista está vazia, o ajudante não é interno,
   # ou algum principal não serve (outra conta, a Lia, outro ajudante). Nada é gravado pela metade.
   def definir!(ajudante:, principal_ids:, quando:)
-    ids = Array(principal_ids).map(&:to_i).uniq
-    raise Recusado, I18n.t('autonomia.agents.ajudante.sem_principal') if ids.empty?
+    ids = ids_de_principais(principal_ids)
     raise Recusado, I18n.t('autonomia.agents.ajudante.ajudante_interno') unless ajudante.actuation_internal?
 
     ActiveRecord::Base.transaction do
@@ -39,14 +41,17 @@ module Autonomia::Agents::Ajudantes
     raise Recusado, e.record.errors.full_messages.to_sentence
   end
 
+  # A conta que vale é a do PRINCIPAL (`vinculo.agent`), nunca a coluna do vínculo: uma linha gravada fora do escritor
+  # único não faz um ajudante de outra conta entrar no turno.
   def disponivel?(vinculo)
-    return false unless vinculo.delegado? && ::Autonomia::Agents::Fase2.ligada?(vinculo.account)
-    return false if vinculo.agent.actuation_internal?
+    principal = vinculo.agent
+    return false unless vinculo.delegado? && principal.present? && ::Autonomia::Agents::Fase2.ligada?(principal.account)
+    return false if principal.actuation_internal?
 
-    ajudante_pronto?(vinculo.delegate, vinculo.account_id)
+    ajudante_pronto?(vinculo.delegate, principal.account_id)
   end
 
-  # Ligado, interno, com instrução e da mesma conta do vínculo.
+  # Ligado, interno, com instrução e da mesma conta do principal.
   def ajudante_pronto?(ajudante, account_id)
     ajudante.present? && ajudante.account_id == account_id && ajudante.operating? && ajudante.actuation_internal? &&
       ajudante.instruction.present?
@@ -75,9 +80,18 @@ module Autonomia::Agents::Ajudantes
       account_id: vinculo.account_id, autonomia_agent_id: vinculo.delegate_agent_id, event_type: tipo,
       conversation_id: delivery&.conversation&.id, metadata: { principal_id: vinculo.autonomia_agent_id }.merge(metadata)
     )
-  rescue StandardError => e
+  rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.warn("[autonomia][ajudante] evento falhou vinculo=#{vinculo.id} #{e.class}")
     nil
+  end
+
+  # Só inteiros (ou texto de inteiro). Objeto, texto qualquer ou lista vazia: Recusado, nunca erro do banco.
+  def ids_de_principais(principal_ids)
+    ids = Array(principal_ids).map { |id| Integer(id.to_s, 10, exception: false) }.uniq
+    raise Recusado, I18n.t('autonomia.agents.ajudante.principal_invalido') if ids.include?(nil)
+    raise Recusado, I18n.t('autonomia.agents.ajudante.sem_principal') if ids.empty?
+
+    ids
   end
 
   def principais_da_conta(ajudante, ids)
@@ -106,5 +120,5 @@ module Autonomia::Agents::Ajudantes
     sufixo = "_#{ajudante.id}"
     "#{base[0, ::Autonomia::Agents::Specialist::MAX_SLUG_LENGTH - sufixo.length]}#{sufixo}"
   end
-  private_class_method :ajudante_pronto?, :principais_da_conta, :gravar_vinculo!, :slug_livre
+  private_class_method :ajudante_pronto?, :ids_de_principais, :principais_da_conta, :gravar_vinculo!, :slug_livre
 end

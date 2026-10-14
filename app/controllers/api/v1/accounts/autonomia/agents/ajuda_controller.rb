@@ -12,7 +12,8 @@ class Api::V1::Accounts::Autonomia::Agents::AjudaController < Api::V1::Accounts:
   # PUT { principal_ids: [..], quando: '...' } — troca o conjunto inteiro. Recusa (422) lista vazia, ajudante que não é
   # interno e principal que não serve (outra conta, a Lia, outro ajudante).
   def update
-    ::Autonomia::Agents::Ajudantes.definir!(ajudante: @agent, principal_ids: params[:principal_ids], quando: params[:quando].to_s)
+    ::Autonomia::Agents::Ajudantes.definir!(ajudante: @agent, principal_ids: ajuda_params[:principal_ids],
+                                            quando: ajuda_params[:quando].to_s)
     render json: payload
   rescue ::Autonomia::Agents::Ajudantes::Recusado => e
     render_unprocessable(e.message)
@@ -22,6 +23,12 @@ class Api::V1::Accounts::Autonomia::Agents::AjudaController < Api::V1::Accounts:
 
   def ensure_fase2
     head :not_found unless ::Autonomia::Agents::Fase2.ligada?(Current.account)
+  end
+
+  # Só escalares: `principal_ids` como lista de ids e `quando` como texto. Objeto em qualquer um dos dois fica de fora
+  # (e a gravação recusa com 422), nunca chega ao modelo como estrutura.
+  def ajuda_params
+    @ajuda_params ||= params.permit(:quando, principal_ids: [])
   end
 
   def fetch_agent

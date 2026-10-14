@@ -69,6 +69,25 @@ RSpec.describe Autonomia::Agents::Ajudantes do
       expect(described_class.disponivel?(vincular(joana, ajudante))).to be(false)
     end
 
+    it 'vínculo forjado entre contas (fora do escritor único) não entra no turno: vale a conta do principal' do
+      outra = conta_da_fase2
+      de_fora = criar_ajudante(outra)
+      forjado = Autonomia::Agents::Specialist.new(agent: joana, account: outra, delegate: de_fora, name: 'X', slug: 'x',
+                                                  description: 'sempre', instruction: '')
+      forjado.save(validate: false)
+
+      expect(described_class.disponivel?(forjado.reload)).to be(false)
+      expect(described_class.rodadas(joana)).to be_nil
+    end
+
+    it 'aceita só ids inteiros: texto ou objeto recusa, sem gravar' do
+      expect { described_class.definir!(ajudante: ajudante, principal_ids: ['abc'], quando: 'x') }
+        .to raise_error(described_class::Recusado)
+      expect { described_class.definir!(ajudante: ajudante, principal_ids: [{ 'id' => joana.id }], quando: 'x') }
+        .to raise_error(described_class::Recusado)
+      expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
+    end
+
     it 'ajudante apagado não é consultado' do
       vinculo = vincular(joana, ajudante)
       ajudante.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations

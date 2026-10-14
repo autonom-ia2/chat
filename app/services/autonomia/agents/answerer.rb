@@ -458,8 +458,9 @@ module Autonomia
         limite = @orcamento_dos_ajudantes.reservar
         return Ajudantes.recusar_por_limite(vinculo: vinculo, limite: limite, delivery: @delivery) if limite
 
-        runner = Specialists::Runner.new(specialist: vinculo, request: args[Specialist::REQUEST_PARAM],
-                                         delivery: @delivery, history: @history, documents: @documents)
+        prazo = [Ajudantes::PRAZO_DA_CONSULTA, @orcamento_dos_ajudantes.restante].min
+        runner = Specialists::Runner.new(specialist: vinculo, request: args[Specialist::REQUEST_PARAM], delivery: @delivery,
+                                         history: @history, documents: @documents, prazo: prazo)
         Specialists::Ajudante.new(vinculo: vinculo, delivery: @delivery).consultar(runner)
       end
 
