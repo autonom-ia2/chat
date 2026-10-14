@@ -150,21 +150,29 @@ module Crm
         (pipeline.metadata || {}).fetch('ai', {}).to_h.with_indifferent_access
       end
 
-      # Agente de IA responsável por caixa + funil (#1447): o agente (não apagado) que a tela "Quem cuida do quê?"
-      # gravou para o par, ou nil.
-      def self.responsible_agent(inbox:, pipeline:)
-        return if inbox.blank? || pipeline.blank?
-
-        linha = ::Crm::InboxAiAgent.where(inbox_id: inbox.id, pipeline_id: pipeline.id).select(:autonomia_agent_id)
-        ::Autonomia::Agents::Agent.kept.find_by(account_id: inbox.account_id, id: linha)
+      # Agentes de área (#1447) só valem com a Fase 2 dos Agentes ligada na conta (e os Agentes ligados): sem ela, quem
+      # responde é sempre a porta (Autonomia::Agents::QuemResponde), e entregar a conversa a uma área não teria efeito.
+      def self.areas_ligadas?(account)
+        account.present? && ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
       end
 
-      # O vínculo do agente com a caixa: o espelho (AgentBot) dele ali é quem posta. Sem vínculo, o agente não atende
-      # nessa caixa (até a F1 do Agentes IA, #1433, só a porta tem vínculo).
+      # Agente de IA responsável por caixa + funil (#1447): o agente que a tela "Quem cuida do quê?" gravou para o par,
+      # se ele pode falar com cliente agora (atendendo, não interno, não de sistema). Sem a Fase 2, ou com o agente
+      # parado, nil: o funil fica com a porta.
+      def self.responsible_agent(inbox:, pipeline:)
+        return if inbox.blank? || pipeline.blank? || !areas_ligadas?(inbox.account)
+
+        linha = ::Crm::InboxAiAgent.where(inbox_id: inbox.id, pipeline_id: pipeline.id).select(:autonomia_agent_id)
+        agente = ::Autonomia::Agents::Agent.kept.find_by(account_id: inbox.account_id, id: linha)
+        agente if agente&.atende_cliente?
+      end
+
+      # O vínculo de ÁREA do agente com a caixa (Autonomia::Agents::Areas): o espelho (AgentBot) dele ali é quem posta.
+      # Sem vínculo, o agente não atende nessa caixa.
       def self.agent_inbox_for(inbox:, agent:)
         return if inbox.blank? || agent.blank?
 
-        ::Autonomia::Agents::AgentInbox.kept.find_by(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: agent.id)
+        ::Autonomia::Agents::AgentInbox.kept.area.find_by(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: agent.id)
       end
 
       # Funil que pode receber um assunto aberto pelo agente: da conta, ativo, ligado à caixa, com etapa para o card
@@ -175,9 +183,12 @@ module Crm
           pipeline.pipeline_inboxes.exists?(inbox_id: inbox.id) && pipeline.stages.exists?
       end
 
-      # Para onde o agente da conversa pode passar o cliente (#1447): os funis da caixa com responsável ligado a ela,
+      # Para onde o agente da conversa pode passar o cliente (#1447): os funis da caixa com responsável que é área nela,
       # menos o funil do assunto em atendimento. [{ pipeline_id:, nome:, agente_id:, agente_nome: }], na ordem do CRM.
+      # Sem a Fase 2, vazio.
       def self.destinos_para(conversation)
+        return [] unless areas_ligadas?(conversation.account)
+
         atual = ::Crm::Cards::ConversationCardFinder.new(account: conversation.account).find(conversation)
         fora = atual&.open? ? atual.pipeline_id : nil
 
@@ -187,15 +198,16 @@ module Crm
                                                 .map { |linha| destino(linha) }
       end
 
-      # As linhas da caixa cujo agente tem vínculo (AgentInbox) com ela.
+      # As linhas da caixa cujo agente tem vínculo de área ativo com ela.
       def self.responsaveis_ligados(inbox)
-        ligados = ::Autonomia::Agents::AgentInbox.kept.where(account_id: inbox.account_id, inbox_id: inbox.id).select(:autonomia_agent_id)
+        ligados = ::Autonomia::Agents::AgentInbox.kept.area.where(account_id: inbox.account_id, inbox_id: inbox.id)
+                                                 .select(:autonomia_agent_id)
         ::Crm::InboxAiAgent.where(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: ligados)
       end
       private_class_method :responsaveis_ligados
 
       def self.destino?(linha, inbox)
-        linha.agent.deleted_at.nil? && funil_de_destino?(linha.pipeline, inbox)
+        linha.agent.deleted_at.nil? && linha.agent.atende_cliente? && funil_de_destino?(linha.pipeline, inbox)
       end
       private_class_method :destino?
 
@@ -203,11 +215,6 @@ module Crm
         { pipeline_id: linha.pipeline.id, nome: linha.pipeline.name, agente_id: linha.agent.id, agente_nome: linha.agent.name }
       end
       private_class_method :destino
-
-      # O agente cuida de algum funil em alguma caixa: a tela "Equipe de agentes" (#1366) mostra "Na equipe".
-      def self.area_de_algum_funil?(agent)
-        agent.present? && agent.deleted_at.nil? && ::Crm::InboxAiAgent.exists?(autonomia_agent_id: agent.id)
-      end
 
       def self.stage_ai_criteria(stage)
         (stage.metadata || {}).fetch('ai_criteria', '').to_s.strip

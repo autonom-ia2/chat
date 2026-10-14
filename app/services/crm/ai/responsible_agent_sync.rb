@@ -1,25 +1,24 @@
 # Entrega a conversa ao agente de IA responsável pelo assunto em atendimento (#1447, contrato com Agentes IA #1433).
 #
 # Quem atende é o robô da conversa (ai_assignee). Quando o assunto em atendimento é de um funil que, naquela caixa,
-# tem um agente responsável (Crm::InboxAiAgent), o espelho (AgentBot) desse agente passa a ser o ai_assignee, pelo
-# mesmo AssignmentService da atribuição manual. Roda no job, no lock da conversa, e confere tudo de novo com a conversa
-# relida. Nada troca quando:
+# tem um agente responsável (Crm::InboxAiAgent), o espelho (AgentBot) do vínculo de área dele passa a ser o
+# ai_assignee, pelo mesmo AssignmentService da atribuição manual. Roda no job, no lock da conversa, e confere tudo de
+# novo com a conversa relida. Nada troca quando:
 # - uma pessoa está atribuída, ou a conversa espera uma pessoa (passagem do robô);
 # - nenhum robô atende a conversa agora (sem ai_assignee): entregar a um robô seria tirá-la da fila de pessoas;
 # - a conversa está resolvida ou adiada e a troca não veio do pedido do agente: entregar a um robô a reabriria;
 # - o responsável já é quem atende.
-# Funil arquivado, fora da caixa, com a IA do funil desligada, ou cujo responsável não tem vínculo com a caixa (sem
-# espelho não há como postar) conta como funil sem responsável.
+# Funil arquivado, fora da caixa, com a IA do funil desligada, cujo responsável está parado ou não é mais área da caixa,
+# ou conta sem a Fase 2 dos Agentes (Crm::Ai::Config.areas_ligadas?): conta como funil sem responsável. Sem a Fase 2,
+# então, o sync só devolve à porta, nunca entrega a uma área.
 #
 # A porta (o robô ativo da caixa) só recebe a conversa de volta quando o próprio card em atendimento passa para um
-# funil sem responsável, ou cujo responsável é a porta (motivo PIPELINE). Troca de foco ou pedido do agente nunca
-# devolvem à porta sozinhos.
+# funil sem responsável (motivo PIPELINE). Troca de foco ou pedido do agente nunca devolvem à porta sozinhos.
 #
 # A troca fica na atividade do card (ai_agent_changed), com o transfer_id do pedido do agente (Crm::Subjects::Abrir)
-# quando houver. Depois do commit sai o evento EVENTO_TROCA (ActiveSupport::Notifications): é o ponto para o Agentes IA
-# enfileirar a resposta do agente de destino, para a frase da origem sair antes. Hoje ninguém assina o evento — o
-# ReplyJob responde a uma mensagem do cliente e resolve o agente só pela caixa (Operate.eligible_agent_inbox); a
-# resposta do destino entra com a F1 do Agentes IA (#1433).
+# quando houver. Depois do commit sai o evento EVENTO_TROCA (ActiveSupport::Notifications) com
+# { conversation:, from_bot:, to_bot:, agent:, transfer_id:, motivo: } — o contrato com o Agentes IA, que assina o
+# evento para enfileirar a resposta do agente de destino, para a frase da origem sair antes.
 class Crm::Ai::ResponsibleAgentSync
   PIPELINE = 'pipeline'.freeze
   FOCO = 'foco'.freeze
@@ -31,7 +30,7 @@ class Crm::Ai::ResponsibleAgentSync
   JANELA_DO_PEDIDO = 10.minutes
 
   Resultado = Struct.new(:trocou, :de_agent_bot_id, :para_agent_bot_id, :autonomia_agent_id, :transfer_id, :motivo,
-                         keyword_init: true)
+                         :evento, keyword_init: true)
 
   # Só enfileira em conta que configurou algum responsável: sem linha, nada a fazer.
   def self.agendar(conversation_id:, motivo:, card_id: nil)
@@ -101,13 +100,12 @@ class Crm::Ai::ResponsibleAgentSync
   def destino_para(card)
     porta = @conversation.inbox_agent_bot
     agente = responsavel(card.pipeline)
-    return volta_para_a_porta(porta, nil) if agente.nil?
+    return volta_para_a_porta(porta) if agente.nil?
 
     espelho = Crm::Ai::Config.agent_inbox_for(inbox: @conversation.inbox, agent: agente)&.agent_bot
-    # Responsável sem vínculo com a caixa não tem como postar: conta como funil sem responsável. Um agente de área não
-    # segue atendendo o funil de outra área.
-    return volta_para_a_porta(porta, nil) if espelho.nil?
-    return volta_para_a_porta(porta, agente) if espelho == porta
+    # Responsável que não é mais área da caixa não tem como postar: conta como funil sem responsável. Um agente de área
+    # não segue atendendo o funil de outra área.
+    return volta_para_a_porta(porta) if espelho.nil?
 
     { bot: espelho, agente: agente }
   end
@@ -120,22 +118,29 @@ class Crm::Ai::ResponsibleAgentSync
     Crm::Ai::Config.responsible_agent(inbox: @conversation.inbox, pipeline: pipeline)
   end
 
-  # Sem responsável, ou o responsável é a porta: só o card em atendimento mudando de funil devolve à porta.
-  def volta_para_a_porta(porta, agente)
-    { bot: porta, agente: agente } if porta && @motivo == PIPELINE
+  # Sem responsável: só o card em atendimento mudando de funil devolve à porta.
+  def volta_para_a_porta(porta)
+    { bot: porta, agente: nil } if porta && @motivo == PIPELINE
   end
 
   def trocar(card, destino)
-    de = @conversation.assignee_agent_bot_id
+    de_bot = @conversation.ai_assignee
     Conversations::AssignmentService.new(conversation: @conversation, assignee_id: destino[:bot].id, assignee_type: 'AgentBot').perform
     transfer_id = transfer_id_do_pedido(card)
     Crm::ActivityLogger.new(
       card: card, actor: nil, event_type: EVENTO, conversation: @conversation,
-      payload: { motivo: @motivo, de_agent_bot_id: de, para_agent_bot_id: destino[:bot].id,
+      payload: { motivo: @motivo, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
                  autonomia_agent_id: destino[:agente]&.id, transfer_id: transfer_id }.compact
     ).perform
-    Resultado.new(trocou: true, de_agent_bot_id: de, para_agent_bot_id: destino[:bot].id,
-                  autonomia_agent_id: destino[:agente]&.id, transfer_id: transfer_id, motivo: @motivo)
+    Resultado.new(trocou: true, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
+                  autonomia_agent_id: destino[:agente]&.id, transfer_id: transfer_id, motivo: @motivo,
+                  evento: evento(de_bot, destino, transfer_id))
+  end
+
+  # O payload do EVENTO_TROCA combinado com o Agentes IA (#1433).
+  def evento(de_bot, destino, transfer_id)
+    { conversation: @conversation, from_bot: de_bot, to_bot: destino[:bot], agent: destino[:agente], transfer_id: transfer_id,
+      motivo: @motivo }
   end
 
   # O transfer_id do pedido do agente (Abrir) neste card, se é recente e ainda não foi usado por uma troca desta
@@ -149,7 +154,6 @@ class Crm::Ai::ResponsibleAgentSync
   end
 
   def publicar(resultado)
-    payload = resultado.to_h.merge(conversation_id: @conversation.id)
-    ActiveRecord.after_all_transactions_commit { ActiveSupport::Notifications.instrument(EVENTO_TROCA, payload) }
+    ActiveRecord.after_all_transactions_commit { ActiveSupport::Notifications.instrument(EVENTO_TROCA, resultado.evento) }
   end
 end

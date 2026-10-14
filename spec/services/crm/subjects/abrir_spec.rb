@@ -59,9 +59,21 @@ RSpec.describe Crm::Subjects::Abrir do
       expect_recusa(:sem_agente_responsavel)
     end
 
-    it ':agente_fora_da_caixa quando o responsável não tem vínculo com a caixa' do
-      Autonomia::Agents::AgentInbox.where(agent: area).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    it ':agente_fora_da_caixa quando o responsável não é mais área da caixa' do
+      area_sumiu!
       expect_recusa(:agente_fora_da_caixa)
+    end
+
+    it ':sem_agente_responsavel quando a área sai pela tela e o agente para (era a última caixa dele)' do
+      Autonomia::Agents::Areas.desvincular!(agent: area, inbox: inbox)
+
+      expect(area.reload).to have_attributes(status: 'paused', enabled: false)
+      expect_recusa(:sem_agente_responsavel)
+    end
+
+    it ':sem_agente_responsavel sem a Fase 2 dos Agentes: quem responde é a porta' do
+      Autonomia::Agents::Fase2.desligar!(account)
+      expect_recusa(:sem_agente_responsavel)
     end
 
     it ':pessoa_atribuida quando uma pessoa atende' do

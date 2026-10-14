@@ -22819,6 +22819,15 @@
   },
   "PUT crm/caixas/:inbox_id": {
     "campos": {
+      "ai_agents": {
+        "campos": {
+          "id": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      },
       "default_stage_id": {},
       "legado": {},
       "modo": {},
@@ -22843,8 +22852,8 @@
     "envelope": "caixa",
     "origem": [
       "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:49"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:61"
     ],
     "sem_corpo": false
   },

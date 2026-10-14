@@ -23,10 +23,35 @@ RSpec.describe Crm::Ai::Config do
       area.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       expect(described_class.responsible_agent(inbox: inbox, pipeline: suporte)).to be_nil
     end
+
+    it 'é nil com o agente parado: quem não fala com cliente agora não recebe a conversa' do
+      area.update_columns(status: Autonomia::Agents::Agent.statuses[:paused]) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.responsible_agent(inbox: inbox, pipeline: suporte)).to be_nil
+      expect(described_class.destinos_para(conversation)).to eq([])
+    end
+  end
+
+  describe 'sem a Fase 2 dos Agentes' do
+    it 'não há responsável nem destino: quem responde é a porta' do
+      Autonomia::Agents::Fase2.desligar!(account)
+      conversation.reload # a conta relida, como numa requisição ou job novo
+
+      expect(described_class.areas_ligadas?(account)).to be(false)
+      expect(described_class.responsible_agent(inbox: inbox, pipeline: suporte)).to be_nil
+      expect(described_class.destinos_para(conversation)).to eq([])
+    end
+
+    it 'nem com os Agentes desligados na conta' do
+      allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false)
+
+      expect(described_class.areas_ligadas?(account)).to be(false)
+      expect(described_class.destinos_para(conversation)).to eq([])
+    end
   end
 
   describe '.destinos_para' do
-    it 'lista o funil com responsável ligado à caixa' do
+    it 'lista o funil com responsável que é área da caixa' do
       create_card(pipeline: comercial)
 
       expect(described_class.destinos_para(conversation))
@@ -41,18 +66,19 @@ RSpec.describe Crm::Ai::Config do
 
     it 'filtra pela caixa da conversa: o responsável de outra caixa não entra' do
       outra = create(:inbox, account: account)
+      Autonomia::Agents::Operate::InboxConnector.new(agent: criar_agente('Outra porta'), inbox: outra).perform(connect: true)
+      Autonomia::Agents::Areas.vincular!(agent: area, inbox: outra)
       account.crm_pipeline_inboxes.create!(pipeline: comercial, inbox: outra, default_stage: comercial.stages.first, created_by: admin)
       Crm::InboxAiAgent.create!(account: account, inbox: outra, pipeline: comercial, agent: area)
 
       expect(described_class.destinos_para(conversation).pluck(:pipeline_id)).to eq([suporte.id])
     end
 
-    it 'exige o agente ligado à caixa: sem vínculo (área antes da F1) a lista sai vazia' do
-      outro = Autonomia::Agents::Agent.create!(account: account, name: 'Comercial IA', agent_type: 'custom')
-      Crm::InboxAiAgent.create!(account: account, inbox: inbox, pipeline: comercial, agent: outro)
-      Autonomia::Agents::AgentInbox.where(agent: area).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    it 'exige o vínculo de área ativo: se ele some por fora, a linha fica sem efeito' do
+      area_sumiu!
 
       expect(described_class.destinos_para(conversation)).to eq([])
+      expect(Crm::InboxAiAgent.where(inbox: inbox)).to exist
     end
 
     it 'deixa de fora funil arquivado ou com a IA do funil desligada' do
@@ -61,18 +87,6 @@ RSpec.describe Crm::Ai::Config do
 
       suporte.update!(metadata: suporte.metadata.merge('ai' => suporte.metadata['ai'].merge('enabled' => true)), status: :archived)
       expect(described_class.destinos_para(conversation)).to eq([])
-    end
-  end
-
-  describe '.area_de_algum_funil?' do
-    it 'diz se o agente cuida de algum funil' do
-      outro = Autonomia::Agents::Agent.create!(account: account, name: 'Sem funil', agent_type: 'custom')
-
-      expect(described_class.area_de_algum_funil?(area)).to be(true)
-      expect(described_class.area_de_algum_funil?(outro)).to be(false)
-
-      area.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      expect(described_class.area_de_algum_funil?(area)).to be(false)
     end
   end
 end

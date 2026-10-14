@@ -68,7 +68,28 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
         end
       end
 
-      expect(eventos.sole).to include(conversation_id: conversation.id, para_agent_bot_id: espelho_area.id, trocou: true)
+      expect(eventos.sole).to eq(conversation: conversation, from_bot: porta, to_bot: espelho_area, agent: area,
+                                 transfer_id: nil, motivo: 'foco')
+    end
+  end
+
+  describe 'sem a Fase 2 dos Agentes' do
+    before { Autonomia::Agents::Fase2.desligar!(account) }
+
+    it 'não entrega a conversa à área' do
+      create_card(pipeline: suporte)
+
+      expect(sync.trocou).to be(false)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+    end
+
+    it 'só devolve à porta quando o card em atendimento muda de funil' do
+      card = create_card(pipeline: suporte)
+      conversation.update!(ai_assignee: espelho_area)
+      card.update!(pipeline: comercial, stage: comercial.stages.first)
+
+      expect(sync(described_class::PIPELINE, card_id: card.id)).to have_attributes(trocou: true, para_agent_bot_id: porta.id)
+      expect(conversation.reload.ai_assignee).to eq(porta)
     end
   end
 
@@ -123,8 +144,8 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload).to have_attributes(status: 'resolved', ai_assignee: porta)
     end
 
-    it 'quando o responsável não tem vínculo com a caixa (sem espelho não há como postar)' do
-      Autonomia::Agents::AgentInbox.where(agent: area).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    it 'quando o responsável não é mais área da caixa (sem espelho não há como postar)' do
+      area_sumiu!
 
       expect(sync.trocou).to be(false)
       expect(conversation.reload.ai_assignee).to eq(porta)
@@ -152,9 +173,11 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload.ai_assignee).to eq(porta)
     end
 
-    it 'quando o card em atendimento passa para um funil cujo responsável não tem vínculo com a caixa' do
-      outra_area = Autonomia::Agents::Agent.create!(account: account, name: 'Área Comercial', agent_type: 'custom')
+    it 'quando o card em atendimento passa para um funil cujo responsável não é mais área da caixa' do
+      outra_area = criar_agente('Área Comercial')
+      Autonomia::Agents::Areas.vincular!(agent: outra_area, inbox: inbox)
       Crm::InboxAiAgent.create!(account: account, inbox: inbox, pipeline: comercial, agent: outra_area)
+      area_sumiu!(outra_area)
       card.update!(pipeline: comercial, stage: comercial.stages.first)
 
       resultado = sync(described_class::PIPELINE, card_id: card.id)

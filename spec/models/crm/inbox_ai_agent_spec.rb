@@ -1,35 +1,50 @@
 require 'rails_helper'
 
 RSpec.describe Crm::InboxAiAgent do
-  let(:account) { create(:account) }
+  include_context 'with crm responsible agent'
+
   let(:other_account) { create(:account) }
-  let(:admin) { create(:user, account: account, role: :administrator) }
-  let(:inbox) { create(:inbox, account: account) }
-  let(:pipeline) { create_crm_pipeline(account: account, user: admin, name: 'Suporte').first }
-  let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Área', agent_type: 'custom') }
 
   def build_row(overrides = {})
-    described_class.new({ account: account, inbox: inbox, pipeline: pipeline, agent: agent }.merge(overrides))
+    described_class.new({ account: account, inbox: inbox, pipeline: comercial, agent: area }.merge(overrides))
   end
 
-  it 'aceita agente de área sem vínculo com a caixa: o vínculo é do Agentes IA (F1, #1433)' do
+  it 'aceita o agente vinculado como área na caixa' do
     expect(build_row).to be_valid
   end
 
-  it 'recusa um segundo agente para o mesmo par caixa/funil' do
-    build_row.save!
+  it 'recusa agente sem vínculo de área ativo na caixa: onde ele trabalha é do Agentes IA' do
+    sem_vinculo = criar_agente('Sem caixa')
+    expect(build_row(agent: sem_vinculo)).not_to be_valid
 
-    other = Autonomia::Agents::Agent.create!(account: account, name: 'Outra', agent_type: 'custom')
-    row = build_row(agent: other)
+    area_sumiu!
+    row = build_row
+    expect(row).not_to be_valid
+    expect(row.errors[:agent]).to include('must work as an area in the inbox')
+  end
+
+  it 'recusa a porta: funil sem área fica com ela, sem linha' do
+    row = build_row(agent: agente_da_porta)
+
+    expect(row).not_to be_valid
+    expect(row.errors[:agent]).to include('must work as an area in the inbox')
+  end
+
+  it 'recusa um segundo agente para o mesmo par caixa/funil' do
+    outra = criar_agente('Outra')
+    Autonomia::Agents::Areas.vincular!(agent: outra, inbox: inbox)
+    row = build_row(pipeline: suporte, agent: outra)
 
     expect(row).not_to be_valid
     expect(row.errors[:pipeline_id]).to be_present
   end
 
-  it 'aceita o mesmo funil em outra caixa' do
-    build_row.save!
+  it 'aceita o mesmo funil em outra caixa em que o agente também é área' do
+    outra_caixa = create(:inbox, account: account)
+    Autonomia::Agents::Operate::InboxConnector.new(agent: criar_agente('Outra porta'), inbox: outra_caixa).perform(connect: true)
+    Autonomia::Agents::Areas.vincular!(agent: area, inbox: outra_caixa)
 
-    expect(build_row(inbox: create(:inbox, account: account))).to be_valid
+    expect(build_row(inbox: outra_caixa, pipeline: suporte)).to be_valid
   end
 
   it 'recusa caixa, funil e agente de outra conta' do
@@ -43,7 +58,7 @@ RSpec.describe Crm::InboxAiAgent do
   end
 
   it 'recusa agente apagado' do
-    agent.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    area.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
     row = build_row
     expect(row).not_to be_valid
