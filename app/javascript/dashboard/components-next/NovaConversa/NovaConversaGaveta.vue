@@ -104,6 +104,11 @@ const {
   enviarPronta,
 } = useNovaConversa({ contato, canal, continuar });
 const continuando = computed(() => Boolean(conversaDaMensagem.value));
+// Entra numa conversa que já existe: a que vai continuar, ou a oculta da
+// caixa com "Reabrir a mesma conversa", onde a criação cai sozinha.
+const naExistente = computed(
+  () => continuando.value || Boolean(conversaExistente.value?.locked)
+);
 
 const { prender, entrar, entrarSeLivre } = useFocoPreso(raiz, aberta);
 const { podeCriar: podeCriarPronta, irCriar } = useCriarMensagemPronta();
@@ -305,6 +310,7 @@ useFixedPanelPresence(aberta);
           :migalha="migalha"
           :titulo="titulo"
           :texto="frase"
+          :na-existente="naExistente"
           @fechar="fechar"
         />
 

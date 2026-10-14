@@ -1,6 +1,7 @@
 {
   "NOVA_CONVERSA": {
     "ROTULO": "Nova conversa",
+    "ROTULO_EXISTENTE": "Enviar mensagem",
     "TITULO": "Fale com {nome}",
     "TITULO_SEM_CONTATO": "Com quem você quer falar?",
     "TEXTO": "Escolha por onde falar e escreva a mensagem.",

@@ -259,6 +259,16 @@ describe('NovaConversaGaveta — continuar a conversa', () => {
     );
   });
 
+  it('o cabeçalho diz "Enviar mensagem" ao continuar e "Nova conversa" ao começar outra', async () => {
+    const wrapper = await abrir();
+    const rotulo = () => wrapper.find('[data-nova-conversa-heroi]').text();
+
+    expect(rotulo()).toContain('NOVA_CONVERSA.ROTULO_EXISTENTE');
+    await comecar(wrapper).setValue(true);
+    expect(rotulo()).not.toContain('NOVA_CONVERSA.ROTULO_EXISTENTE');
+    expect(rotulo()).toContain('NOVA_CONVERSA.ROTULO');
+  });
+
   it('"Começar conversa nova" cria a conversa como antes', async () => {
     const wrapper = await abrir();
 

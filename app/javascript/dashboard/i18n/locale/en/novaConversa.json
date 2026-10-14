@@ -1,6 +1,7 @@
 {
   "NOVA_CONVERSA": {
     "ROTULO": "New conversation",
+    "ROTULO_EXISTENTE": "Send message",
     "TITULO": "Talk to {nome}",
     "TITULO_SEM_CONTATO": "Who do you want to talk to?",
     "TEXTO": "Choose where to talk and write the message.",
