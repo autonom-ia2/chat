@@ -8,8 +8,9 @@
 #   uma recusa manual não é trocada pela da Prospecção, e remover depois a da Prospecção não apaga a manual.
 # - opt_in! limpa as três colunas. Com source:, só limpa se a recusa gravada veio daquela origem.
 # - transfer_opt_out! troca a origem sem tirar a recusa, quando a origem gravada sai e outra ainda vale.
-# - Quem grava desfaz só o que é seu (release_opt_out!): o painel desfaz só a manual, a Prospecção só a dela e o reset
-#   do follow-up de IA, no drawer do card, só a follow_up_reply (chat#1325).
+# - Quem grava desfaz só o que é seu (release_opt_out!): o painel desfaz a manual e a campaign_reply (o pedido de parar
+#   que a IA reconheceu na resposta a uma campanha, #1449, que não tem outra tela), a Prospecção só a dela e o reset do
+#   follow-up de IA, no drawer do card, só a follow_up_reply (chat#1325).
 # - As três gravam sem rodar as validações do contato, para dado antigo (e-mail ou telefone fora do formato)
 #   não impedir o registro da recusa. Rodam os callbacks, então o evento de contato atualizado sai normalmente.
 # - As colunas não entram na edição comum do contato (ContactsController#permitted_params); só por estes métodos.
@@ -25,6 +26,7 @@ module ContactOptOut
     email_unsubscribe
     manual
     follow_up_reply
+    campaign_reply
   ].freeze
 
   included do

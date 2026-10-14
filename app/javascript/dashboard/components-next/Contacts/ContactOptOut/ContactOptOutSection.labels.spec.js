@@ -42,3 +42,28 @@ describe('ContactOptOutSection: rótulo da recusa pedida no follow-up', () => {
     }
   );
 });
+
+describe('ContactOptOutSection: rótulo do pedido de parar na resposta a campanha (#1449)', () => {
+  it.each([
+    ['en', 'Asked to stop in a campaign reply'],
+    ['pt_BR', 'Pediu para parar ao responder uma campanha'],
+  ])('em %s mostra a origem e o botão de desfazer', (locale, label) => {
+    i18n.global.locale.value = locale;
+    const wrapper = mount(ContactOptOutSection, {
+      props: {
+        contact: {
+          id: 7,
+          optedOutAt: 1790000000,
+          optOutSource: 'campaign_reply',
+        },
+      },
+      // O botão real lê o store; aqui só importa que ele aparece.
+      global: { stubs: { Button: true, Dialog: true } },
+    });
+
+    expect(wrapper.get('[data-test="opt-out-details"]').text()).toContain(
+      label
+    );
+    expect(wrapper.find('[data-test="opt-out-action"]').exists()).toBe(true);
+  });
+});
