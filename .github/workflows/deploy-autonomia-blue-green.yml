@@ -462,6 +462,7 @@ jobs:
             rm -rf "$stage_dir"
           }
 
+          rm -f "$APP_DIR/instagram-assisted-suspended"
           prepare_instagram_tester_env
 
           install_instagram_tester_publisher() {
@@ -573,23 +574,74 @@ jobs:
           docker pull "$IMAGE_URI"
           install_instagram_tester_publisher
           # Copy runtime installers from the exact application image, never remote code.
-          install_instagram_coordination() (
+          # A failed copy is the image's/host's failure, not Instagram's: fatal like any boot step.
+          stage_instagram_coordination() (
             set -euo pipefail
             set +x
             umask 077
-            stage_dir="$(mktemp -d /run/instagram-coordination-install.XXXXXX)"
             source_container="instagram-coordination-source-$$"
-            trap 'docker rm -f "$source_container" >/dev/null 2>&1 || true; rm -rf "$stage_dir"' EXIT
+            trap 'docker rm -f "$source_container" >/dev/null 2>&1 || true' EXIT
             docker create --name "$source_container" --entrypoint /bin/sh "$IMAGE_URI" -c 'exit 0' >/dev/null
             for filename in install-coordination-tunnel.sh validate-coordination-env.py coordination-preflight.sh; do
-              docker cp "$source_container:/app/scripts/instagram_testers/runtime/$filename" "$stage_dir/$filename"
-              test ! -L "$stage_dir/$filename"
-              test -s "$stage_dir/$filename"
+              docker cp "$source_container:/app/scripts/instagram_testers/runtime/$filename" "$1/$filename"
+              test ! -L "$1/$filename"
+              test -s "$1/$filename"
             done
-            /bin/bash "$stage_dir/install-coordination-tunnel.sh" install "$AWS_REGION" "$APP_DIR"
           )
-          install_instagram_coordination
-          "$APP_DIR/igcoord/check.sh"
+          # Code of a failed check.sh: needs its sentinel (any line: sudo may print first) and an
+          # Instagram verdict line; check.sh's INSTAGRAM_STEPS decides which codes those are. A host
+          # verdict or no verdict at all is not Instagram's failure.
+          instagram_preflight_verdict() {
+            local line ran='' step=''
+            while IFS= read -r line || [ -n "$line" ]; do
+              case "$line" in
+                instagram_coordination_preflight_ran) ran=1 ;;
+                "instagram_coordination_preflight_failed step="*) [ -n "$step" ] || step="${line#*step=}" ;;
+              esac
+            done
+            [ -n "$ran" ] || return 1
+            case "$step" in ''|*[!a-z_]*) return 1 ;; esac
+            echo "$step"
+          }
+          # #1540: Instagram assisted never aborts the boot. On a failed tunnel or preflight the
+          # green comes up with it suspended (same effect as suspend-instagram-assisted.py);
+          # every other boot failure stays fatal.
+          suspend_instagram_assisted_here() {
+            local staged
+            staged="$(mktemp "$APP_DIR/.instagram-suspend.XXXXXX")"
+            awk 'index($0, "INSTAGRAM_TESTER_AUTOMATION_ENABLED=") != 1' "$APP_DIR/instagram-tester.env" > "$staged"
+            echo "INSTAGRAM_TESTER_AUTOMATION_ENABLED=false" >> "$staged"
+            mv -f "$staged" "$APP_DIR/instagram-tester.env"
+            # web and worker read these files; a failed install leaves them missing.
+            install -d -m 700 "$APP_DIR/igcoord"
+            [ -e "$APP_DIR/igcoord/redis.env" ] || install -m 600 /dev/null "$APP_DIR/igcoord/redis.env"
+            [ -e "$APP_DIR/igcoord/ca.crt" ] || install -m 644 /dev/null "$APP_DIR/igcoord/ca.crt"
+            echo "INSTAGRAM_ASSISTED_SUSPENDED step=$1" | tee "$APP_DIR/instagram-assisted-suspended" >&2
+          }
+          instagram_preflight_or_suspend() {
+            local stage install_log check_log step='' checked=''
+            stage="$(mktemp -d /run/instagram-coordination-install.XXXXXX)"
+            stage_instagram_coordination "$stage"
+            install_log="$(mktemp)"
+            check_log="$(mktemp)"
+            if ! /bin/bash "$stage/install-coordination-tunnel.sh" install "$AWS_REGION" "$APP_DIR" 2>"$install_log"; then
+              step=tunnel_install_failed
+            elif ! "$APP_DIR/igcoord/check.sh" 2>"$check_log"; then
+              checked=1
+            fi
+            rm -rf "$stage"
+            cat "$install_log" "$check_log" >&2
+            if [ -n "$checked" ] && ! step="$(instagram_preflight_verdict < "$check_log")"; then
+              rm -f "$install_log" "$check_log"
+              echo instagram_preflight_failed_without_verdict >&2
+              return 1
+            fi
+            rm -f "$install_log" "$check_log"
+            if [ -n "$step" ]; then
+              suspend_instagram_assisted_here "$step"
+            fi
+          }
+          instagram_preflight_or_suspend
           docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
           docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
           systemctl restart chatwoot-web.service
@@ -942,13 +994,9 @@ jobs:
 
       - name: Switch Sidekiq workers to green
         run: |
-          coordination_command_id=$(aws ssm send-command \
-            --instance-ids "$GREEN_INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
-            --query 'Command.CommandId' \
-            --output text)
-          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
+          source scripts/deploy/blue-green-recovery.sh
+          # #1540: a failing Instagram preflight suspends Instagram assisted on the green, it does not stop the deploy.
+          check_green_instagram_or_suspend "$GREEN_INSTANCE_ID"
 
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
@@ -988,13 +1036,14 @@ jobs:
       - name: Shift HTTPS listener to green
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          coordination_command_id=$(aws ssm send-command \
-            --instance-ids "$GREEN_INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
-            --query 'Command.CommandId' \
-            --output text)
-          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
+          # #1540: a failing Instagram preflight suspends Instagram assisted on the green, it does not stop the deploy.
+          check_green_instagram_or_suspend "$GREEN_INSTANCE_ID"
+          # Sem Instagram, o web da green pode ter acabado de reiniciar: tráfego só com o alvo saudável.
+          if [ "$INSTAGRAM_GREEN_SUSPENDED" = "true" ]; then
+            aws elbv2 wait target-in-service \
+              --target-group-arn "$GREEN_TG_ARN" \
+              --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
+          fi
 
           switch_listener_destination "$LISTENER_ARN" "$GREEN_TG_ARN" "$GREEN_INSTANCE_ID"
           if [ "$LISTENER_SWITCH_STATUS" -ne 0 ]; then
