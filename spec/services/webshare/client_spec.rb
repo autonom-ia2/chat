@@ -5,6 +5,13 @@ RSpec.describe Webshare::Client do
   let(:first_page) { "#{Webshare::Client::LIST_URL}&plan_id=42" }
   let(:second_page) { 'https://proxy.webshare.io/api/v2/proxy/list/?mode=direct&page=2&page_size=100' }
 
+  # O plano fixado (42) é um plano isp ativo.
+  before do
+    stub_request(:get, Webshare::Client::PLANS_URL)
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                 body: { results: [{ 'id' => 42, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'active' }] }.to_json)
+  end
+
   def stub_page(url, results, next_url: nil, status: 200)
     stub_request(:get, url)
       .with(headers: { 'Authorization' => 'Token chave-webshare-secreta' })
@@ -82,12 +89,32 @@ RSpec.describe Webshare::Client do
       expect { discovering(:isp).proxies }.to raise_error(Webshare::Client::Error, 'webshare_plan_not_found pool=isp')
     end
 
-    it 'takes the plan of each pool from its own ENV without asking the API' do
-      with_modified_env(WEBSHARE_ISP_PLAN_ID: '77', WEBSHARE_DATACENTER_PLAN_ID: '88') do
-        expect(described_class.new(pool: :isp, api_key: 'x').plan_id).to eq('77')
-        expect(described_class.new(pool: :datacenter, api_key: 'x').plan_id).to eq('88')
+    it 'keeps the plan id set in ENV while it is an active plan of that subtype' do
+      stub_plans(plans + [{ 'id' => 9, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'active' }])
+
+      with_modified_env(WEBSHARE_ISP_PLAN_ID: '9') do
+        expect(described_class.new(pool: :isp, api_key: 'x').plan_id).to eq('9')
       end
-      expect(a_request(:get, Webshare::Client::PLANS_URL)).not_to have_been_made
+    end
+
+    it 'falls back to discovery with a loud alert when the plan id in ENV is stale (the id changes on edit)' do
+      stub_plans(plans)
+
+      log = capture_log do
+        with_modified_env(WEBSHARE_DATACENTER_PLAN_ID: '11408796') do
+          expect(described_class.new(pool: :datacenter, api_key: 'x').plan_id).to eq('1')
+        end
+      end
+
+      expect(log).to include('plano_configurado_inexistente', 'WEBSHARE_DATACENTER_PLAN_ID=11408796')
+    end
+
+    it 'does not accept a plan id in ENV that belongs to another subtype' do
+      stub_plans(plans)
+
+      with_modified_env(WEBSHARE_ISP_PLAN_ID: '1') do
+        expect(described_class.new(pool: :isp, api_key: 'x').plan_id).to eq('4')
+      end
     end
 
     it 'lists the proxies of the discovered plan' do

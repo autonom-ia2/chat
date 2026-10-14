@@ -4,8 +4,10 @@ require 'uri'
 # cabeçalho do pedido: nunca em log, mensagem de erro ou inspect. A resposta traz usuário e senha de cada proxy; eles
 # ficam só em memória (Webshare::Proxy).
 # A conta tem vários planos; cada cliente lista um pool: :isp (Static Residential, proxy_subtype "isp") ou :datacenter
-# (Proxy Server, proxy_subtype "default"). WEBSHARE_ISP_PLAN_ID / WEBSHARE_DATACENTER_PLAN_ID fixam o plano; sem elas,
-# vale o plano ativo daquele subtipo. O plano "residential" (rotativo, com franquia de banda) nunca serve.
+# (Proxy Server, proxy_subtype "default"). Vale o plano ativo daquele subtipo. WEBSHARE_ISP_PLAN_ID /
+# WEBSHARE_DATACENTER_PLAN_ID só são aceitas se o id estiver entre os planos ativos daquele subtipo: o id muda quando a
+# assinatura é editada na Webshare (14/10/2026: 11408796 → 14564104), e um id velho não pode deixar a stack sem pool —
+# aí alerta e cai para a descoberta. O plano "residential" (rotativo, com franquia de banda) nunca serve.
 class Webshare::Client
   class Error < StandardError; end
 
@@ -25,7 +27,7 @@ class Webshare::Client
     raise ArgumentError, "pool desconhecido: #{pool}" unless PLAN_SUBTYPES.key?(@pool)
 
     @api_key = api_key.to_s.strip
-    @plan_id = (plan_id || ENV.fetch(PLAN_ID_ENVS.fetch(@pool), '')).to_s.strip.presence
+    @configured_plan_id = (plan_id || ENV.fetch(PLAN_ID_ENVS.fetch(@pool), '')).to_s.strip.presence
   end
 
   def configured?
@@ -46,9 +48,9 @@ class Webshare::Client
     results.map { |item| Webshare::Proxy.from_api(item) }
   end
 
-  # Plano do pool: o fixado por ENV, ou o ativo do subtipo do pool descoberto na API.
+  # Plano do pool: o ativo do subtipo, preferindo o id fixado por ENV quando ele ainda existe.
   def plan_id
-    @plan_id ||= discover_plan_id
+    @plan_id ||= resolve_plan_id
   end
 
   def inspect
@@ -57,13 +59,34 @@ class Webshare::Client
 
   private
 
-  def discover_plan_id
-    subtype = PLAN_SUBTYPES.fetch(@pool)
-    plan = Array(fetch_page(PLANS_URL)['results']).find { |item| usable_plan?(item) && item['proxy_subtype'] == subtype }
+  def resolve_plan_id
+    plans = active_plans
+    plan = configured_plan(plans) || plans.first
     raise Error, "webshare_plan_not_found pool=#{@pool}" if plan.nil?
 
     Rails.logger.info("[whatsapp_proxy] plano da Webshare pool=#{@pool} id=#{plan['id']} subtipo=#{plan['proxy_subtype']}")
     plan['id'].to_s
+  end
+
+  def active_plans
+    subtype = PLAN_SUBTYPES.fetch(@pool)
+    Array(fetch_page(PLANS_URL)['results']).select { |item| usable_plan?(item) && item['proxy_subtype'] == subtype }
+  end
+
+  # O plano fixado por ENV, se ainda é um plano ativo do subtipo; senão alerta e devolve nil (vale a descoberta).
+  def configured_plan(plans)
+    return if @configured_plan_id.nil?
+
+    plans.find { |item| item['id'].to_s == @configured_plan_id }.tap { |plan| warn_stale_plan_id if plan.nil? }
+  end
+
+  def warn_stale_plan_id
+    WhatsappProxy::Alert.notify!(
+      'plano_configurado_inexistente',
+      "#{PLAN_ID_ENVS.fetch(@pool)}=#{@configured_plan_id} não está entre os planos ativos #{PLAN_SUBTYPES.fetch(@pool)}; " \
+      'usando o plano ativo do subtipo. Remova a variável.',
+      level: :error
+    )
   end
 
   # Ativo (quando a API informa o estado) e nunca o residencial rotativo.

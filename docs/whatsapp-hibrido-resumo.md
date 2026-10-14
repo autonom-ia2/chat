@@ -219,7 +219,8 @@ Autonom.ia). Regra decidida em 14/10/2026:
 | `WEBSHARE_DATACENTER_PROXY_ADDRESSES` | sim | Idem para o plano datacenter. |
 | `WHATSAPP_PROXY_AUTO_MIGRATE` | não | `true` deixa a reconciliação mover número importado de plano/conta. Padrão desligado. |
 | `WHATSAPP_PROXY_MAX_NUMBERS_PER_IP` | não | Números da mesma conta por IP. Padrão 3. |
-| `WEBSHARE_ISP_PLAN_ID` / `WEBSHARE_DATACENTER_PLAN_ID` | não | Fixam o plano de cada pool. Sem elas, vale o plano ativo do subtipo (`isp` / `default`), descoberto em `/api/v2/subscription/plan/` e registrado no log (id e subtipo). |
+| `WEBSHARE_ISP_PLAN_ID` / `WEBSHARE_DATACENTER_PLAN_ID` | **não use** | O id do plano muda quando a assinatura é editada na Webshare (14/10/2026: 11408796 → 14564104). Sem elas, vale o plano ativo do subtipo (`isp` / `default`), descoberto em `/api/v2/subscription/plan/` e registrado no log. Se estiverem definidas com id que não é plano ativo daquele subtipo, o código alerta e usa a descoberta. |
+| `SENTRY_DSN` | recomendado | Os alertas do proxy vão para o Sentry da instalação; sem ele, só log. |
 
 **Como funciona**
 
@@ -240,11 +241,23 @@ Autonom.ia). Regra decidida em 14/10/2026:
 - Proxy posto à mão sem registro na tabela não é trocado pelo código.
 - Sem IP livre, API fora ou sem chave (com o recurso ligado): a sessão é criada sem proxy (não trava o cliente) e o
   log avisa (`[whatsapp_proxy] plano ... sem IP do Brasil livre na fatia desta stack`).
-- `WhatsappProxy::ReconcileJob` (minutos 7, 27 e 47 de cada hora): busca cada plano e a lista do motor uma vez; sessão
-  cujo IP saiu da lista ou da fatia, ficou inválido, mudou de credencial, é de outro plano (número que trocou de tipo,
-  WAHA ↔ Híbrido) ou de outra conta é reatribuída e a troca é agendada, no máximo 5 sessões por rodada, com 2 minutos
-  entre elas. Sessão que o motor não tem fica de fora; atribuição sem caixa no banco é apagada. Se mais da metade dos
-  IPs sumiu de uma vez, o log avisa (troca em massa).
+- `WhatsappProxy::ReconcileJob` (a cada 10 minutos): busca cada plano e a lista do motor uma vez; sessão cujo IP saiu
+  da lista ou da fatia, ficou inválido, mudou de credencial, é de outro plano (número que trocou de tipo, WAHA ↔
+  Híbrido) ou de outra conta é reatribuída e a troca é agendada, no máximo 5 sessões por rodada. IP que sumiu da lista
+  é urgente (o número já está fora do ar — visto ao ligar o "High IP Reputation" em 14/10/2026): vai primeiro e sem
+  espera; as demais trocas saem com 2 minutos entre elas. Sessão em STARTING/FAILED com IP sumido ou em quarentena é
+  reparada; sessão pedindo QR (SCAN_QR_CODE) nunca. Sessão que o motor não tem fica de fora; atribuição sem caixa no
+  banco é apagada. Se mais da metade dos IPs sumiu de uma vez, alerta (troca em massa).
+- **IP instável** (a Webshare chama de válido, mas a sessão fica caindo — visto em 14/10/2026 na
+  hybrid-551142155355): a reconciliação lê o status de cada sessão no motor. Fora de WORKING (STARTING/FAILED) em 2
+  rodadas seguidas (~40 min), ou 3 quedas avisadas pelo webhook do Híbrido em 30 min, o IP vai para quarentena por 24 h
+  (tabela `whatsapp_proxy_quarantines`; ninguém recebe esse IP) e o número troca de IP no mesmo plano e fatia. No
+  máximo uma troca dessas por sessão por dia; se continuar instável, só alerta (o problema não é o proxy).
+  SCAN_QR_CODE é aparelho desvinculado: nunca troca, só alerta (uma vez por dia).
+- **Alertas** (Sentry da instalação, agrupados por código, sem credencial; e log `[whatsapp_proxy][alerta]`):
+  `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`, `volta_falhou`, `sessao_instavel_trocada`,
+  `sessao_instavel_de_novo`, `ip_em_quarentena`, `aparelho_desvinculado`, `troca_em_massa`,
+  `plano_configurado_inexistente`. Não vão para o administrador da conta (o aviso do Guia): são problemas da plataforma.
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.
 
 **Implantação**
@@ -256,5 +269,6 @@ Autonom.ia). Regra decidida em 14/10/2026:
    sai da sessão no banco e o plano do campo `plano` do arquivo; linha cuja sessão não existe na stack, de plano
    desconhecido, cujo IP já é de outra conta ou cujo motor não respondeu é pulada e listada. Só lê o motor (GET): a
    credencial fica marcada como aplicada apenas quando o motor usa de fato aquele IP com a credencial da lista.
-3. Definir as fatias das duas stacks (sem IP em comum) e só então ligar `WHATSAPP_PROXY_ENABLED=true`. Sessão importada
+3. Definir as fatias das duas stacks (sem IP em comum), conferir `SENTRY_DSN` e só então ligar
+   `WHATSAPP_PROXY_ENABLED=true`. Não definir `WEBSHARE_*_PLAN_ID`. Sessão importada
    num plano que não bate com o tipo (ex.: Híbrido num IP de datacenter) é trocada pela reconciliação.

@@ -26,6 +26,7 @@ class WhatsappProxy::ApplyJob < ApplicationJob
 
     client = Waha::Client.new
     remote = client.get_session(session_name)
+    return unlinked(session_name) if remote['status'] == 'SCAN_QR_CODE'
     return assigner.mark_applied!(session_name, proxy) if already_applied?(session_name, remote, proxy)
     return unless WhatsappProxy::SessionUpdater.new(client: client).apply!(session_name, proxy, before: remote)
 
@@ -36,6 +37,12 @@ class WhatsappProxy::ApplyJob < ApplicationJob
     assigner&.release!(session_name)
   rescue Waha::Client::Error => e
     Rails.logger.warn("[whatsapp_proxy] troca de proxy falhou session=#{session_name}: #{e.class}")
+  end
+
+  # Sessão em STARTING/FAILED com IP morto é reparada (o SessionUpdater espera WORKING); pedindo QR, não: o aparelho
+  # foi desvinculado e o PUT só reiniciaria a sessão.
+  def unlinked(session_name)
+    Rails.logger.warn("[whatsapp_proxy] session=#{session_name} pede QR (aparelho desvinculado): troca de proxy adiada")
   end
 
   def already_applied?(session_name, remote, proxy)

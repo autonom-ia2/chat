@@ -27,7 +27,7 @@ class WhatsappProxy::SessionUpdater
   rescue Waha::Client::Error, VerificationError => e
     raise if snapshot.nil?
 
-    rollback!(session_name, snapshot, e)
+    rollback!(session_name, snapshot, e, proxy.server)
     false
   end
 
@@ -50,12 +50,14 @@ class WhatsappProxy::SessionUpdater
     raise VerificationError, 'session_did_not_return_to_working'
   end
 
-  def rollback!(session_name, snapshot, error)
-    Rails.logger.error("[whatsapp_proxy] troca de proxy falhou session=#{session_name} (#{error.class}: " \
-                       "#{error.is_a?(VerificationError) ? error.message : 'motor'}); voltando à configuração anterior")
+  def rollback!(session_name, snapshot, error, proxy_server)
+    reason = error.is_a?(VerificationError) ? error.message : error.class.name
+    WhatsappProxy::Alert.notify!('troca_desfeita', "troca de proxy da session=#{session_name} para #{proxy_server} falhou " \
+                                                   "(#{reason}); configuração anterior regravada", level: :error)
     @client.update_session(session_name, config: snapshot[:config])
   rescue Waha::Client::Error => e
-    Rails.logger.error("[whatsapp_proxy] volta da configuração falhou session=#{session_name}: #{e.class}")
+    WhatsappProxy::Alert.notify!('volta_falhou', "session=#{session_name}: a configuração anterior não foi regravada (#{e.class})",
+                                 level: :error)
   end
 
   def me_id(session)

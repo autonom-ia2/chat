@@ -6,6 +6,13 @@
 # `origin`: imported (proxy posto à mão antes do código, importado pela rake) ou assigned (escolhido pelo código).
 class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
   def change
+    create_assignments
+    create_quarantines
+  end
+
+  private
+
+  def create_assignments
     create_table :whatsapp_proxy_assignments do |t|
       t.string :session_name, null: false
       t.bigint :account_id, null: false
@@ -20,9 +27,20 @@ class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
       t.string :origin, null: false, default: 'assigned'
       t.timestamps
     end
-    add_foreign_key :whatsapp_proxy_assignments, :accounts, on_delete: :cascade
     add_index :whatsapp_proxy_assignments, :session_name, unique: true
     add_index :whatsapp_proxy_assignments, :proxy_address
     add_index :whatsapp_proxy_assignments, [:account_id, :pool]
+    add_foreign_key :whatsapp_proxy_assignments, :accounts, on_delete: :cascade
+  end
+
+  # IP que derrubou um número (sessão caindo e voltando) fica 24 h fora da escolha, para ninguém.
+  def create_quarantines
+    create_table :whatsapp_proxy_quarantines do |t|
+      t.string :proxy_address, null: false
+      t.datetime :quarantined_until, null: false
+      t.string :reason, null: false
+      t.timestamps
+    end
+    add_index :whatsapp_proxy_quarantines, :proxy_address, unique: true
   end
 end

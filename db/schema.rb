@@ -3903,6 +3903,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
     t.index ["session_name"], name: "index_whatsapp_proxy_assignments_on_session_name", unique: true
   end
 
+  create_table "whatsapp_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
   create_table "whatsapp_template_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false

@@ -52,6 +52,24 @@ RSpec.describe WhatsappProxy::ApplyJob do
     expect(client).to have_received(:update_session).once
   end
 
+  it 'repairs a session stuck in STARTING (its IP vanished), waiting for WORKING' do
+    starting = remote(server: '10.0.0.9:6000', username: 'x').merge('status' => 'STARTING')
+    allow(client).to receive(:get_session).and_return(starting, remote(server: '10.0.0.2:6000'))
+
+    described_class.perform_now(session)
+
+    expect(client).to have_received(:update_session).once
+    expect(WhatsappProxy::Assignment.last.credential_digest).to eq(proxy.credential_digest)
+  end
+
+  it 'leaves a session asking for a QR code alone (unlinked device, not the proxy)' do
+    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000').merge('status' => 'SCAN_QR_CODE'))
+
+    described_class.perform_now(session)
+
+    expect(client).not_to have_received(:update_session)
+  end
+
   it 'never runs twice at the same time for the same session' do
     Redis::Alfred.set("whatsapp_proxy:apply:#{session}", '1', nx: true, ex: 60)
     allow(client).to receive(:get_session)

@@ -24,11 +24,25 @@ class WhatsappProxy::Pool
 
   def candidates
     if slice.empty?
-      Rails.logger.error("[whatsapp_proxy] #{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP para esta stack.")
+      WhatsappProxy::Alert.notify!('fatia_vazia', "#{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP para esta stack",
+                                   level: :error)
       return []
     end
 
-    proxies.select { |proxy| proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address) }
+    @candidates ||= proxies.select do |proxy|
+      proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address) && quarantined.exclude?(proxy.address)
+    end
+  end
+
+  # IP em quarentena (derrubou um número) não serve para ninguém por 24 h.
+  def quarantined
+    @quarantined ||= WhatsappProxy::Quarantine.addresses
+  end
+
+  # A próxima consulta relê a quarentena (a reconciliação põe IP em quarentena no meio da rodada).
+  def forget_quarantine!
+    @quarantined = nil
+    @candidates = nil
   end
 
   def slice
@@ -41,7 +55,8 @@ class WhatsappProxy::Pool
     missing = slice - list.map(&:address)
     return if missing.empty?
 
-    Rails.logger.error("[whatsapp_proxy] #{missing.size} IP(s) da fatia #{SLICE_ENVS.fetch(@name)} sumiram do plano " \
-                       "#{@name} da Webshare (#{missing.join(', ')}): atualize a fatia desta stack.")
+    WhatsappProxy::Alert.notify!('ip_da_fatia_sumiu',
+                                 "#{missing.size} IP(s) da fatia #{SLICE_ENVS.fetch(@name)} sumiram do plano #{@name} " \
+                                 "da Webshare (#{missing.join(', ')}): atualize a fatia desta stack", level: :error)
   end
 end

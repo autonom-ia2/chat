@@ -155,8 +155,9 @@ class WhatsappProxy::Assigner
 
   def pool_exhausted!(session_name, pool)
     backoff!(pool.name)
-    Rails.logger.error("[whatsapp_proxy] plano #{pool.name} sem IP do Brasil livre na fatia desta stack: " \
-                       "session=#{session_name} segue sem proxy. Compre mais IPs ou amplie a fatia.")
+    WhatsappProxy::Alert.notify!('plano_esgotado', "plano #{pool.name} sem IP do Brasil livre na fatia desta stack: " \
+                                                   "session=#{session_name} segue sem proxy. Compre mais IPs ou amplie a fatia.",
+                                 level: :error)
     nil
   end
 
