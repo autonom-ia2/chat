@@ -26,16 +26,20 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     MODELOS.map(item => t(`${FUNIL}.MODELOS.${item.chave}.NOME`))
   );
 
+  // #1548 — `modeloPosicao`: a etapa E<n> do modelo. Acompanha a etapa mesmo
+  // se ela mudar de lugar ou de nome; etapa criada pela pessoa não tem.
   const stagesDoModelo = item =>
     item.etapas.map((chave, index) => ({
       name: t(chave),
       color: corDaPosicao(index),
       categoria: item.categorias?.[index] || '',
+      modeloPosicao: index + 1,
     }));
   const copiarEtapas = etapas =>
     etapas.map((etapa, index) => ({
       ...copiarEtapa(etapa, corDaPosicao(index)),
       categoria: etapa.categoria || '',
+      ...(etapa.modeloPosicao ? { modeloPosicao: etapa.modeloPosicao } : {}),
     }));
 
   const guardarPadrao = (stage, frase) => {
@@ -51,9 +55,15 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     const session = editorSession.value;
     const requested = form.stages.map(stage => ({ stage, name: stage.name }));
     try {
+      // #1548: com o modelo e a posição, o servidor acha a frase mesmo com o
+      // nome da etapa trocado; sem eles, acha pelo nome.
       const { data } = await CrmKanbanAPI.getStageCriteriaDefaults(
         requested.map(item => item.name),
-        { atender: !form.countsAsSale }
+        {
+          atender: !form.countsAsSale,
+          template: modelo.value,
+          positions: requested.map(item => item.stage.modeloPosicao || 0),
+        }
       );
       if (session !== editorSession.value) return;
       (data.payload || []).forEach((item, index) => {
