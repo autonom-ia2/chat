@@ -46,7 +46,7 @@ RSpec.describe Whatsapp::Templates::Finalidades do
     end
   end
 
-  # TEMPORÁRIO: `negocio.prazo` (expected_close_at, no fuso da conta) entra no catálogo pela #1336. Quando ela chegar à
+  # TEMPORÁRIO: `negocio.prazo` (expected_close_at, dia de calendário) entra no catálogo pela #1336. Quando ela chegar à
   # main e for mesclada aqui, tirar esta lista: o spec passa a exigir todas as chaves no catálogo.
   it 'todo campo é uma chave do catálogo de campos (quem envia sabe de onde vem o valor)' do
     chaves_da_1336 = %w[negocio.prazo]
