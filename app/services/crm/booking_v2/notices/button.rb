@@ -7,17 +7,18 @@
 # e o botão não sai. WAHA, 360dialog, canal API e modelo da Meta seguem só em texto.
 #
 # Rótulo por tipo de mensagem: `:notice` (reunião já marcada) "Ver meu horário"; `:invite` (convite para marcar, como o
-# "Testar no meu WhatsApp") "Escolher horário".
+# "Testar no meu WhatsApp") "Escolher horário"; `:stop` (#1562, a mensagem separada logo depois do aviso) "Parar avisos".
 #
-# `fits?`: o corpo FINAL que vai junto do botão (linha de parar e prefixo incluídos) cabe no limite do `cta_url`
-# (`LinkButton::BODY_MAX`). Não cabendo, quem chama manda só texto, com a linha do link: o `SendGuard` recusaria o
-# botão e a mensagem ficaria `failed`, sem link nenhum.
+# `fits?`: o corpo FINAL que vai junto do botão (no aviso, sem a linha de parar desde #1562; no teste, com o
+# prefixo) cabe no limite do `cta_url` (`LinkButton::BODY_MAX`). Não cabendo, quem chama manda só texto, com a linha
+# do link: o `SendGuard` recusaria o botão e a mensagem ficaria `failed`, sem link nenhum.
 #
 # Envio assíncrono: a mensagem é criada aqui e sai depois (`SendReplyJob`). Se o provedor ou o `SendGuard` a marcar
 # `failed`, o `NoticeDispatchJob#fail_undelivered!` passa o aviso a `failed: delivery_failed` e avisa o responsável.
 class Crm::BookingV2::Notices::Button
   TYPE = 'link_button'.freeze
-  LABELS = { notice: 'crm.booking_v2.notices.button_label', invite: 'crm.booking_v2.invite.button_label' }.freeze
+  LABELS = { notice: 'crm.booking_v2.notices.button_label', invite: 'crm.booking_v2.invite.button_label',
+             stop: 'crm.booking_v2.notices.stop_button_label' }.freeze
 
   def self.allowed?(decision, inbox)
     decision.mode == :session && decision.via != Crm::BookingV2::Notices::Route::HYBRID_WEB &&
