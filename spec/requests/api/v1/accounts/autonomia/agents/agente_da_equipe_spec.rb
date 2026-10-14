@@ -90,17 +90,45 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
       expect(Autonomia::Agents::AgentInbox.kept.where(agent: copiloto)).to be_empty
     end
 
-    it 'devolve 422 quando o agente já está na caixa (como área ou como o principal dela)' do
+    it 'repetir o pedido da área que já está ativa é sucesso: 200 e o mesmo vínculo, sem outro espelho' do
       pedir_area
-      pedir_area
+      vinculo = Autonomia::Agents::AgentInbox.kept.find_by(agent: novo, inbox: inbox)
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(erro(:already_linked))
+      expect { pedir_area }.not_to(change { [AgentBot.count, Autonomia::Agents::AgentInbox.count] })
 
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to contain_exactly(include('id' => vinculo.id, 'papel' => 'area'))
+    end
+
+    it 'devolve 422 quando o agente já é o principal da caixa' do
       pedir_area(principal)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(erro(:already_linked, agent: principal))
+    end
+
+    it 'confere o principal atendendo dentro da trava: se ele parar entre a leitura e o vínculo, 422 e nada muda' do
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_wrap_original do |original, **kwargs|
+        principal.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+        original.call(**kwargs)
+      end
+
+      pedir_area
+
+      expect(Autonomia::Agents::Areas).to have_received(:vincular!).with(hash_including(exigir_porta_atendendo: true))
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:sem_principal))
+      expect(Autonomia::Agents::AgentInbox.kept.where(agent: novo)).to be_empty
+      expect(novo.reload).to have_attributes(status: 'draft', enabled: false)
+    end
+
+    it 'responde 422 (nunca 500) quando dois pedidos iguais correm juntos e o índice único recusa o segundo' do
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(ActiveRecord::RecordNotUnique)
+
+      pedir_area
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:already_linked))
     end
 
     it 'devolve 422 sem a Fase 2 na conta' do
@@ -142,6 +170,19 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
 
   describe 'leituras' do
     before { pedir_area }
+
+    it 'channels#index mostra só os vínculos ativos, com o papel; a área arquivada some' do
+      outra = create(:inbox, account: account, name: 'WhatsApp Suporte')
+      conectar(agente('Leo', status: :active, enabled: true), outra)
+      pedir_area(novo, outra)
+      Autonomia::Agents::Areas.desvincular!(agent: novo, inbox: outra)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{novo.id}/channels", headers: headers, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['payload']).to contain_exactly(include('inbox_id' => inbox.id, 'papel' => 'area'))
+      expect(Autonomia::Agents::AgentInbox.where(agent: novo, inbox: outra).where.not(deleted_at: nil)).to exist
+    end
 
     it 'canais_ocupados lista o agente da equipe da caixa, sem tirar o principal' do
       get "/api/v1/accounts/#{account.id}/autonomia/canais_ocupados", headers: headers, as: :json

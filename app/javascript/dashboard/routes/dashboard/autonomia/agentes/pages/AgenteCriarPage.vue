@@ -184,6 +184,12 @@ const caixasDaEquipeNaQuery = computed(() => caixasDaQuery(route.query));
 const escolhendoCanais = ref(
   equipe.value && !caixasDaQuery(route.query).length
 );
+// A conta (e a Fase 2) pode chegar à store depois de a página montar: os passos abrem quando ela chega.
+watch(equipe, ligada => {
+  if (ligada && !caixasDaQuery(route.query).length) {
+    escolhendoCanais.value = true;
+  }
+});
 const canaisDaEquipe = computed(() =>
   caixasDaEquipeNaQuery.value
     .map(id => ocupacao.canais.value.find(canal => canal.inbox_id === id))
@@ -441,19 +447,33 @@ const ativarInterno = async () => {
   }
 };
 
-// #1433: "Começar a trabalhar" do agente da equipe — grava as caixas escolhidas no começo (já liga o
-// agente), relê o agente (estado "Na equipe") e as caixas. Recusado (ex.: o principal parou), a
-// explicação do servidor aparece no topo com "Escolher os canais de novo".
+// #1433: "Começar a trabalhar" do agente da equipe — relê onde ele já está (uma tentativa anterior
+// pode ter entrado em parte) e grava: entra nas escolhidas (idempotente no servidor, e já liga o
+// agente) e sai das que a tela não mostra mais. Recusado (ex.: o principal parou), a explicação do
+// servidor aparece no topo com "Escolher os canais de novo". Sem caixas escolhidas, volta aos passos:
+// nunca abre o Pronto sem vínculo.
 const comecarNaEquipe = async () => {
   const id = conversa.agenteId.value;
   const escolhidas = caixasDaEquipeNaQuery.value;
+  if (!escolhidas.length) {
+    escolhendoCanais.value = true;
+    return;
+  }
+  await ocupacao.carregar();
+  const atuais = caixasDaEquipe(id, ocupacao.canais.value).map(
+    canal => canal.inbox_id
+  );
   const equipeEscolhida = canaisDaEquipe.value;
   const feito = await salvarEquipe.salvar({
     agenteId: id,
     nome: nome.value,
     entram: escolhidas,
+    saem: atuais.filter(inboxId => !escolhidas.includes(inboxId)),
   });
-  if (!feito) return;
+  if (!feito) {
+    ocupacao.carregar();
+    return;
+  }
   resultado.value = {
     canal: '',
     quando: 'always',
@@ -567,7 +587,11 @@ const abrirAgenteExistente = async () => {
     const dados = await store.dispatch('autonomiaAgents/show', idInicial);
     if (dados?.actuation !== ATUACAO.INTERNA) ocupacao.carregar();
     const ativo = dados?.status === 'active' && dados?.enabled === true;
-    if (ativo && etapaPedida.value !== ETAPA.PRONTO) {
+    // #1433: agente da equipe que já entrou em parte das caixas (gravação interrompida) fica ligado; a
+    // criação continua no Confira para terminar, em vez de pular para a página dele.
+    const equipeIncompleta =
+      equipe.value && caixasDaEquipeNaQuery.value.length > 0;
+    if (ativo && etapaPedida.value !== ETAPA.PRONTO && !equipeIncompleta) {
       router.replace({
         name: 'autonomia_agent_panel',
         params: { agentId: idInicial },

@@ -1517,5 +1517,104 @@ describe('AgenteCriarPage', () => {
       expect(wrapper.find('[data-onde-criacao]').exists()).toBe(false);
       wrapper.unmount();
     });
+
+    it('partial failure, then "choose again" leaving out the one that entered, then F5: the retry enters the rest and leaves it', async () => {
+      const VENDAS = {
+        inbox_id: 15,
+        name: 'WhatsApp Vendas',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 3,
+          agent_name: 'Sofia',
+          operating: true,
+          caixas: 1,
+        },
+        areas: [],
+      };
+      let leitura = [...L2_EQUIPE, VENDAS];
+      jornada.canaisOcupados.mockImplementation(async () => ({
+        data: { payload: leitura },
+      }));
+      const recusa = {
+        response: { data: { error: 'Ninguém atende primeiro em Vendas.' } },
+      };
+      canaisApi.connect.mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.papel}`);
+        if (inbox === 15) throw recusa;
+        ligadoNoServidor = true;
+        leitura = leitura.map(canal =>
+          canal.inbox_id === inbox
+            ? { ...canal, areas: [{ agent_id: id, agent_name: 'Duda' }] }
+            : canal
+        );
+      });
+      canaisApi.disconnect.mockImplementation(async (id, inbox) => {
+        ordem.push(`delete:${id}:${inbox}`);
+        leitura = leitura.map(canal =>
+          canal.inbox_id === inbox ? { ...canal, areas: [] } : canal
+        );
+      });
+
+      const wrapper = await montar({
+        query: { papel: 'area', caixas: '11,15', agente: '90' },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(ordem).toEqual(
+        expect.arrayContaining(['post:90:11:area', 'post:90:15:area'])
+      );
+      expect(wrapper.get('[data-erro-equipe]').text()).toContain(
+        'Ninguém atende primeiro em Vendas.'
+      );
+      expect(wrapper.find('#pronto-titulo').exists()).toBe(false);
+
+      // "Escolher os canais de novo": tira a 11, que já tinha entrado.
+      await wrapper.get('[data-erro-equipe] button').trigger('click');
+      await flushPromises();
+      expect(opcao(11).getAttribute('aria-checked')).toBe('true');
+      await clicar(opcao(11));
+      await seguir();
+      await seguir();
+      expect(router.replace).toHaveBeenLastCalledWith({
+        query: { papel: 'area', caixas: '15', agente: '90', etapa: 'confira' },
+      });
+      wrapper.unmount();
+
+      // F5, e agora Vendas aceita: entra na 15 e sai da 11, que a tela não mostra mais.
+      ordem.length = 0;
+      canaisApi.connect.mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.papel}`);
+      });
+      const depoisDoF5 = await montar({
+        query: { papel: 'area', caixas: '15', agente: '90' },
+      });
+      await depoisDoF5.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(
+        ordem.filter(
+          item => item.startsWith('post:') || item.startsWith('delete:')
+        )
+      ).toEqual(['post:90:15:area', 'delete:90:11']);
+      expect(depoisDoF5.get('[data-onde-pronto]').text()).toContain(
+        'WhatsApp Vendas'
+      );
+      expect(depoisDoF5.get('[data-onde-pronto]').text()).not.toContain(
+        'WhatsApp do Centro'
+      );
+      depoisDoF5.unmount();
+    });
+
+    it('opens the steps when the account (and the Fase 2) reaches the store after the page', async () => {
+      ligarFase2(false);
+      const wrapper = await montar({ query: { papel: 'area' } });
+      expect(wrapper.find('[data-criar-onde]').exists()).toBe(false);
+
+      ligarFase2(true);
+      await flushPromises();
+      expect(wrapper.find('[data-criar-onde]').exists()).toBe(true);
+      expect(passo()).toBe('canais');
+      wrapper.unmount();
+    });
   });
 });

@@ -420,7 +420,11 @@ const salvarMudancaDaEquipe = async ({ entram, saem }) => {
     entram,
     saem,
   });
-  if (!feito) return;
+  // Falhou no meio: relê onde ele está, e a próxima tentativa manda só o que ainda falta.
+  if (!feito) {
+    canais.carregar();
+    return;
+  }
   useAlert(t('AGENTS.JORNADA.EQUIPE.FEITO', { nome: nome.value }));
   fechar();
   depoisDeMudarOnde();

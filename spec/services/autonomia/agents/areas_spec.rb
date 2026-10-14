@@ -49,6 +49,16 @@ RSpec.describe Autonomia::Agents::Areas do
         .and(not_change(AgentBot, :count))
     end
 
+    it 'com exigir_porta_atendendo, recusa a caixa cujo principal parou (conferido com a caixa travada)' do
+      agente_da_porta.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox, exigir_porta_atendendo: true) }
+        .to raise_error(described_class::SemPortaAtendendo)
+        .and(not_change(Autonomia::Agents::AgentInbox, :count))
+      # Sem a exigência, a regra de antes: basta a porta existir.
+      expect(described_class.vincular!(agent: agente_da_area, inbox: inbox)).to have_attributes(papel: 'area')
+    end
+
     it 'recusa agente interno (copiloto da equipe nunca fala com cliente)' do
       interno = agente('Copiloto', actuation: :internal)
 

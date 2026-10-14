@@ -47,16 +47,23 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     @eligible_inboxes = eligible_inboxes
   end
 
-  # As recusas previsíveis respondem antes, com o motivo; o Areas confere de novo com agente e caixa travados.
+  # As recusas previsíveis respondem antes, com o motivo; o Areas confere de novo com agente e caixa travados (inclusive
+  # o principal atendendo). Idempotente: a área já ativa do mesmo agente nesta caixa responde 200 com o mesmo vínculo
+  # (a tela repete o pedido depois de uma falha no meio, sem saber o que já entrou).
   def create_area
     recusa = recusa_de_area
     return render_unprocessable(area_error(recusa)) if recusa
 
-    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true)
+    ja_era_area = area_ativa?
+    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, exigir_porta_atendendo: true)
     load_index
-    render :index, status: :created
+    render :index, status: ja_era_area ? :ok : :created
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     render_unprocessable(area_error(:agent_internal))
+  rescue ::Autonomia::Agents::Areas::SemPortaAtendendo
+    render_unprocessable(area_error(:sem_principal))
+  rescue ActiveRecord::RecordNotUnique
+    render_unprocessable(area_error(:already_linked))
   rescue ActiveRecord::RecordInvalid
     render_unprocessable(area_error(:generic))
   end
@@ -64,9 +71,14 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
   def recusa_de_area
     return :fase2_off unless ::Autonomia::Agents::Fase2.ligada?(Current.account)
     return :agent_internal if @agent.actuation_internal?
-    return :already_linked if ::Autonomia::Agents::AgentInbox.kept.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
+    # Já é o principal (porta) desta caixa: não pode ser também da equipe dela.
+    return :already_linked if ::Autonomia::Agents::AgentInbox.kept.porta.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
 
     :sem_principal unless principal_atendendo?
+  end
+
+  def area_ativa?
+    ::Autonomia::Agents::AgentInbox.kept.area.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
   end
 
   # A caixa tem porta ativa (vínculo kept de papel porta) cujo agente está atendendo.
