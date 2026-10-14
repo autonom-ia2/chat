@@ -1,6 +1,7 @@
 {
   "NOVA_CONVERSA": {
     "ROTULO": "New conversation",
+    "ROTULO_EXISTENTE": "Send message",
     "TITULO": "Talk to {nome}",
     "TITULO_SEM_CONTATO": "Who do you want to talk to?",
     "TEXTO": "Choose where to talk and write the message.",
@@ -37,6 +38,24 @@
       },
       "VAZIO_SEM_NOME": "This contact has no phone number or email yet."
     },
+    "ONDE_ENTRA": {
+      "TITULO": "Where the message goes",
+      "ENTRA_NA": "The message goes into conversation #{numero}",
+      "ENTRA_NA_EXISTENTE": "The message goes into the conversation that already exists with this contact",
+      "CONTINUAR": "Continue conversation #{numero}",
+      "NOVA": "Start a new conversation",
+      "NOVA_TEXTO": "A separate conversation, from the beginning.",
+      "ULTIMA_ATIVIDADE": "last activity {quando}",
+      "SITUACAO": {
+        "ABERTA": "Open",
+        "PENDENTE": "Pending",
+        "ADIADA": "Snoozed",
+        "RESOLVIDA": "Resolved"
+      },
+      "CARREGANDO": "Checking the conversation…",
+      "ERRO": "Could not check this conversation.",
+      "TENTAR": "Try again"
+    },
     "MENSAGEM": {
       "TITULO": "Your message",
       "CAMPO": "Your message",
@@ -62,7 +81,8 @@
       "COMPLETE": "Complete the message",
       "CAMPO_ROTULO": "What goes in place of ⟨{campo}⟩",
       "CAMPO_FALADO": "field {campo}",
-      "CAMPO_EXEMPLO": "E.g. {exemplo}"
+      "CAMPO_EXEMPLO": "E.g. {exemplo}",
+      "SO_PRONTA_CONVERSA": "Right now WhatsApp only accepts a ready-made message in this conversation. This happens when the customer has not written for more than 24 hours."
     },
     "PREVIA": {
       "TITULO": "How {nome} receives it",
@@ -82,7 +102,8 @@
         "ASSUNTO": "Write the subject",
         "MENSAGEM": "Write the message",
         "MODELO": "Choose a ready-made message",
-        "CAMPOS": "Fill in the fields of the ready-made message"
+        "CAMPOS": "Fill in the fields of the ready-made message",
+        "CONVERSA": "Wait, checking the conversation"
       }
     },
     "ENVIADA": {
@@ -95,7 +116,8 @@
         "SMS": "By SMS · {caixa}",
         "SITE": "Through the website · {caixa}",
         "OUTRO": "Through {caixa}"
-      }
+      },
+      "NA_CONVERSA": "Added to conversation #{numero}"
     },
     "ERRO": {
       "TITULO": "The message was not sent",

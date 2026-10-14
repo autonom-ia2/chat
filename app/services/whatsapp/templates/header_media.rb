@@ -4,7 +4,10 @@
 # - sem link, a campanha usa o arquivo guardado no perfil do modelo (`WhatsappTemplateProfile#header_file`), a mesma
 #   mídia que foi aprovada; o link do arquivo é gerado na hora do disparo (nunca fica guardado na campanha, porque
 #   expira);
-# - com link, ele precisa ser http ou https, ter endereço e o tipo (`media_type`) ser o do topo do modelo.
+# - com link, ele precisa ser http ou https, ter endereço e o tipo (`media_type`) ser o do topo do modelo;
+# - com arquivo escolhido na campanha (#1465, `media_blob`): a referência assinada do upload de mídia dos Modelos
+#   (`Manager#upload`), só desta conta, do tipo do topo e do tamanho que a Meta aceita; o link também é gerado no disparo.
+#   É o mesmo caminho e a mesma conferência dos cartões do carrossel (`CardMedia`).
 # Usado na criação (`CampaignJourney::WhatsappCampaignCreator`) e no disparo (`CampaignPauses::WhatsappDispatchGate`).
 module Whatsapp::Templates::HeaderMedia
   FORMATS = %w[IMAGE VIDEO DOCUMENT].freeze
@@ -15,6 +18,8 @@ module Whatsapp::Templates::HeaderMedia
   # Tipo e tamanho que a Meta aceita (página "Media" da documentação, lida em 13/10/2026); o mesmo da tela (EscolherArquivo).
   UPLOAD_LIMITS = { 'image/jpeg' => 5.megabytes, 'image/png' => 5.megabytes, 'video/mp4' => 16.megabytes,
                     'application/pdf' => 100.megabytes }.freeze
+  # O começo do content_type que cada tipo de topo aceita (o tipo do blob vem dos bytes, no upload).
+  MIME_PREFIX = { 'image' => 'image/', 'video' => 'video/', 'document' => 'application/pdf' }.freeze
 
   # Recusa com `code` estável para a tela.
   class Invalid < StandardError
@@ -35,15 +40,32 @@ module Whatsapp::Templates::HeaderMedia
     format.downcase if FORMATS.include?(format)
   end
 
-  # O `header` de processed_params conferido e completado com o tipo. Sem link, exige o arquivo no perfil.
+  # O `header` de processed_params conferido e completado com o tipo. O arquivo escolhido na campanha vence o link; sem
+  # nenhum dos dois, exige o arquivo no perfil.
   def normalize!(header, template:, inbox:)
     type = media_type(template)
     return header unless type
 
     header = checked_header!(header, type)
+    chosen = header['media_blob'].to_s.strip
+    return header.merge('media_url' => '', 'media_blob' => checked_blob!(chosen, type, inbox), 'media_type' => type) if chosen.present?
+
     url = header['media_url'].to_s.strip
     url.present? ? check_url!(url) : (profile_file(inbox, template) || raise(Invalid, 'header_media_required'))
-    header.merge('media_url' => url, 'media_type' => type)
+    header.except('media_blob').merge('media_url' => url, 'media_type' => type)
+  end
+
+  def checked_blob!(signed_id, type, inbox)
+    raise Invalid, 'header_media_invalid' unless blob_accepted?(ActiveStorage::Blob.find_signed(signed_id), type, inbox.account_id)
+
+    signed_id
+  end
+
+  # Arquivo subido pelo upload dos Modelos para esta conta, do tipo pedido ('image' | 'video' | 'document') e do tamanho
+  # que a Meta aceita. Também confere o arquivo de cada cartão do carrossel (`CardMedia`).
+  def blob_accepted?(blob, type, account_id)
+    blob.present? && blob.metadata['account_id'].to_s == account_id.to_s &&
+      blob.content_type.to_s.start_with?(MIME_PREFIX.fetch(type)) && upload_allowed?(blob.content_type, blob.byte_size)
   end
 
   def checked_header!(header, type)
@@ -86,7 +108,17 @@ module Whatsapp::Templates::HeaderMedia
     { 'media_url' => blob.url(expires_in: URL_TTL), 'media_name' => blob.filename.to_s }
   end
 
-  # { 'media_url' => link assinado, 'media_name' => nome do arquivo } para o envio, ou nil sem arquivo no perfil.
+  # { 'media_url' => link assinado, 'media_name' => nome do arquivo } para o envio: o arquivo escolhido na campanha
+  # (`media_blob`) ou, sem ele, o guardado no perfil do modelo. nil quando o arquivo sumiu ou não serve mais (conferido de
+  # novo aqui: a referência pode ter sido gravada por fora da criação).
+  def dispatch_media(header, inbox, template)
+    chosen = header.is_a?(Hash) ? header['media_blob'].to_s : ''
+    return profile_media(inbox, template) if chosen.blank?
+
+    blob = ActiveStorage::Blob.find_signed(chosen)
+    signed_media(blob) if blob_accepted?(blob, media_type(template), inbox.account_id)
+  end
+
   def profile_media(inbox, template)
     file = profile_file(inbox, template)
     file && signed_media(file)

@@ -30,6 +30,7 @@ class Account < ApplicationRecord
   include Reportable
   include Featurable
   include Autonomia::AccountProvisioningDefaults
+  include Autonomia::AgentsNiche
   include CacheKeys
   include CaptainFeaturable
   include AccountEmailRateLimitable

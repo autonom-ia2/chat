@@ -55,9 +55,13 @@ module Autonomia
         def disconnect!
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(agent: @agent, inbox: @inbox)
           return Result.new(status: :error, error: :not_connected) if agent_inbox.nil?
+          return disconnect_area! if agent_inbox.area?
 
           ActiveRecord::Base.transaction do
-            agent_inbox.release_bot_conversations!
+            # #1433: área só existe em caixa com porta ativa. Trava a caixa (como o Areas.vincular!) e solta as áreas
+            # antes das conversas da porta; as conversas delas vão direto para a equipe humana.
+            @inbox.lock!
+            agent_inbox.sair_da_caixa!
             # Destrói o VÍNCULO primeiro: o after_destroy :cleanup_mirror_bot do AgentInbox remove o
             # AgentBotInbox-espelho + o AgentBot-espelho (outgoing_url NULL) NA ORDEM SEGURA. Destruir
             # o AgentBot antes violava a FK autonomia_agent_inboxes.agent_bot_id (null:false, sem
@@ -65,6 +69,12 @@ module Autonomia
             # limpeza no callback do model (mesmo caminho de Inbox#destroy / Agent#destroy).
             agent_inbox.destroy!
           end
+          Result.new(status: :ok)
+        end
+
+        # Vínculo de área (#1433) sai pelo mesmo caminho da tela do CRM: arquiva e guarda o espelho.
+        def disconnect_area!
+          ::Autonomia::Agents::Areas.desvincular!(agent: @agent, inbox: @inbox)
           Result.new(status: :ok)
         end
 
@@ -83,7 +93,7 @@ module Autonomia
         end
 
         def already_connected?
-          ::Autonomia::Agents::AgentInbox.kept.exists?(inbox_id: @inbox.id)
+          ::Autonomia::Agents::AgentInbox.kept.porta.exists?(inbox_id: @inbox.id)
         end
       end
     end

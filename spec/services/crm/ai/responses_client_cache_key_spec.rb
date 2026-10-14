@@ -40,4 +40,34 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(sent_cache_key(client)).to eq("agente_builder:#{account.id}")
     expect(Crm::Ai::UsageRecorder).to have_received(:record).with(hash_including(feature: 'agente_builder_coleta'))
   end
+
+  # #1367 — tool_choice desliga as ferramentas de uma chamada sem tirá-las da lista (a lista é prefixo em cache).
+  describe 'tool_choice' do
+    let(:client) { described_class.new(credential: { api_key: 'k' }) }
+    let(:tools) { [{ type: 'web_search' }] }
+
+    def sent_body
+      body = nil
+      expect(WebMock).to(have_requested(:post, url).with { |request| body = JSON.parse(request.body) })
+      body
+    end
+
+    it 'sends tool_choice with the tools kept in the list' do
+      client.create(**params, tools: tools, tool_choice: 'none')
+
+      expect(sent_body).to include('tools' => [{ 'type' => 'web_search' }], 'tool_choice' => 'none')
+    end
+
+    it 'leaves the body as before when tool_choice is not given' do
+      client.create(**params, tools: tools)
+
+      expect(sent_body).not_to have_key('tool_choice')
+    end
+
+    it 'does not send tool_choice without tools' do
+      client.create(**params, tool_choice: 'none')
+
+      expect(sent_body).not_to have_key('tool_choice')
+    end
+  end
 end

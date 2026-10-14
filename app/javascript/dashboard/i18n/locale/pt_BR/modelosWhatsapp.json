@@ -736,19 +736,43 @@
         "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
         "CARTOES": "Fotos dos {n} cartões",
         "CARTAO": "Cartão {n}",
-        "CARTAO_GUARDADO": "Vai a foto aprovada com o modelo: {arquivo}",
-        "CARTAO_SEM_ARQUIVO_FOTO": "Escolha a foto deste cartão (JPG ou PNG, até 5 MB).",
-        "CARTAO_SEM_ARQUIVO_VIDEO": "Escolha o vídeo deste cartão (MP4, até 16 MB).",
-        "CARTAO_VOLTAR": "Usar a aprovada",
         "CATALOGO": "O botão abre o catálogo do seu WhatsApp. A foto do primeiro produto aparece no topo da mensagem.",
         "FORMULARIO": "Quem tocar em “{botao}” abre o formulário ligado a este modelo.",
-        "CARTAO_ESCOLHER_FOTO": "Escolher foto",
-        "CARTAO_ESCOLHER_VIDEO": "Escolher vídeo",
-        "CARTAO_TROCAR_FOTO": "Trocar foto",
-        "CARTAO_TROCAR_VIDEO": "Trocar vídeo",
-        "CARTAO_ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
-        "CARTAO_ENVIANDO": "Enviando {arquivo}…",
-        "CARTAO_ERRO": "Não deu para enviar o arquivo. Tente de novo.",
+        "TOPO": {
+          "foto": "Foto do topo",
+          "video": "Vídeo do topo",
+          "documento": "Documento do topo"
+        },
+        "ARQUIVO": {
+          "GUARDADO": {
+            "foto": "Vai a foto aprovada com o modelo: {arquivo}",
+            "video": "Vai o vídeo aprovado com o modelo: {arquivo}",
+            "documento": "Vai o documento aprovado com o modelo: {arquivo}"
+          },
+          "SEM_ARQUIVO": {
+            "foto": "Escolha a foto (JPG ou PNG, até 5 MB).",
+            "video": "Escolha o vídeo (MP4, até 16 MB).",
+            "documento": "Escolha o documento (PDF, até 100 MB)."
+          },
+          "ESCOLHER": {
+            "foto": "Escolher foto",
+            "video": "Escolher vídeo",
+            "documento": "Escolher documento"
+          },
+          "TROCAR": {
+            "foto": "Trocar foto",
+            "video": "Trocar vídeo",
+            "documento": "Trocar documento"
+          },
+          "VOLTAR": {
+            "foto": "Usar a aprovada",
+            "video": "Usar o aprovado",
+            "documento": "Usar o aprovado"
+          },
+          "ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
+          "ENVIANDO": "Enviando {arquivo}…",
+          "ERRO": "Não deu para enviar o arquivo. Tente de novo."
+        },
         "CUPOM_VAZIO": "Escreva o código do cupom que seus clientes vão usar.",
         "CUPOM_EXEMPLO": "Ex.: {exemplo}"
       },

@@ -1,7 +1,11 @@
+// OBSOLETO desde #1423: o card do funil trocou a gaveta com abas pelo card
+// "Resumo primeiro" (app/javascript/dashboard/routes/dashboard/crm/components/card/).
+// Os alvos abaixo (abas, "Ganhar", "Analisar agora"...) são da gaveta antiga:
+// refazer o roteiro e regravar o vídeo antes de usar.
 // Roteiro do vídeo de trajeto do artigo 10.05 — "Follow-up manual e
 // automático". Rótulos conferidos em
 // app/javascript/dashboard/i18n/locale/pt_BR/crm.json e em
-// app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue.
+// na gaveta antiga do card (removida no #1423).
 //
 // 3ª versão deste roteiro. A 1ª tentou digitar a Data e horário
 // (input[type="datetime-local"]) com "digitar" (Input.insertText) — o campo
@@ -21,7 +25,10 @@ export const login = {
 export const baseUrl = 'http://localhost:3000';
 
 const TITULO_CARD = 'Seguro vida — Marcos Tavares';
-const TITULOS_ANTIGOS = ['Card com follow-up vencido', 'Card para follow-up manual'];
+const TITULOS_ANTIGOS = [
+  'Card com follow-up vencido',
+  'Card para follow-up manual',
+];
 
 // Cria um card avulso próprio deste vídeo, sempre em aberto e sem
 // follow-up (o vídeo cria um de verdade na gravação), no funil Seguro Auto

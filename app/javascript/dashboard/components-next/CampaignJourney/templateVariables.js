@@ -125,12 +125,6 @@ export const templateVariables = template => {
   return [...body, ...header, ...buttons];
 };
 
-/** Media header (image, video, document) the campaign needs a link for. */
-export const mediaHeaderOf = template => {
-  const header = buildTemplateParameters(template)?.header;
-  return header && 'media_url' in header ? header : null;
-};
-
 /** Binding prefilled from a variable_suggestions item; null when there is none. */
 export const bindingFromSuggestion = suggestion => {
   const source = suggestion?.source;
@@ -280,13 +274,11 @@ const mergeButtons = (base = [], extra = []) =>
   );
 
 // Fork (Modelos do WhatsApp, #1334): `extras` = cupom, validade da oferta e cartões do carrossel
-// (formatoNaCampanha.extrasParaEnvio), por cima das partes do modelo.
-export const buildTemplateParams = ({
-  template,
-  bindings,
-  mediaUrl = '',
-  extras = {},
-}) => {
+// (formatoNaCampanha.extrasParaEnvio), por cima das partes do modelo. #1465: o arquivo do topo
+// escolhido na campanha (`extras.header`) entra no topo, junto do tipo; sem ele, o link vai
+// vazio e o servidor usa o arquivo aprovado com o modelo.
+export const buildTemplateParams = ({ template, bindings, extras = {} }) => {
+  const { header: headerExtra, ...formatExtras } = extras;
   const processed = buildTemplateParameters(template) || {};
   const body = processed.body
     ? Object.fromEntries(
@@ -300,10 +292,7 @@ export const buildTemplateParams = ({
       )
     : undefined;
   const header = processed.header
-    ? {
-        ...processed.header,
-        ...('media_url' in processed.header ? { media_url: mediaUrl } : {}),
-      }
+    ? { ...processed.header, ...(headerExtra || {}) }
     : undefined;
   return {
     name: template.name,
@@ -314,7 +303,7 @@ export const buildTemplateParams = ({
       ...processed,
       ...(body ? { body } : {}),
       ...(header ? { header } : {}),
-      ...extras,
+      ...formatExtras,
       ...(extras.buttons
         ? { buttons: mergeButtons(processed.buttons, extras.buttons) }
         : {}),
@@ -336,7 +325,6 @@ export const buildCampaignPayload = ({
   template,
   bindings,
   defaults,
-  mediaUrl,
   extras = {},
   freeText = '',
 }) => ({
@@ -351,7 +339,6 @@ export const buildCampaignPayload = ({
     template_params: buildTemplateParams({
       template,
       bindings,
-      mediaUrl,
       extras,
     }),
     variable_bindings: Object.fromEntries(

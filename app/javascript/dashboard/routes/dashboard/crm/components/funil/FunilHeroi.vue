@@ -51,7 +51,7 @@ defineEmits(['voltar', 'fechar']);
           {{ migalha }}
         </span>
         <span
-          class="inline-flex items-center gap-2 text-sm font-semibold text-n-blue-6"
+          class="inline-flex items-center gap-2 text-sm font-semibold text-n-blue-6 dark:text-n-blue-11"
         >
           <span class="size-4" :class="icone" aria-hidden="true" />
           {{ rotulo }}
