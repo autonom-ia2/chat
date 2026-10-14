@@ -69,6 +69,23 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
     expect(a_request(:any, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
   end
 
+  # #1333: "Criar com IA" é escrever modelo. Quem só vê é barrado antes de chamar a IA.
+  it 'escrever com IA: whatsapp_templates_manage passa da porta; whatsapp_templates_view não' do
+    path = "/api/v1/accounts/#{account.id}/whatsapp_template_suggestions"
+    account.enable_features!('whatsapp_templates_ai')
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+
+    call(role_user('whatsapp_templates_view'), :post, path, { mode: 'create', goal: 'lembrar do horário' })
+    expect(response).to have_http_status(:unauthorized)
+
+    manager = role_user('whatsapp_templates_manage')
+    call(manager, :post, path, { mode: 'create', goal: 'lembrar do horário' })
+    expect(response).to have_http_status(:accepted)
+    Crm::Ai::InteractiveJob.perform_now(response.parsed_body['id'])
+    call(manager, :get, response.parsed_body['poll_url'])
+    expect(response.parsed_body.dig('result', 'error')).to eq('suggestion_unavailable')
+  end
+
   it 'campaign_manage sozinha não abre os modelos' do
     call(role_user('campaign_manage'), :get, base)
 

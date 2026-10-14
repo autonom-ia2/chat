@@ -7,14 +7,17 @@ import ContactAPI from 'dashboard/api/contacts';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import { textosCom } from './card/textos';
 
 const props = defineProps({
   modelValue: { type: Object, default: null },
   disabled: { type: Boolean, default: false },
+  // #1423 — prefixo com as frases da gaveta nova; vazio = textos de sempre.
+  textos: { type: String, default: '' },
 });
 const emit = defineEmits(['update:modelValue']);
-const { t } = useI18n();
-const label = key => t(`CRM_KANBAN.OPPORTUNITY.${key}`);
+const { t, te } = useI18n();
+const label = textosCom({ t, te }, props.textos, 'CRM_KANBAN.OPPORTUNITY');
 const { accountId, currentAccount, isCloudFeatureEnabled } = useAccount();
 const companiesEnabled = computed(() =>
   Boolean(currentAccount.value?.id && isCloudFeatureEnabled('companies'))

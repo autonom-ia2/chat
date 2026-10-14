@@ -3,11 +3,12 @@ import { computed } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 // #1385 — o que impede a passagem de acontecer de verdade, num aviso só, com uma ação. A página só o mostra quando
-// falta algo. Com a assistente desligada, a ação leva ao quadro do CRM (o funil se edita de lá; a rota não abre um
-// funil direto); sem caixa só, leva direto para Caixas no CRM.
+// falta algo. Com a assistente desligada, a ação leva ao Kanban já neste funil (o funil se edita de lá); sem caixa
+// só, leva direto para Caixas no CRM.
 const props = defineProps({
   iaLigada: { type: Boolean, default: true },
   semCaixa: { type: Boolean, default: false },
+  funilId: { type: Number, default: null },
 });
 
 const A = 'CRM_KANBAN.PASSAGEM.AVISOS';
@@ -20,12 +21,17 @@ const acao = computed(() =>
     ? {
         rotulo: `${A}.BOTAO_CAIXA`,
         icone: 'i-lucide-inbox',
-        rota: 'crm_caixas',
+        rota: { name: 'crm_caixas' },
       }
     : {
         rotulo: `${A}.BOTAO_FUNIL`,
         icone: 'i-lucide-kanban',
-        rota: 'crm_kanban_index',
+        rota: {
+          name: 'crm_kanban_index',
+          ...(props.funilId
+            ? { query: { pipeline_id: String(props.funilId) } }
+            : {}),
+        },
       }
 );
 </script>
@@ -56,7 +62,7 @@ const acao = computed(() =>
       :icon="acao.icone"
       amber
       class="!min-h-11 shrink-0"
-      @click="$router.push({ name: acao.rota })"
+      @click="$router.push(acao.rota)"
     />
   </div>
 </template>

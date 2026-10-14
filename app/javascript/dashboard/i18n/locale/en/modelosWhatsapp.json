@@ -518,7 +518,8 @@
       "CATALOGO": "Catalog",
       "VER_COMO_FICA": "See how it looks",
       "OFERTA_CONTAGEM": "Ends in 2 days (example)",
-      "VER_TODAS_AS_OPCOES": "See all options"
+      "VER_TODAS_AS_OPCOES": "See all options",
+      "OFERTA_VALE_ATE": "Valid until {data}"
     },
     "ENVIADO": {
       "TITULO": {
@@ -673,7 +674,8 @@
         "formato_nao_vai": "The template “{modelo}” has a format campaigns cannot send yet.",
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
         "outro": "The campaign stopped before sending. Nothing was sent.",
-        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign."
+        "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign.",
+        "oferta_vencida": "The offer deadline passed before the send. Nothing was sent."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",
@@ -689,7 +691,8 @@
       "VER_MODELO": "Open “{modelo}”",
       "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes.",
       "AGUARDE_LIBERAR": "Wait for WhatsApp to release the template. When it comes back, tap Resume.",
-      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume."
+      "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume.",
+      "NOVA_DATA": "Create the campaign again with a later date."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",
@@ -702,22 +705,77 @@
         "PAUSADO": "paused",
         "DESATIVADO": "disabled",
         "LIMITE": "not created",
-        "SEM_FONTE": "has a field campaigns cannot fill"
+        "SEM_FONTE": "has a field campaigns cannot fill",
+        "NAO_VAI_CODIGO": "verification codes do not go in campaigns",
+        "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns",
+        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
-      "PRIMEIRO_NOME": "First name",
-      "NOME_DO_CONTATO": "Contact name",
       "REVISAO": {
         "TITULO": "Template",
         "CUSTO": "{porEnvio} per message · about {total} for {n} people",
         "CUSTO_AJUDA": "Estimated amount, charged by WhatsApp. It changes if WhatsApp changes the template type.",
         "DIVULGACAO": "Promotion message: people who asked not to receive are left out.",
-        "POR_ENVIO": "{porEnvio} per message"
+        "POR_ENVIO": "{porEnvio} per message",
+        "CUPOM": "Coupon: {cupom}",
+        "VALIDADE": "The offer is valid until {quando}",
+        "CARTOES": "{n} cards with photos"
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
       "CORRIGIR": "Fix “{nome}”",
+      "FORMATO": {
+        "TITULO": "What this message needs",
+        "AJUDA": "This template has parts you complete now. They are the same for everyone who receives it.",
+        "CUPOM": "Coupon code",
+        "CUPOM_AJUDA": "Everyone gets the same code. Up to {n} letters and numbers.",
+        "CUPOM_ERRO": "Type the code, with up to {n} letters and numbers.",
+        "VALIDADE": "The offer is valid until (account time zone: {zona})",
+        "VALIDADE_AJUDA": "The customer sees a countdown. If this time passes before the send, the campaign stops and no one receives it.",
+        "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
+        "CARTOES": "Photos of the {n} cards",
+        "CARTAO": "Card {n}",
+        "CATALOGO": "The button opens your WhatsApp catalog. The photo of the first product shows at the top of the message.",
+        "FORMULARIO": "Whoever taps “{botao}” opens the form linked to this template.",
+        "TOPO": {
+          "foto": "Photo at the top",
+          "video": "Video at the top",
+          "documento": "Document at the top"
+        },
+        "ARQUIVO": {
+          "GUARDADO": {
+            "foto": "The photo approved with the template goes: {arquivo}",
+            "video": "The video approved with the template goes: {arquivo}",
+            "documento": "The document approved with the template goes: {arquivo}"
+          },
+          "SEM_ARQUIVO": {
+            "foto": "Choose the photo (JPG or PNG, up to 5 MB).",
+            "video": "Choose the video (MP4, up to 16 MB).",
+            "documento": "Choose the document (PDF, up to 100 MB)."
+          },
+          "ESCOLHER": {
+            "foto": "Choose photo",
+            "video": "Choose video",
+            "documento": "Choose document"
+          },
+          "TROCAR": {
+            "foto": "Change photo",
+            "video": "Change video",
+            "documento": "Change document"
+          },
+          "VOLTAR": {
+            "foto": "Use the approved one",
+            "video": "Use the approved one",
+            "documento": "Use the approved one"
+          },
+          "ESCOLHIDO": "The file you chose goes: {arquivo}",
+          "ENVIANDO": "Uploading {arquivo}…",
+          "ERRO": "The file could not be uploaded. Try again."
+        },
+        "CUPOM_VAZIO": "Type the coupon code your customers will use.",
+        "CUPOM_EXEMPLO": "E.g. {exemplo}"
+      },
       "SINAL": {
         "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your business.",
         "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your business."
@@ -763,7 +821,9 @@
       "DEPOIS": "After",
       "NAO_DA_AVISO": "This text offers something to the customer, so WhatsApp treats it as promotion. To be a service notice, it must only talk about something the customer already asked for or already has with you.",
       "MANTER_O_MEU": "Keep mine",
-      "USAR": "Use"
+      "USAR": "Use",
+      "O_QUE_MUDOU": "What changed:",
+      "CORTE": "The text is {n}% shorter, without counting the fields."
     },
     "CAMPO_SEM_NOME": "Field {n}",
     "CATALOGO_DE_CAMPOS": {
@@ -875,7 +935,8 @@
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
       "AVISO_PROPAGANDA": "Too much advertising can get the number blocked. Write something useful for the person.",
       "FALHOU": "We could not check who talked to you right now.",
-      "TENTAR_DE_NOVO": "Try again"
+      "TENTAR_DE_NOVO": "Try again",
+      "TEXTO_DESCARTADO": "This template has a coupon, a limited-time offer or a carousel. Everyone gets the full template, so the message you wrote was removed."
     },
     "SAUDE": {
       "TITULO": "How this template is doing",

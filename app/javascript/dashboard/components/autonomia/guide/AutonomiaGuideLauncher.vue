@@ -13,7 +13,7 @@ import { useAvisosDoGuia } from './useAvisosDoGuia';
 // canto cobria paginação e a última linha das listas. No celular não há barra lateral
 // fixa, então fica a bolinha azul de 44 px, sem balão (na tela pequena ele cobriria o
 // conteúdo); o ponto avisa até a primeira abertura.
-// #646 — a fixed panel (e.g. CrmCardDrawer) can share this same bottom-right corner;
+// #646 — a fixed panel (e.g. the CRM card drawer, CardGaveta) can share this same bottom-right corner;
 // `isFixedPanelOpen` lifts the launcher above that panel's footer instead of letting
 // it cover the footer's buttons.
 const { guiaDisponivel, painelAberto, mostrarPonto, alternarGuia } =

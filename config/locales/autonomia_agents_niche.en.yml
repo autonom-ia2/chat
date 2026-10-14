@@ -1,0 +1,30 @@
+en:
+  helpers:
+    label:
+      account:
+        agents_niche: AI agents niche
+  autonomia_agents_niche:
+    label: AI agents niche
+    help: The base that the instructions of new agents start from.
+    installation_default: "Default for this installation: %{niche}"
+    is_default: (default for this installation)
+    warning: Changing the niche does not change agents that already exist; they only change through the Update with the new base button.
+    profile_label: Insurance profile
+    separator: " · "
+    niches:
+      seguros:
+        title: Insurance
+        text: Insurance base.
+      geral:
+        title: General
+        text: General base, for any business.
+    profiles:
+      corretora:
+        title: Broker
+        text: Sells policies from several insurers.
+      seguradora:
+        title: Insurer
+        text: Issues its own policies.
+      insurtech:
+        title: Insurtech
+        text: Digital insurance company.

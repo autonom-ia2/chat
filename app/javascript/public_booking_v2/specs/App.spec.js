@@ -257,7 +257,8 @@ describe('public link /book/:slug', () => {
     const wrapper = await mountApp();
     const note = wrapper.find('[data-testid="zone-note"]').text();
     expect(note.startsWith('Horários mostrados em: ')).toBe(true);
-    expect(note).toContain('Japão');
+    // O fuso como a plataforma mostra, nunca o nome longo do navegador (#1468).
+    expect(note).toBe('Horários mostrados em: Asia/Tokyo.');
 
     await wrapper.find('button[aria-label*="13"]').trigger('click');
     await flushPromises();
@@ -1203,7 +1204,9 @@ describe('meeting management /b/:code (F2-A)', () => {
     // 15:00 de Brasília do dia 13 = 03:00 de Tóquio do dia 14.
     expect(card(wrapper)).toContain('quarta-feira, 14 de outubro');
     expect(card(wrapper)).toContain('03:00');
-    expect(wrapper.find('[data-testid="zone-note"]').text()).toContain('Japão');
+    expect(wrapper.find('[data-testid="zone-note"]').text()).toContain(
+      'Asia/Tokyo'
+    );
   });
 
   it('shows the place: "Entrar" only for http(s) links, and the address', async () => {

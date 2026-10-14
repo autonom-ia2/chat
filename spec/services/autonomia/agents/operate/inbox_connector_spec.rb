@@ -35,5 +35,33 @@ RSpec.describe Autonomia::Agents::Operate::InboxConnector do
       expect(untouched.reload.status).to eq('open')
       expect(Autonomia::Agents::AgentInbox.where(inbox_id: inbox.id)).to be_empty
     end
+
+    # #1433 — área só existe com porta ativa: soltar a porta solta as áreas da caixa; soltar a área não toca a porta.
+    context 'with agente da equipe (área) na caixa' do
+      let(:da_equipe) do
+        Autonomia::Agents::Agent.create!(account: account, name: 'Equipe', agent_type: 'custom', status: :active, enabled: true)
+      end
+
+      before { described_class.new(agent: agent, inbox: inbox).perform(connect: true) }
+
+      it 'soltar a porta solta também as áreas, e as conversas delas vão para a equipe humana' do
+        area = Autonomia::Agents::Areas.vincular!(agent: da_equipe, inbox: inbox)
+        da_area = create(:conversation, account: account, inbox: inbox, status: :open, assignee_agent_bot_id: area.agent_bot_id)
+
+        expect(described_class.new(agent: agent, inbox: inbox).perform(connect: false)).to be_success
+
+        expect(Autonomia::Agents::AgentInbox.kept.where(inbox_id: inbox.id)).to be_empty
+        expect(da_area.reload).to have_attributes(status: 'open', assignee_agent_bot_id: nil)
+      end
+
+      it 'soltar a área pelo conector não toca a porta, e a caixa segue ocupada só pela porta' do
+        Autonomia::Agents::Areas.vincular!(agent: da_equipe, inbox: inbox)
+
+        expect(described_class.new(agent: da_equipe, inbox: inbox).perform(connect: false)).to be_success
+
+        expect(Autonomia::Agents::AgentInbox.kept.where(inbox_id: inbox.id).pluck(:papel)).to eq(['porta'])
+        expect(inbox.reload.agent_bot).to be_present
+      end
+    end
   end
 end

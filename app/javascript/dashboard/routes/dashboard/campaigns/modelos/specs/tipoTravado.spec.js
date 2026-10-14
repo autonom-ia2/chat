@@ -10,6 +10,7 @@ import { corpoParaAlterar } from '../helpers/paraMeta';
 import ModeloCriarPage from '../pages/ModeloCriarPage.vue';
 import ModeloConferencia from '../components/ModeloConferencia.vue';
 import EtapaExtras from '../components/criar/EtapaExtras.vue';
+import ModeloMelhorarComIA from '../components/ModeloMelhorarComIA.vue';
 
 // #1394: a Meta não deixa trocar o tipo de um modelo que já existe. Corrigir e
 // alterar mostram o tipo travado, com a saída "crie um modelo novo com este
@@ -67,6 +68,8 @@ const RECUSADO = modeloDaMeta(
   GRUPO
 );
 
+let flagsLigadas = [];
+
 const loja = () =>
   createStore({
     getters: {
@@ -77,6 +80,9 @@ const loja = () =>
       }),
       getCurrentAccount: () => ({ id: 1, name: 'Hub2you' }),
       'accounts/getAccount': () => () => ({ id: 1, name: 'Hub2you' }),
+      // Piloto da IA ligado (#1333); sem ele, o "Melhorar com IA" não aparece.
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        flagsLigadas.includes(flag),
     },
   });
 
@@ -132,6 +138,7 @@ const abrir = async caminho => {
 };
 
 beforeEach(() => {
+  flagsLigadas = ['whatsapp_templates_ai'];
   Object.values(api).forEach(fn => fn.mockReset());
   api.listarNumeros.mockResolvedValue(NUMEROS);
   api.obterCatalogo.mockResolvedValue(null);
@@ -177,6 +184,37 @@ describe('Corrigir e alterar: o tipo vem travado (#1394)', () => {
     expect(rascunho.tipo).toBe('divulgacao');
     // O corpo que o adaptador manda à Meta com esse rascunho não leva categoria.
     expect(corpoParaAlterar(rascunho, RECUSADO)).not.toHaveProperty('category');
+  });
+
+  // #1333: "Melhorar com IA" na correção troca só o texto; o tipo previsto pela IA
+  // não muda o tipo travado, nem no rascunho nem no custo mostrado.
+  it('melhorar com IA no corrigir mantém o tipo da Meta', async () => {
+    const { wrapper } = await abrir('/modelos/1001/alterar?etapa=texto');
+
+    await wrapper.find('[data-melhorar-com-ia]').trigger('click');
+    const gaveta = wrapper.findComponent(ModeloMelhorarComIA);
+    expect(gaveta.props('tipoTravado')).toBe('divulgacao');
+
+    gaveta.vm.$emit('usar', {
+      texto: [
+        { t: 'texto', v: 'Olá, ' },
+        { t: 'campo', v: 'nome_cliente' },
+        { t: 'texto', v: '! Seu boleto vence amanhã. Dúvidas, responda.' },
+      ],
+      tipo: 'aviso',
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-tipo-travado]').text()).toContain(
+      en.MODELOS_WHATSAPP.TIPOS.divulgacao.ROTULO
+    );
+  });
+
+  it('sem a flag do piloto da IA, o corrigir não mostra o "Melhorar com IA"', async () => {
+    flagsLigadas = [];
+    const { wrapper } = await abrir('/modelos/1001/alterar?etapa=texto');
+
+    expect(wrapper.find('[data-tipo-travado]').exists()).toBe(true);
+    expect(wrapper.find('[data-melhorar-com-ia]').exists()).toBe(false);
   });
 
   it('alterar um modelo aprovado também mostra o tipo travado', async () => {

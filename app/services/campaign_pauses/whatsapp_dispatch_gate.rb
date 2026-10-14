@@ -37,7 +37,8 @@ module CampaignPauses::WhatsappDispatchGate
   def template_verdict
     verdict = Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
     verdict = send_list_verdict(verdict) if verdict.ok?
-    verdict.ok? ? header_media_verdict(verdict) : verdict
+    verdict = header_media_verdict(verdict) if verdict.ok?
+    verdict.ok? ? send_extras_verdict(verdict) : verdict
   rescue StandardError => e
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} template check failed: #{e.class.name}"
     Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_unverifiable', source: 'system',
@@ -55,13 +56,28 @@ module CampaignPauses::WhatsappDispatchGate
     )
   end
 
-  # Media header without a typed link (#1382): the template's saved file, linked once per run, goes to every send.
+  # Media header without a typed link (#1382): the file chosen in the campaign (#1465) or else the template's saved file,
+  # linked once per run, goes to every send.
   def header_media_verdict(verdict)
     return verdict unless Whatsapp::Templates::HeaderMedia.media_type(verdict.template)
-    return verdict if campaign.template_params.to_h.dig('processed_params', 'header', 'media_url').present?
 
-    @profile_header_media = Whatsapp::Templates::HeaderMedia.profile_media(inbox, verdict.template)
-    return verdict if @profile_header_media
+    header = campaign.template_params.to_h.dig('processed_params', 'header')
+    return verdict if header.is_a?(Hash) && header['media_url'].present?
+
+    @header_media = Whatsapp::Templates::HeaderMedia.dispatch_media(header, inbox, verdict.template)
+    return verdict if @header_media
+
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_media_missing', source: 'template', details: verdict.details.slice(:template_name, :language, :lookup_source)
+    )
+  end
+
+  # #1334: the saved file of each carousel card and the campaign flow_token, built once per run (Whatsapp::Templates::SendParams).
+  def send_extras_verdict(verdict)
+    processed = campaign.template_params.to_h['processed_params']
+    extras = Whatsapp::Templates::SendParams.dispatch_extras(processed, template: verdict.template, inbox: inbox, campaign: campaign)
+    @send_extras = extras.presence
+    return verdict if extras
 
     Whatsapp::Templates::DispatchCheck::Verdict.new(
       reason_code: 'template_media_missing', source: 'template', details: verdict.details.slice(:template_name, :language, :lookup_source)
@@ -70,10 +86,12 @@ module CampaignPauses::WhatsappDispatchGate
 
   def process_liquid_template_params(contact)
     params = super
-    return params unless params && @profile_header_media
+    return params unless params && (@header_media || @send_extras)
 
     processed = params['processed_params'].to_h
-    params.merge('processed_params' => processed.merge('header' => processed['header'].to_h.merge(@profile_header_media)))
+    processed = processed.merge('header' => processed['header'].to_h.except('media_blob').merge(@header_media)) if @header_media
+    processed = Whatsapp::Templates::SendParams.apply_extras(processed, @send_extras) if @send_extras
+    params.merge('processed_params' => processed)
   end
 
   def keep_meta_version(template)

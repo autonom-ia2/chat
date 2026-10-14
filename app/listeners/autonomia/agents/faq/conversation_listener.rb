@@ -8,8 +8,9 @@ class Autonomia::Agents::Faq::ConversationListener < BaseListener
     return if conversation&.id.blank?
     return unless Autonomia::Agents::Config.enabled?(conversation.account)
 
-    agent_inbox = Autonomia::Agents::AgentInbox.includes(:agent).find_by(inbox_id: conversation.inbox_id,
-                                                                         account_id: conversation.account_id)
+    # Quem respondia a conversa (#1433). Antes lia qualquer vínculo da caixa, inclusive o arquivado de um agente
+    # excluído; agora só o ativo — com área na caixa, um find_by solto podia pegar a área no lugar da porta.
+    agent_inbox = Autonomia::Agents::QuemResponde.agent_inbox(conversation)
     return unless agent_inbox&.agent&.faq_suggestions_enabled?
 
     Autonomia::Agents::Faq::SuggestJob.perform_later(conversation.id)

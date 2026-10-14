@@ -106,6 +106,12 @@ export const mergeInboxDetails = (inboxesData, inboxesList = []) => {
   });
 };
 
+// fork chat#1457: caixa de WhatsApp oficial com o WhatsApp Híbrido pronto aceita texto livre na
+// conversa nova (sai pelo WhatsApp API). O servidor decide e manda em `whatsapp_api_start`.
+export const canStartWithWhatsappApi = inbox =>
+  inbox?.channelType === INBOX_TYPES.WHATSAPP &&
+  inbox?.whatsappApiStart === true;
+
 export const prepareAttachmentPayload = (
   attachedFiles,
   directUploadsEnabled

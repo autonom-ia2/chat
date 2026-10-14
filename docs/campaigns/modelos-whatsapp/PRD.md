@@ -58,7 +58,7 @@ Preços ficam em configuração (nunca no código); próxima janela de reajuste 
 
 ## 4. Regras de produto
 
-- Linguagem leiga, uma ação principal por tela, sem `<select>` nativo, sem "Jev"/"IA" na tela.
+- Linguagem leiga, uma ação principal por tela, sem `<select>` nativo, sem "Jev"/"IA" na tela. Exceção pedida pelo Rodrigo (12/10/2026, #1333): os rótulos "Criar com IA" e "Melhorar com IA" e o título da gaveta; a conferência segue sem citar tecnologia.
 - Tipo traduzido: "Aviso sobre algo que o cliente já fez ou combinou" (serviço), "Divulgar oferta ou novidade"
   (divulgação), "Código de acesso" (verificação). Custo por envio sempre ao lado.
 - "Agressivo" = maximizar serviço legítimo. Nunca disfarçar divulgação.

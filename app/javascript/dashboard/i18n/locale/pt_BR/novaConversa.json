@@ -1,0 +1,128 @@
+{
+  "NOVA_CONVERSA": {
+    "ROTULO": "Nova conversa",
+    "ROTULO_EXISTENTE": "Enviar mensagem",
+    "TITULO": "Fale com {nome}",
+    "TITULO_SEM_CONTATO": "Com quem você quer falar?",
+    "TEXTO": "Escolha por onde falar e escreva a mensagem.",
+    "FECHAR": "Fechar",
+    "ALTERAR": "Alterar",
+    "ALTERAR_PARTE": "Alterar {parte}",
+    "MIGALHA": {
+      "CONTATOS": "Contatos",
+      "CONVERSAS": "Conversas"
+    },
+    "PARA_QUEM": {
+      "TITULO": "Para quem",
+      "CAMPO": "Digite o nome, telefone ou e-mail",
+      "BUSCANDO": "Procurando…",
+      "NADA": "Ninguém encontrado. Confira o que você digitou.",
+      "NADA_CRIAR": "Ninguém encontrado. Você pode criar o contato agora.",
+      "CRIAR": "Criar contato {valor}",
+      "ERRO": "Não deu para procurar agora. Tente de novo.",
+      "ERRO_CRIAR": "Não deu para criar o contato. Tente de novo."
+    },
+    "POR_ONDE": {
+      "TITULO": "Por onde",
+      "CARREGANDO": "Vendo por onde dá para falar…",
+      "VAZIO": "{nome} ainda não tem telefone nem e-mail.",
+      "COMPLETAR": "Completar o cadastro",
+      "ERRO": "Não deu para ver por onde falar com este contato.",
+      "TENTAR": "Tentar de novo",
+      "CANAL": {
+        "WHATSAPP": "WhatsApp",
+        "EMAIL": "E-mail",
+        "SMS": "SMS",
+        "SITE": "Site",
+        "OUTRO": "Outro canal"
+      },
+      "VAZIO_SEM_NOME": "Este contato ainda não tem telefone nem e-mail."
+    },
+    "ONDE_ENTRA": {
+      "TITULO": "Onde a mensagem entra",
+      "ENTRA_NA": "A mensagem entra na conversa #{numero}",
+      "ENTRA_NA_EXISTENTE": "A mensagem entra na conversa que já existe com este contato",
+      "CONTINUAR": "Continuar a conversa #{numero}",
+      "NOVA": "Começar conversa nova",
+      "NOVA_TEXTO": "Uma conversa separada, do começo.",
+      "ULTIMA_ATIVIDADE": "última atividade {quando}",
+      "SITUACAO": {
+        "ABERTA": "Aberta",
+        "PENDENTE": "Pendente",
+        "ADIADA": "Adiada",
+        "RESOLVIDA": "Resolvida"
+      },
+      "CARREGANDO": "Conferindo a conversa…",
+      "ERRO": "Não deu para conferir esta conversa.",
+      "TENTAR": "Tentar de novo"
+    },
+    "MENSAGEM": {
+      "TITULO": "Sua mensagem",
+      "CAMPO": "Sua mensagem",
+      "CORPO": "Mensagem",
+      "PLACEHOLDER": "Escreva aqui o que você quer dizer",
+      "ESCREVER": "Escrever a mensagem",
+      "ESCREVER_TEXTO": "Você escreve do seu jeito.",
+      "PRONTA": "Usar uma mensagem pronta",
+      "PRONTA_TEXTO": "Um modelo aprovado pelo WhatsApp.",
+      "SO_PRONTA_TITULO": "Escolha uma mensagem pronta",
+      "SO_PRONTA_TEXTO": "No WhatsApp, a primeira mensagem para um cliente precisa ser uma mensagem pronta, aprovada pelo WhatsApp.",
+      "ESCOLHIDA": "Mensagem pronta",
+      "PROCURAR": "Procurar mensagem pronta",
+      "NENHUMA_BUSCA": "Nenhuma mensagem pronta com esse nome.",
+      "SEM_PRONTA": "Este número ainda não tem mensagem pronta aprovada.",
+      "SEM_PRONTA_PECA": "Peça a quem administra a conta para criar uma.",
+      "CRIAR_PRONTA": "Criar mensagem pronta",
+      "ASSUNTO": "Assunto",
+      "ASSUNTO_PLACEHOLDER": "Sobre o que é o e-mail",
+      "MAIS_OPCOES": "Mais opções",
+      "MENOS_OPCOES": "Menos opções",
+      "ANEXAR": "Anexar arquivo",
+      "COMPLETE": "Complete a mensagem",
+      "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
+      "CAMPO_FALADO": "campo {campo}",
+      "CAMPO_EXEMPLO": "Ex.: {exemplo}",
+      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem pronta. Isso acontece quando a pessoa não escreve há mais de 24 horas."
+    },
+    "PREVIA": {
+      "TITULO": "Como {nome} recebe",
+      "TITULO_SEM_NOME": "Como a pessoa recebe",
+      "FANTASMA": "Sua mensagem aparece aqui",
+      "AGORA": "agora",
+      "DE": "De",
+      "ASSUNTO": "Assunto",
+      "SEM_ASSUNTO": "Sem assunto"
+    },
+    "RODAPE": {
+      "CANCELAR": "Cancelar",
+      "ENVIAR": "Enviar mensagem",
+      "FALTA": {
+        "CONTATO": "Escolha para quem enviar",
+        "CANAL": "Escolha por onde falar",
+        "ASSUNTO": "Escreva o assunto",
+        "MENSAGEM": "Escreva a mensagem",
+        "MODELO": "Escolha uma mensagem pronta",
+        "CAMPOS": "Preencha os campos da mensagem pronta",
+        "CONVERSA": "Aguarde, conferindo a conversa"
+      }
+    },
+    "ENVIADA": {
+      "TITULO": "Mensagem a caminho para {nome}",
+      "ABRIR": "Abrir a conversa",
+      "TITULO_SEM_NOME": "Mensagem a caminho",
+      "PELO": {
+        "WHATSAPP": "Pelo WhatsApp · {caixa}",
+        "EMAIL": "Por e-mail · {caixa}",
+        "SMS": "Por SMS · {caixa}",
+        "SITE": "Pelo site · {caixa}",
+        "OUTRO": "Por {caixa}"
+      },
+      "NA_CONVERSA": "Entrou na conversa #{numero}"
+    },
+    "ERRO": {
+      "TITULO": "A mensagem não foi enviada",
+      "PADRAO": "Nada do que você escreveu se perdeu. Tente enviar de novo."
+    },
+    "TEXTO_BUSCA": "Procure pelo nome, telefone ou e-mail."
+  }
+}

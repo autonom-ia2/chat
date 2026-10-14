@@ -52,6 +52,8 @@ export const FEATURE_FLAGS = {
   EMAIL_TEMPLATE_IMPORT: 'email_template_import',
   AUTONOMIA_AGENTS_JOURNEY: 'autonomia_agents_journey',
   WHATSAPP_TEMPLATES_JOURNEY: 'whatsapp_templates_journey',
+  WHATSAPP_TEMPLATES_AI: 'whatsapp_templates_ai',
+  NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

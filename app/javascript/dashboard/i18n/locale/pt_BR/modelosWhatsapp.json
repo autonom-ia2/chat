@@ -518,7 +518,8 @@
       "CATALOGO": "Catálogo",
       "VER_COMO_FICA": "Ver como fica",
       "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)",
-      "VER_TODAS_AS_OPCOES": "Ver todas as opções"
+      "VER_TODAS_AS_OPCOES": "Ver todas as opções",
+      "OFERTA_VALE_ATE": "Vale até {data}"
     },
     "ENVIADO": {
       "TITULO": {
@@ -673,7 +674,8 @@
         "formato_nao_vai": "O modelo “{modelo}” tem um formato que a campanha ainda não sabe enviar.",
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
         "outro": "A campanha parou antes de enviar. Nada foi enviado.",
-        "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha."
+        "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha.",
+        "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",
@@ -689,7 +691,8 @@
       "VER_MODELO": "Abrir “{modelo}”",
       "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar.",
       "AGUARDE_LIBERAR": "Espere o WhatsApp liberar o modelo. Quando ele voltar, toque em Retomar.",
-      "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar."
+      "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar.",
+      "NOVA_DATA": "Crie a campanha de novo com uma data à frente."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
@@ -702,22 +705,77 @@
         "PAUSADO": "pausado",
         "DESATIVADO": "desativado",
         "LIMITE": "não criado",
-        "SEM_FONTE": "tem campo que a campanha não preenche"
+        "SEM_FONTE": "tem campo que a campanha não preenche",
+        "NAO_VAI_CODIGO": "código de verificação não vai em campanha",
+        "NAO_VAI_PRODUTOS": "produtos escolhidos não vão em campanha",
+        "NAO_VAI_CARTAO_COM_CAMPO": "cartão com campo ainda não vai em campanha"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
-      "PRIMEIRO_NOME": "Primeiro nome",
-      "NOME_DO_CONTATO": "Nome do contato",
       "REVISAO": {
         "TITULO": "Modelo",
         "CUSTO": "{porEnvio} por envio · cerca de {total} para {n} pessoas",
         "CUSTO_AJUDA": "Valor estimado, cobrado pelo WhatsApp. Muda se o WhatsApp mudar o tipo do modelo.",
         "DIVULGACAO": "Mensagem de divulgação: quem pediu para não receber fica de fora.",
-        "POR_ENVIO": "{porEnvio} por envio"
+        "POR_ENVIO": "{porEnvio} por envio",
+        "CUPOM": "Cupom: {cupom}",
+        "VALIDADE": "A oferta vale até {quando}",
+        "CARTOES": "{n} cartões com foto"
       },
       "GRUPO_CATALOGO": "Do cadastro",
       "SEM_MODELO_LIBERADO": "Nenhum modelo desta conta do WhatsApp pode ir em campanha agora: estão recusados, pausados ou num formato que a campanha ainda não envia.",
       "CORRIGIR": "Corrigir “{nome}”",
+      "FORMATO": {
+        "TITULO": "O que esta mensagem precisa",
+        "AJUDA": "Este modelo tem partes que você completa agora. Elas valem para todos que vão receber.",
+        "CUPOM": "Código do cupom",
+        "CUPOM_AJUDA": "Todos recebem o mesmo código. Até {n} letras e números.",
+        "CUPOM_ERRO": "Escreva o código, com até {n} letras e números.",
+        "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
+        "VALIDADE_AJUDA": "O cliente vê a contagem regressiva. Se essa hora passar antes do envio, a campanha para e ninguém recebe.",
+        "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
+        "CARTOES": "Fotos dos {n} cartões",
+        "CARTAO": "Cartão {n}",
+        "CATALOGO": "O botão abre o catálogo do seu WhatsApp. A foto do primeiro produto aparece no topo da mensagem.",
+        "FORMULARIO": "Quem tocar em “{botao}” abre o formulário ligado a este modelo.",
+        "TOPO": {
+          "foto": "Foto do topo",
+          "video": "Vídeo do topo",
+          "documento": "Documento do topo"
+        },
+        "ARQUIVO": {
+          "GUARDADO": {
+            "foto": "Vai a foto aprovada com o modelo: {arquivo}",
+            "video": "Vai o vídeo aprovado com o modelo: {arquivo}",
+            "documento": "Vai o documento aprovado com o modelo: {arquivo}"
+          },
+          "SEM_ARQUIVO": {
+            "foto": "Escolha a foto (JPG ou PNG, até 5 MB).",
+            "video": "Escolha o vídeo (MP4, até 16 MB).",
+            "documento": "Escolha o documento (PDF, até 100 MB)."
+          },
+          "ESCOLHER": {
+            "foto": "Escolher foto",
+            "video": "Escolher vídeo",
+            "documento": "Escolher documento"
+          },
+          "TROCAR": {
+            "foto": "Trocar foto",
+            "video": "Trocar vídeo",
+            "documento": "Trocar documento"
+          },
+          "VOLTAR": {
+            "foto": "Usar a aprovada",
+            "video": "Usar o aprovado",
+            "documento": "Usar o aprovado"
+          },
+          "ESCOLHIDO": "Vai o arquivo que você escolheu: {arquivo}",
+          "ENVIANDO": "Enviando {arquivo}…",
+          "ERRO": "Não deu para enviar o arquivo. Tente de novo."
+        },
+        "CUPOM_VAZIO": "Escreva o código do cupom que seus clientes vão usar.",
+        "CUPOM_EXEMPLO": "Ex.: {exemplo}"
+      },
       "SINAL": {
         "ruim": "O WhatsApp está vendo muita gente bloquear ou denunciar o modelo \"{nome}\". Ele pode pausar o modelo a qualquer momento, e a campanha para junto. Dá para enviar, mas o melhor é mandar só para quem conhece a sua empresa.",
         "atencao": "Algumas pessoas bloquearam ou denunciaram o modelo \"{nome}\". Se piorar, o WhatsApp pausa o modelo e a campanha para junto. Dá para enviar, mas mande só para quem conhece a sua empresa."
@@ -763,7 +821,9 @@
       "DEPOIS": "Depois",
       "NAO_DA_AVISO": "Este texto oferece algo ao cliente, então o WhatsApp trata como divulgação. Para ser aviso de serviço, ele precisa falar só de algo que o cliente já pediu ou já tem com você.",
       "MANTER_O_MEU": "Manter o meu",
-      "USAR": "Usar"
+      "USAR": "Usar",
+      "O_QUE_MUDOU": "O que mudou:",
+      "CORTE": "O texto ficou {n}% mais curto, sem contar os campos."
     },
     "CAMPO_SEM_NOME": "Campo {n}",
     "CATALOGO_DE_CAMPOS": {
@@ -875,7 +935,8 @@
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
       "AVISO_PROPAGANDA": "Mensagem de propaganda demais pode levar a bloqueio. Escreva algo útil para a pessoa.",
       "FALHOU": "Não conseguimos conferir quem falou com você agora.",
-      "TENTAR_DE_NOVO": "Tentar de novo"
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "TEXTO_DESCARTADO": "Este modelo tem cupom, oferta com prazo ou carrossel. Todos recebem o modelo completo, então a mensagem que você escreveu foi tirada."
     },
     "SAUDE": {
       "TITULO": "Como este modelo está indo",

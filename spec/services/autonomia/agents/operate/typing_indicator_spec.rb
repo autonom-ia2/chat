@@ -50,6 +50,29 @@ describe Autonomia::Agents::Operate::TypingIndicator do
     end
   end
 
+  context 'when the conversation is on a WhatsApp API (WAHA) inbox' do
+    let(:channel) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511888880000' }) }
+    let(:waha_contact) { create(:contact, account: account, custom_attributes: { 'waha_whatsapp_chat_id' => '5511999990000@c.us' }) }
+    let(:conversation) { create(:conversation, account: account, inbox: channel.inbox, contact: waha_contact) }
+
+    it 'keeps using the panel event and never calls the WAHA engine' do
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+      allow(Waha::Client).to receive(:new).and_call_original
+
+      with_modified_env WAHA_API_URL: 'https://waha.example', WAHA_API_KEY: 'waha-key' do
+        indicator(conversation).on
+        indicator(conversation).off
+      end
+
+      expect(Waha::Client).not_to have_received(:new)
+      [Conversation::CONVERSATION_TYPING_ON, Conversation::CONVERSATION_TYPING_OFF].each do |event|
+        expect(Rails.configuration.dispatcher).to have_received(:dispatch).once.with(
+          event, kind_of(Time), { conversation: conversation, user: agent_bot, is_private: false }
+        )
+      end
+    end
+  end
+
   context 'when the conversation is on WhatsApp Cloud' do
     let(:channel) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
     let(:conversation) { conversation_in(channel.inbox, '5511999990000') }
@@ -77,6 +100,14 @@ describe Autonomia::Agents::Operate::TypingIndicator do
       indicator(conversation).on
 
       expect(WebMock).to have_requested(:post, meta_typing_url).once.with(body: hash_including('message_id' => 'wamid.NEWER'))
+    end
+
+    it 'does not break the delivery of the agent when the channel typing raises inside' do
+      allow(Conversations::ChannelTyping::Deliverer).to receive(:new).and_raise(StandardError, 'boom')
+
+      expect { indicator(conversation).on }.not_to raise_error
+
+      expect(WebMock).not_to have_requested(:post, meta_typing_url)
     end
 
     it 'does nothing on typing off' do

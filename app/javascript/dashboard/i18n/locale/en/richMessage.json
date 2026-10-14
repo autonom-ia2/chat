@@ -1,0 +1,24 @@
+{
+  "RICH_MESSAGE": {
+    "ACTION_ROW": {
+      "OPENS_IN_NEW_TAB": "(opens in a new tab)"
+    },
+    "CONTACT": {
+    },
+    "FAILURE": {
+      "RETRY": "Send again",
+      "TITLE": "{title}."
+    },
+    "FLOW": {
+    },
+    "LINK_BUTTON": {
+      "OPENS": "Opens: {url}"
+    },
+    "LOCATION": {
+    },
+    "LOCATION_REQUEST": {
+    },
+    "OPTIONS": {
+    }
+  }
+}

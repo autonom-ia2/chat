@@ -36,6 +36,18 @@ export const idDaQuery = (query = {}) => {
 export const etapaDaQuery = (query = {}) =>
   ETAPAS.includes(query.etapa) ? query.etapa : ETAPA.CONTE;
 
+// #1494 — Copiloto da equipe: a lista manda `?atuacao=interno` e a conversa abre com
+// `actuation: 'internal'` (ajuda a equipe dentro das conversas, nunca fala com cliente). Qualquer
+// outro valor é o agente de sempre, que atende clientes. Depois que o rascunho existe, a query só
+// tem `?agente=` e a atuação vem do próprio agente (F5).
+export const ATUACAO = { EXTERNA: 'external', INTERNA: 'internal' };
+export const ATUACAO_INTERNA_NA_QUERY = 'interno';
+
+export const atuacaoDaQuery = (query = {}) =>
+  query.atuacao === ATUACAO_INTERNA_NA_QUERY
+    ? ATUACAO.INTERNA
+    : ATUACAO.EXTERNA;
+
 // Celular de exemplo da etapa Conte e perguntas prontas do teste (protótipo DATA.models): "Do meu
 // jeito" usa as do primeiro modelo. As chaves ficam em AGENTS.JORNADA.MODELOS.<I18N> e
 // AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.<CHAVE>.
@@ -45,8 +57,14 @@ const PERGUNTAS = {
   reception: ['AJUDA', 'TROCAR', 'PESSOA'],
 };
 
-export const perguntasDeTeste = modelo =>
-  PERGUNTAS[modelo] || PERGUNTAS.support;
+// O copiloto é testado como alguém da equipe pediria ajuda (o teste não tem uma conversa aberta,
+// então as perguntas se explicam sozinhas).
+const PERGUNTAS_DA_EQUIPE = ['COMO_RESPONDO', 'PROXIMO_PASSO', 'RASCUNHO'];
+
+export const perguntasDeTeste = (modelo, interno = false) => {
+  if (interno) return PERGUNTAS_DA_EQUIPE;
+  return PERGUNTAS[modelo] || PERGUNTAS.support;
+};
 
 export const exemploDoModelo = modelo =>
   (MODELOS.find(item => item.chave === modelo) || MODELOS[0]).i18n;
