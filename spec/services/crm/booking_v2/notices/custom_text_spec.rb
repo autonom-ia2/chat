@@ -66,10 +66,14 @@ RSpec.describe Crm::BookingV2::Notices::CustomText do
     end
   end
 
-  it 'monta o texto padrão de cada aviso com as chaves, como ponto de partida' do
+  # #1517: o padrão do editor não traz o link; editar a partir dele mantém o botão (ou a linha fixa).
+  it 'monta o texto padrão de cada aviso com as chaves, sem o link, como ponto de partida' do
     expect(described_class.default_text('booked', locale: 'pt_BR')).to eq(
-      'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}. Para confirmar, mudar ou cancelar: {{horario.link_gestao}}'
+      'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}.'
     )
-    Crm::MeetingNotice::KINDS.each { |kind| expect(described_class.problem(described_class.default_text(kind, locale: 'en'))).to be_nil }
+    Crm::MeetingNotice::KINDS.each do |kind|
+      expect(described_class.with_link?(described_class.default_text(kind, locale: 'pt_BR'))).to be(false)
+      expect(described_class.problem(described_class.default_text(kind, locale: 'en'))).to be_nil
+    end
   end
 end

@@ -26,3 +26,13 @@ pelo modelo: janela desconhecida, sem botão.
 ## Fora deste passo
 
 Modelo da Meta com botão de URL dinâmica (passo 2, com o chat Modelos WhatsApp) e o teste real nos números do Rodrigo.
+
+## Ajustes decididos pelo Rodrigo (14/10/2026)
+
+- Editor: o texto padrão (`CustomText.default_text`) vem sem `{{horario.link_gestao}}`; editar a partir dele mantém
+  o botão (ou a linha fixa).
+- IA: `prompts/whatsapp_texto.md` (só os avisos do agendamento usam este canal) manda não pôr link; o agendamento passa
+  à IA `CustomText::AI_KEYS` (sem o link), então opção com o campo do link é descartada. `comum.md` e
+  `whatsapp_campanha.md` não mudaram. Casos da bateria simulada reescritos sem o campo do link.
+- Rótulo por tipo (`Notices::Button::LABELS`): aviso de reunião marcada "Ver meu horário"; convite para marcar
+  ("Testar no meu WhatsApp") "Escolher horário" (en "Pick a time").

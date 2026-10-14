@@ -25,7 +25,7 @@ class Crm::BookingV2::InviteText
 
   # O `content_attributes.rich_message` do botão, ou nil quando o convite vai só em texto.
   def rich_message
-    Crm::BookingV2::Notices::Button.rich_message(invite.url, locale: locale) if @button
+    Crm::BookingV2::Notices::Button.rich_message(invite.url, kind: :invite, locale: locale) if @button
   end
 
   def carries_link?

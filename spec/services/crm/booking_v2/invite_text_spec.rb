@@ -20,7 +20,7 @@ RSpec.describe Crm::BookingV2::InviteText do
       text = described_class.new(invite, button: true)
 
       expect(text.to_s).to eq('Oi, Marcos! Escolha o melhor horário para você no botão abaixo.')
-      expect(text.rich_message).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => invite.url)
+      expect(text.rich_message).to eq('type' => 'link_button', 'label' => 'Escolher horário', 'url' => invite.url)
       expect(text.carries_link?).to be(false)
     end
 

@@ -33,12 +33,12 @@ vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({
 }));
 
 const DEFAULT_BOOKED =
-  'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}. Para confirmar, mudar ou cancelar: {{horario.link_gestao}}';
+  'Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}.';
 const SETUP = {
   defaults: {
     booked: DEFAULT_BOOKED,
     rescheduled:
-      'Oi, {{cliente.primeiro_nome}}! Seu horário mudou para {{horario.data_hora}}. Para confirmar, mudar ou cancelar: {{horario.link_gestao}}',
+      'Oi, {{cliente.primeiro_nome}}! Seu horário mudou para {{horario.data_hora}}.',
   },
   fields: [
     { key: 'cliente.primeiro_nome', label: 'Primeiro nome do cliente' },
@@ -112,10 +112,10 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     ).toEqual(['booked', 'rescheduled']);
     const booked = card(wrapper, 'booked');
     expect(booked.find('[data-text-input]').element.value).toBe(
-      'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário]. Para confirmar, mudar ou cancelar: [Link para confirmar, mudar ou cancelar]'
+      'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário].'
     );
     expect(booked.find('[data-text-preview]').text()).toBe(
-      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00. Para confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
     );
     expect(booked.find('[data-text-origin]').text()).toBe(
       'BOOKING.NOTICES.TEXTS.DEFAULT'

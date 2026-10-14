@@ -16,6 +16,8 @@ class Crm::BookingV2::Notices::CustomText
   BUSINESS = 'minha_empresa.nome'.freeze
   ALLOWED_KEYS = [NAME, WHEN, LINK, BUSINESS].freeze
   REQUIRED_KEYS = [WHEN].freeze
+  # O que a IA pode usar (#1517): tudo menos o link, que o sistema manda sozinho (botão ou linha fixa).
+  AI_KEYS = (ALLOWED_KEYS - [LINK]).freeze
   # Chaves que, quando estão no texto, precisam de valor no envio.
   FILLED_KEYS = [LINK, WHEN].freeze
   # Os idiomas que têm a linha de parar escrita (config/locales/booking_v2.*.yml).
@@ -49,10 +51,10 @@ class Crm::BookingV2::Notices::CustomText
       Chaves.extrair(text.to_s).include?(LINK)
     end
 
-    # O texto padrão de hoje com as chaves no lugar dos valores: ponto de partida na tela e "Voltar ao texto padrão".
+    # O texto padrão com as chaves no lugar dos valores: ponto de partida na tela e "Voltar ao texto padrão". Sem o
+    # link (#1517): quem edita a partir dele continua com o botão, ou com a linha fixa onde não há botão.
     def default_text(kind, locale:)
-      sentence = I18n.t("crm.booking_v2.notices.#{kind}", name: ", {{#{NAME}}}", booker: '', when: "{{#{WHEN}}}", locale: locale)
-      "#{sentence} #{Crm::BookingV2::Notices::Text.manage_line("{{#{LINK}}}", locale: locale)}"
+      I18n.t("crm.booking_v2.notices.#{kind}", name: ", {{#{NAME}}}", booker: '', when: "{{#{WHEN}}}", locale: locale)
     end
 
     def message(problem, kind:, locale:)

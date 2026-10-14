@@ -220,7 +220,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response).to have_http_status(:ok)
       url = "https://app.example.com/b/#{Crm::BookingInvite.sole.code}"
       message = conversation.messages.outgoing.sole
-      expect(message.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => url)
+      # Convite para marcar: o rótulo é "Escolher horário" (o "Ver meu horário" é do aviso de reunião já marcada).
+      expect(message.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Escolher horário', 'url' => url)
       expect(message.content).to eq(
         "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:\n\n" \
         'Oi, Admin! Escolha o melhor horário para você no botão abaixo.'

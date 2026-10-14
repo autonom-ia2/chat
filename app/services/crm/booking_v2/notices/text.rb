@@ -57,7 +57,7 @@ class Crm::BookingV2::Notices::Text
 
   # O `content_attributes.rich_message` do botão, ou nil quando a mensagem vai só em texto.
   def rich_message
-    Crm::BookingV2::Notices::Button.rich_message(invite.url, locale: locale) if button?
+    Crm::BookingV2::Notices::Button.rich_message(invite.url, kind: :notice, locale: locale) if button?
   end
 
   # Depois do corpo de um modelo do canal API (que só tem variáveis de contato): dia e hora, link de gestão e a

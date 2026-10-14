@@ -191,11 +191,14 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(described_class.allowed?(decision(mode: :native_template), inbox)).to be(false)
     end
 
-    it 'rótulo dentro do limite do botão nos dois idiomas' do
-      %w[en pt_BR].each do |locale|
-        label = described_class.rich_message('https://x.test/b/AB', locale: locale)['label']
-        expect(label.length).to be <= RichMessages::Types::LinkButton::LABEL_MAX
+    # Rótulo por tipo: reunião já marcada "Ver meu horário"; convite para marcar "Escolher horário".
+    it 'escolhe o rótulo pelo tipo de mensagem, dentro do limite do botão nos dois idiomas' do
+      labels = %w[en pt_BR].index_with do |locale|
+        %i[notice invite].map { |kind| described_class.rich_message('https://x.test/b/AB', kind: kind, locale: locale)['label'] }
       end
+
+      expect(labels).to eq('en' => ['See my appointment', 'Pick a time'], 'pt_BR' => ['Ver meu horário', 'Escolher horário'])
+      expect(labels.values.flatten.map(&:length)).to all(be <= RichMessages::Types::LinkButton::LABEL_MAX)
     end
   end
 end
