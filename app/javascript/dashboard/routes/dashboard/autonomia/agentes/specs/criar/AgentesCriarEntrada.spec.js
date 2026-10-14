@@ -20,7 +20,7 @@ vi.mock('dashboard/api/autonomia/buildThreads', () => ({
 
 // #1543: sem modelo, rascunho nem atuação na URL, a flag ligada abre antes a página "Criar agente".
 const rota = vi.hoisted(() => ({ atual: null }));
-const roteador = vi.hoisted(() => ({ replace: vi.fn() }));
+const roteador = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => rota.atual,
   useRouter: () => roteador,
@@ -51,7 +51,9 @@ vi.mock('../../pages/AgenteCriarPage.vue', async () => {
     __esModule: true,
     default: definir({
       name: 'AgenteCriarPage',
-      setup: () => () => hh('div', { 'data-nova': '' }),
+      props: { focarTitulo: { type: Boolean, default: false } },
+      setup: props => () =>
+        hh('div', { 'data-nova': '', 'data-focar': String(props.focarTitulo) }),
     }),
   };
 });
@@ -95,7 +97,7 @@ describe('AgentesCriarEntrada', () => {
     vi.clearAllMocks();
     const { reactive } = await import('vue');
     rota.atual = reactive({ query: { modelo: 'support' } });
-    roteador.replace.mockImplementation(async ({ query }) => {
+    roteador.push.mockImplementation(async ({ query }) => {
       rota.atual.query = query;
     });
   });
@@ -173,18 +175,18 @@ describe('AgentesCriarEntrada', () => {
       expect(carregouNova).not.toHaveBeenCalled();
     });
 
-    it('puts the choice in the URL and only then mounts the creation', async () => {
+    it('pushes the choice to the URL and only then mounts the creation, asking it to focus its title', async () => {
       comConta(ligada);
       rota.atual.query = {};
       const wrapper = mount(AgentesCriarEntrada);
       await flushPromises();
       await wrapper.get('[data-escolher]').trigger('click');
       await flushPromises();
-      expect(roteador.replace).toHaveBeenCalledWith({
+      expect(roteador.push).toHaveBeenCalledWith({
         query: { atuacao: 'interno' },
       });
       expect(wrapper.find('[data-escolher]').exists()).toBe(false);
-      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+      expect(wrapper.get('[data-nova]').attributes('data-focar')).toBe('true');
     });
 
     it.each([
@@ -201,14 +203,27 @@ describe('AgentesCriarEntrada', () => {
       expect(wrapper.find('[data-nova]').exists()).toBe(true);
     });
 
-    it('goes back to the page when the same route opens again without a choice (menu)', async () => {
+    it('shows the page again when the browser goes back from the creation', async () => {
       comConta(ligada);
+      rota.atual.query = {};
       const wrapper = mount(AgentesCriarEntrada);
       await flushPromises();
+      await wrapper.get('[data-escolher]').trigger('click');
+      await flushPromises();
       expect(wrapper.find('[data-nova]').exists()).toBe(true);
+
+      // "Voltar" do navegador: a URL volta a não ter escolha.
       rota.atual.query = {};
       await flushPromises();
       expect(wrapper.find('[data-escolher]').exists()).toBe(true);
+      expect(wrapper.find('[data-nova]').exists()).toBe(false);
+    });
+
+    it('does not ask for the focus when the creation opens straight from the URL', async () => {
+      comConta(ligada);
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.get('[data-nova]').attributes('data-focar')).toBe('false');
     });
 
     it('keeps the old Builder with the flag off even without a choice in the URL', async () => {

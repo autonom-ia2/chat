@@ -968,7 +968,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher como começar um agente novo
 - intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"
-- onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular, Ver modelos prontos ou o item Criar agente do menu)
+- onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular ou Ver modelos prontos)
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); administrador ou função com autonomia_manage.
