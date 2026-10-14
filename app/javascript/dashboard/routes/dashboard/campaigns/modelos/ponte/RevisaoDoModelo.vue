@@ -8,7 +8,6 @@ import {
   scheduleToUtc,
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import PonteSinalDoModelo from './PonteSinalDoModelo.vue';
-import { dinheiroDoProduto } from '../helpers/produtosNaCampanha';
 
 // Revisão da campanha: qual modelo vai, o tipo da mensagem e quanto custa cada
 // envio (e o total para quem recebe). Divulgação lembra que quem pediu para não
@@ -61,11 +60,7 @@ const produtos = computed(() =>
 // Separador visual entre nome e preço (não é texto para traduzir).
 const PONTO = '·';
 const rotuloDoProduto = produto =>
-  [
-    produto.nome,
-    PONTO,
-    dinheiroDoProduto(produto.preco, localeDoIntl(locale.value)),
-  ].join(' ');
+  [produto.nome, produto.preco].filter(Boolean).join(` ${PONTO} `);
 
 const total = computed(() =>
   custo.value ? dinheiro(custo.value.valor * props.recebem) : ''

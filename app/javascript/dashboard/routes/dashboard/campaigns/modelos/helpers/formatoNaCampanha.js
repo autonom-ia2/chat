@@ -57,12 +57,19 @@ const cartaoComCampo = cartao =>
   );
 
 // Motivo para não oferecer o modelo na campanha (vazio = pode ir).
-// `comCatalogo`: a conta do WhatsApp da caixa tem catálogo conectado (#1418).
-export const formatoQueNaoVai = (template, { comCatalogo = false } = {}) => {
+// #1418: `produtosLigados`: flag whatsapp_campaign_products da conta;
+// `comCatalogo`: a conta do WhatsApp da caixa tem catálogo conectado.
+export const formatoQueNaoVai = (
+  template,
+  { produtosLigados = false, comCatalogo = false } = {}
+) => {
   if (maiusculo(template?.category) === 'AUTHENTICATION') return 'CODIGO';
   const tipos = botoes(template).map(botao => maiusculo(botao?.type));
   if (tipos.includes('OTP')) return 'CODIGO';
-  if (levaProdutos(template)) return comCatalogo ? '' : 'SEM_CATALOGO';
+  if (levaProdutos(template)) {
+    if (!produtosLigados) return 'PRODUTOS';
+    return comCatalogo ? '' : 'SEM_CATALOGO';
+  }
   const cartoes = componente(template, 'CAROUSEL')?.cards || [];
   if (cartoes.some(semMidia)) return 'PRODUTOS';
   if (cartoes.some(cartaoComCampo)) return 'CARTAO_COM_CAMPO';

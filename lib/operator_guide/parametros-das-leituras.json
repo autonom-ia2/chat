@@ -1662,6 +1662,17 @@
     "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
     "parametros": []
   },
+  "inboxes/:inbox_id/whatsapp_catalog": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#show",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_catalog/products": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#products",
+    "parametros": [
+      "after",
+      "q"
+    ]
+  },
   "inboxes/:inbox_id/whatsapp_templates": {
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#index",
     "parametros": [

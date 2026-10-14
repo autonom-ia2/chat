@@ -9,6 +9,9 @@ const MOTIVOS = {
   template_media_missing: 'arquivo_do_topo',
   // #1334: a validade da oferta passou antes do envio.
   template_offer_expired: 'oferta_vencida',
+  // #1418: produto esgotado ou fora do catálogo; catálogo desconectado.
+  template_product_unavailable: 'produto_indisponivel',
+  template_catalog_missing: 'sem_catalogo',
 };
 // Do sistema, mas com motivo que a pessoa resolve (não é "não deu para conferir").
 const DO_SISTEMA_COM_MOTIVO = ['template_missing'];

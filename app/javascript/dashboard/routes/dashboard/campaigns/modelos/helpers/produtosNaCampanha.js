@@ -56,15 +56,18 @@ export const produtosPendentes = (pedido, escolhidos = []) => {
   );
 };
 
-// O que vai no `processed_params` da campanha: só os códigos dos produtos, na
+// O que vai no `processed_params` da campanha: os códigos dos produtos, na
 // ordem escolhida. O servidor monta o resto (catálogo da conta do WhatsApp da
 // caixa, seção do MPM, cartões do carrossel) e confere de novo no disparo.
-export const produtosParaEnvio = escolhidos => ({
-  products: { retailer_ids: (escolhidos || []).map(produto => produto.id) },
-});
-
-export const dinheiroDoProduto = (preco, locale) =>
-  new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: preco?.moeda || 'BRL',
-  }).format(preco?.valor || 0);
+// Os nomes vão junto só para a campanha dizer qual produto acabou, se parar.
+export const produtosParaEnvio = escolhidos => {
+  const lista = escolhidos || [];
+  return {
+    products: {
+      retailer_ids: lista.map(produto => produto.id),
+      names: Object.fromEntries(
+        lista.map(produto => [produto.id, produto.nome])
+      ),
+    },
+  };
+};

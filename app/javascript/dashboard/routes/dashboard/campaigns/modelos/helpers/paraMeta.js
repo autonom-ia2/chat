@@ -22,7 +22,7 @@ const MAXIMO_DO_NOME = 512;
 
 // O que a campanha envia (#1334): todos os formatos, menos código de
 // verificação e produtos escolhidos do catálogo (formatoQueNaoVai).
-// `opcoes.comCatalogo` (#1418): a conta do WhatsApp tem catálogo de produtos.
+// `opcoes` (#1418): { produtosLigados, comCatalogo } — ver formatoQueNaoVai.
 export const podeIrEmCampanha = (modelo, opcoes = {}) =>
   modelo.template
     ? !formatoQueNaoVai(modelo.template, opcoes)
@@ -208,6 +208,46 @@ const codigoNaMeta = codigo => [
   { type: 'BUTTONS', buttons: [{ type: 'OTP', otp_type: 'COPY_CODE' }] },
 ];
 
+// #1418: produtos do catálogo, no formato que a Meta documenta para criar
+// (catalogs/{spm,mpm,product-card-carousel}-template-messages, lido em
+// 14/10/2026). Um: topo PRODUCT + botão SPM. Vários: topo de texto (o título)
+// + botão MPM. Carrossel: 2 cartões com topo PRODUCT e botão SPM; aprovado,
+// manda até 10.
+const CARTOES_DE_PRODUTO_NO_MODELO = 2;
+const produtosNaMeta = ({ tipo, titulo, rodape, botao }, corpo) => {
+  const fim = rodape ? [{ type: 'FOOTER', text: rodape }] : [];
+  const botoes = tipoDoBotao => ({
+    type: 'BUTTONS',
+    buttons: [{ type: tipoDoBotao, text: botao.texto }],
+  });
+  if (tipo === 'um') {
+    return [
+      { type: 'HEADER', format: 'PRODUCT' },
+      corpo,
+      ...fim,
+      botoes('SPM'),
+    ];
+  }
+  if (tipo === 'varios') {
+    return [
+      { type: 'HEADER', format: 'TEXT', text: titulo.trim() },
+      corpo,
+      ...fim,
+      botoes('MPM'),
+    ];
+  }
+  const cartao = {
+    components: [{ type: 'HEADER', format: 'PRODUCT' }, botoes('SPM')],
+  };
+  return [
+    corpo,
+    {
+      type: 'CAROUSEL',
+      cards: Array.from({ length: CARTOES_DE_PRODUTO_NO_MODELO }, () => cartao),
+    },
+  ];
+};
+
 // `midias`: { topo, cartoes: [] } com o que subiu agora (handle, blob_signed_id…).
 // `textos.botaoDaOferta`: o texto do botão da oferta, no idioma da tela.
 export const componentesNaMeta = (
@@ -218,6 +258,9 @@ export const componentesNaMeta = (
   if (formato === 'codigo')
     return { components: codigoNaMeta(conteudo.codigo), fields: {} };
   const { corpo, fields } = corpoComNumeros(conteudo, { nomes });
+  if (formato === 'produtos') {
+    return { components: produtosNaMeta(conteudo.produtos, corpo), fields };
+  }
   if (formato === 'carrossel') {
     return {
       components: [corpo, cartoesNaMeta(conteudo.cartoes, midias.cartoes)],

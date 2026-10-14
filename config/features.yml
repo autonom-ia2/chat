@@ -386,3 +386,13 @@
   display_name: Follow-up de IA com dados reais do card nos modelos
   enabled: false
   column: feature_flags_ext_1
+
+# Campanha com produtos do catálogo da WABA (#1418, épico #1320): um produto, vários e carrossel de produtos, na Nova
+# campanha e na criação de modelos. Bit 24 (16777216), confirmado pela Orquestração: fica DEPOIS de
+# `crm_lembretes_v2` (bit 22) e `crm_calendario_ouro` (bit 23, #1568) — este PR só entra depois dos dois (a posição na
+# lista é o bit). Desligada (padrão): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
+# modelo de produtos. Piloto na conta 16. Liga: #1573.
+- name: whatsapp_campaign_products
+  display_name: Campanha do WhatsApp com produtos do catálogo
+  enabled: false
+  column: feature_flags_ext_1

@@ -8,33 +8,29 @@
 // Sem produtos escolhidos (tela de Modelos), um produto de exemplo.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { localeDoIntl } from '../../helpers/datas';
-import { dinheiroDoProduto } from '../../helpers/produtosNaCampanha';
 
 const props = defineProps({
   // conteudo.produtos: { tipo, titulo, rodape, botao: { tipo, texto } }
   produtos: { type: Object, required: true },
-  // Os escolhidos na campanha: [{ id, nome, preco, foto }].
+  // Os escolhidos na campanha: [{ id, nome, preco (texto), foto }].
   escolhidos: { type: Array, default: () => [] },
   parte: { type: String, required: true },
 });
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 const EXEMPLOS_NO_CARROSSEL = 2;
 const lista = computed(() => {
   if (props.escolhidos.length) return props.escolhidos;
-  const exemplo = { id: '', nome: '', preco: null, foto: '' };
+  const exemplo = { id: '', nome: '', preco: '', foto: '' };
   return props.produtos.tipo === 'carrossel'
     ? Array.from({ length: EXEMPLOS_NO_CARROSSEL }, () => exemplo)
     : [exemplo];
 });
 const primeiro = computed(() => lista.value[0]);
 
-const preco = produto =>
-  produto.preco
-    ? dinheiroDoProduto(produto.preco, localeDoIntl(locale.value))
-    : '';
+// O preço como o catálogo mostra (texto da Meta).
+const preco = produto => produto.preco || '';
 const nome = produto =>
   produto.nome || t('MODELOS_WHATSAPP.CELULAR.PRODUTOS.EXEMPLO');
 

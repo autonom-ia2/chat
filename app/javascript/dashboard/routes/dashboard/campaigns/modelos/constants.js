@@ -197,6 +197,14 @@ export const FORMATOS = [
     tipo: 'divulgacao',
     soDivulgacao: true,
   },
+  // #1418: um produto, vários numa lista ou cartões de produtos do catálogo.
+  {
+    chave: 'produtos',
+    icone: 'i-lucide-shopping-cart',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    tipo: 'divulgacao',
+    soDivulgacao: true,
+  },
   {
     chave: 'catalogo',
     icone: 'i-lucide-shopping-bag',
@@ -228,6 +236,11 @@ export const formatoPorChave = chave =>
   FORMATOS.find(formato => formato.chave === chave) || null;
 
 export const LIMITE_DO_TEXTO_DA_OFERTA = 600;
+// #1418: texto de um produto só (SPM) e título da lista de vários (MPM), da Meta.
+export const LIMITE_DO_TEXTO_DE_UM_PRODUTO = 160;
+export const LIMITE_DO_TITULO_DOS_PRODUTOS = 60;
+// Como os produtos aparecem: um, vários numa lista ou cartões lado a lado.
+export const JEITOS_DE_MOSTRAR_PRODUTOS = ['um', 'varios', 'carrossel'];
 export const LIMITE_DO_TITULO_DA_OFERTA = 16;
 export const LIMITE_DO_CARTAO = 160;
 export const CARTOES_MINIMO = 2;

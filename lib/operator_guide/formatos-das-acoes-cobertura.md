@@ -203,8 +203,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 355 |
-| Com parâmetros conhecidos | 304 |
+| No catálogo | 357 |
+| Com parâmetros conhecidos | 306 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

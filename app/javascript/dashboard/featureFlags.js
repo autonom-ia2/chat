@@ -53,6 +53,7 @@ export const FEATURE_FLAGS = {
   AUTONOMIA_AGENTS_JOURNEY: 'autonomia_agents_journey',
   WHATSAPP_TEMPLATES_JOURNEY: 'whatsapp_templates_journey',
   WHATSAPP_TEMPLATES_AI: 'whatsapp_templates_ai',
+  WHATSAPP_CAMPAIGN_PRODUCTS: 'whatsapp_campaign_products',
   NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

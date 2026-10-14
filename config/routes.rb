@@ -936,6 +936,10 @@ Rails.application.routes.draw do
               end
               post :media, on: :collection
             end
+            # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
+            resource :whatsapp_catalog, only: [:show], module: :inboxes do
+              get :products
+            end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
           resources :whatsapp_template_inboxes, only: [:index]

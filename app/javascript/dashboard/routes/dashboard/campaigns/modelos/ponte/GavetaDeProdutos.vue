@@ -1,7 +1,7 @@
 <script setup>
 // Gaveta "Escolher produtos" da Nova campanha (#1418): uma ação só — escolher
 // do catálogo do WhatsApp da caixa. Busca pelo nome, foto e preço de cada um.
-// Um produto: tocar escolhe. Vários ou carrossel: tocar marca, na ordem em que
+// Um produto: tocar escolhe (botão comum: escolher já fecha a gaveta). Vários ou carrossel: tocar marca, na ordem em que
 // vão (o número aparece na foto); "Usar estes produtos" confirma. Esgotado
 // aparece apagado, com o motivo.
 import { computed, onMounted, ref, watch } from 'vue';
@@ -11,8 +11,6 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import api from '../api/modelosWhatsapp';
-import { localeDoIntl } from '../helpers/datas';
-import { dinheiroDoProduto } from '../helpers/produtosNaCampanha';
 
 const props = defineProps({
   caixa: { type: [Number, String], required: true },
@@ -22,7 +20,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['usar', 'fechar']);
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.PRODUTOS';
 
 const umSo = computed(() => props.pedido.tipo === 'um');
@@ -30,20 +28,34 @@ const busca = ref('');
 const produtos = ref([]);
 const catalogo = ref(null);
 const estado = ref('carregando');
+// Cursor da próxima página da Meta ('' = acabou).
+const depois = ref('');
 const marcados = ref([...props.escolhidos]);
 
-const carregar = async () => {
+// `mais`: soma a próxima página à lista ("Ver mais produtos"). Só vale a
+// resposta do último pedido: uma busca antiga que chega depois é descartada.
+let ultimoPedido = 0;
+const carregar = async ({ mais = false } = {}) => {
+  ultimoPedido += 1;
+  const este = ultimoPedido;
   estado.value = 'carregando';
+  if (!mais) depois.value = '';
   try {
-    produtos.value = await api.listarProdutos(props.caixa, {
+    const pagina = await api.listarProdutos(props.caixa, {
       busca: busca.value,
+      depois: mais ? depois.value : '',
     });
+    if (este !== ultimoPedido) return;
+    produtos.value = mais
+      ? [...produtos.value, ...pagina.produtos]
+      : pagina.produtos;
+    depois.value = pagina.depois;
     estado.value = 'pronto';
   } catch {
-    estado.value = 'erro';
+    if (este === ultimoPedido) estado.value = 'erro';
   }
 };
-const buscarDepois = useDebounceFn(carregar, 300);
+const buscarDepois = useDebounceFn(() => carregar(), 300);
 watch(busca, buscarDepois);
 
 onMounted(async () => {
@@ -71,9 +83,6 @@ const tocar = produto => {
     marcados.value = [...marcados.value, produto];
   }
 };
-
-const preco = produto =>
-  dinheiroDoProduto(produto.preco, localeDoIntl(locale.value));
 
 const faltam = computed(() =>
   Math.max(props.pedido.minimo - marcados.value.length, 0)
@@ -130,7 +139,7 @@ const contagem = computed(() => {
           :label="t('MODELOS_WHATSAPP.TENTAR_DE_NOVO')"
           variant="link"
           size="sm"
-          @click="carregar"
+          @click="carregar()"
         />
       </p>
       <p
@@ -144,14 +153,15 @@ const contagem = computed(() => {
       <ul
         v-else
         class="grid grid-cols-2 gap-3 p-0 m-0 list-none sm:grid-cols-3"
-        :role="umSo ? 'radiogroup' : 'group'"
+        role="group"
         :aria-label="t(`${NS}.GAVETA.${pedido.tipo}`)"
       >
         <li v-for="produto in produtos" :key="produto.id">
           <button
             type="button"
-            :role="umSo ? 'radio' : 'checkbox'"
-            :aria-checked="posicao(produto) >= 0"
+            :role="umSo ? undefined : 'checkbox'"
+            :aria-checked="umSo ? undefined : posicao(produto) >= 0"
+            :aria-pressed="umSo ? posicao(produto) >= 0 : undefined"
             :aria-disabled="bloqueado(produto)"
             :data-produto="produto.id"
             class="relative flex flex-col w-full h-full overflow-hidden text-start rounded-xl ring-1 ring-inset bg-n-solid-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
@@ -183,7 +193,7 @@ const contagem = computed(() => {
               <span class="text-sm font-medium text-n-slate-12">
                 {{ produto.nome }}
               </span>
-              <span class="text-sm text-n-slate-11">{{ preco(produto) }}</span>
+              <span class="text-sm text-n-slate-11">{{ produto.preco }}</span>
               <span
                 v-if="!produto.disponivel"
                 class="text-xs font-medium text-n-ruby-11"
@@ -194,6 +204,16 @@ const contagem = computed(() => {
           </button>
         </li>
       </ul>
+      <Button
+        v-if="depois && produtos.length"
+        :label="t(`${NS}.VER_MAIS`)"
+        :is-loading="estado === 'carregando'"
+        variant="outline"
+        color="slate"
+        class="self-center"
+        data-ver-mais-produtos
+        @click="carregar({ mais: true })"
+      />
     </div>
 
     <template v-if="!umSo" #rodape>

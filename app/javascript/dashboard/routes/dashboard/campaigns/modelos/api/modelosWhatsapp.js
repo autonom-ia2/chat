@@ -3,9 +3,6 @@
 // com os endpoints da tela (#1332) pelo adaptador HTTP; o resto da tela só
 // conhece este contrato.
 import adaptador from './adaptadorHttp';
-// PROTÓTIPO #1418: catálogo de produtos pelo adaptador falso. Com o endpoint,
-// esta linha sai e o adaptadorHttp passa a responder obterCatalogo/listarProdutos.
-import catalogoFalso from './catalogoFalso';
 
 // Contrato (o que cada função devolve, já no formato da tela). Ids no formato
 // real: `id` do modelo é o id da Meta (texto com um número longo) e `id` do
@@ -39,9 +36,12 @@ import catalogoFalso from './catalogoFalso';
 // subirArquivoDaCampanha(caixa, arquivo) → { referencia, nome }  (foto, vídeo ou
 //   documento do topo ou de um cartão, escolhido na campanha, #1334/#1465)
 //   Erros da API chegam como ErroDaApi { codigo, mensagem (já traduzida), status }.
-// obterCatalogo(caixa) → { nome, produtos } | null e listarProdutos(caixa,
-//   { busca }) → [Produto] (#1418, contrato em catalogoFalso.js);
-//   listarFormularios() → []: ainda sem backend.
+// obterCatalogo(caixa?) → { nome, produtos } | null  (#1418; sem catálogo ou
+//   com a flag whatsapp_campaign_products desligada: null)
+// listarProdutos(caixa, { busca, depois }) → { produtos: [Produto], depois }
+//   Produto = { id (retailer_id da Meta), nome, preco (texto da Meta), foto,
+//               disponivel }  (só aprovados; o esgotado vem com disponivel false)
+// listarFormularios() → []: ainda sem backend.
 // criarComIA({ objetivo, tom, tipo?, exemplo }) → { status, pergunta,
 //   sugestoes, opcoes: [{ id, nome, tipo, motivo, conteudo }] }
 // melhorarComIA({ conteudo, pedido, tipo, recusa? }) → { status, pergunta,
@@ -70,4 +70,4 @@ import catalogoFalso from './catalogoFalso';
 //   edicoes: { restantesNoMes | null, liberadaEm | null },
 // }
 // null: a Meta não informa e a tela não inventa.
-export default { ...adaptador, ...catalogoFalso };
+export default adaptador;

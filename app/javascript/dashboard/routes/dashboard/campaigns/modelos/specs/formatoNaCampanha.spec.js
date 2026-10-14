@@ -141,8 +141,8 @@ describe('formatoNaCampanha', () => {
     expect(extrasParaEnvio(guardado, {}, { timeZone: ZONA })).toEqual({});
   });
 
-  // #1418: produtos do catálogo vão quando a conta do WhatsApp tem catálogo.
-  it('código de verificação não vai; produtos só com catálogo conectado', () => {
+  // #1418: produtos do catálogo vão com a flag da conta e o catálogo conectado.
+  it('código de verificação não vai; produtos só com a flag e o catálogo', () => {
     expect(formatoQueNaoVai({ category: 'AUTHENTICATION' })).toBe('CODIGO');
     const varios = {
       components: [{ type: 'BUTTONS', buttons: [{ type: 'MPM' }] }],
@@ -150,10 +150,13 @@ describe('formatoNaCampanha', () => {
     const cartoesDeProduto = {
       components: [{ type: 'CAROUSEL', cards: [cartao('PRODUCT')] }],
     };
-    expect(formatoQueNaoVai(varios)).toBe('SEM_CATALOGO');
-    expect(formatoQueNaoVai(cartoesDeProduto)).toBe('SEM_CATALOGO');
-    expect(formatoQueNaoVai(varios, { comCatalogo: true })).toBe('');
-    expect(formatoQueNaoVai(cartoesDeProduto, { comCatalogo: true })).toBe('');
+    const ligados = { produtosLigados: true };
+    expect(formatoQueNaoVai(varios, { comCatalogo: true })).toBe('PRODUTOS');
+    expect(formatoQueNaoVai(varios, ligados)).toBe('SEM_CATALOGO');
+    expect(formatoQueNaoVai(cartoesDeProduto, ligados)).toBe('SEM_CATALOGO');
+    const comTudo = { ...ligados, comCatalogo: true };
+    expect(formatoQueNaoVai(varios, comTudo)).toBe('');
+    expect(formatoQueNaoVai(cartoesDeProduto, comTudo)).toBe('');
     const comCampo = {
       components: [
         {

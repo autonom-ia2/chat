@@ -494,7 +494,8 @@
         "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
         "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
         "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
-        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp"
+        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp",
+        "PRODUTOS_TITULO": "A lista tem título de até 60 letras"
       },
       "LEMBRETE_ARQUIVO_IGUAL": "Esse arquivo vai igual para todos."
     },
@@ -624,7 +625,17 @@
         "BOTAO": "Preencher formulário"
       },
       "produtos": {
-        "TITULO": "Produtos do catálogo"
+        "TITULO": "Produtos do catálogo",
+        "PARA": "Produtos do seu catálogo, com foto e preço. Você escolhe quais na hora da campanha.",
+        "ETAPA": "Produtos",
+        "NOME_PADRAO": "Produtos da loja",
+        "TEXTO": "Oi, [nome_cliente]! Separamos produtos que combinam com você. Veja e peça por aqui mesmo.",
+        "TITULO_EXEMPLO": "Novidades da semana",
+        "BOTOES": {
+          "um": "Ver",
+          "varios": "Ver itens",
+          "carrossel": "Ver"
+        }
       }
     },
     "CARTOES": {
@@ -684,7 +695,9 @@
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
         "outro": "A campanha parou antes de enviar. Nada foi enviado.",
         "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha.",
-        "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado."
+        "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado.",
+        "produto_indisponivel": "O produto “{produto}” acabou ou saiu do catálogo. Nada foi enviado.",
+        "sem_catalogo": "A conta do WhatsApp não tem mais catálogo de produtos conectado. Nada foi enviado."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",
@@ -701,7 +714,9 @@
       "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar.",
       "AGUARDE_LIBERAR": "Espere o WhatsApp liberar o modelo. Quando ele voltar, toque em Retomar.",
       "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar.",
-      "NOVA_DATA": "Crie a campanha de novo com uma data à frente."
+      "NOVA_DATA": "Crie a campanha de novo com uma data à frente.",
+      "AGUARDE_PRODUTO": "Quando o produto voltar ao catálogo, toque em Retomar. Ou crie a campanha de novo com outro produto.",
+      "CONECTE_CATALOGO": "Conecte o catálogo de novo no WhatsApp e toque em Retomar."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
@@ -830,7 +845,8 @@
         "USAR": "Usar estes produtos",
         "FOTO_DA_MENSAGEM": "foto da mensagem",
         "ACABOU": "Este produto acabou. Tire ou troque por outro.",
-        "TIRAR": "Tirar {nome}"
+        "TIRAR": "Tirar {nome}",
+        "VER_MAIS": "Ver mais produtos"
       }
     },
     "IA": {
@@ -1042,6 +1058,27 @@
         "RESPONDERAM": "{n}% responderam"
       },
       "USAR_MESMO_ASSIM": "Usar mesmo assim"
+    },
+    "PRODUTOS_NO_MODELO": {
+      "PERGUNTA": "Como os produtos aparecem?",
+      "JEITOS": {
+        "um": {
+          "TITULO": "Um produto",
+          "PARA": "Foto grande, nome e preço de um produto."
+        },
+        "varios": {
+          "TITULO": "Vários numa lista",
+          "PARA": "Até 30 produtos. O cliente toca e vê a lista."
+        },
+        "carrossel": {
+          "TITULO": "Cartões lado a lado",
+          "PARA": "De 2 a 10 produtos que o cliente passa para o lado."
+        }
+      },
+      "TITULO": "Título da lista",
+      "TITULO_AJUDA": "Aparece em cima da mensagem. Até {n} letras.",
+      "TITULO_ERRO": "Escreva um título de até {n} letras.",
+      "ESCOLHE_NA_CAMPANHA": "Os produtos você escolhe na hora de criar a campanha. Assim o mesmo modelo serve para várias ofertas."
     }
   }
 }

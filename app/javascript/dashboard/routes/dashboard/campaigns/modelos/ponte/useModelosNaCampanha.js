@@ -27,6 +27,13 @@ export function useModelosNaCampanha() {
     'accounts/isFeatureEnabledonAccount'
   );
 
+  // #1418: produtos do catálogo na campanha (flag whatsapp_campaign_products).
+  const produtosLigados = computed(() =>
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.WHATSAPP_CAMPAIGN_PRODUCTS
+    )
+  );
   const flagLigada = computed(() =>
     isFeatureEnabledonAccount.value(
       accountId.value,
@@ -46,17 +53,15 @@ export function useModelosNaCampanha() {
   // Catálogo que não abre não derruba a ponte: só os modelos com produtos ficam
   // de fora ("sua conta do WhatsApp não tem catálogo de produtos").
   const lerCatalogos = async lista => {
+    if (!produtosLigados.value) return;
     const conectadas = lista.filter(item => item.situacao === 'conectada');
-    try {
-      const lidos = await Promise.all(
-        conectadas.map(item => api.obterCatalogo(item.id))
-      );
-      catalogos.value = Object.fromEntries(
-        conectadas.map((item, indice) => [item.id, lidos[indice]])
-      );
-    } catch {
-      catalogos.value = {};
-    }
+    // Uma caixa com erro não tira os produtos das outras.
+    const lidos = await Promise.all(
+      conectadas.map(item => api.obterCatalogo(item.id).catch(() => null))
+    );
+    catalogos.value = Object.fromEntries(
+      conectadas.map((item, indice) => [item.id, lidos[indice]])
+    );
   };
 
   const carregar = async () => {
@@ -118,7 +123,10 @@ export function useModelosNaCampanha() {
   const motivoDeNaoUsar = (modelo, inboxId) => {
     // #1334: o motivo diz qual formato não vai (código de verificação, produtos
     // sem catálogo conectado, #1418).
-    const opcoes = { comCatalogo: Boolean(catalogoDaCaixa(inboxId)) };
+    const opcoes = {
+      produtosLigados: produtosLigados.value,
+      comCatalogo: Boolean(catalogoDaCaixa(inboxId)),
+    };
     const naoVai = modelo.template
       ? formatoQueNaoVai(modelo.template, opcoes)
       : '';

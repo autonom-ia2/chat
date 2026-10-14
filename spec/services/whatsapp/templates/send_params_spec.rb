@@ -31,6 +31,12 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
                                                                 { 'type' => 'FLOW', 'text' => 'Pedir', 'flow_id' => '9' }] })
   end
 
+  # #1418: carrossel de produtos do catálogo (aprovado com 2 cartões, manda de 2 a 10).
+  def product_carousel
+    card = { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM' }] }] }
+    approved('cartoes_de_produtos', body, { 'type' => 'CAROUSEL', 'cards' => [card, card] })
+  end
+
   def approved(name, *components)
     { 'name' => name, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING', 'components' => components }
   end
@@ -46,7 +52,7 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
   end
 
   before do
-    channel.update_columns(message_templates: [offer, carousel, flow_and_catalog]) # rubocop:disable Rails/SkipsModelValidations
+    channel.update_columns(message_templates: [offer, carousel, flow_and_catalog, product_carousel]) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def params(name, processed)
@@ -173,6 +179,75 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
     end
   end
 
+  describe 'produtos do catálogo (#1418)' do
+    def chosen
+      names = { 'camiseta' => 'Camiseta', 'tenis' => 'Tênis', 'fone' => 'Fone' }
+      { 'products' => { 'retailer_ids' => names.keys, 'names' => names } }
+    end
+
+    def graph
+      'https://graph.facebook.com/v22.0'
+    end
+
+    def graph_answer(body)
+      { status: 200, headers: { 'Content-Type' => 'application/json' }, body: body.to_json }
+    end
+
+    def stub_catalog(available: %w[camiseta tenis fone])
+      stub_request(:get, "#{graph}/#{channel.waba_id}/product_catalogs")
+        .with(query: hash_including({})).to_return(graph_answer(data: [{ id: 'cat-1', name: 'Loja', product_count: 3 }]))
+      rows = %w[camiseta tenis fone].map do |id|
+        { retailer_id: id, name: id, price: 'R$1', image_url: '', availability: available.include?(id) ? 'in stock' : 'out of stock' }
+      end
+      stub_request(:get, "#{graph}/cat-1/products").with(query: hash_including({})).to_return(graph_answer(data: rows))
+    end
+
+    def dispatch_products(processed)
+      campaign = create(:campaign, account: account, inbox: inbox, audience: [], message: 'Chegou a oferta do mês.',
+                                   template_params: params('cartoes_de_produtos', processed))
+      CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: audience, variable_bindings: {}, variable_defaults: {})
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+      campaign
+    end
+
+    it 'criação: só com a flag da conta e com 2 a 10 produtos; guarda os códigos e os nomes, nunca o catálogo da tela' do
+      expect(refusal_code(params('cartoes_de_produtos', chosen))).to eq('products_disabled')
+
+      account.enable_features!('whatsapp_campaign_products')
+      expect(refusal_code(params('cartoes_de_produtos', {}))).to eq('products_required')
+      expect(refusal_code(params('cartoes_de_produtos', { 'products' => { 'retailer_ids' => ['so-um'] } }))).to eq('products_count')
+
+      campaign = create_campaign(params('cartoes_de_produtos', chosen.deep_merge('products' => { 'catalog_id' => 'da-tela' })))
+      expect(campaign.template_params.dig('processed_params', 'products')).to eq(chosen['products'])
+    end
+
+    it 'disparo: cada envio leva um cartão por produto, com o catálogo da WABA da caixa' do
+      stub_catalog
+      sent = stub_graph_messages
+
+      campaign = dispatch_products(chosen)
+
+      expect(CampaignPause.open_for(campaign)).to be_nil
+      expect(sent.size).to eq(2)
+      cards = component(sent.first, 'carousel')['cards']
+      expect(cards.map { |card| card.dig('components', 0, 'parameters', 0, 'product') })
+        .to eq(%w[camiseta tenis fone].map { |id| { 'product_retailer_id' => id, 'catalog_id' => 'cat-1' } })
+    end
+
+    it 'disparo: produto esgotado para a campanha inteira, com o nome dele, e ninguém recebe' do
+      stub_catalog(available: %w[camiseta fone])
+      sent = stub_graph_messages
+
+      campaign = dispatch_products(chosen)
+
+      expect(sent).to be_empty
+      pause = CampaignPause.open_for(campaign)
+      expect(pause.reason_code).to eq('template_product_unavailable')
+      expect(pause.source).to eq('template')
+      expect(pause.details).to include('product_ids' => ['tenis'], 'product_names' => ['Tênis'])
+    end
+  end
+
   describe 'disparo' do
     def dispatch(template_params)
       campaign = create(:campaign, account: account, inbox: inbox, audience: [], message: 'Chegou a oferta do mês.',
@@ -209,6 +284,7 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
 
       dispatch(params('vitrine', stored_cards))
 
+      puts sent.first.to_json
       cards = component(sent.first, 'carousel')['cards']
       expect(cards.pluck('card_index')).to eq([0, 1])
       expect(cards.map { |item| item.dig('components', 0, 'parameters', 0, 'image', 'link') })

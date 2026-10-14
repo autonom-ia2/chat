@@ -6,8 +6,6 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import GavetaDeProdutos from './GavetaDeProdutos.vue';
-import { localeDoIntl } from '../helpers/datas';
-import { dinheiroDoProduto } from '../helpers/produtosNaCampanha';
 
 const props = defineProps({
   caixa: { type: [Number, String], required: true },
@@ -17,7 +15,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['update']);
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const NS = 'MODELOS_WHATSAPP.PONTE.PRODUTOS';
 
 const aberta = ref(false);
@@ -25,7 +23,7 @@ const temEscolha = computed(() => props.escolhidos.length > 0);
 // Preço; no primeiro de vários, também que a foto dele vai na mensagem.
 const PONTO = '·';
 const detalhe = (produto, indice) => {
-  const preco = dinheiroDoProduto(produto.preco, localeDoIntl(locale.value));
+  const preco = produto.preco || '';
   return props.pedido.tipo === 'varios' && indice === 0
     ? [preco, PONTO, t(`${NS}.FOTO_DA_MENSAGEM`)].join(' ')
     : preco;

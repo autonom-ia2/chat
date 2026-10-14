@@ -29,6 +29,9 @@ const ESPERA = {
   modelo_em_analise: 'AGUARDE_APROVAR',
   // #1334: a oferta venceu; o modelo está certo, a data é da campanha.
   oferta_vencida: 'NOVA_DATA',
+  // #1418: o modelo está certo; quando o produto voltar, Retomar confere de novo.
+  produto_indisponivel: 'AGUARDE_PRODUTO',
+  sem_catalogo: 'CONECTE_CATALOGO',
 };
 const oQueFazer = campanha => ESPERA[campanha.motivo] || 'CORRIJA_PRIMEIRO';
 const { t } = useI18n();
@@ -127,6 +130,7 @@ const retomar = async campanha => {
             {{
               $t(`MODELOS_WHATSAPP.PARADAS.MOTIVOS.${campanha.motivo}`, {
                 modelo: campanha.modeloNome,
+                produto: campanha.produto,
               })
             }}
           </span>
