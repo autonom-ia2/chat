@@ -4,7 +4,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
 import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
 import { ATUACAO, MAX_ARQUIVO_BYTES } from '../constants/criacao';
-import { ehSite, nomeDaFonte } from '../utils/pagina';
+import { MAX_FONTES, ehSite, nomeDaFonte } from '../utils/pagina';
 
 // #1181 PR2 — a conversa da etapa Conte com o Construtor, pela store autonomiaBuildThreads (sem
 // editá-la): start/send/retry/completeMaterials, e stopPolling ao sair (a store tem um poll único).
@@ -32,6 +32,11 @@ export const ESPERA_DEMORANDO_MS = 60000;
 const RESPOSTAS_PARA_FECHAR_AO_SAIR = 2;
 
 const ehFoto = arquivo => (arquivo?.type || '').startsWith('image/');
+
+// Material que ocupa uma das vagas da base no servidor (Source::MAX_KNOWLEDGE_SOURCES): o que está
+// lá ou a caminho. Grande demais, acima do limite ou que nem chegou a subir não ocupa.
+export const ocupaVaga = material =>
+  ['fila', 'enviando'].includes(material.estado) || Boolean(material.fonteId);
 
 // "https://www.loja.com.br/precos" vira "www.loja.com.br/precos": o endereço como a pessoa o lê.
 const nomeDoSite = endereco => {
@@ -77,6 +82,10 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
   const materiais = ref([]);
   // A leitura da base de um rascunho continuado falhou (a caixa oferece "Tentar de novo").
   const erroDaBase = ref(false);
+  // Tirar não deu certo no servidor: o item volta para a lista e a caixa avisa ({ nome }).
+  const falhaAoTirar = ref(null);
+  // Fontes tiradas (ou sendo tiradas): uma leitura da base em andamento não as traz de volta.
+  const tiradas = new Set();
   const aviso = ref(null);
   const demorando = ref(false);
   // Quantas vezes a conversa fechou de novo depois de fechada (o teste avisa "Atualizado").
@@ -196,6 +205,7 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
       (lidas || [])
         .filter(fonte => (fonte.kind ?? 'knowledge') === 'knowledge')
         .filter(fonte => !conhecidas.includes(fonte.id))
+        .filter(fonte => !tiradas.has(fonte.id))
         .forEach(fonte =>
           novoMaterial(
             {
@@ -250,6 +260,24 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
     tipo: ehFoto(arquivo) ? 'foto' : 'arquivo',
   });
 
+  // Se o servidor não tirou, o item volta (na ordem em que tinha entrado) e a caixa avisa.
+  const tirarDoServidor = async material => {
+    tiradas.add(material.fonteId);
+    try {
+      await store.dispatch('autonomiaSources/remove', {
+        agentId: agenteId.value,
+        sourceId: material.fonteId,
+      });
+    } catch {
+      tiradas.delete(material.fonteId);
+      materiais.value = [
+        ...materiais.value.filter(m => m.id !== material.id),
+        material,
+      ].sort((a, b) => a.id - b.id);
+      falhaAoTirar.value = { nome: material.nome };
+    }
+  };
+
   // `descritor` é { file } ou { url }, como a store espera.
   const mandarParaBase = async (material, descritor) => {
     trocarMaterial(material.id, { estado: 'enviando' });
@@ -261,12 +289,11 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
       // Tirado enquanto subia: o servidor já guardou, então sai de lá também.
       if (!materiais.value.some(m => m.id === material.id)) {
         if (fonte?.id) {
-          store
-            .dispatch('autonomiaSources/remove', {
-              agentId: agenteId.value,
-              sourceId: fonte.id,
-            })
-            .catch(() => null);
+          await tirarDoServidor({
+            ...material,
+            estado: 'base',
+            fonteId: fonte.id,
+          });
         }
         return;
       }
@@ -293,9 +320,16 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
     return material;
   };
 
+  const base = computed(() => materiais.value.filter(m => m.tipo !== 'foto'));
+  const semVaga = () => base.value.filter(ocupaVaga).length >= MAX_FONTES;
+
+  // Também pelo clipe da conversa: grande demais ou sem vaga não sobe (o material diz por quê).
   const anexarArquivo = arquivo => {
     if (arquivo.size > MAX_ARQUIVO_BYTES) {
       return novoMaterial(doArquivo(arquivo), { estado: 'grande' });
+    }
+    if (semVaga()) {
+      return novoMaterial(doArquivo(arquivo), { estado: 'limite' });
     }
     return paraBase(doArquivo(arquivo), { file: arquivo });
   };
@@ -303,8 +337,6 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
   // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
   const anexarSite = endereco =>
     paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
-
-  const base = computed(() => materiais.value.filter(m => m.tipo !== 'foto'));
 
   watch(agenteId, id => {
     if (!id) return;
@@ -458,16 +490,11 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
   };
 
   const tirar = material => {
+    falhaAoTirar.value = null;
     filaDaBase.delete(material.id);
     materiais.value = materiais.value.filter(m => m.id !== material.id);
-    if (material.fonteId && agenteId.value) {
-      store
-        .dispatch('autonomiaSources/remove', {
-          agentId: agenteId.value,
-          sourceId: material.fonteId,
-        })
-        .catch(() => null);
-    }
+    if (material.fonteId && agenteId.value) return tirarDoServidor(material);
+    return Promise.resolve();
   };
 
   // Fecha (ou conta mais uma atualização) uma vez por geração: observa a fase e o agent_id da
@@ -518,6 +545,7 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
     materiais,
     base,
     erroDaBase,
+    falhaAoTirar,
     carregarBase,
     estadoDoMaterial,
     agenteId,

@@ -767,7 +767,113 @@ describe('useConversaDeCriacao', () => {
         agentId: 90,
         sourceId: 77,
       });
+      expect(chamadas('autonomiaSources/remove')).toHaveLength(1);
       expect(conversa.base.value).toHaveLength(0);
+      expect(conversa.falas.value.some(f => f.de === 'material')).toBe(false);
+      expect(conversa.falhaAoTirar.value).toBeNull();
+    });
+
+    it('when the server does not remove an item, it comes back in place and the box is told', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('A.pdf', 'application/pdf'));
+      conversa.anexarArquivo(arquivo('B.pdf', 'application/pdf'));
+      await flushPromises();
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === 'autonomiaSources/remove') throw new Error('500');
+        return original(acao, dados);
+      });
+
+      await conversa.tirar(conversa.base.value[0]);
+      expect(conversa.base.value.map(m => [m.nome, m.fonteId])).toEqual([
+        ['A.pdf', 41],
+        ['B.pdf', 42],
+      ]);
+      expect(conversa.falhaAoTirar.value).toEqual({ nome: 'A.pdf' });
+      // Tentar de novo limpa o aviso.
+      store.dispatch.mockImplementation(original);
+      await conversa.tirar(conversa.base.value[0]);
+      expect(conversa.falhaAoTirar.value).toBeNull();
+      expect(conversa.base.value.map(m => m.nome)).toEqual(['B.pdf']);
+    });
+
+    it('when an item removed while uploading cannot leave the server, it comes back with a notice', async () => {
+      comThread();
+      let terminar;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/create') {
+          return new Promise(resolve => {
+            terminar = resolve;
+          });
+        }
+        if (acao === 'autonomiaSources/remove') {
+          return Promise.reject(new Error('500'));
+        }
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('Cardápio.pdf', 'application/pdf'));
+      conversa.tirar(conversa.base.value[0]);
+      expect(conversa.base.value).toHaveLength(0);
+
+      terminar({ id: 77 });
+      await flushPromises();
+      expect(conversa.base.value).toHaveLength(1);
+      expect(conversa.base.value[0]).toMatchObject({
+        nome: 'Cardápio.pdf',
+        fonteId: 77,
+        estado: 'base',
+      });
+      expect(conversa.falhaAoTirar.value).toEqual({ nome: 'Cardápio.pdf' });
+    });
+
+    it('a base read in flight never brings back what was just removed', async () => {
+      let responderLeitura;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/fetch') {
+          return new Promise(resolve => {
+            responderLeitura = resolve;
+          });
+        }
+        if (acao === 'autonomiaSources/create')
+          return Promise.resolve({ id: 41 });
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      comThread();
+      conversa.anexarArquivo(arquivo('A.pdf', 'application/pdf'));
+      await flushPromises();
+      const leitura = conversa.carregarBase();
+      await conversa.tirar(conversa.base.value[0]);
+      responderLeitura([{ id: 41, source_type: 'pdf', reference: 'A.pdf' }]);
+      await leitura;
+      expect(conversa.base.value).toHaveLength(0);
+    });
+
+    it('the conversation clip also stops at the base limit, and says why', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      Array.from({ length: 30 }, (_, i) =>
+        conversa.anexarArquivo(arquivo(`f${i}.pdf`, 'application/pdf'))
+      );
+      // Grande demais não ocupa vaga.
+      await conversa.enviar({
+        anexos: [arquivo('enorme.pdf', 'application/pdf', 26 * 1024 * 1024)],
+      });
+      await flushPromises();
+      expect(chamadas('autonomiaSources/create')).toHaveLength(30);
+
+      await conversa.enviar({
+        anexos: [arquivo('mais.pdf', 'application/pdf')],
+      });
+      await flushPromises();
+      expect(chamadas('autonomiaSources/create')).toHaveLength(30);
+      const ultimo = conversa.base.value.at(-1);
+      expect(ultimo.nome).toBe('mais.pdf');
+      expect(conversa.estadoDoMaterial(ultimo)).toBe('limite');
     });
 
     it('reading the base twice at once, or while a file uploads, never duplicates it', async () => {

@@ -1,10 +1,11 @@
 <script setup>
-import { computed, nextTick, ref, useId } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import MaterialLinha from '../pagina/MaterialLinha.vue';
 import { MAX_ARQUIVO, MAX_FONTES, enderecoDoSite } from '../../utils/pagina';
+import { ocupaVaga } from '../../composables/useConversaDeCriacao';
 
 // #1503 — "Base de conhecimento de {nome}" na etapa Conte da criação (só no Conte): os arquivos e
 // sites que o agente lê para responder. A lista é a mesma do clipe da conversa (useConversaDeCriacao
@@ -21,6 +22,10 @@ const props = defineProps({
   podeGerenciar: { type: Boolean, default: false },
   erroAoLer: { type: Boolean, default: false },
   naGaveta: { type: Boolean, default: false },
+  // O rascunho ainda não tem nome (o Construtor dá o nome no fim): os textos falam "do agente".
+  semNome: { type: Boolean, default: false },
+  // O servidor não tirou um item ({ nome }): ele voltou para a lista e a caixa avisa.
+  falhaAoTirar: { type: Object, default: null },
 });
 
 const emit = defineEmits(['anexar', 'site', 'tirar', 'reler']);
@@ -29,6 +34,11 @@ const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR.BASE';
 const SABE = 'AGENTS.JORNADA.PAGINA.SABE';
 const id = `base-${useId()}`;
+// Textos com o nome do agente têm a versão "do agente" enquanto ele não tem nome.
+const texto = (chave, extra = {}) =>
+  props.semNome
+    ? t(`${NS}.${chave}_SEM_NOME`, extra)
+    : t(`${NS}.${chave}`, { nome: props.nome, ...extra });
 
 const adicionando = ref(false);
 const site = ref('');
@@ -50,6 +60,7 @@ const ESTADO_NA_CAIXA = {
   pronto: 'pronto',
   atencao: 'falha',
   grande: 'falha',
+  limite: 'falha',
 };
 const estadoNaCaixa = material =>
   ESTADO_NA_CAIXA[props.estadoDoMaterial(material)] || 'lendo';
@@ -60,10 +71,17 @@ const linhaDe = material => ({
   source_type: material.tipo === 'site' ? 'link' : 'file',
 });
 
-const problemaDe = material =>
-  props.estadoDoMaterial(material) === 'grande' ? t(`${NS}.GRANDE_TEXTO`) : '';
+const problemaDe = material => {
+  const estado = props.estadoDoMaterial(material);
+  if (estado === 'grande') return t(`${NS}.GRANDE_TEXTO`);
+  if (estado === 'limite') return t(`${SABE}.LIMITE`, { n: MAX_FONTES });
+  return '';
+};
 
-const cheia = computed(() => props.itens.length >= MAX_FONTES);
+// Só conta o que ocupa vaga no servidor (grande demais ou que nem subiu fica de fora).
+const cheia = computed(
+  () => props.itens.filter(ocupaVaga).length >= MAX_FONTES
+);
 
 const guardarLinha = material => elemento => {
   linhas[material.id] = elemento?.$el || null;
@@ -153,6 +171,14 @@ const tirar = async material => {
   botaoAdicionar.value?.$el?.focus();
 };
 
+// O item que não saiu voltou para a lista: o leitor de tela ouve isso no lugar do "saiu da base".
+watch(
+  () => props.falhaAoTirar,
+  falha => {
+    if (falha) anuncio.value = t(`${NS}.TIRAR_ERRO`, { item: falha.nome });
+  }
+);
+
 const aoTeclarConfirmacao = evento => {
   if (evento.key !== 'Escape') return;
   evento.preventDefault();
@@ -165,7 +191,7 @@ const aoTeclarConfirmacao = evento => {
   <section
     data-base
     :aria-labelledby="naGaveta ? undefined : `${id}-titulo`"
-    :aria-label="naGaveta ? t(`${NS}.TITULO`, { nome }) : undefined"
+    :aria-label="naGaveta ? texto('TITULO') : undefined"
     class="relative flex flex-col gap-4"
     :class="
       naGaveta
@@ -186,10 +212,10 @@ const aoTeclarConfirmacao = evento => {
           :id="`${id}-titulo`"
           class="m-0 text-base font-semibold text-n-slate-12"
         >
-          {{ t(`${NS}.TITULO`, { nome }) }}
+          {{ texto('TITULO') }}
         </h2>
         <p class="m-0 text-sm text-n-slate-11">
-          {{ t(`${NS}.TEXTO`, { nome }) }}
+          {{ texto('TEXTO') }}
         </p>
       </div>
     </header>
@@ -206,7 +232,7 @@ const aoTeclarConfirmacao = evento => {
     <ul
       v-if="itens.length"
       data-base-lista
-      :aria-label="t(`${NS}.LISTA`, { nome })"
+      :aria-label="texto('LISTA')"
       class="flex flex-col gap-2 p-0 m-0 list-none"
     >
       <MaterialLinha
@@ -220,6 +246,7 @@ const aoTeclarConfirmacao = evento => {
         :nome-agente="nome"
         :pode-gerenciar="podeGerenciar"
         :pode-reler="false"
+        nome-em-duas-linhas
         @tirar="pedirTirar(material)"
         @mandar-outro="mandarOutro(material)"
       >
@@ -239,7 +266,7 @@ const aoTeclarConfirmacao = evento => {
               {{ t(`${NS}.TIRAR_TITULO`, { item: material.nome }) }}
             </p>
             <p class="m-0 text-sm text-n-slate-11">
-              {{ t(`${NS}.TIRAR_TEXTO`, { nome }) }}
+              {{ texto('TIRAR_TEXTO') }}
             </p>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -281,6 +308,12 @@ const aoTeclarConfirmacao = evento => {
     </div>
 
     <AgenteErro v-if="aviso" data-base-aviso tom="ambar" :titulo="aviso" />
+    <AgenteErro
+      v-if="falhaAoTirar"
+      data-base-falha-tirar
+      :titulo="t(`${NS}.TIRAR_ERRO`, { item: falhaAoTirar.nome })"
+      :garantia="t(`${NS}.TIRAR_ERRO_GARANTIA`)"
+    />
 
     <div
       v-if="podeGerenciar && adicionando"

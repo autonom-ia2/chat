@@ -118,6 +118,18 @@ const agente = computed(
 const nome = computed(
   () => agente.value?.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
+// O rascunho nasce com o nome provisório do backend (Builder#draft_agent: 'Novo agente') e só ganha
+// nome quando o Construtor fecha. Até lá a base fala "do agente" (comparação exata, sem regex).
+const NOME_DO_RASCUNHO = 'Novo agente';
+const semNome = computed(() =>
+  [
+    undefined,
+    null,
+    '',
+    NOME_DO_RASCUNHO,
+    t('AGENTS.JORNADA.COMUM.NOVO_AGENTE'),
+  ].includes(agente.value?.name)
+);
 const modelo = computed(() =>
   modeloDoTipo(agente.value?.agent_type, modeloPedido)
 );
@@ -287,11 +299,18 @@ const exemploDoCampo = computed(() => {
 
 const propsDaBase = computed(() => ({
   nome: nome.value,
+  semNome: semNome.value,
   itens: conversa.base.value,
   estadoDoMaterial: conversa.estadoDoMaterial,
   podeGerenciar: podeGerenciar.value,
   erroAoLer: conversa.erroDaBase.value,
+  falhaAoTirar: conversa.falhaAoTirar.value,
 }));
+const tituloDaBase = computed(() =>
+  semNome.value
+    ? t('AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME')
+    : t('AGENTS.JORNADA.CRIAR.BASE.TITULO', { nome: nome.value })
+);
 
 // A caixa some no Confira (no celular, a gaveta fecha junto com a etapa).
 watch(etapa, nova => {
@@ -600,7 +619,7 @@ onMounted(() => {
                 icone="i-lucide-library-big"
                 :aria-label="
                   t('AGENTS.JORNADA.CRIAR.BASE.BOTAO_ARIA', {
-                    nome,
+                    titulo: tituloDaBase,
                     n: conversa.base.value.length,
                   })
                 "
@@ -752,7 +771,7 @@ onMounted(() => {
 
     <AgenteGaveta
       v-if="baseAberta"
-      :titulo="t('AGENTS.JORNADA.CRIAR.BASE.TITULO', { nome })"
+      :titulo="tituloDaBase"
       @fechar="baseAberta = false"
     >
       <BaseDaCriacao

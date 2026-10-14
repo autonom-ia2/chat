@@ -1479,7 +1479,8 @@
           "GRANDE": "Este arquivo passa de 25 MB. Tente um menor.",
           "MANDAR_OUTRO": "Mandar outro",
           "TIRAR": "Tirar",
-          "TIRAR_ARIA": "Tirar {nome}"
+          "TIRAR_ARIA": "Tirar {nome}",
+          "LIMITE": "Já são {n} arquivos e sites. Tire um para mandar outro."
         },
         "EXEMPLO": {
           "TITULO": "Assim seus clientes vão ver",
@@ -1588,7 +1589,13 @@
           "ERRO_LER": "Não deu para mostrar o que já estava na base.",
           "ERRO_LER_GARANTIA": "Nada foi apagado.",
           "BOTAO": "Base",
-          "BOTAO_ARIA": "Base de conhecimento de {nome}: {n}"
+          "BOTAO_ARIA": "{titulo}: {n}",
+          "TITULO_SEM_NOME": "Base de conhecimento do agente",
+          "TEXTO_SEM_NOME": "O que o agente lê para responder. O que você manda pelo clipe da conversa também aparece aqui.",
+          "LISTA_SEM_NOME": "Arquivos e sites do agente",
+          "TIRAR_TEXTO_SEM_NOME": "O agente deixa de usar o que está nele. Sai da conversa também.",
+          "TIRAR_ERRO": "Não deu para tirar {item} agora.",
+          "TIRAR_ERRO_GARANTIA": "Ele continua na base."
         }
       }
     }

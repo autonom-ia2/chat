@@ -911,8 +911,11 @@ describe('AgenteCriarPage', () => {
 
     it('shows the box under the example in Conte, and not in Confira', async () => {
       const wrapper = await montar();
+      // Agente novo ainda sem nome: "Base de conhecimento do agente".
       const caixa = wrapper.get('[data-exemplo] [data-base]');
-      expect(caixa.get('h2').text()).toBe('AGENTS.JORNADA.CRIAR.BASE.TITULO');
+      expect(caixa.get('h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME'
+      );
       expect(caixa.find('[data-base-vazia]').exists()).toBe(true);
 
       conversaFecha();
@@ -1008,6 +1011,10 @@ describe('AgenteCriarPage', () => {
       });
       expect(naCaixa().join('|')).toContain('Antigo.pdf');
       expect(naConversa(wrapper)).toEqual([]);
+      // Com nome (Duda), o título leva o nome.
+      expect(wrapper.get('[data-base] h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO'
+      );
       wrapper.unmount();
     });
 

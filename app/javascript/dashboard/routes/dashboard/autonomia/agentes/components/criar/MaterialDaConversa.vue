@@ -3,11 +3,13 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { nomeSemExtensao } from '../../utils/nomeDoArquivo';
+import { MAX_FONTES } from '../../utils/pagina';
 
 // #1181 PR2 (protótipo materialMsg) — um arquivo ou foto mandado na conversa da criação, com o
 // estado em palavras: lendo, pronto, na fila (antes do rascunho existir), atenção (não deu para
 // ler: mandar outro ou tirar) e grande demais (passa de 25 MB). #1503 — também o site mandado pela
-// caixa da base (ícone de globo, endereço inteiro; "Mandar outro" é só para arquivo).
+// caixa da base (ícone de globo, endereço inteiro; "Mandar outro" é só para arquivo) e o arquivo que
+// não sobe porque a base já tem o máximo de arquivos e sites (`limite`).
 const props = defineProps({
   material: { type: Object, required: true },
   estado: { type: String, required: true },
@@ -23,7 +25,14 @@ const nomeVisivel = computed(() =>
   site.value ? props.material.nome : nomeSemExtensao(props.material.nome)
 );
 
-const problema = computed(() => ['atencao', 'grande'].includes(props.estado));
+const problema = computed(() =>
+  ['atencao', 'grande', 'limite'].includes(props.estado)
+);
+const TEXTO_DO_PROBLEMA = {
+  grande: 'GRANDE',
+  limite: 'LIMITE',
+  atencao: 'ATENCAO_TEXTO',
+};
 const icone = computed(() => {
   if (problema.value) return 'i-lucide-triangle-alert text-n-amber-11';
   if (site.value) return 'i-lucide-globe text-n-slate-11';
@@ -74,7 +83,7 @@ const icone = computed(() => {
     </p>
     <template v-if="problema">
       <p class="m-0 text-n-slate-12">
-        {{ estado === 'grande' ? t(`${NS}.GRANDE`) : t(`${NS}.ATENCAO_TEXTO`) }}
+        {{ t(`${NS}.${TEXTO_DO_PROBLEMA[estado]}`, { n: MAX_FONTES }) }}
       </p>
       <p class="flex flex-wrap gap-3 m-0">
         <button

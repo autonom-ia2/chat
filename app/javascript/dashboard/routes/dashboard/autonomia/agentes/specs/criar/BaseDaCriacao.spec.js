@@ -1,5 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import BaseDaCriacao from '../../components/criar/BaseDaCriacao.vue';
+import MaterialLinha from '../../components/pagina/MaterialLinha.vue';
 
 // #1503 — a caixa "Base de conhecimento de {nome}" da etapa Conte. Os estados vêm da conversa
 // (estadoDoMaterial); a caixa só os mostra e emite o que a pessoa fez.
@@ -159,7 +160,9 @@ describe('BaseDaCriacao', () => {
     );
 
     const cheia = montar({
-      itens: Array.from({ length: 30 }, (_, i) => material(100 + i)),
+      itens: Array.from({ length: 30 }, (_, i) =>
+        material(100 + i, { estado: 'base', fonteId: 500 + i })
+      ),
     });
     await escolherArquivo(cheia, arquivoDe('Mais um.pdf'));
     expect(cheia.emitted('anexar')).toBeUndefined();
@@ -284,6 +287,83 @@ describe('BaseDaCriacao', () => {
       'AGENTS.JORNADA.CRIAR.BASE.TITULO'
     );
     expect(wrapper.get('[data-base]').classes()).not.toContain('ring-1');
+  });
+
+  it('counts only what takes a place on the server toward the limit', async () => {
+    const itens = [
+      ...Array.from({ length: 29 }, (_, i) =>
+        material(100 + i, { fonteId: 500 + i })
+      ),
+      material(200, { estado: 'grande' }),
+      material(201, { estado: 'atencao' }),
+    ];
+    const wrapper = montar({
+      itens,
+      estadoDoMaterial: m => m.estado || 'pronto',
+    });
+    await escolherArquivo(wrapper, arquivoDe('Cabe.pdf'));
+    expect(wrapper.emitted('anexar')).toHaveLength(1);
+  });
+
+  it('shows the over-the-limit item as a problem that says why', () => {
+    const wrapper = montar({
+      itens: [material(9)],
+      estadoDoMaterial: () => 'limite',
+    });
+    expect(linha(wrapper, 9).attributes('data-estado')).toBe('falha');
+    expect(linha(wrapper, 9).text()).toContain(
+      'AGENTS.JORNADA.PAGINA.SABE.LIMITE'
+    );
+  });
+
+  it('says, also to the screen reader, when an item could not be removed', async () => {
+    const wrapper = montar({ itens: VARIOS.slice(0, 1) });
+    await wrapper.setProps({ falhaAoTirar: { nome: 'Cardápio.pdf' } });
+    const aviso = wrapper.get('[data-base-falha-tirar]');
+    expect(aviso.attributes('role')).toBe('alert');
+    expect(aviso.text()).toContain('AGENTS.JORNADA.CRIAR.BASE.TIRAR_ERRO');
+    expect(aviso.text()).toContain(
+      'AGENTS.JORNADA.CRIAR.BASE.TIRAR_ERRO_GARANTIA'
+    );
+    expect(wrapper.get('[data-base-anuncio]').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.BASE.TIRAR_ERRO'
+    );
+  });
+
+  it('talks about "the agent" while it has no name yet', async () => {
+    const wrapper = montar({ semNome: true, itens: VARIOS.slice(0, 1) });
+    expect(wrapper.get('h2').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME'
+    );
+    expect(wrapper.text()).toContain(
+      'AGENTS.JORNADA.CRIAR.BASE.TEXTO_SEM_NOME'
+    );
+    expect(wrapper.get('[data-base-lista]').attributes('aria-label')).toBe(
+      'AGENTS.JORNADA.CRIAR.BASE.LISTA_SEM_NOME'
+    );
+    await abrirTirar(wrapper, 1);
+    expect(wrapper.get('[data-confirmar-tirar]').text()).toContain(
+      'AGENTS.JORNADA.CRIAR.BASE.TIRAR_TEXTO_SEM_NOME'
+    );
+  });
+
+  it('wraps long names in two lines here (the agent page keeps one line)', () => {
+    const wrapper = montar({ itens: VARIOS.slice(0, 1) });
+    const nome = linha(wrapper, 1).get('[title]');
+    expect(nome.classes()).toContain('line-clamp-2');
+    expect(nome.classes()).not.toContain('truncate');
+  });
+
+  it('the agent page drawer keeps the name in one line (MaterialLinha default)', () => {
+    const linhaDaPagina = mount(MaterialLinha, {
+      props: {
+        fonte: { id: 1, reference: 'Cardápio.pdf', source_type: 'pdf' },
+        nomeAgente: 'Duda',
+      },
+    });
+    const nome = linhaDaPagina.get('[title]');
+    expect(nome.classes()).toContain('truncate');
+    expect(nome.classes()).not.toContain('line-clamp-2');
   });
 
   it('never renders a native select', () => {

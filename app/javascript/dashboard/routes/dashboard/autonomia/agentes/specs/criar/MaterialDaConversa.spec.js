@@ -39,6 +39,13 @@ describe('MaterialDaConversa', () => {
     ).toBe(true);
   });
 
+  it('a file over the base limit says why and can only be removed', () => {
+    const wrapper = montar('limite');
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.CRIAR.MATERIAL.LIMITE');
+    expect(wrapper.find('[data-mandar-outro]').exists()).toBe(false);
+    expect(wrapper.find('[data-tirar]').exists()).toBe(true);
+  });
+
   it('a file too big can only be removed', () => {
     const wrapper = montar('grande');
     expect(wrapper.find('[data-mandar-outro]').exists()).toBe(false);

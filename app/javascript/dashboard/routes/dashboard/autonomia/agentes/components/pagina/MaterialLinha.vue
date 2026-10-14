@@ -10,8 +10,8 @@ import { ehSite, estadoDaFonte, nomeDaFonte } from '../../utils/pagina';
 // (Ler de novo, só para site; Tirar) e, no que não deu para ler, "Mandar outro".
 // #1503 — a caixa da base na criação reaproveita a linha: o estado vem pronto (`estado`, do material
 // da conversa), sem "Ler de novo" (`podeReler`), com o texto do problema dela (`problema`) e a
-// confirmação de tirar no slot, dentro da própria linha. O nome quebra em até duas linhas (não corta
-// no meio da coluna estreita da criação).
+// confirmação de tirar no slot, dentro da própria linha. Lá o nome quebra em até duas linhas
+// (`nomeEmDuasLinhas`): a coluna da criação é estreita; na gaveta da página ele continua numa linha.
 const props = defineProps({
   fonte: { type: Object, required: true },
   nomeAgente: { type: String, required: true },
@@ -23,6 +23,7 @@ const props = defineProps({
   podeReler: { type: Boolean, default: true },
   // Texto no lugar de "{nome} ainda não usa este…" (ex.: arquivo grande demais).
   problema: { type: String, default: '' },
+  nomeEmDuasLinhas: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['lerDeNovo', 'tirar', 'mandarOutro']);
@@ -73,7 +74,12 @@ const escolher = chave => {
       </span>
       <span class="flex flex-col min-w-0 grow">
         <span
-          class="text-sm font-medium line-clamp-2 [overflow-wrap:anywhere] text-n-slate-12"
+          class="text-sm font-medium text-n-slate-12"
+          :class="
+            nomeEmDuasLinhas
+              ? 'line-clamp-2 [overflow-wrap:anywhere]'
+              : 'truncate'
+          "
           :title="nome"
         >
           {{ nome }}
