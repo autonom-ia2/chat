@@ -26,20 +26,9 @@ module WhatsappProxy::Health
     :unstable if rounds.to_i >= UNSTABLE_ROUNDS || drops(session_name) >= MAX_DROPS
   end
 
-  # Falha geral marcada pela reconciliação (WhatsappProxy::Outage): queda nessa hora não conta contra o IP.
-  OUTAGE_TTL = 20.minutes.to_i
-
-  def outage!(pool)
-    redis { ::Redis::Alfred.setex("whatsapp_proxy:outage:#{pool}", '1', OUTAGE_TTL) }
-  end
-
-  def outage?(pool)
-    redis { ::Redis::Alfred.get("whatsapp_proxy:outage:#{pool}") }.present?
-  end
-
-  # pool: o plano da sessão (o webhook é do Híbrido: isp).
+  # pool: o plano da sessão (o webhook é do Híbrido: isp). Em falha geral (WhatsappProxy::Outage) a queda não conta.
   def record_drop!(session_name, pool: 'isp')
-    return if outage?(pool)
+    return if WhatsappProxy::Outage.active?(pool)
 
     count = redis { ::Redis::Alfred.incr(drops_key(session_name)) }
     redis { ::Redis::Alfred.expire(drops_key(session_name), DROP_WINDOW) } if count.to_i == 1

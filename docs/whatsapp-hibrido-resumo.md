@@ -218,6 +218,7 @@ Autonom.ia). Regra decidida em 14/10/2026:
 | `WEBSHARE_ISP_PROXY_ADDRESSES` | sim | IPs (vírgula) do plano isp que esta stack pode usar. Vazia = nenhum IP isp. |
 | `WEBSHARE_DATACENTER_PROXY_ADDRESSES` | sim | Idem para o plano datacenter. |
 | `WHATSAPP_PROXY_AUTO_MIGRATE` | não | `true` deixa a reconciliação mover número importado de plano/conta. Padrão desligado. |
+| `WEBSHARE_RESERVED_PROXY_ADDRESSES` | não | IPs (vírgula) da Webshare usados por outra integração, que nunca são dados a número de WhatsApp, mesmo dentro da fatia. Ex.: `104.165.153.115` (plano ISP), reservado para o Instagram. O registro das reservas fica fora do código, com as credenciais de operação (`webshare_reservas.json`). |
 | `WHATSAPP_PROXY_MAX_NUMBERS_PER_IP` | não | Números da mesma conta por IP. Padrão 3. |
 | `WEBSHARE_ISP_PLAN_ID` / `WEBSHARE_DATACENTER_PLAN_ID` | **não use** | O id do plano muda quando a assinatura é editada na Webshare (14/10/2026: 11408796 → 14564104). Sem elas, vale o plano ativo do subtipo (`isp` / `default`), descoberto em `/api/v2/subscription/plan/` e registrado no log. Se estiverem definidas com id que não é plano ativo daquele subtipo, o código alerta e usa a descoberta. |
 | `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` | sim | Conta da PLATAFORMA (ex.: 1 na Hub2You) cujos administradores recebem os alertas do proxy como aviso do Guia (conversa, sino, push e e-mail quando urgente). Nunca a conta de um cliente. Sem ela, os alertas ficam só no log (as duas stacks não têm `SENTRY_DSN`). |
@@ -255,11 +256,15 @@ Autonom.ia). Regra decidida em 14/10/2026:
   (tabela `whatsapp_proxy_quarantines`; ninguém recebe esse IP) e o número troca de IP no mesmo plano e fatia. No
   máximo uma troca dessas por sessão por dia; se continuar instável, só alerta (o problema não é o proxy).
   SCAN_QR_CODE é aparelho desvinculado: nunca troca, só alerta (uma vez por dia).
-- **Falha geral não é IP ruim.** Se mais de 30% dos IPs em uso de um plano (com pelo menos 2) têm sessão fora de
-  WORKING na mesma rodada, ou se as sessões SEM proxy do mesmo motor também estão caindo (mais de 30%, pelo menos 2),
-  é falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena, nenhuma troca por instabilidade, a contagem zera
-  (inclusive as quedas do webhook do Híbrido, ignoradas por 20 min) e sai o alerta `falha_geral` (uma vez por hora).
-  IP que sumiu da lista continua sendo reparado (é fato da Webshare).
+- **Falha geral não é IP ruim.** Mede queda recente, não estado: só conta a sessão que estava WORKING na rodada
+  anterior e agora está fora (status anterior guardado no Redis por 30 min). Sessão que já estava fora — FAILED há
+  dias, ou com proxy rotativo antigo sem atribuição — não entra na conta. Se, entre os que estavam WORKING, mais de 30%
+  dos IPs de um plano caíram (pelo menos 2), ou mais de 30% das sessões SEM proxy do motor caíram (pelo menos 2), é
+  falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena, nenhuma troca por instabilidade, a contagem zera
+  (inclusive as quedas do webhook do Híbrido) e sai o alerta `falha_geral` (uma vez por hora). A falha geral continua
+  enquanto a maioria das sessões que caíram segue fora. Sem a rodada anterior (primeira rodada, Redis vazio) a
+  reconciliação só observa: não declara falha geral nem troca por instabilidade. IP que sumiu da lista continua sendo
+  reparado (é fato da Webshare).
 - **Teto de quarentena:** no máximo 3 IPs por plano em 24 h; acima disso, alerta `teto_de_quarentena` e para de
   quarentenar. A quarentena expira sozinha em 24 h; para soltar antes:
   `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.

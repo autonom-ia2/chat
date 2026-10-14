@@ -5,7 +5,7 @@ RSpec.describe WhatsappProxy::Health do
 
   before do
     %w[unstable_rounds drops unstable_swap scan_qr].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") }
-    Redis::Alfred.delete('whatsapp_proxy:outage:isp')
+    %w[isp baseline].each { |scope| Redis::Alfred.delete(WhatsappProxy::Outage.episode_key(scope)) }
   end
 
   it 'reports unstable only after UNSTABLE_ROUNDS rounds off WORKING in a row' do

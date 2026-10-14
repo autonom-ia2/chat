@@ -152,6 +152,22 @@ RSpec.describe WhatsappProxy::Assigner do
       expect(log).to include('WEBSHARE_DATACENTER_PROXY_ADDRESSES vazia')
     end
 
+    it 'never offers an IP reserved for another integration (e.g. Instagram), even inside the slice' do
+      waha_session!('5511900000001', account)
+
+      with_modified_env(WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.2,10.0.0.1', WEBSHARE_RESERVED_PROXY_ADDRESSES: '10.0.0.2') do
+        expect(assigner.for('5511900000001').address).to eq('10.0.0.1')
+      end
+    end
+
+    it 'leaves the number without proxy when the only IP left is reserved' do
+      waha_session!('5511900000001', account)
+
+      with_modified_env(WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.2', WEBSHARE_RESERVED_PROXY_ADDRESSES: ' 10.0.0.2 ') do
+        expect(assigner.for('5511900000001')).to be_nil
+      end
+    end
+
     it 'only picks IPs of this stack slice' do
       waha_session!('5511900000001', account)
 

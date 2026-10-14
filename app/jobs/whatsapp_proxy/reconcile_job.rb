@@ -3,8 +3,9 @@
 # - cujo IP saiu da lista (ou da fatia), ficou inválido ou mudou de credencial — fato da Webshare, vale sempre;
 # - instável no motor com IP que a Webshare ainda chama de válido (WhatsappProxy::Health): o IP vai para quarentena por
 #   24 h (teto por plano por dia) e o número ganha outro do mesmo plano e fatia — uma troca dessas por sessão por dia.
-#   Em falha geral (WhatsappProxy::Outage: muitos IPs caindo juntos, ou as sessões sem proxy caindo também) não há
-#   quarentena nem troca por instabilidade, e a contagem zera: só o alerta `falha_geral`;
+#   Em falha geral (WhatsappProxy::Outage: muitos IPs que estavam WORKING caindo juntos, ou as sessões sem proxy
+#   caindo também) não há quarentena nem troca por instabilidade, e a contagem zera: só o alerta `falha_geral`. Sem a
+#   rodada anterior (primeira rodada, Redis vazio) também não troca por instabilidade: só observa;
 # - no plano ou na conta errada (número que trocou de tipo, WAHA ↔ Híbrido) — importada, só com
 #   WHATSAPP_PROXY_AUTO_MIGRATE=true.
 # No máximo MAX_CHANGES por rodada. IP que sumiu da lista é URGENTE (o número já está fora do ar): troca já, sem
@@ -21,8 +22,9 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     return unless @assigner.enabled?
 
     managed = managed_assignments
-    @outage = WhatsappProxy::Outage.new(engine_sessions, managed)
+    @outage = WhatsappProxy::Outage.new(engine_sessions, managed, previous: WhatsappProxy::Outage.previous)
     pending = managed.filter_map { |assignment| pending_change(assignment) }
+    WhatsappProxy::Outage.remember!(engine_sessions)
     return if pending.empty?
 
     warn_mass_change(pending, managed)
@@ -86,6 +88,9 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     return general_outage!(assignment) if status != 'SCAN_QR_CODE' && @outage.general?(assignment.pool)
 
     health = WhatsappProxy::Health.observe!(assignment.session_name, status)
+    # Sem a rodada anterior não dá para separar falha geral de IP ruim: só observa (conta), não troca.
+    return nil if health == :unstable && !@outage.known?
+
     if health == :scan_qr
       WhatsappProxy::Alert.notify!('aparelho_desvinculado', "session=#{assignment.session_name} pede QR (aparelho " \
                                                             'desvinculado): não é o proxy, nada foi trocado',
@@ -94,10 +99,9 @@ class WhatsappProxy::ReconcileJob < ApplicationJob
     health
   end
 
-  # Falha geral: nada conta contra o IP (zera a contagem e marca o plano para o webhook não contar quedas). Só avisa.
+  # Falha geral: nada conta contra o IP (zera a contagem; o webhook do Híbrido também não conta). Só avisa.
   def general_outage!(assignment)
     WhatsappProxy::Health.reset!(assignment.session_name)
-    WhatsappProxy::Health.outage!(assignment.pool)
     off, total = @outage.numbers(assignment.pool)
     WhatsappProxy::Alert.notify!('falha_geral', "#{off} de #{total} fora de WORKING ao mesmo tempo (#{assignment.pool}): " \
                                                 'falha geral, nada trocado nem posto em quarentena',

@@ -15,6 +15,8 @@ RSpec.describe WhatsappProxy::ReconcileJob do
   end
 
   before do
+    Redis::Alfred.delete(WhatsappProxy::Outage::PREVIOUS_KEY)
+    %w[isp datacenter baseline].each { |scope| Redis::Alfred.delete(WhatsappProxy::Outage.episode_key(scope)) }
     allow(Webshare::Client).to receive(:new).with(pool: 'isp').and_return(isp)
     allow(Webshare::Client).to receive(:new).with(pool: 'datacenter').and_return(datacenter)
     allow(Waha::Client).to receive(:new).and_return(engine)
@@ -189,9 +191,24 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     end
 
     it 'swaps on the fast signal: the Hybrid webhook saw the session drop MAX_DROPS times' do
+      round('WORKING')
       WhatsappProxy::Health::MAX_DROPS.times { WhatsappProxy::Health.record_drop!(session) }
 
       expect { round('WORKING') }.to have_enqueued_job(WhatsappProxy::ApplyJob).with(session)
+    end
+
+    it 'only observes on the first round (no previous round known): no swap even with the counters already full' do
+      WhatsappProxy::Health::MAX_DROPS.times { WhatsappProxy::Health.record_drop!(session) }
+
+      expect { round('STARTING') }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
+    end
+
+    it 'only observes when Redis lost the previous round' do
+      round('STARTING')
+      Redis::Alfred.delete(WhatsappProxy::Outage::PREVIOUS_KEY)
+
+      expect { round('STARTING') }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
     end
 
     it 'never swaps for SCAN_QR_CODE (unlinked device), only warns' do
@@ -239,7 +256,6 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     let(:engine_sessions) { [] }
 
     before do
-      %w[isp datacenter].each { |pool| Redis::Alfred.delete("whatsapp_proxy:outage:#{pool}") }
       allow(engine).to receive(:list_sessions) { engine_sessions }
       ips = (1..4).map { |i| webshare_proxy(id: i, address: "10.0.0.#{i}") }
       allow(datacenter).to receive(:proxies).and_return(ips + [webshare_proxy(id: 9, address: '10.0.0.9')])
@@ -253,51 +269,61 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       end
     end
 
-    def sessions(status_by_index, unproxied: [])
-      engine_sessions.replace(status_by_index.each_with_index.map { |status, i| { 'name' => "551190000010#{i}", 'status' => status } } +
-                              unproxied.each_with_index.map { |status, i| { 'name' => "55119000009#{i}", 'status' => status, 'config' => {} } })
+    # proxied: status das 4 sessões com proxy nosso; unproxied: sem proxy; rotating: com proxy antigo sem atribuição.
+    def round(proxied, unproxied: [], rotating: [])
+      engine_sessions.replace(
+        proxied.each_with_index.map { |status, i| { 'name' => "551190000010#{i}", 'status' => status } } +
+        unproxied.each_with_index.map { |status, i| { 'name' => "55119000009#{i}", 'status' => status, 'config' => {} } } +
+        rotating.each_with_index.map do |status, i|
+          { 'name' => "55119000008#{i}", 'status' => status, 'config' => { 'proxy' => { 'server' => 'p.webshare.io:80' } } }
+        end
+      )
+      described_class.perform_now
     end
 
-    it 'does not quarantine nor swap when many IPs of the plan drop together, and alerts falha_geral' do
-      sessions(%w[STARTING STARTING FAILED WORKING])
+    it 'does not quarantine nor swap when several IPs that were WORKING drop together, and alerts falha_geral' do
+      round(%w[WORKING WORKING WORKING WORKING])
 
-      log = capture_log { 3.times { described_class.perform_now } }
+      log = capture_log do
+        round(%w[STARTING STARTING FAILED WORKING])
+        2.times { round(%w[STARTING STARTING FAILED WORKING]) }
+      end
 
       expect(apply_jobs).to be_empty
       expect(WhatsappProxy::Quarantine.count).to eq(0)
       expect(log).to include('falha_geral')
-      expect(WhatsappProxy::Health.outage?('datacenter')).to be(true)
+      expect(WhatsappProxy::Outage.active?('datacenter')).to be(true)
     end
 
-    it 'does not swap when the sessions without proxy (the baseline) are dropping too' do
-      sessions(%w[STARTING WORKING WORKING WORKING], unproxied: %w[FAILED STARTING WORKING])
-
-      2.times { described_class.perform_now }
+    it 'does not swap when the sessions without proxy (the baseline) that were WORKING drop too' do
+      round(%w[WORKING WORKING WORKING WORKING], unproxied: %w[WORKING WORKING WORKING])
+      2.times { round(%w[STARTING WORKING WORKING WORKING], unproxied: %w[FAILED STARTING WORKING]) }
 
       expect(apply_jobs).to be_empty
       expect(WhatsappProxy::Quarantine.count).to eq(0)
     end
 
-    it 'still swaps one bad IP when the rest of the plan and the baseline are fine' do
-      sessions(%w[STARTING WORKING WORKING WORKING], unproxied: %w[WORKING WORKING])
-
-      2.times { described_class.perform_now }
+    it 'never declares a general outage for sessions that were already off (old FAILED, old rotating proxy)' do
+      round(%w[WORKING WORKING WORKING WORKING], unproxied: %w[FAILED FAILED], rotating: %w[FAILED FAILED FAILED])
+      2.times { round(%w[STARTING WORKING WORKING WORKING], unproxied: %w[FAILED FAILED], rotating: %w[FAILED FAILED FAILED]) }
 
       expect(apply_jobs.map { |job| job['arguments'].first }).to eq(['5511900000100'])
+      expect(WhatsappProxy::Outage.active?('datacenter')).to be(false)
     end
 
     it 'still repairs a vanished IP during a general outage (a Webshare fact, not a guess)' do
-      sessions(%w[STARTING STARTING FAILED WORKING])
+      round(%w[WORKING WORKING WORKING WORKING])
       allow(datacenter).to receive(:proxies).and_return((2..4).map { |i| webshare_proxy(id: i, address: "10.0.0.#{i}") } +
                                                          [webshare_proxy(id: 9, address: '10.0.0.9')])
 
-      described_class.perform_now
+      round(%w[STARTING STARTING FAILED WORKING])
 
       expect(apply_jobs.map { |job| job['arguments'].first }).to eq(['5511900000100'])
     end
 
-    it 'ignores Hybrid webhook drops while the plan is in a general outage' do
-      WhatsappProxy::Health.outage!('isp')
+    it 'ignores Hybrid webhook drops while a general outage is on' do
+      Redis::Alfred.delete('whatsapp_proxy:drops:hybrid-x')
+      Redis::Alfred.setex(WhatsappProxy::Outage.episode_key('baseline'), '["a","b"]', 60)
       WhatsappProxy::Health.record_drop!('hybrid-x')
 
       expect(WhatsappProxy::Health.drops('hybrid-x')).to eq(0)

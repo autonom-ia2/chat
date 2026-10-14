@@ -1,7 +1,8 @@
 # Um plano da Webshare visto por esta stack (#1516): isp (Static Residential, Híbrido) ou datacenter (Proxy Server, WAHA).
 # Cada stack usa só a sua fatia do plano: WEBSHARE_ISP_PROXY_ADDRESSES / WEBSHARE_DATACENTER_PROXY_ADDRESSES (IPs
 # separados por vírgula). Fatia vazia = nenhum candidato (log de erro): sem ela as duas stacks disputariam o mesmo IP.
-# Candidato: válido, do Brasil e dentro da fatia — nunca outro país, nunca fora da fatia. IP da fatia que sumiu da
+# Candidato: válido, do Brasil e dentro da fatia — nunca outro país, nunca fora da fatia, nunca reservado para outra
+# integração (WEBSHARE_RESERVED_PROXY_ADDRESSES, ex.: o IP do Instagram), nem em quarentena. IP da fatia que sumiu da
 # lista (a Webshare trocou) vira aviso alto no log.
 class WhatsappProxy::Pool
   SLICE_ENVS = { 'isp' => 'WEBSHARE_ISP_PROXY_ADDRESSES', 'datacenter' => 'WEBSHARE_DATACENTER_PROXY_ADDRESSES' }.freeze
@@ -29,9 +30,18 @@ class WhatsappProxy::Pool
       return []
     end
 
-    @candidates ||= proxies.select do |proxy|
-      proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address) && quarantined.exclude?(proxy.address)
-    end
+    @candidates ||= proxies.select { |proxy| offerable?(proxy) }
+  end
+
+  def offerable?(proxy)
+    return false unless proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address)
+
+    quarantined.exclude?(proxy.address) && reserved.exclude?(proxy.address)
+  end
+
+  # IPs da Webshare usados por outra integração (não por número de WhatsApp): nunca oferecidos, mesmo na fatia.
+  def reserved
+    @reserved ||= ENV.fetch('WEBSHARE_RESERVED_PROXY_ADDRESSES', '').split(',').map(&:strip).compact_blank
   end
 
   # IP em quarentena (derrubou um número) não serve para ninguém por 24 h.
