@@ -22,10 +22,11 @@ class Autonomia::Agents::Faq::SuggestJob < ApplicationJob
   private
 
   # O agente que ATENDEU a conversa (último evento replied/handoff dela); fallback: o agente ligado à
-  # caixa hoje. Sem nenhum dos dois, a conversa não foi do agente → nada a extrair. Só eventos de atendimento: o
-  # `consulted` do ajudante (tema 14) e as paradas não fazem do ajudante o dono das FAQs da conversa.
+  # caixa hoje. Sem nenhum dos dois, a conversa não foi do agente → nada a extrair. Os eventos do ajudante
+  # (tema 14: `consulted`, `consult_failed`) não fazem dele o dono das FAQs da conversa; o resto segue como antes.
   def agent_for(conversation)
-    event = Autonomia::Agents::AgentEvent.atendimentos.where(conversation_id: conversation.id, account_id: conversation.account_id)
+    event = Autonomia::Agents::AgentEvent.where(conversation_id: conversation.id, account_id: conversation.account_id)
+                                         .where.not(event_type: Autonomia::Agents::AgentEvent::AJUDANTE_TYPES)
                                          .order(created_at: :desc).first
     agent = event&.agent || Autonomia::Agents::QuemResponde.agent_inbox(conversation)&.agent
     return if agent&.deleted?

@@ -57,6 +57,8 @@ module Autonomia
       # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento
       # desses existe para o corretor ver a causa do silêncio, não para a conversa contar como atendida.
       NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas parado_sem_onde_trabalhar consulted consult_failed].freeze
+      # Tema 14: os eventos do ajudante (consultado por outro agente, nunca dono da conversa).
+      AJUDANTE_TYPES = %w[consulted consult_failed].freeze
 
       scope :in_range, ->(from, to) { where(created_at: from..to) }
       # Tudo que tirou a conversa do agente: handoff sinalizado/CRM + passadas direto pela porta.

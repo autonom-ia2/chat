@@ -44,6 +44,7 @@ RSpec.describe Autonomia::Agents::Faq::SuggestJob, type: :job do
                                                 config: { 'faq_suggestions' => true })
     Autonomia::Agents::AgentEvent.create!(agent: principal, account: account, conversation_id: conversation.id, event_type: :replied)
     Autonomia::Agents::AgentEvent.create!(agent: ajudante, account: account, conversation_id: conversation.id, event_type: :consulted)
+    Autonomia::Agents::AgentEvent.create!(agent: ajudante, account: account, conversation_id: conversation.id, event_type: :consult_failed)
     extractor = instance_double(Autonomia::Agents::Faq::Extractor, call: [])
     allow(Autonomia::Agents::Faq::Extractor).to receive(:new).and_return(extractor)
 
@@ -51,6 +52,21 @@ RSpec.describe Autonomia::Agents::Faq::SuggestJob, type: :job do
 
     expect(Autonomia::Agents::Faq::Extractor).to have_received(:new).with(agent: principal, conversation: conversation)
     expect(Autonomia::Agents::Faq::Extractor).not_to have_received(:new).with(agent: ajudante, conversation: anything)
+  end
+
+  # Sem efeito colateral fora do ajudante: o evento de escolhas incompletas (a Lia muda) segue apontando o agente, como antes.
+  it 'keeps pointing to the agent of a skipped_escolhas_incompletas event, as before' do
+    create_agent('faq_suggestions' => true)
+    outro = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom', status: :active, enabled: true,
+                                             instruction: 'Atenda.', config: { 'faq_suggestions' => true })
+    Autonomia::Agents::AgentEvent.create!(agent: outro, account: account, conversation_id: conversation.id,
+                                          event_type: :skipped_escolhas_incompletas)
+    extractor = instance_double(Autonomia::Agents::Faq::Extractor, call: [])
+    allow(Autonomia::Agents::Faq::Extractor).to receive(:new).and_return(extractor)
+
+    described_class.new.perform(conversation.id)
+
+    expect(Autonomia::Agents::Faq::Extractor).to have_received(:new).with(agent: outro, conversation: conversation)
   end
 
   it 'skips conversations that are no longer resolved' do
