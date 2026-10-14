@@ -11,7 +11,7 @@ import { ESTADO, estadoDoAgente } from '../utils/estadoDoAgente';
 // - Atendendo/Parado: o cartão inteiro abre o agente. Atendendo mostra onde responde (nome do canal
 //   pela L2; sem a L2, só a contagem) e os números da semana pela L1 (sem a L1, a linha some).
 // - Falta terminar: "Continuar" e o "⋯" com Excluir rascunho, só para quem gerencia.
-// - Cotação: abre o módulo de cotação. Agente interno não fala de canal.
+// - Cotação: abre a página do agente já na escolha de canal (#1525). Agente interno não fala de canal.
 // `canais`: caixas da L2 deste agente, ou null quando a L2 não pôde ser lida.
 const props = defineProps({
   agente: { type: Object, required: true },
@@ -53,7 +53,12 @@ const onde = computed(() => {
 });
 
 const linha = computed(() => {
-  if (cotacao.value) return t('AGENTS.JORNADA.CARTAO.COTACAO');
+  // #1525 — a cotação nasce parada e sem canal: o cartão diz isso, e o clique leva à escolha de canal.
+  if (cotacao.value) {
+    return props.agente.tem_onde_trabalhar === false
+      ? t('AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL')
+      : t('AGENTS.JORNADA.CARTAO.COTACAO');
+  }
   if (atendendo.value) return null;
   // Agente interno nunca entra em canal (backend: agent_internal_not_connectable).
   return quantosCanais.value || interno.value

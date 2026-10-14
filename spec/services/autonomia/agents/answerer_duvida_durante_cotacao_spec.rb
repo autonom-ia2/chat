@@ -30,7 +30,7 @@ RSpec.describe Autonomia::Agents::Answerer do
                                                   nome_corretora: 'Seguros do Vale').call
   end
   let(:agent_inbox) do
-    Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: agent_bot)
+    lia_na_caixa(agente, inbox: inbox, agent_bot: agent_bot)
   end
   # A mensagem do cliente que abre ESTE turno — outra que a que disparou a cotação (77).
   let(:delivery) do
