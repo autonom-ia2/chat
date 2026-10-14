@@ -328,7 +328,7 @@ crm_meta_ads_advisor_prune_job:
   queue: low
 
 # Proxy por número de WhatsApp não oficial (#1516): IP que saiu da lista da Webshare (ou mudou de credencial) é trocado
-# no motor, no máximo 5 sessões por rodada. Sem WEBSHARE_API_KEY não faz nada.
+# no motor, no máximo 5 sessões por rodada. Sem WHATSAPP_PROXY_ENABLED=true não faz nada.
 whatsapp_proxy_reconcile_job:
   cron: '7,27,47 * * * *'
   class: 'WhatsappProxy::ReconcileJob'

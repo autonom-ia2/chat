@@ -2,8 +2,10 @@ require 'rails_helper'
 
 RSpec.describe WhatsappProxy::ApplyJob do
   let(:webshare) { instance_double(Webshare::Client, configured?: true) }
-  let(:client) { instance_double(Waha::Client, update_session: {}) }
+  let(:client) { instance_double(Waha::Client, update_session: {}, list_sessions: []) }
   let(:proxy) { webshare_proxy(id: 2, address: '10.0.0.2') }
+
+  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
 
   before do
     allow(Webshare::Client).to receive(:new).and_return(webshare)
@@ -24,6 +26,14 @@ RSpec.describe WhatsappProxy::ApplyJob do
                  'proxy' => { 'server' => '10.0.0.2:6000', 'username' => 'user-2', 'password' => 'senha-2' } }
     expect(client).to have_received(:update_session).with('5511900000001', config: expected, apps: apps)
     expect(WhatsappProxy::Assignment.last.credential_digest).to eq(proxy.credential_digest)
+  end
+
+  it 'does not touch the engine while WHATSAPP_PROXY_ENABLED is off' do
+    allow(client).to receive(:get_session)
+
+    with_modified_env(WHATSAPP_PROXY_ENABLED: 'false') { described_class.perform_now('5511900000001') }
+
+    expect(client).not_to have_received(:update_session)
   end
 
   it 'keeps the credential pending when the engine fails, so the next run retries' do

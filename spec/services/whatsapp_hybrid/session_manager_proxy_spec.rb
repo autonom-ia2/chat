@@ -112,6 +112,17 @@ describe WhatsappHybrid::SessionManager do
       .with(session, config: hash_including(proxy: hash_including(server: '10.0.0.8:6000')), apps: nil)
   end
 
+  it 'behaves as before the proxy while WHATSAPP_PROXY_ENABLED is off, even with the Webshare key' do
+    allow(client).to receive(:get_session).and_return(remote)
+    real = WhatsappProxy::Assigner.new(client: instance_double(Webshare::Client, configured?: true), engine: client)
+
+    with_modified_env(WHATSAPP_PROXY_ENABLED: nil) do
+      described_class.new(connection, client: client, proxy_assigner: real).refresh!
+    end
+
+    expect(client).not_to have_received(:update_session)
+  end
+
   it 'logs a failed update without the credential' do
     allow(client).to receive(:get_session).and_return(remote(webhook: false))
     allow(assigner).to receive(:for).and_return(proxy)

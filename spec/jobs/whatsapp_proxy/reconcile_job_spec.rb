@@ -3,8 +3,11 @@ require 'rails_helper'
 RSpec.describe WhatsappProxy::ReconcileJob do
   let(:webshare) { instance_double(Webshare::Client, configured?: true) }
 
+  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
+
   before do
     allow(Webshare::Client).to receive(:new).and_return(webshare)
+    allow(Waha::Client).to receive(:new).and_return(instance_double(Waha::Client, list_sessions: []))
     Redis::Alfred.delete(WhatsappProxy::Assigner::BACKOFF_KEY)
   end
 
@@ -58,6 +61,16 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     allow(webshare).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
 
     expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+  end
+
+  it 'does nothing while WHATSAPP_PROXY_ENABLED is off, even with the key' do
+    assign!('5511900000001', webshare_proxy(id: 1, address: '10.0.0.1'))
+    allow(webshare).to receive(:proxies)
+
+    with_modified_env(WHATSAPP_PROXY_ENABLED: nil) do
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    end
+    expect(webshare).not_to have_received(:proxies)
   end
 
   it 'does not call Webshare without the key' do

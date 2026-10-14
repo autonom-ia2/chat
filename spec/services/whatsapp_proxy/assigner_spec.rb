@@ -2,11 +2,14 @@ require 'rails_helper'
 
 RSpec.describe WhatsappProxy::Assigner do
   let(:client) { instance_double(Webshare::Client, configured?: true) }
-  let(:assigner) { described_class.new(client: client) }
+  let(:engine) { instance_double(Waha::Client, list_sessions: []) }
+  let(:assigner) { described_class.new(client: client, engine: engine) }
   let(:rio) { webshare_proxy(id: 1, address: '10.0.0.1', city: 'Rio de Janeiro') }
   let(:sao_paulo) { webshare_proxy(id: 2, address: '10.0.0.2', city: 'São Paulo') }
   let(:sao_paolo) { webshare_proxy(id: 3, address: '10.0.0.3', city: 'Sao Paolo') }
   let(:us) { webshare_proxy(id: 4, address: '10.0.0.4', country: 'US', city: 'New York') }
+
+  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
 
   before { Redis::Alfred.delete(described_class::BACKOFF_KEY) }
 
@@ -56,6 +59,49 @@ RSpec.describe WhatsappProxy::Assigner do
     expect(record.proxy_address).to eq('10.0.0.1')
     expect(record.credential_digest).to be_nil
     expect(log).to include('10.0.0.2:6000 saiu da lista')
+  end
+
+  it 'stays off, without calling Webshare, unless WHATSAPP_PROXY_ENABLED is "true"' do
+    allow(client).to receive(:proxies)
+
+    %w[false 1 TRUE].push(nil).each do |value|
+      with_modified_env(WHATSAPP_PROXY_ENABLED: value) do
+        expect(assigner).not_to be_enabled
+        expect(assigner.for('5511900000001')).to be_nil
+      end
+    end
+    expect(client).not_to have_received(:proxies)
+  end
+
+  it 'skips IPs the engine already uses, even without a record, keeping only the host' do
+    allow(engine).to receive(:list_sessions).with(all: true).and_return(
+      [{ 'name' => '5511900000009', 'config' => { 'proxy' => { 'server' => '10.0.0.2:6000', 'password' => 'manual-secret' } } },
+       { 'name' => '5511900000008', 'config' => { 'proxy' => { 'server' => 'http://10.0.0.1:6000' } } },
+       { 'name' => '5511900000007', 'config' => {} }]
+    )
+    third = webshare_proxy(id: 5, address: '10.0.0.5', city: 'Campinas')
+    allow(client).to receive(:proxies).and_return([sao_paulo, rio, third])
+
+    log = capture_log { expect(assigner.for('5511900000001').address).to eq('10.0.0.5') }
+
+    expect(log).not_to include('manual-secret')
+  end
+
+  it 'ignores the proxy of the session itself in the engine' do
+    allow(client).to receive(:proxies).and_return([sao_paulo])
+    allow(engine).to receive(:list_sessions).and_return(
+      [{ 'name' => '5511900000001', 'config' => { 'proxy' => { 'server' => '10.0.0.2:6000' } } }]
+    )
+
+    expect(assigner.for('5511900000001').address).to eq('10.0.0.2')
+  end
+
+  it 'assigns nothing when the engine cannot list its sessions' do
+    allow(client).to receive(:proxies).and_return([sao_paulo])
+    allow(engine).to receive(:list_sessions).and_raise(Waha::Client::Error, 'down')
+
+    expect(assigner.for('5511900000001')).to be_nil
+    expect(WhatsappProxy::Assignment.count).to eq(0)
   end
 
   it 'returns nil without the API key, and the session goes on without proxy' do

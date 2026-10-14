@@ -1,7 +1,9 @@
 # Um IP da Webshare por número de WhatsApp não oficial (#1516). `for` devolve o proxy da sessão: o que já está
 # atribuído, se continua válido na lista, ou um IP livre do Brasil (São Paulo primeiro). Nunca dois números no mesmo IP:
 # a escolha roda sob trava do Postgres e o índice único no endereço segura o resto.
-# nil = a sessão segue sem proxy (sem chave, API fora, pool sem IP livre, ou proxy posto à mão fora da Webshare).
+# nil = a sessão segue sem proxy (recurso desligado, sem chave, API fora, pool sem IP livre, ou proxy posto à mão fora
+# da Webshare). O recurso só liga com WHATSAPP_PROXY_ENABLED=true: a chave da Webshare sozinha não basta.
+# IP livre = fora da tabela E fora do que o próprio motor já usa (proxy posto à mão sem registro).
 # A credencial só existe no Webshare::Proxy em memória: nada de usuário/senha em banco, Redis ou log.
 class WhatsappProxy::Assigner
   LOCK_KEY = 1_516_000_001
@@ -14,17 +16,24 @@ class WhatsappProxy::Assigner
     proxies.find { |proxy| proxy.valid? && proxy.address == assignment.proxy_address && proxy.port == assignment.proxy_port }
   end
 
-  def initialize(client: Webshare::Client.new)
+  def self.feature_enabled?
+    ENV.fetch('WHATSAPP_PROXY_ENABLED', 'false') == 'true'
+  end
+
+  def initialize(client: Webshare::Client.new, engine: Waha::Client.new)
     @client = client
+    @engine = engine
   end
 
   def enabled?
-    @client.configured?
+    self.class.feature_enabled? && @client.configured?
   end
 
   # honor_backoff: só quem roda com frequência (atualização da aba) respeita a pausa; criar e reconectar sempre tentam.
   def for(session_name, honor_backoff: false)
-    unless enabled?
+    return unless self.class.feature_enabled?
+
+    unless @client.configured?
       Rails.logger.warn("[whatsapp_proxy] WEBSHARE_API_KEY ausente: session=#{session_name} segue sem proxy")
       return
     end
@@ -70,7 +79,10 @@ class WhatsappProxy::Assigner
   end
 
   def reassign(session_name, assignment, proxies)
-    taken = WhatsappProxy::Assignment.where.not(session_name: session_name).pluck(:proxy_address)
+    in_engine = engine_hosts(session_name)
+    return if in_engine.nil?
+
+    taken = WhatsappProxy::Assignment.where.not(session_name: session_name).pluck(:proxy_address) + in_engine
     candidate = pick(proxies.reject { |proxy| taken.include?(proxy.address) })
     return pool_exhausted!(session_name) if candidate.nil?
 
@@ -79,6 +91,28 @@ class WhatsappProxy::Assigner
     record.update!(webshare_proxy_id: candidate.id, proxy_address: candidate.address, proxy_port: candidate.port,
                    assigned_at: Time.current, credential_digest: nil)
     candidate
+  end
+
+  # Hosts dos proxies que as outras sessões do motor já usam. Só o host: a credencial que o motor devolve é descartada.
+  # Motor fora: nil, e nada é atribuído (sem a lista não dá para garantir IP livre).
+  def engine_hosts(session_name)
+    Array(@engine.list_sessions(all: true)).filter_map do |session|
+      next if session['name'] == session_name
+
+      proxy_host(session.dig('config', 'proxy', 'server'))
+    end
+  rescue Waha::Client::Error => e
+    Rails.logger.warn("[whatsapp_proxy] motor não listou as sessões (#{e.class}): session=#{session_name} segue sem proxy")
+    nil
+  end
+
+  def proxy_host(server)
+    return if server.blank?
+
+    server = server.to_s
+    URI.parse(server.include?('://') ? server : "http://#{server}").host
+  rescue URI::InvalidURIError
+    nil
   end
 
   def pick(free)
