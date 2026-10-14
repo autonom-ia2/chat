@@ -39,9 +39,6 @@ class Crm::FollowUps::ReminderPopupQuery
   end
 
   def reminder_recipient_ids(follow_up)
-    users = []
-    users += Crm::Cards::Broadcaster.recipient_users_for(follow_up.card) if follow_up.card.present?
-    users << follow_up.assignee if follow_up.assignee.present?
-    users.compact.map(&:id).uniq
+    Crm::FollowUps::RecipientResolver.new(follow_up).users.map(&:id)
   end
 end

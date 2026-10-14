@@ -3,7 +3,10 @@ class Crm::FollowUpPolicy < ApplicationPolicy
     account_user.present?
   end
 
+  # Sem card (#1461): quem marcou, quem recebe e o administrador (StandaloneVisibility).
   def show?
+    return standalone_scope.exists?(id: record.id) if record.card_id.nil?
+
     visible_card_scope.exists?(id: record.card_id)
   end
 
@@ -39,11 +42,18 @@ class Crm::FollowUpPolicy < ApplicationPolicy
   class Scope < ApplicationPolicy::Scope
     def resolve
       visible_card_ids = Pundit.policy_scope!(user_context, Crm::Card).select(:id)
-      scope.where(account_id: account.id, card_id: visible_card_ids)
+      base = scope.where(account_id: account.id)
+      standalone = Crm::FollowUps::StandaloneVisibility.new(user: user, account: account, account_user: account_user)
+      base.where(card_id: visible_card_ids).or(standalone.apply(base.where(card_id: nil)))
     end
   end
 
   private
+
+  def standalone_scope
+    visibility = Crm::FollowUps::StandaloneVisibility.new(user: user, account: account, account_user: account_user)
+    visibility.apply(Crm::FollowUp.where(account_id: account.id, card_id: nil))
+  end
 
   def visible_card_scope
     Pundit.policy_scope!(user_context, Crm::Card)

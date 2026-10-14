@@ -1,5 +1,8 @@
 class Crm::FollowUps::CardNextDueUpdater
+  # Lembrete sem card (#1461): nada a atualizar.
   def self.update(card)
+    return if card.nil?
+
     new(card).perform
   end
 

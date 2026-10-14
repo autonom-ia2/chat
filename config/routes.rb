@@ -323,6 +323,14 @@ Rails.application.routes.draw do
                 post :reschedule
               end
             end
+            # #1460: lembrete que repete (ver, mudar esta e as próximas, pausar, retomar, encerrar).
+            resources :follow_up_series, only: [:show, :update] do
+              member do
+                post :pause
+                post :resume
+                post :end, action: :finish
+              end
+            end
             resources :meetings, only: [:index, :create, :show, :update, :destroy] do
               member do
                 post :sync

@@ -1,4 +1,5 @@
 class Crm::FollowUps::ParamsResolver
+  # card é opcional (#1461): lembrete só no calendário, de um cliente ou de uma empresa (o Creator liga esses dois).
   def initialize(account:, user:, card:, conversation:, attributes:)
     @account = account
     @user = user
@@ -26,15 +27,15 @@ class Crm::FollowUps::ParamsResolver
   private
 
   def resolved_contact_id
-    @card.contact_id || @conversation&.contact_id
+    @card&.contact_id || @conversation&.contact_id
   end
 
   def resolved_inbox_id
-    @card.inbox_id || @conversation&.inbox_id
+    @card&.inbox_id || @conversation&.inbox_id
   end
 
   def resolved_assignee_id
-    @card.owner_id || @conversation&.assignee_id || @user.id
+    @card&.owner_id || @conversation&.assignee_id || @user.id
   end
 
   def resolved_timezone

@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseController
   def events
     authorize ::Crm::FollowUp, :index?
-    render json: { payload: follow_up_events + expected_close_events + meeting_events + external_events }
+    render json: { payload: follow_up_events + series_events + expected_close_events + meeting_events + external_events }
   end
 
   # Read-only free/busy lookup for the meeting scheduler. Returns the busy
@@ -44,19 +44,18 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
 
   def follow_up_events
     due_follow_ups.map do |follow_up|
-      {
-        id: "follow_up_#{follow_up.id}",
-        event_type: "follow_up_#{follow_up.automation_mode}",
-        title: follow_up.title,
-        starts_at: follow_up.due_at&.iso8601,
-        status: follow_up.status,
-        card_id: follow_up.card_id,
-        conversation_id: visible_conversation_id(follow_up),
-        contact_id: follow_up.contact_id,
-        inbox_id: follow_up.inbox_id,
-        assignee_id: follow_up.assignee_id
-      }
+      Crm::FollowUps::SeriesCalendarEvents.follow_up_event(follow_up, conversation_id: visible_conversation_id(follow_up))
     end
+  end
+
+  # #1460: as próximas vezes dos lembretes que repetem (calculadas; só a próxima existe como lembrete).
+  def series_events
+    return [] if owner_id.present? && owner_id.to_i != Current.user.id
+
+    Crm::FollowUps::SeriesCalendarEvents.new(
+      scope: policy_scope(::Crm::FollowUpSeries), from: meeting_filter_time(:from), to: meeting_filter_time(:to),
+      pipeline_id: params[:pipeline_id]
+    ).events
   end
 
   def expected_close_events
@@ -133,7 +132,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
     scope = ::Crm::FollowUps::FilterQuery.new(
       scope: policy_scope(::Crm::FollowUp),
       params: params,
-      includes: [:card, { conversation: :conversation_participants }]
+      includes: [:card, :series, { conversation: :conversation_participants }]
     ).perform
     # Hide completed/canceled follow-ups by default — they crowd out upcoming
     # ones once the date-ordered cap is reached. The calendar passes

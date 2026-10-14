@@ -1,5 +1,5 @@
 class Crm::FollowUps::FilterQuery
-  DEFAULT_INCLUDES = [:card, { conversation: :conversation_participants }, :contact, :inbox, :assignee, :created_by].freeze
+  DEFAULT_INCLUDES = [:card, :series, { conversation: :conversation_participants }, :contact, :inbox, :assignee, :created_by].freeze
 
   def initialize(scope:, params:, includes: DEFAULT_INCLUDES)
     @scope = scope
@@ -17,14 +17,15 @@ class Crm::FollowUps::FilterQuery
     @scope.includes(*@includes)
   end
 
+  # Lembrete sem card (#1461) não é de funil nenhum: aparece em qualquer funil escolhido.
   def apply_pipeline_filter(scope)
     return scope if @params[:pipeline_id].blank?
 
-    scope.joins(:card).where(crm_cards: { pipeline_id: @params[:pipeline_id] })
+    scope.left_joins(:card).where(crm_cards: { pipeline_id: @params[:pipeline_id] }).or(scope.left_joins(:card).where(card_id: nil))
   end
 
   def apply_direct_filters(scope)
-    filtered_scope = %i[card_id status inbox_id].reduce(scope) do |current_scope, attribute|
+    filtered_scope = %i[card_id contact_id series_id status inbox_id].reduce(scope) do |current_scope, attribute|
       apply_direct_filter(current_scope, attribute)
     end
 
