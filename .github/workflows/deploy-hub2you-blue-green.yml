@@ -357,7 +357,7 @@ jobs:
           APP_DIR="/opt/chatwoot"
 
           dnf update -y
-          dnf install -y docker awscli openssh-clients python3
+          dnf install -y docker awscli openssh-clients python3 iproute
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"
