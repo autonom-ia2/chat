@@ -48,14 +48,9 @@ describe('EtapaConfira', () => {
     );
   });
 
-  it('only offers to start answering after one answer was seen', async () => {
+  // #1504 — o teste não é obrigatório: Começar aparece sem nenhuma resposta vista.
+  it('offers to start answering right away, without any test answer', async () => {
     const wrapper = montar();
-    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
-    expect(wrapper.get('[data-pergunte]').text()).toBe(
-      'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTE'
-    );
-
-    await wrapper.setProps({ mensagens: respondido, respondidas: 1 });
     const botao = wrapper.get('[data-comecar] button');
     expect(botao.text()).toBe('Começar a atender no WhatsApp');
     expect(botao.classes()).toContain('min-h-14');
@@ -63,11 +58,33 @@ describe('EtapaConfira', () => {
     expect(wrapper.emitted('comecar')).toHaveLength(1);
   });
 
-  it('without a channel, offers to connect one (or to ask an admin)', async () => {
+  it('says the test is optional until one answer was seen, and keeps Começar after it', async () => {
+    const wrapper = montar();
+    expect(wrapper.get('[data-teste-opcional]').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.TESTE_OPCIONAL'
+    );
+
+    await wrapper.setProps({ mensagens: respondido, respondidas: 1 });
+    expect(wrapper.find('[data-teste-opcional]').exists()).toBe(false);
+    expect(wrapper.get('[data-comecar] button').text()).toBe(
+      'Começar a atender no WhatsApp'
+    );
+  });
+
+  it('the copilot also starts without a test answer', () => {
+    const wrapper = montar({
+      interno: true,
+      rotuloComecar: 'Começar a ajudar a equipe',
+    });
+    expect(wrapper.get('[data-comecar]').text()).toContain(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO_COPILOTO'
+    );
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+  });
+
+  it('without a channel, offers to connect one (or to ask an admin), even before the test', async () => {
     const wrapper = montar({
       rotuloComecar: '',
-      respondidas: 1,
-      mensagens: respondido,
       podeConectarCanal: true,
       linkConectarCanal: '/app/settings_inbox_new',
     });
@@ -169,10 +186,29 @@ describe('EtapaConfira', () => {
     ).toBeNull();
   });
 
-  it('"Not now, finish later" leaves the draft', async () => {
+  // #1504 — "Agora não, terminar depois" virou "Fazer ajustes avançados" (terminar depois é o
+  // "Voltar para Agentes" do topo).
+  it('"Make advanced adjustments" asks the page to open the agent, and says it stays paused', async () => {
     const wrapper = montar();
-    await wrapper.get('[data-depois]').trigger('click');
-    expect(wrapper.emitted('depois')).toHaveLength(1);
+    expect(wrapper.find('[data-depois]').exists()).toBe(false);
+    const botao = wrapper.get('[data-ajustes-botao]');
+    expect(botao.text()).toBe('AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES');
+    expect(botao.classes()).toContain('min-h-11');
+    expect(botao.attributes('aria-describedby')).toBe('confira-ajustes-texto');
+    expect(wrapper.get('#confira-ajustes-texto').text()).toBe(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_TEXTO'
+    );
+    await botao.trigger('click');
+    expect(wrapper.emitted('ajustes')).toHaveLength(1);
+  });
+
+  it('ignores a second click while the adjustments are opening', async () => {
+    const wrapper = montar({ abrindoAjustes: true });
+    const botao = wrapper.get('[data-ajustes-botao]');
+    expect(botao.attributes('aria-busy')).toBe('true');
+    expect(botao.attributes('aria-disabled')).toBe('true');
+    await botao.trigger('click');
+    expect(wrapper.emitted('ajustes')).toBeUndefined();
   });
 
   it('pins the questions, field and start button to the bottom on the phone', () => {
@@ -185,15 +221,11 @@ describe('EtapaConfira', () => {
     expect(doca.className).toContain('fixed');
   });
 
-  it('keeps "Not now" out of the bottom bar on the phone, so the bar stays short', () => {
-    const wrapper = montar({
-      celular: true,
-      mensagens: respondido,
-      respondidas: 1,
-    });
+  it('keeps the advanced adjustments out of the bottom bar on the phone, so the bar stays short', () => {
+    const wrapper = montar({ celular: true });
     const doca = wrapper.get('[data-comecar]').element.parentElement;
-    expect(wrapper.findAll('[data-depois]')).toHaveLength(1);
-    expect(doca.contains(wrapper.get('[data-depois]').element)).toBe(false);
+    expect(wrapper.findAll('[data-ajustes]')).toHaveLength(1);
+    expect(doca.contains(wrapper.get('[data-ajustes]').element)).toBe(false);
   });
 });
 

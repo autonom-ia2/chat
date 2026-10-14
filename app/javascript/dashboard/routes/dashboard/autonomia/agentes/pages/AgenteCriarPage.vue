@@ -44,8 +44,8 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
-// quando já dá para estar nela: sem a conversa fechada fica em Conte; sem uma resposta vista no
-// teste, Comece volta para Confira; Pronto só com o agente atendendo.
+// quando já dá para estar nela: sem a conversa fechada fica em Conte; Pronto só com o agente
+// atendendo. #1504 — o teste é opcional: Comece só exige a conversa fechada (e um canal).
 // - Computador: uma tela só. A conversa fica à esquerda e o celular à direita, que vira teste
 //   quando a conversa fecha. Comece é a folha à direita.
 // - Celular: uma etapa por tela, sem troca automática. Quando a conversa fecha, a barra embaixo
@@ -56,6 +56,8 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 // #1494 — Copiloto da equipe (`?atuacao=interno`): a conversa abre com actuation internal. Sem
 // exemplo de cliente nem ideias de loja; o teste usa perguntas da equipe e o Comece só liga o agente,
 // sem canal. Antes do rascunho existir, a atuação vem da query; depois, do próprio agente.
+// #1504 — "Fazer ajustes avançados" (no Confira) deixa o agente parado (status paused), sem ligar
+// caixa nenhuma, e abre a página dele; vale para os dois tipos. Terminar depois é o "Voltar" do topo.
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
@@ -95,6 +97,7 @@ const elegiveis = ref(null);
 const resultado = ref(null);
 const exemploAberto = ref(false);
 const internoComecando = ref(false);
+const abrindoAjustes = ref(false);
 const confirmarSaida = ref(null);
 const titulo = ref(null);
 const etapaConte = ref(null);
@@ -178,12 +181,7 @@ const etapa = computed(() => {
   if (pedida === ETAPA.PRONTO && atendendo.value) return ETAPA.PRONTO;
   if (!conversa.fechada.value) return ETAPA.CONTE;
   if (pedida === ETAPA.CONTE && celular.value) return ETAPA.CONTE;
-  if (
-    pedida === ETAPA.COMECE &&
-    teste.respondidas.value > 0 &&
-    !interno.value &&
-    canais.value.length
-  ) {
+  if (pedida === ETAPA.COMECE && !interno.value && canais.value.length) {
     return ETAPA.COMECE;
   }
   return ETAPA.CONFIRA;
@@ -394,6 +392,28 @@ const comecarNoCanal = async ({ inboxId, quando, troca }) => {
   irPara(ETAPA.PRONTO);
 };
 
+// Parado (não rascunho) e sem canal: a página do agente abre com o interruptor desligado e a lista
+// mostra "Parado". Nenhuma caixa é ligada aqui. Se não salvar, a pessoa continua no Confira.
+const fazerAjustesAvancados = async () => {
+  const id = agente.value?.id;
+  if (abrindoAjustes.value || !id) return;
+  abrindoAjustes.value = true;
+  try {
+    await store.dispatch('autonomiaAgents/update', {
+      id,
+      enabled: false,
+      status: 'paused',
+    });
+    router.push({ name: 'autonomia_agent_panel', params: { agentId: id } });
+  } catch {
+    useAlert(
+      t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO', { nome: nome.value })
+    );
+  } finally {
+    abrindoAjustes.value = false;
+  }
+};
+
 const verAgente = () =>
   router.push({
     name: 'autonomia_agent_panel',
@@ -590,12 +610,13 @@ onMounted(() => {
           :pode-conectar-canal="podeConectarCanal"
           :link-conectar-canal="linkConectarCanal"
           :celular="celular"
+          :abrindo-ajustes="abrindoAjustes"
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
           @limpar="teste.limpar"
           @respondeu-errado="respondeuErrado"
           @comecar="abrirComece"
-          @depois="sairDeixandoRascunho"
+          @ajustes="fazerAjustesAvancados"
         />
 
         <aside

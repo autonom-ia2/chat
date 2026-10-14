@@ -9,9 +9,10 @@ import RespostasRapidas from '../RespostasRapidas.vue';
 
 // #1181 PR2 (protótipo T04) — o celular vira teste de verdade: perguntas prontas do modelo ou
 // escritas, resposta em partes, "usou: <arquivo>" e a faixa de quando passaria para a equipe.
-// "Respondeu errado?" leva o pedido para a conversa. "Começar a atender no {canal}" só aparece
-// depois de uma resposta vista; sem canal, vira "Conectar seu WhatsApp ou outro canal" (ou o pedido
-// a um administrador). "Agora não, terminar depois" deixa o rascunho em Falta terminar.
+// "Respondeu errado?" leva o pedido para a conversa. #1504 — "Começar a atender no {canal}" aparece
+// assim que a conversa fecha: o teste é opcional ("Se quiser, teste antes"). Sem canal, vira
+// "Conectar seu WhatsApp ou outro canal" (ou o pedido a um administrador). "Fazer ajustes avançados"
+// pede à página para abrir o agente parado e sem canal; terminar depois é o "Voltar" do topo.
 const props = defineProps({
   nome: { type: String, required: true },
   empresa: { type: String, default: '' },
@@ -30,6 +31,8 @@ const props = defineProps({
   celular: { type: Boolean, default: false },
   // Copiloto da equipe (#1494): o teste é de alguém da equipe e o agente não responde clientes.
   interno: { type: Boolean, default: false },
+  // "Fazer ajustes avançados" foi pedido e a página ainda está deixando o agente parado.
+  abrindoAjustes: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -38,7 +41,7 @@ const emit = defineEmits([
   'limpar',
   'respondeuErrado',
   'comecar',
-  'depois',
+  'ajustes',
 ]);
 
 const { t } = useI18n();
@@ -127,6 +130,10 @@ const perguntar = texto => emit('perguntar', { texto, anexos: [] });
 const enviar = ({ texto, anexos }) => {
   emit('perguntar', { texto, anexos });
   pergunta.value = '';
+};
+
+const pedirAjustes = () => {
+  if (!props.abrindoAjustes) emit('ajustes');
 };
 
 const respondeuErrado = () => {
@@ -255,10 +262,18 @@ const respondeuErrado = () => {
           @enviar="enviar"
         />
       </template>
-      <p v-if="!respondidas" data-pergunte class="m-0 text-sm text-n-slate-11">
-        {{ t(`${NS}.PERGUNTE`, { nome }) }}
+      <p
+        v-if="!respondidas"
+        data-teste-opcional
+        class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
+      >
+        <span
+          class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
       </p>
-      <div v-else-if="rotuloComecar" data-comecar class="flex flex-col gap-1">
+      <div v-if="rotuloComecar" data-comecar class="flex flex-col gap-1">
         <AgenteBotao
           tamanho="xl"
           bloco
@@ -275,7 +290,7 @@ const respondeuErrado = () => {
           }}
         </p>
       </div>
-      <div v-else data-sem-canal class="flex flex-col gap-2">
+      <div v-else-if="!interno" data-sem-canal class="flex flex-col gap-2">
         <p class="m-0 text-sm text-n-slate-11">
           {{ t('AGENTS.JORNADA.ERRO.SEM_CANAL_GARANTIA', { nome }) }}
         </p>
@@ -297,15 +312,25 @@ const respondeuErrado = () => {
       </div>
     </div>
     <!-- Fora da barra fixa: no celular fica embaixo do teste, e a barra continua curta. -->
-    <p class="m-0">
+    <div data-ajustes class="flex flex-col items-start gap-0.5">
       <button
         type="button"
-        data-depois
-        class="px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-        @click="emit('depois')"
+        data-ajustes-botao
+        aria-describedby="confira-ajustes-texto"
+        :aria-busy="abrindoAjustes ? 'true' : undefined"
+        :aria-disabled="abrindoAjustes ? 'true' : undefined"
+        class="inline-flex items-center gap-1.5 px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 aria-disabled:cursor-wait aria-disabled:opacity-60"
+        @click="pedirAjustes"
       >
-        {{ t('AGENTS.JORNADA.CRIAR.SAIR.DEPOIS') }}
+        <span
+          class="i-lucide-sliders-horizontal size-4 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.AJUSTES`) }}
       </button>
-    </p>
+      <p id="confira-ajustes-texto" class="px-1 m-0 text-xs text-n-slate-11">
+        {{ t(`${NS}.AJUSTES_TEXTO`, { nome }) }}
+      </p>
+    </div>
   </section>
 </template>
