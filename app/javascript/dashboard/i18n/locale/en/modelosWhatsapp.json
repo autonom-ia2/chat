@@ -172,6 +172,7 @@
       "SISTEMA": {
         "agendamento": "Used by the platform in the booking notices.",
         "anuncios": "Used by the platform in the Ads notices.",
+        "cobranca": "Used by the platform in the pipeline's payment reminders.",
         "satisfacao": "Used by the platform in the satisfaction survey after a conversation."
       }
     },
@@ -848,11 +849,13 @@
         "data_hora": "Appointment date and time",
         "data": "Appointment date",
         "hora": "Appointment time",
-        "link_gestao": "Link to manage the appointment"
+        "link_gestao": "Link to manage the appointment",
+        "link_codigo": "Code of the link to manage the appointment"
       },
       "negocio": {
         "titulo": "Deal title",
-        "valor": "Deal value"
+        "valor": "Deal value",
+        "vencimento": "Due date"
       },
       "atendente": {
         "nome": "Agent name"

@@ -36,8 +36,10 @@ export const CHAVES_DO_CATALOGO = [
   'horario.data',
   'horario.hora',
   'horario.link_gestao',
+  'horario.link_codigo',
   'negocio.titulo',
   'negocio.valor',
+  'negocio.vencimento',
   'atendente.nome',
 ];
 

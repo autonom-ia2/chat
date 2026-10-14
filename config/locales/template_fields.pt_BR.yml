@@ -16,11 +16,13 @@ pt_BR:
         etapa: 'Etapa do negócio'
         valor: 'Valor do negócio'
         responsavel: 'Responsável pelo atendimento'
+        vencimento: 'Data de vencimento'
       horario:
         data_hora: 'Dia e hora do horário'
         data: 'Data do horário'
         hora: 'Hora do horário'
         link_gestao: 'Link para confirmar, mudar ou cancelar'
+        link_codigo: 'Código do link para confirmar, mudar ou cancelar'
       minha_empresa:
         nome: 'Nome da sua empresa'
         endereco: 'Endereço da sua empresa'

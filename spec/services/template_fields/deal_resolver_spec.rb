@@ -21,8 +21,17 @@ RSpec.describe TemplateFields::DealResolver do
 
     expect(resolver.keys.index_with { |key| resolver.value(key) }).to eq(
       'negocio.titulo' => 'Seguro auto — Ana', 'negocio.funil' => 'Vendas', 'negocio.etapa' => vendas.last.name,
-      'negocio.valor' => 'R$ 1.250,00', 'negocio.responsavel' => 'Juliana Melo'
+      'negocio.valor' => 'R$ 1.250,00', 'negocio.responsavel' => 'Juliana Melo', 'negocio.vencimento' => nil
     )
+  end
+
+  # #1518: 02:00 UTC on the 21st is still the 20th in São Paulo (the default) and already the 21st in Tokyo.
+  it 'reads the due date in the account time zone' do
+    card.update!(expected_close_at: Time.utc(2026, 10, 21, 2, 0))
+    expect(described_class.new(card).value('negocio.vencimento')).to eq('20/10/2026')
+
+    account.update!(reporting_timezone: 'Asia/Tokyo')
+    expect(described_class.new(card.reload).value('negocio.vencimento')).to eq('21/10/2026')
   end
 
   it 'leaves a card without value or owner without them' do

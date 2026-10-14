@@ -16,11 +16,13 @@ en:
         etapa: 'Deal stage'
         valor: 'Deal value'
         responsavel: 'Person in charge'
+        vencimento: 'Due date'
       horario:
         data_hora: 'Day and time of the appointment'
         data: 'Appointment date'
         hora: 'Appointment time'
         link_gestao: 'Link to confirm, change or cancel'
+        link_codigo: 'Code of the link to confirm, change or cancel'
       minha_empresa:
         nome: 'Your company name'
         endereco: 'Your company address'
