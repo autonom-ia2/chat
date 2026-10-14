@@ -3960,6 +3960,8 @@
       "SOZINHO": "O que acontece sozinho",
       "ALTERAR": "Alterar",
       "LIGAR": "Colocar no CRM",
+      "PORTA": "{nome} atende primeiro",
+      "AREA": "{nome} cuida de {funis}",
       "ROBO": "{nome} (agente de IA) atende primeiro"
     },
     "MODO_RESUMO": {
@@ -3981,7 +3983,8 @@
     },
     "CUIDAM": {
       "TITULO": "Quem cuida do quê?",
-      "SUBTITULO": "Toque nos assuntos de cada pessoa. Ela só vê as conversas deles."
+      "SUBTITULO": "Toque nos assuntos de cada pessoa. Ela só vê as conversas deles.",
+      "SUBTITULO_COM_AGENTES": "Toque nos assuntos de cada agente de IA e de cada pessoa. A pessoa só vê as conversas deles."
     },
     "SOZINHO": {
       "TITULO": "O que o sistema faz sozinho?",
@@ -4021,6 +4024,11 @@
       "NADA_MUDOU": "Nada mudou.",
       "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards.",
       "RODIZIO_NOME": "{nome}:",
+      "AGENTE_CUIDA": "Cuida de: {funis}. Assume a conversa quando o assunto é desse funil. | Cuida de: {funis}. Assume a conversa quando o assunto é de um desses funis.",
+      "FICA_COM_A_PORTA": "{funis}: sem agente marcado, {porta} continua.",
+      "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
+      "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
+      "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
       "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo."
     },
     "MUDA": {
@@ -4030,7 +4038,11 @@
       "PESSOA_TODAS": "{nome} passa a ver todas as conversas dos assuntos de que cuida.",
       "MODO": "A partir de agora: {resumo}",
       "PESSOA_GANHA": "{nome} passa a cuidar de {assuntos}.",
-      "PESSOA_PERDE": "{nome} deixa de cuidar de {assuntos}."
+      "PESSOA_PERDE": "{nome} deixa de cuidar de {assuntos}.",
+      "AGENTE_ENTRA": "{nome} entra nesta caixa.",
+      "AGENTE_ENTRA_E_LIGA": "{nome} entra nesta caixa e passa a atender.",
+      "AGENTE_SAI": "{nome} sai desta caixa.",
+      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa."
     },
     "FUNIS": {
       "TIPO_SALES": "Vendas: termina em ganho ou perdido",
@@ -4056,7 +4068,26 @@
       "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
       "LEGADO_MUDAR": "Usar o que eu marcar",
       "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas.",
-      "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui."
+      "AGENTES_TITULO": "Agentes de IA",
+      "PESSOAS_TITULO": "Pessoas",
+      "SELO_IA": "Agente de IA",
+      "PORTA": "Atende primeiro todas as conversas desta caixa.",
+      "AGENTE_CUIDA": "Cuida de: {funis}",
+      "AGENTE_NADA": "Não cuida de nenhum assunto nesta caixa.",
+      "FUNIL_COM": "· com {nome}",
+      "TROCOU": "{funil} era de {antes}. Agora é de {agora}.",
+      "DESFAZER": "Desfazer",
+      "REGRA": "O agente marcado num assunto assume a conversa; sem agente, {porta} continua.",
+      "REGRA_SEM_PORTA": "O agente marcado num assunto assume a conversa.",
+      "MOSTRAR_AGENTES": "Mostrar outros agentes ({n})",
+      "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
+      "TIRAR": "Tirar desta caixa",
+      "SAI": "Sai desta caixa ao salvar.",
+      "VAI_PARAR": "Esta é a única caixa em que {nome} trabalha. Ao salvar, {nome} para de atender.",
+      "ENTRA": "Entra nesta caixa ao salvar.",
+      "ENTRA_E_LIGA": "Entra nesta caixa e passa a atender ao salvar.",
+      "PARADO": "Parado",
+      "SO_QUEM_GERENCIA": "Só quem gerencia agentes de IA muda os agentes desta caixa."
     },
     "EDITOR": {
       "ERRO": "Não deu para abrir esta caixa agora.",
@@ -4064,7 +4095,9 @@
       "CONTINUAR": "Continuar",
       "SALVAR": "Salvar",
       "SALVOU": "Caixa salva.",
-      "FALHOU": "Não deu para salvar. Tente de novo."
+      "FALHOU": "Não deu para salvar. Tente de novo.",
+      "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
+      "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo."
     }
   },
   "CRM_FUNIL": {

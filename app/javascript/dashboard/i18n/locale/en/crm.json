@@ -3959,6 +3959,8 @@
       "SOZINHO": "What happens automatically",
       "ALTERAR": "Change",
       "LIGAR": "Add to CRM",
+      "PORTA": "{nome} answers first",
+      "AREA": "{nome} handles {funis}",
       "ROBO": "{nome} (AI agent) answers first"
     },
     "MODO_RESUMO": {
@@ -3980,7 +3982,8 @@
     },
     "CUIDAM": {
       "TITULO": "Who handles what?",
-      "SUBTITULO": "Tap each person's subjects. They only see those conversations."
+      "SUBTITULO": "Tap each person's subjects. They only see those conversations.",
+      "SUBTITULO_COM_AGENTES": "Tap the subjects of each AI agent and each person. A person only sees those conversations."
     },
     "SOZINHO": {
       "TITULO": "What does the system do on its own?",
@@ -4020,6 +4023,11 @@
       "NADA_MUDOU": "Nothing changed.",
       "SAI_DO_CRM": "With no pipeline selected, this inbox leaves the CRM. Its conversations stop becoming cards.",
       "RODIZIO_NOME": "{nome}:",
+      "AGENTE_CUIDA": "Handles: {funis}. Takes over when the subject is this pipeline. | Handles: {funis}. Takes over when the subject is one of these pipelines.",
+      "FICA_COM_A_PORTA": "{funis}: no agent marked, so {porta} carries on.",
+      "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
+      "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
+      "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
       "ROBO": "{nome}, the AI agent, answers first. Then the people below."
     },
     "MUDA": {
@@ -4029,7 +4037,11 @@
       "PESSOA_TODAS": "{nome} now sees all conversations of the subjects they handle.",
       "MODO": "From now on: {resumo}",
       "PESSOA_GANHA": "{nome} starts handling {assuntos}.",
-      "PESSOA_PERDE": "{nome} stops handling {assuntos}."
+      "PESSOA_PERDE": "{nome} stops handling {assuntos}.",
+      "AGENTE_ENTRA": "{nome} joins this inbox.",
+      "AGENTE_ENTRA_E_LIGA": "{nome} joins this inbox and starts answering.",
+      "AGENTE_SAI": "{nome} leaves this inbox.",
+      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox."
     },
     "FUNIS": {
       "TIPO_SALES": "Sales: ends in won or lost",
@@ -4055,7 +4067,26 @@
       "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
       "LEGADO_MUDAR": "Use what I select",
       "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations.",
-      "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies."
+      "AGENTES_TITULO": "AI agents",
+      "PESSOAS_TITULO": "People",
+      "SELO_IA": "AI agent",
+      "PORTA": "Answers every conversation in this inbox first.",
+      "AGENTE_CUIDA": "Handles: {funis}",
+      "AGENTE_NADA": "Doesn't handle any subject in this inbox.",
+      "FUNIL_COM": "· with {nome}",
+      "TROCOU": "{funil} was with {antes}. Now it is with {agora}.",
+      "DESFAZER": "Undo",
+      "REGRA": "The agent marked on a subject takes over the conversation; with no agent, {porta} carries on.",
+      "REGRA_SEM_PORTA": "The agent marked on a subject takes over the conversation.",
+      "MOSTRAR_AGENTES": "Show other agents ({n})",
+      "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies.",
+      "TIRAR": "Remove from this inbox",
+      "SAI": "Leaves this inbox when you save.",
+      "VAI_PARAR": "This is the only inbox where {nome} works. After saving, {nome} stops answering.",
+      "ENTRA": "Joins this inbox when you save.",
+      "ENTRA_E_LIGA": "Joins this inbox and starts answering when you save.",
+      "PARADO": "Stopped",
+      "SO_QUEM_GERENCIA": "Only people who manage AI agents can change the agents of this inbox."
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",
@@ -4063,7 +4094,9 @@
       "CONTINUAR": "Continue",
       "SALVAR": "Save",
       "SALVOU": "Inbox saved.",
-      "FALHOU": "We couldn't save. Try again."
+      "FALHOU": "We couldn't save. Try again.",
+      "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
+      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again."
     }
   },
   "CRM_FUNIL": {
