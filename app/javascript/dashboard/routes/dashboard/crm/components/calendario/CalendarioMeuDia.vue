@@ -207,7 +207,7 @@ const ATALHOS = ['AMANHA', 'TRES_DIAS', 'SEMANA'];
           slate
           ghost
           class="!min-h-11"
-          @click="emit('adiarAtrasados', atrasados)"
+          @click="emit('adiarAtrasados', atrasadosVisiveis)"
         />
       </header>
       <ul class="m-0 flex list-none flex-col gap-2 p-0">

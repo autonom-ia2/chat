@@ -110,11 +110,12 @@ describe('CalendarioOuro', () => {
       series_id: 9,
       recurring: true,
       virtual: true,
+      assignee_id: 1,
     };
     const agente = montar({ ehAdmin: false, events: [...EVENTOS, repete] });
     await flushPromises();
     expect(agente.text()).not.toContain('Da Paula');
-    // A próxima vez de uma repetição não tem dono no evento: não some.
+    // A vez calculada de uma repetição traz o responsável que terá.
     expect(agente.text()).toContain('Conferir o caixa');
 
     const admin = montar();
@@ -204,6 +205,11 @@ describe('CalendarioOuro', () => {
 
     const secao = () => wrapper.find('[data-secao="atrasados"]');
     expect(secao().text()).not.toContain('Coisa antiga');
+    // "Passar tudo" só leva o que a pessoa está vendo.
+    await wrapper.find('[data-adiar-todos]').trigger('click');
+    expect(
+      wrapper.emitted('adiarAtrasados')[0][0].eventos.map(e => e.id)
+    ).toEqual(['follow_up_1']);
     expect(wrapper.find('[data-antigos]').text()).toContain(
       'CRM_CALENDARIO.DIA.ANTIGOS'
     );

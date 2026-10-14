@@ -98,14 +98,13 @@ export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
     return { de: candidatosDe.sort()[0], ate: candidatosAte.sort().at(-1) };
   });
 
-  // "Só os meus": o que está no meu nome. As próximas vezes de um lembrete que
-  // repete não têm dono no evento (quem recebe fica na repetição, e o back só
-  // manda as repetições que a pessoa pode ver); entram para não sumir.
+  // "Só os meus": o que está no meu nome. As vezes calculadas de um lembrete
+  // que repete trazem o responsável que terão (#1568). Sem dono, ou sem saber
+  // quem é a pessoa, não é "meu".
+  const vazio = valor => valor === null || valor === undefined;
   const ehMeu = item => {
     const { assignee_id: dono } = item.evento;
-    if (dono === null || dono === undefined) return item.virtual;
-    if (props.currentUserId === null || props.currentUserId === undefined)
-      return false;
+    if (vazio(dono) || vazio(props.currentUserId)) return false;
     return Number(dono) === Number(props.currentUserId);
   };
 
