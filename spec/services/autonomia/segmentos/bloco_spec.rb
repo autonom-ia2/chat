@@ -19,8 +19,11 @@ RSpec.describe Autonomia::Segmentos::Bloco do
     expect(described_class.for(Account.find(account.id))).to eq(described_class.for(account))
   end
 
+  # Trava do contrato: um único argumento obrigatório (a conta). Argumento opcional pode entrar sem quebrar quem chama.
   it 'depends only on the account, never on a conversation' do
-    expect(described_class.method(:for).parameters.size).to eq(1)
+    obrigatorios = described_class.method(:for).parameters.count { |tipo, _| %i[req keyreq].include?(tipo) }
+
+    expect(obrigatorios).to eq(1)
   end
 
   it 'gives the same text for an account with conversations' do
