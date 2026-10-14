@@ -21,6 +21,7 @@ import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
+import AgenteGaveta from '../components/AgenteGaveta.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import {
   ESTADO_PAGINA,
@@ -705,27 +706,32 @@ const tirarPergunta = id => {
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
-      <EquipeCanais
+      <AgenteGaveta
         v-else-if="aberta === EQUIPE"
-        :nome="nome"
-        :agente-id="agente.id"
-        :canais="canais.canais.value"
-        :caixas="caixas"
-        :leitura="
-          canais.estado.value === 'pronto' && canais.semLeitura.value
-            ? 'erro'
-            : canais.estado.value
-        "
-        :inicial="(equipe || []).map(canal => canal.inbox_id)"
-        :salvando="salvarEquipe.salvando.value"
-        :erro="salvarEquipe.erro.value"
-        :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
-        :texto-sair="t('AGENTS.JORNADA.COMUM.CANCELAR')"
-        :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+        :titulo="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
         @fechar="fechar"
-        @reler="canais.carregar()"
-        @pronto="salvarMudancaDaEquipe"
-      />
+      >
+        <EquipeCanais
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :canais="canais.canais.value"
+          :caixas="caixas"
+          :leitura="
+            canais.estado.value === 'pronto' && canais.semLeitura.value
+              ? 'erro'
+              : canais.estado.value
+          "
+          :inicial="(equipe || []).map(canal => canal.inbox_id)"
+          :salvando="salvarEquipe.salvando.value"
+          :erro="salvarEquipe.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="canais.carregar()"
+          @pronto="salvarMudancaDaEquipe"
+        />
+      </AgenteGaveta>
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"
         :agent-id="agente.id"

@@ -26,6 +26,8 @@ import {
   modeloDaQuery,
   modeloDoTipo,
   papelDaQuery,
+  caixasDaQuery,
+  caixasNaQuery,
   perguntasDeTeste,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
@@ -76,10 +78,12 @@ import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
 // caixa nenhuma, e abre a página dele; vale para os dois tipos. Terminar depois é o "Voltar" do topo.
 // #1543 — vinda da página "Criar agente" (mesma rota, a criação toma o lugar dela): o foco vai ao
 // título da criação, para teclado e leitor de tela saberem que a tela mudou.
-// #1433 (tema 13) — agente da equipe (`?papel=area`, só com a Fase 2): a conversa é a de sempre; o
-// Comece escolhe os canais que já têm principal atendendo (os outros, bloqueados com o motivo), passa
-// pelo "Confira como fica" e grava o vínculo de área, que já liga o agente. A marca fica na query
-// junto de `?agente=` (F5). Pronto mostra "Onde {nome} trabalha" (caixa e papel).
+// #1433 (tema 13) — agente da equipe (`?papel=area`, só com a Fase 2), como no protótipo aprovado:
+// ANTES da conversa, em página inteira, "Em quais canais…" (só os que têm principal atendendo; os
+// outros bloqueados com o motivo) e "Confira como fica". A escolha vai para a URL (`?caixas=`, junto
+// de `?papel=` e depois de `?agente=`): F5 não pergunta de novo. Depois, a conversa de sempre, com
+// "Onde {nome} trabalha" no topo ("Alterar" volta aos passos). "Começar a trabalhar" grava os vínculos
+// de área, que já ligam o agente, sem perguntar canal de novo. Pronto mostra "Onde {nome} trabalha".
 const props = defineProps({
   focarTitulo: { type: Boolean, default: false },
 });
@@ -175,6 +179,16 @@ const equipe = computed(
     papelDaQuery(route.query) === PAPEL_AREA_NA_QUERY
 );
 const salvarEquipe = useSalvarEquipe();
+const caixasDaEquipeNaQuery = computed(() => caixasDaQuery(route.query));
+// Os passos do começo: agente da equipe que ainda não escolheu os canais (ou pediu "Alterar").
+const escolhendoCanais = ref(
+  equipe.value && !caixasDaQuery(route.query).length
+);
+const canaisDaEquipe = computed(() =>
+  caixasDaEquipeNaQuery.value
+    .map(id => ocupacao.canais.value.find(canal => canal.inbox_id === id))
+    .filter(Boolean)
+);
 
 // Onde atender: a leitura L2 (com quem ocupa cada caixa). Se ela falhar, as caixas livres que o
 // canal do agente já devolve (sem mostrar as ocupadas).
@@ -231,11 +245,12 @@ const etapa = computed(() => {
   if (pedida === ETAPA.PRONTO && atendendo.value) return ETAPA.PRONTO;
   if (!conversa.fechada.value) return ETAPA.CONTE;
   if (pedida === ETAPA.CONTE && celular.value) return ETAPA.CONTE;
-  // O agente da equipe abre o Comece mesmo sem canal livre: a gaveta mostra os bloqueados e o motivo.
+  // O agente da equipe não tem Comece: os canais foram escolhidos no começo.
   if (
     pedida === ETAPA.COMECE &&
     !interno.value &&
-    (equipe.value || canais.value.length)
+    !equipe.value &&
+    canais.value.length
   ) {
     return ETAPA.COMECE;
   }
@@ -426,9 +441,41 @@ const ativarInterno = async () => {
   }
 };
 
+// #1433: "Começar a trabalhar" do agente da equipe — grava as caixas escolhidas no começo (já liga o
+// agente), relê o agente (estado "Na equipe") e as caixas. Recusado (ex.: o principal parou), a
+// explicação do servidor aparece no topo com "Escolher os canais de novo".
+const comecarNaEquipe = async () => {
+  const id = conversa.agenteId.value;
+  const escolhidas = caixasDaEquipeNaQuery.value;
+  const equipeEscolhida = canaisDaEquipe.value;
+  const feito = await salvarEquipe.salvar({
+    agenteId: id,
+    nome: nome.value,
+    entram: escolhidas,
+  });
+  if (!feito) return;
+  resultado.value = {
+    canal: '',
+    quando: 'always',
+    saiu: '',
+    equipe: equipeEscolhida,
+  };
+  irPara(ETAPA.PRONTO);
+  ocupacao.carregar();
+  try {
+    await store.dispatch('autonomiaAgents/show', id);
+  } catch {
+    // O vínculo já foi gravado; a lista relê o agente ao abrir.
+  }
+};
+
 const abrirComece = () => {
   if (interno.value) {
     ativarInterno();
+    return;
+  }
+  if (equipe.value) {
+    comecarNaEquipe();
     return;
   }
   erroDeComecar.value = null;
@@ -443,7 +490,7 @@ useEventListener(window, 'focus', () => {
 });
 
 const fecharComece = () => {
-  if (comecando.value || salvarEquipe.salvando.value) return;
+  if (comecando.value) return;
   irPara(ETAPA.CONFIRA);
 };
 
@@ -465,33 +512,6 @@ const comecarNoCanal = async ({ inboxId, quando, troca }) => {
     saiu: troca?.nome || '',
   };
   irPara(ETAPA.PRONTO);
-};
-
-// #1433: grava as caixas da equipe (já liga o agente), relê o agente (estado "Na equipe") e as caixas.
-const comecarNaEquipe = async ({ escolhidas, entram, saem }) => {
-  const id = conversa.agenteId.value;
-  const feito = await salvarEquipe.salvar({
-    agenteId: id,
-    nome: nome.value,
-    entram,
-    saem,
-  });
-  if (!feito) return;
-  resultado.value = {
-    canal: '',
-    quando: 'always',
-    saiu: '',
-    equipe: ocupacao.canais.value.filter(canal =>
-      escolhidas.includes(canal.inbox_id)
-    ),
-  };
-  irPara(ETAPA.PRONTO);
-  ocupacao.carregar();
-  try {
-    await store.dispatch('autonomiaAgents/show', id);
-  } catch {
-    // O vínculo já foi gravado; a lista relê o agente ao abrir.
-  }
 };
 
 // Parado (não rascunho) e sem canal: a página do agente abre com o interruptor desligado e a lista
@@ -563,6 +583,36 @@ const abrirAgenteExistente = async () => {
   }
 };
 
+// #1433: escolheu os canais (passo 2, "Confira como fica"): vão para a URL e a conversa começa.
+const escolheuCanais = ({ escolhidas }) => {
+  salvarEquipe.erro.value = null;
+  router.replace({
+    query: { ...route.query, caixas: caixasNaQuery(escolhidas) },
+  });
+  escolhendoCanais.value = false;
+  if (!idInicial && !conversa.agenteId.value && !conversa.falas.value.length) {
+    conversa.comecar();
+  }
+};
+
+// Voltar do primeiro passo: com canais já escolhidos, volta à criação; sem, à página "Criar agente".
+const voltarDosCanais = () => {
+  if (caixasDaEquipeNaQuery.value.length) {
+    escolhendoCanais.value = false;
+    return;
+  }
+  if (conversa.agenteId.value) {
+    voltarParaLista();
+    return;
+  }
+  router.replace({ query: {} });
+};
+
+const alterarCanais = () => {
+  ocupacao.carregar();
+  escolhendoCanais.value = true;
+};
+
 onMounted(() => {
   if (props.focarTitulo) nextTick(() => titulo.value?.focus());
   conversa.limpar();
@@ -571,14 +621,50 @@ onMounted(() => {
     return;
   }
   if (atuacaoPedida !== ATUACAO.INTERNA) ocupacao.carregar();
-  conversa.comecar();
+  // O agente da equipe escolhe os canais antes: a conversa só começa depois (escolheuCanais).
+  if (!escolhendoCanais.value) conversa.comecar();
 });
 </script>
 
 <template>
   <div class="w-full h-full overflow-y-auto bg-n-background">
+    <div
+      v-if="escolhendoCanais"
+      data-criar-onde
+      class="flex flex-col w-full max-w-3xl gap-6 px-4 py-6 mx-auto md:px-6"
+    >
+      <button
+        type="button"
+        data-voltar-lista
+        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        @click="voltarParaLista"
+      >
+        <span
+          class="i-lucide-arrow-left size-4 rtl:rotate-180"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
+      </button>
+      <p class="m-0 text-sm font-semibold text-n-slate-11">
+        {{ t('AGENTS.JORNADA.CRIAR.TITULO') }}
+      </p>
+      <EquipeCanais
+        :nome="agente && !semNome ? nome : ''"
+        :sem-nome="!agente || semNome"
+        :agente-id="conversa.agenteId.value"
+        :canais="ocupacao.canais.value"
+        :caixas="caixas"
+        :leitura="ocupacao.estado.value"
+        :inicial="caixasDaEquipeNaQuery"
+        :texto-final="t('AGENTS.JORNADA.EQUIPE.CONTINUAR')"
+        @voltar="voltarDosCanais"
+        @reler="ocupacao.carregar()"
+        @pronto="escolheuCanais"
+      />
+    </div>
+
     <EtapaPronto
-      v-if="etapa === ETAPA.PRONTO"
+      v-else-if="etapa === ETAPA.PRONTO"
       :nome="nome"
       :canal="pronto.canal"
       :quando="pronto.quando"
@@ -661,6 +747,43 @@ onMounted(() => {
         </h1>
         <AgentesEtapas :atual="numeroDaEtapa" />
       </div>
+
+      <section
+        v-if="equipe && !abrindo"
+        data-onde-criacao
+        :aria-label="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
+        class="flex items-start gap-3 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+      >
+        <div class="flex flex-col flex-1 min-w-0 gap-2">
+          <h2 class="m-0 text-sm font-semibold text-n-slate-11">
+            {{
+              semNome
+                ? t('AGENTS.JORNADA.ONDE.TITULO_SEM_NOME')
+                : t('AGENTS.JORNADA.ONDE.TITULO', { nome })
+            }}
+          </h2>
+          <ResumoOndeTrabalha :canais="canaisDaEquipe" :caixas="caixas" />
+        </div>
+        <AgenteBotao
+          v-if="!salvarEquipe.salvando.value"
+          data-alterar-onde
+          variante="fantasma"
+          class="shrink-0"
+          :aria-label="t('AGENTS.JORNADA.ONDE.MUDAR_ARIA', { nome })"
+          @click="alterarCanais"
+        >
+          {{ t('AGENTS.JORNADA.PAGINA.ALTERAR') }}
+        </AgenteBotao>
+      </section>
+      <AgenteErro
+        v-if="equipe && salvarEquipe.erro.value"
+        data-erro-equipe
+        :titulo="salvarEquipe.erro.value.titulo"
+        :garantia="salvarEquipe.erro.value.garantia"
+        :acao="t('AGENTS.JORNADA.EQUIPE.ESCOLHER_DE_NOVO')"
+        icone-acao="i-lucide-list"
+        @acao="alterarCanais"
+      />
 
       <p v-if="abrindo" role="status" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.JORNADA.CRIAR.CARREGANDO') }}
@@ -769,7 +892,9 @@ onMounted(() => {
           :celular="celular"
           :abrindo-ajustes="abrindoAjustes"
           :carregando-canais="
-            !interno && ocupacao.estado.value === 'carregando'
+            equipe
+              ? salvarEquipe.salvando.value
+              : !interno && ocupacao.estado.value === 'carregando'
           "
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
@@ -834,25 +959,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <EquipeCanais
-      v-if="etapa === ETAPA.COMECE && equipe"
-      :nome="nome"
-      :sem-nome="semNome"
-      :agente-id="conversa.agenteId.value"
-      :canais="ocupacao.canais.value"
-      :caixas="caixas"
-      :leitura="ocupacao.estado.value"
-      :salvando="salvarEquipe.salvando.value"
-      :erro="salvarEquipe.erro.value"
-      :texto-final="t('AGENTS.JORNADA.EQUIPE.COMECAR')"
-      :texto-sair="t('AGENTS.JORNADA.EQUIPE.VOLTAR_TESTE')"
-      :rotulo-carregando="t('AGENTS.JORNADA.COMUM.COMECANDO')"
-      @fechar="fecharComece"
-      @reler="ocupacao.carregar()"
-      @pronto="comecarNaEquipe"
-    />
     <EtapaComece
-      v-else-if="etapa === ETAPA.COMECE"
+      v-if="etapa === ETAPA.COMECE"
       :nome="nome"
       :agente-id="conversa.agenteId.value"
       :canais="canais"

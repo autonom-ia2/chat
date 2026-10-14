@@ -84,3 +84,13 @@ export const PAPEL_AREA_NA_QUERY = 'area';
 
 export const papelDaQuery = (query = {}) =>
   query.papel === PAPEL_AREA_NA_QUERY ? PAPEL_AREA_NA_QUERY : null;
+
+// #1433 — as caixas que o agente da equipe escolheu no começo (`?caixas=10,11`), antes da conversa. Ficam
+// na URL até ele começar a trabalhar (F5 não pergunta de novo). Ids inválidos são ignorados.
+export const caixasDaQuery = (query = {}) =>
+  texto(query.caixas)
+    .split(',')
+    .map(Number)
+    .filter(id => Number.isInteger(id) && id > 0);
+
+export const caixasNaQuery = ids => ids.join(',');

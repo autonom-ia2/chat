@@ -1,10 +1,9 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
-import AgenteGaveta from '../AgenteGaveta.vue';
 import GrupoDeCartoes from './GrupoDeCartoes.vue';
 import {
   BLOQUEIO,
@@ -15,16 +14,22 @@ import {
   principalDaCaixa,
 } from '../../utils/ondeTrabalha';
 
-// #1433 (tema 13) — os passos do agente da equipe, numa gaveta: (1) em quais canais ele fica na
-// equipe e (2) "Confira como fica". Usada no Comece da criação (`?papel=area`) e no "Mudar" de "Onde
-// {nome} trabalha" na página do agente (abre direto nestes passos, recomendação aceita na rodada 3).
-// - Só caixas com principal ATENDENDO podem ser escolhidas; as outras aparecem bloqueadas com o motivo
-//   (ninguém atende primeiro, outro robô, ou o principal está parado).
-// - "Confira" diz, por caixa, quem atende primeiro e que este agente recebe quando alguém passar; sem
-//   nome ainda, "o agente que você está criando". No "Mudar", também quem sai.
-// Quem chama grava (POST channels com papel area / DELETE) e passa `salvando` e `erro`.
+// #1433 (tema 13) — os passos do agente da equipe, como no protótipo aprovado (70a963b461): (1) em quais
+// canais ele fica na equipe e (2) "Confira como fica", uma decisão por tela.
+// - `modo` 'criar': no começo da criação, antes da conversa (página inteira). Nada é gravado aqui: quem
+//   chama guarda a escolha na URL e grava o vínculo quando o agente começa a trabalhar.
+// - `modo` 'mudar': o "Mudar" de "Onde {nome} trabalha" na página do agente (numa gaveta). Mostra também
+//   quem sai, e quem chama grava (entram e saem).
+// Só caixas com principal ATENDENDO podem ser escolhidas; as outras aparecem bloqueadas com o motivo
+// (ninguém atende primeiro, outro robô, ou o principal não está atendendo). Sem nome ainda, "o agente
+// que você está criando".
 // `canais`: a L2 (canais_ocupados), com `areas`; `caixas`: a store de inboxes (ícone e número).
 const props = defineProps({
+  modo: {
+    type: String,
+    default: 'criar',
+    validator: v => ['criar', 'mudar'].includes(v),
+  },
   nome: { type: String, required: true },
   semNome: { type: Boolean, default: false },
   agenteId: { type: Number, default: null },
@@ -32,26 +37,25 @@ const props = defineProps({
   caixas: { type: Array, default: () => [] },
   // 'carregando' | 'pronto' | 'erro', da leitura da L2.
   leitura: { type: String, default: 'pronto' },
-  // Ids das caixas em que ele já está na equipe (Mudar).
+  // Ids das caixas já escolhidas (criar: escolha anterior; mudar: onde ele está na equipe agora).
   inicial: { type: Array, default: () => [] },
   salvando: { type: Boolean, default: false },
-  // { titulo, garantia } da gravação que falhou, ou null.
+  // { titulo, garantia } da gravação que falhou, ou null (só no mudar).
   erro: { type: Object, default: null },
   textoFinal: { type: String, required: true },
-  // O que o "Voltar" do primeiro passo diz (na criação, "Voltar ao teste").
-  textoSair: { type: String, required: true },
-  rotuloCarregando: { type: String, required: true },
+  rotuloCarregando: { type: String, default: '' },
 });
 
-const emit = defineEmits(['fechar', 'pronto', 'reler']);
+const emit = defineEmits(['voltar', 'pronto', 'reler']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.EQUIPE';
 const PASSOS = ['canais', 'confira'];
+const mudando = props.modo === 'mudar';
 
 const indice = ref(0);
 const escolhidas = ref([...props.inicial]);
-// A leitura pode chegar depois de abrir: até a pessoa mexer, a escolha acompanha onde ele já está.
+// A leitura pode chegar depois de abrir: até a pessoa mexer, a escolha acompanha a inicial.
 const mexeu = ref(false);
 watch(
   () => props.inicial.join(','),
@@ -82,10 +86,11 @@ const MOTIVO = {
 const opcoes = computed(() =>
   props.canais.map(canal => {
     const caixa = caixaPeloId(props.caixas, canal.inbox_id);
-    // Quem já está na equipe da caixa continua escolhível, mesmo se o principal parou (para poder sair).
-    const bloqueio = props.inicial.includes(canal.inbox_id)
-      ? null
-      : bloqueioDaCaixa(canal, props.agenteId);
+    // No Mudar, onde ele já está continua escolhível mesmo se o principal parou (para poder sair).
+    const bloqueio =
+      mudando && props.inicial.includes(canal.inbox_id)
+        ? null
+        : bloqueioDaCaixa(canal, props.agenteId);
     const principal = principalDaCaixa(canal);
     return {
       valor: canal.inbox_id,
@@ -102,6 +107,12 @@ const opcoes = computed(() =>
 );
 const algumaLivre = computed(() =>
   opcoes.value.some(opcao => !opcao.desabilitada)
+);
+// Na criação só valem as escolhidas que ainda podem ser escolhidas (a URL pode ter ficado velha).
+const validas = computed(() =>
+  escolhidas.value.filter(id =>
+    opcoes.value.some(opcao => opcao.valor === id && !opcao.desabilitada)
+  )
 );
 
 const linhaDaCaixa = (inboxId, chave) => {
@@ -121,19 +132,20 @@ const linhaDaCaixa = (inboxId, chave) => {
 };
 
 const mudanca = computed(() =>
-  mudancaDaEquipe(props.inicial, escolhidas.value)
+  mudancaDaEquipe(mudando ? props.inicial : [], validas.value)
 );
 const linhasDoConfira = computed(() => [
-  ...escolhidas.value.map(id => ({ ...linhaDaCaixa(id, 'AVISO'), sai: false })),
+  ...validas.value.map(id => ({ ...linhaDaCaixa(id, 'AVISO'), sai: false })),
   ...mudanca.value.saem.map(id => ({ ...linhaDaCaixa(id, 'SAI'), sai: true })),
 ]);
 
 const mudou = computed(
-  () => mudanca.value.entram.length > 0 || mudanca.value.saem.length > 0
+  () =>
+    !mudando || mudanca.value.entram.length > 0 || mudanca.value.saem.length > 0
 );
 const podeSeguir = computed(() =>
   passo.value === 'canais'
-    ? escolhidas.value.length > 0 && mudou.value
+    ? validas.value.length > 0 && mudou.value
     : !props.salvando
 );
 
@@ -145,7 +157,7 @@ const focarTitulo = async () => {
 const seguir = () => {
   if (!podeSeguir.value) return;
   if (passo.value === 'confira') {
-    emit('pronto', { escolhidas: escolhidas.value, ...mudanca.value });
+    emit('pronto', { escolhidas: validas.value, ...mudanca.value });
     return;
   }
   indice.value += 1;
@@ -155,137 +167,144 @@ const seguir = () => {
 const voltar = () => {
   if (props.salvando) return;
   if (indice.value === 0) {
-    emit('fechar');
+    emit('voltar');
     return;
   }
   indice.value -= 1;
   focarTitulo();
 };
+
+// Na criação é uma tela nova: o foco vai ao título do passo. Na gaveta, a gaveta cuida do foco.
+onMounted(() => {
+  if (!mudando) focarTitulo();
+});
 </script>
 
 <template>
-  <AgenteGaveta
-    :titulo="
-      semNome
-        ? t('AGENTS.JORNADA.ONDE.TITULO_SEM_NOME')
-        : t('AGENTS.JORNADA.ONDE.TITULO', { nome })
-    "
-    @fechar="emit('fechar')"
+  <section
+    data-equipe-canais
+    :data-passo="passo"
+    aria-labelledby="equipe-passo-titulo"
+    class="flex flex-col gap-6"
+    :aria-busy="salvando ? 'true' : undefined"
   >
-    <section
-      data-equipe-canais
-      :data-passo="passo"
-      aria-labelledby="equipe-passo-titulo"
-      class="flex flex-col gap-4"
-      :aria-busy="salvando ? 'true' : undefined"
-    >
-      <header class="flex flex-col gap-2">
-        <p
-          data-progresso
-          class="flex items-center gap-2 m-0 text-sm font-medium text-n-slate-11"
-        >
-          <span aria-hidden="true" class="flex gap-1">
-            <span
-              v-for="n in PASSOS.length"
-              :key="n"
-              class="h-1.5 rounded-full transition-all"
-              :class="n <= indice + 1 ? 'w-6 bg-n-blue-11' : 'w-3 bg-n-slate-5'"
-            />
-          </span>
-          {{ t(`${NS}.PASSO`, { n: indice + 1, total: PASSOS.length }) }}
-        </p>
-        <h3
-          id="equipe-passo-titulo"
-          ref="tituloDoPasso"
-          tabindex="-1"
-          class="m-0 text-xl font-bold tracking-tight outline-none text-n-slate-12"
-        >
-          {{ passo === 'canais' ? comNome('TITULO') : t(`${NS}.CONFIRA`) }}
-        </h3>
-        <p class="m-0 text-sm text-n-slate-11">
-          {{ passo === 'canais' ? t(`${NS}.TEXTO`) : t(`${NS}.CONFIRA_TEXTO`) }}
-        </p>
-      </header>
-
-      <template v-if="passo === 'canais'">
-        <p v-if="leitura === 'carregando'" role="status" class="m-0 text-sm">
-          {{ t(`${NS}.CARREGANDO`) }}
-        </p>
-        <AgenteErro
-          v-else-if="leitura === 'erro'"
-          data-erro-ler
-          tom="ambar"
-          :titulo="t(`${NS}.ERRO_LER`)"
-          :garantia="t(`${NS}.ERRO_LER_GARANTIA`, { nome })"
-          :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
-          @acao="emit('reler')"
-        />
-        <template v-else>
-          <GrupoDeCartoes
-            :model-value="escolhidas"
-            :rotulo="comNome('TITULO')"
-            :opcoes="opcoes"
-            @update:model-value="escolher"
-          />
-          <p
-            v-if="!algumaLivre"
-            data-nenhum-principal
-            class="p-4 m-0 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
-          >
-            {{ t(`${NS}.NENHUM`) }}
-          </p>
-          <p
-            v-else-if="escolhidas.length && !mudou"
-            data-sem-mudanca
-            class="m-0 text-sm text-n-slate-11"
-          >
-            {{ t(`${NS}.SEM_MUDANCA`) }}
-          </p>
-        </template>
-      </template>
-
-      <ul
-        v-else
-        data-confira-equipe
-        class="flex flex-col gap-3 p-0 m-0 list-none"
+    <header class="flex flex-col gap-2">
+      <p
+        data-progresso
+        class="flex items-center gap-2 m-0 text-sm font-medium text-n-slate-11"
       >
-        <li
-          v-for="linha in linhasDoConfira"
-          :key="linha.inboxId"
-          :data-sai="linha.sai ? '' : undefined"
-          class="flex items-start gap-4 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset"
-          :class="linha.sai ? 'ring-n-amber-6' : 'ring-n-weak'"
-        >
+        <span aria-hidden="true" class="flex gap-1">
           <span
-            aria-hidden="true"
-            class="grid rounded-xl place-items-center size-12 shrink-0 bg-n-alpha-2"
-          >
-            <ChannelIcon :inbox="linha.caixa" use-brand-icon class="size-6" />
-          </span>
-          <span class="flex flex-col gap-1 min-w-0">
-            <span class="text-base font-semibold text-n-slate-12">
-              {{ linha.nome }}
-            </span>
-            <span class="text-sm text-n-slate-12">{{ linha.texto }}</span>
-          </span>
-        </li>
-      </ul>
+            v-for="n in PASSOS.length"
+            :key="n"
+            class="h-1.5 rounded-full transition-all"
+            :class="n <= indice + 1 ? 'w-6 bg-n-blue-11' : 'w-3 bg-n-slate-5'"
+          />
+        </span>
+        {{ t(`${NS}.PASSO`, { n: indice + 1, total: PASSOS.length }) }}
+      </p>
+      <h2
+        id="equipe-passo-titulo"
+        ref="tituloDoPasso"
+        tabindex="-1"
+        class="m-0 text-2xl font-bold tracking-tight outline-none md:text-3xl text-n-slate-12"
+      >
+        {{ passo === 'canais' ? comNome('TITULO') : t(`${NS}.CONFIRA`) }}
+      </h2>
+      <p class="m-0 text-base text-n-slate-11">
+        {{ passo === 'canais' ? t(`${NS}.TEXTO`) : t(`${NS}.CONFIRA_TEXTO`) }}
+      </p>
+    </header>
 
+    <template v-if="passo === 'canais'">
+      <p v-if="leitura === 'carregando'" role="status" class="m-0 text-sm">
+        {{ t(`${NS}.CARREGANDO`) }}
+      </p>
       <AgenteErro
-        v-if="erro && passo === 'confira'"
-        data-erro-salvar
-        :titulo="erro.titulo"
-        :garantia="erro.garantia"
+        v-else-if="leitura === 'erro'"
+        data-erro-ler
+        tom="ambar"
+        :titulo="t(`${NS}.ERRO_LER`)"
+        :garantia="t(`${NS}.ERRO_LER_GARANTIA`, { nome })"
         :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
-        @acao="seguir"
+        @acao="emit('reler')"
       />
-    </section>
+      <template v-else>
+        <GrupoDeCartoes
+          :model-value="escolhidas"
+          :rotulo="comNome('TITULO')"
+          :opcoes="opcoes"
+          @update:model-value="escolher"
+        />
+        <p
+          v-if="!algumaLivre"
+          data-nenhum-principal
+          class="p-4 m-0 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
+        >
+          {{ t(`${NS}.NENHUM`) }}
+        </p>
+        <p
+          v-else-if="validas.length && !mudou"
+          data-sem-mudanca
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t(`${NS}.SEM_MUDANCA`) }}
+        </p>
+      </template>
+    </template>
 
-    <template #rodape>
+    <ul
+      v-else
+      data-confira-equipe
+      class="flex flex-col gap-3 p-0 m-0 list-none"
+    >
+      <li
+        v-for="linha in linhasDoConfira"
+        :key="linha.inboxId"
+        :data-sai="linha.sai ? '' : undefined"
+        class="flex items-start gap-4 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset"
+        :class="linha.sai ? 'ring-n-amber-6' : 'ring-n-weak'"
+      >
+        <span
+          aria-hidden="true"
+          class="grid rounded-xl place-items-center size-12 shrink-0 bg-n-alpha-2"
+        >
+          <ChannelIcon :inbox="linha.caixa" use-brand-icon class="size-6" />
+        </span>
+        <span class="flex flex-col gap-1 min-w-0">
+          <span class="text-base font-semibold text-n-slate-12">
+            {{ linha.nome }}
+          </span>
+          <span class="text-sm text-n-slate-12">{{ linha.texto }}</span>
+        </span>
+      </li>
+    </ul>
+
+    <AgenteErro
+      v-if="erro && passo === 'confira'"
+      data-erro-salvar
+      :titulo="erro.titulo"
+      :garantia="erro.garantia"
+      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+      @acao="seguir"
+    />
+
+    <footer
+      class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <AgenteBotao
+        data-voltar-equipe
+        variante="fantasma"
+        icone="i-lucide-arrow-left"
+        :desabilitado="salvando"
+        @click="voltar"
+      >
+        {{ t(`${NS}.VOLTAR`) }}
+      </AgenteBotao>
       <AgenteBotao
         data-seguir-equipe
-        tamanho="xl"
-        bloco
+        tamanho="lg"
+        class="max-sm:w-full"
         :icone-direita="passo === 'canais' ? 'i-lucide-arrow-right' : ''"
         :inativo="!podeSeguir"
         :carregando="salvando"
@@ -294,15 +313,6 @@ const voltar = () => {
       >
         {{ passo === 'canais' ? t(`${NS}.CONTINUAR`) : textoFinal }}
       </AgenteBotao>
-      <AgenteBotao
-        data-voltar-equipe
-        variante="fantasma"
-        bloco
-        :desabilitado="salvando"
-        @click="voltar"
-      >
-        {{ passo === 'canais' ? textoSair : t(`${NS}.VOLTAR`) }}
-      </AgenteBotao>
-    </template>
-  </AgenteGaveta>
+    </footer>
+  </section>
 </template>

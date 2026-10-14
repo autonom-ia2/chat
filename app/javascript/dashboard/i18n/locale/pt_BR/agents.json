@@ -1620,7 +1620,7 @@
         "TEXTO": "Escolha um ou mais. Só dá para escolher canais que já têm quem atenda primeiro.",
         "PRINCIPAL": "{outro} atende primeiro",
         "SEM_PRINCIPAL": "Ninguém atende primeiro neste canal ainda. O agente da equipe precisa de um agente principal no canal.",
-        "PRINCIPAL_PARADO": "{outro} está parado neste canal. O agente da equipe precisa de um agente principal atendendo.",
+        "PRINCIPAL_PARADO": "{outro} não está atendendo neste canal. O agente da equipe precisa de um agente principal atendendo.",
         "NENHUM": "Nenhum canal tem um agente principal atendendo ainda. Ponha um agente para atender primeiro num canal e volte aqui.",
         "CONFIRA": "Confira como fica",
         "CONFIRA_TEXTO": "Nada muda para quem já atende primeiro.",
@@ -1632,7 +1632,6 @@
         "COMECAR": "Começar a trabalhar",
         "SALVAR": "Salvar",
         "VOLTAR": "Voltar",
-        "VOLTAR_TESTE": "Voltar ao teste",
         "SEM_MUDANCA": "Nada mudou. Escolha ou tire um canal para salvar.",
         "ERRO_LER": "Não deu para ler os canais agora.",
         "ERRO_LER_GARANTIA": "Nada mudou em {nome}. Tente de novo em instantes.",
@@ -1641,7 +1640,8 @@
         "FEITO": "Pronto. {nome} já trabalha nos canais escolhidos.",
         "CARREGANDO": "Lendo os canais",
         "SALVANDO": "Salvando…",
-        "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher."
+        "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher.",
+        "ESCOLHER_DE_NOVO": "Escolher os canais de novo"
       },
       "ONDE": {
         "TITULO": "Onde {nome} trabalha",
