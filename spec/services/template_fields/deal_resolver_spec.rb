@@ -11,7 +11,7 @@ RSpec.describe TemplateFields::DealResolver do
   let(:contact) { create(:contact, account: account, name: 'Ana Souza') }
   let(:card) do
     account.crm_cards.create!(pipeline: vendas.first, stage: vendas.last, title: 'Seguro auto — Ana', inbox: inbox, contact: contact,
-                              owner: owner, value_cents: 125_000)
+                              owner: owner, value_cents: 125_000, expected_close_at: Time.utc(2026, 10, 20, 15))
   end
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
@@ -21,14 +21,29 @@ RSpec.describe TemplateFields::DealResolver do
 
     expect(resolver.keys.index_with { |key| resolver.value(key) }).to eq(
       'negocio.titulo' => 'Seguro auto — Ana', 'negocio.funil' => 'Vendas', 'negocio.etapa' => vendas.last.name,
-      'negocio.valor' => 'R$ 1.250,00', 'negocio.responsavel' => 'Juliana Melo'
+      'negocio.valor' => 'R$ 1.250,00', 'negocio.responsavel' => 'Juliana Melo', 'negocio.prazo' => '20/10/2026'
     )
   end
 
-  it 'leaves a card without value or owner without them' do
-    card.update!(value_cents: 0, owner: nil)
+  it 'leaves a card without value, owner or deadline without them' do
+    card.update!(value_cents: 0, owner: nil, expected_close_at: nil)
 
     expect(described_class.new(card).value('negocio.valor')).to be_nil
     expect(described_class.new(card).value('negocio.responsavel')).to be_nil
+    expect(described_class.new(card).value('negocio.prazo')).to be_nil
+  end
+
+  it 'reads the deadline as a date in the account time zone, not in UTC' do
+    card.update!(expected_close_at: Time.utc(2026, 10, 21, 1, 30)) # 20/10 22:30 em São Paulo
+
+    with_modified_env(CRM_DEFAULT_TIMEZONE: 'America/Sao_Paulo') do
+      expect(described_class.new(card).value('negocio.prazo')).to eq('20/10/2026')
+    end
+  end
+
+  it 'formats the value by its cents and currency, never as a float' do
+    card.update!(value_cents: 1_999_999_999, currency: 'USD')
+
+    expect(described_class.new(card).value('negocio.valor')).to eq('USD 19.999.999,99')
   end
 end
