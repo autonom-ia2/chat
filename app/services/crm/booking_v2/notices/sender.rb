@@ -80,6 +80,16 @@ class Crm::BookingV2::Notices::Sender
 
   private_class_method :automatic, :recent_tests
 
+  # O cliente parou os avisos (passo 3 do cabeçalho), nesta precedência. Também usado pelo `NoticeStopPartJob` antes
+  # de criar a mensagem 2 (#1562).
+  def self.stop_reason(meeting)
+    contact = meeting.card.contact
+    return 'opted_out' if contact&.opted_out?
+    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
+
+    'stopped' if meeting.reminders_stopped_at.present?
+  end
+
   # waha_outage: as caixas WAHA que já falharam nesta rodada do cron (`Notices::WahaOutage`).
   def initialize(notice, waha_outage: nil)
     @notice = notice
@@ -138,10 +148,7 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def stop_reason
-    return 'opted_out' if contact&.opted_out?
-    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
-
-    'stopped' if meeting.reminders_stopped_at.present?
+    self.class.stop_reason(meeting)
   end
 
   def setup_reason

@@ -11,7 +11,8 @@
 #   O `metadata` leva o que o cartão do painel precisa para dizer o que houve sem parecer tarefa atrasada (#1291):
 #   `source`, `event`, o cliente, o horário e, no aviso que não saiu, o tipo do aviso e o motivo.
 # - `notice_stop_failed` (#1562): o aviso saiu, mas a mensagem 2 com o botão "Parar avisos" não. Mesma atividade do
-#   aviso que não saiu (`booking_notice_failed`, motivo `stop_part_failed`), título próprio e também UMA vez por reunião.
+#   aviso que não saiu (`booking_notice_failed`, motivo `stop_part_failed`) e título próprio. Avisa UMA vez por AVISO
+#   (reunião + tipo do aviso, `payload[:kind]`): cada aviso da reunião cuja mensagem 2 não saiu é um caso.
 #
 # Nunca altera a reunião (J5-A4).
 class Crm::BookingV2::Notices::AgentAlert
@@ -24,7 +25,8 @@ class Crm::BookingV2::Notices::AgentAlert
     'notices_stopped' => 'booking_notices_stopped'
   }.freeze
   SILENT = %w[notices_stopped].freeze
-  ONCE_PER_MEETING = %w[notice_failed notice_stop_failed].freeze
+  ONCE_PER_MEETING = %w[notice_failed].freeze
+  ONCE_PER_NOTICE = %w[notice_stop_failed].freeze
   # Eventos que não são ação do cliente: a atividade registra `by: 'system'`.
   SYSTEM_EVENTS = %w[notice_failed notice_stop_failed].freeze
 
@@ -39,7 +41,7 @@ class Crm::BookingV2::Notices::AgentAlert
 
     log_activity
     return if SILENT.include?(event)
-    return if ONCE_PER_MEETING.include?(event) && already_alerted?
+    return if (ONCE_PER_MEETING + ONCE_PER_NOTICE).include?(event) && already_alerted?
 
     create_task!
   end
@@ -64,10 +66,12 @@ class Crm::BookingV2::Notices::AgentAlert
   end
 
   def already_alerted?
-    Crm::FollowUp.where(account_id: meeting.account_id, card_id: card.id)
-                 .where("crm_follow_ups.metadata->>'source' = ?", SOURCE)
-                 .where("crm_follow_ups.metadata->>'meeting_id' = ?", meeting.id.to_s)
-                 .exists?(["crm_follow_ups.metadata->>'event' = ?", event])
+    scope = Crm::FollowUp.where(account_id: meeting.account_id, card_id: card.id)
+                         .where("crm_follow_ups.metadata->>'source' = ?", SOURCE)
+                         .where("crm_follow_ups.metadata->>'meeting_id' = ?", meeting.id.to_s)
+                         .where("crm_follow_ups.metadata->>'event' = ?", event)
+    scope = scope.where("crm_follow_ups.metadata->>'kind' = ?", payload.to_h.with_indifferent_access[:kind].to_s) if ONCE_PER_NOTICE.include?(event)
+    scope.exists?
   end
 
   def create_task!

@@ -89,9 +89,10 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
   describe 'falha de entrega informada depois pelo provedor (sent = mensagem criada)' do
     let(:conversation) { create(:conversation, account: account, contact: world.contact) }
 
+    # Remetente fixo: a 2 sai sempre com o remetente da 1 (a factory sortearia um usuário por mensagem).
     def sent_notice(kind, message_status:, sent_at: 10.minutes.ago)
       message = create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
-                                 status: message_status)
+                                 status: message_status, sender: meeting.created_by)
       notice(kind, due_at: sent_at, status: :sent, sent_at: sent_at, message_id: message.id)
     end
 
@@ -116,6 +117,7 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
       other = sent_notice('rescheduled', message_status: :sent)
       stop = lambda do |for_notice, part: 'stop'|
         create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing, status: :failed,
+                         sender: meeting.created_by,
                          content_attributes: { crm_booking_notice: true, crm_booking_notice_part: part, crm_booking_notice_id: for_notice.id })
       end
       stop.call(split)

@@ -74,8 +74,9 @@ const problem = computed(() =>
 );
 // Sem o link no texto, o sistema o manda: no WhatsApp oficial (whatsapp_cloud,
 // o único que mostra o botão), num botão. Nas outras caixas, só a linha.
-// #1562: com o botão, a linha de parar não vai no aviso: sai logo depois, numa
-// mensagem com o botão "Parar avisos". A prévia fica sem ela e a nota diz isso.
+// #1562: a prévia mostra sempre o caso de texto (com a linha de parar), que vale
+// em qualquer caixa; o botão depende da janela aberta, do Híbrido e do limite,
+// que a tela não sabe. A nota explica o caso com botão ("Parar avisos" à parte).
 const showButtonNote = computed(
   () =>
     props.setup.notice_channel === 'whatsapp_cloud' &&
@@ -85,7 +86,7 @@ const preview = computed(() =>
   noticeTextPreview(
     effective.value,
     props.setup.samples || {},
-    showButtonNote.value ? '' : props.setup.stop_line,
+    props.setup.stop_line,
     props.setup.manage_line
   )
 );

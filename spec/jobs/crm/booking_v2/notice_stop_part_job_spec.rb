@@ -118,22 +118,124 @@ RSpec.describe Crm::BookingV2::NoticeStopPartJob do
     expect(Crm::FollowUp.where(account_id: account.id).where("metadata->>'event' = ?", 'notice_failed').count).to eq(1)
   end
 
-  # Erro ao criar a 2: a 1 fica e não é refeita; o aviso continua sent, marcado, e o responsável é avisado UMA vez por
-  # reunião (o segundo aviso com o mesmo problema não cria outra tarefa).
-  it 'erro ao criar a 2: a 1 fica, o aviso continua sent e o responsável é avisado uma vez' do
+  # Erro ao criar a 2: a 1 fica e não é refeita; o aviso continua sent, marcado, e o responsável é avisado uma vez POR
+  # AVISO (item 9 da revisão: dois avisos da mesma reunião são dois alertas; o mesmo aviso de novo, nenhum a mais).
+  it 'erro ao criar a 2: a 1 fica, o aviso continua sent e o responsável é avisado uma vez por aviso' do
     notices = %w[booked rescheduled].map { |kind| sent_notice(kind).tap { |notice| accepted!(notice) } }
     allow(Crm::BookingV2::Notices::Delivery).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
     tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
     allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
     notices.each { |notice| described_class.perform_now(notice.id, 1) }
+    described_class.stop_failed!(notices.first.reload, why: 'again')
 
     expect(notices.map { |notice| notice.reload.attributes.slice('status', 'error_code') })
       .to all(eq('status' => 'sent', 'error_code' => 'stop_part_failed'))
     expect(conversation.messages.outgoing.count).to eq(2)
-    expect(stop_alerts.sole).to have_attributes(assignee_id: meeting.created_by_id)
-    expect(stop_alerts.sole.title).to include('saiu, mas a mensagem com o botão "Parar avisos" não')
+    expect(stop_alerts.map { |alert| alert.metadata['kind'] }).to contain_exactly('booked', 'rescheduled')
+    expect(stop_alerts.first.title).to include('saiu, mas a mensagem com o botão "Parar avisos" não')
     expect(tracker).to have_received(:capture_exception).twice
+  end
+
+  # Item 1 da revisão: erro ao carregar o aviso não pode sumir em silêncio. Vai ao log e ao tracker e, sendo de banco,
+  # relança para o retry do Sidekiq (a conferência e o error_code seguram a repetição).
+  it 'erro de banco ao carregar o aviso: log, tracker e relança para o retry' do
+    notice = sent_notice
+    accepted!(notice)
+    allow(Crm::MeetingNotice).to receive(:includes).and_raise(ActiveRecord::ConnectionNotEstablished)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow(Rails.logger).to receive(:error)
+
+    expect { described_class.perform_now(notice.id, 1) }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+
+    expect(tracker).to have_received(:capture_exception)
+    expect(Rails.logger).to have_received(:error).with(include("CRM booking notice #{notice.id} stop part error"))
+  end
+
+  # Item 1: erro que não é de banco depois de carregar: o aviso é relido por id no rescue e o responsável é avisado.
+  it 'erro inesperado: relê o aviso por id, marca stop_part_failed e avisa' do
+    notice = sent_notice
+    accepted!(notice)
+    allow(Message).to receive(:find_by).and_raise(NoMethodError)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+
+    described_class.perform_now(notice.id, 1)
+
+    expect(notice.reload.error_code).to eq('stop_part_failed')
+    expect(stop_alerts.count).to eq(1)
+  end
+
+  # Item 2: a mensagem 1 apagada não pode deixar o aviso sem a 2 e sem ninguém saber.
+  it 'mensagem 1 apagada: stop_part_failed e alerta' do
+    notice = sent_notice
+    first_message(notice).destroy!
+
+    described_class.perform_now(notice.id, 1)
+
+    expect(notice.reload.error_code).to eq('stop_part_failed')
+    expect(stop_alerts.count).to eq(1)
+  end
+
+  # Item 3: o cliente parou os avisos (ou a reunião foi cancelada) depois da 1: a 2 não sai e ninguém é chamado.
+  it 'cliente parou os avisos ou reunião cancelada: não cria a 2 e não alerta' do
+    stopped = sent_notice('booked')
+    accepted!(stopped)
+    Crm::BookingNoticeStop.create!(account: account, contact: world.contact)
+    described_class.perform_now(stopped.id, 1)
+    Crm::BookingNoticeStop.where(contact_id: world.contact.id).delete_all
+
+    canceled = sent_notice('rescheduled')
+    accepted!(canceled)
+    meeting.update!(status: :canceled)
+    described_class.perform_now(canceled.id, 1)
+
+    expect(stop_messages).to be_empty
+    expect([stopped, canceled].map { |notice| notice.reload.error_code }).to eq([nil, nil])
+    expect(stop_alerts).to be_empty
+  end
+
+  # Item 4: a conferência de duplicata não pode ter corte de quantidade. Com 60 mensagens entre a 1 e a 2 (o corte
+  # antigo era 50), rodar de novo não cria outra.
+  it 'não duplica a 2 mesmo com muitas mensagens na conversa depois dela' do
+    notice = sent_notice
+    accepted!(notice)
+    described_class.perform_now(notice.id, 1)
+    create_list(:message, 60, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing)
+
+    described_class.perform_now(notice.id, 1)
+
+    expect(stop_messages.size).to eq(1)
+  end
+
+  # Item 4: passada a WINDOW o job não cria mais a 2 (a conferência só cobre a WINDOW): desiste com alerta.
+  it 'tarde demais (depois da WINDOW): não cria a 2 e avisa' do
+    notice = sent_notice
+    accepted!(notice)
+
+    travel described_class::WINDOW + 1.minute
+    described_class.perform_now(notice.id, 1)
+
+    expect(stop_messages).to be_empty
+    expect(notice.reload.error_code).to eq('stop_part_failed')
+  end
+
+  # Item 5: o alerta falhando não derruba nada e não desfaz a marca: fica no log e no tracker.
+  it 'alerta que falha: a marca fica e o erro vai ao tracker' do
+    notice = sent_notice
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow(Crm::BookingV2::Notices::AgentAlert).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
+
+    expect { described_class.stop_failed!(notice, why: 'gave_up') }.not_to raise_error
+
+    expect(notice.reload.error_code).to eq('stop_part_failed')
+    expect(tracker).to have_received(:capture_exception)
+  end
+
+  # Item 7: mensagem ausente (nil) não é a 2 e não derruba quem confere.
+  it 'stop_part_of? com mensagem ausente é falso' do
+    expect(described_class.stop_part_of?(nil, 1)).to be(false)
   end
 
   # Aviso que já não é sent (remarcado, falhou) ou já marcado: nada a fazer.
