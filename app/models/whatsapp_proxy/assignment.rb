@@ -2,7 +2,12 @@
 # WHATSAPP_PROXY_MAX_NUMBERS_PER_IP números dela. Só endereço e porta: a credencial vem da API na hora de configurar a
 # sessão e nunca é gravada.
 # - Pendente (endereço vazio): a caixa nasceu sem proxy porque a Webshare estava fora; a reconciliação tenta de novo.
-# - `previous_*`: o IP de antes da última troca, para voltar a ele se o motor recusar a troca.
+# - `previous_*`: o estado de antes da última troca ainda não confirmada (IP, plano, conta, origem). A troca é gravada
+#   já nos campos principais (o IP novo fica reservado para este número desde a escolha) e o anterior fica guardado;
+#   confirmada, ele é esquecido; desfeita, tudo volta. Escolhido em vez de colunas `target_*` porque toda a leitura
+#   (escolha de IP livre, contagem por IP, falha geral) já usa os campos principais — com `target_*` cada uma teria de
+#   olhar os dois lugares. Enquanto isso o IP antigo continua protegido: o motor ainda o mostra nesta sessão, e IP em
+#   uso no motor nunca é oferecido a outra conta.
 # - Recuo: cada troca desfeita conta; a próxima tentativa só depois de BACKOFF[falhas - 1] (máx. 24 h).
 class WhatsappProxy::Assignment < ApplicationRecord
   self.table_name = 'whatsapp_proxy_assignments'
@@ -22,7 +27,7 @@ class WhatsappProxy::Assignment < ApplicationRecord
   validates :proxy_port, absence: true, unless: :proxy_address?
   validates :assigned_at, presence: true
   validate :one_account_per_ip, if: :proxy_address?
-  validate :numbers_per_ip_within_limit, if: :proxy_address?
+  validate :numbers_per_ip_within_limit, if: -> { proxy_address? && will_save_change_to_proxy_address? }
 
   # Atribuições que o código cuida: as da Webshare e as pendentes (sem endereço).
   scope :managed, -> { where.not(webshare_proxy_id: nil).or(where(proxy_address: nil)) }
@@ -81,19 +86,44 @@ class WhatsappProxy::Assignment < ApplicationRecord
     apply_failures >= BACKOFF.size
   end
 
-  # A troca foi para o motor: zera o recuo e esquece o IP anterior.
-  def applied!(credential_digest)
-    update!(credential_digest: credential_digest, apply_failures: 0, last_apply_failed_at: nil,
-            previous_proxy_address: nil, previous_proxy_port: nil, previous_webshare_proxy_id: nil, previous_credential_digest: nil)
+  PREVIOUS = { proxy_address: :previous_proxy_address, proxy_port: :previous_proxy_port,
+               webshare_proxy_id: :previous_webshare_proxy_id, credential_digest: :previous_credential_digest,
+               pool: :previous_pool, account_id: :previous_account_id, origin: :previous_origin }.freeze
+  FORGET_PREVIOUS = PREVIOUS.values.index_with { nil }.freeze
+
+  def awaiting_confirmation?
+    previous_pool.present?
   end
 
-  # O motor recusou a troca e a configuração anterior voltou: a atribuição volta junto (ou fica pendente, se não havia
-  # IP antes) e conta mais uma falha para o recuo.
+  # Estado atual guardado antes de uma troca (só a primeira vez: troca ainda não confirmada mantém o original).
+  def previous_attributes
+    return {} if awaiting_confirmation?
+
+    PREVIOUS.to_h { |field, previous| [previous, self[field]] }
+  end
+
+  # A troca foi para o motor e foi conferida: zera o recuo e esquece o estado anterior.
+  def applied!(credential_digest)
+    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest, apply_failures: 0, last_apply_failed_at: nil))
+  end
+
+  # O motor já tinha este proxy (sem PUT): só registra a credencial e esquece o anterior; o recuo fica como está.
+  def confirmed!(credential_digest)
+    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest))
+  end
+
+  # O motor recusou a troca e a configuração anterior voltou: a atribuição volta inteira (IP, plano, conta, origem — ou
+  # fica pendente, se não havia IP antes) e conta mais uma falha para o recuo.
   def revert_failed_apply!
-    update!(proxy_address: previous_proxy_address, proxy_port: previous_proxy_port, webshare_proxy_id: previous_webshare_proxy_id,
-            credential_digest: previous_credential_digest, previous_proxy_address: nil, previous_proxy_port: nil,
-            previous_webshare_proxy_id: nil, previous_credential_digest: nil,
-            apply_failures: apply_failures + 1, last_apply_failed_at: Time.current)
+    restored = PREVIOUS.transform_values { |previous| self[previous] }
+    restored = restored.merge(pool: pool, account_id: account_id, origin: origin) unless awaiting_confirmation?
+    update!(restored.merge(FORGET_PREVIOUS).merge(apply_failures: apply_failures + 1, last_apply_failed_at: Time.current))
+  end
+
+  # A volta da configuração anterior falhou: o motor ficou com o proxy novo, então a tabela fica nele também.
+  def rollback_failed!(credential_digest)
+    update!(FORGET_PREVIOUS.merge(credential_digest: credential_digest, apply_failures: apply_failures + 1,
+                                  last_apply_failed_at: Time.current))
   end
 
   def apply_failed!

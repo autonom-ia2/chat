@@ -142,6 +142,14 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       WhatsappProxy::Assignment.create!(session_name: '5511900000001', account_id: account.id, pool: 'datacenter', assigned_at: 1.hour.ago)
     end
 
+    it 'waits while the session is not WORKING (L5)' do
+      allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
+      statuses['5511900000001'] = 'STARTING'
+
+      expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+      expect(WhatsappProxy::Assignment.last).to be_pending
+    end
+
     it 'gets an IP and is scheduled once Webshare answers' do
       allow(datacenter).to receive(:proxies).and_return([webshare_proxy(id: 2, address: '10.0.0.2')])
 
@@ -237,6 +245,18 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     expect(scheduled_sessions).not_to include('hybrid-5511900000001')
     expect(log).to include('webshare_indisponivel')
     expect(WhatsappProxy::Outage.previous).to include('hybrid-5511900000001' => 'STARTING')
+  end
+
+  it 'counts a plan error once per round: one bad round never raises webshare_indisponivel (L2)' do
+    hybrid_session!('hybrid-5511900000001', account)
+    assign_proxy!('hybrid-5511900000001', webshare_proxy(id: 50, address: '10.5.0.9'), account: account, pool: 'isp')
+    statuses['hybrid-5511900000001'] = 'STARTING'
+    allow(isp).to receive(:proxies).and_raise(Webshare::Client::Error, 'webshare_list_failed status=401')
+
+    log = capture_log { described_class.perform_now }
+
+    expect(log).not_to include('webshare_indisponivel')
+    expect(isp).to have_received(:proxies).once
   end
 
   it 'remembers the statuses of the round even when nothing is pending' do

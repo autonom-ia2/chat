@@ -80,6 +80,15 @@ RSpec.describe WhatsappProxy::SessionUpdater do
     expect(updater.apply!('5511999999999', proxy)).to eq(:applied)
   end
 
+  it 'reports :rollback_failed (engine left on the new proxy) and alerts volta_falhou when the rollback PUT fails' do
+    allow(client).to receive(:get_session).and_return(before, after(status: 'STARTING'))
+    allow(client).to receive(:update_session).with('5511999999999', config: old_config).and_raise(Waha::Client::Error, 'down')
+
+    log = capture_log { expect(updater.apply!('5511999999999', proxy)).to eq(:rollback_failed) }
+
+    expect(log).to include('[alerta] volta_falhou')
+  end
+
   it 'rolls back when the PUT itself fails' do
     allow(client).to receive(:get_session).and_return(before)
     allow(client).to receive(:update_session).and_raise(Waha::Client::Error, 'down').once

@@ -26,7 +26,7 @@ class WhatsappProxy::Triage
 
     health = health_of(assignment, status)
     return if assignment.in_backoff?
-    return [:pending, false] if assignment.pending?
+    return (status == 'WORKING' ? [:pending, false] : nil) if assignment.pending?
 
     decide(assignment, status, health)
   end
@@ -41,7 +41,7 @@ class WhatsappProxy::Triage
   end
 
   def health_of(assignment, status)
-    if @outage.general?(assignment.pool)
+    if @outage.general?(assignment.pool) || @outage.just_ended?(assignment.session_name)
       WhatsappProxy::Health.reset!(assignment.session_name)
       return
     end

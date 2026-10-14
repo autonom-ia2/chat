@@ -10,8 +10,10 @@
 # - plano: mais de MAX_SHARE dos IPs em uso caíram (por IP), com pelo menos MIN_OFF IPs; ou
 # - linha de base: mais de MAX_SHARE das sessões SEM nenhum proxy caíram, com pelo menos MIN_OFF e só com pelo menos
 #   MIN_BASELINE sessões que estavam WORKING (poucas sessões não são linha de base) — vale para todos os planos.
-# Continua enquanto a maioria das que caíram segue fora, por no máximo EPISODE_MAX: depois disso termina (alerta
-# `falha_geral_fim`) e as que seguem fora passam a contar uma a uma como instáveis (WhatsappProxy::Health.seed!).
+# Continua (sem prazo) enquanto as que caíram seguem fora acima do mesmo limite — falha geral longa não vira "IP
+# instável" por tempo. Termina quando a maioria voltou (alerta `falha_geral_fim`, um por episódio); as que seguem fora
+# passam a ser avaliadas uma a uma, do zero, a partir da rodada SEGUINTE (WhatsappProxy::Health.eligible!). Na rodada
+# em que um episódio termina, não abre outro no mesmo escopo.
 class WhatsappProxy::Outage
   MAX_SHARE = 0.3
   MIN_OFF = 2
@@ -19,7 +21,7 @@ class WhatsappProxy::Outage
   PREVIOUS_KEY = 'whatsapp_proxy:previous_statuses'.freeze
   PREVIOUS_TTL = 30.minutes.to_i
   EPISODE_TTL = 20.minutes.to_i
-  EPISODE_MAX = 1.hour
+  ALERT_WINDOW = 1.day
   BASELINE = 'baseline'.freeze
   SCOPES = [BASELINE, *WhatsappProxy::Assignment::POOLS].freeze
 
@@ -55,6 +57,12 @@ class WhatsappProxy::Outage
     @previous = previous
     @statuses = engine_sessions.to_h { |session| [session['name'], session['status'].to_s] }
     @episodes = {}
+    @just_ended = []
+  end
+
+  # Sessões cujo episódio terminou nesta rodada: não contam nesta rodada.
+  def just_ended?(session_name)
+    @just_ended.include?(session_name)
   end
 
   def known?
@@ -79,44 +87,40 @@ class WhatsappProxy::Outage
   def episode?(scope)
     return @episodes[scope] if @episodes.key?(scope)
 
-    @episodes[scope] = started?(scope) || continuing?(scope)
+    episode = stored_episode(scope)
+    @episodes[scope] = episode ? continue_or_finish(scope, episode) : start?(scope)
   end
 
-  def started?(scope)
+  def start?(scope)
     dropped, total = drop_numbers(scope)
     return false if scope == BASELINE && total < MIN_BASELINE
     return false unless dropped >= MIN_OFF && dropped > total * MAX_SHARE
-    return true if continuing?(scope)
 
-    store_episode(scope, dropped_sessions(scope), Time.current)
+    episode_id = "#{scope}:#{Time.current.to_i}"
+    store_episode(scope, 'id' => episode_id, 'members' => dropped_sessions(scope))
     WhatsappProxy::Alert.notify!('falha_geral', "#{dropped} de #{total} (#{scope}) que estavam WORKING caíram juntos: falha " \
                                                 'geral, nada trocado nem posto em quarentena',
-                                 level: :error, pool: scope, count: dropped, total: total)
+                                 level: :error, pool: scope, count: dropped, total: total, subject: episode_id, window: ALERT_WINDOW)
     true
   end
 
-  def continuing?(scope)
-    episode = stored_episode(scope)
-    return false if episode.nil?
-
+  def continue_or_finish(scope, episode)
     members = Array(episode['members'])
     still_off = members.select { |name| off?(name) }
-    expired = Time.zone.parse(episode['started_at'].to_s) < EPISODE_MAX.ago
-    if !expired && still_off.size >= MIN_OFF && still_off.size > members.size * MAX_SHARE
-      store_episode(scope, members, episode['started_at'])
+    if still_off.size >= MIN_OFF && still_off.size > members.size * MAX_SHARE
+      store_episode(scope, episode)
       return true
     end
 
-    finish!(scope, still_off, expired)
+    finish!(scope, episode, still_off)
   end
 
-  # Fim do episódio: as que seguem fora passam a ser avaliadas uma a uma (instabilidade conta a partir daqui).
-  def finish!(scope, still_off, expired)
-    still_off.each { |name| WhatsappProxy::Health.seed!(name) } if expired
+  def finish!(scope, episode, still_off)
+    still_off.each { |name| WhatsappProxy::Health.eligible!(name) }
+    @just_ended.concat(still_off)
     ::Redis::Alfred.delete(self.class.episode_key(scope))
-    WhatsappProxy::Alert.notify!('falha_geral_fim', "falha geral (#{scope}) terminou#{' por tempo' if expired}; " \
-                                                    "#{still_off.size} sessão(ões) ainda fora",
-                                 pool: scope, count: still_off.size)
+    WhatsappProxy::Alert.notify!('falha_geral_fim', "falha geral (#{scope}) terminou; #{still_off.size} sessão(ões) ainda fora",
+                                 pool: scope, count: still_off.size, subject: episode['id'], window: ALERT_WINDOW)
     false
   rescue Redis::BaseError
     false
@@ -173,8 +177,8 @@ class WhatsappProxy::Outage
     nil
   end
 
-  def store_episode(scope, members, started_at)
-    ::Redis::Alfred.setex(self.class.episode_key(scope), { members: members, started_at: started_at }.to_json, EPISODE_TTL)
+  def store_episode(scope, episode)
+    ::Redis::Alfred.setex(self.class.episode_key(scope), episode.to_json, EPISODE_TTL)
   rescue Redis::BaseError
     nil
   end

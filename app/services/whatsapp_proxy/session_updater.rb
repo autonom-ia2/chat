@@ -2,7 +2,8 @@
 # receber a configuração nova, então a troca segue o padrão do backfill (Waha::ExistingInboxMigrationExecutor):
 #   cópia da configuração atual → PUT só com `config` (sem a chave `apps`: o motor mantém os apps) → espera WORKING
 #   (até ~3 min) com o MESMO número conectado (me.id, não o nome da sessão: números antigos sem o 9 diferem), a mesma
-#   quantidade de apps e o proxy gravado. Falhou: regrava a configuração anterior e devolve :rolled_back.
+#   quantidade de apps e o proxy gravado. Falhou: regrava a configuração anterior e devolve :rolled_back; se nem a volta
+#   der certo, :rollback_failed (o motor ficou com o proxy novo; alerta urgente `volta_falhou`).
 # Sessão pedindo QR (aparelho desvinculado) ou parada (STOPPED, desligada de propósito) nunca é tocada: :refused.
 # A configuração nova é a do motor com só o bloco `proxy` trocado (o motor guarda só as chaves que conhece).
 # Leituras com timeout curto (READ_TIMEOUT), para o pior caso caber na trava do ApplyJob.
@@ -22,8 +23,8 @@ class WhatsappProxy::SessionUpdater
     @health_interval = health_interval
   end
 
-  # :applied quando o motor confirmou a troca; :rolled_back quando voltou à configuração anterior; :refused quando a
-  # sessão não pode ser tocada.
+  # :applied quando o motor confirmou a troca; :rolled_back quando voltou à configuração anterior; :rollback_failed
+  # quando nem a volta foi aceita; :refused quando a sessão não pode ser tocada.
   def apply!(session_name, proxy, before: nil)
     before ||= @client.get_session(session_name, timeout: READ_TIMEOUT)
     return refuse(session_name, before['status']) if UNTOUCHABLE.include?(before['status'].to_s)
@@ -36,7 +37,6 @@ class WhatsappProxy::SessionUpdater
     raise if snapshot.nil?
 
     rollback!(session_name, snapshot, e)
-    :rolled_back
   end
 
   private
@@ -67,9 +67,11 @@ class WhatsappProxy::SessionUpdater
     reason = error.is_a?(VerificationError) ? error.message : error.class.name
     Rails.logger.warn("[whatsapp_proxy] troca de proxy desfeita session=#{session_name} (#{reason})")
     @client.update_session(session_name, config: snapshot[:config])
+    :rolled_back
   rescue Waha::Client::Error => e
     WhatsappProxy::Alert.notify!('volta_falhou', "session=#{session_name}: a configuração anterior não foi regravada (#{e.class})",
                                  level: :error, session: session_name)
+    :rollback_failed
   end
 
   def me_id(session)

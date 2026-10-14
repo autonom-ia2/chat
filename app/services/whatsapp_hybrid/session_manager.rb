@@ -189,7 +189,8 @@ class WhatsappHybrid::SessionManager
   # Proxy a gravar ao reconectar, ou nil para manter o que a sessão tem. Só sessão que já tem atribuição: a existente sem
   # atribuição só entra pela importação ou pela rake `autonomia:whatsapp_proxy:migrar` (uma por vez).
   def verified_proxy(remote_proxy)
-    return unless proxy_managed?
+    assignment = managed_assignment
+    return if assignment.nil? || assignment.in_backoff?
 
     proxy = @proxy_assigner.for(connection.session_name)
     proxy unless proxy.nil? || WhatsappProxy::Server.same?(remote_proxy&.dig('server'), proxy.server)
@@ -198,10 +199,10 @@ class WhatsappHybrid::SessionManager
   # Sessão conectada com atribuição que o motor ainda não tem: agenda a troca (WhatsappProxy::ApplyJob), no máximo uma
   # vez por hora e nunca durante o recuo de uma troca desfeita. Abrir a aba nunca migra sessão sem atribuição.
   def schedule_proxy!(remote, remote_proxy)
-    return unless remote['status'] == 'WORKING' && proxy_managed?
+    return unless remote['status'] == 'WORKING'
 
-    assignment = WhatsappProxy::Assignment.find_by(session_name: connection.session_name)
-    return unless proxy_change_due?(assignment, remote_proxy)
+    assignment = managed_assignment
+    return unless assignment && proxy_change_due?(assignment, remote_proxy)
 
     WhatsappProxy::ApplyJob.perform_later(connection.session_name) unless proxy_rewrite_cooling_down?
   end
@@ -212,8 +213,11 @@ class WhatsappHybrid::SessionManager
     !(remote_proxy && WhatsappProxy::Server.same?(remote_proxy['server'], assignment.server))
   end
 
-  def proxy_managed?
-    @proxy_assigner.enabled? && WhatsappProxy::Assignment.exists?(session_name: connection.session_name)
+  # A atribuição da sessão (uma consulta), só com o recurso ligado; nil = sessão sem proxy gerenciado.
+  def managed_assignment
+    return unless @proxy_assigner.enabled?
+
+    WhatsappProxy::Assignment.find_by(session_name: connection.session_name)
   end
 
   # Redis fora: considera em pausa (falha fechada), para nunca agendar trocas em sequência.

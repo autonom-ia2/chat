@@ -5,7 +5,7 @@
 # a sessão. `webshare_proxy_id` vazio = proxy posto à mão fora da Webshare, só reservado (o código não o troca).
 # `origin`: imported (proxy posto à mão antes do código, importado pela rake) ou assigned (escolhido pelo código).
 # Endereço vazio = pendente: a caixa nasceu sem proxy (Webshare fora) e a reconciliação tenta de novo.
-# `previous_*`: o IP de antes da última troca, para voltar a ele se o motor recusar a troca.
+# `previous_*`: o estado de antes da última troca (IP, plano, conta, origem), para voltar a ele se o motor recusar.
 # `apply_failures`/`last_apply_failed_at`: trocas desfeitas seguidas, para o recuo exponencial.
 class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
   def change
@@ -28,15 +28,22 @@ class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
       # que a Webshare trocou a credencial do mesmo IP; não permite recuperá-la.
       t.string :credential_digest
       t.string :origin, null: false, default: 'assigned'
-      t.string :previous_proxy_address
-      t.integer :previous_proxy_port
-      t.string :previous_webshare_proxy_id
-      t.string :previous_credential_digest
+      previous_columns(t)
       t.integer :apply_failures, null: false, default: 0
       t.datetime :last_apply_failed_at
       t.timestamps
     end
     index_assignments
+  end
+
+  def previous_columns(table)
+    table.string :previous_proxy_address
+    table.integer :previous_proxy_port
+    table.string :previous_webshare_proxy_id
+    table.string :previous_credential_digest
+    table.string :previous_pool
+    table.bigint :previous_account_id
+    table.string :previous_origin
   end
 
   def index_assignments

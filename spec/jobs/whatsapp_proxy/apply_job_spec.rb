@@ -8,15 +8,16 @@ RSpec.describe WhatsappProxy::ApplyJob do
   let(:session) { '5511900000001' }
 
   around do |example|
-    with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.2') { example.run }
+    with_modified_env(WHATSAPP_PROXY_ENABLED: 'true', WEBSHARE_DATACENTER_PROXY_ADDRESSES: '10.0.0.2',
+                      WEBSHARE_ISP_PROXY_ADDRESSES: '10.5.0.1') { example.run }
   end
 
   before do
     allow(Webshare::Client).to receive(:new).and_return(webshare)
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(webshare).to receive(:proxies).and_return([proxy])
-    Redis::Alfred.delete(described_class.lock_key(session))
-    Redis::Alfred.delete("whatsapp_proxy:alert:troca_desfeita:#{session}")
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
+    %w[troca_desfeita volta_falhou].each { |code| Redis::Alfred.delete("whatsapp_proxy:alert:#{code}:#{session}") }
     waha_session!(session, account)
     assign_proxy!(session, proxy, account: account)
   end
@@ -26,14 +27,22 @@ RSpec.describe WhatsappProxy::ApplyJob do
       'config' => { 'ignore' => {}, 'proxy' => { 'server' => server, 'username' => username, 'password' => password } } }
   end
 
-  # A atribuição já foi movida de 10.0.0.9 para 10.0.0.2 pela reconciliação (o anterior fica guardado).
+  # A reconciliação já moveu a atribuição de 10.0.0.9 para 10.0.0.2 (o estado anterior fica guardado).
   def moved_from_old!
-    WhatsappProxy::Assignment.last.update!(previous_proxy_address: '10.0.0.9', previous_proxy_port: 6000,
-                                           previous_webshare_proxy_id: '9', previous_credential_digest: 'antigo')
+    WhatsappProxy::Assignment.last.update!(previous_proxy_address: '10.0.0.9', previous_proxy_port: 6000, previous_webshare_proxy_id: '9',
+                                           previous_credential_digest: 'antigo', previous_pool: 'datacenter',
+                                           previous_account_id: account.id, previous_origin: 'assigned')
   end
 
-  it 'swaps the proxy through the SessionUpdater, records the credential and forgets the previous IP' do
+  def undone_by_engine!
+    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
+                                                      remote(server: '10.0.0.9:6000', status: 'STARTING'))
+    stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
+  end
+
+  it 'swaps the proxy through the SessionUpdater, records the credential and forgets the previous state' do
     moved_from_old!
+    WhatsappProxy::Assignment.last.update!(apply_failures: 2, last_apply_failed_at: 1.day.ago)
     allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'), remote(server: '10.0.0.2:6000'))
 
     described_class.perform_now(session)
@@ -41,16 +50,26 @@ RSpec.describe WhatsappProxy::ApplyJob do
     expect(client).to have_received(:update_session)
       .with(session, config: hash_including('proxy' => hash_including('server' => '10.0.0.2:6000'))).once
     expect(WhatsappProxy::Assignment.last).to have_attributes(credential_digest: proxy.credential_digest, previous_proxy_address: nil,
-                                                              apply_failures: 0)
+                                                              previous_pool: nil, apply_failures: 0)
   end
 
-  it 'does nothing when the engine already has this proxy with this credential' do
+  it 'confirms without PUT when the engine already has this proxy, keeping the failure count (M1)' do
+    WhatsappProxy::Assignment.last.update!(apply_failures: 2, last_apply_failed_at: 1.day.ago)
     allow(client).to receive(:get_session).and_return(remote(server: 'http://10.0.0.2:6000'))
 
     described_class.perform_now(session)
 
     expect(client).not_to have_received(:update_session)
-    expect(WhatsappProxy::Assignment.last.credential_digest).to eq(proxy.credential_digest)
+    expect(WhatsappProxy::Assignment.last).to have_attributes(credential_digest: proxy.credential_digest, apply_failures: 2)
+  end
+
+  it 'leaves at once while the assignment is in backoff (M1)' do
+    WhatsappProxy::Assignment.last.update!(apply_failures: 1, last_apply_failed_at: Time.current)
+    allow(client).to receive(:get_session)
+
+    described_class.perform_now(session)
+
+    expect(client).not_to have_received(:get_session)
   end
 
   it 'repairs a session stuck in STARTING (its IP vanished), waiting for WORKING' do
@@ -73,35 +92,39 @@ RSpec.describe WhatsappProxy::ApplyJob do
   describe 'undone change (H2)' do
     before do
       moved_from_old!
-      allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
-                                                        remote(server: '10.0.0.9:6000', status: 'STARTING'))
-      stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
+      undone_by_engine!
     end
 
-    it 'puts the assignment back on the previous IP, counts a failure and alerts once' do
+    it 'puts the assignment back on the previous state, counts a failure and alerts once' do
       log = capture_log { described_class.perform_now(session) }
 
       expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.9', credential_digest: 'antigo',
-                                                                apply_failures: 1)
+                                                                apply_failures: 1, previous_pool: nil)
       expect(WhatsappProxy::Assignment.last).to be_in_backoff
       expect(log.scan('[alerta] troca_desfeita').size).to eq(1)
     end
 
+    it 'does nothing when a duplicate job, already queued, runs after the reversion (M1)' do
+      2.times { described_class.perform_now(session) }
+
+      expect(client).to have_received(:update_session).twice # o PUT da troca e o PUT da volta, uma vez só
+      expect(WhatsappProxy::Assignment.last.apply_failures).to eq(1)
+    end
+
     it 'alerts again only when the backoff reaches its maximum' do
-      WhatsappProxy::Assignment.last.update!(apply_failures: 2)
+      WhatsappProxy::Assignment.last.update!(apply_failures: 2, last_apply_failed_at: 1.day.ago)
       log = capture_log { described_class.perform_now(session) }
       expect(log).not_to include('[alerta] troca_desfeita')
 
       moved_from_old!
-      WhatsappProxy::Assignment.last.update!(proxy_address: '10.0.0.2', apply_failures: WhatsappProxy::Assignment::BACKOFF.size - 1)
-      Redis::Alfred.delete("whatsapp_proxy:alert:troca_desfeita:#{session}")
+      WhatsappProxy::Assignment.last.update!(proxy_address: '10.0.0.2', apply_failures: WhatsappProxy::Assignment::BACKOFF.size - 1,
+                                             last_apply_failed_at: 2.days.ago)
       log = capture_log { described_class.perform_now(session) }
       expect(log).to include('[alerta] troca_desfeita')
     end
 
-    it 'leaves a brand new number pending (no previous IP) after an undone change' do
-      WhatsappProxy::Assignment.last.update!(previous_proxy_address: nil, previous_proxy_port: nil, previous_webshare_proxy_id: nil,
-                                             previous_credential_digest: nil)
+    it 'leaves a brand new number pending (no previous state) after an undone change' do
+      WhatsappProxy::Assignment.last.update!(WhatsappProxy::Assignment::FORGET_PREVIOUS)
 
       described_class.perform_now(session)
 
@@ -109,14 +132,61 @@ RSpec.describe WhatsappProxy::ApplyJob do
     end
   end
 
+  it 'reverts a plan change (WAHA number that became Hybrid) back to plan, account and origin (M3)' do
+    hybrid_session!('hybrid-5511900000003', account)
+    imported = webshare_proxy(id: 3, address: '10.0.0.3')
+    assign_proxy!('hybrid-5511900000003', imported, account: account, pool: 'datacenter', digest: 'importado')
+      .update!(origin: 'imported')
+    isp = webshare_proxy(id: 50, address: '10.5.0.1')
+    allow(webshare).to receive(:proxies).and_return([proxy, imported, isp])
+    with_modified_env(WHATSAPP_PROXY_AUTO_MIGRATE: 'true') { WhatsappProxy::Assigner.new.for('hybrid-5511900000003') }
+    expect(WhatsappProxy::Assignment.find_by!(session_name: 'hybrid-5511900000003')).to have_attributes(pool: 'isp', origin: 'assigned')
+    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.3:6000', username: 'x'),
+                                                      remote(server: '10.0.0.3:6000', status: 'STARTING'))
+    stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
+
+    described_class.perform_now('hybrid-5511900000003')
+
+    expect(WhatsappProxy::Assignment.find_by!(session_name: 'hybrid-5511900000003'))
+      .to have_attributes(pool: 'datacenter', origin: 'imported', proxy_address: '10.0.0.3', credential_digest: 'importado')
+  end
+
+  it 'keeps the table on the new proxy when the rollback itself failed, and alerts volta_falhou (M2)' do
+    moved_from_old!
+    allow(client).to receive(:get_session).and_return(remote(server: '10.0.0.9:6000', username: 'x'),
+                                                      remote(server: '10.0.0.2:6000', status: 'STARTING'))
+    stub_const('WhatsappProxy::SessionUpdater::HEALTH_ATTEMPTS', 1)
+    allow(client).to receive(:update_session).and_return({})
+    allow(client).to receive(:update_session).with(session, config: { 'ignore' => {}, 'proxy' => hash_including('server' => '10.0.0.9:6000') })
+                                             .and_raise(Waha::Client::Error, 'down')
+
+    log = capture_log { described_class.perform_now(session) }
+
+    expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', previous_proxy_address: nil, apply_failures: 1,
+                                                              credential_digest: proxy.credential_digest)
+    expect(log).to include('[alerta] volta_falhou')
+  end
+
+  it 'clears the previous state when restoring is refused by validation (L1)' do
+    moved_from_old!
+    undone_by_engine!
+    WhatsappProxy::Assignment.create!(session_name: 'outra', account_id: create(:account).id, pool: 'datacenter', webshare_proxy_id: '9',
+                                      proxy_address: '10.0.0.9', proxy_port: 6000, assigned_at: Time.current)
+
+    described_class.perform_now(session)
+
+    expect(WhatsappProxy::Assignment.find_by!(session_name: session)).to have_attributes(pending?: true, previous_proxy_address: nil,
+                                                                                         previous_pool: nil, apply_failures: 1)
+  end
+
   it 'never runs twice at the same time and only releases its own lock (M5)' do
-    Redis::Alfred.set(described_class.lock_key(session), 'outro-job', nx: true, ex: 60)
+    Redis::Alfred.set(WhatsappProxy::SessionLock.key(session), 'outro-job', nx: true, ex: 60)
     allow(client).to receive(:get_session)
 
     described_class.perform_now(session)
 
     expect(client).not_to have_received(:get_session)
-    expect(Redis::Alfred.get(described_class.lock_key(session))).to eq('outro-job')
+    expect(Redis::Alfred.get(WhatsappProxy::SessionLock.key(session))).to eq('outro-job')
   end
 
   it 'releases its own lock at the end' do
@@ -124,7 +194,7 @@ RSpec.describe WhatsappProxy::ApplyJob do
 
     described_class.perform_now(session)
 
-    expect(Redis::Alfred.get(described_class.lock_key(session))).to be_nil
+    expect(Redis::Alfred.get(WhatsappProxy::SessionLock.key(session))).to be_nil
   end
 
   it 'frees the assignment when the engine no longer has the session' do

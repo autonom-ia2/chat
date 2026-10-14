@@ -3900,6 +3900,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
     t.integer "previous_proxy_port"
     t.string "previous_webshare_proxy_id"
     t.string "previous_credential_digest"
+    t.string "previous_pool"
+    t.bigint "previous_account_id"
+    t.string "previous_origin"
     t.integer "apply_failures", default: 0, null: false
     t.datetime "last_apply_failed_at"
     t.datetime "created_at", null: false

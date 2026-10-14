@@ -88,6 +88,15 @@ RSpec.describe WhatsappProxy::Assigner do
       expect(assigner.for('5511900000099').address).to eq('10.0.0.1')
     end
 
+    it 'checks the per-IP limit only when the address changes (L1)' do
+      assign_proxy!('5511900000001', sao_paulo, account: account)
+      assign_proxy!('5511900000002', sao_paulo, account: account)
+
+      with_modified_env(WHATSAPP_PROXY_MAX_NUMBERS_PER_IP: '1') do
+        expect(WhatsappProxy::Assignment.find_by!(session_name: '5511900000001').update(apply_failures: 1)).to be(true)
+      end
+    end
+
     it 'refuses at the model level an IP of another account or above the limit' do
       assign_proxy!('5511900000001', sao_paulo, account: account)
       intruder = WhatsappProxy::Assignment.new(session_name: 'x', account_id: other_account.id, pool: 'datacenter',

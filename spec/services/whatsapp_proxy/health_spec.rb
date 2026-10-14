@@ -29,9 +29,10 @@ RSpec.describe WhatsappProxy::Health do
     expect(described_class.rounds(session)).to eq(0)
   end
 
-  it 'lets a seeded session (end of a long outage) count from the first round' do
-    described_class.seed!(session)
+  it 'lets a session left off at the end of an outage count from zero: two NEW rounds off to become unstable' do
+    described_class.eligible!(session)
 
+    expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to be_nil
     expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to eq(:unstable)
   end
 

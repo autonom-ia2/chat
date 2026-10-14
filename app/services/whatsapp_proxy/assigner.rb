@@ -58,10 +58,27 @@ class WhatsappProxy::Assigner
     end
   end
 
-  # O motor recebeu este proxy: guarda o HMAC da credencial (para notar troca de usuário/senha no mesmo IP) e zera o
-  # recuo.
+  # O motor recebeu este proxy e a troca foi conferida: guarda o HMAC da credencial (para notar troca de usuário/senha
+  # no mesmo IP) e zera o recuo.
   def mark_applied!(session_name, proxy)
     WhatsappProxy::Assignment.find_by(session_name: session_name, proxy_address: proxy.address)&.applied!(proxy.credential_digest)
+  end
+
+  # O motor já estava com este proxy (sem PUT): registra a credencial; o recuo de falhas anteriores fica.
+  def mark_confirmed!(session_name, proxy)
+    WhatsappProxy::Assignment.find_by(session_name: session_name, proxy_address: proxy.address)&.confirmed!(proxy.credential_digest)
+  end
+
+  # Há para onde mover o número, sem `excluding`? Só leitura (nada gravado): a reconciliação usa antes de pôr um IP em
+  # quarentena, para não pôr e tirar a cada rodada quando o plano está sem IP livre.
+  def destination?(session_name, owner, excluding:)
+    pool = pool(owner.pool)
+    in_engine = engine_sessions(session_name)
+    return false if in_engine.nil?
+
+    others = WhatsappProxy::Assignment.where.not(session_name: session_name)
+    candidate = pick(owner, pool, others, in_engine + [[nil, excluding]])
+    candidate.present? && candidate.address != excluding
   end
 
   # Sessão nova que nasceu sem proxy porque a Webshare estava fora (#1516, M6): fica pendente e a reconciliação tenta
@@ -106,25 +123,21 @@ class WhatsappProxy::Assigner
     return if in_engine.nil?
 
     others = WhatsappProxy::Assignment.where.not(session_name: session_name)
-    candidate = account_ip_with_room(owner, pool, others, in_engine) || free_ip(pool, others, in_engine)
+    candidate = pick(owner, pool, others, in_engine)
     return pool_exhausted!(session_name, pool) if candidate.nil?
 
     log_reassign(session_name, assignment, candidate, pool)
     record = assignment || WhatsappProxy::Assignment.new(session_name: session_name)
-    record.update!(previous_state(record).merge(
+    # O estado atual fica guardado (previous_*) até o motor confirmar a troca.
+    record.update!(record.previous_attributes.merge(
                      account_id: owner.account_id, pool: pool.name, origin: 'assigned', webshare_proxy_id: candidate.id,
                      proxy_address: candidate.address, proxy_port: candidate.port, assigned_at: Time.current, credential_digest: nil
                    ))
     candidate
   end
 
-  # Guarda o IP que o motor tem agora, para voltar a ele se a troca for desfeita. Troca ainda não aplicada mantém o
-  # anterior que já estava guardado.
-  def previous_state(record)
-    return {} if record.pending? || record.previous_proxy_address.present?
-
-    { previous_proxy_address: record.proxy_address, previous_proxy_port: record.proxy_port,
-      previous_webshare_proxy_id: record.webshare_proxy_id, previous_credential_digest: record.credential_digest }
+  def pick(owner, pool, others, in_engine)
+    account_ip_with_room(owner, pool, others, in_engine) || free_ip(pool, others, in_engine)
   end
 
   # IP da própria conta (mesmo plano) com menos de N números; o mais cheio primeiro, para usar menos IPs. Fora: IP que

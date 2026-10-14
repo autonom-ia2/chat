@@ -1,8 +1,10 @@
 # Põe proxy numa sessão que já existe no motor e ainda não tem atribuição (#1516) — uma por vez, à mão
 # (`autonomia:whatsapp_proxy:migrar[sessao]`). Abrir a aba ou reconectar nunca fazem isso sozinhos.
-# Antes confere o limite temporário do WhatsApp (/timelock): com restrição ativa (ou sem conseguir conferir), recusa.
-# A troca é a do SessionUpdater (espera WORKING com o mesmo número; falhou, volta). Desfeita ou recusada: a atribuição
-# é apagada e a sessão fica como estava.
+# - Pega a mesma trava do ApplyJob (WhatsappProxy::SessionLock); ocupada, recusa.
+# - Confere o limite temporário do WhatsApp (/timelock): com restrição ativa, ou sem conseguir conferir, recusa.
+# - A troca é a do SessionUpdater (espera WORKING com o mesmo número; falhou, volta). Qualquer fim que não seja a troca
+#   aplicada — desfeita, recusada, exceção, Ctrl-C — apaga a atribuição, para nenhuma atribuição órfã ser aplicada
+#   depois sem o /timelock. Exceção: volta que falhou (o motor ficou com o proxy novo) — aí a tabela fica igual ao motor.
 class WhatsappProxy::Migrator
   Result = Struct.new(:outcome, :detail)
 
@@ -13,16 +15,27 @@ class WhatsappProxy::Migrator
   end
 
   def call(session_name)
-    refusal = precheck(session_name)
-    return Result.new(:refused, refusal) if refusal
-
-    proxy = @assigner.for(session_name)
-    return Result.new(:refused, 'sem IP disponível (veja os alertas)') if proxy.nil?
-
-    finish(session_name, proxy, @updater.apply!(session_name, proxy))
+    result = WhatsappProxy::SessionLock.with(session_name) { migrate(session_name) }
+    result == :locked ? Result.new(:refused, 'outra troca de proxy desta sessão está em andamento') : result
   end
 
   private
+
+  def migrate(session_name)
+    refusal = precheck(session_name)
+    return Result.new(:refused, refusal) if refusal
+
+    outcome = nil
+    begin
+      proxy = @assigner.for(session_name)
+      return Result.new(:refused, 'sem IP disponível (veja os alertas)') if proxy.nil?
+
+      outcome = @updater.apply!(session_name, proxy)
+      finish(session_name, proxy, outcome)
+    ensure
+      @assigner.release!(session_name) unless %i[applied rollback_failed].include?(outcome)
+    end
+  end
 
   def precheck(session_name)
     return 'recurso desligado (WHATSAPP_PROXY_ENABLED) ou sem WEBSHARE_API_KEY' unless @assigner.enabled?
@@ -40,12 +53,15 @@ class WhatsappProxy::Migrator
   end
 
   def finish(session_name, proxy, outcome)
-    if outcome == :applied
+    case outcome
+    when :applied
       @assigner.mark_applied!(session_name, proxy)
-      return Result.new(:applied, proxy.server)
+      Result.new(:applied, proxy.server)
+    when :rollback_failed
+      WhatsappProxy::Assignment.find_by(session_name: session_name)&.rollback_failed!(proxy.credential_digest)
+      Result.new(:rollback_failed, 'a volta falhou: o motor ficou com o proxy novo (veja o alerta volta_falhou)')
+    when :refused then Result.new(:refused, 'sessão pedindo QR ou parada')
+    else Result.new(outcome, 'troca desfeita; a sessão voltou ao que era')
     end
-
-    @assigner.release!(session_name)
-    Result.new(outcome, outcome == :refused ? 'sessão pedindo QR ou parada' : 'troca desfeita; a sessão voltou ao que era')
   end
 end

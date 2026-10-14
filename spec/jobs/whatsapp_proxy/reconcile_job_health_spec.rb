@@ -100,17 +100,33 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       expect(scheduled_sessions).to be_empty
     end
 
-    it 'does not quarantine when there is nowhere to move the number (L1)' do
+    it 'without a destination, never puts/removes a quarantine each round and alerts once a day (L1, L7)' do
       allow(datacenter).to receive(:proxies).and_return([bad])
+      allow(WhatsappProxy::Quarantine).to receive(:put!).and_call_original
+      Redis::Alfred.delete("whatsapp_proxy:alert:quarentena_sem_destino:#{session}:#{Date.current}")
       round(session => 'WORKING')
       round(session => 'STARTING')
 
-      log = capture_log { round(session => 'FAILED') }
+      log = capture_log { 3.times { round(session => 'FAILED') } }
 
       expect(scheduled_sessions).to be_empty
-      expect(WhatsappProxy::Quarantine.count).to eq(0)
+      expect(WhatsappProxy::Quarantine).not_to have_received(:put!)
       expect(WhatsappProxy::Assignment.last.proxy_address).to eq('10.0.0.1')
       expect(log).to include('quarentena_sem_destino')
+      expect(Redis::Alfred.ttl("whatsapp_proxy:alert:quarentena_sem_destino:#{session}:#{Date.current}")).to be > 1.hour.to_i
+    end
+
+    it 'undoes the provisional quarantine when the new assignment is refused (L3)' do
+      round(session => 'WORKING')
+      round(session => 'STARTING')
+      allow_any_instance_of(WhatsappProxy::Assigner).to receive(:resolve) # rubocop:disable RSpec/AnyInstance
+        .and_raise(ActiveRecord::RecordInvalid, WhatsappProxy::Assignment.new)
+
+      log = capture_log { round(session => 'FAILED') }
+
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
+      expect(scheduled_sessions).to be_empty
+      expect(log).to include('atribuicao_invalida')
     end
 
     it 'swaps at most once a day' do
@@ -124,6 +140,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
 
       expect(scheduled_sessions).to be_empty
       expect(log).to include('sessao_instavel_de_novo')
+      expect(Redis::Alfred.ttl("whatsapp_proxy:alert:sessao_instavel_de_novo:#{session}:#{Date.current}")).to be > 1.hour.to_i
     end
 
     it 'stops quarantining after DAILY_LIMIT IPs of the plan in 24 h' do
@@ -157,6 +174,27 @@ RSpec.describe WhatsappProxy::ReconcileJob do
 
       expect(scheduled_sessions.size).to eq(1)
       expect(scheduled_sessions.first).to be_in(%w[5511900000002 5511900000003])
+    end
+  end
+
+  describe 'a new outage never opens in the round the previous one ended (L6)' do
+    before do
+      (1..6).each { |i| session!("551190000020#{i}", webshare_proxy(id: i, address: "10.0.0.#{i}"), owner: create(:account)) }
+      allow(datacenter).to receive(:proxies).and_return((1..9).map { |i| webshare_proxy(id: i, address: "10.0.0.#{i}") })
+    end
+
+    def six(*list)
+      list.each_with_index.to_h { |status, i| ["551190000020#{i + 1}", status] }
+    end
+
+    it 'ends the old episode and only observes the new drops' do
+      round(six('WORKING', 'WORKING', 'WORKING', 'WORKING', 'WORKING', 'WORKING'))
+      round(six('STARTING', 'STARTING', 'WORKING', 'WORKING', 'WORKING', 'WORKING'))
+      expect(WhatsappProxy::Outage.active?('datacenter')).to be(true)
+
+      round(six('WORKING', 'WORKING', 'STARTING', 'STARTING', 'WORKING', 'WORKING'))
+
+      expect(WhatsappProxy::Outage.active?('datacenter')).to be(false)
     end
   end
 
@@ -207,13 +245,29 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       expect(log.scan('[alerta] falha_geral_fim:').size).to eq(1)
     end
 
-    it 'ends the episode after an hour and then judges the ones still off one by one' do
+    it 'keeps a long outage as an outage: 3 of 4 IPs off for 2 hours → no quarantine, no change (HIGH1)' do
       start = Time.current
       travel_to(start) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
-      [10, 20, 30, 40, 50, 60].each { |minute| travel_to(start + minute.minutes) { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) } }
+      log = capture_log do
+        (1..12).each { |step| travel_to(start + (step * 10).minutes) { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) } }
+      end
+
+      expect(scheduled_sessions).to be_empty
+      expect(WhatsappProxy::Quarantine.count).to eq(0)
+      expect(log.scan('[alerta] falha_geral:').size).to eq(1)
+      episode_id = JSON.parse(Redis::Alfred.get(WhatsappProxy::Outage.episode_key('datacenter')))['id']
+      expect(Redis::Alfred.ttl("whatsapp_proxy:alert:falha_geral:#{episode_id}")).to be > 1.hour.to_i
+    end
+
+    it 'ends when most came back; the one still off needs two NEW rounds off to be judged unstable (HIGH1)' do
+      start = Time.current
+      travel_to(start) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 10.minutes) { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) }
+      travel_to(start + 20.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 30.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
       expect(scheduled_sessions).to be_empty
 
-      travel_to(start + 75.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
+      travel_to(start + 40.minutes) { round(proxied('STARTING', 'WORKING', 'WORKING', 'WORKING')) }
 
       expect(scheduled_sessions).to eq(['5511900000101'])
     end
@@ -260,7 +314,7 @@ RSpec.describe WhatsappProxy::ReconcileJob do
     it 'ignores Hybrid webhook drops while an outage is on, and when the feature is off (L3)' do
       Redis::Alfred.delete('whatsapp_proxy:drops:hybrid-x')
       with_modified_env(WHATSAPP_PROXY_ENABLED: nil) { WhatsappProxy::Health.record_drop!('hybrid-x') }
-      Redis::Alfred.setex(WhatsappProxy::Outage.episode_key('baseline'), { members: %w[a b], started_at: Time.current }.to_json, 60)
+      Redis::Alfred.setex(WhatsappProxy::Outage.episode_key('baseline'), { id: 'baseline:1', members: %w[a b] }.to_json, 60)
       WhatsappProxy::Health.record_drop!('hybrid-x')
 
       expect(WhatsappProxy::Health.drops('hybrid-x')).to eq(0)

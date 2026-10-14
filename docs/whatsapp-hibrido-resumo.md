@@ -245,15 +245,19 @@ Autonom.ia). Regra decidida em 14/10/2026:
   fora na criação: a caixa nasce sem proxy, a atribuição fica **pendente** (alerta `caixa_sem_proxy`) e a reconciliação
   tenta de novo, com recuo.
 - Sessão que já existe sem atribuição **nunca** ganha proxy sozinha (nem abrindo a aba, nem reconectando): só pela
-  importação ou por `bundle exec rails "autonomia:whatsapp_proxy:migrar[SESSAO]"` — uma por vez, confere o `/timelock`
-  antes e recusa com restrição ativa; troca desfeita volta a sessão ao que era.
+  importação ou por `bundle exec rails "autonomia:whatsapp_proxy:migrar[SESSAO]"` — uma por vez, com a mesma trava do
+  ApplyJob (ocupada, recusa), confere o `/timelock` antes e recusa com restrição ativa ou sem conseguir conferir;
+  qualquer fim que não seja a troca aplicada (desfeita, recusada, erro, Ctrl-C) apaga a atribuição.
 - Toda regravação de configuração mescla sobre a do motor e nunca manda a chave `apps`. O motor guarda só as chaves de
   configuração que conhece (descarta as outras).
 - Trocar o proxy de sessão existente (`WhatsappProxy::ApplyJob` + `SessionUpdater`): um job por sessão (trava com token,
   solta só por quem pegou); se o motor já tem o proxy e a credencial, nada; sessão pedindo QR ou parada (STOPPED)
   nunca é tocada; senão cópia → PUT → espera WORKING (até ~3 min) com o mesmo número (`me.id`), os mesmos apps e o proxy
-  gravado. Falhou: a configuração anterior volta no motor, a atribuição volta ao IP anterior, conta uma falha e entra em
-  **recuo** (10 min, 30 min, 2 h, 6 h, 24 h); alerta `troca_desfeita` na primeira falha e ao chegar no recuo máximo.
+  gravado. Falhou: a configuração anterior volta no motor, a atribuição volta inteira ao estado anterior (IP, plano,
+  conta, origem), conta uma falha e entra em **recuo** (10 min, 30 min, 2 h, 6 h, 24 h) — job repetido que já estava na
+  fila sai sem fazer nada; alerta `troca_desfeita` na primeira falha e ao chegar no recuo máximo. Se nem a volta der
+  certo, o motor ficou com o proxy novo: a tabela fica nele também e sai `volta_falhou` (urgente). Confirmação sem PUT
+  (o motor já tinha o proxy) não zera o recuo; só uma troca aplicada e conferida zera.
 - Híbrido: a atualização da aba nunca grava proxy na requisição — só agenda o ApplyJob, e só para sessão que já tem
   atribuição, fora do recuo, no máximo uma vez por hora (Redis fora = não agenda). Reconectar grava junto o IP
   atribuído, também só com atribuição. O envio de mensagem nunca mexe no proxy.
@@ -265,15 +269,16 @@ Autonom.ia). Regra decidida em 14/10/2026:
     Reputation" em 14/10/2026; se está WORKING, só depois de duas leituras seguidas, sem urgência;
   - **plano ou conta errados** (número que trocou de tipo) e **credencial trocada**: só com a sessão WORKING; número
     importado só muda de plano/conta com `WHATSAPP_PROXY_AUTO_MIGRATE=true`;
-  - **pendente**: atribui e aplica; sem IP ainda, conta falha (recuo);
-  - um plano com erro na Webshare não para o outro; erro repetido gera `webshare_indisponivel`; se mais da metade dos
-    IPs sumiu de uma vez, `troca_em_massa`.
+  - **pendente**: com a sessão WORKING, atribui e aplica; sem IP ainda, conta falha (recuo);
+  - um plano com erro na Webshare não para o outro (sai da rodada inteira, uma contagem por rodada); erro em duas
+    rodadas seguidas gera `webshare_indisponivel`; se mais da metade dos IPs sumiu de uma vez, `troca_em_massa`.
 - **IP instável** (a Webshare chama de válido, mas a sessão fica caindo — visto em 14/10/2026 na
   hybrid-551142155355): só conta a sessão que **caiu** — estava WORKING na rodada anterior; FAILED antiga não conta e
   não queima IP bom. Fora de WORKING em 2 rodadas seguidas, ou 3 quedas avisadas pelo webhook do Híbrido em 30 min, o
   número troca de IP no mesmo plano e fatia e o IP vai para quarentena por 24 h (tabela `whatsapp_proxy_quarantines`) —
-  mas só se houver para onde mover (senão `quarentena_sem_destino` e nada muda). No máximo uma troca dessas por sessão
-  por dia e 3 quarentenas por plano em 24 h (`teto_de_quarentena`). Os números irmãos (mesma conta, mesmo IP) não saem
+  mas só se houver para onde mover — checado antes, só leitura; sem destino nem põe quarentena e avisa
+  `quarentena_sem_destino` uma vez por dia. No máximo uma troca dessas por sessão por dia (`sessao_instavel_de_novo`,
+  uma vez por dia) e 3 quarentenas por plano em 24 h (`teto_de_quarentena`). Os números irmãos (mesma conta, mesmo IP) não saem
   à força: trocam se eles próprios caírem; WORKING, trocam sem urgência, um por rodada. A quarentena expira sozinha;
   para soltar antes: `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.
 - **Falha geral não é IP ruim** (`WhatsappProxy::Outage`). Mede queda recente: só conta a sessão que estava WORKING na
@@ -281,9 +286,11 @@ Autonom.ia). Regra decidida em 14/10/2026:
   plano caíram (pelo menos 2), ou mais de 30% das sessões sem nenhum proxy do motor caíram (pelo menos 2, e só com pelo
   menos 5 sessões sem proxy que estavam WORKING), é falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena,
   nenhuma troca por instabilidade, contagem zerada (inclusive as quedas do webhook). Alerta `falha_geral` no começo e
-  `falha_geral_fim` no fim. Dura enquanto a maioria das que caíram segue fora, no máximo 1 h; depois, as que seguem fora
-  são avaliadas uma a uma. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido continua sendo
-  reparado.
+  `falha_geral_fim` no fim, um de cada por episódio. Dura (sem prazo) enquanto as que caíram seguem fora acima do mesmo
+  limite: falha longa não vira "IP instável" por tempo. Quando a maioria volta, termina; as que seguem fora são
+  avaliadas uma a uma, do zero, a partir da rodada seguinte (2 rodadas novas fora para virar instável). Na rodada em
+  que um episódio termina não se abre outro. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido
+  continua sendo reparado.
 - **Alertas**: sempre no log `[whatsapp_proxy][alerta]`; como aviso do Guia para os administradores da conta da
   plataforma (`WHATSAPP_PROXY_ALERT_ACCOUNT_ID`), em pt_BR/en, só com nº de caixa e de conta, plano e IP mascarado
   (`10.20.x.x`) — nunca telefone, nome ou credencial, e nunca para a conta do cliente; e no Sentry, se houver

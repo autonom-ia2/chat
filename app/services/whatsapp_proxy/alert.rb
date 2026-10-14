@@ -5,16 +5,19 @@
 #   WHATSAPP_PROXY_ALERT_ACCOUNT_ID — nunca para a conta do cliente; texto próprio em pt_BR/en, só com nº de caixa e
 #   de conta, plano e IP mascarado (nada de telefone, nome ou credencial);
 # - Sentry, quando a instalação tiver SENTRY_DSN.
-# Limite de frequência: um alerta por código e assunto (sessão, IP ou plano) por hora nos canais visíveis; o log fica.
+# Limite de frequência: um alerta por código e assunto (sessão, IP ou plano; ou `subject:` explícito) por janela (1 h,
+# ou `window:`) nos canais visíveis; o log fica.
 module WhatsappProxy::Alert
   module_function
 
   THROTTLE = 1.hour.to_i
 
-  # data: session:, ip:, pool:, count:, total: — viram o texto do aviso já higienizados.
+  # data: session:, ip:, pool:, count:, total:, date: — viram o texto do aviso já higienizados; subject: e window:
+  # trocam o assunto e a janela do limite de frequência.
   def notify!(code, message, level: :warning, **data)
     Rails.logger.public_send(level == :error ? :error : :warn, "[whatsapp_proxy][alerta] #{code}: #{message}")
-    return unless first_in_window?(code, data.values_at(:session, :ip, :pool, :date).compact.first)
+    subject = data[:subject] || data.values_at(:session, :ip, :pool, :date).compact.first
+    return unless first_in_window?(code, subject, data.fetch(:window, THROTTLE))
 
     to_sentry(code, message, level)
     to_platform(code, level, data)
@@ -22,8 +25,8 @@ module WhatsappProxy::Alert
     Rails.logger.warn("[whatsapp_proxy] alerta não enviado (#{e.class})")
   end
 
-  def first_in_window?(code, subject)
-    ::Redis::Alfred.set("whatsapp_proxy:alert:#{code}:#{subject}", '1', nx: true, ex: THROTTLE) ? true : false
+  def first_in_window?(code, subject, window)
+    ::Redis::Alfred.set("whatsapp_proxy:alert:#{code}:#{subject}", '1', nx: true, ex: window.to_i) ? true : false
   rescue Redis::BaseError
     true
   end

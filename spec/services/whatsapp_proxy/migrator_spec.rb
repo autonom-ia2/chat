@@ -17,6 +17,7 @@ RSpec.describe WhatsappProxy::Migrator do
   end
 
   before do
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key(session))
     waha_session!(session, account)
     allow(client).to receive(:timelock).and_return({ 'isActive' => false })
   end
@@ -55,6 +56,37 @@ RSpec.describe WhatsappProxy::Migrator do
     allow(updater).to receive(:apply!).and_return(:rolled_back)
 
     expect(migrator.call(session).outcome).to eq(:rolled_back)
+    expect(WhatsappProxy::Assignment.count).to eq(0)
+  end
+
+  it 'never leaves an orphan assignment when the change blows up halfway (HIGH2)' do
+    allow(updater).to receive(:apply!).and_raise(StandardError, 'boom')
+
+    expect { migrator.call(session) }.to raise_error(StandardError, 'boom')
+    expect(WhatsappProxy::Assignment.count).to eq(0)
+  end
+
+  it 'never leaves an orphan assignment on Ctrl-C (Interrupt) either (HIGH2)' do
+    allow(updater).to receive(:apply!).and_raise(Interrupt)
+
+    expect { migrator.call(session) }.to raise_error(Interrupt)
+    expect(WhatsappProxy::Assignment.count).to eq(0)
+    expect(Redis::Alfred.get(WhatsappProxy::SessionLock.key(session))).to be_nil
+  end
+
+  it 'keeps the table on the new proxy when the rollback failed (engine left on it) (M2)' do
+    allow(updater).to receive(:apply!).and_return(:rollback_failed)
+
+    expect(migrator.call(session).outcome).to eq(:rollback_failed)
+    expect(WhatsappProxy::Assignment.find_by!(session_name: session)).to have_attributes(proxy_address: '10.0.0.2', apply_failures: 1)
+  end
+
+  it 'refuses while another proxy change of the session holds the lock (M4)' do
+    Redis::Alfred.set(WhatsappProxy::SessionLock.key(session), 'apply-job', nx: true, ex: 60)
+    allow(updater).to receive(:apply!)
+
+    expect(migrator.call(session).outcome).to eq(:refused)
+    expect(updater).not_to have_received(:apply!)
     expect(WhatsappProxy::Assignment.count).to eq(0)
   end
 
