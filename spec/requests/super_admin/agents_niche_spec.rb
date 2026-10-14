@@ -25,7 +25,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     campo = document.at_css('[data-agents-niche-form]')
-    expect(radios(document, 'nicho').pluck('value')).to eq(%w[seguros geral])
+    expect(radios(document, 'nicho').pluck('value')).to eq(%w[geral seguros])
     expect(radios(document, 'perfil').pluck('value')).to eq(%w[corretora seguradora insurtech saude_beneficios])
     expect(radios(document, 'nicho').find { |radio| radio['checked'] }['value']).to eq('seguros')
     expect(campo.css('select')).to be_empty
@@ -52,6 +52,25 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(canais.find { |radio| radio['checked'] }['value']).to eq('direto')
     expect(document.at_css('#agents-niche-perfil-insurtech')).to be_present
     expect(document.at_css('[data-agents-niche-channel] legend').text.squish).to eq('How it sells')
+  end
+
+  # Prévia do mockup aprovado (#1550): o texto real do pacote, no idioma da conta, uma prévia por escolha.
+  it 'mostra a prévia de um card fechado para cada escolha, no idioma da conta' do
+    account.update!(locale: 'pt_BR')
+    get "#{path}/edit"
+
+    document = Nokogiri::HTML(response.body)
+    previas = document.css('[data-agents-niche-preview]').to_h do |previa|
+      [previa['data-agents-niche-preview'], previa.css('span').drop(1).map { |chip| chip.text.squish }]
+    end
+    expect(previas).to eq(
+      'corretora' => ['Seguro ativo', 'Não fechou'], 'seguradora' => ['Seguro ativo', 'Não fechou'],
+      'insurtech' => ['Seguro ativo', 'Não fechou'], 'saude_beneficios' => ['Plano ativo', 'Não fechou'],
+      'geral' => %w[Ganho Perdido]
+    )
+    expect(document.css('[data-agents-niche-profile] [data-agents-niche-preview]').size).to eq(4)
+    expect(document.at_css('[data-agents-niche-preview="saude_beneficios"]')['class'])
+      .to include('group-has-[#agents-niche-perfil-saude_beneficios:checked]/perfil:flex')
   end
 
   it 'avisa que a escolha só fica guardada enquanto as palavras por segmento estão desligadas' do

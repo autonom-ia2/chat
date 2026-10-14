@@ -14,7 +14,9 @@ module Crm::Cards::Outcome
     group = GROUPS[status.to_s]
     return if group.nil? || pipeline.nil?
 
-    (pipeline.metadata || {}).dig('outcome_labels', group).presence
+    labels = (pipeline.metadata || {})['outcome_labels']
+    label = labels[group] if labels.is_a?(Hash)
+    label.presence if label.is_a?(String)
   end
 
   def self.equivalent?(previous, current)

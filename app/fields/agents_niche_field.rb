@@ -24,8 +24,9 @@ class AgentsNicheField < Administrate::Field::Base
     Autonomia::Agents::Nicho.padrao_da_instalacao
   end
 
+  # Geral primeiro, como no mockup aprovado (#1550).
   def nichos
-    Autonomia::Agents::Nicho::NICHOS
+    [Autonomia::Agents::Nicho::GERAL, Autonomia::Agents::Nicho::SEGUROS]
   end
 
   def perfis
@@ -34,6 +35,16 @@ class AgentsNicheField < Administrate::Field::Base
 
   def canais
     Autonomia::Agents::Nicho::CANAIS
+  end
+
+  # Prévia do formulário: como um card fechado (ganho, perdido) aparece para a equipe da conta, no idioma dela, com o
+  # pacote do perfil (nil = geral). Lê o mesmo catálogo das requisições, então mostra o texto real.
+  def previa(locale, perfil = nil)
+    camadas = perfil ? [Autonomia::Agents::Nicho::SEGUROS, "#{Autonomia::Agents::Nicho::SEGUROS}/#{perfil}"] : []
+    %w[won lost].map do |status|
+      chave = "crm.export.statuses.#{status}"
+      (camadas.any? && Autonomia::Segmentos::Catalogo.procurar(locale, chave, [], nil, camadas)) || I18n.t(chave, locale: locale)
+    end
   end
 
   # Desligadas as palavras por segmento na instalação, o formulário avisa que a escolha só fica guardada.

@@ -35,6 +35,16 @@ RSpec.describe Autonomia::Segmentos::Pacotes do
     end
   end
 
+  # Revisão (#1550): valor digitado errado na stack não liga os pacotes.
+  it 'só liga com true ou 1' do
+    resultados = %w[true TRUE 1 lixo no yes 0 false].index_with do |valor|
+      with_modified_env(AUTONOMIA_PACOTES_ENABLED: valor) { described_class.enabled? }
+    end
+
+    expect(resultados).to eq('true' => true, 'TRUE' => true, '1' => true, 'lixo' => false, 'no' => false,
+                             'yes' => false, '0' => false, 'false' => false)
+  end
+
   describe '.camadas' do
     it 'devolve [] para conta de seguros com o interruptor desligado' do
       with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil) do

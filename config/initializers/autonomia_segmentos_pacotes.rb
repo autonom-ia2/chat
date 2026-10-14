@@ -8,14 +8,16 @@ module AutonomiaPacotesI18nLookup
 
   protected
 
-  # O pacote só troca o que no base é folha de texto: chave órfã segue ausente, e plural (one/other) ou subárvore do
-  # base seguem do base, com o count.
+  # O pacote vem primeiro e, quando tem a chave, poupa a busca no base. Ele só guarda o que no base é folha de texto
+  # (Catalogo filtra ao montar o índice; o CI também barra): chave órfã segue ausente, e plural (one/other) ou
+  # subárvore do base seguem do base, com o count.
   def lookup(locale, key, scope = [], options = I18n::EMPTY_HASH)
-    base = super
     camadas = ActiveSupport::IsolatedExecutionState[ESTADO]
-    return base unless camadas.present? && base.is_a?(String)
-
-    Autonomia::Segmentos::Catalogo.procurar(locale, key, scope, options[:separator], camadas) || base
+    if camadas.present?
+      achado = Autonomia::Segmentos::Catalogo.procurar(locale, key, scope, options[:separator], camadas)
+      return achado if achado
+    end
+    super
   end
 end
 

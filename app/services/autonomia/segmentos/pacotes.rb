@@ -8,11 +8,12 @@
 # I18n devolve o catálogo base. O lookup fica em config/initializers/autonomia_segmentos_pacotes.rb.
 module Autonomia::Segmentos::Pacotes
   ENV_KEY = 'AUTONOMIA_PACOTES_ENABLED'
-  BOOLEAN = ActiveModel::Type::Boolean.new
+  # Só "true" ou "1" ligam: valor digitado errado na stack deixa desligado (o padrão seguro).
+  LIGADO = %w[true 1].freeze
   LOG_TAG = '[Autonomia::Segmentos::Pacotes]'
 
   def self.enabled?
-    BOOLEAN.cast(ENV.fetch(ENV_KEY, false)) || false
+    LIGADO.include?(ENV.fetch(ENV_KEY, '').to_s.strip.downcase)
   end
 
   def self.camadas(account)

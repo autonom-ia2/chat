@@ -12,6 +12,7 @@ pt_BR:
     switch_off: Enquanto as palavras por segmento estiverem desligadas nesta instalação, a escolha fica guardada e começa a valer quando forem ligadas.
     profile_label: Tipo de empresa
     channel_label: Como vende
+    preview_label: "Para a equipe desta conta, um card fechado aparece como"
     separator: " · "
     niches:
       seguros:

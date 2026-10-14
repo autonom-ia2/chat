@@ -17,6 +17,12 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
     ActiveSupport::IsolatedExecutionState.delete(AutonomiaPacotesI18nLookup::ESTADO)
   end
 
+  # stub_catalogo remonta o índice; cada exemplo termina com o índice real de novo.
+  after do
+    described_class.instance_variable_set(:@indice, nil)
+    described_class::ACHADOS.clear
+  end
+
   def conta(nicho_escolhido, perfil = nil)
     create(:account, internal_attributes: { nicho::NICHO_KEY => nicho_escolhido, nicho::PERFIL_KEY => perfil }.compact)
   end
@@ -100,8 +106,15 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
     expect([primeira.join(10)&.value, segunda.join(10)&.value]).to eq(['Seguro ativo', 'Plano ativo'])
   end
 
+  # Troca os yml do pacote no teste e remonta o índice de verdade (com o filtro contra o base); devolve o original no fim.
+  def stub_catalogo(dados)
+    allow(described_class).to receive(:carregar).and_return(dados)
+    described_class.instance_variable_set(:@indice, nil)
+    described_class::ACHADOS.clear
+  end
+
   it 'deixa o plural do base com o count, mesmo se o pacote trouxer texto na chave' do
-    allow(described_class).to receive(:dados).and_return(
+    stub_catalogo(
       'seguros' => { pt_BR: { crm: { export: { subtitle: 'Planos exportados' } } } }
     )
     base = I18n.t('crm.export.subtitle', locale: :pt_BR, date: '01/01', count: 2)
@@ -113,43 +126,54 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
   end
 
   it 'não cria chave que não existe no base' do
-    allow(described_class).to receive(:dados).and_return('seguros' => { pt_BR: { crm: { so_no_pacote: 'órfã' } } })
+    stub_catalogo('seguros' => { pt_BR: { crm: { so_no_pacote: 'órfã' } } })
 
     pacotes.with(corretora) { expect(I18n.t('crm.so_no_pacote', locale: :pt_BR, default: 'ausente')).to eq('ausente') }
   end
 
   describe '.procurar' do
     before do
-      allow(described_class).to receive(:dados).and_return(
-        'a' => { pt_BR: { x: { y: 'da camada a', z: 'só na a' } } },
-        'a/b' => { pt_BR: { x: { y: 'da camada a/b', w: { fundo: 'texto' } } } }
+      stub_catalogo(
+        'a' => { pt_BR: { crm: { export: { statuses: { won: 'da camada a', lost: 'só na a' } }, so_no_pacote: 'órfã' } } },
+        'a/b' => { pt_BR: { crm: { export: { statuses: { won: 'da camada a/b' }, subtitle: 'plural vira texto' } } } }
       )
     end
 
     it 'procura da camada mais específica para a mais geral' do
-      expect(described_class.procurar(:pt_BR, 'x.y', [], nil, %w[a a/b])).to eq('da camada a/b')
-      expect(described_class.procurar(:pt_BR, 'x.z', [], nil, %w[a a/b])).to eq('só na a')
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[a a/b])).to eq('da camada a/b')
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.lost', [], nil, %w[a a/b])).to eq('só na a')
+      expect(described_class.procurar(:pt_BR, :lost, 'crm.export.statuses', nil, %w[a a/b])).to eq('só na a')
     end
 
-    it 'não devolve subárvore nem atravessa texto' do
-      expect(described_class.procurar(:pt_BR, 'x', [], nil, %w[a a/b])).to be_nil
-      expect(described_class.procurar(:pt_BR, 'x.y.mais', [], nil, %w[a a/b])).to be_nil
+    it 'não devolve subárvore, não atravessa texto e descarta o que no base não é texto' do
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses', [], nil, %w[a a/b])).to be_nil
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won.mais', [], nil, %w[a a/b])).to be_nil
+      expect(described_class.procurar(:pt_BR, 'crm.so_no_pacote', [], nil, %w[a a/b])).to be_nil
+      expect(described_class.procurar(:pt_BR, 'crm.export.subtitle', [], nil, %w[a a/b])).to be_nil
     end
 
     it 'ignora camada ou idioma que não existe' do
-      expect(described_class.procurar(:pt_BR, 'x.y', [], nil, %w[outra])).to be_nil
-      expect(described_class.procurar(:en, 'x.y', [], nil, %w[a a/b])).to be_nil
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[outra])).to be_nil
+      expect(described_class.procurar(:en, 'crm.export.statuses.won', [], nil, %w[a a/b])).to be_nil
+    end
+
+    it 'guarda a resposta e responde igual na segunda vez, inclusive a ausência' do
+      2.times do
+        expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[a a/b])).to eq('da camada a/b')
+        expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[a])).to eq('da camada a')
+        expect(described_class.procurar(:pt_BR, 'crm.export.statuses.open', [], nil, %w[a a/b])).to be_nil
+      end
     end
   end
 
   describe '.dados' do
     describe 'com um yml que não abre' do
       around do |example|
-        anterior = described_class.instance_variable_get(:@dados)
-        described_class.instance_variable_set(:@dados, nil)
+        anterior = described_class.instance_variable_get(:@indice)
+        described_class.instance_variable_set(:@indice, nil)
         example.run
       ensure
-        described_class.instance_variable_set(:@dados, anterior)
+        described_class.instance_variable_set(:@indice, anterior)
       end
 
       it 'fica no catálogo base, lê uma vez só e registra só a classe do erro' do
@@ -174,6 +198,24 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
       expect(dados.keys).to include('seguros', 'seguros/saude_beneficios')
       expect(dados.dig('seguros', :pt_BR, :crm, :export, :statuses, :won)).to eq('Seguro ativo')
       expect(dados.dig('seguros/saude_beneficios', :en, :crm, :export, :statuses, :won)).to eq('Active plan')
+    end
+  end
+
+  # Achados da revisão (#1550): o lookup roda em toda tradução de quem está num pacote.
+  describe 'custo e imutabilidade' do
+    it 'devolve na hora a chave cujo nome final não está em pacote nenhum, sem montar o caminho' do
+      allow(I18n).to receive(:normalize_keys).and_call_original
+
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.open', [], nil, %w[seguros seguros/corretora])).to be_nil
+      expect(I18n).not_to have_received(:normalize_keys)
+    end
+
+    it 'congela o catálogo inteiro, até as folhas' do
+      texto = described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[seguros])
+
+      expect(texto).to eq('Seguro ativo')
+      expect(texto).to be_frozen
+      expect(described_class.dados.dig('seguros', :pt_BR, :crm)).to be_frozen
     end
   end
 end

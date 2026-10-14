@@ -12,6 +12,7 @@ en:
     switch_off: While segment wording is turned off on this installation, the choice is saved and starts to apply once it is turned on.
     profile_label: Type of company
     channel_label: How it sells
+    preview_label: "For this account's team, a closed card shows as"
     separator: " · "
     niches:
       seguros:
