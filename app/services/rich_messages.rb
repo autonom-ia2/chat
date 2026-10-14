@@ -47,8 +47,13 @@
 # - RichMessages::ApiInboxWebhook: a caixa API recebe esse mesmo texto no webhook dela;
 # - RichMessages::RetryKeepsFormat: o reenvio não apaga o formato.
 # E o WhatsappHybrid::Router consulta RichMessages.text_capable? antes de mandar a mensagem em texto.
+# Saiu como texto (chat#1555): `rich_message_sent_as: 'text'` + `rich_message_sent_text`, gravados por
+# RichMessages.mark_sent_as_text! no SendGuard (canais sem o formato) e no WhatsappHybrid::WebTransport (WAHA,
+# rota direta e plano B), e na criação da mensagem da caixa API (RichMessages::ApiInboxSentAsText).
 module RichMessages
   KEY = 'rich_message'.freeze
+  SENT_AS_KEY = 'rich_message_sent_as'.freeze
+  SENT_TEXT_KEY = 'rich_message_sent_text'.freeze
   TYPE_CHARACTERS = 'a-z0-9_'.freeze
   TYPE_INTERFACE = [:error_for, :whatsapp_cloud_payload, :fallback_text].freeze
   HTML_RENDERERS = [:render_html, :render_telegram_html].freeze
@@ -170,6 +175,35 @@ module RichMessages
     return body if complement.blank?
 
     [body.presence, html ? CGI.escapeHTML(complement) : complement].compact.join("\n\n")
+  end
+
+  # A marca de "saiu como texto" (chat#1555): o formato não chegou ao cliente, e este é o texto que ele recebeu
+  # (corpo cru, como a bolha de texto mostra, mais a versão em texto do tipo). A bolha do atendente lê as duas
+  # chaves para mostrar o que o cliente viu.
+  def sent_as_text_attributes(message)
+    { SENT_AS_KEY => 'text', SENT_TEXT_KEY => text_with_fallback(message, message.content.to_s) }
+  end
+
+  # Grava a marca depois que a mensagem saiu como texto (WhatsApp Híbrido e canais sem o formato).
+  # - Mensagem sem `rich_message` sai antes de qualquer trava ou consulta: todo envio do Híbrido passa aqui.
+  # - O `with_lock` relê a linha travada (`lock!` é `reload(lock: true)`): o merge parte do `content_attributes`
+  #   atual, com o `whatsapp_web_id` do eco e as chaves `whatsapp_transport*` (#1519), e só acrescenta as duas
+  #   chaves. Mensagem que falhou não é marcada.
+  # - NUNCA levanta: quem chama já entregou a mensagem, e um erro aqui viraria falha do envio e reenvio
+  #   (mensagem duplicada). O log leva só a classe do erro e o id.
+  def mark_sent_as_text!(message)
+    return unless rich?(message)
+
+    marks = sent_as_text_attributes(message)
+    message.with_lock do
+      next if message.failed?
+
+      message.content_attributes = message.content_attributes.merge(marks)
+      message.save!(validate: false)
+    end
+  rescue StandardError => e
+    Rails.logger.error("[rich_messages] mark_sent_as_text message=#{message.id} #{e.class}")
+    nil
   end
 
   def html_channel?(inbox)

@@ -75,6 +75,13 @@ describe 'Rich messages and the WhatsApp Híbrido fallback' do # rubocop:disable
     expect(message.content_attributes).to include('whatsapp_transport' => 'web', 'whatsapp_transport_fallback' => true)
   end
 
+  it 'marks the link button resent by the WhatsApp API as sent as text (chat#1555)' do
+    message = window_closed_status(accepted_by_meta(rich_message: { type: 'link_button', label: 'Abrir', url: 'https://exemplo.com.br/x' }))
+
+    expect(message.content_attributes).to include('whatsapp_transport_fallback' => true, 'rich_message_sent_as' => 'text',
+                                                  'rich_message_sent_text' => "retorno\n\nAbrir: https://exemplo.com.br/x")
+  end
+
   it 'resends a message without rich_message as before' do
     message = window_closed_status(accepted_by_meta({}))
 

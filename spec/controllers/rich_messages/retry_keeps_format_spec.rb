@@ -36,6 +36,12 @@ describe RichMessages::RetryKeepsFormat, type: :request do
     expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message, 'crm_follow_up_id' => 9)
   end
 
+  it 'drops the sent-as-text marks of the previous attempt (chat#1555)' do
+    message = failed_message(rich_message: rich_message, rich_message_sent_as: 'text', rich_message_sent_text: 'Abrir: x')
+
+    expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message)
+  end
+
   [{}, '', [], false].each do |value|
     it "keeps a rich_message that is #{value.inspect}, so the retry fails again instead of going out as plain text" do
       message = failed_message(rich_message: value)

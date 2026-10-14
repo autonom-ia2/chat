@@ -30,6 +30,9 @@
     "OPTIONS": {
       "CHOSEN": "O cliente tocou em \"{title}\"",
       "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
+    },
+    "SENT_AS_TEXT": {
+      "LABEL": "Enviado como texto"
     }
   }
 }
