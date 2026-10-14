@@ -139,7 +139,8 @@ RSpec.describe 'CRM calendar API', type: :request do
     expect(response.parsed_body['payload']).to be_an(Array)
   end
 
-  # #1568: o calendário "Meu dia" abre com todos os funis, mostra o cliente e abre a conversa pelo número dela.
+  # #1568: o calendário "Meu dia" mostra o cliente e abre a conversa pelo número dela. Sem funil, a consulta já trazia
+  # todos os funis (guarda de regressão, não prova nova).
   describe 'detalhes do Meu dia' do
     let(:account) { create(:account) }
     let(:user) { create(:user, account: account, role: :administrator) }
@@ -166,6 +167,29 @@ RSpec.describe 'CRM calendar API', type: :request do
 
       expect(evento).to include('contact_name' => 'Mariana Costa', 'contact_phone' => '+5511987654321',
                                 'conversation_id' => conversation.id, 'conversation_display_id' => conversation.display_id)
+    end
+
+    it 'não manda o contato de um lembrete quando ele não é o do card nem o da conversa' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      outro = create(:contact, account: account, name: 'Outra Pessoa', phone_number: '+5511900000000')
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual', contact: contact)
+      account.crm_follow_ups.create!(card: card, contact: outro, title: 'Contato trocado', due_at: '2026-10-14T19:30:00Z',
+                                     timezone: 'UTC', created_by: user)
+
+      expect(eventos['Contato trocado']).to include('contact_id' => nil, 'contact_name' => nil, 'contact_phone' => nil)
+    end
+
+    it 'não manda o número da conversa que a pessoa não pode ver' do
+      agente = create(:user, account: account, role: :agent)
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual', contact: contact, owner: agente,
+                                       conversation_id: conversation.id)
+      account.crm_follow_ups.create!(card: card, conversation: conversation, contact: contact, assignee: agente,
+                                     title: 'Conversa fechada', due_at: '2026-10-14T19:30:00Z', timezone: 'UTC', created_by: user)
+      allow(Crm::Conversations::Visibility).to receive(:new).and_return(instance_double(Crm::Conversations::Visibility,
+                                                                                        preload: nil, visible?: false))
+
+      expect(eventos['Conversa fechada']).to include('conversation_id' => nil, 'conversation_display_id' => nil)
     end
 
     it 'manda o vencimento como dia inteiro, com a data UTC' do
