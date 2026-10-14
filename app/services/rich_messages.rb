@@ -13,6 +13,9 @@
 #      fallback_text(body)           # a versão em texto do formato, sem o corpo
 #      self.text_version?            # OPCIONAL, de classe; padrão true. Só quem NÃO tem versão em texto declara
 #                                    # `def self.text_version? = false`
+#      self.text_only?               # OPCIONAL, de classe; padrão false. Quem já é texto em todo canal (o formato
+#                                    # na Meta também é `text`, ex.: link_preview) declara `def self.text_only? = true`
+#                                    # e nunca ganha a marca "Enviado como texto" (chat#1555)
 #    `body` é o texto que sai de fato (já renderizado para o canal) e pode ser vazio: quem exige corpo é o tipo.
 # 3. Versão em texto:
 #    - tipo com `self.text_version? = false` só sai pelo WhatsApp oficial, com a janela aberta; nos outros canais
@@ -184,15 +187,26 @@ module RichMessages
     { SENT_AS_KEY => 'text', SENT_TEXT_KEY => text_with_fallback(message, message.content.to_s) }
   end
 
+  # O formato se perde quando a mensagem sai como texto: ela tem `rich_message` de um tipo conhecido que não é
+  # texto em todo canal. Só lê `content_attributes` (sem consulta). `link_preview` declara `self.text_only?`:
+  # o formato dele na Meta já é `text`, o cliente recebe o mesmo em qualquer caminho, e marcar seria mentir.
+  def format_lost_as_text?(message)
+    return false unless rich?(message)
+
+    klass = type_class_of(message)
+    klass.present? && !(klass.respond_to?(:text_only?) && klass.text_only?)
+  end
+
   # Grava a marca depois que a mensagem saiu como texto (WhatsApp Híbrido e canais sem o formato).
-  # - Mensagem sem `rich_message` sai antes de qualquer trava ou consulta: todo envio do Híbrido passa aqui.
+  # - Mensagem sem `rich_message` (ou de tipo que já é texto) sai antes de qualquer trava ou consulta: todo envio
+  #   do Híbrido passa aqui.
   # - O `with_lock` relê a linha travada (`lock!` é `reload(lock: true)`): o merge parte do `content_attributes`
   #   atual, com o `whatsapp_web_id` do eco e as chaves `whatsapp_transport*` (#1519), e só acrescenta as duas
   #   chaves. Mensagem que falhou não é marcada.
   # - NUNCA levanta: quem chama já entregou a mensagem, e um erro aqui viraria falha do envio e reenvio
   #   (mensagem duplicada). O log leva só a classe do erro e o id.
   def mark_sent_as_text!(message)
-    return unless rich?(message)
+    return unless format_lost_as_text?(message)
 
     marks = sent_as_text_attributes(message)
     message.with_lock do

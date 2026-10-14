@@ -9,7 +9,7 @@ import { useMessageContext } from '../../provider.js';
 import SharedCard from './SharedCard.vue';
 import { mapHrefOf } from './mapLink.js';
 
-const { contentAttributes, sender } = useMessageContext();
+const { contentAttributes, attachments, sender } = useMessageContext();
 const { t } = useI18n();
 
 // Vem do celular do cliente: só texto entra na tela (as coordenadas, o mapLink valida).
@@ -17,9 +17,14 @@ const textOf = value => (typeof value === 'string' ? value : '');
 
 const location = computed(() => contentAttributes.value?.sharedLocation ?? {});
 
-const mapHref = computed(() =>
-  mapHrefOf(location.value.latitude, location.value.longitude)
-);
+// Coordenadas do shared_location; se não forem válidas (mensagem antiga), as do anexo, com a mesma validação.
+const mapHref = computed(() => {
+  const attachment = attachments.value?.[0] ?? {};
+  return (
+    mapHrefOf(location.value.latitude, location.value.longitude) ||
+    mapHrefOf(attachment.coordinatesLat, attachment.coordinatesLong)
+  );
+});
 
 const heading = computed(() => {
   const name = sender?.value?.name;

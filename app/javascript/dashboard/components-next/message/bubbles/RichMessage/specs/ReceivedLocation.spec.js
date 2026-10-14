@@ -111,14 +111,30 @@ describe('bolha da localização recebida', () => {
     ['longitude fora da faixa', { longitude: -181 }],
     ['longitude ausente', { longitude: undefined }],
     ['coordenada que não é número finito', { latitude: Infinity }],
-  ])('não cria link de mapa com %s', (_titulo, mudanca) => {
+  ])(
+    'com %s em shared_location, usa as coordenadas do anexo para o link',
+    (_titulo, mudanca) => {
+      const wrapper = montarRecebida({
+        anexo: { ...ANEXO, coordinatesLat: 10.5, coordinatesLong: -20 },
+        sharedLocation: {
+          latitude: -23.5505,
+          longitude: -46.6333,
+          name: 'Praça da Sé',
+          ...mudanca,
+        },
+      });
+
+      expect(wrapper.get('a').attributes('href')).toBe(
+        'https://maps.google.com/?q=10.5,-20.0'
+      );
+      expect(wrapper.text()).toContain('Praça da Sé');
+    }
+  );
+
+  it('sem coordenada válida nem no shared_location nem no anexo, não cria link', () => {
     const wrapper = montarRecebida({
-      sharedLocation: {
-        latitude: -23.5505,
-        longitude: -46.6333,
-        name: 'Praça da Sé',
-        ...mudanca,
-      },
+      anexo: { ...ANEXO, coordinatesLat: '10.5', coordinatesLong: 200 },
+      sharedLocation: { latitude: 91, longitude: 0, name: 'Praça da Sé' },
     });
 
     expect(wrapper.find('a').exists()).toBe(false);

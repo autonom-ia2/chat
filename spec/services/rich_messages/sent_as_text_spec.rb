@@ -55,6 +55,15 @@ describe 'Rich message sent as text' do # rubocop:disable RSpec/DescribeClass
       expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as')
     end
 
+    it 'does not mark a type that is already text in every channel (link_preview)' do
+      preview = create(:message, message_type: :outgoing, content: 'Veja https://exemplo.com.br',
+                                 content_attributes: { rich_message: { type: 'link_preview' } })
+
+      RichMessages.mark_sent_as_text!(preview)
+
+      expect(preview.reload.content_attributes).to eq('rich_message' => { 'type' => 'link_preview' })
+    end
+
     it 'never raises: logs only the error class and the message id, and leaves the message as it was' do
       allow(message).to receive(:with_lock).and_raise(ActiveRecord::Deadlocked, 'deadlock com dados')
       allow(Rails.logger).to receive(:error)
@@ -109,6 +118,7 @@ describe 'Rich message sent as text' do # rubocop:disable RSpec/DescribeClass
     it 'keeps the send accepted, without failing or resending, when the mark breaks' do
       message = outgoing(rich_message: link_button)
       allow(message).to receive(:with_lock).and_raise(ActiveRecord::Deadlocked)
+      allow(HTTParty).to receive(:post).and_call_original
 
       expect { send_by_web(message) }.not_to have_enqueued_job(SendReplyJob)
 
@@ -117,7 +127,8 @@ describe 'Rich message sent as text' do # rubocop:disable RSpec/DescribeClass
       expect(message.content_attributes).to include('whatsapp_transport_outcome' => 'accepted')
       expect(message.content_attributes).not_to have_key('external_error')
       expect(message.content_attributes).not_to have_key('rich_message_sent_as')
-      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+      # Nada saiu pela Cloud (o envio pela Meta usa HTTParty.post): o WAHA foi o único caminho, uma vez.
+      expect(HTTParty).not_to have_received(:post)
     end
 
     it 'adds nothing to a message without rich_message' do
@@ -223,6 +234,52 @@ describe 'Rich message sent as text' do # rubocop:disable RSpec/DescribeClass
       no_webhook = create_outgoing(rich_message: link_button)
 
       [note, plain, no_webhook].each { |message| expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as') }
+    end
+
+    it 'does not mark a conversation whose broadcast is blocked: the webhook does not deliver it' do
+      allow(Autonomia::Channels::BroadcastGuard).to receive(:blocked_conversation?).and_return(true)
+
+      message = create_outgoing(rich_message: link_button)
+
+      expect(Autonomia::Channels::BroadcastGuard).to have_received(:blocked_conversation?).with(conversation)
+      expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as')
+    end
+
+    it 'does not mark a link_preview, which is already text' do
+      message = create_outgoing({ rich_message: { type: 'link_preview' } }, content: 'Veja https://exemplo.com.br')
+
+      expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as')
+    end
+
+    it 'costs nothing for a message without rich_message: no SQL and the inbox is not loaded' do
+      plain = Message.new(inbox_id: channel.inbox.id, conversation_id: conversation.id, message_type: :outgoing, content: 'Oi')
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { RichMessages::ApiInboxSentAsText.before_create(plain) }
+
+      expect(queries).to be_empty
+      expect(plain.association(:inbox)).not_to be_loaded
+      expect(plain.content_attributes).to eq({})
+    end
+
+    it 'does not break the creation when something inside it fails' do
+      allow(RichMessages).to receive(:error_for).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+      message = nil
+      expect { message = create_outgoing(rich_message: link_button) }.to change(Message, :count).by(1)
+      expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as')
+    end
+
+    it 'does not run outside an API inbox: elsewhere the mark is written by the send' do
+      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      whatsapp = create(:channel_whatsapp, sync_templates: false)
+      other = create(:conversation, inbox: whatsapp.inbox, account: whatsapp.account)
+
+      message = create(:message, message_type: :outgoing, content: 'Já tenho o retorno', conversation: other, inbox: whatsapp.inbox,
+                                 account: whatsapp.account, content_attributes: { rich_message: link_button })
+
+      expect(message.reload.content_attributes).not_to have_key('rich_message_sent_as')
     end
   end
 end

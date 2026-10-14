@@ -2,6 +2,7 @@ import { config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/richMessage.json';
 import { montarMensagem } from '../../../specs/montarMensagem.js';
+import { MESSAGE_STATUS } from '../../../constants';
 
 config.global.plugins = [
   createI18n({ legacy: false, locale: 'pt_BR', messages: { pt_BR: ptBR } }),
@@ -66,6 +67,23 @@ describe('bolha do envio rico que saiu como texto', () => {
     const wrapper = montar({ richMessage: LINK_BUTTON });
 
     expect(nomes(wrapper)).toEqual(['rich-link-button']);
+    expect(wrapper.text()).not.toContain('Enviado como texto');
+  });
+
+  it('com falha segue a bolha do formato com o motivo, como hoje (ex.: webhook da caixa API deu 500)', () => {
+    const wrapper = montarMensagem({
+      content: 'Já tenho o retorno',
+      status: MESSAGE_STATUS.FAILED,
+      contentAttributes: {
+        richMessage: LINK_BUTTON,
+        richMessageSentAs: 'text',
+        richMessageSentText: TEXTO_ENVIADO,
+        externalError: 'O webhook da caixa respondeu 500.',
+      },
+    });
+
+    expect(nomes(wrapper)).toEqual(['rich-link-button']);
+    expect(wrapper.text()).toContain('O webhook da caixa respondeu 500.');
     expect(wrapper.text()).not.toContain('Enviado como texto');
   });
 
