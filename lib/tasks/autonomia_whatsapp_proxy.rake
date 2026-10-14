@@ -15,6 +15,16 @@ namespace :autonomia do
       puts "[whatsapp_proxy][importar][done] imported=#{result.imported} unchanged=#{result.unchanged} skipped=#{result.skipped}"
     end
 
+    # Uso: bundle exec rails "autonomia:whatsapp_proxy:migrar[5511999999999]" — uma sessão por vez, com o recurso ligado.
+    desc 'Põe proxy numa sessão existente sem atribuição (#1516): confere o /timelock, troca e confere; falhou, volta.'
+    task :migrar, %i[sessao] => :environment do |_task, args|
+      abort('[whatsapp_proxy][migrar] informe [sessao]') if args[:sessao].blank?
+
+      result = WhatsappProxy::Migrator.new.call(args[:sessao].strip)
+      puts "[whatsapp_proxy][migrar] session=#{args[:sessao].strip} #{result.outcome}: #{result.detail}"
+      abort('[whatsapp_proxy][migrar] não migrou') unless result.outcome == :applied
+    end
+
     # Uso: bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[10.0.0.1]"
     desc 'Tira um IP da quarentena do proxy do WhatsApp (#1516) antes das 24 h.'
     task :liberar_quarentena, %i[ip] => :environment do |_task, args|

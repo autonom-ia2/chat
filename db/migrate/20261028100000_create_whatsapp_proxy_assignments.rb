@@ -4,6 +4,9 @@
 # Usuário e senha do proxy NÃO moram aqui (só um HMAC para notar troca): vêm da API da Webshare na hora de configurar
 # a sessão. `webshare_proxy_id` vazio = proxy posto à mão fora da Webshare, só reservado (o código não o troca).
 # `origin`: imported (proxy posto à mão antes do código, importado pela rake) ou assigned (escolhido pelo código).
+# Endereço vazio = pendente: a caixa nasceu sem proxy (Webshare fora) e a reconciliação tenta de novo.
+# `previous_*`: o IP de antes da última troca, para voltar a ele se o motor recusar a troca.
+# `apply_failures`/`last_apply_failed_at`: trocas desfeitas seguidas, para o recuo exponencial.
 class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
   def change
     create_assignments
@@ -18,15 +21,25 @@ class CreateWhatsappProxyAssignments < ActiveRecord::Migration[7.2]
       t.bigint :account_id, null: false
       t.string :pool, null: false
       t.string :webshare_proxy_id
-      t.string :proxy_address, null: false
-      t.integer :proxy_port, null: false
+      t.string :proxy_address
+      t.integer :proxy_port
       t.datetime :assigned_at, null: false
       # HMAC (chave derivada do secret_key_base) de usuário:senha do último proxy aplicado no motor. Só serve para notar
       # que a Webshare trocou a credencial do mesmo IP; não permite recuperá-la.
       t.string :credential_digest
       t.string :origin, null: false, default: 'assigned'
+      t.string :previous_proxy_address
+      t.integer :previous_proxy_port
+      t.string :previous_webshare_proxy_id
+      t.string :previous_credential_digest
+      t.integer :apply_failures, null: false, default: 0
+      t.datetime :last_apply_failed_at
       t.timestamps
     end
+    index_assignments
+  end
+
+  def index_assignments
     add_index :whatsapp_proxy_assignments, :session_name, unique: true
     add_index :whatsapp_proxy_assignments, :proxy_address
     add_index :whatsapp_proxy_assignments, [:account_id, :pool]

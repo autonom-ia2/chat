@@ -34,17 +34,14 @@ class Webshare::Client
     @api_key.present?
   end
 
+  # A lista inteira ou erro: nunca uma lista parcial (bateu MAX_PAGES com `next` ainda presente, ou o total recebido
+  # difere do `count` da resposta) — com lista parcial, IP em uso pareceria sumido e seria trocado à toa.
   def proxies
     raise Error, 'webshare_api_key_missing' unless configured?
 
-    url = "#{LIST_URL}&plan_id=#{URI.encode_www_form_component(plan_id)}"
-    results = []
-    MAX_PAGES.times do
-      page = fetch_page(url)
-      results.concat(Array(page['results']))
-      url = page['next'].presence
-      break if url.nil?
-    end
+    results, expected = all_pages("#{LIST_URL}&plan_id=#{URI.encode_www_form_component(plan_id)}")
+    raise Error, 'webshare_list_incomplete' if expected && results.size != expected
+
     results.map { |item| Webshare::Proxy.from_api(item) }
   end
 
@@ -96,6 +93,19 @@ class Webshare::Client
     plan['status'].nil? || plan['status'] == 'active'
   end
 
+  def all_pages(url)
+    results = []
+    expected = nil
+    MAX_PAGES.times do
+      page = fetch_page(url)
+      expected ||= page['count']&.to_i
+      results.concat(Array(page['results']))
+      url = page['next'].presence
+      return [results, expected] if url.nil?
+    end
+    raise Error, 'webshare_list_too_many_pages'
+  end
+
   def fetch_page(url)
     ensure_webshare_url!(url)
     response = HTTParty.get(url, headers: { 'Authorization' => "Token #{@api_key}", 'Accept' => 'application/json' }, timeout: TIMEOUT)
@@ -105,7 +115,8 @@ class Webshare::Client
     raise Error, 'webshare_list_unexpected_body' unless body.is_a?(Hash)
 
     body
-  rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, OpenSSL::SSL::SSLError => e
+  rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, OpenSSL::SSL::SSLError,
+         JSON::ParserError => e
     raise Error, "webshare_list_failed #{e.class}"
   end
 

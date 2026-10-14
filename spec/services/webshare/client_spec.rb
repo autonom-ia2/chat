@@ -12,22 +12,44 @@ RSpec.describe Webshare::Client do
                  body: { results: [{ 'id' => 42, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'active' }] }.to_json)
   end
 
-  def stub_page(url, results, next_url: nil, status: 200)
+  def stub_page(url, results, next_url: nil, status: 200, count: results.size)
     stub_request(:get, url)
       .with(headers: { 'Authorization' => 'Token chave-webshare-secreta' })
       .to_return(status: status, headers: { 'Content-Type' => 'application/json' },
-                 body: { count: results.size, next: next_url, results: results }.to_json)
+                 body: { count: count, next: next_url, results: results }.to_json)
   end
 
   it 'lists every page of proxies with the token header' do
-    stub_page(first_page, [webshare_api_item(1, '10.0.0.1')], next_url: second_page)
-    stub_page(second_page, [webshare_api_item(2, '10.0.0.2', city: 'Sao Paolo')])
+    stub_page(first_page, [webshare_api_item(1, '10.0.0.1')], next_url: second_page, count: 2)
+    stub_page(second_page, [webshare_api_item(2, '10.0.0.2', city: 'Sao Paolo')], count: 2)
 
     proxies = client.proxies
 
     expect(proxies.map(&:server)).to eq(['10.0.0.1:6000', '10.0.0.2:6000'])
     expect(proxies.last.city_name).to eq('Sao Paolo')
     expect(proxies.first).to be_valid
+  end
+
+  it 'never returns a partial list: fewer proxies than the count is an error (M3)' do
+    stub_page(first_page, [webshare_api_item(1, '10.0.0.1')], count: 3)
+
+    expect { client.proxies }.to raise_error(Webshare::Client::Error, 'webshare_list_incomplete')
+  end
+
+  it 'never returns a partial list: more than MAX_PAGES pages is an error (M3)' do
+    stub_const('Webshare::Client::MAX_PAGES', 1)
+    stub_page(first_page, [webshare_api_item(1, '10.0.0.1')], next_url: second_page, count: 2)
+
+    expect { client.proxies }.to raise_error(Webshare::Client::Error, 'webshare_list_too_many_pages')
+  end
+
+  it 'turns an invalid JSON body into an error with the class only (M7)' do
+    stub_request(:get, first_page).to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                                             body: '{"results": [{"password": "senha-vazada"')
+
+    expect { client.proxies }.to raise_error(Webshare::Client::Error) { |error|
+      expect(error.message).to eq('webshare_list_failed JSON::ParserError')
+    }
   end
 
   it 'refuses to send the key to a next page outside Webshare' do

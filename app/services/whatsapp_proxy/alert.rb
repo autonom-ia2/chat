@@ -14,7 +14,7 @@ module WhatsappProxy::Alert
   # data: session:, ip:, pool:, count:, total: — viram o texto do aviso já higienizados.
   def notify!(code, message, level: :warning, **data)
     Rails.logger.public_send(level == :error ? :error : :warn, "[whatsapp_proxy][alerta] #{code}: #{message}")
-    return unless first_in_window?(code, data.values_at(:session, :ip, :pool).compact.first)
+    return unless first_in_window?(code, data.values_at(:session, :ip, :pool, :date).compact.first)
 
     to_sentry(code, message, level)
     to_platform(code, level, data)
@@ -44,7 +44,7 @@ module WhatsappProxy::Alert
   def details(data)
     owner = data[:session] && WhatsappProxy::SessionOwner.find(data[:session])
     { caixa: owner&.inbox_id, conta: owner&.account_id, ip: mask(data[:ip]), plano: data[:pool], n: data[:count],
-      total: data[:total] }.transform_values { |value| value.nil? ? '—' : value }
+      total: data[:total], data: data[:date] }.transform_values { |value| value.nil? ? '—' : value }
   end
 
   # "10.20.30.40:6000" → "10.20.x.x": dá para achar o IP no painel da Webshare sem expô-lo inteiro.

@@ -77,7 +77,7 @@ RSpec.describe Waha::InboxProvisioner do
 
     context 'with a Webshare proxy (#1516)' do
       let(:proxy) { webshare_proxy(id: 9, address: '10.0.0.9') }
-      let(:assigner) { instance_double(WhatsappProxy::Assigner, for: proxy, mark_applied!: 1, release!: 1) }
+      let(:assigner) { instance_double(WhatsappProxy::Assigner, for: proxy, mark_applied!: 1, release!: 1, mark_pending!: nil) }
 
       def provision
         described_class.new(account: account, phone: '5511999999999', api_access_token: 'account-token',
@@ -102,6 +102,7 @@ RSpec.describe Waha::InboxProvisioner do
 
         expect(client).to have_received(:create_session)
           .with('5511999999999', start: true, apps: anything, config: { ignore: hash_including(groups: true) })
+        expect(assigner).to have_received(:mark_pending!).with('5511999999999')
       end
 
       it 'gives the new inbox a datacenter IP through the real Assigner (fake Webshare and engine)' do

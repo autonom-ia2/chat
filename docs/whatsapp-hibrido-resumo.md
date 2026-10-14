@@ -213,7 +213,7 @@ Autonom.ia). Regra decidida em 14/10/2026:
 
 | Variável | Obrigatória | Para quê |
 |---|---|---|
-| `WHATSAPP_PROXY_ENABLED` | sim, para ligar | Só `true` liga. Desligada (padrão), o comportamento é o de antes: sessão nasce sem proxy, nenhuma regravação de proxy e a reconciliação não roda — mesmo com a chave da Webshare no ambiente. |
+| `WHATSAPP_PROXY_ENABLED` | sim, para ligar | Só `true` liga. Desligada (padrão): sessão nasce sem proxy, nenhuma troca, reconciliação parada — mesmo com a chave da Webshare no ambiente. O que muda mesmo desligada está na lista logo abaixo da tabela. |
 | `WEBSHARE_API_KEY` | sim | Chave da API da Webshare. É a única coisa que a importação precisa. |
 | `WEBSHARE_ISP_PROXY_ADDRESSES` | sim | IPs (vírgula) do plano isp que esta stack pode usar. Vazia = nenhum IP isp. |
 | `WEBSHARE_DATACENTER_PROXY_ADDRESSES` | sim | Idem para o plano datacenter. |
@@ -224,62 +224,82 @@ Autonom.ia). Regra decidida em 14/10/2026:
 | `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` | sim | Conta da PLATAFORMA (ex.: 1 na Hub2You) cujos administradores recebem os alertas do proxy como aviso do Guia (conversa, sino, push e e-mail quando urgente). Nunca a conta de um cliente. Sem ela, os alertas ficam só no log (as duas stacks não têm `SENTRY_DSN`). |
 | `SENTRY_DSN` | não | Se um dia existir, os alertas também vão para o Sentry. |
 
+**Com `WHATSAPP_PROXY_ENABLED` desligada** (o estado do deploy), muda só isto em relação a antes do #1516:
+
+- a regravação da configuração da sessão do Híbrido (webhook faltando, reconectar) mescla sobre a configuração do motor
+  — o proxy que a sessão já tem fica — e o PUT não leva mais `apps: null` (a chave `apps` é omitida; o motor mantém os
+  apps);
+- erros do motor nunca levam usuário/senha de proxy (pedido ou resposta) e JSON inválido vira erro só com a classe;
+- apagar a caixa WAHA ou a conexão Híbrida apaga a atribuição de proxy da sessão (com o recurso desligado não há
+  nenhuma);
+- nenhuma chamada à Webshare, nenhum proxy na criação, nenhuma troca, reconciliação e contagem de quedas desligadas.
+  A rake de importação funciona (precisa só da chave).
+
 **Como funciona**
 
 - A atribuição fica na tabela `whatsapp_proxy_assignments` (sessão, conta, plano, origem `assigned`/`imported`,
-  endereço, porta, id da Webshare).
-  Usuário e senha do proxy nunca são gravados: vêm da API na hora de configurar a sessão e só vão no corpo do pedido ao
-  motor. A tabela guarda apenas um HMAC da credencial, para notar quando a Webshare a troca.
-- Caixa WAHA nova e conexão Híbrida nova nascem com proxy. IP livre é o da fatia que não está na tabela nem em uso por
-  outra sessão do próprio motor (`GET /api/sessions?all=true`, só o host do proxy; motor fora = nada atribuído).
-- Toda regravação de configuração mescla sobre a do motor (chaves desconhecidas e webhook ficam) e nunca manda a chave
-  `apps` (o motor mantém os apps da sessão).
-- Trocar o proxy de sessão existente (`WhatsappProxy::ApplyJob` + `SessionUpdater`): um job por sessão de cada vez;
-  se o motor já tem o proxy e a credencial, nada; senão cópia da configuração → PUT → espera WORKING (até ~3 min) com o
-  mesmo número (`me.id`), os mesmos apps e o proxy gravado; falhou, volta a configuração anterior e registra.
-- Híbrido: regravar o webhook preserva o proxy que a sessão já tem; a atualização da aba nunca grava proxy na
-  requisição — só agenda o ApplyJob (no máximo uma vez por hora por sessão; Redis fora = não agenda); reconectar confere
-  se o IP continua valendo e grava junto. O envio de mensagem nunca mexe no proxy.
+  endereço, porta, id da Webshare, IP anterior, falhas). Usuário e senha do proxy nunca são gravados: vêm da API na
+  hora de configurar a sessão e só vão no corpo do pedido ao motor. A tabela guarda apenas um HMAC da credencial.
+- Caixa WAHA nova e conexão Híbrida nova nascem com proxy. IP livre é o da fatia que não está na tabela, nem em uso por
+  outra sessão do próprio motor (`GET /api/sessions?all=true`, só o host), nem reservado, nem em quarentena. Webshare
+  fora na criação: a caixa nasce sem proxy, a atribuição fica **pendente** (alerta `caixa_sem_proxy`) e a reconciliação
+  tenta de novo, com recuo.
+- Sessão que já existe sem atribuição **nunca** ganha proxy sozinha (nem abrindo a aba, nem reconectando): só pela
+  importação ou por `bundle exec rails "autonomia:whatsapp_proxy:migrar[SESSAO]"` — uma por vez, confere o `/timelock`
+  antes e recusa com restrição ativa; troca desfeita volta a sessão ao que era.
+- Toda regravação de configuração mescla sobre a do motor e nunca manda a chave `apps`. O motor guarda só as chaves de
+  configuração que conhece (descarta as outras).
+- Trocar o proxy de sessão existente (`WhatsappProxy::ApplyJob` + `SessionUpdater`): um job por sessão (trava com token,
+  solta só por quem pegou); se o motor já tem o proxy e a credencial, nada; sessão pedindo QR ou parada (STOPPED)
+  nunca é tocada; senão cópia → PUT → espera WORKING (até ~3 min) com o mesmo número (`me.id`), os mesmos apps e o proxy
+  gravado. Falhou: a configuração anterior volta no motor, a atribuição volta ao IP anterior, conta uma falha e entra em
+  **recuo** (10 min, 30 min, 2 h, 6 h, 24 h); alerta `troca_desfeita` na primeira falha e ao chegar no recuo máximo.
+- Híbrido: a atualização da aba nunca grava proxy na requisição — só agenda o ApplyJob, e só para sessão que já tem
+  atribuição, fora do recuo, no máximo uma vez por hora (Redis fora = não agenda). Reconectar grava junto o IP
+  atribuído, também só com atribuição. O envio de mensagem nunca mexe no proxy.
 - Proxy posto à mão sem registro na tabela não é trocado pelo código.
-- Sem IP livre, API fora ou sem chave (com o recurso ligado): a sessão é criada sem proxy (não trava o cliente) e o
-  log avisa (`[whatsapp_proxy] plano ... sem IP do Brasil livre na fatia desta stack`).
-- `WhatsappProxy::ReconcileJob` (a cada 10 minutos): busca cada plano e a lista do motor uma vez; sessão cujo IP saiu
-  da lista ou da fatia, ficou inválido, mudou de credencial, é de outro plano (número que trocou de tipo, WAHA ↔
-  Híbrido) ou de outra conta é reatribuída e a troca é agendada, no máximo 5 sessões por rodada. IP que sumiu da lista
-  é urgente (o número já está fora do ar — visto ao ligar o "High IP Reputation" em 14/10/2026): vai primeiro e sem
-  espera; as demais trocas saem com 2 minutos entre elas. Sessão em STARTING/FAILED com IP sumido ou em quarentena é
-  reparada; sessão pedindo QR (SCAN_QR_CODE) nunca. Sessão que o motor não tem fica de fora; atribuição sem caixa no
-  banco é apagada. Se mais da metade dos IPs sumiu de uma vez, alerta (troca em massa).
+- `WhatsappProxy::ReconcileJob` (a cada 10 minutos; decisão em `WhatsappProxy::Triage`): lê o motor e cada plano uma
+  vez. Nunca toca sessão que o motor não tem, parada (STOPPED) ou pedindo QR; sessão em recuo espera (e não ocupa
+  vaga). No máximo 5 trocas por rodada:
+  - **IP sumido da lista**: urgente (sem espera) se a sessão também está fora de WORKING — visto ao ligar o "High IP
+    Reputation" em 14/10/2026; se está WORKING, só depois de duas leituras seguidas, sem urgência;
+  - **plano ou conta errados** (número que trocou de tipo) e **credencial trocada**: só com a sessão WORKING; número
+    importado só muda de plano/conta com `WHATSAPP_PROXY_AUTO_MIGRATE=true`;
+  - **pendente**: atribui e aplica; sem IP ainda, conta falha (recuo);
+  - um plano com erro na Webshare não para o outro; erro repetido gera `webshare_indisponivel`; se mais da metade dos
+    IPs sumiu de uma vez, `troca_em_massa`.
 - **IP instável** (a Webshare chama de válido, mas a sessão fica caindo — visto em 14/10/2026 na
-  hybrid-551142155355): a reconciliação lê o status de cada sessão no motor. Fora de WORKING (STARTING/FAILED) em 2
-  rodadas seguidas (~40 min), ou 3 quedas avisadas pelo webhook do Híbrido em 30 min, o IP vai para quarentena por 24 h
-  (tabela `whatsapp_proxy_quarantines`; ninguém recebe esse IP) e o número troca de IP no mesmo plano e fatia. No
-  máximo uma troca dessas por sessão por dia; se continuar instável, só alerta (o problema não é o proxy).
-  SCAN_QR_CODE é aparelho desvinculado: nunca troca, só alerta (uma vez por dia).
-- **Falha geral não é IP ruim.** Mede queda recente, não estado: só conta a sessão que estava WORKING na rodada
-  anterior e agora está fora (status anterior guardado no Redis por 30 min). Sessão que já estava fora — FAILED há
-  dias, ou com proxy rotativo antigo sem atribuição — não entra na conta. Se, entre os que estavam WORKING, mais de 30%
-  dos IPs de um plano caíram (pelo menos 2), ou mais de 30% das sessões SEM proxy do motor caíram (pelo menos 2), é
-  falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena, nenhuma troca por instabilidade, a contagem zera
-  (inclusive as quedas do webhook do Híbrido) e sai o alerta `falha_geral` (uma vez por hora). A falha geral continua
-  enquanto a maioria das sessões que caíram segue fora. Sem a rodada anterior (primeira rodada, Redis vazio) a
-  reconciliação só observa: não declara falha geral nem troca por instabilidade. IP que sumiu da lista continua sendo
-  reparado (é fato da Webshare).
-- **Teto de quarentena:** no máximo 3 IPs por plano em 24 h; acima disso, alerta `teto_de_quarentena` e para de
-  quarentenar. A quarentena expira sozinha em 24 h; para soltar antes:
-  `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.
+  hybrid-551142155355): só conta a sessão que **caiu** — estava WORKING na rodada anterior; FAILED antiga não conta e
+  não queima IP bom. Fora de WORKING em 2 rodadas seguidas, ou 3 quedas avisadas pelo webhook do Híbrido em 30 min, o
+  número troca de IP no mesmo plano e fatia e o IP vai para quarentena por 24 h (tabela `whatsapp_proxy_quarantines`) —
+  mas só se houver para onde mover (senão `quarentena_sem_destino` e nada muda). No máximo uma troca dessas por sessão
+  por dia e 3 quarentenas por plano em 24 h (`teto_de_quarentena`). Os números irmãos (mesma conta, mesmo IP) não saem
+  à força: trocam se eles próprios caírem; WORKING, trocam sem urgência, um por rodada. A quarentena expira sozinha;
+  para soltar antes: `bundle exec rails "autonomia:whatsapp_proxy:liberar_quarentena[IP]"`.
+- **Falha geral não é IP ruim** (`WhatsappProxy::Outage`). Mede queda recente: só conta a sessão que estava WORKING na
+  rodada anterior (status guardado no Redis por 30 min) e agora está fora. Se, entre essas, mais de 30% dos IPs de um
+  plano caíram (pelo menos 2), ou mais de 30% das sessões sem nenhum proxy do motor caíram (pelo menos 2, e só com pelo
+  menos 5 sessões sem proxy que estavam WORKING), é falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena,
+  nenhuma troca por instabilidade, contagem zerada (inclusive as quedas do webhook). Alerta `falha_geral` no começo e
+  `falha_geral_fim` no fim. Dura enquanto a maioria das que caíram segue fora, no máximo 1 h; depois, as que seguem fora
+  são avaliadas uma a uma. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido continua sendo
+  reparado.
 - **Alertas**: sempre no log `[whatsapp_proxy][alerta]`; como aviso do Guia para os administradores da conta da
   plataforma (`WHATSAPP_PROXY_ALERT_ACCOUNT_ID`), em pt_BR/en, só com nº de caixa e de conta, plano e IP mascarado
   (`10.20.x.x`) — nunca telefone, nome ou credencial, e nunca para a conta do cliente; e no Sentry, se houver
-  `SENTRY_DSN`. Um alerta por código e assunto por hora. Códigos: `plano_esgotado`, `fatia_vazia`,
-  `ip_da_fatia_sumiu`, `troca_desfeita`, `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`,
-  `ip_em_quarentena`, `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`,
-  `teto_de_quarentena` (os de erro chegam como aviso urgente).
+  `SENTRY_DSN`. Um alerta por código e assunto por hora; `aparelho_desvinculado` é um resumo por dia (quantas sessões
+  pediram QR no dia anterior). Códigos: `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`,
+  `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`, `ip_em_quarentena`, `quarentena_sem_destino`,
+  `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`, `falha_geral_fim`,
+  `teto_de_quarentena`, `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de erro chegam como aviso
+  urgente).
+- A lista da Webshare vem inteira ou dá erro (nunca parcial: com lista parcial, IP em uso pareceria sumido).
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.
 
 **Implantação**
 
-1. Deploy com a migration, com `WHATSAPP_PROXY_ENABLED` ausente (nada muda, mesmo com a chave já no ambiente).
+1. Deploy com a migration, com `WHATSAPP_PROXY_ENABLED` ausente (só as diferenças listadas acima). No blue-green a
+   migration roda (`db:chatwoot_prepare`) antes de o código novo subir, então a tabela já existe quando ele roda.
 2. Em cada stack, importar as atribuições postas à mão, só as do próprio motor:
    `bundle exec rails "autonomia:whatsapp_proxy:importar[/caminho/webshare_assignments.json,hubsegs]"` (Hub2You) ou
    `[...,autonomia]` (Autonom.ia). Idempotente; funciona com o recurso desligado, exige só `WEBSHARE_API_KEY`. A conta

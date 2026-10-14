@@ -3,30 +3,36 @@ require 'rails_helper'
 RSpec.describe WhatsappProxy::Health do
   let(:session) { 'hybrid-551142155355' }
 
+  around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
+
   before do
-    %w[unstable_rounds drops unstable_swap scan_qr].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") }
+    %w[unstable_rounds drops unstable_swap].each { |key| Redis::Alfred.delete("whatsapp_proxy:#{key}:#{session}") }
     %w[isp baseline].each { |scope| Redis::Alfred.delete(WhatsappProxy::Outage.episode_key(scope)) }
   end
 
-  it 'reports unstable only after UNSTABLE_ROUNDS rounds off WORKING in a row' do
-    expect(described_class.observe!(session, 'STARTING')).to be_nil
-    expect(described_class.observe!(session, 'FAILED')).to eq(:unstable)
+  it 'reports unstable after UNSTABLE_ROUNDS rounds off WORKING, counting from a drop out of WORKING' do
+    expect(described_class.observe!(session, 'STARTING', previous: 'WORKING')).to be_nil
+    expect(described_class.observe!(session, 'FAILED', previous: 'STARTING')).to eq(:unstable)
+  end
+
+  it 'never counts a session that was not WORKING before (old FAILED)' do
+    3.times { expect(described_class.observe!(session, 'FAILED', previous: 'FAILED')).to be_nil }
+    expect(described_class.observe!(session, 'FAILED', previous: nil)).to be_nil
+    expect(described_class.rounds(session)).to eq(0)
   end
 
   it 'starts over when the session is back to WORKING' do
-    described_class.observe!(session, 'STARTING')
-    described_class.observe!(session, 'WORKING')
+    described_class.observe!(session, 'STARTING', previous: 'WORKING')
+    described_class.observe!(session, 'WORKING', previous: 'STARTING')
 
-    expect(described_class.observe!(session, 'STARTING')).to be_nil
+    expect(described_class.observe!(session, 'STARTING', previous: 'STOPPED')).to be_nil
+    expect(described_class.rounds(session)).to eq(0)
   end
 
-  it 'ignores STOPPED and treats SCAN_QR_CODE as an unlinked device, reported once a day' do
-    described_class.observe!(session, 'STARTING')
+  it 'lets a seeded session (end of a long outage) count from the first round' do
+    described_class.seed!(session)
 
-    expect(described_class.observe!(session, 'STOPPED')).to be_nil
-    expect(described_class.observe!(session, 'SCAN_QR_CODE')).to eq(:scan_qr)
-    expect(described_class.observe!(session, 'SCAN_QR_CODE')).to be_nil
-    expect(described_class.observe!(session, 'STARTING')).to be_nil
+    expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to eq(:unstable)
   end
 
   it 'counts drops seen by the Hybrid webhook (connected → connecting), not QR' do
@@ -43,9 +49,11 @@ RSpec.describe WhatsappProxy::Health do
   end
 
   it 'never swaps when Redis is down' do
+    allow(Redis::Alfred).to receive_messages(incr: nil, get: nil)
     allow(Redis::Alfred).to receive(:incr).and_raise(Redis::CannotConnectError)
     allow(Redis::Alfred).to receive(:get).and_raise(Redis::CannotConnectError)
 
-    2.times { expect(described_class.observe!(session, 'STARTING')).to be_nil }
+    expect(described_class.observe!(session, 'STARTING', previous: 'WORKING')).to be_nil
+    expect(described_class.observe!(session, 'STARTING', previous: 'STARTING')).to be_nil
   end
 end

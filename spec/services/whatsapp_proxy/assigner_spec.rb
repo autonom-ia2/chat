@@ -287,15 +287,29 @@ RSpec.describe WhatsappProxy::Assigner do
       expect(log).to include('WEBSHARE_API_KEY ausente')
     end
 
-    it 'returns nil when the API is down and pauses the frequent callers' do
+    it 'returns nil when the API is down' do
       client = instance_double(Webshare::Client, configured?: true)
       allow(client).to receive(:proxies).and_raise(Webshare::Client::Error, 'webshare_list_failed status=503')
       pools = { isp: fake_pool('isp', []), datacenter: WhatsappProxy::Pool.new('datacenter', client: client) }
-      down = described_class.new(engine: engine, pools: pools)
 
-      expect(down.for('5511900000001')).to be_nil
-      expect(down.for('5511900000001', honor_backoff: true)).to be_nil
-      expect(client).to have_received(:proxies).once
+      expect(described_class.new(engine: engine, pools: pools).for('5511900000001')).to be_nil
+    end
+
+    it 'records a pending assignment (and alerts) for a new inbox created without proxy (M6)' do
+      log = capture_log { assigner.mark_pending!('5511900000001') }
+
+      expect(WhatsappProxy::Assignment.last).to have_attributes(session_name: '5511900000001', pending?: true, pool: 'datacenter')
+      expect(log).to include('caixa_sem_proxy')
+      expect { assigner.mark_pending!('5511900000001') }.not_to change(WhatsappProxy::Assignment, :count)
+    end
+
+    it 'keeps the previous IP when moving a number, to come back to it if the engine refuses (H2)' do
+      assign_proxy!('5511900000001', webshare_proxy(id: 9, address: '10.0.0.9'), account: account, digest: 'antigo')
+
+      assigner.for('5511900000001')
+
+      expect(WhatsappProxy::Assignment.last).to have_attributes(proxy_address: '10.0.0.2', previous_proxy_address: '10.0.0.9',
+                                                                previous_credential_digest: 'antigo')
     end
 
     it 'records the credential digest once applied, frees the number on release, and never logs the credential' do

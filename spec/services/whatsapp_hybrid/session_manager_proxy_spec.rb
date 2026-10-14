@@ -11,7 +11,7 @@ describe WhatsappHybrid::SessionManager do
     instance_double(Waha::Client, create_session: {}, update_session: {}, start_session: {}, logout_session: {},
                                   capping: { 'cappingStatus' => 'NONE' })
   end
-  let(:assigner) { instance_double(WhatsappProxy::Assigner, enabled?: true, mark_applied!: 1, release!: 1) }
+  let(:assigner) { instance_double(WhatsappProxy::Assigner, enabled?: true, mark_applied!: 1, release!: 1, mark_pending!: nil) }
   let(:manager) { described_class.new(connection, client: client, proxy_assigner: assigner) }
   let(:proxy) { webshare_proxy(id: 7, address: '10.0.0.7') }
   let(:proxy_config) { { server: '10.0.0.7:6000', username: 'user-7', password: 'senha-7' } }
@@ -47,6 +47,7 @@ describe WhatsappHybrid::SessionManager do
     manager.ensure_session!
 
     expect(client).to have_received(:create_session).with(session, start: true, config: hash_excluding(:proxy))
+    expect(assigner).to have_received(:mark_pending!).with(session)
   end
 
   it 'frees the IP when the engine refuses to create the session' do
@@ -77,7 +78,27 @@ describe WhatsappHybrid::SessionManager do
     expect(assigner).not_to have_received(:for)
   end
 
+  it 'never migrates an existing session without assignment when the tab opens, nor on reconnect (H3)' do
+    allow(client).to receive(:get_session).and_return(remote)
+    allow(assigner).to receive(:for)
+    allow(client).to receive(:logout_session)
+
+    expect { manager.refresh! }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+    manager.reconnect!
+
+    expect(assigner).not_to have_received(:for)
+    expect(client).not_to have_received(:update_session)
+  end
+
+  it 'does not enqueue while the assignment is in backoff after an undone change' do
+    assign!('10.0.0.9').update!(apply_failures: 1, last_apply_failed_at: Time.current)
+    allow(client).to receive(:get_session).and_return(remote)
+
+    expect { manager.refresh! }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
+  end
+
   it 'never writes the proxy during the request: refresh only enqueues the change, once per hour' do
+    assign!
     allow(client).to receive(:get_session).and_return(remote)
     allow(assigner).to receive(:for)
 
@@ -87,19 +108,21 @@ describe WhatsappHybrid::SessionManager do
   end
 
   it 'does not enqueue while the session is not connected' do
+    assign!
     allow(client).to receive(:get_session).and_return(remote(status: 'SCAN_QR_CODE'))
 
     expect { manager.refresh! }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
   end
 
   it 'treats a Redis failure as cooling down (fails closed)' do
+    assign!
     allow(client).to receive(:get_session).and_return(remote)
     allow(Redis::Alfred).to receive(:set).and_raise(Redis::CannotConnectError)
 
     expect { manager.refresh! }.not_to have_enqueued_job(WhatsappProxy::ApplyJob)
   end
 
-  it 'keeps the hand-made proxy and unknown keys when rewriting the webhook, without sending apps' do
+  it 'keeps the hand-made proxy and the rest of the remote config when rewriting the webhook, without sending apps' do
     manual = { 'server' => '200.1.1.1:3128', 'username' => 'u', 'password' => 'p' }
     allow(client).to receive(:get_session).and_return(remote(proxy: manual, webhook: false))
     allow(assigner).to receive(:enabled?).and_return(false)

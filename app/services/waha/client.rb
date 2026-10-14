@@ -33,8 +33,8 @@ module Waha
       post('/api/sessions', payload)
     end
 
-    def get_session(name)
-      get("/api/sessions/#{name}")
+    def get_session(name, timeout: DEFAULT_TIMEOUT)
+      get("/api/sessions/#{name}", timeout: timeout)
     end
 
     # Sem `apps`, a chave não vai no corpo e o motor mantém os apps da sessão (verificado no motor em 14/10/2026).
@@ -200,6 +200,9 @@ module Waha
       end
 
       response.parsed_response
+    rescue JSON::ParserError
+      # A mensagem do erro de JSON traz um pedaço do corpo (pode ter credencial): só a classe.
+      raise Error, "WAHA #{method.upcase} #{path} resposta inválida (JSON::ParserError)"
     rescue Net::ReadTimeout => e
       raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{scrub(e.message, body)}"
     rescue HTTParty::Error, SocketError, Net::OpenTimeout, Errno::ECONNREFUSED => e

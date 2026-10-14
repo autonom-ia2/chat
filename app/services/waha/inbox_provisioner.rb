@@ -62,7 +62,7 @@ module Waha
         config: { ignore: @config.session_ignore, proxy: proxy&.to_session_config }.compact,
         apps: session_apps(inbox, app_id, phone_numbers_app_id)
       )
-      @proxy_assigner.mark_applied!(@phone, proxy) if proxy
+      proxy ? @proxy_assigner.mark_applied!(@phone, proxy) : @proxy_assigner.mark_pending!(@phone)
     rescue StandardError => e
       cleanup_inbox(inbox)
       cleanup_remote(app_id, phone_numbers_app_id)

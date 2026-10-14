@@ -3891,11 +3891,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
     t.bigint "account_id", null: false
     t.string "pool", null: false
     t.string "webshare_proxy_id"
-    t.string "proxy_address", null: false
-    t.integer "proxy_port", null: false
+    t.string "proxy_address"
+    t.integer "proxy_port"
     t.datetime "assigned_at", null: false
     t.string "credential_digest"
     t.string "origin", default: "assigned", null: false
+    t.string "previous_proxy_address"
+    t.integer "previous_proxy_port"
+    t.string "previous_webshare_proxy_id"
+    t.string "previous_credential_digest"
+    t.integer "apply_failures", default: 0, null: false
+    t.datetime "last_apply_failed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"

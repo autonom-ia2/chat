@@ -23,20 +23,30 @@ class WhatsappProxy::Pool
     @proxies ||= @client.proxies.tap { |list| warn_missing_slice(list) }
   end
 
+  # Memorizado por instância (uma rodada ou uma atribuição): a fatia vazia alerta uma vez só.
   def candidates
-    if slice.empty?
-      WhatsappProxy::Alert.notify!('fatia_vazia', "#{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP para esta stack",
-                                   level: :error, pool: @name)
-      return []
-    end
-
-    @candidates ||= proxies.select { |proxy| offerable?(proxy) }
+    @candidates ||= if slice.empty?
+                      WhatsappProxy::Alert.notify!('fatia_vazia', "#{SLICE_ENVS.fetch(@name)} vazia: plano #{@name} sem IP " \
+                                                                  'para esta stack', level: :error, pool: @name)
+                      []
+                    else
+                      proxies.select { |proxy| offerable?(proxy) }
+                    end
   end
 
-  def offerable?(proxy)
+  def offerable?(proxy, ignore_quarantine: false)
     return false unless proxy.valid? && proxy.country_code.casecmp?('BR') && slice.include?(proxy.address)
 
-    quarantined.exclude?(proxy.address) && reserved.exclude?(proxy.address)
+    reserved.exclude?(proxy.address) && (ignore_quarantine || quarantined.exclude?(proxy.address))
+  end
+
+  # O IP ainda existe e serve, tirando a quarentena? (Número irmão num IP em quarentena não está "sem IP".)
+  def serving_ignoring_quarantine?(address, port)
+    !slice.empty? && proxies.any? { |proxy| proxy.address == address && proxy.port == port && offerable?(proxy, ignore_quarantine: true) }
+  end
+
+  def quarantined?(address)
+    quarantined.include?(address)
   end
 
   # IPs da Webshare usados por outra integração (não por número de WhatsApp): nunca oferecidos, mesmo na fatia.

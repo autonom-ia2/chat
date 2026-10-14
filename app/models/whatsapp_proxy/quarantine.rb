@@ -24,12 +24,16 @@ class WhatsappProxy::Quarantine < ApplicationRecord
     false
   end
 
-  def self.put!(address, pool, reason)
+  def self.put!(address, pool, reason, notify: true)
     record = find_or_initialize_by(proxy_address: address)
     record.update!(pool: pool, quarantined_until: DURATION.from_now, reason: reason)
-    WhatsappProxy::Alert.notify!('ip_em_quarentena', "IP #{address} (#{pool}) em quarentena por 24 h (#{reason})",
-                                 ip: address, pool: pool)
+    notify_put(record) if notify
     record
+  end
+
+  def self.notify_put(record)
+    WhatsappProxy::Alert.notify!('ip_em_quarentena', "IP #{record.proxy_address} (#{record.pool}) em quarentena por 24 h " \
+                                                     "(#{record.reason})", ip: record.proxy_address, pool: record.pool)
   end
 
   def self.release!(address)
