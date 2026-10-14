@@ -16,7 +16,6 @@ pt_BR:
         etapa: 'Etapa do negócio'
         valor: 'Valor do negócio'
         responsavel: 'Responsável pelo atendimento'
-        vencimento: 'Data de vencimento'
       horario:
         data_hora: 'Dia e hora do horário'
         data: 'Data do horário'

@@ -854,8 +854,7 @@
       },
       "negocio": {
         "titulo": "Título do negócio",
-        "valor": "Valor do negócio",
-        "vencimento": "Data de vencimento"
+        "valor": "Valor do negócio"
       },
       "atendente": {
         "nome": "Nome de quem atende"

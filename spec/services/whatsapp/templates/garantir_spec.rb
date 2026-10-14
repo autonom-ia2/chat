@@ -228,7 +228,7 @@ RSpec.describe Whatsapp::Templates::Garantir do
 
   it 'pronto com botões: devolve a posição de cada botão em `botoes`, e `campos` só com o corpo (#1524)' do
     finalidade = { 'teste_botoes' => { dono: 'agendamento', opcoes: [], variantes: { [] => {
-      nome: 'teste_botoes_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome negocio.vencimento],
+      nome: 'teste_botoes_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome negocio.prazo],
       texto: 'Olá, {{1}}! Seu horário é {{2}}. Use os botões abaixo.',
       botoes: [{ tipo: 'quick_reply', texto: 'Parar avisos', payload: 'stop_notices' },
                { tipo: 'url', texto: 'Ver meu horário', url: 'https://chat.hub2you.ai/b/{{1}}', campo: 'horario.link_codigo', exemplo: 'AB3' }]
@@ -239,7 +239,7 @@ RSpec.describe Whatsapp::Templates::Garantir do
 
     expect(described_class.call(inbox: inbox, finalidade: :teste_botoes)).to eq(
       status: :pronto, nome: 'teste_botoes_v1', idioma: 'pt_BR', categoria: 'UTILITY',
-      campos: { '1' => 'cliente.primeiro_nome', '2' => 'negocio.vencimento' },
+      campos: { '1' => 'cliente.primeiro_nome', '2' => 'negocio.prazo' },
       botoes: [{ 'indice' => 0, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' },
                { 'indice' => 1, 'tipo' => 'url', 'campo' => 'horario.link_codigo' }]
     )

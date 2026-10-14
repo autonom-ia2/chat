@@ -16,7 +16,6 @@ en:
         etapa: 'Deal stage'
         valor: 'Deal value'
         responsavel: 'Person in charge'
-        vencimento: 'Due date'
       horario:
         data_hora: 'Day and time of the appointment'
         data: 'Appointment date'

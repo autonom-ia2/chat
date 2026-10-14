@@ -854,8 +854,7 @@
       },
       "negocio": {
         "titulo": "Deal title",
-        "valor": "Deal value",
-        "vencimento": "Due date"
+        "valor": "Deal value"
       },
       "atendente": {
         "nome": "Agent name"

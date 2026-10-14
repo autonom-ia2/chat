@@ -23,7 +23,7 @@ class TemplateFields::Catalog
     'cliente.email' => 'texto', 'cliente.cliente_desde' => 'data',
     'empresa_cliente.nome' => 'texto', 'empresa_cliente.cnpj' => 'texto',
     'negocio.titulo' => 'texto', 'negocio.funil' => 'texto', 'negocio.etapa' => 'texto', 'negocio.valor' => 'moeda',
-    'negocio.responsavel' => 'texto', 'negocio.vencimento' => 'data',
+    'negocio.responsavel' => 'texto',
     'horario.data_hora' => 'data', 'horario.data' => 'data', 'horario.hora' => 'hora', 'horario.link_gestao' => 'link',
     'horario.link_codigo' => 'texto',
     'minha_empresa.nome' => 'texto', 'minha_empresa.endereco' => 'texto', 'minha_empresa.telefone' => 'texto',

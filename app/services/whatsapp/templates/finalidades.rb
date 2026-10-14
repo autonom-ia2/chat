@@ -48,12 +48,12 @@ module Whatsapp::Templates::Finalidades
   CATEGORIA = 'UTILITY'.freeze
   EXEMPLOS = {
     'cliente.primeiro_nome' => 'Ana', 'negocio.valor' => 'R$ 150,00', 'negocio.titulo' => 'Mensalidade de outubro',
-    'negocio.vencimento' => '20/10/2026'
+    'negocio.prazo' => '20/10/2026'
   }.freeze
   COBRANCA_FIM = 'Se o pagamento já foi feito, por favor desconsidere esta mensagem.'.freeze
   COBRANCA_DEPOIS_FIM = "Se precisar de ajuda com o pagamento, é só responder esta mensagem. #{COBRANCA_FIM}".freeze
-  COM_VALOR = %w[cliente.primeiro_nome negocio.valor negocio.titulo negocio.vencimento].freeze
-  SEM_VALOR = %w[cliente.primeiro_nome negocio.titulo negocio.vencimento].freeze
+  COM_VALOR = %w[cliente.primeiro_nome negocio.valor negocio.titulo negocio.prazo].freeze
+  SEM_VALOR = %w[cliente.primeiro_nome negocio.titulo negocio.prazo].freeze
 
   # finalidade => { dono:, opcoes: [chaves da variante],
   #                 variantes: { [valores das opções] => { nome:, amigavel:, texto:, campos:, botoes: [] } } }

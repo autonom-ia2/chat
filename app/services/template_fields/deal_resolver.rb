@@ -9,7 +9,7 @@ class TemplateFields::DealResolver
 
   READERS = {
     'negocio.titulo' => :title, 'negocio.funil' => :pipeline, 'negocio.etapa' => :stage,
-    'negocio.valor' => :amount, 'negocio.responsavel' => :owner, 'negocio.vencimento' => :due_date
+    'negocio.valor' => :amount, 'negocio.responsavel' => :owner
   }.freeze
 
   def initialize(card)
@@ -39,10 +39,5 @@ class TemplateFields::DealResolver
 
   def owner
     card.owner&.available_name
-  end
-
-  # O vencimento do card (`expected_close_at`, o mesmo do Multifunnel na cobrança, #1498/#1518), no fuso da conta.
-  def due_date
-    TemplateFields::Format.date(card.expected_close_at, TemplateFields::Format.account_zone(card.account))
   end
 end
