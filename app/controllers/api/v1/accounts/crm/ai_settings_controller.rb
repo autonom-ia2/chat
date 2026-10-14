@@ -47,6 +47,7 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
         :enabled, :mode, :max_touches, :tone_instructions,
         { intervals_hours: [], allowed_days: [], quiet_hours: [:start, :end, :tz] }
       ],
+      service_reminders: [:progress, :resolved_check, :payment],
       handoff: [
         :enabled, :mode, :selector_mode, :handoff_mode, :trigger, :prefer_online, :pickup_threshold_seconds,
         :escalation_user_id, :pool_type, :pool_id, :renotify_after_seconds, :escalation_action

@@ -15,6 +15,8 @@ module Crm
     class CallbackRunner
       # Texto livre pelo WhatsApp API fora das 24h, depois do template (chat#1349).
       include Crm::FollowUps::HybridFreeForm
+      # Lembrete de Atender (#1498): o mesmo envio, com o motivo e os fatos do card.
+      include Crm::FollowUps::ServiceReminderContext
 
       Result = Struct.new(:status, :error, :retry_at, keyword_init: true) do
         def self.sent
@@ -48,9 +50,14 @@ module Crm
         skip_reason_before_compose = precondition_fallback_reason
         return Result.fallback(skip_reason_before_compose) if skip_reason_before_compose
 
+        # Lembrete de Atender fora das 24h: o modelo aprovado do ponto único (Crm::FollowUps::EnvioForaDaJanela) vem
+        # primeiro; sem ele e com o Híbrido pronto, segue abaixo para o texto livre (#1349).
+        entrega_do_lembrete = entrega_do_lembrete_fora_da_janela
+        return entrega_do_lembrete if entrega_do_lembrete
+
         # Fora das 24h o template vem primeiro; sem candidato nenhum e com o Híbrido pronto, vai ao texto livre.
         @send_mode = messaging_window.can_send_session_message? ? :free_form : :choose_template
-        @candidates = @send_mode == :choose_template ? template_candidates : []
+        @candidates = @send_mode == :choose_template ? callback_template_candidates : []
         detect_hybrid_free_form
         composition = compose_with_hybrid_retry
 
@@ -61,7 +68,7 @@ module Crm
         # em choose_template, candidato resolvido já passaram em composable?) — closure e no-send não
         # precisam de prova de citação. Mesma trava anti-alucinação do AutoFollowupRunner: uma citação
         # que não bate é falha de composição, cai no mesmo retry limitado de fail_or_fallback.
-        verify_quote!(composition)
+        verify_quote!(composition) unless service_reminder?
 
         prepare_send_metadata(composition)
         # Meta's 131049 MARKETING cap is per-recipient/24h. Defer (don't burn retry
@@ -130,11 +137,8 @@ module Crm
           context: @context,
           mode: composer_mode,
           candidates: hybrid_free_form? ? [] : @candidates,
-          purpose: :callback,
-          callback_context: {
-            'requested_at_text' => base_metadata['requested_at_text'],
-            'requested_at' => @follow_up.due_at&.iso8601
-          },
+          purpose: service_reminder? ? :service : :callback,
+          callback_context: composer_context,
           reasoning_effort: Crm::Ai::Config::CALLBACK_REASONING_EFFORT
         ).perform
       end
@@ -239,7 +243,7 @@ module Crm
 
         sent_ats = @card.account.crm_follow_ups
                         .where(contact_id: contact_id)
-                        .where("metadata ->> 'source' IN (?)", %w[ai_followup ai_callback])
+                        .where("metadata ->> 'source' IN (?)", Crm::FollowUps::MessageSender::AI_SOURCES)
                         .where("metadata ->> 'send_mode' = ?", 'template')
                         .where("metadata ->> 'template_category' = ?", 'marketing')
                         .pluck(Arel.sql("metadata ->> 'sent_at'"))

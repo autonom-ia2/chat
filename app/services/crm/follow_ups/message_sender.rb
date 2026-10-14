@@ -21,7 +21,7 @@ class Crm::FollowUps::MessageSender
   OPTED_OUT_REASON = 'opt_out'.freeze
   # Gravado no metadata pelos runners de IA (nunca por follow-up manual): o texto livre sai pelo WhatsApp API
   # do Híbrido, fora das 24h (chat#1349). O envio só obedece se o Híbrido continuar pronto neste momento.
-  AI_SOURCES = %w[ai_followup ai_callback].freeze
+  AI_SOURCES = %w[ai_followup ai_callback service_reminder].freeze
   TRANSPORT_KEY = 'delivery_transport'.freeze
   WHATSAPP_API_TRANSPORT = 'whatsapp_api'.freeze
   WHATSAPP_API_UNAVAILABLE = 'whatsapp_api_unavailable'.freeze
@@ -214,7 +214,10 @@ class Crm::FollowUps::MessageSender
       processed_params: template_variables
     }
     namespace = metadata['template_namespace'].to_s.strip
-    namespace.present? ? params.merge(namespace: namespace) : params
+    params = params.merge(namespace: namespace) if namespace.present?
+    # #1498: o modelo escolhido pelo Garantir vai com a categoria, como o contrato do upstream pede.
+    category = metadata['template_params_category'].to_s.strip
+    category.present? ? params.merge(category: category) : params
   end
 
   # Slot values composed by the AI follow-up composer (keys "1", "2", …). On the

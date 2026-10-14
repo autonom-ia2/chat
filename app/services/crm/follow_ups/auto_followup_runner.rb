@@ -528,7 +528,7 @@ module Crm
           if contact_id.present?
             sent_ats = @card.account.crm_follow_ups
                             .where(contact_id: contact_id)
-                            .where("metadata ->> 'source' IN (?)", %w[ai_followup ai_callback])
+                            .where("metadata ->> 'source' IN (?)", Crm::FollowUps::MessageSender::AI_SOURCES)
                             .where("metadata ->> 'send_mode' = ?", 'template')
                             .where("metadata ->> 'template_category' = ?", 'marketing')
                             .pluck(Arel.sql("metadata ->> 'sent_at'"))
