@@ -66,6 +66,10 @@ elif name == 'docker':
         print(os.environ.get('GATEWAY', '172.17.0.1'))
     elif args[:2] != ['run', '--rm']:
         sys.exit(99)
+    elif os.environ.get('FAKE_RUBY_STDERR'):
+        # Replays the real coordination_preflight.rb stderr as the container's (#1540 contract test).
+        sys.stderr.write(Path(os.environ['FAKE_RUBY_STDERR']).read_text())
+        sys.exit(1)
 elif name == 'ss':
     listeners = Path(os.environ.get('FAKE_SS', '/nonexistent'))
     if listeners.exists():
@@ -352,7 +356,10 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
                 self.log.write_text('')
                 result = self.run_check(check)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertEqual(result.stderr.strip(), 'instagram_coordination_tunnel_timeout')
+                # Sentinel, the fixed step code the deploy reads (#1540), then the old token for existing greps.
+                self.assertEqual(result.stderr.splitlines(), ['instagram_coordination_preflight_ran',
+                                                              'instagram_coordination_preflight_failed step=tunnel_timeout',
+                                                              'instagram_coordination_tunnel_timeout'])
                 self.assertFalse(self.rails_preflight_ran())
 
     def test_preflight_stops_waiting_when_the_tunnel_unit_dies(self):
@@ -365,7 +372,9 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
         started = time.monotonic()
         result = self.run_check(check)
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stderr.strip(), 'instagram_coordination_tunnel_inactive')
+        self.assertEqual(result.stderr.splitlines(), ['instagram_coordination_preflight_ran',
+                                                      'instagram_coordination_preflight_failed step=tunnel_inactive',
+                                                      'instagram_coordination_tunnel_inactive'])
         self.assertLess(time.monotonic() - started, 10)
         self.assertFalse(self.rails_preflight_ran())
 
@@ -374,6 +383,9 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
         started = time.monotonic()
         result = self.run_check(check, GATEWAY='not-an-ip')
         self.assertNotEqual(result.returncode, 0)
+        # A broken host is not Instagram's failure: host verdict, which the deploy keeps fatal (#1540).
+        self.assertEqual(result.stderr.splitlines(), ['instagram_coordination_preflight_ran',
+                                                      'instagram_coordination_preflight_host_failed step=host_gateway_unavailable'])
         self.assertLess(time.monotonic() - started, 10)
         self.assertFalse(self.rails_preflight_ran())
 
@@ -385,6 +397,8 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
             result = self.run_check(check, FAIL_COMMAND=fail)
             if fail:
                 self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stderr.splitlines()[:2], ['instagram_coordination_preflight_ran',
+                                                                  'instagram_coordination_preflight_failed step=tunnel_inactive'])
                 self.assertFalse(any(name == 'docker' for name, _ in self.calls()))
             else:
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -467,12 +481,32 @@ end
                 self.assertEqual(result.returncode == 0, not fail and code == '200', result.stderr)
                 self.assertNotIn('SECRET_ERROR', result.stdout + result.stderr)
                 if result.returncode:
-                    self.assertEqual(result.stderr.strip(), 'instagram_coordination_preflight_failed')
+                    # Generic token first (existing greps), then which of the three checks failed (#1540).
+                    step = {'ping': 'coordination_ping_failed', 'integrity': 'coordination_ping_failed',
+                            'config': 'proxy_configuration_invalid'}.get(fail, 'proxy_preflight_failed')
+                    self.assertEqual(result.stderr.splitlines(), ['instagram_coordination_preflight_rails_started',
+                                                                  f'instagram_coordination_preflight_failed step={step}'])
                 else:
                     self.assertEqual(result.stdout.splitlines(), ['integrity', 'ping', 'proxy-request',
                                                                  'instagram_coordination_preflight_ok'])
                 if fail in ('ping', 'integrity', 'config'):
                     self.assertNotIn('proxy-request', result.stdout)
+                if result.returncode:
+                    self.assert_deploy_reads_step(result.stderr, step)
+
+    def assert_deploy_reads_step(self, ruby_stderr, step):
+        # Contract: real Ruby stderr -> real check.sh -> the deploy's parser yields the same code (#1540).
+        check = self.preflight_check()
+        self.tunnel_listeners()
+        replay = self.directory / 'ruby-stderr'
+        replay.write_text(ruby_stderr)
+        result = self.run_check(check, FAKE_RUBY_STDERR=str(replay))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stderr.splitlines(), ['instagram_coordination_preflight_ran',
+                                                      f'instagram_coordination_preflight_failed step={step}'])
+        parsed = subprocess.run(['/bin/bash', '-c', 'source scripts/deploy/blue-green-recovery.sh; instagram_preflight_verdict <<<"$1"',
+                                 '_', result.stderr], cwd=ROOT, text=True, capture_output=True, timeout=5)
+        self.assertEqual((parsed.returncode, parsed.stdout), (0, f'{step}\n'), parsed.stderr)
 
 
 if __name__ == '__main__':
