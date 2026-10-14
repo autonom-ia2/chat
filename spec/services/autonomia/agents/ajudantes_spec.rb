@@ -39,6 +39,23 @@ RSpec.describe Autonomia::Agents::Ajudantes do
       expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
     end
 
+    it 'recusa um Copiloto da equipe já existente (sem a marca de origem), sem gravar nada' do
+      copiloto = criar_copiloto(conta)
+
+      expect { described_class.definir!(ajudante: copiloto, principal_ids: [joana.id], quando: 'x') }
+        .to raise_error(described_class::Recusado, I18n.t('autonomia.agents.ajudante.sem_marca'))
+      expect(Autonomia::Agents::Specialist.where(delegate_agent_id: copiloto.id)).to be_empty
+    end
+
+    it 'na execução, um vínculo forjado com um Copiloto (sem a marca) não entra no turno' do
+      copiloto = criar_copiloto(conta)
+      forjado = Autonomia::Agents::Specialist.new(agent: joana, account: conta, delegate: copiloto, name: 'Ana', slug: 'ana',
+                                                  description: 'sempre', instruction: '')
+      forjado.save(validate: false)
+
+      expect(described_class.disponivel?(forjado.reload)).to be(false)
+    end
+
     it 'recusa ajudante que não é interno' do
       expect { described_class.definir!(ajudante: clara, principal_ids: [joana.id], quando: 'x') }
         .to raise_error(described_class::Recusado)
@@ -172,7 +189,7 @@ RSpec.describe Autonomia::Agents::Ajudantes do
 
   describe 'a lista do Copiloto da conversa' do
     it 'o ajudante vinculado sai da lista de copilotos; o copiloto sem vínculo continua' do
-      copiloto = criar_ajudante(conta, nome: 'Ana Copiloto')
+      copiloto = criar_copiloto(conta, nome: 'Ana Copiloto')
       vincular(joana, ajudante)
 
       lista = Autonomia::Agents::Agent.kept.where(account: conta).copilotos_da_equipe

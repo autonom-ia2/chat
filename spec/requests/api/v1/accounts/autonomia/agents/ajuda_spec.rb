@@ -89,6 +89,57 @@ RSpec.describe 'Ajuda do agente (tema 14)', type: :request do
     expect(response.parsed_body['tem_onde_trabalhar']).to be(true)
   end
 
+  describe 'a marca de origem do ajudante (decisão c)' do
+    it 'o PUT do agente não põe a marca: um Copiloto não vira ajudante pela API' do
+      copiloto = criar_copiloto(conta)
+
+      patch "/api/v1/accounts/#{conta.id}/autonomia/agents/#{copiloto.id}",
+            params: { agent: { config: { papel: 'ajudante' } } }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(copiloto.reload).not_to be_ajudante_de_origem
+      put caminho(copiloto), params: { principal_ids: [joana.id], quando: 'x' }, headers: administrator.create_new_auth_token,
+                             as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error'] || response.parsed_body.to_s).to include(I18n.t('autonomia.agents.ajudante.sem_marca'))
+    end
+
+    it 'o PUT do agente não tira a marca de quem nasceu ajudante' do
+      patch "/api/v1/accounts/#{conta.id}/autonomia/agents/#{ajudante.id}",
+            params: { agent: { config: { papel: nil } } }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(ajudante.reload).to be_ajudante_de_origem
+    end
+
+    it 'criar o agente pela API com a marca não a grava' do
+      post "/api/v1/accounts/#{conta.id}/autonomia/agents",
+           params: { agent: { name: 'Falso', agent_type: 'custom', actuation: 'internal', config: { papel: 'ajudante' } } },
+           headers: administrator.create_new_auth_token, as: :json
+
+      expect(Autonomia::Agents::Agent.find_by(name: 'Falso')).not_to be_ajudante_de_origem
+    end
+
+    it 'a abertura do Construtor aceita papel: ajudante e guarda a escolha (o agente nasce dela)' do
+      post "/api/v1/accounts/#{conta.id}/autonomia/build_threads",
+           params: { type: 'custom', papel: 'ajudante' }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(Autonomia::Agents::BuildThread.last.state).to include('papel' => 'ajudante', 'actuation' => 'internal')
+    end
+
+    it 'o ajudante com a marca não aparece como Copiloto da conversa, mesmo sem vínculo' do
+      ajudante
+      copiloto = criar_copiloto(conta)
+      conversa = create(:conversation, account: conta)
+
+      get "/api/v1/accounts/#{conta.id}/autonomia/conversations/#{conversa.display_id}/copilot/agents",
+          headers: administrator.create_new_auth_token, as: :json
+
+      ids = response.parsed_body['agents'].pluck('id')
+      expect(ids).to include(copiloto.id)
+      expect(ids).not_to include(ajudante.id)
+    end
+  end
+
   it 'o ajudante vinculado sai do seletor do Copiloto da conversa' do
     gravar(principal_ids: [joana.id])
     conversa = create(:conversation, account: conta)

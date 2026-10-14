@@ -72,7 +72,7 @@ RSpec.describe Autonomia::Agents::Specialists::Ajudante do
 
   it 'a base do ajudante entra cercada como dado, antes do pedido' do
     trecho = Autonomia::Agents::KnowledgeEntry.new(id: 9, content: 'Franquia reduzida do Auto: 50% da normal.')
-    ajudante.update!(config: { 'with_knowledge' => true })
+    ajudante.update!(config: ajudante.config.merge('with_knowledge' => true))
     allow(Autonomia::Agents::Retriever).to receive(:new).with(agent: ajudante)
                                                         .and_return(instance_double(Autonomia::Agents::Retriever, retrieve: [trecho]))
     capturado = modelo(texto: resposta('ok'))
@@ -139,7 +139,7 @@ RSpec.describe Autonomia::Agents::Specialists::Ajudante do
   end
 
   describe 'a base do ajudante' do
-    before { ajudante.update!(config: { 'with_knowledge' => true }) }
+    before { ajudante.update!(config: ajudante.config.merge('with_knowledge' => true)) }
 
     def busca_que_levanta(erro)
       busca = instance_double(Autonomia::Agents::Retriever)

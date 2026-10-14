@@ -16,22 +16,26 @@ module Autonomia::Agents::OndeTrabalhar
 
   # Os campos que decidem se o agente atende. Mudando algum, quem grava trava o agente antes (AgentsController#update).
   CAMPOS_DE_ATENDIMENTO = %w[status enabled actuation].freeze
+  # A marca de origem do ajudante (tema 14), em `config['papel']`. Só nasce pelo início do Construtor com
+  # `papel: 'ajudante'` (BuildThread); a API do agente não a aceita (`AgentsController::RESERVED_CONFIG_KEYS`).
+  PAPEL_AJUDANTE = 'ajudante'.freeze
 
   included do
     validate :atender_exige_onde_trabalhar, on: %i[update ativacao], if: :passa_a_atender?
 
     # Tema 14 (#1434) — o AJUDANTE: um agente interno que outro agente consulta (o `Specialist` que aponta para ele).
-    # Interno já tem onde trabalhar (`tem_onde_trabalhar?`), já não fala com cliente e já não aceita caixa; o vínculo é
-    # o que o marca como ajudante. O banco cascateia; o caminho normal é o soft delete, que só o tira do turno.
+    # Interno já tem onde trabalhar (`tem_onde_trabalhar?`), já não fala com cliente e já não aceita caixa. Só vira
+    # ajudante quem NASCEU como ajudante (`ajudante_de_origem?`, decisão do Rodrigo em 14/10): um Copiloto da equipe
+    # nunca. O banco cascateia; o caminho normal é o soft delete, que só o tira do turno.
     has_many :vinculos_de_ajudante, class_name: 'Autonomia::Agents::Specialist', foreign_key: :delegate_agent_id,
                                     inverse_of: :delegate, dependent: :delete_all
 
     # Os copilotos que a equipe escolhe na conversa: internos ou ambos, ligados, com instrução, fora os de sistema (o
-    # Guia) e fora os ajudantes — esses trabalham para outro agente, não para a equipe.
+    # Guia) e fora os ajudantes (a marca de origem) — esses trabalham para outro agente, não para a equipe.
     scope :copilotos_da_equipe, lambda {
       where(actuation: %i[internal both], status: :active, enabled: true)
         .where.not(instruction: [nil, '']).where("config->>'system_key' IS NULL")
-        .where.not(id: ::Autonomia::Agents::Specialist.de_ajudante.select(:delegate_agent_id))
+        .where("config->>'papel' IS DISTINCT FROM ?", PAPEL_AJUDANTE)
     }
   end
 
@@ -50,6 +54,11 @@ module Autonomia::Agents::OndeTrabalhar
   # do agente em Operate.authorized_agent_inbox, sem a allowlist de teste, que depende da conversa (#1433).
   def atende_cliente?
     operating? && !actuation_internal? && config&.dig('system_key').blank?
+  end
+
+  # Nasceu como "Ajuda outros agentes": só este agente pode ser ajudante.
+  def ajudante_de_origem?
+    config.to_h['papel'] == PAPEL_AJUDANTE
   end
 
   def tem_onde_trabalhar?

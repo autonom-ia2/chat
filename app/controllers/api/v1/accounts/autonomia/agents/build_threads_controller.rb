@@ -12,7 +12,8 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   def create
     @thread = build_threads_scope.new(thread_params)
     @thread.created_by = Current.user
-    @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge])
+    @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge],
+                                   papel: params[:papel])
     @thread.save!
     # A pendência não pode morrer com a sessão: abrindo uma thread de AJUSTE (agente já vinculado),
     # herda a pergunta que ficou sem resposta na thread anterior daquele agente.

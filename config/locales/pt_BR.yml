@@ -993,6 +993,7 @@ pt_BR:
         profundidade: 'Ajudante não chama outro ajudante, e um agente interno não tem ajudantes.'
         sem_principal: 'Escolha pelo menos um agente para este ajudante ajudar.'
         principal_invalido: 'Escolha agentes desta conta pelo id.'
+        sem_marca: 'Só um agente criado como "Ajuda outros agentes" pode ser ajudante. Um Copiloto da equipe não pode.'
       native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'

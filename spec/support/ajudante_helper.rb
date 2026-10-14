@@ -15,7 +15,12 @@ module AjudanteHelper
     Autonomia::Agents::Agent.create!({ account: conta, name: nome, agent_type: 'custom', actuation: :internal,
                                        status: :active, enabled: true,
                                        instruction: 'Você conhece as regras do produto Auto.',
-                                       config: { 'with_knowledge' => false } }.merge(extras))
+                                       config: { 'with_knowledge' => false, 'papel' => 'ajudante' } }.merge(extras))
+  end
+
+  # Um Copiloto da equipe de antes (interno, sem a marca de origem do ajudante): nunca vira ajudante (decisão c).
+  def criar_copiloto(conta, nome: 'Ana Maciel')
+    criar_ajudante(conta, nome: nome, config: { 'with_knowledge' => false })
   end
 
   def vincular(principal, ajudante, quando: 'Quando a dúvida for sobre o produto Auto')

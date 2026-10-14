@@ -52,6 +52,16 @@ RSpec.describe Autonomia::Agents::Specialist do
       expect(recusa(principal, de_fora)).to be_present
     end
 
+    it 'recusa um Copiloto da equipe já existente como ajudante (decisão c): só quem nasceu ajudante' do
+      mensagens = recusa(principal, criar_copiloto(conta))
+
+      expect(mensagens.join).to include(I18n.t('autonomia.agents.ajudante.sem_marca'))
+    end
+
+    it 'aceita o agente criado com a marca de origem' do
+      expect(vincular(principal, ajudante)).to be_persisted
+    end
+
     it 'recusa o agente que fala com cliente como ajudante: o ajudante é interno' do
       expect(recusa(principal, criar_principal(conta, nome: 'Maria'))).to be_present
     end
@@ -81,7 +91,7 @@ RSpec.describe Autonomia::Agents::Specialist do
     end
 
     it 'recusa o agente de sistema (o Guia) nos dois lados' do
-      guia = criar_ajudante(conta, nome: 'Guia', config: { 'system_key' => 'guia', 'with_knowledge' => false })
+      guia = criar_ajudante(conta, nome: 'Guia', config: { 'system_key' => 'guia', 'with_knowledge' => false, 'papel' => 'ajudante' })
 
       expect(recusa(principal, guia)).to be_present
     end

@@ -30,6 +30,7 @@ module Autonomia::Agents::Ajudantes
   def definir!(ajudante:, principal_ids:, quando:)
     ids = ids_de_principais(principal_ids)
     raise Recusado, I18n.t('autonomia.agents.ajudante.ajudante_interno') unless ajudante.actuation_internal?
+    raise Recusado, I18n.t('autonomia.agents.ajudante.sem_marca') unless ajudante.ajudante_de_origem?
 
     ActiveRecord::Base.transaction do
       ajudante.lock!
@@ -51,10 +52,10 @@ module Autonomia::Agents::Ajudantes
     ajudante_pronto?(vinculo.delegate, principal.account_id)
   end
 
-  # Ligado, interno, com instrução e da mesma conta do principal.
+  # Ligado, interno, nascido como ajudante, com instrução e da mesma conta do principal.
   def ajudante_pronto?(ajudante, account_id)
     ajudante.present? && ajudante.account_id == account_id && ajudante.operating? && ajudante.actuation_internal? &&
-      ajudante.instruction.present?
+      ajudante.ajudante_de_origem? && ajudante.instruction.present?
   end
 
   def rodadas(agent)
