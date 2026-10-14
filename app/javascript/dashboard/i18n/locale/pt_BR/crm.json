@@ -5447,5 +5447,144 @@
     "FALTA": {
       "NOME": "dar um nome ao lembrete"
     }
+  },
+  "CRM_CALENDARIO": {
+    "HEROI": {
+      "ROTULO": "Hoje é {data}",
+      "OI_MANHA": "Bom dia, {nome}",
+      "OI_TARDE": "Boa tarde, {nome}",
+      "OI_NOITE": "Boa noite, {nome}",
+      "OI_MANHA_SEM_NOME": "Bom dia",
+      "OI_TARDE_SEM_NOME": "Boa tarde",
+      "OI_NOITE_SEM_NOME": "Boa noite",
+      "HOJE": "Para hoje: {n} coisa. | Para hoje: {n} coisas.",
+      "HOJE_NADA": "Nada marcado para hoje.",
+      "ATRASADOS": "{n} ficou para trás. | {n} ficaram para trás.",
+      "EM_DIA": "Nada ficou para trás.",
+      "NOVO": "Novo"
+    },
+    "VISAO": {
+      "ROTULO": "Como ver o calendário",
+      "DIA": "Meu dia",
+      "SEMANA": "Semana",
+      "MES": "Mês"
+    },
+    "NAV": {
+      "ANTERIOR": "Antes",
+      "SEGUINTE": "Depois",
+      "VOLTAR_HOJE": "Voltar para hoje",
+      "HOJE_CURTO": "Hoje",
+      "SEMANA_DE": "{de} a {ate}",
+      "MES_ANTERIOR": "Mês anterior",
+      "MES_SEGUINTE": "Próximo mês",
+      "SEMANA_ANTERIOR": "Semana anterior",
+      "SEMANA_SEGUINTE": "Próxima semana"
+    },
+    "MOSTRAR": {
+      "BOTAO": "Mostrar",
+      "TITULO": "O que mostrar",
+      "DE_QUEM": "De quem",
+      "QUEM_TODOS": "De toda a equipe",
+      "QUEM_MEUS": "Só os meus",
+      "FUNIL": "De qual funil",
+      "TODOS_FUNIS": "Todos os funis",
+      "O_QUE": "O que aparece",
+      "FEITOS_TITULO": "Já feitos",
+      "FEITOS": "Mostrar o que já foi feito",
+      "PRONTO": "Pronto"
+    },
+    "TIPO": {
+      "LEMBRETE": "Lembrete",
+      "REUNIAO": "Reunião",
+      "MENSAGEM": "Mensagem marcada",
+      "FECHAR": "Data para fechar",
+      "AGENDA": "Da sua agenda"
+    },
+    "TIPO_LONGO": {
+      "LEMBRETE": "O que eu combinei",
+      "REUNIAO": "Reuniões",
+      "MENSAGEM": "Mensagens marcadas",
+      "FECHAR": "Datas para fechar",
+      "AGENDA": "Da sua agenda"
+    },
+    "EXEMPLO": {
+      "LEMBRETE": "Ex.: ligar para um cliente na sexta",
+      "REUNIAO": "Com link ou presencial, marcadas pelo CRM",
+      "MENSAGEM": "Saem sozinhas no WhatsApp, no dia e na hora",
+      "FECHAR": "O dia em que o negócio deve fechar",
+      "AGENDA": "Compromissos do seu Google ou Outlook"
+    },
+    "ITEM": {
+      "DIA_TODO": "Dia todo",
+      "ONTEM": "Ontem",
+      "HA_DIAS": "Há {n} dia | Há {n} dias",
+      "PARA": "Para {nome}",
+      "REPETE": "Repete",
+      "PAUSADO": "Pausado",
+      "CONCLUIR": "Marcar como feito: {titulo}",
+      "CONCLUIR_CURTO": "Marcar como feito",
+      "ACAO": {
+        "ENTRAR": "Entrar na reunião",
+        "VER_REUNIAO": "Ver reunião",
+        "VER_NEGOCIO": "Ver negócio",
+        "VER_MENSAGEM": "Ver mensagem",
+        "ABRIR_CONVERSA": "Abrir conversa",
+        "LIGAR": "Ligar",
+        "VER": "Ver"
+      }
+    },
+    "DIA": {
+      "HOJE": "Hoje",
+      "AMANHA": "Amanhã",
+      "PARA_HOJE": "Para hoje",
+      "ATRASADOS": "Ficou para trás",
+      "ADIAR_TODOS": "Passar tudo para amanhã",
+      "AGORA": "Agora, {hora}",
+      "PROXIMOS": "Próximos dias",
+      "PROXIMO": "Próximo: {dia} — {titulo}.",
+      "NADA_A_FRENTE": "Nada marcado para os próximos dias.",
+      "VAZIO_HOJE": "Tudo em dia por hoje",
+      "VAZIO_DIA": "Nada marcado para {dia}",
+      "VAZIO_DIA_TEXTO": "Esse dia está livre.",
+      "NOVO": "Marcar algo",
+      "NOVO_NO_DIA": "Marcar algo nesse dia",
+      "FEITO_TITULO": "Feito: {titulo}",
+      "FEITO_PERGUNTA": "Quer marcar o próximo passo?",
+      "ATALHO": {
+        "AMANHA": "Amanhã",
+        "TRES_DIAS": "Em 3 dias",
+        "SEMANA": "Semana que vem"
+      },
+      "NAO_PRECISA": "Não precisa"
+    },
+    "SEMANA": {
+      "VER_DIA": "Ver {dia}",
+      "MARCAR_EM": "Marcar algo em {dia}",
+      "LIVRE": "Livre"
+    },
+    "MES": {
+      "MAIS": "+{n} mais"
+    },
+    "NOVO": {
+      "TITULO": "O que você quer marcar?",
+      "TEXTO": "Escolha uma opção.",
+      "LEMBRETE": "Lembrete",
+      "LEMBRETE_TEXTO": "Um aviso para você ou para a equipe, no dia e na hora.",
+      "REUNIAO": "Reunião com cliente",
+      "REUNIAO_TEXTO": "Marque uma conversa com o cliente, com dia e hora.",
+      "MENSAGEM": "Mensagem marcada",
+      "MENSAGEM_TEXTO": "Uma mensagem que sai sozinha no WhatsApp, no dia e na hora.",
+      "CANCELAR": "Cancelar"
+    },
+    "LEGENDA": {
+      "TITULO": "O que aparece aqui"
+    },
+    "FUSO": "Horários no fuso da conta: {fuso}",
+    "ERRO": "Não deu para carregar o calendário.",
+    "TENTAR": "Tentar de novo",
+    "ALERTA": {
+      "ADIADOS": "Passamos {n} para amanhã. | Passamos {n} para amanhã.",
+      "PROXIMO_MARCADO": "Próximo passo marcado."
+    }
   }
 }

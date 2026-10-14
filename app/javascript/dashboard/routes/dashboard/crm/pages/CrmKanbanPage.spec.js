@@ -113,6 +113,7 @@ const setPermissions = overrides => {
 // `bookingV2` liga a opção da conta `crm_booking_v2` (agendamento novo, #1212).
 const setGetters = ({
   bookingV2 = false,
+  calendarioOuro = false,
   role = 'administrator',
   keys,
 } = {}) => {
@@ -120,7 +121,10 @@ const setGetters = ({
     getCurrentRole: ref(role),
     'accounts/getAccount': ref(() => ({
       id: 1,
-      features: { crm_booking_v2: bookingV2 },
+      features: {
+        crm_booking_v2: bookingV2,
+        crm_calendario_ouro: calendarioOuro,
+      },
     })),
     'crmKanban/getPipelines': ref([PIPELINE]),
     'crmKanban/getStages': ref(
@@ -179,6 +183,7 @@ const mountPage = async ({
         CrmResultTabs: true,
         CrmBulkActionBar: true,
         CrmCalendar: true,
+        CalendarioOuro: true,
         CrmCalendarQuickAdd: true,
         CrmCalendarMeetingScheduler: true,
         CrmMeetingDetail: true,
@@ -267,6 +272,55 @@ describe('CrmKanbanPage', () => {
     wrapper = null;
     document.body.innerHTML = '';
     delete window.globalConfig;
+  });
+
+  // #1568: com a flag, o calendário abre o "Meu dia" sem o topo antigo e
+  // busca todos os funis; sem ela, nada muda (os testes acima e abaixo).
+  describe('Calendário Meu dia (crm_calendario_ouro)', () => {
+    it('com a flag, abre a tela nova sem o topo antigo e sem exigir funil', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        true
+      );
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.find('header').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain('CRM_KANBAN.ACTIONS.CONFIGURE');
+
+      wrapper
+        .findComponent({ name: 'CalendarioOuro' })
+        .vm.$emit('rangeChange', { from: 'a', to: 'b' });
+      await flushPromises();
+      const busca = dispatch.mock.calls.filter(
+        ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+      );
+      expect(busca.at(-1)[1].pipeline_id).toBeUndefined();
+    });
+
+    it('sem a flag, o calendário continua o de sempre', async () => {
+      wrapper = await mountPage({ calendarOnly: true });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        true
+      );
+    });
+
+    it('com a flag, só a página do calendário muda; o Kanban não', async () => {
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.text()).toContain('CRM_KANBAN.ACTIONS.CONFIGURE');
+    });
   });
 
   it('keeps inbox settings in the Agenda, without funnel actions', async () => {

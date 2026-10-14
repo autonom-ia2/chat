@@ -395,3 +395,12 @@
   display_name: Lembretes que repetem, sem card e com quem recebe
   enabled: false
   column: feature_flags_ext_1
+
+# Calendário novo "Meu dia" (#1568). Bit 23 (8388608), reservado pela Orquestração: fica LOGO ABAIXO de
+# `crm_lembretes_v2` (#1542, bit 22) — este PR só entra depois do #1542. Desligada (padrão): CRM > Agendamento >
+# Calendário continua a tela de sempre. Ligada: abre no Meu dia, com semana e mês de apoio e filtros no "Mostrar".
+# Sem migration. Ligar: Issue "Ligar crm_calendario_ouro".
+- name: crm_calendario_ouro
+  display_name: Calendário Meu dia (o que fazer hoje)
+  enabled: false
+  column: feature_flags_ext_1

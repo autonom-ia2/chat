@@ -55,6 +55,7 @@ export const FEATURE_FLAGS = {
   WHATSAPP_TEMPLATES_AI: 'whatsapp_templates_ai',
   NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CRM_LEMBRETES_V2: 'crm_lembretes_v2',
+  CRM_CALENDARIO_OURO: 'crm_calendario_ouro',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',
