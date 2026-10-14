@@ -125,11 +125,23 @@ RSpec.describe Autonomia::Agents::Nicho do
       expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech corretores] + [false])
     end
 
-    it 'trata canal gravado inválido como nil sem invalidar nicho e perfil' do
+    it 'trata canal gravado inválido como direto sem invalidar nicho e perfil' do
       gravar(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
              described_class::CANAL_KEY => 'loja')
 
-      expect(com_canal(described_class.for(account))).to eq(['seguros', 'insurtech', nil, false])
+      expect(com_canal(described_class.for(account))).to eq(%w[seguros insurtech direto] + [false])
+    end
+
+    # A conta 16 da hub2you já era insurtech antes do canal existir: lê direto, igual ao padrão "seguros:insurtech".
+    it 'lê direto na insurtech gravada antes do canal existir, igual ao padrão da instalação' do
+      gravar(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech')
+
+      with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:insurtech') do
+        conta = described_class.for(account)
+        padrao = described_class.padrao_da_instalacao
+        expect([conta.nicho, conta.perfil, conta.canal]).to eq([padrao.nicho, padrao.perfil, padrao.canal])
+        expect(conta.canal).to eq('direto')
+      end
     end
 
     it 'cai em geral e registra log quando o padrão da instalação é inválido' do
@@ -194,6 +206,13 @@ RSpec.describe Autonomia::Agents::Nicho do
         outras_chaves.merge(described_class::NICHO_KEY => 'seguros', described_class::PERFIL_KEY => 'insurtech',
                             described_class::CANAL_KEY => 'corretores')
       )
+    end
+
+    it 'grava direto na insurtech que chega sem canal' do
+      described_class.atribuir(account, nicho: 'seguros', perfil: 'insurtech', canal: nil)
+      account.save!
+
+      expect(account.reload.internal_attributes[described_class::CANAL_KEY]).to eq('direto')
     end
 
     it 'não grava canal em perfil que não é insurtech' do

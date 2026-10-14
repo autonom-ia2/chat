@@ -90,21 +90,22 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(document.at_css('[data-agents-niche-form] legend').text.squish).to eq('Account segment and niche')
   end
 
+  # Insurtech gravada antes do canal existir lê "direto" (#1550).
   it 'mostra o nicho efetivo na página da conta' do
     account.update!(internal_attributes: account.internal_attributes.merge(nicho_key => 'seguros', perfil_key => 'insurtech'))
 
     get path
 
     expect(response).to have_http_status(:ok)
-    expect(Nokogiri::HTML(response.body).at_css('[data-agents-niche]').text.squish).to eq('Insurance · Insurtech')
+    expect(Nokogiri::HTML(response.body).at_css('[data-agents-niche]').text.squish).to eq('Insurance · Insurtech · Direct to customer')
   end
 
   it 'grava nicho e perfil no update sem apagar as outras chaves de internal_attributes' do
-    patch path, params: { account: { name: account.name, agents_niche: { nicho: 'seguros', perfil: 'insurtech' } } }
+    patch path, params: { account: { name: account.name, agents_niche: { nicho: 'seguros', perfil: 'seguradora' } } }
 
     expect(response).to have_http_status(:redirect)
     expect(account.reload.internal_attributes).to eq(
-      'unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'seguros', perfil_key => 'insurtech'
+      'unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'seguros', perfil_key => 'seguradora'
     )
   end
 

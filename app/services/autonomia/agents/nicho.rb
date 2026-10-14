@@ -10,8 +10,9 @@
 #
 # Sem escolha da conta, vale o padrão da instalação: InstallationConfig AUTONOMIA_NICHO_PADRAO, e na falta dele a ENV
 # de mesmo nome ("seguros:insurtech:direto", "seguros:corretora", "seguros" ou "geral"; sem nada, "geral"). Valor
-# inválido, na conta ou na instalação, não quebra a leitura: cai no padrão (ou em geral) e fica no log. Canal gravado
-# inválido só some (vira nil); não invalida nicho e perfil.
+# inválido, na conta ou na instalação, não quebra a leitura: cai no padrão (ou em geral) e fica no log. A insurtech
+# sem canal (ou com canal inválido) vale "direto", na conta e no padrão: é como ela fala até o canal ser escolhido, e
+# o formulário sempre manda um canal marcado. Canal inválido não invalida nicho e perfil.
 #
 # Trocar o nicho não muda agente que já existe: ele só muda pelo botão "Atualizar com a nova base". Lido por
 # Autonomia::Segmentos::Pacotes (#1550), que escolhe as palavras da conta pelo nicho e pelo perfil; o canal fica só
@@ -32,7 +33,7 @@ module Autonomia::Agents::Nicho
   LOG_TAG = '[Autonomia::Agents::Nicho]'
 
   # padrao? diz se o valor veio da instalação (a conta não escolheu, ou escolheu algo inválido).
-  # canal só vem preenchido com o perfil insurtech.
+  # canal: sempre preenchido na insurtech ("direto" quando não informado); nil nos outros perfis.
   Escolha = Data.define(:nicho, :perfil, :canal, :padrao) do
     def initialize(nicho:, perfil:, padrao:, canal: nil) = super
 
@@ -64,11 +65,11 @@ module Autonomia::Agents::Nicho
     Escolha.new(nicho: GERAL, perfil: nil, padrao: true)
   end
 
-  # "seguros:insurtech:direto" → [nicho, perfil, canal]; seguros sem perfil vira corretora, insurtech sem canal vira direto.
+  # "seguros:insurtech:direto" → [nicho, perfil, canal]; seguros sem perfil vira corretora. O canal que faltar é
+  # completado em canal_do, igual para a conta e para o padrão.
   def self.partes_do_padrao(bruto)
     nicho, perfil, canal = bruto.to_s.strip.split(':', 3)
-    perfil = perfil.presence || (PERFIL_PADRAO if nicho == SEGUROS)
-    [nicho, perfil, canal.presence || (CANAL_PADRAO if perfil == INSURTECH)]
+    [nicho, perfil.presence || (PERFIL_PADRAO if nicho == SEGUROS), canal]
   end
   private_class_method :partes_do_padrao
 
@@ -93,9 +94,11 @@ module Autonomia::Agents::Nicho
   end
   private_class_method :escolher
 
-  # Canal só existe na insurtech; fora da lista vira nil.
+  # Canal só existe na insurtech; sem canal ou fora da lista, vale o padrão (direto).
   def self.canal_do(perfil, canal)
-    canal.to_s if perfil == INSURTECH && CANAIS.include?(canal.to_s)
+    return unless perfil == INSURTECH
+
+    CANAIS.include?(canal.to_s) ? canal.to_s : CANAL_PADRAO
   end
   private_class_method :canal_do
 

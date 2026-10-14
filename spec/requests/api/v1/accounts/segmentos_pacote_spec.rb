@@ -49,6 +49,19 @@ RSpec.describe 'Pacote de tradução da conta nas requisições', type: :request
     end
   end
 
+  # Pedido do Multifunnel: o nome do funil vale só para o desfecho; card aberto segue o texto do idioma.
+  it 'exporta o nome do funil no card ganho e o texto do idioma no card aberto' do
+    account, admin, pipeline = conta_com_card_ganho('geral')
+    pipeline.update!(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'Contratado' }))
+    account.crm_cards.create!(pipeline: pipeline, stage: pipeline.stages.first, title: 'Seguro vida', status: :open)
+
+    get "/api/v1/accounts/#{account.id}/crm/cards/export", params: { pipeline_id: pipeline.id }, headers: auth_headers(admin)
+    planilha = Roo::Excelx.new(StringIO.new(response.body)).sheet(0)
+    linhas = (1..2).map { |i| planilha.cell(Crm::Cards::XlsxExport::HEADER_ROW + i, 4) }
+
+    expect(linhas).to contain_exactly('Contratado', I18n.t('crm.export.statuses.open', locale: :pt_BR))
+  end
+
   it 'exporta com o geral quando o interruptor está desligado' do
     seguros = conta_com_card_ganho('seguros', 'corretora')
 

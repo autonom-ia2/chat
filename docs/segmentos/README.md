@@ -21,6 +21,7 @@ A busca é por chave: a camada mais específica que tiver a chave vence; sem
 ela, a de cima; sem nenhuma, o catálogo geral. Pasta de tipo sem arquivo é
 normal: o tipo herda tudo de `seguros`.
 
+A insurtech sem canal informado vale "direto", na conta e no padrão da instalação.
 O canal da insurtech (direto, corretores, parceiros) fica guardado, mas não
 vira camada nesta fase.
 
