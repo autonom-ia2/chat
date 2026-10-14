@@ -15,6 +15,11 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     online
   end
 
+  # A trava da rodada é de sessão: sobrevive ao rollback do exemplo. Um exemplo que dubla o unlock (ou falha no meio)
+  # a deixava presa na conexão do ActiveRecord, e o spec seguinte no mesmo processo a via (booker_spec:300). Solta
+  # todas pelo execute, que nenhum exemplo dubla (a trava de sessão acumula: pegar duas vezes pede soltar duas).
+  after { ActiveRecord::Base.connection.execute('SELECT pg_advisory_unlock_all()') }
+
   def online(*users)
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return(users.to_h { |user| [user.id.to_s, 'online'] })
   end
@@ -176,6 +181,5 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
 
     expect(connection).to have_received(:disconnect!)
     expect(Rails.logger).to have_received(:error).with(/trava não confirmada/)
-    connection.select_value("SELECT pg_advisory_unlock(#{described_class::TRAVA_DA_RODADA})")
   end
 end
