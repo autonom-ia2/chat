@@ -107,3 +107,13 @@ cancellation and SuperAdmin-only pilot. No coverage waiver was added.
 Local `pnpm central:check` passes: 195 articles and 203 covered screens.
 Existing evidence warnings in older articles remain outside this change.
 Remote CI must be checked again at the documentation correction's new head.
+
+## Main advanced during remote CI
+
+Main advanced to `2e41fc5ae2` while the draft PR was being checked. Its CRM
+criteria, WhatsApp echo/result and queue-spec isolation changes were integrated
+unchanged. The only conflict was the generated Guide coverage report, resolved
+by running the generator, not by editing its output. The formats check and
+Central check pass. Sequential focused regressions pass: 172 Ruby examples and
+47 JavaScript tests. These ran only on the preserved isolated local fixtures;
+the larger dashboard build above predates this last upstream-only merge.
