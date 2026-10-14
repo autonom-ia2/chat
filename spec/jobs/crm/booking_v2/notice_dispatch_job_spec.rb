@@ -108,6 +108,42 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
       expect(Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed').count).to eq(1)
     end
 
+    # #1562: a mensagem 2 ("Parar avisos") do aviso com botão falhou depois, no provedor. A 1 saiu: o aviso fica sent
+    # (não vira failed nem é reenviado), ganha stop_part_failed e o responsável é avisado UMA vez, mesmo com o cron
+    # rodando de novo. A mensagem 2 de OUTRO aviso, ou a sem a marca, não conta. Pega quem confundisse a 2 com a 1.
+    it 'mensagem 2 do aviso com botão que falhou: aviso continua sent, marcado, e o responsável é avisado uma vez' do
+      split = sent_notice('booked', message_status: :sent)
+      other = sent_notice('rescheduled', message_status: :sent)
+      stop = lambda do |for_notice, part: 'stop'|
+        create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing, status: :failed,
+                         content_attributes: { crm_booking_notice: true, crm_booking_notice_part: part, crm_booking_notice_id: for_notice.id })
+      end
+      stop.call(split)
+      stop.call(other, part: 'other')
+      allow(Crm::BookingV2::Notices::Sender).to receive(:new)
+      stop_alerts = Crm::FollowUp.where(account_id: account.id).where("metadata->>'event' = ?", 'notice_stop_failed')
+
+      expect { 2.times { described_class.perform_now } }.not_to change(Message, :count)
+
+      expect(split.reload).to have_attributes(status: 'sent', error_code: 'stop_part_failed')
+      expect(other.reload).to have_attributes(status: 'sent', error_code: nil)
+      expect(stop_alerts.sole.metadata).to include('reason' => 'stop_part_failed', 'kind' => 'booked')
+      expect(failure_alerts).to be_empty
+      expect(Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed').count).to eq(1)
+    end
+
+    # #1562: se a mensagem 1 falhou, vale o delivery_failed de sempre (o aviso não saiu), com ou sem a 2.
+    it 'mensagem 1 que falhou continua delivery_failed, mesmo com a mensagem 2 falhando também' do
+      split = sent_notice('booked', message_status: :failed)
+      create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing, status: :failed,
+                       content_attributes: { crm_booking_notice: true, crm_booking_notice_part: 'stop', crm_booking_notice_id: split.id })
+
+      described_class.perform_now
+
+      expect(split.reload).to have_attributes(status: 'failed', error_code: 'delivery_failed')
+      expect(failure_alerts.count).to eq(1)
+    end
+
     it 'não reabre aviso enviado há mais de 2 horas' do
       old = sent_notice('booked', message_status: :failed, sent_at: 3.hours.ago)
 

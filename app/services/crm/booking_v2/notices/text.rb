@@ -19,6 +19,10 @@
 # (`#rich_message`) e o texto padrão sai sem a linha do link. Texto próprio que já põe `{{horario.link_gestao}}`
 # nunca leva botão (duplicaria o link; tirar a chave deixaria a frase pela metade). Sem botão, o texto que não tem o
 # link (próprio, sem a chave) ganha a linha fixa `manage_line` antes da linha de parar: o link chega sempre.
+#
+# "Parar avisos" como botão (#1562): com o botão (`#button?`), o aviso sai SEM a linha de parar e `#stop_message`
+# dá a mensagem 2, que o `Notices::Sender` cria logo depois, na mesma conversa: `stop_prompt` + botão "Parar avisos"
+# para `stop_url`. Sem o botão, nada muda: uma mensagem só, com a linha de parar no texto (RA-18 nos dois casos).
 class Crm::BookingV2::Notices::Text
   STOP_PARAM = '?stop_notices=1'.freeze
   TEAM_BOOKED_KIND = 'booked'.freeze
@@ -52,12 +56,26 @@ class Crm::BookingV2::Notices::Text
   end
 
   def to_s
-    "#{body}\n\n#{stop_line}"
+    button? ? body : "#{body}\n\n#{stop_line}"
   end
 
   # O `content_attributes.rich_message` do botão, ou nil quando a mensagem vai só em texto.
   def rich_message
     Crm::BookingV2::Notices::Button.rich_message(invite.url, kind: :notice, locale: locale) if button?
+  end
+
+  # A mensagem 2 do aviso com botão (#1562): `{ content:, rich_message: }` com o botão "Parar avisos", ou nil sem botão.
+  def stop_message
+    return unless button?
+
+    { content: I18n.t('crm.booking_v2.notices.stop_prompt', locale: locale),
+      rich_message: Crm::BookingV2::Notices::Button.rich_message(self.class.stop_url(invite), kind: :stop, locale: locale) }
+  end
+
+  # Corpo acima do limite do botão (`Notices::Button.fits?`; sem a linha de parar, que vai na mensagem 2): cai no texto,
+  # com a linha do link e a de parar.
+  def button?
+    @button && !own_link? && Crm::BookingV2::Notices::Button.fits?(custom_body || sentence)
   end
 
   # Depois do corpo de um modelo do canal API (que só tem variáveis de contato): dia e hora, link de gestão e a
@@ -80,11 +98,6 @@ class Crm::BookingV2::Notices::Text
     return custom_body || sentence if button?
 
     custom_body ? "#{custom_body}\n\n#{manage_line}" : "#{sentence} #{manage_line}"
-  end
-
-  # Corpo acima do limite do botão (`Notices::Button.fits?`, a linha de parar conta): cai no texto, com a linha do link.
-  def button?
-    @button && !own_link? && Crm::BookingV2::Notices::Button.fits?("#{custom_body || sentence}\n\n#{stop_line}")
   end
 
   # O texto próprio sai (não caiu no padrão) e já põe o link.

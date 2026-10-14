@@ -33,6 +33,8 @@ en:
         manage_line: "To confirm, change or cancel: %{link}"
         button_label: "See my appointment"
         stop_line: "To stop these messages: %{link}"
+        stop_prompt: "Don't want these reminders anymore?"
+        stop_button_label: "Stop reminders"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
       notice_templates:
         meta_failed: "Meta did not answer. Try again in a few minutes."
@@ -63,6 +65,7 @@ en:
         rescheduled: "%{name} moved the appointment to %{when}"
         rebooked: "%{name} booked again, for %{when}"
         notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
+        notice_stop_failed: "The WhatsApp reminder to %{name} was sent, but the message with the \"Stop reminders\" button was not. If the client wants to stop the reminders for %{when}, talk to them."
         reasons:
           no_whatsapp: "The client's number has no WhatsApp."
           waha_unavailable: "The unofficial WhatsApp did not answer: check that it is connected."

@@ -27,6 +27,12 @@
 #    a WAHA).
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
+# 8. Aviso com botão (#1562, `Notices::Text#button?`): logo depois da mensagem 1 (o aviso sem a linha de parar, com o
+#    botão "Ver meu horário"), a mensagem 2 (`Text#stop_message`, botão "Parar avisos"), na MESMA conversa, com o
+#    mesmo `Delivery` e o mesmo remetente, marcada `crm_booking_notice_part: 'stop'` + `crm_booking_notice_id`. O
+#    aviso continua UM só: `message_id` = a mensagem 1, e os tetos contam 1 aviso (contam avisos, não mensagens).
+#    Erro ao criar a 2: a 1 já saiu e não é refeita; o aviso fica `sent`, com `error_code: stop_part_failed`, e o
+#    responsável é avisado UMA vez (`AgentAlert` `notice_stop_failed`). Falha posterior da 2: `NoticeDispatchJob`.
 #
 # Pulado por motivo que exige ação (sem modelo, fora da janela, teto, sem caixa...) ou falha: registra e avisa o
 # responsável UMA vez por reunião. Nada aqui altera a reunião (J5-A4).
@@ -44,6 +50,9 @@ class Crm::BookingV2::Notices::Sender
   # 2 h depois do vencimento; o de 1 dia antes, até 6 h antes da reunião; o de 1 hora antes, até o início.
   WAHA_RETRY_AFTER_DUE = 2.hours
   WAHA_RETRY_DAY_BEFORE_MARGIN = 6.hours
+  # Mensagem 2 do aviso com botão (#1562): a marca dela e o código que fica no aviso `sent` quando ela não sai.
+  STOP_PART = 'stop'.freeze
+  STOP_PART_FAILED = 'stop_part_failed'.freeze
 
   def self.account_limit
     Integer(ENV.fetch(ACCOUNT_LIMIT_ENV, DEFAULT_ACCOUNT_LIMIT).to_s, exception: false) || DEFAULT_ACCOUNT_LIMIT
@@ -202,8 +211,17 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def deliver!(decision)
-    message = delivery(decision).perform
+    first, stop = send_notice!(decision)
+    deliver_stop!(decision, first, stop) if stop
+  end
+
+  # A mensagem 1 (a única, sem botão). Devolve [mensagem, mensagem 2 a criar ou nil]; nil quando o envio falhou.
+  def send_notice!(decision)
+    text = notice_text(decision)
+    stop = text.stop_message
+    message = notice_delivery(decision, text).perform
     notice.update!(status: :sent, sent_at: Time.current, message_id: message.id, skip_reason: nil, error_code: nil)
+    [message, stop]
   rescue StandardError => e
     # Erro do envio (provedor, validação da mensagem, conversa): registrado no aviso, no log e no tracker, e o
     # responsável é avisado; a reunião não muda. Não relança: o cron segue para o próximo aviso.
@@ -211,15 +229,40 @@ class Crm::BookingV2::Notices::Sender
     ChatwootExceptionTracker.new(e, account: meeting.account).capture_exception
     notice.update!(status: :failed, error_code: e.class.name.first(255))
     alert!
+    nil
   end
 
-  def delivery(decision)
+  def notice_text(decision)
     button = Crm::BookingV2::Notices::Button.allowed?(decision, profile.notice_inbox)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
-    Crm::BookingV2::Notices::Delivery.new(
-      decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
-      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message
-    )
+    Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
+  end
+
+  def notice_delivery(decision, text)
+    delivery(decision, content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message)
+  end
+
+  def delivery(decision, **message)
+    Crm::BookingV2::Notices::Delivery.new(decision: decision, inbox: profile.notice_inbox, contact: contact,
+                                          sender: notice_sender(decision), **message)
+  end
+
+  # A mensagem 2 (#1562) vai na conversa da mensagem 1. Erro aqui não desfaz o aviso: a 1 já foi criada e vai sair.
+  # Fica fora do `rescue` da mensagem 1: um erro até no registro da falha chega ao `NoticeDispatchJob`, que não mexe
+  # em aviso `sent`.
+  def deliver_stop!(decision, first, stop)
+    same_conversation = decision.dup.tap { |copy| copy.conversation = first.conversation }
+    delivery(same_conversation, content: stop[:content], rich_message: stop[:rich_message],
+                                marks: { crm_booking_notice_part: STOP_PART, crm_booking_notice_id: notice.id }).perform
+  rescue StandardError => e
+    stop_failed!(e)
+  end
+
+  # O aviso fica `sent` (a 1 saiu), marcado, e o responsável é avisado uma vez por reunião (`AgentAlert`).
+  def stop_failed!(error)
+    Rails.logger.error("CRM booking notice #{notice.id} stop part failed: #{error.class.name}")
+    ChatwootExceptionTracker.new(error, account: meeting.account).capture_exception
+    notice.update!(error_code: STOP_PART_FAILED)
+    Crm::BookingV2::Notices::AgentAlert.new(meeting, 'notice_stop_failed', { kind: notice.kind, reason: STOP_PART_FAILED }).perform
   end
 
   # Pelo WhatsApp Híbrido (#1349) o aviso automático sai sem remetente, para o roteador do Híbrido contar como

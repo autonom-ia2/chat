@@ -10,6 +10,8 @@
 #   aparece no aviso de tarefas do painel. Parar avisos só registra. Aviso que não saiu avisa UMA vez por reunião.
 #   O `metadata` leva o que o cartão do painel precisa para dizer o que houve sem parecer tarefa atrasada (#1291):
 #   `source`, `event`, o cliente, o horário e, no aviso que não saiu, o tipo do aviso e o motivo.
+# - `notice_stop_failed` (#1562): o aviso saiu, mas a mensagem 2 com o botão "Parar avisos" não. Mesma atividade do
+#   aviso que não saiu (`booking_notice_failed`, motivo `stop_part_failed`), título próprio e também UMA vez por reunião.
 #
 # Nunca altera a reunião (J5-A4).
 class Crm::BookingV2::Notices::AgentAlert
@@ -18,12 +20,13 @@ class Crm::BookingV2::Notices::AgentAlert
     'confirmed' => 'booking_client_confirmed', 'canceled' => 'booking_client_canceled',
     'rescheduled' => 'booking_client_rescheduled', 'rebooked' => 'booking_client_rebooked',
     'notice_failed' => 'booking_notice_failed',
+    'notice_stop_failed' => 'booking_notice_failed',
     'notices_stopped' => 'booking_notices_stopped'
   }.freeze
   SILENT = %w[notices_stopped].freeze
-  ONCE_PER_MEETING = %w[notice_failed].freeze
+  ONCE_PER_MEETING = %w[notice_failed notice_stop_failed].freeze
   # Eventos que não são ação do cliente: a atividade registra `by: 'system'`.
-  SYSTEM_EVENTS = %w[notice_failed].freeze
+  SYSTEM_EVENTS = %w[notice_failed notice_stop_failed].freeze
 
   def initialize(meeting, event, payload = {})
     @meeting = meeting
