@@ -190,6 +190,19 @@ RSpec.describe 'CRM calendar API', type: :request do
       expect(eventos({}, como: agente)['Conversa fechada']).to include('conversation_id' => nil, 'conversation_display_id' => nil)
     end
 
+    it 'passando do limite, deixa de fora os lembretes mais antigos, não os de hoje' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual')
+      %w[2026-10-02 2026-10-10 2026-10-14].each do |dia|
+        account.crm_follow_ups.create!(card: card, title: "Lembrete #{dia}", due_at: "#{dia}T15:00:00Z", timezone: 'UTC',
+                                       created_by: user)
+      end
+
+      titulos = eventos({ limit: 2 }).keys
+
+      expect(titulos).to eq(['Lembrete 2026-10-10', 'Lembrete 2026-10-14'])
+    end
+
     it 'manda o vencimento como dia inteiro, com a data UTC' do
       pipeline, stage = create_crm_pipeline(account: account, user: user)
       account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Vence dia 20', expected_close_at: '2026-10-20')

@@ -194,8 +194,10 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   # Acesso por funil (#1148, parte C): cada lista do calendário pré-carrega a visibilidade das conversas numa consulta só.
+  # Passando do limite, ficam de fora os mais antigos, não os de hoje e os próximos (#1568: o Meu dia busca um ano para
+  # trás para mostrar o que atrasou). A lista volta em ordem de data.
   def due_follow_ups
-    follow_ups = filtered_follow_ups.order(:due_at, :id).limit(limit).to_a
+    follow_ups = filtered_follow_ups.order(due_at: :desc, id: :desc).limit(limit).to_a.reverse
     conversation_visibility.preload(follow_ups.map(&:conversation))
     follow_ups
   end
