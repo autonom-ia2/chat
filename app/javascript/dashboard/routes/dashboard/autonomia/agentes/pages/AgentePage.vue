@@ -254,12 +254,17 @@ const tirarGavetaDaConsulta = () => {
   router.replace({ query: resto });
 };
 
+// Escolher o canal: atendendo, a gaveta de onde e quando; parado, a de voltar a atender (escolhe a caixa e
+// liga na mesma ação). #1525 — vale também para o :tab channels da URL, por onde o módulo de Cotação e o
+// cartão da lista trazem a Lia que nasceu parada: cair na gaveta só de leitura pediria mais um clique.
+const gavetaDoCanal = () => (atendendo.value ? GAVETA.ONDE : GAVETA.VOLTAR);
+
 const abrirDaUrl = () => {
   if (!pronto.value || !props.gaveta || props.gaveta === gavetaDaUrlAberta) {
     return;
   }
   gavetaDaUrlAberta = props.gaveta;
-  abrir(props.gaveta);
+  abrir(props.gaveta === GAVETA.ONDE ? gavetaDoCanal() : props.gaveta);
   tirarGavetaDaConsulta();
 };
 
@@ -363,8 +368,7 @@ const escrever = () => {
   else dialogoEscrever.value?.abrir();
 };
 
-const escolherCanal = () =>
-  abrir(atendendo.value ? GAVETA.ONDE : GAVETA.VOLTAR);
+const escolherCanal = () => abrir(gavetaDoCanal());
 
 // #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
 // herói não continuar dizendo "Atendendo". A releitura é só para a tela; falhando, a próxima acerta.

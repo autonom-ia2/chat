@@ -5,6 +5,9 @@ if @agent
     json.name @agent.name
     json.agent_type @agent.agent_type
     json.enabled @agent.enabled
+    # #1525 — nasce parado e sem canal: a aba convida a escolher onde ele atende. Mesmo predicado da lista (`_agent`).
+    json.status @agent.status
+    json.tem_onde_trabalhar @agent.tem_onde_trabalhar?
     # Os ramos que este agente sabe cotar. Um agente sem especialista responderia sobre seguro e não
     # cotaria — a tela precisa poder mostrar isso. Só os que atendem nesta conta: residencial existe em todo
     # agente, mas só cota onde a conexão tem o ramo (`Builder.disponivel?`).

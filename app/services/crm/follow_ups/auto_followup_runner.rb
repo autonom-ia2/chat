@@ -361,7 +361,7 @@ module Crm
       # MARKETING HSMs or Channel::Api campaign templates). Empty in free_form mode
       # and whenever the inbox has no eligible templates.
       def template_candidates
-        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation).perform
+        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation, card: @card).perform
       end
 
       # Closure/satisfaction detected by the brain forces a hard stop of the whole
@@ -477,7 +477,8 @@ module Crm
         else
           metadata['template_name'] = candidate[:name].to_s
           metadata['template_language'] = candidate[:language].presence || 'pt_BR'
-          metadata['template_processed_params'] = stringify_template_variables(composition['template_variables'])
+          # O dado real do card (#1336) vence o que a IA escreveu na mesma posição.
+          metadata['template_processed_params'] = stringify_template_variables(composition['template_variables']).merge(candidate[:filled].to_h)
           metadata.delete('whatsapp_api_message_template_id')
         end
       end

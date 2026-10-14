@@ -88,4 +88,46 @@ RSpec.describe Contacts::OptOutInheritance do
 
     expect(account.contacts.find_by!(phone_number: '+5531999997050').opt_out_source).to eq('prospecting')
   end
+
+  describe 'pedido de parar na resposta a campanha vale pelo número (#1449)' do
+    def asked_to_stop(phone)
+      contact = account.contacts.create!(name: 'Pediu para parar', phone_number: phone)
+      Contacts::CampaignReplyOptOut.mark!(contact)
+      contact
+    end
+
+    it 'o contato que trocou de número continua recusado, e o contato novo com o número antigo herda a recusa' do
+      original = asked_to_stop('+5531999997060')
+      original.update!(phone_number: '+5531999997061')
+
+      contact = inheriting { account.contacts.create!(name: 'Mesmo número', phone_number: '+5531999997060') }
+
+      expect(original.reload.opt_out_source).to eq('campaign_reply')
+      expect(contact.reload.opt_out_source).to eq('campaign_reply')
+    end
+
+    it 'contato que passa a ter o número herda; quem só herdou não leva a recusa para o número novo dele' do
+      original = asked_to_stop('+5531999997070')
+      original.update!(phone_number: '+5531999997071')
+      heir = account.contacts.create!(name: 'Antes', phone_number: '+5531999997072')
+      inheriting { heir.update!(phone_number: '+5531999997070') }
+      expect(heir.reload.opt_out_source).to eq('campaign_reply')
+
+      heir.update!(phone_number: '+5531999997073')
+      heir.update!(phone_number: '+5531999997074')
+      newcomer = inheriting { account.contacts.create!(name: 'Número do herdeiro', phone_number: '+5531999997073') }
+
+      expect(newcomer.reload).not_to be_opted_out
+    end
+
+    it 'recusa manual no mesmo número não passa adiante' do
+      manual = account.contacts.create!(name: 'Manual', phone_number: '+5531999997080')
+      manual.opt_out!(source: 'manual')
+      manual.update!(phone_number: '+5531999997081')
+
+      contact = inheriting { account.contacts.create!(name: 'Novo', phone_number: '+5531999997080') }
+
+      expect(contact.reload).not_to be_opted_out
+    end
+  end
 end

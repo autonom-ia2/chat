@@ -177,3 +177,35 @@ describe('ContactOptOutSection', () => {
     expect(alert).toHaveBeenCalledWith('Aqui só se desfaz a recusa manual.');
   });
 });
+
+describe('ContactOptOutSection: pedido de parar na resposta a campanha (#1449)', () => {
+  beforeEach(() => {
+    dispatch.mockReset();
+    alert.mockReset();
+  });
+
+  it('mostra a origem, explica que a IA reconheceu e oferece desfazer', async () => {
+    dispatch.mockResolvedValue({ id: 7, opted_out_at: null });
+    const wrapper = mountSection({
+      id: 7,
+      optedOutAt: 1790000000,
+      optOutSource: 'campaign_reply',
+    });
+
+    expect(wrapper.get('[data-test="opt-out-origin-hint"]').text()).toBe(
+      `${PREFIX}.ORIGIN_HINT.CAMPAIGN_REPLY`
+    );
+    expect(wrapper.get('[data-test="opt-out-action"]').text()).toContain(
+      `${PREFIX}.UNDO`
+    );
+
+    await wrapper.get('[data-test="confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(dispatch).toHaveBeenCalledWith('contacts/setOptOut', {
+      id: 7,
+      optedOut: false,
+    });
+    expect(alert).toHaveBeenCalledWith(`${PREFIX}.API.UNDO_SUCCESS`);
+  });
+});

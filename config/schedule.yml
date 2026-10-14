@@ -93,6 +93,12 @@ crm_follow_up_due_job:
   class: 'Crm::FollowUpDueJob'
   queue: scheduled_jobs
 
+# #1460: a próxima vez de cada lembrete que repete; a cada 5 minutos, flag checada dentro do job
+crm_follow_up_series_materializer_job:
+  cron: '*/5 * * * *'
+  class: 'Crm::FollowUpSeriesMaterializerJob'
+  queue: scheduled_jobs
+
 # Agendamento WhatsApp-first (#1192): avisos no WhatsApp vencidos (ao marcar, 1 dia antes, 1 hora antes). Sai sem
 # consultar com CRM_CALENDAR_MEETINGS_ENABLED desligado; a flag da conta é conferida no envio.
 crm_booking_v2_notice_dispatch_job:
@@ -332,3 +338,10 @@ crm_meta_ads_advisor_prune_job:
   cron: '30 8 * * *'
   class: 'Crm::MetaAds::Advisor::PruneJob'
   queue: low
+
+# Proxy por número de WhatsApp não oficial (#1516): IP que saiu da lista da Webshare (ou mudou de credencial) é trocado
+# no motor, no máximo 5 sessões por rodada, a cada 10 minutos. Sem WHATSAPP_PROXY_ENABLED=true não faz nada.
+whatsapp_proxy_reconcile_job:
+  cron: '7,17,27,37,47,57 * * * *'
+  class: 'WhatsappProxy::ReconcileJob'
+  queue: scheduled_jobs

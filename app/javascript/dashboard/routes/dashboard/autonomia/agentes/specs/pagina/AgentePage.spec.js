@@ -500,7 +500,7 @@ describe('AgentePage', () => {
       await clicar('[role="switch"]');
       expect(no('[role="dialog"]').textContent).toContain('ONDE_QUANDO.TITULO');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       expect(store.dispatch).not.toHaveBeenCalledWith(
         'autonomiaAgents/update',
@@ -547,7 +547,7 @@ describe('AgentePage', () => {
       );
       await clicar('[data-escolher-canal]');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       wrapper.unmount();
     });
@@ -657,6 +657,42 @@ describe('AgentePage', () => {
       expect(no('[role="dialog"]').textContent).toContain('PAGINA.SABE.TITULO');
       expect(router.replace).toHaveBeenCalledWith({ query: { origem: 'x' } });
       delete rota.query;
+      wrapper.unmount();
+    });
+
+    // #1525 — o módulo de Cotação e o cartão da lista chegam por /channels com a Lia parada e sem canal:
+    // abre a escolha de canal que liga (a mesma do "Escolher canal"), não a gaveta só de leitura.
+    it('opens the channel choice that starts answering for a stopped agent on the old channels tab', async () => {
+      preparar({
+        agente: bia({
+          agent_type: 'insurance_quote',
+          status: 'paused',
+          enabled: false,
+          channels_count: 0,
+          tem_onde_trabalhar: false,
+        }),
+        canais: [{ inbox_id: 2, name: 'Instagram', occupied_by: null }],
+      });
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
+        'PAGINA.ONDE.COMECAR'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps where and when for an answering agent on the old channels tab', async () => {
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      // A gaveta de onde e quando no modo 'alterar': o título dela (o modo 'voltar' usa ONDE_QUANDO.TITULO)
+      // e o "Salvar", nunca o começar/voltar a atender.
+      const gaveta = no('[role="dialog"]').textContent;
+      expect(gaveta).toContain('PAGINA.ONDE.TITULO');
+      expect(gaveta).not.toContain('ONDE_QUANDO.TITULO');
+      const confirmar = no('[role="dialog"] [data-confirmar]').textContent;
+      expect(confirmar).toContain('PAGINA.ONDE.SALVAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.VOLTAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.COMECAR');
       wrapper.unmount();
     });
 

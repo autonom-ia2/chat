@@ -603,14 +603,19 @@
         "FOTO_ENVIADA": "Foto enviada"
       },
       "MENU": {
-        "AGENTES": "Agentes",
-        "CRIAR_AGENTE": "Criar agente"
+        "AGENTES": "Agentes"
       },
       "STATUS": {
         "ATENDENDO": "Atendendo",
         "PARADO": "Parado",
         "FALTA_TERMINAR": "Falta terminar",
         "COTACAO": "Cotação"
+      },
+      "ESCOLHER": {
+        "TITULO": "Criar agente",
+        "TEXTO": "Escolha um modelo pronto. Depois você conta do seu jeito e escolhe o canal no fim.",
+        "OUTRO_TIPO": "Precisa de outro tipo?",
+        "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima."
       },
       "MODELOS": {
         "ROTULO": "Modelos prontos",
@@ -669,7 +674,7 @@
         "PARADO": "Não está respondendo ninguém agora.",
         "PARADO_SEM_CANAL": "Ainda não está em nenhum canal.",
         "RASCUNHO": "Você começou e não terminou.",
-        "COTACAO": "Abre no módulo de cotação",
+        "COTACAO": "Cota seguros com os seus clientes",
         "CONTINUAR": "Continuar",
         "CONTINUAR_ARIA": "Continuar {nome}",
         "MAIS_OPCOES": "Mais opções de {nome}",
@@ -1222,6 +1227,7 @@
           "SEM_CANAL": "Você ainda não conectou nenhum canal.",
           "PARADO": "Para trocar o canal, {nome} precisa voltar a atender.",
           "VOLTAR": "Voltar a atender",
+          "COMECAR": "Começar a atender",
           "TROCAR": "Trocar e começar a atender",
           "VOLTAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
           "VOLTOU": "Quem mandar mensagem no {canal} agora fala com {nome}.",

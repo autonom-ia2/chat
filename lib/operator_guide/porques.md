@@ -382,11 +382,11 @@
 ### abrir_o_crm_kanban_e_filtrar_oportunidades
 - titulo: Abrir o CRM Kanban e filtrar oportunidades
 - rota: crm_kanban_index
-- intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Como alterno entre Kanban, lista e calendário?"
+- intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Onde vejo os atendimentos resolvidos ou cancelados?"; "Como alterno entre Kanban, lista e calendário?"
 - onde_fica: Sidebar > CRM > CRM Kanban
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, atenção da IA, responsável, time, caixa de entrada, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, atenção da IA, responsável, time, caixa de entrada, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar o que fechou (**ganhas/perdidas** num funil de Vender, **resolvidos/cancelados** num funil de Atender): use a visão **Lista** com filtros e veja os números no **Dashboard CRM**.
+- gotchas: fechar o card (Ganhou/Perdeu ou Resolvido/Cancelado) define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - highlight: `crm-filters`
 
 ### criar_funis_estagios_e_conectar_caixas_ao_crm
@@ -396,8 +396,8 @@
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
 - onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar caixas de entrada
 - pre_requisitos: caixas de entrada já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa de entrada e escolha a etapa de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar caixas de entrada, ligar o CRM na caixa de entrada, escolher o funil e a etapa de entrada e salvar.
-- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
+- passos: Ao criar, responda primeiro **Para que serve este funil?** (**Vender** ou **Atender**) e escolha um modelo pronto. No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios (meta e anúncios só num funil de Vender) e, no fim, Caixas de entrada. Adicione cada caixa de entrada e escolha a etapa de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar caixas de entrada, ligar o CRM na caixa de entrada, escolher o funil e a etapa de entrada e salvar.
+- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; Anúncios só existe em funil de Vender; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - highlight: `crm-new-pipeline`
 
 ### ver_caixas_no_crm
@@ -422,9 +422,9 @@
 - titulo: Criar card ou oportunidade no CRM
 - rota: crm_kanban_index
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade
+- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade (num funil de Atender, o botão se chama Novo atendimento)
 - pre_requisitos: CRM habilitado e permissão de criar oportunidades; funil e etapa disponíveis. Contato e empresa são opcionais.
-- passos: Clique em **Nova oportunidade**; em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o negócio** (Passo 2 de 2), escreva o **Nome do negócio** (único obrigatório), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
+- passos: Clique em **Nova oportunidade** (ou **Novo atendimento**, num funil de Atender); em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o negócio** (Passo 2 de 2), escreva o **Nome do negócio** (único obrigatório), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
 - gotchas: os cadastros são compartilhados com Relacionamentos, não cópias; reutilizar existente não altera a pessoa ou empresa; identidade/domínio repetidos pedem escolha explícita, nomes iguais não causam fusão; erro de gravação conserva o preenchimento; repetir a mesma solicitação recupera a oportunidade confirmada. Cards sem conversa podem ser ocultados pelo filtro vinculado; a caixa influencia a visibilidade para agentes.
 - highlight: `crm-new-card`
 
@@ -440,7 +440,7 @@
 ### consultar_oportunidades_na_ficha_do_contato
 - titulo: Consultar oportunidades na ficha do contato
 - rota: contacts_edit
-- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"
+- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"; "Quais atendimentos este contato já teve?"
 - onde_fica: Relacionamentos > Contatos > abrir contato > Acompanhamento > Oportunidades
 - pre_requisitos: Relacionamentos e CRM habilitados; permissão de visualizar CRM e acesso ao contato. Cada oportunidade respeita também sua visibilidade no CRM.
 - passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
@@ -452,17 +452,26 @@
 - intent: "Como marco que este contato já é cliente?"; "Desde quando ele é cliente?"; "Por que este lead virou cliente?"
 - onde_fica: Relacionamentos > Contatos > abrir contato > seção **Cliente**, abaixo de **Atualizar contato**
 - pre_requisitos: acesso para editar o contato.
-- passos: O contato vira cliente sozinho quando um card dele é ganho num funil que conta como venda. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
-- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Resolver um card de funil que não é de venda não promove. Desfazer volta o contato para lead e não mexe em cards nem conversas.
+- passos: O contato vira cliente sozinho quando um card dele é ganho num funil de Vender. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
+- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Fechar um card num funil de Atender (Resolvido ou Cancelado) não faz o contato virar cliente; mover esse card para um funil de Vender também não: ele entra lá Aberto. Desfazer volta o contato para lead e não mexe em cards nem conversas.
 
 ### mover_card_ganhar_perder_ou_reabrir_oportunidade
-- titulo: Mover card, ganhar, perder ou reabrir oportunidade
+- titulo: Mover card, ganhar, perder, resolver, cancelar ou reabrir
 - rota: crm_kanban_index
-- intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"
+- intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"; "Como marco um atendimento como resolvido?"; "Como cancelo um atendimento?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
 - pre_requisitos: card existente em funil ativo.
-- passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Negócio**; quem cuida muda na linha "Fulano cuida deste cliente" do mesmo cartão, com **Salvar** no rodapé; para fechar, use **Ganhou** ou **Perdeu** na faixa do topo do card; informe o valor (**Marcar como ganho**) ou o motivo (**Marcar como perdido**); para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
-- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa; em funil com "Fechar com sucesso aqui conta como venda" desligado (Editar funil), os botões fecham como Resolvido/Cancelado (ou o nome que o funil der), não somam em vendas nem avisam anúncios.
+- passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Negócio** (num funil de Atender, cartão **Assunto**); quem cuida muda na mesma linha "Fulano cuida deste cliente", com **Salvar** no rodapé. Para fechar, use os botões da faixa do topo do card. Num funil de Vender: **Ganhou** (informe o valor e clique em **Marcar como ganho**) ou **Perdeu** (escolha o motivo e clique em **Marcar como perdido**). Num funil de Atender: **Resolvido** ou **Cancelado** (com motivo de cancelamento de atendimento); não pede valor. No modelo Cobrança, os botões são **Pago** e **Cancelado**. Para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
+- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder, cancelar e arquivar não deletam contato nem conversa; Resolvido e Cancelado não somam em vendas nem avisam anúncios; card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); o tipo do funil (Vender ou Atender) muda em Editar funil > Para que serve > Alterar.
+
+### escolher_se_o_funil_e_de_vender_ou_de_atender
+- titulo: Escolher se o funil é de Vender ou de Atender
+- rota: crm_kanban_index
+- intent: "Como faço um funil de suporte?"; "Como faço um funil de pós-venda ou de cobrança?"; "Qual a diferença entre Vender e Atender?"; "Este funil conta como venda?"; "Como mudo o funil para atendimento?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Criar funil (primeira pergunta); num funil que já existe, Configurar > Editar funil > Para que serve > Alterar
+- pre_requisitos: permissão de gerenciar funis.
+- passos: Ao criar o funil, responda **Para que serve este funil?**. **Vender** é para conquistar um cliente novo: o card termina em Ganhou ou Perdeu, tem valor, entra na meta do mês e pode avisar os Anúncios. **Atender** é para resolver algo para quem já é cliente: o card termina em Resolvido ou Cancelado, sem valor, sem meta e sem Anúncios. Em Atender, escolha um modelo pronto: **Suporte**, **Pós-venda**, **Cobrança** ou **Agendamento**. Num funil que já existe, abra **Editar funil**; o primeiro cartão do resumo é **Para que serve**; clique em **Alterar**, escolha Vender ou Atender e salve.
+- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Nova oportunidade e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
 
 ### criar_follow_ups_e_lembretes_no_crm
 - titulo: Criar follow-ups e lembretes no CRM
@@ -496,11 +505,11 @@
 ### ver_dashboard_crm_e_metricas_de_funil
 - titulo: Ver dashboard CRM e métricas de funil
 - rota: crm_dashboard_index
-- intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"
+- intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"; "Quantos atendimentos resolvemos?"
 - onde_fica: Sidebar > CRM > CRM Dashboard
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
-- passos: Abra CRM Dashboard; selecione funil; escolha período; revise KPIs, funil, ganho/perdido, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram.
-- gotchas: moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
+- passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, ganhos, perdidos, valores e meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
 
 ### usar_calendario_crm_e_agendar_reuniao
 - titulo: Usar calendário CRM e agendar reunião
@@ -890,6 +899,15 @@
 - passos: Escolha atuação Interna quando o agente for copiloto da equipe; escolha Sem conhecimento se ele deve partir só da conversa guiada; selecione o tipo ou "Outros"; responda ao construtor; finalize para revisar; abra o painel para testar.
 - gotchas: agente interno não se conecta a caixa de entrada e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar as transferências para humano por falta de conhecimento.
 
+### escolher_o_tipo_ao_criar_agente
+- titulo: Escolher como começar um agente novo
+- rota: autonomia_agents_builder
+- intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"
+- onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular ou Ver modelos prontos)
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); administrador ou função com autonomia_manage.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer comprar ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
+- gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes sai sem criar nada; quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
+
 ### atualizar_conhecimento_e_fontes_do_agente
 - titulo: Atualizar conhecimento e fontes do agente
 - rota: autonomia_agent_panel
@@ -1120,7 +1138,7 @@
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin` para analisar, aceitar, dispensar e atualizar resumo; custom role apenas com `crm_view` pode ser orientada a visualizar o card, mas nao a executar acoes de IA.
 - pre_requisitos: card existente; para resumo, card precisa estar vinculado a uma conversa visivel ao usuario.
 - passos: 1. Abra o card; 2. Em Próximo passo, leia "Lendo a conversa, achamos que..." (quando outra coisa é mais urgente, a sugestão vira uma linha no cartão Negócio); 3. Clique em **Mover para** a etapa sugerida para aceitar, ou em **Deixar como está** para dispensar; 4. Para pedir nova leitura, no cartão Negócio clique na linha "Etapa X, a Nª de N" e, em **Leitura da conversa**, clique em **Ler a conversa de novo**; 5. O resumo da conversa aparece em 2 linhas no cartão Conversa; para ver inteiro e regenerar, clique em "N conversas" e use **Atualizar** na tela Conversas.
-- gotchas: o card nao tem mais paineis nem abas de IA; abaixo do limiar a tela diz "A leitura não teve certeza de uma etapa melhor."; sem sugestao, "A leitura não achou nada para mudar."; resumo nao aparece para card sem conversa ("Nenhuma conversa ligada a este cliente."); aceitar sugestao move o card de etapa; Mover e Deixar como está pedem permissao de IA do CRM e poder mudar o card.
+- gotchas: num funil de Atender o cartao Negocio se chama **Assunto** e mostra a prioridade e ha quanto tempo o pedido esta aberto, sem valor; o card nao tem mais paineis nem abas de IA; abaixo do limiar a tela diz "A leitura não teve certeza de uma etapa melhor."; sem sugestao, "A leitura não achou nada para mudar."; resumo nao aparece para card sem conversa ("Nenhuma conversa ligada a este cliente."); aceitar sugestao move o card de etapa; Mover e Deixar como está pedem permissao de IA do CRM e poder mudar o card.
 
 ### conectar_ou_autorizar_calendario_em_uma_caixa_de_e_mail
 - titulo: Conectar ou autorizar calendario em uma caixa de e-mail
@@ -1173,7 +1191,7 @@
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
 - passos: 1. Abra CRM Kanban; 2. Clique em Configurar caixas de entrada; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
-- gotchas: card automatico cria card para todo e-mail, inclusive os que nao sao lead (newsletter, fornecedor, aviso de sistema): numa caixa de e-mail que recebe de tudo, o funil se enche de card que nao e venda; nesse caso o caminho e desligar o card automatico da caixa e criar o card por automacao com uma condicao que separe o que e lead (por exemplo, o remetente do formulario do site); se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
+- gotchas: card automatico cria card para todo e-mail, inclusive os que nao sao lead (newsletter, fornecedor, aviso de sistema): numa caixa de e-mail que recebe de tudo, o funil se enche de card que nao e de cliente; nesse caso o caminho e desligar o card automatico da caixa e criar o card por automacao com uma condicao que separe o que e lead (por exemplo, o remetente do formulario do site); se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
 - highlight: `crm-configure-inboxes`
 
 ### criar_automacoes_por_etapa_do_funil

@@ -54,6 +54,19 @@ class Autonomia::Guide::Entrega
     end
   end
 
+  # Alerta operacional do proxy do WhatsApp não oficial (#1516) para os administradores da conta da PLATAFORMA
+  # (WHATSAPP_PROXY_ALERT_ACCOUNT_ID). `detalhes` já vem higienizado (nº de caixa/conta, plano, IP mascarado).
+  # Um por código e assunto por hora: a chave leva a hora.
+  def whatsapp_proxy!(codigo, detalhes, urgente:)
+    marca = Digest::SHA256.hexdigest(detalhes.to_json).first(16)
+    hora = @agora.beginning_of_hour.to_i
+    administradores.find_each do |user|
+      entregar(user, chave: "whatsapp_proxy:#{user.id}:#{codigo}:#{marca}:#{hora}", gravidade: urgente ? AVISO::URGENTE : 'agir',
+                     sinal: detalhes.slice(:caixa, :conta).transform_keys(&:to_s).select { |_chave, valor| valor.is_a?(Numeric) },
+                     texto: @texto.whatsapp_proxy(codigo, detalhes))
+    end
+  end
+
   # O resumo dos adiados de dias anteriores: um por pessoa, no primeiro pulso do dia.
   def resumir_adiados!
     adiados = AVISO.where(account: @account, estado: AVISO::ADIADO).where(created_at: ...@agora.beginning_of_day).includes(:user)

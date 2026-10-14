@@ -377,3 +377,12 @@
   display_name: Nova conversa em gaveta (para quem, por onde, mensagem e prévia)
   enabled: true
   column: feature_flags_ext_1
+
+# Follow-up de IA com dados reais (#1336, épico #1320). Bit 21 (2097152), LOGO ABAIXO de `nova_conversa_tela`
+# (#1459, bit 20). Fora das 24 h, a variável do modelo que o perfil (`WhatsappTemplateProfile#fields`) liga a uma chave
+# do catálogo (`negocio.valor`, `negocio.prazo`, `negocio.responsavel`, `cliente.*`…) vai com o dado do card, e o
+# modelo cujo campo ligado não tem dado no card não é oferecido à IA. Desligada (padrão): a IA preenche tudo, como antes.
+- name: followup_template_real_values
+  display_name: Follow-up de IA com dados reais do card nos modelos
+  enabled: false
+  column: feature_flags_ext_1
