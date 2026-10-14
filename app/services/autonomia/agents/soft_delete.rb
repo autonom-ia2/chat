@@ -28,6 +28,7 @@ class Autonomia::Agents::SoftDelete
 
   def archive_inbox_links!(deleted_at)
     @agent.agent_inboxes.kept.find_each do |link|
+      link.soltar_areas_da_caixa! # #1433: a porta sai, as áreas da caixa saem antes
       link.sync_mirror!(operating: false)
       # Only the live routing join is removed. Keep the bot (historical message sender)
       # and the archived AgentInbox (agent, inbox and bot IDs) for recovery.

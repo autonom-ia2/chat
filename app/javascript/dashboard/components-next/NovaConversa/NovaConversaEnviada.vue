@@ -13,6 +13,9 @@ defineProps({
   chaveDoCanal: { type: String, default: 'OUTRO' },
   caixa: { type: String, default: '' },
   endereco: { type: String, default: '' },
+  // #1505 — o número da conversa em que a mensagem entrou, quando ela já
+  // existia.
+  numero: { type: Number, default: null },
 });
 </script>
 
@@ -47,6 +50,13 @@ defineProps({
       class="mb-0 text-center text-[0.9375rem] text-n-slate-11"
     >
       {{ $t(`NOVA_CONVERSA.ENVIADA.PELO.${chaveDoCanal}`, { caixa }) }}
+    </p>
+    <p
+      v-if="numero"
+      data-nova-conversa-enviada-na-conversa
+      class="mb-0 text-center text-[0.9375rem] text-n-slate-11"
+    >
+      {{ $t('NOVA_CONVERSA.ENVIADA.NA_CONVERSA', { numero }) }}
     </p>
   </div>
 </template>

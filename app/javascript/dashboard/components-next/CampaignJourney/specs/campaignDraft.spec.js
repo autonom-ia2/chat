@@ -56,6 +56,8 @@ describe('journeyEntry with a template', () => {
         channel: 'whatsapp_official',
         inboxId: 7,
         templateId: '1001',
+        // #1465: outro modelo começa sem o que foi escolhido para o anterior (cupom, arquivos).
+        formato: {},
         step: 1,
       },
     });

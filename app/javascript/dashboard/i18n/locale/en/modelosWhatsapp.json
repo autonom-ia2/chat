@@ -736,19 +736,43 @@
         "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
         "CARTOES": "Photos of the {n} cards",
         "CARTAO": "Card {n}",
-        "CARTAO_GUARDADO": "The photo approved with the template goes: {arquivo}",
-        "CARTAO_SEM_ARQUIVO_FOTO": "Choose the photo for this card (JPG or PNG, up to 5 MB).",
-        "CARTAO_SEM_ARQUIVO_VIDEO": "Choose the video for this card (MP4, up to 16 MB).",
-        "CARTAO_VOLTAR": "Use the approved one",
         "CATALOGO": "The button opens your WhatsApp catalog. The photo of the first product shows at the top of the message.",
         "FORMULARIO": "Whoever taps “{botao}” opens the form linked to this template.",
-        "CARTAO_ESCOLHER_FOTO": "Choose photo",
-        "CARTAO_ESCOLHER_VIDEO": "Choose video",
-        "CARTAO_TROCAR_FOTO": "Change photo",
-        "CARTAO_TROCAR_VIDEO": "Change video",
-        "CARTAO_ESCOLHIDO": "The file you chose goes: {arquivo}",
-        "CARTAO_ENVIANDO": "Uploading {arquivo}…",
-        "CARTAO_ERRO": "The file could not be uploaded. Try again.",
+        "TOPO": {
+          "foto": "Photo at the top",
+          "video": "Video at the top",
+          "documento": "Document at the top"
+        },
+        "ARQUIVO": {
+          "GUARDADO": {
+            "foto": "The photo approved with the template goes: {arquivo}",
+            "video": "The video approved with the template goes: {arquivo}",
+            "documento": "The document approved with the template goes: {arquivo}"
+          },
+          "SEM_ARQUIVO": {
+            "foto": "Choose the photo (JPG or PNG, up to 5 MB).",
+            "video": "Choose the video (MP4, up to 16 MB).",
+            "documento": "Choose the document (PDF, up to 100 MB)."
+          },
+          "ESCOLHER": {
+            "foto": "Choose photo",
+            "video": "Choose video",
+            "documento": "Choose document"
+          },
+          "TROCAR": {
+            "foto": "Change photo",
+            "video": "Change video",
+            "documento": "Change document"
+          },
+          "VOLTAR": {
+            "foto": "Use the approved one",
+            "video": "Use the approved one",
+            "documento": "Use the approved one"
+          },
+          "ESCOLHIDO": "The file you chose goes: {arquivo}",
+          "ENVIANDO": "Uploading {arquivo}…",
+          "ERRO": "The file could not be uploaded. Try again."
+        },
         "CUPOM_VAZIO": "Type the coupon code your customers will use.",
         "CUPOM_EXEMPLO": "E.g. {exemplo}"
       },

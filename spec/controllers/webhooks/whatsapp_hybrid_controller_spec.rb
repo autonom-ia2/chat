@@ -38,6 +38,20 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
       )
   end
 
+  it 'passes the new-conversations limit the engine sends in me.reachoutTimelock (chat#1486)' do
+    limited = JSON.parse(body).merge('me' => { 'id' => '5511999993846@c.us', 'pushName' => 'Loja', 'reachoutTimelock' => {
+                                       'enforcementType' => 'RESTRICT_ALL_COMPANIONS', 'isActive' => true,
+                                       'timeEnforcementEnds' => 1_791_000_000, 'extra' => 'x'
+                                     } }).to_json
+
+    expect { post_signed(limited, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', limited)) }
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(
+        connection.id, 'session.status',
+        { 'status' => 'FAILED', 'me' => { 'id' => '5511999993846@c.us' },
+          'timelock' => { 'enforcementType' => 'RESTRICT_ALL_COMPANIONS', 'isActive' => true, 'timeEnforcementEnds' => 1_791_000_000 } }
+      )
+  end
+
   it 'applies a replayed event only once' do
     signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
     post_signed(body, signature)

@@ -28,6 +28,8 @@ const props = defineProps({
   podeConectarCanal: { type: Boolean, default: false },
   linkConectarCanal: { type: String, default: '' },
   celular: { type: Boolean, default: false },
+  // Copiloto da equipe (#1494): o teste é de alguém da equipe e o agente não responde clientes.
+  interno: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -53,16 +55,22 @@ watch(
 );
 
 // A última parte da resposta traz `passaria` quando o agente passaria a conversa para a equipe:
-// a faixa entra logo depois dela.
+// a faixa entra logo depois dela. O copiloto já fala com a equipe: sem faixa, e quem pergunta é
+// alguém da equipe, não um cliente.
 const celularMensagens = computed(() =>
-  props.mensagens.flatMap(mensagem =>
-    mensagem.passaria
+  props.mensagens.flatMap(mensagem => {
+    if (props.interno) {
+      return [
+        mensagem.de === 'cliente' ? { ...mensagem, de: 'equipe' } : mensagem,
+      ];
+    }
+    return mensagem.passaria
       ? [
           mensagem,
           { de: 'aviso', texto: t(`${NS}.PASSARIA`, { nome: props.nome }) },
         ]
-      : [mensagem]
-  )
+      : [mensagem];
+  })
 );
 
 const textosDasPerguntas = computed(() =>
@@ -79,11 +87,13 @@ const podeDizerErrado = computed(
     ultima.value?.de === 'agente'
 );
 
-const estadoDoCabecalho = computed(() =>
-  props.digitando
-    ? t(`${NS}.ESCREVENDO`, { nome: props.nome })
-    : t(`${NS}.ATENDIDO_POR`, { nome: props.nome })
-);
+const estadoDoCabecalho = computed(() => {
+  const nome = { nome: props.nome };
+  if (props.digitando) return t(`${NS}.ESCREVENDO`, nome);
+  return props.interno
+    ? t(`${NS}.AJUDA_DA_EQUIPE`, nome)
+    : t(`${NS}.ATENDIDO_POR`, nome);
+});
 
 const erro = computed(() => {
   const nome = { nome: props.nome };
@@ -91,7 +101,9 @@ const erro = computed(() => {
   const MAPA = {
     falha: {
       titulo: t(`${NS}.FALHA`, nome),
-      garantia: t(`${NS}.FALHA_GARANTIA`),
+      garantia: props.interno
+        ? t(`${NS}.FALHA_GARANTIA_COPILOTO`)
+        : t(`${NS}.FALHA_GARANTIA`),
       acao: tentar,
     },
     demora: { titulo: t(`${NS}.DEMORA`), tom: 'ambar', acao: tentar },
@@ -137,7 +149,7 @@ const respondeuErrado = () => {
         class="m-0 text-lg font-semibold text-n-slate-12"
         :class="celular ? 'sr-only' : ''"
       >
-        {{ t(`${NS}.TITULO`) }}
+        {{ interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`) }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
     </div>
@@ -145,7 +157,7 @@ const respondeuErrado = () => {
     <CelularConversa
       :mensagens="celularMensagens"
       :digitando="digitando"
-      :nome="empresa || nome"
+      :nome="interno ? nome : empresa || nome"
       :estado="estadoDoCabecalho"
     >
       <template v-if="mensagens.length || atualizado" #acao>
@@ -256,7 +268,11 @@ const respondeuErrado = () => {
           {{ rotuloComecar }}
         </AgenteBotao>
         <p id="confira-comecar-texto" class="m-0 text-sm text-n-slate-11">
-          {{ t(`${NS}.COMECAR_TEXTO`, { nome }) }}
+          {{
+            interno
+              ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
+              : t(`${NS}.COMECAR_TEXTO`, { nome })
+          }}
         </p>
       </div>
       <div v-else data-sem-canal class="flex flex-col gap-2">
