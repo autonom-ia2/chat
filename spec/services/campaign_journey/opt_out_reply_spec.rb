@@ -48,6 +48,18 @@ RSpec.describe CampaignJourney::OptOutReply do
     expect(contact).to be_opted_out
     expect(contact.opt_out_source).to eq('campaign_reply')
     expect(contact.opted_out_by_id).to be_nil
+    expect(contact.additional_attributes['campaign_reply_phone']).to eq('+5511987650001')
+  end
+
+  it 'campanha só com mídia: o modelo recebe a mensagem anterior vazia, como texto' do
+    outgoing(nil, attributes: { 'campaign_id' => 7 })
+    model_answers('nao', 'ambigua')
+
+    described_class.new(incoming('o que é isso?')).perform
+
+    expect(client).to have_received(:create) do |args|
+      expect(JSON.parse(args[:input])['previous_message']).to eq('')
+    end
   end
 
   it 'pergunta pela feature própria, com a campanha como contexto, e loga só ids e códigos' do

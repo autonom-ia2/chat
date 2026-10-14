@@ -17,9 +17,9 @@
 # - Teto de DAILY_LIMIT mensagens avaliadas por conta por dia (UTC), uma vaga por mensagem. A decisão fica guardada por
 #   mensagem: rodar de novo depois de uma decisão não paga outra chamada.
 # - Custo na Gestão IA pela feature FEATURE. O log leva ids e códigos, nunca o texto do cliente.
-# - Quem desfaz a recusa 'campaign_reply' é a equipe, no painel do contato (Contacts::OptOutsController).
+# - A recusa vale pelo número (Contacts::CampaignReplyOptOut). Quem a desfaz é a equipe, no painel do contato
+#   (Contacts::OptOutsController).
 class CampaignJourney::OptOutReply
-  SOURCE = 'campaign_reply'.freeze
   FEATURE = 'campanha_opt_out'.freeze
   WINDOW = 7.days
   DAILY_LIMIT = 500
@@ -49,7 +49,7 @@ class CampaignJourney::OptOutReply
     result = classify
     return log(:warn, 'limite_diario') if result.nil?
 
-    @contact.opt_out!(source: SOURCE) if result[:decision] == 'sim'
+    Contacts::CampaignReplyOptOut.mark!(@contact) if result[:decision] == 'sim'
     log(:info, "decisao=#{result[:decision]} motivo=#{result[:motivo]}")
   end
 
@@ -97,7 +97,7 @@ class CampaignJourney::OptOutReply
     return unless reserve!
 
     classifier = Crm::Ai::OptOutClassifier.new(account: @message.account, message: @message, feature: FEATURE,
-                                               previous_message: campaign_message.content)
+                                               previous_message: campaign_message.content.to_s)
     result = classifier.perform
     Redis::Alfred.setex(message_key('decision'), result.to_json, CLASSIFICATION_TTL.to_i)
     result

@@ -19,11 +19,19 @@ class Api::V1::Accounts::Contacts::OptOutsController < Api::V1::Accounts::Contac
       return render json: { error: I18n.t('contacts.opt_out.undo_only_manual') }, status: :unprocessable_entity
     end
 
-    @contact.release_opt_out!(source: @contact.opt_out_source, by: Current.user) if @contact.opted_out?
+    release
     render :show
   end
 
   private
+
+  # O pedido de parar na resposta a campanha vale pelo número: desfazer solta o número inteiro (#1449).
+  def release
+    return unless @contact.opted_out?
+    return Contacts::CampaignReplyOptOut.release_number!(@contact, by: Current.user) if @contact.opt_out_source == 'campaign_reply'
+
+    @contact.release_opt_out!(source: @contact.opt_out_source, by: Current.user)
+  end
 
   def authorize_contact_update
     authorize @contact, :update?

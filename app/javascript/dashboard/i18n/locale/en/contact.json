@@ -560,7 +560,7 @@
           "PROSPECTING": "This opt-out came from Prospecting. It is removed only on the lead in Prospecting, by undoing the refusal there.",
           "EMAIL_UNSUBSCRIBE": "This opt-out came from an email unsubscribe made by the person and cannot be undone here.",
           "FOLLOW_UP_REPLY": "This opt-out came from a reply to the AI follow-up asking to stop. It ends when \"Reactivate follow-up\" is used on every CRM card where the person asked to stop, even if one of those cards was later linked to another contact or conversation.",
-          "CAMPAIGN_REPLY": "The AI recognized a request to stop in this person's reply to a WhatsApp campaign. If they did not ask to stop, undo it here."
+          "CAMPAIGN_REPLY": "The AI recognized a request to stop in a reply to a WhatsApp campaign. The opt-out applies to this phone number, even on another contact. If the person did not ask to stop, undo it here."
         },
         "UNDO_DIALOG": {
           "TITLE": "Undo opt-out",
