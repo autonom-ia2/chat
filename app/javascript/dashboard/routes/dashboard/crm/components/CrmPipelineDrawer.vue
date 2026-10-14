@@ -19,7 +19,7 @@ import FunilAnuncios from './funil/FunilAnuncios.vue';
 import FunilAnunciosFacebook from './funil/FunilAnunciosFacebook.vue';
 import FunilAnunciosGoogle from './funil/FunilAnunciosGoogle.vue';
 import FunilLado from './funil/FunilLado.vue';
-import { MODELOS, corLivre } from './funil/funil';
+import { MODELOS, corLivre, modeloDoFunil } from './funil/funil';
 import { useFunilMoldura } from './funil/useFunilMoldura';
 import { useFunilSugestao } from './funil/useFunilSugestao';
 import { useFunilModelo } from './funil/useFunilModelo';
@@ -99,13 +99,13 @@ const pilha = ref([]);
 const selectedStage = ref(null);
 const editorSession = ref(0);
 const {
+  tipo,
   modelo,
   modeloAtual,
+  modelosDisponiveis,
   modeloPendente,
-  stagesDoModelo,
   copiarEtapas,
-  loadDefaultCriteria,
-  quandoUsarDo,
+  escolherTipo,
   escolherModelo,
   confirmarModelo,
   manterModelo,
@@ -119,6 +119,22 @@ const passoGoogle = ref(1);
 
 const defaultOutcomeLabels = computed(() =>
   resultadosPadrao(form.countsAsSale, t)
+);
+// #1498 — o nome dos dois desfechos como a pessoa vai ver, e o modelo do
+// funil (num funil salvo, vem de metadata.template; sem ele, o 1º do tipo).
+const sucesso = computed(
+  () => form.outcomeLabels.success.trim() || defaultOutcomeLabels.value.success
+);
+const fracasso = computed(
+  () => form.outcomeLabels.failure.trim() || defaultOutcomeLabels.value.failure
+);
+const modeloEmUso = computed(() =>
+  isEditing.value
+    ? modeloDoFunil({
+        counts_as_sale: form.countsAsSale,
+        metadata: props.pipeline?.metadata,
+      })
+    : modeloAtual.value || MODELOS[0]
 );
 
 const criteriaFor = stage =>
@@ -287,25 +303,20 @@ const resetForm = () => {
   reiniciarModelo();
   const pipeline = props.pipeline || {};
   const metadata = pipeline.metadata || {};
+  // #1498 — funil novo começa vazio: as etapas vêm do tipo e do modelo.
   Object.assign(form, {
-    name:
-      pipeline.name ||
-      (isEditing.value ? '' : t('CRM_FUNIL.MODELOS.VENDAS.NOME')),
+    name: pipeline.name || '',
     description:
       pipeline.description ||
       t('CRM_KANBAN.PIPELINE_DRAWER.DEFAULT_DESCRIPTION'),
-    whenToUse:
-      pipeline.when_to_use || (isEditing.value ? '' : quandoUsarDo(MODELOS[0])),
+    whenToUse: pipeline.when_to_use || '',
     monthlyTarget: metaDoMes(metadata.goals?.monthly_target_cents),
     countsAsSale: pipeline.counts_as_sale ?? true,
     outcomeLabels: lerResultados(metadata.outcome_labels),
     metaSync: lerMetaSync(metadata.meta_sync),
     googleSync: lerGoogleSync(metadata.google_sync),
-    stages: copiarEtapas(
-      isEditing.value ? props.stages : stagesDoModelo(MODELOS[0])
-    ),
+    stages: copiarEtapas(isEditing.value ? props.stages : []),
   });
-  if (!isEditing.value) loadDefaultCriteria();
 };
 
 const addStage = () => {
@@ -361,6 +372,7 @@ const onSubmit = async () => {
       pipeline: props.pipeline,
       editando: isEditing.value,
       ia: ia.value,
+      modelo: modelo.value,
     })
   );
 };
@@ -405,6 +417,7 @@ const { heroi, rodape } = useFunilMoldura({
   cancelar,
   removeStage,
   ligarGoogle,
+  tipo,
 });
 
 // ——— Ciclo de vida ———
@@ -525,8 +538,11 @@ useFixedPanelPresence(computed(() => props.show));
             <FunilTelaNome
               v-if="view === 'nome'"
               v-model="form.name"
+              :tipo="tipo"
               :modelo="modelo"
+              :modelos="modelosDisponiveis"
               :pendente="modeloPendente"
+              @tipo="escolherTipo"
               @confirmar="confirmarModelo"
               @manter="manterModelo"
               @escolher="escolherModelo"
@@ -556,6 +572,8 @@ useFixedPanelPresence(computed(() => props.show));
               :meta="form.monthlyTarget"
               :dinheiro="formatMoney"
               :ia="ia"
+              :sucesso="sucesso"
+              :fracasso="fracasso"
               @etapas="view = 'etapas'"
               @abrir="abrir"
               @alterar-etapa="openStage"
@@ -576,6 +594,8 @@ useFixedPanelPresence(computed(() => props.show));
               :anuncios="anunciosLigados"
               :arquivando="isArchiving"
               :juntar="juntarNomes"
+              :sucesso="sucesso"
+              :fracasso="fracasso"
               @abrir="abrir"
               @criar="criarComIa"
               @arquivar="$emit('archive')"
@@ -613,10 +633,7 @@ useFixedPanelPresence(computed(() => props.show));
               v-model="form.whenToUse"
               v-model:nota="form.description"
               :nome="form.name"
-              :ideias="
-                (isEditing ? MODELOS[form.countsAsSale ? 0 : 1] : modeloAtual)
-                  .ideias
-              "
+              :ideias="modeloEmUso.ideias"
               :com-nota="isEditing"
             />
 
@@ -673,6 +690,7 @@ useFixedPanelPresence(computed(() => props.show));
               v-show="['returns', 'returns-detail'].includes(view)"
               :key="pipeline.id"
               ref="aiPanel"
+              :atender="!form.countsAsSale"
               :pipeline-id="pipeline.id"
               :detalhe="view === 'returns-detail'"
               @alterar="abrir('returns-detail')"
@@ -697,14 +715,9 @@ useFixedPanelPresence(computed(() => props.show));
               :quando-usar="form.whenToUse"
               :venda="form.countsAsSale"
               :meta="Number(form.monthlyTarget) || 0"
-              :sucesso="
-                form.outcomeLabels.success.trim() ||
-                defaultOutcomeLabels.success
-              "
-              :fracasso="
-                form.outcomeLabels.failure.trim() ||
-                defaultOutcomeLabels.failure
-              "
+              :sucesso="sucesso"
+              :fracasso="fracasso"
+              :sem-tipo="!isEditing && !tipo"
               :dinheiro="formatMoney"
               :retorno="retorno"
               :mensagem-no-dia="aiPanel?.form?.callbackMode === 'both'"

@@ -1170,6 +1170,10 @@
       "conversation_ids"
     ]
   },
+  "crm/follow_up_series/:id": {
+    "controller": "api/v1/accounts/crm/follow_up_series#show",
+    "parametros": []
+  },
   "crm/follow_ups": {
     "controller": "api/v1/accounts/crm/follow_ups#index",
     "motivos": [
@@ -1387,6 +1391,7 @@
   "crm/stage_criteria/defaults": {
     "controller": "api/v1/accounts/crm/stage_criteria#defaults",
     "parametros": [
+      "atender",
       "names"
     ]
   },

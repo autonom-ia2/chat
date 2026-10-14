@@ -1,10 +1,10 @@
 <script setup>
-import { MODELOS } from './funil';
-
 // #1384 — "Começar pronto": cada modelo é um cartão grande com ícone, nome e
 // o caminho do cliente. O escolhido ganha a borda azul e o visto.
+// #1498 — só os modelos do tipo escolhido (Atender tem quatro).
 defineProps({
   modelo: { type: String, required: true },
+  modelos: { type: Array, required: true },
 });
 
 defineEmits(['escolher']);
@@ -16,24 +16,24 @@ defineEmits(['escolher']);
       id="funil-modelos-titulo"
       class="mb-0 text-base font-semibold text-n-slate-12"
     >
-      {{ $t('CRM_FUNIL.MODELOS.ROTULO') }}
+      {{ $t('CRM_FUNIL.TIPO.MODELO') }}
     </h3>
     <div
-      class="grid gap-3 sm:grid-cols-3"
+      class="grid gap-3 sm:grid-cols-2"
       role="group"
       aria-labelledby="funil-modelos-titulo"
     >
       <button
-        v-for="item in MODELOS"
+        v-for="item in modelos"
         :key="item.chave"
         type="button"
         :data-modelo="item.chave"
         :aria-pressed="modelo === item.chave"
-        class="relative flex min-h-11 items-center gap-3 rounded-2xl border-2 p-4 text-start transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand sm:flex-col sm:items-start"
+        class="relative flex min-h-11 items-center gap-3 rounded-2xl border-2 p-4 text-start transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
         :class="
           modelo === item.chave
-            ? 'border-n-blue-8 bg-n-blue-2'
-            : 'border-n-weak bg-n-solid-1 hover:border-n-slate-7'
+            ? 'border-n-blue-9 bg-n-blue-2'
+            : 'border-n-slate-5 bg-n-solid-1 shadow-sm hover:border-n-slate-8'
         "
         @click="$emit('escolher', item.chave)"
       >
@@ -54,7 +54,7 @@ defineEmits(['escolher']);
         </span>
         <span
           v-if="modelo === item.chave"
-          class="grid size-6 shrink-0 place-items-center rounded-full bg-n-blue-9 text-white sm:absolute sm:end-3 sm:top-3"
+          class="grid size-6 shrink-0 place-items-center rounded-full bg-n-blue-9 text-white"
           aria-hidden="true"
         >
           <span class="i-lucide-check size-4" />

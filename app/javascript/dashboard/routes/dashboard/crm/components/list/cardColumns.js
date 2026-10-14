@@ -132,13 +132,15 @@ export const buildCrmCardColumns = ({
   stages = [],
   agents = [],
   includeMeta = false,
+  // #1498 — funil de Atender sem a coluna Valor (a Cobrança mantém).
+  includeValue = true,
 } = {}) => {
   const L = key => t(`CRM_KANBAN.LIST.COLUMNS.${key}`);
 
   // Each non-select column carries meta describing how CrmCardsTable should render
   // it: `editable` (delegates to CrmTableCellEditable on click), `field` (backend
   // field), `frozen`, `align`, and `kind` (drives the read-only renderer).
-  return [
+  const colunas = [
     {
       id: 'select',
       enableSorting: false,
@@ -287,6 +289,9 @@ export const buildCrmCardColumns = ({
         ]
       : []),
   ];
+  return includeValue
+    ? colunas
+    : colunas.filter(coluna => coluna.id !== 'value');
 };
 
 /**

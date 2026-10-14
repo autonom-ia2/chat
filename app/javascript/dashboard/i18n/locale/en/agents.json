@@ -669,7 +669,7 @@
         "PARADO": "Not answering anyone right now.",
         "PARADO_SEM_CANAL": "Not on any channel yet.",
         "RASCUNHO": "You started and did not finish.",
-        "COTACAO": "Opens in the quotes module",
+        "COTACAO": "Quotes insurance with your clients",
         "CONTINUAR": "Continue",
         "CONTINUAR_ARIA": "Continue {nome}",
         "MAIS_OPCOES": "More options for {nome}",
@@ -721,6 +721,7 @@
         "EXTERNO": "{canal} · Another automatic service already answers here",
         "EXTERNO_TEXTO": "Another system already answers here. To use it, stop the other system first.",
         "TROCA": "{outro} stops answering on {canal}, but stays on your list. The open conversations on {canal} go back to the team.",
+        "TROCA_PARA": "{outro} is on no other channel: it stops answering until you choose a channel for it.",
         "TODOS_OCUPADOS": "All your channels already have an agent. Put {nome} in the place of one of them or connect another channel.",
         "SEM_LEITURA": "Channels that already have an agent are not shown here.",
         "SEMPRE": "Always",
@@ -1221,6 +1222,7 @@
           "SEM_CANAL": "You have not connected any channel yet.",
           "PARADO": "To change the channel, {nome} needs to start answering again.",
           "VOLTAR": "Start answering again",
+          "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "VOLTOU": "Whoever messages {canal} now talks to {nome}.",
@@ -1478,7 +1480,8 @@
           "GRANDE": "This file is over 25 MB. Try a smaller one.",
           "MANDAR_OUTRO": "Send another",
           "TIRAR": "Remove",
-          "TIRAR_ARIA": "Remove {nome}"
+          "TIRAR_ARIA": "Remove {nome}",
+          "LIMITE": "There are already {n} files and websites. Remove one to send another."
         },
         "EXEMPLO": {
           "TITULO": "This is what your customers will see",
@@ -1573,6 +1576,30 @@
           "E": "{antes}, and {depois}",
           "HORA": "{h}:00",
           "HORA_MIN": "{h}:{m}"
+        },
+        "BASE": {
+          "TITULO": "{nome}’s knowledge base",
+          "TEXTO": "What {nome} reads to answer. What you send with the clip in the conversation also shows here.",
+          "LISTA": "{nome}’s files and websites",
+          "VAZIO": "Nothing here yet. Send a menu, a price list or your website address.",
+          "ADICIONAR": "Add a file or website",
+          "SITE_EXEMPLO": "www.yourstore.com",
+          "GRANDE_TEXTO": "This file is over 25 MB. Remove it and send a smaller one.",
+          "TIRAR_TITULO": "Remove {item}?",
+          "TIRAR_TEXTO": "{nome} stops using what is in it. It leaves the conversation too.",
+          "TIRAR": "Remove",
+          "ENTROU": "{item} was added to the base.",
+          "TIROU": "{item} was removed from the base.",
+          "ERRO_LER": "Could not show what was already in the base.",
+          "ERRO_LER_GARANTIA": "Nothing was deleted.",
+          "BOTAO": "Base",
+          "BOTAO_ARIA": "{titulo}: {n}",
+          "TITULO_SEM_NOME": "Agent’s knowledge base",
+          "TEXTO_SEM_NOME": "What the agent reads to answer. What you send with the clip in the conversation also shows here.",
+          "LISTA_SEM_NOME": "The agent’s files and websites",
+          "TIRAR_TEXTO_SEM_NOME": "The agent stops using what is in it. It leaves the conversation too.",
+          "TIRAR_ERRO": "Could not remove {item} now.",
+          "TIRAR_ERRO_GARANTIA": "It stays in the base."
         }
       }
     }

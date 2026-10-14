@@ -6,6 +6,8 @@ import { URGENCIAS } from '../useCardNegocio';
 // criação e no Negócio.
 defineProps({
   somenteLeitura: { type: Boolean, default: false },
+  // #1498 — "Prioridade" num funil de Atender.
+  rotulo: { type: String, default: '' },
 });
 const urgencia = defineModel({ type: String, default: 'medium' });
 const { t } = useI18n();
@@ -14,7 +16,7 @@ const { t } = useI18n();
 <template>
   <fieldset class="m-0 flex flex-col gap-2 border-0 p-0" data-campo-urgencia>
     <legend class="mb-1 p-0 text-sm font-medium text-n-slate-12">
-      {{ t('CRM_CARD.NEGOCIO.URGENCIA') }}
+      {{ rotulo || t('CRM_CARD.NEGOCIO.URGENCIA') }}
     </legend>
     <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <button

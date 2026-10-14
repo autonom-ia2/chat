@@ -13,6 +13,8 @@ module Crm
     #   variables positional/named placeholders detected in the body (e.g. %w[1 2])
     #   category downcased Meta category ('marketing'|'utility') for 'native'; nil for
     #            'api' (drives the MARKETING-only 24h frequency cap downstream)
+    #   filled   only with card: + the followup_template_real_values flag (#1336): { position => real card value }
+    #            already written into body and removed from variables; never sent to the AI, wins over its values
     #
     # Native filtering mirrors store/modules/inboxes.js getFilteredWhatsAppTemplates
     # (approved, non-AUTHENTICATION, non-CSAT, drop interactive/location components)
@@ -25,8 +27,11 @@ module Crm
       CSAT_NAME_PREFIX = 'customer_satisfaction_survey'.freeze
       ELIGIBLE_CATEGORIES = %w[marketing utility].freeze
 
-      def initialize(conversation:)
+      # card: o do follow-up. Com ele e a flag `followup_template_real_values`, as variáveis ligadas ao catálogo vêm do card
+      # (Crm::FollowUps::TemplateRealValues, #1336). Sem card, igual a antes.
+      def initialize(conversation:, card: nil)
         @conversation = conversation
+        @card = card
       end
 
       def perform
@@ -35,7 +40,7 @@ module Crm
 
         case inbox.channel_type
         when 'Channel::Whatsapp'
-          native_candidates(inbox)
+          with_real_values(native_candidates(inbox), inbox)
         when 'Channel::Api'
           api_candidates(inbox)
         else
@@ -44,6 +49,12 @@ module Crm
       end
 
       private
+
+      def with_real_values(candidates, inbox)
+        return candidates unless Crm::FollowUps::TemplateRealValues.enabled?(@card)
+
+        Crm::FollowUps::TemplateRealValues.new(card: @card, inbox: inbox).apply(candidates)
+      end
 
       def api_candidates(inbox)
         return [] unless inbox.channel.try(:whatsapp_api_campaign_channel?)

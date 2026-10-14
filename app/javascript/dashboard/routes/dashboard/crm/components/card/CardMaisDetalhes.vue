@@ -14,6 +14,8 @@ const props = defineProps({
   formato: { type: Object, required: true },
   podeGerenciar: { type: Boolean, default: false },
   arquivando: { type: Boolean, default: false },
+  // #1498 — Atender: a nota e o vencimento já estão no cartão Assunto.
+  atender: { type: Boolean, default: false },
 });
 defineEmits(['abrir', 'arquivar']);
 
@@ -44,6 +46,12 @@ const historicoFrase = computed(() =>
     : t(`${R}.SEM_HISTORICO`)
 );
 
+// "Deve fechar até" é um dia, não um instante: lido pela data (#1498).
+const diaDoCampo = valor => {
+  const [ano, mes, dia] = String(valor).slice(0, 10).split('-').map(Number);
+  return new Date(ano, mes - 1, dia);
+};
+
 const extras = computed(
   () =>
     Object.values(props.card.custom_attributes || {}).filter(
@@ -52,10 +60,12 @@ const extras = computed(
 );
 const negocioFrase = computed(() =>
   [
-    props.card.score ? t(`${R}.ATENCAO`, { nota: props.card.score }) : '',
-    props.card.expected_close_at
+    props.card.score && !props.atender
+      ? t(`${R}.ATENCAO`, { nota: props.card.score })
+      : '',
+    props.card.expected_close_at && !props.atender
       ? t(`${R}.FECHA_ATE`, {
-          dia: props.formato.diaCurto(new Date(props.card.expected_close_at)),
+          dia: props.formato.diaCurto(diaDoCampo(props.card.expected_close_at)),
         })
       : '',
     extras.value ? t(`${R}.EXTRAS`, { n: extras.value }, extras.value) : '',
@@ -81,7 +91,7 @@ const linhas = computed(() =>
     negocioFrase.value && {
       parte: 'negocio',
       icone: 'i-lucide-list-plus',
-      titulo: t(`${R}.MAIS_NEGOCIO`),
+      titulo: t(props.atender ? `${R}.MAIS_ASSUNTO` : `${R}.MAIS_NEGOCIO`),
       frase: negocioFrase.value,
     },
   ].filter(Boolean)
@@ -102,7 +112,13 @@ const linhas = computed(() =>
       <span
         class="hidden min-w-0 flex-1 truncate text-sm text-n-slate-11 sm:block"
       >
-        {{ t(`${R}.MAIS_DETALHES_DICA`) }}
+        {{
+          t(
+            atender
+              ? `${R}.MAIS_DETALHES_DICA_ASSUNTO`
+              : `${R}.MAIS_DETALHES_DICA`
+          )
+        }}
       </span>
       <span class="flex-1 sm:hidden" aria-hidden="true" />
       <span

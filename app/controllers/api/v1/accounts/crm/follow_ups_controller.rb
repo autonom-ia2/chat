@@ -5,8 +5,14 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     log_handled_error(exception)
     render json: Crm::FollowUps::RecordInvalidResponse.render(exception), status: :unprocessable_entity
   end
+  # Quem recebe (#1462) fora da regra: código estável para a tela traduzir.
+  rescue_from Crm::FollowUps::RecipientParams::Invalid do |exception|
+    render json: { error: exception.message }, status: :unprocessable_entity
+  end
 
   RESULTS_PER_PAGE = 50
+  RECIPIENT_KEYS = %i[recipient_mode recipient_user_ids recipient_team_id].freeze
+  RECURRENCE_PARAMS = [:frequency, :weekdays_only, :ends_mode, :ends_on, :occurrences_count, { weekdays: [] }].freeze
   MAX_RESULTS_PER_PAGE = 100
 
   def messaging_window
@@ -37,14 +43,17 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
 
   def show; end
 
+  # card_id é opcional (#1461): sem ele, o lembrete fica só no calendário ou com um cliente (contact_id). Com
+  # recurrence, nasce uma série e a primeira vez (#1460); recipient_* diz quem recebe (#1462).
   def create
     authorize ::Crm::FollowUp
-    card = visible_card(params_for_create[:card_id])
-    ensure_card_funnel!(card)
-    conversation = resolved_conversation(card, params_for_create)
+    card = params_for_create[:card_id].present? ? visible_card(params_for_create[:card_id]) : nil
+    ensure_card_funnel!(card) if card
+    conversation = card ? resolved_conversation(card, params_for_create) : nil
     authorize_conversation!(conversation) if conversation.present?
-    attributes = resolved_follow_up_params(card, params_for_create, conversation)
-    @follow_up = Current.account.crm_follow_ups.create!(attributes.merge(card: card, created_by: Current.user))
+    @follow_up = Crm::FollowUps::Creator.new(
+      account: Current.account, user: Current.user, card: card, conversation: conversation, attributes: params_for_create
+    ).perform
     after_follow_up_change('follow_up_created', @follow_up)
     render :show, status: :created
   end
@@ -138,16 +147,6 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
                                              account_user: Current.account_user).authorize!(conversation)
   end
 
-  def resolved_follow_up_params(card, attributes, conversation)
-    ::Crm::FollowUps::ParamsResolver.new(
-      account: Current.account,
-      user: Current.user,
-      card: card,
-      conversation: conversation,
-      attributes: attributes
-    ).perform
-  end
-
   def resolved_conversation(card, attributes)
     return visible_conversation(attributes[:conversation_id]) if attributes[:conversation_id].present?
 
@@ -178,13 +177,8 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   end
 
   def activity_payload(follow_up)
-    {
-      follow_up_id: follow_up.id,
-      title: follow_up.title,
-      status: follow_up.status,
-      automation_mode: follow_up.automation_mode,
-      due_at: follow_up.due_at&.iso8601
-    }
+    { follow_up_id: follow_up.id, title: follow_up.title, status: follow_up.status,
+      automation_mode: follow_up.automation_mode, due_at: follow_up.due_at&.iso8601 }
   end
 
   def params_for_create
@@ -192,16 +186,24 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   end
 
   # Chaves que só o servidor escreve (transporte do Híbrido) nunca entram pelo metadata do cliente.
+  # "Mudar só esta vez" (#1460) também troca quem recebe (#1462) desta vez.
   def params_for_update
-    attributes = follow_up_params.except(:card_id, :conversation_id)
+    attributes = follow_up_params.except(:card_id, :conversation_id, :contact_id, :company_id, :recurrence)
+    attributes = attributes.except(*RECIPIENT_KEYS).merge(recipient_changes(attributes))
     attributes[:metadata] &&= ::Crm::FollowUps::MetadataSanitizer.without_server_keys(attributes[:metadata])
     attributes
   end
 
+  def recipient_changes(attributes)
+    ::Crm::FollowUps::RecipientParams.new(account: Current.account, card: @follow_up.card, attributes: attributes,
+                                          user: Current.user, account_user: Current.account_user).perform
+  end
+
   def follow_up_params
     parameter_set(:follow_up).permit(
-      :card_id, :conversation_id, :title, :description, :follow_up_type,
-      :automation_mode, :due_at, :timezone, metadata: {}
+      :card_id, :conversation_id, :contact_id, :company_id, :title, :description, :follow_up_type,
+      :automation_mode, :due_at, :timezone, :recipient_mode, :recipient_team_id,
+      recipient_user_ids: [], metadata: {}, recurrence: RECURRENCE_PARAMS
     ).to_h.with_indifferent_access
   end
 

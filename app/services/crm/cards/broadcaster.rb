@@ -8,7 +8,10 @@ class Crm::Cards::Broadcaster
     CRM_CARD_ARCHIVED
   ].freeze
 
+  # Lembrete sem card (#1461): não há card para avisar.
   def self.broadcast(card, event_name)
+    return if card.nil?
+
     new(card, event_name).perform
   end
 

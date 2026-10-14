@@ -2,18 +2,20 @@ import { ref } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import AutonomiaChannelsAPI from 'dashboard/api/autonomia/channels';
 
-// #1181 — "Começar a atender": ativar o agente e pôr no canal escolhido, trocando quem já estava
-// lá quando a pessoa escolheu um canal ocupado. Ordem fechada no DECISOES.md item 4, porque o
-// backend só conecta agente que já está ativo (InboxConnector → agent_not_active):
-//   1. PATCH status active (e o "quando" no mesmo PATCH, se mudou) no agente novo;
+// #1181 — "Começar a atender": pôr o agente no canal escolhido e ligá-lo, trocando quem já estava
+// lá quando a pessoa escolheu um canal ocupado.
+// #1366 — agente sem canal não pode ficar atendendo: o servidor recusa ativar antes (422). Ligar e
+// entrar no canal é um passo só no servidor (POST do canal com `ativar`). Ordem:
+//   1. PATCH do "quando", só se mudou (o agente continua como está);
 //   2. DELETE do canal no agente antigo, se for troca;
-//   3. POST do canal no agente novo.
-// Falha depois do PATCH desfaz o status do novo, para o "Nada mudou" ser verdade para ele.
-// Se a falha vier no POST depois que o antigo já saiu (DECISOES.md item 16, opção a), também tenta
-// pôr o antigo de volta na caixa: conseguindo, é o mesmo "Nada mudou"; não conseguindo, a caixa
-// ficou sem agente (motivo próprio, para a tela dizer que as conversas vão para a equipe).
-// Os canais vão direto pela API (sem a store autonomiaChannels, que relê a lista do agente a cada
-// passo e guarda o estado de um agente só).
+//   3. POST do canal no agente novo com `ativar` (vínculo e ligar na mesma transação);
+//   4. relê o agente, para a tela mostrar o estado que o servidor gravou.
+// Falha no POST: nada foi ligado. Desfaz o "quando", se mudou, para o "Nada mudou" ser verdade.
+// Se a falha vier depois que o antigo já saiu (DECISOES.md item 16, opção a), também tenta pôr o
+// antigo de volta na caixa, ligado de novo se ele atendia (sair da última caixa o parou); não
+// conseguindo, a caixa ficou sem agente (motivo próprio, para a tela dizer que as conversas vão
+// para a equipe). Os canais vão direto pela API (sem a store autonomiaChannels, que relê a lista do
+// agente a cada passo e guarda o estado de um agente só).
 export const MOTIVO = {
   COMECAR: 'comecar',
   CANAL: 'canal',
@@ -25,17 +27,24 @@ export const MOTIVO = {
 const navegadorSemRede = () =>
   typeof navigator !== 'undefined' && navigator.onLine === false;
 
-// O PATCH passa pela store (updateRecord → throwErrorMessage), que devolve um Error só com a
-// mensagem, sem `response`: ali só o navegador diz se falta rede. Os canais vão direto pelo axios,
-// e aí erro sem `response` é pedido que não chegou ao servidor.
-const semRede = (error, { ativou }) =>
-  navegadorSemRede() || (ativou && !error?.response);
+// O PATCH do "quando" passa pela store (updateRecord → throwErrorMessage), que devolve um Error só
+// com a mensagem, sem `response`: ali só o navegador diz se falta rede. Os canais vão direto pelo
+// axios, e aí erro sem `response` é pedido que não chegou ao servidor.
+const semRede = (error, { nosCanais }) =>
+  navegadorSemRede() || (nosCanais && !error?.response);
 
-const motivoDaFalha = (error, { ativou, conectando }) => {
-  if (semRede(error, { ativou })) return MOTIVO.OFFLINE;
+const motivoDaFalha = (error, passo) => {
+  if (semRede(error, passo)) return MOTIVO.OFFLINE;
   // 422 no POST = o canal recusou este agente (já ocupado, bot externo, agente interno).
-  if (conectando && error.response.status === 422) return MOTIVO.CANAL;
+  if (passo.conectando && error.response.status === 422) return MOTIVO.CANAL;
   return MOTIVO.COMECAR;
+};
+
+// A explicação do servidor quando ele recusou (422), para a tela mostrar no lugar do texto geral.
+export const mensagemDaRecusa = error => {
+  if (error?.response?.status !== 422) return null;
+  const dados = error.response.data || {};
+  return dados.message || dados.error || null;
 };
 
 export function useComecarAAtender() {
@@ -45,19 +54,12 @@ export function useComecarAAtender() {
 
   const atualizar = dados => store.dispatch('autonomiaAgents/update', dados);
 
-  const desfazer = async (agente, janelaMudou) => {
-    const anterior = {
-      id: agente.id,
-      enabled: agente.enabled === true,
-      status: agente.status || 'draft',
-    };
-    if (janelaMudou) {
-      anterior.config = {
-        response_window: agente.config?.response_window || 'always',
-      };
-    }
+  const desfazerJanela = async agente => {
     try {
-      await atualizar(anterior);
+      await atualizar({
+        id: agente.id,
+        config: { response_window: agente.config?.response_window || 'always' },
+      });
       return true;
     } catch {
       return false;
@@ -66,10 +68,20 @@ export function useComecarAAtender() {
 
   const devolverAoAntigo = async (troca, inboxId) => {
     try {
-      await AutonomiaChannelsAPI.connect(troca.agenteId, inboxId);
+      await AutonomiaChannelsAPI.connect(troca.agenteId, inboxId, {
+        ativar: troca.atendia === true,
+      });
       return true;
     } catch {
       return false;
+    }
+  };
+
+  const relerAgente = async id => {
+    try {
+      await store.dispatch('autonomiaAgents/show', id);
+    } catch {
+      // O agente já está no canal e ligado; a próxima leitura da tela mostra o estado certo.
     }
   };
 
@@ -80,29 +92,38 @@ export function useComecarAAtender() {
 
     const janelaMudou =
       Boolean(janela) && janela !== agente.config?.response_window;
-    const ativar = { id: agente.id, enabled: true, status: 'active' };
-    if (janelaMudou) ativar.config = { response_window: janela };
 
-    const passo = { ativou: false, trocou: false, conectando: false };
+    const passo = {
+      janela: false,
+      nosCanais: false,
+      trocou: false,
+      conectando: false,
+    };
     try {
-      await atualizar(ativar);
-      passo.ativou = true;
+      if (janelaMudou) {
+        await atualizar({ id: agente.id, config: { response_window: janela } });
+        passo.janela = true;
+      }
+      passo.nosCanais = true;
       if (troca) {
         await AutonomiaChannelsAPI.disconnect(troca.agenteId, inboxId);
         passo.trocou = true;
       }
       passo.conectando = true;
-      await AutonomiaChannelsAPI.connect(agente.id, inboxId);
+      await AutonomiaChannelsAPI.connect(agente.id, inboxId, { ativar: true });
+      await relerAgente(agente.id);
       return { ok: true };
     } catch (error) {
-      const desfeito = passo.ativou
-        ? await desfazer(agente, janelaMudou)
-        : true;
+      const desfeito = passo.janela ? await desfazerJanela(agente) : true;
       const semAgente =
         passo.trocou && !(await devolverAoAntigo(troca, inboxId));
       erro.value = semAgente
         ? { motivo: MOTIVO.TROCA_SEM_AGENTE, desfeito, troca }
-        : { motivo: motivoDaFalha(error, passo), desfeito };
+        : {
+            motivo: motivoDaFalha(error, passo),
+            desfeito,
+            mensagem: mensagemDaRecusa(error),
+          };
       return { ok: false, ...erro.value };
     } finally {
       comecando.value = false;

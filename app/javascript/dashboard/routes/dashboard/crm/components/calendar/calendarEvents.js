@@ -28,6 +28,7 @@ import {
   isBefore,
   format,
 } from 'date-fns';
+import { dataDoVencimento } from '../../helpers/closeDate';
 import { ptBR } from 'date-fns/locale';
 
 /* -------------------------------------------------------------------------- */
@@ -152,7 +153,14 @@ export const toDate = value => {
 };
 
 /** The Date an event starts at (or null). */
-export const eventStart = event => toDate(event?.starts_at);
+// O vencimento do card é uma data, sem hora (#1538).
+export const isDateOnly = event => event?.event_type === 'expected_close';
+
+// O vencimento fica no dia gravado, não no instante lido no fuso do navegador.
+export const eventStart = event =>
+  isDateOnly(event)
+    ? dataDoVencimento(event.starts_at)
+    : toDate(event?.starts_at);
 
 /* -------------------------------------------------------------------------- */
 /* Overdue / draggable rules (the 3 types are NOT symmetric)                  */
@@ -176,7 +184,8 @@ export const isOverdue = (event, now = new Date()) => {
     return false;
   const start = eventStart(event);
   if (!start) return false;
-  return isBefore(start, now);
+  // O vencimento só atrasa depois que o dia dele acaba.
+  return isBefore(isDateOnly(event) ? endOfDay(start) : start, now);
 };
 
 /** Count of overdue events in a set. */

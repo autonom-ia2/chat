@@ -8,7 +8,11 @@ module Autonomia
       #          AgentBotInbox do core (ativa inbox.active_bot? → conversas nascem pending)
       #          e o vínculo Autonomia::Agents::AgentInbox. Tudo em transação.
       # disconnect: destrói o vínculo + AgentBotInbox + AgentBot espelho e libera as conversas
-      #             pending ao humano via bot_handoff!.
+      #             pending ao humano via bot_handoff!. Era o último vínculo: o agente para (AgentInbox, #1366).
+      #
+      # #1366 — `ativar: true` é o "Começar a atender neste canal": aceita o agente parado ou em rascunho e o liga
+      # (active + enabled) na MESMA transação do vínculo. Ativar antes, sozinho, não dá mais: agente sem onde trabalhar
+      # não fica atendendo (Agent#tem_onde_trabalhar?). Sem `ativar`, a regra de sempre: só conecta agente que atende.
       class InboxConnector
         Result = Struct.new(:status, :error, :agent_inbox, keyword_init: true) do
           def success?
@@ -16,10 +20,11 @@ module Autonomia
           end
         end
 
-        def initialize(agent:, inbox:)
+        def initialize(agent:, inbox:, ativar: false)
           @agent = agent
           @inbox = inbox
           @account = agent.account
+          @ativar = ativar
         end
 
         def perform(connect:)
@@ -33,14 +38,23 @@ module Autonomia
         end
 
         def connect_locked!
+          recusa = recusa_de_conexao
+          return Result.new(status: :error, error: recusa) if recusa
+
+          Result.new(status: :ok, agent_inbox: criar_vinculo!)
+        end
+
+        def recusa_de_conexao
           # V2.1 — agente INTERNO (copiloto da equipe) NUNCA atende cliente: bloqueia o vínculo de caixa
           # (não cria AgentBot/AgentBotInbox/AgentInbox). Autoridade no backend; a UI esconde como 2ª defesa.
-          return Result.new(status: :error, error: :agent_internal_not_connectable) if @agent.actuation_internal?
-          return Result.new(status: :error, error: :agent_not_active) unless agent_operable?
-          return Result.new(status: :error, error: :inbox_has_webhook_bot) if webhook_bot_present?
-          return Result.new(status: :error, error: :inbox_already_connected) if already_connected?
+          return :agent_internal_not_connectable if @agent.actuation_internal?
+          return :agent_not_active unless agent_operable? || @ativar
+          return :inbox_has_webhook_bot if webhook_bot_present?
 
-          agent_inbox = nil
+          :inbox_already_connected if already_connected?
+        end
+
+        def criar_vinculo!
           ActiveRecord::Base.transaction do
             agent_bot = AgentBot.create!(account: @account, name: @agent.name, bot_type: :webhook,
                                          outgoing_url: nil)
@@ -48,19 +62,27 @@ module Autonomia
             agent_inbox = ::Autonomia::Agents::AgentInbox.create!(
               agent: @agent, inbox: @inbox, account: @account, agent_bot: agent_bot
             )
+            # Depois do vínculo: a validação de atender já o enxerga. Recusada, a transação desfaz o vínculo.
+            @agent.update!(status: :active, enabled: true) if @ativar && !@agent.operating?
+            agent_inbox
           end
-          Result.new(status: :ok, agent_inbox: agent_inbox)
         end
 
+        # #1366 — trava o AGENTE primeiro (ordem agente → caixa, a mesma do connect!, das Areas e do SoftDelete): se este
+        # era o último vínculo, a parada automática relê os vínculos com ele travado.
         def disconnect!
+          @agent.with_lock { disconnect_locked! }
+        end
+
+        def disconnect_locked!
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(agent: @agent, inbox: @inbox)
           return Result.new(status: :error, error: :not_connected) if agent_inbox.nil?
           return disconnect_area! if agent_inbox.area?
 
           ActiveRecord::Base.transaction do
-            # #1433: área só existe em caixa com porta ativa. Trava a caixa (como o Areas.vincular!) e solta as áreas
-            # antes das conversas da porta; as conversas delas vão direto para a equipe humana.
-            @inbox.lock!
+            # #1433: área só existe em caixa com porta ativa. sair_da_caixa! trava os agentes das áreas e depois a caixa
+            # (como o Areas.vincular!) e solta as áreas antes das conversas da porta; as conversas delas vão direto para
+            # a equipe humana.
             agent_inbox.sair_da_caixa!
             # Destrói o VÍNCULO primeiro: o after_destroy :cleanup_mirror_bot do AgentInbox remove o
             # AgentBotInbox-espelho + o AgentBot-espelho (outgoing_url NULL) NA ORDEM SEGURA. Destruir

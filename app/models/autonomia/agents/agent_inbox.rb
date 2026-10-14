@@ -65,6 +65,11 @@ module Autonomia
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
 
+      # #1366 — o PONTO ÚNICO da parada automática: todo caminho que tira um vínculo da caixa passa por um destes dois
+      # (arquivar: desvincular a área; destroy, abaixo: desconectar a porta, caixa apagada). Saiu o último, o agente
+      # para. O SoftDelete arquiva sem callback: o agente apagado já sai parado. O destroy do próprio agente não conta.
+      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? }
+
       # Limpeza do espelho ao destruir o vínculo — centraliza o conserto de "caixa deletada"
       # E "agente deletado" num só lugar. Dispara quando o vínculo cai por:
       #   • Inbox#destroy  → has_many :autonomia_agent_inboxes, dependent: :destroy
@@ -72,6 +77,7 @@ module Autonomia
       # Sem isso, o AgentBot-espelho + AgentBotInbox vazariam (hoje só o InboxConnector#disconnect!
       # os remove). Espelho da nossa criação: outgoing_url NULL → NUNCA toca a Gabriela (webhook real).
       after_destroy :cleanup_mirror_bot
+      after_destroy :parar_agente_sem_onde_trabalhar, unless: :saindo_com_o_agente?
 
       # #1035 — liga/desliga o espelho conforme o agente atende ou não. Desligando: inativa ANTES de
       # liberar, para que nenhuma conversa nova nasça com o bot enquanto as atuais voltam para a equipe.
@@ -113,8 +119,10 @@ module Autonomia
       def soltar_areas_da_caixa!
         return unless porta? && inbox
 
-        # Trava a caixa antes de listar: um Areas.vincular! paralelo espera, e depois não acha mais a porta. Ordem
-        # agente -> caixa (SoftDelete) ou só caixa (Areas, disconnect!): sem ciclo.
+        # Ordem agente → caixa (#1366): trava os agentes das áreas (por id) ANTES da caixa, porque cada área que sai pode
+        # parar o seu agente (parada automática), que trava o agente. Depois trava a caixa e lista de novo: um
+        # Areas.vincular! paralelo espera e depois não acha mais a porta.
+        travar_agentes_das_areas!
         inbox.lock!
         self.class.kept.area.where(inbox_id: inbox_id).includes(:agent).find_each do |area|
           ::Autonomia::Agents::Areas.desvincular!(agent: area.agent, inbox: inbox, porta_saindo: true)
@@ -167,6 +175,16 @@ module Autonomia
         stamp['at'].to_f >= janela.ago.to_f
       end
 
+      # Impasse que sobra (raro): dois agentes cruzados. P é porta em X e área em Y; A é porta em Y e área em X. Saindo
+      # os dois ao mesmo tempo (soft delete ou desconectar), um trava P e depois A (a área de X), o outro trava A e depois
+      # P (a área de Y). O Postgres acusa o impasse e desfaz uma das transações, sem gravar meio caminho; a API devolve
+      # 500 (ActiveRecord::Deadlocked). Sem retry automático: quem pediu tenta de novo. Também cai aqui a área criada
+      # entre esta leitura e a trava da caixa, se outra operação travar o agente dela esperando esta mesma caixa.
+      def travar_agentes_das_areas!
+        ids = self.class.kept.area.where(inbox_id: inbox_id).pluck(:autonomia_agent_id)
+        ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?
+      end
+
       def area_precisa_de_porta_ativa
         return if inbox_id.blank?
         return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
@@ -187,6 +205,14 @@ module Autonomia
 
           errors.add(association_name, 'must belong to the same account')
         end
+      end
+
+      def parar_agente_sem_onde_trabalhar
+        agent.parar_se_sem_onde_trabalhar!(vinculo: self)
+      end
+
+      def saindo_com_o_agente?
+        destroyed_by_association&.active_record == ::Autonomia::Agents::Agent
       end
 
       def cleanup_mirror_bot
