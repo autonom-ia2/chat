@@ -207,7 +207,8 @@ module Crm
         else
           metadata['template_name'] = candidate[:name].to_s
           metadata['template_language'] = candidate[:language].presence || 'pt_BR'
-          metadata['template_processed_params'] = composition['template_variables'].to_h.transform_values(&:to_s)
+          # O dado real do card (#1336) vence o que a IA escreveu na mesma posição.
+          metadata['template_processed_params'] = composition['template_variables'].to_h.transform_values(&:to_s).merge(candidate[:filled].to_h)
           metadata.delete('whatsapp_api_message_template_id')
         end
       end
@@ -253,7 +254,7 @@ module Crm
       end
 
       def template_candidates
-        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation).perform
+        Crm::FollowUps::TemplateCandidates.new(conversation: @follow_up.conversation, card: @card).perform
       end
 
       def messaging_window

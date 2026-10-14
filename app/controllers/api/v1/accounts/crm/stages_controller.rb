@@ -131,7 +131,11 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
   def apply_default_ai_criteria!(stage)
     return if Crm::Ai::Config.stage_ai_criteria(stage).present?
 
-    defaults = Crm::Ai::DefaultStageCriteria.metadata_for(stage.name, atender: !@pipeline.counts_as_sale?)
+    # #1548: a etapa que veio do modelo traz a posição dela no modelo (template_position); o modelo é o do funil.
+    defaults = Crm::Ai::DefaultStageCriteria.metadata_for(
+      stage.name, atender: !@pipeline.counts_as_sale?,
+                  template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+    )
     return if defaults.blank?
 
     stage.metadata = (stage.metadata || {}).merge(defaults)

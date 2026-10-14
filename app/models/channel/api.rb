@@ -81,6 +81,8 @@ class Channel::Api < ApplicationRecord
     safe_waha_call { client.delete_app(app_id) } if app_id.present?
     safe_waha_call { client.delete_app(phone_numbers_app_id) } if phone_numbers_app_id.present?
     safe_waha_call { client.delete_session(session) }
+    # O número sai do IP da Webshare (#1516).
+    safe_waha_call { WhatsappProxy::Assignment.where(session_name: session).delete_all }
     true
   end
 

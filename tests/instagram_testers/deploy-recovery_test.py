@@ -6,6 +6,7 @@ AWS fakes return API envelopes and apply only the workflow's exact projections.
 """
 import json
 import os
+import shutil
 import signal
 from pathlib import Path
 import subprocess
@@ -50,7 +51,7 @@ def fake_aws():
         'describe-images': 'ecr',
     }
     expected_service = ({'command-executed': 'ssm', 'instance-running': 'ec2', 'instance-stopped': 'ec2',
-                         'target-deregistered': 'elbv2'}[args[2]] if operation == 'wait' else expected_services[operation])
+                         'target-deregistered': 'elbv2', 'target-in-service': 'elbv2'}[args[2]] if operation == 'wait' else expected_services[operation])
     assert service == expected_service
     state['calls'].append(args)
     state['events'].append([operation, state['time']])
@@ -92,8 +93,17 @@ def fake_aws():
             if payload[0] == 'set -eu':
                 # Único JSON multi-linha hoje: a suspensão do Instagram, que precisa chegar inteira (#1406).
                 script = (Path(__file__).resolve().parents[2] / 'scripts/deploy/suspend-instagram-assisted.py').read_text().rstrip('\n')
-                assert payload == ['set -eu', f"sudo python3 - <<'INSTAGRAM_RECOVERY'\n{script}\nINSTAGRAM_RECOVERY",
-                                   'sudo systemctl daemon-reload']
+                base = ['set -eu', f"sudo python3 - <<'INSTAGRAM_RECOVERY'\n{script}\nINSTAGRAM_RECOVERY",
+                        'sudo systemctl daemon-reload']
+                assert payload[:3] == base and len(payload) in (3, 4)
+                if len(payload) == 4:
+                    # #1540: green suspension writes the marker in the same command.
+                    prefix = 'printf "%s\\n" "INSTAGRAM_ASSISTED_SUSPENDED step='
+                    suffix = '" | sudo tee /opt/chatwoot/instagram-assisted-suspended >/dev/null'
+                    assert payload[3].startswith(prefix) and payload[3].endswith(suffix), payload[3]
+                    code = payload[3][len(prefix):-len(suffix)]
+                    assert code and all(char in 'abcdefghijklmnopqrstuvwxyz_' for char in code), code
+                    state.setdefault('marker_commands', {})[f'command-{len(state["calls"])}'] = f'INSTAGRAM_ASSISTED_SUSPENDED step={code}'
                 command_kind = 'service'
             elif len(payload) != 1 or not isinstance(payload[0], str):
                 raise AssertionError('unexpected JSON SSM payload')
@@ -209,7 +219,10 @@ def fake_aws():
         if any('stop chatwoot-worker.service' in item for item in payload):
             state['workers'].append(['stop', instance])
             actions.append(['ssm-worker-stopped', instance, False])
-        if any('start chatwoot-worker.service' in item for item in payload):
+        if any('restart chatwoot-web.service' in item for item in payload):
+            state.setdefault('command_web_restarts', {})[command_id] = instance
+        # try-restart keeps a stopped worker stopped and a running one running (#1540).
+        if any('start chatwoot-worker.service' in item and 'try-restart' not in item for item in payload):
             state['workers'].append(['start', instance])
             actions.append(['ssm-worker-started', instance, True])
         state.setdefault('command_worker_actions', {})[command_id] = actions
@@ -222,6 +235,19 @@ def fake_aws():
         envelope = {'Status': 'Success', 'StandardOutputContent': 'synthetic', 'StandardErrorContent': ''}
         if command['kind'] == 'deploy-status':
             envelope['StandardOutputContent'] = state.get('deploy_status', 'DEPLOY_IDLE')
+        elif arg('--command-id') in state.get('command_coordination_checks', {}):
+            marker = state.get('markers', {}).get(command['instance'])
+            if marker:
+                # The remote command prints the marker instead of running check.sh.
+                envelope['StandardOutputContent'] = marker + '\n'
+            elif command['instance'] in (state.get('fail_coordination_instance'), state.get('missing_coordination_instance')):
+                envelope = {'Status': state.get('coordination_status', 'Failed'), 'StandardOutputContent': '',
+                            'StandardErrorContent': state.get('coordination_error', '') if
+                            command['instance'] == state.get('fail_coordination_instance') else ''}
+            if 'invocation_raw' in state:
+                save()
+                print(state['invocation_raw'])
+                sys.exit(0)
         elif command['kind'] == 'retirement':
             envelope['Status'] = state.get('retirement_status', 'Success')
             envelope['StandardOutputContent'] = ''
@@ -238,7 +264,11 @@ def fake_aws():
             result = {'Status': envelope['Status'], 'Output': envelope['StandardOutputContent'],
                       'Error': envelope['StandardErrorContent']}
     elif operation == 'wait':
-        assert args[2] in ('command-executed', 'instance-running', 'instance-stopped', 'target-deregistered')
+        assert args[2] in ('command-executed', 'instance-running', 'instance-stopped', 'target-deregistered',
+                           'target-in-service')
+        if args[2] == 'target-in-service':
+            assert arg('--target-group-arn') == 'tg-green' and arg('--targets') == 'Id=i-green,Port=3000'
+            state.setdefault('green_in_service', []).append(number)
         if args[2] == 'instance-stopped':
             state.setdefault('instance_states', {})[arg('--instance-ids')] = 'stopped'
             state.setdefault('waited_stopped', []).append(arg('--instance-ids'))
@@ -255,6 +285,15 @@ def fake_aws():
                     save()
                     sys.exit(79)
                 state.setdefault('suspensions', []).append([suspended, number])
+                marker = state.get('marker_commands', {}).get(arg('--command-id'))
+                if marker:
+                    state.setdefault('markers', {})[suspended] = marker
+            restarted = state.get('command_web_restarts', {}).get(arg('--command-id'))
+            if restarted:
+                if restarted == state.get('fail_restart_instance'):
+                    save()
+                    sys.exit(80)
+                state.setdefault('web_restarts', []).append([restarted, number])
             for action in state['command_worker_actions'][arg('--command-id')]:
                 worker_event(*action)
         if args[2] == 'target-deregistered':
@@ -471,6 +510,14 @@ publisher_setup() {
                         continue  # Existing bounded poll tolerates transient SSM discovery failure.
                     with self.subTest(stack=workflow.name, path=name, fail_at=number, operation=args[:2]):
                         result, failed = self.execute(script, fail_at=number, **initial)
+                        if (args[1] == 'wait' and args[2] == 'command-executed' and
+                                args[args.index('--command-id')+1] in success.get('command_coordination_checks', {})):
+                            # #1540: the waiter alone decides nothing; the Success status read next keeps the deploy going.
+                            self.assertEqual(result.returncode, 0, result.stderr)
+                            self.assertEqual(failed['calls'][number][1], 'get-command-invocation')
+                            self.assertEqual(failed.get('suspensions', []), [])
+                            self.assertEqual(failed['calls'], success['calls'])
+                            continue
                         tolerant_probe = (name == 'Cleanup failed green resources before traffic shift' and
                             (args[1] == 'get-command-invocation' or
                              (args[1] == 'send-command' and args[args.index('--parameters')+1].startswith('{')
@@ -529,6 +576,9 @@ publisher_setup() {
             cleanup = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
             _, success = self.execute(shift, listener='tg-blue')
             for number, args in enumerate(success['calls'], start=1):
+                if (args[1] == 'wait' and args[2] == 'command-executed' and
+                        args[args.index('--command-id')+1] in success.get('command_coordination_checks', {})):
+                    continue  # #1540: the check's waiter alone fails nothing (covered by the API-failure test).
                 with self.subTest(stack=workflow.name, fail_at=number):
                     result, failed = self.execute(shift, listener='tg-blue', fail_at=number,
                                                   fail_after_apply=args[1] == 'modify-listener')
@@ -816,24 +866,153 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                                     env=self.env, text=True, capture_output=True, timeout=5)
             self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_coordination_failure_cannot_shift_traffic_or_remove_resources(self):
+    STEP_ERRORS = {}
+
+    def real_error(self, scenario):
+        if scenario not in self.STEP_ERRORS:
+            self.STEP_ERRORS[scenario] = real_check_stderr(scenario)
+        return self.STEP_ERRORS[scenario]
+
+    def call_index(self, state, predicate):
+        return next(i for i, call in enumerate(state['calls'], 1) if predicate(call))
+
+    def test_real_check_stderr_is_short_and_starts_with_the_sentinel(self):
+        # SSM keeps only the first 8000 chars of stderr; Rails noise (10 KB in the fake) must go elsewhere.
+        for scenario in (*CHECK_SCENARIOS, *HOST_SCENARIOS):
+            with self.subTest(step=scenario):
+                lines = self.real_error(scenario).splitlines()
+                self.assertLess(len(self.real_error(scenario)), 500)
+                verdict = ('instagram_coordination_preflight_failed' if scenario in CHECK_SCENARIOS
+                           else 'instagram_coordination_preflight_host_failed')
+                self.assertEqual(lines[:2], ['instagram_coordination_preflight_ran',
+                                             f"{verdict} step={scenario.split(':')[0]}"])
+
+    def test_green_coordination_failure_suspends_instagram_and_continues_the_deploy(self):
+        # #1540: a check.sh that ran and failed suspends Instagram assisted on the green (same helper as recovery,
+        # plus the marker), restarts what runs with it on, and the traffic/worker switch still happens.
         for workflow in WORKFLOWS:
-            for name, instance in (('Shift HTTPS listener to green', 'i-green'),
-                                   ('Switch Sidekiq workers to green', 'i-green'),
-                                   ):
-                initial = 'tg-blue' if instance == 'i-green' else 'tg-green'
-                with self.subTest(stack=workflow.name, path=name):
-                    result, state = self.execute(run_block(workflow.read_text(), name),
-                                                 listener=initial, running_workers=['i-blue'],
-                                                 fail_coordination_instance=instance)
-                    self.assertEqual(result.returncode, 78, result.stderr)
-                    self.assertEqual(state['running_workers'], ['i-blue'])
-                    self.assertEqual(state['workers'], [])
-                    self.assertEqual(state['listener'], initial)
-                    self.assertEqual(state['writes'], [])
-                    self.assertFalse(any(call[1] in ('modify-listener', 'terminate-instances', 'delete-target-group')
-                                         for call in state['calls']))
-                    self.assertFalse(any(action[0] == 'start' for action in state['workers']))
+            for name in ('Shift HTTPS listener to green', 'Switch Sidekiq workers to green'):
+                for code, noise in [(code, '') for code in CHECK_SCENARIOS] + [('proxy_preflight_failed', 'sudo: unable to resolve host ip-10-0-0-1\n')]:
+                    with self.subTest(stack=workflow.name, path=name, code=code, noise=bool(noise)):
+                        # sudo may print before check.sh: the sentinel counts on any line.
+                        result, state = self.execute(run_block(workflow.read_text(), name),
+                                                     listener='tg-blue', running_workers=['i-blue'],
+                                                     fail_coordination_instance='i-green',
+                                                     coordination_error=noise + self.real_error(code))
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertIn(f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={code} instance=i-green\n',
+                                      result.stdout)
+                        self.assertEqual(state['markers'], {'i-green': f'INSTAGRAM_ASSISTED_SUSPENDED step={code}'})
+                        self.assertEqual([node for node, _ in state['suspensions']], ['i-green'])
+                        self.assertEqual([node for node, _ in state['web_restarts']], ['i-green'])
+                        suspension = state['suspensions'][0][1]
+                        restart = state['web_restarts'][0][1]
+                        self.assertLess(state['coordination_checks'][0][1], suspension)
+                        self.assertLess(suspension, restart)
+                        if name == 'Shift HTTPS listener to green':
+                            switch = self.call_index(state, lambda call: call[1] == 'modify-listener')
+                            # Traffic only after the restarted green target is back in service.
+                            self.assertEqual(len(state['green_in_service']), 1)
+                            self.assertLess(restart, state['green_in_service'][0])
+                            self.assertLess(state['green_in_service'][0], switch)
+                            self.assertEqual(state['listener'], 'tg-green')
+                            self.assert_pointers(state, 'tg-green', 'i-green')
+                        else:
+                            self.assertEqual(state['workers'], [['stop', 'i-blue'], ['start', 'i-green']])
+                            self.assertEqual(state['running_workers'], ['i-green'])
+                            start = self.call_index(state, lambda call: call[1] == 'send-command' and
+                                'systemctl start chatwoot-worker.service' in call[call.index('--parameters')+1])
+                            self.assertLess(restart, start)
+
+    def test_green_coordination_failures_without_a_preflight_verdict_stay_fatal(self):
+        sentinel = 'instagram_coordination_preflight_ran\n'
+        cases = {
+            **{f'status-{status}': {'coordination_status': status, 'coordination_error': self.real_error('tunnel_timeout')}
+               for status in ('TimedOut', 'Cancelled', 'Cancelling', 'DeliveryTimedOut', 'ExecutionTimedOut',
+                              'InProgress', 'Pending', 'Undeliverable', 'Terminated')},
+            'failed-without-sentinel': {'coordination_error': 'sudo: /opt/chatwoot/igcoord/check.sh: command not found\n'},
+            'failed-empty-stderr': {'coordination_error': ''},
+            **{f'host-{code}': {'coordination_error': self.real_error(code)} for code in HOST_SCENARIOS},
+            'verdict-without-sentinel': {'coordination_error': 'instagram_coordination_preflight_failed step=tunnel_timeout\n'},
+            'truncated-before-code': {'coordination_error': sentinel + 'x' * 7900},
+            'malformed-code': {'coordination_error': sentinel + 'instagram_coordination_preflight_failed step=10.0.0.1:6379\n'},
+            'invocation-not-json': {'invocation_raw': 'not json'},
+            'status-not-string': {'invocation_raw': '{"Status": null, "Output": "", "Error": ""}'},
+            'error-not-string': {'invocation_raw': '{"Status": "Failed", "Output": "", "Error": null}'},
+            'suspension-failed': {'coordination_error': self.real_error('proxy_preflight_failed'),
+                                  'fail_suspension_instance': 'i-green'},
+            'restart-failed': {'coordination_error': self.real_error('proxy_preflight_failed'),
+                               'fail_restart_instance': 'i-green'},
+        }
+        for workflow in WORKFLOWS:
+            for name in ('Shift HTTPS listener to green', 'Switch Sidekiq workers to green'):
+                for case, failure in cases.items():
+                    with self.subTest(stack=workflow.name, path=name, case=case):
+                        # A check that never leaves Pending/InProgress is still fatal once the wait ends.
+                        self.env['INSTAGRAM_CHECK_WAIT_SECONDS'] = '0'
+                        self.addCleanup(self.env.pop, 'INSTAGRAM_CHECK_WAIT_SECONDS', None)
+                        result, state = self.execute(run_block(workflow.read_text(), name),
+                                                     listener='tg-blue', running_workers=['i-blue'],
+                                                     fail_coordination_instance='i-green', **failure)
+                        if case in ('status-InProgress', 'status-Pending'):
+                            self.assertIn('instagram_preflight_status_unexpected:i-green', result.stderr)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertNotIn('::warning::', result.stdout)
+                        self.assertNotIn('10.0.0.1', result.stdout + result.stderr)
+                        if case.startswith('host-'):
+                            self.assertIn(f"instagram_preflight_failed_without_verdict:i-green host_step={case[5:].split(':')[0]}",
+                                          result.stderr)
+                        if not case.startswith(('suspension', 'restart')):
+                            self.assertNotIn('suspensions', state)
+                            self.assertNotIn('INSTAGRAM_ASSISTED_SUSPENDED', result.stderr)
+                        self.assertNotIn('markers', state if case != 'restart-failed' else {})
+                        self.assertNotIn('green_in_service', state)
+                        self.assertEqual(state['running_workers'], ['i-blue'])
+                        self.assertEqual(state['workers'], [])
+                        self.assertEqual(state['listener'], 'tg-blue')
+                        self.assertEqual(state['writes'], [])
+                        self.assertFalse(any(call[1] in ('modify-listener', 'terminate-instances', 'delete-target-group')
+                                             for call in state['calls']))
+
+    def test_green_coordination_success_keeps_instagram_and_reports_an_earlier_suspension(self):
+        for workflow in WORKFLOWS:
+            for name in ('Shift HTTPS listener to green', 'Switch Sidekiq workers to green'):
+                for earlier in ('', 'proxy_preflight_failed'):
+                    with self.subTest(stack=workflow.name, path=name, earlier=earlier):
+                        markers = {'i-green': f'INSTAGRAM_ASSISTED_SUSPENDED step={earlier}'} if earlier else {}
+                        result, state = self.execute(run_block(workflow.read_text(), name), listener='tg-blue',
+                                                     running_workers=['i-blue'], markers=markers)
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertNotIn('suspensions', state)
+                        self.assertNotIn('web_restarts', state)
+                        self.assertNotIn('INSTAGRAM_ASSISTED_SUSPENDED', result.stderr)
+                        warning = (f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={earlier} instance=i-green '
+                                   '(suspenso antes deste passo)')
+                        self.assertEqual(warning in result.stdout, bool(earlier))
+                        if not earlier:
+                            self.assertNotIn('::warning::', result.stdout)
+                        waited = 'green_in_service' in state
+                        self.assertEqual(waited, bool(earlier) and name == 'Shift HTTPS listener to green')
+                        if waited:
+                            self.assertLess(state['green_in_service'][0],
+                                            self.call_index(state, lambda call: call[1] == 'modify-listener'))
+
+    def test_suspension_in_worker_step_is_reported_not_rechecked_by_listener_step(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            _, first = self.execute(run_block(source, 'Switch Sidekiq workers to green'), listener='tg-blue',
+                                    running_workers=['i-blue'], fail_coordination_instance='i-green',
+                                    coordination_error=self.real_error('coordination_ping_failed'))
+            result, state = self.execute(run_block(source, 'Shift HTTPS listener to green'), listener='tg-blue',
+                                         running_workers=['i-green'], markers=first['markers'],
+                                         fail_coordination_instance='i-green')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('::warning::INSTAGRAM_ASSISTED_SUSPENDED step=coordination_ping_failed instance=i-green '
+                          '(suspenso antes deste passo)', result.stdout)
+            self.assertNotIn('suspensions', state)
+            self.assertLess(state['green_in_service'][0],
+                            self.call_index(state, lambda call: call[1] == 'modify-listener'))
+            self.assertEqual(state['listener'], 'tg-green')
 
     def test_coordination_proof_precedes_every_traffic_shift(self):
         for workflow in WORKFLOWS:
@@ -1424,6 +1603,304 @@ print(int(moment.timestamp()))
                 self.assertFalse(any(call[1] in mutations for call in state['calls']))
                 header = workflow.read_text().split('      - name: Warn about forgotten green instances\n', 1)[1]
                 self.assertTrue(header.startswith('        continue-on-error: true\n'))
+
+
+BOOT_FAKE = r'''
+import json, os, sys
+from pathlib import Path
+name = Path(sys.argv[0]).name
+args = sys.argv[1:]
+def log(entry):
+    with open(os.environ['FAKE_LOG'], 'a') as stream:
+        stream.write(json.dumps(entry) + '\n')
+log([name, args])
+if name == 'aws':
+    if args[:2] == ['ecr', 'get-login-password']:
+        print('synthetic-login')
+    elif args[:2] == ['ssm', 'get-parameter'] and args[args.index('--name') + 1] == '/chatwoot/prod/instagram-tester-env':
+        query = args[args.index('--query') + 1]
+        print('SecureString' if query == 'Parameter.Type' else os.environ['FAKE_TESTER_ENV'], end='')
+    else:
+        sys.exit(99)
+elif name == 'ss':
+    if os.environ.get('FAKE_TUNNEL', 'up') == 'up':
+        for port in (16381, 16380):
+            print(f'LISTEN 0 128 172.17.0.1:{port} 0.0.0.0:* users:(("ssh",pid=7,fd=4))')
+elif name == 'systemctl':
+    if args[:2] == ['is-active', '--quiet'] and os.environ.get('FAKE_TUNNEL') == 'inactive':
+        sys.exit(3)
+elif name == 'docker':
+    if args[0] == 'cp':
+        target = Path(args[2])
+        # Only the middle copy fails: the installer itself is already staged and must still not run.
+        if os.environ.get('FAKE_FAIL') == 'docker-cp' and target.name == 'validate-coordination-env.py':
+            sys.exit(77)
+        target.write_text(os.environ['FAKE_INSTALLER'] if target.name == 'install-coordination-tunnel.sh' else 'synthetic\n')
+    elif args[:3] == ['network', 'inspect', 'bridge']:
+        if os.environ.get('FAKE_FAIL') == 'docker-network':
+            sys.exit(1)
+        print(os.environ.get('FAKE_GATEWAY', '172.17.0.1'))
+    elif args[0] == 'run' and args[-1] == 'scripts/instagram_testers/runtime/coordination_preflight.rb':
+        # Stand-in for Rails; coordination-runtime_test feeds the real Ruby output through check.sh.
+        ruby = os.environ.get('FAKE_RUBY', 'ok')
+        if ruby == 'silent':
+            # Docker or Rails boot failed before the script: nothing from it.
+            print('docker: Error response from daemon', file=sys.stderr)
+            sys.exit(1)
+        print('Rails boot noise ' * 600, file=sys.stderr)  # ~10 KB, beyond SSM's 8000-char stderr cut
+        print('instagram_coordination_preflight_rails_started', file=sys.stderr)
+        if ruby == 'ok':
+            print('instagram_coordination_preflight_ok')
+            sys.exit(0)
+        if ruby == 'killed':
+            sys.exit(137)  # the container was killed (OOM, docker stop) after the script started
+        if ruby != 'crashed':
+            print(f'instagram_coordination_preflight_failed step={ruby}', file=sys.stderr)
+        sys.exit(1)
+    elif args[0] == 'run':
+        overlay = next(args[i + 1] for i, arg in enumerate(args) if arg == '--env-file' and args[i + 1].endswith('instagram-tester.env'))
+        for path in (args[i + 1] for i, arg in enumerate(args) if arg == '--env-file'):
+            assert Path(path).exists(), path
+        log(['overlay-at-run', Path(overlay).read_text()])
+        if os.environ.get('FAKE_FAIL') == 'docker-run':
+            sys.exit(77)
+    elif args[0] == 'create' and os.environ.get('FAKE_FAIL') == 'docker-create':
+        sys.exit(77)
+    elif args[0] == 'login':
+        sys.stdin.read()  # like docker: drain the piped password, so `aws ... | docker login` has no broken pipe
+    elif args[0] == 'pull' and os.environ.get('FAKE_FAIL') == 'docker-pull':
+        sys.exit(77)
+    elif args[0] not in ('login', 'pull', 'create', 'rm', 'image'):
+        sys.exit(99)
+else:
+    sys.exit(99)
+'''
+
+# Every Instagram failure the real check.sh can report (suspends), and the fakes that produce it.
+CHECK_SCENARIOS = {
+    'tunnel_timeout': {'FAKE_TUNNEL': 'down'},
+    'tunnel_inactive': {'FAKE_TUNNEL': 'inactive'},
+    'coordination_ping_failed': {'FAKE_RUBY': 'coordination_ping_failed'},
+    'proxy_configuration_invalid': {'FAKE_RUBY': 'proxy_configuration_invalid'},
+    'proxy_preflight_failed': {'FAKE_RUBY': 'proxy_preflight_failed'},
+    'rails_preflight_failed': {'FAKE_RUBY': 'crashed'},  # the script ran and died before classifying
+}
+# Host/Docker failures the real check.sh reports with its own verdict (fatal, never a suspension).
+HOST_SCENARIOS = {
+    'host_gateway_unavailable': {'FAKE_GATEWAY': 'not-an-ip'},
+    'host_gateway_unavailable:docker': {'FAKE_FAIL': 'docker-network'},
+    'host_docker_failed': {'FAKE_RUBY': 'silent'},
+    'host_rails_killed': {'FAKE_RUBY': 'killed'},
+}
+
+
+def write_boot_fakes(directory):
+    bin_dir = directory / 'bin'
+    bin_dir.mkdir()
+    for name in ('aws', 'docker', 'systemctl', 'ss'):
+        (bin_dir / name).write_text(f'#!{sys.executable}\n{BOOT_FAKE}')
+        (bin_dir / name).chmod(0o700)
+    for name in ('sudo', 'ssh', 'sshd', 'curl', 'dnf', 'cloud-init', 'journalctl'):
+        (bin_dir / name).write_text('#!/bin/sh\nexit 99\n')
+        (bin_dir / name).chmod(0o700)
+    return bin_dir
+
+
+def real_check_script(app):
+    """The real coordination-preflight.sh, pointed at a test app dir with a 1 s tunnel wait."""
+    source = (ROOT / 'scripts/instagram_testers/runtime/coordination-preflight.sh').read_text()
+    for old in ('APP_DIR=/opt/chatwoot', 'wait_seconds=60'):
+        assert source.count(old) == 1, old
+    return source.replace('APP_DIR=/opt/chatwoot', f'APP_DIR={app}').replace('wait_seconds=60', 'wait_seconds=1')
+
+
+def real_check_stderr(scenario):
+    """stderr of the real check.sh for one scenario: what SSM returns as StandardErrorContent."""
+    with tempfile.TemporaryDirectory(prefix='real-check-') as name:
+        directory = Path(name)
+        app = directory / 'app'
+        (app / 'igcoord').mkdir(parents=True)
+        for path in ('runtime.env', '.env', 'instagram-tester.env', 'igcoord/redis.env', 'igcoord/ca.crt'):
+            (app / path).write_text('IMAGE_URI=image:sha\n' if path == 'runtime.env' else '')
+        check = directory / 'check.sh'
+        check.write_text(real_check_script(app))
+        env = {'PATH': f'{write_boot_fakes(directory)}:/usr/bin:/bin', 'FAKE_LOG': str(directory / 'log'),
+               'TMPDIR': str(directory), **{**CHECK_SCENARIOS, **HOST_SCENARIOS}[scenario]}
+        result = subprocess.run(['/bin/bash', str(check)], env=env, text=True, capture_output=True, timeout=30)
+    assert result.returncode == 1, (scenario, result.returncode, result.stderr)
+    return result.stderr
+
+
+class GreenBootInstagramTest(unittest.TestCase):
+    """#1540: deploy.sh from the green user data with the real check.sh, run with local fakes only."""
+
+    TESTER_ENV = 'INSTAGRAM_TESTER_APP_NAME=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='green-boot-')
+        self.addCleanup(self.temp.cleanup)
+        self.directory = Path(self.temp.name)
+        self.app = self.directory / 'app'
+        self.run_dir = self.directory / 'run'
+        for path in (self.app, self.run_dir):
+            path.mkdir()
+        self.bin = write_boot_fakes(self.directory)
+        (self.directory / 'check.sh').write_text(real_check_script(self.app))
+        self.log = self.directory / 'commands.jsonl'
+
+    def deploy_script(self, workflow):
+        source = workflow.read_text()
+        nested = source.split('          cat > "$APP_DIR/deploy.sh" <<\'EOF\'\n', 1)[1].split('          EOF\n', 1)[0]
+        script = '\n'.join(line[10:] for line in nested.splitlines()) + '\n'
+        replacements = (('APP_DIR="/opt/chatwoot"', f'APP_DIR="{self.app}"'),
+                        ('mktemp -d /run/', f'mktemp -d {self.run_dir}/'),
+                        # The publisher has its own coverage; it is not part of the coordination preflight.
+                        ('\ninstall_instagram_tester_publisher\n', '\n: publisher-not-under-test\n'))
+        for old, new in replacements:
+            self.assertGreaterEqual(script.count(old), 1, old)
+            script = script.replace(old, new)
+        return script
+
+    def boot(self, workflow, install_fails=False, fail='', start_worker='false', missing_runtime=False, **check_env):
+        (self.app / '.env').write_text('REDIS_URL=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
+        (self.app / 'runtime.env').write_text(f'IMAGE_URI=image:sha\nAWS_REGION=us-east-1\nECR_REGISTRY=registry\n'
+                                              f'START_WORKER_AFTER_DEPLOY={start_worker}\n')
+        installer = ('#!/bin/bash\necho instagram_coordination_fetch_failed >&2\nexit 1\n' if install_fails else
+                     f'#!/bin/bash\nset -eu\necho installer-ran >> "{self.directory}/installer.log"\n'
+                     'install -d -m 700 "$3/igcoord"\n: > "$3/igcoord/redis.env"\n: > "$3/igcoord/ca.crt"\n'
+                     f'install -m 700 "{self.directory}/check.sh" "$3/igcoord/check.sh"\n')
+        if missing_runtime:
+            # check.sh cannot even start (no runtime.env for it): not an Instagram verdict.
+            installer += f'mv "$3/runtime.env" "{self.directory}/runtime.env.hidden"\n'
+        self.log.write_text('')
+        env = {'PATH': f'{self.bin}:/usr/bin:/bin', 'FAKE_LOG': str(self.log),
+               'FAKE_TESTER_ENV': self.TESTER_ENV, 'FAKE_INSTALLER': installer,
+               'FAKE_FAIL': fail, 'TMPDIR': str(self.directory), **check_env}
+        script = self.directory / 'deploy.sh'
+        script.write_text(self.deploy_script(workflow))
+        return subprocess.run(['/bin/bash', str(script)], env=env, text=True, capture_output=True, timeout=60)
+
+    def entries(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def systemctl(self):
+        return [args for name, args in self.entries() if name == 'systemctl' and args[0] != 'is-active']
+
+    def overlays_at_run(self):
+        return [entry[1] for entry in self.entries() if entry[0] == 'overlay-at-run']
+
+    def rails_preflight_ran(self):
+        return any(name == 'docker' and args[0] == 'run' and args[-1].endswith('coordination_preflight.rb')
+                   for name, args in self.entries())
+
+    def reset(self):
+        shutil.rmtree(self.app / 'igcoord', ignore_errors=True)
+        (self.directory / 'installer.log').unlink(missing_ok=True)
+        (self.app / 'instagram-assisted-suspended').unlink(missing_ok=True)
+
+    def assert_suspended(self, result, step, start_worker):
+        self.assertEqual(result.returncode, 0, result.stderr[-3000:])
+        suspended = f'INSTAGRAM_ASSISTED_SUSPENDED step={step}'
+        self.assertIn(suspended, result.stderr)
+        self.assertEqual((self.app / 'instagram-assisted-suspended').read_text(), suspended + '\n')
+        overlay = (self.app / 'instagram-tester.env').read_text()
+        self.assertEqual(overlay, 'INSTAGRAM_TESTER_APP_NAME=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=false\n')
+        self.assertEqual((self.app / 'instagram-tester.env').stat().st_mode & 0o777, 0o600)
+        # Every container of this boot (prepare, SES preflight) already sees the suspension.
+        self.assertEqual(self.overlays_at_run(), [overlay, overlay])
+        self.assertIn(['restart', 'chatwoot-web.service'], self.systemctl())
+        self.assertEqual(['restart', 'chatwoot-worker.service'] in self.systemctl(), start_worker == 'true')
+
+    def test_each_failing_preflight_step_suspends_instagram_and_boot_completes(self):
+        for workflow in WORKFLOWS:
+            for code, check_env in CHECK_SCENARIOS.items():
+                for start_worker in ('false', 'true'):
+                    with self.subTest(stack=workflow.name, step=code, start_worker=start_worker):
+                        self.reset()
+                        result = self.boot(workflow, start_worker=start_worker, **check_env)
+                        self.assert_suspended(result, code, start_worker)
+                        self.assertEqual(self.rails_preflight_ran(), code not in ('tunnel_timeout', 'tunnel_inactive'))
+
+    def test_tunnel_installer_failure_suspends_and_provides_container_files(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                self.reset()
+                result = self.boot(workflow, install_fails=True)
+                self.assert_suspended(result, 'tunnel_install_failed', 'false')
+                self.assertIn('instagram_coordination_fetch_failed', result.stderr)
+                self.assertEqual((self.app / 'igcoord/redis.env').read_text(), '')
+                self.assertEqual((self.app / 'igcoord/ca.crt').read_text(), '')
+                self.assertFalse((self.app / 'igcoord/check.sh').exists())
+                self.assertFalse(self.rails_preflight_ran())
+
+    def test_passing_preflight_keeps_instagram_unchanged(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                self.reset()
+                result = self.boot(workflow)
+                self.assertEqual(result.returncode, 0, result.stderr[-3000:])
+                self.assertIn('instagram_coordination_preflight_ok', result.stdout)
+                self.assertNotIn('INSTAGRAM_ASSISTED_SUSPENDED', result.stdout + result.stderr)
+                self.assertFalse((self.app / 'instagram-assisted-suspended').exists())
+                self.assertEqual((self.app / 'instagram-tester.env').read_text(), self.TESTER_ENV)
+                self.assertEqual(self.overlays_at_run(), [self.TESTER_ENV, self.TESTER_ENV])
+                self.assertTrue(self.rails_preflight_ran())
+                self.assertIn(['restart', 'chatwoot-web.service'], self.systemctl())
+                self.assertEqual((self.directory / 'installer.log').read_text().count('installer-ran'), 1)
+
+    def test_redeploy_clears_a_previous_suspension(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                self.reset()
+                self.assert_suspended(self.boot(workflow, FAKE_TUNNEL='down'), 'tunnel_timeout', 'false')
+                result = self.boot(workflow)
+                self.assertEqual(result.returncode, 0, result.stderr[-3000:])
+                self.assertFalse((self.app / 'instagram-assisted-suspended').exists())
+                self.assertEqual((self.app / 'instagram-tester.env').read_text(), self.TESTER_ENV)
+
+    def test_non_instagram_boot_failures_stay_fatal(self):
+        # Image copy, Docker, host and application failures abort the boot exactly as before #1540.
+        cases = {'image-create': {'fail': 'docker-create'}, 'image-copy': {'fail': 'docker-cp'},
+                 'docker-pull': {'fail': 'docker-pull'}, 'db-prepare': {'fail': 'docker-run'},
+                 'check-without-runtime': {'missing_runtime': True},
+                 **{f'check-{code}': dict(env) for code, env in HOST_SCENARIOS.items()}}
+        for workflow in WORKFLOWS:
+            for case, options in cases.items():
+                with self.subTest(stack=workflow.name, case=case):
+                    self.reset()
+                    result = self.boot(workflow, **{key.removeprefix('FAKE_').lower() if key == 'FAKE_FAIL' else key: value
+                                                    for key, value in options.items()})
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertNotIn('INSTAGRAM_ASSISTED_SUSPENDED', result.stdout + result.stderr)
+                    self.assertFalse((self.app / 'instagram-assisted-suspended').exists())
+                    self.assertEqual((self.app / 'instagram-tester.env').read_text(), self.TESTER_ENV)
+                    self.assertNotIn(['restart', 'chatwoot-web.service'], self.systemctl())
+                    if case in ('image-create', 'image-copy'):
+                        self.assertFalse((self.directory / 'installer.log').exists())
+                    if case.startswith('check-'):
+                        self.assertIn('instagram_preflight_failed_without_verdict', result.stderr)
+                    if case.startswith('check-host'):
+                        self.assertIn(f"instagram_coordination_preflight_host_failed step={case[6:].split(':')[0]}",
+                                      result.stderr)
+                    (self.directory / 'runtime.env.hidden').unlink(missing_ok=True)
+
+    def test_boot_and_ssm_share_the_same_verdict_parser(self):
+        # The green and the runner cannot source one file; the parser must not drift between them.
+        def body(text, indent):
+            start = text.index(f'{indent}instagram_preflight_verdict() {{\n')
+            end = text.index(f'\n{indent}}}\n', start)
+            return [line[len(indent):] for line in text[start:end].splitlines()]
+        runner = body(HELPER.read_text(), '')
+        for workflow in WORKFLOWS:
+            self.assertEqual(body(workflow.read_text(), ' ' * 10), runner, workflow.name)
+
+    def test_green_user_data_fits_the_ec2_limit(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            userdata = source.split("          cat > \"$RUNNER_TEMP/green-user-data.sh\" <<'USERDATA'\n", 1)[1].split('          USERDATA\n', 1)[0]
+            rendered = '\n'.join(line[10:] for line in userdata.splitlines()) + '\n'
+            # EC2 rejects user data above 16 KB; leave room for the substituted image and registry.
+            self.assertLess(len(rendered.encode()), 16384 - 512, workflow.name)
 
 
 if __name__ == '__main__':
