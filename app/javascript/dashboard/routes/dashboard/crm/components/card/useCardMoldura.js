@@ -26,6 +26,7 @@ export const useCardMoldura = ({
   subtitulo,
   migalha,
   nome,
+  jeito,
   etapa,
   contatoInicial,
   permissoes,
@@ -36,7 +37,7 @@ export const useCardMoldura = ({
   const voltarPara = computed(() => {
     const de = anterior.value;
     if (!de || de === 'resumo') return titulo.value;
-    return t(`CRM_CARD.${TELAS[de]?.chave || 'RESUMO'}.TELA`);
+    return jeito.texto(`${TELAS[de]?.chave || 'RESUMO'}.TELA`);
   });
 
   // O título do retorno novo diz o que está sendo marcado.
@@ -59,6 +60,9 @@ export const useCardMoldura = ({
   const heroi = computed(() => {
     if (tela.value === 'criar-1' || tela.value === 'criar-2') {
       const primeiro = tela.value === 'criar-1';
+      // #1498 — num funil de Atender, "Sobre o atendimento".
+      let fim = jeito.atender.value ? '_ATENDER' : '';
+      if (jeito.cobranca.value) fim = '_COBRANCA';
       return {
         voltar: primeiro
           ? (contatoInicial.value &&
@@ -69,10 +73,10 @@ export const useCardMoldura = ({
         rotulo: t('CRM_CARD.CRIAR.ROTULO', { passo: primeiro ? 1 : 2 }),
         icone: primeiro ? 'i-lucide-user-plus' : 'i-lucide-briefcase-business',
         titulo: t(
-          primeiro ? 'CRM_CARD.CRIAR.TITULO_1' : 'CRM_CARD.CRIAR.TITULO_2'
+          primeiro ? 'CRM_CARD.CRIAR.TITULO_1' : `CRM_CARD.CRIAR.TITULO_2${fim}`
         ),
         texto: t(
-          primeiro ? 'CRM_CARD.CRIAR.TEXTO_1' : 'CRM_CARD.CRIAR.TEXTO_2'
+          primeiro ? 'CRM_CARD.CRIAR.TEXTO_1' : `CRM_CARD.CRIAR.TEXTO_2${fim}`
         ),
       };
     }
@@ -91,12 +95,15 @@ export const useCardMoldura = ({
     return {
       voltar: voltarPara.value,
       migalha: [],
-      rotulo: t(`CRM_CARD.${sub.chave}.TELA`),
-      icone: sub.icone,
-      titulo: t(`CRM_CARD.${sub.chave}.${tituloDa(tela.value)}`, {
+      rotulo: jeito.texto(`${sub.chave}.TELA`),
+      icone:
+        jeito.atender.value && sub.chave === 'NEGOCIO'
+          ? 'i-lucide-message-square-text'
+          : sub.icone,
+      titulo: jeito.texto(`${sub.chave}.${tituloDa(tela.value)}`, {
         nome: nome.value,
       }),
-      texto: t(`CRM_CARD.${sub.chave}.${textoDa(tela.value)}`, {
+      texto: jeito.texto(`${sub.chave}.${textoDa(tela.value)}`, {
         nome: nome.value,
       }),
     };

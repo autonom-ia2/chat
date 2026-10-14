@@ -149,11 +149,15 @@ describe('pipeline description AI actions', () => {
 
   // #1384: o funil novo já vem com a descrição padrão e a IA funciona antes de salvar.
   describe('before the pipeline exists', () => {
-    const mountCreate = () =>
-      mount(CrmPipelineDrawer, {
+    // #1498: o funil novo só ganha etapas depois de escolher o tipo.
+    const mountCreate = async () => {
+      const created = mount(CrmPipelineDrawer, {
         props: { show: true, mode: 'create' },
         global: { stubs: { CrmStageAutomationsPanel: true } },
       });
+      await created.get('[data-tipo="VENDER"]').trigger('click');
+      return created;
+    };
 
     it('fills each default stage with the server default description', async () => {
       CrmKanbanAPI.getStageCriteriaDefaults.mockImplementation(async names => ({
@@ -164,11 +168,16 @@ describe('pipeline description AI actions', () => {
           })),
         },
       }));
-      const created = mountCreate();
+      const created = await mountCreate();
       await flushPromises();
 
       const names = created.vm.form.stages.map(stage => stage.name);
-      expect(CrmKanbanAPI.getStageCriteriaDefaults).toHaveBeenCalledWith(names);
+      expect(CrmKanbanAPI.getStageCriteriaDefaults).toHaveBeenCalledWith(
+        names,
+        {
+          atender: false,
+        }
+      );
       expect(created.vm.criteriaFor(created.vm.form.stages[0])).toBe(
         `Padrão de ${names[0]}`
       );
@@ -183,7 +192,7 @@ describe('pipeline description AI actions', () => {
           answer = resolve;
         })
       );
-      const created = mountCreate();
+      const created = await mountCreate();
       created.vm.form.stages[0].aiCriteria = 'Meu texto';
       answer({
         data: {
@@ -207,7 +216,7 @@ describe('pipeline description AI actions', () => {
       CrmKanbanAPI.improveDraftStageCriteria.mockResolvedValue({
         data: { description: 'Primeiro contato.', note: '' },
       });
-      const created = mountCreate();
+      const created = await mountCreate();
       await flushPromises();
       created.vm.form.name = ' Funil novo ';
       created.vm.openStage(created.vm.form.stages[0]);
