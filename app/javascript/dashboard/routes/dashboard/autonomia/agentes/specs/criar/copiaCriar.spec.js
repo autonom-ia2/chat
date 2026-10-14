@@ -97,8 +97,11 @@ describe('cópia da criação em pt_BR', () => {
     expect(vazio.get('[data-vazio]').text()).toBe(
       'Toque numa pergunta ou escreva a sua.'
     );
-    expect(vazio.get('[data-pergunte]').text()).toBe(
-      'Faça uma pergunta para ver como Duda responde.'
+    expect(vazio.get('[data-teste-opcional]').text()).toBe(
+      'Se quiser, teste antes: faça uma pergunta e veja como Duda responde.'
+    );
+    expect(vazio.get('[data-comecar]').text()).toContain(
+      'Começar a atender no WhatsApp'
     );
     expect(vazio.get('[data-perguntas]').text()).toBe('Vocês abrem no sábado?');
 
@@ -119,8 +122,11 @@ describe('cópia da criação em pt_BR', () => {
     expect(respondida.get('[data-aviso]').text()).toBe(
       'Aqui Duda passaria a conversa para a equipe.'
     );
-    expect(respondida.get('[data-depois]').text()).toBe(
-      'Agora não, terminar depois'
+    expect(respondida.get('[data-ajustes]').text()).toContain(
+      'Fazer ajustes avançados'
+    );
+    expect(respondida.get('[data-ajustes]').text()).toContain(
+      'Duda fica parado até você ligar.'
     );
     semProibidas(respondida.text());
   });
@@ -201,10 +207,25 @@ describe('cópia da criação em pt_BR', () => {
     semAtender(conte.text());
 
     const confira = mount(EtapaConfira, {
-      props: { nome: 'Duda', interno: true, mensagens: respondido },
+      props: {
+        nome: 'Duda',
+        interno: true,
+        mensagens: respondido,
+        rotuloComecar: 'Começar a ajudar a equipe',
+      },
     });
     expect(confira.text()).toContain('Duda · ajuda da equipe');
+    // #1504 — o Começar e "Fazer ajustes avançados" aparecem sem teste, e também sem "atender".
+    expect(confira.find('[data-comecar]').exists()).toBe(true);
+    expect(confira.text()).toContain('Fazer ajustes avançados');
     semAtender(confira.text());
+
+    // Sem rótulo, o copiloto nunca cai em "falta escolher onde" (não tem canal).
+    const semRotulo = mount(EtapaConfira, {
+      props: { nome: 'Duda', interno: true },
+    });
+    expect(semRotulo.find('[data-sem-canal]').exists()).toBe(false);
+    semAtender(semRotulo.text());
 
     const pronto = mount(EtapaPronto, {
       props: {

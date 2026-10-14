@@ -122,6 +122,7 @@ module Crm
       def user_input
         {
           card: card_payload,
+          pipeline: pipeline_payload,
           stages: @stages.map { |stage| stage_payload(stage) },
           conversation_summary: @context[:summary],
           recent_messages: @context[:recent_messages],
@@ -160,6 +161,12 @@ module Crm
       def scope_to_schema(values, definitions)
         allowed = Array(definitions).map { |definition| definition[:key].to_s }
         values.to_h.select { |key, _value| allowed.include?(key.to_s) }
+      end
+
+      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache.
+      def pipeline_payload
+        pipeline = @card.pipeline
+        { kind: pipeline&.kind || 'sell', when_to_use: pipeline&.when_to_use.presence }.compact
       end
 
       def card_payload

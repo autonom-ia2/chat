@@ -9,6 +9,8 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps({
   dias: { type: Array, required: true },
   carregando: { type: Boolean, default: false },
+  // #1498 — funil de Atender: "Etapas e assunto".
+  venda: { type: Boolean, default: true },
 });
 
 const { t } = useI18n();
@@ -92,7 +94,13 @@ const mover = evento => {
         @click="filtro = grupo"
         @keydown="mover"
       >
-        {{ t(`${H}.GRUPO.${grupo.toUpperCase()}`) }}
+        {{
+          t(
+            grupo === 'negocio' && !venda
+              ? `${H}.GRUPO.ASSUNTO`
+              : `${H}.GRUPO.${grupo.toUpperCase()}`
+          )
+        }}
         <span class="rounded-md bg-n-alpha-2 px-1.5 text-xs text-n-slate-11">
           {{ contagem[grupo] }}
         </span>

@@ -42,6 +42,14 @@ const mountCard = (card = CONVERSATION_CARD, props = {}) =>
     },
   });
 
+describe('CrmKanbanCard value (#1498)', () => {
+  it('hides the value in a Serve pipeline', () => {
+    const card = { ...NO_CONVERSATION_CARD, value_cents: 120000 };
+    expect(mountCard(card).text()).toContain('1.200');
+    expect(mountCard(card, { comValor: false }).text()).not.toContain('1.200');
+  });
+});
+
 describe('CrmKanbanCard bubble shortcut', () => {
   it('renders the last-message bubble as a conversation button when a linked conversation exists', () => {
     const wrapper = mountCard();

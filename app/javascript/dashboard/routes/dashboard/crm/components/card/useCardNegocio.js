@@ -1,5 +1,15 @@
 import { computed, reactive, ref } from 'vue';
 
+// #1498 — Cobrança: o dia em que o cliente prometeu pagar (metadata do card).
+// Logo depois de salvar, o card local traz o campo solto (payment_promise_at).
+export const promessaDoCard = card => {
+  const valor =
+    card && 'payment_promise_at' in card
+      ? card.payment_promise_at
+      : card?.metadata?.payment_promise_at;
+  return valor ? String(valor).slice(0, 10) : '';
+};
+
 // #1423 — os dados do negócio no card: nome, observações, quanto vale (moeda
 // e valor), urgência, quanto pede atenção (0 a 100) e quando deve fechar. Os
 // campos e o envio são os mesmos da gaveta antiga (RS-03 a RS-08).
@@ -14,6 +24,7 @@ const vazio = () => ({
   priority: 'medium',
   score: 0,
   expectedCloseAt: '',
+  paymentPromiseAt: '',
 });
 
 export const negocioDoCard = card => ({
@@ -26,9 +37,12 @@ export const negocioDoCard = card => ({
   expectedCloseAt: card?.expected_close_at
     ? card.expected_close_at.slice(0, 10)
     : '',
+  paymentPromiseAt: promessaDoCard(card),
 });
 
-export const payloadDoNegocio = form => ({
+// `cobranca`: só a Cobrança mexe na promessa de pagamento; os outros cards
+// não mandam o campo (e não apagam uma promessa antiga).
+export const payloadDoNegocio = (form, { cobranca = false } = {}) => ({
   title: form.title.trim(),
   description: form.description.trim(),
   value_cents: form.valueAmount
@@ -38,6 +52,7 @@ export const payloadDoNegocio = form => ({
   priority: form.priority,
   score: Math.min(Math.max(Number(form.score || 0), 0), 100),
   expected_close_at: form.expectedCloseAt || null,
+  ...(cobranca ? { payment_promise_at: form.paymentPromiseAt || null } : {}),
 });
 
 export const useCardNegocio = () => {

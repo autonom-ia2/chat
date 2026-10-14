@@ -4,21 +4,32 @@
       "OPENS_IN_NEW_TAB": "(opens in a new tab)"
     },
     "CONTACT": {
+      "SHARED": "{sender} shared a contact"
     },
     "FAILURE": {
       "RETRY": "Send again",
       "TITLE": "{title}."
     },
     "FLOW": {
+      "FORM": "WhatsApp form",
+      "FORM_NAMED": "Form: {name}",
+      "OPENS_ON_CUSTOMER_PHONE": "(opens the form in the customer's WhatsApp, not in the dashboard)"
     },
     "LINK_BUTTON": {
       "OPENS": "Opens: {url}"
     },
     "LOCATION": {
+      "SEE_ON_MAP": "See on map",
+      "SHARED": "{sender} shared a location"
     },
     "LOCATION_REQUEST": {
+      "BUTTON": "Send location",
+      "BUTTON_HINT": "(button shown in the customer's WhatsApp)",
+      "CAPTION": "We asked the customer where they are"
     },
     "OPTIONS": {
+      "CHOSEN": "The customer tapped \"{title}\"",
+      "MIRROR": "Copy of what the customer received. Only the customer can tap these options."
     }
   }
 }

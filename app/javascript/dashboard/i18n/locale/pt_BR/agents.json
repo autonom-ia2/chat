@@ -1436,8 +1436,7 @@
           "TEXTO": "{nome} fica na lista como Falta terminar.",
           "FICAR": "Continuar aqui",
           "SAIR": "Sair",
-          "FEITO": "{nome} ficou na lista como Falta terminar.",
-          "DEPOIS": "Agora não, terminar depois"
+          "FEITO": "{nome} ficou na lista como Falta terminar."
         },
         "CONTE": {
           "ROTULO": "Conversa para criar o agente",
@@ -1511,7 +1510,6 @@
           "DEMORA": "Está demorando. Tente de novo.",
           "INCOMPLETO": "{nome} ainda não sabe o suficiente. Conte mais um pouco ao lado.",
           "INCOMPLETO_CELULAR": "{nome} ainda não sabe o suficiente. Conte mais um pouco.",
-          "PERGUNTE": "Faça uma pergunta para ver como {nome} responde.",
           "COMECAR_NO": "Começar a atender no {canal}",
           "COMECAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
           "COMECAR_COPILOTO": "Começar a ajudar a equipe",
@@ -1528,7 +1526,11 @@
             "COMO_RESPONDO": "Um cliente pediu desconto. Como respondo?",
             "PROXIMO_PASSO": "O cliente parou de responder. Qual o próximo passo?",
             "RASCUNHO": "Rascunhe uma resposta sobre o prazo de entrega"
-          }
+          },
+          "TESTE_OPCIONAL": "Se quiser, teste antes: faça uma pergunta e veja como {nome} responde.",
+          "AJUSTES": "Fazer ajustes avançados",
+          "AJUSTES_TEXTO": "{nome} fica parado até você ligar.",
+          "AJUSTES_ERRO": "Não deu para abrir os ajustes de {nome} agora. Nada mudou."
         },
         "CANAL": {
           "WHATSAPP": "WhatsApp",

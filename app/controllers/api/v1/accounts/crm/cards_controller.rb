@@ -113,11 +113,14 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update
     attributes = update_params.to_h.with_indifferent_access
     strip_ai_metadata!(attributes)
+    promessa = payment_promise_from(attributes)
+    return render_unprocessable('crm.invalid_payment_promise') if promessa == PROMESSA_INVALIDA
+
     ensure_new_owner_allowed!(attributes[:owner_id]) if attributes.key?(:owner_id)
-    if attributes.present?
+    if attributes.present? || promessa != SEM_PROMESSA
       mark_value_source_human!(attributes) if attributes.key?(:value_cents)
       mark_score_source_manual!(attributes) if score_changed_by_hand?(attributes)
-      apply_update!(attributes)
+      apply_update!(attributes, promessa: promessa)
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show
@@ -578,18 +581,47 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def update_params
     parameter_set(:card).permit(
       :title, :description, :value_cents, :currency, :lost_reason, :source,
-      :priority, :score, :expected_close_at, :external_id, :owner_id, metadata: {}, custom_attributes: {}
+      :priority, :score, :expected_close_at, :external_id, :owner_id, :payment_promise_at, metadata: {}, custom_attributes: {}
     )
+  end
+
+  # Cobrança (#1498): o dia em que o cliente prometeu pagar, só no formato "AAAA-MM-DD". Devolve SEM_PROMESSA quando
+  # o pedido não traz o campo, nil para tirar e PROMESSA_INVALIDA para data que não existe.
+  SEM_PROMESSA = :sem_promessa
+  PROMESSA_INVALIDA = :promessa_invalida
+
+  def payment_promise_from(attributes)
+    return SEM_PROMESSA unless attributes.key?(:payment_promise_at)
+
+    value = attributes.delete(:payment_promise_at).to_s.strip
+    return if value.empty?
+
+    date = Date.strptime(value, '%Y-%m-%d')
+    date.strftime('%Y-%m-%d') == value ? value : PROMESSA_INVALIDA
+  rescue Date::Error
+    PROMESSA_INVALIDA
+  end
+
+  def with_payment_promise(metadata, promessa)
+    metadata = (metadata || {}).deep_dup
+    promessa ? metadata.merge('payment_promise_at' => promessa) : metadata.except('payment_promise_at')
   end
 
   # Campos do card (#1146): o PATCH manda só o que mudou. Junta com o que já está salvo (chave com null sai), com o card
   # travado, para duas edições ao mesmo tempo não apagarem o campo uma da outra.
-  def apply_update!(attributes)
+  # Promessa de pagamento (#1498): só a chave dela muda no metadata, com o card travado, para não desfazer o que a IA
+  # gravou no meio tempo; o histórico registra a data, não o metadata inteiro.
+  def apply_update!(attributes, promessa: SEM_PROMESSA)
     ActiveRecord::Base.transaction do
       registro = attributes.dup
       if attributes.key?(:custom_attributes)
         @card.lock!
         attributes[:custom_attributes] = @card.custom_attributes.to_h.merge(attributes[:custom_attributes].to_h).compact
+      end
+      unless promessa == SEM_PROMESSA
+        @card.lock!
+        attributes[:metadata] = with_payment_promise(attributes[:metadata].presence || @card.metadata, promessa)
+        registro[:payment_promise_at] = promessa
       end
       @card.update!(attributes)
       # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado.
