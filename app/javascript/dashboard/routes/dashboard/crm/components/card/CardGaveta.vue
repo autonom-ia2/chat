@@ -31,6 +31,8 @@ import { useCardDono } from './useCardDono';
 import { useCardMover } from './useCardMover';
 import TelaOrigem from './telas/TelaOrigem.vue';
 import TelaHistorico from './telas/TelaHistorico.vue';
+import LembreteSerie from '../lembrete/LembreteSerie.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { passosDoCard } from './proximoPasso';
 import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
 import { useCardRetorno } from './useCardRetorno';
@@ -131,15 +133,6 @@ const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
 const negocio = useCardNegocio();
-const retorno = useCardRetorno({
-  t,
-  store,
-  card,
-  emit,
-  podeGerenciar,
-  formato,
-});
-provide('cardRetorno', retorno);
 const atividades = computed(() => card.value.activities || []);
 const { porDia } = useCardHistorico({
   t,
@@ -201,6 +194,41 @@ const irPara = destino => {
 const voltarSemGuarda = () => {
   tela.value = pilha.value.at(-1) || 'resumo';
   pilha.value = pilha.value.slice(0, -1);
+};
+
+const useAccountFlags = useAccount();
+const retorno = useCardRetorno({
+  t,
+  store,
+  card,
+  emit,
+  podeGerenciar,
+  formato,
+  agentes: computed(() => props.agents),
+  locale,
+  lembretesV2: computed(() =>
+    useAccountFlags.isCloudFeatureEnabled(FEATURE_FLAGS.CRM_LEMBRETES_V2)
+  ),
+  // Mudança de um lembrete que repete salva direto na API (#1460): volta à
+  // repetição, que recarrega.
+  aoSalvarEdicao: () => {
+    voltarSemGuarda();
+    emit('refreshCard');
+  },
+});
+provide('cardRetorno', retorno);
+// #1460: a visão da repetição de um lembrete, dentro do card.
+const serieAberta = ref(null);
+const serieTitulo = ref('');
+const telaSerie = ref(null);
+const abrirSerie = serieId => {
+  serieAberta.value = serieId;
+  irPara('retorno-serie');
+};
+// "Só a próxima" abre o lembrete sem repetição; "esta e as próximas", com ela.
+const mudarSerie = escolha => {
+  retorno.editarSerie(escolha);
+  irPara('retorno-novo');
 };
 
 // ——— Quem cuida (DN-02/OB-07): troca o dono na própria gaveta ———
@@ -396,7 +424,9 @@ const { heroi, rodape } = useCardMoldura({
   estado: {
     salvando: computed(() => props.isSaving),
     negocioValido: negocio.valido,
-    salvandoRetorno: computed(() => props.isSavingFollowUp),
+    salvandoRetorno: computed(
+      () => props.isSavingFollowUp || retorno.salvandoEdicao.value
+    ),
     retornoPronto: retorno.pronto,
     modoRetorno: computed(() => retorno.form.automationMode),
     salvandoReuniao: computed(() => Boolean(telaReuniao.value?.salvando)),
@@ -407,6 +437,8 @@ const { heroi, rodape } = useCardMoldura({
     link: computed(() => telaLink.value?.principal || null),
     donoSujo,
     retornoFalta: retorno.faltaFrase,
+    serieTitulo,
+    edicaoRetorno: computed(() => retorno.edicao.value?.qual || ''),
     cliente: computed(() => telaCliente.value),
     criacao: computed(() => criacao.value),
   },
@@ -418,6 +450,7 @@ const { heroi, rodape } = useCardMoldura({
     confirmarReuniao,
     novoRetorno,
     criarRetorno,
+    abrirMudarSerie: () => telaSerie.value?.abrirMudar(),
     desfazerCliente: () => telaCliente.value?.desfazer(),
     passo1: () => {
       tela.value = 'criar-1';
@@ -689,7 +722,20 @@ defineExpose({
               @abrir="abrirConversa"
               @atualizar="resumoConversa.gerar"
             />
-            <TelaRetornoNovo v-else-if="tela === 'retorno-novo'" />
+            <TelaRetornoNovo
+              v-else-if="tela === 'retorno-novo'"
+              :funil="funil?.name || ''"
+            />
+            <LembreteSerie
+              v-else-if="tela === 'retorno-serie' && serieAberta"
+              ref="telaSerie"
+              :serie-id="serieAberta"
+              :pode-gerenciar="podeGerenciar"
+              :formato="formato"
+              @carregou="serie => (serieTitulo = serie.title)"
+              @mudou="emit('refreshCard')"
+              @mudar="mudarSerie"
+            />
             <TelaReuniaoNova
               v-else-if="tela === 'reuniao-nova'"
               ref="telaReuniao"
@@ -742,6 +788,7 @@ defineExpose({
                   @cancelar="cancelarRetorno"
                   @adiar="adiarRetorno"
                   @mudou="emit('refreshCard')"
+                  @serie="abrirSerie"
                 />
               </template>
             </TelaAgenda>

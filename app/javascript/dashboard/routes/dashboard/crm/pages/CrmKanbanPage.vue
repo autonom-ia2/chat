@@ -50,6 +50,8 @@ import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
+// #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
+import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
@@ -93,6 +95,13 @@ const cardsList = useMapGetter('crmKanban/getCardsList');
 const cardsListMeta = useMapGetter('crmKanban/getCardsListMeta');
 const followUps = useMapGetter('crmKanban/getFollowUps');
 const calendarEvents = useMapGetter('crmKanban/getCalendarEvents');
+const lembreteGaveta = ref({
+  show: false,
+  modo: 'novo',
+  dia: new Date(),
+  serieId: null,
+  followUpId: null,
+});
 const uiFlags = useMapGetter('crmKanban/getUIFlags');
 const storedFilters = useMapGetter('crmKanban/getFilters');
 const listPrefs = useMapGetter('crmKanban/getListPrefs');
@@ -1067,6 +1076,14 @@ const loadInboxSettings = async () => {
   }
 };
 
+// Lembretes novos (#1460/#1461/#1462): com a flag, "Novo lembrete" do
+// calendário abre a gaveta nova; sem ela, a janela de sempre.
+const lembretesV2 = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_LEMBRETES_V2
+    ] === true
+);
 // Caixas no CRM (#1149): com a flag da conta, leva à tela nova; sem ela, a
 // gaveta antiga, como sempre.
 const isCaixasNoCrm = computed(
@@ -1783,6 +1800,21 @@ const isMeetingEvent = event => event?.event_type === 'meeting';
 // Land on the tab that matches the event: follow-up/reminder events open on the
 // Follow-ups tab; expected-close (Previsão) events on Resumo, where that field lives.
 const onCalendarOpenEvent = event => {
+  // #1460/#1461: lembrete que repete abre a repetição; o sem card, a gaveta.
+  if (
+    lembretesV2.value &&
+    (event?.series_id ||
+      (!event?.card_id && event?.id?.startsWith?.('follow_up_')))
+  ) {
+    lembreteGaveta.value = {
+      show: true,
+      modo: event.series_id ? 'serie' : 'unico',
+      dia: new Date(event.starts_at),
+      serieId: event.series_id || null,
+      followUpId: event.series_id ? null : event.id.replace('follow_up_', ''),
+    };
+    return;
+  }
   if (isMeetingEvent(event)) {
     selectedMeetingEvent.value = event;
     showMeetingDetail.value = true;
@@ -1925,6 +1957,16 @@ const openMeetingReschedule = async (meetingLike, date) => {
 };
 
 const onCalendarQuickAdd = (payload = {}) => {
+  if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {
+    lembreteGaveta.value = {
+      show: true,
+      modo: 'novo',
+      dia: payload.date ? new Date(payload.date) : new Date(),
+      serieId: null,
+      followUpId: null,
+    };
+    return;
+  }
   quickAddDate.value = payload.date ? new Date(payload.date) : new Date();
   quickAddType.value = payload.type || 'reminder';
   showQuickAdd.value = true;
@@ -2669,6 +2711,16 @@ onUnmounted(() => {
       />
     </section>
 
+    <LembreteGaveta
+      v-if="lembretesV2"
+      :show="lembreteGaveta.show"
+      :modo="lembreteGaveta.modo"
+      :dia="lembreteGaveta.dia"
+      :serie-id="lembreteGaveta.serieId"
+      :follow-up-id="lembreteGaveta.followUpId"
+      @salvou="loadCurrentCalendar"
+      @close="lembreteGaveta = { ...lembreteGaveta, show: false }"
+    />
     <CrmCalendarQuickAdd
       :show="showQuickAdd"
       :date="quickAddDate"

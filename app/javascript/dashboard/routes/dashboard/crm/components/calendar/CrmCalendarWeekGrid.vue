@@ -320,6 +320,26 @@ const hourLabel = hour => `${String(hour).padStart(2, '0')}:00`;
             :class="eventColorClass(event)"
           />
           <span class="text-xs truncate" :class="eventLabelClass(event)">
+            <!-- #1460: lembrete que repete. -->
+            <span
+              v-if="event.recurring"
+              class="me-0.5 inline-block size-3 align-[-1px]"
+              :class="
+                event.series_status === 'paused'
+                  ? 'i-lucide-pause text-n-amber-11'
+                  : 'i-lucide-repeat text-n-blue-11'
+              "
+              aria-hidden="true"
+            />
+            <span v-if="event.recurring" class="sr-only">
+              {{
+                $t(
+                  event.series_status === 'paused'
+                    ? 'CRM_LEMBRETE.CALENDARIO.PAUSADO'
+                    : 'CRM_LEMBRETE.CALENDARIO.REPETE'
+                )
+              }}
+            </span>
             {{ event.title }}
           </span>
         </button>
@@ -389,6 +409,26 @@ const hourLabel = hour => `${String(hour).padStart(2, '0')}:00`;
                 {{ formatTime(event.starts_at) }}
               </span>
               <span class="text-xs truncate" :class="eventLabelClass(event)">
+                <!-- #1460: lembrete que repete. -->
+                <span
+                  v-if="event.recurring"
+                  class="me-0.5 inline-block size-3 align-[-1px]"
+                  :class="
+                    event.series_status === 'paused'
+                      ? 'i-lucide-pause text-n-amber-11'
+                      : 'i-lucide-repeat text-n-blue-11'
+                  "
+                  aria-hidden="true"
+                />
+                <span v-if="event.recurring" class="sr-only">
+                  {{
+                    $t(
+                      event.series_status === 'paused'
+                        ? 'CRM_LEMBRETE.CALENDARIO.PAUSADO'
+                        : 'CRM_LEMBRETE.CALENDARIO.REPETE'
+                    )
+                  }}
+                </span>
                 {{ event.title }}
               </span>
             </span>
