@@ -4,6 +4,9 @@
     As classes do :has ficam escritas por extenso em _form, para o Tailwind gerá-las. %>
 <p class="hidden flex-wrap items-center gap-2 mt-4 mb-0 text-sm text-n-slate-12 <%= classe %>" data-agents-niche-preview="<%= alvo %>">
   <span><%= t("autonomia_agents_niche.#{rotulo}") %></span>
-  <span class="px-2 py-0.5 rounded-lg font-medium ring-1 ring-inset ring-n-iris-8 bg-n-iris-2 text-n-iris-11"><%= textos.first %></span>
-  <span class="px-2 py-0.5 rounded-lg font-medium ring-1 ring-inset ring-n-slate-7 bg-n-slate-2 text-n-slate-11"><%= textos.last %></span>
+  <%# Os dois selos andam juntos: quebram de linha como um bloco, nunca um sozinho embaixo. %>
+  <span class="inline-flex flex-wrap gap-2">
+    <span class="px-2 py-0.5 rounded-lg font-medium ring-1 ring-inset ring-n-iris-8 bg-n-iris-2 text-n-iris-11" data-agents-niche-preview-chip><%= textos.first %></span>
+    <span class="px-2 py-0.5 rounded-lg font-medium ring-1 ring-inset ring-n-slate-7 bg-n-slate-2 text-n-slate-11" data-agents-niche-preview-chip><%= textos.last %></span>
+  </span>
 </p>

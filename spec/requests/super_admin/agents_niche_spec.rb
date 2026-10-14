@@ -61,7 +61,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
 
     document = Nokogiri::HTML(response.body)
     previas = document.css('[data-agents-niche-preview]').to_h do |previa|
-      [previa['data-agents-niche-preview'], previa.css('span').drop(1).map { |chip| chip.text.squish }]
+      [previa['data-agents-niche-preview'], previa.css('[data-agents-niche-preview-chip]').map { |chip| chip.text.squish }]
     end
     expect(previas).to eq(
       'corretora' => ['Seguro ativo', 'Não fechou'], 'seguradora' => ['Seguro ativo', 'Não fechou'],
