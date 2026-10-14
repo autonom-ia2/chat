@@ -228,6 +228,21 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       )
     end
 
+    # Prefixo do teste + texto da página passariam do limite do botão (1024): o SendGuard deixaria a mensagem failed,
+    # sem link nenhum. Sem botão, com a linha do link.
+    it 'texto do convite longo demais para o botão: no oficial sai sem botão, com o link' do
+      page.update!(notice_inbox: cloud, invite_text: "Escolha seu horário. #{'a' * 930}")
+      contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')
+      conversation = create(:conversation, account: account, inbox: cloud, contact: contact)
+      create(:message, account: account, inbox: cloud, conversation: conversation, message_type: :incoming, created_at: 1.hour.ago)
+
+      call(admin, :post, path, phone: '+5511955554444')
+
+      message = conversation.messages.outgoing.sole
+      expect(message.content_attributes).not_to have_key('rich_message')
+      expect(message.content).to end_with("Para confirmar, mudar ou cancelar: https://app.example.com/b/#{Crm::BookingInvite.sole.code}")
+    end
+
     it 'texto do convite da página com o link: no oficial sai sem botão, com o link' do
       page.update!(notice_inbox: cloud, invite_text: 'Escolha aqui: {link}')
       contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')

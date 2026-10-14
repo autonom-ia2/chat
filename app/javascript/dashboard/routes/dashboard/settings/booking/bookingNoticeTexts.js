@@ -109,8 +109,16 @@ export const noticeTextProblem = text => {
   return null;
 };
 
+// O texto põe o link de gestão.
+export const noticeTextHasLink = text =>
+  partsOf(text).parts.some(
+    part => part.type === 'key' && part.value === NOTICE_TEXT.LINK
+  );
+
 // Como o cliente vê: os campos trocados pelos exemplos e a linha de parar.
-export const noticeTextPreview = (text, samples, stopLine) => {
+// Texto sem o link (#1517): o sistema põe a linha do link (`manageLine`)
+// antes da de parar; no WhatsApp oficial ela vira o botão.
+export const noticeTextPreview = (text, samples, stopLine, manageLine = '') => {
   const body = partsOf(text)
     .parts.map(part =>
       part.type === 'key'
@@ -119,7 +127,8 @@ export const noticeTextPreview = (text, samples, stopLine) => {
     )
     .join('')
     .trim();
-  return stopLine ? `${body}\n\n${stopLine}` : body;
+  const linkLine = manageLine && !noticeTextHasLink(text) ? manageLine : '';
+  return [body, linkLine, stopLine].filter(Boolean).join('\n\n');
 };
 
 // Só os textos escritos dos avisos que aparecem na tela (`kinds`, os do jogo);

@@ -82,10 +82,9 @@ class Crm::BookingV2::Notices::Text
     custom_body ? "#{custom_body}\n\n#{manage_line}" : "#{sentence} #{manage_line}"
   end
 
-  # Corpo acima do limite do botão (`LinkButton::BODY_MAX`, a linha de parar conta) seria recusado pelo envio: cai no
-  # texto, com a linha do link.
+  # Corpo acima do limite do botão (`Notices::Button.fits?`, a linha de parar conta): cai no texto, com a linha do link.
   def button?
-    @button && !own_link? && "#{custom_body || sentence}\n\n#{stop_line}".length <= RichMessages::Types::LinkButton::BODY_MAX
+    @button && !own_link? && Crm::BookingV2::Notices::Button.fits?("#{custom_body || sentence}\n\n#{stop_line}")
   end
 
   # O texto próprio sai (não caiu no padrão) e já põe o link.

@@ -109,9 +109,17 @@ class Crm::BookingV2::TestInvite
   end
 
   def deliver!(invite, contact, decision)
-    text = Crm::BookingV2::InviteText.new(invite, button: Crm::BookingV2::Notices::Button.allowed?(decision, page.notice_inbox))
+    text = invite_text(invite, decision)
     Crm::BookingV2::Notices::Delivery.new(decision: decision, inbox: page.notice_inbox, contact: contact, sender: user,
                                           content: content(text, invite), rich_message: text.rich_message).perform
+  end
+
+  # Botão só quando o corpo final (com o prefixo do teste) cabe no limite (`Notices::Button.fits?`); senão, só texto.
+  def invite_text(invite, decision)
+    text = Crm::BookingV2::InviteText.new(invite, button: Crm::BookingV2::Notices::Button.allowed?(decision, page.notice_inbox))
+    return text if text.rich_message.nil? || Crm::BookingV2::Notices::Button.fits?(content(text, invite))
+
+    Crm::BookingV2::InviteText.new(invite)
   end
 
   # Sem botão e sem `{link}` no texto da página, o link vai na linha fixa, como no aviso (#1517).

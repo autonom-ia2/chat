@@ -442,6 +442,7 @@
         "DEFAULT": "Default message",
         "TEAM_BOOKED": "When someone on the team books from the dashboard, the default message goes, saying who booked.",
         "TEXT_LABEL": "Notice message",
+        "BUTTON_NOTE": "On the official WhatsApp, with the conversation open, the link goes in a \"See my appointment\" button.",
         "FIELDS_HINT": "What is in brackets the system fills in when sending. The line to stop notices always goes at the end.",
         "INSERT": "+ {field}",
         "WRITE_AI": "Write with AI",

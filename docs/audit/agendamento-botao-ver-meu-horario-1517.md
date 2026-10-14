@@ -13,9 +13,22 @@ Refs #1517, #1473 (envios ricos), #1354 (texto próprio do aviso).
   deixou de exigir o link.
 - Texto próprio com o link → sem botão, texto com o link. Texto sem o link → com botão; no caminho só de texto, o
   sistema acrescenta a linha fixa `manage_line` antes da linha de parar. O texto padrão com botão sai sem o link cru.
-  A linha de parar (RA-18) vai em todos os caminhos.
+  A linha de parar (RA-18) vai em todo aviso em texto (sessão, WAHA, Híbrido) e no complemento do modelo do canal API.
+  No modelo da Meta não há linha: o "parar" está no link do `{{3}}` (`Notices::Route`), cuja página oferece parar os
+  avisos; isso não mudou.
 - "Testar no meu WhatsApp" (`TestInvite`): a mesma decisão (`Notices::Button`). Texto padrão do convite com botão:
-  `invite.button_text` (sem o link cru); texto da página com `{link}` → sem botão.
+  `invite.button_text` (sem o link cru); texto da página com `{link}` → sem botão. O convite de teste não tem linha de
+  parar: convite não é aviso, e já era assim. Por decisão do Rodrigo ("o sistema garante o link"), o texto da página
+  sem `{link}` passou a ganhar a linha fixa do link na WAHA, no Híbrido e no canal API (antes saía sem link).
+- Limite do botão (`Notices::Button.fits?`): o corpo final que vai com o botão (linha de parar e, no teste, o prefixo
+  incluídos) precisa caber nos 1024 caracteres do `cta_url`. Não cabendo, sai só texto, com a linha do link; senão o
+  `RichMessages::SendGuard` deixaria a mensagem `failed` sem link nenhum.
+- Envio assíncrono: o aviso fica `sent` quando a mensagem é criada; ela sai depois (`SendReplyJob`). Falha posterior
+  (provedor ou `SendGuard`) é pega pelo `NoticeDispatchJob#fail_undelivered!` (até 2 h): o aviso vira
+  `failed: delivery_failed` e o responsável é avisado. O convite de teste não tem essa conferência: a falha aparece na
+  própria conversa, para quem testou.
+- Prévia da tela: texto sem `{{horario.link_gestao}}` mostra a linha do link antes da de parar (`manage_line` do
+  `CustomTextSetup`) e a nota de que, no WhatsApp oficial, o link vai num botão.
 
 ## Conversa que conta
 

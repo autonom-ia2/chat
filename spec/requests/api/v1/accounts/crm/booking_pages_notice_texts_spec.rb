@@ -52,7 +52,10 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
       expect(body.dig('notice_text_setup', 'defaults', 'booked'))
         .to eq('Oi, {{cliente.primeiro_nome}}! Seu horário está marcado para {{horario.data_hora}}.')
       expect(body.dig('notice_text_setup', 'fields').pluck('label')).to include('Dia e hora do horário')
-      expect(body.dig('notice_text_setup', 'stop_line')).to start_with('Para parar estes avisos:')
+      expect(body['notice_text_setup']).to include(
+        'stop_line' => start_with('Para parar estes avisos:'),
+        'manage_line' => start_with('Para confirmar, mudar ou cancelar: ').and(end_with('/b/AB3K9QXZ'))
+      )
     end
 
     # #1517: sem o link o texto é aceito (o sistema manda o link no botão ou na linha fixa); sem o dia e a hora, não.

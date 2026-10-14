@@ -57,6 +57,7 @@ const SETUP = {
   },
   stop_line:
     'Para parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1',
+  manage_line: 'Para confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ',
   max_length: 500,
 };
 const AI_TEXT =
@@ -115,7 +116,11 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
       'Oi, [Primeiro nome do cliente]! Seu horário está marcado para [Dia e hora do horário].'
     );
     expect(booked.find('[data-text-preview]').text()).toBe(
-      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+      'Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ\n\nPara parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1'
+    );
+    // #1517: sem o link no texto, a prévia mostra a linha que o sistema põe e avisa do botão.
+    expect(booked.find('[data-button-note]').text()).toBe(
+      'BOOKING.NOTICES.TEXTS.BUTTON_NOTE'
     );
     expect(booked.find('[data-text-origin]').text()).toBe(
       'BOOKING.NOTICES.TEXTS.DEFAULT'
@@ -281,6 +286,20 @@ describe('bookingNoticeTexts (#1354)', () => {
         'Parar: x'
       )
     ).toBe('Oi, Ana!\n\nParar: x');
+  });
+
+  it('sem o link no texto, a prévia põe a linha do link antes da de parar; com o link, fica como está (#1517)', () => {
+    expect(noticeTextPreview('Oi!', SETUP.samples, 'Parar: x', 'Link: y')).toBe(
+      'Oi!\n\nLink: y\n\nParar: x'
+    );
+    expect(
+      noticeTextPreview(
+        'Mude em {{horario.link_gestao}}',
+        SETUP.samples,
+        'Parar: x',
+        'Link: y'
+      )
+    ).toBe('Mude em https://app.test/b/AB3K9QXZ\n\nParar: x');
   });
 
   it('o formulário lê e manda só os textos escritos, e o passo não avança com texto inválido', () => {

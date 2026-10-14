@@ -3,6 +3,7 @@ import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import {
+  noticeTextHasLink,
   noticeTextPreview,
   noticeTextProblem,
   toFriendly,
@@ -17,7 +18,7 @@ const props = defineProps({
   kind: { type: String, required: true },
   // Texto próprio salvo/editado, com as chaves; vazio = texto padrão.
   text: { type: String, default: '' },
-  // notice_text_setup da página: defaults, fields, samples, stop_line.
+  // notice_text_setup da página: defaults, fields, samples, stop_line, manage_line.
   setup: { type: Object, required: true },
   tone: { type: String, default: '' },
   pageId: { type: Number, default: null },
@@ -73,9 +74,12 @@ const preview = computed(() =>
   noticeTextPreview(
     effective.value,
     props.setup.samples || {},
-    props.setup.stop_line
+    props.setup.stop_line,
+    props.setup.manage_line
   )
 );
+// Sem o link no texto, o sistema o manda: no WhatsApp oficial, num botão.
+const systemLink = computed(() => !noticeTextHasLink(effective.value));
 
 // Põe o campo onde está o cursor.
 const textarea = ref(null);
@@ -215,6 +219,13 @@ const buttonClass =
           class="m-0 px-4 py-3 text-base whitespace-pre-line break-words rounded-2xl rounded-ss-sm bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
         >
           {{ preview }}
+        </p>
+        <p
+          v-if="systemLink"
+          data-button-note
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t('BOOKING.NOTICES.TEXTS.BUTTON_NOTE') }}
         </p>
       </figure>
     </div>

@@ -8,6 +8,13 @@
 #
 # Rótulo por tipo de mensagem: `:notice` (reunião já marcada) "Ver meu horário"; `:invite` (convite para marcar, como o
 # "Testar no meu WhatsApp") "Escolher horário".
+#
+# `fits?`: o corpo FINAL que vai junto do botão (linha de parar e prefixo incluídos) cabe no limite do `cta_url`
+# (`LinkButton::BODY_MAX`). Não cabendo, quem chama manda só texto, com a linha do link: o `SendGuard` recusaria o
+# botão e a mensagem ficaria `failed`, sem link nenhum.
+#
+# Envio assíncrono: a mensagem é criada aqui e sai depois (`SendReplyJob`). Se o provedor ou o `SendGuard` a marcar
+# `failed`, o `NoticeDispatchJob#fail_undelivered!` passa o aviso a `failed: delivery_failed` e avisa o responsável.
 class Crm::BookingV2::Notices::Button
   TYPE = 'link_button'.freeze
   LABELS = { notice: 'crm.booking_v2.notices.button_label', invite: 'crm.booking_v2.invite.button_label' }.freeze
@@ -15,6 +22,10 @@ class Crm::BookingV2::Notices::Button
   def self.allowed?(decision, inbox)
     decision.mode == :session && decision.via != Crm::BookingV2::Notices::Route::HYBRID_WEB &&
       RichMessages.delivery_mode(inbox: inbox, type: TYPE, conversation: decision.conversation) == :native
+  end
+
+  def self.fits?(body)
+    body.length <= RichMessages::Types::LinkButton::BODY_MAX
   end
 
   def self.rich_message(url, kind:, locale:)
