@@ -90,6 +90,42 @@ RSpec.describe Crm::Cards::Outcome do
       expect(card.closed_at).to be_within(1.second).of(closed_at)
     end
 
+    # #1498: resolver um atendimento não é vender; ganho promoveria o contato a cliente.
+    it 'reopens a resolved card moved to a sale funnel, without promoting the contact' do
+      contact = account.contacts.create!(name: 'Carlos')
+      card = close(card_in(service_pipeline, contact: contact), 'won')
+      expect(card.reload).to be_resolved
+      sale, = sale_pipeline
+      target = create_crm_stage(account: account, pipeline: sale, name: 'Novo contato', position: 2)
+
+      Crm::Cards::Mover.new(card: card, actor: user, target_stage: target, automation_context: { skip_automations: true }).perform
+
+      expect(card.reload).to be_open
+      expect(card.closed_at).to be_nil
+      expect(contact.reload).not_to be_customer
+    end
+
+    it 'reopens a cancelled card moved to a sale funnel, so no conversion goes to the ads' do
+      card = close(card_in(service_pipeline), 'lost')
+      expect(card.reload).to be_cancelled
+      sale, = sale_pipeline
+      target = create_crm_stage(account: account, pipeline: sale, name: 'Novo contato', position: 2)
+
+      Crm::Cards::Mover.new(card: card, actor: user, target_stage: target, automation_context: { skip_automations: true }).perform
+
+      expect(card.reload).to be_open
+    end
+
+    it 'keeps a resolved card closed when it only changes stage in its own funnel' do
+      card = close(card_in(service_pipeline), 'won')
+      service, = service_pipeline
+      target = create_crm_stage(account: account, pipeline: service, name: 'Outra', position: 2)
+
+      Crm::Cards::Mover.new(card: card, actor: user, target_stage: target, automation_context: { skip_automations: true }).perform
+
+      expect(card.reload).to be_resolved
+    end
+
     it 'still resets the close date when the outcome itself changes' do
       card = close(card_in(sale_pipeline), 'won')
 

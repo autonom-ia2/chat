@@ -33,6 +33,11 @@ vi.mock('@vueuse/core', async original => ({
 }));
 
 const alerta = vi.hoisted(() => vi.fn());
+const permissao = vi.hoisted(() => ({ gerenciar: true }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { useCanManage: () => computed(() => permissao.gerenciar) };
+});
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -85,7 +90,10 @@ const AGENTE = {
 };
 
 let ordem = [];
+// #1366: o POST do canal com `ativar` liga o agente no servidor; a releitura (show) depois devolve-o atendendo.
+let ligadoNoServidor = false;
 const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
+  ligadoNoServidor = false;
   ordem = [];
   store.state = reactive({
     'autonomiaBuildThreads/getMessages': [],
@@ -114,8 +122,16 @@ const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
     }
     if (acao === 'autonomiaAgents/show') {
       if (falhaShow) throw new Error('500');
-      store.state['autonomiaAgents/getRecords'] = [agente];
-      return agente;
+      const lido = ligadoNoServidor
+        ? {
+            ...agente,
+            status: 'active',
+            enabled: true,
+            tem_onde_trabalhar: true,
+          }
+        : agente;
+      store.state['autonomiaAgents/getRecords'] = [lido];
+      return lido;
     }
     if (acao === 'autonomiaAgents/test') {
       if (teste instanceof Error) throw teste;
@@ -190,12 +206,16 @@ const etapaAtual = () =>
 
 describe('AgenteCriarPage', () => {
   beforeEach(() => {
+    permissao.gerenciar = true;
     prepararStore();
     jornada.canaisOcupados.mockResolvedValue({ data: { payload: L2 } });
     canaisApi.get.mockReset();
-    canaisApi.connect.mockReset().mockImplementation(async (id, inbox) => {
-      ordem.push(`post:${id}:${inbox}`);
-    });
+    canaisApi.connect
+      .mockReset()
+      .mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.ativar ? 'ativar' : '-'}`);
+        if (opcoes?.ativar) ligadoNoServidor = true;
+      });
     canaisApi.disconnect.mockReset().mockImplementation(async (id, inbox) => {
       ordem.push(`delete:${id}:${inbox}`);
     });
@@ -282,15 +302,12 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  // Jornada inteira (teste, folha, começar, Pronto): mais passos que os outros casos.
-  it('starts answering only after one test answer, then activates and connects, and shows Pronto', async () => {
+  // Jornada inteira (folha, começar, Pronto): mais passos que os outros casos. #1504 — sem teste.
+  it('starts answering without any test answer, then activates and connects, and shows Pronto', async () => {
     const wrapper = await montar();
     conversaFecha();
     await flushPromises();
-    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
 
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     const comecar = wrapper.get('[data-comecar] button');
     expect(comecar.text()).toBe('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO');
     await comecar.trigger('click');
@@ -304,13 +321,35 @@ describe('AgenteCriarPage', () => {
       !passo.startsWith('autonomiaBuildThreads') &&
       !passo.startsWith('autonomiaSources');
     expect(ordem.filter(daCriacao)).toEqual([
-      'autonomiaAgents/test',
-      'autonomiaAgents/update',
-      'post:90:10',
+      // #1504: sem teste obrigatório. #1366: ligar é o próprio POST do canal (ativar), e o agente é relido.
+      'post:90:10:ativar',
+      'autonomiaAgents/show',
     ]);
     expect(rota.atual.query.etapa).toBe('pronto');
     expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.PRONTO.TITULO');
     expect(document.activeElement.id).toBe('pronto-titulo');
+    wrapper.unmount();
+  }, 15000);
+
+  // O teste continua funcionando: a resposta vista vai junto para o Pronto.
+  it('still tests before starting, and the answer seen shows in Pronto', async () => {
+    const wrapper = await montar();
+    conversaFecha();
+    await flushPromises();
+    expect(wrapper.find('[data-teste-opcional]').exists()).toBe(true);
+
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+    expect(ordem).toContain('autonomiaAgents/test');
+    expect(wrapper.get('[data-confira]').text()).toContain(
+      'Abrimos sim, das 9h às 13h.'
+    );
+    expect(wrapper.find('[data-teste-opcional]').exists()).toBe(false);
+
+    await wrapper.get('[data-comecar] button').trigger('click');
+    await flushPromises();
+    corpo().querySelector('[role="dialog"] [data-comecar]').click();
+    await flushPromises();
     expect(wrapper.get('[data-celular]').text()).toContain(
       'Abrimos sim, das 9h às 13h.'
     );
@@ -322,8 +361,6 @@ describe('AgenteCriarPage', () => {
       Object.assign(new Error('500'), { response: { status: 500 } })
     );
     const wrapper = await montar({ query: { agente: '90', etapa: 'confira' } });
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     await wrapper.get('[data-comecar] button').trigger('click');
     await flushPromises();
     jornada.canaisOcupados.mockClear();
@@ -335,12 +372,11 @@ describe('AgenteCriarPage', () => {
       'AGENTS.JORNADA.ERRO.COMECAR_ATENDER_GARANTIA'
     );
     expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
-    // Desfez o "Atendendo": o agente volta ao que era.
-    expect(store.dispatch).toHaveBeenLastCalledWith('autonomiaAgents/update', {
-      id: 90,
-      enabled: false,
-      status: 'draft',
-    });
+    // #1366: nada foi ligado (ligar é o próprio POST que falhou), então não há o que desfazer.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
     wrapper.unmount();
   });
 
@@ -374,14 +410,34 @@ describe('AgenteCriarPage', () => {
     expect(wrapper.get('[data-erro-teste]').text()).toContain(
       'AGENTS.JORNADA.CRIAR.CONFIRA.INCOMPLETO'
     );
-    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
     wrapper.unmount();
   });
 
-  it('F5 on Comece without a test answer falls back to Confira', async () => {
+  // #1504 — a etapa Comece não exige mais uma resposta vista no teste.
+  it('F5 on Comece without a test answer stays in Comece', async () => {
+    const wrapper = await montar({ query: { agente: '90', etapa: 'comece' } });
+    expect(
+      corpo().querySelector('[role="dialog"] [data-comecar]')
+    ).not.toBeNull();
+    expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.COMECE');
+    wrapper.unmount();
+  });
+
+  it('F5 on Comece with no inbox at all falls back to Confira', async () => {
+    jornada.canaisOcupados.mockResolvedValue({ data: { payload: [] } });
     const wrapper = await montar({ query: { agente: '90', etapa: 'comece' } });
     expect(corpo().querySelector('[role="dialog"]')).toBeNull();
     expect(wrapper.find('[data-confira]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('F5 on Comece while the conversation is still open stays in Conte', async () => {
+    const wrapper = await montar({
+      query: { modelo: 'support', etapa: 'comece' },
+    });
+    expect(corpo().querySelector('[role="dialog"]')).toBeNull();
+    expect(wrapper.find('[data-confira]').exists()).toBe(false);
+    expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONTE');
     wrapper.unmount();
   });
 
@@ -445,16 +501,130 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  it('"Not now" keeps the draft and says so', async () => {
+  // #1504 — "Fazer ajustes avançados": parado (paused, não rascunho), sem caixa, e a página dele.
+  it('"Make advanced adjustments" pauses the agent without any inbox and opens its page', async () => {
     const wrapper = await montar({ query: { agente: '90' } });
-    await wrapper.get('[data-depois]').trigger('click');
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+      id: 90,
+      enabled: false,
+      status: 'paused',
+    });
+    expect(canaisApi.connect).not.toHaveBeenCalled();
+    expect(ordem.some(passo => passo.startsWith('post:'))).toBe(false);
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 90 },
+    });
+    expect(store.state['autonomiaAgents/getRecords'][0]).toMatchObject({
+      status: 'paused',
+      enabled: false,
+    });
+    expect(alerta).not.toHaveBeenCalled();
+    wrapper.unmount();
+    // A conversa estava fechada: nada de fechar de novo no servidor.
+    expect(ordem).not.toContain('autonomiaBuildThreads/completeMaterials');
+  });
+
+  it('works without any test answer, right after the conversation closes', async () => {
+    const wrapper = await montar();
+    conversaFecha();
+    await flushPromises();
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+    expect(ordem).not.toContain('autonomiaAgents/test');
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'autonomia_agent_panel',
+      params: { agentId: 90 },
+    });
+    wrapper.unmount();
+  });
+
+  it('stays in Confira and says nothing changed when pausing fails', async () => {
+    const wrapper = await montar({ query: { agente: '90' } });
+    falharAcao('autonomiaAgents/update', new Error('500'));
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO'
+    );
+    expect(router.push).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-confira]').exists()).toBe(true);
+    expect(
+      wrapper.get('[data-ajustes-botao]').attributes('aria-busy')
+    ).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('says nothing changed when the agent is missing, instead of doing nothing', async () => {
+    const wrapper = await montar({ query: { agente: '90' } });
+    store.state['autonomiaAgents/getRecords'] = [];
+    await flushPromises();
+    await wrapper.get('[data-ajustes-botao]').trigger('click');
+    await flushPromises();
+    expect(alerta).toHaveBeenCalledWith(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_ERRO'
+    );
+    expect(
+      store.dispatch.mock.calls.some(
+        ([acao]) => acao === 'autonomiaAgents/update'
+      )
+    ).toBe(false);
+    expect(router.push).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('keeps Começar busy while the inboxes load, and starts once they arrive', async () => {
+    let responder;
+    jornada.canaisOcupados.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          responder = resolve;
+        })
+    );
+    const wrapper = await montar({ query: { agente: '90' } });
+    const botao = () => wrapper.get('[data-comecar] button');
+    expect(botao().attributes('aria-busy')).toBe('true');
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).not.toBe('comece');
+
+    responder({ data: { payload: L2 } });
+    await flushPromises();
+    expect(botao().attributes('aria-busy')).toBeUndefined();
+    await botao().trigger('click');
+    await flushPromises();
+    expect(rota.atual.query.etapa).toBe('comece');
+    wrapper.unmount();
+  });
+
+  it('"Back to Agents" at the top still keeps the draft as Not finished', async () => {
+    HTMLDialogElement.prototype.showModal ||= function abrir() {
+      this.open = true;
+    };
+    HTMLDialogElement.prototype.close ||= function fechar() {
+      this.open = false;
+    };
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-voltar-lista]').trigger('click');
+    const sair = [...corpo().querySelectorAll('[data-botoes] button')].find(
+      botao => botao.textContent.includes('AGENTS.JORNADA.CRIAR.SAIR.SAIR')
+    );
+    sair.click();
+    await flushPromises();
     expect(router.push).toHaveBeenCalledWith({
       name: 'autonomia_agents_index',
     });
     expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.CRIAR.SAIR.FEITO');
+    expect(
+      store.dispatch.mock.calls.some(
+        ([acao]) => acao === 'autonomiaAgents/update'
+      )
+    ).toBe(false);
     wrapper.unmount();
-    // A conversa estava fechada: nada de fechar de novo no servidor.
-    expect(ordem).not.toContain('autonomiaBuildThreads/completeMaterials');
   });
 
   // Com contexto: a pergunta e a resposta vão para o campo da conversa, e a pessoa completa o porquê.
@@ -618,11 +788,9 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
-  it('an internal agent starts answering without choosing an inbox', async () => {
+  it('an internal agent starts answering without choosing an inbox (and without a test)', async () => {
     prepararStore({ agente: { ...AGENTE, actuation: 'internal' } });
     const wrapper = await montar({ query: { agente: '90' } });
-    await wrapper.get('[data-perguntas] button').trigger('click');
-    await flushPromises();
     await wrapper.get('[data-comecar] button').trigger('click');
     await flushPromises();
 
@@ -633,9 +801,237 @@ describe('AgenteCriarPage', () => {
     });
     expect(canaisApi.connect).not.toHaveBeenCalled();
     expect(wrapper.get('h1').text()).toBe(
-      'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_SEM_CANAL'
+      'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_COPILOTO'
+    );
+    expect(wrapper.text()).toContain(
+      'AGENTS.JORNADA.CRIAR.PRONTO.EQUIPE_COPILOTO'
     );
     wrapper.unmount();
+  });
+
+  describe('Copiloto da equipe (#1494)', () => {
+    const INTERNO = { ...AGENTE, actuation: 'internal' };
+
+    it('opens the Builder as internal, without the customer example nor the store ideas', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/start',
+        { type: 'custom', actuation: 'internal', with_knowledge: true }
+      );
+      const exemplo = wrapper.get('[data-exemplo]');
+      expect(exemplo.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO'
+      );
+      expect(exemplo.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      expect(exemplo.text()).not.toContain('AGENTS.JORNADA.MODELOS.EXEMPLO');
+      expect(exemplo.text()).not.toContain('.CLIENTE');
+
+      store.state['autonomiaBuildThreads/getMessages'] = [
+        { role: 'assistant', content: 'Como a equipe vai usar você?' },
+      ];
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await flushPromises();
+      expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+      expect(
+        secaoDaConversa(wrapper).get('textarea').attributes('placeholder')
+      ).toBe('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_COPILOTO');
+      wrapper.unmount();
+    });
+
+    it('points the query to the draft without ?atuacao=, and F5 continues the same copilot', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      await flushPromises();
+      expect(router.replace).toHaveBeenCalledWith({ query: { agente: '90' } });
+      // Rascunho já existe, o registro ainda não chegou: continua copiloto.
+      expect(wrapper.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      wrapper.unmount();
+
+      prepararStore({ agente: INTERNO });
+      const depoisDoF5 = await montar({ query: { agente: '90' } });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 90);
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaBuildThreads/start'
+        )
+      ).toBe(false);
+      expect(depoisDoF5.get('[data-confira]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+      );
+      depoisDoF5.unmount();
+    });
+
+    it('tests with team questions and starts helping the team without a channel', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      const perguntas = wrapper
+        .findAll('[data-perguntas] button')
+        .map(botao => botao.text());
+      expect(perguntas).toEqual([
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.COMO_RESPONDO',
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.PROXIMO_PASSO',
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.RASCUNHO',
+      ]);
+
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaAgents/test',
+        expect.objectContaining({
+          agentId: 90,
+          message: 'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.COMO_RESPONDO',
+        })
+      );
+      const comecar = wrapper.get('[data-comecar]');
+      expect(comecar.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+      );
+      expect(comecar.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO_COPILOTO'
+      );
+      expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+
+      await comecar.get('button').trigger('click');
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 90,
+        enabled: true,
+        status: 'active',
+      });
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+      expect(corpo().querySelector('[role="dialog"]')).toBeNull();
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_COPILOTO'
+      );
+      wrapper.unmount();
+    });
+
+    it('says nothing changed and stays in Confira when the copilot cannot start', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      falharAcao('autonomiaAgents/update', new Error('500'));
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(alerta).toHaveBeenCalledTimes(1);
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.CRIAR.COMECE.ERRO_INTERNO'
+      );
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.TITULO');
+      expect(etapaAtual()).toBe('AGENTS.JORNADA.CRIAR.ETAPAS.CONFIRA');
+      wrapper.unmount();
+    });
+
+    it('"Make advanced adjustments" pauses the copilot and opens its page, with no inbox', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      expect(wrapper.find('[data-teste-opcional]').exists()).toBe(true);
+      await wrapper.get('[data-ajustes-botao]').trigger('click');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 90,
+        enabled: false,
+        status: 'paused',
+      });
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agent_panel',
+        params: { agentId: 90 },
+      });
+      wrapper.unmount();
+    });
+
+    it('on the phone, the Confira title is the team one', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({
+        query: { agente: '90', etapa: 'confira' },
+        celular: true,
+      });
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+      );
+      wrapper.unmount();
+
+      prepararStore();
+      const externo = await montar({
+        query: { agente: '90', etapa: 'confira' },
+        celular: true,
+      });
+      expect(externo.get('h1').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
+      );
+      externo.unmount();
+    });
+
+    it('the team question shows as a team bubble, never as a customer one', async () => {
+      prepararStore({ agente: INTERNO });
+      const wrapper = await montar({ query: { agente: '90' } });
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      const confira = wrapper.get('[data-confira]');
+      expect(confira.find('[data-balao="equipe"]').exists()).toBe(true);
+      expect(confira.find('[data-balao="cliente"]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('never reads the inboxes for a copilot, on mount nor on focus', async () => {
+      prepararStore({ agente: INTERNO });
+      jornada.canaisOcupados.mockClear();
+      const rascunho = await montar({ query: { agente: '90' } });
+      window.dispatchEvent(new Event('focus'));
+      await flushPromises();
+      expect(jornada.canaisOcupados).not.toHaveBeenCalled();
+      rascunho.unmount();
+
+      prepararStore();
+      const novo = await montar({ query: { atuacao: 'interno' } });
+      expect(jornada.canaisOcupados).not.toHaveBeenCalled();
+      novo.unmount();
+    });
+
+    it('still reads the inboxes once on mount for the customer agent', async () => {
+      jornada.canaisOcupados.mockClear();
+      const rascunho = await montar({ query: { agente: '90' } });
+      expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
+      rascunho.unmount();
+
+      jornada.canaisOcupados.mockClear();
+      const novo = await montar({ query: { modelo: 'support' } });
+      expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
+      novo.unmount();
+    });
+
+    it('keeps the customer agent as it was: customer questions, example and start in a channel', async () => {
+      const wrapper = await montar({ query: { agente: '90' } });
+      const confira = wrapper.get('[data-confira]');
+      expect(confira.text()).toContain('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO');
+      expect(confira.text()).not.toContain('_COPILOTO');
+      expect(wrapper.get('[data-perguntas] button').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.QUANTO_CUSTA'
+      );
+      await wrapper.get('[data-perguntas] button').trigger('click');
+      await flushPromises();
+      expect(wrapper.get('[data-comecar]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO'
+      );
+      expect(wrapper.get('[data-comecar]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO'
+      );
+      wrapper.unmount();
+
+      const nova = await montar({ query: { modelo: 'support' } });
+      expect(nova.find('[data-exemplo-copiloto]').exists()).toBe(false);
+      expect(nova.get('[data-exemplo]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO'
+      );
+      expect(nova.get('[data-exemplo]').text()).not.toContain('_COPILOTO');
+      nova.unmount();
+    });
   });
 
   it('stops the Builder polling when leaving the page', async () => {
@@ -650,5 +1046,204 @@ describe('AgenteCriarPage', () => {
     const wrapper = await montar({ query: { agente: '90' } });
     expect(corpo().querySelector('select')).toBeNull();
     wrapper.unmount();
+  });
+
+  // #1503 — "Base de conhecimento de {nome}" só no Conte, a mesma lista do clipe da conversa.
+  describe('Base de conhecimento no Conte (#1503)', () => {
+    const responder = (nome, resposta) => {
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === nome) {
+          ordem.push(acao);
+          return typeof resposta === 'function' ? resposta(dados) : resposta;
+        }
+        return original(acao, dados);
+      });
+    };
+    // O rascunho existe e a IA já respondeu (não está mais pensando).
+    const comRascunho = () => {
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+    };
+    const escolher = async (entrada, arquivo) => {
+      Object.defineProperty(entrada.element, 'files', {
+        value: [arquivo],
+        configurable: true,
+      });
+      await entrada.trigger('change');
+    };
+    const pdf = nome => new File(['x'], nome, { type: 'application/pdf' });
+    const naConversa = wrapper =>
+      wrapper
+        .get('[data-conversa]')
+        .findAll('[data-material]')
+        .map(item => item.attributes('aria-label'));
+    const naCaixa = () =>
+      [...corpo().querySelectorAll('[data-base] [data-fonte]')].map(item =>
+        item.textContent.trim()
+      );
+
+    beforeEach(() => {
+      let proxima = 40;
+      responder('autonomiaSources/create', () => {
+        proxima += 1;
+        return { id: proxima };
+      });
+    });
+
+    it('shows the box under the example in Conte, and not in Confira', async () => {
+      const wrapper = await montar();
+      // Agente novo ainda sem nome: "Base de conhecimento do agente".
+      const caixa = wrapper.get('[data-exemplo] [data-base]');
+      expect(caixa.get('h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO_SEM_NOME'
+      );
+      expect(caixa.find('[data-base-vazia]').exists()).toBe(true);
+
+      conversaFecha();
+      await flushPromises();
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.find('[data-base]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('a file added in the box shows in the conversation, and one from the clip shows in the box', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await escolher(wrapper.get('[data-base-seletor]'), pdf('Cardápio.pdf'));
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio']);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { file: expect.any(File), kind: 'knowledge' },
+      });
+
+      const secao = secaoDaConversa(wrapper);
+      await escolher(secao.get('input[type="file"]'), pdf('Tabela.pdf'));
+      await secao.get('form').trigger('submit');
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio', 'Tabela']);
+      expect(naCaixa().join('|')).toContain('Cardápio.pdf');
+      expect(naCaixa().join('|')).toContain('Tabela.pdf');
+      wrapper.unmount();
+    });
+
+    it('a website added in the box shows in the conversation with the globe', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await wrapper.get('[data-base-site]').setValue('loja.com.br');
+      await wrapper.get('[data-base-adicionar] form').trigger('submit');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { url: 'https://loja.com.br/', kind: 'knowledge' },
+      });
+      const material = wrapper.get('[data-conversa] [data-material]');
+      expect(material.text()).toContain('loja.com.br');
+      expect(material.find('.i-lucide-globe').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('removing in the box asks first, then leaves the conversation and the base', async () => {
+      const wrapper = await montar();
+      comRascunho();
+      await flushPromises();
+      await wrapper.get('[data-base-adicionar-botao]').trigger('click');
+      await escolher(wrapper.get('[data-base-seletor]'), pdf('Cardápio.pdf'));
+      await flushPromises();
+
+      await wrapper.get('[data-base] [aria-haspopup]').trigger('click');
+      await flushPromises();
+      corpo().querySelector('[data-base] [role="menuitem"]').click();
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual(['Cardápio']);
+      expect(ordem).not.toContain('autonomiaSources/remove');
+
+      await wrapper.get('[data-sim-tirar]').trigger('click');
+      await flushPromises();
+      expect(naConversa(wrapper)).toEqual([]);
+      expect(naCaixa()).toEqual([]);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/remove', {
+        agentId: 90,
+        sourceId: 41,
+      });
+      wrapper.unmount();
+    });
+
+    it('continuing a draft brings back its base into the box, not into the conversation', async () => {
+      prepararStore({ agente: { ...AGENTE, has_instruction: false } });
+      responder('autonomiaSources/fetch', [
+        {
+          id: 5,
+          source_type: 'file',
+          reference: 'Antigo.pdf',
+          status: 'ready',
+          review: { status: 'accepted' },
+        },
+      ]);
+      const wrapper = await montar({ query: { agente: '90' } });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/fetch', {
+        agentId: 90,
+      });
+      expect(naCaixa().join('|')).toContain('Antigo.pdf');
+      expect(naConversa(wrapper)).toEqual([]);
+      // Com nome (Duda), o título leva o nome.
+      expect(wrapper.get('[data-base] h2').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.TITULO'
+      );
+      wrapper.unmount();
+    });
+
+    it('the team copilot also has its base in Conte (#1494)', async () => {
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+      expect(wrapper.find('[data-exemplo-copiloto]').exists()).toBe(true);
+      expect(wrapper.find('[data-exemplo] [data-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-base-adicionar-botao]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('a view-only seat sees the base without any writing action', async () => {
+      permissao.gerenciar = false;
+      const wrapper = await montar();
+      expect(wrapper.find('[data-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-base-adicionar-botao]').exists()).toBe(false);
+      expect(wrapper.find('[data-base-seletor]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('on the phone, "Base" next to "See an example" opens the box in a drawer, only in Conte', async () => {
+      const wrapper = await montar({ celular: true });
+      expect(wrapper.find('[data-exemplo]').exists()).toBe(false);
+      const botao = wrapper.get('[data-abrir-base]');
+      expect(botao.classes()).toContain('min-h-11');
+      expect(botao.attributes('aria-label')).toBe(
+        'AGENTS.JORNADA.CRIAR.BASE.BOTAO_ARIA'
+      );
+      await botao.trigger('click');
+      await flushPromises();
+      const gaveta = corpo().querySelector('[role="dialog"]');
+      expect(gaveta.textContent).toContain('AGENTS.JORNADA.CRIAR.BASE.TITULO');
+      expect(gaveta.querySelector('[data-base]')).not.toBeNull();
+      // A conversa continua ali atrás, inteira.
+      expect(wrapper.find('[data-conversa]').exists()).toBe(true);
+
+      // A conversa fechou e a tela ainda é o Conte: a base continua na barra, ao lado de "Ver como";
+      // a gaveta fecha quando a etapa vira Confira.
+      conversaFecha();
+      await flushPromises();
+      expect(wrapper.find('[data-abrir-base]').exists()).toBe(true);
+      expect(wrapper.find('[data-ver-exemplo]').exists()).toBe(false);
+      await wrapper.get('[data-ver-como]').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(corpo().querySelector('[data-base]')).toBeNull();
+      wrapper.unmount();
+    });
   });
 });

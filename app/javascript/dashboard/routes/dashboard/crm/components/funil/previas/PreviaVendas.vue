@@ -48,18 +48,17 @@ const vendido = computed(() => Math.round(props.meta * PARTE_DO_EXEMPLO));
         </span>
       </span>
     </section>
+    <!-- #1498: Atender não tem meta; a prévia mostra só como termina. -->
     <p
-      v-else
+      v-else-if="venda"
       class="mb-0 rounded-2xl border border-dashed border-n-slate-6 p-5 text-[0.9375rem] text-n-slate-11"
     >
-      {{
-        $t(venda ? 'CRM_FUNIL.PREVIA.SEM_META' : 'CRM_FUNIL.PREVIA.NAO_VENDA')
-      }}
+      {{ $t('CRM_FUNIL.PREVIA.SEM_META') }}
     </p>
     <section
       class="flex flex-col gap-2 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
     >
-      <span class="text-sm font-medium text-n-slate-11">
+      <span v-if="venda" class="text-sm font-medium text-n-slate-11">
         {{ $t('CRM_FUNIL.PREVIA.FIM') }}
       </span>
       <span class="flex flex-wrap gap-2">

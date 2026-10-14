@@ -240,6 +240,8 @@ Rails.application.routes.draw do
             resource :overview, only: [:show]
             get 'campaign_pauses', to: 'campaign_pauses#index', as: :campaign_pauses # #1332
             post 'campaign_pauses/:id/resume', to: 'campaign_pauses#resume', as: :campaign_pause_resume # #1329
+            get 'conversa_aberta', to: 'conversa_aberta#show', as: :conversa_aberta # #1335
+            post 'conversa_aberta/escrever', to: 'conversa_aberta#escrever', as: :conversa_aberta_escrever # #1335
             scope 'results/:channel/:id', controller: :results do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients
@@ -319,6 +321,14 @@ Rails.application.routes.draw do
                 post :cancel
                 post :dismiss_reminder
                 post :reschedule
+              end
+            end
+            # #1460: lembrete que repete (ver, mudar esta e as próximas, pausar, retomar, encerrar).
+            resources :follow_up_series, only: [:show, :update] do
+              member do
+                post :pause
+                post :resume
+                post :end, action: :finish
               end
             end
             resources :meetings, only: [:index, :create, :show, :update, :destroy] do
@@ -930,6 +940,8 @@ Rails.application.routes.draw do
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
           resources :whatsapp_template_inboxes, only: [:index]
           resources :whatsapp_message_prices, only: [:index]
+          # Criar com IA e Melhorar com IA na tela de Modelos (#1333): opções de texto, nada é salvo.
+          resources :whatsapp_template_suggestions, only: [:create]
 
           namespace :twitter do
             resource :authorization, only: [:create]

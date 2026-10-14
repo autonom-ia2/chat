@@ -3,8 +3,8 @@
 # só para o texto livre (WAHA ou conversa aberta); o modelo aprovado da Meta e o do canal API não mudam.
 #
 # Regras (as mesmas ao salvar, ao receber da IA e de novo no envio):
-# - só as chaves de ALLOWED_KEYS; `{{horario.link_gestao}}` e `{{horario.data_hora}}` obrigatórias (todos os avisos de
-#   hoje são de horário);
+# - só as chaves de ALLOWED_KEYS; `{{horario.data_hora}}` obrigatória (todos os avisos de hoje são de horário);
+#   `{{horario.link_gestao}}` não (#1517): sem ela, o link vai no botão ou na linha fixa (`Notices::Text`);
 # - até MAX_LENGTH caracteres, sem chave malformada e sem colchete (o rótulo de campo da tela que não virou chave);
 # - sem a linha de parar: ela é do sistema e vai sempre depois do texto (`Notices::Text#stop_line`).
 # Leitura das chaves por `Ai::Redacao::Chaves` (split/index, sem regex).
@@ -15,7 +15,11 @@ class Crm::BookingV2::Notices::CustomText
   LINK = 'horario.link_gestao'.freeze
   BUSINESS = 'minha_empresa.nome'.freeze
   ALLOWED_KEYS = [NAME, WHEN, LINK, BUSINESS].freeze
-  REQUIRED_KEYS = [LINK, WHEN].freeze
+  REQUIRED_KEYS = [WHEN].freeze
+  # O que a IA pode usar (#1517): tudo menos o link, que o sistema manda sozinho (botão ou linha fixa).
+  AI_KEYS = (ALLOWED_KEYS - [LINK]).freeze
+  # Chaves que, quando estão no texto, precisam de valor no envio.
+  FILLED_KEYS = [LINK, WHEN].freeze
   # Os idiomas que têm a linha de parar escrita (config/locales/booking_v2.*.yml).
   STOP_LINE_LOCALES = %w[en pt_BR].freeze
   Chaves = Ai::Redacao::Chaves
@@ -37,14 +41,20 @@ class Crm::BookingV2::Notices::CustomText
 
       parts = Chaves.partes(text)
       values = parts.select(&:chave?).to_h { |part| [part.valor, resolver.value(part.valor).to_s] }
-      return if REQUIRED_KEYS.any? { |key| values[key].blank? }
+      return if FILLED_KEYS.any? { |key| values.key?(key) && values[key].blank? }
 
       join(parts, values).strip
     end
 
-    # O texto padrão de hoje com as chaves no lugar dos valores: ponto de partida na tela e "Voltar ao texto padrão".
+    # O texto põe o link de gestão (`{{horario.link_gestao}}`).
+    def with_link?(text)
+      Chaves.extrair(text.to_s).include?(LINK)
+    end
+
+    # O texto padrão com as chaves no lugar dos valores: ponto de partida na tela e "Voltar ao texto padrão". Sem o
+    # link (#1517): quem edita a partir dele continua com o botão, ou com a linha fixa onde não há botão.
     def default_text(kind, locale:)
-      I18n.t("crm.booking_v2.notices.#{kind}", name: ", {{#{NAME}}}", booker: '', when: "{{#{WHEN}}}", link: "{{#{LINK}}}", locale: locale)
+      I18n.t("crm.booking_v2.notices.#{kind}", name: ", {{#{NAME}}}", booker: '', when: "{{#{WHEN}}}", locale: locale)
     end
 
     def message(problem, kind:, locale:)
@@ -64,7 +74,6 @@ class Crm::BookingV2::Notices::CustomText
 
     def keys_problem(keys)
       return :unknown_field unless (keys - ALLOWED_KEYS).empty?
-      return :missing_link unless keys.include?(LINK)
 
       :missing_when unless keys.include?(WHEN)
     end

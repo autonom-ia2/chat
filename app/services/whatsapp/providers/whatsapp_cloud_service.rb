@@ -17,7 +17,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   # Requer Graph recente (typing_indicator é GA a partir de ~v21); a versão é configurável por ENV,
   # independente do v13.0 legado do phone_id_path (que segue intocado p/ envio de mensagens).
   # Doc: graph.facebook.com/<ver>/<phone_number_id>/messages { status:read, message_id, typing_indicator }.
-  def send_typing_indicator(message_id)
+  def send_typing_indicator(message_id, timeout: nil)
     return if message_id.blank?
 
     HTTParty.post(
@@ -28,7 +28,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         status: 'read',
         message_id: message_id,
         typing_indicator: { type: 'text' }
-      }.to_json
+      }.to_json,
+      **{ timeout: timeout }.compact
     )
   rescue StandardError => e
     Rails.logger.warn("[whatsapp][typing] failed phone=#{whatsapp_channel.provider_config['phone_number_id']} #{e.class}")

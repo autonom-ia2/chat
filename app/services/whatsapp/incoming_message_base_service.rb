@@ -78,7 +78,9 @@ class Whatsapp::IncomingMessageBaseService
   def autonomia_capture_reaction?
     return false if outgoing_echo || message_type != 'reaction'
 
-    agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: inbox.id)
+    # Ainda sem a conversa: decide pela porta da caixa. Quem responde à reação é escolhido depois, pela conversa
+    # (ReactionMaterializer -> Operate.eligible_agent_inbox).
+    agent_inbox = ::Autonomia::Agents::QuemResponde.porta_da_caixa(inbox)
     return false if agent_inbox.nil?
 
     ::Autonomia::Agents::Config.operate_reactions_enabled?(agent_inbox.agent)

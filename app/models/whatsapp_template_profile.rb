@@ -8,6 +8,8 @@ class WhatsappTemplateProfile < ApplicationRecord
   belongs_to :inbox
   belongs_to :created_by, class_name: 'User', optional: true
   has_one_attached :header_file
+  # Arquivo de cada cartão do carrossel (#1334), com `metadata['card_index']`: a campanha usa a mesma mídia aprovada.
+  has_many_attached :card_files
 
   validates :name, :language, :waba_id, presence: true
   validates :name, uniqueness: { scope: [:inbox_id, :language] }
@@ -26,6 +28,10 @@ class WhatsappTemplateProfile < ApplicationRecord
 
   def key
     self.class.key_for(name, language)
+  end
+
+  def card_file(index)
+    card_files.detect { |file| file.blob.metadata['card_index'].to_s == index.to_s }
   end
 
   private

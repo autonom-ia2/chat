@@ -13,6 +13,8 @@ import OtherAttribute from 'dashboard/components-next/CustomAttributes/OtherAttr
 const props = defineProps({
   card: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
+  // #1498 — funil de Atender: "deste atendimento", não "deste negócio".
+  atender: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -124,7 +126,13 @@ onMounted(() => {
         {{ t('CRM_KANBAN.DRAWER.CARD_FIELDS.TITLE') }}
       </p>
       <p class="mb-0 text-xs leading-5 text-n-slate-11">
-        {{ t('CRM_KANBAN.DRAWER.CARD_FIELDS.HELP') }}
+        {{
+          t(
+            atender
+              ? 'CRM_KANBAN.DRAWER.CARD_FIELDS.HELP_ATENDER'
+              : 'CRM_KANBAN.DRAWER.CARD_FIELDS.HELP'
+          )
+        }}
       </p>
     </div>
 

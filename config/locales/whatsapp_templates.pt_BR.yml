@@ -36,3 +36,5 @@ pt_BR:
       carousel_media: "Todos os cartões do carrossel precisam do mesmo tipo de mídia: só foto ou só vídeo."
       category_change_not_allowed: "O WhatsApp não deixa mudar o tipo de um modelo que já existe. Crie um modelo novo com este texto."
       meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."
+      suggestion_unavailable: "Não consegui escrever agora. Tente de novo em instantes ou escreva do seu jeito."
+      suggestion_invalid: "Confira o pedido: escreva o que a mensagem precisa fazer, ou um texto de até 1024 letras."

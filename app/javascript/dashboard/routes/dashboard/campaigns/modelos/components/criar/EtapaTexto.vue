@@ -34,6 +34,8 @@ const props = defineProps({
   criarNovoCom: { type: Object, default: null },
   // Nome já usado na mesma conta do WhatsApp: a sugestão de outro (ou '').
   nomeRepetido: { type: String, default: '' },
+  // Corrigir um recusado: o motivo, para o "Melhorar com IA" (#1333).
+  recusa: { type: String, default: '' },
   // Cópia para mudar o tipo (#1394): a mesma conta não aceita texto igual, então
   // a etapa pede, antes do editor, para mudar pelo menos uma palavra.
   pedirTextoNovo: { type: Boolean, default: false },
@@ -44,7 +46,7 @@ const rascunho = defineModel('rascunho', { type: Object, required: true });
 
 const { t } = useI18n();
 const rotulo = useRotuloDoCampo();
-// Gaveta "Melhorar com IA" (entrega E, #1333): escondida enquanto não existir.
+// Gaveta "Melhorar com IA" (#1333): só para quem cria modelo.
 const podeUsarIA = useCanUseIA();
 const melhorando = ref(false);
 
@@ -213,7 +215,7 @@ const usarMelhoria = resposta => {
           {{ $t('MODELOS_WHATSAPP.TEXTO.MENSAGEM') }}
         </h2>
         <Button
-          v-if="podeUsarIA && !textoFixo"
+          v-if="podeUsarIA && !textoFixo && conteudo.texto.length"
           data-melhorar-com-ia
           :label="$t('MODELOS_WHATSAPP.IA.MELHORAR_COM_IA')"
           icon="i-lucide-sparkles"
@@ -312,6 +314,8 @@ const usarMelhoria = resposta => {
     <ModeloMelhorarComIA
       v-if="podeUsarIA && melhorando"
       :rascunho="rascunho"
+      :tipo-travado="tipoTravado"
+      :recusa="recusa"
       @usar="usarMelhoria"
       @fechar="melhorando = false"
     />

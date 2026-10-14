@@ -102,6 +102,38 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(rows[csat['name']]['system_owner']).to eq('satisfacao')
     end
 
+    # #1465: a campanha mostra "vai a foto aprovada" só quando o arquivo do topo está mesmo guardado no perfil.
+    it 'traz o nome do arquivo do topo guardado no perfil; sem arquivo, nil' do
+      profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado',
+                                                language: 'pt_BR', header_media: { 'file_name' => 'antigo.png' })
+      profile.header_file.attach(io: StringIO.new('png'), filename: 'topo.png', content_type: 'image/png')
+      WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'agendamento_ao_marcar_v1',
+                                      language: 'pt_BR', header_media: { 'file_name' => 'so-no-json.png' })
+
+      call(:get, base)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['name'] }
+      expect(rows['pedido_enviado']['header_file_name']).to eq('topo.png')
+      expect(rows['agendamento_ao_marcar_v1']['header_file_name']).to be_nil
+      expect(rows[csat['name']]['header_file_name']).to be_nil
+    end
+
+    # A prévia da campanha mostra a foto aprovada: link de leitura assinado, só para foto.
+    it 'traz o link assinado da foto do topo guardada; documento e vídeo ficam sem link' do
+      foto = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'pedido_enviado', language: 'pt_BR')
+      foto.header_file.attach(io: StringIO.new('png'), filename: 'topo.png', content_type: 'image/png')
+      pdf = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'agendamento_ao_marcar_v1',
+                                            language: 'pt_BR')
+      pdf.header_file.attach(io: StringIO.new('pdf'), filename: 'tabela.pdf', content_type: 'application/pdf')
+
+      call(:get, base)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['name'] }
+      expect(rows['pedido_enviado']['header_file_preview_url']).to start_with('http').and include('topo.png')
+      expect(rows['agendamento_ao_marcar_v1']['header_file_preview_url']).to be_nil
+      expect(rows[csat['name']]['header_file_preview_url']).to be_nil
+    end
+
     # #1338: a saúde de cada modelo (últimos 30 dias) vem na própria lista, sem uma chamada por modelo.
     it 'traz a saúde de cada modelo: envios, entregas, leituras, respostas e custo' do
       conversation = create(:conversation, account: account, inbox: inbox)
@@ -188,6 +220,43 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       profile = WhatsappTemplateProfile.find_by!(inbox: inbox, name: 'boas_vindas')
       expect(profile).to have_attributes(waba_id: channel.waba_id, meta_template_id: '901', friendly_name: 'Boas-vindas', created_by_id: admin.id)
       expect(channel.reload.message_templates.pluck('name')).to include('boas_vindas')
+    end
+
+    # #1334: a campanha do carrossel usa a mesma mídia aprovada de cada cartão, guardada aqui na criação.
+    it 'guarda o arquivo de cada cartão do carrossel no perfil, com a posição do cartão; arquivo de outra conta não entra' do
+      stub_lookup('vitrine', [])
+      stub_request(:post, templates_url).to_return(status: 200, headers: json, body: { id: '902', status: 'PENDING' }.to_json)
+      blobs = %w[1 2].map do |numero|
+        ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: "cartao-#{numero}.png", content_type: 'image/png',
+                                               metadata: { 'account_id' => account.id })
+      end
+      card = { components: [{ type: 'HEADER', format: 'IMAGE', example: { header_handle: ['h'] } }, { type: 'BODY', text: 'Produto' },
+                            { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Ver', url: 'https://loja.com' }] }] }
+      template = { name: 'vitrine', language: 'pt_BR', category: 'MARKETING',
+                   components: [{ type: 'BODY', text: 'Veja a vitrine.' }, { type: 'CAROUSEL', cards: [card, card] }],
+                   card_media: blobs.each_with_index.map { |blob, index| { card_index: index, blob_signed_id: blob.signed_id } } }
+
+      call(:post, base, { template: template })
+
+      expect(response).to have_http_status(:created)
+      profile = WhatsappTemplateProfile.find_by!(inbox: inbox, name: 'vitrine')
+      expect([0, 1].map { |index| profile.card_file(index).filename.to_s }).to eq(%w[cartao-1.png cartao-2.png])
+      # A lista devolve os arquivos guardados de cada cartão: a campanha mostra "vai a foto aprovada".
+      call(:get, base)
+      row = response.parsed_body['payload'].find { |item| item['name'] == 'vitrine' }
+      expect(row['card_media']).to eq([{ 'card_index' => 0, 'file_name' => 'cartao-1.png' },
+                                       { 'card_index' => 1, 'file_name' => 'cartao-2.png' }])
+
+      foreign = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x'), filename: 'a.png', metadata: { 'account_id' => account.id + 1 })
+      call(:post, base, { template: template.merge(name: 'vitrine_2', card_media: [{ card_index: 0, blob_signed_id: foreign.signed_id }]) })
+      expect(response.parsed_body['error']).to eq('media_invalid')
+
+      # Posição fora de 0 a 9, ou o arquivo que já está em outro modelo: recusado antes da Meta.
+      fresh = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x'), filename: 'b.png', metadata: { 'account_id' => account.id })
+      [{ card_index: 10, blob_signed_id: fresh.signed_id }, { card_index: 0, blob_signed_id: blobs.first.signed_id }].each do |media|
+        call(:post, base, { template: template.merge(name: 'vitrine_3', card_media: [media]) })
+        expect(response.parsed_body['error']).to eq('media_invalid')
+      end
     end
 
     it 'nome que já existe na WABA não cria de novo e avisa' do
@@ -468,6 +537,39 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(response).to have_http_status(:created)
       expect(response.parsed_body).to include('handle' => '4::h', 'content_type' => 'image/png')
       expect(ActiveStorage::Blob.find_signed(response.parsed_body['blob_signed_id'])).to be_present
+    end
+  end
+
+  # #1334: tipo e tamanho que a Meta aceita, conferidos no servidor antes de subir (página "Media" da Meta, 13/10/2026):
+  # JPG/PNG até 5 MB, MP4 até 16 MB, PDF até 100 MB. A foto do cartão da campanha sobe por aqui também.
+  describe 'POST media: tipo e tamanho' do
+    it 'recusa arquivo de tipo que a Meta não aceita, sem falar com a Meta' do
+      file = Rack::Test::UploadedFile.new(StringIO.new('texto'), 'text/plain', original_filename: 'nota.txt')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    it 'recusa arquivo que só tem nome de foto (o conteúdo manda, não o nome nem o tipo declarado)' do
+      file = Rack::Test::UploadedFile.new(StringIO.new('não sou foto'), 'image/png', original_filename: 'falsa.png')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
+    end
+
+    it 'recusa foto acima de 5 MB, sem falar com a Meta' do
+      big = StringIO.new("\x89PNG\r\n\x1A\n".b + ('0' * (5.megabytes + 1)))
+      file = Rack::Test::UploadedFile.new(big, 'image/png', original_filename: 'grande.png')
+
+      post "#{base}/media", params: { file: file }, headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['error']).to eq('media_invalid')
+      expect(a_request(:any, graph_host)).not_to have_been_made
     end
   end
 

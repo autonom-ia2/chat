@@ -274,7 +274,7 @@
     "origem": "formato",
     "chave": "carrossel",
     "idioma": "en",
-    "pode_ir_em_campanha": false,
+    "pode_ir_em_campanha": true,
     "corpo": {
       "name": "news",
       "language": "en",
@@ -362,7 +362,7 @@
     "origem": "formato",
     "chave": "oferta",
     "idioma": "en",
-    "pode_ir_em_campanha": false,
+    "pode_ir_em_campanha": true,
     "corpo": {
       "name": "flash_offer",
       "language": "en",
@@ -718,7 +718,7 @@
     "origem": "formato",
     "chave": "carrossel",
     "idioma": "pt_BR",
-    "pode_ir_em_campanha": false,
+    "pode_ir_em_campanha": true,
     "corpo": {
       "name": "novidades",
       "language": "pt_BR",
@@ -806,7 +806,7 @@
     "origem": "formato",
     "chave": "oferta",
     "idioma": "pt_BR",
-    "pode_ir_em_campanha": false,
+    "pode_ir_em_campanha": true,
     "corpo": {
       "name": "oferta_relampago",
       "language": "pt_BR",

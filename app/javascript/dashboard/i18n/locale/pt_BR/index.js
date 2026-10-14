@@ -1,5 +1,6 @@
 import financial from './financial.json';
 import relationships from './relationships.json';
+import richMessage from './richMessage.json';
 import prospecting from './prospecting.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
@@ -13,6 +14,7 @@ import calls from './calls.json';
 import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
+import novaConversa from './novaConversa.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -66,6 +68,7 @@ import yearInReview from './yearInReview.json';
 export default {
   ...financial,
   ...relationships,
+  ...richMessage,
   ...prospecting,
   ...advancedFilters,
   ...agentBots,
@@ -79,6 +82,7 @@ export default {
   ...campaign,
   ...campaignImport,
   ...campaignJourney,
+  ...novaConversa,
   ...brandKits,
   ...booking,
   ...resultJourney,

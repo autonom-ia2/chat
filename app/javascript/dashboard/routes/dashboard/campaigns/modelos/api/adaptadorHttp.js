@@ -7,6 +7,14 @@ import { arquivoGuardado, esquecerArquivos } from './arquivos';
 import { SITUACOES_FORA_DA_LISTA, modeloDaMeta } from './daMeta';
 import { corpoParaAlterar, corpoParaCriar } from '../helpers/paraMeta';
 import { motivoDaPausa } from '../helpers/motivoDaPausa';
+import {
+  corteMedido,
+  opcaoDaIA,
+  passaNaRegra,
+  pedacosParaTexto,
+  textoParaPedacos,
+  tipoDaCategoria,
+} from '../helpers/daIA';
 
 export { motivoDaPausa };
 
@@ -292,6 +300,14 @@ const subirArquivos = async (conteudo, caixa) => {
   return { topo, cartoes };
 };
 
+// Arquivo escolhido na campanha (do topo, #1465, ou de um cartão do carrossel, #1334):
+// o mesmo upload de mídia dos Modelos, com tipo e tamanho conferidos no
+// servidor. Devolve a referência que a campanha guarda.
+const subirArquivoDaCampanha = async (caixa, arquivo) => {
+  const enviado = await chamar(api.uploadMedia(caixa, arquivo));
+  return { referencia: enviado.blob_signed_id, nome: enviado.file_name };
+};
+
 // Um modelo por conta do WhatsApp: números de contas diferentes viram modelos
 // diferentes, cada um com a sua análise. Devolve a lista criada. Se uma conta
 // falhar depois de outra já ter criado, devolve as criadas com `falha` (o erro) e
@@ -374,10 +390,75 @@ const listarNumeros = async () =>
 const obterCatalogo = async () => null;
 const listarFormularios = async () => [];
 
-// Criar e melhorar com IA são a entrega E (#1333): a tela esconde as entradas
-// (helpers/useCanUseIA.js) enquanto estas funções não existirem de verdade.
-const iaIndisponivel = async () => {
-  throw new Error('ia_indisponivel');
+// Criar e melhorar com IA (#1333). O servidor escreve com o redator e descarta
+// o que quebra regra; aqui cada opção passa de novo pela regra estrutural da
+// tela antes de aparecer. Sem nenhuma opção boa: ErroDaApi com a frase simples.
+// Pedido vago ou que não se aplica: { status, pergunta, sugestoes } sem opções.
+const PEDIDO_PARA_A_IA = { manter_aviso: 'manter_como_servico' };
+const semOpcao = () =>
+  new ErroDaApi({ response: { data: { error: 'suggestion_unavailable' } } });
+
+// O resultado do job (#1333): { payload } ou { error, message } (sem IA, IA fora
+// do ar, nenhuma opção boa). O erro vira ErroDaApi, como os outros da tela.
+const pedirSugestao = async corpo => {
+  const resultado = await chamar(api.suggest(corpo));
+  if (resultado?.error) throw new ErroDaApi({ response: { data: resultado } });
+  return resultado.payload;
+};
+
+const respostaDaIA = payload => ({
+  status: payload.status,
+  pergunta: payload.question || '',
+  sugestoes: payload.suggestions || [],
+});
+
+const criarComIA = async ({ objetivo, tom, tipo, exemplo = () => '' }) => {
+  const payload = await pedirSugestao({
+    mode: 'create',
+    goal: objetivo,
+    tone: tom,
+    category: tipo,
+  });
+  const opcoes = (payload.options || [])
+    .map((opcao, indice) => opcaoDaIA(opcao, indice, exemplo))
+    .filter(opcao => passaNaRegra(opcao.conteudo, opcao.tipo));
+  if (payload.status === 'ok' && !opcoes.length) throw semOpcao();
+  return { ...respostaDaIA(payload), opcoes };
+};
+
+// Melhora só o texto da mensagem. O tipo que vai é o do rascunho. `travado`
+// (alterar e corrigir, #1394): o tipo não muda, então a regra confere com ele;
+// senão, com o tipo previsto, que é o que a tela passa a usar.
+const tipoFinal = (item, tipo, travado) =>
+  travado ? tipo : tipoDaCategoria(item.category);
+
+const melhorarComIA = async ({ conteudo, pedido, tipo, travado, recusa }) => {
+  const payload = await pedirSugestao({
+    mode: 'improve',
+    text: pedacosParaTexto(conteudo.texto),
+    improvements: [PEDIDO_PARA_A_IA[pedido] || pedido],
+    category: tipo,
+    meta_reason: recusa || undefined,
+  });
+  const opcao = (payload.options || [])
+    .map(item => ({ item, texto: textoParaPedacos(item.text) }))
+    .find(({ item, texto }) =>
+      passaNaRegra({ ...conteudo, texto }, tipoFinal(item, tipo, travado))
+    );
+  if (payload.status === 'ok' && !opcao) throw semOpcao();
+  if (!opcao) return { ...respostaDaIA(payload), texto: null };
+  const previsto = tipoDaCategoria(opcao.item.category);
+  return {
+    ...respostaDaIA(payload),
+    texto: opcao.texto,
+    tipo: previsto,
+    oQueMudou: opcao.item.changes || '',
+    // No "mais curto", o corte medido (%), no lugar do que a IA diz que cortou.
+    corte:
+      pedido === 'mais_curto' ? corteMedido(conteudo.texto, opcao.texto) : null,
+    motivo: opcao.item.reason || '',
+    continuaDivulgacao: pedido === 'manter_aviso' && previsto === 'divulgacao',
+  };
 };
 
 // Para os testes: começa sem nada guardado.
@@ -399,9 +480,10 @@ export default {
   obterFranquia,
   criarModelo,
   alterarModelo,
+  subirArquivoDaCampanha,
   apagarModelo,
   obterCatalogo,
   listarFormularios,
-  criarComIA: iaIndisponivel,
-  melhorarComIA: iaIndisponivel,
+  criarComIA,
+  melhorarComIA,
 };

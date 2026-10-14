@@ -4,7 +4,8 @@
 // the CRM tag notice and, for WhatsApp Oficial, Cloud inbox, approved template, where
 // each variable comes from and the preview. Other channels open their existing forms.
 // Fork (Modelos do WhatsApp): slots caixa-aviso, modelo-vazio, modelo-aviso e previa, que a
-// Nova campanha preenche com a ponte de Modelos quando a flag está ligada.
+// Nova campanha preenche com a ponte de Modelos quando a flag está ligada. O arquivo do topo
+// (foto, vídeo ou documento) é escolhido no slot modelo-aviso (#1465), não por link.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -34,7 +35,6 @@ const props = defineProps({
   coverage: { type: Object, default: null },
   // Fork (Modelos do WhatsApp): grupos extras de origem (campos do catálogo), só com a ponte ligada.
   fieldGroups: { type: Array, default: () => [] },
-  mediaHeader: { type: Object, default: null },
   previewText: { type: String, default: '' },
   canContinue: { type: Boolean, default: false },
   // WhatsApp API form: { inboxOptions, templates, extraColumns, mediaFile, preview }
@@ -43,6 +43,8 @@ const props = defineProps({
   emailForm: { type: Object, default: () => ({}) },
   // SMS form: { inboxOptions, extraColumns, sample, preview }
   smsForm: { type: Object, default: () => ({}) },
+  // Fork (#1335): texto do cartão do canal trocado por quem chama, { canal: texto }.
+  channelHints: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits([
@@ -106,10 +108,13 @@ const crmTag = computed(() =>
   t(`${NS}.CRM_TAG`, { name: props.draft.title.trim() || '…' })
 );
 
-const cardHint = card =>
-  card.available
-    ? t(`CAMPAIGN_JOURNEY.CHOOSER.HINTS.${HINT_KEYS[card.channel]}`)
-    : t(`${NS}.UNAVAILABLE.${card.reason}`);
+const cardHint = card => {
+  if (!card.available) return t(`${NS}.UNAVAILABLE.${card.reason}`);
+  return (
+    props.channelHints[card.channel] ||
+    t(`CAMPAIGN_JOURNEY.CHOOSER.HINTS.${HINT_KEYS[card.channel]}`)
+  );
+};
 
 const chooseChannel = card => {
   if (!card.available || !JOURNEY_CHANNELS.includes(card.channel)) return;
@@ -292,19 +297,6 @@ const chooseChannel = card => {
             </slot>
             <slot name="modelo-aviso" />
           </div>
-          <!-- Fork (#1382): sem link, vai o arquivo guardado com o modelo; o link é opcional. -->
-          <Input
-            v-if="mediaHeader"
-            :model-value="draft.mediaUrl"
-            type="url"
-            data-test="media-url"
-            :label="t(`${NS}.MEDIA_LABEL`)"
-            :placeholder="t(`${NS}.MEDIA_PLACEHOLDER`)"
-            :message="t(`${NS}.MEDIA_DEFAULT`)"
-            wrap-message
-            custom-input-class="!h-11"
-            @update:model-value="mediaUrl => emit('update', { mediaUrl })"
-          />
           <TemplateVariableBindings
             v-if="variables.length"
             :variables="variables"
@@ -316,6 +308,8 @@ const chooseChannel = card => {
             @bind="(key, binding) => emit('bind', key, binding)"
             @default="(key, value) => emit('default', key, value)"
           />
+          <!-- Fork (#1335): conversa aberta nas últimas 24 h, preenchido pela Nova campanha. -->
+          <slot name="janela" />
         </template>
       </section>
       <slot v-if="!isEmail && !isSms" name="previa">

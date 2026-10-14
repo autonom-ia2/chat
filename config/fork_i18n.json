@@ -45,6 +45,9 @@
       "file": "modelosWhatsapp.json"
     },
     {
+      "file": "novaConversa.json"
+    },
+    {
       "file": "onboardingTrail.json"
     },
     {
@@ -53,6 +56,9 @@
     },
     {
       "file": "relationships.json"
+    },
+    {
+      "file": "richMessage.json"
     }
   ]
 }

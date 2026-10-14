@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -418,10 +418,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
+    t.string "papel", default: "porta", null: false
     t.index ["account_id"], name: "index_autonomia_agent_inboxes_on_account_id"
     t.index ["agent_bot_id"], name: "index_autonomia_agent_inboxes_on_agent_bot_id"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_inboxes_on_autonomia_agent_id"
-    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id", "autonomia_agent_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_agent_uniq", unique: true, where: "(deleted_at IS NULL)"
+    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_porta_uniq", unique: true, where: "(((papel)::text = 'porta'::text) AND (deleted_at IS NULL))"
   end
 
   create_table "autonomia_agent_instruction_versions", force: :cascade do |t|
@@ -1127,6 +1129,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
   end
 
+  create_table "campaign_free_text_deliveries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.bigint "campaign_recipient_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "source_id", null: false
+    t.bigint "message_id"
+    t.datetime "fell_back_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_campaign_free_text_deliveries_on_campaign_id"
+    t.index ["campaign_recipient_id"], name: "idx_campaign_free_text_deliveries_recipient", unique: true
+    t.index ["inbox_id", "source_id"], name: "idx_campaign_free_text_deliveries_source", unique: true
+    t.index ["message_id"], name: "index_campaign_free_text_deliveries_on_message_id"
+  end
+
+  create_table "campaign_free_texts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_id", null: false
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_free_texts_on_account_id"
+    t.index ["campaign_id"], name: "index_campaign_free_texts_on_campaign_id", unique: true
+  end
+
   create_table "campaign_import_labels", force: :cascade do |t|
     t.bigint "campaign_import_id", null: false
     t.bigint "label_id"
@@ -1821,6 +1849,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.bigint "assignee_agent_bot_id"
     t.datetime "status_changed_at"
     t.string "ai_assignee_type"
+    t.index "(((additional_attributes -> 'crm_entrega'::text) ->> 'tentado_em'::text)) NULLS FIRST, id", name: "idx_conversations_crm_entrega_fila", where: "((additional_attributes ->> 'crm_entrega'::text) IS NOT NULL)"
     t.index "((additional_attributes ->> 'campaign_source_ids'::text)) gin_trgm_ops", name: "idx_conversations_campaign_source_ids_trgm", using: :gin
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
@@ -2147,9 +2176,45 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.index ["team_id"], name: "index_crm_cards_on_team_id"
   end
 
+  create_table "crm_follow_up_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "card_id"
+    t.bigint "contact_id"
+    t.bigint "company_id"
+    t.bigint "conversation_id"
+    t.bigint "created_by_id"
+    t.string "title", null: false
+    t.text "description"
+    t.integer "automation_mode", default: 0, null: false
+    t.integer "frequency", null: false
+    t.integer "weekdays", default: [], null: false, array: true
+    t.boolean "weekdays_only", default: false, null: false
+    t.datetime "starts_at", null: false
+    t.string "timezone", default: "UTC", null: false
+    t.integer "ends_mode", default: 0, null: false
+    t.date "ends_on"
+    t.integer "occurrences_count"
+    t.integer "status", default: 0, null: false
+    t.datetime "paused_at"
+    t.datetime "ended_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "idx_crm_follow_up_series_account_status"
+    t.index ["card_id"], name: "index_crm_follow_up_series_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_up_series_on_company_id"
+    t.index ["contact_id"], name: "index_crm_follow_up_series_on_contact_id"
+    t.index ["conversation_id"], name: "index_crm_follow_up_series_on_conversation_id"
+    t.index ["created_by_id"], name: "index_crm_follow_up_series_on_created_by_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_up_series_on_recipient_team_id"
+  end
+
   create_table "crm_follow_ups", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "card_id", null: false
+    t.bigint "card_id"
     t.bigint "conversation_id"
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -2167,6 +2232,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "series_id"
+    t.datetime "occurrence_at"
+    t.integer "recipient_mode", default: 0, null: false
+    t.bigint "recipient_user_ids", default: [], null: false, array: true
+    t.bigint "recipient_team_id"
+    t.bigint "company_id"
     t.index ["account_id", "assignee_id", "due_at", "status"], name: "idx_crm_followups_assignee_due"
     t.index ["account_id", "card_id"], name: "idx_crm_followups_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_followups_conversation"
@@ -2174,11 +2245,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
     t.index ["account_id"], name: "index_crm_follow_ups_on_account_id"
     t.index ["assignee_id"], name: "index_crm_follow_ups_on_assignee_id"
     t.index ["card_id"], name: "index_crm_follow_ups_on_card_id"
+    t.index ["company_id"], name: "index_crm_follow_ups_on_company_id"
     t.index ["contact_id"], name: "index_crm_follow_ups_on_contact_id"
     t.index ["conversation_id"], name: "index_crm_follow_ups_on_conversation_id"
     t.index ["created_by_id"], name: "index_crm_follow_ups_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_follow_ups_on_inbox_id"
+    t.index ["recipient_team_id"], name: "index_crm_follow_ups_on_recipient_team_id"
+    t.index ["series_id", "occurrence_at"], name: "idx_crm_followups_series_occurrence_uniq", unique: true, where: "(series_id IS NOT NULL)"
     t.index ["status", "due_at", "id"], name: "idx_crm_followups_due_processor"
+    t.check_constraint "card_id IS NOT NULL OR contact_id IS NOT NULL OR company_id IS NOT NULL OR created_by_id IS NOT NULL", name: "crm_follow_ups_has_owner"
   end
 
   create_table "crm_google_conversion_events", force: :cascade do |t|
@@ -3994,6 +4069,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
   add_foreign_key "brand_kits", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
   add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
+  add_foreign_key "campaign_free_text_deliveries", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_text_deliveries", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_free_texts", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_pauses", "accounts", on_delete: :cascade
   add_foreign_key "campaign_pauses", "users", column: "paused_by_id", on_delete: :nullify
   add_foreign_key "campaign_pauses", "users", column: "resumed_by_id", on_delete: :nullify
@@ -4043,11 +4122,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_143712) do
   add_foreign_key "crm_cards", "inboxes", on_delete: :nullify
   add_foreign_key "crm_cards", "teams"
   add_foreign_key "crm_cards", "users", column: "owner_id"
+  add_foreign_key "crm_follow_up_series", "accounts"
+  add_foreign_key "crm_follow_up_series", "companies", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "contacts", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "conversations", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_up_series", "teams", column: "recipient_team_id", on_delete: :nullify
+  add_foreign_key "crm_follow_up_series", "users", column: "created_by_id"
   add_foreign_key "crm_follow_ups", "accounts"
+  add_foreign_key "crm_follow_ups", "companies", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "contacts", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "crm_follow_ups", "crm_cards", column: "card_id", on_delete: :cascade
+  add_foreign_key "crm_follow_ups", "crm_follow_up_series", column: "series_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "inboxes", on_delete: :nullify
+  add_foreign_key "crm_follow_ups", "teams", column: "recipient_team_id", on_delete: :nullify
   add_foreign_key "crm_follow_ups", "users", column: "assignee_id"
   add_foreign_key "crm_follow_ups", "users", column: "created_by_id"
   add_foreign_key "crm_google_conversion_events", "accounts", on_delete: :cascade

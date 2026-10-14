@@ -177,7 +177,8 @@ RSpec.describe 'Robô atribuído à conversa' do # rubocop:disable RSpec/Describ
       expect(conversation).not_to be_bot_handoff_waiting
     end
 
-    it 'com rodízio novo, o rodízio entrega a conversa à espera a uma pessoa' do
+    # Motor de entrega (#1454): a passagem entrega na hora, sem esperar o job do rodízio novo, e o job não atribui de novo.
+    it 'com rodízio novo, o motor entrega na passagem e o rodízio não atribui de novo' do
       account.enable_features('assignment_v2')
       account.save!
       inbox.update!(enable_auto_assignment: true)
@@ -187,10 +188,10 @@ RSpec.describe 'Robô atribuído à conversa' do # rubocop:disable RSpec/Describ
       allow(AutoAssignment::AssignmentJob).to receive(:enqueue_for_inbox)
 
       conversation.bot_handoff!
-      expect(AutoAssignment::AssignmentJob).to have_received(:enqueue_for_inbox).with(inbox.id)
-      expect(conversation.reload.ai_assignee).to eq(bot)
+      expect(AutoAssignment::AssignmentJob).not_to have_received(:enqueue_for_inbox)
+      expect(conversation.reload.assignee).to eq(agent)
 
-      AutoAssignment::AssignmentService.new(inbox: inbox).perform_bulk_assignment(limit: 10)
+      expect(AutoAssignment::AssignmentService.new(inbox: inbox).perform_bulk_assignment(limit: 10)).to eq(0)
 
       expect(conversation.reload.assignee).to eq(agent)
       expect(conversation.ai_assignee).to be_nil

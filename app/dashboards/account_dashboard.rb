@@ -36,7 +36,9 @@ class AccountDashboard < Administrate::BaseDashboard
     status: AccountStatusField.with_options(collection: [%w[Active active], %w[Suspended suspended]]),
     suspension_history: SuspensionHistoryField,
     account_users: Field::HasMany,
-    custom_attributes: Field::String
+    custom_attributes: Field::String,
+    # #1429: nicho dos agentes, fora da escolha enterprise/não enterprise para aparecer nos dois ramos.
+    agents_niche: AgentsNicheField
   }.merge(enterprise_attribute_types).freeze
 
   # COLLECTION_ATTRIBUTES
@@ -74,6 +76,7 @@ class AccountDashboard < Administrate::BaseDashboard
     suspension_history
     conversations
     account_users
+    agents_niche
   ] + enterprise_show_page_attributes).freeze
 
   # FORM_ATTRIBUTES
@@ -92,6 +95,7 @@ class AccountDashboard < Administrate::BaseDashboard
     name
     locale
     status
+    agents_niche
   ] + enterprise_form_attributes).freeze
 
   # COLLECTION_FILTERS

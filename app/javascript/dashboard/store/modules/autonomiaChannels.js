@@ -26,6 +26,17 @@ export const getters = {
   },
 };
 
+// #1366 — ligar ou tirar canal muda o estado do agente no servidor (ativar junto; o último canal para).
+// Relê o agente para a lista e a página não mostrarem um estado velho. A troca de canal já aconteceu:
+// se só a releitura falhar, a próxima leitura da tela acerta.
+const relerAgente = async (dispatch, agentId) => {
+  try {
+    await dispatch('autonomiaAgents/show', agentId, { root: true });
+  } catch {
+    // A releitura é só para a tela; o canal já foi trocado.
+  }
+};
+
 export const actions = {
   fetch: async ({ commit }, { agentId }) => {
     // Zera as listas antes de buscar (store module-wide): ao trocar de agente,
@@ -49,15 +60,22 @@ export const actions = {
     }
   },
 
-  connect: async ({ commit, dispatch }, { agentId, inboxId }) => {
+  // `ativar` (#1366): liga o agente junto com o canal; o agente é relido para a tela mostrar o estado novo.
+  connect: async (
+    { commit, dispatch },
+    { agentId, inboxId, ativar = false }
+  ) => {
     commit('SET_UI_FLAG', { connecting: true });
     let connected = false;
     try {
-      const { data } = await AutonomiaChannelsAPI.connect(agentId, inboxId);
+      const { data } = await AutonomiaChannelsAPI.connect(agentId, inboxId, {
+        ativar,
+      });
       connected = true;
       // Re-sync from server truth: a connect moves the inbox between the
       // eligible and connected lists and may free/occupy others.
       await dispatch('fetch', { agentId });
+      if (ativar) await relerAgente(dispatch, agentId);
       return data.payload || data;
     } catch (error) {
       // Só propaga quando o CONNECT em si falhou. Se o vínculo foi criado e
@@ -76,6 +94,8 @@ export const actions = {
     try {
       await AutonomiaChannelsAPI.disconnect(agentId, inboxId);
       await dispatch('fetch', { agentId });
+      // #1366: era o último canal, o servidor parou o agente.
+      await relerAgente(dispatch, agentId);
       return inboxId;
     } catch (error) {
       return throwErrorMessage(error);

@@ -1,23 +1,27 @@
-import { timeZoneName } from '../scheduleTime';
+import { accountTimeZone } from '../scheduleTime';
 
-// #1387 (L15): the review shows the zone by its name, not the IANA id.
-describe('timeZoneName', () => {
-  it('names the zone for people', () => {
-    const nome = timeZoneName('America/Sao_Paulo', 'pt_BR');
-    expect(nome).not.toBe('America/Sao_Paulo');
-    expect(nome).toContain('Brasília');
+// #1456: o fuso é o da conta, o mesmo que a plataforma usa (Configurações da
+// conta grava custom_attributes.timezone e o servidor copia para
+// settings.reporting_timezone). O navegador só quando a conta não tem fuso.
+describe('accountTimeZone', () => {
+  it('reads the zone chosen in the account settings', () => {
+    expect(
+      accountTimeZone({ custom_attributes: { timezone: 'America/Cuiaba' } })
+    ).toBe('America/Cuiaba');
   });
 
-  it('names the zone at the scheduled instant (summer time)', () => {
-    expect(timeZoneName('America/New_York', 'en', '2026-07-01T12:00:00Z')).toBe(
-      'Eastern Daylight Time'
-    );
-    expect(timeZoneName('America/New_York', 'en', '2026-12-01T12:00:00Z')).toBe(
-      'Eastern Standard Time'
-    );
+  it('falls back to the reporting zone the server keeps in sync', () => {
+    expect(
+      accountTimeZone({ settings: { reporting_timezone: 'America/Manaus' } })
+    ).toBe('America/Manaus');
   });
 
-  it('falls back to the id when the zone is unknown', () => {
-    expect(timeZoneName('Nowhere/Zone', 'pt_BR')).toBe('Nowhere/Zone');
+  it('ignores a zone that is not real', () => {
+    expect(
+      accountTimeZone({
+        custom_attributes: { timezone: 'Nowhere/Zone' },
+        settings: { reporting_timezone: 'America/Belem' },
+      })
+    ).toBe('America/Belem');
   });
 });

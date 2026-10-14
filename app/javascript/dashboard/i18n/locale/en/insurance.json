@@ -153,6 +153,7 @@
         "OPEN_AGENTS": "See my agents",
         "CONFIGURE": "Configure and create",
         "OPEN_AGENT": "Open the agent",
+        "CHOOSE_CHANNEL": "Choose where {name} answers",
         "CANCEL": "Cancel",
         "SUBMIT": "Create agent"
       },
@@ -178,6 +179,8 @@
       "EXISTING": {
         "TITLE": "Your Quoting Agent already exists",
         "BRANCHES": "Quotes: {ramos}",
+        "NO_CHANNEL": "{name} is not in any channel yet, so it does not quote for anyone. Choose where it answers to start.",
+        "ASK_ADMIN": "Ask whoever manages the account to choose where {name} answers.",
         "NOTE": "One per account. To change the name or the behavior, edit the agent."
       },
       "ERRORS": {

@@ -8,7 +8,8 @@ import { nomeSemExtensao } from '../utils/nomeDoArquivo';
 // e aria-live para anunciar a resposta). Embaixo da resposta, "Usou: <arquivo sem extensão>" quando o
 // agente se apoiou num arquivo: quebra dentro do balão, no máximo 2 linhas, nome inteiro no title.
 // Nunca mostra confiança, nota ou percentual.
-// mensagens: [{ de: 'cliente' | 'agente', texto, hora?, usou?: [nome do arquivo], fotos?: [url] }], ou
+// 'equipe' (#1494) é quem pergunta ao Copiloto da equipe: fica à direita, mas não como cliente.
+// mensagens: [{ de: 'cliente' | 'equipe' | 'agente', texto, hora?, usou?: [nome do arquivo], fotos?: [url] }], ou
 // { de: 'aviso', texto } para uma faixa no meio da conversa (ex.: "aqui passaria para a equipe").
 // Slots (#1181 PR2, teste da criação): `acao` no cabeçalho, `depois` embaixo das mensagens (vazio,
 // erro, "Respondeu errado?"), fora da região aria-live para só a conversa ser anunciada, e `rodape`
@@ -33,10 +34,17 @@ const mini = computed(() => props.tamanho === 'mini');
 const inicial = computed(() =>
   (props.nome || '?').trim().charAt(0).toUpperCase()
 );
-const quem = de =>
-  de === 'cliente'
-    ? t('AGENTS.JORNADA.COMUM.CLIENTE')
-    : t('AGENTS.JORNADA.COMUM.AGENTE');
+const QUEM = {
+  cliente: 'AGENTS.JORNADA.COMUM.CLIENTE',
+  equipe: 'AGENTS.JORNADA.COMUM.EQUIPE',
+};
+const quem = de => t(QUEM[de] || 'AGENTS.JORNADA.COMUM.AGENTE');
+const BALAO = {
+  cliente: 'self-end bg-[#D9FDD3] dark:bg-n-teal-4 rounded-ee-md',
+  equipe: 'self-end bg-n-blue-3 rounded-ee-md',
+};
+const classeDoBalao = de =>
+  BALAO[de] || 'self-start bg-white dark:bg-n-solid-2 rounded-es-md';
 </script>
 
 <template>
@@ -90,11 +98,7 @@ const quem = de =>
             v-else
             :data-balao="mensagem.de"
             class="relative flex flex-col min-w-0 max-w-[85%] px-3 py-2 text-sm leading-relaxed shadow-sm rounded-2xl text-n-slate-12 [overflow-wrap:anywhere]"
-            :class="
-              mensagem.de === 'cliente'
-                ? 'self-end bg-[#D9FDD3] dark:bg-n-teal-4 rounded-ee-md'
-                : 'self-start bg-white dark:bg-n-solid-2 rounded-es-md'
-            "
+            :class="classeDoBalao(mensagem.de)"
           >
             <span class="sr-only">{{
               t('AGENTS.JORNADA.COMUM.QUEM_DISSE', { quem: quem(mensagem.de) })

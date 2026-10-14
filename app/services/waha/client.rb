@@ -81,13 +81,21 @@ module Waha
       get("/api/sessions/#{session}/capping")
     end
 
-    # "digitando…" antes do envio (WhatsApp Híbrido, chat#1067).
-    def start_typing(session:, chat_id:)
-      post('/api/startTyping', { session: session, chatId: chat_id })
+    # Limite temporário de conversas novas pelos aparelhos conectados (WhatsApp Híbrido, chat#1480).
+    # Só informativo na aba: timeout curto para não segurar a tela.
+    TIMELOCK_TIMEOUT = 5
+
+    def timelock(session)
+      get("/api/sessions/#{session}/timelock", timeout: TIMELOCK_TIMEOUT)
     end
 
-    def stop_typing(session:, chat_id:)
-      post('/api/stopTyping', { session: session, chatId: chat_id })
+    # "digitando…" antes do envio (WhatsApp Híbrido, chat#1067).
+    def start_typing(session:, chat_id:, timeout: DEFAULT_TIMEOUT)
+      post('/api/startTyping', { session: session, chatId: chat_id }, timeout: timeout)
+    end
+
+    def stop_typing(session:, chat_id:, timeout: DEFAULT_TIMEOUT)
+      post('/api/stopTyping', { session: session, chatId: chat_id }, timeout: timeout)
     end
 
     # ---- ENVIO DIRETO (WhatsApp Híbrido, chat#1067) ----
@@ -161,8 +169,8 @@ module Waha
       { 'X-Api-Key' => @key, 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
     end
 
-    def post(path, body = nil)
-      request(:post, path, body)
+    def post(path, body = nil, timeout: DEFAULT_TIMEOUT)
+      request(:post, path, body, timeout: timeout)
     end
 
     def get(path, timeout: DEFAULT_TIMEOUT)

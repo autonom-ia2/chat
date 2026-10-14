@@ -105,6 +105,23 @@ RSpec.describe Whatsapp::Templates::DispatchCheck, :aggregate_failures do
       expect(check.details).to include(format_code: 'copy_code')
     end
 
+    # #1334: an offer whose expiration passed while the campaign waited goes out to no one, with its own reason.
+    it 'pauses a limited-time offer whose recorded expiration already passed, and accepts it while ahead' do
+      offer = template.merge('components' => [{ 'type' => 'LIMITED_TIME_OFFER',
+                                                'limited_time_offer' => { 'text' => 'Só hoje', 'has_expiration' => true } }] +
+                                              template['components'])
+      stub_meta_template_lookup([offer])
+      params = journey_template_params
+      params['processed_params']['limited_time_offer'] = { 'expiration_time_ms' => 1.day.ago.to_i * 1000 }
+      campaign.update!(template_params: params)
+
+      expect(check.reason_code).to eq('template_offer_expired')
+
+      params['processed_params']['limited_time_offer'] = { 'expiration_time_ms' => 1.day.from_now.to_i * 1000 }
+      campaign.update!(template_params: params)
+      expect(check).to be_ok
+    end
+
     it 'does not break on a legacy positional array of parameters' do
       campaign.update!(template_params: journey_template_params.merge('processed_params' => %w[Ana 10/2026]))
       stub_meta_template_lookup([template])

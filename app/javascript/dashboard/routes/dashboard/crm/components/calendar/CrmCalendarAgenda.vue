@@ -11,6 +11,7 @@ import {
   EVENT_TYPE_GROUP,
   EVENT_TYPE_META,
   eventStart,
+  isDateOnly,
   isOverdue,
   aggregateByGroup,
 } from './calendarEvents.js';
@@ -150,7 +151,9 @@ const dayLabel = date =>
   format(date, "EEEE, dd 'de' MMMM", { locale: dateFnsLocale.value });
 
 const timeLabel = event =>
-  format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
+  isDateOnly(event)
+    ? t('CRM_KANBAN.CALENDAR.ALL_DAY')
+    : format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
 
 const metaFor = event => EVENT_TYPE_META[EVENT_TYPE_GROUP(event.event_type)];
 

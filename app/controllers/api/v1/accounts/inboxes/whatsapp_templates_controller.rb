@@ -74,7 +74,8 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   def template_params
     permitted = params.require(:template).permit(:name, :language, :category, :parameter_format, :message_send_ttl_seconds,
                                                  :friendly_name, fields: {},
-                                                                 header_media: %i[handle blob_signed_id file_name content_type byte_size])
+                                                                 header_media: %i[handle blob_signed_id file_name content_type byte_size],
+                                                                 card_media: %i[card_index blob_signed_id])
     components = params[:template][:components]
     return permitted.to_h unless components
 

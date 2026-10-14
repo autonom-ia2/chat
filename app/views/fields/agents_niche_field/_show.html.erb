@@ -1,0 +1,4 @@
+<span data-agents-niche><%= render 'fields/agents_niche_field/name', escolha: field.data %></span>
+<% if field.data.padrao? %>
+  <span class="text-n-slate-11"><%= t('autonomia_agents_niche.is_default') %></span>
+<% end %>

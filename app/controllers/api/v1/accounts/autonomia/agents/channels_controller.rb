@@ -8,8 +8,10 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     @eligible_inboxes = eligible_inboxes
   end
 
+  # `ativar: true` (#1366) — "Começar a atender neste canal": liga o agente parado junto com o vínculo.
   def create
-    result = ::Autonomia::Agents::Operate::InboxConnector.new(agent: @agent, inbox: @inbox).perform(connect: true)
+    ativar = ActiveModel::Type::Boolean.new.cast(params[:ativar]) == true
+    result = ::Autonomia::Agents::Operate::InboxConnector.new(agent: @agent, inbox: @inbox, ativar: ativar).perform(connect: true)
     return render_unprocessable(connector_error(result.error)) unless result.success?
 
     @agent_inbox = result.agent_inbox

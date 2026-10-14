@@ -46,7 +46,8 @@ RSpec.describe 'Agendamento: matriz de permissões das rotas novas', type: :requ
     let(:channel) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false) }
     let(:cloud) { channel.inbox }
     let(:member) { "#{base}/#{world.profile.id}" }
-    let(:good) { 'Oi, {{cliente.primeiro_nome}}! Seu horário é {{horario.data_hora}}. Para mudar: {{horario.link_gestao}}. Até lá!' }
+    # Sem o campo do link: desde o #1517 a IA não o recebe, e opção com ele é descartada (o link vai no botão ou na linha fixa).
+    let(:good) { 'Oi, {{cliente.primeiro_nome}}! Seu horário é {{horario.data_hora}}. Até lá!' }
     let(:template_ai) { instance_double(Crm::Ai::ResponsesClient) }
     let(:writer_ai) { instance_double(Crm::Ai::ResponsesClient) }
     let(:people) do

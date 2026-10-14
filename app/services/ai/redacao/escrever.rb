@@ -5,14 +5,15 @@
 #   Ai::Redacao::Escrever.call(
 #     account:, feature: 'aviso_redacao', canal: 'whatsapp_texto', proposito: 'lembrete 1 dia antes do horário',
 #     limites: { max_chars: 500 }, tom: 'simpatico',
-#     chaves: { permitidas: %w[cliente.primeiro_nome horario.data_hora horario.link_gestao], obrigatorias: %w[horario.link_gestao] },
+#     chaves: { permitidas: %w[cliente.primeiro_nome horario.data_hora horario.link_gestao], obrigatorias: %w[horario.data_hora] },
 #     contexto: { pagina: 'Consulta de 45 min' }
 #   )
 #   # => { status: 'ok', opcoes: [{ texto:, chaves_usadas:, categoria_prevista:, motivo_categoria:, o_que_mudou: }],
 #   #      pergunta: nil, sugestoes: [], descartadas: 0 }
 #
 # Entrada para o modelo: só o que o chamador passa e o catálogo (rótulo, tipo e exemplo FICTÍCIO de cada chave), nunca
-# dado de cliente. `base` (texto atual; o canal pode estender) e `pedido` (`{ melhorias: [...], observacao:,
+# dado de cliente. `colunas` (opcional, `{ 'Vencimento' => 'data' }`) dá o tipo das chaves `publico.<coluna>`, como no
+# `TemplateFields::Catalog.type`; sem ela, a coluna é texto. `base` (texto atual; o canal pode estender) e `pedido` (`{ melhorias: [...], observacao:,
 # recusa_da_meta: }`, modo melhorar, o mesmo nome do prompt calibrado) vão como DADO no JSON: nenhum código interpreta o
 # que a pessoa escreveu. Pela chave de IA da conta (`Crm::Ai::CredentialResolver`), com a `feature` do chamador na
 # Gestão IA. Na requisição do painel: por padrão uma tentativa e 11 s (o rack-timeout de produção corta aos 15 s);
@@ -40,7 +41,7 @@ class Ai::Redacao::Escrever
 
   # rubocop:disable Metrics/ParameterLists
   def initialize(account:, feature:, proposito:, canal:, limites:, chaves:, tom: nil, base: nil, pedido: nil,
-                 opcoes: OPCOES_PADRAO, contexto: {}, modelo: nil, timeout: TIMEOUT, max_retries: 0)
+                 opcoes: OPCOES_PADRAO, contexto: {}, colunas: {}, modelo: nil, timeout: TIMEOUT, max_retries: 0)
     @account = account
     @feature = feature
     @proposito = proposito
@@ -52,6 +53,7 @@ class Ai::Redacao::Escrever
     @pedido = pedido
     @opcoes = opcoes.to_i.clamp(1, Ai::Redacao::Canais::Base::MAX_OPCOES)
     @contexto = contexto.to_h
+    @colunas = colunas.to_h
     @modelo = modelo.presence || MODELO
     @timeout = timeout
     @max_retries = max_retries
@@ -121,7 +123,7 @@ class Ai::Redacao::Escrever
   end
 
   def campo(chave)
-    tipo = TemplateFields::Catalog.type(chave)
+    tipo = TemplateFields::Catalog.type(chave, column_types: @colunas)
     { chave: chave, rotulo: TemplateFields::Catalog.label(chave, locale: :pt_BR), tipo: tipo,
       exemplo: EXEMPLOS[chave] || EXEMPLOS_POR_TIPO.fetch(tipo, EXEMPLOS_POR_TIPO['texto']) }
   end

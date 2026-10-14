@@ -67,14 +67,32 @@ describe('AgenteCartao', () => {
     wrapper.unmount();
   });
 
-  it('says when it is on no inbox yet', () => {
+  // #1366 — ativo e ligado no servidor, mas sem canal: nunca "Atendendo".
+  it('shows an active agent with no inbox as stopped, "not on any channel yet"', () => {
     const wrapper = montarCartao({
-      agente: agente({ channels_count: 0 }),
+      agente: agente({ channels_count: 0, tem_onde_trabalhar: false }),
       canais: [],
     });
-    expect(wrapper.get('[data-onde]').text()).toBe(
-      'AGENTS.JORNADA.CARTAO.ONDE_NENHUM'
-    );
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.STATUS.PARADO');
+    expect(wrapper.text()).not.toContain('AGENTS.JORNADA.STATUS.ATENDENDO');
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL');
+    expect(wrapper.find('[data-onde]').exists()).toBe(false);
+    expect(wrapper.find('[data-semana]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('keeps the Team copilot answering, with its badge, without any inbox', () => {
+    const wrapper = montarCartao({
+      agente: agente({
+        actuation: 'internal',
+        channels_count: 0,
+        tem_onde_trabalhar: true,
+      }),
+      canais: [],
+    });
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.STATUS.ATENDENDO');
+    expect(wrapper.text()).toContain('AGENTS.HUB.INTERNAL_BADGE');
+    expect(wrapper.text()).not.toContain('PARADO_SEM_CANAL');
     wrapper.unmount();
   });
 
@@ -140,7 +158,24 @@ describe('AgenteCartao', () => {
     wrapper.unmount();
   });
 
-  it('sends the quote agent to the quotes module', async () => {
+  // #1525 — nasce parada e sem canal: o cartão diz isso, e o clique segue para a escolha de canal.
+  it('says the quote agent is in no channel yet', () => {
+    const wrapper = montarCartao({
+      agente: agente({
+        agent_type: 'insurance_quote',
+        status: 'paused',
+        enabled: false,
+        channels_count: 0,
+        tem_onde_trabalhar: false,
+      }),
+    });
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.STATUS.COTACAO');
+    expect(wrapper.text()).toContain('AGENTS.JORNADA.CARTAO.PARADO_SEM_CANAL');
+    expect(wrapper.text()).not.toContain('AGENTS.JORNADA.CARTAO.COTACAO');
+    wrapper.unmount();
+  });
+
+  it('sends the quote agent to its own page', async () => {
     const wrapper = montarCartao({
       agente: agente({ agent_type: 'insurance_quote' }),
     });

@@ -9,6 +9,8 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 const props = defineProps({
+  // #1498 — funil de Atender: "Meus atendimentos", sem falar de venda.
+  venda: { type: Boolean, default: true },
   show: { type: Boolean, default: false },
   filters: { type: Object, required: true },
   viewMode: { type: String, default: 'kanban' },
@@ -303,7 +305,13 @@ useFixedPanelPresence(computed(() => props.show));
               @click="applyShortcut('any-owner')"
             />
             <Button
-              :label="t('CRM_KANBAN.FILTERS.SHORTCUT_MINE')"
+              :label="
+                t(
+                  venda
+                    ? 'CRM_KANBAN.FILTERS.SHORTCUT_MINE'
+                    : 'CRM_KANBAN.FILTERS.SHORTCUT_MINE_ATENDER'
+                )
+              "
               outline
               slate
               :aria-pressed="shortcutIsActive('mine')"
@@ -526,7 +534,13 @@ useFixedPanelPresence(computed(() => props.show));
                   {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENTION') }}
                 </strong>
                 <span class="mt-1 block text-sm leading-5 text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENTION_HELP') }}
+                  {{
+                    t(
+                      venda
+                        ? 'CRM_KANBAN.FILTERS.GROUP_ATTENTION_HELP'
+                        : 'CRM_KANBAN.FILTERS.GROUP_ATTENTION_HELP_ATENDER'
+                    )
+                  }}
                 </span>
               </span>
               <span
@@ -552,7 +566,13 @@ useFixedPanelPresence(computed(() => props.show));
                   {{ t('CRM_KANBAN.FILTERS.SCORE_RANGE') }}
                 </span>
                 <p class="mb-0 text-xs leading-5 text-n-slate-10">
-                  {{ t('CRM_KANBAN.FILTERS.SCORE_HELP') }}
+                  {{
+                    t(
+                      venda
+                        ? 'CRM_KANBAN.FILTERS.SCORE_HELP'
+                        : 'CRM_KANBAN.FILTERS.SCORE_HELP_ATENDER'
+                    )
+                  }}
                 </p>
                 <div class="grid grid-cols-2 gap-3">
                   <Input
@@ -780,7 +800,13 @@ useFixedPanelPresence(computed(() => props.show));
           @click="clear"
         />
         <Button
-          :label="t('CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES')"
+          :label="
+            t(
+              venda
+                ? 'CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES'
+                : 'CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES_ATENDER'
+            )
+          "
           :disabled="Boolean(scoreRangeError)"
           class="!min-h-11 !rounded-lg"
           @click="apply"

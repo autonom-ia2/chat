@@ -38,6 +38,27 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
       expect(WhatsappHybrid::Capping.new(connection).status).to eq('FIRST_WARNING')
     end
 
+    it 'keeps the new-conversations limit sent with the status (chat#1486)' do
+      timelock = WhatsappHybrid::Timelock.new(connection)
+      Redis::Alfred.delete(timelock.key)
+      ends_at = 6.hours.from_now.to_i
+      reachout = { 'enforcementType' => 'RESTRICT_ALL_COMPANIONS', 'isActive' => true, 'timeEnforcementEnds' => ends_at }
+
+      described_class.perform_now(connection.id, 'session.status', { 'status' => 'WORKING', 'timelock' => reachout })
+
+      expect(timelock.payload).to eq(active: true, ends_at: ends_at)
+      expect(connection.reload.status).to eq('connected')
+    end
+
+    it 'leaves the limit snapshot alone when the status brings none' do
+      timelock = WhatsappHybrid::Timelock.new(connection)
+      timelock.apply!('isActive' => true, 'timeEnforcementEnds' => 3.hours.from_now.to_i)
+
+      described_class.perform_now(connection.id, 'session.status', { 'status' => 'WORKING' })
+
+      expect(timelock.active?).to be(true)
+    end
+
     it 'does not warn when the connection was never in use' do
       connection.update!(risk_accepted_at: nil)
 

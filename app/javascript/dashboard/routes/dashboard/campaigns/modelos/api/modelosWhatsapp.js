@@ -33,9 +33,15 @@ import adaptador from './adaptadorHttp';
 //   conta falha depois de outra criar, a lista vem com `falha` e `contasSemPedido`.
 // alterarModelo(id, rascunho, { textos }) → Modelo (volta para 'em_analise')
 // apagarModelo(id) → { nomeBloqueadoAte }  (data ISO, 30 dias depois)
+// subirArquivoDaCampanha(caixa, arquivo) → { referencia, nome }  (foto, vídeo ou
+//   documento do topo ou de um cartão, escolhido na campanha, #1334/#1465)
 //   Erros da API chegam como ErroDaApi { codigo, mensagem (já traduzida), status }.
 // obterCatalogo() → null e listarFormularios() → []: ainda sem backend.
-// criarComIA / melhorarComIA: entrega E (#1333); hoje recusam e a tela esconde.
+// criarComIA({ objetivo, tom, tipo?, exemplo }) → { status, pergunta,
+//   sugestoes, opcoes: [{ id, nome, tipo, motivo, conteudo }] }
+// melhorarComIA({ conteudo, pedido, tipo, recusa? }) → { status, pergunta,
+//   sugestoes, texto (pedaços) | null, tipo, oQueMudou, motivo,
+//   continuaDivulgacao }  (#1333; opções já conferidas pela regra estrutural)
 //
 // Modelo = {
 //   id, nome, nomeNoWhatsapp, objetivo, sistema, idioma,
@@ -45,6 +51,10 @@ import adaptador from './adaptadorHttp';
 //   conteudo: { formato, topo, texto, exemplos, rodape, botoes,
 //     cartoes?, oferta?, catalogo?, codigo?, formulario? },
 //   campos: { '1': campo }, template (o modelo como a Meta devolve),
+//   cartoesGuardados: [{ nome } | null]  (arquivo aprovado de cada cartão do
+//     carrossel, guardado no Chat2You; a campanha usa o mesmo, #1334),
+//   topoGuardado: { nome, url } | null  (arquivo do topo guardado; url = link
+//     assinado da foto para a miniatura, vazio em vídeo e documento, #1465),
 //   recusa: { codigo } | null, pausa: { desde | null } | null,
 //   sinal: 'bom' | 'atencao' | 'ruim' | 'sem_nota'  (qualidade dada pelo WhatsApp),
 //   saude: { dias, enviadas, entregues, lidas, responderam,

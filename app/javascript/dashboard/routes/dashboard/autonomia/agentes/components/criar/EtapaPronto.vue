@@ -17,6 +17,8 @@ const props = defineProps({
   ultimo: { type: Object, default: null },
   empresa: { type: String, default: '' },
   celular: { type: Boolean, default: false },
+  // Copiloto da equipe (#1494): ajuda a equipe dentro das conversas, sem canal e sem cliente.
+  interno: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['ver', 'voltar']);
@@ -26,11 +28,12 @@ const NS = 'AGENTS.JORNADA.CRIAR.PRONTO';
 
 const valores = computed(() => ({ nome: props.nome, canal: props.canal }));
 
-const titulo = computed(() =>
-  props.canal
+const titulo = computed(() => {
+  if (props.interno) return t(`${NS}.TITULO_COPILOTO`, valores.value);
+  return props.canal
     ? t(`${NS}.TITULO`, valores.value)
-    : t(`${NS}.TITULO_SEM_CANAL`, valores.value)
-);
+    : t(`${NS}.TITULO_SEM_CANAL`, valores.value);
+});
 
 const QUANDO = {
   business_hours: 'DENTRO',
@@ -45,7 +48,10 @@ const agora = computed(() => {
 const conversa = computed(() =>
   props.ultimo
     ? [
-        { de: 'cliente', texto: props.ultimo.pergunta },
+        {
+          de: props.interno ? 'equipe' : 'cliente',
+          texto: props.ultimo.pergunta,
+        },
         { de: 'agente', texto: props.ultimo.resposta },
       ]
     : []
@@ -89,7 +95,13 @@ const conversa = computed(() =>
             <p v-if="agora" data-agora class="m-0 text-white/90">
               {{ agora }}
             </p>
-            <p class="m-0 text-white/90">{{ t(`${NS}.EQUIPE`, { nome }) }}</p>
+            <p class="m-0 text-white/90">
+              {{
+                interno
+                  ? t(`${NS}.EQUIPE_COPILOTO`, { nome })
+                  : t(`${NS}.EQUIPE`, { nome })
+              }}
+            </p>
             <p v-if="saiu && canal" data-saiu class="m-0 text-white/80">
               {{ t(`${NS}.TROCA`, { outro: saiu, canal }) }}
             </p>
@@ -132,8 +144,12 @@ const conversa = computed(() =>
           v-if="ultimo"
           data-celular
           :mensagens="conversa"
-          :nome="empresa || nome"
-          :estado="t('AGENTS.JORNADA.CRIAR.CONFIRA.ATENDIDO_POR', { nome })"
+          :nome="interno ? nome : empresa || nome"
+          :estado="
+            interno
+              ? t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUDA_DA_EQUIPE', { nome })
+              : t('AGENTS.JORNADA.CRIAR.CONFIRA.ATENDIDO_POR', { nome })
+          "
         />
       </div>
     </section>

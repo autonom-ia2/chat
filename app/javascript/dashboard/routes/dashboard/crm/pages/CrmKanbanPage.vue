@@ -36,8 +36,9 @@ import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
 import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
 import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
+import { diaDoVencimento } from '../helpers/closeDate';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
-import CrmCardDrawer from '../components/CrmCardDrawer.vue';
+import CardGaveta from '../components/card/CardGaveta.vue';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
 import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
@@ -55,9 +56,11 @@ import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
   FAILURE_STATUSES,
   SUCCESS_STATUSES,
+  countsAsSale,
   outcomeLabels,
   outcomeStatuses,
 } from '../helpers/cardOutcome';
+import { ehCobranca } from '../components/funil/funil';
 import {
   buildCrmCardColumns,
   DEFAULT_COLUMN_ORDER,
@@ -206,6 +209,12 @@ const selectedPipeline = computed(() =>
   pipelines.value.find(
     pipeline => pipeline.id === Number(currentPipelineId.value)
   )
+);
+// #1498 — funil de Atender: "Novo atendimento" e cartão sem valor (a
+// Cobrança mostra o valor a receber).
+const funilDeVenda = computed(() => countsAsSale(selectedPipeline.value));
+const quadroComValor = computed(
+  () => funilDeVenda.value || ehCobranca(selectedPipeline.value)
 );
 
 const pipelineOptions = computed(() =>
@@ -825,9 +834,15 @@ const refreshData = async () => {
       const currentStillExists = fetchedPipelines.some(
         pipeline => String(pipeline.id) === String(currentPipelineId.value)
       );
-      const nextPipelineId = currentStillExists
+      // `?pipeline_id=` abre o quadro num funil: a volta da passagem (#1385) cai no funil de onde a pessoa saiu.
+      // Passa pelo watch de currentPipelineId, que alinha o filtro de resultado ao funil.
+      const requested = fetchedPipelines.find(
+        pipeline => String(pipeline.id) === String(route.query.pipeline_id)
+      );
+      let nextPipelineId = currentStillExists
         ? currentPipelineId.value
         : fetchedPipelines[0].id;
+      if (requested) nextPipelineId = requested.id;
       if (String(currentPipelineId.value) === String(nextPipelineId)) {
         await loadActiveView(true);
         return;
@@ -962,12 +977,27 @@ const closePipelineDrawer = () => {
   showPipelineDrawer.value = false;
 };
 
-const openHandoffSettings = () => {
+// A passagem (#1385) volta para cá no mesmo funil: o endereço do quadro guarda o funil antes de sair (vale para o
+// voltar do navegador) e `from: 'crm'` diz à passagem que a seta e o X voltam ao Kanban, não à lista de funis.
+const openHandoffSettings = async () => {
   if (!selectedPipeline.value) return;
+  const pipelineId = selectedPipeline.value.id;
+  await router.replace({
+    query: { ...route.query, pipeline_id: String(pipelineId) },
+  });
   router.push({
     name: 'crm_handoff_settings_edit',
-    params: { pipelineId: selectedPipeline.value.id },
+    params: { pipelineId },
+    query: { from: 'crm' },
   });
+};
+
+// Depois de abrir o funil pedido, tira o `pipeline_id` do endereço: trocar de funil no quadro não o atualiza.
+const clearPipelineFromQuery = () => {
+  if (route.name !== 'crm_kanban_index') return;
+  if (route.query.pipeline_id === undefined) return;
+  const { pipeline_id: _pipeline, ...query } = route.query;
+  router.replace({ query });
 };
 
 const askConfirmation = async config => {
@@ -1268,8 +1298,8 @@ const openCardDrawer = async (card, { initialTab = null } = {}) => {
 };
 
 // Bubble shortcut on the board card: jump straight into the linked inbox
-// conversation by its per-account display_id (mirrors CrmCardDrawer's
-// openConversationByDisplayId). Guarded — the card only emits this when a
+// conversation by its per-account display_id (the same route the card drawer's
+// "Abrir a conversa" uses). Guarded — the card only emits this when a
 // conversation exists, but stay defensive against a stale/empty payload.
 const openCardConversation = card => {
   const displayId = card?.conversation?.display_id;
@@ -1330,7 +1360,7 @@ const refreshSelectedCard = async () => {
   }
 };
 
-const saveCard = async (payload, failed) => {
+const saveCard = async (payload, failed, saved) => {
   const originAccount = String(route.params.accountId);
   try {
     if (drawerMode.value === 'edit') {
@@ -1339,20 +1369,21 @@ const saveCard = async (payload, failed) => {
         ...payload,
       });
       useAlert(t('CRM_KANBAN.ALERTS.CARD_UPDATED'));
-    } else {
-      const created = await store.dispatch('crmKanban/createCard', payload);
-      if (originAccount !== String(route.params.accountId)) return;
-      useAlert(t('CRM_KANBAN.ALERTS.CARD_CREATED'));
-      const changedPipeline =
-        String(currentPipelineId.value) !== String(created.pipeline_id);
-      if (changedPipeline) currentPipelineId.value = created.pipeline_id;
-      await openCardDrawer(created, {
-        initialTab: created.contact_id ? 'contact' : 'summary',
-      });
-      if (!changedPipeline) await loadActiveView(true);
+      // #1423 — o card continua aberto e volta ao resumo atualizado.
+      saved?.();
+      await refreshSelectedCard();
       return;
     }
-    closeDrawer();
+    const created = await store.dispatch('crmKanban/createCard', payload);
+    if (originAccount !== String(route.params.accountId)) return;
+    useAlert(t('CRM_KANBAN.ALERTS.CARD_CREATED'));
+    const changedPipeline =
+      String(currentPipelineId.value) !== String(created.pipeline_id);
+    if (changedPipeline) currentPipelineId.value = created.pipeline_id;
+    await openCardDrawer(created, {
+      initialTab: created.contact_id ? 'contact' : 'summary',
+    });
+    if (!changedPipeline) await loadActiveView(true);
   } catch (error) {
     if (originAccount !== String(route.params.accountId)) return;
     failed?.(error);
@@ -1468,13 +1499,22 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
+    // #1498 — reabrir num funil de Atender diz "Atendimento reaberto".
+    const reaberto = funilDeVenda.value
+      ? 'CARD_REOPENED'
+      : 'CARD_REOPENED_ATENDER';
     useAlert(
       t(
-        `CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[detailedCard?.status] || 'CARD_REOPENED'}`
+        `CRM_KANBAN.ALERTS.${detailedCard?.status === 'open' ? reaberto : CLOSE_ALERT_KEYS[detailedCard?.status] || reaberto}`
       )
     );
   } catch (error) {
-    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR');
+    avisarErro(
+      error,
+      funilDeVenda.value
+        ? 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR'
+        : 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR_ATENDER'
+    );
   }
 };
 
@@ -1534,6 +1574,7 @@ const cardColumnDefs = computed(() =>
     // Keep the settings menu in sync with the table: the Meta column must be
     // hideable/reorderable whenever it is rendered.
     includeMeta: isMetaSyncActive.value,
+    includeValue: quadroComValor.value,
   })
 );
 
@@ -1932,10 +1973,6 @@ const onQuickAddScheduleMeeting = ({ cardId, date } = {}) => {
   openMeetingScheduler({ cardId, date: date || quickAddDate.value });
 };
 
-const onDrawerScheduleMeeting = ({ cardId } = {}) => {
-  openMeetingScheduler({ card: selectedCard.value, cardId, date: new Date() });
-};
-
 // "Continuar" (WhatsApp/Previsão) and "Mais opções": when a deal is already
 // picked, open THAT card's drawer on the relevant tab (WhatsApp → Follow-ups;
 // Previsão → Resumo, where the expected-close field lives). Reunião opens the
@@ -1982,19 +2019,20 @@ const onCalendarReschedule = async ({ event, date }) => {
 
   try {
     const isCloseDate = event.event_type === 'expected_close';
-    let nextIso;
+    let nextDate;
     if (date instanceof Date) {
-      nextIso = date.toISOString();
+      nextDate = date;
     } else if (SNOOZE_PRESET_MS[date]) {
-      nextIso = new Date(Date.now() + SNOOZE_PRESET_MS[date]).toISOString();
+      nextDate = new Date(Date.now() + SNOOZE_PRESET_MS[date]);
     } else {
-      nextIso = new Date(date).toISOString();
+      nextDate = new Date(date);
     }
+    const nextIso = nextDate.toISOString();
 
     if (isCloseDate) {
       await store.dispatch('crmKanban/updateCardFields', {
         id: event.card_id,
-        expected_close_at: nextIso,
+        expected_close_at: diaDoVencimento(nextDate),
       });
     } else {
       const followUpId = String(event.id).replace(/^follow_up_/, '');
@@ -2088,6 +2126,7 @@ onMounted(async () => {
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await refreshData();
+  clearPipelineFromQuery();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {
     store.dispatch('crmKanban/loadListPrefs', currentPipelineId.value);
@@ -2159,7 +2198,13 @@ onUnmounted(() => {
         />
         <Button
           v-if="canManageCards && viewMode !== 'calendar'"
-          :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
+          :label="
+            t(
+              funilDeVenda
+                ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
+                : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
+            )
+          "
           icon="i-lucide-plus"
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
@@ -2349,6 +2394,7 @@ onUnmounted(() => {
 
     <CrmKanbanFiltersDrawer
       :show="showFiltersDrawer"
+      :venda="funilDeVenda"
       :pipeline-name="selectedPipeline?.name"
       :current-user-id="currentUser?.id"
       :filters="filters"
@@ -2521,6 +2567,7 @@ onUnmounted(() => {
               <CrmKanbanCard
                 :card="element"
                 :stage-color="stage.color"
+                :com-valor="quadroComValor"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
               />
@@ -2692,7 +2739,7 @@ onUnmounted(() => {
       @updated="onMeetingUpdated"
     />
 
-    <CrmCardDrawer
+    <CardGaveta
       ref="cardDrawerRef"
       :show="showDrawer"
       :mode="drawerMode"
@@ -2717,7 +2764,6 @@ onUnmounted(() => {
       :meetings-enabled="isMeetingFeatureEnabled"
       @save="saveCard"
       @move="moveCardFromDetails"
-      @schedule-meeting="onDrawerScheduleMeeting"
       @archive="archiveCard"
       @close-deal="closeCardDeal"
       @create-follow-up="createFollowUp"

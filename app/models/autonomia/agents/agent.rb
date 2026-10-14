@@ -121,6 +121,9 @@ module Autonomia
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
       # #1196 — a página da agenda da IA só pode ser página nova da própria conta.
       validate :pagina_de_agendamento_da_conta, if: :will_save_change_to_config?
+      # Quem atende: `operating?`, `atende_cliente?` e, desde o #1366, `tem_onde_trabalhar?` (validação de ativar e parada
+      # automática). Moram juntos em Autonomia::Agents::OndeTrabalhar.
+      include ::Autonomia::Agents::OndeTrabalhar
 
       # #1035 — quando o agente DEIXA de atender (pausa, desliga) as conversas que estavam com ele voltam
       # para a equipe e o espelho da caixa fica inativo (conversa nova nasce sem bot); quando VOLTA a
@@ -317,11 +320,6 @@ module Autonomia
         true
       end
 
-      # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
-      def operating?
-        !deleted? && enabled? && active?
-      end
-
       private
 
       def apply_builder_attributes!(attrs)
@@ -347,8 +345,9 @@ module Autonomia
         agent_inboxes.kept.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
       end
 
+      # #1433: sendo porta, solta antes as áreas da caixa (mesma ordem do InboxConnector#disconnect!).
       def release_bot_conversations
-        agent_inboxes.kept.find_each(&:release_bot_conversations!)
+        agent_inboxes.kept.find_each(&:sair_da_caixa!)
       end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução
