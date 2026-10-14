@@ -80,13 +80,17 @@ falha vai ao log e ao tracker sem desfazer a marca.
   mensagem ausente. Só conta mensagem com a marca, que só o job cria: não há corrida com ele. Busca em páginas
   ordenadas pelo par (mensagem, aviso), sem cortar casos. Cliente que parou ou reunião cancelada: sem alerta.
 - **A 1 falhou**: `delivery_failed` de sempre (o aviso vira `failed`), com ou sem a 2.
+- **A 2 marcada `failed` depois da janela de 2 h**: não gera alerta. Risco aceito, igual ao `delivery_failed` da 1,
+  que também só olha as últimas 2 h.
+- **Retry tardio com a 2 já criada**: o job confere a marca antes do `too_late` e sai quieto, sem alerta.
 - **Job perdido no Redis sem nova tentativa** (processo morto entre o aviso e o enfileiramento, Redis fora): risco
   aceito, sem guarda (regra do projeto: guarda só o que a produção provou). A saída de parar fica pela página de
   gestão `/b/<código>` (`ManageMeeting` → `ManageStop`, que já existia; não foi alterada neste PR). Uma varredura no
   cron para esse caso foi feita e retirada na 3ª revisão: corria com o job (o prazo suprimia a 2 legítima), alertaria
   avisos anteriores ao deploy e custava uma consulta a cada minuto.
 
-`error_code` num aviso `sent` só aparece aqui; o `Scheduler::RESET` o limpa ao reprogramar, e nenhuma tela o lê.
+Um erro na conferência da 2 vai ao log e ao tracker e não impede a rodada do cron de mandar os avisos vencidos
+(`flag_stop_parts!`). `error_code` num aviso `sent` só aparece aqui; o `Scheduler::RESET` o limpa ao reprogramar, e nenhuma tela o lê.
 
 ## O que não muda
 

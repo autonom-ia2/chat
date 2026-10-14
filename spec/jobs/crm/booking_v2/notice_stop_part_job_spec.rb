@@ -242,6 +242,21 @@ RSpec.describe Crm::BookingV2::NoticeStopPartJob do
     expect(stop_alerts.count).to eq(1)
   end
 
+  # Retry tardio (depois da WINDOW) de um job cuja 2 já foi criada: sai quieto, sem marca nem alerta. Pega quem
+  # alertasse "a 2 não saiu" para um aviso cuja 2 saiu.
+  it 'retry depois da WINDOW com a 2 já criada: sai quieto' do
+    notice = sent_notice
+    accepted!(notice)
+    described_class.perform_now(notice.id, 1)
+
+    travel described_class::WINDOW + 1.minute
+    described_class.perform_now(notice.id, 1)
+
+    expect(stop_messages.size).to eq(1)
+    expect(notice.reload.error_code).to be_nil
+    expect(stop_alerts).to be_empty
+  end
+
   # Item 5: o alerta falhando não derruba nada e não desfaz a marca: fica no log e no tracker.
   it 'alerta que falha: a marca fica e o erro vai ao tracker' do
     notice = sent_notice

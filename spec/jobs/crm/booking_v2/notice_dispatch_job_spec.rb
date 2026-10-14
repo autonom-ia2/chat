@@ -71,6 +71,23 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
     expect(failure_alerts.sole).to have_attributes(assignee_id: world.host.id, card_id: world.card.id)
   end
 
+  # #1562: um erro na conferência da mensagem 2 não pode abortar a rodada: os avisos vencidos saem do mesmo jeito, e o
+  # erro vai ao log e ao tracker.
+  it 'erro na conferência da mensagem 2 não impede o envio dos avisos vencidos' do
+    due = notice('booked', due_at: 1.minute.ago)
+    allow_any_instance_of(described_class).to receive(:flag_undelivered_stop!).and_raise(ActiveRecord::StatementInvalid, 'boom') # rubocop:disable RSpec/AnyInstance
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow(Crm::BookingV2::Notices::Sender).to receive(:new) do |record|
+      instance_double(Crm::BookingV2::Notices::Sender, perform: record.update!(status: :sent))
+    end
+
+    described_class.perform_now
+
+    expect(due.reload.status).to eq('sent')
+    expect(tracker).to have_received(:capture_exception).once
+  end
+
   it 'aviso preso em sending há mais de 15 minutos vira failed interrupted, sem reenviar' do
     stuck = notice('booked', due_at: 1.hour.ago, status: :sending)
     stuck.update_columns(updated_at: 16.minutes.ago) # rubocop:disable Rails/SkipsModelValidations

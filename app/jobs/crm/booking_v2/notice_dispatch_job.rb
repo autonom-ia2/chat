@@ -81,7 +81,15 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
                       .where(messages: { status: Message.statuses[:failed] })
                       .limit(BATCH).pluck(:id)
                       .each { |id| fail!(id, from: :sent, code: 'delivery_failed') }
+    flag_stop_parts!(since)
+  end
+
+  # A conferência da mensagem 2 (#1562) não pode impedir a rodada de mandar os avisos vencidos.
+  def flag_stop_parts!(since)
     flag_undelivered_stop!(since)
+  rescue StandardError => e
+    Rails.logger.error("CRM booking notice stop part check failed: #{e.class.name}")
+    ChatwootExceptionTracker.new(e).capture_exception
   end
 
   # Mensagem 2 do aviso com botão (#1562) que o provedor marcou `failed` depois. O SQL acha as mensagens `failed` da

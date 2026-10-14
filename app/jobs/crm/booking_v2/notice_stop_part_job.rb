@@ -118,11 +118,16 @@ class Crm::BookingV2::NoticeStopPartJob < ApplicationJob
     first = Message.find_by(id: notice.message_id)
     return self.class.stop_failed!(notice, why: 'notice_message_missing') if first.nil?
     return if first.failed? || !self.class.wanted?(notice.meeting)
-    # Passada a WINDOW não cria (a conferência de duplicata só cobre a WINDOW): também o retry tardio do Sidekiq.
-    return self.class.stop_failed!(notice, why: 'too_late') if Time.current > first.created_at + WINDOW
+    # Passada a WINDOW não cria (a conferência de duplicata só cobre a WINDOW): também o retry tardio do Sidekiq. Se a 2
+    # já foi criada (retry tardio depois dela), sai quieto.
+    return too_late!(notice, first) if Time.current > first.created_at + WINDOW
     return retry_or_give_up(notice, attempt) if first.source_id.blank?
 
     create_once!(notice, first)
+  end
+
+  def too_late!(notice, first)
+    self.class.stop_failed!(notice, why: 'too_late') unless self.class.stop_created?(notice.id, first)
   end
 
   def create_once!(notice, first)
