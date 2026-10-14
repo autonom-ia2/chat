@@ -192,14 +192,22 @@ module Waha
       )
       unless response.success?
         error_class = response.code == 404 ? NotFound : Error
-        raise error_class.new("WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}", status: response.code)
+        detail = scrub("#{response.code}: #{response.body.to_s[0, 300]}", body)
+        raise error_class.new("WAHA #{method.upcase} #{path} -> #{detail}", status: response.code)
       end
 
       response.parsed_response
     rescue Net::ReadTimeout => e
-      raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{e.message}"
+      raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{scrub(e.message, body)}"
     rescue HTTParty::Error, SocketError, Net::OpenTimeout, Errno::ECONNREFUSED => e
-      raise Error, "WAHA #{method.upcase} #{path} falhou: #{e.message}"
+      raise Error, "WAHA #{method.upcase} #{path} falhou: #{scrub(e.message, body)}"
+    end
+
+    # A senha do proxy da sessão (#1516) vai no corpo do pedido; se o motor a ecoar num erro, ela não chega ao log.
+    def scrub(text, body)
+      proxy = body.is_a?(Hash) ? body.with_indifferent_access.dig(:config, :proxy) : nil
+      secrets = proxy.is_a?(Hash) ? proxy.values_at(:password, :username).compact_blank.map(&:to_s) : []
+      secrets.reduce(text.to_s) { |scrubbed, secret| scrubbed.gsub(secret, '[FILTERED]') }
     end
 
     # GET cru (bytes) para imagens.

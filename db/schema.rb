@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_27_113417) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_28_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3884,6 +3884,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_27_113417) do
     t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
     t.index ["public_id"], name: "index_whatsapp_hybrid_connections_on_public_id", unique: true
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
+  end
+
+  create_table "whatsapp_proxy_assignments", force: :cascade do |t|
+    t.string "session_name", null: false
+    t.string "webshare_proxy_id"
+    t.string "proxy_address", null: false
+    t.integer "proxy_port", null: false
+    t.datetime "assigned_at", null: false
+    t.string "credential_digest"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_assignments_on_proxy_address", unique: true
+    t.index ["session_name"], name: "index_whatsapp_proxy_assignments_on_session_name", unique: true
   end
 
   create_table "whatsapp_template_profiles", force: :cascade do |t|

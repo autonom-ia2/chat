@@ -11,7 +11,7 @@ module Waha
     PHONE_RE = /\A55\d{11}\z/
 
     def initialize(account:, phone:, api_access_token:, display_name: nil, ai_agent: false,
-                   client: Waha::Client.new, config: Waha::Config)
+                   client: Waha::Client.new, config: Waha::Config, proxy_assigner: WhatsappProxy::Assigner.new)
       @account = account
       @phone = normalize_phone(phone)
       @api_access_token = api_access_token.to_s
@@ -19,6 +19,7 @@ module Waha
       @ai_agent = ActiveModel::Type::Boolean.new.cast(ai_agent)
       @client = client
       @config = config
+      @proxy_assigner = proxy_assigner
     end
 
     def perform
@@ -52,16 +53,20 @@ module Waha
       end
     end
 
+    # A sessão já nasce com o IP próprio da Webshare (#1516). Sem IP disponível, nasce sem proxy em vez de travar.
     def provision_remote(inbox, app_id, phone_numbers_app_id)
+      proxy = @proxy_assigner.for(@phone)
       @client.create_session(
         @phone,
         start: true,
-        config: { ignore: @config.session_ignore },
+        config: { ignore: @config.session_ignore, proxy: proxy&.to_session_config }.compact,
         apps: session_apps(inbox, app_id, phone_numbers_app_id)
       )
+      @proxy_assigner.mark_applied!(@phone, proxy) if proxy
     rescue StandardError => e
       cleanup_inbox(inbox)
       cleanup_remote(app_id, phone_numbers_app_id)
+      release_proxy
       Rails.logger.error("[Waha] provisioning failed account=#{@account.id}: #{e.class}")
       raise Error, 'remote_setup_failed'
     end
@@ -133,6 +138,12 @@ module Waha
 
     def normalize_phone(phone)
       phone.to_s.gsub(/\D/, '')
+    end
+
+    def release_proxy
+      @proxy_assigner.release!(@phone)
+    rescue StandardError
+      nil
     end
 
     def cleanup_inbox(inbox)

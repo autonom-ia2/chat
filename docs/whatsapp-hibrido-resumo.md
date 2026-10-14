@@ -191,3 +191,44 @@ Para o Chat2You:
 > Cloud e WAHA trabalhando juntos, escolhendo automaticamente o transporte mais adequado para cada mensagem.
 
 A Cloud continua sendo a conexão principal e oficial. O WAHA adiciona uma segunda capacidade de transporte sem dividir o atendimento em duas caixas.
+
+## Proxy por número (WAHA comum e Híbrido, #1516)
+
+Toda sessão de WhatsApp não oficial no motor sai por um IP próprio da Webshare: um IP por número, nunca dois números
+no mesmo IP. Vale igual nas duas stacks (Hub2You e Autonom.ia).
+
+**Variáveis de ambiente**
+
+| Variável | Obrigatória | Para quê |
+|---|---|---|
+| `WEBSHARE_API_KEY` | sim, para ligar o proxy | Chave da API da Webshare. Sem ela tudo segue como antes: sessão nasce sem proxy e a reconciliação não roda. |
+| `WEBSHARE_PLAN_ID` | não | Plano de onde sai o pool. Sem ela, o código escolhe o plano ativo Static Residential (`proxy_subtype` `isp`) e só cai para `default` se não houver; o plano `residential` (rotativo) nunca é usado. O plano escolhido vai para o log (id e subtipo). |
+
+**Como funciona**
+
+- A atribuição fica na tabela `whatsapp_proxy_assignments` (sessão, endereço, porta, id da Webshare). Usuário e senha
+  do proxy nunca são gravados: vêm da API na hora de configurar a sessão e só vão no corpo do pedido ao motor. A tabela
+  guarda apenas um HMAC da credencial, para notar quando a Webshare a troca.
+- Caixa WAHA nova e conexão Híbrida nova nascem com proxy (IP livre do Brasil, São Paulo primeiro).
+- Híbrido: regravar o webhook preserva o proxy que a sessão já tem; a atualização da aba põe o proxy atribuído quando
+  falta (no máximo uma regravação por hora por sessão); reconectar confere se o IP continua na lista e troca se morreu.
+  O envio de mensagem nunca mexe no proxy (gravar configuração reinicia a sessão).
+- Proxy posto à mão sem registro na tabela não é trocado pelo código.
+- Sem IP livre no pool, API fora ou sem chave: a sessão é criada sem proxy (não trava o cliente) e o log avisa
+  (`[whatsapp_proxy] pool da Webshare sem IP livre... Compre mais IPs`).
+- `WhatsappProxy::ReconcileJob` (minutos 7, 27 e 47 de cada hora): busca a lista uma vez; sessão cujo IP saiu da lista,
+  ficou inválido ou mudou de credencial recebe IP novo e a troca é aplicada no motor, no máximo 5 sessões por rodada,
+  com 2 minutos entre elas. Se mais da metade dos IPs sumiu de uma vez, o log avisa (troca em massa).
+- Excluir a conexão Híbrida devolve o IP ao pool.
+
+**Implantação**
+
+1. Deploy com a migration, sem `WEBSHARE_API_KEY` (nada muda).
+2. Em cada stack, importar as atribuições postas à mão, só as do próprio motor:
+   `bundle exec rails "autonomia:whatsapp_proxy:importar[/caminho/webshare_assignments.json,hubsegs]"` (Hub2You) ou
+   `[...,autonomia]` (Autonom.ia). Idempotente; exige a chave no ambiente da execução.
+3. Ligar `WEBSHARE_API_KEY` (e `WEBSHARE_PLAN_ID`, se quiser fixar o plano).
+
+Atenção: as duas stacks usam o mesmo pool da Webshare e cada uma só conhece as próprias atribuições. Antes de ligar a
+chave nas duas, separar o pool (planos ou contas diferentes por stack, via `WEBSHARE_PLAN_ID`), senão uma stack pode
+dar a um número novo um IP que a outra já usa.

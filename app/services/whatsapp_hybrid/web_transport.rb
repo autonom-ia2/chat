@@ -47,7 +47,7 @@ class WhatsappHybrid::WebTransport
     return reach_out_refused! if WhatsappHybrid::ReachOut.engine_refusal?(e)
 
     # O erro pode ser a sessão caída: atualiza o estado para o roteador parar de escolher o Web.
-    session_manager.refresh!
+    session_manager.refresh!(sync_proxy: false)
     fail!(engine_error_text(e))
   end
 
@@ -63,7 +63,7 @@ class WhatsappHybrid::WebTransport
 
   # Revalida no motor quando o estado gravado é velho; celular desconectado deixa de ser escolhido na hora.
   def session_working?
-    session_manager.refresh! if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
+    session_manager.refresh!(sync_proxy: false) if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
     @connection.status == 'connected' && @connection.same_number?
   end
 

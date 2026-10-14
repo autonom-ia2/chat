@@ -13,10 +13,13 @@ class WhatsappHybrid::SessionManager
 
   SESSION_IGNORE = { status: true, broadcast: true, channels: true, groups: true }.freeze
   WEBHOOK_EVENTS = %w[session.status message.ack].freeze
+  # Gravar a configuração reinicia a sessão no motor: a atualização só põe/corrige o proxy uma vez por hora (#1516).
+  PROXY_REWRITE_COOLDOWN = 1.hour.to_i
 
-  def initialize(connection, client: Waha::Client.new)
+  def initialize(connection, client: Waha::Client.new, proxy_assigner: WhatsappProxy::Assigner.new)
     @connection = connection
     @client = client
+    @proxy_assigner = proxy_assigner
   end
 
   def self.connect!(inbox:, client: Waha::Client.new)
@@ -32,7 +35,7 @@ class WhatsappHybrid::SessionManager
   def ensure_session!
     remote = fetch_remote
     if remote.blank?
-      @client.create_session(connection.session_name, start: true, config: session_config)
+      create_remote_session!
     elsif remote['status'] == 'STOPPED'
       @client.start_session(connection.session_name)
     end
@@ -40,9 +43,10 @@ class WhatsappHybrid::SessionManager
   end
 
   # Consulta o motor e grava estado + número conectado. Retorna o estado público.
-  def refresh!
+  # sync_proxy: false no envio de mensagem — pôr o proxy reinicia a sessão e derrubaria o próprio envio.
+  def refresh!(sync_proxy: true)
     remote = fetch_remote
-    ensure_webhook!(remote)
+    sync_remote_config!(remote, proxy_mode: sync_proxy ? :refresh : :skip)
     status = STATUS_MAP.fetch(remote['status'].to_s, remote.blank? ? 'disconnected' : 'connecting')
     phone = remote.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     apply_status!(status, phone: phone)
@@ -100,8 +104,15 @@ class WhatsappHybrid::SessionManager
     rescue Waha::Client::Error
       @client.restart_session(connection.session_name)
     end
+    # Reconectar já reinicia a sessão: hora de conferir na lista se o IP atribuído continua valendo.
+    sync_remote_config!(fetch_remote, proxy_mode: :verify)
     @client.start_session(connection.session_name) if fetch_remote['status'] == 'STOPPED'
     connection.update!(status: 'connecting', connected_phone: nil)
+  end
+
+  # Troca agendada pela reconciliação (WhatsappProxy::ApplyJob). Reinicia a sessão no motor.
+  def apply_proxy!(proxy)
+    @client.update_session(connection.session_name, config: session_config(proxy.to_session_config), apps: nil)
   end
 
   # Apagar a conexão dispara o logout e a exclusão da sessão no motor (TeardownSessionJob).
@@ -131,23 +142,74 @@ class WhatsappHybrid::SessionManager
     connection.status == 'awaiting_scan' || connection.connected_phone.blank?
   end
 
-  def session_config
-    {
-      ignore: SESSION_IGNORE,
-      webhooks: [{ url: connection.webhook_url, events: WEBHOOK_EVENTS, hmac: { key: connection.ensure_webhook_secret! } }]
-    }
+  def create_remote_session!
+    proxy = @proxy_assigner.for(connection.session_name)
+    @client.create_session(connection.session_name, start: true, config: session_config(proxy&.to_session_config))
+    @proxy_assigner.mark_applied!(connection.session_name, proxy) if proxy
   end
 
-  # Sessão criada antes do webhook (piloto) ou com outro endereço: grava a configuração uma vez.
-  def ensure_webhook!(remote)
+  # proxy: bloco `config.proxy` do motor (com credencial) — vai só no corpo do pedido, nunca em log.
+  def session_config(proxy = nil)
+    {
+      ignore: SESSION_IGNORE,
+      webhooks: [{ url: connection.webhook_url, events: WEBHOOK_EVENTS, hmac: { key: connection.ensure_webhook_secret! } }],
+      proxy: proxy
+    }.compact
+  end
+
+  # Grava a configuração quando falta o webhook (sessão do piloto, endereço novo) ou o proxy atribuído (#1516).
+  # Nunca apaga o proxy que a sessão já tem: sem proxy novo, regrava o que veio do motor.
+  # proxy_mode: :refresh (atualização), :verify (reconectar: confere o IP na lista) ou :skip (envio de mensagem).
+  def sync_remote_config!(remote, proxy_mode:)
     return if remote.blank?
 
-    urls = Array(remote.dig('config', 'webhooks')).pluck('url')
-    return if urls.include?(connection.webhook_url)
+    remote_proxy = remote.dig('config', 'proxy').presence
+    proxy = proxy_for(remote_proxy, proxy_mode)
+    return if proxy.nil? && webhook_configured?(remote)
 
-    @client.update_session(connection.session_name, config: session_config, apps: nil)
+    write_config!(proxy, remote_proxy)
   rescue Waha::Client::Error => e
-    Rails.logger.warn("[whatsapp_hybrid] webhook setup failed inbox=#{connection.inbox_id}: #{e.class}")
+    Rails.logger.warn("[whatsapp_hybrid] session config update failed inbox=#{connection.inbox_id}: #{e.class}")
+  end
+
+  def write_config!(proxy, remote_proxy)
+    @client.update_session(connection.session_name, config: session_config(proxy&.to_session_config || remote_proxy), apps: nil)
+    @proxy_assigner.mark_applied!(connection.session_name, proxy) if proxy
+  end
+
+  def webhook_configured?(remote)
+    Array(remote.dig('config', 'webhooks')).pluck('url').include?(connection.webhook_url)
+  end
+
+  # Proxy a gravar, ou nil para manter o que a sessão tem. Proxy posto à mão sem registro nunca é trocado.
+  def proxy_for(remote_proxy, proxy_mode)
+    return if proxy_mode == :skip || !@proxy_assigner.enabled?
+    return unless proxy_change_wanted?(remote_proxy, proxy_mode)
+
+    proxy = @proxy_assigner.for(connection.session_name, honor_backoff: proxy_mode == :refresh)
+    proxy unless proxy.nil? || proxy.server == remote_proxy&.dig('server')
+  end
+
+  def proxy_change_wanted?(remote_proxy, proxy_mode)
+    assignment = WhatsappProxy::Assignment.find_by(session_name: connection.session_name)
+    return false if remote_proxy && assignment.nil?
+
+    proxy_mode == :verify || !proxy_settled?(remote_proxy, assignment)
+  end
+
+  # Na atualização só consulta a Webshare quando falta proxy ou ele difere do atribuído, e no máximo uma regravação por hora.
+  def proxy_settled?(remote_proxy, assignment)
+    (remote_proxy && remote_proxy['server'] == assignment.server) || proxy_rewrite_cooling_down?
+  end
+
+  def proxy_rewrite_cooling_down?
+    key = "whatsapp_proxy:rewrite:#{connection.session_name}"
+    return true if ::Redis::Alfred.get(key).present?
+
+    ::Redis::Alfred.setex(key, '1', PROXY_REWRITE_COOLDOWN)
+    false
+  rescue Redis::BaseError
+    false
   end
 
   def fetch_remote

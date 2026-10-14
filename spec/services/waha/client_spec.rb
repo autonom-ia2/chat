@@ -68,6 +68,18 @@ RSpec.describe Waha::Client do
     expect(request).to have_been_requested.once
   end
 
+  it 'never puts the proxy credential in the error when the engine echoes it (#1516)' do
+    config = { ignore: {}, proxy: { server: '10.0.0.9:6000', username: 'user-9', password: 'senha-9' } }
+    stub_request(:post, 'https://waha.example/api/sessions')
+      .to_return(status: 400, body: '{"message":"bad proxy user-9:senha-9@10.0.0.9:6000"}')
+
+    expect { client.create_session('5511999999999', config: config) }.to raise_error(described_class::Error) { |error|
+      expect(error.message).not_to include('senha-9')
+      expect(error.message).not_to include('user-9')
+      expect(error.message).to include('[FILTERED]')
+    }
+  end
+
   it 'detects the Brazilian resolver module when the route exists but the session app is not configured' do
     request = stub_request(:get, 'https://waha.example/api/apps/brazilian-phone-numbers/5511999999999/cache/stats')
               .to_return(
