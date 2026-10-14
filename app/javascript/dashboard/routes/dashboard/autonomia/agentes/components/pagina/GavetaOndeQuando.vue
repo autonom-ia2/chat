@@ -145,7 +145,7 @@ const ERRO_DO_MOTIVO = {
   }),
 };
 
-const erroDeComecar = resultado => {
+const erroGeralDeComecar = resultado => {
   const doMotivo = ERRO_DO_MOTIVO[resultado.motivo];
   if (doMotivo) return doMotivo(resultado);
   if (!voltar.value) {
@@ -157,6 +157,12 @@ const erroDeComecar = resultado => {
       nome: props.nome,
     }),
   };
+};
+
+// #1366: o servidor explicou a recusa (422): a explicação dele no lugar do título geral.
+const erroDeComecar = resultado => {
+  const geral = erroGeralDeComecar(resultado);
+  return resultado.mensagem ? { ...geral, titulo: resultado.mensagem } : geral;
 };
 
 const erroDeSalvar = () => ({

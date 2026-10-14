@@ -85,7 +85,10 @@ const AGENTE = {
 };
 
 let ordem = [];
+// #1366: o POST do canal com `ativar` liga o agente no servidor; a releitura (show) depois devolve-o atendendo.
+let ligadoNoServidor = false;
 const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
+  ligadoNoServidor = false;
   ordem = [];
   store.state = reactive({
     'autonomiaBuildThreads/getMessages': [],
@@ -114,8 +117,16 @@ const prepararStore = ({ agente = AGENTE, falhaShow = false, teste } = {}) => {
     }
     if (acao === 'autonomiaAgents/show') {
       if (falhaShow) throw new Error('500');
-      store.state['autonomiaAgents/getRecords'] = [agente];
-      return agente;
+      const lido = ligadoNoServidor
+        ? {
+            ...agente,
+            status: 'active',
+            enabled: true,
+            tem_onde_trabalhar: true,
+          }
+        : agente;
+      store.state['autonomiaAgents/getRecords'] = [lido];
+      return lido;
     }
     if (acao === 'autonomiaAgents/test') {
       if (teste instanceof Error) throw teste;
@@ -193,9 +204,12 @@ describe('AgenteCriarPage', () => {
     prepararStore();
     jornada.canaisOcupados.mockResolvedValue({ data: { payload: L2 } });
     canaisApi.get.mockReset();
-    canaisApi.connect.mockReset().mockImplementation(async (id, inbox) => {
-      ordem.push(`post:${id}:${inbox}`);
-    });
+    canaisApi.connect
+      .mockReset()
+      .mockImplementation(async (id, inbox, opcoes) => {
+        ordem.push(`post:${id}:${inbox}:${opcoes?.ativar ? 'ativar' : '-'}`);
+        if (opcoes?.ativar) ligadoNoServidor = true;
+      });
     canaisApi.disconnect.mockReset().mockImplementation(async (id, inbox) => {
       ordem.push(`delete:${id}:${inbox}`);
     });
@@ -305,8 +319,8 @@ describe('AgenteCriarPage', () => {
       !passo.startsWith('autonomiaSources');
     expect(ordem.filter(daCriacao)).toEqual([
       'autonomiaAgents/test',
-      'autonomiaAgents/update',
-      'post:90:10',
+      'post:90:10:ativar',
+      'autonomiaAgents/show',
     ]);
     expect(rota.atual.query.etapa).toBe('pronto');
     expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.PRONTO.TITULO');
@@ -335,12 +349,11 @@ describe('AgenteCriarPage', () => {
       'AGENTS.JORNADA.ERRO.COMECAR_ATENDER_GARANTIA'
     );
     expect(jornada.canaisOcupados).toHaveBeenCalledTimes(1);
-    // Desfez o "Atendendo": o agente volta ao que era.
-    expect(store.dispatch).toHaveBeenLastCalledWith('autonomiaAgents/update', {
-      id: 90,
-      enabled: false,
-      status: 'draft',
-    });
+    // #1366: nada foi ligado (ligar é o próprio POST que falhou), então não há o que desfazer.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
     wrapper.unmount();
   });
 

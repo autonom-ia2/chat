@@ -245,6 +245,7 @@ describe('trocaNoCanal', () => {
       agenteId: 9,
       nome: 'Bia',
       canal: 'WhatsApp do Centro',
+      atendia: true,
     });
     expect(trocaNoCanal(canais, 10, 5)).toBeNull();
     expect(trocaNoCanal(canais, 13, 5)).toBeNull();

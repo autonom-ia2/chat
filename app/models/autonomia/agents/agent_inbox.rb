@@ -65,6 +65,11 @@ module Autonomia
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
 
+      # #1366 — o PONTO ÚNICO da parada automática: todo caminho que tira um vínculo da caixa passa por um destes dois
+      # (arquivar: desvincular a área; destroy, abaixo: desconectar a porta, caixa apagada). Saiu o último, o agente
+      # para. O SoftDelete arquiva sem callback: o agente apagado já sai parado. O destroy do próprio agente não conta.
+      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? }
+
       # Limpeza do espelho ao destruir o vínculo — centraliza o conserto de "caixa deletada"
       # E "agente deletado" num só lugar. Dispara quando o vínculo cai por:
       #   • Inbox#destroy  → has_many :autonomia_agent_inboxes, dependent: :destroy
@@ -72,6 +77,7 @@ module Autonomia
       # Sem isso, o AgentBot-espelho + AgentBotInbox vazariam (hoje só o InboxConnector#disconnect!
       # os remove). Espelho da nossa criação: outgoing_url NULL → NUNCA toca a Gabriela (webhook real).
       after_destroy :cleanup_mirror_bot
+      after_destroy :parar_agente_sem_onde_trabalhar, unless: :saindo_com_o_agente?
 
       # #1035 — liga/desliga o espelho conforme o agente atende ou não. Desligando: inativa ANTES de
       # liberar, para que nenhuma conversa nova nasça com o bot enquanto as atuais voltam para a equipe.
@@ -187,6 +193,14 @@ module Autonomia
 
           errors.add(association_name, 'must belong to the same account')
         end
+      end
+
+      def parar_agente_sem_onde_trabalhar
+        agent.parar_se_sem_onde_trabalhar!
+      end
+
+      def saindo_com_o_agente?
+        destroyed_by_association&.active_record == ::Autonomia::Agents::Agent
       end
 
       def cleanup_mirror_bot

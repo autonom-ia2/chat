@@ -153,6 +153,14 @@ const isTogglingStatus = computed(() => uiFlags.value.updatingItem);
 
 const toggleStatus = async () => {
   const nextStatus = agent.value?.status === 'active' ? 'paused' : 'active';
+  // #1366 — sem onde trabalhar, ativar é escolher o canal (Publicar), nunca ligar no vazio.
+  if (nextStatus === 'active' && agent.value?.tem_onde_trabalhar === false) {
+    router.push({
+      name: 'autonomia_agent_panel',
+      params: { agentId: props.agentId, tab: 'publish' },
+    });
+    return;
+  }
   try {
     await store.dispatch('autonomiaAgents/update', {
       id: Number(props.agentId),

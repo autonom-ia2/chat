@@ -360,35 +360,19 @@ const testAgent = () => {
 
 const connectInbox = async inboxId => {
   if (!agentId.value || !inboxId) return;
-  // O backend exige agente ativo para conectar — o wizard cria em rascunho,
-  // então ativa antes; se a conexão falhar, volta pra rascunho (sem "zumbi"
-  // ativo-sem-canal).
-  let activated = false;
+  // #1366 — o wizard cria em rascunho; conectar e ativar é um passo só no
+  // servidor (`ativar`). Se a conexão falhar, nada foi ligado.
   try {
-    await store.dispatch('autonomiaAgents/update', {
-      id: agentId.value,
-      enabled: true,
-      status: 'active',
-    });
-    activated = true;
     await store.dispatch('autonomiaChannels/connect', {
       agentId: agentId.value,
       inboxId,
+      ativar: true,
     });
     router.push({
       name: 'autonomia_agent_panel',
       params: { agentId: agentId.value, tab: 'test' },
     });
   } catch (error) {
-    if (activated) {
-      await store
-        .dispatch('autonomiaAgents/update', {
-          id: agentId.value,
-          enabled: false,
-          status: 'draft',
-        })
-        .catch(() => {});
-    }
     useAlert(t('AGENTS.CHANNELS.CONNECT_ERROR'));
   }
 };

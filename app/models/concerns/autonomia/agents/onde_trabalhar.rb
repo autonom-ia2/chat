@@ -1,0 +1,72 @@
+# Quem atende, no agente: `operating?` (ativo e ligado), `atende_cliente?` e — #1366 — `tem_onde_trabalhar?`.
+# O agente não fica atendendo (active + enabled) sem ter onde trabalhar.
+#
+# `tem_onde_trabalhar?` é o PREDICADO ÚNICO: a validação de ativar, a parada automática e a tela (jbuilder `_agent`)
+# leem daqui. O agente tem onde trabalhar quando:
+# - é interno (Copiloto da equipe): trabalha dentro do painel, sem caixa;
+# - tem vínculo ativo numa caixa da conta, de porta ou de área (#1433). O `both` segue a regra do externo.
+# Ponto de extensão (#1434): o ajudante consultado por outro agente entra em `tem_onde_trabalhar?`, como mais um "ou".
+#
+# Ativar sem onde trabalhar é recusado em toda atualização; na criação, só no contexto :ativacao (a API,
+# AgentsController#create). Os outros nascimentos são rascunho (Builder), interno (Guia) ou o Agente de Cotação, que o
+# QuoteAgent::Builder ainda cria atendendo e sem canal (ponto aberto do #1366). Começar a atender num canal é o
+# InboxConnector com `ativar`, que cria o vínculo e liga o agente na mesma transação.
+module Autonomia::Agents::OndeTrabalhar
+  extend ActiveSupport::Concern
+
+  included do
+    validate :atender_exige_onde_trabalhar, on: %i[update ativacao], if: :passa_a_atender?
+  end
+
+  # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
+  def operating?
+    !deleted? && enabled? && active?
+  end
+
+  # Pode falar com cliente agora: atendendo, não interno (copiloto) e não de sistema (o Guia). É o mesmo predicado
+  # do agente em Operate.authorized_agent_inbox, sem a allowlist de teste, que depende da conversa (#1433).
+  def atende_cliente?
+    operating? && !actuation_internal? && config&.dig('system_key').blank?
+  end
+
+  def tem_onde_trabalhar?
+    actuation_internal? || vinculo_ativo_numa_caixa?
+  end
+
+  # Saiu o último vínculo: o agente para (paused + enabled false). Chamado só pelo AgentInbox, quando um vínculo sai da
+  # caixa (destroy ou arquivamento). Sem callbacks: as conversas já foram soltas pelo vínculo, e sem vínculo ativo não há
+  # espelho para sincronizar. Validação antiga do agente não pode impedir a caixa de soltá-lo.
+  def parar_se_sem_onde_trabalhar!
+    return if deleted? || !(active? || enabled?)
+
+    agent_inboxes.reset # o vínculo acabou de sair: lê do banco, nunca da associação carregada antes
+    return if tem_onde_trabalhar?
+
+    update_columns(status: self.class.statuses[:paused], enabled: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  private
+
+  # Lê a associação já carregada (a lista do index pré-carrega os vínculos, sem N+1); senão, consulta. Só vínculos desta
+  # conta contam, como defesa: o AgentInbox já recusa vínculo de outra conta.
+  def vinculo_ativo_numa_caixa?
+    papeis = ::Autonomia::Agents::AgentInbox::PAPEIS
+    if agent_inboxes.loaded?
+      return agent_inboxes.any? { |vinculo| vinculo.deleted_at.nil? && vinculo.account_id == account_id && papeis.include?(vinculo.papel) }
+    end
+
+    agent_inboxes.kept.exists?(account_id: account_id, papel: papeis)
+  end
+
+  # Vai ficar atendendo depois deste save, e algo que decide isso mudou (inclusive deixar de ser interno).
+  def passa_a_atender?
+    return false if deleted? || !(active? && enabled?)
+
+    will_save_change_to_status? || will_save_change_to_enabled? || will_save_change_to_actuation?
+  end
+
+  def atender_exige_onde_trabalhar
+    agent_inboxes.reset # o vínculo pode ter nascido agora (InboxConnector com ativar): lê do banco
+    errors.add(:base, I18n.t('autonomia.agents.sem_onde_trabalhar')) unless tem_onde_trabalhar?
+  end
+end

@@ -48,7 +48,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
-    @agent.save!
+    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?).
+    @agent.save!(context: %i[create ativacao])
     render :show, status: :created
   end
 

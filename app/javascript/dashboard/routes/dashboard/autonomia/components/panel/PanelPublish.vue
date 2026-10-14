@@ -61,31 +61,16 @@ const saveGreeting = async greeting => {
 
 const connectInbox = async inboxId => {
   if (!inboxId) return;
-  // O backend exige agente ativo para conectar, então ativa primeiro — mas se a
-  // conexão falhar, restaura o estado anterior (senão fica "ativo sem canal").
-  const previous = {
-    enabled: props.agent?.enabled === true,
-    status: props.agent?.status || 'draft',
-  };
-  let activated = false;
+  // #1366 — conectar e ativar é um passo só no servidor (`ativar`): sem canal, o
+  // agente não pode ficar ativo, e a conexão que falha não liga nada.
   try {
-    await store.dispatch('autonomiaAgents/update', {
-      id: props.agentId,
-      enabled: true,
-      status: 'active',
-    });
-    activated = true;
     await store.dispatch('autonomiaChannels/connect', {
       agentId: props.agentId,
       inboxId,
+      ativar: true,
     });
     goToTest();
   } catch (error) {
-    if (activated) {
-      await store
-        .dispatch('autonomiaAgents/update', { id: props.agentId, ...previous })
-        .catch(() => {});
-    }
     useAlert(t('AGENTS.CHANNELS.CONNECT_ERROR'));
   }
 };
