@@ -33,8 +33,8 @@ RSpec.describe TemplateFields::DealResolver do
     expect(described_class.new(card).value('negocio.prazo')).to be_nil
   end
 
-  it 'reads the deadline as a date in the account time zone, not in UTC' do
-    card.update!(expected_close_at: Time.utc(2026, 10, 21, 1, 30)) # 20/10 22:30 em São Paulo
+  it 'reads the deadline as the calendar day the CRM saved, even in a negative account time zone' do
+    card.update!(expected_close_at: Time.utc(2026, 10, 20)) # a tela grava "2026-10-20" como 00:00 UTC
 
     with_modified_env(CRM_DEFAULT_TIMEZONE: 'America/Sao_Paulo') do
       expect(described_class.new(card).value('negocio.prazo')).to eq('20/10/2026')

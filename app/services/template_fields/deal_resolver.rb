@@ -37,9 +37,10 @@ class TemplateFields::DealResolver
     card.value_cents.to_i.positive? ? TemplateFields::Format.money_cents(card.value_cents, card.currency) : nil
   end
 
-  # O prazo do card (`expected_close_at`; na Cobrança, "Vencimento"), como data no fuso da conta.
+  # O prazo do card (`expected_close_at`; na Cobrança, "Vencimento"). É um dia de calendário que a tela do CRM grava
+  # como 00:00 UTC: lido como dia, sem fuso, para não cair no dia anterior em fuso negativo.
   def deadline
-    TemplateFields::Format.date(card.expected_close_at, TemplateFields::Format.account_zone(card.account))
+    TemplateFields::Format.calendar_date(card.expected_close_at)
   end
 
   def owner

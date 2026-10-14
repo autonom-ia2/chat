@@ -11,7 +11,8 @@
   modelo nativo.
 - **De onde vem o dado:** o perfil do modelo (`WhatsappTemplateProfile#fields`) liga a posição a uma chave do catálogo
   (`TemplateFields`); o valor sai de `TemplateFields::Resolver.for_card`. Chave nova `negocio.prazo` =
-  `expected_close_at`, data no fuso da conta. Valor pelos centavos (`value_cents` + `currency`); 0 é "sem valor".
+  `expected_close_at`, lido como dia de calendário em UTC (a tela grava "AAAA-MM-DD" como 00:00 UTC; no fuso da conta
+  sairia um dia antes, #1535). Valor pelos centavos (`value_cents` + `currency`); 0 é "sem valor".
 - **Card sem o dado** (Rodrigo, 14/10: "outro modelo; sem nenhum, texto"): o modelo sai da lista; a IA escolhe outro;
   sem nenhum, Híbrido quando a caixa tem, senão `no_template`, como hoje. Regra só em
   `TemplateRealValues#without_real_value`.
