@@ -16,13 +16,19 @@ RSpec.describe Crm::BookingV2::Notices::CustomText do
       expect(described_class.problem(good)).to be_nil
     end
 
+    # 10. #1517: o link deixou de ser obrigatório (vai no botão ou na linha fixa); o dia e a hora continuam.
+    it 'aceita texto sem o link e continua recusando texto sem o dia e a hora' do
+      expect(described_class.problem('Seu horário é {{horario.data_hora}}.')).to be_nil
+      expect(described_class.problem('Mude em {{horario.link_gestao}}.')).to eq(:missing_when)
+      expect(described_class::REQUIRED_KEYS).to eq(['horario.data_hora'])
+    end
+
     it 'diz o motivo de cada recusa' do
       expect(described_class.problem('  ')).to eq(:blank)
       expect(described_class.problem("{{horario.data_hora}} {{horario.link_gestao}} #{'a' * 500}")).to eq(:too_long)
       expect(described_class.problem('Oi {{horario.data_hora}} {{horario.link_gestao')).to eq(:malformed)
       expect(described_class.problem('Oi {{cliente.cpf}} {{horario.data_hora}} {{horario.link_gestao}}')).to eq(:unknown_field)
       expect(described_class.problem('Oi {{1}} {{horario.data_hora}} {{horario.link_gestao}}')).to eq(:unknown_field)
-      expect(described_class.problem('Seu horário é {{horario.data_hora}}.')).to eq(:missing_link)
       expect(described_class.problem('Mude em {{horario.link_gestao}}.')).to eq(:missing_when)
     end
 
@@ -52,7 +58,8 @@ RSpec.describe Crm::BookingV2::Notices::CustomText do
     end
 
     it 'devolve nil (o envio cai no padrão) com texto inválido ou sem link/dia para preencher' do
-      expect(described_class.fill('Sem link {{horario.data_hora}}', resolver)).to be_nil
+      expect(described_class.fill('Sem dia {{horario.link_gestao}}', resolver)).to be_nil
+      expect(described_class.fill('Sem link {{horario.data_hora}}', resolver)).to eq('Sem link 20/10 às 10:00')
 
       values['horario.link_gestao'] = nil
       expect(described_class.fill(good, resolver)).to be_nil

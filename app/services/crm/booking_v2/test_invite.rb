@@ -7,7 +7,7 @@
 # WhatsApp oficial, modelo aprovado; sem modelo que resolva e com o WhatsApp Híbrido pronto para o contato (#1349),
 # texto pela sessão também — sempre com `sender: user` (o atendente que testou), nunca sem remetente como o aviso
 # automático do `Notices::Sender`. Mesma parada (recusou mensagens ou parou os avisos) e os mesmos tetos (por número
-# e, desde #1270, por conta).
+# e, desde #1270, por conta). Botão "Ver meu horário" (#1517): a mesma regra do aviso (`Notices::Button`).
 #
 # Quem testa precisa enxergar a caixa de avisos (`policy_scope(::Inbox)`, o mesmo escopo da escolha da caixa) e, se a
 # mensagem vai para uma conversa que já existe, poder responder nela (`ConversationPolicy#show?`, o mesmo critério do
@@ -103,14 +103,22 @@ class Crm::BookingV2::TestInvite
         account: page.account, booking_profile: page, booking_link: pages.link_for(page, user), contact: contact, created_by: user,
         channel: 'copy', expires_at: page.invite_ttl_days.days.from_now, metadata: { 'test' => true }
       )
-      Crm::BookingV2::Notices::Delivery.new(decision: decision, inbox: page.notice_inbox, contact: contact, sender: user,
-                                            content: content(invite)).perform
+      deliver!(invite, contact, decision)
       invite.update!(sent_at: Time.current)
     end
   end
 
-  def content(invite)
-    prefix = I18n.t('crm.booking_v2.notices.test_prefix', locale: Crm::BookingV2::Notices::Text.locale(page.account))
-    "#{prefix}\n\n#{Crm::BookingV2::InviteText.new(invite)}"
+  def deliver!(invite, contact, decision)
+    text = Crm::BookingV2::InviteText.new(invite, button: Crm::BookingV2::Notices::Button.allowed?(decision, page.notice_inbox))
+    Crm::BookingV2::Notices::Delivery.new(decision: decision, inbox: page.notice_inbox, contact: contact, sender: user,
+                                          content: content(text, invite), rich_message: text.rich_message).perform
+  end
+
+  # Sem botão e sem `{link}` no texto da página, o link vai na linha fixa, como no aviso (#1517).
+  def content(text, invite)
+    locale = Crm::BookingV2::Notices::Text.locale(page.account)
+    parts = [I18n.t('crm.booking_v2.notices.test_prefix', locale: locale), text.to_s]
+    parts << Crm::BookingV2::Notices::Text.manage_line(invite.url, locale: locale) unless text.rich_message || text.carries_link?
+    parts.join("\n\n")
   end
 end

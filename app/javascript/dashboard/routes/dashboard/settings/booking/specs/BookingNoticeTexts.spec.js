@@ -192,20 +192,20 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(textChanges).toEqual([]);
   });
 
-  it('editar troca rótulos por chaves; texto sem link mostra o erro', async () => {
+  it('editar troca rótulos por chaves; texto sem dia e hora mostra o erro', async () => {
     const wrapper = await mountStep();
 
     await card(wrapper, 'booked')
       .find('[data-text-input]')
-      .setValue('Oi! Seu horário é [Dia e hora do horário].');
+      .setValue('Oi! Mude em [Link para confirmar, mudar ou cancelar].');
     const change = lastChange(wrapper);
     expect(change).toEqual({
-      noticeTexts: { booked: 'Oi! Seu horário é {{horario.data_hora}}.' },
+      noticeTexts: { booked: 'Oi! Mude em {{horario.link_gestao}}.' },
     });
 
     await wrapper.setProps({ form: form({ noticeTexts: change.noticeTexts }) });
     expect(card(wrapper, 'booked').find('[data-text-error]').text()).toContain(
-      'BOOKING.NOTICES.TEXTS.ERRORS.MISSING_LINK'
+      'BOOKING.NOTICES.TEXTS.ERRORS.MISSING_WHEN'
     );
     expect(
       card(wrapper, 'booked')
@@ -252,10 +252,10 @@ describe('bookingNoticeTexts (#1354)', () => {
     ).toBe('Traga [documento] em {{horario.data_hora}}');
   });
 
-  it('confere como o servidor: link e dia/hora obrigatórios, só os campos do aviso, tamanho e chave malformada', () => {
+  it('confere como o servidor: dia/hora obrigatório (o link não, #1517), só os campos do aviso, tamanho e chave malformada', () => {
     expect(noticeTextProblem(AI_TEXT)).toBeNull();
     expect(noticeTextProblem('')).toBe('BLANK');
-    expect(noticeTextProblem('Dia {{horario.data_hora}}')).toBe('MISSING_LINK');
+    expect(noticeTextProblem('Dia {{horario.data_hora}}')).toBeNull();
     expect(noticeTextProblem('Link {{horario.link_gestao}}')).toBe(
       'MISSING_WHEN'
     );

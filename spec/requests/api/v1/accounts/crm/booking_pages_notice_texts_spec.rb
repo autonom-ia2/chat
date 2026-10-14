@@ -54,14 +54,20 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
       expect(body.dig('notice_text_setup', 'stop_line')).to start_with('Para parar estes avisos:')
     end
 
-    it 'recusa texto sem link, com a frase simples no idioma da conta, e não grava' do
+    # #1517: sem o link o texto é aceito (o sistema manda o link no botão ou na linha fixa); sem o dia e a hora, não.
+    it 'guarda texto sem link e recusa texto sem o dia e a hora, com a frase simples no idioma da conta' do
       save('booked' => 'Seu horário é {{horario.data_hora}}.')
+
+      expect(response).to have_http_status(:ok)
+      expect(page.reload.notice_texts).to eq('booked' => 'Seu horário é {{horario.data_hora}}.')
+
+      save('day_before' => 'Mude em {{horario.link_gestao}}.')
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body.dig('errors', 'notice_texts')).to eq(
-        ['O texto do aviso "Ao marcar" precisa do link para confirmar, mudar ou cancelar.']
+        ['O texto do aviso "1 dia antes" precisa do dia e da hora.']
       )
-      expect(page.reload.notice_texts).to eq({})
+      expect(page.reload.notice_texts).to eq('booked' => 'Seu horário é {{horario.data_hora}}.')
     end
 
     it 'texto vazio volta ao padrão e preserva o resto do metadata' do
@@ -104,16 +110,17 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
         expect(entrada['tom']['escolha']).to eq('formal')
         expect(entrada['contexto']).to include('atendimento' => 'Conversa de 30 min', 'duracao_minutos' => 30, 'idioma' => 'pt_BR')
         expect(entrada['contexto']['empresa']).to eq(account.name)
-        expect(entrada['chaves']['obrigatorias']).to eq(%w[horario.link_gestao horario.data_hora])
+        # #1517: a IA não exige mais o link (vai no botão ou na linha fixa).
+        expect(entrada['chaves']['obrigatorias']).to eq(%w[horario.data_hora])
       end
     end
 
     it 'devolve só as opções que passam na conferência; nenhuma boa vira mensagem simples, nada salvo' do
-      ai_answers('Oi! Seu horário é {{horario.data_hora}}. Até lá!', good)
+      ai_answers('Oi! Mude em {{horario.link_gestao}}. Até lá!', good)
       ask
       expect(response.parsed_body['payload']['options'].pluck('text')).to eq([good])
 
-      ai_answers('Oi! Seu horário é {{horario.data_hora}}. Até lá!')
+      ai_answers('Oi! Mude em {{horario.link_gestao}}. Até lá!')
       ask
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['message']).to eq('Não conseguimos escrever agora. Tente de novo ou escreva do seu jeito.')

@@ -102,7 +102,7 @@
         "IMAGE_UPLOAD": "We couldn't upload the image. Try another one.",
         "SHORT_NAME": "Check the page address.",
         "IMAGE_REMOVE": "Could not remove the image. Try again.",
-        "NOTICE_TEXTS": "Check the notice messages: the link or the day and time is missing, or a message is too long."
+        "NOTICE_TEXTS": "Check the notice messages: the day and time is missing, or a message is too long."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "That calendar email inbox is no longer available. Choose another one or remove Google Meet and Teams.",
@@ -456,7 +456,6 @@
           "MALFORMED": "A field is badly written. Delete it and use the buttons to add fields.",
           "BRACKET": "There are brackets that are not a field. Remove the brackets or use the buttons to add fields.",
           "UNKNOWN_FIELD": "This notice cannot fill one of the fields. Use only the buttons below.",
-          "MISSING_LINK": "The link to confirm, change or cancel is missing.",
           "MISSING_WHEN": "The day and time are missing."
         }
       }

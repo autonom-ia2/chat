@@ -91,7 +91,9 @@ export const toKeys = (text, fields) => {
   return result + source.slice(position);
 };
 
-// O mesmo que o servidor confere ao salvar (Notices::CustomText.problem).
+// O mesmo que o servidor confere ao salvar (Notices::CustomText.problem). O link
+// não é obrigatório (#1517): sem ele, o sistema manda o link no botão ou numa
+// linha fixa.
 // Devolve a chave do aviso em BOOKING.NOTICES.TEXTS.ERRORS ou null.
 export const noticeTextProblem = text => {
   const value = String(text || '');
@@ -103,7 +105,6 @@ export const noticeTextProblem = text => {
   if (value.includes('[') || value.includes(']')) return 'BRACKET';
   const keys = parts.filter(part => part.type === 'key').map(p => p.value);
   if (keys.some(key => !NOTICE_TEXT_KEYS.includes(key))) return 'UNKNOWN_FIELD';
-  if (!keys.includes(NOTICE_TEXT.LINK)) return 'MISSING_LINK';
   if (!keys.includes(NOTICE_TEXT.WHEN)) return 'MISSING_WHEN';
   return null;
 };

@@ -208,6 +208,52 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    # 9. #1517: o teste segue a regra do aviso; no WhatsApp oficial com a janela aberta o link vai no botão.
+    it 'no WhatsApp oficial com a janela aberta manda o botão "Ver meu horário" e o texto padrão sem o link cru' do
+      page.update!(notice_inbox: cloud)
+      contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')
+      conversation = create(:conversation, account: account, inbox: cloud, contact: contact)
+      create(:message, account: account, inbox: cloud, conversation: conversation, message_type: :incoming, created_at: 1.hour.ago)
+
+      call(admin, :post, path, phone: '+5511955554444')
+
+      expect(response).to have_http_status(:ok)
+      url = "https://app.example.com/b/#{Crm::BookingInvite.sole.code}"
+      message = conversation.messages.outgoing.sole
+      expect(message.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => url)
+      expect(message.content).to eq(
+        "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:\n\n" \
+        'Oi, Admin! Escolha o melhor horário para você no botão abaixo.'
+      )
+    end
+
+    it 'texto do convite da página com o link: no oficial sai sem botão, com o link' do
+      page.update!(notice_inbox: cloud, invite_text: 'Escolha aqui: {link}')
+      contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')
+      conversation = create(:conversation, account: account, inbox: cloud, contact: contact)
+      create(:message, account: account, inbox: cloud, conversation: conversation, message_type: :incoming, created_at: 1.hour.ago)
+
+      call(admin, :post, path, phone: '+5511955554444')
+
+      message = conversation.messages.outgoing.sole
+      expect(message.content_attributes).not_to have_key('rich_message')
+      expect(message.content).to end_with("Escolha aqui: https://app.example.com/b/#{Crm::BookingInvite.sole.code}")
+    end
+
+    # #1517: sem botão (WAHA) e sem {link} no texto da página, o link vai na linha fixa.
+    it 'pela WAHA, texto da página sem {link}: acrescenta a linha do link' do
+      page.update!(invite_text: 'Escolha seu horário.')
+      conversation = open_window_for('+5511955554444')
+
+      call(admin, :post, path, phone: '+5511955554444')
+
+      message = conversation.messages.outgoing.sole
+      expect(message.content_attributes).not_to have_key('rich_message')
+      expect(message.content).to end_with(
+        "Escolha seu horário.\n\nPara confirmar, mudar ou cancelar: https://app.example.com/b/#{Crm::BookingInvite.sole.code}"
+      )
+    end
+
     it 'pela WAHA manda a número que nunca falou com a empresa: chat id da WAHA no contato, conversa aberta e mensagem (#1270)' do
       check = waha_answers(numberExists: true, chatId: '5511955554444@c.us')
 

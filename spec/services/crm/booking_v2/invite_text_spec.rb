@@ -14,6 +14,31 @@ RSpec.describe Crm::BookingV2::InviteText do
       .to eq("Oi, Marcos! Escolha o melhor horário para você: https://app.example.com/b/#{invite.code}")
   end
 
+  # #1517: com o botão, o padrão sai sem o link cru; texto da página com {link} não leva botão.
+  describe 'button (#1517)' do
+    it 'default text without the raw link, and the button with the invite link' do
+      text = described_class.new(invite, button: true)
+
+      expect(text.to_s).to eq('Oi, Marcos! Escolha o melhor horário para você no botão abaixo.')
+      expect(text.rich_message).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => invite.url)
+      expect(text.carries_link?).to be(false)
+    end
+
+    it 'page text with {link}: no button, text as is' do
+      world.profile.update!(invite_text: 'Escolha aqui: {link}')
+      text = described_class.new(invite.reload, button: true)
+
+      expect(text.rich_message).to be_nil
+      expect(text.to_s).to eq("Escolha aqui: #{invite.url}")
+    end
+
+    it 'page text without {link}: button' do
+      world.profile.update!(invite_text: 'Escolha seu horário.')
+
+      expect(described_class.new(invite.reload, button: true).rich_message).to include('url' => invite.url)
+    end
+  end
+
   it 'uses the English default for an English account' do
     account.update!(locale: 'en')
 
