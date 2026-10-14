@@ -1,7 +1,8 @@
 class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseController
   def events
     authorize ::Crm::FollowUp, :index?
-    render json: { payload: follow_up_events + series_events + expected_close_events + meeting_events + external_events }
+    events = follow_up_events + series_events + expected_close_events + meeting_events + external_events
+    render json: { payload: Crm::Calendar::EventDetails.new(account: Current.account, events: events).perform }
   end
 
   # Read-only free/busy lookup for the meeting scheduler. Returns the busy
@@ -65,6 +66,9 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
         event_type: 'expected_close',
         title: card.title,
         starts_at: card.expected_close_at&.iso8601,
+        # O vencimento é uma data gravada como 00:00 UTC (#1538): o dia é a parte UTC, sem hora (#1568).
+        all_day: true,
+        date: card.expected_close_at&.utc&.to_date&.iso8601,
         status: card.status,
         card_id: card.id,
         conversation_id: visible_card_conversation_id(card),
