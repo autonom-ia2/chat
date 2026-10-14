@@ -80,6 +80,23 @@ describe('Meta → tela', () => {
     expect(modelo.cartoesGuardados).toEqual([undefined, { nome: 'b.jpg' }]);
   });
 
+  // #1465: o arquivo do topo guardado de fato no perfil (não o nome solto do header_media).
+  it('keeps the saved header file, or null when there is none', () => {
+    expect(
+      modeloDaMeta(
+        template({
+          header_file_name: 'topo.png',
+          header_file_preview_url: 'https://s/topo.png',
+        }),
+        GRUPO
+      ).topoGuardado
+    ).toEqual({ nome: 'topo.png', url: 'https://s/topo.png' });
+    expect(
+      modeloDaMeta(template({ header_file_name: 'a.pdf' }), GRUPO).topoGuardado
+    ).toEqual({ nome: 'a.pdf', url: '' });
+    expect(modeloDaMeta(template({}), GRUPO).topoGuardado).toBeNull();
+  });
+
   it('builds the screen model with what Meta says and null for what it does not', () => {
     const modelo = modeloDaMeta(
       template({

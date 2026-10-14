@@ -15,6 +15,7 @@ import {
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
+import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
@@ -29,6 +30,8 @@ import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 // Cotação → Falta terminar. Números da semana (L1) e nomes dos canais (L2) chegam em paralelo e,
 // se falharem, o cartão só perde a linha correspondente. Quem só vê não tem ação de escrita.
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
+// #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" (herói T01 e gaveta), vai com
+// ?atuacao=interno: o agente ajuda a equipe dentro das conversas e nunca fala com cliente.
 // #1369 — os cartões só aparecem quando a L1 e a L2 já responderam (ou falharam). Antes, eles
 // surgiam com a lista e cresciam depois: a linha da semana e o nome do canal chegavam e empurravam
 // para baixo os cartões seguintes — o rascunho fica por último —, e o primeiro clique em
@@ -122,21 +125,24 @@ const tentarDeNovo = () => {
   ocupacao.carregar();
 };
 
-const usarModelo = async chave => {
+const COPILOTO = 'copiloto';
+
+const abrirCriacao = async (chave, query) => {
   if (comecandoModelo.value) return;
   comecandoModelo.value = chave;
   modeloQueFalhou.value = null;
   try {
-    await router.push({
-      name: 'autonomia_agents_builder',
-      query: { modelo: chave },
-    });
+    await router.push({ name: 'autonomia_agents_builder', query });
   } catch {
     modeloQueFalhou.value = chave;
   } finally {
     comecandoModelo.value = null;
   }
 };
+
+const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
+const usarCopiloto = () =>
+  abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
 
 const abrirAgente = agente =>
   router.push({
@@ -280,16 +286,35 @@ onBeforeUnmount(() => {
             {{ t('AGENTS.JORNADA.HEROI.SEM_CANAL_SEM_PERMISSAO') }}
           </p>
         </div>
-        <p v-if="podeGerenciar" class="pt-5 m-0 border-t border-white/15">
-          <button
-            data-do-meu-jeito
-            type="button"
-            class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-            @click="usarModelo(MODELO_DO_MEU_JEITO)"
-          >
-            {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-          </button>
-        </p>
+        <div
+          v-if="podeGerenciar"
+          class="flex flex-col gap-3 pt-5 border-t border-white/15"
+        >
+          <p class="m-0">
+            <button
+              data-do-meu-jeito
+              type="button"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarModelo(MODELO_DO_MEU_JEITO)"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
+            </button>
+          </p>
+          <p class="flex flex-col m-0">
+            <button
+              data-copiloto
+              type="button"
+              aria-describedby="copiloto-heroi-texto"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarCopiloto"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
+            </button>
+            <span id="copiloto-heroi-texto" class="text-sm text-white/80">
+              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
+            </span>
+          </p>
+        </div>
       </AgentesHeroi>
 
       <!-- T02 · lista (também carregando e erro) -->
@@ -444,6 +469,21 @@ onBeforeUnmount(() => {
         >
           {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
         </AgenteBotao>
+      </p>
+      <p class="flex flex-col gap-1 m-0">
+        <AgenteBotao
+          data-copiloto
+          variante="fantasma"
+          icone-direita="i-lucide-arrow-right"
+          aria-describedby="copiloto-gaveta-texto"
+          class="w-fit"
+          @click="usarCopiloto"
+        >
+          {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
+        </AgenteBotao>
+        <span id="copiloto-gaveta-texto" class="px-4 text-sm text-n-slate-11">
+          {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
+        </span>
       </p>
     </AgenteGaveta>
 

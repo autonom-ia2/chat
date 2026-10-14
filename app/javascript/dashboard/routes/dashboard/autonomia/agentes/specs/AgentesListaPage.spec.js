@@ -387,6 +387,37 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('offers "Copiloto da equipe" under "Do meu jeito" in the drawer and opens it as internal (#1494)', async () => {
+      const wrapper = await montar();
+      await wrapper.get('[data-criar]').trigger('click');
+      await nextTick();
+      const gaveta = document.querySelector('[role="dialog"]');
+      const copiloto = gaveta.querySelector('[data-copiloto]');
+      expect(copiloto.tagName).toBe('BUTTON');
+      expect(copiloto.textContent).toContain('AGENTS.JORNADA.MODELOS.COPILOTO');
+      const texto = document.getElementById(
+        copiloto.getAttribute('aria-describedby')
+      );
+      expect(texto.textContent.trim()).toBe(
+        'AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO'
+      );
+      // Depois de "Do meu jeito", como opção secundária.
+      const botoes = [...gaveta.querySelectorAll('button')].map(b =>
+        b.textContent.trim()
+      );
+      expect(botoes.indexOf('AGENTS.JORNADA.MODELOS.COPILOTO')).toBe(
+        botoes.indexOf('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') + 1
+      );
+
+      copiloto.click();
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { atuacao: 'interno' },
+      });
+      wrapper.unmount();
+    });
+
     it('shows a view only seat the list without any writing action', async () => {
       estado.podeGerenciar = false;
       const wrapper = await montar();
@@ -444,7 +475,22 @@ describe('AgentesListaPage', () => {
       expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.ESCOLHA');
       expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
+      expect(wrapper.find('[data-copiloto]').exists()).toBe(true);
       expect(wrapper.find('[data-sem-canal]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('opens the team copilot from the big hero (#1494)', async () => {
+      const wrapper = await montar();
+      const copiloto = wrapper.get('[data-copiloto]');
+      expect(copiloto.text()).toBe('AGENTS.JORNADA.MODELOS.COPILOTO');
+      expect(wrapper.text()).toContain('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO');
+      await copiloto.trigger('click');
+      await flushPromises();
+      expect(router.push).toHaveBeenLastCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { atuacao: 'interno' },
+      });
       wrapper.unmount();
     });
 
@@ -504,6 +550,7 @@ describe('AgentesListaPage', () => {
       expect(wrapper.text()).toContain('AGENTS.JORNADA.HEROI.SO_VER');
       expect(wrapper.find('[data-usar]').exists()).toBe(false);
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(false);
+      expect(wrapper.find('[data-copiloto]').exists()).toBe(false);
       expect(textoDosBotoes(wrapper)).toEqual([]);
       wrapper.unmount();
     });

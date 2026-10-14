@@ -52,6 +52,9 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     # Assert
     expect(conversa_viva.reload.assignee_id).to eq(agent.id)
     expect(card.reload.metadata.dig('ai', 'handoff_hold')).to be_nil
+    # O drain trava a conversa: atribuir e passar numa gravação só, senão o after_commit perde o ASSIGNEE_CHANGED (#1454).
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+      .with(Events::Types::ASSIGNEE_CHANGED, anything, hash_including(conversation: conversa_viva)).once
   end
 
   it 'não apaga a espera por causa de um responsável que está na conversa errada' do
@@ -63,9 +66,10 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     # Act
     described_class.perform_now
 
-    # Assert
-    expect(card.reload.metadata.dig('ai', 'handoff_hold', 'held_at')).to be_present
+    # Assert — desde o #1454 a espera passa do card para a conversa (Crm::Entrega::Marca), e é ela que o próximo tick lê
     expect(conversa_viva.reload.assignee_id).to be_nil
+    expect(Crm::Entrega::Marca.dados(conversa_viva)).to include('modo' => 'segurando', 'motivo' => 'ia_crm')
+    expect(card.reload.metadata.dig('ai', 'handoff_hold')).to be_nil
   end
 
   it 'humano que assumiu a conversa viva encerra a espera' do

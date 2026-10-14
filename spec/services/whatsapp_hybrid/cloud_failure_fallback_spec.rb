@@ -53,6 +53,18 @@ describe WhatsappHybrid::CloudFailureFallback do
     expect(message.external_error).to be_present
   end
 
+  it 'keeps the original failure for a new contact while WhatsApp limits new conversations (chat#1486)' do
+    connection = WhatsappHybrid::Connection.find_by(inbox_id: inbox.id)
+    WhatsappHybrid::Timelock.new(connection).apply!('isActive' => true, 'timeEnforcementEnds' => 6.hours.from_now.to_i)
+
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+
+    expect(client).not_to have_received(:send_text)
+    expect(message.reload.status).to eq('failed')
+  ensure
+    Redis::Alfred.delete(WhatsappHybrid::Timelock.new(connection).key) if connection
+  end
+
   it 'never resends on other failures' do
     Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_026)).perform
 

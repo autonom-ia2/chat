@@ -20,7 +20,13 @@ const props = defineProps({
   acesa: { type: Number, default: -1 },
   chegando: { type: Number, default: -1 },
   exemplo: { type: String, default: '' },
+  // #1423 — no card do funil, tocar numa coluna pede para mover o cliente
+  // para ela (`escolher` com o índice). Desligado, o quadro é só de leitura.
+  clicavel: { type: Boolean, default: false },
+  // Nome acessível de cada coluna tocável: recebe o nome da etapa.
+  rotuloEscolher: { type: Function, default: nome => nome },
 });
+const emit = defineEmits(['escolher']);
 
 const MAX_CARTOES = 3;
 // Até cinco colunas dividem o quadro por igual. Com mais, a largura é de
@@ -197,7 +203,7 @@ onMounted(acompanhar);
           :key="coluna.chave"
           :data-coluna="coluna.nome"
           :aria-current="coluna.acesa ? 'true' : undefined"
-          class="flex min-w-[5.25rem] shrink-0 grow flex-col gap-1.5 rounded-xl p-1 transition"
+          class="relative flex min-w-[5.25rem] shrink-0 grow flex-col gap-1.5 rounded-xl p-1 transition"
           :class="[
             rola
               ? 'basis-[calc((100%_-_1rem)/4.55)]'
@@ -207,6 +213,14 @@ onMounted(acompanhar);
               : 'bg-n-alpha-2',
           ]"
         >
+          <button
+            v-if="clicavel && !coluna.acesa"
+            type="button"
+            data-funil-quadro-escolher
+            class="absolute inset-0 z-[1] rounded-xl hover:bg-n-alpha-2 hover:ring-2 hover:ring-inset hover:ring-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-9"
+            :aria-label="rotuloEscolher(coluna.nome)"
+            @click="emit('escolher', coluna.numero - 1)"
+          />
           <span class="flex items-center gap-1">
             <span
               class="grid size-5 shrink-0 place-items-center rounded-full text-xs font-bold"

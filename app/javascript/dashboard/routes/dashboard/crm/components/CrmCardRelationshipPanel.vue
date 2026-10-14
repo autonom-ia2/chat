@@ -17,16 +17,23 @@ import CrmRelationshipLinkForm from './CrmRelationshipLinkForm.vue';
 import CrmRelationshipResources from './CrmRelationshipResources.vue';
 import CrmRelationshipCompanyForm from './CrmRelationshipCompanyForm.vue';
 import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
+import { formatClientPhone } from '../helpers/meetingDay';
+import { textosCom } from './card/textos';
 
 const props = defineProps({
   card: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
   canManageRecords: { type: Boolean, default: false },
   editing: { type: Boolean, default: false },
+  // #1423 — prefixo com as frases da gaveta nova; vazio = textos de sempre.
+  textos: { type: String, default: '' },
+  // #1423 — a gaveta nova mostra a pessoa e a empresa em telas separadas:
+  // 'pessoa' esconde a empresa; 'empresa' esconde a pessoa. Vazio = tudo.
+  parte: { type: String, default: '' },
 });
 const emit = defineEmits(['edit', 'linked', 'guard']);
-const { t } = useI18n();
-const label = key => t(`CRM_KANBAN.RELATIONSHIP.${key}`);
+const { t, te } = useI18n();
+const label = textosCom({ t, te }, props.textos, 'CRM_KANBAN.RELATIONSHIP');
 const router = useRouter();
 const { accountId, currentAccount, isCloudFeatureEnabled } = useAccount();
 const companiesEnabled = computed(() =>
@@ -57,6 +64,8 @@ const differentDealCompany = computed(() => {
     ? dealCompany
     : null;
 });
+const mostraPessoa = computed(() => props.parte !== 'empresa');
+const mostraEmpresa = computed(() => props.parte !== 'pessoa');
 const resources = ref(null);
 const failed = ref(false);
 const companyFailed = ref(false);
@@ -191,7 +200,13 @@ const linked = card => {
   emit('linked', card);
 };
 const details = computed(() => [
-  { key: 'PHONE', value: person.value?.phone_number, icon: 'i-lucide-phone' },
+  {
+    key: 'PHONE',
+    value:
+      formatClientPhone(person.value?.phone_number) ||
+      person.value?.phone_number,
+    icon: 'i-lucide-phone',
+  },
   { key: 'EMAIL', value: person.value?.email, icon: 'i-lucide-mail' },
   {
     key: 'ROLE',
@@ -282,7 +297,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
         />
       </div>
       <section
-        v-else-if="person"
+        v-else-if="person && mostraPessoa"
         class="min-w-0 overflow-hidden rounded-xl border border-n-weak bg-n-solid-1"
         data-relationship-person
       >
@@ -356,7 +371,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
         <div v-else class="p-5"><slot name="editor" /></div>
       </section>
       <section
-        v-else
+        v-else-if="!person"
         class="flex flex-col items-center rounded-xl border border-dashed border-n-strong bg-n-solid-1 px-6 py-9 text-center"
         data-relationship-empty
       >
@@ -388,7 +403,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
         </div>
       </section>
       <section
-        v-if="differentDealCompany && !mode && !companyMode"
+        v-if="differentDealCompany && mostraEmpresa && !mode && !companyMode"
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
         data-relationship-deal-company
       >
@@ -421,7 +436,9 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
         </p>
       </section>
       <section
-        v-if="person && companiesEnabled && !mode && !companyMode"
+        v-if="
+          person && companiesEnabled && mostraEmpresa && !mode && !companyMode
+        "
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
         data-relationship-company
       >
@@ -457,7 +474,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
                 sm
                 link
                 :label="label('CHANGE')"
-                :aria-label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.CHANGE')"
+                :aria-label="label('COMPANY_FORM.CHANGE')"
                 :disabled="editing"
                 @click="guard(() => (companyMode = 'link'))"
               />
@@ -473,7 +490,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
               sm
               icon="i-lucide-pencil"
               :label="label('EDIT')"
-              :aria-label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_TITLE')"
+              :aria-label="label('COMPANY_FORM.EDIT_TITLE')"
               :disabled="editing"
               @click="guard(() => (companyMode = 'edit'))"
             />
@@ -537,7 +554,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
           outline
           sm
           icon="i-lucide-link-2"
-          :label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.LINK_TITLE')"
+          :label="label('COMPANY_FORM.LINK_TITLE')"
           :disabled="editing"
           @click="guard(() => (companyMode = 'link'))"
         />
@@ -548,13 +565,13 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
           slate
           sm
           icon="i-lucide-unlink"
-          :label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.UNLINK_TITLE')"
+          :label="label('COMPANY_FORM.UNLINK_TITLE')"
           :disabled="editing"
           @click="guard(() => (companyMode = 'unlink'))"
         />
       </section>
       <details
-        v-if="person && !mode && !companyMode && !editing"
+        v-if="person && mostraPessoa && !mode && !companyMode && !editing"
         class="group rounded-xl border border-n-weak bg-n-solid-1"
       >
         <summary

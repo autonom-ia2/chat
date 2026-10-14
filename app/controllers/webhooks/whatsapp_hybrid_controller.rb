@@ -10,6 +10,7 @@ class Webhooks::WhatsappHybridController < ActionController::API
   MAX_CLOCK_SKEW_MS = 5.minutes.in_milliseconds
   SEEN_EVENT_TTL = 10.minutes.to_i
   CAPPING_FIELDS = %w[cappingStatus totalQuota usedQuota cycleStart cycleEnd].freeze
+  TIMELOCK_FIELDS = %w[enforcementType isActive timeEnforcementEnds].freeze
 
   before_action :reject_oversized_body
   before_action :authenticate_engine
@@ -65,6 +66,13 @@ class Webhooks::WhatsappHybridController < ActionController::API
     me = body['me'].is_a?(Hash) ? body['me'].slice('id') : nil
     capping = payload.dig('data', 'messageCapping')
     capping = capping.slice(*CAPPING_FIELDS) if capping.is_a?(Hash)
-    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => payload['id'], 'me' => me, 'capping' => capping }.compact
+    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => payload['id'], 'me' => me, 'capping' => capping,
+      'timelock' => reachout_timelock(body) }.compact
+  end
+
+  # Limite de conversas novas que o motor manda em `me.reachoutTimelock` (chat#1486).
+  def reachout_timelock(body)
+    timelock = body['me'].is_a?(Hash) ? body['me']['reachoutTimelock'] : nil
+    timelock.slice(*TIMELOCK_FIELDS) if timelock.is_a?(Hash)
   end
 end

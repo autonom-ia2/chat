@@ -10,6 +10,8 @@ defineProps({
   canal: { type: Object, required: true },
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
+  // #1505 — continuando uma conversa, o assunto é o dela: sem campo.
+  comAssunto: { type: Boolean, default: true },
 });
 
 const assunto = defineModel('assunto', { type: String, default: '' });
@@ -25,7 +27,7 @@ const maisOpcoes = ref(Boolean(cc.value || bcc.value));
 
 <template>
   <div class="flex flex-col gap-5">
-    <div class="flex flex-col gap-2">
+    <div v-if="comAssunto" class="flex flex-col gap-2">
       <label
         for="nova-conversa-assunto"
         class="mb-0 text-base font-semibold text-n-slate-12"

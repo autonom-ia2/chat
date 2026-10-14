@@ -5,9 +5,12 @@
 # (reset_agent_bot_when_assignee_present). Sem Message no thread → sem vazamento
 # p/ webhook n8n (message_created não dispara).
 class Crm::Ai::HandoffInviter
-  def initialize(conversation:, agent:)
+  # `idempotente`: o convite que a pessoa ainda não leu vale como feito; não cria outra notificação (o motor de entrega
+  # pode refazer a passagem depois de uma falha, #1454). A reavisada do EscalationJob avisa de novo de propósito.
+  def initialize(conversation:, agent:, idempotente: false)
     @conversation = conversation
     @agent = agent
+    @idempotente = idempotente
   end
 
   # true só se o convite efetivou de verdade: participante garantido E notificação
@@ -20,12 +23,20 @@ class Crm::Ai::HandoffInviter
     return false unless Crm::Access::ConversationScope.new(user: @agent, account: @conversation.account).allows?(@conversation)
 
     add_participant!
+    return true if @idempotente && convite_pendente?
+
     notify!.present?
   rescue ActiveRecord::RecordInvalid
     false
   end
 
   private
+
+  def convite_pendente?
+    Notification.exists?(user_id: @agent.id, account_id: @conversation.account_id, read_at: nil,
+                         notification_type: Notification.notification_types[:conversation_handoff_request],
+                         primary_actor_type: 'Conversation', primary_actor_id: @conversation.id)
+  end
 
   def add_participant!
     ConversationParticipant.find_or_create_by!(conversation: @conversation, user: @agent)

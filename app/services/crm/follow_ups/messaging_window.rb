@@ -46,7 +46,9 @@ class Crm::FollowUps::MessagingWindow
     return false if can_send_session_message?
 
     router = WhatsappHybrid::Router.new(@conversation)
-    router.web_ready? && router.connection.origin_enabled?(WhatsappHybrid::Router::CRM_FOLLOW_UP_ORIGIN)
+    # Contato barrado pelo limite de conversas novas do WhatsApp (chat#1486) volta para o modelo aprovado.
+    router.web_ready? && router.connection.origin_enabled?(WhatsappHybrid::Router::CRM_FOLLOW_UP_ORIGIN) &&
+      router.reach_out.allowed?
   end
 
   # A caixa é Oficial (Cloud), a conta está no piloto e existe conexão do Híbrido (pronta ou não). Não olha a janela

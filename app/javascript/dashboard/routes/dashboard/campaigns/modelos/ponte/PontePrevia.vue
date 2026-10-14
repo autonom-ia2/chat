@@ -8,6 +8,7 @@ import {
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import ModeloCelular from '../components/ModeloCelular.vue';
 import { rotuloDoCampo } from '../helpers/campos';
+import { miniaturaDe } from '../api/arquivos';
 
 // "Como o cliente vê" na campanha: o mesmo celular da tela de Modelos (com
 // topo, rodapé e botões), com o que cada variável vai receber da primeira
@@ -22,7 +23,7 @@ const props = defineProps({
   sample: { type: Object, default: null },
   remetente: { type: String, default: '' },
   // #1334: o que a campanha preencheu do formato (formatoNaCampanha): cupom,
-  // validade da oferta e o arquivo escolhido de cada cartão.
+  // validade da oferta, o arquivo escolhido de cada cartão e o do topo (#1465).
   valores: { type: Object, default: () => ({}) },
   timeZone: { type: String, default: 'UTC' },
 });
@@ -99,6 +100,22 @@ const arquivoDoCartao = indice =>
   props.modelo.cartoesGuardados?.[indice]?.nome ||
   '';
 
+// #1465: o arquivo do topo que vai — o escolhido agora ou o aprovado guardado —
+// e, se for foto, a miniatura dele.
+const topoQueVai = () => {
+  const guardado = props.modelo.topoGuardado;
+  const escolhido = props.valores.topo;
+  const arquivo = escolhido?.nome || guardado?.nome;
+  if (!arquivo) return {};
+  return {
+    topo: {
+      ...props.modelo.conteudo.topo,
+      arquivo,
+      imagem: miniaturaDe(escolhido, guardado),
+    },
+  };
+};
+
 const conteudo = computed(() => {
   const exemplos = Object.fromEntries(
     Object.entries(props.modelo.campos || {}).map(([chave, campo]) => [
@@ -106,7 +123,7 @@ const conteudo = computed(() => {
       valorDe(chave, campo),
     ])
   );
-  const base = { ...props.modelo.conteudo, exemplos };
+  const base = { ...props.modelo.conteudo, exemplos, ...topoQueVai() };
   return {
     ...base,
     // O celular sabe que é a campanha: mostra o cupom digitado e nunca a

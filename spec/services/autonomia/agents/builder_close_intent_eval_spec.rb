@@ -6,7 +6,9 @@ require 'rails_helper'
 # #641: a intenção de fechar do Construtor era a regex CLOSE_INTENT_PATTERNS sobre a fala crua do dono. Virou o
 # campo `user_asked_to_close` do schema de saída. O que a regex tratava com exceção manual (negação, "pode criar" que
 # é pedido novo, "sem material") agora é entendimento do modelo, e só se prova com o modelo: mesma instrução-mãe,
-# mesmo input montado pelo Builder, mesmo schema e mesmo esforço de raciocínio da produção.
+# mesmo input montado pelo Builder, mesmo schema e mesmo esforço de raciocínio da produção. Desde o #1367 a leitura
+# que decide o turno de CRIAÇÃO sai da chamada ENXUTA (o aviso LEAN_TURN_NOTE no fim do input); o AJUSTE segue com a
+# chamada completa.
 module AvaliacaoDoFechamento
   PERGUNTA_ABERTA = 'E qual o horário de atendimento da Ana?'.freeze
 
@@ -49,9 +51,11 @@ RSpec.describe Autonomia::Agents::Builder do
     thread.append_message!('user', fala)
     builder = described_class.new(account: account, build_thread: thread)
     cliente = Crm::Ai::ResponsesClient.new(credential: { api_key: ENV.fetch('OPENAI_API_KEY') }, feature: 'eval_construtor')
+    input = builder.send(:build_input)
+    input += [{ role: 'developer', content: [{ type: 'input_text', text: described_class::LEAN_TURN_NOTE }] }] unless agent
     raw = cliente.create(model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: described_class::MOTHER_INSTRUCTION,
-                         input: builder.send(:build_input), schema: described_class::BUILDER_SCHEMA,
-                         reasoning_effort: builder.send(:reasoning_effort))
+                         input: input, schema: described_class::BUILDER_SCHEMA,
+                         reasoning_effort: Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT)
     JSON.parse(raw[:text])['user_asked_to_close']
   end
 
