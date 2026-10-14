@@ -27,7 +27,7 @@ RSpec.describe Ai::Redacao::Escrever do
 
       resultado = described_class.call(
         account: account, feature: 'aviso_redacao', canal: 'whatsapp_texto', proposito: caso['proposito'], tom: caso['tom'],
-        limites: { max_chars: custom::MAX_LENGTH }, chaves: { permitidas: custom::ALLOWED_KEYS, obrigatorias: custom::REQUIRED_KEYS },
+        limites: { max_chars: custom::MAX_LENGTH }, chaves: { permitidas: custom::AI_KEYS, obrigatorias: custom::REQUIRED_KEYS },
         opcoes: 2
       )
       validas = resultado[:opcoes].select { |opcao| custom.problem(opcao[:texto]).nil? }
