@@ -4549,6 +4549,26 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo."
+    },
+    {
+     "id": "17.03",
+     "titulo": "Contratar serviços e habilitar em uma conta",
+     "para_que_serve": "Contratar adicionais, habilitar em contas elegíveis e gerenciar capacidade e renovação no piloto da loja.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_financial_store"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_financial_store",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Piloto exclusivo de SuperAdmin; administração comum da conta não concede acesso à loja."
     }
    ]
   },

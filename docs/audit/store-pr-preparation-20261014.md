@@ -97,3 +97,13 @@ Read `docs/store/aws-sandbox-readiness.md` and the Financial release review.
 Financial also reports four high-severity runtime dependency advisories inherited
 from its main. Those need separate reachability/repair review before production;
 the store PRs do not automatically upgrade unrelated dependencies.
+
+## Central help CI correction
+
+The first remote CI run rejected the new `autonomia_financial_store` route
+because it lacked a Central help article. Article 17.03 and its chapter map
+entry now document the current labels, account activation, paid-period
+cancellation and SuperAdmin-only pilot. No coverage waiver was added.
+Local `pnpm central:check` passes: 195 articles and 203 covered screens.
+Existing evidence warnings in older articles remain outside this change.
+Remote CI must be checked again at the documentation correction's new head.
