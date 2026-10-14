@@ -2,6 +2,9 @@
 # as chaves (ponto de partida e "Voltar ao texto padrão"), os campos com o rótulo leigo do catálogo, valores de
 # EXEMPLO para a prévia (nunca de um cliente) e a linha de parar como o cliente vê. Tudo no idioma da conta.
 # `manage_line` (#1517): a linha do link que o sistema põe quando o texto não tem o link e não há botão.
+# `notice_channel` (#1517): o tipo da caixa de avisos salva, para a tela dizer se o link vai num botão. 'whatsapp_cloud'
+# é o único que mostra o botão (o mesmo critério do `RichMessages.whatsapp_cloud?`); as outras vêm de
+# `notice_channel_kind` ('whatsapp' é o 360dialog, 'waha', 'api'); nil sem caixa de avisos utilizável.
 class Crm::BookingV2::Notices::CustomTextSetup
   CustomText = Crm::BookingV2::Notices::CustomText
   SAMPLE_CODE = 'AB3K9QXZ'.freeze
@@ -18,11 +21,18 @@ class Crm::BookingV2::Notices::CustomTextSetup
       fields: CustomText::ALLOWED_KEYS.map { |key| { key: key, label: TemplateFields::Catalog.label(key, locale: @locale) } },
       required: CustomText::REQUIRED_KEYS, max_length: CustomText::MAX_LENGTH, samples: samples,
       stop_line: I18n.t('crm.booking_v2.notices.stop_line', link: "#{sample_link}#{Crm::BookingV2::Notices::Text::STOP_PARAM}", locale: @locale),
-      manage_line: Crm::BookingV2::Notices::Text.manage_line(sample_link, locale: @locale)
+      manage_line: Crm::BookingV2::Notices::Text.manage_line(sample_link, locale: @locale), notice_channel: notice_channel
     }
   end
 
   private
+
+  def notice_channel
+    return unless @page.notices_usable?
+
+    inbox = @page.notice_inbox
+    RichMessages.whatsapp_cloud?(inbox) ? 'whatsapp_cloud' : Crm::AgentBookingProfile.notice_channel_kind(inbox)
+  end
 
   def samples
     {

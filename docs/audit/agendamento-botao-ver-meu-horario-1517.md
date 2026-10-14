@@ -27,8 +27,8 @@ Refs #1517, #1473 (envios ricos), #1354 (texto próprio do aviso).
   (provedor ou `SendGuard`) é pega pelo `NoticeDispatchJob#fail_undelivered!` (até 2 h): o aviso vira
   `failed: delivery_failed` e o responsável é avisado. O convite de teste não tem essa conferência: a falha aparece na
   própria conversa, para quem testou.
-- Prévia da tela: texto sem `{{horario.link_gestao}}` mostra a linha do link antes da de parar (`manage_line` do
-  `CustomTextSetup`) e a nota de que, no WhatsApp oficial, o link vai num botão.
+- Prévia da tela (também a das opções da IA): texto sem `{{horario.link_gestao}}` mostra a linha do link (`manage_line` do
+  `CustomTextSetup`) e, só com caixa de avisos `whatsapp_cloud` (`notice_channel`), a nota de que o link vai num botão.
 
 ## Conversa que conta
 

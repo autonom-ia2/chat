@@ -58,6 +58,7 @@ const SETUP = {
   stop_line:
     'Para parar estes avisos: https://app.test/b/AB3K9QXZ?stop_notices=1',
   manage_line: 'Para confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ',
+  notice_channel: 'whatsapp_cloud',
   max_length: 500,
 };
 const AI_TEXT =
@@ -73,13 +74,13 @@ const form = (extra = {}) => ({
   ...extra,
 });
 
-const mountStep = async (formValue = form()) => {
+const mountStep = async (formValue = form(), textSetup = SETUP) => {
   const wrapper = mount(StepNotices, {
     props: {
       form: formValue,
       inboxOptions: [WAHA],
       pageId: 7,
-      textSetup: SETUP,
+      textSetup,
     },
     global: {
       provide: {
@@ -154,6 +155,44 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(
       card(wrapper, 'booked').find('[data-text-input]').element.value
     ).toContain('A [Nome da sua empresa] te espera');
+  });
+
+  // #1517: a nota do botão só vale para o WhatsApp oficial e para texto sem o
+  // link; outras caixas (e sem caixa) só levam a linha do link.
+  it('a nota do botão some fora do WhatsApp oficial e com o link no texto', async () => {
+    const waha = await mountStep(form(), { ...SETUP, notice_channel: 'waha' });
+    expect(card(waha, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+    const none = await mountStep(form(), { ...SETUP, notice_channel: null });
+    expect(card(none, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+    const withLink = await mountStep(
+      form({ noticeTexts: { booked: AI_TEXT } })
+    );
+    expect(card(withLink, 'booked').find('[data-button-note]').exists()).toBe(
+      false
+    );
+  });
+
+  // #1517: a opção da IA sem o link mostra a linha do link que o sistema põe.
+  it('a prévia da opção da IA sem o link mostra a linha do link', async () => {
+    BookingPagesAPI.noticeTextSuggestions.mockResolvedValue({
+      data: {
+        payload: {
+          options: [{ text: 'Oi! Até {{horario.data_hora}}.', keys: [] }],
+        },
+      },
+    });
+    const wrapper = await mountStep();
+
+    await card(wrapper, 'booked').find('[data-write-ai]').trigger('click');
+    await flushPromises();
+
+    expect(card(wrapper, 'booked').find('[data-ai-option] p').text()).toBe(
+      'Oi! Até 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ'
+    );
   });
 
   it('o tom escolhido nos cartões vai para a IA', async () => {

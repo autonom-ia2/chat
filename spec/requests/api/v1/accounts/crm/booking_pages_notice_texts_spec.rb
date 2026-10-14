@@ -54,7 +54,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
       expect(body.dig('notice_text_setup', 'fields').pluck('label')).to include('Dia e hora do horário')
       expect(body['notice_text_setup']).to include(
         'stop_line' => start_with('Para parar estes avisos:'),
-        'manage_line' => start_with('Para confirmar, mudar ou cancelar: ').and(end_with('/b/AB3K9QXZ'))
+        'manage_line' => start_with('Para confirmar, mudar ou cancelar: ').and(end_with('/b/AB3K9QXZ')), 'notice_channel' => nil
       )
     end
 
@@ -72,6 +72,25 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notice texts', type: :reque
         ['O texto do aviso "1 dia antes" precisa do dia e da hora.']
       )
       expect(page.reload.notice_texts).to eq('booked' => 'Seu horário é {{horario.data_hora}}.')
+    end
+
+    # #1517: a tela só promete o botão quando a caixa de avisos é o WhatsApp oficial (whatsapp_cloud).
+    it 'devolve o tipo da caixa de avisos: whatsapp_cloud só para o oficial, o 360dialog e a WAHA com o tipo deles' do
+      inboxes = {
+        'whatsapp_cloud' => create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false,
+                                                      sync_templates: false).inbox,
+        'whatsapp' => create(:channel_whatsapp, account: account, provider: 'default', validate_provider_config: false,
+                                                sync_templates: false).inbox,
+        'waha' => create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox
+      }
+
+      channels = inboxes.transform_values do |inbox|
+        page.update!(notice_inbox: inbox)
+        get member, headers: admin.create_new_auth_token, as: :json
+        response.parsed_body.dig('payload', 'notice_text_setup', 'notice_channel')
+      end
+
+      expect(channels).to eq('whatsapp_cloud' => 'whatsapp_cloud', 'whatsapp' => 'whatsapp', 'waha' => 'waha')
     end
 
     it 'texto vazio volta ao padrão e preserva o resto do metadata' do
