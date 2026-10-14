@@ -81,3 +81,22 @@ vencimento com a flag, 2 sem a flag, 3 depois do vencimento com a flag), para se
 confirmar que depois do vencimento ela envia; (2) decisão do Followup IA/Rodrigo sobre a recusa por "prazo do cliente
 ainda não venceu" encerrar a cadência: reagendar para depois do prazo em vez de marcar o card como gasto. Sem (2),
 ligar reduz cobranças de quem prometeu pagar no vencimento.
+
+### Repetição da cobrança (10 chamadas, US$ 0,0046; total do eval US$ 0,0157)
+
+| Cobrança, "pago no vencimento" (20/10) | Enviou |
+|---|---|
+| Antes do vencimento (14/10), flag ligada, card completo | 0/3 (`nothing_to_send`) |
+| Antes do vencimento, flag ligada, card sem dono | 1/2 |
+| Antes do vencimento, flag desligada (controle) | 2/2 |
+| Depois do vencimento (21/10), flag ligada | 3/3 |
+
+Somando as duas rodadas, antes do vencimento: com a flag 1 de 7 envia; sem a flag, 4 de 4. A recusa se repete e é
+efeito do vencimento visível no modelo. Depois do vencimento a IA envia (retomada, genérico e, numa, o próprio modelo
+de cobrança com R$ 1.890,00 e 20/10/2026 reais, sem tocar nas posições preenchidas).
+
+**Veredito final:** o preenchimento está pronto (nada inventado, nada sobrescrito). Ligar na conta 16 depende só da
+decisão sobre a recusa antes do prazo: hoje ela encerra a cadência, e quem prometeu pagar no vencimento deixa de ser
+cobrado depois dele. Proposta para o Followup IA: quando a recusa vier com a data do card ainda no futuro, reagendar o
+toque para depois dela em vez de marcar o card como gasto. Observação de texto: depois do vencimento, "vence em
+20/10/2026" fica no presente; o modelo da conta é quem decide a frase.
