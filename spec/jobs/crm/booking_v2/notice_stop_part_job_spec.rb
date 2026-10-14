@@ -220,6 +220,28 @@ RSpec.describe Crm::BookingV2::NoticeStopPartJob do
     expect(notice.reload.error_code).to eq('stop_part_failed')
   end
 
+  # Os retries do Sidekiq (erro de banco) passam da WINDOW. O que chega depois dela, com o banco de volta, desiste com
+  # um alerta em vez de relançar de novo ou criar a 2 fora da conferência; o seguinte não faz mais nada.
+  it 'retry depois da WINDOW: stop_failed! com um alerta, sem relançar nem criar a 2' do
+    notice = sent_notice
+    calls = 0
+    allow(Crm::MeetingNotice).to receive(:includes).and_wrap_original do |original, *args|
+      calls += 1
+      raise ActiveRecord::ConnectionNotEstablished if calls == 1
+
+      original.call(*args)
+    end
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+    expect { described_class.perform_now(notice.id, 1) }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+
+    travel described_class::WINDOW + 1.minute
+    2.times { expect { described_class.perform_now(notice.id, 1) }.not_to raise_error }
+
+    expect(stop_messages).to be_empty
+    expect(notice.reload).to have_attributes(status: 'sent', error_code: 'stop_part_failed')
+    expect(stop_alerts.count).to eq(1)
+  end
+
   # Item 5: o alerta falhando não derruba nada e não desfaz a marca: fica no log e no tracker.
   it 'alerta que falha: a marca fica e o erro vai ao tracker' do
     notice = sent_notice

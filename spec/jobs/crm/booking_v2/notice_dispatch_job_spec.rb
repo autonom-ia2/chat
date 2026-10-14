@@ -134,6 +134,26 @@ RSpec.describe Crm::BookingV2::NoticeDispatchJob do
       expect(Crm::Activity.where(card_id: world.card.id, event_type: 'booking_notice_failed').count).to eq(1)
     end
 
+    # #1562: em páginas pelo par (mensagem, aviso), sem cortar casos. Com página de 1 e uma mensagem falha que não é a 2
+    # (mesmo remetente) antes delas, as duas 2 que falharam são achadas.
+    it 'a 2 que falhou é achada em páginas, sem perder casos, e mensagem falha sem a marca não conta' do
+      stub_const("#{described_class}::BATCH", 1)
+      notices = %w[booked rescheduled].map { |kind| sent_notice(kind, message_status: :sent) }
+      create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing, status: :failed,
+                       sender: meeting.created_by)
+      notices.each do |item|
+        create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing, status: :failed,
+                         sender: meeting.created_by,
+                         content_attributes: { crm_booking_notice: true, crm_booking_notice_part: 'stop', crm_booking_notice_id: item.id })
+      end
+      allow(Crm::BookingV2::Notices::Sender).to receive(:new)
+
+      described_class.perform_now
+
+      expect(notices.map { |item| item.reload.attributes.slice('status', 'error_code') })
+        .to all(eq('status' => 'sent', 'error_code' => 'stop_part_failed'))
+    end
+
     # #1562: se a mensagem 1 falhou, vale o delivery_failed de sempre (o aviso não saiu), com ou sem a 2.
     it 'mensagem 1 que falhou continua delivery_failed, mesmo com a mensagem 2 falhando também' do
       split = sent_notice('booked', message_status: :failed)

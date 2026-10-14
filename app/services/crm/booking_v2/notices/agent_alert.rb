@@ -12,7 +12,8 @@
 #   `source`, `event`, o cliente, o horário e, no aviso que não saiu, o tipo do aviso e o motivo.
 # - `notice_stop_failed` (#1562): o aviso saiu, mas a mensagem 2 com o botão "Parar avisos" não. Mesma atividade do
 #   aviso que não saiu (`booking_notice_failed`, motivo `stop_part_failed`) e título próprio. Avisa UMA vez por AVISO
-#   (reunião + tipo do aviso, `payload[:kind]`): cada aviso da reunião cuja mensagem 2 não saiu é um caso.
+#   ENVIADO: o `metadata` leva `notice_id` e `message_id` (a mensagem 1) e o dedupe é por eles. O mesmo aviso remarcado
+#   reaproveita a linha (`Scheduler::RESET`), mas sai com outra mensagem 1: falhar de novo gera outro alerta.
 #
 # Nunca altera a reunião (J5-A4).
 class Crm::BookingV2::Notices::AgentAlert
@@ -70,8 +71,12 @@ class Crm::BookingV2::Notices::AgentAlert
                          .where("crm_follow_ups.metadata->>'source' = ?", SOURCE)
                          .where("crm_follow_ups.metadata->>'meeting_id' = ?", meeting.id.to_s)
                          .where("crm_follow_ups.metadata->>'event' = ?", event)
-    scope = scope.where("crm_follow_ups.metadata->>'kind' = ?", payload.to_h.with_indifferent_access[:kind].to_s) if ONCE_PER_NOTICE.include?(event)
-    scope.exists?
+    ONCE_PER_NOTICE.include?(event) ? scope.exists?(sent_notice_condition) : scope.exists?
+  end
+
+  def sent_notice_condition
+    ids = payload.to_h.with_indifferent_access
+    ["crm_follow_ups.metadata->>'notice_id' = ? AND crm_follow_ups.metadata->>'message_id' = ?", ids[:notice_id].to_s, ids[:message_id].to_s]
   end
 
   def create_task!
@@ -84,7 +89,7 @@ class Crm::BookingV2::Notices::AgentAlert
   end
 
   def alert_metadata
-    details = payload.to_h.with_indifferent_access.slice(:kind, :reason).transform_values(&:to_s)
+    details = payload.to_h.with_indifferent_access.slice(:kind, :reason, :notice_id, :message_id).transform_values(&:to_s)
     { 'source' => SOURCE, 'meeting_id' => meeting.id, 'event' => event, 'contact_name' => client_name,
       'starts_at' => meeting.starts_at.iso8601 }.merge(details.to_h).compact_blank
   end

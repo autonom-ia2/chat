@@ -64,33 +64,38 @@ Em inglês: "Don't want these reminders anymore?" / "Stop reminders" (14 caracte
 Todas deixam o aviso `sent` (a 1 saiu), com `error_code: stop_part_failed`, sem reenviar nada, e avisam o responsável
 pelo `Notices::AgentAlert`, evento `notice_stop_failed`: a atividade do aviso que não saiu (`booking_notice_failed`,
 motivo `stop_part_failed`), título próprio ("O aviso … saiu, mas a mensagem com o botão 'Parar avisos' não …") e UMA
-vez por AVISO (dedupe por reunião + tipo do aviso; o `notice_failed` continua uma vez por reunião). Só aviso `sent`
-sem marca é marcado, e o alerta que falha vai ao log e ao tracker sem desfazer a marca.
+vez por AVISO ENVIADO: o `metadata` do alerta leva `notice_id` e `message_id` (a mensagem 1) e o dedupe é por eles.
+O aviso remarcado reaproveita a linha (`Scheduler::RESET`) mas sai com outra mensagem 1, então falhar de novo gera
+outro alerta. O `notice_failed` continua uma vez por reunião. Só aviso `sent` sem marca é marcado, e o alerta que
+falha vai ao log e ao tracker sem desfazer a marca.
 
 - **Erro no job** (criar a 2, ou enfileirar): sempre log e tracker. Erro de banco (`ConnectionNotEstablished`,
   `StatementInvalid`) relança para o retry do Sidekiq; a trava, a conferência e o `error_code` seguram a repetição.
   Outro erro: o aviso é relido por id e marcado.
-- **Job perdido** (crash entre o aviso e o enfileiramento, Redis fora): `Notices::StopPartSweep#flag_missing!`, no
-  cron (`NoticeDispatchJob`). Aviso "com botão" é o que tem `rich_message` na mensagem 1, o único caminho que o põe;
-  por isso não precisou de campo novo. Sem a 2 depois de `GRACE` (5 min), até `WINDOW + GRACE` → marca e alerta.
-  Cliente que parou ou reunião cancelada: nada.
-- **A 2 marcada `failed` depois** (provedor ou `SendGuard`): `Notices::StopPartSweep#flag_failed!` (janela de 2 h).
-  O SQL acha as mensagens `failed` da conversa da 1, criadas depois dela e pelo mesmo remetente; a marca é conferida
-  em Ruby (`messages.content_attributes` é json gravado como texto, `->>` devolve NULL), com guarda para mensagem
-  ausente. Busca em páginas ordenadas pelo par (mensagem, aviso), sem cortar casos.
+- **Retry tardio**: os retries do Sidekiq passam da `WINDOW` (30 min). O que chega depois dela, com o banco de volta,
+  cai no `too_late` antes de qualquer outra conferência e desiste com um alerta, sem relançar nem criar a 2.
+- **A 2 marcada `failed` depois** (provedor ou `SendGuard`): `NoticeDispatchJob#flag_undelivered_stop!` (janela de
+  2 h). O SQL acha as mensagens `failed` da conversa da 1, criadas depois dela e pelo mesmo remetente; a marca é
+  conferida em Ruby (`messages.content_attributes` é json gravado como texto, `->>` devolve NULL), com guarda para
+  mensagem ausente. Só conta mensagem com a marca, que só o job cria: não há corrida com ele. Busca em páginas
+  ordenadas pelo par (mensagem, aviso), sem cortar casos. Cliente que parou ou reunião cancelada: sem alerta.
 - **A 1 falhou**: `delivery_failed` de sempre (o aviso vira `failed`), com ou sem a 2.
+- **Job perdido no Redis sem nova tentativa** (processo morto entre o aviso e o enfileiramento, Redis fora): risco
+  aceito, sem guarda (regra do projeto: guarda só o que a produção provou). A saída de parar fica pela página de
+  gestão `/b/<código>` (`ManageMeeting` → `ManageStop`, que já existia; não foi alterada neste PR). Uma varredura no
+  cron para esse caso foi feita e retirada na 3ª revisão: corria com o job (o prazo suprimia a 2 legítima), alertaria
+  avisos anteriores ao deploy e custava uma consulta a cada minuto.
 
-Um erro na conferência não impede a rodada do cron de mandar os avisos vencidos (`sweep_stop_parts!`). `error_code`
-num aviso `sent` só aparece aqui; o `Scheduler::RESET` o limpa ao reprogramar, e nenhuma tela o lê.
+`error_code` num aviso `sent` só aparece aqui; o `Scheduler::RESET` o limpa ao reprogramar, e nenhuma tela o lê.
 
 ## O que não muda
 
 - Caminho de texto (WAHA, Híbrido, canal API, 360dialog, modelo da Meta, corpo acima do limite, texto próprio com o
   link): uma mensagem só, com a linha de parar, igual a antes.
 - RA-18: a saída de parar existe sempre, em botão (mensagem 2) ou em texto. Se a 2 não sair, a página de gestão
-  (`/b/<código>`, sem `?stop_notices=1`), que abre pelo botão "Ver meu horário" da 1, tem o botão "Parar avisos"
+  (`/b/<código>`, sem `?stop_notices=1`), que abre pelo botão "Ver meu horário" da 1, já tem o botão "Parar avisos"
   (`public_booking_v2/components/ManageMeeting.vue`, `BOOKING_V2.MANAGE.STOP`, que abre `ManageStop`) enquanto os
-  avisos não estão parados. É a saída quando a 2 não sai.
+  avisos não estão parados. É a saída quando a 2 não sai. Essa tela já existia e não foi alterada neste PR.
 - `TestInvite` ("Testar no meu WhatsApp"): o convite não tem linha de parar (`InviteText` + prefixo do teste, sem
   `stop_line`), então não ganha a mensagem 2. Conferido no spec de request (`conversation.messages.outgoing.sole`).
 
@@ -105,9 +110,8 @@ a saída de parar vai na frase do fim ou, no oficial com a conversa aberta, no b
 
 ## Validação local
 
-Specs (um arquivo por vez, banco isolado): `spec/services/crm/booking_v2/notices/*` (incluindo o novo
-`stop_part_sweep_spec.rb`), `spec/jobs/crm/booking_v2/*` (incluindo `notice_stop_part_job_spec.rb` e
-`notice_dispatch_job_spec.rb`), `booking_pages_notices_spec`, `booking_pages_notice_texts_spec`,
+Specs (um arquivo por vez, banco isolado): `spec/services/crm/booking_v2/notices/*`, `spec/jobs/crm/booking_v2/*`
+(incluindo `notice_stop_part_job_spec.rb` e `notice_dispatch_job_spec.rb`), `booking_pages_notices_spec`, `booking_pages_notice_texts_spec`,
 `booking_routes_permissions_spec`; vitest do `BookingNoticeTexts.spec.js`; rubocop, eslint (0 erros; 18 avisos de
 i18n que já existiam no arquivo), prettier e `scripts/check-fork-i18n.mjs`.
 

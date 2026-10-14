@@ -22,8 +22,10 @@
 # Falha (erro ao criar, mensagem 1 apagada, desistência): o aviso continua `sent` (a 1 saiu), ganha
 # `error_code: stop_part_failed` e o responsável é avisado UMA vez por aviso (`AgentAlert` `notice_stop_failed`). Nada
 # é reenviado. Erro de banco (DB_ERRORS) vai ao log e ao tracker e é relançado para o retry do Sidekiq: a trava, a
-# conferência e o `error_code` seguram a repetição. Job perdido e a 2 marcada `failed` depois: `Notices::StopPartSweep`,
-# no cron.
+# conferência e o `error_code` seguram a repetição. Os retries do Sidekiq passam da WINDOW: o que chega depois dela
+# (com o banco de volta) cai no `too_late`, que desiste com alerta, antes de qualquer outra conferência. A 2 marcada
+# `failed` depois: `NoticeDispatchJob#flag_undelivered_stop!`. Job perdido no Redis sem nova tentativa: risco aceito,
+# sem guarda (regra do projeto); a saída de parar fica na página de gestão (`ManageMeeting` → `ManageStop`).
 class Crm::BookingV2::NoticeStopPartJob < ApplicationJob
   queue_as :default
 
@@ -53,7 +55,8 @@ class Crm::BookingV2::NoticeStopPartJob < ApplicationJob
   end
 
   def self.alert!(notice)
-    Crm::BookingV2::Notices::AgentAlert.new(notice.meeting, 'notice_stop_failed', { kind: notice.kind, reason: STOP_PART_FAILED }).perform
+    payload = { kind: notice.kind, reason: STOP_PART_FAILED, notice_id: notice.id, message_id: notice.message_id }
+    Crm::BookingV2::Notices::AgentAlert.new(notice.meeting, 'notice_stop_failed', payload).perform
   rescue StandardError => e
     report(notice.id, e, account: notice.account, what: 'alert')
   end
@@ -115,15 +118,14 @@ class Crm::BookingV2::NoticeStopPartJob < ApplicationJob
     first = Message.find_by(id: notice.message_id)
     return self.class.stop_failed!(notice, why: 'notice_message_missing') if first.nil?
     return if first.failed? || !self.class.wanted?(notice.meeting)
+    # Passada a WINDOW não cria (a conferência de duplicata só cobre a WINDOW): também o retry tardio do Sidekiq.
+    return self.class.stop_failed!(notice, why: 'too_late') if Time.current > first.created_at + WINDOW
     return retry_or_give_up(notice, attempt) if first.source_id.blank?
 
     create_once!(notice, first)
   end
 
-  # Passada a WINDOW não cria (a conferência de duplicata só cobre a WINDOW). Dentro dela, com o aviso travado.
   def create_once!(notice, first)
-    return self.class.stop_failed!(notice, why: 'too_late') if Time.current > first.created_at + WINDOW
-
     notice.with_lock { create_stop!(notice, first) if still_wanted?(notice) && !self.class.stop_created?(notice.id, first) }
   end
 

@@ -34,15 +34,18 @@ RSpec.describe Crm::BookingV2::Notices::AgentAlert do
     )
   end
 
-  # #1562 (item 9 da revisão): a mensagem 2 que não saiu avisa uma vez POR AVISO, não por reunião. Pega quem voltasse a
-  # deduplicar só pela reunião (o segundo aviso com o problema ficaria sem alerta) ou não deduplicasse nada.
-  it 'notice_stop_failed avisa uma vez por aviso: outro tipo da mesma reunião alerta, o mesmo tipo de novo não' do
-    payload = ->(kind) { { kind: kind, reason: 'stop_part_failed' } }
-    described_class.new(meeting, 'notice_stop_failed', payload.call('booked')).perform
-    described_class.new(meeting, 'notice_stop_failed', payload.call('booked')).perform
-    described_class.new(meeting, 'notice_stop_failed', payload.call('day_before')).perform
+  # #1562: a mensagem 2 que não saiu avisa uma vez POR AVISO ENVIADO (notice_id + message_id no metadata). Pega quem
+  # deduplicasse pela reunião ou pelo tipo (o aviso remarcado reaproveita a linha e falharia de novo sem alerta) ou
+  # não deduplicasse nada.
+  it 'notice_stop_failed avisa uma vez por aviso enviado: o mesmo de novo não, o remarcado e outro aviso sim' do
+    payload = ->(notice_id, message_id) { { kind: 'booked', reason: 'stop_part_failed', notice_id: notice_id, message_id: message_id } }
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 100)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 100)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 200)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(11, 300)).perform
 
-    expect(alerts.map { |alert| alert.metadata['kind'] }).to contain_exactly('booked', 'day_before')
+    expect(alerts.map { |alert| alert.metadata.values_at('notice_id', 'message_id') })
+      .to contain_exactly(%w[10 100], %w[10 200], %w[11 300])
     expect(alerts.first.title).to start_with('O aviso no WhatsApp para Marcos Lima saiu, mas a mensagem com o botão "Parar avisos" não.')
   end
 
