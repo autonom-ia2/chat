@@ -684,10 +684,15 @@ describe('AgentePage', () => {
     it('keeps where and when for an answering agent on the old channels tab', async () => {
       rota.params = { agentId: '7', tab: 'channels' };
       const wrapper = await montar({ gaveta: 'onde' });
-      expect(no('[role="dialog"]')).not.toBeNull();
-      expect(
-        no('[role="dialog"] [data-confirmar]')?.textContent || ''
-      ).not.toContain('PAGINA.ONDE.VOLTAR');
+      // A gaveta de onde e quando no modo 'alterar': o título dela (o modo 'voltar' usa ONDE_QUANDO.TITULO)
+      // e o "Salvar", nunca o começar/voltar a atender.
+      const gaveta = no('[role="dialog"]').textContent;
+      expect(gaveta).toContain('PAGINA.ONDE.TITULO');
+      expect(gaveta).not.toContain('ONDE_QUANDO.TITULO');
+      const confirmar = no('[role="dialog"] [data-confirmar]').textContent;
+      expect(confirmar).toContain('PAGINA.ONDE.SALVAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.VOLTAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.COMECAR');
       wrapper.unmount();
     });
 

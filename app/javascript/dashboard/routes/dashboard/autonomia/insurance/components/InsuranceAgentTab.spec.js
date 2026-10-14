@@ -6,9 +6,14 @@ const api = vi.hoisted(() => ({
   getQuoteAgent: vi.fn(),
   createQuoteAgent: vi.fn(),
 }));
+// Permissões por chave: `insurance_manage` (criar) e `autonomia_manage` (abrir o agente e escolher o canal).
+const permissoes = vi.hoisted(() => ({
+  insurance_manage: true,
+  autonomia_manage: true,
+}));
 vi.mock('dashboard/composables/useCanManage', async () => {
-  const { ref } = await import('vue');
-  return { useCanManage: () => ref(true) };
+  const { computed } = await import('vue');
+  return { useCanManage: chave => computed(() => permissoes[chave]) };
 });
 
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: api }));
@@ -69,6 +74,8 @@ describe('InsuranceAgentTab', () => {
   beforeEach(() => {
     Object.values(api).forEach(fn => fn.mockReset());
     push.mockReset();
+    permissoes.insurance_manage = true;
+    permissoes.autonomia_manage = true;
     api.getQuoteAgent.mockResolvedValue({ data: { payload: null } });
   });
 
@@ -189,6 +196,46 @@ describe('InsuranceAgentTab', () => {
       name: 'autonomia_agent_panel',
       params: { agentId: 1, tab: 'channels' },
     });
+    expect(wrapper.find('[data-pedir-canal]').exists()).toBe(false);
+  });
+
+  // Escolher o canal e abrir o agente pedem a permissão de agentes (o gate da rota e da gaveta). Sem ela,
+  // nenhum dos dois botões, e o aviso diz a quem pedir.
+  it('sem permissao de agentes, avisa a quem pedir em vez de oferecer o canal', async () => {
+    permissoes.autonomia_manage = false;
+    api.getQuoteAgent.mockResolvedValue({
+      data: {
+        payload: {
+          ...criado,
+          status: 'paused',
+          enabled: false,
+          tem_onde_trabalhar: false,
+        },
+      },
+    });
+    const wrapper = await montar();
+
+    const rotulos = wrapper.findAll('button').map(b => b.text());
+    expect(rotulos).not.toContain('INSURANCE.AGENT.ACTIONS.CHOOSE_CHANNEL');
+    expect(rotulos).not.toContain('INSURANCE.AGENT.ACTIONS.OPEN_AGENT');
+    expect(wrapper.find('[data-pedir-canal]').text()).toContain(
+      'EXISTING.ASK_ADMIN'
+    );
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('sem permissao de agentes e com canal, nao oferece abrir o agente nem avisa', async () => {
+    permissoes.autonomia_manage = false;
+    api.getQuoteAgent.mockResolvedValue({
+      data: {
+        payload: { ...criado, status: 'active', tem_onde_trabalhar: true },
+      },
+    });
+    const wrapper = await montar();
+
+    const rotulos = wrapper.findAll('button').map(b => b.text());
+    expect(rotulos).not.toContain('INSURANCE.AGENT.ACTIONS.OPEN_AGENT');
+    expect(wrapper.find('[data-pedir-canal]').exists()).toBe(false);
   });
 
   // 409 não é falha: alguém clicou duas vezes, ou já havia um. Mostrar erro sobre algo que a própria

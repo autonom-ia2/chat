@@ -21,6 +21,9 @@ const { installationName } = useBranding();
 const brand = computed(() => ({ installationName: installationName.value }));
 const router = useRouter();
 const canManage = useCanManage('insurance_manage');
+// #1525 — escolher o canal e abrir o agente é da página do agente, que pede a permissão de agentes (o mesmo
+// gate da rota e da gaveta). Sem ela, a aba avisa a quem pedir em vez de levar a uma página sem a escolha.
+const canManageAgents = useCanManage('autonomia_manage');
 
 const BEHAVIORS = ['consultivo', 'objetivo'];
 const PILLARS = ['COLLECT', 'QUOTE', 'EXPLAIN', 'HANDOFF'];
@@ -172,6 +175,13 @@ const openAgent = () => {
         <p v-if="semCanal" data-sem-canal class="text-sm text-n-slate-12">
           {{ t('INSURANCE.AGENT.EXISTING.NO_CHANNEL', { name: agent.name }) }}
         </p>
+        <p
+          v-if="semCanal && !canManageAgents"
+          data-pedir-canal
+          class="text-sm text-n-slate-12"
+        >
+          {{ t('INSURANCE.AGENT.EXISTING.ASK_ADMIN', { name: agent.name }) }}
+        </p>
         <p class="text-xs text-n-slate-11">
           {{ t('INSURANCE.AGENT.EXISTING.NOTE') }}
         </p>
@@ -190,7 +200,7 @@ const openAgent = () => {
           @click="openForm"
         />
         <NextButton
-          v-else-if="agent"
+          v-else-if="agent && canManageAgents"
           solid
           blue
           :icon="semCanal ? 'i-lucide-radio' : 'i-lucide-external-link'"

@@ -180,6 +180,7 @@
         "TITLE": "O seu Agente de Cotação já existe",
         "BRANCHES": "Cota: {ramos}",
         "NO_CHANNEL": "{name} ainda não atende em nenhum canal, então não cota com ninguém. Escolha onde atender para começar.",
+        "ASK_ADMIN": "Peça a quem administra a conta para escolher onde {name} atende.",
         "NOTE": "Um por conta. Para mudar o nome ou o comportamento, edite o agente."
       },
       "ERRORS": {
