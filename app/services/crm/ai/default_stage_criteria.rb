@@ -22,13 +22,30 @@ module Crm
         'não veio' => 'O cliente tinha horário marcado e não apareceu, nem avisou antes.'
       }.freeze
 
-      def self.criteria_for(stage_name)
-        key = stage_name.to_s.strip.downcase
-        TEMPLATES[key] || TEMPLATES[key.gsub(/\s+/, ' ')]
+      # #1498: frases só de funil de Atender — as etapas dos modelos Pós-venda, Cobrança e Agendamento, e nomes que em
+      # venda querem dizer outra coisa ("Em atendimento" não fala de proposta). Funil de Vender não as recebe.
+      ATENDER_TEMPLATES = {
+        'novo' => 'O cliente acabou de pedir ajuda ou mandou a primeira mensagem. Ninguém começou a resolver ainda.',
+        'em atendimento' => 'Alguém da equipe já está cuidando do pedido: entendendo o problema, pedindo dados ou resolvendo. ' \
+                            'Ainda não está resolvido.',
+        'compra feita' => 'O cliente acabou de comprar. Ainda não falamos com ele depois da compra.',
+        'acompanhando' => 'Estamos acompanhando a entrega, a instalação ou o começo do uso, e tirando as dúvidas do cliente.',
+        'tudo certo' => 'O cliente recebeu, está usando e disse que está tudo certo.',
+        'a vencer' => 'O cliente tem um pagamento que ainda não venceu.',
+        'atrasado' => 'O vencimento passou e o cliente ainda não pagou nem disse quando vai pagar.',
+        'prometeu pagar' => 'O cliente disse o dia em que vai pagar. Estamos esperando esse dia.',
+        'pago' => 'O cliente pagou ou mandou o comprovante.',
+        'pediu horário' => 'O cliente quer marcar um horário e ainda não escolheu o dia.',
+        'precisa remarcar' => 'O cliente não pôde vir ou pediu outro dia. Falta escolher o novo horário.'
+      }.freeze
+
+      def self.criteria_for(stage_name, atender: false)
+        key = stage_name.to_s.squish.downcase
+        (atender && ATENDER_TEMPLATES[key]) || TEMPLATES[key]
       end
 
-      def self.metadata_for(stage_name)
-        criteria = criteria_for(stage_name)
+      def self.metadata_for(stage_name, atender: false)
+        criteria = criteria_for(stage_name, atender: atender)
         return {} if criteria.blank?
 
         { 'ai_criteria' => criteria }

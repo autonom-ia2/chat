@@ -25,4 +25,19 @@ RSpec.describe Crm::Ai::DefaultStageCriteria do
 
     expect(names.map { |name| described_class.criteria_for(name) }).to all(be_present)
   end
+
+  # #1498
+  it 'knows the stages of the After-sales, Collections and Appointment templates only in a Serve pipeline' do
+    names = ['Compra feita', 'Acompanhando', 'Tudo certo', 'A vencer', 'Atrasado', 'Prometeu pagar', 'Pago',
+             'Pediu horário', 'Precisa remarcar']
+
+    expect(names.map { |name| described_class.criteria_for(name, atender: true) }).to all(be_present)
+    expect(names.map { |name| described_class.criteria_for(name) }).to all(be_nil)
+  end
+
+  it 'reads "Em atendimento" as service in a Serve pipeline and keeps the sale meaning otherwise' do
+    expect(described_class.criteria_for('Em atendimento', atender: true)).to include('cuidando do pedido')
+    expect(described_class.criteria_for('Em atendimento')).to include('proposta')
+    expect(described_class.metadata_for('Novo', atender: true)['ai_criteria']).to include('pedir ajuda')
+  end
 end
