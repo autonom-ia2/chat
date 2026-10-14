@@ -10,15 +10,20 @@ const coordinateOf = (value, limit) =>
   Number.isFinite(value) && Math.abs(value) <= limit ? value : null;
 
 // Notação decimal comum, sempre com ao menos uma casa e sem notação científica (90 → "90.0",
-// 1e-7 → "0.0000001"), igual ao `decimal` do location.rb, para o link sair o mesmo nos dois lados.
+// 1e-7 → "0.0000001", -0 → "0.0"), igual ao `decimal` do location.rb, para o link sair o mesmo nos dois lados.
+// Sem `toFixed` no número pequeno: ele lança RangeError abaixo de 1e-100 (5e-324). Na faixa das coordenadas o
+// JavaScript só usa notação científica com expoente negativo e um dígito antes do ponto ("1.25e-7"), então
+// basta escrever os dígitos depois de (expoente - 1) zeros.
 const decimalOf = value => {
+  // Inteiro na faixa não tem notação científica; (-0).toFixed(1) já sai "0.0".
   if (Number.isInteger(value)) return value.toFixed(1);
 
   const [mantissa, exponent] = String(value).split('e');
   if (!exponent) return mantissa;
 
-  const mantissaDecimals = (mantissa.split('.')[1] ?? '').length;
-  return value.toFixed(mantissaDecimals - Number(exponent));
+  const sign = mantissa.startsWith('-') ? '-' : '';
+  const digits = mantissa.replace('-', '').replace('.', '');
+  return `${sign}0.${'0'.repeat(-Number(exponent) - 1)}${digits}`;
 };
 
 // O link do ponto, ou '' quando alguma coordenada não é válida.

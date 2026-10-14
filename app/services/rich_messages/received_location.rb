@@ -5,12 +5,16 @@
 # mas ele junta nome e endereço num título só (e perde o endereço quando não há nome); o robô (webhook, que leva
 # `content_attributes`) e o agente leem os campos daqui. A resposta ao pedido leva também `in_reply_to`, como
 # toda resposta citada. Vale para o WhatsApp oficial e o 360dialog, que passam pelo mesmo serviço.
+# Coordenadas: a Meta documenta número (Float). Grava só número finito na faixa (latitude -90 a 90, longitude
+# -180 a 180); texto numérico vira número (`Float(texto, exception: false)`). Sem as duas coordenadas válidas,
+# não grava `shared_location`: a bolha fica com o anexo de antes.
 # Só acrescenta ao final de `attach_location`; o resto do recebimento não muda. Fica de fora:
 # - o eco da coexistência (`outgoing_echo`): a localização foi mandada pela empresa pelo app, não pelo cliente;
 # - `location` que não é objeto: não grava nada e não interrompe o recebimento.
 module RichMessages::ReceivedLocation
   KEY = 'shared_location'.freeze
-  FIELDS = %w[latitude longitude name address].freeze
+  TEXT_FIELDS = %w[name address].freeze
+  COORDINATE_LIMITS = { 'latitude' => 90, 'longitude' => 180 }.freeze
 
   private
 
@@ -19,6 +23,15 @@ module RichMessages::ReceivedLocation
     location = messages_data.first['location']
     return if outgoing_echo || !location.is_a?(Hash)
 
-    @message.content_attributes = @message.content_attributes.merge(KEY => location.to_hash.slice(*FIELDS).compact)
+    coordinates = COORDINATE_LIMITS.to_h { |field, limit| [field, shared_coordinate(location[field], limit)] }
+    return if coordinates.value?(nil)
+
+    shared = coordinates.merge(location.to_hash.slice(*TEXT_FIELDS).compact)
+    @message.content_attributes = @message.content_attributes.merge(KEY => shared)
+  end
+
+  def shared_coordinate(value, limit)
+    number = value.is_a?(String) ? Float(value, exception: false) : value
+    number if [Integer, Float].any? { |klass| number.is_a?(klass) } && number.finite? && number.abs <= limit
   end
 end

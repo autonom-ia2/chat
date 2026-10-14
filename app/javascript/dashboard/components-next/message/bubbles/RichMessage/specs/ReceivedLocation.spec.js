@@ -67,7 +67,7 @@ describe('bolha da localização recebida', () => {
     );
   });
 
-  it('abre o ponto no mapa em outra aba, com alvo de toque de 44 px', () => {
+  it('abre o ponto no mapa em outra aba e usa a classe de 44 px (min-h-11)', () => {
     const link = montarRecebida({
       sharedLocation: { latitude: -23.5505, longitude: -46.6333 },
     }).get('a');

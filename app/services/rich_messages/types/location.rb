@@ -71,7 +71,10 @@ class RichMessages::Types::Location
 
   # Notação decimal comum, sem perder casas, sempre com ao menos uma casa e sem notação científica: 90 → "90.0",
   # 1.0e-07 → "0.0000001". As bolhas (RichMessage/mapLink.js, `decimalOf`) escrevem igual, para o link sair o mesmo.
+  # -0.0 sai "0.0", como no JavaScript. O BigDecimal não arredonda nem estoura com número minúsculo (5e-324).
   def decimal(value)
+    return '0.0' if value.zero?
+
     BigDecimal(value.to_s).to_s('F')
   end
 end
