@@ -20,9 +20,10 @@ module Autonomia::Segmentos::Catalogo
   # próprio (raro), filtra pelo último nome e calcula sem guardar.
   def self.procurar(locale, key, scope, separator, camadas)
     if scope.blank? && separator.nil?
-      return unless completas.include?(key.is_a?(Symbol) ? key.name : key)
-
-      return procurar_guardado(locale, key, camadas)
+      texto = key.is_a?(Symbol) ? key.name : key
+      return procurar_guardado(locale, key, camadas) if completas.include?(texto)
+      # Chave fora do pacote volta aqui; só a escrita irregular (".crm.x", "crm..x", "crm.x.") vai ao caminho lento.
+      return unless separador_irregular?(texto.to_s)
     end
     return unless folhas.include?(ultimo_nome(key, separator))
 
@@ -94,14 +95,28 @@ module Autonomia::Segmentos::Catalogo
   end
   private_class_method :montar_indice
 
-  # Só fica a folha que no catálogo base também é texto (o resto o CI já barra; aqui é a garantia em tempo de execução).
+  # Só fica a folha que no catálogo base também é texto e não é forma de plural (one/other: o I18n busca o nó plural
+  # inteiro, que viria do base, e o texto do pacote não teria efeito). O CI barra os dois casos; aqui é a garantia em
+  # tempo de execução, sem quebrar com yml que desce por baixo de um texto do base.
   def self.planas_contra_o_base(dados)
     base = I18n.backend.translations(do_init: true)
     dados.transform_values do |arvore|
-      achatar(arvore).select { |caminho, _| base.dig(*caminho).is_a?(String) }.freeze
+      achatar(arvore).select { |caminho, _| folha_de_texto_no_base?(base, caminho) }.freeze
     end.freeze
   end
   private_class_method :planas_contra_o_base
+
+  def self.folha_de_texto_no_base?(base, caminho)
+    pai = caminho[0...-1].reduce(base) { |no, chave| no.is_a?(Hash) ? no[chave] : (break nil) }
+    pai.is_a?(Hash) && pai[caminho.last].is_a?(String) && !pai.key?(:other)
+  end
+  private_class_method :folha_de_texto_no_base?
+
+  def self.separador_irregular?(texto)
+    separador = I18n.default_separator
+    texto.start_with?(separador) || texto.end_with?(separador) || texto.include?(separador * 2)
+  end
+  private_class_method :separador_irregular?
 
   def self.carregar_ou_vazio
     carregar
@@ -146,8 +161,9 @@ module Autonomia::Segmentos::Catalogo
   # pedaço final.
   def self.ultimo_nome(key, separator)
     texto = key.is_a?(Symbol) ? key.name : key.to_s
-    corte = texto.rindex(separator || I18n.default_separator)
-    corte ? texto[(corte + 1)..] : texto
+    separador = separator || I18n.default_separator
+    corte = texto.rindex(separador)
+    corte ? texto[(corte + separador.length)..] : texto
   end
   private_class_method :ultimo_nome
 end

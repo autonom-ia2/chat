@@ -13,6 +13,7 @@ pt_BR:
     profile_label: Tipo de empresa
     channel_label: Como vende
     preview_label: "Para a equipe desta conta, um card fechado aparece como"
+    preview_label_off: "Quando as palavras por segmento forem ligadas, um card fechado vai aparecer como"
     separator: " · "
     niches:
       seguros:

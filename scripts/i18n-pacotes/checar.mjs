@@ -169,6 +169,12 @@ function erroDaMensagem({ onde, chave, valor, catalogo, idioma, params }) {
   if (typeof original !== 'string') {
     return `${onde}: não é folha de texto no catálogo base de ${idioma}`;
   }
+  // Forma de plural (one/other) do servidor: o I18n busca o nó inteiro, que vem do base, e o texto do pacote não vale.
+  const corte = chave.lastIndexOf('.');
+  const pai = corte > 0 ? valorEm(catalogo, chave.slice(0, corte)) : null;
+  if (pai && typeof pai === 'object' && 'other' in pai) {
+    return `${onde}: é forma de plural no catálogo base de ${idioma}; o pacote não troca plural`;
+  }
   try {
     const doPacote = params(valor, onde).join(',');
     const doBase = params(original, `${idioma}:${chave}`).join(',');

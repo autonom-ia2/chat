@@ -13,6 +13,7 @@ en:
     profile_label: Type of company
     channel_label: How it sells
     preview_label: "For this account's team, a closed card shows as"
+    preview_label_off: "Once segment wording is turned on, a closed card will show as"
     separator: " · "
     niches:
       seguros:

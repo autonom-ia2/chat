@@ -246,6 +246,23 @@ describe('pacote do servidor', () => {
     ]);
   });
 
+  // Rodada 2 (#1550): a forma de plural passava, mas o I18n busca o nó plural inteiro no base e ignora o pacote.
+  it('(a) reprova forma de plural (one/other) do base', () => {
+    const raiz = copiaDoValido();
+    ['pt_BR', 'en'].forEach(idioma => {
+      const plural = { subtitle: { other: '%{count} apólices' } };
+      escrever(
+        raiz,
+        `servidor/seguros/${idioma}.yml`,
+        YAML.stringify({ [idioma]: { crm: { export: plural } } })
+      );
+    });
+
+    const erros = servidor(raiz);
+    expect(erros).toHaveLength(2);
+    expect(erros.every(e => e.includes('é forma de plural'))).toBe(true);
+  });
+
   it('(d) reprova raiz do yml diferente do nome do arquivo', () => {
     const raiz = copiaDoValido();
     escrever(

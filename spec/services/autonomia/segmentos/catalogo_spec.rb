@@ -157,6 +157,21 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
       expect(described_class.procurar(:en, 'crm.export.statuses.won', [], nil, %w[a a/b])).to be_nil
     end
 
+    it 'descarta folha de plural e yml que desce por baixo de um texto do base, sem quebrar' do
+      export = { subtitle: { one: 'um', other: 'vários' }, statuses: { won: { extra: 'por baixo de texto' } } }
+      stub_catalogo('a' => { pt_BR: { crm: { export: export } } })
+
+      expect(described_class.procurar(:pt_BR, 'crm.export.subtitle.other', [], nil, %w[a])).to be_nil
+      expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won.extra', [], nil, %w[a])).to be_nil
+      expect(described_class.planas.fetch('a')).to eq({})
+    end
+
+    it 'aceita separador de vários caracteres e chave com separador sobrando' do
+      expect(described_class.procurar(:pt_BR, 'crm::export::statuses::won', [], '::', %w[a a/b])).to eq('da camada a/b')
+      expect(described_class.procurar(:pt_BR, '.crm.export.statuses.won', [], nil, %w[a a/b])).to eq('da camada a/b')
+      expect(described_class.procurar(:pt_BR, 'crm..export.statuses.won', [], nil, %w[a a/b])).to eq('da camada a/b')
+    end
+
     it 'guarda a resposta e responde igual na segunda vez, inclusive a ausência' do
       2.times do
         expect(described_class.procurar(:pt_BR, 'crm.export.statuses.won', [], nil, %w[a a/b])).to eq('da camada a/b')

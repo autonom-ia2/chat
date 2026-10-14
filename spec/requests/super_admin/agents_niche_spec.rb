@@ -70,7 +70,31 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     )
     expect(document.css('[data-agents-niche-profile] [data-agents-niche-preview]').size).to eq(4)
     expect(document.at_css('[data-agents-niche-preview="saude_beneficios"]')['class'])
-      .to include('group-has-[#agents-niche-perfil-saude_beneficios:checked]/perfil:flex')
+      .to include('group-has-[#agents-niche-perfil-saude-beneficios:checked]/perfil:flex')
+  end
+
+  # Rodada 2 (#1550): o Tailwind troca "_" por espaço dentro de [...]; com "_" no id, a prévia de saúde nunca aparecia.
+  it 'aponta cada prévia para um rádio que existe, sem "_" no id' do
+    get "#{path}/edit"
+
+    document = Nokogiri::HTML(response.body)
+    alvos = document.css('[data-agents-niche-preview]').map do |previa|
+      classe = previa['class'].split.find { |nome| nome.start_with?('group-has-[#') }
+      classe.delete_prefix('group-has-[#').split(':checked').first
+    end
+    expect(alvos.size).to eq(5)
+    expect(alvos).to all(satisfy { |id| id.exclude?('_') && document.at_css("##{id}").present? })
+  end
+
+  it 'diz na prévia que é o efeito de quando ligar, enquanto as palavras por segmento estão desligadas' do
+    get "#{path}/edit"
+    desligado = Nokogiri::HTML(response.body).at_css('[data-agents-niche-preview="geral"] span').text.squish
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') { get "#{path}/edit" }
+    ligado = Nokogiri::HTML(response.body).at_css('[data-agents-niche-preview="geral"] span').text.squish
+
+    expect(desligado).to eq('Once segment wording is turned on, a closed card will show as')
+    expect(ligado).to eq("For this account's team, a closed card shows as")
   end
 
   it 'avisa que a escolha só fica guardada enquanto as palavras por segmento estão desligadas' do

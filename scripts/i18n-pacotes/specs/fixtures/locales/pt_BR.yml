@@ -5,3 +5,6 @@ pt_BR:
         won: 'Ganho'
         lost: 'Perdido'
       count: '%{count} cards'
+      subtitle:
+        one: '1 card'
+        other: '%{count} cards'
