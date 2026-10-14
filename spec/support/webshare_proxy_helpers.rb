@@ -11,6 +11,29 @@ module WebshareProxyHelpers
       'password' => password, 'valid' => true, 'country_code' => 'BR', 'city_name' => city }
   end
 
+  # Pool da Webshare com lista falsa (sem HTTP).
+  def fake_pool(name, proxies)
+    WhatsappProxy::Pool.new(name, client: instance_double(Webshare::Client, configured?: true, proxies: proxies))
+  end
+
+  # Sessão WAHA comum (canal API provider=waha) de uma conta.
+  def waha_session!(name, account)
+    create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => name })
+  end
+
+  # Sessão Híbrida (conexão auxiliar de uma caixa Cloud) de uma conta.
+  def hybrid_session!(name, account)
+    channel = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                        validate_provider_config: false)
+    WhatsappHybrid::Connection.create!(account: account, inbox: channel.inbox, session_name: name, status: 'connected')
+  end
+
+  def assign_proxy!(session, proxy, account:, pool: 'datacenter', digest: nil)
+    WhatsappProxy::Assignment.create!(session_name: session, account_id: account.id, pool: pool, webshare_proxy_id: proxy.id,
+                                      proxy_address: proxy.address, proxy_port: proxy.port, assigned_at: 1.day.ago,
+                                      credential_digest: digest)
+  end
+
   def capture_log
     io = StringIO.new
     original = Rails.logger

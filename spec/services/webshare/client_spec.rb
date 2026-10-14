@@ -44,52 +44,57 @@ RSpec.describe Webshare::Client do
     expect { client.proxies }.to raise_error(Webshare::Client::Error, 'webshare_list_failed Net::OpenTimeout')
   end
 
-  describe 'plan of the pool' do
-    let(:discovering) { described_class.new(api_key: 'chave-webshare-secreta', plan_id: '') }
-
-    def stub_plans(plans)
-      stub_request(:get, Webshare::Client::PLANS_URL)
-        .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: { results: plans }.to_json)
+  describe 'plan of each pool' do
+    let(:plans) do
+      [{ 'id' => 1, 'proxy_type' => 'shared', 'proxy_subtype' => 'default', 'status' => 'active' },
+       { 'id' => 2, 'proxy_type' => 'residential', 'proxy_subtype' => 'residential', 'status' => 'active' },
+       { 'id' => 3, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'inactive' },
+       { 'id' => 4, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'active' }]
     end
 
-    it 'prefers the active Static Residential (isp) plan and never the rotating residential one' do
-      stub_plans([{ 'id' => 1, 'proxy_type' => 'shared', 'proxy_subtype' => 'default', 'status' => 'active' },
-                  { 'id' => 2, 'proxy_type' => 'residential', 'proxy_subtype' => 'residential', 'status' => 'active' },
-                  { 'id' => 3, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'inactive' },
-                  { 'id' => 4, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp', 'status' => 'active' }])
+    def stub_plans(list)
+      stub_request(:get, Webshare::Client::PLANS_URL)
+        .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: { results: list }.to_json)
+    end
 
-      log = capture_log { expect(discovering.plan_id).to eq('4') }
+    def discovering(pool)
+      described_class.new(pool: pool, api_key: 'chave-webshare-secreta', plan_id: '')
+    end
 
-      expect(log).to include('plano da Webshare id=4 subtipo=isp')
+    it 'uses the active Static Residential (isp) plan for the isp pool' do
+      stub_plans(plans)
+
+      log = capture_log { expect(discovering(:isp).plan_id).to eq('4') }
+
+      expect(log).to include('pool=isp id=4 subtipo=isp')
       expect(log).not_to include('chave-webshare-secreta')
     end
 
-    it 'falls back to the default plan when there is no isp plan' do
-      stub_plans([{ 'id' => 2, 'proxy_type' => 'residential', 'proxy_subtype' => 'residential' },
-                  { 'id' => 1, 'proxy_type' => 'shared', 'proxy_subtype' => 'default' }])
+    it 'uses the Proxy Server (default) plan for the datacenter pool' do
+      stub_plans(plans)
 
-      expect(discovering.plan_id).to eq('1')
+      expect(discovering(:datacenter).plan_id).to eq('1')
     end
 
-    it 'refuses to use the residential plan alone' do
-      stub_plans([{ 'id' => 2, 'proxy_type' => 'residential', 'proxy_subtype' => 'residential' }])
+    it 'never falls back to another plan, least of all the rotating residential one' do
+      stub_plans(plans.reject { |plan| plan['proxy_subtype'] == 'isp' && plan['status'] == 'active' })
 
-      expect { discovering.proxies }.to raise_error(Webshare::Client::Error, 'webshare_plan_not_found')
+      expect { discovering(:isp).proxies }.to raise_error(Webshare::Client::Error, 'webshare_plan_not_found pool=isp')
     end
 
-    it 'uses WEBSHARE_PLAN_ID without asking the API' do
-      stub_page(first_page, [webshare_api_item(1, '10.0.0.1')])
-
-      client.proxies
-
+    it 'takes the plan of each pool from its own ENV without asking the API' do
+      with_modified_env(WEBSHARE_ISP_PLAN_ID: '77', WEBSHARE_DATACENTER_PLAN_ID: '88') do
+        expect(described_class.new(pool: :isp, api_key: 'x').plan_id).to eq('77')
+        expect(described_class.new(pool: :datacenter, api_key: 'x').plan_id).to eq('88')
+      end
       expect(a_request(:get, Webshare::Client::PLANS_URL)).not_to have_been_made
     end
 
     it 'lists the proxies of the discovered plan' do
-      stub_plans([{ 'id' => 4, 'proxy_type' => 'shared', 'proxy_subtype' => 'isp' }])
+      stub_plans(plans)
       stub_page("#{Webshare::Client::LIST_URL}&plan_id=4", [webshare_api_item(1, '10.0.0.1')])
 
-      expect(discovering.proxies.map(&:server)).to eq(['10.0.0.1:6000'])
+      expect(discovering(:isp).proxies.map(&:server)).to eq(['10.0.0.1:6000'])
     end
   end
 

@@ -26,7 +26,8 @@ describe WhatsappHybrid::SessionManager do
   end
 
   def assign!(address = '10.0.0.7')
-    WhatsappProxy::Assignment.create!(session_name: session, webshare_proxy_id: '7', proxy_address: address,
+    WhatsappProxy::Assignment.create!(session_name: session, account_id: connection.account_id, pool: 'isp',
+                                      webshare_proxy_id: '7', proxy_address: address,
                                       proxy_port: 6000, assigned_at: 1.day.ago)
   end
 
@@ -114,7 +115,7 @@ describe WhatsappHybrid::SessionManager do
 
   it 'behaves as before the proxy while WHATSAPP_PROXY_ENABLED is off, even with the Webshare key' do
     allow(client).to receive(:get_session).and_return(remote)
-    real = WhatsappProxy::Assigner.new(client: instance_double(Webshare::Client, configured?: true), engine: client)
+    real = WhatsappProxy::Assigner.new(engine: client, pools: { isp: fake_pool('isp', [proxy]) })
 
     with_modified_env(WHATSAPP_PROXY_ENABLED: nil) do
       described_class.new(connection, client: client, proxy_assigner: real).refresh!

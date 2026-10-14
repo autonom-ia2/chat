@@ -4,6 +4,7 @@ RSpec.describe WhatsappProxy::ApplyJob do
   let(:webshare) { instance_double(Webshare::Client, configured?: true) }
   let(:client) { instance_double(Waha::Client, update_session: {}, list_sessions: []) }
   let(:proxy) { webshare_proxy(id: 2, address: '10.0.0.2') }
+  let(:account) { create(:account) }
 
   around { |example| with_modified_env(WHATSAPP_PROXY_ENABLED: 'true') { example.run } }
 
@@ -11,8 +12,8 @@ RSpec.describe WhatsappProxy::ApplyJob do
     allow(Webshare::Client).to receive(:new).and_return(webshare)
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(webshare).to receive(:proxies).and_return([proxy])
-    WhatsappProxy::Assignment.create!(session_name: '5511900000001', webshare_proxy_id: '2', proxy_address: '10.0.0.2',
-                                      proxy_port: 6000, assigned_at: 1.day.ago)
+    waha_session!('5511900000001', account)
+    assign_proxy!('5511900000001', proxy, account: account)
   end
 
   it 'swaps the proxy of a WAHA session keeping its config and apps, then records the credential' do
