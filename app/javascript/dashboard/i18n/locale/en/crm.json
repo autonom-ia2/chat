@@ -4646,11 +4646,12 @@
       "COBRANCA_FRASE": "{titulo}: {valor} due {vencimento}.",
       "COBRANCA_SEM_DATA": "{titulo}: {valor} due, no due date.",
       "PROMESSA": "Promised to pay {dia}.",
-      "PRIORIDADE_TEMPO": "Priority: {prioridade}, open for {tempo}.",
       "MAIS_ASSUNTO": "More about the subject",
       "MAIS_DETALHES_DICA_ASSUNTO": "Where it came from, what happened, more about the subject and archive",
       "COBRANCA_VENCEU": "{titulo}: {valor} due, was due {vencimento}.",
-      "EM_DIA": "on {dia}"
+      "EM_DIA": "on {dia}",
+      "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}."
     },
     "ETAPA": {
       "TELA": "Stage",

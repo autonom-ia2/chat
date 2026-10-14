@@ -344,18 +344,26 @@ const temConversa = computed(() =>
             </I18nT>
           </template>
         </p>
-        <p v-else-if="atender" class="mb-0" data-resumo-assunto>
-          <strong class="font-semibold">{{ card.title }}.</strong>
-          {{ ' ' }}
-          <I18nT :keypath="`${R}.PRIORIDADE_TEMPO`" tag="span" scope="global">
-            <template #prioridade>
-              <strong class="font-semibold">{{ prioridade }}</strong>
-            </template>
-            <template #tempo>
-              <strong class="font-semibold">{{ tempoAberto }}</strong>
-            </template>
-          </I18nT>
-        </p>
+        <I18nT
+          v-else-if="atender"
+          :keypath="
+            tempoAberto ? `${R}.ASSUNTO_FRASE` : `${R}.ASSUNTO_SEM_TEMPO`
+          "
+          tag="p"
+          scope="global"
+          class="mb-0"
+          data-resumo-assunto
+        >
+          <template #titulo>
+            <strong class="font-semibold">{{ card.title }}</strong>
+          </template>
+          <template #prioridade>
+            <strong class="font-semibold">{{ prioridade }}</strong>
+          </template>
+          <template #tempo>
+            <strong class="font-semibold">{{ tempoAberto }}</strong>
+          </template>
+        </I18nT>
         <I18nT
           v-else
           :keypath="

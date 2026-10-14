@@ -4647,11 +4647,12 @@
       "COBRANCA_FRASE": "{titulo}: {valor} a receber, vence {vencimento}.",
       "COBRANCA_SEM_DATA": "{titulo}: {valor} a receber, sem vencimento.",
       "PROMESSA": "Prometeu pagar {dia}.",
-      "PRIORIDADE_TEMPO": "Prioridade {prioridade}, aberto há {tempo}.",
       "MAIS_ASSUNTO": "Mais do assunto",
       "MAIS_DETALHES_DICA_ASSUNTO": "De onde veio, o que já aconteceu, mais do assunto e arquivar",
       "COBRANCA_VENCEU": "{titulo}: {valor} a receber, venceu {vencimento}.",
-      "EM_DIA": "em {dia}"
+      "EM_DIA": "em {dia}",
+      "ASSUNTO_FRASE": "{titulo}. Prioridade {prioridade}, aberto há {tempo}.",
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}."
     },
     "ETAPA": {
       "TELA": "Etapa",
