@@ -29,6 +29,16 @@ RSpec.describe Channel::Api do
       expect(client).to have_received(:delete_app).with('br_numbers').once
       expect(client).to have_received(:delete_session).with('5511999999999').once
     end
+
+    it 'takes the number off its Webshare IP (#1516)' do
+      WhatsappProxy::Assignment.create!(session_name: '5511999999999', account_id: channel_api.account_id, pool: 'datacenter',
+                                        webshare_proxy_id: '1', proxy_address: '10.0.0.1', proxy_port: 6000,
+                                        assigned_at: Time.current)
+
+      channel_api.destroy!
+
+      expect(WhatsappProxy::Assignment.count).to eq(0)
+    end
   end
 
   describe 'length validations' do
