@@ -47,7 +47,7 @@ module WhatsappProxy::Alert
   def details(data)
     owner = data[:session] && WhatsappProxy::SessionOwner.find(data[:session])
     { caixa: owner&.inbox_id, conta: owner&.account_id, ip: mask(data[:ip]), plano: data[:pool], n: data[:count],
-      total: data[:total], data: data[:date] }.transform_values { |value| value.nil? ? '—' : value }
+      total: data[:total], data: data[:date], horas: data[:hours] }.transform_values { |value| value.nil? ? '—' : value }
   end
 
   # "10.20.30.40:6000" → "10.20.x.x": dá para achar o IP no painel da Webshare sem expô-lo inteiro.

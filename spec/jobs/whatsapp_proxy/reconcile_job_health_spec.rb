@@ -259,6 +259,21 @@ RSpec.describe WhatsappProxy::ReconcileJob do
       expect(Redis::Alfred.ttl("whatsapp_proxy:alert:falha_geral:#{episode_id}")).to be > 1.hour.to_i
     end
 
+    it 'never stays silent: a 13 h outage sends 1 start, 2 still-on and 1 end alerts' do
+      start = Time.current
+      travel_to(start) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
+      log = capture_log do
+        (1..52).each { |step| travel_to(start + (step * 15).minutes) { round(proxied('STARTING', 'STARTING', 'FAILED', 'WORKING')) } }
+        travel_to(start + 13.hours + 10.minutes) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }
+      end
+
+      expect(log.scan('[alerta] falha_geral:').size).to eq(1)
+      expect(log.scan('[alerta] falha_geral_em_curso:').size).to eq(2)
+      expect(log).to include('há 6 h; 3 número(s) ainda fora', 'há 12 h; 3 número(s) ainda fora')
+      expect(log.scan('[alerta] falha_geral_fim:').size).to eq(1)
+      expect(scheduled_sessions).to be_empty
+    end
+
     it 'ends when most came back; the one still off needs two NEW rounds off to be judged unstable (HIGH1)' do
       start = Time.current
       travel_to(start) { round(proxied('WORKING', 'WORKING', 'WORKING', 'WORKING')) }

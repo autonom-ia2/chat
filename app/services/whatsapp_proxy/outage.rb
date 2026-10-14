@@ -13,7 +13,8 @@
 # Continua (sem prazo) enquanto as que caíram seguem fora acima do mesmo limite — falha geral longa não vira "IP
 # instável" por tempo. Termina quando a maioria voltou (alerta `falha_geral_fim`, um por episódio); as que seguem fora
 # passam a ser avaliadas uma a uma, do zero, a partir da rodada SEGUINTE (WhatsappProxy::Health.eligible!). Na rodada
-# em que um episódio termina, não abre outro no mesmo escopo.
+# em que um episódio termina, não abre outro no mesmo escopo. Falha que não melhora não fica calada: alerta
+# `falha_geral_em_curso` a cada STILL_ON_EVERY (duração e quantos números seguem fora).
 class WhatsappProxy::Outage
   MAX_SHARE = 0.3
   MIN_OFF = 2
@@ -22,6 +23,7 @@ class WhatsappProxy::Outage
   PREVIOUS_TTL = 30.minutes.to_i
   EPISODE_TTL = 20.minutes.to_i
   ALERT_WINDOW = 1.day
+  STILL_ON_EVERY = 6.hours
   BASELINE = 'baseline'.freeze
   SCOPES = [BASELINE, *WhatsappProxy::Assignment::POOLS].freeze
 
@@ -97,7 +99,7 @@ class WhatsappProxy::Outage
     return false unless dropped >= MIN_OFF && dropped > total * MAX_SHARE
 
     episode_id = "#{scope}:#{Time.current.to_i}"
-    store_episode(scope, 'id' => episode_id, 'members' => dropped_sessions(scope))
+    store_episode(scope, 'id' => episode_id, 'started_at' => Time.current.to_i, 'members' => dropped_sessions(scope))
     WhatsappProxy::Alert.notify!('falha_geral', "#{dropped} de #{total} (#{scope}) que estavam WORKING caíram juntos: falha " \
                                                 'geral, nada trocado nem posto em quarentena',
                                  level: :error, pool: scope, count: dropped, total: total, subject: episode_id, window: ALERT_WINDOW)
@@ -108,11 +110,23 @@ class WhatsappProxy::Outage
     members = Array(episode['members'])
     still_off = members.select { |name| off?(name) }
     if still_off.size >= MIN_OFF && still_off.size > members.size * MAX_SHARE
-      store_episode(scope, episode)
+      store_episode(scope, still_on!(scope, episode, still_off))
       return true
     end
 
     finish!(scope, episode, still_off)
+  end
+
+  # A cada STILL_ON_EVERY de episódio, um alerta (uma vez por período: o período avisado fica no episódio).
+  def still_on!(scope, episode, still_off)
+    hours = (Time.current.to_i - episode['started_at'].to_i) / 1.hour.to_i
+    period = hours / (STILL_ON_EVERY.to_i / 1.hour.to_i)
+    return episode if period < 1 || period <= episode['warned_period'].to_i
+
+    WhatsappProxy::Alert.notify!('falha_geral_em_curso', "falha geral (#{scope}) há #{hours} h; #{still_off.size} número(s) ainda fora",
+                                 level: :error, pool: scope, count: still_off.size, hours: hours,
+                                 subject: "#{episode['id']}:#{period}", window: STILL_ON_EVERY)
+    episode.merge('warned_period' => period)
   end
 
   def finish!(scope, episode, still_off)

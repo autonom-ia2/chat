@@ -286,7 +286,8 @@ Autonom.ia). Regra decidida em 14/10/2026:
   plano caíram (pelo menos 2), ou mais de 30% das sessões sem nenhum proxy do motor caíram (pelo menos 2, e só com pelo
   menos 5 sessões sem proxy que estavam WORKING), é falha da Webshare, do WhatsApp ou do motor: nenhuma quarentena,
   nenhuma troca por instabilidade, contagem zerada (inclusive as quedas do webhook). Alerta `falha_geral` no começo e
-  `falha_geral_fim` no fim, um de cada por episódio. Dura (sem prazo) enquanto as que caíram seguem fora acima do mesmo
+  `falha_geral_fim` no fim, um de cada por episódio, e `falha_geral_em_curso` a cada 6 h enquanto durar (duração e
+  quantos números seguem fora). Dura (sem prazo) enquanto as que caíram seguem fora acima do mesmo
   limite: falha longa não vira "IP instável" por tempo. Quando a maioria volta, termina; as que seguem fora são
   avaliadas uma a uma, do zero, a partir da rodada seguinte (2 rodadas novas fora para virar instável). Na rodada em
   que um episódio termina não se abre outro. Sem a rodada anterior (primeira rodada, Redis vazio) só observa. IP sumido
@@ -297,9 +298,9 @@ Autonom.ia). Regra decidida em 14/10/2026:
   `SENTRY_DSN`. Um alerta por código e assunto por hora; `aparelho_desvinculado` é um resumo por dia (quantas sessões
   pediram QR no dia anterior). Códigos: `plano_esgotado`, `fatia_vazia`, `ip_da_fatia_sumiu`, `troca_desfeita`,
   `volta_falhou`, `sessao_instavel_trocada`, `sessao_instavel_de_novo`, `ip_em_quarentena`, `quarentena_sem_destino`,
-  `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`, `falha_geral_fim`,
-  `teto_de_quarentena`, `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de erro chegam como aviso
-  urgente).
+  `aparelho_desvinculado`, `troca_em_massa`, `plano_configurado_inexistente`, `falha_geral`, `falha_geral_em_curso`,
+  `falha_geral_fim`, `teto_de_quarentena`, `webshare_indisponivel`, `caixa_sem_proxy`, `atribuicao_invalida` (os de
+  erro chegam como aviso urgente).
 - A lista da Webshare vem inteira ou dá erro (nunca parcial: com lista parcial, IP em uso pareceria sumido).
 - Excluir a conexão Híbrida ou a caixa WAHA tira o número do IP; apagar a conta apaga as atribuições dela.
 

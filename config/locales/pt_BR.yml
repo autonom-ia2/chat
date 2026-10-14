@@ -932,6 +932,7 @@ pt_BR:
           troca_em_massa: 'Proxy do WhatsApp: %{n} de %{total} IPs em uso sumiram da Webshare de uma vez. Trocando no máximo 5 por rodada.'
           plano_configurado_inexistente: 'Proxy do WhatsApp: o id de plano fixado para %{plano} não é mais um plano ativo. Usando o plano ativo; remova a variável.'
           falha_geral: 'Proxy do WhatsApp: %{n} de %{total} sessões caíram ao mesmo tempo (%{plano}). Parece falha geral (Webshare, WhatsApp ou o motor), não IP ruim: nenhum IP foi trocado nem posto em quarentena.'
+          falha_geral_em_curso: 'Proxy do WhatsApp: a falha geral (%{plano}) já dura %{horas} horas; %{n} número(s) seguem fora. Nenhum IP foi trocado nem posto em quarentena por causa dela.'
           falha_geral_fim: 'Proxy do WhatsApp: a falha geral (%{plano}) terminou. %{n} sessão(ões) ainda fora passam a ser avaliadas uma a uma.'
           webshare_indisponivel: 'Proxy do WhatsApp: a Webshare segue falhando no plano %{plano} (%{n} erros seguidos). Nada desse plano é corrigido até ela responder.'
           caixa_sem_proxy: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) nasceu sem proxy porque a Webshare não respondeu. Vou tentar de novo.'
