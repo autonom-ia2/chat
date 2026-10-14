@@ -37,6 +37,23 @@
       },
       "VAZIO_SEM_NOME": "Este contato ainda não tem telefone nem e-mail."
     },
+    "ONDE_ENTRA": {
+      "TITULO": "Onde a mensagem entra",
+      "ENTRA_NA": "A mensagem entra na conversa #{numero}",
+      "CONTINUAR": "Continuar a conversa #{numero}",
+      "NOVA": "Começar conversa nova",
+      "NOVA_TEXTO": "Uma conversa separada, do começo.",
+      "ULTIMA_ATIVIDADE": "última atividade {quando}",
+      "SITUACAO": {
+        "ABERTA": "Aberta",
+        "PENDENTE": "Pendente",
+        "ADIADA": "Adiada",
+        "RESOLVIDA": "Resolvida"
+      },
+      "CARREGANDO": "Conferindo a conversa…",
+      "ERRO": "Não deu para conferir esta conversa.",
+      "TENTAR": "Tentar de novo"
+    },
     "MENSAGEM": {
       "TITULO": "Sua mensagem",
       "CAMPO": "Sua mensagem",
@@ -62,7 +79,8 @@
       "COMPLETE": "Complete a mensagem",
       "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
       "CAMPO_FALADO": "campo {campo}",
-      "CAMPO_EXEMPLO": "Ex.: {exemplo}"
+      "CAMPO_EXEMPLO": "Ex.: {exemplo}",
+      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem pronta. Isso acontece quando a pessoa não escreve há mais de 24 horas."
     },
     "PREVIA": {
       "TITULO": "Como {nome} recebe",
@@ -82,7 +100,8 @@
         "ASSUNTO": "Escreva o assunto",
         "MENSAGEM": "Escreva a mensagem",
         "MODELO": "Escolha uma mensagem pronta",
-        "CAMPOS": "Preencha os campos da mensagem pronta"
+        "CAMPOS": "Preencha os campos da mensagem pronta",
+        "CONVERSA": "Aguarde, conferindo a conversa"
       }
     },
     "ENVIADA": {
@@ -95,7 +114,8 @@
         "SMS": "Por SMS · {caixa}",
         "SITE": "Pelo site · {caixa}",
         "OUTRO": "Por {caixa}"
-      }
+      },
+      "NA_CONVERSA": "Entrou na conversa #{numero}"
     },
     "ERRO": {
       "TITULO": "A mensagem não foi enviada",

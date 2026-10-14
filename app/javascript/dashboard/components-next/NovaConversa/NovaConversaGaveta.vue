@@ -11,6 +11,7 @@ import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirecti
 import NovaConversaHeroi from './NovaConversaHeroi.vue';
 import NovaConversaParaQuem from './NovaConversaParaQuem.vue';
 import NovaConversaPorOnde from './NovaConversaPorOnde.vue';
+import NovaConversaOndeEntra from './NovaConversaOndeEntra.vue';
 import NovaConversaSemCanal from './NovaConversaSemCanal.vue';
 import NovaConversaMensagem from './NovaConversaMensagem.vue';
 import NovaConversaPrevia from './NovaConversaPrevia.vue';
@@ -19,6 +20,7 @@ import NovaConversaErro from './NovaConversaErro.vue';
 import NovaConversaRodape from './NovaConversaRodape.vue';
 import { useNovaConversaContato } from './useNovaConversaContato';
 import { useNovaConversa } from './useNovaConversa';
+import { useContinuarConversa } from './useContinuarConversa';
 import { useFocoPreso } from './useFocoPreso';
 import { useCriarMensagemPronta } from './useCriarMensagemPronta';
 import {
@@ -75,9 +77,21 @@ const {
   criarContato,
 } = useNovaConversaContato();
 
+// #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
+const continuar = useContinuarConversa({ contato, canal });
+const {
+  destino: escolha,
+  existente: conversaExistente,
+  carregando: carregandoConversa,
+  erro: erroNaConversa,
+  esperando: esperandoConversa,
+  carregar: carregarConversa,
+} = continuar;
+
 const {
   form,
   tipo,
+  destino: conversaDaMensagem,
   comAssinatura,
   assinatura,
   falta,
@@ -88,7 +102,8 @@ const {
   limpar,
   enviar,
   enviarPronta,
-} = useNovaConversa({ contato, canal });
+} = useNovaConversa({ contato, canal, continuar });
+const continuando = computed(() => Boolean(conversaDaMensagem.value));
 
 const { prender, entrar, entrarSeLivre } = useFocoPreso(raiz, aberta);
 const { podeCriar: podeCriarPronta, irCriar } = useCriarMensagemPronta();
@@ -299,6 +314,7 @@ useFixedPanelPresence(aberta);
             :chave-do-canal="enviada.chaveDoCanal"
             :caixa="enviada.caixa"
             :endereco="enviada.endereco"
+            :numero="enviada.numero"
           />
           <div
             v-else
@@ -344,10 +360,19 @@ useFixedPanelPresence(aberta);
                 @tentar="carregarCanais"
               />
 
+              <NovaConversaOndeEntra
+                v-if="canal && conversaExistente"
+                v-model="escolha"
+                :conversa="conversaExistente"
+                :carregando="continuando && carregandoConversa"
+                :erro="continuando && erroNaConversa"
+                @tentar="carregarConversa"
+              />
+
               <NovaConversaMensagem
-                v-if="canal"
+                v-if="canal && !esperandoConversa"
                 ref="blocoDaMensagem"
-                :key="canal.id"
+                :key="`${canal.id}-${tipo}`"
                 v-model:modo="form.modo"
                 v-model:mensagem="form.mensagem"
                 v-model:assunto="form.assunto"
@@ -360,6 +385,7 @@ useFixedPanelPresence(aberta);
                 :assinatura="assinatura"
                 :com-assinatura="comAssinatura"
                 :pode-criar-pronta="podeCriarPronta"
+                :continuando="continuando"
                 @update:campos-prontos="form.camposProntos = $event"
                 @update:texto-do-modelo="form.textoDoModelo = $event"
                 @enviar-pronta="enviarPronta"
@@ -375,7 +401,7 @@ useFixedPanelPresence(aberta);
                 :nome="nome"
                 :email="tipo === TIPOS.EMAIL"
                 :texto="previa"
-                :assunto="form.assunto"
+                :assunto="continuando ? '' : form.assunto"
                 :remetente="canal?.name || ''"
                 :endereco-do-remetente="linhaDoCanal(canal)"
               />
