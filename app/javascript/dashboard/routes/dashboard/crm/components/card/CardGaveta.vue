@@ -149,7 +149,11 @@ const { porDia } = useCardHistorico({
   te,
   locale,
   activities: atividades,
-  textos: 'CRM_CARD.HISTORICO.EVENTO',
+  // #1498 — Atender tem frases próprias ("Atendimento reaberto").
+  textos: () =>
+    jeito.atender.value
+      ? ['CRM_CARD.HISTORICO.EVENTO_ATENDER', 'CRM_CARD.HISTORICO.EVENTO']
+      : ['CRM_CARD.HISTORICO.EVENTO'],
 });
 const sugestao = useSugestaoEtapa({
   t,
@@ -234,7 +238,13 @@ const descarte = useCardGuarda({
   editando,
   rascunhos: () =>
     [
-      negocio.sujo.value && editando.value && t('CRM_CARD.SAIR.NEGOCIO'),
+      negocio.sujo.value &&
+        editando.value &&
+        t(
+          jeito.atender.value
+            ? 'CRM_CARD.SAIR.ASSUNTO'
+            : 'CRM_CARD.SAIR.NEGOCIO'
+        ),
       retorno.sujo.value && t('CRM_CARD.SAIR.RETORNO'),
       donoSujo.value && t('CRM_CARD.SAIR.DONO'),
       telaCliente.value?.sujo && t('CRM_CARD.SAIR.CLIENTE'),
@@ -596,6 +606,7 @@ defineExpose({
                 :tem-conversa="Boolean(card.conversation?.display_id)"
                 :ocupado="isSavingFollowUp || sugestao.respondendo.value"
                 :status="desfecho.status"
+                :venda="venda"
                 @responder="abrirConversa()"
                 @feito="feito"
                 @retorno="novoRetorno"
@@ -765,6 +776,7 @@ defineExpose({
               v-else-if="tela === 'historico'"
               :dias="porDia"
               :carregando="isLoadingDetails"
+              :venda="venda"
             />
           </main>
 

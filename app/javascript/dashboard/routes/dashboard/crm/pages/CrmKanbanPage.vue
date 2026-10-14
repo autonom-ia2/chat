@@ -1498,13 +1498,22 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
+    // #1498 — reabrir num funil de Atender diz "Atendimento reaberto".
+    const reaberto = funilDeVenda.value
+      ? 'CARD_REOPENED'
+      : 'CARD_REOPENED_ATENDER';
     useAlert(
       t(
-        `CRM_KANBAN.ALERTS.${CLOSE_ALERT_KEYS[detailedCard?.status] || 'CARD_REOPENED'}`
+        `CRM_KANBAN.ALERTS.${detailedCard?.status === 'open' ? reaberto : CLOSE_ALERT_KEYS[detailedCard?.status] || reaberto}`
       )
     );
   } catch (error) {
-    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR');
+    avisarErro(
+      error,
+      funilDeVenda.value
+        ? 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR'
+        : 'CRM_KANBAN.ALERTS.CARD_CLOSE_ERROR_ATENDER'
+    );
   }
 };
 
@@ -2383,6 +2392,7 @@ onUnmounted(() => {
 
     <CrmKanbanFiltersDrawer
       :show="showFiltersDrawer"
+      :venda="funilDeVenda"
       :pipeline-name="selectedPipeline?.name"
       :current-user-id="currentUser?.id"
       :filters="filters"

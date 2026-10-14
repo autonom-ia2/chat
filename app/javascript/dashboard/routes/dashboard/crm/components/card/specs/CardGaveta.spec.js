@@ -352,6 +352,9 @@ describe('CardGaveta (#1423)', () => {
     expect(html).toContain('CRM_CARD.ASSUNTO.TITULO');
     expect(html).not.toContain('CRM_CARD.NEGOCIO.NOME');
     expect(wrapper.find('[data-campo-valor]').exists()).toBe(false);
+    expect(
+      wrapper.findComponent({ name: 'CrmCardCustomFields' }).props('atender')
+    ).toBe(true);
   });
 
   it('na Cobrança, editar o card pede valor a receber, vencimento e promessa', async () => {

@@ -126,6 +126,10 @@ const faltaNome = computed(() => mexeuNoNome.value && !titulo.value.trim());
       </div>
     </details>
 
-    <CrmCardCustomFields :card="card" :can-manage="podeGerenciar" />
+    <CrmCardCustomFields
+      :card="card"
+      :can-manage="podeGerenciar"
+      :atender="atender"
+    />
   </section>
 </template>

@@ -248,7 +248,9 @@ const temConversa = computed(() =>
             }}
           </template>
         </I18nT>
-        <p v-else class="mb-0">{{ t(`${R}.SEM_CONTATO`) }}</p>
+        <p v-else class="mb-0">
+          {{ t(atender ? `${R}.SEM_CONTATO_ATENDER` : `${R}.SEM_CONTATO`) }}
+        </p>
         <template #extra>
           <div
             v-if="mostraEmpresa"

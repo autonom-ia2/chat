@@ -292,7 +292,8 @@ const ACTIVITY_TONE_CLASSES = {
 // payload ("Aviso não saiu" leva by: 'system'). Só eventos do agendamento.
 
 // `textos` (opcional): prefixo de i18n com títulos próprios por tipo de evento;
-// o que não tiver lá usa o texto de sempre (CRM_KANBAN.DRAWER).
+// o que não tiver lá usa o texto de sempre (CRM_KANBAN.DRAWER). Pode ser uma
+// função que devolve a lista de prefixos, em ordem (#1498: Atender primeiro).
 export const useCardHistorico = ({
   t,
   te,
@@ -300,8 +301,14 @@ export const useCardHistorico = ({
   activities,
   textos = '',
 }) => {
+  const prefixos = () =>
+    (typeof textos === 'function' ? textos() : [textos]).filter(Boolean);
   const proprio = chave =>
-    textos && te && te(`${textos}.${chave}`) ? `${textos}.${chave}` : '';
+    (te &&
+      prefixos()
+        .map(prefixo => `${prefixo}.${chave}`)
+        .find(opcao => te(opcao))) ||
+    '';
   // Texto do detalhe: o próprio da gaveta nova, se houver; senão, o de sempre.
   const detalhe = (chave, valores) =>
     t(proprio(chave) || `CRM_KANBAN.DRAWER.${chave}`, valores);

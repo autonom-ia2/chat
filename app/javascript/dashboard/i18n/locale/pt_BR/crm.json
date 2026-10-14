@@ -565,7 +565,8 @@
       "EXPORT_ERROR": "Não foi possível exportar a lista. Tente de novo.",
       "CREATE_INITIAL_PIPELINE": "Criar funil inicial",
       "LOAD_MORE": "Carregar mais",
-      "NEW_CARD_ATENDER": "Novo atendimento"
+      "NEW_CARD_ATENDER": "Novo atendimento",
+      "VIEW_OPPORTUNITIES_ATENDER": "Ver atendimentos"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -634,7 +635,10 @@
       "LABELS": "Etiquetas",
       "LABELS_PLACEHOLDER": "Nenhuma etiqueta",
       "CAMPAIGN": "Campanha",
-      "CAMPAIGN_PLACEHOLDER": "Nenhuma campanha"
+      "CAMPAIGN_PLACEHOLDER": "Nenhuma campanha",
+      "SHORTCUT_MINE_ATENDER": "Meus atendimentos",
+      "SCORE_HELP_ATENDER": "Mede quanta atenção o cliente pede agora.",
+      "GROUP_ATTENTION_HELP_ATENDER": "Quanta atenção o cliente pede agora."
     },
     "RESPONSIBLE_FILTER": {
       "AGENT": "Qualquer agente",
@@ -1181,7 +1185,9 @@
       "FOLLOW_UP_CANCELED": "Retorno cancelado.",
       "FOLLOW_UP_SAVE_ERROR": "Não foi possível salvar o retorno.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Informe a mensagem livre para o envio automático.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial."
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial.",
+      "CARD_REOPENED_ATENDER": "Atendimento reaberto.",
+      "CARD_CLOSE_ERROR_ATENDER": "Não foi possível atualizar o status do atendimento."
     },
     "ERRORS": {
       "TITLE": "Não foi possível carregar o CRM",
@@ -1254,7 +1260,8 @@
         "UPDATE_SUCCESS": "Campo do card salvo",
         "UPDATE_ERROR": "Não foi possível salvar o campo do card",
         "DELETE_SUCCESS": "Campo do card limpo",
-        "DELETE_ERROR": "Não foi possível limpar o campo do card"
+        "DELETE_ERROR": "Não foi possível limpar o campo do card",
+        "HELP_ATENDER": "Informações próprias deste atendimento."
       },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
@@ -4560,7 +4567,8 @@
       "RETORNO": "o retorno que estava marcando",
       "CLIENTE": "as mudanças na pessoa ou na empresa",
       "CRIAR": "o cliente que estava criando",
-      "DONO": "a troca de quem cuida"
+      "DONO": "a troca de quem cuida",
+      "ASSUNTO": "as mudanças no assunto"
     },
     "PASSO": {
       "ROTULO": "Próximo passo",
@@ -4590,7 +4598,8 @@
         "REUNIAO_FUTURA": "Reunião {quando}",
         "RETORNO_FUTURO": "{quando}: {titulo}"
       },
-      "FECHADO": "Este negócio terminou: {status}. Se o cliente voltar, toque em Reabrir."
+      "FECHADO": "Este negócio terminou: {status}. Se o cliente voltar, toque em Reabrir.",
+      "FECHADO_ATENDER": "Este atendimento terminou: {status}. Se o cliente voltar, toque em Reabrir."
     },
     "RESUMO": {
       "ROTULO": "Cliente no funil",
@@ -4652,7 +4661,8 @@
       "COBRANCA_VENCEU": "{titulo}: {valor} a receber, venceu {vencimento}.",
       "EM_DIA": "em {dia}",
       "ASSUNTO_FRASE": "{titulo}. Prioridade {prioridade}, aberto há {tempo}.",
-      "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}."
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}.",
+      "SEM_CONTATO_ATENDER": "Ainda não há uma pessoa ligada a este atendimento."
     },
     "ETAPA": {
       "TELA": "Etapa",
@@ -4926,7 +4936,8 @@
         "TUDO": "Tudo",
         "NEGOCIO": "Etapas e negócio",
         "RETORNOS": "Retornos",
-        "REUNIOES": "Reuniões"
+        "REUNIOES": "Reuniões",
+        "ASSUNTO": "Etapas e assunto"
       },
       "VAZIO": "Nada aconteceu ainda.",
       "VAZIO_FILTRO": "Nada deste tipo por aqui.",
@@ -4982,6 +4993,12 @@
         "ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT": "o cliente não quer receber mensagens automáticas",
         "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Passou para {time}",
         "BOOKED_BY_AI_DETAIL": "Marcada pelo assistente: {title}"
+      },
+      "EVENTO_ATENDER": {
+        "ACTIVITY_UPDATE": "Os dados do atendimento mudaram",
+        "ACTIVITY_LINK_CONTACT": "Uma pessoa foi ligada a este atendimento",
+        "ACTIVITY_UNLINK_CONTACT": "A pessoa foi tirada deste atendimento",
+        "ACTIVITY_REOPEN": "Atendimento reaberto"
       }
     },
     "CRIAR": {

@@ -565,7 +565,8 @@
       "EXPORT_ERROR": "Could not export the list. Please try again.",
       "CREATE_INITIAL_PIPELINE": "Create initial pipeline",
       "LOAD_MORE": "Load more",
-      "NEW_CARD_ATENDER": "New request"
+      "NEW_CARD_ATENDER": "New request",
+      "VIEW_OPPORTUNITIES_ATENDER": "See requests"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -634,7 +635,10 @@
       "LABELS": "Labels",
       "LABELS_PLACEHOLDER": "No labels yet",
       "CAMPAIGN": "Campaign",
-      "CAMPAIGN_PLACEHOLDER": "No campaigns yet"
+      "CAMPAIGN_PLACEHOLDER": "No campaigns yet",
+      "SHORTCUT_MINE_ATENDER": "My requests",
+      "SCORE_HELP_ATENDER": "Measures how much attention the customer needs now.",
+      "GROUP_ATTENTION_HELP_ATENDER": "How much attention the customer needs now."
     },
     "RESPONSIBLE_FILTER": {
       "AGENT": "Any agent",
@@ -1181,7 +1185,9 @@
       "FOLLOW_UP_CANCELED": "Follow-up canceled.",
       "FOLLOW_UP_SAVE_ERROR": "Could not save the follow-up.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Enter the free-form message for auto-send.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template."
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template.",
+      "CARD_REOPENED_ATENDER": "Request reopened.",
+      "CARD_CLOSE_ERROR_ATENDER": "Could not update the request status."
     },
     "ERRORS": {
       "TITLE": "Could not load the CRM",
@@ -1254,7 +1260,8 @@
         "UPDATE_SUCCESS": "Card field saved",
         "UPDATE_ERROR": "Could not save the card field",
         "DELETE_SUCCESS": "Card field cleared",
-        "DELETE_ERROR": "Could not clear the card field"
+        "DELETE_ERROR": "Could not clear the card field",
+        "HELP_ATENDER": "Information specific to this request."
       },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",
@@ -4559,7 +4566,8 @@
       "RETORNO": "the follow-up you were setting",
       "CLIENTE": "the changes to the person or company",
       "CRIAR": "the customer you were creating",
-      "DONO": "the change of who takes care"
+      "DONO": "the change of who takes care",
+      "ASSUNTO": "the changes to the subject"
     },
     "PASSO": {
       "ROTULO": "Next step",
@@ -4589,7 +4597,8 @@
         "REUNIAO_FUTURA": "Meeting {quando}",
         "RETORNO_FUTURO": "{quando}: {titulo}"
       },
-      "FECHADO": "This deal is over: {status}. If the customer comes back, tap Reopen."
+      "FECHADO": "This deal is over: {status}. If the customer comes back, tap Reopen.",
+      "FECHADO_ATENDER": "This request is over: {status}. If the customer comes back, tap Reopen."
     },
     "RESUMO": {
       "ROTULO": "Customer in the funnel",
@@ -4651,7 +4660,8 @@
       "COBRANCA_VENCEU": "{titulo}: {valor} due, was due {vencimento}.",
       "EM_DIA": "on {dia}",
       "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
-      "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}."
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
+      "SEM_CONTATO_ATENDER": "No person is linked to this request yet."
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -4925,7 +4935,8 @@
         "TUDO": "All",
         "NEGOCIO": "Stages and deal",
         "RETORNOS": "Follow-ups",
-        "REUNIOES": "Meetings"
+        "REUNIOES": "Meetings",
+        "ASSUNTO": "Stages and subject"
       },
       "VAZIO": "Nothing has happened yet.",
       "VAZIO_FILTRO": "Nothing of this kind here.",
@@ -4981,6 +4992,12 @@
         "ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT": "the customer does not want automatic messages",
         "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Moved to {time}",
         "BOOKED_BY_AI_DETAIL": "Set by the assistant: {title}"
+      },
+      "EVENTO_ATENDER": {
+        "ACTIVITY_UPDATE": "The request details changed",
+        "ACTIVITY_LINK_CONTACT": "A person was linked to this request",
+        "ACTIVITY_UNLINK_CONTACT": "The person was removed from this request",
+        "ACTIVITY_REOPEN": "Request reopened"
       }
     },
     "CRIAR": {
