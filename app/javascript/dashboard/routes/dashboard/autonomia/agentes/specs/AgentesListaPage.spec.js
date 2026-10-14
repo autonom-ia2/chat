@@ -412,53 +412,20 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
-    it('opens the templates drawer from "Criar agente" and "Ver modelos prontos"', async () => {
+    it('opens the full "Criar agente" page, not a drawer, from the hero, the phone bar and "Ver modelos prontos" (#1543)', async () => {
       const wrapper = await montar();
+      const pagina = { name: 'autonomia_agents_builder' };
+
       await wrapper.get('[data-criar]').trigger('click');
-      await nextTick();
-      // A gaveta vai para o body (TeleportWithDirection).
-      let gaveta = document.querySelector('[role="dialog"]');
-      expect(gaveta.textContent).toContain('AGENTS.JORNADA.MENU.CRIAR_AGENTE');
-      expect(gaveta.querySelectorAll('[data-usar]')).toHaveLength(3);
-      gaveta.querySelector('[data-fechar]').click();
+      expect(router.push).toHaveBeenLastCalledWith(pagina);
+      await wrapper.get('[data-criar-celular]').trigger('click');
+      expect(router.push).toHaveBeenLastCalledWith(pagina);
+      await wrapper.get('[data-ver-modelos]').trigger('click');
+      expect(router.push).toHaveBeenLastCalledWith(pagina);
+
+      expect(router.push).toHaveBeenCalledTimes(3);
       await nextTick();
       expect(document.querySelector('[role="dialog"]')).toBeNull();
-
-      await wrapper.get('[data-ver-modelos]').trigger('click');
-      await nextTick();
-      gaveta = document.querySelector('[role="dialog"]');
-      expect(gaveta.textContent).toContain('AGENTS.JORNADA.MODELOS.ROTULO');
-      wrapper.unmount();
-    });
-
-    it('offers "Copiloto da equipe" under "Do meu jeito" in the drawer and opens it as internal (#1494)', async () => {
-      const wrapper = await montar();
-      await wrapper.get('[data-criar]').trigger('click');
-      await nextTick();
-      const gaveta = document.querySelector('[role="dialog"]');
-      const copiloto = gaveta.querySelector('[data-copiloto]');
-      expect(copiloto.tagName).toBe('BUTTON');
-      expect(copiloto.textContent).toContain('AGENTS.JORNADA.MODELOS.COPILOTO');
-      const texto = document.getElementById(
-        copiloto.getAttribute('aria-describedby')
-      );
-      expect(texto.textContent.trim()).toBe(
-        'AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO'
-      );
-      // Depois de "Do meu jeito", como opção secundária.
-      const botoes = [...gaveta.querySelectorAll('button')].map(b =>
-        b.textContent.trim()
-      );
-      expect(botoes.indexOf('AGENTS.JORNADA.MODELOS.COPILOTO')).toBe(
-        botoes.indexOf('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') + 1
-      );
-
-      copiloto.click();
-      await flushPromises();
-      expect(router.push).toHaveBeenLastCalledWith({
-        name: 'autonomia_agents_builder',
-        query: { atuacao: 'interno' },
-      });
       wrapper.unmount();
     });
 
@@ -467,6 +434,7 @@ describe('AgentesListaPage', () => {
       const wrapper = await montar();
       expect(wrapper.find('[data-criar]').exists()).toBe(false);
       expect(wrapper.find('[data-ver-modelos]').exists()).toBe(false);
+      expect(wrapper.find('[data-criar-celular]').exists()).toBe(false);
       expect(wrapper.find('[data-continuar]').exists()).toBe(false);
       expect(wrapper.find('[aria-haspopup="menu"]').exists()).toBe(false);
       expect(wrapper.text()).toContain('AGENTS.JORNADA.LISTA.SO_VER');

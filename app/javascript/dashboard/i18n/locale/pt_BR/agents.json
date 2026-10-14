@@ -603,14 +603,19 @@
         "FOTO_ENVIADA": "Foto enviada"
       },
       "MENU": {
-        "AGENTES": "Agentes",
-        "CRIAR_AGENTE": "Criar agente"
+        "AGENTES": "Agentes"
       },
       "STATUS": {
         "ATENDENDO": "Atendendo",
         "PARADO": "Parado",
         "FALTA_TERMINAR": "Falta terminar",
         "COTACAO": "Cotação"
+      },
+      "ESCOLHER": {
+        "TITULO": "Criar agente",
+        "TEXTO": "Escolha um modelo pronto. Depois você conta do seu jeito e escolhe o canal no fim.",
+        "OUTRO_TIPO": "Precisa de outro tipo?",
+        "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima."
       },
       "MODELOS": {
         "ROTULO": "Modelos prontos",

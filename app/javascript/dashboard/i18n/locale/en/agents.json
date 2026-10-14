@@ -603,14 +603,19 @@
         "FOTO_ENVIADA": "Photo sent"
       },
       "MENU": {
-        "AGENTES": "Agents",
-        "CRIAR_AGENTE": "Create agent"
+        "AGENTES": "Agents"
       },
       "STATUS": {
         "ATENDENDO": "Answering",
         "PARADO": "Stopped",
         "FALTA_TERMINAR": "Not finished",
         "COTACAO": "Quotes"
+      },
+      "ESCOLHER": {
+        "TITULO": "Create agent",
+        "TEXTO": "Pick a ready-made template. Then tell it your way and choose the channel at the end.",
+        "OUTRO_TIPO": "Need another kind?",
+        "OUTRO_TEXTO": "For special cases. Most agents start from a template above."
       },
       "MODELOS": {
         "ROTULO": "Ready-made templates",

@@ -18,6 +18,31 @@ vi.mock('dashboard/api/autonomia/buildThreads', () => ({
   default: construtor,
 }));
 
+// #1543: sem modelo, rascunho nem atuação na URL, a flag ligada abre antes a página "Criar agente".
+const rota = vi.hoisted(() => ({ atual: null }));
+const roteador = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock('vue-router', () => ({
+  useRoute: () => rota.atual,
+  useRouter: () => roteador,
+}));
+vi.mock('../../pages/AgenteEscolherPage.vue', async () => {
+  const { defineComponent: definir, h: hh } = await import('vue');
+  return {
+    __esModule: true,
+    default: definir({
+      name: 'AgenteEscolherPage',
+      emits: ['escolher'],
+      setup:
+        (_props, { emit }) =>
+        () =>
+          hh('button', {
+            'data-escolher': '',
+            onClick: () => emit('escolher', { atuacao: 'interno' }),
+          }),
+    }),
+  };
+});
+
 const carregouNova = vi.hoisted(() => vi.fn());
 vi.mock('../../pages/AgenteCriarPage.vue', async () => {
   carregouNova();
@@ -66,8 +91,13 @@ const comConta = dados => {
 };
 
 describe('AgentesCriarEntrada', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { reactive } = await import('vue');
+    rota.atual = reactive({ query: { modelo: 'support' } });
+    roteador.replace.mockImplementation(async ({ query }) => {
+      rota.atual.query = query;
+    });
   });
 
   it('keeps the old Builder with the flag off, without loading the new page nor calling any API', async () => {
@@ -128,5 +158,66 @@ describe('AgentesCriarEntrada', () => {
     expect(wrapper.find('[data-antiga]').exists()).toBe(true);
     expect(wrapper.find('[data-nova]').exists()).toBe(false);
     expect(desmontouAntiga).not.toHaveBeenCalled();
+  });
+
+  describe('página "Criar agente" (#1543)', () => {
+    const ligada = { ...conta, features: { autonomia_agents_journey: true } };
+
+    it('opens the "Criar agente" page first when the URL has no choice', async () => {
+      comConta(ligada);
+      rota.atual.query = {};
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escolher]').exists()).toBe(true);
+      expect(wrapper.find('[data-nova]').exists()).toBe(false);
+      expect(carregouNova).not.toHaveBeenCalled();
+    });
+
+    it('puts the choice in the URL and only then mounts the creation', async () => {
+      comConta(ligada);
+      rota.atual.query = {};
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      await wrapper.get('[data-escolher]').trigger('click');
+      await flushPromises();
+      expect(roteador.replace).toHaveBeenCalledWith({
+        query: { atuacao: 'interno' },
+      });
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+    });
+
+    it.each([
+      [{ modelo: 'sdr' }],
+      [{ type: 'support' }],
+      [{ agente: '7' }],
+      [{ atuacao: 'interno' }],
+    ])('goes straight to the creation with %o', async query => {
+      comConta(ligada);
+      rota.atual.query = query;
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+    });
+
+    it('goes back to the page when the same route opens again without a choice (menu)', async () => {
+      comConta(ligada);
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+      rota.atual.query = {};
+      await flushPromises();
+      expect(wrapper.find('[data-escolher]').exists()).toBe(true);
+    });
+
+    it('keeps the old Builder with the flag off even without a choice in the URL', async () => {
+      comConta({ ...conta });
+      rota.atual.query = {};
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+      expect(wrapper.find('[data-antiga]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
   });
 });
