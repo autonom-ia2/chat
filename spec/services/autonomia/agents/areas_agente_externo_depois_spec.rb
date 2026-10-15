@@ -74,4 +74,16 @@ RSpec.describe Autonomia::Agents::Areas, type: :request do
       .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
     expect(da_area.reload.assignee_agent_bot_id).to eq(externo.id)
   end
+
+  it 'sem a aba por caixa, soltar a área no meio de um turno refaz o turno pelo ReplyJob, como na main' do
+    pergunta = create(:message, account: account, conversation: da_area, message_type: :incoming, content: 'e o boleto?')
+    stamp = { 'pending_message_id' => pergunta.id, 'at' => Time.current.to_f }
+    da_area.update!(additional_attributes: da_area.additional_attributes.to_h.merge(
+      Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => stamp
+    ))
+    Autonomia::Agents::AgenteIaPorCaixa.desligar!(account)
+
+    expect { described_class.desvincular!(agent: da_equipe, inbox: inbox) }
+      .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).with(da_area.id, pergunta.id).exactly(:once)
+  end
 end

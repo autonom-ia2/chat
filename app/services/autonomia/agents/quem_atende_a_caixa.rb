@@ -3,7 +3,8 @@
 # Para quem usa, todos são agentes de IA: os da plataforma (vínculo AgentInbox não apagado, de porta ou de área) e os de
 # outro sistema (AgentBotInbox de um AgentBot que não é espelho, AgentInbox.espelhos). `tipo` diz qual é qual só para a
 # tela saber onde abrir e o que mandar na troca: 'plataforma' ou 'webhook'.
-# Não depende da flag da jornada nem da Fase 2: a regra vale para todas as contas. Os agentes da plataforma só entram nas
+# Não depende da flag da jornada nem da Fase 2. A aba e a troca só existem com a chave da conta
+# Autonomia::Agents::AgenteIaPorCaixa (o controller responde 404 sem ela). Os agentes da plataforma só entram nas
 # OPÇÕES com o módulo de Agentes ligado na conta (Config.enabled?), como o resto da API deles.
 module Autonomia::Agents::QuemAtendeACaixa
   PLATAFORMA = 'plataforma'.freeze

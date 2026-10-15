@@ -153,29 +153,50 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
   end
 
-  # #1648 — espelho de agente da plataforma nunca é agente externo (AgentInbox.espelhos, a regra única do
-  # leitura da aba Agente de IA, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta apagada.
-  it 'espelho de agente da plataforma nunca é agente externo, nem sobrando de porta apagada (#1648)' do
-    tipo = lambda do |caixa|
-      get "#{url}/#{caixa.id}", headers: auth_headers(admin)
-      response.parsed_body.dig('payload', 'caixa', 'agent_bot', 'tipo_do_principal')
+  # #1648 — com a aba "Agente de IA" por caixa: espelho de agente da plataforma nunca é agente externo
+  # (AgentInbox.espelhos, a regra da aba, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta
+  # apagada. Sem ela, a regra da main: só o espelho da porta ativa da caixa, de agente não apagado, é 'ia'.
+  describe 'tipo_do_principal' do
+    let(:tipo) do
+      lambda do |caixa|
+        get "#{url}/#{caixa.id}", headers: auth_headers(admin)
+        response.parsed_body.dig('payload', 'caixa', 'agent_bot', 'tipo_do_principal')
+      end
     end
-    espelho = inbox.agent_bot_inbox.agent_bot
+    let(:espelho) { inbox.agent_bot_inbox.agent_bot }
+    let(:outra) do
+      create(:inbox, account: account).tap do |caixa|
+        AgentBotInbox.create!(inbox: caixa, agent_bot: espelho, account: account, status: :active)
+      end
+    end
 
-    # O espelho da Clara ligado em outra caixa, onde ela não é a porta.
-    outra = create(:inbox, account: account)
-    AgentBotInbox.create!(inbox: outra, agent_bot: espelho, account: account, status: :active)
-    expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia ia])
+    it 'com a aba por caixa: espelho nunca é agente externo, nem sobrando de porta apagada (#1648)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
 
-    # Agente apagado.
-    clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    expect(tipo.call(inbox)).to eq('ia')
+      # O espelho da Clara ligado em outra caixa, onde ela não é a porta.
+      expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia ia])
 
-    # Vínculo da porta apagado com o espelho ainda ligado: nem tipo externo, nem cartão de agente externo.
-    clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
-    Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    expect(tipo.call(inbox)).to eq('ia')
-    expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents', 'externo')).to be_nil
+      # Agente apagado.
+      clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('ia')
+
+      # Vínculo da porta apagado com o espelho ainda ligado: nem tipo externo, nem cartão de agente externo.
+      clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('ia')
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents', 'externo')).to be_nil
+    end
+
+    it 'sem a aba por caixa: como a main, só o espelho da porta ativa da caixa, de agente não apagado, é ia' do
+      expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia externo])
+
+      clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('externo')
+
+      clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('externo')
+    end
   end
 
   it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do
@@ -250,6 +271,7 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
+      expect(Autonomia::Agents::AgentInbox.kept.where(inbox: so_de_pessoas)).to be_empty
     end
 
     it 'principal parado recusa com crm.caixas.principal_parado' do

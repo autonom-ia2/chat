@@ -128,11 +128,12 @@ module Autonomia::Agents::Areas
     end
   end
 
-  # Sem a aba "Agente de IA" por caixa (#1648), a regra de antes da opção B: agente de outro sistema (ativo ou não) na
-  # caixa sem porta não deixa a área entrar.
+  # Sem a aba "Agente de IA" por caixa (#1648), a regra de antes da opção B, com o predicado de antes
+  # (AgentInbox.robo_externo_na_caixa?): robô que não é o espelho da porta ativa não deixa a área entrar. Com ela, nada
+  # barra (a área convive com agente de outro sistema).
   def outro_sistema_barra_area?(inbox)
     !::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(inbox.account_id) &&
-      ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(inbox, so_ativos: false).exists?
+      ::Autonomia::Agents::AgentInbox.robo_externo_na_caixa?(inbox.id)
   end
 
   def vincular_na_caixa!(agent, inbox)

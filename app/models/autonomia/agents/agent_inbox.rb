@@ -98,6 +98,14 @@ module Autonomia
         unscoped.select(:agent_bot_id)
       end
 
+      # Robô de fora da Autonom.ia na caixa (#1433): um AgentBotInbox que não é o espelho da porta ativa — bot de webhook,
+      # como o n8n. Com ele, a caixa sem porta não é só de pessoas e não recebe agente da equipe. É a regra das contas SEM
+      # a aba "Agente de IA" por caixa (#1648): com ela, a área convive com agente de outro sistema (opção B).
+      def self.robo_externo_na_caixa?(inbox_id)
+        espelhos_da_porta = kept.porta.where(inbox_id: inbox_id).select(:agent_bot_id)
+        AgentBotInbox.where(inbox_id: inbox_id).where.not(agent_bot_id: espelhos_da_porta).exists?
+      end
+
       def porta?
         papel == 'porta'
       end
@@ -140,20 +148,27 @@ module Autonomia
       # A conversa aberta que a área atendia volta para o robô da caixa (a porta), pelo mesmo caminho de atribuir um
       # robô pelo painel, e a porta responde à última mensagem do cliente que ficou sem resposta. Sem porta atendendo
       # (ou caixa só de pessoas), ou conversa já à espera de pessoa: vai para a equipe humana, sem robô.
-      # Com agente de outro sistema atendendo primeiro (#1648, opção B), a conversa volta para ele, mas o turno NÃO é
-      # refeito pelo ReplyJob da plataforma: quem responde ali é o outro sistema, e o turno da plataforma morreria calado.
+      # Com agente de outro sistema atendendo primeiro (#1648, opção B, só com a aba "Agente de IA" por caixa ligada na
+      # conta), a conversa volta para ele, mas o turno NÃO é refeito pelo ReplyJob da plataforma: quem responde ali é o
+      # outro sistema, e o turno da plataforma morreria calado. Sem a chave, como antes.
       def devolver_conversas_a_porta!
         robo_da_porta = inbox.agent_bot_inbox&.active? ? inbox.agent_bot : nil
-        porta_da_plataforma = robo_da_porta.present? && self.class.espelhos.exists?(agent_bot_id: robo_da_porta.id)
+        refaz_o_turno = refaz_o_turno_com?(robo_da_porta)
         inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
           if robo_da_porta.nil? || conversation.bot_handoff_waiting?
             conversation.bot_handoff!(keep_bot: false)
           else
             ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: robo_da_porta.id,
                                                    assignee_type: 'AgentBot').perform
-            responder_mensagem_pendente(conversation) if porta_da_plataforma
+            responder_mensagem_pendente(conversation) if refaz_o_turno
           end
         end
+      end
+
+      def refaz_o_turno_com?(robo_da_porta)
+        return true unless ::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(account_id)
+
+        robo_da_porta.present? && self.class.espelhos.exists?(agent_bot_id: robo_da_porta.id)
       end
 
       # Desmarcar ou pausar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde).
@@ -174,7 +189,7 @@ module Autonomia
       def area_precisa_de_porta_ou_caixa_sem_outro_sistema
         return if inbox.blank? || ::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(inbox.account_id)
         return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
-        return unless ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(inbox, so_ativos: false).exists?
+        return unless self.class.robo_externo_na_caixa?(inbox_id)
 
         errors.add(:papel, 'area requires an active porta or an inbox served only by people')
       end

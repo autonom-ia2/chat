@@ -39,12 +39,23 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(codigo).to have_attributes(codigo: :ok, ok?: true)
     end
 
-    it ':ok para a caixa com o espelho que sobrou de uma porta apagada' do
+    def porta_apagada_com_espelho_sobrando
       principal(inbox)
       Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-
       expect(AgentBotInbox.where(inbox_id: inbox.id).count).to eq(1)
+    end
+
+    it ':ok para a caixa com o espelho que sobrou de uma porta apagada, com a aba por caixa (#1648)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+      porta_apagada_com_espelho_sobrando
+
       expect(codigo.codigo).to eq(:ok)
+    end
+
+    it ':robo_externo para o espelho que sobrou de uma porta apagada, sem a aba por caixa (o predicado da main)' do
+      porta_apagada_com_espelho_sobrando
+
+      expect(codigo.codigo).to eq(:robo_externo)
     end
 
     it ':principal_parado quando o principal não está atendendo' do
