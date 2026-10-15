@@ -88,13 +88,16 @@ const esperando = computed(
 );
 const semCanal = computed(() => !(caixas.value || []).length);
 
-// #1433: "N na equipe" só aparece quando há agente da equipe.
+// #1433: "N na equipe" só aparece quando há agente da equipe; tema 14 (#1434): "N ajudando", só com ajudante.
 const contagemTexto = computed(() => {
-  const { atendendo, naEquipe, parados } = contagem.value;
+  const { atendendo, naEquipe, ajudando, parados } = contagem.value;
   return [
     t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: atendendo }, atendendo),
     naEquipe
       ? t('AGENTS.JORNADA.LISTA.CONTAGEM_NA_EQUIPE', { n: naEquipe }, naEquipe)
+      : '',
+    ajudando
+      ? t('AGENTS.JORNADA.LISTA.CONTAGEM_AJUDANDO', { n: ajudando }, ajudando)
       : '',
     t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: parados }, parados),
   ]

@@ -600,7 +600,8 @@
         "USOU": "Usou: {arquivo}",
         "IDEIAS": "Ideias para começar",
         "QUEM_DISSE": "{quem}:",
-        "FOTO_ENVIADA": "Foto enviada"
+        "FOTO_ENVIADA": "Foto enviada",
+        "PRINCIPAL": "Agente principal"
       },
       "MENU": {
         "AGENTES": "Agentes"
@@ -610,7 +611,8 @@
         "PARADO": "Parado",
         "FALTA_TERMINAR": "Falta terminar",
         "COTACAO": "Cotação",
-        "NA_EQUIPE": "Na equipe"
+        "NA_EQUIPE": "Na equipe",
+        "AJUDANDO": "Ajudando"
       },
       "ESCOLHER": {
         "TITULO": "Criar agente",
@@ -620,6 +622,10 @@
         "EQUIPE": {
           "TITULO": "Agente da equipe",
           "TEXTO": "Fica num canal que já tem agente principal e recebe a conversa quando alguém passa."
+        },
+        "AJUDA": {
+          "TITULO": "Ajuda outros agentes",
+          "TEXTO": "Responde só para outro agente, nunca para o cliente."
         }
       },
       "MODELOS": {
@@ -668,7 +674,8 @@
         "SEUS_AGENTES": "Seus agentes",
         "CONTAGEM_ATENDENDO": "Nenhum atendendo | 1 atendendo | {n} atendendo",
         "CONTAGEM_PARADOS": "Nenhum parado | 1 parado | {n} parados",
-        "CONTAGEM_NA_EQUIPE": "Nenhum na equipe | 1 na equipe | {n} na equipe"
+        "CONTAGEM_NA_EQUIPE": "Nenhum na equipe | 1 na equipe | {n} na equipe",
+        "CONTAGEM_AJUDANDO": "Nenhum ajudando | 1 ajudando | {n} ajudando"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Ainda não está em nenhum canal",
@@ -1427,7 +1434,8 @@
             "AGENTE": "Claro! Para {pagina}, tenho terça às 10h ou quarta às 15h. Qual fica melhor para você?",
             "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
-        }
+        },
+        "INTERRUPTOR_AJUDANTE": "{nome} ajudando outros agentes"
       },
       "CRIAR": {
         "TITULO": "Criar agente",
@@ -1480,7 +1488,9 @@
             "DOCES": "Confeitaria",
             "ESTETICA": "Clínica de estética",
             "OFICINA": "Oficina mecânica"
-          }
+          },
+          "INTRO_AJUDANTE": "Vou te fazer umas perguntas curtas. O agente só começa a ajudar outros agentes quando você mandar.",
+          "EXEMPLO_AJUDANTE": "Ex.: tirar as dúvidas mais difíceis sobre os produtos para os outros agentes"
         },
         "MATERIAL": {
           "VOCE_MANDOU": "Você mandou:",
@@ -1499,7 +1509,10 @@
           "TITULO": "Assim seus clientes vão ver",
           "TITULO_COPILOTO": "Assim a equipe vai usar",
           "LEGENDA": "Depois de você contar, {nome} responde do jeito do seu negócio.",
-          "COPILOTO": "Dentro de uma conversa, alguém da equipe pede ajuda e {nome} resume, sugere o próximo passo ou rascunha uma resposta. {nome} nunca fala com cliente."
+          "COPILOTO": "Dentro de uma conversa, alguém da equipe pede ajuda e {nome} resume, sugere o próximo passo ou rascunha uma resposta. {nome} nunca fala com cliente.",
+          "TITULO_AJUDANTE": "Assim os outros agentes vão usar",
+          "AJUDANTE": "No meio de uma conversa, o agente principal pergunta a {nome}, recebe a resposta e responde ao cliente. {nome} nunca fala com cliente.",
+          "AJUDANTE_SEM_NOME": "No meio de uma conversa, o agente principal pergunta ao agente que você está criando, recebe a resposta e responde ao cliente. Esse agente nunca fala com cliente."
         },
         "CONFIRA": {
           "TITULO": "Teste como se fosse seu cliente",
@@ -1539,12 +1552,17 @@
             "TROCAR": "Quero trocar um produto",
             "COMO_RESPONDO": "Um cliente pediu desconto. Como respondo?",
             "PROXIMO_PASSO": "O cliente parou de responder. Qual o próximo passo?",
-            "RASCUNHO": "Rascunhe uma resposta sobre o prazo de entrega"
+            "RASCUNHO": "Rascunhe uma resposta sobre o prazo de entrega",
+            "AJUDANTE_O_QUE_SABE": "Em que você pode me ajudar?",
+            "AJUDANTE_CLIENTE": "Um cliente fez uma pergunta sobre o seu assunto. O que devo responder?",
+            "AJUDANTE_NAO_SABE": "Se você não souber a resposta, o que me devolve?"
           },
           "TESTE_OPCIONAL": "Se quiser, teste antes: faça uma pergunta e veja como {nome} responde.",
           "AJUSTES": "Fazer ajustes avançados",
           "AJUSTES_TEXTO": "{nome} fica parado até você ligar.",
-          "AJUSTES_ERRO": "Não deu para abrir os ajustes de {nome} agora. Nada mudou."
+          "AJUSTES_ERRO": "Não deu para abrir os ajustes de {nome} agora. Nada mudou.",
+          "TITULO_AJUDANTE": "Teste como se fosse o agente principal",
+          "AJUDA_AOS_AGENTES": "{nome} ajuda outros agentes"
         },
         "CANAL": {
           "WHATSAPP": "WhatsApp",
@@ -1570,7 +1588,9 @@
           "EQUIPE": "Quando não souber, {nome} passa a conversa para a equipe.",
           "EQUIPE_COPILOTO": "Dentro das conversas, a equipe pede ajuda a {nome}. {nome} nunca fala com cliente.",
           "TROCA": "{outro} parou de responder no {canal}.",
-          "VER": "Ver {nome}"
+          "VER": "Ver {nome}",
+          "TITULO_AJUDANTE": "{nome} já está ajudando",
+          "EQUIPE_AJUDANTE": "Os agentes escolhidos chamam {nome} quando precisam. {nome} nunca fala com cliente."
         },
         "HORARIO": {
           "DIAS": {
@@ -1649,7 +1669,56 @@
         "RECEBE": "Recebe quando alguém passar",
         "PRONTO_TITULO": "{nome} já está trabalhando",
         "MUDAR": "Mudar",
-        "MUDAR_ARIA": "Mudar onde {nome} trabalha"
+        "MUDAR_ARIA": "Mudar onde {nome} trabalha",
+        "AJUDA": "Ajuda: {agentes}"
+      },
+      "AJUDANTE": {
+        "QUEM": {
+          "TITULO": "Quem {nome} vai ajudar?",
+          "TITULO_SEM_NOME": "Quem o agente que você está criando vai ajudar?",
+          "TEXTO": "Escolha um ou mais agentes que conversam com seus clientes.",
+          "VAZIO": "Ainda não há agente conversando com clientes. Crie primeiro um agente que atenda num canal e volte aqui.",
+          "COTACAO": "O Agente de Cotação não recebe ajuda de outro agente.",
+          "CARREGANDO": "Lendo os agentes",
+          "ERRO_LER": "Não deu para ler os agentes agora.",
+          "ERRO_LER_GARANTIA": "Nada mudou. Tente de novo em instantes."
+        },
+        "AVISO": "O que {nome} sabe e faz pode chegar ao cliente pelas respostas do agente principal.",
+        "AVISO_SEM_NOME": "O que o agente que você está criando sabe e faz pode chegar ao cliente pelas respostas do agente principal.",
+        "QUANDO": {
+          "TITULO": "Quando chamar {nome}?",
+          "TITULO_SEM_NOME": "Quando chamar o agente que você está criando?",
+          "TEXTO": "Os agentes escolhidos chamam {nome} nesta situação. Escreva numa frase.",
+          "TEXTO_SEM_NOME": "Os agentes escolhidos chamam nesta situação. Escreva numa frase.",
+          "ROTULO": "Quando chamar",
+          "EXEMPLO": "Ex.: quando a dúvida for sobre trocas e devoluções",
+          "RESUMO": "Quando chamar: {quando}",
+          "SEM_LEITURA": "Não deu para ler agora. Toque em Mudar para ver e trocar."
+        },
+        "COMECAR": "Começar a ajudar",
+        "COMECAR_TEXTO": "{nome} responde só quando os agentes escolhidos chamam. Não precisa de canal.",
+        "QUEM_AJUDA": "Quem {nome} ajuda",
+        "QUEM_AJUDA_SEM_NOME": "Quem o agente que você está criando ajuda",
+        "MUDAR_ARIA": "Mudar quem {nome} ajuda",
+        "MUDAR_QUANDO_ARIA": "Mudar quando chamar {nome}",
+        "NINGUEM": "{nome} ainda não ajuda nenhum agente.",
+        "NUNCA_CLIENTE": "{nome} responde só a esses agentes, nunca ao cliente.",
+        "ERRO": "Não deu para salvar quem {nome} ajuda.",
+        "ERRO_GARANTIA": "Nada mudou em {nome}. Tente de novo.",
+        "FEITO": "Pronto. {nome} já ajuda os agentes escolhidos.",
+        "ESCOLHER_DE_NOVO": "Escolher de novo",
+        "SEM_FASE2": "{nome} ajuda outros agentes, e isso ainda não está ligado nesta conta.",
+        "SEM_FASE2_GARANTIA": "Nada foi ligado. Fale com o suporte para liberar.",
+        "INTERRUPTOR": {
+          "VOLTOU": "{nome} voltou a ajudar.",
+          "VOLTAR_ERRO": "Não deu para voltar a ajudar.",
+          "PARAR_TITULO": "Parar de ajudar?",
+          "PARAR_TEXTO": "Os agentes que {nome} ajuda continuam respondendo sozinhos. Dá para voltar quando quiser.",
+          "PARAR_CONFIRMAR": "Parar de ajudar",
+          "PARAR_ERRO": "Não deu para parar agora.",
+          "PARAR_ERRO_GARANTIA": "{nome} continua ajudando.",
+          "PARAR_FEITO": "{nome} parou de ajudar. Dá para voltar quando quiser."
+        }
       }
     }
   }

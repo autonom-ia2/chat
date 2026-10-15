@@ -1,3 +1,5 @@
+import { ehAjudante, quemAjuda } from './ajudante';
+
 // #1181 — o estado que a pessoa lê no cartão e na página do agente.
 // "Atendendo" só quando o agente está ativo e ligado (mesma regra de Agent#operating? no backend)
 // E tem onde trabalhar (#1366, Agent#tem_onde_trabalhar? no backend, lido em `tem_onde_trabalhar`):
@@ -6,18 +8,25 @@
 // #1433 (tema 13) — o agente da equipe (só vínculos de área, `na_equipe` do servidor) ligado aparece
 // "Na equipe": recebe a conversa quando alguém passa, não atende primeiro. Nunca "Atendendo" como o
 // principal, nem "Parado" só por não ocupar caixa nenhuma.
+// Tema 14 (#1434) — o ajudante (nasceu como "Ajuda outros agentes") ligado e ajudando alguém aparece
+// "Ajudando". Ligado sem ninguém para ajudar não faz nada: "Parado", nunca "Atendendo" como o Copiloto.
 // Rascunho continua "Falta terminar" mesmo com instrução (DECISOES.md item 5): só começa a atender
 // quem escolheu onde. O agente de cotação mora no módulo de cotação e tem cartão próprio.
 export const ESTADO = {
   ATENDENDO: 'atendendo',
   NA_EQUIPE: 'na_equipe',
+  AJUDANDO: 'ajudando',
   PARADO: 'parado',
   FALTA_TERMINAR: 'falta_terminar',
   COTACAO: 'cotacao',
 };
 
 // Estados em que o agente está trabalhando (o interruptor aparece ligado).
-export const TRABALHANDO = [ESTADO.ATENDENDO, ESTADO.NA_EQUIPE];
+export const TRABALHANDO = [
+  ESTADO.ATENDENDO,
+  ESTADO.NA_EQUIPE,
+  ESTADO.AJUDANDO,
+];
 
 const TIPO_COTACAO = 'insurance_quote';
 
@@ -28,6 +37,9 @@ export const estadoDeAtendimento = agente => {
   }
   const ligado = agente.status === 'active' && agente.enabled === true;
   if (!ligado || agente.tem_onde_trabalhar === false) return ESTADO.PARADO;
+  if (ehAjudante(agente)) {
+    return quemAjuda(agente).length ? ESTADO.AJUDANDO : ESTADO.PARADO;
+  }
   return agente.na_equipe === true ? ESTADO.NA_EQUIPE : ESTADO.ATENDENDO;
 };
 
@@ -41,6 +53,7 @@ export const estadoDoAgente = agente => {
 const ORDEM = [
   ESTADO.ATENDENDO,
   ESTADO.NA_EQUIPE,
+  ESTADO.AJUDANDO,
   ESTADO.PARADO,
   ESTADO.COTACAO,
   ESTADO.FALTA_TERMINAR,
@@ -56,6 +69,7 @@ export const contarEstados = agentes => {
   return {
     atendendo: estados.filter(e => e === ESTADO.ATENDENDO).length,
     naEquipe: estados.filter(e => e === ESTADO.NA_EQUIPE).length,
+    ajudando: estados.filter(e => e === ESTADO.AJUDANDO).length,
     parados: estados.filter(e => e === ESTADO.PARADO).length,
   };
 };
