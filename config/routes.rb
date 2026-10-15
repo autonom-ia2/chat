@@ -478,6 +478,8 @@ Rails.application.routes.draw do
             # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
             get 'numeros_da_semana', to: 'numeros_da_semana#index'
             get 'canais_ocupados', to: 'canais_ocupados#index'
+            # #1648 — quem da plataforma atende a caixa (aba "Agente externo"), sem flag: vale para todas as contas.
+            get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'

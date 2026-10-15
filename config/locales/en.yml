@@ -574,6 +574,9 @@ en:
     agents:
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
+      caixa_externo:
+        caixa_com_agente_da_plataforma: "This inbox is handled by the platform Agents. To use an external agent here, first remove them from the inbox on each agent's page."
+        desconectar_agente_da_plataforma: "This inbox is handled by a platform Agent. To take it out, use the agent's page."
       ajudante:
         outra_conta: 'The helper and the agents it helps must belong to this account.'
         ele_mesmo: 'An agent cannot help itself.'

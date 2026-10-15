@@ -1,11 +1,11 @@
 require 'rails_helper'
 
-# #1433 — REGISTRO do comportamento de hoje, sem bloqueio: um agente externo (bot de webhook do Chatwoot, plugado pelo
-# painel com Inbox#set_agent_bot / AgentBotInbox) entra DEPOIS numa caixa só de pessoas que já tem área. O painel não
-# passa pelo Areas e não trava a caixa. Barrar isso é do próximo PR, a marcação por caixa (decisão do Rodrigo de 15/10).
-# Quando a marcação entrar, os `pending` daqui viram o comportamento esperado.
-RSpec.describe Autonomia::Agents::Areas do
+# #1433 / #1648 — um agente externo (bot de webhook do Chatwoot) plugado DEPOIS, pela aba "Agente externo" da caixa
+# (Inbox#set_agent_bot), numa caixa só de pessoas que já tem área. Com a marcação por caixa (#1648) o plug é recusado
+# (422) e nada muda: a área continua válida e dona das conversas dela, e a caixa segue aceitando área.
+RSpec.describe Autonomia::Agents::Areas, type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:da_equipe) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Financeiro', agent_type: 'custom', status: :active, enabled: true,
@@ -23,44 +23,36 @@ RSpec.describe Autonomia::Agents::Areas do
 
   before do
     Autonomia::Agents::Fase2.ligar!(account)
-    AgentBotInbox.create!(inbox: inbox, agent_bot: externo, account: account)
+    url = "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/set_agent_bot"
+    post url, params: { agent_bot: externo.id }, headers: admin.create_new_auth_token, as: :json
   end
 
-  it 'a área continua na caixa, mas o vínculo dela deixa de ser válido e a caixa passa a recusar área' do
+  it 'o plug do agente externo é recusado e a caixa fica sem robô' do
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('caixa_com_agente_da_plataforma')
+    expect(AgentBotInbox.where(inbox_id: inbox.id)).to be_empty
+  end
+
+  it 'a área continua válida na caixa, e a caixa segue aceitando área' do
     expect(area.reload.deleted_at).to be_nil
-    expect(area).not_to be_valid
-    expect(area.errors[:papel]).to be_present
-    expect(described_class.caixa_aceita_area?(Inbox.find(inbox.id)).codigo).to eq(:robo_externo)
+    expect(area).to be_valid
+    expect(described_class.caixa_aceita_area?(Inbox.find(inbox.id)).codigo).to eq(:ok)
     expect(da_equipe.reload.tem_onde_trabalhar?).to be(true)
   end
 
   it 'a conversa de que a área é dona continua sendo respondida por ela' do
+    expect(da_area.reload.assignee_agent_bot_id).to eq(area.agent_bot_id)
     expect(Autonomia::Agents::QuemResponde.agent_inbox(da_area)).to eq(area)
     expect(Autonomia::Agents::Operate.eligible_agent_inbox(da_area)).to eq(area)
   end
 
-  it 'o agente externo também recebe o webhook das mensagens da conversa da área (pode haver resposta dupla)' do
+  it 'o agente externo não recebe o webhook das mensagens da conversa da área' do
     expect do
       create(:message, account: account, conversation: da_area, message_type: :incoming, content: 'quero o boleto')
-    end.to have_enqueued_job(AgentBots::WebhookJob).with('https://parceiro.example/webhook', anything, :agent_bot_webhook,
-                                                         hash_including(:secret, :delivery_id))
+    end.not_to have_enqueued_job(AgentBots::WebhookJob).with('https://parceiro.example/webhook', anything, anything, anything)
   end
 
-  it 'conversa nova nasce com o agente externo, não com a área' do
-    nova = create(:conversation, account: account, inbox: inbox)
-
-    expect(nova.assignee_agent_bot_id).not_to eq(area.agent_bot_id)
-    expect(Autonomia::Agents::QuemResponde.agent_inbox(nova)).to be_nil
-  end
-
-  it 'soltar a área hoje entrega as conversas dela ao agente externo' do
-    described_class.desvincular!(agent: da_equipe, inbox: inbox)
-
-    expect(da_area.reload.assignee_agent_bot_id).to eq(externo.id)
-  end
-
-  it 'soltar a área deveria mandar as conversas dela para as pessoas, nunca para o agente externo' do
-    pending 'marcação por caixa (próximo PR): devolver_conversas_a_porta! usa inbox.agent_bot, que aqui é o agente externo'
+  it 'soltar a área manda as conversas dela para as pessoas, nunca para o agente externo' do
     described_class.desvincular!(agent: da_equipe, inbox: inbox)
 
     expect(da_area.reload.assignee_agent_bot_id).to be_nil

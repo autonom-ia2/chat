@@ -1042,6 +1042,9 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      caixa_externo:
+        caixa_com_agente_da_plataforma: 'Esta caixa é atendida pelos Agentes da plataforma. Para usar um agente externo aqui, tire-os antes da caixa, na página de cada agente.'
+        desconectar_agente_da_plataforma: 'Esta caixa é atendida por um Agente da plataforma. Para tirá-lo, use a página do agente.'
       ajudante:
         outra_conta: 'O ajudante e os agentes que ele ajuda precisam ser desta conta.'
         ele_mesmo: 'Um agente não pode ajudar a si mesmo.'

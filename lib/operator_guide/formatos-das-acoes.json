@@ -17090,7 +17090,6 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:69",
       "app/controllers/api/v1/accounts/inboxes_controller.rb:115",
       "app/controllers/api/v1/accounts/inboxes_controller.rb:120"
     ],

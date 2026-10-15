@@ -61,7 +61,8 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       'porta' => { 'id' => clara.id, 'name' => 'Clara' },
       'pode_mudar' => true,
       'areas' => [{ 'id' => maria.id, 'name' => 'Maria', 'pipeline_ids' => [vendas.id], 'parado' => false, 'ultima_caixa' => true }],
-      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
+      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }],
+      'externo' => nil
     )
   end
 
