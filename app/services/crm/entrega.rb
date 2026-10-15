@@ -21,6 +21,8 @@
 class Crm::Entrega
   Resultado = Struct.new(:status, :pessoa, :motivo, :card, keyword_init: true)
   Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, keyword_init: true)
+  # Motivos em que quem pediu a passagem foi o robô que atendia.
+  PEDIDO_DO_ROBO = %w[robo_pediu n8n].freeze
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card).
@@ -40,7 +42,9 @@ class Crm::Entrega
 
   # Por conta própria: trava a conversa, relê e grava.
   def call
-    @conversation.with_lock { @resultado = executar(planejar, gravar: true) }
+    Crm::Passagens.com_motivo(@motivo) do
+      @conversation.with_lock { @resultado = executar(planejar, gravar: true) }
+    end
     registrar
     @resultado
   end
@@ -56,6 +60,7 @@ class Crm::Entrega
   private
 
   def planejar
+    @quem_atendia = robo_que_atendia
     return nada('ja_tem_pessoa') if @conversation.assignee_id.present?
     return nada('fechada') unless @conversation.open? || @conversation.pending?
 
@@ -132,13 +137,21 @@ class Crm::Entrega
     Plano.new(acao: :nada, motivo: motivo)
   end
 
-  # O card do assunto em atendimento (#1141). Quem já tem o card (a IA do CRM) o passa. Sem olhar a chave do CRM: o
-  # card aberto que existe já decide quem vê a conversa (Crm::Access::Recipients), e a fila tem de usar o mesmo funil.
+  # O card do assunto em atendimento, relido aqui, sob a trava (#1606, regra única Crm::Assunto.funil_atual). O card que
+  # a IA do CRM passou é o da avaliação; se o assunto mudou desde então, vale o atual (corrida c). Sem olhar a chave do
+  # CRM: o card aberto que existe já decide quem vê a conversa (Crm::Access::Recipients), e a fila usa o mesmo funil.
   def card_em_atendimento
-    return @card if @card
+    atual = Crm::Assunto.funil_atual(@conversation)
+    @assunto_mudou = @card.present? && atual&.id != @card.id
+    atual
+  end
 
-    card = Crm::Cards::ConversationCardFinder.new(account: @conversation.account).find(@conversation)
-    card if card&.open?
+  # O robô que estava com a conversa antes desta entrega: o valor do banco, porque na passagem do robô
+  # (ConversationBotHandoff#bot_handoff!) ele já saiu da memória.
+  def robo_que_atendia
+    return unless @conversation.attribute_in_database('ai_assignee_type') == 'AgentBot'
+
+    AgentBot.find_by(id: @conversation.attribute_in_database('assignee_agent_bot_id'))
   end
 
   def regra_do(card)
@@ -157,7 +170,9 @@ class Crm::Entrega
     end
   end
 
+  # O porquê da passagem é anotado ANTES de gravar: a conversa o prende no save que troca a pessoa.
   def entregar(plano, gravar)
+    anotar_passagem(plano)
     return resultado(:nada, nada('falhou_atribuir')) unless atribuir(plano.pessoa, gravar)
 
     registro(plano)&.entregue!(plano.pessoa, razao: @razao)
@@ -192,6 +207,7 @@ class Crm::Entrega
     # rodízio nativo não passar por cima e a fila tentar de novo.
     return segurar(Plano.new(acao: :segurar, card: plano.card, settings: plano.settings, motivo: falha), gravar) if falha
 
+    convite_como_passagem!(plano)
     ate = Time.current + plano.settings[:invite_ttl_seconds].to_i.seconds
     Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate)
     @conversation.save! if gravar && @conversation.changed?
@@ -215,6 +231,24 @@ class Crm::Entrega
     falha
   end
 
+  # A entrega para uma pessoa vira passagem pelo escritor único (Crm::PassagensListener, depois do commit): aqui só o
+  # porquê vai junto, no contexto do Crm::Passagens.com_motivo aberto pelo #call ou pela passagem do robô
+  # (ConversationBotHandoff#bot_handoff!). Quem pediu: o robô, quando foi ele (pediu a passagem, ou o agente externo pelo
+  # toggle); senão a pessoa logada ou o sistema (a IA do CRM, a triagem, o robô desligado).
+  def anotar_passagem(plano)
+    Crm::Passagens.anotar(card: plano.card, pedida_por: PEDIDO_DO_ROBO.include?(@motivo) ? @quem_atendia : nil)
+  end
+
+  # O convite não atribui (o listener não vê troca): é a única passagem para pessoa gravada aqui (#1606, aprovado pelo
+  # Multifunnel). Savepoint próprio: se o registro falhar, o convite segue, e a falha fica no log, com ids.
+  def convite_como_passagem!(plano)
+    pediu = PEDIDO_DO_ROBO.include?(@motivo) ? @quem_atendia : nil
+    Crm::Passagens.registrar!(conversation: @conversation, de: @quem_atendia, para: plano.pessoa, pedida_por: pediu,
+                              motivo: Crm::Passagens::CONVITE, card: plano.card)
+  rescue ActiveRecord::ActiveRecordError, ArgumentError => e
+    Rails.logger.error("[crm][passagem] nao_registrada evento=convite conversa=#{@conversation.id} erro=#{e.class}")
+  end
+
   def registro(plano)
     return if plano.card.blank? || plano.settings.blank?
 
@@ -230,7 +264,7 @@ class Crm::Entrega
     Rails.logger.info(
       "[crm][entrega] conversa=#{@conversation.id} conta=#{@conversation.account_id} card=#{@resultado.card&.id || '-'} " \
       "motivo=#{@motivo} origem=#{@origem} desfecho=#{@resultado.status} pessoa=#{@resultado.pessoa&.id || '-'} " \
-      "detalhe=#{@resultado.motivo || '-'}"
+      "detalhe=#{@resultado.motivo || '-'}#{' assunto_mudou' if @assunto_mudou}"
     )
   end
 end

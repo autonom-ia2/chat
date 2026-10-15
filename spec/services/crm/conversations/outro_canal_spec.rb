@@ -73,6 +73,9 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     expect(account.crm_cards.where(contact: joao).count).to eq(1)
     # O card continua do canal de origem e da Ana: a conversa vinculada não o arrasta para a caixa de e-mail.
     expect(onix.reload).to have_attributes(inbox_id: whatsapp.id, owner_id: ana.id)
+    # A passagem do Bruno (rodízio) para a Ana fica no registro de passagens (#1622), com o porquê e o card.
+    expect(Crm::Passagem.where(conversation_id: conversation.id).order(:id).last)
+      .to have_attributes(de_id: bruno.id, para_id: ana.id, motivo: 'outro_canal', card_id: onix.id)
   end
 
   # Dono que não pode receber na caixa nova (decisão do Rodrigo em 15/10): liga, e quem cuida do funil ali recebe.
