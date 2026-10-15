@@ -97,16 +97,13 @@ const setRouting = value => emit('save', { routing_enabled: value });
       :title="tr('WAY.TITLE')"
     >
       <template #acao>
-        <label
-          class="flex items-center gap-2 cursor-pointer shrink-0"
-          data-routing-switch
-        >
-          <span class="sr-only">{{ tr('WAY.SWITCH') }}</span>
+        <span class="flex items-center shrink-0" data-routing-switch>
           <ToggleSwitch
+            :label="tr('WAY.SWITCH')"
             :model-value="routingOn"
             @update:model-value="setRouting"
           />
-        </label>
+        </span>
       </template>
       <p class="mb-2 text-base font-semibold text-n-slate-12">
         {{ tr('WAY.SWITCH') }}

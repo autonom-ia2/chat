@@ -16,28 +16,35 @@ class WhatsappHybrid::Pause
   end
 
   # A pausa é gravada ANTES do stop: o aviso de "parou" que o motor manda em seguida já encontra a conexão pausada.
-  # Motor recusou, ou não respondeu e a consulta seguinte não mostra a sessão parada: desfaz a pausa e recusa.
+  # Motor recusou, ou não respondeu e a consulta seguinte não mostra a sessão parada: desfaz a pausa nova e recusa.
+  # Pausa já gravada (pedido repetido, ou a sessão voltou a rodar no motor): para de novo, sem desfazer a pausa.
   def pause!
     exclusive do
-      next @manager.refresh! if @connection.paused?
-
       remote = remote_session
-      @connection.update!(paused_at: Time.current, down_alerted_at: nil)
-      stop!(remote)
+      fresh = !@connection.paused?
+      @connection.update!(paused_at: Time.current, down_alerted_at: nil) if fresh
+      stop!(remote, undo: fresh)
       @manager.refresh!
     end
   end
 
   # Sessão apagada no motor (404) é recriada, com QR. Falha do motor mantém a pausa e recusa o pedido: nada é
   # recriado por cima de uma sessão viva (recriar soltaria a atribuição de proxy dela, #1516).
+  # A pausa só sai de vez quando o motor aceitou: recusa (ao recriar ou ao religar) volta a pausa como estava.
   def resume!
     exclusive do
       remote = remote_session
+      paused_at = @connection.paused_at
       @connection.update!(paused_at: nil)
-      next @manager.ensure_session! if remote.blank?
+      begin
+        next @manager.ensure_session! if remote.blank?
 
-      start!(remote)
-      @manager.refresh!
+        @client.start_session(@connection.session_name) if remote['status'] == 'STOPPED'
+        @manager.refresh!
+      rescue Waha::Client::Error
+        @connection.update!(paused_at: paused_at || Time.current)
+        raise
+      end
     end
   end
 
@@ -69,15 +76,16 @@ class WhatsappHybrid::Pause
     {}
   end
 
-  def stop!(remote)
+  # undo: a pausa acabou de ser gravada por este pedido (só essa é desfeita quando o motor não para).
+  def stop!(remote, undo:)
     return if remote.blank? || remote['status'] == 'STOPPED'
 
     @client.stop_session(@connection.session_name)
   rescue Waha::Client::Timeout
-    # Sem resposta: decide pelo estado real. Parada → a pausa fica; qualquer outra coisa → desfaz e recusa.
-    undo_pause! unless confirmed_stopped?
+    # Sem resposta: decide pelo estado real. Parada → a pausa fica; qualquer outra coisa → recusa.
+    refuse_stop!(undo) unless confirmed_stopped?
   rescue Waha::Client::Error
-    undo_pause!
+    refuse_stop!(undo)
   end
 
   def confirmed_stopped?
@@ -86,15 +94,8 @@ class WhatsappHybrid::Pause
     false
   end
 
-  def undo_pause!
-    @connection.update!(paused_at: nil)
+  def refuse_stop!(undo)
+    @connection.update!(paused_at: nil) if undo
     raise Waha::Client::Error, 'stop não confirmado'
-  end
-
-  def start!(remote)
-    @client.start_session(@connection.session_name) if remote['status'] == 'STOPPED'
-  rescue Waha::Client::Error
-    @connection.update!(paused_at: Time.current)
-    raise
   end
 end

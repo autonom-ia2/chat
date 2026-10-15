@@ -3,8 +3,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 
 // #1487 — uma parte de uma configuração em uma frase: ícone, nome pequeno, a frase e "Alterar". Mesma anatomia do
 // cartão-resumo do funil (#1384, FunilResumoCartao), sem depender do CRM: os textos do botão vêm de quem usa.
-// `apagado`: a parte não vale agora (ex.: um interruptor acima está desligado) — o cartão esmaece e não oferece
-// "Alterar"; a frase explica o porquê. O slot `acao` troca o botão (ex.: um interruptor no cabeçalho).
+// `dimmed`: a parte não vale agora (ex.: um interruptor acima está desligado) — o cartão esmaece e não oferece
+// "Alterar"; a frase visível do cartão explica o porquê (sem aria-disabled: um <article> não é controle). O slot `acao` troca o botão (ex.: um interruptor no cabeçalho).
 defineProps({
   name: { type: String, required: true },
   icon: { type: String, required: true },
@@ -21,7 +21,7 @@ defineEmits(['edit']);
 <template>
   <article
     :data-summary-card="name"
-    :aria-disabled="dimmed || undefined"
+    :data-dimmed="dimmed || undefined"
     class="flex items-start gap-3 p-4 transition border shadow-sm rounded-2xl bg-n-solid-1 sm:gap-4 sm:p-5"
     :class="
       dimmed

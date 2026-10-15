@@ -1,9 +1,9 @@
 <script setup>
 // #1487 — liga/desliga com área de toque de 44 px (o Switch do components-next tem 16 px de altura), com
 // <input type="checkbox" role="switch"> de verdade. Mesma anatomia do FunilInterruptor (#1384), sem o CRM.
-// Fica dentro de um <label> com o texto; `label` dá o nome quando o texto ao lado não diz o que liga.
+// `label` é obrigatório: é o nome do interruptor para o leitor de tela (aria-label do input).
 defineProps({
-  label: { type: String, default: undefined },
+  label: { type: String, required: true },
   disabled: { type: Boolean, default: false },
 });
 const on = defineModel({ type: Boolean, default: false });

@@ -30,14 +30,10 @@ class WhatsappHybrid::TeardownSessionJob < ApplicationJob
 
   private
 
+  # Mesmo pedido do reconectar da aba (WakeSession): parada ou subindo, espera pelo retry.
   def wake_up!(client, session_name)
-    case client.get_session(session_name)&.dig('status')
-    when 'STOPPED'
-      client.start_session(session_name)
-      raise Waking
-    when 'STARTING'
-      raise Waking
-    end
+    status = WhatsappHybrid::WakeSession.new(client, session_name).start_if_stopped!
+    raise Waking if WhatsappHybrid::WakeSession::WAKING.include?(status)
   end
 
   # Sessão apagada: o IP da Webshare volta para o pool (#1516).

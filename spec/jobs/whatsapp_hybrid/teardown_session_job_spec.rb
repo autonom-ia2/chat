@@ -80,13 +80,16 @@ RSpec.describe WhatsappHybrid::TeardownSessionJob do
       expect(client).to have_received(:delete_session).with('hybrid-1')
     end
 
-    it 'gives up waking after the last attempt and schedules the plain teardown' do
+    it 'gives up waking after the last attempt and still logs out and deletes' do
       allow(client).to receive(:get_session).and_return({ 'status' => 'STARTING' })
-      job = described_class.new('hybrid-1')
-      job.exception_executions = { '[WhatsappHybrid::TeardownSessionJob::Waking]' => described_class::WAKE_ATTEMPTS - 1 }
-      job.executions = described_class::WAKE_ATTEMPTS
+      allow(client).to receive_messages(start_session: {}, logout_session: {}, delete_session: {})
 
-      expect { job.perform_now }.to have_enqueued_job(described_class).with('hybrid-1', wake: false)
+      perform_enqueued_jobs { described_class.perform_later('hybrid-1') }
+
+      expect(client).to have_received(:get_session).exactly(described_class::WAKE_ATTEMPTS).times
+      expect(client).not_to have_received(:start_session)
+      expect(client).to have_received(:logout_session).with('hybrid-1').once
+      expect(client).to have_received(:delete_session).with('hybrid-1').once
     end
   end
 end

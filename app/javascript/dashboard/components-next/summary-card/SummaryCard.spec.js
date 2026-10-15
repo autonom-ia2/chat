@@ -27,7 +27,8 @@ describe('SummaryCard (#1487)', () => {
   it('dims and hides "Change" when the part does not apply now', () => {
     const wrapper = mountCard({ editLabel: 'Change', dimmed: true });
 
-    expect(wrapper.find('article').attributes('aria-disabled')).toBe('true');
+    expect(wrapper.find('article').attributes('aria-disabled')).toBeUndefined();
+    expect(wrapper.find('article').attributes('data-dimmed')).toBe('true');
     expect(wrapper.find('button').exists()).toBe(false);
   });
 });

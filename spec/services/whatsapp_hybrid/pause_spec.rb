@@ -75,6 +75,25 @@ describe WhatsappHybrid::Pause do
       expect(connection.reload).not_to be_paused
     end
 
+    it 'stops again when the pause is already saved but the session is running in the engine' do
+      connection.update!(paused_at: 1.hour.ago, status: 'connected')
+      allow(client).to receive(:get_session).and_return(working, stopped)
+
+      pause.pause!
+
+      expect(client).to have_received(:stop_session).with('hybrid-pause')
+      expect(connection.reload).to be_paused
+    end
+
+    it 'keeps an existing pause when the engine refuses the new stop' do
+      connection.update!(paused_at: 1.hour.ago, status: 'connected')
+      allow(client).to receive(:get_session).and_return(working)
+      allow(client).to receive(:stop_session).and_raise(Waha::Client::Error.new('boom', status: 500))
+
+      expect { pause.pause! }.to raise_error(Waha::Client::Error)
+      expect(connection.reload).to be_paused
+    end
+
     it 'refuses while another change holds the session' do
       Redis::Alfred.set(WhatsappProxy::SessionLock.key('hybrid-pause'), 'other', ex: 60)
       allow(client).to receive(:get_session)
@@ -190,6 +209,14 @@ describe WhatsappHybrid::Pause do
       expect(WhatsappProxy::Assignment.exists?(assignment.id)).to be(true)
     end
 
+    it 'keeps the pause and returns the error when the engine refuses to recreate the session' do
+      allow(client).to receive(:get_session).and_raise(Waha::Client::NotFound.new('404', status: 404))
+      allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new('boom', status: 500))
+
+      expect { pause.resume! }.to raise_error(Waha::Client::Error)
+      expect(connection.reload).to be_paused
+    end
+
     it 'recreates the session (with a QR code) only when the engine no longer has it' do
       calls = 0
       allow(client).to receive(:get_session) do
@@ -206,13 +233,15 @@ describe WhatsappHybrid::Pause do
     end
   end
 
-  it 'reconnect! (new QR code) clears the pause' do
+  it 'reconnect! (new QR code) on a paused session starts it first, then logs out, and clears the pause' do
     connection.update!(paused_at: Time.current, status: 'disconnected')
-    allow(client).to receive(:get_session).and_return(stopped)
+    allow(Kernel).to receive(:sleep)
+    allow(client).to receive(:get_session).and_return(stopped, working)
+    expect(client).to receive(:start_session).with('hybrid-pause').ordered
+    expect(client).to receive(:logout_session).with('hybrid-pause').ordered
 
     manager.reconnect!
 
-    expect(client).to have_received(:logout_session).with('hybrid-pause')
     expect(connection.reload).not_to be_paused
   end
 end

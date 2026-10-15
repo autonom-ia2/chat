@@ -108,8 +108,8 @@ class WhatsappHybrid::SessionManager
   end
 
   def reconnect!
-    # Pedir novo QR é decisão de religar: desfaz a pausa.
-    connection.update!(paused_at: nil) if connection.paused?
+    # Pedir novo QR é decisão de religar: desfaz a pausa, com a sessão no ar antes do logout (WakeSession).
+    WhatsappHybrid::WakeSession.unpause!(@client, connection)
     # Sessão apagada no motor (reinício, limpeza): recria em vez de falhar.
     return ensure_session! if fetch_remote.blank?
 

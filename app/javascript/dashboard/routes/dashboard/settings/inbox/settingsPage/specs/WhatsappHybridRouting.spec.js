@@ -93,7 +93,7 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     );
     ['who', 'pace'].forEach(name => {
       const card = wrapper.find(`[data-summary-card="${name}"]`);
-      expect(card.attributes('aria-disabled')).toBe('true');
+      expect(card.attributes('data-dimmed')).toBe('true');
       expect(card.text()).toContain(`${R}.OFF_HINT`);
       expect(card.text()).not.toContain(`${R}.EDIT`);
     });
