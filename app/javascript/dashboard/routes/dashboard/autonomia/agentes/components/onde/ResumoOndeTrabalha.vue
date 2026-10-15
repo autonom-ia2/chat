@@ -54,8 +54,8 @@ const linhas = computed(() =>
         <span>
           <b class="font-semibold">{{ linha.nome }}</b>
           <span v-if="linha.endereco" class="text-n-slate-11">
-            · {{ linha.endereco }}</span
-          >
+            {{ `· ${linha.endereco}` }}
+          </span>
         </span>
         <span class="text-n-slate-11">{{ linha.papel }}</span>
       </span>
