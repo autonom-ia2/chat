@@ -752,7 +752,10 @@
         "SEM_HORARIO": "This channel has no business hours yet.",
         "QUEM_RECEBE": "When it does not know, {nome} hands the conversation to the team. Who receives it is set in Assignment.",
         "ESCOLHER_QUEM_RECEBE": "Choose who receives",
-        "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives."
+        "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives.",
+        "TAMBEM": "Also receives when someone hands over on:",
+        "TAMBEM_TEXTO": "Choose the other channels where {nome} gets the conversation when someone hands it over. There, {nome} does not answer first.",
+        "TAMBEM_NENHUMA": "There is no other channel to choose yet."
       },
       "COMPOSITOR": {
         "ESCREVA": "Write your answer",
@@ -1091,7 +1094,8 @@
           "TEXTO": "On {canal}, {quando}.",
           "TEXTO_N": "On 1 channel, {quando}. | On {n} channels, {quando}.",
           "ALTERAR_ARIA": "Change where and when it answers",
-          "ESCOLHER_CANAL": "Choose channel"
+          "ESCOLHER_CANAL": "Choose channel",
+          "TAMBEM": "Also receives when someone hands over on: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Name and way of talking",

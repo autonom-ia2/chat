@@ -752,7 +752,10 @@
         "SEM_HORARIO": "Este canal ainda não tem horário de atendimento.",
         "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
         "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
-        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe."
+        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe.",
+        "TAMBEM": "Também recebe quando alguém passar em:",
+        "TAMBEM_TEXTO": "Marque os outros canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
+        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher."
       },
       "COMPOSITOR": {
         "ESCREVA": "Escreva sua resposta",
@@ -1091,7 +1094,8 @@
           "TEXTO": "No {canal}, {quando}.",
           "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
-          "ESCOLHER_CANAL": "Escolher canal"
+          "ESCOLHER_CANAL": "Escolher canal",
+          "TAMBEM": "Também recebe quando alguém passar em: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Nome e jeito de falar",

@@ -47,3 +47,32 @@ export const mudancaDaEquipe = (antes, depois) => ({
   entram: depois.filter(id => !antes.includes(id)),
   saem: antes.filter(id => !depois.includes(id)),
 });
+
+// #1433 (gaveta "Onde e quando", decisão do Rodrigo de 15/10: "a, para todos os agentes") — quem atende
+// primeiro numa caixa também pode receber, quando alguém passar, em OUTRAS caixas. Só quem fala com
+// cliente: o interno (Copiloto) e o ajudante não; a Lia (cotação) sim. O servidor confere de novo.
+export const recebeEmOutrasCaixas = agente =>
+  Boolean(agente) &&
+  agente.actuation !== 'internal' &&
+  agente.ajudante !== true &&
+  !(agente.ajuda || []).length;
+
+// As outras caixas da seção "Também recebe quando alguém passar em": fora as em que ele é o principal e a
+// escolhida em "Onde atende" (`fora`). [{ canal, bloqueio }], na ordem da leitura. Onde ele já está na
+// equipe continua escolhível mesmo bloqueada, para poder sair.
+export const outrasCaixasDaEquipe = (canais, agenteId, fora = []) =>
+  (canais || [])
+    .filter(
+      canal =>
+        !fora.includes(canal.inbox_id) &&
+        principalDaCaixa(canal)?.agent_id !== agenteId
+    )
+    .map(canal => {
+      const naEquipe = (canal.areas || []).some(
+        area => area.agent_id === agenteId
+      );
+      return {
+        canal,
+        bloqueio: naEquipe ? null : bloqueioDaCaixa(canal, agenteId),
+      };
+    });
