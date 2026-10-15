@@ -45,6 +45,17 @@ const atalho = (alvo = document.body, extra = {}) =>
   );
 
 describe('useLarguraDoMenu', () => {
+  it('tecla segurada (repeat) não alterna de novo', () => {
+    const { sidebarWidth, wrapper } = montar({ salvo: { sidebar_width: 256 } });
+    atalho(document.body, { repeat: true });
+    expect(sidebarWidth.value).toBe(256);
+    atalho();
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    atalho(document.body, { repeat: true });
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
   it('sem escolha: tela grande abre em 256px, tela média começa recolhida', () => {
     expect(montar({ janela: 1440 }).sidebarWidth.value).toBe(LARGURA_PADRAO);
     expect(montar({ janela: 1024 }).sidebarWidth.value).toBe(LARGURA_RECOLHIDA);

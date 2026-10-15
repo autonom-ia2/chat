@@ -108,6 +108,11 @@ const idsPorGrupo = cartoes =>
   ]);
 
 describe('useCartoes', () => {
+  const configOriginal = window.globalConfig;
+  afterEach(() => {
+    window.globalConfig = configOriginal;
+  });
+
   beforeEach(() => {
     estado.chaves = ['administrator'];
     estado.passos = [];
@@ -203,7 +208,23 @@ describe('useCartoes', () => {
     expect(
       idsPorGrupo(montar()).flatMap(([, cartoes]) => cartoes)
     ).not.toContain('QUEM_CUIDA');
-    delete window.globalConfig;
+  });
+
+  it('recurso da instalação desligado: o cartão não aparece, mesmo com permissão', () => {
+    window.globalConfig = {
+      CRM_KANBAN_ENABLED: 'false',
+      EMAIL_CAMPAIGN_ENABLED: 'true',
+    };
+    const ids = idsPorGrupo(montar()).flatMap(([, cartoes]) => cartoes);
+    expect(ids).not.toContain('QUEM_CUIDA');
+    expect(ids).not.toContain('EMAIL_ENVIO');
+    window.globalConfig = {
+      CRM_KANBAN_ENABLED: 'true',
+      EMAIL_CAMPAIGN_ENABLED: 'false',
+    };
+    const semEmail = idsPorGrupo(montar()).flatMap(([, cartoes]) => cartoes);
+    expect(semEmail).toContain('QUEM_CUIDA');
+    expect(semEmail).not.toContain('EMAIL_ENVIO');
   });
 
   it('caixa que pede reconexão deixa o cartão de canais vermelho e vira o "Comece por aqui"', () => {

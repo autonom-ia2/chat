@@ -76,6 +76,8 @@ export function useLarguraDoMenu({
 
   useEventListener(document, 'keydown', evento => {
     const comando = evento.ctrlKey || evento.metaKey;
+    // Tecla segurada repete o evento: alternaria sem parar.
+    if (evento.repeat) return;
     if (!comando || evento.key !== '\\' || celular.value) return;
     if (escrevendo(evento.target)) return;
     evento.preventDefault();

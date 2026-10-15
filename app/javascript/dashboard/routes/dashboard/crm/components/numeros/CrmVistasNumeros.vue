@@ -1,33 +1,38 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
 import { ROTA_NUMEROS, useAbaNumeros } from './useAbaNumeros';
 
 // Na página Números (#1617), o mesmo seletor do CRM para voltar ao Kanban, à Lista ou ao Calendário.
 // Lista e Calendário abrem o CRM já na vista certa (`?view=`).
 const { t } = useI18n();
 const { mostrar } = useAbaNumeros();
+const { podeAbrir } = usePodeAbrir();
 
-const vistas = computed(() => [
-  {
-    id: 'kanban',
-    to: { name: 'crm_kanban_index' },
-    label: t('CRM_KANBAN.VIEWS.KANBAN'),
-    icon: 'i-lucide-kanban',
-  },
-  {
-    id: 'list',
-    to: { name: 'crm_kanban_index', query: { view: 'list' } },
-    label: t('CRM_KANBAN.VIEWS.LIST'),
-    icon: 'i-lucide-list',
-  },
-  {
-    id: 'calendar',
-    to: { name: 'crm_kanban_index', query: { view: 'calendar' } },
-    label: t('CRM_KANBAN.VIEWS.CALENDAR'),
-    icon: 'i-lucide-calendar-days',
-  },
-]);
+// Quem só vê os relatórios do CRM (crm_view_reports sem crm_view) não ganha link para tela que não abre.
+const vistas = computed(() =>
+  [
+    {
+      id: 'kanban',
+      to: { name: 'crm_kanban_index' },
+      label: t('CRM_KANBAN.VIEWS.KANBAN'),
+      icon: 'i-lucide-kanban',
+    },
+    {
+      id: 'list',
+      to: { name: 'crm_kanban_index', query: { view: 'list' } },
+      label: t('CRM_KANBAN.VIEWS.LIST'),
+      icon: 'i-lucide-list',
+    },
+    {
+      id: 'calendar',
+      to: { name: 'crm_kanban_index', query: { view: 'calendar' } },
+      label: t('CRM_KANBAN.VIEWS.CALENDAR'),
+      icon: 'i-lucide-calendar-days',
+    },
+  ].filter(vista => podeAbrir(vista.to))
+);
 </script>
 
 <template>
