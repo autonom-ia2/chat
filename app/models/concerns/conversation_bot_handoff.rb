@@ -36,15 +36,16 @@ module ConversationBotHandoff
   # `keep_bot: false` solta o robô de vez: é o caminho de quem desliga o robô, não de quem passa a conversa.
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
+  # `dono`: a pessoa a quem a entrega é dirigida (o dono do card, R13 do #1150); ver Crm::Entrega.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
-  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
+  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false, dono: nil)
     self.class.transaction do
       take_fresh_assignee(release_assignee)
       robo = keep_bot ? handoff_bot : nil
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
-      deliver_on_handoff(motivo, keep_bot)
+      deliver_on_handoff(motivo, keep_bot, dono)
       if robo && assignee_id.blank?
         wait_for_person_with(robo)
       else
@@ -103,11 +104,11 @@ module ConversationBotHandoff
 
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
   # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
-  def deliver_on_handoff(motivo, keep_bot)
+  def deliver_on_handoff(motivo, keep_bot, dono)
     return if assignee_id.present?
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
-    Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem').na_passagem
+    Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', dono: dono).na_passagem
   end
 
   def wait_for_person_with(robo)

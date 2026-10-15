@@ -24,13 +24,17 @@ class Crm::Entrega
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card).
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {})
+  # `dono`: a pessoa a quem a conversa é dirigida (o dono do card, R13 do #1150). Se ela está na fila de quem cuida, a fila
+  # é só ela, e a regra do funil vale como para a pessoa fixa: entrega, convida ou segura até ela entrar (a marca guarda
+  # o dono para a próxima tentativa). Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, dono: nil) # rubocop:disable Metrics/ParameterLists
     @conversation = conversation
     @motivo = motivo.to_s
     @origem = origem.to_s
     @card = card
     @sugestao = pedido[:sugestao]
     @razao = pedido[:razao]
+    @dono = dono
   end
 
   # Por conta própria: trava a conversa, relê e grava.
@@ -95,7 +99,11 @@ class Crm::Entrega
   end
 
   def fila(card)
-    @fila ||= Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas
+    @fila ||= begin
+      pessoas = Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas
+      @dono_na_fila = @dono && pessoas.find { |pessoa| pessoa.id == @dono.id }
+      @dono_na_fila ? [@dono_na_fila] : pessoas
+    end
   end
 
   def nada(motivo)
@@ -147,7 +155,8 @@ class Crm::Entrega
   def segurar(plano, gravar)
     vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
     falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao)
+    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao,
+                                              dono: @dono_na_fila)
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)

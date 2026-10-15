@@ -173,7 +173,16 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
 
-    Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] }).call
+    Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
+                     dono: dono_da_marca(conversation, marca)).call
+  end
+
+  # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela
+  # continua na fila de quem cuida.
+  def dono_da_marca(conversation, marca)
+    return if marca['dono_id'].blank?
+
+    conversation.account.users.find_by(id: marca['dono_id'])
   end
 
   # Pré-filtro barato no JSONB: o volume esperado é baixo, mas isso evita varrer
