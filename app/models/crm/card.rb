@@ -178,7 +178,7 @@ class Crm::Card < ApplicationRecord
   end
 
   def sugerir_repasse
-    Crm::RepasseJob.agendar(([conversation_id] + card_conversations.pluck(:conversation_id)).compact.uniq)
+    Crm::RepassePorCardJob.perform_later(id)
   end
 
   def sync_responsible_agent

@@ -13,6 +13,10 @@
 # sugestão vale. Sugestão de outra pessoa (a conversa mudou de mãos) não vale e sai na próxima leitura do assunto.
 # "A equipe de X" é quem cuida do funil do card (Crm::Entrega::QuemCuida, a fila do motor de entrega): sem ninguém além da
 # pessoa, não há para quem passar e nada é sugerido.
+#
+# Só a TROCA de assunto com uma pessoa já no nome gera o aviso (decisão de produto, 15/10). Atribuir uma pessoa a uma
+# conversa cujo assunto já é de outro funil não gera aviso: não há gatilho na atribuição, de propósito. Conversa
+# resolvida ou adiada perde o aviso (Crm::ConversationObserverListener#conversation_status_changed).
 module Crm::Repasse
   CHAVE = 'crm_repasse'.freeze
   DISPENSADOS = 'crm_repasse_dispensados'.freeze
@@ -59,12 +63,29 @@ module Crm::Repasse
   # Alguém da equipe do funil, além da pessoa, está online agora? Sem ninguém, "Passar" deixa a conversa esperando (como a
   # triagem), e a tela avisa antes (decisão 2a do Rodrigo, 15/10). Presença fora do ar conta como ninguém: o motor de
   # entrega também segura nesse caso.
+  # true/false; nil quando a presença está fora do ar (desconhecido): a tela não diz "ninguém online" sem saber.
+  # Só a falha de leitura da presença (Redis) vira nil; qualquer outro erro sobe.
   def equipe_online?(conversation, card, user)
     equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas.map(&:id) - [user.id]
-    equipe.intersect?(Crm::Entrega::Presenca.online_ids(conversation.account_id).to_a)
-  rescue StandardError => e
+    online = presenca(conversation)
+    online.nil? ? nil : equipe.intersect?(online.to_a)
+  end
+
+  def presenca(conversation)
+    Crm::Entrega::Presenca.online_ids(conversation.account_id)
+  rescue Redis::BaseError => e
     Rails.logger.warn("[crm][repasse] presença indisponível conversa=#{conversation.id} #{e.class}")
-    false
+    nil
+  end
+
+  # Tira o aviso (conversa resolvida ou adiada). Sem marca, nada grava.
+  def limpar!(conversation)
+    return if conversation.additional_attributes.to_h[CHAVE].blank?
+
+    Crm::Conversations::SyncLock.new(account: conversation.account, conversation: conversation).perform do
+      gravar_marca(conversation, nil)
+    end
+    Crm::Subjects::Notifier.notify(conversation)
   end
 
   def passar!(conversation, user, card_id)

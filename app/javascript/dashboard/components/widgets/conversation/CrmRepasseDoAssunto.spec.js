@@ -152,6 +152,20 @@ describe('CrmRepasseDoAssunto (#1606, decisão "a")', () => {
       expect(box(wrapper).exists()).toBe(false);
     });
 
+    it('presença desconhecida (null): não diz "ninguém online" e passa direto', async () => {
+      CrmKanbanAPI.passSubjectToTeam.mockResolvedValue({});
+      const wrapper = mountRepasse({
+        repasse: { ...REPASSE, equipe_online: null },
+      });
+      await flushPromises();
+
+      await wrapper.find('[data-crm-repasse-pass]').trigger('click');
+      await flushPromises();
+
+      expect(nobody(wrapper).exists()).toBe(false);
+      expect(CrmKanbanAPI.passSubjectToTeam).toHaveBeenCalledWith(9, 31);
+    });
+
     it('Ficar com a conversa, no aviso, fica e não passa', async () => {
       CrmKanbanAPI.keepSubjectWithMe.mockResolvedValue({});
       const wrapper = mountRepasse({ repasse: SEM_NINGUEM });

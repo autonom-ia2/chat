@@ -68,8 +68,30 @@ RSpec.describe Crm::Repasse do
 
       expect(described_class.para(conversation.reload, ana)).to include(equipe_online: false)
 
+      # Presença fora do ar: desconhecido (nil), e a tela não diz "ninguém online".
       allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(Redis::CannotConnectError)
-      expect(described_class.para(conversation.reload, ana)).to include(equipe_online: false)
+      expect(described_class.para(conversation.reload, ana)).to include(equipe_online: nil)
+    end
+
+    it 'outro erro na leitura da equipe não vira "ninguém online": sobe' do
+      card_em(agentes)
+      described_class.sugerir!(conversation.reload)
+      allow(Crm::Entrega::QuemCuida).to receive(:new).and_raise(ArgumentError)
+
+      expect { described_class.para(conversation.reload, ana) }.to raise_error(ArgumentError)
+    end
+
+    it 'conversa resolvida perde o aviso; reaberta, ele não volta' do
+      card_em(agentes)
+      described_class.sugerir!(conversation.reload)
+      conversation.update!(status: :resolved)
+      evento = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation.reload)
+
+      Crm::ConversationObserverListener.instance.conversation_status_changed(evento)
+      conversation.update!(status: :open)
+
+      expect(marca).to be_nil
+      expect(described_class.para(conversation.reload, ana)).to be_nil
     end
 
     it 'não sugere quando a pessoa cuida do funil novo' do
@@ -138,7 +160,19 @@ RSpec.describe Crm::Repasse do
 
       card.update!(pipeline: agentes.first, stage: agentes.last)
 
-      expect(Crm::RepasseJob).to have_been_enqueued.with(conversation.id)
+      expect(Crm::RepassePorCardJob).to have_been_enqueued.with(card.id).once
+    end
+
+    it 'o job do card avalia em lote as conversas em andamento com pessoa no nome' do
+      card = card_em(agentes)
+      allow(described_class).to receive(:sugerir!)
+
+      Crm::RepassePorCardJob.perform_now(card.id)
+      expect(described_class).to have_received(:sugerir!).with(conversation).once
+
+      conversation.update!(assignee: nil)
+      Crm::RepassePorCardJob.perform_now(card.id)
+      expect(described_class).to have_received(:sugerir!).once
     end
   end
 

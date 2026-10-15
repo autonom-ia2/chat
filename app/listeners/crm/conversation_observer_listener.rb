@@ -64,6 +64,16 @@ class Crm::ConversationObserverListener < BaseListener
     Crm::Cards::RebroadcastConversationCardsJob.perform_later(conversation.id)
   end
 
+  # Decisão "a" (#1606): conversa resolvida ou adiada sai do aviso "O assunto virou X"; na reabertura ele não volta.
+  def conversation_status_changed(event)
+    return unless Crm::Config.enabled?
+
+    conversation, = extract_conversation_and_account(event)
+    return unless conversation&.resolved? || conversation&.snoozed?
+
+    Crm::Repasse.limpar!(conversation)
+  end
+
   private
 
   # Falha ao carimbar não pode custar a sincronização do card nem o registro de quem pegou o convite, que vêm logo
