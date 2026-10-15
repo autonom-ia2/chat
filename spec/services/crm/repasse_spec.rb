@@ -151,6 +151,17 @@ RSpec.describe Crm::Repasse do
                             card_id: card.id)
     end
 
+    it 'conversa resolvida ou adiada: a sugestão some e Passar não a reabre' do
+      %i[resolved snoozed].each do |status|
+        conversation.update!(status: status)
+
+        expect(described_class.para(conversation.reload, ana)).to be_nil
+        expect { described_class.passar!(conversation.reload, ana, card.id) }
+          .to raise_error(described_class::Error) { |erro| expect(erro.code).to eq('repasse_mudou') }
+        expect(conversation.reload).to have_attributes(status: status.to_s, assignee: ana)
+      end
+    end
+
     it 'só quem está com a conversa' do
       expect { described_class.passar!(conversation.reload, bia, card.id) }
         .to raise_error(described_class::Error) { |erro| expect(erro.code).to eq('repasse_nao_e_seu') }

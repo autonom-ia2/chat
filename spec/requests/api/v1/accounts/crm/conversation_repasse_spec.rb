@@ -63,9 +63,12 @@ RSpec.describe 'CRM conversation repasse API', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq('crm.conversation_cards.repasse_nao_e_seu')
 
+    agentes.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct' } })
     post "#{base_url}/repasse", params: { card_id: card.id }, headers: ana.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:no_content)
-    expect(conversation.reload.assignee_id).not_to eq(ana.id)
+    expect(conversation.reload.assignee).to eq(bia)
+    expect(Crm::Passagem.where(conversation_id: conversation.id, motivo: 'assunto').sole)
+      .to have_attributes(de_id: ana.id, para_id: bia.id, pedida_por_id: ana.id)
   end
 end

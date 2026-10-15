@@ -58,8 +58,9 @@ module Crm::Repasse
     Crm::Conversations::SyncLock.new(account: conversation.account, conversation: conversation).perform do
       conferir!(conversation, user, card_id)
       gravar_marca(conversation, nil)
-      # Como na saída da triagem: uma gravação só (sai a pessoa, entra quem a Entrega escolheu, ou a marca de espera),
-      # dentro do Crm::Passagens.com_motivo('assunto') do próprio bot_handoff!; o listener grava a passagem.
+      # A marca sai antes, numa gravação que não troca o atendente. Depois, como na saída da triagem, a passagem é uma
+      # gravação só (sai a pessoa, entra quem a Entrega escolheu, ou a marca de espera), dentro do
+      # Crm::Passagens.com_motivo('assunto') do próprio bot_handoff!; o listener grava a passagem.
       conversation.bot_handoff!(dispatch_event: false, motivo: MOTIVO, release_assignee: true)
     end
     Crm::Subjects::Notifier.notify(conversation)
@@ -113,13 +114,18 @@ module Crm::Repasse
     Array(conversation.additional_attributes.to_h[DISPENSADOS]).include?(card.id)
   end
 
-  # A marca vale só para quem está com a conversa e enquanto o card dela for o assunto atual.
+  # A marca vale só para quem está com a conversa, com ela em andamento (aberta ou pendente: passar reabriria uma resolvida
+  # ou adiada) e enquanto o card dela for o assunto atual.
   def valida(conversation, user)
     marca = conversation.additional_attributes.to_h[CHAVE]
-    return if marca.blank? || user.nil?
-    return unless marca['user_id'] == user.id && conversation.assignee_id == user.id
+    return unless marca.present? && dela_e_em_andamento?(conversation, marca, user)
 
     marca if Crm::Assunto.funil_atual(conversation)&.id == marca['card_id']
+  end
+
+  def dela_e_em_andamento?(conversation, marca, user)
+    user.present? && marca['user_id'] == user.id && conversation.assignee_id == user.id &&
+      (conversation.open? || conversation.pending?)
   end
 
   def conferir!(conversation, user, card_id)
