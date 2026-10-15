@@ -137,9 +137,10 @@ class Crm::Ai::ResponsibleAgentSync
     nil
   end
 
+  # Inclui o vínculo removido: o espelho de uma área que saiu da caixa continua sendo nosso, e a conversa volta à porta.
   def dono_e_vinculo_da_caixa?
-    Autonomia::Agents::AgentInbox.kept.exists?(account_id: @account.id, inbox_id: @conversation.inbox_id,
-                                               agent_bot_id: @conversation.assignee_agent_bot_id)
+    Autonomia::Agents::AgentInbox.exists?(account_id: @account.id, inbox_id: @conversation.inbox_id,
+                                          agent_bot_id: @conversation.assignee_agent_bot_id)
   end
 
   # A troca que segue um pedido do agente (Abrir) é registrada como ABRIR, com o transfer_id dele, qualquer que seja o

@@ -283,6 +283,15 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload.ai_assignee).to eq(espelho_area)
     end
 
+    it 'a área que saiu da caixa (vínculo removido) com a conversa: volta à porta' do
+      area_sumiu!
+      create_card(pipeline: comercial)
+
+      expect(sync(described_class::FOCO)).to have_attributes(trocou: true, para_agent_bot_id: porta.id)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(passagens.last).to have_attributes(de_id: area.id, para_id: agente_da_porta.id, motivo: 'assunto')
+    end
+
     it 'robô externo com a conversa não é tirado pela volta à porta' do
       externo = create(:agent_bot, account: account, name: 'n8n')
       conversation.update!(ai_assignee: externo)
