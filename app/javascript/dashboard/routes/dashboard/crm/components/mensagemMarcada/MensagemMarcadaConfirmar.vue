@@ -51,7 +51,7 @@ const comAnotacao = ref(Boolean(anotacao.value));
         {{
           alvo.dono
             ? t(`${M}.SE_FALHAR`, { nome: alvo.dono })
-            : t(`${M}.SE_FALHAR_VOCE`)
+            : t(`${M}.SE_FALHAR_SEM_DONO`)
         }}
       </li>
       <li class="flex items-start gap-3 text-[0.9375rem] text-n-slate-12">

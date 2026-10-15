@@ -2001,14 +2001,15 @@ const openMeetingReschedule = async (meetingLike, date) => {
 
 const onCalendarQuickAdd = (payload = {}) => {
   if (mensagemMarcadaNova.value && payload.type === 'whatsapp') {
-    // O dia clicado, pelas partes locais da data (o Calendário novo manda o meio-dia UTC).
+    // O Calendário novo manda a chave do dia no fuso da conta; o antigo, a data
+    // do dia clicado na tela (as partes locais dela são o dia que a pessoa viu).
     const data = payload.date ? new Date(payload.date) : new Date();
     const dia = [
       data.getFullYear(),
       String(data.getMonth() + 1).padStart(2, '0'),
       String(data.getDate()).padStart(2, '0'),
     ].join('-');
-    mensagemMarcada.value = { show: true, dia };
+    mensagemMarcada.value = { show: true, dia: payload.dia || dia };
     return;
   }
   if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {

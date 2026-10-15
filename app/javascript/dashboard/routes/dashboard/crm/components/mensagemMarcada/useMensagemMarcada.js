@@ -172,6 +172,8 @@ export const useMensagemMarcada = ({ store, fuso, caixasDaTela }) => {
     alvo.value = paraAlvo(card);
     mensagem.value = { texto: '', modelo: null };
     camposProntos.value = false;
+    // Outra pessoa, outra conversa: a janela da hora marcada é conferida de novo.
+    carregarJanela();
     if (alvo.value.oficial) passo.value = 'quando';
   };
 
