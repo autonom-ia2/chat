@@ -75,6 +75,23 @@ RSpec.describe Autonomia::Agents::QuemResponde, :um_turno do
 
       expect(desatribuir.ai_assignee).to eq(porta)
     end
+
+    it 'robô da conta sem vínculo ativo NESTA caixa é ignorado: porta' do
+      outra_caixa = create(:inbox, account: account)
+      Autonomia::Agents::Operate::InboxConnector.new(agent: criar_agente('Porta de outra caixa'), inbox: outra_caixa).perform(connect: true)
+      espelho_de_outra_caixa = Autonomia::Agents::Areas.vincular!(agent: criar_agente('Área de outra caixa'), inbox: outra_caixa)
+                                                       .agent_bot
+      contrato!(robo: espelho_de_outra_caixa)
+
+      expect(desatribuir.ai_assignee).to eq(porta)
+    end
+
+    it 'espelho de vínculo removido desta caixa é ignorado: porta' do
+      contrato!(robo: espelho_area)
+      area_sumiu!
+
+      expect(desatribuir.ai_assignee).to eq(porta)
+    end
   end
 
   # A porta n8n (Placement): um robô externo, com webhook, numa caixa sem vínculo nosso. Mesmo com a Fase 2 ligada e o

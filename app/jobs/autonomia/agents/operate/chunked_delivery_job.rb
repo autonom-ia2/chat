@@ -40,19 +40,37 @@ module Autonomia
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
           if chunk.blank? || !current_turn?(conversation, reply_to_message_id) || !bot_in_command?(conversation, agent_inbox)
             typing.off
-            return
+            return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index)
           end
 
           typing.off # a pausa ANTES deste pedaço já passou; estamos prestes a postar
           posted = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s)
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado.
-          return unless posted
+          return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index) unless posted
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
           log_replied(agent_inbox.agent, conversation, meta, posted) if index.zero?
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
+        end
+
+        # #1606: a cadeia parou antes do 1º pedaço porque OUTRO vínculo ativo da caixa virou o dono depois da IA (troca sem
+        # evento, como a atribuição de robô pela tela). Sem nada postado, o turno é refeito pelo dono novo, como no
+        # Responder (`dono_mudou`); o ReenfileirarTurno confere se o turno ainda é este e barra o segundo enfileiramento.
+        # Do 2º pedaço em diante a resposta já começou: a cadeia só para (resposta parcial, aceita).
+        def refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index)
+          return unless index.zero? && dono_novo?(conversation, agent_inbox)
+
+          ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: conversation, message_id: reply_to_message_id,
+                                                               origem: :responder, quem_perdeu: agent_inbox)
+        end
+
+        def dono_novo?(conversation, agent_inbox)
+          return false unless ::Autonomia::Agents::Fase2.ligada?(conversation.account)
+
+          fresh = ::Autonomia::Agents::Operate.eligible_agent_inbox(conversation.reload)
+          fresh.present? && fresh.id != agent_inbox.id
         end
 
         # Agenda o próximo pedaço após sua pausa, mostrando "digitando" durante a espera.
