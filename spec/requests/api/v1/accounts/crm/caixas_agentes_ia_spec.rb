@@ -153,7 +153,9 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
   end
 
-  it 'agente externo quando o robô não é o espelho da porta viva daquela caixa (#1570)' do
+  # #1648 — espelho de agente da plataforma nunca é agente externo (AgentInbox.espelhos, a regra única do
+  # robo_externo_na_caixa?, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta apagada.
+  it 'espelho de agente da plataforma nunca é agente externo, nem sobrando de porta apagada (#1648)' do
     tipo = lambda do |caixa|
       get "#{url}/#{caixa.id}", headers: auth_headers(admin)
       response.parsed_body.dig('payload', 'caixa', 'agent_bot', 'tipo_do_principal')
@@ -163,16 +165,17 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     # O espelho da Clara ligado em outra caixa, onde ela não é a porta.
     outra = create(:inbox, account: account)
     AgentBotInbox.create!(inbox: outra, agent_bot: espelho, account: account, status: :active)
-    expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia externo])
+    expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia ia])
 
-    # Agente apagado (a porta dele já não aparece em ai_agents).
+    # Agente apagado.
     clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    expect(tipo.call(inbox)).to eq('externo')
+    expect(tipo.call(inbox)).to eq('ia')
 
-    # Vínculo da porta apagado com o robô ainda ligado: mesma regra de AgentInbox.robo_externo_na_caixa?.
+    # Vínculo da porta apagado com o espelho ainda ligado: nem tipo externo, nem cartão de agente externo.
     clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
     Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    expect(tipo.call(inbox)).to eq('externo')
+    expect(tipo.call(inbox)).to eq('ia')
+    expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents', 'externo')).to be_nil
   end
 
   it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do

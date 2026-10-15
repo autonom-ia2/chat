@@ -98,9 +98,20 @@ RSpec.describe Autonomia::Agents::AgentInbox do
       expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
       expect(area).to be_valid
 
+      # #1648 — o espelho que sobrou de uma porta apagada continua espelho, não robô de fora (AgentInbox.espelhos).
       porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(true)
-      expect(area).not_to be_valid
+      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
+    end
+
+    it 'espelho de agente apagado ou de outra caixa não é robô de fora; bot de webhook é (#1648)' do
+      outra = create(:inbox, account: account)
+      AgentBotInbox.create!(inbox: outra, agent_bot: agent_bot, account: account)
+      porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.robo_externo_na_caixa?(outra.id)).to be(false)
+
+      AgentBotInbox.create!(inbox: outra, agent_bot: AgentBot.create!(account: account, name: 'n8n'), account: account)
+      expect(described_class.robo_externo_na_caixa?(outra.id)).to be(true)
     end
 
     it 'aceita área em caixa com porta ativa, e mais de uma área por caixa' do

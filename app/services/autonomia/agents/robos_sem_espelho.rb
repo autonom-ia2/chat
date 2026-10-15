@@ -19,6 +19,6 @@ module Autonomia::Agents::RobosSemEspelho
   end
 
   def espelhos_de_agentes
-    Autonomia::Agents::AgentInbox.select(:agent_bot_id)
+    Autonomia::Agents::AgentInbox.espelhos
   end
 end

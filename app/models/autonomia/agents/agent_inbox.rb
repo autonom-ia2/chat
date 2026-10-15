@@ -91,11 +91,18 @@ module Autonomia
         end
       end
 
-      # Robô de fora da Autonom.ia na caixa (#1433): um AgentBotInbox que não é o espelho da porta ativa — bot de webhook,
-      # como o n8n. Com ele, a caixa sem porta não é só de pessoas e não recebe agente da equipe.
+      # O que é espelho de agente da plataforma: todo agent_bot de um vínculo, apagado ou não, de porta ou de área, em
+      # qualquer caixa (#1648). A mesma regra para a lista de Agentes externos (RobosSemEspelho), o `externo` e o
+      # `tipo_do_principal` do CRM e o robo_externo_na_caixa?: espelho nunca é agente externo.
+      def self.espelhos
+        unscoped.select(:agent_bot_id)
+      end
+
+      # Robô de fora da Autonom.ia na caixa (#1433): um AgentBotInbox cujo robô não é espelho de agente da plataforma
+      # (AgentInbox.espelhos, #1648) — bot de webhook, como o n8n. Com ele, a caixa sem porta não é só de pessoas e não
+      # recebe agente da equipe.
       def self.robo_externo_na_caixa?(inbox_id)
-        espelhos_da_porta = kept.porta.where(inbox_id: inbox_id).select(:agent_bot_id)
-        AgentBotInbox.where(inbox_id: inbox_id).where.not(agent_bot_id: espelhos_da_porta).exists?
+        AgentBotInbox.where(inbox_id: inbox_id).where.not(agent_bot_id: espelhos).exists?
       end
 
       def porta?

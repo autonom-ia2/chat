@@ -45,7 +45,7 @@ class Crm::Caixas::RetratoDosAgentes
   def externo(inbox_id)
     vinculo = AgentBotInbox.active.includes(:agent_bot)
                            .where(inbox_id: inbox_id, account_id: @account.id)
-                           .where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.select(:agent_bot_id))
+                           .where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.espelhos)
                            .order(:id).first
     return if vinculo&.agent_bot.nil?
 

@@ -38,6 +38,18 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(codigo).to have_attributes(codigo: :ok, ok?: true)
     end
 
+    # #1648 — espelho que sobrou de porta apagada não é robô de fora (AgentInbox.espelhos).
+    it 'não chama de :robo_externo o espelho que sobrou de uma porta apagada' do
+      principal(inbox)
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(AgentBotInbox.where(inbox_id: inbox.id).count).to eq(1)
+      expect(codigo.codigo).to eq(:ok)
+
+      robo_externo(inbox)
+      expect(codigo.codigo).to eq(:robo_externo)
+    end
+
     it ':principal_parado quando o principal não está atendendo' do
       principal(inbox, status: Autonomia::Agents::Agent.statuses[:paused], enabled: false)
 
