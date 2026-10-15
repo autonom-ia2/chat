@@ -96,6 +96,18 @@ RSpec.describe Autonomia::Agents::Specialist do
       expect(recusa(principal, guia)).to be_present
     end
 
+    it 'recusa como principal um agente em rascunho (revisão do PR2)' do
+      rascunho = criar_principal(conta, nome: 'Rascunho', status: :draft, enabled: false)
+
+      expect(recusa(rascunho, ajudante)).to include(a_string_including(I18n.t('autonomia.agents.ajudante.principal_rascunho')))
+    end
+
+    it 'recusa como principal um agente com a marca de ajudante, mesmo que fale com cliente (dado forjado)' do
+      marcado = criar_principal(conta, nome: 'Marcado', config: { 'with_knowledge' => false, 'papel' => 'ajudante' })
+
+      expect(recusa(marcado, ajudante)).to include(a_string_including(I18n.t('autonomia.agents.ajudante.principal_ajudante')))
+    end
+
     it 'recusa o agente apontando para si mesmo' do
       expect(recusa(principal, principal)).to be_present
     end

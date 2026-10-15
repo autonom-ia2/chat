@@ -5,6 +5,7 @@ import AgenteEscolherPage from '../../pages/AgenteEscolherPage.vue';
 // ?modelo=) e, em "Precisa de outro tipo?", só o Copiloto da equipe (?atuacao=interno). "Agente da
 // equipe" e "Ajuda outros agentes" ainda não existem: não aparecem, nem escondidos nem desabilitados.
 // #1433 (tema 13): "Agente da equipe" (?papel=area) aparece só com a Fase 2 ligada na conta.
+// Tema 14 (#1434): "Ajuda outros agentes" (?papel=ajudante) também, depois do agente da equipe.
 const estado = vi.hoisted(() => ({ podeGerenciar: true }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
@@ -86,6 +87,7 @@ describe('AgenteEscolherPage', () => {
     expect(html).not.toContain('ESCOLHER.AJUDA');
     expect(html).not.toContain('data-outro="equipe"');
     expect(html).not.toContain('data-outro="ajuda"');
+    expect(html).not.toContain('data-outro="ajudante"');
   });
 
   it('goes back to the list', async () => {
@@ -126,18 +128,18 @@ describe('AgenteEscolherPage com a Fase 2 (#1433, tema 13)', () => {
     conta.fase2 = true;
   });
 
-  it('offers "Agente da equipe" first, with its explanation, and still the copilot; never "Ajuda outros agentes"', () => {
+  it('offers "Agente da equipe" first, then "Ajuda outros agentes" (tema 14), and still the copilot', () => {
     const wrapper = montar();
     const opcoes = wrapper.get('[data-outro-tipo]').findAll('[data-outro]');
     expect(opcoes.map(opcao => opcao.attributes('data-outro'))).toEqual([
       'equipe',
+      'ajudante',
       'copiloto',
     ]);
     expect(opcoes[0].element.tagName).toBe('BUTTON');
     expect(opcoes[0].text()).toContain('AGENTS.JORNADA.ESCOLHER.EQUIPE.TITULO');
     expect(opcoes[0].text()).toContain('AGENTS.JORNADA.ESCOLHER.EQUIPE.TEXTO');
     expect(opcoes[0].classes()).toContain('min-h-11');
-    expect(wrapper.html()).not.toContain('ESCOLHER.AJUDA');
   });
 
   it('starts the team agent with ?papel=area and ignores other clicks while it starts', async () => {
@@ -152,5 +154,24 @@ describe('AgenteEscolherPage com a Fase 2 (#1433, tema 13)', () => {
   it('keeps it away from a view only seat', () => {
     estado.podeGerenciar = false;
     expect(montar().find('[data-agente-da-equipe]').exists()).toBe(false);
+    expect(montar().find('[data-ajudante]').exists()).toBe(false);
+  });
+
+  it('explains "Ajuda outros agentes" with the prototype text and starts it with ?papel=ajudante', async () => {
+    const wrapper = montar();
+    const cartao = wrapper.get('[data-ajudante]');
+    expect(cartao.element.tagName).toBe('BUTTON');
+    expect(cartao.text()).toContain('AGENTS.JORNADA.ESCOLHER.AJUDA.TITULO');
+    expect(cartao.text()).toContain('AGENTS.JORNADA.ESCOLHER.AJUDA.TEXTO');
+    expect(cartao.classes()).toContain('min-h-11');
+
+    await cartao.trigger('click');
+    await wrapper.get('[data-agente-da-equipe]').trigger('click');
+    await wrapper.get('[data-copiloto]').trigger('click');
+    expect(wrapper.emitted('escolher')).toEqual([[{ papel: 'ajudante' }]]);
+    expect(
+      wrapper.get('[data-agente-da-equipe]').attributes('disabled')
+    ).toBeDefined();
+    expect(wrapper.find('select').exists()).toBe(false);
   });
 });

@@ -77,6 +77,7 @@ describe('estado do agente da equipe', () => {
     expect(contarEstados(lista)).toEqual({
       atendendo: 1,
       naEquipe: 1,
+      ajudando: 0,
       parados: 1,
     });
   });

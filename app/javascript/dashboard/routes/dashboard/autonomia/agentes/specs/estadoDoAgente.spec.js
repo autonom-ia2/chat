@@ -104,6 +104,7 @@ describe('contarEstados', () => {
     expect(contarEstados(lista)).toEqual({
       atendendo: 2,
       naEquipe: 0,
+      ajudando: 0,
       parados: 1,
     });
   });
@@ -113,6 +114,7 @@ describe('contarEstados', () => {
     expect(contarEstados(lista)).toEqual({
       atendendo: 1,
       naEquipe: 0,
+      ajudando: 0,
       parados: 1,
     });
     expect(ordenarAgentes([lista[1], lista[0]]).map(a => a.id)).toEqual([1, 2]);
