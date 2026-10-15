@@ -63,5 +63,13 @@
     {
       "file": "sidebarFork.json"
     }
-  ]
+  ],
+  "pacotes": {
+    "painel": "app/javascript/dashboard/i18n/pacotes",
+    "servidor": "config/pacotes",
+    "idiomas": ["en", "pt_BR"],
+    "segmentos": {
+      "seguros": ["corretora", "seguradora", "insurtech", "saude_beneficios"]
+    }
+  }
 }

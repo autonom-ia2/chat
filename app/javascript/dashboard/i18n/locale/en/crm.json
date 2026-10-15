@@ -608,7 +608,7 @@
       "NO_COMPANY": "No company",
       "SELECTED_COMPANY_FALLBACK": "Selected company #{id}",
       "SCORE_RANGE": "AI attention (0–100)",
-      "SCORE_HELP": "Attention needed, not probability of winning.",
+      "SCORE_HELP": "Attention needed, not chance of closing.",
       "SCORE_MIN": "Minimum",
       "SCORE_MAX": "Maximum",
       "SCORE_INVALID": "Use a whole number from 0 to 100.",
@@ -636,7 +636,7 @@
       "GROUP_OPPORTUNITY": "Labels, stage and outcome",
       "GROUP_OPPORTUNITY_HELP": "VIP, renewal and pipeline stages.",
       "GROUP_ATTENTION": "Attention and priority",
-      "GROUP_ATTENTION_HELP": "Attention level, without indicating win probability.",
+      "GROUP_ATTENTION_HELP": "Attention level, without indicating closing probability.",
       "GROUP_ACTIVITY": "Value, follow-up and activity",
       "GROUP_ACTIVITY_HELP": "Estimated value, follow-up and card activity.",
       "COMPANY": "Company",
@@ -4229,7 +4229,7 @@
       "ANUNCIOS_DESLIGADO": "Your ads don't know about your sales yet.",
       "O_FACEBOOK": "Facebook",
       "O_INSTAGRAM": "Instagram",
-      "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each closed sale counts on the dashboard.",
       "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
       "ATENDER_LEMBRETES": "We share progress after {andamento} in the same stage and ask if it was solved {resolveu} after {sucesso}.",
       "ATENDER_SO_ANDAMENTO": "We share progress after {andamento} in the same stage.",
@@ -4503,7 +4503,7 @@
       "AJUDA": "Pick one. The ready-made stages come next.",
       "VENDER": {
         "NOME": "Sell",
-        "TEXTO": "Win a new customer."
+        "TEXTO": "Get a new customer."
       },
       "ATENDER": {
         "NOME": "Serve",

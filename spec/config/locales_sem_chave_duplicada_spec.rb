@@ -13,7 +13,8 @@ require 'rails_helper'
 # rubocop:disable RSpec/DescribeClass -- é a configuração de locales, não uma classe (mesmo padrão de spec/config)
 RSpec.describe 'config/locales sem chave duplicada' do
   # rubocop:enable RSpec/DescribeClass
-  arquivos_de_locale = Rails.root.glob('config/locales/**/*.yml').sort
+  # Os pacotes por segmento (#1550) são yml de locale também: a mesma duplicata apagaria uma troca em silêncio.
+  arquivos_de_locale = (Rails.root.glob('config/locales/**/*.yml') + Rails.root.glob('config/pacotes/**/*.yml')).sort
 
   # -> lista de "caminho.da.chave (linhas a e b)" para cada chave repetida no mesmo mapeamento.
   def chaves_duplicadas(yaml)
@@ -59,7 +60,7 @@ RSpec.describe 'config/locales sem chave duplicada' do
 
   it 'varre todos os arquivos de locale' do
     expect(arquivos_de_locale.map { |arquivo| arquivo.relative_path_from(Rails.root).to_s })
-      .to include('config/locales/en.yml', 'config/locales/pt_BR.yml')
+      .to include('config/locales/en.yml', 'config/locales/pt_BR.yml', 'config/pacotes/seguros/pt_BR.yml')
   end
 
   arquivos_de_locale.each do |arquivo|
