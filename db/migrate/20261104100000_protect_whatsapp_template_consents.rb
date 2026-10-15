@@ -4,8 +4,12 @@
 #   apaga nem altera a linha. As colunas e os índices ficam.
 # - `user_name`: cópia do nome de quem mudou, para o registro não perder o "quem" se o usuário for apagado. As linhas
 #   existentes recebem o nome atual ANTES do gatilho existir (depois dele, nenhum UPDATE passa).
-# - O próprio Postgres recusa UPDATE, DELETE (por linha) e TRUNCATE. Corrigir uma linha no futuro (aceite gravado errado,
-#   pedido de LGPD) exige uma migration que desligue o gatilho, corrija e religue.
+# - O próprio Postgres recusa UPDATE, DELETE (por linha) e TRUNCATE. A trava é contra comando comum (do app ou de psql):
+#   o dono da tabela ou um superusuário ainda conseguem `ALTER TABLE ... DISABLE TRIGGER`,
+#   `SET session_replication_role = replica`, `DROP TRIGGER` ou `DROP TABLE`. Correção legítima (aceite gravado errado,
+#   pedido de LGPD) = migration revisada que desliga o gatilho, corrige e religa.
+# - Linha gravada pelo código antigo durante o deploy (entre esta migration e a troca do app) fica com `user_name` NULL;
+#   a tela cai no nome atual do usuário. Risco aceito pelo Rodrigo em 15/10/2026.
 #
 # Tirar a FK pede trava rápida em `accounts` e `users` (somem os gatilhos internos da FK lá): com uma transação longa na
 # frente, desiste em 5 s em vez de enfileirar a escrita nessas tabelas atrás dela (rodar de novo).
@@ -15,8 +19,8 @@ class ProtectWhatsappTemplateConsents < ActiveRecord::Migration[7.2]
 
   def up
     execute "SET LOCAL lock_timeout = '5s'"
-    remove_foreign_key :whatsapp_template_consents, :accounts
-    remove_foreign_key :whatsapp_template_consents, :users
+    remove_foreign_key :whatsapp_template_consents, :accounts, if_exists: true
+    remove_foreign_key :whatsapp_template_consents, :users, if_exists: true
     add_column :whatsapp_template_consents, :user_name, :string
     execute <<~SQL.squish
       UPDATE whatsapp_template_consents SET user_name = users.name
@@ -38,17 +42,18 @@ class ProtectWhatsappTemplateConsents < ActiveRecord::Migration[7.2]
     SQL
   end
 
-  # Volta as FKs sem validar (`validate: false`): sem FK, contas e usuários podem ter sido apagados com as linhas ficando,
-  # e validar recusaria a volta. Nenhuma linha é apagada nem alterada na volta.
+  # Volta só com a tabela vazia: com linha gravada, tirar `user_name` perderia o "quem". Mesmo vazia, a volta não recria
+  # as chaves estrangeiras: cascade apagaria registro guardado (Rodrigo, 15/10/2026). O `up` tira as FKs só se existirem.
   def down
-    execute "SET LOCAL lock_timeout = '5s'"
+    if select_value('SELECT EXISTS (SELECT 1 FROM whatsapp_template_consents)')
+      raise ActiveRecord::IrreversibleMigration, 'whatsapp_template_consents tem registros guardados; a volta perderia user_name'
+    end
+
     execute <<~SQL.squish
       DROP TRIGGER IF EXISTS #{FUNCAO}_truncate ON whatsapp_template_consents;
       DROP TRIGGER IF EXISTS #{FUNCAO}_row ON whatsapp_template_consents;
       DROP FUNCTION IF EXISTS #{FUNCAO}();
     SQL
     remove_column :whatsapp_template_consents, :user_name
-    add_foreign_key :whatsapp_template_consents, :users, on_delete: :nullify, validate: false
-    add_foreign_key :whatsapp_template_consents, :accounts, on_delete: :cascade, validate: false
   end
 end

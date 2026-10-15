@@ -7,8 +7,10 @@
 # na justiça tempos depois". Por isso:
 # - sem chave estrangeira: conta, caixa, mensagem, follow-up e autorização são bigint simples, com índice. Apagar
 #   qualquer uma delas no Chatwoot não apaga nem altera a linha (o id fica, mesmo sem a linha de origem);
-# - o próprio Postgres recusa UPDATE, DELETE (por linha) e TRUNCATE. Corrigir uma linha no futuro exige uma migration que
-#   desligue o gatilho, corrija e religue.
+# - o próprio Postgres recusa UPDATE, DELETE (por linha) e TRUNCATE. A trava é contra comando comum (do app ou de psql):
+#   o dono da tabela ou um superusuário ainda conseguem `ALTER TABLE ... DISABLE TRIGGER`,
+#   `SET session_replication_role = replica`, `DROP TRIGGER` ou `DROP TABLE`. Correção legítima = migration revisada que
+#   desliga o gatilho, corrige e religa.
 # Tabela nova, sem FK: nenhuma trava em tabela do Chatwoot. O índice único de message_id dá a idempotência.
 # O gatilho vai para o schema.rb pelo dumper do hairtrigger (bloco `execute`), e o `db:schema:load` dos testes o recria.
 class CreateWhatsappOutOfWindowSends < ActiveRecord::Migration[7.2]
@@ -19,7 +21,13 @@ class CreateWhatsappOutOfWindowSends < ActiveRecord::Migration[7.2]
     travar_no_banco
   end
 
+  # Volta só com a tabela vazia: com linha gravada, apagar a tabela apagaria a prova. Aí a volta recusa, e o caminho é
+  # outra migration, decidida com o Rodrigo.
   def down
+    if select_value('SELECT EXISTS (SELECT 1 FROM whatsapp_out_of_window_sends)')
+      raise ActiveRecord::IrreversibleMigration, 'whatsapp_out_of_window_sends tem registros guardados; a volta não apaga a tabela'
+    end
+
     execute <<~SQL.squish
       DROP TRIGGER IF EXISTS #{FUNCAO}_truncate ON whatsapp_out_of_window_sends;
       DROP TRIGGER IF EXISTS #{FUNCAO}_row ON whatsapp_out_of_window_sends;

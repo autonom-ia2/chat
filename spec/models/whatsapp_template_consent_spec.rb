@@ -79,6 +79,15 @@ RSpec.describe WhatsappTemplateConsent do
     expect(gravar.reload.user_name).to be_nil
   end
 
+  it 'na criação, quem mudou precisa ser usuário da conta (sem FK, quem confere é o model)' do
+    de_fora = create(:user, account: create(:account))
+    linha = described_class.new(account: account, user: de_fora, marca: 'utility', acao: described_class::LIGOU, versao_aviso: 'v1',
+                                texto_aviso: 'Aviso.')
+
+    expect(linha).not_to be_valid
+    expect(linha.errors.attribute_names).to eq([:user])
+  end
+
   it 'na criação, a conta é obrigatória' do
     linha = described_class.new(marca: 'utility', acao: described_class::LIGOU, versao_aviso: 'v1', texto_aviso: 'Aviso.')
 

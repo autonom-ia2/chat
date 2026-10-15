@@ -2,10 +2,12 @@
 # Followup IA, numa linha, DEPOIS que o `MessageSender` devolve `:sent`, com a mensagem criada e o
 # `envio_fora_da_janela` do metadata que o `enviar` devolveu (mais `crm_follow_up_id` e `motivo`, opcionais).
 # - Idempotente por mensagem: a mesma mensagem não grava duas vezes (índice único de message_id cobre a corrida).
-# - Nunca levanta para quem chama: a mensagem já saiu, e o registro não pode virar falha de envio. Em erro, log só com a
-#   classe e os ids (sem a mensagem do erro, que pode trazer dado do cliente), e devolve nil.
+# - Nunca levanta para quem chama: a mensagem já saiu, e o registro não pode virar falha de envio. Em erro, log e alerta
+#   no rastreador de erros só com a classe e os ids (sem a mensagem do erro, que pode trazer dado do cliente), e devolve nil.
 class Whatsapp::Templates::EnvioForaDaJanela::Registro
   LOG = '[whatsapp][templates][fora_da_janela] registro_falhou'.freeze
+  # O que vai ao rastreador de erros: só ids e a classe do erro original, nunca a mensagem dele.
+  Falhou = Class.new(StandardError)
 
   def self.call(message:, registro:)
     new(message: message, registro: registro).call
@@ -22,11 +24,19 @@ class Whatsapp::Templates::EnvioForaDaJanela::Registro
 
     gravar
   rescue StandardError => e
-    Rails.logger.error("#{LOG} account_id=#{@message.try(:account_id)} message_id=#{@message.try(:id)} #{e.class.name}")
+    avisar(e)
     nil
   end
 
   private
+
+  # Log e alerta (ChatwootExceptionTracker) com a mesma linha: ids e classe. Registro perdido é prova perdida; sem fila de
+  # nova tentativa (decisão de 15/10/2026), o alerta é o que avisa alguém.
+  def avisar(erro)
+    linha = "#{LOG} account_id=#{@message.try(:account_id)} message_id=#{@message.try(:id)} #{erro.class.name}"
+    Rails.logger.error(linha)
+    ChatwootExceptionTracker.new(Falhou.new(linha)).capture_exception
+  end
 
   # Savepoint: quem chama pode estar numa transação, e um comando recusado no Postgres a invalidaria inteira. Na corrida
   # (outra gravação da mesma mensagem entre a busca e o INSERT), o índice único recusa e vale a linha que ganhou.

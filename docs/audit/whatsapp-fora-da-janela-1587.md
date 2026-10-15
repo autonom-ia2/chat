@@ -63,9 +63,14 @@ depois do `:sent` do `MessageSender`, com o hash acima mais `crm_follow_up_id` e
   FKs de conta e usuário e grava `user_name`).
 - Gatilho nos bancos de teste: o dumper do `hairtrigger` (já no Gemfile) escreve função e gatilhos no `db/schema.rb`
   como bloco `execute`, e o `db:schema:load` (local e CI) os recria. A suíte limpa por transação, sem TRUNCATE.
-- Corrigir uma linha no futuro (aceite gravado errado, pedido de LGPD) exige uma migration que desligue o gatilho,
-  aplique a correção e religue. Com o gatilho ligado, nem UPDATE/DELETE por psql passa; só DDL de dono da tabela
-  (`ALTER TABLE ... DISABLE TRIGGER`) o desliga, e isso vai por migration revisada, nunca à mão.
+- A trava é contra comando comum (UPDATE/DELETE/TRUNCATE do app ou de psql). O dono da tabela ou um superusuário ainda
+  conseguem `ALTER TABLE ... DISABLE TRIGGER`, `SET session_replication_role = replica`, `DROP TRIGGER` ou `DROP TABLE`.
+  Correção legítima (aceite gravado errado, pedido de LGPD) = migration revisada que desliga o gatilho, corrige e religa.
+- Volta (`down`) das duas migrations: recusa com `IrreversibleMigration` se a tabela tiver linha; vazia, tira gatilhos e
+  função (a de envios apaga a tabela; a de autorização tira `user_name`) e nunca recria FK com cascade.
+- `user_name` na tela: a cópia gravada primeiro; o usuário atual só para linha antiga sem cópia (gravada pelo código
+  antigo durante o deploy, risco aceito pelo Rodrigo em 15/10/2026).
+- Falha ao gravar o registro de envio: log e alerta no `ChatwootExceptionTracker`, só com ids e classe; sem nova tentativa.
 
 ## Decisões do Rodrigo (15/10/2026)
 

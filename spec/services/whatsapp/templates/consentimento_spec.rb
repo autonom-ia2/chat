@@ -58,12 +58,21 @@ RSpec.describe Whatsapp::Templates::Consentimento do
     expect(WhatsappTemplateConsent.sole).to have_attributes(user_id: admin.id, user_name: 'Ana Souza')
   end
 
-  it 'usuário que mudou de nome: a tela mostra o nome atual' do
+  it 'usuário que mudou de nome: a tela mostra o nome copiado na gravação (quem era na hora)' do
     mudar('ligar', 'utility')
     admin.update!(name: 'Ana Lima')
 
-    expect(described_class.new(account: account).estado['utility']['mudanca']).to include('por' => 'Ana Lima')
-    expect(WhatsappTemplateConsent.sole.user_name).to eq('Ana Souza')
+    expect(described_class.new(account: account).estado['utility']['mudanca']).to include('por' => 'Ana Souza')
+  end
+
+  it 'linha antiga sem cópia do nome (user_name NULL, gravada no deploy): a tela cai no nome atual do usuário' do
+    WhatsappTemplateConsent.connection.execute(<<~SQL.squish)
+      INSERT INTO whatsapp_template_consents (account_id, user_id, marca, acao, versao_aviso, texto_aviso, precos, created_at)
+      VALUES (#{account.id}, #{admin.id}, 'utility', 'ligou', 'v1', 'Aviso.', '{}', now())
+    SQL
+
+    expect(WhatsappTemplateConsent.sole.user_name).to be_nil
+    expect(described_class.new(account: account).estado['utility']['mudanca']).to include('por' => 'Ana Souza')
   end
 
   it 'liga as duas no mesmo pedido: uma linha por marca' do

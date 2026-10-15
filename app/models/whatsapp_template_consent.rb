@@ -20,6 +20,7 @@ class WhatsappTemplateConsent < ApplicationRecord
   validates :marca, inclusion: { in: MARCAS }
   validates :acao, inclusion: { in: [LIGOU, DESLIGOU] }
   validates :versao_aviso, :texto_aviso, presence: true
+  validate :usuario_da_conta, on: :create
 
   # Aviso de serviço ligado (#1586): quem precisa reagir assina este evento (o Agendamento cria os avisos fixos dele).
   # Sai depois do commit, uma vez por linha `utility` + `ligou`; desligar e Divulgação não publicam.
@@ -43,6 +44,13 @@ class WhatsappTemplateConsent < ApplicationRecord
   end
 
   private
+
+  # Sem chave estrangeira, quem confere é o model: quem mudou precisa ser usuário da conta.
+  def usuario_da_conta
+    return if user.nil? || account.nil?
+
+    errors.add(:user, :invalid) unless AccountUser.exists?(account_id: account_id, user_id: user.id)
+  end
 
   def copiar_nome_de_quem_mudou
     self.user_name = user&.name

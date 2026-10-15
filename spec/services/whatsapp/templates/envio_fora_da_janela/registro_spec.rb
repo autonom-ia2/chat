@@ -83,6 +83,20 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela::Registro do
         .with("#{described_class::LOG} account_id=#{account.id} message_id=#{message.id} ActiveRecord::RecordInvalid").twice
     end
 
+    it 'manda ao rastreador de erros só os ids e a classe, sem a mensagem do erro original' do
+      allow(WhatsappOutOfWindowSend).to receive(:create!).and_raise(ActiveRecord::StatementInvalid, 'DETAIL: texto do cliente')
+      rastreador = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
+
+      expect(registrar).to be_nil
+
+      expect(ChatwootExceptionTracker).to have_received(:new) do |erro|
+        expect(erro).to be_a(described_class::Falhou)
+        expect(erro.message).to eq("#{described_class::LOG} account_id=#{account.id} message_id=#{message.id} ActiveRecord::StatementInvalid")
+      end
+      expect(rastreador).to have_received(:capture_exception).once
+    end
+
     it 'banco recusa o comando: devolve nil e a transação de quem chama segue válida (savepoint)' do
       allow(WhatsappOutOfWindowSend).to receive(:create!) { WhatsappOutOfWindowSend.connection.execute('SELECT 1/0') }
       resultado = nil
