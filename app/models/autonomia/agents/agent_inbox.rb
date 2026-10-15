@@ -117,7 +117,9 @@ module Autonomia
         return if inbox.nil?
         return devolver_conversas_a_porta! if area?
 
-        pending = inbox.conversations.where(status: :pending)
+        # Só as pending SEM dono ou do espelho desta porta: a pending que já tem uma área como ai_assignee é dela e fica
+        # com ela quando a porta sai (#1433).
+        pending = inbox.conversations.where(status: :pending, assignee_agent_bot_id: [nil, agent_bot_id])
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
         # Desligar não é passar a conversa: o robô sai de vez, sem ficar esperando pessoa (#1377).
         pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }

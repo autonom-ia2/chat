@@ -84,11 +84,15 @@ module Autonomia::Agents::Areas
   # rascunho cuja conversa de criação já fechou (tem instrução). Rascunho pela metade é sempre recusado. O CRM não manda.
   #
   # A regra da caixa é conferida SEMPRE, com a caixa já travada, pelo mesmo leitor da tela (caixa_aceita_area?): a tela
-  # só oferece caixas que aceitam, mas o principal pode parar (ou um robô entrar) entre a leitura e o clique.
+  # só oferece caixas que aceitam, mas o principal pode parar entre a leitura e o clique.
   #
-  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete): a conferência
-  # da caixa e a entrada de um principal ou robô não se cruzam, e a parada automática do agente não espera por uma
-  # caixa que outro segura.
+  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem dos caminhos da Autonom.ia (InboxConnector, SoftDelete): entre eles,
+  # a conferência da caixa e a entrada ou saída de um principal não se cruzam, e a parada automática do agente não espera
+  # por uma caixa que outro segura. A garantia é PARCIAL: o painel do Chatwoot pluga um agente externo na caixa
+  # (Inbox#set_agent_bot / AgentBotInbox) sem travar a caixa, então ele pode entrar depois da conferência, ou numa
+  # caixa só de pessoas que já tem área. Barrar isso fica para o próximo PR, a marcação por caixa ("o agente externo
+  # desta caixa respeita quem é o dono", decisão do Rodrigo de 15/10). O comportamento de hoje está registrado em
+  # spec/services/autonomia/agents/areas_agente_externo_depois_spec.rb.
   def vincular!(agent:, inbox:, ativar: false, de_rascunho: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.

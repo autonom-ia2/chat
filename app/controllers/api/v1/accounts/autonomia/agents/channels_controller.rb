@@ -49,19 +49,20 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     @eligible_inboxes = eligible_inboxes
   end
 
-  # As recusas previsíveis respondem antes, com o motivo; o Areas confere de novo com agente e caixa travados (o
-  # principal atendendo, ou a caixa sem robô de fora quando não há principal). Idempotente: a área já ativa do mesmo
-  # agente nesta caixa responde 200 com o mesmo vínculo (a tela repete o pedido depois de uma falha no meio, sem saber
-  # o que já entrou).
+  # Idempotente, ANTES das recusas: a área já ativa do mesmo agente nesta caixa responde 200 com o mesmo vínculo (a
+  # tela repete o pedido depois de uma falha no meio, sem saber o que já entrou; o principal pode ter parado depois).
+  # As outras recusas previsíveis respondem antes do vínculo, com o motivo; o Areas confere de novo com agente e caixa
+  # travados (o principal atendendo, ou a caixa sem agente externo quando não há principal).
   def create_area
+    return responder_area_ja_ativa if area_ativa?
+
     recusa = recusa_de_area
     return render_unprocessable(area_error(recusa)) if recusa
 
-    ja_era_area = area_ativa?
     # `de_rascunho`: esta é a criação do agente da equipe; o rascunho com a conversa de criação fechada entra e liga.
     @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, de_rascunho: true)
     load_index
-    render :index, status: ja_era_area ? :ok : :created
+    render :index, status: :created
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     render_unprocessable(area_error(:agent_internal))
   rescue ::Autonomia::Agents::Areas::CaixaNaoAceitaArea => e
@@ -83,6 +84,12 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     return :already_linked if ::Autonomia::Agents::AgentInbox.kept.porta.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
 
     recusa_da_caixa
+  end
+
+  def responder_area_ja_ativa
+    @agent_inbox = ::Autonomia::Agents::AgentInbox.kept.area.find_by(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
+    load_index
+    render :index, status: :ok
   end
 
   def area_ativa?

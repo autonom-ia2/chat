@@ -143,6 +143,17 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
       expect(response.parsed_body['payload']).to contain_exactly(include('id' => vinculo.id, 'papel' => 'area'))
     end
 
+    it 'repetir o pedido da área já ativa responde 200 mesmo que a caixa não aceite mais área (idempotência antes da recusa)' do
+      pedir_area
+      vinculo = Autonomia::Agents::AgentInbox.kept.find_by(agent: novo, inbox: inbox)
+      principal.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { pedir_area }.not_to(change { [AgentBot.count, Autonomia::Agents::AgentInbox.count] })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to contain_exactly(include('id' => vinculo.id, 'papel' => 'area'))
+    end
+
     it 'devolve 422 quando o agente já é o principal da caixa' do
       pedir_area(principal)
 

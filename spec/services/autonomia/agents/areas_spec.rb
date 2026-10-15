@@ -269,6 +269,14 @@ RSpec.describe Autonomia::Agents::Areas do
     let!(:da_area) do
       create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: area.agent_bot, status: :open) }
     end
+    let!(:pending_da_area) do
+      create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: area.agent_bot, status: :pending) }
+    end
+    let!(:pending_sem_dono) do
+      create(:conversation, account: account, inbox: inbox).tap do |c|
+        c.update_columns(status: Conversation.statuses[:pending], assignee_agent_bot_id: nil) # rubocop:disable Rails/SkipsModelValidations
+      end
+    end
     let!(:da_porta) do
       create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: porta.agent_bot, status: :open) }
     end
@@ -279,6 +287,11 @@ RSpec.describe Autonomia::Agents::Areas do
         expect(da_area.reload).to have_attributes(assignee_agent_bot_id: area.agent_bot_id, status: 'open')
         expect(agente_da_area.reload).to have_attributes(status: 'active', enabled: true)
         expect(agente_da_area.tem_onde_trabalhar?).to be(true)
+      end
+
+      it 'a pending de que a área é dona fica com a área; a pending sem dono vai para as pessoas' do
+        expect(pending_da_area.reload).to have_attributes(assignee_agent_bot_id: area.agent_bot_id, status: 'pending')
+        expect(pending_sem_dono.reload.status).to eq('open')
       end
 
       it 'as conversas da porta seguem a regra de sempre, e a caixa aceita área (só de pessoas)' do
