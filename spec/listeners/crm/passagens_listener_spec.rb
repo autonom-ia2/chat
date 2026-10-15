@@ -68,6 +68,7 @@ RSpec.describe Crm::PassagensListener do
   describe 'a Entrega' do
     # Pega: a passagem do robô grava uma vez, pelo listener, com o motivo e o card do contexto.
     it 'robô pediu, regra direta: uma passagem do robô para a pessoa, pedida pelo robô, com card e motivo', :aggregate_failures do
+      online(ana) # só a Ana pode receber: o teste não depende do rodízio entre quem está online
       conversa = conversa_do_robo
       card = card_em(conversa, vendas)
       regra!(vendas)
@@ -94,6 +95,7 @@ RSpec.describe Crm::PassagensListener do
     end
 
     it 'IA do CRM: uma passagem, pedida pelo sistema, com o motivo da IA do CRM' do
+      online(ana) # só a Ana pode receber: o teste não depende do rodízio entre quem está online
       conversa = conversa_do_robo
       card = card_em(conversa, vendas)
       regra!(vendas)
@@ -314,7 +316,9 @@ RSpec.describe Crm::PassagensListener do
       expect(passagens(conversa).sole).to have_attributes(de_type: 'AgentBot', de_id: bot.id, para_id: bia.id)
     end
 
-    it 'transação desfeita solta a troca: o save seguinte, que não troca pessoa, não grava a troca velha' do
+    # Pega a troca velha presa no objeto: robô → Ana desfeita deixaria o "antes" = robô; a conversa muda por fora para
+    # a Bia; o save seguinte (Bia → Tito) tem de sair da Bia, não do robô.
+    it 'troca de uma transação desfeita não vale para a próxima: o "antes" é o do banco' do
       conversa = conversa_do_robo
 
       como(admin) do
@@ -322,10 +326,25 @@ RSpec.describe Crm::PassagensListener do
           conversa.update!(assignee: ana, ai_assignee: nil)
           raise ActiveRecord::Rollback
         end
-        conversa.reload.update!(ai_assignee: create(:agent_bot, account: account))
+        Conversation.where(id: conversa.id).update_all(assignee_id: bia.id, assignee_agent_bot_id: nil, ai_assignee_type: nil) # rubocop:disable Rails/SkipsModelValidations
+        conversa.reload.update!(assignee: tito)
       end
 
-      expect(passagens(conversa)).to be_empty
+      expect(passagens(conversa).sole).to have_attributes(de_type: 'User', de_id: bia.id, para_id: tito.id)
+    end
+
+    it 'vários saves na mesma transação guardam o primeiro motivo e card (o segundo save fora do com_motivo)' do
+      conversa = conversa_do_robo
+      card = card_em(conversa, vendas)
+
+      como(admin) do
+        Conversation.transaction do
+          Crm::Passagens.com_motivo('passar_para', card: card) { conversa.update!(assignee: ana, ai_assignee: nil) }
+          conversa.update!(assignee: bia)
+        end
+      end
+
+      expect(passagens(conversa).sole).to have_attributes(motivo: 'passar_para', card_id: card.id, para_id: bia.id)
     end
 
     it 'uma falha ao gravar a passagem não desfaz a atribuição' do

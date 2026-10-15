@@ -74,4 +74,41 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
     expect(runner.send(:customer_replied_about_other_subject)).to be_nil
     expect(runner.send(:customer_replied_since_scheduling?)).to be(false)
   end
+
+  # Uma mensagem por vez por card (#1589): lembrete de Atender que saiu há pouco segura o toque por 24 h.
+  describe 'com lembrete de Atender enviado no mesmo card' do
+    def lembrete_enviado(enviado_em)
+      lembrete = account.crm_follow_ups.create!(
+        card: card, conversation: conversation, title: 'Andamento', due_at: enviado_em, timezone: 'UTC',
+        automation_mode: :reminder_only, metadata: { 'source' => 'service_reminder', 'kind' => 'progress' }
+      )
+      # rubocop:disable Rails/SkipsModelValidations
+      lembrete.update_columns(status: Crm::FollowUp.statuses[:done], completed_at: enviado_em,
+                              metadata: lembrete.metadata.merge('sent_message_id' => 1))
+      # rubocop:enable Rails/SkipsModelValidations
+    end
+
+    it 'adia o toque para 24 h depois do lembrete, sem mandar nem encerrar' do
+      enviado_em = 2.hours.ago
+      lembrete_enviado(enviado_em)
+      expect(Crm::FollowUps::MessageSender).not_to receive(:new)
+
+      result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+      expect(result.status).to eq(:rescheduled)
+      expect(follow_up.reload.due_at).to eq(enviado_em + 24.hours)
+      expect(card.reload.metadata.dig('ai', 'auto_followup_state', 'stopped_reason')).to be_blank
+      expect(card.activities.where(event_type: 'ai_followup_postponed')).to exist
+    end
+
+    it 'lembrete de mais de 24 h não segura: o toque segue para a composição' do
+      lembrete_enviado(25.hours.ago)
+      allow(Crm::Ai::FollowUpComposer).to receive(:new).and_raise(Crm::Ai::ResponsesClient::Error, 'sem_ia_no_teste')
+
+      result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+      expect(result.status).not_to eq(:rescheduled)
+      expect(card.activities.where(event_type: 'ai_followup_postponed')).not_to exist
+    end
+  end
 end
