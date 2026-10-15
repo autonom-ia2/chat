@@ -30,6 +30,47 @@ module Autonomia::Agents::QuemResponde
     ::Autonomia::Agents::AgentInbox.kept.porta.find_by(inbox_id: inbox.id, account_id: inbox.account_id)
   end
 
+  # #1606 ponto 3: a resposta pública de um robô não tira a conversa de OUTRO vínculo ativo da caixa que é o dono dela
+  # (Message#claim_conversation_for_bot). Ex.: a porta postando atrasada enquanto a área atende. Só com a Fase 2; robô
+  # que não é nosso (n8n) numa caixa sem vínculo nosso nunca é barrado. Chamar com a conversa travada.
+  def dono_ativo_outro?(conversation, sender)
+    return false unless sender.is_a?(AgentBot) && conversation.ai_assignee.is_a?(AgentBot)
+    return false if conversation.ai_assignee == sender || !::Autonomia::Agents::Fase2.ligada?(conversation.account)
+
+    vinculos = ::Autonomia::Agents::AgentInbox.kept.where(inbox_id: conversation.inbox_id, account_id: conversation.account_id)
+    return false if dono_da_conversa(vinculos, conversation).nil?
+
+    ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:claim_barrado, conversation_id: conversation.id,
+                                                                              dono: conversation.assignee_agent_bot_id, robo: sender.id)
+    true
+  end
+
+  # Quem fica com a conversa depois da resposta pública do robô `sender`: ele, ou o dono que é outro vínculo ativo.
+  def dono_depois_do_claim(conversation, sender)
+    dono_ativo_outro?(conversation, sender) ? conversation.ai_assignee : sender
+  end
+
+  # #1606 ponto 4: para quem a conversa volta quando a pessoa sai dela (Conversations::AssignmentService). Com a Fase 2,
+  # o espelho de área do responsável do funil do card em atendimento (leitor do CRM); sem ele, o robô da caixa (a
+  # porta), como sempre foi. O robô do funil só vale se for o espelho de um vínculo ativo DESTA caixa, na conta da
+  # conversa (fail-closed): espelho de outra caixa, de vínculo removido ou de outra conta é ignorado.
+  def robo_da_devolucao(conversation)
+    porta = conversation.inbox_agent_bot
+    return porta unless ::Autonomia::Agents::Fase2.ligada?(conversation.account)
+
+    robo = ::Autonomia::Agents::ContratoDoFunil.robo_do_funil(conversation)
+    robo = nil unless robo && espelho_na_caixa?(conversation, robo)
+    ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:devolucao, conversation_id: conversation.id,
+                                                                          destino: robo ? :area : :porta)
+    robo || porta
+  end
+
+  def espelho_na_caixa?(conversation, robo)
+    ::Autonomia::Agents::AgentInbox.kept.exists?(account_id: conversation.account_id, inbox_id: conversation.inbox_id,
+                                                 agent_bot_id: robo.id)
+  end
+  private_class_method :espelho_na_caixa?
+
   def dono_da_conversa(vinculos, conversation)
     return if conversation.assignee_agent_bot_id.blank? || conversation.ai_assignee_type != 'AgentBot'
 
