@@ -6,7 +6,8 @@ class Crm::ConversationObserverListener < BaseListener
     return if ignored_message?(message)
 
     Crm::SyncConversationCardJob.perform_later(message.conversation_id, message.id)
-    enqueue_subject_identification(message)
+    # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
+    Crm::Subjects.identificar_depois(message)
   end
 
   # SLA auto-apply v1 (gatilho "conversa criada"): hand off to a job so listener
@@ -82,13 +83,6 @@ class Crm::ConversationObserverListener < BaseListener
     return unless Crm::Ai::Config.enabled?
 
     Crm::Ai::HandoffPickupJob.perform_later(conversation.id, conversation.assignee_id, event.timestamp.iso8601)
-  end
-
-  # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
-  def enqueue_subject_identification(message)
-    return unless message.incoming? && Crm::Subjects.ligado?(message.conversation)
-
-    Crm::Subjects::IdentifyJob.set(wait: Crm::Subjects::DEBOUNCE).perform_later(message.conversation_id, message.id)
   end
 
   def ignored_message?(message)

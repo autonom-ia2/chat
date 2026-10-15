@@ -35,6 +35,14 @@ module Crm::Subjects
     Crm::Ai::Config.enabled? && sugerir?(conversation)
   end
 
+  # Pergunta o assunto da mensagem do cliente depois da espera, se a caixa tem a IA de assunto ligada. Um caminho só
+  # para a mensagem nova (#1145) e para a recuperada pelo WhatsApp Híbrido (#1638).
+  def self.identificar_depois(message)
+    return unless message.incoming? && ligado?(message.conversation)
+
+    Crm::Subjects::IdentifyJob.set(wait: DEBOUNCE).perform_later(message.conversation_id, message.id)
+  end
+
   # O mesmo interruptor da IA do card: funil com a IA desligada fica fora da IA de assunto.
   def self.ia_do_funil?(pipeline)
     Crm::Ai::Config.pipeline_ai_settings(pipeline)[:enabled] != false

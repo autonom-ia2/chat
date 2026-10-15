@@ -500,4 +500,200 @@ RSpec.describe Crm::Subjects::Identifier do
       expect(finder.find(conversation)).to eq(chat2you)
     end
   end
+
+  describe 'mensagem recuperada pelo WhatsApp Híbrido (#1638)' do
+    let(:aviso) { 'Esta mensagem não é suportada' }
+
+    def recuperar(message, content, quando: Time.current)
+      message.update!(content: content,
+                      content_attributes: message.content_attributes.merge('hybrid_recovered_at' => quando.utc.iso8601))
+    end
+
+    def decisao_da_ia_no_aviso
+      create_card(title: 'Joana Lima')
+      stub_jev('sem_assunto')
+      message = incoming(aviso)
+      identify(message)
+      [message, Crm::SubjectDecision.find_by!(message: message)]
+    end
+
+    # A IA criou um card em cima do aviso (o pior caso): a decisão é applied/create com o card dela.
+    def card_criado_no_aviso(titulo: 'Atendimento')
+      card = create_card(title: titulo, focused_at: 1.minute.ago, metadata: { 'subject' => { 'source' => 'ai' } })
+      message = incoming(aviso)
+      decisao = Crm::SubjectDecision.create!(account: account, conversation: conversation, message: message, mode: 'auto',
+                                             action: 'create', state: 'applied', card: card, pipeline: comercial,
+                                             title: titulo, decided_by: 'review')
+      [message, decisao, card]
+    end
+
+    def jev_com_titulo(titulo)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: titulo)
+    end
+
+    it 'a decisão automática tomada em cima do aviso é reaberta na mesma linha e decidida com o texto real' do
+      message, anterior = decisao_da_ia_no_aviso
+      expect(anterior).to have_attributes(state: 'kept', action: 'none')
+
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      requests = stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Seguro do Onix')
+
+      decision = identify(message)
+
+      expect(decision).to have_attributes(id: anterior.id, action: 'rename', state: 'applied', title: 'Seguro do Onix')
+      expect(Crm::SubjectDecision.where(message: message).count).to eq(1)
+      expect(requests.size).to eq(1)
+      expect(requests.first['state'].to_json).to include('Onix')
+    end
+
+    it 'o card que a IA criou em cima do aviso ganha o assunto real: mesmo card, nenhum segundo' do
+      message, anterior, card = card_criado_no_aviso
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      jev_com_titulo('Seguro do Onix')
+
+      decision = identify(message)
+
+      expect(decision).to have_attributes(id: anterior.id, action: 'rename', state: 'applied', card_id: card.id,
+                                          title: 'Seguro do Onix')
+      expect(card.reload.title).to eq('Seguro do Onix')
+      expect(account.crm_cards.count).to eq(1)
+      expect(finder.find(conversation)).to eq(card)
+    end
+
+    it 'nome que a pessoa trocou à mão depois da IA fica' do
+      message, anterior, card = card_criado_no_aviso
+      card.update!(title: 'Renovação da frota')
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      jev_com_titulo('Seguro do Onix')
+
+      expect(identify(message)).to have_attributes(id: anterior.id, state: 'kept', reason: 'pessoa_deu_nome')
+      expect(card.reload.title).to eq('Renovação da frota')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'mesmo assunto com o texto real: nada muda e a tela não é avisada de novo' do
+      message, anterior, card = card_criado_no_aviso(titulo: 'Seguro do Onix')
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      jev_com_titulo('Seguro do Onix')
+      allow(Crm::Subjects::Notifier).to receive(:notify)
+      allow(Crm::Cards::Broadcaster).to receive(:broadcast)
+
+      expect(identify(message)).to have_attributes(id: anterior.id, state: 'kept', card_id: card.id)
+      expect(card.reload.title).to eq('Seguro do Onix')
+      expect(Crm::Subjects::Notifier).not_to have_received(:notify)
+      expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
+    end
+
+    it 'erro inesperado na decisão reaberta devolve a decisão ao que era, sem apagar a linha' do
+      message, anterior, card = card_criado_no_aviso
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      jev_com_titulo('Seguro do Onix')
+      allow(Crm::Subjects::Applier).to receive(:new).and_raise(ActiveRecord::StatementInvalid, 'boom')
+
+      expect { identify(message) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(anterior.reload).to have_attributes(state: 'applied', action: 'create', card_id: card.id, title: 'Atendimento',
+                                                 pipeline_id: comercial.id, decided_by: 'review')
+      expect(card.reload.title).to eq('Atendimento')
+    end
+
+    it 'card da IA fechado depois do aviso: o assunto real segue o caminho de sempre' do
+      message, _anterior, card = card_criado_no_aviso
+      card.update!(status: :won, closed_at: Time.current)
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      jev_com_titulo('Seguro do Onix')
+
+      decision = identify(message)
+
+      # Fechado há pouco por uma pessoa: o pedido novo vira sugestão (#1260), e o card fechado não é renomeado.
+      expect(decision).to have_attributes(action: 'create', state: 'suggested', title: 'Seguro do Onix')
+      expect(card.reload.title).to eq('Atendimento')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'Jev fora do ar na decisão reaberta: vale o que valia antes' do
+      message, anterior, card = card_criado_no_aviso
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return(status: 200, body: { model: 'outro' }.to_json)
+
+      identify(message)
+
+      expect(anterior.reload).to have_attributes(state: 'applied', action: 'create', card_id: card.id, title: 'Atendimento')
+    end
+
+    it 'voltar ao mesmo assunto de antes avisa a tela quando o foco tinha mudado no meio-tempo' do
+      agentes = create_card(title: 'Agentes de IA', focused_at: 2.hours.ago, metadata: { 'subject' => { 'source' => 'ai' } })
+      outro = create_card(title: 'Chat2You', focused_at: 3.hours.ago, metadata: { 'subject' => { 'source' => 'ai' } })
+      message = incoming(aviso)
+      anterior = Crm::SubjectDecision.create!(account: account, conversation: conversation, message: message, mode: 'auto',
+                                              action: 'focus', state: 'applied', card: agentes, decided_by: 'jev')
+      Crm::Subjects::Acoes.focar(conversation: conversation, card: outro)
+      travel 1.minute
+      recuperar(message, 'Voltando aos agentes')
+      stub_jev("card_#{agentes.id}")
+      allow(Crm::Subjects::Notifier).to receive(:notify)
+
+      expect(identify(message)).to have_attributes(id: anterior.id, action: 'focus', state: 'applied', card_id: agentes.id)
+      expect(finder.find(conversation)).to eq(agentes)
+      expect(Crm::Subjects::Notifier).to have_received(:notify)
+    end
+
+    it 'decisão gravada no mesmo segundo da recuperação reabre (o horário chega sem fração)' do
+      travel_to(Time.zone.parse('2026-10-15 10:00:00.700'), with_usec: true)
+      message, anterior = decisao_da_ia_no_aviso
+      recuperar(message, 'Quero cotar o seguro do Onix', quando: Time.zone.parse('2026-10-15 10:00:00'))
+      travel 20.seconds
+      requests = stub_jev('sem_assunto')
+
+      identify(message)
+
+      expect(requests.size).to eq(1)
+      expect(anterior.reload.updated_at).to be > Time.zone.parse('2026-10-15 10:00:01')
+    end
+
+    it 'reabre uma vez só: a decisão tomada depois da recuperação já leu o texto real' do
+      message, = decisao_da_ia_no_aviso
+      travel 1.minute
+      recuperar(message, 'Quero cotar o seguro do Onix')
+      travel Crm::Subjects::DEBOUNCE
+      requests = stub_jev('sem_assunto')
+      identify(message)
+      travel 1.minute
+
+      identify(message)
+
+      expect(requests.size).to eq(1)
+    end
+
+    it 'sem a marca de recuperação a mensagem decidida não é perguntada de novo' do
+      message, anterior = decisao_da_ia_no_aviso
+      travel 1.minute
+      message.update!(content: 'Editada sem recuperar')
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(message)).to eq(anterior)
+      expect(requests).to be_empty
+    end
+
+    %w[accepted dismissed suggested pending].each do |state|
+      it "decisão #{state} (escolha da pessoa, sugestão esperando ou reserva em curso) fica como está" do
+        message, anterior = decisao_da_ia_no_aviso
+        anterior.update!(state: state, action: 'create', pipeline: comercial, title: 'Escolha')
+        travel 1.minute
+        recuperar(message, 'Quero cotar o seguro do Onix')
+        requests = stub_jev("novo_#{comercial.id}")
+
+        expect(identify(message)).to have_attributes(id: anterior.id, state: state, title: 'Escolha')
+        expect(requests).to be_empty
+      end
+    end
+  end
 end

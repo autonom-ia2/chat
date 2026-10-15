@@ -9,12 +9,14 @@ class Crm::Subjects::Applier
   # Decisões que não leram nada ou não chegaram ao fim: não passam na frente de uma mais antiga.
   SEM_EFEITO = %w[failed no_content no_quota].freeze
 
-  def initialize(conversation:, question:, mode:, decisao:)
+  # anterior: o retrato da decisão reaberta pelo WhatsApp Híbrido (#1638), ou nil.
+  def initialize(conversation:, question:, mode:, decisao:, anterior: nil)
     @conversation = conversation
     @account = conversation.account
     @question = question
     @mode = mode
     @decisao = decisao
+    @anterior = anterior
   end
 
   def aplicar(opcao, titulo)
@@ -28,6 +30,9 @@ class Crm::Subjects::Applier
   private
 
   def novo(pipeline, titulo)
+    card_da_ia = card_nomeado_no_aviso(pipeline)
+    return decidir('rename', card: card_da_ia, pipeline: pipeline, title: titulo) if card_da_ia
+
     atual = @question.atual
     if @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
       decidir('rename', card: atual, pipeline: pipeline, title: titulo)
@@ -75,7 +80,7 @@ class Crm::Subjects::Applier
 
   def executar(action, atributos)
     case action
-    when 'rename' then dar_nome(atributos[:card].reload, atributos[:title])
+    when 'rename' then renomear(atributos[:card].reload, atributos[:title])
     when 'focus' then focar(atributos[:card].reload)
     when 'create' then criar(atributos[:pipeline], atributos[:title])
     end
@@ -95,9 +100,42 @@ class Crm::Subjects::Applier
                         .exists?(['message_id > ?', @decisao.message_id])
   end
 
+  # #1638: o card que a IA criou ou nomeou em cima do aviso "mensagem não suportada", neste funil. O assunto do texto
+  # real vai para ele, nunca para um segundo card.
+  def card_nomeado_no_aviso(pipeline)
+    return unless nomeado_no_aviso? && @anterior['pipeline_id'] == pipeline.id
+
+    # Card fechado depois do aviso: o assunto real segue o caminho de sempre.
+    @account.crm_cards.find_by(id: @anterior['card_id'])&.then { |card| card if card.open? }
+  end
+
+  def nomeado_no_aviso?
+    @anterior.present? && %w[create rename].include?(@anterior['action'])
+  end
+
+  def renomear(card, titulo)
+    nomeado_no_aviso? && card.id == @anterior['card_id'] ? renomear_o_do_aviso(card, titulo) : dar_nome(card, titulo)
+  end
+
+  # Mesmo assunto: nada muda. Nome trocado à mão depois da IA: é da pessoa, fica (#1260). Senão, novo nome e o card
+  # volta a ser o assunto atual, a menos que a pessoa tenha escolhido outro há pouco.
+  def renomear_o_do_aviso(card, titulo)
+    return { state: 'kept', reason: 'card_mudou' } unless card.open?
+    return { state: 'kept', reason: 'pessoa_deu_nome' } unless card.title == @anterior['title']
+    return { state: 'kept' } if titulo == card.title
+
+    resultado = dar_nome_da_ia(card, titulo)
+    Crm::Subjects::Acoes.focar(conversation: @conversation, card: card) unless card == @question.atual || pessoa_escolheu_assunto?
+    resultado
+  end
+
   def dar_nome(card, titulo)
     return { state: 'kept', reason: 'card_mudou' } if !card.open? || Crm::Subjects::Naming.named?(card)
 
+    dar_nome_da_ia(card, titulo)
+  end
+
+  def dar_nome_da_ia(card, titulo)
     card.update!(title: titulo, metadata: Crm::Subjects::Naming.metadata(card, 'ai'))
     Crm::ActivityLogger.new(card: card, actor: nil, event_type: 'update', payload: { title: titulo },
                             conversation: @conversation).perform

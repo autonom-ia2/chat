@@ -16,10 +16,12 @@ class Crm::Subjects::Identifier
   def perform
     setting = Crm::InboxSetting.find_by(account_id: @account.id, inbox_id: @conversation.inbox_id, crm_enabled: true)
     return if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
-    return existente if existente || pipelines.empty?
+
+    anterior = existente
+    return anterior if pipelines.empty?
 
     @mode = setting.subject_ai_mode
-    @decisao = reservar
+    @decisao = anterior ? reabrir(anterior) : reservar
     return existente if @decisao.nil?
 
     decidir
@@ -31,6 +33,13 @@ class Crm::Subjects::Identifier
 
   def existente
     Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
+  end
+
+  # Mensagem já decidida só volta a ser perguntada quando o Híbrido recuperou o texto real (#1638). O retrato é a
+  # decisão de antes: volta se der erro, e diz ao Applier qual card a IA já tinha nomeado.
+  def reabrir(anterior)
+    @retrato = Crm::Subjects::Reabertura.reabrir(anterior, @message, @mode)
+    anterior.reload if @retrato
   end
 
   # Outro job da mesma mensagem reservou primeiro: nil, e quem chamou devolve a linha dele.
@@ -57,10 +66,12 @@ class Crm::Subjects::Identifier
 
   # Erro inesperado (banco, card apagado no meio): antes de aplicar, a transação do lock já voltou atrás, então a
   # reserva sai e o retry do job pergunta de novo. Depois de aplicar, a decisão fica como falha: repetir criaria outro
-  # card.
+  # card. Decisão reaberta (#1638) nunca é apagada: volta ao que era antes.
   def desfazer_reserva(erro)
     Rails.logger.error("[crm][assunto] decisão #{@decisao.id} falhou: #{erro.class}")
-    @aplicado ? @decisao.update_columns(state: 'failed', reason: erro.class.name.first(120)) : @decisao.destroy # rubocop:disable Rails/SkipsModelValidations
+    return @decisao.update_columns(state: 'failed', reason: erro.class.name.first(120)) if @aplicado # rubocop:disable Rails/SkipsModelValidations
+
+    @retrato ? @decisao.update_columns(@retrato) : @decisao.destroy # rubocop:disable Rails/SkipsModelValidations
   end
 
   def perguntar
@@ -72,8 +83,8 @@ class Crm::Subjects::Identifier
     escolha = revisar?(opcao) ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
     return if escolha.nil?
 
-    resultado = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao)
-                                      .aplicar(escolha.opcao, escolha.titulo)
+    resultado = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao,
+                                           anterior: @retrato).aplicar(escolha.opcao, escolha.titulo)
     @aplicado = true
     @evento = resultado.delete(:evento)
     concluir(**resultado, decided_by: escolha.decided_by)
@@ -81,9 +92,20 @@ class Crm::Subjects::Identifier
 
   # O aviso em tempo real sai com a decisão já gravada: falhar aqui não desfaz nem repete nada.
   def avisar
+    return if mesmo_resultado?
+
     Crm::Cards::Broadcaster.broadcast(@decisao.card, @evento) if @evento && @decisao.card
     Crm::Subjects::Notifier.notify(@conversation) if %w[applied suggested].include?(@decisao&.state)
     avaliar_card_novo
+  end
+
+  # Reaberta que chegou ao mesmo resultado de antes (#1638): a tela já mostra isso, nada a avisar. Voltar a um assunto
+  # só é igual se ele já era o atual antes desta decisão (a pessoa pode ter trocado o foco no meio-tempo).
+  def mesmo_resultado?
+    campos = %w[state action card_id title]
+    return false unless @retrato.present? && @decisao.attributes.slice(*campos) == @retrato.slice(*campos)
+
+    @decisao.action != 'focus' || question.atual&.id == @decisao.card_id
   end
 
   # Card novo do pedido é o assunto atual: a IA avalia ele, não o anterior (#1147). A troca de foco agenda em Focus.
@@ -161,7 +183,11 @@ class Crm::Subjects::Identifier
                         .where.not(decided_by: nil).count >= Crm::Subjects::LIMITE_MENSAL
   end
 
+  # Reaberta (#1638) que não conseguiu decidir (sem cota, Jev fora, nada para ler) volta ao que era: o que valia antes
+  # continua valendo.
   def concluir(**atributos)
+    return @decisao.update_columns(@retrato) if @retrato && Crm::Subjects::Applier::SEM_EFEITO.include?(atributos[:state]) # rubocop:disable Rails/SkipsModelValidations
+
     padrao = { confidence: @jev&.certeza, decided_by: ('jev' if @jev) }
     @decisao.update!(padrao.merge(atributos))
   end
