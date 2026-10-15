@@ -101,7 +101,7 @@ class Whatsapp::Templates::Garantir
     return indisponivel('botoes_diferentes') unless mesmos_botoes?(template)
 
     resultado = { status: :pronto, nome: template['name'], idioma: template['language'],
-                  categoria: template['category'].to_s.upcase.presence || Finalidades::CATEGORIA, campos: @pronto.campos }
+                  categoria: template['category'].to_s.upcase.presence || @pronto.categoria, campos: @pronto.campos }
     @pronto.botoes.any? ? resultado.merge(botoes: @pronto.botoes_do_envio) : resultado
   end
 
