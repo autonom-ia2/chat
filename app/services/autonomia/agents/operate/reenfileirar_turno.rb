@@ -6,7 +6,7 @@
 # Só refaz o turno que ainda está em andamento: a última mensagem pública é do cliente e é a que a marca do debounce
 # aponta. Pelo :responder, sem a janela do debounce: quem chama está com o turno na mão, depois da IA, que pode passar
 # dela; o limite é a vida da posse (PosseDoTurno::TTL). Pelo :evento_troca, a troca chega a qualquer hora, então só
-# turno recente (AgentInbox#turno_em_andamento?).
+# turno recente (AgentInbox#turno_em_andamento?), e o settle refeito espera o fim da janela do debounce.
 # Pessoa atribuída, agente que não pode responder, conta fora da Fase 2: nada a refazer.
 class Autonomia::Agents::Operate::ReenfileirarTurno
   ORIGENS = %i[responder evento_troca].freeze
@@ -99,9 +99,22 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     telemetria(:turno_reenfileirado, destino)
     conversation_id = @conversation.id
     message_id = @message_id
+    espera = espera_da_janela(destino)
     ActiveRecord.after_all_transactions_commit do
-      ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation_id, message_id, 'settle', destino.id)
+      ::Autonomia::Agents::Operate::ReplyJob.set(wait: espera).perform_later(conversation_id, message_id, 'settle', destino.id)
     end
+  end
+
+  # Pelo :evento_troca, o turno refeito espera o fim da janela do debounce, como o settle do gatilho: o Sync do CRM troca
+  # o dono segundos depois da mensagem, e o dono novo não pode responder enquanto o cliente ainda digita. Uma mensagem
+  # nova na janela muda a marca, e este settle desiste. Pelo :responder a janela já passou (quem chama já fez a IA).
+  # A marca existe aqui: turno_em_andamento? já a conferiu.
+  def espera_da_janela(destino)
+    return 0.seconds unless @origem == :evento_troca
+
+    stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+    fim = stamp['at'].to_f + ::Autonomia::Agents::Config.debounce_seconds_for(destino.agent).to_f
+    [fim - Time.current.to_f, 0].max.seconds
   end
 
   def telemetria(evento, destino)

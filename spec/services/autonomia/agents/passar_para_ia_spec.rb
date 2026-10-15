@@ -90,12 +90,15 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
 
     it 'com o registro real do CRM (Crm::Passagens.registrar!): grava a passagem com card e quem pediu' do
       allow(contrato).to receive(:registrar_passagem!).and_call_original
+      # Com o contexto real do CRM (#1622), o listener dele vê que a passagem é gravada aqui e não grava outra.
+      allow(contrato).to receive(:com_motivo_da_passagem).and_call_original if Crm::Passagens.respond_to?(:com_motivo)
       card = create_card(pipeline: suporte)
-      conversation.update!(assignee: pessoa)
+      conversation.update!(assignee: pessoa) # com o listener de atribuição do CRM, grava a passagem 'atribuicao'
+      do_setup = Crm::Passagem.where(conversation_id: conversation.id).ids
 
       passar(por: :pessoa, origem: pessoa, pedida_por: pessoa, transfer_id: 'tr-9')
 
-      expect(Crm::Passagem.where(conversation_id: conversation.id).sole).to have_attributes(
+      expect(Crm::Passagem.where(conversation_id: conversation.id).where.not(id: do_setup).sole).to have_attributes(
         card_id: card.id, de_type: 'User', de_id: pessoa.id, para_type: 'Autonomia::Agents::Agent', para_id: area.id,
         pedida_por_type: 'User', pedida_por_id: pessoa.id, motivo: 'pedido_pelo_nome', transfer_id: 'tr-9'
       )
@@ -194,7 +197,40 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
     expect(eventos).to be_empty
   end
 
+  describe 'o próprio robô que tinha passado a conversa a pessoas (#1377: segue como ai_assignee)' do
+    it 'com a espera de pessoa: passou, a espera acaba e o robô segue o dono' do
+      esperar_pessoa!
+
+      resultado = passar(agente_da_porta, por: :pessoa, pedida_por: pessoa)
+
+      expect(resultado).to have_attributes(ok?: true, trocou?: true, codigo: :passou)
+      expect(conversation.reload).to have_attributes(ai_assignee: porta, assignee_id: nil)
+      expect(conversation.bot_handoff_waiting?).to be(false)
+    end
+
+    it 'com a marca do motor de entrega do CRM: passou, e a marca sai' do
+      Crm::Entrega::Marca.marcar(conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu')
+      conversation.save!
+      expect(conversation.reload.crm_delivery_pending?).to be(true)
+
+      resultado = passar(agente_da_porta, por: :pessoa, pedida_por: pessoa)
+
+      expect(resultado.codigo).to eq(:passou)
+      expect(conversation.reload.crm_delivery_pending?).to be(false)
+      expect(conversation.ai_assignee).to eq(porta)
+    end
+  end
+
   describe 'recusas' do
+    it 'pessoa de outra conta pedindo: outra_conta, sem troca nem registro' do
+      estranha = create(:user, account: create(:account), role: :administrator)
+
+      eventos = eventos_de_troca { expect_recusa(passar(por: :pessoa, pedida_por: estranha), :outra_conta) }
+
+      expect(contrato).not_to have_received(:registrar_passagem!)
+      expect(eventos).to be_empty
+    end
+
     it 'Fase 2 desligada' do
       Autonomia::Agents::Fase2.desligar!(conversation.account)
 
@@ -255,6 +291,27 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       expect { passar(por: :pessoa, origem: pessoa) }.to raise_error(ArgumentError, /pedida_por/)
       expect(conversation.reload).to have_attributes(assignee_id: pessoa.id)
       expect(contrato).not_to have_received(:registrar_passagem!)
+    end
+
+    it 'pedido da IA sem pedida_por e sem origem: erro, e nada troca nem é registrado como o sistema' do
+      eventos = eventos_de_troca { expect { passar(por: :ia) }.to raise_error(ArgumentError, /sem origem de IA/) }
+
+      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(contrato).not_to have_received(:registrar_passagem!)
+      expect(eventos).to be_empty
+    end
+
+    it 'pedido da IA com origem humana e sem pedida_por: erro (a pessoa não pediu)' do
+      conversation.update!(assignee: pessoa)
+
+      expect { passar(por: :ia, origem: pessoa) }.to raise_error(ArgumentError, /sem origem de IA/)
+      expect(contrato).not_to have_received(:registrar_passagem!)
+    end
+
+    it 'pedido da IA com origem de IA: o robô (AgentBot) também vale como quem pediu' do
+      passar(por: :ia, origem: porta)
+
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(pedida_por: porta))
     end
 
     it 'pedido do CRM com pedida_por: erro (o pedido do CRM é do sistema)' do

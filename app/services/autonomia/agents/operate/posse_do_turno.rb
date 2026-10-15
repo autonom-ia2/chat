@@ -9,9 +9,14 @@
 # de perder o turno para si mesmo e deixar o cliente sem resposta. Outro settle (job_id diferente) segue barrado.
 #
 # A chave dura a vida do turno (TTL de um dia), não só a janela do debounce: a marca do debounce não é limpa depois da
-# resposta, e o caminho :responder do ReenfileirarTurno não tem prazo dentro desse dia. Com uma chave curta, um pedaço 0
-# atrasado do dono antigo tomaria de novo a chave do dono novo e o faria responder duas vezes. Passado o dia, o
-# ReenfileirarTurno também não refaz mais o turno.
+# resposta, e o caminho :responder do ReenfileirarTurno não tem prazo dentro desse dia. Com uma chave curta, o pedaço 0
+# atrasado do dono antigo (ChunkedDeliveryJob) chamaria o ReenfileirarTurno, que tomaria de novo a chave do dono novo e
+# enfileiraria outro settle para ele: o dono novo responderia duas vezes. Passado o dia, o ReenfileirarTurno também não
+# refaz mais o turno.
+#
+# O turno respondido NÃO solta a chave, de propósito: ela é o que impede responder de novo o mesmo turno (dedupe). Solta
+# só quem não entregou: o turno que falhou (exceção, IA sem resultado, resposta vazia — Operate::Responder), que pode ser
+# retomado pelo mesmo dono ou pelo seguinte.
 #
 # Quem perde o turno porque o dono mudou solta a SUA chave, e só se ela ainda tiver o valor que ele tomou
 # (compare-and-delete): se o turno voltar para ele (A→B→A), ele pode responder; uma posse mais nova dele não é apagada.
@@ -34,6 +39,8 @@ module Autonomia::Agents::Operate::PosseDoTurno
   def assumir?(conversation:, agent_inbox:, message_id:, job_id:, posse: nil)
     return true unless ::Autonomia::Agents::Fase2.ligada?(conversation.account)
     return true if posse.present? && posse.to_i == agent_inbox.id
+
+    soltar_repassada_de_outro(conversation.id, message_id, posse) if posse.present?
     return true if tomar?(conversation.id, message_id, agent_inbox.id, dono: job_id)
 
     ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:turno_em_curso, conversation_id: conversation.id,
@@ -52,6 +59,13 @@ module Autonomia::Agents::Operate::PosseDoTurno
   # O valor com que um settle ficou com o turno: o job_id dele, ou REPASSADA quando a posse veio do ReenfileirarTurno.
   def valor(job_id:, posse:, agent_inbox:)
     posse.present? && posse.to_i == agent_inbox.id ? REPASSADA : job_id
+  end
+
+  # O settle chegou com a posse de B, mas o dono agora é outro (A→B→C): B não responde por este settle. Solta a chave
+  # REPASSADA de B (compare-and-delete), senão ela prende o turno por um dia e a volta para B (A→B→C→B) é barrada. Se B
+  # já tomou a chave por um settle dele (job_id), o valor não bate e nada é solto.
+  def soltar_repassada_de_outro(conversation_id, message_id, posse)
+    soltar(conversation_id, message_id, posse.to_i, REPASSADA)
   end
 
   # Solta só se a chave ainda for de quem pede (`valor`); sem valor, não solta nada.

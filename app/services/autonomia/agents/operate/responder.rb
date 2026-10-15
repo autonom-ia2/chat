@@ -21,6 +21,8 @@ module Autonomia
         # Sinal de silêncio padrão (a instrução emite isto em vez de uma resposta). Override por agente
         # via config['silence_tokens'] (lista). Match exato após normalizar (trim + minúsculas + markdown).
         SILENCE_TOKEN = 'conversation_closed_for_now'.freeze
+        # Os silêncios que são falha (motivo_do_silencio): soltam a posse do turno, que pode ser retomado (#1606).
+        SILENCIOS_DE_FALHA = %w[ia_falhou vazio].freeze
 
         Result = Struct.new(:status, :message, :error, keyword_init: true) do
           def self.replied(message)
@@ -115,6 +117,7 @@ module Autonomia
         # que cotar e não ter como entregar.
         def falha_no_turno(error)
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{error.class}")
+          soltar_posse
           ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
           Result.silenced
         end
@@ -206,6 +209,8 @@ module Autonomia
           outcome = @conversation.with_lock do
             if !still_eligible?
               silencio_por_inelegibilidade
+            elsif turno_superado?
+              silencio_por_turno_superado
             elsif already_replied?
               Result.replied(nil)
             else
@@ -237,6 +242,8 @@ module Autonomia
           outcome = @conversation.with_lock do
             if !still_eligible?
               silencio_por_inelegibilidade
+            elsif turno_superado?
+              silencio_por_turno_superado
             elsif already_replied?
               Result.replied(nil)
             elsif audio.present?
@@ -354,6 +361,8 @@ module Autonomia
         #   `vazio`        — devolveu, mas sem texto utilizável.
         #   `nao_elegivel` — o turno tinha o que dizer e não disse: um humano assumiu (ou o agente
         #                    saiu do ar) durante a chamada de IA, e o texto foi descartado.
+        #   Na hora de postar (#1606): `dono_mudou` (outro agente da caixa virou o dono) e `turno_superado` (o cliente
+        #   escreveu de novo durante a IA; responde o settle da mensagem nova).
         def motivo_do_silencio(result)
           return 'sinal' if silence_signal?(result)
           return 'ia_falhou' if result.nil?
@@ -366,8 +375,49 @@ module Autonomia
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
         def silence_with_async(_result, motivo)
           registrar_silencio(motivo)
+          if SILENCIOS_DE_FALHA.include?(motivo)
+            soltar_posse
+            refazer_pelo_dono_novo
+          end
           dispatch_async(replied: false)
           Result.silenced
+        end
+
+        # #1606: a IA falhou e, durante a chamada, outro vínculo ativo da caixa virou o dono por um caminho sem o evento
+        # de troca (o robô atribuído pela tela). Sem isto o turno ficaria sem dono: a posse foi solta, mas ninguém chama o
+        # dono novo. Com o evento, o assinante já enfileirou, e o SET NX do ReenfileirarTurno barra este segundo pedido.
+        def refazer_pelo_dono_novo
+          return if still_eligible? || !dono_mudou?
+
+          ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
+                                                               origem: :responder, quem_perdeu: @agent_inbox,
+                                                               posse_de_quem_perdeu: @posse)
+        end
+
+        # #1606: uma mensagem mais nova do cliente abriu outro turno durante a IA (a marca do debounce aponta para ela).
+        # A resposta deste turno ficou velha: é descartada, e o settle do turno novo responde, uma vez. Mesmo critério do
+        # ChunkedDeliveryJob#current_turn? (sem marca, segue). Chamar só com estado fresco (depois de still_eligible?, que
+        # relê a conversa, dentro do lock). Só com a Fase 2; fora dela posta como sempre.
+        def turno_superado?
+          return false if @reply_to_message_id.blank? || !::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+
+          stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+          pendente = stamp.is_a?(Hash) ? stamp['pending_message_id'] : nil
+          pendente.present? && pendente != @reply_to_message_id.to_i
+        end
+
+        def silencio_por_turno_superado
+          registrar_silencio('turno_superado')
+          Result.silenced
+        end
+
+        # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou
+        # pela volta ao mesmo dono. Solta a posse deste settle (compare-and-delete com o valor dele). O silêncio por `sinal`
+        # é decisão da instrução e o turno respondido seguem com a chave: é o que impede responder duas vezes.
+        def soltar_posse
+          return unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+
+          ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @reply_to_message_id, @agent_inbox.id, @posse)
         end
 
         # O turno mudo porque deixou de ser nosso: humano assumiu, agente desligado, conversa movida.

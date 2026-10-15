@@ -32,15 +32,16 @@ module Autonomia::Agents::PassarParaIa
 
   # origem: quem tinha a conversa (User, Autonomia::Agents::Agent ou AgentBot), ou nil. pedida_por: quem pediu a
   # passagem — obrigatório com `por: :pessoa` (a pessoa que clicou, que nem sempre é a que tinha a conversa); com
-  # `por: :ia`, se faltar, a IA que tinha a conversa (a origem); com `por: :crm`, sempre nil (o sistema). A assinatura é
-  # o contrato fixado com o Multifunnel (#1593).
+  # `por: :ia`, se faltar, a origem quando ela é uma IA (Agent ou AgentBot); origem humana ou nenhuma é erro (nil seria
+  # "o sistema", e a pessoa não pediu); com
+  # `por: :crm`, sempre nil (o sistema). A assinatura é o contrato fixado com o Multifunnel (#1593).
   # rubocop:disable Metrics/ParameterLists
   def call(conversation:, agent:, por:, motivo:, origem: nil, pedida_por: nil, transfer_id: nil)
     raise ArgumentError, "por fora da lista: #{por}" unless POR.include?(por)
 
     pedido = { agent: agent, por: por, motivo: motivo, origem: origem, transfer_id: transfer_id,
                pedida_por: quem_pediu(por, pedida_por, origem) }
-    codigo = recusa_antes_da_trava(conversation, agent)
+    codigo = recusa_antes_da_trava(conversation, agent, pedido[:pedida_por])
     resultado = codigo ? Resultado.recusa(codigo) : passar(conversation, pedido)
     registrar_telemetria(conversation, resultado, por)
     resultado
@@ -49,14 +50,21 @@ module Autonomia::Agents::PassarParaIa
 
   def quem_pediu(por, pedida_por, origem)
     case por
-    when :pessoa
-      raise ArgumentError, 'pedida_por é obrigatório quando quem pede é uma pessoa' if pedida_por.nil?
-
-      pedida_por
-    when :ia then pedida_por || origem
+    when :pessoa then exigir!(pedida_por, 'pedida_por é obrigatório quando quem pede é uma pessoa')
+    when :ia then exigir!(pedida_por || origem_de_ia(origem), 'pedido da IA sem pedida_por e sem origem de IA')
     else
       raise ArgumentError, 'pedido do CRM é do sistema: sem pedida_por' unless pedida_por.nil?
     end
+  end
+
+  def origem_de_ia(origem)
+    origem if origem.is_a?(::Autonomia::Agents::Agent) || origem.is_a?(AgentBot)
+  end
+
+  def exigir!(quem, mensagem)
+    raise ArgumentError, mensagem if quem.nil?
+
+    quem
   end
 
   # Os agentes que podem receber conversas desta caixa: vínculo ativo (porta ou área) e atendendo cliente. Só com a
@@ -80,11 +88,17 @@ module Autonomia::Agents::PassarParaIa
     ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
   end
 
-  def recusa_antes_da_trava(conversation, agent)
-    return :outra_conta if agent.account_id != conversation.account_id
+  # A pessoa que pede tem de ser da conta da conversa (`outra_conta`, como o agente de outra conta). Se ela pode mexer
+  # NESTA conversa (caixa, papel, função personalizada) é da rota que chamar o serviço: a policy da conversa, lá.
+  def recusa_antes_da_trava(conversation, agent, pedida_por)
+    return :outra_conta if agent.account_id != conversation.account_id || pessoa_de_outra_conta?(pedida_por, conversation)
     return :fase2_desligada unless fase2?(conversation.account)
 
     :nao_atende_cliente unless agent.atende_cliente?
+  end
+
+  def pessoa_de_outra_conta?(pedida_por, conversation)
+    pedida_por.is_a?(User) && !pedida_por.account_users.exists?(account_id: conversation.account_id)
   end
 
   # Tudo relido sob a trava. Sem return dentro do with_lock (dispararia ROLLBACK): o resultado sai em variável.
@@ -116,9 +130,18 @@ module Autonomia::Agents::PassarParaIa
 
     codigo = recusa_do_vinculo(vinculo)
     return Resultado.recusa(codigo) if codigo
-    return Resultado.ja_e_o_dono if conversation.assignee_id.nil? && conversation.ai_assignee == vinculo.agent_bot
+    return Resultado.ja_e_o_dono if ja_e_o_dono?(conversation, vinculo)
 
     Resultado.passou
+  end
+
+  # Já é o dono só se nada espera por pessoa. Desde o #1377 o robô que passou a conversa a pessoas continua como
+  # ai_assignee, com a espera de pessoa (bot_handoff_waiting?) ou a marca do motor de entrega (crm_delivery_pending?):
+  # devolver `ja_e_o_dono` aí deixaria a espera de pé, e a conversa iria para um humano. Com uma delas, `passou`: o
+  # AssignmentService encerra as duas (end_bot_handoff_wait), como em qualquer passagem.
+  def ja_e_o_dono?(conversation, vinculo)
+    conversation.assignee_id.nil? && conversation.ai_assignee == vinculo.agent_bot &&
+      !conversation.bot_handoff_waiting? && !conversation.crm_delivery_pending?
   end
 
   # O agente é relido sob a trava: uma pausa entre a conferência de antes da trava e a trava não passa.
