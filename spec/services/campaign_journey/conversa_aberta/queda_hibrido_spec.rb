@@ -152,6 +152,34 @@ RSpec.describe CampaignJourney::ConversaAberta::QuedaHibrido, :aggregate_failure
     expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=ausente'))
   end
 
+  # A janela entre o plano B assumir (marca + pending) e o resultado do motor: outro aviso, ou a campanha, nesse meio
+  # tempo nunca reenvia nem manda o modelo.
+  it 'aviso repetido enquanto o Híbrido ainda envia (pending): não reenvia nem manda o modelo' do
+    sent = stub_graph_messages
+    delivery = campanha_disparada
+    message = Message.find(delivery.message_id)
+    message.update!(status: :failed, content_attributes: { 'whatsapp_transport_fallback' => true, 'whatsapp_transport_outcome' => 'pending' })
+
+    expect { aviso_131047(delivery.source_id) }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+
+    expect(client).not_to have_received(:send_text)
+    expect(tipos_enviados(sent)).to eq(%w[text])
+  end
+
+  it 'o plano B grava pending sob trava antes de chamar o motor' do
+    stub_graph_messages
+    delivery = campanha_disparada
+    lido = nil
+    allow(client).to receive(:check_contact_exists) do
+      lido = Message.find(delivery.message_id).content_attributes['whatsapp_transport_outcome']
+      { 'numberExists' => true, 'chatId' => '5511987654321@c.us' }
+    end
+
+    aviso_131047(delivery.source_id)
+
+    expect(lido).to eq('pending')
+  end
+
   it 'failed com a campanha parada: as travas de hoje seguram o modelo' do
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => false })
     sent = stub_graph_messages

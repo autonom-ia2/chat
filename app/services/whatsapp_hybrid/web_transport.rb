@@ -23,6 +23,10 @@ class WhatsappHybrid::WebTransport
   #   uncertain - o motor não respondeu: pode ter saído, nunca reenviar sozinho;
   #   throttled - passou do limite por minuto, espera a próxima tentativa (resultado ainda não é final).
   OUTCOME_KEY = 'whatsapp_transport_outcome'.freeze
+  UNCONFIRMED_ERROR = 'O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.'.freeze
+  # #1453: sem resposta do motor ANTES do pedido de envio (estado da sessão, consulta do contato): nada saiu.
+  NO_ANSWER_ERROR = 'O WhatsApp API não respondeu e a mensagem não saiu. Verifique a conexão na aba WhatsApp API da caixa.'.freeze
+  THROTTLE_ENQUEUE_ERROR = 'Não foi possível agendar a nova tentativa pelo WhatsApp API. Reenvie a mensagem.'.freeze
   CAPPED_ERROR = 'O WhatsApp limitou conversas novas neste número por enquanto. Use um modelo aprovado ' \
                  'ou tente de novo depois do fim do ciclo (aba WhatsApp API da caixa).'.freeze
 
@@ -52,8 +56,8 @@ class WhatsappHybrid::WebTransport
 
     send_now(chat_id)
   rescue Waha::Client::Timeout
-    # Sem resposta não sabemos se saiu: nunca reenviar automaticamente.
-    fail!('O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.', 'uncertain')
+    # Sem resposta ao pedido de envio não sabemos se saiu: nunca reenviar automaticamente. Antes dele (#1453), nada saiu.
+    @delivering ? fail!(UNCONFIRMED_ERROR, 'uncertain') : fail!(NO_ANSWER_ERROR)
   rescue Waha::Client::Error => e
     Rails.logger.error("[whatsapp_hybrid] send failed message=#{@message.id}: #{e.message.to_s[0, 200]}")
     return reach_out_refused! if WhatsappHybrid::ReachOut.engine_refusal?(e)
@@ -83,6 +87,7 @@ class WhatsappHybrid::WebTransport
     physical_id = @client.new_message_id(session)
     mark_pending!(physical_id)
     WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
+    @delivering = true
     deliver_or_uncertain(chat_id, physical_id)
     record_outcome!('accepted')
     RichMessages.mark_sent_as_text!(@message)
@@ -93,8 +98,11 @@ class WhatsappHybrid::WebTransport
   # Timeout (resultado `uncertain`), para ninguém reenviar por cima. Recusa do WhatsApp (463, 475) e 4xx seguem como falha.
   def deliver_or_uncertain(chat_id, physical_id)
     deliver(chat_id, physical_id)
-  rescue Errno::ECONNRESET, Errno::EPIPE, IOError, Net::WriteTimeout => e
+  rescue Errno::ECONNRESET, Errno::EPIPE, Errno::ETIMEDOUT, IOError, Net::WriteTimeout => e
     raise Waha::Client::Timeout, "WAHA envio sem confirmação: conexão fechada (#{e.class})"
+  rescue Errno::EHOSTUNREACH, Errno::ENETUNREACH => e
+    # Sem rota até o motor: o pedido não chegou, nada saiu.
+    raise Waha::Client::Error, "WAHA envio sem rota (#{e.class})"
   rescue Waha::Client::InvalidResponse => e
     raise Waha::Client::Timeout, e.message
   rescue Waha::Client::Error => e
@@ -120,9 +128,7 @@ class WhatsappHybrid::WebTransport
   end
 
   def mark_pending!(physical_id)
-    # #1453: limpa o `throttled` de uma espera anterior. Daqui em diante o pedido pode sair; erro inesperado deixa a
-    # mensagem sem resultado, e nem a nova tentativa nem a campanha a reenviam por cima.
-    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, OUTCOME_KEY => nil }, source_id: physical_id)
+    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin }, source_id: physical_id)
     ::Redis::Alfred.setex(self.class.message_key(@connection, physical_id), @message.id, MESSAGE_KEY_TTL)
   end
 
@@ -157,9 +163,19 @@ class WhatsappHybrid::WebTransport
   def throttle!
     return fail!(THROTTLED_OUT_ERROR) if cloud_fallback? && throttle_count > THROTTLE_MAX_RETRIES
 
+    # #1453: agenda ANTES de gravar `throttled`; sem a nova tentativa na fila, a mensagem não fica esperando à toa.
+    return fail!(THROTTLE_ENQUEUE_ERROR) unless enqueue_retry
+
     record_outcome!('throttled')
-    retry_job.set(wait: THROTTLE_RETRY).perform_later(@message.id)
     log('throttled')
+  end
+
+  def enqueue_retry
+    job = retry_job.set(wait: THROTTLE_RETRY).perform_later(@message.id)
+    job.present? && job.successfully_enqueued?
+  rescue StandardError => e
+    Rails.logger.error("[whatsapp_hybrid] retry not enqueued message=#{@message.id}: #{e.class}")
+    false
   end
 
   # #1453: a mensagem do plano B do 131047 tem o source_id da Meta, e o SendReplyJob a ignoraria.

@@ -38,9 +38,19 @@ RSpec.describe WhatsappHybrid::UnexpectedErrorOutcome, :aggregate_failures do
   describe 'quando o envio foi marcado e não há resultado (pode ter saído)' do
     let(:attributes) { { 'whatsapp_transport_fallback' => true, 'whatsapp_transport' => 'web' } }
 
-    it 'fecha como uncertain' do
+    it 'fecha como uncertain, com o aviso de conferir no celular (não o erro da Meta)' do
       expect(settle).to eq('uncertain')
       expect(message.reload).to be_failed
+      expect(message.content_attributes['external_error']).to eq(WhatsappHybrid::WebTransport::UNCONFIRMED_ERROR)
+    end
+  end
+
+  describe 'quando o plano B assumiu e ainda não chamou o motor (pending)' do
+    let(:attributes) { { 'whatsapp_transport_fallback' => true, 'whatsapp_transport_outcome' => 'pending' } }
+
+    it 'fecha como failed, com o erro original' do
+      expect(settle).to eq('failed')
+      expect(message.reload.content_attributes['external_error']).to eq('131047: Re-engagement message')
     end
   end
 

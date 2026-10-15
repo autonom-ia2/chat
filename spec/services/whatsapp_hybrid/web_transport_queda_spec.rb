@@ -87,6 +87,41 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
       expect(client).not_to have_received(:send_text)
     end
 
+    it 'sem rota até o motor (EHOSTUNREACH) no envio: failed, nada saiu' do
+      allow(client).to receive(:send_text).and_raise(Errno::EHOSTUNREACH)
+
+      transport.perform
+
+      expect(outcome).to eq('failed')
+    end
+
+    it 'ETIMEDOUT no envio: incerto' do
+      allow(client).to receive(:send_text).and_raise(Errno::ETIMEDOUT)
+
+      transport.perform
+
+      expect(outcome).to eq('uncertain')
+    end
+
+    it 'sem resposta do motor ANTES do pedido de envio (consulta do contato): failed, nada saiu' do
+      allow(client).to receive(:check_contact_exists).and_raise(Waha::Client::Timeout)
+
+      transport.perform
+
+      expect(outcome).to eq('failed')
+      expect(message.reload.content_attributes['external_error']).to eq(described_class::NO_ANSWER_ERROR)
+      expect(client).not_to have_received(:send_text)
+    end
+
+    it 'sem resposta ao pedido de envio: incerto, com o aviso de conferir no celular' do
+      allow(client).to receive(:send_text).and_raise(Waha::Client::Timeout)
+
+      transport.perform
+
+      expect(outcome).to eq('uncertain')
+      expect(message.reload.content_attributes['external_error']).to eq(described_class::UNCONFIRMED_ERROR)
+    end
+
     it '4xx do motor continua failed' do
       allow(client).to receive(:send_text).and_raise(Waha::Client::Error.new('WAHA POST /api/sendText -> 422: bad', status: 422))
 
@@ -103,6 +138,16 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
 
     it 'mensagem do plano B do 131047 (tem o source_id da Meta): a nova tentativa vai pelo FallbackRetryJob' do
       expect { transport.perform }.to have_enqueued_job(WhatsappHybrid::FallbackRetryJob).with(message.id)
+    end
+
+    it 'nova tentativa que não entra na fila: falha certa, nunca fica throttled sem job' do
+      allow(WhatsappHybrid::FallbackRetryJob).to receive(:set).and_raise(Redis::CannotConnectError)
+
+      transport.perform
+
+      expect(outcome).to eq('failed')
+      expect(message.reload).to be_failed
+      expect(message.content_attributes['external_error']).to eq(described_class::THROTTLE_ENQUEUE_ERROR)
     end
 
     it 'mensagem comum: sem teto, continua esperando pelo SendReplyJob' do

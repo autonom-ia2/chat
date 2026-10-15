@@ -42,7 +42,11 @@ module WhatsappHybrid::CloudFailureFallback
       next [nil, nil] if already_taken?(message) || !message.failed?
 
       failed_attrs = message.content_attributes.to_h
-      message.update!(status: :sent, content_attributes: failed_attrs.except('external_error').merge('whatsapp_transport_fallback' => true))
+      # `pending` (#1453): o plano B assumiu e ainda não há resultado. Quem lê nesse meio tempo (outro aviso, a campanha)
+      # nunca reenvia nem manda o modelo por cima.
+      message.update!(status: :sent, content_attributes: failed_attrs.except('external_error')
+                                                                     .merge('whatsapp_transport_fallback' => true,
+                                                                            WhatsappHybrid::WebTransport::OUTCOME_KEY => 'pending'))
       [router, failed_attrs]
     end
   end

@@ -49,16 +49,36 @@ RSpec.describe CampaignJourney::ConversaAberta::ConferenciaHibridoJob, :aggregat
   it 'ainda throttled antes do teto: confere de novo, com espera maior' do
     freeze_time do
       expect { described_class.perform_now(delivery.id, 1) }
-        .to have_enqueued_job(described_class).with(delivery.id, 2).at((described_class::ESPERA * 2).from_now)
+        .to have_enqueued_job(described_class).with(delivery.id, 2).at(described_class::ESPERAS[1].from_now)
     end
   end
 
-  it 'ainda throttled no teto: desiste sem modelo e registra o motivo' do
+  # A última conferência roda depois do teto do Híbrido: a nova tentativa não está mais na fila, nada saiu.
+  it 'ainda throttled na última conferência: fecha como falha, manda o modelo e registra o motivo' do
     allow(Rails.logger).to receive(:warn)
 
-    expect { described_class.perform_now(delivery.id, described_class::TENTATIVAS) }.not_to have_enqueued_job
+    expect { described_class.perform_now(delivery.id, described_class::ESPERAS.size) }
+      .to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob).with(delivery.id)
 
+    expect(message.reload).to be_failed
+    expect(message.content_attributes).to include('whatsapp_transport_outcome' => 'failed',
+                                                  'external_error' => WhatsappHybrid::WebTransport::THROTTLED_OUT_ERROR)
     expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=throttled'))
+  end
+
+  it 'a última conferência espera o teto do Híbrido' do
+    teto = WhatsappHybrid::WebTransport::THROTTLE_MAX_RETRIES * WhatsappHybrid::WebTransport::THROTTLE_RETRY
+
+    expect(described_class::ESPERAS.sum).to be > teto
+  end
+
+  it 'virou pending (o Híbrido está enviando agora): sem modelo e com aviso' do
+    resultado!('pending')
+    allow(Rails.logger).to receive(:warn)
+
+    expect { described_class.perform_now(delivery.id, 1) }.not_to have_enqueued_job
+
+    expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=pending'))
   end
 
   it 'entrega apagada: não faz nada' do

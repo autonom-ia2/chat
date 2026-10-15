@@ -25,13 +25,13 @@ class WhatsappHybrid::FallbackRetryJob < ApplicationJob
 
   private
 
-  # Só quem ainda espera, e só um job por vez: o `throttled` é trocado por "sem resultado" sob trava. Um job repetido, ou
-  # outro resultado já gravado, não reenvia.
+  # Só quem ainda espera, e só um job por vez: o `throttled` é trocado por `pending` sob trava. Um job repetido, ou
+  # outro resultado já gravado, não reenvia; quem lê `pending` (a campanha) nunca manda o modelo por cima.
   def claim(message)
     message.with_lock do
       next false unless message.content_attributes.to_h[OUTCOME_KEY] == 'throttled'
 
-      message.update!(content_attributes: message.content_attributes.to_h.merge(OUTCOME_KEY => nil))
+      message.update!(content_attributes: message.content_attributes.to_h.merge(OUTCOME_KEY => 'pending'))
     end
   end
 
