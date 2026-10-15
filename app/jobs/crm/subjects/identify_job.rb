@@ -14,8 +14,11 @@
 # pulado em silêncio. Job sem o argumento (enfileirado antes desta versão) lê a regra na hora.
 #
 # Marco que não grava (Redis fora, ou outros jobs gravando sem parar): a falha vai para o rastreador e o job levanta,
-# para o retry gravar de novo. A reserva única da decisão (Crm::SubjectDecision, conversa + mensagem) impede que o
-# retry pergunte o assunto outra vez. Enquanto isso, o ReplyJob cai no teto de 20 s (fallback explícito).
+# para o retry gravar de novo. Com a decisão já concluída, a reserva única (Crm::SubjectDecision, conversa + mensagem)
+# devolve a mesma decisão e o retry não pergunta o assunto outra vez; se a decisão quebrou antes de aplicar, a reserva
+# é desfeita e o retry pergunta de novo, como antes. Enquanto isso, o ReplyJob cai no teto de 20 s (fallback explícito).
+# Na exceção da decisão, o marco e o evento saem com estado 'erro' (contrato com o Agentes IA) e o retry os repete
+# com o estado real.
 #
 # O que vem depois da decisão (o Sync em linha e a parada da cadência de follow-up no card que é o assunto, corrida f)
 # roda mesmo quando a decisão quebrou no meio (o aviso em tempo real, por exemplo): o assunto pode já estar aplicado,
@@ -94,11 +97,23 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
   end
 
   def marcar(conversation_id, message_id, levantar: true)
+    gravar_marco(conversation_id, message_id, levantar)
+    avisar_decisao(conversation_id, message_id)
+  end
+
+  def gravar_marco(conversation_id, message_id, levantar)
     Crm::Subjects::Marco.gravar(conversation_id, message_id)
-    ActiveSupport::Notifications.instrument(EVENTO, conversation_id: conversation_id, message_id: message_id, estado: @estado)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e).capture_exception
     Rails.logger.error("[crm][assunto] marco_nao_gravado conversa=#{conversation_id} mensagem=#{message_id} erro=#{e.class}")
     raise if levantar
+  end
+
+  # Quem assina o evento não derruba o job: o marco já foi gravado, e um retry só repetiria o aviso.
+  def avisar_decisao(conversation_id, message_id)
+    ActiveSupport::Notifications.instrument(EVENTO, conversation_id: conversation_id, message_id: message_id, estado: @estado)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e).capture_exception
+    Rails.logger.error("[crm][assunto] aviso_da_decisao_falhou conversa=#{conversation_id} mensagem=#{message_id} erro=#{e.class}")
   end
 end

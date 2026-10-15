@@ -233,11 +233,28 @@ RSpec.describe Crm::Subjects::IdentifyJob do
         expect { described_class.perform_now(conversation.id, mensagem.id) }.to raise_error(Redis::BaseConnectionError)
       ensure
         Rails.logger = original
+        fora.close
       end
 
       expect(identifier).to have_received(:perform)
       expect(rastreador).to have_received(:capture_exception)
       expect(saida.string).to include("marco_nao_gravado conversa=#{conversation.id} mensagem=#{mensagem.id}")
+
+      # O retry, com o Redis de volta, grava o marco.
+      allow(Redis::Alfred).to receive(:with).and_call_original
+      described_class.perform_now(conversation.id, mensagem.id, true)
+      expect(Crm::Subjects::Marco.decidido_ate(conversation.id)).to eq(mensagem.id)
+    end
+
+    it 'o retry com a decisão já concluída não pergunta o assunto de novo (a reserva devolve a mesma decisão)' do
+      allow(Crm::Subjects::Identifier).to receive(:new).and_call_original
+      allow(TypesafeAi::Config).to receive(:api_key).and_return(nil)
+      mensagem = incoming
+
+      described_class.perform_now(conversation.id, mensagem.id, true)
+      described_class.perform_now(conversation.id, mensagem.id, true)
+
+      expect(Crm::SubjectDecision.where(conversation_id: conversation.id, message_id: mensagem.id).count).to eq(1)
     end
 
     it 'a regra do turno vem do enqueue: o Sync segue a fila escolhida, não a regra relida depois da espera' do
@@ -250,6 +267,11 @@ RSpec.describe Crm::Subjects::IdentifyJob do
 
       described_class.perform_now(conversation.id, mensagem.id, false)
       expect(Crm::Ai::ResponsibleAgentSync).to have_received(:new).once
+
+      # Job enfileirado antes desta versão (sem o argumento): lê a regra na hora.
+      allow(Crm::Subjects).to receive(:ordem_do_turno?).and_return(true)
+      described_class.perform_now(conversation.id, mensagem.id)
+      expect(Crm::Ai::ResponsibleAgentSync).to have_received(:new).twice
     end
 
     it 'fora da ordem do turno, o Sync não roda em linha (segue assíncrono, como hoje)' do
