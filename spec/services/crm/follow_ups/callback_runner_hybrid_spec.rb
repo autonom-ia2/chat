@@ -177,4 +177,42 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
       expect(ai_calls.size).to eq(1)
     end
   end
+
+  # Lembrete de Atender (#1498) fora das 24h: o modelo da finalidade (Garantir) vem primeiro; sem ele e com o Híbrido
+  # pronto, o texto livre sai pelo WhatsApp API, como no retorno combinado. Nunca usa um modelo genérico da lista.
+  context 'when it is a service reminder' do
+    let!(:follow_up) { create_crm_hybrid_follow_up(scenario, source: 'service_reminder', metadata: { 'kind' => 'payment_due' }) }
+
+    # O Garantir (#1518) chama a Meta; aqui o modelo da finalidade ainda está em análise.
+    before do
+      allow(Whatsapp::Templates::Garantir).to receive(:call)
+        .and_return({ status: :em_analise, nome: 'cobranca_vencimento', idioma: 'pt_BR' })
+    end
+
+    it 'sem modelo pronto, vai ao texto livre pelo Híbrido sem passar pelos modelos da lista' do
+      stub_crm_hybrid_ai(crm_hybrid_ai_answer)
+
+      result = nil
+      expect { result = run_callback }.to change(Message, :count).by(1)
+
+      expect(result.status).to eq(:sent)
+      expect(ai_call_modes).to eq(['free_form'])
+      expect(follow_up.reload.metadata).to include('delivery_transport' => 'whatsapp_api')
+      expect(follow_up.metadata).not_to include('template_name')
+    end
+
+    context 'without the hybrid' do
+      let(:scenario) { build_crm_hybrid_scenario(templates: [CrmHybridHelpers::APPROVED_TEMPLATE], hybrid: false) }
+
+      it 'avisa a equipe sem chamar a IA' do
+        stub_crm_hybrid_ai(crm_hybrid_ai_answer)
+
+        result = run_callback
+
+        expect(result.status).to eq(:fallback)
+        expect(result.error).to eq('modelo_em_analise')
+        expect(ai_calls).to be_empty
+      end
+    end
+  end
 end

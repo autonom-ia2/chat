@@ -64,7 +64,8 @@ describe RichMessages::ApiInboxWebhook do
       it 'reads rich_message from the real payload, whose keys are strings' do
         payload = outgoing.webhook_data
 
-        expect(payload[:content_attributes].keys).to eq(['rich_message'])
+        # A mensagem da caixa API já nasce com a marca de texto (chat#1555), também em chaves string.
+        expect(payload[:content_attributes].keys).to eq(%w[rich_message rich_message_sent_as rich_message_sent_text])
         expect(payload[:content_attributes]).to be_key(RichMessages::KEY)
       end
 

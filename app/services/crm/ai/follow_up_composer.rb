@@ -179,7 +179,7 @@ module Crm
                            'como encerramento.'.freeze
 
       def instructions
-        return callback_instructions if @purpose == :callback
+        return purpose_instructions if %i[service callback].include?(@purpose)
         return reminder_instructions if @mode == :reminder
 
         <<~PROMPT.strip
@@ -214,6 +214,15 @@ module Crm
       # retorno (open_loop_source = a frase LITERAL onde o cliente pediu). should_send=false +
       # closure_detected=true SOMENTE se a conversa mostrar que o cliente DESISTIU/CANCELOU ou o assunto
       # já foi resolvido depois ("não precisa mais", "já resolvi", "comprei em outro lugar").
+      def purpose_instructions
+        @purpose == :service ? service_instructions : callback_instructions
+      end
+
+      # #1498: lembrete de Atender (andamento, deu certo?, pagamento). O texto fixo mora em ServiceReminderPrompt.
+      def service_instructions
+        [Crm::Ai::ServiceReminderPrompt::TEXT, mode_instructions, tone_instructions_line].compact_blank.join("\n\n")
+      end
+
       def callback_instructions
         req = @callback_context['requested_at_text'].to_s.strip
         <<~PROMPT.strip
@@ -328,10 +337,17 @@ module Crm
           last_message_role: last_message_role,
           tone_instructions: @tone_instructions
         }
-        payload[:other_subjects] = @context[:other_subjects] if @context[:other_subjects].present?
-        payload[:cadence] = @cadence if @cadence.present?
-        payload[:candidates] = candidates_for_input if choose_template_mode?
-        payload.to_json
+        payload.merge(optional_input).to_json
+      end
+
+      # O que só entra quando existe: outros pedidos, o lembrete de Atender (#1498), a cadência e os modelos.
+      def optional_input
+        {
+          other_subjects: @context[:other_subjects].presence,
+          service_reminder: (@callback_context if @purpose == :service),
+          cadence: @cadence.presence,
+          candidates: (candidates_for_input if choose_template_mode?)
+        }.compact
       end
 
       def candidates_for_input

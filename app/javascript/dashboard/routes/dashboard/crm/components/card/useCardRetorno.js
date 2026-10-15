@@ -2,6 +2,12 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
+import CrmFollowUpSeriesAPI from 'dashboard/api/crmFollowUpSeries';
+import { paredeDe, repetirVazio } from '../lembrete/recorrencia';
+import { quemRecebeDaApi, repetirDaApi } from '../lembrete/paraApi';
+import { quemRecebeVazio } from '../lembrete/quemRecebe';
+import { useLembreteContexto } from '../lembrete/useLembreteContexto';
+import { useLembreteExtras } from '../lembrete/useLembreteExtras';
 
 // #1423 — o retorno novo do card: o que fazer, quando, a mensagem que sai e,
 // fora das 24 horas, a mensagem pronta (aprovada). As regras são as da gaveta
@@ -11,7 +17,8 @@ const MODOS = ['reminder_only', 'snooze_conversation', 'auto_send_message'];
 
 // O nome começa vazio, com exemplos no campo ("Ligar dia 30 às 10h"): um
 // nome pronto ("Falar com o cliente") virava o nome de tudo.
-const formularioVazio = (modo = 'reminder_only') => ({
+// #1460/#1462: repetir e quem recebe entram no mesmo formulário.
+const formularioVazio = (modo = 'reminder_only', comCard = true) => ({
   title: '',
   dueAt: '',
   automationMode: modo,
@@ -22,6 +29,8 @@ const formularioVazio = (modo = 'reminder_only') => ({
   templateName: '',
   templateLanguage: 'pt_BR',
   templateNamespace: '',
+  repetir: repetirVazio(),
+  quemRecebe: quemRecebeVazio(comCard),
 });
 
 const textoDoModeloNativo = modelo =>
@@ -34,8 +43,31 @@ export const useCardRetorno = ({
   emit,
   podeGerenciar,
   formato,
+  agentes,
+  locale,
+  // Flag crm_lembretes_v2 (#1460/#1461/#1462).
+  lembretesV2 = computed(() => false),
+  aoSalvarEdicao,
+  // Na gaveta nova (calendário, Relacionamento) a coisa se chama "lembrete".
+  chamarDeLembrete = false,
 }) => {
-  const form = reactive(formularioVazio());
+  const comCard = () => Boolean(card.value?.id);
+  const form = reactive(formularioVazio('reminder_only', comCard()));
+  const contexto = useLembreteContexto({
+    store,
+    card,
+    agentes,
+    ligado: lembretesV2,
+  });
+  const extras = useLembreteExtras({
+    t,
+    form,
+    card,
+    contexto,
+    formato,
+    locale,
+    ligado: lembretesV2,
+  });
   const foto = ref('');
   const janela = ref(null);
   const carregandoJanela = ref(false);
@@ -155,8 +187,12 @@ export const useCardRetorno = ({
   );
 
   const sujo = computed(() => JSON.stringify({ ...form }) !== foto.value);
+  // #1460: mudando um lembrete que repete ("proximas") ou só a próxima vez
+  // ("esta"); null quando é um lembrete novo.
+  const edicao = ref(null);
   const reiniciar = modo => {
-    Object.assign(form, formularioVazio(modo));
+    edicao.value = null;
+    Object.assign(form, formularioVazio(modo, comCard()));
     janela.value = null;
     modelosApi.value = [];
     foto.value = JSON.stringify({ ...form });
@@ -242,13 +278,71 @@ export const useCardRetorno = ({
       !form.dueAt && 'QUANDO',
       envia && !form.messageBody.trim() && 'MENSAGEM',
       envia && prontaObrigatoria.value && !temPronta() && faltaDaPronta(),
+      extras.faltaRepetir.value && 'ULTIMO_DIA',
+      !extras.pronto.value && 'QUEM',
     ].filter(Boolean);
   });
   const pronto = computed(() => falta.value.length === 0);
 
-  const criar = () => {
-    if (!podeGerenciar.value || !card.value?.id) return false;
+  // O formulário volta preenchido com a série (ou só com a próxima vez).
+  const editarSerie = ({ qual, serie }) => {
+    reiniciar();
+    const dueAt = paredeDe(
+      serie.next_occurrences[0] || serie.starts_at,
+      serie.timezone
+    );
+    edicao.value = {
+      qual,
+      serieId: serie.id,
+      followUpId: serie.pending_follow_up_id,
+      dueAtInicial: dueAt,
+    };
+    Object.assign(form, {
+      title: serie.title,
+      description: serie.description || '',
+      dueAt,
+      repetir: qual === 'esta' ? repetirVazio() : repetirDaApi(serie),
+      quemRecebe: quemRecebeDaApi(serie),
+    });
+    foto.value = JSON.stringify({ ...form });
+  };
+  const salvandoEdicao = ref(false);
+  const salvarEdicao = async () => {
+    const { qual, serieId, followUpId, dueAtInicial } = edicao.value;
+    const { recurrence, ...todos } = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      ...extras.payload(),
+    };
+    // Sem mudar o dia nem a hora, o começo da série fica onde está.
+    const dados = { ...todos };
+    if (form.dueAt === dueAtInicial) {
+      delete dados.due_at;
+      delete dados.timezone;
+    }
+    salvandoEdicao.value = true;
+    try {
+      if (qual === 'proximas')
+        await CrmFollowUpSeriesAPI.mudar(serieId, { ...dados, recurrence });
+      else await CrmKanbanAPI.updateFollowUp(followUpId, dados);
+      useAlert(t('CRM_LEMBRETE.MUDADO'));
+      reiniciar();
+      aoSalvarEdicao?.();
+    } catch {
+      useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_SAVE_ERROR'));
+    } finally {
+      salvandoEdicao.value = false;
+    }
+    return true;
+  };
+
+  // Sem card só com a flag (#1461): lembrete só no calendário ou de um cliente.
+  const criar = ligadoA => {
+    if (edicao.value) return salvarEdicao();
+    if (!podeGerenciar.value) return false;
+    if (!card.value?.id && !lembretesV2.value) return false;
     if (!form.title.trim() || !form.dueAt) return false;
+    if (!extras.pronto.value || extras.faltaRepetir.value) return false;
     const envia = form.automationMode === 'auto_send_message';
     if (envia && !form.messageBody.trim()) {
       useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_MESSAGE_BODY_REQUIRED'));
@@ -259,14 +353,13 @@ export const useCardRetorno = ({
       return false;
     }
     emit('createFollowUp', {
-      card_id: card.value.id,
+      card_id: card.value?.id || null,
       conversation_id: conversaId.value || null,
       title: form.title.trim(),
       description: form.description.trim(),
       follow_up_type: 'task',
       automation_mode: form.automationMode,
-      due_at: new Date(form.dueAt).toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      ...extras.payload(ligadoA),
       ...(envia ? { metadata: metadata() } : {}),
     });
     return true;
@@ -278,13 +371,18 @@ export const useCardRetorno = ({
     falta.value.length
       ? t('CRM_CARD.RETORNO.FALTA.FRASE', {
           itens: formato.juntar(
-            falta.value.map(chave => t(`CRM_CARD.RETORNO.FALTA.${chave}`))
+            falta.value.map(chave =>
+              chamarDeLembrete && chave === 'NOME'
+                ? t('CRM_LEMBRETE.FALTA.NOME')
+                : t(`CRM_CARD.RETORNO.FALTA.${chave}`)
+            )
           ),
         })
       : ''
   );
   // A prévia do lado ("Como vai acontecer").
   const previa = computed(() => ({
+    ...extras.previa.value,
     modo: form.automationMode,
     titulo: form.title,
     quando: form.dueAt ? formato.quando(form.dueAt) : '',
@@ -310,6 +408,11 @@ export const useCardRetorno = ({
 
   return {
     form,
+    contexto,
+    lembretesV2,
+    edicao,
+    editarSerie,
+    salvandoEdicao,
     sujo,
     faltaFrase,
     previa,

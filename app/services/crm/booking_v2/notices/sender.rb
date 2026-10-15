@@ -27,6 +27,10 @@
 #    a WAHA).
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
+# 8. Aviso com botão (#1562, `Notices::Text#button?`): a mensagem 1 é o aviso sem a linha de parar, com o botão "Ver
+#    meu horário"; a mensagem 2 (botão "Parar avisos") sai pelo `NoticeStopPartJob`, enfileirado aqui com atraso,
+#    depois que a 1 saiu (ver o job: ordem, idempotência e falhas). O aviso continua UM só: `message_id` = a mensagem 1,
+#    e os tetos contam 1 aviso (contam avisos, não mensagens).
 #
 # Pulado por motivo que exige ação (sem modelo, fora da janela, teto, sem caixa...) ou falha: registra e avisa o
 # responsável UMA vez por reunião. Nada aqui altera a reunião (J5-A4).
@@ -75,6 +79,16 @@ class Crm::BookingV2::Notices::Sender
   end
 
   private_class_method :automatic, :recent_tests
+
+  # O cliente parou os avisos (passo 3 do cabeçalho), nesta precedência. Também usado pelo `NoticeStopPartJob` antes
+  # de criar a mensagem 2 (#1562).
+  def self.stop_reason(meeting)
+    contact = meeting.card.contact
+    return 'opted_out' if contact&.opted_out?
+    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
+
+    'stopped' if meeting.reminders_stopped_at.present?
+  end
 
   # waha_outage: as caixas WAHA que já falharam nesta rodada do cron (`Notices::WahaOutage`).
   def initialize(notice, waha_outage: nil)
@@ -134,10 +148,7 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def stop_reason
-    return 'opted_out' if contact&.opted_out?
-    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
-
-    'stopped' if meeting.reminders_stopped_at.present?
+    self.class.stop_reason(meeting)
   end
 
   def setup_reason
@@ -201,9 +212,17 @@ class Crm::BookingV2::Notices::Sender
     reason == 'past_due' && notice.error_code == WAHA_UNAVAILABLE
   end
 
+  # Com o botão (#1562), a mensagem 2 ("Parar avisos") sai pelo `NoticeStopPartJob`, depois que a 1 saiu.
   def deliver!(decision)
-    message = delivery(decision).perform
+    Crm::BookingV2::NoticeStopPartJob.enqueue(notice) if send_notice!(decision)
+  end
+
+  # A mensagem 1 (a única, sem botão). Devolve true quando ela levou o botão e a mensagem 2 tem de sair.
+  def send_notice!(decision)
+    text = notice_text(decision)
+    message = notice_delivery(decision, text).perform
     notice.update!(status: :sent, sent_at: Time.current, message_id: message.id, skip_reason: nil, error_code: nil)
+    text.button?
   rescue StandardError => e
     # Erro do envio (provedor, validação da mensagem, conversa): registrado no aviso, no log e no tracker, e o
     # responsável é avisado; a reunião não muda. Não relança: o cron segue para o próximo aviso.
@@ -211,11 +230,15 @@ class Crm::BookingV2::Notices::Sender
     ChatwootExceptionTracker.new(e, account: meeting.account).capture_exception
     notice.update!(status: :failed, error_code: e.class.name.first(255))
     alert!
+    false
   end
 
-  def delivery(decision)
+  def notice_text(decision)
     button = Crm::BookingV2::Notices::Button.allowed?(decision, profile.notice_inbox)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
+    Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
+  end
+
+  def notice_delivery(decision, text)
     Crm::BookingV2::Notices::Delivery.new(
       decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
       content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message

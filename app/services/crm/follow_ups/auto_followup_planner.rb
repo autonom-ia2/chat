@@ -22,6 +22,8 @@ module Crm
       # Conversa precisa ter tido troca REAL dos dois lados antes de iniciar o follow-up.
       MIN_CONTACT_MESSAGES = 2
       MIN_AGENT_MESSAGES = 2
+      # Retornos com data (combinado com o cliente, lembrete de Atender): enquanto pendentes, seguram a cadência.
+      DATED_SOURCES = %w[ai_callback service_reminder].freeze
 
       def initialize(pipeline:, now: Time.current)
         @pipeline = pipeline
@@ -80,9 +82,10 @@ module Crm
       # GUARDA: NÃO inicia a cadência genérica de auto-followup se o card tem um RETORNO POR DATA
       # (ai_callback) pendente com data futura — o cliente já disse QUANDO voltar; não perturbar antes.
       # Depois que o callback dispara (vira done/overdue), o card volta a ser elegível normalmente.
+      # #1498: lembrete de Atender pendente também segura a cadência (dois fluxos de mensagem para o mesmo cliente).
       def pending_callback?(card)
         card.follow_ups.active.any? do |follow_up|
-          follow_up.metadata.to_h['source'] == 'ai_callback' &&
+          DATED_SOURCES.include?(follow_up.metadata.to_h['source']) &&
             follow_up.due_at.present? && follow_up.due_at > @now
         end
       end

@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # Botão "Ver meu horário" no aviso (#1517): só no WhatsApp oficial com a janela aberta e fora do Híbrido; texto próprio
-# que já põe o link não leva botão; sem botão o link chega sempre (no texto ou na linha fixa); a linha de parar vale em
-# todos os caminhos (RA-18).
+# que já põe o link não leva botão; sem botão o link chega sempre (no texto ou na linha fixa); a saída de parar vale em
+# todos os caminhos (RA-18): com botão, na mensagem 2 "Parar avisos" (#1562); sem botão, na linha de parar do texto.
 RSpec.describe Crm::BookingV2::Notices::Sender do
   let(:account) { create(:account, locale: 'pt_BR') }
   let(:world) { build_booking_world(account: account) }
@@ -14,7 +14,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
                             metadata: { 'booking_profile_id' => world.profile.id })
   end
   let!(:invite) { create_booking_invite(world: world, meeting: meeting, scheduled_at: Time.current, channel: 'public') }
-  let(:stop_line) { "Para parar estes avisos: #{invite.url}?stop_notices=1" }
+  let(:stop_url) { "#{invite.url}?stop_notices=1" }
+  let(:stop_line) { "Para parar estes avisos: #{stop_url}" }
   let(:own_without_link) { 'Oi, {{cliente.primeiro_nome}}! Te esperamos em {{horario.data_hora}}.' }
   let(:own_with_link) { 'Oi, {{cliente.primeiro_nome}}! Te esperamos em {{horario.data_hora}}. Mude em {{horario.link_gestao}}' }
 
@@ -48,18 +49,71 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     Message.find(notice.message_id)
   end
 
-  describe 'WhatsApp oficial com a janela aberta' do
-    before { open_window! }
+  def notice_messages(conversation)
+    conversation.messages.outgoing.order(:id).to_a
+  end
 
-    # 1. O caso do botão: o link sai do corpo e vai no botão; a linha de parar fica.
-    it 'texto padrão: botão com o link de gestão, corpo sem o link cru e com a linha de parar' do
+  def stop_job
+    Crm::BookingV2::NoticeStopPartJob
+  end
+
+  # O aviso inteiro com botão: a 1 pelo Sender, a Meta a aceita (wamid) e o job atrasado cria a 2.
+  def send_split!
+    notice = claimed
+    described_class.new(notice).perform
+    Message.find(notice.reload.message_id).update!(source_id: 'wamid.AVISO1')
+    stop_job.perform_now(notice.id)
+    notice
+  end
+
+  describe 'WhatsApp oficial com a janela aberta' do
+    let!(:conversation) { open_window! }
+
+    # 1. O caso do botão (#1517 + #1562): o Sender cria SÓ a mensagem 1 (sem link cru e SEM a linha de parar, com "Ver
+    # meu horário"), aponta o aviso para ela e agenda a 2 com atraso. Pega quem voltasse a criar as duas juntas (cada
+    # uma com o próprio SendReplyJob, a 2 podendo chegar antes) ou perdesse a 2.
+    it 'texto padrão: só a mensagem 1, com "Ver meu horário" e sem a linha de parar; a 2 fica agendada' do
+      notice = claimed
+      expect { described_class.new(notice).perform }.to change(Message.outgoing, :count).by(1)
+
+      first = notice_messages(conversation).sole
+      expect(notice.reload).to have_attributes(status: 'sent', message_id: first.id, error_code: nil)
+      expect(first).to have_attributes(content: 'Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.', sender: meeting.created_by)
+      expect(first.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Ver meu horário', 'url' => invite.url)
+      expect(stop_job).to have_been_enqueued.with(notice.id, 1).at(stop_job::WAIT.from_now)
+    end
+
+    # A 2, depois que a 1 saiu: mesma conversa, mesmo remetente, criada depois, marcada para o job de conferência.
+    it 'texto padrão: mensagem 2 com "Parar avisos", depois da 1, na mesma conversa e do mesmo remetente' do
+      notice = send_split!
+
+      first, stop = notice_messages(conversation)
+      expect(notice.reload.message_id).to eq(first.id)
+      expect(stop).to have_attributes(content: 'Não quer mais receber estes avisos?', id: be > first.id,
+                                      conversation_id: first.conversation_id, sender: first.sender)
+      expect(stop.content_attributes['rich_message']).to eq('type' => 'link_button', 'label' => 'Parar avisos', 'url' => stop_url)
+      expect(stop.content_attributes).to include('crm_booking_notice' => true, 'crm_booking_notice_part' => 'stop',
+                                                 'crm_booking_notice_id' => notice.id)
+    end
+
+    # Tetos (#1562): as duas mensagens são UM aviso. Pega quem passasse a contar mensagens em vez de avisos.
+    it 'as duas mensagens contam como 1 aviso nos tetos do número e da conta' do
+      send_split!
+
+      expect(notice_messages(conversation).size).to eq(2)
+      expect(described_class.recent_for_contact(world.contact)).to eq(1)
+      expect(described_class.recent_for_account(account.id)).to eq(1)
+    end
+
+    # fits? (#1562): a linha de parar foi para a mensagem 2, então só o corpo conta. Pega quem continuasse somando a
+    # linha de parar e mandasse para o texto um aviso que cabe no botão.
+    it 'corpo do tamanho exato do limite (sem a linha de parar): ainda sai com os botões' do
+      stub_const('RichMessages::Types::LinkButton::BODY_MAX', 'Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.'.length)
+
       message = sent_message
 
-      expect(message.content_attributes['rich_message']).to eq(
-        'type' => 'link_button', 'label' => 'Ver meu horário', 'url' => invite.url
-      )
-      expect(message.content).to eq("Oi, Marcos! Seu horário está marcado para 20/10 às 10:00.\n\n#{stop_line}")
-      expect(message.content.delete_suffix(stop_line)).not_to include(invite.url)
+      expect(message.content_attributes['rich_message']).to include('label' => 'Ver meu horário')
+      expect(stop_job).to have_been_enqueued
     end
 
     # 2. Texto próprio sem a chave do link: o botão leva o link.
@@ -69,7 +123,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       message = sent_message
 
       expect(message.content_attributes['rich_message']).to include('url' => invite.url)
-      expect(message.content).to eq("Oi, Marcos! Te esperamos em 20/10 às 10:00.\n\n#{stop_line}")
+      expect(message.content).to eq('Oi, Marcos! Te esperamos em 20/10 às 10:00.')
+      expect(stop_job).to have_been_enqueued
     end
 
     # 3. Texto próprio que põe o link: o botão duplicaria; sai como texto, com o link.
@@ -80,6 +135,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
 
       expect(message.content_attributes).not_to have_key('rich_message')
       expect(message.content).to eq("Oi, Marcos! Te esperamos em 20/10 às 10:00. Mude em #{invite.url}\n\n#{stop_line}")
+      expect(notice_messages(conversation).size).to eq(1)
+      expect(stop_job).not_to have_been_enqueued
     end
 
     # Corpo acima do limite do botão seria recusado no envio (mensagem failed, sem link): cai no texto com o link.
@@ -90,6 +147,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
 
       expect(message.content_attributes).not_to have_key('rich_message')
       expect(message.content).to include("Para confirmar, mudar ou cancelar: #{invite.url}").and end_with(stop_line)
+      expect(notice_messages(conversation).size).to eq(1)
+      expect(stop_job).not_to have_been_enqueued
     end
   end
 
@@ -99,9 +158,13 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511900001111' }).inbox
     end
 
+    # #1562: na WAHA nada muda, byte a byte, e continua UMA mensagem.
     it 'sem rich_message, com o link e a linha de parar no texto' do
-      open_window!
+      conversation = open_window!
       message = sent_message
+
+      expect(notice_messages(conversation)).to eq([message])
+      expect(stop_job).not_to have_been_enqueued
 
       expect(message.content_attributes).not_to have_key('rich_message')
       expect(message.content).to eq(
@@ -192,13 +255,25 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     end
 
     # Rótulo por tipo: reunião já marcada "Ver meu horário"; convite para marcar "Escolher horário".
+    # #1562: "Parar avisos" (en "Stop reminders") também cabe nos 20 caracteres do botão.
     it 'escolhe o rótulo pelo tipo de mensagem, dentro do limite do botão nos dois idiomas' do
       labels = %w[en pt_BR].index_with do |locale|
-        %i[notice invite].map { |kind| described_class.rich_message('https://x.test/b/AB', kind: kind, locale: locale)['label'] }
+        %i[notice invite stop].map { |kind| described_class.rich_message('https://x.test/b/AB', kind: kind, locale: locale)['label'] }
       end
 
-      expect(labels).to eq('en' => ['See my appointment', 'Pick a time'], 'pt_BR' => ['Ver meu horário', 'Escolher horário'])
+      expect(labels).to eq('en' => ['See my appointment', 'Pick a time', 'Stop reminders'],
+                           'pt_BR' => ['Ver meu horário', 'Escolher horário', 'Parar avisos'])
       expect(labels.values.flatten.map(&:length)).to all(be <= RichMessages::Types::LinkButton::LABEL_MAX)
+    end
+
+    # #1562: a mensagem 2 sai no idioma da conta (pergunta curta + botão para o link de gestão com ?stop_notices=1).
+    it 'mensagem 2 no idioma da conta' do
+      button = ->(label) { { 'type' => 'link_button', 'label' => label, 'url' => stop_url } }
+
+      expect(Crm::BookingV2::Notices::Text.stop_message(invite.url, locale: 'pt_BR'))
+        .to eq({ content: 'Não quer mais receber estes avisos?', rich_message: button.call('Parar avisos') })
+      expect(Crm::BookingV2::Notices::Text.stop_message(invite.url, locale: 'en'))
+        .to eq({ content: "Don't want these reminders anymore?", rich_message: button.call('Stop reminders') })
     end
   end
 end

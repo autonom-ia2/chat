@@ -16,7 +16,11 @@
 // 6. A lista de mensagens converte as chaves de `rich_message` para camelCase em profundidade: a bolha não
 //    desenha nem depende de mapas com chaves livres (ex.: dados de formulário).
 // Tipo sem arquivo em `types/` segue na bolha de antes (texto).
-import { MESSAGE_TYPES } from '../../constants';
+// Exceção (chat#1555): a ÚNICA regra transversal, que vem antes da escolha por tipo. Mensagem que saiu como texto
+// (`richMessageSentAs === 'text'`) e não falhou usa SentAsText.vue, para qualquer tipo. Com falha, segue a bolha
+// do tipo com o motivo, como antes.
+import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../constants';
+import SentAsText from './SentAsText.vue';
 
 const CHANNEL_MESSAGE_TYPES = [MESSAGE_TYPES.OUTGOING, MESSAGE_TYPES.TEMPLATE];
 
@@ -48,6 +52,9 @@ const bubbles = new Map(
 export const richMessageBubbleFor = message => {
   if (message.private || !CHANNEL_MESSAGE_TYPES.includes(message.messageType))
     return null;
+
+  const sentAsText = message.contentAttributes?.richMessageSentAs === 'text';
+  if (sentAsText && message.status !== MESSAGE_STATUS.FAILED) return SentAsText;
 
   const type = message.contentAttributes?.richMessage?.type;
   if (typeof type !== 'string') return null;

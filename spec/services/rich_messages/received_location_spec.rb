@@ -88,6 +88,28 @@ describe RichMessages::ReceivedLocation do
     expect(echo.content_attributes).not_to have_key('shared_location')
   end
 
+  # A Meta documenta as coordenadas como número (Float). Texto numérico vira número; o resto não é gravado.
+  it 'converts coordinates that come as numeric text into numbers' do
+    message = receive(location.merge(latitude: '-23.5505', longitude: '-46'))
+
+    expect(message.content_attributes['shared_location']).to include('latitude' => -23.5505, 'longitude' => -46.0)
+  end
+
+  {
+    'a latitude that is not a number' => { latitude: 'Praça da Sé' },
+    'a latitude above 90' => { latitude: 90.0001 },
+    'a longitude below -180' => { longitude: '-180.5' },
+    'a missing longitude' => { longitude: nil },
+    'a coordinate that is neither number nor text' => { latitude: true }
+  }.each do |description, change|
+    it "records no shared_location with #{description}, and keeps the attachment" do
+      message = receive(location.merge(change).compact)
+
+      expect(message.content_attributes).not_to have_key('shared_location')
+      expect(message.attachments.sole.file_type).to eq('location')
+    end
+  end
+
   it 'records nothing and raises nothing when the location is not an object' do
     message = nil
 
