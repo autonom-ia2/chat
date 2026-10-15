@@ -59,6 +59,9 @@
     },
     {
       "file": "richMessage.json"
+    },
+    {
+      "file": "sidebarFork.json"
     }
   ]
 }

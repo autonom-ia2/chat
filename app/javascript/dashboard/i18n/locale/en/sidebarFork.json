@@ -1,0 +1,149 @@
+{
+  "FORK_SIDEBAR": {
+    "MENU": "Main menu",
+    "FECHAR": "Close the menu",
+    "ABRIR_ITEM": "Show what is in {item}",
+    "FECHAR_ITEM": "Hide what is in {item}",
+    "FALTAM_PASSOS": "1 step left | {count} steps left",
+    "GRUPOS": {
+      "ATENDER": "Serve",
+      "ACOMPANHAR": "Follow up",
+      "CRESCER": "Grow",
+      "AUTOMATICO": "On autopilot",
+      "RESULTADOS": "Results",
+      "OUTROS": "Other"
+    },
+    "ITENS": {
+      "NOTIFICACOES": "Notifications",
+      "EM_QUE_PARTICIPO": "I'm part of",
+      "PRAZOS": "Reply deadlines",
+      "AGENDA": "Schedule",
+      "RESULTADOS_AGENDA": "Schedule results",
+      "CAMPANHAS": "Campaigns",
+      "VISAO_GERAL": "Overview",
+      "AGENTES": "Agents",
+      "FUNIS": "Pipelines",
+      "GASTO_IA": "AI spending",
+      "USUARIOS": "Users",
+      "AJUDA": "Help",
+      "CONFIGURACOES": "Settings"
+    }
+  },
+  "SETTINGS_INICIO": {
+    "ROTULO": "Settings",
+    "TITULO": "What do you want to change?",
+    "TEXTO": "Pick a topic. Each card shows what is ready and what is still missing.",
+    "BUSCA": {
+      "ROTULO": "Search the settings",
+      "PLACEHOLDER": "Search: hours, user, WhatsApp…",
+      "LIMPAR": "Clear the search",
+      "NADA": "Nothing with that name. Try another word.",
+      "RESULTADOS": "No topic found | 1 topic found | {count} topics found"
+    },
+    "COMECE": {
+      "ROTULO": "Start here",
+      "TUDO_PRONTO": "Everything essential is ready."
+    },
+    "ABRIR": "Open",
+    "FALTA": "Missing: {item}",
+    "PRONTO": "Ready",
+    "CARREGANDO": "Loading the settings",
+    "GRUPOS": {
+      "SUA_EMPRESA": "Your company",
+      "CANAIS": "Channels",
+      "PESSOAS": "People and access",
+      "ATENDIMENTO": "Support",
+      "CONEXOES": "Connections",
+      "SEGURANCA": "Security",
+      "OUTROS": "Other"
+    },
+    "CONTAGEM": {
+      "caixas": "No channel yet | 1 channel connected | {count} channels connected",
+      "usuarios": "Just you for now | 1 user | {count} users",
+      "times": "No team yet | 1 team | {count} teams",
+      "etiquetas": "No label yet | 1 label | {count} labels"
+    },
+    "NOTAS": {
+      "HORARIOS": "Set inside each channel"
+    },
+    "OUTRO_ITEM": "Another platform setting.",
+    "CARTOES": {
+      "DADOS_EMPRESA": {
+        "TITULO": "Company details",
+        "TEXTO": "Your account name, language and time zone."
+      },
+      "PLANO": {
+        "TITULO": "Plan and invoices",
+        "TEXTO": "Your plan, the next payment and the invoices."
+      },
+      "HORARIOS": {
+        "TITULO": "Hours",
+        "TEXTO": "When your team works and what customers get outside those hours."
+      },
+      "CANAIS": {
+        "TITULO": "Support channels",
+        "TEXTO": "WhatsApp, email, Instagram and website: where customers talk to you."
+      },
+      "USUARIOS": {
+        "TITULO": "Users",
+        "TEXTO": "Who can sign in and what each person can do."
+      },
+      "TIMES": {
+        "TITULO": "Teams",
+        "TEXTO": "Groups of people to share the work."
+      },
+      "ATRIBUICAO": {
+        "TITULO": "Assignment",
+        "TEXTO": "Who gets each new conversation, how much each person can take and when the bot hands over."
+      },
+      "PASSAGEM": {
+        "TITULO": "Hand over to a person",
+        "TEXTO": "When the CRM bot passes the conversation to someone on the team."
+      },
+      "FUNCOES": {
+        "TITULO": "Custom roles",
+        "TEXTO": "Tailored access: what each person sees and can change."
+      },
+      "RESPOSTAS": {
+        "TITULO": "Canned replies",
+        "TEXTO": "Texts you always use, one click away in the conversation."
+      },
+      "ETIQUETAS": {
+        "TITULO": "Labels",
+        "TEXTO": "Names and colors to sort conversations and customers."
+      },
+      "ENCERRAR": {
+        "TITULO": "Rules to close",
+        "TEXTO": "What must be filled in before a conversation is closed."
+      },
+      "ACOES": {
+        "TITULO": "One-click actions",
+        "TEXTO": "Several steps in one button: tag, hand over and reply."
+      },
+      "CAMPOS": {
+        "TITULO": "Extra fields",
+        "TEXTO": "More information you want to keep about each customer."
+      },
+      "INTEGRACOES": {
+        "TITULO": "Integrations",
+        "TEXTO": "Connect the platform to other systems, like the AI key."
+      },
+      "ROBOS": {
+        "TITULO": "External bots",
+        "TEXTO": "Bots from other systems that reply in your conversations."
+      },
+      "IMPORTAR": {
+        "TITULO": "Bring from another system",
+        "TEXTO": "Bring in customers and conversations that live somewhere else."
+      },
+      "LOGIN": {
+        "TITULO": "Company sign-in",
+        "TEXTO": "Sign in with the company account, without another password."
+      },
+      "HISTORICO": {
+        "TITULO": "Change history",
+        "TEXTO": "Who changed what, and when."
+      }
+    }
+  }
+}

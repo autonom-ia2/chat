@@ -55,6 +55,7 @@ import captain from './captain/captain.routes';
 import prospecting from './prospecting/prospecting.routes';
 import booking from './booking/booking.routes';
 import data from './data/data.routes';
+import { routes as inicioRoutes, menuNovoLigado } from './inicio/inicio.routes';
 
 export default {
   routes: [
@@ -65,6 +66,9 @@ export default {
         permissions: SETTINGS_LANDINGS.flatMap(page => page.permissions),
       },
       redirect: to => {
+        if (menuNovoLigado(store, to.params.accountId)) {
+          return { name: 'settings_inicio', params: to.params };
+        }
         if (
           store.getters.getCurrentRole === 'administrator' &&
           store.getters.getCurrentCustomRoleId === null
@@ -106,5 +110,6 @@ export default {
     ...captain.routes,
     ...prospecting.routes,
     ...booking.routes,
+    ...inicioRoutes,
   ],
 };

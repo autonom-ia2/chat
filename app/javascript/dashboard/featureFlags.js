@@ -56,6 +56,7 @@ export const FEATURE_FLAGS = {
   NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CRM_LEMBRETES_V2: 'crm_lembretes_v2',
   CRM_CALENDARIO_OURO: 'crm_calendario_ouro',
+  MENU_LATERAL_NOVO: 'menu_lateral_novo',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

@@ -205,7 +205,8 @@ RSpec.describe Account do
         feature_nova_conversa_tela: 1 << 20,
         feature_followup_template_real_values: 1 << 21,
         feature_crm_lembretes_v2: 1 << 22,
-        feature_crm_calendario_ouro: 1 << 23
+        feature_crm_calendario_ouro: 1 << 23,
+        feature_menu_lateral_novo: 1 << 24
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

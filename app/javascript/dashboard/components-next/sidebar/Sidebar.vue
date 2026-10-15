@@ -46,6 +46,7 @@ import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
+import ForkSidebarNav from './fork/ForkSidebarNav.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import {
   SIDEBAR_SORT_SECTIONS,
@@ -291,6 +292,14 @@ const hasFilteredUnreadCounts = computed(() => {
     )
   );
 });
+
+// Menu lateral novo do fork (#1617): reorganiza esta mesma lista; desligada, o menu de sempre.
+const forkMenuOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.MENU_LATERAL_NOVO
+  )
+);
 
 const hasDataImport = computed(() => {
   return isFeatureEnabledonAccount.value(
@@ -1427,6 +1436,7 @@ const menuItems = computed(() => {
       {
         'sidebar-branded': hasBrandedSidebar,
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
+        'max-md:!w-[min(85vw,20rem)]': forkMenuOn,
         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
         'transition-transform duration-200 ease-out md:transition-[width]':
           !isResizing,
@@ -1503,7 +1513,14 @@ const menuItems = computed(() => {
         </ComposeConversation>
       </div>
     </section>
+    <ForkSidebarNav
+      v-if="forkMenuOn"
+      :itens="menuItems"
+      :gaveta-aberta="isMobile && isMobileSidebarOpen"
+      @fechar="closeMobileSidebar"
+    />
     <nav
+      v-else
       ref="navRef"
       class="grid overflow-y-auto flex-grow gap-2 pb-5 sidebar-scrollbar min-w-0"
       :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"
