@@ -497,7 +497,9 @@
         "OPEN_WORK_INFO": "Pessoas, conversas e cards abertos neste funil, contados à parte: uma conversa pode ter vários cards.",
         "OPEN_PEOPLE": "Pessoas",
         "OPEN_CONVERSATIONS": "Conversas",
-        "OPEN_CARDS": "Cards"
+        "OPEN_CARDS": "Cards",
+        "RESOLUTION_TIME": "Tempo de solução",
+        "RESOLUTION_TIME_INFO": "Média, do início do card até a última vez que ele foi marcado como Resolvido, sem o tempo em que esperamos o cliente."
       },
       "MEETINGS": {
         "TITLE": "Reuniões",
@@ -538,7 +540,16 @@
         "NONE": "Sem responsável",
         "CARDS": "cards",
         "EMPTY": "Nenhum card aberto."
-      }
+      },
+      "DURACAO": {
+        "DIAS": "{d} d {h} h",
+        "HORAS": "{h} h {m} min",
+        "MINUTOS": "{m} min",
+        "SEM_DADOS": "—",
+        "SO_DIAS": "{d} d",
+        "SO_HORAS": "{h} h"
+      },
+      "SUBTITLE_ATENDER": "Desempenho do funil: etapas, resolvidos e cancelados, tempo de solução e IA vs humano."
     },
     "ACTIONS": {
       "REFRESH": "Atualizar",
@@ -4210,7 +4221,12 @@
       "O_FACEBOOK": "o Facebook",
       "O_INSTAGRAM": "o Instagram",
       "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada venda fechada conta no painel.",
-      "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}."
+      "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}.",
+      "ATENDER_LEMBRETES": "Avisamos o andamento e perguntamos se resolveu.",
+      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento do pedido.",
+      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu.",
+      "COBRAR_LEMBRETES": "Lembramos do pagamento antes, no dia e depois do vencimento.",
+      "ATENDER_SEM_LEMBRETES": "Nenhum lembrete ligado."
     },
     "SOBRE": {
       "ROTULO": "Quando usar este funil",
@@ -4319,7 +4335,8 @@
       "DEPOIS_FRASE_MENSAGEM": "No dia combinado, a equipe recebe um lembrete e o cliente, uma mensagem.",
       "DEPOIS_EXEMPLO": "Ex.: “Pode me chamar na sexta?” vira um lembrete na sexta, às 9h.",
       "SEM_RESPOSTA_POR": "Sem resposta por",
-      "DEPOIS_PEDIDO": "“Pode me chamar na sexta?”"
+      "DEPOIS_PEDIDO": "“Pode me chamar na sexta?”",
+      "TEXTO_ATENDER": "O cliente fica sabendo do andamento, e ninguém fica sem resposta."
     },
     "CAIXAS": {
       "ROTULO": "Caixas de entrada",
@@ -4490,7 +4507,33 @@
     },
     "ATENDER": {
       "TITULO": "Como cada pedido termina",
-      "TEXTO": "Resolvido quando deu certo. Cancelado quando o cliente não precisa mais."
+      "TEXTO": "Resolvido quando deu certo. Cancelado quando o cliente não precisa mais.",
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "TITULO": "Avisar o andamento",
+          "FRASE": "Se o pedido passa 1 dia na mesma etapa, avisamos o cliente que seguimos cuidando.",
+          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso."
+        },
+        "RESOLVEU": {
+          "TITULO": "Perguntar se resolveu",
+          "FRASE": "1 dia depois de {sucesso}, perguntamos se deu tudo certo.",
+          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui."
+        },
+        "COBRAR": {
+          "TITULO": "Lembrar do pagamento",
+          "FRASE": "Lembramos o cliente 3 dias antes, no dia e 3 dias depois do vencimento.",
+          "ANTES": "3 dias antes",
+          "NO_DIA": "No dia",
+          "DEPOIS": "3 dias depois",
+          "MSG_ANTES": "Oi, {nome}! Passando para lembrar que o pagamento de {valor} vence sexta.",
+          "MSG_NO_DIA": "Oi, {nome}! O pagamento de {valor} vence hoje. Se já pagou, pode ignorar.",
+          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento de {valor}. Posso te ajudar com alguma coisa?"
+        },
+        "PREVIA_TITULO": "Com a Ana, de exemplo",
+        "PREVIA_TEXTO": "Saem pelo WhatsApp, no horário de atendimento do funil. A mensagem de verdade é escrita olhando a conversa de cada cliente.",
+        "VALOR_EXEMPLO": "R$ 350",
+        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho."
+      }
     }
   },
   "CRM_CARD": {

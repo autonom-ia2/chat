@@ -15,6 +15,10 @@ RSpec.describe Whatsapp::Templates::SystemTemplates do
     expect(described_class.owner_for(CsatTemplateNameService.csat_template_name(42, 3))).to eq('satisfacao')
   end
 
+  it 'reconhece os prontos por finalidade que o Garantir cria (#1518)' do
+    Whatsapp::Templates::Finalidades.prontos.each { |pronto| expect(described_class.owner_for(pronto.nome)).to eq(pronto.dono) }
+  end
+
   it 'modelo da pessoa não é do sistema' do
     expect(described_class.system?('boas_vindas')).to be(false)
     expect(described_class.system?(nil)).to be(false)

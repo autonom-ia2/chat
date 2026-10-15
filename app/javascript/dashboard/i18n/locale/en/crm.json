@@ -497,7 +497,9 @@
         "OPEN_WORK_INFO": "People, conversations and open cards in this pipeline, counted apart: one conversation can hold several cards.",
         "OPEN_PEOPLE": "People",
         "OPEN_CONVERSATIONS": "Conversations",
-        "OPEN_CARDS": "Cards"
+        "OPEN_CARDS": "Cards",
+        "RESOLUTION_TIME": "Resolution time",
+        "RESOLUTION_TIME_INFO": "Average from when the card opened until it was last marked Resolved, without the time we waited for the customer."
       },
       "MEETINGS": {
         "TITLE": "Meetings",
@@ -538,7 +540,16 @@
         "NONE": "Unassigned",
         "CARDS": "cards",
         "EMPTY": "No open cards."
-      }
+      },
+      "DURACAO": {
+        "DIAS": "{d} d {h} h",
+        "HORAS": "{h} h {m} min",
+        "MINUTOS": "{m} min",
+        "SEM_DADOS": "—",
+        "SO_DIAS": "{d} d",
+        "SO_HORAS": "{h} h"
+      },
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -4209,7 +4220,12 @@
       "O_FACEBOOK": "Facebook",
       "O_INSTAGRAM": "Instagram",
       "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
-      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}."
+      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
+      "ATENDER_LEMBRETES": "We share progress and ask if it was solved.",
+      "ATENDER_SO_ANDAMENTO": "We share the request progress.",
+      "ATENDER_SO_RESOLVEU": "We ask if it was solved.",
+      "COBRAR_LEMBRETES": "We send payment reminders before, on and after the due date.",
+      "ATENDER_SEM_LEMBRETES": "No reminder on."
     },
     "SOBRE": {
       "ROTULO": "When to use this pipeline",
@@ -4318,7 +4334,8 @@
       "DEPOIS_FRASE_MENSAGEM": "On the agreed day, the team gets a reminder and the customer gets a message.",
       "DEPOIS_EXEMPLO": "E.g. “Can you call me on Friday?” becomes a reminder on Friday at 9am.",
       "SEM_RESPOSTA_POR": "No reply for",
-      "DEPOIS_PEDIDO": "“Can you call me on Friday?”"
+      "DEPOIS_PEDIDO": "“Can you call me on Friday?”",
+      "TEXTO_ATENDER": "The customer hears about progress, and nobody is left without an answer."
     },
     "CAIXAS": {
       "ROTULO": "Inboxes",
@@ -4489,7 +4506,33 @@
     },
     "ATENDER": {
       "TITULO": "How each request ends",
-      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it."
+      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it.",
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "TITULO": "Share progress",
+          "FRASE": "If a request stays 1 day in the same stage, we tell the customer we are still on it.",
+          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news."
+        },
+        "RESOLVEU": {
+          "TITULO": "Ask if it was solved",
+          "FRASE": "1 day after {sucesso}, we ask if everything worked out.",
+          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here."
+        },
+        "COBRAR": {
+          "TITULO": "Payment reminders",
+          "FRASE": "We remind the customer 3 days before, on the day and 3 days after the due date.",
+          "ANTES": "3 days before",
+          "NO_DIA": "On the day",
+          "DEPOIS": "3 days after",
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that the payment of {valor} is due on Friday.",
+          "MSG_NO_DIA": "Hi, {nome}! The payment of {valor} is due today. If you already paid, please ignore this.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the payment of {valor} yet. Can I help with anything?"
+        },
+        "PREVIA_TITULO": "With Ana, as an example",
+        "PREVIA_TEXTO": "Sent on WhatsApp during the pipeline business hours. The real message is written from each customer conversation.",
+        "VALOR_EXEMPLO": "R$ 350",
+        "DESLIGADOS": "No reminder on. Nobody gets a message on their own."
+      }
     }
   },
   "CRM_CARD": {

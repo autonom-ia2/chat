@@ -91,9 +91,9 @@ class Crm::FollowUps::AutoSendValidator
     metadata['source'] == 'ai_followup'
   end
 
-  # ai_followup OU ai_callback: ambos escolhem template/escrevem o body no envio.
+  # ai_followup, ai_callback ou lembrete de Atender (#1498): escolhem template/escrevem o body no envio.
   def ai_driven?
-    %w[ai_followup ai_callback].include?(metadata['source'])
+    Crm::FollowUps::MessageSender::AI_SOURCES.include?(metadata['source'])
   end
 
   def metadata

@@ -40,7 +40,7 @@ describe('bolha da localização enviada', () => {
     expect(address.classes()).not.toContain('truncate');
   });
 
-  it('o atendente abre o ponto no mapa em outra aba, com alvo de toque de 44 px', () => {
+  it('o atendente abre o ponto no mapa em outra aba e usa a classe de 44 px (min-h-11)', () => {
     const link = montarRica(Location, { richMessage: UNIDADE }).get('a');
 
     expect(link.attributes('href')).toBe(

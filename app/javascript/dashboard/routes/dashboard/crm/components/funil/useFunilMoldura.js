@@ -110,7 +110,12 @@ export const useFunilMoldura = ({
         rotulo: t(`${FUNIL}.${subtela.chave}.ROTULO`),
         icone: subtela.icone,
         titulo: t(`${FUNIL}.${subtela.chave}.${subtela.titulo || 'TITULO'}`),
-        texto: t(`${FUNIL}.${subtela.chave}.TEXTO`),
+        // #1498 — Atender: os lembretes falam do andamento, não de chamar de volta.
+        texto: t(
+          !form.countsAsSale && view.value === 'returns'
+            ? `${FUNIL}.RETORNO.TEXTO_ATENDER`
+            : `${FUNIL}.${subtela.chave}.TEXTO`
+        ),
       };
     const topo = TOPO[view.value] || TOPO.nome;
     return {

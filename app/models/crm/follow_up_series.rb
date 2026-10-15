@@ -89,6 +89,15 @@ class Crm::FollowUpSeries < ApplicationRecord
     Crm::FollowUps::SeriesSchedule.new(self)
   end
 
+  # O responsável de cada vez segue o lembrete de uma vez só (ParamsResolver): quem cuida do card, quem atende a
+  # conversa, quem marcou. "Só eu" fica com quem marcou. A vez criada (SeriesMaterializer) e a vez calculada do
+  # calendário (#1568, "Só os meus") usam esta mesma regra.
+  def occurrence_assignee_id
+    return created_by_id if recipients_creator?
+
+    card&.owner_id || conversation&.assignee_id || created_by_id
+  end
+
   # Uma vez de mentira (não salva), para saber quem receberia agora sem vez marcada.
   def recipient_preview
     Crm::FollowUp.new(account_id: account_id, card: card, created_by: created_by, recipient_mode: recipient_mode,
