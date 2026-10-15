@@ -404,3 +404,15 @@
   display_name: Calendário Meu dia (o que fazer hoje)
   enabled: false
   column: feature_flags_ext_1
+
+# Recuperar pelo WhatsApp API as mensagens que a Cloud entrega como "não suportada" (#1489). Bit A RESERVAR pela
+# Orquestração: sobre a main de hoje cai no bit 24 (logo abaixo de `crm_calendario_ouro`), que o #1578 já reservou; o
+# #1608 reservou o 25. A posição na lista é o bit: entrando depois dos dois, este vai para o 26 (ajustar aqui e no
+# spec/models/account_spec.rb). Desligada (padrão): a bolha fica com o aviso, como antes,
+# e nenhum job consulta o motor. Ligada: só nas caixas com WhatsApp API conectado, mesmo número e envio automático
+# ligado. Sem migration. Piloto nas contas 47 (stack Autonom.ia) e 1 (stack Hub2You), pelo Super Admin, depois do
+# deploy; ver docs/whatsapp-hibrido-cloud-waha-prd.md (§ Recuperar "não suportada").
+- name: whatsapp_hybrid_recovery
+  display_name: WhatsApp API recupera mensagens "não suportadas"
+  enabled: false
+  column: feature_flags_ext_1

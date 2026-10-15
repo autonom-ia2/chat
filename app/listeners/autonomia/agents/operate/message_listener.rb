@@ -34,7 +34,14 @@ module Autonomia
             !message.incoming? ||      # ANTI-LOOP: só mensagens do contato disparam
             message.private? ||        # nunca processa notas privadas
             message.activity? ||       # eventos de atividade não são respondíveis
-            message.conversation_id.blank?
+            message.conversation_id.blank? ||
+            unsupported?(message)
+        end
+
+        # Aviso de "mensagem não suportada" (chat#1489): não há o que responder. Quando o WhatsApp API recupera o
+        # conteúdo em até 2 minutos, quem chama a IA, uma vez, é o WhatsappHybrid::UnsupportedRecovery.
+        def unsupported?(message)
+          message.content_attributes.to_h.with_indifferent_access[:is_unsupported].present?
         end
       end
     end

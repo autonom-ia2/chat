@@ -82,6 +82,12 @@
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "This message is unsupported. You can view this message on the Instagram app.",
     "UNSUPPORTED_MESSAGE_TIKTOK": "This message is unsupported. You can view this message on the TikTok app.",
     "UNSUPPORTED_MESSAGE_WHATSAPP": "This message is unsupported. You can view this message on the WhatsApp app.",
+    "HYBRID_RECOVERY": {
+      "PENDING": "Fetching the content from the phone…",
+      "FAILED": "Couldn't recover this message. Check it on the phone.",
+      "MEDIA": "This message has media. Check it on the phone.",
+      "RECOVERED": "recovered from the phone"
+    },
     "WHATSAPP_FLOW_RESPONSE": "Submitted a flow response",
     "WHATSAPP_REFERRAL": {
       "AD": "Ad"

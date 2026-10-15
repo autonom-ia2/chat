@@ -2096,3 +2096,31 @@ O trabalho novo não é “integrar dois WhatsApps”.
 6. UX e telemetria.
 
 O principal gate técnico é comprovar a correlação de IDs WAHA/GOWS com smb_message_echoes da Meta. Esse spike deve anteceder o roteador definitivo.
+
+## 62. Recuperar "não suportada" (chat#1489)
+
+A Cloud entrega como `unsupported` (erros 131051 e 131060) mensagens que o aparelho conectado recebe normalmente.
+No spike de 15/10/2026 (conta 47, caixa 61), 6/6 eram modelos com botões de outra empresa (`templateMessage`), e o
+motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?downloadMedia=false`.
+
+**Para todas as caixas WhatsApp (PR 0).**
+- A bolha guarda `unsupported_type` e `unsupported_error_code`. O tipo `unknown` vira a mesma bolha.
+- A nossa IA (`Autonomia::Agents::Operate::MessageListener`) não responde a mensagem com `is_unsupported`.
+
+**Com a flag `whatsapp_hybrid_recovery` (PR 2, desligada por padrão).**
+- Só na caixa cuja conexão está conectada, com o mesmo número e o envio automático ligado (`Connection#routable?`).
+- A bolha nasce com `whatsapp_web_id` (id físico tirado do wamid) e `hybrid_recovery: pending`.
+- `WhatsappHybrid::RecoverUnsupportedJob` pergunta ao motor (pull) em 5 s, 15 s, 30 s, 1 min, 2 min, 5 min, 10 min e
+  depois de 10 em 10 min, até 30 min do recebimento.
+- Casamento: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa, uma candidata só.
+- Recuperada: a própria mensagem recebe o texto (título, corpo, rodapé e os botões numerados), perde `is_unsupported`,
+  ganha `hybrid_recovery: recovered` e `recovered_via: web`. Posição e horário não mudam.
+- A IA é chamada uma vez se a recuperação chegar em até 2 min; depois disso, não responde.
+- Falhou (`hybrid_recovery: failed`, motivo em `hybrid_recovery_reason`): `timeout`, `mismatch`, `ambiguous`,
+  `unreadable`, `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no meio) ou `media`.
+- Mídia fica para a PR 3: guarda só a legenda e a bolha manda olhar no celular.
+- n8n/AgentBot, regras de automação e webhooks continuam vendo o aviso e o `message_updated` (PR 4).
+
+**Ligar (passo posterior, com OK do Rodrigo).** Super Admin → conta → `whatsapp_hybrid_recovery`, na conta 47 (stack
+Autonom.ia) e na conta 1 (stack Hub2You). Desligar é o mesmo caminho; mensagens já pendentes falham com `disabled` na
+próxima tentativa.
