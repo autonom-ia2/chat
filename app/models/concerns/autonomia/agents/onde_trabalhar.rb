@@ -19,6 +19,9 @@ module Autonomia::Agents::OndeTrabalhar
   # A marca de origem do ajudante (tema 14), em `config['papel']`. Só nasce pelo início do Construtor com
   # `papel: 'ajudante'` (BuildThread); a API do agente não a aceita (`AgentsController::RESERVED_CONFIG_KEYS`).
   PAPEL_AJUDANTE = 'ajudante'.freeze
+  # Tipos que nunca entram como agente da equipe (área). A Lia (Agente de Cotação) por enquanto: decisão pendente do
+  # Rodrigo (#1433). Tirar daqui libera o tipo em `pode_ser_area?` e em `podem_ser_area` de uma vez.
+  TIPOS_FORA_DA_EQUIPE = %w[insurance_quote].freeze
 
   included do
     validate :atender_exige_onde_trabalhar, on: %i[update ativacao], if: :passa_a_atender?
@@ -36,6 +39,19 @@ module Autonomia::Agents::OndeTrabalhar
       where(actuation: %i[internal both], status: :active, enabled: true)
         .where.not(instruction: [nil, '']).where("config->>'system_key' IS NULL")
         .where("config->>'papel' IS DISTINCT FROM ?", PAPEL_AJUDANTE)
+    }
+
+    # #1433 — os agentes da conta que `pode_ser_area?` aceita, numa consulta só (a lista do CRM, #1447). Mesmas regras,
+    # em SQL; "sem onde trabalhar" é não ter vínculo ativo da própria conta, como `vinculo_ativo_numa_caixa?`.
+    scope :podem_ser_area, lambda { |account|
+      vinculos = ::Autonomia::Agents::AgentInbox.kept.where(papel: ::Autonomia::Agents::AgentInbox::PAPEIS)
+                                                .where('autonomia_agent_inboxes.autonomia_agent_id = autonomia_agents.id')
+                                                .where('autonomia_agent_inboxes.account_id = autonomia_agents.account_id')
+      kept.where(account_id: account.id)
+          .where.not(actuation: :internal).where.not(status: :draft).where.not(agent_type: TIPOS_FORA_DA_EQUIPE)
+          .where("config->>'system_key' IS NULL").where("config->>'papel' IS DISTINCT FROM ?", PAPEL_AJUDANTE)
+          .where("(autonomia_agents.status = :ativo AND autonomia_agents.enabled) OR NOT EXISTS (#{vinculos.to_sql})",
+                 ativo: statuses[:active])
     }
   end
 
@@ -59,6 +75,20 @@ module Autonomia::Agents::OndeTrabalhar
   # Nasceu como "Ajuda outros agentes": só este agente pode ser ajudante.
   def ajudante_de_origem?
     config.to_h['papel'] == PAPEL_AJUDANTE
+  end
+
+  # #1433 — o PREDICADO ÚNICO de "pode ser oferecido como agente da equipe (área)". O escopo `podem_ser_area` é o mesmo
+  # em SQL; o Areas.vincular! recusa quem não passa aqui.
+  def pode_ser_area?
+    motivo_para_nao_ser_area.nil?
+  end
+
+  # nil quando pode ser área; senão o motivo: :interno, :sistema, :rascunho ou :fora_da_equipe (apagado, ajudante,
+  # tipo fora da equipe, ou parado de propósito: parou e ainda tem caixa).
+  # `de_rascunho: true` — só a criação do agente da equipe (POST channels com papel area): aceita o rascunho cuja
+  # conversa de criação já fechou (tem instrução, o `has_instruction` da tela). Rascunho pela metade nunca.
+  def motivo_para_nao_ser_area(de_rascunho: false)
+    motivo_pelo_que_o_agente_e || motivo_pelo_estado(de_rascunho)
   end
 
   def tem_onde_trabalhar?
@@ -87,6 +117,22 @@ module Autonomia::Agents::OndeTrabalhar
   end
 
   private
+
+  # O que o agente é (não muda com pausa): interno, de sistema, apagado, ajudante ou tipo fora da equipe.
+  def motivo_pelo_que_o_agente_e
+    return :interno if actuation_internal?
+    return :sistema if config.to_h['system_key'].present?
+
+    :fora_da_equipe if deleted? || ajudante_de_origem? || TIPOS_FORA_DA_EQUIPE.include?(agent_type)
+  end
+
+  # Como ele está: rascunho (só o pronto, e só com de_rascunho), atendendo, ou parado porque ficou sem onde trabalhar
+  # (o rascunho pronto também está sem caixa).
+  def motivo_pelo_estado(de_rascunho)
+    return :rascunho if draft? && !(de_rascunho && instruction.present?)
+
+    :fora_da_equipe unless operating? || !tem_onde_trabalhar?
+  end
 
   # Lê a associação já carregada (a lista do index pré-carrega os vínculos, sem N+1); senão, consulta. Só vínculos desta
   # conta contam, como defesa: o AgentInbox já recusa vínculo de outra conta.

@@ -89,7 +89,8 @@ class Crm::Caixas::GravadorDeAgentes
   # incompleto); caixa sem porta ativa.
   def vincular!(agente)
     ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true)
-  rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
+  rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema,
+         ::Autonomia::Agents::Areas::AgenteRascunho, ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
     raise Invalida, 'crm.caixas.agente_invalido'
   rescue ActiveRecord::RecordInvalid => e
     raise Invalida, codigo_da_recusa(e.record)

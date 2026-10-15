@@ -65,6 +65,17 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     )
   end
 
+  it 'não oferece rascunho, pausado de propósito (com caixa) nem a Lia (#1433)' do
+    marta
+    agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.')
+    agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
+    pausado = agente('Pausado')
+    Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)
+    pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(agentes_da_caixa['disponiveis']).to eq([{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }])
+  end
+
   it 'sem a Fase 2 a caixa não leva os agentes e a tela os esconde' do
     Autonomia::Agents::Fase2.desligar!(account)
 
@@ -146,6 +157,21 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       alheio = Autonomia::Agents::Agent.create!(account: create(:account), name: 'Alheio', agent_type: 'custom')
       salvar([{ id: alheio.id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
+    end
+
+    it 'rascunho, pausado de propósito ou Lia como área: 422, nunca 500 (#1433)' do
+      salvar([{ id: agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.').id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_invalido')
+
+      salvar([{ id: agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false).id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_invalido')
+
+      pausado = agente('Pausado')
+      Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)
+      pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+      salvar([{ id: pausado.id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_invalido')
+      expect(pausado.reload).to have_attributes(status: 'paused', enabled: false)
     end
 
     it 'o mesmo agente duas vezes' do
