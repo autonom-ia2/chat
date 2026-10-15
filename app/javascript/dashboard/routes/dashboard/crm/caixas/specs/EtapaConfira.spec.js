@@ -46,12 +46,12 @@ describe('EtapaConfira', () => {
     ['off', false],
     ['on', true],
   ])(
-    'with phase 2 %s says the external agent answers first (#1570)',
+    'with phase 2 %s says the agent from another system answers first, as an AI agent (#1570, #1648)',
     (_, fase2) => {
       const wrapper = render(fase2);
 
       expect(wrapper.find('[data-robo]').text()).toBe(
-        'Primeiro atende Robô n8n, o agente externo. Depois, as pessoas abaixo.'
+        'Primeiro atende Robô n8n, o agente de IA. Depois, as pessoas abaixo.'
       );
       expect(wrapper.text()).not.toContain(
         'Atende primeiro todas as conversas desta caixa.'

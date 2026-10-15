@@ -285,6 +285,50 @@ RSpec.describe 'Autonomia quem_atende: trocar', type: :request do
     end
   end
 
+  # Revisão do #1648: a troca é atômica também no que sai dela.
+  describe 'eventos e falhas de validação' do
+    it 'avisa a passagem das conversas do agente de outro sistema só depois de gravar a troca inteira' do
+      AgentBotInbox.create!(inbox: inbox, agent_bot: outro_sistema, account: account)
+      conversa = pendente!
+      segundo = create(:agent_bot, account: account, name: 'Parceiro', outgoing_url: 'https://parceiro.example.com/hook')
+      novo_ja_estava = []
+      allow_any_instance_of(Conversation).to receive(:dispatch_bot_handoff_event).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
+        novo_ja_estava << AgentBotInbox.exists?(inbox_id: inbox.id, agent_bot_id: segundo.id)
+        original.call
+      end
+
+      trocar(agent_bot_id: segundo.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(conversa.reload.status).to eq('open')
+      expect(novo_ja_estava).to eq([true])
+    end
+
+    it 'responde 422 conexao_recusada quando uma validação de modelo falha no meio, e nada muda' do
+      vinculo = porta!(agente('Sofia'))
+      allow(AgentBotInbox).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(AgentBotInbox.new))
+
+      trocar(agent_bot_id: outro_sistema.id)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('conexao_recusada')
+      expect(porta_da_caixa.id).to eq(vinculo.id)
+      expect(robos_da_caixa).to eq([vinculo.agent_bot_id])
+    end
+
+    it 'lê só o agente de outro sistema ativo, e pedir o mesmo com o AgentBotInbox inativo o liga de novo' do
+      AgentBotInbox.create!(inbox: inbox, agent_bot: outro_sistema, account: account).update!(status: :inactive)
+
+      get url, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['primeiro']).to be_nil
+
+      trocar(agent_bot_id: outro_sistema.id)
+
+      expect(AgentBotInbox.where(inbox_id: inbox.id).pluck(:agent_bot_id, :status)).to eq([[outro_sistema.id, 'active']])
+      expect(response.parsed_body['primeiro']).to include('tipo' => 'webhook', 'id' => outro_sistema.id)
+    end
+  end
+
   describe 'pedido e permissão' do
     it 'refuses a request with more than one target' do
       trocar(agent_bot_id: outro_sistema.id, nenhum: true)

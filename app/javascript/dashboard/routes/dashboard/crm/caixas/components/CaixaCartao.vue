@@ -53,12 +53,11 @@ const porta = computed(() =>
 const externo = computed(
   () => !porta.value && roboExterno(props.caixa.agent_bot)
 );
-const fraseDoRobo = computed(() => {
-  const nome = props.caixa.agent_bot?.name;
-  return roboExterno(props.caixa.agent_bot)
-    ? t('CRM_CAIXAS.CARTAO.ROBO_EXTERNO', { nome })
-    : t('CRM_CAIXAS.CARTAO.ROBO', { nome });
-});
+// #1648 — para quem usa, todos são agentes de IA: a mesma frase para o de outro
+// sistema.
+const fraseDoRobo = computed(() =>
+  t('CRM_CAIXAS.CARTAO.ROBO', { nome: props.caixa.agent_bot?.name })
+);
 const areas = computed(() =>
   areasDa(props.caixa)
     .map(agente => ({

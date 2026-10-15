@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# chat#1648 — Quem cuida do quê? mostra "Agente externo: {nome}, atende primeiro" com o que o retrato diz em
+# chat#1648 — Quem cuida do quê? mostra "Agente de IA: {nome}, atende primeiro" com o que o retrato diz em
 # `ai_agents.externo`. Só na caixa aberta (`detalhe`); a lista não consulta.
 RSpec.describe Crm::Caixas::RetratoDosAgentes do
   let(:account) { create(:account) }
@@ -13,6 +13,13 @@ RSpec.describe Crm::Caixas::RetratoDosAgentes do
 
   it 'exposes the external agent of the inbox' do
     AgentBotInbox.create!(inbox: inbox, agent_bot: externo, account: account)
+
+    expect(retrato[:externo]).to eq({ id: externo.id, name: 'Robo n8n' })
+  end
+
+  it 'still sees the agent from another system when its agent_bot_inboxes row has no account_id' do
+    bot_inbox = AgentBotInbox.create!(inbox: inbox, agent_bot: externo, account: account)
+    bot_inbox.update_column(:account_id, nil) # rubocop:disable Rails/SkipsModelValidations
 
     expect(retrato[:externo]).to eq({ id: externo.id, name: 'Robo n8n' })
   end

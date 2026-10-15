@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
-import BotConfiguration from '../BotConfiguration.vue';
+import AbaAgenteDeIa from '../components/AbaAgenteDeIa.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import QuemAtendeAPI from 'dashboard/api/autonomia/quemAtende';
 import { useAlert } from 'dashboard/composables';
@@ -11,11 +11,12 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/agents.json';
 // de outro sistema, sem diferença na tela), quem também recebe quando alguém
 // passa e a troca completa, com confirmação em linha e o motivo da recusa.
 const jornada = { ativa: true };
-const podeTrocar = { valor: true };
+// As chaves que a pessoa tem (inbox_manage e autonomia_manage).
+const permissoes = { inbox_manage: true, autonomia_manage: true };
 
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => podeTrocar.valor) };
+  return { useCanManage: chave => computed(() => permissoes[chave]) };
 });
 vi.mock(
   'dashboard/routes/dashboard/autonomia/agentes/composables/useJornadaAtiva',
@@ -50,7 +51,7 @@ const leitura = (agentes, opcoes) => ({
 
 const render = async dados => {
   QuemAtendeAPI.daCaixa.mockResolvedValue({ data: dados });
-  const wrapper = mount(BotConfiguration, {
+  const wrapper = mount(AbaAgenteDeIa, {
     props: { inbox: { id: 10, name: 'WhatsApp Vendas' } },
     global: {
       plugins: [
@@ -88,11 +89,12 @@ const COM_SOFIA = leitura(
   ]
 );
 
-describe('BotConfiguration', () => {
+describe('AbaAgenteDeIa', () => {
   beforeEach(() => {
     vi.useRealTimers();
     jornada.ativa = true;
-    podeTrocar.valor = true;
+    permissoes.inbox_manage = true;
+    permissoes.autonomia_manage = true;
     QuemAtendeAPI.daCaixa.mockReset();
     QuemAtendeAPI.trocar.mockReset();
     useAlert.mockReset();
@@ -127,7 +129,10 @@ describe('BotConfiguration', () => {
       'Leo',
       'Sofia',
     ]);
-    expect(wrapper.text()).not.toMatch(/externo|robô|n8n|webhook/i);
+    const texto = wrapper.text().toLowerCase();
+    ['externo', 'robô', 'n8n', 'webhook'].forEach(termo => {
+      expect(texto.includes(termo)).toBe(false);
+    });
   });
 
   it('asks for confirmation inline and swaps platform agent for platform agent', async () => {
@@ -320,12 +325,83 @@ describe('BotConfiguration', () => {
     );
   });
 
+  // #1648 (revisão): mexer em agente da plataforma pede autonomia_manage, como o servidor.
+  it('with only inbox_manage and a platform agent answering first, shows who answers but not the choice', async () => {
+    permissoes.autonomia_manage = false;
+    const wrapper = await render(COM_SOFIA);
+
+    expect(wrapper.text()).toContain('Sofia');
+    expect(wrapper.findComponent(ChoiceSelect).exists()).toBe(false);
+  });
+
+  it('with only inbox_manage and an agent from another system, offers only agents from another system and nobody', async () => {
+    permissoes.autonomia_manage = false;
+    const wrapper = await render(
+      leitura([AUTOMACAO], [opcao(AUTOMACAO), opcao(LEO), opcao(SOFIA)])
+    );
+
+    expect(
+      wrapper
+        .findComponent(ChoiceSelect)
+        .props('options')
+        .map(o => o.value)
+    ).toEqual(['ninguem', 'webhook:31']);
+  });
+
+  it('stops trying again when the server says no (401, 403, 404)', async () => {
+    vi.useFakeTimers();
+    QuemAtendeAPI.daCaixa.mockRejectedValue({ response: { status: 403 } });
+    mount(AbaAgenteDeIa, {
+      props: { inbox: { id: 10 } },
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'pt_BR',
+            messages: { pt_BR: { ...pt_BR } },
+          }),
+        ],
+        stubs: { 'router-link': true },
+      },
+    });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(9000);
+
+    expect(QuemAtendeAPI.daCaixa).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries again after a server error (5xx)', async () => {
+    vi.useFakeTimers();
+    QuemAtendeAPI.daCaixa
+      .mockRejectedValueOnce({ response: { status: 502 } })
+      .mockResolvedValueOnce({ data: COM_SOFIA });
+    const wrapper = mount(AbaAgenteDeIa, {
+      props: { inbox: { id: 10 } },
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'pt_BR',
+            messages: { pt_BR: { ...pt_BR } },
+          }),
+        ],
+        stubs: { 'router-link': true },
+      },
+    });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(3000);
+    await flushPromises();
+
+    expect(QuemAtendeAPI.daCaixa).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-quem-atende]').exists()).toBe(true);
+  });
+
   it('never shows a read error: stays loading and tries again', async () => {
     vi.useFakeTimers();
     QuemAtendeAPI.daCaixa
       .mockRejectedValueOnce(new Error('rede'))
       .mockResolvedValueOnce({ data: COM_SOFIA });
-    const wrapper = mount(BotConfiguration, {
+    const wrapper = mount(AbaAgenteDeIa, {
       props: { inbox: { id: 10 } },
       global: {
         plugins: [
@@ -351,7 +427,7 @@ describe('BotConfiguration', () => {
   });
 
   it('who cannot manage the inbox sees who answers but not the choice', async () => {
-    podeTrocar.valor = false;
+    permissoes.inbox_manage = false;
     const wrapper = await render(COM_SOFIA);
 
     expect(wrapper.text()).toContain('Sofia');

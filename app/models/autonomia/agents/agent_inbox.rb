@@ -140,15 +140,18 @@ module Autonomia
       # A conversa aberta que a área atendia volta para o robô da caixa (a porta), pelo mesmo caminho de atribuir um
       # robô pelo painel, e a porta responde à última mensagem do cliente que ficou sem resposta. Sem porta atendendo
       # (ou caixa só de pessoas), ou conversa já à espera de pessoa: vai para a equipe humana, sem robô.
+      # Com agente de outro sistema atendendo primeiro (#1648, opção B), a conversa volta para ele, mas o turno NÃO é
+      # refeito pelo ReplyJob da plataforma: quem responde ali é o outro sistema, e o turno da plataforma morreria calado.
       def devolver_conversas_a_porta!
         robo_da_porta = inbox.agent_bot_inbox&.active? ? inbox.agent_bot : nil
+        porta_da_plataforma = robo_da_porta.present? && self.class.espelhos.exists?(agent_bot_id: robo_da_porta.id)
         inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
           if robo_da_porta.nil? || conversation.bot_handoff_waiting?
             conversation.bot_handoff!(keep_bot: false)
           else
             ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: robo_da_porta.id,
                                                    assignee_type: 'AgentBot').perform
-            responder_mensagem_pendente(conversation)
+            responder_mensagem_pendente(conversation) if porta_da_plataforma
           end
         end
       end

@@ -21608,13 +21608,13 @@
     "controller": "api/v1/accounts/autonomia/quem_atende#update",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:18",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:46",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:52",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:32"
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:67",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:49",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:61",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:35"
     ],
     "sem_corpo": false
   },

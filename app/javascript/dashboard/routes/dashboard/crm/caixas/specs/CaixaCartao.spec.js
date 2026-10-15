@@ -86,14 +86,14 @@ describe('CaixaCartao', () => {
     expect(wrapper.text()).not.toContain('Maria');
   });
 
-  it('says when the first to answer is an external agent (#1570)', () => {
+  it('says when the first to answer is an agent from another system, as an AI agent (#1570, #1648)', () => {
     const wrapper = render({
       ...CAIXA,
       agent_bot: { id: 99, name: 'Robô antigo', tipo_do_principal: 'externo' },
     });
 
     expect(wrapper.text()).toContain(
-      'Robô antigo (agente externo) atende primeiro'
+      'Robô antigo (agente de IA) atende primeiro'
     );
   });
 
@@ -106,7 +106,7 @@ describe('CaixaCartao', () => {
     }).find('[data-quem-cuida]');
 
     expect(quemCuida.find('[data-externo]').text()).toBe(
-      'Robô n8n (agente externo) atende primeiro'
+      'Robô n8n (agente de IA) atende primeiro'
     );
     expect(quemCuida.text()).not.toContain('Robô n8n atende primeiro');
   });

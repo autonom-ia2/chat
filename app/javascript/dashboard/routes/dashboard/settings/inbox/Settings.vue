@@ -32,7 +32,8 @@ import WhatsappHybridPage from './settingsPage/WhatsappHybridPage.vue';
 import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
-import BotConfiguration from './components/BotConfiguration.vue';
+// #1648 — a aba "Agente de IA" é um componente do fork; o BotConfiguration do Chatwoot fica intacto.
+import BotConfiguration from 'dashboard/routes/dashboard/autonomia/agentes/components/AbaAgenteDeIa.vue';
 import AccountHealth from './components/AccountHealth.vue';
 import TwilioHealth from './components/TwilioHealth.vue';
 import WhatsappManualMigrationDialog from './components/WhatsappManualMigrationDialog.vue';

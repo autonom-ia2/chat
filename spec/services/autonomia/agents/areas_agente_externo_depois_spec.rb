@@ -61,4 +61,17 @@ RSpec.describe Autonomia::Agents::Areas, type: :request do
 
     expect(da_area.reload.assignee_agent_bot_id).to eq(externo.id)
   end
+
+  # Revisão do #1648: a conversa foi para o webhook; o ReplyJob da plataforma não refaz o turno dela (morreria calado).
+  it 'soltar a área no meio de um turno não enfileira o ReplyJob da plataforma para a conversa do agente de outro sistema' do
+    pergunta = create(:message, account: account, conversation: da_area, message_type: :incoming, content: 'e o boleto?')
+    stamp = { 'pending_message_id' => pergunta.id, 'at' => Time.current.to_f }
+    da_area.update!(additional_attributes: da_area.additional_attributes.to_h.merge(
+      Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => stamp
+    ))
+
+    expect { described_class.desvincular!(agent: da_equipe, inbox: inbox) }
+      .not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    expect(da_area.reload.assignee_agent_bot_id).to eq(externo.id)
+  end
 end

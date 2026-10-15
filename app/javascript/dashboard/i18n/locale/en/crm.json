@@ -3947,8 +3947,7 @@
       "LIGAR": "Add to CRM",
       "PORTA": "{nome} answers first",
       "AREA": "{nome} handles {funis}",
-      "ROBO": "{nome} (AI agent) answers first",
-      "ROBO_EXTERNO": "{nome} (external agent) answers first"
+      "ROBO": "{nome} (AI agent) answers first"
     },
     "MODO_RESUMO": {
       "AUTO": "The system creates the card when it understands the subject.",
@@ -4015,8 +4014,7 @@
       "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
       "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
       "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
-      "ROBO": "{nome}, the AI agent, answers first. Then the people below.",
-      "ROBO_EXTERNO": "{nome}, the external agent, answers first. Then the people below."
+      "ROBO": "{nome}, the AI agent, answers first. Then the people below."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} starts coming in through this inbox.",
@@ -4068,7 +4066,6 @@
       "REGRA_SEM_PORTA": "The agent marked on a subject takes over the conversation.",
       "MOSTRAR_AGENTES": "Show other agents ({n})",
       "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies.",
-      "ROBO_EXTERNO": "{nome}, this inbox’s external agent, answers first. When the conversation goes to a person, what is selected here applies.",
       "TIRAR": "Remove from this inbox",
       "SAI": "Leaves this inbox when you save.",
       "VAI_PARAR": "This is the only inbox where {nome} works. After saving, {nome} stops answering.",

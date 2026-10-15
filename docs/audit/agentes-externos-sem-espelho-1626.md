@@ -14,8 +14,12 @@
 
 ## Efeito colateral conhecido
 
-- Configurações da caixa › Robô (`BotConfiguration.vue`) usa a mesma lista: o espelho deixa de aparecer como opção.
-  A rota `inboxes/:id/set_agent_bot` não foi alterada.
+- Atualizado no #1648: a aba da caixa virou "Agente de IA" (`AbaAgenteDeIa.vue`, componente do fork; o
+  `BotConfiguration.vue` do Chatwoot ficou intacto e fora da tela). Ela não lê mais a lista de robôs: lê e troca pelo
+  `GET/PUT autonomia/inboxes/:inbox_id/quem_atende`, cujas opções também deixam os espelhos de fora
+  (`AgentInbox.espelhos`) e os robôs de sistema (sem conta; conferido em produção em 15/10, nenhuma caixa usa).
+- A rota crua `inboxes/:id/set_agent_bot` ganhou o prepend `CaixaSemAgenteExterno` no #1648: recusa agente de outro
+  sistema em caixa com porta da plataforma e recusa espelho de agente da plataforma que não é a porta da caixa.
 
 ## Validação
 

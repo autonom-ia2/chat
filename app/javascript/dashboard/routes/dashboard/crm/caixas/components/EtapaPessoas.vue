@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgentesDaCaixa from './AgentesDaCaixa.vue';
-import { corDoFunil, portaOuRobo, roboExterno } from '../helpers/caixa';
+import { corDoFunil, portaOuRobo } from '../helpers/caixa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
@@ -107,11 +107,7 @@ const chipClasse = ativo =>
       class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
     >
       <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      {{
-        roboExterno(robo)
-          ? $t('CRM_CAIXAS.PESSOAS.ROBO_EXTERNO', { nome: robo.name })
-          : $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name })
-      }}
+      {{ $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name }) }}
     </p>
     <div
       v-if="legado"

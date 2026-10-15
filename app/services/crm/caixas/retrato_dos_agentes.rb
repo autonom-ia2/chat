@@ -41,10 +41,11 @@ class Crm::Caixas::RetratoDosAgentes
   # espelho de agente da plataforma. Espelho é qualquer agent_bot de autonomia_agent_inboxes, apagado ou não (a mesma
   # regra do Autonomia::Agents::RobosSemEspelho, #1626): o espelho de uma porta apagada não vira "agente externo".
   # Mais de uma linha (não há índice único por caixa): a mais antiga. { id, name } ou nil. Só na caixa aberta
-  # (`detalhe`): a lista não faz uma consulta por caixa.
+  # (`detalhe`): a lista não faz uma consulta por caixa. Filtra só pela caixa (que já é da conta): agent_bot_inboxes.account_id
+  # aceita nulo em linhas antigas, como no CanaisOcupadosFinder.
   def externo(inbox_id)
     vinculo = AgentBotInbox.active.includes(:agent_bot)
-                           .where(inbox_id: inbox_id, account_id: @account.id)
+                           .where(inbox_id: inbox_id)
                            .where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.espelhos)
                            .order(:id).first
     return if vinculo&.agent_bot.nil?

@@ -65,11 +65,20 @@ class Autonomia::Agents::TrocarQuemAtende
     end
     Resultado.new(mudou: mudou)
   rescue Recusa => e
-    Rails.logger.warn("[autonomia][quem_atende] recusado code=#{e.code} account=#{@inbox.account_id} inbox=#{@inbox.id}")
-    Resultado.new(code: e.code, mudou: false)
+    recusada(e.code)
+  rescue ActiveRecord::RecordInvalid => e
+    # Uma validação de modelo no meio da troca (vínculo, AgentBotInbox, agente): nada mudou, e a tela recebe o motivo
+    # geral em vez de um 500.
+    Rails.logger.warn("[autonomia][quem_atende] invalido model=#{e.record.class.name} account=#{@inbox.account_id} inbox=#{@inbox.id}")
+    recusada(:conexao_recusada)
   end
 
   private
+
+  def recusada(code)
+    Rails.logger.warn("[autonomia][quem_atende] recusado code=#{code} account=#{@inbox.account_id} inbox=#{@inbox.id}")
+    Resultado.new(code: code, mudou: false)
+  end
 
   def travar!
     @travados = ([porta_lida_antes&.autonomia_agent_id, @novo_agente&.id].compact.uniq.sort)
@@ -86,16 +95,22 @@ class Autonomia::Agents::TrocarQuemAtende
     porta = ::Autonomia::Agents::QuemAtendeACaixa.vinculos(@inbox).porta.includes(:agent).first
     raise Recusa, :mudou_agora if porta && @travados.exclude?(porta.autonomia_agent_id)
 
-    { porta: porta, robos: ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(@inbox).to_a }
+    { porta: porta, robos: ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(@inbox, so_ativos: false).to_a }
   end
 
   def igual_ao_atual?
-    robos = @atual[:robos].map(&:agent_bot_id)
+    robos = robos_que_atendem
     case @alvo[:tipo]
     when 'plataforma' then atende_primeiro_agora? && robos.empty?
     when 'webhook' then @atual[:porta].nil? && robos == [@novo_robo.id]
     else @atual[:porta].nil? && robos.empty?
     end
+  end
+
+  # O agente de outro sistema com o AgentBotInbox inativo não atende: pedir o mesmo o põe de novo, ativo (o inativo
+  # vira nil e a troca acontece).
+  def robos_que_atendem
+    @atual[:robos].map { |bot_inbox| bot_inbox.agent_bot_id if bot_inbox.active? }
   end
 
   def conferir_o_novo!
@@ -130,12 +145,15 @@ class Autonomia::Agents::TrocarQuemAtende
   end
 
   # As conversas que o agente de outro sistema segurava voltam para a equipe, pela regra da porta
-  # (AgentInbox#release_bot_conversations!): pending sem dono ou dele, open dele.
+  # (AgentInbox#release_bot_conversations!): pending sem dono ou dele, open dele. O evento da passagem
+  # (CONVERSATION_BOT_HANDOFF) sai DEPOIS do commit: desfeita a troca, ninguém é avisado de uma passagem que não houve.
   def tirar_robo!(bot_inbox)
     bot_inbox.destroy!
     pending = @inbox.conversations.where(status: :pending, assignee_agent_bot_id: [nil, bot_inbox.agent_bot_id])
     dele = @inbox.conversations.where(status: :open, assignee_agent_bot_id: bot_inbox.agent_bot_id)
-    pending.or(dele).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
+    passadas = pending.or(dele).to_a
+    passadas.each { |conversation| conversation.bot_handoff!(keep_bot: false, dispatch_event: false) }
+    ActiveRecord.after_all_transactions_commit { passadas.each(&:dispatch_bot_handoff_event) } if passadas.any?
   end
 
   def por_o_novo!

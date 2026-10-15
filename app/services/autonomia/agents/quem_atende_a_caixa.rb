@@ -43,9 +43,12 @@ module Autonomia::Agents::QuemAtendeACaixa
     ::Autonomia::Agents::AgentInbox.kept.where(inbox_id: inbox.id, account_id: inbox.account_id)
   end
 
-  # AgentBotInbox de agente de outro sistema na caixa (o espelho de agente da plataforma nunca conta).
-  def robos_de_outro_sistema(inbox)
-    AgentBotInbox.where(inbox_id: inbox.id).where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.espelhos)
+  # AgentBotInbox de agente de outro sistema na caixa (o espelho de agente da plataforma nunca conta). Para ler quem
+  # atende, só os ativos (o inativo não recebe conversa: Inbox#active_bot?). `so_ativos: false` é da troca, que tira
+  # todos antes de pôr o novo.
+  def robos_de_outro_sistema(inbox, so_ativos: true)
+    robos = AgentBotInbox.where(inbox_id: inbox.id).where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.espelhos)
+    so_ativos ? robos.active : robos
   end
 
   # O espelho da porta ativa: o único AgentBot que a caixa com agente da plataforma aceita como robô.
@@ -53,7 +56,8 @@ module Autonomia::Agents::QuemAtendeACaixa
     vinculos(inbox).porta.pick(:agent_bot_id)
   end
 
-  # Os AgentBots da conta que são agentes de outro sistema: nem espelho, nem robô de sistema (account_id nulo).
+  # Os AgentBots da conta que são agentes de outro sistema: nem espelho, nem robô de sistema (account_id nulo). O robô
+  # de sistema fica de fora de propósito: conferido em produção em 15/10, nenhuma caixa usa um (revisão do #1648).
   def agentes_de_outro_sistema(account)
     account.agent_bots.where.not(id: ::Autonomia::Agents::AgentInbox.espelhos)
   end

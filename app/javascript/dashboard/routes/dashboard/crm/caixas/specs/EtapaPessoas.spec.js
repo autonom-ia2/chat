@@ -48,7 +48,7 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-agentes]').exists()).toBe(false);
   });
 
-  it('calls an agent from another system an external agent (#1570)', () => {
+  it('calls an agent from another system an AI agent, like ours (#1570, #1648)', () => {
     const wrapper = render(null, {
       id: 99,
       name: 'Clara',
@@ -56,7 +56,7 @@ describe('EtapaPessoas', () => {
     });
 
     expect(wrapper.find('[data-robo]').text()).toBe(
-      'Clara, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+      'Clara, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
     );
   });
 
@@ -72,7 +72,7 @@ describe('EtapaPessoas', () => {
     );
 
     expect(wrapper.find('[data-robo]').text()).toBe(
-      'Robô n8n, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+      'Robô n8n, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
     );
     expect(wrapper.find('[data-porta]').exists()).toBe(false);
   });
