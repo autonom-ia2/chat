@@ -19,9 +19,9 @@ module Autonomia::Agents::OndeTrabalhar
   # A marca de origem do ajudante (tema 14), em `config['papel']`. Só nasce pelo início do Construtor com
   # `papel: 'ajudante'` (BuildThread); a API do agente não a aceita (`AgentsController::RESERVED_CONFIG_KEYS`).
   PAPEL_AJUDANTE = 'ajudante'.freeze
-  # Tipos que nunca entram como agente da equipe (área). A Lia (Agente de Cotação) por enquanto: decisão pendente do
-  # Rodrigo (#1433). Tirar daqui libera o tipo em `pode_ser_area?` e em `podem_ser_area` de uma vez.
-  TIPOS_FORA_DA_EQUIPE = %w[insurance_quote].freeze
+  # Tipos que nunca entram como agente da equipe (área). Vazio: a Lia (Agente de Cotação) PODE atender outras caixas
+  # como área (decisão do Rodrigo em 15/10, "lia b pode atender outras caixas"). Pôr um tipo aqui o tira das duas regras.
+  TIPOS_FORA_DA_EQUIPE = [].freeze
 
   included do
     validate :atender_exige_onde_trabalhar, on: %i[update ativacao], if: :passa_a_atender?

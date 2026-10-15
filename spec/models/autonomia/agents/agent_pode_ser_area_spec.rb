@@ -50,7 +50,7 @@ RSpec.describe Autonomia::Agents::Agent do
       expect(pronto.motivo_para_nao_ser_area(de_rascunho: true)).to be_nil
     end
 
-    it 'recusa interno, de sistema, ajudante, apagado e a Lia (Agente de Cotação)' do
+    it 'recusa interno, de sistema, ajudante e apagado; aceita a Lia (Agente de Cotação)' do
       apagado = agente('Apagado')
       apagado.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
@@ -59,7 +59,7 @@ RSpec.describe Autonomia::Agents::Agent do
       expect(agente('Ajudante', actuation: :internal, config: { 'papel' => 'ajudante' }).pode_ser_area?).to be(false)
       expect(agente('Ajudante externo', config: { 'papel' => 'ajudante' }).motivo_para_nao_ser_area).to eq(:fora_da_equipe)
       expect(apagado.motivo_para_nao_ser_area).to eq(:fora_da_equipe)
-      expect(agente('Lia', agent_type: 'insurance_quote').motivo_para_nao_ser_area).to eq(:fora_da_equipe)
+      expect(agente('Lia', agent_type: 'insurance_quote').pode_ser_area?).to be(true)
     end
   end
 
@@ -83,7 +83,7 @@ RSpec.describe Autonomia::Agents::Agent do
         described_class.podem_ser_area(account).order(:name).map(&:name)
       end
 
-      expect(nomes).to eq(['Atendendo', 'Parado sem caixa'])
+      expect(nomes).to eq(['Atendendo', 'Lia', 'Parado sem caixa'])
       expect(consultas).to eq(1)
       expect(described_class.where(account: account).select(&:pode_ser_area?).map(&:name)).to match_array(nomes)
     end

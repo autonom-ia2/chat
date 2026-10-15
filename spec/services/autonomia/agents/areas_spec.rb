@@ -132,8 +132,9 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(parado.reload).to have_attributes(status: 'active', enabled: true)
     end
 
-    it 'recusa a Lia (Agente de Cotação) e o ajudante' do
-      expect_recusa(agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false), described_class::AgenteNaoPodeSerArea)
+    it 'aceita a Lia (Agente de Cotação) e recusa o ajudante' do
+      lia = agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
+      expect(described_class.vincular!(agent: lia, inbox: inbox, ativar: true)).to have_attributes(papel: 'area')
       expect_recusa(agente('Ajudante', config: { 'papel' => 'ajudante' }, status: :paused, enabled: false),
                     described_class::AgenteNaoPodeSerArea)
     end

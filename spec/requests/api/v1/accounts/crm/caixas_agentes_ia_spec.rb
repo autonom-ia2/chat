@@ -65,15 +65,17 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     )
   end
 
-  it 'não oferece rascunho, pausado de propósito (com caixa) nem a Lia (#1433)' do
+  it 'não oferece rascunho nem pausado de propósito (com caixa); oferece a Lia (#1433)' do
     marta
     agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.')
-    agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
+    lia = agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
     pausado = agente('Pausado')
     Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)
     pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
 
-    expect(agentes_da_caixa['disponiveis']).to eq([{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }])
+    expect(agentes_da_caixa['disponiveis']).to eq(
+      [{ 'id' => lia.id, 'name' => 'Lia', 'parado' => true }, { 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
+    )
   end
 
   it 'sem a Fase 2 a caixa não leva os agentes e a tela os esconde' do
@@ -159,11 +161,8 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       expect_recusa('crm.caixas.agente_invalido')
     end
 
-    it 'rascunho, pausado de propósito ou Lia como área: 422, nunca 500 (#1433)' do
+    it 'rascunho ou pausado de propósito como área: 422, nunca 500 (#1433)' do
       salvar([{ id: agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.').id, pipeline_ids: [] }])
-      expect_recusa('crm.caixas.agente_invalido')
-
-      salvar([{ id: agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false).id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
 
       pausado = agente('Pausado')
