@@ -580,6 +580,8 @@ en:
         profundidade: 'A helper cannot call another helper, and an internal agent cannot have helpers.'
         sem_principal: 'Choose at least one agent for this helper to help.'
         principal_invalido: 'Choose agents from this account by their id.'
+        principal_rascunho: 'The chosen agent is still a draft. Finish creating it before adding a helper.'
+        principal_ajudante: 'A helper does not get help from another helper. Choose an agent that talks to customers.'
         sem_marca: 'Only an agent created as "Helps other agents" can be a helper. A team Copilot cannot.'
       native_tool_not_allowed: 'This agent cannot use one or more of the requested native tools. Nothing was saved.'
       escolhas_incompletas: "The Quote Agent could not build its instruction: the choice '%{campo}' is missing from its record. This cannot be fixed here — contact Autonom.ia support."
@@ -600,6 +602,8 @@ en:
           fase2_off: 'Team agents are not available for this account yet.'
           agent_internal: '%{nome} is an internal agent (team copilot) and never talks to customers, so it cannot be on the team of a channel.'
           already_linked: '%{nome} is already on %{canal}.'
+          rascunho: '%{nome} is not finished yet. Finish the conversation that creates the agent, then put it on the team of %{canal}.'
+          nao_pode_ser_area: '%{nome} cannot be on the team of %{canal}. Paused agents that still have a channel, helpers and the quote agent stay out of teams.'
           sem_principal: 'No one answers first on %{canal} right now. A team agent needs a main agent answering on the channel.'
     insurance:
       errors:

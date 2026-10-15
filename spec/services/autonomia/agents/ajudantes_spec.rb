@@ -39,6 +39,14 @@ RSpec.describe Autonomia::Agents::Ajudantes do
       expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
     end
 
+    it 'recusa principal em rascunho, sem gravar nada (revisão do PR2)' do
+      rascunho = criar_principal(conta, nome: 'Rascunho', status: :draft, enabled: false)
+
+      expect { described_class.definir!(ajudante: ajudante, principal_ids: [joana.id, rascunho.id], quando: 'x') }
+        .to raise_error(described_class::Recusado) { |erro| expect(erro.message).to include(I18n.t('autonomia.agents.ajudante.principal_rascunho')) }
+      expect(Autonomia::Agents::Specialist.where(delegate_agent_id: ajudante.id)).to be_empty
+    end
+
     it 'recusa um Copiloto da equipe já existente (sem a marca de origem), sem gravar nada' do
       copiloto = criar_copiloto(conta)
 

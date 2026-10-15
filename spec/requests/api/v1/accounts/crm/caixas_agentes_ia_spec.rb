@@ -61,7 +61,21 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       'porta' => { 'id' => clara.id, 'name' => 'Clara' },
       'pode_mudar' => true,
       'areas' => [{ 'id' => maria.id, 'name' => 'Maria', 'pipeline_ids' => [vendas.id], 'parado' => false, 'ultima_caixa' => true }],
-      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
+      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }],
+      'recusa_area_nova' => nil
+    )
+  end
+
+  it 'não oferece rascunho nem pausado de propósito (com caixa); oferece a Lia (#1433)' do
+    marta
+    agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.')
+    lia = agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
+    pausado = agente('Pausado')
+    Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)
+    pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(agentes_da_caixa['disponiveis']).to eq(
+      [{ 'id' => lia.id, 'name' => 'Lia', 'parado' => true }, { 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
     )
   end
 
@@ -105,14 +119,37 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to be_empty
   end
 
-  it 'com o principal pausado, a área que já está na caixa fica e troca de funil (#1570)' do
-    clara.update!(status: :paused, enabled: false)
+  # #1570: o leitor da caixa (Autonomia::Agents::Areas.caixa_aceita_area?) só pelo contrato: ok? e codigo.
+  def caixa_recusa(codigo)
+    resultado = instance_double(Autonomia::Agents::Areas::Resultado, ok?: false, codigo: codigo)
+    allow(Autonomia::Agents::Areas).to receive(:caixa_aceita_area?).and_return(resultado)
+  end
+
+  it 'com a caixa recusando área nova, a área que já está nela fica e troca de funil: o leitor só vale para quem entra (#1570)' do
+    caixa_recusa(:principal_parado)
 
     salvar([{ id: maria.id, pipeline_ids: [suporte.id] }])
 
     expect(response).to have_http_status(:ok)
     expect(area?(maria)).to be(true)
     expect(linhas).to eq([[suporte.id, maria.id]])
+  end
+
+  it 'caixa que não aceita área nova não oferece ninguém e diz o motivo (#1570)' do
+    marta
+    caixa_recusa(:robo_externo)
+
+    expect(agentes_da_caixa).to include('pode_mudar' => true, 'disponiveis' => [], 'recusa_area_nova' => 'robo_externo')
+  end
+
+  it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do
+    Autonomia::Agents::Operate::InboxConnector.new(agent: clara, inbox: inbox).perform(connect: false)
+
+    caixa = agentes_da_caixa
+    expect(caixa['porta']).to be_nil
+    expect(caixa['areas'].pluck('name')).to eq(['Maria'])
+    expect(area?(maria)).to be(true)
+    expect(maria.reload).to be_operating
   end
 
   it 'funil arquivado não aparece na tela e o responsável dele fica' do
@@ -158,19 +195,34 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       expect_recusa('crm.caixas.agente_invalido')
     end
 
+    it 'rascunho (código próprio, #1570) ou pausado de propósito como área: 422, nunca 500 (#1433)' do
+      salvar([{ id: agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.').id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_rascunho')
+
+      pausado = agente('Pausado')
+      Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)
+      pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+      salvar([{ id: pausado.id, pipeline_ids: [] }])
+      expect_recusa('crm.caixas.agente_invalido')
+      expect(pausado.reload).to have_attributes(status: 'paused', enabled: false)
+    end
+
     it 'o mesmo agente duas vezes' do
       salvar([{ id: marta.id, pipeline_ids: [suporte.id] }, { id: marta.id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
     end
 
-    it 'área nova com o principal da caixa parado; a área que já estava fica (#1570)' do
-      clara.update!(status: :paused, enabled: false)
+    it 'área nova em caixa que não aceita área agora, com o código do leitor; a área que já estava fica (#1570)' do
+      { principal_parado: 'crm.caixas.porta_parada', robo_externo: 'crm.caixas.agente_externo',
+        fase2_desligada: 'crm.caixas.agentes_desligados' }.each do |codigo, code|
+        caixa_recusa(codigo)
 
-      salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
+        salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
 
-      expect_recusa('crm.caixas.porta_parada')
-      expect(area?(maria)).to be(true)
-      expect(marta.reload).to have_attributes(status: 'paused', enabled: false)
+        expect_recusa(code)
+        expect(area?(maria)).to be(true)
+        expect(marta.reload).to have_attributes(status: 'paused', enabled: false)
+      end
     end
 
     it 'sem a Fase 2' do

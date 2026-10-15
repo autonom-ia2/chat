@@ -87,6 +87,18 @@ RSpec.describe 'Ajuda do agente (tema 14)', type: :request do
 
     expect(response.parsed_body['ajuda']).to eq([{ 'id' => joana.id, 'name' => 'Joana' }])
     expect(response.parsed_body['tem_onde_trabalhar']).to be(true)
+    expect(response.parsed_body['ajudante']).to be(true)
+  end
+
+  it 'a marca de origem sai no agente antes do vínculo, e o Copiloto não a tem (a tela distingue os dois)' do
+    ajudante
+    copiloto = criar_copiloto(conta)
+
+    get "/api/v1/accounts/#{conta.id}/autonomia/agents", headers: administrator.create_new_auth_token, as: :json
+
+    por_id = response.parsed_body['payload'].index_by { |agente| agente['id'] }
+    expect(por_id[ajudante.id]).to include('ajudante' => true, 'ajuda' => [])
+    expect(por_id[copiloto.id]).to include('ajudante' => false)
   end
 
   describe 'a marca de origem do ajudante (decisão c)' do
@@ -124,6 +136,17 @@ RSpec.describe 'Ajuda do agente (tema 14)', type: :request do
 
       expect(response).to have_http_status(:success)
       expect(Autonomia::Agents::BuildThread.last.state).to include('papel' => 'ajudante', 'actuation' => 'internal')
+    end
+
+    it 'sem a Fase 2, a abertura do Construtor ignora papel: ajudante (a conversa de sempre, sem a marca)' do
+      conta.update!(internal_attributes: conta.internal_attributes.merge('autonomia_agents_fase2' => false))
+
+      post "/api/v1/accounts/#{conta.id}/autonomia/build_threads",
+           params: { type: 'custom', papel: 'ajudante' }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(Autonomia::Agents::BuildThread.last.state).not_to include('papel')
+      expect(Autonomia::Agents::BuildThread.last.state['actuation']).not_to eq('internal')
     end
 
     it 'o ajudante com a marca não aparece como Copiloto da conversa, mesmo sem vínculo' do

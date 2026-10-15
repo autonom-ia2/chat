@@ -6,6 +6,7 @@ import AgenteStatus from './AgenteStatus.vue';
 import AgenteBotao from './AgenteBotao.vue';
 import AgenteMenuMais from './AgenteMenuMais.vue';
 import { ESTADO, TRABALHANDO, estadoDoAgente } from '../utils/estadoDoAgente';
+import { ehAjudante, nomesQueAjuda } from '../utils/ajudante';
 
 // #1181 (protótipo T02) — cartão do agente na lista.
 // - Atendendo/Parado: o cartão inteiro abre o agente. Atendendo mostra onde responde (nome do canal
@@ -15,6 +16,8 @@ import { ESTADO, TRABALHANDO, estadoDoAgente } from '../utils/estadoDoAgente';
 // `canais`: caixas da L2 deste agente, ou null quando a L2 não pôde ser lida.
 // #1433 (tema 13) — Na equipe: diz em quais caixas recebe quando alguém passa (`equipe`, nomes pela L2; sem a
 // L2, só o papel). Não mostra os números da semana do principal nem "Responde no".
+// Tema 14 (#1434) — o ajudante diz quem ajuda ("Ajuda: Clara, Bruno"), ligado ou parado, e não leva o selo
+// do Copiloto da equipe: ele é interno, mas ajuda agentes, não a equipe.
 const props = defineProps({
   agente: { type: Object, required: true },
   numeros: { type: Object, default: null },
@@ -41,6 +44,8 @@ const fotoDoCartao = computed(
   () => props.foto || props.agente.avatar_url || ''
 );
 const interno = computed(() => props.agente.actuation === 'internal');
+const ajudante = computed(() => ehAjudante(props.agente));
+const ajuda = computed(() => nomesQueAjuda(props.agente));
 const quantosCanais = computed(() => props.agente.channels_count || 0);
 const rascunho = computed(() => estado.value === ESTADO.FALTA_TERMINAR);
 const cotacao = computed(() => estado.value === ESTADO.COTACAO);
@@ -66,6 +71,9 @@ const linha = computed(() => {
       : t('AGENTS.JORNADA.CARTAO.COTACAO');
   }
   if (atendendo.value) return null;
+  if (ajudante.value && ajuda.value) {
+    return t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: ajuda.value });
+  }
   if (naEquipe.value) {
     return props.equipe?.length
       ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
@@ -161,7 +169,7 @@ const itensDoMenu = computed(() => [
           <span class="flex flex-wrap items-center gap-1.5">
             <AgenteStatus :estado="estado" />
             <span
-              v-if="interno"
+              v-if="interno && !ajudante"
               class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-n-iris-3 text-n-slate-12"
             >
               {{ t('AGENTS.HUB.INTERNAL_BADGE') }}
@@ -176,6 +184,7 @@ const itensDoMenu = computed(() => [
       <span
         v-if="linha"
         :data-equipe="naEquipe ? '' : undefined"
+        :data-ajuda="ajudante && ajuda ? '' : undefined"
         class="text-sm text-n-slate-12"
         >{{ linha }}</span
       >

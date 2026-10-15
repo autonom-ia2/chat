@@ -4002,7 +4002,7 @@
       "SUBTITULO": "Quando chega mensagem nova nesta caixa.",
       "AUTO": "Criar o card quando entender o assunto",
       "AUTO_TEXTO": "O sistema lê a conversa, escolhe o funil certo e cria o card.",
-      "AUTO_EXEMPLO": "O sistema entende que é {funil} e cria o card. Quando o robô passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "AUTO_EXEMPLO": "O sistema entende que é {funil} e cria o card. Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "SUGGEST": "Sugerir o assunto e esperar a equipe",
       "SUGGEST_TEXTO": "O sistema mostra o funil que parece certo. Alguém confirma com um clique.",
       "SUGGEST_EXEMPLO": "Aparece para a equipe: “Parece {funil}”. Quem confirmar cria o card.",
@@ -4011,7 +4011,7 @@
       "OFF_EXEMPLO": "Nada acontece. Alguém da equipe lê e cria o card.",
       "CHEGOU": "Criar o card assim que a conversa chegar",
       "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
-      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o robô passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",
@@ -4029,7 +4029,7 @@
       "SO_SUAS": "cuida de {assuntos}. Vê só as conversas que atende.",
       "SEM_ASSUNTO": "conversas sem assunto",
       "SEM_ASSUNTO_TITULO": "Sem assunto",
-      "RODIZIO": "Quem recebe quando o robô passa a conversa ou ela sai da triagem (na hora, quem tem menos conversas abertas; sem ninguém agora, quem entrar primeiro)",
+      "RODIZIO": "Quem recebe quando o agente passa a conversa ou ela sai da triagem (na hora, quem tem menos conversas abertas; sem ninguém agora, quem entrar primeiro)",
       "NINGUEM": "ninguém ainda",
       "MUDA": "O que muda ao salvar",
       "NADA_MUDOU": "Nada mudou.",
@@ -4075,7 +4075,7 @@
       "TODAS": "Todas",
       "SO_AS_QUE_ATENDE": "Só as que atende",
       "NAO_VE": "Não vê nada",
-      "RODIZIO": "Quando o robô passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro. Se a Atribuição do funil estiver em convite, a pessoa é convidada em vez de receber direto. Administradores também recebem.",
+      "RODIZIO": "Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro. Se a Atribuição do funil estiver em convite, a pessoa é convidada em vez de receber direto. Administradores também recebem.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
       "LEGADO_MUDAR": "Usar o que eu marcar",
       "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas.",
@@ -4109,7 +4109,10 @@
       "FALHOU": "Não deu para salvar. Tente de novo.",
       "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
       "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
-      "PORTA_PARADA": "Esta caixa precisa de um agente atendendo primeiro."
+      "PORTA_PARADA": "Esta caixa precisa de um agente atendendo primeiro.",
+      "AGENTE_EXTERNO": "Esta caixa é atendida por um agente externo. Ela não recebe agente de área.",
+      "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes.",
+      "AGENTES_DESLIGADOS": "Os agentes de área ainda não estão ligados nesta conta."
     }
   },
   "CRM_FUNIL": {

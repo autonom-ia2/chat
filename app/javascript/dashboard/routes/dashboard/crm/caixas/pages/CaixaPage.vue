@@ -21,6 +21,8 @@ import {
   quemCuida,
 } from '../helpers/caixa';
 import {
+  chaveDoErroDosAgentes,
+  ERROS_DOS_AGENTES,
   formularioDaCaixa,
   salvarDaCaixa,
   temAgentesNaTela,
@@ -35,19 +37,6 @@ const router = useRouter();
 const fase2 = useFase2();
 
 const ULTIMA = 4;
-// #1447 — recusas do servidor ao gravar os agentes de IA da caixa.
-const AGENTE_NAO_LIGA = 'crm.caixas.agente_nao_liga';
-// #1570 — agente novo só entra em caixa com o principal atendendo.
-const PORTA_PARADA = 'crm.caixas.porta_parada';
-const ERROS_DOS_AGENTES = [
-  AGENTE_NAO_LIGA,
-  'crm.caixas.agente_invalido',
-  'crm.caixas.agentes_desligados',
-  'crm.caixas.agentes_sem_permissao',
-  'crm.caixas.funil_com_dois_agentes',
-  PORTA_PARADA,
-  'crm.caixas.sem_porta',
-];
 const CHAVES = ['CHEGA', 'CUIDAM', 'SOZINHO', 'CONFIRA'];
 
 const estado = ref('carregando');
@@ -215,15 +204,12 @@ const salvar = async () => {
     const codigo = error?.response?.data?.error?.code;
     const dosAgentes = ERROS_DOS_AGENTES.includes(codigo);
     if (codigo === 'crm.caixas.sem_triagem' || dosAgentes) ir(2);
-    if (codigo === AGENTE_NAO_LIGA) {
-      useAlert(t('CRM_CAIXAS.EDITOR.AGENTE_NAO_LIGA'));
-    } else if (codigo === PORTA_PARADA) {
-      useAlert(t('CRM_CAIXAS.EDITOR.PORTA_PARADA'));
-    } else if (dosAgentes) {
-      useAlert(t('CRM_CAIXAS.EDITOR.ERRO_AGENTES'));
-    } else {
-      useAlert(t('CRM_CAIXAS.EDITOR.FALHOU'));
-    }
+    // As chaves dos agentes são literais em helpers/agentesIa.js.
+    useAlert(
+      dosAgentes
+        ? t(chaveDoErroDosAgentes(codigo))
+        : t('CRM_CAIXAS.EDITOR.FALHOU')
+    );
   } finally {
     salvando.value = false;
   }

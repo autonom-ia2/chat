@@ -3,7 +3,11 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
 import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
-import { ATUACAO, MAX_ARQUIVO_BYTES } from '../constants/criacao';
+import {
+  ATUACAO,
+  MAX_ARQUIVO_BYTES,
+  PAPEL_AJUDANTE_NA_QUERY,
+} from '../constants/criacao';
 import { MAX_FONTES, ehSite, nomeDaFonte } from '../utils/pagina';
 
 // #1181 PR2 — a conversa da etapa Conte com o Construtor, pela store autonomiaBuildThreads (sem
@@ -11,6 +15,8 @@ import { MAX_FONTES, ehSite, nomeDaFonte } from '../utils/pagina';
 // - A IA fala primeiro: a conversa abre só com o modelo (`type`), a atuação (externa; interna para o
 //   Copiloto da equipe, #1494) e com base (arquivos sempre opcionais; o rascunho nasce na primeira
 //   resposta e dá o agentId).
+// - Tema 14 (#1434): `papel` (função, lida ao abrir) devolve 'ajudante' para "Ajuda outros agentes": a
+//   abertura vai com `papel: 'ajudante'` e atuação interna (o agente nasce interno e com a marca de origem).
 // - Continuar um rascunho: com instrução, já está pronto para testar (sem abrir conversa até a
 //   pessoa escrever); sem instrução, abre a conversa ligada ao agente (o backend retoma a pergunta).
 // - A conversa fecha quando o Construtor gera o agente (fase `reviewing` com `agent_id` na thread;
@@ -62,7 +68,11 @@ const estadoDaFonte = fonte => {
   return 'lendo';
 };
 
-export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
+export function useConversaDeCriacao({
+  modelo,
+  atuacao = ATUACAO.EXTERNA,
+  papel = () => null,
+}) {
   const store = useStore();
   const { t } = useI18n();
 
@@ -165,10 +175,16 @@ export function useConversaDeCriacao({ modelo, atuacao = ATUACAO.EXTERNA }) {
     return estadosDasFontes.value[material.fonteId] || estadoDaFonte(null);
   };
 
-  const opcoesDeInicio = () =>
-    agenteExistente.value
-      ? { agentId: agenteExistente.value.id }
-      : { type: modelo, actuation: atuacao, with_knowledge: true };
+  const opcoesDeInicio = () => {
+    if (agenteExistente.value) return { agentId: agenteExistente.value.id };
+    const ajudante = papel() === PAPEL_AJUDANTE_NA_QUERY;
+    return {
+      type: modelo,
+      actuation: ajudante ? ATUACAO.INTERNA : atuacao,
+      with_knowledge: true,
+      ...(ajudante ? { papel: PAPEL_AJUDANTE_NA_QUERY } : {}),
+    };
+  };
 
   const abrir = (extra = {}) =>
     store

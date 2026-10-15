@@ -2,10 +2,14 @@
 # dos Agentes ligada na conta (Crm::Ai::Config.areas_ligadas?); sem ela a caixa não leva `ai_agents` e a tela esconde a
 # parte dos agentes.
 #
-# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Sem porta nativa não há área.
+# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Caixa sem porta pode ser só de pessoas: as
+#   áreas que já estavam nela ficam (#1570).
 # - areas: os agentes vinculados como área na caixa, como as pessoas membros dela, com os funis de que cuidam.
 #   `ultima_caixa`: tirar este agente daqui o faz parar de atender (é o único lugar onde ele trabalha).
-# - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa com porta).
+# - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa que aceita área
+#   agora, Autonomia::Agents::Areas.caixa_aceita_area?).
+# - recusa_area_nova: o código do leitor quando a caixa não aceita área nova (principal_parado, robo_externo,
+#   fase2_desligada); a tela explica. nil quando aceita, ou para quem só lê.
 #   `parado`: entrar na caixa liga o agente.
 class Crm::Caixas::RetratoDosAgentes
   def initialize(account:, inbox_ids:, pode_mudar:)
@@ -20,17 +24,27 @@ class Crm::Caixas::RetratoDosAgentes
     @ligado = Crm::Ai::Config.areas_ligadas?(@account)
   end
 
-  def caixa(inbox_id)
-    porta = vinculos.fetch(inbox_id, []).find(&:porta?)
+  def caixa(inbox)
+    porta = vinculos.fetch(inbox.id, []).find(&:porta?)
+    recusa = recusa_area_nova(inbox)
     {
       porta: porta && { id: porta.agent.id, name: porta.agent.name },
-      pode_mudar: @pode_mudar && porta.present?,
-      areas: areas(inbox_id),
-      disponiveis: @pode_mudar && porta ? disponiveis(inbox_id) : []
+      pode_mudar: @pode_mudar,
+      areas: areas(inbox.id),
+      disponiveis: @pode_mudar && recusa.nil? ? disponiveis(inbox.id) : [],
+      recusa_area_nova: recusa
     }
   end
 
   private
+
+  # Só para quem pode mexer em agentes: quem só lê não vê a lista de quem pode entrar.
+  def recusa_area_nova(inbox)
+    return unless @pode_mudar
+
+    resultado = ::Autonomia::Agents::Areas.caixa_aceita_area?(inbox)
+    resultado.ok? ? nil : resultado.codigo.to_s
+  end
 
   def areas(inbox_id)
     vinculos.fetch(inbox_id, []).select(&:area?).map(&:agent).sort_by { |agente| agente.name.to_s.downcase }.map do |agente|
@@ -68,9 +82,9 @@ class Crm::Caixas::RetratoDosAgentes
                                 .transform_values { |linhas| linhas.map(&:last) }
   end
 
-  # Agentes da conta que podem ser área: não apagados e que falam com cliente (não interno, não de sistema).
+  # Agentes da conta que podem ser área (Agent#pode_ser_area?, #1433): fora rascunho, parado de propósito, interno,
+  # sistema, ajudante e Lia.
   def candidatos
-    @candidatos ||= ::Autonomia::Agents::Agent.kept.where(account_id: @account.id).order(:name, :id).to_a
-                                              .reject { |agente| agente.actuation_internal? || agente.config&.dig('system_key').present? }
+    @candidatos ||= ::Autonomia::Agents::Agent.podem_ser_area(@account).order(:name, :id).to_a
   end
 end

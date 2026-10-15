@@ -1034,6 +1034,8 @@ pt_BR:
         profundidade: 'Ajudante não chama outro ajudante, e um agente interno não tem ajudantes.'
         sem_principal: 'Escolha pelo menos um agente para este ajudante ajudar.'
         principal_invalido: 'Escolha agentes desta conta pelo id.'
+        principal_rascunho: 'O agente escolhido ainda está em rascunho. Termine a criação dele antes de pôr um ajudante.'
+        principal_ajudante: 'Um ajudante não recebe ajuda de outro ajudante. Escolha um agente que conversa com clientes.'
         sem_marca: 'Só um agente criado como "Ajuda outros agentes" pode ser ajudante. Um Copiloto da equipe não pode.'
       native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
@@ -1058,6 +1060,8 @@ pt_BR:
           fase2_off: "O agente da equipe ainda não está disponível nesta conta."
           agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
           already_linked: "%{nome} já está em %{canal}."
+          rascunho: "%{nome} ainda não está pronto. Termine a conversa que cria o agente e depois ponha ele na equipe de %{canal}."
+          nao_pode_ser_area: "%{nome} não pode ficar na equipe de %{canal}. Agente pausado que ainda tem canal, ajudante e o agente de cotação ficam fora da equipe."
           sem_principal: "Ninguém atende primeiro em %{canal} agora. O agente da equipe precisa de um agente principal atendendo no canal."
     prospecting:
       presets:

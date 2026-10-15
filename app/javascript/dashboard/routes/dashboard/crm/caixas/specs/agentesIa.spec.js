@@ -1,6 +1,8 @@
 import {
   agentesParaFormulario,
   alternarFunilDoAgente,
+  chaveDaRecusaDaCaixa,
+  chaveDoErroDosAgentes,
   formularioDaCaixa,
   funisSemAgente,
   mudancasDosAgentes,
@@ -51,6 +53,22 @@ const formulario = dados => formularioDaCaixa(dados, true);
 const agentes = () => agentesParaFormulario(aiAgents()).agentes;
 
 describe('agentes de IA da caixa', () => {
+  it('maps the inbox refusal and the save errors to fixed i18n keys (#1570)', () => {
+    expect(chaveDaRecusaDaCaixa('principal_parado')).toBe(
+      'CRM_CAIXAS.EDITOR.PORTA_PARADA'
+    );
+    expect(chaveDaRecusaDaCaixa('robo_externo')).toBe(
+      'CRM_CAIXAS.EDITOR.AGENTE_EXTERNO'
+    );
+    expect(chaveDaRecusaDaCaixa(null)).toBeNull();
+    expect(chaveDoErroDosAgentes('crm.caixas.agente_rascunho')).toBe(
+      'CRM_CAIXAS.EDITOR.AGENTE_RASCUNHO'
+    );
+    expect(chaveDoErroDosAgentes('crm.caixas.agente_invalido')).toBe(
+      'CRM_CAIXAS.EDITOR.ERRO_AGENTES'
+    );
+  });
+
   it('shows the agents only with phase 2 on in the account payload', () => {
     expect(temAgentesIa(caixa(), true)).toBe(true);
     expect(temAgentesIa(caixa(), false)).toBe(false);

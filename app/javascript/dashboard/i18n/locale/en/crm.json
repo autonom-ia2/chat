@@ -4001,7 +4001,7 @@
       "SUBTITULO": "When a new message arrives in this inbox.",
       "AUTO": "Create the card when it understands the subject",
       "AUTO_TEXTO": "The system reads the conversation, picks the right pipeline and creates the card.",
-      "AUTO_EXEMPLO": "The system sees it's {funil} and creates the card. When the bot hands the conversation over or it leaves triage, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "AUTO_EXEMPLO": "The system sees it's {funil} and creates the card. When the agent hands the conversation over or it leaves triage, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
       "SUGGEST": "Suggest the subject and wait for the team",
       "SUGGEST_TEXTO": "The system shows the pipeline that seems right. Someone confirms with one click.",
       "SUGGEST_EXEMPLO": "The team sees: “Looks like {funil}”. Whoever confirms creates the card.",
@@ -4010,7 +4010,7 @@
       "OFF_EXEMPLO": "Nothing happens. Someone on the team reads it and creates the card.",
       "CHEGOU": "Create the card as soon as the conversation arrives",
       "CHEGOU_TEXTO": "Every new conversation becomes a card right away.",
-      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the bot hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
       "RECOMENDADO": "Recommended",
       "EXEMPLO": "Example",
       "MENSAGEM": "Hi! How much is it?",
@@ -4028,7 +4028,7 @@
       "SO_SUAS": "handles {assuntos}. Sees only the conversations they handle.",
       "SEM_ASSUNTO": "conversations without a subject",
       "SEM_ASSUNTO_TITULO": "No subject",
-      "RODIZIO": "Who gets it when the bot hands the conversation over or it leaves triage (right away, whoever has the fewest open conversations; if nobody can now, whoever comes online first)",
+      "RODIZIO": "Who gets it when the agent hands the conversation over or it leaves triage (right away, whoever has the fewest open conversations; if nobody can now, whoever comes online first)",
       "NINGUEM": "nobody yet",
       "MUDA": "What changes when you save",
       "NADA_MUDOU": "Nothing changed.",
@@ -4074,7 +4074,7 @@
       "TODAS": "All",
       "SO_AS_QUE_ATENDE": "Only theirs",
       "NAO_VE": "Sees nothing",
-      "RODIZIO": "When the bot hands a conversation over or it leaves triage, it goes right away to whoever handles the subject and has the fewest open conversations. If nobody can take it now, it waits and goes to whoever comes online first. If the pipeline's Assignment is set to invite, the person is invited instead of getting it directly. Administrators get conversations too.",
+      "RODIZIO": "When the agent hands a conversation over or it leaves triage, it goes right away to whoever handles the subject and has the fewest open conversations. If nobody can take it now, it waits and goes to whoever comes online first. If the pipeline's Assignment is set to invite, the person is invited instead of getting it directly. Administrators get conversations too.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
       "LEGADO_MUDAR": "Use what I select",
       "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations.",
@@ -4108,7 +4108,10 @@
       "FALHOU": "We couldn't save. Try again.",
       "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
       "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
-      "PORTA_PARADA": "This inbox needs an agent answering first."
+      "PORTA_PARADA": "This inbox needs an agent answering first.",
+      "AGENTE_EXTERNO": "This inbox is handled by an external agent. It can't take area agents.",
+      "AGENTE_RASCUNHO": "This agent is still a draft; finish creating it first.",
+      "AGENTES_DESLIGADOS": "Area agents aren't turned on for this account yet."
     }
   },
   "CRM_FUNIL": {
