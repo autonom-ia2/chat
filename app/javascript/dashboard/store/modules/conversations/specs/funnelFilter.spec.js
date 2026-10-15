@@ -1,6 +1,11 @@
 import { applyPageFilters, filterByCrmPipeline } from '../helpers';
 import getters from '../getters';
 import actions from '../actions';
+import { mutations } from '../index';
+import types from '../../../mutation-types';
+
+const api = vi.hoisted(() => ({ show: vi.fn() }));
+vi.mock('../../../../api/inbox/conversation', () => ({ default: api }));
 
 // Filtro "Funil" da lista (multifunil #1150): a conversa que chega pelo websocket só entra na lista filtrada se for do
 // funil escolhido; "none" é "Sem assunto".
@@ -73,6 +78,7 @@ describe('filtro Funil (#1150)', () => {
   describe('conversa que chega pelo websocket (sem os funis no payload)', () => {
     const estado = naLista => ({
       conversationFilters: { crmPipelineId: '3' },
+      appliedFilters: [],
       allConversations: naLista ? [conversa(42, [])] : [],
     });
 
@@ -123,29 +129,89 @@ describe('filtro Funil (#1150)', () => {
   });
 
   describe('#refreshConversationFunnel', () => {
-    const contexto = ({ crmPipelineId, naLista }) => ({
+    const contexto = ({
+      crmPipelineId = '3',
+      naLista = true,
+      appliedFilters = [],
+    }) => ({
+      state: { conversationFilters: { crmPipelineId }, appliedFilters },
       getters: {
-        getChatListFilters: { crmPipelineId },
-        getConversationById: () => (naLista ? conversa(42, []) : undefined),
+        getConversationById: () =>
+          naLista ? conversa(42, undefined) : undefined,
       },
-      dispatch: vi.fn(),
+      commit: vi.fn(),
     });
 
-    it('com filtro de funil, relê a conversa já listada', () => {
-      const ctx = contexto({ crmPipelineId: '3', naLista: true });
-      actions.refreshConversationFunnel(ctx, 42);
+    it('com filtro de funil, lê da API só os funis da conversa já listada', async () => {
+      api.show.mockResolvedValue({ data: { id: 42, crm_pipeline_ids: [3] } });
+      const ctx = contexto({});
+      await actions.refreshConversationFunnel(ctx, 42);
 
-      expect(ctx.dispatch).toHaveBeenCalledWith('getConversation', 42);
+      expect(api.show).toHaveBeenCalledWith(42);
+      expect(ctx.commit).toHaveBeenCalledWith(
+        types.SET_CONVERSATION_CRM_PIPELINE_IDS,
+        {
+          id: 42,
+          crmPipelineIds: [3],
+        }
+      );
     });
 
-    it('sem filtro de funil, ou conversa fora da lista, não pede nada', () => {
-      const semFiltro = contexto({ crmPipelineId: undefined, naLista: true });
-      const foraDaLista = contexto({ crmPipelineId: '3', naLista: false });
-      actions.refreshConversationFunnel(semFiltro, 42);
-      actions.refreshConversationFunnel(foraDaLista, 42);
+    it('sem filtro, com pasta ou filtro avançado, ou conversa fora da lista, não pede nada', async () => {
+      await actions.refreshConversationFunnel(
+        contexto({ crmPipelineId: null }),
+        42
+      );
+      await actions.refreshConversationFunnel(
+        contexto({ appliedFilters: [{ attribute_key: 'status' }] }),
+        42
+      );
+      await actions.refreshConversationFunnel(contexto({ naLista: false }), 42);
 
-      expect(semFiltro.dispatch).not.toHaveBeenCalled();
-      expect(foraDaLista.dispatch).not.toHaveBeenCalled();
+      expect(api.show).not.toHaveBeenCalled();
+    });
+
+    it('falha da leitura não quebra e não grava nada; o próximo evento tenta de novo', async () => {
+      api.show.mockRejectedValue(new Error('rede'));
+      const ctx = contexto({});
+      await actions.refreshConversationFunnel(ctx, 42);
+
+      expect(ctx.commit).not.toHaveBeenCalled();
+      const dispatch = vi.fn();
+      actions.updateConversation(
+        {
+          commit: vi.fn(),
+          dispatch,
+          state: {
+            conversationFilters: { crmPipelineId: '3' },
+            appliedFilters: [],
+            allConversations: [conversa(42, undefined)],
+          },
+          rootGetters: {},
+        },
+        conversa(42, undefined)
+      );
+      expect(dispatch).toHaveBeenCalledWith('refreshConversationFunnel', 42);
+    });
+  });
+
+  describe('SET_CONVERSATION_CRM_PIPELINE_IDS', () => {
+    it('grava só os funis, só em conversa que está na lista', () => {
+      const state = {
+        allConversations: [{ ...conversa(42, undefined), status: 'pending' }],
+      };
+      mutations[types.SET_CONVERSATION_CRM_PIPELINE_IDS](state, {
+        id: 42,
+        crmPipelineIds: [3],
+      });
+      mutations[types.SET_CONVERSATION_CRM_PIPELINE_IDS](state, {
+        id: 99,
+        crmPipelineIds: [3],
+      });
+
+      expect(state.allConversations).toHaveLength(1);
+      expect(state.allConversations[0].crm_pipeline_ids).toEqual([3]);
+      expect(state.allConversations[0].status).toBe('pending');
     });
   });
 });

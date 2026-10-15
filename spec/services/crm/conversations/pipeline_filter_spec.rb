@@ -149,6 +149,13 @@ RSpec.describe Crm::Conversations::PipelineFilter do
                         conversas[:resolvida].id => [], conversas[:triagem].id => [])
     end
 
+    it 'card que não é da conta da conversa não conta' do
+      intruso = card(conversas[:triagem], vendas)
+      intruso.update_columns(account_id: create(:account).id) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.for([conversas[:triagem]])).to eq(conversas[:triagem].id => [])
+    end
+
     it 'lista vazia não consulta' do
       expect(described_class.for([])).to eq({})
     end

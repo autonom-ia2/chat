@@ -277,6 +277,16 @@ export const mutations = {
     );
   },
 
+  // Filtro "Funil" (#1150): só os funis da conversa que ainda está na lista; o resto do objeto fica como está.
+  [types.SET_CONVERSATION_CRM_PIPELINE_IDS](_state, { id, crmPipelineIds }) {
+    const index = _state.allConversations.findIndex(c => c.id === id);
+    if (index < 0 || !Array.isArray(crmPipelineIds)) return;
+    _state.allConversations[index] = {
+      ..._state.allConversations[index],
+      crm_pipeline_ids: crmPipelineIds,
+    };
+  },
+
   [types.UPDATE_CONVERSATION](_state, conversation) {
     const { allConversations } = _state;
     const index = allConversations.findIndex(c => c.id === conversation.id);
