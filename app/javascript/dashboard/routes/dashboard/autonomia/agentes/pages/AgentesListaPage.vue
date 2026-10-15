@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -26,7 +26,6 @@ import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue';
-import GavetaOutroSistema from '../components/GavetaOutroSistema.vue';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
 // T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
@@ -47,7 +46,6 @@ import GavetaOutroSistema from '../components/GavetaOutroSistema.vue';
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
-const route = useRoute();
 const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
@@ -57,10 +55,6 @@ const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 // #1648 (mockup-2) — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
 const outrosSistemas = useMapGetter('agentBots/getBots');
-// Ficha do agente de outro sistema: null fechada, { agente: null } para conectar um novo.
-const fichaOutro = ref(null);
-const pendenteApagarOutro = ref(null);
-const confirmacaoOutro = ref(null);
 
 const carregando = ref(true);
 const falhou = ref(false);
@@ -287,35 +281,19 @@ const equipeDe = agente =>
 // Externo aparece com a foto da caixa em que atende; sem ela (ou sem a L2), com a foto própria.
 const fotoDe = agente => fotoDoAgente(agente, canaisDe(agente), caixas.value);
 
-const abrirOutro = agente => {
-  fichaOutro.value = { agente };
-};
-const fecharOutro = () => {
-  fichaOutro.value = null;
-};
-const pedirApagarOutro = agente => {
-  pendenteApagarOutro.value = agente;
-  confirmacaoOutro.value?.abrir();
-};
-const apagarOutro = async () => {
-  await store.dispatch('agentBots/delete', pendenteApagarOutro.value.id);
-  useAlert(t('AGENTS.OUTRO_SISTEMA.APAGOU'));
-  confirmacaoOutro.value?.fechar();
-  fecharOutro();
-};
-// "Abrir agente" da aba da caixa chega com ?outro=<id>: abre a ficha dele.
-const abrirOutroDaRota = () => {
-  const { outro } = route.query;
-  if (!outro) return;
-  if (outro === 'novo') {
-    abrirOutro(null);
-    return;
-  }
-  const bot = (outrosSistemas.value || []).find(
-    item => String(item.id) === String(outro)
-  );
-  if (bot) abrirOutro(bot);
-};
+// A página do agente de outro sistema é a mesma rota dos nossos, com `?origem=webhook`.
+const rotaDoOutro = agente => ({
+  name: 'autonomia_agent_panel',
+  params: { agentId: agente.id },
+  query: { origem: 'webhook' },
+});
+const hrefDoOutro = agente => router.resolve(rotaDoOutro(agente)).href;
+const abrirOutro = agente => router.push(rotaDoOutro(agente));
+const conectarOutro = () =>
+  router.push({
+    name: 'autonomia_agents_builder',
+    query: { conectar: 'outro' },
+  });
 
 const pedirExclusao = agente => {
   pendenteExcluir.value = agente;
@@ -345,7 +323,6 @@ const excluir = async () => {
 onMounted(() => {
   carregar();
   store.dispatch('agentBots/get');
-  abrirOutroDaRota();
   relogioDasLeituras = setTimeout(() => {
     esperaVencida.value = true;
   }, ESPERA_MAXIMA_DAS_LEITURAS_MS);
@@ -526,6 +503,7 @@ onBeforeUnmount(() => {
                 v-if="tipo === 'outro'"
                 :agente="agente"
                 :canais="canaisDoOutro(agente)"
+                :href="hrefDoOutro(agente)"
                 @abrir="abrirOutro"
               />
               <AgenteCartao
@@ -557,7 +535,7 @@ onBeforeUnmount(() => {
               data-conectar-outro
               variante="fantasma"
               icone="i-lucide-link"
-              @click="abrirOutro(null)"
+              @click="conectarOutro"
             >
               {{ t('AGENTS.OUTRO_SISTEMA.CONECTAR') }}
             </AgenteBotao>
@@ -589,25 +567,6 @@ onBeforeUnmount(() => {
       :carregando="excluindo"
       @confirmar="excluir"
       @fechada="aoFecharConfirmacao"
-    />
-
-    <GavetaOutroSistema
-      v-if="fichaOutro"
-      :agente="fichaOutro.agente"
-      @fechar="fecharOutro"
-      @apagar="pedirApagarOutro"
-    />
-    <AgenteConfirmacao
-      ref="confirmacaoOutro"
-      :titulo="
-        t('AGENTS.OUTRO_SISTEMA.APAGAR_TITULO', {
-          nome: pendenteApagarOutro?.name,
-        })
-      "
-      :texto="t('AGENTS.OUTRO_SISTEMA.APAGAR_TEXTO')"
-      :confirmar="t('AGENTS.OUTRO_SISTEMA.APAGAR_CONFIRMAR')"
-      @confirmar="apagarOutro"
-      @fechada="pendenteApagarOutro = null"
     />
   </div>
 </template>

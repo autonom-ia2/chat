@@ -14,7 +14,8 @@ import AgenteBotao from 'dashboard/routes/dashboard/autonomia/agentes/components
 // Mostra quem atende primeiro, quem também recebe quando alguém passa e uma
 // escolha só: trocar quem atende primeiro. A troca pede confirmação em linha e
 // o servidor faz a troca completa por trás. Sem erro de leitura na tela:
-// enquanto não lê, fica carregando e tenta de novo sozinho.
+// enquanto não lê, fica carregando e tenta de novo sozinho. A confirmação segue o padrão das telas
+// de agentes (aviso de troca dentro da escolha, Cancelar e Trocar no rodapé do bloco).
 const props = defineProps({
   inbox: { type: Object, default: () => ({}) },
 });
@@ -92,10 +93,11 @@ const tambemRecebem = computed(() =>
   })
 );
 
-const rotaDoAgente = agente =>
-  agente.origem === 'webhook'
-    ? { name: 'autonomia_agents_index', query: { outro: agente.id } }
-    : { name: 'autonomia_agent_panel', params: { agentId: agente.id } };
+const rotaDoAgente = agente => ({
+  name: 'autonomia_agent_panel',
+  params: { agentId: agente.id },
+  query: agente.origem === 'webhook' ? { origem: 'webhook' } : {},
+});
 
 const carregar = async () => {
   try {
@@ -178,130 +180,132 @@ onBeforeUnmount(() => clearTimeout(relogio));
       />
     </template>
 
-    <template v-else>
-      <section
-        data-quem-atende
-        class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+    <section
+      v-else
+      data-quem-atende
+      class="flex flex-col divide-y divide-n-weak rounded-2xl bg-n-solid-1 shadow-sm ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
+    >
+      <div
+        v-if="principal"
+        class="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:gap-3"
       >
-        <div
-          v-if="principal"
-          class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
-        >
-          <div class="flex min-w-0 flex-1 items-center gap-3">
-            <AgenteAvatar
-              :nome="principal.name"
-              :src="principal.avatar_url || ''"
-              tom="atendendo"
-            />
-            <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span class="text-sm font-medium text-n-teal-11">
-                {{ t('AGENTS.CAIXA_AGENTE_IA.ATENDE_PRIMEIRO') }}
-              </span>
-              <span class="truncate text-base font-semibold text-n-slate-12">
-                {{ principal.name }}
-              </span>
-              <span class="text-sm text-n-slate-11">
-                {{ t('AGENTS.CAIXA_AGENTE_IA.ATENDE_PRIMEIRO_TEXTO') }}
-              </span>
-            </div>
-          </div>
-          <router-link
-            :to="rotaDoAgente(principal)"
-            data-abrir-agente
-            class="-ms-3 inline-flex min-h-11 items-center gap-1.5 self-start rounded-xl px-3 text-sm font-semibold text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 sm:ms-0 sm:self-auto"
-          >
-            {{ t('AGENTS.CAIXA_AGENTE_IA.ABRIR') }}
-            <span
-              class="i-lucide-arrow-right size-4 rtl:rotate-180"
-              aria-hidden="true"
-            />
-          </router-link>
-        </div>
-        <div v-else data-ninguem class="flex items-start gap-3">
-          <span
-            class="grid size-12 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
-            aria-hidden="true"
-          >
-            <span class="i-lucide-users size-5" />
-          </span>
-          <div class="flex flex-col gap-0.5">
-            <span class="text-base font-semibold text-n-slate-12">
-              {{ t('AGENTS.CAIXA_AGENTE_IA.NINGUEM') }}
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+          <AgenteAvatar
+            :nome="principal.name"
+            :src="principal.avatar_url || ''"
+            tom="atendendo"
+          />
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span class="text-sm font-medium text-n-teal-11">
+              {{ t('AGENTS.CAIXA_AGENTE_IA.ATENDE_PRIMEIRO') }}
+            </span>
+            <span class="truncate text-base font-semibold text-n-slate-12">
+              {{ principal.name }}
             </span>
             <span class="text-sm text-n-slate-11">
-              {{ t('AGENTS.CAIXA_AGENTE_IA.NINGUEM_TEXTO') }}
+              {{ t('AGENTS.CAIXA_AGENTE_IA.ATENDE_PRIMEIRO_TEXTO') }}
             </span>
           </div>
         </div>
-        <p
-          v-if="equipe.length"
-          data-tambem-recebem
-          class="m-0 flex items-start gap-2 border-t border-n-weak pt-4 text-sm text-n-slate-12"
+        <router-link
+          :to="rotaDoAgente(principal)"
+          data-abrir-agente
+          class="-ms-3 inline-flex min-h-11 items-center gap-1.5 self-start rounded-xl px-3 text-sm font-semibold text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 sm:ms-0 sm:self-auto"
         >
+          {{ t('AGENTS.CAIXA_AGENTE_IA.ABRIR') }}
           <span
-            class="i-lucide-users mt-0.5 size-4 shrink-0 text-n-slate-11"
+            class="i-lucide-arrow-right size-4 rtl:rotate-180"
             aria-hidden="true"
           />
-          {{ tambemRecebem }}
-        </p>
-      </section>
+        </router-link>
+      </div>
+      <div v-else data-ninguem class="flex items-start gap-3 p-5">
+        <span
+          class="grid size-12 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
+          aria-hidden="true"
+        >
+          <span class="i-lucide-users size-5" />
+        </span>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-base font-semibold text-n-slate-12">
+            {{ t('AGENTS.CAIXA_AGENTE_IA.NINGUEM') }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ t('AGENTS.CAIXA_AGENTE_IA.NINGUEM_TEXTO') }}
+          </span>
+        </div>
+      </div>
+      <p
+        v-if="equipe.length"
+        data-tambem-recebem
+        class="m-0 flex items-start gap-2 p-5 text-sm text-n-slate-12"
+      >
+        <span
+          class="i-lucide-users mt-0.5 size-4 shrink-0 text-n-slate-11"
+          aria-hidden="true"
+        />
+        {{ tambemRecebem }}
+      </p>
 
-      <div v-if="podeTrocar" class="flex max-w-md flex-col gap-2">
+      <div v-if="podeTrocar" class="flex flex-col gap-2 p-5">
         <label
           for="quem-atende-primeiro"
-          class="m-0 text-sm font-medium text-n-slate-12"
+          class="m-0 text-sm font-semibold text-n-slate-12"
         >
           {{ t('AGENTS.CAIXA_AGENTE_IA.CAMPO') }}
         </label>
         <ChoiceSelect
           v-model="escolhido"
           trigger-id="quem-atende-primeiro"
-          class="w-full [&_button]:w-full"
+          class="w-full max-w-md [&_button]:w-full"
           :options="opcoes"
           :aria-label="t('AGENTS.CAIXA_AGENTE_IA.CAMPO')"
           :placeholder="t('AGENTS.CAIXA_AGENTE_IA.ESCOLHER')"
           :disabled="trocando"
         />
-        <p v-if="!pendente" class="m-0 text-sm text-n-slate-11">
-          {{ t('AGENTS.CAIXA_AGENTE_IA.CAMPO_AJUDA') }}
-        </p>
-      </div>
-
-      <div
-        v-if="pendente"
-        data-confirmacao
-        role="group"
-        :aria-label="t('AGENTS.CAIXA_AGENTE_IA.CAMPO')"
-        class="flex max-w-xl flex-col gap-3 rounded-2xl bg-n-amber-2 p-4 ring-1 ring-inset ring-n-amber-6"
-      >
         <p
-          class="m-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-12"
+          v-if="pendente"
+          data-troca
           aria-live="polite"
+          class="m-0 flex items-start gap-2 rounded-xl bg-n-amber-2 p-3 text-sm text-n-slate-12 ring-1 ring-inset ring-n-amber-6"
         >
           <span
-            class="i-lucide-arrow-left-right mt-0.5 size-4 shrink-0 text-n-amber-11"
+            class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
             aria-hidden="true"
           />
           {{ textoDaConfirmacao }}
         </p>
-        <div class="flex flex-wrap gap-2">
-          <AgenteBotao data-trocar :carregando="trocando" @click="trocar">
-            {{
-              principal
-                ? t('AGENTS.CAIXA_AGENTE_IA.TROCAR')
-                : t('AGENTS.CAIXA_AGENTE_IA.CONFIRMAR')
-            }}
-          </AgenteBotao>
-          <AgenteBotao
-            data-cancelar
-            variante="contorno"
-            :desabilitado="trocando"
-            @click="cancelar"
-          >
-            {{ t('AGENTS.CAIXA_AGENTE_IA.CANCELAR') }}
-          </AgenteBotao>
-        </div>
+        <p v-else class="m-0 text-sm text-n-slate-11">
+          {{ t('AGENTS.CAIXA_AGENTE_IA.CAMPO_AJUDA') }}
+        </p>
       </div>
-    </template>
+      <div
+        v-if="pendente"
+        data-confirmacao
+        class="flex flex-col-reverse gap-2 px-5 py-4 sm:flex-row sm:justify-end"
+      >
+        <AgenteBotao
+          data-cancelar
+          variante="contorno"
+          tamanho="lg"
+          :desabilitado="trocando"
+          @click="cancelar"
+        >
+          {{ t('AGENTS.CAIXA_AGENTE_IA.CANCELAR') }}
+        </AgenteBotao>
+        <AgenteBotao
+          data-trocar
+          tamanho="lg"
+          :carregando="trocando"
+          @click="trocar"
+        >
+          {{
+            principal
+              ? t('AGENTS.CAIXA_AGENTE_IA.TROCAR')
+              : t('AGENTS.CAIXA_AGENTE_IA.CONFIRMAR')
+          }}
+        </AgenteBotao>
+      </div>
+    </section>
   </div>
 </template>

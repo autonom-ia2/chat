@@ -1780,13 +1780,49 @@
       "SALVAR": "Salvar",
       "SALVOU": "Agente salvo.",
       "APAGAR": "Apagar agente",
-      "PRONTO_TITULO": "Agente conectado",
-      "PRONTO_TEXTO": "Falta um passo: copie a chave de acesso e cole no outro sistema.",
       "CONCLUIR": "Concluir",
       "APAGAR_TITULO": "Apagar {nome}?",
       "APAGAR_TEXTO": "Ele para de atender nos canais em que está. As conversas novas vão para as pessoas da equipe.",
       "APAGAR_CONFIRMAR": "Apagar",
-      "APAGOU": "Agente apagado."
+      "APAGOU": "Agente apagado.",
+      "PAGINA": {
+        "CARREGANDO": "Carregando o agente",
+        "BLOCO_FAZ": "O que ele faz",
+        "FAZ_VAZIO": "Ainda sem descrição.",
+        "BLOCO_CONEXAO": "Como ele se conecta",
+        "CONEXAO_TEXTO": "As conversas vão para este endereço. O outro sistema responde com a chave de acesso.",
+        "BLOCO_ONDE": "Onde atende",
+        "ONDE_TEXTO": "Atende primeiro as conversas novas destes canais.",
+        "ONDE_NENHUM": "Ainda não atende primeiro em nenhum canal.",
+        "ONDE_COMO": "Para trocar, abra o canal e use a aba Agente de IA.",
+        "ABRIR_CANAL": "Abrir canal",
+        "ALTERAR": "Alterar",
+        "MENU_NOME_FOTO": "Mudar nome e foto",
+        "TITULO_FAZ": "O que {nome} faz",
+        "TITULO_CONEXAO": "Como {nome} se conecta",
+        "TITULO_NOME_FOTO": "Nome e foto",
+        "CANCELAR": "Cancelar",
+        "APAGANDO": "Apagando…",
+        "APAGAR_ERRO": "Não deu para apagar agora.",
+        "APAGAR_ERRO_GARANTIA": "{nome} continua como estava."
+      },
+      "CONECTAR_PAGINA": {
+        "VOLTAR": "Voltar para Agentes",
+        "TITULO": "Conectar agente de outro sistema",
+        "ETAPA_NOME": "Quem é",
+        "ETAPA_ENDERECO": "Endereço",
+        "ETAPA_CHAVE": "Chave",
+        "PASSO1_TITULO": "Quem é o agente",
+        "PASSO2_TITULO": "Para onde vão as conversas",
+        "PASSO2_TEXTO": "Cole o endereço do webhook do outro sistema. As conversas novas vão para lá.",
+        "PASSO3_TITULO": "Falta um passo: copie a chave",
+        "PASSO3_TEXTO": "Cole a chave de acesso no outro sistema. Sem ela, {nome} não consegue responder aqui.",
+        "PASSO3_DEPOIS": "Para {nome} começar a atender, escolha-o na aba Agente de IA de um canal.",
+        "CONTINUAR": "Continuar",
+        "VOLTAR_PASSO": "Voltar",
+        "ERRO": "Não deu para conectar agora. Tente de novo."
+      },
+      "ESCOLHER_FOTO": "Escolher foto"
     }
   }
 }

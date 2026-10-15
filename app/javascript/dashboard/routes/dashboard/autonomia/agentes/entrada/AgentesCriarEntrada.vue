@@ -20,6 +20,10 @@ const AgenteCriarPage = defineAsyncComponent(
 const AgenteEscolherPage = defineAsyncComponent(
   () => import('../pages/AgenteEscolherPage.vue')
 );
+// #1648 (mockup-2) — `?conectar=outro`: conectar agente de outro sistema, em página inteira.
+const AgenteConectarPage = defineAsyncComponent(
+  () => import('../pages/AgenteConectarPage.vue')
+);
 
 const jornadaAtiva = useJornadaAtiva();
 // Flag desligada: nada de rota nem roteador aqui, o seletor continua como antes.
@@ -31,7 +35,11 @@ const semEscolha = query =>
   !query.type &&
   !query.agente &&
   !query.atuacao &&
-  !query.papel;
+  !query.papel &&
+  !query.conectar;
+const conectando = computed(
+  () => jornadaAtiva && route.query.conectar === 'outro'
+);
 const escolhendo = computed(() => jornadaAtiva && semEscolha(route.query));
 const veioDaEscolha = ref(false);
 
@@ -42,7 +50,8 @@ const escolher = async query => {
 </script>
 
 <template>
-  <AgenteEscolherPage v-if="escolhendo" @escolher="escolher" />
+  <AgenteConectarPage v-if="conectando" />
+  <AgenteEscolherPage v-else-if="escolhendo" @escolher="escolher" />
   <AgenteCriarPage v-else-if="jornadaAtiva" :focar-titulo="veioDaEscolha" />
   <AgentBuilderPage v-else />
 </template>

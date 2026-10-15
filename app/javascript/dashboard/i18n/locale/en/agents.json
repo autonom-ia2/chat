@@ -1780,13 +1780,49 @@
       "SALVAR": "Save",
       "SALVOU": "Agent saved.",
       "APAGAR": "Delete agent",
-      "PRONTO_TITULO": "Agent connected",
-      "PRONTO_TEXTO": "One step left: copy the access key and paste it in the other system.",
       "CONCLUIR": "Done",
       "APAGAR_TITULO": "Delete {nome}?",
       "APAGAR_TEXTO": "It stops answering on its channels. New conversations go to the people on the team.",
       "APAGAR_CONFIRMAR": "Delete",
-      "APAGOU": "Agent deleted."
+      "APAGOU": "Agent deleted.",
+      "PAGINA": {
+        "CARREGANDO": "Loading the agent",
+        "BLOCO_FAZ": "What it does",
+        "FAZ_VAZIO": "No description yet.",
+        "BLOCO_CONEXAO": "How it connects",
+        "CONEXAO_TEXTO": "Conversations go to this address. The other system replies with the access key.",
+        "BLOCO_ONDE": "Where it answers",
+        "ONDE_TEXTO": "Answers new conversations first on these channels.",
+        "ONDE_NENHUM": "Does not answer first on any channel yet.",
+        "ONDE_COMO": "To change it, open the channel and use the AI agent tab.",
+        "ABRIR_CANAL": "Open channel",
+        "ALTERAR": "Change",
+        "MENU_NOME_FOTO": "Change name and photo",
+        "TITULO_FAZ": "What {nome} does",
+        "TITULO_CONEXAO": "How {nome} connects",
+        "TITULO_NOME_FOTO": "Name and photo",
+        "CANCELAR": "Cancel",
+        "APAGANDO": "Deleting…",
+        "APAGAR_ERRO": "Could not delete right now.",
+        "APAGAR_ERRO_GARANTIA": "{nome} stays as it was."
+      },
+      "CONECTAR_PAGINA": {
+        "VOLTAR": "Back to Agents",
+        "TITULO": "Connect an agent from another system",
+        "ETAPA_NOME": "Who",
+        "ETAPA_ENDERECO": "Address",
+        "ETAPA_CHAVE": "Key",
+        "PASSO1_TITULO": "Who the agent is",
+        "PASSO2_TITULO": "Where conversations go",
+        "PASSO2_TEXTO": "Paste the other system's webhook address. New conversations go there.",
+        "PASSO3_TITULO": "One step left: copy the key",
+        "PASSO3_TEXTO": "Paste the access key in the other system. Without it, {nome} cannot reply here.",
+        "PASSO3_DEPOIS": "For {nome} to start answering, choose it in a channel's AI agent tab.",
+        "CONTINUAR": "Continue",
+        "VOLTAR_PASSO": "Back",
+        "ERRO": "Could not connect right now. Try again."
+      },
+      "ESCOLHER_FOTO": "Choose photo"
     }
   }
 }

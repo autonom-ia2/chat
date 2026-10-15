@@ -21,6 +21,11 @@ const props = defineProps({
 const AgentePage = defineAsyncComponent(
   () => import('../pages/AgentePage.vue')
 );
+// #1648 (mockup-2) — agente de outro sistema (agent_bot webhook): a mesma página, pela mesma rota,
+// com `?origem=webhook` (o id é o do agent_bot).
+const AgenteOutroSistemaPage = defineAsyncComponent(
+  () => import('../pages/AgenteOutroSistemaPage.vue')
+);
 
 const jornadaAtiva = useJornadaAtiva();
 const route = useRoute();
@@ -31,8 +36,13 @@ const gaveta = computed(() =>
 </script>
 
 <template>
+  <AgenteOutroSistemaPage
+    v-if="jornadaAtiva && route.query?.origem === 'webhook'"
+    :key="`webhook-${agentId}`"
+    :bot-id="agentId"
+  />
   <AgentePage
-    v-if="jornadaAtiva"
+    v-else-if="jornadaAtiva"
     :key="agentId"
     :agent-id="agentId"
     :gaveta="gaveta"
