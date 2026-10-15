@@ -100,7 +100,11 @@ const chipClasse = ativo =>
       class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
     >
       <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      {{ $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name }) }}
+      {{
+        robo.tipo_do_principal === 'externo'
+          ? $t('CRM_CAIXAS.PESSOAS.ROBO_EXTERNO', { nome: robo.name })
+          : $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name })
+      }}
     </p>
     <div
       v-if="legado"

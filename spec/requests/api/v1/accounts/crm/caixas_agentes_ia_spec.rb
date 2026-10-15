@@ -142,6 +142,30 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(agentes_da_caixa).to include('pode_mudar' => true, 'disponiveis' => [], 'recusa_area_nova' => 'robo_externo')
   end
 
+  it 'a lista de caixas não consulta se a caixa aceita área nova; só a caixa aberta (#1570)' do
+    allow(Autonomia::Agents::Areas).to receive(:caixa_aceita_area?).and_call_original
+
+    get url, headers: auth_headers(admin)
+
+    caixa = response.parsed_body.dig('payload', 'caixas').find { |item| item.dig('inbox', 'id') == inbox.id }
+    expect(caixa['ai_agents']).not_to have_key('recusa_area_nova')
+    expect(Autonomia::Agents::Areas).not_to have_received(:caixa_aceita_area?)
+
+    expect(agentes_da_caixa).to have_key('recusa_area_nova')
+    expect(Autonomia::Agents::Areas).to have_received(:caixa_aceita_area?).once
+  end
+
+  it 'diz se quem atende primeiro é agente de IA ou agente externo (#1570)' do
+    get "#{url}/#{inbox.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Clara', 'tipo_do_principal' => 'ia')
+
+    externa = create(:inbox, account: account)
+    robo = create(:agent_bot, account: account, name: 'Robô n8n')
+    AgentBotInbox.create!(inbox: externa, agent_bot: robo, account: account, status: :active)
+    get "#{url}/#{externa.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
+  end
+
   it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do
     Autonomia::Agents::Operate::InboxConnector.new(agent: clara, inbox: inbox).perform(connect: false)
 

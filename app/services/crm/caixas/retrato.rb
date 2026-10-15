@@ -2,10 +2,12 @@
 # cuida de quê. Pessoa sem linha de acesso aparece como hoje vê: todos os funis, sem assunto e todas as conversas.
 # Com a Fase 2 dos Agentes, cada caixa leva também `ai_agents` (Crm::Caixas::RetratoDosAgentes, #1447).
 class Crm::Caixas::Retrato
-  def initialize(account:, inboxes:, pode_mudar_agentes: false)
+  # `detalhe: true` (a caixa aberta, #1570): consulta se a caixa aceita agente de área novo. A lista não consulta.
+  def initialize(account:, inboxes:, pode_mudar_agentes: false, detalhe: false)
     @account = account
     @inboxes = inboxes.to_a
     @pode_mudar_agentes = pode_mudar_agentes
+    @detalhe = detalhe
   end
 
   def caixas
@@ -44,12 +46,21 @@ class Crm::Caixas::Retrato
   private
 
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
-  # conversa (Crm::Card#responsible_agent_bot, #1377).
+  # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é o espelho de
+  # um agente dos Agentes IA (um AgentInbox aponta para ele); 'externo' quando é de outro sistema (n8n, Zapier...).
   def robo(inbox)
     vinculo = inbox.agent_bot_inbox
     return unless vinculo&.active? && vinculo.agent_bot
 
-    { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
+    tipo = bots_de_agente.include?(vinculo.agent_bot_id) ? 'ia' : 'externo'
+    { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name, tipo_do_principal: tipo }
+  end
+
+  def bots_de_agente
+    @bots_de_agente ||= begin
+      ids = @inboxes.filter_map { |inbox| inbox.agent_bot_inbox&.agent_bot_id }
+      ::Autonomia::Agents::AgentInbox.where(account_id: @account.id, agent_bot_id: ids).distinct.pluck(:agent_bot_id).to_set
+    end
   end
 
   def agentes_de_ia_da(inbox)
@@ -57,7 +68,9 @@ class Crm::Caixas::Retrato
   end
 
   def agentes_de_ia
-    @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes)
+    @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(
+      account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes, detalhe: @detalhe
+    )
   end
 
   def pessoas(inbox)

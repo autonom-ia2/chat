@@ -17,13 +17,13 @@ const PESSOAS = [
   },
 ];
 
-const render = aiAgents =>
+const render = (aiAgents, robo = { id: 99, name: 'Clara' }) =>
   mount(EtapaPessoas, {
     props: {
       funis: FUNIS,
       todosOsFunis: FUNIS,
       pessoas: PESSOAS,
-      robo: { id: 99, name: 'Clara' },
+      robo,
       aiAgents,
     },
     global: {
@@ -46,6 +46,18 @@ describe('EtapaPessoas', () => {
       'Clara, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
     );
     expect(wrapper.find('[data-agentes]').exists()).toBe(false);
+  });
+
+  it('calls an agent from another system an external agent (#1570)', () => {
+    const wrapper = render(null, {
+      id: 99,
+      name: 'Clara',
+      tipo_do_principal: 'externo',
+    });
+
+    expect(wrapper.find('[data-robo]').text()).toBe(
+      'Clara, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+    );
   });
 
   it('with phase 2 lists the AI agents before the people', () => {

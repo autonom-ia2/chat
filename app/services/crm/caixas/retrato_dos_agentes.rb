@@ -9,13 +9,14 @@
 # - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa que aceita área
 #   agora, Autonomia::Agents::Areas.caixa_aceita_area?).
 # - recusa_area_nova: o código do leitor quando a caixa não aceita área nova (principal_parado, robo_externo,
-#   fase2_desligada); a tela explica. nil quando aceita, ou para quem só lê.
+#   fase2_desligada); a tela explica. Só na caixa aberta; nil quando aceita, ou para quem só lê.
 #   `parado`: entrar na caixa liga o agente.
 class Crm::Caixas::RetratoDosAgentes
-  def initialize(account:, inbox_ids:, pode_mudar:)
+  def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false)
     @account = account
     @inbox_ids = inbox_ids
     @pode_mudar = pode_mudar
+    @detalhe = detalhe
   end
 
   def ligado?
@@ -31,16 +32,15 @@ class Crm::Caixas::RetratoDosAgentes
       porta: porta && { id: porta.agent.id, name: porta.agent.name },
       pode_mudar: @pode_mudar,
       areas: areas(inbox.id),
-      disponiveis: @pode_mudar && recusa.nil? ? disponiveis(inbox.id) : [],
-      recusa_area_nova: recusa
-    }
+      disponiveis: @pode_mudar && recusa.nil? ? disponiveis(inbox.id) : []
+    }.merge(@detalhe ? { recusa_area_nova: recusa } : {})
   end
 
   private
 
-  # Só para quem pode mexer em agentes: quem só lê não vê a lista de quem pode entrar.
+  # Só na caixa aberta (a lista não consulta, #1570) e para quem pode mexer em agentes.
   def recusa_area_nova(inbox)
-    return unless @pode_mudar
+    return unless @detalhe && @pode_mudar
 
     resultado = ::Autonomia::Agents::Areas.caixa_aceita_area?(inbox)
     resultado.ok? ? nil : resultado.codigo.to_s

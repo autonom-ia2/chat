@@ -49,9 +49,9 @@ const CAIXA = {
   },
 };
 
-const render = () =>
+const render = (caixa = CAIXA) =>
   mount(CaixaCartao, {
-    props: { caixa: CAIXA, funis: FUNIS },
+    props: { caixa, funis: FUNIS },
     global: {
       plugins: [
         createI18n({
@@ -84,5 +84,16 @@ describe('CaixaCartao', () => {
     expect(wrapper.find('[data-quem-cuida]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Robô antigo');
     expect(wrapper.text()).not.toContain('Maria');
+  });
+
+  it('says when the first to answer is an external agent (#1570)', () => {
+    const wrapper = render({
+      ...CAIXA,
+      agent_bot: { id: 99, name: 'Robô antigo', tipo_do_principal: 'externo' },
+    });
+
+    expect(wrapper.text()).toContain(
+      'Robô antigo (agente externo) atende primeiro'
+    );
   });
 });
