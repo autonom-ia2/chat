@@ -226,7 +226,8 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     end
 
     # #1648 (decisão do Rodrigo de 15/10, opção B): o agente de outro sistema atende primeiro e a área fica na equipe.
-    it 'caixa com agente de outro sistema aceita área pelo CRM, mostra o agente e a tela a oferece' do
+    it 'com a aba por caixa, caixa com agente de outro sistema aceita área pelo CRM, mostra o agente e a tela a oferece' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       bot = create(:agent_bot, account: account, name: 'Automação')
       AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: bot, account: account)
       get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
@@ -238,6 +239,17 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       expect(response).to have_http_status(:ok)
       expect(Autonomia::Agents::AgentInbox.kept.area.exists?(inbox: so_de_pessoas, agent: marta)).to be(true)
       expect(so_de_pessoas.reload.agent_bot).to eq(bot)
+    end
+
+    it 'sem a aba por caixa, caixa com agente de outro sistema recusa com crm.caixas.robo_externo (como antes do #1648)' do
+      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: create(:agent_bot, account: account), account: account)
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('pode_mudar' => false, 'disponiveis' => [])
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
     end
 
     it 'principal parado recusa com crm.caixas.principal_parado' do

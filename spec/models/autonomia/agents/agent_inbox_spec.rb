@@ -84,10 +84,14 @@ RSpec.describe Autonomia::Agents::AgentInbox do
 
     # #1433: sem porta, a área entra na caixa só de pessoas; #1648 (decisão do Rodrigo de 15/10, opção B): também na caixa
     # com agente de outro sistema atendendo primeiro.
-    it 'aceita área em caixa só de pessoas e em caixa sem porta com agente de outro sistema' do
+    it 'aceita área em caixa só de pessoas e, só com a aba por caixa, em caixa sem porta com agente de outro sistema' do
       expect(area).to be_valid
 
       AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'Parceiro'), account: account)
+      expect(area).not_to be_valid
+      expect(area.tap(&:valid?).errors[:papel]).to be_present
+
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       expect(area).to be_valid
     end
 

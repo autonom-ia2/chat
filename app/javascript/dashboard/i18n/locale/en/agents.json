@@ -1668,6 +1668,7 @@
         "ESCOLHER_DE_NOVO": "Choose the channels again",
         "SO_PESSOAS": "Served only by people; {nome} receives when someone hands over",
         "SO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over",
+        "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
         "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
         "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
         "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team."

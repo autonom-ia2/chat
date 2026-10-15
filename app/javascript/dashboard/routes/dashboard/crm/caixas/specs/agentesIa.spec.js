@@ -186,6 +186,10 @@ describe('erroDosAgentes', () => {
       ehDosAgentes: true,
       alerta: 'PRINCIPAL_PARADO',
     });
+    expect(erroDosAgentes('crm.caixas.robo_externo')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_EXTERNO',
+    });
     expect(erroDosAgentes('crm.caixas.agente_nao_liga')).toEqual({
       ehDosAgentes: true,
       alerta: 'AGENTE_NAO_LIGA',

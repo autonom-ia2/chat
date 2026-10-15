@@ -36,7 +36,8 @@ RSpec.describe Autonomia::Agents::Areas do
     end
 
     # #1648 (decisão do Rodrigo de 15/10, opção B): caixa sem porta e com agente de outro sistema aceita a área.
-    it 'aceita caixa sem porta ativa e com agente de outro sistema' do
+    it 'aceita caixa sem porta ativa e com agente de outro sistema, com a aba por caixa' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       outra_caixa = create(:inbox, account: account)
       AgentBotInbox.create!(inbox: outra_caixa, agent_bot: create(:agent_bot, account: account), account: account)
 

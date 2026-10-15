@@ -619,6 +619,7 @@ en:
           rascunho: '%{nome} is not finished yet. Finish the conversation that creates the agent, then put it on the team of %{canal}.'
           nao_pode_ser_area: '%{nome} cannot be on the team of %{canal}. Paused agents that still have a channel and helpers stay out of teams.'
           sem_principal: 'The main agent of %{canal} is not answering right now. A team agent needs the main agent answering on the channel.'
+          robo_externo: "An external agent answers on %{canal}. A team agent cannot join a channel with an external agent yet."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

@@ -14,6 +14,7 @@ import {
   principalDaCaixa,
   soDePessoas,
 } from '../../utils/ondeTrabalha';
+import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 
 // #1433 (tema 13) — os passos do agente da equipe, como no protótipo aprovado (70a963b461): (1) em quais
 // canais ele fica na equipe e (2) "Confira como fica", uma decisão por tela.
@@ -76,8 +77,12 @@ const comNome = chave =>
     ? t(`${NS}.${chave}_SEM_NOME`)
     : t(`${NS}.${chave}`, { nome: props.nome });
 
+// #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
+const porCaixa = useAgenteIaPorCaixa();
+
 const MOTIVO = {
   [BLOQUEIO.SEM_PRINCIPAL]: () => t(`${NS}.SEM_PRINCIPAL`),
+  [BLOQUEIO.OUTRO_ROBO]: () => t(`${NS}.OUTRO_ROBO`),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t(`${NS}.PRINCIPAL_PARADO`, {
       outro: principalDaCaixa(canal).agent_name,
@@ -91,7 +96,9 @@ const opcoes = computed(() =>
     const bloqueio =
       mudando && props.inicial.includes(canal.inbox_id)
         ? null
-        : bloqueioDaCaixa(canal, props.agenteId);
+        : bloqueioDaCaixa(canal, props.agenteId, {
+            comOutroSistema: porCaixa.value,
+          });
     const principal = principalDaCaixa(canal);
     let texto = enderecoDaCaixa(caixa);
     if (soDePessoas(canal)) texto = comNome('SO_PESSOAS');

@@ -3948,7 +3948,8 @@
       "LIGAR": "Colocar no CRM",
       "PORTA": "{nome} atende primeiro",
       "AREA": "{nome} cuida de {funis}",
-      "ROBO": "{nome} (agente de IA) atende primeiro"
+      "ROBO": "{nome} (agente de IA) atende primeiro",
+      "ROBO_EXTERNO": "{nome} (agente externo) atende primeiro"
     },
     "MODO_RESUMO": {
       "AUTO": "O sistema cria o card quando entende o assunto.",
@@ -4015,7 +4016,8 @@
       "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
       "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
       "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
-      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo."
+      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo.",
+      "ROBO_EXTERNO": "Primeiro atende {nome}, o agente externo. Depois, as pessoas abaixo."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",
@@ -4067,6 +4069,7 @@
       "REGRA_SEM_PORTA": "O agente marcado num assunto assume a conversa.",
       "MOSTRAR_AGENTES": "Mostrar outros agentes ({n})",
       "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
+      "ROBO_EXTERNO": "{nome}, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
       "TIRAR": "Tirar desta caixa",
       "SAI": "Sai desta caixa ao salvar.",
       "VAI_PARAR": "Esta é a única caixa em que {nome} trabalha. Ao salvar, {nome} para de atender.",
@@ -4086,6 +4089,7 @@
       "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
       "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
       "PRINCIPAL_PARADO": "O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.",
+      "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.",
       "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes."
     }
   },

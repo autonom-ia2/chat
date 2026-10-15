@@ -12,7 +12,9 @@
 # conversa por uma passagem; ela nunca abre conversa sozinha (QuemResponde: sem dono e sem porta, ninguém responde).
 # Caixa com agente de outro sistema (AgentBotInbox que não é espelho, como o n8n) também aceita a área (decisão do
 # Rodrigo de 15/10 na #1648, opção B): conversa nova nasce com ele, e a área responde a conversa que alguém passar para
-# ela. O risco de os dois responderem quando o outro sistema não filtra por dono ficou na #1636.
+# ela. O risco de os dois responderem quando o outro sistema não filtra por dono ficou na #1636. Só nas contas com a
+# aba "Agente de IA" por caixa (Autonomia::Agents::AgenteIaPorCaixa); nas outras, a regra de antes: caixa sem porta e
+# com agente de outro sistema é recusada (CaixaNaoAceitaArea com :robo_externo).
 #
 # Os dois métodos são idempotentes e rodam em transação. Soltar arquiva o vínculo (deleted_at) e GUARDA o espelho:
 # ele é o autor das mensagens que a área já mandou (destruir o AgentBot apagaria o autor delas). Vincular de novo
@@ -42,7 +44,7 @@ module Autonomia::Agents::Areas
   end
 
   # Resposta de caixa_aceita_area?: `codigo` é um de CODIGOS.
-  CODIGOS = %i[ok principal_parado fase2_desligada].freeze
+  CODIGOS = %i[ok principal_parado robo_externo fase2_desligada].freeze
   Resultado = Struct.new(:codigo) do
     def ok?
       codigo == :ok
@@ -55,7 +57,9 @@ module Autonomia::Agents::Areas
   # vincular!. Puro: não trava nada (o vincular! chama com a caixa já travada). -> Resultado com o código:
   # - :fase2_desligada — a conta DA CAIXA não tem a Fase 2 (sem ela a área nunca responde);
   # - :principal_parado — a caixa tem principal (porta ativa) e ele não está atendendo;
-  # - :ok — principal atendendo, ou caixa sem principal (só de pessoas ou com agente de outro sistema, #1648).
+  # - :robo_externo — sem principal e com agente de outro sistema, na conta sem a aba "Agente de IA" por caixa;
+  # - :ok — principal atendendo, ou caixa sem principal (só de pessoas ou, com a aba por caixa, com agente de outro
+  #   sistema, #1648).
   # `conferir_fase2: false` é só do vincular!: a Fase 2 é regra da conta, conferida por quem chama (a API de canais e
   # a tela do CRM). O vincular! confere sempre a regra da CAIXA.
   # Tenancy: o principal é lido na conta da caixa.
@@ -64,6 +68,7 @@ module Autonomia::Agents::Areas
 
     porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: inbox.id, account_id: inbox.account_id)
     return Resultado.new(porta.agent&.operating? ? :ok : :principal_parado) if porta
+    return Resultado.new(:robo_externo) if outro_sistema_barra_area?(inbox)
 
     Resultado.new(:ok)
   end
@@ -123,6 +128,13 @@ module Autonomia::Agents::Areas
     end
   end
 
+  # Sem a aba "Agente de IA" por caixa (#1648), a regra de antes da opção B: agente de outro sistema (ativo ou não) na
+  # caixa sem porta não deixa a área entrar.
+  def outro_sistema_barra_area?(inbox)
+    !::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(inbox.account_id) &&
+      ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(inbox, so_ativos: false).exists?
+  end
+
   def vincular_na_caixa!(agent, inbox)
     vinculos = ::Autonomia::Agents::AgentInbox.where(autonomia_agent_id: agent.id, inbox_id: inbox.id)
     vinculos.kept.area.first || reativar!(vinculos.area.order(deleted_at: :desc).first) || criar!(agent, inbox)
@@ -152,5 +164,5 @@ module Autonomia::Agents::Areas
     espelho = AgentBot.new(account: agent.account, name: agent.name, bot_type: :webhook, outgoing_url: nil)
     ::Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: agent.account, agent_bot: espelho, papel: 'area')
   end
-  private_class_method :vincular_na_caixa!, :recusar_quem_nao_pode_ser_area!, :conferir_a_caixa!, :reativar!, :criar!
+  private_class_method :outro_sistema_barra_area?, :vincular_na_caixa!, :recusar_quem_nao_pode_ser_area!, :conferir_a_caixa!, :reativar!, :criar!
 end

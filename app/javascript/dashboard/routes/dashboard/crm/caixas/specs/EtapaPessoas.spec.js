@@ -5,6 +5,16 @@ import { agentesParaFormulario } from '../helpers/agentesIa';
 import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
+// #1648 — a aba "Agente de IA" por caixa da conta (desligada: como a main).
+const porCaixa = vi.hoisted(() => ({ ligada: false }));
+vi.mock(
+  'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa',
+  async () => {
+    const { computed } = await import('vue');
+    return { useAgenteIaPorCaixa: () => computed(() => porCaixa.ligada) };
+  }
+);
+
 const FUNIS = [{ id: 1, name: 'Comercial' }];
 const PESSOAS = [
   {
@@ -39,6 +49,10 @@ const render = (aiAgents, robo = { id: 99, name: 'Clara' }) =>
   });
 
 describe('EtapaPessoas', () => {
+  beforeEach(() => {
+    porCaixa.ligada = false;
+  });
+
   it('without phase 2 keeps the sentence about the robot, as before', () => {
     const wrapper = render(null);
 
@@ -48,7 +62,7 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-agentes]').exists()).toBe(false);
   });
 
-  it('calls an agent from another system an AI agent, like ours (#1570, #1648)', () => {
+  it('calls an agent from another system an external agent (#1570)', () => {
     const wrapper = render(null, {
       id: 99,
       name: 'Clara',
@@ -56,7 +70,7 @@ describe('EtapaPessoas', () => {
     });
 
     expect(wrapper.find('[data-robo]').text()).toBe(
-      'Clara, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+      'Clara, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
     );
   });
 
@@ -72,39 +86,9 @@ describe('EtapaPessoas', () => {
     );
 
     expect(wrapper.find('[data-robo]').text()).toBe(
-      'Robô n8n, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+      'Robô n8n, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
     );
     expect(wrapper.find('[data-porta]').exists()).toBe(false);
-  });
-
-  it('with phase 2, the agent from another system gets its card, as an AI agent, and the team agents stay (#1648, option B)', () => {
-    const wrapper = render(
-      agentesParaFormulario({
-        porta: null,
-        pode_mudar: true,
-        externo: { id: 99, name: 'Automação Vendas' },
-        areas: [],
-        disponiveis: [],
-      }),
-      { id: 99, name: 'Automação Vendas', tipo_do_principal: 'externo' }
-    );
-
-    expect(wrapper.find('[data-externo]').text()).toBe(
-      'Agente de IA: Automação Vendas, atende primeiro'
-    );
-    expect(wrapper.find('[data-motivo-externo]').exists()).toBe(false);
-    expect(wrapper.find('[data-robo]').exists()).toBe(false);
-    expect(wrapper.find('[data-regra]').text()).toBe(
-      'O agente marcado num assunto assume a conversa; sem agente, Automação Vendas continua.'
-    );
-    expect(wrapper.find('[data-porta]').exists()).toBe(false);
-  });
-
-  it('says "agent", not "robot", when the conversation is handed over', () => {
-    const wrapper = render(null);
-
-    expect(wrapper.text()).toContain('Quando o agente passa a conversa');
-    expect(wrapper.text().toLowerCase()).not.toContain('robô');
   });
 
   it('with phase 2 lists the AI agents before the people', () => {
@@ -129,5 +113,62 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-porta]').text()).toContain('Clara');
     expect(wrapper.find('[data-agente-area="Maria"]').exists()).toBe(true);
     expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
+  });
+  // #1648 — com a aba "Agente de IA" por caixa ligada na conta.
+  describe('with the AI agent tab per inbox on', () => {
+    beforeEach(() => {
+      porCaixa.ligada = true;
+    });
+
+    it('calls an agent from another system an AI agent, like ours', () => {
+      const wrapper = render(null, {
+        id: 99,
+        name: 'Clara',
+        tipo_do_principal: 'externo',
+      });
+
+      expect(wrapper.find('[data-robo]').text()).toBe(
+        'Clara, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+      );
+    });
+
+    it('gives the agent from another system its card, and the team agents stay (option B)', () => {
+      const wrapper = render(
+        agentesParaFormulario({
+          porta: null,
+          pode_mudar: true,
+          externo: { id: 99, name: 'Automação Vendas' },
+          areas: [],
+          disponiveis: [],
+        }),
+        { id: 99, name: 'Automação Vendas', tipo_do_principal: 'externo' }
+      );
+
+      expect(wrapper.find('[data-externo]').text()).toBe(
+        'Agente de IA: Automação Vendas, atende primeiro'
+      );
+      expect(wrapper.find('[data-robo]').exists()).toBe(false);
+      expect(wrapper.find('[data-regra]').text()).toBe(
+        'O agente marcado num assunto assume a conversa; sem agente, Automação Vendas continua.'
+      );
+    });
+  });
+
+  it('with the AI agent tab per inbox off, ignores the card of the agent from another system, as before', () => {
+    const wrapper = render(
+      agentesParaFormulario({
+        porta: null,
+        pode_mudar: false,
+        externo: { id: 99, name: 'Automação Vendas' },
+        areas: [],
+        disponiveis: [],
+      }),
+      { id: 99, name: 'Automação Vendas', tipo_do_principal: 'externo' }
+    );
+
+    expect(wrapper.find('[data-externo]').exists()).toBe(false);
+    expect(wrapper.find('[data-robo]').text()).toContain(
+      'o agente externo desta caixa'
+    );
   });
 });

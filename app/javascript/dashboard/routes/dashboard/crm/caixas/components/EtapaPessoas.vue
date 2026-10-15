@@ -3,7 +3,8 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgentesDaCaixa from './AgentesDaCaixa.vue';
-import { corDoFunil, portaOuRobo } from '../helpers/caixa';
+import { useAgenteIaPorCaixa } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
+import { corDoFunil, portaOuRobo, roboExterno } from '../helpers/caixa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
@@ -32,9 +33,13 @@ const aiAgents = defineModel('aiAgents', { type: Object, default: null });
 
 const porta = computed(() => portaOuRobo(aiAgents.value?.porta, props.robo));
 // Agente de outro sistema que atende primeiro, como o servidor diz
-// (`ai_agents.externo`, #1648). Os agentes da equipe convivem com ele (decisão
-// do Rodrigo de 15/10, opção B): sem agente marcado no assunto, ele continua.
-const externo = computed(() => aiAgents.value?.externo || null);
+// (`ai_agents.externo`, #1648). Só com a aba "Agente de IA" por caixa ligada na
+// conta: os agentes da equipe convivem com ele (decisão do Rodrigo de 15/10,
+// opção B) e, sem agente marcado no assunto, ele continua. Desligada, como antes.
+const porCaixa = useAgenteIaPorCaixa();
+const externo = computed(() =>
+  porCaixa.value ? aiAgents.value?.externo || null : null
+);
 // A frase do robô: sem a Fase 2, como sempre; com ela, só quando o robô não
 // entra como porta nem como o cartão do agente externo (#1570, #1648).
 const mostraORobo = computed(
@@ -107,7 +112,11 @@ const chipClasse = ativo =>
       class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
     >
       <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      {{ $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name }) }}
+      {{
+        roboExterno(robo) && !porCaixa
+          ? $t('CRM_CAIXAS.PESSOAS.ROBO_EXTERNO', { nome: robo.name })
+          : $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name })
+      }}
     </p>
     <div
       v-if="legado"

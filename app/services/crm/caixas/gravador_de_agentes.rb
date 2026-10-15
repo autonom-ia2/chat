@@ -15,6 +15,7 @@ class Crm::Caixas::GravadorDeAgentes
   # Código do Autonomia::Agents::Areas.caixa_aceita_area? (leitor único da regra da caixa, #1433) -> código da tela.
   CODIGO_DA_CAIXA = {
     principal_parado: 'crm.caixas.principal_parado',
+    robo_externo: 'crm.caixas.robo_externo',
     fase2_desligada: 'crm.caixas.agentes_desligados'
   }.freeze
 

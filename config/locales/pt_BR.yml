@@ -1091,6 +1091,7 @@ pt_BR:
           rascunho: "%{nome} ainda não está pronto. Termine a conversa que cria o agente e depois ponha ele na equipe de %{canal}."
           nao_pode_ser_area: "%{nome} não pode ficar na equipe de %{canal}. Agente pausado que ainda tem canal e ajudante ficam fora da equipe."
           sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
+          robo_externo: "Um agente externo atende em %{canal}. O agente da equipe ainda não entra em canal com agente externo."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'

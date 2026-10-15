@@ -75,7 +75,8 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
 
     # #1648 (decisão do Rodrigo de 15/10, opção B): a área entra em caixa com agente de outro sistema, que continua
     # atendendo primeiro.
-    it 'vincula como área a caixa com agente de outro sistema, que continua sendo o robô da caixa' do
+    it 'com a aba por caixa, vincula como área a caixa com agente de outro sistema, que continua sendo o robô da caixa' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       externa = create(:inbox, account: account, name: 'Site')
       bot = create(:agent_bot, account: account)
       AgentBotInbox.create!(inbox: externa, agent_bot: bot)
@@ -86,6 +87,16 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
       expect(Autonomia::Agents::AgentInbox.kept.find_by(agent: novo, inbox: externa)).to have_attributes(papel: 'area')
       expect(externa.reload.agent_bot).to eq(bot)
       expect(novo.reload).to have_attributes(status: 'active', enabled: true)
+    end
+
+    it 'sem a aba por caixa, devolve 422 para caixa com agente de outro sistema, e nada muda (como antes do #1648)' do
+      externa = create(:inbox, account: account, name: 'Site')
+      AgentBotInbox.create!(inbox: externa, agent_bot: create(:agent_bot, account: account))
+
+      expect { pedir_area(novo, externa) }.not_to change(Autonomia::Agents::AgentInbox, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:robo_externo, caixa: externa))
     end
 
     it 'confere o principal dentro da trava: se ele parar entre a leitura e o vínculo, 422 e nada muda' do

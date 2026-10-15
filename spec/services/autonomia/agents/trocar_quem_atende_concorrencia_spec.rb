@@ -8,7 +8,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::TrocarQuemAtende, :relationships_committed_fixtures do
   self.use_transactional_tests = false
 
-  let!(:account) { create(:account) }
+  let!(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let!(:inbox) { create(:inbox, account: account) }
   let!(:agente) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'custom', status: :active, enabled: true)

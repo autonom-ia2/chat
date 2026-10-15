@@ -11,6 +11,7 @@ import {
   principalDaCaixa,
   soDePessoas,
 } from '../../utils/ondeTrabalha';
+import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 
 // #1433 (decisão do Rodrigo de 15/10, "a, para todos os agentes") — na gaveta "Onde e quando {nome}
 // responde", logo abaixo de "Onde atende": as OUTRAS caixas em que o agente também recebe quando alguém
@@ -32,7 +33,11 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 
+// #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
+const porCaixa = useAgenteIaPorCaixa();
+
 const MOTIVO = {
+  [BLOQUEIO.OUTRO_ROBO]: () => t('AGENTS.JORNADA.EQUIPE.OUTRO_ROBO'),
   [BLOQUEIO.SEM_PRINCIPAL]: () => t('AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t('AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO', {
@@ -54,20 +59,20 @@ const textoDaCaixa = (canal, caixa, bloqueio) => {
 };
 
 const opcoes = computed(() =>
-  outrasCaixasDaEquipe(props.canais, props.agenteId, props.fora).map(
-    ({ canal, bloqueio }) => {
-      const caixa = caixaPeloId(props.caixas, canal.inbox_id);
-      const tipo = chaveDoTipoDaCaixa(canal);
-      return {
-        valor: canal.inbox_id,
-        titulo: canal.name,
-        etiqueta: tipo ? t(`AGENTS.JORNADA.ONDE_QUANDO.TIPO.${tipo}`) : '',
-        texto: textoDaCaixa(canal, caixa, bloqueio),
-        desabilitada: Boolean(bloqueio),
-        motivo: bloqueio ? MOTIVO[bloqueio](canal) : '',
-      };
-    }
-  )
+  outrasCaixasDaEquipe(props.canais, props.agenteId, props.fora, {
+    comOutroSistema: porCaixa.value,
+  }).map(({ canal, bloqueio }) => {
+    const caixa = caixaPeloId(props.caixas, canal.inbox_id);
+    const tipo = chaveDoTipoDaCaixa(canal);
+    return {
+      valor: canal.inbox_id,
+      titulo: canal.name,
+      etiqueta: tipo ? t(`AGENTS.JORNADA.ONDE_QUANDO.TIPO.${tipo}`) : '',
+      texto: textoDaCaixa(canal, caixa, bloqueio),
+      desabilitada: Boolean(bloqueio),
+      motivo: bloqueio ? MOTIVO[bloqueio](canal) : '',
+    };
+  })
 );
 </script>
 

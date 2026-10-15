@@ -5,7 +5,7 @@ require 'rails_helper'
 # área fica (decisão do Rodrigo de 15/10, opção B). Espelho de agente da plataforma nunca entra por aqui. Vale para todas
 # as contas.
 RSpec.describe 'Inbox set_agent_bot with platform agents', type: :request do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:externo) { create(:agent_bot, account: account, name: 'Robo n8n', outgoing_url: 'https://n8n.example.com/hook') }

@@ -4,7 +4,7 @@ require 'rails_helper'
 # atende hoje pelo caminho certo (InboxConnector para agente da plataforma, AgentBotInbox para agente de outro sistema) e
 # põe o novo, numa transação. As áreas da caixa ficam (#1621).
 RSpec.describe 'Autonomia quem_atende: trocar', type: :request do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:url) { "/api/v1/accounts/#{account.id}/autonomia/inboxes/#{inbox.id}/quem_atende" }
@@ -329,6 +329,62 @@ RSpec.describe 'Autonomia quem_atende: trocar', type: :request do
     end
   end
 
+  # Decisão do Rodrigo (#1648): a Lia (Agente de Cotação) aparece nas opções como qualquer agente.
+  describe 'a Lia (Agente de Cotação)' do
+    let(:config_da_lia) { { 'agente_de_cotacao' => { 'ramos' => ['auto'] } } }
+    let(:lia) { agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false, config: config_da_lia) }
+
+    def especialista!(slug)
+      Autonomia::Agents::Specialist.create!(agent: lia, account: account, slug: slug, name: slug, description: 'cota',
+                                            instruction: 'Cote.')
+    end
+
+    def retrato_da_lia
+      lia.reload
+      { config: lia.config, instruction: lia.instruction, agent_type: lia.agent_type,
+        especialistas: lia.specialists.order(:id).pluck(:slug, :instruction, :enabled) }
+    end
+
+    it 'aparece nas opções como qualquer agente' do
+      lia
+
+      get url, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['opcoes']).to include('tipo' => 'plataforma', 'id' => lia.id, 'name' => 'Lia', 'recusa' => nil)
+    end
+
+    it 'entra num canal: vira quem atende primeiro e passa a atender' do
+      trocar(agent_id: lia.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(porta_da_caixa.autonomia_agent_id).to eq(lia.id)
+      expect(lia.reload).to have_attributes(status: 'active', enabled: true)
+    end
+
+    it 'sai do único canal dela: o InboxConnector a tira e ela para' do
+      porta!(lia.tap { |agente| agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) }) # rubocop:disable Rails/SkipsModelValidations
+
+      trocar(nenhum: true)
+
+      expect(response).to have_http_status(:ok)
+      expect(porta_da_caixa).to be_nil
+      expect(lia.reload).to have_attributes(status: 'paused', enabled: false)
+    end
+
+    it 'com especialistas: entrar e sair não mexe nos especialistas nem na configuração dela' do
+      especialista!('cotacao_auto')
+      especialista!('cotacao_residencial')
+      antes = retrato_da_lia
+
+      trocar(agent_id: lia.id)
+      expect(retrato_da_lia).to eq(antes.merge)
+      trocar(agent_bot_id: outro_sistema.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(retrato_da_lia).to eq(antes)
+    end
+  end
+
   describe 'pedido e permissão' do
     it 'refuses a request with more than one target' do
       trocar(agent_bot_id: outro_sistema.id, nenhum: true)
@@ -348,7 +404,7 @@ RSpec.describe 'Autonomia quem_atende: trocar', type: :request do
     end
 
     it 'does not find a platform agent when the account has no Agents module' do
-      sem_modulo = create(:account)
+      sem_modulo = create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true })
       dono = create(:user, account: sem_modulo, role: :administrator)
       caixa = create(:inbox, account: sem_modulo)
       agent = Autonomia::Agents::Agent.create!(account: sem_modulo, name: 'Sofia', agent_type: 'custom')

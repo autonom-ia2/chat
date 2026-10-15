@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
+import { useAgenteIaPorCaixa } from '../composables/useAgenteIaPorCaixa';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
@@ -62,7 +63,11 @@ const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 // #1648 — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
 const bots = useMapGetter('agentBots/getBots');
-const outrosSistemas = computed(() => agentesDeOutroSistema(bots.value));
+// Só com a aba "Agente de IA" por caixa ligada na conta (piloto); desligada, a lista de sempre.
+const porCaixa = useAgenteIaPorCaixa();
+const outrosSistemas = computed(() =>
+  porCaixa.value ? agentesDeOutroSistema(bots.value) : []
+);
 
 const carregando = ref(true);
 const falhou = ref(false);
@@ -326,7 +331,7 @@ const excluir = async () => {
 
 onMounted(() => {
   carregar();
-  store.dispatch('agentBots/get');
+  if (porCaixa.value) store.dispatch('agentBots/get');
   relogioDasLeituras = setTimeout(() => {
     esperaVencida.value = true;
   }, ESPERA_MAXIMA_DAS_LEITURAS_MS);
@@ -536,7 +541,7 @@ onBeforeUnmount(() => {
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
             </AgenteBotao>
             <AgenteBotao
-              v-if="isAdmin"
+              v-if="isAdmin && porCaixa"
               data-conectar-outro
               variante="fantasma"
               icone="i-lucide-link"

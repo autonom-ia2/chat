@@ -53,10 +53,17 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(codigo).to have_attributes(codigo: :principal_parado, ok?: false)
     end
 
-    it ':ok sem principal e com agente de outro sistema atendendo primeiro (#1648, opção B)' do
+    it ':ok sem principal e com agente de outro sistema atendendo primeiro, com a aba por caixa ligada (#1648, opção B)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       agente_de_outro_sistema(inbox)
 
       expect(codigo).to have_attributes(codigo: :ok, ok?: true)
+    end
+
+    it ':robo_externo sem principal e com agente de outro sistema, sem a aba por caixa (como antes do #1648)' do
+      agente_de_outro_sistema(inbox).update!(status: :inactive)
+
+      expect(codigo).to have_attributes(codigo: :robo_externo, ok?: false)
     end
 
     it ':fase2_desligada quando a conta da caixa não tem a Fase 2, antes de olhar a caixa' do
@@ -68,7 +75,7 @@ RSpec.describe Autonomia::Agents::Areas do
     end
 
     it 'só devolve códigos da lista fechada' do
-      expect(described_class::CODIGOS).to eq(%i[ok principal_parado fase2_desligada])
+      expect(described_class::CODIGOS).to eq(%i[ok principal_parado robo_externo fase2_desligada])
     end
 
     it 'isola a conta: a Fase 2 e o principal são lidos da conta da caixa' do

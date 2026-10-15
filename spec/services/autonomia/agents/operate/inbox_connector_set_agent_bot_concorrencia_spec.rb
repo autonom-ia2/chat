@@ -7,7 +7,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Operate::InboxConnector, :relationships_committed_fixtures do
   self.use_transactional_tests = false
 
-  let!(:account) { create(:account) }
+  let!(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let!(:admin) { create(:user, account: account, role: :administrator) }
   let!(:inbox) { create(:inbox, account: account) }
   let!(:agente) do

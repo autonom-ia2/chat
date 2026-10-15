@@ -3,7 +3,7 @@ require 'rails_helper'
 # #1648 (revisão) — trocar quem atende primeiro pede inbox_manage e, quando mexe em agente da plataforma (o que sai ou o
 # que entra), também autonomia_manage. inbox_manage é delegável por função; mexer em agente da plataforma não vem junto.
 RSpec.describe 'Autonomia quem_atende with custom roles', type: :request do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_agente_ia_por_caixa' => true }) }
   let(:inbox) { create(:inbox, account: account) }
   let(:url) { "/api/v1/accounts/#{account.id}/autonomia/inboxes/#{inbox.id}/quem_atende" }
   let(:automacao) { create(:agent_bot, account: account, name: 'Automação', outgoing_url: 'https://automacao.example.com/hook') }

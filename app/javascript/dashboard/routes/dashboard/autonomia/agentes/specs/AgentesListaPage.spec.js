@@ -670,7 +670,16 @@ describe('AgentesListaPage', () => {
       occupied_by: ocupadoPor,
     });
 
+    // A aba "Agente de IA" por caixa ligada na conta (#1648).
+    const ligarPorCaixa = (ligada = true) => {
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agente_ia_por_caixa: ligada,
+      });
+      store.state.getCurrentAccountId = 1;
+    };
+
     beforeEach(() => {
+      ligarPorCaixa();
       store.state['agentBots/getBots'] = BOTS;
       api.canaisOcupados.mockResolvedValue({
         data: {
@@ -714,6 +723,16 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('with the AI agent tab per inbox off, the list is as before: no agents from another system, no Connect', async () => {
+      ligarPorCaixa(false);
+      const wrapper = await montar();
+
+      expect(wrapper.find('[data-outro-sistema]').exists()).toBe(false);
+      expect(wrapper.find('[data-conectar-outro]').exists()).toBe(false);
+      expect(store.dispatch).not.toHaveBeenCalledWith('agentBots/get');
+      wrapper.unmount();
+    });
+
     it('opens the agent page with origem=webhook', async () => {
       const wrapper = await montar();
       await wrapper.get('[data-outro-sistema] a').trigger('click');
@@ -744,6 +763,7 @@ describe('AgentesListaPage', () => {
 
     it('is not an empty list when the account only has agents from another system', async () => {
       prepararStore({ agentes: [] });
+      ligarPorCaixa();
       store.state['agentBots/getBots'] = BOTS;
       const wrapper = await montar();
 

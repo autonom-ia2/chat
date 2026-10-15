@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import AgenteIa from './AgenteIa.vue';
+import { useAgenteIaPorCaixa } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import FunilSelo from './FunilSelo.vue';
 import {
   assuntosDe,
@@ -14,6 +15,7 @@ import {
   primeiroNome,
   quemCuida,
   quemFazTriagem,
+  roboExterno,
 } from '../helpers/caixa';
 import {
   agentesDoFormulario,
@@ -34,6 +36,8 @@ const props = defineProps({
 });
 
 const { t, locale } = useI18n();
+// #1648 — com a aba "Agente de IA" por caixa, o agente de outro sistema é um agente de IA como os nossos.
+const porCaixa = useAgenteIaPorCaixa();
 
 const funisMarcados = computed(() => funisDaCaixa(props.form, props.funis));
 const varios = computed(() => funisMarcados.value.length > 1);
@@ -255,7 +259,13 @@ const lista = computed(() =>
           class="mb-0 flex items-center gap-2 text-[0.9375rem] text-n-slate-12"
         >
           <span class="i-lucide-bot size-4" aria-hidden="true" />
-          {{ $t('CRM_CAIXAS.CONFIRA.ROBO', { nome: form.agent_bot.name }) }}
+          {{
+            roboExterno(form.agent_bot) && !porCaixa
+              ? $t('CRM_CAIXAS.CONFIRA.ROBO_EXTERNO', {
+                  nome: form.agent_bot.name,
+                })
+              : $t('CRM_CAIXAS.CONFIRA.ROBO', { nome: form.agent_bot.name })
+          }}
         </p>
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
           <li

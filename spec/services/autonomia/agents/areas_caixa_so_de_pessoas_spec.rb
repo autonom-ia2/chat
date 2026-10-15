@@ -40,13 +40,23 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(described_class.vincular!(agent: agente('Suporte'), inbox: inbox)).to have_attributes(papel: 'area')
     end
 
-    it 'aceita a caixa com agente de outro sistema: a área entra e ele continua sendo o robô da caixa (#1648)' do
+    it 'aceita a caixa com agente de outro sistema com a aba por caixa: a área entra e ele continua sendo o robô (#1648)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       bot_inbox = agente_de_outro_sistema(inbox)
 
       vinculo = described_class.vincular!(agent: da_equipe, inbox: inbox)
 
       expect(vinculo).to have_attributes(papel: 'area', deleted_at: nil)
       expect(AgentBotInbox.where(inbox_id: inbox.id).pluck(:agent_bot_id)).to eq([bot_inbox.agent_bot_id])
+    end
+
+    it 'sem a aba por caixa, recusa a caixa com agente de outro sistema, sem deixar espelho nem vínculo' do
+      agente_de_outro_sistema(inbox)
+
+      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
+        .and(not_change(AgentBot, :count))
+        .and(not_change(Autonomia::Agents::AgentInbox, :count))
     end
 
     it 'caixa com principal parado continua recusada' do

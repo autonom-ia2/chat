@@ -16,6 +16,9 @@
 # dos dois espera o outro e enxerga o que ele gravou.
 module Autonomia::Agents::CaixaSemAgenteExterno
   def set_agent_bot
+    # Só nas contas com a aba "Agente de IA" por caixa (#1648); nas outras, o set_agent_bot do Chatwoot.
+    return super unless ::Autonomia::Agents::AgenteIaPorCaixa.ligada?(Current.account)
+
     codigo = nil
     ActiveRecord::Base.transaction do
       travar_agentes_e_caixa!

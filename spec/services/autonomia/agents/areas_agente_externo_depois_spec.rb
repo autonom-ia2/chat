@@ -5,7 +5,7 @@ require 'rails_helper'
 # aceito e a área fica. Ela continua válida e dona das conversas dela; conversa nova nasce com o agente de outro
 # sistema. O risco de os dois responderem quando o outro sistema não filtra por dono ficou na #1636.
 RSpec.describe Autonomia::Agents::Areas, type: :request do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:da_equipe) do

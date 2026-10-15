@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # chat#1626 — a API pública de robôs (Configurações › Agentes externos) não lista nem deixa mexer no espelho.
 RSpec.describe 'Agent bots API without platform agent mirrors', type: :request do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:headers) { admin.create_new_auth_token }
   let(:inbox) { create(:inbox, account: account) }

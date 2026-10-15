@@ -36,9 +36,8 @@ module Autonomia
     # - porta: atende primeiro todas as conversas da caixa. Uma por caixa; o espelho dela tem o AgentBotInbox, então é
     #   o inbox.agent_bot (InboxConnector).
     # - area:  agente da equipe; recebe a conversa quando alguém passa (vira o ai_assignee com o espelho dele). Em
-    #   caixa com porta ativa ou sem porta (só de pessoas ou com agente de outro sistema, #1648); espelho próprio SEM
-    #   AgentBotInbox
-    #   (Autonomia::Agents::Areas).
+    #   caixa com porta ativa ou sem porta (só de pessoas ou, com a aba "Agente de IA" por caixa, com agente de outro
+    #   sistema, #1648); espelho próprio SEM AgentBotInbox (Autonomia::Agents::Areas).
     # Um agente tem no máximo um vínculo ativo por caixa. Quem responde a conversa: Autonomia::Agents::QuemResponde.
     class AgentInbox < ApplicationRecord
       self.table_name = 'autonomia_agent_inboxes'
@@ -62,6 +61,7 @@ module Autonomia
       validates :papel, inclusion: { in: PAPEIS }
       validates :inbox_id, uniqueness: { conditions: -> { kept.porta } }, if: -> { deleted_at.nil? && porta? }
       validates :autonomia_agent_id, uniqueness: { scope: :inbox_id, conditions: -> { kept } }, if: -> { deleted_at.nil? }
+      validate :area_precisa_de_porta_ou_caixa_sem_outro_sistema, if: -> { deleted_at.nil? && area? }
       # Tenancy (defesa em profundidade): o runtime resolve o vínculo só por inbox_id
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
@@ -167,6 +167,16 @@ module Autonomia
         ActiveRecord.after_all_transactions_commit do
           ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
         end
+      end
+
+      # Caixa com porta ativa, ou sem porta e sem agente de outro sistema (#1433). Com a aba "Agente de IA" por caixa
+      # ligada na conta (#1648, opção B), a área também convive com agente de outro sistema.
+      def area_precisa_de_porta_ou_caixa_sem_outro_sistema
+        return if inbox.blank? || ::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(inbox.account_id)
+        return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
+        return unless ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(inbox, so_ativos: false).exists?
+
+        errors.add(:papel, 'area requires an active porta or an inbox served only by people')
       end
 
       def mirror_bot_inboxes

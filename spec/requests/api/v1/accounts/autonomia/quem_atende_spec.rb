@@ -3,7 +3,7 @@ require 'rails_helper'
 # chat#1648 — a aba "Agente de IA" da caixa lê quem atende ali (agente da plataforma ou de outro sistema), quem atende
 # primeiro e as opções da troca. Sem flag (jornada ou Fase 2) e com a autorização da tela de configuração da caixa.
 RSpec.describe 'Autonomia quem_atende API', type: :request do
-  let(:account) { create(:account) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:url) { "/api/v1/accounts/#{account.id}/autonomia/inboxes/#{inbox.id}/quem_atende" }
@@ -55,7 +55,7 @@ RSpec.describe 'Autonomia quem_atende API', type: :request do
   end
 
   describe 'opcoes' do
-    let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+    let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_agente_ia_por_caixa' => true }) }
 
     around do |example|
       with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run }
@@ -85,7 +85,7 @@ RSpec.describe 'Autonomia quem_atende API', type: :request do
     end
 
     it 'offers only agents from another system when the account has no Agents module' do
-      sem_modulo = create(:account)
+      sem_modulo = create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true })
       dono = create(:user, account: sem_modulo, role: :administrator)
       caixa = create(:inbox, account: sem_modulo)
       Autonomia::Agents::Agent.create!(account: sem_modulo, name: 'Sofia', agent_type: 'custom')

@@ -6,7 +6,7 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ResponsibleAgentSync do
   include ActiveJob::TestHelper
 
-  let(:account) { create(:account) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agente_ia_por_caixa' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
   let(:contact) { create(:contact, account: account, name: 'Joana Lima') }

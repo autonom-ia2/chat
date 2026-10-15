@@ -1668,6 +1668,7 @@
         "ESCOLHER_DE_NOVO": "Escolher os canais de novo",
         "SO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar",
         "SO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar",
+        "OUTRO_ROBO": "Um agente externo atende neste canal. O agente da equipe ainda não entra em canal com agente externo.",
         "AVISO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar. Conversa nova continua com as pessoas.",
         "AVISO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar. Conversa nova continua com as pessoas.",
         "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe."

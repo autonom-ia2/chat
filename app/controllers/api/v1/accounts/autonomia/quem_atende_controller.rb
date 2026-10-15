@@ -1,11 +1,13 @@
 # chat#1648 — a aba "Agente de IA" da caixa: quem atende primeiro, quem também recebe quando alguém passa, e a troca.
-# Fora da base dos Agentes (sem flag de módulo, de jornada ou de Fase 2): a aba vale para todas as contas e troca também
-# agente de outro sistema. Agente da plataforma só com o módulo de Agentes ligado na conta (404 sem ele, como a API deles).
+# Fora da base dos Agentes (sem flag de módulo, de jornada ou de Fase 2), mas atrás da chave da conta
+# Autonomia::Agents::AgenteIaPorCaixa (404 sem ela). Troca também agente de outro sistema. Agente da plataforma só com o
+# módulo de Agentes ligado na conta (404 sem ele, como a API deles).
 # Ler: a autorização da tela de configuração da caixa (InboxPolicy#settings?). Trocar: a do set_agent_bot
 # (InboxPolicy#set_agent_bot?, inbox_manage) e, quando a troca mexe em agente da plataforma (o que sai ou o que entra),
 # também autonomia_manage: inbox_manage pode ser delegada por função, e mexer em agente da plataforma é da função de
 # Agentes. Troca só entre agentes de outro sistema (ou com ninguém) basta inbox_manage.
 class Api::V1::Accounts::Autonomia::QuemAtendeController < Api::V1::Accounts::BaseController
+  before_action :ensure_flag
   before_action :fetch_inbox
 
   # { agentes: [{ tipo, id, name, papel, avatar_url }], primeiro: { tipo, id, name } | null,
@@ -30,6 +32,11 @@ class Api::V1::Accounts::Autonomia::QuemAtendeController < Api::V1::Accounts::Ba
   end
 
   private
+
+  # Só nas contas com a aba "Agente de IA" por caixa (#1648); fora delas a caixa tem a aba Robô de sempre.
+  def ensure_flag
+    head :not_found unless ::Autonomia::Agents::AgenteIaPorCaixa.ligada?(Current.account)
+  end
 
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
