@@ -43,6 +43,15 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(Crm::Ai::UsageRecorder).to have_received(:record).once
   end
 
+  # Ida que volta sem texto foi cobrada pela OpenAI: grava antes de levantar `empty_response`.
+  it 'sem ferramentas e com texto vazio, grava uma vez e levanta', :aggregate_failures do
+    responder_com([{ 'usage' => uso, 'output' => [] }])
+
+    expect { cliente.create(model: 'm', instructions: 'i', input: 'oi') }
+      .to raise_error(described_class::Error, 'empty_response')
+    expect(Crm::Ai::UsageRecorder).to have_received(:record).once
+  end
+
   it 'com ferramentas e resposta direta, grava uma vez' do
     responder_com([respondendo])
 
