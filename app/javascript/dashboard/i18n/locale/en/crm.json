@@ -1547,6 +1547,8 @@
         "TEXT": "The subject is now {pipeline}. Do you want to pass it to the {pipeline} team?",
         "PASS": "Pass to the {pipeline} team",
         "KEEP": "Keep the conversation",
+        "NOBODY_ONLINE": "Nobody from the {pipeline} team is online; the conversation will wait for someone to come in.",
+        "PASS_ANYWAY": "Pass anyway",
         "DONE": "Conversation passed to the {pipeline} team.",
         "ERROR": "Could not answer. The subject may have changed; check again."
       }

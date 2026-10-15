@@ -56,9 +56,20 @@ RSpec.describe Crm::Repasse do
 
       expect(marca).to include('card_id' => card.id, 'pipeline_id' => agentes.first.id, 'user_id' => ana.id)
       expect(conversation.reload.assignee).to eq(ana)
-      expect(described_class.para(conversation, ana)).to eq(card_id: card.id, pipeline_name: 'Agentes de IA')
+      expect(described_class.para(conversation, ana)).to eq(card_id: card.id, pipeline_name: 'Agentes de IA', equipe_online: true)
       expect(described_class.para(conversation, bia)).to be_nil
       expect(Crm::Subjects::Notifier).to have_received(:notify).once
+    end
+
+    it 'avisa quando ninguém da equipe nova está online (Passar vai deixar a conversa esperando)' do
+      card_em(agentes)
+      described_class.sugerir!(conversation.reload)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online', bia.id.to_s => 'busy' })
+
+      expect(described_class.para(conversation.reload, ana)).to include(equipe_online: false)
+
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(Redis::CannotConnectError)
+      expect(described_class.para(conversation.reload, ana)).to include(equipe_online: false)
     end
 
     it 'não sugere quando a pessoa cuida do funil novo' do

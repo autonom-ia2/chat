@@ -23,12 +23,26 @@ const currentUser = useMapGetter('getCurrentUser');
 
 const repasse = ref(null);
 const answering = ref(false);
+// Decisão 2a (#1606): ninguém da equipe nova online. Antes de passar, a pessoa vê que a conversa vai esperar.
+const confirming = ref(false);
 
 const isMine = computed(
   () => Boolean(props.assigneeId) && props.assigneeId === currentUser.value?.id
 );
 const isVisible = computed(() => isMine.value && Boolean(repasse.value));
 const pipeline = computed(() => repasse.value?.pipeline_name || '');
+const message = computed(() =>
+  confirming.value
+    ? t('CRM_KANBAN.CONVERSATION.REPASSE.NOBODY_ONLINE', {
+        pipeline: pipeline.value,
+      })
+    : t('CRM_KANBAN.CONVERSATION.REPASSE.TEXT', { pipeline: pipeline.value })
+);
+const passLabel = computed(() =>
+  confirming.value
+    ? t('CRM_KANBAN.CONVERSATION.REPASSE.PASS_ANYWAY')
+    : t('CRM_KANBAN.CONVERSATION.REPASSE.PASS', { pipeline: pipeline.value })
+);
 
 let lastRequest = 0;
 const fetchRepasse = async () => {
@@ -50,6 +64,10 @@ const fetchRepasse = async () => {
 
 const answer = async pass => {
   if (!repasse.value || answering.value) return;
+  if (pass && repasse.value.equipe_online === false && !confirming.value) {
+    confirming.value = true;
+    return;
+  }
   answering.value = true;
   const { card_id: cardId } = repasse.value;
   const name = pipeline.value;
@@ -61,6 +79,7 @@ const answer = async pass => {
       await CrmKanbanAPI.keepSubjectWithMe(props.conversationId, cardId);
     }
     repasse.value = null;
+    confirming.value = false;
   } catch {
     useAlert(t('CRM_KANBAN.CONVERSATION.REPASSE.ERROR'));
   } finally {
@@ -82,6 +101,7 @@ watch(
   () => [props.conversationId, isMine.value],
   () => {
     repasse.value = null;
+    confirming.value = false;
     fetchRepasse();
   },
   { immediate: true }
@@ -97,15 +117,17 @@ watch(
     <p
       class="mb-0 flex items-start gap-2 text-sm leading-5 text-n-slate-12"
       role="status"
+      :data-crm-repasse-nobody-online="confirming || undefined"
     >
       <span
-        class="i-lucide-arrow-right-left mt-0.5 size-4 shrink-0 text-n-amber-11"
+        class="mt-0.5 size-4 shrink-0 text-n-amber-11"
+        :class="confirming ? 'i-lucide-clock' : 'i-lucide-arrow-right-left'"
       />
-      <span>{{ t('CRM_KANBAN.CONVERSATION.REPASSE.TEXT', { pipeline }) }}</span>
+      <span>{{ message }}</span>
     </p>
     <div class="flex flex-wrap gap-2">
       <NextButton
-        :label="t('CRM_KANBAN.CONVERSATION.REPASSE.PASS', { pipeline })"
+        :label="passLabel"
         sm
         class="min-h-11"
         :is-loading="answering"

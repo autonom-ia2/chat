@@ -51,7 +51,20 @@ module Crm::Repasse
     return if marca.nil?
 
     card = Crm::Card.find_by(account_id: conversation.account_id, id: marca['card_id'])
-    { card_id: card.id, pipeline_name: card.pipeline&.name } if card
+    return if card.nil?
+
+    { card_id: card.id, pipeline_name: card.pipeline&.name, equipe_online: equipe_online?(conversation, card, user) }
+  end
+
+  # Alguém da equipe do funil, além da pessoa, está online agora? Sem ninguém, "Passar" deixa a conversa esperando (como a
+  # triagem), e a tela avisa antes (decisão 2a do Rodrigo, 15/10). Presença fora do ar conta como ninguém: o motor de
+  # entrega também segura nesse caso.
+  def equipe_online?(conversation, card, user)
+    equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas.map(&:id) - [user.id]
+    equipe.intersect?(Crm::Entrega::Presenca.online_ids(conversation.account_id).to_a)
+  rescue StandardError => e
+    Rails.logger.warn("[crm][repasse] presença indisponível conversa=#{conversation.id} #{e.class}")
+    false
   end
 
   def passar!(conversation, user, card_id)

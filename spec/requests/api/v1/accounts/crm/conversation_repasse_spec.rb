@@ -44,7 +44,7 @@ RSpec.describe 'CRM conversation repasse API', type: :request do
     get "#{base_url}/cards", headers: ana.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['repasse']).to eq('card_id' => card.id, 'pipeline_name' => 'Agentes de IA')
+    expect(response.parsed_body['repasse']).to eq('card_id' => card.id, 'pipeline_name' => 'Agentes de IA', 'equipe_online' => true)
 
     get "#{base_url}/cards", headers: admin.create_new_auth_token, as: :json
     expect(response.parsed_body['repasse']).to be_nil

@@ -34,7 +34,12 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
-const REPASSE = { card_id: 31, pipeline_name: 'Agentes de IA' };
+const REPASSE = {
+  card_id: 31,
+  pipeline_name: 'Agentes de IA',
+  equipe_online: true,
+};
+const SEM_NINGUEM = { ...REPASSE, equipe_online: false };
 
 const wrappers = [];
 afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()));
@@ -112,6 +117,54 @@ describe('CrmRepasseDoAssunto (#1606, decisão "a")', () => {
     expect(CrmKanbanAPI.passSubjectToTeam).not.toHaveBeenCalled();
     expect(useAlert).not.toHaveBeenCalled();
     expect(box(wrapper).exists()).toBe(false);
+  });
+
+  describe('ninguém da equipe nova online (decisão 2a)', () => {
+    const nobody = wrapper => wrapper.find('[data-crm-repasse-nobody-online]');
+
+    it('Passar primeiro avisa que a conversa vai esperar, sem chamar o servidor', async () => {
+      const wrapper = mountRepasse({ repasse: SEM_NINGUEM });
+      await flushPromises();
+      expect(nobody(wrapper).exists()).toBe(false);
+
+      await wrapper.find('[data-crm-repasse-pass]').trigger('click');
+      await flushPromises();
+
+      expect(CrmKanbanAPI.passSubjectToTeam).not.toHaveBeenCalled();
+      expect(nobody(wrapper).text()).toContain(
+        'CRM_KANBAN.CONVERSATION.REPASSE.NOBODY_ONLINE'
+      );
+      expect(wrapper.find('[data-crm-repasse-pass]').attributes('label')).toBe(
+        'CRM_KANBAN.CONVERSATION.REPASSE.PASS_ANYWAY'
+      );
+    });
+
+    it('Passar mesmo assim chama o servidor e some', async () => {
+      CrmKanbanAPI.passSubjectToTeam.mockResolvedValue({});
+      const wrapper = mountRepasse({ repasse: SEM_NINGUEM });
+      await flushPromises();
+
+      await wrapper.find('[data-crm-repasse-pass]').trigger('click');
+      await wrapper.find('[data-crm-repasse-pass]').trigger('click');
+      await flushPromises();
+
+      expect(CrmKanbanAPI.passSubjectToTeam).toHaveBeenCalledWith(9, 31);
+      expect(box(wrapper).exists()).toBe(false);
+    });
+
+    it('Ficar com a conversa, no aviso, fica e não passa', async () => {
+      CrmKanbanAPI.keepSubjectWithMe.mockResolvedValue({});
+      const wrapper = mountRepasse({ repasse: SEM_NINGUEM });
+      await flushPromises();
+
+      await wrapper.find('[data-crm-repasse-pass]').trigger('click');
+      await wrapper.find('[data-crm-repasse-keep]').trigger('click');
+      await flushPromises();
+
+      expect(CrmKanbanAPI.keepSubjectWithMe).toHaveBeenCalledWith(9, 31);
+      expect(CrmKanbanAPI.passSubjectToTeam).not.toHaveBeenCalled();
+      expect(box(wrapper).exists()).toBe(false);
+    });
   });
 
   it('erro do servidor avisa e mantém a sugestão para tentar de novo', async () => {
