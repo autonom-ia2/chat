@@ -7,7 +7,11 @@
 # ...}`). `field` aceita as duas formas (direta, como no protojson, e dentro do invólucro) e ignora maiúsculas.
 # `contextInfo` (mensagem citada) nunca é lido: o texto citado não é desta mensagem.
 #
-# Resultado: `kind` :text (com `text`), :media (com a legenda em `text`, se houver) ou :empty (nada legível).
+# Resultado (`kind`):
+#   :text       — com `text` (e `header_media` quando o cabeçalho do modelo tem um arquivo);
+#   :media      — com a legenda em `text`, se houver;
+#   :empty      — o motor ainda não tem o conteúdo (`_data.Message` ausente ou vazio): vale tentar de novo;
+#   :unreadable — veio uma mensagem de um tipo que não lemos (protocolo, reação, enquete, edição…): não vai mudar.
 class WhatsappHybrid::RecoveredContent
   # header_media: :image ou :media quando o cabeçalho do modelo traz um arquivo (não é baixado; fica para a PR 3).
   Result = Struct.new(:kind, :text, :header_media)
@@ -31,6 +35,7 @@ class WhatsappHybrid::RecoveredContent
   def result
     message = proto_message
     return from_engine_fields if message.nil?
+    return Result.new(:empty, nil) if message.empty?
     return Result.new(:media, nil) if VIEW_ONCE.any? { |name| field(message, name) }
 
     text = TEXT_READERS.lazy.filter_map { |reader| send(reader, message).presence }.first
@@ -41,7 +46,7 @@ class WhatsappHybrid::RecoveredContent
 
   def media_result(message)
     media = MEDIA.lazy.filter_map { |name| field(message, name) }.first
-    media ? Result.new(:media, string(field(media, 'caption'))) : Result.new(:empty, nil)
+    media ? Result.new(:media, string(field(media, 'caption'))) : Result.new(:unreadable, nil)
   end
 
   def proto_message

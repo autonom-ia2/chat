@@ -198,13 +198,32 @@ describe WhatsappHybrid::UnsupportedRecovery do
       expect(attributes['hybrid_recovery']).to eq('pending')
     end
 
-    it 'mensagem ainda sem nada legível' do
-      stub_engine(engine_message('_data' => { 'Message' => { 'protocolMessage' => { 'type' => 0 } } }))
+    it 'conteúdo que ainda não chegou ao motor (_data.Message vazio ou ausente)' do
+      [{ 'Message' => {} }, { 'Info' => {} }].each do |data|
+        stub_engine(engine_message('_data' => data))
 
-      expect(attempt!).to eq(:retry)
+        expect(attempt!).to eq(:retry)
+      end
       expect(message.reload.content).to eq(placeholder)
       expect(attributes['hybrid_recovery']).to eq('pending')
     end
+  end
+
+  it 'tipo que não lemos (protocolo, reação…): falha na hora com unreadable e mantém o aviso' do
+    stub_engine(engine_message('_data' => { 'Message' => { 'protocolMessage' => { 'type' => 0 } } }))
+
+    expect(attempt!).to eq(:done)
+    expect(message.reload.content).to eq(placeholder)
+    expect(attributes).to include('is_unsupported' => true, 'hybrid_recovery' => 'failed', 'hybrid_recovery_reason' => 'unreadable')
+  end
+
+  it 'a mesma mensagem com id composto diferente (outro chat) e o mesmo remetente conta uma vez' do
+    stub_engine([engine_message, engine_message('id' => "false_5511937016094@s.whatsapp.net_#{web_id}",
+                                                'from' => '5511937016094@s.whatsapp.net')])
+
+    attempt!
+
+    expect(attributes['hybrid_recovery']).to eq('recovered')
   end
 
   it 'aceita o remetente em @s.whatsapp.net (mesmo número)' do
@@ -308,61 +327,13 @@ describe WhatsappHybrid::UnsupportedRecovery do
     end
   end
 
-  describe 'quando a IA é chamada (RecoveryAiWake)' do
-    def outgoing!(private: false)
-      create(:message, message_type: :outgoing, conversation: conversation, account: account, inbox: inbox,
-                       content: 'Oi! Em que posso ajudar?', private: private)
-    end
+  it 'a resposta do humano depois do aviso: recupera, mas não chama a IA (regra no RecoveryAiWake)' do
+    stub_engine
+    message
+    create(:message, message_type: :outgoing, conversation: conversation, account: account, inbox: inbox,
+                     sender: create(:user, account: account), content: 'Oi!')
 
-    def incoming!(content)
-      create(:message, message_type: :incoming, conversation: conversation, account: account, inbox: inbox, sender: contact,
-                       content: content)
-    end
-
-    before { stub_engine }
-
-    it 'A não suportada, B "oi?" respondida, A recuperada: a IA não é chamada de novo' do
-      message
-      incoming!('oi?')
-      outgoing!
-
-      expect { attempt! }.not_to have_enqueued_job(reply_job)
-      expect(attributes['hybrid_recovery']).to eq('recovered')
-    end
-
-    it 'cliente mandou outra depois (ainda sem resposta): quem responde é o gatilho da mensagem nova' do
-      message
-      incoming!('oi?')
-
-      expect { attempt! }.not_to have_enqueued_job(reply_job)
-    end
-
-    it 'atendente respondeu depois do aviso: a IA não é chamada' do
-      message
-      outgoing!
-
-      expect { attempt! }.not_to have_enqueued_job(reply_job)
-    end
-
-    it 'nota privada depois não conta: a IA é chamada' do
-      message
-      outgoing!(private: true)
-
-      expect { attempt! }.to have_enqueued_job(reply_job).exactly(:once)
-    end
-
-    it 'modelo de outra empresa (hsm) acorda a IA uma vez, como qualquer outra' do
-      message.update!(content_attributes: message.content_attributes.merge('unsupported_type' => 'hsm'))
-
-      expect { attempt! }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
-      expect(attributes['hybrid_recovery']).to eq('recovered')
-    end
-
-    it 'modelo (hsm) com resposta depois do aviso: não acorda' do
-      message.update!(content_attributes: message.content_attributes.merge('unsupported_type' => 'hsm'))
-      outgoing!
-
-      expect { attempt! }.not_to have_enqueued_job(reply_job)
-    end
+    expect { attempt! }.not_to have_enqueued_job(reply_job)
+    expect(attributes['hybrid_recovery']).to eq('recovered')
   end
 end

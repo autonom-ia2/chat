@@ -179,9 +179,20 @@ describe WhatsappHybrid::RecoveredContent do
     expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil, nil])
   end
 
-  it 'devolve :empty quando não há nada legível' do
-    expect(read('templateMessage' => { 'hydratedTemplate' => { 'hydratedButtons' => [] } }).kind).to eq(:empty)
-    expect(read('protocolMessage' => { 'type' => 0 }).kind).to eq(:empty)
+  it 'devolve :unreadable para tipo conhecido que não lemos (não vai mudar)' do
+    [{ 'protocolMessage' => { 'type' => 0 } }, { 'reactionMessage' => { 'text' => '👍' } },
+     { 'pollCreationMessage' => { 'name' => 'Enquete' } }, { 'pollUpdateMessage' => { 'vote' => {} } },
+     { 'editedMessage' => { 'message' => { 'protocolMessage' => {} } } },
+     { 'templateMessage' => { 'hydratedTemplate' => { 'hydratedButtons' => [] } } }].each do |message|
+      expect(read(message).kind).to eq(:unreadable)
+    end
+  end
+
+  it 'devolve :empty quando o conteúdo ainda não chegou (vale tentar de novo)' do
+    expect(read({}).kind).to eq(:empty)
+    expect(described_class.from_payload('id' => 'x', '_data' => { 'Info' => {} }).kind).to eq(:empty)
+    expect(described_class.from_payload('id' => 'x', '_data' => { 'Message' => nil }).kind).to eq(:empty)
+    expect(read('ephemeralMessage' => { 'message' => {} }).kind).to eq(:empty)
   end
 
   it 'sem _data, usa o body e o hasMedia do motor' do

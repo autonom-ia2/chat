@@ -4,9 +4,9 @@
 # `unsupported.type` é de mensagem nova (RECOVERABLE_TYPES), a mensagem ganha `whatsapp_web_id` (o id físico tirado do
 # wamid) e `hybrid_recovery: pending`, e o RecoverUnsupportedJob passa a perguntar ao motor por ela (pull). Cada
 # tentativa é um `attempt!`:
-#   :retry — o motor ainda não tem a mensagem (404), não respondeu, respondeu sem mensagem, a mensagem ainda não tem
-#            nada legível, ou a conexão não está pronta agora. O job desiste em 30 minutos;
-#   :done  — recuperou, ou falhou de vez (mídia, não casou, mais de uma candidata, flag desligada).
+#   :retry — o motor ainda não tem a mensagem (404), não respondeu, respondeu sem mensagem, a mensagem ainda veio
+#            sem conteúdo (`_data.Message` vazio), ou a conexão não está pronta agora. O job desiste em 30 minutos;
+#   :done  — recuperou, ou falhou de vez (mídia, tipo que não lemos, não casou, mais de uma candidata, flag desligada).
 #
 # Casamento com certeza, todas juntas: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa da
 # mensagem e uma candidata só. Faltando uma, a bolha fica com o aviso.
@@ -103,9 +103,10 @@ class WhatsappHybrid::UnsupportedRecovery
     []
   end
 
-  # A mesma mensagem pode voltar por mais de um chat perguntado: conta uma vez por id.
+  # Todas as que casam têm o mesmo id físico (`match?`). A mesma mensagem pode voltar por mais de um chat perguntado,
+  # com o id composto diferente: conta uma vez por remetente. Dois remetentes diferentes com o mesmo id: ambígua.
   def settle(candidates)
-    matches = candidates.select { |payload| match?(payload) }.uniq { |payload| payload['id'] }
+    matches = candidates.select { |payload| match?(payload) }.uniq { |payload| normalized(payload['from']) }
     return fail!(matches.empty? ? 'mismatch' : 'ambiguous') unless matches.size == 1
 
     apply(WhatsappHybrid::RecoveredContent.from_payload(matches.first))
@@ -116,11 +117,12 @@ class WhatsappHybrid::UnsupportedRecovery
       sender_ids.include?(normalized(payload['from']))
   end
 
-  # Nada legível ainda (o motor pode estar decifrando): tenta de novo até o prazo.
+  # Conteúdo que ainda não chegou ao motor: tenta de novo até o prazo. Tipo que não lemos: falha já (fica o aviso).
   def apply(content)
     case content.kind
     when :text then recovered!(content)
     when :media then media!(content.text)
+    when :unreadable then fail!('unreadable')
     else :retry
     end
   end

@@ -486,8 +486,19 @@ module Autonomia
         # scope `chat`.
         def history
           recent_messages.map do |message|
-            { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
+            { role: message.incoming? ? 'user' : 'assistant', content: history_content(message) }
           end
+        end
+
+        # chat#1489: modelo recuperado do celular com um arquivo no cabeçalho, que não foi lido. A IA fica sabendo.
+        RECOVERED_HEADER_NOTES = {
+          'image' => '[a mensagem tinha uma imagem que não foi lida]',
+          'media' => '[a mensagem tinha um arquivo que não foi lido]'
+        }.freeze
+
+        def history_content(message)
+          note = RECOVERED_HEADER_NOTES[message.content_attributes.to_h['hybrid_recovery_header']]
+          [message.content.to_s, note].compact.join("\n")
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
