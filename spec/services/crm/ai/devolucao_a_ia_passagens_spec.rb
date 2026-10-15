@@ -64,7 +64,8 @@ RSpec.describe Crm::Ai::DevolucaoAIa do
     expect(passar.error).not_to eq('devolvida_sem_pedido_novo')
   end
 
-  it 'convite aceito e devolvido também conta como atendido (antes o convite nunca carimbava)' do
+  # O convite em si não conta (pelas_passagens o ignora): o aceite vira a passagem de atribuição, e é ela que é devolvida.
+  it 'convite aceito (vira atribuição) e devolvido conta como atendido (antes o convite nunca carimbava)' do
     Crm::Passagens.registrar!(conversation: conversation, de: bot, para: ana, pedida_por: nil, motivo: 'convite')
     como(ana) { atribuir(ana) }
     como(ana) { atribuir(nil) }
@@ -77,6 +78,18 @@ RSpec.describe Crm::Ai::DevolucaoAIa do
     Crm::Passagens.registrar!(conversation: conversation, de: bot, para: admin, pedida_por: nil, motivo: 'convite')
 
     expect(described_class.em(card, conversation.reload)).to be_nil
+  end
+
+  # Pega o achado do revisor: a área passou para a Ana e a Ana devolveu para a porta (outro robô).
+  it 'devolvida para um robô diferente do que passou também conta como atendido' do
+    area = create(:agent_bot, account: account, name: 'Área')
+    Crm::Passagens.registrar!(conversation: conversation, de: area, para: ana, pedida_por: area, motivo: 'robo_pediu')
+    como(ana) { atribuir(ana) }
+    como(ana) { atribuir(nil) }
+
+    expect(conversation.reload.ai_assignee).to eq(bot)
+    expect(described_class.pelas_passagens(conversation)).to be_present
+    expect(passar).to have_attributes(status: :skipped, error: 'devolvida_sem_pedido_novo')
   end
 
   it 'com uma pessoa no nome não há devolução' do
