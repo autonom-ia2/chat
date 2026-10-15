@@ -629,7 +629,7 @@ const menuItems = computed(() => {
         },
         {
           name: 'Participating',
-          label: t('SIDEBAR.PARTICIPATING_CONVERSATIONS'),
+          label: t('FORK_CONVERSATION_LIST.PARTICIPATING'),
           icon: 'i-lucide-user-round-check',
           badgeCount: hasFilteredUnreadCounts.value
             ? participatingUnreadCount.value

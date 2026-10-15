@@ -67,6 +67,14 @@ const conversationListRequest = useAbortableRequest();
 
 // actions
 const actions = {
+  // Filtro "Funil" da lista (#1150): o card de uma conversa já listada mudou; relê a conversa para os funis dela
+  // (crm_pipeline_ids) valerem no filtro. Sem filtro de funil, ou conversa fora da lista, nada a fazer.
+  refreshConversationFunnel: ({ getters, dispatch }, conversationId) => {
+    if (!getters.getChatListFilters?.crmPipelineId) return null;
+    if (!getters.getConversationById(conversationId)) return null;
+    return dispatch('getConversation', conversationId);
+  },
+
   getConversation: async ({ commit, dispatch }, conversationId) => {
     try {
       const response = await ConversationApi.show(conversationId);

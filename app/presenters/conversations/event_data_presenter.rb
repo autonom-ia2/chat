@@ -19,19 +19,28 @@ class Conversations::EventDataPresenter < SimpleDelegator
       priority: priority,
       waiting_since: waiting_since.to_i,
       handoff_invite: crm_handoff_invite,
+      crm_pipeline_ids: crm_pipeline_ids, # fork #1150: filtro "Funil" da lista em tempo real
       **push_timestamps
     }
   end
 
   # Like #push_data but with message text normalized for external integrations (webhooks).
   def webhook_data
-    push_data.merge(
+    # crm_pipeline_ids é do painel (filtro da lista), não do contrato de webhook.
+    push_data.except(:crm_pipeline_ids).merge(
       account: account.webhook_data,
       messages: webhook_push_messages
     )
   end
 
   private
+
+  # Funis da conversa (Crm::Conversations::PipelineIds): o filtro "Funil" da lista confere a conversa que chega (#1150).
+  def crm_pipeline_ids
+    return [] unless Crm::Config.enabled?
+
+    Crm::Conversations::PipelineIds.for([__getobj__]).fetch(id, [])
+  end
 
   # Convite R3 pendente do card CRM vinculado (badge na lista de conversas).
   # Só consulta quando o CRM AI está ligado; olha todos os cards abertos da

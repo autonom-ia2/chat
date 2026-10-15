@@ -88,3 +88,9 @@ json.waiting_since conversation.waiting_since.to_i.to_i
 sla_applicable = conversation.account.feature_enabled?('sla') && (!conversation.respond_to?(:sla_applicable?) || conversation.sla_applicable?)
 json.sla_policy_id sla_applicable ? conversation.sla_policy_id : nil
 json.partial! 'enterprise/api/v1/conversations/partials/conversation', conversation: conversation if ChatwootApp.enterprise?
+# Funis da conversa, para o filtro "Funil" da lista conferir em tempo real (multifunil #1150). A lista e o filtro passam
+# os ids da página inteira (crm_pipeline_ids), numa consulta só.
+if Crm::Config.enabled?
+  json.crm_pipeline_ids(local_assigns[:crm_pipeline_ids]&.[](conversation.id) ||
+                        Crm::Conversations::PipelineIds.for([conversation])[conversation.id])
+end

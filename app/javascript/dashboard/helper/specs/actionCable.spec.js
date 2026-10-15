@@ -417,6 +417,30 @@ describe('ActionCableConnector - Copilot Tests', () => {
       );
     });
 
+    it('relê a conversa do card para o filtro Funil da lista (#1150)', () => {
+      actionCable.onReceived({
+        event: 'crm.card.moved',
+        data: {
+          id: 77,
+          account_id: 1,
+          conversation: { id: 500, display_id: 42 },
+        },
+      });
+      actionCable.onReceived({
+        event: 'crm.card.created',
+        data: { id: 78, account_id: 1, conversation: null },
+      });
+      actionCable.onReceived({
+        event: 'crm.card.updated',
+        data: { id: 79, account_id: 2, conversation: { display_id: 43 } },
+      });
+
+      const releituras = mockDispatch.mock.calls.filter(
+        ([acao]) => acao === 'refreshConversationFunnel'
+      );
+      expect(releituras).toEqual([['refreshConversationFunnel', 42]]);
+    });
+
     it('ignores CRM card events from another account', () => {
       actionCable.onReceived({
         event: 'crm.card.updated',
@@ -494,6 +518,14 @@ describe('ActionCableConnector - Copilot Tests', () => {
 
       expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledTimes(1);
       expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledWith(42);
+      expect(mockDispatch).toHaveBeenCalledWith(
+        'refreshConversationFunnel',
+        42
+      );
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        'refreshConversationFunnel',
+        43
+      );
     });
   });
 

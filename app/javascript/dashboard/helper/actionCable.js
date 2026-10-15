@@ -403,6 +403,13 @@ class ActionCableConnector extends BaseActionCableConnector {
       event,
       card: data,
     });
+    // O card mudou de funil ou de status: a conversa na lista filtrada por funil confere de novo (#1150).
+    if (this.isAValidEvent(data) && data.conversation?.display_id) {
+      this.app.$store.dispatch(
+        'refreshConversationFunnel',
+        data.conversation.display_id
+      );
+    }
   };
 
   // Multifunil (#1145): a IA mudou os assuntos de uma conversa (criou, deu nome, trocou o atual ou sugeriu).
@@ -410,6 +417,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     if (!this.isAValidEvent(data)) return;
 
     onCrmSubjectsChangedRemotely(data.conversation_id);
+    this.app.$store.dispatch('refreshConversationFunnel', data.conversation_id);
   };
 
   onCrmFollowUpDue = data => {
