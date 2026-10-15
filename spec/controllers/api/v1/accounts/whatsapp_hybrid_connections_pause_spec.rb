@@ -120,4 +120,17 @@ RSpec.describe 'WhatsApp Híbrido pause API', type: :request do
 
     expect(response.parsed_body).to include('status' => 'not_connected', 'same_number_inboxes' => ['Atendimento WhatsApp'])
   end
+
+  it 'asks to try again in a few seconds when a paused session is still starting, without logging out' do
+    connection.update!(paused_at: Time.current, status: 'disconnected')
+    allow(Kernel).to receive(:sleep)
+    allow(client).to receive(:get_session).and_return(stopped, { 'status' => 'STARTING' })
+
+    post "#{base}/reconnect", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'waking')
+    expect(client).not_to have_received(:logout_session)
+    expect(connection.reload).to be_paused
+  end
 end

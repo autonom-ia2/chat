@@ -999,7 +999,8 @@
         "SAVE": "Could not save. Try again.",
         "DISCONNECT": "Could not disconnect. Try again.",
         "PAUSE": "Could not pause. Try again.",
-        "RESUME": "Could not resume. Try again."
+        "RESUME": "Could not resume. Try again.",
+        "WAKING": "WhatsApp API is starting again. Try again in a few seconds."
       },
       "PAUSE": {
         "BUTTON": "Pause WhatsApp API",

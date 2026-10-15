@@ -42,6 +42,8 @@ class WhatsappHybrid::Pause
         @client.start_session(@connection.session_name) if remote['status'] == 'STOPPED'
         @manager.refresh!
       rescue Waha::Client::Error
+        # Timeout no start também cai aqui: a pausa volta mesmo que o motor tenha subido. Retomar de novo resolve (a
+        # sessão já está WORKING, então não há start; só o refresh!).
         @connection.update!(paused_at: paused_at || Time.current)
         raise
       end

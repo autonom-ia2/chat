@@ -37,6 +37,9 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
   def reconnect
     WhatsappHybrid::SessionManager.new(@connection).reconnect!
     render json: payload(@connection)
+  rescue WhatsappHybrid::WakeSession::NotReady
+    # Conexão pausada religando (#1487): nada foi desfeito; a próxima tentativa encontra a sessão de pé.
+    render json: { error: 'waking' }, status: :unprocessable_entity
   rescue Waha::Client::Error => e
     render_engine_error('reconnect_failed', e)
   end

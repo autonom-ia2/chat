@@ -123,8 +123,8 @@ const run = async (action, errorKey) => {
   try {
     const response = await action();
     if (response?.data?.status) await apply(response.data);
-  } catch {
-    useAlert(tk(errorKey));
+  } catch (error) {
+    useAlert(tk(typeof errorKey === 'function' ? errorKey(error) : errorKey));
   } finally {
     isBusy.value = false;
   }
@@ -139,13 +139,19 @@ const requestCode = () =>
     pairingCode.value = data.code;
   }, 'ERRORS.CODE');
 
+// Conexão pausada religando (#1487): o servidor pede para tentar de novo em alguns segundos.
+const reconnectErrorKey = error =>
+  error?.response?.data?.error === 'waking'
+    ? 'ERRORS.WAKING'
+    : 'ERRORS.CONNECT';
+
 const reconnect = () =>
   run(async () => {
     resetQr();
     pairingCode.value = '';
     await WhatsappHybridAPI.reconnect(props.inbox.id);
     await load();
-  }, 'ERRORS.CONNECT');
+  }, reconnectErrorKey);
 
 const save = settings =>
   run(

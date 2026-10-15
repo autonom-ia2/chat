@@ -1,17 +1,26 @@
 # Religa uma sessão parada no motor antes de tirar o aparelho do celular (#1487). Logout numa sessão parada (WhatsApp
 # API pausado) pode não desvincular o aparelho: a sessão precisa estar no ar. O TeardownSessionJob usa o mesmo pedido e
-# espera de forma assíncrona (retry); o reconectar da aba espera aqui, curto, porque a pessoa está olhando a tela.
+# espera de forma assíncrona (retry, sem pressa); o reconectar da aba espera aqui, com teto curto (~6 s), porque a pessoa
+# está olhando a tela. Não subiu a tempo: o reconectar recusa sem logout ("está religando, tente de novo") e, na
+# tentativa seguinte, a sessão já está de pé.
 class WhatsappHybrid::WakeSession
-  WAIT_TRIES = 5
-  WAIT_SECONDS = 1
-  WAKING = %w[STOPPED STARTING].freeze
+  # A sessão foi religada mas ainda não está de pé: o painel pede para tentar de novo em alguns segundos.
+  class NotReady < StandardError; end
 
-  # Reconectar uma conexão pausada: a sessão parada sobe antes do logout, para o aparelho sair do celular de verdade,
-  # e a pausa sai. Sem pausa, nada a fazer.
+  WAKING = %w[STOPPED STARTING].freeze
+  READY = %w[WORKING SCAN_QR_CODE].freeze
+  DEADLINE_SECONDS = 6
+  STEP_TIMEOUT = 3
+  WAIT_SECONDS = 1
+  # Limite de voltas além do relógio (e o que encerra o laço nos testes, com o sleep simulado).
+  MAX_TRIES = 6
+
+  # Reconectar uma conexão pausada: a sessão parada sobe antes do logout e a pausa sai. Sem pausa, nada a fazer.
+  # Não subiu a tempo: a pausa fica e o erro sobe, sem logout.
   def self.unpause!(client, connection)
     return unless connection.paused?
+    raise NotReady unless new(client, connection.session_name).call
 
-    new(client, connection.session_name).call
     connection.update!(paused_at: nil)
   end
 
@@ -21,21 +30,55 @@ class WhatsappHybrid::WakeSession
   end
 
   # Dá start se a sessão está parada. Devolve o estado lido antes do pedido (nil: o motor não tem a sessão).
-  def start_if_stopped!
-    status = @client.get_session(@session_name)&.dig('status')
-    @client.start_session(@session_name) if status == 'STOPPED'
+  # timeout: só o reconectar passa um curto; o teardown usa o padrão do cliente.
+  def start_if_stopped!(timeout: nil)
+    status = @client.get_session(@session_name, **timeout_option(timeout))&.dig('status')
+    @client.start_session(@session_name, **timeout_option(timeout)) if status == 'STOPPED'
     status
   rescue Waha::Client::NotFound
     nil
   end
 
-  # Religa e espera a sessão sair de "parada/subindo", no máximo WAIT_TRIES vezes. Não subiu a tempo: segue assim mesmo.
+  # Verdadeiro quando dá para seguir: a sessão está de pé (conectada ou pedindo QR) ou o motor não a tem mais (o
+  # reconectar recria). Falso quando ela não subiu dentro do teto.
   def call
-    return unless start_if_stopped! == 'STOPPED'
+    started_at = monotonic_now
+    status = start_if_stopped!(timeout: STEP_TIMEOUT)
+    return true unless WAKING.include?(status)
 
-    WAIT_TRIES.times do
+    wait_until_up(started_at)
+  end
+
+  private
+
+  def wait_until_up(started_at)
+    MAX_TRIES.times do
+      remaining = DEADLINE_SECONDS - (monotonic_now - started_at)
+      break if remaining <= 0
+
       Kernel.sleep(WAIT_SECONDS)
-      break unless WAKING.include?(@client.get_session(@session_name)&.dig('status'))
+      return true if READY.include?(current_status([STEP_TIMEOUT, remaining.ceil].min))
     end
+    Rails.logger.warn("[whatsapp_hybrid] wake session=#{@session_name}: não subiu em #{DEADLINE_SECONDS}s")
+    false
+  rescue Waha::Client::NotFound
+    true
+  end
+
+  # Sem resposta (timeout) conta como "ainda subindo"; 404 sobe para quem chamou.
+  def current_status(timeout)
+    @client.get_session(@session_name, timeout: timeout)&.dig('status')
+  rescue Waha::Client::NotFound
+    raise
+  rescue Waha::Client::Error
+    nil
+  end
+
+  def timeout_option(timeout)
+    timeout ? { timeout: timeout } : {}
+  end
+
+  def monotonic_now
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 end

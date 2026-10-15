@@ -83,7 +83,13 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
 
   it('turns the general switch off: only templates after 24 h, the other cards dimmed', async () => {
     const wrapper = mountRouting();
-    await wrapper.find('[data-routing-switch] input').setValue(false);
+    // Clique de verdade no trilho do interruptor (não só teclado).
+    await wrapper
+      .find('[data-routing-switch] [data-toggle-track]')
+      .trigger('click');
+    expect(wrapper.find('[data-routing-switch] input').element.checked).toBe(
+      false
+    );
 
     expect(wrapper.emitted('save')).toEqual([[{ routing_enabled: false }]]);
 

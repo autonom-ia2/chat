@@ -233,15 +233,37 @@ describe WhatsappHybrid::Pause do
     end
   end
 
-  it 'reconnect! (new QR code) on a paused session starts it first, then logs out, and clears the pause' do
-    connection.update!(paused_at: Time.current, status: 'disconnected')
-    allow(Kernel).to receive(:sleep)
-    allow(client).to receive(:get_session).and_return(stopped, working)
-    expect(client).to receive(:start_session).with('hybrid-pause').ordered
-    expect(client).to receive(:logout_session).with('hybrid-pause').ordered
+  describe 'reconnect! (new QR code) on a paused session' do
+    before do
+      connection.update!(paused_at: Time.current, status: 'disconnected')
+      allow(Kernel).to receive(:sleep)
+    end
 
-    manager.reconnect!
+    it 'starts it first, then logs out, and clears the pause when it comes up in time' do
+      allow(client).to receive(:get_session).and_return(stopped, working)
+      expect(client).to receive(:start_session).with('hybrid-pause', timeout: WhatsappHybrid::WakeSession::STEP_TIMEOUT).ordered
+      expect(client).to receive(:logout_session).with('hybrid-pause').ordered
 
-    expect(connection.reload).not_to be_paused
+      manager.reconnect!
+
+      expect(connection.reload).not_to be_paused
+    end
+
+    it 'does not log out a session that did not come up: keeps the pause and asks to try again' do
+      allow(client).to receive(:get_session).and_return(stopped, { 'status' => 'STARTING' })
+
+      expect { manager.reconnect! }.to raise_error(WhatsappHybrid::WakeSession::NotReady)
+      expect(client).not_to have_received(:logout_session)
+      expect(connection.reload).to be_paused
+    end
+
+    it 'goes on normally on the next try, with the session already up' do
+      allow(client).to receive(:get_session).and_return(working)
+
+      manager.reconnect!
+
+      expect(client).to have_received(:logout_session).with('hybrid-pause')
+      expect(connection.reload).not_to be_paused
+    end
   end
 end

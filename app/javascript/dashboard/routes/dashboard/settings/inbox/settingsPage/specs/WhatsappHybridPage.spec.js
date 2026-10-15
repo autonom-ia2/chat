@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import WhatsappHybridPage from '../WhatsappHybridPage.vue';
 import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
+import { useAlert } from 'dashboard/composables';
 
 vi.mock('dashboard/api/whatsappHybrid', () => ({
   default: {
@@ -219,6 +220,22 @@ describe('WhatsappHybridPage (chat#1487, gold standard)', () => {
     expect(wrapper.text()).toContain(`${KEY}.REMOVED_TITLE`);
     expect(wrapper.find('[data-reconnect]').exists()).toBe(true);
     expect(wrapper.find('[data-pause]').exists()).toBe(false);
+  });
+
+  it('asks to try again in a few seconds while a paused session is starting again', async () => {
+    WhatsappHybridAPI.show.mockResolvedValue({
+      data: { ...connected, status: 'failed', connected: false },
+    });
+    WhatsappHybridAPI.reconnect.mockRejectedValue({
+      response: { data: { error: 'waking' } },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    await wrapper.find('[data-reconnect]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(`${KEY}.ERRORS.WAKING`);
   });
 
   it('warns about a wrong phone and hides risk, routing and pause', async () => {

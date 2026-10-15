@@ -1000,7 +1000,8 @@
         "SAVE": "Não foi possível salvar. Tente de novo.",
         "DISCONNECT": "Não foi possível desconectar. Tente de novo.",
         "PAUSE": "Não foi possível pausar. Tente de novo.",
-        "RESUME": "Não foi possível retomar. Tente de novo."
+        "RESUME": "Não foi possível retomar. Tente de novo.",
+        "WAKING": "O WhatsApp API está religando. Tente de novo em alguns segundos."
       },
       "PAUSE": {
         "BUTTON": "Pausar WhatsApp API",
