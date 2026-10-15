@@ -463,6 +463,17 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
       expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, motivo: 'rodizio')
     end
 
+    # Pega: a marca do rodízio herdada por outra troca de pessoa na mesma transação.
+    it 'outra troca de pessoa depois do rodízio, na mesma transação, não sai como rodízio' do
+      conversation = create(:conversation, account: account, inbox: so_bruno, contact: joao, assignee: bruno)
+      Conversation.transaction do
+        Crm::Passagens.com_motivo(Crm::Passagens::Rodizio::MOTIVO) { conversation.update!(assignee: ana) }
+        conversation.update!(assignee: admin)
+      end
+
+      expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: admin.id, motivo: 'atribuicao')
+    end
+
     it 'rodízio V2, na gravação da fila' do
       fila = create(:inbox, account: account, enable_auto_assignment: false)
       conversation = create(:conversation, account: account, inbox: fila, contact: joao, assignee: nil, status: :open)
