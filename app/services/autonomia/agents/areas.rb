@@ -27,9 +27,9 @@ module Autonomia::Agents::Areas
   class CaixaNaoAceitaArea < StandardError
     attr_reader :codigo
 
-    def initialize(codigo, inbox_id)
+    def initialize(codigo)
       @codigo = codigo
-      super("inbox #{inbox_id} does not accept a team agent: #{codigo}")
+      super("inbox does not accept a team agent: #{codigo}")
     end
   end
 
@@ -74,9 +74,9 @@ module Autonomia::Agents::Areas
   # A regra da caixa é conferida SEMPRE, com a caixa já travada, pelo mesmo leitor da tela (caixa_aceita_area?): a tela
   # só oferece caixas que aceitam, mas o principal pode parar (ou um robô entrar) entre a leitura e o clique.
   #
-  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete,
-  # AgentInbox#soltar_areas_da_caixa!): a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam, e a
-  # parada automática do agente não espera por uma caixa que outro segura.
+  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete): a conferência
+  # da caixa e a entrada de um principal ou robô não se cruzam, e a parada automática do agente não espera por uma
+  # caixa que outro segura.
   def vincular!(agent:, inbox:, ativar: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.
@@ -92,17 +92,17 @@ module Autonomia::Agents::Areas
     end
   end
 
-  # Solta o vínculo de área do agente na caixa (se houver). As conversas que ele atendia voltam à porta; com
-  # `porta_saindo: true` (a porta está saindo da caixa), vão direto para a equipe humana.
+  # Solta o vínculo de área do agente na caixa (se houver). As conversas que ele atendia voltam à porta; sem porta
+  # atendendo (caixa só de pessoas), vão para a equipe humana.
   # Nunca toca a porta: soltar a porta é o InboxConnector.
   # Agente e depois caixa, como o vincular!. Sendo a última área do agente, ele para (AgentInbox, #1366).
-  def desvincular!(agent:, inbox:, porta_saindo: false)
+  def desvincular!(agent:, inbox:)
     agent.with_lock do
       inbox.with_lock do
         vinculo = ::Autonomia::Agents::AgentInbox.kept.area.find_by(autonomia_agent_id: agent.id, inbox_id: inbox.id)
         next if vinculo.nil?
 
-        vinculo.release_bot_conversations!(porta_saindo: porta_saindo)
+        vinculo.release_bot_conversations!
         vinculo.update!(deleted_at: Time.current)
       end
     end
@@ -122,7 +122,7 @@ module Autonomia::Agents::Areas
   # O mesmo leitor da tela, com a caixa já travada.
   def conferir_a_caixa!(inbox)
     resultado = caixa_aceita_area?(inbox, conferir_fase2: false)
-    raise CaixaNaoAceitaArea.new(resultado.codigo, inbox.id) unless resultado.ok?
+    raise CaixaNaoAceitaArea, resultado.codigo unless resultado.ok?
   end
 
   def reativar!(vinculo)

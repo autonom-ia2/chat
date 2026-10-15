@@ -210,39 +210,56 @@ RSpec.describe Autonomia::Agents::Areas do
     end
   end
 
-  # A área só existe com porta ativa: em todo caminho que tira a porta, as áreas da caixa saem antes, e as conversas
-  # delas vão direto para a equipe humana (sem passar pelo robô da porta, que está saindo).
+  # #1433 (decisão do Rodrigo de 15/10): em todo caminho que tira a porta, as áreas da caixa FICAM e a caixa passa a ser
+  # só de pessoas. As conversas que a porta atendia seguem a regra de sempre (vão para a equipe humana); as da área
+  # continuam com ela, e o agente da área segue com onde trabalhar.
   describe 'quando a porta sai da caixa' do
     let!(:area) { described_class.vincular!(agent: agente_da_area, inbox: inbox) }
     let!(:da_area) do
       create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: area.agent_bot, status: :open) }
     end
-
-    def areas_ativas
-      Autonomia::Agents::AgentInbox.kept.area.where(inbox_id: inbox.id)
+    let!(:da_porta) do
+      create(:conversation, account: account, inbox: inbox).tap { |c| c.update!(ai_assignee: porta.agent_bot, status: :open) }
     end
 
-    it 'pelo desconectar da porta, sem atribuir antes ao robô da porta' do
-      expect(Conversations::AssignmentService).not_to receive(:new)
+    shared_examples 'a área fica e a caixa vira só de pessoas' do
+      it 'a área fica, com as conversas dela, e o agente segue com onde trabalhar' do
+        expect(Autonomia::Agents::AgentInbox.kept.area.where(inbox_id: inbox.id)).to contain_exactly(area)
+        expect(da_area.reload).to have_attributes(assignee_agent_bot_id: area.agent_bot_id, status: 'open')
+        expect(agente_da_area.reload).to have_attributes(status: 'active', enabled: true)
+        expect(agente_da_area.tem_onde_trabalhar?).to be(true)
+      end
 
-      Autonomia::Agents::Operate::InboxConnector.new(agent: agente_da_porta, inbox: inbox).perform(connect: false)
-
-      expect(areas_ativas).to be_empty
-      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+      it 'as conversas da porta seguem a regra de sempre, e a caixa aceita área (só de pessoas)' do
+        expect(da_porta.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+        expect(described_class.caixa_aceita_area?(inbox, conferir_fase2: false).codigo).to eq(:ok)
+      end
     end
 
-    it 'pela exclusão lógica do agente da porta' do
-      Autonomia::Agents::SoftDelete.new(agent: agente_da_porta, actor: nil).perform
+    context 'when a porta é desconectada' do
+      before { Autonomia::Agents::Operate::InboxConnector.new(agent: agente_da_porta, inbox: inbox).perform(connect: false) }
 
-      expect(areas_ativas).to be_empty
-      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+      it_behaves_like 'a área fica e a caixa vira só de pessoas'
     end
 
-    it 'pelo destroy do agente da porta' do
-      agente_da_porta.destroy!
+    context 'when o agente da porta é excluído (lógico)' do
+      before { Autonomia::Agents::SoftDelete.new(agent: agente_da_porta, actor: nil).perform }
 
-      expect(areas_ativas).to be_empty
-      expect(da_area.reload).to have_attributes(assignee_agent_bot_id: nil, status: 'open')
+      it_behaves_like 'a área fica e a caixa vira só de pessoas'
+    end
+
+    context 'when o agente da porta é destruído' do
+      before { agente_da_porta.destroy! }
+
+      it_behaves_like 'a área fica e a caixa vira só de pessoas'
+    end
+
+    it 'quando o agente da porta para (pausa): a área fica, e a caixa tem principal parado' do
+      agente_da_porta.update!(status: :paused)
+
+      expect(Autonomia::Agents::AgentInbox.kept.area.where(inbox_id: inbox.id)).to contain_exactly(area)
+      expect(da_area.reload.assignee_agent_bot_id).to eq(area.agent_bot_id)
+      expect(described_class.caixa_aceita_area?(inbox, conferir_fase2: false).codigo).to eq(:principal_parado)
     end
   end
 end

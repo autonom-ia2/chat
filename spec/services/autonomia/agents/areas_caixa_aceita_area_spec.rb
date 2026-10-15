@@ -83,6 +83,15 @@ RSpec.describe Autonomia::Agents::Areas do
     end
   end
 
+  describe 'CaixaNaoAceitaArea' do
+    it 'nasce de new(codigo), expõe #codigo e a mensagem vem do código' do
+      erro = described_class::CaixaNaoAceitaArea.new(:principal_parado)
+
+      expect(erro.codigo).to eq(:principal_parado)
+      expect(erro.message).to include('principal_parado')
+    end
+  end
+
   describe '.vincular! usa o mesmo leitor' do
     it 'confere a caixa pelo caixa_aceita_area?, já travada, e levanta CaixaNaoAceitaArea com o mesmo código' do
       robo_externo(inbox)

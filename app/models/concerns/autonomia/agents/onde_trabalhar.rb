@@ -69,7 +69,7 @@ module Autonomia::Agents::OndeTrabalhar
   # caixa (destroy ou arquivamento).
   # - TRAVA O AGENTE antes de reler os vínculos: duas saídas ao mesmo tempo (caixas diferentes) não veem, cada uma, o
   #   vínculo da outra e deixam o agente atendendo sem nada. Quem chama já trava o agente antes da caixa
-  #   (InboxConnector#disconnect!, Areas, AgentInbox#soltar_areas_da_caixa!, SoftDelete): a ordem é sempre agente → caixa.
+  #   (InboxConnector#disconnect!, Areas, SoftDelete): a ordem é sempre agente → caixa.
   # - `update_columns` e não `update!`: validação antiga do agente (público-alvo, tom, página da agenda gravados antes
   #   de uma regra nova) faria o `update!` recusar, e a caixa não conseguiria soltar o agente. O que o callback do
   #   `update!` faria (sync_mirror_bots) é chamado aqui à mão, para o espelho seguir o estado.

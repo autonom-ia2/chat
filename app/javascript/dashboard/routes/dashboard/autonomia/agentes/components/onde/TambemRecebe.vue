@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import GrupoDeCartoes from './GrupoDeCartoes.vue';
+import EscolhaMarcar from '../EscolhaMarcar.vue';
+import { chaveDoTipoDaCaixa } from '../../utils/canais';
 import {
   BLOQUEIO,
   caixaPeloId,
@@ -13,7 +14,8 @@ import {
 
 // #1433 (decisão do Rodrigo de 15/10, "a, para todos os agentes") — na gaveta "Onde e quando {nome}
 // responde", logo abaixo de "Onde atende": as OUTRAS caixas em que o agente também recebe quando alguém
-// passar (vínculo de área). Várias escolhas, em cartões (sem lista nativa). Podem ser escolhidas as caixas
+// passar (vínculo de área). Várias escolhas, em cartões compactos iguais aos de "Onde atende" (EscolhaMarcar, sem
+// lista nativa), com o tipo do canal na etiqueta. Podem ser escolhidas as caixas
 // com principal atendendo e as atendidas só por pessoas; outro robô e principal parado ficam bloqueados
 // com o motivo. A caixa principal dele (e a escolhida em "Onde atende", em `fora`) não aparece.
 // Quem grava é a gaveta (useSalvarEquipe), junto com o resto.
@@ -56,10 +58,11 @@ const opcoes = computed(() =>
   outrasCaixasDaEquipe(props.canais, props.agenteId, props.fora).map(
     ({ canal, bloqueio }) => {
       const caixa = caixaPeloId(props.caixas, canal.inbox_id);
+      const tipo = chaveDoTipoDaCaixa(canal);
       return {
         valor: canal.inbox_id,
-        inbox: caixa || { channel_type: canal.channel_type },
         titulo: canal.name,
+        etiqueta: tipo ? t(`AGENTS.JORNADA.ONDE_QUANDO.TIPO.${tipo}`) : '',
         texto: textoDaCaixa(canal, caixa, bloqueio),
         desabilitada: Boolean(bloqueio),
         motivo: bloqueio ? MOTIVO[bloqueio](canal) : '',
@@ -77,7 +80,7 @@ const opcoes = computed(() =>
     <p class="m-0 text-sm text-n-slate-11">
       {{ t('AGENTS.JORNADA.ONDE_QUANDO.TAMBEM_TEXTO', { nome }) }}
     </p>
-    <GrupoDeCartoes
+    <EscolhaMarcar
       v-if="opcoes.length"
       :model-value="modelValue"
       :rotulo="t('AGENTS.JORNADA.ONDE_QUANDO.TAMBEM')"

@@ -86,7 +86,7 @@ RSpec.describe Autonomia::Agents::AgentInbox do
     it 'aceita área em caixa só de pessoas e recusa em caixa sem porta com robô de fora' do
       expect(area).to be_valid
 
-      AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'n8n'), account: account)
+      AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'Parceiro'), account: account)
       expect(area).not_to be_valid
       expect(area.tap(&:valid?).errors[:papel]).to be_present
     end

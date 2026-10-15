@@ -68,7 +68,7 @@ const CANAIS = [
   },
   {
     inbox_id: 4,
-    name: 'WhatsApp GTA',
+    name: 'WhatsApp Parceiro',
     occupied_by: { kind: 'external' },
     so_de_pessoas: false,
   },
@@ -135,6 +135,13 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     );
     expect(opcao(2).getAttribute('aria-disabled')).toBe('true');
     expect(no('select')).toBeNull();
+    // Mesmo cartão compacto de "Onde atende" (decisão do Rodrigo de 15/10).
+    const radio = no('[role="radio"]');
+    ['px-4', 'py-3', 'rounded-xl', 'min-h-11'].forEach(classe => {
+      expect(radio.className).toContain(classe);
+      expect(opcao(5).className).toContain(classe);
+    });
+    expect(opcao(5).querySelector('.size-12')).toBeNull();
   });
 
   it('saves entering and leaving: POST with papel area, then DELETE, and closes', async () => {

@@ -109,11 +109,13 @@ module Autonomia
       # Devolve ao humano as conversas em que o bot ainda está no comando: as `pending` da caixa e as
       # `open` que têm o espelho como ai_assignee (na caixa do espelho elas nascem open — ver
       # Conversation#set_active_bot_conversation). Mesmo caminho do disconnect manual.
-      # Área (#1433): só as conversas do espelho dela, que voltam para a porta (as `pending` da caixa são da porta); com
-      # `porta_saindo: true`, a porta está saindo da caixa e elas vão direto para a equipe humana.
-      def release_bot_conversations!(porta_saindo: false)
+      # Área (#1433): só as conversas do espelho dela, que voltam para a porta (as `pending` da caixa são da porta); sem
+      # porta atendendo, vão para a equipe humana.
+      # Porta saindo (#1433, decisão do Rodrigo de 15/10): as áreas da caixa FICAM e a caixa passa a ser só de pessoas;
+      # só as conversas da porta saem, pela regra de sempre. As da área continuam com ela.
+      def release_bot_conversations!
         return if inbox.nil?
-        return devolver_conversas_a_porta!(porta_saindo: porta_saindo) if area?
+        return devolver_conversas_a_porta! if area?
 
         pending = inbox.conversations.where(status: :pending)
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
@@ -121,36 +123,13 @@ module Autonomia
         pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
       end
 
-      # #1433 — a área que estava com a porta sai junto com ela (regra do #1366, mantida). Todo caminho que tira a porta (InboxConnector#disconnect!,
-      # SoftDelete, Agent#destroy) chama isto ANTES de soltar as conversas da porta: as áreas da caixa saem, e as
-      # conversas delas vão direto para a equipe humana. Trava a caixa, como o Areas.vincular!.
-      def soltar_areas_da_caixa!
-        return unless porta? && inbox
-
-        # Ordem agente → caixa (#1366): trava os agentes das áreas (por id) ANTES da caixa, porque cada área que sai pode
-        # parar o seu agente (parada automática), que trava o agente. Depois trava a caixa e lista de novo: um
-        # Areas.vincular! paralelo espera e depois não acha mais a porta.
-        travar_agentes_das_areas!
-        inbox.lock!
-        self.class.kept.area.where(inbox_id: inbox_id).includes(:agent).find_each do |area|
-          ::Autonomia::Agents::Areas.desvincular!(agent: area.agent, inbox: inbox, porta_saindo: true)
-        end
-      end
-
-      # O vínculo está saindo da caixa (desconectar, destroy do agente): as áreas primeiro, se for porta; depois as
-      # conversas dele.
-      def sair_da_caixa!
-        soltar_areas_da_caixa!
-        release_bot_conversations!
-      end
-
       private
 
       # A conversa aberta que a área atendia volta para o robô da caixa (a porta), pelo mesmo caminho de atribuir um
-      # robô pelo painel, e a porta responde à última mensagem do cliente que ficou sem resposta. Sem porta atendendo,
-      # porta saindo, ou conversa já à espera de pessoa: vai para a equipe humana, sem robô.
-      def devolver_conversas_a_porta!(porta_saindo:)
-        robo_da_porta = inbox.agent_bot_inbox&.active? && !porta_saindo ? inbox.agent_bot : nil
+      # robô pelo painel, e a porta responde à última mensagem do cliente que ficou sem resposta. Sem porta atendendo
+      # (ou caixa só de pessoas), ou conversa já à espera de pessoa: vai para a equipe humana, sem robô.
+      def devolver_conversas_a_porta!
+        robo_da_porta = inbox.agent_bot_inbox&.active? ? inbox.agent_bot : nil
         inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
           if robo_da_porta.nil? || conversation.bot_handoff_waiting?
             conversation.bot_handoff!(keep_bot: false)
@@ -181,16 +160,6 @@ module Autonomia
 
         janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
         stamp['at'].to_f >= janela.ago.to_f
-      end
-
-      # Impasse que sobra (raro): dois agentes cruzados. P é porta em X e área em Y; A é porta em Y e área em X. Saindo
-      # os dois ao mesmo tempo (soft delete ou desconectar), um trava P e depois A (a área de X), o outro trava A e depois
-      # P (a área de Y). O Postgres acusa o impasse e desfaz uma das transações, sem gravar meio caminho; a API devolve
-      # 500 (ActiveRecord::Deadlocked). Sem retry automático: quem pediu tenta de novo. Também cai aqui a área criada
-      # entre esta leitura e a trava da caixa, se outra operação travar o agente dela esperando esta mesma caixa.
-      def travar_agentes_das_areas!
-        ids = self.class.kept.area.where(inbox_id: inbox_id).pluck(:autonomia_agent_id)
-        ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?
       end
 
       # Caixa com porta ativa, ou só de pessoas (sem porta e sem robô de fora, #1433).

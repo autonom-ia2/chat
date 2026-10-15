@@ -40,7 +40,7 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(described_class.vincular!(agent: agente('Suporte'), inbox: inbox)).to have_attributes(papel: 'area')
     end
 
-    it 'recusa a caixa com robô de fora (webhook, como o n8n), sem deixar espelho nem vínculo' do
+    it 'recusa a caixa com agente externo (bot de webhook), sem deixar espelho nem vínculo' do
       robo_externo(inbox)
 
       expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }
@@ -168,7 +168,7 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(outra_area.reload.deleted_at).to be_nil
     end
 
-    it 'apagar o agente de uma área não solta as outras áreas da caixa (soltar_areas_da_caixa! é só da porta)' do
+    it 'apagar o agente de uma área não solta as outras áreas da caixa' do
       Autonomia::Agents::SoftDelete.new(agent: da_equipe, actor: nil).perform
 
       expect(area.reload.deleted_at).to be_present
