@@ -33,4 +33,10 @@ describe('Inbox Settings', () => {
 
     expect(result).toBe(false);
   });
+
+  // #1487: escolha única pelo ChoiceSelect (teclado WAI-ARIA, 44 px), nunca pelo Select antigo.
+  it('uses ChoiceSelect for single choices, not the old Select', () => {
+    expect(Settings.components.ChoiceSelect).toBeDefined();
+    expect(Settings.components.SelectInput).toBeUndefined();
+  });
 });
