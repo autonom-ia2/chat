@@ -594,6 +594,13 @@ en:
           inbox_has_webhook_bot: 'This inbox is already connected to another bot. Disconnect it first.'
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa: as recusas que a tela mostra como vieram.
+        area_errors:
+          generic: 'Could not put %{nome} on the team of %{canal}. Nothing changed.'
+          fase2_off: 'Team agents are not available for this account yet.'
+          agent_internal: '%{nome} is an internal agent (team copilot) and never talks to customers, so it cannot be on the team of a channel.'
+          already_linked: '%{nome} is already on %{canal}.'
+          sem_principal: 'No one answers first on %{canal} right now. A team agent needs a main agent answering on the channel.'
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."
@@ -931,6 +938,47 @@ en:
   automation:
     system_name: 'Automation System'
   crm:
+    # #1498: titles of the Serve reminders (shown in the card agenda).
+    service_reminders:
+      progress: 'Share progress'
+      resolved_check: 'Ask if it was solved'
+      payment_before: 'Payment reminder: 3 days before'
+      payment_due: 'Payment reminder: on the day'
+      payment_after: 'Payment reminder: after the due date'
+      aviso:
+        titulo: 'The message to the customer was not sent on its own: please contact them.'
+        em_analise: 'The message template for this reminder is under WhatsApp review.'
+        sem_finalidade_de_modelo: 'Outside the WhatsApp 24-hour window this reminder has no message template.'
+        canal_sem_modelo_oficial: 'The conversation is not on an official WhatsApp number, the only one that sends templates.'
+        campo_sem_valor: 'A card detail is missing to fill the message (name, amount, subject or due date).'
+        sem_whatsapp_oficial: 'The inbox is not an official WhatsApp number.'
+        idioma_sem_pronto: 'There is no ready template in this language yet.'
+        formato: 'The template has a format we cannot send yet.'
+        recusado: 'WhatsApp rejected the message template for this reminder.'
+        pausado: 'WhatsApp paused the message template for this reminder.'
+        desativado: 'The message template for this reminder was disabled.'
+        situacao_desconhecida: 'Could not find out the message template status.'
+        meta_fora: 'WhatsApp did not answer just now.'
+        sem_permissao: 'The WhatsApp account did not grant permission to use templates.'
+        meta_recusou: 'WhatsApp refused the send.'
+        closure: 'From the conversation, the matter was already over (paid, solved or no longer needed).'
+        template_offer_expired: 'The message template offer has expired.'
+        no_conversation: 'The card no longer has a linked conversation.'
+        texto_diferente: 'The approved WhatsApp template has a different text than expected.'
+        perfil_invalido: 'The inbox WhatsApp profile is not complete enough to use templates.'
+        categoria_propaganda: 'WhatsApp classified the template as marketing; nothing was sent to the customer.'
+        template_missing: 'The message template no longer exists on WhatsApp.'
+        template_not_approved: 'The message template is not approved on WhatsApp.'
+        template_category_changed: 'WhatsApp changed the message template category.'
+        template_structure_changed: 'The message template changed and needs to be checked.'
+        template_format_unsupported: 'The template has a format we cannot send yet.'
+        templates_not_synced: 'The WhatsApp template list has not been refreshed yet.'
+        template_unverifiable: 'Could not check the message template with WhatsApp.'
+        no_template: 'Outside the WhatsApp 24-hour window no approved template fit this reminder.'
+        not_composable: 'From the conversation, it did not make sense to send the message now.'
+        send_failed: 'Sending failed after a few attempts.'
+        unverified_quote: 'The written message did not match the conversation and was not sent.'
+        whatsapp_api_unavailable: 'The inbox WhatsApp was not ready to send.'
     export:
       sheet_name: 'Cards'
       file_prefix: 'crm'

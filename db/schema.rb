@@ -2304,6 +2304,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
     t.index ["pipeline_id"], name: "index_crm_inbox_agent_pipelines_on_pipeline_id"
   end
 
+  create_table "crm_inbox_ai_agents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_inbox_ai_agents_on_account_id"
+    t.index ["autonomia_agent_id"], name: "index_crm_inbox_ai_agents_on_autonomia_agent_id"
+    t.index ["inbox_id", "pipeline_id"], name: "idx_crm_inbox_ai_agents_unique", unique: true
+    t.index ["pipeline_id"], name: "index_crm_inbox_ai_agents_on_pipeline_id"
+  end
+
   create_table "crm_inbox_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -4174,6 +4187,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   add_foreign_key "crm_inbox_agent_pipelines", "accounts", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_inbox_agent_accesses", column: "access_id", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "autonomia_agents", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "inboxes", on_delete: :cascade
   add_foreign_key "crm_inbox_settings", "accounts"
   add_foreign_key "crm_inbox_settings", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_inbox_settings", "crm_pipelines", column: "default_pipeline_id"

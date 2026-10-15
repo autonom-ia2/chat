@@ -27,6 +27,10 @@ class RichMessages::Types::LinkPreview
                           '(por exemplo https://exemplo.com.br).'.freeze
   BODY_TOO_LONG = "O texto da mensagem com prévia de link passa de #{BODY_MAX} caracteres.".freeze
 
+  # O formato na Meta também é `text` (com `preview_url`): o cliente recebe texto em qualquer canal, então a
+  # mensagem nunca ganha a marca "Enviado como texto" (RichMessages.format_lost_as_text?, chat#1555).
+  def self.text_only? = true
+
   def initialize(_payload); end
 
   def error_for(body)

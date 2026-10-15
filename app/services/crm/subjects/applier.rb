@@ -107,16 +107,12 @@ class Crm::Subjects::Applier
   def focar(card)
     return { state: 'kept', reason: 'card_mudou' } unless card.open?
 
-    Crm::Cards::Focus.new(account: @account, card: card, conversation: @conversation).perform
+    Crm::Subjects::Acoes.focar(conversation: @conversation, card: card)
     { state: 'applied', card: card, evento: Events::Types::CRM_CARD_UPDATED }
   end
 
   def criar(pipeline, titulo)
-    card = Crm::Cards::Creator.new(
-      account: @account, user: nil, conversation: @conversation,
-      params: { pipeline_id: pipeline.id, stage_id: pipeline.stages.order(:position, :id).first.id, title: titulo,
-                metadata: { 'subject' => { 'source' => 'ai', 'named_at' => Time.current.iso8601 } } }
-    ).perform
+    card = Crm::Subjects::Acoes.criar(conversation: @conversation, pipeline: pipeline, titulo: titulo, source: 'ai')
     { state: 'applied', card: card, evento: Events::Types::CRM_CARD_CREATED }
   end
 end

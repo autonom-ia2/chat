@@ -5,6 +5,7 @@ import { ESTADO } from '../utils/estadoDoAgente';
 
 // #1181 — pílula de estado: o estado vai em texto (Atendendo / Parado / Falta terminar / Cotação),
 // o ponto colorido só reforça. Texto em slate 12 sobre fundo claro do tom, AA nos dois temas.
+// #1433: Na equipe (agente da equipe) em azul, como no protótipo da Fase 2.
 // Parado e Falta terminar são âmbar, como no protótipo (.pill-off e .pill-draft); o texto distingue.
 const props = defineProps({
   estado: {
@@ -18,6 +19,7 @@ const { t } = useI18n();
 
 const ESTILO = {
   [ESTADO.ATENDENDO]: { fundo: 'bg-n-teal-3', ponto: 'bg-n-teal-9' },
+  [ESTADO.NA_EQUIPE]: { fundo: 'bg-n-blue-3', ponto: 'bg-n-blue-9' },
   [ESTADO.PARADO]: { fundo: 'bg-n-amber-3', ponto: 'bg-n-amber-9' },
   [ESTADO.FALTA_TERMINAR]: { fundo: 'bg-n-amber-3', ponto: 'bg-n-amber-9' },
   [ESTADO.COTACAO]: { fundo: 'bg-n-slate-3', ponto: 'bg-n-slate-9' },
@@ -25,6 +27,7 @@ const ESTILO = {
 
 const ROTULO = {
   [ESTADO.ATENDENDO]: 'ATENDENDO',
+  [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
   [ESTADO.PARADO]: 'PARADO',
   [ESTADO.FALTA_TERMINAR]: 'FALTA_TERMINAR',
   [ESTADO.COTACAO]: 'COTACAO',

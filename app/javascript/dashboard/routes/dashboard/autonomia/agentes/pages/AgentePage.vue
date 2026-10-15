@@ -21,6 +21,8 @@ import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
+import AgenteGaveta from '../components/AgenteGaveta.vue';
+import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import {
   ESTADO_PAGINA,
   useAgenteDaPagina,
@@ -28,7 +30,9 @@ import {
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
-import { ESTADO } from '../utils/estadoDoAgente';
+import { useSalvarEquipe } from '../composables/useSalvarEquipe';
+import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
+import { caixasDaEquipe } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
 import {
   GAVETA,
@@ -50,6 +54,9 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // uma gaveta (T08–T14); Mudar conversando (T11) troca o conteúdo da página. Parar (T15) e Excluir
 // (T16) pedem confirmação; voltar a atender passa pela confirmação de canal. Quem só vê lê e testa.
 // `gaveta` vem do seletor da rota (o :tab antigo traduzido) e abre a gaveta certa ao carregar.
+// #1433 (tema 13): o agente da equipe (`na_equipe`) aparece "Na equipe", com "Onde {nome} trabalha" (caixa e
+// papel) no lugar de "Onde e quando responde"; "Mudar" abre direto os passos do agente da equipe (EquipeCanais).
+// Ligar de novo um agente da equipe parado não pede canal: as caixas dele continuam.
 const props = defineProps({
   agentId: { type: [String, Number], required: true },
   gaveta: { type: String, default: null },
@@ -96,6 +103,17 @@ const nome = computed(
 );
 const estadoDaPagina = computed(() => estadoDeOperacao(agente.value));
 const atendendo = computed(() => estadoDaPagina.value === ESTADO.ATENDENDO);
+const trabalhando = computed(() => TRABALHANDO.includes(estadoDaPagina.value));
+const naEquipe = computed(() => agente.value?.na_equipe === true);
+// Caixas em que ele está na equipe (L2), ou [] sem a leitura; null quando não é agente da equipe.
+const equipe = computed(() => {
+  if (!naEquipe.value) return null;
+  return canais.estado.value === 'pronto' && !canais.semLeitura.value
+    ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
+    : [];
+});
+const salvarEquipe = useSalvarEquipe();
+const EQUIPE = 'equipe';
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
@@ -139,6 +157,13 @@ const foto = computed(
 
 const ondeNoHeroi = computed(() => {
   if (interno.value) return '';
+  if (equipe.value) {
+    return equipe.value.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
+          caixas: equipe.value.map(canal => canal.name).join(', '),
+        })
+      : t('AGENTS.JORNADA.ONDE.RECEBE');
+  }
   if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
   const ligado = atendendo.value;
   if (umCanal.value) {
@@ -370,6 +395,13 @@ const escrever = () => {
 
 const escolherCanal = () => abrir(gavetaDoCanal());
 
+// #1433: "Mudar" de "Onde {nome} trabalha" do agente da equipe.
+const mudarEquipe = () => {
+  if (!podeGerenciar.value) return;
+  canais.carregar();
+  aberta.value = EQUIPE;
+};
+
 // #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
 // herói não continuar dizendo "Atendendo". A releitura é só para a tela; falhando, a próxima acerta.
 const depoisDeMudarOnde = async () => {
@@ -379,6 +411,23 @@ const depoisDeMudarOnde = async () => {
   } catch {
     // O canal já mudou; a tela relê o agente ao abrir de novo.
   }
+};
+
+const salvarMudancaDaEquipe = async ({ entram, saem }) => {
+  const feito = await salvarEquipe.salvar({
+    agenteId: agente.value.id,
+    nome: nome.value,
+    entram,
+    saem,
+  });
+  // Falhou no meio: relê onde ele está, e a próxima tentativa manda só o que ainda falta.
+  if (!feito) {
+    canais.carregar();
+    return;
+  }
+  useAlert(t('AGENTS.JORNADA.EQUIPE.FEITO', { nome: nome.value }));
+  fechar();
+  depoisDeMudarOnde();
 };
 
 const voltarInterno = async () => {
@@ -402,7 +451,7 @@ const alternar = ligar => {
     dialogoParar.value?.abrir();
     return;
   }
-  if (interno.value) {
+  if (interno.value || naEquipe.value) {
     voltarInterno();
     return;
   }
@@ -570,7 +619,7 @@ const tirarPergunta = id => {
           @mais="escolherMais"
         />
         <p
-          v-if="!atendendo"
+          v-if="!trabalhando"
           data-faixa-parado
           class="flex items-start gap-3 p-4 m-0 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
         >
@@ -608,11 +657,14 @@ const tirarPergunta = id => {
           :texto-onde="textoOnde"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
+          :equipe="equipe"
+          :caixas="caixas"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
           @escrever="escrever"
           @escolher-canal="escolherCanal"
+          @mudar-equipe="mudarEquipe"
         />
       </template>
     </div>
@@ -622,7 +674,7 @@ const tirarPergunta = id => {
         v-if="aberta === GAVETA.TESTAR"
         :agente="agente"
         :nome="nome"
-        :atendendo="atendendo"
+        :atendendo="trabalhando"
         :pode-mudar="podeMudar"
         :pergunta="perguntaDoTeste"
         @fechar="fechar"
@@ -658,6 +710,32 @@ const tirarPergunta = id => {
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
+      <AgenteGaveta
+        v-else-if="aberta === EQUIPE"
+        :titulo="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
+        @fechar="fechar"
+      >
+        <EquipeCanais
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :canais="canais.canais.value"
+          :caixas="caixas"
+          :leitura="
+            canais.estado.value === 'pronto' && canais.semLeitura.value
+              ? 'erro'
+              : canais.estado.value
+          "
+          :inicial="(equipe || []).map(canal => canal.inbox_id)"
+          :salvando="salvarEquipe.salvando.value"
+          :erro="salvarEquipe.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="canais.carregar()"
+          @pronto="salvarMudancaDaEquipe"
+        />
+      </AgenteGaveta>
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"
         :agent-id="agente.id"
@@ -725,7 +803,7 @@ const tirarPergunta = id => {
         :erro-garantia="t(`${NS}.EXCLUIR.ERRO_GARANTIA`)"
         :executar="excluir"
       >
-        <p v-if="atendendo" data-extra class="m-0 text-sm text-n-slate-11">
+        <p v-if="trabalhando" data-extra class="m-0 text-sm text-n-slate-11">
           {{ t(`${NS}.EXCLUIR.EXTRA`) }}
           <button
             data-atalho-parar

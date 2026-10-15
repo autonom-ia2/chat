@@ -40,7 +40,20 @@ RSpec.describe TemplateFields::Resolver do
       expect(asked.value('negocio.titulo')).to eq(world.card.title)
     end
 
+    # #1518/#1524: the dynamic URL button of a template is "<base>/b/{{1}}"; the code fills {{1}} and gives back the
+    # same management link, which itself stays exactly as before.
+    it 'reads the management link code, which rebuilds the very same management link' do
+      resolver = described_class.for_meeting(meeting, invite: invite)
+      code = resolver.value('horario.link_codigo')
+
+      expect(resolver.value('horario.link_gestao')).to eq(invite.url)
+      expect(resolver.value('horario.link_gestao')).to eq("https://app.example.com/b/#{invite.code}")
+      expect(code).to eq(invite.code)
+      expect('https://app.example.com/b/{{1}}'.sub('{{1}}', code)).to eq(resolver.value('horario.link_gestao'))
+    end
+
     it 'has no management link without an invite' do
+      expect(described_class.for_meeting(meeting).value('horario.link_codigo')).to be_nil
       expect(described_class.for_meeting(meeting).value('horario.link_gestao')).to be_nil
       expect(described_class.for_meeting(meeting).value('cliente.primeiro_nome')).to eq('Marcos')
     end

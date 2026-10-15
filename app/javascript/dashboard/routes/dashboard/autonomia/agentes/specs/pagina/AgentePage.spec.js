@@ -1069,4 +1069,114 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
   });
+
+  // #1433 (tema 13) — agente da equipe: "Na equipe", "Onde {nome} trabalha" (caixa e papel) e "Mudar"
+  // direto nos passos do agente da equipe.
+  describe('agente da equipe', () => {
+    const L2_EQUIPE = [
+      {
+        inbox_id: 1,
+        name: 'WhatsApp do Centro',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 3,
+          agent_name: 'Sofia',
+          operating: true,
+        },
+        areas: [{ agent_id: 7, agent_name: 'Bia', operating: true }],
+      },
+      {
+        inbox_id: 2,
+        name: 'Instagram',
+        channel_type: 'Channel::Instagram',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 4,
+          agent_name: 'Leo',
+          operating: true,
+        },
+        areas: [],
+      },
+      { inbox_id: 5, name: 'Site', occupied_by: null, areas: [] },
+    ];
+
+    const prepararEquipe = (extra = {}) =>
+      preparar({
+        agente: bia({ na_equipe: true, tem_onde_trabalhar: true, ...extra }),
+        canais: L2_EQUIPE,
+      });
+
+    it('says "Na equipe" (switch on), where it receives, and never the parked banner', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      expect(no('[data-interruptor]').getAttribute('aria-checked')).toBe(
+        'true'
+      );
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.NA_EQUIPE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.CARTAO.RECEBE_EM'
+      );
+      expect(no('[data-faixa-parado]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('swaps "Onde e quando responde" for "Onde {nome} trabalha", with only the inbox and the role', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      const bloco = no('[data-linha="onde-trabalha"]');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.TITULO');
+      expect(bloco.textContent).toContain('WhatsApp do Centro');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.RECEBE');
+      expect(bloco.textContent).not.toContain('Instagram');
+      expect(no('[data-linha="onde"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('"Mudar" opens straight in the team steps, saves the change and reads the agent again', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      await clicar('[data-mudar-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('canais');
+      expect(no('[data-opcao="1"]').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-opcao="5"]').getAttribute('aria-disabled')).toBe('true');
+
+      await clicar('[data-opcao="2"]');
+      await clicar('[data-seguir-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('confira');
+      await clicar('[data-seguir-equipe]');
+
+      expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { papel: 'area' });
+      expect(canaisApi.disconnect).not.toHaveBeenCalled();
+      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.EQUIPE.FEITO');
+      expect(no('[data-equipe-canais]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('turning a stopped team agent back on does not ask for an inbox', async () => {
+      prepararEquipe({ status: 'paused', enabled: false });
+      const wrapper = await montar();
+      expect(no('[data-faixa-parado]')).not.toBeNull();
+      await clicar('[data-interruptor]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(no('aside[role="dialog"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps the main agent page as it was (no regression)', async () => {
+      const wrapper = await montar();
+      expect(no('[data-linha="onde"]')).not.toBeNull();
+      expect(no('[data-linha="onde-trabalha"]')).toBeNull();
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.ATENDENDO'
+      );
+      wrapper.unmount();
+    });
+  });
 });

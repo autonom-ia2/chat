@@ -16,11 +16,14 @@ import {
   funisDaCaixa,
   faltaEscolherLegado,
   legadoPendente,
-  paraFormulario,
-  paraSalvar,
   primeiroNome,
   quemCuida,
 } from '../helpers/caixa';
+import {
+  formularioDaCaixa,
+  salvarDaCaixa,
+  temAgentesNaTela,
+} from '../helpers/agentesIa';
 
 // #1149 — uma caixa em quatro etapas e um Salvar só (R16): o que chega, quem
 // cuida do quê, o que o sistema faz sozinho e a conferência em frases.
@@ -29,6 +32,16 @@ const route = useRoute();
 const router = useRouter();
 
 const ULTIMA = 4;
+// #1447 — recusas do servidor ao gravar os agentes de IA da caixa.
+const AGENTE_NAO_LIGA = 'crm.caixas.agente_nao_liga';
+const ERROS_DOS_AGENTES = [
+  AGENTE_NAO_LIGA,
+  'crm.caixas.agente_invalido',
+  'crm.caixas.agentes_desligados',
+  'crm.caixas.agentes_sem_permissao',
+  'crm.caixas.funil_com_dois_agentes',
+  'crm.caixas.sem_porta',
+];
 const CHAVES = ['CHEGA', 'CUIDAM', 'SOZINHO', 'CONFIRA'];
 
 const estado = ref('carregando');
@@ -44,8 +57,8 @@ const carregar = async () => {
   try {
     const dados = await CrmCaixasAPI.buscar(route.params.inboxId);
     funis.value = dados.funis;
-    original.value = paraFormulario(dados.caixa);
-    form.value = paraFormulario(dados.caixa);
+    original.value = formularioDaCaixa(dados.caixa);
+    form.value = formularioDaCaixa(dados.caixa);
     // Caixa já no CRM: todas as etapas abertas para ir direto ao que mudar.
     alcancada.value = dados.caixa.crm_enabled ? ULTIMA : 1;
     etapa.value = Number(route.query.etapa) || 1;
@@ -133,6 +146,13 @@ const bloqueio = computed(() => {
   return '';
 });
 
+// #1447: com os agentes de IA na etapa 2, o subtítulo fala deles também.
+const subtitulo = computed(() =>
+  etapa.value === 2 && temAgentesNaTela(form.value?.ai_agents)
+    ? t('CRM_CAIXAS.CUIDAM.SUBTITULO_COM_AGENTES')
+    : t(`CRM_CAIXAS.${CHAVES[etapa.value - 1]}.SUBTITULO`)
+);
+
 const ir = numero => {
   etapa.value = numero;
   alcancada.value = Math.max(alcancada.value, numero);
@@ -165,13 +185,25 @@ const salvar = async () => {
   }
   salvando.value = true;
   try {
-    await CrmCaixasAPI.salvar(route.params.inboxId, paraSalvar(form.value));
+    await CrmCaixasAPI.salvar(
+      route.params.inboxId,
+      salvarDaCaixa(form.value, original.value)
+    );
     useAlert(t('CRM_CAIXAS.EDITOR.SALVOU'));
     voltarParaLista({ salva: route.params.inboxId });
   } catch (error) {
-    // R7 conferida também no servidor: volta para a etapa que resolve.
-    if (error?.response?.data?.error?.code === 'crm.caixas.sem_triagem') ir(2);
-    useAlert(t('CRM_CAIXAS.EDITOR.FALHOU'));
+    // R7 e os agentes de IA (#1447) conferidos também no servidor: volta para
+    // a etapa que resolve.
+    const codigo = error?.response?.data?.error?.code;
+    const dosAgentes = ERROS_DOS_AGENTES.includes(codigo);
+    if (codigo === 'crm.caixas.sem_triagem' || dosAgentes) ir(2);
+    if (codigo === AGENTE_NAO_LIGA) {
+      useAlert(t('CRM_CAIXAS.EDITOR.AGENTE_NAO_LIGA'));
+    } else if (dosAgentes) {
+      useAlert(t('CRM_CAIXAS.EDITOR.ERRO_AGENTES'));
+    } else {
+      useAlert(t('CRM_CAIXAS.EDITOR.FALHOU'));
+    }
   } finally {
     salvando.value = false;
   }
@@ -241,7 +273,7 @@ const salvar = async () => {
               {{ $t(`CRM_CAIXAS.${CHAVES[etapa - 1]}.TITULO`) }}
             </h2>
             <p class="mb-0 text-base text-n-slate-11">
-              {{ $t(`CRM_CAIXAS.${CHAVES[etapa - 1]}.SUBTITULO`) }}
+              {{ subtitulo }}
             </p>
           </div>
 
@@ -254,6 +286,7 @@ const salvar = async () => {
           <EtapaPessoas
             v-else-if="etapa === 2"
             v-model:pessoas="form.people"
+            v-model:ai-agents="form.ai_agents"
             :funis="funisMarcados"
             :todos-os-funis="funis"
             :falta-triagem="semTriagem"

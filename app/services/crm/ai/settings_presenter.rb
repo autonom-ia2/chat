@@ -15,6 +15,7 @@ module Crm
           callback_mode: Config.pipeline_callback_mode(@pipeline),
           stale_hours: pipeline_settings[:stale_hours].presence || Config::DEFAULT_STALE_HOURS,
           auto_followup: Config.auto_followup_settings(@pipeline),
+          service_reminders: Config.service_reminders_settings(@pipeline),
           handoff: Config.handoff_settings(nil, @pipeline),
           inboxes: @pipeline.inboxes.order(:name, :id).map { |inbox| { id: inbox.id, name: inbox.name } },
           team: team,

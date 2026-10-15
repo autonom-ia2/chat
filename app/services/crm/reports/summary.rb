@@ -45,7 +45,9 @@ module Crm
           lost_value_by_currency: currency_amount(lost),
           resolved_count: closed_with(sale ? nil : :resolved).count,
           cancelled_count: closed_with(sale ? nil : :cancelled).count,
-          goal: sale ? goal_payload : nil
+          goal: sale ? goal_payload : nil,
+          # #1498: funil de Atender mostra o tempo de solução (sem a pausa em "Esperando o cliente").
+          resolution_time: sale ? nil : ResolutionTime.new(pipeline: pipeline, cards: closed_with(:resolved)).perform
         }
       end
 

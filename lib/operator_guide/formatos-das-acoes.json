@@ -97,9 +97,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:23",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
     ],
     "sem_corpo": true
   },
@@ -5456,6 +5456,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -5468,14 +5476,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -10474,16 +10482,20 @@
       },
       "inbox_id": {
         "tipo": "inteiro"
+      },
+      "papel": {
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -22855,6 +22867,15 @@
   },
   "PUT crm/caixas/:inbox_id": {
     "campos": {
+      "ai_agents": {
+        "campos": {
+          "id": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      },
       "default_stage_id": {},
       "legado": {},
       "modo": {},
@@ -22879,8 +22900,8 @@
     "envelope": "caixa",
     "origem": [
       "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:49"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:61"
     ],
     "sem_corpo": false
   },
@@ -23292,6 +23313,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -23304,14 +23333,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },

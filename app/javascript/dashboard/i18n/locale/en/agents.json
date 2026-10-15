@@ -609,13 +609,18 @@
         "ATENDENDO": "Answering",
         "PARADO": "Stopped",
         "FALTA_TERMINAR": "Not finished",
-        "COTACAO": "Quotes"
+        "COTACAO": "Quotes",
+        "NA_EQUIPE": "On the team"
       },
       "ESCOLHER": {
         "TITULO": "Create agent",
         "TEXTO": "Pick a ready-made template. Then tell it your way and choose the channel at the end.",
         "OUTRO_TIPO": "Need another kind?",
-        "OUTRO_TEXTO": "For special cases. Most agents start from a template above."
+        "OUTRO_TEXTO": "For special cases. Most agents start from a template above.",
+        "EQUIPE": {
+          "TITULO": "Team agent",
+          "TEXTO": "Stays on a channel that already has a main agent and receives the conversation when someone hands over."
+        }
       },
       "MODELOS": {
         "ROTULO": "Ready-made templates",
@@ -662,7 +667,8 @@
         "CARREGANDO": "Loading your agents",
         "SEUS_AGENTES": "Your agents",
         "CONTAGEM_ATENDENDO": "None answering | 1 answering | {n} answering",
-        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped"
+        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped",
+        "CONTAGEM_NA_EQUIPE": "None on the team | 1 on the team | {n} on the team"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Not on any channel yet",
@@ -678,7 +684,8 @@
         "CONTINUAR": "Continue",
         "CONTINUAR_ARIA": "Continue {nome}",
         "MAIS_OPCOES": "More options for {nome}",
-        "EXCLUIR_RASCUNHO": "Delete draft"
+        "EXCLUIR_RASCUNHO": "Delete draft",
+        "RECEBE_EM": "Receives when someone hands over in: {caixas}"
       },
       "EXCLUIR": {
         "TITULO": "Delete this draft?",
@@ -1606,6 +1613,43 @@
           "TIRAR_ERRO": "Could not remove {item} now.",
           "TIRAR_ERRO_GARANTIA": "It stays in the base."
         }
+      },
+      "EQUIPE": {
+        "TITULO": "On which channels will {nome} be on the team?",
+        "TITULO_SEM_NOME": "On which channels will the agent you are creating be on the team?",
+        "TEXTO": "Choose one or more. Only channels that already have someone answering first can be chosen.",
+        "PRINCIPAL": "{outro} answers first",
+        "SEM_PRINCIPAL": "No one answers first on this channel yet. A team agent needs a main agent on the channel.",
+        "PRINCIPAL_PARADO": "{outro} is not answering on this channel. A team agent needs a main agent that is answering.",
+        "NENHUM": "No channel has a main agent answering yet. Put an agent to answer first on a channel and come back here.",
+        "CONFIRA": "Check how it works",
+        "CONFIRA_TEXTO": "Nothing changes for who already answers first.",
+        "AVISO": "{outro} answers first; {nome} receives when someone hands over.",
+        "AVISO_SEM_NOME": "{outro} answers first; the agent you are creating receives when someone hands over.",
+        "SAI": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to {outro}.",
+        "PASSO": "Step {n} of {total}",
+        "CONTINUAR": "Continue",
+        "COMECAR": "Start working",
+        "SALVAR": "Save",
+        "VOLTAR": "Back",
+        "SEM_MUDANCA": "Nothing changed. Choose or remove a channel to save.",
+        "ERRO_LER": "Could not read the channels right now.",
+        "ERRO_LER_GARANTIA": "Nothing changed in {nome}. Try again in a moment.",
+        "ERRO": "Could not put {nome} on the team.",
+        "ERRO_GARANTIA": "The channels that were already set stay as they are. Try again.",
+        "FEITO": "Done. {nome} now works on the chosen channels.",
+        "CARREGANDO": "Reading the channels",
+        "SALVANDO": "Saving…",
+        "COMECAR_TEXTO": "{nome} receives the conversation when someone hands over, on the channels you choose.",
+        "ESCOLHER_DE_NOVO": "Choose the channels again"
+      },
+      "ONDE": {
+        "TITULO": "Where {nome} works",
+        "TITULO_SEM_NOME": "Where the agent you are creating works",
+        "RECEBE": "Receives when someone hands over",
+        "PRONTO_TITULO": "{nome} is already working",
+        "MUDAR": "Change",
+        "MUDAR_ARIA": "Change where {nome} works"
       }
     }
   }

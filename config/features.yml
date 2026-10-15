@@ -386,3 +386,21 @@
   display_name: Follow-up de IA com dados reais do card nos modelos
   enabled: false
   column: feature_flags_ext_1
+
+# Lembretes novos do CRM (#1460 repetir, #1461 sem card, #1462 quem recebe). Bit 22 (4194304), reservado pela
+# Orquestração: fica LOGO ABAIXO de `followup_template_real_values` (#1336, bit 21).
+# Desligada (padrão): o "Novo lembrete" do calendário abre a janela antiga e o card, o Relacionamento e o calendário
+# não mostram repetir nem quem recebe; a API (#1537) continua, sem uso. Ligar: #1527.
+- name: crm_lembretes_v2
+  display_name: Lembretes que repetem, sem card e com quem recebe
+  enabled: false
+  column: feature_flags_ext_1
+
+# Calendário novo "Meu dia" (#1568). Bit 23 (8388608), reservado pela Orquestração: fica LOGO ABAIXO de
+# `crm_lembretes_v2` (#1542, bit 22) — este PR só entra depois do #1542. Desligada (padrão): CRM > Agendamento >
+# Calendário continua a tela de sempre. Ligada: abre no Meu dia, com semana e mês de apoio e filtros no "Mostrar".
+# Sem migration. Ligar: #1574.
+- name: crm_calendario_ouro
+  display_name: Calendário Meu dia (o que fazer hoje)
+  enabled: false
+  column: feature_flags_ext_1

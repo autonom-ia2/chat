@@ -194,6 +194,9 @@ describe('AgentesCriarEntrada', () => {
       [{ type: 'support' }],
       [{ agente: '7' }],
       [{ atuacao: 'interno' }],
+      // #1433: o agente da equipe.
+      [{ papel: 'area' }],
+      [{ papel: 'area', agente: '7' }],
     ])('goes straight to the creation with %o', async query => {
       comConta(ligada);
       rota.atual.query = query;
