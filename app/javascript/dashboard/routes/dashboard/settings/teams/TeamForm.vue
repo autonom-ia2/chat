@@ -8,6 +8,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Popover from 'dashboard/components-next/popover/Popover.vue';
 import EmojiIcon from 'dashboard/components-next/emoji-icon-picker/EmojiIcon.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import GerenciadoEmAtribuicao from 'dashboard/components-next/sidebar/fork/GerenciadoEmAtribuicao.vue';
 
 const EmojiIconPicker = defineAsyncComponent(
   () =>
@@ -22,6 +23,7 @@ export default {
     EmojiIcon,
     Icon,
     EmojiIconPicker,
+    GerenciadoEmAtribuicao,
   },
   props: {
     onSubmit: {
@@ -165,6 +167,7 @@ export default {
           {{ $t('TEAMS_SETTINGS.FORM.AUTO_ASSIGN.LABEL') }}
         </label>
       </div>
+      <GerenciadoEmAtribuicao />
       <div class="flex flex-row justify-end gap-2 py-2 px-0 w-full">
         <div class="w-full">
           <NextButton

@@ -415,10 +415,20 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Menu lateral novo e página inicial de Configurações com cartões (#1617).
+# Bit = posição na lista; só acrescentar no fim (combinado com a Orquestração, #1322). Nunca inserir antes de uma flag
+# que já está na main: o bit gravado nas contas mudaria de significado.
+# Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
+# No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
+- name: menu_lateral_novo
+  display_name: Menu lateral novo e Configurações em cartões
+  enabled: false
+  column: feature_flags_ext_1
+
 # Outro canal (#1150, R13; PR #1664): o cliente com card aberto que escreve por outra caixa tem a conversa nova ligada
-# ao card e entregue ao dono, sem passar pela triagem. Bit 25 (33554432), o próximo depois de
-# `whatsapp_campaign_products` (bit 24): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição
-# na lista é o bit). Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
+# ao card e entregue ao dono, sem passar pela triagem. Bit 26 (67108864), o próximo depois de `menu_lateral_novo`
+# (bit 25): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
+# Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
 - name: crm_outro_canal
   display_name: Conversa de outro canal vai para o card aberto e o dono
   enabled: false
