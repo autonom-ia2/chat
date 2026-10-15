@@ -4,9 +4,7 @@
     "controller": "api/v1/accounts/agent_bots#destroy",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:26",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:26"
     ],
     "sem_corpo": true
   },
@@ -15,9 +13,7 @@
     "controller": "api/v1/accounts/agent_bots#avatar",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:21",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:21"
     ],
     "sem_corpo": true
   },
@@ -1121,9 +1117,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:16",
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:48",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -8064,9 +8058,7 @@
     "controller": "api/v1/accounts/agent_bots#reset_access_token",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:31",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:31"
     ],
     "sem_corpo": true
   },
@@ -8075,9 +8067,7 @@
     "controller": "api/v1/accounts/agent_bots#reset_secret",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:36",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:36"
     ],
     "sem_corpo": true
   },
@@ -19099,9 +19089,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:16",
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:48",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52"
     ],
     "sem_corpo": false
   },
