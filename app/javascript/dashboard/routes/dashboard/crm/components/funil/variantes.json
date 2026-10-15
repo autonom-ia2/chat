@@ -1,0 +1,5 @@
+{
+  "seguros/saude_beneficios": {
+    "ATENDIMENTO": ["novo", "andamento", "andamento", "resolvido"]
+  }
+}
