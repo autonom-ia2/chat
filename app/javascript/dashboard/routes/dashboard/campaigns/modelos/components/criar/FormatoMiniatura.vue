@@ -34,6 +34,21 @@ defineProps({
       <span class="w-4/5 h-2 rounded bg-n-solid-1" />
       <span class="w-1/2 h-4 rounded bg-n-solid-1" />
     </template>
+    <template v-else-if="formato === 'produtos'">
+      <span class="flex gap-1">
+        <span
+          v-for="n in 2"
+          :key="n"
+          class="flex flex-col w-1/2 overflow-hidden rounded bg-n-solid-1"
+        >
+          <span class="grid h-7 place-items-center bg-n-teal-4">
+            <span class="i-lucide-shopping-cart size-3.5 text-n-teal-11" />
+          </span>
+          <span class="h-1.5 m-1 rounded bg-n-slate-5" />
+        </span>
+      </span>
+      <span class="w-3/4 h-2 rounded bg-n-solid-1" />
+    </template>
     <template v-else-if="formato === 'catalogo'">
       <span class="grid h-8 rounded place-items-center bg-n-solid-1">
         <span class="i-lucide-shopping-bag size-4 text-n-teal-11" />
