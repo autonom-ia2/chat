@@ -42,6 +42,9 @@ module Crm::Subjects
   # caixa tem responsável por funil OU a conversa tem passagem em aberto. Verdadeira, a IA de assunto vai para a fila
   # high com espera de DEBOUNCE_ORDEM, troca o dono em linha (ResponsibleAgentSync) e só então grava o marco
   # (Crm::Subjects::Marco), que o ReplyJob espera. Falsa, nada muda: fila low, 15 s, Sync assíncrono, sem espera.
+  # "Passagem em aberto" inclui a de pessoa → robô (o robô atende uma conversa que veio de uma pessoa): ali o assunto
+  # ainda pode trocar o funil e o robô, então a ordem importa. Custo aceito pelo Multifunnel (15/10): fila high e espera
+  # do marco nessas conversas, só com a Fase 2 ligada.
   def self.ordem_do_turno?(conversation)
     return false unless ligado?(conversation) && Crm::Ai::Config.areas_ligadas?(conversation.account)
 

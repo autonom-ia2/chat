@@ -39,6 +39,14 @@ RSpec.describe Crm::Subjects::IdentifyJob do
       expect(Crm::Subjects.ordem_do_turno?(conversation)).to be(true)
     end
 
+    it 'conta a passagem pessoa → robô em aberto (o robô atende uma conversa que veio de uma pessoa)' do
+      Crm::InboxAiAgent.delete_all
+      Crm::Passagens.registrar!(conversation: conversation, de: admin, para: porta, pedida_por: admin, motivo: 'devolucao')
+
+      expect(Crm::Passagens.ultima_aberta(conversation).para).to have_attributes(tipo: :ia)
+      expect(Crm::Subjects.ordem_do_turno?(conversation)).to be(true)
+    end
+
     it 'é falsa sem a IA de assunto na caixa, sem a IA do CRM ou sem a Fase 2 (linhas de responsável não contam)',
        :aggregate_failures do
       account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :off)
