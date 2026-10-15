@@ -11,6 +11,7 @@ const ModeloPage = () => import('./pages/ModeloPage.vue');
 const ModeloCriarPage = () => import('./pages/ModeloCriarPage.vue');
 const ModeloEnviadoPage = () => import('./pages/ModeloEnviadoPage.vue');
 const ModeloUsarPage = () => import('./pages/ModeloUsarPage.vue');
+const AutorizacaoPage = () => import('./pages/AutorizacaoPage.vue');
 
 // Modelos de mensagem do WhatsApp, nova jornada (#1332), ligada à API de Modelos
 // (#1330). Atrás da flag whatsapp_templates_journey: desligada, o endereço volta
@@ -71,6 +72,14 @@ export const routes = [
     path: frontendURL(`${base}/enviado`),
     name: 'modelos_whatsapp_enviado',
     component: ModeloEnviadoPage,
+    meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
+    beforeEnter: exigirJornadaDeModelos,
+  },
+  // #1586: autorização do dono para o sistema criar modelos (só quem administra modelos).
+  {
+    path: frontendURL(`${base}/autorizacao`),
+    name: 'modelos_whatsapp_autorizacao',
+    component: AutorizacaoPage,
     meta: meta(PERMISSOES_PARA_CRIAR, LISTA),
     beforeEnter: exigirJornadaDeModelos,
   },

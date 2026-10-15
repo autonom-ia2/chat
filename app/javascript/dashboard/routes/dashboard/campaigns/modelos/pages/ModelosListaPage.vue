@@ -13,6 +13,7 @@ import {
 import { rotuloDoCampo } from '../helpers/campos';
 import ModeloLinha from '../components/ModeloLinha.vue';
 import FranquiaDoMes from '../components/FranquiaDoMes.vue';
+import AutorizacaoResumo from '../components/AutorizacaoResumo.vue';
 import AvisoDeSituacao from '../components/AvisoDeSituacao.vue';
 import {
   mudancasDeSituacao,
@@ -256,6 +257,9 @@ const conectarHref = computed(
             <span class="i-lucide-eye size-5 shrink-0" aria-hidden="true" />
             {{ $t('MODELOS_WHATSAPP.SO_VER') }}
           </p>
+
+          <!-- #1586: autorização do dono para o sistema criar modelos. -->
+          <AutorizacaoResumo v-if="podeCriar" />
 
           <AvisoDeSituacao :mudancas="mudancas" />
 
