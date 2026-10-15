@@ -68,9 +68,9 @@ class Crm::Caixas::RetratoDosAgentes
                                 .transform_values { |linhas| linhas.map(&:last) }
   end
 
-  # Agentes da conta que podem ser área: não apagados e que falam com cliente (não interno, não de sistema).
+  # Agentes da conta que podem ser área (Agent#pode_ser_area?, #1433): fora rascunho, parado de propósito, interno,
+  # sistema, ajudante e Lia.
   def candidatos
-    @candidatos ||= ::Autonomia::Agents::Agent.kept.where(account_id: @account.id).order(:name, :id).to_a
-                                              .reject { |agente| agente.actuation_internal? || agente.config&.dig('system_key').present? }
+    @candidatos ||= ::Autonomia::Agents::Agent.podem_ser_area(@account).order(:name, :id).to_a
   end
 end

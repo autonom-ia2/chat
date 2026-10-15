@@ -62,7 +62,8 @@ module Crm::Passagens
     Crm::Passagem.transaction(requires_new: true) do
       travar(conversation)
       agora = Time.current
-      devolver_as_de!(conversation, destino, origem, agora)
+      # O convite não tira a conversa de ninguém (o robô segue com ela): não encerra passagem nenhuma além de outro convite.
+      devolver_as_de!(conversation, destino, origem, agora) unless pedido[:motivo] == CONVITE
       fechar_convites!(conversation, agora)
       Crm::Passagem.create!(
         account_id: conversation.account_id, conversation_id: conversation.id, card_id: card&.id, pipeline_id: card&.pipeline_id,

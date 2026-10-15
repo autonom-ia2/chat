@@ -4,7 +4,9 @@
 # recebe este mesmo objeto e lê o que ficou preso aqui, mesmo que o bloco do com_motivo já tenha terminado.
 #
 # Vários saves de pessoa na mesma transação (robô → Ana → Bia) viram uma troca só, do primeiro "antes" (o robô) para a
-# pessoa do fim (a Bia): é o que o commit mostra. A transação desfeita solta a troca.
+# pessoa do fim (a Bia), com o primeiro motivo, card e quem pediu que apareceram: é o que o commit mostra. A troca
+# presa numa transação que já terminou (desfeita, ou cujo último save não trocou a pessoa e não disparou o evento) não
+# passa para a próxima: cada transação começa a sua.
 module ConversationPassagem
   extend ActiveSupport::Concern
 
@@ -12,7 +14,6 @@ module ConversationPassagem
 
   included do
     before_save :prender_troca_da_passagem, if: :will_save_change_to_assignee_id?
-    after_rollback :soltar_troca_da_passagem
   end
 
   # A troca presa desde o último commit, e solta: cada troca é lida uma vez.
@@ -25,13 +26,16 @@ module ConversationPassagem
   private
 
   def prender_troca_da_passagem
-    contexto = Crm::Passagens::Contexto
-    antes = @troca_da_passagem || antes_desta_troca
-    @troca_da_passagem = antes.dup.tap do |troca|
-      troca.motivo = contexto.motivo.presence
-      troca.card = contexto.card
-      troca.pedida_por = contexto.pedida_por || Current.user
-    end
+    transacao = self.class.connection.current_transaction
+    anterior = @troca_da_passagem if @transacao_da_troca.equal?(transacao)
+    @transacao_da_troca = transacao
+    @troca_da_passagem = (anterior || antes_desta_troca).dup.tap { |troca| completar(troca, Crm::Passagens::Contexto) }
+  end
+
+  def completar(troca, contexto)
+    troca.motivo ||= contexto.motivo.presence
+    troca.card ||= contexto.card
+    troca.pedida_por ||= contexto.pedida_por || Current.user
   end
 
   def antes_desta_troca

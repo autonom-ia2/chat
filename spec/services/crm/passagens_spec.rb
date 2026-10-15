@@ -83,14 +83,32 @@ RSpec.describe Crm::Passagens do
       expect(ida.reload.devolvida_em).to be_present
     end
 
-    it 'o n8n continua AgentBot e não casa com um agente: a passagem para a porta não fecha a que veio do n8n' do
+    it 'o n8n continua AgentBot: devolver ao n8n fecha a ida dele, e a passagem fica com a classe e o id de agent_bots' do
       n8n = create(:agent_bot, account: account, name: 'n8n')
       ida = passar(de: n8n, para: ana)
-      passar(de: bruno, para: porta, pedida_por: bruno)
 
-      expect(ida.reload.devolvida_em).to be_nil
-      expect(passar(de: bruno, para: n8n, pedida_por: bruno).para).to have_attributes(classe: 'AgentBot', id: n8n.id)
-      expect(ida.reload.devolvida_em).to be_present
+      volta = passar(de: ana, para: n8n, pedida_por: ana)
+
+      expect(volta.para).to have_attributes(classe: 'AgentBot', id: n8n.id)
+      expect(ida.reload).to have_attributes(devolvida_em: be_present, devolvida_por_id: ana.id)
+    end
+
+    it 'o n8n e o agente da porta são pontas diferentes: a volta da porta para a Ana não fecha a do n8n para a Bruno' do
+      n8n = create(:agent_bot, account: account, name: 'n8n')
+      do_n8n = passar(de: n8n, para: bruno)
+
+      passar(de: ana, para: porta, pedida_por: ana)
+
+      expect(do_n8n.reload.devolvida_em).to be_nil
+    end
+
+    # Pega o achado do revisor: o convite sai do robô que segue com a conversa; ele não pode fechar a devolução Ana → robô.
+    it 'convite não fecha a passagem aberta para o robô que convida (o robô segue com a conversa)' do
+      devolucao = passar(de: ana, para: porta, pedida_por: ana)
+
+      passar(de: porta, para: bruno, motivo: 'convite')
+
+      expect(devolucao.reload.devolvida_em).to be_nil
     end
 
     it 'dentro da transação de quem chama, uma falha ao gravar a nova desfaz também a devolução (savepoint)' do
@@ -132,13 +150,6 @@ RSpec.describe Crm::Passagens do
       expect(ida.reload.devolvida_em).to be_present
     end
 
-    it 'não fecha passagem que não envolve nem o destino nem a origem da nova' do
-      outra = passar(de: porta, para: bruno)
-      passar(de: espelho_area, para: ana)
-
-      expect(outra.reload.devolvida_em).to be_nil
-    end
-
     it 'o nome que vai para a IA tem no máximo 60 caracteres' do
       comprida = create(:user, account: account, name: 'A' * 200)
       passar(de: porta, para: comprida)
@@ -174,9 +185,14 @@ RSpec.describe Crm::Passagens do
       expect([contexto.motivo, contexto.card]).to eq([nil, nil])
     end
 
-    it 'restaura o anterior mesmo quando o bloco quebra' do
-      expect { described_class.com_motivo('volta') { raise ArgumentError } }.to raise_error(ArgumentError)
-      expect(Crm::Passagens::Contexto.motivo).to be_nil
+    it 'restaura o de fora mesmo quando o bloco de dentro quebra' do
+      card = create_card(pipeline: suporte)
+      contexto = Crm::Passagens::Contexto
+
+      described_class.com_motivo('passar_para_ia', card: card, pedida_por: ana) do
+        expect { described_class.com_motivo('volta') { raise ArgumentError } }.to raise_error(ArgumentError)
+        expect([contexto.motivo, contexto.card, contexto.pedida_por]).to eq(['passar_para_ia', card, ana])
+      end
     end
   end
 
