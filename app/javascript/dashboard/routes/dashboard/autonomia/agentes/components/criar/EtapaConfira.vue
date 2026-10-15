@@ -26,6 +26,8 @@ const props = defineProps({
   conversaPensando: { type: Boolean, default: false },
   // Rótulo do botão de começar ("Começar a atender no WhatsApp"), ou '' quando não há canal.
   rotuloComecar: { type: String, default: '' },
+  // #1433: o texto embaixo do botão quando ele não é o de sempre (agente da equipe).
+  textoComecar: { type: String, default: '' },
   podeConectarCanal: { type: Boolean, default: false },
   linkConectarCanal: { type: String, default: '' },
   celular: { type: Boolean, default: false },
@@ -299,9 +301,10 @@ const respondeuErrado = () => {
         </AgenteBotao>
         <p id="confira-comecar-texto" class="m-0 text-sm text-n-slate-11">
           {{
-            interno
+            textoComecar ||
+            (interno
               ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
-              : t(`${NS}.COMECAR_TEXTO`, { nome })
+              : t(`${NS}.COMECAR_TEXTO`, { nome }))
           }}
         </p>
       </div>

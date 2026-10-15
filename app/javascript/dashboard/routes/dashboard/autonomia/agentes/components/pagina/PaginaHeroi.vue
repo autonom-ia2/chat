@@ -5,7 +5,7 @@ import AgenteStatus from '../AgenteStatus.vue';
 import AgenteInterruptor from '../AgenteInterruptor.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import MaisOpcoes from './MaisOpcoes.vue';
-import { ESTADO } from '../../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO } from '../../utils/estadoDoAgente';
 
 // #1181 PR3 (protótipo T07, heroT07) — o único bloco navy da página: volta para a lista, foto, nome e
 // onde responde. Quem gerencia tem o interruptor Atendendo/Parado (o estado fica só nele), a ação
@@ -105,7 +105,12 @@ const aoVoltar = evento => {
         >
           <AgenteInterruptor
             data-interruptor
-            :ligado="estado === ESTADO.ATENDENDO"
+            :ligado="TRABALHANDO.includes(estado)"
+            :texto-ligado="
+              estado === ESTADO.NA_EQUIPE
+                ? t('AGENTS.JORNADA.STATUS.NA_EQUIPE')
+                : ''
+            "
             :rotulo="t(`${NS}.INTERRUPTOR`, { nome })"
             :desabilitado="alternando"
             @alternar="emit('alternar', $event)"

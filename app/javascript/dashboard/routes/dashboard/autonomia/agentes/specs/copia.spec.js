@@ -66,6 +66,7 @@ describe('cópia da lista em pt_BR', () => {
     );
     expect(textos).toEqual([
       'Atendendo',
+      'Na equipe',
       'Parado',
       'Falta terminar',
       'Cotação',

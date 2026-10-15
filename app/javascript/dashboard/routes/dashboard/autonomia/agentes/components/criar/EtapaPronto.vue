@@ -19,6 +19,9 @@ const props = defineProps({
   celular: { type: Boolean, default: false },
   // Copiloto da equipe (#1494): ajuda a equipe dentro das conversas, sem canal e sem cliente.
   interno: { type: Boolean, default: false },
+  // #1433 (tema 13): agente da equipe. Título "{nome} já está trabalhando" e o bloco "Onde {nome} trabalha"
+  // vem de quem chama, no slot, embaixo do herói.
+  equipe: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['ver', 'voltar']);
@@ -30,6 +33,8 @@ const valores = computed(() => ({ nome: props.nome, canal: props.canal }));
 
 const titulo = computed(() => {
   if (props.interno) return t(`${NS}.TITULO_COPILOTO`, valores.value);
+  if (props.equipe)
+    return t('AGENTS.JORNADA.ONDE.PRONTO_TITULO', valores.value);
   return props.canal
     ? t(`${NS}.TITULO`, valores.value)
     : t(`${NS}.TITULO_SEM_CANAL`, valores.value);
@@ -153,5 +158,6 @@ const conversa = computed(() =>
         />
       </div>
     </section>
+    <slot />
   </div>
 </template>

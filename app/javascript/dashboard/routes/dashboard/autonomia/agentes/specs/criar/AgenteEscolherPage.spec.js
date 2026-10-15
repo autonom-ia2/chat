@@ -4,6 +4,7 @@ import AgenteEscolherPage from '../../pages/AgenteEscolherPage.vue';
 // #1543 — página inteira "Criar agente": agente normal em destaque (modelos e "Do meu jeito", com
 // ?modelo=) e, em "Precisa de outro tipo?", só o Copiloto da equipe (?atuacao=interno). "Agente da
 // equipe" e "Ajuda outros agentes" ainda não existem: não aparecem, nem escondidos nem desabilitados.
+// #1433 (tema 13): "Agente da equipe" (?papel=area) aparece só com a Fase 2 ligada na conta.
 const estado = vi.hoisted(() => ({ podeGerenciar: true }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
@@ -11,6 +12,17 @@ vi.mock('dashboard/composables/useCanManage', async () => {
 });
 
 const router = vi.hoisted(() => ({ push: vi.fn() }));
+const conta = vi.hoisted(() => ({ fase2: false }));
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  const getters = {
+    'accounts/getAccount': () => () => ({
+      autonomia_agents_fase2: conta.fase2,
+    }),
+    getCurrentAccountId: () => 1,
+  };
+  return { useMapGetter: nome => computed(() => getters[nome]()) };
+});
 vi.mock('vue-router', () => ({ useRouter: () => router }));
 
 const montar = () => mount(AgenteEscolherPage);
@@ -19,6 +31,7 @@ describe('AgenteEscolherPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     estado.podeGerenciar = true;
+    conta.fase2 = false;
   });
 
   it('opens with the title, the three templates and "Do meu jeito" in the navy block', () => {
@@ -67,7 +80,7 @@ describe('AgenteEscolherPage', () => {
     expect(wrapper.emitted('escolher')).toEqual([[{ atuacao: 'interno' }]]);
   });
 
-  it('has no "Agente da equipe" nor "Ajuda outros agentes", not even hidden or disabled', () => {
+  it('without the Fase 2, has no "Agente da equipe" nor "Ajuda outros agentes", not even hidden or disabled', () => {
     const html = montar().html();
     expect(html).not.toContain('ESCOLHER.EQUIPE');
     expect(html).not.toContain('ESCOLHER.AJUDA');
@@ -103,5 +116,41 @@ describe('AgenteEscolherPage', () => {
         expect(wrapper.get(seletor).classes()).toContain('min-h-11');
       }
     );
+  });
+});
+
+describe('AgenteEscolherPage com a Fase 2 (#1433, tema 13)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    estado.podeGerenciar = true;
+    conta.fase2 = true;
+  });
+
+  it('offers "Agente da equipe" first, with its explanation, and still the copilot; never "Ajuda outros agentes"', () => {
+    const wrapper = montar();
+    const opcoes = wrapper.get('[data-outro-tipo]').findAll('[data-outro]');
+    expect(opcoes.map(opcao => opcao.attributes('data-outro'))).toEqual([
+      'equipe',
+      'copiloto',
+    ]);
+    expect(opcoes[0].element.tagName).toBe('BUTTON');
+    expect(opcoes[0].text()).toContain('AGENTS.JORNADA.ESCOLHER.EQUIPE.TITULO');
+    expect(opcoes[0].text()).toContain('AGENTS.JORNADA.ESCOLHER.EQUIPE.TEXTO');
+    expect(opcoes[0].classes()).toContain('min-h-11');
+    expect(wrapper.html()).not.toContain('ESCOLHER.AJUDA');
+  });
+
+  it('starts the team agent with ?papel=area and ignores other clicks while it starts', async () => {
+    const wrapper = montar();
+    await wrapper.get('[data-agente-da-equipe]').trigger('click');
+    await wrapper.get('[data-copiloto]').trigger('click');
+    await wrapper.findAll('[data-usar]')[0].trigger('click');
+    expect(wrapper.emitted('escolher')).toEqual([[{ papel: 'area' }]]);
+    expect(wrapper.get('[data-copiloto]').attributes('disabled')).toBeDefined();
+  });
+
+  it('keeps it away from a view only seat', () => {
+    estado.podeGerenciar = false;
+    expect(montar().find('[data-agente-da-equipe]').exists()).toBe(false);
   });
 });

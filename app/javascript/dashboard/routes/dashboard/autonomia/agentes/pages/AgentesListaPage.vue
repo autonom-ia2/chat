@@ -14,6 +14,7 @@ import {
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
+import { caixasDaEquipe } from '../utils/ondeTrabalha';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
@@ -87,10 +88,19 @@ const esperando = computed(
 );
 const semCanal = computed(() => !(caixas.value || []).length);
 
-const contagemTexto = computed(
-  () =>
-    `${t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: contagem.value.atendendo }, contagem.value.atendendo)} · ${t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: contagem.value.parados }, contagem.value.parados)}`
-);
+// #1433: "N na equipe" só aparece quando há agente da equipe.
+const contagemTexto = computed(() => {
+  const { atendendo, naEquipe, parados } = contagem.value;
+  return [
+    t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: atendendo }, atendendo),
+    naEquipe
+      ? t('AGENTS.JORNADA.LISTA.CONTAGEM_NA_EQUIPE', { n: naEquipe }, naEquipe)
+      : '',
+    t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: parados }, parados),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+});
 
 const linkConectarCanal = computed(
   () => router.resolve({ name: 'settings_inbox_new' }).href
@@ -205,6 +215,12 @@ const enderecoDe = agente =>
 const canaisDe = agente =>
   ocupacao.estado.value === 'pronto'
     ? canaisDoAgente(agente.id, ocupacao.canais.value)
+    : null;
+
+// #1433: caixas em que o agente está na equipe (L2), ou null sem a leitura.
+const equipeDe = agente =>
+  ocupacao.estado.value === 'pronto'
+    ? caixasDaEquipe(agente.id, ocupacao.canais.value).map(canal => canal.name)
     : null;
 
 // Externo aparece com a foto da caixa em que atende; sem ela (ou sem a L2), com a foto própria.
@@ -416,6 +432,7 @@ onBeforeUnmount(() => {
               :href="enderecoDe(agente)"
               :numeros="semana.numerosDe(agente.id)"
               :canais="canaisDe(agente)"
+              :equipe="equipeDe(agente)"
               :foto="fotoDe(agente)"
               :pode-gerenciar="podeGerenciar"
               :continuando="continuando === agente.id"

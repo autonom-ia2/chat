@@ -585,6 +585,13 @@ en:
           inbox_has_webhook_bot: 'This inbox is already connected to another bot. Disconnect it first.'
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa: as recusas que a tela mostra como vieram.
+        area_errors:
+          generic: 'Could not put %{nome} on the team of %{canal}. Nothing changed.'
+          fase2_off: 'Team agents are not available for this account yet.'
+          agent_internal: '%{nome} is an internal agent (team copilot) and never talks to customers, so it cannot be on the team of a channel.'
+          already_linked: '%{nome} is already on %{canal}.'
+          sem_principal: 'No one answers first on %{canal} right now. A team agent needs a main agent answering on the channel.'
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

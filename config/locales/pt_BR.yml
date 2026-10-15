@@ -1043,6 +1043,13 @@ pt_BR:
           inbox_has_webhook_bot: "Esta caixa de entrada já está conectada a outro bot. Desconecte-o primeiro."
           inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
           not_connected: "Esta caixa de entrada não está conectada ao agente."
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa.
+        area_errors:
+          generic: "Não deu para pôr %{nome} na equipe de %{canal}. Nada mudou."
+          fase2_off: "O agente da equipe ainda não está disponível nesta conta."
+          agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
+          already_linked: "%{nome} já está em %{canal}."
+          sem_principal: "Ninguém atende primeiro em %{canal} agora. O agente da equipe precisa de um agente principal atendendo no canal."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
