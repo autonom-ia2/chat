@@ -100,3 +100,56 @@ decisão sobre a recusa antes do prazo: hoje ela encerra a cadência, e quem pro
 cobrado depois dele. Proposta para o Followup IA: quando a recusa vier com a data do card ainda no futuro, reagendar o
 toque para depois dela em vez de marcar o card como gasto. Observação de texto: depois do vencimento, "vence em
 20/10/2026" fica no presente; o modelo da conta é quem decide a frase.
+
+## Nova rodada depois do #1591 (15/10/2026)
+
+O #1591 (Followup IA, na main em `5be5020e4e`) mudou o runner: num funil de Atender, se a IA recusa por mérito
+(`nothing_to_send`, que vira `no_open_loop`) e o `expected_close_at` do card ainda não passou, o mesmo toque volta
+no dia seguinte ao prazo (D+1), no primeiro horário permitido, uma vez por card. A data vem só do card. A flag não
+muda essa regra. Worktree atualizada com a main (merge `31863fed3d`).
+
+**Mesma bateria, mesmos cenários:** 30 chamadas na rodada principal + 10 na repetição, `gpt-6-luna`. **Custo:** 40
+chamadas, US$ 0,0150 (0,0110 + 0,0040), nenhum erro. Somado às rodadas de 14/10, o eval gastou US$ 0,0307 dos US$ 0,30.
+Chave da conta 16 (hook `crm_kanban_ai`, que é a que o `Crm::Ai::CredentialResolver` usa nessa conta) lida de novo
+com OK do Rodrigo. O psql só leu (`BEGIN READ ONLY`). O valor foi cifrado no servidor com uma chave RSA pública
+(OAEP), e só o cifrado saiu de lá. Antes, um pré-teste com valor falso. A chave decifrada e a chave privada foram
+apagadas no fim. Teste de fumaça com chave falsa: o valor não aparece na saída, no resultado nem no log.
+
+| Cobrança, "pago no vencimento" (20/10) | Com a flag | Sem a flag |
+|---|---|---|
+| Antes do vencimento (14/10): enviou | 1/7 | 4/4 |
+| Antes do vencimento: recusou (`nothing_to_send`) | 6/7 | 0/4 |
+| Recusas que o runner reagenda para 21/10 (funil de Atender) | 6/6 | — |
+| Depois do vencimento (21/10): enviou | 3/3 | — |
+
+Outros cenários com a flag ligada (rodada principal, 15 pares):
+
+| Medida (flag ligada) | Resultado |
+|---|---|
+| Índice escolhido válido | 15/15 |
+| Valor real mantido, IA sem escrever em posição já preenchida | 15/15, 0 sobrescritas |
+| Sem nenhum modelo sobrando: recusou (`no_fitting_template`, encerra como antes) | 3/3 |
+| `negocio.prazo` preenchido | "20/10/2026" (dia certo, sem o erro de 1 dia a menos do #1535) |
+| `negocio.valor` preenchido | "R$ 1.890,00" |
+| Card sem o dado: modelo que precisa dele sai da lista | sempre |
+
+Leitura:
+
+- O efeito na IA se repete (em 14/10 também foi 1/7 contra 4/4): com o vencimento visível no modelo e o prazo
+  ainda no futuro, ela não cobra. A mudança está no que vem depois. Antes, essa recusa marcava o card como gasto e
+  a cadência acabava. Agora as 6 recusas caem em card de funil de Atender com prazo 20/10 e voltam em 21/10. Nessa
+  data a IA enviou 3/3.
+- Neste eval quem reagenda é o código do runner, não a IA, e a conta acima aplica a regra do #1591 às respostas
+  registradas. O caminho do runner foi testado pelos specs: `auto_followup_runner_deadline_spec` (espera D+1, uma
+  vez, prazo de hoje ainda espera, vencido encerra, funil de Vender e card sem prazo encerram, confiança baixa e
+  encerramento não esperam) e pelos specs do runner, Híbrido e dados reais: 86 exemplos, 0 falhas, em
+  `chat2you_test_1522`. A recusa por mérito não aciona o texto livre do Híbrido (`no_template_fits?`).
+- Nesta rodada, depois do vencimento, a IA escolheu retomada e genérico, não o modelo de cobrança (em 14/10 foi 1/3).
+  Os valores reais desse modelo saem corretos na lista oferecida (acima). O preenchimento já tinha sido conferido no
+  envio em 14/10.
+- Fora da bateria: `negocio.titulo` não está nos modelos sintéticos. Cobrança em funil de Vender continua
+  encerrando na recusa (decisão do Rodrigo: só funil de Atender).
+
+**Veredito:** pode ligar o bit 21 (`followup_template_real_values`) em 1/16/18. O preenchimento está correto e a
+recusa antes do prazo deixou de encerrar a cadência no funil de Atender: espera o D+1 uma vez e, depois do vencimento,
+a IA cobra.
