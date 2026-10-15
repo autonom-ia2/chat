@@ -1,10 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { I18nT } from 'vue-i18n';
+import { I18nT, useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import FunilResumoCartao from './FunilResumoCartao.vue';
 import FunilCartaoVendas from './FunilCartaoVendas.vue';
 import FunilCartaoQuandoUsar from './FunilCartaoQuandoUsar.vue';
+import { rotuloDoTempo, tempoDoLembrete } from './lembretesAtender';
 
 // #1384 — Editar: o funil inteiro em frases, cada parte com "Alterar". O que
 // falta aparece em âmbar, com um botão só.
@@ -31,6 +32,8 @@ const props = defineProps({
 
 defineEmits(['abrir', 'criar', 'arquivar']);
 
+const { t } = useI18n();
+
 const primeira = computed(() => props.etapas[0]?.name || '');
 // #1498 — o que os lembretes de Atender fazem, numa frase.
 const fraseAtender = computed(() => {
@@ -45,6 +48,16 @@ const fraseAtender = computed(() => {
   if (ligados.resolved_check) return 'CRM_FUNIL.RESUMO.ATENDER_SO_RESOLVEU';
   return 'CRM_FUNIL.RESUMO.ATENDER_SEM_LEMBRETES';
 });
+// #1589 — o tempo escolhido de cada lembrete entra na frase do resumo.
+const temposAtender = computed(() => ({
+  andamento: t(
+    rotuloDoTempo(tempoDoLembrete(props.lembretesAtender, 'progress'))
+  ),
+  resolveu: t(
+    rotuloDoTempo(tempoDoLembrete(props.lembretesAtender, 'resolved_check'))
+  ),
+  sucesso: props.sucesso,
+}));
 const ultima = computed(() => props.etapas.at(-1)?.name || '');
 const nomesSemFrase = computed(() =>
   props.semFrase.map(etapa => etapa.name.trim() || '…')
@@ -123,7 +136,9 @@ const nomesSemFrase = computed(() =>
     @alterar="$emit('abrir', 'returns')"
   >
     <template v-if="!retorno">{{ $t('CRM_FUNIL.CARREGANDO') }}</template>
-    <template v-else-if="!venda">{{ $t(fraseAtender) }}</template>
+    <template v-else-if="!venda">
+      {{ $t(fraseAtender, temposAtender) }}
+    </template>
     <I18nT
       v-else-if="retorno.enabled"
       :keypath="

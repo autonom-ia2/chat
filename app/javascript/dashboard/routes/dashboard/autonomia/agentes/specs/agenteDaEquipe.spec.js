@@ -16,6 +16,7 @@ import {
   bloqueioDaCaixa,
   caixasDaEquipe,
   mudancaDaEquipe,
+  soDePessoas,
 } from '../utils/ondeTrabalha';
 import { PAPEL_AREA_NA_QUERY, papelDaQuery } from '../constants/criacao';
 import { fase2Ligada } from '../composables/useFase2';
@@ -77,6 +78,7 @@ describe('estado do agente da equipe', () => {
     expect(contarEstados(lista)).toEqual({
       atendendo: 1,
       naEquipe: 1,
+      ajudando: 0,
       parados: 1,
     });
   });
@@ -92,12 +94,27 @@ describe('caixas do agente da equipe', () => {
       BLOQUEIO.SEM_PRINCIPAL
     );
     expect(bloqueioDaCaixa({ occupied_by: { kind: 'external' } }, 90)).toBe(
-      BLOQUEIO.SEM_PRINCIPAL
+      BLOQUEIO.OUTRO_ROBO
     );
     // O próprio principal da caixa não vira equipe dela.
     expect(bloqueioDaCaixa({ occupied_by: principal() }, 9)).toBe(
       BLOQUEIO.SEM_PRINCIPAL
     );
+  });
+
+  it('an inbox served only by people (no main agent, no bot) can take a team agent (#1433)', () => {
+    expect(
+      bloqueioDaCaixa({ occupied_by: null, so_de_pessoas: true }, 90)
+    ).toBeNull();
+    expect(soDePessoas({ occupied_by: null, so_de_pessoas: true })).toBe(true);
+    // Leitura antiga, sem o campo: continua bloqueada (nunca libera por engano).
+    expect(soDePessoas({ occupied_by: null })).toBe(false);
+    expect(
+      bloqueioDaCaixa(
+        { occupied_by: { kind: 'external' }, so_de_pessoas: false },
+        90
+      )
+    ).toBe(BLOQUEIO.OUTRO_ROBO);
   });
 
   it('reads where the agent is on the team from the inbox reading', () => {
@@ -215,5 +232,20 @@ describe('telas do agente da equipe', () => {
     expect(linhas[0].text()).toContain('+55 11 99999-0000');
     expect(linhas[0].text()).toContain('AGENTS.JORNADA.ONDE.RECEBE');
     expect(wrapper.find('a').exists()).toBe(false);
+  });
+
+  it('"Onde trabalha" says when the inbox is served only by people', () => {
+    const wrapper = mount(ResumoOndeTrabalha, {
+      props: {
+        canais: [
+          { inbox_id: 11, name: 'Centro', so_de_pessoas: false },
+          { inbox_id: 12, name: 'Recepção', so_de_pessoas: true },
+        ],
+      },
+    });
+    const linhas = wrapper.findAll('[data-linha-caixa]');
+    expect(linhas[0].text()).toContain('AGENTS.JORNADA.ONDE.RECEBE');
+    expect(linhas[0].text()).not.toContain('RECEBE_PESSOAS');
+    expect(linhas[1].text()).toContain('AGENTS.JORNADA.ONDE.RECEBE_PESSOAS');
   });
 });

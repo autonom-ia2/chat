@@ -11,6 +11,7 @@ import { ESTADO, TRABALHANDO } from '../../utils/estadoDoAgente';
 // onde responde. Quem gerencia tem o interruptor Atendendo/Parado (o estado fica só nele), a ação
 // principal (Mudar conversando, ou Editar instruções no agente escrito à mão) e Mais opções. Quem só
 // vê tem a pílula de estado no lugar do interruptor. Anéis decorativos como no AutomacaoHeroi.
+// Tema 14 (#1434): no ajudante, o interruptor diz "ajudando outros agentes" e, ligado, "Ajudando".
 defineProps({
   nome: { type: String, required: true },
   foto: { type: String, default: '' },
@@ -22,12 +23,18 @@ defineProps({
   acaoPrincipal: { type: String, default: null },
   itensMais: { type: Array, default: () => [] },
   alternando: { type: Boolean, default: false },
+  ajudante: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['voltarLista', 'alternar', 'acaoPrincipal', 'mais']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA';
+// O estado ligado escrito ao lado do interruptor, quando não é "Atendendo".
+const TEXTO_LIGADO = {
+  [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
+  [ESTADO.AJUDANDO]: 'AJUDANDO',
+};
 
 const aoVoltar = evento => {
   if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
@@ -107,11 +114,15 @@ const aoVoltar = evento => {
             data-interruptor
             :ligado="TRABALHANDO.includes(estado)"
             :texto-ligado="
-              estado === ESTADO.NA_EQUIPE
-                ? t('AGENTS.JORNADA.STATUS.NA_EQUIPE')
+              TEXTO_LIGADO[estado]
+                ? t(`AGENTS.JORNADA.STATUS.${TEXTO_LIGADO[estado]}`)
                 : ''
             "
-            :rotulo="t(`${NS}.INTERRUPTOR`, { nome })"
+            :rotulo="
+              t(ajudante ? `${NS}.INTERRUPTOR_AJUDANTE` : `${NS}.INTERRUPTOR`, {
+                nome,
+              })
+            "
             :desabilitado="alternando"
             @alternar="emit('alternar', $event)"
           />

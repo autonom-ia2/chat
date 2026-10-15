@@ -18,6 +18,8 @@ import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
 // quando e leva o resto ao módulo de cotação. Interno não tem onde e quando. Quem só vê lê e testa.
 // #1433 (tema 13): o agente da equipe troca "Onde e quando responde" por "Onde {nome} trabalha" (caixa e
 // papel); "Mudar" abre direto nos passos do agente da equipe.
+// Tema 14 (#1434): o ajudante não fala com cliente: sem "Testar" (como cliente) e sem "Quando passa para a
+// equipe". No lugar, "Quem {nome} ajuda" e "Quando chamar", e cada "Mudar" abre direto os passos do ajudante.
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -27,11 +29,15 @@ const props = defineProps({
   interno: { type: Boolean, default: false },
   temCanal: { type: Boolean, default: false },
   textoOnde: { type: String, default: '' },
+  // #1433: nomes das outras caixas em que ele também recebe quando alguém passa (agente da equipe nelas).
+  tambemRecebe: { type: Array, default: () => [] },
   quantasFontes: { type: Number, default: 0 },
   quantasPerguntas: { type: Number, default: 0 },
   // #1433: linhas da L2 em que o agente está na equipe, ou null quando ele não é agente da equipe.
   equipe: { type: Array, default: null },
   caixas: { type: Array, default: () => [] },
+  // Tema 14: { principais: [{ id, name }], quando } quando o agente é ajudante, ou null.
+  ajuda: { type: Object, default: null },
 });
 
 const emit = defineEmits([
@@ -41,6 +47,7 @@ const emit = defineEmits([
   'escrever',
   'escolherCanal',
   'mudarEquipe',
+  'mudarAjuda',
 ]);
 
 const { t } = useI18n();
@@ -107,7 +114,7 @@ onMounted(() => {
 <template>
   <div class="flex flex-col gap-4">
     <section
-      v-if="!cotacao"
+      v-if="!cotacao && !ajuda"
       data-bloco="testar"
       :aria-labelledby="`${base}-testar`"
       class="flex flex-col gap-3 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
@@ -239,8 +246,97 @@ onMounted(() => {
         </AgenteBotao>
       </div>
 
+      <template v-if="ajuda">
+        <div
+          data-linha="quem-ajuda"
+          role="group"
+          :aria-labelledby="`${base}-quem-ajuda`"
+          class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+        >
+          <div class="flex items-start flex-1 min-w-0 gap-3">
+            <span
+              class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-iris-3"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-bot size-5 text-n-iris-11" />
+            </span>
+            <div class="flex flex-col flex-1 min-w-0 gap-1">
+              <h3
+                :id="`${base}-quem-ajuda`"
+                class="m-0 text-sm font-semibold text-n-slate-11"
+              >
+                {{ t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome }) }}
+              </h3>
+              <p data-quem-ajuda class="m-0 text-sm text-n-slate-12">
+                {{
+                  ajuda.principais.length
+                    ? ajuda.principais
+                        .map(principal => principal.name)
+                        .join(', ')
+                    : t('AGENTS.JORNADA.AJUDANTE.NINGUEM', { nome })
+                }}
+              </p>
+              <p class="m-0 text-sm text-n-slate-11">
+                {{ t('AGENTS.JORNADA.AJUDANTE.NUNCA_CLIENTE', { nome }) }}
+              </p>
+            </div>
+          </div>
+          <AgenteBotao
+            v-if="podeGerenciar"
+            data-mudar-ajuda="quem"
+            class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+            variante="fantasma"
+            :aria-label="t('AGENTS.JORNADA.AJUDANTE.MUDAR_ARIA', { nome })"
+            @click="emit('mudarAjuda', 'quem')"
+          >
+            {{ t('AGENTS.JORNADA.ONDE.MUDAR') }}
+          </AgenteBotao>
+        </div>
+        <div
+          data-linha="quando-chamar"
+          role="group"
+          :aria-labelledby="`${base}-quando-chamar`"
+          class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+        >
+          <div class="flex items-start flex-1 min-w-0 gap-3">
+            <span
+              class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+              aria-hidden="true"
+            >
+              <span class="i-lucide-bell-ring size-5 text-n-slate-11" />
+            </span>
+            <div class="flex flex-col flex-1 min-w-0 gap-1">
+              <h3
+                :id="`${base}-quando-chamar`"
+                class="m-0 text-sm font-semibold text-n-slate-11"
+              >
+                {{ t('AGENTS.JORNADA.AJUDANTE.QUANDO.ROTULO') }}
+              </h3>
+              <p data-quando-chamar class="m-0 text-sm text-n-slate-12">
+                {{
+                  ajuda.quando ||
+                  t('AGENTS.JORNADA.AJUDANTE.QUANDO.SEM_LEITURA')
+                }}
+              </p>
+            </div>
+          </div>
+          <AgenteBotao
+            v-if="podeGerenciar"
+            data-mudar-ajuda="quando"
+            class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+            variante="fantasma"
+            :aria-label="
+              t('AGENTS.JORNADA.AJUDANTE.MUDAR_QUANDO_ARIA', { nome })
+            "
+            @click="emit('mudarAjuda', 'quando')"
+          >
+            {{ t('AGENTS.JORNADA.ONDE.MUDAR') }}
+          </AgenteBotao>
+        </div>
+      </template>
+
       <div
-        v-if="equipe"
+        v-else-if="equipe"
         data-linha="onde-trabalha"
         role="group"
         :aria-labelledby="`${base}-onde-trabalha`"
@@ -307,6 +403,17 @@ onMounted(() => {
             </h3>
             <p class="m-0 text-sm text-n-slate-12">
               {{ temCanal ? textoOnde : t(`${NS}.NENHUM_CANAL`) }}
+            </p>
+            <p
+              v-if="tambemRecebe.length"
+              data-tambem-recebe
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{
+                t(`${NS}.BLOCO_ONDE.TAMBEM`, {
+                  caixas: tambemRecebe.join(', '),
+                })
+              }}
             </p>
           </div>
         </div>
@@ -464,7 +571,7 @@ onMounted(() => {
     </section>
 
     <section
-      v-else
+      v-else-if="!ajuda"
       data-bloco="passa"
       :aria-labelledby="`${base}-passa`"
       class="flex flex-col gap-3 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"

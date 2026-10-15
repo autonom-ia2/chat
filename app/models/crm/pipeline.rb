@@ -54,6 +54,17 @@ class Crm::Pipeline < ApplicationRecord
   # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
   validates :when_to_use, length: { maximum: MAX_WHEN_TO_USE }
   validates :metadata, jsonb_attributes_length: true
+  validate :outcome_labels_format, if: :outcome_labels_changed?
+
+  # Nomes dos desfechos (#1144) em metadata['outcome_labels']: objeto só com success e/ou failure, em texto (#1580).
+  # Gravado, cada nome tem até OUTCOME_LABEL_MAX_LENGTH (o caminho pipeline.outcome_labels corta antes de gravar).
+  OUTCOME_LABEL_KEYS = %w[success failure].freeze
+  OUTCOME_LABEL_MAX_LENGTH = 30
+
+  def self.outcome_labels_valid?(labels)
+    labels = labels.to_unsafe_h if labels.respond_to?(:to_unsafe_h)
+    labels.is_a?(Hash) && (labels.keys.map(&:to_s) - OUTCOME_LABEL_KEYS).empty? && labels.values.all?(String)
+  end
 
   # Tipo do funil (#1498) para a IA: "sell" (Vender) ou "serve" (Atender).
   def kind
@@ -61,6 +72,18 @@ class Crm::Pipeline < ApplicationRecord
   end
 
   private
+
+  # Só confere quando o valor muda: funil antigo com dado fora do formato não trava ao mudar outro campo.
+  def outcome_labels_changed?
+    (metadata || {})['outcome_labels'] != (metadata_was || {})['outcome_labels']
+  end
+
+  def outcome_labels_format
+    labels = (metadata || {})['outcome_labels']
+    return if labels.nil? || (self.class.outcome_labels_valid?(labels) && labels.values.all? { |label| label.length <= OUTCOME_LABEL_MAX_LENGTH })
+
+    errors.add(:base, I18n.t('crm.pipelines.outcome_labels_invalid'))
+  end
 
   # Funil que não conta como venda (#1144) não manda nada para Meta nem Google, nem mudança de etapa: a sincronização
   # é desligada ao salvar, para não virar conversão de anúncio por engano.

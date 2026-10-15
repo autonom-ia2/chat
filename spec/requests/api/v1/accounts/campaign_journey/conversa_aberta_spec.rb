@@ -21,6 +21,7 @@ RSpec.describe 'Conversa aberta na campanha (#1335)', :aggregate_failures, type:
   before do
     account.disable_features!(:whatsapp_templates_journey)
     account.enable_features!(:campaign_open_window_text)
+    allow(Whatsapp::WabaTimezone).to receive(:for).and_return(nil) # fuso da WABA (#1592): spec próprio
   end
 
   def ana

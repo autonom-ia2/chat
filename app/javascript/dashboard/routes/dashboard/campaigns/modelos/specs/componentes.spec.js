@@ -233,10 +233,14 @@ describe('FranquiaDoMes', () => {
 
     expect(api.custoPorEnvio).toHaveBeenCalledWith('resposta');
     expect(wrapper.find('[data-franquia-numero="8"]').text()).toContain(
-      '230 of 1,000'
+      'About 230 of 1,000'
     );
     expect(wrapper.find('[data-franquia-numero="9"]').text()).toContain(
-      'Over the 1,000 free ones'
+      'About 1,001, over the 1,000 free ones'
+    );
+    // #1592: o número é estimativa, e a tela diz por quê.
+    expect(wrapper.find('[data-franquia-estimativa]').text()).toContain(
+      'Estimate'
     );
   });
 

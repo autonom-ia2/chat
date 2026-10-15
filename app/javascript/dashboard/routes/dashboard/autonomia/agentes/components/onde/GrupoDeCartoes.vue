@@ -1,12 +1,14 @@
 <script setup>
 import { useId } from 'vue';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
+import AgenteAvatar from '../AgenteAvatar.vue';
 
 // #1366 (protótipo da Fase 2, rodada 2; real no #1433, tema 13) — cartões grandes de escolha de "Onde
 // trabalha": hoje, os canais do agente da equipe. Várias escolhas (role=checkbox, cada cartão no Tab,
 // Espaço ou Enter marca). O cartão bloqueado continua visível, no Tab e anunciado (aria-disabled),
 // com o motivo escrito e ligado a ele (aria-describedby), para o leitor de tela dizer por quê.
-// opcoes: [{ valor, titulo, texto?, motivo?, desabilitada?, inbox? }] — `inbox`: a caixa da store (ícone).
+// opcoes: [{ valor, titulo, texto?, motivo?, desabilitada?, inbox?, avatar? }] — `inbox`: a caixa da store (ícone);
+// `avatar` ({ nome, src, tom? }, tema 14): a foto do agente, nos agentes que o ajudante pode ajudar.
 const props = defineProps({
   rotulo: { type: String, required: true },
   opcoes: { type: Array, required: true },
@@ -65,6 +67,13 @@ const idDoMotivo = opcao => `${base}-${opcao.valor}`;
       >
         <ChannelIcon :inbox="opcao.inbox" use-brand-icon class="size-6" />
       </span>
+      <AgenteAvatar
+        v-else-if="opcao.avatar"
+        :nome="opcao.avatar.nome"
+        :src="opcao.avatar.src || ''"
+        :tom="opcao.avatar.tom || 'neutro'"
+        :class="opcao.desabilitada ? 'opacity-60' : ''"
+      />
       <span class="flex flex-col gap-1 pe-8 grow min-w-0">
         <span
           class="text-base font-semibold"

@@ -14,10 +14,12 @@ import { useComecarAAtender } from '../composables/useComecarAAtender';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import { useFase2 } from '../composables/useFase2';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
+import { useAjudanteNaCriacao } from '../composables/useAjudanteNaCriacao';
 import {
   ATUACAO,
   ETAPA,
   IDEIAS_PARA_COMECAR,
+  PAPEL_AJUDANTE_NA_QUERY,
   PAPEL_AREA_NA_QUERY,
   atuacaoDaQuery,
   etapaDaQuery,
@@ -56,6 +58,7 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
+import AjudanteNaCriacao from '../components/onde/AjudanteNaCriacao.vue';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -84,6 +87,9 @@ import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
 // de `?papel=` e depois de `?agente=`): F5 não pergunta de novo. Depois, a conversa de sempre, com
 // "Onde {nome} trabalha" no topo ("Alterar" volta aos passos). "Começar a trabalhar" grava os vínculos
 // de área, que já ligam o agente, sem perguntar canal de novo. Pronto mostra "Onde {nome} trabalha".
+// Tema 14 (#1434) — "Ajuda outros agentes" (`?papel=ajudante`, só com a Fase 2), no mesmo molde: antes da
+// conversa, "Quem {nome} vai ajudar?" e "Quando chamar {nome}?" (useAjudanteNaCriacao). A conversa abre
+// com `papel: 'ajudante'`; "Começar a ajudar" grava o vínculo e liga o agente, sem canal.
 const props = defineProps({
   focarTitulo: { type: Boolean, default: false },
 });
@@ -98,9 +104,13 @@ const modeloPedido = modeloDaQuery(route.query);
 const idInicial = idDaQuery(route.query);
 const atuacaoPedida = atuacaoDaQuery(route.query);
 
+// O papel é lido ao abrir a conversa: a Fase 2 da conta pode chegar à store depois do setup.
+let ajudanteNaCriacao = null;
 const conversa = useConversaDeCriacao({
   modelo: modeloPedido,
   atuacao: atuacaoPedida,
+  papel: () =>
+    ajudanteNaCriacao?.ajudante.value ? PAPEL_AJUDANTE_NA_QUERY : null,
 });
 // O rascunho ainda está sendo escrito pelo Construtor: só o id; quem diz "incompleto" é o 422.
 const teste = useTesteDoAgente(
@@ -162,16 +172,50 @@ const modelo = computed(() =>
   modeloDoTipo(agente.value?.agent_type, modeloPedido)
 );
 const empresa = computed(() => contaDaStore.value?.(contaId.value)?.name || '');
+const fase2 = useFase2();
+const irPara = (proxima, { empilhar = false } = {}) => {
+  const query = { ...route.query, etapa: proxima };
+  return empilhar ? router.push({ query }) : router.replace({ query });
+};
+
+const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
+
+const voltarParaLista = () => {
+  if (!conversa.agenteId.value) {
+    irParaLista();
+    return;
+  }
+  confirmarSaida.value?.abrir();
+};
+
+ajudanteNaCriacao = useAjudanteNaCriacao({
+  agente,
+  nome,
+  fase2,
+  conversa,
+  idInicial,
+  voltarParaLista,
+  aoComecar: principais => {
+    resultado.value = {
+      canal: '',
+      quando: 'always',
+      saiu: '',
+      ajuda: principais,
+    };
+    irPara(ETAPA.PRONTO);
+  },
+});
+const ajudante = computed(() => ajudanteNaCriacao.ajudante.value);
+const escolhendoAjuda = ajudanteNaCriacao.escolhendo;
 const interno = computed(() =>
   agente.value
     ? agente.value.actuation === ATUACAO.INTERNA
-    : atuacaoPedida === ATUACAO.INTERNA
+    : atuacaoPedida === ATUACAO.INTERNA || ajudante.value
 );
 const atendendo = computed(
   // #1366: a mesma regra da lista: ativo, ligado e com onde trabalhar (#1433: ou na equipe).
   () => TRABALHANDO.includes(estadoDeAtendimento(agente.value))
 );
-const fase2 = useFase2();
 const equipe = computed(
   () =>
     fase2.value &&
@@ -231,6 +275,11 @@ watch(
 );
 
 const rotuloComecar = computed(() => {
+  if (ajudante.value) {
+    return ajudanteNaCriacao.bloqueado.value
+      ? ''
+      : t('AGENTS.JORNADA.AJUDANTE.COMECAR');
+  }
   if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO');
   if (equipe.value) return t('AGENTS.JORNADA.EQUIPE.COMECAR');
   if (ocupacao.estado.value === 'carregando') {
@@ -242,6 +291,33 @@ const rotuloComecar = computed(() => {
     ? t(`AGENTS.JORNADA.CRIAR.CANAL.${tipo.chave}`)
     : tipo.nome;
   return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO', { canal });
+});
+
+// Tema 14: o texto embaixo de Começar e a espera do botão, por tipo de agente.
+const textoComecar = computed(() => {
+  if (ajudante.value) {
+    return t('AGENTS.JORNADA.AJUDANTE.COMECAR_TEXTO', { nome: nome.value });
+  }
+  return equipe.value
+    ? t('AGENTS.JORNADA.EQUIPE.COMECAR_TEXTO', { nome: nome.value })
+    : '';
+});
+const carregandoComecar = computed(() => {
+  if (ajudante.value) {
+    return (
+      ajudanteNaCriacao.salvando.value || ajudanteNaCriacao.comecando.value
+    );
+  }
+  if (equipe.value) return salvarEquipe.salvando.value;
+  return !interno.value && ocupacao.estado.value === 'carregando';
+});
+const tituloDaConfiraNoCelular = computed(() => {
+  if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_AJUDANTE');
+  return t(
+    interno.value
+      ? 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
+      : 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
+  );
 });
 
 const etapaPedida = computed(() => etapaDaQuery(route.query));
@@ -271,11 +347,6 @@ const numeroDaEtapa = computed(
       [ETAPA.PRONTO]: 4,
     })[etapa.value]
 );
-
-const irPara = (proxima, { empilhar = false } = {}) => {
-  const query = { ...route.query, etapa: proxima };
-  return empilhar ? router.push({ query }) : router.replace({ query });
-};
 
 // Computador: ao fechar a conversa, a URL acompanha (Confira) sem trocar de tela.
 watch(
@@ -330,13 +401,26 @@ const exemplo = computed(() => {
     { de: 'agente', texto: t(`${base}.AGENTE`), hora },
   ];
 });
-const tituloDoExemplo = computed(() =>
-  t(
+const tituloDoExemplo = computed(() => {
+  if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_AJUDANTE');
+  return t(
     interno.value
       ? 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO'
       : 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO'
-  )
-);
+  );
+});
+// O exemplo do agente que não fala com cliente é uma frase, não um celular.
+const exemploInterno = computed(() => {
+  if (ajudante.value && semNome.value) {
+    return t('AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE_SEM_NOME');
+  }
+  return t(
+    ajudante.value
+      ? 'AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE'
+      : 'AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO',
+    { nome: nome.value }
+  );
+});
 const ideias = computed(() =>
   interno.value || modelo.value === MODELO_DO_MEU_JEITO || idInicial
     ? []
@@ -346,6 +430,7 @@ const ideias = computed(() =>
 );
 const exemploDoCampo = computed(() => {
   if (idInicial) return '';
+  if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_AJUDANTE');
   if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_COPILOTO');
   return modelo.value === MODELO_DO_MEU_JEITO
     ? t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_DO_MEU_JEITO')
@@ -376,8 +461,6 @@ const linkConectarCanal = computed(
   () => router.resolve({ name: 'settings_inbox_new' }).href
 );
 
-const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
-
 const sairDeixandoRascunho = () => {
   const ficou = Boolean(conversa.agenteId.value);
   const nomeAoSair = nome.value;
@@ -385,14 +468,6 @@ const sairDeixandoRascunho = () => {
   if (ficou) {
     useAlert(t('AGENTS.JORNADA.CRIAR.SAIR.FEITO', { nome: nomeAoSair }));
   }
-};
-
-const voltarParaLista = () => {
-  if (!conversa.agenteId.value) {
-    irParaLista();
-    return;
-  }
-  confirmarSaida.value?.abrir();
 };
 
 const perguntarNoTeste = ({ texto, anexos }) =>
@@ -490,6 +565,10 @@ const comecarNaEquipe = async () => {
 };
 
 const abrirComece = () => {
+  if (ajudante.value) {
+    ajudanteNaCriacao.comecar();
+    return;
+  }
   if (interno.value) {
     ativarInterno();
     return;
@@ -577,6 +656,7 @@ const pronto = computed(() => {
     quando: agente.value?.config?.response_window || 'always',
     saiu: '',
     equipe: caixasDaEquipe(conversa.agenteId.value, ocupacao.canais.value),
+    ajuda: agente.value?.ajuda || [],
   };
 });
 
@@ -644,9 +724,11 @@ onMounted(() => {
     abrirAgenteExistente();
     return;
   }
-  if (atuacaoPedida !== ATUACAO.INTERNA) ocupacao.carregar();
-  // O agente da equipe escolhe os canais antes: a conversa só começa depois (escolheuCanais).
-  if (!escolhendoCanais.value) conversa.comecar();
+  if (atuacaoPedida !== ATUACAO.INTERNA && !ajudante.value) ocupacao.carregar();
+  // O agente da equipe e o ajudante escolhem antes: a conversa só começa depois (escolheuCanais, escolheuAjuda).
+  if (!escolhendoCanais.value && !escolhendoAjuda.value) {
+    conversa.comecar();
+  }
 });
 </script>
 
@@ -687,6 +769,15 @@ onMounted(() => {
       />
     </div>
 
+    <AjudanteNaCriacao
+      v-else-if="escolhendoAjuda"
+      parte="passos"
+      :ajuda="ajudanteNaCriacao"
+      :nome="nome"
+      :sem-nome="!agente || semNome"
+      :agente-id="conversa.agenteId.value"
+    />
+
     <EtapaPronto
       v-else-if="etapa === ETAPA.PRONTO"
       :nome="nome"
@@ -698,6 +789,7 @@ onMounted(() => {
       :celular="celular"
       :interno="interno"
       :equipe="equipe"
+      :ajudante="ajudante"
       @ver="verAgente"
       @voltar="irParaLista"
     >
@@ -717,6 +809,13 @@ onMounted(() => {
         <!-- #1433: aqui entra "Escolher de quais funis ele cuida", quando a tela do CRM existir (a rota
           vem do Multifunnel, #1447). Até lá, sem botão. -->
       </section>
+      <AjudanteNaCriacao
+        v-if="ajudante"
+        parte="pronto"
+        :ajuda="ajudanteNaCriacao"
+        :nome="nome"
+        :principais="pronto.ajuda"
+      />
     </EtapaPronto>
 
     <div
@@ -761,11 +860,7 @@ onMounted(() => {
         >
           {{
             celular && etapa === ETAPA.CONFIRA
-              ? t(
-                  interno
-                    ? 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
-                    : 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
-                )
+              ? tituloDaConfiraNoCelular
               : t('AGENTS.JORNADA.CRIAR.TITULO')
           }}
         </h1>
@@ -799,6 +894,13 @@ onMounted(() => {
           {{ t('AGENTS.JORNADA.PAGINA.ALTERAR') }}
         </AgenteBotao>
       </section>
+      <AjudanteNaCriacao
+        v-if="ajudante && !abrindo"
+        parte="topo"
+        :ajuda="ajudanteNaCriacao"
+        :nome="nome"
+        :sem-nome="semNome"
+      />
       <AgenteErro
         v-if="equipe && salvarEquipe.erro.value"
         data-erro-equipe
@@ -841,6 +943,7 @@ onMounted(() => {
           :exemplo-do-campo="exemploDoCampo"
           :celular="celular"
           :interno="interno"
+          :ajudante="ajudante"
           @enviar="enviarNaConversa"
           @tentar-de-novo="conversa.tentarDeNovo"
           @tirar="conversa.tirar"
@@ -899,8 +1002,9 @@ onMounted(() => {
           v-if="conversa.fechada.value && (!celular || etapa !== ETAPA.CONTE)"
           :nome="nome"
           :empresa="empresa"
-          :perguntas="perguntasDeTeste(modelo, interno)"
+          :perguntas="perguntasDeTeste(modelo, interno, ajudante)"
           :interno="interno"
+          :ajudante="ajudante"
           :mensagens="teste.mensagens.value"
           :digitando="teste.digitando.value"
           :problema="teste.aviso.value?.tipo ?? null"
@@ -908,18 +1012,12 @@ onMounted(() => {
           :respondidas="teste.respondidas.value"
           :conversa-pensando="conversa.pensando.value"
           :rotulo-comecar="rotuloComecar"
-          :texto-comecar="
-            equipe ? t('AGENTS.JORNADA.EQUIPE.COMECAR_TEXTO', { nome }) : ''
-          "
+          :texto-comecar="textoComecar"
           :pode-conectar-canal="podeConectarCanal"
           :link-conectar-canal="linkConectarCanal"
           :celular="celular"
           :abrindo-ajustes="abrindoAjustes"
-          :carregando-canais="
-            equipe
-              ? salvarEquipe.salvando.value
-              : !interno && ocupacao.estado.value === 'carregando'
-          "
+          :carregando-canais="carregandoComecar"
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
           @limpar="teste.limpar"
@@ -945,7 +1043,7 @@ onMounted(() => {
             data-exemplo-copiloto
             class="m-0 text-sm text-n-slate-11"
           >
-            {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome }) }}
+            {{ exemploInterno }}
           </p>
           <template v-else>
             <CelularConversa
@@ -1004,7 +1102,7 @@ onMounted(() => {
       @fechar="exemploAberto = false"
     >
       <p v-if="interno" class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome }) }}
+        {{ exemploInterno }}
       </p>
       <template v-else>
         <CelularConversa

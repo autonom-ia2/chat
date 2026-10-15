@@ -28,12 +28,19 @@ const props = defineProps({
   celular: { type: Boolean, default: false },
   // Copiloto da equipe (#1494): a introdução fala de ajudar a equipe, não de atender.
   interno: { type: Boolean, default: false },
+  // Tema 14 (#1434): o ajudante fala de ajudar outros agentes.
+  ajudante: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['enviar', 'tentarDeNovo', 'tirar']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.CRIAR.CONTE';
+
+const intro = computed(() => {
+  if (props.ajudante) return t(`${NS}.INTRO_AJUDANTE`);
+  return props.interno ? t(`${NS}.INTRO_COPILOTO`) : t(`${NS}.INTRO`);
+});
 
 const rascunho = defineModel('rascunho', { type: String, default: '' });
 const compositor = ref(null);
@@ -113,7 +120,7 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
       >
         <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
         <span data-intro>
-          {{ interno ? t(`${NS}.INTRO_COPILOTO`) : t(`${NS}.INTRO`) }}
+          {{ intro }}
         </span>
       </p>
       <div

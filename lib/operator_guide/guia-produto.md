@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (220 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (222 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1001,9 +1001,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Agente da equipe
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
-- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo.
-- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (só os que já têm quem atenda primeiro) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
-- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; canal sem principal, com outro robô ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo ou atendido só por pessoas (sem agente principal e sem agente externo).
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (os que têm agente principal atendendo e os atendidos só por pessoas) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal, ou que o canal é atendido só por pessoas, e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
+- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; no canal atendido só por pessoas, conversa nova continua com as pessoas e ele só responde a conversa que alguém passar para ele, nunca começa sozinho; canal com agente externo ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- nav_target: `autonomia_agents_builder`
+
+### Criar um agente que ajuda outros agentes (ajudante)
+- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando os agentes chamam o ajudante?"; "Por que o Agente de Cotação aparece bloqueado?"
+- onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Ajuda outros agentes
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um agente que já converse com clientes.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Ajuda outros agentes; 3. Marque os agentes que ele vai ajudar (um ou mais) e clique em Continuar; 4. Em Quando chamar, escreva numa frase a situação em que os agentes escolhidos o chamam e clique em Continuar; 5. Conte na conversa o que ele sabe e teste como se fosse o agente principal (Alterar, no topo, troca a escolha); 6. Clique em Começar a ajudar; 7. Na página do agente, Mudar em Quem ele ajuda ou em Quando chamar reabre os passos.
+- gotchas: o ajudante nunca fala com o cliente e não escolhe canal: quem responde é o agente principal, que o consulta; o que o ajudante sabe e faz pode chegar ao cliente pelas respostas do principal; o Copiloto da equipe, outros ajudantes e rascunhos não aparecem para escolher, e o Agente de Cotação aparece bloqueado com o motivo; um Copiloto já existente não vira ajudante, só quem nasce como Ajuda outros agentes; na lista ele aparece como Ajudando; a página dele não tem Testar como cliente nem Quando passa para a equipe.
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente
@@ -2256,6 +2266,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Clique em Usar em uma campanha; 2. Com mais de um número, escolha de qual sai; 3. Confira o que vai em cada campo; 4. Clique em Continuar para a campanha e escolha o público; a caixa, o modelo e os campos já vêm escolhidos.
 - gotchas: Nome do cliente e Nome da empresa já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
 - nav_target: `modelos_whatsapp_usar`
+
+### Autorizar o Chat2You a criar modelos do WhatsApp sozinho
+- intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
+- onde_fica: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
+- rota: `modelos_whatsapp_autorizacao` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/autorizacao`
+- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
+- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
+- passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
+- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
+- nav_target: `modelos_whatsapp_autorizacao`
 
 ### Trazer contatos e conversas de outra ferramenta
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?

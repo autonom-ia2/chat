@@ -18,6 +18,8 @@
 # 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
 #    Oficial sem modelo que resolva e WhatsApp Híbrido pronto para o contato (#1349): texto pela sessão também,
 #    mandado sem remetente para o roteador do Híbrido contar como `automation` (ver `#notice_sender`).
+#    Modelo v2 com botões (#1524): o `Route` o põe na frente do configurado quando aprovado; corpo e botões pelo
+#    `Notices::TemplateFill` (ver `#template_fill`).
 #    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
 #    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
 #    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
@@ -177,7 +179,7 @@ class Crm::BookingV2::Notices::Sender
 
   def route
     @route ||= Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
-                                                  template: profile.notice_template(notice.kind))
+                                                  template: profile.notice_template(notice.kind), kind: notice.kind)
   end
 
   # WAHA sem conversa: pergunta o chat id antes de abrir uma (`Notices::WahaChat`, #1270).
@@ -241,8 +243,19 @@ class Crm::BookingV2::Notices::Sender
   def notice_delivery(decision, text)
     Crm::BookingV2::Notices::Delivery.new(
       decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
-      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message
+      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message,
+      **template_fill(decision)
     )
+  end
+
+  # Modelo v2 (#1524): corpo e botões pelo catálogo de campos, e a marca do aviso na mensagem, que prova ao
+  # `Crm::BookingNoticeStopReplyListener` que o toque em "Parar avisos" responde a um aviso nosso. Uma mensagem só: o
+  # "Parar avisos" já vai no próprio modelo (sem `NoticeStopPartJob`, que só sai do texto pela sessão com botão).
+  def template_fill(decision)
+    return {} if decision.campos.blank?
+
+    { filled: Crm::BookingV2::Notices::TemplateFill.new(decision, meeting: meeting, invite: invite).call,
+      marks: { crm_booking_notice_id: notice.id } }
   end
 
   # Pelo WhatsApp Híbrido (#1349) o aviso automático sai sem remetente, para o roteador do Híbrido contar como
