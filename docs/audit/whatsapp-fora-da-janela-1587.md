@@ -48,5 +48,12 @@ Juiz do eval (#1333): a rubrica da calibração não está no git (scratchpad da
 
 ## Registro por envio
 
-Vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, categoria, origem, `consentimento_id`) e no log
-(sem texto do cliente). Uma tabela própria (append-only) fica para decisão; ver o relatório da entrega.
+Nesta entrega vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, categoria, origem,
+`consentimento_id`) e no log (sem texto do cliente).
+
+## Decisões do Rodrigo (15/10/2026)
+
+- "retorno" fica UTILITY ("Ok assim").
+- O registro por envio terá TABELA própria (append-only), em PR separado, não neste.
+- `encaixar_tipo` (chamada paga que pode vir do painel, pedido do Followup IA): cache de 24 h por conta e SHA-256 do
+  texto sem os espaços das pontas, guardando também o "nenhum".

@@ -51,6 +51,44 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela::Encaixe do
     expect(described_class.call(account: account, texto: texto)).to be_nil
   end
 
+  describe 'cache de 24 h por conta e texto' do
+    before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+    it 'a 2ª chamada com o mesmo texto (mesmo com espaços nas pontas) não paga a IA; texto diferente paga' do
+      allow(jev).to receive(:decidir).and_return(resultado('andamento'))
+
+      expect(described_class.call(account: account, texto: texto)).to eq('andamento')
+      expect(described_class.call(account: account, texto: "  #{texto}\n")).to eq('andamento')
+      expect(jev).to have_received(:decidir).once
+
+      described_class.call(account: account, texto: 'Avisar que o boleto venceu ontem')
+      expect(jev).to have_received(:decidir).twice
+    end
+
+    it 'guarda também o "nenhum"' do
+      allow(jev).to receive(:decidir).and_return(resultado('nenhum'))
+
+      2.times { expect(described_class.call(account: account, texto: texto)).to be_nil }
+      expect(jev).to have_received(:decidir).once
+    end
+
+    it 'outra conta com o mesmo texto paga a própria pergunta' do
+      allow(jev).to receive(:decidir).and_return(resultado('andamento'))
+
+      described_class.call(account: account, texto: texto)
+      described_class.call(account: create(:account), texto: texto)
+
+      expect(jev).to have_received(:decidir).twice
+    end
+
+    it 'Jev fora do ar não fica guardado: a próxima chamada pergunta de novo' do
+      allow(jev).to receive(:decidir).and_raise(TypesafeAi::Decisor::Error, 'typesafe_unavailable')
+
+      2.times { expect(described_class.call(account: account, texto: texto)).to be_nil }
+      expect(jev).to have_received(:decidir).twice
+    end
+  end
+
   it 'texto vazio não pergunta' do
     allow(jev).to receive(:decidir)
 
