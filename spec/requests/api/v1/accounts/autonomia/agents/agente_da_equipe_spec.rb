@@ -1,8 +1,9 @@
 require 'rails_helper'
 
 # #1433 (tema 13, tela) — "Agente da equipe" na criação: POST channels com papel 'area' põe o agente na caixa como área
-# (recebe quando alguém passa) e já o liga, pelo Autonomia::Agents::Areas. Só na Fase 2 e só em caixa com principal
-# atendendo. A leitura de canais diz quem está na equipe de cada caixa, e o agente diz se está só na equipe.
+# (recebe quando alguém passa) e já o liga, pelo Autonomia::Agents::Areas. Só na Fase 2, em caixa com principal
+# atendendo ou atendida só por pessoas (sem principal e sem robô de fora). A leitura de canais diz quem está na equipe
+# de cada caixa, e o agente diz se está só na equipe.
 RSpec.describe 'Autonomia agente da equipe', type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:administrator) { create(:user, account: account, role: :administrator) }
@@ -51,14 +52,15 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
       expect(response.parsed_body['payload']).to contain_exactly(include('inbox_id' => inbox.id, 'papel' => 'area'))
     end
 
-    it 'devolve 422 com o motivo para caixa sem principal, e nada muda' do
+    it 'aceita a caixa só de pessoas (sem principal e sem robô): vincula como área e liga, e a caixa segue sem robô' do
       livre = create(:inbox, account: account, name: 'Instagram')
 
-      expect { pedir_area(novo, livre) }.not_to change(Autonomia::Agents::AgentInbox, :count)
+      expect { pedir_area(novo, livre) }.to change(Autonomia::Agents::AgentInbox, :count).by(1)
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(erro(:sem_principal, caixa: livre))
-      expect(novo.reload).to have_attributes(status: 'draft', enabled: false)
+      expect(response).to have_http_status(:created)
+      expect(Autonomia::Agents::AgentInbox.kept.find_by(agent: novo, inbox: livre)).to have_attributes(papel: 'area')
+      expect(novo.reload).to have_attributes(status: 'active', enabled: true)
+      expect(livre.reload.agent_bot).to be_nil
     end
 
     it 'devolve 422 quando o principal da caixa está parado' do
@@ -70,14 +72,30 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
       expect(response.parsed_body['error']).to eq(erro(:sem_principal))
     end
 
-    it 'devolve 422 para caixa com outro robô (webhook), que não é um principal da Autonom.ia' do
+    it 'devolve 422 para caixa com outro robô (webhook), que não é um principal da Autonom.ia, e nada muda' do
       externa = create(:inbox, account: account, name: 'Site')
       AgentBotInbox.create!(inbox: externa, agent_bot: create(:agent_bot, account: account))
 
-      pedir_area(novo, externa)
+      expect { pedir_area(novo, externa) }.not_to change(Autonomia::Agents::AgentInbox, :count)
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(erro(:sem_principal, caixa: externa))
+      expect(response.parsed_body['error']).to eq(erro(:robo_externo, caixa: externa))
+      expect(novo.reload).to have_attributes(status: 'draft', enabled: false)
+    end
+
+    it 'confere o robô de fora dentro da trava: se ele entrar entre a leitura e o vínculo, 422 e nada muda' do
+      livre = create(:inbox, account: account, name: 'Instagram')
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_wrap_original do |original, **kwargs|
+        AgentBotInbox.create!(inbox: livre, agent_bot: create(:agent_bot, account: account))
+        original.call(**kwargs)
+      end
+
+      pedir_area(novo, livre)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:robo_externo, caixa: livre))
+      expect(Autonomia::Agents::AgentInbox.kept.where(agent: novo)).to be_empty
+      expect(novo.reload).to have_attributes(status: 'draft', enabled: false)
     end
 
     it 'devolve 422 para o agente interno (Copiloto da equipe)' do

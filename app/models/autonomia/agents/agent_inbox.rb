@@ -35,8 +35,9 @@ module Autonomia
     # Papel na caixa (#1433):
     # - porta: atende primeiro todas as conversas da caixa. Uma por caixa; o espelho dela tem o AgentBotInbox, então é
     #   o inbox.agent_bot (InboxConnector).
-    # - area:  agente da equipe; recebe a conversa quando alguém passa (vira o ai_assignee com o espelho dele). Só em
-    #   caixa com porta ativa; espelho próprio SEM AgentBotInbox (Autonomia::Agents::Areas).
+    # - area:  agente da equipe; recebe a conversa quando alguém passa (vira o ai_assignee com o espelho dele). Em
+    #   caixa com porta ativa ou só de pessoas (sem porta e sem robô de fora); espelho próprio SEM AgentBotInbox
+    #   (Autonomia::Agents::Areas).
     # Um agente tem no máximo um vínculo ativo por caixa. Quem responde a conversa: Autonomia::Agents::QuemResponde.
     class AgentInbox < ApplicationRecord
       self.table_name = 'autonomia_agent_inboxes'
@@ -60,7 +61,7 @@ module Autonomia
       validates :papel, inclusion: { in: PAPEIS }
       validates :inbox_id, uniqueness: { conditions: -> { kept.porta } }, if: -> { deleted_at.nil? && porta? }
       validates :autonomia_agent_id, uniqueness: { scope: :inbox_id, conditions: -> { kept } }, if: -> { deleted_at.nil? }
-      validate :area_precisa_de_porta_ativa, if: -> { deleted_at.nil? && area? }
+      validate :area_precisa_de_porta_ou_caixa_so_de_pessoas, if: -> { deleted_at.nil? && area? }
       # Tenancy (defesa em profundidade): o runtime resolve o vínculo só por inbox_id
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
@@ -90,6 +91,13 @@ module Autonomia
         end
       end
 
+      # Robô de fora da Autonom.ia na caixa (#1433): um AgentBotInbox que não é o espelho da porta ativa — bot de webhook,
+      # como o n8n. Com ele, a caixa sem porta não é só de pessoas e não recebe agente da equipe.
+      def self.robo_externo_na_caixa?(inbox_id)
+        espelhos_da_porta = kept.porta.where(inbox_id: inbox_id).select(:agent_bot_id)
+        AgentBotInbox.where(inbox_id: inbox_id).where.not(agent_bot_id: espelhos_da_porta).exists?
+      end
+
       def porta?
         papel == 'porta'
       end
@@ -113,7 +121,7 @@ module Autonomia
         pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
       end
 
-      # #1433 — área só existe em caixa com porta ativa. Todo caminho que tira a porta (InboxConnector#disconnect!,
+      # #1433 — a área que estava com a porta sai junto com ela (regra do #1366, mantida). Todo caminho que tira a porta (InboxConnector#disconnect!,
       # SoftDelete, Agent#destroy) chama isto ANTES de soltar as conversas da porta: as áreas da caixa saem, e as
       # conversas delas vão direto para a equipe humana. Trava a caixa, como o Areas.vincular!.
       def soltar_areas_da_caixa!
@@ -185,11 +193,13 @@ module Autonomia
         ::Autonomia::Agents::Agent.where(id: ids).order(:id).lock.load if ids.any?
       end
 
-      def area_precisa_de_porta_ativa
+      # Caixa com porta ativa, ou só de pessoas (sem porta e sem robô de fora, #1433).
+      def area_precisa_de_porta_ou_caixa_so_de_pessoas
         return if inbox_id.blank?
         return if self.class.kept.porta.where(inbox_id: inbox_id).where.not(id: id).exists?
+        return unless self.class.robo_externo_na_caixa?(inbox_id)
 
-        errors.add(:papel, 'area requires an active porta in the inbox')
+        errors.add(:papel, 'area requires an active porta or an inbox served only by people')
       end
 
       def mirror_bot_inboxes

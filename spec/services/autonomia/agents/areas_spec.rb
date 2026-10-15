@@ -35,11 +35,13 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(described_class.vincular!(agent: agente_da_area, inbox: inbox)).to eq(primeiro)
     end
 
-    it 'recusa caixa sem porta ativa, sem deixar espelho para trás' do
+    # #1433: caixa sem porta só aceita se for só de pessoas (areas_caixa_so_de_pessoas_spec); com robô de fora, recusa.
+    it 'recusa caixa sem porta ativa e com robô de fora, sem deixar espelho para trás' do
       outra_caixa = create(:inbox, account: account)
+      AgentBotInbox.create!(inbox: outra_caixa, agent_bot: create(:agent_bot, account: account), account: account)
 
       expect { described_class.vincular!(agent: agente_da_area, inbox: outra_caixa) }
-        .to raise_error(ActiveRecord::RecordInvalid)
+        .to raise_error(described_class::CaixaComRoboExterno)
         .and(not_change(AgentBot, :count))
     end
 

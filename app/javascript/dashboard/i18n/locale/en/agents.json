@@ -621,7 +621,7 @@
         "OUTRO_TEXTO": "For special cases. Most agents start from a template above.",
         "EQUIPE": {
           "TITULO": "Team agent",
-          "TEXTO": "Stays on a channel that already has a main agent and receives the conversation when someone hands over."
+          "TEXTO": "Stays on a channel with a main agent or served only by people, and receives the conversation when someone hands over."
         },
         "AJUDA": {
           "TITULO": "Helps other agents",
@@ -1637,11 +1637,11 @@
       "EQUIPE": {
         "TITULO": "On which channels will {nome} be on the team?",
         "TITULO_SEM_NOME": "On which channels will the agent you are creating be on the team?",
-        "TEXTO": "Choose one or more. Only channels that already have someone answering first can be chosen.",
+        "TEXTO": "Choose one or more. You can choose channels with a main agent answering and channels served only by people.",
         "PRINCIPAL": "{outro} answers first",
         "SEM_PRINCIPAL": "No one answers first on this channel yet. A team agent needs a main agent on the channel.",
         "PRINCIPAL_PARADO": "{outro} is not answering on this channel. A team agent needs a main agent that is answering.",
-        "NENHUM": "No channel has a main agent answering yet. Put an agent to answer first on a channel and come back here.",
+        "NENHUM": "No channel can take a team agent right now. It joins channels with a main agent answering or served only by people.",
         "CONFIRA": "Check how it works",
         "CONFIRA_TEXTO": "Nothing changes for who already answers first.",
         "AVISO": "{outro} answers first; {nome} receives when someone hands over.",
@@ -1661,7 +1661,13 @@
         "CARREGANDO": "Reading the channels",
         "SALVANDO": "Saving…",
         "COMECAR_TEXTO": "{nome} receives the conversation when someone hands over, on the channels you choose.",
-        "ESCOLHER_DE_NOVO": "Choose the channels again"
+        "ESCOLHER_DE_NOVO": "Choose the channels again",
+        "SO_PESSOAS": "Served only by people; {nome} receives when someone hands over",
+        "SO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over",
+        "OUTRO_ROBO": "Another bot answers on this channel. A team agent cannot join a channel with another bot yet.",
+        "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
+        "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
+        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team."
       },
       "ONDE": {
         "TITULO": "Where {nome} works",
@@ -1670,7 +1676,8 @@
         "PRONTO_TITULO": "{nome} is already working",
         "MUDAR": "Change",
         "MUDAR_ARIA": "Change where {nome} works",
-        "AJUDA": "Helps: {agentes}"
+        "AJUDA": "Helps: {agentes}",
+        "RECEBE_PESSOAS": "Served only by people; receives when someone hands over"
       },
       "AJUDANTE": {
         "QUEM": {

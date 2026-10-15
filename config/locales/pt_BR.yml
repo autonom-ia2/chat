@@ -1063,7 +1063,8 @@ pt_BR:
           fase2_off: "O agente da equipe ainda não está disponível nesta conta."
           agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
           already_linked: "%{nome} já está em %{canal}."
-          sem_principal: "Ninguém atende primeiro em %{canal} agora. O agente da equipe precisa de um agente principal atendendo no canal."
+          sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
+          robo_externo: "Outro robô atende em %{canal}. O agente da equipe ainda não entra em canal com outro robô."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
