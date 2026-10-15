@@ -95,6 +95,19 @@ describe('CaixaPage', () => {
     expect(wrapper.find('[data-porta]').text()).toContain('Clara');
   });
 
+  it('hides the AI agents when phase 2 is turned off in the account', async () => {
+    conta.estado.fase2 = true;
+    const wrapper = render();
+    await flushPromises();
+    expect(wrapper.find('[data-porta]').text()).toContain('Clara');
+
+    conta.estado.fase2 = false;
+    await nextTick();
+
+    expect(wrapper.find('[data-porta]').exists()).toBe(false);
+    expect(wrapper.find('[data-robo]').exists()).toBe(true);
+  });
+
   it.each([
     [
       'crm.caixas.principal_parado',

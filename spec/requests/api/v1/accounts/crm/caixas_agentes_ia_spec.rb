@@ -150,12 +150,28 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     AgentBotInbox.create!(inbox: externa, agent_bot: robo, account: account, status: :active)
     get "#{url}/#{externa.id}", headers: auth_headers(admin)
     expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
+  end
 
-    # Vínculo da porta apagado com o robô ainda ligado na caixa: não é mais a porta, é agente externo (mesma regra de
-    # AgentInbox.robo_externo_na_caixa?).
+  it 'agente externo quando o robô não é o espelho da porta viva daquela caixa (#1570)' do
+    tipo = lambda do |caixa|
+      get "#{url}/#{caixa.id}", headers: auth_headers(admin)
+      response.parsed_body.dig('payload', 'caixa', 'agent_bot', 'tipo_do_principal')
+    end
+    espelho = inbox.agent_bot_inbox.agent_bot
+
+    # O espelho da Clara ligado em outra caixa, onde ela não é a porta.
+    outra = create(:inbox, account: account)
+    AgentBotInbox.create!(inbox: outra, agent_bot: espelho, account: account, status: :active)
+    expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia externo])
+
+    # Agente apagado (a porta dele já não aparece em ai_agents).
+    clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    expect(tipo.call(inbox)).to eq('externo')
+
+    # Vínculo da porta apagado com o robô ainda ligado: mesma regra de AgentInbox.robo_externo_na_caixa?.
+    clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
     Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    get "#{url}/#{inbox.id}", headers: auth_headers(admin)
-    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('tipo_do_principal' => 'externo')
+    expect(tipo.call(inbox)).to eq('externo')
   end
 
   it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do

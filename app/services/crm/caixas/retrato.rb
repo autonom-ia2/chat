@@ -57,10 +57,12 @@ class Crm::Caixas::Retrato
     { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name, tipo_do_principal: tipo }
   end
 
-  # [[inbox_id, agent_bot_id], ...] das portas ativas das caixas da tela, numa consulta só.
+  # [[inbox_id, agent_bot_id], ...] das portas ativas das caixas da tela, numa consulta só. Agente apagado não conta,
+  # como em RetratoDosAgentes#vinculos: lá a porta dele já não aparece.
   def espelhos_da_porta
     @espelhos_da_porta ||= ::Autonomia::Agents::AgentInbox.kept.porta
                                                           .where(account_id: @account.id, inbox_id: @inboxes.map(&:id))
+                                                          .where(autonomia_agent_id: ::Autonomia::Agents::Agent.kept.select(:id))
                                                           .pluck(:inbox_id, :agent_bot_id).to_set
   end
 
