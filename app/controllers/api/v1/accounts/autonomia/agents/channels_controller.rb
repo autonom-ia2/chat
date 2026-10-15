@@ -55,11 +55,17 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     return render_unprocessable(area_error(recusa)) if recusa
 
     ja_era_area = area_ativa?
-    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, exigir_porta_atendendo: true)
+    # `de_rascunho`: esta é a criação do agente da equipe; o rascunho com a conversa de criação fechada entra e liga.
+    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, exigir_porta_atendendo: true,
+                                                        de_rascunho: true)
     load_index
     render :index, status: ja_era_area ? :ok : :created
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     render_unprocessable(area_error(:agent_internal))
+  rescue ::Autonomia::Agents::Areas::AgenteRascunho
+    render_unprocessable(area_error(:rascunho))
+  rescue ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
+    render_unprocessable(area_error(:nao_pode_ser_area))
   rescue ::Autonomia::Agents::Areas::SemPortaAtendendo
     render_unprocessable(area_error(:sem_principal))
   rescue ActiveRecord::RecordNotUnique

@@ -22,8 +22,9 @@ module Crm
       # Conversa precisa ter tido troca REAL dos dois lados antes de iniciar o follow-up.
       MIN_CONTACT_MESSAGES = 2
       MIN_AGENT_MESSAGES = 2
-      # Retornos com data (combinado com o cliente, lembrete de Atender): enquanto pendentes, seguram a cadência.
-      DATED_SOURCES = %w[ai_callback service_reminder].freeze
+      # Retorno combinado com o cliente: enquanto pendente com data futura, segura a cadência. O lembrete de Atender
+      # segura pela regra de uma mensagem por vez por card (Crm::FollowUps::UmaMensagemPorVez, #1589).
+      DATED_SOURCES = %w[ai_callback].freeze
 
       def initialize(pipeline:, now: Time.current)
         @pipeline = pipeline
@@ -58,7 +59,7 @@ module Crm
         # removida (contas só-IA, como a 6, PRECISAM de follow-up).
         return false unless Crm::FollowUps::MessagingWindow.new(conversation, at: @now).whatsapp_capable?
         return false if cadence_active?(card) || cadence_spent?(card) || opted_out?(card) || opt_out_undecided?(card)
-        return false if pending_callback?(card)
+        return false if pending_callback?(card) || Crm::FollowUps::UmaMensagemPorVez.new(card, now: @now).automatico_espera?
         return false if Crm::Ai::Config.contact_followup_disabled?(conversation.contact)
         return false unless sufficient_two_way_exchange?(conversation)
 
@@ -82,7 +83,6 @@ module Crm
       # GUARDA: NÃO inicia a cadência genérica de auto-followup se o card tem um RETORNO POR DATA
       # (ai_callback) pendente com data futura — o cliente já disse QUANDO voltar; não perturbar antes.
       # Depois que o callback dispara (vira done/overdue), o card volta a ser elegível normalmente.
-      # #1498: lembrete de Atender pendente também segura a cadência (dois fluxos de mensagem para o mesmo cliente).
       def pending_callback?(card)
         card.follow_ups.active.any? do |follow_up|
           DATED_SOURCES.include?(follow_up.metadata.to_h['source']) &&

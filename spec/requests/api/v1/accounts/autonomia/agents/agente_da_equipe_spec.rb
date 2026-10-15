@@ -9,7 +9,8 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
   let(:headers) { administrator.create_new_auth_token }
   let(:inbox) { create(:inbox, account: account, name: 'WhatsApp Vendas') }
   let(:principal) { agente('Sofia', status: :active, enabled: true) }
-  let(:novo) { agente('Bruno') }
+  # O rascunho da criação com a conversa já fechada (tem instrução): é quem "Começar a trabalhar" põe na equipe.
+  let(:novo) { agente('Bruno', instruction: 'Atende o financeiro.') }
 
   around do |example|
     with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run }
@@ -78,6 +79,30 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(erro(:sem_principal, caixa: externa))
+    end
+
+    it 'devolve 422 para o rascunho cuja conversa de criação não fechou (sem instrução), e nada muda' do
+      pela_metade = agente('Pela metade')
+
+      expect { pedir_area(pela_metade) }.not_to change(Autonomia::Agents::AgentInbox, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:rascunho, agent: pela_metade))
+      expect(pela_metade.reload).to have_attributes(status: 'draft', enabled: false)
+    end
+
+    it 'devolve 422 para quem foi pausado de propósito e ainda tem caixa, e não o liga' do
+      outra = create(:inbox, account: account, name: 'WhatsApp Suporte')
+      pausado = agente('Leo', status: :active, enabled: true, instruction: 'Atende o suporte.')
+      conectar(pausado, outra)
+      pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      pedir_area(pausado)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(erro(:nao_pode_ser_area, agent: pausado))
+      expect(Autonomia::Agents::AgentInbox.kept.where(agent: pausado, inbox: inbox)).to be_empty
+      expect(pausado.reload).to have_attributes(status: 'paused', enabled: false)
     end
 
     it 'devolve 422 para o agente interno (Copiloto da equipe)' do
