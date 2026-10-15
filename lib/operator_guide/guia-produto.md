@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (220 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (221 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1004,6 +1004,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo.
 - passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (só os que já têm quem atenda primeiro) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
 - gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; canal sem principal, com outro robô ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- nav_target: `autonomia_agents_builder`
+
+### Criar um agente que ajuda outros agentes (ajudante)
+- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando ele é chamado?"; "Por que o Agente de Cotação aparece bloqueado?"
+- onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Ajuda outros agentes
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um agente que já converse com clientes.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Ajuda outros agentes; 3. Marque os agentes que ele vai ajudar (um ou mais) e clique em Continuar; 4. Em Quando chamar, escreva numa frase a situação em que os agentes escolhidos o chamam e clique em Continuar; 5. Conte na conversa o que ele sabe e teste como se fosse o agente principal (Alterar, no topo, troca a escolha); 6. Clique em Começar a ajudar; 7. Na página do agente, Mudar em Quem ele ajuda ou em Quando chamar reabre os passos.
+- gotchas: o ajudante nunca fala com o cliente e não escolhe canal: quem responde é o agente principal, que o consulta; o que o ajudante sabe e faz pode chegar ao cliente pelas respostas do principal; o Copiloto da equipe, outros ajudantes e rascunhos não aparecem para escolher, e o Agente de Cotação aparece bloqueado com o motivo; um Copiloto já existente não vira ajudante, só quem nasce como Ajuda outros agentes; na lista ele aparece como Ajudando; a página dele não tem Testar como cliente nem Quando passa para a equipe.
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente

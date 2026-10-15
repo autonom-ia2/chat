@@ -23,6 +23,7 @@ import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
+import AjudantePassos from '../components/onde/AjudantePassos.vue';
 import {
   ESTADO_PAGINA,
   useAgenteDaPagina,
@@ -31,6 +32,8 @@ import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
+import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
+import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
 import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
 import { caixasDaEquipe } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
@@ -57,6 +60,8 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // #1433 (tema 13): o agente da equipe (`na_equipe`) aparece "Na equipe", com "Onde {nome} trabalha" (caixa e
 // papel) no lugar de "Onde e quando responde"; "Mudar" abre direto os passos do agente da equipe (EquipeCanais).
 // Ligar de novo um agente da equipe parado não pede canal: as caixas dele continuam.
+// Tema 14 (#1434): o ajudante aparece "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
+// equipe"; "Quem {nome} ajuda" e "Quando chamar" ("GET /ajuda") com "Mudar" abrindo os passos do ajudante.
 const props = defineProps({
   agentId: { type: [String, Number], required: true },
   gaveta: { type: String, default: null },
@@ -114,6 +119,21 @@ const equipe = computed(() => {
 });
 const salvarEquipe = useSalvarEquipe();
 const EQUIPE = 'equipe';
+const AJUDA = 'ajuda';
+const ajudante = computed(() => ehAjudante(agente.value));
+const ajudaDoAgente = useAjudaDoAgente();
+const registros = useMapGetter('autonomiaAgents/getRecords');
+const leituraDosAgentes = ref('pronto');
+const passoDaAjuda = ref('quem');
+// Quem ele ajuda (do agente) e o "quando chamar" (da rota /ajuda), ou null quando não é ajudante.
+const ajuda = computed(() =>
+  ajudante.value
+    ? {
+        principais: quemAjuda(agente.value),
+        quando: ajudaDoAgente.quando.value,
+      }
+    : null
+);
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
@@ -156,6 +176,10 @@ const foto = computed(
 );
 
 const ondeNoHeroi = computed(() => {
+  if (ajudante.value) {
+    const nomes = nomesQueAjuda(agente.value);
+    return nomes ? t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: nomes }) : '';
+  }
   if (interno.value) return '';
   if (equipe.value) {
     return equipe.value.length
@@ -345,6 +369,7 @@ const carregarTudo = async () => {
   canais.carregar();
   await carregar();
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
+  if (ajudante.value) ajudaDoAgente.carregar(Number(props.agentId));
   lerFontes();
   lerPerguntas();
 };
@@ -400,6 +425,41 @@ const mudarEquipe = () => {
   if (!podeGerenciar.value) return;
   canais.carregar();
   aberta.value = EQUIPE;
+};
+
+// Tema 14: "Mudar" de "Quem {nome} ajuda" (passo 1) ou de "Quando chamar" (passo 2). A página só leu este
+// agente: a lista da conta é lida ao abrir, para a escolha estar em dia.
+const lerAgentes = async () => {
+  leituraDosAgentes.value = 'carregando';
+  try {
+    await store.dispatch('autonomiaAgents/get');
+    leituraDosAgentes.value = 'pronto';
+  } catch {
+    leituraDosAgentes.value = 'erro';
+  }
+};
+const mudarAjuda = (passo = 'quem') => {
+  if (!podeGerenciar.value) return;
+  lerAgentes();
+  ajudaDoAgente.erro.value = null;
+  passoDaAjuda.value = passo;
+  aberta.value = AJUDA;
+};
+const salvarMudancaDaAjuda = async ({ principais, quando: frase }) => {
+  const feito = await ajudaDoAgente.salvar({
+    agenteId: agente.value.id,
+    nome: nome.value,
+    principalIds: principais,
+    quando: frase,
+  });
+  if (!feito) return;
+  useAlert(t('AGENTS.JORNADA.AJUDANTE.FEITO', { nome: nome.value }));
+  fechar();
+  try {
+    await store.dispatch('autonomiaAgents/show', agente.value.id);
+  } catch {
+    // O vínculo já foi gravado; a tela relê o agente ao abrir de novo.
+  }
 };
 
 // #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
@@ -613,6 +673,7 @@ const tirarPergunta = id => {
           :acao-principal="acaoPrincipal"
           :itens-mais="itensMais"
           :alternando="alternando"
+          :ajudante="ajudante"
           @voltar-lista="irParaLista"
           @alternar="alternar"
           @acao-principal="acaoDoHeroi"
@@ -659,12 +720,14 @@ const tirarPergunta = id => {
           :quantas-perguntas="perguntas.length"
           :equipe="equipe"
           :caixas="caixas"
+          :ajuda="ajuda"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
           @escrever="escrever"
           @escolher-canal="escolherCanal"
           @mudar-equipe="mudarEquipe"
+          @mudar-ajuda="mudarAjuda"
         />
       </template>
     </div>
@@ -734,6 +797,31 @@ const tirarPergunta = id => {
           @voltar="fechar"
           @reler="canais.carregar()"
           @pronto="salvarMudancaDaEquipe"
+        />
+      </AgenteGaveta>
+      <AgenteGaveta
+        v-else-if="aberta === AJUDA"
+        :titulo="t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome })"
+        @fechar="fechar"
+      >
+        <AjudantePassos
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :agentes="registros || []"
+          :leitura="leituraDosAgentes"
+          :inicial="{
+            principais: ajuda.principais.map(principal => principal.id),
+            quando: ajuda.quando,
+          }"
+          :comecar-em="passoDaAjuda"
+          :salvando="ajudaDoAgente.salvando.value"
+          :erro="ajudaDoAgente.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="lerAgentes"
+          @pronto="salvarMudancaDaAjuda"
         />
       </AgenteGaveta>
       <GavetaConversas
