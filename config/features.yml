@@ -405,11 +405,12 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Menu lateral novo e página inicial de Configurações com cartões (#1617). Bit 24 (16777216) NESTA branch: é a
-# posição no yml, logo depois de `crm_calendario_ouro` (bit 23), e o account_spec confere 1 << 24.
-# PENDENTE de confirmação com a Orquestração (#1322): os bits 24 e 25 estão reservados para #1578
-# (whatsapp_campaign_products) e #1590 (crm_mensagem_marcada). Se eles entrarem antes, esta flag vai para depois
-# deles no yml e vira o bit 26 (67108864) — mudar o yml e o account_spec juntos.
+# Menu lateral novo e página inicial de Configurações com cartões (#1617). Reserva da Orquestração (#1322): BIT 27
+# (134217728) de feature_flags_ext_1. Ordem final no yml: 24 whatsapp_campaign_products (já na main), 25
+# crm_mensagem_marcada (#1608), 26 whatsapp_hybrid_recovery (#1489), 27 esta. O bit é a posição na lista e o arquivo
+# não aceita buraco nem item reservado (cada nome vira flag de verdade), então NESTA branch, criada antes dos três,
+# ela cai no bit 24 e o account_spec confere 1 << 24. Antes do push: atualizar a branch com a main, pôr esta entrada
+# depois de whatsapp_hybrid_recovery e trocar o account_spec para 1 << 27 (combinado com a Orquestração).
 # Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
 # No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
 - name: menu_lateral_novo

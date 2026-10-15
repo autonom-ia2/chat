@@ -181,6 +181,8 @@ const mountPage = async ({
         CrmListExportButton: true,
         CrmTableColumnSettings: true,
         CrmSavedViews: true,
+        // Aba Números do menu novo (#1617): tem teste próprio (useAbaNumeros.spec.js).
+        CrmAbaNumeros: true,
         CrmResultTabs: true,
         CrmBulkActionBar: true,
         CrmCalendar: true,

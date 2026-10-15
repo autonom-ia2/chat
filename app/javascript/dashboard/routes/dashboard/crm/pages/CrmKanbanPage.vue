@@ -50,6 +50,7 @@ import CrmSavedViews from '../components/list/CrmSavedViews.vue';
 import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
+import CrmAbaNumeros from '../components/numeros/CrmAbaNumeros.vue';
 import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
 // #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
@@ -156,7 +157,13 @@ const calendarioOuro = computed(
 const funilDoCalendario = ref(null);
 
 const currentPipelineId = ref('');
-const viewMode = ref(isCalendarOnly.value ? 'calendar' : 'kanban');
+// `?view=list|calendar` abre já na vista (a página Números volta por aqui, #1617).
+const VISTAS_PELO_ENDERECO = ['list', 'calendar'];
+const viewMode = ref(
+  isCalendarOnly.value
+    ? 'calendar'
+    : VISTAS_PELO_ENDERECO.find(vista => vista === route.query.view) || 'kanban'
+);
 // The two CRM routes share this component, so the instance is reused on navigation:
 // keep viewMode in sync with the route (force calendar on the calendar-only page).
 watch(isCalendarOnly, only => {
@@ -2304,7 +2311,7 @@ onUnmounted(() => {
         </h1>
         <div
           v-if="!isCalendarOnly"
-          class="flex items-center rounded-xl bg-n-alpha-2 p-1"
+          class="flex flex-wrap items-center rounded-xl bg-n-alpha-2 p-1"
           role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
@@ -2324,6 +2331,7 @@ onUnmounted(() => {
             <span :class="mode.icon" class="size-3.5" aria-hidden="true" />
             {{ mode.label }}
           </button>
+          <CrmAbaNumeros />
         </div>
       </div>
 

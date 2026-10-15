@@ -81,10 +81,15 @@ const limpar = () => {
         v-if="comece && !termo"
         :to="comece.to"
         data-comece
-        class="group grid grid-cols-[auto_1fr] items-center gap-4 p-4 rounded-2xl ring-1 ring-inset ring-white/20 bg-white/10 transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white sm:grid-cols-[auto_1fr_auto]"
+        class="group grid grid-cols-[auto_1fr] items-center gap-4 p-4 rounded-2xl ring-1 ring-inset ring-white/20 bg-white/10 transition hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white sm:grid-cols-[auto_1fr_auto] motion-reduce:transition-none"
       >
         <span
-          class="grid shrink-0 place-items-center size-12 rounded-xl bg-n-amber-9 text-n-amber-12"
+          class="grid shrink-0 place-items-center size-12 rounded-xl"
+          :class="
+            comece.estado.tipo === 'erro'
+              ? 'bg-n-ruby-9 text-white'
+              : 'bg-n-amber-9 text-n-amber-12'
+          "
           aria-hidden="true"
         >
           <span class="size-6" :class="comece.icone" />

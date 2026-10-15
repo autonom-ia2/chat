@@ -32,7 +32,7 @@ const idDaLista = computed(
     <div class="flex items-center min-w-0 gap-1 pe-1">
       <button
         type="button"
-        class="flex items-center flex-1 min-w-0 gap-2.5 text-[0.9375rem] leading-5 rounded-lg min-h-11 ps-11 pe-2 transition-colors duration-150"
+        class="flex items-center flex-1 min-w-0 gap-2.5 text-[0.9375rem] leading-5 rounded-lg min-h-11 ps-11 pe-2 transition-colors duration-150 motion-reduce:transition-none"
         :class="[tema.foco, tema.textoFilho, tema.passar]"
         :aria-expanded="aberto"
         :aria-controls="idDaLista"
@@ -42,7 +42,7 @@ const idDaLista = computed(
           {{ subgrupo.label }}
         </span>
         <span
-          class="i-lucide-chevron-down size-4 shrink-0 transition-transform duration-150"
+          class="i-lucide-chevron-down size-4 shrink-0 transition-transform duration-150 motion-reduce:transition-none"
           :class="{ 'rotate-180': aberto }"
           aria-hidden="true"
         />

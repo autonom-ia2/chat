@@ -4,6 +4,9 @@
 // aparece quando esse item existe para a pessoa e a rota dele abre (mesma checagem do menu). Assim a página não
 // repete regra de quem vê o quê: herda do menu de sempre.
 //
+// `rota` (sem `origem`): cartão de uma tela que não está em Configurações hoje; aparece se a rota abre para a
+// pessoa (permissão e flag da própria rota) e se a instalação tem o recurso (`exige`).
+//
 // `passo` liga o cartão à trilha de Primeiros passos (config/onboarding/trilha.yml): passo pendente vira
 // "Falta: …" no cartão; feito vira "Pronto". `contagem` diz qual número barato (já na store) mostrar.
 //
@@ -29,6 +32,12 @@ export const GRUPOS_DE_CARTOES = [
         origem: 'Financial',
         icone: 'i-lucide-receipt',
       },
+      // Fica junto do Plano: é uma decisão de gasto do dono (a Meta cobra pelos modelos), não um ajuste do canal.
+      {
+        id: 'CUSTOS_WHATSAPP',
+        rota: 'modelos_whatsapp_autorizacao',
+        icone: 'i-lucide-badge-dollar-sign',
+      },
       // Hoje o horário mora em dois lugares (cada canal e o calendário dos Prazos de resposta). Não unificamos
       // o dado agora: o cartão leva ao lugar atual e diz isso. Pendência registrada na Issue #1617.
       {
@@ -48,6 +57,14 @@ export const GRUPOS_DE_CARTOES = [
         icone: 'i-lucide-message-circle',
         passo: 'canal',
         contagem: 'caixas',
+        // Caixa que pede para reconectar (o mesmo dado do aviso vermelho no menu de sempre) vira selo vermelho.
+        saude: true,
+      },
+      {
+        id: 'EMAIL_ENVIO',
+        rota: 'campaigns_email_sender_index',
+        exige: 'campanhasPorEmail',
+        icone: 'i-lucide-mail',
       },
     ],
   },
@@ -72,6 +89,12 @@ export const GRUPOS_DE_CARTOES = [
         id: 'ATRIBUICAO',
         origem: 'Settings Agent Assignment',
         icone: 'i-lucide-user-cog',
+      },
+      {
+        id: 'QUEM_CUIDA',
+        rota: 'crm_caixas',
+        exige: 'crm',
+        icone: 'i-lucide-network',
       },
       // Quem não administra, mas cuida da IA do CRM, chega na passagem direto por este cartão.
       {
@@ -160,7 +183,7 @@ export const GRUPOS_DE_CARTOES = [
 export const ORIGENS_DOS_CARTOES = [
   ...new Set(
     GRUPOS_DE_CARTOES.flatMap(grupo =>
-      grupo.cartoes.map(cartao => cartao.origem)
+      grupo.cartoes.map(cartao => cartao.origem).filter(Boolean)
     )
   ),
 ];

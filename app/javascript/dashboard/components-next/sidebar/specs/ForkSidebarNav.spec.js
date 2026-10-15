@@ -32,6 +32,10 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('vuex', () => ({ useStore: () => ({ getters: {} }) }));
+vi.mock('dashboard/composables/store', async () => {
+  const { ref: valor } = await import('vue');
+  return { useMapGetter: () => valor(false) };
+});
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ accountScopedRoute: name => ({ name, params: {} }) }),
 }));

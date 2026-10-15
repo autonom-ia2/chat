@@ -1,12 +1,5 @@
 <script setup>
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -21,6 +14,8 @@ import { publicarMenu } from './menuPublicado';
 import { temaDoMenu } from './tema';
 import ForkSidebarItem from './ForkSidebarItem.vue';
 import ForkSidebarIcone from './ForkSidebarIcone.vue';
+import ForkSidebarRecolher from './ForkSidebarRecolher.vue';
+import { useLarguraDoMenu } from './useLarguraDoMenu';
 
 // Menu lateral novo (#1617). Recebe a lista que o Sidebar.vue já monta e só reorganiza (forkSidebarMenu.js).
 // Fica no lugar da <nav> de sempre quando a flag `menu_lateral_novo` está ligada na conta.
@@ -32,16 +27,13 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar']);
 
-// 256px: cabem inteiros os rótulos de hoje ("Todas as conversas" com a contagem, "Resultados da agenda").
-const LARGURA_PADRAO = 256;
-// Largura que o provider.js do upstream usa ao abrir o menu recolhido (duplo clique na borda).
-const LARGURA_DO_UPSTREAM = 200;
+const ID_DA_LISTA = 'fork-menu-lista';
 
 const { t } = useI18n();
 const route = useRoute();
 const store = useStore();
 const { accountScopedRoute } = useAccount();
-const { uiSettings } = useUISettings();
+const { uiSettings, updateUISettings } = useUISettings();
 const { isAllowed, resolvePath, isCollapsed, sidebarWidth } =
   useSidebarContext();
 const { brandedColor } = useBrandedSidebar();
@@ -102,10 +94,11 @@ const todos = computed(() => [
 ]);
 const ativa = computed(() => acharAtivo(todos.value, route, resolvePath));
 
-// Um item aberto por vez, além do que contém a tela atual.
-const abertoNome = ref(null);
+// Um item aberto por vez, além do que contém a tela atual. O aberto fica guardado (uiSettings) para a próxima.
+const abertoNome = ref(uiSettings.value?.menu_grupo_aberto || null);
 const alternar = nome => {
   abertoNome.value = abertoNome.value === nome ? null : nome;
+  updateUISettings({ menu_grupo_aberto: abertoNome.value });
 };
 
 const contagemDe = item => {
@@ -121,17 +114,12 @@ const pendenciaDe = item =>
       )
     : '';
 
-// Largura padrão do menu novo: 240px, quando a pessoa ainda não arrastou a borda.
-// Sem largura escolhida, ou com os 200px que o provider.js grava ao abrir o menu recolhido (duplo clique na
-// borda), vale a largura do menu novo. Não grava: arrastar a borda continua sendo a escolha da pessoa.
-const larguraDoMenuNovo = largura =>
-  !largura || largura === LARGURA_DO_UPSTREAM ? LARGURA_PADRAO : largura;
-onMounted(() => {
-  sidebarWidth.value = larguraDoMenuNovo(uiSettings.value?.sidebar_width);
-});
-watch(isCollapsed, (recolhido, estava) => {
-  if (recolhido || !estava) return;
-  sidebarWidth.value = larguraDoMenuNovo(sidebarWidth.value);
+// Largura: 256px aberto, botão e atalho para recolher, recolhido sozinho em tela média sem escolha.
+const { alternar: alternarLargura, anuncio } = useLarguraDoMenu({
+  sidebarWidth,
+  isCollapsed,
+  uiSettings,
+  updateUISettings,
 });
 
 // Gaveta do celular: foco preso, Esc fecha, foco volta para quem abriu.
@@ -212,6 +200,7 @@ const navegou = () => {
       </button>
     </div>
     <nav
+      :id="ID_DA_LISTA"
       ref="lista"
       :aria-label="t('FORK_SIDEBAR.MENU')"
       class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
@@ -313,6 +302,13 @@ const navegou = () => {
           @navegou="navegou"
         />
       </template>
+      <ForkSidebarRecolher
+        :recolhido="isCollapsed"
+        :controla="ID_DA_LISTA"
+        :tema="tema"
+        @alternar="alternarLargura"
+      />
     </ul>
+    <p class="sr-only" aria-live="polite">{{ anuncio ? t(anuncio) : '' }}</p>
   </div>
 </template>

@@ -14,6 +14,12 @@ import {
   SAIRAM_DAS_CONFIGURACOES,
 } from 'dashboard/routes/dashboard/settings/inicio/cartoes';
 
+// Importação de contatos mora em Relacionamentos (ou em Contatos, sem a navegação nova).
+const IMPORTAR_CONTATOS = [
+  'contacts_import_journey',
+  'contacts_campaign_imports',
+];
+
 const ITEM = chave => `FORK_SIDEBAR.ITENS.${chave}`;
 
 // `pega`: o item do topo, inteiro. `promove`: um filho vira item do topo. `monta`: item novo com filhos que
@@ -45,20 +51,25 @@ export const FORK_LAYOUT = {
     {
       id: 'ACOMPANHAR',
       itens: [
+        // A página Números (ex-Dashboard) virou aba do CRM: o item fica marcado nela.
+        { pega: 'CRM', absorve: ['CRM Dashboard'] },
         // Com a navegação de Relacionamentos ligada chega só ele; desligada, chegam Contatos e Empresas.
-        { pega: 'Relationships' },
-        { pega: 'Contacts' },
+        {
+          pega: 'Relationships',
+          ativoPorPrefixo: ['relationships_'],
+          ativoEm: IMPORTAR_CONTATOS,
+        },
+        { pega: 'Contacts', ativoEm: IMPORTAR_CONTATOS },
         { pega: 'Companies' },
-        { pega: 'CRM' },
         {
           monta: 'Agenda',
           rotulo: 'AGENDA',
           icone: 'i-lucide-calendar-days',
           filhos: [
-            { de: 'CRM Calendar' },
             { de: 'CRM Booking' },
+            { de: 'CRM Calendar' },
             { de: 'CRM My Booking Hours' },
-            { de: 'CRM Booking Results', rotulo: 'RESULTADOS_AGENDA' },
+            { de: 'CRM Booking Results', rotulo: 'MEUS_RESULTADOS' },
           ],
         },
       ],
@@ -68,6 +79,8 @@ export const FORK_LAYOUT = {
       itens: [
         {
           pega: 'Campaigns',
+          // Telas filhas sem item próprio (editor de e-mail, nova campanha…) marcam Campanhas.
+          ativoPorPrefixo: ['campaigns_'],
           rotulosDosFilhos: {
             'Campaign Journey': 'CAMPANHAS',
             'Campaign Management': 'VISAO_GERAL',
@@ -87,11 +100,13 @@ export const FORK_LAYOUT = {
       itens: [
         {
           pega: 'Reports',
-          rotulosDosFilhos: { 'Reports Agent': 'USUARIOS' },
-          junta: [
-            { de: 'CRM Dashboard', rotulo: 'FUNIS' },
-            { de: 'CRM AI Usage', rotulo: 'GASTO_IA' },
-          ],
+          rotulosDosFilhos: {
+            'Reports Agent': 'RELATORIO_USUARIOS',
+            'Reports Inbox': 'RELATORIO_CANAIS',
+            'Reports Team': 'RELATORIO_TIMES',
+            'Reports SLA': 'RELATORIO_PRAZOS',
+          },
+          junta: [{ de: 'CRM AI Usage', rotulo: 'GASTO_IA' }],
         },
       ],
     },
@@ -156,6 +171,7 @@ export const nomesCitadosNoLayout = () => {
     entrada.promove,
     ...(entrada.filhos || []).map(filho => filho.de),
     ...(entrada.junta || []).map(filho => filho.de),
+    ...(entrada.absorve || []),
     ...Object.keys(entrada.rotulosDosFilhos || {}),
   ]);
   return [...new Set(citados.filter(Boolean))];
@@ -167,6 +183,7 @@ const filhosUsados = () =>
       entrada.promove,
       ...(entrada.filhos || []).map(filho => filho.de),
       ...(entrada.junta || []).map(filho => filho.de),
+      ...(entrada.absorve || []),
     ])
   );
 
@@ -234,6 +251,13 @@ const linkDireto = (item, conhecidos) => {
   };
 };
 
+// Rotas a mais que marcam o item: no link direto entram no activeOn dele; no item com filhos, também no dele
+// (acharAtivo olha o activeOn do pai quando nenhuma folha bate).
+const comAtivoEm = (item, rotas) => ({
+  ...item,
+  activeOn: [...new Set([...(item.activeOn || []), ...rotas])],
+});
+
 const pegarFilhos = (lista, indice, t) =>
   lista
     .map(({ de, rotulo }) => {
@@ -263,6 +287,17 @@ const montarPega = (entrada, indice, usados, ctx) => {
   }
   if (entrada.direto) {
     item = linkDireto(item, FILHOS_CONHECIDOS[entrada.pega] || []);
+  }
+  const absorvidos = (entrada.absorve || [])
+    .map(nome => indice.get(nome)?.item)
+    .filter(Boolean);
+  const extrasDeAtivo = [
+    ...juntarActiveOn(absorvidos),
+    ...(entrada.ativoEm || []),
+  ];
+  if (extrasDeAtivo.length) item = comAtivoEm(item, extrasDeAtivo);
+  if (entrada.ativoPorPrefixo) {
+    item = { ...item, ativoPorPrefixo: entrada.ativoPorPrefixo };
   }
   return item;
 };
@@ -395,6 +430,17 @@ export const acharAtivo = (itens, rota, resolverCaminho) => {
       porNome.find(({ folha }) => parametrosBatem(folha, rota)) || porNome[0]
     );
   }
+  // Tela sem item próprio que pertence a um item (editor de e-mail das Campanhas, importação de contatos):
+  // marca o item, sem marcar nenhum filho.
+  const nomeDaRota = rota.name || '';
+  const dono = itens.find(
+    item =>
+      item.activeOn?.includes(nomeDaRota) ||
+      (item.ativoPorPrefixo || []).some(prefixo =>
+        nomeDaRota.startsWith(prefixo)
+      )
+  );
+  if (dono) return { item: dono, folha: dono.children ? null : dono };
   return (
     pares.find(({ folha }) =>
       rota.path.startsWith(`${resolverCaminho(folha.to)}/`)

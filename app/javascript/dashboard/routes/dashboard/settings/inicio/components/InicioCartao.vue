@@ -11,6 +11,7 @@ const props = defineProps({
 
 const TONS = {
   falta: 'bg-n-amber-3 text-n-amber-11',
+  erro: 'bg-n-ruby-3 text-n-ruby-11',
   pronto: 'bg-n-teal-3 text-n-teal-11',
   destaque: 'bg-n-blue-3 text-n-blue-11',
   neutro: 'bg-n-slate-3 text-n-slate-11',
@@ -21,6 +22,7 @@ const tom = computed(() => {
   return TONS[props.cartao.estado?.tipo] || TONS.neutro;
 });
 const falta = computed(() => props.cartao.estado?.tipo === 'falta');
+const erro = computed(() => props.cartao.estado?.tipo === 'erro');
 </script>
 
 <template>
@@ -66,6 +68,14 @@ const falta = computed(() => props.cartao.estado?.tipo === 'falta');
           class="inline-flex items-center gap-1.5 rounded-full bg-n-amber-3 px-3 py-1 font-semibold text-n-amber-11 ring-1 ring-inset ring-n-amber-6"
         >
           <span class="i-lucide-circle-alert size-4" aria-hidden="true" />
+          {{ cartao.estado.texto }}
+        </span>
+        <span
+          v-else-if="erro"
+          data-erro
+          class="inline-flex items-center gap-1.5 rounded-full bg-n-ruby-3 px-3 py-1 font-semibold text-n-ruby-11 ring-1 ring-inset ring-n-ruby-6"
+        >
+          <span class="i-lucide-plug-zap size-4" aria-hidden="true" />
           {{ cartao.estado.texto }}
         </span>
         <span

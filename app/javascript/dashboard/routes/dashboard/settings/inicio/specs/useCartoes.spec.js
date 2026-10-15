@@ -14,7 +14,12 @@ const traduzir = (chave, valores, quantidade) => {
   if (typeof texto !== 'string') return chave;
   if (texto.includes(' | ')) {
     const formas = texto.split(' | ');
-    texto = formas[Math.min(quantidade ?? 0, formas.length - 1)];
+    // Como o vue-i18n: com duas formas, 1 usa a primeira; com três, 0, 1 e o resto.
+    const indice =
+      formas.length === 2
+        ? Number(quantidade !== 1)
+        : Math.min(quantidade ?? 0, formas.length - 1);
+    texto = formas[indice];
   }
   return Object.entries(valores || {}).reduce(
     (resultado, [nome, valor]) => resultado.split(`{${nome}}`).join(valor),
@@ -111,7 +116,10 @@ describe('useCartoes', () => {
 
   it('administrador vê os cartões do que o menu entrega, em grupos', () => {
     expect(idsPorGrupo(montar())).toEqual([
-      ['SUA_EMPRESA', ['DADOS_EMPRESA', 'PLANO', 'HORARIOS']],
+      [
+        'SUA_EMPRESA',
+        ['DADOS_EMPRESA', 'PLANO', 'CUSTOS_WHATSAPP', 'HORARIOS'],
+      ],
       ['CANAIS', ['CANAIS']],
       ['PESSOAS', ['USUARIOS']],
       ['ATENDIMENTO', ['ETIQUETAS']],
@@ -144,7 +152,10 @@ describe('useCartoes', () => {
     cartoes.termo.value = 'HORARIO';
     expect(idsPorGrupo(cartoes)).toEqual([['SUA_EMPRESA', ['HORARIOS']]]);
     cartoes.termo.value = 'whats';
-    expect(idsPorGrupo(cartoes)).toEqual([['CANAIS', ['CANAIS']]]);
+    expect(idsPorGrupo(cartoes)).toEqual([
+      ['SUA_EMPRESA', ['CUSTOS_WHATSAPP']],
+      ['CANAIS', ['CANAIS']],
+    ]);
     cartoes.termo.value = 'xyz';
     expect(cartoes.grupos.value).toEqual([]);
     expect(cartoes.encontrados.value).toBe(0);
@@ -172,6 +183,42 @@ describe('useCartoes', () => {
       tipo: 'pronto',
       texto: '2 canais ligados',
     });
+  });
+
+  it('cartões de telas fora de Configurações: só com o recurso da instalação e a permissão da rota', () => {
+    window.globalConfig = {
+      CRM_KANBAN_ENABLED: 'true',
+      EMAIL_CAMPAIGN_ENABLED: 'true',
+    };
+    const ids = idsPorGrupo(montar());
+    expect(ids.find(([grupo]) => grupo === 'CANAIS')[1]).toEqual([
+      'CANAIS',
+      'EMAIL_ENVIO',
+    ]);
+    expect(ids.find(([grupo]) => grupo === 'PESSOAS')[1]).toEqual([
+      'USUARIOS',
+      'QUEM_CUIDA',
+    ]);
+    estado.chaves = ['inbox_view'];
+    expect(
+      idsPorGrupo(montar()).flatMap(([, cartoes]) => cartoes)
+    ).not.toContain('QUEM_CUIDA');
+    delete window.globalConfig;
+  });
+
+  it('caixa que pede reconexão deixa o cartão de canais vermelho e vira o "Comece por aqui"', () => {
+    listas['inboxes/getInboxes'] = [
+      { id: 1 },
+      { id: 2, reauthorization_required: true },
+    ];
+    const cartoes = montar();
+    const canais = cartoes.grupos.value.find(g => g.id === 'CANAIS').cartoes[0];
+    expect(canais.estado).toEqual({
+      tipo: 'erro',
+      texto: 'Precisa reconectar: 1 canal',
+    });
+    expect(cartoes.primeiraPendencia.value.id).toBe('CANAIS');
+    listas['inboxes/getInboxes'] = [{ id: 1 }, { id: 2 }];
   });
 
   it('configuração nova sem cartão aparece em "Outros"', () => {

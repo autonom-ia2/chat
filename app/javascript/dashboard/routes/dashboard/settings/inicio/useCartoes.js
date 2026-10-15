@@ -1,8 +1,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { usePolicy } from 'dashboard/composables/usePolicy';
+import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
 import { useOnboardingTrail } from 'dashboard/composables/useOnboardingTrail';
 import { useMenuPublicado } from 'dashboard/components-next/sidebar/fork/menuPublicado';
 import { FILHOS_CONHECIDOS } from 'dashboard/components-next/sidebar/forkSidebarMenu';
@@ -30,14 +29,21 @@ export const normalizar = texto =>
     .join('')
     .trim();
 
+// O que a instalação precisa ter ligado para a tela do cartão abrir (o beforeEnter da rota confere o mesmo).
+const EXIGENCIAS = {
+  crm: () => window.globalConfig?.CRM_KANBAN_ENABLED === 'true',
+  campanhasPorEmail: () =>
+    window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
+    window.globalConfig?.CRM_KANBAN_ENABLED === 'true',
+};
+
 const minuscula = texto =>
   texto ? texto.charAt(0).toLocaleLowerCase('pt-BR') + texto.slice(1) : '';
 
 export function useCartoes() {
   const { t } = useI18n();
-  const router = useRouter();
   const store = useStore();
-  const { shouldShow } = usePolicy();
+  const { podeAbrir } = usePodeAbrir();
   const menu = useMenuPublicado();
   const trilha = useOnboardingTrail();
   const termo = ref('');
@@ -59,17 +65,6 @@ export function useCartoes() {
     return mapa;
   });
 
-  // A mesma checagem de rota do menu (provider.js isAllowed): permissão, flag e tipo de instalação.
-  const podeAbrir = to => {
-    if (!to) return false;
-    const rota = router.resolve(to);
-    return shouldShow(
-      rota.meta?.featureFlag || '',
-      rota.meta?.permissions || [],
-      rota.meta?.installationTypes || []
-    );
-  };
-
   const destinoDe = item =>
     item.to || (item.children || []).find(filho => podeAbrir(filho.to))?.to;
 
@@ -80,9 +75,22 @@ export function useCartoes() {
     return Array.isArray(lista) ? lista.length : 0;
   };
 
-  // Estado do cartão: o que falta (âmbar), o que está pronto (verde) ou só um dado (neutro).
+  // Caixas que pedem reconexão: já vêm na lista de caixas do menu (`reauthorization_required`), sem chamada nova.
+  const paraReconectar = () =>
+    (store.getters['inboxes/getInboxes'] || []).filter(
+      caixa => caixa.reauthorization_required
+    ).length;
+
+  // Estado do cartão: o que falta (âmbar), erro (vermelho), pronto (verde) ou só um dado (neutro).
   const estadoDe = cartao => {
     const passo = cartao.passo ? passoDe(cartao.passo) : null;
+    const quebradas = cartao.saude ? paraReconectar() : 0;
+    if (quebradas > 0) {
+      return {
+        tipo: 'erro',
+        texto: t('SETTINGS_INICIO.RECONECTAR', { count: quebradas }, quebradas),
+      };
+    }
     if (passo?.status === 'pendente') {
       return {
         tipo: 'falta',
@@ -110,9 +118,15 @@ export function useCartoes() {
     return null;
   };
 
-  const montarCartao = (cartao, grupo) => {
+  const destinoDoCartao = cartao => {
+    if (cartao.rota) return { name: cartao.rota };
     const item = indice.value.get(cartao.origem);
-    const to = item && destinoDe(item);
+    return item && destinoDe(item);
+  };
+
+  const montarCartao = (cartao, grupo) => {
+    if (cartao.exige && !EXIGENCIAS[cartao.exige]()) return null;
+    const to = destinoDoCartao(cartao);
     if (!to || !podeAbrir(to)) return null;
     return {
       id: cartao.id,
@@ -189,7 +203,7 @@ export function useCartoes() {
     () =>
       grupos.value
         .flatMap(grupo => grupo.cartoes)
-        .find(cartao => cartao.estado?.tipo === 'falta') || null
+        .find(cartao => ['erro', 'falta'].includes(cartao.estado?.tipo)) || null
   );
 
   const carregado = computed(() => Boolean(menu.value));

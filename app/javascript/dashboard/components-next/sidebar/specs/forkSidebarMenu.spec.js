@@ -69,7 +69,12 @@ describe('organizeForkMenu', () => {
     {
       name: 'Reports',
       label: 'Relatórios',
-      children: [folha('Reports Agent', 'agent_reports_index')],
+      children: [
+        folha('Reports Agent', 'agent_reports_index'),
+        folha('Reports Inbox', 'inbox_reports_index'),
+        folha('Reports Team', 'team_reports_index'),
+        folha('Reports SLA', 'sla_reports'),
+      ],
     },
     folha('Relationships', 'relationships_home'),
     folha('CentralDeAjuda', 'central_de_ajuda'),
@@ -110,15 +115,18 @@ describe('organizeForkMenu', () => {
       to: { name: 'crm_sla_index' },
     });
 
-    // CRM fica só com o Kanban e vira link direto; a Agenda junta o agendamento.
-    expect(nomes(acompanhar.itens)).toEqual(['Relationships', 'CRM', 'Agenda']);
-    expect(acompanhar.itens[1]).toMatchObject({
+    // CRM primeiro, só com o Kanban e marcado na página Números; a Agenda junta o agendamento.
+    expect(nomes(acompanhar.itens)).toEqual(['CRM', 'Relationships', 'Agenda']);
+    expect(acompanhar.itens[0]).toMatchObject({
       to: { name: 'crm_kanban_index' },
     });
-    expect(acompanhar.itens[1].children).toBeUndefined();
+    expect(acompanhar.itens[0].children).toBeUndefined();
+    expect(acompanhar.itens[0].activeOn).toEqual(
+      expect.arrayContaining(['crm_kanban_index', 'crm_dashboard_index'])
+    );
     expect(nomes(acompanhar.itens[2].children)).toEqual([
-      'CRM Calendar',
       'CRM Booking',
+      'CRM Calendar',
     ]);
 
     // Cotação sem as abas; Capitão e Financeiro fora do menu.
@@ -128,17 +136,15 @@ describe('organizeForkMenu', () => {
     expect(nomes(automatico.itens)).toEqual(['Agents', 'Automacoes']);
     expect(automatico.itens[0].label).toBe('FORK_SIDEBAR.ITENS.AGENTES');
 
-    // Relatórios ganham Funis; "Agentes" do relatório vira "Usuários".
-    expect(nomes(resultados.itens[0].children)).toEqual([
-      'Reports Agent',
-      'CRM Dashboard',
+    // Relatórios sem Funis (virou a aba Números do CRM); nomes do dia a dia.
+    expect(
+      resultados.itens[0].children.map(filho => [filho.name, filho.label])
+    ).toEqual([
+      ['Reports Agent', 'FORK_SIDEBAR.ITENS.RELATORIO_USUARIOS'],
+      ['Reports Inbox', 'FORK_SIDEBAR.ITENS.RELATORIO_CANAIS'],
+      ['Reports Team', 'FORK_SIDEBAR.ITENS.RELATORIO_TIMES'],
+      ['Reports SLA', 'FORK_SIDEBAR.ITENS.RELATORIO_PRAZOS'],
     ]);
-    expect(resultados.itens[0].children[0].label).toBe(
-      'FORK_SIDEBAR.ITENS.USUARIOS'
-    );
-    expect(resultados.itens[0].children[1].label).toBe(
-      'FORK_SIDEBAR.ITENS.FUNIS'
-    );
 
     // Rodapé: Ajuda e Configurações, que abre a página de cartões e fica marcada nas telas que viraram cartão.
     expect(nomes(menu.rodape)).toEqual(['CentralDeAjuda', 'Settings']);
@@ -218,15 +224,88 @@ describe('organizeForkMenu', () => {
     );
     const acompanhar = menu.grupos.find(grupo => grupo.id === 'ACOMPANHAR');
     expect(nomes(acompanhar.itens)).toEqual([
+      'CRM',
       'Contacts',
       'Companies',
-      'CRM',
       'Agenda',
     ]);
     expect(acompanhar.itens[3]).toMatchObject({
       label: 'FORK_SIDEBAR.ITENS.AGENDA',
       to: { name: 'crm_calendar_index' },
     });
+  });
+
+  it('item marcado nas telas filhas sem item próprio (S9)', () => {
+    const comCampanhas = [
+      ...upstream.filter(item => item.name !== 'Settings'),
+      {
+        name: 'Campaigns',
+        label: 'Campanhas',
+        children: [folha('Campaign Journey', 'campaigns_journey_index')],
+      },
+      {
+        name: 'Settings',
+        label: 'Configurações',
+        children: [
+          {
+            ...folha('Settings Inboxes', 'settings_inbox_list'),
+            activeOn: [
+              'settings_inbox_list',
+              'settings_inbox_show',
+              'settings_inbox_new',
+              'settings_inboxes_page_channel',
+            ],
+          },
+        ],
+      },
+    ];
+    const menu = organizeForkMenu(comCampanhas, ctx);
+    const itens = [
+      ...menu.topo,
+      ...menu.grupos.flatMap(g => g.itens),
+      ...menu.rodape,
+    ];
+    const caminho = to => `/${to.name}`;
+    const dono = (name, path = '/outra') =>
+      acharAtivo(itens, { name, path, params: {} }, caminho)?.item.name;
+
+    expect(dono('campaigns_email_builder')).toBe('Campaigns');
+    expect(dono('campaigns_journey_new')).toBe('Campaigns');
+    expect(dono('relationships_company_media')).toBe('Relationships');
+    expect(dono('relationships_qualquer_tela_nova')).toBe('Relationships');
+    expect(dono('contacts_import_journey')).toBe('Relationships');
+    expect(dono('contacts_campaign_imports')).toBe('Relationships');
+    expect(dono('crm_dashboard_index')).toBe('CRM');
+    [
+      'settings_inbox_new',
+      'settings_inboxes_page_channel',
+      'settings_inbox_show',
+    ].forEach(rota =>
+      expect(dono(rota, '/app/settings/inboxes/1/whatsapp-api')).toBe(
+        'Settings'
+      )
+    );
+
+    // Sem a navegação de Relacionamentos, a importação marca Contatos.
+    const semNavegacao = organizeForkMenu(
+      [
+        ...comCampanhas.filter(item => item.name !== 'Relationships'),
+        {
+          name: 'Contacts',
+          label: 'Contatos',
+          children: [folha('All Contacts')],
+        },
+      ],
+      ctx
+    );
+    const itensSem = semNavegacao.grupos.flatMap(g => g.itens);
+    expect(
+      acharAtivo(
+        itensSem,
+        { name: 'contacts_import_journey', path: '/x' },
+        caminho
+      ).item.name
+    ).toBe('Contacts');
   });
 
   it('acharAtivo prefere o caminho igual e depois o activeOn', () => {
@@ -530,7 +609,7 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect(nomes(menu.topo)).toEqual(['FirstSteps']);
     expect(menu.grupos.map(grupo => [grupo.id, nomes(grupo.itens)])).toEqual([
       ['ATENDER', ['Conversation', 'Inbox', 'Calls', 'Prazos']],
-      ['ACOMPANHAR', ['Contacts', 'Companies', 'CRM', 'Agenda']],
+      ['ACOMPANHAR', ['CRM', 'Contacts', 'Companies', 'Agenda']],
       ['CRESCER', ['Campaigns', 'Prospecting', 'Insurance']],
       ['AUTOMATICO', ['Agents', 'Automacoes']],
       ['RESULTADOS', ['Reports']],

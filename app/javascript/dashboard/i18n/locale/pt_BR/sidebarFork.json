@@ -1,7 +1,6 @@
 {
   "FORK_SIDEBAR": {
     "MENU": "Menu principal",
-    "FECHAR": "Fechar o menu",
     "ABRIR_ITEM": "Mostrar o que tem em {item}",
     "FECHAR_ITEM": "Esconder o que tem em {item}",
     "NOVAS": "1 nova | {count} novas",
@@ -21,16 +20,32 @@
       "EM_QUE_PARTICIPO": "Em que participo",
       "PRAZOS": "Prazos de resposta",
       "AGENDA": "Agenda",
-      "RESULTADOS_AGENDA": "Resultados da agenda",
       "CAMPANHAS": "Campanhas",
       "VISAO_GERAL": "Visão geral",
       "AGENTES": "Agentes",
-      "FUNIS": "Funis",
       "GASTO_IA": "Gasto com IA",
-      "USUARIOS": "Usuários",
       "AJUDA": "Ajuda",
-      "CONFIGURACOES": "Configurações"
-    }
+      "CONFIGURACOES": "Configurações",
+      "MEUS_RESULTADOS": "Meus resultados",
+      "RELATORIO_USUARIOS": "Usuários",
+      "RELATORIO_CANAIS": "Canais",
+      "RELATORIO_TIMES": "Times",
+      "RELATORIO_PRAZOS": "Prazos de resposta"
+    },
+    "RECOLHER": "Recolher menu",
+    "ABRIR_MENU": "Abrir menu",
+    "ANUNCIO_RECOLHIDO": "Menu recolhido",
+    "ANUNCIO_ABERTO": "Menu aberto",
+    "ATRIBUICAO": {
+      "TEXTO": "Quem recebe cada conversa é definido em Atribuição.",
+      "LINK": "Abrir Atribuição"
+    },
+    "CRM": {
+      "ABA_NUMEROS": "Números",
+      "TITULO_NUMEROS": "Números",
+      "VISTAS": "Como ver o CRM"
+    },
+    "ACAO_COM_ATALHO": "{acao} ({tecla})"
   },
   "SETTINGS_INICIO": {
     "ROTULO": "Configurações",
@@ -132,8 +147,8 @@
         "TEXTO": "Ligue a plataforma a outros sistemas, como a chave da IA."
       },
       "ROBOS": {
-        "TITULO": "Robôs externos",
-        "TEXTO": "Robôs de outros sistemas que respondem nas suas conversas."
+        "TITULO": "Agentes externos",
+        "TEXTO": "Para agentes de outros sistemas. Os Agentes da plataforma ficam em No automático."
       },
       "IMPORTAR": {
         "TITULO": "Trazer de outro sistema",
@@ -146,7 +161,20 @@
       "HISTORICO": {
         "TITULO": "Histórico de alterações",
         "TEXTO": "Quem mudou o quê, e quando."
+      },
+      "QUEM_CUIDA": {
+        "TITULO": "Quem cuida do quê",
+        "TEXTO": "Quem da equipe atende cada caixa e cada funil no CRM."
+      },
+      "CUSTOS_WHATSAPP": {
+        "TITULO": "Custos do WhatsApp",
+        "TEXTO": "Sua autorização para a plataforma criar modelos que a Meta cobra."
+      },
+      "EMAIL_ENVIO": {
+        "TITULO": "E-mail de envio",
+        "TEXTO": "O endereço que aparece para quem recebe suas campanhas por e-mail."
       }
-    }
+    },
+    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais"
   }
 }

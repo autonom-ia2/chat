@@ -33,7 +33,7 @@ const ir = (navegar, evento) => {
         :href="href"
         :title="folha.label"
         :aria-current="ativa ? 'page' : undefined"
-        class="flex items-center min-w-0 gap-2.5 pe-2 text-[0.9375rem] leading-5 transition-colors duration-150 rounded-lg min-h-11"
+        class="flex items-center min-w-0 gap-2.5 pe-2 text-[0.9375rem] leading-5 transition-colors duration-150 rounded-lg min-h-11 motion-reduce:transition-none"
         :class="[
           neta ? 'ps-12' : 'ps-11',
           tema.foco,

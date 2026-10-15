@@ -26,14 +26,14 @@ const router = useRouter();
 
 const temFilhos = computed(() => Boolean(props.item.children?.length));
 const souAtivo = computed(
-  () => !temFilhos.value && props.ativa?.folha.name === props.item.name
+  () => !temFilhos.value && props.ativa?.folha?.name === props.item.name
 );
 const contemAtiva = computed(
   () => temFilhos.value && props.ativa?.item.name === props.item.name
 );
 // Só o item que contém a tela marca o filho: Etiquetas existem em Conversas e em Contatos com o mesmo nome.
 const ativaNome = computed(() =>
-  contemAtiva.value ? props.ativa.folha.name : ''
+  contemAtiva.value ? props.ativa.folha?.name || '' : ''
 );
 const mostraFilhos = computed(() => props.aberto || contemAtiva.value);
 const idDaLista = computed(
@@ -81,7 +81,7 @@ const classesDoIcone = computed(() => {
         :href="href"
         :data-menu-item="item.name"
         :aria-current="souAtivo ? 'page' : undefined"
-        class="flex items-center min-w-0 gap-3 px-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl"
+        class="flex items-center min-w-0 gap-3 px-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl motion-reduce:transition-none"
         :class="[tema.foco, classesDaLinha]"
         @click="ir(navigate, $event)"
       >
@@ -117,7 +117,7 @@ const classesDoIcone = computed(() => {
       <button
         type="button"
         :data-menu-item="item.name"
-        class="flex items-center w-full min-w-0 gap-3 px-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl text-start"
+        class="flex items-center w-full min-w-0 gap-3 px-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl text-start motion-reduce:transition-none"
         :class="[tema.foco, classesDaLinha]"
         :aria-expanded="mostraFilhos"
         :aria-controls="idDaLista"
@@ -141,7 +141,7 @@ const classesDoIcone = computed(() => {
         <span class="flex-1 min-w-0 truncate">{{ item.label }}</span>
         <ForkContador :numero="contagem" :classes="tema.contador" />
         <span
-          class="i-lucide-chevron-down size-4 shrink-0 opacity-70 transition-transform duration-150"
+          class="i-lucide-chevron-down size-4 shrink-0 opacity-70 transition-transform duration-150 motion-reduce:transition-none"
           :class="{ 'rotate-180': mostraFilhos }"
           aria-hidden="true"
         />
