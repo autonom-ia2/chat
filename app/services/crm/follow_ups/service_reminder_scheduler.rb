@@ -3,9 +3,11 @@
 # mensagem olhando a conversa, escolhe o modelo aprovado fora das 24h e, se não der, vira lembrete para a equipe.
 #
 # Quando cada um sai (só em funil de Atender, com o interruptor ligado):
-#   - progress        o card está há 1 dia na mesma etapa sem novidade: avisamos que seguimos cuidando. Um por
-#                     entrada na etapa; não em "Esperando o cliente" (a pausa) nem em "Resolvido".
-#   - resolved_check  1 dia depois de Resolvido: perguntamos se deu tudo certo.
+#   - progress        o card está há um tempo (4 h a 3 dias, escolhido no funil; 1 dia por padrão) na mesma etapa
+#                     sem novidade: avisamos que seguimos cuidando. Um por entrada na etapa; não em "Esperando o
+#                     cliente" (a pausa) nem em "Resolvido".
+#   - resolved_check  um tempo (1 dia a 1 semana, escolhido no funil; 1 dia por padrão) depois de Resolvido:
+#                     perguntamos se deu tudo certo. Mudou o tempo, o lembrete pendente muda de horário.
 #   - payment_*       Cobrança: 3 dias antes, no dia e 3 dias depois do vencimento (o depois espera a promessa
 #                     de pagamento, se o cliente prometeu um dia mais tarde).
 # Sempre no próximo dia e horário liberados do funil (Crm::FollowUps::AllowedSchedule).
@@ -21,12 +23,11 @@ class Crm::FollowUps::ServiceReminderScheduler
   SOURCE = 'service_reminder'.freeze
   # Exigido pelo AutoSendValidator na criação; o texto de verdade a IA escreve no envio.
   MESSAGE_PLACEHOLDER = 'Lembrete do atendimento.'.freeze
-  PROGRESS_AFTER = 1.day
-  RESOLVED_CHECK_AFTER = 1.day
+  # Passado o horário do "deu certo?", ele ainda sai por este tempo (o horário do funil pode empurrar); depois, não.
   RESOLVED_CHECK_WINDOW = 3.days
   PAYMENT_OFFSETS = { 'payment_before' => -3, 'payment_due' => 0, 'payment_after' => 3 }.freeze
   SEM_PRAZO = %w[espera resolvido].freeze
-  Reminder = Struct.new(:kind, :key, :due_at, keyword_init: true)
+  Reminder = Struct.new(:kind, :key, :due_at, :after_hours, keyword_init: true)
   # Ao ligar num funil cheio de cards parados, os lembretes novos saem espaçados, não todos no mesmo minuto.
   STAGGER = 2.minutes
 
@@ -51,7 +52,7 @@ class Crm::FollowUps::ServiceReminderScheduler
     @atraso = atraso
   end
 
-  # -> número de lembretes criados
+  # -> número de lembretes criados ou levados para outro horário (#1589)
   # Com o card travado: duas rodadas do job ao mesmo tempo não criam o mesmo lembrete duas vezes. Trava a linha sem
   # recarregar o card (with_lock recarrega e joga fora o que o job pré-carregou); o que mudar até o envio, o
   # DueProcessor confere de novo (wanted?).
@@ -86,12 +87,21 @@ class Crm::FollowUps::ServiceReminderScheduler
     return if SEM_PRAZO.include?(stage_category) || novidade_recente?
 
     Reminder.new(kind: 'progress', key: "progress:#{@card.stage_id}:#{@card.entered_stage_at.to_i}",
-                 due_at: schedule_at([@card.entered_stage_at + PROGRESS_AFTER, @now].max))
+                 after_hours: progress_after_hours,
+                 due_at: schedule_at([@card.entered_stage_at + progress_after_hours.hours, @now].max))
   end
 
-  # "Sem novidade": conversa que andou no último dia não precisa de aviso.
+  # "Sem novidade": conversa que andou dentro do tempo escolhido não precisa de aviso.
   def novidade_recente?
-    @card.last_activity_at.present? && @card.last_activity_at > @now - PROGRESS_AFTER
+    @card.last_activity_at.present? && @card.last_activity_at > @now - progress_after_hours.hours
+  end
+
+  def progress_after_hours
+    settings[:progress_after_hours]
+  end
+
+  def resolved_check_after_hours
+    settings[:resolved_check_after_hours]
   end
 
   # Andamento e "deu certo?" esperam o follow-up automático que está falando com este cliente (#1589). O pagamento da
@@ -105,10 +115,11 @@ class Crm::FollowUps::ServiceReminderScheduler
 
   def resolved_check
     return unless settings[:resolved_check] && @card.resolved? && @card.closed_at.present? && texto_livre?
-    return if @card.closed_at < @now - RESOLVED_CHECK_WINDOW
+    return if @card.closed_at < @now - resolved_check_after_hours.hours - RESOLVED_CHECK_WINDOW
 
     Reminder.new(kind: 'resolved_check', key: "resolved_check:#{@card.closed_at.to_i}",
-                 due_at: schedule_at([@card.closed_at + RESOLVED_CHECK_AFTER, @now].max))
+                 after_hours: resolved_check_after_hours,
+                 due_at: schedule_at([@card.closed_at + resolved_check_after_hours.hours, @now].max))
   end
 
   def payments
@@ -210,17 +221,39 @@ class Crm::FollowUps::ServiceReminderScheduler
 
   # Cancelado não conta: se o lembrete voltar a valer (interruptor religado, vencimento que voltou), é criado de novo.
   def create_unless_known!(reminder)
-    return false if known_scope.where.not(status: :canceled).exists?(["metadata ->> 'key' = ?", reminder.key])
+    known = known_scope.where.not(status: :canceled).find_by("metadata ->> 'key' = ?", reminder.key)
+    return reschedule_if_time_changed!(known, reminder) if known
 
     @card.account.crm_follow_ups.create!(
       card: @card, conversation: conversation, contact: @card.contact, inbox: conversation.inbox,
       title: I18n.with_locale(@card.account.locale) { I18n.t("crm.service_reminders.#{reminder.kind}") },
       due_at: reminder.due_at, timezone: timezone, follow_up_type: :message, automation_mode: :auto_send_message,
       assignee_id: sender&.id, created_by_id: sender&.id,
-      metadata: { 'source' => SOURCE, 'kind' => reminder.kind, 'key' => reminder.key,
-                  'message_body' => MESSAGE_PLACEHOLDER }
+      metadata: reminder_metadata(reminder)
     )
     true
+  end
+
+  def reminder_metadata(reminder)
+    { 'source' => SOURCE, 'kind' => reminder.kind, 'key' => reminder.key, 'after_hours' => reminder.after_hours,
+      'message_body' => MESSAGE_PLACEHOLDER }.compact
+  end
+
+  # #1589: o tempo escolhido mudou e o lembrete ainda não saiu: vai para o novo horário. Lembrete anterior à escolha
+  # não tem o tempo gravado e era de 1 dia. Conta como criado: entra no teto e no espaçamento do job (trocar 3 dias
+  # por 4 horas não solta todos os pendentes do funil no mesmo minuto).
+  def reschedule_if_time_changed!(known, reminder)
+    return false if reminder.after_hours.nil? || !known.pending?
+
+    gravado = known.metadata.to_h.fetch('after_hours', Crm::Ai::Config::DEFAULT_SERVICE_REMINDER_HOURS).to_i
+    return false if gravado == reminder.after_hours
+
+    known.with_lock do
+      next unless known.pending?
+
+      known.update!(due_at: reminder.due_at, metadata: known.metadata.merge('after_hours' => reminder.after_hours))
+      true
+    end
   end
 
   # Sem quem envie, o auto_send morre em 'sender_required': dono do card, quem atende a conversa ou um admin.

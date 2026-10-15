@@ -5461,7 +5461,9 @@
         "campos": {
           "payment": {},
           "progress": {},
-          "resolved_check": {}
+          "progress_after_hours": {},
+          "resolved_check": {},
+          "resolved_check_after_hours": {}
         },
         "tipo": "objeto"
       },
@@ -23320,7 +23322,9 @@
         "campos": {
           "payment": {},
           "progress": {},
-          "resolved_check": {}
+          "progress_after_hours": {},
+          "resolved_check": {},
+          "resolved_check_after_hours": {}
         },
         "tipo": "objeto"
       },
