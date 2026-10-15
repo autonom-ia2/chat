@@ -11,29 +11,41 @@
 # análise, então repetir o job é seguro.
 #
 # Cada resultado vai ao log (status e motivo, sem texto nem dado de cliente). Erro numa caixa ou finalidade vai ao
-# tracker e não para as outras. Meta fora do ar em alguma: o job tenta de novo mais tarde (o que já foi criado volta
-# "em análise" pela lista da caixa, sem falar com a Meta).
+# tracker e não para as outras. Meta fora do ar numa caixa: as finalidades que faltam DESSA caixa ficam para depois
+# (não insiste na Meta caída), as outras caixas seguem, e no fim o job tenta de novo mais tarde (o que já foi criado
+# volta "em análise" pela lista da caixa, sem falar com a Meta). Esgotadas as tentativas: log e tracker.
+#
+# Sem trava contra dois jobs ao mesmo tempo na mesma caixa, de propósito: a Meta recusa nome duplicado e o custo é um
+# POST a mais.
 class Crm::BookingV2::NoticeTemplateEnsureJob < ApplicationJob
   class MetaFora < StandardError; end
 
   FINALIDADES = Whatsapp::Templates::Finalidades::Agendamento::POR_TIPO.values.freeze
   LOG = '[crm][booking_v2][notice_template_ensure]'.freeze
+  META_FORA = 'meta_fora'.freeze
 
   queue_as :low
 
-  retry_on MetaFora, wait: 5.minutes, attempts: 3 do |job, _error|
-    Rails.logger.warn("#{LOG} desistiu account_id=#{job.arguments.first} motivo=meta_fora")
+  # A mensagem do erro só leva ids (conta e caixas), nunca dado de cliente.
+  retry_on MetaFora, wait: 5.minutes, attempts: 3 do |job, error|
+    Rails.logger.warn("#{LOG} desistiu #{error.message} motivo=#{META_FORA}")
+    ChatwootExceptionTracker.new(error, account: Account.find_by(id: job.arguments.first)).capture_exception
   end
 
   def perform(account_id, inbox_id = nil)
     account = Account.find_by(id: account_id)
     return unless account && autorizado?(account)
 
-    resultados = inboxes(account, inbox_id).flat_map { |inbox| FINALIDADES.map { |finalidade| garantir(inbox, finalidade) } }
-    raise MetaFora if resultados.any? { |resultado| resultado.to_h[:motivo] == 'meta_fora' }
+    caidas = inboxes(account, inbox_id).reject { |inbox| garantir_caixa(inbox) }
+    raise MetaFora, "account_id=#{account.id} inbox_ids=#{caidas.map(&:id).join(',')}" if caidas.any?
   end
 
   private
+
+  # Falso quando a Meta caiu nesta caixa: o `none?` para na primeira finalidade com `meta_fora`.
+  def garantir_caixa(inbox)
+    FINALIDADES.none? { |finalidade| garantir(inbox, finalidade).to_h[:motivo] == META_FORA }
+  end
 
   def autorizado?(account)
     Crm::Config.booking_v2_enabled?(account) && WhatsappTemplateConsent.ativo?(account, :utility)

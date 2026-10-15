@@ -22,6 +22,13 @@ RSpec.describe 'assinante de whatsapp_templates.consentimento_ligado', type: :jo
     end.not_to have_enqueued_job(job)
   end
 
+  # Evento sem conta não tem para quem criar: nada vai para a fila (o job sairia vazio).
+  it 'evento sem account_id: não enfileira' do
+    expect do
+      ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: nil, marca: 'utility')
+    end.not_to have_enqueued_job(job)
+  end
+
   # A cadeia real: a linha gravada pela tela de Modelos publica o evento depois do commit e o assinante enfileira.
   it 'ligar o Aviso de serviço pelo registro enfileira' do
     expect do

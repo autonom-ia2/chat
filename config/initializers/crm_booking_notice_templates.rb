@@ -6,6 +6,7 @@
 # Contrato do #1603: o assinante nunca derruba quem publica. Erro ao enfileirar fica no log (só a classe) e no tracker.
 ActiveSupport::Notifications.subscribe('whatsapp_templates.consentimento_ligado') do |*, payload|
   next unless payload[:marca].to_s == 'utility'
+  next if payload[:account_id].blank?
 
   Crm::BookingV2::NoticeTemplateEnsureJob.perform_later(payload[:account_id])
 rescue StandardError => e

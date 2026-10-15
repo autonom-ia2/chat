@@ -157,4 +157,40 @@ RSpec.describe Crm::BookingV2::NoticeTemplateEnsureJob do
 
     expect { described_class.perform_now(account.id) }.to have_enqueued_job(described_class).with(account.id)
   end
+
+  # Não insistir na Meta caída: na 1ª finalidade com `meta_fora`, as outras 3 da MESMA caixa ficam para a nova
+  # tentativa; a outra caixa segue normalmente.
+  it 'meta_fora na 1ª finalidade: pula as outras 3 da caixa e segue nas outras caixas' do
+    caida = cloud_inbox
+    boa = cloud_inbox
+    page_with(caida)
+    page_with(boa)
+    autorizar
+    allow(garantir).to receive(:call).with(hash_including(inbox: caida)).and_return(status: :indisponivel, motivo: 'meta_fora')
+
+    expect { described_class.perform_now(account.id) }.to have_enqueued_job(described_class).with(account.id)
+
+    expect(garantir).to have_received(:call).with(hash_including(inbox: caida)).once
+    expect(garantir).to have_received(:call).with(hash_including(inbox: caida, finalidade: 'agendamento_ao_marcar'))
+    expect(nomes_na_lista(boa)).to match_array(nomes_v2)
+  end
+
+  # Esgotadas as tentativas com a Meta fora, alguém precisa saber: vai ao tracker com a conta e a caixa (só ids).
+  it 'Meta fora até o fim das tentativas: registra no tracker com conta e caixa' do
+    inbox = cloud_inbox
+    page_with(inbox)
+    autorizar
+    allow(client).to receive(:create).and_raise(Whatsapp::Templates::MetaClient::Unreachable)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    perform_enqueued_jobs(only: described_class) { described_class.perform_later(account.id) }
+
+    expect(client).to have_received(:create).exactly(3).times
+    expect(ChatwootExceptionTracker).to have_received(:new).once.with(
+      an_instance_of(described_class::MetaFora).and(having_attributes(message: "account_id=#{account.id} inbox_ids=#{inbox.id}")),
+      account: account
+    )
+    expect(tracker).to have_received(:capture_exception).once
+  end
 end
