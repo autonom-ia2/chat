@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (221 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (222 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
