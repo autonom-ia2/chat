@@ -184,6 +184,18 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       expect(conversation.reload).to have_attributes(status: 'resolved')
     end
 
+    it 'pessoa atribuída: o CRM e a IA não tiram a conversa dela' do
+      conversation.update!(assignee: pessoa)
+
+      %i[crm ia].each do |por|
+        resultado = passar(por: por, origem: agente_da_porta)
+
+        expect(resultado).to have_attributes(ok?: false, trocou?: false, codigo: :pessoa_atribuida)
+        expect(conversation.reload).to have_attributes(assignee_id: pessoa.id, ai_assignee: nil)
+      end
+      expect(contrato).not_to have_received(:registrar_passagem!)
+    end
+
     it 'por fora da lista' do
       expect { passar(por: :robo) }.to raise_error(ArgumentError)
     end

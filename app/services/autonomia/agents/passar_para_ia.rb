@@ -7,7 +7,8 @@
 #
 # A troca: o espelho do vínculo do agente NAQUELA caixa (AgentInbox, nunca o Crm::Ai::Config) vira o ai_assignee, pelo
 # AssignmentService da atribuição manual, com a conversa travada e relida. Na mesma gravação o AssignmentService encerra a
-# espera de pessoa e a marca do motor de entrega (`end_bot_handoff_wait`) e tira a pessoa da conversa. O registro da
+# espera de pessoa e a marca do motor de entrega (`end_bot_handoff_wait`) e tira a pessoa da conversa (só
+# `por: :pessoa` chega aqui com pessoa no nome; CRM e IA são recusados com `pessoa_atribuida`). O registro da
 # passagem vem depois, na mesma transação. Depois do commit sai o `crm.ai.responsible_agent_changed`, o mesmo do Sync do
 # CRM, e o assinante (Operate::ReenfileirarTurno) refaz o turno em andamento com o dono novo.
 module Autonomia::Agents::PassarParaIa
@@ -15,7 +16,7 @@ module Autonomia::Agents::PassarParaIa
   # O contexto do registro do CRM em que a passagem é gravada por este serviço (Crm::Passagens.com_motivo).
   MOTIVO_DO_REGISTRO = 'passar_para_ia'.freeze
   CODIGOS = %i[passou ja_e_o_dono fase2_desligada nao_atende_cliente sem_vinculo_na_caixa outra_conta
-               conversa_resolvida].freeze
+               conversa_resolvida pessoa_atribuida].freeze
 
   # `ok?` também é verdadeiro quando o agente já era o dono (`ja_e_o_dono`, nada troca).
   Resultado = Struct.new(:ok, :trocou, :codigo, keyword_init: true) do
@@ -75,7 +76,7 @@ module Autonomia::Agents::PassarParaIa
     de = nil
     conversation.with_lock do
       vinculo = vinculo_na_caixa(conversation, pedido[:agent])
-      resultado = decidir(conversation, vinculo)
+      resultado = decidir(conversation, vinculo, pedido[:por])
       if resultado.trocou?
         de = conversation.ai_assignee
         trocar_e_registrar!(conversation, vinculo, pedido)
@@ -90,8 +91,11 @@ module Autonomia::Agents::PassarParaIa
                                                  autonomia_agent_id: agent.id)
   end
 
-  def decidir(conversation, vinculo)
+  # Pessoa no nome vence (decisão "a" do Rodrigo, 15/10, e "atendente responde não assume"): só ela mesma, ou outra
+  # pessoa pela tela (`por: :pessoa`), passa a conversa para a IA. O CRM e a IA não tiram a conversa de uma pessoa.
+  def decidir(conversation, vinculo, por)
     return Resultado.recusa(:conversa_resolvida) if conversation.resolved?
+    return Resultado.recusa(:pessoa_atribuida) if conversation.assignee_id.present? && por != :pessoa
     return Resultado.recusa(:sem_vinculo_na_caixa) if vinculo.nil?
     return Resultado.ja_e_o_dono if conversation.assignee_id.nil? && conversation.ai_assignee == vinculo.agent_bot
 
