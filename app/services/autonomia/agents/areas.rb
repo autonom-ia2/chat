@@ -17,6 +17,7 @@ module Autonomia::Agents::Areas
   class AgenteInterno < StandardError; end
   class AgenteNaoAtende < StandardError; end
   class AgenteDeSistema < StandardError; end
+  class SemPortaAtendendo < StandardError; end
 
   module_function
 
@@ -28,14 +29,20 @@ module Autonomia::Agents::Areas
   # (active + enabled) na MESMA transação do vínculo, como o InboxConnector. É o caminho da área que volta depois que
   # o agente parou por ter ficado sem onde trabalhar. Sem `ativar`, só vincula quem já atende.
   #
+  # `exigir_porta_atendendo: true` (#1433, tela do agente da equipe) — com a caixa já travada, confere que o principal
+  # dela (a porta) está atendendo; senão SemPortaAtendendo. A tela só oferece caixas assim, mas o principal pode parar
+  # entre a leitura e o clique.
+  #
   # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete,
   # AgentInbox#soltar_areas_da_caixa!): a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam, e a
   # parada automática do agente não espera por uma caixa que outro segura.
-  def vincular!(agent:, inbox:, ativar: false)
+  def vincular!(agent:, inbox:, ativar: false, exigir_porta_atendendo: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.
       recusar_quem_nao_fala_com_cliente!(agent, ativar: ativar)
       inbox.with_lock do
+        raise SemPortaAtendendo, "inbox #{inbox.id} has no operating porta" if exigir_porta_atendendo && !porta_atendendo?(inbox)
+
         vinculo = vincular_na_caixa!(agent, inbox)
         # Depois do vínculo: a validação de atender já o enxerga. Recusada, a transação desfaz o vínculo.
         agent.update!(status: :active, enabled: true) if ativar && !agent.operating?
@@ -71,6 +78,10 @@ module Autonomia::Agents::Areas
     raise AgenteNaoAtende, "agent #{agent.id} is not operating" unless ativar || agent.operating?
   end
 
+  def porta_atendendo?(inbox)
+    ::Autonomia::Agents::AgentInbox.kept.porta.find_by(inbox_id: inbox.id)&.agent&.operating? || false
+  end
+
   def reativar!(vinculo)
     return if vinculo.nil?
 
@@ -83,5 +94,5 @@ module Autonomia::Agents::Areas
     espelho = AgentBot.new(account: agent.account, name: agent.name, bot_type: :webhook, outgoing_url: nil)
     ::Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: agent.account, agent_bot: espelho, papel: 'area')
   end
-  private_class_method :vincular_na_caixa!, :recusar_quem_nao_fala_com_cliente!, :reativar!, :criar!
+  private_class_method :vincular_na_caixa!, :recusar_quem_nao_fala_com_cliente!, :porta_atendendo?, :reativar!, :criar!
 end

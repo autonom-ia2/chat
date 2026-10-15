@@ -50,7 +50,10 @@ import CrmSavedViews from '../components/list/CrmSavedViews.vue';
 import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
+import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
+// #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
+import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
@@ -96,6 +99,13 @@ const cardsList = useMapGetter('crmKanban/getCardsList');
 const cardsListMeta = useMapGetter('crmKanban/getCardsListMeta');
 const followUps = useMapGetter('crmKanban/getFollowUps');
 const calendarEvents = useMapGetter('crmKanban/getCalendarEvents');
+const lembreteGaveta = ref({
+  show: false,
+  modo: 'novo',
+  dia: new Date(),
+  serieId: null,
+  followUpId: null,
+});
 const uiFlags = useMapGetter('crmKanban/getUIFlags');
 const storedFilters = useMapGetter('crmKanban/getFilters');
 const listPrefs = useMapGetter('crmKanban/getListPrefs');
@@ -133,6 +143,17 @@ const router = useRouter();
 // Calendar-only sub-page (route meta.calendarOnly): opens straight on the calendar
 // with the kanban/list/calendar switch and "New pipeline" button hidden.
 const isCalendarOnly = computed(() => route.meta?.calendarOnly === true);
+// Calendário "Meu dia" (#1568): com a flag da conta, a página do calendário
+// abre a tela nova; desligada, a de sempre, sem mudança nenhuma.
+const calendarioOuro = computed(
+  () =>
+    isCalendarOnly.value &&
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_CALENDARIO_OURO
+    ] === true
+);
+// No "Meu dia", o funil é opcional: vazio = todos os funis (decisão 2 do #1568).
+const funilDoCalendario = ref(null);
 
 const currentPipelineId = ref('');
 const viewMode = ref(isCalendarOnly.value ? 'calendar' : 'kanban');
@@ -748,7 +769,7 @@ const loadMoreList = async () => {
 };
 
 const loadCurrentCalendar = async () => {
-  if (!currentPipelineId.value) return;
+  if (!calendarioOuro.value && !currentPipelineId.value) return;
   loadError.value = '';
   // The calendar emits range-change with the visible window; use that when
   // present, else the legacy ±30/90d default for the very first fetch.
@@ -762,7 +783,9 @@ const loadCurrentCalendar = async () => {
     // filterByOwner, so the fetch always pulls the full pipeline window.
     // Completed/canceled follow-ups are hidden unless the "Histórico" toggle is on.
     await store.dispatch('crmKanban/fetchCalendarEvents', {
-      pipeline_id: currentPipelineId.value,
+      pipeline_id: calendarioOuro.value
+        ? funilDoCalendario.value || undefined
+        : currentPipelineId.value,
       include_completed: store.getters['crmKanban/getCalendarIncludeCompleted'],
       ...range,
     });
@@ -1076,6 +1099,14 @@ const loadInboxSettings = async () => {
   }
 };
 
+// Lembretes novos (#1460/#1461/#1462): com a flag, "Novo lembrete" do
+// calendário abre a gaveta nova; sem ela, a janela de sempre.
+const lembretesV2 = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_LEMBRETES_V2
+    ] === true
+);
 // Caixas no CRM (#1149): com a flag da conta, leva à tela nova; sem ela, a
 // gaveta antiga, como sempre.
 const isCaixasNoCrm = computed(
@@ -1802,6 +1833,21 @@ const isMeetingEvent = event => event?.event_type === 'meeting';
 // Land on the tab that matches the event: follow-up/reminder events open on the
 // Follow-ups tab; expected-close (Previsão) events on Resumo, where that field lives.
 const onCalendarOpenEvent = event => {
+  // #1460/#1461: lembrete que repete abre a repetição; o sem card, a gaveta.
+  if (
+    lembretesV2.value &&
+    (event?.series_id ||
+      (!event?.card_id && event?.id?.startsWith?.('follow_up_')))
+  ) {
+    lembreteGaveta.value = {
+      show: true,
+      modo: event.series_id ? 'serie' : 'unico',
+      dia: new Date(event.starts_at),
+      serieId: event.series_id || null,
+      followUpId: event.series_id ? null : event.id.replace('follow_up_', ''),
+    };
+    return;
+  }
   if (isMeetingEvent(event)) {
     selectedMeetingEvent.value = event;
     showMeetingDetail.value = true;
@@ -1944,6 +1990,16 @@ const openMeetingReschedule = async (meetingLike, date) => {
 };
 
 const onCalendarQuickAdd = (payload = {}) => {
+  if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {
+    lembreteGaveta.value = {
+      show: true,
+      modo: 'novo',
+      dia: payload.date ? new Date(payload.date) : new Date(),
+      serieId: null,
+      followUpId: null,
+    };
+    return;
+  }
   quickAddDate.value = payload.date ? new Date(payload.date) : new Date();
   quickAddType.value = payload.type || 'reminder';
   showQuickAdd.value = true;
@@ -2045,6 +2101,91 @@ const onCalendarReschedule = async ({ event, date }) => {
   } catch {
     useAlert(t('CRM_KANBAN.CALENDAR.RESCHEDULE_ERROR'));
   }
+};
+
+/* Calendário Ouro: concluir, próximo passo, adiar e abrir a conversa. */
+// Só os canais conectados: "Mensagem marcada" exige uma caixa de WhatsApp
+// que não esteja pedindo para reconectar (reauthorization_required). É o canal
+// oficial que envia a mensagem marcada; o WhatsApp API (Híbrido) é auxiliar e
+// não muda isso.
+const ehWhatsappConectado = inbox =>
+  (inbox.channel_type === 'Channel::Whatsapp' ||
+    (inbox.channel_type === 'Channel::TwilioSms' &&
+      inbox.medium === 'whatsapp')) &&
+  inbox.reauthorization_required !== true;
+const temWhatsappConectado = computed(() =>
+  (inboxes.value || []).some(ehWhatsappConectado)
+);
+const idDoLembrete = evento => String(evento.id).replace('follow_up_', '');
+
+// A tela já marcou como feito; se o servidor recusar, ela volta como estava.
+const ouroConcluir = async ({ evento, falhou }) => {
+  try {
+    await store.dispatch('crmKanban/completeFollowUp', idDoLembrete(evento));
+  } catch {
+    falhou();
+    useAlert(t('CRM_CALENDARIO.ALERTA.NAO_CONCLUIU'));
+  }
+  await loadCurrentCalendar();
+};
+
+const ouroProximoPasso = async ({ evento, titulo, quando, fuso }) => {
+  try {
+    await store.dispatch('crmKanban/createFollowUp', {
+      card_id: evento.card_id || undefined,
+      contact_id: evento.card_id ? undefined : evento.contact_id,
+      title: titulo,
+      follow_up_type: 'task',
+      automation_mode: 'reminder_only',
+      due_at: quando,
+      timezone: fuso,
+    });
+    useAlert(t('CRM_CALENDARIO.ALERTA.PROXIMO_MARCADO'));
+    await loadCurrentCalendar();
+  } catch (error) {
+    useAlert(
+      error?.response?.data?.message ||
+        t('CRM_KANBAN.ALERTS.FOLLOW_UP_SAVE_ERROR')
+    );
+  }
+};
+
+// Só aquela vez de cada lembrete (o reschedule mexe na linha, nunca na
+// repetição). Se parte falhar, diz quantos passaram.
+const ouroAdiarAtrasados = async ({ eventos, quando }) => {
+  const resultados = await Promise.allSettled(
+    eventos.map(evento =>
+      store.dispatch('crmKanban/rescheduleFollowUp', {
+        id: idDoLembrete(evento),
+        dueAt: quando,
+      })
+    )
+  );
+  const total = eventos.length;
+  const ok = resultados.filter(r => r.status === 'fulfilled').length;
+  if (ok === total) {
+    useAlert(t('CRM_CALENDARIO.ALERTA.ADIADOS', { n: total }, total));
+  } else if (ok > 0) {
+    useAlert(t('CRM_CALENDARIO.ALERTA.ADIADOS_PARCIAL', { ok, total }));
+  } else {
+    useAlert(t('CRM_KANBAN.CALENDAR.RESCHEDULE_ERROR'));
+  }
+  await loadCurrentCalendar();
+};
+
+// O evento já traz o número da conversa (display_id), o mesmo da rota (#1568).
+const ouroAbrirConversa = displayId =>
+  openCardConversation({ conversation: { display_id: displayId } });
+
+// Reunião marcada pelo agendamento novo, direto do Meu dia (#1568).
+const ouroReuniaoMarcada = async () => {
+  useAlert(t('CRM_KANBAN.BOOKING_AGENDA.SUCCESS'));
+  await loadCurrentCalendar();
+};
+
+const ouroMudarFunil = funil => {
+  funilDoCalendario.value = funil;
+  loadCurrentCalendar();
 };
 
 const onMeetingOpenCard = meeting => {
@@ -2152,6 +2293,7 @@ onUnmounted(() => {
       @cancel="clearContactCreationIntent"
     />
     <header
+      v-if="!calendarioOuro"
       class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak px-6 py-3 sm:px-8"
     >
       <div class="flex min-w-0 flex-wrap items-center gap-4">
@@ -2669,6 +2811,34 @@ onUnmounted(() => {
       />
     </section>
 
+    <CalendarioOuro
+      v-else-if="viewMode === 'calendar' && calendarioOuro"
+      :events="calendarEvents"
+      :loading="uiFlags.isFetchingCalendar"
+      :error="!!loadError"
+      :owners="agents"
+      :current-user-id="currentUser?.id"
+      :funil="funilDoCalendario"
+      :funis="pipelineOptions"
+      :eh-admin="currentRole === 'administrator'"
+      :tem-whatsapp="temWhatsappConectado"
+      :reunioes-ligadas="isMeetingFeatureEnabled"
+      :pode-agendamento="canOpenBooking && isMeetingFeatureEnabled"
+      :pode-caixas="canOpenInboxSettings"
+      :caixas="inboxes"
+      @update:funil="ouroMudarFunil"
+      @abrir-agendamento="openBooking"
+      @abrir-caixas="openInboxSettingsDrawer"
+      @reuniao-marcada="ouroReuniaoMarcada"
+      @range-change="onCalendarRangeChange"
+      @abrir="onCalendarOpenEvent"
+      @abrir-conversa="ouroAbrirConversa"
+      @novo="onCalendarQuickAdd"
+      @concluir="ouroConcluir"
+      @proximo-passo="ouroProximoPasso"
+      @adiar-atrasados="ouroAdiarAtrasados"
+      @retry="loadCurrentCalendar"
+    />
     <section
       v-else-if="viewMode === 'calendar'"
       class="flex min-h-0 flex-1 flex-col px-8 pb-4 pt-1"
@@ -2697,6 +2867,16 @@ onUnmounted(() => {
       />
     </section>
 
+    <LembreteGaveta
+      v-if="lembretesV2"
+      :show="lembreteGaveta.show"
+      :modo="lembreteGaveta.modo"
+      :dia="lembreteGaveta.dia"
+      :serie-id="lembreteGaveta.serieId"
+      :follow-up-id="lembreteGaveta.followUpId"
+      @salvou="loadCurrentCalendar"
+      @close="lembreteGaveta = { ...lembreteGaveta, show: false }"
+    />
     <CrmCalendarQuickAdd
       :show="showQuickAdd"
       :date="quickAddDate"

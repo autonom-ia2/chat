@@ -106,6 +106,12 @@ crm_booking_v2_notice_dispatch_job:
   class: 'Crm::BookingV2::NoticeDispatchJob'
   queue: scheduled_jobs
 
+# Lembretes de Atender (#1498): cria e cancela os lembretes por data; quem envia é o crm_follow_up_due_job.
+crm_service_reminders_job:
+  cron: '*/15 * * * *'
+  class: 'Crm::ServiceRemindersJob'
+  queue: scheduled_jobs
+
 # executed every 6 hours; feature flags checked inside the job
 crm_ai_stale_cards_job:
   cron: '0 */6 * * *'
@@ -332,3 +338,10 @@ crm_meta_ads_advisor_prune_job:
   cron: '30 8 * * *'
   class: 'Crm::MetaAds::Advisor::PruneJob'
   queue: low
+
+# Proxy por número de WhatsApp não oficial (#1516): IP que saiu da lista da Webshare (ou mudou de credencial) é trocado
+# no motor, no máximo 5 sessões por rodada, a cada 10 minutos. Sem WHATSAPP_PROXY_ENABLED=true não faz nada.
+whatsapp_proxy_reconcile_job:
+  cron: '7,17,27,37,47,57 * * * *'
+  class: 'WhatsappProxy::ReconcileJob'
+  queue: scheduled_jobs

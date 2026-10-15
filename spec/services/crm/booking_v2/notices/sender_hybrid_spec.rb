@@ -208,6 +208,10 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     it 'fica sent, sem falha, sem alerta, e conta no teto do número' do
       notice, message = send_hybrid_notice!
 
+      # #1562: o "Parar avisos" em mensagem separada é só do oficial; pelo Híbrido segue UMA mensagem, com a linha.
+      expect(conversation.messages.outgoing.count).to eq(1)
+      expect(message.content).to end_with("\n\nPara parar estes avisos: #{invite.url}?stop_notices=1")
+
       expect(notice).to have_attributes(status: 'sent', skip_reason: nil, error_code: nil)
       expect(message.status).not_to eq('failed')
       expect(alerts.count).to eq(0)

@@ -6,6 +6,9 @@
 # - Atendimento automático externo, sem nome: bot de webhook na caixa ou vínculo de agente fora da API (de sistema).
 # - Livre (nil): sem bot e sem vínculo kept — a mesma regra das caixas elegíveis de agents/:id/channels.
 # O bot da caixa é lido pela associação da caixa: agent_bot_inboxes.account_id aceita nulo em linhas antigas.
+# `areas` (#1433, tema 13): os agentes da equipe da caixa (vínculo de papel área, ativo, de agente visível na API), por
+#   nome: [{ agent_id, agent_name, operating }]. Não ocupam a caixa; a tela lê daqui "Recebe quando alguém passar em".
+#   Quem pode receber um agente da equipe: a caixa cujo `occupied_by` é um agente nativo com `operating` true.
 class Autonomia::CanaisOcupadosFinder
   EXTERNO = { kind: 'external' }.freeze
 
@@ -14,11 +17,13 @@ class Autonomia::CanaisOcupadosFinder
     @agents_scope = agents_scope
   end
 
-  # [{ inbox_id:, name:, channel_type:, occupied_by: }] por nome da caixa; no máximo 5 consultas, seja qual for o número de caixas.
+  # [{ inbox_id:, name:, channel_type:, occupied_by:, areas: }] por nome da caixa; no máximo 6 consultas, seja qual for o número
+  # de caixas.
   def call
     com_bot = caixas_com_bot
     @account.inboxes.order(:name, :id).pluck(:id, :name, :channel_type).map do |inbox_id, name, channel_type|
-      { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupante(inbox_id, com_bot) }
+      { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupante(inbox_id, com_bot),
+        areas: areas_por_caixa.fetch(inbox_id, []) }
     end
   end
 
@@ -52,6 +57,20 @@ class Autonomia::CanaisOcupadosFinder
     @agentes ||= @agents_scope.where(id: vinculos.values.uniq)
                               .pluck(:id, :name, :status, :enabled)
                               .index_by(&:first)
+  end
+
+  # { inbox_id => [{ agent_id:, agent_name:, operating: }] } dos agentes da equipe, numa consulta só.
+  def areas_por_caixa
+    @areas_por_caixa ||= @agents_scope.joins(:agent_inboxes)
+                                      .merge(::Autonomia::Agents::AgentInbox.kept.area.where(account_id: @account.id))
+                                      .order(:name, :id)
+                                      .pluck('autonomia_agent_inboxes.inbox_id', :id, :name, :status, :enabled)
+                                      .group_by(&:first)
+                                      .transform_values { |linhas| linhas.map { |linha| area(*linha.drop(1)) } }
+  end
+
+  def area(agent_id, agent_name, status, enabled)
+    { agent_id: agent_id, agent_name: agent_name, operating: enabled && status == 'active' }
   end
 
   def caixas_com_bot

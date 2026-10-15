@@ -35,6 +35,12 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
     world.card.update!(conversation_id: conversation.id)
   end
 
+  # O link de gestão chega ao cliente no texto ou, no WhatsApp oficial com a conversa aberta, no botão "Ver meu horário"
+  # (#1517); desde o #1562 a linha de parar (que também tinha o link) vai numa mensagem à parte.
+  def link_que_chega(message)
+    [message.content, message.content_attributes.with_indifferent_access.dig(:rich_message, :url)].compact.join(' ')
+  end
+
   def agendar(entrega: delivery, **extra)
     params = { 'inicio' => slot, 'cliente_confirmou' => true }.merge(extra.stringify_keys)
     described_class.new(agent: agent, params: params, delivery: entrega).call
@@ -145,7 +151,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
 
         expect(status_do_marcado).to eq(['pending', nil])
         expect { despachar_depois_da_folga }.to change { conversa.messages.outgoing.count }.by(1)
-        expect(conversa.messages.outgoing.last.content).to include(link_de_gestao)
+        expect(link_que_chega(conversa.messages.outgoing.last)).to include(link_de_gestao)
       end
 
       it 'nota privada com o link não conta como confirmação ao cliente' do
@@ -158,7 +164,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
 
       it 'se a IA não chegou a responder (o turno morreu), o cliente recebe o "ao marcar" com o link' do
         expect { despachar_depois_da_folga }.to change { conversa.messages.outgoing.count }.by(1)
-        expect(conversa.messages.outgoing.last.content).to include("/b/#{Crm::BookingInvite.sole.code}")
+        expect(link_que_chega(conversa.messages.outgoing.last)).to include("/b/#{Crm::BookingInvite.sole.code}")
       end
     end
 
@@ -171,7 +177,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::AgendarReuniao do
 
       expect { Crm::BookingV2::NoticeDispatchJob.perform_now }.to change { conversa_de_avisos.messages.outgoing.count }.by(1)
       expect(conversation.messages.count).to eq(0)
-      expect(conversa_de_avisos.messages.outgoing.last.content).to include("/b/#{Crm::BookingInvite.sole.code}")
+      expect(link_que_chega(conversa_de_avisos.messages.outgoing.last)).to include("/b/#{Crm::BookingInvite.sole.code}")
     end
 
     it 'sem caixa de avisos: nenhum aviso, e o link de gestão volta ao modelo mesmo assim' do

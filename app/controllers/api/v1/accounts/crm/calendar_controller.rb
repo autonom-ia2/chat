@@ -1,7 +1,8 @@
 class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseController
   def events
     authorize ::Crm::FollowUp, :index?
-    render json: { payload: follow_up_events + series_events + expected_close_events + meeting_events + external_events }
+    events = follow_up_events + series_events + expected_close_events + meeting_events + external_events
+    render json: { payload: Crm::Calendar::EventDetails.new(account: Current.account, events: events).perform }
   end
 
   # Read-only free/busy lookup for the meeting scheduler. Returns the busy
@@ -65,6 +66,9 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
         event_type: 'expected_close',
         title: card.title,
         starts_at: card.expected_close_at&.iso8601,
+        # O vencimento é uma data gravada como 00:00 UTC (#1538): o dia é a parte UTC, sem hora (#1568).
+        all_day: true,
+        date: card.expected_close_at&.utc&.to_date&.iso8601,
         status: card.status,
         card_id: card.id,
         conversation_id: visible_card_conversation_id(card),
@@ -190,8 +194,10 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   # Acesso por funil (#1148, parte C): cada lista do calendário pré-carrega a visibilidade das conversas numa consulta só.
+  # Passando do limite, ficam de fora os mais antigos, não os de hoje e os próximos (#1568: o Meu dia busca um ano para
+  # trás para mostrar o que atrasou). A lista volta em ordem de data.
   def due_follow_ups
-    follow_ups = filtered_follow_ups.order(:due_at, :id).limit(limit).to_a
+    follow_ups = filtered_follow_ups.order(due_at: :desc, id: :desc).limit(limit).to_a.reverse
     conversation_visibility.preload(follow_ups.map(&:conversation))
     follow_ups
   end

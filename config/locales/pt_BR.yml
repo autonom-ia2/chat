@@ -400,7 +400,7 @@ pt_BR:
     online:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
     opt_out:
-      undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
+      undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe ou o pedido de parar reconhecido na resposta a uma campanha. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
   integration_apps:
     #Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:
@@ -603,6 +603,47 @@ pt_BR:
   automation:
     system_name: 'Sistema de Automação'
   crm:
+    # #1498: título dos lembretes de Atender (aparecem na agenda do card).
+    service_reminders:
+      progress: 'Avisar o andamento'
+      resolved_check: 'Perguntar se resolveu'
+      payment_before: 'Lembrar do pagamento: 3 dias antes'
+      payment_due: 'Lembrar do pagamento: no dia'
+      payment_after: 'Lembrar do pagamento: depois do vencimento'
+      aviso:
+        titulo: 'A mensagem ao cliente não saiu sozinha: fale com ele.'
+        em_analise: 'O modelo de mensagem deste aviso está em análise no WhatsApp.'
+        sem_finalidade_de_modelo: 'Fora das 24 horas do WhatsApp este aviso não tem modelo de mensagem.'
+        canal_sem_modelo_oficial: 'A conversa não é de um número oficial do WhatsApp, que é o único que manda modelo.'
+        campo_sem_valor: 'Falta um dado do card para preencher a mensagem (nome, valor, assunto ou vencimento).'
+        sem_whatsapp_oficial: 'A caixa não é um número oficial do WhatsApp.'
+        idioma_sem_pronto: 'Ainda não há modelo pronto neste idioma.'
+        formato: 'O modelo tem um formato que ainda não conseguimos mandar.'
+        recusado: 'O WhatsApp recusou o modelo de mensagem deste aviso.'
+        pausado: 'O WhatsApp pausou o modelo de mensagem deste aviso.'
+        desativado: 'O modelo de mensagem deste aviso foi desativado.'
+        situacao_desconhecida: 'Não deu para saber a situação do modelo de mensagem.'
+        meta_fora: 'O WhatsApp não respondeu agora.'
+        sem_permissao: 'A conta do WhatsApp não deu permissão para usar modelos.'
+        meta_recusou: 'O WhatsApp recusou o envio.'
+        closure: 'Pela conversa, o assunto já tinha acabado (pagou, resolveu ou não precisa mais).'
+        template_offer_expired: 'A oferta do modelo de mensagem venceu.'
+        no_conversation: 'O card não tem mais conversa ligada.'
+        texto_diferente: 'O modelo aprovado no WhatsApp tem um texto diferente do esperado.'
+        perfil_invalido: 'O perfil do WhatsApp da caixa não está completo para usar modelos.'
+        categoria_propaganda: 'O WhatsApp classificou o modelo como propaganda; nada foi mandado ao cliente.'
+        template_missing: 'O modelo de mensagem não existe mais no WhatsApp.'
+        template_not_approved: 'O modelo de mensagem não está aprovado no WhatsApp.'
+        template_category_changed: 'O WhatsApp mudou a categoria do modelo de mensagem.'
+        template_structure_changed: 'O modelo de mensagem mudou e precisa ser conferido.'
+        template_format_unsupported: 'O modelo tem um formato que ainda não conseguimos mandar.'
+        templates_not_synced: 'A lista de modelos do WhatsApp ainda não foi atualizada.'
+        template_unverifiable: 'Não deu para conferir o modelo de mensagem com o WhatsApp.'
+        no_template: 'Fora das 24 horas do WhatsApp nenhum modelo aprovado serviu para este aviso.'
+        not_composable: 'Pela conversa, não fazia sentido mandar a mensagem agora.'
+        send_failed: 'O envio falhou depois de algumas tentativas.'
+        unverified_quote: 'A mensagem escrita não batia com a conversa e não foi mandada.'
+        whatsapp_api_unavailable: 'O WhatsApp da caixa não estava pronto para mandar.'
     export:
       sheet_name: 'Cards'
       file_prefix: 'crm'
@@ -919,6 +960,31 @@ pt_BR:
         whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
         whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
         whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'
+        whatsapp_proxy:
+          plano_esgotado: 'Proxy do WhatsApp: o plano %{plano} não tem IP do Brasil livre na fatia desta stack. A caixa %{caixa} (conta %{conta}) está sem proxy. Compre mais IPs na Webshare ou amplie a fatia.'
+          fatia_vazia: 'Proxy do WhatsApp: a fatia %{plano} desta stack está vazia, então nenhum número recebe proxy desse plano. Defina a variável da fatia.'
+          ip_da_fatia_sumiu: 'Proxy do WhatsApp: %{n} IP(s) da fatia %{plano} não estão mais na Webshare (foram trocados). Atualize a fatia desta stack.'
+          troca_desfeita: 'Proxy do WhatsApp: a troca de IP da caixa %{caixa} (conta %{conta}) para %{ip} falhou (tentativa %{n}) e a configuração anterior voltou. Vou tentar de novo mais tarde, esperando mais a cada vez.'
+          volta_falhou: 'Proxy do WhatsApp: não deu para voltar a configuração anterior da caixa %{caixa} (conta %{conta}). Confira a sessão agora.'
+          sessao_instavel_trocada: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) ficou caindo no IP %{ip}. O IP ficou 24 horas em quarentena e o número ganhou outro.'
+          sessao_instavel_de_novo: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo depois de trocar de IP hoje. Não parece ser o proxy; confira o aparelho e o motor.'
+          ip_em_quarentena: 'Proxy do WhatsApp: o IP %{ip} (%{plano}) está em quarentena por 24 horas.'
+          aparelho_desvinculado: 'Proxy do WhatsApp: em %{data}, %{n} caixa(s) pediram QR (aparelho desvinculado). Não é o proxy; nada foi trocado.'
+          troca_em_massa: 'Proxy do WhatsApp: %{n} de %{total} IPs em uso sumiram da Webshare de uma vez. Trocando no máximo 5 por rodada.'
+          plano_configurado_inexistente: 'Proxy do WhatsApp: o id de plano fixado para %{plano} não é mais um plano ativo. Usando o plano ativo; remova a variável.'
+          falha_geral: 'Proxy do WhatsApp: %{n} de %{total} sessões caíram ao mesmo tempo (%{plano}). Parece falha geral (Webshare, WhatsApp ou o motor), não IP ruim: nenhum IP foi trocado nem posto em quarentena.'
+          falha_geral_em_curso: 'Proxy do WhatsApp: a falha geral (%{plano}) já dura %{horas} horas; %{n} número(s) seguem fora. Nenhum IP foi trocado nem posto em quarentena por causa dela.'
+          falha_geral_perdida: 'Proxy do WhatsApp: o registro da falha geral (%{plano}) sumiu antes de terminar (Redis?). A contagem recomeça.'
+          sessao_fora_24h: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) está fora há mais de 24 horas. Ela não caiu de um estado conectado, então o IP não foi trocado; confira o aparelho e o motor.'
+          motor_indisponivel: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo no IP %{ip}, mas o motor não respondeu, então a troca ficou para depois.'
+          credencial_mascarada: 'Proxy do WhatsApp: o motor devolveu mascarada a credencial do proxy da caixa %{caixa} (conta %{conta}), então não dá para comparar. Nada foi regravado nem reaplicado.'
+          proxy_manual_detectado: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) passou a usar um proxy fora da Webshare (%{ip}), posto à mão. Ela deixou de ser gerenciada pela plataforma.'
+          falha_geral_fim: 'Proxy do WhatsApp: a falha geral (%{plano}) terminou. %{n} sessão(ões) ainda fora passam a ser avaliadas uma a uma.'
+          webshare_indisponivel: 'Proxy do WhatsApp: a Webshare segue falhando no plano %{plano} (%{n} erros seguidos). Nada desse plano é corrigido até ela responder.'
+          caixa_sem_proxy: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) nasceu sem proxy porque a Webshare não respondeu. Vou tentar de novo.'
+          quarentena_sem_destino: 'Proxy do WhatsApp: a caixa %{caixa} (conta %{conta}) continua caindo no IP %{ip}, mas não há IP livre para onde mover. Nada mudou.'
+          atribuicao_invalida: 'Proxy do WhatsApp: o IP novo da caixa %{caixa} (conta %{conta}) foi recusado (conta ou limite por IP). Nada mudou.'
+          teto_de_quarentena: 'Proxy do WhatsApp: o plano %{plano} já teve 3 IPs em quarentena hoje. Parei de pôr em quarentena; confira a Webshare.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
@@ -960,6 +1026,17 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      ajudante:
+        outra_conta: 'O ajudante e os agentes que ele ajuda precisam ser desta conta.'
+        ele_mesmo: 'Um agente não pode ajudar a si mesmo.'
+        tipo_proibido: 'O Agente de Cotação e os agentes do sistema não ajudam nem recebem ajuda.'
+        ajudante_interno: 'O ajudante nunca fala com o cliente: ele precisa ser um agente interno.'
+        profundidade: 'Ajudante não chama outro ajudante, e um agente interno não tem ajudantes.'
+        sem_principal: 'Escolha pelo menos um agente para este ajudante ajudar.'
+        principal_invalido: 'Escolha agentes desta conta pelo id.'
+        principal_rascunho: 'O agente escolhido ainda está em rascunho. Termine a criação dele antes de pôr um ajudante.'
+        principal_ajudante: 'Um ajudante não recebe ajuda de outro ajudante. Escolha um agente que conversa com clientes.'
+        sem_marca: 'Só um agente criado como "Ajuda outros agentes" pode ser ajudante. Um Copiloto da equipe não pode.'
       native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'
@@ -977,6 +1054,13 @@ pt_BR:
           inbox_has_webhook_bot: "Esta caixa de entrada já está conectada a outro bot. Desconecte-o primeiro."
           inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
           not_connected: "Esta caixa de entrada não está conectada ao agente."
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa.
+        area_errors:
+          generic: "Não deu para pôr %{nome} na equipe de %{canal}. Nada mudou."
+          fase2_off: "O agente da equipe ainda não está disponível nesta conta."
+          agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
+          already_linked: "%{nome} já está em %{canal}."
+          sem_principal: "Ninguém atende primeiro em %{canal} agora. O agente da equipe precisa de um agente principal atendendo no canal."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'

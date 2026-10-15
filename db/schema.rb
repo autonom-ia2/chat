@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -503,9 +503,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "delegate_agent_id"
     t.index ["account_id", "enabled"], name: "idx_autonomia_agent_specialists_account_enabled"
+    t.index ["autonomia_agent_id", "delegate_agent_id"], name: "idx_autonomia_agent_specialists_par_delegate", unique: true, where: "(delegate_agent_id IS NOT NULL)"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
+    t.index ["delegate_agent_id"], name: "idx_autonomia_agent_specialists_delegate", where: "(delegate_agent_id IS NOT NULL)"
   end
 
   create_table "autonomia_agent_tool_runs", force: :cascade do |t|
@@ -2301,6 +2304,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
     t.index ["pipeline_id"], name: "index_crm_inbox_agent_pipelines_on_pipeline_id"
   end
 
+  create_table "crm_inbox_ai_agents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_inbox_ai_agents_on_account_id"
+    t.index ["autonomia_agent_id"], name: "index_crm_inbox_ai_agents_on_autonomia_agent_id"
+    t.index ["inbox_id", "pipeline_id"], name: "idx_crm_inbox_ai_agents_unique", unique: true
+    t.index ["pipeline_id"], name: "index_crm_inbox_ai_agents_on_pipeline_id"
+  end
+
   create_table "crm_inbox_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -3932,6 +3948,43 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_proxy_assignments", force: :cascade do |t|
+    t.string "session_name", null: false
+    t.bigint "account_id", null: false
+    t.string "pool", null: false
+    t.string "webshare_proxy_id"
+    t.string "proxy_address"
+    t.integer "proxy_port"
+    t.datetime "assigned_at", null: false
+    t.string "credential_digest"
+    t.string "origin", default: "assigned", null: false
+    t.string "previous_proxy_address"
+    t.integer "previous_proxy_port"
+    t.string "previous_webshare_proxy_id"
+    t.string "previous_credential_digest"
+    t.string "previous_pool"
+    t.bigint "previous_account_id"
+    t.string "previous_origin"
+    t.integer "apply_failures", default: 0, null: false
+    t.datetime "last_apply_failed_at"
+    t.datetime "apply_scheduled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "pool"], name: "index_whatsapp_proxy_assignments_on_account_id_and_pool"
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_assignments_on_proxy_address"
+    t.index ["session_name"], name: "index_whatsapp_proxy_assignments_on_session_name", unique: true
+  end
+
+  create_table "whatsapp_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.string "pool", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
   create_table "whatsapp_template_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -3990,6 +4043,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
+  add_foreign_key "autonomia_agent_specialists", "autonomia_agents", column: "delegate_agent_id", on_delete: :cascade
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
   add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
@@ -4133,6 +4187,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
   add_foreign_key "crm_inbox_agent_pipelines", "accounts", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_inbox_agent_accesses", column: "access_id", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "autonomia_agents", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "inboxes", on_delete: :cascade
   add_foreign_key "crm_inbox_settings", "accounts"
   add_foreign_key "crm_inbox_settings", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_inbox_settings", "crm_pipelines", column: "default_pipeline_id"
@@ -4236,6 +4294,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_100100) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify

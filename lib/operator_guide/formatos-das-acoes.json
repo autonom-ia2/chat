@@ -97,9 +97,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:23",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
     ],
     "sem_corpo": true
   },
@@ -406,7 +406,7 @@
     "completo": true,
     "controller": "api/v1/accounts/contacts/opt_outs#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:14",
+      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:17",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
     ],
     "sem_corpo": true
@@ -3359,6 +3359,22 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/agents/:agent_id/ajuda": {
+    "campos": {
+      "principal_ids": {
+        "tipo": "lista"
+      },
+      "quando": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/agents/:agent_id/tools/:id": {
     "campos": {
       "description": {
@@ -3512,11 +3528,11 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:200",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:185",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:284",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:236",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:293",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:149",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:123"
     ],
@@ -5440,6 +5456,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -5452,14 +5476,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -10442,10 +10466,10 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:200",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:284",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:236",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:293",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:42"
     ],
     "sem_corpo": false
@@ -10458,16 +10482,20 @@
       },
       "inbox_id": {
         "tipo": "inteiro"
+      },
+      "papel": {
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:37"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -10765,6 +10793,7 @@
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
       },
+      "papel": {},
       "type": {},
       "with_knowledge": {}
     },
@@ -10772,20 +10801,21 @@
     "controller": "api/v1/accounts/autonomia/agents/build_threads#create",
     "modelo": "Autonomia::Agents::Agent",
     "motivos": [
-      "leitura crua sem tipo: message (repassada a @thread.append_message!), type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
+      "leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:86",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:84",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:65",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:91",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:82",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:65",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:15",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:143"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:150"
     ],
     "sem_corpo": false
   },
@@ -10815,17 +10845,17 @@
       "leitura crua sem tipo: message (repassada a @thread.append_message!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:32",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:86",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:84",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:132",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:101"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:91",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:82",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:100",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108"
     ],
     "sem_corpo": false
   },
@@ -10833,8 +10863,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#retry_build",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:53",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:101"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:54",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108"
     ],
     "sem_corpo": true
   },
@@ -10869,7 +10899,7 @@
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:11",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:65"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -10894,10 +10924,10 @@
       "leitura crua sem tipo: message"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:65"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -13141,7 +13171,7 @@
     "completo": true,
     "controller": "api/v1/accounts/contacts/opt_outs#create",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:9",
+      "app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb:12",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
     ],
     "sem_corpo": true
@@ -15169,6 +15199,7 @@
       "sla_warning_seconds": {
         "tipo": "inteiro"
       },
+      "template_position": {},
       "win_probability": {
         "max": 100,
         "min": 0,
@@ -15185,7 +15216,7 @@
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
     "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
+      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::Ai::DefaultStageCriteria.metadata_for)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
@@ -15194,6 +15225,7 @@
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:120",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:106",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:137",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
     ],
     "sem_corpo": false
@@ -15507,8 +15539,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stage_criteria#improve",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:23"
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:28"
     ],
     "sem_corpo": false
   },
@@ -21299,6 +21331,22 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/agents/:agent_id/ajuda": {
+    "campos": {
+      "principal_ids": {
+        "tipo": "lista"
+      },
+      "quando": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:14",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/agents/ajuda_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/agents/:agent_id/tools/:id": {
     "campos": {
       "description": {
@@ -21452,11 +21500,11 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:200",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:185",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:284",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:236",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:293",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:149",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:123"
     ],
@@ -22819,6 +22867,15 @@
   },
   "PUT crm/caixas/:inbox_id": {
     "campos": {
+      "ai_agents": {
+        "campos": {
+          "id": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      },
       "default_stage_id": {},
       "legado": {},
       "modo": {},
@@ -22843,8 +22900,8 @@
     "envelope": "caixa",
     "origem": [
       "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:49"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:61"
     ],
     "sem_corpo": false
   },
@@ -23256,6 +23313,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -23268,14 +23333,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },

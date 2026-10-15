@@ -413,7 +413,7 @@ en:
     online:
       delete: '%{contact_name} is Online, please try again later'
     opt_out:
-      undo_only_manual: 'Only an opt-out marked by the team can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
+      undo_only_manual: 'Only an opt-out marked by the team, or a request to stop recognized in a reply to a campaign, can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
   integration_apps:
     # Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:
@@ -500,6 +500,31 @@ en:
         whatsapp_api_caiu: 'WhatsApp API on the inbox "%{caixa}" disconnected. Until you reconnect it in the inbox WhatsApp API tab, replies after 24 hours need an approved template. Do you want me to show you how to reconnect?'
         whatsapp_api_perto_do_limite: 'WhatsApp is close to limiting new conversations on the inbox "%{caixa}" (cycle ends on %{fim}). I already slowed down sending through WhatsApp API. Avoid starting conversations with new contacts there for now. Want to see the numbers?'
         whatsapp_api_bloqueado: 'WhatsApp blocked new conversations through WhatsApp API on the inbox "%{caixa}" until %{fim}. Replies to people you already talk to keep going; for new contacts use an approved template. Want me to explain?'
+        whatsapp_proxy:
+          plano_esgotado: 'WhatsApp proxy: the %{plano} plan has no free Brazilian IP in this stack slice. Inbox %{caixa} (account %{conta}) is running without proxy. Buy more IPs on Webshare or widen the slice.'
+          fatia_vazia: 'WhatsApp proxy: the %{plano} slice of this stack is empty, so no number gets a proxy from that plan. Set the slice variable.'
+          ip_da_fatia_sumiu: 'WhatsApp proxy: %{n} IP(s) of the %{plano} slice are no longer on Webshare (replaced). Update the slice of this stack.'
+          troca_desfeita: 'WhatsApp proxy: changing the IP of inbox %{caixa} (account %{conta}) to %{ip} failed (attempt %{n}) and the previous setup was restored. It will try again later, waiting longer each time.'
+          volta_falhou: 'WhatsApp proxy: restoring the previous setup of inbox %{caixa} (account %{conta}) failed. Check the session now.'
+          sessao_instavel_trocada: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) kept dropping on IP %{ip}. That IP is in quarantine for 24 hours and the number got another one.'
+          sessao_instavel_de_novo: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) is still dropping after changing IP today. It does not look like the proxy; check the device and the engine.'
+          ip_em_quarentena: 'WhatsApp proxy: IP %{ip} (%{plano}) is in quarantine for 24 hours.'
+          aparelho_desvinculado: 'WhatsApp proxy: on %{data}, %{n} inbox(es) asked for a QR code (device unlinked). That is not the proxy; nothing was changed.'
+          troca_em_massa: 'WhatsApp proxy: %{n} of %{total} IPs in use vanished from Webshare at once. Changing at most 5 per round.'
+          plano_configurado_inexistente: 'WhatsApp proxy: the plan id set for %{plano} is not an active plan anymore. Using the active plan; remove the variable.'
+          falha_geral: 'WhatsApp proxy: %{n} of %{total} sessions are off at the same time (%{plano}). That looks like a general outage (Webshare, WhatsApp or the engine), not a bad IP: no IP was changed or quarantined.'
+          falha_geral_em_curso: 'WhatsApp proxy: the general outage (%{plano}) has been going on for %{horas} hours; %{n} number(s) still off. No IP was changed or quarantined because of it.'
+          falha_geral_perdida: 'WhatsApp proxy: the record of the general outage (%{plano}) vanished before it ended (Redis?). Counting starts over.'
+          sessao_fora_24h: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) has been off for more than 24 hours. It did not drop from a working state, so the IP was not changed; check the device and the engine.'
+          motor_indisponivel: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) keeps dropping on IP %{ip}, but the engine did not answer, so the change was postponed.'
+          credencial_mascarada: 'WhatsApp proxy: the engine returned the proxy credential of inbox %{caixa} (account %{conta}) masked, so it cannot be compared. Nothing was rewritten or reapplied.'
+          proxy_manual_detectado: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) is now on a proxy outside Webshare (%{ip}), set by hand. It is no longer managed by the platform.'
+          falha_geral_fim: 'WhatsApp proxy: the general outage (%{plano}) is over. %{n} session(s) still off are now checked one by one.'
+          webshare_indisponivel: 'WhatsApp proxy: Webshare keeps failing for the %{plano} plan (%{n} errors in a row). Nothing in that plan is being fixed until it answers again.'
+          caixa_sem_proxy: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) was created without proxy because Webshare did not answer. I will try again.'
+          quarentena_sem_destino: 'WhatsApp proxy: inbox %{caixa} (account %{conta}) keeps dropping on IP %{ip}, but there is no free IP to move it to. Nothing changed.'
+          atribuicao_invalida: 'WhatsApp proxy: the new IP for inbox %{caixa} (account %{conta}) was refused (account or per-IP limit). Nothing changed.'
+          teto_de_quarentena: 'WhatsApp proxy: the %{plano} plan already had 3 IPs quarantined today. I stopped quarantining; check Webshare.'
       needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'
@@ -547,6 +572,17 @@ en:
     agents:
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
+      ajudante:
+        outra_conta: 'The helper and the agents it helps must belong to this account.'
+        ele_mesmo: 'An agent cannot help itself.'
+        tipo_proibido: 'The Quote Agent and system agents cannot help or be helped.'
+        ajudante_interno: 'A helper never talks to customers: it must be an internal agent.'
+        profundidade: 'A helper cannot call another helper, and an internal agent cannot have helpers.'
+        sem_principal: 'Choose at least one agent for this helper to help.'
+        principal_invalido: 'Choose agents from this account by their id.'
+        principal_rascunho: 'The chosen agent is still a draft. Finish creating it before adding a helper.'
+        principal_ajudante: 'A helper does not get help from another helper. Choose an agent that talks to customers.'
+        sem_marca: 'Only an agent created as "Helps other agents" can be a helper. A team Copilot cannot.'
       native_tool_not_allowed: 'This agent cannot use one or more of the requested native tools. Nothing was saved.'
       escolhas_incompletas: "The Quote Agent could not build its instruction: the choice '%{campo}' is missing from its record. This cannot be fixed here — contact Autonom.ia support."
       booking_page_forbidden: 'Only people who can see Scheduling (CRM › Scheduling) can choose the booking page the AI uses.'
@@ -560,6 +596,13 @@ en:
           inbox_has_webhook_bot: 'This inbox is already connected to another bot. Disconnect it first.'
           inbox_already_connected: 'This inbox is already connected to an agent.'
           not_connected: 'This inbox is not connected to the agent.'
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa: as recusas que a tela mostra como vieram.
+        area_errors:
+          generic: 'Could not put %{nome} on the team of %{canal}. Nothing changed.'
+          fase2_off: 'Team agents are not available for this account yet.'
+          agent_internal: '%{nome} is an internal agent (team copilot) and never talks to customers, so it cannot be on the team of a channel.'
+          already_linked: '%{nome} is already on %{canal}.'
+          sem_principal: 'No one answers first on %{canal} right now. A team agent needs a main agent answering on the channel.'
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."
@@ -897,6 +940,47 @@ en:
   automation:
     system_name: 'Automation System'
   crm:
+    # #1498: titles of the Serve reminders (shown in the card agenda).
+    service_reminders:
+      progress: 'Share progress'
+      resolved_check: 'Ask if it was solved'
+      payment_before: 'Payment reminder: 3 days before'
+      payment_due: 'Payment reminder: on the day'
+      payment_after: 'Payment reminder: after the due date'
+      aviso:
+        titulo: 'The message to the customer was not sent on its own: please contact them.'
+        em_analise: 'The message template for this reminder is under WhatsApp review.'
+        sem_finalidade_de_modelo: 'Outside the WhatsApp 24-hour window this reminder has no message template.'
+        canal_sem_modelo_oficial: 'The conversation is not on an official WhatsApp number, the only one that sends templates.'
+        campo_sem_valor: 'A card detail is missing to fill the message (name, amount, subject or due date).'
+        sem_whatsapp_oficial: 'The inbox is not an official WhatsApp number.'
+        idioma_sem_pronto: 'There is no ready template in this language yet.'
+        formato: 'The template has a format we cannot send yet.'
+        recusado: 'WhatsApp rejected the message template for this reminder.'
+        pausado: 'WhatsApp paused the message template for this reminder.'
+        desativado: 'The message template for this reminder was disabled.'
+        situacao_desconhecida: 'Could not find out the message template status.'
+        meta_fora: 'WhatsApp did not answer just now.'
+        sem_permissao: 'The WhatsApp account did not grant permission to use templates.'
+        meta_recusou: 'WhatsApp refused the send.'
+        closure: 'From the conversation, the matter was already over (paid, solved or no longer needed).'
+        template_offer_expired: 'The message template offer has expired.'
+        no_conversation: 'The card no longer has a linked conversation.'
+        texto_diferente: 'The approved WhatsApp template has a different text than expected.'
+        perfil_invalido: 'The inbox WhatsApp profile is not complete enough to use templates.'
+        categoria_propaganda: 'WhatsApp classified the template as marketing; nothing was sent to the customer.'
+        template_missing: 'The message template no longer exists on WhatsApp.'
+        template_not_approved: 'The message template is not approved on WhatsApp.'
+        template_category_changed: 'WhatsApp changed the message template category.'
+        template_structure_changed: 'The message template changed and needs to be checked.'
+        template_format_unsupported: 'The template has a format we cannot send yet.'
+        templates_not_synced: 'The WhatsApp template list has not been refreshed yet.'
+        template_unverifiable: 'Could not check the message template with WhatsApp.'
+        no_template: 'Outside the WhatsApp 24-hour window no approved template fit this reminder.'
+        not_composable: 'From the conversation, it did not make sense to send the message now.'
+        send_failed: 'Sending failed after a few attempts.'
+        unverified_quote: 'The written message did not match the conversation and was not sent.'
+        whatsapp_api_unavailable: 'The inbox WhatsApp was not ready to send.'
     export:
       sheet_name: 'Cards'
       file_prefix: 'crm'

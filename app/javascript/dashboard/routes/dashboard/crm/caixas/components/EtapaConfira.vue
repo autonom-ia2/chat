@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import AgenteIa from './AgenteIa.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
   assuntosDe,
@@ -13,6 +14,15 @@ import {
   quemCuida,
   quemFazTriagem,
 } from '../helpers/caixa';
+import {
+  agentesDoFormulario,
+  donoDoFunil,
+  ficaNaCaixa,
+  funisDoAgente,
+  funisSemAgente,
+  mudancasDosAgentes,
+  nomesDosFunis,
+} from '../helpers/agentesIa';
 
 // #1149 — etapa 4: a caixa inteira em frases antes do Salvar, com o que muda
 // em relação ao que está salvo hoje.
@@ -57,6 +67,54 @@ const pessoas = computed(() =>
     })
 );
 
+// #1447 — com a Fase 2 dos Agentes: a porta, cada agente de área que fica na
+// caixa e os funis que ficam com a porta. Sem ela, só a frase do robô.
+const comAgentes = computed(() => Boolean(props.form.ai_agents));
+const porta = computed(() =>
+  comAgentes.value ? props.form.ai_agents.porta || props.form.agent_bot : null
+);
+const areas = computed(() =>
+  agentesDoFormulario(props.form).filter(agente =>
+    ficaNaCaixa(agente, props.form.pipeline_ids)
+  )
+);
+const textoDaArea = agente => {
+  const meus = funisDoAgente(agente, funisMarcados.value);
+  return meus.length
+    ? t(
+        'CRM_CAIXAS.CONFIRA.AGENTE_CUIDA',
+        { funis: nomesDosFunis(meus, locale.value) },
+        meus.length
+      )
+    : t('CRM_CAIXAS.PESSOAS.AGENTE_NADA');
+};
+const agentes = computed(() => [
+  ...(porta.value
+    ? [
+        {
+          id: `porta-${porta.value.id}`,
+          nome: porta.value.name,
+          texto: t('CRM_CAIXAS.PESSOAS.PORTA'),
+        },
+      ]
+    : []),
+  ...areas.value.map(agente => ({
+    id: agente.id,
+    nome: agente.name,
+    texto: textoDaArea(agente),
+  })),
+]);
+const comAPorta = computed(() => {
+  if (!porta.value) return '';
+  const sobra = funisSemAgente(areas.value, funisMarcados.value);
+  return sobra.length
+    ? t('CRM_CAIXAS.CONFIRA.FICA_COM_A_PORTA', {
+        funis: nomesDosFunis(sobra, locale.value),
+        porta: porta.value.name,
+      })
+    : '';
+});
+
 const rodizio = computed(() => [
   ...(varios.value
     ? [
@@ -68,19 +126,35 @@ const rodizio = computed(() => [
         },
       ]
     : []),
-  ...funisMarcados.value.map(funil => ({
-    chave: funil.id,
-    nome: funil.name,
-    cor: corDoFunil(props.funis, funil.id),
-    quem: nomes(quemCuida(props.form, funil.id)),
-  })),
+  // #1447: com agente de área, ele atende primeiro e fica fora do rodízio; as
+  // pessoas recebem quando o cliente pede uma pessoa.
+  ...funisMarcados.value.map(funil => {
+    const daCaixa = quemCuida(props.form, funil.id);
+    return {
+      chave: funil.id,
+      nome: funil.name,
+      cor: corDoFunil(props.funis, funil.id),
+      quem: nomes(daCaixa),
+      agente: donoDoFunil(areas.value, funil.id)?.name || '',
+      ou: juntar(daCaixa.map(primeiroNome), locale.value, 'disjunction'),
+      quantas: daCaixa.length,
+    };
+  }),
 ]);
 
 const lista = computed(() =>
-  mudancas(props.original, props.form, props.funis, {
-    semAssunto: t('CRM_CAIXAS.CONFIRA.SEM_ASSUNTO'),
-    locale: locale.value,
-  }).map(({ chave, valores }) =>
+  [
+    ...mudancas(props.original, props.form, props.funis, {
+      semAssunto: t('CRM_CAIXAS.CONFIRA.SEM_ASSUNTO'),
+      locale: locale.value,
+    }),
+    ...mudancasDosAgentes(
+      props.original,
+      props.form,
+      props.funis,
+      locale.value
+    ),
+  ].map(({ chave, valores }) =>
     t(`CRM_CAIXAS.MUDA.${chave}`, {
       ...valores,
       resumo: valores.modo
@@ -121,6 +195,31 @@ const lista = computed(() =>
       </section>
 
       <section
+        v-if="agentes.length"
+        data-confira-agentes
+        class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
+      >
+        <h3 class="mb-0 text-base font-semibold text-n-slate-12">
+          {{ $t('CRM_CAIXAS.PESSOAS.AGENTES_TITULO') }}
+        </h3>
+        <ul class="m-0 flex list-none flex-col gap-3 p-0">
+          <li v-for="agente in agentes" :key="agente.id" class="flex">
+            <AgenteIa :nome="agente.nome" :texto="agente.texto" />
+          </li>
+        </ul>
+        <p
+          v-if="comAPorta"
+          class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-11"
+        >
+          <span
+            class="i-lucide-info mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ comAPorta }}
+        </p>
+      </section>
+
+      <section
         class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
       >
         <h3 class="mb-0 text-base font-semibold text-n-slate-12">
@@ -148,7 +247,7 @@ const lista = computed(() =>
           {{ $t('CRM_CAIXAS.CONFIRA.RODIZIO') }}
         </h3>
         <p
-          v-if="form.agent_bot"
+          v-if="!comAgentes && form.agent_bot"
           class="mb-0 flex items-center gap-2 text-[0.9375rem] text-n-slate-12"
         >
           <span class="i-lucide-bot size-4" aria-hidden="true" />
@@ -168,8 +267,44 @@ const lista = computed(() =>
             <strong class="font-semibold">
               {{ $t('CRM_CAIXAS.CONFIRA.RODIZIO_NOME', { nome: item.nome }) }}
             </strong>
-            <span :class="item.quem ? '' : 'text-n-ruby-11'">
+            <span
+              v-if="!item.agente"
+              :class="item.quem ? '' : 'text-n-ruby-11'"
+            >
               {{ item.quem || $t('CRM_CAIXAS.CONFIRA.NINGUEM') }}
+            </span>
+            <span
+              v-else
+              data-rodizio-agente
+              class="flex basis-full flex-col gap-1 ps-[1.125rem]"
+            >
+              <span class="flex items-start gap-2">
+                <span
+                  class="i-lucide-bot mt-0.5 size-4 shrink-0 text-n-iris-11"
+                  aria-hidden="true"
+                />
+                {{
+                  $t('CRM_CAIXAS.CONFIRA.RODIZIO_AGENTE', { nome: item.agente })
+                }}
+              </span>
+              <span
+                class="flex items-start gap-2"
+                :class="item.quantas ? '' : 'text-n-ruby-11'"
+              >
+                <span
+                  class="i-lucide-users mt-0.5 size-4 shrink-0 text-n-slate-11"
+                  aria-hidden="true"
+                />
+                {{
+                  item.quantas
+                    ? $t(
+                        'CRM_CAIXAS.CONFIRA.RODIZIO_PESSOAS',
+                        { nomes: item.ou },
+                        item.quantas
+                      )
+                    : $t('CRM_CAIXAS.CONFIRA.RODIZIO_SEM_PESSOA')
+                }}
+              </span>
             </span>
           </li>
         </ul>

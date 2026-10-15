@@ -54,7 +54,7 @@ class WhatsappHybrid::WebTransport
     return reach_out_refused! if WhatsappHybrid::ReachOut.engine_refusal?(e)
 
     # O erro pode ser a sessão caída: atualiza o estado para o roteador parar de escolher o Web.
-    session_manager.refresh!
+    session_manager.refresh!(sync_proxy: false)
     fail!(engine_error_text(e))
   end
 
@@ -70,7 +70,7 @@ class WhatsappHybrid::WebTransport
 
   # Revalida no motor quando o estado gravado é velho; celular desconectado deixa de ser escolhido na hora.
   def session_working?
-    session_manager.refresh! if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
+    session_manager.refresh!(sync_proxy: false) if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
     @connection.status == 'connected' && @connection.same_number?
   end
 
@@ -80,6 +80,7 @@ class WhatsappHybrid::WebTransport
     WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
     deliver(chat_id, physical_id)
     record_outcome!('accepted')
+    RichMessages.mark_sent_as_text!(@message)
     log('sent', physical_id)
   end
 
@@ -94,8 +95,7 @@ class WhatsappHybrid::WebTransport
   end
 
   def mark_pending!(physical_id)
-    attrs = @message.content_attributes.to_h.merge('whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin)
-    @message.update!(source_id: physical_id, content_attributes: attrs)
+    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin }, source_id: physical_id)
     ::Redis::Alfred.setex(self.class.message_key(@connection, physical_id), @message.id, MESSAGE_KEY_TTL)
   end
 
@@ -134,16 +134,22 @@ class WhatsappHybrid::WebTransport
   end
 
   def record_outcome!(value)
-    @message.update!(content_attributes: @message.content_attributes.to_h.merge(OUTCOME_KEY => value))
+    merge_attributes!(OUTCOME_KEY => value)
+  end
+
+  # O eco da Meta (2 a 7 s depois do envio, às vezes antes da resposta do WAHA) e a marca de mensagem rica escrevem o
+  # mesmo content_attributes (chat#1555). Grava sobre o registro relido sob trava e acrescenta só as chaves de quem chama:
+  # nunca devolve o hash lido antes do envio.
+  def merge_attributes!(extra, columns = {})
+    @message.with_lock do
+      @message.update!(columns.merge(content_attributes: @message.content_attributes.to_h.merge(extra)))
+    end
   end
 
   def fail!(reason, outcome = 'failed')
     # external_error mora dentro de content_attributes: grava junto, senão um sobrescreve o outro.
-    attrs = @message.content_attributes.to_h.merge(
-      'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => reason,
-      OUTCOME_KEY => outcome == 'uncertain' ? 'uncertain' : 'failed'
-    )
-    @message.update!(status: :failed, content_attributes: attrs)
+    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => reason,
+                        OUTCOME_KEY => outcome == 'uncertain' ? 'uncertain' : 'failed' }, status: :failed)
     log(outcome)
   end
 

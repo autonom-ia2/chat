@@ -2,13 +2,16 @@
 import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import AgentesDaCaixa from './AgentesDaCaixa.vue';
 import { corDoFunil } from '../helpers/caixa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
 // assuntos ela cuida (inclusive as conversas ainda sem assunto) e se vê todas
 // as conversas deles ou só as que atende. Quem cuida de um funil entra no
-// rodízio dos cards novos dele (R8). Administrador vê tudo.
+// rodízio dos cards novos dele (R8). Administrador vê tudo. Com a Fase 2 dos
+// Agentes (`aiAgents`), os agentes de IA vêm antes, com a porta primeiro
+// (#1447); sem ela, só a frase do robô que atende primeiro, como sempre.
 const props = defineProps({
   // Só os funis marcados na etapa 1.
   funis: { type: Array, required: true },
@@ -24,6 +27,21 @@ const props = defineProps({
 
 const emit = defineEmits(['escolherLegado']);
 const pessoas = defineModel('pessoas', { type: Array, required: true });
+// { porta, pode_mudar, agentes } ou null sem a Fase 2 (helpers/agentesIa).
+const aiAgents = defineModel('aiAgents', { type: Object, default: null });
+
+const porta = computed(() => aiAgents.value?.porta || props.robo);
+const agentesIa = computed({
+  get: () => aiAgents.value?.agentes || [],
+  set: agentes => {
+    aiAgents.value = { ...aiAgents.value, agentes };
+  },
+});
+const temAgentes = computed(
+  () =>
+    Boolean(aiAgents.value) &&
+    (Boolean(porta.value) || agentesIa.value.length > 0)
+);
 
 const atualizar = (pessoa, mudanca) => {
   pessoas.value = pessoas.value.map(item =>
@@ -72,7 +90,7 @@ const chipClasse = ativo =>
 <template>
   <div class="flex flex-col gap-5">
     <p
-      v-if="robo"
+      v-if="!aiAgents && robo"
       data-robo
       class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
     >
@@ -116,10 +134,43 @@ const chipClasse = ativo =>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="mb-0 text-[0.9375rem] text-n-slate-11">
-        {{ $t('CRM_CAIXAS.PESSOAS.EXPLICA') }}
-      </p>
+    <section v-if="temAgentes" class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1">
+        <h3 class="mb-0 text-base font-semibold text-n-slate-12">
+          {{ $t('CRM_CAIXAS.PESSOAS.AGENTES_TITULO') }}
+        </h3>
+        <p data-regra class="mb-0 text-[0.9375rem] text-n-slate-11">
+          {{
+            porta
+              ? $t('CRM_CAIXAS.PESSOAS.REGRA', { porta: porta.name })
+              : $t('CRM_CAIXAS.PESSOAS.REGRA_SEM_PORTA')
+          }}
+        </p>
+      </div>
+      <AgentesDaCaixa
+        v-model:agentes="agentesIa"
+        :porta="porta"
+        :pode-mudar="aiAgents.pode_mudar"
+        :funis="funis"
+        :todos-os-funis="todosOsFunis"
+      />
+    </section>
+
+    <div
+      class="flex flex-wrap justify-between gap-3"
+      :class="temAgentes ? 'items-end' : 'items-center'"
+    >
+      <div class="flex flex-col gap-1">
+        <h3
+          v-if="temAgentes"
+          class="mb-0 text-base font-semibold text-n-slate-12"
+        >
+          {{ $t('CRM_CAIXAS.PESSOAS.PESSOAS_TITULO') }}
+        </h3>
+        <p class="mb-0 text-[0.9375rem] text-n-slate-11">
+          {{ $t('CRM_CAIXAS.PESSOAS.EXPLICA') }}
+        </p>
+      </div>
       <Button
         data-todos
         :label="$t('CRM_CAIXAS.PESSOAS.TODOS_TUDO')"

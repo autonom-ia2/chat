@@ -82,12 +82,13 @@ export const quemCuida = (caixa, funilId) =>
 export const quemFazTriagem = caixa =>
   agentes(caixa).filter(pessoa => pessoa.triage);
 
-export const juntar = (nomes, locale) => {
+// tipo 'disjunction' junta com "ou" ("Bruno ou Diego").
+export const juntar = (nomes, locale, tipo = 'conjunction') => {
   if (!nomes.length) return '';
   try {
     return new Intl.ListFormat(locale.replace('_', '-'), {
       style: 'long',
-      type: 'conjunction',
+      type: tipo,
     }).format(nomes);
   } catch {
     return nomes.join(', ');

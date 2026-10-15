@@ -24,6 +24,25 @@ RSpec.describe 'CRM AI settings API', type: :request do
     expect(response.parsed_body['error']).to eq('crm.ai.disabled')
   end
 
+  # #1498: lembretes de Atender; funil criado pelo modelo Cobrança já vem com o do pagamento ligado.
+  it 'reads and saves the Serve reminders, defaulting on only for a template-made Serve pipeline' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    pipeline.update!(counts_as_sale: false, metadata: pipeline.metadata.merge('template' => 'COBRANCA'))
+    url = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings"
+
+    get url, headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'service_reminders'))
+      .to eq('progress' => false, 'resolved_check' => false, 'payment' => true)
+
+    patch url, params: { ai_settings: { service_reminders: { payment: false } } }, headers: auth_headers(admin), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'service_reminders', 'payment')).to be(false)
+    expect(pipeline.reload.metadata.dig('ai', 'service_reminders'))
+      .to eq('progress' => false, 'resolved_check' => false, 'payment' => false)
+  end
+
   it 'lets administrators read and update pipeline AI settings' do
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)

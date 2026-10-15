@@ -5,12 +5,13 @@ import AgenteStatus from '../AgenteStatus.vue';
 import AgenteInterruptor from '../AgenteInterruptor.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import MaisOpcoes from './MaisOpcoes.vue';
-import { ESTADO } from '../../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO } from '../../utils/estadoDoAgente';
 
 // #1181 PR3 (protótipo T07, heroT07) — o único bloco navy da página: volta para a lista, foto, nome e
 // onde responde. Quem gerencia tem o interruptor Atendendo/Parado (o estado fica só nele), a ação
 // principal (Mudar conversando, ou Editar instruções no agente escrito à mão) e Mais opções. Quem só
 // vê tem a pílula de estado no lugar do interruptor. Anéis decorativos como no AutomacaoHeroi.
+// Tema 14 (#1434): no ajudante, o interruptor diz "ajudando outros agentes" e, ligado, "Ajudando".
 defineProps({
   nome: { type: String, required: true },
   foto: { type: String, default: '' },
@@ -22,12 +23,18 @@ defineProps({
   acaoPrincipal: { type: String, default: null },
   itensMais: { type: Array, default: () => [] },
   alternando: { type: Boolean, default: false },
+  ajudante: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['voltarLista', 'alternar', 'acaoPrincipal', 'mais']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA';
+// O estado ligado escrito ao lado do interruptor, quando não é "Atendendo".
+const TEXTO_LIGADO = {
+  [ESTADO.NA_EQUIPE]: 'NA_EQUIPE',
+  [ESTADO.AJUDANDO]: 'AJUDANDO',
+};
 
 const aoVoltar = evento => {
   if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
@@ -105,8 +112,17 @@ const aoVoltar = evento => {
         >
           <AgenteInterruptor
             data-interruptor
-            :ligado="estado === ESTADO.ATENDENDO"
-            :rotulo="t(`${NS}.INTERRUPTOR`, { nome })"
+            :ligado="TRABALHANDO.includes(estado)"
+            :texto-ligado="
+              TEXTO_LIGADO[estado]
+                ? t(`AGENTS.JORNADA.STATUS.${TEXTO_LIGADO[estado]}`)
+                : ''
+            "
+            :rotulo="
+              t(ajudante ? `${NS}.INTERRUPTOR_AJUDANTE` : `${NS}.INTERRUPTOR`, {
+                nome,
+              })
+            "
             :desabilitado="alternando"
             @alternar="emit('alternar', $event)"
           />
