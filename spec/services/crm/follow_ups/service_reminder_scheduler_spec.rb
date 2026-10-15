@@ -115,7 +115,9 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     expect(reminders(card).map { |r| r.metadata['kind'] }).to eq(['progress'])
   end
 
-  it 'ao ligar num funil cheio, o job cria poucos por rodada e espaçados' do
+  # Às 21h em São Paulo (fora do horário 8–20 do funil) o espaçamento sumia: todos caíam juntos às 8h (CI de 00:00 UTC).
+  it 'ao ligar num funil cheio, o job cria poucos por rodada e espaçados, mesmo fora do horário' do
+    travel_to(Time.zone.parse('2026-10-15 00:00 UTC'))
     cards = Array.new(3) { setup_card.tap { |card| card.update_columns(entered_stage_at: 2.days.ago) } }
     pipeline = cards.first.pipeline
     cards.drop(1).each { |card| card.update_columns(pipeline_id: pipeline.id, stage_id: cards.first.stage_id) }

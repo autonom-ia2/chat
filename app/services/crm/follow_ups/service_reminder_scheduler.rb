@@ -153,8 +153,11 @@ class Crm::FollowUps::ServiceReminderScheduler
     (@card.stage&.metadata || {})['category']
   end
 
+  # O espaçamento conta a partir do primeiro horário permitido: somado antes, fora do horário (à noite, no sábado) todos
+  # caíam juntos na abertura seguinte e saíam de uma vez. A segunda conferência leva quem passou do fim do horário.
   def schedule_at(time)
-    Crm::FollowUps::AllowedSchedule.new(config: schedule_config, timezone: timezone).next_at(time + @atraso)
+    horario = Crm::FollowUps::AllowedSchedule.new(config: schedule_config, timezone: timezone)
+    horario.next_at(horario.next_at(time) + @atraso)
   end
 
   def sendable_conversation?
