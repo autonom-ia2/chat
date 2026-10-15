@@ -608,7 +608,7 @@
       "NO_COMPANY": "No company",
       "SELECTED_COMPANY_FALLBACK": "Selected company #{id}",
       "SCORE_RANGE": "AI attention (0–100)",
-      "SCORE_HELP": "Attention needed, not probability of winning.",
+      "SCORE_HELP": "Attention needed, not chance of closing.",
       "SCORE_MIN": "Minimum",
       "SCORE_MAX": "Maximum",
       "SCORE_INVALID": "Use a whole number from 0 to 100.",
@@ -636,7 +636,7 @@
       "GROUP_OPPORTUNITY": "Labels, stage and outcome",
       "GROUP_OPPORTUNITY_HELP": "VIP, renewal and pipeline stages.",
       "GROUP_ATTENTION": "Attention and priority",
-      "GROUP_ATTENTION_HELP": "Attention level, without indicating win probability.",
+      "GROUP_ATTENTION_HELP": "Attention level, without indicating closing probability.",
       "GROUP_ACTIVITY": "Value, follow-up and activity",
       "GROUP_ACTIVITY_HELP": "Estimated value, follow-up and card activity.",
       "COMPANY": "Company",
@@ -3956,7 +3956,8 @@
       "LIGAR": "Add to CRM",
       "PORTA": "{nome} answers first",
       "AREA": "{nome} handles {funis}",
-      "ROBO": "{nome} (AI agent) answers first"
+      "ROBO": "{nome} (AI agent) answers first",
+      "ROBO_EXTERNO": "{nome} (external agent) answers first"
     },
     "MODO_RESUMO": {
       "AUTO": "The system creates the card when it understands the subject.",
@@ -3985,7 +3986,7 @@
       "SUBTITULO": "When a new message arrives in this inbox.",
       "AUTO": "Create the card when it understands the subject",
       "AUTO_TEXTO": "The system reads the conversation, picks the right pipeline and creates the card.",
-      "AUTO_EXEMPLO": "The system sees it's {funil} and creates the card. When the bot hands the conversation over or it leaves triage, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "AUTO_EXEMPLO": "The system sees it's {funil} and creates the card. When the agent hands the conversation over or it leaves triage, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
       "SUGGEST": "Suggest the subject and wait for the team",
       "SUGGEST_TEXTO": "The system shows the pipeline that seems right. Someone confirms with one click.",
       "SUGGEST_EXEMPLO": "The team sees: “Looks like {funil}”. Whoever confirms creates the card.",
@@ -3994,7 +3995,7 @@
       "OFF_EXEMPLO": "Nothing happens. Someone on the team reads it and creates the card.",
       "CHEGOU": "Create the card as soon as the conversation arrives",
       "CHEGOU_TEXTO": "Every new conversation becomes a card right away.",
-      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the bot hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
       "RECOMENDADO": "Recommended",
       "EXEMPLO": "Example",
       "MENSAGEM": "Hi! How much is it?",
@@ -4012,7 +4013,7 @@
       "SO_SUAS": "handles {assuntos}. Sees only the conversations they handle.",
       "SEM_ASSUNTO": "conversations without a subject",
       "SEM_ASSUNTO_TITULO": "No subject",
-      "RODIZIO": "Who gets it when the bot hands the conversation over or it leaves triage (right away, whoever has the fewest open conversations; if nobody can now, whoever comes online first)",
+      "RODIZIO": "Who gets it when the agent hands the conversation over or it leaves triage (right away, whoever has the fewest open conversations; if nobody can now, whoever comes online first)",
       "NINGUEM": "nobody yet",
       "MUDA": "What changes when you save",
       "NADA_MUDOU": "Nothing changed.",
@@ -4023,7 +4024,8 @@
       "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
       "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
       "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
-      "ROBO": "{nome}, the AI agent, answers first. Then the people below."
+      "ROBO": "{nome}, the AI agent, answers first. Then the people below.",
+      "ROBO_EXTERNO": "{nome}, the external agent, answers first. Then the people below."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} starts coming in through this inbox.",
@@ -4058,7 +4060,7 @@
       "TODAS": "All",
       "SO_AS_QUE_ATENDE": "Only theirs",
       "NAO_VE": "Sees nothing",
-      "RODIZIO": "When the bot hands a conversation over or it leaves triage, it goes right away to whoever handles the subject and has the fewest open conversations. If nobody can take it now, it waits and goes to whoever comes online first. If the pipeline's Assignment is set to invite, the person is invited instead of getting it directly. Administrators get conversations too.",
+      "RODIZIO": "When the agent hands a conversation over or it leaves triage, it goes right away to whoever handles the subject and has the fewest open conversations. If nobody can take it now, it waits and goes to whoever comes online first. If the pipeline's Assignment is set to invite, the person is invited instead of getting it directly. Administrators get conversations too.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
       "LEGADO_MUDAR": "Use what I select",
       "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations.",
@@ -4075,6 +4077,7 @@
       "REGRA_SEM_PORTA": "The agent marked on a subject takes over the conversation.",
       "MOSTRAR_AGENTES": "Show other agents ({n})",
       "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies.",
+      "ROBO_EXTERNO": "{nome}, this inbox’s external agent, answers first. When the conversation goes to a person, what is selected here applies.",
       "TIRAR": "Remove from this inbox",
       "SAI": "Leaves this inbox when you save.",
       "VAI_PARAR": "This is the only inbox where {nome} works. After saving, {nome} stops answering.",
@@ -4091,7 +4094,10 @@
       "SALVOU": "Inbox saved.",
       "FALHOU": "We couldn't save. Try again.",
       "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
-      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again."
+      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
+      "PRINCIPAL_PARADO": "The main agent of this inbox is not answering. To add a team agent here, turn the main agent on first.",
+      "AGENTE_EXTERNO": "An external agent answers on this inbox. A team agent cannot join an inbox with an external agent yet.",
+      "AGENTE_RASCUNHO": "This agent is still a draft; finish creating it first."
     }
   },
   "CRM_FUNIL": {
@@ -4236,7 +4242,7 @@
       "ANUNCIOS_DESLIGADO": "Your ads don't know about your sales yet.",
       "O_FACEBOOK": "Facebook",
       "O_INSTAGRAM": "Instagram",
-      "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each closed sale counts on the dashboard.",
       "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
       "ATENDER_LEMBRETES": "We share progress after {andamento} in the same stage and ask if it was solved {resolveu} after {sucesso}.",
       "ATENDER_SO_ANDAMENTO": "We share progress after {andamento} in the same stage.",
@@ -4510,7 +4516,7 @@
       "AJUDA": "Pick one. The ready-made stages come next.",
       "VENDER": {
         "NOME": "Sell",
-        "TEXTO": "Win a new customer."
+        "TEXTO": "Get a new customer."
       },
       "ATENDER": {
         "NOME": "Serve",

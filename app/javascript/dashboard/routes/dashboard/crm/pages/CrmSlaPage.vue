@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { useHasCustomRolePermission } from 'dashboard/composables/useCanManage';
+import { CRM_ADMIN_PERMISSION } from 'dashboard/constants/permissions.js';
 import CrmSlaPolicyList from '../components/sla/CrmSlaPolicyList.vue';
 import CrmInboxScheduleList from '../components/sla/CrmInboxScheduleList.vue';
 
@@ -19,6 +21,14 @@ const isSlaFeatureEnabled = computed(() =>
     accountId.value,
     FEATURE_FLAGS.SLA
   )
+);
+
+// Service calendars answer only to administrators and crm_admin seats (Enterprise::Crm::
+// ServiceSchedulePolicy). A seat with only sla_manage manages the policies, not the calendars (#1618).
+const currentRole = useMapGetter('getCurrentRole');
+const hasCrmAdmin = useHasCustomRolePermission(CRM_ADMIN_PERMISSION);
+const canManageSchedules = computed(
+  () => currentRole.value === 'administrator' || hasCrmAdmin.value
 );
 
 const pipelines = ref([]);
@@ -67,7 +77,10 @@ onMounted(async () => {
         <CrmSlaPolicyList :pipelines="pipelines" />
       </section>
 
-      <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
+      <section
+        v-if="canManageSchedules"
+        class="p-5 border rounded-xl border-n-weak bg-n-solid-1"
+      >
         <CrmInboxScheduleList />
       </section>
     </div>

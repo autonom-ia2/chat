@@ -1,0 +1,14 @@
+# Pacote de tradução por conta (#1550). Só folhas que existem em config/locales/pt_BR.yml; veja docs/segmentos/README.md.
+pt_BR:
+  crm:
+    # Critério da IA da etapa antiga "perdido" (#1554): aparece para quem configura o funil.
+    stage_criteria:
+      legado:
+        perdido: 'Lead encerrado sem fechar: o cliente recusou com clareza, pediu para não ser contatado, disse que fechou com outra empresa, o número é inválido, não respondeu depois das tentativas definidas pelo funil, ou o atendente encerrou a conversa sem fechar. Não usar para quem ainda está negociando ou só disse "vou pensar".'
+    export:
+      columns:
+        closed_at: 'Terminou em'
+        lost_reason: 'Por que não fechou'
+      statuses:
+        won: 'Seguro ativo'
+        lost: 'Não fechou'

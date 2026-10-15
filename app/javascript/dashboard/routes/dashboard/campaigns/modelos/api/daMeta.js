@@ -5,6 +5,7 @@
 // Sem expressão regular (regra do Rodrigo): o texto é lido com indexOf/slice.
 import { campoDoPerfil } from '../helpers/campos';
 import { codigoDeExemploValido } from '../helpers/regraEstrutural';
+import { pedidoDeProdutos } from '../helpers/produtosNaCampanha';
 
 const ABRE = '{{';
 const FECHA = '}}';
@@ -183,6 +184,27 @@ const cartoesDe = carrossel =>
     };
   });
 
+// #1418: o que o celular mostra dos produtos — o tipo, o título do topo (vários),
+// o rodapé e o botão (o do modelo ou o do cartão, no carrossel).
+const produtosDe = (template, botoes) => {
+  const pedido = pedidoDeProdutos(template);
+  const cartao = componente(template, 'CAROUSEL')?.cards?.[0];
+  const botaoDoCartao = botoesDe(
+    (cartao?.components || []).find(item => maiusculo(item.type) === 'BUTTONS')
+  )[0];
+  const botao = pedido.tipo === 'carrossel' ? botaoDoCartao : botoes[0];
+  const topo = componente(template, 'HEADER');
+  return {
+    tipo: pedido.tipo,
+    titulo: maiusculo(topo?.format) === 'TEXT' ? topo.text || '' : '',
+    rodape: componente(template, 'FOOTER')?.text || '',
+    botao: {
+      tipo: maiusculo(botao?.type) === 'URL' ? 'site' : 'ver',
+      texto: botao?.text || '',
+    },
+  };
+};
+
 const ofertaDe = (template, botoes) => {
   const oferta = componente(template, 'LIMITED_TIME_OFFER');
   const cupom = botoes.find(botao => maiusculo(botao.type) === 'COPY_CODE');
@@ -211,6 +233,8 @@ const codigoDe = template => {
 
 const formatoDe = template => {
   if (maiusculo(template.category) === 'AUTHENTICATION') return 'codigo';
+  // #1418: um produto, vários ou carrossel de produtos do catálogo.
+  if (pedidoDeProdutos(template)) return 'produtos';
   if (componente(template, 'CAROUSEL')) return 'carrossel';
   if (componente(template, 'LIMITED_TIME_OFFER')) return 'oferta';
   const tipos = botoesDe(componente(template, 'BUTTONS')).map(botao =>
@@ -233,8 +257,8 @@ export const editavelNaTela = template => {
         Array.isArray(botao.supported_apps)
     );
   }
-  // Catálogo e formulário: a tela ainda não remonta esses botões.
-  if (['catalogo', 'formulario'].includes(formato)) return false;
+  // Catálogo, formulário e produtos: a tela ainda não remonta esses botões.
+  if (['catalogo', 'formulario', 'produtos'].includes(formato)) return false;
   if (formato !== 'padrao') return true;
   return botoes.every(botao =>
     BOTOES_EDITAVEIS.includes(maiusculo(botao.type))
@@ -279,6 +303,9 @@ export const conteudoDaMeta = (template, perfil = template) => {
       : {}),
     ...(formato === 'formulario'
       ? { formulario: { id: '', botao: botoes[0]?.text || '' } }
+      : {}),
+    ...(formato === 'produtos'
+      ? { produtos: produtosDe(template, botoes) }
       : {}),
   };
   return { conteudo, campos };

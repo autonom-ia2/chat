@@ -98,6 +98,13 @@ const view = ref('nome');
 const pilha = ref([]);
 const selectedStage = ref(null);
 const editorSession = ref(0);
+// #1548 (passo 2) — pacote da conta ("seguros.<tipo>" ou null), que escolhe a
+// variante do modelo de funil.
+const pacote = computed(
+  () =>
+    store.getters['accounts/getAccount']?.(store.getters.getCurrentAccountId)
+      ?.autonomia_pacote || null
+);
 const {
   tipo,
   modelo,
@@ -110,7 +117,7 @@ const {
   confirmarModelo,
   manterModelo,
   reiniciarModelo,
-} = useFunilModelo({ t, ia, form, editorSession });
+} = useFunilModelo({ t, ia, form, editorSession, pacote });
 // O aviso de troca de modelo vale só enquanto a pessoa está no passo Nome.
 watch(view, () => manterModelo());
 const focoCaixa = ref(null);

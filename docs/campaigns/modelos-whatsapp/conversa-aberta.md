@@ -17,8 +17,8 @@ as contas.
   - falta o valor de um campo;
   - a Meta recusa o texto na hora;
   - a Meta avisa depois com `131047` (janela fechada). Neste caso o modelo sai uma vez só, pela
-    `CampaignJourney::ConversaAberta::Queda` e o `QuedaJob`. A queda não acontece se o Híbrido já entregou o texto pelo
-    WhatsApp API.
+    `CampaignJourney::ConversaAberta::Queda` e o `QuedaJob`. Se o Híbrido assumiu o texto, a queda segue o resultado do
+    envio dele (ver "Híbrido e 131047" abaixo).
 - **Na conversa**: a mensagem escrita entra na conversa do contato com
   `additional_attributes = { campaign_id, campaign_free_text: true }`. O robô do #1405 não assume conversa de campanha.
 - **Campos**: os do catálogo, mais as colunas do Público.
@@ -35,10 +35,38 @@ as contas.
 
 ## Limitações conhecidas
 
-- **Híbrido e 131047.** Quando a Meta recusa o texto com 131047 e o WhatsApp Híbrido **assume** o reenvio pelo WhatsApp
-  API, a mensagem ganha a marca `whatsapp_transport_fallback`. Com essa marca, a campanha **não** manda o modelo: a marca
-  quer dizer "o Híbrido assumiu", não "entregou". Se o envio do Híbrido falhar depois, a pessoa fica sem texto e sem
-  modelo. É uma escolha conservadora, para não mandar duas mensagens à mesma pessoa.
+- **Híbrido e 131047 (#1453).** Quando a Meta recusa o texto com 131047 e o WhatsApp Híbrido **assume** o reenvio
+  pelo WhatsApp API, a mensagem ganha a marca `whatsapp_transport_fallback`. O reenvio é síncrono: no `ensure` da queda,
+  a `CampaignJourney::ConversaAberta::QuedaHibrido` relê a mensagem do banco e decide pelo `whatsapp_transport_outcome`
+  gravado pelo `WhatsappHybrid::WebTransport` (#1349):
+  - `failed` (nada saiu): o modelo, uma vez só, pelo `QuedaJob`, com as mesmas travas (campanha parada, modelo que não
+    confere);
+  - `accepted` (o motor aceitou) e `uncertain` (o motor não respondeu; pode ter saído): nunca o modelo, para não mandar
+    duas mensagens. O motivo vai ao log (`[ConversaAberta] queda delivery=… outcome=…`);
+  - `pending` (gravado sob trava quando o plano B assume e a cada nova tentativa, antes de chamar o motor): o Híbrido
+    ainda está enviando. Outro aviso ou a campanha, nesse meio tempo, nunca reenvia nem manda o modelo; a conferência
+    relê depois. Na leitura tardia (~16 min), se ainda estiver `pending` (ou sem resultado), fecha sob trava: sem o
+    envio marcado (`whatsapp_transport = web`) é `failed` e o modelo sai uma vez; com ele, `uncertain`, sem modelo;
+  - `throttled` (o Híbrido tenta de novo em 15 s, pelo `WhatsappHybrid::FallbackRetryJob`, até 20 vezes ≈ 5 min; depois
+    falha de forma certa): o `ConferenciaHibridoJob` relê a mensagem ~30 s, 2 min, 11 min e 16 min depois do aviso. Se
+    virar `failed`, o modelo sai uma vez; `accepted`/`uncertain` encerram. Na leitura de ~11 min (teto do Híbrido mais
+    5 min de folga para a fila), se ainda estiver `throttled` DENTRO da trava, fecha como falha e o modelo sai uma vez;
+    se a nova tentativa assumiu nesse meio tempo, nada é fechado e a conferência segue. `throttled` nunca sobrescreve
+    resultado final. A falha certa que chega na nova tentativa também pede o modelo, pelo próprio `WebTransport`. A
+    nova tentativa entra na fila antes de gravar `throttled`; se não entrar, a mensagem falha de forma certa;
+  - aviso 131047 repetido de mensagem que o plano B já assumiu não grava a falha da Meta por cima do envio em curso, e
+    o plano B não assume o texto de uma entrega que já caiu para o modelo (`fell_back_at`);
+  - erro inesperado antes de o Híbrido marcar o envio pelo WhatsApp API (Redis, banco): a mensagem volta para a falha,
+    mantém a marca, fecha como `failed` (`WhatsappHybrid::UnexpectedErrorOutcome`) e o modelo sai;
+  - erro inesperado depois dessa marca (mesmo pouco antes do pedido ao motor): pode ter saído, fecha como `uncertain`,
+    com o aviso de conferir no celular, e o modelo não sai. Conservador: pode haver perda, nunca mensagem dupla;
+  - sem resposta do motor antes do pedido de envio (estado da sessão, consulta do contato): `failed`. No pedido de
+    envio, sem resposta, 5xx (o estado da sessão é relido), conexão fechada, `ETIMEDOUT` e resposta 2xx ilegível contam
+    como `uncertain`. Recusa do WhatsApp (463, 475), 4xx e sem rota até o motor (`EHOSTUNREACH`, conexão recusada)
+    continuam `failed`;
+  - na nova tentativa do `throttled`, se a rota do WhatsApp API não vale mais (conta, conexão, contato barrado), a
+    mensagem falha de forma certa e o modelo sai;
+  - um segundo aviso 131047 do mesmo wamid não refaz o envio pelo WhatsApp API.
 - **Mensagem achada pelo id.** O Híbrido troca o `source_id` da mensagem pelo id do WAHA antes de enviar. Por isso a
   entrega guarda o `message_id` da mensagem da conversa, e a queda acha a mensagem por ele. A entrega em si é achada
   pelo `source_id` do aviso, que é o wamid gravado no envio.

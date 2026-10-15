@@ -22,6 +22,22 @@ RSpec.describe Crm::Cards::Outcome do
     Crm::Cards::Closer.new(card: card, actor: user, result: result, value_cents: 5000, lost_reason: 'Sem retorno').perform
   end
 
+  # Revisão (#1550): outcome_labels gravado fora do formato não derruba a planilha.
+  describe '.custom_label' do
+    it 'lê o nome do grupo do desfecho e ignora metadado fora do formato' do
+      pipeline = sale_pipeline.first
+      nomes = lambda do |labels|
+        pipeline.metadata = { 'outcome_labels' => labels }
+        %w[won lost open].map { |status| described_class.custom_label(pipeline, status) }
+      end
+
+      expect(nomes.call({ 'success' => 'Contratado' })).to eq(['Contratado', nil, nil])
+      expect(nomes.call('texto solto')).to eq([nil, nil, nil])
+      expect(nomes.call({ 'success' => { 'x' => 1 }, 'failure' => '' })).to eq([nil, nil, nil])
+      expect(described_class.custom_label(nil, 'won')).to be_nil
+    end
+  end
+
   describe '.status_for' do
     it 'translates the verb to the funnel kind and keeps the rest' do
       sale, = sale_pipeline

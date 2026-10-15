@@ -2,16 +2,19 @@
 # dos Agentes ligada na conta (Crm::Ai::Config.areas_ligadas?); sem ela a caixa não leva `ai_agents` e a tela esconde a
 # parte dos agentes.
 #
-# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Sem porta nativa não há área.
+# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Sem porta, a caixa só de pessoas (sem agente
+#   externo) também recebe área (#1433); a caixa com agente externo não.
 # - areas: os agentes vinculados como área na caixa, como as pessoas membros dela, com os funis de que cuidam.
 #   `ultima_caixa`: tirar este agente daqui o faz parar de atender (é o único lugar onde ele trabalha).
-# - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa com porta).
+# - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa que aceita área).
 #   `parado`: entrar na caixa liga o agente.
 class Crm::Caixas::RetratoDosAgentes
-  def initialize(account:, inbox_ids:, pode_mudar:)
+  # `detalhe: true` só na caixa aberta (#1570): a lista de caixas não consulta o leitor.
+  def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false)
     @account = account
     @inbox_ids = inbox_ids
     @pode_mudar = pode_mudar
+    @detalhe = detalhe
   end
 
   def ligado?
@@ -22,15 +25,27 @@ class Crm::Caixas::RetratoDosAgentes
 
   def caixa(inbox_id)
     porta = vinculos.fetch(inbox_id, []).find(&:porta?)
+    pode_mudar = @pode_mudar && aceita_area?(porta, inbox_id)
     {
       porta: porta && { id: porta.agent.id, name: porta.agent.name },
-      pode_mudar: @pode_mudar && porta.present?,
+      pode_mudar: pode_mudar,
       areas: areas(inbox_id),
-      disponiveis: @pode_mudar && porta ? disponiveis(inbox_id) : []
+      disponiveis: pode_mudar ? disponiveis(inbox_id) : []
     }
   end
 
   private
+
+  # Com porta: como sempre (o principal parado é conferido ao salvar). Sem porta: o leitor único do Agentes IA diz se é
+  # só de pessoas (sem agente externo). Na lista (sem `detalhe`) não consulta e devolve false: na lista, caixa sem
+  # porta sai com `pode_mudar: false` e `disponiveis: []`. A lista não oferece agentes; só a caixa aberta vale para isso.
+  def aceita_area?(porta, inbox_id)
+    return true if porta
+    return false unless @detalhe
+
+    inbox = Inbox.find_by(id: inbox_id, account_id: @account.id)
+    inbox.present? && ::Autonomia::Agents::Areas.caixa_aceita_area?(inbox, conferir_fase2: false).ok?
+  end
 
   def areas(inbox_id)
     vinculos.fetch(inbox_id, []).select(&:area?).map(&:agent).sort_by { |agente| agente.name.to_s.downcase }.map do |agente|
@@ -69,7 +84,7 @@ class Crm::Caixas::RetratoDosAgentes
   end
 
   # Agentes da conta que podem ser área (Agent#pode_ser_area?, #1433): fora rascunho, parado de propósito, interno,
-  # sistema, ajudante e Lia.
+  # sistema e ajudante. A Lia entra (#1433, "lia b").
   def candidatos
     @candidatos ||= ::Autonomia::Agents::Agent.podem_ser_area(@account).order(:name, :id).to_a
   end

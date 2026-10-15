@@ -242,6 +242,8 @@ const listarCampanhasParadas = async () => {
       modeloId: modelo?.id || null,
       modeloNome: modelo?.nome || pausa.details?.template_name || '',
       motivo: motivoDaPausa(pausa),
+      // #1418: o produto que acabou (o nome guardado quando a campanha foi criada).
+      produto: (pausa.details?.product_names || []).join(', '),
       // O modelo já está aprovado e igual ao que a campanha guardou (o servidor confere).
       podeRetomar: Boolean(pausa.ready_to_resume),
     };
@@ -385,9 +387,41 @@ const listarNumeros = async () =>
     numero => numero.situacao === 'conectada'
   );
 
-// Ainda sem backend (catálogo de produtos e formulários do WhatsApp): a tela
-// esconde esses formatos (constants.js, FORMATOS[].disponivel).
-const obterCatalogo = async () => null;
+// #1418: o catálogo de produtos da conta do WhatsApp da caixa. Sem caixa (tela
+// de criar modelo), a primeira conectada. Sem catálogo ou com a flag desligada
+// (404), null: a tela não oferece produtos.
+const obterCatalogo = async caixa => {
+  const id =
+    caixa || (await lerCaixas()).find(item => !item.reconnect)?.id || null;
+  if (!id) return null;
+  try {
+    const { catalog } = await chamar(api.getCatalog(id));
+    return catalog
+      ? { nome: catalog.name, produtos: catalog.product_count }
+      : null;
+  } catch (erro) {
+    if (erro.status === 404) return null;
+    throw erro;
+  }
+};
+
+// Uma página dos produtos aprovados, pelo nome; `depois` pede a próxima.
+const produtoDaApi = produto => ({
+  id: produto.id,
+  nome: produto.name,
+  preco: produto.price,
+  foto: produto.image_url,
+  disponivel: produto.available,
+});
+const listarProdutos = async (caixa, { busca = '', depois = '' } = {}) => {
+  const { payload, meta } = await chamar(
+    api.getCatalogProducts(caixa, { search: busca.trim(), after: depois })
+  );
+  return { produtos: payload.map(produtoDaApi), depois: meta?.after || '' };
+};
+
+// Ainda sem backend (formulários do WhatsApp): a tela esconde esse formato
+// (constants.js, FORMATOS[].disponivel).
 const listarFormularios = async () => [];
 
 // Criar e melhorar com IA (#1333). O servidor escreve com o redator e descarta
@@ -483,6 +517,7 @@ export default {
   subirArquivoDaCampanha,
   apagarModelo,
   obterCatalogo,
+  listarProdutos,
   listarFormularios,
   criarComIA,
   melhorarComIA,

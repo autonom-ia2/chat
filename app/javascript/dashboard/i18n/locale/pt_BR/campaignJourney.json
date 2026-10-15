@@ -414,7 +414,9 @@
           "CAROUSEL_FIELD_REQUIRED": "Um cartão deste modelo tem campo que a campanha ainda não preenche.",
           "FREE_TEXT_INVALID": "A mensagem escrita não pode ir assim. Volte à Mensagem e confira o texto (link só pelo botão do campo).",
           "FREE_TEXT_DISABLED": "A mensagem escrita não está liberada nesta conta. Tire a mensagem escrita para mandar só o modelo.",
-          "FREE_TEXT_RICH_TEMPLATE": "Este modelo tem cupom, oferta com prazo ou carrossel: todos recebem o modelo completo. Volte à Mensagem e tire a mensagem escrita."
+          "FREE_TEXT_RICH_TEMPLATE": "Este modelo tem cupom, oferta com prazo ou carrossel: todos recebem o modelo completo. Volte à Mensagem e tire a mensagem escrita.",
+          "PRODUCTS_REQUIRED": "Escolha os produtos da mensagem: 1 num produto só, até 30 na lista e de 2 a 10 nos cartões.",
+          "PRODUCTS_DISABLED": "Campanha com produtos do catálogo ainda não está liberada para esta conta."
         },
         "OPTED_OUT": "Recusaram mensagens",
         "REASONS": {

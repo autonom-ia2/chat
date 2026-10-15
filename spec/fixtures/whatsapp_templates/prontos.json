@@ -412,6 +412,49 @@
   },
   {
     "origem": "formato",
+    "chave": "produtos",
+    "idioma": "en",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "store_products",
+      "language": "en",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "New this week"
+        },
+        {
+          "type": "BODY",
+          "text": "Hi, {{1}}! We picked products we think you will like. Take a look and order right here.",
+          "example": {
+            "body_text": [
+              [
+                "Ana"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "MPM",
+              "text": "View items"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Store products",
+      "fields": {
+        "1": "cliente.primeiro_nome"
+      }
+    }
+  },
+  {
+    "origem": "formato",
     "chave": "codigo",
     "idioma": "en",
     "pode_ir_em_campanha": false,
@@ -851,6 +894,49 @@
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "desconto"
+      }
+    }
+  },
+  {
+    "origem": "formato",
+    "chave": "produtos",
+    "idioma": "pt_BR",
+    "pode_ir_em_campanha": true,
+    "corpo": {
+      "name": "produtos_da_loja",
+      "language": "pt_BR",
+      "category": "MARKETING",
+      "parameter_format": "positional",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Novidades da semana"
+        },
+        {
+          "type": "BODY",
+          "text": "Oi, {{1}}! Separamos produtos que combinam com você. Veja e peça por aqui mesmo.",
+          "example": {
+            "body_text": [
+              [
+                "Ana"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "MPM",
+              "text": "Ver itens"
+            }
+          ]
+        }
+      ],
+      "friendly_name": "Produtos da loja",
+      "fields": {
+        "1": "cliente.primeiro_nome"
       }
     }
   },
