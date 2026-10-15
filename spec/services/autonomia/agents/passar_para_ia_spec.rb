@@ -197,7 +197,40 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
     expect(eventos).to be_empty
   end
 
+  describe 'o próprio robô que tinha passado a conversa a pessoas (#1377: segue como ai_assignee)' do
+    it 'com a espera de pessoa: passou, a espera acaba e o robô segue o dono' do
+      esperar_pessoa!
+
+      resultado = passar(agente_da_porta, por: :pessoa, pedida_por: pessoa)
+
+      expect(resultado).to have_attributes(ok?: true, trocou?: true, codigo: :passou)
+      expect(conversation.reload).to have_attributes(ai_assignee: porta, assignee_id: nil)
+      expect(conversation.bot_handoff_waiting?).to be(false)
+    end
+
+    it 'com a marca do motor de entrega do CRM: passou, e a marca sai' do
+      Crm::Entrega::Marca.marcar(conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu')
+      conversation.save!
+      expect(conversation.reload.crm_delivery_pending?).to be(true)
+
+      resultado = passar(agente_da_porta, por: :pessoa, pedida_por: pessoa)
+
+      expect(resultado.codigo).to eq(:passou)
+      expect(conversation.reload.crm_delivery_pending?).to be(false)
+      expect(conversation.ai_assignee).to eq(porta)
+    end
+  end
+
   describe 'recusas' do
+    it 'pessoa de outra conta pedindo: outra_conta, sem troca nem registro' do
+      estranha = create(:user, account: create(:account), role: :administrator)
+
+      eventos = eventos_de_troca { expect_recusa(passar(por: :pessoa, pedida_por: estranha), :outra_conta) }
+
+      expect(contrato).not_to have_received(:registrar_passagem!)
+      expect(eventos).to be_empty
+    end
+
     it 'Fase 2 desligada' do
       Autonomia::Agents::Fase2.desligar!(conversation.account)
 
