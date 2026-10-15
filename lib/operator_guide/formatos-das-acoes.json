@@ -97,9 +97,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": true
   },
@@ -10495,11 +10495,11 @@
     "controller": "api/v1/accounts/autonomia/agents/channels#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:21",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:17",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": false
   },

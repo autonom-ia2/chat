@@ -12,6 +12,7 @@ import {
   enderecoDaCaixa,
   mudancaDaEquipe,
   principalDaCaixa,
+  soDePessoas,
 } from '../../utils/ondeTrabalha';
 
 // #1433 (tema 13) — os passos do agente da equipe, como no protótipo aprovado (70a963b461): (1) em quais
@@ -20,9 +21,9 @@ import {
 //   chama guarda a escolha na URL e grava o vínculo quando o agente começa a trabalhar.
 // - `modo` 'mudar': o "Mudar" de "Onde {nome} trabalha" na página do agente (numa gaveta). Mostra também
 //   quem sai, e quem chama grava (entram e saem).
-// Só caixas com principal ATENDENDO podem ser escolhidas; as outras aparecem bloqueadas com o motivo
-// (ninguém atende primeiro, outro robô, ou o principal não está atendendo). Sem nome ainda, "o agente
-// que você está criando".
+// Podem ser escolhidas as caixas com principal ATENDENDO e as atendidas só por pessoas (sem principal e
+// sem robô; ali o agente só recebe o que alguém passar). As outras aparecem bloqueadas com o motivo (outro
+// robô, ou o principal não está atendendo). Sem nome ainda, "o agente que você está criando".
 // `canais`: a L2 (canais_ocupados), com `areas`; `caixas`: a store de inboxes (ícone e número).
 const props = defineProps({
   modo: {
@@ -77,6 +78,7 @@ const comNome = chave =>
 
 const MOTIVO = {
   [BLOQUEIO.SEM_PRINCIPAL]: () => t(`${NS}.SEM_PRINCIPAL`),
+  [BLOQUEIO.OUTRO_ROBO]: () => t(`${NS}.OUTRO_ROBO`),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t(`${NS}.PRINCIPAL_PARADO`, {
       outro: principalDaCaixa(canal).agent_name,
@@ -92,14 +94,16 @@ const opcoes = computed(() =>
         ? null
         : bloqueioDaCaixa(canal, props.agenteId);
     const principal = principalDaCaixa(canal);
+    let texto = enderecoDaCaixa(caixa);
+    if (soDePessoas(canal)) texto = comNome('SO_PESSOAS');
+    else if (principal && !bloqueio) {
+      texto = t(`${NS}.PRINCIPAL`, { outro: principal.agent_name });
+    }
     return {
       valor: canal.inbox_id,
       inbox: caixa || { channel_type: canal.channel_type },
       titulo: canal.name,
-      texto:
-        principal && !bloqueio
-          ? t(`${NS}.PRINCIPAL`, { outro: principal.agent_name })
-          : enderecoDaCaixa(caixa),
+      texto,
       desabilitada: Boolean(bloqueio),
       motivo: bloqueio ? MOTIVO[bloqueio](canal) : '',
     };
@@ -115,9 +119,11 @@ const validas = computed(() =>
   )
 );
 
-const linhaDaCaixa = (inboxId, chave) => {
+const linhaDaCaixa = (inboxId, chaveDoPapel) => {
   const canal = props.canais.find(item => item.inbox_id === inboxId);
   const outro = principalDaCaixa(canal)?.agent_name || '';
+  // Na caixa só de pessoas não há quem atenda primeiro: o texto fala das pessoas.
+  const chave = soDePessoas(canal) ? `${chaveDoPapel}_PESSOAS` : chaveDoPapel;
   return {
     inboxId,
     nome: canal?.name || '',
@@ -125,8 +131,8 @@ const linhaDaCaixa = (inboxId, chave) => {
       channel_type: canal?.channel_type,
     },
     texto:
-      chave === 'AVISO' && props.semNome
-        ? t(`${NS}.AVISO_SEM_NOME`, { outro })
+      chaveDoPapel === 'AVISO' && props.semNome
+        ? t(`${NS}.${chave}_SEM_NOME`, { outro })
         : t(`${NS}.${chave}`, { outro, nome: props.nome }),
   };
 };
