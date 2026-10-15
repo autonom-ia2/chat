@@ -693,6 +693,28 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo, mas o Guia da Plataforma já tinha o conteúdo pronto — só precisou ser portado."
+    },
+    {
+     "id": "03.05",
+     "titulo": "Achar um ajuste na página de Configurações",
+     "para_que_serve": "Usar a página de cartões de Configurações (menu novo): grupos, busca, Comece por aqui e os selos de estado.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "settings_inicio"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inicio",
+      "destaque": null
+     },
+     "requer": "menu_lateral_novo",
+     "prints": [],
+     "fontes": [
+      "porques: abrir_a_pagina_de_configuracoes"
+     ],
+     "revisar": false,
+     "nota": "Só com o menu novo (#1617)."
     }
    ]
   },

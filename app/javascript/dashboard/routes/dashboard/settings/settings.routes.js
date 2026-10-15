@@ -7,10 +7,6 @@ import {
   AUTOMATION_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
-import {
-  getUserPermissions,
-  hasPermissions,
-} from 'dashboard/helper/permissionsHelper.js';
 
 const CANNED_LIST_PERMISSIONS = [
   ...ROLES,
@@ -45,7 +41,6 @@ import integrations from './integrations/integrations.routes';
 import labels from './labels/labels.routes';
 import macros from './macros/macros.routes';
 import reports from './reports/reports.routes';
-import store from '../../../store';
 import teams from './teams/teams.routes';
 import customRoles from './customRoles/customRole.routes';
 import profile from './profile/profile.routes';
@@ -55,6 +50,13 @@ import captain from './captain/captain.routes';
 import prospecting from './prospecting/prospecting.routes';
 import booking from './booking/booking.routes';
 import data from './data/data.routes';
+import {
+  routes as inicioRoutes,
+  CHAVES_EXTRAS_DO_INICIO,
+} from './inicio/inicio.routes';
+import { destinoDeConfiguracoes } from './inicio/destinoDeConfiguracoes';
+
+const SettingsWrapper = () => import('./SettingsWrapper.vue');
 
 export default {
   routes: [
@@ -62,25 +64,14 @@ export default {
       path: frontendURL('accounts/:accountId/settings'),
       name: 'settings_home',
       meta: {
-        permissions: SETTINGS_LANDINGS.flatMap(page => page.permissions),
+        permissions: [
+          ...SETTINGS_LANDINGS.flatMap(page => page.permissions),
+          ...CHAVES_EXTRAS_DO_INICIO,
+        ],
       },
-      redirect: to => {
-        if (
-          store.getters.getCurrentRole === 'administrator' &&
-          store.getters.getCurrentCustomRoleId === null
-        ) {
-          return { name: 'general_settings_index', params: to.params };
-        }
-
-        const permissions = getUserPermissions(
-          store.getters.getCurrentUser,
-          to.params.accountId
-        );
-        const landing = SETTINGS_LANDINGS.find(page =>
-          hasPermissions(page.permissions, permissions)
-        );
-        return { name: landing.name, params: to.params };
-      },
+      // Nunca é exibida: o beforeEnter sempre manda para outra tela.
+      component: SettingsWrapper,
+      beforeEnter: to => destinoDeConfiguracoes(to, SETTINGS_LANDINGS),
     },
     ...account.routes,
     ...agent.routes,
@@ -106,5 +97,6 @@ export default {
     ...captain.routes,
     ...prospecting.routes,
     ...booking.routes,
+    ...inicioRoutes,
   ],
 };
