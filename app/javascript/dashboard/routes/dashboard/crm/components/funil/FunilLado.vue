@@ -7,6 +7,7 @@ import PreviaEtapa from './previas/PreviaEtapa.vue';
 import PreviaSobre from './previas/PreviaSobre.vue';
 import PreviaVendas from './previas/PreviaVendas.vue';
 import PreviaLembretes from './previas/PreviaLembretes.vue';
+import PreviaLembretesAtender from './previas/PreviaLembretesAtender.vue';
 import PreviaCaixa from './previas/PreviaCaixa.vue';
 import PreviaAnuncios from './previas/PreviaAnuncios.vue';
 
@@ -38,6 +39,9 @@ const props = defineProps({
   etapaAvisada: { type: String, default: '' },
   // #1498 — sem tipo escolhido, o funil novo ainda não tem quadro.
   semTipo: { type: Boolean, default: false },
+  // #1498 — prévia dos lembretes de Atender.
+  lembretesAtender: { type: Object, default: null },
+  modelo: { type: String, default: '' },
 });
 
 const P = 'CRM_FUNIL.PREVIA';
@@ -105,6 +109,17 @@ const google = computed(() =>
         :sucesso="sucesso"
         :fracasso="fracasso"
         :dinheiro="dinheiro"
+      />
+    </PreviaMoldura>
+    <PreviaMoldura
+      v-else-if="em('returns') && !venda"
+      :titulo="$t('CRM_FUNIL.ATENDER.LEMBRETES.PREVIA_TITULO')"
+      :texto="$t('CRM_FUNIL.ATENDER.LEMBRETES.PREVIA_TEXTO')"
+    >
+      <PreviaLembretesAtender
+        :modelo="modelo"
+        :sucesso="sucesso"
+        :ligados="lembretesAtender || {}"
       />
     </PreviaMoldura>
     <PreviaMoldura

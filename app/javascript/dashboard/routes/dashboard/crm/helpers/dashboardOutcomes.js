@@ -37,3 +37,31 @@ export const openWork = summary => [
   { key: 'CONVERSATIONS', value: summary?.open_conversations_count || 0 },
   { key: 'CARDS', value: summary?.open_count || 0 },
 ];
+
+// #1498 — tempo de solução em palavras curtas: "1 d 4 h", "3 h 20 min",
+// "12 min". Sem cards resolvidos no período, "—".
+const MINUTO = 60;
+const HORA = 60 * MINUTO;
+const DIA = 24 * HORA;
+export const duracao = segundos => {
+  if (!Number.isFinite(segundos)) return { chave: 'SEM_DADOS', valores: {} };
+  const total = Math.max(Math.round(segundos), 0);
+  if (total >= DIA) {
+    const valores = {
+      d: Math.floor(total / DIA),
+      h: Math.floor((total % DIA) / HORA),
+    };
+    return { chave: valores.h ? 'DIAS' : 'SO_DIAS', valores };
+  }
+  if (total >= HORA) {
+    const valores = {
+      h: Math.floor(total / HORA),
+      m: Math.floor((total % HORA) / MINUTO),
+    };
+    return { chave: valores.m ? 'HORAS' : 'SO_HORAS', valores };
+  }
+  return {
+    chave: 'MINUTOS',
+    valores: { m: Math.max(Math.round(total / MINUTO), 1) },
+  };
+};

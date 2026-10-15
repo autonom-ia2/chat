@@ -5440,6 +5440,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -5452,14 +5460,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -23258,6 +23266,14 @@
         "tipo": "objeto"
       },
       "score_enabled": {},
+      "service_reminders": {
+        "campos": {
+          "payment": {},
+          "progress": {},
+          "resolved_check": {}
+        },
+        "tipo": "objeto"
+      },
       "stale_hours": {}
     },
     "completo": false,
@@ -23270,14 +23286,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
     ],
     "sem_corpo": false
   },
