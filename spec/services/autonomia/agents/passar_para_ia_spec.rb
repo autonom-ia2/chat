@@ -257,6 +257,14 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       expect(contrato).not_to have_received(:registrar_passagem!)
     end
 
+    it 'pedido da IA sem pedida_por e sem origem: erro, e nada troca nem é registrado como o sistema' do
+      eventos = eventos_de_troca { expect { passar(por: :ia) }.to raise_error(ArgumentError, /pedida_por nem origem/) }
+
+      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(contrato).not_to have_received(:registrar_passagem!)
+      expect(eventos).to be_empty
+    end
+
     it 'pedido do CRM com pedida_por: erro (o pedido do CRM é do sistema)' do
       expect { passar(por: :crm, pedida_por: pessoa) }.to raise_error(ArgumentError, /pedida_por/)
       expect(conversation.reload.ai_assignee).to eq(porta)
