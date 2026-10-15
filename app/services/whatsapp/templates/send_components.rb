@@ -10,6 +10,8 @@
 #   buttons[i]: { type: 'catalog', thumbnail_product_retailer_id?: … }     botão de catálogo
 #   buttons[i]: { type: 'quick_reply', payload: … }                        resposta rápida com payload estável (#1473): a Meta
 #                                                                          devolve o payload, não o texto do botão
+#   products: { retailer_ids: [...], catalog_id: … }                       produtos do catálogo (#1418): topo do produto, botão
+#                                                                          MPM ou cartões (Whatsapp::Templates::ProductParams)
 # O cupom (botão COPY_CODE) já era enviado pelo Chatwoot (`{ type: 'copy_code', parameter: … }`).
 #
 # Formato de cada componente conforme a documentação oficial da Meta, lida em 13/10/2026:
@@ -24,11 +26,12 @@ module Whatsapp::Templates::SendComponents
   def process_enhanced_template_params(template, processed_params = nil)
     params = (processed_params || template_params['processed_params']).to_h
     components = super
-    extras = offer_components(template, params) + carousel_components(template, params)
-    buttons = extra_button_components(template, params)
-    return components if extras.empty? && buttons.empty?
+    products = Whatsapp::Templates::ProductParams.components(template, params)
+    extras = offer_components(template, params) + carousel_components(template, params) + products[:after_body]
+    buttons = extra_button_components(template, params) + products[:buttons]
+    return components if extras.empty? && buttons.empty? && products[:header].empty?
 
-    @template_params = after_body(components, extras) + buttons
+    @template_params = products[:header] + after_body(components, extras) + buttons
   end
 
   # Oferta e carrossel vão logo depois do corpo, como nos exemplos da Meta; os botões ficam no fim.

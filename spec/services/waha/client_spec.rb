@@ -39,6 +39,14 @@ RSpec.describe Waha::Client do
       expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas') }
         .to raise_error(described_class::Error) { |error| expect(error.status).to be_nil }
     end
+
+    # #1453: o motor respondeu 2xx (executou o pedido) mas o corpo não é JSON: não dá para confirmar o resultado.
+    it 'raises InvalidResponse (still an Error) for a 2xx answer with an invalid JSON body' do
+      stub_request(:get, url).to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: '{quebrado')
+
+      expect { client.check_contact_exists(phone: '5511912345678', session: 'vendas') }
+        .to raise_error(described_class::InvalidResponse, a_string_including('resposta inválida'))
+    end
   end
 
   it 'creates a session with apps when provided' do

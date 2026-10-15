@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
 import CaixaIcone from './CaixaIcone.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
@@ -11,8 +12,10 @@ import {
   juntar,
   legadoPendente,
   modoDaCaixa,
+  portaOuRobo,
   primeiroNome,
   quemFazTriagem,
+  roboExterno,
 } from '../helpers/caixa';
 import {
   areasDa,
@@ -38,10 +41,24 @@ const funis = computed(() => funisDaCaixa(props.caixa, props.funis));
 // Todo mundo da caixa, administrador incluído: numa conta em que só há
 // administradores, "0 pessoas" diria que ninguém cuida, e todos veem tudo.
 const pessoas = computed(() => props.caixa.people.length);
-// #1447 — com a Fase 2 dos Agentes: a porta e os agentes de área que cuidam
-// de algum funil da caixa. Sem ela, o robô que atende primeiro, como sempre.
-const comAgentes = computed(() => temAgentesIa(props.caixa));
-const porta = computed(() => portaDa(props.caixa) || props.caixa.agent_bot);
+// #1447 — com a Fase 2 dos Agentes (da conta, #1570): a porta e os agentes de
+// área que cuidam de algum funil da caixa. Sem ela, o robô que atende primeiro, como sempre.
+const fase2 = useFase2();
+const comAgentes = computed(() => temAgentesIa(props.caixa, fase2.value));
+const porta = computed(() =>
+  portaOuRobo(portaDa(props.caixa), props.caixa.agent_bot)
+);
+// #1570 — robô de outro sistema atende primeiro: "agente externo", com ou sem
+// a Fase 2.
+const externo = computed(
+  () => !porta.value && roboExterno(props.caixa.agent_bot)
+);
+const fraseDoRobo = computed(() => {
+  const nome = props.caixa.agent_bot?.name;
+  return roboExterno(props.caixa.agent_bot)
+    ? t('CRM_CAIXAS.CARTAO.ROBO_EXTERNO', { nome })
+    : t('CRM_CAIXAS.CARTAO.ROBO', { nome });
+});
 const areas = computed(() =>
   areasDa(props.caixa)
     .map(agente => ({
@@ -138,7 +155,7 @@ const aviso = computed(() => {
         </dt>
         <dd v-if="!comAgentes" class="m-0 text-[0.9375rem] text-n-slate-12">
           <span v-if="caixa.agent_bot" class="block">
-            {{ $t('CRM_CAIXAS.CARTAO.ROBO', { nome: caixa.agent_bot.name }) }}
+            {{ fraseDoRobo }}
           </span>
           {{ $t('CRM_CAIXAS.CARTAO.PESSOAS', { n: pessoas }, pessoas) }}
           <template v-if="funis.length > 1 && triagem">
@@ -161,6 +178,13 @@ const aviso = computed(() => {
                 $t('CRM_CAIXAS.PESSOAS.SELO_IA')
               }}</span>
             </span>
+          </span>
+          <span v-else-if="externo" data-externo class="flex items-start gap-2">
+            <span
+              class="i-lucide-bot mt-0.5 size-4 shrink-0 text-n-slate-11"
+              aria-hidden="true"
+            />
+            <span>{{ fraseDoRobo }}</span>
           </span>
           <span
             v-for="agente in areas"

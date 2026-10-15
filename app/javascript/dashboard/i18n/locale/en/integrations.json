@@ -64,6 +64,7 @@
     },
     "WEBHOOK": {
       "SUBSCRIBED_EVENTS": "Subscribed Events",
+      "SUBSCRIBED_EVENTS_LABEL": "Subscribed Events:",
       "LEARN_MORE": "Learn more about webhooks",
       "PAYWALL": {
         "TITLE": "Webhooks are available on paid plans",
@@ -99,6 +100,7 @@
             "CONTACT_UPDATED": "Contact updated",
             "CONVERSATION_TYPING_ON": "Conversation Typing On",
             "CONVERSATION_TYPING_OFF": "Conversation Typing Off",
+            "INBOX_CREATED": "Inbox created",
             "INBOX_UPDATED": "Inbox updated"
           },
           "CRM_EVENTS": {

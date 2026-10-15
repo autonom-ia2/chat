@@ -22,7 +22,10 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
-import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
+import {
+  definirPacoteDoPainel,
+  setDashboardLocale,
+} from 'dashboard/i18n/localeLoader';
 
 export default {
   name: 'App',
@@ -115,6 +118,8 @@ export default {
         accountId: this.currentAccountId,
       });
       const account = this.getAccount(this.currentAccountId);
+      // #1550 — pacote de tradução da conta, antes de instalar o idioma.
+      definirPacoteDoPainel(account.autonomia_pacote);
       const { locale, latest_chatwoot_version: latestChatwootVersion } =
         account;
       const { pubsub_token: pubsubToken } = this.currentUser || {};

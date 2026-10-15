@@ -129,7 +129,8 @@ RSpec.describe Autonomia::Agents::Agent do
       expect(area.reload).to have_attributes(status: 'paused', enabled: false)
     end
 
-    it 'para a área cuja caixa perdeu a porta, e a porta que saiu' do
+    # #1433 (decisão do Rodrigo de 15/10): a porta sai, a área fica (a caixa vira só de pessoas) e segue trabalhando.
+    it 'para a porta que saiu, e a área da caixa continua com onde trabalhar' do
       porta = agente('Porta')
       conectar(porta, inbox)
       area = agente('Financeiro')
@@ -137,7 +138,9 @@ RSpec.describe Autonomia::Agents::Agent do
 
       desconectar(porta, inbox)
 
-      expect([porta.reload, area.reload].map { |a| [a.status, a.enabled] }).to all(eq(['paused', false]))
+      expect(porta.reload).to have_attributes(status: 'paused', enabled: false)
+      expect(area.reload).to have_attributes(status: 'active', enabled: true)
+      expect(area.tem_onde_trabalhar?).to be(true)
     end
 
     it 'não para a área que ainda é porta em outra caixa' do
@@ -182,7 +185,7 @@ RSpec.describe Autonomia::Agents::Agent do
   end
 
   describe 'parada automática: soft delete, espelho e evento' do
-    it 'o soft delete da porta para a área que só tinha aquela caixa' do
+    it 'o soft delete da porta não para a área que só tinha aquela caixa (#1433: a área fica)' do
       porta = agente('Porta')
       conectar(porta, inbox)
       area = agente('Financeiro')
@@ -190,7 +193,8 @@ RSpec.describe Autonomia::Agents::Agent do
 
       Autonomia::Agents::SoftDelete.new(agent: porta, actor: nil).perform
 
-      expect(area.reload).to have_attributes(status: 'paused', enabled: false)
+      expect(area.reload).to have_attributes(status: 'active', enabled: true)
+      expect(area.tem_onde_trabalhar?).to be(true)
     end
 
     it 'deixa espelho e bots coerentes depois de parar a porta' do

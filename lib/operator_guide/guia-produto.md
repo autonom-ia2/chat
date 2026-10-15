@@ -552,10 +552,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
 - onde_fica: Sidebar > CRM > CRM SLA
 - rota: `crm_sla_index` - `/app/accounts/:accountId/crm/sla`
-- gate: papel `administrator` ou `crm_admin`
+- gate: papel `administrator` ou `crm_admin` ou `sla_manage`
 - pre_requisitos: funis e caixas para associar políticas e agendas.
 - passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
-- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo.
+- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo; função só com `sla_manage` edita as políticas, mas a agenda das caixas fica para administrador ou `crm_admin`.
 - nav_target: `crm_sla_index`
 - highlight: `crm-new-sla`
 
@@ -1001,9 +1001,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Agente da equipe
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
-- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo.
-- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (só os que já têm quem atenda primeiro) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
-- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; canal sem principal, com outro robô ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo ou atendido só por pessoas (sem agente principal e sem agente externo).
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (os que têm agente principal atendendo e os atendidos só por pessoas) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal, ou que o canal é atendido só por pessoas, e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
+- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; no canal atendido só por pessoas, conversa nova continua com as pessoas e ele só responde a conversa que alguém passar para ele, nunca começa sozinho; canal com agente externo ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
 - nav_target: `autonomia_agents_builder`
 
 ### Criar um agente que ajuda outros agentes (ajudante)
