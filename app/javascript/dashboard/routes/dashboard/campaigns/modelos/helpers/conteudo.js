@@ -2,6 +2,7 @@ import {
   LIMITE_DO_RODAPE,
   LIMITE_DO_TEXTO,
   LIMITE_DO_TEXTO_DA_OFERTA,
+  LIMITE_DO_TEXTO_DE_UM_PRODUTO,
   formatoPorChave,
   objetivoPorChave,
 } from '../constants';
@@ -13,6 +14,15 @@ import { conferirBotoes } from './regraEstrutural';
 // ("Nome do cliente") e nunca como {{1}}; a troca para o formato da Meta é do
 // adaptador. Nada aqui usa expressão regular (regra do Rodrigo): o texto é lido
 // com indexOf/split.
+
+// Limite de letras do texto: menor na oferta e no produto único (#1418).
+export const limiteDoTexto = conteudo => {
+  if (conteudo?.formato === 'oferta') return LIMITE_DO_TEXTO_DA_OFERTA;
+  if (conteudo?.formato === 'produtos' && conteudo.produtos?.tipo === 'um') {
+    return LIMITE_DO_TEXTO_DE_UM_PRODUTO;
+  }
+  return LIMITE_DO_TEXTO;
+};
 
 const ABRE = '[';
 const FECHA = ']';
@@ -160,8 +170,7 @@ export const conferirConteudo = (conteudo, contexto = {}) => {
   // Código de verificação: o texto é fixo do WhatsApp, só a validade muda.
   if (conteudo.formato === 'codigo') return conferirFormato(conteudo, contexto);
   const formato = conteudo.formato || 'padrao';
-  const limite =
-    formato === 'oferta' ? LIMITE_DO_TEXTO_DA_OFERTA : LIMITE_DO_TEXTO;
+  const limite = limiteDoTexto(conteudo);
   const pedacos = conteudo.texto.filter(
     pedaco => pedaco.t === 'campo' || temLetras(pedaco.v)
   );

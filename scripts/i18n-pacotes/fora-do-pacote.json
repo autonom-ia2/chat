@@ -42,6 +42,7 @@
     "YEAR_IN_REVIEW.BUSIEST_DAY.COMPARISON.500_PLUS": "\"Perdeu a calma\": expressão da retrospectiva do ano."
   },
   "servidor": {
-    "autonomia.guide.avisos.whatsapp_proxy.sessao_instavel_trocada": "\"O número ganhou outro\" IP: aviso técnico do proxy do WhatsApp; não é resultado de venda."
+    "autonomia.guide.avisos.whatsapp_proxy.sessao_instavel_trocada": "\"O número ganhou outro\" IP: aviso técnico do proxy do WhatsApp; não é resultado de venda.",
+    "whatsapp_templates.errors.catalog_not_found": "\"A conexão perdeu o acesso\" ao catálogo do WhatsApp: aviso de conexão; não é resultado de venda."
   }
 }

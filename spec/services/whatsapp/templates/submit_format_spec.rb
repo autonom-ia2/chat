@@ -23,6 +23,16 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
     { 'buttons' => campaign_buttons(component_named(components, 'BUTTONS')),
       'limited_time_offer' => { 'expiration_time_ms' => 1.day.from_now.to_i * 1000 },
       'carousel' => { 'cards' => Array(component_named(components, 'CAROUSEL')&.dig('cards')).map { |card| campaign_card(card) } } }
+      .merge(campaign_products(template))
+  end
+
+  # #1418: o modelo de produtos leva o mínimo de produtos que a Meta aceita (1; 2 no carrossel).
+  def campaign_products(template)
+    kind = Whatsapp::Templates::ProductParams.kind(template)
+    return {} unless kind
+
+    ids = Array.new(Whatsapp::Templates::ProductParams::LIMITS[kind].min) { |index| "sku-#{index}" }
+    { 'products' => { 'retailer_ids' => ids } }
   end
 
   def component_named(components, type)
@@ -187,6 +197,16 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
         .to eq(['carousel_card'])
       no_url = card(button: { 'type' => 'URL', 'text' => 'Ver', 'url' => '' })
       expect(described_class.problems(template('MARKETING', { 'type' => 'CAROUSEL', 'cards' => [card, no_url] }))).to eq(['url_missing'])
+    end
+
+    # #1418: o cartão de produto não tem foto nossa nem texto: o topo PRODUCT vem do catálogo e o botão é o "Ver" (SPM).
+    it 'aceita o carrossel de produtos: topo PRODUCT e um botão em cada cartão' do
+      produto = { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, buttons({ 'type' => 'SPM', 'text' => 'Ver' })] }
+      sem_botao = { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }] }
+      expect(described_class.problems(template('MARKETING', { 'type' => 'CAROUSEL', 'cards' => [produto, produto] }))).to eq([])
+      expect(described_class.problems(template('UTILITY', { 'type' => 'CAROUSEL', 'cards' => [produto, produto] }))).to eq(['marketing_only'])
+      expect(described_class.problems(template('MARKETING', { 'type' => 'CAROUSEL', 'cards' => [produto, sem_botao] })))
+        .to eq(['carousel_card'])
     end
   end
 
