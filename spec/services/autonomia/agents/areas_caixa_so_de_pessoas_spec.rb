@@ -3,7 +3,7 @@ require 'rails_helper'
 # #1433 (tema 13) — agente da equipe (área) em caixa atendida só por pessoas: sem principal (porta) e sem robô de fora.
 # Decisão do Rodrigo de 15/10 (#1593): sem isso o cenário humano → IA → humano não funciona. Ali a área só responde
 # quando é DONA da conversa (o espelho dela é o ai_assignee, por passagem); conversa nova nasce sem robô e ninguém
-# responde. Caixa com outro robô continua recusada.
+# responde. Caixa com agente de outro sistema também aceita (#1648, decisão do Rodrigo de 15/10, opção B).
 RSpec.describe Autonomia::Agents::Areas do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account, name: 'WhatsApp Vendas') }
@@ -14,7 +14,7 @@ RSpec.describe Autonomia::Agents::Areas do
                                      instruction: 'Atenda o cliente.')
   end
 
-  def robo_externo(caixa)
+  def agente_de_outro_sistema(caixa)
     AgentBotInbox.create!(inbox: caixa, agent_bot: create(:agent_bot, account: caixa.account), account: caixa.account)
   end
 
@@ -40,19 +40,13 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(described_class.vincular!(agent: agente('Suporte'), inbox: inbox)).to have_attributes(papel: 'area')
     end
 
-    it 'recusa a caixa com agente externo (bot de webhook), sem deixar espelho nem vínculo' do
-      robo_externo(inbox)
+    it 'aceita a caixa com agente de outro sistema: a área entra e ele continua sendo o robô da caixa (#1648)' do
+      bot_inbox = agente_de_outro_sistema(inbox)
 
-      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }
-        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
-        .and(not_change(AgentBot, :count))
-        .and(not_change(Autonomia::Agents::AgentInbox, :count))
-    end
+      vinculo = described_class.vincular!(agent: da_equipe, inbox: inbox)
 
-    it 'recusa a caixa com robô de fora mesmo com o robô desligado (AgentBotInbox inativo)' do
-      robo_externo(inbox).update!(status: :inactive)
-
-      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }.to raise_error(described_class::CaixaNaoAceitaArea)
+      expect(vinculo).to have_attributes(papel: 'area', deleted_at: nil)
+      expect(AgentBotInbox.where(inbox_id: inbox.id).pluck(:agent_bot_id)).to eq([bot_inbox.agent_bot_id])
     end
 
     it 'caixa com principal parado continua recusada' do

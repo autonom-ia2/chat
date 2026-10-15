@@ -82,36 +82,26 @@ RSpec.describe Autonomia::Agents::AgentInbox do
       expect(build_link(papel: 'gerente')).not_to be_valid
     end
 
-    # #1433: sem porta, a área só entra na caixa atendida só por pessoas (sem robô de fora).
-    it 'aceita área em caixa só de pessoas e recusa em caixa sem porta com robô de fora' do
+    # #1433: sem porta, a área entra na caixa só de pessoas; #1648 (decisão do Rodrigo de 15/10, opção B): também na caixa
+    # com agente de outro sistema atendendo primeiro.
+    it 'aceita área em caixa só de pessoas e em caixa sem porta com agente de outro sistema' do
       expect(area).to be_valid
 
       AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'Parceiro'), account: account)
-      expect(area).not_to be_valid
-      expect(area.tap(&:valid?).errors[:papel]).to be_present
-    end
-
-    it 'com porta ativa, o AgentBotInbox do espelho dela não conta como robô de fora' do
-      porta
-      AgentBotInbox.create!(inbox: inbox, agent_bot: agent_bot, account: account)
-
-      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
       expect(area).to be_valid
-
-      # #1648 — o espelho que sobrou de uma porta apagada continua espelho, não robô de fora (AgentInbox.espelhos).
-      porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
     end
 
-    it 'espelho de agente apagado ou de outra caixa não é robô de fora; bot de webhook é (#1648)' do
+    it 'espelho de agente, apagado ou de outra caixa, não é agente de outro sistema; bot de webhook é (#1648)' do
       outra = create(:inbox, account: account)
       AgentBotInbox.create!(inbox: outra, agent_bot: agent_bot, account: account)
       porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      de_outro_sistema = -> { Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(outra).pluck(:agent_bot_id) }
 
-      expect(described_class.robo_externo_na_caixa?(outra.id)).to be(false)
+      expect(de_outro_sistema.call).to be_empty
 
-      AgentBotInbox.create!(inbox: outra, agent_bot: AgentBot.create!(account: account, name: 'n8n'), account: account)
-      expect(described_class.robo_externo_na_caixa?(outra.id)).to be(true)
+      n8n = AgentBot.create!(account: account, name: 'Automação')
+      AgentBotInbox.create!(inbox: outra, agent_bot: n8n, account: account)
+      expect(de_outro_sistema.call).to eq([n8n.id])
     end
 
     it 'aceita área em caixa com porta ativa, e mais de uma área por caixa' do

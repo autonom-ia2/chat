@@ -575,8 +575,17 @@ en:
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
       caixa_externo:
-        caixa_com_agente_da_plataforma: "This inbox is handled by the platform Agents. To use an external agent here, first remove them from the inbox on each agent's page."
-        desconectar_agente_da_plataforma: "This inbox is handled by a platform Agent. To take it out, use the agent's page."
+        caixa_com_agente_da_plataforma: 'This channel is handled by AI agents. To change who answers first, use the AI agent tab of the channel.'
+        desconectar_agente_da_plataforma: 'This channel is handled by an AI agent. To change who answers first, use the AI agent tab of the channel.'
+        agente_da_plataforma: 'This is a platform AI agent. To make it answer first, use the AI agent tab of the channel.'
+      quem_atende:
+        pedido_invalido: 'Choose one AI agent, or nobody.'
+        agente_interno: 'This agent only works inside the dashboard and cannot answer customers.'
+        agente_rascunho: 'This agent is not finished yet. Finish creating it before choosing it.'
+        agente_parado: 'This agent is stopped. Turn it on in the agent page before choosing it.'
+        agente_ja_e_da_equipe: 'This agent already receives conversations when someone hands them over in this channel. To make it answer first, remove it from the channel team in CRM › Who handles what.'
+        mudou_agora: 'Someone changed this channel just now. Reload and try again.'
+        conexao_recusada: 'This agent cannot answer first in this channel right now.'
       ajudante:
         outra_conta: 'The helper and the agents it helps must belong to this account.'
         ele_mesmo: 'An agent cannot help itself.'
@@ -610,7 +619,6 @@ en:
           rascunho: '%{nome} is not finished yet. Finish the conversation that creates the agent, then put it on the team of %{canal}.'
           nao_pode_ser_area: '%{nome} cannot be on the team of %{canal}. Paused agents that still have a channel and helpers stay out of teams.'
           sem_principal: 'The main agent of %{canal} is not answering right now. A team agent needs the main agent answering on the channel.'
-          robo_externo: "An external agent answers on %{canal}. A team agent cannot join a channel with an external agent yet."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

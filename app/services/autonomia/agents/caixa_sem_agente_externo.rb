@@ -1,10 +1,14 @@
-# chat#1648 — Prepend em Api::V1::Accounts::InboxesController#set_agent_bot (aba "Agente externo" da caixa).
-# Caixa atendida por agente da plataforma (vínculo AgentInbox não apagado, de porta ou de área) não aceita agente
-# externo (n8n, Zapier...): o vínculo ficaria órfão e os dois responderiam. Recusa com 422 e um `code`:
+# chat#1648 — Prepend em Api::V1::Accounts::InboxesController#set_agent_bot (a API crua de pôr robô na caixa).
+# Caixa com PORTA da plataforma (vínculo AgentInbox de porta, não apagado) não aceita agente de outro sistema por aqui:
+# o vínculo da porta ficaria órfão e os dois responderiam. A troca certa é a da aba "Agente de IA" (PUT quem_atende,
+# Autonomia::Agents::TrocarQuemAtende), que tira a porta pelo InboxConnector. Recusa com 422 e um `code`:
 # - caixa_com_agente_da_plataforma: pediu um robô que não é o espelho da porta desta caixa;
 # - desconectar_agente_da_plataforma: pediu para desconectar (agent_bot vazio) a caixa que tem porta nossa, o que
-#   soltaria o espelho dela. Quem tira o agente da caixa é a página do agente (InboxConnector, Areas).
-# Vale para todas as contas, com ou sem a Fase 2.
+#   soltaria o espelho dela;
+# - agente_da_plataforma: pediu o espelho de um agente da plataforma (#1626: espelho não é robô) que não é a porta desta
+#   caixa. O agente da plataforma entra pela aba Agente de IA ou pela página dele.
+# Caixa só com agente da equipe (área) aceita: a área fica e convive com o agente de outro sistema (decisão do Rodrigo
+# de 15/10, opção B; o risco de os dois responderem ficou na #1636). Vale para todas as contas, com ou sem a Fase 2.
 #
 # TRAVA OS AGENTES DA CAIXA E DEPOIS A CAIXA, a ordem dos caminhos da Autonom.ia (Areas e InboxConnector travam o
 # agente e depois a caixa). Quem serializa com um agente entrando agora (que ainda não tem vínculo para ser travado
@@ -30,14 +34,17 @@ module Autonomia::Agents::CaixaSemAgenteExterno
   end
 
   def codigo_da_recusa
-    return unless ::Autonomia::Agents::QuemAtendeACaixa.vinculos(@inbox).exists?
-
     espelho = ::Autonomia::Agents::QuemAtendeACaixa.espelho_da_porta(@inbox)
-    if @agent_bot
-      :caixa_com_agente_da_plataforma unless @agent_bot.id == espelho
-    elsif espelho
-      :desconectar_agente_da_plataforma
-    end
+    return desconectar(espelho) if @agent_bot.nil?
+    return if @agent_bot.id == espelho
+    return :caixa_com_agente_da_plataforma if espelho
+
+    :agente_da_plataforma if ::Autonomia::Agents::AgentInbox.espelhos.exists?(agent_bot_id: @agent_bot.id)
+  end
+
+  # Desconectar (agent_bot vazio) só solta robô de outro sistema: o espelho da porta sai pela troca ou pelo agente.
+  def desconectar(espelho)
+    :desconectar_agente_da_plataforma if espelho
   end
 
   def recusar(codigo)

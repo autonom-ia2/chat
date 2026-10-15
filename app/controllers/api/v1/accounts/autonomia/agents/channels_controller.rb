@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accounts::Autonomia::BaseController
   PAPEL_AREA = 'area'.freeze
   # Código do Areas.caixa_aceita_area? -> motivo da tela (area_errors).
-  MOTIVO_DA_CAIXA = { principal_parado: :sem_principal, robo_externo: :robo_externo, fase2_desligada: :fase2_off }.freeze
+  MOTIVO_DA_CAIXA = { principal_parado: :sem_principal, fase2_desligada: :fase2_off }.freeze
 
   before_action :fetch_agent
   before_action :fetch_inbox, only: [:create, :destroy]

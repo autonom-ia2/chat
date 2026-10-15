@@ -2,13 +2,13 @@
 # dos Agentes ligada na conta (Crm::Ai::Config.areas_ligadas?); sem ela a caixa não leva `ai_agents` e a tela esconde a
 # parte dos agentes.
 #
-# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Sem porta, a caixa só de pessoas (sem agente
-#   externo) também recebe área (#1433); a caixa com agente externo não.
+# - porta: o agente que atende primeiro (vínculo de porta, Agentes IA). Sem porta, a caixa só de pessoas (#1433) e a
+#   caixa com agente de outro sistema (#1648, opção B) também recebem área.
 # - areas: os agentes vinculados como área na caixa, como as pessoas membros dela, com os funis de que cuidam.
 #   `ultima_caixa`: tirar este agente daqui o faz parar de atender (é o único lugar onde ele trabalha).
 # - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa que aceita área).
 #   `parado`: entrar na caixa liga o agente.
-# - externo (só com `detalhe`, #1648): o agente externo que atende primeiro, { id, name } ou nil.
+# - externo (só com `detalhe`, #1648): o agente de outro sistema que atende primeiro, { id, name } ou nil.
 class Crm::Caixas::RetratoDosAgentes
   # `detalhe: true` só na caixa aberta (#1570): a lista de caixas não consulta o leitor.
   def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false)
@@ -52,8 +52,8 @@ class Crm::Caixas::RetratoDosAgentes
     { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
   end
 
-  # Com porta: como sempre (o principal parado é conferido ao salvar). Sem porta: o leitor único do Agentes IA diz se é
-  # só de pessoas (sem agente externo). Na lista (sem `detalhe`) não consulta e devolve false: na lista, caixa sem
+  # Com porta: como sempre (o principal parado é conferido ao salvar). Sem porta: o leitor único do Agentes IA diz se
+  # aceita (só de pessoas ou com agente de outro sistema, #1648). Na lista (sem `detalhe`) não consulta e devolve false: na lista, caixa sem
   # porta sai com `pode_mudar: false` e `disponiveis: []`. A lista não oferece agentes; só a caixa aberta vale para isso.
   def aceita_area?(porta, inbox_id)
     return true if porta

@@ -1,7 +1,9 @@
 require 'rails_helper'
 
-# chat#1648 — marcação por caixa: a aba "Agente externo" (InboxesController#set_agent_bot) não pluga agente externo em
-# caixa atendida por agente da plataforma, nem desconecta o espelho da porta. Vale para todas as contas.
+# chat#1648 — marcação por caixa: a API crua InboxesController#set_agent_bot não pluga agente de outro sistema em caixa
+# com PORTA da plataforma, nem desconecta o espelho da porta (a troca é o PUT quem_atende). Caixa só com área aceita e a
+# área fica (decisão do Rodrigo de 15/10, opção B). Espelho de agente da plataforma nunca entra por aqui. Vale para todas
+# as contas.
 RSpec.describe 'Inbox set_agent_bot with platform agents', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -47,14 +49,14 @@ RSpec.describe 'Inbox set_agent_bot with platform agents', type: :request do
     expect(robo_da_caixa).to eq([porta.agent_bot_id])
   end
 
-  it 'refuses an external agent on an inbox with only an area' do
-    area!
+  it 'accepts an agent from another system on an inbox with only an area, and the area stays' do
+    area = area!
 
     plugar(externo.id)
 
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['code']).to eq('caixa_com_agente_da_plataforma')
-    expect(robo_da_caixa).to be_empty
+    expect(response).to have_http_status(:ok)
+    expect(robo_da_caixa).to eq([externo.id])
+    expect(area.reload.deleted_at).to be_nil
   end
 
   it 'refuses the mirror of an area, which is not the porta of this inbox' do
@@ -63,6 +65,7 @@ RSpec.describe 'Inbox set_agent_bot with platform agents', type: :request do
     plugar(area.agent_bot_id)
 
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['code']).to eq('agente_da_plataforma')
     expect(robo_da_caixa).to be_empty
   end
 

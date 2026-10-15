@@ -154,7 +154,7 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
   end
 
   # #1648 — espelho de agente da plataforma nunca é agente externo (AgentInbox.espelhos, a regra única do
-  # robo_externo_na_caixa?, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta apagada.
+  # leitura da aba Agente de IA, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta apagada.
   it 'espelho de agente da plataforma nunca é agente externo, nem sobrando de porta apagada (#1648)' do
     tipo = lambda do |caixa|
       get "#{url}/#{caixa.id}", headers: auth_headers(admin)
@@ -225,16 +225,19 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       expect(marta.reload).to be_operating
     end
 
-    it 'caixa com agente externo recusa com crm.caixas.robo_externo, e a tela não a oferece' do
-      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: create(:agent_bot, account: account), account: account)
+    # #1648 (decisão do Rodrigo de 15/10, opção B): o agente de outro sistema atende primeiro e a área fica na equipe.
+    it 'caixa com agente de outro sistema aceita área pelo CRM, mostra o agente e a tela a oferece' do
+      bot = create(:agent_bot, account: account, name: 'Automação')
+      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: bot, account: account)
       get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
-      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('pode_mudar' => false, 'disponiveis' => [])
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents'))
+        .to include('pode_mudar' => true, 'externo' => { 'id' => bot.id, 'name' => 'Automação' })
 
       salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
-      expect(Autonomia::Agents::AgentInbox.kept.where(inbox: so_de_pessoas)).to be_empty
+      expect(response).to have_http_status(:ok)
+      expect(Autonomia::Agents::AgentInbox.kept.area.exists?(inbox: so_de_pessoas, agent: marta)).to be(true)
+      expect(so_de_pessoas.reload.agent_bot).to eq(bot)
     end
 
     it 'principal parado recusa com crm.caixas.principal_parado' do
@@ -248,11 +251,11 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     end
 
     it 'a recusa que vem de dentro do Areas (caixa travada) também sai pelo código' do
-      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(Autonomia::Agents::Areas::CaixaNaoAceitaArea.new(:robo_externo))
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(Autonomia::Agents::Areas::CaixaNaoAceitaArea.new(:principal_parado))
 
       salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
 
-      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.principal_parado')
     end
   end
 

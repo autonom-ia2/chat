@@ -21589,6 +21589,35 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/inboxes/:inbox_id/quem_atende": {
+    "campos": {
+      "agent_bot_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "agent_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "nenhum": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/quem_atende#update",
+    "modelo": "Autonomia::Agents::Agent",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:48",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:58",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:46",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:32"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/prospecting/leads/:id": {
     "campos": {
       "discard_reason": {

@@ -48,7 +48,7 @@ class Crm::Caixas::Retrato
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
   # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é espelho de
   # agente da plataforma; 'externo' em qualquer outro caso (n8n, Zapier...). Espelho é a regra única de
-  # AgentInbox.espelhos (#1648), a mesma do robo_externo_na_caixa?, do `externo` e da lista de Agentes externos.
+  # AgentInbox.espelhos (#1648), a mesma da aba Agente de IA (QuemAtendeACaixa), do `externo` e da lista de Agentes externos.
   def robo(inbox)
     vinculo = inbox.agent_bot_inbox
     return unless vinculo&.active? && vinculo.agent_bot

@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# #1433 / #1648 — um agente externo (bot de webhook do Chatwoot) plugado DEPOIS, pela aba "Agente externo" da caixa
-# (Inbox#set_agent_bot), numa caixa só de pessoas que já tem área. Com a marcação por caixa (#1648) o plug é recusado
-# (422) e nada muda: a área continua válida e dona das conversas dela, e a caixa segue aceitando área.
+# #1433 / #1648 — um agente de outro sistema (bot de webhook do Chatwoot) plugado DEPOIS, pela API crua da caixa
+# (Inbox#set_agent_bot), numa caixa só de pessoas que já tem área. Decisão do Rodrigo de 15/10 (opção B): o plug é
+# aceito e a área fica. Ela continua válida e dona das conversas dela; conversa nova nasce com o agente de outro
+# sistema. O risco de os dois responderem quando o outro sistema não filtra por dono ficou na #1636.
 RSpec.describe Autonomia::Agents::Areas, type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -27,10 +28,9 @@ RSpec.describe Autonomia::Agents::Areas, type: :request do
     post url, params: { agent_bot: externo.id }, headers: admin.create_new_auth_token, as: :json
   end
 
-  it 'o plug do agente externo é recusado e a caixa fica sem robô' do
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['code']).to eq('caixa_com_agente_da_plataforma')
-    expect(AgentBotInbox.where(inbox_id: inbox.id)).to be_empty
+  it 'o plug do agente de outro sistema é aceito e ele vira o robô da caixa' do
+    expect(response).to have_http_status(:ok)
+    expect(AgentBotInbox.where(inbox_id: inbox.id).pluck(:agent_bot_id)).to eq([externo.id])
   end
 
   it 'a área continua válida na caixa, e a caixa segue aceitando área' do
@@ -46,18 +46,19 @@ RSpec.describe Autonomia::Agents::Areas, type: :request do
     expect(Autonomia::Agents::Operate.eligible_agent_inbox(da_area)).to eq(area)
   end
 
-  it 'conversa nova não nasce com o agente externo: a caixa continua sem robô' do
+  it 'conversa nova nasce com o agente de outro sistema' do
     caixa = Inbox.find(inbox.id)
     nova = create(:conversation, account: account, inbox: caixa)
 
-    expect(caixa.agent_bot).to be_nil
-    expect(caixa.active_bot?).to be(false)
-    expect(nova.reload.assignee_agent_bot_id).not_to eq(externo.id)
+    expect(caixa.agent_bot).to eq(externo)
+    expect(caixa.active_bot?).to be(true)
+    expect(nova.reload.assignee_agent_bot_id).to eq(externo.id)
+    expect(Autonomia::Agents::QuemResponde.agent_inbox(nova)).to be_nil
   end
 
-  it 'soltar a área manda as conversas dela para as pessoas, nunca para o agente externo' do
+  it 'soltar a área devolve as conversas dela a quem atende primeiro: o agente de outro sistema' do
     described_class.desvincular!(agent: da_equipe, inbox: inbox)
 
-    expect(da_area.reload.assignee_agent_bot_id).to be_nil
+    expect(da_area.reload.assignee_agent_bot_id).to eq(externo.id)
   end
 end
