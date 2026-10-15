@@ -33,14 +33,37 @@ RSpec.describe 'CRM AI settings API', type: :request do
 
     get url, headers: auth_headers(admin)
     expect(response.parsed_body.dig('payload', 'service_reminders'))
-      .to eq('progress' => false, 'resolved_check' => false, 'payment' => true)
+      .to eq('progress' => false, 'resolved_check' => false, 'payment' => true,
+             'progress_after_hours' => 24, 'resolved_check_after_hours' => 24)
 
     patch url, params: { ai_settings: { service_reminders: { payment: false } } }, headers: auth_headers(admin), as: :json
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('payload', 'service_reminders', 'payment')).to be(false)
     expect(pipeline.reload.metadata.dig('ai', 'service_reminders'))
-      .to eq('progress' => false, 'resolved_check' => false, 'payment' => false)
+      .to eq('progress' => false, 'resolved_check' => false, 'payment' => false,
+             'progress_after_hours' => 24, 'resolved_check_after_hours' => 24)
+  end
+
+  # #1589: o tempo de cada lembrete só aceita as opções da tela; outro valor mantém o que estava.
+  it 'saves the reminder times offered on screen and keeps the saved one for any other value' do
+    account, admin = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: admin)
+    pipeline.update!(counts_as_sale: false, metadata: pipeline.metadata.merge('template' => 'ATENDIMENTO'))
+    url = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings"
+
+    patch url, params: { ai_settings: { service_reminders: { progress_after_hours: 4, resolved_check_after_hours: '168' } } },
+               headers: auth_headers(admin), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'service_reminders'))
+      .to include('progress' => true, 'progress_after_hours' => 4, 'resolved_check_after_hours' => 168)
+
+    patch url, params: { ai_settings: { service_reminders: { progress_after_hours: 5, resolved_check_after_hours: 'abc' } } },
+               headers: auth_headers(admin), as: :json
+
+    expect(pipeline.reload.metadata.dig('ai', 'service_reminders'))
+      .to include('progress_after_hours' => 4, 'resolved_check_after_hours' => 168)
   end
 
   it 'lets administrators read and update pipeline AI settings' do
