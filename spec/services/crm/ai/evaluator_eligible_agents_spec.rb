@@ -37,8 +37,8 @@ RSpec.describe Crm::Ai::Evaluator do
     let(:lia) { criar_agente_ia(account, 'Lia') }
 
     before do
-      dublar_passar_para_ia(destinos: [lia])
-      allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(true)
+      ligar_agentes_ia!(account)
+      agente_na_caixa!(lia, caixa_whatsapp)
     end
 
     it 'pedido pelo nome ligado: a Lia entra com o rótulo de agente' do

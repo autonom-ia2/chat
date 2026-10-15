@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1593 — a Atribuição do funil com agentes de IA: a lista `ai_agents` (só com a Fase 2) e "A mesma pessoa" apontando
-# um agente (pool_type 'ai_agent'). O serviço dos Agentes é dublê por contrato (PassarParaIaHelper).
+# um agente (pool_type 'ai_agent'). Quem pode receber é a regra real dos Agentes (Lia atende as duas caixas do funil).
 RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -13,14 +13,13 @@ RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request 
   let(:lia) { criar_agente_ia(account, 'Lia') }
   let(:marta) { criar_agente_ia(account, 'Marta') }
   let(:url) { "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/ai_settings" }
-  let!(:servico) { dublar_passar_para_ia }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { example.run } }
 
   before do
     [vendas, contato].each { |inbox| pipeline.pipeline_inboxes.create!(account: account, inbox: inbox) }
-    allow(servico).to receive(:destinos_na_caixa).and_return([lia])
-    allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(true)
+    ligar_agentes_ia!(account)
+    [vendas, contato].each { |inbox| agente_na_caixa!(lia, inbox) }
   end
 
   def salvar(handoff, stage_handoff: nil)
@@ -49,7 +48,7 @@ RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request 
   end
 
   it 'sem a Fase 2: a chave não vem, e a tela mostra só pessoas' do
-    allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(false)
+    Autonomia::Agents::Fase2.desligar!(account)
 
     get url, headers: admin.create_new_auth_token
 
@@ -80,7 +79,7 @@ RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request 
   # Pega: desligar a Fase 2 (ou o agente virar interno) travar o save de qualquer outra coisa da Atribuição.
   it 'regra já salva com a Lia: salvar o resto continua funcionando sem a Fase 2' do
     salvar({ enabled: true, pool_type: 'ai_agent', pool_id: lia.id })
-    allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(false)
+    Autonomia::Agents::Fase2.desligar!(account)
 
     salvar({ enabled: true, pool_type: 'ai_agent', pool_id: lia.id, prefer_online: false })
 
@@ -88,7 +87,7 @@ RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request 
   end
 
   it 'sem a Fase 2: não aceita agente' do
-    allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(false)
+    Autonomia::Agents::Fase2.desligar!(account)
 
     salvar({ enabled: true, pool_type: 'ai_agent', pool_id: lia.id })
 

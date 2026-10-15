@@ -27,8 +27,6 @@
 class Crm::Entrega
   Resultado = Struct.new(:status, :pessoa, :motivo, :card, :agente, keyword_init: true)
   Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, :agente, keyword_init: true)
-  # O motivo que os Agentes recebem quando é a Atribuição que passa a um agente de IA (#1593).
-  MOTIVO_IA = 'atribuicao'.freeze
   # Motivos em que quem pediu a passagem foi o robô que atendia.
   PEDIDO_DO_ROBO = %w[robo_pediu n8n].freeze
 
@@ -67,8 +65,8 @@ class Crm::Entrega
   # (Crm::Entrega::ParaIa.alvo).
   def concluir_para_ia!(origem: @conversation.ai_assignee)
     agente = @resultado.agente
-    codigo = passar_ao_agente(agente, origem)
-    registrar_ia(agente, codigo)
+    codigo = Crm::Entrega::ParaIa.pela_atribuicao!(conversation: @conversation, agent: agente, origem: origem,
+                                                   rotulo: "motivo=#{@motivo} origem=#{@origem}")
     return Resultado.new(status: :com_ia, agente: agente, card: @resultado.card) if codigo == Crm::Entrega::ParaIa::PASSOU
     return Resultado.new(status: :nada, motivo: 'ja_tem_pessoa', card: @resultado.card) if codigo == Crm::Entrega::ParaIa::FICA_COM_A_PESSOA
 
@@ -78,17 +76,6 @@ class Crm::Entrega
   end
 
   private
-
-  # Erro no serviço dos Agentes não deixa a conversa sem ninguém: conta como recusa, e a entrega segue sem IA. Erro de
-  # contrato (ArgumentError) é de programação e sobe.
-  def passar_ao_agente(agente, origem)
-    Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :crm, motivo: MOTIVO_IA, origem: origem)
-  rescue ArgumentError
-    raise
-  rescue StandardError => e
-    Rails.logger.error("[crm][entrega] passar ao agente falhou conversa=#{@conversation.id} agente=#{agente.id} erro=#{e.class}")
-    'erro'
-  end
 
   def planejar
     @quem_atendia = robo_que_atendia
@@ -286,13 +273,6 @@ class Crm::Entrega
       "[crm][entrega] conversa=#{@conversation.id} conta=#{@conversation.account_id} card=#{@resultado.card&.id || '-'} " \
       "motivo=#{@motivo} origem=#{@origem} desfecho=#{@resultado.status} pessoa=#{@resultado.pessoa&.id || '-'} " \
       "detalhe=#{@resultado.motivo || '-'}#{' assunto_mudou' if @assunto_mudou}"
-    )
-  end
-
-  def registrar_ia(agente, codigo)
-    Rails.logger.info(
-      "[crm][entrega] conversa=#{@conversation.id} conta=#{@conversation.account_id} motivo=#{@motivo} origem=#{@origem} " \
-      "desfecho=#{codigo == Crm::Entrega::ParaIa::PASSOU ? 'com_ia' : 'ia_recusou'} agente=#{agente.id} codigo=#{codigo}"
     )
   end
 end

@@ -44,6 +44,14 @@ module Crm::AgentesIa
     settings[:selector_mode] == 'direct' ? rotulos(conversation).keys : []
   end
 
+  # "A mesma pessoa" num agente de IA que não pode ser salvo (pode_salvar?): o save da Atribuição falha com 422.
+  def validar_pool!(pipeline, novo, antes)
+    return if novo['pool_type'] != 'ai_agent' || pode_salvar?(pipeline.account, novo, antes)
+
+    pipeline.errors.add(:metadata, :invalid)
+    raise ActiveRecord::RecordInvalid, pipeline
+  end
+
   # A regra salva já apontava este agente: salvar o resto da Atribuição não pede de novo (a Fase 2 pode ter sido
   # desligada, ou o agente parado, depois). Agente novo: escolhivel?.
   def pode_salvar?(account, novo, antes)
