@@ -236,7 +236,10 @@ describe('Sidebar: Agendamento no grupo CRM', () => {
 describe('Sidebar: SLA no grupo CRM', () => {
   const comSla = keys => {
     seat({ role: 'agent', customRoleId: 7, keys });
-    getters['accounts/isFeatureEnabledonAccount'] = ref(() => true);
+    // Todas as flags, menos a do menu novo (#1617): este teste lê o menu de sempre.
+    getters['accounts/isFeatureEnabledonAccount'] = ref(
+      (_id, flag) => flag !== 'menu_lateral_novo'
+    );
     return childrenOf(mountSidebar(), 'CRM');
   };
 

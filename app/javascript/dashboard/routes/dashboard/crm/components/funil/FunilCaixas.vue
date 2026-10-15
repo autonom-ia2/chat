@@ -61,7 +61,9 @@ watch(
 const lugar = computed(() => t('CRM_CAIXAS.LISTA.TITULO'));
 
 const frase = cartao =>
-  t(cartao.etapa ? 'CRM_FUNIL.CAIXAS.SOZINHO' : 'CRM_FUNIL.CAIXAS.ESCOLHIDO');
+  cartao.etapa
+    ? t('CRM_FUNIL.CAIXAS.SOZINHO')
+    : t('CRM_FUNIL.CAIXAS.ESCOLHIDO');
 </script>
 
 <template>

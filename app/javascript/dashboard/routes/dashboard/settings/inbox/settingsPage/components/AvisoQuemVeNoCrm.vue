@@ -34,33 +34,35 @@ const destino = computed(() => ({
 </script>
 
 <template>
-  <aside
-    v-if="ligado"
-    data-aviso-quem-ve
-    class="mb-6 flex items-start gap-3 rounded-2xl border border-n-blue-6 bg-n-blue-2 p-4"
-  >
-    <span
-      class="i-lucide-eye mt-0.5 size-5 shrink-0 text-n-blue-11"
-      aria-hidden="true"
-    />
-    <div class="flex min-w-0 flex-col gap-1">
-      <p class="mb-0 text-sm font-medium text-n-slate-12">
-        {{ $t('CRM_CAIXAS.AVISO_AGENTES.TITULO') }}
-      </p>
-      <p class="mb-0 text-sm text-n-slate-11">
-        {{ $t('CRM_CAIXAS.AVISO_AGENTES.TEXTO', { lugar }) }}
-      </p>
-      <router-link
-        v-if="canAdminCrm"
-        :to="destino"
-        class="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      >
-        {{ $t('CRM_CAIXAS.AVISO_AGENTES.LINK', { lugar }) }}
-        <span
-          class="i-lucide-arrow-right size-4 rtl:rotate-180"
-          aria-hidden="true"
-        />
-      </router-link>
-    </div>
-  </aside>
+  <div>
+    <aside
+      v-if="ligado"
+      data-aviso-quem-ve
+      class="mb-6 flex items-start gap-3 rounded-2xl border border-n-blue-6 bg-n-blue-2 p-4"
+    >
+      <span
+        class="i-lucide-eye mt-0.5 size-5 shrink-0 text-n-blue-11"
+        aria-hidden="true"
+      />
+      <div class="flex min-w-0 flex-col gap-1">
+        <p class="mb-0 text-sm font-medium text-n-slate-12">
+          {{ $t('CRM_CAIXAS.AVISO_AGENTES.TITULO') }}
+        </p>
+        <p class="mb-0 text-sm text-n-slate-11">
+          {{ $t('CRM_CAIXAS.AVISO_AGENTES.TEXTO', { lugar }) }}
+        </p>
+        <router-link
+          v-if="canAdminCrm"
+          :to="destino"
+          class="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        >
+          {{ $t('CRM_CAIXAS.AVISO_AGENTES.LINK', { lugar }) }}
+          <span
+            class="i-lucide-arrow-right size-4 rtl:rotate-180"
+            aria-hidden="true"
+          />
+        </router-link>
+      </div>
+    </aside>
+  </div>
 </template>

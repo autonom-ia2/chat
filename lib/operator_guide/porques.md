@@ -17,13 +17,22 @@
 - passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o painel Seu proximo passo, que e sempre o primeiro que ainda falta; 3. Assista ao video curto ao lado, quando houver; 4. Clique no botao azul do painel (o nome dele e a acao do passo, por exemplo Conectar a chave) para ir direto a tela daquele passo; 5. Volte a lista e siga para o proximo.
 - gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; os passos ficam em tres etapas (Ligar a plataforma, Organizar as vendas, Crescer); passos opcionais trazem Pular por enquanto; o painel mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito) e o tempo estimado; passo que depende de outro mostra Precisa antes, sem bloquear; clicar num passo da lista abre ele no painel; Preciso de ajuda abre o Guia; a lista some do centro da tela quando o essencial termina, mas continua no menu.
 
+### abrir_a_pagina_de_configuracoes
+- titulo: Abrir a página inicial de Configurações (cartões)
+- rota: settings_inicio
+- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
+- onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
+- pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
+- passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
+- gotchas: os cartões ficam em grupos (Sua empresa, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua empresa, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+
 ### criar_caixa_de_entrada
 - titulo: Criar caixa de entrada
 - leitura: caixas
 - cobre: settings_inbox_list, settings_inbox_finish, settings_inboxes_add_agents
 - rota: settings_inbox_new
 - intent: Como crio uma caixa de entrada?; Onde adiciono um novo canal?; Quero conectar um WhatsApp, email, site ou API.; Como comeco um inbox novo?
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa
 - pre_requisitos: ter credenciais/dados do canal escolhido quando o canal exigir
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Clique em adicionar nova caixa; 4. Escolha o tipo de canal; 5. Preencha os dados e avance para agentes/finalizacao.
 - gotchas: cada canal pede dados diferentes; canais sociais/email podem exigir autorizacao externa; a etapa final pode mostrar webhook, script ou instrucoes de DNS.
@@ -33,7 +42,7 @@
 - leitura: caixas
 - rota: settings_inbox_show
 - intent: Onde altero uma caixa existente?; Como mudo nome, saudacao ou configuracoes do inbox?; Onde vejo as abas de configuracao da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa
 - pre_requisitos: caixa de entrada ja criada
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Selecione a caixa; 4. Use as abas de configuracao; 5. Atualize os campos necessarios e salve.
 - gotchas: a rota usa `:tab?`; abas como `configuration`, `collaborators`, `business-hours` e `inbox-settings` aparecem conforme o tipo de canal.
@@ -42,7 +51,7 @@
 - titulo: Gerenciar agentes da caixa
 - rota: settings_inbox_show
 - intent: Como coloco agentes em uma caixa?; Onde removo um agente do inbox?; Por que um agente nao ve uma caixa?; Como ajusto autoatribuicao da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores
 - pre_requisitos: caixa criada; agentes convidados/ativos na conta
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores; 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
 - gotchas: o agente precisa estar ativo na conta; sem estar associado a caixa, ele pode nao receber/visualizar conversas daquele canal.
@@ -51,7 +60,7 @@
 - titulo: Ligar o rodízio para cada conversa nova ganhar um responsável
 - rota: settings_inbox_show
 - intent: Quero que cada lead chegue com um responsável; Como distribuo as conversas entre o time?; Liga o rodízio na caixa Comercial; Por que os leads ficam sem responsável?; Por que o card do CRM está sem dono?
-- onde_fica: Configurações > Caixas de entrada > selecionar caixa > Colaboradores > Atribuição automática (pela API: PATCH inboxes/:id com enable_auto_assignment). Na conta com atribuição avançada, a regra vem de Configurações > Atribuição de Agentes > Política de atribuição, vinculada à caixa.
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configurações > Caixas de entrada > selecionar caixa > Colaboradores > Atribuição automática (pela API: PATCH inboxes/:id com enable_auto_assignment). Na conta com atribuição avançada, a regra vem de Configurações > Atribuição de Agentes > Política de atribuição, vinculada à caixa.
 - pre_requisitos: administrador; a caixa com as pessoas certas como agentes (o rodízio só escolhe entre os agentes da caixa)
 - passos: 1. Leia a caixa e os agentes dela e confira se quem deve receber está lá; 2. Ligue a Atribuição automática da caixa; 3. Na conta com atribuição avançada, confira se a caixa está numa política de atribuição e, se não estiver, vincule a uma (ou crie uma em rodízio); 4. Diga à pessoa quem vai entrar no rodízio e o aviso de quem está online.
 - gotchas: o rodízio só entrega para quem está online naquele momento; sem atribuição avançada ele só age quando a conversa nasce ou é reaberta, então a conversa que chega com todo mundo offline (um e-mail à noite) fica sem responsável para sempre, até alguém atribuir à mão; com atribuição avançada a plataforma tenta de novo a cada 30 minutos para as conversas abertas e sem responsável, então a da noite ganha dono quando alguém entra online (conversa parada há mais de 7 dias fica de fora, por padrão); o card do CRM herda o responsável da conversa: se o card nasce antes da atribuição, ganha o dono quando a conversa é atribuída; o card que o card automático da caixa criou acompanha cada troca de responsável da conversa, e o criado de outro jeito (automação, Kanban) só recebe o dono quando está sem dono; conversa que já tem responsável não entra no rodízio.
@@ -61,7 +70,7 @@
 - leitura: horario
 - rota: settings_inbox_show
 - intent: Onde configuro horario comercial?; Como mudo dias e horas de atendimento?; Como configuro disponibilidade da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Horario de atendimento
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Horario de atendimento
 - pre_requisitos: caixa criada
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
 - gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
@@ -201,7 +210,7 @@
 - titulo: Convidar e gerenciar agentes
 - rota: agent_list
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
-- onde_fica: Configuracoes > Agentes
+- onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes
 - pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
 - passos: 1. Abra Configuracoes; 2. Entre em Agentes; 3. Clique para adicionar/editar agente; 4. Informe dados e papel; 5. Salve e acompanhe convite/status.
 - gotchas: agente convidado pode precisar aceitar convite antes de operar; o acesso a uma caixa de entrada tambem depende de estar associado a ela.
@@ -211,7 +220,7 @@
 - titulo: Ajustar papel do agente
 - rota: agent_list
 - intent: Como faco alguem virar administrador?; Onde mudo papel de agente?; Como aplico um papel customizado a um usuario?
-- onde_fica: Configuracoes > Agentes > editar agente
+- onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes > editar agente
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
 - gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
@@ -322,7 +331,7 @@
 - titulo: Ver relatorios
 - rota: account_overview_reports
 - intent: Onde vejo relatorios?; Como acompanho volume e desempenho?; Onde vejo relatorio por agente, caixa, time ou etiqueta?
-- onde_fica: Relatorios > Visao geral / Conversas / Agentes / Caixas / Times / Etiquetas
+- onde_fica: No menu novo: Resultados > Relatórios > Visão geral. No menu antigo: Relatorios > Visao geral / Conversas / Agentes / Caixas / Times / Etiquetas
 - pre_requisitos: conversas e eventos suficientes para gerar metricas
 - passos: 1. Abra Relatorios; 2. Escolha Visao geral ou outro recorte; 3. Ajuste periodo/filtros; 4. Compare metricas; 5. Abra detalhes quando a tela oferecer drilldown.
 - gotchas: rotas especificas tambem existem, como `conversation_reports`; usuarios sem `report_manage` nao acessam relatorios.
@@ -373,7 +382,7 @@
 - rota: sla_reports
 - feature: sla
 - intent: Onde vejo SLA?; Como acompanho violacoes de SLA?; Onde consulto conversas com prazo vencido?
-- onde_fica: Relatorios > SLA
+- onde_fica: No menu novo: Resultados > Relatórios > Prazos de resposta. No menu antigo: Relatorios > SLA
 - pre_requisitos: SLA configurado e aplicado a conversas; dados de atendimento no periodo escolhido
 - passos: 1. Abra Relatorios; 2. Entre em SLA; 3. Ajuste periodo/filtros; 4. Revise metricas e tabela; 5. Abra a conversa quando precisar investigar.
 - gotchas: esta rota e de relatorio; criacao/gestao de politicas SLA pode depender de recursos Enterprise ou customizados fora do fluxo nativo.
@@ -404,7 +413,7 @@
 - titulo: Ver os canais de cada funil
 - rota: crm_caixas
 - intent: "Quais caixas estão no CRM?"; "Qual funil recebe as conversas do WhatsApp?"; "Quem cuida das conversas de cada caixa?"; "Por que esta caixa não cria cards?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil (com a tela nova ligada na conta)
+- onde_fica: No menu novo: Configurações > Canais de cada funil. No menu antigo: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil (com a tela nova ligada na conta)
 - pre_requisitos: administrador da conta ou função com crm_admin; ao menos uma caixa de entrada conectada.
 - passos: Cada caixa aparece num cartão com três frases: **Chega aqui** (os funis que a caixa atende), **Quem cuida** (quantas pessoas e quem vê as conversas ainda sem assunto) e **O que acontece sozinho**. Caixa fora do CRM tem o botão **Colocar no CRM**; as outras, **Alterar**.
 - gotchas: cartão com borda amarela tem algo a resolver e diz o quê (ninguém vê as conversas sem assunto, ou a caixa ainda está em "vê apenas atribuídos"); administrador vê todas as conversas de todas as caixas e não aparece com restrição; quem está na caixa continua sendo definido em Configurações > Caixas de entrada > Agentes.
@@ -486,7 +495,7 @@
 - titulo: Lembrete que repete, lembrete sem card e quem recebe o aviso
 - rota: crm_calendar_index
 - intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem negócio?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
-- onde_fica: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
 - pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um negócio do funil.
 - passos: Em **É sobre quem?** escolha **Ninguém** (fica só no calendário), **Um cliente** ou **Um negócio do funil**; escreva **O que é** e escolha **Quando?** (a hora é no fuso da conta). Em **Repetir?** escolha **Uma vez só**, **Todo dia** (ou só de segunda a sexta), **Toda semana** (marque os dias), **Todo mês** ou **Todo ano**, e em **Até quando?** escolha sem data, até um dia ou um número de vezes; as **Próximas datas** aparecem logo abaixo. Em **Quem recebe o aviso?** escolha **Quem cuida do cliente**, **Só eu**, **Escolher pessoas** ou **Um time inteiro**; clique em **Salvar**. Para ver a repetição, no card use **Ver** em **Repetem**, ou clique numa data com o ícone de repetir no calendário: lá estão **Feito desta vez**, **Pausar**/**Retomar**, **Encerrar** e **Mudar** (só a próxima ou esta e as próximas).
 - gotchas: só o lembrete para a equipe repete; mensagem ao cliente que repete ainda não existe (#1528); "Quem cuida do cliente" segue o dono do card no momento do aviso; pausar não apaga as datas, elas ficam marcadas **Pausado** e ninguém é avisado até retomar; encerrar para de repetir e o que já passou fica no histórico; quem não vê o funil do card aparece desligado em **Escolher pessoas**; se ninguém sobrar para receber (time vazio, pessoa que saiu), o aviso vai para quem marcou; lembrete sem card só é visto por quem marcou, por quem recebe e pelo administrador; "Todo dia 31" cai no último dia nos meses mais curtos.
@@ -505,7 +514,7 @@
 - rota: crm_sla_index
 - feature: sla
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
-- onde_fica: Sidebar > CRM > CRM SLA
+- onde_fica: No menu novo: Atender > Prazos de resposta. No menu antigo: Sidebar > CRM > CRM SLA
 - pre_requisitos: funis e caixas para associar políticas e agendas.
 - passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
 - gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo; função só com `sla_manage` edita as políticas, mas a agenda das caixas fica para administrador ou `crm_admin`.
@@ -515,7 +524,7 @@
 - titulo: Ver dashboard CRM e métricas de funil
 - rota: crm_dashboard_index
 - intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"; "Quantos atendimentos resolvemos?"
-- onde_fica: Sidebar > CRM > CRM Dashboard
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números. No menu antigo: Sidebar > CRM > CRM Dashboard
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, ganhos, perdidos, valores e meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
 - gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
@@ -524,7 +533,7 @@
 - titulo: Usar calendário CRM e agendar reunião
 - rota: crm_calendar_index
 - intent: "Onde fica o calendário CRM?"; "Como agendo uma reunião no card?"; "Como evitar conflito de agenda?"
-- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); ou CRM Kanban > visualização Calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); ou CRM Kanban > visualização Calendário
 - pre_requisitos: caixa de e-mail Google ou Microsoft conectada com calendário ativo; card CRM existente para a reunião.
 - passos: Abra CRM Calendar e clique em um dia; ou abra o card, no cartão **Agenda** clique em **Alterar** (ou **Marcar**) e em **Marcar reunião**: a tela abre no próprio card; com página de agendamento e Google/Microsoft, escolha em cima **Pela minha página** ou **Pelo Google ou Microsoft**; pela página, escolha dia e horário livre (o cliente recebe aviso no WhatsApp); pelo Google/Microsoft, preencha **Enviar de**, **Título da reunião**, **Data**, **Horário de início**, **Duração** e **Convidados** (o cliente recebe convite por e-mail); clique em **Marcar reunião** no rodapé. Para o cliente escolher, use **O cliente escolhe pelo link**: abre a tela **Link da agenda** no card, com mensagem editável, **Enviar na conversa** (sem conversa, **Copiar o link**) e **Cancelar este link**.
 - gotchas: sem página de agendamento e sem caixa com `calendar_enabled`, a Agenda do card mostra "Para marcar reunião, falta a sua página de agendamento", com **Criar minha página** (com permissão) e **Só um lembrete**; **O cliente escolhe pelo link** só aparece com página de agendamento no ar; no calendário, sem caixa com `calendar_enabled`, o scheduler mostra estado vazio; horários ocupados vêm do free/busy do provedor e podem falhar de forma silenciosa; reuniões arrastadas no calendário não são alteradas sem confirmação, abrem o scheduler de reagendamento.
@@ -544,7 +553,7 @@
 - rota: settings_booking
 - feature: crm_booking_v2
 - intent: Como crio uma página para o cliente marcar horário?; Onde fica o link de agendamento sem Google ou Microsoft?; Como mando o link ou o QR code de agendamento?; Como pauso a página de agendamento?; Por que não consigo publicar a página?; Como escolho para qual funil vai quem marcar?
-- onde_fica: CRM > Agendamento > Páginas e links (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); também pelo botão Agendamento no topo do CRM > Agendamento > Calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); também pelo botão Agendamento no topo do CRM > Agendamento > Calendário
 - perfil: criar, editar, publicar, pausar e excluir exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa vê as páginas, a prévia e o link (copiar, QR code, abrir), mas não vê Criar página, Editar, Pausar, Publicar, Excluir nem Alterar. Agente sem função e função sem o módulo Agendamento não veem o item no menu.
 - pre_requisitos: agendamento de reuniões ligado na instalação e a opção Agendamento WhatsApp-first ligada na conta pelo suporte; função com Agendamento (Ver ou Editar) para quem não é administrador; para Google Meet ou Teams, uma caixa de e-mail do Google ou Microsoft com agenda já conectada.
 - passos: 1. Abra CRM > Agendamento > Páginas e links e clique em Criar página; 2. Escolha um modelo (Conversa de vendas, Consulta ou atendimento, Visita ou Começar do zero); 3. Em Conte, confira o nome que o cliente vê, o link em Endereço da página (já vem pronto; Mudar endereço abre o campo para trocar o final), quanto tempo dura e toque em quem atende; 4. Em Onde acontece, escolha um ou mais locais (Vídeo no WhatsApp, Ligação no WhatsApp, Meu link com o endereço completo, No local com o endereço); 5. Em Dias e horas, toque nos dias, escolha Das, Até, Avisar com e Intervalo, e deixe ligado ou desligue Fechar nos feriados nacionais; 6. Em Sua marca, envie logo e foto, escolha de que lado a logo fica (À esquerda, No centro ou À direita), a cor (uma das prontas ou Outra cor) e escreva a frase de boas-vindas, confira em Assim fica na página (Claro e Escuro mostram os dois temas) e clique em Continuar; a logo de fundo escuro é criada sozinha, e Trocar imagem em Em fundo escuro envia outra; para não repetir isso a cada página, o administrador clica em Salvar como identidade da conta, e numa página que já existe quem gerencia páginas usa Usar a identidade salva e confirma em Sim, usar; 7. Em Avisos, escolha por qual WhatsApp sai o aviso ao cliente (ou Sem avisos), quando avisar e até quando o cliente pode mudar, e clique em Ver como fica; 8. Na prévia, confira a frase do funil e a dos avisos e use Alterar se quiser mudar; 9. Clique em Publicar e use Copiar link, QR code ou Abrir.
@@ -555,7 +564,7 @@
 - rota: settings_booking
 - feature: crm_booking_v2
 - intent: Como aviso o cliente no WhatsApp antes do horário?; Como escolho quando o cliente recebe o lembrete?; Como testo o link de agendamento no meu WhatsApp?; Por que o aviso no WhatsApp não saiu?; Como vejo se o cliente confirmou o horário?; O cliente pode cancelar ou mudar o horário sozinho?; Como o cliente para de receber os avisos?; Como mudo o texto do aviso que o cliente recebe?; A IA pode escrever o texto dos avisos?
-- onde_fica: CRM > Agendamento > Páginas e links > Editar a página > passo Avisos; o teste fica na prévia, com a página no ar; a resposta do cliente aparece no detalhe da reunião no CRM Calendar e no histórico do card
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > Editar a página > passo Avisos; o teste fica na prévia, com a página no ar; a resposta do cliente aparece no detalhe da reunião no CRM Calendar e no histórico do card
 - perfil: escolher os avisos e testar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase dos avisos na prévia. Para testar, a pessoa também precisa enxergar o WhatsApp de avisos. Conectar WhatsApp e criar mensagem aprovada na Meta continuam do administrador.
 - pre_requisitos: um WhatsApp conectado na conta (oficial da Meta, WAHA ou API de WhatsApp); no WhatsApp oficial, mensagens aprovadas pela Meta com o link do horário no lugar de {{3}} para avisar quem não falou com a empresa nas últimas 24 horas.
 - passos: 1. Abra CRM > Agendamento > Páginas e links e clique em Editar na página; 2. Clique em Continuar até o passo Avisos; 3. Em Por qual WhatsApp sai o aviso, escolha o número; 4. Escolha quando avisar: Ao marcar, 1 dia antes e 1 hora antes; Ao marcar e 1 hora antes; ou Só ao marcar; 5. Em O texto de cada aviso, deixe o texto padrão ou escreva o seu: Escrever com IA (no jeito escolhido em Como a IA escreve: Curto, Simpático ou Formal) mostra até 2 textos e Usar este texto põe no campo; os botões com o nome dos campos põem o nome do cliente, o dia e a hora, o link ou o nome da empresa; confira em Assim chega para o cliente; Voltar ao texto padrão desfaz; 6. No WhatsApp oficial, escolha uma mensagem aprovada para cada aviso; 7. Escolha até quando o cliente pode mudar ou cancelar (1 hora, 2 horas ou 1 dia antes); 8. Clique em Ver como fica e confira a frase dos avisos; 9. Com a página no ar, clique em Testar no meu WhatsApp, digite o seu número e clique em Enviar teste.
@@ -565,7 +574,7 @@
 - titulo: Atender no dia da reunião marcada pela página de agendamento
 - rota: crm_calendar_index
 - intent: Onde vejo as reuniões de hoje?; Como sei se o cliente confirmou a reunião?; Como lembro o cliente da reunião?; Como chamo o cliente no WhatsApp na hora da reunião?; Como faço a chamada de vídeo no WhatsApp?; O cliente faltou, como mando o link para marcar outro horário?; Como registro que a reunião aconteceu?
-- onde_fica: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a reunião de hoje aparece em Próximo passo (Ver a reunião) e as outras no cartão Agenda, onde a Próxima reunião mostra Chamar no WhatsApp e Lembrar
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a reunião de hoje aparece em Próximo passo (Ver a reunião) e as outras no cartão Agenda, onde a Próxima reunião mostra Chamar no WhatsApp e Lembrar
 - perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo de O cliente escolhe pelo link, no cartão Agenda do card).
 - pre_requisitos: a opção Agendamento WhatsApp-first ligada na conta pelo suporte; reunião marcada por uma página de agendamento; para mandar mensagem, uma conversa com o cliente aberta para resposta.
 - passos: 1. Abra CRM Calendar, escolha a visão Agenda e veja Hoje; 2. Cada reunião mostra a hora, onde acontece e Confirmou, Pediu para mudar ou Ainda não respondeu; 3. Se o cliente não respondeu, toque em Lembrar: ele recebe na conversa uma mensagem curta com o link para confirmar; 4. Na hora, clique na reunião e em Chamar no WhatsApp: abre a conversa do cliente (ou o WhatsApp no número dele) e a chamada de vídeo ou de voz começa no próprio WhatsApp; 5. Depois, em Como foi a reunião?, toque em Aconteceu ou Não compareceu; 6. Se o cliente não compareceu, toque em Enviar link para ele marcar outro horário, ou em Agora não; 7. Se a página tem etapa para depois da reunião, responda Mover ou Agora não (no modo automático o card já muda sozinho).
@@ -576,7 +585,7 @@
 - rota: settings_booking
 - feature: crm_booking_v2
 - intent: Como faço o card mudar de etapa depois da reunião?; Como mover o card automaticamente quando a reunião acontece?; Por que o sistema pergunta se quero mover o card depois da reunião?; Como desligo a pergunta de mover o card?
-- onde_fica: CRM > Agendamento > Páginas e links > Editar a página > prévia (Ver como fica) > Depois da reunião
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > Editar a página > prévia (Ver como fica) > Depois da reunião
 - perfil: mudar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase.
 - pre_requisitos: a opção Agendamento WhatsApp-first ligada na conta pelo suporte; um funil ativo com a etapa desejada.
 - passos: 1. Abra CRM > Agendamento > Páginas e links e clique em Editar na página; 2. Vá até a prévia; 3. Em Depois da reunião, clique em Alterar; 4. Escolha o funil e a etapa; 5. Escolha Perguntar antes ou Mover sozinho; 6. Clique em Salvar. Para desligar, clique em Alterar e em Não mover o card.
@@ -587,7 +596,7 @@
 - rota: settings_booking
 - feature: crm_booking_v2
 - intent: Quem pode criar a página de agendamento?; Como deixo alguém só ver as páginas de agendamento?; Por que o atendente não vê CRM > Agendamento?; Qual função dá acesso ao Agendamento?
-- onde_fica: Configurações > Funções personalizadas > módulo Agendamento (Sem acesso, Ver, Editar); a tela fica em CRM > Agendamento > Páginas e links
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: Configurações > Funções personalizadas > módulo Agendamento (Sem acesso, Ver, Editar); a tela fica em CRM > Agendamento > Páginas e links
 - perfil: administrador faz tudo; função com Agendamento em Editar cria, edita, publica, pausa e exclui páginas e escolhe modelo, marca, locais, horários, funil e quem atende; função com Agendamento em Ver vê as páginas, a prévia e o link, sem botão de mudar; agente sem função e função sem o módulo não veem a tela e a API responde 401.
 - pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; só o administrador cria e muda funções.
 - passos: 1. Abra Configurações > Funções personalizadas; 2. Crie ou edite a função; 3. Na linha Agendamento, escolha Ver ou Editar; 4. Salve a função e atribua à pessoa em Configurações > Agentes.
@@ -598,7 +607,7 @@
 - rota: settings_booking
 - feature: crm_booking_v2
 - intent: Como passo as reuniões de um vendedor para outro?; Alguém saiu de férias, como troco quem atende as reuniões marcadas?; Como mudo o responsável das reuniões futuras de uma vez?; Por que algumas reuniões não passaram para a outra pessoa?
-- onde_fica: CRM > Agendamento > Páginas e links > cartão da página > Passar reuniões
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > cartão da página > Passar reuniões
 - perfil: administrador ou função com Agendamento em Editar; com Agendamento em Ver o botão não aparece e a API responde 401.
 - pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; a pessoa que recebe precisa poder atender (ser da conta e, se tiver função, ter acesso ao CRM).
 - passos: 1. Abra CRM > Agendamento > Páginas e links; 2. No cartão da página, clique em Passar reuniões; 3. Em De quem, escolha a pessoa que hoje atende; 4. Em Para quem, escolha quem vai atender; 5. Deixe ligado Só as desta página ou desligue para passar as reuniões de todas as páginas; 6. Clique em Ver antes de passar e confira quantas vão passar e quais ficam; 7. Clique no botão Passar para, com o nome da pessoa, para confirmar.
@@ -609,7 +618,7 @@
 - rota: crm_my_booking_hours
 - feature: crm_booking_v2
 - intent: Como escolho os dias e horas em que aceito reuniões?; Como pauso a minha agenda de agendamento?; Vou sair de férias, como paro de receber reuniões?; Por que não consigo marcar um horário fora do da página?; Onde ficam Meus horários?
-- onde_fica: Menu lateral > CRM > Agendamento > Meus horários
+- onde_fica: No menu novo: Acompanhar > Agenda > Meus horários. No menu antigo: Menu lateral > CRM > Agendamento > Meus horários
 - perfil: cada pessoa que atende reuniões mexe só nos próprios horários; vale para administrador, agente sem função e função com acesso ao CRM, sem precisar do módulo Agendamento; função sem CRM não vê o item e a API responde 401.
 - pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; para ajustar dias e horas, a pessoa precisa atender em pelo menos uma página (como responsável ou com link individual); pausar funciona sempre.
 - passos: 1. Abra CRM > Agendamento > Meus horários no menu lateral; 2. Toque nos dias em que aceita reuniões; 3. Escolha Das e Até; 4. Clique em Salvar meus horários; 5. Para parar de receber reuniões, clique em Pausar a minha agenda, e em Voltar a receber reuniões quando quiser; 6. Para seguir de novo o horário da página, clique em Usar o horário da página.
@@ -620,7 +629,7 @@
 - rota: settings_booking_results
 - feature: crm_booking_v2
 - intent: Quantos clientes marcaram horário pelo link?; Quantos abriram o link e não marcaram?; Quantos compareceram e quantos faltaram?; De onde vieram os agendamentos?; Como mando o link de novo para quem abriu e não marcou?
-- onde_fica: CRM > Agendamento > Páginas e links > aba Resultados
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links > aba Resultados. No menu antigo: CRM > Agendamento > Páginas e links > aba Resultados
 - perfil: administrador e função com Agendamento em Ver ou Editar veem a equipe toda e podem trocar para Só os meus; Enviar de novo exige poder mandar o link de agenda (administrador, agente sem função ou função com acesso ao CRM); agente sem função usa CRM > Agendamento > Meus números; função sem CRM e sem Agendamento não vê e a API responde 401.
 - pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; ao menos um link de agenda enviado ou uma página publicada.
 - passos: 1. Abra CRM > Agendamento > Páginas e links e toque em Resultados; 2. Escolha 7 dias ou 30 dias; 3. Leia os cinco números (Links enviados, Abriram, Marcaram, Compareceram, Faltaram) e a frase de cada um; 4. Veja em De onde vieram os horários marcados quanto veio da conversa, do link da página e do pedido de contato; 5. Em Abriram o link e não marcaram, toque em Enviar de novo ao lado da pessoa para mandar o link na conversa dela.
@@ -631,7 +640,7 @@
 - rota: crm_booking_results
 - feature: crm_booking_v2
 - intent: Quantos dos meus links viraram horário marcado?; Quem abriu o meu link e não marcou?; Onde vejo meus números de agendamento?
-- onde_fica: Menu lateral > CRM > Agendamento > Meus números
+- onde_fica: No menu novo: Acompanhar > Agenda > Meus resultados. No menu antigo: Menu lateral > CRM > Agendamento > Meus números
 - perfil: administrador, agente sem função e função com acesso ao CRM veem os próprios números (links que criaram e reuniões em que são responsáveis); quem pode ver a equipe troca para Equipe toda.
 - pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; CRM ligado.
 - passos: 1. Abra CRM > Agendamento > Meus números; 2. Escolha 7 dias ou 30 dias; 3. Leia os cinco números; 4. Em Abriram o link e não marcaram, toque em Enviar de novo para mandar o link na conversa do cliente.
@@ -641,7 +650,7 @@
 - titulo: Sincronizar RSVP, reagendar e registrar no-show
 - rota: crm_calendar_index
 - intent: "Como vejo se o convidado da reunião aceitou ou recusou?"; "Onde vejo o RSVP / confirmação de presença dos convidados da reunião?"; "Como marco no-show (não compareceu)?"; "Como cancelo ou reagendo uma reunião?"; "Status de presença dos convidados da reunião no calendário."
-- onde_fica: Sidebar > CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > abrir evento de reunião
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > abrir evento de reunião
 - pre_requisitos: reunião criada pelo CRM ou pelo link público; calendário conectado ao provedor.
 - passos: Abra o evento no calendário; use atualizar RSVP para sincronizar com Google/Microsoft; use Entrar, Abrir card, Reagendar ou Cancelar; após o fim da reunião, marque Realizada ou No-show; adicione notas se realizada.
 - gotchas: outcome só aparece depois do horário de término, não durante a reunião; cancelar/reagendar chama o provedor externo e pode falhar por token expirado; resumo por IA depende de `CRM_AI_ENABLED` e credencial configurada.
@@ -1006,7 +1015,7 @@
 - titulo: Visao geral dos canais
 - rota: settings_inbox_new
 - intent: Qual canal devo conectar?; Como conecto WhatsApp, Instagram ou email?; Onde crio live-chat do site?; Como comeco com Telegram ou API?
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa
 - perfil: `administrator` cria canais e conclui o wizard. Funcao personalizada com `inbox_manage` tambem cria: as telas do wizard aceitam `administrator` ou `inbox_manage`. `agent` sem essa funcao nao cria; diga para pedir a um administrator e, se ja houver caixa criada, orientar apenas como acessar conversas permitidas. O Guia nao monta a criacao para quem nao e administrator, mas isso e limite dele, nao da pessoa: ofereca o caminho na tela.
 - pre_requisitos: credenciais do provedor escolhido; para WhatsApp API, numero em formato `55DDNNNNNNNNN`; para Instagram, conta/authorization da Meta; para email, conta Google/Microsoft ou endereco para encaminhamento; para site, dominio do site; para Telegram, token do bot; para API, webhook opcional.
 - passos: 1. Abra Nova caixa e escolha o canal; 2. Para WhatsApp oficial, escolha Cloud/Twilio e siga a autorizacao ou configuracao manual; 3. Para WhatsApp API, informe modo humano ou IA, nome da caixa e telefone; 4. Para Instagram, autorize o perfil; para email, escolha Google, Microsoft ou encaminhamento; 5. Para site, Telegram ou API, preencha os campos do canal; 6. Adicione agentes e finalize o wizard.
@@ -1069,7 +1078,7 @@
 - titulo: Configurar CSAT da caixa
 - rota: settings_inbox_show
 - intent: Como ativo pesquisa de satisfacao?; Onde configuro CSAT?; Como escolho quando enviar avaliacao?; Como configuro CSAT no WhatsApp?
-- onde_fica: Sidebar > Configuracoes > Caixas de entrada > selecionar caixa > CSAT
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Sidebar > Configuracoes > Caixas de entrada > selecionar caixa > CSAT
 - perfil: somente `administrator`. Se o perfil nao puder, diga que configurar CSAT e uma configuracao de caixa e precisa de administrador; o usuario pode apenas consultar relatorios se tiver `report_manage`.
 - pre_requisitos: caixa de entrada existente; etiquetas criadas se a regra de envio for baseada em etiquetas
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba CSAT; 3. Ative a pesquisa; 4. Defina tipo de exibicao/mensagem ou template, conforme o canal; 5. Configure a regra por etiquetas; 6. Salve.
@@ -1079,7 +1088,7 @@
 - titulo: Configurar widget do site
 - rota: settings_inbox_show
 - intent: Como configuro o live-chat do site?; Onde altero cor e texto do widget?; Como ativo formulario pre-chat?; Onde pego o script do widget?
-- onde_fica: Sidebar > Configuracoes > Caixas de entrada > caixa de website/live-chat
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Sidebar > Configuracoes > Caixas de entrada > caixa de website/live-chat
 - perfil: somente `administrator`. Se o perfil nao puder, diga que editar widget, pre-chat, disponibilidade e dominio permitido exige administrador da conta.
 - pre_requisitos: caixa do tipo Website/live-chat ja criada; para criar uma nova, use `settings_inbox_new`
 - passos: 1. Abra Configuracoes > Caixas de entrada e selecione a caixa de website; 2. Em Configuracoes, ajuste nome, titulo, tagline, cor, posicao/tipo do bubble, saudacao e recursos do widget; 3. Em Pre-chat, habilite o formulario e escolha campos; 4. Em Horario de atendimento, configure disponibilidade; 5. Em Configuracao, revise HMAC, dominios permitidos e acesso mobile quando aplicavel.
@@ -1141,7 +1150,7 @@
 - titulo: Ver plano e cobranca
 - rota: billing_settings_index
 - intent: Onde vejo meu plano?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
-- onde_fica: Sidebar > Configuracoes > Billing/Cobranca
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
 - perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
 - pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, plano diferente de Hacker
 - passos: 1. Abra Configuracoes > Billing; 2. Revise plano atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se o plano permitir.
@@ -1171,7 +1180,7 @@
 - titulo: Conectar ou autorizar calendario em uma caixa de e-mail
 - rota: settings_inboxes_page_channel
 - intent: "Como libero agenda Google no CRM?"; "Como autorizo calendario da Microsoft?"; "Por que nao aparece caixa para agendar reuniao?"; "Como reconecto calendario de uma inbox?"
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa > Email > Google ou Microsoft; para revisar caixa existente: Configuracoes > Caixas de entrada > selecionar caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa > Email > Google ou Microsoft; para revisar caixa existente: Configuracoes > Caixas de entrada > selecionar caixa
 - perfil: `administrator`; se o perfil nao puder, diga que conexao OAuth de e-mail/calendario e acao administrativa e peca a um administrador da conta para conectar ou reautorizar a caixa.
 - pre_requisitos: credenciais OAuth Google ou Microsoft configuradas para a conta ou globalmente; permissao no provedor para consentir acesso de e-mail e calendario.
 - passos: 1. Abra Nova caixa e escolha Email; 2. Escolha Google ou Microsoft; 3. Entre com a conta de e-mail que sera a caixa; 4. Aceite as permissoes solicitadas, incluindo calendario; 5. Ao voltar, confirme que a caixa aparece no CRM Calendar e nos perfis de agendamento.
@@ -1181,7 +1190,7 @@
 - titulo: Configurar pagina de agendamento em caixa compartilhada e links por agente
 - rota: crm_calendar_index
 - intent: "Como varios vendedores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
-- onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > CRM Calendar > Agendamento
 - perfil: `administrator`; se o perfil nao puder, diga que a API de perfis de agendamento e administrativa. Custom role com `crm_manage_pipelines` pode ver controles de CRM, mas deve pedir a um administrador para salvar/gerar links de booking.
 - pre_requisitos: caixa de e-mail Google/Microsoft conectada com calendario; agentes adicionados como membros da caixa; funil/etapa padrao recomendados para criar o lead corretamente.
 - passos: 1. Abra CRM Calendar; 2. Clique em Agendamento; 3. Habilite a pagina da caixa; 4. Em Atribuicao, escolha Por agente (links individuais); 5. Marque Caixa compartilhada quando varios agentes usam o mesmo e-mail; 6. Salve e copie o link de cada agente.
@@ -1325,7 +1334,7 @@
 - titulo: Baixar relatório de agentes
 - rota: agent_reports_index
 - intent: Como baixo o relatório de agentes?; Onde exporto o desempenho por agente?; Como gero o CSV de agentes?; Onde fica o download do relatório de agentes?
-- onde_fica: Relatorios > Agentes
+- onde_fica: No menu novo: Resultados > Relatórios > Usuários. No menu antigo: Relatorios > Agentes
 - pre_requisitos: conversas atribuídas a agentes no período escolhido
 - passos: 1. Abra Relatorios; 2. Entre em Agentes; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de agentes; 5. Abra o arquivo gerado.
 - gotchas: o download usa o período/filtros ativos na tela; usuários sem `report_manage` não acessam.
@@ -1335,7 +1344,7 @@
 - titulo: Baixar relatório de caixas
 - rota: inbox_reports_index
 - intent: Como baixo o relatório por caixa de entrada?; Onde exporto o desempenho das caixas?; Como gero o CSV de caixas?; Onde fica o download do relatório de caixas?
-- onde_fica: Relatorios > Caixas
+- onde_fica: No menu novo: Resultados > Relatórios > Canais. No menu antigo: Relatorios > Caixas
 - pre_requisitos: conversas nas caixas no período escolhido
 - passos: 1. Abra Relatorios; 2. Entre em Caixas; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de entrada; 5. Abra o arquivo gerado.
 - gotchas: o rótulo no botão é 'Baixar relatórios de entrada'; o download respeita o período ativo.
@@ -1345,7 +1354,7 @@
 - titulo: Baixar relatório de times
 - rota: team_reports_index
 - intent: Como baixo o relatório por time?; Onde exporto o desempenho dos times?; Como gero o CSV de times?; Onde fica o download do relatório de times?
-- onde_fica: Relatorios > Times
+- onde_fica: No menu novo: Resultados > Relatórios > Times. No menu antigo: Relatorios > Times
 - pre_requisitos: times criados e conversas atribuídas no período
 - passos: 1. Abra Relatorios; 2. Entre em Times; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de time; 5. Abra o arquivo gerado.
 - gotchas: o download respeita o período/filtros ativos na tela.
@@ -1355,7 +1364,7 @@
 - titulo: Baixar relatório de etiquetas
 - rota: label_reports_index
 - intent: Como baixo o relatório por etiqueta?; Onde exporto o desempenho das etiquetas?; Como gero o CSV de etiquetas?; Onde fica o download do relatório de etiquetas?
-- onde_fica: Relatorios > Etiquetas
+- onde_fica: No menu novo: Resultados > Relatórios > Etiquetas. No menu antigo: Relatorios > Etiquetas
 - pre_requisitos: etiquetas aplicadas a conversas no período
 - passos: 1. Abra Relatorios; 2. Entre em Etiquetas; 3. Ajuste o período/filtros; 4. Clique em Baixar relatórios de etiquetas; 5. Abra o arquivo gerado.
 - gotchas: o download respeita o período/filtros ativos na tela.
@@ -1365,7 +1374,7 @@
 - titulo: Baixar relatório de CSAT
 - rota: csat_reports
 - intent: Onde vejo a satisfação do cliente (CSAT)?; Como exporto as respostas de CSAT?; Como baixo o relatório de CSAT?; Onde acompanho avaliações dos clientes?
-- onde_fica: Relatorios > CSAT
+- onde_fica: No menu novo: Resultados > Relatórios > CSAT. No menu antigo: Relatorios > CSAT
 - pre_requisitos: pesquisa de CSAT habilitada e respostas coletadas no período
 - passos: 1. Abra Relatorios; 2. Entre em CSAT; 3. Ajuste o período/filtros; 4. Revise as métricas e respostas; 5. Clique em Baixar relatórios de CSAT para exportar.
 - gotchas: o botão de download usa o rótulo 'Baixar relatórios de CSAT'; sem respostas no período a tela fica vazia.
@@ -1407,7 +1416,7 @@
 - titulo: Usar e filtrar o calendário CRM por tipo de evento
 - rota: crm_calendar_index
 - intent: Como filtro o calendário por tipo?; Como mostro só reuniões / só follow-ups no calendário?; Como escondo os eventos externos do calendário?; O que são os chips Lembretes, WhatsApp, Previsões, Reuniões e Externos?
-- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
 - pre_requisitos: ao menos um funil; para ver reuniões/externos, caixa Google ou Microsoft com calendário ativo.
 - passos: 1. Abra o Calendário do CRM; 2. No cabeçalho, use os chips de tipo (Lembretes, WhatsApp, Previsões, Reuniões, Externos) para ligar/desligar cada camada; 3. Alterne a visão em Mês/Semana/Dia/Agenda; 4. Use Hoje e as setas para navegar; 5. Ajuste o escopo entre Meus e Todos.
 - gotchas: os chips são toggles independentes e ficam coloridos quando ativos; Externos aparece em estilo apagado/itálico e é só leitura; sem caixa com calendário conectado, Reuniões e Externos ficam vazios; o escopo Meus/Todos altera quais retornos aparecem.
@@ -1416,7 +1425,7 @@
 - titulo: Conectar WhatsApp Oficial (Cloud API)
 - rota: settings_inbox_new
 - intent: Como conecto o WhatsApp Oficial?; Como crio uma caixa do WhatsApp oficial (Cloud API/Meta)?; Quero atender no WhatsApp oficial; Onde ligo o WhatsApp Business API oficial?
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp Oficial
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > WhatsApp Oficial
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha WhatsApp Oficial; faça o login/autorização da Meta (Embedded Signup) ou informe os dados da Cloud API; selecione o número aprovado; atribua agentes e finalize.
 - gotchas: WhatsApp Oficial (Cloud API da Meta) é DIFERENTE do WhatsApp API por QR Code: o oficial usa número aprovado pela Meta e exige templates aprovados para mensagens fora da janela de 24h.
@@ -1426,7 +1435,7 @@
 - titulo: Conectar WhatsApp por QR Code (WhatsApp API)
 - rota: settings_inbox_new
 - intent: Como conecto o WhatsApp lendo um QR Code?; Como uso o WhatsApp API (não oficial)?; Conectar número de WhatsApp escaneando QR; WhatsApp via WAHA
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp API
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > WhatsApp API
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha WhatsApp API; informe modo/nome/número e crie a caixa; na tela de conexão aparece o QR Code; no celular abra WhatsApp > Aparelhos conectados > Conectar aparelho e escaneie; aguarde conectar e finalize.
 - gotchas: WhatsApp API por QR Code é DIFERENTE do WhatsApp Oficial: usa o número direto via QR (sem aprovação da Meta); números brasileiros enviados com ou sem o 9º dígito são resolvidos automaticamente para o chat correto quando o App de números brasileiros está habilitado no WAHA; cada contato usa uma conversa contínua nesta caixa e, se o cliente voltar depois de uma resolução, a mesma conversa é reaberta; o QR aparece na tela de conexão DEPOIS de criar a caixa (não no clique do tile); o WhatsApp dá cerca de 2 minutos e meio para ler (a tela mostra o tempo restante); se expirar, a tela mostra "O QR Code expirou" e o botão Gerar novo QR Code, sem recriar a caixa; leia pelo próprio WhatsApp (Aparelhos conectados), não pela câmera do celular; pode desconectar se o aparelho/sessão cair; se o tile não aparecer, o canal pode não estar habilitado nesta instalação.
@@ -1435,18 +1444,18 @@
 ### conectar_whatsapp_api_na_caixa_oficial
 - titulo: Conectar o WhatsApp API na caixa oficial
 - rota: settings_inbox_show
-- intent: Como respondo o cliente depois de 24 horas sem modelo?; Quero ligar o WhatsApp API na minha caixa oficial; Onde fica a aba WhatsApp API da caixa?; O que quer dizer WhatsApp API na bolha da mensagem?; O que é WhatsApp API plano B?; O WhatsApp API da caixa desconectou, como reconecto?; Como desligo o envio pelo WhatsApp API?
-- onde_fica: Configurações > Caixas de entrada > selecionar a caixa de WhatsApp Oficial > aba WhatsApp API
+- intent: Como respondo o cliente depois de 24 horas sem modelo?; Quero ligar o WhatsApp API na minha caixa oficial; Onde fica a aba WhatsApp API da caixa?; O que quer dizer WhatsApp API na bolha da mensagem?; O que é WhatsApp API plano B?; O WhatsApp API da caixa desconectou, como reconecto?; Como desligo o envio pelo WhatsApp API?; Como pauso o WhatsApp API sem desconectar o celular?; Por que a aba avisa que o número está em outra caixa?
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configurações > Caixas de entrada > selecionar a caixa de WhatsApp Oficial > aba WhatsApp API
 - perfil: `administrator`, ou função personalizada com `inbox_manage`. Sem isso, diga que conectar, ajustar e desconectar o WhatsApp API da caixa fica com quem administra as caixas; quem atende só vê o resultado na conversa.
 - pre_requisitos: caixa de WhatsApp Oficial conectada pela Meta; o celular com o WhatsApp Business do mesmo número na mão; a aba só aparece nas contas em que o recurso foi liberado
-- passos: 1. Abra a caixa de WhatsApp Oficial em Configurações > Caixas de entrada; 2. Entre na aba WhatsApp API e clique em Conectar WhatsApp API; 3. No celular deste número, abra o WhatsApp Business, vá em Configurações > Dispositivos conectados > Conectar dispositivo e leia o QR Code (ou clique em Prefiro usar um código e, no celular, toque em Conectar com número de telefone e digite o código); 4. Espere a tela confirmar que é o mesmo número da caixa oficial; 5. Em Antes de ligar, marque o aceite do risco; 6. Confira o Envio automático (já vem ligado); 7. Em Quem pode enviar depois de 24 horas, deixe ligados só Atendentes, Robôs, Automações ou Campanhas que devem usar esse caminho; 8. Ajuste Mensagens por minuto pelo WhatsApp API (de 1 a 120; vem 20).
-- gotchas: o WhatsApp API não é canal oficial da Meta e o número oficial pode sofrer restrição ou banimento, por isso nada sai por ele antes do aceite do risco; é a mesma caixa e a mesma conversa, sem segunda caixa nem bolha repetida; dentro de 24 horas a mensagem sai pelo WhatsApp Oficial, depois de 24 horas sai pelo WhatsApp API; modelo aprovado sempre sai pelo oficial; botões, listas, carrossel e formulários nunca saem pelo WhatsApp API; com a aba conectada, o campo de resposta não trava mais depois de 24 horas; a bolha mostra WhatsApp API quando saiu por esse caminho e WhatsApp API · plano B quando a Meta recusou porque a janela tinha fechado e a mensagem foi reenviada com segurança; contato só com o código da Meta, sem telefone na ficha, nunca usa o WhatsApp API e continua precisando de modelo depois de 24 horas; se o celular conectado for outro número, a tela avisa e nada sai por ele: desconecte e conecte o celular certo; origem desligada em Quem pode enviar falha depois de 24 horas como antes; o que passa do limite por minuto espera a vez em vez de sair em rajada; se o celular desconectar, os administradores recebem aviso urgente do Guia e, até reconectar com Gerar novo QR Code, respostas depois de 24 horas voltam a precisar de modelo aprovado; falha com Confira no celular antes de reenviar quer dizer que não deu para saber se saiu, então olhe o celular antes de mandar de novo; desligar o Envio automático pausa sem desconectar; Desconectar WhatsApp API tira o aparelho do celular e a caixa volta a pedir modelo depois de 24 horas.
+- passos: 1. Abra a caixa de WhatsApp Oficial em Configurações > Caixas de entrada; 2. Entre na aba WhatsApp API e clique em Conectar WhatsApp API; 3. No celular deste número, abra o WhatsApp Business, vá em Configurações > Dispositivos conectados > Conectar dispositivo e leia o QR Code (ou clique em Prefiro usar um código e, no celular, toque em Conectar com número de telefone e digite o código); 4. Espere a tela confirmar que é o mesmo número da caixa oficial; 5. Em Antes de ligar, marque o aceite do risco; 6. Em Envio automático, confira Por onde a mensagem sai (o interruptor Usar o WhatsApp API depois de 24 horas já vem ligado); 7. Em Quem pode usar o WhatsApp API depois de 24 h, clique em Alterar e marque só quem deve usar esse caminho (Atendentes e Lembretes do CRM são os recomendados; Agentes de IA e agentes externos, Automações e Campanhas também podem; Campanhas têm risco maior de bloqueio) e clique em Salvar; 8. Em Ritmo, clique em Alterar e escolha 10, 20 ou 30 mensagens por minuto (20 é o recomendado) ou Outro, de 1 a 120; 9. Para parar por um tempo sem desconectar o celular, clique em Pausar WhatsApp API e confirme; para voltar, clique em Retomar.
+- gotchas: o WhatsApp API não é canal oficial da Meta e o número oficial pode sofrer restrição ou banimento, por isso nada sai por ele antes do aceite do risco; é a mesma caixa e a mesma conversa, sem segunda caixa nem bolha repetida; dentro de 24 horas a mensagem sai pelo WhatsApp Oficial, depois de 24 horas sai pelo WhatsApp API; modelo aprovado sempre sai pelo oficial; botões, listas, carrossel e formulários nunca saem pelo WhatsApp API; com a aba conectada, o campo de resposta não trava mais depois de 24 horas; a bolha mostra WhatsApp API quando saiu por esse caminho e WhatsApp API · plano B quando a Meta recusou porque a janela tinha fechado e a mensagem foi reenviada com segurança; contato só com o código da Meta, sem telefone na ficha, nunca usa o WhatsApp API e continua precisando de modelo depois de 24 horas; se o celular conectado for outro número, a tela avisa e nada sai por ele: desconecte e conecte o celular certo; quem não está marcado em Quem pode usar o WhatsApp API falha depois de 24 horas como antes; campanhas nunca passam de 10 por minuto; o que passa do limite por minuto espera a vez em vez de sair em rajada; se o celular desconectar, os administradores recebem aviso urgente do Guia e, até reconectar com Gerar novo QR Code, respostas depois de 24 horas voltam a precisar de modelo aprovado; falha com Confira no celular antes de reenviar quer dizer que não deu para saber se saiu, então olhe o celular antes de mandar de novo; desligar o Envio automático faz tudo sair pela API oficial, com o celular ainda conectado e a conexão ligada; Pausar WhatsApp API para a conexão sem tirar o aparelho do celular: enquanto pausado, tudo sai pela API oficial e, depois de 24 horas, só modelo aprovado, como caixa sem WhatsApp API; a pausa não gera aviso de queda e nada religa sozinho; Retomar volta sem novo QR Code, e só se o WhatsApp tiver desligado o aparelho nesse meio-tempo a tela pede o QR de novo; a ordem certa para conectar é a caixa oficial já conectada, depois o WhatsApp Business aberto no celular, depois o QR Code; o WhatsApp pede que o app WhatsApp Business seja aberto no celular ao menos a cada 14 dias, e a aba lembra disso (a plataforma não sabe quando o app foi aberto); se o mesmo número também estiver ligado em outra caixa WhatsApp API (não oficial) da conta, a aba avisa com o nome da caixa, porque duas conexões no mesmo número aumentam o risco de bloqueio, mas nada é bloqueado; Pausar e Desconectar ficam em Outras ações, no fim da aba, e os dois pedem confirmação; Desconectar WhatsApp API tira o aparelho do celular e a caixa volta a pedir modelo depois de 24 horas.
 
 ### conectar_caixa_de_e_mail
 - titulo: Conectar caixa de e-mail
 - rota: settings_inbox_new
 - intent: Como conecto um e-mail?; Como integro Gmail/Outlook?; Quero atender por e-mail; Conectar caixa de e-mail (IMAP/SMTP)
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > E-mail
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > E-mail
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha E-mail; conecte via Gmail/Microsoft (OAuth) ou informe IMAP/SMTP; valide o envio/recebimento; atribua agentes e finalize.
 - gotchas: Para Google/Microsoft pode ser preciso reautorizar para conceder o escopo; verifique IMAP/SMTP e a identidade de remetente para o envio sair correto.
@@ -1456,7 +1465,7 @@
 - titulo: Conectar Instagram
 - rota: settings_inbox_new
 - intent: Como conecto o Instagram?; Quero atender DMs do Instagram; Conectar conta do Instagram
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Instagram
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Instagram
 - pre_requisitos: perfil profissional do Instagram; acesso ao perfil para autorizar no Instagram Login; permissão de gerenciar caixas de entrada. Este fluxo de Instagram Login não exige Página do Facebook.
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa e escolha Instagram. Com preparação assistida habilitada na conta, informe o @, busque e selecione o perfil conferindo foto, @ e nome; envie convite somente quando a tela oferecer essa ação. Se estiver pendente, no navegador de um computador entre com o @ exato, abra Apps e sites > Convites do testador, localize o nome do aplicativo exibido e clique em Aceitar; o link Abrir Apps e sites leva a https://www.instagram.com/accounts/manage_access/. Volte e clique em Já aceitei — verificar. Com Convite aceito, clique em Continuar com Instagram e autorize o mesmo perfil. Com preparação assistida desligada na conta, siga diretamente o Instagram Login. Atribua agentes e finalize o assistente.
 - gotchas: Preparação assistida ligada depende da disponibilidade da instalação; se indisponível, peça suporte e nova verificação, sem pular para OAuth direto. A habilitação não concede canal, plano, limite de caixas ou permissões. Convite aceito não comprova propriedade do perfil, não conclui a conexão e não substitui OAuth ou App Review. Não detectamos qual perfil está aberto no Instagram: confira o @ na outra aba. Nunca peça senha, cookie ou token ao usuário. Erro ou timeout não significa convite ausente; após envio incerto, verifique antes de tentar novamente. O gestor de sessão usa uma máquina dedicada da operação; não abre Chrome no computador do cliente. Trocar perfil ou voltar não remove testador. Reautorizar uma caixa existente preserva a mesma caixa e perfil e continua disponível, respeitando suas permissões; não serve para criar outra caixa ou trocar de perfil. Mensagens dependem das permissões concedidas e do funcionamento da integração.
@@ -1466,7 +1475,7 @@
 - titulo: Conectar página do Facebook
 - rota: settings_inbox_new
 - intent: Como conecto o Facebook/Messenger?; Quero atender mensagens da página do Facebook; Conectar página do Facebook
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Facebook
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Facebook
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Facebook; faça login e autorize; selecione a página do Facebook; atribua agentes e finalize.
 - gotchas: É preciso ser administrador da página no Facebook e conceder as permissões de mensagens na autorização da Meta.
@@ -1476,7 +1485,7 @@
 - titulo: Criar canal de chat ao vivo no site
 - rota: settings_inbox_new
 - intent: Como coloco o chat ao vivo no meu site?; Como crio um widget de site?; Conectar canal de website/live-chat
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Site
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Site
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Site; preencha nome e domínio do widget; ajuste cor/saudação; atribua agentes; finalize e copie o script para colar no seu site.
 - gotchas: O widget só aparece depois de colar o script no site; a última etapa mostra o código de instalação.
@@ -1486,7 +1495,7 @@
 - titulo: Conectar canal de SMS
 - rota: settings_inbox_new
 - intent: Como conecto SMS?; Quero atender por SMS; Conectar SMS com Twilio ou Bandwidth
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > SMS
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > SMS
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha SMS; selecione o provedor (Twilio ou Bandwidth) e informe as credenciais/número; atribua agentes e finalize.
 - gotchas: Exige conta no provedor (Twilio/Bandwidth) com número habilitado para SMS.
@@ -1496,7 +1505,7 @@
 - titulo: Conectar canal do Telegram
 - rota: settings_inbox_new
 - intent: Como conecto o Telegram?; Quero atender pelo Telegram; Conectar bot do Telegram
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Telegram
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Telegram
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: No Telegram crie um bot com o BotFather e copie o token; vá em Configurações > Caixas de entrada > Nova caixa; escolha Telegram; cole o token do bot; atribua agentes e finalize.
 - gotchas: O token vem do BotFather; sem o token correto o canal não conecta.
@@ -1506,7 +1515,7 @@
 - titulo: Criar canal personalizado via API
 - rota: settings_inbox_new
 - intent: Como crio um canal pela API?; Conectar canal personalizado; Quero integrar um canal próprio via API
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > API
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > API
 - pre_requisitos: ter os dados/credenciais do canal escolhido
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha API; informe nome e (opcional) webhook; finalize; use as credenciais/endpoints para integrar seu canal.
 - gotchas: O canal API é genérico: você envia/recebe mensagens pelos endpoints; precisa de desenvolvimento do seu lado.
@@ -1516,7 +1525,7 @@
 - titulo: Diagnosticar conexão de canal (WhatsApp / e-mail / Instagram não conecta ou não recebe)
 - rota: settings_inbox_new
 - intent: Por que meu WhatsApp não conecta?; Por que não estou recebendo mensagens?; Minha caixa de e-mail parou de receber; Por que o Instagram não recebe mensagens?; Meu canal caiu ou desconectou; Diagnosticar conexão da caixa de entrada
-- onde_fica: Configurações > Caixas de entrada
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada
 - diagnostic: `channel`
 - passos: O Guia lê o estado real das suas caixas e aponta o que está faltando (autorização expirada, credenciais incompletas, IMAP/SMTP desligado, caixa sem agente etc.). Siga o conserto indicado para a caixa citada, nas Configurações daquela caixa de entrada.
 - gotchas: o status em tempo real do WhatsApp API (QR Code) só aparece na tela de Conexão da caixa; reconectar/reautorizar é sempre feito pelo administrador.
@@ -1547,7 +1556,7 @@
 - titulo: Diagnosticar atribuição (conversas não são atribuídas a ninguém)
 - rota: settings_inbox_new
 - intent: Por que as conversas não são atribuídas?; As conversas ficam sem responsável; A atribuição automática não está funcionando; Ninguém recebe as novas conversas; Diagnosticar roteamento de conversas
-- onde_fica: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
 - diagnostic: `routing`
 - passos: O Guia verifica, por caixa, se a atribuição automática está ligada, se há agentes vinculados, se algum agente está online, se há limite por agente e se o horário de funcionamento está fora do expediente — e aponta o que ajustar nas Configurações da caixa.
 - gotchas: a atribuição automática só envia conversas para agentes 'Online'; fora do horário comercial a atribuição cai ou zera.
@@ -1558,7 +1567,7 @@
 - titulo: Diagnosticar calendário/reuniões (não consigo agendar)
 - rota: settings_inbox_new
 - intent: Por que não consigo agendar reunião?; O calendário não conecta; Os horários disponíveis não aparecem; Falha ao criar reunião; Diagnosticar calendário ou reuniões
-- onde_fica: Configurações > Caixas de entrada (e-mail Google/Microsoft)
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada (e-mail Google/Microsoft)
 - diagnostic: `calendar`
 - passos: O Guia confere se o recurso de reuniões está ativo na instalação, se há caixa de e-mail Google/Microsoft conectada por OAuth, se o calendário foi autorizado (escopo) e se os tokens de acesso estão presentes — e indica o que reconectar.
 - gotchas: só e-mail conectado via 'Entrar com Google/Microsoft' oferece calendário (IMAP/SMTP comum não); ativar o recurso na instalação é ajuste de servidor (administrador da plataforma).
@@ -1569,7 +1578,7 @@
 - titulo: Ver o volume e os tempos de atendimento da conta
 - rota: conversation_reports
 - intent: Quantas conversas entraram neste mês?; Nosso tempo de primeira resposta está piorando?; Quanto tempo o cliente espera entre respostas?; Quantas conversas foram resolvidas no período?; Como exporto esses números para planilha?
-- onde_fica: Relatórios > Conversas
+- onde_fica: No menu novo: Resultados > Relatórios > Conversas. No menu antigo: Relatórios > Conversas
 - pre_requisitos: nenhum, mas só aparecem números se houver conversas no período escolhido
 - passos: 1. Abra Relatórios > Conversas; 2. Escolha o período no seletor de datas; 3. Ligue Horários de funcionamento se quiser descontar o tempo fora do expediente; 4. Compare os gráficos de conversas, mensagens, tempo de primeira resposta, tempo de resolução e tempo de espera do cliente; 5. Clique em Baixar relatórios de conversas para gerar o arquivo CSV.
 - gotchas: o filtro Agrupar por só aparece quando o período tem 30 dias ou mais, abaixo disso tudo é mostrado por dia; clicar numa barra abre a lista de conversas daquela barra, mas só para administrador e só em barra com valor maior que zero; tempo de primeira resposta e tempo de resolução são médias apenas das conversas que tiveram resposta ou resolução, por isso somam menos que o total de conversas; com Horários de funcionamento ligado, o arquivo baixado vem com nome terminando em business-hours.
@@ -1580,7 +1589,7 @@
 - rota: agent_reports_show
 - cobre: agent_reports
 - intent: Por que o tempo de resposta desse agente subiu?; Quantas conversas essa pessoa resolveu no mês?; Em que dias ela atendeu mais?; Quais conversas entraram naquele pico do gráfico?; Como baixo isso em planilha?
-- onde_fica: Relatórios > Agentes > clicar no nome do agente
+- onde_fica: No menu novo: Resultados > Relatórios > Usuários. No menu antigo: Relatórios > Agentes > clicar no nome do agente
 - pre_requisitos: o agente precisa existir e ter conversas atribuídas no período
 - passos: 1. Abra Relatórios > Agentes; 2. Clique no nome da pessoa na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: o relatório de agente não tem gráfico de mensagens recebidas, porque mensagem do cliente não é atribuída a um agente; o botão de baixar gera o arquivo de todos os agentes do período, não apenas o da pessoa aberta na tela; trocar de agente pelo filtro do topo recarrega a tela inteira; ver as conversas por trás de uma barra é restrito a administrador.
@@ -1591,7 +1600,7 @@
 - rota: inbox_reports_show
 - cobre: inbox_reports
 - intent: O WhatsApp está demorando mais que o site para responder?; Quantas mensagens esse canal recebeu na semana?; Em que dia esse canal teve mais conversa?; Quais conversas geraram aquele pico?
-- onde_fica: Relatórios > Caixa de Entrada > clicar no nome da caixa
+- onde_fica: No menu novo: Resultados > Relatórios > Canais. No menu antigo: Relatórios > Caixa de Entrada > clicar no nome da caixa
 - pre_requisitos: a caixa de entrada precisa existir e ter conversas no período
 - passos: 1. Abra Relatórios > Caixa de Entrada; 2. Clique no nome do canal na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: o botão de baixar traz o arquivo de todas as caixas do período, não só a que está na tela; o filtro do topo troca de canal e recarrega tudo; os tempos médios consideram apenas conversas que tiveram primeira resposta ou resolução; abrir as conversas de uma barra é permitido apenas a administrador.
@@ -1602,7 +1611,7 @@
 - rota: team_reports_show
 - cobre: team_reports
 - intent: O time de suporte está resolvendo mais rápido que o comercial?; Quantas conversas esse time atendeu no mês?; O tempo de espera do cliente nesse time caiu?; Quais conversas estão por trás desse número?
-- onde_fica: Relatórios > Time > clicar no nome do time
+- onde_fica: No menu novo: Resultados > Relatórios > Times. No menu antigo: Relatórios > Time > clicar no nome do time
 - pre_requisitos: o time precisa existir e ter conversas atribuídas a ele no período
 - passos: 1. Abra Relatórios > Time; 2. Clique no nome do time na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: só entram conversas atribuídas ao time, então atendimento feito pela mesma pessoa fora do time não aparece aqui; o botão de baixar gera o arquivo de todos os times do período; trocar de time pelo filtro do topo substitui toda a tela; ver as conversas de uma barra é restrito a administrador.
@@ -1613,7 +1622,7 @@
 - rota: label_reports_show
 - cobre: label_reports
 - intent: Quantas conversas tiveram essa etiqueta no mês?; Reclamações estão crescendo?; Conversas com essa etiqueta demoram mais para resolver?; Quais conversas receberam essa etiqueta naquele dia?
-- onde_fica: Relatórios > Etiquetas > clicar no nome da etiqueta
+- onde_fica: No menu novo: Resultados > Relatórios > Etiquetas. No menu antigo: Relatórios > Etiquetas > clicar no nome da etiqueta
 - pre_requisitos: a etiqueta precisa estar criada e aplicada em conversas do período
 - passos: 1. Abra Relatórios > Etiquetas; 2. Clique no nome da etiqueta na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: etiqueta criada mas nunca aplicada abre a tela zerada, e isso não é erro; o botão de baixar gera o arquivo de todas as etiquetas do período; trocar de etiqueta pelo filtro do topo recarrega a tela inteira; só administrador abre a lista de conversas por trás de uma barra.
@@ -1623,7 +1632,7 @@
 - titulo: Medir o quanto o robô resolve sozinho
 - rota: bot_reports
 - intent: Quantas conversas o robô atendeu sem passar para ninguém?; Qual a taxa de transferência para os atendentes?; O robô está resolvendo mais do que no mês passado?; Quantas respostas o robô enviou?
-- onde_fica: Relatórios > Robôs
+- onde_fica: No menu novo: Resultados > Relatórios > Robôs. No menu antigo: Relatórios > Robôs
 - pre_requisitos: ter conversas atendidas por robô no período
 - passos: 1. Abra Relatórios > Robôs; 2. Escolha o período; 3. Leia os quadros de conversas, total de respostas, taxa de resolução e taxa de entrega; 4. Acompanhe a evolução nos gráficos de resolução e de transferências; 5. Clique numa barra para ver as conversas daquele dia.
 - gotchas: esta tela não tem o botão Horários de funcionamento, tudo é contado no dia inteiro, diferente das demais; também não tem botão de baixar, os números ficam só na tela; taxa de resolução e taxa de entrega aparecem como dois tracinhos quando o valor é zero; os quadros do topo usam o período inteiro e ignoram o agrupamento por semana ou mês, que vale só para os gráficos; taxa de entrega alta significa que o robô passou muita conversa para gente, o que costuma ser sinal de fluxo incompleto.
@@ -1633,7 +1642,7 @@
 - titulo: Escolher como as conversas são distribuídas
 - rota: assignment_policy_index
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
-- onde_fica: Configurações > Atribuição de Agentes
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
 - pre_requisitos: ser administrador da conta
 - passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
 - gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
@@ -1643,7 +1652,7 @@
 - titulo: Ver e organizar as políticas de atribuição
 - rota: agent_assignment_policy_index
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
 - pre_requisitos: ser administrador da conta
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
@@ -1653,7 +1662,7 @@
 - titulo: Criar uma regra nova de distribuição de conversas
 - rota: agent_assignment_policy_create
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
 - pre_requisitos: ser administrador da conta
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
 - gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
@@ -1663,7 +1672,7 @@
 - titulo: Ajustar uma política existente e ligar as caixas de entrada
 - rota: agent_assignment_policy_edit
 - intent: Como coloco uma caixa de entrada nessa política?; Como mudo o limite de conversas por agente?; Como tiro uma caixa de entrada da política?; Por que a caixa saiu da outra política quando eu vinculei aqui?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
 - pre_requisitos: ter uma política de atribuição já criada
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Ajuste ordem, prioridade, distribuição justa e descarte de inativas; 3. Clique em Atualizar política para gravar esses campos; 4. Em Caixas de entrada adicionadas, vincule e desvincule as caixas.
 - gotchas: esta é a única tela com a seção de caixas de entrada, e já vem preenchida com a política existente; uma caixa só pode estar em uma política, e vincular aqui desvincula da anterior, com aviso antes; vincular e desvincular caixa vale na hora, enquanto os demais campos só valem depois do botão Atualizar política; o intervalo de conversas inativas aceita de 1 hora a 999 dias, e em branco desliga o descarte.
@@ -1673,7 +1682,7 @@
 - titulo: Ver quanto cada pessoa aguenta de conversa
 - rota: agent_capacity_policy_index
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
 - pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
@@ -1683,7 +1692,7 @@
 - titulo: Criar uma regra de limite de conversas
 - rota: agent_capacity_policy_create
 - intent: Como crio uma política de capacidade?; Como limito o número máximo de conversas por caixa?; Quais conversas não devem contar no limite do agente?; Onde adiciono os agentes nessa política?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
 - pre_requisitos: ter atribuição avançada liberada no plano
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Defina as regras de exclusão, escolhendo as etiquetas e o tempo que não contam na capacidade; 4. Clique em Criar política.
 - gotchas: a política nasce sem ninguém dentro, porque as seções de limite por caixa e de agentes só existem na tela de edição, para onde o sistema leva ao salvar; as etiquetas de exclusão precisam já existir na conta para poderem ser escolhidas.
@@ -1693,7 +1702,7 @@
 - titulo: Colocar agentes e limites numa política de capacidade
 - rota: agent_capacity_policy_edit
 - intent: Como adiciono agentes a uma política de capacidade?; Como defino o máximo de conversas por caixa de entrada?; Como mudo a capacidade de uma pessoa específica?; Por que o agente saiu da outra política de capacidade?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
 - pre_requisitos: ter uma política de capacidade criada e os agentes cadastrados na conta
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Em limites por caixa de entrada, escolha a caixa e o máximo de conversas; 3. Em agentes atribuídos, use Adicionar agente; 4. Ajuste nome, descrição e regras de exclusão e clique em Atualizar política.
 - gotchas: todo agente entra com capacidade 20 por padrão, então ajuste se o time não for homogêneo; um agente só pode estar em uma política de capacidade, e vincular aqui tira ele da anterior; mexer em agente e em limite por caixa vale na hora, enquanto nome, descrição e exclusões só valem depois do botão Atualizar política.
@@ -1703,7 +1712,7 @@
 - titulo: Escolher o funil para configurar a passagem da IA
 - rota: crm_handoff_settings_index
 - intent: Onde configuro a IA passando o atendimento para uma pessoa?; Em quais funis o handoff já está ligado?; Por que essa tela não aparece para mim?; Como reviso a passagem da IA de um funil específico?
-- onde_fica: Configurações > Transferir para humano (CRM)
+- onde_fica: No menu novo: Configurações > Atribuição > passagem para a pessoa (quem cuida da IA do CRM sem administrar: Configurações > Passar para uma pessoa). No menu antigo: Configurações > Transferir para humano (CRM)
 - pre_requisitos: CRM Kanban e IA do CRM ligados, pelo menos um funil criado, e permissão de administrador
 - passos: 1. Abra Configurações > Transferir para humano (CRM); 2. Leia a frase de cada funil: ligada, com o jeito (na hora ou com convite) e em quantas etapas, ou desligada; 3. Toque em Abrir no funil que quer configurar.
 - gotchas: aqui nada é configurado, é só a lista de escolha; a frase conta as etapas, então um funil desligado com uma etapa do seu jeito aparece como ligada em 1 etapa; com a assistente do funil desligada a frase diz que está desligada por isso, porque ninguém é chamado; a seta e o X voltam para Atribuição de agentes (ou para o Kanban, para quem não chega lá); com o CRM ou a IA do CRM desligados a plataforma devolve você à tela inicial sem avisar; sem funil criado a lista fica vazia.
@@ -1713,7 +1722,7 @@
 - titulo: Definir quando e para quem a IA passa a conversa
 - rota: crm_handoff_settings_edit
 - intent: Como faço a IA chamar um humano no meio do atendimento?; Qual a diferença entre transferir direto e por convite?; O que acontece se ninguém pegar a conversa?; Como coloco uma regra diferente só em uma etapa do funil?; Como escolho quem recebe a conversa?
-- onde_fica: Configurações > Transferir para humano (CRM) > nome do funil
+- onde_fica: No menu novo: Configurações > Atribuição > passagem para a pessoa. No menu antigo: Configurações > Transferir para humano (CRM) > nome do funil
 - pre_requisitos: um funil com a assistente ligada, pelo menos uma caixa de entrada ligada ao funil e pessoas nessas caixas
 - passos: 1. No cartão Passagem para a equipe, ligue a passagem (salva na hora); 2. Em Quando passar, toque em Alterar e escreva quando chamar a equipe; 3. Em Quem recebe, escolha alguém da equipe ou a mesma pessoa; 4. Em Como entregar, escolha na hora ou com convite e, no convite, o tempo de espera e o que fazer se ninguém aceitar; 5. Em Etapas, toque em Alterar na etapa diferente e escolha como nas outras, do meu jeito ou não chamar ninguém; 6. Salve cada tela; 7. Para sair, use a seta do topo: aberta pela lista ela diz Todos os funis e volta à lista; aberta pelo Kanban (Configurar > Atribuição e transferência para humano) ela diz Kanban e volta ao Kanban no mesmo funil; o X e o Fechar vão para o mesmo lugar.
 - gotchas: cada tela de detalhe salva sozinha e Cancelar desfaz só ela; a equipe é quem está nas caixas de entrada do funil, e pessoa fora delas aparece como fora da equipe e não recebe; com a mesma pessoa, ela recebe quando estiver na caixa da conversa, senão a conversa vai para alguém da equipe dessa caixa; os avisos de falta levam ao CRM, onde se liga a assistente (o Kanban abre já neste funil) e as caixas do funil; quando falta ligar a assistente do funil ou uma caixa, a tela avisa no topo; na hora entrega para quem está online e, sem ninguém, a assistente segue com o cliente até alguém entrar; com convite a pessoa é avisada e a assistente segue até ela aceitar; o tempo de espera padrão é 15 minutos, Avisar de novo avisa até 8 vezes e o convite vale 24 horas; uma regra antiga que entregava para quem está fora aparece com aviso e o botão Corrigir agora; com alteração sem salvar, a tela pede para salvar ou cancelar antes de sair.
@@ -1733,7 +1742,7 @@
 - titulo: Acompanhar quanto a IA está custando
 - rota: crm_ai_usage_index
 - intent: Quanto gastei de IA esse mês?; Qual recurso de IA consome mais?; Como exporto o relatório de uso da IA?; Por que os valores apareceram em dólar?; Dá para ver o que foi conversado com a IA?
-- onde_fica: CRM > Gestão de IA
+- onde_fica: No menu novo: Resultados > Relatórios > Gasto com IA. No menu antigo: CRM > Gestão de IA
 - pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
 - passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
 - gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
@@ -1743,7 +1752,7 @@
 - titulo: Ver o plano contratado e quanto está sendo cobrado
 - rota: autonomia_financial_subscription
 - intent: Qual plano eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
-- onde_fica: Financeiro > Assinatura
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Assinatura
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
 - passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
 - gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
@@ -1753,7 +1762,7 @@
 - titulo: Conferir faturas emitidas e o que já foi pago
 - rota: autonomia_financial_invoices
 - intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
-- onde_fica: Financeiro > Faturas
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
 - pre_requisitos: ser administrador da conta
 - passos: 1. Abra Financeiro > Faturas; 2. Veja no topo o total em aberto, quantas estão pagas e quantos pagamentos existem; 3. Na tabela, olhe valor, status, vencimento e data de pagamento; 4. Use abrir fatura para ver o documento da cobrança; 5. Desça até pagamentos para conferir origem e data de cada um.
 - gotchas: a tela não cobra, não paga e não emite fatura, só mostra o que o sistema de cobrança registrou; o link de abrir fatura só existe quando a cobrança tem documento; o total em aberto soma pendentes e vencidas juntas, sem separar; a origem mostra o meio de pagamento e cai para manual quando o pagamento foi lançado à mão.
@@ -1796,7 +1805,7 @@
 - rota: settings_prospecting_index
 - cobre: autonomia_prospecting_settings
 - intent: Onde coloco a chave do Google?; Por que o mapa nao aparece?; Por que o botao Enriquecer esta desligado?; Como mudo o funil sugerido?; Como mudo o peso da nota dos leads?; Como busco em outro pais?; Onde vejo o consumo?; Por que nao consigo editar os pesos?
-- onde_fica: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao nao ve o atalho nem abre a tela; diga que ajustar a Prospeccao pede Editar prospeccao.
 - pre_requisitos: Prospeccao ligada na conta pelo suporte
 - passos: 1. Abra Prospeccao > Configuracoes; 2. Na aba Geral, confira as Chaves do Google, a Pesquisa de empresa e decisor e os avisos; 3. Escolha o Funil CRM padrao e a Etapa CRM padrao; 4. Escolha o Pais da busca; 5. Ajuste a Validade do cache (segundos) e confira o Consumo diario e o Consumo mensal; 6. Clique em Salvar; 7. Na aba Score, escolha a Forma padrao de pesquisa e o Perfil de score e clique em Salvar; 8. Para as jogadas salvas, use a aba Jogadas.
@@ -1906,7 +1915,7 @@
 - titulo: Editar e excluir as jogadas salvas
 - rota: settings_prospecting_index
 - intent: Onde edito ou apago uma jogada salva?; Quantas jogadas posso salvar?
-- onde_fica: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve as jogadas salvas na grade da busca, mas nao edita nem exclui.
 - pre_requisitos: ter salvo pelo menos uma jogada na busca, em Filtros avancados > Salvar como jogada
 - passos: 1. Abra Prospeccao > Configuracoes; 2. Entre na aba Jogadas; 3. Para mudar, clique em Editar, ajuste o Nome da jogada e os filtros e clique em Salvar jogada; 4. Para apagar, clique em Excluir e depois em Confirmar exclusao.
@@ -2076,7 +2085,7 @@
 - titulo: Ver os modelos de mensagem do WhatsApp
 - rota: settings_templates
 - intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
-- onde_fica: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp (o item saiu de Configurações). No menu antigo: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
 - passos: 1. Abra Configurações > Modelos; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Busque pelo nome ou pelo texto; 5. Abra o modelo para ver status, categoria e caixas.
 - gotchas: esta tela só exibe, porque criar e editar modelo é sempre no provedor, e não há botão de criar aqui; sincronizar fica desligado sem nenhuma caixa de WhatsApp; a sincronização leva alguns minutos e a tela mostra a hora da última tentativa; respondendo só parte das caixas, aparece aviso de sincronização parcial e a lista fica incompleta; modelo ainda não enviado para aprovação não serve para campanha.
@@ -2086,7 +2095,7 @@
 - titulo: Ver os modelos do WhatsApp pela área de Campanhas
 - rota: campaigns_templates_index
 - intent: Onde vejo os modelos antes de montar uma campanha do WhatsApp?; Quais modelos posso usar na campanha do WhatsApp Oficial?; Onde ficam os modelos do WhatsApp em Campanhas?
-- onde_fica: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
 - passos: 1. Abra Campanhas > Modelos WhatsApp; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Confira que o modelo que vai usar está aprovado; 5. Siga para Campanhas > WhatsApp Oficial para montar a campanha.
 - gotchas: é a mesma tela de Configurações > Modelos, só com outro caminho no menu; por enquanto só administrador vê; só exibe e sincroniza, porque criar e editar modelo é sempre no provedor; os modelos das campanhas de e-mail são outra coisa e ficam dentro de cada campanha de e-mail.
@@ -2097,7 +2106,7 @@
 - rota: modelos_whatsapp_lista
 - cobre: modelos_whatsapp_modelo
 - intent: Onde vejo os meus modelos de mensagem do WhatsApp?; Meu modelo foi aprovado?; Por que o WhatsApp recusou o meu modelo?; Por que o modelo está pausado?; Onde o modelo está sendo usado?; Quanto custa cada envio do modelo?; Quantas respostas grátis ainda tenho no mês?; Por que a minha campanha parou por causa do modelo?
-- onde_fica: Menu lateral > Campanhas > Modelos WhatsApp (com a nova tela de Modelos liberada na conta)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Menu lateral > Campanhas > Modelos WhatsApp (com a nova tela de Modelos liberada na conta)
 - pre_requisitos: número do WhatsApp oficial (API oficial da Meta) conectado; ser administrador ou ter a função com Modelos do WhatsApp (ver ou editar)
 - passos: 1. Abra Campanhas > Modelos WhatsApp; 2. Veja a lista, com o que precisa de você primeiro (recusado, pausado, em análise e depois os prontos); 3. Busque pelo nome ou pelo texto, ou filtre por número; 4. Clique no modelo para ver a mensagem como o cliente vê, a situação explicada, o tipo e o custo por envio, e onde ele está em uso; 5. Em Respostas grátis do mês, confira quantas respostas cada número já mandou.
 - gotchas: quem aprova é o WhatsApp, e a situação chega pela lista que o Chat2You busca no WhatsApp ao abrir a tela; Divulgação custa bem mais por envio que Aviso de serviço, e o WhatsApp pode mudar o tipo sozinho (a tela avisa); os preços vêm da tabela oficial da Meta para o Brasil configurada na plataforma; modelo com o selo Usado pelo sistema (agendamento, Anúncios, pesquisa de satisfação) não se altera nem se apaga, só duplica; modelo em uso numa campanha agendada, num aviso do agendamento ou num follow-up não se altera nem se apaga até trocar o modelo lá; uso em funil que a pessoa não vê aparece só como em uso onde você não tem acesso; quando o modelo muda e uma campanha parada por causa dele pode seguir, use Retomar: ela confere o modelo de novo e só sai se estiver tudo certo; quem só vê não tem os botões de criar, alterar e apagar; com a tela nova desligada, o mesmo menu abre a lista antiga.
@@ -2108,7 +2117,7 @@
 - rota: modelos_whatsapp_novo
 - cobre: modelos_whatsapp_enviado
 - intent: Como crio um modelo de mensagem do WhatsApp?; Como mando um modelo para o WhatsApp aprovar?; Como ponho foto, botão ou rodapé no modelo?; Como faço um carrossel, uma oferta com prazo ou um código de verificação?; Como duplico um modelo?; Como crio um modelo sem sair da campanha?
-- onde_fica: Campanhas > Modelos WhatsApp > Criar modelo (ou, na Nova campanha, Criar modelo quando a caixa não tem modelo pronto)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > Criar modelo (ou, na Nova campanha, Criar modelo quando a caixa não tem modelo pronto)
 - pre_requisitos: número do WhatsApp oficial conectado; ser administrador ou ter a função com Modelos do WhatsApp em editar; foto, vídeo ou PDF no computador se o modelo tiver arquivo no topo
 - passos: 1. Clique em Criar modelo; 2. Escolha um começo pronto, Começar do zero ou um dos outros formatos; 3. Em Texto, dê um nome que a equipe reconheça, escreva a mensagem e ponha os campos (Nome do cliente, Data…) com um exemplo em cada; 4. Em Extras, escolha o topo (e o arquivo), o rodapé e os botões; 5. Em Números, escolha a conta do WhatsApp; 6. Em Confira, veja o que o WhatsApp confere e clique em Enviar para aprovação; 7. Vindo da campanha, clique em Voltar para a campanha: o rascunho volta com o modelo novo escolhido.
 - gotchas: o modelo vale para todos os números da mesma conta do WhatsApp; escolhendo duas contas, saem dois pedidos, cada um com a sua análise; o texto não pode começar nem terminar com um campo, e todo campo precisa de exemplo, senão o WhatsApp recusa; o nome no WhatsApp sai do nome do modelo e não pode repetir, e um nome apagado fica preso por 30 dias; o arquivo do topo sobe para o WhatsApp só no envio; a análise leva de minutos a algumas horas; enquanto isso, a campanha pode ser montada e agendada, mas Enviar agora só libera depois da aprovação; catálogo de produtos, formulário e Criar com IA ainda não estão disponíveis.
@@ -2118,7 +2127,7 @@
 - titulo: Corrigir um modelo recusado ou alterar um modelo
 - rota: modelos_whatsapp_alterar
 - intent: Como corrijo um modelo que o WhatsApp recusou?; Como altero o texto de um modelo aprovado?; Por que não consigo alterar o modelo?; Quantas vezes posso alterar um modelo?; Como peço revisão de uma recusa?
-- onde_fica: Campanhas > Modelos WhatsApp > abrir o modelo > Corrigir (recusado), Alterar o texto (pausado) ou Alterar (pronto)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > abrir o modelo > Corrigir (recusado), Alterar o texto (pausado) ou Alterar (pronto)
 - pre_requisitos: ser administrador ou ter a função com Modelos do WhatsApp em editar; o modelo não pode estar em uso nem ser do sistema
 - passos: 1. Abra o modelo na lista; 2. Leia o motivo e o Como resolver; 3. Clique em Corrigir, Alterar o texto ou Alterar; 4. Ajuste o texto e os extras, confira e clique em Reenviar para aprovação ou Enviar alteração.
 - gotchas: depois de alterar, o modelo volta para a análise do WhatsApp; o WhatsApp deixa alterar um modelo aprovado 1 vez por dia e até 10 vezes em 30 dias; nome e idioma não mudam (para isso, duplique); modelo em uso numa campanha agendada, aviso ou follow-up não muda: a tela mostra onde ele está e pede para trocar lá ou duplicar; o pedido de revisão de uma recusa só existe no Gerenciador do WhatsApp, e o link leva até lá.
@@ -2128,7 +2137,7 @@
 - titulo: Usar um modelo pronto em uma campanha
 - rota: modelos_whatsapp_usar
 - intent: Como uso um modelo aprovado numa campanha?; De qual número sai a campanha do modelo?; O que vai em cada campo do modelo na campanha?
-- onde_fica: Campanhas > Modelos WhatsApp > Usar em uma campanha (na lista ou no modelo)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > Usar em uma campanha (na lista ou no modelo)
 - pre_requisitos: modelo Pronto para usar; acesso a Campanhas para montar e enviar
 - passos: 1. Clique em Usar em uma campanha; 2. Com mais de um número, escolha de qual sai; 3. Confira o que vai em cada campo; 4. Clique em Continuar para a campanha e escolha o público; a caixa, o modelo e os campos já vêm escolhidos.
 - gotchas: Nome do cliente e Nome da empresa já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
@@ -2138,7 +2147,7 @@
 - titulo: Autorizar o Chat2You a criar modelos do WhatsApp sozinho
 - rota: modelos_whatsapp_autorizacao
 - intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
-- onde_fica: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
+- onde_fica: No menu novo: Configurações > Custos do WhatsApp (ou Crescer > Campanhas > Modelos WhatsApp). No menu antigo: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
 - pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
 - passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
 - gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.

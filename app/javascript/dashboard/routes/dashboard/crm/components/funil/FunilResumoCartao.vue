@@ -43,7 +43,7 @@ defineEmits(['alterar']);
         </h3>
         <Button
           v-if="!semAlterar"
-          :label="$t(soVer ? 'CRM_FUNIL.CAIXAS.VER' : 'CRM_FUNIL.ALTERAR')"
+          :label="soVer ? $t('CRM_FUNIL.CAIXAS.VER') : $t('CRM_FUNIL.ALTERAR')"
           :aria-label="
             soVer ? titulo : $t('CRM_FUNIL.ALTERAR_PARTE', { parte: titulo })
           "

@@ -414,3 +414,13 @@
   display_name: Campanha do WhatsApp com produtos do catálogo
   enabled: false
   column: feature_flags_ext_1
+
+# Menu lateral novo e página inicial de Configurações com cartões (#1617).
+# Bit = posição na lista; só acrescentar no fim (combinado com a Orquestração, #1322). Nunca inserir antes de uma flag
+# que já está na main: o bit gravado nas contas mudaria de significado.
+# Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
+# No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
+- name: menu_lateral_novo
+  display_name: Menu lateral novo e Configurações em cartões
+  enabled: false
+  column: feature_flags_ext_1
