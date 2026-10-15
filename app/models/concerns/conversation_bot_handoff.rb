@@ -48,7 +48,7 @@ module ConversationBotHandoff
     para_ia, quem_passou = Crm::Passagens.com_motivo(motivo) do
       passar_ao_atendimento!(keep_bot: keep_bot, motivo: motivo, release_assignee: release_assignee)
     end
-    depois_da_passagem(para_ia, dispatch_event, quem_passou)
+    depois_da_passagem(para_ia, dispatch_event, quem_passou, motivo)
   end
 
   def passar_ao_atendimento!(keep_bot:, motivo:, release_assignee:)
@@ -116,22 +116,39 @@ module ConversationBotHandoff
   end
 
   # Sem agente de IA na regra, o aviso de passagem sai na hora, como sempre. Com ele, tudo espera o commit.
-  def depois_da_passagem(para_ia, dispatch_event, quem_passou)
+  def depois_da_passagem(para_ia, dispatch_event, quem_passou, motivo)
     if para_ia
-      ActiveRecord.after_all_transactions_commit { concluir_passagem(para_ia, dispatch_event, quem_passou) }
+      ActiveRecord.after_all_transactions_commit { concluir_passagem(para_ia, dispatch_event, quem_passou, motivo) }
     elsif dispatch_event
       dispatch_bot_handoff_event
     end
   end
 
   # Depois do commit: a passagem ao agente de IA que a regra apontou. Com ele no comando, sem aviso de passagem.
-  # Um erro aqui sai depois do commit de quem chamou: fica no log e o aviso de passagem sai, como numa recusa.
-  def concluir_passagem(para_ia, dispatch_event, quem_passou)
+  # Um erro aqui sai depois do commit de quem chamou: fica no log, a conversa fica com a marca de segurar (a fila tenta
+  # de novo) e o aviso de passagem sai, como numa recusa.
+  def concluir_passagem(para_ia, dispatch_event, quem_passou, motivo)
     com_ia = para_ia.concluir_para_ia!(origem: quem_passou).status == :com_ia
     dispatch_bot_handoff_event if dispatch_event && !com_ia
   rescue StandardError => e
     Rails.logger.error("[crm][entrega] concluir passagem ao agente falhou conversa=#{id} erro=#{e.class}")
+    segurar_para_a_fila(motivo)
     dispatch_bot_handoff_event if dispatch_event
+  end
+
+  # Sem a marca do motor, a fila (HandoffDrainJob) não veria a conversa. Relida sob a trava: quem entrou nesse meio tempo
+  # (uma pessoa, o agente de IA, a resolução) vence, e nada é gravado. Numa cópia lida do banco: a que falhou pode ter
+  # mudança só na memória.
+  def segurar_para_a_fila(motivo)
+    conversa = self.class.find(id)
+    conversa.with_lock do
+      next unless conversa.awaiting_person? && !conversa.resolved?
+
+      Crm::Entrega::Marca.marcar(conversa, modo: Crm::Entrega::Marca::SEGURANDO, motivo: motivo, falha: 'erro_na_passagem')
+      conversa.save!
+    end
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] segurar para a fila falhou conversa=#{id} erro=#{e.class}")
   end
 
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a

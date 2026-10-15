@@ -34,9 +34,12 @@ module Crm::AgentesIa
     destinos(conversation).find { |agente| agente.id == agent_id.to_i }
   end
 
-  # { rótulo => agente } na forma que a IA do CRM recebe.
+  # { rótulo => agente } na forma que a IA do CRM recebe. Dois agentes de mesmo nome levam o id no rótulo
+  # ("Lia #12 (agente de IA)"): a lista não perde ninguém, e o motor acha cada um por igualdade.
   def rotulos(conversation)
-    destinos(conversation).index_by { |agente| "#{agente.name}#{SUFIXO}" }
+    agentes = destinos(conversation)
+    repetidos = agentes.map(&:name).tally.select { |_nome, quantos| quantos > 1 }.keys
+    agentes.index_by { |agente| repetidos.include?(agente.name) ? "#{agente.name} ##{agente.id}#{SUFIXO}" : "#{agente.name}#{SUFIXO}" }
   end
 
   # Com "Se o cliente pedir alguém pelo nome" ligado, os rótulos que a IA do CRM recebe junto dos nomes das pessoas.

@@ -47,6 +47,17 @@ RSpec.describe Crm::Ai::Evaluator do
       expect(nomes).to contain_exactly('Léo do WhatsApp', 'Lia (agente de IA)')
     end
 
+    # Pega: dois agentes de mesmo nome viravam um só rótulo, e um deles sumia da lista do modelo.
+    it 'dois agentes com o mesmo nome: os dois entram, cada um com o id no rótulo, e o motor acha cada um', :aggregate_failures do
+      outra_lia = criar_agente_ia(account, 'Lia')
+      Autonomia::Agents::Areas.vincular!(agent: outra_lia, inbox: caixa_whatsapp)
+
+      nomes = nomes_para_o_modelo(card_com(primaria: conversa_viva), selector_mode: 'direct')
+
+      expect(nomes).to contain_exactly('Léo do WhatsApp', "Lia ##{lia.id} (agente de IA)", "Lia ##{outra_lia.id} (agente de IA)")
+      expect(Crm::AgentesIa.rotulos(conversa_viva).values).to contain_exactly(lia, outra_lia)
+    end
+
     it 'rodízio: só pessoas (a IA não entra na vez)' do
       nomes = nomes_para_o_modelo(card_com(primaria: conversa_viva))
 

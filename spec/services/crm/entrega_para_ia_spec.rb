@@ -140,7 +140,8 @@ RSpec.describe Crm::Entrega do
     end
 
     # Pega: erro depois do commit deixava a conversa sem o aviso de passagem.
-    it 'na passagem do robô, erro inesperado depois do commit: o aviso de passagem sai mesmo assim' do
+    # Pega também: sem a marca do motor, a fila não via a conversa, que ficava esperando pessoa para sempre.
+    it 'na passagem do robô, erro inesperado depois do commit: o aviso sai, a conversa fica segura e a fila entrega depois', :aggregate_failures do
       allow(Rails.configuration.dispatcher).to receive(:dispatch)
       antes_do_servico { parar_area! }
       allow(Crm::Ai::HandoffMemberSelector).to receive(:new).and_raise(RuntimeError) # a reserva sem IA quebra
@@ -148,6 +149,15 @@ RSpec.describe Crm::Entrega do
       conversation.bot_handoff!
 
       expect(Rails.configuration.dispatcher).to aviso_de_passagem_para_pessoa
+      conversation.reload
+      expect(conversation.assignee_id).to be_nil
+      expect(Crm::Entrega::Marca.dados(conversation)).to include('modo' => 'segurando', 'motivo' => 'robo_pediu', 'falha' => 'erro_na_passagem')
+
+      allow(Crm::Ai::HandoffMemberSelector).to receive(:new).and_call_original
+      with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::Ai::HandoffDrainJob.perform_now }
+
+      expect(conversation.reload.assignee_id).to eq(ana.id)
+      expect(Crm::Entrega::Marca.presente?(conversation)).to be(false)
     end
 
     # Pega: erro de contrato (pedida_por com por: :crm) virar desvio silencioso para a equipe.

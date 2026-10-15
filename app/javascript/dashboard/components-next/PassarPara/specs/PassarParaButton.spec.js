@@ -3,7 +3,8 @@ import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enCrm from 'dashboard/i18n/locale/en/crm.json';
 
-// #1593 — "Passar para…": o selo e a origem vêm do servidor; a recusa vira linguagem simples pelo código.
+// #1593 — "Passar para…": só com a Fase 2 na conta; o selo e a origem vêm do servidor quando a pessoa abre o botão;
+// a recusa vira linguagem simples pelo código.
 const api = vi.hoisted(() => ({ quemPodeReceber: vi.fn(), passar: vi.fn() }));
 vi.mock('dashboard/api/passarPara', () => ({ default: api }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -42,10 +43,20 @@ const retrato = (extra = {}) => ({
   ...extra,
 });
 
-const montar = (meta = { assignee: ANA, assignee_type: 'User' }) => {
+const COM_A_LIA = {
+  assignee: { id: 90, name: 'Lia' },
+  assignee_type: 'AgentBot',
+};
+
+const montar = (
+  meta = { assignee: ANA, assignee_type: 'User' },
+  { fase2 = true } = {}
+) => {
   const store = createStore({
     getters: {
       getCurrentUser: () => ANA,
+      getCurrentAccountId: () => 1,
+      'accounts/getAccount': () => () => ({ autonomia_agents_fase2: fase2 }),
       'inboxAssignableAgents/getAssignableAgents': () => () => [ANA, BRUNO],
     },
     actions: {
@@ -70,12 +81,23 @@ describe('PassarParaButton', () => {
     api.quemPodeReceber.mockResolvedValue({ data: retrato() });
   });
 
-  it('com uma pessoa na conversa não pede o selo ao servidor', async () => {
+  it('sem a Fase 2 na conta: nem botão nem pedido ao servidor', async () => {
     // Arrange / Act
-    const wrapper = montar();
+    const wrapper = montar(COM_A_LIA, { fase2: false });
     await flushPromises();
 
     // Assert
+    expect(wrapper.find('[data-passar-para]').exists()).toBe(false);
+    expect(api.quemPodeReceber).not.toHaveBeenCalled();
+  });
+
+  it('abrir a conversa não pede nada ao servidor, nem com um robô nela', async () => {
+    // Arrange / Act
+    const wrapper = montar(COM_A_LIA);
+    await flushPromises();
+
+    // Assert
+    expect(wrapper.find('[data-passar-para]').exists()).toBe(true);
     expect(api.quemPodeReceber).not.toHaveBeenCalled();
     expect(wrapper.find('[data-com-ia]').exists()).toBe(false);
   });
@@ -96,10 +118,7 @@ describe('PassarParaButton', () => {
     });
 
     // Act
-    const wrapper = montar({
-      assignee: { id: 90, name: 'Lia' },
-      assignee_type: 'AgentBot',
-    });
+    const wrapper = montar(COM_A_LIA);
     await flushPromises();
     await wrapper.find('[data-passar-para]').trigger('click');
     await flushPromises();
@@ -129,10 +148,8 @@ describe('PassarParaButton', () => {
     });
 
     // Act
-    const wrapper = montar({
-      assignee: { id: 90, name: 'Lia' },
-      assignee_type: 'AgentBot',
-    });
+    const wrapper = montar(COM_A_LIA);
+    await wrapper.find('[data-passar-para]').trigger('click');
     await flushPromises();
 
     // Assert
@@ -155,10 +172,8 @@ describe('PassarParaButton', () => {
     });
 
     // Act
-    const wrapper = montar({
-      assignee: { id: 90, name: 'Lia' },
-      assignee_type: 'AgentBot',
-    });
+    const wrapper = montar(COM_A_LIA);
+    await wrapper.find('[data-passar-para]').trigger('click');
     await flushPromises();
 
     // Assert

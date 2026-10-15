@@ -1,9 +1,9 @@
 <script setup>
 // #1593 — "Passar para…" na conversa: quem atende escolhe quem assume, entre as pessoas da caixa e os agentes de IA
 // que podem receber nela (regra dos Agentes, com a Fase 2). Uma frase confirma o que vai acontecer; a recusa do
-// servidor aparece em linguagem simples. Sem a Fase 2, só pessoas.
+// servidor aparece em linguagem simples. Só nas contas com a Fase 2 dos Agentes ligada (o piloto).
 // Com um agente de IA na conversa, o selo diz com quem ela está e quem passou (a origem, do registro de passagens do
-// CRM), e o topo da lista oferece "Devolver para …".
+// CRM), e o topo da lista oferece "Devolver para …". O servidor só é consultado quando a pessoa abre o botão.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -12,6 +12,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import PassarParaAPI from 'dashboard/api/passarPara';
+import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -19,6 +20,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const store = useStore();
+const fase2 = useFase2();
 const P = 'CRM_KANBAN.PASSAR_PARA';
 const PREFIXO_IA = 'ia:';
 const DEVOLVER = 'devolver';
@@ -63,22 +65,13 @@ const lerRetrato = async () => {
   }
 };
 
-// O selo só existe com um robô no nome da conversa: aí vale perguntar ao servidor qual agente e quem passou.
-watch(
-  conversaId,
-  () => {
-    retrato.value = null;
-    if (comRobo.value) lerRetrato();
-  },
-  { immediate: true }
-);
-// O robô entrou ou saiu na mesma conversa. Quando foi este botão que passou, o retrato do POST já está certo.
+// O retrato (destinos, selo e origem) é da conversa em que o botão foi aberto: outra conversa começa sem ele.
+watch(conversaId, () => {
+  retrato.value = null;
+});
+// O robô saiu da conversa: o selo sai junto.
 watch(comRobo, comBot => {
-  if (!comBot) {
-    retrato.value = null;
-    return;
-  }
-  if (retrato.value?.com_ia?.bot_id !== atribuida.value?.id) lerRetrato();
+  if (!comBot) retrato.value = null;
 });
 
 const comIa = computed(() => retrato.value?.com_ia || null);
@@ -229,7 +222,7 @@ const confirmar = async () => {
 </script>
 
 <template>
-  <div class="flex min-w-0 items-center gap-2">
+  <div v-if="fase2" class="flex min-w-0 items-center gap-2">
     <!-- No celular só cabe o essencial: o rosto de robô com o nome e o botão só com o ícone. -->
     <span
       v-if="comIa"
