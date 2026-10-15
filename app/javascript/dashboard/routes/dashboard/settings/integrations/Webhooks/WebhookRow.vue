@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue';
-import { getI18nKey } from 'dashboard/routes/dashboard/settings/helper/settingsHelper';
 import ShowMore from 'dashboard/components/widgets/ShowMore.vue';
 import { useI18n } from 'vue-i18n';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { webhookEventLabelKey } from './crmWebhookEvents';
 
 const props = defineProps({
   webhook: {
@@ -21,16 +21,7 @@ const emit = defineEmits(['edit', 'delete']);
 const { t } = useI18n();
 const subscribedEvents = computed(() => {
   const { subscriptions } = props.webhook;
-  return subscriptions
-    .map(event =>
-      t(
-        getI18nKey(
-          'INTEGRATION_SETTINGS.WEBHOOK.FORM.SUBSCRIPTIONS.EVENTS',
-          event
-        )
-      )
-    )
-    .join(', ');
+  return subscriptions.map(event => t(webhookEventLabelKey(event))).join(', ');
 });
 </script>
 

@@ -2,6 +2,9 @@
 en:
   crm:
     export:
+      columns:
+        closed_at: 'Ended at'
+        lost_reason: 'Why it did not close'
       statuses:
         won: 'Active policy'
         lost: 'Not closed'

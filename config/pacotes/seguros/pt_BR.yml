@@ -2,6 +2,9 @@
 pt_BR:
   crm:
     export:
+      columns:
+        closed_at: 'Terminou em'
+        lost_reason: 'Por que não fechou'
       statuses:
         won: 'Seguro ativo'
         lost: 'Não fechou'

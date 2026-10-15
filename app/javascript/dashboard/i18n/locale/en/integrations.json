@@ -99,6 +99,7 @@
             "CONTACT_UPDATED": "Contact updated",
             "CONVERSATION_TYPING_ON": "Conversation Typing On",
             "CONVERSATION_TYPING_OFF": "Conversation Typing Off",
+            "INBOX_CREATED": "Inbox created",
             "INBOX_UPDATED": "Inbox updated"
           },
           "CRM_EVENTS": {

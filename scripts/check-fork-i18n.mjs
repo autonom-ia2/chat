@@ -8,6 +8,7 @@ import {
   checarPacotes,
   parametros as parameters,
 } from './i18n-pacotes/checar.mjs';
+import { checarCobertura } from './i18n-pacotes/cobertura.mjs';
 
 const root = 'app/javascript/dashboard/i18n/locale';
 const registry = JSON.parse(readFileSync('config/fork_i18n.json', 'utf8'));
@@ -105,7 +106,11 @@ if (process.env.CROWDIN_SYNC === 'true') {
   );
 }
 // #1550 — pacotes de tradução por conta: chaves, idiomas, parâmetros e camadas.
-const erros = checarPacotes(registry.pacotes, { crowdin });
+const erros = [
+  ...checarPacotes(registry.pacotes, { crowdin }),
+  // Todo ganho/perda do base tem decisão: pacote do segmento ou exceção com motivo.
+  ...checarCobertura(registry.pacotes),
+];
 assert.equal(erros.length, 0, erros.join('\n'));
 const pacotes =
   camadasEncontradas(registry.pacotes.painel).length +

@@ -24,7 +24,7 @@ describe('dashboard locale with the account translation pack (#1550)', () => {
     expect(i18n.global.locale.value).toBe('pt_BR');
     expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Plano ativo');
     expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_LOST')).toBe('Não fechou');
-    expect(i18n.global.t('CRM_CARD.DESFECHO.GANHOU')).toBe('Plano ativo');
+    expect(i18n.global.t('CRM_CARD.DESFECHO.GANHOU')).toBe('Fechou o plano');
     // Texto fora do pacote segue o geral.
     expect(i18n.global.t('CANNED_MGMT.SEARCH_PLACEHOLDER')).toBe(
       'Pesquisar respostas prontas...'

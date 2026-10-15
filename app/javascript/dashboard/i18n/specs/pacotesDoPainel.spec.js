@@ -133,7 +133,7 @@ describe('the account name for the outcome beats the pack', () => {
     expect(comNome.rotuloPerder.value).toBe('Não fechou');
 
     const semNome = useCardDesfecho({ t, card, funil: ref({}) });
-    expect(semNome.rotuloGanhar.value).toBe('Seguro ativo');
+    expect(semNome.rotuloGanhar.value).toBe('Fechou o seguro');
   });
 
   it('without a pack the general text stays', () => {

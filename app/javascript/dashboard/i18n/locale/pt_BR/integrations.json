@@ -99,6 +99,7 @@
             "CONTACT_UPDATED": "Contato atualizado",
             "CONVERSATION_TYPING_ON": "Status de Digitação ativado",
             "CONVERSATION_TYPING_OFF": "Status de Digitação desativado",
+            "INBOX_CREATED": "Caixa de entrada criada",
             "INBOX_UPDATED": "Caixa de entrada atualizada"
           },
           "CRM_EVENTS": {

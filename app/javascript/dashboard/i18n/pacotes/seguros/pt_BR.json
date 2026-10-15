@@ -6,13 +6,202 @@
     },
     "DRAWER": {
       "STATUS_WON": "Seguro ativo",
-      "STATUS_LOST": "Não fechou"
+      "STATUS_LOST": "Não fechou",
+      "WIN_DEAL": "Fechou o seguro",
+      "LOSE_DEAL": "Não fechou",
+      "WIN_DIALOG_TITLE": "Fechou o seguro?",
+      "WIN_CONFIRM": "Marcar: fechou o seguro",
+      "LOSE_DIALOG_TITLE": "Não fechou desta vez?",
+      "LOSE_CONFIRM": "Marcar: não fechou",
+      "LOSE_REASON_PLACEHOLDER": "Por que não fechou?",
+      "CLOSE_AS_TITLE": "Terminar como {label}",
+      "ACTIVITY_WON": "Fechou o seguro",
+      "ACTIVITY_LOST": "Não fechou",
+      "ACTIVITY_REOPEN": "Card reaberto"
+    },
+    "META_SYNC_STATUS": {
+      "EVENT_WON": "Fechou o seguro",
+      "EVENT_LOST": "Não fechou"
+    },
+    "ALERTS": {
+      "CARD_WON": "Marcado: fechou o seguro.",
+      "CARD_LOST": "Marcado: não fechou.",
+      "CARD_REOPENED": "Card reaberto.",
+      "CARD_CLOSE_ERROR": "Não foi possível mudar o resultado do card."
+    },
+    "DASHBOARD": {
+      "KPI": {
+        "WON": "Seguros fechados",
+        "WON_INFO": "Cards que fecharam o seguro no período escolhido.",
+        "LOST": "Não fecharam",
+        "LOST_INFO": "Cards que não fecharam no período escolhido.",
+        "WIN_RATE": "Taxa de fechamento (quantidade)",
+        "WIN_RATE_INFO": "De todos os cards que terminaram no período, quantos fecharam o seguro (em %).",
+        "WIN_RATE_VALUE": "Taxa de fechamento (valor)",
+        "WIN_RATE_VALUE_INFO": "Quanto do valor que terminou no período fechou (em %).",
+        "WON_VALUE": "Valor fechado",
+        "WON_VALUE_INFO": "Valor total dos seguros fechados no período, por moeda.",
+        "LOST_VALUE": "Valor que não fechou",
+        "LOST_VALUE_INFO": "Valor total do que não fechou no período, por moeda.",
+        "GOAL_INFO": "Quanto da meta de vendas do mês já foi fechado. O ritmo compara isso com quanto do mês já passou."
+      },
+      "THROUGHPUT": {
+        "TITLE": "Cards que terminaram",
+        "EMPTY": "Nenhum card terminou no período.",
+        "WON": "Fecharam",
+        "LOST": "Não fecharam"
+      },
+      "SUBTITLE": "Como o funil está indo, etapa por etapa. Veja o que fechou, o que não fechou e quem atendeu: IA ou pessoa.",
+      "META_SYNC": {
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o seguro, os dados aparecem aqui."
+      }
+    },
+    "CONFIRM": {
+      "DELETE_STAGE_DESCRIPTION_WITH_CARDS": "A etapa {stage} tem {count} card. Ele não aparece no Kanban porque já terminou ou foi arquivado. Escolha outra etapa para ele antes de excluir esta. | A etapa {stage} tem {count} cards. Eles não aparecem no Kanban porque já terminaram ou foram arquivados. Escolha outra etapa para eles antes de excluir esta."
+    },
+    "PIPELINE_DRAWER": {
+      "DEFAULT_STAGE_LOST": "Não fechou",
+      "COUNTS_AS_SALE_ON": "Os cards terminam como Seguro ativo ou Não fechou, entram no total de vendas e podem avisar seus anúncios.",
+      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o seguro, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar.",
+      "META_SYNC_EVENT_WON": "Fechou o seguro (Purchase, com valor)",
+      "META_SYNC_EVENT_LOST": "Não fechou (OrderCanceled)"
+    },
+    "PIPELINE_EDITOR": {
+      "AD_RESULTS_HELP": "Mostre quais anúncios viraram vendas. A venda conta quando o card fecha o seguro, em qualquer coluna.",
+      "META_PROGRESS": {
+        "NONE": {
+          "HELP": "Não enviar a entrada nesta etapa. Os seguros fechados continuam seguindo os ajustes do funil."
+        }
+      }
+    },
+    "GOOGLE_SYNC": {
+      "EVENT_WON": "Fechou o seguro",
+      "EVENT_LOST": "Não fechou",
+      "CONVERSION_NAME_WON": "Nome da conversão para seguros fechados",
+      "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Seguro fechado",
+      "CONVERSION_NAME_WON_HELP": "Os eventos de não fechou e de mudança de etapa usam os nomes de conversão padrão."
+    },
+    "CALENDAR": {
+      "EVENT": {
+        "WIN": "Fechou o seguro",
+        "LOSE": "Não fechou"
+      }
+    },
+    "META_ADS_HUB": {
+      "PANEL": {
+        "PATH_LIST": {
+          "WON": "Seguro ativo",
+          "LOST": "Não fechou"
+        }
+      },
+      "SUMMARY": {
+        "NEXT_SALES": "Quando um card avança ou fecha o seguro, a Meta fica sabendo e aprende quem compra."
+      },
+      "FUNNEL": {
+        "HINT": "Quando um card avança ou fecha o seguro no CRM, contamos para a Meta. Ela aprende a mostrar o anúncio para quem compra."
+      },
+      "AI": {
+        "QUOTE": {
+          "REASONS": {
+            "CLOSED": "O cliente já fechou o seguro. Não há o que retomar aqui."
+          }
+        }
+      }
+    },
+    "TRACKED_LINKS": {
+      "PAGE": {
+        "WON": "Fecharam"
+      }
+    },
+    "BOOKING_AGENDA": {
+      "ERRORS": {
+        "CARD_CLOSED": "Este card já terminou. Reabra para marcar."
+      }
     }
   },
   "CRM_CARD": {
     "DESFECHO": {
-      "GANHOU": "Seguro ativo",
-      "PERDEU": "Não fechou"
+      "GANHOU": "Fechou o seguro",
+      "PERDEU": "Não fechou",
+      "GANHOU_TITULO_PADRAO": "Fechou o seguro! Quanto ficou?",
+      "GANHOU_CONFIRMA_PADRAO": "Marcar: fechou o seguro",
+      "PERDEU_TITULO": "Não fechou desta vez?",
+      "PERDEU_CONFIRMA": "Marcar: não fechou"
+    },
+    "ORIGEM": {
+      "AVISO_ESTADO": {
+        "QUANDO": {
+          "GANHO": "Foi quando o seguro fechou.",
+          "PERDIDO": "Foi quando o card terminou sem fechar."
+        }
+      }
+    }
+  },
+  "CRM_DASHBOARD": {
+    "ORIGIN": {
+      "SUBTITLE": "Seguros fechados e receita, pela origem da campanha.",
+      "EMPTY": "Nenhum seguro fechado com origem de campanha neste período.",
+      "WON": "Fecharam"
+    }
+  },
+  "CRM_CAIXAS": {
+    "FUNIS": {
+      "TIPO_SALES": "Vendas: termina quando o seguro fecha ou não fecha"
+    }
+  },
+  "CRM_FUNIL": {
+    "ANUNCIOS": {
+      "EVENTOS": {
+        "LOST": "Venda que não fechou"
+      },
+      "FACEBOOK": {
+        "TAMBEM_PERDIDA": "Também quando a venda não fecha."
+      }
+    }
+  },
+  "CONTACTS_LAYOUT": {
+    "DETAILS": {
+      "CUSTOMER": {
+        "DESCRIPTION": "Vira cliente sozinho quando um seguro fecha num funil de venda. Marque aqui se ele já comprou de outro jeito."
+      }
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS_NOTE": "cards com marca de campanha · {won} fecharam"
+      }
+    }
+  },
+  "AUTOMATION": {
+    "CRM_CARD_STATUS": {
+      "WON": "Seguro ativo",
+      "LOST": "Não fechou"
+    },
+    "ACTIONS": {
+      "CRM_MARK_CARD_WON": "Marcar card do CRM: fechou o seguro",
+      "CRM_MARK_CARD_LOST": "Marcar card do CRM: não fechou"
+    }
+  },
+  "INTEGRATION_SETTINGS": {
+    "WEBHOOK": {
+      "FORM": {
+        "SUBSCRIPTIONS": {
+          "CRM_EVENTS": {
+            "CRM_CARD_WON": "Card do CRM: fechou o seguro",
+            "CRM_CARD_LOST": "Card do CRM: não fechou"
+          }
+        }
+      }
+    },
+    "CRM_N8N": {
+      "EVENTS": {
+        "LIST": {
+          "CRM_CARD_WON": "Um card fechou o seguro.",
+          "CRM_CARD_LOST": "Um card não fechou.",
+          "CRM_CARD_REOPENED": "Um card que tinha terminado foi reaberto."
+        }
+      }
     }
   }
 }
