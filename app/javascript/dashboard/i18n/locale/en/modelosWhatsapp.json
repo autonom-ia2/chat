@@ -864,8 +864,9 @@
       "TITULO": "Free replies this month",
       "EXPLICA": "WhatsApp gives {limite} free replies per number each month. After that, each reply costs {valor}.",
       "EXPLICA_SEM_VALOR": "WhatsApp gives {limite} free replies per number each month.",
-      "USADAS": "{n} of {limite}",
-      "PASSOU": "Over the {limite} free ones"
+      "USADAS": "About {n} of {limite}",
+      "PASSOU": "About {n}, over the {limite} free ones",
+      "ESTIMATIVA": "Estimate: it counts only the replies sent through Chat2You. Replies sent from another app on the same number are not included. The month resets at midnight in the WhatsApp account time zone."
     },
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” is ready to use.",
@@ -930,8 +931,8 @@
         "CONTEUDO_TEXTO": "People who talked to you in the last 24 hours get: “{texto}”"
       },
       "CUSTO_ESCRITA": {
-        "gratis": "Free (within this month's {limite}: {sobram} left).",
-        "passa": "{gratis} go out free ({sobram} left of this month's {limite}); the other {pagas} cost {preco} each: {valor}.",
+        "gratis": "Free (within this month's {limite}: about {sobram} left).",
+        "passa": "{gratis} go out free (about {sobram} left of this month's {limite}); the other {pagas} cost {preco} each: {valor}.",
         "sem_franquia": "We could not read this month's free messages: count on up to {valor} ({preco} each)."
       },
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
