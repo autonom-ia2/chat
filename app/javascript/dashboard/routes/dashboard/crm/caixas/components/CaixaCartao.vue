@@ -140,7 +140,13 @@ const aviso = computed(() => {
         </dt>
         <dd v-if="!comAgentes" class="m-0 text-[0.9375rem] text-n-slate-12">
           <span v-if="caixa.agent_bot" class="block">
-            {{ $t('CRM_CAIXAS.CARTAO.ROBO', { nome: caixa.agent_bot.name }) }}
+            {{
+              caixa.agent_bot.tipo_do_principal === 'externo'
+                ? $t('CRM_CAIXAS.CARTAO.ROBO_EXTERNO', {
+                    nome: caixa.agent_bot.name,
+                  })
+                : $t('CRM_CAIXAS.CARTAO.ROBO', { nome: caixa.agent_bot.name })
+            }}
           </span>
           {{ $t('CRM_CAIXAS.CARTAO.PESSOAS', { n: pessoas }, pessoas) }}
           <template v-if="funis.length > 1 && triagem">

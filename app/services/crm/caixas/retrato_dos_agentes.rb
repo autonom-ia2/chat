@@ -9,10 +9,12 @@
 # - disponiveis: quem a tela pode pôr como área (só para quem pode mexer em agentes, e só em caixa que aceita área).
 #   `parado`: entrar na caixa liga o agente.
 class Crm::Caixas::RetratoDosAgentes
-  def initialize(account:, inbox_ids:, pode_mudar:)
+  # `detalhe: true` só na caixa aberta (#1570): a lista de caixas não consulta o leitor.
+  def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false)
     @account = account
     @inbox_ids = inbox_ids
     @pode_mudar = pode_mudar
+    @detalhe = detalhe
   end
 
   def ligado?
@@ -35,9 +37,11 @@ class Crm::Caixas::RetratoDosAgentes
   private
 
   # Com porta: como sempre (o principal parado é conferido ao salvar). Sem porta: o leitor único do Agentes IA diz se é
-  # só de pessoas (sem agente externo).
+  # só de pessoas (sem agente externo). Na lista (sem `detalhe`) não consulta: a lista não oferece
+  # agentes.
   def aceita_area?(porta, inbox_id)
     return true if porta
+    return false unless @detalhe
 
     inbox = Inbox.find_by(id: inbox_id, account_id: @account.id)
     inbox.present? && ::Autonomia::Agents::Areas.caixa_aceita_area?(inbox, conferir_fase2: false).ok?

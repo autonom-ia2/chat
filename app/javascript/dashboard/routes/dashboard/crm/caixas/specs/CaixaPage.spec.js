@@ -95,22 +95,38 @@ describe('CaixaPage', () => {
     expect(wrapper.find('[data-porta]').text()).toContain('Clara');
   });
 
-  it('says the inbox needs an agent answering first when the server refuses a new area', async () => {
-    conta.estado.fase2 = true;
-    rota.query.etapa = '4';
-    api.salvar.mockRejectedValue({
-      response: { data: { error: { code: 'crm.caixas.porta_parada' } } },
-    });
-    const wrapper = render();
-    await flushPromises();
+  it.each([
+    [
+      'crm.caixas.principal_parado',
+      'O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.',
+    ],
+    [
+      'crm.caixas.robo_externo',
+      'Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.',
+    ],
+    [
+      'crm.caixas.agente_rascunho',
+      'Este agente ainda é rascunho; termine de criar antes.',
+    ],
+    [
+      'crm.caixas.agente_invalido',
+      'Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.',
+    ],
+  ])(
+    'turns the server refusal %s into a plain sentence',
+    async (code, frase) => {
+      conta.estado.fase2 = true;
+      rota.query.etapa = '4';
+      api.salvar.mockRejectedValue({ response: { data: { error: { code } } } });
+      const wrapper = render();
+      await flushPromises();
 
-    await wrapper.get('[data-salvar]').trigger('click');
-    await flushPromises();
+      await wrapper.get('[data-salvar]').trigger('click');
+      await flushPromises();
 
-    expect(alerta).toHaveBeenCalledWith(
-      'Esta caixa precisa de um agente atendendo primeiro.'
-    );
-    // Volta para quem cuida, onde se resolve.
-    expect(wrapper.find('[data-porta]').exists()).toBe(true);
-  });
+      expect(alerta).toHaveBeenCalledWith(frase);
+      // Volta para quem cuida, onde se resolve.
+      expect(wrapper.find('[data-porta]').exists()).toBe(true);
+    }
+  );
 });

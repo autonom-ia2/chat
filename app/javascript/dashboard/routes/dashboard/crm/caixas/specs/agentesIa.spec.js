@@ -194,6 +194,11 @@ describe('erroDosAgentes', () => {
       ehDosAgentes: true,
       alerta: 'AGENTE_NAO_LIGA',
     });
+    // #1570: rascunho tem frase própria.
+    expect(erroDosAgentes('crm.caixas.agente_rascunho')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_RASCUNHO',
+    });
   });
 
   it('keeps the general text for the other agent refusals and ignores the rest', () => {

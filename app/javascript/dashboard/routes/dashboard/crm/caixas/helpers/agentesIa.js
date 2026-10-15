@@ -235,6 +235,8 @@ export const salvarDaCaixa = (form, original) => ({
 // agentes. `alerta`: a chave do texto próprio do motivo (em CRM_CAIXAS.EDITOR), ou null para o texto geral.
 const ALERTA_DO_ERRO = {
   'crm.caixas.agente_nao_liga': 'AGENTE_NAO_LIGA',
+  // #1570 — rascunho tem frase própria.
+  'crm.caixas.agente_rascunho': 'AGENTE_RASCUNHO',
   'crm.caixas.principal_parado': 'PRINCIPAL_PARADO',
   'crm.caixas.robo_externo': 'AGENTE_EXTERNO',
 };
