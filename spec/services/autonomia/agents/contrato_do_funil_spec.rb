@@ -40,6 +40,43 @@ RSpec.describe Autonomia::Agents::ContratoDoFunil do
     end
   end
 
+  describe '.registrar_passagem!' do
+    let(:pedido) do
+      { conversation: conversation, de: nil, para: build_stubbed(:agent_bot), pedida_por: nil, motivo: 'm', transfer_id: 't' }
+    end
+
+    it 'delega ao registro do CRM com a mesma assinatura' do
+      recebidos = []
+      stub_const('Crm::Passagens', leitor(:registrar!) { |**kwargs| recebidos << kwargs })
+
+      described_class.registrar_passagem!(**pedido)
+
+      expect(recebidos).to eq([pedido])
+    end
+
+    it 'sem o registro, não faz nada' do
+      stub_const('Crm::Passagens', Module.new)
+
+      expect(described_class.registrar_passagem!(**pedido)).to be_nil
+    end
+  end
+
+  describe '.com_motivo_da_passagem' do
+    it 'roda o bloco dentro do contexto do CRM' do
+      vistos = []
+      stub_const('Crm::Passagens', leitor(:com_motivo) { |motivo, &bloco| vistos << motivo; bloco.call }) # rubocop:disable Style/Semicolon
+
+      expect(described_class.com_motivo_da_passagem('passar_para_ia') { :feito }).to eq(:feito)
+      expect(vistos).to eq(['passar_para_ia'])
+    end
+
+    it 'sem o contexto, só roda o bloco' do
+      stub_const('Crm::Passagens', Module.new)
+
+      expect(described_class.com_motivo_da_passagem('passar_para_ia') { :feito }).to eq(:feito)
+    end
+  end
+
   describe '.robo_do_funil' do
     let(:robo) { build_stubbed(:agent_bot) }
 
