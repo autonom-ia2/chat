@@ -368,9 +368,19 @@ module Autonomia
 
         # O turno mudo porque deixou de ser nosso: humano assumiu, agente desligado, conversa movida.
         # Não despacha assíncrono nem posta — só deixa o rastro, para que este motivo não se confunda
-        # com os outros três na contagem.
+        # com os outros três na contagem. Quando quem assumiu foi OUTRO agente da caixa (`dono_mudou`, #1606), o turno
+        # não morre: é refeito pelo dono novo (ReenfileirarTurno, com SET NX contra dois reenfileiramentos).
         def silencio_por_inelegibilidade
+          return silencio_por_dono_novo if dono_mudou?
+
           registrar_silencio('nao_elegivel')
+          Result.silenced
+        end
+
+        def silencio_por_dono_novo
+          registrar_silencio('dono_mudou')
+          ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
+                                                               origem: :responder, quem_perdeu: @agent_inbox)
           Result.silenced
         end
 
@@ -413,9 +423,17 @@ module Autonomia
         # na MESMA caixa do agente: sem responsável + agente ligado/ativo/não-interno/não-sistema +
         # feature on + allowlist. Cobre o que mudou durante a chamada de IA (humano assumiu, agente
         # desligado, conversa movida de caixa) — em qualquer um desses casos NÃO posta.
+        # Guarda quem a releitura achou (@quem_responde_agora), para o silêncio dizer se foi pessoa ou outro dono.
         def still_eligible?
-          fresh = ::Autonomia::Agents::Operate.eligible_agent_inbox(@conversation.reload)
-          fresh.present? && fresh.id == @agent_inbox.id
+          @quem_responde_agora = ::Autonomia::Agents::Operate.eligible_agent_inbox(@conversation.reload)
+          @quem_responde_agora.present? && @quem_responde_agora.id == @agent_inbox.id
+        end
+
+        # #1606: outro vínculo ativo da caixa virou o dono da conversa (Sync do CRM, passagem). Só com a Fase 2; fora
+        # dela a escolha é sempre a porta, e um vínculo diferente aqui segue sendo `nao_elegivel`, como antes.
+        def dono_mudou?
+          @quem_responde_agora.present? && @quem_responde_agora.id != @agent_inbox.id &&
+            ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
         end
 
         # Idempotência: já existe uma resposta outgoing do bot para ESTA mensagem incoming?

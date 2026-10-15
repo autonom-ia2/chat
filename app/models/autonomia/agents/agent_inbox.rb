@@ -136,6 +136,16 @@ module Autonomia
         release_bot_conversations!
       end
 
+      # O turno desta mensagem ainda está em andamento: a marca do debounce do ReplyJob (a mesma que o settle confere)
+      # aponta para ela e é recente. Também refaz o turno quando o dono muda (Operate::ReenfileirarTurno, #1606).
+      def turno_em_andamento?(conversation, mensagem)
+        stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+        return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
+
+        janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
+        stamp['at'].to_f >= janela.ago.to_f
+      end
+
       private
 
       # A conversa aberta que a área atendia volta para o robô da caixa (a porta), pelo mesmo caminho de atribuir um
@@ -165,14 +175,6 @@ module Autonomia
         ActiveRecord.after_all_transactions_commit do
           ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
         end
-      end
-
-      def turno_em_andamento?(conversation, mensagem)
-        stamp = conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
-        return false unless stamp.is_a?(Hash) && stamp['pending_message_id'] == mensagem.id
-
-        janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
-        stamp['at'].to_f >= janela.ago.to_f
       end
 
       # Impasse que sobra (raro): dois agentes cruzados. P é porta em X e área em Y; A é porta em Y e área em X. Saindo
