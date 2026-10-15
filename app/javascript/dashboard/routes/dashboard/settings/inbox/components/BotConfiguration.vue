@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
-import JornadaAPI from 'dashboard/api/autonomia/jornada';
+import QuemAtendeAPI from 'dashboard/api/autonomia/quemAtende';
 import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFieldSection.vue';
 import LoadingState from 'dashboard/components/widgets/LoadingState.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -83,25 +83,18 @@ const rotaDoAgente = agente => ({
   params: { accountId: accountId.value, agentId: agente.id },
 });
 
-const daCaixa = canais => {
-  const canal = canais.find(item => item.inbox_id === inboxId.value);
-  const ocupante = canal?.occupied_by;
-  return {
-    principal:
-      ocupante?.kind === 'agent'
-        ? { id: ocupante.agent_id, name: ocupante.agent_name }
-        : null,
-    equipe: (canal?.areas || []).map(area => ({
-      id: area.agent_id,
-      name: area.agent_name,
-    })),
-  };
-};
+// #1648 — leitura própria da caixa, sem flag: a mesma regra da recusa do
+// servidor (set_agent_bot). `papel`: 'porta' atende primeiro, 'area' recebe
+// quando alguém passa.
+const daCaixa = agentes => ({
+  principal: agentes.find(agente => agente.papel === 'porta') || null,
+  equipe: agentes.filter(agente => agente.papel === 'area'),
+});
 
 const carregarPlataforma = async () => {
   try {
-    const { data } = await JornadaAPI.canaisOcupados();
-    plataforma.value = daCaixa(data.payload);
+    const { data } = await QuemAtendeAPI.daCaixa(inboxId.value);
+    plataforma.value = daCaixa(data.agentes);
   } catch {
     plataforma.value = { principal: null, equipe: [] };
   }
@@ -113,6 +106,8 @@ onMounted(() => {
   carregarPlataforma();
 });
 
+// Falhou: relê quem atende. Se um agente da plataforma entrou na caixa nesse
+// meio-tempo (o servidor recusa, #1648), a tela passa a mostrar o motivo.
 const salvar = async () => {
   try {
     await store.dispatch('agentBots/setAgentBotInbox', {
@@ -122,6 +117,7 @@ const salvar = async () => {
     useAlert(t('AGENTS.CAIXA_EXTERNO.SALVOU'));
   } catch {
     useAlert(t('AGENTS.CAIXA_EXTERNO.FALHOU'));
+    carregarPlataforma();
   }
 };
 
@@ -131,6 +127,7 @@ const desconectar = async () => {
     useAlert(t('AGENTS.CAIXA_EXTERNO.DESCONECTOU'));
   } catch {
     useAlert(t('AGENTS.CAIXA_EXTERNO.FALHOU_DESCONECTAR'));
+    carregarPlataforma();
   }
 };
 </script>
@@ -138,9 +135,7 @@ const desconectar = async () => {
 <template>
   <div class="mx-6 max-w-4xl">
     <LoadingState
-      v-if="
-        !plataforma || uiFlags.isFetching || uiFlags.isFetchingAgentBot
-      "
+      v-if="!plataforma || uiFlags.isFetching || uiFlags.isFetchingAgentBot"
     />
     <SettingsFieldSection
       v-else-if="daPlataforma"
@@ -168,19 +163,26 @@ const desconectar = async () => {
               >
                 <span class="i-lucide-bot size-5" />
               </span>
-              <span class="min-w-0 flex-1 text-[0.9375rem] text-n-slate-12">
-                {{ agente.texto }}
-              </span>
-              <router-link
-                :to="rotaDoAgente(agente)"
-                class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-[0.9375rem] font-medium text-n-blue-11 hover:bg-n-alpha-2"
+              <div
+                class="flex min-w-0 flex-1 flex-col md:flex-row md:items-center md:gap-3"
               >
-                {{ $t('AGENTS.CAIXA_EXTERNO.ABRIR') }}
                 <span
-                  class="i-lucide-arrow-right size-4 rtl:rotate-180"
-                  aria-hidden="true"
-                />
-              </router-link>
+                  class="min-w-0 text-[0.9375rem] text-n-slate-12 md:flex-1"
+                >
+                  {{ agente.texto }}
+                </span>
+                <router-link
+                  :to="rotaDoAgente(agente)"
+                  data-abrir-agente
+                  class="-ms-2 inline-flex min-h-11 items-center gap-1.5 self-start rounded-lg px-2 text-[0.9375rem] font-medium text-n-blue-11 hover:bg-n-alpha-2 md:ms-0 md:self-auto"
+                >
+                  {{ $t('AGENTS.CAIXA_EXTERNO.ABRIR') }}
+                  <span
+                    class="i-lucide-arrow-right size-4 rtl:rotate-180"
+                    aria-hidden="true"
+                  />
+                </router-link>
+              </div>
             </li>
           </ul>
         </section>

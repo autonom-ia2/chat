@@ -38,8 +38,7 @@ const externo = computed(() => aiAgents.value?.externo || null);
 // entra como porta nem como o cartão do agente externo (#1570, #1648).
 const mostraORobo = computed(
   () =>
-    Boolean(props.robo) &&
-    (!aiAgents.value || (!porta.value && !externo.value))
+    Boolean(props.robo) && (!aiAgents.value || (!porta.value && !externo.value))
 );
 const agentesIa = computed({
   get: () => aiAgents.value?.agentes || [],
@@ -155,10 +154,7 @@ const chipClasse = ativo =>
         <h3 class="mb-0 text-base font-semibold text-n-slate-12">
           {{ $t('CRM_CAIXAS.PESSOAS.AGENTES_TITULO') }}
         </h3>
-        <p
-          data-regra
-          class="mb-0 text-[0.9375rem] text-n-slate-11"
-        >
+        <p data-regra class="mb-0 text-[0.9375rem] text-n-slate-11">
           {{
             porta
               ? $t('CRM_CAIXAS.PESSOAS.REGRA', { porta: porta.name })
@@ -177,7 +173,9 @@ const chipClasse = ativo =>
           >
             <span class="i-lucide-plug size-5" />
           </span>
-          <p class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12">
+          <p
+            class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12"
+          >
             {{ $t('CRM_CAIXAS.PESSOAS.EXTERNO', { nome: externo.name }) }}
           </p>
         </div>

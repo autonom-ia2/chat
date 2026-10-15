@@ -77,6 +77,36 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-porta]').exists()).toBe(false);
   });
 
+  it('with phase 2, the external agent from the server gets its card and locks the team agents (#1648)', () => {
+    const wrapper = render(
+      agentesParaFormulario({
+        porta: null,
+        pode_mudar: false,
+        externo: { id: 99, name: 'Robô n8n' },
+        areas: [],
+        disponiveis: [],
+      }),
+      { id: 99, name: 'Robô n8n', tipo_do_principal: 'externo' }
+    );
+
+    expect(wrapper.find('[data-externo]').text()).toBe(
+      'Agente externo: Robô n8n, atende primeiro'
+    );
+    expect(wrapper.find('[data-motivo-externo]').text()).toBe(
+      pt_BR.CRM_CAIXAS.EDITOR.AGENTE_EXTERNO
+    );
+    expect(wrapper.find('[data-robo]').exists()).toBe(false);
+    expect(wrapper.find('[data-regra]').exists()).toBe(false);
+    expect(wrapper.find('[data-porta]').exists()).toBe(false);
+  });
+
+  it('says "agent", not "robot", when the conversation is handed over', () => {
+    const wrapper = render(null);
+
+    expect(wrapper.text()).toContain('Quando o agente passa a conversa');
+    expect(wrapper.text().toLowerCase()).not.toContain('robô');
+  });
+
   it('with phase 2 lists the AI agents before the people', () => {
     const wrapper = render(
       agentesParaFormulario({

@@ -25,6 +25,8 @@ export const agentesParaFormulario = aiAgents =>
     ? {
         porta: aiAgents.porta,
         pode_mudar: aiAgents.pode_mudar,
+        // #1648 — agente externo que atende primeiro ({ id, name } ou null).
+        externo: aiAgents.externo || null,
         agentes: [
           ...aiAgents.areas.map(agente => ({
             ...agente,
