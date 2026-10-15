@@ -67,7 +67,8 @@ class CampaignJourney::ConversaAberta::QuedaHibrido
   end
 
   def registrar(level, motivo)
-    Rails.logger.public_send(level, "[ConversaAberta] queda delivery=#{@delivery.id} outcome=#{outcome || 'ausente'}: #{motivo}")
+    Rails.logger.public_send(level, "[ConversaAberta] queda delivery=#{@delivery.id} message=#{@delivery.message_id} " \
+                                    "outcome=#{outcome || 'ausente'}: #{motivo}")
   end
 
   def outcome
