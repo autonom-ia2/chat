@@ -864,8 +864,9 @@
       "TITULO": "Respostas grátis do mês",
       "EXPLICA": "O WhatsApp dá {limite} respostas grátis por número a cada mês. Depois disso, cada resposta custa {valor}.",
       "EXPLICA_SEM_VALOR": "O WhatsApp dá {limite} respostas grátis por número a cada mês.",
-      "USADAS": "{n} de {limite}",
-      "PASSOU": "Passou das {limite} grátis"
+      "USADAS": "Cerca de {n} de {limite}",
+      "PASSOU": "Cerca de {n}, passou das {limite} grátis",
+      "ESTIMATIVA": "Estimativa: conta só as respostas que saíram pelo Chat2You. O que sai por outro aplicativo no mesmo número não entra. O mês vira à meia-noite no fuso da conta do WhatsApp."
     },
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” ficou pronto para usar.",
@@ -930,8 +931,8 @@
         "CONTEUDO_TEXTO": "Quem falou com você nas últimas 24 horas recebe: “{texto}”"
       },
       "CUSTO_ESCRITA": {
-        "gratis": "Grátis (dentro das {limite} do mês: sobram {sobram}).",
-        "passa": "{gratis} saem grátis (sobram {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
+        "gratis": "Grátis (dentro das {limite} do mês: sobram cerca de {sobram}).",
+        "passa": "{gratis} saem grátis (sobram cerca de {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
         "sem_franquia": "Não conseguimos ver as grátis do mês: conte com até {valor} ({preco} cada)."
       },
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
