@@ -5,7 +5,8 @@ class SyncDispatcher < BaseDispatcher
   end
 
   def listeners
-    [ActionCableListener.instance, AgentBotListener.instance]
+    # Crm::PassagensListener (#1606): precisa de Current.user, que só existe na thread de quem mudou.
+    [ActionCableListener.instance, AgentBotListener.instance, Crm::PassagensListener.instance]
   end
 end
 
