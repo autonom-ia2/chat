@@ -20,6 +20,7 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
   before do
+    account.enable_features!(Crm::Conversations::OutroCanal::FLAG)
     [ana, bruno].each { |user| create(:inbox_member, inbox: email, user: user) }
     create(:inbox_member, inbox: whatsapp, user: ana)
     account.crm_inbox_settings.create!(inbox: email, crm_enabled: true)
@@ -76,6 +77,36 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     # A passagem do Bruno (rodízio) para a Ana fica no registro de passagens (#1622), com o porquê e o card.
     expect(Crm::Passagem.where(conversation_id: conversation.id).order(:id).last)
       .to have_attributes(de_id: bruno.id, para_id: ana.id, motivo: 'outro_canal', card_id: onix.id)
+  end
+
+  # Pega: R13 agindo numa conta fora do piloto. Sem a flag, o comportamento é o de antes do #1664.
+  it 'conta sem a flag crm_outro_canal: nada liga e nada muda', :aggregate_failures do
+    account.disable_features!(Crm::Conversations::OutroCanal::FLAG)
+    account.crm_pipeline_inboxes.find_by(inbox: email).update!(auto_create_card: true)
+    account.crm_inbox_settings.find_by(inbox: email).update!(auto_create_card: true, default_pipeline: seguros.first)
+    conversation, message = email_do_joao
+
+    sincronizar(conversation, message)
+
+    expect(ligada?(conversation)).to be(false)
+    expect(conversation.assignee_id).to eq(bruno.id)
+    expect(Crm::Entrega::Marca.dados(conversation)).to be_nil
+    expect(Crm::Passagem.where(conversation_id: conversation.id, motivo: 'outro_canal')).to be_empty
+    # Como antes: a caixa de e-mail cria o próprio card, e o do Onix fica como estava.
+    expect(account.crm_cards.where(contact: joao).count).to eq(2)
+    expect(onix.reload).to have_attributes(inbox_id: whatsapp.id, owner_id: ana.id)
+  end
+
+  it 'conta sem a flag: o card vinculado à mão segue a caixa da última conversa sincronizada, como antes' do
+    account.disable_features!(Crm::Conversations::OutroCanal::FLAG)
+    account.crm_pipeline_inboxes.find_by(inbox: email).update!(auto_create_card: true)
+    account.crm_inbox_settings.find_by(inbox: email).update!(auto_create_card: true, default_pipeline: seguros.first)
+    conversation, message = email_do_joao
+    Crm::Cards::ConversationLinker.new(card: onix, conversation: conversation, actor: nil).link
+
+    sincronizar(conversation, message)
+
+    expect(onix.reload.inbox_id).to eq(email.id)
   end
 
   # Dono que não pode receber na caixa nova (decisão do Rodrigo em 15/10): liga, e quem cuida do funil ali recebe.

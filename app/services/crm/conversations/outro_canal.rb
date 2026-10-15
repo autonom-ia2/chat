@@ -28,9 +28,11 @@
 # nome sem ter respondido (o rodízio atribui na criação, antes desta sincronização) sai: é a triagem que a R13 pula.
 # Sem o rodízio, quem está no nome foi posto por uma pessoa ou automação e fica.
 #
-# Roda dentro da sincronização do card (CardSyncer), sob a mesma trava (conversa e contato).
+# Roda dentro da sincronização do card (CardSyncer), sob a mesma trava (conversa e contato). Só nas contas com a flag
+# `crm_outro_canal` (#1666); sem ela, nada muda.
 class Crm::Conversations::OutroCanal
   MOTIVO = 'outro_canal'.freeze
+  FLAG = 'crm_outro_canal'.freeze
   ATIVIDADE_SQL = 'COALESCE(crm_cards.last_activity_at, crm_cards.updated_at)'.freeze
   # Só puxa a conversa nova o card com atividade neste prazo (a mesma leitura de atividade da deduplicação).
   JANELA_DE_ATIVIDADE = 30.days
@@ -53,7 +55,12 @@ class Crm::Conversations::OutroCanal
   private
 
   def candidata?
-    @conversation.contact_id.present? && em_andamento? && abriu_a_conversa? && caixa_no_crm? && sem_card?
+    ligada_na_conta? && @conversation.contact_id.present? && em_andamento? && abriu_a_conversa? && caixa_no_crm? && sem_card?
+  end
+
+  # Atrás da flag de conta `crm_outro_canal` (piloto: contas 1, 16 e 18; ligar: #1666). Sem ela, nada muda.
+  def ligada_na_conta?
+    @account.feature_enabled?(FLAG)
   end
 
   # Sob a trava, relendo: outra sincronização pode ter ligado ou criado um card nesse meio tempo.

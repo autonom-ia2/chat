@@ -171,8 +171,10 @@ class Crm::Conversations::CardSyncer
   # A caixa (e o canal) do card é a da conversa principal dele. Uma conversa de outra caixa ligada ao card (outro canal,
   # R13 do #1150, ou vínculo à mão) não o arrasta para a caixa dela: a caixa do card decide quem o vê no Kanban, e ele
   # pularia de caixa a cada mensagem de um canal ou do outro. Card sem principal adota a caixa de quem o adota.
+  # Junto com a R13, atrás da flag `crm_outro_canal` (#1666): sem ela, a caixa do card segue a última conversa sincronizada.
   def caixa_attributes(card)
-    return {} unless card.conversation_id.blank? || own_conversation?(card)
+    da_caixa = card.conversation_id.blank? || own_conversation?(card)
+    return {} unless da_caixa || !@account.feature_enabled?(Crm::Conversations::OutroCanal::FLAG)
 
     { inbox_id: @conversation.inbox_id, source: @conversation.inbox&.channel_type }
   end
