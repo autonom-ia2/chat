@@ -30,4 +30,13 @@ RSpec.describe Crm::FollowUps::SendErrorCode do
 
     expect(described_class.for(cancelado)).to eq('recusou')
   end
+
+  it 'só vale com a flag crm_mensagem_marcada da conta' do
+    account = create(:account)
+
+    expect(described_class.enabled?(account)).to be(false)
+    account.enable_features!('crm_mensagem_marcada')
+    expect(described_class.enabled?(account)).to be(true)
+    expect(described_class.enabled?(nil)).to be(false)
+  end
 end

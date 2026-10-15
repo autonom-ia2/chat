@@ -16,6 +16,12 @@ class Crm::FollowUps::SendErrorCode
   }.freeze
   OTHER = 'outro'.freeze
   OPTED_OUT = 'recusou'.freeze
+  FLAG = 'crm_mensagem_marcada'.freeze
+
+  # Sem a flag, a API fica como antes: nem a chave `send_error_code` sai.
+  def self.enabled?(account)
+    account.present? && account.feature_enabled?(FLAG)
+  end
 
   def self.for(follow_up)
     metadata = follow_up.metadata.to_h

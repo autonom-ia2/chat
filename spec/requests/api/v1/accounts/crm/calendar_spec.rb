@@ -169,16 +169,28 @@ RSpec.describe 'CRM calendar API', type: :request do
                                 'conversation_id' => conversation.id, 'conversation_display_id' => conversation.display_id)
     end
 
-    # #1590: a mensagem marcada que não saiu traz o motivo como código; o texto cru fica no servidor.
-    it 'manda o motivo de a mensagem marcada não ter saído' do
+    # #1590: a mensagem marcada que não saiu traz o motivo como código, só com a flag; o texto cru fica no servidor.
+    def mensagem_que_nao_saiu
       pipeline, stage = create_crm_pipeline(account: account, user: user)
       card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual', contact: contact,
                                        conversation_id: conversation.id)
       falhou = account.crm_follow_ups.create!(card: card, contact: contact, title: 'Não saiu', due_at: '2026-10-14T19:30:00Z',
                                               timezone: 'UTC', created_by: user)
       falhou.update!(status: :overdue, metadata: { 'send_error' => 'sender_required' })
+    end
+
+    it 'com a flag crm_mensagem_marcada, manda o motivo de a mensagem marcada não ter saído' do
+      account.enable_features!('crm_mensagem_marcada')
+      mensagem_que_nao_saiu
 
       expect(eventos['Não saiu']).to include('send_error_code' => 'sem_remetente')
+      expect(eventos['Não saiu'].to_json).not_to include('sender_required')
+    end
+
+    it 'sem a flag crm_mensagem_marcada, o evento sai como antes, sem send_error_code' do
+      mensagem_que_nao_saiu
+
+      expect(eventos['Não saiu']).not_to have_key('send_error_code')
       expect(eventos['Não saiu'].to_json).not_to include('sender_required')
     end
 

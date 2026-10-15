@@ -10,14 +10,17 @@ class Crm::FollowUps::SeriesCalendarEvents
   end
 
   # Um lembrete do calendário; a vez de uma série leva a série junto (#1460).
-  def self.follow_up_event(follow_up, conversation_id:)
-    {
+  # Só com a flag crm_mensagem_marcada da conta o motivo de a mensagem não ter saído vai junto (#1590).
+  def self.follow_up_event(follow_up, conversation_id:, account:)
+    falhas = Crm::FollowUps::SendErrorCode.enabled?(account)
+    event = {
       id: "follow_up_#{follow_up.id}", event_type: "follow_up_#{follow_up.automation_mode}", title: follow_up.title,
       starts_at: follow_up.due_at&.iso8601, status: follow_up.status, card_id: follow_up.card_id,
       conversation_id: conversation_id, contact_id: safe_contact_id(follow_up), inbox_id: follow_up.inbox_id,
       assignee_id: follow_up.assignee_id, series_id: follow_up.series_id, series_status: follow_up.series&.status,
-      recurring: follow_up.series_id.present?, send_error_code: Crm::FollowUps::SendErrorCode.for(follow_up)
+      recurring: follow_up.series_id.present?
     }
+    falhas ? event.merge(send_error_code: Crm::FollowUps::SendErrorCode.for(follow_up)) : event
   end
 
   # O mesmo critério do serializer do lembrete (_follow_up.json.jbuilder): o contato só sai se for o do card ou o da

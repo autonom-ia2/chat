@@ -201,4 +201,24 @@ describe('useMensagemMarcada', () => {
     await m.criar({ titulo: 'x' });
     expect(m.erro.value).toBe('GERAL');
   });
+
+  it('clique duplo em "Marcar mensagem" faz uma ida só ao servidor', async () => {
+    const { store, dispatch } = novaLoja();
+    const m = useMensagemMarcada({ store, fuso: ref('America/Sao_Paulo') });
+    m.escolherAlvo(card());
+    marcarAmanha(m);
+    m.mensagem.value = { texto: 'Oi!', modelo: null };
+
+    const [primeiro, segundo] = await Promise.all([
+      m.criar({ titulo: 'x' }),
+      m.criar({ titulo: 'x' }),
+    ]);
+
+    expect(primeiro).toBe(true);
+    expect(segundo).toBe(false);
+    const criacoes = dispatch.mock.calls.filter(
+      ([tipo]) => tipo === 'crmKanban/createFollowUp'
+    );
+    expect(criacoes).toHaveLength(1);
+  });
 });

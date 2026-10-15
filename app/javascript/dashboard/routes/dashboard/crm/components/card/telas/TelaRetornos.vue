@@ -1,6 +1,8 @@
 <script setup>
 import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmCardAutoFollowupStatus from '../../CrmCardAutoFollowupStatus.vue';
 import CampoQuando from '../CampoQuando.vue';
@@ -67,9 +69,12 @@ const confirmarAdiar = item => {
 };
 const situacao = item =>
   t(`CRM_KANBAN.FOLLOW_UP_STATUS.${String(item.status).toUpperCase()}`);
-// #1590: por que a mensagem marcada não saiu, numa frase (o servidor manda só o código).
+// #1590: por que a mensagem marcada não saiu, numa frase (o servidor manda só o
+// código). Só com a flag crm_mensagem_marcada; sem ela, como antes.
+const { isCloudFeatureEnabled } = useAccount();
 const falha = item =>
-  item.send_error_code
+  item.send_error_code &&
+  isCloudFeatureEnabled(FEATURE_FLAGS.CRM_MENSAGEM_MARCADA)
     ? t('CRM_MENSAGEM_MARCADA.FALHA.TITULO', {
         motivo: t(`CRM_MENSAGEM_MARCADA.FALHA.${item.send_error_code}`),
       })

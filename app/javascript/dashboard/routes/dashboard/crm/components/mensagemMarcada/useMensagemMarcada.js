@@ -215,6 +215,8 @@ export const useMensagemMarcada = ({ store, fuso, caixasDaTela }) => {
   };
 
   const criar = async ({ titulo, montada }) => {
+    // Clique duplo em "Marcar mensagem": só uma ida ao servidor (#1590).
+    if (salvando.value) return false;
     salvando.value = true;
     erro.value = '';
     try {

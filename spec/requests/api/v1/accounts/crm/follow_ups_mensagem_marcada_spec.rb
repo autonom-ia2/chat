@@ -68,18 +68,34 @@ RSpec.describe 'CRM follow-ups API — Mensagem marcada', type: :request do
     expect(response).to have_http_status(:created)
   end
 
-  it 'manda o motivo da falha como código, sem o texto cru' do
+  def follow_up_que_nao_saiu
     follow_up = account.crm_follow_ups.create!(
       card: card, conversation: conversation, title: 'Mensagem para Mariana', due_at: 1.hour.from_now, timezone: 'UTC',
       automation_mode: :auto_send_message, created_by: user,
       metadata: { 'message_body' => 'Oi', 'whatsapp_api_message_template_id' => template.id }
     )
     follow_up.update!(status: :overdue, metadata: follow_up.metadata.merge('send_error' => 'whatsapp_api_unavailable'))
+    follow_up
+  end
+
+  it 'com a flag, manda o motivo da falha como código, sem o texto cru' do
+    account.enable_features!('crm_mensagem_marcada')
+    follow_up = follow_up_que_nao_saiu
 
     get "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}", headers: auth_headers(user)
 
     payload = response.parsed_body['payload']
     expect(payload['send_error_code']).to eq('celular_desconectado')
+    expect(payload['metadata']).not_to have_key('send_error')
+  end
+
+  it 'sem a flag, o lembrete sai como antes, sem send_error_code' do
+    follow_up = follow_up_que_nao_saiu
+
+    get "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}", headers: auth_headers(user)
+
+    payload = response.parsed_body['payload']
+    expect(payload).not_to have_key('send_error_code')
     expect(payload['metadata']).not_to have_key('send_error')
   end
 end

@@ -2007,15 +2007,10 @@ const openMeetingReschedule = async (meetingLike, date) => {
 
 const onCalendarQuickAdd = (payload = {}) => {
   if (mensagemMarcadaNova.value && payload.type === 'whatsapp') {
-    // O Calendário novo manda a chave do dia no fuso da conta; o antigo, a data
-    // do dia clicado na tela (as partes locais dela são o dia que a pessoa viu).
-    const data = payload.date ? new Date(payload.date) : new Date();
-    const dia = [
-      data.getFullYear(),
-      String(data.getMonth() + 1).padStart(2, '0'),
-      String(data.getDate()).padStart(2, '0'),
-    ].join('-');
-    mensagemMarcada.value = { show: true, dia: payload.dia || dia };
+    // Só o Calendário novo pede "mensagem" (o antigo manda sempre 'reminder'), e
+    // ele manda o dia como chave no fuso da conta. Sem dia, a gaveta começa sem
+    // dia escolhido e conta o "hoje" no fuso da conta — nunca no do navegador.
+    mensagemMarcada.value = { show: true, dia: payload.dia || '' };
     return;
   }
   if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {
