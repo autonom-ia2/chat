@@ -1,7 +1,13 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { timelockEndFor } from '../whatsappHybridState';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
+import {
+  timelockEndFor,
+  limitDateTime,
+  limitDate,
+} from '../whatsappHybridState';
 
 // chat#1480/#1481 — o que o WhatsApp está limitando neste número: a restrição temporária de conversas novas e o
 // ciclo de conversas novas. Só avisos, no tom das caixas de situação (âmbar atenção, vermelho bloqueado).
@@ -10,7 +16,13 @@ const props = defineProps({
   now: { type: Number, required: true },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const { currentAccount } = useAccount();
+// Fuso e idioma da conta, nunca os do navegador.
+const dateOptions = computed(() => ({
+  locale: locale.value,
+  timeZone: fusoDaConta(currentAccount.value),
+}));
 
 const CAPPING_KEYS = {
   FIRST_WARNING: 'NEAR',
@@ -22,7 +34,7 @@ const capping = computed(() => props.state.capping || { status: 'NONE' });
 const cappingKey = computed(() => CAPPING_KEYS[capping.value.status] || '');
 const cappingEnd = computed(() =>
   capping.value.cycle_end
-    ? new Date(capping.value.cycle_end * 1000).toLocaleDateString()
+    ? limitDate(capping.value.cycle_end, dateOptions.value)
     : '—'
 );
 const cappingText = computed(() =>
@@ -44,12 +56,7 @@ const timelockText = computed(() => {
     return t('INBOX_MGMT.WHATSAPP_HYBRID.TIMELOCK.NO_END');
   }
   return t('INBOX_MGMT.WHATSAPP_HYBRID.TIMELOCK.UNTIL', {
-    end: timelockEnd.value.toLocaleString([], {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    end: limitDateTime(props.state.timelock.ends_at, dateOptions.value),
   });
 });
 </script>

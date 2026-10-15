@@ -907,10 +907,10 @@
         "NOT_CONNECTED": "Não conectado",
         "AWAITING": "Aguardando o celular",
         "CONNECTED": "Conectado",
-        "FAILED": "Falha na conexão",
         "REMOVED": "Desconectado pelo WhatsApp",
         "DISCONNECTED": "Desconectado",
-        "PAUSED": "Pausado"
+        "PAUSED": "Pausado",
+        "EXPIRED": "QR Code expirado"
       },
       "RISK": {
         "TITLE": "Antes de ligar",

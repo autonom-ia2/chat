@@ -71,6 +71,8 @@ const STEPS = ['STEP_1', 'STEP_2', 'STEP_3'];
     </div>
     <div class="flex flex-col w-full gap-2 sm:flex-row sm:justify-center">
       <Button
+        v-if="!pairingCode"
+        data-use-code
         :is-loading="isBusy"
         color="slate"
         variant="outline"

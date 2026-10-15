@@ -825,9 +825,10 @@ export default {
   >
     <SpinnerLoader :size="28" class="text-n-blue-9" />
   </div>
+  <!-- #1487: a coluna da grade não passa da largura da tela (no celular, a barra de abas e os cartões esticavam a página). -->
   <div
     v-else
-    class="grid grid-rows-[auto_1fr] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
+    class="grid grid-rows-[auto_1fr] grid-cols-[minmax(0,1fr)] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
   >
     <SettingIntroBanner
       :header-image="inbox.avatarUrl"

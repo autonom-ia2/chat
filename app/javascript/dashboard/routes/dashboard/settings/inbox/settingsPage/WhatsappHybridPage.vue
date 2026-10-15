@@ -10,6 +10,7 @@ import {
   stoppedKeyFor,
   statusKeyFor,
   phaseFor,
+  phoneLabel,
   PHASE_TONES,
 } from './whatsappHybridState';
 import WhatsappHybridHeroi from './components/WhatsappHybridHeroi.vue';
@@ -270,10 +271,10 @@ onBeforeUnmount(() => {
             {{
               connected
                 ? t('INBOX_MGMT.WHATSAPP_HYBRID.CONNECTED_HELP', {
-                    phone: state.phone,
+                    phone: phoneLabel(state.phone),
                   })
                 : t('INBOX_MGMT.WHATSAPP_HYBRID.WRONG_NUMBER', {
-                    phone: state.phone,
+                    phone: phoneLabel(state.phone),
                   })
             }}
           </p>

@@ -16,16 +16,29 @@ vi.mock('dashboard/api/whatsappHybrid', () => ({
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
+// Conta em Tóquio: as datas da aba seguem o fuso da conta, não o do navegador (o do teste).
+vi.mock('dashboard/composables/useAccount', async () => {
+  const { ref } = await import('vue');
+  return {
+    useAccount: () => ({ currentAccount: ref({ timezone: 'Asia/Tokyo' }) }),
+  };
+});
+
 vi.mock('qrcode', () => ({
   default: { toDataURL: vi.fn(async value => `data:image/png;${value}`) },
 }));
 
-const translate = (key, params) =>
-  params?.inbox ? `${key}|${params.inbox}` : key;
+const translate = (key, params) => {
+  if (params?.inbox) return `${key}|${params.inbox}`;
+  if (params?.phone) return `${key}|${params.phone}`;
+  if (params?.end) return `${key}|${params.end}`;
+  return key;
+};
 
-vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: translate }),
-}));
+vi.mock('vue-i18n', async () => {
+  const { ref } = await import('vue');
+  return { useI18n: () => ({ t: translate, locale: ref('pt_BR') }) };
+});
 
 const KEY = 'INBOX_MGMT.WHATSAPP_HYBRID';
 
@@ -230,6 +243,68 @@ describe('WhatsappHybridPage (chat#1487, gold standard)', () => {
     expect(wrapper.find('[data-hybrid-timelock]').text()).toContain(
       `${KEY}.TIMELOCK.NO_END`
     );
+  });
+
+  it('writes the restriction end in the account time zone', async () => {
+    // 2026-10-14 02:30 UTC = 14/10 11:30 em Tóquio.
+    const endsAt = Date.UTC(2026, 9, 14, 2, 30) / 1000;
+    vi.setSystemTime(Date.UTC(2026, 9, 13, 20, 0));
+    WhatsappHybridAPI.show.mockResolvedValue({
+      data: { ...connected, timelock: { active: true, ends_at: endsAt } },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-hybrid-timelock]').text()).toBe(
+      `${KEY}.TIMELOCK.UNTIL|14/10, 11:30`
+    );
+  });
+
+  it('shows the connected phone formatted, not raw digits', async () => {
+    WhatsappHybridAPI.show.mockResolvedValue({
+      data: { ...connected, phone: '551140001487' },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-situacao]').text()).toContain(
+      `${KEY}.CONNECTED_HELP|+55 (11) 4000-1487`
+    );
+  });
+
+  it('says the QR expired in the chip, like the title', async () => {
+    WhatsappHybridAPI.show.mockResolvedValue({
+      data: { ...connected, status: 'failed', connected: false, phone: null },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-hybrid-selo]').text()).toBe(
+      `${KEY}.STATUS.EXPIRED`
+    );
+  });
+
+  it('hides "use a code instead" once the code is on screen', async () => {
+    WhatsappHybridAPI.show.mockResolvedValue({
+      data: {
+        ...connected,
+        status: 'awaiting_scan',
+        connected: false,
+        qr: 'q',
+      },
+    });
+    WhatsappHybridAPI.requestCode = vi.fn().mockResolvedValue({
+      data: { code: 'ABCD-1234' },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+
+    expect(wrapper.find('[data-use-code]').exists()).toBe(true);
+    await wrapper.find('[data-use-code]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-pairing-code]').text()).toBe('ABCD-1234');
+    expect(wrapper.find('[data-use-code]').exists()).toBe(false);
   });
 
   it('shows the 14-day reminder when connected or paused', async () => {

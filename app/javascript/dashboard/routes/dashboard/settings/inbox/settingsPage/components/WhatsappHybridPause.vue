@@ -3,7 +3,8 @@ import { ref } from 'vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-// chat#1487 — pausar o WhatsApp API sem desvincular o aparelho. Pede confirmação curta dizendo o efeito.
+// chat#1487 — pausar o WhatsApp API sem desvincular o aparelho. Pede confirmação curta dizendo o efeito, com o botão
+// normal (azul): pausar é reversível. Só Desconectar usa o vermelho de ação perigosa.
 defineProps({
   isBusy: { type: Boolean, default: false },
 });
@@ -31,7 +32,6 @@ const confirm = () => {
   />
   <Dialog
     ref="dialogRef"
-    type="alert"
     :title="$t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.CONFIRM_TITLE')"
     :description="$t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.CONFIRM_TEXT')"
     :confirm-button-label="$t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.CONFIRM')"

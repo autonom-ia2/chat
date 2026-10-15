@@ -906,10 +906,10 @@
         "NOT_CONNECTED": "Not connected",
         "AWAITING": "Waiting for the phone",
         "CONNECTED": "Connected",
-        "FAILED": "Connection failed",
         "REMOVED": "Disconnected by WhatsApp",
         "DISCONNECTED": "Disconnected",
-        "PAUSED": "Paused"
+        "PAUSED": "Paused",
+        "EXPIRED": "QR code expired"
       },
       "RISK": {
         "TITLE": "Before turning it on",

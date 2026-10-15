@@ -3,6 +3,10 @@ import {
   timelockEndFor,
   statusKeyFor,
   phaseFor,
+  limitDateTime,
+  limitDate,
+  phoneLabel,
+  STATUS_VISUALS,
 } from '../whatsappHybridState';
 
 describe('stoppedKeyFor', () => {
@@ -69,7 +73,7 @@ describe('statusKeyFor', () => {
       'CONNECTED'
     );
     expect(statusKeyFor({ status: 'failed', phone: '5511' })).toBe('REMOVED');
-    expect(statusKeyFor({ status: 'failed' })).toBe('FAILED');
+    expect(statusKeyFor({ status: 'failed' })).toBe('EXPIRED');
     expect(statusKeyFor({ status: 'disconnected' })).toBe('DISCONNECTED');
     expect(statusKeyFor({ status: 'awaiting_scan' })).toBe('AWAITING');
   });
@@ -94,5 +98,44 @@ describe('phaseFor', () => {
 
   it('puts the pause before the engine state', () => {
     expect(phaseFor({ status: 'disconnected', paused: true })).toBe('paused');
+  });
+});
+
+describe('limit dates (chat#1487)', () => {
+  // 2026-10-14 02:30 UTC = 13/10 23:30 em São Paulo e 14/10 11:30 em Tóquio.
+  const endsAt = Date.UTC(2026, 9, 14, 2, 30) / 1000;
+
+  it('uses the account time zone and language, not the browser', () => {
+    expect(
+      limitDateTime(endsAt, { locale: 'pt_BR', timeZone: 'America/Sao_Paulo' })
+    ).toBe('13/10, 23:30');
+    expect(
+      limitDateTime(endsAt, { locale: 'pt_BR', timeZone: 'Asia/Tokyo' })
+    ).toBe('14/10, 11:30');
+    expect(
+      limitDate(endsAt, { locale: 'pt_BR', timeZone: 'America/Sao_Paulo' })
+    ).toBe('13/10/2026');
+    expect(limitDate(endsAt, { locale: 'en', timeZone: 'Asia/Tokyo' })).toBe(
+      '10/14/2026'
+    );
+  });
+});
+
+describe('expired QR chip (chat#1487)', () => {
+  it('says expired, like the title, with a matching icon', () => {
+    expect(statusKeyFor({ status: 'failed', phone: null })).toBe('EXPIRED');
+    expect(STATUS_VISUALS.EXPIRED.icon).toBe('i-lucide-timer-off');
+  });
+});
+
+describe('phoneLabel (chat#1487)', () => {
+  it('formats the raw digits with the country code', () => {
+    expect(phoneLabel('551140001487')).toBe('+55 (11) 4000-1487');
+    expect(phoneLabel('5511999993846')).toBe('+55 (11) 99999-3846');
+  });
+
+  it('keeps empty as empty', () => {
+    expect(phoneLabel(null)).toBe('');
+    expect(phoneLabel('')).toBe('');
   });
 });

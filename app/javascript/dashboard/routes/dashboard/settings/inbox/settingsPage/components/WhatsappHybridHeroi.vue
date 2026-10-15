@@ -45,10 +45,13 @@ const visual = computed(() => STATUS_VISUALS[props.statusKey]);
         v-if="visual && statusLabel"
         data-hybrid-selo
         role="status"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 mt-2 text-sm font-medium rounded-full w-fit whitespace-nowrap"
-        :class="visual.chip"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 mt-2 text-sm font-semibold rounded-full w-fit whitespace-nowrap bg-white text-[#0D2344]"
       >
-        <span class="size-4" :class="visual.icon" aria-hidden="true" />
+        <span
+          class="size-4"
+          :class="[visual.icon, visual.tone]"
+          aria-hidden="true"
+        />
         {{ statusLabel }}
       </span>
     </div>
