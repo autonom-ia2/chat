@@ -202,6 +202,59 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     end
   end
 
+  describe 'turno que falhou pode ser retomado' do
+    # Porta: a 1ª chamada levanta (falha_no_turno), a 2ª responde. Área: a IA não devolve resultado (silêncio ia_falhou).
+    def ia_falha_primeiro!
+      chamadas = Hash.new(0)
+      allow(Autonomia::Agents::Answerer).to receive(:new) do |agent:, **|
+        resposta = double('Answerer') # rubocop:disable RSpec/VerifiedDoubles
+        allow(resposta).to receive(:answer) do
+          chamadas[agent.id] += 1
+          raise 'a IA caiu' if agent == agente_da_porta && chamadas[agent.id] == 1
+          next nil if agent == area
+
+          Autonomia::Agents::AnswerResult.new(reply: "Resposta de #{agent.name}.", confidence: 0.9,
+                                              handoff: { should: false, reason: nil }, used_knowledge: [],
+                                              answered_from_knowledge: false)
+        end
+        resposta
+      end
+      chamadas
+    end
+
+    it 'falha da IA na porta, falha na área, volta à porta: a porta retoma a mesma mensagem e responde' do
+      chamadas = ia_falha_primeiro!
+      mensagem = turno_do_cliente
+      rodar_turno! # a porta falha
+      expect(respostas).to be_empty
+      expect(Redis::Alfred.exists?(posse.chave(conversation.id, mensagem.id, vinculo_da_porta.id))).to be(false)
+
+      trocar_dono!(espelho_area)
+      rodar_turno! # a área não devolve resultado
+      expect(respostas).to be_empty
+      expect(Redis::Alfred.exists?(posse.chave(conversation.id, mensagem.id, vinculo_area.id))).to be(false)
+
+      trocar_dono!(porta)
+      rodar_turno!
+
+      expect(respostas.sole).to have_attributes(sender_id: porta.id, content: 'Resposta de Porta.')
+      expect(chamadas[agente_da_porta.id]).to eq(2)
+    end
+
+    it 'o turno respondido segue com a chave: a volta ao mesmo dono não responde de novo' do
+      ia_responde!
+      mensagem = turno_do_cliente
+      rodar_turno!
+      expect(respostas.count).to eq(1)
+
+      trocar_dono!(porta)
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(Redis::Alfred.exists?(posse.chave(conversation.id, mensagem.id, vinculo_da_porta.id))).to be(true)
+    end
+  end
+
   it 'cenário 7: Responder e assinante disparando juntos enfileiram um ReplyJob só' do
     ia_responde!
     mensagem = turno_do_cliente

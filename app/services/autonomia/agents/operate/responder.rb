@@ -21,6 +21,8 @@ module Autonomia
         # Sinal de silêncio padrão (a instrução emite isto em vez de uma resposta). Override por agente
         # via config['silence_tokens'] (lista). Match exato após normalizar (trim + minúsculas + markdown).
         SILENCE_TOKEN = 'conversation_closed_for_now'.freeze
+        # Os silêncios que são falha (motivo_do_silencio): soltam a posse do turno, que pode ser retomado (#1606).
+        SILENCIOS_DE_FALHA = %w[ia_falhou vazio].freeze
 
         Result = Struct.new(:status, :message, :error, keyword_init: true) do
           def self.replied(message)
@@ -115,6 +117,7 @@ module Autonomia
         # que cotar e não ter como entregar.
         def falha_no_turno(error)
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{error.class}")
+          soltar_posse
           ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
           Result.silenced
         end
@@ -366,8 +369,18 @@ module Autonomia
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
         def silence_with_async(_result, motivo)
           registrar_silencio(motivo)
+          soltar_posse if SILENCIOS_DE_FALHA.include?(motivo)
           dispatch_async(replied: false)
           Result.silenced
+        end
+
+        # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou
+        # pela volta ao mesmo dono. Solta a posse deste settle (compare-and-delete com o valor dele). O silêncio por `sinal`
+        # é decisão da instrução e o turno respondido seguem com a chave: é o que impede responder duas vezes.
+        def soltar_posse
+          return unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+
+          ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @reply_to_message_id, @agent_inbox.id, @posse)
         end
 
         # O turno mudo porque deixou de ser nosso: humano assumiu, agente desligado, conversa movida.
