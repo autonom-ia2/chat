@@ -85,8 +85,11 @@ module Crm
 
       # As passagens recentes da conversa (#1606), em qualquer modo (convite, sem regra do funil, atribuição pela tela):
       # texto cercado como dado. Sem passagem, a entrada fica igual à de antes.
+      # Vale para todas as contas, com ou sem a Fase 2 dos Agentes (correção do pingue-pongue). Só a conversa da conta do
+      # card: account_id conferido aqui, como no #latest_conversation.
       def handoff_history
         conversa = @card.conversa_em_atendimento
+        conversa = nil unless conversa&.account_id == @card.account_id
         texto = conversa ? Crm::Passagens.recentes(conversa) : ''
         texto.present? ? { handoff_history: texto } : {}
       end

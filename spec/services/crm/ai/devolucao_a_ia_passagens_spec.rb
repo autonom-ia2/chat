@@ -98,6 +98,29 @@ RSpec.describe Crm::Ai::DevolucaoAIa do
     expect(described_class.pelas_passagens(conversation.reload)).to be_nil
   end
 
+  # Correção do pingue-pongue para TODAS as contas (decisão do Multifunnel, 15/10): a leitura das passagens não depende
+  # da Fase 2 dos Agentes. Só a troca de IA pelo assunto é da Fase 2.
+  it 'vale sem a Fase 2 dos Agentes', :aggregate_failures do
+    expect(Autonomia::Agents::Fase2.ligada?(account)).to be(false)
+    do_cliente('Quero falar com alguém')
+    como(ana) { atribuir(ana) }
+    como(ana) { atribuir(nil) }
+
+    expect(described_class.pelas_passagens(conversation.reload)).to be_present
+    expect(passar).to have_attributes(status: :skipped, error: 'devolvida_sem_pedido_novo')
+    expect(Crm::Ai::ContextBuilder.new(card: card.reload).perform[:conversation_state]).to have_key(:handoff_history)
+  end
+
+  it 'passagem gravada com outra conta não entra na devolução nem no texto da IA', :aggregate_failures do
+    outra = create(:account)
+    Crm::Passagem.create!(account_id: outra.id, conversation_id: conversation.id, para_type: 'User', para_id: ana.id,
+                          para_nome: 'Intrusa', motivo: 'atribuicao', em: 1.minute.ago, devolvida_em: Time.current)
+
+    expect(described_class.pelas_passagens(conversation.reload)).to be_nil
+    expect(Crm::Passagens.recentes(conversation)).to eq('')
+    expect(Crm::Ai::ContextBuilder.new(card: card.reload).perform[:conversation_state]).not_to have_key(:handoff_history)
+  end
+
   describe 'o classificador lê as passagens recentes' do
     it 'conversation_state traz handoff_history cercado como dado, e nada sem passagem', :aggregate_failures do
       expect(Crm::Ai::ContextBuilder.new(card: card).perform[:conversation_state]).not_to have_key(:handoff_history)
@@ -108,6 +131,25 @@ RSpec.describe Crm::Ai::DevolucaoAIa do
       estado = Crm::Ai::ContextBuilder.new(card: card.reload).perform[:conversation_state]
       expect(estado[:handoff_history]).to start_with(Crm::Passagens::ABRE).and include('Devolvida por Ana')
       expect(estado[:returned_to_ai_at]).to be_present
+    end
+
+    it 'o pedido ao modelo traz a instrução sobre handoff_history e o bloco das passagens', :aggregate_failures do
+      como(ana) { atribuir(ana) }
+      como(ana) { atribuir(nil) }
+      cliente = double('cliente') # rubocop:disable RSpec/VerifiedDoubles
+      pedido = nil
+      allow(cliente).to receive(:create) do |**args|
+        pedido = args
+        { text: { stage_id: nil, intent: 'nenhum', should_handoff: false }.to_json }
+      end
+      contexto = Crm::Ai::ContextBuilder.new(card: card.reload).perform
+
+      Crm::Ai::StageClassifier.new(card: card, client: cliente, stages: [], context: contexto).perform
+
+      expect(pedido[:schema].to_json).to include('conversation_state.handoff_history')
+      entrada = JSON.parse(pedido[:input])
+      expect(entrada.dig('conversation_state', 'handoff_history')).to start_with(Crm::Passagens::ABRE)
+      expect(entrada.dig('conversation_state', 'handoff_history')).to include('Devolvida por Ana')
     end
   end
 end

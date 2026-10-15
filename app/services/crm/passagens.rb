@@ -112,7 +112,8 @@ module Crm::Passagens
   # O texto que a IA lê: as últimas passagens, da mais antiga para a mais nova, cercadas como dado. Nomes são o que a
   # equipe digitou: sem sinais de marcação e numa linha só, ninguém fecha a cerca nem forja uma linha com o nome.
   def recentes(conversation, limite: LIMITE)
-    passagens = Crm::Passagem.where(conversation_id: conversation.id).em_ordem.limit(limite).to_a.reverse
+    passagens = Crm::Passagem.where(account_id: conversation.account_id, conversation_id: conversation.id)
+                             .em_ordem.limit(limite).to_a.reverse
     return '' if passagens.empty?
 
     fuso = Crm::Timezone::Resolver.new(account: conversation.account).name_or_default

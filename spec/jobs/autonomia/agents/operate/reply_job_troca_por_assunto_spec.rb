@@ -50,7 +50,7 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
 
     expect(respostas.sole).to have_attributes(sender_id: espelho_area.id, content: 'Resposta de Área Suporte.')
     expect(eventos.size).to eq(1)
-    expect(passagens.sole).to have_attributes(de_id: agente_da_porta.id, para_id: area.id, motivo: 'assunto')
+    expect(passagens.sole).to have_attributes(de_id: agente_da_porta.id, para_id: area.id, motivo: 'foco')
   end
 
   it 'troca no meio da resposta da porta: a resposta velha é descartada e sai 1 resposta, da área' do
@@ -98,6 +98,6 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
     expect(eventos.size).to eq(1)
     ida, volta = passagens.to_a
     expect(ida).to have_attributes(para_id: area.id, devolvida_em: be_present)
-    expect(volta).to have_attributes(de_id: area.id, para_id: agente_da_porta.id, motivo: 'assunto', devolvida_em: nil)
+    expect(volta).to have_attributes(de_id: area.id, para_id: agente_da_porta.id, motivo: 'foco', devolvida_em: nil)
   end
 end
