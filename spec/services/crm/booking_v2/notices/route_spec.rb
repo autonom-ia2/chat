@@ -114,6 +114,96 @@ RSpec.describe Crm::BookingV2::Notices::Route do
     expect(Whatsapp::Templates::Garantir).not_to have_received(:call)
   end
 
+  # Autocura (#1633): quem ligou a autorização antes do assinante do evento estar no ar ficava sem os modelos v2 para
+  # sempre. O aviso que encontra `ausente` com a autorização ligada enfileira a criação, com trava por caixa.
+  describe 'autocura dos modelos v2' do
+    let(:templates) { [v1] }
+    let(:lock_key) { format(described_class::HEAL_LOCK_KEY, inbox_id: inbox.id) }
+
+    # A trava mora no Redis, que não volta com a transação do exemplo.
+    before { Redis::Alfred.delete(lock_key) }
+    after { Redis::Alfred.delete(lock_key) }
+
+    def ligar_autorizacao
+      WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU,
+                                      versao_aviso: 'v1', texto_aviso: 'Aviso.')
+    end
+
+    # Motivo: o caminho da correção. `ausente` + autorização enfileira a criação UMA vez; o aviso seguinte, logo depois,
+    # não enfileira de novo (sem a trava, cada aviso de cada contato enfileiraria um job).
+    it 'ausente com autorização enfileira uma vez, e a segunda chamada não enfileira de novo' do
+      ligar_autorizacao
+
+      expect { decide }.to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob).with(account.id, inbox.id).exactly(:once)
+      expect { decide(kind: 'hour_before') }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+    end
+
+    # Motivo: o aviso daquele momento não espera a criação: continua na regra de hoje (o v1 configurado, ou o motivo
+    # de pulo sem ele), e nada vai à Meta na hora.
+    it 'o aviso de agora segue a regra de hoje, sem falar com a Meta' do
+      ligar_autorizacao
+
+      expect(decide.template['name']).to eq('aviso_marcado')
+      Redis::Alfred.delete(lock_key)
+      expect(decide(template: {})).to have_attributes(reason: 'template_required')
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+    end
+
+    # Motivo: sem a autorização do dono o sistema não pode criar modelo na Meta (#1586); nem enfileira.
+    it 'sem autorização não enfileira' do
+      expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+    end
+
+    # Motivo: autorização desligada depois de ligada vale como sem autorização (a última linha manda).
+    it 'autorização desligada não enfileira' do
+      ligar_autorizacao
+      WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::DESLIGOU,
+                                      versao_aviso: 'v1', texto_aviso: 'Aviso.')
+
+      expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+    end
+
+    # Motivo: em análise o modelo já existe na Meta; enfileirar seria trabalho à toa.
+    context 'when o v2 está em análise' do
+      let(:templates) { [v1, v2('PENDING')] }
+
+      it 'não enfileira' do
+        ligar_autorizacao
+
+        expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      end
+    end
+
+    # Motivo: pronto, o v2 é usado; não há o que criar.
+    context 'when o v2 está pronto' do
+      let(:templates) { [v1, v2('APPROVED')] }
+
+      it 'não enfileira' do
+        ligar_autorizacao
+
+        expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      end
+    end
+
+    # Motivo: sem `kind` (o "Testar no meu WhatsApp") o v2 nem é consultado; não pode disparar criação.
+    it 'sem kind não enfileira' do
+      ligar_autorizacao
+
+      expect { decide(kind: nil) }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+    end
+
+    # Motivo: a fila fora do ar não pode derrubar o aviso: o erro vai ao tracker e o aviso segue a regra de hoje.
+    it 'erro ao enfileirar vai ao tracker e o aviso segue' do
+      ligar_autorizacao
+      allow(Crm::BookingV2::NoticeTemplateEnsureJob).to receive(:perform_later).and_raise(StandardError, 'fila fora')
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      expect(decide.template['name']).to eq('aviso_marcado')
+      expect(tracker).to have_received(:capture_exception).once
+    end
+  end
+
   # Motivo: a tela pública pergunta "vai sair?" numa requisição web: o `Garantir` precisa ir com `criar: false`
   # (nunca cria, nunca fala com a Meta), mesmo sem o v2 na caixa.
   describe 'Sender#will_send?' do

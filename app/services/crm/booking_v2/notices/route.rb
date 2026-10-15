@@ -16,6 +16,11 @@
 #   Meta, também na requisição web do `will_send?`). `:pronto` + UTILITY → `native_template` com `campos` (corpo) e
 #   `botoes` ("Ver meu horário" e "Parar avisos"), que o `Notices::TemplateFill` preenche. Qualquer outro resultado
 #   (`em_analise`, `indisponivel`, `ausente`, `sem_base_url`, outra categoria): a regra acima, sem mudança.
+#   Autocura (#1633): `ausente` com o Aviso de serviço ligado (`WhatsappTemplateConsent.ativo?`) quer dizer que o
+#   gatilho de criar se perdeu (ex.: a autorização ligou antes do assinante do evento estar no ar). O Route enfileira o
+#   `NoticeTemplateEnsureJob` desta caixa, no máximo 1 vez a cada 15 min por caixa (trava `SET NX EX` no Redis), e o
+#   aviso daquele momento segue a regra acima sem esperar. Enfileirar não fala com a Meta, então vale também na
+#   requisição web do `will_send?`. Erro ao enfileirar vai só ao tracker.
 # - WAHA (#1270, decisão do Rodrigo em 11/10): texto, sem exigir mensagem do cliente nas últimas 24 h; sem conversa e
 #   sem telefone → `no_phone`. Os tetos (4 por número em 24 h e o teto por conta) e o "Parar avisos" são conferidos
 #   antes, no `Notices::Sender` e no `TestInvite`, e contêm o risco de bloqueio do número.
@@ -38,6 +43,10 @@ class Crm::BookingV2::Notices::Route
   HYBRID_ORIGIN = 'automation'.freeze
   # Marca, na decisão e na mensagem (`content_attributes.crm_booking_notice_via`), do aviso que saiu pelo Híbrido.
   HYBRID_WEB = :hybrid_web
+
+  # Trava da autocura (#1633): 1 enfileiramento do `NoticeTemplateEnsureJob` por caixa a cada 15 min.
+  HEAL_LOCK_KEY = 'crm:booking_v2:notice_template_heal:%<inbox_id>d'.freeze
+  HEAL_LOCK_TTL = 15.minutes.to_i
 
   # campos/botoes: só no modelo v2 (`Garantir` `:pronto`), para o `Notices::TemplateFill`.
   Decision = Struct.new(:mode, :reason, :conversation, :template, :via, :campos, :botoes, keyword_init: true) do
@@ -134,6 +143,7 @@ class Crm::BookingV2::Notices::Route
     return if finalidade.nil? || TemplateFields::ContactResolver.first_name(contact).blank?
 
     result = Whatsapp::Templates::Garantir.call(inbox: inbox, finalidade: finalidade, criar: false)
+    heal_missing_templates(result)
     return unless result[:status] == :pronto
 
     found = listed_template(result[:nome], result[:idioma])
@@ -143,6 +153,18 @@ class Crm::BookingV2::Notices::Route
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
     nil
+  end
+
+  # Autocura (#1633): o v2 não está na caixa, mas o dono autorizou criar. Enfileira a criação desta caixa (o job
+  # reconfere a autorização e não duplica), com a trava por caixa; o aviso de agora não espera. Erro só vai ao tracker.
+  def heal_missing_templates(result)
+    return unless result[:status] == :indisponivel && result[:motivo] == 'ausente'
+    return unless WhatsappTemplateConsent.ativo?(inbox.account, :utility)
+    return unless Redis::Alfred.set(format(HEAL_LOCK_KEY, inbox_id: inbox.id), 1, nx: true, ex: HEAL_LOCK_TTL)
+
+    Crm::BookingV2::NoticeTemplateEnsureJob.perform_later(inbox.account_id, inbox.id)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
   end
 
   # Lida do banco, como no `Garantir`: a lista do objeto da caixa pode estar velha.
