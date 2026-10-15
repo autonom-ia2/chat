@@ -60,6 +60,23 @@ describe('EtapaPessoas', () => {
     );
   });
 
+  it('with phase 2 on, an external agent keeps its own sentence and is not the AI door (#1570)', () => {
+    const wrapper = render(
+      agentesParaFormulario({
+        porta: null,
+        pode_mudar: false,
+        areas: [],
+        disponiveis: [],
+      }),
+      { id: 99, name: 'Robô n8n', tipo_do_principal: 'externo' }
+    );
+
+    expect(wrapper.find('[data-robo]').text()).toBe(
+      'Robô n8n, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.'
+    );
+    expect(wrapper.find('[data-porta]').exists()).toBe(false);
+  });
+
   it('with phase 2 lists the AI agents before the people', () => {
     const wrapper = render(
       agentesParaFormulario({

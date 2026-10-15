@@ -23,6 +23,7 @@ import {
 import {
   formularioDaCaixa,
   salvarDaCaixa,
+  temAgentesIa,
   temAgentesNaTela,
   erroDosAgentes,
 } from '../helpers/agentesIa';
@@ -67,9 +68,12 @@ const carregar = async () => {
 onMounted(carregar);
 
 // O payload da conta pode chegar (ou mudar) depois da caixa: os agentes de IA
-// aparecem ou somem com ele, a partir do que está salvo.
+// aparecem ou somem com ele, a partir do que está salvo. Se continuam como
+// estavam, a edição em curso fica.
 watch(fase2, ligada => {
   if (!caixaSalva.value || !form.value) return;
+  const aparece = temAgentesIa(caixaSalva.value, ligada);
+  if (aparece === Boolean(form.value.ai_agents)) return;
   // Uma cópia para cada: o formulário muda a lista, o original não.
   const agentes = () => formularioDaCaixa(caixaSalva.value, ligada).ai_agents;
   original.value = { ...original.value, ai_agents: agentes() };

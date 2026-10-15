@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgentesDaCaixa from './AgentesDaCaixa.vue';
-import { corDoFunil } from '../helpers/caixa';
+import { corDoFunil, portaOuRobo, roboExterno } from '../helpers/caixa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
@@ -30,7 +30,12 @@ const pessoas = defineModel('pessoas', { type: Array, required: true });
 // { porta, pode_mudar, agentes } ou null sem a Fase 2 (helpers/agentesIa).
 const aiAgents = defineModel('aiAgents', { type: Object, default: null });
 
-const porta = computed(() => aiAgents.value?.porta || props.robo);
+const porta = computed(() => portaOuRobo(aiAgents.value?.porta, props.robo));
+// A frase do robô: sem a Fase 2, como sempre; com ela, só quando o robô não
+// entra como porta (agente externo, #1570).
+const mostraORobo = computed(
+  () => Boolean(props.robo) && (!aiAgents.value || !porta.value)
+);
 const agentesIa = computed({
   get: () => aiAgents.value?.agentes || [],
   set: agentes => {
@@ -90,13 +95,13 @@ const chipClasse = ativo =>
 <template>
   <div class="flex flex-col gap-5">
     <p
-      v-if="!aiAgents && robo"
+      v-if="mostraORobo"
       data-robo
       class="mb-0 flex items-start gap-2 rounded-xl bg-n-alpha-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
     >
       <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {{
-        robo.tipo_do_principal === 'externo'
+        roboExterno(robo)
           ? $t('CRM_CAIXAS.PESSOAS.ROBO_EXTERNO', { nome: robo.name })
           : $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name })
       }}

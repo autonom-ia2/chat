@@ -37,8 +37,8 @@ class Crm::Caixas::RetratoDosAgentes
   private
 
   # Com porta: como sempre (o principal parado é conferido ao salvar). Sem porta: o leitor único do Agentes IA diz se é
-  # só de pessoas (sem agente externo). Na lista (sem `detalhe`) não consulta: a lista não oferece
-  # agentes.
+  # só de pessoas (sem agente externo). Na lista (sem `detalhe`) não consulta e devolve false: na lista, caixa sem
+  # porta sai com `pode_mudar: false` e `disponiveis: []`. A lista não oferece agentes; só a caixa aberta vale para isso.
   def aceita_area?(porta, inbox_id)
     return true if porta
     return false unless @detalhe

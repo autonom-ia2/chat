@@ -46,21 +46,22 @@ class Crm::Caixas::Retrato
   private
 
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
-  # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é o espelho de
-  # um agente dos Agentes IA (um AgentInbox aponta para ele); 'externo' quando é de outro sistema (n8n, Zapier...).
+  # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é o espelho da
+  # porta ativa da caixa (AgentInbox porta não apagado); 'externo' em qualquer outro caso (n8n, Zapier...). É a mesma
+  # regra de AgentInbox.robo_externo_na_caixa? (#1433).
   def robo(inbox)
     vinculo = inbox.agent_bot_inbox
     return unless vinculo&.active? && vinculo.agent_bot
 
-    tipo = bots_de_agente.include?(vinculo.agent_bot_id) ? 'ia' : 'externo'
+    tipo = espelhos_da_porta.include?([inbox.id, vinculo.agent_bot_id]) ? 'ia' : 'externo'
     { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name, tipo_do_principal: tipo }
   end
 
-  def bots_de_agente
-    @bots_de_agente ||= begin
-      ids = @inboxes.filter_map { |inbox| inbox.agent_bot_inbox&.agent_bot_id }
-      ::Autonomia::Agents::AgentInbox.where(account_id: @account.id, agent_bot_id: ids).distinct.pluck(:agent_bot_id).to_set
-    end
+  # [[inbox_id, agent_bot_id], ...] das portas ativas das caixas da tela, numa consulta só.
+  def espelhos_da_porta
+    @espelhos_da_porta ||= ::Autonomia::Agents::AgentInbox.kept.porta
+                                                          .where(account_id: @account.id, inbox_id: @inboxes.map(&:id))
+                                                          .pluck(:inbox_id, :agent_bot_id).to_set
   end
 
   def agentes_de_ia_da(inbox)

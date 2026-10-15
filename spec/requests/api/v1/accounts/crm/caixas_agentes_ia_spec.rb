@@ -150,6 +150,12 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     AgentBotInbox.create!(inbox: externa, agent_bot: robo, account: account, status: :active)
     get "#{url}/#{externa.id}", headers: auth_headers(admin)
     expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
+
+    # Vínculo da porta apagado com o robô ainda ligado na caixa: não é mais a porta, é agente externo (mesma regra de
+    # AgentInbox.robo_externo_na_caixa?).
+    Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    get "#{url}/#{inbox.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('tipo_do_principal' => 'externo')
   end
 
   it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do

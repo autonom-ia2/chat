@@ -10,9 +10,11 @@ import {
   funisDaCaixa,
   juntar,
   mudancas,
+  portaOuRobo,
   primeiroNome,
   quemCuida,
   quemFazTriagem,
+  roboExterno,
 } from '../helpers/caixa';
 import {
   agentesDoFormulario,
@@ -71,7 +73,9 @@ const pessoas = computed(() =>
 // caixa e os funis que ficam com a porta. Sem ela, só a frase do robô.
 const comAgentes = computed(() => Boolean(props.form.ai_agents));
 const porta = computed(() =>
-  comAgentes.value ? props.form.ai_agents.porta || props.form.agent_bot : null
+  comAgentes.value
+    ? portaOuRobo(props.form.ai_agents.porta, props.form.agent_bot)
+    : null
 );
 const areas = computed(() =>
   agentesDoFormulario(props.form).filter(agente =>
@@ -247,12 +251,13 @@ const lista = computed(() =>
           {{ $t('CRM_CAIXAS.CONFIRA.RODIZIO') }}
         </h3>
         <p
-          v-if="!comAgentes && form.agent_bot"
+          v-if="form.agent_bot && !porta"
+          data-robo
           class="mb-0 flex items-center gap-2 text-[0.9375rem] text-n-slate-12"
         >
           <span class="i-lucide-bot size-4" aria-hidden="true" />
           {{
-            form.agent_bot.tipo_do_principal === 'externo'
+            roboExterno(form.agent_bot)
               ? $t('CRM_CAIXAS.CONFIRA.ROBO_EXTERNO', {
                   nome: form.agent_bot.name,
                 })

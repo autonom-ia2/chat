@@ -96,4 +96,18 @@ describe('CaixaCartao', () => {
       'Robô antigo (agente externo) atende primeiro'
     );
   });
+
+  it('with phase 2 on, an external agent is never shown as the AI door (#1570)', () => {
+    conta.fase2 = true;
+    const quemCuida = render({
+      ...CAIXA,
+      agent_bot: { id: 99, name: 'Robô n8n', tipo_do_principal: 'externo' },
+      ai_agents: { ...CAIXA.ai_agents, porta: null },
+    }).find('[data-quem-cuida]');
+
+    expect(quemCuida.find('[data-externo]').text()).toBe(
+      'Robô n8n (agente externo) atende primeiro'
+    );
+    expect(quemCuida.text()).not.toContain('Robô n8n atende primeiro');
+  });
 });
