@@ -6,6 +6,7 @@ import {
   funisSemAgente,
   mudancasDosAgentes,
   salvarDaCaixa,
+  temAgentesIa,
   tirarDaCaixa,
   voltarParaCaixa,
 } from '../helpers/agentesIa';
@@ -46,9 +47,24 @@ const caixa = (ai = aiAgents()) => ({
   ...(ai ? { ai_agents: ai } : {}),
 });
 
+const formulario = dados => formularioDaCaixa(dados, true);
+
 const agentes = () => agentesParaFormulario(aiAgents()).agentes;
 
 describe('agentes de IA da caixa', () => {
+  it('shows the agents only with phase 2 on in the account payload', () => {
+    expect(temAgentesIa(caixa(), true)).toBe(true);
+    expect(temAgentesIa(caixa(), false)).toBe(false);
+    expect(temAgentesIa(caixa(), undefined)).toBe(false);
+    expect(temAgentesIa(caixa(null), true)).toBe(false);
+
+    expect(formularioDaCaixa(caixa(), false).ai_agents).toBeNull();
+    expect(formularioDaCaixa(caixa(), true).ai_agents.porta).toEqual({
+      id: 9,
+      name: 'Clara',
+    });
+  });
+
   it('puts the inbox areas and the other agents in one list', () => {
     expect(
       agentes().map(({ name, na_caixa: naCaixa }) => [name, naCaixa])
@@ -90,8 +106,8 @@ describe('agentes de IA da caixa', () => {
   });
 
   it('sends the agents that stay or join, with pipelines of this inbox', () => {
-    const original = formularioDaCaixa(caixa());
-    const form = formularioDaCaixa(caixa());
+    const original = formulario(caixa());
+    const form = formulario(caixa());
     form.ai_agents.agentes = alternarFunilDoAgente(
       form.ai_agents.agentes,
       2,
@@ -109,8 +125,8 @@ describe('agentes de IA da caixa', () => {
   });
 
   it('does not bring in an agent whose only pipeline left the inbox', () => {
-    const original = formularioDaCaixa(caixa());
-    const form = formularioDaCaixa(caixa());
+    const original = formulario(caixa());
+    const form = formulario(caixa());
     form.ai_agents.agentes = alternarFunilDoAgente(
       form.ai_agents.agentes,
       2,
@@ -123,25 +139,25 @@ describe('agentes de IA da caixa', () => {
   });
 
   it('sends nothing about agents when they did not change', () => {
-    const original = formularioDaCaixa(caixa());
-    const form = formularioDaCaixa(caixa());
+    const original = formulario(caixa());
+    const form = formulario(caixa());
     form.modo = 'off';
 
     expect(salvarDaCaixa(form, original)).not.toHaveProperty('ai_agents');
   });
 
   it('sends nothing about agents without phase 2 or without permission', () => {
-    const sem = formularioDaCaixa(caixa(null));
+    const sem = formulario(caixa(null));
     expect(salvarDaCaixa(sem, sem)).not.toHaveProperty('ai_agents');
 
-    const leitura = formularioDaCaixa(caixa(aiAgents({ pode_mudar: false })));
+    const leitura = formulario(caixa(aiAgents({ pode_mudar: false })));
     leitura.ai_agents.agentes = tirarDaCaixa(leitura.ai_agents.agentes, 1);
     expect(salvarDaCaixa(leitura, leitura)).not.toHaveProperty('ai_agents');
   });
 
   it('describes who joins, who leaves and who stops', () => {
-    const antes = formularioDaCaixa(caixa());
-    const depois = formularioDaCaixa(caixa());
+    const antes = formulario(caixa());
+    const depois = formulario(caixa());
     depois.ai_agents.agentes = tirarDaCaixa(
       alternarFunilDoAgente(depois.ai_agents.agentes, 2, 1).agentes,
       1
@@ -177,6 +193,11 @@ describe('erroDosAgentes', () => {
     expect(erroDosAgentes('crm.caixas.agente_nao_liga')).toEqual({
       ehDosAgentes: true,
       alerta: 'AGENTE_NAO_LIGA',
+    });
+    // #1570: rascunho tem frase própria.
+    expect(erroDosAgentes('crm.caixas.agente_rascunho')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_RASCUNHO',
     });
   });
 
