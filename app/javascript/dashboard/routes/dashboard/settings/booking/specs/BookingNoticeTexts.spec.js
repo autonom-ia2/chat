@@ -104,6 +104,8 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     BookingPagesAPI.noticeTextSuggestions.mockReset();
   });
 
+  // #1562: a prévia mostra o caso de texto, que sempre vale (o botão depende da
+  // janela aberta, que a tela não sabe); a nota explica o caso com botão.
   it('mostra um cartão por aviso do jogo, com o texto padrão pelos rótulos e a prévia com a linha de parar', async () => {
     const wrapper = await mountStep();
 
@@ -159,10 +161,15 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
 
   // #1517: a nota do botão só vale para o WhatsApp oficial e para texto sem o
   // link; outras caixas (e sem caixa) só levam a linha do link.
+  // #1562: fora do oficial a prévia é a mesma, com a linha de parar no fim.
   it('a nota do botão some fora do WhatsApp oficial e com o link no texto', async () => {
+    const stopLine = `\n\n${SETUP.stop_line}`;
     const waha = await mountStep(form(), { ...SETUP, notice_channel: 'waha' });
     expect(card(waha, 'booked').find('[data-button-note]').exists()).toBe(
       false
+    );
+    expect(card(waha, 'booked').find('[data-text-preview]').text()).toBe(
+      `Oi, Ana! Seu horário está marcado para 14/10 às 15:00.\n\nPara confirmar, mudar ou cancelar: https://app.test/b/AB3K9QXZ${stopLine}`
     );
     const none = await mountStep(form(), { ...SETUP, notice_channel: null });
     expect(card(none, 'booked').find('[data-button-note]').exists()).toBe(
@@ -174,6 +181,10 @@ describe('StepNotices — texto de cada aviso (#1354)', () => {
     expect(card(withLink, 'booked').find('[data-button-note]').exists()).toBe(
       false
     );
+    const withLinkPreview = card(withLink, 'booked')
+      .find('[data-text-preview]')
+      .text();
+    expect(withLinkPreview.endsWith(SETUP.stop_line)).toBe(true);
   });
 
   // #1517: a opção da IA sem o link mostra a linha do link que o sistema põe.

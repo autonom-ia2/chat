@@ -236,6 +236,30 @@ module Crm
         cfg.with_indifferent_access
       end
 
+      # Lembretes de Atender (#1498): avisar o andamento, perguntar se resolveu e, na Cobrança, lembrar do pagamento.
+      # Vêm ligados só em funil criado pelos modelos de Atender (metadata.template); funil antigo convertido fica
+      # desligado até alguém ligar, para nada mudar sozinho na conversão.
+      SERVICE_REMINDER_KINDS = %w[progress resolved_check payment].freeze
+
+      def self.service_reminders_settings(pipeline)
+        saved = pipeline_ai_settings(pipeline).fetch('service_reminders', {}).to_h
+        defaults = default_service_reminders(pipeline)
+        SERVICE_REMINDER_KINDS.index_with do |kind|
+          saved.key?(kind) ? BOOLEAN.cast(saved[kind]) == true : defaults[kind]
+        end.with_indifferent_access
+      end
+
+      def self.default_service_reminders(pipeline)
+        template = (pipeline.metadata || {})['template'].to_s
+        novo_de_atender = !pipeline.counts_as_sale? && template.present? && template != 'VENDAS'
+        cobranca = template == 'COBRANCA'
+        {
+          'progress' => novo_de_atender && !cobranca,
+          'resolved_check' => novo_de_atender && !cobranca,
+          'payment' => novo_de_atender && cobranca
+        }
+      end
+
       # Don't re-hand-off the same conversation within this window (loop/spam guard).
       HANDOFF_COOLDOWN_SECONDS = 6 * 60 * 60
       # TTL do convite R3: fecha ciclos esquecidos sem re-notificar nem escalar.

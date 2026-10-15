@@ -10,7 +10,9 @@
 #   reenviar: não sabemos se saiu, e mandar duas vezes é pior do que não mandar;
 # - erro inesperado no envio vira `failed` com a classe do erro (log + tracker);
 # - `sent` quer dizer mensagem criada, não entregue: aviso enviado nas últimas DELIVERY_CHECK cuja mensagem o
-#   provedor marcou depois como `failed` vira `failed: delivery_failed` (1 SELECT pelo mesmo índice, LIMIT 200).
+#   provedor marcou depois como `failed` vira `failed: delivery_failed` (1 SELECT pelo mesmo índice, LIMIT 200);
+# - aviso com botão (#1562) cuja mensagem 2 ("Parar avisos") o provedor marcou `failed`: fica `sent` com
+#   `error_code: stop_part_failed` (a mensagem 1 saiu), sem reenviar (`#flag_undelivered_stop!`).
 #
 # WAHA fora do ar (#1270): cada rodada leva um `Notices::WahaOutage`. Depois do primeiro erro ou timeout de uma caixa
 # WAHA, os outros avisos dela na rodada não chamam a WAHA e voltam para a fila (`Notices::Sender`), sem esperar o
@@ -79,6 +81,69 @@ class Crm::BookingV2::NoticeDispatchJob < ApplicationJob
                       .where(messages: { status: Message.statuses[:failed] })
                       .limit(BATCH).pluck(:id)
                       .each { |id| fail!(id, from: :sent, code: 'delivery_failed') }
+    flag_stop_parts!(since)
+  end
+
+  # A conferência da mensagem 2 (#1562) não pode impedir a rodada de mandar os avisos vencidos.
+  def flag_stop_parts!(since)
+    flag_undelivered_stop!(since)
+  rescue StandardError => e
+    Rails.logger.error("CRM booking notice stop part check failed: #{e.class.name}")
+    ChatwootExceptionTracker.new(e).capture_exception
+  end
+
+  # Mensagem 2 do aviso com botão (#1562) que o provedor marcou `failed` depois. O SQL acha as mensagens `failed` da
+  # conversa da 1, criadas depois dela e pelo mesmo remetente (a 2 sai com o remetente da 1), e a marca
+  # (`crm_booking_notice_part` + `crm_booking_notice_id`) é conferida em Ruby: `content_attributes` é json gravado como
+  # texto (`store ... coder: JSON`) e `->>` nele devolve NULL. Só olha mensagens com a marca, que só o
+  # `NoticeStopPartJob` cria, então não corre com ele. Em páginas pelo par (mensagem, aviso), sem cortar casos. O aviso
+  # fica `sent` (a 1 saiu), ganha `stop_part_failed` e o responsável é avisado uma vez; nada é reenviado.
+  STOP_JOIN = <<~SQL.squish.freeze
+    INNER JOIN messages notice_messages ON notice_messages.id = crm_meeting_notices.message_id
+    INNER JOIN messages stop_messages ON stop_messages.conversation_id = notice_messages.conversation_id
+      AND stop_messages.id > notice_messages.id
+      AND stop_messages.sender_type IS NOT DISTINCT FROM notice_messages.sender_type
+      AND stop_messages.sender_id IS NOT DISTINCT FROM notice_messages.sender_id
+  SQL
+  STOP_PAGE_KEY = 'stop_messages.id, crm_meeting_notices.id'.freeze
+
+  def flag_undelivered_stop!(since)
+    each_failed_stop_page(since) do |pairs|
+      messages = Message.where(id: pairs.map(&:first)).index_by(&:id)
+      pairs.select { |message_id, notice_id| Crm::BookingV2::NoticeStopPartJob.stop_part_of?(messages[message_id], notice_id) }
+           .map(&:last).uniq.each { |id| flag_stop_failed!(id) }
+    end
+  end
+
+  def each_failed_stop_page(since)
+    last = [0, 0]
+    loop do
+      pairs = failed_after_notice(since).where("(#{STOP_PAGE_KEY}) > (?, ?)", *last).reorder(Arel.sql(STOP_PAGE_KEY))
+                                        .limit(BATCH).pluck('stop_messages.id', 'crm_meeting_notices.id')
+      break if pairs.empty?
+
+      yield pairs
+      break if pairs.size < BATCH
+
+      last = pairs.last
+    end
+  end
+
+  def failed_after_notice(since)
+    Crm::MeetingNotice.sent.where(error_code: nil).where('crm_meeting_notices.due_at > ?', DELIVERY_DUE_WINDOW.ago)
+                      .where('crm_meeting_notices.sent_at > ?', since)
+                      .joins(STOP_JOIN).where(stop_messages: { status: Message.statuses[:failed] })
+                      .where('stop_messages.created_at >= ?', since)
+  end
+
+  # O mesmo caminho do job (marca só aviso `sent` sem marca, alerta com rescue). Um aviso com problema não para os outros.
+  def flag_stop_failed!(id)
+    notice = Crm::MeetingNotice.includes(meeting: [:account, { card: :contact }]).find(id)
+    job = Crm::BookingV2::NoticeStopPartJob
+    job.stop_failed!(notice, why: 'stop_delivery_failed') if job.wanted?(notice.meeting)
+  rescue StandardError => e
+    Rails.logger.error("CRM booking notice stop part #{id} failed: #{e.class.name}")
+    ChatwootExceptionTracker.new(e, account: notice&.account).capture_exception
   end
 
   # Muda só se o aviso ainda está no estado esperado (outro processo pode ter mexido) e, mudando, avisa o responsável.

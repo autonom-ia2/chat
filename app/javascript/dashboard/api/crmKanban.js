@@ -261,6 +261,10 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  getFollowUp(id) {
+    return axios.get(`${this.url}/follow_ups/${id}`);
+  }
+
   createFollowUp(payload) {
     return axios.post(`${this.url}/follow_ups`, { follow_up: payload });
   }

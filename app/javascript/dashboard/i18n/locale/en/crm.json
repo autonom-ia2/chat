@@ -497,7 +497,9 @@
         "OPEN_WORK_INFO": "People, conversations and open cards in this pipeline, counted apart: one conversation can hold several cards.",
         "OPEN_PEOPLE": "People",
         "OPEN_CONVERSATIONS": "Conversations",
-        "OPEN_CARDS": "Cards"
+        "OPEN_CARDS": "Cards",
+        "RESOLUTION_TIME": "Resolution time",
+        "RESOLUTION_TIME_INFO": "Average from when the card opened until it was last marked Resolved, without the time we waited for the customer."
       },
       "MEETINGS": {
         "TITLE": "Meetings",
@@ -538,7 +540,16 @@
         "NONE": "Unassigned",
         "CARDS": "cards",
         "EMPTY": "No open cards."
-      }
+      },
+      "DURACAO": {
+        "DIAS": "{d} d {h} h",
+        "HORAS": "{h} h {m} min",
+        "MINUTOS": "{m} min",
+        "SEM_DADOS": "—",
+        "SO_DIAS": "{d} d",
+        "SO_HORAS": "{h} h"
+      },
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -4209,7 +4220,12 @@
       "O_FACEBOOK": "Facebook",
       "O_INSTAGRAM": "Instagram",
       "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
-      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}."
+      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
+      "ATENDER_LEMBRETES": "We share progress and ask if it was solved.",
+      "ATENDER_SO_ANDAMENTO": "We share the request progress.",
+      "ATENDER_SO_RESOLVEU": "We ask if it was solved.",
+      "COBRAR_LEMBRETES": "We send payment reminders before, on and after the due date.",
+      "ATENDER_SEM_LEMBRETES": "No reminder on."
     },
     "SOBRE": {
       "ROTULO": "When to use this pipeline",
@@ -4318,7 +4334,8 @@
       "DEPOIS_FRASE_MENSAGEM": "On the agreed day, the team gets a reminder and the customer gets a message.",
       "DEPOIS_EXEMPLO": "E.g. “Can you call me on Friday?” becomes a reminder on Friday at 9am.",
       "SEM_RESPOSTA_POR": "No reply for",
-      "DEPOIS_PEDIDO": "“Can you call me on Friday?”"
+      "DEPOIS_PEDIDO": "“Can you call me on Friday?”",
+      "TEXTO_ATENDER": "The customer hears about progress, and nobody is left without an answer."
     },
     "CAIXAS": {
       "ROTULO": "Inboxes",
@@ -4489,7 +4506,33 @@
     },
     "ATENDER": {
       "TITULO": "How each request ends",
-      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it."
+      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it.",
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "TITULO": "Share progress",
+          "FRASE": "If a request stays 1 day in the same stage, we tell the customer we are still on it.",
+          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news."
+        },
+        "RESOLVEU": {
+          "TITULO": "Ask if it was solved",
+          "FRASE": "1 day after {sucesso}, we ask if everything worked out.",
+          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here."
+        },
+        "COBRAR": {
+          "TITULO": "Payment reminders",
+          "FRASE": "We remind the customer 3 days before, on the day and 3 days after the due date.",
+          "ANTES": "3 days before",
+          "NO_DIA": "On the day",
+          "DEPOIS": "3 days after",
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that the payment of {valor} is due on Friday.",
+          "MSG_NO_DIA": "Hi, {nome}! The payment of {valor} is due today. If you already paid, please ignore this.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the payment of {valor} yet. Can I help with anything?"
+        },
+        "PREVIA_TITULO": "With Ana, as an example",
+        "PREVIA_TEXTO": "Sent on WhatsApp during the pipeline business hours. The real message is written from each customer conversation.",
+        "VALOR_EXEMPLO": "R$ 350",
+        "DESLIGADOS": "No reminder on. Nobody gets a message on their own."
+      }
     }
   },
   "CRM_CARD": {
@@ -4833,7 +4876,9 @@
         "PRONTA_NOME": "type the name of the ready message",
         "PRONTA_IDIOMA": "choose the language of the ready message",
         "PRONTA_ESCOLHER": "pick the ready message",
-        "NOME": "give the follow-up a name"
+        "NOME": "give the follow-up a name",
+        "QUEM": "choose who gets the reminder",
+        "ULTIMO_DIA": "choose the last day"
       },
       "TITULO_LEMBRETE": "New reminder",
       "TITULO_ESCONDER": "Hide the conversation until a day",
@@ -5255,6 +5300,194 @@
       "MINUTOS": "{n} minute | {n} minutes",
       "HORAS": "{n} hour | {n} hours",
       "DIAS": "{n} day | {n} days"
+    },
+    "SERIE": {
+      "TELA": "Repeat"
+    }
+  },
+  "CRM_LEMBRETE": {
+    "SALVO": "Done, reminder saved.",
+    "FUSO_DA_CONTA": "Time in {fuso}, your account time zone.",
+    "REPETIR": {
+      "PERGUNTA": "Repeat?",
+      "OPCAO": {
+        "NUNCA": "Just once",
+        "DIA": "Every day",
+        "SEMANA": "Every week",
+        "MES": "Every month",
+        "ANO": "Every year"
+      },
+      "SO_DIAS_UTEIS": "Only Monday to Friday",
+      "QUAIS_DIAS": "On which days?",
+      "MES_CURTO": "In months without day {dia}, the reminder comes on the last day of the month.",
+      "ATE_QUANDO": "Until when?",
+      "FIM": {
+        "NUNCA": "No end date",
+        "DATA": "Until a date",
+        "VEZES": "A number of times"
+      },
+      "QUANTAS": "How many times?",
+      "N_VEZES": "{n} times",
+      "ULTIMO_DIA": "Last day",
+      "PROXIMAS": "Next dates",
+      "TOTAL": "{n} times in total. The last one is {ultima}.",
+      "SEM_FIM": "And so on, until you pause or end it.",
+      "ESCOLHA_DIA": "Pick the day above to see the next dates.",
+      "FUSO": "Always in {fuso} time.",
+      "FRASE": {
+        "DIA": "Every day at {hora}",
+        "DIA_UTIL": "Monday to Friday at {hora}",
+        "SEMANA": "Every {dias} at {hora}",
+        "MES": "Every month on day {dia} at {hora}",
+        "MES_FIM": "Every month on day {dia} (or the last day) at {hora}",
+        "ANO": "Every year on {dia} at {hora}",
+        "UMA_VEZ": "Just once",
+        "SEMANA_FIM": "Every {dias} at {hora}"
+      }
+    },
+    "QUEM": {
+      "PERGUNTA": "Who gets the reminder?",
+      "DONO": "Whoever handles the customer",
+      "DONO_TEXTO": "Today it is {nome}. If the owner changes, the reminder follows.",
+      "EU": "Only me",
+      "EU_TEXTO": "{nome}, you.",
+      "PESSOAS": "Pick people",
+      "PESSOAS_TEXTO": "One or more people on the team.",
+      "TIME": "A whole team",
+      "TIME_TEXTO": "Everyone on the team gets it.",
+      "TIME_NOME": "{nome} ({n} people)",
+      "ESCOLHA_PESSOAS": "Check who gets it:",
+      "SEM_FUNIL": "Cannot see the {funil} pipeline",
+      "QUAL_TIME": "Which team?",
+      "ESCOLHA_TIME": "Choose the team",
+      "RECEBEM": "Getting it: {nomes}.",
+      "CRIADOR_VE": "You also see this reminder in your calendar, because you created it."
+    },
+    "PREVIA": {
+      "PROXIMAS": "Next: {datas}",
+      "AVISA": "Reminds: {nomes}",
+      "AVISA_DONO": "Reminds: {nomes}, who handles the customer",
+      "AVISA_FALTA": "Choose who gets the reminder.",
+      "ONDE_NADA": "Stays only in the calendar.",
+      "ONDE_CONTATO": "Stays in the calendar and on {nome}’s profile.",
+      "ONDE_CARD": "Stays in the calendar and on {nome}’s card.",
+      "ONDE_CONTATO_SEM": "Stays in the calendar and on the customer profile.",
+      "ONDE_CARD_SEM": "Stays in the calendar and on the customer card.",
+      "ONDE_NADA_SEM": "Stays only in the calendar.",
+      "ONDE_EMPRESA": "Stays in the calendar and on {nome}’s profile.",
+      "ONDE_EMPRESA_SEM": "Stays in the calendar and on the company profile."
+    },
+    "LISTA": {
+      "TITULO": "Repeating",
+      "PROXIMA": "Next: {dia} at {hora}",
+      "PAUSADA": "Paused",
+      "AVISA": "Reminds: {nomes}",
+      "VER": "View"
+    },
+    "SERIE": {
+      "TELA": "Repeat",
+      "TEXTO": "See the next dates and who gets it. You can pause or end it.",
+      "MUDAR": "Change",
+      "LIGADO_CARD": "Deal: {nome}",
+      "LIGADO_CONTATO": "Customer: {nome}",
+      "LIGADO_NADA": "Calendar only",
+      "FUSO": "{fuso} time",
+      "QUEM_DONO": "{nomes}, who handles the customer. If the owner changes, the reminder follows.",
+      "QUEM_TIME": "Team {time}: {nomes}.",
+      "SITUACAO": {
+        "ATIVA": "Repeating",
+        "PAUSADA": "Paused",
+        "ENCERRADA": "Ended"
+      },
+      "PAUSADA_DESDE": "Paused since {dia}. Nobody gets reminded until you resume.",
+      "FEITO_ESTE": "Done this time",
+      "PAUSAR": "Pause",
+      "RETOMAR": "Resume",
+      "ENCERRAR": "End",
+      "ENCERRAR_TITULO": "End this reminder?",
+      "ENCERRAR_TEXTO": "It stops repeating and nobody gets reminded again. What was already done stays in the history.",
+      "ENCERRAR_CONFIRMA": "End",
+      "CONTINUAR": "Go back",
+      "MUDAR_TITULO": "What do you want to change?",
+      "MUDAR_TEXTO": "Pick one of the two.",
+      "SO_ESTA": "Only the next one ({dia})",
+      "SO_ESTA_TEXTO": "The other dates stay as they are.",
+      "ESTA_E_PROXIMAS": "This one and all the next ones",
+      "ESTA_E_PROXIMAS_TEXTO": "What already happened does not change.",
+      "PROXIMAS": "Next dates",
+      "DIA_HORA": "{dia} at {hora}",
+      "A_PROXIMA": "Next",
+      "NAO_AVISA": "Paused",
+      "QUEM_RECEBE": "Who gets the reminder",
+      "FEITO_OK": "Done, {dia} is marked as done. The next one is still scheduled.",
+      "PAUSADA_OK": "Done, paused.",
+      "RETOMADA_OK": "Done, repeating again.",
+      "ENCERRADA_OK": "Done, ended.",
+      "LADO_TITULO": "What each button does",
+      "LADO_TEXTO": "Nothing disappears without your confirmation.",
+      "AJUDA": {
+        "FEITO": "Done this time: marks only the current date. The next ones stay.",
+        "PAUSAR": "Pause: nobody gets reminded until you resume. The dates stay.",
+        "ENCERRAR": "End: stops repeating. The history is kept.",
+        "MUDAR": "Change: you choose to change only the next one or all from now on."
+      },
+      "ERRO": "That did not work. Try again.",
+      "ERRO_CARREGAR": "Could not open this reminder right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "PASSADAS": "Dates already past ({n})",
+      "HISTORICO": {
+        "FEITA": "Done",
+        "AVISADA": "Reminded",
+        "NAO_AVISADA": "Not reminded"
+      },
+      "LIGADO_EMPRESA": "Company: {nome}"
+    },
+    "LIGAR": {
+      "PERGUNTA": "Who is it about?",
+      "NADA": "Nobody",
+      "NADA_TEXTO": "Stays only in the calendar. E.g. pay the rent.",
+      "CONTATO": "A customer",
+      "CONTATO_TEXTO": "Even without an open deal. E.g. birthday.",
+      "CARD": "A deal in the pipeline",
+      "CARD_TEXTO": "Also shows on the customer card.",
+      "QUAL_CARD": "Which deal?",
+      "QUAL_CONTATO": "Which customer?",
+      "BUSCAR": "Choose",
+      "BUSCAR_DICA": "Type the name",
+      "FALTA": "Choose the customer."
+    },
+    "GAVETA": {
+      "ROTULO": "Calendar",
+      "TITULO": "New reminder",
+      "TEXTO": "A reminder for you or the team, on the right day and time."
+    },
+    "MUDADO": "Done, reminder changed.",
+    "MUDAR": {
+      "TITULO_ESTA": "Change only the next time",
+      "TITULO_PROXIMAS": "Change this one and the next ones",
+      "TEXTO_ESTA": "The other dates stay as they are.",
+      "TEXTO_PROXIMAS": "What already happened does not change."
+    },
+    "MODO_OUTROS": {
+      "TITULO": "Remind at the time",
+      "TEXTO": "Reminder at the set time for {nomes}."
+    },
+    "UNICO": {
+      "TEXTO": "A one-time reminder.",
+      "QUANDO": "{dia} at {hora} ({fuso} time)",
+      "FEITO_OK": "Done, marked as done.",
+      "CANCELADO_OK": "Done, canceled.",
+      "EMPRESA": "Company: {nome}"
+    },
+    "FICHA": {
+      "NOVO": "New reminder"
+    },
+    "CALENDARIO": {
+      "REPETE": "Repeating reminder:",
+      "PAUSADO": "Paused reminder:"
+    },
+    "FALTA": {
+      "NOME": "give the reminder a name"
     }
   }
 }

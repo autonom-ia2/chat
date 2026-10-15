@@ -172,6 +172,7 @@
       "SISTEMA": {
         "agendamento": "Usado pelo sistema nos avisos do agendamento.",
         "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
+        "cobranca": "Usado pelo sistema nos avisos de cobrança do funil.",
         "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."
       }
     },
@@ -848,7 +849,8 @@
         "data_hora": "Data e hora do horário",
         "data": "Data do horário",
         "hora": "Hora do horário",
-        "link_gestao": "Link para confirmar ou remarcar"
+        "link_gestao": "Link para confirmar ou remarcar",
+        "link_codigo": "Código do link para confirmar ou remarcar"
       },
       "negocio": {
         "titulo": "Título do negócio",

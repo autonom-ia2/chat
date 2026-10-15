@@ -22,6 +22,7 @@ pt_BR:
         data: 'Data do horário'
         hora: 'Hora do horário'
         link_gestao: 'Link para confirmar, mudar ou cancelar'
+        link_codigo: 'Código do link para confirmar, mudar ou cancelar'
       minha_empresa:
         nome: 'Nome da sua empresa'
         endereco: 'Endereço da sua empresa'

@@ -33,6 +33,8 @@ pt_BR:
         manage_line: "Para confirmar, mudar ou cancelar: %{link}"
         button_label: "Ver meu horário"
         stop_line: "Para parar estes avisos: %{link}"
+        stop_prompt: "Não quer mais receber estes avisos?"
+        stop_button_label: "Parar avisos"
         test_prefix: "Este é um teste da sua página de agendamento. Seu cliente recebe um link igual a este:"
       notice_templates:
         meta_failed: "A Meta não respondeu. Tente de novo em alguns minutos."
@@ -63,6 +65,7 @@ pt_BR:
         rescheduled: "%{name} mudou o horário para %{when}"
         rebooked: "%{name} marcou de novo, para %{when}"
         notice_failed: "O aviso no WhatsApp para %{name} não saiu. O horário de %{when} continua marcado: fale com o cliente."
+        notice_stop_failed: "O aviso no WhatsApp para %{name} saiu, mas a mensagem com o botão \"Parar avisos\" não. Se o cliente quiser parar os avisos do horário de %{when}, fale com ele."
         reasons:
           no_whatsapp: "O número do cliente não tem WhatsApp."
           waha_unavailable: "O WhatsApp não oficial não respondeu: confira se ele está conectado."

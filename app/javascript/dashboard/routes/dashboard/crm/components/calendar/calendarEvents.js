@@ -199,6 +199,9 @@ export const overdueCount = (events = [], now = new Date()) =>
  */
 export const isDraggable = (event, now = new Date()) => {
   if (isEventDone(event)) return false;
+  // #1460: as vezes futuras de um lembrete que repete são calculadas (não
+  // existem ainda); muda-se pela própria repetição.
+  if (event.virtual) return false;
   if (EVENT_TYPE_GROUP(event.event_type) === OVERLAY_GROUP.MEETING)
     return false;
   // External events are read-only context — never draggable.
@@ -413,6 +416,10 @@ export const formatTime = value => {
   if (!d) return '';
   return format(d, 'HH:mm', { locale: ptBR });
 };
+
+// A hora que aparece no evento; vazio para o vencimento, que é uma data (#1538).
+export const eventTime = event =>
+  isDateOnly(event) ? '' : formatTime(event?.starts_at);
 
 /** The hours rendered in week/day time-grids. */
 export const DAY_HOURS = Array.from({ length: 24 }, (_, h) => h);

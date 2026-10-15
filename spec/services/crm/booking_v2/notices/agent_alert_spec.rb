@@ -34,6 +34,21 @@ RSpec.describe Crm::BookingV2::Notices::AgentAlert do
     )
   end
 
+  # #1562: a mensagem 2 que não saiu avisa uma vez POR AVISO ENVIADO (notice_id + message_id no metadata). Pega quem
+  # deduplicasse pela reunião ou pelo tipo (o aviso remarcado reaproveita a linha e falharia de novo sem alerta) ou
+  # não deduplicasse nada.
+  it 'notice_stop_failed avisa uma vez por aviso enviado: o mesmo de novo não, o remarcado e outro aviso sim' do
+    payload = ->(notice_id, message_id) { { kind: 'booked', reason: 'stop_part_failed', notice_id: notice_id, message_id: message_id } }
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 100)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 100)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(10, 200)).perform
+    described_class.new(meeting, 'notice_stop_failed', payload.call(11, 300)).perform
+
+    expect(alerts.map { |alert| alert.metadata.values_at('notice_id', 'message_id') })
+      .to contain_exactly(%w[10 100], %w[10 200], %w[11 300])
+    expect(alerts.first.title).to start_with('O aviso no WhatsApp para Marcos Lima saiu, mas a mensagem com o botão "Parar avisos" não.')
+  end
+
   it 'motivo que a atendente resolve entra no texto da tarefa (push e e-mail)' do
     described_class.new(meeting, 'notice_failed', { kind: 'booked', reason: 'no_whatsapp' }).perform
 

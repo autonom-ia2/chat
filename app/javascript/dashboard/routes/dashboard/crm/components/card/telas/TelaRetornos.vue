@@ -1,11 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmCardAutoFollowupStatus from '../../CrmCardAutoFollowupStatus.vue';
 import CampoQuando from '../CampoQuando.vue';
 import { atrasado } from '../proximoPasso';
 import { atalhosDeData } from '../atalhosDeData';
+import LembretesQueRepetem from '../../lembrete/LembretesQueRepetem.vue';
 
 // #1423 — os retornos do card. "Combinado com o cliente": o atrasado em
 // vermelho, com Feito e Cancelar na própria linha (RT-02). Depois, o "Chamar
@@ -22,7 +23,11 @@ const props = defineProps({
   podeIa: { type: Boolean, default: false },
   podeRegistros: { type: Boolean, default: false },
 });
-const emit = defineEmits(['feito', 'cancelar', 'adiar', 'mudou']);
+const emit = defineEmits(['feito', 'cancelar', 'adiar', 'mudou', 'serie']);
+// #1460: a vez pendente de um lembrete que repete aparece em "Repetem", com a
+// visão da repetição; fora dela, em "Já marcado", como sempre.
+const retorno = inject('cardRetorno');
+const daSerie = item => Boolean(item.series_id && item.series);
 
 const { t } = useI18n();
 const R = 'CRM_CARD.RETORNOS';
@@ -31,8 +36,12 @@ const agora = new Date();
 const abertos = computed(() =>
   props.retornos
     .filter(item => ABERTOS.includes(item.status))
+    .filter(item => !(daSerie(item) && item.status === 'pending'))
     .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
     .map(item => ({ ...item, atrasado: atrasado(item, agora) }))
+);
+const queRepetem = computed(() =>
+  props.retornos.filter(item => daSerie(item) && item.status === 'pending')
 );
 const fechados = computed(() =>
   props.retornos.filter(item => !ABERTOS.includes(item.status))
@@ -70,6 +79,13 @@ const situacao = item =>
       <span class="i-lucide-loader-2 size-4 animate-spin" aria-hidden="true" />
       {{ t('CRM_CARD.CARREGANDO') }}
     </p>
+
+    <LembretesQueRepetem
+      :retornos="queRepetem"
+      :contexto="retorno.contexto"
+      :formato="formato"
+      @ver="serie => emit('serie', serie)"
+    />
 
     <section class="flex flex-col gap-3">
       <h3 class="mb-0 text-base font-semibold text-n-slate-12">

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (218 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (219 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -527,6 +527,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: Abra o card; no cartão **Agenda**, clique em **Alterar** (ou **Marcar**, quando não há nada marcado); em **Marcar algo novo**, escolha **Lembrete** ou **Mensagem no dia** (o azul **Novo lembrete** do rodapé também abre um lembrete); escreva **O que é**, confira **O que fazer?** (**Me lembrar**, **Esconder a conversa até lá** ou **Mandar uma mensagem**), escolha **Quando?** e, se for mensagem, **Sua mensagem** ou a mensagem pronta; clique em **Salvar**. Em **Já marcado**, use **Feito**, **Adiar** ou **Cancelar**; o retorno atrasado também aparece em **Próximo passo** com **Marcar como feito**. Para ver o que aconteceu, **Mais detalhes > O que já aconteceu**, filtro **Retornos**.
 - gotchas: o card não tem mais abas: tudo de retorno fica no cartão Agenda; sem conversa ligada, **Mensagem no dia** e **Esconder a conversa até lá** ficam travados (aparece "Precisa de uma conversa ligada a este cliente."); WhatsApp fora da janela de 24 horas exige mensagem pronta, e o rodapé diz o que falta; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
 - nav_target: `crm_kanban_index`
+
+### Lembrete que repete, lembrete sem card e quem recebe o aviso
+- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem negócio?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
+- onde_fica: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
+- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um negócio do funil.
+- passos: Em **É sobre quem?** escolha **Ninguém** (fica só no calendário), **Um cliente** ou **Um negócio do funil**; escreva **O que é** e escolha **Quando?** (a hora é no fuso da conta). Em **Repetir?** escolha **Uma vez só**, **Todo dia** (ou só de segunda a sexta), **Toda semana** (marque os dias), **Todo mês** ou **Todo ano**, e em **Até quando?** escolha sem data, até um dia ou um número de vezes; as **Próximas datas** aparecem logo abaixo. Em **Quem recebe o aviso?** escolha **Quem cuida do cliente**, **Só eu**, **Escolher pessoas** ou **Um time inteiro**; clique em **Salvar**. Para ver a repetição, no card use **Ver** em **Repetem**, ou clique numa data com o ícone de repetir no calendário: lá estão **Feito desta vez**, **Pausar**/**Retomar**, **Encerrar** e **Mudar** (só a próxima ou esta e as próximas).
+- gotchas: só o lembrete para a equipe repete; mensagem ao cliente que repete ainda não existe (#1528); "Quem cuida do cliente" segue o dono do card no momento do aviso; pausar não apaga as datas, elas ficam marcadas **Pausado** e ninguém é avisado até retomar; encerrar para de repetir e o que já passou fica no histórico; quem não vê o funil do card aparece desligado em **Escolher pessoas**; se ninguém sobrar para receber (time vazio, pessoa que saiu), o aviso vai para quem marcou; lembrete sem card só é visto por quem marcou, por quem recebe e pelo administrador; "Todo dia 31" cai no último dia nos meses mais curtos.
+- nav_target: `crm_calendar_index`
 
 ### Usar o card CRM a partir de uma conversa
 - intent: "Onde está o card CRM desta conversa?"; "Como vinculo atendimento a uma oportunidade?"; "Por que não vejo card no painel da conversa?"
