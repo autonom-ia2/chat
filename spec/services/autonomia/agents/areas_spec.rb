@@ -49,6 +49,16 @@ RSpec.describe Autonomia::Agents::Areas do
         .and(not_change(AgentBot, :count))
     end
 
+    it 'com exigir_porta_atendendo, recusa a caixa cujo principal parou (conferido com a caixa travada)' do
+      agente_da_porta.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox, exigir_porta_atendendo: true) }
+        .to raise_error(described_class::SemPortaAtendendo)
+        .and(not_change(Autonomia::Agents::AgentInbox, :count))
+      # Sem a exigência, a regra de antes: basta a porta existir.
+      expect(described_class.vincular!(agent: agente_da_area, inbox: inbox)).to have_attributes(papel: 'area')
+    end
+
     it 'recusa agente interno (copiloto da equipe nunca fala com cliente)' do
       interno = agente('Copiloto', actuation: :internal)
 
@@ -76,6 +86,57 @@ RSpec.describe Autonomia::Agents::Areas do
 
       expect { described_class.vincular!(agent: agente_da_area, inbox: caixa_alheia) }
         .to raise_error(ActiveRecord::RecordInvalid)
+    end
+  end
+
+  # #1433 — só entra quem Agent#pode_ser_area?, mesmo com `ativar` (o caminho do CRM, que liga quem entra).
+  describe '.vincular! com ativar: quem pode ser agente da equipe' do
+    def expect_recusa(agent, erro, **opcoes)
+      expect { described_class.vincular!(agent: agent, inbox: inbox, ativar: true, **opcoes) }
+        .to raise_error(erro)
+        .and(not_change(Autonomia::Agents::AgentInbox, :count))
+        .and(not_change(AgentBot, :count))
+      expect(agent.reload).not_to be_operating
+    end
+
+    it 'recusa o rascunho, e com de_rascunho o rascunho pela metade (sem instrução)' do
+      rascunho = agente('Novo', status: :draft, enabled: false, instruction: 'Atende o financeiro.')
+      pela_metade = agente('Pela metade', status: :draft, enabled: false)
+
+      expect_recusa(rascunho, described_class::AgenteRascunho)
+      expect_recusa(pela_metade, described_class::AgenteRascunho, de_rascunho: true)
+    end
+
+    it 'com de_rascunho, liga o rascunho cuja conversa de criação fechou' do
+      rascunho = agente('Novo', status: :draft, enabled: false, instruction: 'Atende o financeiro.')
+
+      vinculo = described_class.vincular!(agent: rascunho, inbox: inbox, ativar: true, de_rascunho: true)
+
+      expect(vinculo).to have_attributes(papel: 'area', deleted_at: nil)
+      expect(rascunho.reload).to have_attributes(status: 'active', enabled: true)
+    end
+
+    it 'recusa quem foi pausado de propósito e ainda tem caixa' do
+      outra_caixa = create(:inbox, account: account)
+      pausado = agente('Pausado')
+      Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: outra_caixa).perform(connect: true)
+      pausado.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      expect_recusa(pausado, described_class::AgenteNaoPodeSerArea)
+    end
+
+    it 'aceita e liga quem parou por ter ficado sem onde trabalhar' do
+      parado = agente('Parado', status: :paused, enabled: false)
+
+      expect(described_class.vincular!(agent: parado, inbox: inbox, ativar: true)).to have_attributes(papel: 'area')
+      expect(parado.reload).to have_attributes(status: 'active', enabled: true)
+    end
+
+    it 'aceita a Lia (Agente de Cotação) e recusa o ajudante' do
+      lia = agente('Lia', agent_type: 'insurance_quote', status: :paused, enabled: false)
+      expect(described_class.vincular!(agent: lia, inbox: inbox, ativar: true)).to have_attributes(papel: 'area')
+      expect_recusa(agente('Ajudante', config: { 'papel' => 'ajudante' }, status: :paused, enabled: false),
+                    described_class::AgenteNaoPodeSerArea)
     end
   end
 

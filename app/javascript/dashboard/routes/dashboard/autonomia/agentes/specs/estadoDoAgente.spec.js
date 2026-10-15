@@ -101,12 +101,22 @@ describe('contarEstados', () => {
       agente(4, { status: 'draft' }),
       agente(5, { agent_type: 'insurance_quote' }),
     ];
-    expect(contarEstados(lista)).toEqual({ atendendo: 2, parados: 1 });
+    expect(contarEstados(lista)).toEqual({
+      atendendo: 2,
+      naEquipe: 0,
+      ajudando: 0,
+      parados: 1,
+    });
   });
 
   it('counts an active agent with nowhere to work among the stopped ones (#1366)', () => {
     const lista = [agente(1), agente(2, { tem_onde_trabalhar: false })];
-    expect(contarEstados(lista)).toEqual({ atendendo: 1, parados: 1 });
+    expect(contarEstados(lista)).toEqual({
+      atendendo: 1,
+      naEquipe: 0,
+      ajudando: 0,
+      parados: 1,
+    });
     expect(ordenarAgentes([lista[1], lista[0]]).map(a => a.id)).toEqual([1, 2]);
   });
 });

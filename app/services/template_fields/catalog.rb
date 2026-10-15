@@ -25,6 +25,7 @@ class TemplateFields::Catalog
     'negocio.titulo' => 'texto', 'negocio.funil' => 'texto', 'negocio.etapa' => 'texto', 'negocio.valor' => 'moeda',
     'negocio.responsavel' => 'texto', 'negocio.prazo' => 'data',
     'horario.data_hora' => 'data', 'horario.data' => 'data', 'horario.hora' => 'hora', 'horario.link_gestao' => 'link',
+    'horario.link_codigo' => 'texto',
     'minha_empresa.nome' => 'texto', 'minha_empresa.endereco' => 'texto', 'minha_empresa.telefone' => 'texto',
     'minha_empresa.site' => 'link',
     'atendente.nome' => 'texto',

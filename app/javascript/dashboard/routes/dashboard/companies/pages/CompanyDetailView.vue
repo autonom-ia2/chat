@@ -16,6 +16,7 @@ import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/Rela
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Policy from 'dashboard/components/policy.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import LembreteNaFicha from 'dashboard/routes/dashboard/crm/components/lembrete/LembreteNaFicha.vue';
 import CompaniesDetailsLayout from 'dashboard/components-next/Companies/CompaniesDetailsLayout.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
@@ -328,6 +329,9 @@ onBeforeUnmount(() => {
               <span class="i-lucide-globe size-4" aria-hidden="true" />
               {{ t('RELATIONSHIPS.VISIT_SITE') }}
             </a>
+            <LembreteNaFicha
+              :empresa="{ id: company.id, name: company.name }"
+            />
             <Policy :permissions="['administrator']">
               <RelationshipActionMenu
                 :actions="[

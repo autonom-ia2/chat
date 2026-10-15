@@ -1,0 +1,40 @@
+# Default AI criteria for CRM stages (#1548). Read by Crm::Ai::DefaultStageCriteria.
+# <template>.e<n>: stage n of the pipeline template (metadata.template, #1498). The per-account text pack (#1545)
+# overrides these keys. legado: names from older pipelines, without a template.
+en:
+  crm:
+    stage_criteria:
+      vendas:
+        e1: 'The customer just arrived: sent the first message or asked the first question. We do not know yet what they need.'
+        e2: 'We are finding out what the customer needs: answering questions, collecting details or booking a time. We have not sent a price yet.'
+        e3: 'The customer already got the price, the quote or the proposal and is thinking about it. They have not said yes or no yet.'
+        e4: 'The customer wants to close, but is still settling details: price, deadline, payment method or discount.'
+        e5: 'The customer said yes: accepted the proposal, paid, signed or asked for the next step to get started.'
+      atendimento:
+        e1: 'The customer just asked for help: told us about a problem or asked a question. Nobody has started working on it yet.'
+        e2: 'Someone on the team is already handling the request: understanding the problem, asking for details or solving it. It is not solved yet.'
+        e3: 'We asked the customer for something, like a photo, a detail or an answer, and we are waiting for them to send it.'
+        e4: 'The customer request was solved: they confirmed it worked or that they need nothing else.'
+      pos_venda:
+        e1: 'The customer just bought. We have not talked to them since the purchase.'
+        e2: 'We are following the delivery, the installation or the first days of use, and answering the customer questions.'
+        e3: 'We asked the customer for something, like a photo, a detail or an answer, and we are waiting for them to send it.'
+        e4: 'The customer received it, is using it and said everything is fine.'
+      cobranca:
+        e1: 'The customer has a payment that is not due yet.'
+        e2: 'The due date has passed and the customer has not paid or said when they will pay.'
+        e3: 'The customer said which day they will pay. We are waiting for that day.'
+        e4: 'The customer paid or sent the receipt.'
+      agendamentos:
+        e1: 'The customer wants to book a time and has not picked the day yet.'
+        e2: 'The customer picked a day and time and the appointment is booked. It has not happened yet.'
+        e3: 'The customer could not come or asked for another day. The new time still needs to be picked.'
+        e4: 'The customer came at the booked time and was attended.'
+      legado:
+        novo: 'First contact or newly created lead. The customer showed initial interest, asked a first question or replied for the first time. There is no needs assessment or proposal yet.'
+        em_atendimento: 'Active conversation with qualification in progress: an agent or the AI is understanding the need, collecting details, answering questions or scheduling. No formal proposal, quote or commercial terms have been sent yet.'
+        proposta: 'A proposal, quote, plan or commercial terms have been presented. The customer is evaluating, negotiating prices or deadlines, or comparing options. They have not confirmed the deal or a final refusal yet.'
+        fechamento: 'The customer confirmed the intent to buy, accepted the proposal, asked for a payment link, a signature or the next operational step to sign up. The conversation shows an imminent or completed conversion.'
+        perdido: 'Lead closed without conversion: the customer explicitly refused, asked not to be contacted, said they closed with a competitor, the number is invalid, there was no reply after the attempts set by the pipeline, or the agent closed the conversation as lost. Do not use for leads still in active negotiation or who only said "I will think about it".'
+        nao_veio: 'The customer had a booked time and did not show up or let us know beforehand.'
+        novo_atender: 'The customer just asked for help or sent the first message. Nobody has started working on it yet.'

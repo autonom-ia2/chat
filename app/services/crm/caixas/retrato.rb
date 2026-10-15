@@ -1,9 +1,11 @@
 # Caixas no CRM (#1149): cada caixa como a tela mostra. O que chega (funis ligados), o que o sistema faz sozinho e quem
 # cuida de quê. Pessoa sem linha de acesso aparece como hoje vê: todos os funis, sem assunto e todas as conversas.
+# Com a Fase 2 dos Agentes, cada caixa leva também `ai_agents` (Crm::Caixas::RetratoDosAgentes, #1447).
 class Crm::Caixas::Retrato
-  def initialize(account:, inboxes:)
+  def initialize(account:, inboxes:, pode_mudar_agentes: false)
     @account = account
     @inboxes = inboxes.to_a
+    @pode_mudar_agentes = pode_mudar_agentes
   end
 
   def caixas
@@ -36,7 +38,7 @@ class Crm::Caixas::Retrato
       visibility_mode: setting&.visibility_mode || 'all_inbox_cards',
       agent_bot: robo(inbox),
       people: pessoas(inbox)
-    }
+    }.merge(agentes_de_ia_da(inbox))
   end
 
   private
@@ -48,6 +50,14 @@ class Crm::Caixas::Retrato
     return unless vinculo&.active? && vinculo.agent_bot
 
     { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
+  end
+
+  def agentes_de_ia_da(inbox)
+    agentes_de_ia.ligado? ? { ai_agents: agentes_de_ia.caixa(inbox.id) } : {}
+  end
+
+  def agentes_de_ia
+    @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes)
   end
 
   def pessoas(inbox)

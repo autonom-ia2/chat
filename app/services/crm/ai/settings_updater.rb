@@ -35,9 +35,28 @@ module Crm
         ai['callback_mode'] = normalize_callback_mode(@params[:callback_mode]) if @params.key?(:callback_mode)
         ai['stale_hours'] = (@params[:stale_hours].presence || Config::DEFAULT_STALE_HOURS).to_i if @params.key?(:stale_hours)
         ai['auto_followup'] = normalize_auto_followup(@params[:auto_followup]) if @params.key?(:auto_followup)
+        ai['service_reminders'] = normalize_service_reminders(@params[:service_reminders]) if @params.key?(:service_reminders)
         ai['handoff'] = normalize_handoff(@params[:handoff], ai['handoff']) if @params.key?(:handoff)
         metadata['ai'] = ai
         @pipeline.update!(metadata: metadata)
+      end
+
+      # #1498: só as três chaves conhecidas; o que não vier mantém o valor de agora. #1589: o tempo de cada lembrete só
+      # aceita as opções da tela; outro valor também mantém o de agora.
+      def normalize_service_reminders(params)
+        current = Config.service_reminders_settings(@pipeline)
+        incoming = params.to_h.stringify_keys
+        ligados = Config::SERVICE_REMINDER_KINDS.index_with do |kind|
+          incoming.key?(kind) ? cast_boolean(incoming[kind], default: false) : current[kind]
+        end
+        ligados.merge(normalize_reminder_hours(incoming, current))
+      end
+
+      def normalize_reminder_hours(incoming, current)
+        Config::SERVICE_REMINDER_HOURS.to_h do |kind, opcoes|
+          chave = "#{kind}_after_hours"
+          [chave, Config.service_reminder_option(opcoes, incoming[chave]) || current[chave]]
+        end
       end
 
       def normalize_auto_followup(params)

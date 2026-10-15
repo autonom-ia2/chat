@@ -227,6 +227,8 @@ export const colors = {
 
     black: '#000000',
     brand: '#2781F6',
+    // Fundo escuro dos topos (heróis) das telas novas: card, Automações, calendário.
+    heroi: '#0D2344',
     portal: 'var(--dynamic-portal-color)',
     'portal-soft': 'var(--dynamic-portal-color-soft)',
     'portal-faint': 'var(--dynamic-portal-color-faint)',

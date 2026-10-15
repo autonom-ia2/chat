@@ -103,6 +103,8 @@ class Crm::Card < ApplicationRecord
   after_save :promote_contact_to_customer, if: -> { saved_change_to_status?(to: 'won') && contact.present? }
   # Acesso por funil (#1148): funil, status e conversa principal do card decidem quem vê a conversa.
   after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id]) }
+  # Agente de IA responsável por caixa + funil (#1447): o card em atendimento mudou de funil.
+  after_commit :sync_responsible_agent, on: :update, if: :saved_change_to_pipeline_id?
 
   validates :title, presence: true
   validates :currency, presence: true
@@ -171,6 +173,10 @@ class Crm::Card < ApplicationRecord
     return if resolved_inbox.blank?
 
     resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
+  end
+
+  def sync_responsible_agent
+    Crm::Ai::ResponsibleAgentSync.agendar_para_card(self, motivo: Crm::Ai::ResponsibleAgentSync::PIPELINE)
   end
 
   def invalidate_funnel_counts

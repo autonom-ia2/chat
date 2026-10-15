@@ -209,6 +209,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingPages notices', type: :request do
     end
 
     # 9. #1517: o teste segue a regra do aviso; no WhatsApp oficial com a janela aberta o link vai no botão.
+    # #1562: o convite não tem linha de parar, então não ganha a mensagem 2 "Parar avisos" (`.sole` pega a 2ª).
     it 'no WhatsApp oficial com a janela aberta manda o botão "Ver meu horário" e o texto padrão sem o link cru' do
       page.update!(notice_inbox: cloud)
       contact = account.contacts.create!(name: 'Admin Ana', phone_number: '+5511955554444')

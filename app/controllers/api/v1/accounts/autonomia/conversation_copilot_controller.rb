@@ -19,13 +19,8 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   # Lightweight inline json (id/name/actuation/description) — does NOT reuse _agent.json.jbuilder
   # so instruction/scaffold/config never leak through this agent-facing, non-admin endpoint.
   def agents
-    agents = Current.account.then do |account|
-      ::Autonomia::Agents::Agent.kept
-                                .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
-                                .where.not(instruction: [nil, ''])
-                                .where("config->>'system_key' IS NULL") # agentes de sistema (Guia) fora do copiloto
-                                .order(:name)
-    end
+    # Fora os de sistema (Guia) e os ajudantes de outro agente (tema 14): `Agent.copilotos_da_equipe`.
+    agents = ::Autonomia::Agents::Agent.kept.where(account: Current.account).copilotos_da_equipe.order(:name)
 
     render json: {
       agents: agents.map do |agent|

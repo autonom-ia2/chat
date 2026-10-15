@@ -257,6 +257,10 @@ const canSubmit = computed(
 );
 const stageOptions = computed(() => form.stages.filter(stage => stage.id));
 const retorno = computed(() => aiPanel.value?.form?.autoFollowup || null);
+// #1498 — os lembretes de Atender ligados (andamento, deu certo?, pagamento).
+const lembretesAtender = computed(
+  () => aiPanel.value?.form?.serviceReminders || null
+);
 const comRetorno = computed(
   () => isEditing.value && Boolean(props.pipeline?.id) && ia.value
 );
@@ -590,6 +594,8 @@ useFixedPanelPresence(computed(() => props.show));
               :dinheiro="formatMoney"
               :com-retorno="comRetorno"
               :retorno="retorno"
+              :lembretes-atender="lembretesAtender"
+              :modelo="modeloEmUso.chave"
               :caixas="nomesCaixas"
               :anuncios="anunciosLigados"
               :arquivando="isArchiving"
@@ -691,6 +697,8 @@ useFixedPanelPresence(computed(() => props.show));
               :key="pipeline.id"
               ref="aiPanel"
               :atender="!form.countsAsSale"
+              :modelo="modeloEmUso.chave"
+              :sucesso="sucesso"
               :pipeline-id="pipeline.id"
               :detalhe="view === 'returns-detail'"
               @alterar="abrir('returns-detail')"
@@ -720,6 +728,8 @@ useFixedPanelPresence(computed(() => props.show));
               :sem-tipo="!isEditing && !tipo"
               :dinheiro="formatMoney"
               :retorno="retorno"
+              :lembretes-atender="lembretesAtender"
+              :modelo="modeloEmUso.chave"
               :mensagem-no-dia="aiPanel?.form?.callbackMode === 'both'"
               :foco="focoCaixa"
               :meta-sync="form.metaSync"

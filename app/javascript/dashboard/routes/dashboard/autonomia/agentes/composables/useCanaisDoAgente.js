@@ -22,12 +22,15 @@ export function useCanaisDoAgente(agentId) {
   const doAgente = async () => {
     const id = Number(agentId.value);
     const { data } = await AutonomiaChannelsAPI.get(id);
-    const ligados = (data?.payload || []).map(item => ({
-      inbox_id: item.inbox_id,
-      name: item.inbox_name,
-      channel_type: item.channel_type,
-      occupied_by: { kind: 'agent', agent_id: id },
-    }));
+    // #1433: só onde ele é o principal; a área (agente da equipe) não ocupa a caixa.
+    const ligados = (data?.payload || [])
+      .filter(item => item.papel !== 'area')
+      .map(item => ({
+        inbox_id: item.inbox_id,
+        name: item.inbox_name,
+        channel_type: item.channel_type,
+        occupied_by: { kind: 'agent', agent_id: id },
+      }));
     const livres = (data?.eligible_inboxes || []).map(item => ({
       inbox_id: item.id,
       name: item.name,

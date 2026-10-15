@@ -3826,6 +3826,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.29",
+     "titulo": "Autorizar o Chat2You a criar modelos do WhatsApp sozinho",
+     "para_que_serve": "Deixar o Chat2You criar sozinho os modelos de Aviso de serviço (e, se quiser, de Divulgação) que ele precisa, sabendo quanto a Meta cobra por mensagem.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_autorizacao"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_autorizacao",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: autorizar_sistema_a_criar_modelos_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

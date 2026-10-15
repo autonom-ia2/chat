@@ -13,6 +13,7 @@ import { useJornadaAtiva } from '../composables/useJornadaAtiva';
 // "Criar agente" (escolha do modelo ou do Copiloto da equipe). A escolha entra no histórico (push):
 // a criação só monta depois dela, porque lê a URL uma vez, ao montar, e o "Voltar" do navegador na
 // criação devolve a URL sem escolha, que mostra a página de novo.
+// #1433: `?papel=area` (agente da equipe) também é uma escolha.
 const AgenteCriarPage = defineAsyncComponent(
   () => import('../pages/AgenteCriarPage.vue')
 );
@@ -26,7 +27,11 @@ const route = jornadaAtiva ? useRoute() : null;
 const router = jornadaAtiva ? useRouter() : null;
 
 const semEscolha = query =>
-  !query.modelo && !query.type && !query.agente && !query.atuacao;
+  !query.modelo &&
+  !query.type &&
+  !query.agente &&
+  !query.atuacao &&
+  !query.papel;
 const escolhendo = computed(() => jornadaAtiva && semEscolha(route.query));
 const veioDaEscolha = ref(false);
 

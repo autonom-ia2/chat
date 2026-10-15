@@ -19,6 +19,7 @@ const SUGGESTION_POLL = { intervalMs: 1500, timeoutMs: 120 * 1000 };
 // GET  inboxes/:inboxId/whatsapp_catalog/products?q=&after= → { payload: [{ id, name, price, image_url, available }], meta: { after } }
 // POST whatsapp_template_suggestions  { mode: create|improve, goal | text + improvements, tone, category } (#1333)
 //   → 202 + poll_url (job); `suggest` busca o resultado: { payload } ou { error, message }
+// GET  whatsapp_template_consent · POST { operacao: ligar|desligar, marcas, versao_aviso } (#1586)
 class WhatsappTemplatesAPI extends ApiClient {
   constructor() {
     super('', { accountScoped: true });
@@ -87,6 +88,19 @@ class WhatsappTemplatesAPI extends ApiClient {
         },
       }
     );
+  }
+
+  // Autorização do dono para o sistema criar modelos (#1586).
+  getConsent() {
+    return axios.get(`${this.url}whatsapp_template_consent`);
+  }
+
+  updateConsent({ acao, marcas, versaoAviso }) {
+    return axios.post(`${this.url}whatsapp_template_consent`, {
+      operacao: acao,
+      marcas,
+      versao_aviso: versaoAviso,
+    });
   }
 
   getCampaignPauses() {

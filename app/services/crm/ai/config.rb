@@ -150,6 +150,79 @@ module Crm
         (pipeline.metadata || {}).fetch('ai', {}).to_h.with_indifferent_access
       end
 
+      # Agentes de área (#1447) só valem com a Fase 2 dos Agentes ligada na conta (e os Agentes ligados): sem ela, quem
+      # responde é sempre a porta (Autonomia::Agents::QuemResponde), e entregar a conversa a uma área não teria efeito.
+      def self.areas_ligadas?(account)
+        account.present? && ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
+      end
+
+      # Agente de IA responsável por caixa + funil (#1447): o agente que a tela "Quem cuida do quê?" gravou para o par,
+      # se ele pode falar com cliente agora (atendendo, não interno, não de sistema). Sem a Fase 2, ou com o agente
+      # parado, nil: o funil fica com a porta.
+      def self.responsible_agent(inbox:, pipeline:)
+        return if inbox.blank? || pipeline.blank? || !areas_ligadas?(inbox.account)
+
+        linha = ::Crm::InboxAiAgent.where(inbox_id: inbox.id, pipeline_id: pipeline.id).select(:autonomia_agent_id)
+        agente = ::Autonomia::Agents::Agent.kept.find_by(account_id: inbox.account_id, id: linha)
+        agente if agente&.atende_cliente?
+      end
+
+      # O vínculo de ÁREA do agente com a caixa (Autonomia::Agents::Areas): o espelho (AgentBot) dele ali é quem posta.
+      # Sem vínculo, o agente não atende nessa caixa.
+      def self.agent_inbox_for(inbox:, agent:)
+        return if inbox.blank? || agent.blank?
+
+        ::Autonomia::Agents::AgentInbox.kept.area.find_by(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: agent.id)
+      end
+
+      # Funil que pode receber um assunto aberto pelo agente: da conta, ativo, ligado à caixa (com o CRM ligado nela), com
+      # etapa para o card nascer e a IA do funil ligada. O mesmo critério da IA de assunto (Crm::Subjects::Identifier#pipelines).
+      def self.funil_de_destino?(pipeline, inbox)
+        return false unless funil_da_caixa?(pipeline, inbox)
+
+        pipeline.active? && pipeline_ai_settings(pipeline)[:enabled] != false && pipeline.stages.exists?
+      end
+
+      def self.funil_da_caixa?(pipeline, inbox)
+        pipeline.present? && inbox.present? && pipeline.account_id == inbox.account_id &&
+          ::Crm::InboxSetting.exists?(account_id: inbox.account_id, inbox_id: inbox.id, crm_enabled: true) &&
+          pipeline.pipeline_inboxes.exists?(inbox_id: inbox.id)
+      end
+      private_class_method :funil_da_caixa?
+
+      # Para onde o agente da conversa pode passar o cliente (#1447): os funis da caixa com responsável que é área nela,
+      # menos o funil do assunto em atendimento. [{ pipeline_id:, nome:, agente_id:, agente_nome: }], na ordem do CRM.
+      # Sem a Fase 2, vazio.
+      def self.destinos_para(conversation)
+        return [] unless areas_ligadas?(conversation.account)
+
+        atual = ::Crm::Cards::ConversationCardFinder.new(account: conversation.account).find(conversation)
+        fora = atual&.open? ? atual.pipeline_id : nil
+
+        responsaveis_ligados(conversation.inbox).where.not(pipeline_id: fora).includes(:pipeline, :agent).to_a
+                                                .select { |linha| destino?(linha, conversation.inbox) }
+                                                .sort_by { |linha| [linha.pipeline.position, linha.pipeline.id] }
+                                                .map { |linha| destino(linha) }
+      end
+
+      # As linhas da caixa cujo agente tem vínculo de área ativo com ela.
+      def self.responsaveis_ligados(inbox)
+        ligados = ::Autonomia::Agents::AgentInbox.kept.area.where(account_id: inbox.account_id, inbox_id: inbox.id)
+                                                 .select(:autonomia_agent_id)
+        ::Crm::InboxAiAgent.where(account_id: inbox.account_id, inbox_id: inbox.id, autonomia_agent_id: ligados)
+      end
+      private_class_method :responsaveis_ligados
+
+      def self.destino?(linha, inbox)
+        linha.agent.deleted_at.nil? && linha.agent.atende_cliente? && funil_de_destino?(linha.pipeline, inbox)
+      end
+      private_class_method :destino?
+
+      def self.destino(linha)
+        { pipeline_id: linha.pipeline.id, nome: linha.pipeline.name, agente_id: linha.agent.id, agente_nome: linha.agent.name }
+      end
+      private_class_method :destino
+
       def self.stage_ai_criteria(stage)
         (stage.metadata || {}).fetch('ai_criteria', '').to_s.strip
       end
@@ -161,6 +234,49 @@ module Crm
         cfg = DEFAULT_AUTO_FOLLOWUP.merge(pipeline_ai_settings(pipeline).fetch('auto_followup', {}).to_h)
         cfg['enabled'] = BOOLEAN.cast(cfg['enabled'])
         cfg.with_indifferent_access
+      end
+
+      # Lembretes de Atender (#1498): avisar o andamento, perguntar se resolveu e, na Cobrança, lembrar do pagamento.
+      # Vêm ligados só em funil criado pelos modelos de Atender (metadata.template); funil antigo convertido fica
+      # desligado até alguém ligar, para nada mudar sozinho na conversão.
+      SERVICE_REMINDER_KINDS = %w[progress resolved_check payment].freeze
+      # #1589: o tempo de andamento e "deu certo?", em horas, escolhido na frase da tela. Só as opções dos botões valem;
+      # qualquer outro valor (ou nenhum) é 1 dia, o tempo de antes da escolha.
+      SERVICE_REMINDER_HOURS = { 'progress' => [4, 24, 48, 72], 'resolved_check' => [24, 48, 72, 168] }.freeze
+      DEFAULT_SERVICE_REMINDER_HOURS = 24
+
+      def self.service_reminders_settings(pipeline)
+        saved = pipeline_ai_settings(pipeline).fetch('service_reminders', {}).to_h
+        defaults = default_service_reminders(pipeline)
+        ligados = SERVICE_REMINDER_KINDS.index_with do |kind|
+          saved.key?(kind) ? BOOLEAN.cast(saved[kind]) == true : defaults[kind]
+        end
+        ligados.merge(service_reminder_hours(saved)).with_indifferent_access
+      end
+
+      # { 'progress_after_hours' => 24, 'resolved_check_after_hours' => 24 }
+      def self.service_reminder_hours(saved)
+        SERVICE_REMINDER_HOURS.to_h do |kind, opcoes|
+          chave = "#{kind}_after_hours"
+          [chave, service_reminder_option(opcoes, saved[chave]) || DEFAULT_SERVICE_REMINDER_HOURS]
+        end
+      end
+
+      # A opção da tela que o valor é, exatamente (24 ou "24"); nil para qualquer outra coisa. Sem converter: "0x18" ou
+      # 24.0 e 24.9 não viram 24.
+      def self.service_reminder_option(opcoes, valor)
+        opcoes.find { |horas| horas.eql?(valor) || horas.to_s.eql?(valor) }
+      end
+
+      def self.default_service_reminders(pipeline)
+        template = (pipeline.metadata || {})['template'].to_s
+        novo_de_atender = !pipeline.counts_as_sale? && template.present? && template != 'VENDAS'
+        cobranca = template == 'COBRANCA'
+        {
+          'progress' => novo_de_atender && !cobranca,
+          'resolved_check' => novo_de_atender && !cobranca,
+          'payment' => novo_de_atender && cobranca
+        }
       end
 
       # Don't re-hand-off the same conversation within this window (loop/spam guard).

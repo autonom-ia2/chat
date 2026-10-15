@@ -14,10 +14,18 @@ class Crm::FollowUps::SeriesCalendarEvents
     {
       id: "follow_up_#{follow_up.id}", event_type: "follow_up_#{follow_up.automation_mode}", title: follow_up.title,
       starts_at: follow_up.due_at&.iso8601, status: follow_up.status, card_id: follow_up.card_id,
-      conversation_id: conversation_id, contact_id: follow_up.contact_id, inbox_id: follow_up.inbox_id,
+      conversation_id: conversation_id, contact_id: safe_contact_id(follow_up), inbox_id: follow_up.inbox_id,
       assignee_id: follow_up.assignee_id, series_id: follow_up.series_id, series_status: follow_up.series&.status,
       recurring: follow_up.series_id.present?
     }
+  end
+
+  # O mesmo critério do serializer do lembrete (_follow_up.json.jbuilder): o contato só sai se for o do card ou o da
+  # conversa, ou se o lembrete não tem card (#1461). O calendário manda nome e telefone dele (#1568): divergente não vaza.
+  def self.safe_contact_id(follow_up)
+    return follow_up.contact_id if follow_up.card_id.nil?
+
+    follow_up.contact_id if [follow_up.card&.contact_id, follow_up.conversation&.contact_id].include?(follow_up.contact_id)
   end
 
   def events
@@ -31,7 +39,7 @@ class Crm::FollowUps::SeriesCalendarEvents
   private
 
   def series_in_view
-    scope = @scope.where(status: %i[active paused]).includes(:card)
+    scope = @scope.where(status: %i[active paused]).includes(:card, :conversation)
     return scope.to_a if @pipeline_id.blank?
 
     joined = scope.left_joins(:card)
@@ -54,6 +62,8 @@ class Crm::FollowUps::SeriesCalendarEvents
       status: series.paused? ? 'paused' : 'pending',
       card_id: series.card_id,
       contact_id: series.contact_id || series.card&.contact_id,
+      # #1568: o responsável que a vez terá quando for criada, para o "Só os meus" do calendário.
+      assignee_id: series.occurrence_assignee_id,
       series_id: series.id,
       series_status: series.status,
       recurring: true,

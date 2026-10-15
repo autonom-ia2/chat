@@ -172,6 +172,7 @@
       "SISTEMA": {
         "agendamento": "Usado pelo sistema nos avisos do agendamento.",
         "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
+        "cobranca": "Usado pelo sistema nos avisos de cobrança do funil.",
         "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."
       }
     },
@@ -916,7 +917,8 @@
         "data_hora": "Data e hora do horário",
         "data": "Data do horário",
         "hora": "Hora do horário",
-        "link_gestao": "Link para confirmar ou remarcar"
+        "link_gestao": "Link para confirmar ou remarcar",
+        "link_codigo": "Código do link para confirmar ou remarcar"
       },
       "negocio": {
         "titulo": "Título do negócio",
@@ -1079,6 +1081,72 @@
       "TITULO_AJUDA": "Aparece em cima da mensagem. Até {n} letras.",
       "TITULO_ERRO": "Escreva um título de até {n} letras.",
       "ESCOLHE_NA_CAMPANHA": "Os produtos você escolhe na hora de criar a campanha. Assim o mesmo modelo serve para várias ofertas."
+    },
+    "AUTORIZACAO": {
+      "TITULO": "Autorização para criar modelos",
+      "AVISO": "Você autoriza o {marca} a criar modelos por conta própria. Os modelos que você já tem continuam como estão.",
+      "SITUACAO": {
+        "LIGADA": "Ligada",
+        "DESLIGADA": "Desligada"
+      },
+      "OPCIONAL": "(opcional)",
+      "SERVICO": {
+        "ROTULO": "Aviso de serviço",
+        "EXPLICA": "Avisos sobre um pedido ou atendimento do cliente, como confirmação, lembrete e cobrança."
+      },
+      "DIVULGACAO": {
+        "ROTULO": "Divulgação",
+        "EXPLICA": "Ofertas, promoções e convites para o cliente voltar a comprar.",
+        "TRAVADA": "Marque o Aviso de serviço para liberar esta.",
+        "LIBERADA": "Divulgação também",
+        "NAO_LIBERADA": "Divulgação não liberada",
+        "LIGAR": "Ligar Divulgação",
+        "DESLIGAR": "Desligar Divulgação"
+      },
+      "PRECO": "{valor} por mensagem entregue",
+      "LIBERADO": "O que está liberado",
+      "META": {
+        "TITULO": "O que a Meta cobra e limita",
+        "COBRA": "A Meta cobra cada mensagem entregue, mesmo com a conversa aberta.",
+        "TABELA": "Preços da tabela da Meta para o Brasil, em vigor desde {data}.",
+        "LIMITE_MODELOS": "Cada conta do WhatsApp aceita até {modelos} modelos ({verificada} se a empresa for verificada na Meta) e até {porHora} novos por hora.",
+        "LIMITE_DIVULGACAO": "A Meta limita quantas divulgações cada pessoa recebe. Algumas podem não ser entregues."
+      },
+      "LIGADA_POR": "Ligada por {nome} em {dia} às {hora}, no fuso da conta ({fuso}).",
+      "LIGADA_POR_SEM_FUSO": "Ligada por {nome} em {dia} às {hora}, no fuso da sua conta.",
+      "DESLIGADA_POR": "Desligada por {nome} em {dia} às {hora}, no fuso da conta ({fuso}).",
+      "DESLIGADA_POR_SEM_FUSO": "Desligada por {nome} em {dia} às {hora}, no fuso da sua conta.",
+      "ALGUEM": "alguém que não está mais na conta",
+      "ACOES": {
+        "LIGAR": "Ligar autorização",
+        "DESLIGAR": "Desligar autorização"
+      },
+      "AGORA_NAO": "Agora não",
+      "CONFIRMAR_LIGAR": {
+        "TITULO": "Ligar a autorização?",
+        "SIM": "Sim, ligar"
+      },
+      "CONFIRMAR_DIVULGACAO": {
+        "TITULO": "Ligar a Divulgação?",
+        "SIM": "Sim, ligar"
+      },
+      "CONFIRMAR_DESLIGAR": {
+        "TITULO": "Desligar a autorização?",
+        "SIM": "Sim, desligar"
+      },
+      "CONFIRMAR_DESLIGAR_DIVULGACAO": {
+        "TITULO": "Desligar a Divulgação?",
+        "SIM": "Sim, desligar"
+      },
+      "FALHOU": "Não deu certo. Tente de novo.",
+      "RESUMO": {
+        "TITULO": "Autorização para o {marca} criar modelos",
+        "DESLIGADA": "Desligada. O {marca} não cria modelos sozinho.",
+        "LIGADA_SERVICO": "Ligada para Aviso de serviço.",
+        "LIGADA_TUDO": "Ligada para Aviso de serviço e Divulgação.",
+        "ABRIR": "Ver autorização"
+      },
+      "SO_ADMIN": "Só quem administra a conta pode mudar."
     }
   }
 }

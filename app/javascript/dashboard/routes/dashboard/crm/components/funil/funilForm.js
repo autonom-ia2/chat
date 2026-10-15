@@ -125,5 +125,9 @@ export const payloadDoFunil = ({ form, pipeline, editando, ia, modelo }) => ({
     position: index + 1,
     funnel_stage_type: stage.funnel_stage_type || null,
     ...(stage.categoria ? { category: stage.categoria } : {}),
+    // #1548 — posição da etapa no modelo, para o critério padrão (só ao criar).
+    ...(!stage.id && stage.modeloPosicao
+      ? { template_position: stage.modeloPosicao }
+      : {}),
   })),
 });

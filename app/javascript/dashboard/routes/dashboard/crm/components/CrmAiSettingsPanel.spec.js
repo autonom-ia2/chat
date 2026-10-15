@@ -170,3 +170,125 @@ describe('AI follow-up settings', () => {
     wrapper.unmount();
   });
 });
+
+// #1498 — lembretes de Atender: carregam do servidor, mudam no interruptor e
+// vão no salvar.
+describe('Serve reminders', () => {
+  const montar = async (payload, modelo = 'COBRANCA') => {
+    CrmKanbanAPI.getAiSettings.mockResolvedValue({ data: { payload } });
+    CrmKanbanAPI.updateAiSettings.mockImplementation(async (_id, body) => ({
+      data: { payload: body.ai_settings },
+    }));
+    const wrapper = mount(Panel, {
+      props: {
+        pipelineId: 7,
+        detalhe: false,
+        atender: true,
+        modelo,
+        sucesso: modelo === 'COBRANCA' ? 'Pago' : 'Resolvido',
+      },
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'pt_BR',
+            fallbackLocale: false,
+            messages: { en, pt_BR },
+          }),
+        ],
+      },
+    });
+    await flushPromises();
+    return wrapper;
+  };
+
+  it('shows only the payment reminder in Collections and saves it turned off', async () => {
+    const wrapper = await montar({
+      ...config(),
+      service_reminders: {
+        progress: false,
+        resolved_check: false,
+        payment: true,
+      },
+    });
+    const lembretes = wrapper.findAll('[data-lembrete]');
+    expect(lembretes.map(item => item.attributes('data-lembrete'))).toEqual([
+      'payment',
+    ]);
+    expect(lembretes[0].text()).toContain('Lembrar do pagamento');
+
+    await lembretes[0].get('input[role="switch"]').setValue(false);
+    await wrapper.vm.saveSettings({ silent: true });
+
+    const [[, body]] = CrmKanbanAPI.updateAiSettings.mock.calls.slice(-1);
+    expect(body.ai_settings.service_reminders).toEqual({
+      progress: false,
+      resolved_check: false,
+      payment: false,
+      progress_after_hours: 24,
+      resolved_check_after_hours: 24,
+    });
+    wrapper.unmount();
+  });
+
+  // #1589 — o tempo escolhido na frase vai no salvar; o salvo volta marcado.
+  it('loads the saved time, lets the user pick another in the sentence and saves it', async () => {
+    const wrapper = await montar(
+      {
+        ...config(),
+        service_reminders: {
+          progress: true,
+          resolved_check: true,
+          payment: false,
+          progress_after_hours: 72,
+          resolved_check_after_hours: 24,
+        },
+      },
+      'ATENDIMENTO'
+    );
+    const andamento = wrapper.get('[data-lembrete="progress"]');
+    expect(andamento.get('[data-tempo="72"]').attributes('aria-checked')).toBe(
+      'true'
+    );
+
+    await andamento.get('[data-tempo="4"]').trigger('click');
+    const resolveu = wrapper.get('[data-lembrete="resolved_check"]');
+    await resolveu.get('[data-tempo="168"]').trigger('click');
+    await resolveu.get('[data-tempo="168"]').trigger('keydown', {
+      key: 'ArrowRight',
+    });
+    await wrapper.vm.saveSettings({ silent: true });
+
+    const [[, body]] = CrmKanbanAPI.updateAiSettings.mock.calls.slice(-1);
+    expect(body.ai_settings.service_reminders).toEqual({
+      progress: true,
+      resolved_check: true,
+      payment: false,
+      progress_after_hours: 4,
+      resolved_check_after_hours: 24,
+    });
+    wrapper.unmount();
+  });
+
+  it('does not show Serve reminders in a Sell pipeline', async () => {
+    CrmKanbanAPI.getAiSettings.mockResolvedValue({
+      data: { payload: config() },
+    });
+    const wrapper = mount(Panel, {
+      props: { pipelineId: 8, detalhe: false },
+      global: {
+        plugins: [
+          createI18n({
+            legacy: false,
+            locale: 'pt_BR',
+            fallbackLocale: false,
+            messages: { en, pt_BR },
+          }),
+        ],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-lembretes-atender]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+});
