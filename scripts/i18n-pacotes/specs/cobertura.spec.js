@@ -67,6 +67,19 @@ describe('termos de ganho/perda', () => {
     expect(termosDeResultado('{won} closed', 'en')).toEqual([]);
     expect(termosDeResultado('%{lost} cards', 'en')).toEqual([]);
   });
+
+  // Revisão do Codex (#1579): literal e aspas não podem esconder a palavra.
+  it("lê o literal {'...'}, que aparece na tela", () => {
+    expect(termosDeResultado("Status: {'Won'}", 'en')).toEqual(['won']);
+    expect(termosDeResultado("Status: {'Ganho'}", 'pt_BR')).toEqual(['ganh']);
+    expect(termosDeResultado("{'@'}{won}", 'en')).toEqual([]);
+  });
+
+  it('trata aspa na ponta como pontuação e mantém a contração', () => {
+    expect(termosDeResultado("Deal 'won'", 'en')).toEqual(['won']);
+    expect(termosDeResultado('Deal ’lost’', 'en')).toEqual(['lost']);
+    expect(termosDeResultado("It won't change", 'en')).toEqual([]);
+  });
 });
 
 describe('cobertura de um catálogo', () => {

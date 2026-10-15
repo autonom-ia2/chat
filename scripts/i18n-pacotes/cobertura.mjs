@@ -19,14 +19,32 @@ const PALAVRAS_EN = new Set(['won', 'win', 'lost', 'lose', 'loss', 'winning']);
 const isObject = value =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-// Tira {x} e %{x}: nome de parâmetro não é texto que a pessoa lê.
+const ASPAS = ["'", '"'];
+
+// Literal do vue-i18n ({'Won'} aparece na tela como Won): volta o texto de dentro.
+const literal = conteudo => {
+  const limpo = conteudo.trim();
+  const aspa = limpo[0];
+  return limpo.length > 1 && ASPAS.includes(aspa) && limpo.endsWith(aspa)
+    ? limpo.slice(1, -1)
+    : null;
+};
+
+// Tira {x} e %{x}: nome de parâmetro não é texto que a pessoa lê. O literal
+// {'...'} é texto que a pessoa lê, então fica.
 const semParametros = texto => {
   let fora = '';
   let dentro = 0;
+  let conteudo = '';
   [...texto].forEach(letra => {
-    if (letra === '{') dentro += 1;
-    else if (letra === '}' && dentro) dentro -= 1;
-    else if (!dentro) fora += letra;
+    if (letra === '{') {
+      dentro += 1;
+      if (dentro === 1) conteudo = '';
+    } else if (letra === '}' && dentro) {
+      dentro -= 1;
+      if (!dentro) fora += ` ${literal(conteudo) ?? ''} `;
+    } else if (dentro) conteudo += letra;
+    else fora += letra;
   });
   return fora;
 };
@@ -36,6 +54,17 @@ const ehLetraDePalavra = letra =>
   (letra >= '0' && letra <= '9') ||
   letra === "'" ||
   letra === '’';
+
+const APOSTROFOS = ["'", '’'];
+
+// Aspa no começo ou no fim é pontuação ('won', ’lost’); dentro, contração (won't).
+const semAspasDasPontas = palavra => {
+  let inicio = 0;
+  let fim = palavra.length;
+  while (inicio < fim && APOSTROFOS.includes(palavra[inicio])) inicio += 1;
+  while (fim > inicio && APOSTROFOS.includes(palavra[fim - 1])) fim -= 1;
+  return palavra.slice(inicio, fim);
+};
 
 // Quebra em palavras por espaço e pontuação, letra a letra.
 export const palavras = texto => {
@@ -50,7 +79,7 @@ export const palavras = texto => {
     }
   });
   if (atual) lista.push(atual);
-  return lista;
+  return lista.map(semAspasDasPontas).filter(Boolean);
 };
 
 // Termos de ganho/perda que o texto usa, em minúsculas ([] quando não usa).
