@@ -261,4 +261,50 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     expect(described_class.new(pipeline: pipeline).perform).to eq(0)
     expect(card.reload.follow_ups.count).to eq(0)
   end
+
+  # Uma mensagem por vez por card (#1589): lembrete de Atender pendente ou enviado há menos de 24 h segura o início.
+  describe 'com lembrete de Atender no mesmo card' do
+    def lembrete_de_atender(card, conversation, due_at:, enviado_em: nil)
+      lembrete = card.account.crm_follow_ups.create!(
+        card: card, conversation: conversation, title: 'Andamento', due_at: due_at, timezone: 'UTC',
+        automation_mode: :reminder_only, metadata: { 'source' => 'service_reminder', 'kind' => 'progress' }
+      )
+      return lembrete unless enviado_em
+
+      # rubocop:disable Rails/SkipsModelValidations
+      lembrete.update_columns(status: Crm::FollowUp.statuses[:done], completed_at: enviado_em,
+                              metadata: lembrete.metadata.merge('sent_message_id' => 1))
+      # rubocop:enable Rails/SkipsModelValidations
+      lembrete
+    end
+
+    def card_elegivel
+      account, user = create_account_and_user
+      pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+      card, conversation = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+      [pipeline, card, conversation]
+    end
+
+    it 'pendente (mesmo vencido, saindo agora) não deixa a cadência começar' do
+      pipeline, card, conversation = card_elegivel
+      lembrete_de_atender(card, conversation, due_at: 1.minute.ago)
+
+      expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    end
+
+    it 'enviado há menos de 24 h segura; passado o dia, a cadência começa' do
+      pipeline, card, conversation = card_elegivel
+      lembrete_de_atender(card, conversation, due_at: 20.hours.ago, enviado_em: 20.hours.ago)
+
+      expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+      expect(described_class.new(pipeline: pipeline, now: 5.hours.from_now).perform).to eq(1)
+    end
+
+    it 'cancelado não segura' do
+      pipeline, card, conversation = card_elegivel
+      lembrete_de_atender(card, conversation, due_at: 1.hour.from_now).update!(status: :canceled)
+
+      expect(described_class.new(pipeline: pipeline).perform).to eq(1)
+    end
+  end
 end

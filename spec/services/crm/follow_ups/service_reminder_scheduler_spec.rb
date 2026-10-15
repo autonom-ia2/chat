@@ -107,6 +107,86 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     expect(described_class.wanted?(no_dia, now: Time.zone.parse('2026-10-19 12:00 UTC'))).to be(false)
   end
 
+  # Uma mensagem por vez por card (#1589): o follow-up automático em curso segura andamento e "deu certo?".
+  describe 'com o follow-up automático no mesmo card' do
+    def ligar_automatico(card, mode: 'auto_send')
+      ai = card.pipeline.metadata['ai'].merge('auto_followup' => card.pipeline.metadata.dig('ai', 'auto_followup')
+                                                                   .merge('enabled' => true, 'mode' => mode))
+      card.pipeline.update!(metadata: card.pipeline.metadata.merge('ai' => ai))
+    end
+
+    def toque_automatico(card, enviado_em: nil)
+      toque = account.crm_follow_ups.create!(
+        card: card, conversation: card.primary_conversation, title: 'Retomar', due_at: now + 1.hour, timezone: 'UTC',
+        automation_mode: :auto_send_message, created_by: user, metadata: { 'source' => 'ai_followup', 'touch' => 1, 'message_body' => 'Oi' }
+      )
+      return toque unless enviado_em
+
+      toque.update_columns(status: Crm::FollowUp.statuses[:done], completed_at: enviado_em,
+                           metadata: toque.metadata.merge('sent_message_id' => 1))
+      toque
+    end
+
+    it 'toque pendente: o andamento não é criado, e o que já estava pendente é cancelado e volta depois' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 2.days)
+      ligar_automatico(card)
+      expect(schedule(card)).to eq(1)
+      lembrete = reminders(card).sole
+
+      toque = toque_automatico(card)
+      expect(described_class.wanted?(lembrete.reload, now: now)).to be(false)
+      expect(schedule(card)).to eq(0)
+      expect(lembrete.reload).to be_canceled
+
+      toque.update_columns(status: Crm::FollowUp.statuses[:canceled])
+      expect(schedule(card)).to eq(1)
+    end
+
+    it 'toque enviado há menos de 24 h segura o andamento e o "deu certo?"; passado o dia, saem' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 3.days)
+      ligar_automatico(card)
+      toque_automatico(card, enviado_em: now - 20.hours)
+      expect(schedule(card)).to eq(0)
+
+      resolvido = setup_card(category: 'resolvido')
+      resolvido.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now - 2.days)
+      ligar_automatico(resolvido)
+      toque_automatico(resolvido, enviado_em: now - 20.hours)
+      expect(schedule(resolvido)).to eq(0)
+
+      expect(schedule(card, at: now + 5.hours)).to eq(1)
+      expect(schedule(resolvido, at: now + 5.hours)).to eq(1)
+    end
+
+    it 'cadência só de lembrete para a equipe (nada vai ao cliente) não segura o andamento' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 2.days)
+      ligar_automatico(card, mode: 'ai_reminder')
+      toque_automatico(card)
+
+      expect(schedule(card)).to eq(1)
+    end
+
+    it 'cadência desligada com toque parado não segura o andamento' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 2.days)
+      toque_automatico(card)
+
+      expect(schedule(card)).to eq(1)
+    end
+
+    it 'o lembrete de pagamento da Cobrança não espera (tem dia marcado)' do
+      card = setup_card(template: 'COBRANCA', category: 'novo', expected_close_at: Date.new(2026, 10, 17))
+      ligar_automatico(card)
+      toque_automatico(card)
+
+      schedule(card)
+      expect(reminders(card).map { |r| r.metadata['kind'] }).to contain_exactly('payment_before', 'payment_due', 'payment_after')
+    end
+  end
+
   it 'o job passa pelos funis de Atender e cria os lembretes' do
     card = setup_card
     card.update_columns(entered_stage_at: 2.days.ago)

@@ -12,6 +12,8 @@
 # Andamento e "deu certo?" só valem com a conversa aberta para texto (24 h do WhatsApp ou Híbrido pronto): fora dela
 # ainda não há modelo para eles (Issue própria, depende do #1518), e um aviso por card na tela da equipe não ajuda.
 # Nada para quem recusou mensagem automática, contato com follow-up desligado ou card arquivado.
+# Uma mensagem por vez por card (#1589): andamento e "deu certo?" esperam o follow-up automático em curso
+# (Crm::FollowUps::UmaMensagemPorVez). O que estava pendente é cancelado e volta a ser criado quando ele termina.
 #
 # Idempotente: a chave de cada lembrete fica no metadata e não se repete. O que deixou de valer (card fechado,
 # mudou de etapa, vencimento mudou, interruptor desligado) é cancelado aqui e conferido de novo no envio (wanted?).
@@ -66,7 +68,7 @@ class Crm::FollowUps::ServiceReminderScheduler
     return [] if @card.pipeline.blank? || @card.pipeline.counts_as_sale?
     return [] unless sendable_conversation? && destino_aceita_mensagem?
 
-    [progress, resolved_check, *payments].compact
+    [*avisos, *payments].compact
   end
 
   private
@@ -90,6 +92,15 @@ class Crm::FollowUps::ServiceReminderScheduler
   # "Sem novidade": conversa que andou no último dia não precisa de aviso.
   def novidade_recente?
     @card.last_activity_at.present? && @card.last_activity_at > @now - PROGRESS_AFTER
+  end
+
+  # Andamento e "deu certo?" esperam o follow-up automático que está falando com este cliente (#1589). O pagamento da
+  # Cobrança tem dia marcado e não espera.
+  def avisos
+    return [] unless settings[:progress] || settings[:resolved_check]
+    return [] if Crm::FollowUps::UmaMensagemPorVez.new(@card, now: @now).lembrete_espera?
+
+    [progress, resolved_check]
   end
 
   def resolved_check
