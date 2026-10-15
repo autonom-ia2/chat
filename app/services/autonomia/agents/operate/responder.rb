@@ -60,7 +60,8 @@ module Autonomia
           return skip_for_humans(blocked) if blocked
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
-          result = answer
+          # chat#1489: a linha de contexto do histórico nunca vai ao cliente, mesmo se o modelo a repetir.
+          result = ::Autonomia::Agents::Operate::RecoveredHeaderNote.without_notes(answer)
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
           # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
@@ -486,19 +487,10 @@ module Autonomia
         # scope `chat`.
         def history
           recent_messages.map do |message|
-            { role: message.incoming? ? 'user' : 'assistant', content: history_content(message) }
+            # chat#1489: modelo recuperado com arquivo no cabeçalho ganha uma linha de contexto (RecoveredHeaderNote).
+            { role: message.incoming? ? 'user' : 'assistant',
+              content: ::Autonomia::Agents::Operate::RecoveredHeaderNote.history_content(message) }
           end
-        end
-
-        # chat#1489: modelo recuperado do celular com um arquivo no cabeçalho, que não foi lido. A IA fica sabendo.
-        RECOVERED_HEADER_NOTES = {
-          'image' => '[a mensagem tinha uma imagem que não foi lida]',
-          'media' => '[a mensagem tinha um arquivo que não foi lido]'
-        }.freeze
-
-        def history_content(message)
-          note = RECOVERED_HEADER_NOTES[message.content_attributes.to_h['hybrid_recovery_header']]
-          [message.content.to_s, note].compact.join("\n")
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
