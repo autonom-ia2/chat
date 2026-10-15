@@ -7,6 +7,13 @@ require 'rails_helper'
 # Mecanismo coberto aqui: o token do debounce (`autonomia_debounce.pending_message_id`) que está na main da base desta
 # PR (cd9d030aa7). A posse do turno da Fase 2 ("um turno, uma ordem", PR #1627) ainda não está na main: este spec
 # ganha o caso com ela ligada quando o #1627 entrar e a main for mesclada aqui.
+#
+# Checklist depois do #1627 (mesclar a main nesta branch):
+# [ ] spec com a Fase 2 ligada: a recuperada pega a posse do turno, responde uma vez e solta;
+# [ ] spec do `turno_superado`: cliente manda outra durante a chamada à IA -> resposta da recuperada descartada e só a
+#     mais nova responde;
+# [ ] rodar os specs do responder e do reply_job;
+# [ ] conferir o número do evento: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 9, 10 e 11.
 describe Autonomia::Agents::Operate::ReplyJob do
   include_context 'with a pending unsupported hybrid message'
 

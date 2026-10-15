@@ -9,7 +9,7 @@
 #
 # Resultado (`kind`):
 #   :text       — com `text` (e `header_media` quando o cabeçalho do modelo tem um arquivo);
-#   :media      — com a legenda em `text`, se houver;
+#   :media      — com a legenda em `text`, se houver, e `header_media` (:image ou :media) dizendo que havia arquivo;
 #   :empty      — o motor ainda não tem o conteúdo (`_data.Message` ausente ou vazio): vale tentar de novo;
 #   :unreadable — veio uma mensagem de um tipo que não lemos (protocolo, reação, enquete, edição…): não vai mudar.
 class WhatsappHybrid::RecoveredContent
@@ -46,7 +46,9 @@ class WhatsappHybrid::RecoveredContent
 
   def media_result(message)
     media = MEDIA.lazy.filter_map { |name| field(message, name) }.first
-    media ? Result.new(:media, string(field(media, 'caption'))) : Result.new(:unreadable, nil)
+    return Result.new(:unreadable, nil) if media.nil?
+
+    Result.new(:media, string(field(media, 'caption')), field(message, 'imageMessage') ? :image : :media)
   end
 
   def proto_message
@@ -67,7 +69,7 @@ class WhatsappHybrid::RecoveredContent
   # Sem `_data`: o que o motor normaliza no topo (`body`, `hasMedia`).
   def from_engine_fields
     body = string(@payload['body'])
-    return Result.new(:media, body) if @payload['hasMedia'] == true
+    return Result.new(:media, body, :media) if @payload['hasMedia'] == true
     return Result.new(:text, body) if body
 
     Result.new(:empty, nil)

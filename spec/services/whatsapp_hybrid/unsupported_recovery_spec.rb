@@ -303,7 +303,17 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
       expect(message.reload.content).to eq('Foto do produto')
       expect(attributes).not_to have_key('is_unsupported')
-      expect(attributes).to include('hybrid_recovery' => 'failed', 'hybrid_recovery_reason' => 'media')
+      expect(attributes).to include('hybrid_recovery' => 'failed', 'hybrid_recovery_reason' => 'media',
+                                    'hybrid_recovery_header' => 'image')
+      expect(attributes).not_to have_key('hybrid_recovered_at')
+    end
+
+    it 'vídeo com legenda: marca que havia um arquivo (media)' do
+      stub_engine(engine_message('_data' => { 'Message' => { 'videoMessage' => { 'caption' => 'Olha isso' } } }))
+
+      attempt!
+
+      expect(attributes).to include('hybrid_recovery_header' => 'media', 'hybrid_recovery_reason' => 'media')
     end
 
     it 'sem legenda: o aviso fica' do
@@ -335,5 +345,65 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
     expect { attempt! }.not_to have_enqueued_job(reply_job)
     expect(attributes['hybrid_recovery']).to eq('recovered')
+  end
+
+  describe 'hybrid_recovered_at e aviso whatsapp_hybrid.message_recovered' do
+    let(:events) { [] }
+
+    around do |example|
+      callback = ->(*args) { events << ActiveSupport::Notifications::Event.new(*args).payload }
+      ActiveSupport::Notifications.subscribed(callback, 'whatsapp_hybrid.message_recovered') { example.run }
+    end
+
+    it 'recuperada: grava o horário no mesmo update e publica uma vez, só com os 3 ids' do
+      stub_engine
+
+      freeze_time do
+        attempt!
+
+        expect(attributes['hybrid_recovered_at']).to eq(Time.current.utc.iso8601)
+      end
+      expect(events).to eq([{ message_id: message.id, conversation_id: conversation.id, account_id: account.id }])
+    end
+
+    it 'falha não grava o horário nem publica' do
+      stub_engine(engine_message('fromMe' => true))
+
+      attempt!
+
+      expect(attributes).not_to have_key('hybrid_recovered_at')
+      expect(events).to be_empty
+    end
+
+    it 'o job rodando de novo numa mensagem já recuperada não publica outra vez' do
+      stub_engine
+      attempt!
+
+      described_class.new(message.reload).attempt!
+      WhatsappHybrid::RecoverUnsupportedJob.perform_now(message.id)
+
+      expect(events.size).to eq(1)
+    end
+  end
+
+  describe 'falha avisa a IA (Operate::NaoSuportada)' do
+    it 'chama NaoSuportada.falhou uma vez, só quando a falha é nova' do
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:falhou)
+      stub_engine(engine_message('fromMe' => true))
+
+      attempt!
+      described_class.new(message.reload).fail!('timeout')
+
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:falhou).once
+    end
+
+    it 'recuperada não chama falhou' do
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:falhou)
+      stub_engine
+
+      attempt!
+
+      expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:falhou)
+    end
   end
 end

@@ -34,13 +34,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     it 'imagem no cabeçalho: o texto e a linha de que a imagem não foi lida' do
       recebida('Sua fatura está disponível.', 'hybrid_recovery' => 'recovered', 'hybrid_recovery_header' => 'image')
 
-      expect(historico).to eq(["Sua fatura está disponível.\n[a mensagem tinha uma imagem que não foi lida]"])
+      expect(historico).to eq(["Sua fatura está disponível.\n#{Autonomia::Agents::Operate::RecoveredHeaderNote::NOTES['image']}"])
     end
 
     it 'outro arquivo no cabeçalho: a linha do arquivo' do
       recebida('Contrato anexo.', 'hybrid_recovery_header' => 'media')
 
-      expect(historico).to eq(["Contrato anexo.\n[a mensagem tinha um arquivo que não foi lido]"])
+      expect(historico).to eq(["Contrato anexo.\n#{Autonomia::Agents::Operate::RecoveredHeaderNote::NOTES['media']}"])
     end
 
     it 'mensagem comum: só o texto, como antes' do
@@ -94,14 +94,44 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       expect(result.status).to eq(:replied)
       expect(result.message.content).not_to include(note)
-      expect(result.message.content).to eq("Recebi sua mensagem. \nVou verificar a fatura para você.")
-      expect(conversation.messages.outgoing.pluck(:content).join).not_to include('[a mensagem tinha')
+      expect(result.message.content).to eq("Recebi sua mensagem.\nVou verificar a fatura para você.")
+      expect(conversation.messages.outgoing.pluck(:content).join).not_to include('contexto interno')
     end
 
-    it 'se a resposta for só a linha, o turno fica em silêncio (nada vai ao cliente)' do
+    it 'se a resposta for só a linha, o turno fica em silêncio com motivo próprio (nada vai ao cliente)' do
       answer_with(note)
+      allow(Rails.logger).to receive(:info).and_call_original
 
       expect { perform }.not_to(change { conversation.messages.outgoing.count })
+      expect(Rails.logger).to have_received(:info).with(a_string_including('motivo=so_contexto_interno'))
+    end
+
+    it 'entrega humanizada: os pedaços não levam a linha' do
+      answer_with("Recebi sua mensagem. #{note}\n\nVou verificar a fatura para você.")
+
+      with_modified_env(AI_HUMANIZE_DELIVERY: 'true') do
+        expect { perform }.to have_enqueued_job(Autonomia::Agents::Operate::ChunkedDeliveryJob)
+      end
+
+      chunks = ActiveJob::Base.queue_adapter.enqueued_jobs.last[:args][3]
+      texts = chunks.pluck('text').join("\n")
+      expect(texts).to include('Vou verificar a fatura')
+      expect(texts).not_to include('contexto interno')
+    end
+
+    it 'resposta em áudio: o texto sintetizado e o de reserva não levam a linha' do
+      answer_with("Recebi sua mensagem. #{note}")
+      spoken = []
+      allow_any_instance_of(described_class).to receive(:voice_reply_applies?).and_return(true) # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(described_class).to receive(:synthesize_audio) do |_responder, text| # rubocop:disable RSpec/AnyInstance
+        spoken << text
+        nil
+      end
+
+      result = perform
+
+      expect(spoken).to eq(['Recebi sua mensagem.'])
+      expect(result.message.content).to eq('Recebi sua mensagem.')
     end
 
     it 'resposta comum passa intacta' do

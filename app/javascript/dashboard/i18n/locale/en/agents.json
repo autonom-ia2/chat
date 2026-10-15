@@ -479,6 +479,7 @@
           "policy": "Policy",
           "audience": "Outside the target audience",
           "schedule": "Outside the schedule",
+          "recuperacao_falhou": "WhatsApp message not shown (check the phone)",
           "other": "Other / unspecified"
         }
       },

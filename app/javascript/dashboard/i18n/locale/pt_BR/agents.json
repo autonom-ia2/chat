@@ -479,6 +479,7 @@
           "policy": "Política",
           "audience": "Fora do público-alvo",
           "schedule": "Fora do horário de atuação",
+          "recuperacao_falhou": "Mensagem que o WhatsApp não mostrou (ver no celular)",
           "other": "Outro / não especificado"
         }
       },

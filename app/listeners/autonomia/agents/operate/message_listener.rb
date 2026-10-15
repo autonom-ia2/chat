@@ -21,6 +21,7 @@ module Autonomia
           # mensagem (rodamos fora de request, sem Current.account). message.account
           # é o caminho canônico do core; a conta certa é a dona da conversa/inbox.
           return unless ::Autonomia::Agents::Config.enabled?(message.account)
+          return skip_unsupported(message) if unsupported?(message)
 
           # vínculo (AgentInbox) + agent.enabled?/active? + conversa pending +
           # unassigned são checados no Job (precisam de DB). Aqui só o mínimo barato.
@@ -34,8 +35,7 @@ module Autonomia
             !message.incoming? ||      # ANTI-LOOP: só mensagens do contato disparam
             message.private? ||        # nunca processa notas privadas
             message.activity? ||       # eventos de atividade não são respondíveis
-            message.conversation_id.blank? ||
-            unsupported?(message)
+            message.conversation_id.blank?
         end
 
         # Aviso de "mensagem não suportada" do WhatsApp (chat#1489): não há o que responder. Quando o WhatsApp API
@@ -44,6 +44,14 @@ module Autonomia
         def unsupported?(message)
           message.inbox&.channel_type == 'Channel::Whatsapp' &&
             message.content_attributes.to_h.with_indifferent_access[:is_unsupported].present?
+        end
+
+        # Sem recuperação em curso, a IA não responde e o motivo fica no evento do agente (sem falha silenciosa). Com
+        # recuperação pendente, quem decide (chamar, `recuperada_tarde` ou `recuperacao_falhou`) é a própria recuperação.
+        def skip_unsupported(message)
+          return if ::WhatsappHybrid::UnsupportedRecovery.pending?(message)
+
+          ::Autonomia::Agents::Operate::NaoSuportada.ignorada(message)
         end
       end
     end

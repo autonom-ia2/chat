@@ -53,4 +53,21 @@ describe Autonomia::Agents::Operate::MessageListener do
 
     expect { listener.message_created(created({ 'is_unsupported' => true }, inbox: inbox)) }.to have_enqueued_job(reply_job)
   end
+
+  it 'aviso sem recuperação: registra o motivo (NaoSuportada.ignorada)' do
+    allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
+    event = created({ 'is_unsupported' => true })
+
+    listener.message_created(event)
+
+    expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:ignorada).with(event.data[:message])
+  end
+
+  it 'aviso com recuperação pendente: não registra agora (a recuperação decide)' do
+    allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
+
+    listener.message_created(created({ 'is_unsupported' => true, 'hybrid_recovery' => 'pending' }))
+
+    expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:ignorada)
+  end
 end

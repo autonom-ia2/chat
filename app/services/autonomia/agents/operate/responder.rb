@@ -61,13 +61,14 @@ module Autonomia
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
           # chat#1489: a linha de contexto do histórico nunca vai ao cliente, mesmo se o modelo a repetir.
-          result = ::Autonomia::Agents::Operate::RecoveredHeaderNote.without_notes(answer)
+          answered = answer
+          result = ::Autonomia::Agents::Operate::RecoveredHeaderNote.without_notes(answered)
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
           # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
           # começou. Descartar aqui deixaria o cliente sem cotação e sem explicação.
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
-          motivo = motivo_do_silencio(result)
+          motivo = ::Autonomia::Agents::Operate::RecoveredHeaderNote.silence_reason(answered, result) || motivo_do_silencio(result)
           return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)

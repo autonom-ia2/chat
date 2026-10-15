@@ -174,9 +174,11 @@ describe WhatsappHybrid::RecoveredContent do
       .to eq([:media, nil, nil])
   end
 
-  it 'marca mídia e guarda só a legenda' do
-    expect(read('imageMessage' => { 'caption' => 'Foto do produto', 'mimetype' => 'image/jpeg' }).to_a).to eq([:media, 'Foto do produto', nil])
-    expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil, nil])
+  it 'marca mídia, guarda só a legenda e diz que havia arquivo (imagem ou outro)' do
+    expect(read('imageMessage' => { 'caption' => 'Foto do produto', 'mimetype' => 'image/jpeg' }).to_a)
+      .to eq([:media, 'Foto do produto', :image])
+    expect(read('videoMessage' => { 'caption' => 'Vídeo' }).to_a).to eq([:media, 'Vídeo', :media])
+    expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil, :media])
   end
 
   it 'devolve :unreadable para tipo conhecido que não lemos (não vai mudar)' do
@@ -197,7 +199,7 @@ describe WhatsappHybrid::RecoveredContent do
 
   it 'sem _data, usa o body e o hasMedia do motor' do
     expect(described_class.from_payload('body' => 'Olá').to_a).to eq([:text, 'Olá', nil])
-    expect(described_class.from_payload('body' => 'legenda', 'hasMedia' => true).to_a).to eq([:media, 'legenda', nil])
+    expect(described_class.from_payload('body' => 'legenda', 'hasMedia' => true).to_a).to eq([:media, 'legenda', :media])
     expect(described_class.from_payload(nil).kind).to eq(:empty)
   end
 end

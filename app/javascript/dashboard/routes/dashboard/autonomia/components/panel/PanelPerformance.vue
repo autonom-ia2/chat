@@ -152,6 +152,7 @@ const REASON_LABEL_KEYS = {
   human_requested: 'AGENTS.PERFORMANCE.REASONS.CODES.human_requested',
   missing_knowledge: 'AGENTS.PERFORMANCE.REASONS.CODES.missing_knowledge',
   policy: 'AGENTS.PERFORMANCE.REASONS.CODES.policy',
+  recuperacao_falhou: 'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_falhou',
   other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
 };
 const reasonLabel = reason =>

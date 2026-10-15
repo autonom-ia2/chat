@@ -2120,17 +2120,35 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
 - Casamento: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa, uma candidata só (a mesma
   mensagem devolvida por mais de um chat conta uma vez).
 - Recuperada: a própria mensagem recebe o texto (título, corpo, rodapé e os botões numerados), perde `is_unsupported`,
-  ganha `hybrid_recovery: recovered` e `recovered_via: web`. Posição e horário não mudam. Imagem (ou outro arquivo) no
-  cabeçalho do modelo não é baixada: grava `hybrid_recovery_header: image|media` e a bolha avisa para olhar no celular.
-- A IA é chamada uma vez (`WhatsappHybrid::RecoveryAiWake`) quando a recuperação chega em até 2 min **e** a mensagem
-  ainda é a última da conversa (o cliente não mandou outra e ninguém respondeu depois; nota privada não conta). Vale
-  também para modelo de outra empresa (`hsm`): o modelo de agentes já instrui a não dar trela para robô.
+  ganha `hybrid_recovery: recovered`, `recovered_via: web` e `hybrid_recovered_at` (UTC, no mesmo update; nunca o
+  `updated_at`). Posição e horário não mudam. Imagem (ou outro arquivo) no cabeçalho do modelo não é baixada: grava
+  `hybrid_recovery_header: image|media` e a bolha avisa para olhar no celular. Depois do commit sai
+  `whatsapp_hybrid.message_recovered` (ActiveSupport::Notifications, só `message_id`, `conversation_id`, `account_id`),
+  uma vez, só na passagem pending → recovered (Multifunil).
+- A IA é chamada uma vez (`WhatsappHybrid::RecoveryAiWake`) quando a recuperação chega em até 2 min, a conversa não
+  está resolvida e ninguém falou depois do aviso: o mesmo contato na mesma caixa, uma pessoa, ou a nossa IA
+  respondendo a esta mensagem ou a uma mais nova. Mensagem do sistema (fora do horário, saudação), atividade, nota,
+  automação e outro robô não contam. Vale também para modelo de outra empresa (`hsm`): o modelo de agentes já
+  instrui a não dar trela para robô.
+- A IA não responde ao aviso, mas nunca sem rastro: evento do agente `skipped_mensagem_nao_suportada` (aviso sem
+  recuperação), `skipped_recuperada_tarde` (recuperada depois de 2 min) ou `skipped_recuperacao_falhou`
+  (`Autonomia::Agents::Operate::NaoSuportada`). Só com a flag ligada, a falha passa a conversa para as pessoas
+  (`bot_handoff!`, evento `handed_off` com motivo `recuperacao_falhou`) com a nota privada "O cliente mandou uma
+  mensagem que o WhatsApp oficial não mostra. Veja no celular.".
+- Histórico da IA: mensagem com `hybrid_recovery_header` ganha a linha "[contexto interno, não repetir ao cliente: a
+  mensagem tinha uma imagem que não foi lida]" (ou "um arquivo"). Ela nunca vai ao `content` nem ao cliente: se o
+  modelo a repetir, sai da resposta (só a linha exata); sobrando nada, silêncio com motivo `so_contexto_interno`.
 - Falhou (`hybrid_recovery: failed`, motivo em `hybrid_recovery_reason`): `timeout`, `mismatch`, `ambiguous`,
-  `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no meio) ou `media`.
-- Mídia fica para a PR 3: guarda só a legenda (que acorda a IA pela mesma regra) e a bolha manda olhar no celular.
-  Visualização única não é aberta: fica com o aviso.
+  `unreadable` (tipo que não lemos), `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no
+  meio) ou `media`.
+- Mídia fica para a PR 3: guarda só a legenda (que acorda a IA pela mesma regra, com a marca do arquivo) e a bolha
+  manda olhar no celular. Visualização única não é aberta: fica com o aviso.
 - n8n/AgentBot, regras de automação e webhooks continuam vendo o aviso e o `message_updated` (PR 4).
 
 **Ligar (passo posterior, com OK do Rodrigo).** Super Admin → conta → `whatsapp_hybrid_recovery`, na conta 47 (stack
 Autonom.ia) e na conta 1 (stack Hub2You). Desligar é o mesmo caminho; mensagens já pendentes falham com `disabled` na
 próxima tentativa.
+
+**Depois do #1627 (Fase 2 dos Agentes):** mesclar a main e acrescentar o spec com a Fase 2 ligada (posse do turno e
+`turno_superado`) em `spec/jobs/autonomia/agents/operate/reply_job_recuperacao_spec.rb`; rodar os specs do responder e
+do reply_job; o #1627 usa o evento 8, o #1489 usa 9, 10 e 11.

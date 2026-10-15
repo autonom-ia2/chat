@@ -42,6 +42,16 @@ describe('hybridRecoveryHeaderKey', () => {
     );
   });
 
+  it('leaves the notice to the media message (only the caption came)', () => {
+    expect(
+      hybridRecoveryHeaderKey({
+        hybridRecovery: 'failed',
+        hybridRecoveryReason: 'media',
+        hybridRecoveryHeader: 'image',
+      })
+    ).toBeNull();
+  });
+
   it('returns null without a header file', () => {
     expect(hybridRecoveryHeaderKey({ hybridRecovery: 'recovered' })).toBeNull();
     expect(hybridRecoveryHeaderKey(undefined)).toBeNull();

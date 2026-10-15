@@ -93,10 +93,40 @@ describe WhatsappHybrid::RecoveryAiWake do
     it_behaves_like 'does not call the AI'
   end
 
-  context 'when our AI replied' do
+  context 'when our AI replied without saying to which message' do
     before { after_notice(message_type: :outgoing, sender: our_bot, content: 'Olá! Em que posso ajudar?') }
 
     it_behaves_like 'does not call the AI'
+  end
+
+  context 'when our AI replied to the recovered message (or a newer one)' do
+    before do
+      after_notice(message_type: :outgoing, sender: our_bot, content: 'Olá!',
+                   content_attributes: { 'autonomia_reply_to_message_id' => message.id })
+    end
+
+    it_behaves_like 'does not call the AI'
+  end
+
+  context 'when our AI answered an earlier "oi" after the notice (oi → bolha → IA responde ao oi)' do
+    # O "oi" chegou antes da bolha (id menor); a resposta da IA a ele saiu depois da bolha.
+    let(:oi) do
+      create(:message, message_type: :incoming, conversation: conversation, account: account, inbox: inbox, sender: contact,
+                       content: 'oi')
+    end
+    let(:message) do
+      oi
+      create(:message, message_type: :incoming, conversation: conversation, account: account, inbox: inbox, sender: contact,
+                       content: placeholder, source_id: wamid,
+                       content_attributes: { 'is_unsupported' => true, 'whatsapp_web_id' => web_id, 'hybrid_recovery' => 'pending' })
+    end
+
+    before do
+      after_notice(message_type: :outgoing, sender: our_bot, content: 'Olá! Em que posso ajudar?',
+                   content_attributes: { 'autonomia_reply_to_message_id' => oi.id })
+    end
+
+    it_behaves_like 'calls the AI once'
   end
 
   context 'when the contact sent another message (A não suportada, B "oi?")' do
@@ -134,10 +164,22 @@ describe WhatsappHybrid::RecoveryAiWake do
       end
     end
 
-    it 'em 2:01 não chama' do
+    it 'em 2:01 não chama e registra o motivo (recuperada_tarde)' do
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:tarde)
+
       travel_to(recovered_at + 2.minutes + 1.second) do
         expect { described_class.call(message.reload) }.not_to have_enqueued_job(reply_job)
       end
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:tarde).with(message)
+    end
+
+    it 'tarde, mas alguém já respondeu: não registra recuperada_tarde' do
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:tarde)
+      after_notice(message_type: :outgoing, sender: create(:user, account: account), content: 'Oi!')
+
+      travel_to(recovered_at + 5.minutes) { described_class.call(message.reload) }
+
+      expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:tarde)
     end
   end
 end

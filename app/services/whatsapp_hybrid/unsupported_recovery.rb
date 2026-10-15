@@ -19,6 +19,9 @@ class WhatsappHybrid::UnsupportedRecovery
   STATE_KEY = 'hybrid_recovery'.freeze
   REASON_KEY = 'hybrid_recovery_reason'.freeze
   HEADER_KEY = 'hybrid_recovery_header'.freeze
+  RECOVERED_AT_KEY = 'hybrid_recovered_at'.freeze
+  # Avisa quem precisa saber (Multifunil) que a mensagem foi recuperada. Só ids, uma vez, depois do commit.
+  RECOVERED_EVENT = 'whatsapp_hybrid.message_recovered'.freeze
   WEB_ID_KEY = 'whatsapp_web_id'.freeze
   VIA_KEY = 'recovered_via'.freeze
   UNSUPPORTED_KEY = 'is_unsupported'.freeze
@@ -82,9 +85,14 @@ class WhatsappHybrid::UnsupportedRecovery
     settle(candidates)
   end
 
+  # A bolha fica com o aviso. A IA não responde: o motivo vai ao evento do agente e, com a flag ligada, a conversa passa
+  # para as pessoas com uma nota (Operate::NaoSuportada). Só quando a falha é nova.
   def fail!(reason)
     changed = write { |attrs| [nil, attrs.merge(STATE_KEY => FAILED, REASON_KEY => reason)] }
-    log("failed reason=#{reason}") if changed
+    return :done unless changed
+
+    log("failed reason=#{reason}")
+    ::Autonomia::Agents::Operate::NaoSuportada.falhou(@message)
     :done
   end
 
@@ -121,34 +129,50 @@ class WhatsappHybrid::UnsupportedRecovery
   def apply(content)
     case content.kind
     when :text then recovered!(content)
-    when :media then media!(content.text)
+    when :media then media!(content)
     when :unreadable then fail!('unreadable')
     else :retry
     end
   end
 
+  # `hybrid_recovered_at` vai no mesmo update que troca o estado (nunca o updated_at).
+  # TODO(#1637): EsperaDoAssunto conta o teto a partir de max(created_at, hybrid_recovered_at). Issue dos Agentes IA #1637.
   def recovered!(content)
-    header = content.header_media ? { HEADER_KEY => content.header_media.to_s } : {}
-    finish!('recovered') do |attrs|
-      [content.text, attrs.except(UNSUPPORTED_KEY, REASON_KEY).merge(STATE_KEY => RECOVERED, VIA_KEY => 'web').merge(header)]
+    finish!('recovered', announce: true) do |attrs|
+      recovered = { STATE_KEY => RECOVERED, VIA_KEY => 'web', RECOVERED_AT_KEY => Time.current.utc.iso8601 }
+      [content.text, attrs.except(UNSUPPORTED_KEY, REASON_KEY).merge(recovered).merge(header_mark(content))]
     end
+    :done
+  end
+
+  def header_mark(content)
+    content.header_media ? { HEADER_KEY => content.header_media.to_s } : {}
   end
 
   # Mídia fica para a PR 3: guarda só a legenda (e aí a IA pode ser chamada); sem legenda, a bolha fica com o aviso.
-  def media!(caption)
-    return fail!('media') if caption.blank?
+  # A marca do arquivo (`hybrid_recovery_header`) vai junto, para a IA saber que havia um arquivo que não leu.
+  def media!(content)
+    return fail!('media') if content.text.blank?
 
     finish!('failed reason=media') do |attrs|
-      [caption, attrs.except(UNSUPPORTED_KEY).merge(STATE_KEY => FAILED, REASON_KEY => 'media', VIA_KEY => 'web')]
+      failed = { STATE_KEY => FAILED, REASON_KEY => 'media', VIA_KEY => 'web' }
+      [content.text, attrs.except(UNSUPPORTED_KEY).merge(failed).merge(header_mark(content))]
     end
   end
 
-  def finish!(outcome, &)
+  def finish!(outcome, announce: false, &)
     return :done unless write(&)
 
     log(outcome)
+    announce_recovered if announce
     WhatsappHybrid::RecoveryAiWake.call(@message)
     :done
+  end
+
+  # Depois do commit (fora da transação, mesmo se alguém chamar dentro de uma). Só na transição pending -> recovered.
+  def announce_recovered
+    payload = { message_id: @message.id, conversation_id: @message.conversation_id, account_id: @message.account_id }
+    ActiveRecord.after_all_transactions_commit { ActiveSupport::Notifications.instrument(RECOVERED_EVENT, payload) }
   end
 
   # Sob trava, sobre o registro relido; só quando ainda está pendente. O bloco devolve [conteúdo novo ou nil, atributos].

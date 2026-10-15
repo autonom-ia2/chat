@@ -26,5 +26,8 @@ const HEADER_KEYS = {
   media: 'CONVERSATION.HYBRID_RECOVERY.HEADER_MEDIA',
 };
 
-export const hybridRecoveryHeaderKey = contentAttributes =>
-  HEADER_KEYS[contentAttributes?.hybridRecoveryHeader] || null;
+// Mídia da qual só veio a legenda: o aviso de mídia (hybridRecoveryNoteKey) já diz.
+export const hybridRecoveryHeaderKey = contentAttributes => {
+  if (contentAttributes?.hybridRecoveryReason === 'media') return null;
+  return HEADER_KEYS[contentAttributes?.hybridRecoveryHeader] || null;
+};
