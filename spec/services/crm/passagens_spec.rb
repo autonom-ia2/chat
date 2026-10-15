@@ -83,14 +83,32 @@ RSpec.describe Crm::Passagens do
       expect(ida.reload.devolvida_em).to be_present
     end
 
-    it 'o n8n continua AgentBot e não casa com um agente: n8n → Ana → porta não devolve a ida' do
+    it 'o n8n continua AgentBot: devolver ao n8n fecha a ida dele, e a passagem fica com a classe e o id de agent_bots' do
       n8n = create(:agent_bot, account: account, name: 'n8n')
       ida = passar(de: n8n, para: ana)
+
+      volta = passar(de: ana, para: n8n, pedida_por: ana)
+
+      expect(volta.para).to have_attributes(classe: 'AgentBot', id: n8n.id)
+      expect(ida.reload).to have_attributes(devolvida_em: be_present, devolvida_por_id: ana.id)
+    end
+
+    it 'o n8n e o agente da porta são pontas diferentes: a volta da porta para a Ana não fecha a do n8n para a Bruno' do
+      n8n = create(:agent_bot, account: account, name: 'n8n')
+      do_n8n = passar(de: n8n, para: bruno)
+
       passar(de: ana, para: porta, pedida_por: ana)
 
-      expect(ida.reload.devolvida_em).to be_nil
-      expect(passar(de: ana, para: n8n, pedida_por: ana).para).to have_attributes(classe: 'AgentBot', id: n8n.id)
-      expect(ida.reload.devolvida_em).to be_present
+      expect(do_n8n.reload.devolvida_em).to be_nil
+    end
+
+    # Pega o achado do revisor: o convite sai do robô que segue com a conversa; ele não pode fechar a devolução Ana → robô.
+    it 'convite não fecha a passagem aberta para o robô que convida (o robô segue com a conversa)' do
+      devolucao = passar(de: ana, para: porta, pedida_por: ana)
+
+      passar(de: porta, para: bruno, motivo: 'convite')
+
+      expect(devolucao.reload.devolvida_em).to be_nil
     end
 
     it 'dentro da transação de quem chama, uma falha ao gravar a nova desfaz também a devolução (savepoint)' do
@@ -115,11 +133,29 @@ RSpec.describe Crm::Passagens do
       expect(passar(de: create(:agent_bot, account: nil, name: 'Plataforma'), para: ana).de).to have_attributes(classe: 'AgentBot')
     end
 
-    it 'não devolve a passagem de outra origem (Lia → Ana; Ana → Bruno mantém Lia → Ana em aberto)' do
+    it 'quem passa adiante não está mais com a conversa: Lia → Ana e depois Ana → Bruno fecha a primeira' do
       ida = passar(de: porta, para: ana)
-      passar(de: ana, para: bruno, pedida_por: ana)
+      adiante = passar(de: ana, para: bruno, pedida_por: ana)
 
-      expect(ida.reload.devolvida_em).to be_nil
+      expect(ida.reload).to have_attributes(devolvida_em: be_present, devolvida_por_id: ana.id)
+      expect(described_class.ultima_aberta(conversation)).to eq(adiante)
+    end
+
+    # Pega o achado do revisor: a pessoa devolve para um robô diferente do que passou (a área passou, volta para a
+    # porta). Antes a ida ficava "ainda não devolvida" e a IA lia que a Ana seguia com a conversa.
+    it 'Área → Ana e depois Ana → Porta (outro robô) também fecha a ida' do
+      ida = passar(de: espelho_area, para: ana)
+      passar(de: ana, para: porta, pedida_por: ana)
+
+      expect(ida.reload.devolvida_em).to be_present
+    end
+
+    it 'o nome que vai para a IA tem no máximo 60 caracteres' do
+      comprida = create(:user, account: account, name: 'A' * 200)
+      passar(de: porta, para: comprida)
+
+      expect(described_class.recentes(conversation)).to include("#{'A' * 60} (pessoa)")
+      expect(described_class.recentes(conversation)).not_to include('A' * 61)
     end
 
     it 'não toca em passagens de outra conversa' do
@@ -130,6 +166,33 @@ RSpec.describe Crm::Passagens do
       passar(de: ana, para: porta, pedida_por: ana)
 
       expect(de_fora.reload.devolvida_em).to be_nil
+    end
+  end
+
+  describe '.com_motivo' do
+    it 'devolve o valor do bloco, guarda motivo e card durante ele e restaura o anterior ao sair (aninha)', :aggregate_failures do
+      card = create_card(pipeline: suporte)
+      contexto = Crm::Passagens::Contexto
+
+      valor = described_class.com_motivo('passar_para_ia', card: card) do
+        expect([contexto.motivo, contexto.card]).to eq(['passar_para_ia', card])
+        described_class.com_motivo('triagem') { expect([contexto.motivo, contexto.card]).to eq(['triagem', nil]) }
+        expect([contexto.motivo, contexto.card]).to eq(['passar_para_ia', card])
+        :feito
+      end
+
+      expect(valor).to eq(:feito)
+      expect([contexto.motivo, contexto.card]).to eq([nil, nil])
+    end
+
+    it 'restaura o de fora mesmo quando o bloco de dentro quebra' do
+      card = create_card(pipeline: suporte)
+      contexto = Crm::Passagens::Contexto
+
+      described_class.com_motivo('passar_para_ia', card: card, pedida_por: ana) do
+        expect { described_class.com_motivo('volta') { raise ArgumentError } }.to raise_error(ArgumentError)
+        expect([contexto.motivo, contexto.card, contexto.pedida_por]).to eq(['passar_para_ia', card, ana])
+      end
     end
   end
 
@@ -185,6 +248,24 @@ RSpec.describe Crm::Passagens do
       expect(linhas.size).to eq(2)
       expect(linhas.first).to include('para B')
       expect(linhas.last).to include('para C (pessoa), pedida pelo sistema').and include('Ainda não devolvida')
+    end
+
+    it 'o robô de outro sistema aparece como "agente externo", não como IA' do
+      n8n = create(:agent_bot, account: account, name: 'Fluxo')
+      passar(de: n8n, para: ana, pedida_por: n8n)
+
+      expect(described_class.recentes(conversation)).to include('passada de Fluxo (agente externo) para Ana (pessoa), ' \
+                                                                'pedida por Fluxo (agente externo).')
+    end
+
+    it 'toda passagem nova fecha o convite em aberto (o da Ana venceu e foi para o Bruno): nunca dois convites abertos' do
+      convite_ana = passar(de: porta, para: ana, motivo: 'convite')
+      convite_bruno = passar(de: porta, para: bruno, motivo: 'convite')
+
+      expect(convite_ana.reload.devolvida_em).to be_present
+      expect(described_class.ultima_aberta(conversation)).to eq(convite_bruno)
+      expect(described_class.recentes(conversation)).to include('convite de Porta (IA) para Ana (pessoa)')
+        .and include('Convite encerrado às')
     end
 
     it 'nome com sinais de marcação ou quebra de linha não fecha a cerca nem forja linha' do

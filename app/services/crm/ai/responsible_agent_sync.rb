@@ -87,9 +87,10 @@ class Crm::Ai::ResponsibleAgentSync
       !@conversation.bot_handoff_waiting? && @conversation.ai_assignee.is_a?(AgentBot)
   end
 
+  # A regra única de "qual funil manda" (#1606, Crm::Assunto.funil_atual), relida sob a trava.
   def card_em_atendimento
-    card = Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
-    return if card.nil? || !card.open?
+    card = Crm::Assunto.funil_atual(@conversation)
+    return if card.nil?
     return if @motivo == PIPELINE && card.id != @card_id.to_i
 
     card
