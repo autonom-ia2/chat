@@ -6,6 +6,18 @@ module Crm::Cards::Outcome
   CLOSED_STATUSES = (SALE_STATUSES + NOT_SALE_STATUSES).freeze
   NOT_SALE = { 'won' => 'resolved', 'lost' => 'cancelled' }.freeze
   SALE = NOT_SALE.invert.freeze
+  # Grupo do desfecho, a chave do nome que o funil dá a ele (metadata['outcome_labels']); espelha outcomeGroup do painel.
+  GROUPS = { 'won' => 'success', 'resolved' => 'success', 'lost' => 'failure', 'cancelled' => 'failure' }.freeze
+
+  # Nome que o funil deu ao desfecho do status, ou nil (status aberto, arquivado ou funil sem nome próprio).
+  def self.custom_label(pipeline, status)
+    group = GROUPS[status.to_s]
+    return if group.nil? || pipeline.nil?
+
+    labels = (pipeline.metadata || {})['outcome_labels']
+    label = labels[group] if labels.is_a?(Hash)
+    label.presence if label.is_a?(String)
+  end
 
   def self.equivalent?(previous, current)
     NOT_SALE[previous] == current || SALE[previous] == current
