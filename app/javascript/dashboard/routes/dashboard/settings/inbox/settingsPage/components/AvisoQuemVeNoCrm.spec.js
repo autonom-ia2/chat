@@ -5,7 +5,7 @@ import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
 // #1149 (R16) — em Caixa → Agentes, o aviso de que quem vê o quê no CRM fica em
-// Caixas no CRM, com o link para a caixa lá.
+// Canais de cada funil, com o link para a caixa lá.
 const conta = vi.hoisted(() => ({ features: {} }));
 vi.mock('vuex', () => ({
   useStore: () => ({
@@ -30,7 +30,7 @@ describe('AvisoQuemVeNoCrm', () => {
     conta.features = {};
   });
 
-  it('com o CRM e a tela nova ligados, avisa e leva à caixa em Caixas no CRM', () => {
+  it('com o CRM e a tela nova ligados, avisa e leva à caixa em Canais de cada funil', () => {
     window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
     conta.features = { crm_configurar_caixas: true };
     const wrapper = montar();
@@ -44,7 +44,7 @@ describe('AvisoQuemVeNoCrm', () => {
       name: 'crm_caixa',
       params: { accountId: 7, inboxId: 5 },
     });
-    expect(link.text()).toBe('Configurar em Caixas no CRM');
+    expect(link.text()).toBe('Configurar em Canais de cada funil');
   });
 
   it('sem a tela nova ou sem CRM, não mostra nada', () => {

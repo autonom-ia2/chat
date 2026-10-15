@@ -557,7 +557,7 @@
       "CREATE_PIPELINE": "Criar funil",
       "EDIT_PIPELINE": "Editar funil",
       "HANDOFF_SETTINGS": "Atribuição e transferência para humano",
-      "INBOX_SETTINGS": "Configurar caixas de entrada",
+      "INBOX_SETTINGS": "Canais de cada funil",
       "NEW_CARD": "Nova oportunidade",
       "FILTER": "Filtrar",
       "FILTERS": "Filtros",
@@ -2885,8 +2885,8 @@
       }
     },
     "ACCESS": {
-      "OWNER_WITHOUT_FUNNEL": "Essa pessoa não cuida do funil deste card nesta caixa. Escolha outra pessoa ou libere o funil para ela em Caixas no CRM.",
-      "CARD_FUNNEL_REQUIRED": "Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Caixas no CRM."
+      "OWNER_WITHOUT_FUNNEL": "Essa pessoa não cuida do funil deste card nesta caixa. Escolha outra pessoa ou libere o funil para ela em Canais de cada funil.",
+      "CARD_FUNNEL_REQUIRED": "Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Canais de cada funil."
     },
     "PASSAGEM": {
       "CARREGANDO": "Abrindo as regras deste funil",
@@ -3920,7 +3920,7 @@
   },
   "CRM_CAIXAS": {
     "LISTA": {
-      "TITULO": "Caixas no CRM",
+      "TITULO": "Canais de cada funil",
       "SUBTITULO": "Para cada caixa: o que chega, quem cuida e o que o sistema faz sozinho.",
       "CARREGANDO": "Carregando as caixas",
       "ERRO": "Não deu para carregar as caixas agora.",
@@ -5562,7 +5562,7 @@
       "PRONTO": "Pronto",
       "CONFIG": "Configurações",
       "CONFIG_AGENDAMENTO": "Agendamento",
-      "CONFIG_CAIXAS": "Caixas do CRM"
+      "CONFIG_CAIXAS": "Canais de cada funil"
     },
     "TIPO": {
       "LEMBRETE": "Lembrete",

@@ -557,7 +557,7 @@
       "CREATE_PIPELINE": "Create pipeline",
       "EDIT_PIPELINE": "Edit pipeline",
       "HANDOFF_SETTINGS": "Assignment & handoff",
-      "INBOX_SETTINGS": "Configure inboxes",
+      "INBOX_SETTINGS": "Channels per pipeline",
       "NEW_CARD": "New opportunity",
       "FILTER": "Filter",
       "FILTERS": "Filters",
@@ -2884,8 +2884,8 @@
       }
     },
     "ACCESS": {
-      "OWNER_WITHOUT_FUNNEL": "This person doesn’t handle this card’s pipeline in this inbox. Choose someone else or give them the pipeline in Inboxes in CRM.",
-      "CARD_FUNNEL_REQUIRED": "You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Inboxes in CRM."
+      "OWNER_WITHOUT_FUNNEL": "This person doesn’t handle this card’s pipeline in this inbox. Choose someone else or give them the pipeline in Channels per pipeline.",
+      "CARD_FUNNEL_REQUIRED": "You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Channels per pipeline."
     },
     "PASSAGEM": {
       "CARREGANDO": "Opening the rules for this pipeline",
@@ -3919,7 +3919,7 @@
   },
   "CRM_CAIXAS": {
     "LISTA": {
-      "TITULO": "Inboxes in CRM",
+      "TITULO": "Channels per pipeline",
       "SUBTITULO": "For each inbox: what comes in, who handles it and what happens automatically.",
       "CARREGANDO": "Loading inboxes",
       "ERRO": "We couldn't load the inboxes right now.",
@@ -5561,7 +5561,7 @@
       "PRONTO": "Done",
       "CONFIG": "Settings",
       "CONFIG_AGENDAMENTO": "Scheduling",
-      "CONFIG_CAIXAS": "CRM inboxes"
+      "CONFIG_CAIXAS": "Channels per pipeline"
     },
     "TIPO": {
       "LEMBRETE": "Reminder",

@@ -5,7 +5,7 @@ import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
 // #1149 (R16) — o Editar funil só mostra onde o funil está ligado; mudar é em
-// Caixas no CRM.
+// Canais de cada funil.
 const etapas = [
   { id: 10, name: 'Cotação', color: '#2563eb' },
   { id: 11, name: 'Proposta', color: '#0891b2' },
@@ -49,7 +49,7 @@ describe('FunilCaixas — só leitura', () => {
     );
   });
 
-  it('não liga nem desliga nada: cada caixa leva à página dela em Caixas no CRM', () => {
+  it('não liga nem desliga nada: cada caixa leva à página dela em Canais de cada funil', () => {
     const wrapper = montar();
     const links = wrapper.findAllComponents(RouterLinkStub);
 
@@ -59,7 +59,7 @@ describe('FunilCaixas — só leitura', () => {
       { name: 'crm_caixa', params: { inboxId: 3 } },
       { name: 'crm_caixas' },
     ]);
-    expect(links[0].text()).toBe('Mudar em Caixas no CRM');
+    expect(links[0].text()).toBe('Mudar em Canais de cada funil');
   });
 
   it('sem caixa ligada, diz que nenhuma traz conversas e mostra onde ligar', () => {

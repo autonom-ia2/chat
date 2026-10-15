@@ -427,19 +427,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar caixas de entrada
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Canais de cada funil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixas de entrada já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: Ao criar, responda primeiro **Para que serve este funil?** (**Vender** ou **Atender**) e escolha um modelo pronto. No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios (meta e anúncios só num funil de Vender) e, no fim, Caixas de entrada. Adicione cada caixa de entrada e escolha a etapa de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar caixas de entrada, ligar o CRM na caixa de entrada, escolher o funil e a etapa de entrada e salvar.
-- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; Anúncios só existe em funil de Vender; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
+- passos: Ao criar, responda primeiro **Para que serve este funil?** (**Vender** ou **Atender**) e escolha um modelo pronto. No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios (meta e anúncios só num funil de Vender) e, no fim, Caixas de entrada, que só mostra onde o funil está ligado (**Ligado em**). Para ligar uma caixa ao funil, abra Canais de cada funil, marque o funil na caixa e salve; o atalho **Mudar em Canais de cada funil** leva direto à caixa.
+- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; Anúncios só existe em funil de Vender; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; a caixa que alimenta mais de um funil também se configura em Canais de cada funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
 
-### Ver as caixas no CRM
+### Ver os canais de cada funil
 - intent: "Quais caixas estão no CRM?"; "Qual funil recebe as conversas do WhatsApp?"; "Quem cuida das conversas de cada caixa?"; "Por que esta caixa não cria cards?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Configurar caixas de entrada (com a tela nova ligada na conta)
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil (com a tela nova ligada na conta)
 - rota: `crm_caixas` - `/app/accounts/:accountId/crm/caixas`
 - gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
 - pre_requisitos: administrador da conta ou função com crm_admin; ao menos uma caixa de entrada conectada.
@@ -449,7 +449,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Alterar o que chega numa caixa e quem cuida
 - intent: "Como ligo o CRM numa caixa?"; "Como faço a caixa atender mais de um funil?"; "Como faço um agente ver só as conversas dele?"; "Quem vê as conversas sem assunto?"; "Como a IA cria o card sozinha?"
-- onde_fica: Sidebar > CRM > Caixas no CRM > Alterar
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil > Alterar
 - rota: `crm_caixa` - `/app/accounts/:accountId/crm/caixas/:inboxId`
 - gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
 - pre_requisitos: administrador da conta ou função com crm_admin; funis criados no CRM.
@@ -1311,12 +1311,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar CRM por caixa de entrada
 - intent: "Como faco conversas virarem cards automaticamente?"; "Como defino funil padrao por inbox?"; "Como restringo cards da caixa para o agente atribuido?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar caixas de entrada
+- onde_fica: Sidebar > CRM > CRM Kanban > Canais de cada funil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
-- passos: 1. Abra CRM Kanban; 2. Clique em Configurar caixas de entrada; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
+- passos: 1. Abra CRM Kanban; 2. Clique em Canais de cada funil; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
 - gotchas: card automatico cria card para todo e-mail, inclusive os que nao sao lead (newsletter, fornecedor, aviso de sistema): numa caixa de e-mail que recebe de tudo, o funil se enche de card que nao e de cliente; nesse caso o caminho e desligar o card automatico da caixa e criar o card por automacao com uma condicao que separe o que e lead (por exemplo, o remetente do formulario do site); se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`
