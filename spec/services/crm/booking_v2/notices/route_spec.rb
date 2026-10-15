@@ -115,13 +115,22 @@ RSpec.describe Crm::BookingV2::Notices::Route do
   end
 
   # Autocura (#1633): quem ligou a autorização antes do assinante do evento estar no ar ficava sem os modelos v2 para
-  # sempre. O aviso que encontra `ausente` com a autorização ligada enfileira a criação, com trava por caixa.
+  # sempre. O envio real (`heal: true`) que encontra `ausente` com a autorização ligada enfileira a criação, com trava
+  # por caixa.
   describe 'autocura dos modelos v2' do
     let(:templates) { [v1] }
     let(:lock_key) { format(described_class::HEAL_LOCK_KEY, inbox_id: inbox.id) }
+    let(:job) { Crm::BookingV2::NoticeTemplateEnsureJob }
 
-    # A trava mora no Redis, que não volta com a transação do exemplo.
-    before { Redis::Alfred.delete(lock_key) }
+    # A trava mora no Redis, que não volta com a transação do exemplo. A página nova publicada com esta caixa e o
+    # agendamento novo ligado: o que o job confere.
+    before do
+      Redis::Alfred.delete(lock_key)
+      account.enable_features('crm_booking_v2')
+      account.save!
+      world.profile.update!(notice_inbox: inbox)
+    end
+
     after { Redis::Alfred.delete(lock_key) }
 
     def ligar_autorizacao
@@ -129,13 +138,22 @@ RSpec.describe Crm::BookingV2::Notices::Route do
                                       versao_aviso: 'v1', texto_aviso: 'Aviso.')
     end
 
+    def heal_decide(kind: 'booked', template: configured, conversation: nil)
+      described_class.new(inbox: inbox, contact: world.contact, template: template, kind: kind, conversation: conversation,
+                          heal: true).decide
+    end
+
+    def trava?
+      Redis::Alfred.exists?(lock_key)
+    end
+
     # Motivo: o caminho da correção. `ausente` + autorização enfileira a criação UMA vez; o aviso seguinte, logo depois,
     # não enfileira de novo (sem a trava, cada aviso de cada contato enfileiraria um job).
     it 'ausente com autorização enfileira uma vez, e a segunda chamada não enfileira de novo' do
       ligar_autorizacao
 
-      expect { decide }.to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob).with(account.id, inbox.id).exactly(:once)
-      expect { decide(kind: 'hour_before') }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      expect { heal_decide }.to have_enqueued_job(job).with(account.id, inbox.id).exactly(:once)
+      expect { heal_decide(kind: 'hour_before') }.not_to have_enqueued_job(job)
     end
 
     # Motivo: o aviso daquele momento não espera a criação: continua na regra de hoje (o v1 configurado, ou o motivo
@@ -143,15 +161,25 @@ RSpec.describe Crm::BookingV2::Notices::Route do
     it 'o aviso de agora segue a regra de hoje, sem falar com a Meta' do
       ligar_autorizacao
 
-      expect(decide.template['name']).to eq('aviso_marcado')
+      expect(heal_decide.template['name']).to eq('aviso_marcado')
       Redis::Alfred.delete(lock_key)
-      expect(decide(template: {})).to have_attributes(reason: 'template_required')
+      expect(heal_decide(template: {})).to have_attributes(reason: 'template_required')
       expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
     end
 
+    # Motivo: o padrão é sem efeito (`heal: false`): quem não é o envio real (a página pública, o teste) não pode
+    # gastar a trava nem enfileirar.
+    it 'sem heal não enfileira nem grava a trava' do
+      ligar_autorizacao
+
+      expect { decide }.not_to have_enqueued_job(job)
+      expect(trava?).to be(false)
+    end
+
     # Motivo: sem a autorização do dono o sistema não pode criar modelo na Meta (#1586); nem enfileira.
-    it 'sem autorização não enfileira' do
-      expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+    it 'sem autorização não enfileira nem grava a trava' do
+      expect { heal_decide }.not_to have_enqueued_job(job)
+      expect(trava?).to be(false)
     end
 
     # Motivo: autorização desligada depois de ligada vale como sem autorização (a última linha manda).
@@ -160,7 +188,26 @@ RSpec.describe Crm::BookingV2::Notices::Route do
       WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::DESLIGOU,
                                       versao_aviso: 'v1', texto_aviso: 'Aviso.')
 
-      expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      expect { heal_decide }.not_to have_enqueued_job(job)
+    end
+
+    # Motivo: com o agendamento novo desligado o job não faria nada; a trava não pode ser gasta à toa.
+    it 'agendamento novo desligado não enfileira nem grava a trava' do
+      ligar_autorizacao
+      account.disable_features('crm_booking_v2')
+      account.save!
+
+      expect { heal_decide }.not_to have_enqueued_job(job)
+      expect(trava?).to be(false)
+    end
+
+    # Motivo: o job só cria para caixas de páginas novas publicadas; sem nenhuma com esta caixa, nada a fazer.
+    it 'sem página publicada com esta caixa não enfileira nem grava a trava' do
+      ligar_autorizacao
+      world.profile.update!(enabled: false)
+
+      expect { heal_decide }.not_to have_enqueued_job(job)
+      expect(trava?).to be(false)
     end
 
     # Motivo: em análise o modelo já existe na Meta; enfileirar seria trabalho à toa.
@@ -170,7 +217,7 @@ RSpec.describe Crm::BookingV2::Notices::Route do
       it 'não enfileira' do
         ligar_autorizacao
 
-        expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+        expect { heal_decide }.not_to have_enqueued_job(job)
       end
     end
 
@@ -181,7 +228,7 @@ RSpec.describe Crm::BookingV2::Notices::Route do
       it 'não enfileira' do
         ligar_autorizacao
 
-        expect { decide }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+        expect { heal_decide }.not_to have_enqueued_job(job)
       end
     end
 
@@ -189,18 +236,52 @@ RSpec.describe Crm::BookingV2::Notices::Route do
     it 'sem kind não enfileira' do
       ligar_autorizacao
 
-      expect { decide(kind: nil) }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      expect { heal_decide(kind: nil) }.not_to have_enqueued_job(job)
     end
 
-    # Motivo: a fila fora do ar não pode derrubar o aviso: o erro vai ao tracker e o aviso segue a regra de hoje.
-    it 'erro ao enfileirar vai ao tracker e o aviso segue' do
+    # Motivo: com a janela aberta o aviso sai como texto, mas é a hora de os modelos ficarem prontos antes de a
+    # conversa fechar. A decisão continua `session`, e a consulta só lê.
+    context 'when a janela de 24 h está aberta' do
+      let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: world.contact) }
+
+      before do
+        allow(Crm::FollowUps::MessagingWindow).to receive(:new)
+          .and_return(instance_double(Crm::FollowUps::MessagingWindow, can_send_session_message?: true))
+      end
+
+      it 'enfileira e a decisão continua texto' do
+        ligar_autorizacao
+        allow(Whatsapp::Templates::Garantir).to receive(:call).and_call_original
+        decision = nil
+
+        expect { decision = heal_decide(conversation: conversation) }.to have_enqueued_job(job).with(account.id, inbox.id)
+        expect(decision).to have_attributes(mode: :session, reason: nil, template: nil)
+        expect(Whatsapp::Templates::Garantir).to have_received(:call).with(hash_including(criar: false))
+        expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+      end
+
+      # Motivo: sem heal, a janela aberta continua como era: nem consulta o Garantir.
+      it 'sem heal nem consulta o Garantir' do
+        ligar_autorizacao
+        allow(Whatsapp::Templates::Garantir).to receive(:call)
+        conversation # a conversa da caixa, que o Route acha sozinho
+
+        expect(decide.mode).to eq(:session)
+        expect(Whatsapp::Templates::Garantir).not_to have_received(:call)
+      end
+    end
+
+    # Motivo: a fila fora do ar não pode derrubar o aviso: o erro vai ao tracker, o aviso segue a regra de hoje e a
+    # trava sai, para o próximo aviso tentar de novo (senão a caixa ficaria 15 min sem autocura).
+    it 'erro ao enfileirar vai ao tracker, o aviso segue e a trava não fica' do
       ligar_autorizacao
-      allow(Crm::BookingV2::NoticeTemplateEnsureJob).to receive(:perform_later).and_raise(StandardError, 'fila fora')
+      allow(job).to receive(:perform_later).and_raise(StandardError, 'fila fora')
       tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
       allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
-      expect(decide.template['name']).to eq('aviso_marcado')
+      expect(heal_decide.template['name']).to eq('aviso_marcado')
       expect(tracker).to have_received(:capture_exception).once
+      expect(trava?).to be(false)
     end
   end
 
@@ -212,22 +293,47 @@ RSpec.describe Crm::BookingV2::Notices::Route do
       create_internal_meeting(world: world, starts_at: Time.zone.parse('2026-10-20T13:00:00Z'),
                               metadata: { 'booking_profile_id' => world.profile.id })
     end
+    let(:lock_key) { format(described_class::HEAL_LOCK_KEY, inbox_id: inbox.id) }
+    let(:notice) { Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: 'booked', status: :pending, due_at: Time.current) }
 
     before do
+      Redis::Alfred.delete(lock_key)
       account.enable_features('crm_booking_v2')
       account.save!
       world.profile.update!(notice_inbox: inbox, notice_templates: { 'booked' => configured })
       create_booking_invite(world: world, meeting: meeting, scheduled_at: Time.current, channel: 'public')
     end
 
+    after { Redis::Alfred.delete(lock_key) }
+
     it 'consulta só para ler' do
       allow(Whatsapp::Templates::Garantir).to receive(:call).and_call_original
-      notice = Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: 'booked', status: :pending, due_at: Time.current)
 
       expect(Crm::BookingV2::Notices::Sender.new(notice).will_send?).to be(true)
       expect(Whatsapp::Templates::Garantir).to have_received(:call).with(hash_including(criar: false))
       expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
       expect(channel.reload.message_templates.map { |item| item['name'] }).to eq(['aviso_marcado'])
+    end
+
+    # Motivo (#1633): a página pública é anônima e o `will_send?` tem contrato "sem efeito": mesmo com `ausente` e a
+    # autorização ligada, não grava a trava nem enfileira a criação.
+    it 'não grava a trava nem enfileira a autocura' do
+      WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU,
+                                      versao_aviso: 'v1', texto_aviso: 'Aviso.')
+      sender = Crm::BookingV2::Notices::Sender.new(notice)
+
+      expect { sender.will_send? }.not_to have_enqueued_job(Crm::BookingV2::NoticeTemplateEnsureJob)
+      expect(Redis::Alfred.exists?(lock_key)).to be(false)
+    end
+
+    # Motivo (#1633): o envio real (o cron) é quem liga a autocura; sem isso ela nunca rodaria.
+    it 'o envio real liga a autocura' do
+      allow(described_class).to receive(:new)
+        .and_return(instance_double(described_class, decide: described_class::Decision.new(reason: 'template_required')))
+
+      Crm::BookingV2::Notices::Sender.new(notice).perform
+
+      expect(described_class).to have_received(:new).with(hash_including(heal: true))
     end
   end
 end

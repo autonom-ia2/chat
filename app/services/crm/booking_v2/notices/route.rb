@@ -17,10 +17,12 @@
 #   `botoes` ("Ver meu horário" e "Parar avisos"), que o `Notices::TemplateFill` preenche. Qualquer outro resultado
 #   (`em_analise`, `indisponivel`, `ausente`, `sem_base_url`, outra categoria): a regra acima, sem mudança.
 #   Autocura (#1633): `ausente` com o Aviso de serviço ligado (`WhatsappTemplateConsent.ativo?`) quer dizer que o
-#   gatilho de criar se perdeu (ex.: a autorização ligou antes do assinante do evento estar no ar). O Route enfileira o
-#   `NoticeTemplateEnsureJob` desta caixa, no máximo 1 vez a cada 15 min por caixa (trava `SET NX EX` no Redis), e o
-#   aviso daquele momento segue a regra acima sem esperar. Enfileirar não fala com a Meta, então vale também na
-#   requisição web do `will_send?`. Erro ao enfileirar vai só ao tracker.
+#   gatilho de criar se perdeu (ex.: a autorização ligou antes do assinante do evento estar no ar). Só no envio real
+#   (`heal: true`, passado pelo `Sender#perform`; nunca no `will_send?` da página pública, que não tem efeito), com o
+#   agendamento novo ligado e uma página nova publicada com esta caixa, o Route enfileira o `NoticeTemplateEnsureJob`
+#   desta caixa, no máximo 1 vez a cada 15 min por caixa (trava `SET NX EX` no Redis). Também com a janela aberta: o
+#   aviso sai como texto e o `Garantir` é lido só para isso. O aviso daquele momento segue a regra acima sem esperar.
+#   Erro ao enfileirar tira a trava e vai só ao tracker.
 # - WAHA (#1270, decisão do Rodrigo em 11/10): texto, sem exigir mensagem do cliente nas últimas 24 h; sem conversa e
 #   sem telefone → `no_phone`. Os tetos (4 por número em 24 h e o teto por conta) e o "Parar avisos" são conferidos
 #   antes, no `Notices::Sender` e no `TestInvite`, e contêm o risco de bloqueio do número.
@@ -92,13 +94,18 @@ class Crm::BookingV2::Notices::Route
   end
 
   # kind: o tipo do aviso (`Crm::MeetingNotice::KINDS`); sem ele, o modelo v2 não é consultado.
-  def initialize(inbox:, contact:, conversation: nil, template: nil, kind: nil)
+  # heal: liga a autocura dos modelos v2 (#1633). Só o envio real (`Sender#perform`, no cron) passa `true`; o
+  # `will_send?` da página pública e o teste ficam no padrão, sem efeito nenhum.
+  # rubocop:disable Metrics/ParameterLists -- todas nomeadas; `heal` é a chave explícita do efeito (#1633).
+  def initialize(inbox:, contact:, conversation: nil, template: nil, kind: nil, heal: false)
     @inbox = inbox
     @contact = contact
     @preferred = conversation
     @template = template.to_h
     @kind = kind&.to_s
+    @heal = heal
   end
+  # rubocop:enable Metrics/ParameterLists
 
   def decide
     return skip('no_inbox') if inbox.blank?
@@ -117,7 +124,10 @@ class Crm::BookingV2::Notices::Route
   attr_reader :inbox, :contact, :template, :kind
 
   def official
-    return session if conversation && Crm::FollowUps::MessagingWindow.new(conversation).can_send_session_message?
+    if conversation && Crm::FollowUps::MessagingWindow.new(conversation).can_send_session_message?
+      heal_with_window_open
+      return session
+    end
 
     ready = ready_template
     return native(ready[:template], campos: ready[:campos], botoes: ready[:botoes]) if ready
@@ -155,14 +165,50 @@ class Crm::BookingV2::Notices::Route
     nil
   end
 
-  # Autocura (#1633): o v2 não está na caixa, mas o dono autorizou criar. Enfileira a criação desta caixa (o job
-  # reconfere a autorização e não duplica), com a trava por caixa; o aviso de agora não espera. Erro só vai ao tracker.
-  def heal_missing_templates(result)
-    return unless result[:status] == :indisponivel && result[:motivo] == 'ausente'
-    return unless WhatsappTemplateConsent.ativo?(inbox.account, :utility)
-    return unless Redis::Alfred.set(format(HEAL_LOCK_KEY, inbox_id: inbox.id), 1, nx: true, ex: HEAL_LOCK_TTL)
+  # Janela aberta (#1633): o aviso sai como texto, mas é a hora de deixar os modelos prontos antes de a conversa
+  # fechar. Só lê (`criar: false`) e aplica a mesma autocura; a decisão continua `session`. Erro só vai ao tracker.
+  def heal_with_window_open
+    finalidade = Whatsapp::Templates::Finalidades::Agendamento::POR_TIPO[kind]
+    return unless heal? && finalidade
 
-    Crm::BookingV2::NoticeTemplateEnsureJob.perform_later(inbox.account_id, inbox.id)
+    heal_missing_templates(Whatsapp::Templates::Garantir.call(inbox: inbox, finalidade: finalidade, criar: false))
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
+  end
+
+  # Autocura (#1633): o v2 não está na caixa, mas o dono autorizou criar. Enfileira a criação desta caixa (o job
+  # reconfere tudo e não duplica); o aviso de agora não espera. As condições vêm antes da trava, para não gastá-la.
+  def heal_missing_templates(result)
+    return unless heal? && result[:status] == :indisponivel && result[:motivo] == 'ausente'
+    return unless heal_allowed?
+
+    enqueue_heal
+  end
+
+  def heal?
+    @heal == true
+  end
+
+  # O mesmo que o job confere: agendamento novo ligado, Aviso de serviço ligado e página nova publicada com esta caixa.
+  def heal_allowed?
+    account = inbox.account
+    Crm::Config.booking_v2_enabled?(account) && WhatsappTemplateConsent.ativo?(account, :utility) &&
+      account.crm_agent_booking_profiles.new_pages.enabled.exists?(notice_inbox_id: inbox.id)
+  end
+
+  # Trava `SET NX EX` por caixa + enfileirar. Se enfileirar falha, a trava sai (o próximo aviso tenta de novo) e o
+  # erro vai ao tracker. Com o Redis fora, nem a trava grava: cada aviso dessa caixa manda o erro ao tracker (aceito:
+  # é um aviso por envio do cron, e a fila do Sidekiq também está fora).
+  def enqueue_heal
+    key = format(HEAL_LOCK_KEY, inbox_id: inbox.id)
+    return unless Redis::Alfred.set(key, 1, nx: true, ex: HEAL_LOCK_TTL)
+
+    begin
+      Crm::BookingV2::NoticeTemplateEnsureJob.perform_later(inbox.account_id, inbox.id)
+    rescue StandardError
+      Redis::Alfred.delete(key)
+      raise
+    end
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
   end
