@@ -27,6 +27,19 @@ describe WhatsappHybrid::UnsupportedRecovery do
                                     'unsupported_error_code' => 131_060)
     end
 
+    it 'modelo com imagem no cabeçalho: recupera o texto e avisa no fim, no idioma da conta' do
+      account.update!(locale: 'pt_BR')
+      template = { 'Format' => nil, 'hydratedTemplate' => {
+        'Title' => { 'ImageMessage' => { 'mimetype' => 'image/jpeg' } }, 'hydratedContentText' => template_body
+      } }
+      stub_engine(engine_message('_data' => { 'Message' => { 'templateMessage' => template } }))
+
+      attempt!
+
+      expect(message.reload.content).to eq("#{template_body}\n\n(Esta mensagem tem uma imagem. Veja no celular.)")
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+    end
+
     it 'mantém a posição e o horário da mensagem' do
       created_at = message.created_at
       stub_engine

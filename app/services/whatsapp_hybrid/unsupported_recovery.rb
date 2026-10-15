@@ -111,10 +111,20 @@ class WhatsappHybrid::UnsupportedRecovery
 
   def apply(content)
     case content.kind
-    when :text then recovered!(content.text)
+    when :text then recovered!(with_header_note(content))
     when :media then media!(content.text)
     else fail!('unreadable')
     end
+  end
+
+  # Modelo com imagem (ou outro arquivo) no cabeçalho: o texto vem, o arquivo não (PR 3). Uma linha no fim avisa,
+  # no idioma da conta.
+  def with_header_note(content)
+    return content.text if content.header_media.nil?
+
+    key = content.header_media == :image ? 'recovered_header_image' : 'recovered_header_media'
+    note = I18n.with_locale(@message.account.locale) { I18n.t("conversations.messages.whatsapp.#{key}") }
+    "#{content.text}\n\n#{note}"
   end
 
   def recovered!(text)

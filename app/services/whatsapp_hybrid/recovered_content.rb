@@ -9,12 +9,14 @@
 #
 # Resultado: `kind` :text (com `text`), :media (com a legenda em `text`, se houver) ou :empty (nada legível).
 class WhatsappHybrid::RecoveredContent
-  Result = Struct.new(:kind, :text)
+  # header_media: :image ou :media quando o cabeçalho do modelo traz um arquivo (não é baixado; fica para a PR 3).
+  Result = Struct.new(:kind, :text, :header_media)
 
   # Invólucros que só embrulham outra mensagem em `.message`.
   WRAPPERS = %w[ephemeralMessage viewOnceMessage viewOnceMessageV2 viewOnceMessageV2Extension documentWithCaptionMessage
                 deviceSentMessage].freeze
   MEDIA = %w[imageMessage videoMessage audioMessage documentMessage stickerMessage ptvMessage].freeze
+  HEADER_MEDIA = %w[videoMessage documentMessage locationMessage].freeze
   TEXT_READERS = %i[plain_text template_text interactive_text buttons_text list_text].freeze
 
   def self.from_payload(payload)
@@ -30,7 +32,7 @@ class WhatsappHybrid::RecoveredContent
     return from_engine_fields if message.nil?
 
     text = TEXT_READERS.lazy.filter_map { |reader| send(reader, message).presence }.first
-    return Result.new(:text, text) if text
+    return Result.new(:text, text, header_media(message)) if text
 
     media = MEDIA.lazy.filter_map { |name| field(message, name) }.first
     return Result.new(:media, string(field(media, 'caption'))) if media
@@ -77,6 +79,22 @@ class WhatsappHybrid::RecoveredContent
     return hydrated_text(hydrated) if hydrated
 
     interactive_body(field(template, 'interactiveMessageTemplate'))
+  end
+
+  # Cabeçalho do modelo: `Title` (hydrated) ou `header.Media` (interativo). Os dois são `oneof`, embrulhados.
+  def header_media(message)
+    header = template_header(field(message, 'templateMessage')) || field(field(message, 'interactiveMessage'), 'header')
+    return if header.nil?
+    return :image if field(header, 'imageMessage')
+
+    :media if HEADER_MEDIA.any? { |name| field(header, name) }
+  end
+
+  def template_header(template)
+    hydrated = field(template, 'hydratedTemplate') || field(template, 'hydratedFourRowTemplate')
+    return hydrated if hydrated
+
+    field(field(template, 'interactiveMessageTemplate'), 'header')
   end
 
   def hydrated_text(template)

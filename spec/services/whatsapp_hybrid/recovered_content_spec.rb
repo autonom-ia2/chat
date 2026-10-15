@@ -25,6 +25,80 @@ describe WhatsappHybrid::RecoveredContent do
       "1. Já paguei\n2. Ver boleto: https://exemplo.test/b\n3. Ligar: +551130000000"
   end
 
+  # Estrutura real de produção (15/10/2026, 2 mensagens do spike, só as chaves); valores inventados.
+  describe 'formato real do motor' do
+    def engine_payload(template_message)
+      {
+        'id' => 'false_5511937016094@c.us_3A0000000000000000', 'timestamp' => 1_760_000_000, 'from' => '5511937016094@c.us',
+        'fromMe' => false, 'source' => 'app', 'body' => '', 'to' => '551142155355@c.us', 'participant' => nil,
+        'hasMedia' => false, 'media' => nil, 'ack' => 1, 'location' => nil, 'vCards' => [], 'ackName' => 'SERVER',
+        'replyTo' => nil,
+        '_data' => { 'Info' => { 'Chat' => '5511937016094@s.whatsapp.net', 'IsFromMe' => false }, 'IsEdit' => false,
+                     'RawMessage' => { 'templateMessage' => {} },
+                     'Message' => { 'templateMessage' => template_message } }
+      }
+    end
+
+    let(:image) { { 'ImageMessage' => { 'URL' => 'https://mmg.example/x', 'mimetype' => 'image/jpeg', 'JPEGThumbnail' => 'AAAA' } } }
+    let(:context_info) { { 'quotedMessage' => { 'conversation' => 'não é desta mensagem' } } }
+
+    it 'caso A: hydratedTemplate com imagem no Title e botões em HydratedButton (PascalCase)' do
+      template = {
+        'Format' => nil, 'contextInfo' => context_info, 'templateID' => '111',
+        'hydratedTemplate' => {
+          'Title' => image,
+          'hydratedContentText' => 'Sua fatura de outubro está disponível.',
+          'hydratedFooterText' => 'Empresa Exemplo S.A.',
+          'hydratedButtons' => [
+            { 'HydratedButton' => { 'CallButton' => { 'displayText' => 'Falar com a central', 'phoneNumber' => '+551140000000' } },
+              'index' => 0 },
+            { 'HydratedButton' => { 'QuickReplyButton' => { 'displayText' => 'Já paguei', 'ID' => 'pago' } }, 'index' => 1 },
+            { 'HydratedButton' => { 'UrlButton' => { 'displayText' => 'Ver fatura', 'URL' => 'https://exemplo.test/f' } },
+              'index' => 2 }
+          ],
+          'templateID' => '111'
+        }
+      }
+
+      result = described_class.from_payload(engine_payload(template))
+
+      expect(result.to_a).to eq([:text, "Sua fatura de outubro está disponível.\n\nEmpresa Exemplo S.A.\n\n" \
+                                        "1. Falar com a central: +551140000000\n2. Já paguei\n3. Ver fatura: https://exemplo.test/f",
+                                 :image])
+    end
+
+    it 'caso B: Format.InteractiveMessageTemplate com NativeFlowMessage e imagem no header.Media' do
+      params = { display_text: 'Acessar oferta', url: 'https://exemplo.test/o', merchant_url: 'https://exemplo.test',
+                 webview_presentation: nil }
+      template = {
+        'Format' => { 'InteractiveMessageTemplate' => {
+          'InteractiveMessage' => { 'NativeFlowMessage' => {
+            'buttons' => [{ 'name' => 'cta_url', 'buttonParamsJSON' => params.to_json },
+                          { 'name' => 'cta_call', 'buttonParamsJSON' => { display_text: 'Ligar', phone_number: '+5511' }.to_json },
+                          { 'name' => 'quebrado', 'buttonParamsJSON' => '{"display_text":' }],
+            'messageParamsJSON' => '{}'
+          } },
+          'header' => { 'Media' => image, 'hasMediaAttachment' => true },
+          'body' => { 'text' => 'Oferta especial para você neste mês.' },
+          'footer' => { 'Media' => nil, 'text' => 'Loja Exemplo' }
+        } },
+        'contextInfo' => context_info, 'templateID' => '222'
+      }
+
+      result = described_class.from_payload(engine_payload(template))
+
+      expect(result.to_a).to eq([:text, "Oferta especial para você neste mês.\n\nLoja Exemplo\n\n" \
+                                        "1. Acessar oferta: https://exemplo.test/o\n2. Ligar: +5511",
+                                 :image])
+    end
+
+    it 'modelo sem arquivo no cabeçalho não pede para olhar o celular' do
+      template = { 'Format' => nil, 'hydratedTemplate' => { 'hydratedContentText' => 'Só texto' } }
+
+      expect(described_class.from_payload(engine_payload(template)).header_media).to be_nil
+    end
+  end
+
   it 'lê o modelo hydratedTemplate: título, corpo, rodapé e botões numerados' do
     result = read('templateMessage' => { 'hydratedTemplate' => hydrated })
 
@@ -91,8 +165,8 @@ describe WhatsappHybrid::RecoveredContent do
   end
 
   it 'marca mídia e guarda só a legenda' do
-    expect(read('imageMessage' => { 'caption' => 'Foto do produto', 'mimetype' => 'image/jpeg' }).to_a).to eq([:media, 'Foto do produto'])
-    expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil])
+    expect(read('imageMessage' => { 'caption' => 'Foto do produto', 'mimetype' => 'image/jpeg' }).to_a).to eq([:media, 'Foto do produto', nil])
+    expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil, nil])
   end
 
   it 'devolve :empty quando não há nada legível' do
@@ -101,8 +175,8 @@ describe WhatsappHybrid::RecoveredContent do
   end
 
   it 'sem _data, usa o body e o hasMedia do motor' do
-    expect(described_class.from_payload('body' => 'Olá').to_a).to eq([:text, 'Olá'])
-    expect(described_class.from_payload('body' => 'legenda', 'hasMedia' => true).to_a).to eq([:media, 'legenda'])
+    expect(described_class.from_payload('body' => 'Olá').to_a).to eq([:text, 'Olá', nil])
+    expect(described_class.from_payload('body' => 'legenda', 'hasMedia' => true).to_a).to eq([:media, 'legenda', nil])
     expect(described_class.from_payload(nil).kind).to eq(:empty)
   end
 end
