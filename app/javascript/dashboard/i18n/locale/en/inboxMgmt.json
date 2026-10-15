@@ -909,7 +909,8 @@
         "CONNECTED": "Connected",
         "FAILED": "Connection failed",
         "REMOVED": "Disconnected by WhatsApp",
-        "DISCONNECTED": "Disconnected"
+        "DISCONNECTED": "Disconnected",
+        "PAUSED": "Paused"
       },
       "RISK": {
         "TITLE": "Before turning it on",
@@ -934,7 +935,29 @@
         "CONNECT": "Could not connect WhatsApp API. Try again.",
         "CODE": "Could not create the code. Try again.",
         "SAVE": "Could not save. Try again.",
-        "DISCONNECT": "Could not disconnect. Try again."
+        "DISCONNECT": "Could not disconnect. Try again.",
+        "PAUSE": "Could not pause. Try again.",
+        "RESUME": "Could not resume. Try again."
+      },
+      "PAUSE": {
+        "BUTTON": "Pause WhatsApp API",
+        "CONFIRM_TITLE": "Pause WhatsApp API?",
+        "CONFIRM_TEXT": "While paused, everything goes through the official API; after 24 hours, only approved templates. The phone stays linked and you can resume at any time.",
+        "CONFIRM": "Pause",
+        "CANCEL": "Cancel",
+        "PAUSED_TITLE": "WhatsApp API paused",
+        "PAUSED_HELP": "Everything is going through the official API. After 24 hours, only approved templates. The phone stays linked.",
+        "RESUME": "Resume"
+      },
+      "CONNECT_ORDER": {
+        "TITLE": "Follow this order",
+        "STEP_1": "The official inbox is already connected",
+        "STEP_2": "Open WhatsApp Business on the phone",
+        "STEP_3": "Scan the QR code"
+      },
+      "NOTICES": {
+        "SAME_NUMBER": "This number is also linked in the inbox {inbox} as WhatsApp API (unofficial). Two connections on the same number raise the risk of a ban.",
+        "APP_EVERY_14_DAYS": "WhatsApp asks that the WhatsApp Business app be opened on this phone at least every 14 days."
       }
     },
     "TABS": {

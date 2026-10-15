@@ -53,6 +53,11 @@ module Waha
       post("/api/sessions/#{name}/start")
     end
 
+    # Para a sessão sem desvincular o aparelho (diferente de logout): o start depois religa sem novo QR.
+    def stop_session(name)
+      post("/api/sessions/#{name}/stop")
+    end
+
     def restart_session(name)
       post("/api/sessions/#{name}/restart")
     end

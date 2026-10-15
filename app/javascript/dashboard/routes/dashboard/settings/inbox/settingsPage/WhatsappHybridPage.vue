@@ -8,7 +8,14 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import { qrSecondsLeft, formatSeconds } from 'dashboard/helper/wahaQrWindow';
-import { stoppedKeyFor, timelockEndFor } from './whatsappHybridState';
+import {
+  stoppedKeyFor,
+  timelockEndFor,
+  statusKeyFor,
+} from './whatsappHybridState';
+import WhatsappHybridPause from './components/WhatsappHybridPause.vue';
+import WhatsappHybridPaused from './components/WhatsappHybridPaused.vue';
+import WhatsappHybridNotices from './components/WhatsappHybridNotices.vue';
 
 // Aba "WhatsApp API" da caixa WhatsApp Oficial (chat#1067): a mesma caixa ganha um segundo
 // caminho de envio, usado quando a janela oficial de 24 horas está fechada.
@@ -41,14 +48,17 @@ let ticks = 0;
 
 const notConnected = computed(() => state.value.status === 'not_connected');
 const connected = computed(() => Boolean(state.value.connected));
+// Pausado pelo administrador (chat#1487): a sessão está parada de propósito, com o aparelho vinculado.
+const paused = computed(() => Boolean(state.value.paused));
 // FAILED (rodada de QR esgotada) e STOPPED: nenhum QR novo chega sem reiniciar.
-const isExpired = computed(() =>
-  ['failed', 'disconnected'].includes(state.value.status)
+const isExpired = computed(
+  () => !paused.value && ['failed', 'disconnected'].includes(state.value.status)
 );
 const stoppedKey = computed(() => stoppedKeyFor(state.value));
 const pairing = computed(
   () =>
     !notConnected.value &&
+    !paused.value &&
     !connected.value &&
     !isExpired.value &&
     !['loading', 'unavailable'].includes(state.value.status)
@@ -112,21 +122,17 @@ const hasStats = computed(() =>
 );
 
 const STATUS_TONES = {
-  connected: 'text-n-teal-11 bg-n-teal-3',
-  failed: 'text-n-ruby-11 bg-n-ruby-3',
-  disconnected: 'text-n-slate-11 bg-n-alpha-2',
+  CONNECTED: 'text-n-teal-11 bg-n-teal-3',
+  FAILED: 'text-n-ruby-11 bg-n-ruby-3',
+  REMOVED: 'text-n-ruby-11 bg-n-ruby-3',
+  DISCONNECTED: 'text-n-slate-11 bg-n-alpha-2',
+  PAUSED: 'text-n-slate-11 bg-n-alpha-2',
 };
+const statusKey = computed(() => statusKeyFor(state.value));
 const statusTone = computed(
-  () => STATUS_TONES[state.value.status] || 'text-n-amber-11 bg-n-amber-3'
+  () => STATUS_TONES[statusKey.value] || 'text-n-amber-11 bg-n-amber-3'
 );
-const statusLabel = computed(() => {
-  if (notConnected.value) return tk('STATUS.NOT_CONNECTED');
-  if (connected.value) return tk('STATUS.CONNECTED');
-  if (stoppedKey.value === 'REMOVED') return tk('STATUS.REMOVED');
-  if (state.value.status === 'failed') return tk('STATUS.FAILED');
-  if (state.value.status === 'disconnected') return tk('STATUS.DISCONNECTED');
-  return tk('STATUS.AWAITING');
-});
+const statusLabel = computed(() => tk(`STATUS.${statusKey.value}`));
 
 const resetQr = () => {
   qrValue.value = '';
@@ -143,7 +149,7 @@ const renderQr = async value => {
 const apply = async data => {
   state.value = data;
   rateLimit.value = data.rate_limit_per_minute || 20;
-  if (data.connected || isExpired.value || notConnected.value) {
+  if (data.connected || data.paused || isExpired.value || notConnected.value) {
     resetQr();
     if (data.connected) pairingCode.value = '';
     return;
@@ -212,6 +218,13 @@ const saveRateLimit = () => {
   save({ rate_limit_per_minute: value });
 };
 
+const pause = () =>
+  run(() => WhatsappHybridAPI.pause(props.inbox.id), 'ERRORS.PAUSE');
+
+// Retomar religa sem QR; se o WhatsApp tiver desvinculado o aparelho, a resposta já traz o QR.
+const resume = () =>
+  run(() => WhatsappHybridAPI.resume(props.inbox.id), 'ERRORS.RESUME');
+
 const disconnect = () =>
   run(async () => {
     await WhatsappHybridAPI.disconnect(props.inbox.id);
@@ -258,7 +271,17 @@ onBeforeUnmount(() => {
         </span>
       </div>
 
-      <div v-if="notConnected" class="flex">
+      <div v-if="notConnected" class="flex flex-col items-start gap-3">
+        <div class="text-sm text-n-slate-11">
+          <p class="mb-1 font-medium text-n-slate-12">
+            {{ tk('CONNECT_ORDER.TITLE') }}
+          </p>
+          <ol class="mb-0 leading-6 list-decimal list-inside">
+            <li>{{ tk('CONNECT_ORDER.STEP_1') }}</li>
+            <li>{{ tk('CONNECT_ORDER.STEP_2') }}</li>
+            <li>{{ tk('CONNECT_ORDER.STEP_3') }}</li>
+          </ol>
+        </div>
         <NextButton
           :is-loading="isBusy"
           icon="i-lucide-qr-code"
@@ -266,6 +289,12 @@ onBeforeUnmount(() => {
           @click="connect"
         />
       </div>
+
+      <WhatsappHybridPaused
+        v-else-if="paused"
+        :is-busy="isBusy"
+        @resume="resume"
+      />
 
       <div
         v-else-if="isExpired"
@@ -380,6 +409,11 @@ onBeforeUnmount(() => {
         {{ tk('CONNECTED_HELP', { phone: state.phone }) }}
       </div>
     </section>
+
+    <WhatsappHybridNotices
+      :same-number-inboxes="state.same_number_inboxes || []"
+      :show-app-reminder="connected || paused"
+    />
 
     <section
       v-if="connected && !wrongNumber"
@@ -548,7 +582,15 @@ onBeforeUnmount(() => {
       </table>
     </section>
 
-    <div v-if="!notConnected && state.status !== 'loading'" class="flex">
+    <div
+      v-if="!notConnected && state.status !== 'loading'"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <WhatsappHybridPause
+        v-if="connected && !wrongNumber"
+        :is-busy="isBusy"
+        @confirm="pause"
+      />
       <NextButton
         :is-loading="isBusy"
         color="ruby"

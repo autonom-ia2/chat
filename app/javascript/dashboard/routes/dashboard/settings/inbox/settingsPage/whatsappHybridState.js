@@ -15,3 +15,14 @@ export const timelockEndFor = ({ timelock } = {}, now = Date.now()) => {
   const end = new Date(timelock.ends_at * 1000);
   return end.getTime() > now ? end : null;
 };
+
+// chat#1487 — o selo de estado da aba. Pausado vem antes do estado do motor: a sessão parada de propósito
+// não é "desconectado".
+export const statusKeyFor = (data = {}) => {
+  if (data.status === 'not_connected') return 'NOT_CONNECTED';
+  if (data.paused) return 'PAUSED';
+  if (data.connected) return 'CONNECTED';
+  if (data.status === 'failed') return data.phone ? 'REMOVED' : 'FAILED';
+  if (data.status === 'disconnected') return 'DISCONNECTED';
+  return 'AWAITING';
+};

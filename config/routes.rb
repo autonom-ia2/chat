@@ -898,6 +898,8 @@ Rails.application.routes.draw do
               post :connect, action: :create
               post :request_code
               post :reconnect
+              post :pause
+              post :resume
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]

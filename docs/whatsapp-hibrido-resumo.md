@@ -334,3 +334,18 @@ Autonom.ia). Regra decidida em 14/10/2026:
 3. Definir as fatias das duas stacks (sem IP em comum), `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` e só então ligar
    `WHATSAPP_PROXY_ENABLED=true`. Não definir `WEBSHARE_*_PLAN_ID`. Sessão importada
    num plano que não bate com o tipo (ex.: Híbrido num IP de datacenter) é trocada pela reconciliação.
+
+## Pausar sem desvincular e avisos da aba (#1487)
+
+- **Pausar WhatsApp API** (com confirmação) para a sessão no motor (`POST /api/sessions/{nome}/stop`), sem logout: o
+  aparelho continua vinculado. A pausa fica em `whatsapp_hybrid_connections.paused_at`.
+- Enquanto pausada: o roteador nunca escolhe o WhatsApp API (`Connection#routable?` e `Router#web_allowed_for?`
+  respondem não; o follow-up do CRM cai para modelo por `MessagingWindow#hybrid_web_available?`); `ensure_session!`
+  não cria nem religa a sessão; `refresh!` só lê (não grava configuração nem proxy, o que reiniciaria a sessão); a parada
+  não vira alerta de queda nem sinal de IP ruim. Sessão STOPPED continua intocada pela automação de proxy (#1516).
+- **Retomar** faz `start` da mesma sessão, sem QR. Se o WhatsApp desvinculou o aparelho nesse meio-tempo, o motor pede
+  QR e a aba mostra o fluxo de reconectar normal. Gerar novo QR Code também desfaz a pausa.
+- Avisos (só informam, nada bloqueia): a ordem de conexão antes do QR (oficial conectada → app aberto → QR); lembrete
+  fixo de abrir o app WhatsApp Business ao menos a cada 14 dias (o motor não informa quando o app foi aberto); e o
+  mesmo número ligado em outra caixa WhatsApp API comum (WAHA) da conta, comparando dígitos e tratando o celular
+  brasileiro com e sem o 9 como o mesmo número (`WhatsappHybrid::SameNumberInboxes`).

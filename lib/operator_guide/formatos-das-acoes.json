@@ -1085,8 +1085,8 @@
     "completo": true,
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:44",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:61",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -7996,10 +7996,10 @@
     "modelo": "WhatsappHybrid::Connection",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:25",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:67",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:74",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:84",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:91",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:89",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -19004,7 +19004,16 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#create",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:18",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
+    ],
+    "sem_corpo": true
+  },
+  "POST whatsapp_hybrid_connections/:inbox_id/pause": {
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_hybrid_connections#pause",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:45",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -19013,7 +19022,7 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#reconnect",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:37",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -19022,7 +19031,16 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#request_code",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:30",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
+    ],
+    "sem_corpo": true
+  },
+  "POST whatsapp_hybrid_connections/:inbox_id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_hybrid_connections#resume",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:53",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -25736,10 +25754,10 @@
     "modelo": "WhatsappHybrid::Connection",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:25",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:67",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:74",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:84",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:91",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:89",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:69"
     ],
     "sem_corpo": false
   }

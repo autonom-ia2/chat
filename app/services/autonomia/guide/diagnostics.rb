@@ -67,7 +67,8 @@ module Autonomia
           end
 
           hibrido = inbox.whatsapp? ? WhatsappHybrid::Connection.find_by(inbox_id: inbox.id) : nil
-          if hibrido && hibrido.status != 'connected'
+          # Pausado pelo administrador (#1487) não é problema a apontar.
+          if hibrido && !hibrido.paused? && hibrido.status != 'connected'
             findings << "WhatsApp API da caixa oficial \"#{label}\": desconectado — respostas depois de 24 horas precisam de modelo aprovado. Reconecte na aba WhatsApp API da caixa."
           end
 

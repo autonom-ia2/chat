@@ -1,4 +1,8 @@
-import { stoppedKeyFor, timelockEndFor } from '../whatsappHybridState';
+import {
+  stoppedKeyFor,
+  timelockEndFor,
+  statusKeyFor,
+} from '../whatsappHybridState';
 
 describe('stoppedKeyFor', () => {
   it('says WhatsApp removed the device when a connected session fails', () => {
@@ -48,5 +52,24 @@ describe('timelockEndFor', () => {
         now
       )
     ).toBeNull();
+  });
+});
+
+describe('statusKeyFor', () => {
+  it('shows paused before the engine state (the stopped session is on purpose)', () => {
+    expect(
+      statusKeyFor({ status: 'disconnected', paused: true, phone: '5511' })
+    ).toBe('PAUSED');
+  });
+
+  it('keeps the other states', () => {
+    expect(statusKeyFor({ status: 'not_connected' })).toBe('NOT_CONNECTED');
+    expect(statusKeyFor({ status: 'connected', connected: true })).toBe(
+      'CONNECTED'
+    );
+    expect(statusKeyFor({ status: 'failed', phone: '5511' })).toBe('REMOVED');
+    expect(statusKeyFor({ status: 'failed' })).toBe('FAILED');
+    expect(statusKeyFor({ status: 'disconnected' })).toBe('DISCONNECTED');
+    expect(statusKeyFor({ status: 'awaiting_scan' })).toBe('AWAITING');
   });
 });

@@ -51,14 +51,19 @@ class WhatsappHybrid::Connection < ApplicationRecord
     disabled_origins.exclude?(origin.to_s)
   end
 
+  # Pausada pelo administrador (#1487): a sessão está parada no motor, com o aparelho ainda vinculado.
+  def paused?
+    paused_at.present?
+  end
+
   # Pronta para o roteador escolher o transporte Web.
   def routable?
     routable_when_connected? && status == 'connected'
   end
 
-  # Estava em uso pelo roteador (só essas quedas viram aviso ao administrador).
+  # Estava em uso pelo roteador (só essas quedas viram aviso ao administrador). Pausada não é queda.
   def routable_when_connected?
-    routing_enabled && risk_accepted? && same_number?
+    !paused? && routing_enabled && risk_accepted? && same_number?
   end
 
   private

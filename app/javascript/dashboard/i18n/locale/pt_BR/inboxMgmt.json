@@ -910,7 +910,8 @@
         "CONNECTED": "Conectado",
         "FAILED": "Falha na conexão",
         "REMOVED": "Desconectado pelo WhatsApp",
-        "DISCONNECTED": "Desconectado"
+        "DISCONNECTED": "Desconectado",
+        "PAUSED": "Pausado"
       },
       "RISK": {
         "TITLE": "Antes de ligar",
@@ -935,7 +936,29 @@
         "CONNECT": "Não foi possível conectar o WhatsApp API. Tente de novo.",
         "CODE": "Não foi possível gerar o código. Tente de novo.",
         "SAVE": "Não foi possível salvar. Tente de novo.",
-        "DISCONNECT": "Não foi possível desconectar. Tente de novo."
+        "DISCONNECT": "Não foi possível desconectar. Tente de novo.",
+        "PAUSE": "Não foi possível pausar. Tente de novo.",
+        "RESUME": "Não foi possível retomar. Tente de novo."
+      },
+      "PAUSE": {
+        "BUTTON": "Pausar WhatsApp API",
+        "CONFIRM_TITLE": "Pausar o WhatsApp API?",
+        "CONFIRM_TEXT": "Enquanto pausado, tudo sai pela API oficial; fora de 24 h, só mensagem pronta (modelo aprovado). O celular continua conectado e você pode retomar quando quiser.",
+        "CONFIRM": "Pausar",
+        "CANCEL": "Cancelar",
+        "PAUSED_TITLE": "WhatsApp API pausado",
+        "PAUSED_HELP": "Tudo está saindo pela API oficial. Fora de 24 h, só mensagem pronta (modelo aprovado). O celular continua conectado.",
+        "RESUME": "Retomar"
+      },
+      "CONNECT_ORDER": {
+        "TITLE": "Siga esta ordem",
+        "STEP_1": "A caixa oficial já está conectada",
+        "STEP_2": "Abra o WhatsApp Business no celular",
+        "STEP_3": "Leia o QR Code"
+      },
+      "NOTICES": {
+        "SAME_NUMBER": "Este número também está ligado na caixa {inbox} como WhatsApp API (não oficial). Duas conexões no mesmo número aumentam o risco de bloqueio.",
+        "APP_EVERY_14_DAYS": "O WhatsApp pede que o app WhatsApp Business seja aberto neste celular ao menos a cada 14 dias."
       }
     },
     "TABS": {
