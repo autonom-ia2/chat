@@ -23,7 +23,7 @@ const toggle = (key, on) => {
     <legend class="mb-3 text-base text-n-slate-12">
       {{ tw('DRAWER_TEXT') }}
     </legend>
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3">
       <CheckCard
         v-for="origin in ROUTING_ORIGINS"
         :key="origin.key"
@@ -37,17 +37,23 @@ const toggle = (key, on) => {
         <template v-if="origin.recommended || origin.risky" #selos>
           <span
             v-if="origin.recommended"
-            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-n-teal-3 text-n-teal-11"
+            class="inline-flex items-center w-fit gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-n-teal-3 text-n-teal-11"
           >
-            <span class="i-lucide-thumbs-up size-3.5" aria-hidden="true" />
+            <span
+              class="i-lucide-thumbs-up size-3.5 shrink-0"
+              aria-hidden="true"
+            />
             {{ tw('RECOMMENDED') }}
           </span>
           <span
             v-if="origin.risky"
             data-risk
-            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-n-amber-3 text-n-amber-11"
+            class="inline-flex items-center w-fit gap-1 px-2 py-0.5 text-xs font-semibold rounded-lg bg-n-amber-3 text-n-amber-11"
           >
-            <span class="i-lucide-triangle-alert size-3.5" aria-hidden="true" />
+            <span
+              class="i-lucide-triangle-alert size-3.5 shrink-0"
+              aria-hidden="true"
+            />
             {{ tw('RISK') }}
           </span>
         </template>

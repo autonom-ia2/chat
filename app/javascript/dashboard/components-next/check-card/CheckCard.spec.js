@@ -11,6 +11,7 @@ describe('CheckCard (#1487)', () => {
 
     expect(wrapper.find('label').text()).toContain('Agents');
     expect(wrapper.find('[data-badge]').exists()).toBe(true);
+    expect(wrapper.find('.font-semibold').classes()).toContain('leading-snug');
     await input.setValue(true);
 
     expect(wrapper.emitted('update:modelValue')).toEqual([[true]]);

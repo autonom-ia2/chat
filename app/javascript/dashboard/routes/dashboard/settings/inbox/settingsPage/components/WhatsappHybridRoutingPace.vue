@@ -81,7 +81,7 @@ const campaignCap = computed(() => Math.min(props.campaignLimit, rate.value));
         :aria-invalid="showError || undefined"
         :aria-describedby="showError ? 'hybrid-pace-other-error' : undefined"
         class="!w-28 px-3 !mb-0 text-base border rounded-xl min-h-11 bg-n-alpha-black2 text-n-slate-12"
-        :class="showError ? 'border-n-ruby-8' : 'border-n-weak'"
+        :class="showError ? '!border-n-ruby-8' : 'border-n-weak'"
         @input="touched = true"
         @blur="touched = true"
       />

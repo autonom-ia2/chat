@@ -111,6 +111,13 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     expect(drawer.find('[data-origin="campaign"] [data-risk]').exists()).toBe(
       true
     );
+    // Uma coluna em todas as larguras: a gaveta divide o espaço com a prévia.
+    expect(
+      drawer.find('[data-origin="human"]').element.parentElement.className
+    ).not.toContain('grid-cols-2');
+    expect(drawer.find('[data-risk]').classes()).toEqual(
+      expect.arrayContaining(['inline-flex', 'w-fit', 'items-center'])
+    );
 
     await drawer.find('[data-origin="crm_follow_up"] input').setValue(false);
     await drawer.find('[data-origin="bot"] input').setValue(true);
@@ -164,6 +171,10 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     await flushPromises();
     expect(drawer.find('[role="alert"]').text()).toBe(
       `${R}.PACE.INVALID|1,120`
+    );
+    // A borda vermelha vence o estilo global do input.
+    expect(drawer.find('[data-pace-other]').classes()).toContain(
+      '!border-n-ruby-8'
     );
     expect(
       buttonWith(wrapper, `${R}.SAVE`).attributes('disabled')
