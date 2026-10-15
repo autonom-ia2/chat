@@ -88,9 +88,12 @@ json.waiting_since conversation.waiting_since.to_i.to_i
 sla_applicable = conversation.account.feature_enabled?('sla') && (!conversation.respond_to?(:sla_applicable?) || conversation.sla_applicable?)
 json.sla_policy_id sla_applicable ? conversation.sla_policy_id : nil
 json.partial! 'enterprise/api/v1/conversations/partials/conversation', conversation: conversation if ChatwootApp.enterprise?
-# Funis da conversa, para o filtro "Funil" da lista conferir no painel (multifunil #1150). As listas passam os ids da
-# página inteira (crm_pipeline_ids), numa consulta só; a conversa lida sozinha consulta os dela.
-if Crm::Config.enabled?
-  json.crm_pipeline_ids(local_assigns[:crm_pipeline_ids]&.[](conversation.id) ||
-                        Crm::Conversations::PipelineIds.for([conversation])[conversation.id])
+# Funis da conversa que a pessoa enxerga, para o filtro "Funil" da lista conferir no painel (multifunil #1150), e se há
+# card em funil oculto para ela (não é "Sem assunto"). As listas passam a página inteira (crm_funnels), numa consulta só;
+# a conversa lida sozinha consulta os dela.
+crm_funnel = local_assigns[:crm_funnels]&.[](conversation.id) ||
+             Crm::Conversations::PipelineIds.for_current_user([conversation])&.[](conversation.id)
+if crm_funnel
+  json.crm_pipeline_ids crm_funnel[:ids]
+  json.crm_pipeline_hidden crm_funnel[:hidden]
 end

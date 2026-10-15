@@ -1,6 +1,6 @@
-# Funis de cada conversa (crm_pipeline_ids na resposta da API), para o filtro "Funil" da lista conferir no painel a
-# conversa que chega ou muda (multifunil #1150). Vai só na API, que responde a quem já pode ver a conversa; o payload do
-# websocket não leva, porque também chega ao contato pelo widget.
+# Funis de cada conversa (crm_pipeline_ids e crm_pipeline_hidden na resposta da API), para o filtro "Funil" da lista
+# conferir no painel a conversa que chega ou muda (multifunil #1150). Vai só na API, que responde a quem já pode ver a
+# conversa; o payload do websocket não leva, porque também chega ao contato pelo widget.
 #
 # Mesma regra do Crm::Conversations::PipelineFilter e do acesso por funil (Crm::Access::ConversationScope): card aberto
 # manda; sem card aberto, valem os ganhos/perdidos; arquivado, resolvido e cancelado não contam. Lista vazia = "Sem
@@ -11,6 +11,27 @@ class Crm::Conversations::PipelineIds
 
   def self.for(conversations)
     new(conversations).perform
+  end
+
+  # O que vai na API para a pessoa (Current.user): só os funis que ela enxerga (Crm::Access::VisiblePipelines), e
+  # hidden quando a conversa tem card em funil que ela não enxerga. Assim a conversa não vira "Sem assunto" para ela e
+  # o id do funil oculto não sai do servidor. { conversation_id => { ids: [...], hidden: true/false } }.
+  # A API da conta (views): a pessoa da requisição; nil com o CRM desligado (a resposta não leva os campos).
+  def self.for_current_user(conversations)
+    return unless Crm::Config.enabled?
+
+    visible_for(conversations, user: Current.user, account: Current.account)
+  end
+
+  def self.visible_for(conversations, user:, account:)
+    all = self.for(conversations)
+    return {} if all.empty?
+
+    visible = Crm::Access::VisiblePipelines.new(user: user, account: account)
+    all.transform_values do |pipeline_ids|
+      shown = pipeline_ids.select { |pipeline_id| visible.visible?(pipeline_id) }
+      { ids: shown, hidden: shown.size < pipeline_ids.size }
+    end
   end
 
   def initialize(conversations)

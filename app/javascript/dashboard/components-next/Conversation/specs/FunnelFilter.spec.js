@@ -76,12 +76,12 @@ describe('FunnelFilter (#1150)', () => {
     expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['']);
   });
 
-  it('falha ao ler os funis: não aparece e volta para todos', async () => {
+  it('falha ao ler os funis: só esconde o filtro, sem mexer na escolha guardada', async () => {
     api.getPipelines.mockRejectedValue(new Error('rede'));
     const wrapper = mount(FunnelFilter, { props: { modelValue: '3' } });
     await flushPromises();
 
     expect(wrapper.find('[data-funnel-filter]').exists()).toBe(false);
-    expect(wrapper.emitted('update:modelValue').at(-1)).toEqual(['']);
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
 });

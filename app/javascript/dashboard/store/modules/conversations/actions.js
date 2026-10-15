@@ -70,6 +70,9 @@ const isFunnelFilterActive = state =>
   Boolean(state?.conversationFilters?.crmPipelineId) &&
   !state.appliedFilters?.length;
 
+// Leitura mais recente dos funis de cada conversa: uma resposta mais velha que chega depois é descartada.
+const funnelReads = {};
+
 // A conversa do websocket entra (ou já está) na lista filtrada sem os funis: falta ler da API.
 const needsCrmFunnel = (state, conversationId) => {
   if (!isFunnelFilterActive(state)) return false;
@@ -90,11 +93,15 @@ const actions = {
   ) => {
     if (!isFunnelFilterActive(state)) return;
     if (!getters.getConversationById(conversationId)) return;
+    const read = (funnelReads[conversationId] || 0) + 1;
+    funnelReads[conversationId] = read;
     try {
       const { data } = await ConversationApi.show(conversationId);
+      if (funnelReads[conversationId] !== read) return;
       commit(types.SET_CONVERSATION_CRM_PIPELINE_IDS, {
         id: data.id,
         crmPipelineIds: data.crm_pipeline_ids,
+        crmPipelineHidden: data.crm_pipeline_hidden,
       });
     } catch {
       // Sem acesso ou falha de rede: tenta de novo no próximo evento da conversa (needsCrmFunnel).

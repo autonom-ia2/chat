@@ -36,6 +36,18 @@ describe('filtro Funil (#1150)', () => {
       expect(filterByCrmPipeline(true, 'none', [3])).toBe(false);
     });
 
+    it('card em funil oculto para a pessoa: não é "Sem assunto" nem entra em funil dela', () => {
+      expect(filterByCrmPipeline(true, 'none', [], true)).toBe(false);
+      expect(filterByCrmPipeline(true, '3', [], true)).toBe(false);
+      expect(filterByCrmPipeline(true, '3', [3], true)).toBe(true);
+      expect(
+        applyPageFilters(
+          { ...conversa(7, []), crm_pipeline_hidden: true },
+          { status: 'open', crmPipelineId: 'none' }
+        )
+      ).toBe(false);
+    });
+
     it('conversa sem o campo não entra numa lista filtrada', () => {
       expect(filterByCrmPipeline(true, '3', undefined)).toBe(false);
       expect(filterByCrmPipeline(true, 'none', undefined)).toBe(false);
@@ -143,7 +155,9 @@ describe('filtro Funil (#1150)', () => {
     });
 
     it('com filtro de funil, lê da API só os funis da conversa já listada', async () => {
-      api.show.mockResolvedValue({ data: { id: 42, crm_pipeline_ids: [3] } });
+      api.show.mockResolvedValue({
+        data: { id: 42, crm_pipeline_ids: [3], crm_pipeline_hidden: true },
+      });
       const ctx = contexto({});
       await actions.refreshConversationFunnel(ctx, 42);
 
@@ -153,6 +167,7 @@ describe('filtro Funil (#1150)', () => {
         {
           id: 42,
           crmPipelineIds: [3],
+          crmPipelineHidden: true,
         }
       );
     });
@@ -169,6 +184,37 @@ describe('filtro Funil (#1150)', () => {
       await actions.refreshConversationFunnel(contexto({ naLista: false }), 42);
 
       expect(api.show).not.toHaveBeenCalled();
+    });
+
+    it('resposta fora de ordem é descartada: vale a leitura mais recente', async () => {
+      let primeira;
+      api.show
+        .mockReturnValueOnce(
+          new Promise(resolve => {
+            primeira = resolve;
+          })
+        )
+        .mockResolvedValueOnce({
+          data: { id: 42, crm_pipeline_ids: [5], crm_pipeline_hidden: false },
+        });
+      const ctx = contexto({});
+
+      const velha = actions.refreshConversationFunnel(ctx, 42);
+      await actions.refreshConversationFunnel(ctx, 42);
+      primeira({
+        data: { id: 42, crm_pipeline_ids: [3], crm_pipeline_hidden: true },
+      });
+      await velha;
+
+      expect(ctx.commit).toHaveBeenCalledTimes(1);
+      expect(ctx.commit).toHaveBeenCalledWith(
+        types.SET_CONVERSATION_CRM_PIPELINE_IDS,
+        {
+          id: 42,
+          crmPipelineIds: [5],
+          crmPipelineHidden: false,
+        }
+      );
     });
 
     it('falha da leitura não quebra e não grava nada; o próximo evento tenta de novo', async () => {
@@ -211,6 +257,7 @@ describe('filtro Funil (#1150)', () => {
 
       expect(state.allConversations).toHaveLength(1);
       expect(state.allConversations[0].crm_pipeline_ids).toEqual([3]);
+      expect(state.allConversations[0].crm_pipeline_hidden).toBe(false);
       expect(state.allConversations[0].status).toBe('pending');
     });
   });

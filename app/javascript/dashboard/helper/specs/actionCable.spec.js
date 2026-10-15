@@ -1,4 +1,8 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import {
+  FUNNEL_REFRESH_DEBOUNCE_MS,
+  resetFunnelRefresh,
+} from 'dashboard/helper/crmFunnelRefresh';
 import ActionCableConnector from '../actionCable';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
@@ -417,28 +421,53 @@ describe('ActionCableConnector - Copilot Tests', () => {
       );
     });
 
-    it('relê a conversa do card para o filtro Funil da lista (#1150)', () => {
+    it('relê a conversa do card para o filtro Funil só quando o funil ou o status muda, juntando avisos (#1150)', () => {
+      vi.useFakeTimers();
+      resetFunnelRefresh();
+      const card = (id, pipelineId, extra = {}) => ({
+        id,
+        account_id: 1,
+        pipeline_id: pipelineId,
+        status: 'open',
+        conversation: { id: 500, display_id: 42 },
+        ...extra,
+      });
+      const releituras = () =>
+        mockDispatch.mock.calls.filter(
+          ([acao]) => acao === 'refreshConversationFunnel'
+        );
+
+      actionCable.onReceived({ event: 'crm.card.moved', data: card(77, 3) });
+      actionCable.onReceived({ event: 'crm.card.moved', data: card(77, 5) });
       actionCable.onReceived({
-        event: 'crm.card.moved',
-        data: {
-          id: 77,
-          account_id: 1,
-          conversation: { id: 500, display_id: 42 },
-        },
+        event: 'crm.subjects.changed',
+        data: { account_id: 1, conversation_id: 42 },
+      });
+      expect(releituras()).toEqual([]);
+      vi.advanceTimersByTime(FUNNEL_REFRESH_DEBOUNCE_MS);
+      expect(releituras()).toEqual([['refreshConversationFunnel', 42]]);
+
+      actionCable.onReceived({
+        event: 'crm.card.updated',
+        data: card(77, 5, { title: 'Só o título mudou' }),
       });
       actionCable.onReceived({
         event: 'crm.card.created',
-        data: { id: 78, account_id: 1, conversation: null },
+        data: card(78, 3, { conversation: null }),
       });
       actionCable.onReceived({
         event: 'crm.card.updated',
-        data: { id: 79, account_id: 2, conversation: { display_id: 43 } },
+        data: card(79, 3, { account_id: 2, conversation: { display_id: 43 } }),
       });
+      vi.advanceTimersByTime(FUNNEL_REFRESH_DEBOUNCE_MS);
+      expect(releituras()).toHaveLength(1);
 
-      const releituras = mockDispatch.mock.calls.filter(
-        ([acao]) => acao === 'refreshConversationFunnel'
-      );
-      expect(releituras).toEqual([['refreshConversationFunnel', 42]]);
+      actionCable.onReceived({
+        event: 'crm.card.updated',
+        data: card(77, 5, { status: 'won' }),
+      });
+      vi.advanceTimersByTime(FUNNEL_REFRESH_DEBOUNCE_MS);
+      expect(releituras()).toHaveLength(2);
     });
 
     it('ignores CRM card events from another account', () => {
@@ -503,6 +532,8 @@ describe('ActionCableConnector - Copilot Tests', () => {
 
   describe('crm subjects changed (#1145)', () => {
     it('relê os assuntos da conversa avisada, só da conta aberta', async () => {
+      vi.useFakeTimers();
+      resetFunnelRefresh();
       const { onCrmSubjectsChangedRemotely } = await import(
         'dashboard/routes/dashboard/crm/composables/useCrmConversationStages'
       );
@@ -518,6 +549,7 @@ describe('ActionCableConnector - Copilot Tests', () => {
 
       expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledTimes(1);
       expect(onCrmSubjectsChangedRemotely).toHaveBeenCalledWith(42);
+      vi.advanceTimersByTime(FUNNEL_REFRESH_DEBOUNCE_MS);
       expect(mockDispatch).toHaveBeenCalledWith(
         'refreshConversationFunnel',
         42

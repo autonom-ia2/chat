@@ -156,8 +156,33 @@ RSpec.describe Crm::Conversations::PipelineFilter do
       expect(described_class.for([conversas[:triagem]])).to eq(conversas[:triagem].id => [])
     end
 
-    it 'lista vazia não consulta' do
-      expect(described_class.for([])).to eq({})
+    it 'visible_for: só os funis que a pessoa enxerga; card em funil oculto vira hidden, sem o id' do
+      access = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false, triage: true)
+      access.agent_pipelines.create!(account: account, pipeline: vendas.first)
+      pedidas = conversas.values_at(:sinistro, :aberto_manda, :vendas, :triagem)
+
+      expect(described_class.visible_for(pedidas, user: agent, account: account)).to eq(
+        conversas[:sinistro].id => { ids: [], hidden: true },
+        conversas[:aberto_manda].id => { ids: [vendas.first.id], hidden: false },
+        conversas[:vendas].id => { ids: [vendas.first.id], hidden: false },
+        conversas[:triagem].id => { ids: [], hidden: false }
+      )
+      expect(described_class.visible_for([conversas[:sinistro]], user: admin, account: account))
+        .to eq(conversas[:sinistro].id => { ids: [sinistro.first.id], hidden: false })
+    end
+
+    def queries(&)
+      count = 0
+      counter = ->(*, payload) { count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name]) }
+      ActiveSupport::Notifications.subscribed(counter, 'sql.active_record', &)
+      count
+    end
+
+    it 'lê a página inteira em 2 consultas, quantas forem as conversas, e nenhuma sem conversa' do
+      duas = conversas.values.first(2)
+      expect(queries { described_class.for([]) }).to eq(0)
+      expect(queries { described_class.for(duas) }).to eq(2)
+      expect(queries { described_class.for(conversas.values) }).to eq(2)
     end
   end
 end

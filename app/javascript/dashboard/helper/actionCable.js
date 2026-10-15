@@ -15,6 +15,10 @@ import { markCallDismissed, isLocalCall } from 'dashboard/helper/voice';
 import { VOICE_CALL_DIRECTION } from 'dashboard/components-next/message/constants';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { onCrmSubjectsChangedRemotely } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import {
+  cardFunnelChanged,
+  scheduleFunnelRefresh,
+} from 'dashboard/helper/crmFunnelRefresh';
 
 const { isImpersonating } = useImpersonation();
 const UNREAD_COUNTS_REFETCH_THROTTLE_MS = 5000;
@@ -404,12 +408,12 @@ class ActionCableConnector extends BaseActionCableConnector {
       card: data,
     });
     // O card mudou de funil ou de status: a conversa na lista filtrada por funil confere de novo (#1150).
-    if (this.isAValidEvent(data) && data.conversation?.display_id) {
-      this.app.$store.dispatch(
-        'refreshConversationFunnel',
-        data.conversation.display_id
-      );
-    }
+    if (!this.isAValidEvent(data) || !data.conversation?.display_id) return;
+    if (!cardFunnelChanged(data)) return;
+    scheduleFunnelRefresh(
+      this.app.$store.dispatch,
+      data.conversation.display_id
+    );
   };
 
   // Multifunil (#1145): a IA mudou os assuntos de uma conversa (criou, deu nome, trocou o atual ou sugeriu).
@@ -417,7 +421,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     if (!this.isAValidEvent(data)) return;
 
     onCrmSubjectsChangedRemotely(data.conversation_id);
-    this.app.$store.dispatch('refreshConversationFunnel', data.conversation_id);
+    scheduleFunnelRefresh(this.app.$store.dispatch, data.conversation_id);
   };
 
   onCrmFollowUpDue = data => {

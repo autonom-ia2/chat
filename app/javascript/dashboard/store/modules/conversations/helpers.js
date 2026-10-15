@@ -24,17 +24,19 @@ export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
   return labels.length ? isOnLabel && shouldFilter : shouldFilter;
 };
-// Filtro "Funil" (multifunil #1150): crm_pipeline_ids vem na conversa lida da API; vazio = "Sem assunto".
+// Filtro "Funil" (multifunil #1150): crm_pipeline_ids vem na conversa lida da API, só com os funis que a pessoa
+// enxerga; crm_pipeline_hidden diz que há card em funil oculto para ela. "Sem assunto" = nenhum dos dois.
 // Conversa sem o campo (vinda do websocket, ainda não lida da API) não entra numa lista filtrada por funil.
 export const filterByCrmPipeline = (
   shouldFilter,
   crmPipelineId,
-  chatPipelineIds
+  chatPipelineIds,
+  hasHiddenPipeline = false
 ) => {
   if (!crmPipelineId) return shouldFilter;
   if (!Array.isArray(chatPipelineIds)) return false;
   if (crmPipelineId === 'none')
-    return shouldFilter && chatPipelineIds.length === 0;
+    return shouldFilter && chatPipelineIds.length === 0 && !hasHiddenPipeline;
   return (
     shouldFilter && chatPipelineIds.map(String).includes(String(crmPipelineId))
   );
@@ -68,6 +70,7 @@ export const applyPageFilters = (conversation, filters) => {
     first_reply_created_at: firstReplyOn,
     waiting_since: waitingSince,
     crm_pipeline_ids: chatPipelineIds,
+    crm_pipeline_hidden: hasHiddenPipeline,
   } = conversation;
   const team = meta.team || {};
   const { id: chatTeamId } = team;
@@ -85,7 +88,8 @@ export const applyPageFilters = (conversation, filters) => {
   shouldFilter = filterByCrmPipeline(
     shouldFilter,
     crmPipelineId,
-    chatPipelineIds
+    chatPipelineIds,
+    hasHiddenPipeline
   );
 
   return shouldFilter;

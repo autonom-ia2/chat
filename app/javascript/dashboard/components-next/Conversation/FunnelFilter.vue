@@ -24,8 +24,8 @@ onMounted(async () => {
     const { data } = await CrmKanbanAPI.getPipelines();
     pipelines.value = data?.payload || [];
   } catch {
-    // Sem a lista de funis o filtro não aparece e a lista volta para todos os funis.
-    pipelines.value = [];
+    // Sem a lista de funis (rede, deploy) o filtro só some: a escolha guardada fica como está e volta na próxima vez.
+    return;
   }
   const visible = visibleFunnelChoice(
     modelValue.value,
