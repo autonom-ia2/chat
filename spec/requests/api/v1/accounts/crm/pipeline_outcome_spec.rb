@@ -60,7 +60,7 @@ RSpec.describe 'CRM pipeline outcome API', type: :request do
 
   # #1580: outcome_labels fora de { success:, failure: } em texto é recusado na entrada, pelos dois caminhos.
   describe 'outcome_labels fora do formato' do
-    let(:mensagem) { 'Outcome names must be an object with success and/or failure as text.' }
+    let(:mensagem) { 'Outcome names must be an object with success and/or failure as text, up to 30 characters each.' }
 
     before { pipeline.update!(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'Contratado' })) }
 
@@ -105,6 +105,18 @@ RSpec.describe 'CRM pipeline outcome API', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.body).to include(mensagem)
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/crm/pipelines",
+             params: { pipeline: { name: 'Novo', metadata: { outcome_labels: %w[Contratado] } } }, headers: auth_headers(user), as: :json
+      end.not_to change(Crm::Pipeline, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(mensagem)
+    end
+
+    it 'recusa nome longo demais pelo metadata (o outro caminho corta em 30)' do
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'x' * 31 }))
+      expect_recusa
     end
 
     it 'aceita o formato válido pelos dois caminhos, só success ou os dois' do
@@ -124,6 +136,11 @@ RSpec.describe 'CRM pipeline outcome API', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(pipeline.reload.name).to eq('Sinistro 2')
+      expect(pipeline.metadata['outcome_labels']).to eq('antigo')
+
+      patch_pipeline(metadata: pipeline.metadata, name: 'Sinistro 3')
+      expect(response).to have_http_status(:ok)
+      expect(pipeline.reload.name).to eq('Sinistro 3')
     end
   end
 end

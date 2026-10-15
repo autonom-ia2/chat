@@ -1,9 +1,8 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
   PIXEL_ID_MAX_LENGTH = 20
-  OUTCOME_LABEL_MAX_LENGTH = 30
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
-  before_action :ensure_outcome_labels_format, only: [:create, :update]
+  before_action :ensure_outcome_labels_format, only: [:update]
 
   def index
     authorize ::Crm::Pipeline
@@ -17,6 +16,8 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     @pipeline = Current.account.crm_pipelines.new(pipeline_params)
     @pipeline.created_by = Current.user
     authorize @pipeline
+    return render_outcome_labels_invalid unless outcome_labels_param_valid?
+
     @pipeline.save!
     update_goal!
     update_outcome_labels!
@@ -47,11 +48,18 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   # #1580: outcome_labels fora de { success:, failure: } em texto é recusado antes de gravar qualquer coisa (o create
-  # salva o funil antes de update_outcome_labels!). O que chega por metadata['outcome_labels'] o modelo confere.
+  # salva o funil antes de update_outcome_labels!), depois da autorização. O que chega por metadata['outcome_labels']
+  # o modelo confere.
   def ensure_outcome_labels_format
-    labels = params.dig(:pipeline, :outcome_labels)
-    return if labels.nil? || ::Crm::Pipeline.outcome_labels_valid?(labels)
+    render_outcome_labels_invalid unless outcome_labels_param_valid?
+  end
 
+  def outcome_labels_param_valid?
+    labels = params.dig(:pipeline, :outcome_labels)
+    labels.nil? || ::Crm::Pipeline.outcome_labels_valid?(labels)
+  end
+
+  def render_outcome_labels_invalid
     render json: { message: I18n.t('crm.pipelines.outcome_labels_invalid'), attributes: ['outcome_labels'] },
            status: :unprocessable_entity
   end
@@ -86,7 +94,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     return if labels.nil?
 
     metadata = (@pipeline.metadata || {}).deep_dup
-    cleaned = %w[success failure].index_with { |key| labels[key].to_s.strip.first(OUTCOME_LABEL_MAX_LENGTH) }.compact_blank
+    cleaned = %w[success failure].index_with { |key| labels[key].to_s.strip.first(::Crm::Pipeline::OUTCOME_LABEL_MAX_LENGTH) }.compact_blank
     if cleaned.empty?
       metadata.delete('outcome_labels')
     else

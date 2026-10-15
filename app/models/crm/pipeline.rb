@@ -57,7 +57,9 @@ class Crm::Pipeline < ApplicationRecord
   validate :outcome_labels_format, if: :outcome_labels_changed?
 
   # Nomes dos desfechos (#1144) em metadata['outcome_labels']: objeto só com success e/ou failure, em texto (#1580).
+  # Gravado, cada nome tem até OUTCOME_LABEL_MAX_LENGTH (o caminho pipeline.outcome_labels corta antes de gravar).
   OUTCOME_LABEL_KEYS = %w[success failure].freeze
+  OUTCOME_LABEL_MAX_LENGTH = 30
 
   def self.outcome_labels_valid?(labels)
     labels = labels.to_unsafe_h if labels.respond_to?(:to_unsafe_h)
@@ -78,7 +80,7 @@ class Crm::Pipeline < ApplicationRecord
 
   def outcome_labels_format
     labels = (metadata || {})['outcome_labels']
-    return if labels.nil? || self.class.outcome_labels_valid?(labels)
+    return if labels.nil? || (self.class.outcome_labels_valid?(labels) && labels.values.all? { |label| label.length <= OUTCOME_LABEL_MAX_LENGTH })
 
     errors.add(:base, I18n.t('crm.pipelines.outcome_labels_invalid'))
   end

@@ -1,4 +1,4 @@
 pt_BR:
   crm:
     pipelines:
-      outcome_labels_invalid: "Os nomes dos desfechos precisam ser um objeto com success e/ou failure em texto."
+      outcome_labels_invalid: "Os nomes dos desfechos precisam ser um objeto com success e/ou failure em texto, com até 30 caracteres cada."
