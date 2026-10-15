@@ -35,7 +35,7 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(trocas.sole.payload).to include('motivo' => 'foco', 'para_agent_bot_id' => espelho_area.id)
     end
 
-    it 'troca pelo PassarParaIa: uma passagem da porta para a área, com motivo assunto, pedida pelo sistema' do
+    it 'troca pelo PassarParaIa: uma passagem da porta para a área, com o motivo do disparo (foco), pedida pelo sistema' do
       card = create_card(pipeline: suporte)
 
       expect(sync).to have_attributes(trocou: true, codigo: :passou)

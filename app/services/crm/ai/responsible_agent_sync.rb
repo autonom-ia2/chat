@@ -152,18 +152,18 @@ class Crm::Ai::ResponsibleAgentSync
     troca = { motivo: pedido ? ABRIR : @motivo, transfer_id: pedido&.payload&.dig('transfer_id') }
     passagem = Autonomia::Agents::PassarParaIa.call(conversation: @conversation, agent: destino[:agente], por: :crm,
                                                     motivo: troca[:motivo], origem: de_bot, transfer_id: troca[:transfer_id])
-    return recusada(passagem) unless passagem.trocou?
+    return recusada(passagem, troca[:motivo]) unless passagem.trocou?
 
     registrar_atividade(card, de_bot, destino, troca)
     Resultado.new(trocou: true, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
                   autonomia_agent_id: destino[:agente].id, codigo: passagem.codigo, **troca)
   end
 
-  def recusada(passagem)
+  def recusada(passagem, motivo)
     unless passagem.codigo == :ja_e_o_dono
-      Rails.logger.info("[crm][sync_dono] passagem_recusada conversa=#{@conversation.id} codigo=#{passagem.codigo} motivo=#{@motivo}")
+      Rails.logger.info("[crm][sync_dono] passagem_recusada conversa=#{@conversation.id} codigo=#{passagem.codigo} motivo=#{motivo}")
     end
-    Resultado.new(trocou: false, motivo: @motivo, codigo: passagem.codigo)
+    Resultado.new(trocou: false, motivo: motivo, codigo: passagem.codigo)
   end
 
   def registrar_atividade(card, de_bot, destino, troca)
