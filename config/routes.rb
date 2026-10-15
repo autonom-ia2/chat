@@ -508,6 +508,8 @@ Rails.application.routes.draw do
               resources :instruction_versions, only: [:index], controller: 'agents/instruction_versions'
               post 'instruction_versions/:version_id/restore',
                    to: 'agents/instruction_versions#restore'
+              # Tema 14 (#1434) — quem o ajudante ajuda e quando chamar (atrás da chave da Fase 2).
+              resource :ajuda, only: [:show, :update], controller: 'agents/ajuda'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
               member do

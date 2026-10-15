@@ -2,7 +2,8 @@ require 'rails_helper'
 
 # #1367 (alavanca 0): o Testar é medido à parte do atendimento. Mesmo Answerer, outro rótulo de uso.
 RSpec.describe Autonomia::Agents::Playground do
-  let(:agent) { instance_double(Autonomia::Agents::Agent) }
+  # Sem conta: a Fase 2 fica desligada e o Testar não ganha as rodadas do ajudante (tema 14).
+  let(:agent) { instance_double(Autonomia::Agents::Agent, account: nil) }
   let(:answerer) { instance_double(Autonomia::Agents::Answerer, answer: :resultado) }
 
   before { allow(Autonomia::Agents::Answerer).to receive(:new).and_return(answerer) }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -503,9 +503,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "delegate_agent_id"
     t.index ["account_id", "enabled"], name: "idx_autonomia_agent_specialists_account_enabled"
+    t.index ["autonomia_agent_id", "delegate_agent_id"], name: "idx_autonomia_agent_specialists_par_delegate", unique: true, where: "(delegate_agent_id IS NOT NULL)"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
+    t.index ["delegate_agent_id"], name: "idx_autonomia_agent_specialists_delegate", where: "(delegate_agent_id IS NOT NULL)"
   end
 
   create_table "autonomia_agent_tool_runs", force: :cascade do |t|
@@ -4040,6 +4043,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_29_100000) do
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
+  add_foreign_key "autonomia_agent_specialists", "autonomia_agents", column: "delegate_agent_id", on_delete: :cascade
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
   add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade

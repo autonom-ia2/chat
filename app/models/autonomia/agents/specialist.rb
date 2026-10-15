@@ -15,16 +15,21 @@
 #  updated_at         :datetime         not null
 #  account_id         :bigint           not null
 #  autonomia_agent_id :bigint           not null
+#  delegate_agent_id  :bigint
 #
 # Indexes
 #
 #  idx_autonomia_agent_specialists_account_enabled          (account_id,enabled)
 #  idx_autonomia_agent_specialists_agent_slug               (autonomia_agent_id,slug) UNIQUE
+#  idx_autonomia_agent_specialists_delegate                 (delegate_agent_id) WHERE (delegate_agent_id IS NOT NULL)
+#  idx_autonomia_agent_specialists_par_delegate             (autonomia_agent_id,delegate_agent_id) UNIQUE
+#                                                           WHERE (delegate_agent_id IS NOT NULL)
 #  index_autonomia_agent_specialists_on_autonomia_agent_id  (autonomia_agent_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (delegate_agent_id => autonomia_agents.id) ON DELETE => cascade
 #
 # Subagente especializado de um agente Autonom.ia (#311).
 #
@@ -38,6 +43,12 @@
 # é deliberado: é o que funciona nos fluxos de cotação em produção e evita que o principal precise
 # entender o payload de um ramo inteiro. O especialista de cotação devolve os FATOS rotulados, em texto, e não
 # frase para parafrasear (`Insurance::QuoteAgent::RetornoDoEspecialista`, item 9 da auditoria de voz de 26/09/2026).
+#
+# O AJUDANTE (tema 14, #1434): com `delegate_agent_id`, a linha é o VÍNCULO principal → ajudante, outro agente da
+# conta. A instrução, a base e as ferramentas vêm do agente apontado, e não de texto embutido; `description` guarda o
+# "quando chamar". O ajudante é um agente interno (não fala com cliente, não tem caixa) e não chama ajudante
+# (profundidade 1). A Lia não entra: os degraus do ajudante vêm DEPOIS dos `Builder.*_mantida`, por onde ela sai.
+# Quem grava o conjunto é `Autonomia::Agents::Ajudantes.definir!`; quem decide se entra no turno, `Ajudantes.disponivel?`.
 class Autonomia::Agents::Specialist < ApplicationRecord
   self.table_name = 'autonomia_agent_specialists'
 
@@ -62,24 +73,40 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   # Nome do único parâmetro da função. O principal escreve aqui, em português, o que precisa do
   # especialista ("cotar auto para o CPF X, placa Y").
   REQUEST_PARAM = 'pedido'.freeze
+  # O que o ajudante lê antes da instrução dele: quem o consulta e que a resposta nunca vai ao cliente.
+  CONTEXTO_DO_AJUDANTE = 'Você é %<ajudante>s, um ajudante consultado pelo agente %<principal>s. Você nunca fala ' \
+                         'com o cliente: responda a %<principal>s com os fatos que encontrou e diga o que ainda falta. ' \
+                         'Não cumprimente nem se apresente.'.freeze
 
   belongs_to :account
   belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id,
                      inverse_of: :specialists
+  belongs_to :delegate, class_name: 'Autonomia::Agents::Agent', foreign_key: :delegate_agent_id, optional: true,
+                        inverse_of: :vinculos_de_ajudante
 
   before_validation :normalize_slug
   before_validation :inherit_account
   before_validation :normalize_tool_slugs
+  before_validation :sem_instrucao_propria, if: :delegado?
   before_create :ensure_within_limit
 
   validates :name, presence: true
   validates :description, presence: true, length: { maximum: MAX_DESCRIPTION_LENGTH }
-  validates :instruction, presence: true, length: { maximum: MAX_INSTRUCTION_LENGTH }
+  validates :instruction, presence: true, unless: :delegado?
+  validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }
   validates :custom_instruction, length: { maximum: MAX_CUSTOM_INSTRUCTION_LENGTH }, allow_nil: true
   validates :slug, presence: true, uniqueness: { scope: :autonomia_agent_id },
                    length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
+  validates :delegate_agent_id, uniqueness: { scope: :autonomia_agent_id }, allow_nil: true
+  validate :ajudante_valido, if: :delegado?
 
   scope :enabled, -> { where(enabled: true) }
+  scope :de_ajudante, -> { where.not(delegate_agent_id: nil) }
+
+  # Aponta para outro agente da conta: é o vínculo com um ajudante (tema 14).
+  def delegado?
+    delegate_agent_id.present?
+  end
 
   def function_name
     "#{FUNCTION_PREFIX}#{slug}"
@@ -118,25 +145,30 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   # cotação; a gravada, para os demais. Ver `QuoteAgent::Builder.instrucao_mantida`: é o que faz um
   # agente já criado receber o manual novo sem ser recriado (entrega 3, termo 5).
   def instrucao_do_sistema
-    ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_mantida(self) || instruction
+    ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_mantida(self) || (delegado? ? instrucao_do_ajudante : instruction)
   end
 
   # Idem para a descrição que o principal lê na função (`openai_schema`).
   def descricao_do_sistema
-    ::Autonomia::Insurance::QuoteAgent::Builder.descricao_mantida(self) || description
+    ::Autonomia::Insurance::QuoteAgent::Builder.descricao_mantida(self) || (delegado? ? descricao_do_ajudante : description)
   end
 
   # Os slugs das ferramentas reservadas a este especialista: os do deploy quando ele é um especialista do
   # Agente de Cotação (`QuoteAgent::Builder.ferramentas_mantidas_do_especialista`, fatia 2 do #420), os
   # gravados em `tool_slugs` para os demais. `tools` e a reserva do principal (`Answerer`) leem daqui.
+  # O vínculo com um ajudante não reserva nada: as ferramentas dele são as do agente apontado (`tools`), e as do
+  # principal continuam com o principal — um ajudante com agenda não tira a agenda de quem o consulta.
   def ferramentas_do_sistema
-    ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas_do_especialista(self) || tool_slugs
+    ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas_do_especialista(self) || (delegado? ? [] : tool_slugs)
   end
 
   # Ferramentas reservadas a este especialista, na ordem declarada. Slug que não existe (ou foi
   # desabilitado) é ignorado em silêncio: o especialista trabalha com o que sobrou em vez de
   # derrubar o turno inteiro por causa de uma configuração velha.
+  # O ajudante usa todas as ferramentas DELE (sem especialistas: ajudante não chama ajudante).
   def tools
+    return @tools ||= Autonomia::Agents::Tools::Bound.for_agent(delegate) if delegado?
+
     slugs = ferramentas_do_sistema
     return [] if slugs.blank?
 
@@ -151,6 +183,55 @@ class Autonomia::Agents::Specialist < ApplicationRecord
   end
 
   private
+
+  def instrucao_do_ajudante
+    contexto = format(CONTEXTO_DO_AJUDANTE, ajudante: delegate.name, principal: agent.name)
+    [contexto, delegate.instruction.to_s.strip.presence].compact.join("\n\n")
+  end
+
+  def descricao_do_ajudante
+    "Consulta o ajudante #{delegate.name}. Só você lê a resposta; o cliente nunca fala com ele. Chame quando: #{description}"
+  end
+
+  # A coluna é NOT NULL, e o vínculo não tem instrução própria: quem manda é o agente apontado.
+  def sem_instrucao_propria
+    self.instruction = '' if instruction.nil?
+  end
+
+  def ajudante_valido
+    motivo = motivo_de_recusa_do_ajudante
+    errors.add(:delegate_agent_id, I18n.t("autonomia.agents.ajudante.#{motivo}")) if motivo
+  end
+
+  # Mesma conta; nenhum dos dois é a Lia (instrução mantida) nem agente de sistema; e o ajudante serve (abaixo).
+  def motivo_de_recusa_do_ajudante
+    return 'outra_conta' unless mesma_conta?
+    return 'ele_mesmo' if delegate.id == agent.id
+    return 'tipo_proibido' if tipo_proibido?(agent) || tipo_proibido?(delegate)
+
+    motivo_do_ajudante
+  end
+
+  # O ajudante é interno e NASCEU como ajudante (a marca de origem: um Copiloto da equipe nunca vira ajudante); o
+  # principal não é interno, por isso ajudante não chama ajudante (profundidade 1); e o ajudante não tem ajudante dele.
+  def motivo_do_ajudante
+    return 'ajudante_interno' unless delegate.actuation_internal?
+    return 'sem_marca' unless delegate.ajudante_de_origem?
+
+    'profundidade' if alem_da_profundidade_um?
+  end
+
+  def mesma_conta?
+    delegate.present? && agent.present? && delegate.account_id == agent.account_id
+  end
+
+  def alem_da_profundidade_um?
+    agent.actuation_internal? || self.class.de_ajudante.exists?(autonomia_agent_id: delegate.id)
+  end
+
+  def tipo_proibido?(agente)
+    agente.agent_type == 'insurance_quote' || agente.config.to_h['system_key'].present?
+  end
 
   # O descarte silencioso acima esconde o caso em que o especialista fica SEM FERRAMENTA NENHUMA e
   # ainda assim responde ao principal — que foi o defeito da Lia em 08/09/2026: ela pediu placa,

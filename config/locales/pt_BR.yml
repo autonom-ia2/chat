@@ -1026,6 +1026,15 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      ajudante:
+        outra_conta: 'O ajudante e os agentes que ele ajuda precisam ser desta conta.'
+        ele_mesmo: 'Um agente não pode ajudar a si mesmo.'
+        tipo_proibido: 'O Agente de Cotação e os agentes do sistema não ajudam nem recebem ajuda.'
+        ajudante_interno: 'O ajudante nunca fala com o cliente: ele precisa ser um agente interno.'
+        profundidade: 'Ajudante não chama outro ajudante, e um agente interno não tem ajudantes.'
+        sem_principal: 'Escolha pelo menos um agente para este ajudante ajudar.'
+        principal_invalido: 'Escolha agentes desta conta pelo id.'
+        sem_marca: 'Só um agente criado como "Ajuda outros agentes" pode ser ajudante. Um Copiloto da equipe não pode.'
       native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'

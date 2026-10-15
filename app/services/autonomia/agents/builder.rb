@@ -1573,6 +1573,13 @@ module Autonomia
         with_knowledge?
       end
 
+      # O config com que o rascunho nasce: a base declarada e, quando a abertura foi "Ajuda outros agentes" (tema 14), a
+      # marca de origem do ajudante. A marca só nasce aqui.
+      def config_do_rascunho
+        papel = @thread.state.to_h['papel']
+        { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE) }.compact
+      end
+
       # Garante o Agent vinculado à thread (modo guided). Cria um rascunho mínimo na PRIMEIRA geração
       # bem-sucedida — em QUALQUER ramo (needs_more_info=true durante a entrevista OU final) — e o
       # vincula à thread, para o agentId existir já durante a conversa (destrava Materiais/anexo no FE)
@@ -1591,7 +1598,7 @@ module Autonomia
           agent = Autonomia::Agents::Agent.create!(
             account: @thread.account, created_by: @thread.created_by,
             name: 'Novo agente', agent_type: draft_agent_type, mode: :guided, status: :draft, enabled: false,
-            actuation: builder_actuation, config: { 'with_knowledge' => with_knowledge? }
+            actuation: builder_actuation, config: config_do_rascunho
           )
           @thread.update!(agent: agent)
           agent
