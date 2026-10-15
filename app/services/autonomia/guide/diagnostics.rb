@@ -164,7 +164,7 @@ module Autonomia
           member_ids = members.map(&:user_id)
           online = @account.account_users.human.where(user_id: member_ids).any? { |au| au.availability == 'online' }
           findings << "#{label}: nenhum agente vinculado está 'Online' no cadastro — a atribuição automática só envia para agentes online." unless online
-          findings << "#{label}: horário de funcionamento ativo e FORA do expediente agora — a atribuição cai/zera fora do horário." if inbox.working_hours_enabled? && inbox.out_of_office?
+          findings << "#{label}: fora do horário agora: o agente de IA que atende só no horário não responde e sai a mensagem de fora do horário; a atribuição continua." if inbox.working_hours_enabled? && inbox.out_of_office?
         end
         findings
       end

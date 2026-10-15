@@ -206,7 +206,8 @@ RSpec.describe Account do
         feature_followup_template_real_values: 1 << 21,
         feature_crm_lembretes_v2: 1 << 22,
         feature_crm_calendario_ouro: 1 << 23,
-        feature_whatsapp_campaign_products: 1 << 24
+        feature_whatsapp_campaign_products: 1 << 24,
+        feature_horario_unico_caixa: 1 << 25
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
