@@ -89,6 +89,35 @@ RSpec.describe Crm::Subjects::IdentifyJob do
       expect(job['queue_name']).to eq('low')
       expect(job['scheduled_at'].to_time - Time.current).to be_within(1.5).of(Crm::Subjects::DEBOUNCE)
     end
+
+    # #1642: a mensagem recuperada pelo WhatsApp Híbrido passa pelo mesmo Crm::Subjects.identificar_depois.
+    def recuperar(mensagem)
+      payload = { message_id: mensagem.id, conversation_id: conversation.id, account_id: account.id }
+      ActiveSupport::Notifications.instrument('whatsapp_hybrid.message_recovered', payload)
+    end
+
+    it 'mensagem recuperada na ordem do turno: fila high, espera de 3 s' do
+      mensagem = incoming
+      clear_enqueued_jobs
+
+      recuperar(mensagem)
+
+      job = enqueued_jobs.sole
+      expect(job).to include('job_class' => described_class.name, 'queue_name' => 'high')
+      expect(job['scheduled_at'].to_time - Time.current).to be_within(1.5).of(Crm::Subjects::DEBOUNCE_ORDEM)
+    end
+
+    it 'mensagem recuperada fora da ordem do turno: fila low e 15 s, como hoje' do
+      Crm::InboxAiAgent.delete_all
+      mensagem = incoming
+      clear_enqueued_jobs
+
+      recuperar(mensagem)
+
+      job = enqueued_jobs.sole
+      expect(job).to include('job_class' => described_class.name, 'queue_name' => 'low')
+      expect(job['scheduled_at'].to_time - Time.current).to be_within(1.5).of(Crm::Subjects::DEBOUNCE)
+    end
   end
 
   describe 'o marco "assunto decidido"' do

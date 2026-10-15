@@ -33,6 +33,9 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     conversation = Conversation.find_by(id: conversation_id)
     message = conversation&.messages&.find_by(id: message_id)
     return 'mensagem_sumida' if message.blank?
+
+    # Vale também para a mensagem recuperada pelo WhatsApp Híbrido (#1638): se o cliente já mandou outra depois, a
+    # decisão da mais nova manda e a recuperada não é perguntada de novo.
     return mais_nova! if conversation.messages.incoming.exists?(id: (message.id + 1)..)
 
     decidir(conversation, message)
