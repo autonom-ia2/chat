@@ -3135,6 +3135,8 @@
         "PERCURSO_TODAS": "Em todas as etapas, {jeito}.",
         "PEDIU": "{cliente} pediu a {nome}",
         "FILA_IA": "Vai para {nome} (Agente de IA), a qualquer hora, nas caixas em que atende. Nas outras, para alguém da equipe.",
+        "FILA_IA_PARADO": "{nome} está com o atendimento parado, então vai para alguém da equipe.",
+        "FILA_IA_INDISPONIVEL": "O agente de IA não está disponível, então vai para alguém da equipe.",
         "FILA_EQUIPE_IA": "Quem estiver com menos conversas recebe primeiro. Agente de IA não entra nessa vez.",
         "FILA_EQUIPE_NOME_IA": "Quem estiver com menos conversas recebe primeiro. Se o cliente pedir alguém pelo nome, pessoa ou agente de IA, vai para quem ele pediu."
       },

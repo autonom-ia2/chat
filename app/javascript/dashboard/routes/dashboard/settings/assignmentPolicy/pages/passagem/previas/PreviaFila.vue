@@ -11,6 +11,8 @@ const props = defineProps({
   regra: { type: Object, required: true },
   fila: { type: Array, default: () => [] },
   pessoa: { type: String, default: '' },
+  // #1593: o agente de IA escolhido não recebe agora (parado): { nome }.
+  parado: { type: Object, default: null },
 });
 
 const { t } = useI18n();
@@ -82,7 +84,14 @@ const notaDaVez = computed(() => {
         :class="paraIa ? 'i-lucide-bot' : 'i-lucide-user-round'"
         aria-hidden="true"
       />
-      <span v-if="!pessoa">{{ t(`${P}.FILA_FALTA`) }}</span>
+      <span v-if="parado" data-previa-ia-parado>
+        {{
+          parado.nome
+            ? t(`${P}.FILA_IA_PARADO`, { nome: parado.nome })
+            : t(`${P}.FILA_IA_INDISPONIVEL`)
+        }}
+      </span>
+      <span v-else-if="!pessoa">{{ t(`${P}.FILA_FALTA`) }}</span>
       <span v-else-if="paraIa" data-previa-ia>
         {{ t(`${P}.FILA_IA`, { nome: pessoa }) }}
       </span>

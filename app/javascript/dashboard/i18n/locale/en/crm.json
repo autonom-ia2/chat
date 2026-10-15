@@ -3134,6 +3134,8 @@
         "PERCURSO_TODAS": "In every stage, {jeito}.",
         "PEDIU": "{cliente} asked for {nome}",
         "FILA_IA": "Goes to {nome} (AI agent), at any time, in the inboxes they work. In the others, to someone on the team.",
+        "FILA_IA_PARADO": "{nome} is paused, so it goes to someone on the team.",
+        "FILA_IA_INDISPONIVEL": "The AI agent is not available, so it goes to someone on the team.",
         "FILA_EQUIPE_IA": "Whoever has the fewest conversations receives first. AI agents are not part of this turn.",
         "FILA_EQUIPE_NOME_IA": "Whoever has the fewest conversations receives first. If the customer asks for someone by name, person or AI agent, it goes to who they asked for."
       },
