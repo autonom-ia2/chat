@@ -15,12 +15,30 @@ class Crm::Entrega::ParaIa
   # Uma pessoa já está no nome: o serviço recusa :crm e :ia, e a conversa fica com ela.
   FICA_COM_A_PESSOA = 'pessoa_atribuida'.freeze
 
+  # O agente que está passando a conversa (o robô gravado nela é o espelho dele nesta caixa) não a recebe de volta: a
+  # regra que aponta para ele mesmo vira alguém da equipe, sem chamar os Agentes. A guarda é do CRM: para o serviço dos
+  # Agentes, a área que espera pessoa e recebe a conversa de novo é uma troca válida (`passou`), e isso seria o laço.
   def self.alvo(conversation:, settings:, sugestao:)
+    agente = alvo_da_regra(conversation, settings, sugestao)
+    agente unless esta_passando?(agente, conversation)
+  end
+
+  def self.alvo_da_regra(conversation, settings, sugestao)
     return ::Crm::AgentesIa.destino(settings[:pool_id], conversation) if settings[:pool_type] == 'ai_agent'
     return if settings[:selector_mode] != 'direct' || sugestao.blank?
 
     ::Crm::AgentesIa.rotulos(conversation)[sugestao.to_s.strip]
   end
+
+  # O valor do banco: na passagem do robô (ConversationBotHandoff#bot_handoff!) ele já saiu da memória.
+  def self.esta_passando?(agente, conversation)
+    return false if agente.nil? || conversation.attribute_in_database('ai_assignee_type') != 'AgentBot'
+
+    ::Autonomia::Agents::AgentInbox.kept.exists?(account_id: conversation.account_id, inbox_id: conversation.inbox_id,
+                                                 autonomia_agent_id: agente.id,
+                                                 agent_bot_id: conversation.attribute_in_database('assignee_agent_bot_id'))
+  end
+  private_class_method :alvo_da_regra, :esta_passando?
 
   # `origem`: quem estava com a conversa. `pedida_por`: quem pediu; obrigatório com por: :pessoa e proibido com :crm
   # (o serviço levanta ArgumentError), então só vai quando existe. O card o serviço acha sozinho.
