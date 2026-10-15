@@ -169,7 +169,7 @@ class Crm::BookingV2::Notices::Route
   # fechar. Só lê (`criar: false`) e aplica a mesma autocura; a decisão continua `session`. Erro só vai ao tracker.
   def heal_with_window_open
     finalidade = Whatsapp::Templates::Finalidades::Agendamento::POR_TIPO[kind]
-    return unless heal? && finalidade
+    return unless heal? && finalidade && heal_allowed?
 
     heal_missing_templates(Whatsapp::Templates::Garantir.call(inbox: inbox, finalidade: finalidade, criar: false))
   rescue StandardError => e
@@ -205,9 +205,9 @@ class Crm::BookingV2::Notices::Route
 
     begin
       Crm::BookingV2::NoticeTemplateEnsureJob.perform_later(inbox.account_id, inbox.id)
-    rescue StandardError
+    rescue StandardError => e
+      ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
       Redis::Alfred.delete(key)
-      raise
     end
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
