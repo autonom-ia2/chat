@@ -124,13 +124,10 @@ class Crm::Entrega
     dono if dono && (settings.nil? || online?(dono))
   end
 
-  # Presença (Redis) fora do ar não é "offline": registra a falha, só com ids, e quem chama segura (#pela_regra). Outro
-  # erro sobe: não vira "offline" em silêncio.
+  # Presença fora do ar não é "offline": o ponto único (Presenca.online_ids!, o mesmo do seletor) registra a falha e
+  # levanta PresencaIndisponivel, e o #pela_regra segura.
   def online?(pessoa)
-    Crm::Entrega::Presenca.online_ids(@conversation.account_id).include?(pessoa.id)
-  rescue Redis::BaseError => e
-    Rails.logger.error("[crm][entrega] presença indisponível conta=#{@conversation.account_id} erro=#{e.class}")
-    raise Crm::Ai::HandoffMemberSelector::PresencaIndisponivel, e.class.name
+    Crm::Entrega::Presenca.online_ids!(@conversation.account_id).include?(pessoa.id)
   end
 
   def nada(motivo)

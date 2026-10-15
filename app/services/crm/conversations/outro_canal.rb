@@ -24,9 +24,9 @@
 # por ele, sem cair para outra pessoa; com regra, vale o que a regra manda (rodízio, pessoa fixa, convite, segurar até
 # alguém entrar). Com o dono online e regra de convite, ele é convidado. Caixa com robô: o robô fazia a triagem (R12) e a
 # R13 a pula; enquanto ninguém recebe, o robô segue respondendo.
-# Quem já respondeu não perde a conversa: ela só fica ligada ao card. Numa caixa com o rodízio nativo, quem está no
-# nome sem ter respondido (o rodízio atribui na criação, antes desta sincronização) sai: é a triagem que a R13 pula.
-# Sem o rodízio, quem está no nome foi posto por uma pessoa ou automação e fica.
+# Quem já respondeu não perde a conversa: ela só fica ligada ao card. Quem está no nome sem ter respondido só sai se
+# foi o rodízio nativo que o pôs (a triagem que a R13 pula), pelo registro de passagens (#1622, #1657): quem se
+# atribuiu ou foi atribuído por uma pessoa fica.
 #
 # Roda dentro da sincronização do card (CardSyncer), sob a mesma trava (conversa e contato). Só nas contas com a flag
 # `crm_outro_canal` (#1666); sem ela, nada muda.
@@ -127,10 +127,17 @@ class Crm::Conversations::OutroCanal
   end
 
   # Card com conversa de outro contato vinculada: não liga, e a sincronização segue como antes.
+  # Savepoint próprio: uma falha no meio do vínculo desfaz só o vínculo, e a sincronização segue como antes.
   def ligar(card)
-    Crm::Cards::ConversationLinker.new(card: card, conversation: @conversation, actor: nil).link
+    Conversation.transaction(requires_new: true) do
+      Crm::Cards::ConversationLinker.new(card: card, conversation: @conversation, actor: nil).link
+    end
   rescue ActiveRecord::RecordInvalid
     Rails.logger.warn("[crm][outro_canal] conversa=#{@conversation.id} card=#{card.id} nao_ligada=contato")
+    nil
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @account).capture_exception
+    Rails.logger.error("[crm][outro_canal] vinculo_falhou conversa=#{@conversation.id} card=#{card.id} erro=#{e.class}")
     nil
   end
 
@@ -139,7 +146,8 @@ class Crm::Conversations::OutroCanal
   # Savepoint próprio: uma falha da entrega desfaz só a entrega; a conversa segue ligada e a sincronização continua.
   def entregar(card, dono)
     return if dono && @conversation.assignee_id == dono.id
-    return if pessoa_respondeu? || atribuida_por_alguem?
+    return if pessoa_respondeu?
+    return if @conversation.assignee_id.present? && !posta_pelo_rodizio?
 
     Conversation.transaction(requires_new: true) do
       @conversation.bot_handoff!(dispatch_event: false, motivo: MOTIVO, release_assignee: true, dono: dono)
@@ -154,9 +162,15 @@ class Crm::Conversations::OutroCanal
     @conversation.messages.outgoing.exists?(sender_type: 'User')
   end
 
-  # Com alguém no nome numa caixa sem o rodízio nativo, quem pôs foi uma pessoa ou uma automação, não a triagem: fica.
-  def atribuida_por_alguem?
-    @conversation.assignee_id.present? && !@conversation.inbox.enable_auto_assignment?
+  # Quem está no nome foi posto pelo rodízio nativo (#1657): a caixa tem o rodízio e a passagem em aberto para essa
+  # pessoa (o registro de passagens, #1622) não foi pedida por ninguém, isto é, pelo sistema. Pedida por uma pessoa
+  # (autoatribuição, "Atribuir a"), ou sem passagem registrada: fica com quem está, mesmo sem ter respondido.
+  def posta_pelo_rodizio?
+    return false unless @conversation.inbox.enable_auto_assignment?
+
+    passagem = Crm::Passagens.ultima_aberta(@conversation)
+    passagem.present? && passagem.para_type == 'User' && passagem.para_id == @conversation.assignee_id &&
+      passagem.pedida_por_type.nil?
   end
 
   # Só ids (nunca texto do cliente).

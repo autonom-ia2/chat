@@ -192,6 +192,49 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     expect(ChatwootExceptionTracker).to have_received(:new)
   end
 
+  # Pega: a entrega gravou a troca e falhou depois; sem o savepoint, a troca ficava pela metade ou derrubava a sincronização.
+  it 'falha depois de a entrega gravar: o savepoint desfaz a troca, o vínculo fica e a sincronização segue', :aggregate_failures do
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: nil))
+    conversation, message = email_do_joao
+    allow_any_instance_of(Conversation).to receive(:save!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+      original.call(*args)
+      raise ActiveRecord::StatementInvalid, 'depois de gravar'
+    end
+
+    expect { sincronizar(conversation, message) }.not_to raise_error
+    expect([ligada?(conversation), Conversation.find(conversation.id).assignee_id]).to eq([true, bruno.id])
+    expect(ChatwootExceptionTracker).to have_received(:new)
+  end
+
+  # Pega: o vínculo gravou a linha e falhou depois; sem o savepoint, o CardSyncer caía ou ficava um vínculo pela metade.
+  it 'falha no meio do vínculo: o savepoint desfaz o vínculo, ninguém troca e a sincronização segue', :aggregate_failures do
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: nil))
+    allow(Crm::ActivityLogger).to receive(:new).and_wrap_original do |original, **kwargs|
+      raise 'falha depois do vínculo' if kwargs[:event_type] == 'conversation_linked'
+
+      original.call(**kwargs)
+    end
+    conversation, message = email_do_joao
+
+    expect { sincronizar(conversation, message) }.not_to raise_error
+    expect([Crm::CardConversation.exists?(conversation: conversation), conversation.assignee_id]).to eq([false, bruno.id])
+    expect(ChatwootExceptionTracker).to have_received(:new)
+  end
+
+  it 'card de outra conta com o mesmo contato: não liga' do
+    outra_conta = create(:account)
+    funil = create_crm_pipeline(account: outra_conta, user: create(:user, account: outra_conta, role: :administrator), name: 'Outro')
+    alheio = outra_conta.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'Alheio',
+                                           contact: create(:contact, account: outra_conta), last_activity_at: 1.minute.ago)
+    alheio.update_columns(contact_id: joao.id, owner_id: ana.id) # rubocop:disable Rails/SkipsModelValidations
+    onix.update_columns(status: Crm::Card.statuses[:won]) # rubocop:disable Rails/SkipsModelValidations
+    conversation, message = email_do_joao
+
+    sincronizar(conversation, message)
+
+    expect([Crm::CardConversation.exists?(conversation: conversation), conversation.assignee_id]).to eq([false, bruno.id])
+  end
+
   it 'card sem dono: não liga e a conversa segue a triagem' do
     onix.update!(owner: nil)
     conversation, message = email_do_joao
@@ -293,15 +336,28 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
       expect(conversation.reload.assignee_id).to eq(bruno.id)
     end
 
-    it 'presença fora do ar: segura guardando a dona, sem tratar como offline', :aggregate_failures do
-      allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(Redis::CannotConnectError)
-      conversation, message = email_do_joao
+    # Pega: falha da presença tratada como "dona offline", e a regra entregando a outra pessoa sem registro.
+    [Redis::CannotConnectError, RuntimeError].each do |erro|
+      it "presença com #{erro.name}: segura guardando a dona, sem tratar como offline", :aggregate_failures do
+        allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(erro)
+        conversation, message = email_do_joao
 
-      sincronizar(conversation, message)
+        sincronizar(conversation, message)
 
-      expect(conversation.assignee_id).to be_nil
-      expect(Crm::Entrega::Marca.dados(conversation)).to include('falha' => 'presenca_indisponivel', 'dono_id' => ana.id)
+        expect(conversation.assignee_id).to be_nil
+        expect(Crm::Entrega::Marca.dados(conversation)).to include('falha' => 'presenca_indisponivel', 'dono_id' => ana.id)
+      end
     end
+  end
+
+  it 'presença com erro genérico e sem regra no funil: segura guardando a dona', :aggregate_failures do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(RuntimeError)
+    conversation, message = email_do_joao
+
+    sincronizar(conversation, message)
+
+    expect(conversation.assignee_id).to be_nil
+    expect(Crm::Entrega::Marca.dados(conversation)).to include('falha' => 'presenca_indisponivel', 'dono_id' => ana.id)
   end
 
   it 'regra de convite e dona offline: a regra convida quem cuida do funil e está online (o Bruno)' do
@@ -347,6 +403,28 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
 
       expect([ligada?(conversation), conversation.assignee_id]).to eq([false, bruno.id]), "status #{status}"
     end
+  end
+
+  # Quem sai e quem fica, pelo registro de passagens (#1657): só sai quem o rodízio pôs e ainda não respondeu.
+  it 'posto pelo rodízio (passagem sem quem pediu) e sem resposta: sai para a dona', :aggregate_failures do
+    conversation, message = email_do_joao
+    expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, pedida_por_type: nil)
+
+    sincronizar(conversation, message)
+
+    expect([ligada?(conversation), conversation.assignee_id]).to eq([true, ana.id])
+  end
+
+  it 'atribuído à mão (passagem pedida por uma pessoa) e sem resposta: fica', :aggregate_failures do
+    conversation, message = email_do_joao(assignee: nil)
+    Current.user = bruno
+    conversation.update!(assignee: bruno)
+    Current.reset
+    expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, pedida_por_id: bruno.id)
+
+    sincronizar(conversation, message)
+
+    expect([ligada?(conversation), conversation.assignee_id]).to eq([true, bruno.id])
   end
 
   it 'quem já respondeu não perde: liga ao card e mantém o atendente' do

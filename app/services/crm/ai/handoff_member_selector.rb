@@ -124,11 +124,8 @@ module Crm
       end
 
       def online_agent_ids
-        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids(@account_id)
-      rescue StandardError => e
-        # Presença fora do ar não é "ninguém online": quem chama decide (o motor segura e a fila tenta de novo, #1454).
-        Rails.logger.error("[crm][entrega] presença indisponível conta=#{@account_id} erro=#{e.class}")
-        raise PresencaIndisponivel, e.class.name
+        # Falha vira PresencaIndisponivel no ponto único (Crm::Entrega::Presenca.online_ids!): quem chama segura.
+        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids!(@account_id)
       end
     end
   end
