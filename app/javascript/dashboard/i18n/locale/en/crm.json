@@ -2983,7 +2983,10 @@
         "CITACAO": "“{frase}”",
         "DESLIGADA_SEM_IA": "{estado} The team is not called.",
         "QUEM_EQUIPE_ANTIGA": "Goes to {equipe}: whoever has the fewest conversations.",
-        "COMO_NA_HORA_ANTIGA": "{jeito}: the conversation goes straight to the person."
+        "COMO_NA_HORA_ANTIGA": "{jeito}: the conversation goes straight to the person.",
+        "QUEM_IA": "Goes to {nome} (AI agent) in the inboxes they work; in the others, to someone on the team.",
+        "QUEM_EQUIPE_NOME_IA": "Goes to {equipe}. If the customer asks for someone by name, person or AI agent, it goes to who they asked for.",
+        "COMO_IA": "With {nome} (AI agent), the conversation passes right away, with no invite and no wait."
       },
       "ANTIGA": {
         "TEXTO": "Today, if nobody is online, the conversation goes to someone who is away and the customer gets no reply.",
@@ -3015,7 +3018,24 @@
         "PESSOA_CAMPO": "Person who receives",
         "ESCOLHA": "Choose a person",
         "FORA_DA_EQUIPE": "{nome} (not on the team)",
-        "AVISO_FORA_DA_EQUIPE": "This person is not in any inbox of this pipeline and will not receive. Choose someone on the team."
+        "AVISO_FORA_DA_EQUIPE": "This person is not in any inbox of this pipeline and will not receive. Choose someone on the team.",
+        "EQUIPE_DESC_IA": "Whoever is online and has the fewest conversations, among the people in the inbox the customer wrote to. AI agents are not part of this turn.",
+        "PESSOA_DESC_IA": "A person or an AI agent, always the same one. If they do not work the conversation inbox, it goes to someone on the team.",
+        "IA_NAS_CAIXAS": "{n} AI agent in the inboxes | {n} AI agents in the inboxes",
+        "IA_FORA_DA_VEZ": "AI agents are not part of the turn: it is only for people who are online. They receive when the customer asks for them by name or when someone passes the conversation to them.",
+        "PELO_NOME_IA": "If the customer asks for someone by name, send it to who they asked for",
+        "PELO_NOME_DESC_IA": "Works for people and for the AI agents in the inboxes. The AI understands the request, like “I want to talk to Lia”.",
+        "PESSOA_CAMPO_IA": "Who receives",
+        "ESCOLHA_IA": "Choose a person or an agent",
+        "GRUPO_PESSOAS": "People",
+        "GRUPO_IA": "AI agents",
+        "IA_OPCAO": "{nome} · AI agent",
+        "IA_OPCAO_PARADO": "{nome} · AI agent (paused)",
+        "IA_ASSUME": "Takes over right away, at any time of day.",
+        "IA_PARADO": "{nome} is paused and does not receive conversations. Meanwhile, they go to someone on the team. Choose another one or turn {nome} back on in Agents.",
+        "IA_SEM_CAIXA": "{nome} does not work any inbox of this pipeline and will not receive. Choose another one or add {nome} to an inbox in CRM Inboxes.",
+        "IA_ALGUMAS_CAIXAS": "{nome} only works in {caixas}. In the other inboxes, the conversation goes to someone on the team.",
+        "IA_TODAS_AS_CAIXAS": "Works in every inbox of this pipeline."
       },
       "COMO": {
         "TITULO": "Choose how",
@@ -3113,7 +3133,8 @@
           "PESSOA_ESPERA": "If {nome} is away, the assistant stays with Ana until {nome} comes online.",
           "PESSOA_CONVITE": "{nome} gets the invite even when away. The assistant stays with Ana until {nome} accepts.",
           "PESSOA_FORA": "Goes to {nome} even when away, and Ana gets no reply.",
-          "FALTA": "Choose the person to see who receives."
+          "FALTA": "Choose the person to see who receives.",
+          "IA": "{nome} is an AI agent: takes over right away, even with the team away."
         },
         "ETAPAS_TITULO": "Your board",
         "ETAPAS_TEXTO": "What happens in each column.",
@@ -3133,7 +3154,11 @@
         "PERCURSO_PROPRIAS": "In {etapas}, each one calls the team its own way.",
         "PERCURSO_NAO": "In {etapas}, the assistant replies alone.",
         "PERCURSO_OUTRAS": "In the other stages, {jeito}.",
-        "PERCURSO_TODAS": "In every stage, {jeito}."
+        "PERCURSO_TODAS": "In every stage, {jeito}.",
+        "PEDIU": "{cliente} asked for {nome}",
+        "FILA_IA": "Goes to {nome} (AI agent), at any time, in the inboxes they work. In the others, to someone on the team.",
+        "FILA_EQUIPE_IA": "Whoever has the fewest conversations receives first. AI agents are not part of this turn.",
+        "FILA_EQUIPE_NOME_IA": "Whoever has the fewest conversations receives first. If the customer asks for someone by name, person or AI agent, it goes to who they asked for."
       },
       "CENA": {
         "SABADO": "Saturday, 10am",
@@ -3168,7 +3193,8 @@
         "ACEITOU_LOGO": "Three minutes later, {nome} accepted.",
         "ASSUMIU": "{nome} took over. The assistant stops replying.",
         "VAI_ONLINE_OU_NAO": "The conversation goes to {nome}, online or not. If away, the assistant stops and {cliente} gets no reply.",
-        "ROBO_CHAMA": "Sure! I have called the team."
+        "ROBO_CHAMA": "Sure! I have called the team.",
+        "IA_ASSUME": "{nome}, an AI agent, took over right away and continues with {cliente}."
       },
       "RODAPE": {
         "SALVAR": "Save",
@@ -3219,6 +3245,41 @@
           "JEITO_CONVITE": "with an invite"
         }
       }
+    },
+    "PASSAR_PARA": {
+      "BOTAO": "Pass to…",
+      "TITULO": "Pass the conversation to…",
+      "DESCRICAO": "Whoever you choose takes over the conversation.",
+      "CARREGANDO": "Loading who can receive…",
+      "PESSOAS": "People in this inbox",
+      "AGENTES": "AI agents in this inbox",
+      "VOCE": "{nome} (you)",
+      "COM_A_CONVERSA": "Has the conversation",
+      "NINGUEM": "There is no one else in this inbox to receive right now.",
+      "CONFIRMA_SAI": "{nome} takes over the conversation and you leave it.",
+      "CONFIRMA": "{nome} takes over the conversation.",
+      "CANCELAR": "Cancel",
+      "PASSAR_PARA": "Pass to {nome}",
+      "ESCOLHA": "Choose who receives",
+      "PRONTO": "Done: {nome} has the conversation.",
+      "COM_IA": "With {nome} · AI agent",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} is paused. Choose another person or another agent.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} no longer works this inbox. Choose another person or another agent.",
+        "FASE2_DESLIGADA": "AI agents are not turned on for this account. Choose a person.",
+        "CONVERSA_RESOLVIDA": "This conversation is already resolved. Reopen it to pass it.",
+        "OUTRA_CONTA": "{nome} belongs to another account. Choose someone from this inbox.",
+        "PESSOA_FORA_DA_CAIXA": "{nome} is not in this inbox anymore. Choose someone else.",
+        "DESTINO_INVALIDO": "This option is no longer available. Close and open the list again.",
+        "ERRO": "Could not pass it right now. Try again."
+      },
+      "COM_IA_POR": "With {nome} · passed by {por}",
+      "COM_IA_POR_EXTERNO": "With {nome} · passed by external agent {por}",
+      "DEVOLVER": "Give back to {nome}",
+      "DEVOLVER_DESC": "{nome} passed the conversation to {agente}.",
+      "CONFIRMA_DEVOLVE": "{nome} takes the conversation back and {agente} leaves it.",
+      "CONFIRMA_NO_LUGAR": "{nome} takes over the conversation from {agente}.",
+      "SEM_ROBO": "No agent answers this inbox first: the AI agent only replies when it receives the conversation."
     }
   },
   "crm": {

@@ -18,9 +18,17 @@
 # Quem chama: ConversationBotHandoff#bot_handoff! (o robô do Agentes IA, o n8n por toggle_status e quem desliga o
 # robô), a saída da triagem (Crm::Access::TriageExit / VisibilitySync), a IA do CRM (Crm::Ai::HandoffExecutor, que é
 # só o adaptador dela) e a fila de quem espera (HandoffDrainJob).
+#
+# Agente de IA (#1593): quando a regra aponta um agente que pode receber na caixa (Crm::Entrega::ParaIa), o plano é
+# `:ia`. A passagem para ele é do serviço dos Agentes, que trava e relê por conta própria; por isso ela acontece DEPOIS
+# da trava: em `call`, logo em seguida; na passagem do robô, o resultado sai `:para_ia` e o
+# ConversationBotHandoff chama `concluir_para_ia!` depois do commit. Recusada (o agente parou entre a leitura e a
+# passagem, por exemplo), a entrega roda de novo sem IA: alguém da equipe.
 class Crm::Entrega
-  Resultado = Struct.new(:status, :pessoa, :motivo, :card, keyword_init: true)
-  Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, keyword_init: true)
+  Resultado = Struct.new(:status, :pessoa, :motivo, :card, :agente, keyword_init: true)
+  Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, :agente, keyword_init: true)
+  # O motivo que os Agentes recebem quando é a Atribuição que passa a um agente de IA (#1593).
+  MOTIVO_IA = 'atribuicao'.freeze
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card).
@@ -37,15 +45,31 @@ class Crm::Entrega
   def call
     @conversation.with_lock { @resultado = executar(planejar, gravar: true) }
     registrar
-    @resultado
+    @resultado.status == :para_ia ? concluir_para_ia! : @resultado
   end
 
   # Dentro de ConversationBotHandoff#bot_handoff!, com a linha já travada: a passagem grava status, robô e pessoa numa
   # gravação só (os callbacks veem a troca de status e a de atendente juntas). Aqui a conversa muda só na memória.
+  # `:para_ia`: quem chama termina com `concluir_para_ia!` depois do commit.
   def na_passagem
     @resultado = executar(planejar, gravar: false)
     registrar
     @resultado
+  end
+
+  # Fora de qualquer trava: o serviço dos Agentes trava a conversa e relê. A origem é o robô que estava com a conversa
+  # (o que passou). Só 'passou' é a IA assumindo: 'ja_e_o_dono' quer dizer que o alvo é quem acabou de passar, e a
+  # conversa vai para alguém da equipe, como qualquer recusa.
+  def concluir_para_ia!
+    agente = @resultado.agente
+    codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :crm, motivo: MOTIVO_IA,
+                                          origem: @conversation.ai_assignee)
+    registrar_ia(agente, codigo)
+    return Resultado.new(status: :com_ia, agente: agente, card: @resultado.card) if codigo == Crm::Entrega::ParaIa::PASSOU
+
+    @sem_ia = true
+    @conversation.reload
+    call
   end
 
   private
@@ -56,7 +80,17 @@ class Crm::Entrega
 
     card = card_em_atendimento
     settings = regra_do(card)
-    settings ? pela_regra(card, settings) : sem_regra(card)
+    return sem_regra(card) unless settings
+
+    agente = @sem_ia ? nil : Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao)
+    return Plano.new(acao: :ia, agente: agente, card: card, settings: settings) if agente
+
+    pela_regra(card, so_pessoas(settings))
+  end
+
+  # A IA não entra no rodízio: "A mesma pessoa" apontando um agente que não pode receber agora vira alguém da equipe.
+  def so_pessoas(settings)
+    settings[:pool_type] == 'ai_agent' ? settings.merge(pool_type: 'inbox', pool_id: nil) : settings
   end
 
   def pela_regra(card, settings)
@@ -90,8 +124,13 @@ class Crm::Entrega
     Crm::Ai::HandoffMemberSelector.new(
       inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card),
       mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online,
-      suggested_name: @sugestao, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
+      suggested_name: sugestao_de_pessoa, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
     )
+  end
+
+  # O nome pedido era de um agente de IA que não pôde receber: não é nome de pessoa para casar.
+  def sugestao_de_pessoa
+    Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
   end
 
   def fila(card)
@@ -123,6 +162,7 @@ class Crm::Entrega
     when :pessoa then entregar(plano, gravar)
     when :segurar then segurar(plano, gravar)
     when :convite then convidar(plano, gravar)
+    when :ia then Resultado.new(status: :para_ia, agente: plano.agente, card: plano.card)
     else resultado(:nada, plano)
     end
   end
@@ -200,6 +240,13 @@ class Crm::Entrega
       "[crm][entrega] conversa=#{@conversation.id} conta=#{@conversation.account_id} card=#{@resultado.card&.id || '-'} " \
       "motivo=#{@motivo} origem=#{@origem} desfecho=#{@resultado.status} pessoa=#{@resultado.pessoa&.id || '-'} " \
       "detalhe=#{@resultado.motivo || '-'}"
+    )
+  end
+
+  def registrar_ia(agente, codigo)
+    Rails.logger.info(
+      "[crm][entrega] conversa=#{@conversation.id} conta=#{@conversation.account_id} motivo=#{@motivo} origem=#{@origem} " \
+      "desfecho=#{codigo == Crm::Entrega::ParaIa::PASSOU ? 'com_ia' : 'ia_recusou'} agente=#{agente.id} codigo=#{codigo}"
     )
   end
 end

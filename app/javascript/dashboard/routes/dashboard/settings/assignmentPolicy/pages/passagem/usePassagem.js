@@ -4,6 +4,8 @@ import {
   ETAPA_DESLIGADA,
   ETAPA_IGUAL,
   ETAPA_PROPRIA,
+  PREFIXO_IA,
+  ehAgente,
   faltaPessoa,
   modoDaEtapa,
 } from './passagem';
@@ -14,6 +16,9 @@ const ESPERA_PADRAO_SEGUNDOS = 900;
 const SELETORES = ['round_robin', 'direct'];
 const FLUXOS = ['r2_direct', 'r3_invite'];
 const DESTINOS = ['inbox', 'user'];
+// #1593: no servidor, "A mesma pessoa" apontando um agente de IA é pool_type 'ai_agent' + o id do agente. Na tela ele
+// fica em "A mesma pessoa" (pool_type 'user') com o valor "ia:<id>", junto das pessoas.
+const AGENTE_NO_SERVIDOR = 'ai_agent';
 const SE_NINGUEM = ['renotify', 'escalate'];
 
 const idPositivo = valor => {
@@ -23,6 +28,28 @@ const idPositivo = valor => {
 
 const daLista = (lista, valor, padrao) =>
   lista.includes(valor) ? valor : padrao;
+
+const destinoDoServidor = handoff => {
+  const id = idPositivo(handoff?.pool_id);
+  if (handoff?.pool_type === AGENTE_NO_SERVIDOR) {
+    return id
+      ? { pool_type: 'user', pool_id: `${PREFIXO_IA}${id}` }
+      : { pool_type: 'user', pool_id: null };
+  }
+  return {
+    pool_type: daLista(DESTINOS, handoff?.pool_type, 'inbox'),
+    pool_id: id,
+  };
+};
+
+export const regraParaServidor = regra =>
+  ehAgente(regra.pool_id)
+    ? {
+        ...regra,
+        pool_type: AGENTE_NO_SERVIDOR,
+        pool_id: idPositivo(String(regra.pool_id).slice(PREFIXO_IA.length)),
+      }
+    : regra;
 
 export const regraDoServidor = handoff => ({
   enabled: handoff?.enabled === true,
@@ -35,8 +62,7 @@ export const regraDoServidor = handoff => ({
       ? Math.round(Number(handoff.pickup_threshold_seconds))
       : ESPERA_PADRAO_SEGUNDOS,
   escalation_user_id: idPositivo(handoff?.escalation_user_id),
-  pool_type: daLista(DESTINOS, handoff?.pool_type, 'inbox'),
-  pool_id: idPositivo(handoff?.pool_id),
+  ...destinoDoServidor(handoff),
   escalation_action: daLista(
     SE_NINGUEM,
     handoff?.escalation_action,
@@ -49,9 +75,13 @@ export const regraDoServidor = handoff => ({
 const etapaParaServidor = (etapa, regraDoFunil) => {
   if (etapa.modo === ETAPA_IGUAL) return { custom: false };
   if (etapa.modo === ETAPA_DESLIGADA) {
-    return { custom: true, ...regraDoFunil, enabled: false };
+    return { custom: true, ...regraParaServidor(regraDoFunil), enabled: false };
   }
-  return { custom: true, ...etapa.regra, enabled: true };
+  return {
+    custom: true,
+    ...regraParaServidor(etapa.regra),
+    enabled: true,
+  };
 };
 
 // As caixas do funil e a equipe (quem está nelas) vêm junto do ai_settings (Crm::Ai::SettingsPresenter): quem tem só a
@@ -68,6 +98,8 @@ export function usePassagem() {
   const caixas = ref([]);
   const equipe = ref([]);
   const iaDoFunilLigada = ref(true);
+  // #1593: os agentes de IA das caixas do funil (só com a Fase 2 dos Agentes; sem ela o servidor não manda a lista).
+  const agentesIa = ref([]);
   const regra = ref(regraDoServidor({}));
   const etapas = ref([]);
   const original = ref('');
@@ -99,6 +131,7 @@ export function usePassagem() {
       caixas.value = dados.inboxes || [];
       equipe.value = equipeDoServidor(dados.team);
       iaDoFunilLigada.value = dados.enabled !== false;
+      agentesIa.value = dados.ai_agents || [];
       regra.value = regraDoServidor(dados.handoff);
       etapas.value = (dados.stages || []).map(etapa => ({
         id: etapa.id,
@@ -135,7 +168,7 @@ export function usePassagem() {
         ])
       );
       await CrmKanbanAPI.updateAiSettings(funilId, {
-        ai_settings: { handoff: { ...regra.value } },
+        ai_settings: { handoff: regraParaServidor(regra.value) },
         stage_handoff: stageHandoff,
       });
       original.value = estado();
@@ -176,6 +209,7 @@ export function usePassagem() {
     caixas,
     equipe,
     iaDoFunilLigada,
+    agentesIa,
     regra,
     etapas,
     alterado,

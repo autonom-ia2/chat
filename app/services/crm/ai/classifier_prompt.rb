@@ -114,6 +114,9 @@ module Crm::Ai::ClassifierPrompt
     gatilho descrever justamente isso. Se nada indicar handoff, retorne "handoff": null.
     Se o cliente citar/pedir um agente presente em eligible_agents, coloque o nome em "suggested_agent"; senão
     suggested_agent=null. Não invente nomes fora da lista.
+    Itens de eligible_agents que terminam em "(agente de IA)" são agentes de IA da equipe: valem como qualquer nome
+    (o cliente pedir a Lia, ou o atendente dizer que vai passar para ela). Copie o item exatamente como está na lista.
+    Pedir pelo nome um agente de IA da lista conta como pedir um atendente.
   HANDOFF
 
   # Estático (prefix-stable): os valores temporais (now_local, weekday, timezone, default_hour) NÃO

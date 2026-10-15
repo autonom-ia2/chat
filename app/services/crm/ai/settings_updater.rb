@@ -149,7 +149,17 @@ module Crm
           renotify_after_seconds = normalize_positive_integer(cfg[:renotify_after_seconds])
           renotify_after_seconds ? result['renotify_after_seconds'] = renotify_after_seconds : result.delete('renotify_after_seconds')
         end
+        validate_ai_agent_pool!(result) if cfg.key?(:pool_type) || cfg.key?(:pool_id)
         result
+      end
+
+      # #1593: "A mesma pessoa" num agente de IA só com a Fase 2 e um agente desta conta que fala com cliente
+      # (Crm::AgentesIa.escolhivel?). Senão, 422.
+      def validate_ai_agent_pool!(result)
+        return if result['pool_type'] != 'ai_agent' || Crm::AgentesIa.escolhivel?(@pipeline.account, result['pool_id'])
+
+        @pipeline.errors.add(:metadata, :invalid)
+        raise ActiveRecord::RecordInvalid, @pipeline
       end
 
       def normalized_handoff_defaults(existing)

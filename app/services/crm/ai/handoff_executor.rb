@@ -9,7 +9,8 @@ module Crm
     # então as guardas abaixo cortam antes de qualquer efeito.
     class HandoffExecutor
       Result = Struct.new(:status, :assignee, :error, keyword_init: true)
-      STATUS = { entregue: :handed_off, convidado: :invited, segurando: :held_online }.freeze
+      # com_ia (#1593): a regra levou a conversa a um agente de IA; o serviço dos Agentes já trocou o dono e avisou.
+      STATUS = { entregue: :handed_off, convidado: :invited, segurando: :held_online, com_ia: :handed_to_ai }.freeze
       # O motivo do motor no vocabulário de sempre deste executor (logs e specs).
       ERROS = {
         'ja_tem_pessoa' => 'already_assigned', 'intervalo' => 'cooldown', 'ninguem_cuida' => 'no_eligible_agent',
@@ -58,8 +59,9 @@ module Crm
         return skip(erro_de(entrega)) if status.nil?
 
         apos_entregar if status == :handed_off
-        # A espera agora fica na conversa (Crm::Entrega::Marca); a do card, anterior ao #1454, sai.
-        clear_handoff_hold! if status == :held_online
+        # A espera agora fica na conversa (Crm::Entrega::Marca); a do card, anterior ao #1454, sai. Com um agente de IA
+        # (#1593) também: a conversa já tem dono.
+        clear_handoff_hold! if %i[held_online handed_to_ai].include?(status)
         # Fora da trava e da transação do card (revisão da chat#665): um erro ao postar não desfaz o convite.
         ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation) if status == :invited
         registrar(status == :held_online ? 'held_online' : status.to_s, agente: entrega.pessoa)

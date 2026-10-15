@@ -2984,7 +2984,10 @@
         "CITACAO": "“{frase}”",
         "DESLIGADA_SEM_IA": "{estado} A equipe não é chamada.",
         "QUEM_EQUIPE_ANTIGA": "Vai para {equipe}: quem estiver com menos conversas.",
-        "COMO_NA_HORA_ANTIGA": "{jeito}: a conversa vai direto para a pessoa."
+        "COMO_NA_HORA_ANTIGA": "{jeito}: a conversa vai direto para a pessoa.",
+        "QUEM_IA": "Vai para {nome} (Agente de IA) nas caixas em que atende; nas outras, para alguém da equipe.",
+        "QUEM_EQUIPE_NOME_IA": "Vai para {equipe}. Se o cliente pedir alguém pelo nome, pessoa ou agente de IA, vai para quem ele pediu.",
+        "COMO_IA": "Com {nome} (Agente de IA), a conversa passa na hora, sem convite e sem espera."
       },
       "ANTIGA": {
         "TEXTO": "Hoje, se ninguém estiver online, a conversa vai para quem está fora e o cliente fica sem resposta.",
@@ -3016,7 +3019,24 @@
         "PESSOA_CAMPO": "Pessoa que recebe",
         "ESCOLHA": "Escolha uma pessoa",
         "FORA_DA_EQUIPE": "{nome} (fora da equipe)",
-        "AVISO_FORA_DA_EQUIPE": "Esta pessoa não está em nenhuma caixa deste funil e não vai receber. Escolha alguém da equipe."
+        "AVISO_FORA_DA_EQUIPE": "Esta pessoa não está em nenhuma caixa deste funil e não vai receber. Escolha alguém da equipe.",
+        "EQUIPE_DESC_IA": "Quem estiver online e com menos conversas, entre as pessoas da caixa em que o cliente escreveu. Agente de IA não entra nessa vez.",
+        "PESSOA_DESC_IA": "Uma pessoa ou um agente de IA, sempre o mesmo. Se não atender a caixa da conversa, vai para alguém da equipe.",
+        "IA_NAS_CAIXAS": "{n} agente de IA nas caixas | {n} agentes de IA nas caixas",
+        "IA_FORA_DA_VEZ": "Agentes de IA não entram na vez: ela é só das pessoas online. Eles recebem quando o cliente pede pelo nome ou quando alguém passa a conversa para eles.",
+        "PELO_NOME_IA": "Se o cliente pedir alguém pelo nome, mandar para quem ele pediu",
+        "PELO_NOME_DESC_IA": "Vale para as pessoas e para os agentes de IA das caixas. A IA entende o pedido, como “quero falar com a Lia”.",
+        "PESSOA_CAMPO_IA": "Quem recebe",
+        "ESCOLHA_IA": "Escolha uma pessoa ou um agente",
+        "GRUPO_PESSOAS": "Pessoas",
+        "GRUPO_IA": "Agentes de IA",
+        "IA_OPCAO": "{nome} · Agente de IA",
+        "IA_OPCAO_PARADO": "{nome} · Agente de IA (parado)",
+        "IA_ASSUME": "Assume na hora, a qualquer hora do dia.",
+        "IA_PARADO": "{nome} está com o atendimento parado e não recebe conversas. Enquanto isso, elas vão para alguém da equipe. Escolha outro ou ligue {nome} de novo em Agentes.",
+        "IA_SEM_CAIXA": "{nome} não atende nenhuma caixa deste funil e não vai receber. Escolha outro ou coloque {nome} numa caixa em Caixas no CRM.",
+        "IA_ALGUMAS_CAIXAS": "{nome} atende só em {caixas}. Nas outras caixas, a conversa vai para alguém da equipe.",
+        "IA_TODAS_AS_CAIXAS": "Atende em todas as caixas deste funil."
       },
       "COMO": {
         "TITULO": "Escolha o jeito",
@@ -3114,7 +3134,8 @@
           "PESSOA_ESPERA": "Se {nome} estiver fora, a assistente segue com a Ana até {nome} entrar.",
           "PESSOA_CONVITE": "{nome} recebe o convite mesmo fora. A assistente segue com a Ana até {nome} aceitar.",
           "PESSOA_FORA": "Vai para {nome} mesmo fora, e a Ana fica sem resposta.",
-          "FALTA": "Escolha a pessoa para ver quem recebe."
+          "FALTA": "Escolha a pessoa para ver quem recebe.",
+          "IA": "{nome} é agente de IA: assume na hora, mesmo com a equipe fora."
         },
         "ETAPAS_TITULO": "Seu quadro",
         "ETAPAS_TEXTO": "O que acontece em cada coluna.",
@@ -3134,7 +3155,11 @@
         "PERCURSO_PROPRIAS": "Em {etapas}, cada uma chama a equipe do seu jeito.",
         "PERCURSO_NAO": "Em {etapas}, a assistente responde sozinha.",
         "PERCURSO_OUTRAS": "Nas outras etapas, {jeito}.",
-        "PERCURSO_TODAS": "Em todas as etapas, {jeito}."
+        "PERCURSO_TODAS": "Em todas as etapas, {jeito}.",
+        "PEDIU": "{cliente} pediu a {nome}",
+        "FILA_IA": "Vai para {nome} (Agente de IA), a qualquer hora, nas caixas em que atende. Nas outras, para alguém da equipe.",
+        "FILA_EQUIPE_IA": "Quem estiver com menos conversas recebe primeiro. Agente de IA não entra nessa vez.",
+        "FILA_EQUIPE_NOME_IA": "Quem estiver com menos conversas recebe primeiro. Se o cliente pedir alguém pelo nome, pessoa ou agente de IA, vai para quem ele pediu."
       },
       "CENA": {
         "SABADO": "Sábado, 10h",
@@ -3169,7 +3194,8 @@
         "ACEITOU_LOGO": "Três minutos depois, {nome} aceitou.",
         "ASSUMIU": "{nome} assumiu. A assistente para de responder.",
         "VAI_ONLINE_OU_NAO": "A conversa vai para {nome}, esteja online ou não. Se estiver fora, a assistente para e a {cliente} fica sem resposta.",
-        "ROBO_CHAMA": "Claro! Já chamei a equipe."
+        "ROBO_CHAMA": "Claro! Já chamei a equipe.",
+        "IA_ASSUME": "{nome}, agente de IA, assumiu na hora e segue com a {cliente}."
       },
       "RODAPE": {
         "SALVAR": "Salvar",
@@ -3220,6 +3246,41 @@
           "JEITO_CONVITE": "com convite"
         }
       }
+    },
+    "PASSAR_PARA": {
+      "BOTAO": "Passar para…",
+      "TITULO": "Passar a conversa para…",
+      "DESCRICAO": "Quem você escolher assume a conversa.",
+      "CARREGANDO": "Carregando quem pode receber…",
+      "PESSOAS": "Pessoas desta caixa",
+      "AGENTES": "Agentes de IA desta caixa",
+      "VOCE": "{nome} (você)",
+      "COM_A_CONVERSA": "Está com a conversa",
+      "NINGUEM": "Não há mais ninguém nesta caixa para receber agora.",
+      "CONFIRMA_SAI": "{nome} assume a conversa e você sai dela.",
+      "CONFIRMA": "{nome} assume a conversa.",
+      "CANCELAR": "Cancelar",
+      "PASSAR_PARA": "Passar para {nome}",
+      "ESCOLHA": "Escolha quem recebe",
+      "PRONTO": "Pronto: {nome} está com a conversa.",
+      "COM_IA": "Com {nome} · Agente de IA",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} está com o atendimento parado. Escolha outra pessoa ou outro agente.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} não atende mais esta caixa. Escolha outra pessoa ou outro agente.",
+        "FASE2_DESLIGADA": "Os agentes de IA não estão ligados nesta conta. Escolha uma pessoa.",
+        "CONVERSA_RESOLVIDA": "Esta conversa já foi resolvida. Reabra para passar.",
+        "OUTRA_CONTA": "{nome} é de outra conta. Escolha alguém desta caixa.",
+        "PESSOA_FORA_DA_CAIXA": "{nome} não está mais nesta caixa. Escolha outra pessoa.",
+        "DESTINO_INVALIDO": "Esta opção não está mais disponível. Feche e abra a lista de novo.",
+        "ERRO": "Não deu para passar agora. Tente de novo."
+      },
+      "COM_IA_POR": "Com {nome} · passada por {por}",
+      "COM_IA_POR_EXTERNO": "Com {nome} · passada pelo agente externo {por}",
+      "DEVOLVER": "Devolver para {nome}",
+      "DEVOLVER_DESC": "{nome} passou a conversa para {agente}.",
+      "CONFIRMA_DEVOLVE": "{nome} assume a conversa de novo e {agente} sai dela.",
+      "CONFIRMA_NO_LUGAR": "{nome} assume a conversa no lugar de {agente}.",
+      "SEM_ROBO": "Nenhum agente atende esta caixa primeiro: o agente de IA só responde quando recebe a conversa."
     }
   },
   "crm": {

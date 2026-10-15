@@ -100,7 +100,8 @@ module Crm
         return [] if conversation.blank? || conversation.inbox.blank?
 
         # Acesso por funil (#1148, parte C): o modelo só conhece quem pode receber a conversa.
-        Crm::Access::Recipients.inbox_members(conversation).pluck(:name)
+        # #1593: com o pedido pelo nome, os agentes de IA que podem receber entram com o rótulo; o modelo decide.
+        Crm::Access::Recipients.inbox_members(conversation).pluck(:name) + Crm::AgentesIa.rotulos_pelo_nome(conversation, handoff_config)
       end
 
       # Independent of the stage move. Guarded inside the executor; never let a

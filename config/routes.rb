@@ -715,6 +715,7 @@ Rails.application.routes.draw do
               end
               resource :contact_info_request, only: [:create]
               resources :assignments, only: [:create]
+              resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]

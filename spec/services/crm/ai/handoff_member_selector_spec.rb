@@ -45,6 +45,15 @@ RSpec.describe Crm::Ai::HandoffMemberSelector do
     expect(selected).not_to eq(outsider)
   end
 
+  # #1593: a IA não entra no rodízio. Com "A mesma pessoa" num agente que não pôde receber, a escolha é entre as pessoas.
+  it 'treats an ai_agent pool as the whole inbox (people only)' do
+    create(:conversation, account: account, inbox: inbox, assignee: busy_agent)
+
+    selected = described_class.new(inbox: inbox, account_id: account.id, pool_type: 'ai_agent', pool_id: 999).perform
+
+    expect(selected).to eq(agent)
+  end
+
   it 'respects require_online gating for a single-user pool' do
     selector = described_class.new(
       inbox: inbox,

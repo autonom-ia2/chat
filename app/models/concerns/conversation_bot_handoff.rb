@@ -37,14 +37,18 @@ module ConversationBotHandoff
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
+  # A regra da Atribuição pode apontar um agente de IA (#1593): a passagem grava como se esperasse pessoa e, logo
+  # depois, o motor passa ao agente (Crm::Entrega#concluir_para_ia!). Com o agente no comando, não há aviso de passagem
+  # para pessoa; recusado, o motor entrega a alguém da equipe e o aviso sai como sempre.
   def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
+    para_ia = nil
     self.class.transaction do
       take_fresh_assignee(release_assignee)
       robo = keep_bot ? handoff_bot : nil
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
-      deliver_on_handoff(motivo, keep_bot)
+      para_ia = deliver_on_handoff(motivo, keep_bot)
       if robo && assignee_id.blank?
         wait_for_person_with(robo)
       else
@@ -52,7 +56,7 @@ module ConversationBotHandoff
       end
       save!
     end
-    dispatch_bot_handoff_event if dispatch_event
+    concluir_passagem(para_ia, dispatch_event)
   end
 
   def bot_handoff_waiting?
@@ -103,11 +107,19 @@ module ConversationBotHandoff
 
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
   # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
+  # Depois da gravação: a passagem ao agente de IA, quando a regra o apontou. Com ele no comando, sem aviso de passagem.
+  def concluir_passagem(para_ia, dispatch_event)
+    com_ia = para_ia&.concluir_para_ia!&.status == :com_ia
+    dispatch_bot_handoff_event if dispatch_event && !com_ia
+  end
+
+  # Devolve a entrega quando ela aponta um agente de IA, para terminar depois da gravação.
   def deliver_on_handoff(motivo, keep_bot)
     return if assignee_id.present?
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
-    Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem').na_passagem
+    entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem')
+    entrega if entrega.na_passagem.status == :para_ia
   end
 
   def wait_for_person_with(robo)
