@@ -5,13 +5,17 @@
 #                                                                  versao_aviso: (a versão que a tela mostrou) }
 #   => { payload: { utility: { ativo, mudanca: { acao, por, em } | null }, marketing: { ... },
 #                   aviso: { versao, vigente_desde, moeda, precos, textos: { ligar: {...}, desligar: {...} }, limites } } }
-#   Recusado: 422 { error: acao_invalida | marca_invalida | utility_desligada, message } ou 409 aviso_mudou.
+#   Recusado: 422 { error: acao_invalida | marca_invalida | utility_desligada, message }, 409 aviso_mudou ou
+#   403 somente_administrador.
 #
-# Ver e mudar: administrador e `whatsapp_templates_manage` (o mesmo gate de criar modelos na tela de Modelos). Mudar
+# Ver: administrador e `whatsapp_templates_manage` (o gate de criar modelos na tela de Modelos). Mudar: SÓ
+# administrador, nunca por função (regra do projeto: financeiro não se delega; o aceite libera gasto com a Meta). Mudar
 # também pede a flag `whatsapp_templates_journey` da conta (sem ela, 404), como escrever modelos.
 class Api::V1::Accounts::WhatsappTemplateConsentsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
+  # Sem a flag, 404 para todos (como escrever modelos); com ela, só o administrador muda.
   before_action :ensure_journey_enabled, only: :create
+  before_action :ensure_administrator, only: :create
 
   def show
     render json: { payload: consentimento.estado }
@@ -29,6 +33,13 @@ class Api::V1::Accounts::WhatsappTemplateConsentsController < Api::V1::Accounts:
 
   def consentimento
     Whatsapp::Templates::Consentimento.new(account: Current.account, user: Current.user)
+  end
+
+  def ensure_administrator
+    return if Current.account_user&.administrator?
+
+    render json: { error: 'somente_administrador', message: I18n.t('whatsapp_templates.consent.errors.somente_administrador') },
+           status: :forbidden
   end
 
   def ensure_journey_enabled

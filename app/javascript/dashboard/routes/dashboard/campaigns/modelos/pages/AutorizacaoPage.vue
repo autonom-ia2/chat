@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useBranding } from 'shared/composables/useBranding';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -20,6 +21,12 @@ const { estado, autorizacao, carregar, mudar, dinheiro, quando, diaDaData } =
 
 const marca = computed(() => installationName.value || 'Chat2You');
 const ligada = computed(() => Boolean(autorizacao.value?.servico));
+// Ver: quem administra modelos. Mudar: só o administrador da conta (o aceite
+// libera gasto com a Meta; financeiro não se delega por função).
+const { isAdmin } = useAdmin();
+const podeMudar = computed(() => Boolean(isAdmin.value));
+// A frase "Só quem administra a conta pode mudar." descreve cada controle travado.
+const ID_SO_ADMIN = 'autorizacao-so-admin';
 const divulgacao = computed(() => Boolean(autorizacao.value?.divulgacao));
 
 const querServico = ref(false);
@@ -207,15 +214,23 @@ const confirmar = async () => {
           <section
             v-if="!ligada"
             data-marcas
+            role="group"
+            :aria-describedby="podeMudar ? undefined : ID_SO_ADMIN"
             class="flex flex-col gap-1 p-2 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
           >
             <label
               data-marca-servico
-              class="flex items-start gap-4 p-4 cursor-pointer rounded-xl min-h-11 hover:bg-n-alpha-1"
+              class="flex items-start gap-4 p-4 rounded-xl min-h-11"
+              :class="
+                podeMudar
+                  ? 'cursor-pointer hover:bg-n-alpha-1'
+                  : 'cursor-not-allowed opacity-60'
+              "
             >
               <span class="grid place-items-center size-6 shrink-0">
                 <Checkbox
                   v-model="querServico"
+                  :disabled="!podeMudar"
                   @update:model-value="aoMudarServico"
                 />
               </span>
@@ -239,13 +254,16 @@ const confirmar = async () => {
               data-marca-divulgacao
               class="flex items-start gap-4 p-4 rounded-xl min-h-11"
               :class="
-                querServico
+                podeMudar && querServico
                   ? 'cursor-pointer hover:bg-n-alpha-1'
                   : 'cursor-not-allowed opacity-60'
               "
             >
               <span class="grid place-items-center size-6 shrink-0">
-                <Checkbox v-model="querDivulgacao" :disabled="!querServico" />
+                <Checkbox
+                  v-model="querDivulgacao"
+                  :disabled="!podeMudar || !querServico"
+                />
               </span>
               <span class="flex flex-col gap-1">
                 <span class="text-base font-semibold text-n-slate-12">
@@ -290,10 +308,9 @@ const confirmar = async () => {
                   class="i-lucide-check size-5 mt-0.5 shrink-0 text-n-teal-11"
                   aria-hidden="true"
                 />
-                <span class="text-n-slate-12">
+                <span class="flex flex-col gap-1 text-n-slate-12">
                   {{ $t('MODELOS_WHATSAPP.AUTORIZACAO.SERVICO.ROTULO') }}
-                  <span class="text-n-slate-11">
-                    ·
+                  <span class="text-sm text-n-slate-11">
                     {{
                       $t('MODELOS_WHATSAPP.AUTORIZACAO.PRECO', {
                         valor: precoDe('servico'),
@@ -331,8 +348,7 @@ const confirmar = async () => {
                               'MODELOS_WHATSAPP.AUTORIZACAO.DIVULGACAO.NAO_LIBERADA'
                             )
                       }}
-                      <span class="text-n-slate-11">
-                        ·
+                      <span class="block text-sm text-n-slate-11">
                         {{
                           $t('MODELOS_WHATSAPP.AUTORIZACAO.PRECO', {
                             valor: precoDe('divulgacao'),
@@ -351,6 +367,7 @@ const confirmar = async () => {
                 </span>
                 <Button
                   data-mexer-divulgacao
+                  :aria-describedby="podeMudar ? undefined : ID_SO_ADMIN"
                   :label="
                     divulgacao
                       ? $t('MODELOS_WHATSAPP.AUTORIZACAO.DIVULGACAO.DESLIGAR')
@@ -359,6 +376,7 @@ const confirmar = async () => {
                   color="slate"
                   variant="faded"
                   class="!min-h-11"
+                  :disabled="!podeMudar"
                   @click="pedirDivulgacao"
                 />
               </li>
@@ -410,25 +428,41 @@ const confirmar = async () => {
             {{ falha }}
           </p>
 
+          <p
+            v-if="!podeMudar"
+            :id="ID_SO_ADMIN"
+            data-so-admin
+            class="flex items-start gap-3 px-4 py-3 mb-0 text-[0.9375rem] rounded-xl bg-n-slate-2 text-n-slate-11"
+          >
+            <span
+              class="i-lucide-lock size-5 mt-0.5 shrink-0"
+              aria-hidden="true"
+            />
+            {{ $t('MODELOS_WHATSAPP.AUTORIZACAO.SO_ADMIN') }}
+          </p>
+
           <div>
             <Button
               v-if="!ligada"
               data-ligar
+              :aria-describedby="podeMudar ? undefined : ID_SO_ADMIN"
               :label="$t('MODELOS_WHATSAPP.AUTORIZACAO.ACOES.LIGAR')"
               icon="i-lucide-power"
               size="lg"
-              :disabled="!querServico"
+              :disabled="!podeMudar || !querServico"
               class="!min-h-12 !rounded-xl"
               @click="pedirLigar"
             />
             <Button
               v-else
               data-desligar
+              :aria-describedby="podeMudar ? undefined : ID_SO_ADMIN"
               :label="$t('MODELOS_WHATSAPP.AUTORIZACAO.ACOES.DESLIGAR')"
               icon="i-lucide-power-off"
               color="ruby"
               variant="faded"
               size="lg"
+              :disabled="!podeMudar"
               class="!min-h-12 !rounded-xl"
               @click="pedirDesligar"
             />

@@ -1056,7 +1056,8 @@
         "LIGADA_SERVICO": "Ligada para Aviso de serviço.",
         "LIGADA_TUDO": "Ligada para Aviso de serviço e Divulgação.",
         "ABRIR": "Ver autorização"
-      }
+      },
+      "SO_ADMIN": "Só quem administra a conta pode mudar."
     }
   }
 }

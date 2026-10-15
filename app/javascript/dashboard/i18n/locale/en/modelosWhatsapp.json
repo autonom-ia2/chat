@@ -1056,7 +1056,8 @@
         "LIGADA_SERVICO": "On for Service notice.",
         "LIGADA_TUDO": "On for Service notice and Promotion.",
         "ABRIR": "See permission"
-      }
+      },
+      "SO_ADMIN": "Only account administrators can change this."
     }
   }
 }

@@ -14,6 +14,10 @@ const conta = vi.hoisted(() => ({ atual: null }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ currentAccount: conta.atual }),
 }));
+const admin = vi.hoisted(() => ({ eh: true }));
+vi.mock('dashboard/composables/useAdmin', () => ({
+  useAdmin: () => ({ isAdmin: ref(admin.eh) }),
+}));
 vi.mock('shared/composables/useBranding', () => ({
   useBranding: () => ({ installationName: ref('Chat2You') }),
 }));
@@ -82,6 +86,7 @@ beforeEach(() => {
   api.getConsent.mockReset();
   api.updateConsent.mockReset();
   conta.atual = ref({ timezone: 'America/Sao_Paulo' });
+  admin.eh = true;
 });
 
 describe('autorizacaoDaApi', () => {
@@ -227,6 +232,54 @@ describe('AutorizacaoPage', () => {
 
     expect(api.getConsent).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-falha]').text()).toBe('Meta prices changed.');
+  });
+
+  // Mudar é só do administrador da conta; quem gerencia modelos vê só leitura.
+  it('shows read-only to non-admins: everything disabled, with the reason', async () => {
+    admin.eh = false;
+    api.getConsent.mockReturnValue(resposta(payload()));
+    const wrapper = montar(AutorizacaoPage);
+    await flushPromises();
+
+    const caixas = wrapper.findAll('input[type="checkbox"]');
+    expect(caixas).not.toHaveLength(0);
+    expect(caixas.every(caixa => caixa.element.disabled)).toBe(true);
+    expect(wrapper.find('[data-ligar]').attributes('disabled')).toBeDefined();
+    const frase = wrapper.find('[data-so-admin]');
+    expect(frase.text()).toBe('Only account administrators can change this.');
+    // A frase descreve os controles travados (leitor de tela).
+    const id = frase.attributes('id');
+    expect(wrapper.find('[data-marcas]').attributes('aria-describedby')).toBe(
+      id
+    );
+    expect(wrapper.find('[data-ligar]').attributes('aria-describedby')).toBe(
+      id
+    );
+
+    await wrapper.find('[data-ligar]').trigger('click');
+    expect(wrapper.find('[data-dialogo]').exists()).toBe(false);
+  });
+
+  it('read-only also when on: Promotion and Turn off stay disabled', async () => {
+    admin.eh = false;
+    api.getConsent.mockReturnValue(resposta(payload({ servico: LIGOU })));
+    const wrapper = montar(AutorizacaoPage);
+    await flushPromises();
+
+    const divulgacaoBotao = wrapper.find('[data-mexer-divulgacao]');
+    const desligar = wrapper.find('[data-desligar]');
+    expect(divulgacaoBotao.attributes('disabled')).toBeDefined();
+    expect(desligar.attributes('disabled')).toBeDefined();
+    const id = wrapper.find('[data-so-admin]').attributes('id');
+    expect(divulgacaoBotao.attributes('aria-describedby')).toBe(id);
+    expect(desligar.attributes('aria-describedby')).toBe(id);
+
+    await divulgacaoBotao.trigger('click');
+    await desligar.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-dialogo]').exists()).toBe(false);
+    expect(api.updateConsent).not.toHaveBeenCalled();
   });
 
   it('without a time zone on the account, says only "your account time zone"', async () => {
