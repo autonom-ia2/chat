@@ -29,6 +29,10 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     Conversations::AssignmentService.new(conversation: conversation.reload, assignee_id: robo.id, assignee_type: 'AgentBot').perform
   end
 
+  def posse
+    Autonomia::Agents::Operate::PosseDoTurno
+  end
+
   def silencios(linhas, motivo)
     linhas.grep(/\[autonomia\]\[operate\] silencio .*motivo=#{motivo}\b/)
   end
@@ -91,6 +95,24 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(linhas.grep(/turno_reenfileirado conv=#{conversation.id} .*origem=responder/).size).to eq(1)
     end
 
+    it 'retry do 1º pedaço já postado, com o dono trocado depois: não refaz o turno nem solta a posse' do
+      ia_responde!(texto: texto_longo)
+      mensagem = turno_do_cliente
+      rodar_turno! # a porta responde e enfileira a cadeia
+      primeiro = jobs_de(UmTurnoHelper::CHUNK_JOB).sole
+      rodar_rodada!(UmTurnoHelper::CHUNK_JOB) # o 1º pedaço da porta entra
+      expect(respostas.count).to eq(1)
+      clear_enqueued_jobs
+      atribuir_sem_evento!(espelho_area)
+
+      linhas = linhas_do_log { primeiro[:job].perform_now(*ActiveJob::Arguments.deserialize(primeiro[:args])) }
+
+      expect(linhas.grep(/turno_reenfileirado|reenfileiramento_barrado/)).to be_empty
+      expect(jobs_de(UmTurnoHelper::REPLY_JOB)).to be_empty
+      expect(respostas.pluck(:sender_id)).to eq([porta.id])
+      expect(Redis::Alfred.exists?(posse.chave(conversation.id, mensagem.id, vinculo_da_porta.id))).to be(true)
+    end
+
     it 'cenário 6b: troca no meio da cadeia: a cadeia para e o dono novo não começa outra (resposta parcial, aceita)' do
       ia_responde!(texto: texto_longo)
       turno_do_cliente
@@ -132,6 +154,52 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
     expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :evento_troca)).to be(false)
     expect(settles_na_fila).to be_empty
+  end
+
+  describe 'a posse do turno (PosseDoTurno)' do
+    let(:janela) { Autonomia::Agents::Config.debounce_seconds_for(agente_da_porta) + Autonomia::Agents::AgentInbox::FOLGA_DO_TURNO }
+
+    it 'a posse repassada dura mais que a janela do debounce com a folga, e um pedaço 0 atrasado não a toma de novo' do
+      mensagem = turno_do_cliente
+      conversation.update!(ai_assignee: espelho_area)
+
+      expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                                  quem_perdeu: vinculo_da_porta)).to be(true)
+      expect(Redis::Alfred.ttl(posse.chave(conversation.id, mensagem.id, vinculo_area.id))).to be > janela.to_i
+
+      travel janela + 1.minute # o pedaço 0 atrasado da porta, com a área já tendo respondido
+      expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                                  quem_perdeu: vinculo_da_porta)).to be(false)
+      expect(settles_na_fila.count { |job| ActiveJob::Arguments.deserialize(job[:args])[3].present? }).to eq(1)
+    end
+
+    it 'pelo Responder, turno mais velho que a vida da posse não é refeito' do
+      mensagem = turno_do_cliente
+      conversation.update!(ai_assignee: espelho_area)
+      travel posse::TTL + 1.minute
+
+      expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                                  quem_perdeu: vinculo_da_porta)).to be(false)
+    end
+
+    it 'solta a chave de quem perdeu só se ela ainda tiver o valor dele' do
+      mensagem = turno_do_cliente
+      chave = posse.chave(conversation.id, mensagem.id, vinculo_da_porta.id)
+      Redis::Alfred.set(chave, 'job-novo')
+      conversation.update!(ai_assignee: espelho_area)
+
+      described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                           quem_perdeu: vinculo_da_porta, posse_de_quem_perdeu: 'job-velho')
+      expect(Redis::Alfred.get(chave)).to eq('job-novo')
+
+      described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                           quem_perdeu: vinculo_da_porta)
+      expect(Redis::Alfred.get(chave)).to eq('job-novo')
+
+      described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder,
+                           quem_perdeu: vinculo_da_porta, posse_de_quem_perdeu: 'job-novo')
+      expect(Redis::Alfred.exists?(chave)).to be(false)
+    end
   end
 
   it 'cenário 7: Responder e assinante disparando juntos enfileiram um ReplyJob só' do

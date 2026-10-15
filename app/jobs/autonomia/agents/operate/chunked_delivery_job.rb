@@ -38,16 +38,14 @@ module Autonomia
 
           # Cliente mandou nova mensagem durante a entrega, ou um humano assumiu, ou acabaram os chunks:
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
-          if chunk.blank? || !current_turn?(conversation, reply_to_message_id) || !bot_in_command?(conversation, agent_inbox)
-            typing.off
-            return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index)
-          end
-
-          typing.off # a pausa ANTES deste pedaço já passou; estamos prestes a postar
-          posted = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s)
+          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+          typing.off # parando, ou a pausa ANTES deste pedaço já passou e estamos prestes a postar
+          posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s) if motivo.nil?
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
-          # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado.
-          return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index) unless posted
+          # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
+          # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
+          return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta) if motivo == :dono_mudou
+          return unless posted
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
           log_replied(agent_inbox.agent, conversation, meta, posted) if index.zero?
@@ -58,12 +56,23 @@ module Autonomia
         # #1606: a cadeia parou antes do 1º pedaço porque OUTRO vínculo ativo da caixa virou o dono depois da IA (troca sem
         # evento, como a atribuição de robô pela tela). Sem nada postado, o turno é refeito pelo dono novo, como no
         # Responder (`dono_mudou`); o ReenfileirarTurno confere se o turno ainda é este e barra o segundo enfileiramento.
-        # Do 2º pedaço em diante a resposta já começou: a cadeia só para (resposta parcial, aceita).
-        def refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index)
+        # Do 2º pedaço em diante a resposta já começou: a cadeia só para (resposta parcial, aceita). O 1º pedaço já postado
+        # (retry do índice 0) também conta como resposta começada. `meta['posse']`: a posse do settle que respondeu, para
+        # soltar só a dele (PosseDoTurno.soltar).
+        def refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
           return unless index.zero? && dono_novo?(conversation, agent_inbox)
+          return if chunk_posted?(conversation, reply_to_message_id, 0)
 
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: conversation, message_id: reply_to_message_id,
-                                                               origem: :responder, quem_perdeu: agent_inbox)
+                                                               origem: :responder, quem_perdeu: agent_inbox,
+                                                               posse_de_quem_perdeu: meta['posse'])
+        end
+
+        # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou).
+        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+          return :turno_mudou unless current_turn?(conversation, reply_to_message_id)
+
+          :dono_mudou unless bot_in_command?(conversation, agent_inbox)
         end
 
         def dono_novo?(conversation, agent_inbox)
@@ -90,20 +99,19 @@ module Autonomia
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do
         # lock (NÃO usar return no bloco — dispararia rollback e descartaria a mensagem postada).
-        # -> a Message postada, ou nil quando não postou.
+        # -> [a Message postada, nil] ou [nil, motivo] quando não postou (:turno_mudou, :dono_mudou, :ja_postado).
         def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, text)
           posted = nil
+          motivo = nil
           conversation.with_lock do
             # Revalidação AUTORITATIVA com estado fresco DENTRO do lock (fecha a corrida entre o check
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
-            if current_turn?(conversation, reply_to_message_id) &&
-               bot_in_command?(conversation, agent_inbox) &&
-               !chunk_posted?(conversation, reply_to_message_id, index)
-              posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text)
-            end
+            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+            motivo ||= :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
+            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text) if motivo.nil?
           end
-          posted
+          [posted, motivo]
         end
 
         def build_message!(conversation, agent_inbox, reply_to_message_id, index, text)

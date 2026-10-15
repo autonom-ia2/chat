@@ -4,8 +4,9 @@
 # - :evento_troca  — o `crm.ai.responsible_agent_changed` (Sync do CRM e PassarParaIa), depois do commit.
 #
 # Só refaz o turno que ainda está em andamento: a última mensagem pública é do cliente e é a que a marca do debounce
-# aponta. Pelo :responder, sem prazo: quem chama está com o turno na mão, depois da IA, que pode passar da janela do
-# debounce. Pelo :evento_troca, a troca chega a qualquer hora, então só turno recente (AgentInbox#turno_em_andamento?).
+# aponta. Pelo :responder, sem a janela do debounce: quem chama está com o turno na mão, depois da IA, que pode passar
+# dela; o limite é a vida da posse (PosseDoTurno::TTL). Pelo :evento_troca, a troca chega a qualquer hora, então só
+# turno recente (AgentInbox#turno_em_andamento?).
 # Pessoa atribuída, agente que não pode responder, conta fora da Fase 2: nada a refazer.
 class Autonomia::Agents::Operate::ReenfileirarTurno
   ORIGENS = %i[responder evento_troca].freeze
@@ -37,18 +38,20 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
   end
 
-  # `quem_perdeu`: o vínculo que perdeu o turno (caminho :responder); a posse dele é solta.
-  def self.call(conversation:, message_id:, origem:, quem_perdeu: nil)
-    new(conversation, message_id, origem, quem_perdeu).call
+  # `quem_perdeu`: o vínculo que perdeu o turno (caminho :responder). `posse_de_quem_perdeu`: o valor com que ele tomou
+  # a chave (PosseDoTurno.valor); a chave dele só é solta se ainda tiver esse valor. Sem ele, nada é solto.
+  def self.call(conversation:, message_id:, origem:, quem_perdeu: nil, posse_de_quem_perdeu: nil)
+    new(conversation, message_id, origem, quem_perdeu: quem_perdeu, posse_de_quem_perdeu: posse_de_quem_perdeu).call
   end
 
-  def initialize(conversation, message_id, origem, quem_perdeu)
+  def initialize(conversation, message_id, origem, quem_perdeu: nil, posse_de_quem_perdeu: nil)
     raise ArgumentError, "origem fora da lista: #{origem}" unless ORIGENS.include?(origem)
 
     @conversation = conversation
     @message_id = message_id.to_i
     @origem = origem
     @quem_perdeu = quem_perdeu
+    @posse_de_quem_perdeu = posse_de_quem_perdeu
   end
 
   # -> true quando enfileirou o turno para o dono novo.
@@ -67,15 +70,22 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
   private
 
   def soltar_posse_de_quem_perdeu
-    ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @message_id, @quem_perdeu.id) if @quem_perdeu
+    return if @quem_perdeu.nil?
+
+    ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @message_id, @quem_perdeu.id, @posse_de_quem_perdeu)
   end
 
   def turno_em_andamento?(destino)
     ultima = self.class.ultima_mensagem_publica(@conversation)
     return false unless ultima&.id == @message_id && ultima.incoming?
-    return ::Autonomia::Agents::Operate::ReplyJob.turno_pendente?(@conversation, @message_id) if @origem == :responder
+    return turno_do_responder?(ultima) if @origem == :responder
 
     destino.turno_em_andamento?(@conversation, ultima)
+  end
+
+  def turno_do_responder?(ultima)
+    ultima.created_at >= ::Autonomia::Agents::Operate::PosseDoTurno::TTL.ago &&
+      ::Autonomia::Agents::Operate::ReplyJob.turno_pendente?(@conversation, @message_id)
   end
 
   def barrado(destino)
