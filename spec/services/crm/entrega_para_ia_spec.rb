@@ -84,6 +84,17 @@ RSpec.describe Crm::Entrega do
       expect(conversa.reload.assignee_id).to eq(ana.id)
     end
 
+    # Pega: o laço quando o serviço aceita a volta. A Lia (o robô no nome é o espelho dela) passa e a regra aponta a
+    # Lia: o serviço dos Agentes responde `passou` (a espera de pessoa vale como troca), então quem barra é o CRM.
+    it 'a própria Lia passa: alguém da equipe recebe, sem chamar o serviço', :aggregate_failures do
+      Autonomia::Agents::AgentInbox.create!(account: account, inbox: inbox, agent: lia, agent_bot: bot, papel: 'porta')
+      conversa = conversa_do_robo
+
+      expect(entrega(conversa).status).to eq(:entregue)
+      expect(conversa.reload.assignee_id).to eq(ana.id)
+      expect(servico).not_to have_received(:call)
+    end
+
     # Pega: uma pessoa assumiu entre a leitura e a passagem; a entrega não pode tirá-la nem dar a conversa a outra.
     it 'pessoa já no nome (pessoa_atribuida): fica com ela, sem cair para a equipe', :aggregate_failures do
       conversa = conversa_do_robo

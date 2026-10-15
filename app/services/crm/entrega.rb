@@ -63,7 +63,8 @@ class Crm::Entrega
 
   # Fora de qualquer trava: o serviço dos Agentes trava a conversa e relê. A origem é o robô que estava com a conversa
   # (o que passou). Só 'passou' é a IA assumindo. 'pessoa_atribuida': uma pessoa entrou no nome antes; ela fica com a
-  # conversa e nada muda. 'ja_e_o_dono' (o alvo é quem acabou de passar) e as recusas: alguém da equipe.
+  # conversa e nada muda. 'ja_e_o_dono' e as recusas: alguém da equipe. O agente que acabou de passar nem chega aqui
+  # (Crm::Entrega::ParaIa.alvo).
   def concluir_para_ia!(origem: @conversation.ai_assignee)
     agente = @resultado.agente
     codigo = passar_ao_agente(agente, origem)

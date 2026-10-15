@@ -51,14 +51,41 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
     expect(conversation.ai_assignee).to be_nil
   end
 
-  # Pega: a área que pede pessoa recebendo de volta dela mesma (laço).
-  it 'a própria área passa: ja_e_o_dono e vai para alguém da equipe', :aggregate_failures do
+  # Pega: o laço. A área passa por bot_handoff! e "A mesma pessoa" = a própria área. Com o PR-B #1628 o serviço dos
+  # Agentes responde `passou` para quem espera pessoa; quem barra é o CRM, antes de chamá-lo.
+  it 'a própria área passa: vai para alguém da equipe, sem voltar para ela, com uma passagem só', :aggregate_failures do
     regra_na_area!
     conversation.update!(ai_assignee: espelho_area)
+    Crm::Passagem.where(conversation_id: conversation.id).delete_all
+    allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
 
+    expect { conversation.bot_handoff! }.to change(Crm::Passagem, :count).by(1)
+
+    conversation.reload
+    expect(conversation.assignee_id).to be_in([ana.id, bruno.id])
+    expect(conversation.ai_assignee).not_to eq(espelho_area)
+    expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
+    passagem = Crm::Passagens.ultima_aberta(conversation)
+    expect([passagem.de.classe, passagem.de.id]).to eq(['Autonomia::Agents::Agent', area.id])
+    expect([passagem.para.classe, passagem.para.id]).to eq(['User', conversation.assignee_id])
+  end
+
+  # Pega: o laço pela fila. Ninguém online: a área segue esperando pessoa (marca do robô e do motor). Quando a Ana fica
+  # online, a fila entrega a ela, não devolve à área (o caminho em que o #1628 deixou de responder ja_e_o_dono).
+  it 'a área passa sem ninguém online e a fila entrega depois: vai para a Ana, nunca de volta à área', :aggregate_failures do
+    regra_na_area!
+    conversation.update!(ai_assignee: espelho_area)
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     conversation.bot_handoff!
+    expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
+    expect(conversation.bot_handoff_waiting? || conversation.crm_delivery_pending?).to be(true)
 
-    expect(conversation.reload.assignee_id).to be_in([ana.id, bruno.id])
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
+    allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
+    Crm::Entrega.new(conversation: conversation, motivo: 'robo_pediu', origem: 'fila').call
+
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
   end
 
   describe 'Passar para… na conversa' do
