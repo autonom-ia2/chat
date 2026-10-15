@@ -32,6 +32,8 @@ import { useCardMover } from './useCardMover';
 import TelaOrigem from './telas/TelaOrigem.vue';
 import TelaHistorico from './telas/TelaHistorico.vue';
 import LembreteSerie from '../lembrete/LembreteSerie.vue';
+import MensagemMarcadaGaveta from '../mensagemMarcada/MensagemMarcadaGaveta.vue';
+import { usaGavetaNova } from '../mensagemMarcada/useMensagemMarcada';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { passosDoCard } from './proximoPasso';
 import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
@@ -224,6 +226,19 @@ const retorno = useCardRetorno({
   },
 });
 provide('cardRetorno', retorno);
+// #1590: com a flag, "Mandar mensagem" de um card da caixa oficial abre a
+// gaveta da Mensagem marcada (já com o cliente); fora disso, o retorno de sempre.
+const mensagemNova = computed(
+  () =>
+    useAccountFlags.isCloudFeatureEnabled(FEATURE_FLAGS.CRM_MENSAGEM_MARCADA) &&
+    usaGavetaNova(card.value, props.inboxes)
+);
+const mensagemAberta = ref(false);
+// Marcou pela tela do retorno: volta para a Agenda, onde a mensagem aparece.
+const mensagemMarcou = () => {
+  emit('refreshCard');
+  if (tela.value === 'retorno-novo') voltarSemGuarda();
+};
 // #1460: a visão da repetição de um lembrete, dentro do card.
 const serieAberta = ref(null);
 const serieTitulo = ref('');
@@ -378,6 +393,11 @@ const cancelarRetorno = item =>
 // Agenda já chega marcada.
 const novoRetorno = (modo = 'reminder_only') => {
   if (!podeGerenciar.value) return;
+  // #1590: a mensagem no dia abre a gaveta da Mensagem marcada.
+  if (modo === 'auto_send_message' && mensagemNova.value) {
+    mensagemAberta.value = true;
+    return;
+  }
   retorno.reiniciar(modo);
   irPara('retorno-novo');
 };
@@ -746,6 +766,8 @@ defineExpose({
             <TelaRetornoNovo
               v-else-if="tela === 'retorno-novo'"
               :funil="funil?.name || ''"
+              :mensagem-nova="mensagemNova"
+              @mensagem-nova="mensagemAberta = true"
             />
             <LembreteSerie
               v-else-if="tela === 'retorno-serie' && serieAberta"
@@ -863,6 +885,14 @@ defineExpose({
         v-if="rodape"
         :rodape="rodape"
         :ocupado="Boolean(ocupado())"
+      />
+      <MensagemMarcadaGaveta
+        v-if="mensagemNova"
+        :show="mensagemAberta"
+        :card="card"
+        :caixas="inboxes"
+        @salvou="mensagemMarcou"
+        @close="mensagemAberta = false"
       />
     </div>
   </transition>

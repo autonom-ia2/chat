@@ -5695,5 +5695,119 @@
       "CANCELAR": "Cancelar",
       "MARCAR": "Marcar reunião"
     }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "ROTULO": "Mensagem marcada",
+    "MIGALHA": "Calendário",
+    "PASSO_DE": "Passo {numero} de {total}",
+    "TITULO_LEMBRETE": "Mensagem para {nome}",
+    "CANCELAR": "Cancelar",
+    "VOLTAR": "Voltar",
+    "CONTINUAR": "Continuar",
+    "MARCAR": "Marcar mensagem",
+    "FALTA": {
+      "PARA_QUEM": "Escolha quem recebe.",
+      "QUANDO": "Escolha o dia e a hora.",
+      "PASSADO": "Esse horário já passou.",
+      "CONFERINDO": "Conferindo o WhatsApp…",
+      "PRONTA": "Escolha uma mensagem pronta.",
+      "CAMPOS": "Complete a mensagem pronta.",
+      "TEXTO": "Escreva a mensagem.",
+      "JANELA": "Confira o WhatsApp de novo."
+    },
+    "PARA_QUEM": {
+      "TITULO": "Para quem é a mensagem?",
+      "ROTULO": "Procure o cliente ou o negócio",
+      "EXEMPLO": "Digite um nome",
+      "RECENTES": "Mexidos por último",
+      "ACHADOS": "Encontrados",
+      "BUSCANDO": "Procurando…",
+      "FALHOU": "Não deu para procurar agora. Tente de novo.",
+      "VAZIO": "Ninguém com esse nome.",
+      "SEM_WHATSAPP": "Ainda não conversou pelo WhatsApp",
+      "RESUMO": "Para quem",
+      "NEGOCIO": "· {negocio}",
+      "PELO_NEGOCIO": "Outro WhatsApp: marque pelo negócio"
+    },
+    "QUANDO": {
+      "TITULO": "Quando a mensagem sai?",
+      "DIA": "Que dia?",
+      "HORA": "Que horas?",
+      "HOJE": "Hoje",
+      "AMANHA": "Amanhã",
+      "OUTRO_DIA": "Outro dia",
+      "ESCOLHA_DIA": "Escolha o dia",
+      "OUTRA_HORA": "Outro horário",
+      "ESCOLHA_HORA": "Escolha o horário",
+      "NOME_HORA": {
+        "MANHA": "De manhã",
+        "ALMOCO": "No almoço",
+        "TARDE": "À tarde",
+        "FIM": "No fim do dia"
+      },
+      "PASSADO": "Esse horário já passou. Escolha outro.",
+      "FUSO": "Horário de {fuso}, o da conta.",
+      "RESUMO": "Quando",
+      "FRASE": "{dia}, às {hora}",
+      "HOJE_FRASE": "hoje",
+      "AMANHA_FRASE": "amanhã"
+    },
+    "MENSAGEM": {
+      "TITULO": "O que dizer para {nome}?",
+      "CONFERINDO": "Conferindo o que o WhatsApp deixa mandar nesse horário…",
+      "ERRO_JANELA": "Não deu para conferir o WhatsApp agora.",
+      "TENTAR": "Tentar de novo",
+      "LIVRE": "Nesse horário, {nome} pode receber o texto que você escrever.",
+      "SO_PRONTA": "Nesse horário, já terá passado mais de 1 dia desde a última mensagem de {nome}. Aí o WhatsApp só deixa mandar uma mensagem pronta aprovada.",
+      "PELO_CELULAR": "Já terá passado mais de 1 dia desde a última mensagem de {nome}, mas o WhatsApp do celular está conectado: a mensagem sai por ele, do jeito que você escrever.",
+      "ESCOLHA_PRONTA": "Escolha a mensagem pronta",
+      "RESUMO": "O que dizer",
+      "RESUMO_PRONTA": "Mensagem pronta",
+      "RESUMO_TEXTO": "“{inicio}”"
+    },
+    "CONFIRMAR": {
+      "TITULO": "Confira e marque",
+      "O_QUE_ACONTECE": "O que vai acontecer",
+      "SAI_POR": "Sai pela caixa “{caixa}”, na conversa que já existe.",
+      "SAI_PELO_CELULAR": "Sai pelo WhatsApp do celular ligado à caixa “{caixa}”.",
+      "SE_FALHAR": "Se não der para enviar, {nome} recebe um aviso.",
+      "SE_FALHAR_VOCE": "Se não der para enviar, você recebe um aviso.",
+      "ONDE_APARECE": "Aparece no calendário e no negócio até sair.",
+      "ANOTAR": "Anotar algo para a equipe",
+      "ANOTACAO": "Anotação para a equipe",
+      "ANOTACAO_EXEMPLO": "O cliente não vê esta anotação",
+      "ERRO": {
+        "PASSADO": "Esse horário já passou. Volte e escolha outro.",
+        "PRONTA": "Nesse horário só dá para mandar mensagem pronta. Volte e escolha uma.",
+        "GERAL": "Não deu para marcar agora. Tente de novo."
+      }
+    },
+    "PRONTO": {
+      "TITULO": "Mensagem marcada para {nome}",
+      "TEXTO": "Sai {quando}.",
+      "FRASE": "Pronto. A mensagem sai {quando}.",
+      "ONDE": "Ela já está no calendário e no negócio. Dá para mudar ou cancelar até a hora de sair.",
+      "ABRIR_NEGOCIO": "Abrir o negócio",
+      "FECHAR": "Fechar"
+    },
+    "PREVIA": {
+      "TITULO": "Como {nome} vai ver",
+      "TITULO_SEM_NOME": "Como o cliente vai ver",
+      "TEXTO": "É exatamente isto que chega no WhatsApp.",
+      "FANTASMA": "A mensagem aparece aqui",
+      "SEM_HORA": "--:--",
+      "SEM_DIA": "Dia ainda não escolhido"
+    },
+    "FALHA": {
+      "TITULO": "Não saiu: {motivo}",
+      "sem_conversa": "o cliente não tem mais conversa no WhatsApp.",
+      "canal": "a conversa não é de WhatsApp.",
+      "sem_remetente": "ninguém da equipe ficou como responsável.",
+      "celular_desconectado": "o WhatsApp do celular estava desconectado.",
+      "sem_modelo": "já tinha passado 1 dia e faltou a mensagem pronta.",
+      "modelo_invalido": "a mensagem pronta não é desta caixa.",
+      "recusou": "o cliente pediu para não receber mensagens.",
+      "outro": "o WhatsApp recusou o envio."
+    }
   }
 }

@@ -153,6 +153,18 @@ const detalhe = computed(() =>
           <span class="i-lucide-repeat size-3.5" aria-hidden="true" />
           {{ t(item.pausado ? `${N}.PAUSADO` : `${N}.REPETE`) }}
         </span>
+        <span
+          v-if="item.falha"
+          data-item-falha
+          class="inline-flex items-center gap-1 font-medium text-n-ruby-11"
+        >
+          <span class="i-lucide-circle-alert size-3.5" aria-hidden="true" />
+          {{
+            t('CRM_MENSAGEM_MARCADA.FALHA.TITULO', {
+              motivo: t(`CRM_MENSAGEM_MARCADA.FALHA.${item.falha}`),
+            })
+          }}
+        </span>
       </span>
     </button>
 

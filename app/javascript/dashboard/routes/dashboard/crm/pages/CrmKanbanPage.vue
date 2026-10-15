@@ -54,6 +54,7 @@ import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
 // #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
 import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
+import MensagemMarcadaGaveta from '../components/mensagemMarcada/MensagemMarcadaGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
@@ -106,6 +107,9 @@ const lembreteGaveta = ref({
   serieId: null,
   followUpId: null,
 });
+// #1590: a Mensagem marcada nova (flag crm_mensagem_marcada), pelo "+ Novo" do
+// calendário; o card abre a mesma gaveta por conta própria.
+const mensagemMarcada = ref({ show: false, dia: '' });
 const uiFlags = useMapGetter('crmKanban/getUIFlags');
 const storedFilters = useMapGetter('crmKanban/getFilters');
 const listPrefs = useMapGetter('crmKanban/getListPrefs');
@@ -1101,6 +1105,12 @@ const loadInboxSettings = async () => {
 
 // Lembretes novos (#1460/#1461/#1462): com a flag, "Novo lembrete" do
 // calendário abre a gaveta nova; sem ela, a janela de sempre.
+const mensagemMarcadaNova = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_MENSAGEM_MARCADA
+    ] === true
+);
 const lembretesV2 = computed(
   () =>
     getAccount.value(currentAccountId.value)?.features?.[
@@ -1990,6 +2000,17 @@ const openMeetingReschedule = async (meetingLike, date) => {
 };
 
 const onCalendarQuickAdd = (payload = {}) => {
+  if (mensagemMarcadaNova.value && payload.type === 'whatsapp') {
+    // O dia clicado, pelas partes locais da data (o Calendário novo manda o meio-dia UTC).
+    const data = payload.date ? new Date(payload.date) : new Date();
+    const dia = [
+      data.getFullYear(),
+      String(data.getMonth() + 1).padStart(2, '0'),
+      String(data.getDate()).padStart(2, '0'),
+    ].join('-');
+    mensagemMarcada.value = { show: true, dia };
+    return;
+  }
   if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {
     lembreteGaveta.value = {
       show: true,
@@ -2876,6 +2897,20 @@ onUnmounted(() => {
       :follow-up-id="lembreteGaveta.followUpId"
       @salvou="loadCurrentCalendar"
       @close="lembreteGaveta = { ...lembreteGaveta, show: false }"
+    />
+    <MensagemMarcadaGaveta
+      v-if="mensagemMarcadaNova"
+      :show="mensagemMarcada.show"
+      :dia="mensagemMarcada.dia"
+      :caixas="inboxes"
+      @salvou="loadCurrentCalendar"
+      @abrir-negocio="
+        id => {
+          mensagemMarcada = { ...mensagemMarcada, show: false };
+          openCardDrawer({ id }, { initialTab: 'followups' });
+        }
+      "
+      @close="mensagemMarcada = { ...mensagemMarcada, show: false }"
     />
     <CrmCalendarQuickAdd
       :show="showQuickAdd"

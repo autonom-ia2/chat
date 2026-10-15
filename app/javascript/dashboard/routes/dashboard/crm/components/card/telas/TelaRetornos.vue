@@ -67,6 +67,13 @@ const confirmarAdiar = item => {
 };
 const situacao = item =>
   t(`CRM_KANBAN.FOLLOW_UP_STATUS.${String(item.status).toUpperCase()}`);
+// #1590: por que a mensagem marcada não saiu, numa frase (o servidor manda só o código).
+const falha = item =>
+  item.send_error_code
+    ? t('CRM_MENSAGEM_MARCADA.FALHA.TITULO', {
+        motivo: t(`CRM_MENSAGEM_MARCADA.FALHA.${item.send_error_code}`),
+      })
+    : '';
 </script>
 
 <template>
@@ -139,6 +146,17 @@ const situacao = item =>
                 {{ item.title }}
               </p>
               <p class="mb-0 text-sm text-n-slate-11">{{ modo(item) }}</p>
+              <p
+                v-if="falha(item)"
+                data-retorno-falha
+                class="mb-0 flex items-start gap-2 text-sm font-medium text-n-ruby-11"
+              >
+                <span
+                  class="i-lucide-circle-alert mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {{ falha(item) }}
+              </p>
               <p v-if="item.description" class="mb-0 text-sm text-n-slate-12">
                 {{ item.description }}
               </p>
@@ -254,6 +272,13 @@ const situacao = item =>
             <span v-if="item.description" class="text-sm text-n-slate-11">{{
               item.description
             }}</span>
+            <span
+              v-if="falha(item)"
+              data-retorno-falha
+              class="text-sm font-medium text-n-ruby-11"
+            >
+              {{ falha(item) }}
+            </span>
           </span>
           <span
             class="shrink-0 rounded-lg bg-n-slate-4 px-2 py-0.5 text-xs font-medium text-n-slate-11"

@@ -169,6 +169,19 @@ RSpec.describe 'CRM calendar API', type: :request do
                                 'conversation_id' => conversation.id, 'conversation_display_id' => conversation.display_id)
     end
 
+    # #1590: a mensagem marcada que não saiu traz o motivo como código; o texto cru fica no servidor.
+    it 'manda o motivo de a mensagem marcada não ter saído' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual', contact: contact,
+                                       conversation_id: conversation.id)
+      falhou = account.crm_follow_ups.create!(card: card, contact: contact, title: 'Não saiu', due_at: '2026-10-14T19:30:00Z',
+                                              timezone: 'UTC', created_by: user)
+      falhou.update!(status: :overdue, metadata: { 'send_error' => 'sender_required' })
+
+      expect(eventos['Não saiu']).to include('send_error_code' => 'sem_remetente')
+      expect(eventos['Não saiu'].to_json).not_to include('sender_required')
+    end
+
     it 'não manda o contato de um lembrete quando ele não é o do card nem o da conversa' do
       pipeline, stage = create_crm_pipeline(account: account, user: user)
       outro = create(:contact, account: account, name: 'Outra Pessoa', phone_number: '+5511900000000')
