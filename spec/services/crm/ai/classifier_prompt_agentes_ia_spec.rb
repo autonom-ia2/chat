@@ -17,6 +17,18 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
     end
     expect(described_class::TEXT).to eq(partes_de_antes.join("\n\n"))
     expect(described_class::TEXT).not_to include('(agente de IA)')
+    expect(described_class::HANDOFF).to end_with('Não invente nomes fora da lista.')
+  end
+
+  # Pega: o classificador voltar a mandar sempre o TEXT (a explicação do rótulo sumiria no piloto em silêncio).
+  it 'o StageClassifier manda o prefixo certo para a lista de elegíveis', :aggregate_failures do
+    instrucoes = lambda do |elegiveis|
+      Crm::Ai::StageClassifier.new(card: nil, client: nil, stages: [], context: nil, eligible_agents: elegiveis)
+                              .send(:instructions)
+    end
+
+    expect(instrucoes.call(['Lia (agente de IA)'])).to equal(described_class::TEXT_COM_AGENTES_IA)
+    expect(instrucoes.call([])).to equal(described_class::TEXT)
   end
 
   # Pega: o rótulo "(agente de IA)" chegando ao modelo sem a explicação de que é um atendente.

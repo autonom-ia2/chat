@@ -78,6 +78,16 @@ RSpec.describe Crm::Entrega do
       expect(servico).to have_received(:call).once
     end
 
+    # Pega: o serviço levantar ANTES de trocar e a entrega contar como troca feita (a conversa ficaria sem ninguém).
+    it 'o serviço falha antes de trocar: alguém da equipe recebe, sem passagem para a área', :aggregate_failures do
+      allow(servico).to receive(:call).and_raise(RuntimeError, 'caiu antes')
+
+      expect(entrega.status).to eq(:entregue)
+      expect(conversation.reload).to have_attributes(assignee_id: ana.id)
+      expect(conversation.ai_assignee).not_to eq(espelho_area)
+      expect(Crm::Passagem.where(conversation_id: conversation.id).map { |passagem| passagem.para.id }).not_to include(area.id)
+    end
+
     # Pega: o serviço troca o dono, commita e só depois levanta (no aviso, na telemetria). Tratar isso como "não trocou"
     # passava a conversa a uma pessoa por cima: dois donos, duas passagens.
     it 'o serviço troca e falha depois do commit: fica com a área, um dono só e uma passagem só', :aggregate_failures do

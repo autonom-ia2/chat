@@ -77,13 +77,19 @@ class Crm::Entrega::ParaIa
   end
 
   # "Não trocou" e "trocou e falhou depois" (no aviso, na telemetria) são diferentes: relido sob a trava, o agente já no
-  # nome, sem pessoa e sem espera, é a troca feita, e a entrega não passa a conversa a uma pessoa por cima (seriam duas
-  # passagens). Numa cópia lida do banco: a conversa da entrega pode ter mudança só na memória.
+  # nome, sem pessoa e sem as esperas (as duas saem na troca, end_bot_handoff_wait), é a troca feita, e a entrega não
+  # passa a conversa a uma pessoa por cima (seriam duas passagens). Como o `alvo` já tirou o agente que era dono no
+  # plano, só uma troca depois dele chega aqui como dono. Numa cópia lida do banco: a da entrega pode ter mudança só na
+  # memória. Se a releitura também falhar no banco, conta como 'erro' (não trocou), com o log.
   def self.ficou_com_o_agente?(conversation, agent)
     conversa = conversation.class.find(conversation.id)
     conversa.with_lock do
-      conversa.assignee_id.nil? && !conversa.bot_handoff_waiting? && espelho_de?(agent, conversa.ai_assignee, conversa)
+      conversa.assignee_id.nil? && !conversa.bot_handoff_waiting? && !conversa.crm_delivery_pending? &&
+        espelho_de?(agent, conversa.ai_assignee, conversa)
     end
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.error("[crm][entrega] reler a troca falhou conversa=#{conversation.id} #{Crm::SegurarNaFilaJob.para_log(e)}")
+    false
   end
   private_class_method :pela_atribuicao, :ficou_com_o_agente?
 end
