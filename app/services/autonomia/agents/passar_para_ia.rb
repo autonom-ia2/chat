@@ -32,7 +32,8 @@ module Autonomia::Agents::PassarParaIa
 
   # origem: quem tinha a conversa (User, Autonomia::Agents::Agent ou AgentBot), ou nil. pedida_por: quem pediu a
   # passagem — obrigatório com `por: :pessoa` (a pessoa que clicou, que nem sempre é a que tinha a conversa); com
-  # `por: :ia`, se faltar, a IA que tinha a conversa (a origem), e sem as duas é erro (nil seria "o sistema"); com
+  # `por: :ia`, se faltar, a origem quando ela é uma IA (Agent ou AgentBot); origem humana ou nenhuma é erro (nil seria
+  # "o sistema", e a pessoa não pediu); com
   # `por: :crm`, sempre nil (o sistema). A assinatura é o contrato fixado com o Multifunnel (#1593).
   # rubocop:disable Metrics/ParameterLists
   def call(conversation:, agent:, por:, motivo:, origem: nil, pedida_por: nil, transfer_id: nil)
@@ -50,10 +51,14 @@ module Autonomia::Agents::PassarParaIa
   def quem_pediu(por, pedida_por, origem)
     case por
     when :pessoa then exigir!(pedida_por, 'pedida_por é obrigatório quando quem pede é uma pessoa')
-    when :ia then exigir!(pedida_por || origem, 'pedido da IA sem pedida_por nem origem: quem pediu ficaria como o sistema')
+    when :ia then exigir!(pedida_por || origem_de_ia(origem), 'pedido da IA sem pedida_por e sem origem de IA')
     else
       raise ArgumentError, 'pedido do CRM é do sistema: sem pedida_por' unless pedida_por.nil?
     end
+  end
+
+  def origem_de_ia(origem)
+    origem if origem.is_a?(::Autonomia::Agents::Agent) || origem.is_a?(AgentBot)
   end
 
   def exigir!(quem, mensagem)
