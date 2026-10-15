@@ -4,12 +4,18 @@
 # settle que enfileira. Sem ela, o settle que esperava o assunto e o reenfileirado pela troca de dono chamariam o
 # Responder duas vezes para o mesmo dono (duas chamadas de IA e, na entrega em pedaços, duas cadeias disputando).
 #
+# O valor da chave é o job_id do settle que a tomou. O Sidekiq devolve à fila o job em curso no deploy (e o retry
+# repete o job), sempre com o mesmo job_id: o mesmo settle rodando de novo reconhece a própria posse e responde, em vez
+# de perder o turno para si mesmo e deixar o cliente sem resposta. Outro settle (job_id diferente) segue barrado.
+#
 # Quem perde o turno porque o dono mudou solta a chave: se o turno voltar para ele (A→B→A), ele pode responder.
 # Laço não há: só uma troca de dono de verdade reenfileira, e o turno vence com a janela do debounce mais a folga.
 #
 # Só com a Fase 2 ligada. Fora dela nada aqui é lido nem gravado: o turno segue como sempre foi.
 module Autonomia::Agents::Operate::PosseDoTurno
   TTL = 2.minutes
+  # Quem tomou a chave sem ser um settle (o ReenfileirarTurno, que repassa a posse pelo argumento `posse`).
+  REPASSADA = 'repassada'.freeze
 
   module_function
 
@@ -17,19 +23,24 @@ module Autonomia::Agents::Operate::PosseDoTurno
     "autonomia:turno:#{conversation_id}:#{message_id}:#{agent_inbox_id}"
   end
 
-  # true quando pode responder. `posse` é o id do vínculo cuja chave quem enfileirou já tomou.
-  def assumir?(conversation:, agent_inbox:, message_id:, posse: nil)
+  # true quando pode responder. `job_id`: o do settle que pergunta. `posse`: o id do vínculo cuja chave quem enfileirou
+  # já tomou.
+  def assumir?(conversation:, agent_inbox:, message_id:, job_id:, posse: nil)
     return true unless ::Autonomia::Agents::Fase2.ligada?(conversation.account)
     return true if posse.present? && posse.to_i == agent_inbox.id
-    return true if tomar?(conversation.id, message_id, agent_inbox.id)
+    return true if tomar?(conversation.id, message_id, agent_inbox.id, dono: job_id)
 
     ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:turno_em_curso, conversation_id: conversation.id,
                                                                                msg: message_id, agent_inbox: agent_inbox.id)
     false
   end
 
-  def tomar?(conversation_id, message_id, agent_inbox_id)
-    ::Redis::Alfred.set(chave(conversation_id, message_id, agent_inbox_id), 1, nx: true, ex: TTL.to_i) ? true : false
+  # true quando a chave ficou com `dono`, agora ou antes (o mesmo job rodando de novo).
+  def tomar?(conversation_id, message_id, agent_inbox_id, dono: REPASSADA)
+    chave = chave(conversation_id, message_id, agent_inbox_id)
+    return true if ::Redis::Alfred.set(chave, dono, nx: true, ex: TTL.to_i)
+
+    dono != REPASSADA && ::Redis::Alfred.get(chave) == dono.to_s
   end
 
   def soltar(conversation_id, message_id, agent_inbox_id)

@@ -24,6 +24,11 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     cliente_escreve(texto).tap { |mensagem| gatilho(mensagem) }
   end
 
+  # A troca sem o evento do CRM: a atribuição de robô pela tela (Conversations::AssignmentService).
+  def atribuir_sem_evento!(robo)
+    Conversations::AssignmentService.new(conversation: conversation.reload, assignee_id: robo.id, assignee_type: 'AgentBot').perform
+  end
+
   def silencios(linhas, motivo)
     linhas.grep(/\[autonomia\]\[operate\] silencio .*motivo=#{motivo}\b/)
   end
@@ -69,6 +74,23 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(jobs_de(UmTurnoHelper::REPLY_JOB)).to be_empty
     end
 
+    it 'troca sem evento (robô atribuído pela tela) depois da IA e antes do 1º pedaço: o dono novo refaz o turno' do
+      ia_responde!(texto: texto_longo)
+      turno_do_cliente
+      rodar_turno! # a porta responde e enfileira a cadeia
+      atribuir_sem_evento!(espelho_area)
+
+      linhas = linhas_do_log do
+        rodar_rodada!(UmTurnoHelper::CHUNK_JOB) # o 1º pedaço da porta vê o dono novo e não posta
+        rodar_turno!
+        rodar_turno!(UmTurnoHelper::CHUNK_JOB)
+      end
+
+      expect(cadeias).to eq([espelho_area.id])
+      expect(respostas.count).to eq(Autonomia::Agents::Operate::ReplyChunker.call(texto_longo).size)
+      expect(linhas.grep(/turno_reenfileirado conv=#{conversation.id} .*origem=responder/).size).to eq(1)
+    end
+
     it 'cenário 6b: troca no meio da cadeia: a cadeia para e o dono novo não começa outra (resposta parcial, aceita)' do
       ia_responde!(texto: texto_longo)
       turno_do_cliente
@@ -83,6 +105,33 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(cadeias).to eq([porta.id])
       expect(respostas.count).to eq(1)
     end
+  end
+
+  it 'IA que passa da janela do debounce mais a folga: o dono antigo cala e o novo refaz o turno mesmo assim' do
+    ia_responde!(durante: lambda do |agente|
+      next unless agente == agente_da_porta
+
+      travel 4.minutes
+      atribuir_sem_evento!(espelho_area)
+    end)
+    turno_do_cliente
+
+    linhas = linhas_do_log { rodar_turno! }
+
+    expect(respostas.sole.sender_id).to eq(espelho_area.id)
+    expect(silencios(linhas, 'dono_mudou').size).to eq(1)
+  end
+
+  it 'evento de troca muito depois do turno (fora da janela) não refaz turno velho' do
+    ia_responde!
+    mensagem = turno_do_cliente
+    clear_enqueued_jobs
+    travel 4.minutes
+    conversation.update!(ai_assignee: espelho_area)
+
+    expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
+    expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :evento_troca)).to be(false)
+    expect(settles_na_fila).to be_empty
   end
 
   it 'cenário 7: Responder e assinante disparando juntos enfileiram um ReplyJob só' do
@@ -174,6 +223,13 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
       expect(described_class.call(conversation: conversation, message_id: mensagem.id, origem: :responder)).to be(false)
       expect(described_class.ao_trocar_dono(conversation: conversation)).to be(false)
       expect(settles_na_fila.size).to eq(1) # só o do debounce
+    end
+
+    it 'o assinante nem lê a última mensagem' do
+      allow(described_class).to receive(:ultima_mensagem_publica).and_call_original
+
+      expect(described_class.ao_trocar_dono(conversation: conversation.reload)).to be(false)
+      expect(described_class).not_to have_received(:ultima_mensagem_publica)
     end
   end
 

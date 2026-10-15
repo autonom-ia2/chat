@@ -4,25 +4,33 @@
 # - :evento_troca  — o `crm.ai.responsible_agent_changed` (Sync do CRM e PassarParaIa), depois do commit.
 #
 # Só refaz o turno que ainda está em andamento: a última mensagem pública é do cliente e é a que a marca do debounce
-# aponta, recente (AgentInbox#turno_em_andamento?). Pessoa atribuída, agente que não pode responder, conta fora da
-# Fase 2: nada a refazer.
+# aponta. Pelo :responder, sem prazo: quem chama está com o turno na mão, depois da IA, que pode passar da janela do
+# debounce. Pelo :evento_troca, a troca chega a qualquer hora, então só turno recente (AgentInbox#turno_em_andamento?).
+# Pessoa atribuída, agente que não pode responder, conta fora da Fase 2: nada a refazer.
 class Autonomia::Agents::Operate::ReenfileirarTurno
   ORIGENS = %i[responder evento_troca].freeze
 
-  # O assinante do evento de troca (config/initializers/autonomia_turno.rb). Falha aqui não pode derrubar quem trocou o
-  # dono (o Sync do CRM): fica no log e no rastreador de erro.
+  # O assinante do evento de troca (config/initializers/autonomia_turno.rb). A Fase 2 vem antes de qualquer leitura: conta
+  # fora dela não consulta nem a última mensagem.
   def self.ao_trocar_dono(payload)
     conversation = payload.to_h[:conversation]
     return if conversation.blank?
+    return false unless fase2?(conversation.account)
 
     ultima = ultima_mensagem_publica(conversation)
     return unless ultima&.incoming?
 
     call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
+  # Roda depois do commit de quem trocou o dono (o Sync do CRM, o PassarParaIa), dentro do instrument dele: propagar não
+  # desfaz a troca já gravada, só derrubaria quem chamou e os outros assinantes do evento. Fica no log e no rastreador.
   rescue StandardError => e
     Rails.logger.warn("[autonomia][turno] reenfileirar_falhou conv=#{conversation&.id} #{e.class}")
     ChatwootExceptionTracker.new(e, account: conversation&.account).capture_exception
     nil
+  end
+
+  def self.fase2?(account)
+    ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
   end
 
   def self.ultima_mensagem_publica(conversation)
@@ -45,7 +53,7 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
 
   # -> true quando enfileirou o turno para o dono novo.
   def call
-    return false unless @message_id.positive? && fase2?
+    return false unless @message_id.positive? && self.class.fase2?(@conversation.account)
 
     soltar_posse_de_quem_perdeu
     destino = ::Autonomia::Agents::Operate.eligible_agent_inbox(@conversation.reload)
@@ -58,18 +66,16 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
 
   private
 
-  def fase2?
-    account = @conversation.account
-    ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
-  end
-
   def soltar_posse_de_quem_perdeu
     ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @message_id, @quem_perdeu.id) if @quem_perdeu
   end
 
   def turno_em_andamento?(destino)
     ultima = self.class.ultima_mensagem_publica(@conversation)
-    ultima&.id == @message_id && ultima.incoming? && destino.turno_em_andamento?(@conversation, ultima)
+    return false unless ultima&.id == @message_id && ultima.incoming?
+    return ::Autonomia::Agents::Operate::ReplyJob.turno_pendente?(@conversation, @message_id) if @origem == :responder
+
+    destino.turno_em_andamento?(@conversation, ultima)
   end
 
   def barrado(destino)

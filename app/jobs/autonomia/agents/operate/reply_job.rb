@@ -25,6 +25,12 @@ module Autonomia
 
         DEBOUNCE_KEY = 'autonomia_debounce'.freeze
 
+        # A marca do debounce aponta para esta mensagem: nenhuma mais nova do cliente abriu outro turno (#1606).
+        def self.turno_pendente?(conversation, message_id)
+          stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
+          stamp.is_a?(Hash) && stamp['pending_message_id'] == message_id.to_i
+        end
+
         # `posse` (#1606): o id do vínculo cuja posse do turno quem enfileirou já tomou (Operate::ReenfileirarTurno).
         def perform(conversation_id, message_id, phase = 'trigger', posse = nil)
           conversation = Conversation.find_by(id: conversation_id)
@@ -69,7 +75,8 @@ module Autonomia
           return unless current_token?(conversation, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
           return unless ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
-                                                                            message_id: message_id, posse: posse)
+                                                                            message_id: message_id, job_id: job_id,
+                                                                            posse: posse)
 
           ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
