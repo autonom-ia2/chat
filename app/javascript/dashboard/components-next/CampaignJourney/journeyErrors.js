@@ -54,6 +54,10 @@ const CREATE_ERRORS = {
   free_text_disabled: 'FREE_TEXT_DISABLED',
   // Fork #1456: cupom, oferta com prazo ou carrossel só no modelo completo.
   free_text_not_allowed_with_rich_template: 'FREE_TEXT_RICH_TEMPLATE',
+  // Fork #1418: produtos do catálogo (Whatsapp::Templates::ProductParams).
+  products_required: 'PRODUCTS_REQUIRED',
+  products_count: 'PRODUCTS_REQUIRED',
+  products_disabled: 'PRODUCTS_DISABLED',
 };
 
 export const createErrorKey = error => {
