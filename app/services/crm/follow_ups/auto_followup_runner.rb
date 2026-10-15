@@ -315,16 +315,21 @@ module Crm
         reschedule(wait_until)
       end
 
+      # Recusa por mérito (a IA não quis enviar), no funil de Atender, e ainda sem ter esperado neste card.
+      def deadline_wait_allowed?(reason, composition)
+        reason == 'no_open_loop' && !Crm::Ai::Config::BOOLEAN.cast(composition['should_send']) &&
+          !Crm::Ai::Config::BOOLEAN.cast(state['deadline_wait_done']) && @card.pipeline&.kind == 'serve'
+      end
+
       def deadline_wait_until(reason, composition)
-        return unless reason == 'no_open_loop' && !Crm::Ai::Config::BOOLEAN.cast(composition['should_send'])
-        return if Crm::Ai::Config::BOOLEAN.cast(state['deadline_wait_done']) || @card.pipeline&.kind != 'serve'
+        return unless deadline_wait_allowed?(reason, composition)
 
         deadline = @card.expected_close_at
-        return if deadline.blank? || deadline <= @now
-
-        # O dia é o do calendário em UTC (a tela do CRM grava "AAAA-MM-DD" como 00:00 UTC), e o dia seguinte começa no
-        # fuso do contato.
         zone = ActiveSupport::TimeZone[resolved_timezone]
+        # O dia é o do calendário em UTC (a tela do CRM grava "AAAA-MM-DD" como 00:00 UTC), comparado com o "hoje" do
+        # contato: prazo de hoje ainda espera, só o de ontem para trás encerra. O dia seguinte começa no fuso do contato.
+        return if deadline.blank? || deadline.utc.to_date < @now.in_time_zone(zone).to_date
+
         day_after = deadline.utc.to_date + 1
         compute_due(zone.local(day_after.year, day_after.month, day_after.day))
       end

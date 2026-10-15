@@ -55,19 +55,30 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
 
       expect(result.status).to eq(:rescheduled)
       expect(follow_up.reload.status).to eq('pending')
-      expect(follow_up.due_at).to be >= Time.utc(2026, 10, 21)
-      expect(follow_up.due_at).to be < Time.utc(2026, 10, 22)
+      expect(follow_up.due_at).to eq(Time.utc(2026, 10, 21, 11)) # 08:00 em São Paulo, primeiro horário permitido do dia 21
       expect(state(card)).to include('deadline_wait_done' => true)
       expect(state(card)['spent']).not_to be(true)
       expect(card.reload.metadata.to_h.dig('ai', 'auto_followup_state', 'stopped_reason')).to be_nil
     end
 
     it 'does not consume the touch: the same touch runs again after the date' do
-      _card, follow_up = setup_card(counts_as_sale: false, expected_close_at: due_day)
+      card, follow_up = setup_card(counts_as_sale: false, expected_close_at: due_day)
 
       run(follow_up)
 
       expect(follow_up.reload.metadata['touch']).to eq(1)
+      expect(follow_up.account.crm_follow_ups.where(card: card).count).to eq(1) # nenhum toque 2 criado
+      expect(follow_up).to be_pending
+    end
+
+    it 'still waits when the due date is today: only a past date ends the cadence' do
+      card, follow_up = setup_card(counts_as_sale: false, expected_close_at: Time.utc(2026, 10, 14))
+
+      result = run(follow_up)
+
+      expect(result.status).to eq(:rescheduled)
+      expect(follow_up.reload.due_at).to eq(Time.utc(2026, 10, 15, 11))
+      expect(state(card)).to include('deadline_wait_done' => true)
     end
 
     it 'waits only once per card: a second refusal ends the cadence as before' do
