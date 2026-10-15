@@ -71,8 +71,19 @@ class Crm::Entrega::ParaIa
   rescue ArgumentError
     raise
   rescue StandardError => e
-    Rails.logger.error("[crm][entrega] passar ao agente falhou conversa=#{conversation.id} agente=#{agent.id} erro=#{e.class}")
-    'erro'
+    Rails.logger.error("[crm][entrega] passar ao agente falhou conversa=#{conversation.id} agente=#{agent.id} " \
+                       "#{Crm::SegurarNaFilaJob.para_log(e)}")
+    ficou_com_o_agente?(conversation, agent) ? PASSOU : 'erro'
   end
-  private_class_method :pela_atribuicao
+
+  # "Não trocou" e "trocou e falhou depois" (no aviso, na telemetria) são diferentes: relido sob a trava, o agente já no
+  # nome, sem pessoa e sem espera, é a troca feita, e a entrega não passa a conversa a uma pessoa por cima (seriam duas
+  # passagens). Numa cópia lida do banco: a conversa da entrega pode ter mudança só na memória.
+  def self.ficou_com_o_agente?(conversation, agent)
+    conversa = conversation.class.find(conversation.id)
+    conversa.with_lock do
+      conversa.assignee_id.nil? && !conversa.bot_handoff_waiting? && espelho_de?(agent, conversa.ai_assignee, conversa)
+    end
+  end
+  private_class_method :pela_atribuicao, :ficou_com_o_agente?
 end

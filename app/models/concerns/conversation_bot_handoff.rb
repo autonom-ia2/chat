@@ -131,24 +131,17 @@ module ConversationBotHandoff
     com_ia = para_ia.concluir_para_ia!(origem: quem_passou).status == :com_ia
     dispatch_bot_handoff_event if dispatch_event && !com_ia
   rescue StandardError => e
-    Rails.logger.error("[crm][entrega] concluir passagem ao agente falhou conversa=#{id} erro=#{e.class}")
+    Rails.logger.error("[crm][entrega] concluir passagem ao agente falhou conversa=#{id} #{Crm::SegurarNaFilaJob.para_log(e)}")
     segurar_para_a_fila(motivo)
     dispatch_bot_handoff_event if dispatch_event
   end
 
-  # Sem a marca do motor, a fila (HandoffDrainJob) não veria a conversa. Relida sob a trava: quem entrou nesse meio tempo
-  # (uma pessoa, o agente de IA, a resolução) vence, e nada é gravado. Numa cópia lida do banco: a que falhou pode ter
-  # mudança só na memória.
+  # Sem a marca do motor, a fila (HandoffDrainJob) não veria a conversa: marca na hora (numa cópia lida do banco, sob a
+  # trava). Se falhar, o retry_on do job agenda nova tentativa. Só a falha ao agendar chega ao rescue, e fica no log.
   def segurar_para_a_fila(motivo)
-    conversa = self.class.find(id)
-    conversa.with_lock do
-      next unless conversa.awaiting_person? && !conversa.resolved?
-
-      Crm::Entrega::Marca.marcar(conversa, modo: Crm::Entrega::Marca::SEGURANDO, motivo: motivo, falha: 'erro_na_passagem')
-      conversa.save!
-    end
+    Crm::SegurarNaFilaJob.perform_now(id, motivo)
   rescue StandardError => e
-    Rails.logger.error("[crm][entrega] segurar para a fila falhou conversa=#{id} erro=#{e.class}")
+    Rails.logger.error("[crm][entrega] segurar na fila não agendou conversa=#{id} #{Crm::SegurarNaFilaJob.para_log(e)}")
   end
 
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a

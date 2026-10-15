@@ -91,13 +91,14 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       expect(response.parsed_body['origem']).to be_nil
     end
 
-    it 'sem a Fase 2: só pessoas, sem selo e sem consultar os Agentes', :aggregate_failures do
+    # Pega: a rota respondendo fora do piloto (o botão some, mas a API ficava aberta).
+    it 'sem a Fase 2: 404, sem consultar os Agentes', :aggregate_failures do
       Autonomia::Agents::Fase2.desligar!(account)
       allow(servico).to receive(:destinos_possiveis).and_call_original
 
       get url, headers: ana.create_new_auth_token
 
-      expect(response.parsed_body).to include('fase2' => false, 'agentes' => [], 'com_ia' => nil)
+      expect(response).to have_http_status(:not_found)
       expect(servico).not_to have_received(:destinos_possiveis)
     end
   end
@@ -156,10 +157,10 @@ RSpec.describe 'Conversation Passar para API', type: :request do
 
     # Pega: a recusa dos Agentes virar 500 ou sumir; a tela precisa do código para explicar. Cada recusa acontece de
     # verdade no banco. `outra_conta` e `pessoa_atribuida` não chegam por aqui: agente de outra conta é destino_invalido
-    # (abaixo), e a pessoa que pede sempre pode tirar a conversa de uma pessoa.
+    # (abaixo), e a pessoa que pede sempre pode tirar a conversa de uma pessoa. `fase2_desligada` nem chega ao serviço: a
+    # rota responde 404 (abaixo).
     def preparar_recusa!(codigo)
       case codigo
-      when 'fase2_desligada' then Autonomia::Agents::Fase2.desligar!(account)
       when 'nao_atende_cliente'
         area.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
       when 'sem_vinculo_na_caixa' then area_sumiu!
@@ -167,7 +168,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       end
     end
 
-    %w[fase2_desligada nao_atende_cliente sem_vinculo_na_caixa conversa_resolvida].each do |codigo|
+    %w[nao_atende_cliente sem_vinculo_na_caixa conversa_resolvida].each do |codigo|
       it "recusa #{codigo}: 422 com o código, e nada muda", :aggregate_failures do
         preparar_recusa!(codigo)
 
@@ -187,6 +188,17 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       passar({ tipo: 'ia', id: alheio.id })
 
       expect(response.parsed_body).to eq('codigo' => 'destino_invalido')
+      expect(servico).not_to have_received(:call)
+    end
+
+    # Pega: passar a conversa (para pessoa ou agente) fora do piloto pela API.
+    it 'sem a Fase 2: 404 e nada muda, nem para pessoa', :aggregate_failures do
+      Autonomia::Agents::Fase2.desligar!(account)
+
+      expect { passar({ tipo: 'pessoa', id: bruno.id }) }.not_to change(Crm::Passagem, :count)
+
+      expect(response).to have_http_status(:not_found)
+      expect(conversation.reload.assignee_id).to eq(ana.id)
       expect(servico).not_to have_received(:call)
     end
 

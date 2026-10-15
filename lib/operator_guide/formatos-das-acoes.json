@@ -13484,8 +13484,8 @@
     "corpo_plano": false,
     "envelope": "destino",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:10",
-      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:13",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:33",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false

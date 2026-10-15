@@ -78,6 +78,22 @@ RSpec.describe Crm::Entrega do
       expect(servico).to have_received(:call).once
     end
 
+    # Pega: o serviço troca o dono, commita e só depois levanta (no aviso, na telemetria). Tratar isso como "não trocou"
+    # passava a conversa a uma pessoa por cima: dois donos, duas passagens.
+    it 'o serviço troca e falha depois do commit: fica com a área, um dono só e uma passagem só', :aggregate_failures do
+      allow(servico).to receive(:call).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos)
+        raise 'falhou depois da troca'
+      end
+
+      resultado = nil
+      expect { resultado = entrega }.to change(Crm::Passagem, :count).by(1)
+
+      expect(resultado.status).to eq(:com_ia)
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
+      expect(Crm::Passagens.ultima_aberta(conversation).para.id).to eq(area.id)
+    end
+
     # Pega: o laço. A área (o robô no nome é o espelho dela) pede pessoa e a regra aponta para ela mesma. O serviço
     # dos Agentes responde `passou` para quem espera pessoa, então quem barra é o CRM, antes de chamá-lo.
     it 'a própria área passa: alguém da equipe recebe, sem chamar o serviço', :aggregate_failures do
