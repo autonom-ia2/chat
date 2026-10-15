@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import SentenceChoice from 'dashboard/components-next/sentence-choice/SentenceChoice.vue';
+import Input from 'dashboard/components-next/input/Input.vue';
 import {
   PACE_OPTIONS,
   PACE_RECOMMENDED,
@@ -70,18 +71,20 @@ const campaignCap = computed(() => Math.min(props.campaignLimit, rate.value));
       <label for="hybrid-pace-other" class="text-sm text-n-slate-12">
         {{ tp('OTHER_LABEL', { min: PACE_MIN, max: PACE_MAX }) }}
       </label>
-      <input
+      <!-- O Input do components-next desenha o contorno de erro (o estilo global do campo cobria a borda). O texto do
+           erro fica aqui, com id e role="alert": o Input não liga a mensagem dele ao campo para o leitor de tela. -->
+      <Input
         id="hybrid-pace-other"
         v-model="other"
-        data-pace-other
         type="number"
         inputmode="numeric"
-        :min="PACE_MIN"
-        :max="PACE_MAX"
+        :min="String(PACE_MIN)"
+        :max="String(PACE_MAX)"
+        :message-type="showError ? 'error' : 'info'"
         :aria-invalid="showError || undefined"
         :aria-describedby="showError ? 'hybrid-pace-other-error' : undefined"
-        class="!w-28 px-3 !mb-0 text-base border rounded-xl min-h-11 bg-n-alpha-black2 text-n-slate-12"
-        :class="showError ? '!border-n-ruby-8' : 'border-n-weak'"
+        class="w-28"
+        custom-input-class="!h-11 !text-base"
         @input="touched = true"
         @blur="touched = true"
       />

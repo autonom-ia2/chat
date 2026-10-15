@@ -165,22 +165,24 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     expect(
       drawer.find('[data-choice="other"]').attributes('aria-checked')
     ).toBe('true');
-    expect(drawer.find('[data-pace-other]').element.value).toBe('45');
+    expect(drawer.find('#hybrid-pace-other').element.value).toBe('45');
 
-    await drawer.find('[data-pace-other]').setValue('500');
+    await drawer.find('#hybrid-pace-other').setValue('500');
     await flushPromises();
     expect(drawer.find('[role="alert"]').text()).toBe(
       `${R}.PACE.INVALID|1,120`
     );
-    // A borda vermelha vence o estilo global do input.
-    expect(drawer.find('[data-pace-other]').classes()).toContain(
-      '!border-n-ruby-8'
-    );
+    // O contorno vermelho do Input do components-next (o estilo global cobria a borda) e o campo marcado inválido.
+    const field = drawer.find('#hybrid-pace-other');
+    expect(field.classes()).toContain('outline-n-ruby-8');
+    expect(field.attributes('aria-invalid')).toBe('true');
+    expect(field.attributes('min')).toBe('1');
+    expect(field.attributes('max')).toBe('120');
     expect(
       buttonWith(wrapper, `${R}.SAVE`).attributes('disabled')
     ).toBeDefined();
 
-    await drawer.find('[data-pace-other]').setValue('15');
+    await drawer.find('#hybrid-pace-other').setValue('15');
     await flushPromises();
     await buttonWith(wrapper, `${R}.SAVE`).trigger('click');
     expect(wrapper.emitted('save')).toEqual([[{ rate_limit_per_minute: 15 }]]);
@@ -198,13 +200,13 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     await drawer.find('[data-choice="other"]').trigger('click');
     await flushPromises();
 
-    expect(drawer.find('[data-pace-other]').exists()).toBe(true);
+    expect(drawer.find('#hybrid-pace-other').exists()).toBe(true);
     expect(drawer.find('[role="alert"]').exists()).toBe(false);
     expect(
       buttonWith(wrapper, `${R}.SAVE`).attributes('disabled')
     ).toBeDefined();
 
-    await drawer.find('[data-pace-other]').trigger('blur');
+    await drawer.find('#hybrid-pace-other').trigger('blur');
     expect(drawer.find('[role="alert"]').exists()).toBe(true);
     wrapper.unmount();
   });
