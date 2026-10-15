@@ -930,6 +930,7 @@
         },
         "WHO": {
           "TITLE": "Quem pode usar o WhatsApp API depois de 24 h",
+          "DRAWER_TITLE": "Quem pode usar depois de 24 h",
           "DRAWER_TEXT": "Marque quem pode mandar mensagem pelo WhatsApp API quando passar de 24 horas.",
           "SUMMARY": "{list} usa o WhatsApp API depois de 24 h. | {list} usam o WhatsApp API depois de 24 h.",
           "NONE": "Ninguém usa o WhatsApp API depois de 24 h: tudo sai como mensagem pronta.",

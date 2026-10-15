@@ -54,7 +54,7 @@ defineEmits(['edit']);
           />
         </slot>
       </div>
-      <div class="-mt-2 text-base leading-relaxed text-n-slate-12">
+      <div class="text-base leading-relaxed text-n-slate-12">
         <slot />
       </div>
       <slot name="extra" />

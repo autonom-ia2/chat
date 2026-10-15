@@ -30,6 +30,9 @@ const otherNumber = computed(() => Number(other.value));
 const invalid = computed(
   () => choice.value === PACE_OTHER && !validPace(otherNumber.value)
 );
+// O erro só aparece depois que a pessoa mexe no campo; o Salvar já fica travado antes.
+const touched = ref(false);
+const showError = computed(() => invalid.value && touched.value);
 
 const options = computed(() => [
   ...PACE_OPTIONS.map(value => ({ value, label: String(value) })),
@@ -75,13 +78,15 @@ const campaignCap = computed(() => Math.min(props.campaignLimit, rate.value));
         inputmode="numeric"
         :min="PACE_MIN"
         :max="PACE_MAX"
-        :aria-invalid="invalid || undefined"
-        aria-describedby="hybrid-pace-other-error"
-        class="w-28 px-3 mb-0 text-base border rounded-xl min-h-11 bg-n-alpha-black2 text-n-slate-12"
-        :class="invalid ? 'border-n-ruby-8' : 'border-n-weak'"
+        :aria-invalid="showError || undefined"
+        :aria-describedby="showError ? 'hybrid-pace-other-error' : undefined"
+        class="!w-28 px-3 !mb-0 text-base border rounded-xl min-h-11 bg-n-alpha-black2 text-n-slate-12"
+        :class="showError ? 'border-n-ruby-8' : 'border-n-weak'"
+        @input="touched = true"
+        @blur="touched = true"
       />
       <p
-        v-if="invalid"
+        v-if="showError"
         id="hybrid-pace-other-error"
         role="alert"
         class="mb-0 text-sm text-n-ruby-11"

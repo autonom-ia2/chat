@@ -39,12 +39,12 @@ const checked = defineModel({ type: Boolean, default: false });
     </span>
     <span class="flex flex-col flex-1 min-w-0 gap-1">
       <span
-        class="flex items-center gap-2 text-[0.9375rem] font-semibold text-n-slate-12"
+        class="flex items-start gap-2 text-[0.9375rem] font-semibold text-n-slate-12"
       >
         <span
           v-if="icon"
           :class="icon"
-          class="size-4 shrink-0 text-n-slate-11"
+          class="size-4 mt-0.5 shrink-0 text-n-slate-11"
           aria-hidden="true"
         />
         <span class="min-w-0 break-words">{{ title }}</span>

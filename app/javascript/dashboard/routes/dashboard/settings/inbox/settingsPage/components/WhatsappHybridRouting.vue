@@ -173,7 +173,7 @@ const setRouting = value => emit('save', { routing_enabled: value });
       </p>
     </SummaryCard>
 
-    <SidePanel ref="whoPanel" width="3xl" :title="tr('WHO.TITLE')">
+    <SidePanel ref="whoPanel" width="3xl" :title="tr('WHO.DRAWER_TITLE')">
       <div
         class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]"
         data-who-drawer

@@ -175,4 +175,36 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     expect(wrapper.emitted('save')).toEqual([[{ rate_limit_per_minute: 15 }]]);
     wrapper.unmount();
   });
+
+  it('waits for the person to type before showing the number error, with Save locked meanwhile', async () => {
+    const wrapper = mountRouting();
+    const editButtons = wrapper
+      .findAll('button')
+      .filter(button => button.text() === `${R}.EDIT`);
+    await editButtons[1].trigger('click');
+
+    const drawer = wrapper.find('[data-test="drawer"]');
+    await drawer.find('[data-choice="other"]').trigger('click');
+    await flushPromises();
+
+    expect(drawer.find('[data-pace-other]').exists()).toBe(true);
+    expect(drawer.find('[role="alert"]').exists()).toBe(false);
+    expect(
+      buttonWith(wrapper, `${R}.SAVE`).attributes('disabled')
+    ).toBeDefined();
+
+    await drawer.find('[data-pace-other]').trigger('blur');
+    expect(drawer.find('[role="alert"]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('uses a short drawer title, so it fits at 390 px', async () => {
+    const wrapper = mountRouting();
+    await buttonWith(wrapper, `${R}.EDIT`).trigger('click');
+
+    expect(wrapper.find('[data-test="drawer"]').attributes('data-title')).toBe(
+      `${R}.WHO.DRAWER_TITLE`
+    );
+    wrapper.unmount();
+  });
 });
