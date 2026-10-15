@@ -114,9 +114,13 @@ module ConversationBotHandoff
   end
 
   # Depois do commit: a passagem ao agente de IA que a regra apontou. Com ele no comando, sem aviso de passagem.
+  # Um erro aqui sai depois do commit de quem chamou: fica no log e o aviso de passagem sai, como numa recusa.
   def concluir_passagem(para_ia, dispatch_event, quem_passou)
     com_ia = para_ia.concluir_para_ia!(origem: quem_passou).status == :com_ia
     dispatch_bot_handoff_event if dispatch_event && !com_ia
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] concluir passagem ao agente falhou conversa=#{id} erro=#{e.class}")
+    dispatch_bot_handoff_event if dispatch_event
   end
 
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a

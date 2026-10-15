@@ -92,9 +92,12 @@ RSpec.describe Crm::Entrega do
         resultado_da_ia(:pessoa_atribuida)
       end
 
+      allow(conversa).to receive(:with_lock).and_call_original
+
       resultado = entrega(conversa)
 
       expect(resultado).to have_attributes(status: :nada, motivo: 'ja_tem_pessoa')
+      expect(conversa).to have_received(:with_lock).once # não tentou de novo sem IA
       expect(conversa.reload.assignee_id).to eq(admin.id)
     end
 
@@ -140,6 +143,27 @@ RSpec.describe Crm::Entrega do
 
       expect(chamadas_antes_do_commit).to eq(0)
       expect(chamadas).to eq(1)
+    end
+
+    # Pega: erro depois do commit deixava a conversa sem o aviso de passagem.
+    it 'na passagem do robô, erro inesperado depois do commit: o aviso de passagem sai mesmo assim' do
+      conversa = conversa_do_robo
+      allow(Rails.configuration.dispatcher).to receive(:dispatch)
+      allow(servico).to receive(:call).and_return(resultado_da_ia(:nao_atende_cliente))
+      allow(Crm::Ai::HandoffMemberSelector).to receive(:new).and_raise(RuntimeError) # a reserva sem IA quebra
+
+      conversa.bot_handoff!
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
+    end
+
+    # Pega: erro de contrato (pedida_por com por: :crm) virar desvio silencioso para a equipe.
+    it 'erro de contrato com o serviço dos Agentes sobe, em vez de virar recusa' do
+      conversa = conversa_do_robo
+      allow(servico).to receive(:call).and_raise(ArgumentError)
+
+      expect { entrega(conversa) }.to raise_error(ArgumentError)
     end
 
     it 'na passagem do robô com recusa: alguém da equipe recebe e o aviso de passagem sai', :aggregate_failures do

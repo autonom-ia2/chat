@@ -48,7 +48,7 @@ module Crm::AgentesIa
   # desligada, ou o agente parado, depois). Agente novo: escolhivel?.
   def pode_salvar?(account, novo, antes)
     antes = (antes || {}).to_h
-    return true if antes['pool_type'] == 'ai_agent' && antes['pool_id'].to_i == novo['pool_id'].to_i
+    return true if antes['pool_type'] == 'ai_agent' && novo['pool_id'].to_i.positive? && antes['pool_id'].to_i == novo['pool_id'].to_i
 
     escolhivel?(account, novo['pool_id'])
   end

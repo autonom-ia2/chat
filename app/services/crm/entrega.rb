@@ -74,9 +74,12 @@ class Crm::Entrega
 
   private
 
-  # Erro no serviço dos Agentes não deixa a conversa sem ninguém: conta como recusa, e a entrega segue sem IA.
+  # Erro no serviço dos Agentes não deixa a conversa sem ninguém: conta como recusa, e a entrega segue sem IA. Erro de
+  # contrato (ArgumentError) é de programação e sobe.
   def passar_ao_agente(agente, origem)
     Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :crm, motivo: MOTIVO_IA, origem: origem)
+  rescue ArgumentError
+    raise
   rescue StandardError => e
     Rails.logger.error("[crm][entrega] passar ao agente falhou conversa=#{@conversation.id} agente=#{agente.id} erro=#{e.class}")
     'erro'

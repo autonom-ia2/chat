@@ -72,9 +72,13 @@ watch(
   },
   { immediate: true }
 );
+// O robô entrou ou saiu na mesma conversa. Quando foi este botão que passou, o retrato do POST já está certo.
 watch(comRobo, comBot => {
-  if (comBot) lerRetrato();
-  else retrato.value = null;
+  if (!comBot) {
+    retrato.value = null;
+    return;
+  }
+  if (retrato.value?.com_ia?.bot_id !== atribuida.value?.id) lerRetrato();
 });
 
 const comIa = computed(() => retrato.value?.com_ia || null);
@@ -208,6 +212,8 @@ const confirmar = async () => {
     atualizarConversa(pedido, data);
     if (pedido !== conversaId.value) return;
     retrato.value = data;
+    // Passou para a IA mas o servidor ainda não mostra com quem está: lê de novo.
+    if (!data.assignee && !data.com_ia) lerRetrato();
     dialogRef.value?.close();
     useAlert(t(`${P}.PRONTO`, { nome: destino.nome }));
   } catch (erro) {

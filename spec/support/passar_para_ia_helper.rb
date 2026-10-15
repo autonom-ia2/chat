@@ -1,7 +1,7 @@
 # #1593 — dublês por contrato do que ainda não está na main:
-# - Autonomia::Agents::PassarParaIa (PR-B da sessão Agentes IA): `call(conversation:, agent:, por:, motivo:, origem:,
-#   transfer_id:)` -> Resultado (ok?, trocou?, codigo), `destinos_possiveis(conversation)` e `destinos_na_caixa(inbox)`
-#   -> Array<Agent>;
+# - Autonomia::Agents::PassarParaIa (PR-B da sessão Agentes IA): `call(conversation:, agent:, por:, motivo:, origem: nil,
+#   pedida_por: nil, transfer_id: nil)` -> Resultado (ok?, trocou?, codigo); pedida_por obrigatório com por: :pessoa e
+#   proibido com :crm. `destinos_possiveis(conversation)` e `destinos_na_caixa(inbox)` -> Array<Agent>;
 # - Crm::Passagens.com_motivo(motivo) { ... } (PR B da #1606).
 # Quando cada um entrar, o dublê sai e o spec usa o código real.
 module PassarParaIaHelper
