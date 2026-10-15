@@ -10,6 +10,8 @@ const PADRAO = {
   iconeAtivo: 'text-n-blue-11',
   iconePai: 'text-n-blue-11',
   paiAtivo: 'font-semibold text-n-slate-12',
+  paiFechadoAtivo:
+    'bg-n-blue-3/70 font-semibold text-n-blue-11 hover:bg-n-blue-3',
   tituloGrupo: 'text-n-slate-11',
   linha: 'border-n-weak',
   foco: 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand',
@@ -29,6 +31,7 @@ const MARCA = {
   iconeAtivo: 'text-[var(--sidebar-background-color)]',
   iconePai: 'text-white',
   paiAtivo: 'font-semibold text-white',
+  paiFechadoAtivo: 'bg-white/15 font-semibold text-white hover:bg-white/20',
   tituloGrupo: 'text-white/60',
   linha: 'border-white/15',
   foco: 'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white',

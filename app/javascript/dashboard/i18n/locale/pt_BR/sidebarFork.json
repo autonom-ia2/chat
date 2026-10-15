@@ -1,8 +1,6 @@
 {
   "FORK_SIDEBAR": {
     "MENU": "Menu principal",
-    "ABRIR_ITEM": "Mostrar o que tem em {item}",
-    "FECHAR_ITEM": "Esconder o que tem em {item}",
     "NOVAS": "1 nova | {count} novas",
     "ROTULO_COM_EXTRA": "{item}, {extra}",
     "FECHAR_GAVETA": "Fechar o menu",

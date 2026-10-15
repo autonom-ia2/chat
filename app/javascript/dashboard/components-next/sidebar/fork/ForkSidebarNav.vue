@@ -100,6 +100,20 @@ const alternar = nome => {
   abertoNome.value = abertoNome.value === nome ? null : nome;
   updateUISettings({ menu_grupo_aberto: abertoNome.value });
 };
+// O grupo da tela atual abre sozinho quando a pessoa NAVEGA para uma tela dele (e ao carregar). Depois ela pode
+// fechá-lo, e ele fica fechado até a próxima navegação para uma tela dele. Não grava: é a rota, não a escolha.
+const grupoDaTela = computed(() =>
+  ativa.value?.item.children ? ativa.value.item.name : null
+);
+watch(
+  () => [route.fullPath, grupoDaTela.value],
+  ([, grupo], anterior) => {
+    const mesmaTela = anterior && anterior[0] === route.fullPath;
+    if (!grupo || (mesmaTela && anterior[1] === grupo)) return;
+    abertoNome.value = grupo;
+  },
+  { immediate: true }
+);
 
 const contagemDe = item => {
   const chave = item.getterKeys?.count;

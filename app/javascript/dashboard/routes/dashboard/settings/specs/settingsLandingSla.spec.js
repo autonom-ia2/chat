@@ -17,6 +17,8 @@ const home = settingsRoutes.routes.find(
 const funcaoSo = permissions => {
   store.getters.getCurrentRole = 'agent';
   store.getters.getCurrentCustomRoleId = 7;
+  // Menu novo (#1617) desligado: settings_home segue a regra de sempre.
+  store.getters['accounts/isFeatureEnabledonAccount'] = () => false;
   store.getters.getCurrentUser = {
     accounts: [{ id: 9, custom_role_id: 7, permissions }],
   };

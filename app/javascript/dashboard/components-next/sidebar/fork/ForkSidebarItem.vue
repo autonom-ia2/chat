@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { folhasDe } from '../forkSidebarMenu';
 import ForkContador from './ForkContador.vue';
@@ -21,7 +20,6 @@ const props = defineProps({
 
 const emit = defineEmits(['alternar', 'navegou']);
 
-const { t } = useI18n();
 const router = useRouter();
 
 const temFilhos = computed(() => Boolean(props.item.children?.length));
@@ -35,13 +33,15 @@ const contemAtiva = computed(
 const ativaNome = computed(() =>
   contemAtiva.value ? props.ativa.folha?.name || '' : ''
 );
-const mostraFilhos = computed(() => props.aberto || contemAtiva.value);
+// Aberto ou fechado é escolha da pessoa (o Nav abre sozinho só quando ela navega para uma tela do grupo).
+const mostraFilhos = computed(() => props.aberto);
 const idDaLista = computed(
   () => `fork-item-${props.item.name.split(' ').join('-')}`
 );
 
 const alternar = () => {
-  if (!mostraFilhos.value) {
+  // Abrir um grupo que não tem a tela atual já leva à primeira tela dele, como o menu de sempre.
+  if (!mostraFilhos.value && !contemAtiva.value) {
     const [primeira] = folhasDe(props.item);
     if (primeira) {
       router.push(primeira.to);
@@ -58,6 +58,9 @@ const ir = (navegar, evento) => {
 
 const classesDaLinha = computed(() => {
   if (souAtivo.value) return props.tema.ativo;
+  // Fechado com a tela atual dentro: o próprio item fica realçado, para a pessoa não se perder.
+  if (contemAtiva.value && !mostraFilhos.value)
+    return props.tema.paiFechadoAtivo;
   if (contemAtiva.value) return [props.tema.paiAtivo, props.tema.passar];
   return [props.tema.texto, props.tema.passar];
 });
@@ -121,14 +124,6 @@ const classesDoIcone = computed(() => {
         :class="[tema.foco, classesDaLinha]"
         :aria-expanded="mostraFilhos"
         :aria-controls="idDaLista"
-        :title="
-          t(
-            mostraFilhos
-              ? 'FORK_SIDEBAR.FECHAR_ITEM'
-              : 'FORK_SIDEBAR.ABRIR_ITEM',
-            { item: item.label }
-          )
-        "
         @click="alternar"
       >
         <Icon

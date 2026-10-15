@@ -24,6 +24,10 @@ const META = {
   conversation_mentions: ['administrator', 'agent'],
   central_de_ajuda: ['administrator', 'agent', 'crm_manage_ai'],
   crm_handoff_settings_index: ['administrator', 'crm_manage_ai'],
+  crm_calendar_index: ['administrator', 'agent'],
+  settings_booking: ['administrator', 'agent'],
+  agent_reports_index: ['administrator', 'agent'],
+  conversation_reports: ['administrator', 'agent'],
 };
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
@@ -104,7 +108,26 @@ const ITENS = [
     name: 'CRM',
     label: 'CRM',
     icon: 'i-lucide-kanban-square',
-    children: [folha('CRM Kanban', 'crm_kanban_index')],
+    children: [
+      folha('CRM Kanban', 'crm_kanban_index'),
+      {
+        name: 'CRM Scheduling',
+        label: 'Agendamento',
+        children: [
+          folha('CRM Calendar', 'crm_calendar_index'),
+          folha('CRM Booking', 'settings_booking'),
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Reports',
+    label: 'Relatórios',
+    icon: 'i-lucide-chart-spline',
+    children: [
+      folha('Report Overview', 'agent_reports_index'),
+      folha('Report Conversation', 'conversation_reports'),
+    ],
   },
   { ...folha('CentralDeAjuda', 'central_de_ajuda'), icon: 'i-lucide-x' },
   {
@@ -147,6 +170,7 @@ describe('ForkSidebarNav', () => {
     expect(wrapper.findAll('h2').map(titulo => titulo.text())).toEqual([
       'FORK_SIDEBAR.GRUPOS.ATENDER',
       'FORK_SIDEBAR.GRUPOS.ACOMPANHAR',
+      'FORK_SIDEBAR.GRUPOS.RESULTADOS',
     ]);
   });
 
@@ -211,5 +235,65 @@ describe('ForkSidebarNav', () => {
     montar();
     expect(larguras.atual.value).toBe(300);
     larguras.salva = 240;
+  });
+
+  describe('abrir e fechar grupo (bug do Rodrigo: fechar não fechava)', () => {
+    const irPara = async nome => {
+      rota.path = `/${nome}`;
+      rota.name = nome;
+      rota.fullPath = `/${nome}`;
+      await nextTick();
+      await nextTick();
+    };
+    const botao = (wrapper, nome) =>
+      wrapper.find(`button[data-menu-item="${nome}"]`);
+    const aberto = (wrapper, nome) =>
+      botao(wrapper, nome).attributes('aria-expanded');
+
+    afterEach(async () => {
+      await irPara('crm_kanban_index');
+    });
+
+    it('(a)(e) o grupo da tela atual nasce aberto e clicar fecha; fechado, ele fica realçado', async () => {
+      await irPara('home');
+      const { wrapper } = montar();
+      await nextTick();
+      expect(aberto(wrapper, 'Conversation')).toBe('true');
+      await botao(wrapper, 'Conversation').trigger('click');
+      expect(aberto(wrapper, 'Conversation')).toBe('false');
+      expect(botao(wrapper, 'Conversation').classes()).toContain(
+        'bg-n-blue-3/70'
+      );
+      await botao(wrapper, 'Conversation').trigger('click');
+      expect(aberto(wrapper, 'Conversation')).toBe('true');
+    });
+
+    it('(b) navegar para outra tela do mesmo grupo reabre', async () => {
+      await irPara('home');
+      const { wrapper } = montar();
+      await nextTick();
+      await botao(wrapper, 'Conversation').trigger('click');
+      expect(aberto(wrapper, 'Conversation')).toBe('false');
+      await irPara('conversation_mentions');
+      expect(aberto(wrapper, 'Conversation')).toBe('true');
+    });
+
+    it('(c) navegar para tela de outro grupo fecha o anterior e abre o novo', async () => {
+      await irPara('home');
+      const { wrapper } = montar();
+      await nextTick();
+      await irPara('agent_reports_index');
+      expect(aberto(wrapper, 'Reports')).toBe('true');
+      expect(aberto(wrapper, 'Conversation')).toBe('false');
+    });
+
+    it('(d) Agenda nasce fechada e abre na tela filha', async () => {
+      await irPara('home');
+      const { wrapper } = montar();
+      await nextTick();
+      expect(aberto(wrapper, 'Agenda')).toBe('false');
+      await irPara('crm_calendar_index');
+      expect(aberto(wrapper, 'Agenda')).toBe('true');
+    });
   });
 });
