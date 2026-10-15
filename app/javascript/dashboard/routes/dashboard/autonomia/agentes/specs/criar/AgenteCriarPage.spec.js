@@ -1881,6 +1881,72 @@ describe('AgenteCriarPage', () => {
       wrapper.unmount();
     });
 
+    it('saves only the chosen agents that can still be helped', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: {
+          papel: 'ajudante',
+          ajuda: '3,6,5,99',
+          quando: QUANDO,
+          agente: '90',
+        },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(90, {
+        principalIds: [3],
+        quando: QUANDO,
+      });
+      wrapper.unmount();
+    });
+
+    it('with none of the chosen agents still valid, goes back to the steps without saving nor turning on', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: {
+          papel: 'ajudante',
+          ajuda: '6,5',
+          quando: QUANDO,
+          agente: '90',
+        },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(agentesApi.updateAjuda).not.toHaveBeenCalled();
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+      expect(passo()).toBe('quem');
+      wrapper.unmount();
+    });
+
+    it('a draft born as helper stays a helper without the Fase 2: "Começar" is blocked with the reason, never turned on as copilot', async () => {
+      prepararAjudante();
+      ligarFase2(false);
+      const wrapper = await montar({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      expect(wrapper.get('[data-ajuda-bloqueado]').text()).toContain(
+        'AGENTS.JORNADA.AJUDANTE.SEM_FASE2'
+      );
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.find('[data-comecar]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+      );
+      expect(wrapper.find('[data-alterar-ajuda]').exists()).toBe(false);
+      expect(agentesApi.updateAjuda).not.toHaveBeenCalled();
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
     it('"Alterar" goes back to the steps with the choice marked', async () => {
       prepararAjudante();
       const wrapper = await montar({

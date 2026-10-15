@@ -1696,7 +1696,7 @@
           "SEM_LEITURA": "Could not read it now. Tap Change to see and edit it."
         },
         "COMECAR": "Start helping",
-        "COMECAR_TEXTO": "{nome} answers only the chosen agents, when called. No channel needed.",
+        "COMECAR_TEXTO": "{nome} answers only when the chosen agents call. No channel needed.",
         "QUEM_AJUDA": "Who {nome} helps",
         "QUEM_AJUDA_SEM_NOME": "Who the agent you are creating helps",
         "MUDAR_ARIA": "Change who {nome} helps",
@@ -1706,7 +1706,19 @@
         "ERRO": "Could not save who {nome} helps.",
         "ERRO_GARANTIA": "Nothing changed in {nome}. Try again.",
         "FEITO": "Done. {nome} now helps the chosen agents.",
-        "ESCOLHER_DE_NOVO": "Choose again"
+        "ESCOLHER_DE_NOVO": "Choose again",
+        "SEM_FASE2": "{nome} helps other agents, and that is not turned on for this account yet.",
+        "SEM_FASE2_GARANTIA": "Nothing was turned on. Talk to support to enable it.",
+        "INTERRUPTOR": {
+          "VOLTOU": "{nome} is helping again.",
+          "VOLTAR_ERRO": "Could not start helping again.",
+          "PARAR_TITULO": "Stop helping?",
+          "PARAR_TEXTO": "The agents {nome} helps keep answering on their own. You can turn it back on anytime.",
+          "PARAR_CONFIRMAR": "Stop helping",
+          "PARAR_ERRO": "Could not stop right now.",
+          "PARAR_ERRO_GARANTIA": "{nome} keeps helping.",
+          "PARAR_FEITO": "{nome} stopped helping. You can turn it back on anytime."
+        }
       }
     }
   }

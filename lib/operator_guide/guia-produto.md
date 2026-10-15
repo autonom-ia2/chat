@@ -1007,7 +1007,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `autonomia_agents_builder`
 
 ### Criar um agente que ajuda outros agentes (ajudante)
-- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando ele é chamado?"; "Por que o Agente de Cotação aparece bloqueado?"
+- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando os agentes chamam o ajudante?"; "Por que o Agente de Cotação aparece bloqueado?"
 - onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Ajuda outros agentes
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`

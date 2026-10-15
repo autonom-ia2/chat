@@ -1328,6 +1328,74 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    it('stopping speaks of helping, never of answering nor of conversations going to the team', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      const dialogo = no('dialog[open]').textContent;
+      expect(dialogo).toContain(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TITULO'
+      );
+      expect(dialogo).toContain(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TEXTO'
+      );
+      expect(dialogo).not.toContain('PAGINA.PARAR.TEXTO');
+      await clicar('dialog[open] [data-confirmar]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        status: 'paused',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_FEITO'
+      );
+      wrapper.unmount();
+    });
+
+    it('turning a stopped helper back on says it helps again, without asking for an inbox', async () => {
+      prepararAjudante({ status: 'paused', enabled: false });
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTOU'
+      );
+      expect(no('[data-ajudante-passos]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('a stopped helper with nobody to help opens "who it helps" instead of turning on, and turns on after saving', async () => {
+      prepararAjudante({ status: 'paused', enabled: false, ajuda: [] });
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      expect(no('[data-ajudante-passos]').dataset.passo).toBe('quem');
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+
+      await clicar('[data-opcao="3"]');
+      await clicar('[data-seguir-ajudante]');
+      await clicar('[data-seguir-ajudante]');
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(7, {
+        principalIds: [3],
+        quando: 'Dúvidas de troca',
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTOU'
+      );
+      wrapper.unmount();
+    });
+
     it('a view only seat reads who it helps without any "Mudar"', async () => {
       estado.podeGerenciar = false;
       prepararAjudante();

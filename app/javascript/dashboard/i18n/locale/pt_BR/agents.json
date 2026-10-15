@@ -1696,7 +1696,7 @@
           "SEM_LEITURA": "Não deu para ler agora. Toque em Mudar para ver e trocar."
         },
         "COMECAR": "Começar a ajudar",
-        "COMECAR_TEXTO": "{nome} responde só aos agentes escolhidos, quando chamado. Não precisa de canal.",
+        "COMECAR_TEXTO": "{nome} responde só quando os agentes escolhidos chamam. Não precisa de canal.",
         "QUEM_AJUDA": "Quem {nome} ajuda",
         "QUEM_AJUDA_SEM_NOME": "Quem o agente que você está criando ajuda",
         "MUDAR_ARIA": "Mudar quem {nome} ajuda",
@@ -1706,7 +1706,19 @@
         "ERRO": "Não deu para salvar quem {nome} ajuda.",
         "ERRO_GARANTIA": "Nada mudou em {nome}. Tente de novo.",
         "FEITO": "Pronto. {nome} já ajuda os agentes escolhidos.",
-        "ESCOLHER_DE_NOVO": "Escolher de novo"
+        "ESCOLHER_DE_NOVO": "Escolher de novo",
+        "SEM_FASE2": "{nome} ajuda outros agentes, e isso ainda não está ligado nesta conta.",
+        "SEM_FASE2_GARANTIA": "Nada foi ligado. Fale com o suporte para liberar.",
+        "INTERRUPTOR": {
+          "VOLTOU": "{nome} voltou a ajudar.",
+          "VOLTAR_ERRO": "Não deu para voltar a ajudar.",
+          "PARAR_TITULO": "Parar de ajudar?",
+          "PARAR_TEXTO": "Os agentes que {nome} ajuda continuam respondendo sozinhos. Dá para voltar quando quiser.",
+          "PARAR_CONFIRMAR": "Parar de ajudar",
+          "PARAR_ERRO": "Não deu para parar agora.",
+          "PARAR_ERRO_GARANTIA": "{nome} continua ajudando.",
+          "PARAR_FEITO": "{nome} parou de ajudar. Dá para voltar quando quiser."
+        }
       }
     }
   }

@@ -58,8 +58,7 @@ import EtapaPronto from '../components/criar/EtapaPronto.vue';
 import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
-import AjudantePassos from '../components/onde/AjudantePassos.vue';
-import ResumoAjuda from '../components/onde/ResumoAjuda.vue';
+import AjudanteNaCriacao from '../components/onde/AjudanteNaCriacao.vue';
 
 // #1181 PR2 — criar agente: Conte · Confira · Comece · Pronto (protótipo T03–T06), atrás da flag
 // autonomia_agents_journey (o seletor da rota decide). A etapa vem da query (`?etapa=`), e só vale
@@ -140,7 +139,6 @@ const resultado = ref(null);
 const exemploAberto = ref(false);
 const baseAberta = ref(false);
 const internoComecando = ref(false);
-const ajudanteComecando = ref(false);
 const abrindoAjustes = ref(false);
 const confirmarSaida = ref(null);
 const titulo = ref(null);
@@ -175,18 +173,40 @@ const modelo = computed(() =>
 );
 const empresa = computed(() => contaDaStore.value?.(contaId.value)?.name || '');
 const fase2 = useFase2();
-ajudanteNaCriacao = useAjudanteNaCriacao({ agente, fase2 });
+const irPara = (proxima, { empilhar = false } = {}) => {
+  const query = { ...route.query, etapa: proxima };
+  return empilhar ? router.push({ query }) : router.replace({ query });
+};
+
+const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
+
+const voltarParaLista = () => {
+  if (!conversa.agenteId.value) {
+    irParaLista();
+    return;
+  }
+  confirmarSaida.value?.abrir();
+};
+
+ajudanteNaCriacao = useAjudanteNaCriacao({
+  agente,
+  nome,
+  fase2,
+  conversa,
+  idInicial,
+  voltarParaLista,
+  aoComecar: principais => {
+    resultado.value = {
+      canal: '',
+      quando: 'always',
+      saiu: '',
+      ajuda: principais,
+    };
+    irPara(ETAPA.PRONTO);
+  },
+});
 const ajudante = computed(() => ajudanteNaCriacao.ajudante.value);
-const {
-  escolhendo: escolhendoAjuda,
-  leitura: leituraDosAgentes,
-  agentes: agentesDaConta,
-  principais: principaisDaAjuda,
-  inicial: ajudaInicial,
-  quando: quandoChamar,
-  salvando: salvandoAjuda,
-  erro: erroDaAjuda,
-} = ajudanteNaCriacao;
+const escolhendoAjuda = ajudanteNaCriacao.escolhendo;
 const interno = computed(() =>
   agente.value
     ? agente.value.actuation === ATUACAO.INTERNA
@@ -255,7 +275,11 @@ watch(
 );
 
 const rotuloComecar = computed(() => {
-  if (ajudante.value) return t('AGENTS.JORNADA.AJUDANTE.COMECAR');
+  if (ajudante.value) {
+    return ajudanteNaCriacao.bloqueado.value
+      ? ''
+      : t('AGENTS.JORNADA.AJUDANTE.COMECAR');
+  }
   if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO');
   if (equipe.value) return t('AGENTS.JORNADA.EQUIPE.COMECAR');
   if (ocupacao.estado.value === 'carregando') {
@@ -279,15 +303,14 @@ const textoComecar = computed(() => {
     : '';
 });
 const carregandoComecar = computed(() => {
-  if (ajudante.value) return salvandoAjuda.value || ajudanteComecando.value;
+  if (ajudante.value) {
+    return (
+      ajudanteNaCriacao.salvando.value || ajudanteNaCriacao.comecando.value
+    );
+  }
   if (equipe.value) return salvarEquipe.salvando.value;
   return !interno.value && ocupacao.estado.value === 'carregando';
 });
-const quemAjudaTitulo = computed(() =>
-  semNome.value
-    ? t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA_SEM_NOME')
-    : t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome: nome.value })
-);
 const tituloDaConfiraNoCelular = computed(() => {
   if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_AJUDANTE');
   return t(
@@ -324,11 +347,6 @@ const numeroDaEtapa = computed(
       [ETAPA.PRONTO]: 4,
     })[etapa.value]
 );
-
-const irPara = (proxima, { empilhar = false } = {}) => {
-  const query = { ...route.query, etapa: proxima };
-  return empilhar ? router.push({ query }) : router.replace({ query });
-};
 
 // Computador: ao fechar a conversa, a URL acompanha (Confira) sem trocar de tela.
 watch(
@@ -443,8 +461,6 @@ const linkConectarCanal = computed(
   () => router.resolve({ name: 'settings_inbox_new' }).href
 );
 
-const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
-
 const sairDeixandoRascunho = () => {
   const ficou = Boolean(conversa.agenteId.value);
   const nomeAoSair = nome.value;
@@ -452,14 +468,6 @@ const sairDeixandoRascunho = () => {
   if (ficou) {
     useAlert(t('AGENTS.JORNADA.CRIAR.SAIR.FEITO', { nome: nomeAoSair }));
   }
-};
-
-const voltarParaLista = () => {
-  if (!conversa.agenteId.value) {
-    irParaLista();
-    return;
-  }
-  confirmarSaida.value?.abrir();
 };
 
 const perguntarNoTeste = ({ texto, anexos }) =>
@@ -556,37 +564,9 @@ const comecarNaEquipe = async () => {
   }
 };
 
-// Tema 14: "Começar a ajudar" — grava quem ele ajuda (PUT /ajuda) e liga o agente, sem canal. Recusado,
-// a explicação do servidor aparece no topo com "Escolher de novo"; o agente segue parado.
-const comecarAAjudar = async () => {
-  if (ajudanteComecando.value) return;
-  ajudanteComecando.value = true;
-  const principais = ajudanteNaCriacao.principais.value;
-  try {
-    const feito = await ajudanteNaCriacao.comecar({
-      id: agente.value.id,
-      nome: nome.value,
-    });
-    if (!feito) return;
-    resultado.value = {
-      canal: '',
-      quando: 'always',
-      saiu: '',
-      ajuda: principais,
-    };
-    irPara(ETAPA.PRONTO);
-  } catch {
-    useAlert(
-      t('AGENTS.JORNADA.CRIAR.COMECE.ERRO_INTERNO', { nome: nome.value })
-    );
-  } finally {
-    ajudanteComecando.value = false;
-  }
-};
-
 const abrirComece = () => {
   if (ajudante.value) {
-    comecarAAjudar();
+    ajudanteNaCriacao.comecar();
     return;
   }
   if (interno.value) {
@@ -732,28 +712,6 @@ const voltarDosCanais = () => {
   router.replace({ query: {} });
 };
 
-// Tema 14: escolheu quem ajuda e quando chamar: vai para a URL e a conversa começa (só na primeira vez).
-const escolheuAjuda = escolha => {
-  ajudanteNaCriacao.escolher(escolha);
-  if (!idInicial && !conversa.agenteId.value && !conversa.falas.value.length) {
-    conversa.comecar();
-  }
-};
-
-// Voltar do primeiro passo: com a escolha já feita (ou um rascunho), volta à criação; sem, à "Criar agente".
-const voltarDaAjuda = () => {
-  const { principais, quando } = ajudanteNaCriacao.inicial.value;
-  if (principais.length && quando) {
-    ajudanteNaCriacao.escolhendo.value = false;
-    return;
-  }
-  if (conversa.agenteId.value) {
-    voltarParaLista();
-    return;
-  }
-  router.replace({ query: {} });
-};
-
 const alterarCanais = () => {
   ocupacao.carregar();
   escolhendoCanais.value = true;
@@ -768,7 +726,7 @@ onMounted(() => {
   }
   if (atuacaoPedida !== ATUACAO.INTERNA && !ajudante.value) ocupacao.carregar();
   // O agente da equipe e o ajudante escolhem antes: a conversa só começa depois (escolheuCanais, escolheuAjuda).
-  if (!escolhendoCanais.value && !ajudanteNaCriacao.escolhendo.value) {
+  if (!escolhendoCanais.value && !escolhendoAjuda.value) {
     conversa.comecar();
   }
 });
@@ -811,39 +769,14 @@ onMounted(() => {
       />
     </div>
 
-    <div
+    <AjudanteNaCriacao
       v-else-if="escolhendoAjuda"
-      data-criar-ajuda
-      class="flex flex-col w-full max-w-3xl gap-6 px-4 py-6 mx-auto md:px-6"
-    >
-      <button
-        type="button"
-        data-voltar-lista
-        class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-        @click="voltarParaLista"
-      >
-        <span
-          class="i-lucide-arrow-left size-4 rtl:rotate-180"
-          aria-hidden="true"
-        />
-        {{ t('AGENTS.JORNADA.CRIAR.VOLTAR') }}
-      </button>
-      <p class="m-0 text-sm font-semibold text-n-slate-11">
-        {{ t('AGENTS.JORNADA.CRIAR.TITULO') }}
-      </p>
-      <AjudantePassos
-        :nome="agente && !semNome ? nome : ''"
-        :sem-nome="!agente || semNome"
-        :agente-id="conversa.agenteId.value"
-        :agentes="agentesDaConta"
-        :leitura="leituraDosAgentes"
-        :inicial="ajudaInicial"
-        :texto-final="t('AGENTS.JORNADA.EQUIPE.CONTINUAR')"
-        @voltar="voltarDaAjuda"
-        @reler="ajudanteNaCriacao.carregarAgentes()"
-        @pronto="escolheuAjuda"
-      />
-    </div>
+      parte="passos"
+      :ajuda="ajudanteNaCriacao"
+      :nome="nome"
+      :sem-nome="!agente || semNome"
+      :agente-id="conversa.agenteId.value"
+    />
 
     <EtapaPronto
       v-else-if="etapa === ETAPA.PRONTO"
@@ -876,20 +809,13 @@ onMounted(() => {
         <!-- #1433: aqui entra "Escolher de quais funis ele cuida", quando a tela do CRM existir (a rota
           vem do Multifunnel, #1447). Até lá, sem botão. -->
       </section>
-      <section
+      <AjudanteNaCriacao
         v-if="ajudante"
-        data-ajuda-pronto
-        aria-labelledby="ajuda-pronto-titulo"
-        class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
-      >
-        <h2
-          id="ajuda-pronto-titulo"
-          class="m-0 text-base font-semibold text-n-slate-12"
-        >
-          {{ t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome }) }}
-        </h2>
-        <ResumoAjuda :principais="pronto.ajuda" :quando="quandoChamar" />
-      </section>
+        parte="pronto"
+        :ajuda="ajudanteNaCriacao"
+        :nome="nome"
+        :principais="pronto.ajuda"
+      />
     </EtapaPronto>
 
     <div
@@ -968,37 +894,12 @@ onMounted(() => {
           {{ t('AGENTS.JORNADA.PAGINA.ALTERAR') }}
         </AgenteBotao>
       </section>
-      <section
+      <AjudanteNaCriacao
         v-if="ajudante && !abrindo"
-        data-ajuda-criacao
-        :aria-label="quemAjudaTitulo"
-        class="flex items-start gap-3 p-4 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
-      >
-        <div class="flex flex-col flex-1 min-w-0 gap-2">
-          <h2 class="m-0 text-sm font-semibold text-n-slate-11">
-            {{ quemAjudaTitulo }}
-          </h2>
-          <ResumoAjuda :principais="principaisDaAjuda" :quando="quandoChamar" />
-        </div>
-        <AgenteBotao
-          v-if="!salvandoAjuda && !ajudanteComecando"
-          data-alterar-ajuda
-          variante="fantasma"
-          class="shrink-0"
-          :aria-label="t('AGENTS.JORNADA.AJUDANTE.MUDAR_ARIA', { nome })"
-          @click="ajudanteNaCriacao.alterar()"
-        >
-          {{ t('AGENTS.JORNADA.PAGINA.ALTERAR') }}
-        </AgenteBotao>
-      </section>
-      <AgenteErro
-        v-if="ajudante && erroDaAjuda"
-        data-erro-ajuda
-        :titulo="erroDaAjuda.titulo"
-        :garantia="erroDaAjuda.garantia"
-        :acao="t('AGENTS.JORNADA.AJUDANTE.ESCOLHER_DE_NOVO')"
-        icone-acao="i-lucide-list"
-        @acao="ajudanteNaCriacao.alterar()"
+        parte="topo"
+        :ajuda="ajudanteNaCriacao"
+        :nome="nome"
+        :sem-nome="semNome"
       />
       <AgenteErro
         v-if="equipe && salvarEquipe.erro.value"

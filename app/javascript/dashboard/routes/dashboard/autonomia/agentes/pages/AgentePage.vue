@@ -122,6 +122,12 @@ const EQUIPE = 'equipe';
 const AJUDA = 'ajuda';
 const ajudante = computed(() => ehAjudante(agente.value));
 const ajudaDoAgente = useAjudaDoAgente();
+// Tema 14: ligar e parar o ajudante falam de ajudar outros agentes, nunca de atender nem de passar conversas
+// para a equipe. Os demais agentes seguem com os textos de sempre.
+const doInterruptor = (deSempre, doAjudante, valores = {}) =>
+  ajudante.value
+    ? t(`AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.${doAjudante}`, valores)
+    : t(deSempre, valores);
 const registros = useMapGetter('autonomiaAgents/getRecords');
 const leituraDosAgentes = ref('pronto');
 const passoDaAjuda = ref('quem');
@@ -438,8 +444,31 @@ const lerAgentes = async () => {
     leituraDosAgentes.value = 'erro';
   }
 };
-const mudarAjuda = (passo = 'quem') => {
+const voltarInterno = async () => {
+  alternando.value = true;
+  try {
+    await store.dispatch('autonomiaAgents/update', {
+      id: agente.value.id,
+      enabled: true,
+      status: 'active',
+    });
+    useAlert(
+      doInterruptor(`${NS}.VOLTAR_INTERNO.FEITO`, 'VOLTOU', {
+        nome: nome.value,
+      })
+    );
+  } catch {
+    useAlert(doInterruptor(`${NS}.VOLTAR_INTERNO.ERRO`, 'VOLTAR_ERRO'));
+  } finally {
+    alternando.value = false;
+  }
+};
+
+// Ligar um ajudante que não ajuda ninguém abre a escolha; salvando, ele já volta ligado.
+const ligarDepoisDeEscolher = ref(false);
+const mudarAjuda = (passo = 'quem', { ligar = false } = {}) => {
   if (!podeGerenciar.value) return;
+  ligarDepoisDeEscolher.value = ligar;
   lerAgentes();
   ajudaDoAgente.erro.value = null;
   passoDaAjuda.value = passo;
@@ -453,8 +482,13 @@ const salvarMudancaDaAjuda = async ({ principais, quando: frase }) => {
     quando: frase,
   });
   if (!feito) return;
-  useAlert(t('AGENTS.JORNADA.AJUDANTE.FEITO', { nome: nome.value }));
   fechar();
+  if (ligarDepoisDeEscolher.value) {
+    ligarDepoisDeEscolher.value = false;
+    await voltarInterno();
+    return;
+  }
+  useAlert(t('AGENTS.JORNADA.AJUDANTE.FEITO', { nome: nome.value }));
   try {
     await store.dispatch('autonomiaAgents/show', agente.value.id);
   } catch {
@@ -490,25 +524,14 @@ const salvarMudancaDaEquipe = async ({ entram, saem }) => {
   depoisDeMudarOnde();
 };
 
-const voltarInterno = async () => {
-  alternando.value = true;
-  try {
-    await store.dispatch('autonomiaAgents/update', {
-      id: agente.value.id,
-      enabled: true,
-      status: 'active',
-    });
-    useAlert(t(`${NS}.VOLTAR_INTERNO.FEITO`, { nome: nome.value }));
-  } catch {
-    useAlert(t(`${NS}.VOLTAR_INTERNO.ERRO`));
-  } finally {
-    alternando.value = false;
-  }
-};
-
 const alternar = ligar => {
   if (!ligar) {
     dialogoParar.value?.abrir();
+    return;
+  }
+  // Tema 14: ajudante sem ninguém para ajudar não liga "vazio": escolhe antes quem ele ajuda.
+  if (ajudante.value && !quemAjuda(agente.value).length) {
+    mudarAjuda('quem', { ligar: true });
     return;
   }
   if (interno.value || naEquipe.value) {
@@ -534,7 +557,9 @@ const parar = async () => {
     id: agente.value.id,
     status: 'paused',
   });
-  useAlert(t(`${NS}.PARAR.FEITO`, { nome: nome.value }));
+  useAlert(
+    doInterruptor(`${NS}.PARAR.FEITO`, 'PARAR_FEITO', { nome: nome.value })
+  );
 };
 
 // A store tira o agente da lista antes de a promessa voltar: sem `excluindo`, a página cairia no
@@ -872,12 +897,16 @@ const tirarPergunta = id => {
     <template v-if="(pronto || excluindo) && podeGerenciar">
       <DialogoAcao
         ref="dialogoParar"
-        :titulo="t(`${NS}.PARAR.TITULO`, { nome })"
-        :texto="t(`${NS}.PARAR.TEXTO`)"
-        :confirmar="t(`${NS}.PARAR.CONFIRMAR`)"
+        :titulo="doInterruptor(`${NS}.PARAR.TITULO`, 'PARAR_TITULO', { nome })"
+        :texto="doInterruptor(`${NS}.PARAR.TEXTO`, 'PARAR_TEXTO', { nome })"
+        :confirmar="doInterruptor(`${NS}.PARAR.CONFIRMAR`, 'PARAR_CONFIRMAR')"
         :rotulo-carregando="t(`${NS}.PARAR.PARANDO`)"
-        :erro-titulo="t(`${NS}.PARAR.ERRO`)"
-        :erro-garantia="t(`${NS}.PARAR.ERRO_GARANTIA`, { nome })"
+        :erro-titulo="doInterruptor(`${NS}.PARAR.ERRO`, 'PARAR_ERRO')"
+        :erro-garantia="
+          doInterruptor(`${NS}.PARAR.ERRO_GARANTIA`, 'PARAR_ERRO_GARANTIA', {
+            nome,
+          })
+        "
         :executar="parar"
       />
       <DialogoAcao

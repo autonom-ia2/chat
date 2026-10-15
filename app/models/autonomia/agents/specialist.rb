@@ -203,11 +203,14 @@ class Autonomia::Agents::Specialist < ApplicationRecord
     errors.add(:delegate_agent_id, I18n.t("autonomia.agents.ajudante.#{motivo}")) if motivo
   end
 
-  # Mesma conta; nenhum dos dois é a Lia (instrução mantida) nem agente de sistema; e o ajudante serve (abaixo).
+  # Mesma conta; nenhum dos dois é a Lia (instrução mantida) nem agente de sistema; o principal é um agente
+  # terminado e não nasceu como ajudante (revisão do PR2); e o ajudante serve (abaixo).
   def motivo_de_recusa_do_ajudante
     return 'outra_conta' unless mesma_conta?
     return 'ele_mesmo' if delegate.id == agent.id
     return 'tipo_proibido' if tipo_proibido?(agent) || tipo_proibido?(delegate)
+    return 'principal_rascunho' if agent.draft?
+    return 'principal_ajudante' if agent.ajudante_de_origem?
 
     motivo_do_ajudante
   end

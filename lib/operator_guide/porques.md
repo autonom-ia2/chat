@@ -929,7 +929,7 @@
 ### criar_ajudante_de_agentes
 - titulo: Criar um agente que ajuda outros agentes (ajudante)
 - rota: autonomia_agents_builder
-- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando ele é chamado?"; "Por que o Agente de Cotação aparece bloqueado?"
+- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando os agentes chamam o ajudante?"; "Por que o Agente de Cotação aparece bloqueado?"
 - onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Ajuda outros agentes
 - pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um agente que já converse com clientes.
 - passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Ajuda outros agentes; 3. Marque os agentes que ele vai ajudar (um ou mais) e clique em Continuar; 4. Em Quando chamar, escreva numa frase a situação em que os agentes escolhidos o chamam e clique em Continuar; 5. Conte na conversa o que ele sabe e teste como se fosse o agente principal (Alterar, no topo, troca a escolha); 6. Clique em Começar a ajudar; 7. Na página do agente, Mudar em Quem ele ajuda ou em Quando chamar reabre os passos.

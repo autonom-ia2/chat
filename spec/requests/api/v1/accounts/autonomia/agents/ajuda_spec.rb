@@ -138,6 +138,17 @@ RSpec.describe 'Ajuda do agente (tema 14)', type: :request do
       expect(Autonomia::Agents::BuildThread.last.state).to include('papel' => 'ajudante', 'actuation' => 'internal')
     end
 
+    it 'sem a Fase 2, a abertura do Construtor ignora papel: ajudante (a conversa de sempre, sem a marca)' do
+      conta.update!(internal_attributes: conta.internal_attributes.merge('autonomia_agents_fase2' => false))
+
+      post "/api/v1/accounts/#{conta.id}/autonomia/build_threads",
+           params: { type: 'custom', papel: 'ajudante' }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(Autonomia::Agents::BuildThread.last.state).not_to include('papel')
+      expect(Autonomia::Agents::BuildThread.last.state['actuation']).not_to eq('internal')
+    end
+
     it 'o ajudante com a marca não aparece como Copiloto da conversa, mesmo sem vínculo' do
       ajudante
       copiloto = criar_copiloto(conta)
