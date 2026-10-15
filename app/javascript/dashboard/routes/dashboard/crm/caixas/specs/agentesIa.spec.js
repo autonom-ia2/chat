@@ -1,5 +1,6 @@
 import {
   agentesParaFormulario,
+  erroDosAgentes,
   alternarFunilDoAgente,
   formularioDaCaixa,
   funisSemAgente,
@@ -159,5 +160,35 @@ describe('agentes de IA da caixa', () => {
     expect(juntar(['Bruno', 'Diego'], 'pt_BR', 'disjunction')).toBe(
       'Bruno ou Diego'
     );
+  });
+});
+
+// #1433 — a caixa que não aceita agente da equipe volta com o motivo próprio, na etapa dos agentes.
+describe('erroDosAgentes', () => {
+  it('maps each refusal of the inbox to its own text, on the agents step', () => {
+    expect(erroDosAgentes('crm.caixas.principal_parado')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'PRINCIPAL_PARADO',
+    });
+    expect(erroDosAgentes('crm.caixas.robo_externo')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_EXTERNO',
+    });
+    expect(erroDosAgentes('crm.caixas.agente_nao_liga')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_NAO_LIGA',
+    });
+  });
+
+  it('keeps the general text for the other agent refusals and ignores the rest', () => {
+    expect(erroDosAgentes('crm.caixas.agente_invalido')).toEqual({
+      ehDosAgentes: true,
+      alerta: null,
+    });
+    expect(erroDosAgentes('crm.caixas.sem_triagem')).toEqual({
+      ehDosAgentes: false,
+      alerta: null,
+    });
+    expect(erroDosAgentes('crm.caixas.sem_porta').ehDosAgentes).toBe(false);
   });
 });

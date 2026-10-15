@@ -6,8 +6,8 @@ import { localeDoIntl, numero } from '../helpers/datas';
 
 // Franquia do mês: quantas respostas ao cliente (mensagem livre, sem modelo)
 // cada número já mandou, contra as grátis do WhatsApp. Passou da franquia, cada
-// resposta tem o preço de "serviço". Sem dados (sem permissão ou sem tabela),
-// não aparece.
+// resposta tem o preço de "serviço". O número é estimativa (#1592): só vê o que
+// saiu pelo Chat2You. Sem dados (sem permissão ou sem tabela), não aparece.
 const { t, locale } = useI18n();
 const franquia = ref(null);
 const custo = ref(null);
@@ -41,6 +41,7 @@ const linhas = computed(() =>
       passou,
       texto: passou
         ? t('MODELOS_WHATSAPP.FRANQUIA.PASSOU', {
+            n: numero(item.usadas, locale.value),
             limite: numero(franquia.value.limite, locale.value),
           })
         : t('MODELOS_WHATSAPP.FRANQUIA.USADAS', {
@@ -95,6 +96,9 @@ const linhas = computed(() =>
           </span>
         </li>
       </ul>
+      <p data-franquia-estimativa class="mb-0 text-xs text-n-slate-11">
+        {{ $t('MODELOS_WHATSAPP.FRANQUIA.ESTIMATIVA') }}
+      </p>
     </section>
   </div>
 </template>

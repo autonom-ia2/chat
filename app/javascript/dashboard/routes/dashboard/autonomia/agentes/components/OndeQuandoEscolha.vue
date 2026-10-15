@@ -17,6 +17,8 @@ import EscolhaRadio from './EscolhaRadio.vue';
 // quem usa, em `horarios` ({ [inbox_id]: texto | null }): texto mostra o horário, null quer dizer
 // "sem horário" (só "Sempre" fica disponível) e caixa ausente aparece sem horário, sem travar.
 // Sem lista suspensa nativa: tudo em cartões-rádio.
+// Slot `depoisDeOnde` (#1433): o que vem logo abaixo de "Onde atende" (a gaveta da página põe ali as
+// outras caixas em que ele também recebe quando alguém passar).
 const props = defineProps({
   canais: { type: Array, required: true },
   agenteId: { type: Number, default: null },
@@ -177,6 +179,8 @@ const linkQuemRecebe = computed(
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.SEM_LEITURA') }}
       </p>
     </section>
+
+    <slot name="depoisDeOnde" />
 
     <section class="flex flex-col gap-2">
       <h3 class="m-0 text-sm font-semibold text-n-slate-12">

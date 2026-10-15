@@ -8,5 +8,10 @@ export const fase2Ligada = conta => conta?.autonomia_agents_fase2 === true;
 export function useFase2() {
   const conta = useMapGetter('accounts/getAccount');
   const contaId = useMapGetter('getCurrentAccountId');
-  return computed(() => fase2Ligada(conta.value?.(contaId.value)));
+  // Mesma leitura do useAgendaNovaNaConta: o getter da conta é uma função (a página do agente também usa).
+  return computed(
+    () =>
+      typeof conta.value === 'function' &&
+      fase2Ligada(conta.value(contaId.value))
+  );
 }

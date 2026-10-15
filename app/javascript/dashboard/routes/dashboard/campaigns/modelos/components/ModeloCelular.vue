@@ -7,6 +7,7 @@ import { rotuloDoCampo } from '../helpers/campos';
 import { botoesNoCelular } from '../helpers/regraEstrutural';
 import CelularCartoes from './celular/CelularCartoes.vue';
 import CelularOferta from './celular/CelularOferta.vue';
+import CelularProdutos from './celular/CelularProdutos.vue';
 
 // "Como o cliente vê": a mensagem dentro de um celular, com os exemplos no lugar
 // dos campos (destacados, para mostrar o que muda para cada cliente). Moldura
@@ -92,6 +93,12 @@ const botoes = computed(() => {
     return [{ tipo: 'formulario', texto: conteudo.formulario.botao }];
   }
   if (formato.value === 'carrossel') return [];
+  // #1418: um ou vários produtos levam o botão do modelo; o carrossel, nos cartões.
+  if (formato.value === 'produtos') {
+    return conteudo.produtos.tipo === 'carrossel'
+      ? []
+      : [{ tipo: 'catalogo', texto: conteudo.produtos.botao.texto }];
+  }
   // O texto do "Copiar código" é fixo do WhatsApp: a prévia mostra o de verdade.
   return conteudo.botoes.map(botao =>
     botao.tipo === 'copiar_codigo'
@@ -112,6 +119,7 @@ const rodape = computed(() => {
       minutos
     );
   }
+  if (formato.value === 'produtos') return props.conteudo.produtos.rodape;
   return formato.value === 'padrao' ? props.conteudo.rodape : '';
 });
 
@@ -208,6 +216,12 @@ watch(
             }}
           </span>
         </div>
+        <CelularProdutos
+          v-if="formato === 'produtos'"
+          :produtos="conteudo.produtos"
+          :escolhidos="conteudo.produtosEscolhidos || []"
+          parte="topo"
+        />
         <CelularOferta
           v-if="formato === 'oferta'"
           :oferta="conteudo.oferta"
@@ -263,6 +277,12 @@ watch(
           {{ botao.valor }}
         </span>
       </span>
+      <CelularProdutos
+        v-if="formato === 'produtos'"
+        :produtos="conteudo.produtos"
+        :escolhidos="conteudo.produtosEscolhidos || []"
+        parte="depois"
+      />
       <span
         v-if="botoesNaTela.escondidos"
         data-celular-ver-todas
