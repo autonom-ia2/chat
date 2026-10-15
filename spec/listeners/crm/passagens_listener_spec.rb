@@ -68,6 +68,7 @@ RSpec.describe Crm::PassagensListener do
   describe 'a Entrega' do
     # Pega: a passagem do robô grava uma vez, pelo listener, com o motivo e o card do contexto.
     it 'robô pediu, regra direta: uma passagem do robô para a pessoa, pedida pelo robô, com card e motivo', :aggregate_failures do
+      online(ana) # só a Ana pode receber: o teste não depende do rodízio entre quem está online
       conversa = conversa_do_robo
       card = card_em(conversa, vendas)
       regra!(vendas)
@@ -94,6 +95,7 @@ RSpec.describe Crm::PassagensListener do
     end
 
     it 'IA do CRM: uma passagem, pedida pelo sistema, com o motivo da IA do CRM' do
+      online(ana) # só a Ana pode receber: o teste não depende do rodízio entre quem está online
       conversa = conversa_do_robo
       card = card_em(conversa, vendas)
       regra!(vendas)
