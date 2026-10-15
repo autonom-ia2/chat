@@ -105,6 +105,35 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
     expect(envio.motivo).to eq('campo_sem_valor')
   end
 
+  # Com o Garantir de verdade (#1586): criar o modelo da cobrança depende da autorização do dono. A Meta é um dublê.
+  describe 'autorização do dono para criar o modelo' do
+    let(:client) { instance_double(Whatsapp::Templates::MetaClient) }
+
+    before { allow(Whatsapp::Templates::MetaClient).to receive(:new).and_return(client) }
+
+    it 'sem autorização: nada é criado na Meta e a equipe é lembrada, com o motivo' do
+      allow(client).to receive(:create)
+
+      result = envio
+
+      expect(result.status).to eq(:lembrar_equipe)
+      expect(result.motivo).to eq('modelo_indisponivel:sem_consentimento')
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+      I18n.with_locale(:pt_BR) { expect(described_class.aviso(result.motivo)).to include('não autorizou') }
+    end
+
+    it 'com autorização: o Garantir cria o modelo e o lembrete espera a análise da Meta' do
+      WhatsappTemplateConsent.create!(account: account, user: user, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU,
+                                      versao_aviso: 'v1', texto_aviso: 'Aviso.')
+      pronto = Whatsapp::Templates::Finalidades.pronto(:cobranca_vencimento, momento: :no_dia, com_valor: true)
+      criado = pronto.corpo.deep_stringify_keys.merge('id' => '901', 'status' => 'PENDING')
+      allow(client).to receive(:create).and_return(Whatsapp::Templates::MetaClient::Outcome.new(template: criado, created: true))
+
+      expect(envio.motivo).to eq('modelo_em_analise')
+      expect(client).to have_received(:create).with(pronto.corpo.deep_stringify_keys)
+    end
+  end
+
   context 'when it is the progress reminder (no template purpose)' do
     let(:kind) { 'progress' }
 
@@ -127,7 +156,7 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
         expect(described_class.aviso(motivo)).not_to eq('A mensagem ao cliente não saiu sozinha: fale com ele.'), motivo
       end
       %w[sem_whatsapp_oficial idioma_sem_pronto formato recusado pausado desativado situacao_desconhecida meta_fora
-         sem_permissao meta_recusou texto_diferente perfil_invalido].each do |motivo|
+         sem_permissao meta_recusou texto_diferente perfil_invalido sem_consentimento].each do |motivo|
         expect(described_class.aviso("modelo_indisponivel:#{motivo}")).to include(' '), motivo
         expect(I18n.t("crm.service_reminders.aviso.#{motivo}", default: nil)).to be_present, motivo
       end

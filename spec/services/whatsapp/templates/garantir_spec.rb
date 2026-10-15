@@ -26,6 +26,54 @@ RSpec.describe Whatsapp::Templates::Garantir do
     channel.update_columns(message_templates: templates) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # Autorização do dono (#1586): uma linha do registro, como a tela grava.
+  def autorizar(acao = WhatsappTemplateConsent::LIGOU, conta: account)
+    WhatsappTemplateConsent.create!(account: conta, marca: 'utility', acao: acao, versao_aviso: 'v1', texto_aviso: 'Aviso.')
+  end
+
+  # Sem a autorização, criar para antes de falar com a Meta: nem o cliente é montado, nada é gravado.
+  describe 'autorização do dono para criar (#1586)' do
+    it 'sem autorização: sem_consentimento, sem falar com a Meta nem gravar lista ou perfil' do
+      expect(garantir).to eq(status: :indisponivel, motivo: 'sem_consentimento')
+
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+      expect(channel.reload.message_templates).to eq([])
+      expect(WhatsappTemplateProfile.count).to eq(0)
+    end
+
+    it 'ligada e depois desligada: vale a última linha' do
+      autorizar
+      autorizar(WhatsappTemplateConsent::DESLIGOU)
+
+      expect(garantir).to eq(status: :indisponivel, motivo: 'sem_consentimento')
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+    end
+
+    it 'a autorização de outra conta não vale' do
+      autorizar(conta: create(:account))
+
+      expect(garantir).to eq(status: :indisponivel, motivo: 'sem_consentimento')
+    end
+
+    it 'ligada: cria pela Meta' do
+      autorizar
+      allow(client).to receive(:create).and_return(outcome.new(template: listed('PENDING'), created: true))
+
+      expect(garantir).to eq(status: :em_analise, nome: pronto.nome, idioma: 'pt_BR')
+      expect(client).to have_received(:create)
+    end
+
+    it 'sem autorização, o modelo que já está na lista continua valendo' do
+      put_in_list(listed('APPROVED'))
+
+      expect(garantir).to include(status: :pronto, nome: pronto.nome)
+    end
+
+    it 'criar: false não muda: fora da lista é ausente' do
+      expect(garantir(criar: false)).to eq(status: :indisponivel, motivo: 'ausente')
+    end
+  end
+
   describe 'quando o modelo já está na lista da caixa' do
     it 'aprovado: devolve pronto com nome, idioma, categoria e campos, sem falar com a Meta' do
       put_in_list(listed('APPROVED'))
@@ -126,6 +174,7 @@ RSpec.describe Whatsapp::Templates::Garantir do
     end
 
     it 'modelo de outra finalidade ou da pessoa não serve' do
+      autorizar
       put_in_list(listed('APPROVED', 'name' => 'boas_vindas'))
       allow(client).to receive(:create).and_return(outcome.new(template: listed('PENDING'), created: true))
 
@@ -135,6 +184,8 @@ RSpec.describe Whatsapp::Templates::Garantir do
   end
 
   describe 'quando o modelo não está na lista da caixa' do
+    before { autorizar }
+
     it 'cria o pronto pela Meta, põe na lista e grava o perfil do sistema (sem quem criou)' do
       allow(client).to receive(:create).and_return(outcome.new(template: listed('PENDING'), created: true))
 

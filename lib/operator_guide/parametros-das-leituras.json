@@ -1995,6 +1995,10 @@
     "controller": "api/v1/accounts/whatsapp_message_prices#index",
     "parametros": []
   },
+  "whatsapp_template_consent": {
+    "controller": "api/v1/accounts/whatsapp_template_consents#show",
+    "parametros": []
+  },
   "whatsapp_template_inboxes": {
     "controller": "api/v1/accounts/whatsapp_template_inboxes#index",
     "parametros": []

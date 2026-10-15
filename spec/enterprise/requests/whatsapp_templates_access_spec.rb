@@ -86,6 +86,23 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
     expect(response.parsed_body.dig('result', 'error')).to eq('suggestion_unavailable')
   end
 
+  # #1586: a autorização do sistema para criar modelos segue o gate de criar modelos.
+  it 'autorização do sistema: whatsapp_templates_manage vê e liga; whatsapp_templates_view não' do
+    path = "/api/v1/accounts/#{account.id}/whatsapp_template_consent"
+    ligar = { operacao: 'ligar', marcas: %w[utility], versao_aviso: Whatsapp::Templates::AvisoDeConsentimento::VERSAO }
+
+    viewer = role_user('whatsapp_templates_view')
+    call(viewer, :get, path)
+    expect(response).to have_http_status(:unauthorized)
+    call(viewer, :post, path, ligar)
+    expect(response).to have_http_status(:unauthorized)
+
+    manager = role_user('whatsapp_templates_manage')
+    call(manager, :post, path, ligar)
+    expect(response).to have_http_status(:ok)
+    expect(WhatsappTemplateConsent.sole).to have_attributes(user_id: manager.id, acao: 'ligou')
+  end
+
   it 'campaign_manage sozinha não abre os modelos' do
     call(role_user('campaign_manage'), :get, base)
 

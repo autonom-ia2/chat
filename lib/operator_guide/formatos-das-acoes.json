@@ -19022,6 +19022,30 @@
     ],
     "sem_corpo": true
   },
+  "POST whatsapp_template_consent": {
+    "campos": {
+      "marcas": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "operacao": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "versao_aviso": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_template_consents#create",
+    "modelo": "WhatsappTemplateConsent",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_template_consents_controller.rb:20",
+      "app/controllers/api/v1/accounts/whatsapp_template_consents_controller.rb:21"
+    ],
+    "sem_corpo": false
+  },
   "POST whatsapp_template_suggestions": {
     "campos": {
       "category": {

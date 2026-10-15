@@ -94,7 +94,10 @@ class Autonomia::Guide::Acoes
     'POST crm/meta_ads_connection/selection', 'PATCH crm/meta_ads_connection/funnel',
     'PATCH crm/meta_ads_connection/destinations',
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
-    'POST crm/meta_ads_connection/facebook_login'
+    'POST crm/meta_ads_connection/facebook_login',
+    # #1586 — a autorização do dono para o sistema criar modelos é registro append-only (o desfazer não apaga linha) e
+    # libera envios que a Meta cobra: a pessoa confirma antes.
+    'POST whatsapp_template_consent'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

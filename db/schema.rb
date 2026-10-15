@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_31_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3985,6 +3985,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
     t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
   end
 
+  create_table "whatsapp_template_consents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "marca", null: false
+    t.string "acao", null: false
+    t.string "versao_aviso", null: false
+    t.text "texto_aviso", null: false
+    t.jsonb "precos", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_whatsapp_template_consents_account_created"
+    t.index ["account_id", "marca", "created_at"], name: "idx_whatsapp_template_consents_account_marca_created"
+    t.index ["user_id"], name: "index_whatsapp_template_consents_on_user_id"
+  end
+
   create_table "whatsapp_template_profiles", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -4295,6 +4309,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
   add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_consents", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_consents", "users", on_delete: :nullify
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify
