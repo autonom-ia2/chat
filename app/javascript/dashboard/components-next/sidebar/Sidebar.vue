@@ -26,6 +26,7 @@ import {
   CAMPAIGN_PERMISSIONS,
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
+  SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -247,13 +248,16 @@ const canViewCrmReports = computed(() => {
   );
 });
 
-// CRM SLA management is admin-grade (administrators or crm_admin custom-role seats)
+// CRM SLA management is admin-grade (administrators, crm_admin or sla_manage seats, #1618)
 // AND requires the enterprise `sla` feature (the backend gate 404s without it).
 const canManageCrmSla = computed(() => {
   if (!slaFeatureEnabled.value) return false;
   if (currentRole.value === 'administrator') return true;
   const permissions = getUserPermissions(currentUser.value, accountId.value);
-  return permissions.includes(CRM_ADMIN_PERMISSION);
+  return (
+    permissions.includes(CRM_ADMIN_PERMISSION) ||
+    permissions.includes(SLA_MANAGE_PERMISSION)
+  );
 });
 
 // Agendamento mora no CRM (#1212) como subgrupo (#1264): função só com

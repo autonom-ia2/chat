@@ -1,0 +1,6 @@
+# Pacote de tradução por conta (#1550). Só folhas que existem em config/locales/pt_BR.yml; veja docs/segmentos/README.md.
+pt_BR:
+  crm:
+    export:
+      statuses:
+        won: 'Plano ativo'

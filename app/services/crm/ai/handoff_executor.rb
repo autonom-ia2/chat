@@ -46,6 +46,14 @@ module Crm
         return 'not_requested' unless requested?
         return 'disabled' unless settings[:enabled]
         return 'no_conversation' if @conversation.blank?
+
+        conversa_bloqueada
+      end
+
+      def conversa_bloqueada
+        # #1606 (corrida c): a avaliação leva de 15 a 25 s; se o assunto da conversa virou outro card nesse meio tempo,
+        # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
+        return 'assunto_mudou' unless Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)

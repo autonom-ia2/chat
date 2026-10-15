@@ -1,0 +1,8 @@
+{
+  "CRM": {
+    "WON": "Ganho",
+    "LOST": "Perdido",
+    "COUNT": "{count} cards",
+    "GROUP": { "ITEM": "Item" }
+  }
+}

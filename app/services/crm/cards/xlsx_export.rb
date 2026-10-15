@@ -141,11 +141,17 @@ class Crm::Cards::XlsxExport
   def text_value(column, card, payload)
     case column
     when :pipeline, :stage, :inbox then payload.dig(column, :name)
-    when :status then I18n.t("crm.export.statuses.#{card.status}", default: card.status)
+    when :status then status_text(card)
     when :priority then card.priority && I18n.t("crm.export.priorities.#{card.priority}", default: card.priority)
     when *CONTACT_COLUMNS.keys then payload.dig(:contact, CONTACT_COLUMNS[column])
     else relation_text(column, card, payload)
     end
+  end
+
+  # O nome que o funil deu ao desfecho vence o texto do idioma (e o do pacote da conta), como no painel (cardStatusLabel).
+  def status_text(card)
+    Crm::Cards::Outcome.custom_label(card.pipeline, card.status) ||
+      I18n.t("crm.export.statuses.#{card.status}", default: card.status)
   end
 
   def relation_text(column, card, payload)

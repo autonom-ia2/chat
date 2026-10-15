@@ -7,7 +7,7 @@
 #     'atribuicao', 'triagem', 'volta'…). Na mesma transação, carimba como devolvida toda passagem em aberto cujo `de` é
 #     o `para` da nova: Lia → Ana e depois Ana → Lia fecha a primeira, sem ninguém chamar "devolver" por fora.
 #   Crm::Passagens.encerrar_aberta!(conversation, por:)
-#     Só a desatribuição sem destino (a pessoa tirou o nome dela): carimba a passagem em aberto.
+#     Só nosso, em dois casos: a desatribuição sem destino (sem pessoa e sem IA) e a conversa resolvida.
 #   Crm::Passagens.ultima_aberta(conversation) -> Crm::Passagem | nil
 #     de e para respondem tipo (:pessoa | :ia), classe, id (na tabela da classe) e nome; mais em e devolvida_em.
 #   Crm::Passagens.recentes(conversation, limite: 5) -> String (vazia sem passagem), cercada como dado para a IA.
@@ -16,14 +16,24 @@
 # posta pela porta e a que posta pela área são a mesma ponta, e a devolução automática casa as duas. Robô que não é
 # espelho de agente (n8n) fica como 'AgentBot'.
 #
-# Quem chama o registrar!: Crm::Entrega (IA → pessoa e triagem), o POST /passar_para (pessoa → pessoa), o PassarParaIa
-# do Agentes IA (→ IA, inclusive a volta para a porta) e a atribuição manual (o listener do CRM, quando quem atribuiu foi
-# uma pessoa). O POST /passar_para não grava quando o destino é IA: quem grava é o PassarParaIa.
+# Quem grava (decisão do Multifunnel, 15/10):
+# - Destino PESSOA: só o Crm::PassagensListener (Crm::Passagens::Atribuicao), depois do commit de toda troca de pessoa:
+#   a Entrega, "Atribuir a mim", o rodízio e, quando existir (#1593), o POST /passar_para. Quem atribui não chama registrar!: envolve a
+#   atribuição em com_motivo(motivo, card:), e o listener grava. Única exceção: o convite, que não atribui, a Entrega
+#   grava ela mesma (motivo 'convite'). Toda passagem nova fecha o convite que estava aberto.
+# - Destino IA: o PassarParaIa do Agentes IA (dentro de com_motivo('passar_para_ia'), para o listener não gravar de
+#   novo), e a devolução pela tela (a pessoa sai e a conversa fica com um robô), que o listener grava.
+# - encerrar_aberta!: só o listener, na desatribuição sem destino e na conversa resolvida.
 module Crm::Passagens
   LIMITE = 5
+  # O nome vai para o prompt da IA: curto, numa linha, sem sinais de marcação.
+  NOME_MAXIMO = 60
   ABRE = '<passagens_recentes>'.freeze
   FECHA = '</passagens_recentes>'.freeze
-  TIPO = { pessoa: 'pessoa', ia: 'IA' }.freeze
+  CONVITE = 'convite'.freeze
+  # O rótulo de cada classe no texto da IA. O robô de outro sistema é "agente externo" (decisão do Rodrigo, 15/10):
+  # "IA" fazia o modelo achar que era um colega de IA interno.
+  ROTULO = { 'User' => 'pessoa', 'Autonomia::Agents::Agent' => 'IA', 'AgentBot' => 'agente externo' }.freeze
 
   module_function
 
@@ -52,7 +62,9 @@ module Crm::Passagens
     Crm::Passagem.transaction(requires_new: true) do
       travar(conversation)
       agora = Time.current
-      devolver_as_de!(conversation, destino, origem, agora)
+      # O convite não tira a conversa de ninguém (o robô segue com ela): não encerra passagem nenhuma além de outro convite.
+      devolver_as_de!(conversation, destino, origem, agora) unless pedido[:motivo] == CONVITE
+      fechar_convites!(conversation, agora)
       Crm::Passagem.create!(
         account_id: conversation.account_id, conversation_id: conversation.id, card_id: card&.id, pipeline_id: card&.pipeline_id,
         **pedido, em: agora, **colunas('de', origem), **colunas('para', destino)
@@ -71,6 +83,22 @@ module Crm::Passagens
       abertas.each { |aberta| aberta.update!(devolvida_em: agora, **quem) }
       abertas.first
     end
+  end
+
+  # O porquê da troca de atendente feita dentro do bloco (Crm::Passagens::Contexto). Quem atribui uma pessoa não chama
+  # registrar!: envolve a atribuição aqui, e o listener grava (escritor único para destino pessoa). 'passar_para_ia'
+  # diz ao listener que o PassarParaIa já gravou a troca para a IA. pedida_por: só quando não é a pessoa logada (o robô
+  # que pediu a passagem). Reentrante: o bloco de dentro vale até sair.
+  def com_motivo(motivo, card: nil, pedida_por: nil, &)
+    Crm::Passagens::Contexto.set(motivo: motivo.to_s, card: card, pedida_por: pedida_por, &)
+  end
+
+  # A Entrega só sabe o card do assunto e quem pediu depois de planejar, já dentro do bloco (e antes de gravar).
+  def anotar(card:, pedida_por: nil)
+    return if Crm::Passagens::Contexto.motivo.blank?
+
+    Crm::Passagens::Contexto.card = card
+    Crm::Passagens::Contexto.pedida_por = pedida_por if pedida_por
   end
 
   def ultima_aberta(conversation)
@@ -129,11 +157,22 @@ module Crm::Passagens
     Crm::Passagem::Ponta.new(tipo: :ia, classe: 'AgentBot', id: robo.id, nome: robo.name)
   end
 
+  # Toda passagem nova encerra o convite que estava em aberto (o da Ana que venceu e foi para o Bruno, ou o que a
+  # própria Ana aceitou): um convite nunca fica aberto ao lado de outra passagem.
+  def fechar_convites!(conversation, agora)
+    Crm::Passagem.where(conversation_id: conversation.id, motivo: CONVITE).abertas.lock.to_a.each do |convite|
+      convite.update!(devolvida_em: agora)
+    end
+  end
+
+  # Fecha as passagens que esta encerra: as que vieram do destino (Lia → Ana e agora Ana → Lia) e as que foram PARA a
+  # origem (quem passa adiante não está mais com a conversa: Área → Ana e agora Ana → Porta). Carimbadas por quem passou.
   def devolver_as_de!(conversation, destino, origem, agora)
     quem = colunas('devolvida_por', origem)
-    Crm::Passagem.where(conversation_id: conversation.id, de_type: destino.classe, de_id: destino.id).abertas.lock.to_a.each do |aberta|
-      aberta.update!(devolvida_em: agora, **quem)
-    end
+    abertas = Crm::Passagem.where(conversation_id: conversation.id).abertas
+    encerradas = abertas.where(de_type: destino.classe, de_id: destino.id)
+    encerradas = encerradas.or(abertas.where(para_type: origem.classe, para_id: origem.id)) if origem
+    encerradas.lock.to_a.each { |aberta| aberta.update!(devolvida_em: agora, **quem) }
   end
 
   def travar(conversation)
@@ -150,10 +189,11 @@ module Crm::Passagens
   end
 
   def linha(passagem, fuso)
-    de = passagem.de ? "#{nome(passagem.de)} (#{TIPO[passagem.de.tipo]})" : 'ninguém'
-    texto = "#{hora(passagem.em, fuso)}: passada de #{de} para #{nome(passagem.para)} (#{TIPO[passagem.para.tipo]}), " \
-            "#{quem_pediu(passagem.pedida_por)}."
+    de = passagem.de ? rotulado(passagem.de) : 'ninguém'
+    acao = passagem.motivo == CONVITE ? 'convite' : 'passada'
+    texto = "#{hora(passagem.em, fuso)}: #{acao} de #{de} para #{rotulado(passagem.para)}, #{quem_pediu(passagem.pedida_por)}."
     return "#{texto} Ainda não devolvida." if passagem.aberta?
+    return "#{texto} Convite encerrado às #{hora(passagem.devolvida_em, fuso)}." if passagem.motivo == CONVITE
 
     por = passagem.devolvida_por ? " por #{nome(passagem.devolvida_por)}" : ''
     "#{texto} Devolvida#{por} às #{hora(passagem.devolvida_em, fuso)}."
@@ -162,11 +202,15 @@ module Crm::Passagens
   def quem_pediu(ponta)
     return 'pedida pelo sistema' if ponta.nil?
 
-    "pedida por #{nome(ponta)} (#{TIPO[ponta.tipo]})"
+    "pedida por #{rotulado(ponta)}"
+  end
+
+  def rotulado(ponta)
+    "#{nome(ponta)} (#{ROTULO.fetch(ponta.classe, 'IA')})"
   end
 
   def nome(ponta)
-    ponta.nome.to_s.delete('<>').squish.presence || 'sem nome'
+    ponta.nome.to_s.delete('<>').squish.first(NOME_MAXIMO).presence || 'sem nome'
   end
 
   def hora(instante, fuso)

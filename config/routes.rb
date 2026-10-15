@@ -899,6 +899,8 @@ Rails.application.routes.draw do
               post :connect, action: :create
               post :request_code
               post :reconnect
+              post :pause
+              post :resume
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
@@ -938,6 +940,10 @@ Rails.application.routes.draw do
                 get :usage
               end
               post :media, on: :collection
+            end
+            # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
+            resource :whatsapp_catalog, only: [:show], module: :inboxes do
+              get :products
             end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.

@@ -21,6 +21,9 @@ module Crm
       def maybe_cancel
         return unless @message&.incoming?
         return unless cadence_active?
+        # Multifunil (#1606, corrida f): a resposta sobre outro pedido não para a cadência deste card. O mesmo critério
+        # do Runner, com a regra única de "qual funil manda" (Crm::Assunto).
+        return unless Crm::Assunto.atual?(@card, @message.conversation)
 
         cancel_pending_follow_ups
         write_state

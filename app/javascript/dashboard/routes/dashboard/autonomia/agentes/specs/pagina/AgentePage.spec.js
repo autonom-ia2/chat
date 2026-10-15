@@ -1074,6 +1074,78 @@ describe('AgentePage', () => {
 
   // #1433 (tema 13) — agente da equipe: "Na equipe", "Onde {nome} trabalha" (caixa e papel) e "Mudar"
   // direto nos passos do agente da equipe.
+  // #1433 ("a, para todos os agentes"): quem atende primeiro também recebe em outras caixas quando alguém
+  // passa — a seção na gaveta "Onde e quando" e a linha no resumo. Só com a Fase 2.
+  describe('também recebe em outras caixas', () => {
+    const COM_AREA = [
+      ...L2,
+      {
+        inbox_id: 3,
+        name: 'WhatsApp dos Jardins',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 9,
+          agent_name: 'Duda',
+          operating: true,
+        },
+        areas: [{ agent_id: 7, agent_name: 'Bia', operating: true }],
+      },
+      {
+        inbox_id: 4,
+        name: 'WhatsApp Recepção',
+        occupied_by: null,
+        so_de_pessoas: true,
+      },
+    ];
+    const ligarFase2 = ligada => {
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: ligada,
+      });
+    };
+
+    it('shows the other inboxes in the summary and the section in the drawer', async () => {
+      preparar({ canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="onde"] [data-tambem-recebe]')).not.toBeNull();
+      await clicar('[data-alterar="onde"]');
+      const secao = no('aside[role="dialog"] [data-tambem-recebe]');
+      expect(secao).not.toBeNull();
+      expect(
+        secao.querySelector('[data-opcao="3"]').getAttribute('aria-checked')
+      ).toBe('true');
+      expect(
+        secao.querySelector('[data-opcao="4"]').getAttribute('aria-disabled')
+      ).toBeNull();
+      expect(secao.querySelector('[data-opcao="1"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('the quote agent (Lia) gets the section too', async () => {
+      preparar({
+        agente: bia({ name: 'Lia', agent_type: 'insurance_quote' }),
+        canais: COM_AREA,
+      });
+      ligarFase2(true);
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      expect(no('aside[role="dialog"] [data-tambem-recebe]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2, nothing changes (no regression)', async () => {
+      preparar({ canais: COM_AREA });
+      ligarFase2(false);
+      const wrapper = await montar();
+      expect(no('[data-tambem-recebe]')).toBeNull();
+      await clicar('[data-alterar="onde"]');
+      expect(no('aside[role="dialog"]')).not.toBeNull();
+      expect(no('[data-tambem-recebe]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
   describe('agente da equipe', () => {
     const L2_EQUIPE = [
       {

@@ -39,6 +39,7 @@ json.autonomia_prospecting_enabled Autonomia::Prospecting::Config.enabled?(@acco
 json.autonomia_insurance_enabled Autonomia::Insurance::Config.enabled?(@account)
 # #1433 (tema 13) — Fase 2 dos Agentes ligada na conta (piloto): a página "Criar agente" oferece o agente da equipe.
 json.autonomia_agents_fase2 Autonomia::Agents::Config.enabled?(@account) && Autonomia::Agents::Fase2.ligada?(@account)
+json.autonomia_pacote Autonomia::Segmentos::Pacotes.nome(@account)
 # Guia da Plataforma: gate EXATO do backend (Config.enabled? + credencial de IA resolvível) — o widget
 # do guia só aparece quando o /autonomia/guide/chat de fato responderia. Best-effort: nunca quebra o
 # payload da conta.

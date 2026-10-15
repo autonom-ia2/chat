@@ -53,7 +53,9 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def render_caixa
-    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?)
+    retrato = ::Crm::Caixas::Retrato.new(
+      account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?, detalhe: true
+    )
     render json: { payload: { caixa: retrato.caixa(@inbox), funis: retrato.funis } }
   end
 

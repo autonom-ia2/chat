@@ -1,0 +1,192 @@
+{
+  "CRM_KANBAN": {
+    "DRAWER": {
+      "STATUS_WON": "Active policy",
+      "STATUS_LOST": "Not closed",
+      "LOSE_REASON_PLACEHOLDER": "Why didn't it close?",
+      "CLOSE_AS_TITLE": "End as {label}",
+      "ACTIVITY_WON": "Policy closed",
+      "ACTIVITY_LOST": "Not closed",
+      "ACTIVITY_REOPEN": "Card reopened"
+    },
+    "META_SYNC_STATUS": {
+      "EVENT_WON": "Policy closed",
+      "EVENT_LOST": "Not closed"
+    },
+    "ALERTS": {
+      "CARD_WON": "Marked: policy closed.",
+      "CARD_LOST": "Marked: not closed.",
+      "CARD_REOPENED": "Card reopened.",
+      "CARD_CLOSE_ERROR": "Could not update the card result."
+    },
+    "DASHBOARD": {
+      "KPI": {
+        "WON": "Policies closed",
+        "WON_INFO": "Cards that closed a policy in the selected period.",
+        "LOST": "Not closed",
+        "LOST_INFO": "Cards that did not close in the selected period.",
+        "WIN_RATE": "Close rate (count)",
+        "WIN_RATE_INFO": "Of all cards that ended in the period, how many closed a policy (in %).",
+        "WIN_RATE_VALUE": "Close rate (value)",
+        "WIN_RATE_VALUE_INFO": "Of the value of everything that ended in the period, how much closed (in %).",
+        "WON_VALUE": "Closed value",
+        "WON_VALUE_INFO": "Total value of policies closed in the period, by currency.",
+        "LOST_VALUE": "Value not closed",
+        "LOST_VALUE_INFO": "Total value of what did not close in the period, by currency.",
+        "GOAL_INFO": "How much of this month's sales target is already closed. Pace compares it to how much of the month has passed."
+      },
+      "THROUGHPUT": {
+        "TITLE": "Cards that ended",
+        "EMPTY": "No card ended in the period.",
+        "WON": "Closed",
+        "LOST": "Not closed"
+      },
+      "SUBTITLE": "How the funnel is doing, stage by stage. See what closed, what did not, and who served: AI or a person.",
+      "META_SYNC": {
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a policy, the data shows up here."
+      }
+    },
+    "CONFIRM": {
+      "DELETE_STAGE_DESCRIPTION_WITH_CARDS": "{stage} has {count} card. It doesn't show on the Kanban because it has ended or was archived. Choose another stage for it before deleting this one. | {stage} has {count} cards. They don't show on the Kanban because they have ended or were archived. Choose another stage for them before deleting this one."
+    },
+    "PIPELINE_DRAWER": {
+      "DEFAULT_STAGE_LOST": "Not closed",
+      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card closes a policy, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy."
+    },
+    "PIPELINE_EDITOR": {
+      "AD_RESULTS_HELP": "Show which ads became sales. A sale is counted when a card closes a policy, regardless of its column.",
+      "META_PROGRESS": {
+        "NONE": {
+          "HELP": "Do not send entry into this stage. Closed policies still follow the pipeline settings."
+        }
+      }
+    },
+    "GOOGLE_SYNC": {
+      "CONVERSION_NAME_WON": "Conversion name for closed policies",
+      "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Policy closed",
+      "CONVERSION_NAME_WON_HELP": "Not closed and stage-moved events use their default conversion names."
+    },
+    "CALENDAR": {
+      "EVENT": {
+        "WIN": "Policy closed",
+        "LOSE": "Not closed"
+      }
+    },
+    "META_ADS_HUB": {
+      "PANEL": {
+        "PATH_LIST": {
+          "WON": "Active policy",
+          "LOST": "Not closed"
+        }
+      },
+      "SUMMARY": {
+        "NEXT_SALES": "When a card moves forward or closes a policy, Meta is told and learns who buys."
+      },
+      "FUNNEL": {
+        "HINT": "When a card moves forward or closes a policy in the CRM, we tell Meta. It learns to show your ad to people who buy."
+      },
+      "AI": {
+        "QUOTE": {
+          "REASONS": {
+            "CLOSED": "The customer already closed the policy. Nothing to resume here."
+          }
+        }
+      }
+    },
+    "TRACKED_LINKS": {
+      "PAGE": {
+        "WON": "Closed"
+      }
+    },
+    "BOOKING_AGENDA": {
+      "ERRORS": {
+        "CARD_CLOSED": "This card has ended. Reopen it to schedule."
+      }
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "GANHOU": "Policy closed",
+      "PERDEU": "Not closed",
+      "GANHOU_TITULO_PADRAO": "Policy closed! How much was it?",
+      "GANHOU_CONFIRMA_PADRAO": "Mark as: policy closed",
+      "PERDEU_TITULO": "Didn't close this time?",
+      "PERDEU_CONFIRMA": "Mark as: not closed"
+    },
+    "ORIGEM": {
+      "AVISO_ESTADO": {
+        "QUANDO": {
+          "GANHO": "It was when the policy closed.",
+          "PERDIDO": "It was when the card ended without closing."
+        }
+      }
+    }
+  },
+  "CRM_DASHBOARD": {
+    "ORIGIN": {
+      "SUBTITLE": "Policies closed and revenue, by campaign source.",
+      "EMPTY": "No policies closed with a campaign source in this period.",
+      "WON": "Closed"
+    }
+  },
+  "CRM_CAIXAS": {
+    "FUNIS": {
+      "TIPO_SALES": "Sales: ends when the policy closes or does not close"
+    }
+  },
+  "CRM_FUNIL": {
+    "ANUNCIOS": {
+      "EVENTOS": {
+        "LOST": "Sale not closed"
+      },
+      "FACEBOOK": {
+        "TAMBEM_PERDIDA": "Also when the sale does not close."
+      }
+    }
+  },
+  "CONTACTS_LAYOUT": {
+    "DETAILS": {
+      "CUSTOMER": {
+        "DESCRIPTION": "Becomes a customer on its own when a policy closes in a sales funnel. Mark it here if they bought some other way."
+      }
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS_NOTE": "cards with a campaign mark · {won} closed"
+      }
+    }
+  },
+  "AUTOMATION": {
+    "CRM_CARD_STATUS": {
+      "WON": "Active policy",
+      "LOST": "Not closed"
+    },
+    "ACTIONS": {
+      "CRM_MARK_CARD_WON": "Mark CRM card: policy closed",
+      "CRM_MARK_CARD_LOST": "Mark CRM card: not closed"
+    }
+  },
+  "INTEGRATION_SETTINGS": {
+    "WEBHOOK": {
+      "FORM": {
+        "SUBSCRIPTIONS": {
+          "CRM_EVENTS": {
+            "CRM_CARD_WON": "CRM card: policy closed",
+            "CRM_CARD_LOST": "CRM card: not closed"
+          }
+        }
+      }
+    },
+    "CRM_N8N": {
+      "EVENTS": {
+        "LIST": {
+          "CRM_CARD_WON": "A card closed a policy.",
+          "CRM_CARD_LOST": "A card did not close.",
+          "CRM_CARD_REOPENED": "A card that had ended was reopened."
+        }
+      }
+    }
+  }
+}

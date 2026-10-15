@@ -334,3 +334,31 @@ Autonom.ia). Regra decidida em 14/10/2026:
 3. Definir as fatias das duas stacks (sem IP em comum), `WHATSAPP_PROXY_ALERT_ACCOUNT_ID` e só então ligar
    `WHATSAPP_PROXY_ENABLED=true`. Não definir `WEBSHARE_*_PLAN_ID`. Sessão importada
    num plano que não bate com o tipo (ex.: Híbrido num IP de datacenter) é trocada pela reconciliação.
+
+## Pausar sem desvincular e avisos da aba (#1487)
+
+- **Pausar WhatsApp API** (com confirmação) para a sessão no motor (`POST /api/sessions/{nome}/stop`), sem logout: o
+  aparelho continua vinculado. A pausa fica em `whatsapp_hybrid_connections.paused_at`.
+- Enquanto pausada: o roteador nunca escolhe o WhatsApp API (`Connection#routable?` e `Router#web_allowed_for?`
+  respondem não). Para o follow-up do CRM é o mesmo que conexão caída (`MessagingWindow#hybrid_web_available?` responde
+  não): o que for compor depois de 24 horas vai como modelo, e o toque já previsto para sair como texto livre pelo
+  WhatsApp API falha com `whatsapp_api_unavailable` (o executor recompõe). `ensure_session!` não cria nem religa a
+  sessão; `refresh!` só lê (não grava configuração nem proxy, o que reiniciaria a sessão); a parada não vira alerta de
+  queda nem sinal de IP ruim, mesmo que o aviso do motor chegue com o estado ainda "conectado". Sessão STOPPED continua
+  intocada pela automação de proxy (#1516). O Guia mostra "pausado pelo administrador" como informação, não como queda.
+- Pausar lê o motor antes (só 404 conta como "sem sessão"; outra falha recusa e nada é gravado), grava a pausa e só
+  então pede o stop; recusa do motor desfaz a pausa; sem resposta, consulta de novo e mantém a pausa só se a sessão
+  aparecer parada. Pausar e retomar usam a mesma trava por sessão da troca de proxy (ocupada: "tente de novo").
+- **Retomar** faz `start` da mesma sessão, sem QR. Se o WhatsApp desvinculou o aparelho nesse meio-tempo, o motor pede
+  QR e a aba mostra o fluxo de reconectar normal. Só recria a sessão quando o motor responde que ela não existe (404);
+  falha do motor mantém a pausa, sem recriar nada (recriar soltaria o IP da sessão). Gerar novo QR Code também desfaz
+  a pausa.
+- **Desconectar** uma conexão pausada: o `TeardownSessionJob` religa a sessão parada e espera ela subir antes do logout
+  (logout em sessão parada pode não tirar o aparelho do celular); se não subir a tempo, faz logout e exclusão assim
+  mesmo.
+- Avisos (só informam, nada bloqueia): a ordem de conexão antes do QR (oficial conectada → app aberto → QR); lembrete
+  fixo de abrir o app WhatsApp Business ao menos a cada 14 dias (o motor não informa quando o app foi aberto); e o
+  mesmo número ligado em outra caixa WhatsApp API comum (WAHA) da mesma conta, só quando a sessão dessa caixa está viva
+  no motor (conectada, subindo ou com QR; uma consulta à lista de sessões, guardada por 1 minuto; motor fora = sem
+  aviso). O número vem do aparelho da sessão quando o motor informa, senão do nome da sessão; celular brasileiro com e
+  sem o 9 (antes de 6 a 9) é o mesmo número (`WhatsappHybrid::SameNumberInboxes`).

@@ -4,6 +4,7 @@ import {
   CARTOES_MINIMO,
   LIMITE_DO_CARTAO,
   LIMITE_DO_TITULO_DA_OFERTA,
+  LIMITE_DO_TITULO_DOS_PRODUTOS,
   VALIDADE_MAXIMA,
   VALIDADE_MINIMA,
   formatoPorChave,
@@ -82,7 +83,25 @@ const conferirOferta = ({ oferta }) => [
   },
 ];
 
+// #1418: produtos pedem catálogo conectado; vários numa lista pedem o título.
+const conferirProdutos = ({ produtos }, temCatalogo) => [
+  { chave: 'CATALOGO', ok: temCatalogo },
+  ...(produtos.tipo === 'varios'
+    ? [
+        {
+          chave: 'PRODUTOS_TITULO',
+          ok:
+            temLetras(produtos.titulo) &&
+            produtos.titulo.length <= LIMITE_DO_TITULO_DOS_PRODUTOS,
+        },
+      ]
+    : []),
+];
+
 export const conferirFormato = (conteudo, { temCatalogo = true } = {}) => {
+  if (conteudo.formato === 'produtos') {
+    return conferirProdutos(conteudo, temCatalogo);
+  }
   if (conteudo.formato === 'carrossel') return conferirCarrossel(conteudo);
   if (conteudo.formato === 'oferta') return conferirOferta(conteudo);
   if (conteudo.formato === 'catalogo') {
@@ -146,6 +165,14 @@ export const rascunhoDoFormato = (chave, { t, ler, exemplosDe }) => {
       },
     },
     catalogo: { catalogo: { botao: t(`${base}.BOTAO`) } },
+    produtos: {
+      produtos: {
+        tipo: 'varios',
+        titulo: t(`${base}.TITULO_EXEMPLO`),
+        rodape: '',
+        botao: { tipo: 'ver', texto: t(`${base}.BOTOES.varios`) },
+      },
+    },
     codigo: {
       codigo: { botao: 'copiar', validade: 10, avisoDeSeguranca: true },
     },

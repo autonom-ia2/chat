@@ -362,7 +362,9 @@ class Message < ApplicationRecord
       locked = Conversation.lock.find(conversation_id)
       next if locked.assignee_id.present? || (locked.ai_assignee == sender && !locked.pending?)
 
-      locked.update!(ai_assignee: sender, status: locked.pending? ? :open : locked.status)
+      # Outro agente da caixa é o dono: ele fica, só o pending vira open (#1606).
+      locked.update!(ai_assignee: Autonomia::Agents::QuemResponde.dono_depois_do_claim(locked, sender),
+                     status: locked.pending? ? :open : locked.status)
     end
   rescue ActiveRecord::ActiveRecordError => e
     # A mensagem já está gravada e enviada: falhar aqui não pode pular os passos seguintes nem devolver erro a quem

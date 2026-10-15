@@ -1,0 +1,14 @@
+# Pacote de tradução por conta (#1550). Só folhas que existem em config/locales/en.yml; veja docs/segmentos/README.md.
+en:
+  crm:
+    # AI criterion of the legacy "perdido" stage (#1554): shown to whoever sets up the pipeline.
+    stage_criteria:
+      legado:
+        perdido: 'Lead ended without closing: the customer clearly refused, asked not to be contacted, said they closed with another company, the number is invalid, there was no reply after the attempts set by the pipeline, or the agent ended the conversation without closing. Do not use for leads still negotiating or who only said "I will think about it".'
+    export:
+      columns:
+        closed_at: 'Ended at'
+        lost_reason: 'Why it did not close'
+      statuses:
+        won: 'Active policy'
+        lost: 'Not closed'

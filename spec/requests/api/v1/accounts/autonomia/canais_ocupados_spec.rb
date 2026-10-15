@@ -69,9 +69,11 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['payload']).to eq([
                                                       { 'inbox_id' => alfa.id, 'name' => 'Alfa',
-                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil, 'areas' => [] },
+                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'areas' => [] },
                                                       { 'inbox_id' => zeta.id, 'name' => 'Zeta',
-                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil, 'areas' => [] }
+                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'areas' => [] }
                                                     ])
     end
 
@@ -117,6 +119,21 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       get_canais
 
       expect(occupied_by(inbox)).to eq('kind' => 'external')
+    end
+
+    # #1433: só a caixa sem principal e sem robô de fora é "só de pessoas" (pode receber o agente da equipe).
+    it 'says which inboxes are served only by people: no main agent and no external bot' do
+      livre = create(:inbox, account: account)
+      externa = create(:inbox, account: account)
+      com_principal = create(:inbox, account: account)
+      link_webhook(externa)
+      link_native(create_agent('Bia'), com_principal)
+
+      get_canais
+
+      por_caixa = response.parsed_body['payload'].index_by { |row| row['inbox_id'] }
+      expect(por_caixa.transform_values { |row| row['so_de_pessoas'] })
+        .to eq(livre.id => true, externa.id => false, com_principal.id => false)
     end
 
     it 'still sees the external bot when its agent_bot_inboxes row has no account_id' do

@@ -47,8 +47,8 @@ const onDelete = async hide => {
       router.push({ name: getConversationDashboardRoute(route.name) });
     } else if (isAInboxViewRoute(route.name)) {
       router.push({ name: 'inbox_view' });
-    } else if (route.name !== 'contacts_dashboard') {
-      router.push({ name: 'contacts_dashboard' });
+    } else if (route.name !== 'contacts_dashboard_index') {
+      router.push({ name: 'contacts_dashboard_index' });
     }
   } catch (error) {
     useAlert(error.message || t('DELETE_CONTACT.API.ERROR_MESSAGE'));

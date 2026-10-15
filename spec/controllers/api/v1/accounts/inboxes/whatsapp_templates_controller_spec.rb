@@ -293,6 +293,30 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('system_template')
     end
+
+    # #1418: produtos do catálogo só com a flag `whatsapp_campaign_products`; o servidor barra antes da Meta.
+    it 'modelo com produtos do catálogo sem a flag: 422 products_disabled, sem chamar a Meta; com a flag, segue' do
+      spm = [{ type: 'HEADER', format: 'PRODUCT' }, { type: 'BODY', text: 'Veja este produto.' },
+             { type: 'BUTTONS', buttons: [{ type: 'SPM', text: 'Ver' }] }]
+      card = { components: [{ type: 'HEADER', format: 'PRODUCT' }, { type: 'BUTTONS', buttons: [{ type: 'SPM', text: 'Ver' }] }] }
+      cartoes = [{ type: 'BODY', text: 'Veja.' }, { type: 'CAROUSEL', cards: [card, card] }]
+
+      [spm, cartoes].each do |components|
+        call(:post, base, { template: params[:template].merge(name: 'vitrine', fields: {}, components: components) })
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to include('error' => 'products_disabled',
+                                                'message' => I18n.t('whatsapp_templates.errors.products_disabled', locale: :pt_BR))
+      end
+      call(:patch, "#{base}/11", { template: { components: spm } })
+      expect(response.parsed_body['error']).to eq('products_disabled')
+      expect(a_request(:any, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
+
+      account.enable_features!('whatsapp_campaign_products')
+      stub_lookup('vitrine', [])
+      stub_request(:post, templates_url).to_return(status: 200, headers: json, body: { id: '902', status: 'PENDING' }.to_json)
+      call(:post, base, { template: params[:template].merge(name: 'vitrine', fields: {}, components: spm) })
+      expect(response).to have_http_status(:created)
+    end
   end
 
   # #1380: o pronto "Cobrança ou boleto" foi à Meta com COPY_CODE sem exemplo num aviso e voltou recusado. A forma que a
