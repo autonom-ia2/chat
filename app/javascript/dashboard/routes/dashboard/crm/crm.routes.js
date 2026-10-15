@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -47,7 +48,7 @@ const campaignsMeta = {
 };
 
 const ensureCrmEnabled = (to, _from, next) => {
-  if (window.globalConfig?.CRM_KANBAN_ENABLED === 'true') {
+  if (isCrmKanbanEnabled()) {
     next();
     return;
   }
@@ -55,10 +56,7 @@ const ensureCrmEnabled = (to, _from, next) => {
 };
 
 const ensureCrmAiEnabled = (to, _from, next) => {
-  if (
-    window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
-    window.globalConfig?.CRM_AI_ENABLED === 'true'
-  ) {
+  if (isCrmKanbanEnabled() && window.globalConfig?.CRM_AI_ENABLED === 'true') {
     next();
     return;
   }

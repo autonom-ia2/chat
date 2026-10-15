@@ -102,9 +102,29 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/portals');
   });
 
-  it('should return dashboard route as default for users with custom roles', () => {
+  // #1643: the dashboard is closed to a custom role without conversation keys;
+  // sending it there looped forever. The profile opens for every seat.
+  it('sends a custom role with no landing page to the profile, never the closed dashboard', () => {
     const permissions = ['custom_role'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+    expect(defaultRedirectPage(to, permissions)).toBe(
+      'accounts/2/profile/settings'
+    );
+  });
+
+  it('sends a CRM-only custom role to the CRM when the CRM is on', () => {
+    const original = window.globalConfig;
+    try {
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+      expect(defaultRedirectPage(to, ['crm_view', 'custom_role'])).toBe(
+        'accounts/2/crm'
+      );
+      window.globalConfig = { CRM_KANBAN_ENABLED: 'false' };
+      expect(defaultRedirectPage(to, ['crm_view', 'custom_role'])).toBe(
+        'accounts/2/profile/settings'
+      );
+    } finally {
+      window.globalConfig = original;
+    }
   });
 
   it('should return dashboard route for users with administrator role', () => {
@@ -181,9 +201,43 @@ describe('#validateLoggedInRoutes', () => {
                 params: { accountId: 1 },
                 meta: { permissions: ['administrator'] },
               },
-              { accounts: [{ id: 1, role: 'agent', status: 'active' }] }
+              {
+                accounts: [
+                  {
+                    id: 1,
+                    role: 'agent',
+                    status: 'active',
+                    permissions: ['agent'],
+                  },
+                ],
+              }
             )
           ).toEqual(`accounts/1/dashboard`);
+        });
+
+        // #1643: a payload without permissions opens nothing; it stops on the
+        // profile instead of redirecting to it forever.
+        it('stops on the profile when the account has no permissions', () => {
+          const user = {
+            accounts: [{ id: 1, role: 'agent', status: 'active' }],
+          };
+          const meta = {
+            permissions: ['administrator', 'agent', 'custom_role'],
+          };
+          const billing = {
+            path: '/app/accounts/1/settings/billing',
+            params: { accountId: 1 },
+            meta,
+          };
+          const profile = {
+            path: '/app/accounts/1/profile/settings',
+            params: { accountId: 1 },
+            meta,
+          };
+          expect(validateLoggedInRoutes(billing, user)).toEqual(
+            'accounts/1/profile/settings'
+          );
+          expect(validateLoggedInRoutes(profile, user)).toBeNull();
         });
       });
       describe('when route is suspended route', () => {

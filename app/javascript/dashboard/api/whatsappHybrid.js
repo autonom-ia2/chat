@@ -23,6 +23,15 @@ class WhatsappHybridAPI extends ApiClient {
     return axios.post(`${this.url}/${inboxId}/reconnect`);
   }
 
+  // chat#1487: pausa sem desvincular o aparelho; retomar religa sem QR.
+  pause(inboxId) {
+    return axios.post(`${this.url}/${inboxId}/pause`);
+  }
+
+  resume(inboxId) {
+    return axios.post(`${this.url}/${inboxId}/resume`);
+  }
+
   updateSettings(inboxId, settings) {
     return axios.patch(`${this.url}/${inboxId}`, settings);
   }
