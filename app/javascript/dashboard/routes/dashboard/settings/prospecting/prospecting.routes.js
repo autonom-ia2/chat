@@ -1,22 +1,11 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import store from '../../../../store';
+// Mesmo guarda assíncrono das rotas da Prospecção: espera a conta no F5 (#1618).
+import { ensureProspectingEnabled } from '../../autonomia/contaDaRota';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 
 const ProspectingSettingsPage = () =>
   import('../../autonomia/prospecting/pages/ProspectingSettingsPage.vue');
-
-const ensureProspectingEnabled = (to, _from, next) => {
-  const accountId = Number(to.params.accountId);
-  const account = store.getters['accounts/getAccount'](accountId);
-
-  if (account?.autonomia_prospecting_enabled === true) {
-    next();
-    return;
-  }
-
-  next({ name: 'home', params: to.params });
-};
 
 export default {
   routes: [
