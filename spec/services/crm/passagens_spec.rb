@@ -133,6 +133,28 @@ RSpec.describe Crm::Passagens do
     end
   end
 
+  describe '.com_motivo' do
+    it 'devolve o valor do bloco, guarda motivo e card durante ele e restaura o anterior ao sair (aninha)', :aggregate_failures do
+      card = create_card(pipeline: suporte)
+      contexto = Crm::Passagens::Contexto
+
+      valor = described_class.com_motivo('passar_para_ia', card: card) do
+        expect([contexto.motivo, contexto.card]).to eq(['passar_para_ia', card])
+        described_class.com_motivo('triagem') { expect([contexto.motivo, contexto.card]).to eq(['triagem', nil]) }
+        expect([contexto.motivo, contexto.card]).to eq(['passar_para_ia', card])
+        :feito
+      end
+
+      expect(valor).to eq(:feito)
+      expect([contexto.motivo, contexto.card]).to eq([nil, nil])
+    end
+
+    it 'restaura o anterior mesmo quando o bloco quebra' do
+      expect { described_class.com_motivo('volta') { raise ArgumentError } }.to raise_error(ArgumentError)
+      expect(Crm::Passagens::Contexto.motivo).to be_nil
+    end
+  end
+
   describe '.encerrar_aberta!' do
     it 'carimba a última passagem em aberto com quem tirou o nome' do
       passagem = passar(de: porta, para: ana)
