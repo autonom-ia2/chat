@@ -199,7 +199,7 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
     end
 
     # Bloqueio do Followup IA (#1448): o Híbrido assume o texto e troca o source_id da mensagem pelo id do WAHA antes de
-    # enviar. A entrega continua achada pelo wamid do aviso; a mensagem, pelo id. Com a marca do Híbrido, sem modelo.
+    # enviar. A entrega continua achada pelo wamid do aviso; a mensagem, pelo id. Híbrido aceitou (#1453): sem modelo.
     it 'o Híbrido assumiu o texto (source_id trocado): nenhum modelo é enfileirado' do
       sent = stub_graph_messages
       conversa = falou('Ana Souza')
@@ -207,7 +207,8 @@ RSpec.describe CampaignJourney::ConversaAberta::Envio, :aggregate_failures do
       disparar(campaign)
       texto_id = CampaignRecipient.find_by(campaign: campaign, contact: contato('Ana Souza')).source_id
       allow(WhatsappHybrid::Router).to receive(:new).and_return(instance_double(WhatsappHybrid::Router, web_ready?: false))
-      conversa.messages.outgoing.last.update!(source_id: 'waha-fisico-1', content_attributes: { whatsapp_transport_fallback: true })
+      aceito = { whatsapp_transport_fallback: true, whatsapp_transport: 'web', whatsapp_transport_outcome: 'accepted' }
+      conversa.messages.outgoing.last.update!(source_id: 'waha-fisico-1', content_attributes: aceito)
 
       expect { aviso(texto_id, 131_047) }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
       expect(sent.select { |body| body['to'] == '+5511987654321' }.pluck('type')).to eq(%w[text])

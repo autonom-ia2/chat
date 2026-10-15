@@ -71,4 +71,26 @@ describe WhatsappHybrid::CloudFailureFallback do
     expect(client).not_to have_received(:send_text)
     expect(message.reload.status).to eq('failed')
   end
+
+  # #1453: o pedido já saiu; o erro depois dele não pode virar "falha" nem tirar a marca do plano B.
+  it 'keeps an accepted resend as sent when something breaks afterwards' do
+    allow(RichMessages).to receive(:mark_sent_as_text!).and_raise(Redis::CannotConnectError)
+
+    expect do
+      Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+    end.to raise_error(Redis::CannotConnectError)
+
+    expect(message.reload.status).not_to eq('failed')
+    expect(message.content_attributes).to include('whatsapp_transport_fallback' => true, 'whatsapp_transport_outcome' => 'accepted')
+  end
+
+  it 'does not resend when the same 131047 notice arrives again (chat#1453)' do
+    allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => false })
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+    allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511937016094@c.us' })
+
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+
+    expect(client).not_to have_received(:send_text)
+  end
 end

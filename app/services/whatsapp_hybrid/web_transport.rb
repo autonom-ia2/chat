@@ -3,6 +3,10 @@
 # depois, às vezes antes da resposta do WAHA), a conciliação já encontra a mensagem.
 class WhatsappHybrid::WebTransport
   THROTTLE_RETRY = 15.seconds
+  # Teto das novas tentativas do limite por minuto (20 × 15 s = 5 min); depois a mensagem falha de forma certa (#1453).
+  THROTTLE_MAX_RETRIES = 20
+  THROTTLED_OUT_ERROR = 'O WhatsApp API ficou no limite de envios por minuto e a mensagem não saiu. Reenvie mais tarde ' \
+                        'ou use um modelo aprovado.'.freeze
   CHAT_ID_TTL = 1.day.to_i
   # Estado da sessão mais velho que isto é revalidado no motor antes de enviar.
   STATUS_MAX_AGE = 60.seconds
@@ -78,10 +82,28 @@ class WhatsappHybrid::WebTransport
     physical_id = @client.new_message_id(session)
     mark_pending!(physical_id)
     WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
-    deliver(chat_id, physical_id)
+    deliver_or_uncertain(chat_id, physical_id)
     record_outcome!('accepted')
     RichMessages.mark_sent_as_text!(@message)
     log('sent', physical_id)
+  end
+
+  # #1453: depois que o pedido de envio saiu, erro do servidor (5xx), conexão fechada ou resposta ilegível não provam que nada saiu. Viram
+  # Timeout (resultado `uncertain`), para ninguém reenviar por cima. Recusa do WhatsApp (463, 475) e 4xx seguem como falha.
+  def deliver_or_uncertain(chat_id, physical_id)
+    deliver(chat_id, physical_id)
+  rescue Errno::ECONNRESET, Errno::EPIPE, IOError, Net::WriteTimeout => e
+    raise Waha::Client::Timeout, "WAHA envio sem confirmação: conexão fechada (#{e.class})"
+  rescue Waha::Client::InvalidResponse => e
+    raise Waha::Client::Timeout, e.message
+  rescue Waha::Client::Error => e
+    raise if e.is_a?(Waha::Client::Timeout) || e.status.to_i < 500 || engine_refused?(e)
+
+    raise Waha::Client::Timeout.new(e.message, status: e.status)
+  end
+
+  def engine_refused?(error)
+    WhatsappHybrid::ReachOut.engine_refusal?(error) || error.message.to_s.include?('error 475')
   end
 
   def deliver(chat_id, physical_id)
@@ -95,7 +117,9 @@ class WhatsappHybrid::WebTransport
   end
 
   def mark_pending!(physical_id)
-    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin }, source_id: physical_id)
+    # #1453: limpa o `throttled` de uma espera anterior. Daqui em diante o pedido pode sair; erro inesperado deixa a
+    # mensagem sem resultado, e nem a nova tentativa nem a campanha a reenviam por cima.
+    merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, OUTCOME_KEY => nil }, source_id: physical_id)
     ::Redis::Alfred.setex(self.class.message_key(@connection, physical_id), @message.id, MESSAGE_KEY_TTL)
   end
 
@@ -128,9 +152,16 @@ class WhatsappHybrid::WebTransport
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.
   def throttle!
+    return fail!(THROTTLED_OUT_ERROR) if throttle_count > THROTTLE_MAX_RETRIES
+
     record_outcome!('throttled')
-    SendReplyJob.set(wait: THROTTLE_RETRY).perform_later(@message.id)
+    retry_job.set(wait: THROTTLE_RETRY).perform_later(@message.id)
     log('throttled')
+  end
+
+  # #1453: a mensagem do plano B do 131047 tem o source_id da Meta, e o SendReplyJob a ignoraria.
+  def retry_job
+    @message.content_attributes.to_h['whatsapp_transport_fallback'].present? ? WhatsappHybrid::FallbackRetryJob : SendReplyJob
   end
 
   def record_outcome!(value)
@@ -151,6 +182,23 @@ class WhatsappHybrid::WebTransport
     merge_attributes!({ 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => reason,
                         OUTCOME_KEY => outcome == 'uncertain' ? 'uncertain' : 'failed' }, status: :failed)
     log(outcome)
+    campaign_fallback_after_failure unless outcome == 'uncertain'
+  end
+
+  # #1453: texto de campanha que este transporte assumiu no 131047 e não saiu (falha certa, inclusive depois do throttled,
+  # na nova tentativa do SendReplyJob): a campanha manda o modelo, uma vez só (trava na entrega). Nunca derruba o envio.
+  def campaign_fallback_after_failure
+    CampaignJourney::ConversaAberta::QuedaHibrido.after_transport_failure(@message)
+  rescue StandardError => e
+    Rails.logger.error("[whatsapp_hybrid] queda da campanha não pedida message=#{@message.id}: #{e.class}")
+  end
+
+  # Quantas vezes esta mensagem esperou o limite por minuto (expira junto com a chave da mensagem).
+  def throttle_count
+    key = "whatsapp_hybrid:throttle:#{@message.id}"
+    count = ::Redis::Alfred.incr(key)
+    ::Redis::Alfred.expire(key, MESSAGE_KEY_TTL) if count == 1
+    count
   end
 
   def log(outcome, physical_id = nil)
