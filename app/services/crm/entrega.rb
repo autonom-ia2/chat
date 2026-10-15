@@ -31,14 +31,16 @@ class Crm::Entrega
   PEDIDO_DO_ROBO = %w[robo_pediu n8n].freeze
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
-  # "direto"; `razao`: o motivo dela, para a linha do tempo do card).
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {})
+  # "direto"; `razao`: o motivo dela, para a linha do tempo do card). `quem_passou`: o robô que está passando, na
+  # passagem do robô (ConversationBotHandoff#bot_handoff!), que pode ser o da caixa quando a conversa não tinha robô.
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil) # rubocop:disable Metrics/ParameterLists
     @conversation = conversation
     @motivo = motivo.to_s
     @origem = origem.to_s
     @card = card
     @sugestao = pedido[:sugestao]
     @razao = pedido[:razao]
+    @quem_passou = quem_passou
   end
 
   # Por conta própria: trava a conversa, relê e grava.
@@ -78,7 +80,7 @@ class Crm::Entrega
   private
 
   def planejar
-    @quem_atendia = robo_que_atendia
+    @quem_atendia ||= robo_que_atendia
     return nada('ja_tem_pessoa') if @conversation.assignee_id.present?
     return nada('fechada') unless @conversation.open? || @conversation.pending?
 
@@ -86,15 +88,17 @@ class Crm::Entrega
     settings = regra_do(card)
     return sem_regra(card) unless settings
 
-    agente = @sem_ia ? nil : Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao)
+    agente = agente_da_regra(settings)
     return Plano.new(acao: :ia, agente: agente, card: card, settings: settings) if agente
 
-    pela_regra(card, so_pessoas(settings))
+    pela_regra(card, Crm::Entrega::ParaIa.so_pessoas(settings))
   end
 
-  # A IA não entra no rodízio: "A mesma pessoa" apontando um agente que não pode receber agora vira alguém da equipe.
-  def so_pessoas(settings)
-    settings[:pool_type] == 'ai_agent' ? settings.merge(pool_type: 'inbox', pool_id: nil) : settings
+  # O agente de IA que a regra aponta e pode receber agora; nunca o robô que está passando (Crm::Entrega::ParaIa.alvo).
+  def agente_da_regra(settings)
+    return if @sem_ia
+
+    Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao, quem_passa: @quem_passou || @quem_atendia)
   end
 
   def pela_regra(card, settings)
@@ -155,7 +159,8 @@ class Crm::Entrega
   end
 
   # O robô que estava com a conversa antes desta entrega: o valor do banco, porque na passagem do robô
-  # (ConversationBotHandoff#bot_handoff!) ele já saiu da memória.
+  # (ConversationBotHandoff#bot_handoff!) ele já saiu da memória. Lido uma vez: a entrega que roda de novo sem IA
+  # (concluir_para_ia!) relê a conversa, e o robô já não está mais nela.
   def robo_que_atendia
     return unless @conversation.attribute_in_database('ai_assignee_type') == 'AgentBot'
 

@@ -61,7 +61,7 @@ module ConversationBotHandoff
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
-      para_ia = deliver_on_handoff(motivo, keep_bot)
+      para_ia = deliver_on_handoff(motivo, keep_bot, quem_passou)
       robo && assignee_id.blank? ? wait_for_person_with(robo) : clear_bot_wait_mark
       save!
     end
@@ -137,11 +137,11 @@ module ConversationBotHandoff
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
   # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
   # Devolve a entrega quando ela aponta um agente de IA (#1593), para terminar depois do commit.
-  def deliver_on_handoff(motivo, keep_bot)
+  def deliver_on_handoff(motivo, keep_bot, quem_passou)
     return if assignee_id.present?
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
-    entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem')
+    entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', quem_passou: quem_passou)
     entrega if entrega.na_passagem.status == :para_ia
   end
 

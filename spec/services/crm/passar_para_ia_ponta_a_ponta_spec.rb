@@ -41,7 +41,7 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
     expect([passagem.para.classe, passagem.para.id]).to eq(['Autonomia::Agents::Agent', area.id])
   end
 
-  it 'área parada: o serviço recusa e alguém da equipe recebe', :aggregate_failures do
+  it 'área parada: fora dos destinos, alguém da equipe recebe', :aggregate_failures do
     regra_na_area!
     area.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
 
@@ -78,13 +78,27 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     conversation.bot_handoff!
     expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
-    expect(conversation.bot_handoff_waiting? || conversation.crm_delivery_pending?).to be(true)
+    expect(conversation).to have_attributes(bot_handoff_waiting?: true, crm_delivery_pending?: true)
 
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
     allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
-    Crm::Entrega.new(conversation: conversation, motivo: 'robo_pediu', origem: 'fila').call
+    with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::Ai::HandoffDrainJob.perform_now }
 
     expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
+  end
+
+  # Pega: o laço pelo robô da caixa. Sem robô gravado na conversa (pendente), quem passa é o robô da caixa (a porta);
+  # a regra aponta a própria porta e ela não pode receber de volta.
+  it 'sem robô na conversa, a porta passa e a regra aponta a porta: vai para alguém da equipe', :aggregate_failures do
+    regra = { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'pool_type' => 'ai_agent', 'pool_id' => agente_da_porta.id }
+    comercial.stages.first.update!(metadata: { 'ai_handoff' => regra })
+    conversation.update!(ai_assignee: nil, status: :pending)
+    allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
+
+    conversation.bot_handoff!
+
+    expect(conversation.reload.assignee_id).to be_in([ana.id, bruno.id])
     expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
   end
 
