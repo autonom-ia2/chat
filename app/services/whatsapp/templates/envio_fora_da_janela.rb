@@ -11,6 +11,8 @@
 #   # => Envio(status: :enviar, metadata: { 'template_name', 'template_language', 'template_category',
 #   #          'template_params_category', 'template_processed_params', 'message_body', 'envio_fora_da_janela' })
 #   #  | Envio(status: :equipe, motivo: 'campo_sem_valor', metadata: {})
+#   Whatsapp::Templates::EnvioForaDaJanela.registrar_envio(message:, registro: envio.metadata['envio_fora_da_janela']
+#                                                          .merge('crm_follow_up_id' => follow_up.id))  # depois do :sent
 #   Whatsapp::Templates::EnvioForaDaJanela.encaixar_tipo(account:, texto:)  # follow-up livre -> 'andamento' | nil
 #   Whatsapp::Templates::EnvioForaDaJanela.previa(plano:, valores:)         # o texto como vai sair
 #
@@ -52,6 +54,13 @@ class Whatsapp::Templates::EnvioForaDaJanela
 
   def self.enviar(inbox:, plano:, valores:, contato: nil)
     Despacho.new(inbox: inbox, plano: plano, valores: valores, contato: contato).call
+  end
+
+  # Depois que o `MessageSender` devolve `:sent`: grava a linha append-only do envio. `registro` é o
+  # `envio_fora_da_janela` do metadata do `enviar` (+ `crm_follow_up_id` e `motivo`, opcionais). Idempotente por
+  # mensagem; nunca levanta (em erro, log e nil).
+  def self.registrar_envio(message:, registro:)
+    Registro.call(message: message, registro: registro)
   end
 
   def self.encaixar_tipo(account:, texto:)
