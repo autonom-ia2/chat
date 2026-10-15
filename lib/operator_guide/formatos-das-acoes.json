@@ -97,9 +97,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": true
   },
@@ -590,8 +590,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:46"
     ],
     "sem_corpo": true
   },
@@ -652,9 +652,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:37",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:38",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64"
     ],
     "sem_corpo": false
   },
@@ -884,9 +884,9 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#destroy",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:39",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -1085,8 +1085,8 @@
     "completo": true,
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:44",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:64",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -5397,14 +5397,15 @@
       "leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:28",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:93",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:74",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:58"
     ],
     "sem_corpo": false
   },
@@ -5460,7 +5461,9 @@
         "campos": {
           "payment": {},
           "progress": {},
-          "resolved_check": {}
+          "progress_after_hours": {},
+          "resolved_check": {},
+          "resolved_check_after_hours": {}
         },
         "tipo": "objeto"
       },
@@ -6084,13 +6087,13 @@
       "leitura crua sem tipo: category, funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:82",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:120",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:106",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:124",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:110",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64"
     ],
     "sem_corpo": false
   },
@@ -6831,11 +6834,12 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -7993,10 +7997,10 @@
     "modelo": "WhatsappHybrid::Connection",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:25",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:67",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:74",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:87",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:94",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:92",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": false
   },
@@ -10491,11 +10495,11 @@
     "controller": "api/v1/accounts/autonomia/agents/channels#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:21",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:17",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": false
   },
@@ -15110,10 +15114,11 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:15",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:93",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:74",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:55"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:58"
     ],
     "sem_corpo": false
   },
@@ -15216,17 +15221,18 @@
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
     "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::Ai::DefaultStageCriteria.metadata_for)"
+      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:82",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:120",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:106",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:137",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:138",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:124",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:110",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:149",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -15800,9 +15806,9 @@
     "controller": "api/v1/accounts/crm/stages#reorder",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:89",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:50"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:51"
     ],
     "sem_corpo": false
   },
@@ -17283,10 +17289,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:29",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:30",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -17301,10 +17308,10 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:42",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:45",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:46",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:44",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -19000,7 +19007,16 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#create",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:18",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
+    ],
+    "sem_corpo": true
+  },
+  "POST whatsapp_hybrid_connections/:inbox_id/pause": {
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_hybrid_connections#pause",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:48",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -19009,7 +19025,7 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#reconnect",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:37",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -19018,7 +19034,16 @@
     "controller": "api/v1/accounts/whatsapp_hybrid_connections#request_code",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:30",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
+    ],
+    "sem_corpo": true
+  },
+  "POST whatsapp_hybrid_connections/:inbox_id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/whatsapp_hybrid_connections#resume",
+    "origem": [
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:56",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": true
   },
@@ -22900,8 +22925,8 @@
     "envelope": "caixa",
     "origem": [
       "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:65",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:61"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:67",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -23254,14 +23279,15 @@
       "leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:28",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:68",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:93",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:74",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:58"
     ],
     "sem_corpo": false
   },
@@ -23317,7 +23343,9 @@
         "campos": {
           "payment": {},
           "progress": {},
-          "resolved_check": {}
+          "progress_after_hours": {},
+          "resolved_check": {},
+          "resolved_check_after_hours": {}
         },
         "tipo": "objeto"
       },
@@ -23941,13 +23969,13 @@
       "leitura crua sem tipo: category, funnel_stage_type"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:82",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:120",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:106",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:124",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:110",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64"
     ],
     "sem_corpo": false
   },
@@ -24667,11 +24695,12 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -25729,10 +25758,10 @@
     "modelo": "WhatsappHybrid::Connection",
     "origem": [
       "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:25",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:67",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:74",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72",
-      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:52"
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:87",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:94",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:92",
+      "app/controllers/api/v1/accounts/whatsapp_hybrid_connections_controller.rb:72"
     ],
     "sem_corpo": false
   }

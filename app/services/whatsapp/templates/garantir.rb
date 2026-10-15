@@ -16,7 +16,8 @@
 # (com `detalhe`, o motivo da Meta), pausado, desativado, situacao_desconhecida, meta_fora, sem_permissao, meta_recusou,
 # texto_diferente (modelo com o nome do pronto e outro texto), botoes_diferentes (o mesmo nome com outros botões: tipo,
 # texto, URL ou ordem), perfil_invalido (o perfil não pode ser gravado: nada é criado), sem_base_url (botão com a base do
-# ambiente e o FRONTEND_URL vazio), ausente (só com `criar: false`).
+# ambiente e o FRONTEND_URL vazio), ausente (só com `criar: false`), sem_consentimento (fora da lista, e o dono não
+# ligou o Aviso de serviço: #1586).
 #
 # `criar: false` (#1524) só LÊ a lista da caixa: não fala com a Meta, não grava lista nem perfil, não enfileira nada.
 # Serve a quem roda numa requisição web (o `Route` do agendamento). Fora da lista, devolve `ausente`.
@@ -26,10 +27,12 @@
 # - aprovado só serve se o envio sabe mandar o formato (`SendableFormat`) e com o corpo e os botões do pronto (a URL na
 #   base deste ambiente);
 # - em análise, recusado, pausado ou desativado: nunca cria de novo (a Meta não aceita outro com o mesmo nome e idioma);
-# - fora da lista (e `criar: true`, o padrão): cria pelo `MetaClient` (que não duplica pelo nome), depois da mesma
-#   conferência estrutural do `Manager` (`SubmitFormat`), põe na lista pela `ChannelList` e grava o perfil com o dono do
-#   sistema e sem quem criou (origem sistema). O dono protege o modelo na tela de Modelos (`SystemTemplates`), onde a
-#   situação aparece (recusado com o motivo da Meta).
+# - fora da lista (e `criar: true`, o padrão): só com a autorização do dono (`WhatsappTemplateConsent`, Aviso de
+#   serviço ligado; sem ela, `sem_consentimento` antes de falar com a Meta, #1586). Cria pelo `MetaClient` (que não
+#   duplica pelo nome), depois da mesma conferência estrutural do `Manager` (`SubmitFormat`), põe na lista pela
+#   `ChannelList` e grava o perfil com o dono do sistema e sem quem criou (origem sistema). O dono protege o modelo na
+#   tela de Modelos (`SystemTemplates`), onde a situação aparece (recusado com o motivo da Meta);
+# - modelo que já está na lista (de qualquer origem) segue as regras acima, com ou sem a autorização: ela só trava criar.
 # Fala com a Meta (até alguns segundos): chamar de job, não de requisição do painel. Nada do texto da Meta vai para o log.
 class Whatsapp::Templates::Garantir
   Finalidades = Whatsapp::Templates::Finalidades
@@ -64,7 +67,7 @@ class Whatsapp::Templates::Garantir
 
   def procurar
     template = listed
-    return @criar ? criar_na_meta : indisponivel('ausente') unless template
+    return @criar ? criar_se_autorizado : indisponivel('ausente') unless template
 
     registrar_perfil(template) if @criar
     situacao(template)
@@ -98,7 +101,7 @@ class Whatsapp::Templates::Garantir
     return indisponivel('botoes_diferentes') unless mesmos_botoes?(template)
 
     resultado = { status: :pronto, nome: template['name'], idioma: template['language'],
-                  categoria: template['category'].to_s.upcase.presence || Finalidades::CATEGORIA, campos: @pronto.campos }
+                  categoria: template['category'].to_s.upcase.presence || @pronto.categoria, campos: @pronto.campos }
     @pronto.botoes.any? ? resultado.merge(botoes: @pronto.botoes_do_envio) : resultado
   end
 
@@ -131,6 +134,14 @@ class Whatsapp::Templates::Garantir
     [uri.scheme.to_s.downcase, uri.host.to_s.downcase, uri.port, uri.path.presence || '/', uri.query, variavel, depois]
   rescue URI::InvalidURIError
     url.to_s
+  end
+
+  # Criar só com o Aviso de serviço ligado pelo dono (#1586): a Meta cobra cada envio do modelo. Lido logo antes de
+  # falar com a Meta; um desligar que chega durante a chamada (segundos) não desfaz o pedido já feito.
+  def criar_se_autorizado
+    return indisponivel('sem_consentimento') unless WhatsappTemplateConsent.ativo?(@inbox.account, :utility)
+
+    criar_na_meta
   end
 
   # O perfil é conferido ANTES de falar com a Meta (como no `Manager`): perfil inválido não deixa modelo lá sem perfil aqui.

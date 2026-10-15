@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_02_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2630,6 +2630,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
     t.index ["event_id"], name: "idx_crm_meta_conv_event_id", unique: true
   end
 
+  create_table "crm_passagens", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "card_id"
+    t.bigint "pipeline_id"
+    t.string "de_type"
+    t.bigint "de_id"
+    t.string "de_nome"
+    t.string "para_type", null: false
+    t.bigint "para_id", null: false
+    t.string "para_nome"
+    t.string "pedida_por_type"
+    t.bigint "pedida_por_id"
+    t.string "pedida_por_nome"
+    t.string "motivo"
+    t.bigint "message_id"
+    t.string "transfer_id"
+    t.datetime "em", null: false
+    t.datetime "devolvida_em"
+    t.string "devolvida_por_type"
+    t.bigint "devolvida_por_id"
+    t.string "devolvida_por_nome"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_crm_passagens_account_created"
+    t.index ["card_id"], name: "index_crm_passagens_on_card_id"
+    t.index ["conversation_id", "id"], name: "idx_crm_passagens_conversation"
+    t.index ["conversation_id"], name: "idx_crm_passagens_abertas", where: "(devolvida_em IS NULL)"
+    t.index ["pipeline_id"], name: "index_crm_passagens_on_pipeline_id"
+  end
+
   create_table "crm_pipeline_inboxes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "pipeline_id", null: false
@@ -3942,6 +3973,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
     t.string "public_id", null: false
     t.text "webhook_secret"
     t.datetime "down_alerted_at"
+    t.datetime "paused_at"
     t.index ["account_id"], name: "index_whatsapp_hybrid_connections_on_account_id"
     t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
     t.index ["public_id"], name: "index_whatsapp_hybrid_connections_on_public_id", unique: true
@@ -3983,6 +4015,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
+  create_table "whatsapp_template_consents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "marca", null: false
+    t.string "acao", null: false
+    t.string "versao_aviso", null: false
+    t.text "texto_aviso", null: false
+    t.jsonb "precos", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_whatsapp_template_consents_account_created"
+    t.index ["account_id", "marca", "created_at"], name: "idx_whatsapp_template_consents_account_marca_created"
+    t.index ["user_id"], name: "index_whatsapp_template_consents_on_user_id"
   end
 
   create_table "whatsapp_template_profiles", force: :cascade do |t|
@@ -4223,6 +4269,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   add_foreign_key "crm_meta_advisor_actions", "users", column: "opened_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "users", column: "resolved_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_runs", "accounts", on_delete: :cascade
+  add_foreign_key "crm_passagens", "accounts", on_delete: :cascade
+  add_foreign_key "crm_passagens", "conversations", on_delete: :cascade
+  add_foreign_key "crm_passagens", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_passagens", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"
@@ -4295,6 +4345,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_30_100000) do
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
   add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_consents", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_template_consents", "users", on_delete: :nullify
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify

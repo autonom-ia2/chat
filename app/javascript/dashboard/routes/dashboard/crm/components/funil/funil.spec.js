@@ -1,4 +1,37 @@
-import { CORES, corLivre, diasEmFaixa, quandoSai, tempoAte } from './funil';
+import {
+  CATEGORIAS,
+  CORES,
+  MODELOS,
+  categoriasDoModelo,
+  corLivre,
+  diasEmFaixa,
+  quandoSai,
+  tempoAte,
+} from './funil';
+
+// #1548 (passo 2) — variante do modelo por tipo de conta (pacote da F1).
+describe('categoriasDoModelo', () => {
+  const modelo = chave => MODELOS.find(item => item.chave === chave);
+
+  it('health accounts keep "waiting on the carrier" in progress', () => {
+    expect(
+      categoriasDoModelo(modelo('ATENDIMENTO'), 'seguros.saude_beneficios')
+    ).toEqual(['novo', 'andamento', 'andamento', 'resolvido']);
+  });
+
+  it('keeps today categories without a package, for other types and templates', () => {
+    expect(categoriasDoModelo(modelo('ATENDIMENTO'), null)).toBe(CATEGORIAS);
+    expect(categoriasDoModelo(modelo('ATENDIMENTO'), 'seguros.corretora')).toBe(
+      CATEGORIAS
+    );
+    expect(
+      categoriasDoModelo(modelo('POS_VENDA'), 'seguros.saude_beneficios')
+    ).toBe(CATEGORIAS);
+    expect(
+      categoriasDoModelo(modelo('VENDAS'), 'seguros.saude_beneficios')
+    ).toBeUndefined();
+  });
+});
 
 describe('tempoAte', () => {
   it('says each wait in everyday words', () => {

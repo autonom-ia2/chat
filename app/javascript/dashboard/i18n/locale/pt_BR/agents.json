@@ -621,7 +621,7 @@
         "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima.",
         "EQUIPE": {
           "TITULO": "Agente da equipe",
-          "TEXTO": "Fica num canal que já tem agente principal e recebe a conversa quando alguém passa."
+          "TEXTO": "Fica num canal com agente principal ou atendido só por pessoas e recebe a conversa quando alguém passa."
         },
         "AJUDA": {
           "TITULO": "Ajuda outros agentes",
@@ -737,8 +737,8 @@
         "QUANDO": "Quando atende",
         "OCUPADO": "{canal} · Já tem {agente} respondendo aqui",
         "OCUPADO_TEXTO": "Colocar {nome} no lugar",
-        "EXTERNO": "{canal} · Já tem outro atendimento automático",
-        "EXTERNO_TEXTO": "Outro sistema já responde aqui. Para usar, pare o outro sistema antes.",
+        "EXTERNO": "{canal} · Já tem um agente externo atendendo aqui",
+        "EXTERNO_TEXTO": "Um agente externo já atende aqui. Para usar este canal, pare o agente externo antes.",
         "TROCA": "{outro} para de responder no {canal}, mas continua na sua lista. As conversas abertas no {canal} voltam para a equipe.",
         "TROCA_PARA": "{outro} não está em nenhum outro canal: para de atender até você escolher um canal para ele.",
         "TODOS_OCUPADOS": "Todos os seus canais já têm um agente. Coloque {nome} no lugar de um deles ou conecte outro canal.",
@@ -752,7 +752,10 @@
         "SEM_HORARIO": "Este canal ainda não tem horário de atendimento.",
         "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
         "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
-        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe."
+        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe.",
+        "TAMBEM": "Também recebe quando alguém passar em:",
+        "TAMBEM_TEXTO": "Marque os outros canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
+        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher."
       },
       "COMPOSITOR": {
         "ESCREVA": "Escreva sua resposta",
@@ -1091,7 +1094,8 @@
           "TEXTO": "No {canal}, {quando}.",
           "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
-          "ESCOLHER_CANAL": "Escolher canal"
+          "ESCOLHER_CANAL": "Escolher canal",
+          "TAMBEM": "Também recebe quando alguém passar em: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Nome e jeito de falar",
@@ -1637,11 +1641,11 @@
       "EQUIPE": {
         "TITULO": "Em quais canais {nome} vai ficar na equipe?",
         "TITULO_SEM_NOME": "Em quais canais o agente que você está criando vai ficar na equipe?",
-        "TEXTO": "Escolha um ou mais. Só dá para escolher canais que já têm quem atenda primeiro.",
+        "TEXTO": "Escolha um ou mais. Dá para escolher canais com agente principal atendendo e canais atendidos só por pessoas.",
         "PRINCIPAL": "{outro} atende primeiro",
         "SEM_PRINCIPAL": "Ninguém atende primeiro neste canal ainda. O agente da equipe precisa de um agente principal no canal.",
         "PRINCIPAL_PARADO": "{outro} não está atendendo neste canal. O agente da equipe precisa de um agente principal atendendo.",
-        "NENHUM": "Nenhum canal tem um agente principal atendendo ainda. Ponha um agente para atender primeiro num canal e volte aqui.",
+        "NENHUM": "Nenhum canal pode receber o agente da equipe agora. Ele entra em canal com agente principal atendendo ou atendido só por pessoas.",
         "CONFIRA": "Confira como fica",
         "CONFIRA_TEXTO": "Nada muda para quem já atende primeiro.",
         "AVISO": "{outro} atende primeiro; {nome} recebe quando alguém passar.",
@@ -1661,7 +1665,13 @@
         "CARREGANDO": "Lendo os canais",
         "SALVANDO": "Salvando…",
         "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher.",
-        "ESCOLHER_DE_NOVO": "Escolher os canais de novo"
+        "ESCOLHER_DE_NOVO": "Escolher os canais de novo",
+        "SO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar",
+        "SO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar",
+        "OUTRO_ROBO": "Um agente externo atende neste canal. O agente da equipe ainda não entra em canal com agente externo.",
+        "AVISO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar. Conversa nova continua com as pessoas.",
+        "AVISO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar. Conversa nova continua com as pessoas.",
+        "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe."
       },
       "ONDE": {
         "TITULO": "Onde {nome} trabalha",
@@ -1670,7 +1680,8 @@
         "PRONTO_TITULO": "{nome} já está trabalhando",
         "MUDAR": "Mudar",
         "MUDAR_ARIA": "Mudar onde {nome} trabalha",
-        "AJUDA": "Ajuda: {agentes}"
+        "AJUDA": "Ajuda: {agentes}",
+        "RECEBE_PESSOAS": "Atendida só por pessoas; recebe quando alguém passar"
       },
       "AJUDANTE": {
         "QUEM": {

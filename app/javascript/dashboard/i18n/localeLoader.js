@@ -1,3 +1,9 @@
+import {
+  camadasDoPacote,
+  carregarPacote,
+  composeMessages,
+} from './pacotesDoPainel';
+
 const DEFAULT_LOCALE = 'en';
 // The legacy European Portuguese catalogue is mostly untranslated English, so
 // preferences saved as `pt` are served in Brazilian Portuguese (issue #881).
@@ -84,16 +90,52 @@ export const buildDashboardI18nMessages = async locale => {
   };
 };
 
+// #1550 — pacote de tradução da conta (payload `autonomia_pacote`). Trocar de
+// conta recarrega a página, então basta guardar o nome antes do setLocale.
+let pacoteDoPainel = null;
+const bases = new Map();
+const pacotesInstalados = new WeakMap();
+
+export const definirPacoteDoPainel = nome => {
+  pacoteDoPainel = nome || null;
+};
+
+// O pacote é composto numa cópia do catálogo e instalado com setLocaleMessage;
+// o catálogo base nunca é alterado. Reinstala quando o pacote aplicado muda e
+// devolve o base aos outros idiomas que tinham pacote.
 export const setDashboardLocale = async (composer, locale) => {
   const request = Symbol();
   localeChanges.set(composer, request);
+  const pacote = pacoteDoPainel;
 
   const { locale: resolvedLocale, messages } = await loadOrReload(locale);
+  const overlays = await carregarPacote(
+    resolvedLocale,
+    camadasDoPacote(pacote)
+  );
 
   if (localeChanges.get(composer) !== request) return;
 
-  if (!composer.availableLocales.includes(resolvedLocale)) {
-    composer.setLocaleMessage(resolvedLocale, messages);
+  bases.set(resolvedLocale, messages);
+  const instalados = pacotesInstalados.get(composer) || new Map();
+  pacotesInstalados.set(composer, instalados);
+  instalados.forEach((nome, outro) => {
+    if (outro !== resolvedLocale && nome && bases.has(outro)) {
+      composer.setLocaleMessage(outro, bases.get(outro));
+      instalados.set(outro, null);
+    }
+  });
+
+  const aplicado = overlays.length ? pacote : null;
+  if (
+    !composer.availableLocales.includes(resolvedLocale) ||
+    (instalados.get(resolvedLocale) ?? null) !== aplicado
+  ) {
+    composer.setLocaleMessage(
+      resolvedLocale,
+      composeMessages(messages, overlays)
+    );
+    instalados.set(resolvedLocale, aplicado);
   }
 
   composer.locale.value = resolvedLocale;

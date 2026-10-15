@@ -79,9 +79,11 @@ RSpec.describe 'Acesso por funil: saída da triagem' do # rubocop:disable RSpec/
 
     expect(conversation.reload.assignee_id).to eq(vendas_agent.id)
     expect(card.reload.owner_id).to eq(vendas_agent.id)
-    # O card nascer agenda uma sincronização; o vínculo card↔conversa que o CardSyncer cria agenda a segunda, que já
-    # não muda nada (o novo atendente tem o funil). Não há terceira: a cadeia termina.
-    expect(Crm::Access::VisibilitySync).to have_received(:perform).at_most(:twice)
+    # O card nascer agenda uma sincronização; o vínculo card↔conversa que o CardSyncer cria agenda a segunda. Com alguém
+    # em "Só as suas" na caixa, o dono também decide quem vê (#1652): a saída da triagem tira o dono (terceira) e o
+    # CardSyncer põe o novo atendente como dono (quarta), que já não muda nada. O perform_enqueued_jobs roda a fila até
+    # esvaziar: exatamente quatro prova que não há quinta e a cadeia termina.
+    expect(Crm::Access::VisibilitySync).to have_received(:perform).exactly(4).times
   end
 
   it 'keeps the conversation with whoever already has the funnel of the card' do

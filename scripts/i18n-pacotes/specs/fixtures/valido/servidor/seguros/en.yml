@@ -1,0 +1,6 @@
+en:
+  crm:
+    export:
+      statuses:
+        won: 'Active policy'
+      count: '%{count} policies'

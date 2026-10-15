@@ -6,8 +6,15 @@ import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
 // The drawer pulls global config + permissions; stub them so we can mount it in
 // isolation and focus on the form-reset reactivity that the realtime-churn fix
 // changed.
+// #1548 (passo 2): o pacote da conta (`autonomia_pacote`) vem da conta atual.
+const conta = vi.hoisted(() => ({ autonomia_pacote: null }));
 vi.mock('vuex', () => ({
-  useStore: () => ({ getters: {} }),
+  useStore: () => ({
+    getters: {
+      getCurrentAccountId: 1,
+      'accounts/getAccount': () => conta,
+    },
+  }),
 }));
 vi.mock('../composables/useCrmPermissions', () => ({
   useCrmPermissions: () => ({ canManageAi: ref(false) }),
@@ -439,6 +446,65 @@ describe('CrmPipelineDrawer Atender', () => {
       'espera',
       'resolvido',
     ]);
+  });
+
+  describe('variant by account type (#1548)', () => {
+    afterEach(() => {
+      conta.autonomia_pacote = null;
+    });
+
+    const categoriasCriadas = async chave => {
+      const wrapper = mountDrawer({
+        mode: 'create',
+        pipeline: null,
+        stages: [],
+      });
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      await wrapper.get(`[data-modelo="${chave}"]`).trigger('click');
+      wrapper.vm.view = 'confira';
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-funil-principal]').trigger('click');
+      await flushPromises();
+      const [[payload]] = wrapper.emitted('save');
+      return payload.stages.map(stage => stage.category);
+    };
+
+    it('health account: Service E3 is in progress, not a pause', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'andamento',
+        'resolvido',
+      ]);
+    });
+
+    it('health account: other Serve templates keep today categories', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('POS_VENDA')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+
+    it('broker account or no package: Service keeps today categories', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+      conta.autonomia_pacote = null;
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
   });
 
   it('gives "Paid" back when leaving Collections for another template', async () => {

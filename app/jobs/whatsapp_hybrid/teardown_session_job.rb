@@ -2,12 +2,24 @@
 # Roda fora da transação: a conexão já foi apagada. Se o motor estiver fora, tenta de novo (até 5 vezes,
 # com espera crescente) para a sessão não ficar órfã com o aparelho ainda conectado ao celular.
 # Sessão que o motor já não conhece (404) é sucesso: não há o que apagar.
+# Sessão parada (WhatsApp API pausado, #1487) é religada antes: logout numa sessão parada pode não tirar o aparelho do
+# celular. Se ela não ficar pronta a tempo, segue com logout e exclusão assim mesmo.
 class WhatsappHybrid::TeardownSessionJob < ApplicationJob
+  # A sessão parada foi religada e ainda está subindo.
+  class Waking < StandardError; end
+
+  WAKE_WAIT = 10.seconds
+  WAKE_ATTEMPTS = 6
+
   queue_as :low
   retry_on Waha::Client::Error, wait: :polynomially_longer, attempts: 5
+  retry_on Waking, wait: WAKE_WAIT, attempts: WAKE_ATTEMPTS do |job, _error|
+    job.class.perform_later(job.arguments.first, wake: false)
+  end
 
-  def perform(session_name)
+  def perform(session_name, wake: true)
     client = Waha::Client.new
+    wake_up!(client, session_name) if wake
     logout(client, session_name)
     client.delete_session(session_name)
     release_proxy(session_name)
@@ -17,6 +29,12 @@ class WhatsappHybrid::TeardownSessionJob < ApplicationJob
   end
 
   private
+
+  # Mesmo pedido do reconectar da aba (WakeSession): parada ou subindo, espera pelo retry.
+  def wake_up!(client, session_name)
+    status = WhatsappHybrid::WakeSession.new(client, session_name).start_if_stopped!
+    raise Waking if WhatsappHybrid::WakeSession::WAKING.include?(status)
+  end
 
   # Sessão apagada: o IP da Webshare volta para o pool (#1516).
   def release_proxy(session_name)

@@ -1,5 +1,7 @@
 // #1384 — o que a gaveta de funil usa em mais de um lugar: modelos prontos,
 // cores das etapas, o resumo dos retornos e o calendário das tentativas.
+import { camadasDoPacote } from 'dashboard/i18n/pacotesDoPainel';
+import VARIANTES from './variantes.json';
 
 export const FUNIL = 'CRM_FUNIL';
 
@@ -145,6 +147,19 @@ export const MODELOS = [
     ideias: ['MARCAR', 'REMARCAR', 'HORARIOS'],
   },
 ];
+// #1548 (passo 2) — variante do modelo por tipo de conta: a própria lista de
+// categorias. Chave = camada do pacote da F1 (#1550); conta sem pacote (ou com
+// AUTONOMIA_PACOTES_ENABLED desligado) não tem camada e fica com o modelo de
+// hoje. Saúde: no Atendimento, "Esperando a operadora" (E3) não pausa o prazo.
+// A lista (variantes.json) é a mesma que o servidor lê em
+// Crm::PipelineStages::TemplateVariant.
+export const categoriasDoModelo = (modelo, pacote) => {
+  const camada = camadasDoPacote(pacote)
+    .reverse()
+    .find(item => VARIANTES[item]?.[modelo.chave]);
+  return camada ? VARIANTES[camada][modelo.chave] : modelo.categorias;
+};
+
 export const modelosDoTipo = tipo =>
   MODELOS.filter(modelo => modelo.tipo === tipo);
 

@@ -167,6 +167,18 @@ module Crm
         agente if agente&.atende_cliente?
       end
 
+      # Contrato com o Agentes IA (#1606, devolução de pessoa para a IA): o espelho (AgentBot) de área do responsável do
+      # funil do assunto em foco (Crm::Assunto.funil_atual), com o mesmo critério do ResponsibleAgentSync#destino_para.
+      # nil sem a Fase 2, sem card aberto, com o funil fora da caixa ou com a IA do funil desligada, com o agente parado
+      # ou sem vínculo de área na caixa: aí quem recebe é a porta.
+      def self.robo_do_funil(conversation)
+        card = ::Crm::Assunto.funil_atual(conversation)
+        return if card.nil? || !funil_de_destino?(card.pipeline, conversation.inbox)
+
+        agente = responsible_agent(inbox: conversation.inbox, pipeline: card.pipeline)
+        agent_inbox_for(inbox: conversation.inbox, agent: agente)&.agent_bot
+      end
+
       # O vínculo de ÁREA do agente com a caixa (Autonomia::Agents::Areas): o espelho (AgentBot) dele ali é quem posta.
       # Sem vínculo, o agente não atende nessa caixa.
       def self.agent_inbox_for(inbox:, agent:)
@@ -240,13 +252,32 @@ module Crm
       # Vêm ligados só em funil criado pelos modelos de Atender (metadata.template); funil antigo convertido fica
       # desligado até alguém ligar, para nada mudar sozinho na conversão.
       SERVICE_REMINDER_KINDS = %w[progress resolved_check payment].freeze
+      # #1589: o tempo de andamento e "deu certo?", em horas, escolhido na frase da tela. Só as opções dos botões valem;
+      # qualquer outro valor (ou nenhum) é 1 dia, o tempo de antes da escolha.
+      SERVICE_REMINDER_HOURS = { 'progress' => [4, 24, 48, 72], 'resolved_check' => [24, 48, 72, 168] }.freeze
+      DEFAULT_SERVICE_REMINDER_HOURS = 24
 
       def self.service_reminders_settings(pipeline)
         saved = pipeline_ai_settings(pipeline).fetch('service_reminders', {}).to_h
         defaults = default_service_reminders(pipeline)
-        SERVICE_REMINDER_KINDS.index_with do |kind|
+        ligados = SERVICE_REMINDER_KINDS.index_with do |kind|
           saved.key?(kind) ? BOOLEAN.cast(saved[kind]) == true : defaults[kind]
-        end.with_indifferent_access
+        end
+        ligados.merge(service_reminder_hours(saved)).with_indifferent_access
+      end
+
+      # { 'progress_after_hours' => 24, 'resolved_check_after_hours' => 24 }
+      def self.service_reminder_hours(saved)
+        SERVICE_REMINDER_HOURS.to_h do |kind, opcoes|
+          chave = "#{kind}_after_hours"
+          [chave, service_reminder_option(opcoes, saved[chave]) || DEFAULT_SERVICE_REMINDER_HOURS]
+        end
+      end
+
+      # A opção da tela que o valor é, exatamente (24 ou "24"); nil para qualquer outra coisa. Sem converter: "0x18" ou
+      # 24.0 e 24.9 não viram 24.
+      def self.service_reminder_option(opcoes, valor)
+        opcoes.find { |horas| horas.eql?(valor) || horas.to_s.eql?(valor) }
       end
 
       def self.default_service_reminders(pipeline)

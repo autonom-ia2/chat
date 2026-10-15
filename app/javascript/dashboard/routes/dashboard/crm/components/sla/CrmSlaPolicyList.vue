@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { convertSecondsToTimeUnit } from '@chatwoot/utils';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanManage } from 'dashboard/composables/useCanManage';
+import { SLA_MANAGE_PERMISSION } from 'dashboard/constants/permissions.js';
 import {
   BaseTable,
   BaseTableRow,
@@ -22,6 +24,10 @@ const store = useStore();
 const records = useMapGetter('sla/getSLA');
 const uiFlags = useMapGetter('sla/getUIFlags');
 
+// The SLA policy API writes only with sla_manage (SlaPolicyPolicy); a crm_admin seat without it
+// reads the list (#1618). Administrators and seats without a custom role keep every action.
+const canManage = useCanManage(SLA_MANAGE_PERMISSION);
+
 const showDialog = ref(false);
 const selectedPolicy = ref(null);
 const deleteCandidate = ref(null);
@@ -33,7 +39,7 @@ const tableHeaders = computed(() => [
   t('CRM_SLA.POLICIES.TABLE.NRT'),
   t('CRM_SLA.POLICIES.TABLE.RT'),
   t('CRM_SLA.POLICIES.TABLE.AUTO_APPLY'),
-  t('CRM_SLA.POLICIES.TABLE.ACTIONS'),
+  ...(canManage.value ? [t('CRM_SLA.POLICIES.TABLE.ACTIONS')] : []),
 ]);
 
 // Same compact rendering as the native SLA list (30m / 2h / 1d).
@@ -95,6 +101,7 @@ const confirmDelete = async () => {
         </p>
       </div>
       <Button
+        v-if="canManage"
         :label="t('CRM_SLA.POLICIES.ADD')"
         icon="i-lucide-plus"
         sm
@@ -174,7 +181,7 @@ const confirmDelete = async () => {
             </span>
           </BaseTableCell>
 
-          <BaseTableCell class="w-20">
+          <BaseTableCell v-if="canManage" class="w-20">
             <div class="flex items-center gap-1">
               <Button
                 icon="i-lucide-pencil"

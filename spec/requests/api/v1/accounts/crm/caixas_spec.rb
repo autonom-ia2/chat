@@ -54,7 +54,8 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
     get url, headers: auth_headers(admin)
 
     caixa = response.parsed_body.dig('payload', 'caixas').find { |item| item.dig('inbox', 'id') == inbox.id }
-    expect(caixa['agent_bot']).to eq('id' => bot.id, 'name' => 'Clara')
+    # Sem agente dos Agentes IA por trás do robô: agente externo (#1570).
+    expect(caixa['agent_bot']).to eq('id' => bot.id, 'name' => 'Clara', 'tipo_do_principal' => 'externo')
 
     inbox.agent_bot_inbox.update!(status: :inactive)
     get "#{url}/#{inbox.id}", headers: auth_headers(admin)

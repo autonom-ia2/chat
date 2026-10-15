@@ -19,4 +19,6 @@ Para adicionar um módulo:
 3. Alterar fonte e tradução pt_BR no mesmo PR. Outros idiomas podem ser incluídos no mesmo processo, sem serviço externo obrigatório.
 4. Rodar `pnpm i18n:fork:check`, os testes da tela e a compilação do painel. O check também compila as mensagens e compara parâmetros nomeados.
 
+Pacotes por segmento (#1550): as trocas de palavras por segmento da conta (por exemplo, "Seguro ativo" no lugar de "Ganho" para seguros) não são catálogos novos. Ficam em `app/javascript/dashboard/i18n/pacotes/<camada>/` e `config/pacotes/<camada>/`, registradas na chave `pacotes` de `config/fork_i18n.json`, fora do Crowdin e do `load_path` do Rails. Cada camada traz `en` e `pt_BR` com as mesmas chaves, e só pode trocar mensagens que já existem no catálogo base, com os mesmos parâmetros; o mesmo `pnpm i18n:fork:check` reprova o resto. Camadas, interruptor e passo a passo em `docs/segmentos/README.md`.
+
 A política não configura projetos externos, credenciais, glossários remotos ou serviços pagos. Mudanças nos textos do backend continuam seguindo a política do catálogo `en.yml` e do Crowdin.

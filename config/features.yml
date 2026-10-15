@@ -409,7 +409,7 @@
 # campanha e na criação de modelos. Bit 24 (16777216), confirmado pela Orquestração: fica DEPOIS de
 # `crm_lembretes_v2` (bit 22) e `crm_calendario_ouro` (bit 23, #1568) — este PR só entra depois dos dois (a posição na
 # lista é o bit). Desligada (padrão): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
-# modelo de produtos. Piloto na conta 16. Liga: #1573.
+# modelo de produtos. Beta (validado com catálogo simulado). Liga: #1573.
 - name: whatsapp_campaign_products
   display_name: Campanha do WhatsApp com produtos do catálogo
   enabled: false
@@ -417,10 +417,9 @@
 
 # Mensagem marcada nova (#1590): gaveta no padrão da casa — para quem, quando, o que dizer e confira, com o balão do
 # WhatsApp como o cliente vai ver. Abre pelo "+ Novo" do calendário e pelo "Mandar mensagem" do card (caixa oficial).
-# Bit 25 (33554432), reservado pela Orquestração: fica DEPOIS de `whatsapp_campaign_products` (bit 24, #1578) — a
-# posição na lista é o bit; este PR só entra depois do #1578. Desligada (padrão): a janela antiga do calendário e o
-# retorno do card, como antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
-# Ligar nas demais: #1605.
+# Bit 25 (33554432): a posição na lista é o bit e a flag vai no fim do que está na main — aqui, logo depois de
+# `whatsapp_campaign_products` (bit 24). Desligada (padrão): a janela antiga do calendário e o retorno do card, como
+# antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy). Ligar nas demais: #1605.
 - name: crm_mensagem_marcada
   display_name: Mensagem marcada nova (para quem, quando, o que dizer)
   enabled: false

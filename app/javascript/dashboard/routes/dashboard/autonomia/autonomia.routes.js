@@ -4,7 +4,7 @@ import {
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
-import store from 'dashboard/store';
+import { contaDaRota, ensureProspectingEnabled } from './contaDaRota';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
@@ -44,22 +44,6 @@ const agentsManageMeta = {
   permissions: ['administrator', 'autonomia_manage'],
 };
 
-// Link direto / F5: o guarda roda antes de a store ter a conta, e o getter volta
-// vazio; sem esperar, a rota mandava para home com o recurso ligado (Cotação em
-// 03/09, Prospecção e Agentes na #675). Carrega a conta antes de decidir. Se ela
-// não carregar, o guarda segue sem conta e redireciona, como antes.
-const contaDaRota = async to => {
-  const accountId = Number(to.params.accountId);
-  const account = store.getters['accounts/getAccount'](accountId);
-  if (account?.id) return account;
-  try {
-    await store.dispatch('accounts/get');
-  } catch {
-    return null;
-  }
-  return store.getters['accounts/getAccount'](accountId);
-};
-
 // Gate POR CONTA (aditivo, ISOLADO): mantém o ENV master (kill-switch global,
 // exposto como window.globalConfig.AUTONOMIA_AGENTS_ENABLED) como pré-condição E
 // exige a conta marcada como habilitada pelo gate isolado, exposto no payload da
@@ -74,16 +58,6 @@ const ensureAutonomiaEnabled = async (to, _from, next) => {
   const accountEnabled = account?.autonomia_agents_enabled === true;
 
   if (masterEnabled && accountEnabled) {
-    next();
-    return;
-  }
-  next({ name: 'home', params: to.params });
-};
-
-const ensureProspectingEnabled = async (to, _from, next) => {
-  const account = await contaDaRota(to);
-
-  if (account?.autonomia_prospecting_enabled === true) {
     next();
     return;
   }

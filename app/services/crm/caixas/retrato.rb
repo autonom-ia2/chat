@@ -2,10 +2,12 @@
 # cuida de quê. Pessoa sem linha de acesso aparece como hoje vê: todos os funis, sem assunto e todas as conversas.
 # Com a Fase 2 dos Agentes, cada caixa leva também `ai_agents` (Crm::Caixas::RetratoDosAgentes, #1447).
 class Crm::Caixas::Retrato
-  def initialize(account:, inboxes:, pode_mudar_agentes: false)
+  # `detalhe: true` (a caixa aberta, #1570): consulta se a caixa aceita agente de área novo. A lista não consulta.
+  def initialize(account:, inboxes:, pode_mudar_agentes: false, detalhe: false)
     @account = account
     @inboxes = inboxes.to_a
     @pode_mudar_agentes = pode_mudar_agentes
+    @detalhe = detalhe
   end
 
   def caixas
@@ -44,12 +46,24 @@ class Crm::Caixas::Retrato
   private
 
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
-  # conversa (Crm::Card#responsible_agent_bot, #1377).
+  # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é o espelho da
+  # porta ativa da caixa (AgentInbox porta não apagado); 'externo' em qualquer outro caso (n8n, Zapier...). É a mesma
+  # regra de AgentInbox.robo_externo_na_caixa? (#1433).
   def robo(inbox)
     vinculo = inbox.agent_bot_inbox
     return unless vinculo&.active? && vinculo.agent_bot
 
-    { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
+    tipo = espelhos_da_porta.include?([inbox.id, vinculo.agent_bot_id]) ? 'ia' : 'externo'
+    { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name, tipo_do_principal: tipo }
+  end
+
+  # [[inbox_id, agent_bot_id], ...] das portas ativas das caixas da tela, numa consulta só. Agente apagado não conta,
+  # como em RetratoDosAgentes#vinculos: lá a porta dele já não aparece.
+  def espelhos_da_porta
+    @espelhos_da_porta ||= ::Autonomia::Agents::AgentInbox.kept.porta
+                                                          .where(account_id: @account.id, inbox_id: @inboxes.map(&:id))
+                                                          .where(autonomia_agent_id: ::Autonomia::Agents::Agent.kept.select(:id))
+                                                          .pluck(:inbox_id, :agent_bot_id).to_set
   end
 
   def agentes_de_ia_da(inbox)
@@ -57,7 +71,9 @@ class Crm::Caixas::Retrato
   end
 
   def agentes_de_ia
-    @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes)
+    @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(
+      account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes, detalhe: @detalhe
+    )
   end
 
   def pessoas(inbox)

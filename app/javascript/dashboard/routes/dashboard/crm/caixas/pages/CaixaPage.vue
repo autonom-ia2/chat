@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmCaixasAPI from 'dashboard/api/crmCaixas';
+import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
 import CaixaEtapas from '../components/CaixaEtapas.vue';
 import CaixaIcone from '../components/CaixaIcone.vue';
 import EtapaFunis from '../components/EtapaFunis.vue';
@@ -22,7 +23,9 @@ import {
 import {
   formularioDaCaixa,
   salvarDaCaixa,
+  temAgentesIa,
   temAgentesNaTela,
+  erroDosAgentes,
 } from '../helpers/agentesIa';
 
 // #1149 — uma caixa em quatro etapas e um Salvar só (R16): o que chega, quem
@@ -30,18 +33,10 @@ import {
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+// #1570 — a Fase 2 dos Agentes vem da conta, a mesma fonte da tela dos Agentes.
+const fase2 = useFase2();
 
 const ULTIMA = 4;
-// #1447 — recusas do servidor ao gravar os agentes de IA da caixa.
-const AGENTE_NAO_LIGA = 'crm.caixas.agente_nao_liga';
-const ERROS_DOS_AGENTES = [
-  AGENTE_NAO_LIGA,
-  'crm.caixas.agente_invalido',
-  'crm.caixas.agentes_desligados',
-  'crm.caixas.agentes_sem_permissao',
-  'crm.caixas.funil_com_dois_agentes',
-  'crm.caixas.sem_porta',
-];
 const CHAVES = ['CHEGA', 'CUIDAM', 'SOZINHO', 'CONFIRA'];
 
 const estado = ref('carregando');
@@ -51,14 +46,16 @@ const form = ref(null);
 const etapa = ref(1);
 const alcancada = ref(1);
 const salvando = ref(false);
+const caixaSalva = ref(null);
 
 const carregar = async () => {
   estado.value = 'carregando';
   try {
     const dados = await CrmCaixasAPI.buscar(route.params.inboxId);
     funis.value = dados.funis;
-    original.value = formularioDaCaixa(dados.caixa);
-    form.value = formularioDaCaixa(dados.caixa);
+    caixaSalva.value = dados.caixa;
+    original.value = formularioDaCaixa(dados.caixa, fase2.value);
+    form.value = formularioDaCaixa(dados.caixa, fase2.value);
     // Caixa já no CRM: todas as etapas abertas para ir direto ao que mudar.
     alcancada.value = dados.caixa.crm_enabled ? ULTIMA : 1;
     etapa.value = Number(route.query.etapa) || 1;
@@ -69,6 +66,19 @@ const carregar = async () => {
 };
 
 onMounted(carregar);
+
+// O payload da conta pode chegar (ou mudar) depois da caixa: os agentes de IA
+// aparecem ou somem com ele, a partir do que está salvo. Se continuam como
+// estavam, a edição em curso fica.
+watch(fase2, ligada => {
+  if (!caixaSalva.value || !form.value) return;
+  const aparece = temAgentesIa(caixaSalva.value, ligada);
+  if (aparece === Boolean(form.value.ai_agents)) return;
+  // Uma cópia para cada: o formulário muda a lista, o original não.
+  const agentes = () => formularioDaCaixa(caixaSalva.value, ligada).ai_agents;
+  original.value = { ...original.value, ai_agents: agentes() };
+  form.value = { ...form.value, ai_agents: agentes() };
+});
 
 const funisMarcados = computed(() =>
   form.value ? funisDaCaixa(form.value, funis.value) : []
@@ -195,10 +205,10 @@ const salvar = async () => {
     // R7 e os agentes de IA (#1447) conferidos também no servidor: volta para
     // a etapa que resolve.
     const codigo = error?.response?.data?.error?.code;
-    const dosAgentes = ERROS_DOS_AGENTES.includes(codigo);
+    const { ehDosAgentes: dosAgentes, alerta } = erroDosAgentes(codigo);
     if (codigo === 'crm.caixas.sem_triagem' || dosAgentes) ir(2);
-    if (codigo === AGENTE_NAO_LIGA) {
-      useAlert(t('CRM_CAIXAS.EDITOR.AGENTE_NAO_LIGA'));
+    if (alerta) {
+      useAlert(t(`CRM_CAIXAS.EDITOR.${alerta}`));
     } else if (dosAgentes) {
       useAlert(t('CRM_CAIXAS.EDITOR.ERRO_AGENTES'));
     } else {
