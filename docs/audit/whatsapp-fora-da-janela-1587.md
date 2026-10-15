@@ -48,8 +48,15 @@ Juiz do eval (#1333): a rubrica da calibração não está no git (scratchpad da
 
 ## Registro por envio
 
-Nesta entrega vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, categoria, origem,
-`consentimento_id`) e no log (sem texto do cliente).
+Vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, idioma, categoria, origem, `consentimento_id`)
+e no log (sem texto do cliente). Na tabela própria `whatsapp_out_of_window_sends` (PR #1587b, depende do #1631), uma
+linha append-only por mensagem: o Followup chama `EnvioForaDaJanela.registrar_envio(message:, registro:)` numa linha
+depois do `:sent` do `MessageSender`, com o hash acima mais `crm_follow_up_id` e `motivo` (opcionais).
+- Idempotente por `message_id` (índice único; a corrida devolve a linha que ganhou).
+- Nunca levanta: em erro, log com a classe e os ids e devolve nil. Grava num savepoint, para não invalidar a transação
+  de quem chama.
+- Conta e caixa apagadas levam a linha; mensagem, follow-up e autorização apagados só soltam a referência (nullify).
+- A linha gravada não muda nem sai pelo app (`readonly?`).
 
 ## Decisões do Rodrigo (15/10/2026)
 

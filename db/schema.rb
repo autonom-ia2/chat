@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_01_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_03_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3979,6 +3979,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_01_100000) do
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
+  create_table "whatsapp_out_of_window_sends", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "message_id"
+    t.bigint "crm_follow_up_id"
+    t.bigint "whatsapp_template_consent_id"
+    t.string "tipo", null: false
+    t.string "caminho", null: false
+    t.string "escolha"
+    t.string "template_name", null: false
+    t.string "template_language", null: false
+    t.string "categoria", null: false
+    t.string "origem", null: false
+    t.string "motivo"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_whatsapp_oow_sends_account_created"
+    t.index ["crm_follow_up_id"], name: "index_whatsapp_out_of_window_sends_on_crm_follow_up_id"
+    t.index ["inbox_id", "tipo"], name: "idx_whatsapp_oow_sends_inbox_tipo"
+    t.index ["message_id"], name: "index_whatsapp_out_of_window_sends_on_message_id", unique: true
+    t.index ["whatsapp_template_consent_id"], name: "idx_whatsapp_oow_sends_consent"
+  end
+
   create_table "whatsapp_proxy_assignments", force: :cascade do |t|
     t.string "session_name", null: false
     t.bigint "account_id", null: false
@@ -4343,6 +4365,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_01_100000) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
+  add_foreign_key "whatsapp_out_of_window_sends", "accounts", on_delete: :cascade
+  add_foreign_key "whatsapp_out_of_window_sends", "crm_follow_ups", on_delete: :nullify
+  add_foreign_key "whatsapp_out_of_window_sends", "inboxes", on_delete: :cascade
+  add_foreign_key "whatsapp_out_of_window_sends", "messages", on_delete: :nullify
+  add_foreign_key "whatsapp_out_of_window_sends", "whatsapp_template_consents", on_delete: :nullify
   add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_consents", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_consents", "users", on_delete: :nullify
