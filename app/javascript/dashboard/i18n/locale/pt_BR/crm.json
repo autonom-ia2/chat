@@ -3948,7 +3948,8 @@
       "LIGAR": "Colocar no CRM",
       "PORTA": "{nome} atende primeiro",
       "AREA": "{nome} cuida de {funis}",
-      "ROBO": "{nome} (agente de IA) atende primeiro"
+      "ROBO": "{nome} (agente de IA) atende primeiro",
+      "ROBO_EXTERNO": "{nome} (agente externo) atende primeiro"
     },
     "MODO_RESUMO": {
       "AUTO": "O sistema cria o card quando entende o assunto.",
@@ -3977,7 +3978,7 @@
       "SUBTITULO": "Quando chega mensagem nova nesta caixa.",
       "AUTO": "Criar o card quando entender o assunto",
       "AUTO_TEXTO": "O sistema lê a conversa, escolhe o funil certo e cria o card.",
-      "AUTO_EXEMPLO": "O sistema entende que é {funil} e cria o card. Quando o robô passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "AUTO_EXEMPLO": "O sistema entende que é {funil} e cria o card. Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "SUGGEST": "Sugerir o assunto e esperar a equipe",
       "SUGGEST_TEXTO": "O sistema mostra o funil que parece certo. Alguém confirma com um clique.",
       "SUGGEST_EXEMPLO": "Aparece para a equipe: “Parece {funil}”. Quem confirmar cria o card.",
@@ -3986,7 +3987,7 @@
       "OFF_EXEMPLO": "Nada acontece. Alguém da equipe lê e cria o card.",
       "CHEGOU": "Criar o card assim que a conversa chegar",
       "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
-      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o robô passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",
@@ -4004,7 +4005,7 @@
       "SO_SUAS": "cuida de {assuntos}. Vê só as conversas que atende.",
       "SEM_ASSUNTO": "conversas sem assunto",
       "SEM_ASSUNTO_TITULO": "Sem assunto",
-      "RODIZIO": "Quem recebe quando o robô passa a conversa ou ela sai da triagem (na hora, quem tem menos conversas abertas; sem ninguém agora, quem entrar primeiro)",
+      "RODIZIO": "Quem recebe quando o agente passa a conversa ou ela sai da triagem (na hora, quem tem menos conversas abertas; sem ninguém agora, quem entrar primeiro)",
       "NINGUEM": "ninguém ainda",
       "MUDA": "O que muda ao salvar",
       "NADA_MUDOU": "Nada mudou.",
@@ -4015,7 +4016,8 @@
       "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
       "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
       "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
-      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo."
+      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo.",
+      "ROBO_EXTERNO": "Primeiro atende {nome}, o agente externo. Depois, as pessoas abaixo."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",
@@ -4050,7 +4052,7 @@
       "TODAS": "Todas",
       "SO_AS_QUE_ATENDE": "Só as que atende",
       "NAO_VE": "Não vê nada",
-      "RODIZIO": "Quando o robô passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro. Se a Atribuição do funil estiver em convite, a pessoa é convidada em vez de receber direto. Administradores também recebem.",
+      "RODIZIO": "Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro. Se a Atribuição do funil estiver em convite, a pessoa é convidada em vez de receber direto. Administradores também recebem.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
       "LEGADO_MUDAR": "Usar o que eu marcar",
       "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas.",
@@ -4067,6 +4069,7 @@
       "REGRA_SEM_PORTA": "O agente marcado num assunto assume a conversa.",
       "MOSTRAR_AGENTES": "Mostrar outros agentes ({n})",
       "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
+      "ROBO_EXTERNO": "{nome}, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
       "TIRAR": "Tirar desta caixa",
       "SAI": "Sai desta caixa ao salvar.",
       "VAI_PARAR": "Esta é a única caixa em que {nome} trabalha. Ao salvar, {nome} para de atender.",
@@ -4086,7 +4089,8 @@
       "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
       "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
       "PRINCIPAL_PARADO": "O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.",
-      "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo."
+      "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.",
+      "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes."
     }
   },
   "CRM_FUNIL": {
