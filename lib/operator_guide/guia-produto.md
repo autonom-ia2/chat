@@ -552,10 +552,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
 - onde_fica: Sidebar > CRM > CRM SLA
 - rota: `crm_sla_index` - `/app/accounts/:accountId/crm/sla`
-- gate: papel `administrator` ou `crm_admin`
+- gate: papel `administrator` ou `crm_admin` ou `sla_manage`
 - pre_requisitos: funis e caixas para associar políticas e agendas.
 - passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
-- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo.
+- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo; função só com `sla_manage` edita as políticas, mas a agenda das caixas fica para administrador ou `crm_admin`.
 - nav_target: `crm_sla_index`
 - highlight: `crm-new-sla`
 
