@@ -1,0 +1,6 @@
+pt_BR:
+  crm:
+    export:
+      statuses:
+        won: 'Seguro ativo'
+      count: '%{count} apólices'

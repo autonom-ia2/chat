@@ -37,8 +37,28 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
   def reconnect
     WhatsappHybrid::SessionManager.new(@connection).reconnect!
     render json: payload(@connection)
+  rescue WhatsappHybrid::WakeSession::NotReady
+    # Conexão pausada religando (#1487): nada foi desfeito; a próxima tentativa encontra a sessão de pé.
+    render json: { error: 'waking' }, status: :unprocessable_entity
   rescue Waha::Client::Error => e
     render_engine_error('reconnect_failed', e)
+  end
+
+  # Pausar sem desvincular o aparelho (#1487): enquanto pausada, tudo sai pela oficial.
+  def pause
+    WhatsappHybrid::Pause.new(@connection).pause!
+    render json: payload(@connection)
+  rescue Waha::Client::Error, WhatsappHybrid::Pause::Busy => e
+    render_engine_error('pause_failed', e)
+  end
+
+  # Retomar religa a mesma sessão, sem QR; se o WhatsApp tiver desvinculado o aparelho, a aba mostra o QR.
+  def resume
+    pause = WhatsappHybrid::Pause.new(@connection)
+    pause.resume!
+    render json: payload(@connection, qr_code: pause.qr)
+  rescue Waha::Client::Error, WhatsappHybrid::Pause::Busy => e
+    render_engine_error('resume_failed', e)
   end
 
   def destroy
@@ -79,15 +99,11 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
   end
 
   def payload(connection, qr_code: nil)
-    return { available: true, connected: false, status: 'not_connected' } if connection.nil?
+    return { available: true, connected: false, status: 'not_connected', same_number_inboxes: same_number_inboxes } if connection.nil?
 
     {
       available: true,
-      status: connection.status,
-      connected: connection.status == 'connected',
-      phone: connection.connected_phone,
-      cloud_phone: connection.cloud_phone_digits,
-      same_number: connection.same_number?,
+      **state_payload(connection),
       risk_accepted: connection.risk_accepted?,
       risk_accepted_at: connection.risk_accepted_at,
       routing_enabled: connection.routing_enabled,
@@ -97,8 +113,26 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
       campaign_rate_limit_per_minute: WhatsappHybrid::RateLimit::CAMPAIGN_PER_MINUTE,
       **limits_payload(connection),
       stats: { days: WhatsappHybrid::Stats::DAYS, by_origin: WhatsappHybrid::Stats.summary(connection) },
+      same_number_inboxes: same_number_inboxes,
       qr: qr_code
     }
+  end
+
+  # Estado da sessão e do aparelho. Pausada (#1487) é decisão do administrador, não queda.
+  def state_payload(connection)
+    {
+      status: connection.status,
+      connected: connection.status == 'connected' && !connection.paused?,
+      paused: connection.paused?,
+      phone: connection.connected_phone,
+      cloud_phone: connection.cloud_phone_digits,
+      same_number: connection.same_number?
+    }
+  end
+
+  # Outras caixas WhatsApp API comuns da conta no mesmo número (#1487): só aviso, nada é bloqueado.
+  def same_number_inboxes
+    WhatsappHybrid::SameNumberInboxes.new(account_id: @inbox.account_id, phone: @inbox.channel.phone_number).names
   end
 
   # O que o WhatsApp está limitando neste número: o ciclo de conversas novas e o limite temporário (chat#1480).

@@ -1,9 +1,22 @@
-<%# #1429 — nicho dos agentes em cartões (rádios nativos dentro do rótulo; sem <select>). Cor de seleção íris: o tema do
-    super admin não define a escala azul (--blue-*). O perfil só aparece com Seguros marcado, por CSS (:has), sem
-    script. Os nomes dos campos seguem AgentsNicheField.permitted_attribute. %>
+<%# #1429/#1550 — segmento e nicho da conta em cartões (rádios nativos dentro do rótulo; sem <select>). Cor de seleção
+    íris: o tema do super admin não define a escala azul (--blue-*). O perfil só aparece com Seguros marcado, e o "Como
+    vende" só com Insurtech marcada, por CSS (:has), sem script. Os nomes dos campos seguem
+    AgentsNicheField.permitted_attribute. A prévia mostra como um card fechado aparece para a equipe na escolha marcada,
+    também por CSS. %>
 <% base = "#{f.object_name}[#{field.attribute}]" %>
+<% idioma = f.object.locale.presence || I18n.default_locale %>
+<%# Desligado na instalação, a prévia diz que é o efeito de quando ligar (o painel ainda mostra o geral). %>
+<% rotulo_da_previa = field.pacotes_ligados? ? 'preview_label' : 'preview_label_off' %>
+<%# Classes por extenso (o Tailwind só gera o que lê escrito): cada prévia aparece só com o seu perfil marcado. O id do
+    rádio usa hífen: o Tailwind troca "_" por espaço dentro de [...], e o seletor de saude_beneficios não acharia nada. %>
+<% previa_do_perfil = {
+     'corretora' => 'group-has-[#agents-niche-perfil-corretora:checked]/perfil:flex',
+     'seguradora' => 'group-has-[#agents-niche-perfil-seguradora:checked]/perfil:flex',
+     'insurtech' => 'group-has-[#agents-niche-perfil-insurtech:checked]/perfil:flex',
+     'saude_beneficios' => 'group-has-[#agents-niche-perfil-saude-beneficios:checked]/perfil:flex'
+   } %>
 <% cartao = 'flex items-start gap-3 p-4 rounded-xl cursor-pointer min-h-11 ring-1 ring-inset ring-n-slate-7 bg-n-solid-1 hover:bg-n-slate-2 has-[:checked]:ring-2 has-[:checked]:ring-n-iris-9 has-[:checked]:bg-n-iris-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-n-iris-9' %>
-<div class="field-unit__label">
+<div class="field-unit__label self-start pt-4">
   <%# Texto simples, sem for: nenhum campo tem o id do atributo, e o <legend> do grupo já anuncia o campo. %>
   <span><%= t('autonomia_agents_niche.label') %></span>
 </div>
@@ -22,12 +35,12 @@
       </label>
     <% end %>
   </fieldset>
-  <fieldset class="hidden p-0 m-0 mt-4 border-0 group-has-[#agents-niche-seguros:checked]/nicho:block" data-agents-niche-profile>
+  <fieldset class="hidden p-0 m-0 mt-4 border-0 group/perfil group-has-[#agents-niche-seguros:checked]/nicho:block" data-agents-niche-profile>
     <legend class="mb-2 text-sm font-semibold text-n-slate-12"><%= t('autonomia_agents_niche.profile_label') %></legend>
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2">
       <% field.perfis.each do |perfil| %>
         <label class="<%= cartao %>">
-          <input type="radio" name="<%= base %>[perfil]" value="<%= perfil %>"
+          <input type="radio" id="agents-niche-perfil-<%= perfil.dasherize %>" name="<%= base %>[perfil]" value="<%= perfil %>"
                  class="mt-1 size-4 accent-n-iris-9" <%= 'checked' if field.perfil == perfil %>>
           <span class="flex flex-col gap-0.5">
             <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_agents_niche.profiles.#{perfil}.title") %></span>
@@ -36,11 +49,37 @@
         </label>
       <% end %>
     </div>
+    <fieldset class="hidden p-0 m-0 mt-4 border-0 group-has-[#agents-niche-perfil-insurtech:checked]/perfil:block" data-agents-niche-channel>
+      <legend class="mb-2 text-sm font-semibold text-n-slate-12"><%= t('autonomia_agents_niche.channel_label') %></legend>
+      <div class="grid gap-3">
+        <% field.canais.each do |canal| %>
+          <label class="<%= cartao %>">
+            <input type="radio" name="<%= base %>[canal]" value="<%= canal %>"
+                   class="mt-1 size-4 accent-n-iris-9" <%= 'checked' if field.canal == canal %>>
+            <span class="flex flex-col gap-0.5">
+              <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_agents_niche.channels.#{canal}.title") %></span>
+              <span class="text-sm text-n-slate-11"><%= t("autonomia_agents_niche.channels.#{canal}.text") %></span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    </fieldset>
+    <% field.perfis.each do |perfil| %>
+      <%= render 'fields/agents_niche_field/previa', textos: field.previa(idioma, perfil), alvo: perfil, rotulo: rotulo_da_previa,
+                 classe: previa_do_perfil.fetch(perfil) %>
+    <% end %>
   </fieldset>
+  <%= render 'fields/agents_niche_field/previa', textos: field.previa(idioma), alvo: 'geral', rotulo: rotulo_da_previa,
+             classe: 'group-has-[#agents-niche-geral:checked]/nicho:flex' %>
   <p class="mt-4 mb-0 text-sm text-n-slate-12">
     <%= t('autonomia_agents_niche.installation_default', niche: render('fields/agents_niche_field/name', escolha: field.padrao).strip) %>
   </p>
   <p class="flex items-start gap-2 p-3 mt-2 mb-0 text-sm rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12" role="note">
     <%= t('autonomia_agents_niche.warning') %>
   </p>
+  <% unless field.pacotes_ligados? %>
+    <p class="mt-2 mb-0 text-sm text-n-slate-11" role="note" data-agents-niche-switch-off>
+      <%= t('autonomia_agents_niche.switch_off') %>
+    </p>
+  <% end %>
 </div>

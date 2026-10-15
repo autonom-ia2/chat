@@ -29,6 +29,8 @@ const props = defineProps({
   interno: { type: Boolean, default: false },
   temCanal: { type: Boolean, default: false },
   textoOnde: { type: String, default: '' },
+  // #1433: nomes das outras caixas em que ele também recebe quando alguém passa (agente da equipe nelas).
+  tambemRecebe: { type: Array, default: () => [] },
   quantasFontes: { type: Number, default: 0 },
   quantasPerguntas: { type: Number, default: 0 },
   // #1433: linhas da L2 em que o agente está na equipe, ou null quando ele não é agente da equipe.
@@ -401,6 +403,17 @@ onMounted(() => {
             </h3>
             <p class="m-0 text-sm text-n-slate-12">
               {{ temCanal ? textoOnde : t(`${NS}.NENHUM_CANAL`) }}
+            </p>
+            <p
+              v-if="tambemRecebe.length"
+              data-tambem-recebe
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{
+                t(`${NS}.BLOCO_ONDE.TAMBEM`, {
+                  caixas: tambemRecebe.join(', '),
+                })
+              }}
             </p>
           </div>
         </div>

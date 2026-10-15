@@ -1,8 +1,14 @@
-import { computed, ref } from 'vue';
+import { computed, ref, unref } from 'vue';
 import * as Sentry from '@sentry/vue';
 import { useAlert } from 'dashboard/composables';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { FUNIL, MODELOS, corDaPosicao, modelosDoTipo } from './funil';
+import {
+  FUNIL,
+  MODELOS,
+  categoriasDoModelo,
+  corDaPosicao,
+  modelosDoTipo,
+} from './funil';
 import { copiarEtapa } from './funilForm';
 
 // #1384 — os modelos de "Começar pronto" do funil novo: as etapas do modelo,
@@ -10,7 +16,9 @@ import { copiarEtapa } from './funilForm';
 // confirmação quando a pessoa já mudou alguma etapa.
 // #1498 — antes do modelo vem o tipo (Vender ou Atender). Sem tipo escolhido,
 // o funil novo ainda não tem etapas.
-export const useFunilModelo = ({ t, ia, form, editorSession }) => {
+// #1548 (passo 2) — `pacote`: o da conta (`autonomia_pacote`), que escolhe a
+// variante do modelo; funil que já existe não passa por aqui.
+export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
   const tipo = ref('');
   const modelo = ref('');
   const modeloPendente = ref('');
@@ -28,13 +36,15 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
 
   // #1548 — `modeloPosicao`: a etapa E<n> do modelo. Acompanha a etapa mesmo
   // se ela mudar de lugar ou de nome; etapa criada pela pessoa não tem.
-  const stagesDoModelo = item =>
-    item.etapas.map((chave, index) => ({
+  const stagesDoModelo = item => {
+    const categorias = categoriasDoModelo(item, unref(pacote));
+    return item.etapas.map((chave, index) => ({
       name: t(chave),
       color: corDaPosicao(index),
-      categoria: item.categorias?.[index] || '',
+      categoria: categorias?.[index] || '',
       modeloPosicao: index + 1,
     }));
+  };
   const copiarEtapas = etapas =>
     etapas.map((etapa, index) => ({
       ...copiarEtapa(etapa, corDaPosicao(index)),

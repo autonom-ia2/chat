@@ -12,6 +12,9 @@ RSpec.describe CampaignJourney::ConversaAberta::Contagem, :aggregate_failures do
   let(:audience) { saved_audience(account: account, user: user, content: content) }
   let(:now) { Time.zone.parse('2026-10-13 12:00') }
 
+  # O fuso da WABA (#1592) tem spec próprio; aqui a franquia vira no fuso da conta.
+  before { allow(Whatsapp::WabaTimezone).to receive(:for).and_return(nil) }
+
   def contato(nome)
     audience.campaign_import_rows.includes(:contact).map(&:contact).find { |contact| contact.name == nome }
   end

@@ -39,4 +39,14 @@ RSpec.describe Crm::Subjects::IdentifyJob do
 
     expect(identifier).to have_received(:perform)
   end
+
+  it 'mensagem recuperada pelo Híbrido que não é mais a última do cliente não é perguntada de novo (#1638)' do
+    recuperada = incoming('Texto real')
+    recuperada.update!(content_attributes: { 'hybrid_recovered_at' => Time.current.utc.iso8601 })
+    incoming('Mensagem seguinte, já decidida')
+
+    described_class.perform_now(conversation.id, recuperada.id)
+
+    expect(Crm::Subjects::Identifier).not_to have_received(:new)
+  end
 end

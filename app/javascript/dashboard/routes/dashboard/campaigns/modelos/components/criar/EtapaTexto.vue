@@ -5,12 +5,12 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { CODIGO_DE_EXEMPLO } from '../../constants';
 import {
-  CODIGO_DE_EXEMPLO,
-  LIMITE_DO_TEXTO,
-  LIMITE_DO_TEXTO_DA_OFERTA,
-} from '../../constants';
-import { camposUsados, contarLetras } from '../../helpers/conteudo';
+  camposUsados,
+  contarLetras,
+  limiteDoTexto,
+} from '../../helpers/conteudo';
 import ModeloEditorTexto from '../ModeloEditorTexto.vue';
 import ModeloMelhorarComIA from '../ModeloMelhorarComIA.vue';
 import CustoDoTipo from '../CustoDoTipo.vue';
@@ -53,11 +53,7 @@ const melhorando = ref(false);
 const conteudo = computed(() => rascunho.value.conteudo);
 const campos = computed(() => camposUsados(conteudo.value.texto));
 const letras = computed(() => contarLetras(conteudo.value.texto));
-const limite = computed(() =>
-  conteudo.value.formato === 'oferta'
-    ? LIMITE_DO_TEXTO_DA_OFERTA
-    : LIMITE_DO_TEXTO
-);
+const limite = computed(() => limiteDoTexto(conteudo.value));
 // Código de verificação: o texto vem fixo do WhatsApp.
 const textoFixo = computed(() => conteudo.value.formato === 'codigo');
 

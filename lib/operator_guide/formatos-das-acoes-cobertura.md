@@ -5,8 +5,8 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 605 |
-| Sem corpo | 180 |
+| No catálogo | 607 |
+| Sem corpo | 182 |
 | Com corpo | 425 |
 | Com corpo e formato completo | 347 (81,6%) |
 | Com corpo e formato incompleto | 78 |
@@ -79,7 +79,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
-- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::Ai::DefaultStageCriteria.metadata_for)
+- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -172,7 +172,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` category — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` template_position — repassada a Crm::Ai::DefaultStageCriteria.metadata_for
+- `api/v1/accounts/crm/stages#create` template_position — repassada a Crm::PipelineStages::TemplateVariant.category_for
 - `api/v1/accounts/crm/stages#update` category — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
@@ -205,8 +205,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 357 |
-| Com parâmetros conhecidos | 306 |
+| No catálogo | 359 |
+| Com parâmetros conhecidos | 308 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos
