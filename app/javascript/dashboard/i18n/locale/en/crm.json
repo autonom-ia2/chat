@@ -677,9 +677,7 @@
       "URGENT": "Urgent"
     },
     "CARD_STATUS": {
-      "OPEN": "Open",
-      "WON": "Won",
-      "LOST": "Lost"
+      "OPEN": "Open"
     },
     "FOLLOW_UP_FILTER": {
       "NONE": "No follow-up",
@@ -1432,18 +1430,9 @@
       "STATUS_ARCHIVED": "Archived",
       "STATUS_RESOLVED": "Resolved",
       "STATUS_CANCELLED": "Cancelled",
-      "WIN_DEAL": "Win",
-      "LOSE_DEAL": "Lose",
       "REOPEN_DEAL": "Reopen",
-      "WIN_DIALOG_TITLE": "Win this deal",
       "VALUE_AI_FILLED": "Value filled by AI from the conversation. Edit if needed.",
-      "WIN_VALUE_LABEL": "Deal value",
-      "WIN_CURRENCY_LABEL": "Currency",
-      "WIN_CONFIRM": "Mark as won",
-      "LOSE_DIALOG_TITLE": "Lose this deal",
-      "LOSE_REASON_LABEL": "Reason (optional)",
       "LOSE_REASON_PLACEHOLDER": "Why was the deal lost?",
-      "LOSE_CONFIRM": "Mark as lost",
       "CLOSE_AS_TITLE": "Close as {label}",
       "MARK_AS": "Mark as {label}",
       "CANCEL": "Cancel",
@@ -1574,12 +1563,6 @@
       "WHEN_TO_USE": "When to use",
       "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the products or cases that come here.",
       "WHEN_TO_USE_PLACEHOLDER": "E.g.: sales of our two products, AI Agents and Chat2You.",
-      "COUNTS_AS_SALE": "Closing successfully here counts as a sale",
-      "COUNTS_AS_SALE_ON": "Cards close as Won or Lost, count toward sales totals and can notify your ads.",
-      "COUNTS_AS_SALE_OFF": "Cards close as Resolved or Cancelled. They never count as sales nor notify ads. Good for after-sales, claims, support.",
-      "OUTCOME_SUCCESS": "Name when it works out",
-      "OUTCOME_FAILURE": "Name when it doesn't work out",
-      "OUTCOME_HELP": "Optional. E.g. \"Hired\" and \"Gave up\". Leave blank to use the default name.",
       "MONTHLY_TARGET": "Monthly sales target (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
@@ -1601,10 +1584,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "In negotiation",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "When a card is won, lost or moved, send the conversion back to Meta so it optimizes your Click-to-WhatsApp ads by real closers.",
-      "META_SYNC_EVENTS": "Which events to send",
-      "META_SYNC_EVENT_WON": "Won (Purchase, with value)",
-      "META_SYNC_EVENT_LOST": "Lost (Order canceled)",
-      "META_SYNC_EVENT_MOVED": "Stage moved (uses the mapping above)",
       "META_SYNC_DATASET": "Dataset ID (advanced)",
       "META_SYNC_DATASET_PLACEHOLDER": "Leave empty to use the WhatsApp connection dataset",
       "META_SYNC_DATASET_HELP": "Leave empty to derive it from the WhatsApp connection. Only set this if Meta gave you a specific dataset.",
@@ -1640,10 +1619,6 @@
       "TITLE": "Google Ads",
       "HELP": "Send CRM outcomes to Google Ads through a scheduled conversion feed.",
       "TOGGLE": "Enable Google Ads offline conversions",
-      "EVENTS": "Which events to include",
-      "EVENT_WON": "Won",
-      "EVENT_LOST": "Lost",
-      "EVENT_MOVED": "Stage moved",
       "CONVERSION_NAME_WON": "Conversion name for won cards",
       "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Won deal",
       "CONVERSION_NAME_WON_HELP": "Lost and stage-moved events use their default conversion names.",
@@ -4318,9 +4293,9 @@
       "O_INSTAGRAM": "Instagram",
       "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
       "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
-      "ATENDER_LEMBRETES": "We share progress and ask if it was solved.",
-      "ATENDER_SO_ANDAMENTO": "We share the request progress.",
-      "ATENDER_SO_RESOLVEU": "We ask if it was solved.",
+      "ATENDER_LEMBRETES": "We share progress after {andamento} in the same stage and ask if it was solved {resolveu} after {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "We share progress after {andamento} in the same stage.",
+      "ATENDER_SO_RESOLVEU": "We ask if it was solved {resolveu} after {sucesso}.",
       "COBRAR_LEMBRETES": "We send payment reminders before, on and after the due date.",
       "ATENDER_SEM_LEMBRETES": "No reminder on."
     },
@@ -4607,13 +4582,17 @@
       "LEMBRETES": {
         "ANDAMENTO": {
           "TITULO": "Share progress",
-          "FRASE": "If a request stays 1 day in the same stage, we tell the customer we are still on it.",
-          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news."
+          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news.",
+          "FRASE_TEMPO": "If a request stays {tempo} in the same stage, we tell the customer we are still on it.",
+          "TEMPO_ROTULO": "Time in the same stage",
+          "QUANDO": "{tempo} in the same stage"
         },
         "RESOLVEU": {
           "TITULO": "Ask if it was solved",
-          "FRASE": "1 day after {sucesso}, we ask if everything worked out.",
-          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here."
+          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here.",
+          "FRASE_TEMPO": "{tempo} after {sucesso}, we ask if everything worked out.",
+          "TEMPO_ROTULO": "Time after {sucesso}",
+          "QUANDO": "{tempo} after {sucesso}"
         },
         "COBRAR": {
           "TITULO": "Payment reminders",
@@ -4628,7 +4607,14 @@
         "PREVIA_TITULO": "With Ana, as an example",
         "PREVIA_TEXTO": "Sent on WhatsApp during the pipeline business hours. The real message is written from each customer conversation.",
         "VALOR_EXEMPLO": "R$ 350",
-        "DESLIGADOS": "No reminder on. Nobody gets a message on their own."
+        "DESLIGADOS": "No reminder on. Nobody gets a message on their own.",
+        "TEMPOS": {
+          "H4": "4 hours",
+          "H24": "1 day",
+          "H48": "2 days",
+          "H72": "3 days",
+          "H168": "1 week"
+        }
       }
     }
   },
