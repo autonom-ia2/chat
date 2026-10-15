@@ -4072,7 +4072,8 @@
       "ENTRA": "Joins this inbox when you save.",
       "ENTRA_E_LIGA": "Joins this inbox and starts answering when you save.",
       "PARADO": "Stopped",
-      "SO_QUEM_GERENCIA": "Only people who manage AI agents can change the agents of this inbox."
+      "SO_QUEM_GERENCIA": "Only people who manage AI agents can change the agents of this inbox.",
+      "EXTERNO": "External agent: {nome}, answers first"
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",

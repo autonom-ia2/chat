@@ -4073,7 +4073,8 @@
       "ENTRA": "Entra nesta caixa ao salvar.",
       "ENTRA_E_LIGA": "Entra nesta caixa e passa a atender ao salvar.",
       "PARADO": "Parado",
-      "SO_QUEM_GERENCIA": "Só quem gerencia agentes de IA muda os agentes desta caixa."
+      "SO_QUEM_GERENCIA": "Só quem gerencia agentes de IA muda os agentes desta caixa.",
+      "EXTERNO": "Agente externo: {nome}, atende primeiro"
     },
     "EDITOR": {
       "ERRO": "Não deu para abrir esta caixa agora.",

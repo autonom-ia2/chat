@@ -261,7 +261,7 @@ export default {
           ...visibleToAllChannelTabs,
           {
             key: 'bot-configuration',
-            name: this.$t('INBOX_MGMT.TABS.BOT_CONFIGURATION'),
+            name: this.$t('AGENTS.CAIXA_EXTERNO.ABA'),
           },
         ];
       }

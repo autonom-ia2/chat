@@ -1731,6 +1731,26 @@
           "PARAR_FEITO": "{nome} stopped helping. You can turn it back on anytime."
         }
       }
+    },
+    "CAIXA_EXTERNO": {
+      "ABA": "External agent",
+      "TITULO": "External agent",
+      "EXPLICA": "An outside system answers this inbox's conversations first and can hand the conversation to a person.",
+      "ESCOLHER": "Choose the external agent",
+      "NENHUM": "No external agent",
+      "PLATAFORMA": "This inbox is handled by the platform Agents.",
+      "PRINCIPAL": "{nome} answers first",
+      "EQUIPE": "{nome} receives when someone hands over",
+      "ABRIR": "Open agent",
+      "TRAVADO_PRINCIPAL": "To use an external agent on this inbox, first remove the main agent. You do this on the agent's page.",
+      "TRAVADO_EQUIPE": "To use an external agent on this inbox, first remove the team agents. You do this on each agent's page.",
+      "TRAVADO_TUDO": "To use an external agent on this inbox, first remove the main agent and the team agents. You do this on each agent's page.",
+      "SALVAR": "Save",
+      "DESCONECTAR": "Disconnect",
+      "SALVOU": "External agent saved.",
+      "FALHOU": "Could not save. Try again.",
+      "DESCONECTOU": "External agent disconnected.",
+      "FALHOU_DESCONECTAR": "Could not disconnect. Try again."
     }
   }
 }

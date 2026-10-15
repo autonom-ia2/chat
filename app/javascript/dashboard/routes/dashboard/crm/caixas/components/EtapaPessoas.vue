@@ -30,7 +30,15 @@ const pessoas = defineModel('pessoas', { type: Array, required: true });
 // { porta, pode_mudar, agentes } ou null sem a Fase 2 (helpers/agentesIa).
 const aiAgents = defineModel('aiAgents', { type: Object, default: null });
 
-const porta = computed(() => aiAgents.value?.porta || props.robo);
+// Com a Fase 2, o robô da caixa sem porta é um agente externo (o espelho do
+// agente da plataforma só existe com porta). Ele atende primeiro e trava a
+// parte de pôr agente da equipe (marcação por caixa, #1424).
+const externo = computed(() =>
+  aiAgents.value && !aiAgents.value.porta ? props.robo : null
+);
+const porta = computed(() =>
+  aiAgents.value ? aiAgents.value.porta : props.robo
+);
 const agentesIa = computed({
   get: () => aiAgents.value?.agentes || [],
   set: agentes => {
@@ -40,7 +48,9 @@ const agentesIa = computed({
 const temAgentes = computed(
   () =>
     Boolean(aiAgents.value) &&
-    (Boolean(porta.value) || agentesIa.value.length > 0)
+    (Boolean(porta.value) ||
+      Boolean(externo.value) ||
+      agentesIa.value.length > 0)
 );
 
 const atualizar = (pessoa, mudanca) => {
@@ -135,11 +145,14 @@ const chipClasse = ativo =>
     </div>
 
     <section v-if="temAgentes" class="flex flex-col gap-3">
-      <div class="flex flex-col gap-1">
+      <div v-if="!externo" class="flex flex-col gap-1">
         <h3 class="mb-0 text-base font-semibold text-n-slate-12">
           {{ $t('CRM_CAIXAS.PESSOAS.AGENTES_TITULO') }}
         </h3>
-        <p data-regra class="mb-0 text-[0.9375rem] text-n-slate-11">
+        <p
+          data-regra
+          class="mb-0 text-[0.9375rem] text-n-slate-11"
+        >
           {{
             porta
               ? $t('CRM_CAIXAS.PESSOAS.REGRA', { porta: porta.name })
@@ -147,7 +160,34 @@ const chipClasse = ativo =>
           }}
         </p>
       </div>
+      <template v-if="externo">
+        <div
+          data-externo
+          class="flex items-center gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4"
+        >
+          <span
+            class="grid size-9 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-plug size-5" />
+          </span>
+          <p class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12">
+            {{ $t('CRM_CAIXAS.PESSOAS.EXTERNO', { nome: externo.name }) }}
+          </p>
+        </div>
+        <p
+          data-motivo-externo
+          class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-11"
+        >
+          <span
+            class="i-lucide-lock mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ $t('CRM_CAIXAS.EDITOR.AGENTE_EXTERNO') }}
+        </p>
+      </template>
       <AgentesDaCaixa
+        v-else
         v-model:agentes="agentesIa"
         :porta="porta"
         :pode-mudar="aiAgents.pode_mudar"

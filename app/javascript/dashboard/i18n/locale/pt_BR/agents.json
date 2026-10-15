@@ -1731,6 +1731,26 @@
           "PARAR_FEITO": "{nome} parou de ajudar. Dá para voltar quando quiser."
         }
       }
+    },
+    "CAIXA_EXTERNO": {
+      "ABA": "Agente externo",
+      "TITULO": "Agente externo",
+      "EXPLICA": "Um sistema de fora atende primeiro as conversas desta caixa e pode passar a conversa para uma pessoa.",
+      "ESCOLHER": "Escolha o agente externo",
+      "NENHUM": "Nenhum agente externo",
+      "PLATAFORMA": "Esta caixa é atendida pelos Agentes da plataforma.",
+      "PRINCIPAL": "{nome} atende primeiro",
+      "EQUIPE": "{nome} recebe quando alguém passar",
+      "ABRIR": "Abrir agente",
+      "TRAVADO_PRINCIPAL": "Para usar um agente externo nesta caixa, tire antes o agente principal. Isso se faz na página do agente.",
+      "TRAVADO_EQUIPE": "Para usar um agente externo nesta caixa, tire antes os agentes da equipe. Isso se faz na página de cada agente.",
+      "TRAVADO_TUDO": "Para usar um agente externo nesta caixa, tire antes o agente principal e os agentes da equipe. Isso se faz na página de cada agente.",
+      "SALVAR": "Salvar",
+      "DESCONECTAR": "Desconectar",
+      "SALVOU": "Agente externo salvo.",
+      "FALHOU": "Não deu para salvar. Tente de novo.",
+      "DESCONECTOU": "Agente externo desconectado.",
+      "FALHOU_DESCONECTAR": "Não deu para desconectar. Tente de novo."
     }
   }
 }
