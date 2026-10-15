@@ -9,9 +9,14 @@
 # de perder o turno para si mesmo e deixar o cliente sem resposta. Outro settle (job_id diferente) segue barrado.
 #
 # A chave dura a vida do turno (TTL de um dia), não só a janela do debounce: a marca do debounce não é limpa depois da
-# resposta, e o caminho :responder do ReenfileirarTurno não tem prazo dentro desse dia. Com uma chave curta, um pedaço 0
-# atrasado do dono antigo tomaria de novo a chave do dono novo e o faria responder duas vezes. Passado o dia, o
-# ReenfileirarTurno também não refaz mais o turno.
+# resposta, e o caminho :responder do ReenfileirarTurno não tem prazo dentro desse dia. Com uma chave curta, o pedaço 0
+# atrasado do dono antigo (ChunkedDeliveryJob) chamaria o ReenfileirarTurno, que tomaria de novo a chave do dono novo e
+# enfileiraria outro settle para ele: o dono novo responderia duas vezes. Passado o dia, o ReenfileirarTurno também não
+# refaz mais o turno.
+#
+# O turno respondido NÃO solta a chave, de propósito: ela é o que impede responder de novo o mesmo turno (dedupe). Solta
+# só quem não entregou: o turno que falhou (exceção, IA sem resultado, resposta vazia — Operate::Responder), que pode ser
+# retomado pelo mesmo dono ou pelo seguinte.
 #
 # Quem perde o turno porque o dono mudou solta a SUA chave, e só se ela ainda tiver o valor que ele tomou
 # (compare-and-delete): se o turno voltar para ele (A→B→A), ele pode responder; uma posse mais nova dele não é apagada.
