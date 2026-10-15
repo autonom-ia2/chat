@@ -57,4 +57,90 @@ RSpec.describe 'CRM pipeline outcome API', type: :request do
     expect(response).to have_http_status(:ok)
     expect(card.reload).to be_resolved
   end
+
+  # #1580: outcome_labels fora de { success:, failure: } em texto é recusado na entrada, pelos dois caminhos.
+  describe 'outcome_labels fora do formato' do
+    let(:mensagem) { 'Outcome names must be an object with success and/or failure as text, up to 30 characters each.' }
+
+    before { pipeline.update!(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'Contratado' })) }
+
+    def expect_recusa
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(mensagem)
+      expect(pipeline.reload.metadata['outcome_labels']).to eq('success' => 'Contratado')
+    end
+
+    it 'recusa texto solto' do
+      patch_pipeline(outcome_labels: 'Contratado')
+      expect_recusa
+
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => 'Contratado'))
+      expect_recusa
+    end
+
+    it 'recusa lista' do
+      patch_pipeline(outcome_labels: %w[Contratado Desistiu])
+      expect_recusa
+
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => %w[Contratado Desistiu]))
+      expect_recusa
+    end
+
+    it 'recusa chave desconhecida ou valor que não é texto' do
+      patch_pipeline(outcome_labels: { success: 'Contratado', outro: 'x' })
+      expect_recusa
+
+      patch_pipeline(outcome_labels: { success: { nome: 'Contratado' } })
+      expect_recusa
+
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 42 }))
+      expect_recusa
+    end
+
+    it 'recusa ao criar, sem criar o funil' do
+      expect do
+        post "/api/v1/accounts/#{account.id}/crm/pipelines",
+             params: { pipeline: { name: 'Novo', outcome_labels: 'Contratado' } }, headers: auth_headers(user), as: :json
+      end.not_to change(Crm::Pipeline, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(mensagem)
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/crm/pipelines",
+             params: { pipeline: { name: 'Novo', metadata: { outcome_labels: %w[Contratado] } } }, headers: auth_headers(user), as: :json
+      end.not_to change(Crm::Pipeline, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include(mensagem)
+    end
+
+    it 'recusa nome longo demais pelo metadata (o outro caminho corta em 30)' do
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'x' * 31 }))
+      expect_recusa
+    end
+
+    it 'aceita o formato válido pelos dois caminhos, só success ou os dois' do
+      patch_pipeline(outcome_labels: { failure: 'Desistiu' })
+      expect(response).to have_http_status(:ok)
+      expect(pipeline.reload.metadata['outcome_labels']).to eq('failure' => 'Desistiu')
+
+      patch_pipeline(metadata: pipeline.metadata.merge('outcome_labels' => { 'success' => 'Apólice', 'failure' => 'Não fechou' }))
+      expect(response).to have_http_status(:ok)
+      expect(pipeline.reload.metadata['outcome_labels']).to eq('success' => 'Apólice', 'failure' => 'Não fechou')
+    end
+
+    it 'não trava o funil que já tinha o dado fora do formato quando outro campo muda' do
+      pipeline.update_column(:metadata, pipeline.metadata.merge('outcome_labels' => 'antigo')) # rubocop:disable Rails/SkipsModelValidations
+
+      patch_pipeline(name: 'Sinistro 2')
+
+      expect(response).to have_http_status(:ok)
+      expect(pipeline.reload.name).to eq('Sinistro 2')
+      expect(pipeline.metadata['outcome_labels']).to eq('antigo')
+
+      patch_pipeline(metadata: pipeline.metadata, name: 'Sinistro 3')
+      expect(response).to have_http_status(:ok)
+      expect(pipeline.reload.name).to eq('Sinistro 3')
+    end
+  end
 end

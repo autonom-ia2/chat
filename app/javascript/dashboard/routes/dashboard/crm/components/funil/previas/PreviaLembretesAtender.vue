@@ -1,10 +1,15 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { lembretesDoModelo } from '../lembretesAtender';
+import {
+  lembretesDoModelo,
+  rotuloDoTempo,
+  tempoDoLembrete,
+} from '../lembretesAtender';
 
 // #1498 — os lembretes de Atender com a Ana, de exemplo: a mensagem que sai e
-// quando. Lembrete desligado não aparece.
+// quando. Lembrete desligado não aparece. #1589 — o "quando" acompanha o
+// tempo escolhido na frase.
 const props = defineProps({
   modelo: { type: String, default: '' },
   sucesso: { type: String, default: '' },
@@ -16,9 +21,11 @@ const L = 'CRM_FUNIL.ATENDER.LEMBRETES';
 const nome = computed(() => t('CRM_FUNIL.PREVIA.CLIENTE'));
 const valor = computed(() => t(`${L}.VALOR_EXEMPLO`));
 const MOMENTOS = {
-  progress: [{ quando: `${L}.ANDAMENTO.TITULO`, msg: `${L}.ANDAMENTO.MSG` }],
+  progress: [
+    { quando: `${L}.ANDAMENTO.QUANDO`, msg: `${L}.ANDAMENTO.MSG`, tempo: true },
+  ],
   resolved_check: [
-    { quando: `${L}.RESOLVEU.TITULO`, msg: `${L}.RESOLVEU.MSG` },
+    { quando: `${L}.RESOLVEU.QUANDO`, msg: `${L}.RESOLVEU.MSG`, tempo: true },
   ],
   payment: [
     { quando: `${L}.COBRAR.ANTES`, msg: `${L}.COBRAR.MSG_ANTES` },
@@ -29,7 +36,14 @@ const MOMENTOS = {
 const conversa = computed(() =>
   lembretesDoModelo(props.modelo)
     .filter(chave => props.ligados[chave])
-    .flatMap(chave => MOMENTOS[chave])
+    .flatMap(chave =>
+      MOMENTOS[chave].map(item => ({
+        ...item,
+        tempo: item.tempo
+          ? t(rotuloDoTempo(tempoDoLembrete(props.ligados, chave)))
+          : '',
+      }))
+    )
 );
 </script>
 
@@ -42,7 +56,7 @@ const conversa = computed(() =>
       <span
         class="self-center rounded-lg bg-n-solid-1 px-2 py-0.5 text-sm text-n-slate-11"
       >
-        {{ t(item.quando, { sucesso }) }}
+        {{ t(item.quando, { sucesso, tempo: item.tempo }) }}
       </span>
       <p
         class="mb-0 max-w-[85%] self-end rounded-xl rounded-ee-sm bg-n-blue-9 px-3 py-2 text-sm text-white"
