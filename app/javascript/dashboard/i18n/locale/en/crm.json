@@ -1542,6 +1542,13 @@
         "SUGGESTION_FOCUS_ACCEPT": "Handle this subject",
         "SUGGESTION_DISMISS": "Dismiss",
         "SUGGESTION_ERROR": "Could not answer the suggestion. It may have changed; check the subjects again."
+      },
+      "REPASSE": {
+        "TEXT": "The subject is now {pipeline}. Do you want to pass it to the {pipeline} team?",
+        "PASS": "Pass to the {pipeline} team",
+        "KEEP": "Keep the conversation",
+        "DONE": "Conversation passed to the {pipeline} team.",
+        "ERROR": "Could not answer. The subject may have changed; check again."
       }
     },
     "PIPELINE_DRAWER": {

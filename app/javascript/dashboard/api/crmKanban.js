@@ -294,6 +294,20 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/conversations/${conversationId}/cards`);
   }
 
+  // Decisão "a" (#1606): o assunto mudou depois que a pessoa recebeu; passar para a equipe do assunto ou ficar.
+  passSubjectToTeam(conversationId, cardId) {
+    return axios.post(`${this.url}/conversations/${conversationId}/repasse`, {
+      card_id: cardId,
+    });
+  }
+
+  keepSubjectWithMe(conversationId, cardId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/repasse/manter`,
+      { card_id: cardId }
+    );
+  }
+
   focusConversationSubject(conversationId, cardId) {
     return axios.post(`${this.url}/conversations/${conversationId}/focus`, {
       card_id: cardId,
