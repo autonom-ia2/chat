@@ -27,6 +27,7 @@ export const destinoDeConfiguracoes = async (to, landings) => {
   // conta (e, ao trocar de conta, é a anterior).
   const usuario = store.getters.getCurrentUser;
   const conta = getCurrentAccount(usuario, Number(params.accountId)) || {};
+  // `!custom_role_id`: em build sem EE a conta não traz custom_role_id; o administrador vai para a Conta.
   if (conta.role === 'administrator' && !conta.custom_role_id) {
     return { name: 'general_settings_index', params };
   }

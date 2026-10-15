@@ -50,7 +50,10 @@ import captain from './captain/captain.routes';
 import prospecting from './prospecting/prospecting.routes';
 import booking from './booking/booking.routes';
 import data from './data/data.routes';
-import { routes as inicioRoutes } from './inicio/inicio.routes';
+import {
+  routes as inicioRoutes,
+  CHAVES_EXTRAS_DO_INICIO,
+} from './inicio/inicio.routes';
 import { destinoDeConfiguracoes } from './inicio/destinoDeConfiguracoes';
 
 const SettingsWrapper = () => import('./SettingsWrapper.vue');
@@ -61,7 +64,10 @@ export default {
       path: frontendURL('accounts/:accountId/settings'),
       name: 'settings_home',
       meta: {
-        permissions: SETTINGS_LANDINGS.flatMap(page => page.permissions),
+        permissions: [
+          ...SETTINGS_LANDINGS.flatMap(page => page.permissions),
+          ...CHAVES_EXTRAS_DO_INICIO,
+        ],
       },
       // Nunca é exibida: o beforeEnter sempre manda para outra tela.
       component: SettingsWrapper,

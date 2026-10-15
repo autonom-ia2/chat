@@ -12,6 +12,13 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const SettingsInicioPage = () => import('./SettingsInicioPage.vue');
 
+// Chaves que abrem a página de cartões além das telas de Configurações de sempre: quem cuida da IA do CRM vê o
+// cartão da passagem. O settings_home (/settings) aceita as mesmas, para o endereço digitado chegar aqui.
+export const CHAVES_EXTRAS_DO_INICIO = [
+  CRM_MANAGE_AI_PERMISSION,
+  CRM_ADMIN_PERMISSION,
+];
+
 // Página inicial de Configurações em cartões (#1617), só com o menu novo ligado na conta. Quem abre: quem já
 // abria alguma tela de Configurações (as chaves do `settings_home`, mais crm_manage_ai/crm_admin, que dão o
 // cartão da passagem); cada cartão confere a própria rota. Flag desligada: a página manda para `settings_home`.
@@ -33,8 +40,7 @@ export const routes = [
         ...AUTOMATION_PERMISSIONS,
         'sla_manage',
         // Quem cuida da IA do CRM chega na passagem pelo cartão "Passar para uma pessoa".
-        CRM_MANAGE_AI_PERMISSION,
-        CRM_ADMIN_PERMISSION,
+        ...CHAVES_EXTRAS_DO_INICIO,
       ],
     },
   },

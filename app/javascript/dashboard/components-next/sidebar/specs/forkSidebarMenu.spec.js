@@ -308,6 +308,46 @@ describe('organizeForkMenu', () => {
     ).toBe('Contacts');
   });
 
+  it('Prospecção fica em Acompanhar, depois do CRM, e acende nas telas dela', () => {
+    const configuracoes = [
+      'settings_prospecting_index',
+      'autonomia_prospecting_settings',
+    ];
+    const menu = organizeForkMenu(
+      [
+        ...upstream,
+        {
+          name: 'Prospecting',
+          label: 'Prospecção',
+          activeOn: ['autonomia_prospecting_search', ...configuracoes],
+          children: [
+            folha('Prospecting Search', 'autonomia_prospecting_search'),
+            folha('Prospecting Lists', 'autonomia_prospecting_lists'),
+            {
+              ...folha('Prospecting Settings', 'settings_prospecting_index'),
+              activeOn: configuracoes,
+            },
+          ],
+        },
+      ],
+      ctx
+    );
+    const acompanhar = menu.grupos.find(grupo => grupo.id === 'ACOMPANHAR');
+    expect(nomes(acompanhar.itens).slice(0, 2)).toEqual(['CRM', 'Prospecting']);
+    expect(
+      nomes(menu.grupos.find(grupo => grupo.id === 'CRESCER').itens)
+    ).not.toContain('Prospecting');
+    const itens = menu.grupos.flatMap(grupo => grupo.itens);
+    const caminho = to => `/${to.name}`;
+    ['settings_prospecting_index', 'autonomia_prospecting_search'].forEach(
+      rota => {
+        const ativa = acharAtivo(itens, { name: rota, path: '/x' }, caminho);
+        expect(ativa.item.name).toBe('Prospecting');
+        expect(acompanhar.itens).toContain(ativa.item);
+      }
+    );
+  });
+
   it('acharAtivo prefere o caminho igual e depois o activeOn', () => {
     const menu = organizeForkMenu(upstream, ctx);
     const itens = [
