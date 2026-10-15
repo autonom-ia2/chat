@@ -102,6 +102,20 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
     expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
   end
 
+  # Pega: a guarda do laço barrando quem não passou nada. Na saída da triagem quem sai é a pessoa; com a regra na porta,
+  # a porta recebe.
+  it 'saída da triagem com a regra na porta: a pessoa sai e a porta assume', :aggregate_failures do
+    regra = { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'pool_type' => 'ai_agent', 'pool_id' => agente_da_porta.id }
+    comercial.stages.first.update!(metadata: { 'ai_handoff' => regra })
+    conversation.update!(assignee: ana, ai_assignee: nil)
+
+    conversation.bot_handoff!(dispatch_event: false, motivo: 'triagem', release_assignee: true)
+
+    expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: porta)
+    expect(conversation.bot_handoff_waiting?).to be(false)
+    expect(Crm::Entrega::Marca.presente?(conversation)).to be(false)
+  end
+
   describe 'Passar para… na conversa' do
     it 'Ana passa para a área e a devolve: uma passagem por troca, selo com a origem, motivo passar_para', :aggregate_failures do
       conversation.update!(assignee: ana, ai_assignee: nil)

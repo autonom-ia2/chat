@@ -154,10 +154,13 @@ module ConversationBotHandoff
   # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
   # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
   # Devolve a entrega quando ela aponta um agente de IA (#1593), para terminar depois do commit.
+  # O robô só está passando quando nenhuma pessoa tinha a conversa: na saída da triagem quem sai é a pessoa (gravada no
+  # banco), e o robô da caixa não pode ser barrado pela guarda do laço.
   def deliver_on_handoff(motivo, keep_bot, quem_passou)
     return if assignee_id.present?
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
+    quem_passou = nil if attribute_in_database('assignee_id').present?
     entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', quem_passou: quem_passou)
     entrega if entrega.na_passagem.status == :para_ia
   end
