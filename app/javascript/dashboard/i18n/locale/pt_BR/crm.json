@@ -4834,7 +4834,9 @@
         "PRONTA_NOME": "escrever o nome da mensagem pronta",
         "PRONTA_IDIOMA": "escolher o idioma da mensagem pronta",
         "PRONTA_ESCOLHER": "escolher a mensagem pronta",
-        "NOME": "dar um nome ao retorno"
+        "NOME": "dar um nome ao retorno",
+        "QUEM": "escolher quem recebe o aviso",
+        "ULTIMO_DIA": "escolher o último dia"
       },
       "TITULO_LEMBRETE": "Novo lembrete",
       "TITULO_ESCONDER": "Esconder a conversa até um dia",
@@ -5256,6 +5258,194 @@
       "MINUTOS": "{n} minuto | {n} minutos",
       "HORAS": "{n} hora | {n} horas",
       "DIAS": "{n} dia | {n} dias"
+    },
+    "SERIE": {
+      "TELA": "Repetição"
+    }
+  },
+  "CRM_LEMBRETE": {
+    "SALVO": "Pronto, lembrete marcado.",
+    "FUSO_DA_CONTA": "Horário de {fuso}, o fuso da sua conta.",
+    "REPETIR": {
+      "PERGUNTA": "Repetir?",
+      "OPCAO": {
+        "NUNCA": "Uma vez só",
+        "DIA": "Todo dia",
+        "SEMANA": "Toda semana",
+        "MES": "Todo mês",
+        "ANO": "Todo ano"
+      },
+      "SO_DIAS_UTEIS": "Só de segunda a sexta",
+      "QUAIS_DIAS": "Em quais dias?",
+      "MES_CURTO": "Nos meses que não têm dia {dia}, o aviso vem no último dia do mês.",
+      "ATE_QUANDO": "Até quando?",
+      "FIM": {
+        "NUNCA": "Sem data para acabar",
+        "DATA": "Até um dia",
+        "VEZES": "Um número de vezes"
+      },
+      "QUANTAS": "Quantas vezes?",
+      "N_VEZES": "{n} vezes",
+      "ULTIMO_DIA": "Último dia",
+      "PROXIMAS": "Próximas datas",
+      "TOTAL": "{n} vezes ao todo. A última é {ultima}.",
+      "SEM_FIM": "E assim por diante, até você pausar ou encerrar.",
+      "ESCOLHA_DIA": "Escolha o dia acima para ver as próximas datas.",
+      "FUSO": "Sempre no horário de {fuso}.",
+      "FRASE": {
+        "DIA": "Todo dia, às {hora}",
+        "DIA_UTIL": "De segunda a sexta, às {hora}",
+        "SEMANA": "Toda {dias}, às {hora}",
+        "MES": "Todo dia {dia} do mês, às {hora}",
+        "MES_FIM": "Todo dia {dia} do mês (ou o último dia), às {hora}",
+        "ANO": "Todo ano em {dia}, às {hora}",
+        "UMA_VEZ": "Uma vez só",
+        "SEMANA_FIM": "Todo {dias}, às {hora}"
+      }
+    },
+    "QUEM": {
+      "PERGUNTA": "Quem recebe o aviso?",
+      "DONO": "Quem cuida do cliente",
+      "DONO_TEXTO": "Hoje é {nome}. Se mudar quem cuida, o aviso vai junto.",
+      "EU": "Só eu",
+      "EU_TEXTO": "{nome}, você.",
+      "PESSOAS": "Escolher pessoas",
+      "PESSOAS_TEXTO": "Uma ou mais pessoas da equipe.",
+      "TIME": "Um time inteiro",
+      "TIME_TEXTO": "Todo mundo do time recebe.",
+      "TIME_NOME": "{nome} ({n} pessoas)",
+      "ESCOLHA_PESSOAS": "Marque quem recebe:",
+      "SEM_FUNIL": "Não vê o funil {funil}",
+      "QUAL_TIME": "Qual time?",
+      "ESCOLHA_TIME": "Escolha o time",
+      "RECEBEM": "Recebem: {nomes}.",
+      "CRIADOR_VE": "Você também vê este lembrete na sua agenda, porque foi você que marcou."
+    },
+    "PREVIA": {
+      "PROXIMAS": "Próximas: {datas}",
+      "AVISA": "Avisa: {nomes}",
+      "AVISA_DONO": "Avisa: {nomes}, quem cuida do cliente",
+      "AVISA_FALTA": "Escolha quem recebe o aviso.",
+      "ONDE_NADA": "Fica só no calendário.",
+      "ONDE_CONTATO": "Fica no calendário e na ficha de {nome}.",
+      "ONDE_CARD": "Fica no calendário e no card de {nome}.",
+      "ONDE_CONTATO_SEM": "Fica no calendário e na ficha do cliente.",
+      "ONDE_CARD_SEM": "Fica no calendário e no card do cliente.",
+      "ONDE_NADA_SEM": "Fica só no calendário.",
+      "ONDE_EMPRESA": "Fica no calendário e na ficha de {nome}.",
+      "ONDE_EMPRESA_SEM": "Fica no calendário e na ficha da empresa."
+    },
+    "LISTA": {
+      "TITULO": "Repetem",
+      "PROXIMA": "Próxima: {dia}, às {hora}",
+      "PAUSADA": "Pausado",
+      "AVISA": "Avisa: {nomes}",
+      "VER": "Ver"
+    },
+    "SERIE": {
+      "TELA": "Repetição",
+      "TEXTO": "Veja as próximas datas e quem recebe. Dá para pausar ou encerrar.",
+      "MUDAR": "Mudar",
+      "LIGADO_CARD": "Negócio: {nome}",
+      "LIGADO_CONTATO": "Cliente: {nome}",
+      "LIGADO_NADA": "Só no calendário",
+      "FUSO": "horário de {fuso}",
+      "QUEM_DONO": "{nomes}, quem cuida do cliente. Se mudar quem cuida, o aviso vai junto.",
+      "QUEM_TIME": "Time {time}: {nomes}.",
+      "SITUACAO": {
+        "ATIVA": "Repetindo",
+        "PAUSADA": "Pausado",
+        "ENCERRADA": "Encerrado"
+      },
+      "PAUSADA_DESDE": "Pausado desde {dia}. Ninguém recebe aviso até você retomar.",
+      "FEITO_ESTE": "Feito desta vez",
+      "PAUSAR": "Pausar",
+      "RETOMAR": "Retomar",
+      "ENCERRAR": "Encerrar",
+      "ENCERRAR_TITULO": "Encerrar este lembrete?",
+      "ENCERRAR_TEXTO": "Ele para de repetir e ninguém recebe mais aviso. O que já foi feito continua no histórico.",
+      "ENCERRAR_CONFIRMA": "Encerrar",
+      "CONTINUAR": "Voltar",
+      "MUDAR_TITULO": "O que você quer mudar?",
+      "MUDAR_TEXTO": "Escolha uma das duas.",
+      "SO_ESTA": "Só a próxima ({dia})",
+      "SO_ESTA_TEXTO": "As outras datas continuam como estão.",
+      "ESTA_E_PROXIMAS": "Esta e todas as próximas",
+      "ESTA_E_PROXIMAS_TEXTO": "O que já passou não muda.",
+      "PROXIMAS": "Próximas datas",
+      "DIA_HORA": "{dia}, às {hora}",
+      "A_PROXIMA": "A próxima",
+      "NAO_AVISA": "Pausado",
+      "QUEM_RECEBE": "Quem recebe o aviso",
+      "FEITO_OK": "Pronto, {dia} ficou como feito. A próxima continua marcada.",
+      "PAUSADA_OK": "Pronto, pausado.",
+      "RETOMADA_OK": "Pronto, voltou a repetir.",
+      "ENCERRADA_OK": "Pronto, encerrado.",
+      "LADO_TITULO": "O que cada botão faz",
+      "LADO_TEXTO": "Nada some sem você confirmar.",
+      "AJUDA": {
+        "FEITO": "Feito desta vez: marca só a data de agora. As próximas continuam.",
+        "PAUSAR": "Pausar: ninguém recebe aviso até você retomar. As datas não somem.",
+        "ENCERRAR": "Encerrar: para de repetir. O histórico fica guardado.",
+        "MUDAR": "Mudar: você escolhe se muda só a próxima ou todas daqui para a frente."
+      },
+      "ERRO": "Não deu certo. Tente de novo.",
+      "ERRO_CARREGAR": "Não deu para abrir este lembrete agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "PASSADAS": "Datas que já passaram ({n})",
+      "HISTORICO": {
+        "FEITA": "Feito",
+        "AVISADA": "Avisado",
+        "NAO_AVISADA": "Não avisado"
+      },
+      "LIGADO_EMPRESA": "Empresa: {nome}"
+    },
+    "LIGAR": {
+      "PERGUNTA": "É sobre quem?",
+      "NADA": "Ninguém",
+      "NADA_TEXTO": "Fica só no calendário. Ex.: pagar o aluguel.",
+      "CONTATO": "Um cliente",
+      "CONTATO_TEXTO": "Mesmo sem negócio aberto. Ex.: aniversário.",
+      "CARD": "Um negócio do funil",
+      "CARD_TEXTO": "Aparece também no card do cliente.",
+      "QUAL_CARD": "Qual negócio?",
+      "QUAL_CONTATO": "Qual cliente?",
+      "BUSCAR": "Escolha",
+      "BUSCAR_DICA": "Digite o nome",
+      "FALTA": "Falta escolher o cliente."
+    },
+    "GAVETA": {
+      "ROTULO": "Calendário",
+      "TITULO": "Novo lembrete",
+      "TEXTO": "Um aviso para você ou para a equipe, no dia e na hora certos."
+    },
+    "MUDADO": "Pronto, lembrete mudado.",
+    "MUDAR": {
+      "TITULO_ESTA": "Mudar só a próxima vez",
+      "TITULO_PROXIMAS": "Mudar esta e as próximas",
+      "TEXTO_ESTA": "As outras datas continuam como estão.",
+      "TEXTO_PROXIMAS": "O que já passou não muda."
+    },
+    "MODO_OUTROS": {
+      "TITULO": "Avisar na hora",
+      "TEXTO": "Aviso na hora marcada para {nomes}."
+    },
+    "UNICO": {
+      "TEXTO": "Um lembrete de uma vez só.",
+      "QUANDO": "{dia}, às {hora} (horário de {fuso})",
+      "FEITO_OK": "Pronto, marcado como feito.",
+      "CANCELADO_OK": "Pronto, cancelado.",
+      "EMPRESA": "Empresa: {nome}"
+    },
+    "FICHA": {
+      "NOVO": "Novo lembrete"
+    },
+    "CALENDARIO": {
+      "REPETE": "Lembrete que repete:",
+      "PAUSADO": "Lembrete pausado:"
+    },
+    "FALTA": {
+      "NOME": "dar um nome ao lembrete"
     }
   }
 }
