@@ -9,6 +9,7 @@ import { nomeSemExtensao } from '../utils/nomeDoArquivo';
 // agente se apoiou num arquivo: quebra dentro do balão, no máximo 2 linhas, nome inteiro no title.
 // Nunca mostra confiança, nota ou percentual.
 // 'equipe' (#1494) é quem pergunta ao Copiloto da equipe: fica à direita, mas não como cliente.
+// 'principal' (tema 14, #1434) é o agente principal que consulta o ajudante: também à direita.
 // mensagens: [{ de: 'cliente' | 'equipe' | 'agente', texto, hora?, usou?: [nome do arquivo], fotos?: [url] }], ou
 // { de: 'aviso', texto } para uma faixa no meio da conversa (ex.: "aqui passaria para a equipe").
 // Slots (#1181 PR2, teste da criação): `acao` no cabeçalho, `depois` embaixo das mensagens (vazio,
@@ -37,11 +38,13 @@ const inicial = computed(() =>
 const QUEM = {
   cliente: 'AGENTS.JORNADA.COMUM.CLIENTE',
   equipe: 'AGENTS.JORNADA.COMUM.EQUIPE',
+  principal: 'AGENTS.JORNADA.COMUM.PRINCIPAL',
 };
 const quem = de => t(QUEM[de] || 'AGENTS.JORNADA.COMUM.AGENTE');
 const BALAO = {
   cliente: 'self-end bg-[#D9FDD3] dark:bg-n-teal-4 rounded-ee-md',
   equipe: 'self-end bg-n-blue-3 rounded-ee-md',
+  principal: 'self-end bg-n-iris-3 rounded-ee-md',
 };
 const classeDoBalao = de =>
   BALAO[de] || 'self-start bg-white dark:bg-n-solid-2 rounded-es-md';

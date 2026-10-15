@@ -133,6 +133,42 @@ describe('AgentesListaPage', () => {
       wrapper.unmount();
     });
 
+    it('counts helpers apart and shows them as "Ajudando" with who they help (tema 14)', async () => {
+      prepararStore({
+        agentes: [
+          ...AGENTES,
+          agente(6, {
+            name: 'Duda',
+            actuation: 'internal',
+            channels_count: 0,
+            tem_onde_trabalhar: true,
+            ajudante: true,
+            ajuda: [{ id: 3, name: 'Bia' }],
+          }),
+        ],
+      });
+      const wrapper = await montar();
+      expect(wrapper.get('[data-contagem]').text()).toContain(
+        'AGENTS.JORNADA.LISTA.CONTAGEM_AJUDANDO'
+      );
+      const nomes = wrapper.findAll('[data-cartao] h2').map(n => n.text());
+      expect(nomes).toEqual(['Bia', 'Duda', 'Leo', 'Rascunho']);
+      const cartao = wrapper.findAll('[data-cartao]')[1];
+      expect(cartao.text()).toContain('AGENTS.JORNADA.STATUS.AJUDANDO');
+      expect(cartao.get('[data-ajuda]').text()).toBe(
+        'AGENTS.JORNADA.ONDE.AJUDA'
+      );
+      wrapper.unmount();
+    });
+
+    it('has no helper count when there is no helper', async () => {
+      const wrapper = await montar();
+      expect(wrapper.get('[data-contagem]').text()).not.toContain(
+        'CONTAGEM_AJUDANDO'
+      );
+      wrapper.unmount();
+    });
+
     it('reads the week numbers and the inbox names once', async () => {
       const wrapper = await montar();
       expect(api.semana).toHaveBeenCalledTimes(1);

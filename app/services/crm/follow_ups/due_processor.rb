@@ -1,4 +1,7 @@
 class Crm::FollowUps::DueProcessor
+  # Lembrete de Atender sem a quem mandar (#1498): cancela calado, sem aviso na tela a cada lembrete.
+  SEM_DESTINO = [Crm::FollowUps::MessageSender::OPTED_OUT_REASON, 'contact_disabled', 'card_archived', 'no_conversation'].freeze
+
   def initialize(now: Time.current)
     @now = now
   end
@@ -66,8 +69,22 @@ class Crm::FollowUps::DueProcessor
       Crm::Ai::Config.auto_followup_settings(follow_up.card.pipeline)['mode'] == 'ai_reminder'
   end
 
+  # Lembrete de Atender (#1498) vai pelo mesmo caminho do retorno combinado: a IA escreve no envio.
   def ai_callback?(follow_up)
-    follow_up.metadata.to_h['source'] == 'ai_callback'
+    [Crm::FollowUps::CallbackScheduler::SOURCE, Crm::FollowUps::ServiceReminderScheduler::SOURCE]
+      .include?(follow_up.metadata.to_h['source'])
+  end
+
+  # Lembrete de Atender que não saiu (#1498): a equipe lê o porquê em linguagem simples, na agenda e no aviso.
+  def aviso_para_a_equipe(follow_up, motivo)
+    return {} unless service_reminder?(follow_up)
+
+    texto = I18n.with_locale(follow_up.account.locale) { Crm::FollowUps::EnvioForaDaJanela.aviso(motivo) }
+    { description: texto }
+  end
+
+  def service_reminder?(follow_up)
+    follow_up.metadata.to_h['source'] == Crm::FollowUps::ServiceReminderScheduler::SOURCE
   end
 
   # AI kill-switch re-checked at execution (not just at scan/plan time): global
@@ -78,8 +95,24 @@ class Crm::FollowUps::DueProcessor
   end
 
   def ai_callback_enabled?(follow_up)
+    return Crm::Ai::Config.enabled? if service_reminder?(follow_up)
+
     Crm::Ai::Config.enabled? &&
       Crm::Ai::Config.pipeline_callback_enabled?(follow_up.card.pipeline)
+  end
+
+  # Lembrete de Atender que deixou de valer (card fechou, mudou de etapa, vencimento ou interruptor mudou) não sai.
+  def cancel_obsolete_service_reminder(follow_up, reason = 'no_longer_due')
+    follow_up.update!(status: :canceled, canceled_at: @now,
+                      metadata: follow_up.metadata.merge('canceled_reason' => reason.to_s))
+    finalize_follow_up(follow_up)
+  end
+
+  # Lembrete de Atender para quem recusou mensagem automática, contato sem follow-up ou card arquivado: cancela em
+  # silêncio, sem virar aviso na tela a cada lembrete (como o envio manual faz com quem recusou).
+  def lembrete_sem_destino?(follow_up, reason)
+    service_reminder?(follow_up) &&
+      SEM_DESTINO.include?(reason.to_s)
   end
 
   # Retorno por data (one-shot). O CallbackRunner ENVIA (free_form/template) ou devolve :fallback
@@ -89,6 +122,9 @@ class Crm::FollowUps::DueProcessor
     # disabled callbacks, leave the row pending (do nothing) so it resumes if
     # re-enabled — never dispatch the runner (which would spend an AI call).
     return unless ai_callback_enabled?(follow_up)
+    if service_reminder?(follow_up) && !Crm::FollowUps::ServiceReminderScheduler.wanted?(follow_up, now: @now)
+      return cancel_obsolete_service_reminder(follow_up)
+    end
 
     result = Crm::FollowUps::CallbackRunner.new(follow_up: follow_up, now: @now).perform
 
@@ -98,8 +134,11 @@ class Crm::FollowUps::DueProcessor
       log_message_sent(follow_up, follow_up.conversation&.messages&.find_by(id: follow_up.metadata.to_h['sent_message_id']))
       finalize_follow_up(follow_up)
     when :fallback
+      return cancel_obsolete_service_reminder(follow_up, result.error) if lembrete_sem_destino?(follow_up, result.error)
+
       follow_up.update!(automation_mode: Crm::FollowUp.automation_modes[:reminder_only],
-                        metadata: follow_up.metadata.merge('callback_fallback' => result.error.to_s))
+                        metadata: follow_up.metadata.merge('callback_fallback' => result.error.to_s),
+                        **aviso_para_a_equipe(follow_up, result.error))
       process_overdue(follow_up) # status overdue + reopen + notify popup + finalize
     when :failed
       follow_up.update!(due_at: result.retry_at, metadata: follow_up.metadata.merge('send_error' => result.error.to_s))

@@ -233,5 +233,19 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
       expect(events.count { |event| event['virtual'] }).to be >= 4
       expect(events.count { |event| !event['virtual'] }).to eq(1)
     end
+
+    # #1568: as vezes calculadas trazem o mesmo responsável que a vez criada (o "Só os meus" do calendário).
+    it 'gives the next times the same owner the created time has' do
+      create_reminder(admin, title: 'Ligar toda semana', card_id: card.id, due_at: 1.hour.from_now.iso8601,
+                             recurrence: { frequency: 'daily' })
+
+      get "#{base_url}/calendar/events", params: { from: Time.current.iso8601, to: 3.days.from_now.iso8601 },
+                                         headers: auth_headers(admin)
+
+      events = response.parsed_body['payload'].select { |event| event['title'] == 'Ligar toda semana' }
+      real = events.find { |event| !event['virtual'] }
+      expect(real['assignee_id']).to eq(agent.id)
+      expect(events.select { |event| event['virtual'] }.pluck('assignee_id').uniq).to eq([agent.id])
+    end
   end
 end

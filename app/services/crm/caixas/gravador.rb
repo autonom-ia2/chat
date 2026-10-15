@@ -11,6 +11,8 @@
 # - Funil arquivado não aparece na tela: seus vínculos e liberações ficam como estão.
 # - Pessoa que cuida de tudo (sem assunto, todos os funis, todas as conversas) fica sem linha de acesso: é o mesmo
 #   que não ter configuração (R5). Administrador e usuário de integração nunca ganham linha.
+# - Agentes de IA de área e os funis deles (#1447): só quando a tela manda `ai_agents` (Crm::Caixas::GravadorDeAgentes).
+#   Funil que sai da caixa leva junto o agente responsável por ele nela.
 class Crm::Caixas::Gravador
   class Invalida < StandardError
     attr_reader :code
@@ -38,6 +40,7 @@ class Crm::Caixas::Gravador
       funis_retirados = gravar_vinculos!
       gravar_configuracao!
       gravar_acessos!
+      gravar_agentes!(funis_retirados)
       expirar_sugestoes!(funis_retirados)
     end
   end
@@ -138,6 +141,13 @@ class Crm::Caixas::Gravador
     vinculo.assign_attributes(auto_create_card: um_funil? && modo == 'chegou', default_stage_id: um_funil? ? etapa.id : nil)
     vinculo.created_by ||= @user
     vinculo.save!
+  end
+
+  def gravar_agentes!(funis_retirados)
+    Crm::InboxAiAgent.where(account_id: @account.id, inbox_id: @inbox.id, pipeline_id: funis_retirados).delete_all if funis_retirados.any?
+    return unless @dados.key?(:ai_agents)
+
+    Crm::Caixas::GravadorDeAgentes.new(account: @account, inbox: @inbox, lista: @dados[:ai_agents], pipeline_ids: pipeline_ids).perform
   end
 
   # Sugestão de assunto que esperava resposta num funil que saiu da caixa não pode mais ser aceita: sai da tela,

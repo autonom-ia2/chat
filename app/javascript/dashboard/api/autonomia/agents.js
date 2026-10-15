@@ -62,6 +62,20 @@ class AutonomiaAgentsAPI extends ApiClient {
     );
   }
 
+  // Tema 14 (#1434) — who a helper agent helps and when to call it (behind the
+  // account's Fase 2; 404 without it). PUT replaces the whole set; 422 carries
+  // the reason in `error`.
+  getAjuda(agentId) {
+    return axios.get(`${this.url}/${agentId}/ajuda`);
+  }
+
+  updateAjuda(agentId, { principalIds, quando }) {
+    return axios.put(`${this.url}/${agentId}/ajuda`, {
+      principal_ids: principalIds,
+      quando,
+    });
+  }
+
   getTools(agentId) {
     return axios.get(`${this.url}/${agentId}/tools`);
   }

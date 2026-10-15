@@ -5,7 +5,8 @@ import AgenteAvatar from './AgenteAvatar.vue';
 import AgenteStatus from './AgenteStatus.vue';
 import AgenteBotao from './AgenteBotao.vue';
 import AgenteMenuMais from './AgenteMenuMais.vue';
-import { ESTADO, estadoDoAgente } from '../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO, estadoDoAgente } from '../utils/estadoDoAgente';
+import { ehAjudante, nomesQueAjuda } from '../utils/ajudante';
 
 // #1181 (protótipo T02) — cartão do agente na lista.
 // - Atendendo/Parado: o cartão inteiro abre o agente. Atendendo mostra onde responde (nome do canal
@@ -13,6 +14,10 @@ import { ESTADO, estadoDoAgente } from '../utils/estadoDoAgente';
 // - Falta terminar: "Continuar" e o "⋯" com Excluir rascunho, só para quem gerencia.
 // - Cotação: abre a página do agente já na escolha de canal (#1525). Agente interno não fala de canal.
 // `canais`: caixas da L2 deste agente, ou null quando a L2 não pôde ser lida.
+// #1433 (tema 13) — Na equipe: diz em quais caixas recebe quando alguém passa (`equipe`, nomes pela L2; sem a
+// L2, só o papel). Não mostra os números da semana do principal nem "Responde no".
+// Tema 14 (#1434) — o ajudante diz quem ajuda ("Ajuda: Clara, Bruno"), ligado ou parado, e não leva o selo
+// do Copiloto da equipe: ele é interno, mas ajuda agentes, não a equipe.
 const props = defineProps({
   agente: { type: Object, required: true },
   numeros: { type: Object, default: null },
@@ -24,6 +29,8 @@ const props = defineProps({
   continuando: { type: Boolean, default: false },
   // Endereço da página do agente (ou do módulo de cotação): abrir em outra aba continua funcionando.
   href: { type: String, required: true },
+  // #1433: nomes das caixas em que o agente está na equipe (L2), ou null sem a leitura.
+  equipe: { type: Array, default: null },
 });
 
 const emit = defineEmits(['abrir', 'continuar', 'excluir', 'abrirCotacao']);
@@ -37,10 +44,14 @@ const fotoDoCartao = computed(
   () => props.foto || props.agente.avatar_url || ''
 );
 const interno = computed(() => props.agente.actuation === 'internal');
+const ajudante = computed(() => ehAjudante(props.agente));
+const ajuda = computed(() => nomesQueAjuda(props.agente));
 const quantosCanais = computed(() => props.agente.channels_count || 0);
 const rascunho = computed(() => estado.value === ESTADO.FALTA_TERMINAR);
 const cotacao = computed(() => estado.value === ESTADO.COTACAO);
 const atendendo = computed(() => estado.value === ESTADO.ATENDENDO);
+const naEquipe = computed(() => estado.value === ESTADO.NA_EQUIPE);
+const trabalhando = computed(() => TRABALHANDO.includes(estado.value));
 
 const onde = computed(() => {
   const total = quantosCanais.value;
@@ -60,6 +71,16 @@ const linha = computed(() => {
       : t('AGENTS.JORNADA.CARTAO.COTACAO');
   }
   if (atendendo.value) return null;
+  if (ajudante.value && ajuda.value) {
+    return t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: ajuda.value });
+  }
+  if (naEquipe.value) {
+    return props.equipe?.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
+          caixas: props.equipe.join(', '),
+        })
+      : t('AGENTS.JORNADA.ONDE.RECEBE');
+  }
   // Agente interno nunca entra em canal (backend: agent_internal_not_connectable).
   return quantosCanais.value || interno.value
     ? t('AGENTS.JORNADA.CARTAO.PARADO')
@@ -139,7 +160,7 @@ const itensDoMenu = computed(() => [
         <AgenteAvatar
           :nome="nome"
           :src="fotoDoCartao"
-          :tom="atendendo ? 'atendendo' : 'neutro'"
+          :tom="trabalhando ? 'atendendo' : 'neutro'"
         />
         <span class="flex flex-col gap-1 grow min-w-0">
           <h2 class="m-0 text-base font-semibold truncate text-n-slate-12">
@@ -148,7 +169,7 @@ const itensDoMenu = computed(() => [
           <span class="flex flex-wrap items-center gap-1.5">
             <AgenteStatus :estado="estado" />
             <span
-              v-if="interno"
+              v-if="interno && !ajudante"
               class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-n-iris-3 text-n-slate-12"
             >
               {{ t('AGENTS.HUB.INTERNAL_BADGE') }}
@@ -160,7 +181,13 @@ const itensDoMenu = computed(() => [
           aria-hidden="true"
         />
       </span>
-      <span v-if="linha" class="text-sm text-n-slate-12">{{ linha }}</span>
+      <span
+        v-if="linha"
+        :data-equipe="naEquipe ? '' : undefined"
+        :data-ajuda="ajudante && ajuda ? '' : undefined"
+        class="text-sm text-n-slate-12"
+        >{{ linha }}</span
+      >
       <template v-if="atendendo && !interno">
         <span data-onde class="text-sm text-n-slate-12">{{ onde }}</span>
         <span

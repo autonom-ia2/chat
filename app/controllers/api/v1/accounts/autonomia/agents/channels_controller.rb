@@ -1,22 +1,27 @@
 class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accounts::Autonomia::BaseController
+  PAPEL_AREA = 'area'.freeze
+
   before_action :fetch_agent
   before_action :fetch_inbox, only: [:create, :destroy]
 
-  # Lista os vínculos do agente + inboxes elegíveis da conta (para o seletor de canal).
+  # Lista os vínculos ativos do agente + inboxes elegíveis da conta (para o seletor de canal).
+  # #1433: a área desmarcada fica arquivada (deleted_at) e não é canal; cada vínculo diz o papel.
   def index
-    @agent_inboxes = @agent.agent_inboxes.includes(:inbox).order(created_at: :desc)
-    @eligible_inboxes = eligible_inboxes
+    load_index
   end
 
   # `ativar: true` (#1366) — "Começar a atender neste canal": liga o agente parado junto com o vínculo.
+  # `papel: 'area'` (#1433, tema 13) — "agente da equipe": entra na caixa como área (recebe quando alguém passa) e já
+  # liga, pelo Autonomia::Agents::Areas. Só com a Fase 2 ligada na conta.
   def create
+    return create_area if params[:papel] == PAPEL_AREA
+
     ativar = ActiveModel::Type::Boolean.new.cast(params[:ativar]) == true
     result = ::Autonomia::Agents::Operate::InboxConnector.new(agent: @agent, inbox: @inbox, ativar: ativar).perform(connect: true)
     return render_unprocessable(connector_error(result.error)) unless result.success?
 
     @agent_inbox = result.agent_inbox
-    @agent_inboxes = @agent.agent_inboxes.includes(:inbox).order(created_at: :desc)
-    @eligible_inboxes = eligible_inboxes
+    load_index
     render :index, status: :created
   end
 
@@ -37,6 +42,57 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     @inbox = Current.account.inboxes.find(params[:inbox_id])
   end
 
+  def load_index
+    @agent_inboxes = @agent.agent_inboxes.kept.includes(:inbox).order(created_at: :desc)
+    @eligible_inboxes = eligible_inboxes
+  end
+
+  # As recusas previsíveis respondem antes, com o motivo; o Areas confere de novo com agente e caixa travados (inclusive
+  # o principal atendendo). Idempotente: a área já ativa do mesmo agente nesta caixa responde 200 com o mesmo vínculo
+  # (a tela repete o pedido depois de uma falha no meio, sem saber o que já entrou).
+  def create_area
+    recusa = recusa_de_area
+    return render_unprocessable(area_error(recusa)) if recusa
+
+    ja_era_area = area_ativa?
+    # `de_rascunho`: esta é a criação do agente da equipe; o rascunho com a conversa de criação fechada entra e liga.
+    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, exigir_porta_atendendo: true,
+                                                        de_rascunho: true)
+    load_index
+    render :index, status: ja_era_area ? :ok : :created
+  rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
+    render_unprocessable(area_error(:agent_internal))
+  rescue ::Autonomia::Agents::Areas::AgenteRascunho
+    render_unprocessable(area_error(:rascunho))
+  rescue ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
+    render_unprocessable(area_error(:nao_pode_ser_area))
+  rescue ::Autonomia::Agents::Areas::SemPortaAtendendo
+    render_unprocessable(area_error(:sem_principal))
+  rescue ActiveRecord::RecordNotUnique
+    render_unprocessable(area_error(:already_linked))
+  rescue ActiveRecord::RecordInvalid
+    render_unprocessable(area_error(:generic))
+  end
+
+  def recusa_de_area
+    return :fase2_off unless ::Autonomia::Agents::Fase2.ligada?(Current.account)
+    return :agent_internal if @agent.actuation_internal?
+    # Já é o principal (porta) desta caixa: não pode ser também da equipe dela.
+    return :already_linked if ::Autonomia::Agents::AgentInbox.kept.porta.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
+
+    :sem_principal unless principal_atendendo?
+  end
+
+  def area_ativa?
+    ::Autonomia::Agents::AgentInbox.kept.area.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
+  end
+
+  # A caixa tem porta ativa (vínculo kept de papel porta) cujo agente está atendendo.
+  def principal_atendendo?
+    porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: @inbox.id)
+    porta.present? && porta.agent.operating?
+  end
+
   # Inboxes da conta que ainda não têm nenhum bot (nem webhook/Gabriela, nem agente nativo).
   def eligible_inboxes
     connected_ids = ::Autonomia::Agents::AgentInbox.kept.where(account: Current.account).pluck(:inbox_id)
@@ -48,5 +104,9 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
   def connector_error(code)
     I18n.t("autonomia.agents.operate.connect_errors.#{code}",
            default: I18n.t('autonomia.agents.operate.connect_errors.generic'))
+  end
+
+  def area_error(code)
+    I18n.t("autonomia.agents.operate.area_errors.#{code}", nome: @agent.name, canal: @inbox.name)
   end
 end

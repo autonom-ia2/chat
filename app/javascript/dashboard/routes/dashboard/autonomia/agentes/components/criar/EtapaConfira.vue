@@ -26,11 +26,15 @@ const props = defineProps({
   conversaPensando: { type: Boolean, default: false },
   // Rótulo do botão de começar ("Começar a atender no WhatsApp"), ou '' quando não há canal.
   rotuloComecar: { type: String, default: '' },
+  // #1433: o texto embaixo do botão quando ele não é o de sempre (agente da equipe).
+  textoComecar: { type: String, default: '' },
   podeConectarCanal: { type: Boolean, default: false },
   linkConectarCanal: { type: String, default: '' },
   celular: { type: Boolean, default: false },
   // Copiloto da equipe (#1494): o teste é de alguém da equipe e o agente não responde clientes.
   interno: { type: Boolean, default: false },
+  // Tema 14 (#1434): o ajudante (também interno) é testado como o agente principal o consultaria.
+  ajudante: { type: Boolean, default: false },
   // "Fazer ajustes avançados" foi pedido e a página ainda está deixando o agente parado.
   abrindoAjustes: { type: Boolean, default: false },
   // As caixas ainda estão sendo lidas: Começar espera (sem teste, a pessoa chega aqui antes delas).
@@ -65,9 +69,8 @@ watch(
 const celularMensagens = computed(() =>
   props.mensagens.flatMap(mensagem => {
     if (props.interno) {
-      return [
-        mensagem.de === 'cliente' ? { ...mensagem, de: 'equipe' } : mensagem,
-      ];
+      const quem = props.ajudante ? 'principal' : 'equipe';
+      return [mensagem.de === 'cliente' ? { ...mensagem, de: quem } : mensagem];
     }
     return mensagem.passaria
       ? [
@@ -92,9 +95,15 @@ const podeDizerErrado = computed(
     ultima.value?.de === 'agente'
 );
 
+const tituloDoTeste = computed(() => {
+  if (props.ajudante) return t(`${NS}.TITULO_AJUDANTE`);
+  return props.interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`);
+});
+
 const estadoDoCabecalho = computed(() => {
   const nome = { nome: props.nome };
   if (props.digitando) return t(`${NS}.ESCREVENDO`, nome);
+  if (props.ajudante) return t(`${NS}.AJUDA_AOS_AGENTES`, nome);
   return props.interno
     ? t(`${NS}.AJUDA_DA_EQUIPE`, nome)
     : t(`${NS}.ATENDIDO_POR`, nome);
@@ -158,7 +167,7 @@ const respondeuErrado = () => {
         class="m-0 text-lg font-semibold text-n-slate-12"
         :class="celular ? 'sr-only' : ''"
       >
-        {{ interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`) }}
+        {{ tituloDoTeste }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
       <!-- No celular a dica fica aqui em cima: a barra fixa embaixo já leva perguntas, campo e Começar. -->
@@ -299,9 +308,10 @@ const respondeuErrado = () => {
         </AgenteBotao>
         <p id="confira-comecar-texto" class="m-0 text-sm text-n-slate-11">
           {{
-            interno
+            textoComecar ||
+            (interno
               ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
-              : t(`${NS}.COMECAR_TEXTO`, { nome })
+              : t(`${NS}.COMECAR_TEXTO`, { nome }))
           }}
         </p>
       </div>

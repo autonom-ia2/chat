@@ -57,9 +57,10 @@ class Crm::BookingV2::ManageMeeting
     alert('rescheduled', from: previous.iso8601)
   end
 
-  def stop_notices!
+  # reason: de onde veio o pedido (o link de gestão, ou o botão "Parar avisos" do modelo, #1524).
+  def stop_notices!(reason: 'client_link')
     stop = Crm::BookingNoticeStop.create_or_find_by!(account_id: invite.account_id, contact_id: invite.contact_id) do |record|
-      record.reason = 'client_link'
+      record.reason = reason
     end
     newly = stop.previously_new_record?
     now = Time.current

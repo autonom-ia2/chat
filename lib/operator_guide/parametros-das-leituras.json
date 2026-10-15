@@ -112,6 +112,10 @@
     "controller": "api/v1/accounts/autonomia/agents#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/ajuda": {
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
@@ -1392,7 +1396,9 @@
     "controller": "api/v1/accounts/crm/stage_criteria#defaults",
     "parametros": [
       "atender",
-      "names"
+      "names",
+      "positions",
+      "template"
     ]
   },
   "crm/stages/:stage_id/stage_automations": {
@@ -1987,6 +1993,10 @@
   },
   "whatsapp_message_prices": {
     "controller": "api/v1/accounts/whatsapp_message_prices#index",
+    "parametros": []
+  },
+  "whatsapp_template_consent": {
+    "controller": "api/v1/accounts/whatsapp_template_consents#show",
     "parametros": []
   },
   "whatsapp_template_inboxes": {

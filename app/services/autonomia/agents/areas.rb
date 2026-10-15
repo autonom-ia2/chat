@@ -17,6 +17,13 @@ module Autonomia::Agents::Areas
   class AgenteInterno < StandardError; end
   class AgenteNaoAtende < StandardError; end
   class AgenteDeSistema < StandardError; end
+  class SemPortaAtendendo < StandardError; end
+  class AgenteRascunho < StandardError; end
+  class AgenteNaoPodeSerArea < StandardError; end
+
+  # O motivo de Agent#motivo_para_nao_ser_area vira o erro de cada um.
+  RECUSAS = { interno: AgenteInterno, sistema: AgenteDeSistema, rascunho: AgenteRascunho,
+              fora_da_equipe: AgenteNaoPodeSerArea }.freeze
 
   module_function
 
@@ -24,18 +31,30 @@ module Autonomia::Agents::Areas
   # InboxConnector#connect_locked!, mais o de sistema). ActiveRecord::RecordInvalid quando a caixa não tem porta
   # ativa, o agente já é a porta dela, ou agente/caixa são de contas diferentes.
   #
-  # `ativar: true` (#1366) — "pôr o agente nesta área e ligá-lo": aceita o agente parado ou em rascunho e o liga
+  # Só entra quem `pode_ser_area?` (#1433), mesmo com `ativar`: senão AgenteInterno, AgenteDeSistema, AgenteRascunho
+  # ou AgenteNaoPodeSerArea (ajudante, Lia, parado de propósito com caixa).
+  #
+  # `ativar: true` (#1366) — "pôr o agente nesta área e ligá-lo": aceita o agente parado SEM onde trabalhar e o liga
   # (active + enabled) na MESMA transação do vínculo, como o InboxConnector. É o caminho da área que volta depois que
   # o agente parou por ter ficado sem onde trabalhar. Sem `ativar`, só vincula quem já atende.
+  #
+  # `de_rascunho: true` (com `ativar`) — só a criação do agente da equipe (POST channels com papel area): aceita o
+  # rascunho cuja conversa de criação já fechou (tem instrução). Rascunho pela metade é sempre recusado. O CRM não manda.
+  #
+  # `exigir_porta_atendendo: true` (#1433, tela do agente da equipe) — com a caixa já travada, confere que o principal
+  # dela (a porta) está atendendo; senão SemPortaAtendendo. A tela só oferece caixas assim, mas o principal pode parar
+  # entre a leitura e o clique.
   #
   # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete,
   # AgentInbox#soltar_areas_da_caixa!): a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam, e a
   # parada automática do agente não espera por uma caixa que outro segura.
-  def vincular!(agent:, inbox:, ativar: false)
+  def vincular!(agent:, inbox:, ativar: false, exigir_porta_atendendo: false, de_rascunho: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.
-      recusar_quem_nao_fala_com_cliente!(agent, ativar: ativar)
+      recusar_quem_nao_pode_ser_area!(agent, ativar: ativar, de_rascunho: de_rascunho)
       inbox.with_lock do
+        raise SemPortaAtendendo, "inbox #{inbox.id} has no operating porta" if exigir_porta_atendendo && !porta_atendendo?(inbox)
+
         vinculo = vincular_na_caixa!(agent, inbox)
         # Depois do vínculo: a validação de atender já o enxerga. Recusada, a transação desfaz o vínculo.
         agent.update!(status: :active, enabled: true) if ativar && !agent.operating?
@@ -65,10 +84,14 @@ module Autonomia::Agents::Areas
     vinculos.kept.area.first || reativar!(vinculos.area.order(deleted_at: :desc).first) || criar!(agent, inbox)
   end
 
-  def recusar_quem_nao_fala_com_cliente!(agent, ativar:)
-    raise AgenteInterno, "agent #{agent.id} is internal and never talks to customers" if agent.actuation_internal?
-    raise AgenteDeSistema, "agent #{agent.id} is a system agent" if agent.config&.dig('system_key').present?
+  def recusar_quem_nao_pode_ser_area!(agent, ativar:, de_rascunho:)
+    motivo = agent.motivo_para_nao_ser_area(de_rascunho: de_rascunho && ativar)
+    raise RECUSAS.fetch(motivo), "agent #{agent.id} cannot be a team agent (#{motivo})" if motivo
     raise AgenteNaoAtende, "agent #{agent.id} is not operating" unless ativar || agent.operating?
+  end
+
+  def porta_atendendo?(inbox)
+    ::Autonomia::Agents::AgentInbox.kept.porta.find_by(inbox_id: inbox.id)&.agent&.operating? || false
   end
 
   def reativar!(vinculo)
@@ -83,5 +106,5 @@ module Autonomia::Agents::Areas
     espelho = AgentBot.new(account: agent.account, name: agent.name, bot_type: :webhook, outgoing_url: nil)
     ::Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: agent.account, agent_bot: espelho, papel: 'area')
   end
-  private_class_method :vincular_na_caixa!, :recusar_quem_nao_fala_com_cliente!, :reativar!, :criar!
+  private_class_method :vincular_na_caixa!, :recusar_quem_nao_pode_ser_area!, :porta_atendendo?, :reativar!, :criar!
 end

@@ -69,9 +69,9 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['payload']).to eq([
                                                       { 'inbox_id' => alfa.id, 'name' => 'Alfa',
-                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil },
+                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil, 'areas' => [] },
                                                       { 'inbox_id' => zeta.id, 'name' => 'Zeta',
-                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil }
+                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil, 'areas' => [] }
                                                     ])
     end
 

@@ -6,7 +6,9 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import FunilInterruptor from './funil/FunilInterruptor.vue';
+import FunilLembretesAtender from './funil/FunilLembretesAtender.vue';
 import { diasEmFaixa, tempoAte } from './funil/funil';
+import { TEMPO_PADRAO, tempoDoLembrete } from './funil/lembretesAtender';
 
 // #1384 — "Lembretes e retornos" do funil. Abre no resumo (duas frases
 // prontas, cada uma com liga/desliga); "Alterar" leva ao detalhe das
@@ -17,6 +19,10 @@ const props = defineProps({
   // #1498 — num funil de Atender, "cliente que some" só aparece para quem já
   // tinha ligado: é lembrete pensado para venda.
   atender: { type: Boolean, default: false },
+  // #1498 — o modelo do funil (Cobrança lembra do vencimento) e o nome do
+  // sucesso, para as frases dos lembretes de Atender.
+  modelo: { type: String, default: '' },
+  sucesso: { type: String, default: '' },
 });
 
 const emit = defineEmits(['alterar']);
@@ -29,6 +35,14 @@ const isSaving = ref(false);
 const loadFailed = ref(false);
 const form = reactive({
   callbackMode: 'reminder',
+  // #1498 — lembretes de Atender (metadata.ai.service_reminders).
+  serviceReminders: {
+    progress: false,
+    resolved_check: false,
+    payment: false,
+    progress_after_hours: TEMPO_PADRAO,
+    resolved_check_after_hours: TEMPO_PADRAO,
+  },
   stageCriteria: {},
   autoFollowup: {
     enabled: false,
@@ -207,6 +221,20 @@ const loadSettings = async () => {
     form.callbackMode = ['message', 'both'].includes(payload.callback_mode)
       ? 'both'
       : 'reminder';
+    form.serviceReminders = {
+      progress: payload.service_reminders?.progress === true,
+      resolved_check: payload.service_reminders?.resolved_check === true,
+      payment: payload.service_reminders?.payment === true,
+      // #1589 — o tempo de andamento e "deu certo?", em horas.
+      progress_after_hours: tempoDoLembrete(
+        payload.service_reminders,
+        'progress'
+      ),
+      resolved_check_after_hours: tempoDoLembrete(
+        payload.service_reminders,
+        'resolved_check'
+      ),
+    };
     form.stageCriteria = Object.fromEntries(
       (payload.stages || []).map(stage => [stage.id, stage.ai_criteria || ''])
     );
@@ -256,6 +284,7 @@ const saveSettings = async ({ silent = false } = {}) => {
         callback_enabled: true,
         callback_mode: form.callbackMode,
         stale_hours: STALE_HOURS,
+        service_reminders: { ...form.serviceReminders },
         auto_followup: form.autoFollowup.enabled
           ? {
               enabled: form.autoFollowup.enabled,
@@ -321,6 +350,12 @@ watch(
 
     <!-- Resumo: as duas situações em frases, já prontas. -->
     <template v-else-if="!detalhe">
+      <FunilLembretesAtender
+        v-if="atender"
+        v-model="form.serviceReminders"
+        :modelo="modelo"
+        :sucesso="sucesso"
+      />
       <section
         data-callback
         class="flex flex-col gap-4 rounded-2xl border bg-n-solid-1 p-5"

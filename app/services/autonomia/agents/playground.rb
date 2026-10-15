@@ -16,7 +16,9 @@ module Autonomia
 
       # -> Autonomia::Agents::AnswerResult
       def run
-        Answerer.new(agent: @agent, query: @message, history: @history, images: @images, feature: USAGE_FEATURE).answer
+        # Tema 14 (#1434): o principal com ajudante testa com as mesmas rodadas da produção.
+        Answerer.new(agent: @agent, query: @message, history: @history, images: @images, feature: USAGE_FEATURE,
+                     **(Ajudantes.rodadas(@agent) || {})).answer
       end
     end
   end

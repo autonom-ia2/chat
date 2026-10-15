@@ -6,6 +6,7 @@ import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConv
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import RelationshipActionMenu from './RelationshipActionMenu.vue';
 import ContactOpportunityLink from './ContactOpportunityLink.vue';
+import LembreteNaFicha from 'dashboard/routes/dashboard/crm/components/lembrete/LembreteNaFicha.vue';
 
 const props = defineProps({
   readOnly: { type: Boolean, default: false },
@@ -49,6 +50,7 @@ const actions = computed(() => [
         </template>
       </ComposeConversation>
     </div>
+    <LembreteNaFicha :contato="{ id: contact.id, name: contact.name }" />
     <VoiceCallButton
       :phone="contact.phoneNumber"
       :contact-id="contact.id"

@@ -8,6 +8,7 @@ vi.mock('../../../../api/crmKanban', () => ({
   default: {
     createCard: vi.fn(),
     createPipeline: vi.fn(),
+    createStage: vi.fn(),
     updatePipeline: vi.fn(),
     accountIdFromRoute: '1',
     getPipelineInboxes: vi.fn(),
@@ -75,6 +76,28 @@ describe('#crmKanban pipeline save (#1197)', () => {
     await run({ name: 'Sem tipo' });
     expect(CrmKanbanAPI.createPipeline.mock.calls[1][0]).not.toHaveProperty(
       'counts_as_sale'
+    );
+  });
+
+  // #1548 — a posição da etapa no modelo chega ao servidor ao criar.
+  it('forwards template_position when creating a stage', async () => {
+    CrmKanbanAPI.createPipeline.mockResolvedValue({
+      data: { payload: { id: 5 } },
+    });
+    CrmKanbanAPI.createStage.mockResolvedValue({
+      data: { payload: { id: 1 } },
+    });
+    await actions.savePipelineWithStages(
+      { commit: vi.fn(), dispatch: vi.fn() },
+      {
+        pipeline: { name: 'Cobrança', template: 'COBRANCA' },
+        stages: [{ name: 'Boleto atrasado', template_position: 2 }],
+      }
+    );
+
+    expect(CrmKanbanAPI.createStage).toHaveBeenCalledWith(
+      5,
+      expect.objectContaining({ template_position: 2 })
     );
   });
 });

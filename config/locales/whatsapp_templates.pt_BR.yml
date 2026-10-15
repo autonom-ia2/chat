@@ -38,3 +38,21 @@ pt_BR:
       meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."
       suggestion_unavailable: "Não consegui escrever agora. Tente de novo em instantes ou escreva do seu jeito."
       suggestion_invalid: "Confira o pedido: escreva o que a mensagem precisa fazer, ou um texto de até 1024 letras."
+    # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
+    # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
+    consent:
+      formato_da_data: "%d/%m/%Y"
+      separador_decimal: ","
+      separador_milhar: "."
+      ligar:
+        utility: "Você autoriza o %{marca} a criar modelos de Aviso de serviço por conta própria e a enviá-los aos seus clientes, como o lembrete de pagamento. Os modelos que você já tem continuam como estão. A Meta cobra cada mensagem entregue, mesmo com a conversa aberta: %{preco} por Aviso de serviço (tabela da Meta para o Brasil, em vigor desde %{vigencia}). Exemplo: %{envios} avisos custam %{exemplo}."
+        marketing: "Você autoriza também o %{marca} a criar e enviar modelos de Divulgação: ofertas, promoções e convites para o cliente voltar a comprar. A Meta cobra %{preco} por mensagem de Divulgação entregue (tabela da Meta para o Brasil, em vigor desde %{vigencia}) e limita quantas divulgações cada pessoa recebe: algumas podem não ser entregues."
+      desligar:
+        utility: "O %{marca} para de criar modelos sozinho, de Aviso de serviço e de Divulgação. Os modelos que você já tem continuam como estão."
+        marketing: "O %{marca} para de criar e enviar modelos de Divulgação. O Aviso de serviço continua ligado."
+      errors:
+        acao_invalida: "Escolha ligar ou desligar."
+        marca_invalida: "Escolha Aviso de serviço ou Divulgação."
+        aviso_mudou: "Os preços da Meta mudaram enquanto você lia. Confira o aviso de novo e confirme."
+        utility_desligada: "A Divulgação só liga com o Aviso de serviço ligado."
+        somente_administrador: "Só quem administra a conta pode mudar."
