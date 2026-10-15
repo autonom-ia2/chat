@@ -73,6 +73,7 @@ const mountPage = () =>
       stubs: {
         Button: ButtonStub,
         Dialog: DialogStub,
+        SidePanel: true,
         Switch: true,
         Checkbox: true,
       },

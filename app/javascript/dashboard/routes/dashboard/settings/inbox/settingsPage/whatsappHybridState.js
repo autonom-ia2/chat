@@ -85,3 +85,33 @@ export const limitDate = (epochSeconds, { locale, timeZone } = {}) =>
 // "551140001487" → "+55 (11) 4000-1487", com o mesmo formatador da Nova conversa. Vazio fica vazio.
 export const phoneLabel = digits =>
   digits ? telefoneLegivel(`+${String(digits).split('+').join('')}`) : '';
+
+// chat#1487 — quem pode usar o WhatsApp API depois de 24 horas: as origens do backend (disabled_origins), com o
+// ícone e os selos da tela. Atendentes e lembretes do CRM são o uso recomendado; campanha é o de maior risco.
+export const ROUTING_ORIGINS = [
+  { key: 'human', icon: 'i-lucide-headset', recommended: true },
+  { key: 'bot', icon: 'i-lucide-bot' },
+  { key: 'automation', icon: 'i-lucide-workflow' },
+  { key: 'crm_follow_up', icon: 'i-lucide-bell-ring', recommended: true },
+  { key: 'campaign', icon: 'i-lucide-megaphone', risky: true },
+];
+const ORIGIN_KEYS = ROUTING_ORIGINS.map(origin => origin.key);
+
+export const enabledOriginsFor = (disabled = []) =>
+  ORIGIN_KEYS.filter(key => !disabled.includes(key));
+
+export const disabledOriginsFor = (enabled = []) =>
+  ORIGIN_KEYS.filter(key => !enabled.includes(key));
+
+// Ritmo: três escolhas na frase e "Outro" para o resto (mesmos limites do servidor: 1 a 120).
+export const PACE_OPTIONS = [10, 20, 30];
+export const PACE_RECOMMENDED = 20;
+export const PACE_MIN = 1;
+export const PACE_MAX = 120;
+export const PACE_OTHER = 'other';
+
+export const paceChoiceFor = rate =>
+  PACE_OPTIONS.includes(rate) ? rate : PACE_OTHER;
+
+export const validPace = value =>
+  Number.isInteger(value) && value >= PACE_MIN && value <= PACE_MAX;
