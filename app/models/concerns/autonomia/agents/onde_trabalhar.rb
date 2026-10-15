@@ -49,7 +49,7 @@ module Autonomia::Agents::OndeTrabalhar
                                                 .where('autonomia_agent_inboxes.account_id = autonomia_agents.account_id')
       kept.where(account_id: account.id)
           .where.not(actuation: :internal).where.not(status: :draft).where.not(agent_type: TIPOS_FORA_DA_EQUIPE)
-          .where("config->>'system_key' IS NULL").where("config->>'papel' IS DISTINCT FROM ?", PAPEL_AJUDANTE)
+          .where("NULLIF(config->>'system_key', '') IS NULL").where("config->>'papel' IS DISTINCT FROM ?", PAPEL_AJUDANTE)
           .where("(autonomia_agents.status = :ativo AND autonomia_agents.enabled) OR NOT EXISTS (#{vinculos.to_sql})",
                  ativo: statuses[:active])
     }

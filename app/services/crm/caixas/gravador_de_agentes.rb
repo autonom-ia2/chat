@@ -45,7 +45,8 @@ class Crm::Caixas::GravadorDeAgentes
   end
 
   # Quem pode ser área desta caixa: agente da conta, não apagado, que fala com cliente (não interno, não de sistema) e
-  # que não é a porta dela. O Areas confere de novo, com o agente travado.
+  # que não é a porta dela. Filtro largo de propósito (não o escopo podem_ser_area): quem já está na caixa e foi pausado
+  # não pode travar o salvar da tela. Quem ENTRA é conferido pelo Areas (pode_ser_area?), com o agente travado.
   def candidatos
     @candidatos ||= begin
       lista = agentes_da_conta.kept.where.not(id: porta&.autonomia_agent_id).to_a
