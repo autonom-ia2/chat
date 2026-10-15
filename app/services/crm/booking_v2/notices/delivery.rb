@@ -12,14 +12,16 @@
 # `crm_booking_notice_id`), que o `NoticeDispatchJob` usa para conferir a entrega dela.
 #
 # Modelo da Meta: variáveis posicionais do corpo {{1}} primeiro nome, {{2}} dia e hora, {{3}} link de gestão; só as
-# que o corpo do modelo usa. Modelo do canal API: o corpo do modelo (com as variáveis de contato) mais o dia, o link
-# de gestão e a linha de parar.
+# que o corpo do modelo usa. Modelo v2 com botões (#1524): `filled` (`Notices::TemplateFill`) traz o corpo e os
+# `buttons` prontos, que vão como estão no `processed_params`. Modelo do canal API: o corpo do modelo (com as variáveis
+# de contato) mais o dia, o link de gestão e a linha de parar.
 class Crm::BookingV2::Notices::Delivery
   PLACEHOLDER_COUNT = 3
 
   # values: os três valores do modelo (ver `Notices::Text#template_values`); appendix: o que vai depois do corpo do
-  # modelo do canal API; rich_message: o do botão (`Notices::Text#rich_message`), ou nil; marks: marcas a mais na mensagem.
-  def initialize(decision:, inbox:, contact:, sender:, content:, values: [], appendix: nil, rich_message: nil, marks: {}) # rubocop:disable Metrics/ParameterLists
+  # modelo do canal API; rich_message: o do botão (`Notices::Text#rich_message`), ou nil; marks: marcas a mais na
+  # mensagem; filled: o `{ body:, buttons: }` do modelo v2 (`Notices::TemplateFill`), ou nil.
+  def initialize(decision:, inbox:, contact:, sender:, content:, values: [], appendix: nil, rich_message: nil, marks: {}, filled: nil) # rubocop:disable Metrics/ParameterLists
     @decision = decision
     @inbox = inbox
     @contact = contact
@@ -29,6 +31,7 @@ class Crm::BookingV2::Notices::Delivery
     @appendix = appendix
     @rich_message = rich_message
     @marks = marks
+    @filled = filled
   end
 
   def perform
@@ -69,13 +72,19 @@ class Crm::BookingV2::Notices::Delivery
   end
 
   def native_params
-    body = used_positions.to_h { |position| [position.to_s, @values[position - 1].to_s] }
-    { name: decision.template['name'], language: decision.template['language'], processed_params: { body: body } }
+    { name: decision.template['name'], language: decision.template['language'], processed_params: processed_params }
+  end
+
+  def processed_params
+    return { body: @filled[:body], buttons: @filled[:buttons] }.compact if @filled
+
+    { body: used_positions.to_h { |position| [position.to_s, @values[position - 1].to_s] } }
   end
 
   # O que o painel mostra: o corpo do modelo com os valores no lugar (troca de string, sem regex).
   def native_content
-    used_positions.reduce(native_body) { |text, position| text.gsub("{{#{position}}}") { @values[position - 1].to_s } }
+    body_values = processed_params[:body]
+    body_values.reduce(native_body) { |text, (position, value)| text.gsub("{{#{position}}}") { value } }
   end
 
   def api_content
