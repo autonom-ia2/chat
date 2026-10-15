@@ -127,15 +127,22 @@ class Crm::BookingV2::Notices::Route
   end
 
   # O modelo v2 do tipo do aviso, aprovado como UTILITY, com o item da lista da caixa; senão nil (vale a regra de hoje).
+  # Contato sem primeiro nome: a Meta recusa parâmetro vazio no `{{1}}`, então o v2 não é usado. Erro ao ler a lista só
+  # tira o v2 (vai ao tracker): o aviso segue pela regra de hoje.
   def ready_template
     finalidade = Whatsapp::Templates::Finalidades::Agendamento::POR_TIPO[kind]
-    return if finalidade.nil?
+    return if finalidade.nil? || TemplateFields::ContactResolver.first_name(contact).blank?
 
     result = Whatsapp::Templates::Garantir.call(inbox: inbox, finalidade: finalidade, criar: false)
-    return unless result[:status] == :pronto && result[:categoria] == Whatsapp::Templates::Finalidades::CATEGORIA
+    return unless result[:status] == :pronto
 
     found = listed_template(result[:nome], result[:idioma])
-    { template: found, campos: result[:campos], botoes: result[:botoes] } if found
+    return unless found && found['category'].to_s.casecmp?(Whatsapp::Templates::Finalidades::CATEGORIA)
+
+    { template: found, campos: result[:campos], botoes: result[:botoes] }
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
+    nil
   end
 
   # Lida do banco, como no `Garantir`: a lista do objeto da caixa pode estar velha.

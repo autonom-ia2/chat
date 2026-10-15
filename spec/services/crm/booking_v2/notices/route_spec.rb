@@ -89,6 +89,23 @@ RSpec.describe Crm::BookingV2::Notices::Route do
     end
   end
 
+  # Motivo: a Meta recusa parâmetro vazio; contato sem primeiro nome não usa o v2 (o `{{1}}` sairia vazio).
+  it 'contato sem primeiro nome segue a regra de hoje' do
+    world.contact.update!(name: '')
+
+    expect(decide.template['name']).to eq('aviso_marcado')
+  end
+
+  # Motivo: erro ao ler a lista da caixa só tira o v2; o aviso não cai por causa dele.
+  it 'erro na consulta ao Garantir vai ao tracker e segue a regra de hoje' do
+    allow(Whatsapp::Templates::Garantir).to receive(:call).and_raise(StandardError, 'lista quebrada')
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    expect(decide.template['name']).to eq('aviso_marcado')
+    expect(tracker).to have_received(:capture_exception).once
+  end
+
   # Motivo: sem `kind` (o "Testar no meu WhatsApp"), o v2 não é consultado.
   it 'sem kind não consulta o Garantir' do
     allow(Whatsapp::Templates::Garantir).to receive(:call)

@@ -55,6 +55,19 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
     expect(Crm::BookingV2::NoticeStopPartJob).not_to have_been_enqueued
   end
 
+  # Motivo: o `{{2}}` sai no fuso da reunião (o da página), nunca no do servidor nem em "Brasília". 13:00 UTC em Manaus
+  # (UTC-4) é 09:00, não as 10:00 de São Paulo.
+  it 'o dia e a hora saem no fuso da reunião' do
+    meeting.update!(timezone: 'America/Manaus')
+    notice = Crm::MeetingNotice.create!(meeting: meeting, account: account, kind: 'booked', status: :sending, attempts: 1,
+                                        due_at: Crm::BookingV2::Notices::Scheduler.expected_due_at(meeting, 'booked'))
+
+    described_class.new(notice).perform
+
+    body = Message.find(notice.reload.message_id).additional_attributes.dig('template_params', 'processed_params', 'body')
+    expect(body['2']).to eq('20/10 às 09:00')
+  end
+
   # Motivo: o `template_params` chega à Meta como o upstream monta (corpo + URL com o código + payload estável).
   it 'o envio do upstream monta os componentes do corpo e dos dois botões' do
     params = { 'name' => 'agendamento_ao_marcar_v2', 'language' => 'pt_BR',
