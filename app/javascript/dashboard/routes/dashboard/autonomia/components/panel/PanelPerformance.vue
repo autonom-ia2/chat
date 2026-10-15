@@ -154,6 +154,10 @@ const REASON_LABEL_KEYS = {
   policy: 'AGENTS.PERFORMANCE.REASONS.CODES.policy',
   recuperacao_falhou: 'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_falhou',
   recuperada_tarde: 'AGENTS.PERFORMANCE.REASONS.CODES.recuperada_tarde',
+  recuperacao_acordar_falhou:
+    'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_acordar_falhou',
+  recuperacao_passagem_falhou:
+    'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_passagem_falhou',
   other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
 };
 const reasonLabel = reason =>

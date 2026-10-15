@@ -481,6 +481,8 @@
           "schedule": "Fora do horário de atuação",
           "recuperacao_falhou": "Mensagem que o WhatsApp não mostrou (ver no celular)",
           "recuperada_tarde": "Mensagem do WhatsApp que chegou atrasada",
+          "recuperacao_acordar_falhou": "Mensagem do WhatsApp recuperada sem chamar a IA",
+          "recuperacao_passagem_falhou": "Mensagem do WhatsApp sem passagem para a equipe",
           "other": "Outro / não especificado"
         }
       },

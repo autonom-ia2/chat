@@ -21,7 +21,7 @@ module Autonomia
           # mensagem (rodamos fora de request, sem Current.account). message.account
           # é o caminho canônico do core; a conta certa é a dona da conversa/inbox.
           return unless ::Autonomia::Agents::Config.enabled?(message.account)
-          return skip_unsupported(message) if unsupported?(message)
+          return if recovery_pending?(message)
 
           # vínculo (AgentInbox) + agent.enabled?/active? + conversa pending +
           # unassigned são checados no Job (precisam de DB). Aqui só o mínimo barato.
@@ -38,22 +38,14 @@ module Autonomia
             message.conversation_id.blank?
         end
 
-        # Aviso de "mensagem não suportada" do WhatsApp (chat#1489), na conta com a flag `whatsapp_hybrid_recovery`:
-        # não há o que responder. Quando o WhatsApp API recupera o conteúdo, quem decide chamar a IA, uma vez, é o
-        # WhatsappHybrid::RecoveryAiWake. Sem a flag, igual à main. Instagram e TikTok também marcam `is_unsupported` (em
-        # mídia); lá a IA segue como antes.
-        def unsupported?(message)
+        # Aviso de "mensagem não suportada" do WhatsApp com recuperação em curso (chat#1489): a conta tem a flag
+        # `whatsapp_hybrid_recovery` e a mensagem está `hybrid_recovery: pending`. A IA espera; quem decide chamá-la,
+        # uma vez, é a recuperação (WhatsappHybrid::RecoveryAiWake / Operate::NaoSuportada). Sem a flag, ou sem
+        # recuperação (caixa sem WhatsApp API pronto, tipo que não é mensagem nova), igual à main.
+        def recovery_pending?(message)
           message.inbox&.channel_type == 'Channel::Whatsapp' &&
-            message.content_attributes.to_h.with_indifferent_access[:is_unsupported].present? &&
-            message.account.feature_enabled?(::WhatsappHybrid::UnsupportedRecovery::FEATURE)
-        end
-
-        # Sem recuperação em curso, a IA não responde e o motivo fica no evento do agente (sem falha silenciosa). Com
-        # recuperação pendente, quem decide (chamar, `recuperada_tarde` ou `recuperacao_falhou`) é a própria recuperação.
-        def skip_unsupported(message)
-          return if ::WhatsappHybrid::UnsupportedRecovery.pending?(message)
-
-          ::Autonomia::Agents::Operate::NaoSuportada.ignorada(message)
+            message.account.feature_enabled?(::WhatsappHybrid::UnsupportedRecovery::FEATURE) &&
+            ::WhatsappHybrid::UnsupportedRecovery.pending?(message)
         end
       end
     end

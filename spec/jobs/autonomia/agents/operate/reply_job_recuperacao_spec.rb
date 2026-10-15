@@ -13,7 +13,7 @@ require 'rails_helper'
 # [ ] spec do `turno_superado`: cliente manda outra durante a chamada à IA -> resposta da recuperada descartada e só a
 #     mais nova responde;
 # [ ] rodar os specs do responder e do reply_job;
-# [ ] conferir o número do evento: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 9, 10, 11 e 12;
+# [ ] conferir o número do evento: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 10, 11, 12 e 13 (9 sem uso);
 # [ ] no merge com o #1627, manter as duas pontas do enum (AgentEvent), do ALLOWED_REASONS (EventLogger) e da posse no
 #     responder (as linhas do #1489 ficam: RecoveredHeaderNote no #history e no answer).
 describe Autonomia::Agents::Operate::ReplyJob do

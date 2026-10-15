@@ -92,7 +92,7 @@ class WhatsappHybrid::UnsupportedRecovery
     return :done unless changed
 
     log("failed reason=#{reason}")
-    after_write { ::Autonomia::Agents::Operate::NaoSuportada.falhou(@message) }
+    after_write('recuperacao_passagem_falhou') { ::Autonomia::Agents::Operate::NaoSuportada.falhou(@message) }
     :done
   end
 
@@ -165,19 +165,19 @@ class WhatsappHybrid::UnsupportedRecovery
     return :done unless write(&)
 
     log(outcome)
-    after_write { WhatsappHybrid::RecoveryAiWake.call(@message) }
+    after_write('recuperacao_acordar_falhou') { WhatsappHybrid::RecoveryAiWake.call(@message) }
     announce_recovered if announce
     :done
   end
 
-  # Depois de gravar: falha aqui vira o evento `skipped_recuperacao_acordar_falhou` e vai ao tracker. O job só tenta de
-  # novo a busca no motor e a gravação.
-  def after_write
+  # Depois de gravar: falha aqui vira o evento `skipped_<reason>` e vai ao tracker uma vez (o que o NaoSuportada já
+  # capturou por dentro não chega aqui). O job só tenta de novo a busca no motor e a gravação.
+  def after_write(reason)
     yield
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
-    log("after_write error=#{e.class}")
-    ::Autonomia::Agents::Operate::NaoSuportada.acordar_falhou(@message)
+    log("after_write reason=#{reason} error=#{e.class}")
+    ::Autonomia::Agents::Operate::NaoSuportada.depois_de_gravar_falhou(@message, reason)
   end
 
   # Depois do commit (fora da transação, mesmo se alguém chamar dentro de uma). Só na transição pending -> recovered.

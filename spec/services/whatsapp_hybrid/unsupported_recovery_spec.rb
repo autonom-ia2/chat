@@ -445,7 +445,7 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
     before do
       allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
-      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:acordar_falhou)
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:depois_de_gravar_falhou)
     end
 
     it 'erro ao chamar a IA: fica recuperada, registra o motivo e vai ao tracker' do
@@ -454,8 +454,9 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
       expect(attempt!).to eq(:done)
       expect(attributes['hybrid_recovery']).to eq('recovered')
-      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:acordar_falhou).with(message)
-      expect(tracker).to have_received(:capture_exception)
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:depois_de_gravar_falhou)
+        .with(message, 'recuperacao_acordar_falhou')
+      expect(tracker).to have_received(:capture_exception).once
     end
 
     it 'erro ao passar a falha para as pessoas: fica failed e registra o motivo' do
@@ -464,7 +465,20 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
       expect(attempt!).to eq(:done)
       expect(attributes['hybrid_recovery']).to eq('failed')
-      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:acordar_falhou).with(message)
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:depois_de_gravar_falhou)
+        .with(message, 'recuperacao_passagem_falhou')
+      expect(tracker).to have_received(:capture_exception).once
+    end
+
+    it 'erro de banco que o NaoSuportada já capturou por dentro não vai de novo ao tracker' do
+      stub_engine(engine_message('fromMe' => true))
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:falhou).and_call_original
+      allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_raise(ActiveRecord::StatementInvalid, 'x')
+
+      attempt!
+
+      expect(tracker).to have_received(:capture_exception).once
+      expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:depois_de_gravar_falhou)
     end
 
     it 'o job não agenda outra tentativa' do

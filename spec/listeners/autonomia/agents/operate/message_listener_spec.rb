@@ -1,14 +1,15 @@
 require 'rails_helper'
 
-# chat#1489: no WhatsApp da conta com a flag `whatsapp_hybrid_recovery`, a nossa IA não responde ao aviso de "mensagem
-# não suportada" (pendente, falhou ou sem recuperação). Sem a flag, igual à main. Instagram e TikTok também marcam
-# `is_unsupported` (em mídia): lá a IA segue como antes.
+# chat#1489: no WhatsApp da conta com a flag `whatsapp_hybrid_recovery`, a nossa IA espera quando o aviso de "mensagem
+# não suportada" tem recuperação em curso (`hybrid_recovery: pending`). Sem a flag, ou sem recuperação, igual à main.
+# Instagram e TikTok também marcam `is_unsupported` (em mídia): lá a IA segue como antes.
 describe Autonomia::Agents::Operate::MessageListener do
   let(:listener) { described_class.instance }
   let(:whatsapp_inbox) do
     create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false).inbox
   end
   let(:reply_job) { Autonomia::Agents::Operate::ReplyJob }
+  let(:pending) { { 'is_unsupported' => true, 'hybrid_recovery' => 'pending' } }
 
   before do
     allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
@@ -26,24 +27,35 @@ describe Autonomia::Agents::Operate::MessageListener do
     expect { listener.message_created(created({})) }.to have_enqueued_job(reply_job)
   end
 
-  it 'não chama a IA para o aviso pendente de recuperação' do
-    event = created({ 'is_unsupported' => true, 'hybrid_recovery' => 'pending' })
+  context 'with the flag on' do
+    it 'aviso com recuperação em curso: a IA espera' do
+      expect { listener.message_created(created(pending)) }.not_to have_enqueued_job(reply_job)
+    end
 
-    expect { listener.message_created(event) }.not_to have_enqueued_job(reply_job)
+    it 'lê a marca com chave em símbolo (mensagem ainda em memória, recém-criada)' do
+      event = created({})
+      event.data[:message].content_attributes = { is_unsupported: true, hybrid_recovery: 'pending' }
+
+      expect { listener.message_created(event) }.not_to have_enqueued_job(reply_job)
+    end
+
+    it 'aviso sem recuperação (caixa sem WhatsApp API pronto, tipo que não é mensagem nova): vai para a IA como na main' do
+      expect { listener.message_created(created({ 'is_unsupported' => true })) }.to have_enqueued_job(reply_job)
+    end
+
+    it 'aviso cuja recuperação já falhou: vai para a IA como na main (o evento novo não existe aqui)' do
+      failed = { 'is_unsupported' => true, 'hybrid_recovery' => 'failed' }
+
+      expect { listener.message_created(created(failed)) }.to have_enqueued_job(reply_job)
+    end
   end
 
-  it 'não chama a IA para o aviso sem recuperação nem para o que falhou' do
-    expect { listener.message_created(created({ 'is_unsupported' => true })) }.not_to have_enqueued_job(reply_job)
+  context 'with the flag off (igual à main)' do
+    before { whatsapp_inbox.account.disable_features!(WhatsappHybrid::UnsupportedRecovery::FEATURE) }
 
-    failed = created({ 'is_unsupported' => true, 'hybrid_recovery' => 'failed' })
-    expect { listener.message_created(failed) }.not_to have_enqueued_job(reply_job)
-  end
-
-  it 'lê a marca com chave em símbolo (mensagem ainda em memória, recém-criada)' do
-    event = created({})
-    event.data[:message].content_attributes = { is_unsupported: true }
-
-    expect { listener.message_created(event) }.not_to have_enqueued_job(reply_job)
+    it 'até o aviso marcado como pendente segue para a IA' do
+      expect { listener.message_created(created(pending)) }.to have_enqueued_job(reply_job)
+    end
   end
 
   it 'Instagram com is_unsupported (mídia): a IA continua sendo chamada' do
@@ -56,33 +68,5 @@ describe Autonomia::Agents::Operate::MessageListener do
     inbox = create(:channel_tiktok).inbox
 
     expect { listener.message_created(created({ 'is_unsupported' => true }, inbox: inbox)) }.to have_enqueued_job(reply_job)
-  end
-
-  it 'aviso sem recuperação: registra o motivo (NaoSuportada.ignorada)' do
-    allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
-    event = created({ 'is_unsupported' => true })
-
-    listener.message_created(event)
-
-    expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:ignorada).with(event.data[:message])
-  end
-
-  it 'aviso com recuperação pendente: não registra agora (a recuperação decide)' do
-    allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
-
-    listener.message_created(created({ 'is_unsupported' => true, 'hybrid_recovery' => 'pending' }))
-
-    expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:ignorada)
-  end
-
-  context 'when the account does not have the flag (igual à main)' do
-    before { whatsapp_inbox.account.disable_features!(WhatsappHybrid::UnsupportedRecovery::FEATURE) }
-
-    it 'o aviso segue para a IA como hoje e nada é registrado' do
-      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
-
-      expect { listener.message_created(created({ 'is_unsupported' => true })) }.to have_enqueued_job(reply_job)
-      expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:ignorada)
-    end
   end
 end

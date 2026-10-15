@@ -481,6 +481,8 @@
           "schedule": "Outside the schedule",
           "recuperacao_falhou": "WhatsApp message not shown (check the phone)",
           "recuperada_tarde": "WhatsApp message arrived late",
+          "recuperacao_acordar_falhou": "WhatsApp message recovered, AI not called",
+          "recuperacao_passagem_falhou": "WhatsApp message not shown, handoff not done",
           "other": "Other / unspecified"
         }
       },

@@ -23,13 +23,6 @@ describe Autonomia::Agents::Operate::NaoSuportada do
     message
   end
 
-  it 'aviso sem recuperação: só o evento skipped_mensagem_nao_suportada' do
-    described_class.ignorada(message)
-
-    expect(events.pluck(:event_type, :handoff_reason)).to eq([%w[skipped_mensagem_nao_suportada mensagem_nao_suportada]])
-    expect(conversation.reload.assignee_agent_bot_id).to eq(agent_bot.id)
-  end
-
   describe 'falhou (flag ligada)' do
     it 'com o espelho no comando (open, ai_assignee): evento, passa para as pessoas com o motivo e a nota' do
       allow(Crm::Entrega).to receive(:new).and_call_original
@@ -84,6 +77,43 @@ describe Autonomia::Agents::Operate::NaoSuportada do
       expect(notes.count).to eq(1)
     end
 
+    it 'resolvida entre a leitura e o lock: a decisão é sobre a conversa relida (só o evento)' do
+      allow(conversation).to receive(:with_lock).and_wrap_original do |original, &block|
+        Conversation.where(id: conversation.id).update_all(status: Conversation.statuses[:resolved]) # rubocop:disable Rails/SkipsModelValidations
+        original.call(&block)
+      end
+      allow(message).to receive(:conversation).and_return(conversation)
+
+      described_class.falhou(message)
+
+      expect(events.pluck(:event_type)).to eq(%w[skipped_recuperacao_falhou])
+      expect(conversation.reload.status).to eq('resolved')
+      expect(notes).to be_empty
+    end
+
+    it 'segunda falha na mesma conversa, já esperando por pessoa: deixa a nota mesmo assim, sem passar de novo' do
+      described_class.falhou(message)
+      second = create(:message, message_type: :incoming, conversation: conversation, account: account, inbox: inbox,
+                                sender: contact, content: placeholder, created_at: 1.second.from_now,
+                                content_attributes: { 'is_unsupported' => true })
+
+      described_class.falhou(second)
+
+      expect(events.handed_off.count).to eq(1)
+      expect(notes.pluck(:content)).to eq([failed_note, failed_note])
+    end
+
+    it 'atividade e nota privada depois do aviso não contam: ainda passa para as pessoas' do
+      create(:message, message_type: :activity, conversation: conversation, account: account, inbox: inbox,
+                       content: 'Conversa atribuída a Maria')
+      create(:message, message_type: :outgoing, private: true, conversation: conversation, account: account, inbox: inbox,
+                       sender: create(:user, account: account), content: 'vou olhar')
+
+      described_class.falhou(message)
+
+      expect(events.handed_off.count).to eq(1)
+    end
+
     it 'nota em inglês na conta em inglês' do
       account.update!(locale: 'en')
 
@@ -134,10 +164,14 @@ describe Autonomia::Agents::Operate::NaoSuportada do
     end
   end
 
-  it 'falha ao acordar a IA: evento skipped_recuperacao_acordar_falhou' do
-    described_class.acordar_falhou(message)
+  it 'falha depois de gravar: evento com o motivo de cada caminho' do
+    described_class.depois_de_gravar_falhou(message, 'recuperacao_acordar_falhou')
+    described_class.depois_de_gravar_falhou(message, 'recuperacao_passagem_falhou')
 
-    expect(events.pluck(:event_type, :handoff_reason)).to eq([%w[skipped_recuperacao_acordar_falhou recuperacao_acordar_falhou]])
+    expect(events.pluck(:event_type, :handoff_reason)).to eq(
+      [%w[skipped_recuperacao_acordar_falhou recuperacao_acordar_falhou],
+       %w[skipped_recuperacao_passagem_falhou recuperacao_passagem_falhou]]
+    )
   end
 
   it 'sem agente que responderia a conversa: nada a registrar' do
