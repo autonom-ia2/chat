@@ -53,6 +53,8 @@ export const FORK_LAYOUT = {
       itens: [
         // A página Números (ex-Dashboard) virou aba do CRM: o item fica marcado nela.
         { pega: 'CRM', absorve: ['CRM Dashboard'] },
+        // Prospecção mora junto do CRM (pedido do Rodrigo): achar a empresa e acompanhar a venda.
+        { pega: 'Prospecting' },
         // Com a navegação de Relacionamentos ligada chega só ele; desligada, chegam Contatos e Empresas.
         {
           pega: 'Relationships',
@@ -86,7 +88,6 @@ export const FORK_LAYOUT = {
             'Campaign Management': 'VISAO_GERAL',
           },
         },
-        { pega: 'Prospecting' },
         // As duas abas da Cotação são da mesma tela: o item vira link direto.
         { pega: 'Insurance', direto: true },
       ],

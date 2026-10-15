@@ -609,8 +609,8 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect(nomes(menu.topo)).toEqual(['FirstSteps']);
     expect(menu.grupos.map(grupo => [grupo.id, nomes(grupo.itens)])).toEqual([
       ['ATENDER', ['Conversation', 'Inbox', 'Calls', 'Prazos']],
-      ['ACOMPANHAR', ['CRM', 'Contacts', 'Companies', 'Agenda']],
-      ['CRESCER', ['Campaigns', 'Prospecting', 'Insurance']],
+      ['ACOMPANHAR', ['CRM', 'Prospecting', 'Contacts', 'Companies', 'Agenda']],
+      ['CRESCER', ['Campaigns', 'Insurance']],
       ['AUTOMATICO', ['Agents', 'Automacoes']],
       ['RESULTADOS', ['Reports']],
     ]);

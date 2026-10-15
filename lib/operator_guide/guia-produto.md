@@ -1934,7 +1934,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ajustar funil sugerido, pais da busca, cache e nota da prospeccao
 - intent: Onde coloco a chave do Google?; Por que o mapa nao aparece?; Por que o botao Enriquecer esta desligado?; Como mudo o funil sugerido?; Como mudo o peso da nota dos leads?; Como busco em outro pais?; Onde vejo o consumo?; Por que nao consigo editar os pesos?
-- onde_fica: No menu novo: Crescer > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - cobre: autonomia_prospecting_settings
@@ -2045,7 +2045,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Editar e excluir as jogadas salvas
 - intent: Onde edito ou apago uma jogada salva?; Quantas jogadas posso salvar?
-- onde_fica: No menu novo: Crescer > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve as jogadas salvas na grade da busca, mas nao edita nem exclui.

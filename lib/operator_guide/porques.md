@@ -1805,7 +1805,7 @@
 - rota: settings_prospecting_index
 - cobre: autonomia_prospecting_settings
 - intent: Onde coloco a chave do Google?; Por que o mapa nao aparece?; Por que o botao Enriquecer esta desligado?; Como mudo o funil sugerido?; Como mudo o peso da nota dos leads?; Como busco em outro pais?; Onde vejo o consumo?; Por que nao consigo editar os pesos?
-- onde_fica: No menu novo: Crescer > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao nao ve o atalho nem abre a tela; diga que ajustar a Prospeccao pede Editar prospeccao.
 - pre_requisitos: Prospeccao ligada na conta pelo suporte
 - passos: 1. Abra Prospeccao > Configuracoes; 2. Na aba Geral, confira as Chaves do Google, a Pesquisa de empresa e decisor e os avisos; 3. Escolha o Funil CRM padrao e a Etapa CRM padrao; 4. Escolha o Pais da busca; 5. Ajuste a Validade do cache (segundos) e confira o Consumo diario e o Consumo mensal; 6. Clique em Salvar; 7. Na aba Score, escolha a Forma padrao de pesquisa e o Perfil de score e clique em Salvar; 8. Para as jogadas salvas, use a aba Jogadas.
@@ -1915,7 +1915,7 @@
 - titulo: Editar e excluir as jogadas salvas
 - rota: settings_prospecting_index
 - intent: Onde edito ou apago uma jogada salva?; Quantas jogadas posso salvar?
-- onde_fica: No menu novo: Crescer > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve as jogadas salvas na grade da busca, mas nao edita nem exclui.
 - pre_requisitos: ter salvo pelo menos uma jogada na busca, em Filtros avancados > Salvar como jogada
 - passos: 1. Abra Prospeccao > Configuracoes; 2. Entre na aba Jogadas; 3. Para mudar, clique em Editar, ajuste o Nome da jogada e os filtros e clique em Salvar jogada; 4. Para apagar, clique em Excluir e depois em Confirmar exclusao.

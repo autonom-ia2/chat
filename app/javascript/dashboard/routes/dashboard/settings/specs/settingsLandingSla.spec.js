@@ -19,25 +19,27 @@ const funcaoSo = permissions => {
   store.getters.getCurrentCustomRoleId = 7;
   // Menu novo (#1617) desligado: settings_home segue a regra de sempre.
   store.getters['accounts/isFeatureEnabledonAccount'] = () => false;
+  store.getters['accounts/getAccount'] = id => ({ id });
   store.getters.getCurrentUser = {
     accounts: [{ id: 9, custom_role_id: 7, permissions }],
   };
 };
 
+// settings_home decide no beforeEnter, depois de a conta carregar (#1617).
 const destinoDe = permissions => {
   funcaoSo(permissions);
-  return home.redirect({ params: { accountId: 9 } });
+  return home.beforeEnter({ params: { accountId: 9 } });
 };
 
 describe('página inicial de Configurações para a função só com SLA', () => {
-  it('leva para CRM › SLA', () => {
-    expect(destinoDe(['sla_manage'])).toEqual({
+  it('leva para CRM › SLA', async () => {
+    expect(await destinoDe(['sla_manage'])).toEqual({
       name: 'crm_sla_index',
       params: { accountId: 9 },
     });
   });
 
-  it('todo destino da página inicial é uma rota registrada', () => {
+  it('todo destino da página inicial é uma rota registrada', async () => {
     const vazio = { render: () => null };
     const router = createRouter({
       history: createMemoryHistory(),
@@ -47,7 +49,8 @@ describe('página inicial de Configurações para a função só com SLA', () =>
         ...crmRoutes,
       ],
     });
-    const destinos = [
+    // Um por vez: cada caso troca a pessoa na store.
+    const casos = [
       ['canned_response_manage'],
       ['inbox_view'],
       ['label_manage'],
@@ -55,8 +58,13 @@ describe('página inicial de Configurações para a função só com SLA', () =>
       ['automation_view'],
       ['macro_manage'],
       ['sla_manage'],
-    ].map(permissions => destinoDe(permissions).name);
-
+    ];
+    const destinos = [];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const permissions of casos) {
+      // eslint-disable-next-line no-await-in-loop
+      destinos.push((await destinoDe(permissions)).name);
+    }
     destinos.forEach(name => expect(router.hasRoute(name)).toBe(true));
   });
 
