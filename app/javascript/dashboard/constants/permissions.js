@@ -14,6 +14,8 @@ export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
 export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
 export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
+// SLA is managed in CRM › SLA (crm_sla_index); the SLA policy API checks this key.
+export const SLA_MANAGE_PERMISSION = 'sla_manage';
 export const PROSPECTING_PERMISSIONS = [
   'prospecting_view',
   'prospecting_manage',

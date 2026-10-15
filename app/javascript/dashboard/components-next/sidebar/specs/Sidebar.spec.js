@@ -230,3 +230,25 @@ describe('Sidebar: Agendamento no grupo CRM', () => {
     expect(childrenOf(mountSidebar(), 'CRM')).toBeUndefined();
   });
 });
+
+// CRM › SLA (#1618): o SLA saiu de Configurações e mora no CRM; a função com
+// sla_manage, a chave que a API do SLA confere, também vê a entrada.
+describe('Sidebar: SLA no grupo CRM', () => {
+  const comSla = keys => {
+    seat({ role: 'agent', customRoleId: 7, keys });
+    getters['accounts/isFeatureEnabledonAccount'] = ref(() => true);
+    return childrenOf(mountSidebar(), 'CRM');
+  };
+
+  it('função com CRM e sla_manage vê o SLA', () => {
+    expect(comSla(['crm_view', 'sla_manage'])).toContain('CRM SLA');
+  });
+
+  it('função com crm_admin continua vendo o SLA', () => {
+    expect(comSla(['crm_view', 'crm_admin'])).toContain('CRM SLA');
+  });
+
+  it('função com CRM sem chave de SLA continua sem o SLA', () => {
+    expect(comSla(['crm_view'])).not.toContain('CRM SLA');
+  });
+});

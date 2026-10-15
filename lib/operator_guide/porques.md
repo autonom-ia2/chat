@@ -508,7 +508,7 @@
 - onde_fica: Sidebar > CRM > CRM SLA
 - pre_requisitos: funis e caixas para associar políticas e agendas.
 - passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
-- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo.
+- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo; função só com `sla_manage` edita as políticas, mas a agenda das caixas fica para administrador ou `crm_admin`.
 - highlight: `crm-new-sla`
 
 ### ver_dashboard_crm_e_metricas_de_funil

@@ -5,6 +5,7 @@ import {
   CANNED_RESPONSE_MANAGE_PERMISSION,
   INBOX_PERMISSIONS,
   AUTOMATION_PERMISSIONS,
+  SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import {
   getUserPermissions,
@@ -25,7 +26,8 @@ const SETTINGS_LANDINGS = [
   { name: 'attributes_list', permissions: ['attribute_manage'] },
   { name: 'automation_list', permissions: AUTOMATION_PERMISSIONS },
   { name: 'macros_wrapper', permissions: ['macro_manage'] },
-  { name: 'sla_list', permissions: ['sla_manage'] },
+  // SLA moved to CRM › SLA; settings/sla (sla_list) is not registered (#1618).
+  { name: 'crm_sla_index', permissions: [SLA_MANAGE_PERMISSION] },
 ];
 
 import account from './account/account.routes';

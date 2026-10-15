@@ -1483,7 +1483,7 @@
         "INACTIVE": "Inativa"
       },
       "PRIORITY": {
-        "EARLIEST_CREATED": "Criado recentemente",
+        "EARLIEST_CREATED": "Mais antiga primeiro",
         "LONGEST_WAITING": "Maior tempo de espera"
       },
       "METHOD": {
