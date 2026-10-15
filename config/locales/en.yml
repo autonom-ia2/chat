@@ -476,6 +476,8 @@ en:
       done: 'Done.'
       failed: 'I could not do this right now.'
       unknown_action: 'The Guide does not do that.'
+      only_on_screen:
+        whatsapp_template_consent: 'This is only done on screen: Templates › Permission.'
       admin_only: 'Only an account admin can do this.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
@@ -969,6 +971,7 @@ en:
         template_offer_expired: 'The message template offer has expired.'
         no_conversation: 'The card no longer has a linked conversation.'
         texto_diferente: 'The approved WhatsApp template has a different text than expected.'
+        sem_consentimento: 'The account owner has not allowed the system to create WhatsApp templates (Templates › Permission).'
         perfil_invalido: 'The inbox WhatsApp profile is not complete enough to use templates.'
         categoria_propaganda: 'WhatsApp classified the template as marketing; nothing was sent to the customer.'
         template_missing: 'The message template no longer exists on WhatsApp.'

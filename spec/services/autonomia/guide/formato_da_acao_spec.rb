@@ -35,6 +35,13 @@ RSpec.describe 'Formato da ação no Guia' do
       expect(formato('POST custom_role')).to include('não é uma ação da plataforma', 'POST custom_roles')
     end
 
+    # #1586: o aceite do dono para criar modelos só se faz na tela; o Guia diz onde, não "não existe".
+    it 'o que só se faz na tela responde onde fica, não que a ação não existe' do
+      texto = I18n.with_locale(:pt_BR) { formato('POST whatsapp_template_consent') }
+
+      expect(texto).to eq('Isto só se faz na tela: Modelos › Autorização.')
+    end
+
     it 'lembra que a ação sem desfazer vai por propor_acao' do
       expect(formato('POST campaigns')).to include('use propor_acao')
     end

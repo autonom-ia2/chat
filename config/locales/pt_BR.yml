@@ -630,6 +630,7 @@ pt_BR:
         template_offer_expired: 'A oferta do modelo de mensagem venceu.'
         no_conversation: 'O card não tem mais conversa ligada.'
         texto_diferente: 'O modelo aprovado no WhatsApp tem um texto diferente do esperado.'
+        sem_consentimento: 'O dono da conta não autorizou o sistema a criar modelos do WhatsApp (Modelos › Autorização).'
         perfil_invalido: 'O perfil do WhatsApp da caixa não está completo para usar modelos.'
         categoria_propaganda: 'O WhatsApp classificou o modelo como propaganda; nada foi mandado ao cliente.'
         template_missing: 'O modelo de mensagem não existe mais no WhatsApp.'
@@ -936,6 +937,8 @@ pt_BR:
       done: 'Pronto, feito.'
       failed: 'Não consegui fazer isso agora.'
       unknown_action: 'Isto o Guia não faz.'
+      only_on_screen:
+        whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'

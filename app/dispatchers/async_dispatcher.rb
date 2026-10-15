@@ -26,7 +26,9 @@ class AsyncDispatcher < BaseDispatcher
       Crm::MetaCapiListener.instance,
       Crm::GoogleOfflineListener.instance,
       # #1305: a confirmação da IA na conversa dispensa o aviso "ao marcar" repetido.
-      Crm::BookingNoticeToldListener.instance
+      Crm::BookingNoticeToldListener.instance,
+      # #1524: o toque em "Parar avisos" no modelo do aviso para os avisos do contato.
+      Crm::BookingNoticeStopReplyListener.instance
     ]
   end
 end

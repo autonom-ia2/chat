@@ -4,6 +4,10 @@ require 'rails_helper'
 # do corpo: variável nunca no começo nem no fim, numeradas em ordem a partir de 1 e com um exemplo para cada uma.
 RSpec.describe Whatsapp::Templates::Finalidades do
   let(:prontos) { described_class.prontos }
+  let(:cobranca) { described_class.pronto(:cobranca_vencimento, momento: :antes, com_valor: true) }
+
+  # Os avisos do agendamento (#1524) têm botão com a base do ambiente: sem FRONTEND_URL o corpo seria `SemBase`.
+  around { |example| with_modified_env(FRONTEND_URL: 'https://app.example.com') { example.run } }
 
   def body_of(pronto)
     pronto.corpo[:components].find { |component| component[:type] == 'BODY' }
@@ -111,7 +115,7 @@ RSpec.describe Whatsapp::Templates::Finalidades do
   end
 
   it 'reconhece o dono pelo nome do pronto' do
-    expect(described_class.dono_de(prontos.first.nome)).to eq('cobranca')
+    expect(described_class.dono_de(cobranca.nome)).to eq('cobranca')
     expect(described_class.dono_de('boas_vindas')).to be_nil
   end
 
@@ -120,6 +124,47 @@ RSpec.describe Whatsapp::Templates::Finalidades do
       expect(pronto.texto).to include('pagamento')
       expect(pronto.texto.downcase).not_to include('negócio')
       expect(pronto.texto.downcase).not_to include('compra')
+    end
+  end
+
+  # #1524: os 4 avisos do agendamento são FIXOS no catálogo; nome, texto e botões são o contrato com a Meta (um modelo
+  # aprovado com outro texto ou outros botões vira `texto_diferente`/`botoes_diferentes`) e com o envio.
+  describe 'avisos do agendamento (#1524)' do
+    let(:agendamento) { prontos.select { |pronto| pronto.dono == 'agendamento' } }
+
+    # Motivo: um por tipo de aviso (`Crm::MeetingNotice::KINDS`), com os nomes `_v2` que a tela de Modelos protege.
+    it 'tem os 4 prontos, um por tipo de aviso, UTILITY e pt_BR' do
+      expect(described_class::Agendamento::POR_TIPO.keys).to match_array(Crm::MeetingNotice::KINDS)
+      nomes = described_class::Agendamento::POR_TIPO.values.map { |finalidade| described_class.pronto(finalidade).nome }
+      expect(nomes).to eq(%w[agendamento_ao_marcar_v2 agendamento_horario_mudou_v2 agendamento_1_dia_antes_v2 agendamento_1_hora_antes_v2])
+      expect(agendamento.map(&:nome)).to match_array(nomes)
+      expect(agendamento.map { |pronto| pronto.corpo[:category] }.uniq).to eq(['UTILITY'])
+      expect(agendamento.map(&:idioma).uniq).to eq(['pt_BR'])
+    end
+
+    # Motivo: os quatro passam nas regras estruturais da Meta (SubmitFormat) e do envio (SendableFormat), com o botão
+    # de URL na base do ambiente, com exemplo, e a resposta rápida "Parar avisos".
+    it 'passam nas conferências, com "Ver meu horário" (URL do ambiente) e "Parar avisos"' do
+      agendamento.each do |pronto|
+        template = pronto.corpo.deep_stringify_keys
+        buttons = template['components'].find { |component| component['type'] == 'BUTTONS' }['buttons']
+
+        expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([]), pronto.nome
+        expect(Whatsapp::Templates::SendableFormat.sendable?(template)).to be(true), pronto.nome
+        expect(buttons).to eq([{ 'type' => 'URL', 'text' => 'Ver meu horário', 'url' => 'https://app.example.com/b/{{1}}',
+                                 'example' => ['https://app.example.com/b/AB3K9QXZ'] },
+                               { 'type' => 'QUICK_REPLY', 'text' => 'Parar avisos' }]), pronto.nome
+        expect(pronto.campos).to eq('1' => 'cliente.primeiro_nome', '2' => 'horario.data_hora')
+        expect(pronto.botoes_do_envio).to eq([{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' },
+                                              { 'indice' => 1, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' }])
+      end
+    end
+
+    # Motivo: redação de utilidade (#1585): cita o horário e o próximo passo, e diz como parar.
+    it 'citam o horário, o próximo passo e como parar' do
+      agendamento.each do |pronto|
+        expect(pronto.texto).to include('{{2}}', 'Ver meu horário', 'Parar avisos'), pronto.nome
+      end
     end
   end
 
@@ -186,8 +231,8 @@ RSpec.describe Whatsapp::Templates::Finalidades do
     end
 
     it 'pronto sem botões não manda o componente de botões' do
-      expect(prontos.first.corpo[:components].map { |component| component[:type] }).to eq(['BODY'])
-      expect(prontos.first.botoes_do_envio).to eq([])
+      expect(cobranca.corpo[:components].map { |component| component[:type] }).to eq(['BODY'])
+      expect(cobranca.botoes_do_envio).to eq([])
     end
   end
 end
