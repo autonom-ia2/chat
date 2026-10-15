@@ -93,9 +93,10 @@ describe('caixas do agente da equipe', () => {
     expect(bloqueioDaCaixa({ occupied_by: null }, 90)).toBe(
       BLOQUEIO.SEM_PRINCIPAL
     );
-    expect(bloqueioDaCaixa({ occupied_by: { kind: 'external' } }, 90)).toBe(
-      BLOQUEIO.OUTRO_ROBO
-    );
+    // #1648 (opção B): agente de outro sistema atendendo primeiro não bloqueia.
+    expect(
+      bloqueioDaCaixa({ occupied_by: { kind: 'external' } }, 90)
+    ).toBeNull();
     // O próprio principal da caixa não vira equipe dela.
     expect(bloqueioDaCaixa({ occupied_by: principal() }, 9)).toBe(
       BLOQUEIO.SEM_PRINCIPAL
@@ -114,7 +115,7 @@ describe('caixas do agente da equipe', () => {
         { occupied_by: { kind: 'external' }, so_de_pessoas: false },
         90
       )
-    ).toBe(BLOQUEIO.OUTRO_ROBO);
+    ).toBeNull();
   });
 
   it('reads where the agent is on the team from the inbox reading', () => {

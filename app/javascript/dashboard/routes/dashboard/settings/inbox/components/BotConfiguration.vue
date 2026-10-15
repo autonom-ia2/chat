@@ -2,78 +2,90 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import QuemAtendeAPI from 'dashboard/api/autonomia/quemAtende';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AgenteAvatar from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteAvatar.vue';
 import AgenteBotao from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteBotao.vue';
+import { useJornadaAtiva } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useJornadaAtiva';
 
-// #1648 (mockup-2) — aba "Agente de IA" da caixa. Todos são agentes de IA: os
-// da plataforma e os de outro sistema (webhook) aparecem juntos, sem rótulo.
+// #1648 — aba "Agente de IA" da caixa. Todos são agentes de IA: os da
+// plataforma e os de outro sistema (webhook) aparecem juntos, sem rótulo.
 // Mostra quem atende primeiro, quem também recebe quando alguém passa e uma
-// escolha só: trocar quem atende primeiro. A troca pede confirmação em linha e
-// o servidor faz a troca completa por trás. Sem erro de leitura na tela:
-// enquanto não lê, fica carregando e tenta de novo sozinho. A confirmação segue o padrão das telas
-// de agentes (aviso de troca dentro da escolha, Cancelar e Trocar no rodapé do bloco).
+// escolha só: trocar quem atende primeiro. As opções vêm do servidor, com o
+// motivo de recusa de cada uma (a tela avisa antes de pedir). A troca pede
+// confirmação em linha e o servidor faz a troca completa por trás. Sem erro de
+// leitura na tela: enquanto não lê, fica carregando e tenta de novo sozinho.
+// A confirmação segue o padrão das telas de agentes (aviso dentro da escolha,
+// Cancelar e Trocar no rodapé do bloco).
 const props = defineProps({
   inbox: { type: Object, default: () => ({}) },
 });
 
 const NINGUEM = 'ninguem';
 const NOVA_TENTATIVA_MS = 3000;
+const RECUSAS = [
+  'agente_interno',
+  'agente_rascunho',
+  'agente_parado',
+  'agente_ja_e_da_equipe',
+  'mudou_agora',
+];
 
 const { t } = useI18n();
-const store = useStore();
 const podeTrocar = useCanManage('inbox_manage');
-const agentesDaPlataforma = useMapGetter('autonomiaAgents/getRecords');
-const agentesDeOutroSistema = useMapGetter('agentBots/getBots');
+const jornadaAtiva = useJornadaAtiva();
 
 const inboxId = computed(() => Number(props.inbox?.id));
-// [{ id, name, papel, origem, avatar_url? }] ou null enquanto carrega.
-const daCaixa = ref(null);
+// { agentes, primeiro, opcoes } ou null enquanto carrega.
+const leitura = ref(null);
 const escolhido = ref('');
 const trocando = ref(false);
+// Código da recusa do servidor na última troca (a tela mostra o motivo).
+const recusaDaTroca = ref(null);
 let relogio = null;
 
-const chave = agente => (agente ? `${agente.origem}:${agente.id}` : NINGUEM);
+const chave = agente => (agente ? `${agente.tipo}:${agente.id}` : NINGUEM);
 
 const principal = computed(
-  () => daCaixa.value?.find(agente => agente.papel === 'porta') || null
+  () => leitura.value?.agentes.find(agente => agente.papel === 'porta') || null
 );
 const equipe = computed(
-  () => daCaixa.value?.filter(agente => agente.papel === 'area') || []
+  () => leitura.value?.agentes.filter(agente => agente.papel === 'area') || []
 );
 const chaveAtual = computed(() =>
   principal.value ? chave(principal.value) : ''
-);
-
-const todos = computed(() =>
-  [
-    ...(agentesDaPlataforma.value || [])
-      .filter(
-        agente => agente.status !== 'draft' && agente.actuation !== 'internal'
-      )
-      .map(agente => ({ ...agente, origem: 'plataforma' })),
-    ...(agentesDeOutroSistema.value || []).map(agente => ({
-      ...agente,
-      origem: 'webhook',
-    })),
-  ].sort((a, b) => a.name.localeCompare(b.name))
 );
 
 const opcoes = computed(() => [
   ...(principal.value
     ? [{ value: NINGUEM, label: t('AGENTS.CAIXA_AGENTE_IA.NINGUEM_OPCAO') }]
     : []),
-  ...todos.value.map(agente => ({ value: chave(agente), label: agente.name })),
+  ...(leitura.value?.opcoes || []).map(agente => ({
+    value: chave(agente),
+    label: agente.name,
+  })),
 ]);
 
 const novo = computed(() =>
-  todos.value.find(agente => chave(agente) === escolhido.value)
+  (leitura.value?.opcoes || []).find(
+    agente => chave(agente) === escolhido.value
+  )
 );
 const pendente = computed(
   () => Boolean(escolhido.value) && escolhido.value !== chaveAtual.value
+);
+
+const textoDaRecusa = codigo =>
+  RECUSAS.includes(codigo)
+    ? t(`AGENTS.CAIXA_AGENTE_IA.RECUSA.${codigo.toUpperCase()}`, {
+        nome: novo.value?.name || '',
+      })
+    : '';
+// O motivo de não dar para trocar: o que o servidor já disse da opção, ou o
+// que respondeu na última tentativa.
+const recusa = computed(() =>
+  pendente.value ? textoDaRecusa(recusaDaTroca.value || novo.value?.recusa) : ''
 );
 
 const textoDaConfirmacao = computed(() => {
@@ -93,54 +105,72 @@ const tambemRecebem = computed(() =>
   })
 );
 
-const rotaDoAgente = agente => ({
-  name: 'autonomia_agent_panel',
-  params: { agentId: agente.id },
-  query: agente.origem === 'webhook' ? { origem: 'webhook' } : {},
-});
+// Agente de outro sistema abre a página dele na lista nova de Agentes; sem a
+// jornada, a lista de Configurações › Robôs, onde ele se edita.
+const rotaDoAgente = agente => {
+  if (agente.tipo !== 'webhook') {
+    return { name: 'autonomia_agent_panel', params: { agentId: agente.id } };
+  }
+  if (!jornadaAtiva) return { name: 'agent_bots' };
+  return {
+    name: 'autonomia_agent_panel',
+    params: { agentId: agente.id },
+    query: { origem: 'webhook' },
+  };
+};
+
+const mostrar = dados => {
+  leitura.value = dados;
+  escolhido.value = chaveAtual.value;
+};
 
 const carregar = async () => {
+  clearTimeout(relogio);
   try {
     const { data } = await QuemAtendeAPI.daCaixa(inboxId.value);
-    daCaixa.value = data.agentes;
-    escolhido.value = chaveAtual.value;
+    mostrar(data);
   } catch {
     relogio = setTimeout(carregar, NOVA_TENTATIVA_MS);
   }
 };
 
-const cancelar = () => {
-  escolhido.value = chaveAtual.value;
+const escolher = valor => {
+  escolhido.value = valor;
+  recusaDaTroca.value = null;
 };
 
+const cancelar = () => escolher(chaveAtual.value);
+
 const trocar = async () => {
-  if (trocando.value) return;
+  if (trocando.value || recusa.value) return;
   trocando.value = true;
   const alvo = escolhido.value === NINGUEM ? null : novo.value;
   try {
-    await QuemAtendeAPI.trocar(
+    const { data } = await QuemAtendeAPI.trocar(
       inboxId.value,
-      alvo && { id: alvo.id, origem: alvo.origem }
+      alvo && { tipo: alvo.tipo, id: alvo.id }
     );
     useAlert(
       alvo
         ? t('AGENTS.CAIXA_AGENTE_IA.TROCOU', { nome: alvo.name })
         : t('AGENTS.CAIXA_AGENTE_IA.TIROU')
     );
-    await carregar();
-  } catch {
-    useAlert(t('AGENTS.CAIXA_AGENTE_IA.FALHOU'));
-    cancelar();
+    mostrar(data);
+  } catch (erro) {
+    const codigo = erro?.response?.data?.code;
+    if (RECUSAS.includes(codigo)) {
+      recusaDaTroca.value = codigo;
+    } else {
+      useAlert(t('AGENTS.CAIXA_AGENTE_IA.FALHOU'));
+      cancelar();
+    }
+    if (codigo === 'mudou_agora') carregar();
   } finally {
     trocando.value = false;
   }
 };
 
-onMounted(() => {
-  store.dispatch('autonomiaAgents/get');
-  store.dispatch('agentBots/get');
-  carregar();
-});
+onMounted(carregar);
 onBeforeUnmount(() => clearTimeout(relogio));
 </script>
 
@@ -150,7 +180,7 @@ onBeforeUnmount(() => clearTimeout(relogio));
       {{ t('AGENTS.CAIXA_AGENTE_IA.TITULO') }}
     </h2>
 
-    <template v-if="!daCaixa">
+    <template v-if="!leitura">
       <p role="status" class="sr-only">
         {{ t('AGENTS.CAIXA_AGENTE_IA.CARREGANDO') }}
       </p>
@@ -255,16 +285,29 @@ onBeforeUnmount(() => clearTimeout(relogio));
           {{ t('AGENTS.CAIXA_AGENTE_IA.CAMPO') }}
         </label>
         <ChoiceSelect
-          v-model="escolhido"
+          :model-value="escolhido"
           trigger-id="quem-atende-primeiro"
           class="w-full max-w-md [&_button]:w-full"
           :options="opcoes"
           :aria-label="t('AGENTS.CAIXA_AGENTE_IA.CAMPO')"
           :placeholder="t('AGENTS.CAIXA_AGENTE_IA.ESCOLHER')"
           :disabled="trocando"
+          @update:model-value="escolher"
         />
         <p
-          v-if="pendente"
+          v-if="recusa"
+          data-recusa
+          role="alert"
+          class="m-0 flex items-start gap-2 rounded-xl bg-n-ruby-2 p-3 text-sm text-n-slate-12 ring-1 ring-inset ring-n-ruby-6"
+        >
+          <span
+            class="i-lucide-circle-alert size-5 shrink-0 text-n-ruby-11"
+            aria-hidden="true"
+          />
+          {{ recusa }}
+        </p>
+        <p
+          v-else-if="pendente"
           data-troca
           aria-live="polite"
           class="m-0 flex items-start gap-2 rounded-xl bg-n-amber-2 p-3 text-sm text-n-slate-12 ring-1 ring-inset ring-n-amber-6"
@@ -294,6 +337,7 @@ onBeforeUnmount(() => clearTimeout(relogio));
           {{ t('AGENTS.CAIXA_AGENTE_IA.CANCELAR') }}
         </AgenteBotao>
         <AgenteBotao
+          v-if="!recusa"
           data-trocar
           tamanho="lg"
           :carregando="trocando"

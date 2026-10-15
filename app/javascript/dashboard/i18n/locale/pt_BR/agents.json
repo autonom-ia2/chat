@@ -1668,7 +1668,6 @@
         "ESCOLHER_DE_NOVO": "Escolher os canais de novo",
         "SO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar",
         "SO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar",
-        "OUTRO_ROBO": "Um agente externo atende neste canal. O agente da equipe ainda não entra em canal com agente externo.",
         "AVISO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar. Conversa nova continua com as pessoas.",
         "AVISO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar. Conversa nova continua com as pessoas.",
         "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe."
@@ -1754,7 +1753,14 @@
       "CANCELAR": "Cancelar",
       "TROCOU": "Pronto. {nome} atende primeiro neste canal.",
       "TIROU": "Pronto. Ninguém atende primeiro neste canal.",
-      "FALHOU": "Não deu para trocar agora. Nada mudou neste canal."
+      "FALHOU": "Não deu para trocar agora. Nada mudou neste canal.",
+      "RECUSA": {
+        "AGENTE_INTERNO": "Este agente trabalha só dentro do painel e não atende clientes.",
+        "AGENTE_RASCUNHO": "A criação deste agente ainda não terminou. Termine de criar antes de escolher esse agente.",
+        "AGENTE_PARADO": "Este agente está parado. Ligue esse agente na página do agente antes de escolher.",
+        "AGENTE_JA_E_DA_EQUIPE": "{nome} já recebe quando alguém passa neste canal. Para {nome} atender primeiro, tire esse agente da equipe do canal em CRM › Quem cuida do quê.",
+        "MUDOU_AGORA": "Alguém mudou este canal agora. Veja quem atende e tente de novo."
+      }
     },
     "CAIXA_USUARIOS": {
       "ABA": "Usuários"
@@ -1762,11 +1768,11 @@
     "OUTRO_SISTEMA": {
       "CONECTAR": "Conectar agente de outro sistema",
       "CONECTADO_POR": "Conectado por endereço de webhook",
-      "EXPLICA": "Use quando o agente foi montado em outro sistema. As conversas chegam a ele por um endereço de webhook.",
+      "EXPLICA": "Use quando o agente foi montado em outro sistema. As conversas chegam ao agente por um endereço de webhook.",
       "FOTO": "Foto",
       "NOME": "Nome",
       "NOME_EXEMPLO": "Ex.: Automação Vendas",
-      "DESCRICAO": "O que ele faz",
+      "DESCRICAO": "O que o agente faz",
       "DESCRICAO_EXEMPLO": "Ex.: Responde dúvidas de preço e passa para a equipe.",
       "ENDERECO": "Endereço do webhook",
       "ENDERECO_AJUDA": "Quem montou o agente sabe qual é. Começa com https://",
@@ -1779,17 +1785,18 @@
       "BOTAO_CONECTAR": "Conectar",
       "SALVAR": "Salvar",
       "SALVOU": "Agente salvo.",
+      "SALVAR_ERRO": "Não deu para salvar agora. Nada mudou.",
       "APAGAR": "Apagar agente",
       "CONCLUIR": "Concluir",
       "APAGAR_TITULO": "Apagar {nome}?",
-      "APAGAR_TEXTO": "Ele para de atender nos canais em que está. As conversas novas vão para as pessoas da equipe.",
+      "APAGAR_TEXTO": "O agente para de atender nos canais em que está. As conversas novas vão para as pessoas da equipe.",
       "APAGAR_CONFIRMAR": "Apagar",
       "APAGOU": "Agente apagado.",
       "PAGINA": {
         "CARREGANDO": "Carregando o agente",
-        "BLOCO_FAZ": "O que ele faz",
+        "BLOCO_FAZ": "O que o agente faz",
         "FAZ_VAZIO": "Ainda sem descrição.",
-        "BLOCO_CONEXAO": "Como ele se conecta",
+        "BLOCO_CONEXAO": "Como o agente se conecta",
         "CONEXAO_TEXTO": "As conversas vão para este endereço. O outro sistema responde com a chave de acesso.",
         "BLOCO_ONDE": "Onde atende",
         "ONDE_TEXTO": "Atende primeiro as conversas novas destes canais.",
@@ -1817,7 +1824,7 @@
         "PASSO2_TEXTO": "Cole o endereço do webhook do outro sistema. As conversas novas vão para lá.",
         "PASSO3_TITULO": "Falta um passo: copie a chave",
         "PASSO3_TEXTO": "Cole a chave de acesso no outro sistema. Sem ela, {nome} não consegue responder aqui.",
-        "PASSO3_DEPOIS": "Para {nome} começar a atender, escolha-o na aba Agente de IA de um canal.",
+        "PASSO3_DEPOIS": "Para {nome} começar a atender, escolha esse agente na aba Agente de IA de um canal.",
         "CONTINUAR": "Continuar",
         "VOLTAR_PASSO": "Voltar",
         "ERRO": "Não deu para conectar agora. Tente de novo."

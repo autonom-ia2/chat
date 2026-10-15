@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
@@ -16,6 +17,10 @@ import {
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
+import {
+  agentesDeOutroSistema,
+  canaisDoAgenteDeOutroSistema,
+} from '../utils/outroSistema';
 import { caixasDaEquipe } from '../utils/ondeTrabalha';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
@@ -50,11 +55,14 @@ const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
 const ocupacao = useCanaisOcupados();
+// A API de robôs só deixa o administrador criar, mudar e apagar (AgentBotPolicy).
+const { isAdmin } = useAdmin();
 
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
-// #1648 (mockup-2) — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
-const outrosSistemas = useMapGetter('agentBots/getBots');
+// #1648 — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
+const bots = useMapGetter('agentBots/getBots');
+const outrosSistemas = computed(() => agentesDeOutroSistema(bots.value));
 
 const carregando = ref(true);
 const falhou = ref(false);
@@ -74,22 +82,18 @@ let relogioDasLeituras = null;
 let relogioDoConstrutor = null;
 let tentativaDeContinuar = 0;
 
-// Caixas em que o agente de outro sistema atende primeiro (L2; `agent_bot_id` é proposta do mockup).
+// Caixas em que o agente de outro sistema atende primeiro (L2), ou null sem a leitura.
 const canaisDoOutro = bot =>
   ocupacao.estado.value === 'pronto'
-    ? ocupacao.canais.value
-        .filter(
-          canal =>
-            canal.occupied_by?.kind === 'external' &&
-            canal.occupied_by.agent_bot_id === bot.id
-        )
-        .map(canal => canal.name)
+    ? canaisDoAgenteDeOutroSistema(ocupacao.canais.value, bot.id).map(
+        canal => canal.name
+      )
     : null;
 const outrosAtendendo = computed(() =>
-  (outrosSistemas.value || []).filter(bot => canaisDoOutro(bot)?.length)
+  outrosSistemas.value.filter(bot => canaisDoOutro(bot)?.length)
 );
 const outrosParados = computed(() =>
-  (outrosSistemas.value || []).filter(bot => !canaisDoOutro(bot)?.length)
+  outrosSistemas.value.filter(bot => !canaisDoOutro(bot)?.length)
 );
 // Uma lista só, na ordem de sempre: quem atende (da plataforma e de outro sistema), na equipe,
 // parados, cotação e rascunho.
@@ -124,7 +128,7 @@ const vazia = computed(
     !carregando.value &&
     !falhou.value &&
     !agentes.value.length &&
-    !(outrosSistemas.value || []).length
+    !outrosSistemas.value.length
 );
 const leiturasDosCartoes = computed(
   () =>
@@ -532,6 +536,7 @@ onBeforeUnmount(() => {
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
             </AgenteBotao>
             <AgenteBotao
+              v-if="isAdmin"
               data-conectar-outro
               variante="fantasma"
               icone="i-lucide-link"

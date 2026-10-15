@@ -127,8 +127,8 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     expect(opcao(3).textContent).toContain('AGENTS.JORNADA.EQUIPE.PRINCIPAL');
     expect(opcao(5).getAttribute('aria-disabled')).toBeNull();
     expect(opcao(5).textContent).toContain('AGENTS.JORNADA.EQUIPE.SO_PESSOAS');
-    expect(opcao(4).getAttribute('aria-disabled')).toBe('true');
-    expect(opcao(4).textContent).toContain('AGENTS.JORNADA.EQUIPE.OUTRO_ROBO');
+    // #1648 (opção B): o canal com agente de outro sistema aceita o agente da equipe.
+    expect(opcao(4).getAttribute('aria-disabled')).toBeNull();
     expect(opcao(6).getAttribute('aria-disabled')).toBe('true');
     expect(opcao(6).textContent).toContain(
       'AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO'
@@ -148,7 +148,7 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     const wrapper = montar();
     await clicar(opcao(5));
     await clicar(opcao(3));
-    await clicar(opcao(4)); // bloqueada: não marca
+    await clicar(opcao(6)); // bloqueada (principal parado): não marca
     await clicar(no('[data-confirmar]'));
 
     expect(canaisApi.connect).toHaveBeenCalledTimes(1);

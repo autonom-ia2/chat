@@ -1668,7 +1668,6 @@
         "ESCOLHER_DE_NOVO": "Choose the channels again",
         "SO_PESSOAS": "Served only by people; {nome} receives when someone hands over",
         "SO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over",
-        "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
         "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
         "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
         "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team."
@@ -1754,7 +1753,14 @@
       "CANCELAR": "Cancel",
       "TROCOU": "Done. {nome} answers first on this channel.",
       "TIROU": "Done. Nobody answers first on this channel.",
-      "FALHOU": "Could not switch right now. Nothing changed on this channel."
+      "FALHOU": "Could not switch right now. Nothing changed on this channel.",
+      "RECUSA": {
+        "AGENTE_INTERNO": "This agent only works inside the dashboard and does not answer customers.",
+        "AGENTE_RASCUNHO": "This agent is not finished yet. Finish creating this agent before choosing it.",
+        "AGENTE_PARADO": "This agent is stopped. Turn it on in the agent page before choosing it.",
+        "AGENTE_JA_E_DA_EQUIPE": "{nome} already receives conversations when someone hands them over in this channel. For {nome} to answer first, remove this agent from the channel team in CRM › Who handles what.",
+        "MUDOU_AGORA": "Someone changed this channel just now. Check who answers and try again."
+      }
     },
     "CAIXA_USUARIOS": {
       "ABA": "Users"
@@ -1779,6 +1785,7 @@
       "BOTAO_CONECTAR": "Connect",
       "SALVAR": "Save",
       "SALVOU": "Agent saved.",
+      "SALVAR_ERRO": "Could not save right now. Nothing changed.",
       "APAGAR": "Delete agent",
       "CONCLUIR": "Done",
       "APAGAR_TITULO": "Delete {nome}?",
@@ -1817,7 +1824,7 @@
         "PASSO2_TEXTO": "Paste the other system's webhook address. New conversations go there.",
         "PASSO3_TITULO": "One step left: copy the key",
         "PASSO3_TEXTO": "Paste the access key in the other system. Without it, {nome} cannot reply here.",
-        "PASSO3_DEPOIS": "For {nome} to start answering, choose it in a channel's AI agent tab.",
+        "PASSO3_DEPOIS": "For {nome} to start answering, choose this agent in a channel's AI agent tab.",
         "CONTINUAR": "Continue",
         "VOLTAR_PASSO": "Back",
         "ERRO": "Could not connect right now. Try again."

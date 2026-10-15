@@ -114,10 +114,6 @@ describe('CaixaPage', () => {
       'O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.',
     ],
     [
-      'crm.caixas.robo_externo',
-      'Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.',
-    ],
-    [
       'crm.caixas.agente_rascunho',
       'Este agente ainda é rascunho; termine de criar antes.',
     ],

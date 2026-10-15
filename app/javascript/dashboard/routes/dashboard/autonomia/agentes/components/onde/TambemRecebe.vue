@@ -33,7 +33,6 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 
 const MOTIVO = {
-  [BLOQUEIO.OUTRO_ROBO]: () => t('AGENTS.JORNADA.EQUIPE.OUTRO_ROBO'),
   [BLOQUEIO.SEM_PRINCIPAL]: () => t('AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t('AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO', {

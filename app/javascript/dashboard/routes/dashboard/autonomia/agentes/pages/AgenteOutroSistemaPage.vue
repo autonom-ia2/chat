@@ -1,11 +1,16 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAdmin } from 'dashboard/composables/useAdmin';
+import AgentBotsAPI from 'dashboard/api/agentBots';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
+import {
+  agentesDeOutroSistema,
+  canaisDoAgenteDeOutroSistema,
+} from '../utils/outroSistema';
 import { ESTADO } from '../utils/estadoDoAgente';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import DialogoAcao from '../components/pagina/DialogoAcao.vue';
@@ -13,13 +18,16 @@ import AgenteBotao from '../components/AgenteBotao.vue';
 import ChaveDeAcesso from '../components/ChaveDeAcesso.vue';
 import GavetaAlterarOutro from '../components/GavetaAlterarOutro.vue';
 
-// #1648 (mockup-2, ajuste do Rodrigo) — a página do agente de outro sistema (agent_bot webhook) é a
+// #1648 (ajuste do Rodrigo no mockup) — a página do agente de outro sistema (agent_bot webhook) é a
 // mesma página dos nossos agentes: o herói (nome, foto, selo Atendendo/Parado e onde atende) e as
 // seções no padrão da PaginaBlocos. Seções: O que ele faz · Como ele se conecta (endereço e chave) ·
 // Onde atende (os canais em que atende primeiro; troca-se na aba Agente de IA de cada canal).
 // "Alterar" abre a gaveta da seção com Cancelar e Salvar, como nas nossas seções. "Apagar agente"
 // e "Mudar nome e foto" ficam no "⋯" do herói. Mesma rota da página dos nossos agentes, com
 // `?origem=webhook` (os ids de agent_bot e de agente da plataforma podem coincidir).
+// Leitura: a lista de robôs da store (a mesma que a gaveta atualiza). Sem o agente nela, pergunta ao
+// servidor por ele: 404 (apagado, de outra conta ou espelho de agente da plataforma, #1626) volta para
+// a lista; outra falha fica carregando e tenta de novo, sem tela de erro.
 const props = defineProps({
   botId: { type: [String, Number], required: true },
 });
@@ -28,7 +36,8 @@ const NS = 'AGENTS.OUTRO_SISTEMA.PAGINA';
 const { t } = useI18n();
 const router = useRouter();
 const store = useStore();
-const podeGerenciar = useCanManage('autonomia_manage');
+// A API de robôs só deixa o administrador mudar, apagar e ver a chave (AgentBotPolicy).
+const { isAdmin: podeGerenciar } = useAdmin();
 const bots = useMapGetter('agentBots/getBots');
 const ocupacao = useCanaisOcupados();
 
@@ -36,15 +45,13 @@ const alterando = ref(null);
 const dialogoApagar = ref(null);
 
 const agente = computed(() =>
-  (bots.value || []).find(bot => String(bot.id) === String(props.botId))
+  agentesDeOutroSistema(bots.value).find(
+    bot => String(bot.id) === String(props.botId)
+  )
 );
 const nome = computed(() => agente.value?.name || '');
 const canais = computed(() =>
-  ocupacao.canais.value.filter(
-    canal =>
-      canal.occupied_by?.kind === 'external' &&
-      String(canal.occupied_by.agent_bot_id) === String(props.botId)
-  )
+  canaisDoAgenteDeOutroSistema(ocupacao.canais.value, props.botId)
 );
 const estado = computed(() =>
   canais.value.length ? ESTADO.ATENDENDO : ESTADO.PARADO
@@ -99,14 +106,30 @@ const apagar = async () => {
   irParaLista();
 };
 
+const NOVA_TENTATIVA_MS = 3000;
+let relogio = null;
+
+const carregar = async () => {
+  await store.dispatch('agentBots/get');
+  if (agente.value) return;
+  try {
+    const { data } = await AgentBotsAPI.show(props.botId);
+    // Robô de sistema (sem conta) não é agente da conta.
+    if (data?.system_bot) irParaLista();
+    else relogio = setTimeout(carregar, NOVA_TENTATIVA_MS);
+  } catch (erro) {
+    if (erro?.response?.status === 404) irParaLista();
+    else relogio = setTimeout(carregar, NOVA_TENTATIVA_MS);
+  }
+};
+
 const BLOCO = 'flex flex-col gap-3 p-5 sm:flex-row sm:items-start';
 const ICONE = 'grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2';
 const ALTERAR =
   'max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0';
 
-onMounted(() => {
-  store.dispatch('agentBots/get');
-});
+onMounted(carregar);
+onBeforeUnmount(() => clearTimeout(relogio));
 </script>
 
 <template>

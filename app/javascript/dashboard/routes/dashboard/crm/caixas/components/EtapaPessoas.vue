@@ -31,8 +31,9 @@ const pessoas = defineModel('pessoas', { type: Array, required: true });
 const aiAgents = defineModel('aiAgents', { type: Object, default: null });
 
 const porta = computed(() => portaOuRobo(aiAgents.value?.porta, props.robo));
-// Agente externo (n8n, Zapier...) que atende primeiro, como o servidor diz
-// (`ai_agents.externo`, #1648). Ele trava a parte de pôr agente da equipe.
+// Agente de outro sistema que atende primeiro, como o servidor diz
+// (`ai_agents.externo`, #1648). Os agentes da equipe convivem com ele (decisão
+// do Rodrigo de 15/10, opção B): sem agente marcado no assunto, ele continua.
 const externo = computed(() => aiAgents.value?.externo || null);
 // A frase do robô: sem a Fase 2, como sempre; com ela, só quando o robô não
 // entra como porta nem como o cartão do agente externo (#1570, #1648).
@@ -150,48 +151,36 @@ const chipClasse = ativo =>
     </div>
 
     <section v-if="temAgentes" class="flex flex-col gap-3">
-      <div v-if="!externo" class="flex flex-col gap-1">
+      <div class="flex flex-col gap-1">
         <h3 class="mb-0 text-base font-semibold text-n-slate-12">
           {{ $t('CRM_CAIXAS.PESSOAS.AGENTES_TITULO') }}
         </h3>
         <p data-regra class="mb-0 text-[0.9375rem] text-n-slate-11">
           {{
-            porta
-              ? $t('CRM_CAIXAS.PESSOAS.REGRA', { porta: porta.name })
+            porta || externo
+              ? $t('CRM_CAIXAS.PESSOAS.REGRA', {
+                  porta: (porta || externo).name,
+                })
               : $t('CRM_CAIXAS.PESSOAS.REGRA_SEM_PORTA')
           }}
         </p>
       </div>
-      <template v-if="externo">
-        <div
-          data-externo
-          class="flex items-center gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4"
+      <div
+        v-if="externo"
+        data-externo
+        class="flex items-center gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4"
+      >
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
+          aria-hidden="true"
         >
-          <span
-            class="grid size-9 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
-            aria-hidden="true"
-          >
-            <span class="i-lucide-plug size-5" />
-          </span>
-          <p
-            class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12"
-          >
-            {{ $t('CRM_CAIXAS.PESSOAS.EXTERNO', { nome: externo.name }) }}
-          </p>
-        </div>
-        <p
-          data-motivo-externo
-          class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-11"
-        >
-          <span
-            class="i-lucide-lock mt-0.5 size-4 shrink-0"
-            aria-hidden="true"
-          />
-          {{ $t('CRM_CAIXAS.EDITOR.AGENTE_EXTERNO') }}
+          <span class="i-lucide-plug size-5" />
+        </span>
+        <p class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12">
+          {{ $t('CRM_CAIXAS.PESSOAS.EXTERNO', { nome: externo.name }) }}
         </p>
-      </template>
+      </div>
       <AgentesDaCaixa
-        v-else
         v-model:agentes="agentesIa"
         :porta="porta"
         :pode-mudar="aiAgents.pode_mudar"

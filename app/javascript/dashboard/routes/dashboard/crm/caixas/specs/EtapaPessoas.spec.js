@@ -77,26 +77,26 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-porta]').exists()).toBe(false);
   });
 
-  it('with phase 2, the external agent from the server gets its card and locks the team agents (#1648)', () => {
+  it('with phase 2, the agent from another system gets its card, as an AI agent, and the team agents stay (#1648, option B)', () => {
     const wrapper = render(
       agentesParaFormulario({
         porta: null,
-        pode_mudar: false,
-        externo: { id: 99, name: 'Robô n8n' },
+        pode_mudar: true,
+        externo: { id: 99, name: 'Automação Vendas' },
         areas: [],
         disponiveis: [],
       }),
-      { id: 99, name: 'Robô n8n', tipo_do_principal: 'externo' }
+      { id: 99, name: 'Automação Vendas', tipo_do_principal: 'externo' }
     );
 
     expect(wrapper.find('[data-externo]').text()).toBe(
-      'Agente externo: Robô n8n, atende primeiro'
+      'Agente de IA: Automação Vendas, atende primeiro'
     );
-    expect(wrapper.find('[data-motivo-externo]').text()).toBe(
-      pt_BR.CRM_CAIXAS.EDITOR.AGENTE_EXTERNO
-    );
+    expect(wrapper.find('[data-motivo-externo]').exists()).toBe(false);
     expect(wrapper.find('[data-robo]').exists()).toBe(false);
-    expect(wrapper.find('[data-regra]').exists()).toBe(false);
+    expect(wrapper.find('[data-regra]').text()).toBe(
+      'O agente marcado num assunto assume a conversa; sem agente, Automação Vendas continua.'
+    );
     expect(wrapper.find('[data-porta]').exists()).toBe(false);
   });
 

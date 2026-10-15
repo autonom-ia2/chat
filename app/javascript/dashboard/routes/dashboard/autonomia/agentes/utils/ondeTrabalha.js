@@ -1,27 +1,27 @@
 // #1433 (tema 13) — leituras do agente da equipe sobre as caixas da L2 (`canais_ocupados`), sem tela.
 // O agente da equipe fica numa caixa que tem agente principal (a porta) atendendo, ou numa caixa atendida
-// só por pessoas (sem principal e sem robô, `so_de_pessoas` da L2), e recebe a conversa quando alguém
-// passa. Na caixa só de pessoas ele nunca abre conversa sozinho. Caixa com outro robô ou com o principal
-// parado não serve.
+// só por pessoas (sem principal e sem robô, `so_de_pessoas` da L2), ou com um agente de outro sistema
+// atendendo primeiro (#1648, decisão do Rodrigo de 15/10, opção B), e recebe a conversa quando alguém
+// passa. Sem principal da plataforma ele nunca abre conversa sozinho. Caixa com o principal parado não serve.
 
 export const BLOQUEIO = {
   SEM_PRINCIPAL: 'sem_principal',
   PRINCIPAL_PARADO: 'principal_parado',
-  OUTRO_ROBO: 'outro_robo',
 };
 
 // Caixa atendida só por pessoas: sem principal e sem outro robô (o backend diz, em `so_de_pessoas`).
 export const soDePessoas = canal => canal?.so_de_pessoas === true;
 
-// O agente nativo que atende primeiro na caixa, ou null (livre ou outro robô).
+// O agente nativo que atende primeiro na caixa, ou null (livre ou agente de outro sistema).
 export const principalDaCaixa = canal =>
   canal?.occupied_by?.kind === 'agent' ? canal.occupied_by : null;
 
 // Por que a caixa não pode receber este agente da equipe, ou null quando pode.
 export const bloqueioDaCaixa = (canal, agenteId) => {
   if (soDePessoas(canal)) return null;
+  // Agente de outro sistema (ou de sistema) atendendo primeiro: o servidor confere de novo.
+  if (canal?.occupied_by?.kind === 'external') return null;
   const principal = principalDaCaixa(canal);
-  if (canal?.occupied_by?.kind === 'external') return BLOQUEIO.OUTRO_ROBO;
   if (!principal || principal.agent_id === agenteId) {
     return BLOQUEIO.SEM_PRINCIPAL;
   }

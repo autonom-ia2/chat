@@ -9,8 +9,10 @@ import AgenteGaveta from './AgenteGaveta.vue';
 import AgenteBotao from './AgenteBotao.vue';
 import FotoDoAgente from './FotoDoAgente.vue';
 
-// #1648 (mockup-2) — "Alterar" de uma seção da página do agente de outro sistema, no padrão das
+// #1648 — "Alterar" de uma seção da página do agente de outro sistema, no padrão das
 // nossas seções: gaveta com o campo e, no rodapé, Cancelar e Salvar.
+// A action agentBots/update manda sempre nome, descrição e endereço (FormData): a
+// gaveta manda os três, só com o campo da seção mudado, e a foto só quando escolhida.
 // campo: 'faz' (O que ele faz) · 'conexao' (endereço do webhook) · 'nome-foto' (menu "⋯").
 const props = defineProps({
   agente: { type: Object, required: true },
@@ -49,22 +51,35 @@ const aoEscolherFoto = ({ file, url }) => {
   form.fotoUrl = url;
 };
 
-const DADOS = {
-  faz: () => ({ description: form.descricao }),
-  conexao: () => ({ outgoing_url: form.endereco }),
-  'nome-foto': () => ({ name: form.nome, avatar: form.foto }),
-};
+const dados = () => ({
+  name: props.campo === 'nome-foto' ? form.nome.trim() : props.agente.name,
+  description:
+    props.campo === 'faz' ? form.descricao : props.agente.description || '',
+  outgoing_url:
+    props.campo === 'conexao'
+      ? form.endereco.trim()
+      : props.agente.outgoing_url,
+  avatar: props.campo === 'nome-foto' ? form.foto : null,
+});
+
+const podeSalvar = computed(() => {
+  if (props.campo === 'nome-foto') return Boolean(form.nome.trim());
+  if (props.campo === 'conexao') return Boolean(form.endereco.trim());
+  return true;
+});
 
 const salvar = async () => {
-  if (salvando.value) return;
+  if (salvando.value || !podeSalvar.value) return;
   salvando.value = true;
   try {
     await store.dispatch('agentBots/update', {
       id: props.agente.id,
-      data: DADOS[props.campo](),
+      data: dados(),
     });
     useAlert(t(`${NS}.SALVOU`));
     emit('fechar');
+  } catch {
+    useAlert(t(`${NS}.SALVAR_ERRO`));
   } finally {
     salvando.value = false;
   }
@@ -124,6 +139,7 @@ const salvar = async () => {
           form="form-alterar-outro"
           tamanho="lg"
           :carregando="salvando"
+          :desabilitado="!podeSalvar"
         >
           {{ t(`${NS}.SALVAR`) }}
         </AgenteBotao>

@@ -1387,16 +1387,15 @@ describe('AgenteCriarPage', () => {
       expect(opcao(11).textContent).toContain(
         'AGENTS.JORNADA.EQUIPE.PRINCIPAL'
       );
-      [10, 12, 13].forEach(valor => {
+      // #1648 (opção B): o canal com agente de outro sistema (13) aceita o agente da equipe.
+      expect(opcao(13).getAttribute('aria-disabled')).toBeNull();
+      [10, 12].forEach(valor => {
         expect(opcao(valor).getAttribute('aria-disabled')).toBe('true');
         const motivo = opcao(valor).querySelector('[data-motivo]');
         expect(opcao(valor).getAttribute('aria-describedby')).toBe(motivo.id);
       });
       expect(opcao(10).textContent).toContain(
         'AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'
-      );
-      expect(opcao(13).textContent).toContain(
-        'AGENTS.JORNADA.EQUIPE.OUTRO_ROBO'
       );
       expect(opcao(12).textContent).toContain(
         'AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO'

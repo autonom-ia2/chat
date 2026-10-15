@@ -78,7 +78,6 @@ const comNome = chave =>
 
 const MOTIVO = {
   [BLOQUEIO.SEM_PRINCIPAL]: () => t(`${NS}.SEM_PRINCIPAL`),
-  [BLOQUEIO.OUTRO_ROBO]: () => t(`${NS}.OUTRO_ROBO`),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t(`${NS}.PRINCIPAL_PARADO`, {
       outro: principalDaCaixa(canal).agent_name,

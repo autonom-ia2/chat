@@ -4076,7 +4076,7 @@
       "ENTRA_E_LIGA": "Joins this inbox and starts answering when you save.",
       "PARADO": "Stopped",
       "SO_QUEM_GERENCIA": "Only people who manage AI agents can change the agents of this inbox.",
-      "EXTERNO": "External agent: {nome}, answers first"
+      "EXTERNO": "AI agent: {nome}, answers first"
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",
@@ -4088,7 +4088,6 @@
       "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
       "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
       "PRINCIPAL_PARADO": "The main agent of this inbox is not answering. To add a team agent here, turn the main agent on first.",
-      "AGENTE_EXTERNO": "An external agent answers on this inbox. A team agent cannot join an inbox with an external agent yet.",
       "AGENTE_RASCUNHO": "This agent is still a draft; finish creating it first."
     }
   },
