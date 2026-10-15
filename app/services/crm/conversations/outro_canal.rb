@@ -162,15 +162,13 @@ class Crm::Conversations::OutroCanal
     @conversation.messages.outgoing.exists?(sender_type: 'User')
   end
 
-  # Quem está no nome foi posto pelo rodízio nativo (#1657): a caixa tem o rodízio e a passagem em aberto para essa
-  # pessoa (o registro de passagens, #1622) não foi pedida por ninguém, isto é, pelo sistema. Pedida por uma pessoa
-  # (autoatribuição, "Atribuir a"), ou sem passagem registrada: fica com quem está, mesmo sem ter respondido.
+  # Quem está no nome foi posto pelo rodízio nativo (#1657): a passagem em aberto para essa pessoa, no registro de
+  # passagens (#1622), tem o motivo do rodízio (Crm::Passagens::Rodizio). Posta por uma pessoa, uma automação, a
+  # Entrega, a IA do CRM ou a API, ou sem passagem registrada: fica com quem está, mesmo sem ter respondido.
   def posta_pelo_rodizio?
-    return false unless @conversation.inbox.enable_auto_assignment?
-
     passagem = Crm::Passagens.ultima_aberta(@conversation)
-    passagem.present? && passagem.para_type == 'User' && passagem.para_id == @conversation.assignee_id &&
-      passagem.pedida_por_type.nil?
+    passagem.present? && passagem.motivo == Crm::Passagens::Rodizio::MOTIVO && passagem.para_type == 'User' &&
+      passagem.para_id == @conversation.assignee_id
   end
 
   # Só ids (nunca texto do cliente).

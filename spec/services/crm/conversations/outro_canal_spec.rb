@@ -44,11 +44,27 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
   end
 
   # O e-mail do João: conversa nova na caixa de e-mail, aberta pela mensagem dele (o rodízio nativo já pôs o Bruno).
-  def email_do_joao(contact: joao, assignee: bruno, **attrs)
-    conversation = create(:conversation, account: account, inbox: email, contact: contact, assignee: assignee, **attrs)
+  # `origem`: quem pôs o atendente na conversa, como o registro de passagens grava (#1657). :rodizio (o rodízio nativo,
+  # padrão destes cenários), :pessoa (alguém logado atribuiu), :automacao (sem contexto, como automação e API) ou
+  # :entrega (o motor de entrega).
+  def email_do_joao(contact: joao, assignee: bruno, origem: :rodizio, **attrs)
+    criar = -> { create(:conversation, account: account, inbox: email, contact: contact, assignee: assignee, **attrs) }
+    conversation = case origem
+                   when :rodizio then Crm::Passagens.com_motivo(Crm::Passagens::Rodizio::MOTIVO) { criar.call }
+                   when :entrega then Crm::Passagens.com_motivo('triagem') { criar.call }
+                   when :pessoa then como(bruno) { criar.call }
+                   else criar.call
+                   end
     message = create(:message, account: account, inbox: email, conversation: conversation, message_type: :incoming,
                                content: 'Segue o documento do Onix')
     [conversation, message]
+  end
+
+  def como(user)
+    Current.user = user
+    yield
+  ensure
+    Current.reset
   end
 
   def sincronizar(conversation, message)
@@ -406,25 +422,55 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
   end
 
   # Quem sai e quem fica, pelo registro de passagens (#1657): só sai quem o rodízio pôs e ainda não respondeu.
-  it 'posto pelo rodízio (passagem sem quem pediu) e sem resposta: sai para a dona', :aggregate_failures do
+  # Só sai quem o rodízio pôs (#1657): a passagem dele tem o motivo `rodizio`; as outras origens ficam sem ele.
+  it 'posto pelo rodízio e sem resposta: sai para a dona', :aggregate_failures do
     conversation, message = email_do_joao
-    expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, pedida_por_type: nil)
+    expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, motivo: 'rodizio')
 
     sincronizar(conversation, message)
 
     expect([ligada?(conversation), conversation.assignee_id]).to eq([true, ana.id])
   end
 
-  it 'atribuído à mão (passagem pedida por uma pessoa) e sem resposta: fica', :aggregate_failures do
-    conversation, message = email_do_joao(assignee: nil)
-    Current.user = bruno
-    conversation.update!(assignee: bruno)
-    Current.reset
-    expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, pedida_por_id: bruno.id)
+  # Pega: "sem quem pediu" tratado como rodízio. Automação, API, Entrega e IA do CRM gravam sem quem pediu também.
+  {
+    pessoa: 'atribuído à mão (alguém logado)',
+    automacao: 'posto por automação ou API (sem contexto)',
+    entrega: 'posto pelo motor de entrega'
+  }.each do |origem, descricao|
+    it "#{descricao} e sem resposta: fica", :aggregate_failures do
+      conversation, message = email_do_joao(origem: origem)
+      expect(Crm::Passagens.ultima_aberta(conversation).motivo).not_to eq('rodizio')
 
-    sincronizar(conversation, message)
+      sincronizar(conversation, message)
 
-    expect([ligada?(conversation), conversation.assignee_id]).to eq([true, bruno.id])
+      expect([ligada?(conversation), conversation.assignee_id]).to eq([true, bruno.id])
+    end
+  end
+
+  # Pega: o prepend sem efeito. A passagem do rodízio de verdade precisa sair com o motivo `rodizio`.
+  describe 'marca do rodízio nativo no registro de passagens' do
+    let(:so_bruno) { create(:inbox, account: account, enable_auto_assignment: true) }
+
+    before { create(:inbox_member, inbox: so_bruno, user: bruno) }
+
+    it 'rodízio V1, na criação da conversa' do
+      allow(AutoAssignment::AgentAssignmentService).to receive(:new).and_wrap_original do |original, **kwargs|
+        original.call(**kwargs).tap { |service| allow(service).to receive(:find_assignee).and_return(bruno) }
+      end
+      conversation = create(:conversation, account: account, inbox: so_bruno, contact: joao)
+
+      expect(Crm::Passagens.ultima_aberta(conversation)).to have_attributes(para_id: bruno.id, motivo: 'rodizio')
+    end
+
+    it 'rodízio V2, na gravação da fila' do
+      fila = create(:inbox, account: account, enable_auto_assignment: false)
+      conversation = create(:conversation, account: account, inbox: fila, contact: joao, assignee: nil, status: :open)
+
+      AutoAssignment::AssignmentService.new(inbox: fila).send(:claim_and_assign, conversation, bruno)
+
+      expect(Crm::Passagens.ultima_aberta(conversation.reload)).to have_attributes(para_id: bruno.id, motivo: 'rodizio')
+    end
   end
 
   it 'quem já respondeu não perde: liga ao card e mantém o atendente' do
@@ -438,7 +484,7 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
 
   it 'caixa sem rodízio nativo: quem alguém pôs no nome fica, mesmo sem ter respondido' do
     email.update!(enable_auto_assignment: false)
-    conversation, message = email_do_joao
+    conversation, message = email_do_joao(origem: :pessoa)
 
     sincronizar(conversation, message)
 
