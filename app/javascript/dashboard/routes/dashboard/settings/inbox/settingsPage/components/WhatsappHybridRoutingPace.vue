@@ -72,13 +72,13 @@ const campaignCap = computed(() => Math.min(props.campaignLimit, rate.value));
         {{ tp('OTHER_LABEL', { min: PACE_MIN, max: PACE_MAX }) }}
       </label>
       <!-- O Input do components-next desenha o contorno de erro (o estilo global do campo cobria a borda). O texto do
-           erro fica aqui, com id e role="alert": o Input não liga a mensagem dele ao campo para o leitor de tela. -->
+           erro fica aqui, com id e role="alert": o Input não liga a mensagem dele ao campo para o leitor de tela.
+           O Input só repassa `min` para datas; o mínimo (1) é conferido pela tela, que trava o Salvar. -->
       <Input
         id="hybrid-pace-other"
         v-model="other"
         type="number"
         inputmode="numeric"
-        :min="String(PACE_MIN)"
         :max="String(PACE_MAX)"
         :message-type="showError ? 'error' : 'info'"
         :aria-invalid="showError || undefined"

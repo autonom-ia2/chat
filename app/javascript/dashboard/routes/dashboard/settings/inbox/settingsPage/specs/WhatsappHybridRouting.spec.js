@@ -176,7 +176,6 @@ describe('WhatsappHybridRouting (chat#1487)', () => {
     const field = drawer.find('#hybrid-pace-other');
     expect(field.classes()).toContain('outline-n-ruby-8');
     expect(field.attributes('aria-invalid')).toBe('true');
-    expect(field.attributes('min')).toBe('1');
     expect(field.attributes('max')).toBe('120');
     expect(
       buttonWith(wrapper, `${R}.SAVE`).attributes('disabled')
