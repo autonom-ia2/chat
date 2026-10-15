@@ -1,0 +1,178 @@
+{
+  "FORK_SIDEBAR": {
+    "MENU": "Menu principal",
+    "NOVAS": "1 nova | {count} novas",
+    "ROTULO_COM_EXTRA": "{item}, {extra}",
+    "FECHAR_GAVETA": "Fechar o menu",
+    "FALTAM_PASSOS": "Falta 1 passo | Faltam {count} passos",
+    "GRUPOS": {
+      "ATENDER": "Atender",
+      "ACOMPANHAR": "Acompanhar",
+      "CRESCER": "Crescer",
+      "AUTOMATICO": "No automático",
+      "RESULTADOS": "Resultados",
+      "OUTROS": "Outros"
+    },
+    "ITENS": {
+      "NOTIFICACOES": "Notificações",
+      "EM_QUE_PARTICIPO": "Em que participo",
+      "PRAZOS": "Prazos de resposta",
+      "AGENDA": "Agenda",
+      "CAMPANHAS": "Campanhas",
+      "VISAO_GERAL": "Visão geral",
+      "AGENTES": "Agentes",
+      "GASTO_IA": "Gasto com IA",
+      "AJUDA": "Ajuda",
+      "CONFIGURACOES": "Configurações",
+      "MEUS_RESULTADOS": "Meus resultados",
+      "RELATORIO_USUARIOS": "Usuários",
+      "RELATORIO_CANAIS": "Canais",
+      "RELATORIO_TIMES": "Times",
+      "RELATORIO_PRAZOS": "Prazos de resposta"
+    },
+    "RECOLHER": "Recolher menu",
+    "ABRIR_MENU": "Abrir menu",
+    "ANUNCIO_RECOLHIDO": "Menu recolhido",
+    "ANUNCIO_ABERTO": "Menu aberto",
+    "ATRIBUICAO": {
+      "TEXTO": "Quem recebe cada conversa é definido em Atribuição.",
+      "LINK": "Abrir Atribuição"
+    },
+    "CRM": {
+      "ABA_NUMEROS": "Números",
+      "TITULO_NUMEROS": "Números",
+      "VISTAS": "Como ver o CRM"
+    },
+    "ACAO_COM_ATALHO": "{acao} ({tecla})"
+  },
+  "SETTINGS_INICIO": {
+    "ROTULO": "Configurações",
+    "TITULO": "O que você quer ajustar?",
+    "TEXTO": "Escolha um assunto. Cada cartão mostra o que já está pronto e o que ainda falta.",
+    "BUSCA": {
+      "ROTULO": "Procurar nas configurações",
+      "PLACEHOLDER": "Procure: horário, usuário, WhatsApp…",
+      "LIMPAR": "Limpar a busca",
+      "NADA": "Nada com esse nome. Tente outra palavra.",
+      "RESULTADOS": "Nenhum assunto encontrado | 1 assunto encontrado | {count} assuntos encontrados"
+    },
+    "COMECE": {
+      "ROTULO": "Comece por aqui",
+      "TUDO_PRONTO": "Tudo o que é essencial já está pronto."
+    },
+    "ABRIR": "Abrir",
+    "FALTA": "Falta: {item}",
+    "PRONTO": "Pronto",
+    "CARREGANDO": "Carregando as configurações",
+    "GRUPOS": {
+      "SUA_EMPRESA": "Sua empresa",
+      "CANAIS": "Canais",
+      "PESSOAS": "Pessoas e acesso",
+      "ATENDIMENTO": "Atendimento",
+      "CONEXOES": "Conexões",
+      "SEGURANCA": "Segurança",
+      "OUTROS": "Outros"
+    },
+    "CONTAGEM": {
+      "caixas": "Nenhum canal ainda | 1 canal ligado | {count} canais ligados",
+      "usuarios": "Só você por enquanto | 1 usuário | {count} usuários",
+      "times": "Nenhum time ainda | 1 time | {count} times",
+      "etiquetas": "Nenhuma etiqueta ainda | 1 etiqueta | {count} etiquetas"
+    },
+    "NOTAS": {
+      "HORARIOS": "Fica dentro de cada canal"
+    },
+    "OUTRO_ITEM": "Outra configuração da plataforma.",
+    "CARTOES": {
+      "DADOS_EMPRESA": {
+        "TITULO": "Dados da empresa",
+        "TEXTO": "Nome, idioma e fuso da sua conta."
+      },
+      "PLANO": {
+        "TITULO": "Plano e faturas",
+        "TEXTO": "Seu plano, o próximo pagamento e as faturas."
+      },
+      "HORARIOS": {
+        "TITULO": "Horários",
+        "TEXTO": "Quando sua equipe atende e o que o cliente recebe fora do horário."
+      },
+      "CANAIS": {
+        "TITULO": "Canais de atendimento",
+        "TEXTO": "WhatsApp, e-mail, Instagram e site: por onde o cliente fala com você."
+      },
+      "USUARIOS": {
+        "TITULO": "Usuários",
+        "TEXTO": "Quem entra na plataforma e o que cada pessoa pode fazer."
+      },
+      "TIMES": {
+        "TITULO": "Times",
+        "TEXTO": "Grupos de pessoas para dividir o trabalho."
+      },
+      "ATRIBUICAO": {
+        "TITULO": "Atribuição",
+        "TEXTO": "Quem recebe cada conversa nova, quanto cada pessoa aguenta e quando o robô passa para alguém."
+      },
+      "PASSAGEM": {
+        "TITULO": "Passar para uma pessoa",
+        "TEXTO": "Quando o robô do CRM entrega a conversa para alguém da equipe."
+      },
+      "FUNCOES": {
+        "TITULO": "Funções personalizadas",
+        "TEXTO": "Acesso sob medida: o que cada pessoa vê e o que pode mudar."
+      },
+      "RESPOSTAS": {
+        "TITULO": "Respostas prontas",
+        "TEXTO": "Textos que você usa sempre, a um clique na conversa."
+      },
+      "ETIQUETAS": {
+        "TITULO": "Etiquetas",
+        "TEXTO": "Nomes e cores para separar conversas e clientes."
+      },
+      "ENCERRAR": {
+        "TITULO": "Regras para encerrar",
+        "TEXTO": "O que precisa estar preenchido antes de encerrar uma conversa."
+      },
+      "ACOES": {
+        "TITULO": "Ações em um clique",
+        "TEXTO": "Vários passos num botão só: marcar, passar para alguém e responder."
+      },
+      "CAMPOS": {
+        "TITULO": "Campos extras",
+        "TEXTO": "Informações a mais que você quer guardar de cada cliente."
+      },
+      "INTEGRACOES": {
+        "TITULO": "Integrações",
+        "TEXTO": "Ligue a plataforma a outros sistemas, como a chave da IA."
+      },
+      "ROBOS": {
+        "TITULO": "Agentes externos",
+        "TEXTO": "Para agentes de outros sistemas. Os Agentes da plataforma ficam em No automático."
+      },
+      "IMPORTAR": {
+        "TITULO": "Trazer de outro sistema",
+        "TEXTO": "Traga clientes e conversas que estão em outro lugar."
+      },
+      "LOGIN": {
+        "TITULO": "Login da empresa",
+        "TEXTO": "Entrar com a conta da empresa, sem uma senha a mais."
+      },
+      "HISTORICO": {
+        "TITULO": "Histórico de alterações",
+        "TEXTO": "Quem mudou o quê, e quando."
+      },
+      "QUEM_CUIDA": {
+        "TITULO": "Quem cuida do quê",
+        "TEXTO": "Quem da equipe atende cada caixa e cada funil no CRM."
+      },
+      "CUSTOS_WHATSAPP": {
+        "TITULO": "Custos do WhatsApp",
+        "TEXTO": "Sua autorização para a plataforma criar modelos que a Meta cobra."
+      },
+      "EMAIL_ENVIO": {
+        "TITULO": "E-mail de envio",
+        "TEXTO": "O endereço que aparece para quem recebe suas campanhas por e-mail."
+      }
+    },
+    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais"
+  }
+}

@@ -25,8 +25,11 @@ module OutOfOffisable
 
   # 'UTC' é o padrão da coluna: só entra aqui quem não escolheu fuso nenhum.
   # Quem quiser UTC de propósito escolhe na tela de horário de atendimento.
+  # Lê a coluna, não o leitor: com a flag horario_unico_caixa (#1619) o leitor
+  # devolve o fuso da conta, e a caixa nova ficaria em UTC se a flag desligar.
   def apply_default_timezone
-    return if timezone.present? && timezone != 'UTC'
+    column_timezone = self[:timezone]
+    return if column_timezone.present? && column_timezone != 'UTC'
 
     inherited = account&.reporting_timezone.presence
     return if inherited.blank?

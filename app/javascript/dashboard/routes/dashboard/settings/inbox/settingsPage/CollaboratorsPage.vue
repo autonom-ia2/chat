@@ -11,6 +11,7 @@ import SettingsFieldSection from 'dashboard/components-next/Settings/SettingsFie
 import SettingsAccordion from 'dashboard/components-next/Settings/SettingsAccordion.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
+import GerenciadoEmAtribuicao from 'dashboard/components-next/sidebar/fork/GerenciadoEmAtribuicao.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
@@ -395,6 +396,7 @@ onMounted(() => {
         </div>
       </template>
     </SettingsFieldSection>
+    <GerenciadoEmAtribuicao />
     <SettingsAccordion
       :title="$t('INBOX_MGMT.SETTINGS_POPUP.AGENT_ASSIGNMENT')"
       class="mt-6"
