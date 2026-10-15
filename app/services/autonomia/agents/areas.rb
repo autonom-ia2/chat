@@ -22,33 +22,67 @@ module Autonomia::Agents::Areas
   class AgenteInterno < StandardError; end
   class AgenteNaoAtende < StandardError; end
   class AgenteDeSistema < StandardError; end
-  class SemPortaAtendendo < StandardError; end
-  class CaixaComRoboExterno < StandardError; end
+
+  # A caixa não aceita agente da equipe agora; `codigo` é o do caixa_aceita_area? (ex.: :principal_parado).
+  class CaixaNaoAceitaArea < StandardError
+    attr_reader :codigo
+
+    def initialize(codigo, inbox_id)
+      @codigo = codigo
+      super("inbox #{inbox_id} does not accept a team agent: #{codigo}")
+    end
+  end
+
+  # Resposta de caixa_aceita_area?: `codigo` é um de CODIGOS.
+  CODIGOS = %i[ok principal_parado robo_externo fase2_desligada].freeze
+  Resultado = Struct.new(:codigo) do
+    def ok?
+      codigo == :ok
+    end
+  end
 
   module_function
 
+  # O LEITOR ÚNICO de "esta caixa pode receber um agente da equipe agora?" (#1433), para a tela dos Agentes, o CRM e o
+  # vincular!. Puro: não trava nada (o vincular! chama com a caixa já travada). -> Resultado com o código:
+  # - :fase2_desligada — a conta DA CAIXA não tem a Fase 2 (sem ela a área nunca responde);
+  # - :principal_parado — a caixa tem principal (porta ativa) e ele não está atendendo;
+  # - :robo_externo — sem principal e com robô de fora (AgentBotInbox, ex.: n8n);
+  # - :ok — principal atendendo, ou caixa só de pessoas.
+  # `conferir_fase2: false` é só do vincular!: a Fase 2 é regra da conta, conferida por quem chama (a API de canais e
+  # a tela do CRM). O vincular! confere sempre a regra da CAIXA.
+  # Tenancy: o principal é lido na conta da caixa.
+  def caixa_aceita_area?(inbox, conferir_fase2: true)
+    return Resultado.new(:fase2_desligada) if conferir_fase2 && !::Autonomia::Agents::Fase2.ligada?(inbox.account)
+
+    porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: inbox.id, account_id: inbox.account_id)
+    return Resultado.new(porta.agent&.operating? ? :ok : :principal_parado) if porta
+    return Resultado.new(:robo_externo) if ::Autonomia::Agents::AgentInbox.robo_externo_na_caixa?(inbox.id)
+
+    Resultado.new(:ok)
+  end
+
   # -> o AgentInbox de área ativo. Recusa o agente que não fala com cliente (mesmo predicado do
-  # InboxConnector#connect_locked!, mais o de sistema). CaixaComRoboExterno quando a caixa não tem porta ativa e tem
-  # robô de fora; ActiveRecord::RecordInvalid quando o agente já é a porta dela, ou agente/caixa são de contas
-  # diferentes. Caixa sem porta e sem robô (só de pessoas) aceita.
+  # InboxConnector#connect_locked!, mais o de sistema). CaixaNaoAceitaArea (com o `codigo` do caixa_aceita_area?)
+  # quando a caixa tem principal parado ou robô de fora; ActiveRecord::RecordInvalid quando o agente já é a porta dela,
+  # ou agente/caixa são de contas diferentes. Principal atendendo ou caixa só de pessoas aceita.
   #
   # `ativar: true` (#1366) — "pôr o agente nesta área e ligá-lo": aceita o agente parado ou em rascunho e o liga
   # (active + enabled) na MESMA transação do vínculo, como o InboxConnector. É o caminho da área que volta depois que
   # o agente parou por ter ficado sem onde trabalhar. Sem `ativar`, só vincula quem já atende.
   #
-  # `exigir_porta_atendendo: true` (#1433, tela do agente da equipe) — com a caixa já travada, confere que o principal
-  # dela (a porta), SE HOUVER, está atendendo; senão SemPortaAtendendo. A tela só oferece caixas assim, mas o principal
-  # pode parar entre a leitura e o clique. Caixa sem porta não tem principal a conferir.
+  # A regra da caixa é conferida SEMPRE, com a caixa já travada, pelo mesmo leitor da tela (caixa_aceita_area?): a tela
+  # só oferece caixas que aceitam, mas o principal pode parar (ou um robô entrar) entre a leitura e o clique.
   #
   # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete,
   # AgentInbox#soltar_areas_da_caixa!): a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam, e a
   # parada automática do agente não espera por uma caixa que outro segura.
-  def vincular!(agent:, inbox:, ativar: false, exigir_porta_atendendo: false)
+  def vincular!(agent:, inbox:, ativar: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.
       recusar_quem_nao_fala_com_cliente!(agent, ativar: ativar)
       inbox.with_lock do
-        conferir_a_caixa!(inbox, exigir_porta_atendendo)
+        conferir_a_caixa!(inbox)
 
         vinculo = vincular_na_caixa!(agent, inbox)
         # Depois do vínculo: a validação de atender já o enxerga. Recusada, a transação desfaz o vínculo.
@@ -85,14 +119,10 @@ module Autonomia::Agents::Areas
     raise AgenteNaoAtende, "agent #{agent.id} is not operating" unless ativar || agent.operating?
   end
 
-  # Com porta: só a exigência do principal atendendo. Sem porta: a caixa precisa ser só de pessoas (sem robô de fora).
-  def conferir_a_caixa!(inbox, exigir_porta_atendendo)
-    porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: inbox.id)
-    if porta
-      raise SemPortaAtendendo, "inbox #{inbox.id} has no operating porta" if exigir_porta_atendendo && !porta.agent&.operating?
-    elsif ::Autonomia::Agents::AgentInbox.robo_externo_na_caixa?(inbox.id)
-      raise CaixaComRoboExterno, "inbox #{inbox.id} has an external bot"
-    end
+  # O mesmo leitor da tela, com a caixa já travada.
+  def conferir_a_caixa!(inbox)
+    resultado = caixa_aceita_area?(inbox, conferir_fase2: false)
+    raise CaixaNaoAceitaArea.new(resultado.codigo, inbox.id) unless resultado.ok?
   end
 
   def reativar!(vinculo)

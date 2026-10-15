@@ -133,7 +133,7 @@ RSpec.describe 'Autonomia agente da equipe', type: :request do
 
       pedir_area
 
-      expect(Autonomia::Agents::Areas).to have_received(:vincular!).with(hash_including(exigir_porta_atendendo: true))
+      expect(Autonomia::Agents::Areas).to have_received(:vincular!).with(agent: novo, inbox: inbox, ativar: true)
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(erro(:sem_principal))
       expect(Autonomia::Agents::AgentInbox.kept.where(agent: novo)).to be_empty

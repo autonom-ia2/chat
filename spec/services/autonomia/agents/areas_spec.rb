@@ -41,7 +41,7 @@ RSpec.describe Autonomia::Agents::Areas do
       AgentBotInbox.create!(inbox: outra_caixa, agent_bot: create(:agent_bot, account: account), account: account)
 
       expect { described_class.vincular!(agent: agente_da_area, inbox: outra_caixa) }
-        .to raise_error(described_class::CaixaComRoboExterno)
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
         .and(not_change(AgentBot, :count))
     end
 
@@ -51,14 +51,12 @@ RSpec.describe Autonomia::Agents::Areas do
         .and(not_change(AgentBot, :count))
     end
 
-    it 'com exigir_porta_atendendo, recusa a caixa cujo principal parou (conferido com a caixa travada)' do
+    it 'recusa sempre a caixa cujo principal parou (conferido com a caixa travada)' do
       agente_da_porta.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
 
-      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox, exigir_porta_atendendo: true) }
-        .to raise_error(described_class::SemPortaAtendendo)
+      expect { described_class.vincular!(agent: agente_da_area, inbox: inbox) }
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:principal_parado) }
         .and(not_change(Autonomia::Agents::AgentInbox, :count))
-      # Sem a exigência, a regra de antes: basta a porta existir.
-      expect(described_class.vincular!(agent: agente_da_area, inbox: inbox)).to have_attributes(papel: 'area')
     end
 
     it 'recusa agente interno (copiloto da equipe nunca fala com cliente)' do

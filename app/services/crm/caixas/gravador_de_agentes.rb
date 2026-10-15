@@ -91,6 +91,9 @@ class Crm::Caixas::GravadorDeAgentes
     ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true)
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     raise Invalida, 'crm.caixas.agente_invalido'
+  rescue ::Autonomia::Agents::Areas::CaixaNaoAceitaArea
+    # #1433: a caixa recusou (principal parado ou robô de fora), com a caixa travada.
+    raise Invalida, 'crm.caixas.sem_porta'
   rescue ActiveRecord::RecordInvalid => e
     raise Invalida, codigo_da_recusa(e.record)
   end

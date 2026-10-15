@@ -26,7 +26,7 @@ RSpec.describe Autonomia::Agents::Areas do
 
   describe '.vincular! em caixa sem principal' do
     it 'aceita a caixa só de pessoas: vínculo de área, espelho sem AgentBotInbox, e a caixa segue sem robô' do
-      vinculo = described_class.vincular!(agent: da_equipe, inbox: inbox, exigir_porta_atendendo: true)
+      vinculo = described_class.vincular!(agent: da_equipe, inbox: inbox)
 
       expect(vinculo).to have_attributes(papel: 'area', inbox: inbox, deleted_at: nil)
       expect(AgentBotInbox.where(inbox_id: inbox.id)).to be_empty
@@ -43,8 +43,8 @@ RSpec.describe Autonomia::Agents::Areas do
     it 'recusa a caixa com robô de fora (webhook, como o n8n), sem deixar espelho nem vínculo' do
       robo_externo(inbox)
 
-      expect { described_class.vincular!(agent: da_equipe, inbox: inbox, exigir_porta_atendendo: true) }
-        .to raise_error(described_class::CaixaComRoboExterno)
+      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
         .and(not_change(AgentBot, :count))
         .and(not_change(Autonomia::Agents::AgentInbox, :count))
     end
@@ -52,16 +52,16 @@ RSpec.describe Autonomia::Agents::Areas do
     it 'recusa a caixa com robô de fora mesmo com o robô desligado (AgentBotInbox inativo)' do
       robo_externo(inbox).update!(status: :inactive)
 
-      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }.to raise_error(described_class::CaixaComRoboExterno)
+      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }.to raise_error(described_class::CaixaNaoAceitaArea)
     end
 
-    it 'caixa com principal parado continua recusada (exigir_porta_atendendo)' do
+    it 'caixa com principal parado continua recusada' do
       principal = agente('Porta')
       Autonomia::Agents::Operate::InboxConnector.new(agent: principal, inbox: inbox).perform(connect: true)
       principal.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
 
-      expect { described_class.vincular!(agent: da_equipe, inbox: inbox, exigir_porta_atendendo: true) }
-        .to raise_error(described_class::SemPortaAtendendo)
+      expect { described_class.vincular!(agent: da_equipe, inbox: inbox) }
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:principal_parado) }
         .and(not_change(Autonomia::Agents::AgentInbox, :count))
     end
 

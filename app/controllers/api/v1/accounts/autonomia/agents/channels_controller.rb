@@ -1,5 +1,7 @@
 class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accounts::Autonomia::BaseController
   PAPEL_AREA = 'area'.freeze
+  # Código do Areas.caixa_aceita_area? -> motivo da tela (area_errors).
+  MOTIVO_DA_CAIXA = { principal_parado: :sem_principal, robo_externo: :robo_externo, fase2_desligada: :fase2_off }.freeze
 
   before_action :fetch_agent
   before_action :fetch_inbox, only: [:create, :destroy]
@@ -56,15 +58,13 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     return render_unprocessable(area_error(recusa)) if recusa
 
     ja_era_area = area_ativa?
-    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true, exigir_porta_atendendo: true)
+    @agent_inbox = ::Autonomia::Agents::Areas.vincular!(agent: @agent, inbox: @inbox, ativar: true)
     load_index
     render :index, status: ja_era_area ? :ok : :created
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     render_unprocessable(area_error(:agent_internal))
-  rescue ::Autonomia::Agents::Areas::SemPortaAtendendo
-    render_unprocessable(area_error(:sem_principal))
-  rescue ::Autonomia::Agents::Areas::CaixaComRoboExterno
-    render_unprocessable(area_error(:robo_externo))
+  rescue ::Autonomia::Agents::Areas::CaixaNaoAceitaArea => e
+    render_unprocessable(area_error(MOTIVO_DA_CAIXA.fetch(e.codigo, :generic)))
   rescue ActiveRecord::RecordNotUnique
     render_unprocessable(area_error(:already_linked))
   rescue ActiveRecord::RecordInvalid
@@ -84,13 +84,9 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     ::Autonomia::Agents::AgentInbox.kept.area.exists?(autonomia_agent_id: @agent.id, inbox_id: @inbox.id)
   end
 
-  # Caixa com principal (porta ativa): ele precisa estar atendendo. Caixa sem principal (#1433): só de pessoas, sem
-  # robô de fora; ali a área só responde a conversa que alguém passar para ela.
+  # A regra é do Areas.caixa_aceita_area? (leitor único): principal atendendo ou caixa só de pessoas.
   def recusa_da_caixa
-    porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: @inbox.id)
-    return (:sem_principal unless porta.agent.operating?) if porta
-
-    :robo_externo if ::Autonomia::Agents::AgentInbox.robo_externo_na_caixa?(@inbox.id)
+    MOTIVO_DA_CAIXA[::Autonomia::Agents::Areas.caixa_aceita_area?(@inbox).codigo]
   end
 
   # Inboxes da conta que ainda não têm nenhum bot (nem webhook/Gabriela, nem agente nativo).
