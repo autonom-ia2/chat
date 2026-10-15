@@ -20,7 +20,7 @@ class Crm::Conversations::PipelineFilter
     return relation if @value.blank?
     return relation.where(sanitize("NOT #{card_exists('', 'NOT IN (:released)')}")) if @value == NONE
 
-    pipeline_id = Integer(@value, exception: false)
+    pipeline_id = Integer(@value, 10, exception: false)
     return relation.none unless pipeline_id && visible?(pipeline_id)
 
     relation.where(sanitize(in_pipeline_sql, pipeline_id: pipeline_id))

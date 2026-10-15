@@ -24,8 +24,8 @@ export const filterByLabel = (shouldFilter, labels, chatLabels) => {
   const isOnLabel = labels.every(label => chatLabels.includes(label));
   return labels.length ? isOnLabel && shouldFilter : shouldFilter;
 };
-// Filtro "Funil" (multifunil #1150): crm_pipeline_ids vem na conversa (lista e websocket); vazio = "Sem assunto".
-// Conversa sem o campo (CRM desligado) não entra numa lista filtrada por funil.
+// Filtro "Funil" (multifunil #1150): crm_pipeline_ids vem na conversa lida da API; vazio = "Sem assunto".
+// Conversa sem o campo (vinda do websocket, ainda não lida da API) não entra numa lista filtrada por funil.
 export const filterByCrmPipeline = (
   shouldFilter,
   crmPipelineId,

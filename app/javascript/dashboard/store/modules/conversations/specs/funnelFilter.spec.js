@@ -70,6 +70,58 @@ describe('filtro Funil (#1150)', () => {
     ).toBe(false);
   });
 
+  describe('conversa que chega pelo websocket (sem os funis no payload)', () => {
+    const estado = naLista => ({
+      conversationFilters: { crmPipelineId: '3' },
+      allConversations: naLista ? [conversa(42, [])] : [],
+    });
+
+    it('conversa nova na lista: pede a leitura dos funis', () => {
+      const dispatch = vi.fn();
+      actions.addConversation(
+        {
+          commit: vi.fn(),
+          dispatch,
+          state: {
+            currentInbox: null,
+            appliedFilters: [],
+            conversationFilters: { crmPipelineId: '3' },
+          },
+          rootState: { route: { name: 'home' } },
+        },
+        { ...conversa(42), meta: { sender: { id: 1 } } }
+      );
+
+      expect(dispatch).toHaveBeenCalledWith('refreshConversationFunnel', 42);
+    });
+
+    it('conversa atualizada que ainda não estava na lista: pede a leitura; já listada: não', () => {
+      const novo = vi.fn();
+      const listada = vi.fn();
+      actions.updateConversation(
+        {
+          commit: vi.fn(),
+          dispatch: novo,
+          state: estado(false),
+          rootGetters: {},
+        },
+        conversa(42, undefined)
+      );
+      actions.updateConversation(
+        {
+          commit: vi.fn(),
+          dispatch: listada,
+          state: estado(true),
+          rootGetters: {},
+        },
+        conversa(42, undefined)
+      );
+
+      expect(novo).toHaveBeenCalledWith('refreshConversationFunnel', 42);
+      expect(listada).not.toHaveBeenCalledWith('refreshConversationFunnel', 42);
+    });
+  });
+
   describe('#refreshConversationFunnel', () => {
     const contexto = ({ crmPipelineId, naLista }) => ({
       getters: {

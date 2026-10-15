@@ -750,7 +750,6 @@ RSpec.describe Conversation do
         waiting_since: conversation.waiting_since.to_i,
         priority: nil,
         handoff_invite: nil,
-        crm_pipeline_ids: [],
         unread_count: 0
       }
     end

@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # Filtro "Funil" (multifunil #1150): a lista aceita crm_pipeline_id e cada conversa traz os funis dela
-# (crm_pipeline_ids), para o painel conferir em tempo real a conversa que chega pelo websocket.
+# (crm_pipeline_ids), lidos da API, para o painel conferir a conversa que chega ou muda.
 RSpec.describe 'Conversations API: filtro Funil', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -53,10 +53,20 @@ RSpec.describe 'Conversations API: filtro Funil', type: :request do
     expect(response.parsed_body['meta']['all_count']).to eq(1)
   end
 
-  it 'a conversa do websocket traz os mesmos funis, e o webhook não' do
-    data = conversa_vendas.push_event_data
-
-    expect(data[:crm_pipeline_ids]).to eq([vendas.first.id])
+  it 'o websocket e o webhook não levam os funis: o payload também chega ao contato pelo widget' do
+    expect(conversa_vendas.push_event_data).not_to have_key(:crm_pipeline_ids)
     expect(conversa_vendas.webhook_data).not_to have_key(:crm_pipeline_ids)
+  end
+
+  it 'a conversa lida sozinha (show) traz os funis dela' do
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa_vendas.display_id}", headers: agent.create_new_auth_token
+
+    expect(response.parsed_body['crm_pipeline_ids']).to eq([vendas.first.id])
+  end
+
+  it 'as conversas do contato também trazem os funis' do
+    get "/api/v1/accounts/#{account.id}/contacts/#{conversa_sinistro.contact_id}/conversations", headers: agent.create_new_auth_token
+
+    expect(response.parsed_body['payload'].pluck('crm_pipeline_ids')).to eq([[sinistro.first.id]])
   end
 end

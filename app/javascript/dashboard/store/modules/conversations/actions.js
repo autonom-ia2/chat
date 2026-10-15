@@ -67,8 +67,11 @@ const conversationListRequest = useAbortableRequest();
 
 // actions
 const actions = {
-  // Filtro "Funil" da lista (#1150): o card de uma conversa já listada mudou; relê a conversa para os funis dela
-  // (crm_pipeline_ids) valerem no filtro. Sem filtro de funil, ou conversa fora da lista, nada a fazer.
+  // Filtro "Funil" da lista (#1150). O websocket não traz os funis da conversa (crm_pipeline_ids): o payload também vai
+  // ao contato pelo widget. Com filtro de funil, a conversa que entra na lista é lida da API, que traz os funis; antes
+  // disso ela fica fora da lista filtrada (applyPageFilters). Sem filtro, nada a fazer.
+  // Também quando o card de uma conversa listada muda de funil ou de status. Só relê conversa que já está na lista:
+  // a leitura não pode pôr nela conversa que a tela não mostra (Menções, Em que participo).
   refreshConversationFunnel: ({ getters, dispatch }, conversationId) => {
     if (!getters.getChatListFilters?.crmPipelineId) return null;
     if (!getters.getConversationById(conversationId)) return null;
@@ -532,6 +535,9 @@ const actions = {
     ) {
       commit(types.ADD_CONVERSATION, conversation);
       dispatch('contacts/setContact', sender);
+      if (state.conversationFilters?.crmPipelineId) {
+        dispatch('refreshConversationFunnel', conversation.id);
+      }
     }
   },
 
@@ -547,11 +553,16 @@ const actions = {
     }
   },
 
-  updateConversation({ commit, dispatch, rootGetters }, conversation) {
+  updateConversation({ commit, dispatch, state, rootGetters }, conversation) {
     const sender = conversation.meta?.sender;
+    // Filtro "Funil" (#1150): conversa que entra na lista filtrada pelo websocket precisa dos funis da API.
+    const needsFunnel =
+      Boolean(state?.conversationFilters?.crmPipelineId) &&
+      !state.allConversations.some(({ id }) => id === conversation.id);
 
     commit(types.UPDATE_CONVERSATION, conversation);
     syncConversationCallVisibility(conversation, rootGetters?.getCurrentUserID);
+    if (needsFunnel) dispatch('refreshConversationFunnel', conversation.id);
 
     dispatch('conversationLabels/setConversationLabel', {
       id: conversation.id,

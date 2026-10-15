@@ -901,8 +901,12 @@ watch(
 );
 watch(
   computed(() => props.conversationType),
-  () => {
-    activeAssigneeTab.value = defaultAssigneeTab();
+  (type, previousType) => {
+    // Só entrar ou sair de "Em que participo" troca a aba; nas outras listas a escolha da pessoa fica.
+    const { PARTICIPATING } = wootConstants.CONVERSATION_TYPE;
+    if ([type, previousType].includes(PARTICIPATING)) {
+      activeAssigneeTab.value = defaultAssigneeTab();
+    }
     resetAndFetchData();
   }
 );
