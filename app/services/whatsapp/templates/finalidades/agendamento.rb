@@ -43,7 +43,7 @@ module Whatsapp::Templates::Finalidades::Agendamento
     'agendamento_1_hora_antes' => {
       dono: 'agendamento', opcoes: [],
       variantes: variante('agendamento_1_hora_antes_v2', 'Agendamento: 1 hora antes',
-                          'Olá, {{1}}! Lembrete: seu horário começa em 1 hora ({{2}}).')
+                          'Olá, {{1}}! Seu horário está chegando: {{2}}.')
     }
   }.freeze
 end
