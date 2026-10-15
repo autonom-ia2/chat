@@ -40,10 +40,11 @@ class Crm::FollowUps::Creator
   end
 
   # #1590: mensagem automática com horário que já passou não tem como sair "na hora marcada" (sairia na hora, no
-  # primeiro giro do cron). Só a criação pelo painel passa aqui; reagendar tem trava parecida, sem a folga
-  # (Rescheduler). Vale com a flag desligada também: a tela antiga troca o código por uma frase (CrmKanbanPage).
+  # primeiro giro do cron). Reagendar tem trava parecida, sem a folga (Rescheduler). Só com a flag
+  # crm_mensagem_marcada: sem ela (inclusive pelo token de integração), a criação aceita como sempre aceitou.
   def reject_past_auto_send!(follow_up)
     return unless follow_up.auto_send_message?
+    return unless @account.feature_enabled?('crm_mensagem_marcada')
     return if follow_up.due_at.blank? || follow_up.due_at >= PAST_GRACE.ago
 
     follow_up.errors.add(:due_at, :in_the_past, message: 'must be in the future for auto-send follow-ups')

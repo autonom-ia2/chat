@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #1590 — Mensagem marcada: horário que já passou não é aceito na criação, e o motivo de uma mensagem não ter saído
+# #1590 — Mensagem marcada: com a flag, horário que já passou não é aceito na criação, e o motivo de uma mensagem não ter saído
 # chega à tela como código (o texto cru de send_error continua fora).
 RSpec.describe 'CRM follow-ups API — Mensagem marcada', type: :request do
   around do |example|
@@ -36,7 +36,15 @@ RSpec.describe 'CRM follow-ups API — Mensagem marcada', type: :request do
          headers: auth_headers(user)
   end
 
+  it 'sem a flag crm_mensagem_marcada, aceita mensagem automática com horário que já passou, como antes' do
+    expect { criar(due_at: 10.minutes.ago) }.to change(Crm::FollowUp, :count).by(1)
+
+    expect(response).to have_http_status(:created)
+  end
+
   it 'recusa mensagem automática com horário que já passou, com código estável' do
+    account.enable_features!('crm_mensagem_marcada')
+
     expect { criar(due_at: 10.minutes.ago) }.not_to change(Crm::FollowUp, :count)
 
     expect(response).to have_http_status(:unprocessable_entity)
@@ -45,6 +53,7 @@ RSpec.describe 'CRM follow-ups API — Mensagem marcada', type: :request do
   end
 
   it 'aceita a mensagem automática marcada para agora (folga de 1 minuto) e para o futuro' do
+    account.enable_features!('crm_mensagem_marcada')
     criar(due_at: 20.seconds.ago)
     expect(response).to have_http_status(:created)
 
@@ -53,6 +62,7 @@ RSpec.describe 'CRM follow-ups API — Mensagem marcada', type: :request do
   end
 
   it 'não muda o lembrete para a equipe: horário passado continua aceito' do
+    account.enable_features!('crm_mensagem_marcada')
     criar(due_at: 2.hours.ago, automation_mode: 'reminder_only')
 
     expect(response).to have_http_status(:created)

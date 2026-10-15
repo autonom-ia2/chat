@@ -1485,7 +1485,8 @@ const createFollowUp = async payload => {
       useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'));
       return;
     }
-    // #1590: mensagem automática com horário que já passou é recusada na criação.
+    // #1590: com a flag crm_mensagem_marcada, mensagem automática com horário que já
+    // passou é recusada na criação; o retorno de sempre (Twilio, caixa API) ainda passa aqui.
     if (error?.response?.data?.code === 'due_at_in_the_past') {
       useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'));
       return;
