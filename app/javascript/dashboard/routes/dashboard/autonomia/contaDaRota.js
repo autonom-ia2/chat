@@ -3,13 +3,17 @@ import store from 'dashboard/store';
 // Link direto / F5: o guarda roda antes de a store ter a conta, e o getter volta
 // vazio; sem esperar, a rota mandava para home com o recurso ligado (Cotação em
 // 03/09, Prospecção e Agentes na #675, Prospecção › Configurações na #1618).
-// Carrega a conta antes de decidir. Se ela não carregar (o accounts/get já engole
-// o erro), o guarda segue sem conta e redireciona, como antes.
+// Carrega a conta antes de decidir. Se ela não carregar, o guarda segue sem conta
+// e redireciona, como antes.
 export const contaDaRota = async to => {
   const accountId = Number(to.params.accountId);
   const account = store.getters['accounts/getAccount'](accountId);
   if (account?.id) return account;
-  await store.dispatch('accounts/get');
+  try {
+    await store.dispatch('accounts/get');
+  } catch {
+    return null;
+  }
   return store.getters['accounts/getAccount'](accountId);
 };
 
