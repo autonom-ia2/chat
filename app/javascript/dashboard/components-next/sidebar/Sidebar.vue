@@ -1436,7 +1436,7 @@ const menuItems = computed(() => {
       {
         'sidebar-branded': hasBrandedSidebar,
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
-        'max-md:!w-[min(85vw,20rem)]': forkMenuOn,
+        'max-md:!w-[min(85vw,20rem)] max-md:!z-50': forkMenuOn,
         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
         'transition-transform duration-200 ease-out md:transition-[width]':
           !isResizing,

@@ -61,9 +61,12 @@ const classesDaLinha = computed(() => {
   if (contemAtiva.value) return [props.tema.paiAtivo, props.tema.passar];
   return [props.tema.texto, props.tema.passar];
 });
-const classesDoIcone = computed(() =>
-  souAtivo.value || contemAtiva.value ? props.tema.iconeAtivo : props.tema.icone
-);
+const classesDoIcone = computed(() => {
+  if (souAtivo.value) return props.tema.iconeAtivo;
+  // O pai aberto mantém o ícone visível (na barra de marca o 'ativo' é da cor do fundo).
+  if (contemAtiva.value) return props.tema.iconePai;
+  return props.tema.icone;
+});
 </script>
 
 <template>

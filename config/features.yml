@@ -405,9 +405,11 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Menu lateral novo e página inicial de Configurações com cartões (#1617). Bit A CONFIRMAR com a Orquestração (#1322):
-# na fila de reservas os bits 24 (whatsapp_campaign_products, #1578) e 25 (crm_mensagem_marcada, #1590) já estão
-# tomados, então o esperado é o bit 26 (67108864), logo depois deles no yml. Nesta branch, sem os dois, ele cai no 24.
+# Menu lateral novo e página inicial de Configurações com cartões (#1617). Bit 24 (16777216) NESTA branch: é a
+# posição no yml, logo depois de `crm_calendario_ouro` (bit 23), e o account_spec confere 1 << 24.
+# PENDENTE de confirmação com a Orquestração (#1322): os bits 24 e 25 estão reservados para #1578
+# (whatsapp_campaign_products) e #1590 (crm_mensagem_marcada). Se eles entrarem antes, esta flag vai para depois
+# deles no yml e vira o bit 26 (67108864) — mudar o yml e o account_spec juntos.
 # Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
 # No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
 - name: menu_lateral_novo

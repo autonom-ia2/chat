@@ -32,7 +32,10 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar']);
 
-const LARGURA_PADRAO = 240;
+// 256px: cabem inteiros os rótulos de hoje ("Todas as conversas" com a contagem, "Resultados da agenda").
+const LARGURA_PADRAO = 256;
+// Largura que o provider.js do upstream usa ao abrir o menu recolhido (duplo clique na borda).
+const LARGURA_DO_UPSTREAM = 200;
 
 const { t } = useI18n();
 const route = useRoute();
@@ -119,8 +122,16 @@ const pendenciaDe = item =>
     : '';
 
 // Largura padrão do menu novo: 240px, quando a pessoa ainda não arrastou a borda.
+// Sem largura escolhida, ou com os 200px que o provider.js grava ao abrir o menu recolhido (duplo clique na
+// borda), vale a largura do menu novo. Não grava: arrastar a borda continua sendo a escolha da pessoa.
+const larguraDoMenuNovo = largura =>
+  !largura || largura === LARGURA_DO_UPSTREAM ? LARGURA_PADRAO : largura;
 onMounted(() => {
-  if (!uiSettings.value?.sidebar_width) sidebarWidth.value = LARGURA_PADRAO;
+  sidebarWidth.value = larguraDoMenuNovo(uiSettings.value?.sidebar_width);
+});
+watch(isCollapsed, (recolhido, estava) => {
+  if (recolhido || !estava) return;
+  sidebarWidth.value = larguraDoMenuNovo(sidebarWidth.value);
 });
 
 // Gaveta do celular: foco preso, Esc fecha, foco volta para quem abriu.
@@ -188,11 +199,23 @@ const navegou = () => {
     data-menu-novo
     class="flex flex-col flex-grow min-h-0 min-w-0"
   >
+    <div v-if="gavetaAberta" class="flex justify-end px-3 pb-1">
+      <button
+        type="button"
+        data-fechar-gaveta
+        class="inline-flex items-center gap-2 px-3 text-[0.9375rem] rounded-xl min-h-11"
+        :class="[tema.foco, tema.texto, tema.passar]"
+        @click="emit('fechar')"
+      >
+        <span class="i-lucide-x size-5" aria-hidden="true" />
+        {{ t('FORK_SIDEBAR.FECHAR_GAVETA') }}
+      </button>
+    </div>
     <nav
       ref="lista"
       :aria-label="t('FORK_SIDEBAR.MENU')"
-      class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] [scrollbar-width:thin]"
-      :class="isCollapsed ? 'px-1.5 pb-3' : 'ps-3 pe-1.5 pb-4'"
+      class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
+      :class="isCollapsed ? 'px-1.5 pb-3' : 'ps-3 pe-1 pb-4'"
     >
       <ul
         v-if="topo.length"

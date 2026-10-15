@@ -360,6 +360,144 @@ const montar = ({
   return wrapper.findComponent({ name: 'ForkSidebarNav' }).props('itens');
 };
 
+// O menu de sempre (flag do menu novo desligada), lido dos SidebarGroup que o Sidebar.vue renderiza.
+const menuDeSempre = opcoes => {
+  montar(opcoes);
+  const todas = getters['accounts/isFeatureEnabledonAccount'].value;
+  getters['accounts/isFeatureEnabledonAccount'] = ref(
+    (id, flag) => flag !== 'menu_lateral_novo' && todas(id, flag)
+  );
+  const wrapper = shallowMount(Sidebar, {
+    global: {
+      stubs: {
+        RouterLink: true,
+        SidebarGroup: {
+          name: 'SidebarGroup',
+          props: ['name', 'children'],
+          template: '<li />',
+        },
+      },
+    },
+  });
+  return {
+    novo: wrapper.findComponent({ name: 'ForkSidebarNav' }).exists(),
+    grupos: wrapper.findAllComponents({ name: 'SidebarGroup' }).map(grupo => ({
+      name: grupo.props('name'),
+      children: (grupo.props('children') || []).map(filho => filho.name),
+    })),
+  };
+};
+
+// O menu de hoje no main (8ba5b440), com todas as flags, como o Sidebar.vue monta para o administrador.
+const MENU_DE_SEMPRE = [
+  { name: 'FirstSteps', children: [] },
+  { name: 'Inbox', children: [] },
+  {
+    name: 'Conversation',
+    children: [
+      'All',
+      'Mentions',
+      'Participating',
+      'Unattended',
+      'Folders',
+      'Teams',
+      'Channels',
+      'Labels',
+    ],
+  },
+  {
+    name: 'Captain',
+    children: [
+      'Overview',
+      'FAQs',
+      'Documents',
+      'Scenarios',
+      'Playground',
+      'Inboxes',
+      'Tools',
+      'Settings',
+    ],
+  },
+  { name: 'Calls', children: [] },
+  { name: 'Automacoes', children: [] },
+  { name: 'Agents', children: [] },
+  {
+    name: 'Prospecting',
+    children: [
+      'Prospecting Search',
+      'Prospecting Lists',
+      'Prospecting Settings',
+    ],
+  },
+  { name: 'Insurance', children: ['Insurance Connections', 'Insurance Agent'] },
+  {
+    name: 'Contacts',
+    children: ['All Contacts', 'Active', 'Segments', 'Tagged With'],
+  },
+  {
+    name: 'CRM',
+    children: [
+      'CRM Kanban',
+      'CRM Scheduling',
+      'CRM Dashboard',
+      'CRM AI Usage',
+      'CRM SLA',
+    ],
+  },
+  { name: 'Financial', children: ['Subscription', 'Invoices'] },
+  { name: 'Companies', children: ['All Companies'] },
+  {
+    name: 'Reports',
+    children: [
+      'Report Overview',
+      'Report Conversation',
+      'Reports Agent',
+      'Reports Label',
+      'Reports Inbox',
+      'Reports Team',
+      'Reports CSAT',
+      'Reports SLA',
+      'Reports Bot',
+    ],
+  },
+  {
+    name: 'Campaigns',
+    children: [
+      'Campaign Audiences',
+      'Campaign Journey',
+      'Campaign WhatsApp Templates',
+      'Campaign Links and QR codes',
+      'Campaign Meta Ads',
+      'Campaign Management',
+    ],
+  },
+  { name: 'CentralDeAjuda', children: [] },
+  {
+    name: 'Settings',
+    children: [
+      'Settings Account Settings',
+      'Settings Prospecting',
+      'Settings Agents',
+      'Settings Teams',
+      'Settings Agent Assignment',
+      'Settings Inboxes',
+      'Settings Templates',
+      'Settings Labels',
+      'Settings Custom Attributes',
+      'Settings Agent Bots',
+      'Settings Macros',
+      'Settings Canned Responses',
+      'Settings Integrations',
+      'Settings Data',
+      'Settings Audit Logs',
+      'Settings Custom Roles',
+      'Conversation Workflow',
+      'Settings Security',
+      'Settings Billing',
+    ],
+  },
+];
+
 const VARIANTES = [
   {},
   { jornadas: false },
@@ -379,9 +517,26 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
 
   const listas = () => VARIANTES.map(montar);
 
-  it('com a flag ligada, o Sidebar entrega a lista ao menu novo', () => {
+  it('com a flag ligada, o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
     const itens = montar({});
-    expect(itens.length).toBeGreaterThan(10);
+    expect(
+      itens.map(item => ({
+        name: item.name,
+        children: (item.children || []).map(filho => filho.name),
+      }))
+    ).toEqual(MENU_DE_SEMPRE);
+
+    const menu = organizeForkMenu(itens, ctx);
+    expect(nomes(menu.topo)).toEqual(['FirstSteps']);
+    expect(menu.grupos.map(grupo => [grupo.id, nomes(grupo.itens)])).toEqual([
+      ['ATENDER', ['Conversation', 'Inbox', 'Calls', 'Prazos']],
+      ['ACOMPANHAR', ['Contacts', 'Companies', 'CRM', 'Agenda']],
+      ['CRESCER', ['Campaigns', 'Prospecting', 'Insurance']],
+      ['AUTOMATICO', ['Agents', 'Automacoes']],
+      ['RESULTADOS', ['Reports']],
+    ]);
+    expect(nomes(menu.rodape)).toEqual(['CentralDeAjuda', 'Settings']);
+    expect(menu.configuracoesExtras).toEqual([]);
   });
 
   it('todo item do topo do upstream tem lugar no layout', () => {
@@ -429,28 +584,9 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect([...new Set(sumiram)]).toEqual([]);
   });
 
-  it('com a flag desligada, o menu de sempre continua', () => {
-    montar({});
-    getters['accounts/isFeatureEnabledonAccount'] = ref(
-      (_id, flag) => flag !== 'menu_lateral_novo'
-    );
-    const wrapper = shallowMount(Sidebar, {
-      global: {
-        stubs: {
-          RouterLink: true,
-          SidebarGroup: {
-            name: 'SidebarGroup',
-            props: ['name', 'children'],
-            template: '<li />',
-          },
-        },
-      },
-    });
-    expect(wrapper.findComponent({ name: 'ForkSidebarNav' }).exists()).toBe(
-      false
-    );
-    expect(
-      wrapper.findAllComponents({ name: 'SidebarGroup' }).length
-    ).toBeGreaterThan(10);
+  it('com a flag desligada, o menu de sempre continua igual ao do main (nomes e filhos)', () => {
+    const { novo, grupos } = menuDeSempre({});
+    expect(novo).toBe(false);
+    expect(grupos).toEqual(MENU_DE_SEMPRE);
   });
 });

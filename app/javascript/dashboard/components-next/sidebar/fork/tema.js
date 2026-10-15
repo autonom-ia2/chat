@@ -8,6 +8,7 @@ const PADRAO = {
   passar: 'hover:bg-n-alpha-2 hover:text-n-slate-12',
   ativo: 'bg-n-blue-3 text-n-blue-11 font-semibold',
   iconeAtivo: 'text-n-blue-11',
+  iconePai: 'text-n-blue-11',
   paiAtivo: 'font-semibold text-n-slate-12',
   tituloGrupo: 'text-n-slate-11',
   linha: 'border-n-weak',
@@ -26,6 +27,7 @@ const MARCA = {
   ativo:
     'bg-white text-[var(--sidebar-background-color)] font-semibold shadow-sm',
   iconeAtivo: 'text-[var(--sidebar-background-color)]',
+  iconePai: 'text-white',
   paiAtivo: 'font-semibold text-white',
   tituloGrupo: 'text-white/60',
   linha: 'border-white/15',

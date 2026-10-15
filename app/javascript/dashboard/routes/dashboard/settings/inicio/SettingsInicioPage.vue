@@ -4,10 +4,12 @@ import { useI18n } from 'vue-i18n';
 import InicioHeroi from './components/InicioHeroi.vue';
 import InicioCartao from './components/InicioCartao.vue';
 import { useCartoes } from './useCartoes';
+import { useSoComMenuNovo } from './useSoComMenuNovo';
 
 // Página inicial de Configurações (#1617): cada assunto num cartão, cada coisa num lugar só. Abre pelo item
 // Configurações do menu novo (e pelo endereço antigo de Configurações, com a flag ligada).
 const { t } = useI18n();
+useSoComMenuNovo();
 const {
   termo,
   buscando,

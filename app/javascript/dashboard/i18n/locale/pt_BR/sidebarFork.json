@@ -4,6 +4,9 @@
     "FECHAR": "Fechar o menu",
     "ABRIR_ITEM": "Mostrar o que tem em {item}",
     "FECHAR_ITEM": "Esconder o que tem em {item}",
+    "NOVAS": "1 nova | {count} novas",
+    "ROTULO_COM_EXTRA": "{item}, {extra}",
+    "FECHAR_GAVETA": "Fechar o menu",
     "FALTAM_PASSOS": "Falta 1 passo | Faltam {count} passos",
     "GRUPOS": {
       "ATENDER": "Atender",

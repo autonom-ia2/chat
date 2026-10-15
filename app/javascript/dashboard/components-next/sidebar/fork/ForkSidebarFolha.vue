@@ -33,7 +33,7 @@ const ir = (navegar, evento) => {
         :href="href"
         :title="folha.label"
         :aria-current="ativa ? 'page' : undefined"
-        class="flex items-center min-w-0 gap-2.5 pe-2 text-[0.9375rem] leading-5 transition-colors duration-150 rounded-lg min-h-10"
+        class="flex items-center min-w-0 gap-2.5 pe-2 text-[0.9375rem] leading-5 transition-colors duration-150 rounded-lg min-h-11"
         :class="[
           neta ? 'ps-12' : 'ps-11',
           tema.foco,
@@ -52,8 +52,10 @@ const ir = (navegar, evento) => {
           }"
         />
         <template v-else>
+          <!-- Ícone só na lista que cresce (emoji do time, cor da etiqueta). No primeiro nível, o texto alinha com o
+               do item pai e cabe inteiro em 240px ("Todas as conversas"). -->
           <span
-            v-if="folha.icon"
+            v-if="folha.icon && neta"
             class="grid shrink-0 size-4 place-content-center"
             aria-hidden="true"
           >

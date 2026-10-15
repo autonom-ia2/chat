@@ -206,6 +206,7 @@ RSpec.describe Account do
         feature_followup_template_real_values: 1 << 21,
         feature_crm_lembretes_v2: 1 << 22,
         feature_crm_calendario_ouro: 1 << 23,
+        # #1617: bit 24 nesta branch; vira 26 se #1578 e #1590 entrarem antes (confirmar com a Orquestração, #1322).
         feature_menu_lateral_novo: 1 << 24
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)

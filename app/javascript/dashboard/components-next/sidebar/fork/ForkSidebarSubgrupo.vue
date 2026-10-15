@@ -32,7 +32,7 @@ const idDaLista = computed(
     <div class="flex items-center min-w-0 gap-1 pe-1">
       <button
         type="button"
-        class="flex items-center flex-1 min-w-0 gap-2.5 text-[0.9375rem] leading-5 rounded-lg min-h-10 ps-11 pe-2 transition-colors duration-150"
+        class="flex items-center flex-1 min-w-0 gap-2.5 text-[0.9375rem] leading-5 rounded-lg min-h-11 ps-11 pe-2 transition-colors duration-150"
         :class="[tema.foco, tema.textoFilho, tema.passar]"
         :aria-expanded="aberto"
         :aria-controls="idDaLista"

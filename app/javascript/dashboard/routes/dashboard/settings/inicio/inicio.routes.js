@@ -5,13 +5,16 @@ import {
   CANNED_RESPONSE_MANAGE_PERMISSION,
   INBOX_PERMISSIONS,
   AUTOMATION_PERMISSIONS,
+  CRM_MANAGE_AI_PERMISSION,
+  CRM_ADMIN_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const SettingsInicioPage = () => import('./SettingsInicioPage.vue');
 
 // Página inicial de Configurações em cartões (#1617), só com o menu novo ligado na conta. Quem abre: quem já
-// abria alguma tela de Configurações (as mesmas chaves do `settings_home`); cada cartão confere a própria rota.
+// abria alguma tela de Configurações (as chaves do `settings_home`, mais crm_manage_ai/crm_admin, que dão o
+// cartão da passagem); cada cartão confere a própria rota. Flag desligada: a página manda para `settings_home`.
 export const routes = [
   {
     path: frontendURL('accounts/:accountId/settings/inicio'),
@@ -29,6 +32,9 @@ export const routes = [
         'macro_manage',
         ...AUTOMATION_PERMISSIONS,
         'sla_manage',
+        // Quem cuida da IA do CRM chega na passagem pelo cartão "Passar para uma pessoa".
+        CRM_MANAGE_AI_PERMISSION,
+        CRM_ADMIN_PERMISSION,
       ],
     },
   },

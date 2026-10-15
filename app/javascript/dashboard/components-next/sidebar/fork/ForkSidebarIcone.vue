@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { usePopoverState } from '../provider';
 import SidebarCollapsedPopover from '../SidebarCollapsedPopover.vue';
@@ -22,6 +23,19 @@ const {
   scheduleClose,
   cancelClose,
 } = usePopoverState();
+
+const { t } = useI18n();
+
+// O ponto do ícone é só visual: a contagem ou a pendência vão no nome do link para o leitor de tela.
+const nomeAcessivel = computed(() => {
+  let extra = props.pendencia;
+  if (!extra && props.contagem > 0) {
+    extra = t('FORK_SIDEBAR.NOVAS', { count: props.contagem }, props.contagem);
+  }
+  return extra
+    ? t('FORK_SIDEBAR.ROTULO_COM_EXTRA', { item: props.item.label, extra })
+    : props.item.label;
+});
 
 const temFilhos = computed(() => Boolean(props.item.children?.length));
 const destino = computed(() => props.item.to || folhasDe(props.item)[0]?.to);
@@ -71,8 +85,8 @@ const aoOrdenar = aberto => {
       ref="gatilho"
       :to="destino"
       :data-menu-item="item.name"
-      :aria-label="item.label"
-      :title="item.label"
+      :aria-label="nomeAcessivel"
+      :title="nomeAcessivel"
       :aria-current="marcado ? 'page' : undefined"
       class="relative grid transition-colors duration-150 size-11 place-items-center rounded-xl"
       :class="[tema.foco, marcado ? tema.ativo : [tema.icone, tema.passar]]"
