@@ -18,13 +18,18 @@ module Whatsapp::Templates::Finalidades
   # Botão com a base do ambiente e a base vazia (FRONTEND_URL sem valor): configuração, não catálogo.
   class SemBase < StandardError; end
 
-  Pronto = Data.define(:finalidade, :nome, :nome_amigavel, :dono, :idioma, :texto, :campos, :botoes) do
+  # `categoria`: UTILITY nos prontos do catálogo; o modelo que a IA escreve por tipo (#1587) pode ser MARKETING.
+  Pronto = Data.define(:finalidade, :nome, :nome_amigavel, :dono, :idioma, :texto, :campos, :botoes, :categoria) do
+    def initialize(categoria: Whatsapp::Templates::Finalidades::CATEGORIA, **)
+      super(categoria: categoria, **)
+    end
+
     # O pedido de criação no formato da Meta (o mesmo que a tela de Modelos manda ao `MetaClient`).
     def corpo
       exemplos = campos.values.map { |campo| Whatsapp::Templates::Finalidades.exemplo(campo) }
       components = [{ type: 'BODY', text: texto, example: { body_text: [exemplos] } }]
       components << { type: 'BUTTONS', buttons: botoes_da_meta } if botoes.any?
-      { name: nome, language: idioma, category: Whatsapp::Templates::Finalidades::CATEGORIA, components: components }
+      { name: nome, language: idioma, category: categoria, components: components }
     end
 
     # Os botões no formato da Meta, com a URL na base deste ambiente: o que vai na criação e o que o aprovado precisa ter.
@@ -63,7 +68,7 @@ module Whatsapp::Templates::Finalidades
   # Um exemplo por campo, que a Meta pede para cada variável (e para o fim variável da URL). Link: base + caminho.
   EXEMPLOS = {
     'cliente.primeiro_nome' => 'Ana', 'negocio.valor' => 'R$ 150,00', 'negocio.titulo' => 'Mensalidade de outubro',
-    'negocio.prazo' => '20/10/2026',
+    'negocio.prazo' => '20/10/2026', 'minha_empresa.nome' => 'Studio Exemplo',
     'horario.data_hora' => '14/10 às 15:00', 'horario.data' => '14/10/2026', 'horario.hora' => '15:00',
     'horario.link_gestao' => { base: :booking_invite, caminho: '/b/AB3K9QXZ' }, 'horario.link_codigo' => 'AB3K9QXZ'
   }.freeze
