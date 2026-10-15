@@ -18,13 +18,14 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
     create(:message, message_type: :outgoing, content: 'oi', conversation: conversation, account: account, inbox: inbox,
                      content_attributes: { 'whatsapp_transport_fallback' => true })
   end
+  let(:session_manager) { instance_double(WhatsappHybrid::SessionManager, refresh!: true) }
   let(:transport) { described_class.new(message: message, connection: connection, origin: 'campaign', client: client) }
 
   before do
     allow(client).to receive_messages(check_contact_exists: { 'numberExists' => true, 'chatId' => '5511937016094@c.us' },
                                       new_message_id: '3EB0Q1453', send_text: {}, start_typing: {}, stop_typing: {})
     allow(Kernel).to receive(:sleep)
-    allow(WhatsappHybrid::SessionManager).to receive(:new).and_return(instance_double(WhatsappHybrid::SessionManager, refresh!: true))
+    allow(WhatsappHybrid::SessionManager).to receive(:new).and_return(session_manager)
     Redis::Alfred.delete('whatsapp_hybrid:chat_id:hybrid-q1453:5511937016094')
     Redis::Alfred.delete("whatsapp_hybrid:throttle:#{message.id}")
   end
@@ -34,12 +35,13 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
   end
 
   describe 'erro depois de o pedido de envio sair' do
-    it '5xx do motor: incerto, nunca failed' do
+    it '5xx do motor: incerto, nunca failed, e o estado da sessão é relido' do
       allow(client).to receive(:send_text).and_raise(Waha::Client::Error.new('WAHA POST /api/sendText -> 502: bad gateway', status: 502))
 
       transport.perform
 
       expect(outcome).to eq('uncertain')
+      expect(session_manager).to have_received(:refresh!).with(sync_proxy: false)
     end
 
     it 'conexão fechada depois de enviar: incerto' do
@@ -103,6 +105,15 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
       expect { transport.perform }.to have_enqueued_job(WhatsappHybrid::FallbackRetryJob).with(message.id)
     end
 
+    it 'mensagem comum: sem teto, continua esperando pelo SendReplyJob' do
+      message.update!(content_attributes: {})
+      described_class::THROTTLE_MAX_RETRIES.times { transport.perform }
+
+      expect { transport.perform }.to have_enqueued_job(SendReplyJob).with(message.id)
+      expect(outcome).to eq('throttled')
+      expect(message.reload).not_to be_failed
+    end
+
     it 'mensagem comum: a nova tentativa continua pelo SendReplyJob' do
       message.update!(content_attributes: {})
 
@@ -146,6 +157,11 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
       entrega
 
       expect { transport.perform }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+    end
+
+    it 'mensagem do plano B que não é de campanha (sem entrega): falha sem pedir modelo' do
+      expect { transport.perform }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+      expect(outcome).to eq('failed')
     end
 
     it 'incerto não pede modelo' do

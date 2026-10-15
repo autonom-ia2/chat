@@ -3,7 +3,8 @@
 # depois, às vezes antes da resposta do WAHA), a conciliação já encontra a mensagem.
 class WhatsappHybrid::WebTransport
   THROTTLE_RETRY = 15.seconds
-  # Teto das novas tentativas do limite por minuto (20 × 15 s = 5 min); depois a mensagem falha de forma certa (#1453).
+  # Teto das novas tentativas do limite por minuto do plano B do 131047 (20 × 15 s = 5 min); depois falha de forma certa
+  # e a campanha pode mandar o modelo (#1453). As demais mensagens esperam sem teto, como sempre.
   THROTTLE_MAX_RETRIES = 20
   THROTTLED_OUT_ERROR = 'O WhatsApp API ficou no limite de envios por minuto e a mensagem não saiu. Reenvie mais tarde ' \
                         'ou use um modelo aprovado.'.freeze
@@ -99,6 +100,8 @@ class WhatsappHybrid::WebTransport
   rescue Waha::Client::Error => e
     raise if e.is_a?(Waha::Client::Timeout) || e.status.to_i < 500 || engine_refused?(e)
 
+    # Só lê o estado da sessão (não reenvia): com a sessão caída, o roteador para de escolher o Web.
+    session_manager.refresh!(sync_proxy: false)
     raise Waha::Client::Timeout.new(e.message, status: e.status)
   end
 
@@ -152,7 +155,7 @@ class WhatsappHybrid::WebTransport
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.
   def throttle!
-    return fail!(THROTTLED_OUT_ERROR) if throttle_count > THROTTLE_MAX_RETRIES
+    return fail!(THROTTLED_OUT_ERROR) if cloud_fallback? && throttle_count > THROTTLE_MAX_RETRIES
 
     record_outcome!('throttled')
     retry_job.set(wait: THROTTLE_RETRY).perform_later(@message.id)
@@ -161,7 +164,12 @@ class WhatsappHybrid::WebTransport
 
   # #1453: a mensagem do plano B do 131047 tem o source_id da Meta, e o SendReplyJob a ignoraria.
   def retry_job
-    @message.content_attributes.to_h['whatsapp_transport_fallback'].present? ? WhatsappHybrid::FallbackRetryJob : SendReplyJob
+    cloud_fallback? ? WhatsappHybrid::FallbackRetryJob : SendReplyJob
+  end
+
+  # Mensagem que o plano B do 131047 (CloudFailureFallback) assumiu.
+  def cloud_fallback?
+    @message.content_attributes.to_h['whatsapp_transport_fallback'].present?
   end
 
   def record_outcome!(value)
