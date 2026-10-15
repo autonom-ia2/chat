@@ -37,6 +37,20 @@ module Crm::Subjects
     Crm::Ai::Config.enabled? && sugerir?(conversation)
   end
 
+  # Pergunta o assunto da mensagem do cliente depois da espera, se a caixa tem a IA de assunto ligada. Um caminho só
+  # para a mensagem nova (#1145) e para a recuperada pelo WhatsApp Híbrido (#1638). Na ordem do turno (#1606), fila
+  # high e espera curta (DEBOUNCE_ORDEM): o agente espera o assunto antes de responder. Fora dela, fila low e DEBOUNCE.
+  def self.identificar_depois(message)
+    return unless message.incoming? && ligado?(message.conversation)
+
+    job = if ordem_do_turno?(message.conversation)
+            Crm::Subjects::IdentifyJob.set(queue: :high, wait: DEBOUNCE_ORDEM)
+          else
+            Crm::Subjects::IdentifyJob.set(wait: DEBOUNCE)
+          end
+    job.perform_later(message.conversation_id, message.id)
+  end
+
   # A REGRA ÚNICA de "este turno espera o assunto" (#1606, contrato com o Agentes IA, que só lê): a IA de assunto está
   # ligada na caixa, a Fase 2 dos Agentes está ligada na conta (linhas de responsável numa conta sem ela não contam), e a
   # caixa tem responsável por funil OU a conversa tem passagem em aberto. Verdadeira, a IA de assunto vai para a fila

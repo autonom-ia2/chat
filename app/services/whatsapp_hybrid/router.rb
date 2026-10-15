@@ -37,7 +37,10 @@ class WhatsappHybrid::Router
 
   # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
   # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
+  # Conexão pausada (#1487) nunca serve: tudo sai pela oficial, como caixa sem Híbrido.
   def web_allowed_for?(message)
+    return false if connection.nil? || connection.paused?
+
     message.content_type == 'text' && connection.origin_enabled?(origin_of(message)) && RichMessages.text_capable?(message)
   end
 
