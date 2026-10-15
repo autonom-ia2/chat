@@ -45,13 +45,23 @@ RSpec.describe Autonomia::Agents::ContratoDoFunil do
       { conversation: conversation, de: nil, para: build_stubbed(:agent_bot), pedida_por: nil, motivo: 'm', transfer_id: 't' }
     end
 
-    it 'delega ao registro do CRM com a mesma assinatura' do
+    it 'delega ao registro do CRM com a mesma assinatura, card nil quando não vem' do
       recebidos = []
       stub_const('Crm::Passagens', leitor(:registrar!) { |**kwargs| recebidos << kwargs })
 
       described_class.registrar_passagem!(**pedido)
 
-      expect(recebidos).to eq([pedido])
+      expect(recebidos).to eq([pedido.merge(card: nil)])
+    end
+
+    it 'leva o card ao registro do CRM' do
+      card = instance_double(Crm::Card)
+      recebidos = []
+      stub_const('Crm::Passagens', leitor(:registrar!) { |**kwargs| recebidos << kwargs })
+
+      described_class.registrar_passagem!(**pedido, card: card)
+
+      expect(recebidos.sole).to include(card: card)
     end
 
     it 'sem o registro, não faz nada' do
@@ -62,18 +72,40 @@ RSpec.describe Autonomia::Agents::ContratoDoFunil do
   end
 
   describe '.com_motivo_da_passagem' do
-    it 'roda o bloco dentro do contexto do CRM' do
-      vistos = []
-      stub_const('Crm::Passagens', leitor(:com_motivo) { |motivo, &bloco| vistos << motivo; bloco.call }) # rubocop:disable Style/Semicolon
+    let(:card) { instance_double(Crm::Card) }
 
-      expect(described_class.com_motivo_da_passagem('passar_para_ia') { :feito }).to eq(:feito)
-      expect(vistos).to eq(['passar_para_ia'])
+    it 'com o com_motivo do CRM: chamado com o motivo e o card, devolve o valor do bloco' do
+      vistos = []
+      stub_const('Crm::Passagens', leitor(:com_motivo) do |motivo, card: nil, &bloco|
+        vistos << [motivo, card, :antes]
+        bloco.call.tap { vistos << :depois }
+      end)
+
+      expect(described_class.com_motivo_da_passagem('passar_para_ia', card: card) { :feito }).to eq(:feito)
+      expect(vistos).to eq([['passar_para_ia', card, :antes], :depois])
     end
 
-    it 'sem o contexto, só roda o bloco' do
-      stub_const('Crm::Passagens', Module.new)
+    it 'sem card, o CRM recebe card nil' do
+      vistos = []
+      stub_const('Crm::Passagens', leitor(:com_motivo) { |motivo, card: :ausente, &bloco| (vistos << [motivo, card]) && bloco.call })
 
-      expect(described_class.com_motivo_da_passagem('passar_para_ia') { :feito }).to eq(:feito)
+      described_class.com_motivo_da_passagem('passar_para_ia') { :feito }
+
+      expect(vistos).to eq([['passar_para_ia', nil]])
+    end
+
+    it 'sem o com_motivo do CRM: só roda o bloco e devolve o valor dele' do
+      stub_const('Crm::Passagens', leitor(:registrar!) { |**| nil })
+
+      expect(described_class.com_motivo_da_passagem('passar_para_ia', card: card) { :feito }).to eq(:feito)
+    end
+
+    it 'decide na hora da chamada, não no carregamento' do
+      stub_const('Crm::Passagens', Module.new)
+      expect(described_class.com_motivo_da_passagem('m') { :sem }).to eq(:sem)
+
+      stub_const('Crm::Passagens', leitor(:com_motivo) { |_motivo, card: nil, &bloco| [:com, bloco.call] }) # rubocop:disable Lint/UnusedBlockArgument
+      expect(described_class.com_motivo_da_passagem('m') { :bloco }).to eq(%i[com bloco])
     end
   end
 

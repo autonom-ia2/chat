@@ -45,7 +45,8 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       expect(resultado).to have_attributes(ok?: true, trocou?: true, codigo: :passou)
       expect(conversation.reload).to have_attributes(ai_assignee: espelho_area, status: 'open', assignee_id: nil)
       expect(contrato).to have_received(:registrar_passagem!).with(
-        conversation: conversation, de: porta, para: area, pedida_por: nil, motivo: 'pedido_pelo_nome', transfer_id: 'tr-1'
+        conversation: conversation, de: porta, para: area, pedida_por: nil, motivo: 'pedido_pelo_nome', transfer_id: 'tr-1',
+        card: nil
       ).once
       expect(eventos.sole).to include(conversation: conversation, from_bot: porta, to_bot: espelho_area, agent: area,
                                       origem: porta, transfer_id: 'tr-1', por: :crm, motivo: 'pedido_pelo_nome')
@@ -54,11 +55,46 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
     it 'vinda de pessoa, solta a pessoa, e quem pediu é ela' do
       conversation.update!(assignee: pessoa)
 
-      resultado = passar(por: :pessoa, origem: pessoa)
+      resultado = passar(por: :pessoa, origem: pessoa, pedida_por: pessoa)
 
       expect(resultado.codigo).to eq(:passou)
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
       expect(contrato).to have_received(:registrar_passagem!).with(hash_including(de: pessoa, pedida_por: pessoa, para: area))
+    end
+
+    it 'quem pediu é quem clicou, não quem tinha a conversa' do
+      supervisora = create(:user, account: account, role: :administrator)
+      conversation.update!(assignee: pessoa)
+
+      passar(por: :pessoa, origem: pessoa, pedida_por: supervisora)
+
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(de: pessoa, pedida_por: supervisora))
+    end
+
+    it 'pedida pela IA: sem pedida_por, é a IA que tinha a conversa; com ele, o informado' do
+      passar(por: :ia, origem: agente_da_porta)
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(pedida_por: agente_da_porta)).once
+
+      passar(agente_da_porta, por: :ia, origem: area, pedida_por: area)
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(pedida_por: area)).once
+    end
+
+    it 'registra com o card do assunto em atendimento, no contexto e no registro' do
+      card = create_card(pipeline: suporte)
+
+      passar(origem: porta)
+
+      expect(contrato).to have_received(:com_motivo_da_passagem).with('passar_para_ia', card: card)
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(card: card))
+    end
+
+    it 'card fechado não vai ao registro' do
+      card = create_card(pipeline: suporte)
+      card.update_columns(status: Crm::Card.statuses[:won]) # rubocop:disable Rails/SkipsModelValidations
+
+      passar(origem: porta)
+
+      expect(contrato).to have_received(:registrar_passagem!).with(hash_including(card: nil))
     end
 
     it 'encerra a espera de pessoa e a marca de entrega do CRM, na mesma gravação' do
@@ -198,6 +234,33 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
 
     it 'por fora da lista' do
       expect { passar(por: :robo) }.to raise_error(ArgumentError)
+    end
+
+    it 'pessoa sem pedida_por: erro, e nada troca' do
+      conversation.update!(assignee: pessoa)
+
+      expect { passar(por: :pessoa, origem: pessoa) }.to raise_error(ArgumentError, /pedida_por/)
+      expect(conversation.reload).to have_attributes(assignee_id: pessoa.id)
+      expect(contrato).not_to have_received(:registrar_passagem!)
+    end
+
+    it 'pedido do CRM com pedida_por: erro (o pedido do CRM é do sistema)' do
+      expect { passar(por: :crm, pedida_por: pessoa) }.to raise_error(ArgumentError, /pedida_por/)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+    end
+
+    it 'agente pausado entre a conferência e a trava: recusa sob a trava, sem troca nem registro' do
+      allow(conversation).to receive(:with_lock).and_wrap_original do |original, *args, &bloco|
+        area.update_columns(status: Autonomia::Agents::Agent.statuses[:paused]) # rubocop:disable Rails/SkipsModelValidations
+        original.call(*args, &bloco)
+      end
+
+      resultado = nil
+      eventos = eventos_de_troca { resultado = passar }
+
+      expect_recusa(resultado, :nao_atende_cliente)
+      expect(contrato).not_to have_received(:registrar_passagem!)
+      expect(eventos).to be_empty
     end
 
     it 'recusa não registra passagem nem emite evento' do

@@ -6,8 +6,9 @@
 # - `robo_do_funil(conversation)`    -> o espelho de área do responsável do funil do card em atendimento, ou nil
 #                                      (Crm::Ai::Config.robo_do_funil)
 # - `registrar_passagem!(...)`       -> grava a passagem no registro do CRM (Crm::Passagens.registrar!)
-# - `com_motivo_da_passagem(motivo)` -> roda o bloco no contexto em que o CRM sabe que a passagem já foi gravada por
-#                                      quem chama (Crm::Passagens.com_motivo), para o listener dele não gravar de novo
+# - `com_motivo_da_passagem(motivo, card:)` -> roda o bloco com motivo e card guardados no contexto do CRM
+#                                      (Crm::Passagens.com_motivo(motivo, card: nil) { ... }, devolve o valor do bloco),
+#                                      para o listener dele saber que a passagem já é gravada por quem chama
 #
 # Nos specs, duble ESTE módulo (`allow(described_class)...`), nunca a presença ou a ausência da constante do CRM.
 module Autonomia::Agents::ContratoDoFunil
@@ -37,16 +38,19 @@ module Autonomia::Agents::ContratoDoFunil
     robo.is_a?(AgentBot) ? robo : nil
   end
 
-  # Assinatura do Crm::Passagens.registrar! (PR #1611). `card` e `message_id` ficam com o padrão do CRM.
-  def registrar_passagem!(conversation:, de:, para:, pedida_por:, motivo:, transfer_id: nil) # rubocop:disable Naming/MethodParameterName, Metrics/ParameterLists
+  # Assinatura do Crm::Passagens.registrar! (PR #1611). `message_id` fica com o padrão do CRM; card nil = sem card.
+  # rubocop:disable Naming/MethodParameterName, Metrics/ParameterLists
+  def registrar_passagem!(conversation:, de:, para:, pedida_por:, motivo:, card: nil, transfer_id: nil)
     leitor = leitor_do(:registrar_passagem!)
-    leitor&.registrar!(conversation: conversation, de: de, para: para, pedida_por: pedida_por, motivo: motivo,
+    leitor&.registrar!(conversation: conversation, de: de, para: para, pedida_por: pedida_por, motivo: motivo, card: card,
                        transfer_id: transfer_id)
   end
+  # rubocop:enable Naming/MethodParameterName, Metrics/ParameterLists
 
-  def com_motivo_da_passagem(motivo, &)
+  # Decidido na hora da chamada (leitor_do), nunca no carregamento: sem o com_motivo do CRM, o bloco roda direto.
+  def com_motivo_da_passagem(motivo, card: nil, &)
     leitor = leitor_do(:com_motivo_da_passagem)
-    leitor ? leitor.com_motivo(motivo, &) : yield
+    leitor ? leitor.com_motivo(motivo, card: card, &) : yield
   end
 
   # PADRÃO SEGURO, num lugar só. Enquanto a metade Multifunnel não está na main, o leitor não existe e a resposta é a

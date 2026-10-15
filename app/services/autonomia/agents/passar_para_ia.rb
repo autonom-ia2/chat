@@ -30,16 +30,33 @@ module Autonomia::Agents::PassarParaIa
 
   module_function
 
-  # origem: quem tinha a conversa (User, Autonomia::Agents::Agent ou AgentBot), ou nil. A assinatura é o contrato
-  # fixado com o Multifunnel (#1593).
-  def call(conversation:, agent:, por:, motivo:, origem: nil, transfer_id: nil) # rubocop:disable Metrics/ParameterLists
+  # origem: quem tinha a conversa (User, Autonomia::Agents::Agent ou AgentBot), ou nil. pedida_por: quem pediu a
+  # passagem — obrigatório com `por: :pessoa` (a pessoa que clicou, que nem sempre é a que tinha a conversa); com
+  # `por: :ia`, se faltar, a IA que tinha a conversa (a origem); com `por: :crm`, sempre nil (o sistema). A assinatura é
+  # o contrato fixado com o Multifunnel (#1593).
+  # rubocop:disable Metrics/ParameterLists
+  def call(conversation:, agent:, por:, motivo:, origem: nil, pedida_por: nil, transfer_id: nil)
     raise ArgumentError, "por fora da lista: #{por}" unless POR.include?(por)
 
-    pedido = { agent: agent, por: por, motivo: motivo, origem: origem, transfer_id: transfer_id }
+    pedido = { agent: agent, por: por, motivo: motivo, origem: origem, transfer_id: transfer_id,
+               pedida_por: quem_pediu(por, pedida_por, origem) }
     codigo = recusa_antes_da_trava(conversation, agent)
     resultado = codigo ? Resultado.recusa(codigo) : passar(conversation, pedido)
     registrar_telemetria(conversation, resultado, por)
     resultado
+  end
+  # rubocop:enable Metrics/ParameterLists
+
+  def quem_pediu(por, pedida_por, origem)
+    case por
+    when :pessoa
+      raise ArgumentError, 'pedida_por é obrigatório quando quem pede é uma pessoa' if pedida_por.nil?
+
+      pedida_por
+    when :ia then pedida_por || origem
+    else
+      raise ArgumentError, 'pedido do CRM é do sistema: sem pedida_por' unless pedida_por.nil?
+    end
   end
 
   # Os agentes que podem receber conversas desta caixa: vínculo ativo (porta ou área) e atendendo cliente. Só com a
@@ -96,29 +113,40 @@ module Autonomia::Agents::PassarParaIa
   def decidir(conversation, vinculo, por)
     return Resultado.recusa(:conversa_resolvida) if conversation.resolved?
     return Resultado.recusa(:pessoa_atribuida) if conversation.assignee_id.present? && por != :pessoa
-    return Resultado.recusa(:sem_vinculo_na_caixa) if vinculo.nil?
+
+    codigo = recusa_do_vinculo(vinculo)
+    return Resultado.recusa(codigo) if codigo
     return Resultado.ja_e_o_dono if conversation.assignee_id.nil? && conversation.ai_assignee == vinculo.agent_bot
 
     Resultado.passou
   end
 
+  # O agente é relido sob a trava: uma pausa entre a conferência de antes da trava e a trava não passa.
+  def recusa_do_vinculo(vinculo)
+    return :sem_vinculo_na_caixa if vinculo.nil?
+
+    :nao_atende_cliente unless vinculo.agent.reload.atende_cliente?
+  end
+
   # O AssignmentService de robô tira a pessoa, põe o espelho, abre a conversa e encerra as esperas (end_bot_handoff_wait),
   # numa gravação; o registro da passagem vem logo depois, na mesma transação. Tudo dentro do `com_motivo` do CRM: o
-  # listener síncrono dele vê que esta passagem já está sendo gravada aqui e não grava outra.
+  # listener síncrono dele vê que esta passagem já está sendo gravada aqui e não grava outra. O card é o do assunto em
+  # atendimento, lido antes da troca (sem card aberto, nil).
   def trocar_e_registrar!(conversation, vinculo, pedido)
     contrato = ::Autonomia::Agents::ContratoDoFunil
-    contrato.com_motivo_da_passagem(MOTIVO_DO_REGISTRO) do
+    card = card_em_atendimento(conversation)
+    contrato.com_motivo_da_passagem(MOTIVO_DO_REGISTRO, card: card) do
       ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: vinculo.agent_bot_id,
                                              assignee_type: 'AgentBot').perform
-      contrato.registrar_passagem!(conversation: conversation, de: pedido[:origem], para: pedido[:agent],
-                                   pedida_por: pedida_por(pedido), motivo: pedido[:motivo], transfer_id: pedido[:transfer_id])
+      contrato.registrar_passagem!(conversation: conversation, de: pedido[:origem], para: pedido[:agent], card: card,
+                                   pedida_por: pedido[:pedida_por], motivo: pedido[:motivo], transfer_id: pedido[:transfer_id])
     end
   end
 
-  # Quem pediu, no formato do registro (User, Agent, AgentBot ou nil = o sistema). Pedido do CRM é do sistema; de pessoa
-  # ou da IA, quem tinha a conversa e a passou.
-  def pedida_por(pedido)
-    pedido[:por] == :crm ? nil : pedido[:origem]
+  # O mesmo card que a Crm::Entrega e o Sync do CRM leem para a conversa: o do ConversationCardFinder, se aberto.
+  def card_em_atendimento(conversation)
+    card = ::Crm::Cards::ConversationCardFinder.new(account: conversation.account).find(conversation)
+    card if card&.open?
   end
 
   def publicar(conversation, anterior, pedido)
