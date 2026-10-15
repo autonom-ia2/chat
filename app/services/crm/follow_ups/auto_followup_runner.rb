@@ -93,6 +93,9 @@ module Crm
         outro = customer_replied_about_other_subject
         return postpone_for_other_subject(outro) if outro
 
+        lembrete_ate = service_reminder_wait_until
+        return postpone_for_service_reminder(lembrete_ate) if lembrete_ate
+
         return reschedule(compute_due(@now)) if outside_schedule?(@now)
 
         choose_delivery_mode
@@ -305,6 +308,17 @@ module Crm
         next_due = compute_due(@now + OTHER_SUBJECT_WAIT)
         merge_state!('reply_seen_message_id' => reply.id)
         log_activity('ai_followup_postponed', reason: 'other_subject', next_due_at: next_due.iso8601, touch: touch)
+        reschedule(next_due)
+      end
+
+      # Uma mensagem por vez por card (#1589): lembrete de Atender que saiu há pouco segura o toque por 24 h.
+      def service_reminder_wait_until
+        Crm::FollowUps::UmaMensagemPorVez.new(@card, now: @now).automatico_espera_ate
+      end
+
+      def postpone_for_service_reminder(until_at)
+        next_due = compute_due(until_at)
+        log_activity('ai_followup_postponed', reason: 'service_reminder', next_due_at: next_due.iso8601, touch: touch)
         reschedule(next_due)
       end
 
