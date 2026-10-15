@@ -358,6 +358,120 @@ RSpec.describe Autonomia::Agents::Operate::ReenfileirarTurno, :um_turno do
     expect { described_class.call(conversation: conversation, message_id: 1, origem: :outra) }.to raise_error(ArgumentError)
   end
 
+  describe 'a janela do debounce e a mensagem nova durante a IA' do
+    def respondida(resposta)
+      resposta.content_attributes.to_h.stringify_keys['autonomia_reply_to_message_id']
+    end
+
+    # A IA de quem responde primeiro vê o cliente escrever de novo no meio da chamada (uma vez só).
+    def cliente_escreve_durante_a_ia!
+      segunda = []
+      ia_responde!(durante: lambda do |_agente|
+        next if segunda.any?
+
+        segunda << cliente_escreve('esqueci de dizer uma coisa').tap { |mensagem| gatilho(mensagem) }
+      end)
+      segunda
+    end
+
+    it 'troca de dono pelo evento dentro da janela: o turno refeito espera o fim da janela, e a mensagem nova vence' do
+      ia_responde!
+      turno_do_cliente
+      fim_da_janela = Time.current + Autonomia::Agents::Config.debounce_seconds_for(area)
+      travel 2.seconds
+      trocar_dono!(espelho_area)
+
+      retomada = settles_na_fila.find { |job| ActiveJob::Arguments.deserialize(job[:args])[3].present? }
+      expect(Time.zone.at(retomada[:at])).to be_within(1.second).of(fim_da_janela)
+
+      segunda = cliente_escreve('ainda estou digitando')
+      gatilho(segunda)
+      rodar_turno!
+
+      expect(respostas.sole).to have_attributes(sender_id: espelho_area.id)
+      expect(respondida(respostas.sole)).to eq(segunda.id)
+    end
+
+    it 'M2 chega durante a IA (clássico): a resposta de M é descartada e só sai a de M2' do
+      segunda = cliente_escreve_durante_a_ia!
+      turno_do_cliente
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(respondida(respostas.sole)).to eq(segunda.sole.id)
+      expect(silencios(linhas, 'turno_superado').size).to eq(1)
+    end
+
+    it 'M2 chega durante a IA (voz): a resposta de M é descartada e só sai a de M2' do
+      # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(Autonomia::Agents::Operate::Responder).to receive(:voice_reply_applies?).and_return(true)
+      allow_any_instance_of(Autonomia::Agents::Operate::Responder).to receive(:synthesize_audio).and_return(nil)
+      # rubocop:enable RSpec/AnyInstance
+      segunda = cliente_escreve_durante_a_ia!
+      turno_do_cliente
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(respondida(respostas.sole)).to eq(segunda.sole.id)
+      expect(silencios(linhas, 'turno_superado').size).to eq(1)
+    end
+
+    it 'fora da Fase 2, M2 durante a IA segue como antes: as duas respostas saem' do
+      Autonomia::Agents::Fase2.desligar!(account)
+      segunda = cliente_escreve_durante_a_ia!
+      primeira = turno_do_cliente
+
+      rodar_turno!
+
+      expect(respostas.map { |resposta| respondida(resposta) }).to contain_exactly(primeira.id, segunda.sole.id)
+    end
+  end
+
+  it 'A→B→C→B no mesmo turno: o settle de B que encontra C solta a posse de B, e a volta para B responde' do
+    ia_responde!
+    vendas = criar_agente('Área Vendas')
+    vinculo_vendas = Autonomia::Agents::Areas.vincular!(agent: vendas, inbox: inbox)
+    mensagem = turno_do_cliente
+    trocar_dono!(espelho_area)
+    trocar_dono!(vinculo_vendas.agent_bot)
+
+    do_b = settles_na_fila.find { |job| ActiveJob::Arguments.deserialize(job[:args])[3] == vinculo_area.id }
+    ActiveJob::Base.queue_adapter.enqueued_jobs.delete(do_b)
+    travel_to(Time.zone.at(do_b[:at]))
+    settle(mensagem, vinculo_area.id) # o dono agora é C: B não responde por este settle
+    expect(respostas).to be_empty
+    expect(Redis::Alfred.exists?(posse.chave(conversation.id, mensagem.id, vinculo_area.id))).to be(false)
+
+    trocar_dono!(espelho_area)
+    rodar_turno!
+
+    expect(respostas.sole.sender_id).to eq(espelho_area.id)
+  end
+
+  it 'a IA falha depois de o robô ser atribuído pela tela (sem evento): a posse é solta e o dono novo refaz o turno' do
+    allow(Autonomia::Agents::Answerer).to receive(:new) do |agent:, **|
+      resposta = double('Answerer') # rubocop:disable RSpec/VerifiedDoubles
+      allow(resposta).to receive(:answer) do
+        if agent == agente_da_porta
+          atribuir_sem_evento!(espelho_area)
+          next nil # a IA da porta não devolve resultado: silêncio ia_falhou
+        end
+
+        Autonomia::Agents::AnswerResult.new(reply: "Resposta de #{agent.name}.", confidence: 0.9,
+                                            handoff: { should: false, reason: nil }, used_knowledge: [],
+                                            answered_from_knowledge: false)
+      end
+      resposta
+    end
+    mensagem = turno_do_cliente
+
+    linhas = linhas_do_log { rodar_turno! }
+
+    expect(respostas.sole.sender_id).to eq(espelho_area.id)
+    expect(silencios(linhas, 'ia_falhou').size).to eq(1)
+    expect(linhas.grep(/turno_reenfileirado conv=#{conversation.id} msg=#{mensagem.id} origem=responder/).size).to eq(1)
+  end
+
   it 'o assinante escuta o mesmo evento que o Sync publica' do
     turno_do_cliente
     allow(described_class).to receive(:ao_trocar_dono).and_call_original
