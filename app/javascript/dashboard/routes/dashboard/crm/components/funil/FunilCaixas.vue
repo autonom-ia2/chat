@@ -18,8 +18,11 @@ const foco = defineModel('foco', { type: Object, default: null });
 
 const { t } = useI18n();
 
+// Sem etapa escolhida, o card nasce na primeira (Crm::Conversations::CardSyncer).
 const etapaPorId = id =>
-  props.etapas.find(etapa => Number(etapa.id) === Number(id)) || null;
+  props.etapas.find(etapa => Number(etapa.id) === Number(id)) ||
+  props.etapas[0] ||
+  null;
 
 const cartoes = computed(() =>
   props.ligadas.map(ligada => {

@@ -153,10 +153,10 @@ export default {
         // Sem a resposta, a tela fica como sempre; a API continua recusando.
       }
     },
-    // O 403 de quem tenta se adicionar com acesso restrito vem em inglês da API:
-    // a tela mostra o texto dela, traduzido.
+    // A recusa de quem tenta se adicionar com acesso restrito vem em inglês da
+    // API, com um código estável: a tela mostra o texto dela, traduzido.
     mensagemDeErro(error) {
-      if (error?.status === 403)
+      if (error?.code === 'participants.self_add_restricted')
         return this.$t('CONVERSATION_PARTICIPANTS.API.SELF_ADD_RESTRICTED');
       return (
         error?.message || this.$t('CONVERSATION_PARTICIPANTS.API.ERROR_MESSAGE')

@@ -115,12 +115,13 @@ export const actions = {
         refreshConversationUnreadCounts(dispatch);
       }
     } catch (error) {
-      // #1148/#1149: quem tem acesso restrito não se adiciona (403). O status
+      // #1148/#1149: quem tem acesso restrito não se adiciona. O código da API
       // segue junto para a tela trocar pelo texto traduzido.
-      if (error?.response?.status === 403) {
-        const proibido = new Error(parseAPIErrorResponse(error));
-        proibido.status = 403;
-        throw proibido;
+      const code = error?.response?.data?.code;
+      if (code) {
+        const recusa = new Error(parseAPIErrorResponse(error));
+        recusa.code = code;
+        throw recusa;
       }
       throwErrorMessage(error);
     } finally {

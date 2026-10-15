@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 
 // #1149 (R16) — aqui se escolhe quem atende a caixa. Quem vê o quê no CRM
 // (funis, cards e conversas) fica num lugar só: CRM → Caixas no CRM. O aviso
@@ -12,6 +13,9 @@ const props = defineProps({
 });
 
 const store = useStore();
+// A tela de destino é de administrador ou crm_admin: quem só gerencia caixas lê
+// o aviso, sem o link que não abriria.
+const { canAdminCrm } = useCrmPermissions();
 const { t } = useI18n();
 // O nome da tela de caixas sai de uma chave só (o título dela).
 const lugar = computed(() => t('CRM_CAIXAS.LISTA.TITULO'));
@@ -47,6 +51,7 @@ const destino = computed(() => ({
         {{ $t('CRM_CAIXAS.AVISO_AGENTES.TEXTO', { lugar }) }}
       </p>
       <router-link
+        v-if="canAdminCrm"
         :to="destino"
         class="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       >

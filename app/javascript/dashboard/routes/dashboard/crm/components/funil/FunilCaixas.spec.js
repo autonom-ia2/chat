@@ -62,6 +62,14 @@ describe('FunilCaixas — só leitura', () => {
     expect(links[0].text()).toBe('Mudar em Canais de cada funil');
   });
 
+  it('card automático sem etapa escolhida mostra a primeira, como o sistema faz', () => {
+    const wrapper = montar({
+      ligadas: [{ ...ligadas[0], default_stage_id: null }],
+    });
+
+    expect(wrapper.get('[data-caixa]').text()).toContain('Cotação');
+  });
+
   it('sem caixa ligada, diz que nenhuma traz conversas e mostra onde ligar', () => {
     const wrapper = montar({ ligadas: [] });
 

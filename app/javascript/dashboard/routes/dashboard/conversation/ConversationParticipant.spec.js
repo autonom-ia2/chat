@@ -104,7 +104,7 @@ describe('ConversationParticipant — acesso restrito', () => {
     });
     const proibido = Object.assign(
       new Error('Restricted agents cannot add themselves'),
-      { status: 403 }
+      { code: 'participants.self_add_restricted' }
     );
     const dispatch = vi.fn(acao =>
       acao === 'conversationWatchers/update'
