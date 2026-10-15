@@ -1063,6 +1063,8 @@ pt_BR:
           fase2_off: "O agente da equipe ainda não está disponível nesta conta."
           agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
           already_linked: "%{nome} já está em %{canal}."
+          rascunho: "%{nome} ainda não está pronto. Termine a conversa que cria o agente e depois ponha ele na equipe de %{canal}."
+          nao_pode_ser_area: "%{nome} não pode ficar na equipe de %{canal}. Agente pausado que ainda tem canal, ajudante e o agente de cotação ficam fora da equipe."
           sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
           robo_externo: "Um agente externo atende em %{canal}. O agente da equipe ainda não entra em canal com agente externo."
     prospecting:

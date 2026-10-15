@@ -8,8 +8,10 @@
 class Crm::ServiceRemindersJob < ApplicationJob
   queue_as :scheduled_jobs
 
-  # Resolvido há mais tempo que isto já não ganha "deu tudo certo?".
-  RESOLVED_LOOKBACK = Crm::FollowUps::ServiceReminderScheduler::RESOLVED_CHECK_WINDOW
+  # Resolvido há mais tempo que isto já não ganha "deu tudo certo?": o maior tempo que a tela oferece (1 semana, #1589)
+  # mais a folga do lembrete. Dá 10 dias.
+  RESOLVED_LOOKBACK = Crm::Ai::Config::SERVICE_REMINDER_HOURS['resolved_check'].max.hours +
+                      Crm::FollowUps::ServiceReminderScheduler::RESOLVED_CHECK_WINDOW
   MAX_NOVOS_POR_FUNIL = 20
   PRELOAD = [:account, :stage, :contact, :owner, { primary_conversation: [:inbox, :contact] }].freeze
 
@@ -32,11 +34,13 @@ class Crm::ServiceRemindersJob < ApplicationJob
     end
   end
 
-  # Com tudo desligado, ainda passa pelos cards que têm lembrete pendente, para cancelá-los.
+  # Com tudo desligado, ainda passa pelos cards que têm lembrete pendente, para cancelá-los. Resolvido (até 10 dias)
+  # entra todo só com o "deu certo?" ligado; desligado, só o que tem lembrete pendente, para cancelar.
   def cards_for(pipeline, now, settings)
-    scope = pipeline.cards.where(status: :open).or(pipeline.cards.where(status: :resolved, closed_at: (now - RESOLVED_LOOKBACK)..))
-                    .includes(*PRELOAD)
-    return scope if settings.values.any?
+    resolvidos = pipeline.cards.where(status: :resolved, closed_at: (now - RESOLVED_LOOKBACK)..)
+    resolvidos = resolvidos.where(id: pending_card_ids(pipeline)) unless settings[:resolved_check]
+    scope = pipeline.cards.where(status: :open).or(resolvidos).includes(*PRELOAD)
+    return scope if settings.slice(*Crm::Ai::Config::SERVICE_REMINDER_KINDS).values.any?
 
     scope.where(id: pending_card_ids(pipeline))
   end

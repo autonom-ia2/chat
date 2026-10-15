@@ -604,6 +604,8 @@ en:
           fase2_off: 'Team agents are not available for this account yet.'
           agent_internal: '%{nome} is an internal agent (team copilot) and never talks to customers, so it cannot be on the team of a channel.'
           already_linked: '%{nome} is already on %{canal}.'
+          rascunho: '%{nome} is not finished yet. Finish the conversation that creates the agent, then put it on the team of %{canal}.'
+          nao_pode_ser_area: '%{nome} cannot be on the team of %{canal}. Paused agents that still have a channel, helpers and the quote agent stay out of teams.'
           sem_principal: 'The main agent of %{canal} is not answering right now. A team agent needs the main agent answering on the channel.'
           robo_externo: "An external agent answers on %{canal}. A team agent cannot join a channel with an external agent yet."
     insurance:

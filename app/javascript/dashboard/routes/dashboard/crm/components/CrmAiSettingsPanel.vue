@@ -8,6 +8,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import FunilInterruptor from './funil/FunilInterruptor.vue';
 import FunilLembretesAtender from './funil/FunilLembretesAtender.vue';
 import { diasEmFaixa, tempoAte } from './funil/funil';
+import { TEMPO_PADRAO, tempoDoLembrete } from './funil/lembretesAtender';
 
 // #1384 — "Lembretes e retornos" do funil. Abre no resumo (duas frases
 // prontas, cada uma com liga/desliga); "Alterar" leva ao detalhe das
@@ -35,7 +36,13 @@ const loadFailed = ref(false);
 const form = reactive({
   callbackMode: 'reminder',
   // #1498 — lembretes de Atender (metadata.ai.service_reminders).
-  serviceReminders: { progress: false, resolved_check: false, payment: false },
+  serviceReminders: {
+    progress: false,
+    resolved_check: false,
+    payment: false,
+    progress_after_hours: TEMPO_PADRAO,
+    resolved_check_after_hours: TEMPO_PADRAO,
+  },
   stageCriteria: {},
   autoFollowup: {
     enabled: false,
@@ -218,6 +225,15 @@ const loadSettings = async () => {
       progress: payload.service_reminders?.progress === true,
       resolved_check: payload.service_reminders?.resolved_check === true,
       payment: payload.service_reminders?.payment === true,
+      // #1589 — o tempo de andamento e "deu certo?", em horas.
+      progress_after_hours: tempoDoLembrete(
+        payload.service_reminders,
+        'progress'
+      ),
+      resolved_check_after_hours: tempoDoLembrete(
+        payload.service_reminders,
+        'resolved_check'
+      ),
     };
     form.stageCriteria = Object.fromEntries(
       (payload.stages || []).map(stage => [stage.id, stage.ai_criteria || ''])
