@@ -92,7 +92,7 @@ class WhatsappHybrid::UnsupportedRecovery
     return :done unless changed
 
     log("failed reason=#{reason}")
-    ::Autonomia::Agents::Operate::NaoSuportada.falhou(@message)
+    after_write { ::Autonomia::Agents::Operate::NaoSuportada.falhou(@message) }
     :done
   end
 
@@ -160,19 +160,36 @@ class WhatsappHybrid::UnsupportedRecovery
     end
   end
 
+  # Primeiro a IA, depois o aviso. Já gravou: o que falhar daqui em diante não volta para nova tentativa.
   def finish!(outcome, announce: false, &)
     return :done unless write(&)
 
     log(outcome)
+    after_write { WhatsappHybrid::RecoveryAiWake.call(@message) }
     announce_recovered if announce
-    WhatsappHybrid::RecoveryAiWake.call(@message)
     :done
   end
 
+  # Depois de gravar: falha aqui vira o evento `skipped_recuperacao_acordar_falhou` e vai ao tracker. O job só tenta de
+  # novo a busca no motor e a gravação.
+  def after_write
+    yield
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
+    log("after_write error=#{e.class}")
+    ::Autonomia::Agents::Operate::NaoSuportada.acordar_falhou(@message)
+  end
+
   # Depois do commit (fora da transação, mesmo se alguém chamar dentro de uma). Só na transição pending -> recovered.
+  # Assinante com erro não derruba a recuperação: o erro fica só em volta do instrument.
   def announce_recovered
     payload = { message_id: @message.id, conversation_id: @message.conversation_id, account_id: @message.account_id }
-    ActiveRecord.after_all_transactions_commit { ActiveSupport::Notifications.instrument(RECOVERED_EVENT, payload) }
+    ActiveRecord.after_all_transactions_commit do
+      ActiveSupport::Notifications.instrument(RECOVERED_EVENT, payload)
+    rescue StandardError => e
+      ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
+      log("announce error=#{e.class}")
+    end
   end
 
   # Sob trava, sobre o registro relido; só quando ainda está pendente. O bloco devolve [conteúdo novo ou nil, atributos].

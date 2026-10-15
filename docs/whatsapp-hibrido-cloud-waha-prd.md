@@ -2105,8 +2105,9 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
 
 **Para todas as caixas WhatsApp (PR 0).**
 - A bolha guarda `unsupported_type` e `unsupported_error_code`.
-- Na caixa WhatsApp, a nossa IA (`Autonomia::Agents::Operate::MessageListener`) não responde a mensagem com
-  `is_unsupported`. Instagram e TikTok também usam `is_unsupported` (em mídia): lá a IA segue como antes.
+- Na caixa WhatsApp da conta com a flag `whatsapp_hybrid_recovery`, a nossa IA (`Autonomia::Agents::Operate::MessageListener`)
+  não responde a mensagem com `is_unsupported`. Sem a flag, igual à main. Instagram e TikTok também usam
+  `is_unsupported` (em mídia): lá a IA segue como antes.
 
 **Com a flag `whatsapp_hybrid_recovery` (PR 2, `feature_flags_ext_1`, desligada por padrão; o bit é a posição no `features.yml` quando entrar na main).**
 - O tipo `unknown` recebido vira a mesma bolha. Flag desligada, ou eco de saída: o caminho de hoje (só log).
@@ -2132,9 +2133,14 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
   instrui a não dar trela para robô.
 - A IA não responde ao aviso, mas nunca sem rastro: evento do agente `skipped_mensagem_nao_suportada` (aviso sem
   recuperação), `skipped_recuperada_tarde` (recuperada depois de 2 min) ou `skipped_recuperacao_falhou`
-  (`Autonomia::Agents::Operate::NaoSuportada`). Só com a flag ligada, a falha passa a conversa para as pessoas
-  (`bot_handoff!`, evento `handed_off` com motivo `recuperacao_falhou`) com a nota privada "O cliente mandou uma
-  mensagem que o WhatsApp oficial não mostra. Veja no celular.".
+  (`Autonomia::Agents::Operate::NaoSuportada`); `skipped_recuperacao_acordar_falhou` quando a recuperação gravou e o
+  que vem depois falhou (sem nova tentativa; vai ao tracker). Com a flag ligada, falha e recuperação tarde vão para as
+  pessoas: conversa resolvida fica só com o evento; se alguém falou depois do aviso, evento e nota, sem passar; senão
+  `bot_handoff!` (motivo `recuperacao_falhou` ou `recuperacao_tarde`, texto livre no Crm::Entrega), evento `handed_off`
+  e a nota privada ("O cliente mandou uma mensagem que o WhatsApp oficial não mostra. Veja no celular." ou "A mensagem
+  do cliente chegou atrasada e a IA não respondeu. Veja a conversa.").
+- Atendente que responde durante a espera do debounce: vale o fluxo normal ("atendente responde, não assume"); a regra
+  de "alguém falou depois" só olha a hora de acordar a IA.
 - Histórico da IA: mensagem com `hybrid_recovery_header` ganha a linha "[contexto interno, não repetir ao cliente: a
   mensagem tinha uma imagem que não foi lida]" (ou "um arquivo"). Ela nunca vai ao `content` nem ao cliente: se o
   modelo a repetir, sai da resposta (só a linha exata); sobrando nada, silêncio com motivo `so_contexto_interno`.
@@ -2151,4 +2157,5 @@ próxima tentativa.
 
 **Depois do #1627 (Fase 2 dos Agentes):** mesclar a main e acrescentar o spec com a Fase 2 ligada (posse do turno e
 `turno_superado`) em `spec/jobs/autonomia/agents/operate/reply_job_recuperacao_spec.rb`; rodar os specs do responder e
-do reply_job; o #1627 usa o evento 8, o #1489 usa 9, 10 e 11.
+do reply_job; o #1627 usa o evento 8, o #1489 usa 9, 10, 11 e 12. No merge, manter as duas pontas do enum, do
+`ALLOWED_REASONS` e da posse no responder.

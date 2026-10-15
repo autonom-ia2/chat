@@ -480,6 +480,7 @@
           "audience": "Outside the target audience",
           "schedule": "Outside the schedule",
           "recuperacao_falhou": "WhatsApp message not shown (check the phone)",
+          "recuperada_tarde": "WhatsApp message arrived late",
           "other": "Other / unspecified"
         }
       },

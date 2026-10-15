@@ -375,6 +375,39 @@ describe WhatsappHybrid::UnsupportedRecovery do
       expect(events).to be_empty
     end
 
+    it 'depois do commit: dentro de uma transação nada sai antes do fim do bloco, e sai exatamente um' do
+      stub_engine
+
+      Message.transaction do
+        attempt!
+        expect(events).to be_empty
+      end
+
+      expect(events.size).to eq(1)
+    end
+
+    it 'primeiro a IA, depois o aviso' do
+      stub_engine
+      order = []
+      allow(WhatsappHybrid::RecoveryAiWake).to receive(:call) { order << :wake }
+      ActiveSupport::Notifications.subscribed(->(*) { order << :announce }, 'whatsapp_hybrid.message_recovered') { attempt! }
+
+      expect(order).to eq(%i[wake announce])
+    end
+
+    it 'assinante com erro não derruba a recuperação: vai ao tracker' do
+      stub_engine
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+      failing = ->(*) { raise ArgumentError, 'assinante quebrado' }
+
+      result = ActiveSupport::Notifications.subscribed(failing, 'whatsapp_hybrid.message_recovered') { attempt! }
+
+      expect(result).to eq(:done)
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+      expect(tracker).to have_received(:capture_exception)
+    end
+
     it 'o job rodando de novo numa mensagem já recuperada não publica outra vez' do
       stub_engine
       attempt!
@@ -404,6 +437,42 @@ describe WhatsappHybrid::UnsupportedRecovery do
       attempt!
 
       expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:falhou)
+    end
+  end
+
+  describe 'falha depois de gravar não volta para nova tentativa' do
+    let(:tracker) { instance_double(ChatwootExceptionTracker, capture_exception: nil) }
+
+    before do
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:acordar_falhou)
+    end
+
+    it 'erro ao chamar a IA: fica recuperada, registra o motivo e vai ao tracker' do
+      stub_engine
+      allow(WhatsappHybrid::RecoveryAiWake).to receive(:call).and_raise(Redis::CannotConnectError)
+
+      expect(attempt!).to eq(:done)
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:acordar_falhou).with(message)
+      expect(tracker).to have_received(:capture_exception)
+    end
+
+    it 'erro ao passar a falha para as pessoas: fica failed e registra o motivo' do
+      stub_engine(engine_message('fromMe' => true))
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:falhou).and_raise(Redis::CannotConnectError)
+
+      expect(attempt!).to eq(:done)
+      expect(attributes['hybrid_recovery']).to eq('failed')
+      expect(Autonomia::Agents::Operate::NaoSuportada).to have_received(:acordar_falhou).with(message)
+    end
+
+    it 'o job não agenda outra tentativa' do
+      stub_engine
+      allow(WhatsappHybrid::RecoveryAiWake).to receive(:call).and_raise(Redis::CannotConnectError)
+
+      expect { WhatsappHybrid::RecoverUnsupportedJob.perform_now(message.id) }
+        .not_to have_enqueued_job(WhatsappHybrid::RecoverUnsupportedJob)
     end
   end
 end

@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# chat#1489: no WhatsApp, a nossa IA não responde ao aviso de "mensagem não suportada" (pendente, falhou ou sem
-# recuperação). Instagram e TikTok também marcam `is_unsupported` (em mídia): lá a IA segue como antes.
+# chat#1489: no WhatsApp da conta com a flag `whatsapp_hybrid_recovery`, a nossa IA não responde ao aviso de "mensagem
+# não suportada" (pendente, falhou ou sem recuperação). Sem a flag, igual à main. Instagram e TikTok também marcam
+# `is_unsupported` (em mídia): lá a IA segue como antes.
 describe Autonomia::Agents::Operate::MessageListener do
   let(:listener) { described_class.instance }
   let(:whatsapp_inbox) do
@@ -9,7 +10,10 @@ describe Autonomia::Agents::Operate::MessageListener do
   end
   let(:reply_job) { Autonomia::Agents::Operate::ReplyJob }
 
-  before { allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true) }
+  before do
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+    whatsapp_inbox.account.enable_features!(WhatsappHybrid::UnsupportedRecovery::FEATURE)
+  end
 
   def created(attributes, inbox: whatsapp_inbox)
     conversation = create(:conversation, account: inbox.account, inbox: inbox)
@@ -69,5 +73,16 @@ describe Autonomia::Agents::Operate::MessageListener do
     listener.message_created(created({ 'is_unsupported' => true, 'hybrid_recovery' => 'pending' }))
 
     expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:ignorada)
+  end
+
+  context 'when the account does not have the flag (igual à main)' do
+    before { whatsapp_inbox.account.disable_features!(WhatsappHybrid::UnsupportedRecovery::FEATURE) }
+
+    it 'o aviso segue para a IA como hoje e nada é registrado' do
+      allow(Autonomia::Agents::Operate::NaoSuportada).to receive(:ignorada)
+
+      expect { listener.message_created(created({ 'is_unsupported' => true })) }.to have_enqueued_job(reply_job)
+      expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:ignorada)
+    end
   end
 end

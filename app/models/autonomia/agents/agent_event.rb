@@ -50,17 +50,20 @@ module Autonomia
       # metadados (vínculo, caixa, papel).
       # consulted / consult_failed (tema 14, #1434): o principal consultou o ajudante (ou a consulta falhou ou passou do
       # teto). Gravado no AJUDANTE, com principal_id, tempo, rodadas e custo nos metadados; nunca texto.
-      # skipped_mensagem_nao_suportada / skipped_recuperada_tarde / skipped_recuperacao_falhou (#1489): a IA não respondeu
+      # skipped_mensagem_nao_suportada / skipped_recuperada_tarde / skipped_recuperacao_falhou /
+      # skipped_recuperacao_acordar_falhou (#1489): a IA não respondeu
       # ao aviso de "mensagem não suportada" do WhatsApp (Operate::NaoSuportada). O 8 fica para o #1627 (skipped_assunto_atrasou).
       enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
                          skipped_escolhas_incompletas: 4, parado_sem_onde_trabalhar: 5, consulted: 6, consult_failed: 7,
-                         skipped_mensagem_nao_suportada: 9, skipped_recuperada_tarde: 10, skipped_recuperacao_falhou: 11 }
+                         skipped_mensagem_nao_suportada: 9, skipped_recuperada_tarde: 10, skipped_recuperacao_falhou: 11,
+                         skipped_recuperacao_acordar_falhou: 12 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
       # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento
       # desses existe para o corretor ver a causa do silêncio, não para a conversa contar como atendida.
       NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas parado_sem_onde_trabalhar consulted consult_failed
-                                 skipped_mensagem_nao_suportada skipped_recuperada_tarde skipped_recuperacao_falhou].freeze
+                                 skipped_mensagem_nao_suportada skipped_recuperada_tarde skipped_recuperacao_falhou
+                                 skipped_recuperacao_acordar_falhou].freeze
       # Tema 14: os eventos do ajudante (consultado por outro agente, nunca dono da conversa).
       AJUDANTE_TYPES = %w[consulted consult_failed].freeze
 

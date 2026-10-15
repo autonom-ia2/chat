@@ -480,6 +480,7 @@
           "audience": "Fora do público-alvo",
           "schedule": "Fora do horário de atuação",
           "recuperacao_falhou": "Mensagem que o WhatsApp não mostrou (ver no celular)",
+          "recuperada_tarde": "Mensagem do WhatsApp que chegou atrasada",
           "other": "Outro / não especificado"
         }
       },

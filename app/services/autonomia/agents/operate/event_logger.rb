@@ -13,7 +13,8 @@ module Autonomia
         # `escolhas_incompletas` (#380): o Agente de Cotação emudeceu porque as escolhas da corretora no
         # config estão incompletas — o motivo fica no evento com o próprio nome, não colapsado em `other`.
         ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule
-                             escolhas_incompletas mensagem_nao_suportada recuperada_tarde recuperacao_falhou other].freeze
+                             escolhas_incompletas mensagem_nao_suportada recuperada_tarde recuperacao_falhou
+                             recuperacao_acordar_falhou other].freeze
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
