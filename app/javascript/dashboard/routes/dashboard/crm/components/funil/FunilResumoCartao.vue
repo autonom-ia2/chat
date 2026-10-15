@@ -12,6 +12,8 @@ defineProps({
   titulo: { type: String, required: true },
   falta: { type: Boolean, default: false },
   semAlterar: { type: Boolean, default: false },
+  // Parte que só se vê aqui (as caixas, #1149 R16): "Ver" no lugar de "Alterar".
+  soVer: { type: Boolean, default: false },
 });
 
 defineEmits(['alterar']);
@@ -41,9 +43,11 @@ defineEmits(['alterar']);
         </h3>
         <Button
           v-if="!semAlterar"
-          :label="$t('CRM_FUNIL.ALTERAR')"
-          :aria-label="$t('CRM_FUNIL.ALTERAR_PARTE', { parte: titulo })"
-          icon="i-lucide-pencil"
+          :label="$t(soVer ? 'CRM_FUNIL.CAIXAS.VER' : 'CRM_FUNIL.ALTERAR')"
+          :aria-label="
+            soVer ? titulo : $t('CRM_FUNIL.ALTERAR_PARTE', { parte: titulo })
+          "
+          :icon="soVer ? 'i-lucide-eye' : 'i-lucide-pencil'"
           slate
           faded
           class="!min-h-11 shrink-0"

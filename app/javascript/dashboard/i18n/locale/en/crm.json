@@ -4089,6 +4089,11 @@
       "PRINCIPAL_PARADO": "The main agent of this inbox is not answering. To add a team agent here, turn the main agent on first.",
       "AGENTE_EXTERNO": "An external agent answers on this inbox. A team agent cannot join an inbox with an external agent yet.",
       "AGENTE_RASCUNHO": "This agent is still a draft; finish creating it first."
+    },
+    "AVISO_AGENTES": {
+      "TITULO": "Who sees what in the CRM is set somewhere else",
+      "TEXTO": "Here you choose who answers this inbox. Which pipelines, cards and conversations each person and each AI agent sees in the CRM is set in CRM → {lugar}.",
+      "LINK": "Set it in {lugar}"
     }
   },
   "CRM_FUNIL": {
@@ -4355,20 +4360,15 @@
       "ROTULO": "Inboxes",
       "TITULO": "Where customers come from",
       "TEXTO": "Where this pipeline’s conversations come from and which column they start in.",
-      "NENHUMA": "This account has no inbox yet.",
-      "TRAZ": "Brings conversations to this pipeline",
-      "NAO_TRAZ": "Doesn't bring conversations here",
-      "LIGAR": "Connect",
-      "LIGAR_ESTA": "Connect this inbox",
-      "DESLIGAR": "Disconnect",
-      "DESLIGAR_NOME": "Disconnect {nome} from this pipeline",
       "CONVERSA_NOVA": "New conversation",
       "SOZINHO": "The customer shows up on the board by itself, with the conversation attached.",
-      "EQUIPE": "The customer only joins the board when the team adds them.",
-      "COMECA": "Which column the customer starts in",
-      "CRIAR_SOZINHO": "Every new conversation becomes a card on the board",
-      "QUEM_ATENDE": "Who handles each inbox is set in CRM inboxes",
-      "LIGANDO": "Connecting…"
+      "LIGADO_EM": "Connected to",
+      "ESCOLHIDO": "The card is created when the AI or the team picks this pipeline for the conversation.",
+      "MUDAR": "Change in {lugar}",
+      "MUDAR_NOME": "Change {nome} in {lugar}",
+      "ONDE_MUDA": "Which pipelines each inbox brings conversations to, how cards are created and who sees what are all set in {lugar}, with a single Save.",
+      "ABRIR_CAIXAS": "Open {lugar}",
+      "VER": "See"
     },
     "ANUNCIOS": {
       "ROTULO": "Ads",

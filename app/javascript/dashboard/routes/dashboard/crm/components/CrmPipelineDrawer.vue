@@ -51,19 +51,10 @@ const props = defineProps({
   isArchiving: { type: Boolean, default: false },
   isDeletingStage: { type: Boolean, default: false },
   isLoadingPipelineInboxes: { type: Boolean, default: false },
-  isSavingPipelineInbox: { type: Boolean, default: false },
-  isRemovingPipelineInbox: { type: Boolean, default: false },
   agents: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits([
-  'close',
-  'save',
-  'archive',
-  'deleteStage',
-  'addPipelineInbox',
-  'removePipelineInbox',
-]);
+const emit = defineEmits(['close', 'save', 'archive', 'deleteStage']);
 
 const { t, locale } = useI18n();
 const store = useStore();
@@ -121,7 +112,6 @@ const {
 // O aviso de troca de modelo vale só enquanto a pessoa está no passo Nome.
 watch(view, () => manterModelo());
 const focoCaixa = ref(null);
-const caixaAberta = ref(false);
 const passoGoogle = ref(1);
 
 const defaultOutcomeLabels = computed(() =>
@@ -291,8 +281,13 @@ const anunciosLigados = computed(() => [
   ...(form.googleSync.enabled ? [t('CRM_FUNIL.RESUMO.O_GOOGLE')] : []),
 ]);
 
+// #1149 (R16): só as caixas com o CRM ligado. A que saiu do CRM guarda o
+// vínculo, mas não traz conversa nenhuma.
+const caixasLigadas = computed(() =>
+  props.pipelineInboxes.filter(item => item.caixa_no_crm)
+);
 const nomesCaixas = computed(() =>
-  props.pipelineInboxes
+  caixasLigadas.value
     .map(
       item =>
         item.inbox?.name ||
@@ -355,17 +350,6 @@ const removeStage = index => {
   form.stages.splice(index, 1);
   pronto();
 };
-// ——— Caixas de entrada ———
-const addPipelineInbox = dados => {
-  if (!isEditing.value || !props.pipeline?.id) return;
-  emit('addPipelineInbox', { pipelineId: props.pipeline.id, ...dados });
-};
-const removePipelineInbox = pipelineInbox => {
-  emit('removePipelineInbox', {
-    pipelineId: props.pipeline.id,
-    inboxId: pipelineInbox.inbox_id,
-  });
-};
 
 const onSubmit = async () => {
   if (!canSubmit.value || props.isSaving || aiPanel.value?.isSaving) return;
@@ -420,7 +404,6 @@ const { heroi, rodape } = useFunilMoldura({
   salvando: computed(() => props.isSaving),
   apagandoEtapa: computed(() => props.isDeletingStage),
   hasUnnamedStages,
-  caixaAberta,
   passoGoogle,
   onSubmit,
   fechar,
@@ -663,15 +646,10 @@ useFixedPanelPresence(computed(() => props.show));
             <FunilCaixas
               v-else-if="view === 'inboxes'"
               v-model:foco="focoCaixa"
-              v-model:aberta="caixaAberta"
               :caixas="inboxes"
-              :ligadas="pipelineInboxes"
+              :ligadas="caixasLigadas"
               :etapas="stageOptions"
               :carregando="isLoadingPipelineInboxes"
-              :salvando="isSavingPipelineInbox"
-              :removendo="isRemovingPipelineInbox"
-              @ligar="addPipelineInbox"
-              @desligar="removePipelineInbox"
             />
 
             <FunilAnuncios

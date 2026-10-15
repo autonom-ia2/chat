@@ -405,6 +405,7 @@ Rails.application.routes.draw do
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
+            get :meu_acesso, to: 'meu_acesso#show'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate

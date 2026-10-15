@@ -14,6 +14,7 @@ import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsTo
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
+import AvisoQuemVeNoCrm from './components/AvisoQuemVeNoCrm.vue';
 import assignmentPoliciesAPI from 'dashboard/api/assignmentPolicies';
 import { useI18n } from 'vue-i18n';
 
@@ -362,6 +363,7 @@ onMounted(() => {
 
 <template>
   <div>
+    <AvisoQuemVeNoCrm :inbox-id="inbox.id" />
     <SettingsFieldSection
       :label="$t('INBOX_MGMT.SETTINGS_POPUP.INBOX_AGENTS')"
       :help-text="$t('INBOX_MGMT.SETTINGS_POPUP.INBOX_AGENTS_SUB_TEXT')"

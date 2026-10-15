@@ -7,6 +7,7 @@ import { useAgentsList } from 'dashboard/composables/useAgentsList';
 import ThumbnailGroup from 'dashboard/components/widgets/ThumbnailGroup.vue';
 import MultiselectDropdownItems from 'shared/components/ui/MultiselectDropdownItems.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import CrmMeuAcessoAPI from 'dashboard/api/crmMeuAcesso';
 
 export default {
   components: {
@@ -31,6 +32,7 @@ export default {
     return {
       selectedWatchers: [],
       showDropDown: false,
+      caixasRestritas: [],
     };
   },
   computed: {
@@ -52,6 +54,22 @@ export default {
         const userIds = participants.map(el => el.id);
         this.updateParticipant(userIds);
       },
+    },
+    conversa() {
+      return this.$store.getters.getConversationById(this.conversationId);
+    },
+    // #1148/#1149: quem tem acesso restrito por funil nesta caixa não se
+    // adiciona; outra pessoa pode adicioná-lo.
+    isSelfAddBlocked() {
+      return this.caixasRestritas.includes(Number(this.conversa?.inbox_id));
+    },
+    dropdownAgents() {
+      if (!this.isSelfAddBlocked) return this.agentsList;
+      return this.agentsList.filter(
+        agent =>
+          agent.id !== this.currentUser.id ||
+          this.selectedWatchers.some(watcher => watcher.id === agent.id)
+      );
     },
     isUserWatching() {
       return this.selectedWatchers.some(
@@ -100,6 +118,7 @@ export default {
   mounted() {
     this.fetchParticipants();
     this.$store.dispatch('agents/get');
+    this.fetchCaixasRestritas();
   },
   methods: {
     fetchParticipants() {
@@ -118,13 +137,30 @@ export default {
           userIds,
         });
       } catch (error) {
-        alertMessage =
-          error?.message ||
-          this.$t('CONVERSATION_PARTICIPANTS.API.ERROR_MESSAGE');
+        alertMessage = this.mensagemDeErro(error);
       } finally {
         useAlert(alertMessage);
       }
       this.fetchParticipants();
+    },
+    // Acesso por funil só existe com o CRM ligado; sem ele, ninguém é restrito.
+    async fetchCaixasRestritas() {
+      if (window.globalConfig?.CRM_KANBAN_ENABLED !== 'true') return;
+      try {
+        const { data } = await CrmMeuAcessoAPI.get();
+        this.caixasRestritas = data.payload.restricted_inbox_ids;
+      } catch {
+        // Sem a resposta, a tela fica como sempre; a API continua recusando.
+      }
+    },
+    // O 403 de quem tenta se adicionar com acesso restrito vem em inglês da API:
+    // a tela mostra o texto dela, traduzido.
+    mensagemDeErro(error) {
+      if (error?.status === 403)
+        return this.$t('CONVERSATION_PARTICIPANTS.API.SELF_ADD_RESTRICTED');
+      return (
+        error?.message || this.$t('CONVERSATION_PARTICIPANTS.API.ERROR_MESSAGE')
+      );
     },
     onOpenDropdown() {
       this.showDropDown = true;
@@ -188,6 +224,13 @@ export default {
       <p v-if="isUserWatching" class="m-0 text-sm text-n-slate-10">
         {{ $t('CONVERSATION_PARTICIPANTS.YOU_ARE_WATCHING') }}
       </p>
+      <p
+        v-else-if="isSelfAddBlocked"
+        data-participar-restrito
+        class="m-0 text-sm text-n-slate-10"
+      >
+        {{ $t('CONVERSATION_PARTICIPANTS.SELF_ADD_RESTRICTED_HINT') }}
+      </p>
       <NextButton
         v-else
         link
@@ -219,7 +262,7 @@ export default {
         <NextButton ghost slate xs icon="i-lucide-x" @click="onCloseDropdown" />
       </div>
       <MultiselectDropdownItems
-        :options="agentsList"
+        :options="dropdownAgents"
         :selected-items="selectedWatchers"
         has-thumbnail
         @select="onClickItem"

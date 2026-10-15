@@ -1287,6 +1287,10 @@
       "until"
     ]
   },
+  "crm/meu_acesso": {
+    "controller": "api/v1/accounts/crm/meu_acesso#show",
+    "parametros": []
+  },
   "crm/my_booking_hours": {
     "controller": "api/v1/accounts/crm/my_booking_hours#show",
     "parametros": []

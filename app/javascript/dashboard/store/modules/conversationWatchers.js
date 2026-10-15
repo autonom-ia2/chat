@@ -1,5 +1,8 @@
 import types from '../mutation-types';
-import { throwErrorMessage } from 'dashboard/store/utils/api';
+import {
+  parseAPIErrorResponse,
+  throwErrorMessage,
+} from 'dashboard/store/utils/api';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import ConversationInboxApi from '../../api/inbox/conversation';
@@ -112,6 +115,13 @@ export const actions = {
         refreshConversationUnreadCounts(dispatch);
       }
     } catch (error) {
+      // #1148/#1149: quem tem acesso restrito não se adiciona (403). O status
+      // segue junto para a tela trocar pelo texto traduzido.
+      if (error?.response?.status === 403) {
+        const proibido = new Error(parseAPIErrorResponse(error));
+        proibido.status = 403;
+        throw proibido;
+      }
       throwErrorMessage(error);
     } finally {
       commit(types.SET_CONVERSATION_PARTICIPANTS_UI_FLAG, {

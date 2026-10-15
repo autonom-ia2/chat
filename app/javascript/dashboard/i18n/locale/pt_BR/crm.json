@@ -4090,6 +4090,11 @@
       "PRINCIPAL_PARADO": "O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.",
       "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.",
       "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes."
+    },
+    "AVISO_AGENTES": {
+      "TITULO": "Quem vê o quê no CRM fica em outro lugar",
+      "TEXTO": "Aqui você escolhe quem atende esta caixa. Que funis, cards e conversas cada pessoa e cada agente de IA vê no CRM é configurado em CRM → {lugar}.",
+      "LINK": "Configurar em {lugar}"
     }
   },
   "CRM_FUNIL": {
@@ -4356,20 +4361,15 @@
       "ROTULO": "Caixas de entrada",
       "TITULO": "Por onde os clientes chegam",
       "TEXTO": "De onde vêm as conversas deste funil e em que coluna elas começam.",
-      "NENHUMA": "Esta conta ainda não tem caixa de entrada.",
-      "TRAZ": "Traz conversas para este funil",
-      "NAO_TRAZ": "Não traz conversas para cá",
-      "LIGAR": "Ligar",
-      "LIGAR_ESTA": "Ligar esta caixa",
-      "DESLIGAR": "Desligar",
-      "DESLIGAR_NOME": "Desligar {nome} deste funil",
       "CONVERSA_NOVA": "Conversa nova",
       "SOZINHO": "O cliente aparece no quadro sozinho, com a conversa junto.",
-      "EQUIPE": "O cliente só entra no quadro quando a equipe pede.",
-      "COMECA": "Em que coluna o cliente começa",
-      "CRIAR_SOZINHO": "Toda conversa nova vira cartão no quadro",
-      "QUEM_ATENDE": "Quem atende cada caixa fica em Caixas no CRM",
-      "LIGANDO": "Ligando…"
+      "LIGADO_EM": "Ligado em",
+      "ESCOLHIDO": "O card nasce quando a IA ou a equipe escolhe este funil para a conversa.",
+      "MUDAR": "Mudar em {lugar}",
+      "MUDAR_NOME": "Mudar {nome} em {lugar}",
+      "ONDE_MUDA": "Que funis cada caixa alimenta, como o card nasce e quem vê o quê ficam em {lugar}, com um único Salvar.",
+      "ABRIR_CAIXAS": "Abrir {lugar}",
+      "VER": "Ver"
     },
     "ANUNCIOS": {
       "ROTULO": "Anúncios",
