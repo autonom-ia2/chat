@@ -75,6 +75,7 @@ RSpec.describe Crm::Subjects::IdentifyJob do
 
       job = enqueued_jobs.find { |item| item['job_class'] == described_class.name }
       expect(job['queue_name']).to eq('high')
+      expect(job['arguments']).to eq([conversation.id, mensagem.id, true])
       expect(job['scheduled_at'].to_time - Time.current).to be_within(1.5).of(Crm::Subjects::DEBOUNCE_ORDEM)
     end
 
@@ -167,12 +168,16 @@ RSpec.describe Crm::Subjects::IdentifyJob do
 
     it 'NÃO é gravado quando chegou mensagem mais nova: o job dela grava' do
       primeira = incoming
-      incoming('mais uma')
+      segunda = incoming('mais uma')
 
       recebidos = eventos { described_class.perform_now(conversation.id, primeira.id) }
 
       expect(recebidos).to be_empty
       expect(Crm::Subjects::Marco.decidido_ate(conversation.id)).to be_nil
+
+      described_class.perform_now(conversation.id, segunda.id)
+      expect(Crm::Subjects::Marco.decidido_ate(conversation.id)).to eq(segunda.id)
+      expect(Crm::Subjects::Marco.decidido_ate?(conversation.id, primeira.id)).to be(true)
     end
   end
 
@@ -212,12 +217,39 @@ RSpec.describe Crm::Subjects::IdentifyJob do
       expect(dono_no_marco).to eq(espelho_area)
     end
 
-    it 'sem Redis o marco não sai, mas o job não esconde a decisão nem quebra por isso' do
+    # Redis fora de verdade: um cliente apontado para uma porta sem ninguém. A decisão sai, a falha vai para o log e o
+    # rastreador, e o job levanta para o retry gravar o marco (a reserva única da decisão evita perguntar de novo).
+    it 'sem Redis a decisão sai, a falha do marco fica registrada e o job levanta para o retry' do
       mensagem = incoming
-      allow(Crm::Subjects::Marco).to receive(:gravar).and_raise(Crm::Subjects::Marco::MarcoNaoGravado)
+      fora = Redis.new(url: 'redis://127.0.0.1:1/0', reconnect_attempts: 0, connect_timeout: 0.2)
+      allow(Redis::Alfred).to receive(:with).and_yield(fora)
+      rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
+      saida = StringIO.new
+      original = Rails.logger
+      Rails.logger = ActiveSupport::Logger.new(saida)
 
-      expect { described_class.perform_now(conversation.id, mensagem.id) }.not_to raise_error
+      begin
+        expect { described_class.perform_now(conversation.id, mensagem.id) }.to raise_error(Redis::BaseConnectionError)
+      ensure
+        Rails.logger = original
+      end
+
       expect(identifier).to have_received(:perform)
+      expect(rastreador).to have_received(:capture_exception)
+      expect(saida.string).to include("marco_nao_gravado conversa=#{conversation.id} mensagem=#{mensagem.id}")
+    end
+
+    it 'a regra do turno vem do enqueue: o Sync segue a fila escolhida, não a regra relida depois da espera' do
+      mensagem = incoming
+      allow(Crm::Subjects).to receive(:ordem_do_turno?).and_return(false)
+      allow(Crm::Ai::ResponsibleAgentSync).to receive(:new).and_call_original
+
+      described_class.perform_now(conversation.id, mensagem.id, true)
+      expect(Crm::Ai::ResponsibleAgentSync).to have_received(:new).once
+
+      described_class.perform_now(conversation.id, mensagem.id, false)
+      expect(Crm::Ai::ResponsibleAgentSync).to have_received(:new).once
     end
 
     it 'fora da ordem do turno, o Sync não roda em linha (segue assíncrono, como hoje)' do
@@ -284,6 +316,23 @@ RSpec.describe Crm::Subjects::IdentifyJob do
 
       account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :off)
       Crm::Conversations::CardSyncer.new(conversation: conversation.reload, message: mensagem).perform
+      expect(toque.reload.status).to eq('canceled')
+    end
+
+    # Pega o achado do revisor: com a IA de assunto ligada mas fora da ordem do turno (sem área), o CardSyncer para a
+    # cadência na hora, como sempre foi; só na ordem do turno quem para é o IdentifyJob.
+    it 'IA de assunto ligada e fora da ordem do turno: o CardSyncer para a cadência na hora' do
+      Crm::InboxAiAgent.delete_all
+      account.crm_pipeline_inboxes.find_by(pipeline: comercial).update!(auto_create_card: true)
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(auto_create_card: true)
+      card = create_card(pipeline: comercial)
+      toque = cadencia_ativa(card)
+      mensagem = incoming('Ainda tenho interesse')
+      expect(Crm::Subjects.ligado?(conversation)).to be(true)
+      expect(Crm::Subjects.ordem_do_turno?(conversation)).to be(false)
+
+      Crm::Conversations::CardSyncer.new(conversation: conversation, message: mensagem).perform
+
       expect(toque.reload.status).to eq('canceled')
     end
   end
