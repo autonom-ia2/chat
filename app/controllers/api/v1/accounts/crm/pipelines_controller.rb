@@ -3,6 +3,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   OUTCOME_LABEL_MAX_LENGTH = 30
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
+  before_action :ensure_outcome_labels_format, only: [:create, :update]
 
   def index
     authorize ::Crm::Pipeline
@@ -43,6 +44,16 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])
     authorize @pipeline
+  end
+
+  # #1580: outcome_labels fora de { success:, failure: } em texto é recusado antes de gravar qualquer coisa (o create
+  # salva o funil antes de update_outcome_labels!). O que chega por metadata['outcome_labels'] o modelo confere.
+  def ensure_outcome_labels_format
+    labels = params.dig(:pipeline, :outcome_labels)
+    return if labels.nil? || ::Crm::Pipeline.outcome_labels_valid?(labels)
+
+    render json: { message: I18n.t('crm.pipelines.outcome_labels_invalid'), attributes: ['outcome_labels'] },
+           status: :unprocessable_entity
   end
 
   def pipeline_params

@@ -1,0 +1,4 @@
+en:
+  crm:
+    pipelines:
+      outcome_labels_invalid: "Outcome names must be an object with success and/or failure as text."
