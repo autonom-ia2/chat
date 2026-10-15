@@ -37,6 +37,14 @@ RSpec.describe Crm::FollowUps::MessagingWindow, '#hybrid_web_available?' do
     expect(described_class.new(conversation).hybrid_web_available?).to be(false)
   end
 
+  it 'é falso com o WhatsApp API pausado na aba (#1487): o follow-up volta para o modelo aprovado' do
+    scenario[:connection].update!(paused_at: Time.current)
+    window = described_class.new(conversation)
+
+    expect(window.hybrid_web_available?).to be(false)
+    expect(window.requires_template?).to be(true)
+  end
+
   it 'é falso quando o aceite de risco foi retirado' do
     scenario[:connection].update!(risk_accepted_at: nil)
 
