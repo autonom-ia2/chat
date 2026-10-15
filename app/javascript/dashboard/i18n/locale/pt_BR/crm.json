@@ -1195,6 +1195,7 @@
       "FOLLOW_UP_SAVE_ERROR": "Não foi possível salvar o retorno.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Informe a mensagem livre para o envio automático.",
       "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial.",
+      "FOLLOW_UP_DUE_AT_PAST": "Esse horário já passou. Escolha um horário daqui para frente.",
       "CARD_REOPENED_ATENDER": "Atendimento reaberto.",
       "CARD_CLOSE_ERROR_ATENDER": "Não foi possível atualizar o status do atendimento."
     },

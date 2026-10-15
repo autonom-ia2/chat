@@ -22,8 +22,4 @@ class Crm::FollowUps::RecordInvalidResponse
   def self.error?(record, attribute, error)
     record.errors.details[attribute].to_a.any? { |detail| detail[:error] == error }
   end
-
-  def self.template_fallback?(record)
-    error?(record, :metadata, :template_fallback_required)
-  end
 end

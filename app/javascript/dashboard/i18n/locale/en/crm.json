@@ -1195,6 +1195,7 @@
       "FOLLOW_UP_SAVE_ERROR": "Could not save the follow-up.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Enter the free-form message for auto-send.",
       "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template.",
+      "FOLLOW_UP_DUE_AT_PAST": "This time has already passed. Pick a time from now on.",
       "CARD_REOPENED_ATENDER": "Request reopened.",
       "CARD_CLOSE_ERROR_ATENDER": "Could not update the request status."
     },

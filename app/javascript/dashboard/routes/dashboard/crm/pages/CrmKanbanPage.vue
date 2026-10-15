@@ -1485,6 +1485,11 @@ const createFollowUp = async payload => {
       useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'));
       return;
     }
+    // #1590: mensagem automática com horário que já passou é recusada na criação.
+    if (error?.response?.data?.code === 'due_at_in_the_past') {
+      useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'));
+      return;
+    }
     const apiMessage = error?.response?.data?.message;
     useAlert(apiMessage || t('CRM_KANBAN.ALERTS.FOLLOW_UP_SAVE_ERROR'));
   }
