@@ -7,8 +7,8 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 // #1149 (R16) — o Editar funil só mostra onde o funil está ligado; mudar é em
 // Canais de cada funil.
 const etapas = [
-  { id: 10, name: 'Cotação', color: '#2563eb' },
-  { id: 11, name: 'Proposta', color: '#0891b2' },
+  { id: 11, name: 'Proposta', color: '#0891b2', position: 2 },
+  { id: 10, name: 'Cotação', color: '#2563eb', position: 1 },
 ];
 const ligadas = [
   {
@@ -62,7 +62,7 @@ describe('FunilCaixas — só leitura', () => {
     expect(links[0].text()).toBe('Mudar em Canais de cada funil');
   });
 
-  it('card automático sem etapa escolhida mostra a primeira, como o sistema faz', () => {
+  it('card automático sem etapa escolhida mostra a primeira por posição, como o sistema faz', () => {
     const wrapper = montar({
       ligadas: [{ ...ligadas[0], default_stage_id: null }],
     });

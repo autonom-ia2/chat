@@ -18,11 +18,17 @@ const foco = defineModel('foco', { type: Object, default: null });
 
 const { t } = useI18n();
 
-// Sem etapa escolhida, o card nasce na primeira (Crm::Conversations::CardSyncer).
+// As etapas salvas do funil. Sem etapa escolhida, o card nasce na primeira por
+// posição e id, como o Crm::Conversations::CardSyncer.
+const primeiraEtapa = computed(
+  () =>
+    [...props.etapas].sort(
+      (a, b) => a.position - b.position || Number(a.id) - Number(b.id)
+    )[0] || null
+);
 const etapaPorId = id =>
   props.etapas.find(etapa => Number(etapa.id) === Number(id)) ||
-  props.etapas[0] ||
-  null;
+  primeiraEtapa.value;
 
 const cartoes = computed(() =>
   props.ligadas.map(ligada => {

@@ -7,6 +7,7 @@ import { useAgentsList } from 'dashboard/composables/useAgentsList';
 import ThumbnailGroup from 'dashboard/components/widgets/ThumbnailGroup.vue';
 import MultiselectDropdownItems from 'shared/components/ui/MultiselectDropdownItems.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import * as Sentry from '@sentry/vue';
 import CrmMeuAcessoAPI from 'dashboard/api/crmMeuAcesso';
 
 export default {
@@ -149,8 +150,10 @@ export default {
       try {
         const { data } = await CrmMeuAcessoAPI.get();
         this.caixasRestritas = data.payload.restricted_inbox_ids;
-      } catch {
-        // Sem a resposta, a tela fica como sempre; a API continua recusando.
+      } catch (error) {
+        // Decisão: sem a resposta, a tela fica como sempre (fail-open). Não
+        // abre brecha: a API continua recusando a autoadição de quem é restrito.
+        Sentry.captureException(error);
       }
     },
     // A recusa de quem tenta se adicionar com acesso restrito vem em inglês da

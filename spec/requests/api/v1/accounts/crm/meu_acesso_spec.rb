@@ -8,7 +8,6 @@ RSpec.describe 'CRM meu acesso API', type: :request do
   let(:restricted) { create(:user, account: account, role: :agent) }
   let(:free_agent) { create(:user, account: account, role: :agent) }
   let(:inbox) { create(:inbox, account: account) }
-  let(:other_inbox) { create(:inbox, account: account) }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
@@ -31,6 +30,19 @@ RSpec.describe 'CRM meu acesso API', type: :request do
   it 'is empty for a person without restriction and for an administrator, even with an access row' do
     expect(meu_acesso(free_agent)).to eq([])
     expect(meu_acesso(admin)).to eq([])
+  end
+
+  it 'does not leak a restriction the same person has in another account' do
+    other_account = create(:account)
+    inbox_b = create(:inbox, account: other_account)
+    create(:account_user, account: other_account, user: free_agent, role: :agent)
+    create(:inbox_member, inbox: inbox_b, user: free_agent)
+    Crm::InboxAgentAccess.create!(account: other_account, inbox: inbox_b, user: free_agent, all_pipelines: false, triage: true)
+
+    expect(meu_acesso(free_agent)).to eq([])
+
+    get "/api/v1/accounts/#{other_account.id}/crm/meu_acesso", headers: free_agent.create_new_auth_token, as: :json
+    expect(response.parsed_body.dig('payload', 'restricted_inbox_ids')).to eq([inbox_b.id])
   end
 
   it 'answers 404 when the CRM is off' do

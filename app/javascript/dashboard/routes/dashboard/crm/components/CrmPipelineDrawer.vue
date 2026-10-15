@@ -252,7 +252,6 @@ const canSubmit = computed(
     form.stages.length > 0 &&
     form.stages.every(stage => stage.name.trim())
 );
-const stageOptions = computed(() => form.stages.filter(stage => stage.id));
 const retorno = computed(() => aiPanel.value?.form?.autoFollowup || null);
 // #1498 — os lembretes de Atender ligados (andamento, deu certo?, pagamento).
 const lembretesAtender = computed(
@@ -648,7 +647,7 @@ useFixedPanelPresence(computed(() => props.show));
               v-model:foco="focoCaixa"
               :caixas="inboxes"
               :ligadas="caixasLigadas"
-              :etapas="stageOptions"
+              :etapas="stages"
               :carregando="isLoadingPipelineInboxes"
             />
 

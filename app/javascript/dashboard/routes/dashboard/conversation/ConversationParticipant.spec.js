@@ -47,8 +47,12 @@ const montar = ({ dispatch = vi.fn() } = {}) =>
     },
   });
 
-// O Button do painel vem simplificado no setup dos testes: o rótulo fica no HTML.
-const participar = wrapper => wrapper.html().includes('Participar da conversa');
+// O Button do painel vem simplificado no setup dos testes: o rótulo fica no
+// atributo label do botão.
+const participar = wrapper =>
+  wrapper
+    .findAll('button')
+    .some(botao => botao.attributes('label') === 'Participar da conversa');
 
 const opcoes = wrapper =>
   wrapper
