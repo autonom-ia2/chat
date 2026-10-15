@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1593 — ponta a ponta com o PassarParaIa REAL (PR-B dos Agentes IA, mescla local de teste) e o Crm::Passagens real.
-# Só o Crm::Passagens.com_motivo (PR B da #1606) segue dublado, e só no caminho de pessoa.
+# Com o #1622 mesclado: o com_motivo e o listener de atribuição reais. Nada dublado.
 RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
   include_context 'with crm responsible agent'
 
@@ -29,7 +29,7 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
   it 'robô passa com "A mesma pessoa" na área: a área assume e a conversa sai de Não atribuídas', :aggregate_failures do
     regra_na_area!
 
-    conversation.bot_handoff!
+    expect { conversation.bot_handoff! }.to change(Crm::Passagem, :count).by(1)
 
     conversation.reload
     expect(conversation).to have_attributes(ai_assignee: espelho_area, assignee_id: nil, status: 'open')
@@ -62,21 +62,29 @@ RSpec.describe 'Agente de IA na Atribuição e no Passar para, ponta a ponta' do
   end
 
   describe 'Passar para… na conversa' do
-    before { dublar_com_motivo }
-
-    it 'Ana passa para a área; o selo mostra a origem; Ana devolve para si', :aggregate_failures do
+    it 'Ana passa para a área (uma passagem, sem dupla pelo listener); selo com a origem; Ana devolve (uma passagem, motivo passar_para)', :aggregate_failures do
       conversation.update!(assignee: ana, ai_assignee: nil)
+      Crm::Passagem.where(conversation_id: conversation.id).delete_all
       servico = Crm::PassarPara.new(conversation: conversation, usuario: ana)
 
-      expect(servico.passar!(tipo: 'ia', id: area.id).ok).to be(true)
+      expect { expect(servico.passar!(tipo: 'ia', id: area.id).ok).to be(true) }.to change(Crm::Passagem, :count).by(1)
       conversation.reload
       expect(conversation).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
       retrato = Crm::PassarPara.new(conversation: conversation, usuario: ana).retrato
       expect(retrato[:com_ia]).to include(id: area.id)
       expect(retrato[:origem]).to include(tipo: 'pessoa', id: ana.id, pode_receber: true)
 
-      expect(Crm::PassarPara.new(conversation: conversation, usuario: ana).passar!(tipo: 'pessoa', id: ana.id).ok).to be(true)
+      Current.user = ana
+      expect do
+        expect(Crm::PassarPara.new(conversation: conversation, usuario: ana).passar!(tipo: 'pessoa', id: ana.id).ok).to be(true)
+      end.to change(Crm::Passagem, :count).by(1)
       expect(conversation.reload).to have_attributes(assignee_id: ana.id, ai_assignee: nil)
+      ultima = Crm::Passagem.where(conversation_id: conversation.id).em_ordem.first
+      expect(ultima.motivo).to eq('passar_para')
+      expect([ultima.para.classe, ultima.para.id]).to eq(['User', ana.id])
+      expect(Crm::Passagem.where(conversation_id: conversation.id).abertas.count).to eq(1)
+    ensure
+      Current.reset
     end
 
     it 'Bruno pede a passagem da conversa da Ana: pedida_por é o Bruno, origem a Ana' do

@@ -41,7 +41,17 @@ module ConversationBotHandoff
   # commit de TODAS as transações abertas (quem chama pode estar dentro de uma trava), o motor passa ao agente
   # (Crm::Entrega#concluir_para_ia!), com o robô que passou como origem. Com o agente no comando, não há aviso de
   # passagem para pessoa; recusado, o motor entrega a alguém da equipe e o aviso sai como sempre.
+  # O motivo da passagem vai no contexto do registro de passagens (#1606): a pessoa entra no save daqui, depois que a
+  # Entrega já saiu, e a conversa prende o motivo nesse save (ConversationPassagem).
   def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
+    motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
+    para_ia, quem_passou = Crm::Passagens.com_motivo(motivo) do
+      passar_ao_atendimento!(keep_bot: keep_bot, motivo: motivo, release_assignee: release_assignee)
+    end
+    depois_da_passagem(para_ia, dispatch_event, quem_passou)
+  end
+
+  def passar_ao_atendimento!(keep_bot:, motivo:, release_assignee:)
     para_ia = nil
     quem_passou = nil
     self.class.transaction do
@@ -55,8 +65,9 @@ module ConversationBotHandoff
       robo && assignee_id.blank? ? wait_for_person_with(robo) : clear_bot_wait_mark
       save!
     end
-    depois_da_passagem(para_ia, dispatch_event, quem_passou)
+    [para_ia, quem_passou]
   end
+  private :passar_ao_atendimento!
 
   def bot_handoff_waiting?
     additional_attributes.is_a?(Hash) && additional_attributes[BOT_HANDOFF_WAITING_SINCE_KEY].present?
