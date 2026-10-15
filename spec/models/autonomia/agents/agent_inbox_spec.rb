@@ -82,10 +82,24 @@ RSpec.describe Autonomia::Agents::AgentInbox do
       expect(build_link(papel: 'gerente')).not_to be_valid
     end
 
-    it 'recusa área em caixa sem porta ativa' do
+    # #1433: sem porta, a área só entra na caixa atendida só por pessoas (sem robô de fora).
+    it 'aceita área em caixa só de pessoas e recusa em caixa sem porta com robô de fora' do
+      expect(area).to be_valid
+
+      AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'Parceiro'), account: account)
       expect(area).not_to be_valid
+      expect(area.tap(&:valid?).errors[:papel]).to be_present
+    end
+
+    it 'com porta ativa, o AgentBotInbox do espelho dela não conta como robô de fora' do
+      porta
+      AgentBotInbox.create!(inbox: inbox, agent_bot: agent_bot, account: account)
+
+      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
+      expect(area).to be_valid
 
       porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(true)
       expect(area).not_to be_valid
     end
 

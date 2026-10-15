@@ -12,37 +12,6 @@ import { juntar, paraFormulario, paraSalvar } from './caixa';
 // e disponíveis viram uma lista só (`agentes`): `na_caixa` diz quem já é área
 // aqui e `sai` marca quem vai ser tirado ao salvar.
 
-// #1570 — por que a caixa não aceita agente de área novo agora (códigos do
-// leitor Autonomia::Agents::Areas.caixa_aceita_area?, em `recusa_area_nova`).
-const RECUSA_DA_CAIXA = {
-  principal_parado: 'CRM_CAIXAS.EDITOR.PORTA_PARADA',
-  robo_externo: 'CRM_CAIXAS.EDITOR.AGENTE_EXTERNO',
-  fase2_desligada: 'CRM_CAIXAS.EDITOR.AGENTES_DESLIGADOS',
-};
-
-export const chaveDaRecusaDaCaixa = codigo => RECUSA_DA_CAIXA[codigo] || null;
-
-// Recusas do servidor ao salvar os agentes que têm frase própria; as outras
-// dos agentes usam CRM_CAIXAS.EDITOR.ERRO_AGENTES.
-const FRASE_DO_ERRO = {
-  'crm.caixas.agente_nao_liga': 'CRM_CAIXAS.EDITOR.AGENTE_NAO_LIGA',
-  'crm.caixas.agente_rascunho': 'CRM_CAIXAS.EDITOR.AGENTE_RASCUNHO',
-  'crm.caixas.porta_parada': 'CRM_CAIXAS.EDITOR.PORTA_PARADA',
-  'crm.caixas.agente_externo': 'CRM_CAIXAS.EDITOR.AGENTE_EXTERNO',
-  'crm.caixas.agentes_desligados': 'CRM_CAIXAS.EDITOR.AGENTES_DESLIGADOS',
-};
-
-export const ERROS_DOS_AGENTES = [
-  ...Object.keys(FRASE_DO_ERRO),
-  'crm.caixas.agente_invalido',
-  'crm.caixas.agentes_sem_permissao',
-  'crm.caixas.funil_com_dois_agentes',
-  'crm.caixas.sem_porta',
-];
-
-export const chaveDoErroDosAgentes = codigo =>
-  FRASE_DO_ERRO[codigo] || 'CRM_CAIXAS.EDITOR.ERRO_AGENTES';
-
 export const temAgentesIa = (caixa, fase2) =>
   fase2 === true && Boolean(caixa.ai_agents);
 
@@ -56,7 +25,6 @@ export const agentesParaFormulario = aiAgents =>
     ? {
         porta: aiAgents.porta,
         pode_mudar: aiAgents.pode_mudar,
-        recusa_area_nova: aiAgents.recusa_area_nova || null,
         agentes: [
           ...aiAgents.areas.map(agente => ({
             ...agente,
@@ -261,4 +229,26 @@ export const formularioDaCaixa = (caixa, fase2) => ({
 export const salvarDaCaixa = (form, original) => ({
   ...paraSalvar(form),
   ...agentesParaSalvar(form, original),
+});
+
+// #1447/#1433 — recusas do servidor ao gravar os agentes de IA da caixa. `ehDosAgentes`: a etapa que resolve é a dos
+// agentes. `alerta`: a chave do texto próprio do motivo (em CRM_CAIXAS.EDITOR), ou null para o texto geral.
+const ALERTA_DO_ERRO = {
+  'crm.caixas.agente_nao_liga': 'AGENTE_NAO_LIGA',
+  // #1570 — rascunho tem frase própria.
+  'crm.caixas.agente_rascunho': 'AGENTE_RASCUNHO',
+  'crm.caixas.principal_parado': 'PRINCIPAL_PARADO',
+  'crm.caixas.robo_externo': 'AGENTE_EXTERNO',
+};
+const ERROS_DOS_AGENTES = [
+  ...Object.keys(ALERTA_DO_ERRO),
+  'crm.caixas.agente_invalido',
+  'crm.caixas.agentes_desligados',
+  'crm.caixas.agentes_sem_permissao',
+  'crm.caixas.funil_com_dois_agentes',
+];
+
+export const erroDosAgentes = codigo => ({
+  ehDosAgentes: ERROS_DOS_AGENTES.includes(codigo),
+  alerta: ALERTA_DO_ERRO[codigo] || null,
 });

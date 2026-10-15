@@ -97,16 +97,12 @@ describe('CaixaPage', () => {
 
   it.each([
     [
-      'crm.caixas.porta_parada',
-      'Esta caixa precisa de um agente atendendo primeiro.',
+      'crm.caixas.principal_parado',
+      'O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.',
     ],
     [
-      'crm.caixas.agente_externo',
-      'Esta caixa é atendida por um agente externo. Ela não recebe agente de área.',
-    ],
-    [
-      'crm.caixas.agentes_desligados',
-      'Os agentes de área ainda não estão ligados nesta conta.',
+      'crm.caixas.robo_externo',
+      'Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.',
     ],
     [
       'crm.caixas.agente_rascunho',

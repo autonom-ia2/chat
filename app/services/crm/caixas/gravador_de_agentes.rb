@@ -2,10 +2,7 @@
 # com o resto da caixa (Crm::Caixas::Gravador, na mesma transação).
 #
 # `lista` é a lista inteira dos agentes de área que ficam na caixa: [{ 'id' =>, 'pipeline_ids' => [] }].
-# - Agente que entra: Autonomia::Agents::Areas.vincular!(ativar: true) — vincula e liga num passo só. Só entra em caixa
-#   que aceita área agora (Areas.caixa_aceita_area?, #1570): com o principal atendendo, ou só de pessoas; nunca com
-#   agente externo. Só quem ENTRA é vinculado: a área que já está na caixa fica, mesmo com o principal pausado ou
-#   sem principal.
+# - Agente que entra: Autonomia::Agents::Areas.vincular!(ativar: true) — vincula e liga num passo só.
 # - Agente que sai: as linhas dele na caixa saem e Autonomia::Agents::Areas.desvincular!. Sendo a última caixa dele, o
 #   Agentes IA o para sozinho (a tela avisa antes).
 # - Os funis: uma linha em crm_inbox_ai_agents por funil marcado; um funil tem um agente só na caixa.
@@ -15,10 +12,10 @@
 # segundo agente com a caixa já presa inverteria a ordem.
 class Crm::Caixas::GravadorDeAgentes
   Invalida = Crm::Caixas::Gravador::Invalida
-  # Os códigos fechados de Areas.caixa_aceita_area? (e de CaixaNaoAceitaArea#codigo) para a tela.
-  CAIXA_NAO_ACEITA = {
-    principal_parado: 'crm.caixas.porta_parada',
-    robo_externo: 'crm.caixas.agente_externo',
+  # Código do Autonomia::Agents::Areas.caixa_aceita_area? (leitor único da regra da caixa, #1433) -> código da tela.
+  CODIGO_DA_CAIXA = {
+    principal_parado: 'crm.caixas.principal_parado',
+    robo_externo: 'crm.caixas.robo_externo',
     fase2_desligada: 'crm.caixas.agentes_desligados'
   }.freeze
 
@@ -43,17 +40,19 @@ class Crm::Caixas::GravadorDeAgentes
   def validar!
     raise Invalida, 'crm.caixas.agentes_desligados' unless Crm::Ai::Config.areas_ligadas?(@account)
     raise Invalida, 'crm.caixas.agente_invalido' if agente_invalido?
-    raise Invalida, caixa_recusa if ids_entrando.any? && caixa_recusa
+
+    recusa = recusa_da_caixa
+    raise Invalida, recusa if recusa
     raise Invalida, 'crm.caixas.funil_invalido' if (funis_pedidos - @pipeline_ids).any?
     raise Invalida, 'crm.caixas.funil_com_dois_agentes' if funis_pedidos.size != funis_pedidos.uniq.size
   end
 
-  # A caixa só é consultada quando ENTRA agente novo: mexer nos funis de quem já está nela vale sempre.
-  def caixa_recusa
-    return @caixa_recusa if defined?(@caixa_recusa)
+  # Só quando entra alguém: a caixa tem de aceitar área agora (principal atendendo, ou só de pessoas, #1433). Quem já
+  # está na caixa não trava o salvar dos funis. O Areas confere de novo, com a caixa travada.
+  def recusa_da_caixa
+    return if (@lista.keys - atuais).empty?
 
-    resultado = ::Autonomia::Agents::Areas.caixa_aceita_area?(@inbox)
-    @caixa_recusa = resultado.ok? ? nil : CAIXA_NAO_ACEITA.fetch(resultado.codigo)
+    CODIGO_DA_CAIXA[::Autonomia::Agents::Areas.caixa_aceita_area?(@inbox, conferir_fase2: false).codigo]
   end
 
   # O mesmo agente duas vezes, ou quem não pode ser área desta caixa.
@@ -94,12 +93,8 @@ class Crm::Caixas::GravadorDeAgentes
     agentes_da_conta.where(id: atuais - @lista.keys).order(:id)
   end
 
-  def ids_entrando
-    @lista.keys - atuais
-  end
-
   def entrando
-    ids_entrando.sort.map { |id| candidatos.fetch(id) }
+    (@lista.keys - atuais).sort.map { |id| candidatos.fetch(id) }
   end
 
   def tirar!(agente)
@@ -107,24 +102,29 @@ class Crm::Caixas::GravadorDeAgentes
     ::Autonomia::Agents::Areas.desvincular!(agent: agente, inbox: @inbox)
   end
 
-  # Recusa do Areas vira código para a tela: agente que não pode falar com cliente, rascunho, ou que não liga
-  # (cadastro incompleto); caixa que não aceita área agora (o Areas confere com a caixa travada, pelo mesmo leitor).
+  # Recusa do Areas vira código para a tela: agente que não pode falar com cliente, ou que não liga (cadastro
+  # incompleto); caixa que não aceita área (pelo código do leitor).
   def vincular!(agente)
     ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true)
   rescue ::Autonomia::Agents::Areas::AgenteRascunho
+    # #1570: rascunho tem frase própria na tela.
     raise Invalida, 'crm.caixas.agente_rascunho'
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema,
          ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
     raise Invalida, 'crm.caixas.agente_invalido'
   rescue ::Autonomia::Agents::Areas::CaixaNaoAceitaArea => e
-    raise Invalida, CAIXA_NAO_ACEITA.fetch(e.codigo)
+    raise Invalida, CODIGO_DA_CAIXA.fetch(e.codigo, 'crm.caixas.agente_invalido')
   rescue ActiveRecord::RecordInvalid => e
     raise Invalida, codigo_da_recusa(e.record)
   end
 
   def codigo_da_recusa(record)
     return 'crm.caixas.agente_nao_liga' if record.is_a?(::Autonomia::Agents::Agent)
-    return 'crm.caixas.sem_porta' if record.errors.include?(:papel)
+
+    if record.errors.include?(:papel)
+      codigo = ::Autonomia::Agents::Areas.caixa_aceita_area?(@inbox, conferir_fase2: false).codigo
+      return CODIGO_DA_CAIXA.fetch(codigo, 'crm.caixas.agente_invalido')
+    end
 
     'crm.caixas.agente_invalido'
   end

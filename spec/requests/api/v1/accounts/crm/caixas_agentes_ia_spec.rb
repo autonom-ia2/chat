@@ -61,8 +61,7 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       'porta' => { 'id' => clara.id, 'name' => 'Clara' },
       'pode_mudar' => true,
       'areas' => [{ 'id' => maria.id, 'name' => 'Maria', 'pipeline_ids' => [vendas.id], 'parado' => false, 'ultima_caixa' => true }],
-      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }],
-      'recusa_area_nova' => nil
+      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
     )
   end
 
@@ -119,14 +118,8 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to be_empty
   end
 
-  # #1570: o leitor da caixa (Autonomia::Agents::Areas.caixa_aceita_area?) só pelo contrato: ok? e codigo.
-  def caixa_recusa(codigo)
-    resultado = instance_double(Autonomia::Agents::Areas::Resultado, ok?: false, codigo: codigo)
-    allow(Autonomia::Agents::Areas).to receive(:caixa_aceita_area?).and_return(resultado)
-  end
-
-  it 'com a caixa recusando área nova, a área que já está nela fica e troca de funil: o leitor só vale para quem entra (#1570)' do
-    caixa_recusa(:principal_parado)
+  it 'com o principal pausado, a área que já está na caixa fica e troca de funil: o leitor só vale para quem entra (#1570)' do
+    clara.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
 
     salvar([{ id: maria.id, pipeline_ids: [suporte.id] }])
 
@@ -135,23 +128,16 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to eq([[suporte.id, maria.id]])
   end
 
-  it 'caixa que não aceita área nova não oferece ninguém e diz o motivo (#1570)' do
-    marta
-    caixa_recusa(:robo_externo)
-
-    expect(agentes_da_caixa).to include('pode_mudar' => true, 'disponiveis' => [], 'recusa_area_nova' => 'robo_externo')
-  end
-
-  it 'a lista de caixas não consulta se a caixa aceita área nova; só a caixa aberta (#1570)' do
+  it 'a lista de caixas não consulta se a caixa aceita área; só a caixa aberta (#1570)' do
+    sem_principal = create_crm_inbox(account: account, name: 'WhatsApp Recepção', members: [admin])
     allow(Autonomia::Agents::Areas).to receive(:caixa_aceita_area?).and_call_original
 
     get url, headers: auth_headers(admin)
-
-    caixa = response.parsed_body.dig('payload', 'caixas').find { |item| item.dig('inbox', 'id') == inbox.id }
-    expect(caixa['ai_agents']).not_to have_key('recusa_area_nova')
+    expect(response).to have_http_status(:ok)
     expect(Autonomia::Agents::Areas).not_to have_received(:caixa_aceita_area?)
 
-    expect(agentes_da_caixa).to have_key('recusa_area_nova')
+    get "#{url}/#{sem_principal.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('porta' => nil, 'pode_mudar' => true)
     expect(Autonomia::Agents::Areas).to have_received(:caixa_aceita_area?).once
   end
 
@@ -186,6 +172,62 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(linhas).to eq([[arquivado.id, maria.id]])
+  end
+
+  # #1433: a mesma regra da caixa da API dos Agentes e da gaveta (Areas.caixa_aceita_area?, leitor único).
+  describe 'caixa sem principal' do
+    let(:so_de_pessoas) { create_crm_inbox(account: account, name: 'WhatsApp Recepção', members: [admin]) }
+
+    before do
+      account.crm_inbox_settings.create!(inbox: so_de_pessoas, crm_enabled: true, subject_ai_mode: 'auto')
+      account.crm_pipeline_inboxes.create!(inbox: so_de_pessoas, pipeline: vendas)
+    end
+
+    def salvar_na(caixa, ai_agents)
+      put "#{url}/#{caixa.id}", params: { caixa: { pipeline_ids: [vendas.id], modo: 'chegou', people: [], ai_agents: ai_agents } },
+                                headers: auth_headers(admin), as: :json
+    end
+
+    it 'caixa só de pessoas aceita área pelo CRM, e a tela a oferece' do
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('porta' => nil, 'pode_mudar' => true)
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:ok)
+      expect(Autonomia::Agents::AgentInbox.kept.area.exists?(inbox: so_de_pessoas, agent: marta)).to be(true)
+      expect(marta.reload).to be_operating
+    end
+
+    it 'caixa com agente externo recusa com crm.caixas.robo_externo, e a tela não a oferece' do
+      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: create(:agent_bot, account: account), account: account)
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('pode_mudar' => false, 'disponiveis' => [])
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
+      expect(Autonomia::Agents::AgentInbox.kept.where(inbox: so_de_pessoas)).to be_empty
+    end
+
+    it 'principal parado recusa com crm.caixas.principal_parado' do
+      clara.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.principal_parado')
+      expect(area?(marta)).to be(false)
+    end
+
+    it 'a recusa que vem de dentro do Areas (caixa travada) também sai pelo código' do
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(Autonomia::Agents::Areas::CaixaNaoAceitaArea.new(:robo_externo))
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
+    end
   end
 
   describe 'recusa sem gravar nada' do
@@ -234,19 +276,6 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     it 'o mesmo agente duas vezes' do
       salvar([{ id: marta.id, pipeline_ids: [suporte.id] }, { id: marta.id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
-    end
-
-    it 'área nova em caixa que não aceita área agora, com o código do leitor; a área que já estava fica (#1570)' do
-      { principal_parado: 'crm.caixas.porta_parada', robo_externo: 'crm.caixas.agente_externo',
-        fase2_desligada: 'crm.caixas.agentes_desligados' }.each do |codigo, code|
-        caixa_recusa(codigo)
-
-        salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
-
-        expect_recusa(code)
-        expect(area?(maria)).to be(true)
-        expect(marta.reload).to have_attributes(status: 'paused', enabled: false)
-      end
     end
 
     it 'sem a Fase 2' do

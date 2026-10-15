@@ -83,33 +83,4 @@ describe('EtapaPessoas', () => {
     expect(wrapper.find('[data-agente-area="Maria"]').exists()).toBe(true);
     expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
   });
-
-  it('says why the inbox takes no new area agent (#1570)', () => {
-    const wrapper = render(
-      agentesParaFormulario({
-        porta: { id: 9, name: 'Clara' },
-        pode_mudar: true,
-        areas: [],
-        disponiveis: [],
-        recusa_area_nova: 'robo_externo',
-      })
-    );
-
-    expect(wrapper.find('[data-recusa-da-caixa]').text()).toBe(
-      'Esta caixa é atendida por um agente externo. Ela não recebe agente de área.'
-    );
-  });
-
-  it('says nothing when the inbox takes new area agents', () => {
-    const wrapper = render(
-      agentesParaFormulario({
-        porta: { id: 9, name: 'Clara' },
-        pode_mudar: true,
-        areas: [],
-        disponiveis: [{ id: 2, name: 'Marta', parado: true }],
-      })
-    );
-
-    expect(wrapper.find('[data-recusa-da-caixa]').exists()).toBe(false);
-  });
 });

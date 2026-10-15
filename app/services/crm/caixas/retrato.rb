@@ -64,7 +64,7 @@ class Crm::Caixas::Retrato
   end
 
   def agentes_de_ia_da(inbox)
-    agentes_de_ia.ligado? ? { ai_agents: agentes_de_ia.caixa(inbox) } : {}
+    agentes_de_ia.ligado? ? { ai_agents: agentes_de_ia.caixa(inbox.id) } : {}
   end
 
   def agentes_de_ia

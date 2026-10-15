@@ -2,10 +2,15 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
-import { caixaPeloId, enderecoDaCaixa } from '../../utils/ondeTrabalha';
+import {
+  caixaPeloId,
+  enderecoDaCaixa,
+  soDePessoas,
+} from '../../utils/ondeTrabalha';
 
 // #1433 (tema 13) — "Onde {nome} trabalha" do agente da equipe: uma linha por caixa, só com a caixa e o
-// papel ("Recebe quando alguém passar"). Usado no Pronto da criação e na página do agente.
+// papel ("Recebe quando alguém passar"; na caixa só de pessoas, diz que ela é atendida só por pessoas).
+// Usado no Pronto da criação e na página do agente.
 // Os assuntos (funis) de que ele cuida não aparecem aqui ainda: a tela do CRM que os escolhe não existe.
 // `canais`: linhas da L2 (canais_ocupados) em que o agente está na equipe; `caixas`: a store de inboxes.
 const props = defineProps({
@@ -23,6 +28,9 @@ const linhas = computed(() =>
       caixa: caixa || { channel_type: canal.channel_type },
       nome: canal.name,
       endereco: enderecoDaCaixa(caixa),
+      papel: soDePessoas(canal)
+        ? t('AGENTS.JORNADA.ONDE.RECEBE_PESSOAS')
+        : t('AGENTS.JORNADA.ONDE.RECEBE'),
     };
   })
 );
@@ -49,9 +57,7 @@ const linhas = computed(() =>
             · {{ linha.endereco }}</span
           >
         </span>
-        <span class="text-n-slate-11">
-          {{ t('AGENTS.JORNADA.ONDE.RECEBE') }}
-        </span>
+        <span class="text-n-slate-11">{{ linha.papel }}</span>
       </span>
     </li>
   </ul>

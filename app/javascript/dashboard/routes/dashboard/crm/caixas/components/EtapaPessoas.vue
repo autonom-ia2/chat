@@ -4,7 +4,6 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgentesDaCaixa from './AgentesDaCaixa.vue';
 import { corDoFunil } from '../helpers/caixa';
-import { chaveDaRecusaDaCaixa } from '../helpers/agentesIa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
 // #1149 — etapa 2: quem cuida do quê. Para cada pessoa da caixa, de quais
@@ -38,10 +37,6 @@ const agentesIa = computed({
     aiAgents.value = { ...aiAgents.value, agentes };
   },
 });
-// #1570 — a caixa não aceita agente de área novo agora: a tela diz por quê.
-const recusaDaCaixa = computed(() =>
-  chaveDaRecusaDaCaixa(aiAgents.value?.recusa_area_nova)
-);
 const temAgentes = computed(
   () =>
     Boolean(aiAgents.value) &&
@@ -156,17 +151,6 @@ const chipClasse = ativo =>
           }}
         </p>
       </div>
-      <p
-        v-if="recusaDaCaixa"
-        data-recusa-da-caixa
-        class="mb-0 flex items-start gap-2 rounded-xl bg-n-amber-2 px-4 py-3 text-[0.9375rem] text-n-slate-12"
-      >
-        <span
-          class="i-lucide-info mt-0.5 size-4 shrink-0 text-n-amber-11"
-          aria-hidden="true"
-        />
-        {{ $t(recusaDaCaixa) }}
-      </p>
       <AgentesDaCaixa
         v-model:agentes="agentesIa"
         :porta="porta"

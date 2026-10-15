@@ -1,8 +1,7 @@
 import {
   agentesParaFormulario,
+  erroDosAgentes,
   alternarFunilDoAgente,
-  chaveDaRecusaDaCaixa,
-  chaveDoErroDosAgentes,
   formularioDaCaixa,
   funisSemAgente,
   mudancasDosAgentes,
@@ -53,22 +52,6 @@ const formulario = dados => formularioDaCaixa(dados, true);
 const agentes = () => agentesParaFormulario(aiAgents()).agentes;
 
 describe('agentes de IA da caixa', () => {
-  it('maps the inbox refusal and the save errors to fixed i18n keys (#1570)', () => {
-    expect(chaveDaRecusaDaCaixa('principal_parado')).toBe(
-      'CRM_CAIXAS.EDITOR.PORTA_PARADA'
-    );
-    expect(chaveDaRecusaDaCaixa('robo_externo')).toBe(
-      'CRM_CAIXAS.EDITOR.AGENTE_EXTERNO'
-    );
-    expect(chaveDaRecusaDaCaixa(null)).toBeNull();
-    expect(chaveDoErroDosAgentes('crm.caixas.agente_rascunho')).toBe(
-      'CRM_CAIXAS.EDITOR.AGENTE_RASCUNHO'
-    );
-    expect(chaveDoErroDosAgentes('crm.caixas.agente_invalido')).toBe(
-      'CRM_CAIXAS.EDITOR.ERRO_AGENTES'
-    );
-  });
-
   it('shows the agents only with phase 2 on in the account payload', () => {
     expect(temAgentesIa(caixa(), true)).toBe(true);
     expect(temAgentesIa(caixa(), false)).toBe(false);
@@ -193,5 +176,40 @@ describe('agentes de IA da caixa', () => {
     expect(juntar(['Bruno', 'Diego'], 'pt_BR', 'disjunction')).toBe(
       'Bruno ou Diego'
     );
+  });
+});
+
+// #1433 — a caixa que não aceita agente da equipe volta com o motivo próprio, na etapa dos agentes.
+describe('erroDosAgentes', () => {
+  it('maps each refusal of the inbox to its own text, on the agents step', () => {
+    expect(erroDosAgentes('crm.caixas.principal_parado')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'PRINCIPAL_PARADO',
+    });
+    expect(erroDosAgentes('crm.caixas.robo_externo')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_EXTERNO',
+    });
+    expect(erroDosAgentes('crm.caixas.agente_nao_liga')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_NAO_LIGA',
+    });
+    // #1570: rascunho tem frase própria.
+    expect(erroDosAgentes('crm.caixas.agente_rascunho')).toEqual({
+      ehDosAgentes: true,
+      alerta: 'AGENTE_RASCUNHO',
+    });
+  });
+
+  it('keeps the general text for the other agent refusals and ignores the rest', () => {
+    expect(erroDosAgentes('crm.caixas.agente_invalido')).toEqual({
+      ehDosAgentes: true,
+      alerta: null,
+    });
+    expect(erroDosAgentes('crm.caixas.sem_triagem')).toEqual({
+      ehDosAgentes: false,
+      alerta: null,
+    });
+    expect(erroDosAgentes('crm.caixas.sem_porta').ehDosAgentes).toBe(false);
   });
 });

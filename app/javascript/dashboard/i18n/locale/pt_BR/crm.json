@@ -4087,10 +4087,9 @@
       "FALHOU": "Não deu para salvar. Tente de novo.",
       "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
       "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
-      "PORTA_PARADA": "Esta caixa precisa de um agente atendendo primeiro.",
-      "AGENTE_EXTERNO": "Esta caixa é atendida por um agente externo. Ela não recebe agente de área.",
-      "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes.",
-      "AGENTES_DESLIGADOS": "Os agentes de área ainda não estão ligados nesta conta."
+      "PRINCIPAL_PARADO": "O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.",
+      "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.",
+      "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes."
     }
   },
   "CRM_FUNIL": {
