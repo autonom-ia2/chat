@@ -415,12 +415,9 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Menu lateral novo e página inicial de Configurações com cartões (#1617). Reserva da Orquestração (#1322): BIT 27
-# (134217728) de feature_flags_ext_1. Ordem final combinada: 24 whatsapp_campaign_products (na main), 25
-# crm_mensagem_marcada (#1608), 26 whatsapp_hybrid_recovery (#1489), 27 esta. O bit é a posição na lista e o arquivo
-# não aceita buraco nem item reservado (cada nome vira flag de verdade): hoje, sem #1608 e #1489 na main, esta entrada
-# fica logo depois de whatsapp_campaign_products e cai no BIT 25 — o account_spec confere 1 << 25. Quando os dois
-# entrarem, ela vai para depois deles (bit 27) e o account_spec acompanha (combinado com a Orquestração).
+# Menu lateral novo e página inicial de Configurações com cartões (#1617).
+# Bit = posição na lista; só acrescentar no fim (combinado com a Orquestração, #1322). Nunca inserir antes de uma flag
+# que já está na main: o bit gravado nas contas mudaria de significado.
 # Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
 # No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
 - name: menu_lateral_novo

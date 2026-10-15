@@ -207,7 +207,7 @@ RSpec.describe Account do
         feature_crm_lembretes_v2: 1 << 22,
         feature_crm_calendario_ouro: 1 << 23,
         feature_whatsapp_campaign_products: 1 << 24,
-        # #1617: reserva final = bit 27 (#1322); hoje, sem #1608 e #1489 na main, a posição no yml dá 25.
+        # #1617: bit = posição no features.yml; só acrescentar no fim (#1322).
         feature_menu_lateral_novo: 1 << 25
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
