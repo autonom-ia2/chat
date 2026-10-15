@@ -26,6 +26,8 @@
 # - encerrar_aberta!: só o listener, na desatribuição sem destino e na conversa resolvida.
 module Crm::Passagens
   LIMITE = 5
+  # O nome vai para o prompt da IA: curto, numa linha, sem sinais de marcação.
+  NOME_MAXIMO = 60
   ABRE = '<passagens_recentes>'.freeze
   FECHA = '</passagens_recentes>'.freeze
   CONVITE = 'convite'.freeze
@@ -162,11 +164,14 @@ module Crm::Passagens
     end
   end
 
+  # Fecha as passagens que esta encerra: as que vieram do destino (Lia → Ana e agora Ana → Lia) e as que foram PARA a
+  # origem (quem passa adiante não está mais com a conversa: Área → Ana e agora Ana → Porta). Carimbadas por quem passou.
   def devolver_as_de!(conversation, destino, origem, agora)
     quem = colunas('devolvida_por', origem)
-    Crm::Passagem.where(conversation_id: conversation.id, de_type: destino.classe, de_id: destino.id).abertas.lock.to_a.each do |aberta|
-      aberta.update!(devolvida_em: agora, **quem)
-    end
+    abertas = Crm::Passagem.where(conversation_id: conversation.id).abertas
+    encerradas = abertas.where(de_type: destino.classe, de_id: destino.id)
+    encerradas = encerradas.or(abertas.where(para_type: origem.classe, para_id: origem.id)) if origem
+    encerradas.lock.to_a.each { |aberta| aberta.update!(devolvida_em: agora, **quem) }
   end
 
   def travar(conversation)
@@ -204,7 +209,7 @@ module Crm::Passagens
   end
 
   def nome(ponta)
-    ponta.nome.to_s.delete('<>').squish.presence || 'sem nome'
+    ponta.nome.to_s.delete('<>').squish.first(NOME_MAXIMO).presence || 'sem nome'
   end
 
   def hora(instante, fuso)

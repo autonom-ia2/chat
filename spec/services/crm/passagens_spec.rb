@@ -83,13 +83,13 @@ RSpec.describe Crm::Passagens do
       expect(ida.reload.devolvida_em).to be_present
     end
 
-    it 'o n8n continua AgentBot e não casa com um agente: n8n → Ana → porta não devolve a ida' do
+    it 'o n8n continua AgentBot e não casa com um agente: a passagem para a porta não fecha a que veio do n8n' do
       n8n = create(:agent_bot, account: account, name: 'n8n')
       ida = passar(de: n8n, para: ana)
-      passar(de: ana, para: porta, pedida_por: ana)
+      passar(de: bruno, para: porta, pedida_por: bruno)
 
       expect(ida.reload.devolvida_em).to be_nil
-      expect(passar(de: ana, para: n8n, pedida_por: ana).para).to have_attributes(classe: 'AgentBot', id: n8n.id)
+      expect(passar(de: bruno, para: n8n, pedida_por: bruno).para).to have_attributes(classe: 'AgentBot', id: n8n.id)
       expect(ida.reload.devolvida_em).to be_present
     end
 
@@ -115,11 +115,36 @@ RSpec.describe Crm::Passagens do
       expect(passar(de: create(:agent_bot, account: nil, name: 'Plataforma'), para: ana).de).to have_attributes(classe: 'AgentBot')
     end
 
-    it 'não devolve a passagem de outra origem (Lia → Ana; Ana → Bruno mantém Lia → Ana em aberto)' do
+    it 'quem passa adiante não está mais com a conversa: Lia → Ana e depois Ana → Bruno fecha a primeira' do
       ida = passar(de: porta, para: ana)
-      passar(de: ana, para: bruno, pedida_por: ana)
+      adiante = passar(de: ana, para: bruno, pedida_por: ana)
 
-      expect(ida.reload.devolvida_em).to be_nil
+      expect(ida.reload).to have_attributes(devolvida_em: be_present, devolvida_por_id: ana.id)
+      expect(described_class.ultima_aberta(conversation)).to eq(adiante)
+    end
+
+    # Pega o achado do revisor: a pessoa devolve para um robô diferente do que passou (a área passou, volta para a
+    # porta). Antes a ida ficava "ainda não devolvida" e a IA lia que a Ana seguia com a conversa.
+    it 'Área → Ana e depois Ana → Porta (outro robô) também fecha a ida' do
+      ida = passar(de: espelho_area, para: ana)
+      passar(de: ana, para: porta, pedida_por: ana)
+
+      expect(ida.reload.devolvida_em).to be_present
+    end
+
+    it 'não fecha passagem que não envolve nem o destino nem a origem da nova' do
+      outra = passar(de: porta, para: bruno)
+      passar(de: espelho_area, para: ana)
+
+      expect(outra.reload.devolvida_em).to be_nil
+    end
+
+    it 'o nome que vai para a IA tem no máximo 60 caracteres' do
+      comprida = create(:user, account: account, name: 'A' * 200)
+      passar(de: porta, para: comprida)
+
+      expect(described_class.recentes(conversation)).to include("#{'A' * 60} (pessoa)")
+      expect(described_class.recentes(conversation)).not_to include('A' * 61)
     end
 
     it 'não toca em passagens de outra conversa' do
