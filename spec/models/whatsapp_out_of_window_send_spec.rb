@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Registro append-only de cada envio fora da janela (#1585): linha gravada não muda nem sai pelo app.
+# Registro append-only de cada envio fora da janela (#1585): linha gravada não muda nem sai, nem pelo app nem pelo banco,
+# e fica guardada mesmo com a conta, a caixa ou a mensagem apagadas.
 RSpec.describe WhatsappOutOfWindowSend do
   let(:inbox) { create(:inbox) }
 
@@ -25,35 +26,104 @@ RSpec.describe WhatsappOutOfWindowSend do
     expect(linha.errors.attribute_names).to include(:tipo, :caminho, :template_name, :template_language, :categoria, :origem)
   end
 
-  it 'conta ou caixa apagada leva o registro (on_delete: cascade)' do
-    da_caixa = gravar
-    Inbox.where(id: inbox.id).delete_all
-    expect(described_class.exists?(da_caixa.id)).to be(false)
+  describe 'o banco recusa mudar ou apagar (gatilho, Rodrigo 15/10: "trava no banco")' do
+    def sql_cru(comando)
+      described_class.transaction(requires_new: true) { described_class.connection.execute(comando) }
+    end
 
-    outra = create(:inbox)
-    da_conta = described_class.create!(account: outra.account, inbox: outra, tipo: 'retorno', caminho: 'modelo', template_name: 'x',
-                                       template_language: 'pt_BR', categoria: 'UTILITY', origem: 'conta')
-    Account.where(id: outra.account_id).delete_all
-    expect(described_class.exists?(da_conta.id)).to be(false)
+    it 'UPDATE, DELETE e TRUNCATE por SQL cru' do
+      linha = gravar
+
+      expect { sql_cru("UPDATE whatsapp_out_of_window_sends SET tipo = 'retorno' WHERE id = #{linha.id}") }
+        .to raise_error(ActiveRecord::StatementInvalid, /registro append-only, UPDATE recusado/)
+      expect { sql_cru("DELETE FROM whatsapp_out_of_window_sends WHERE id = #{linha.id}") }
+        .to raise_error(ActiveRecord::StatementInvalid, /registro append-only, DELETE recusado/)
+      expect { sql_cru('TRUNCATE whatsapp_out_of_window_sends') }
+        .to raise_error(ActiveRecord::StatementInvalid, /registro append-only, TRUNCATE recusado/)
+      expect(described_class.find(linha.id)).to have_attributes(tipo: 'andamento')
+    end
+
+    it 'delete_all e update_all do app também' do
+      linha = gravar
+
+      expect { described_class.transaction(requires_new: true) { described_class.where(id: linha.id).delete_all } }
+        .to raise_error(ActiveRecord::StatementInvalid, /append-only/)
+      expect { described_class.transaction(requires_new: true) { described_class.where(id: linha.id).update_all(tipo: 'x') } } # rubocop:disable Rails/SkipsModelValidations
+        .to raise_error(ActiveRecord::StatementInvalid, /append-only/)
+      expect(described_class.find(linha.id)).to have_attributes(tipo: 'andamento')
+    end
   end
 
-  it 'mensagem, follow-up e autorização apagados só soltam a referência (on_delete: nullify)' do
-    account = inbox.account
-    conversation = create(:conversation, account: account, inbox: inbox)
-    message = create(:message, account: account, inbox: inbox, conversation: conversation)
-    follow_up = Crm::FollowUp.create!(account: account, contact: conversation.contact, inbox: inbox, title: 'Retorno', due_at: 1.hour.from_now)
-    consentimento = WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU,
-                                                    versao_aviso: 'v1', texto_aviso: 'Aviso.')
-    linha = described_class.create!(account: account, inbox: inbox, message: message, crm_follow_up: follow_up,
-                                    whatsapp_template_consent: consentimento, tipo: 'retorno', caminho: 'modelo', template_name: 'x',
-                                    template_language: 'pt_BR', categoria: 'UTILITY', origem: 'sistema')
+  describe 'guardado mesmo com a origem apagada (sem chave estrangeira)' do
+    let(:account) { inbox.account }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation) }
+    let(:follow_up) do
+      Crm::FollowUp.create!(account: account, contact: conversation.contact, inbox: inbox, title: 'Retorno', due_at: 1.hour.from_now)
+    end
+    let(:consentimento) do
+      WhatsappTemplateConsent.create!(account: account, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU, versao_aviso: 'v1',
+                                      texto_aviso: 'Aviso.')
+    end
+    let!(:linha) do
+      described_class.create!(account: account, inbox: inbox, message: message, crm_follow_up: follow_up,
+                              whatsapp_template_consent: consentimento, tipo: 'retorno', caminho: 'modelo', template_name: 'x',
+                              template_language: 'pt_BR', categoria: 'UTILITY', origem: 'sistema')
+    end
+    let(:ids_de_origem) do
+      { account_id: account.id, inbox_id: inbox.id, message_id: message.id, crm_follow_up_id: follow_up.id,
+        whatsapp_template_consent_id: consentimento.id, tipo: 'retorno' }
+    end
 
-    Message.where(id: message.id).delete_all
-    Crm::FollowUp.where(id: follow_up.id).delete_all
-    WhatsappTemplateConsent.where(id: consentimento.id).delete_all
+    it 'mensagem e follow-up apagados pelo Chatwoot: a linha fica, com os ids de origem' do
+      expect { message.destroy! }.not_to raise_error
+      expect { follow_up.destroy! }.not_to raise_error
 
-    expect(described_class.find(linha.id)).to have_attributes(message_id: nil, crm_follow_up_id: nil, whatsapp_template_consent_id: nil,
-                                                              tipo: 'retorno')
+      expect(described_class.find(linha.id)).to have_attributes(ids_de_origem)
+      expect(described_class.find(linha.id).message).to be_nil
+    end
+
+    it 'caixa apagada pelo Chatwoot: a linha fica' do
+      expect { inbox.destroy! }.not_to raise_error
+
+      expect(described_class.find(linha.id)).to have_attributes(ids_de_origem)
+    end
+
+    # O follow-up sai antes: a FK de crm_follow_ups para accounts (do fork, sem cascade) recusaria apagar a conta, e
+    # isso não tem a ver com esta tabela.
+    it 'conta apagada pelo Chatwoot: a linha fica' do
+      follow_up.destroy!
+
+      expect { account.destroy! }.not_to raise_error
+
+      expect(described_class.find(linha.id)).to have_attributes(ids_de_origem)
+    end
+
+    it 'follow-up, mensagem, caixa e conta apagados direto no banco (sem callbacks): a linha fica' do
+      Crm::FollowUp.where(id: follow_up.id).delete_all
+      Message.where(id: message.id).delete_all
+      Inbox.where(id: inbox.id).delete_all
+      Account.where(id: account.id).delete_all
+
+      expect(described_class.find(linha.id)).to have_attributes(ids_de_origem)
+    end
+  end
+
+  it 'na criação, referência informada precisa existir (sem FK, o banco não confere)' do
+    nova = described_class.new(account: inbox.account, inbox: inbox, message_id: 0, crm_follow_up_id: 0, whatsapp_template_consent_id: 0,
+                               tipo: 'retorno', caminho: 'modelo', template_name: 'x', template_language: 'pt_BR',
+                               categoria: 'UTILITY', origem: 'sistema')
+
+    expect(nova).not_to be_valid
+    expect(nova.errors.attribute_names).to contain_exactly(:message, :crm_follow_up, :whatsapp_template_consent)
+  end
+
+  it 'na criação, conta e caixa são obrigatórias' do
+    nova = described_class.new(tipo: 'retorno', caminho: 'modelo', template_name: 'x', template_language: 'pt_BR',
+                               categoria: 'UTILITY', origem: 'sistema')
+
+    expect(nova).not_to be_valid
+    expect(nova.errors.attribute_names).to contain_exactly(:account, :inbox)
   end
 
   describe 'referências de outra conta são recusadas' do

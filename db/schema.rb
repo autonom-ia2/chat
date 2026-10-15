@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_03_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -4047,6 +4047,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_100000) do
     t.text "texto_aviso", null: false
     t.jsonb "precos", default: {}, null: false
     t.datetime "created_at", null: false
+    t.string "user_name"
     t.index ["account_id", "created_at"], name: "idx_whatsapp_template_consents_account_created"
     t.index ["account_id", "marca", "created_at"], name: "idx_whatsapp_template_consents_account_marca_created"
     t.index ["user_id"], name: "index_whatsapp_template_consents_on_user_id"
@@ -4365,14 +4366,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_100000) do
   add_foreign_key "whatsapp_api_message_templates", "inboxes", on_delete: :nullify
   add_foreign_key "whatsapp_api_message_templates", "users", column: "created_by_id"
   add_foreign_key "whatsapp_api_message_templates", "users", column: "updated_by_id"
-  add_foreign_key "whatsapp_out_of_window_sends", "accounts", on_delete: :cascade
-  add_foreign_key "whatsapp_out_of_window_sends", "crm_follow_ups", on_delete: :nullify
-  add_foreign_key "whatsapp_out_of_window_sends", "inboxes", on_delete: :cascade
-  add_foreign_key "whatsapp_out_of_window_sends", "messages", on_delete: :nullify
-  add_foreign_key "whatsapp_out_of_window_sends", "whatsapp_template_consents", on_delete: :nullify
   add_foreign_key "whatsapp_proxy_assignments", "accounts", on_delete: :cascade
-  add_foreign_key "whatsapp_template_consents", "accounts", on_delete: :cascade
-  add_foreign_key "whatsapp_template_consents", "users", on_delete: :nullify
   add_foreign_key "whatsapp_template_profiles", "accounts", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "inboxes", on_delete: :cascade
   add_foreign_key "whatsapp_template_profiles", "users", column: "created_by_id", on_delete: :nullify
@@ -4397,6 +4391,34 @@ AS $function$ BEGIN IF OLD.triggered_at IS NOT NULL AND NOT (NOT OLD.blocked AND
 
   # no candidate create_trigger statement could be found, creating an adapter-specific one
   execute("CREATE TRIGGER email_reputation_snapshot_immutable BEFORE UPDATE ON \"email_reputation_states\" FOR EACH ROW EXECUTE FUNCTION email_reputation_snapshot_immutable()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.whatsapp_out_of_window_sends_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'whatsapp_out_of_window_sends: registro append-only, % recusado', TG_OP; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_out_of_window_sends_append_only_row BEFORE DELETE OR UPDATE ON \"whatsapp_out_of_window_sends\" FOR EACH ROW EXECUTE FUNCTION whatsapp_out_of_window_sends_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_out_of_window_sends_append_only_truncate BEFORE TRUNCATE ON \"whatsapp_out_of_window_sends\" FOR EACH STATEMENT EXECUTE FUNCTION whatsapp_out_of_window_sends_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.whatsapp_template_consents_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'whatsapp_template_consents: registro append-only, % recusado', TG_OP; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_template_consents_append_only_row BEFORE DELETE OR UPDATE ON \"whatsapp_template_consents\" FOR EACH ROW EXECUTE FUNCTION whatsapp_template_consents_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_template_consents_append_only_truncate BEFORE TRUNCATE ON \"whatsapp_template_consents\" FOR EACH STATEMENT EXECUTE FUNCTION whatsapp_template_consents_append_only()")
 
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

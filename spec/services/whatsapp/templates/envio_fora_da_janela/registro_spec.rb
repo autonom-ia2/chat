@@ -74,15 +74,25 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela::Registro do
         .with("#{described_class::LOG} account_id=#{account.id} message_id=#{message.id} ActiveRecord::RecordInvalid")
     end
 
-    it 'banco recusa (autorização inexistente): devolve nil e a transação de quem chama segue válida' do
+    it 'autorização ou follow-up inexistente (sem FK, quem confere é o model): devolve nil, sem gravar' do
+      expect(registrar(registro.merge('consentimento_id' => 0))).to be_nil
+      expect(registrar(registro.merge('crm_follow_up_id' => 0))).to be_nil
+
+      expect(WhatsappOutOfWindowSend.count).to eq(0)
+      expect(Rails.logger).to have_received(:error)
+        .with("#{described_class::LOG} account_id=#{account.id} message_id=#{message.id} ActiveRecord::RecordInvalid").twice
+    end
+
+    it 'banco recusa o comando: devolve nil e a transação de quem chama segue válida (savepoint)' do
+      allow(WhatsappOutOfWindowSend).to receive(:create!) { WhatsappOutOfWindowSend.connection.execute('SELECT 1/0') }
       resultado = nil
       ActiveRecord::Base.transaction do
-        resultado = registrar(registro.merge('consentimento_id' => 0))
+        resultado = registrar
         expect(Account.exists?(account.id)).to be(true)
       end
 
       expect(resultado).to be_nil
-      expect(Rails.logger).to have_received(:error).with(a_string_ending_with("message_id=#{message.id} ActiveRecord::InvalidForeignKey"))
+      expect(Rails.logger).to have_received(:error).with(a_string_ending_with("message_id=#{message.id} ActiveRecord::StatementInvalid"))
     end
 
     it 'mensagem ausente, não gravada ou registro que não é hash: devolve nil' do

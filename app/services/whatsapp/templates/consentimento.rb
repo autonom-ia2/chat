@@ -96,8 +96,9 @@ class Whatsapp::Templates::Consentimento
                                     texto_aviso: texto, precos: Aviso.precos(marca))
   end
 
+  # Quem mudou: o nome atual do usuário; apagado, o nome copiado na gravação (`user_name`).
   def estado_da_marca(ultima)
-    mudanca = ultima && { 'acao' => ultima.acao, 'por' => ultima.user&.name, 'em' => ultima.created_at.iso8601 }
+    mudanca = ultima && { 'acao' => ultima.acao, 'por' => ultima.user&.name || ultima.user_name, 'em' => ultima.created_at.iso8601 }
     { 'ativo' => ultima&.acao == WhatsappTemplateConsent::LIGOU, 'mudanca' => mudanca }
   end
 end

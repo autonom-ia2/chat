@@ -55,8 +55,17 @@ depois do `:sent` do `MessageSender`, com o hash acima mais `crm_follow_up_id` e
 - Idempotente por `message_id` (índice único; a corrida devolve a linha que ganhou).
 - Nunca levanta: em erro, log com a classe e os ids e devolve nil. Grava num savepoint, para não invalidar a transação
   de quem chama.
-- Conta e caixa apagadas levam a linha; mensagem, follow-up e autorização apagados só soltam a referência (nullify).
-- A linha gravada não muda nem sai pelo app (`readonly?`).
+- Guardada para sempre (Rodrigo, 15/10/2026: "Sim, trava no banco"; "Precisa guardar porque o cliente pode entrar na
+  justiça tempos depois"): sem chave estrangeira, conta, caixa, mensagem, follow-up ou autorização apagados deixam a
+  linha intacta, com o id de origem. Na criação, o model confere que cada referência existe e é da conta.
+- A linha gravada não muda nem sai: o app recusa (`readonly?`) e o Postgres também (gatilho BEFORE UPDATE OR DELETE por
+  linha e BEFORE TRUNCATE). O mesmo vale para `whatsapp_template_consents` (migration 20261104100000, que também tira as
+  FKs de conta e usuário e grava `user_name`).
+- Gatilho nos bancos de teste: o dumper do `hairtrigger` (já no Gemfile) escreve função e gatilhos no `db/schema.rb`
+  como bloco `execute`, e o `db:schema:load` (local e CI) os recria. A suíte limpa por transação, sem TRUNCATE.
+- Corrigir uma linha no futuro (aceite gravado errado, pedido de LGPD) exige uma migration que desligue o gatilho,
+  aplique a correção e religue. Com o gatilho ligado, nem UPDATE/DELETE por psql passa; só DDL de dono da tabela
+  (`ALTER TABLE ... DISABLE TRIGGER`) o desliga, e isso vai por migration revisada, nunca à mão.
 
 ## Decisões do Rodrigo (15/10/2026)
 

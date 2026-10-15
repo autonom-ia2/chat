@@ -33,7 +33,7 @@ RSpec.describe Whatsapp::Templates::Consentimento do
     end
 
     linha = WhatsappTemplateConsent.sole
-    expect(linha).to have_attributes(account_id: account.id, user_id: admin.id, marca: 'utility', acao: 'ligou',
+    expect(linha).to have_attributes(account_id: account.id, user_id: admin.id, user_name: 'Ana Souza', marca: 'utility', acao: 'ligou',
                                      versao_aviso: versao, texto_aviso: texto,
                                      precos: { 'BRL' => '0.0350', 'USD' => '0.0068', 'vigente_desde' => '2026-10-01' })
     expect(texto).to include('R$ 0,035', 'mesmo com a conversa aberta', '01/10/2026', '1.000', 'R$ 35,00')
@@ -46,6 +46,24 @@ RSpec.describe Whatsapp::Templates::Consentimento do
     expect(estado['utility']['ativo']).to be(true)
     expect(estado['utility']['mudanca']).to include('acao' => 'ligou', 'por' => 'Ana Souza')
     expect(Time.iso8601(estado['utility']['mudanca']['em'])).to be_within(5.seconds).of(Time.current)
+  end
+
+  it 'usuário apagado: a tela mostra o nome copiado na gravação' do
+    mudar('ligar', 'utility')
+    admin.destroy!
+
+    estado = described_class.new(account: account).estado
+
+    expect(estado['utility']['mudanca']).to include('acao' => 'ligou', 'por' => 'Ana Souza')
+    expect(WhatsappTemplateConsent.sole).to have_attributes(user_id: admin.id, user_name: 'Ana Souza')
+  end
+
+  it 'usuário que mudou de nome: a tela mostra o nome atual' do
+    mudar('ligar', 'utility')
+    admin.update!(name: 'Ana Lima')
+
+    expect(described_class.new(account: account).estado['utility']['mudanca']).to include('por' => 'Ana Lima')
+    expect(WhatsappTemplateConsent.sole.user_name).to eq('Ana Souza')
   end
 
   it 'liga as duas no mesmo pedido: uma linha por marca' do
