@@ -36,6 +36,13 @@ RSpec.describe Autonomia::HorarioUnicoCaixa do
         expect(inbox).to be_valid
       end
 
+      it "returns Etc/UTC, the IANA name, for an account in 'UTC'" do
+        account.update!(reporting_timezone: 'UTC')
+
+        expect(inbox.reload.timezone).to eq('Etc/UTC')
+        expect(inbox).to be_valid
+      end
+
       it 'falls back to the column when the account has no valid timezone' do
         account.update_column(:settings, account.settings.except('reporting_timezone')) # rubocop:disable Rails/SkipsModelValidations
 

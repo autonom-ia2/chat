@@ -246,6 +246,14 @@ RSpec.describe AppliedSla, type: :model do
         expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:00').to_i)
       end
 
+      it 'falls back to the inbox calendar when the agent calendar is unusable and the flag is off' do
+        create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']], enabled: false)
+        conversation.update!(created_at: brt('2026-09-02 08:30'))
+
+        expect(Sla::ScheduleResolver.for_conversation(conversation).owner).to eq(inbox)
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:00').to_i)
+      end
+
       context 'with the horario_unico_caixa flag on' do
         let(:created_at) { brt('2026-09-02 08:30') }
 
@@ -265,6 +273,13 @@ RSpec.describe AppliedSla, type: :model do
           create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']])
 
           expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 14:30').to_i)
+        end
+
+        it 'uses the inbox working hours, not the inbox calendar, when the agent calendar is disabled' do
+          create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']], enabled: false)
+
+          expect(Sla::ScheduleResolver.for_conversation(conversation)).to be_nil
+          expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:30').to_i)
         end
 
         it 'uses the inbox working hours when nobody is assigned' do
