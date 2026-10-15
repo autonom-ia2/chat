@@ -866,7 +866,6 @@
     },
     "WHATSAPP_HYBRID": {
       "TITLE": "WhatsApp API neste número",
-      "DESCRIPTION": "Um segundo caminho de envio na mesma caixa. Quando a janela oficial de 24 horas estiver fechada, a resposta sai pelo WhatsApp API.",
       "CONNECT": "Conectar WhatsApp API",
       "SCAN_TITLE": "Leia o QR Code com o WhatsApp Business desta caixa",
       "QR_ALT": "QR Code para conectar o WhatsApp API",
@@ -959,6 +958,26 @@
       "NOTICES": {
         "SAME_NUMBER": "Este número também está ligado na caixa {inbox} como WhatsApp API (não oficial). Duas conexões no mesmo número aumentam o risco de bloqueio.",
         "APP_EVERY_14_DAYS": "O WhatsApp pede que o app WhatsApp Business seja aberto neste celular ao menos a cada 14 dias."
+      },
+      "HERO": {
+        "TITLE": "Responda depois de 24 horas sem modelo",
+        "TEXT": "Quando passar 24 horas da última mensagem do cliente, a sua resposta sai pelo WhatsApp API, neste mesmo número."
+      },
+      "STATE": {
+        "NOT_CONNECTED_TITLE": "Ligue o WhatsApp API",
+        "CONNECTED_TITLE": "WhatsApp API ligado",
+        "WRONG_NUMBER_TITLE": "Este é outro celular"
+      },
+      "LOADING": "Carregando o WhatsApp API",
+      "LOAD_ERROR": "Não foi possível abrir esta aba agora.",
+      "RETRY": "Tentar de novo",
+      "MORE": {
+        "TITLE": "Outras ações"
+      },
+      "DISCONNECT_CONFIRM": {
+        "TITLE": "Desconectar o WhatsApp API?",
+        "TEXT": "O celular sai desta caixa. Para ligar de novo, vai precisar ler um novo QR Code. Para parar só por um tempo, use Pausar.",
+        "CONFIRM": "Desconectar"
       }
     },
     "TABS": {

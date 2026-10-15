@@ -2,6 +2,7 @@ import {
   stoppedKeyFor,
   timelockEndFor,
   statusKeyFor,
+  phaseFor,
 } from '../whatsappHybridState';
 
 describe('stoppedKeyFor', () => {
@@ -71,5 +72,27 @@ describe('statusKeyFor', () => {
     expect(statusKeyFor({ status: 'failed' })).toBe('FAILED');
     expect(statusKeyFor({ status: 'disconnected' })).toBe('DISCONNECTED');
     expect(statusKeyFor({ status: 'awaiting_scan' })).toBe('AWAITING');
+  });
+});
+
+describe('phaseFor', () => {
+  it('gives each state one situation box', () => {
+    expect(phaseFor({ status: 'loading' })).toBe('loading');
+    expect(phaseFor({ status: 'unavailable' })).toBe('unavailable');
+    expect(phaseFor({ status: 'not_connected' })).toBe('not_connected');
+    expect(phaseFor({ status: 'awaiting_scan' })).toBe('pairing');
+    expect(phaseFor({ status: 'connecting' })).toBe('pairing');
+    expect(phaseFor({ status: 'failed' })).toBe('stopped');
+    expect(phaseFor({ status: 'disconnected' })).toBe('stopped');
+    expect(
+      phaseFor({ status: 'connected', connected: true, same_number: true })
+    ).toBe('connected');
+    expect(
+      phaseFor({ status: 'connected', connected: true, same_number: false })
+    ).toBe('wrong_number');
+  });
+
+  it('puts the pause before the engine state', () => {
+    expect(phaseFor({ status: 'disconnected', paused: true })).toBe('paused');
   });
 });

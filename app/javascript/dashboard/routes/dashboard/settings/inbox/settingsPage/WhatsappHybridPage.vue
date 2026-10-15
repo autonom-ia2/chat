@@ -4,39 +4,46 @@ import { useI18n } from 'vue-i18n';
 import QRCode from 'qrcode';
 import { useAlert } from 'dashboard/composables';
 import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
-import NextButton from 'dashboard/components-next/button/Button.vue';
-import Switch from 'dashboard/components-next/switch/Switch.vue';
-import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import { qrSecondsLeft, formatSeconds } from 'dashboard/helper/wahaQrWindow';
 import {
   stoppedKeyFor,
-  timelockEndFor,
   statusKeyFor,
+  phaseFor,
+  PHASE_TONES,
 } from './whatsappHybridState';
-import WhatsappHybridPause from './components/WhatsappHybridPause.vue';
+import WhatsappHybridHeroi from './components/WhatsappHybridHeroi.vue';
+import WhatsappHybridConnect from './components/WhatsappHybridConnect.vue';
+import WhatsappHybridPairing from './components/WhatsappHybridPairing.vue';
+import WhatsappHybridStopped from './components/WhatsappHybridStopped.vue';
 import WhatsappHybridPaused from './components/WhatsappHybridPaused.vue';
 import WhatsappHybridNotices from './components/WhatsappHybridNotices.vue';
+import WhatsappHybridLimits from './components/WhatsappHybridLimits.vue';
+import WhatsappHybridRisk from './components/WhatsappHybridRisk.vue';
+import WhatsappHybridRouting from './components/WhatsappHybridRouting.vue';
+import WhatsappHybridStats from './components/WhatsappHybridStats.vue';
+import WhatsappHybridPause from './components/WhatsappHybridPause.vue';
+import WhatsappHybridDisconnect from './components/WhatsappHybridDisconnect.vue';
 
 // Aba "WhatsApp API" da caixa WhatsApp Oficial (chat#1067): a mesma caixa ganha um segundo
-// caminho de envio, usado quando a janela oficial de 24 horas está fechada.
+// caminho de envio, usado depois de 24 horas da última mensagem do cliente.
+// chat#1487 — no padrão das telas novas: herói escuro com o selo do estado, uma caixa de situação com uma ação
+// principal por estado, cartões arredondados e as ações raras (pausar, desconectar) no fim, com confirmação.
 const props = defineProps({
   inbox: { type: Object, required: true },
 });
 
 const { t } = useI18n();
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
-const tk = (key, params) => t(`INBOX_MGMT.WHATSAPP_HYBRID.${key}`, params);
-// Mesmos textos de QR expirado/desconectado da caixa WhatsApp API.
-// eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
-const tw = (key, params) => t(`INBOX_MGMT.WAHA_CONNECTION.${key}`, params);
+const tk = key => t(`INBOX_MGMT.WHATSAPP_HYBRID.${key}`);
 
-const ORIGINS = ['human', 'bot', 'automation', 'crm_follow_up', 'campaign'];
+const QR_POLL_MS = 3000;
+const CONNECTED_POLL_TICKS = 10;
 
 const state = ref({ status: 'loading' });
 const qrDataUrl = ref('');
 const pairingCode = ref('');
 const isBusy = ref(false);
-const rateLimit = ref(20);
 // Posição do QR atual na rodada de pareamento (1..6) e quando ele apareceu.
 const qrValue = ref('');
 const qrIndex = ref(0);
@@ -46,93 +53,27 @@ let timer = null;
 let clock = null;
 let ticks = 0;
 
-const notConnected = computed(() => state.value.status === 'not_connected');
-const connected = computed(() => Boolean(state.value.connected));
-// Pausado pelo administrador (chat#1487): a sessão está parada de propósito, com o aparelho vinculado.
-const paused = computed(() => Boolean(state.value.paused));
-// FAILED (rodada de QR esgotada) e STOPPED: nenhum QR novo chega sem reiniciar.
-const isExpired = computed(
-  () => !paused.value && ['failed', 'disconnected'].includes(state.value.status)
-);
+const phase = computed(() => phaseFor(state.value));
+const connected = computed(() => phase.value === 'connected');
+const paused = computed(() => phase.value === 'paused');
 const stoppedKey = computed(() => stoppedKeyFor(state.value));
-const pairing = computed(
-  () =>
-    !notConnected.value &&
-    !paused.value &&
-    !connected.value &&
-    !isExpired.value &&
-    !['loading', 'unavailable'].includes(state.value.status)
+const statusKey = computed(() => statusKeyFor(state.value));
+const statusLabel = computed(() =>
+  ['loading', 'unavailable'].includes(phase.value)
+    ? ''
+    : tk(`STATUS.${statusKey.value}`)
+);
+const phaseTone = computed(
+  () => PHASE_TONES[phase.value] || 'bg-n-solid-1 ring-n-weak'
+);
+const hasConnection = computed(
+  () => !['loading', 'unavailable', 'not_connected'].includes(phase.value)
 );
 const timeLeft = computed(() => {
   if (!qrIndex.value || !qrDataUrl.value) return '';
   const elapsed = Math.max(now.value - qrShownAt.value, 0) / 1000;
   return formatSeconds(qrSecondsLeft(qrIndex.value, elapsed));
 });
-const wrongNumber = computed(() => connected.value && !state.value.same_number);
-const disabledOrigins = computed(() => state.value.disabled_origins || []);
-
-// Limite de conversas novas do WhatsApp (NONE, FIRST_WARNING, SECOND_WARNING, CAPPED).
-const capping = computed(() => state.value.capping || { status: 'NONE' });
-const cappingKey = computed(() => {
-  const keys = {
-    FIRST_WARNING: 'NEAR',
-    SECOND_WARNING: 'NEAR',
-    CAPPED: 'BLOCKED',
-  };
-  return keys[capping.value.status] || '';
-});
-const cappingEnd = computed(() =>
-  capping.value.cycle_end
-    ? new Date(capping.value.cycle_end * 1000).toLocaleDateString()
-    : '—'
-);
-
-// Limite temporário de conversas novas (chat#1480): `now` anda a cada segundo, então o aviso some na hora certa.
-const timelockEnd = computed(() => timelockEndFor(state.value, now.value));
-const timelockText = computed(() => {
-  if (!timelockEnd.value) return '';
-  if (timelockEnd.value === true) return tk('TIMELOCK.NO_END');
-  return tk('TIMELOCK.UNTIL', {
-    end: timelockEnd.value.toLocaleString([], {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-  });
-});
-
-// Últimos 7 dias, por origem: o que saiu, o que falhou e o que esperou a vez.
-const statsRows = computed(() => {
-  const byOrigin = state.value.stats?.by_origin || {};
-  return ORIGINS.map(origin => {
-    const row = byOrigin[origin] || {};
-    return {
-      origin,
-      sent: row.sent || 0,
-      failed:
-        (row.failed || 0) + (row.uncertain || 0) + (row.disconnected || 0),
-      waited: row.throttled || 0,
-      fallback: row.fallback || 0,
-    };
-  });
-});
-const hasStats = computed(() =>
-  statsRows.value.some(row => row.sent || row.failed || row.waited)
-);
-
-const STATUS_TONES = {
-  CONNECTED: 'text-n-teal-11 bg-n-teal-3',
-  FAILED: 'text-n-ruby-11 bg-n-ruby-3',
-  REMOVED: 'text-n-ruby-11 bg-n-ruby-3',
-  DISCONNECTED: 'text-n-slate-11 bg-n-alpha-2',
-  PAUSED: 'text-n-slate-11 bg-n-alpha-2',
-};
-const statusKey = computed(() => statusKeyFor(state.value));
-const statusTone = computed(
-  () => STATUS_TONES[statusKey.value] || 'text-n-amber-11 bg-n-amber-3'
-);
-const statusLabel = computed(() => tk(`STATUS.${statusKey.value}`));
 
 const resetQr = () => {
   qrValue.value = '';
@@ -148,8 +89,7 @@ const renderQr = async value => {
 
 const apply = async data => {
   state.value = data;
-  rateLimit.value = data.rate_limit_per_minute || 20;
-  if (data.connected || data.paused || isExpired.value || notConnected.value) {
+  if (phaseFor(data) !== 'pairing') {
     resetQr();
     if (data.connected) pairingCode.value = '';
     return;
@@ -170,6 +110,11 @@ const load = async () => {
   } catch {
     state.value = { status: 'unavailable' };
   }
+};
+
+const retry = () => {
+  state.value = { status: 'loading' };
+  load();
 };
 
 const run = async (action, errorKey) => {
@@ -207,17 +152,6 @@ const save = settings =>
     'ERRORS.SAVE'
   );
 
-const toggleOrigin = (origin, enabled) => {
-  const others = disabledOrigins.value.filter(item => item !== origin);
-  save({ disabled_origins: enabled ? others : [...others, origin] });
-};
-
-const saveRateLimit = () => {
-  const value = Math.min(Math.max(parseInt(rateLimit.value, 10) || 1, 1), 120);
-  rateLimit.value = value;
-  save({ rate_limit_per_minute: value });
-};
-
 const pause = () =>
   run(() => WhatsappHybridAPI.pause(props.inbox.id), 'ERRORS.PAUSE');
 
@@ -237,8 +171,10 @@ onMounted(() => {
   load();
   timer = setInterval(() => {
     ticks += 1;
-    if (pairing.value || (connected.value && ticks % 10 === 0)) load();
-  }, 3000);
+    const connectedPoll =
+      state.value.connected && ticks % CONNECTED_POLL_TICKS === 0;
+    if (phase.value === 'pairing' || connectedPoll) load();
+  }, QR_POLL_MS);
   clock = setInterval(() => {
     now.value = Date.now();
   }, 1000);
@@ -251,355 +187,136 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 py-6">
-    <section
-      class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-    >
-      <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <p class="mb-1 text-base font-medium text-n-slate-12">
-            {{ tk('TITLE') }}
-          </p>
-          <p class="mb-0 text-sm text-n-slate-11">{{ tk('DESCRIPTION') }}</p>
-        </div>
-        <span
-          class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shrink-0"
-          :class="statusTone"
-        >
-          <span class="rounded-full size-1.5 bg-current" />
-          {{ statusLabel }}
-        </span>
-      </div>
-
-      <div v-if="notConnected" class="flex flex-col items-start gap-3">
-        <div class="text-sm text-n-slate-11">
-          <p class="mb-1 font-medium text-n-slate-12">
-            {{ tk('CONNECT_ORDER.TITLE') }}
-          </p>
-          <ol class="mb-0 leading-6 list-decimal list-inside">
-            <li>{{ tk('CONNECT_ORDER.STEP_1') }}</li>
-            <li>{{ tk('CONNECT_ORDER.STEP_2') }}</li>
-            <li>{{ tk('CONNECT_ORDER.STEP_3') }}</li>
-          </ol>
-        </div>
-        <NextButton
-          :is-loading="isBusy"
-          icon="i-lucide-qr-code"
-          :label="tk('CONNECT')"
-          @click="connect"
-        />
-      </div>
-
-      <WhatsappHybridPaused
-        v-else-if="paused"
-        :is-busy="isBusy"
-        @resume="resume"
-      />
-
-      <div
-        v-else-if="isExpired"
-        class="flex flex-col items-center gap-3 px-4 py-8 text-center border rounded-lg border-n-weak"
-      >
-        <span
-          class="size-8 text-n-slate-10"
-          :class="
-            stoppedKey === 'EXPIRED' ? 'i-lucide-timer-off' : 'i-lucide-unplug'
-          "
-        />
-        <p class="mb-0 text-base font-medium text-n-slate-12">
-          {{
-            stoppedKey === 'REMOVED'
-              ? tk('REMOVED_TITLE')
-              : tw(`${stoppedKey}_TITLE`)
-          }}
-        </p>
-        <p class="max-w-md mb-0 text-sm text-n-slate-11">
-          {{ tk(`${stoppedKey}_HELP`) }}
-        </p>
-        <NextButton
-          :is-loading="isBusy"
-          icon="i-lucide-refresh-cw"
-          :label="tw('RECONNECT')"
-          @click="reconnect"
-        />
-      </div>
-
-      <div
-        v-else-if="pairing"
-        class="flex flex-col items-center gap-3 px-4 py-6 text-center border rounded-lg border-n-weak"
-      >
-        <p class="mb-0 text-sm font-medium text-n-slate-12">
-          {{ tk('SCAN_TITLE') }}
-        </p>
-        <div
-          class="flex items-center justify-center bg-white rounded-lg size-[240px] p-2"
-        >
-          <img
-            v-if="qrDataUrl"
-            :src="qrDataUrl"
-            :alt="tk('QR_ALT')"
-            class="size-full"
-          />
-          <span
-            v-else
-            class="i-lucide-loader-circle animate-spin size-6 text-n-slate-10"
-          />
-        </div>
-        <p
-          v-if="timeLeft"
-          class="mb-0 text-xs font-medium tabular-nums text-n-amber-11"
-        >
-          {{ tw('TIME_LEFT', { time: timeLeft }) }}
-        </p>
-        <p v-else class="mb-0 text-xs text-n-slate-11">
-          {{ tw('PREPARING') }}
-        </p>
-        <ol
-          class="mb-0 text-xs leading-5 text-left list-decimal list-inside text-n-slate-11"
-        >
-          <li>{{ tk('STEP_1') }}</li>
-          <li>{{ tk('STEP_2') }}</li>
-          <li>{{ tk('STEP_3') }}</li>
-        </ol>
-        <p
-          v-if="pairingCode"
-          class="mb-0 font-mono text-2xl font-semibold tracking-widest text-n-slate-12"
-        >
-          {{ pairingCode }}
-        </p>
-        <p v-if="pairingCode" class="mb-0 text-xs text-n-slate-11">
-          {{ tk('CODE_HELP') }}
-        </p>
-        <div class="flex flex-wrap justify-center gap-2">
-          <NextButton
-            :is-loading="isBusy"
-            color="slate"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-keyboard"
-            :label="tk('USE_CODE')"
-            @click="requestCode"
-          />
-          <NextButton
-            :is-loading="isBusy"
-            color="slate"
-            variant="outline"
-            size="sm"
-            icon="i-lucide-refresh-cw"
-            :label="tk('NEW_QR')"
-            @click="reconnect"
-          />
-        </div>
-        <p class="mb-0 text-xs text-n-slate-11">{{ tw('HINT') }}</p>
-      </div>
-
-      <div
-        v-else-if="wrongNumber"
-        class="flex items-start gap-2 px-4 py-3 text-sm rounded-lg text-n-ruby-11 bg-n-ruby-3"
-      >
-        <span class="i-lucide-circle-alert size-4 mt-0.5 shrink-0" />
-        {{ tk('WRONG_NUMBER', { phone: state.phone }) }}
-      </div>
-
-      <div
-        v-else-if="connected"
-        class="flex items-center gap-2 px-4 py-3 text-sm rounded-lg text-n-teal-11 bg-n-teal-3"
-      >
-        <span class="i-lucide-circle-check size-4" />
-        {{ tk('CONNECTED_HELP', { phone: state.phone }) }}
-      </div>
-    </section>
-
-    <WhatsappHybridNotices
-      :same-number-inboxes="state.same_number_inboxes || []"
-      :show-app-reminder="connected || paused"
-    />
-
-    <section
-      v-if="connected && !wrongNumber"
-      class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-    >
-      <p class="mb-0 text-base font-medium text-n-slate-12">
-        {{ tk('RISK.TITLE') }}
-      </p>
-      <label class="flex items-start gap-3 cursor-pointer">
-        <Checkbox
-          class="mt-0.5"
-          :model-value="Boolean(state.risk_accepted)"
-          :disabled="isBusy"
-          @update:model-value="value => save({ risk_accepted: value })"
-        />
-        <span class="text-sm text-n-slate-12">{{ tk('RISK.TEXT') }}</span>
-      </label>
-    </section>
-
-    <section
-      v-if="connected && !wrongNumber && state.risk_accepted"
-      class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-    >
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <p class="mb-1 text-base font-medium text-n-slate-12">
-            {{ tk('ROUTING.TITLE') }}
-          </p>
-          <p class="mb-0 text-sm text-n-slate-11">
-            {{ tk('ROUTING.DESCRIPTION') }}
-          </p>
-        </div>
-        <Switch
-          :model-value="Boolean(state.routing_enabled)"
-          @update:model-value="value => save({ routing_enabled: value })"
-        />
-      </div>
-
-      <dl class="grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 mb-0 text-sm">
-        <dt class="text-n-slate-11">{{ tk('ROUTING.INSIDE') }}</dt>
-        <dd class="mb-0 font-medium text-n-slate-12">{{ tk('OFFICIAL') }}</dd>
-        <dt class="text-n-slate-11">{{ tk('ROUTING.OUTSIDE') }}</dt>
-        <dd class="mb-0 font-medium text-n-slate-12">
-          {{ state.routing_active ? tk('WEB') : tk('OFFICIAL') }}
-        </dd>
-        <dt class="text-n-slate-11">{{ tk('ROUTING.TEMPLATES') }}</dt>
-        <dd class="mb-0 font-medium text-n-slate-12">{{ tk('OFFICIAL') }}</dd>
-      </dl>
-
-      <div class="flex flex-col gap-2 pt-3 border-t border-n-weak">
-        <p class="mb-0 text-sm font-medium text-n-slate-12">
-          {{ tk('ORIGINS.TITLE') }}
-        </p>
-        <div
-          v-for="origin in ORIGINS"
-          :key="origin"
-          class="flex items-center justify-between gap-3 min-h-[44px]"
-        >
-          <span class="text-sm text-n-slate-12">
-            {{ tk(`ORIGINS.${origin.toUpperCase()}`) }}
-          </span>
-          <Switch
-            :model-value="!disabledOrigins.includes(origin)"
-            @update:model-value="value => toggleOrigin(origin, value)"
-          />
-        </div>
-      </div>
-
-      <div
-        class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-n-weak"
-      >
-        <label for="hybrid-rate-limit" class="text-sm text-n-slate-12">
-          {{ tk('RATE_LIMIT') }}
-        </label>
-        <input
-          id="hybrid-rate-limit"
-          v-model="rateLimit"
-          type="number"
-          min="1"
-          max="120"
-          class="w-24 px-3 py-2 mb-0 text-sm rounded-lg border border-n-weak bg-n-alpha-black2 text-n-slate-12"
-          @change="saveRateLimit"
-        />
-        <p class="w-full mb-0 text-xs text-n-slate-11">
-          {{
-            tk('CAMPAIGN_LIMIT', {
-              limit: state.campaign_rate_limit_per_minute || 10,
-            })
-          }}
-        </p>
-      </div>
-    </section>
-
-    <section
-      v-if="
-        connected && !wrongNumber && timelockEnd && cappingKey !== 'BLOCKED'
-      "
-      class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl text-n-amber-11 bg-n-amber-3"
-    >
-      <span class="i-lucide-hourglass size-4 mt-0.5 shrink-0" />
-      <span>{{ timelockText }}</span>
-    </section>
-
-    <section
-      v-if="connected && !wrongNumber && cappingKey"
-      class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl"
-      :class="
-        cappingKey === 'BLOCKED'
-          ? 'text-n-ruby-11 bg-n-ruby-3'
-          : 'text-n-amber-11 bg-n-amber-3'
-      "
-    >
-      <span class="i-lucide-gauge size-4 mt-0.5 shrink-0" />
-      <span>
-        {{
-          tk(`CAPPING.${cappingKey}`, {
-            used: capping.used ?? '—',
-            total: capping.total ?? '—',
-            end: cappingEnd,
-          })
-        }}
-      </span>
-    </section>
-
-    <section
-      v-if="connected && !wrongNumber"
-      class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-    >
-      <p class="mb-0 text-base font-medium text-n-slate-12">
-        {{ tk('STATS.TITLE', { days: state.stats?.days || 7 }) }}
-      </p>
-      <p v-if="!hasStats" class="mb-0 text-sm text-n-slate-11">
-        {{ tk('STATS.EMPTY') }}
-      </p>
-      <table v-else class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-n-slate-11">
-            <th class="py-1 font-normal">{{ tk('STATS.WHO') }}</th>
-            <th class="py-1 font-normal text-right">{{ tk('STATS.SENT') }}</th>
-            <th class="py-1 font-normal text-right">
-              {{ tk('STATS.FAILED') }}
-            </th>
-            <th class="py-1 font-normal text-right">
-              {{ tk('STATS.WAITED') }}
-            </th>
-            <th class="py-1 font-normal text-right">
-              {{ tk('STATS.FALLBACK') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in statsRows"
-            :key="row.origin"
-            class="border-t border-n-weak text-n-slate-12"
-          >
-            <td class="py-2">
-              {{ tk(`ORIGINS.${row.origin.toUpperCase()}`) }}
-            </td>
-            <td class="py-2 text-right tabular-nums">{{ row.sent }}</td>
-            <td class="py-2 text-right tabular-nums">{{ row.failed }}</td>
-            <td class="py-2 text-right tabular-nums">{{ row.waited }}</td>
-            <td class="py-2 text-right tabular-nums">{{ row.fallback }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+  <div class="flex flex-col w-full max-w-3xl gap-5 py-6">
+    <WhatsappHybridHeroi :status-key="statusKey" :status-label="statusLabel" />
 
     <div
-      v-if="!notConnected && state.status !== 'loading'"
-      class="flex flex-wrap items-center gap-2"
+      v-if="phase === 'loading'"
+      data-hybrid-loading
+      aria-busy="true"
+      class="h-48 rounded-2xl bg-n-alpha-2 animate-pulse"
     >
-      <WhatsappHybridPause
-        v-if="connected && !wrongNumber"
-        :is-busy="isBusy"
-        @confirm="pause"
-      />
-      <NextButton
-        :is-loading="isBusy"
-        color="ruby"
-        variant="ghost"
-        size="sm"
-        icon="i-lucide-unplug"
-        :label="tk('DISCONNECT')"
-        @click="disconnect"
-      />
+      <span class="sr-only">{{ tk('LOADING') }}</span>
     </div>
+
+    <section
+      v-else-if="phase === 'unavailable'"
+      data-hybrid-error
+      role="alert"
+      class="flex flex-col items-start gap-3 p-5 sm:p-6 rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1"
+    >
+      <p class="mb-0 text-base text-n-slate-12">{{ tk('LOAD_ERROR') }}</p>
+      <Button
+        icon="i-lucide-refresh-cw"
+        color="slate"
+        variant="outline"
+        class="min-h-11"
+        :label="tk('RETRY')"
+        @click="retry"
+      />
+    </section>
+
+    <template v-else>
+      <section
+        data-situacao
+        :data-phase="phase"
+        aria-live="polite"
+        class="p-5 sm:p-6 rounded-2xl ring-1 ring-inset"
+        :class="phaseTone"
+      >
+        <WhatsappHybridConnect
+          v-if="phase === 'not_connected'"
+          :is-busy="isBusy"
+          @connect="connect"
+        />
+        <WhatsappHybridPaused
+          v-else-if="paused"
+          :is-busy="isBusy"
+          @resume="resume"
+        />
+        <WhatsappHybridStopped
+          v-else-if="phase === 'stopped'"
+          :stopped-key="stoppedKey"
+          :is-busy="isBusy"
+          @reconnect="reconnect"
+        />
+        <WhatsappHybridPairing
+          v-else-if="phase === 'pairing'"
+          :qr-data-url="qrDataUrl"
+          :time-left="timeLeft"
+          :pairing-code="pairingCode"
+          :is-busy="isBusy"
+          @request-code="requestCode"
+          @new-qr="reconnect"
+        />
+        <div v-else class="flex flex-col items-start gap-2">
+          <span
+            class="size-8"
+            :class="
+              connected
+                ? 'i-lucide-circle-check text-n-teal-10'
+                : 'i-lucide-circle-alert text-n-ruby-10'
+            "
+            aria-hidden="true"
+          />
+          <h2 class="m-0 text-lg font-semibold text-n-slate-12">
+            {{
+              connected
+                ? tk('STATE.CONNECTED_TITLE')
+                : tk('STATE.WRONG_NUMBER_TITLE')
+            }}
+          </h2>
+          <p class="mb-0 text-base leading-relaxed text-n-slate-12">
+            {{
+              connected
+                ? t('INBOX_MGMT.WHATSAPP_HYBRID.CONNECTED_HELP', {
+                    phone: state.phone,
+                  })
+                : t('INBOX_MGMT.WHATSAPP_HYBRID.WRONG_NUMBER', {
+                    phone: state.phone,
+                  })
+            }}
+          </p>
+        </div>
+      </section>
+
+      <WhatsappHybridNotices
+        :same-number-inboxes="state.same_number_inboxes || []"
+        :show-app-reminder="connected || paused"
+      />
+
+      <template v-if="connected">
+        <WhatsappHybridLimits :state="state" :now="now" />
+        <WhatsappHybridRisk
+          :accepted="Boolean(state.risk_accepted)"
+          :is-busy="isBusy"
+          @change="value => save({ risk_accepted: value })"
+        />
+        <WhatsappHybridRouting
+          v-if="state.risk_accepted"
+          :state="state"
+          @save="save"
+        />
+        <WhatsappHybridStats :stats="state.stats" />
+      </template>
+
+      <section
+        v-if="hasConnection"
+        data-hybrid-more
+        class="flex flex-col gap-3 pt-5 border-t border-n-weak"
+      >
+        <h2 class="m-0 text-base font-semibold text-n-slate-12">
+          {{ tk('MORE.TITLE') }}
+        </h2>
+        <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <WhatsappHybridPause
+            v-if="connected"
+            :is-busy="isBusy"
+            @confirm="pause"
+          />
+          <WhatsappHybridDisconnect :is-busy="isBusy" @confirm="disconnect" />
+        </div>
+      </section>
+    </template>
   </div>
 </template>

@@ -1,6 +1,5 @@
 <script setup>
-import { useI18n } from 'vue-i18n';
-import NextButton from 'dashboard/components-next/button/Button.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 
 // chat#1487 — WhatsApp API pausado: uma ação só, retomar.
 defineProps({
@@ -8,25 +7,27 @@ defineProps({
 });
 
 const emit = defineEmits(['resume']);
-
-const { t } = useI18n();
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center gap-3 px-4 py-8 text-center border rounded-lg border-n-weak"
-  >
-    <span class="i-lucide-circle-pause size-8 text-n-slate-10" />
-    <p class="mb-0 text-base font-medium text-n-slate-12">
-      {{ t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.PAUSED_TITLE') }}
+  <div class="flex flex-col items-start gap-3">
+    <span
+      class="i-lucide-circle-pause size-8 text-n-slate-10"
+      aria-hidden="true"
+    />
+    <h2 class="m-0 text-lg font-semibold text-n-slate-12">
+      {{ $t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.PAUSED_TITLE') }}
+    </h2>
+    <p class="mb-0 text-base leading-relaxed text-n-slate-12">
+      {{ $t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.PAUSED_HELP') }}
     </p>
-    <p class="max-w-md mb-0 text-sm text-n-slate-11">
-      {{ t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.PAUSED_HELP') }}
-    </p>
-    <NextButton
+    <Button
+      data-resume
       :is-loading="isBusy"
       icon="i-lucide-play"
-      :label="t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.RESUME')"
+      size="lg"
+      class="w-full mt-1 !min-h-12 !rounded-xl sm:w-auto"
+      :label="$t('INBOX_MGMT.WHATSAPP_HYBRID.PAUSE.RESUME')"
       @click="emit('resume')"
     />
   </div>

@@ -865,7 +865,6 @@
     },
     "WHATSAPP_HYBRID": {
       "TITLE": "WhatsApp API on this number",
-      "DESCRIPTION": "A second way to send from this same inbox. When the official 24-hour window is closed, replies go through WhatsApp API.",
       "CONNECT": "Connect WhatsApp API",
       "SCAN_TITLE": "Scan the QR code with this inbox's WhatsApp Business",
       "QR_ALT": "QR code to connect WhatsApp API",
@@ -958,6 +957,26 @@
       "NOTICES": {
         "SAME_NUMBER": "This number is also linked in the inbox {inbox} as WhatsApp API (unofficial). Two connections on the same number raise the risk of a ban.",
         "APP_EVERY_14_DAYS": "WhatsApp asks that the WhatsApp Business app be opened on this phone at least every 14 days."
+      },
+      "HERO": {
+        "TITLE": "Reply after 24 hours without a template",
+        "TEXT": "When 24 hours have passed since the last message from the customer, your reply goes out through WhatsApp API, on this same number."
+      },
+      "STATE": {
+        "NOT_CONNECTED_TITLE": "Turn on WhatsApp API",
+        "CONNECTED_TITLE": "WhatsApp API is on",
+        "WRONG_NUMBER_TITLE": "This is another phone"
+      },
+      "LOADING": "Loading WhatsApp API",
+      "LOAD_ERROR": "Could not open this tab right now.",
+      "RETRY": "Try again",
+      "MORE": {
+        "TITLE": "Other actions"
+      },
+      "DISCONNECT_CONFIRM": {
+        "TITLE": "Disconnect WhatsApp API?",
+        "TEXT": "The phone is unlinked from this inbox. To turn it on again, you will need to scan a new QR code. To stop only for a while, use Pause.",
+        "CONFIRM": "Disconnect"
       }
     },
     "TABS": {
