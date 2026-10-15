@@ -4107,7 +4107,8 @@
       "SALVOU": "Inbox saved.",
       "FALHOU": "We couldn't save. Try again.",
       "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
-      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again."
+      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
+      "PORTA_PARADA": "This inbox needs an agent answering first."
     }
   },
   "CRM_FUNIL": {

@@ -105,6 +105,16 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to be_empty
   end
 
+  it 'com o principal pausado, a área que já está na caixa fica e troca de funil (#1570)' do
+    clara.update!(status: :paused, enabled: false)
+
+    salvar([{ id: maria.id, pipeline_ids: [suporte.id] }])
+
+    expect(response).to have_http_status(:ok)
+    expect(area?(maria)).to be(true)
+    expect(linhas).to eq([[suporte.id, maria.id]])
+  end
+
   it 'funil arquivado não aparece na tela e o responsável dele fica' do
     arquivado = create_crm_pipeline(account: account, user: admin, name: 'Antigo').first
     account.crm_pipeline_inboxes.create!(inbox: inbox, pipeline: arquivado)
@@ -151,6 +161,16 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     it 'o mesmo agente duas vezes' do
       salvar([{ id: marta.id, pipeline_ids: [suporte.id] }, { id: marta.id, pipeline_ids: [] }])
       expect_recusa('crm.caixas.agente_invalido')
+    end
+
+    it 'área nova com o principal da caixa parado; a área que já estava fica (#1570)' do
+      clara.update!(status: :paused, enabled: false)
+
+      salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
+
+      expect_recusa('crm.caixas.porta_parada')
+      expect(area?(maria)).to be(true)
+      expect(marta.reload).to have_attributes(status: 'paused', enabled: false)
     end
 
     it 'sem a Fase 2' do

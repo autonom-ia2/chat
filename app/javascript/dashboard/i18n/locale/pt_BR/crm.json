@@ -4108,7 +4108,8 @@
       "SALVOU": "Caixa salva.",
       "FALHOU": "Não deu para salvar. Tente de novo.",
       "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
-      "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo."
+      "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
+      "PORTA_PARADA": "Esta caixa precisa de um agente atendendo primeiro."
     }
   },
   "CRM_FUNIL": {

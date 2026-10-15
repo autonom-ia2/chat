@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmCaixasAPI from 'dashboard/api/crmCaixas';
+import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
 import CaixaEtapas from '../components/CaixaEtapas.vue';
 import CaixaIcone from '../components/CaixaIcone.vue';
 import EtapaFunis from '../components/EtapaFunis.vue';
@@ -30,16 +31,21 @@ import {
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+// #1570 — a Fase 2 dos Agentes vem da conta, a mesma fonte da tela dos Agentes.
+const fase2 = useFase2();
 
 const ULTIMA = 4;
 // #1447 — recusas do servidor ao gravar os agentes de IA da caixa.
 const AGENTE_NAO_LIGA = 'crm.caixas.agente_nao_liga';
+// #1570 — agente novo só entra em caixa com o principal atendendo.
+const PORTA_PARADA = 'crm.caixas.porta_parada';
 const ERROS_DOS_AGENTES = [
   AGENTE_NAO_LIGA,
   'crm.caixas.agente_invalido',
   'crm.caixas.agentes_desligados',
   'crm.caixas.agentes_sem_permissao',
   'crm.caixas.funil_com_dois_agentes',
+  PORTA_PARADA,
   'crm.caixas.sem_porta',
 ];
 const CHAVES = ['CHEGA', 'CUIDAM', 'SOZINHO', 'CONFIRA'];
@@ -57,8 +63,8 @@ const carregar = async () => {
   try {
     const dados = await CrmCaixasAPI.buscar(route.params.inboxId);
     funis.value = dados.funis;
-    original.value = formularioDaCaixa(dados.caixa);
-    form.value = formularioDaCaixa(dados.caixa);
+    original.value = formularioDaCaixa(dados.caixa, fase2.value);
+    form.value = formularioDaCaixa(dados.caixa, fase2.value);
     // Caixa já no CRM: todas as etapas abertas para ir direto ao que mudar.
     alcancada.value = dados.caixa.crm_enabled ? ULTIMA : 1;
     etapa.value = Number(route.query.etapa) || 1;
@@ -199,6 +205,8 @@ const salvar = async () => {
     if (codigo === 'crm.caixas.sem_triagem' || dosAgentes) ir(2);
     if (codigo === AGENTE_NAO_LIGA) {
       useAlert(t('CRM_CAIXAS.EDITOR.AGENTE_NAO_LIGA'));
+    } else if (codigo === PORTA_PARADA) {
+      useAlert(t('CRM_CAIXAS.EDITOR.PORTA_PARADA'));
     } else if (dosAgentes) {
       useAlert(t('CRM_CAIXAS.EDITOR.ERRO_AGENTES'));
     } else {

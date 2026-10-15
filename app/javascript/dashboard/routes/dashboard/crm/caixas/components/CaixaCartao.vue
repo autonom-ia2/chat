@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
 import CaixaIcone from './CaixaIcone.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
@@ -38,9 +39,10 @@ const funis = computed(() => funisDaCaixa(props.caixa, props.funis));
 // Todo mundo da caixa, administrador incluído: numa conta em que só há
 // administradores, "0 pessoas" diria que ninguém cuida, e todos veem tudo.
 const pessoas = computed(() => props.caixa.people.length);
-// #1447 — com a Fase 2 dos Agentes: a porta e os agentes de área que cuidam
-// de algum funil da caixa. Sem ela, o robô que atende primeiro, como sempre.
-const comAgentes = computed(() => temAgentesIa(props.caixa));
+// #1447 — com a Fase 2 dos Agentes (da conta, #1570): a porta e os agentes de
+// área que cuidam de algum funil da caixa. Sem ela, o robô que atende primeiro, como sempre.
+const fase2 = useFase2();
+const comAgentes = computed(() => temAgentesIa(props.caixa, fase2.value));
 const porta = computed(() => portaDa(props.caixa) || props.caixa.agent_bot);
 const areas = computed(() =>
   areasDa(props.caixa)

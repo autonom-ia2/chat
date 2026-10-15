@@ -2,7 +2,8 @@
 # com o resto da caixa (Crm::Caixas::Gravador, na mesma transação).
 #
 # `lista` é a lista inteira dos agentes de área que ficam na caixa: [{ 'id' =>, 'pipeline_ids' => [] }].
-# - Agente que entra: Autonomia::Agents::Areas.vincular!(ativar: true) — vincula e liga num passo só.
+# - Agente que entra: Autonomia::Agents::Areas.vincular!(ativar: true) — vincula e liga num passo só. Só entra em caixa
+#   com o principal (a porta) atendendo (#1570); a área que já está na caixa fica, mesmo com o principal pausado.
 # - Agente que sai: as linhas dele na caixa saem e Autonomia::Agents::Areas.desvincular!. Sendo a última caixa dele, o
 #   Agentes IA o para sozinho (a tela avisa antes).
 # - Os funis: uma linha em crm_inbox_ai_agents por funil marcado; um funil tem um agente só na caixa.
@@ -86,11 +87,13 @@ class Crm::Caixas::GravadorDeAgentes
   end
 
   # Recusa do Areas vira código para a tela: agente que não pode falar com cliente, ou que não liga (cadastro
-  # incompleto); caixa sem porta ativa.
+  # incompleto); caixa sem porta ativa, ou com a porta parada.
   def vincular!(agente)
-    ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true)
+    ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true, exigir_porta_atendendo: true)
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema
     raise Invalida, 'crm.caixas.agente_invalido'
+  rescue ::Autonomia::Agents::Areas::SemPortaAtendendo
+    raise Invalida, 'crm.caixas.porta_parada'
   rescue ActiveRecord::RecordInvalid => e
     raise Invalida, codigo_da_recusa(e.record)
   end
