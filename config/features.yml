@@ -425,9 +425,20 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Horário único da caixa (#1619, flag #1649). A posição na lista é o bit: entra no FIM, e a Orquestração confere a
+# posição na main antes de ligar. Ligada: o fuso da caixa (`inbox.timezone`) é o fuso da conta (`reporting_timezone`)
+# e a IA (`EngagementGate`) e o SLA (`Sla::ScheduleResolver`) deixam de ler o calendário de caixa do CRM
+# (`Crm::ServiceSchedule` com dono Inbox): valem o horário do Chatwoot (`working_hours`) e o calendário da pessoa.
+# Desligada (padrão): tudo como antes, com a coluna `inboxes.timezone` e o calendário de caixa do CRM. Sem migration;
+# nasce ligada nas contas 1, 16 e 18 da Hub2You pela Orquestração. Voltar = desligar a flag.
+- name: horario_unico_caixa
+  display_name: Horário único da caixa (horário do Chatwoot no fuso da conta)
+  enabled: false
+  column: feature_flags_ext_1
+
 # Outro canal (#1150, R13; PR #1664): o cliente com card aberto que escreve por outra caixa tem a conversa nova ligada
-# ao card e entregue ao dono, sem passar pela triagem. Bit 26 (67108864), o próximo depois de `menu_lateral_novo`
-# (bit 25): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
+# ao card e entregue ao dono, sem passar pela triagem. Bit 27 (134217728), o próximo depois de `horario_unico_caixa`
+# (bit 26): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
 # Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
 - name: crm_outro_canal
   display_name: Conversa de outro canal vai para o card aberto e o dono
