@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -9,8 +9,10 @@ import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
+  ESTADO,
   canaisDoAgente,
   contarEstados,
+  estadoDoAgente,
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
@@ -23,6 +25,8 @@ import ModeloCartao from '../components/ModeloCartao.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
+import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue';
+import GavetaOutroSistema from '../components/GavetaOutroSistema.vue';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
 // T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
@@ -43,6 +47,7 @@ import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
+const route = useRoute();
 const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
@@ -50,6 +55,12 @@ const ocupacao = useCanaisOcupados();
 
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
+// #1648 (mockup-2) — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
+const outrosSistemas = useMapGetter('agentBots/getBots');
+// Ficha do agente de outro sistema: null fechada, { agente: null } para conectar um novo.
+const fichaOutro = ref(null);
+const pendenteApagarOutro = ref(null);
+const confirmacaoOutro = ref(null);
 
 const carregando = ref(true);
 const falhou = ref(false);
@@ -69,10 +80,57 @@ let relogioDasLeituras = null;
 let relogioDoConstrutor = null;
 let tentativaDeContinuar = 0;
 
-const lista = computed(() => ordenarAgentes(agentes.value));
-const contagem = computed(() => contarEstados(agentes.value));
+// Caixas em que o agente de outro sistema atende primeiro (L2; `agent_bot_id` é proposta do mockup).
+const canaisDoOutro = bot =>
+  ocupacao.estado.value === 'pronto'
+    ? ocupacao.canais.value
+        .filter(
+          canal =>
+            canal.occupied_by?.kind === 'external' &&
+            canal.occupied_by.agent_bot_id === bot.id
+        )
+        .map(canal => canal.name)
+    : null;
+const outrosAtendendo = computed(() =>
+  (outrosSistemas.value || []).filter(bot => canaisDoOutro(bot)?.length)
+);
+const outrosParados = computed(() =>
+  (outrosSistemas.value || []).filter(bot => !canaisDoOutro(bot)?.length)
+);
+// Uma lista só, na ordem de sempre: quem atende (da plataforma e de outro sistema), na equipe,
+// parados, cotação e rascunho.
+const ULTIMOS = [ESTADO.COTACAO, ESTADO.FALTA_TERMINAR];
+const lista = computed(() => {
+  const ordenados = ordenarAgentes(agentes.value).map(agente => ({
+    tipo: 'plataforma',
+    agente,
+    estado: estadoDoAgente(agente),
+  }));
+  const outro = agente => ({ tipo: 'outro', agente });
+  return [
+    ...ordenados.filter(item => item.estado === ESTADO.ATENDENDO),
+    ...outrosAtendendo.value.map(outro),
+    ...ordenados.filter(
+      item => item.estado !== ESTADO.ATENDENDO && !ULTIMOS.includes(item.estado)
+    ),
+    ...outrosParados.value.map(outro),
+    ...ordenados.filter(item => ULTIMOS.includes(item.estado)),
+  ];
+});
+const contagem = computed(() => {
+  const daPlataforma = contarEstados(agentes.value);
+  return {
+    ...daPlataforma,
+    atendendo: daPlataforma.atendendo + outrosAtendendo.value.length,
+    parados: daPlataforma.parados + outrosParados.value.length,
+  };
+});
 const vazia = computed(
-  () => !carregando.value && !falhou.value && !agentes.value.length
+  () =>
+    !carregando.value &&
+    !falhou.value &&
+    !agentes.value.length &&
+    !(outrosSistemas.value || []).length
 );
 const leiturasDosCartoes = computed(
   () =>
@@ -229,6 +287,36 @@ const equipeDe = agente =>
 // Externo aparece com a foto da caixa em que atende; sem ela (ou sem a L2), com a foto própria.
 const fotoDe = agente => fotoDoAgente(agente, canaisDe(agente), caixas.value);
 
+const abrirOutro = agente => {
+  fichaOutro.value = { agente };
+};
+const fecharOutro = () => {
+  fichaOutro.value = null;
+};
+const pedirApagarOutro = agente => {
+  pendenteApagarOutro.value = agente;
+  confirmacaoOutro.value?.abrir();
+};
+const apagarOutro = async () => {
+  await store.dispatch('agentBots/delete', pendenteApagarOutro.value.id);
+  useAlert(t('AGENTS.OUTRO_SISTEMA.APAGOU'));
+  confirmacaoOutro.value?.fechar();
+  fecharOutro();
+};
+// "Abrir agente" da aba da caixa chega com ?outro=<id>: abre a ficha dele.
+const abrirOutroDaRota = () => {
+  const { outro } = route.query;
+  if (!outro) return;
+  if (outro === 'novo') {
+    abrirOutro(null);
+    return;
+  }
+  const bot = (outrosSistemas.value || []).find(
+    item => String(item.id) === String(outro)
+  );
+  if (bot) abrirOutro(bot);
+};
+
 const pedirExclusao = agente => {
   pendenteExcluir.value = agente;
   confirmacao.value?.abrir();
@@ -256,6 +344,8 @@ const excluir = async () => {
 
 onMounted(() => {
   carregar();
+  store.dispatch('agentBots/get');
+  abrirOutroDaRota();
   relogioDasLeituras = setTimeout(() => {
     esperaVencida.value = true;
   }, ESPERA_MAXIMA_DAS_LEITURAS_MS);
@@ -428,30 +518,48 @@ onBeforeUnmount(() => {
             :aria-label="t('AGENTS.JORNADA.LISTA.SEUS_AGENTES')"
             class="grid grid-cols-1 gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
           >
-            <AgenteCartao
-              v-for="agente in lista"
-              :key="agente.id"
-              :agente="agente"
-              :href="enderecoDe(agente)"
-              :numeros="semana.numerosDe(agente.id)"
-              :canais="canaisDe(agente)"
-              :equipe="equipeDe(agente)"
-              :foto="fotoDe(agente)"
-              :pode-gerenciar="podeGerenciar"
-              :continuando="continuando === agente.id"
-              @abrir="abrirAgente"
-              @abrir-cotacao="abrirCotacao"
-              @continuar="continuar"
-              @excluir="pedirExclusao"
-            />
+            <template
+              v-for="{ tipo, agente } in lista"
+              :key="`${tipo}-${agente.id}`"
+            >
+              <AgenteOutroSistemaCartao
+                v-if="tipo === 'outro'"
+                :agente="agente"
+                :canais="canaisDoOutro(agente)"
+                @abrir="abrirOutro"
+              />
+              <AgenteCartao
+                v-else
+                :agente="agente"
+                :href="enderecoDe(agente)"
+                :numeros="semana.numerosDe(agente.id)"
+                :canais="canaisDe(agente)"
+                :equipe="equipeDe(agente)"
+                :foto="fotoDe(agente)"
+                :pode-gerenciar="podeGerenciar"
+                :continuando="continuando === agente.id"
+                @abrir="abrirAgente"
+                @abrir-cotacao="abrirCotacao"
+                @continuar="continuar"
+                @excluir="pedirExclusao"
+              />
+            </template>
           </ul>
-          <p v-if="podeGerenciar" class="m-0">
+          <p v-if="podeGerenciar" class="flex flex-wrap gap-2 m-0">
             <AgenteBotao
               data-ver-modelos
               variante="fantasma"
               @click="abrirPaginaCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
+            </AgenteBotao>
+            <AgenteBotao
+              data-conectar-outro
+              variante="fantasma"
+              icone="i-lucide-link"
+              @click="abrirOutro(null)"
+            >
+              {{ t('AGENTS.OUTRO_SISTEMA.CONECTAR') }}
             </AgenteBotao>
           </p>
         </template>
@@ -481,6 +589,25 @@ onBeforeUnmount(() => {
       :carregando="excluindo"
       @confirmar="excluir"
       @fechada="aoFecharConfirmacao"
+    />
+
+    <GavetaOutroSistema
+      v-if="fichaOutro"
+      :agente="fichaOutro.agente"
+      @fechar="fecharOutro"
+      @apagar="pedirApagarOutro"
+    />
+    <AgenteConfirmacao
+      ref="confirmacaoOutro"
+      :titulo="
+        t('AGENTS.OUTRO_SISTEMA.APAGAR_TITULO', {
+          nome: pendenteApagarOutro?.name,
+        })
+      "
+      :texto="t('AGENTS.OUTRO_SISTEMA.APAGAR_TEXTO')"
+      :confirmar="t('AGENTS.OUTRO_SISTEMA.APAGAR_CONFIRMAR')"
+      @confirmar="apagarOutro"
+      @fechada="pendenteApagarOutro = null"
     />
   </div>
 </template>

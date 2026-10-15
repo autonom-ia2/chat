@@ -204,7 +204,7 @@ export default {
         },
         {
           key: 'collaborators',
-          name: this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
+          name: this.$t('AGENTS.CAIXA_USUARIOS.ABA'),
         },
       ];
 
@@ -261,7 +261,7 @@ export default {
           ...visibleToAllChannelTabs,
           {
             key: 'bot-configuration',
-            name: this.$t('AGENTS.CAIXA_EXTERNO.ABA'),
+            name: this.$t('AGENTS.CAIXA_AGENTE_IA.ABA'),
           },
         ];
       }
