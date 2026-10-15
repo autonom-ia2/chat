@@ -405,35 +405,12 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Campanha com produtos do catálogo da WABA (#1418, épico #1320): um produto, vários e carrossel de produtos, na Nova
-# campanha e na criação de modelos. Bit 24 (16777216), confirmado pela Orquestração: fica DEPOIS de
-# `crm_lembretes_v2` (bit 22) e `crm_calendario_ouro` (bit 23, #1568) — este PR só entra depois dos dois (a posição na
-# lista é o bit). Desligada (padrão): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
-# modelo de produtos. Beta (validado com catálogo simulado). Liga: #1573.
-- name: whatsapp_campaign_products
-  display_name: Campanha do WhatsApp com produtos do catálogo
-  enabled: false
-  column: feature_flags_ext_1
-
-# Mensagem marcada nova (#1590): gaveta no padrão da casa — para quem, quando, o que dizer e confira, com o balão do
-# WhatsApp como o cliente vai ver. Abre pelo "+ Novo" do calendário e pelo "Mandar mensagem" do card (caixa oficial).
-# Bit 25 (33554432), reservado pela Orquestração: fica DEPOIS de `whatsapp_campaign_products` (bit 24, #1578) — a
-# posição na lista é o bit; este PR só entra depois do #1578. Desligada (padrão): a janela antiga do calendário e o
-# retorno do card, como antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
-# Ligar nas demais: #1605.
-- name: crm_mensagem_marcada
-  display_name: Mensagem marcada nova (para quem, quando, o que dizer)
-  enabled: false
-  column: feature_flags_ext_1
-
-# Recuperar pelo WhatsApp API as mensagens que a Cloud entrega como "não suportada" (#1489). Bit 26 (67108864),
-# reservado pela Orquestração: fica DEPOIS de `crm_mensagem_marcada` (bit 25, #1608), que vem depois de
-# `whatsapp_campaign_products` (bit 24, #1578). A posição na lista é o bit: as duas entradas acima vêm aqui com o texto
-# exato dos PRs donos (a do #1578 já está na main; a do #1608, igual à do PR) para este ficar no 26 em qualquer ordem
-# de merge. Desligada (padrão): a bolha fica com o aviso, como antes, e nenhum job consulta o motor. Ligada: só nas
-# caixas com WhatsApp API conectado, mesmo número e envio automático ligado. Sem migration. Piloto nas contas 47
-# (stack Autonom.ia) e 1 (stack Hub2You), pelo Super Admin, depois do deploy; ver docs/whatsapp-hibrido-cloud-waha-prd.md
-# (§ 62).
+# Recuperar pelo WhatsApp API as mensagens que a Cloud entrega como "não suportada" (#1489). O bit é a posição na lista
+# e quem chega primeiro à main pega o próximo (regra da Orquestração): a intenção era o 26, depois do #1578 (24) e do
+# #1608 (25); antes do push, mesclar a main e ajustar o spec/models/account_spec.rb para o bit que cair. Desligada
+# (padrão): a bolha fica com o aviso, como antes, e nenhum job consulta o motor. Ligada: só nas caixas com WhatsApp API
+# conectado, mesmo número e envio automático ligado. Sem migration. Piloto nas contas 47 (stack Autonom.ia) e 1 (stack
+# Hub2You), pelo Super Admin, depois do deploy; ver docs/whatsapp-hibrido-cloud-waha-prd.md (§ 62).
 - name: whatsapp_hybrid_recovery
   display_name: WhatsApp API recupera mensagens "não suportadas"
   enabled: false

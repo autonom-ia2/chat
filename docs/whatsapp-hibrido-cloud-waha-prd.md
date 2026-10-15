@@ -2108,7 +2108,7 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
 - Na caixa WhatsApp, a nossa IA (`Autonomia::Agents::Operate::MessageListener`) não responde a mensagem com
   `is_unsupported`. Instagram e TikTok também usam `is_unsupported` (em mídia): lá a IA segue como antes.
 
-**Com a flag `whatsapp_hybrid_recovery` (PR 2, bit 26 da `feature_flags_ext_1`, desligada por padrão).**
+**Com a flag `whatsapp_hybrid_recovery` (PR 2, `feature_flags_ext_1`, desligada por padrão; o bit é a posição no `features.yml` quando entrar na main).**
 - O tipo `unknown` recebido vira a mesma bolha. Flag desligada, ou eco de saída: o caminho de hoje (só log).
 - Só recupera `unsupported.type` de mensagem nova: `hsm`, `interactive`, `button`, `list`, `template` e sem tipo
   (erro 131060). Edição, reação, voto, fixar, `keep_in_chat` e os demais ficam com o aviso, sem job.

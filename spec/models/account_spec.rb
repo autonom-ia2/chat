@@ -206,10 +206,8 @@ RSpec.describe Account do
         feature_followup_template_real_values: 1 << 21,
         feature_crm_lembretes_v2: 1 << 22,
         feature_crm_calendario_ouro: 1 << 23,
-        # #1578 (já na main) e #1608 (bit 25) vêm aqui com as entradas dos PRs donos; o #1489 fica no 26 (Orquestração).
-        feature_whatsapp_campaign_products: 1 << 24,
-        feature_crm_mensagem_marcada: 1 << 25,
-        feature_whatsapp_hybrid_recovery: 1 << 26
+        # #1489: a posição na lista é o bit; ajustar ao bit que cair quando a main for mesclada (Orquestração).
+        feature_whatsapp_hybrid_recovery: 1 << 24
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
