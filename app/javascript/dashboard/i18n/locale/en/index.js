@@ -40,6 +40,7 @@ import inbox from './inbox.json';
 import inboxMgmt from './inboxMgmt.json';
 import onboardingTrail from './onboardingTrail.json';
 import modelosWhatsapp from './modelosWhatsapp.json';
+import erroDaMeta from './erroDaMeta.json';
 import insurance from './insurance.json';
 import integrationApps from './integrationApps.json';
 import integrations from './integrations.json';
@@ -107,6 +108,7 @@ export default {
   ...inboxMgmt,
   ...onboardingTrail,
   ...modelosWhatsapp,
+  ...erroDaMeta,
   ...insurance,
   ...integrationApps,
   ...integrations,

@@ -27,6 +27,9 @@
       "file": "emailCampaignImportRecovery.json"
     },
     {
+      "file": "erroDaMeta.json"
+    },
+    {
       "file": "emailCampaignProtection.json"
     },
     {
