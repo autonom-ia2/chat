@@ -7,7 +7,9 @@
 #   carrossel          — um item por cartão do modelo, cada topo conferido por `Whatsapp::Templates::CardMedia`
 #                        (arquivo escolhido na campanha, link ou o arquivo aprovado guardado no perfil); campo no texto
 #                        do cartão ou no fim do link do botão precisa do valor;
-#   catálogo (CATALOG) — o botão é marcado sozinho; a Meta mostra o primeiro item do catálogo.
+#   catálogo (CATALOG) — o botão é marcado sozinho; a Meta mostra o primeiro item do catálogo;
+#   produtos (#1418)   — um, vários ou carrossel de produtos: os códigos escolhidos, conferidos por
+#                        `Whatsapp::Templates::ProductParams` (o catálogo entra só no disparo, `DispatchProducts`).
 # Botão sem nada a enviar ocupa a posição dele como { 'type' => 'static' }: o conversor do Chatwoot só aceita a lista
 # de botões sem buracos, e o envio pula o estático.
 # No disparo (`CampaignPauses::WhatsappDispatchGate`), `dispatch_extras` gera uma vez por disparo o que vai em todo
@@ -29,6 +31,7 @@ module Whatsapp::Templates::SendParams
     check_coupons!(processed, template)
     check_offer!(processed, template, now)
     processed = with_carousel(processed, template, inbox)
+    processed = Whatsapp::Templates::ProductParams.normalize!(processed, template)
     with_catalog(processed, template)
   end
 
@@ -60,7 +63,8 @@ module Whatsapp::Templates::SendParams
 
   def with_carousel(processed, template, inbox)
     template_cards = cards_of(template)
-    return processed.except('carousel') if template_cards.empty?
+    # O carrossel de produtos (#1418) não tem arquivo nosso: cada cartão é um produto escolhido.
+    return processed.except('carousel') if template_cards.empty? || Whatsapp::Templates::ProductParams.kind(template)
 
     cards = Array(as_hash(processed['carousel'])['cards'])
     raise Invalid, 'carousel_cards_mismatch' unless cards.size == template_cards.size

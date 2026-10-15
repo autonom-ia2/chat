@@ -1,5 +1,9 @@
 {
   "MODELOS_WHATSAPP": {
+    "BETA": {
+      "SELO": "Beta",
+      "AVISO": "New feature: if something does not work, contact support."
+    },
     "CARREGANDO": "Loading the templates…",
     "ERRO": "We couldn't open the templates right now.",
     "TENTAR_DE_NOVO": "Try again",
@@ -495,7 +499,8 @@
         "SEM_CHAVES": "The text and the footer have no double braces typed by hand",
         "FORMATO_DIVULGACAO": "This format goes as a promotion",
         "CARTOES_MESMA_MIDIA": "All cards have the same kind of media (only photos or only videos)",
-        "NOME_LIVRE": "The name does not exist yet in this WhatsApp account"
+        "NOME_LIVRE": "The name does not exist yet in this WhatsApp account",
+        "PRODUTOS_TITULO": "The list has a title of up to 60 characters"
       },
       "LEMBRETE_ARQUIVO_IGUAL": "This file goes out the same to everyone."
     },
@@ -520,7 +525,13 @@
       "VER_COMO_FICA": "See how it looks",
       "OFERTA_CONTAGEM": "Ends in 2 days (example)",
       "VER_TODAS_AS_OPCOES": "See all options",
-      "OFERTA_VALE_ATE": "Valid until {data}"
+      "OFERTA_VALE_ATE": "Valid until {data}",
+      "PRODUTOS": {
+        "EXEMPLO": "Catalog product",
+        "LISTA": "Products",
+        "ITENS": "{n} item | {n} items",
+        "AO_TOCAR": "When they tap “{botao}”, the customer sees:"
+      }
     },
     "ENVIADO": {
       "TITULO": {
@@ -617,6 +628,19 @@
         "NOME_PADRAO": "Quick sign-up",
         "TEXTO": "Hi, [nome_cliente]! It takes 1 minute: fill in the form so we can help you better.",
         "BOTAO": "Fill in the form"
+      },
+      "produtos": {
+        "TITULO": "Catalog products",
+        "PARA": "Products from your catalog, with photo and price. You choose which ones when you create the campaign.",
+        "ETAPA": "Products",
+        "NOME_PADRAO": "Store products",
+        "TEXTO": "Hi, [nome_cliente]! We picked products we think you will like. Take a look and order right here.",
+        "TITULO_EXEMPLO": "New this week",
+        "BOTOES": {
+          "um": "View",
+          "varios": "View items",
+          "carrossel": "View"
+        }
       }
     },
     "CARTOES": {
@@ -676,7 +700,10 @@
         "nao_conferido": "We could not check the template “{modelo}” with WhatsApp. Nothing was sent.",
         "outro": "The campaign stopped before sending. Nothing was sent.",
         "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign.",
-        "oferta_vencida": "The offer deadline passed before the send. Nothing was sent."
+        "oferta_vencida": "The offer deadline passed before the send. Nothing was sent.",
+        "produto_indisponivel": "The product “{produto}” is out of stock or left the catalog. Nothing was sent.",
+        "sem_catalogo": "The WhatsApp account no longer has a product catalog connected. Nothing was sent.",
+        "produtos_desligados": "Campaigns with catalog products are no longer enabled for this account. Nothing was sent."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",
@@ -693,7 +720,10 @@
       "AGUARDE_CONFERENCIA": "We could not check the template with WhatsApp yet. Resume unlocks when the check passes.",
       "AGUARDE_LIBERAR": "Wait for WhatsApp to release the template. When it comes back, tap Resume.",
       "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume.",
-      "NOVA_DATA": "Create the campaign again with a later date."
+      "NOVA_DATA": "Create the campaign again with a later date.",
+      "AGUARDE_PRODUTO": "When the product is back in the catalog, tap Resume. Or create the campaign again with another product.",
+      "FALE_COM_SUPORTE": "Contact support to enable catalog products again, then tap Resume.",
+      "CONECTE_CATALOGO": "Connect the catalog again on WhatsApp and tap Resume."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",
@@ -709,7 +739,8 @@
         "SEM_FONTE": "has a field campaigns cannot fill",
         "NAO_VAI_CODIGO": "verification codes do not go in campaigns",
         "NAO_VAI_PRODUTOS": "chosen products do not go in campaigns",
-        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet"
+        "NAO_VAI_CARTAO_COM_CAMPO": "cards with fields do not go in campaigns yet",
+        "NAO_VAI_SEM_CATALOGO": "your WhatsApp account has no product catalog"
       },
       "EM_ANALISE": "“{nome}” is still in review at WhatsApp. You can set up and schedule the campaign; sending now unlocks when it is approved.",
       "ENVIAR_AGORA_BLOQUEADO": "Sending now unlocks when WhatsApp approves the template. Pick a date to schedule.",
@@ -721,7 +752,9 @@
         "POR_ENVIO": "{porEnvio} per message",
         "CUPOM": "Coupon: {cupom}",
         "VALIDADE": "The offer is valid until {quando}",
-        "CARTOES": "{n} cards with photos"
+        "CARTOES": "{n} cards with photos",
+        "PRODUTOS": "{n} catalog product: | {n} catalog products:",
+        "PRODUTOS_AJUDA": "If a product runs out or leaves the catalog before sending, the campaign stops and we let you know. Nobody gets the message without the product."
       },
       "GRUPO_CATALOGO": "From the records",
       "SEM_MODELO_LIBERADO": "No template of this WhatsApp account can go in a campaign right now: they are rejected, paused or in a format campaigns cannot send yet.",
@@ -780,6 +813,47 @@
       "SINAL": {
         "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your business.",
         "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your business."
+      },
+      "PRODUTOS": {
+        "TITULO": {
+          "um": "Product in the message",
+          "varios": "Products in the message",
+          "carrossel": "Products in the cards"
+        },
+        "AJUDA": {
+          "um": "Choose 1 product from your catalog. The photo, name and price come from there.",
+          "varios": "Choose up to {maximo} products. The photo of the first one shows in the message.",
+          "carrossel": "Choose 2 to {maximo} products. Each product becomes a card."
+        },
+        "ESCOLHER": {
+          "um": "Choose product",
+          "varios": "Choose products",
+          "carrossel": "Choose products"
+        },
+        "TROCAR": {
+          "um": "Change product",
+          "varios": "Change products",
+          "carrossel": "Change products"
+        },
+        "GAVETA": {
+          "um": "Choose the product",
+          "varios": "Choose the products",
+          "carrossel": "Choose the products for the cards"
+        },
+        "DO_CATALOGO": "From the {nome} catalog · {n} product | From the {nome} catalog · {n} products",
+        "BUSCA": "Search by name",
+        "BUSCA_EXEMPLO": "E.g. t-shirt",
+        "CARREGANDO": "Opening the catalog…",
+        "ERRO": "We couldn’t open the catalog right now.",
+        "NENHUM": "No product with that name.",
+        "ESGOTADO": "Out of stock",
+        "FALTAM": "Choose {n} more product | Choose {n} more products",
+        "ESCOLHIDOS": "{n} chosen, up to {maximo} | {n} chosen, up to {maximo}",
+        "USAR": "Use these products",
+        "FOTO_DA_MENSAGEM": "message photo",
+        "ACABOU": "This product is out of stock. Remove it or choose another.",
+        "TIRAR": "Remove {nome}",
+        "VER_MAIS": "See more products"
       }
     },
     "IA": {
@@ -864,8 +938,9 @@
       "TITULO": "Free replies this month",
       "EXPLICA": "WhatsApp gives {limite} free replies per number each month. After that, each reply costs {valor}.",
       "EXPLICA_SEM_VALOR": "WhatsApp gives {limite} free replies per number each month.",
-      "USADAS": "{n} of {limite}",
-      "PASSOU": "Over the {limite} free ones"
+      "USADAS": "About {n} of {limite}",
+      "PASSOU": "About {n}, over the {limite} free ones",
+      "ESTIMATIVA": "Estimate: it counts only the replies sent through Chat2You. Replies sent from another app on the same number are not included. The month resets at midnight in the WhatsApp account time zone."
     },
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” is ready to use.",
@@ -930,8 +1005,8 @@
         "CONTEUDO_TEXTO": "People who talked to you in the last 24 hours get: “{texto}”"
       },
       "CUSTO_ESCRITA": {
-        "gratis": "Free (within this month's {limite}: {sobram} left).",
-        "passa": "{gratis} go out free ({sobram} left of this month's {limite}); the other {pagas} cost {preco} each: {valor}.",
+        "gratis": "Free (within this month's {limite}: about {sobram} left).",
+        "passa": "{gratis} go out free (about {sobram} left of this month's {limite}); the other {pagas} cost {preco} each: {valor}.",
         "sem_franquia": "We could not read this month's free messages: count on up to {valor} ({preco} each)."
       },
       "CANAL_HINT": "Template approved by Meta. People who talked to you in the last 24 hours can get a message written by you.",
@@ -992,6 +1067,27 @@
         "RESPONDERAM": "{n}% replied"
       },
       "USAR_MESMO_ASSIM": "Use it anyway"
+    },
+    "PRODUTOS_NO_MODELO": {
+      "PERGUNTA": "How do the products show?",
+      "JEITOS": {
+        "um": {
+          "TITULO": "One product",
+          "PARA": "Big photo, name and price of one product."
+        },
+        "varios": {
+          "TITULO": "Several in a list",
+          "PARA": "Up to 30 products. The customer taps and sees the list."
+        },
+        "carrossel": {
+          "TITULO": "Cards side by side",
+          "PARA": "2 to 10 products the customer swipes through."
+        }
+      },
+      "TITULO": "List title",
+      "TITULO_AJUDA": "Shows above the message. Up to {n} characters.",
+      "TITULO_ERRO": "Write a title of up to {n} characters.",
+      "ESCOLHE_NA_CAMPANHA": "You choose the products when you create the campaign, so the same template works for many offers."
     },
     "AUTORIZACAO": {
       "TITULO": "Permission to create templates",

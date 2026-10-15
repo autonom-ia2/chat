@@ -34,6 +34,7 @@ import EtapaCatalogo from '../components/criar/EtapaCatalogo.vue';
 import EtapaCodigo from '../components/criar/EtapaCodigo.vue';
 import EtapaFormulario from '../components/criar/EtapaFormulario.vue';
 import EtapaOferta from '../components/criar/EtapaOferta.vue';
+import EtapaProdutos from '../components/criar/EtapaProdutos.vue';
 import EtapaTexto from '../components/criar/EtapaTexto.vue';
 
 // Criar (jornada 2), duplicar e alterar/corrigir (jornadas 3 e 4) usam a mesma
@@ -190,7 +191,8 @@ const carregar = async () => {
     [numeros.value, catalogo.value, formularios.value, existentes.value] =
       await Promise.all([
         api.listarNumeros(),
-        api.obterCatalogo(),
+        // Catálogo que não abre não derruba a tela: só os produtos ficam de fora.
+        api.obterCatalogo(route.query.caixa).catch(() => null),
         api.listarFormularios(),
         // Para avisar de nome repetido já no Texto. Sem a lista, o aviso some e
         // quem barra é o servidor (name_taken, com o texto traduzido).
@@ -220,6 +222,16 @@ const carregar = async () => {
 onMounted(carregar);
 // Novo e alterar usam este mesmo componente: trocar de rota recarrega.
 watch(() => route.name, carregar);
+// #1418: o catálogo é da conta do WhatsApp dos números escolhidos: trocou a
+// conta, a conferência lê o catálogo dela.
+watch(
+  () => rascunho.value?.numeros?.[0],
+  async (caixa, antes) => {
+    if (!caixa || caixa === antes) return;
+    catalogo.value = await api.obterCatalogo(caixa).catch(() => null);
+  }
+);
+
 watch(locale, () => {
   if (!montadoDaQuery || JSON.stringify(rascunho.value) !== montadoDaQuery)
     return;
@@ -337,6 +349,10 @@ const resumoDoFormato = computed(() => {
     },
     oferta: () => conteudo.oferta.titulo || falta,
     catalogo: () => catalogo.value?.nome || falta,
+    produtos: () =>
+      t(
+        `MODELOS_WHATSAPP.PRODUTOS_NO_MODELO.JEITOS.${conteudo.produtos.tipo}.TITULO`
+      ),
     codigo: () =>
       t('MODELOS_WHATSAPP.CONFIRA.CODIGO', {
         botao: t(
@@ -454,7 +470,9 @@ const enviar = async () => {
         ids: salvos.map(salvo => salvo.id).join(','),
         modo: modo.value,
         // Carrossel, oferta e código ainda não vão em campanha: o Enviado diz isso.
-        ...(formato.value === 'padrao' ? {} : { semCampanha: '1' }),
+        ...(['padrao', 'produtos'].includes(formato.value)
+          ? {}
+          : { semCampanha: '1' }),
       },
     });
   } catch (erro) {
@@ -695,6 +713,11 @@ const proximaAlteracao = computed(() => {
                 <EtapaOferta
                   v-else-if="formato === 'oferta'"
                   v-model:rascunho="rascunho"
+                />
+                <EtapaProdutos
+                  v-else-if="formato === 'produtos'"
+                  v-model:rascunho="rascunho"
+                  :catalogo="catalogo"
                 />
                 <EtapaCatalogo
                   v-else-if="formato === 'catalogo'"

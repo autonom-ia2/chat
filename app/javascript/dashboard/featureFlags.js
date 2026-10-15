@@ -53,6 +53,7 @@ export const FEATURE_FLAGS = {
   AUTONOMIA_AGENTS_JOURNEY: 'autonomia_agents_journey',
   WHATSAPP_TEMPLATES_JOURNEY: 'whatsapp_templates_journey',
   WHATSAPP_TEMPLATES_AI: 'whatsapp_templates_ai',
+  WHATSAPP_CAMPAIGN_PRODUCTS: 'whatsapp_campaign_products',
   NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CRM_LEMBRETES_V2: 'crm_lembretes_v2',
   CRM_CALENDARIO_OURO: 'crm_calendario_ouro',

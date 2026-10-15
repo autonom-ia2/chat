@@ -7,6 +7,8 @@
 # the campaign gets an open CampaignPause with the reason and goes back to `active`. Otherwise `super`
 # runs untouched — opt-out (chat#737), phone or BSUID destination and the authentication guard
 # (Whatsapp::AuthenticationTemplateGuard) stay where they are.
+# #1418: a template with catalog products also checks that each chosen product is still in the inbox catalog and for
+# sale (Whatsapp::Templates::DispatchProducts); otherwise the whole campaign pauses with the product name.
 # Every WhatsApp Cloud one-off campaign with template_params goes through the check. A check that
 # breaks never sends blind and never leaves the campaign stuck in `processing`: it pauses by the system.
 #
@@ -38,7 +40,8 @@ module CampaignPauses::WhatsappDispatchGate
     verdict = Whatsapp::Templates::DispatchCheck.new(campaign, channel: channel).call
     verdict = send_list_verdict(verdict) if verdict.ok?
     verdict = header_media_verdict(verdict) if verdict.ok?
-    verdict.ok? ? send_extras_verdict(verdict) : verdict
+    verdict = send_extras_verdict(verdict) if verdict.ok?
+    verdict.ok? ? products_verdict(verdict) : verdict
   rescue StandardError => e
     Rails.logger.error "[CampaignPauses] campaign=#{campaign.id} template check failed: #{e.class.name}"
     Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_unverifiable', source: 'system',
@@ -84,14 +87,47 @@ module CampaignPauses::WhatsappDispatchGate
     )
   end
 
+  # #1418: each chosen product still in the inbox catalog and for sale; the catalog goes to every send.
+  # Sem a flag `whatsapp_campaign_products` (desligada depois de a campanha ser criada), a campanha de produtos para
+  # inteira com motivo próprio: nada sai.
+  def products_verdict(verdict)
+    return products_disabled_verdict(verdict) if products_disabled?(verdict.template)
+
+    processed = campaign.template_params.to_h['processed_params']
+    check = Whatsapp::Templates::DispatchProducts.new(inbox: inbox, template: verdict.template, processed: processed).call
+    @product_catalog_id = check.catalog_id
+    return verdict if check.ok?
+
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: check.reason_code, source: 'template',
+      details: verdict.details.slice(:template_name, :language, :lookup_source).merge(check.details)
+    )
+  end
+
+  def products_disabled?(template)
+    Whatsapp::Templates::ProductParams.kind(template).present? && !campaign.account.feature_enabled?('whatsapp_campaign_products')
+  end
+
+  def products_disabled_verdict(verdict)
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_products_disabled', source: 'template',
+      details: verdict.details.slice(:template_name, :language, :lookup_source)
+    )
+  end
+
   def process_liquid_template_params(contact)
     params = super
-    return params unless params && (@header_media || @send_extras)
+    return params unless params && (@header_media || @send_extras || @product_catalog_id)
 
-    processed = params['processed_params'].to_h
+    params.merge('processed_params' => with_dispatch_extras(params['processed_params'].to_h))
+  end
+
+  def with_dispatch_extras(processed)
     processed = processed.merge('header' => processed['header'].to_h.except('media_blob').merge(@header_media)) if @header_media
     processed = Whatsapp::Templates::SendParams.apply_extras(processed, @send_extras) if @send_extras
-    params.merge('processed_params' => processed)
+    return processed unless @product_catalog_id
+
+    processed.merge('products' => processed['products'].to_h.merge('catalog_id' => @product_catalog_id))
   end
 
   def keep_meta_version(template)

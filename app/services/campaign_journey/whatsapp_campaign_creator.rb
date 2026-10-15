@@ -34,6 +34,7 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
   def validate_message!
     raise Error.new('template_not_found', 'The template is not approved in this inbox') unless template
 
+    validate_products_feature!
     validate_free_text!
 
     variables.validate!(@campaign_import, template_keys: CampaignJourney::TemplateVariableKeys.keys(template))
@@ -42,6 +43,14 @@ class CampaignJourney::WhatsappCampaignCreator < CampaignJourney::AudienceCampai
     raise Error.new(e.message, 'The message variables do not match the template or the audience', e.details.presence)
   rescue Whatsapp::Templates::HeaderMedia::Invalid => e
     raise Error.new(e.code, 'The template needs what Meta asks at send time (header or card file, coupon code, offer expiration)')
+  end
+
+  # #1418: modelo com produtos do catálogo só com a flag da conta.
+  def validate_products_feature!
+    return unless Whatsapp::Templates::ProductParams.kind(template)
+    return if @account.feature_enabled?('whatsapp_campaign_products')
+
+    raise Error.new('products_disabled', 'Catalog product templates are not enabled for this account')
   end
 
   # #1335: a mensagem escrita para quem falou com a caixa nas últimas 24 h, conferida antes de gravar (flag da conta).
