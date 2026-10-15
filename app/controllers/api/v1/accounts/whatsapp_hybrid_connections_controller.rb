@@ -45,7 +45,7 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
   def pause
     WhatsappHybrid::Pause.new(@connection).pause!
     render json: payload(@connection)
-  rescue Waha::Client::Error => e
+  rescue Waha::Client::Error, WhatsappHybrid::Pause::Busy => e
     render_engine_error('pause_failed', e)
   end
 
@@ -54,7 +54,7 @@ class Api::V1::Accounts::WhatsappHybridConnectionsController < Api::V1::Accounts
     pause = WhatsappHybrid::Pause.new(@connection)
     pause.resume!
     render json: payload(@connection, qr_code: pause.qr)
-  rescue Waha::Client::Error => e
+  rescue Waha::Client::Error, WhatsappHybrid::Pause::Busy => e
     render_engine_error('resume_failed', e)
   end
 

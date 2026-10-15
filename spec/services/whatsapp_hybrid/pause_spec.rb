@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1487: pausar para a sessão no motor sem desvincular o aparelho; retomar religa sem QR. Enquanto pausada, nada religa
-# a sessão sozinho e a parada não vira alerta de queda.
+# a sessão sozinho e a parada não vira alerta de queda. Só 404 é "sem sessão"; outra falha do motor recusa o pedido.
 describe WhatsappHybrid::Pause do
   let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:phone) { channel.phone_number.delete('^0-9') }
@@ -18,9 +18,8 @@ describe WhatsappHybrid::Pause do
 
   before do
     allow(client).to receive_messages(stop_session: {}, start_session: {}, logout_session: {}, update_session: {},
-                                      capping: {}, restart_session: {})
-    allow(WhatsappHybrid::DownAlert).to receive(:new).and_call_original
-    allow(WhatsappProxy::Health).to receive(:record_drop!)
+                                      capping: {}, restart_session: {}, create_session: {})
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key('hybrid-pause'))
   end
 
   describe '#pause!' do
@@ -33,17 +32,6 @@ describe WhatsappHybrid::Pause do
       expect(client).not_to have_received(:logout_session)
       expect(connection.reload).to have_attributes(status: 'disconnected', connected_phone: phone)
       expect(connection).to be_paused
-    end
-
-    it 'does not alert the admins nor count a proxy drop' do
-      allow(client).to receive(:get_session).and_return(working, stopped)
-
-      pause.pause!
-      manager.apply_status!('connecting')
-
-      expect(WhatsappHybrid::DownAlert).not_to have_received(:new)
-      expect(WhatsappProxy::Health).not_to have_received(:record_drop!)
-      expect(connection.reload.down_alerted_at).to be_nil
     end
 
     it 'never rewrites the session config while paused (a rewrite restarts it in the engine)' do
@@ -62,13 +50,65 @@ describe WhatsappHybrid::Pause do
       expect(connection.reload).not_to be_paused
     end
 
-    it 'keeps the pause when the engine does not answer (safe side: everything through the official API)' do
-      allow(client).to receive(:get_session).and_return(working, stopped)
+    it 'does not save the pause nor stop anything when the engine cannot be read' do
+      allow(client).to receive(:get_session).and_raise(Waha::Client::Timeout, 'timeout')
+
+      expect { pause.pause! }.to raise_error(Waha::Client::Error)
+      expect(client).not_to have_received(:stop_session)
+      expect(connection.reload).not_to be_paused
+    end
+
+    it 'keeps the pause after a stop timeout only when the engine then shows the session stopped' do
+      allow(client).to receive(:get_session).and_return(working, stopped, stopped)
       allow(client).to receive(:stop_session).and_raise(Waha::Client::Timeout, 'timeout')
 
       pause.pause!
 
       expect(connection.reload).to be_paused
+    end
+
+    it 'undoes the pause after a stop timeout when the session is still running' do
+      allow(client).to receive(:get_session).and_return(working, working)
+      allow(client).to receive(:stop_session).and_raise(Waha::Client::Timeout, 'timeout')
+
+      expect { pause.pause! }.to raise_error(Waha::Client::Error)
+      expect(connection.reload).not_to be_paused
+    end
+
+    it 'refuses while another change holds the session' do
+      Redis::Alfred.set(WhatsappProxy::SessionLock.key('hybrid-pause'), 'other', ex: 60)
+      allow(client).to receive(:get_session)
+
+      expect { pause.pause! }.to raise_error(described_class::Busy)
+      expect(client).not_to have_received(:get_session)
+      expect(connection.reload).not_to be_paused
+    end
+  end
+
+  # A pausa vale mesmo com o estado ainda "conectado" (o aviso do motor chega antes da consulta de volta).
+  describe 'engine events on a paused connection' do
+    before do
+      connection.update!(paused_at: Time.current, status: 'connected')
+      allow(WhatsappHybrid::DownAlert).to receive(:new).and_call_original
+      allow(WhatsappProxy::Health).to receive(:record_drop!)
+    end
+
+    %w[STOPPED FAILED STARTING].each do |engine_status|
+      it "does not alert the admins nor count a proxy drop on #{engine_status}" do
+        WhatsappHybrid::WebhookEventJob.perform_now(connection.id, 'session.status', { 'status' => engine_status })
+
+        expect(WhatsappHybrid::DownAlert).not_to have_received(:new)
+        expect(WhatsappProxy::Health).not_to have_received(:record_drop!)
+        expect(connection.reload.down_alerted_at).to be_nil
+      end
+    end
+
+    it 'still counts the drop of a connection that is not paused (control)' do
+      connection.update!(paused_at: nil)
+
+      WhatsappHybrid::WebhookEventJob.perform_now(connection.id, 'session.status', { 'status' => 'FAILED' })
+
+      expect(WhatsappProxy::Health).to have_received(:record_drop!).with('hybrid-pause')
     end
   end
 
@@ -86,7 +126,6 @@ describe WhatsappHybrid::Pause do
 
     it 'ensure_session! does not recreate a session missing in the engine' do
       allow(client).to receive(:get_session).and_return(nil)
-      allow(client).to receive(:create_session)
 
       manager.ensure_session!
 
@@ -136,6 +175,34 @@ describe WhatsappHybrid::Pause do
 
       expect { pause.resume! }.to raise_error(Waha::Client::Error)
       expect(connection.reload).to be_paused
+    end
+
+    it 'keeps the pause, recreates nothing and keeps the proxy assignment when the engine cannot be read' do
+      assignment = WhatsappProxy::Assignment.create!(session_name: 'hybrid-pause', account_id: connection.account_id,
+                                                     pool: 'isp', webshare_proxy_id: '1', proxy_address: '10.0.0.1',
+                                                     proxy_port: 6000, assigned_at: Time.current)
+      allow(client).to receive(:get_session).and_raise(Waha::Client::Error.new('bad gateway', status: 502))
+
+      expect { pause.resume! }.to raise_error(Waha::Client::Error)
+      expect(client).not_to have_received(:create_session)
+      expect(client).not_to have_received(:start_session)
+      expect(connection.reload).to be_paused
+      expect(WhatsappProxy::Assignment.exists?(assignment.id)).to be(true)
+    end
+
+    it 'recreates the session (with a QR code) only when the engine no longer has it' do
+      calls = 0
+      allow(client).to receive(:get_session) do
+        calls += 1
+        raise Waha::Client::NotFound.new('404', status: 404) if calls == 1
+
+        calls == 2 ? nil : { 'status' => 'SCAN_QR_CODE' }
+      end
+
+      pause.resume!
+
+      expect(client).to have_received(:create_session)
+      expect(connection.reload).not_to be_paused
     end
   end
 

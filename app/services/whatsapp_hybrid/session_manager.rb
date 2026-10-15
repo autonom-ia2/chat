@@ -81,8 +81,7 @@ class WhatsappHybrid::SessionManager
   # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.
   def apply_status!(status, phone: nil)
     was_connected = connection.status == 'connected'
-    # Sinal rápido de IP ruim (#1516): conectado → conectando/falhou. Aparelho desvinculado (QR) não conta.
-    WhatsappProxy::Health.record_drop!(connection.session_name) if was_connected && %w[connecting failed].include?(status)
+    WhatsappProxy::Health.record_drop!(connection.session_name) if proxy_drop?(was_connected, status)
     paired = status == 'connected' && fresh_pairing?
     connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
     WhatsappHybrid::ReachOut.paired!(connection) if paired
@@ -145,6 +144,9 @@ class WhatsappHybrid::SessionManager
   rescue Redis::BaseError
     sync_remote_config!(fetch_remote, proxy_mode: :skip)
   end
+
+  # Sinal rápido de IP ruim (#1516): conectado → conectando/falhou. Aparelho desvinculado (QR) e pausa (#1487) não contam.
+  def proxy_drop?(was_connected, status) = was_connected && !connection.paused? && %w[connecting failed].include?(status)
 
   def clear_down_alert!
     connection.update!(down_alerted_at: nil) if connection.down_alerted_at

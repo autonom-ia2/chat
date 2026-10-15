@@ -25,7 +25,8 @@ RSpec.describe 'WhatsApp Híbrido pause API', type: :request do
   before do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive_messages(update_session: {}, stop_session: {}, start_session: {}, logout_session: {},
-                                      capping: { 'cappingStatus' => 'NONE' }, timelock: { 'isActive' => false })
+                                      capping: { 'cappingStatus' => 'NONE' }, timelock: { 'isActive' => false },
+                                      list_sessions: [])
   end
 
   it 'refuses agents' do
@@ -73,12 +74,36 @@ RSpec.describe 'WhatsApp Híbrido pause API', type: :request do
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to eq('error' => 'pause_failed')
+    expect(connection.reload).not_to be_paused
+  end
+
+  it 'refuses the pause, without saving it, when the engine cannot be read' do
+    allow(client).to receive(:get_session).and_raise(Waha::Client::Timeout, 'timeout')
+
+    post "#{base}/pause", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to eq('error' => 'pause_failed')
+    expect(client).not_to have_received(:stop_session)
+    expect(connection.reload).not_to be_paused
+  end
+
+  it 'answers try again while another change holds the session' do
+    allow(client).to receive(:get_session).and_return(working)
+    Redis::Alfred.set(WhatsappProxy::SessionLock.key('hybrid-5511999993846'), 'other', ex: 60)
+
+    post "#{base}/pause", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to eq('error' => 'pause_failed')
+    expect(client).not_to have_received(:stop_session)
+  ensure
+    Redis::Alfred.delete(WhatsappProxy::SessionLock.key('hybrid-5511999993846'))
   end
 
   it 'lists other WhatsApp API inboxes on the same number' do
     api = Channel::Api.create!(account: account, additional_attributes: { 'provider' => 'waha', 'session' => '551199993846' })
     create(:inbox, account: account, channel: api, name: 'Vendas WhatsApp')
     allow(client).to receive(:get_session).and_return(working)
+    allow(client).to receive(:list_sessions).and_return([{ 'name' => '551199993846', 'status' => 'WORKING' }])
 
     get base, headers: admin.create_new_auth_token, as: :json
 
@@ -89,6 +114,7 @@ RSpec.describe 'WhatsApp Híbrido pause API', type: :request do
     connection.delete
     api = Channel::Api.create!(account: account, additional_attributes: { 'provider' => 'waha', 'session' => '5511999993846' })
     create(:inbox, account: account, channel: api, name: 'Atendimento WhatsApp')
+    allow(client).to receive(:list_sessions).and_return([{ 'name' => '5511999993846', 'status' => 'WORKING' }])
 
     get base, headers: admin.create_new_auth_token, as: :json
 
