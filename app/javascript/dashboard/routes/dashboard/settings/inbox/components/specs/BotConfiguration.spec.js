@@ -3,6 +3,7 @@ import { createI18n } from 'vue-i18n';
 import { computed, reactive } from 'vue';
 import BotConfiguration from '../BotConfiguration.vue';
 import QuemAtendeAPI from 'dashboard/api/autonomia/quemAtende';
+import { useAlert } from 'dashboard/composables';
 import en from 'dashboard/i18n/locale/en/agents.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/agents.json';
 
@@ -62,6 +63,7 @@ describe('BotConfiguration', () => {
   beforeEach(() => {
     dispatch.mockReset();
     QuemAtendeAPI.daCaixa.mockReset();
+    useAlert.mockReset();
   });
 
   it('reads who serves the inbox from its own endpoint', async () => {
@@ -121,7 +123,7 @@ describe('BotConfiguration', () => {
     });
   });
 
-  it('reads again who serves the inbox when the server refuses the save', async () => {
+  it('a refused save (422) alerts the lock reason, never "try again"', async () => {
     const wrapper = await render([], BOTS[0]);
     dispatch.mockImplementation(async acao => {
       if (acao === 'agentBots/setAgentBotInbox') throw new Error('recusado');
@@ -136,5 +138,62 @@ describe('BotConfiguration', () => {
     expect(wrapper.find('[data-motivo]').text()).toBe(
       pt_BR.AGENTS.CAIXA_EXTERNO.TRAVADO_PRINCIPAL
     );
+    expect(useAlert).toHaveBeenCalledWith(
+      pt_BR.AGENTS.CAIXA_EXTERNO.TRAVADO_PRINCIPAL
+    );
+    expect(useAlert).not.toHaveBeenCalledWith(
+      pt_BR.AGENTS.CAIXA_EXTERNO.FALHOU
+    );
+  });
+
+  it('a failed save on a still free inbox keeps the generic message', async () => {
+    const wrapper = await render([], BOTS[0]);
+    dispatch.mockImplementation(async acao => {
+      if (acao === 'agentBots/setAgentBotInbox') throw new Error('rede');
+    });
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(pt_BR.AGENTS.CAIXA_EXTERNO.FALHOU);
+    expect(wrapper.find('[data-caixa-livre]').exists()).toBe(true);
+  });
+
+  it('a refused disconnect (422) alerts the lock reason', async () => {
+    const wrapper = await render([], BOTS[0]);
+    dispatch.mockImplementation(async acao => {
+      if (acao === 'agentBots/disconnectBot') throw new Error('recusado');
+    });
+    QuemAtendeAPI.daCaixa.mockResolvedValue({
+      data: { agentes: [{ id: 7, name: 'Bia', papel: 'area' }] },
+    });
+
+    await wrapper.find('[data-desconectar]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      pt_BR.AGENTS.CAIXA_EXTERNO.TRAVADO_EQUIPE
+    );
+  });
+
+  it('a failed read keeps the choice locked with "Try again", never the free inbox', async () => {
+    QuemAtendeAPI.daCaixa.mockRejectedValueOnce(new Error('500'));
+    const wrapper = await render([], BOTS[0]);
+
+    expect(wrapper.find('[data-erro-de-leitura]').exists()).toBe(true);
+    expect(wrapper.find('[data-caixa-livre]').exists()).toBe(false);
+    expect(wrapper.find('[role="alert"]').text()).toBe(
+      pt_BR.AGENTS.CAIXA_EXTERNO.ERRO_LEITURA
+    );
+    expect(wrapper.find('[role="combobox"]').attributes()).toHaveProperty(
+      'disabled'
+    );
+
+    await wrapper.find('[data-tentar-de-novo]').trigger('click');
+    await flushPromises();
+
+    expect(QuemAtendeAPI.daCaixa).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-erro-de-leitura]').exists()).toBe(false);
+    expect(wrapper.find('[data-caixa-livre]').exists()).toBe(true);
   });
 });

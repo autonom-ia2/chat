@@ -1750,7 +1750,9 @@
       "SALVOU": "Agente externo salvo.",
       "FALHOU": "Não deu para salvar. Tente de novo.",
       "DESCONECTOU": "Agente externo desconectado.",
-      "FALHOU_DESCONECTAR": "Não deu para desconectar. Tente de novo."
+      "FALHOU_DESCONECTAR": "Não deu para desconectar. Tente de novo.",
+      "ERRO_LEITURA": "Não deu para saber quais agentes atendem esta caixa. A escolha fica travada até a gente saber.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
     }
   }
 }

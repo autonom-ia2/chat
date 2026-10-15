@@ -27,14 +27,26 @@ RSpec.describe Crm::Caixas::RetratoDosAgentes do
     expect(retrato[:porta]).to eq({ id: agente.id, name: 'Clara' })
   end
 
-  it 'treats the mirror of a deleted porta as external, like tipo_do_principal' do
+  it 'never calls the mirror of a deleted porta an external agent, like RobosSemEspelho' do
     agente = Autonomia::Agents::Agent.create!(account: account, name: 'Clara', agent_type: 'custom')
     espelho = create(:agent_bot, account: account, name: 'Clara', outgoing_url: nil)
     AgentBotInbox.create!(inbox: inbox, agent_bot: espelho, account: account)
     Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: espelho,
                                           deleted_at: Time.current)
 
-    expect(retrato[:externo]).to eq({ id: espelho.id, name: 'Clara' })
+    expect(retrato[:externo]).to be_nil
+  end
+
+  it 'picks the row that is not a mirror when the inbox has more than one, oldest first' do
+    agente = Autonomia::Agents::Agent.create!(account: account, name: 'Clara', agent_type: 'custom')
+    espelho = create(:agent_bot, account: account, name: 'Clara', outgoing_url: nil)
+    AgentBotInbox.create!(inbox: inbox, agent_bot: espelho, account: account)
+    Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: espelho)
+    AgentBotInbox.create!(inbox: inbox, agent_bot: externo, account: account)
+    outro = create(:agent_bot, account: account, name: 'Outro', outgoing_url: 'https://outro.example.com/hook')
+    AgentBotInbox.create!(inbox: inbox, agent_bot: outro, account: account)
+
+    expect(retrato[:externo]).to eq({ id: externo.id, name: 'Robo n8n' })
   end
 
   it 'has no external agent for an inactive bot or an inbox without bot' do

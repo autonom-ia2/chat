@@ -6,8 +6,10 @@
 #   soltaria o espelho dela. Quem tira o agente da caixa é a página do agente (InboxConnector, Areas).
 # Vale para todas as contas, com ou sem a Fase 2.
 #
-# TRAVA OS AGENTES DA CAIXA E DEPOIS A CAIXA, a ordem dos caminhos da Autonom.ia (OndeTrabalhar, Areas, InboxConnector):
-# um agente entrando na caixa ao mesmo tempo espera esta gravação, ou esta conferência já o enxerga.
+# TRAVA OS AGENTES DA CAIXA E DEPOIS A CAIXA, a ordem dos caminhos da Autonom.ia (Areas e InboxConnector travam o
+# agente e depois a caixa). Quem serializa com um agente entrando agora (que ainda não tem vínculo para ser travado
+# aqui) é a trava da CAIXA: o InboxConnector#connect! e o Areas.vincular! conferem a caixa com ela travada, então um
+# dos dois espera o outro e enxerga o que ele gravou.
 module Autonomia::Agents::CaixaSemAgenteExterno
   def set_agent_bot
     codigo = nil

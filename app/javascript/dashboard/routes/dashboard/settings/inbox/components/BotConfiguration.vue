@@ -27,8 +27,11 @@ const uiFlags = useMapGetter('agentBots/getUIFlags');
 const accountId = useMapGetter('getCurrentAccountId');
 
 const inboxId = computed(() => Number(props.inbox?.id));
-// { principal: { id, name } | null, equipe: [{ id, name }] }, ou null enquanto carrega.
+// { principal: { id, name } | null, equipe: [{ id, name }] }, ou null enquanto
+// carrega ou quando a leitura falhou (`erroDeLeitura`).
 const plataforma = ref(null);
+// Sem saber quem atende, a escolha fica travada: nunca vira "caixa livre".
+const erroDeLeitura = ref(false);
 const selectedAgentBotId = ref('');
 
 const activeAgentBot = computed(() =>
@@ -92,11 +95,13 @@ const daCaixa = agentes => ({
 });
 
 const carregarPlataforma = async () => {
+  erroDeLeitura.value = false;
   try {
     const { data } = await QuemAtendeAPI.daCaixa(inboxId.value);
     plataforma.value = daCaixa(data.agentes);
   } catch {
-    plataforma.value = { principal: null, equipe: [] };
+    plataforma.value = null;
+    erroDeLeitura.value = true;
   }
 };
 
@@ -106,8 +111,15 @@ onMounted(() => {
   carregarPlataforma();
 });
 
-// Falhou: relê quem atende. Se um agente da plataforma entrou na caixa nesse
-// meio-tempo (o servidor recusa, #1648), a tela passa a mostrar o motivo.
+// Falhou: relê quem atende. O servidor só recusa (422, #1648) quando a caixa
+// tem agente da plataforma; aí a releitura mostra a caixa travada e o aviso é
+// o motivo (TRAVADO_*), nunca "tente de novo" numa ação que não vai passar.
+// O store devolve só a mensagem, sem o `code`: o estado relido é a fonte.
+const avisarFalha = async textoGenerico => {
+  await carregarPlataforma();
+  useAlert(daPlataforma.value ? motivo.value : textoGenerico);
+};
+
 const salvar = async () => {
   try {
     await store.dispatch('agentBots/setAgentBotInbox', {
@@ -116,8 +128,7 @@ const salvar = async () => {
     });
     useAlert(t('AGENTS.CAIXA_EXTERNO.SALVOU'));
   } catch {
-    useAlert(t('AGENTS.CAIXA_EXTERNO.FALHOU'));
-    carregarPlataforma();
+    await avisarFalha(t('AGENTS.CAIXA_EXTERNO.FALHOU'));
   }
 };
 
@@ -126,16 +137,53 @@ const desconectar = async () => {
     await store.dispatch('agentBots/disconnectBot', { inboxId: inboxId.value });
     useAlert(t('AGENTS.CAIXA_EXTERNO.DESCONECTOU'));
   } catch {
-    useAlert(t('AGENTS.CAIXA_EXTERNO.FALHOU_DESCONECTAR'));
-    carregarPlataforma();
+    await avisarFalha(t('AGENTS.CAIXA_EXTERNO.FALHOU_DESCONECTAR'));
   }
 };
 </script>
 
 <template>
   <div class="mx-6 max-w-4xl">
+    <SettingsFieldSection
+      v-if="erroDeLeitura"
+      data-erro-de-leitura
+      :label="$t('AGENTS.CAIXA_EXTERNO.TITULO')"
+      class="[&>div]:!items-start"
+    >
+      <div class="flex flex-col gap-3">
+        <ChoiceSelect
+          model-value=""
+          disabled
+          :options="[]"
+          :aria-label="$t('AGENTS.CAIXA_EXTERNO.ESCOLHER')"
+          :placeholder="$t('AGENTS.CAIXA_EXTERNO.ESCOLHER')"
+        />
+        <p
+          role="alert"
+          class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-11"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+            aria-hidden="true"
+          />
+          {{ $t('AGENTS.CAIXA_EXTERNO.ERRO_LEITURA') }}
+        </p>
+        <NextButton
+          type="button"
+          data-tentar-de-novo
+          class="!min-h-11 self-start"
+          :label="$t('AGENTS.CAIXA_EXTERNO.TENTAR_DE_NOVO')"
+          icon="i-lucide-refresh-cw"
+          slate
+          faded
+          @click="carregarPlataforma"
+        />
+      </div>
+    </SettingsFieldSection>
     <LoadingState
-      v-if="!plataforma || uiFlags.isFetching || uiFlags.isFetchingAgentBot"
+      v-else-if="
+        !plataforma || uiFlags.isFetching || uiFlags.isFetchingAgentBot
+      "
     />
     <SettingsFieldSection
       v-else-if="daPlataforma"
@@ -235,6 +283,7 @@ const desconectar = async () => {
               />
               <NextButton
                 type="button"
+                data-desconectar
                 class="!min-h-11"
                 :label="$t('AGENTS.CAIXA_EXTERNO.DESCONECTAR')"
                 :disabled="!activeAgentBot"

@@ -88,10 +88,9 @@ module Autonomia::Agents::Areas
   #
   # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem dos caminhos da Autonom.ia (InboxConnector, SoftDelete): entre eles,
   # a conferência da caixa e a entrada ou saída de um principal não se cruzam, e a parada automática do agente não espera
-  # por uma caixa que outro segura. A garantia é PARCIAL: o painel do Chatwoot pluga um agente externo na caixa
-  # (Inbox#set_agent_bot / AgentBotInbox) sem travar a caixa, então ele pode entrar depois da conferência, ou numa
-  # caixa só de pessoas que já tem área. Barrar isso fica para o próximo PR, a marcação por caixa ("o agente externo
-  # desta caixa respeita quem é o dono", decisão do Rodrigo de 15/10). O comportamento de hoje está registrado em
+  # por uma caixa que outro segura. O agente externo plugado pela aba da caixa (Inbox#set_agent_bot) também trava a
+  # caixa e é recusado quando ela tem agente da plataforma (marcação por caixa, #1648,
+  # Autonomia::Agents::CaixaSemAgenteExterno); o InboxConnector confere a caixa com ela travada. Registro em
   # spec/services/autonomia/agents/areas_agente_externo_depois_spec.rb.
   def vincular!(agent:, inbox:, ativar: false, de_rascunho: false)
     agent.with_lock do

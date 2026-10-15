@@ -1750,7 +1750,9 @@
       "SALVOU": "External agent saved.",
       "FALHOU": "Could not save. Try again.",
       "DESCONECTOU": "External agent disconnected.",
-      "FALHOU_DESCONECTAR": "Could not disconnect. Try again."
+      "FALHOU_DESCONECTAR": "Could not disconnect. Try again.",
+      "ERRO_LEITURA": "We could not check which agents serve this inbox. The choice stays locked until we know.",
+      "TENTAR_DE_NOVO": "Try again"
     }
   }
 }

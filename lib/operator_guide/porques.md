@@ -1089,11 +1089,11 @@
 - titulo: Gerenciar agent bots nativos
 - rota: agent_bots
 - intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?
-- onde_fica: Sidebar > Configuracoes > Agent Bots; para conectar na caixa: Configuracoes > Caixas de entrada > selecionar caixa > Bot Configuration
+- onde_fica: Sidebar > Configuracoes > Robos; para conectar na caixa: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente externo
 - perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
-- passos: 1. Abra Agent Bots; 2. Crie ou edite um bot com nome, descricao, avatar e webhook URL; 3. Copie o access token e secret quando forem exibidos; 4. Abra a caixa desejada e entre em Bot Configuration; 5. Selecione o bot e salve; 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
-- gotchas: nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` aparecem na lista mas nao podem ser editados/excluidos; desconectar bot da caixa nao apaga o bot do catalogo.
+- passos: 1. Abra Configuracoes > Robos; 2. Crie ou edite um bot com nome, descricao, avatar e webhook URL; 3. Copie o access token e secret quando forem exibidos; 4. Abra a caixa desejada e entre na aba Agente externo; 5. Se a caixa mostrar "Esta caixa e atendida pelos Agentes da plataforma", a escolha esta travada: tire antes o agente da caixa na pagina do agente (Abrir agente); 6. Com a caixa livre, escolha o agente externo e salve; 7. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
+- gotchas: nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` aparecem na lista mas nao podem ser editados/excluidos; desconectar bot da caixa nao apaga o bot do catalogo; caixa com agente da plataforma (o que atende primeiro ou agente da equipe) nao aceita agente externo e nao se desconecta por esta aba: o servidor recusa, e o agente sai pela pagina dele; os agentes da plataforma nao aparecem na lista de Robos.
 - highlight: `settings-add-bot`
 
 ### usar_busca_global

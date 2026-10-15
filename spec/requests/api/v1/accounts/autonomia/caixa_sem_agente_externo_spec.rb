@@ -91,6 +91,30 @@ RSpec.describe 'Inbox set_agent_bot with platform agents', type: :request do
     expect(robo_da_caixa).to eq([porta.agent_bot_id])
   end
 
+  context 'with the Quote Agent (Lia) as porta' do
+    let!(:lia) do
+      espelho = create(:agent_bot, account: account, name: 'Lia', outgoing_url: nil)
+      AgentBotInbox.create!(inbox: inbox, agent_bot: espelho, account: account)
+      agente = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote')
+      Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: account, agent_bot: espelho)
+    end
+
+    it 'saves her own mirror again' do
+      plugar(lia.agent_bot_id)
+
+      expect(response).to have_http_status(:ok)
+      expect(robo_da_caixa).to eq([lia.agent_bot_id])
+    end
+
+    it 'refuses an external agent' do
+      plugar(externo.id)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('caixa_com_agente_da_plataforma')
+      expect(robo_da_caixa).to eq([lia.agent_bot_id])
+    end
+  end
+
   it 'refuses to disconnect the mirror of a porta' do
     porta = porta!
 

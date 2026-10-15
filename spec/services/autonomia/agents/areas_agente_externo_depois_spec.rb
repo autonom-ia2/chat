@@ -46,10 +46,13 @@ RSpec.describe Autonomia::Agents::Areas, type: :request do
     expect(Autonomia::Agents::Operate.eligible_agent_inbox(da_area)).to eq(area)
   end
 
-  it 'o agente externo não recebe o webhook das mensagens da conversa da área' do
-    expect do
-      create(:message, account: account, conversation: da_area, message_type: :incoming, content: 'quero o boleto')
-    end.not_to have_enqueued_job(AgentBots::WebhookJob).with('https://parceiro.example/webhook', anything, anything, anything)
+  it 'conversa nova não nasce com o agente externo: a caixa continua sem robô' do
+    caixa = Inbox.find(inbox.id)
+    nova = create(:conversation, account: account, inbox: caixa)
+
+    expect(caixa.agent_bot).to be_nil
+    expect(caixa.active_bot?).to be(false)
+    expect(nova.reload.assignee_agent_bot_id).not_to eq(externo.id)
   end
 
   it 'soltar a área manda as conversas dela para as pessoas, nunca para o agente externo' do

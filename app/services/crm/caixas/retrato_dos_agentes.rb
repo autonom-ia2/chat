@@ -32,17 +32,22 @@ class Crm::Caixas::RetratoDosAgentes
       pode_mudar: pode_mudar,
       areas: areas(inbox_id),
       disponiveis: pode_mudar ? disponiveis(inbox_id) : []
-    }.merge(@detalhe ? { externo: externo(inbox_id, porta) } : {})
+    }.merge(@detalhe ? { externo: externo(inbox_id) } : {})
   end
 
   private
 
-  # #1648 — o agente externo (n8n, Zapier...) que atende primeiro: o AgentBotInbox ativo da caixa quando o robô não é o
-  # espelho da porta ativa (a mesma regra do `tipo_do_principal` do Retrato, #1570). { id, name } ou nil. Só na caixa
-  # aberta (`detalhe`): a lista não faz uma consulta por caixa.
-  def externo(inbox_id, porta)
-    vinculo = AgentBotInbox.active.includes(:agent_bot).find_by(inbox_id: inbox_id, account_id: @account.id)
-    return if vinculo&.agent_bot.nil? || vinculo.agent_bot_id == porta&.agent_bot_id
+  # #1648 — o agente externo (n8n, Zapier...) que atende primeiro: o AgentBotInbox ativo da caixa cujo robô não é
+  # espelho de agente da plataforma. Espelho é qualquer agent_bot de autonomia_agent_inboxes, apagado ou não (a mesma
+  # regra do Autonomia::Agents::RobosSemEspelho, #1626): o espelho de uma porta apagada não vira "agente externo".
+  # Mais de uma linha (não há índice único por caixa): a mais antiga. { id, name } ou nil. Só na caixa aberta
+  # (`detalhe`): a lista não faz uma consulta por caixa.
+  def externo(inbox_id)
+    vinculo = AgentBotInbox.active.includes(:agent_bot)
+                           .where(inbox_id: inbox_id, account_id: @account.id)
+                           .where.not(agent_bot_id: ::Autonomia::Agents::AgentInbox.select(:agent_bot_id))
+                           .order(:id).first
+    return if vinculo&.agent_bot.nil?
 
     { id: vinculo.agent_bot.id, name: vinculo.agent_bot.name }
   end
