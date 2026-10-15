@@ -106,8 +106,11 @@ class Crm::Caixas::GravadorDeAgentes
   # incompleto); caixa que não aceita área (pelo código do leitor).
   def vincular!(agente)
     ::Autonomia::Agents::Areas.vincular!(agent: agente, inbox: @inbox, ativar: true)
+  rescue ::Autonomia::Agents::Areas::AgenteRascunho
+    # #1570: rascunho tem frase própria na tela.
+    raise Invalida, 'crm.caixas.agente_rascunho'
   rescue ::Autonomia::Agents::Areas::AgenteInterno, ::Autonomia::Agents::Areas::AgenteDeSistema,
-         ::Autonomia::Agents::Areas::AgenteRascunho, ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
+         ::Autonomia::Agents::Areas::AgenteNaoPodeSerArea
     raise Invalida, 'crm.caixas.agente_invalido'
   rescue ::Autonomia::Agents::Areas::CaixaNaoAceitaArea => e
     raise Invalida, CODIGO_DA_CAIXA.fetch(e.codigo, 'crm.caixas.agente_invalido')
