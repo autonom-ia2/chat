@@ -1,4 +1,6 @@
 <script setup>
+import CrmVistasNumeros from '../components/numeros/CrmVistasNumeros.vue';
+import { useMenuNovo } from 'dashboard/components-next/sidebar/fork/useMenuNovo';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLocale } from 'shared/composables/useLocale';
@@ -93,6 +95,8 @@ const ORIGIN_FALLBACK = {
   barClass: 'bg-n-slate-8',
 };
 
+// Com o menu novo (#1617) a página se chama Números e ganha o seletor do CRM.
+const { ligado: menuNovo } = useMenuNovo();
 const pipelines = ref([]);
 const selectedPipelineId = ref('');
 const selectedPeriodKey = ref('LAST_30');
@@ -456,9 +460,16 @@ onMounted(async () => {
       class="flex flex-col gap-4 px-6 py-5 border-b sm:flex-row sm:items-center sm:justify-between border-n-weak"
     >
       <div class="min-w-0">
-        <h1 class="mb-1 text-xl font-semibold text-n-slate-12">
-          {{ t('CRM_KANBAN.DASHBOARD.TITLE') }}
-        </h1>
+        <div class="flex flex-wrap items-center gap-4 mb-1">
+          <h1 class="m-0 text-xl font-semibold text-n-slate-12">
+            {{
+              menuNovo
+                ? t('FORK_SIDEBAR.CRM.TITULO_NUMEROS')
+                : t('CRM_KANBAN.DASHBOARD.TITLE')
+            }}
+          </h1>
+          <CrmVistasNumeros />
+        </div>
         <p class="m-0 text-sm text-n-slate-11">
           {{
             t(

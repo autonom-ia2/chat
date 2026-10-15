@@ -865,7 +865,6 @@
     },
     "WHATSAPP_HYBRID": {
       "TITLE": "WhatsApp API on this number",
-      "DESCRIPTION": "A second way to send from this same inbox. When the official 24-hour window is closed, replies go through WhatsApp API.",
       "CONNECT": "Connect WhatsApp API",
       "SCAN_TITLE": "Scan the QR code with this inbox's WhatsApp Business",
       "QR_ALT": "QR code to connect WhatsApp API",
@@ -882,10 +881,6 @@
       "CONNECTED_HELP": "Connected to {phone}. Same number as the official inbox.",
       "WRONG_NUMBER": "The connected phone ({phone}) is not this inbox's number. Disconnect and connect the right phone.",
       "DISCONNECT": "Disconnect WhatsApp API",
-      "OFFICIAL": "Official",
-      "WEB": "WhatsApp API",
-      "RATE_LIMIT": "Messages per minute through WhatsApp API",
-      "CAMPAIGN_LIMIT": "Campaigns use at most {limit} per minute. When WhatsApp warns about the limit, the speed goes down by itself.",
       "CAPPING": {
         "NEAR": "WhatsApp warned that this number is close to the limit of new conversations ({used} of {total}). Sending through WhatsApp API slowed down by itself. The cycle ends on {end}.",
         "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved template."
@@ -907,9 +902,10 @@
         "NOT_CONNECTED": "Not connected",
         "AWAITING": "Waiting for the phone",
         "CONNECTED": "Connected",
-        "FAILED": "Connection failed",
         "REMOVED": "Disconnected by WhatsApp",
-        "DISCONNECTED": "Disconnected"
+        "DISCONNECTED": "Disconnected",
+        "PAUSED": "Paused",
+        "EXPIRED": "QR code expired"
       },
       "RISK": {
         "TITLE": "Before turning it on",
@@ -917,24 +913,134 @@
       },
       "ROUTING": {
         "TITLE": "Automatic sending",
-        "DESCRIPTION": "The inbox picks the way for each message. You don't need to do anything.",
-        "INSIDE": "Within 24 hours",
-        "OUTSIDE": "After 24 hours",
-        "TEMPLATES": "Approved templates"
+        "EDIT": "Change",
+        "EDIT_PART": "Change: {part}",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "OFF_HINT": "Turn it on above to choose.",
+        "WAY": {
+          "TITLE": "How messages go out",
+          "SWITCH": "Use WhatsApp API after 24 hours",
+          "SWITCH_HINT": "Through the phone connected to this inbox.",
+          "INSIDE": "Customer wrote in the last 24 h → goes out through the official number.",
+          "OUTSIDE_ON": "More than 24 h → goes out through WhatsApp API.",
+          "OUTSIDE_OFF": "More than 24 h → only approved templates.",
+          "TEMPLATES": "Approved template → always goes out through the official number."
+        },
+        "WHO": {
+          "TITLE": "Who can use WhatsApp API after 24 h",
+          "DRAWER_TITLE": "Who can use it after 24 h",
+          "DRAWER_TEXT": "Check who can send through WhatsApp API when more than 24 hours have passed.",
+          "SUMMARY": "{list} uses WhatsApp API after 24 h. | {list} use WhatsApp API after 24 h.",
+          "NONE": "Nobody uses WhatsApp API after 24 h: everything goes out as an approved template.",
+          "RECOMMENDED": "Recommended",
+          "RISK": "Higher risk of the number being blocked",
+          "ORIGINS": {
+            "HUMAN": {
+              "TITLE": "Agents",
+              "SHORT": "Agents",
+              "EXAMPLE": "When someone on the team replies to a customer who went quiet."
+            },
+            "BOT": {
+              "TITLE": "AI agents and external agents",
+              "SHORT": "AI agents",
+              "EXAMPLE": "When the agent picks the conversation back up."
+            },
+            "AUTOMATION": {
+              "TITLE": "Automations",
+              "SHORT": "Automations",
+              "EXAMPLE": "When an automation sends a message by itself."
+            },
+            "CRM_FOLLOW_UP": {
+              "TITLE": "CRM reminders",
+              "SHORT": "CRM reminders",
+              "EXAMPLE": "The \"did everything go well?\" after Resolved."
+            },
+            "CAMPAIGN": {
+              "TITLE": "Campaigns",
+              "SHORT": "Campaigns",
+              "EXAMPLE": "When a campaign sends to many people at once."
+            }
+          }
+        },
+        "PACE": {
+          "TITLE": "Pace",
+          "SUMMARY": "Up to {n} messages per minute through WhatsApp API.",
+          "DRAWER_TEXT": "Anything above the pace waits its turn instead of going out all at once.",
+          "BEFORE": "Send at most",
+          "AFTER": "messages per minute through WhatsApp API.",
+          "CHOICE_LABEL": "Messages per minute",
+          "OTHER": "Other…",
+          "OTHER_LABEL": "How many per minute ({min} to {max})",
+          "INVALID": "Use a whole number from {min} to {max}.",
+          "RECOMMENDED": "{n} per minute is the recommended pace.",
+          "CAMPAIGNS": "Campaigns never go over {limit} per minute, to protect your number."
+        },
+        "PREVIEW": {
+          "BADGE": "Preview",
+          "TITLE": "How it works",
+          "FOLLOW_UP_WEB": "Carlos has not replied for 2 days. The CRM reminder goes out through WhatsApp API at 10:00.",
+          "FOLLOW_UP_TEMPLATE": "Carlos has not replied for 2 days. The CRM reminder goes out as an approved template through the official number.",
+          "AGENT_WEB": "Ana, from the team, replies to Maria 3 days later. The reply goes out through WhatsApp API.",
+          "AGENT_TEMPLATE": "Ana, from the team, replies to Maria 3 days later. She can only send an approved template.",
+          "PACE": "Up to {n} per minute: anything above waits its turn."
+        }
       },
       "ORIGINS": {
-        "TITLE": "Who can send after 24 hours",
         "HUMAN": "Agents",
-        "BOT": "Bots",
+        "BOT": "AI agents and external agents",
         "AUTOMATION": "Automations",
-        "CRM_FOLLOW_UP": "CRM follow-up",
+        "CRM_FOLLOW_UP": "CRM reminders",
         "CAMPAIGN": "Campaigns"
       },
       "ERRORS": {
         "CONNECT": "Could not connect WhatsApp API. Try again.",
         "CODE": "Could not create the code. Try again.",
         "SAVE": "Could not save. Try again.",
-        "DISCONNECT": "Could not disconnect. Try again."
+        "DISCONNECT": "Could not disconnect. Try again.",
+        "PAUSE": "Could not pause. Try again.",
+        "RESUME": "Could not resume. Try again.",
+        "WAKING": "WhatsApp API is starting again. Try again in a few seconds."
+      },
+      "PAUSE": {
+        "BUTTON": "Pause WhatsApp API",
+        "CONFIRM_TITLE": "Pause WhatsApp API?",
+        "CONFIRM_TEXT": "While paused, everything goes through the official API; after 24 hours, only approved templates. The phone stays linked and you can resume at any time.",
+        "CONFIRM": "Pause",
+        "CANCEL": "Cancel",
+        "PAUSED_TITLE": "WhatsApp API paused",
+        "PAUSED_HELP": "Everything is going through the official API. After 24 hours, only approved templates. The phone stays linked.",
+        "RESUME": "Resume"
+      },
+      "CONNECT_ORDER": {
+        "TITLE": "Follow this order",
+        "STEP_1": "The official inbox is already connected",
+        "STEP_2": "Open WhatsApp Business on the phone",
+        "STEP_3": "Scan the QR code"
+      },
+      "NOTICES": {
+        "SAME_NUMBER": "This number is also linked in the inbox {inbox} as WhatsApp API (unofficial). Two connections on the same number raise the risk of a ban.",
+        "APP_EVERY_14_DAYS": "WhatsApp asks that the WhatsApp Business app be opened on this phone at least every 14 days."
+      },
+      "HERO": {
+        "TITLE": "Reply after 24 hours without a template",
+        "TEXT": "When 24 hours have passed since the last message from the customer, your reply goes out through WhatsApp API, on this same number."
+      },
+      "STATE": {
+        "NOT_CONNECTED_TITLE": "Turn on WhatsApp API",
+        "CONNECTED_TITLE": "WhatsApp API is on",
+        "WRONG_NUMBER_TITLE": "This is another phone"
+      },
+      "LOADING": "Loading WhatsApp API",
+      "LOAD_ERROR": "Could not open this tab right now.",
+      "RETRY": "Try again",
+      "MORE": {
+        "TITLE": "Other actions"
+      },
+      "DISCONNECT_CONFIRM": {
+        "TITLE": "Disconnect WhatsApp API?",
+        "TEXT": "The phone is unlinked from this inbox. To turn it on again, you will need to scan a new QR code. To stop only for a while, use Pause.",
+        "CONFIRM": "Disconnect"
       }
     },
     "TABS": {

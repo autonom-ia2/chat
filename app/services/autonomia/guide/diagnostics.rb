@@ -47,6 +47,18 @@ module Autonomia
         visivel.squeeze(' ').strip[0, 80].to_s
       end
 
+      # WhatsApp API (Híbrido) da caixa oficial. Pausado pelo administrador (#1487) informa, sem tratar como queda.
+      def hybrid_finding(inbox, label)
+        hibrido = inbox.whatsapp? ? WhatsappHybrid::Connection.find_by(inbox_id: inbox.id) : nil
+        return if hibrido.nil?
+
+        if hibrido.paused?
+          "WhatsApp API da caixa oficial \"#{label}\": pausado pelo administrador — tudo sai pela API oficial e respostas depois de 24 horas precisam de modelo aprovado. Para voltar, use Retomar na aba WhatsApp API da caixa."
+        elsif hibrido.status != 'connected'
+          "WhatsApp API da caixa oficial \"#{label}\": desconectado — respostas depois de 24 horas precisam de modelo aprovado. Reconecte na aba WhatsApp API da caixa."
+        end
+      end
+
       # --- CANAIS / conexão de caixa ---
       def channel
         return ['A conta ainda não tem nenhuma caixa de entrada criada — não há por onde receber mensagens. Crie uma em Configurações > Caixas de entrada > Nova caixa.'] if inboxes.empty?
@@ -66,10 +78,7 @@ module Autonomia
             end
           end
 
-          hibrido = inbox.whatsapp? ? WhatsappHybrid::Connection.find_by(inbox_id: inbox.id) : nil
-          if hibrido && hibrido.status != 'connected'
-            findings << "WhatsApp API da caixa oficial \"#{label}\": desconectado — respostas depois de 24 horas precisam de modelo aprovado. Reconecte na aba WhatsApp API da caixa."
-          end
+          hybrid_finding(inbox, label)&.then { |finding| findings << finding }
 
           if inbox.api? && ch.respond_to?(:waha_provider?) && ch.waha_provider?
             aa = (ch.additional_attributes || {}).to_h

@@ -32,7 +32,10 @@ class WhatsappHybrid::SessionManager
 
   attr_reader :connection
 
+  # Pausada (#1487): nunca cria nem religa a sessão; só o "Retomar" faz isso.
   def ensure_session!
+    return refresh! if connection.paused?
+
     remote = fetch_remote
     if remote.blank?
       create_remote_session!
@@ -44,9 +47,10 @@ class WhatsappHybrid::SessionManager
 
   # Consulta o motor e grava estado + número conectado. Retorna o estado público.
   # sync_proxy: false no envio de mensagem — pôr o proxy reinicia a sessão e derrubaria o próprio envio.
+  # Pausada: só lê. Gravar a configuração reinicia a sessão no motor e desfaria a pausa.
   def refresh!(sync_proxy: true)
     remote = fetch_remote
-    sync_remote_config!(remote, proxy_mode: sync_proxy ? :refresh : :skip)
+    sync_remote_config!(remote, proxy_mode: sync_proxy ? :refresh : :skip) unless connection.paused?
     status = STATUS_MAP.fetch(remote['status'].to_s, remote.blank? ? 'disconnected' : 'connecting')
     phone = remote.dig('me', 'id').to_s.split('@').first.to_s.delete('^0-9').presence
     apply_status!(status, phone: phone)
@@ -77,16 +81,22 @@ class WhatsappHybrid::SessionManager
   # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.
   def apply_status!(status, phone: nil)
     was_connected = connection.status == 'connected'
-    # Sinal rápido de IP ruim (#1516): conectado → conectando/falhou. Aparelho desvinculado (QR) não conta.
-    WhatsappProxy::Health.record_drop!(connection.session_name) if was_connected && %w[connecting failed].include?(status)
+    WhatsappProxy::Health.record_drop!(connection.session_name) if proxy_drop?(was_connected, status)
     paired = status == 'connected' && fresh_pairing?
     connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
     WhatsappHybrid::ReachOut.paired!(connection) if paired
     status == 'connected' ? clear_down_alert! : alert_down!(was_connected)
   end
 
+  # A sessão como o motor a vê ({} quando não existe ou o motor não respondeu).
+  def fetch_remote
+    @client.get_session(connection.session_name) || {}
+  rescue Waha::Client::Error
+    {}
+  end
+
   def qr
-    return if connection.status == 'connected'
+    return if connection.status == 'connected' || connection.paused?
 
     @client.qr_value(connection.session_name)['value']
   rescue Waha::Client::Error
@@ -98,6 +108,8 @@ class WhatsappHybrid::SessionManager
   end
 
   def reconnect!
+    # Pedir novo QR é decisão de religar: desfaz a pausa, com a sessão no ar antes do logout (WakeSession).
+    WhatsappHybrid::WakeSession.unpause!(@client, connection)
     # Sessão apagada no motor (reinício, limpeza): recria em vez de falhar.
     return ensure_session! if fetch_remote.blank?
 
@@ -132,6 +144,9 @@ class WhatsappHybrid::SessionManager
   rescue Redis::BaseError
     sync_remote_config!(fetch_remote, proxy_mode: :skip)
   end
+
+  # Sinal rápido de IP ruim (#1516): conectado → conectando/falhou. Aparelho desvinculado (QR) e pausa (#1487) não contam.
+  def proxy_drop?(was_connected, status) = was_connected && !connection.paused? && %w[connecting failed].include?(status)
 
   def clear_down_alert!
     connection.update!(down_alerted_at: nil) if connection.down_alerted_at
@@ -242,11 +257,5 @@ class WhatsappHybrid::SessionManager
     !::Redis::Alfred.set("whatsapp_proxy:rewrite:#{connection.session_name}", '1', nx: true, ex: PROXY_REWRITE_COOLDOWN)
   rescue Redis::BaseError
     true
-  end
-
-  def fetch_remote
-    @client.get_session(connection.session_name) || {}
-  rescue Waha::Client::Error
-    {}
   end
 end

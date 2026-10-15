@@ -5,7 +5,8 @@
 # dúvida e quando é preciso dar nome ao assunto (o Jev só escolhe, não escreve). Na dúvida, nada muda.
 # Nunca regex nem lista de palavras para interpretar o cliente (R17).
 #
-# Ligada em Automática por padrão (#1260), com o mesmo interruptor da IA do card: só funis com a IA do funil ligada.
+# Desligada por padrão (subject_ai_mode off): o admin liga caixa por caixa, em Sugerir ou Automática (#1260). Só funis
+# com a IA do funil ligada (o mesmo interruptor da IA do card).
 # Automática respeita a pessoa: o que ela acabou de escolher ou fechar vira sugestão, não troca sozinha.
 module Crm::Subjects
   # Espera depois da última mensagem, como a avaliação de etapa: uma rajada vira uma pergunta só.
@@ -33,6 +34,14 @@ module Crm::Subjects
   # A IA do CRM está ligada na instalação e a caixa da conversa tem o CRM e a IA de assunto ligados.
   def self.ligado?(conversation)
     Crm::Ai::Config.enabled? && sugerir?(conversation)
+  end
+
+  # Pergunta o assunto da mensagem do cliente depois da espera, se a caixa tem a IA de assunto ligada. Um caminho só
+  # para a mensagem nova (#1145) e para a recuperada pelo WhatsApp Híbrido (#1638).
+  def self.identificar_depois(message)
+    return unless message.incoming? && ligado?(message.conversation)
+
+    Crm::Subjects::IdentifyJob.set(wait: DEBOUNCE).perform_later(message.conversation_id, message.id)
   end
 
   # O mesmo interruptor da IA do card: funil com a IA desligada fica fora da IA de assunto.

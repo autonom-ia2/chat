@@ -23,6 +23,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/relationships.json
       - /app/javascript/dashboard/i18n/locale/en/resultJourney.json
       - /app/javascript/dashboard/i18n/locale/en/richMessage.json
+      - /app/javascript/dashboard/i18n/locale/en/sidebarFork.json
     translation: >-
       /app/javascript/dashboard/i18n/locale/%two_letters_code%/%original_file_name%
   - source: /config/locales/en.yml

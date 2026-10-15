@@ -37,7 +37,17 @@ module ConversationBotHandoff
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
+  # O motivo da passagem vai no contexto do registro de passagens (#1606): a pessoa entra no save daqui, depois que a
+  # Entrega já saiu, e a conversa prende o motivo nesse save (ConversationPassagem).
   def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
+    motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
+    Crm::Passagens.com_motivo(motivo) do
+      passar_ao_atendimento!(keep_bot: keep_bot, motivo: motivo, release_assignee: release_assignee)
+    end
+    dispatch_bot_handoff_event if dispatch_event
+  end
+
+  def passar_ao_atendimento!(keep_bot:, motivo:, release_assignee:)
     self.class.transaction do
       take_fresh_assignee(release_assignee)
       robo = keep_bot ? handoff_bot : nil
@@ -52,8 +62,8 @@ module ConversationBotHandoff
       end
       save!
     end
-    dispatch_bot_handoff_event if dispatch_event
   end
+  private :passar_ao_atendimento!
 
   def bot_handoff_waiting?
     additional_attributes.is_a?(Hash) && additional_attributes[BOT_HANDOFF_WAITING_SINCE_KEY].present?
