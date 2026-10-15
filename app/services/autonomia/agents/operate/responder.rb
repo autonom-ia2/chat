@@ -39,11 +39,14 @@ module Autonomia
           end
         end
 
-        def initialize(conversation:, agent_inbox:, reply_to_message_id: nil)
+        # `posse` (#1606): o valor com que o settle ficou com o turno (PosseDoTurno.valor). Vai ao ReenfileirarTurno e à
+        # entrega em pedaços, para soltar só a posse que ainda é deste turno.
+        def initialize(conversation:, agent_inbox:, reply_to_message_id: nil, posse: nil)
           @conversation = conversation
           @agent_inbox  = agent_inbox
           @agent        = agent_inbox.agent
           @reply_to_message_id = reply_to_message_id
+          @posse = posse
         end
 
         # -> Result
@@ -308,7 +311,8 @@ module Autonomia
           # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied.
           meta = {
             'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
-            'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result)
+            'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
+            'posse' => @posse
           }
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
@@ -380,7 +384,8 @@ module Autonomia
         def silencio_por_dono_novo
           registrar_silencio('dono_mudou')
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
-                                                               origem: :responder, quem_perdeu: @agent_inbox)
+                                                               origem: :responder, quem_perdeu: @agent_inbox,
+                                                               posse_de_quem_perdeu: @posse)
           Result.silenced
         end
 

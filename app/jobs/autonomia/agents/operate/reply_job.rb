@@ -81,7 +81,8 @@ module Autonomia
           ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
             agent_inbox: agent_inbox,
-            reply_to_message_id: message_id
+            reply_to_message_id: message_id,
+            posse: ::Autonomia::Agents::Operate::PosseDoTurno.valor(job_id: job_id, posse: posse, agent_inbox: agent_inbox)
           ).perform
         end
 

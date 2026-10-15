@@ -8,12 +8,18 @@
 # repete o job), sempre com o mesmo job_id: o mesmo settle rodando de novo reconhece a própria posse e responde, em vez
 # de perder o turno para si mesmo e deixar o cliente sem resposta. Outro settle (job_id diferente) segue barrado.
 #
-# Quem perde o turno porque o dono mudou solta a chave: se o turno voltar para ele (A→B→A), ele pode responder.
-# Laço não há: só uma troca de dono de verdade reenfileira, e o turno vence com a janela do debounce mais a folga.
+# A chave dura a vida do turno (TTL de um dia), não só a janela do debounce: a marca do debounce não é limpa depois da
+# resposta, e o caminho :responder do ReenfileirarTurno não tem prazo dentro desse dia. Com uma chave curta, um pedaço 0
+# atrasado do dono antigo tomaria de novo a chave do dono novo e o faria responder duas vezes. Passado o dia, o
+# ReenfileirarTurno também não refaz mais o turno.
+#
+# Quem perde o turno porque o dono mudou solta a SUA chave, e só se ela ainda tiver o valor que ele tomou
+# (compare-and-delete): se o turno voltar para ele (A→B→A), ele pode responder; uma posse mais nova dele não é apagada.
+# Laço não há: só uma troca de dono de verdade reenfileira, e cada reenfileiramento precisa tomar a chave do destino.
 #
 # Só com a Fase 2 ligada. Fora dela nada aqui é lido nem gravado: o turno segue como sempre foi.
 module Autonomia::Agents::Operate::PosseDoTurno
-  TTL = 2.minutes
+  TTL = 1.day
   # Quem tomou a chave sem ser um settle (o ReenfileirarTurno, que repassa a posse pelo argumento `posse`).
   REPASSADA = 'repassada'.freeze
 
@@ -43,7 +49,15 @@ module Autonomia::Agents::Operate::PosseDoTurno
     dono != REPASSADA && ::Redis::Alfred.get(chave) == dono.to_s
   end
 
-  def soltar(conversation_id, message_id, agent_inbox_id)
-    ::Redis::Alfred.delete(chave(conversation_id, message_id, agent_inbox_id))
+  # O valor com que um settle ficou com o turno: o job_id dele, ou REPASSADA quando a posse veio do ReenfileirarTurno.
+  def valor(job_id:, posse:, agent_inbox:)
+    posse.present? && posse.to_i == agent_inbox.id ? REPASSADA : job_id
+  end
+
+  # Solta só se a chave ainda for de quem pede (`valor`); sem valor, não solta nada.
+  def soltar(conversation_id, message_id, agent_inbox_id, valor)
+    return if valor.blank?
+
+    ::Redis::Alfred.delete_if_equals(chave(conversation_id, message_id, agent_inbox_id), valor.to_s)
   end
 end

@@ -43,6 +43,17 @@ RSpec.describe Autonomia::Agents::Operate::PosseDoTurno, :um_turno do
     expect(described_class.tomar?(conversation.id, 10, vinculo_da_porta.id, dono: 'job-1')).to be(false)
   end
 
+  it 'o settle passa ao Responder o valor da posse: o job_id, ou a posse repassada' do
+    mensagem = cliente_escreve('oi')
+    gatilho(mensagem)
+    job = settle_job(mensagem)
+    job.perform_now
+    expect(Autonomia::Agents::Operate::Responder).to have_received(:new).with(hash_including(posse: job.job_id))
+
+    settle(mensagem, vinculo_da_porta.id)
+    expect(Autonomia::Agents::Operate::Responder).to have_received(:new).with(hash_including(posse: described_class::REPASSADA))
+  end
+
   it 'fora da Fase 2 não lê nem grava a chave' do
     Autonomia::Agents::Fase2.desligar!(account)
 
