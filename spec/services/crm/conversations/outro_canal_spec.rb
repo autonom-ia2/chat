@@ -75,34 +75,77 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     expect(onix.reload).to have_attributes(inbox_id: whatsapp.id, owner_id: ana.id)
   end
 
-  it 'dono sem o funil do card na caixa nova: não liga e a conversa segue a triagem', :aggregate_failures do
-    acesso(ana, pos_venda)
-    acesso(bruno, triage: true)
-    conversation, message = email_do_joao
+  # Dono que não pode receber na caixa nova (decisão do Rodrigo em 15/10): liga, e quem cuida do funil ali recebe.
+  describe 'dono que não pode receber na caixa nova' do
+    let(:carla) { create(:user, account: account, role: :agent, name: 'Carla seguros') }
 
-    sincronizar(conversation, message)
+    it 'sem o funil do card: liga e vai para quem cuida do funil na caixa nova; a Ana segue dona', :aggregate_failures do
+      create(:inbox_member, inbox: email, user: carla)
+      acesso(ana, pos_venda)
+      acesso(bruno, triage: true)
+      acesso(carla, seguros)
+      online(ana, bruno, carla)
+      conversation, message = email_do_joao
 
-    expect(ligada?(conversation)).to be(false)
-    expect(conversation.assignee_id).to eq(bruno.id)
+      sincronizar(conversation, message)
+
+      expect(ligada?(conversation)).to be(true)
+      expect(conversation.assignee_id).to eq(carla.id)
+      expect(onix.reload.owner_id).to eq(ana.id)
+    end
+
+    it 'sem o funil e com regra de Atribuição: vale a regra (convite para quem cuida do funil)' do
+      create(:inbox_member, inbox: email, user: carla)
+      acesso(ana, pos_venda)
+      acesso(carla, seguros)
+      online(ana, carla)
+      seguros.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite' } })
+      allow(Crm::Ai::HandoffInviter).to receive(:new).and_return(instance_double(Crm::Ai::HandoffInviter, perform: true))
+      conversation, message = email_do_joao
+
+      sincronizar(conversation, message)
+
+      expect(Crm::Ai::HandoffInviter).to have_received(:new).with(hash_including(conversation: conversation, agent: carla))
+    end
+
+    it 'fora da caixa nova: liga e vai para quem cuida dela (o Bruno, sem restrição)' do
+      email.inbox_members.where(user: ana).destroy_all
+      conversation, message = email_do_joao(assignee: nil)
+
+      sincronizar(conversation, message)
+
+      expect([ligada?(conversation), conversation.assignee_id, onix.reload.owner_id]).to eq([true, bruno.id, ana.id])
+    end
+
+    it 'em "Só as suas" na caixa nova: liga e vai para quem cuida do funil, não para ela' do
+      row = Crm::InboxAgentAccess.create!(account: account, inbox: email, user: ana, all_pipelines: false, triage: false, only_own: true)
+      row.agent_pipelines.create!(account: account, pipeline: seguros.first)
+      conversation, message = email_do_joao(assignee: nil)
+
+      sincronizar(conversation, message)
+
+      expect([ligada?(conversation), conversation.assignee_id]).to eq([true, bruno.id])
+    end
   end
 
-  it 'dono que não é membro da caixa nova: não liga' do
-    email.inbox_members.where(user: ana).destroy_all
-    conversation, message = email_do_joao
+  describe 'prazo de atividade do card (30 dias)' do
+    it 'card com atividade há 29 dias: liga e vai para a dona' do
+      onix.update_columns(last_activity_at: 29.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      conversation, message = email_do_joao
 
-    sincronizar(conversation, message)
+      sincronizar(conversation, message)
 
-    expect([ligada?(conversation), conversation.assignee_id]).to eq([false, bruno.id])
-  end
+      expect([ligada?(conversation), conversation.assignee_id]).to eq([true, ana.id])
+    end
 
-  it 'dona em "Só as suas" na caixa nova: não liga (o mesmo critério do participante na saída da triagem)' do
-    row = Crm::InboxAgentAccess.create!(account: account, inbox: email, user: ana, all_pipelines: false, triage: false, only_own: true)
-    row.agent_pipelines.create!(account: account, pipeline: seguros.first)
-    conversation, message = email_do_joao
+    it 'card parado há 31 dias: não liga e segue o caminho normal' do
+      onix.update_columns(last_activity_at: 31.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      conversation, message = email_do_joao
 
-    sincronizar(conversation, message)
+      sincronizar(conversation, message)
 
-    expect([ligada?(conversation), conversation.assignee_id]).to eq([false, bruno.id])
+      expect([Crm::CardConversation.exists?(conversation: conversation), conversation.assignee_id]).to eq([false, bruno.id])
+    end
   end
 
   it 'falha na entrega: a conversa fica ligada, com quem estava, e a sincronização segue', :aggregate_failures do
@@ -176,6 +219,66 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     Crm::Ai::HandoffDrainJob.perform_now
     expect(conversation.reload.assignee_id).to eq(ana.id)
     expect(Crm::Entrega::Marca.dados(conversation)).to be_nil
+  end
+
+  describe 'com regra de Atribuição direta no funil' do
+    before { seguros.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct' } }) }
+
+    it 'dona online: recebe, mesmo com outra pessoa do funil mais livre' do
+      create(:conversation, account: account, inbox: email, assignee: ana, status: :open)
+      conversation, message = email_do_joao
+
+      sincronizar(conversation, message)
+
+      expect(conversation.assignee_id).to eq(ana.id)
+    end
+
+    it 'dona offline: a regra decide entre quem cuida do funil (o Bruno, online), sem esperar por ela', :aggregate_failures do
+      online(bruno)
+      conversation, message = email_do_joao(assignee: nil)
+
+      sincronizar(conversation, message)
+
+      expect(ligada?(conversation)).to be(true)
+      expect(conversation.assignee_id).to eq(bruno.id)
+    end
+
+    it 'dona offline e ninguém online ("só para quem está online"): segura para quem entrar primeiro, sem guardar a dona',
+       :aggregate_failures do
+      online
+      conversation, message = email_do_joao
+
+      sincronizar(conversation, message)
+
+      expect(conversation.assignee_id).to be_nil
+      expect(Crm::Entrega::Marca.dados(conversation)).to include('modo' => 'segurando')
+      expect(Crm::Entrega::Marca.dados(conversation)).not_to have_key('dono_id')
+
+      online(bruno)
+      Crm::Ai::HandoffDrainJob.perform_now
+      expect(conversation.reload.assignee_id).to eq(bruno.id)
+    end
+
+    it 'presença fora do ar: segura guardando a dona, sem tratar como offline', :aggregate_failures do
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(Redis::CannotConnectError)
+      conversation, message = email_do_joao
+
+      sincronizar(conversation, message)
+
+      expect(conversation.assignee_id).to be_nil
+      expect(Crm::Entrega::Marca.dados(conversation)).to include('falha' => 'presenca_indisponivel', 'dono_id' => ana.id)
+    end
+  end
+
+  it 'regra de convite e dona offline: a regra convida quem cuida do funil e está online (o Bruno)' do
+    online(bruno)
+    seguros.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite' } })
+    allow(Crm::Ai::HandoffInviter).to receive(:new).and_return(instance_double(Crm::Ai::HandoffInviter, perform: true))
+    conversation, message = email_do_joao
+
+    sincronizar(conversation, message)
+
+    expect(Crm::Ai::HandoffInviter).to have_received(:new).with(hash_including(conversation: conversation, agent: bruno))
   end
 
   it 'regra de convite no funil: convida a dona, sem atribuir' do

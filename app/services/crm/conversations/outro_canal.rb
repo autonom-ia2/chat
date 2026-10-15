@@ -8,17 +8,22 @@
 # - na mensagem do cliente que abriu a conversa (conversa que nós começamos, ou já em andamento, não entra);
 # - a conversa ainda sem card, aberta ou pendente;
 # - o card aberto do MESMO contato (outro cadastro com o mesmo telefone ou e-mail não vale: o merge de contato já leva
-#   os cards), de OUTRA caixa (na mesma caixa vale a deduplicação de sempre), num funil ativo. Mais de um: o de atividade
-#   mais recente (a IA de assunto pode trocar o foco depois);
-# - o dono desse card pode receber na caixa nova: é da conta, é membro da caixa e tem o funil do card nela (o mesmo
-#   critério do participante na saída da triagem, Crm::Access::TriageExit). Card sem dono, ou dono que não pode: nada
-#   muda, a conversa segue a triagem.
+#   os cards), de OUTRA caixa (na mesma caixa vale a deduplicação de sempre), num funil ativo, com atividade nos
+#   últimos JANELA_DE_ATIVIDADE (decisão do Rodrigo em 15/10: card parado há mais tempo não puxa a conversa). Mais de
+#   um: o de atividade mais recente (a IA de assunto pode trocar o foco depois);
+# - o card tem dono. Card sem dono: nada muda, a conversa segue a triagem.
 #
 # O que faz: liga a conversa ao card (vira o assunto atual dela; o funil do card passa a decidir quem a vê) e, se
-# ninguém começou a atender (nenhuma resposta de pessoa), passa a conversa pelo motor de entrega dirigida ao dono
-# (bot_handoff! → Crm::Entrega com `dono:`), numa gravação só: sai quem o rodízio nativo tinha posto e entra o dono.
-# Dono offline ou regra de convite: o motor segura ou convida, como faz para a pessoa fixa da Atribuição. Caixa com robô:
-# o robô fazia a triagem (R12) e a R13 a pula; com o dono fora, o robô segue respondendo à espera dele.
+# ninguém começou a atender (nenhuma resposta de pessoa), passa a conversa pelo motor de entrega (bot_handoff! →
+# Crm::Entrega), numa gravação só: sai quem o rodízio nativo tinha posto e entra quem recebe. Dirigida ao dono
+# (`dono:`) quando ele pode receber na caixa nova: é da conta, é membro dela e tem o funil do card nela (o mesmo critério
+# do participante na saída da triagem, Crm::Access::TriageExit). Dono que não pode (decisão do Rodrigo em 15/10): liga
+# do mesmo jeito, e o motor entrega para quem cuida do funil na caixa nova, pela regra de Atribuição se houver; o dono
+# continua dono do card.
+# Dono offline (decisão do Rodrigo em 15/10, "depende da regra de atribuição"): sem regra no funil, a conversa espera
+# por ele, sem cair para outra pessoa; com regra, vale o que a regra manda (rodízio, pessoa fixa, convite, segurar até
+# alguém entrar). Com o dono online e regra de convite, ele é convidado. Caixa com robô: o robô fazia a triagem (R12) e a
+# R13 a pula; enquanto ninguém recebe, o robô segue respondendo.
 # Quem já respondeu não perde a conversa: ela só fica ligada ao card. Numa caixa com o rodízio nativo, quem está no
 # nome sem ter respondido (o rodízio atribui na criação, antes desta sincronização) sai: é a triagem que a R13 pula.
 # Sem o rodízio, quem está no nome foi posto por uma pessoa ou automação e fica.
@@ -27,6 +32,8 @@
 class Crm::Conversations::OutroCanal
   MOTIVO = 'outro_canal'.freeze
   ATIVIDADE_SQL = 'COALESCE(crm_cards.last_activity_at, crm_cards.updated_at)'.freeze
+  # Só puxa a conversa nova o card com atividade neste prazo (a mesma leitura de atividade da deduplicação).
+  JANELA_DE_ATIVIDADE = 30.days
 
   def initialize(conversation:, message:)
     @conversation = conversation
@@ -54,9 +61,9 @@ class Crm::Conversations::OutroCanal
     return unless em_andamento? && sem_card?
 
     card = card_travado
-    dono = card && dono_que_recebe(card)
-    return unless dono && ligar(card)
+    return unless card&.owner && ligar(card)
 
+    dono = dono_que_recebe(card)
     entregar(card, dono)
     registrar(card, dono)
     card
@@ -97,6 +104,7 @@ class Crm::Conversations::OutroCanal
     @account.crm_cards.open.joins(:pipeline).merge(Crm::Pipeline.active)
             .where(contact_id: @conversation.contact_id)
             .where('crm_cards.inbox_id IS DISTINCT FROM ?', @conversation.inbox_id)
+            .where("#{ATIVIDADE_SQL} >= ?", JANELA_DE_ATIVIDADE.ago)
             .order(Arel.sql("#{ATIVIDADE_SQL} DESC, crm_cards.id DESC"))
             .first
   end
@@ -119,14 +127,12 @@ class Crm::Conversations::OutroCanal
     nil
   end
 
-  # Já com o dono, ou com alguém que já respondeu: fica como está.
-  # O dono precisa estar na fila de quem cuida, a mesma que o motor usa (já com o card ligado): fora dela, a conversa
-  # fica só ligada ao card, e não vai para outra pessoa da fila no lugar dele.
+  # Já com o dono, ou com alguém que já respondeu: fica como está. `dono` nil (ele não pode receber na caixa nova): o
+  # motor entrega para quem cuida do funil do card, como em qualquer entrega.
   # Savepoint próprio: uma falha da entrega desfaz só a entrega; a conversa segue ligada e a sincronização continua.
   def entregar(card, dono)
-    return if @conversation.assignee_id == dono.id
+    return if dono && @conversation.assignee_id == dono.id
     return if pessoa_respondeu? || atribuida_por_alguem?
-    return unless Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas.include?(dono)
 
     Conversation.transaction(requires_new: true) do
       @conversation.bot_handoff!(dispatch_event: false, motivo: MOTIVO, release_assignee: true, dono: dono)
@@ -149,8 +155,8 @@ class Crm::Conversations::OutroCanal
   # Só ids (nunca texto do cliente).
   def registrar(card, dono)
     Rails.logger.info(
-      "[crm][outro_canal] conversa=#{@conversation.id} conta=#{@account.id} card=#{card.id} dono=#{dono.id} " \
-      "atendente=#{@conversation.assignee_id || '-'}"
+      "[crm][outro_canal] conversa=#{@conversation.id} conta=#{@account.id} card=#{card.id} dono=#{card.owner_id} " \
+      "dirigida=#{dono ? 'sim' : 'nao'} atendente=#{@conversation.assignee_id || '-'}"
     )
   end
 end

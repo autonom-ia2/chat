@@ -24,9 +24,10 @@ class Crm::Entrega
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card).
-  # `dono`: a pessoa a quem a conversa é dirigida (o dono do card, R13 do #1150). Se ela está na fila de quem cuida, a fila
-  # é só ela, e a regra do funil vale como para a pessoa fixa: entrega, convida ou segura até ela entrar (a marca guarda
-  # o dono para a próxima tentativa). Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
+  # `dono`: a pessoa a quem a conversa é dirigida (o dono do card, R13 do #1150), se está na fila de quem cuida (ver
+  # #fila). Sem regra no funil, a conversa espera por ela (a marca guarda o dono para a próxima tentativa); com regra, ela
+  # recebe (ou é convidada) quando está online, e senão a regra decide. Fora da fila (sem o funil, saiu da caixa), vale a
+  # fila de sempre.
   def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, dono: nil) # rubocop:disable Metrics/ParameterLists
     @conversation = conversation
     @motivo = motivo.to_s
@@ -67,12 +68,16 @@ class Crm::Entrega
     convite = settings[:handoff_mode] == 'r3_invite'
     selector = seletor(card, settings, require_online: convite ? false : settings[:prefer_online])
     escolher(selector, card, settings, acao: convite ? :convite : :pessoa)
+  rescue Crm::Ai::HandoffMemberSelector::PresencaIndisponivel
+    # Sem saber se o dono está online (R13): segura e guarda o dono, e a fila decide quando a presença voltar.
+    @dono_dirigido = @dono
+    Plano.new(acao: :segurar, card: card, settings: settings, motivo: 'presenca_indisponivel')
   end
 
   # Sem regra: quem cuida da conversa e está online, com menos conversas abertas (decisão 2 do Rodrigo, 13/10).
   def sem_regra(card)
     selector = Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card),
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, nil),
       mode: 'round_robin', prefer_online: true, require_online: true, conversation: @conversation
     )
     escolher(selector, card, nil)
@@ -92,18 +97,35 @@ class Crm::Entrega
 
   def seletor(card, settings, require_online:)
     Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card),
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, settings),
       mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online,
       suggested_name: @sugestao, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
     )
   end
 
-  def fila(card)
+  # Quem cuida (Crm::Entrega::QuemCuida). Com o dono nela (R13 do #1150; decisão do Rodrigo em 15/10: "depende da regra
+  # de atribuição"): sem regra, a fila é só ele e a conversa espera por ele; com regra, só ele quando está online, e
+  # com ele fora a regra decide entre quem cuida do funil, como em qualquer entrega.
+  def fila(card, settings)
     @fila ||= begin
       pessoas = Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas
-      @dono_na_fila = @dono && pessoas.find { |pessoa| pessoa.id == @dono.id }
-      @dono_na_fila ? [@dono_na_fila] : pessoas
+      @dono_dirigido = dono_dirigido(pessoas, settings)
+      @dono_dirigido ? [@dono_dirigido] : pessoas
     end
+  end
+
+  def dono_dirigido(pessoas, settings)
+    dono = @dono && pessoas.find { |pessoa| pessoa.id == @dono.id }
+    dono if dono && (settings.nil? || online?(dono))
+  end
+
+  # Presença (Redis) fora do ar não é "offline": registra a falha, só com ids, e quem chama segura (#pela_regra). Outro
+  # erro sobe: não vira "offline" em silêncio.
+  def online?(pessoa)
+    Crm::Entrega::Presenca.online_ids(@conversation.account_id).include?(pessoa.id)
+  rescue Redis::BaseError => e
+    Rails.logger.error("[crm][entrega] presença indisponível conta=#{@conversation.account_id} erro=#{e.class}")
+    raise Crm::Ai::HandoffMemberSelector::PresencaIndisponivel, e.class.name
   end
 
   def nada(motivo)
@@ -156,7 +178,7 @@ class Crm::Entrega
     vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
     falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
     Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao,
-                                              dono: @dono_na_fila)
+                                              dono: @dono_dirigido)
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)
