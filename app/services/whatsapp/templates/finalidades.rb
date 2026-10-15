@@ -10,19 +10,26 @@
 # `campo`, com exemplo) e `quick_reply` (texto fixo; o `payload` vai no envio, não no modelo). Quick replies juntos, como a
 # Meta pede (`SubmitFormat`). O que o envio precisa saber deles está em `Pronto#botoes_do_envio`.
 #
-# Cobrança (`cobranca_vencimento`, #1498): um modelo por momento (antes, no dia, depois do vencimento) e por valor (com
-# ou sem). O momento é texto fixo, não variável: é o texto fixo que a Meta aprova. Sem "negócio" nem "compra" no texto.
+# Cada finalidade mora no seu arquivo em `finalidades/` (a cobrança em `finalidades/cobranca.rb`), com a constante
+# `FINALIDADES`; o `CATALOGO` junta todas. Finalidade nova = arquivo novo, sem tocar aqui.
 module Whatsapp::Templates::Finalidades
   # Finalidade ou variante que não existe: erro de quem chama.
   class Desconhecida < ArgumentError; end
+  # Botão com a base do ambiente e a base vazia (FRONTEND_URL sem valor): configuração, não catálogo.
+  class SemBase < StandardError; end
 
   Pronto = Data.define(:finalidade, :nome, :nome_amigavel, :dono, :idioma, :texto, :campos, :botoes) do
     # O pedido de criação no formato da Meta (o mesmo que a tela de Modelos manda ao `MetaClient`).
     def corpo
-      exemplos = campos.values.map { |campo| Whatsapp::Templates::Finalidades::EXEMPLOS.fetch(campo) }
+      exemplos = campos.values.map { |campo| Whatsapp::Templates::Finalidades.exemplo(campo) }
       components = [{ type: 'BODY', text: texto, example: { body_text: [exemplos] } }]
-      components << { type: 'BUTTONS', buttons: botoes.map { |botao| botao_da_meta(botao) } } if botoes.any?
+      components << { type: 'BUTTONS', buttons: botoes_da_meta } if botoes.any?
       { name: nome, language: idioma, category: Whatsapp::Templates::Finalidades::CATEGORIA, components: components }
+    end
+
+    # Os botões no formato da Meta, com a URL na base deste ambiente: o que vai na criação e o que o aprovado precisa ter.
+    def botoes_da_meta
+      botoes.map { |botao| botao_da_meta(botao) }
     end
 
     # [{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' }, { 'indice' => 1, 'tipo' => 'quick_reply',
@@ -39,54 +46,38 @@ module Whatsapp::Templates::Finalidades
     def botao_da_meta(botao)
       return { type: 'QUICK_REPLY', text: botao[:texto] } if botao[:tipo] == 'quick_reply'
 
-      url = { type: 'URL', text: botao[:texto], url: botao[:url] }
-      botao[:campo] ? url.merge(example: [botao[:url].split('{{').first + botao[:exemplo]]) : url
+      endereco = Whatsapp::Templates::Finalidades.url_de(botao[:url])
+      url = { type: 'URL', text: botao[:texto], url: endereco }
+      return url unless botao[:campo]
+
+      exemplo = botao[:exemplo] || Whatsapp::Templates::Finalidades.exemplo(botao[:campo])
+      url.merge(example: [endereco.split('{{').first + exemplo])
     end
   end
 
   IDIOMA = 'pt_BR'.freeze
   CATEGORIA = 'UTILITY'.freeze
+  # A base de cada link que muda por ambiente (Hub2You, Autonom.ia): no catálogo, `url: { base: :booking_invite,
+  # caminho: '/b/{{1}}' }`, nunca o endereço escrito. Resolvida na hora (`url_de`).
+  BASES_DE_URL = { booking_invite: -> { Crm::BookingInvite.base_url } }.freeze
+  # Um exemplo por campo, que a Meta pede para cada variável (e para o fim variável da URL). Link: base + caminho.
   EXEMPLOS = {
     'cliente.primeiro_nome' => 'Ana', 'negocio.valor' => 'R$ 150,00', 'negocio.titulo' => 'Mensalidade de outubro',
-    'negocio.prazo' => '20/10/2026'
+    'negocio.prazo' => '20/10/2026',
+    'horario.data_hora' => '14/10 às 15:00', 'horario.data' => '14/10/2026', 'horario.hora' => '15:00',
+    'horario.link_gestao' => { base: :booking_invite, caminho: '/b/AB3K9QXZ' }, 'horario.link_codigo' => 'AB3K9QXZ'
   }.freeze
-  COBRANCA_FIM = 'Se o pagamento já foi feito, por favor desconsidere esta mensagem.'.freeze
-  COBRANCA_DEPOIS_FIM = "Se precisar de ajuda com o pagamento, é só responder esta mensagem. #{COBRANCA_FIM}".freeze
-  COM_VALOR = %w[cliente.primeiro_nome negocio.valor negocio.titulo negocio.prazo].freeze
-  SEM_VALOR = %w[cliente.primeiro_nome negocio.titulo negocio.prazo].freeze
 
   # finalidade => { dono:, opcoes: [chaves da variante],
   #                 variantes: { [valores das opções] => { nome:, amigavel:, texto:, campos:, botoes: [] } } }
-  CATALOGO = {
-    'cobranca_vencimento' => {
-      dono: 'cobranca',
-      opcoes: %i[momento com_valor],
-      variantes: {
-        ['antes', true] => { nome: 'cobranca_antes_vencimento_com_valor_v1', amigavel: 'Cobrança: antes do vencimento (com valor)',
-                             campos: COM_VALOR,
-                             texto: 'Olá, {{1}}! Passando para lembrar que o seu pagamento de {{2}} referente a {{3}} vence em ' \
-                                    "{{4}}. #{COBRANCA_FIM}" },
-        ['antes', false] => { nome: 'cobranca_antes_vencimento_sem_valor_v1', amigavel: 'Cobrança: antes do vencimento',
-                              campos: SEM_VALOR,
-                              texto: 'Olá, {{1}}! Passando para lembrar que o seu pagamento referente a {{2}} vence em {{3}}. ' \
-                                     "#{COBRANCA_FIM}" },
-        ['no_dia', true] => { nome: 'cobranca_dia_vencimento_com_valor_v1', amigavel: 'Cobrança: no dia do vencimento (com valor)',
-                              campos: COM_VALOR,
-                              texto: "Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} vence hoje, {{4}}. #{COBRANCA_FIM}" },
-        ['no_dia', false] => { nome: 'cobranca_dia_vencimento_sem_valor_v1', amigavel: 'Cobrança: no dia do vencimento',
-                               campos: SEM_VALOR,
-                               texto: "Olá, {{1}}! O seu pagamento referente a {{2}} vence hoje, {{3}}. #{COBRANCA_FIM}" },
-        ['depois', true] => { nome: 'cobranca_apos_vencimento_com_valor_v1', amigavel: 'Cobrança: depois do vencimento (com valor)',
-                              campos: COM_VALOR,
-                              texto: 'Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} venceu em {{4}} e ainda não consta ' \
-                                     "como pago. #{COBRANCA_DEPOIS_FIM}" },
-        ['depois', false] => { nome: 'cobranca_apos_vencimento_sem_valor_v1', amigavel: 'Cobrança: depois do vencimento',
-                               campos: SEM_VALOR,
-                               texto: 'Olá, {{1}}! O seu pagamento referente a {{2}} venceu em {{3}} e ainda não consta como ' \
-                                      "pago. #{COBRANCA_DEPOIS_FIM}" }
-      }
-    }
-  }.freeze
+  # Junta o `FINALIDADES` de cada arquivo de `finalidades/`. A mesma finalidade em dois arquivos para a carga.
+  CATALOGO = Dir[File.join(__dir__, 'finalidades', '*.rb')].reduce({}) do |catalogo, arquivo|
+    proprias = const_get(File.basename(arquivo, '.rb').camelize, false)::FINALIDADES
+    repetidas = catalogo.keys & proprias.keys
+    raise ArgumentError, "finalidade repetida: #{repetidas.join(', ')}" if repetidas.any?
+
+    catalogo.merge(proprias)
+  end.freeze
 
   module_function
 
@@ -110,6 +101,19 @@ module Whatsapp::Templates::Finalidades
   # O dono (selo "Usado pelo sistema" da tela de Modelos) de um nome de pronto, ou nil.
   def dono_de(nome)
     prontos.find { |pronto| pronto.nome == nome.to_s }&.dono
+  end
+
+  # O endereço de um botão URL: o texto como está, ou `{ base:, caminho: }` com a base deste ambiente.
+  def url_de(url)
+    return url unless url.is_a?(Hash)
+
+    base = BASES_DE_URL[url[:base]] || raise(Desconhecida, "base de URL #{url[:base]}")
+    endereco = base.call.presence || raise(SemBase, "base de URL #{url[:base]} vazia")
+    "#{endereco}#{url[:caminho]}"
+  end
+
+  def exemplo(campo)
+    url_de(EXEMPLOS.fetch(campo))
   end
 
   def normalizar(valor)

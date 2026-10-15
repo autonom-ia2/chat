@@ -245,6 +245,144 @@ RSpec.describe Whatsapp::Templates::Garantir do
     )
   end
 
+  # O `Route` do agendamento pergunta numa requisição web (#1524): lá só se lê. Nada de Meta, banco ou fila.
+  describe 'só leitura (criar: false)' do
+    # Todo SQL que não é leitura, enquanto o bloco roda.
+    def escritas(&)
+      sqls = []
+      anotar = ->(*, payload) { sqls << payload[:sql] unless payload[:name] == 'SCHEMA' }
+      ActiveSupport::Notifications.subscribed(anotar, 'sql.active_record', &)
+      sqls.reject { |sql| sql.lstrip.upcase.start_with?('SELECT') }
+    end
+
+    def so_ler
+      resultado = nil
+      sqls = nil
+      expect { sqls = escritas { resultado = garantir(criar: false) } }.not_to have_enqueued_job
+      expect(sqls).to eq([])
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
+      resultado
+    end
+
+    before { allow(Whatsapp::Templates::MetaClient).to receive(:new) }
+
+    it 'fora da lista: indisponível com o motivo ausente, sem criar nem gravar' do
+      expect(so_ler).to eq(status: :indisponivel, motivo: 'ausente')
+      expect(channel.reload.message_templates).to eq([])
+      expect(WhatsappTemplateProfile.count).to eq(0)
+    end
+
+    it 'aprovado: pronto, sem gravar o perfil que faltava' do
+      put_in_list(listed('APPROVED'))
+
+      expect(so_ler).to eq(status: :pronto, nome: pronto.nome, idioma: 'pt_BR', categoria: 'UTILITY', campos: pronto.campos)
+      expect(WhatsappTemplateProfile.count).to eq(0)
+    end
+
+    it 'em análise, recusado e texto diferente: os mesmos motivos de sempre' do
+      put_in_list(listed('PENDING'))
+      expect(so_ler).to eq(status: :em_analise, nome: pronto.nome, idioma: 'pt_BR')
+
+      put_in_list(listed('REJECTED', 'rejected_reason' => 'INVALID_FORMAT'))
+      expect(so_ler).to include(status: :indisponivel, motivo: 'recusado', detalhe: 'INVALID_FORMAT')
+
+      put_in_list(listed('APPROVED', 'components' => [{ 'type' => 'BODY', 'text' => 'Oi, {{1}}! Outra coisa {{2}} aqui.' }]))
+      expect(so_ler).to eq(status: :indisponivel, motivo: 'texto_diferente')
+    end
+
+    it 'perfil existente não é tocado' do
+      put_in_list(listed('APPROVED'))
+      perfil = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: pronto.nome,
+                                               language: 'pt_BR')
+
+      so_ler
+
+      expect(perfil.reload).to have_attributes(system_owner: nil, meta_template_id: nil)
+    end
+  end
+
+  # Aprovado só serve com os botões do pronto: tipo, texto, URL e ordem (#1524).
+  describe 'botões' do
+    let(:catalogo_teste) do
+      { 'teste_link' => { dono: 'agendamento', opcoes: [], variantes: { [] => {
+        nome: 'teste_link_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome horario.data_hora],
+        texto: 'Olá, {{1}}! Seu horário é {{2}}. Use os botões abaixo.',
+        botoes: [{ tipo: 'url', texto: 'Ver meu horário', url: { base: :booking_invite, caminho: '/b/{{1}}' }, campo: 'horario.link_codigo' },
+                 { tipo: 'quick_reply', texto: 'Parar avisos', payload: 'stop_notices' }]
+      } } } }
+    end
+    let(:hub2you) { 'https://chat.hub2you.ai' }
+
+    before { stub_const('Whatsapp::Templates::Finalidades::CATALOGO', Whatsapp::Templates::Finalidades::CATALOGO.merge(catalogo_teste)) }
+
+    def aprovado_com(buttons)
+      teste = with_modified_env(FRONTEND_URL: hub2you) { Whatsapp::Templates::Finalidades.pronto(:teste_link).corpo.deep_stringify_keys }
+      components = teste['components'].reject { |component| component['type'] == 'BUTTONS' }
+      components << { 'type' => 'BUTTONS', 'buttons' => buttons } if buttons
+      put_in_list(teste.merge('id' => '903', 'status' => 'APPROVED', 'components' => components))
+    end
+
+    def url(endereco = "#{hub2you}/b/{{1}}")
+      { 'type' => 'URL', 'text' => 'Ver meu horário', 'url' => endereco, 'example' => ["#{hub2you}/b/AB3K9QXZ"] }
+    end
+
+    def parar(texto = 'Parar avisos')
+      { 'type' => 'QUICK_REPLY', 'text' => texto }
+    end
+
+    def garantir_link
+      with_modified_env(FRONTEND_URL: hub2you) { described_class.call(inbox: inbox, finalidade: :teste_link, criar: false) }
+    end
+
+    it 'os mesmos botões, com a URL escrita de outro jeito (maiúscula no domínio): pronto' do
+      aprovado_com([url('HTTPS://Chat.Hub2You.AI/b/{{1}}'), parar])
+
+      expect(garantir_link).to include(status: :pronto, botoes: [{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' },
+                                                                 { 'indice' => 1, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' }])
+    end
+
+    it 'outro texto de botão, outra URL, outra ordem, botão a menos ou sem botões: indisponível' do
+      [[url, parar('Sair')], [url('https://outro.site/b/{{1}}'), parar], [url("#{hub2you}/x/{{1}}"), parar],
+       [url("#{hub2you}/b/fixo"), parar], [url("#{hub2you}/b/variavel"), parar], [parar, url], [url], nil].each do |buttons|
+        aprovado_com(buttons)
+        expect(garantir_link).to eq(status: :indisponivel, motivo: 'botoes_diferentes'), buttons.inspect
+      end
+    end
+
+    it 'outro tipo de botão no lugar: indisponível' do
+      aprovado_com([{ 'type' => 'PHONE_NUMBER', 'text' => 'Ver meu horário', 'phone_number' => '+5511999999999' }, parar])
+
+      expect(garantir_link).to include(status: :indisponivel)
+    end
+
+    it 'pronto sem botões e modelo com botão: indisponível' do
+      put_in_list(listed('APPROVED', 'components' => pronto.corpo.deep_stringify_keys['components'] +
+                                                      [{ 'type' => 'BUTTONS', 'buttons' => [parar] }]))
+
+      expect(garantir(criar: false)).to eq(status: :indisponivel, motivo: 'botoes_diferentes')
+    end
+
+    it 'FRONTEND_URL vazio: indisponível com o motivo, sem criar nada' do
+      aprovado_com([url, parar])
+      allow(client).to receive(:create)
+
+      resultado = with_modified_env(FRONTEND_URL: '') { described_class.call(inbox: inbox, finalidade: :teste_link) }
+
+      expect(resultado).to eq(status: :indisponivel, motivo: 'sem_base_url')
+      expect(client).not_to have_received(:create)
+    end
+
+    it 'a URL do aprovado é comparada com a base do ambiente: outra base não serve' do
+      aprovado_com([url, parar])
+
+      expect(garantir_link).to include(status: :pronto)
+      autonomia = with_modified_env(FRONTEND_URL: 'https://app.autonomia.site') do
+        described_class.call(inbox: inbox, finalidade: :teste_link, criar: false)
+      end
+      expect(autonomia).to eq(status: :indisponivel, motivo: 'botoes_diferentes')
+    end
+  end
+
   it 'o modelo do sistema fica protegido na tela de Modelos' do
     expect(Whatsapp::Templates::SystemTemplates.owner_for(pronto.nome)).to eq('cobranca')
   end

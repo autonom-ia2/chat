@@ -46,6 +46,42 @@ RSpec.describe Whatsapp::Templates::Finalidades do
     end
   end
 
+  # A extração do catálogo (#1524) não pode mudar um nome nem uma letra da cobrança que já está em produção (#1535).
+  it 'a cobrança segue com os mesmos nomes e textos' do
+    fim = 'Se o pagamento já foi feito, por favor desconsidere esta mensagem.'
+    depois = "Se precisar de ajuda com o pagamento, é só responder esta mensagem. #{fim}"
+    cobranca = prontos.select { |pronto| pronto.finalidade == 'cobranca_vencimento' }.to_h { |pronto| [pronto.nome, pronto.texto] }
+
+    expect(cobranca).to eq(
+      'cobranca_antes_vencimento_com_valor_v1' =>
+        "Olá, {{1}}! Passando para lembrar que o seu pagamento de {{2}} referente a {{3}} vence em {{4}}. #{fim}",
+      'cobranca_antes_vencimento_sem_valor_v1' =>
+        "Olá, {{1}}! Passando para lembrar que o seu pagamento referente a {{2}} vence em {{3}}. #{fim}",
+      'cobranca_dia_vencimento_com_valor_v1' => "Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} vence hoje, {{4}}. #{fim}",
+      'cobranca_dia_vencimento_sem_valor_v1' => "Olá, {{1}}! O seu pagamento referente a {{2}} vence hoje, {{3}}. #{fim}",
+      'cobranca_apos_vencimento_com_valor_v1' =>
+        "Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} venceu em {{4}} e ainda não consta como pago. #{depois}",
+      'cobranca_apos_vencimento_sem_valor_v1' =>
+        "Olá, {{1}}! O seu pagamento referente a {{2}} venceu em {{3}} e ainda não consta como pago. #{depois}"
+    )
+  end
+
+  it 'o catálogo junta as finalidades de cada arquivo de finalidades/' do
+    expect(described_class::CATALOGO['cobranca_vencimento']).to eq(described_class::Cobranca::FINALIDADES['cobranca_vencimento'])
+    expect(described_class::CATALOGO).to be_frozen
+  end
+
+  it 'todo campo de pronto e todo campo de horário tem exemplo' do
+    horario = TemplateFields::Catalog::FIELDS.keys.select { |campo| campo.start_with?('horario.') }
+    with_modified_env FRONTEND_URL: 'https://chat.hub2you.ai' do
+      (prontos.flat_map { |pronto| pronto.campos.values } + horario).uniq.each do |campo|
+        expect(described_class.exemplo(campo)).to be_present, campo
+      end
+      expect(described_class.exemplo('horario.link_gestao')).to eq('https://chat.hub2you.ai/b/AB3K9QXZ')
+    end
+    expect(described_class.exemplo('horario.data_hora')).to eq('14/10 às 15:00')
+  end
+
   it 'todo campo é uma chave do catálogo de campos (quem envia sabe de onde vem o valor)' do
     prontos.flat_map { |pronto| pronto.campos.values }.uniq.each do |campo|
       expect(TemplateFields::Catalog.known?(campo)).to be(true), campo
@@ -117,6 +153,36 @@ RSpec.describe Whatsapp::Templates::Finalidades do
         [{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' },
          { 'indice' => 1, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' }]
       )
+    end
+
+    # A base do link muda por ambiente (Hub2You, Autonom.ia): o catálogo guarda só a base nomeada e o caminho.
+    it 'URL com base do ambiente: o endereço e o exemplo usam o FRONTEND_URL da hora' do
+      dinamico = { 'teste_base' => { dono: 'agendamento', opcoes: [], variantes: { [] => {
+        nome: 'teste_base_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome horario.data_hora],
+        texto: 'Olá, {{1}}! Seu horário é {{2}}. Use o botão abaixo.',
+        botoes: [{ tipo: 'url', texto: 'Ver meu horário', url: { base: :booking_invite, caminho: '/b/{{1}}' },
+                   campo: 'horario.link_codigo' }]
+      } } } }
+      stub_const("#{described_class}::CATALOGO", described_class::CATALOGO.merge(dinamico))
+      botao = lambda do
+        template = described_class.pronto(:teste_base).corpo.deep_stringify_keys
+        expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([])
+        template['components'].find { |component| component['type'] == 'BUTTONS' }['buttons'].sole
+      end
+
+      with_modified_env FRONTEND_URL: 'https://chat.hub2you.ai/' do
+        expect(botao.call).to include('url' => 'https://chat.hub2you.ai/b/{{1}}', 'example' => ['https://chat.hub2you.ai/b/AB3K9QXZ'])
+      end
+      with_modified_env FRONTEND_URL: 'https://app.autonomia.site' do
+        expect(botao.call).to include('url' => 'https://app.autonomia.site/b/{{1}}', 'example' => ['https://app.autonomia.site/b/AB3K9QXZ'])
+      end
+    end
+
+    it 'base de URL desconhecida é erro de quem escreveu o catálogo' do
+      expect { described_class.url_de(base: :outra, caminho: '/x') }.to raise_error(described_class::Desconhecida)
+      with_modified_env FRONTEND_URL: '' do
+        expect { described_class.url_de(base: :booking_invite, caminho: '/b/{{1}}') }.to raise_error(described_class::SemBase)
+      end
     end
 
     it 'pronto sem botões não manda o componente de botões' do
