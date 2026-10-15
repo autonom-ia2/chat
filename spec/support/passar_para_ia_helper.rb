@@ -1,9 +1,33 @@
-# #1593 — dublês por contrato do serviço dos Agentes (Autonomia::Agents::PassarParaIa, PR-B da sessão Agentes IA) e do
-# registro de passagens do CRM (Crm::Passagens, #1606), até os dois entrarem na main. Os nomes e assinaturas são os
-# combinados nas Issues; trocar por chamadas reais quando entrarem.
+# #1593 — dublês por contrato do que ainda não está na main:
+# - Autonomia::Agents::PassarParaIa (PR-B da sessão Agentes IA): `call(conversation:, agent:, por:, motivo:, origem:,
+#   transfer_id:)` -> Resultado (ok?, trocou?, codigo), `destinos_possiveis(conversation)` e `destinos_na_caixa(inbox)`
+#   -> Array<Agent>;
+# - Crm::Passagens.com_motivo(motivo) { ... } (PR B da #1606).
+# Quando cada um entrar, o dublê sai e o spec usa o código real.
 module PassarParaIaHelper
+  CODIGOS_OK = %i[passou ja_e_o_dono].freeze
+
+  # O Resultado do PassarParaIa, na forma combinada.
+  class ResultadoDaIa
+    attr_reader :codigo
+
+    def initialize(codigo)
+      @codigo = codigo
+    end
+
+    def ok?
+      CODIGOS_OK.include?(codigo)
+    end
+
+    def trocou?
+      codigo == :passou
+    end
+  end
+
   def dublar_passar_para_ia(destinos: [], codigo: :passou)
+    # rubocop:disable RSpec/VerifiedDoubleReference -- a constante chega no PR-B dos Agentes IA
     servico = class_double('Autonomia::Agents::PassarParaIa')
+    # rubocop:enable RSpec/VerifiedDoubleReference
     allow(servico).to receive(:destinos_possiveis).and_return(destinos)
     allow(servico).to receive(:destinos_na_caixa).and_return(destinos)
     allow(servico).to receive(:call).and_return(resultado_da_ia(codigo))
@@ -12,25 +36,20 @@ module PassarParaIaHelper
   end
 
   def resultado_da_ia(codigo)
-    ok = %i[passou ja_e_o_dono].include?(codigo)
-    double('Autonomia::Agents::PassarParaIa::Resultado', ok?: ok, trocou?: codigo == :passou, codigo: codigo)
+    ResultadoDaIa.new(codigo)
   end
 
-  def dublar_passagens(ultima_aberta: nil)
-    passagens = class_double('Crm::Passagens')
-    allow(passagens).to receive(:registrar!)
-    allow(passagens).to receive(:com_motivo) { |_motivo, &bloco| bloco.call }
-    allow(passagens).to receive(:ultima_aberta).and_return(ultima_aberta)
-    stub_const('Crm::Passagens', passagens)
-    passagens
-  end
-
-  # A ponta de uma passagem como o leitor do #1606 devolve: classe + id identificam; tipo e nome são para a tela.
-  def ponta(registro)
-    case registro
-    when User then double('ponta', classe: 'User', tipo: :pessoa, id: registro.id, nome: registro.name)
-    else double('ponta', classe: 'Autonomia::Agents::Agent', tipo: :ia, id: registro.id, nome: registro.name)
+  # Só o `com_motivo`, que chega no PR B da #1606: roda o bloco e anota o motivo. O resto do Crm::Passagens segue real.
+  # Sem a verificação do dublê parcial só enquanto o método não existe. -> a lista dos motivos marcados.
+  def dublar_com_motivo
+    motivos = []
+    without_partial_double_verification do
+      allow(Crm::Passagens).to receive(:com_motivo) do |motivo, &bloco|
+        motivos << motivo
+        bloco.call
+      end
     end
+    motivos
   end
 
   def criar_agente_ia(account, nome)

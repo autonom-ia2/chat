@@ -936,6 +936,10 @@
     "controller": "api/v1/accounts/conversations/participants#show",
     "parametros": []
   },
+  "conversations/:conversation_id/passar_para": {
+    "controller": "api/v1/accounts/conversations/passar_para#show",
+    "parametros": []
+  },
   "conversations/:id": {
     "controller": "api/v1/accounts/conversations#show",
     "parametros": []

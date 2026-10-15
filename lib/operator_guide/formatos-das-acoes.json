@@ -13470,6 +13470,22 @@
     ],
     "sem_corpo": false
   },
+  "POST conversations/:conversation_id/passar_para": {
+    "campos": {
+      "id": {},
+      "tipo": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/passar_para#create",
+    "corpo_plano": false,
+    "envelope": "destino",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+    ],
+    "sem_corpo": false
+  },
   "POST conversations/:id/custom_attributes": {
     "campos": {
       "custom_attributes": {

@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #1593 — "Passar para…" na conversa. O serviço dos Agentes (PassarParaIa) e o registro de passagens (Crm::Passagens,
-# #1606) são dublês por contrato (PassarParaIaHelper). Cada cenário diz que falha pega.
+# #1593 — "Passar para…" na conversa. O registro de passagens é o real (Crm::Passagens, #1606); o serviço dos Agentes
+# (PassarParaIa) e o Crm::Passagens.com_motivo são dublês por contrato (PassarParaIaHelper). Cada cenário diz que falha
+# pega.
 RSpec.describe 'Conversation Passar para API', type: :request do
   let(:account) { create(:account) }
   let(:ana) { create(:user, account: account, role: :agent, name: 'Ana Souza') }
@@ -13,7 +14,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
   let(:lia) { criar_agente_ia(account, 'Lia') }
   let(:url) { "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/passar_para" }
   let!(:servico) { dublar_passar_para_ia(destinos: [lia]) }
-  let!(:passagens) { dublar_passagens }
+  let!(:motivos) { dublar_com_motivo }
 
   before do
     create(:inbox_member, inbox: inbox, user: ana)
@@ -24,6 +25,10 @@ RSpec.describe 'Conversation Passar para API', type: :request do
   def espelho_da_lia_com_a_conversa!
     Autonomia::Agents::AgentInbox.create!(agent: lia, inbox: inbox, account: account, agent_bot: bot)
     conversation.update!(assignee: nil, ai_assignee: bot)
+  end
+
+  def passagem!(origem, destino)
+    Crm::Passagens.registrar!(conversation: conversation, de: origem, para: destino, pedida_por: origem, motivo: 'passar_para')
   end
 
   it 'sem login: 401' do
@@ -51,8 +56,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     # Pega: o selo "Com Lia · passada por Ana" e o "Devolver para Ana" precisam da origem do registro do CRM.
     it 'com a Lia na conversa: selo e origem vindos do registro de passagens', :aggregate_failures do
       espelho_da_lia_com_a_conversa!
-      aberta = double('passagem', de: ponta(ana), para: ponta(lia))
-      allow(passagens).to receive(:ultima_aberta).and_return(aberta)
+      passagem!(ana, lia)
 
       get url, headers: ana.create_new_auth_token
 
@@ -64,7 +68,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     # Pega: oferecer "Devolver para" quem já saiu da caixa.
     it 'origem que saiu da caixa: vem sem poder receber' do
       espelho_da_lia_com_a_conversa!
-      allow(passagens).to receive(:ultima_aberta).and_return(double('passagem', de: ponta(fora), para: ponta(lia)))
+      passagem!(fora, lia)
 
       get url, headers: ana.create_new_auth_token
 
@@ -74,8 +78,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     # Pega: passagem aberta de outro agente (já trocou de mãos) virar a origem errada.
     it 'passagem aberta para outro agente: sem origem' do
       espelho_da_lia_com_a_conversa!
-      outro = criar_agente_ia(account, 'Maria')
-      allow(passagens).to receive(:ultima_aberta).and_return(double('passagem', de: ponta(ana), para: ponta(outro)))
+      passagem!(ana, criar_agente_ia(account, 'Maria'))
 
       get url, headers: ana.create_new_auth_token
 
@@ -96,13 +99,15 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     # Pega: passar para pessoa sem o motivo no registro, ou gravando a passagem em dobro (o escritor de atribuição a
     # pessoa é o listener do CRM; aqui só o motivo).
     it 'para pessoa: a atribuição de hoje, com o motivo marcado e sem gravar passagem própria', :aggregate_failures do
+      allow(Crm::Passagens).to receive(:registrar!)
+
       post url, params: { destino: { tipo: 'pessoa', id: bruno.id } }, headers: ana.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(conversation.reload.assignee_id).to eq(bruno.id)
       expect(response.parsed_body.dig('assignee', 'id')).to eq(bruno.id)
-      expect(passagens).to have_received(:com_motivo).with('passar_para')
-      expect(passagens).not_to have_received(:registrar!)
+      expect(motivos).to eq(['passar_para'])
+      expect(Crm::Passagens).not_to have_received(:registrar!)
     end
 
     it 'devolver para a origem com a Lia na conversa: a pessoa assume e a Lia sai', :aggregate_failures do
@@ -121,7 +126,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to eq('codigo' => 'pessoa_fora_da_caixa')
       expect(conversation.reload.assignee_id).to eq(ana.id)
-      expect(passagens).not_to have_received(:registrar!)
+      expect(motivos).to be_empty
     end
 
     # Pega: o CRM gravar uma segunda passagem quando quem grava é o serviço dos Agentes.
@@ -131,7 +136,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
       expect(response).to have_http_status(:ok)
       expect(servico).to have_received(:call).with(conversation: conversation, agent: lia, por: :pessoa, motivo: 'passar_para',
                                                    origem: ana, transfer_id: nil)
-      expect(passagens).not_to have_received(:registrar!)
+      expect(Crm::Passagem.count).to eq(0)
     end
 
     it 'a Lia já está com a conversa (ja_e_o_dono): ok, sem erro' do
