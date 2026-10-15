@@ -6,6 +6,7 @@
 class Crm::Subjects::Identifier
   Escolha = Struct.new(:opcao, :titulo, :decided_by, keyword_init: true)
   LEITURAS = %w[mensagens_com_respostas].freeze
+  SEM_MUDANCA = (Crm::Subjects::Applier::SEM_EFEITO + %w[kept doubt superseded]).freeze
 
   def initialize(conversation:, message:)
     @conversation = conversation
@@ -183,10 +184,13 @@ class Crm::Subjects::Identifier
                         .where.not(decided_by: nil).count >= Crm::Subjects::LIMITE_MENSAL
   end
 
-  # Reaberta (#1638) que não conseguiu decidir (sem cota, Jev fora, nada para ler) volta ao que era: o que valia antes
-  # continua valendo.
+  # Reaberta (#1638) que não mudou nada (sem cota, Jev fora, nada para ler, dúvida, mantido, repetido ou vencido por
+  # uma mais nova) volta ao que era: o que valia antes continua valendo, e o card do aviso fica como estava. Com o
+  # horário de agora: já leu o texto real e não reabre outra vez.
   def concluir(**atributos)
-    return @decisao.update_columns(@retrato) if @retrato && Crm::Subjects::Applier::SEM_EFEITO.include?(atributos[:state]) # rubocop:disable Rails/SkipsModelValidations
+    if @retrato && SEM_MUDANCA.include?(atributos[:state])
+      return @decisao.update_columns(@retrato.merge('updated_at' => Time.current)) # rubocop:disable Rails/SkipsModelValidations
+    end
 
     padrao = { confidence: @jev&.certeza, decided_by: ('jev' if @jev) }
     @decisao.update!(padrao.merge(atributos))

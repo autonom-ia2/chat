@@ -30,8 +30,7 @@ class Crm::Subjects::Applier
   private
 
   def novo(pipeline, titulo)
-    card_da_ia = card_nomeado_no_aviso(pipeline)
-    return decidir('rename', card: card_da_ia, pipeline: pipeline, title: titulo) if card_da_ia
+    return no_card_do_aviso(pipeline, titulo) if card_do_aviso
 
     atual = @question.atual
     if @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
@@ -80,7 +79,7 @@ class Crm::Subjects::Applier
 
   def executar(action, atributos)
     case action
-    when 'rename' then renomear(atributos[:card].reload, atributos[:title])
+    when 'rename' then renomear(atributos[:card].reload, atributos[:title], atributos[:pipeline])
     when 'focus' then focar(atributos[:card].reload)
     when 'create' then criar(atributos[:pipeline], atributos[:title])
     end
@@ -100,31 +99,40 @@ class Crm::Subjects::Applier
                         .exists?(['message_id > ?', @decisao.message_id])
   end
 
-  # #1638: o card que a IA criou ou nomeou em cima do aviso "mensagem não suportada", neste funil. O assunto do texto
-  # real vai para ele, nunca para um segundo card.
-  def card_nomeado_no_aviso(pipeline)
-    return unless nomeado_no_aviso? && @anterior['pipeline_id'] == pipeline.id
+  # #1638: o card que a IA criou ou nomeou em cima do aviso, numa decisão reaberta (Crm::Subjects::CardDoAviso). Card
+  # fechado depois do aviso não entra: o assunto real segue o caminho de sempre.
+  def card_do_aviso
+    return @card_do_aviso if defined?(@card_do_aviso)
 
-    # Card fechado depois do aviso: o assunto real segue o caminho de sempre.
-    @account.crm_cards.find_by(id: @anterior['card_id'])&.then { |card| card if card.open? }
+    @card_do_aviso = Crm::Subjects::CardDoAviso.de(account: @account, anterior: @anterior)
   end
 
-  def nomeado_no_aviso?
-    @anterior.present? && %w[create rename].include?(@anterior['action'])
+  # Mexido por uma pessoa, funil fora do acesso ou troca de funil com a caixa em Sugerir: o card fica como está e nada
+  # novo nasce; só o log registra. Mesmo assunto: nada muda.
+  def no_card_do_aviso(pipeline, titulo)
+    aviso = card_do_aviso
+    if aviso.pessoa_mexeu? || !aviso.pode_ir_para?(pipeline) || (aviso.card.pipeline_id != pipeline.id && @mode != 'auto')
+      Rails.logger.info("[crm][assunto] card do aviso mantido decisao=#{@decisao.id} card=#{aviso.card.id}")
+      return { action: 'none', state: 'kept', reason: 'card_do_aviso_mantido', card: aviso.card }
+    end
+    return { action: 'none', state: 'kept', card: aviso.card } if aviso.mesmo_assunto?(pipeline, titulo)
+
+    decidir('rename', card: aviso.card, pipeline: pipeline, title: titulo)
   end
 
-  def renomear(card, titulo)
-    nomeado_no_aviso? && card.id == @anterior['card_id'] ? renomear_o_do_aviso(card, titulo) : dar_nome(card, titulo)
+  def renomear(card, titulo, pipeline)
+    card_do_aviso&.card&.id == card.id ? renomear_o_do_aviso(card, titulo, pipeline) : dar_nome(card, titulo)
   end
 
-  # Mesmo assunto: nada muda. Nome trocado à mão depois da IA: é da pessoa, fica (#1260). Senão, novo nome e o card
-  # volta a ser o assunto atual, a menos que a pessoa tenha escolhido outro há pouco.
-  def renomear_o_do_aviso(card, titulo)
+  # Leva ao funil do assunto real (se for outro), dá o nome novo e o card volta a ser o assunto atual, a menos que a
+  # pessoa tenha escolhido outro há pouco.
+  def renomear_o_do_aviso(card, titulo, pipeline)
     return { state: 'kept', reason: 'card_mudou' } unless card.open?
-    return { state: 'kept', reason: 'pessoa_deu_nome' } unless card.title == @anterior['title']
-    return { state: 'kept' } if titulo == card.title
+    # De novo dentro do lock: a pessoa pode ter mexido no card enquanto a IA pensava.
+    return { state: 'kept', reason: 'card_do_aviso_mantido' } if card_do_aviso.recarregar.pessoa_mexeu?
 
-    resultado = dar_nome_da_ia(card, titulo)
+    card_do_aviso.mover_para(pipeline)
+    resultado = dar_nome_da_ia(card.reload, titulo)
     Crm::Subjects::Acoes.focar(conversation: @conversation, card: card) unless card == @question.atual || pessoa_escolheu_assunto?
     resultado
   end

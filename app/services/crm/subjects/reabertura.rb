@@ -32,7 +32,7 @@ module Crm::Subjects::Reabertura
   end
 
   def self.recuperada_em(message)
-    Time.iso8601(message.content_attributes['hybrid_recovered_at'].to_s).change(usec: 0)
+    Time.iso8601(message.content_attributes.to_h['hybrid_recovered_at'].to_s).change(usec: 0)
   rescue ArgumentError
     nil
   end
