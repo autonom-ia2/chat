@@ -4254,9 +4254,9 @@
       "O_INSTAGRAM": "Instagram",
       "TIPO_VENDER": "{tipo}: win a new customer. Each closed sale counts on the dashboard.",
       "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
-      "ATENDER_LEMBRETES": "We share progress and ask if it was solved.",
-      "ATENDER_SO_ANDAMENTO": "We share the request progress.",
-      "ATENDER_SO_RESOLVEU": "We ask if it was solved.",
+      "ATENDER_LEMBRETES": "We share progress after {andamento} in the same stage and ask if it was solved {resolveu} after {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "We share progress after {andamento} in the same stage.",
+      "ATENDER_SO_RESOLVEU": "We ask if it was solved {resolveu} after {sucesso}.",
       "COBRAR_LEMBRETES": "We send payment reminders before, on and after the due date.",
       "ATENDER_SEM_LEMBRETES": "No reminder on."
     },
@@ -4543,13 +4543,17 @@
       "LEMBRETES": {
         "ANDAMENTO": {
           "TITULO": "Share progress",
-          "FRASE": "If a request stays 1 day in the same stage, we tell the customer we are still on it.",
-          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news."
+          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news.",
+          "FRASE_TEMPO": "If a request stays {tempo} in the same stage, we tell the customer we are still on it.",
+          "TEMPO_ROTULO": "Time in the same stage",
+          "QUANDO": "{tempo} in the same stage"
         },
         "RESOLVEU": {
           "TITULO": "Ask if it was solved",
-          "FRASE": "1 day after {sucesso}, we ask if everything worked out.",
-          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here."
+          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here.",
+          "FRASE_TEMPO": "{tempo} after {sucesso}, we ask if everything worked out.",
+          "TEMPO_ROTULO": "Time after {sucesso}",
+          "QUANDO": "{tempo} after {sucesso}"
         },
         "COBRAR": {
           "TITULO": "Payment reminders",
@@ -4564,7 +4568,14 @@
         "PREVIA_TITULO": "With Ana, as an example",
         "PREVIA_TEXTO": "Sent on WhatsApp during the pipeline business hours. The real message is written from each customer conversation.",
         "VALOR_EXEMPLO": "R$ 350",
-        "DESLIGADOS": "No reminder on. Nobody gets a message on their own."
+        "DESLIGADOS": "No reminder on. Nobody gets a message on their own.",
+        "TEMPOS": {
+          "H4": "4 hours",
+          "H24": "1 day",
+          "H48": "2 days",
+          "H72": "3 days",
+          "H168": "1 week"
+        }
       }
     }
   },

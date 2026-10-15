@@ -153,6 +153,144 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     expect(lembrete.due_at).to be_within(1.minute).of(now - 2.hours + 1.day)
   end
 
+  # #1589: o tempo de cada lembrete é escolhido no funil (metadata.ai.service_reminders.<lembrete>_after_hours).
+  describe 'com o tempo escolhido no funil' do
+    def escolher(card, horas)
+      reminders = card.pipeline.metadata.dig('ai', 'service_reminders').to_h.merge(horas)
+      card.pipeline.update!(metadata: card.pipeline.metadata.merge('ai' => card.pipeline.metadata['ai'].merge('service_reminders' => reminders)))
+    end
+
+    it 'andamento em 4 horas: sai com 4 h parado, e a conversa que andou há 5 h não segura' do
+      card = setup_card
+      escolher(card, 'progress_after_hours' => 4)
+      card.update_columns(entered_stage_at: now - 6.hours, last_activity_at: now - 5.hours)
+
+      expect(schedule(card)).to eq(1)
+      expect(reminders(card).sole.metadata['after_hours']).to eq(4)
+    end
+
+    it 'andamento em 3 dias: com 2 dias parado, fica marcado para o 3º dia' do
+      card = setup_card
+      escolher(card, 'progress_after_hours' => 72)
+      card.update_columns(entered_stage_at: now - 2.days)
+
+      expect(schedule(card)).to eq(1)
+      expect(reminders(card).sole.due_at).to be_within(1.minute).of(now + 1.day)
+    end
+
+    it '"deu certo?" em 1 semana sai 7 dias depois e ainda vale no 9º dia; valor fora da tela vira 1 dia' do
+      card = setup_card
+      escolher(card, 'resolved_check_after_hours' => 168)
+      card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now - 2.hours)
+      schedule(card)
+      expect(reminders(card).sole.due_at).to be_within(1.minute).of(now - 2.hours + 7.days)
+
+      card.update_columns(closed_at: now - 9.days)
+      expect(described_class.new(card: card.reload, now: now).desired.map(&:kind)).to eq(['resolved_check'])
+
+      escolher(card, 'resolved_check_after_hours' => 100)
+      expect(Crm::Ai::Config.service_reminders_settings(card.pipeline.reload)[:resolved_check_after_hours]).to eq(24)
+    end
+
+    it 'mudou o tempo com o lembrete pendente: ele vai para o novo horário, sem lembrete novo' do
+      card = setup_card
+      card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now - 2.hours)
+      schedule(card)
+      lembrete = reminders(card).sole
+      expect(lembrete.metadata['after_hours']).to eq(24)
+
+      escolher(card, 'resolved_check_after_hours' => 72)
+      expect(schedule(card)).to eq(1)
+      expect(schedule(card)).to eq(0)
+
+      expect(reminders(card).sole.id).to eq(lembrete.id)
+      expect(lembrete.reload.due_at).to be_within(1.minute).of(now - 2.hours + 3.days)
+      expect(lembrete.metadata['after_hours']).to eq(72)
+    end
+
+    it 'lembrete criado antes da escolha (sem o tempo gravado) conta como 1 dia e só muda se o tempo mudar' do
+      card = setup_card
+      card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now - 2.hours)
+      schedule(card)
+      lembrete = reminders(card).sole
+      lembrete.update_columns(metadata: lembrete.metadata.except('after_hours'))
+      antes = lembrete.reload.due_at
+
+      expect(schedule(card)).to eq(0)
+      expect(lembrete.reload.due_at).to eq(antes)
+    end
+
+    it 'andamento pendente também muda de horário; o que já saiu ou virou aviso para a equipe não é tocado' do
+      card = setup_card
+      escolher(card, 'progress_after_hours' => 72)
+      card.update_columns(entered_stage_at: now - 2.days)
+      schedule(card)
+      pendente = reminders(card).sole
+
+      escolher(card, 'progress_after_hours' => 48)
+      expect(schedule(card)).to eq(1)
+      expect(pendente.reload.due_at).to be_within(1.minute).of(now)
+
+      %i[done overdue].each do |status|
+        pendente.update_columns(status: Crm::FollowUp.statuses[status], due_at: now - 1.hour)
+        escolher(card, 'progress_after_hours' => 4)
+        expect(schedule(card)).to eq(0)
+        expect(pendente.reload.due_at).to eq(now - 1.hour)
+        escolher(card, 'progress_after_hours' => 48)
+      end
+    end
+
+    it 'trocar o tempo num funil cheio leva os pendentes aos poucos e espaçados (teto e espaçamento do job)' do
+      travel_to(now)
+      cards = Array.new(3) do
+        setup_card.tap { |card| card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now - 2.days) }
+      end
+      pipeline = cards.first.pipeline
+      cards.drop(1).each { |card| card.update_columns(pipeline_id: pipeline.id, stage_id: cards.first.stage_id) }
+      escolher(cards.first, 'resolved_check_after_hours' => 168)
+      cards.each { |card| schedule(card) }
+
+      escolher(cards.first, 'resolved_check_after_hours' => 24)
+      stub_const('Crm::ServiceRemindersJob::MAX_NOVOS_POR_FUNIL', 2)
+      with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::ServiceRemindersJob.perform_now }
+
+      todos = Crm::FollowUp.where(card: cards).where("metadata ->> 'source' = ?", described_class::SOURCE)
+      movidos = todos.select { |lembrete| lembrete.metadata['after_hours'] == 24 }.sort_by(&:due_at)
+      expect(movidos.size).to eq(2)
+      expect(movidos.last.due_at - movidos.first.due_at).to be >= described_class::STAGGER
+      expect(todos.count { |lembrete| lembrete.metadata['after_hours'] == 168 }).to eq(1)
+    end
+
+    it 'com o "deu certo?" desligado, o job ainda cancela o andamento pendente do card que foi resolvido' do
+      travel_to(now)
+      card = setup_card
+      escolher(card, 'resolved_check' => false)
+      card.update_columns(entered_stage_at: now - 2.days)
+      schedule(card)
+      lembrete = reminders(card).sole
+      card.update_columns(status: Crm::Card.statuses[:resolved], closed_at: now)
+
+      with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::ServiceRemindersJob.perform_now }
+
+      expect(lembrete.reload).to be_canceled
+    end
+
+    it 'com tudo desligado e só o tempo gravado, o job não passa pelos cards sem lembrete pendente' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 2.days)
+      escolher(card, 'progress' => false, 'resolved_check' => false, 'payment' => false, 'progress_after_hours' => 48)
+      allow(described_class).to receive(:new).and_call_original
+
+      with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true') { Crm::ServiceRemindersJob.perform_now }
+
+      expect(described_class).not_to have_received(:new)
+    end
+  end
+
+  it 'o job olha Resolvido de até 10 dias (1 semana + a folga)' do
+    expect(Crm::ServiceRemindersJob::RESOLVED_LOOKBACK).to eq(10.days)
+  end
+
   it 'lembra do pagamento 3 dias antes, no dia e depois; o depois espera a promessa' do
     card = setup_card(template: 'COBRANCA', category: 'novo', value_cents: 35_000, expected_close_at: Date.new(2026, 10, 20))
     card.update!(metadata: { 'payment_promise_at' => '2026-10-27' })

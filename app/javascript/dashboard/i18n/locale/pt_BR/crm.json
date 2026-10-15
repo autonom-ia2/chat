@@ -4255,9 +4255,9 @@
       "O_INSTAGRAM": "o Instagram",
       "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada venda fechada conta no painel.",
       "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}.",
-      "ATENDER_LEMBRETES": "Avisamos o andamento e perguntamos se resolveu.",
-      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento do pedido.",
-      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu.",
+      "ATENDER_LEMBRETES": "Avisamos o andamento com {andamento} na mesma etapa e perguntamos se resolveu {resolveu} depois de {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento com {andamento} na mesma etapa.",
+      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu {resolveu} depois de {sucesso}.",
       "COBRAR_LEMBRETES": "Lembramos do pagamento antes, no dia e depois do vencimento.",
       "ATENDER_SEM_LEMBRETES": "Nenhum lembrete ligado."
     },
@@ -4544,13 +4544,17 @@
       "LEMBRETES": {
         "ANDAMENTO": {
           "TITULO": "Avisar o andamento",
-          "FRASE": "Se o pedido passa 1 dia na mesma etapa, avisamos o cliente que seguimos cuidando.",
-          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso."
+          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso.",
+          "FRASE_TEMPO": "Se o pedido passa {tempo} na mesma etapa, avisamos o cliente que seguimos cuidando.",
+          "TEMPO_ROTULO": "Tempo na mesma etapa",
+          "QUANDO": "{tempo} na mesma etapa"
         },
         "RESOLVEU": {
           "TITULO": "Perguntar se resolveu",
-          "FRASE": "1 dia depois de {sucesso}, perguntamos se deu tudo certo.",
-          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui."
+          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui.",
+          "FRASE_TEMPO": "{tempo} depois de {sucesso}, perguntamos se deu tudo certo.",
+          "TEMPO_ROTULO": "Tempo depois de {sucesso}",
+          "QUANDO": "{tempo} depois de {sucesso}"
         },
         "COBRAR": {
           "TITULO": "Lembrar do pagamento",
@@ -4565,7 +4569,14 @@
         "PREVIA_TITULO": "Com a Ana, de exemplo",
         "PREVIA_TEXTO": "Saem pelo WhatsApp, no horário de atendimento do funil. A mensagem de verdade é escrita olhando a conversa de cada cliente.",
         "VALOR_EXEMPLO": "R$ 350",
-        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho."
+        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho.",
+        "TEMPOS": {
+          "H4": "4 horas",
+          "H24": "1 dia",
+          "H48": "2 dias",
+          "H72": "3 dias",
+          "H168": "1 semana"
+        }
       }
     }
   },
