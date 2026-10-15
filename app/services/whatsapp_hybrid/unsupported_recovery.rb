@@ -1,20 +1,24 @@
 # Recupera pelo aparelho conectado (WAHA) a mensagem que a Cloud entregou como "não suportada" (chat#1489).
 #
-# Ao nascer a bolha, numa caixa com WhatsApp API pronto e na conta com a flag `whatsapp_hybrid_recovery`, a mensagem
-# ganha `whatsapp_web_id` (o id físico tirado do wamid) e `hybrid_recovery: pending`, e o RecoverUnsupportedJob passa
-# a perguntar ao motor por ela (pull: nada de assinar o evento `message`). Cada tentativa é um `attempt!`:
-#   :retry — o motor ainda não tem a mensagem (404), não respondeu, ou a conexão não está pronta agora;
-#   :done  — recuperou, ou falhou de vez (mídia, nada legível, não casou, mais de uma candidata, flag desligada).
+# Ao nascer a bolha, numa caixa com WhatsApp API pronto, na conta com a flag `whatsapp_hybrid_recovery` e quando o
+# `unsupported.type` é de mensagem nova (RECOVERABLE_TYPES), a mensagem ganha `whatsapp_web_id` (o id físico tirado do
+# wamid) e `hybrid_recovery: pending`, e o RecoverUnsupportedJob passa a perguntar ao motor por ela (pull). Cada
+# tentativa é um `attempt!`:
+#   :retry — o motor ainda não tem a mensagem (404), não respondeu, respondeu sem mensagem, a mensagem ainda não tem
+#            nada legível, ou a conexão não está pronta agora. O job desiste em 30 minutos;
+#   :done  — recuperou, ou falhou de vez (mídia, não casou, mais de uma candidata, flag desligada).
 #
 # Casamento com certeza, todas juntas: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa da
 # mensagem e uma candidata só. Faltando uma, a bolha fica com o aviso.
 #
 # A própria Message recebe o texto (posição e horário não mudam) e o `message_updated` normal leva à tela. Toda escrita
 # é sob trava, sobre o registro relido, e só mexe nas chaves desta recuperação (#1560). Nada de conteúdo vai ao log.
+# Quem decide se a IA é chamada é o WhatsappHybrid::RecoveryAiWake.
 class WhatsappHybrid::UnsupportedRecovery
   FEATURE = 'whatsapp_hybrid_recovery'.freeze
   STATE_KEY = 'hybrid_recovery'.freeze
   REASON_KEY = 'hybrid_recovery_reason'.freeze
+  HEADER_KEY = 'hybrid_recovery_header'.freeze
   WEB_ID_KEY = 'whatsapp_web_id'.freeze
   VIA_KEY = 'recovered_via'.freeze
   UNSUPPORTED_KEY = 'is_unsupported'.freeze
@@ -22,16 +26,20 @@ class WhatsappHybrid::UnsupportedRecovery
   RECOVERED = 'recovered'.freeze
   FAILED = 'failed'.freeze
 
-  # A nossa IA espera a recuperação até aqui; depois, não responde ao aviso.
-  AI_WAIT = 2.minutes
+  # `unsupported.type` de mensagem nova (nil é o erro 131060, sem tipo). Edição, reação, voto, fixar e afins mexem
+  # numa mensagem que já existe: não viram bolha nova, então ficam com o aviso e sem job.
+  RECOVERABLE_TYPES = [nil, 'hsm', 'interactive', 'button', 'list', 'template'].freeze
+
   DEADLINE = 30.minutes
   RETRY_DELAYS = [5.seconds, 15.seconds, 30.seconds, 1.minute, 2.minutes, 5.minutes, 10.minutes].freeze
 
   C_US = '@c.us'.freeze
   S_WHATSAPP = '@s.whatsapp.net'.freeze
 
-  # Chaves que a bolha já nasce com elas, ou {} quando a caixa não recupera.
-  def self.initial_attributes(inbox, wamid)
+  # Chaves que a bolha já nasce com elas, ou {} quando não há o que recuperar.
+  def self.initial_attributes(inbox, wamid, unsupported_type)
+    return {} unless RECOVERABLE_TYPES.include?(unsupported_type)
+
     web_id = WhatsappHybrid::Wamid.message_id(wamid.to_s)
     return {} unless safe_web_id?(web_id) && connection_for(inbox)
 
@@ -43,12 +51,12 @@ class WhatsappHybrid::UnsupportedRecovery
     web_id.present? && web_id.delete('A-Za-z0-9').empty?
   end
 
-  # Conexão da própria caixa, pronta (conectada, mesmo número, envio automático ligado), na conta liberada.
+  # Conexão da própria caixa (buscada pelo inbox_id), pronta: conectada, mesmo número, envio automático ligado.
   def self.connection_for(inbox)
     return unless inbox.account.feature_enabled?(FEATURE) && WhatsappHybrid::Config.available_for?(inbox)
 
     connection = WhatsappHybrid::Connection.find_by(inbox_id: inbox.id)
-    connection if connection&.routable? && connection.inbox_id == inbox.id
+    connection if connection&.routable?
   end
 
   def self.pending?(message)
@@ -69,82 +77,75 @@ class WhatsappHybrid::UnsupportedRecovery
     return fail!('chat_unknown') if chat_ids.empty?
 
     candidates = fetch(connection)
-    return :retry if candidates.nil?
+    return :retry if candidates.empty?
 
     settle(candidates)
   end
 
   def fail!(reason)
-    write { |attrs| [nil, attrs.merge(STATE_KEY => FAILED, REASON_KEY => reason)] }
-    log("failed reason=#{reason}")
+    changed = write { |attrs| [nil, attrs.merge(STATE_KEY => FAILED, REASON_KEY => reason)] }
+    log("failed reason=#{reason}") if changed
     :done
   end
 
   private
 
-  # nil quando nenhuma consulta respondeu com a mensagem (tenta de novo); senão, as que responderam.
+  # As mensagens que o motor devolveu (só objetos), de todos os chats perguntados.
   def fetch(connection)
     client = Waha::Client.new
-    found = chat_ids.filter_map { |chat_id| lookup(client, connection, chat_id) }
-    found.presence
+    chat_ids.flat_map { |chat_id| lookup(client, connection, chat_id) }.select { |payload| payload.is_a?(Hash) }
   end
 
   def lookup(client, connection, chat_id)
-    payload = client.get_message(connection.session_name, chat_id, web_id)
-    payload.is_a?(Array) ? payload : [payload]
+    Array.wrap(client.get_message(connection.session_name, chat_id, web_id))
   rescue Waha::Client::Error => e
     log("lookup error=#{e.class} status=#{e.status}")
-    nil
+    []
   end
 
+  # A mesma mensagem pode voltar por mais de um chat perguntado: conta uma vez por id.
   def settle(candidates)
-    matches = candidates.flatten.select { |payload| match?(payload) }
+    matches = candidates.select { |payload| match?(payload) }.uniq { |payload| payload['id'] }
     return fail!(matches.empty? ? 'mismatch' : 'ambiguous') unless matches.size == 1
 
     apply(WhatsappHybrid::RecoveredContent.from_payload(matches.first))
   end
 
   def match?(payload)
-    payload.is_a?(Hash) && payload['id'].to_s.split('_').last == web_id && payload['fromMe'] == false &&
+    payload['id'].to_s.split('_').last == web_id && payload['fromMe'] == false &&
       sender_ids.include?(normalized(payload['from']))
   end
 
+  # Nada legível ainda (o motor pode estar decifrando): tenta de novo até o prazo.
   def apply(content)
     case content.kind
-    when :text then recovered!(with_header_note(content))
+    when :text then recovered!(content)
     when :media then media!(content.text)
-    else fail!('unreadable')
+    else :retry
     end
   end
 
-  # Modelo com imagem (ou outro arquivo) no cabeçalho: o texto vem, o arquivo não (PR 3). Uma linha no fim avisa,
-  # no idioma da conta.
-  def with_header_note(content)
-    return content.text if content.header_media.nil?
-
-    key = content.header_media == :image ? 'recovered_header_image' : 'recovered_header_media'
-    note = I18n.with_locale(@message.account.locale) { I18n.t("conversations.messages.whatsapp.#{key}") }
-    "#{content.text}\n\n#{note}"
-  end
-
-  def recovered!(text)
-    changed = write do |attrs|
-      [text, attrs.except(UNSUPPORTED_KEY, REASON_KEY).merge(STATE_KEY => RECOVERED, VIA_KEY => 'web')]
+  def recovered!(content)
+    header = content.header_media ? { HEADER_KEY => content.header_media.to_s } : {}
+    finish!('recovered') do |attrs|
+      [content.text, attrs.except(UNSUPPORTED_KEY, REASON_KEY).merge(STATE_KEY => RECOVERED, VIA_KEY => 'web').merge(header)]
     end
-    return :done unless changed
-
-    log('recovered')
-    wake_ai
-    :done
   end
 
-  # Mídia fica para a PR 3: guarda só a legenda; sem legenda, a bolha continua com o aviso.
+  # Mídia fica para a PR 3: guarda só a legenda (e aí a IA pode ser chamada); sem legenda, a bolha fica com o aviso.
   def media!(caption)
-    write do |attrs|
-      failed = attrs.merge(STATE_KEY => FAILED, REASON_KEY => 'media')
-      caption.present? ? [caption, failed.except(UNSUPPORTED_KEY).merge(VIA_KEY => 'web')] : [nil, failed]
+    return fail!('media') if caption.blank?
+
+    finish!('failed reason=media') do |attrs|
+      [caption, attrs.except(UNSUPPORTED_KEY).merge(STATE_KEY => FAILED, REASON_KEY => 'media', VIA_KEY => 'web')]
     end
-    log('failed reason=media')
+  end
+
+  def finish!(outcome, &)
+    return :done unless write(&)
+
+    log(outcome)
+    WhatsappHybrid::RecoveryAiWake.call(@message)
     :done
   end
 
@@ -160,13 +161,6 @@ class WhatsappHybrid::UnsupportedRecovery
       @message.update!(changes)
       true
     end
-  end
-
-  # A nossa IA não respondeu ao aviso (MessageListener). Recuperada dentro da espera, é chamada uma vez.
-  def wake_ai
-    return if Time.current > @message.created_at + AI_WAIT
-
-    ::Autonomia::Agents::Operate::ReplyJob.perform_later(@message.conversation_id, @message.id)
   end
 
   def web_id

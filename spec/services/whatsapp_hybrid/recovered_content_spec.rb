@@ -164,6 +164,16 @@ describe WhatsappHybrid::RecoveredContent do
     expect([result.kind, result.text]).to eq([:media, 'Contrato'])
   end
 
+  it 'visualização única não é aberta: mídia sem legenda' do
+    %w[viewOnceMessage viewOnceMessageV2 viewOnceMessageV2Extension].each do |wrapper|
+      result = read(wrapper => { 'message' => { 'imageMessage' => { 'caption' => 'só uma vez' } } })
+
+      expect(result.to_a).to eq([:media, nil, nil])
+    end
+    expect(read('ephemeralMessage' => { 'message' => { 'viewOnceMessageV2' => { 'message' => { 'conversation' => 'x' } } } }).to_a)
+      .to eq([:media, nil, nil])
+  end
+
   it 'marca mídia e guarda só a legenda' do
     expect(read('imageMessage' => { 'caption' => 'Foto do produto', 'mimetype' => 'image/jpeg' }).to_a).to eq([:media, 'Foto do produto', nil])
     expect(read('audioMessage' => { 'seconds' => 3 }).to_a).to eq([:media, nil, nil])

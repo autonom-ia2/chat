@@ -86,7 +86,9 @@
       "PENDING": "Buscando o conteúdo no celular…",
       "FAILED": "Não foi possível recuperar esta mensagem. Veja no celular.",
       "MEDIA": "Esta mensagem tem mídia. Veja no celular.",
-      "RECOVERED": "recuperada do celular"
+      "RECOVERED": "recuperada do celular",
+      "HEADER_IMAGE": "Esta mensagem tem uma imagem. Veja no celular.",
+      "HEADER_MEDIA": "Esta mensagem tem mídia. Veja no celular."
     },
     "WHATSAPP_FLOW_RESPONSE": "Enviou uma resposta de um Flow",
     "WHATSAPP_REFERRAL": {

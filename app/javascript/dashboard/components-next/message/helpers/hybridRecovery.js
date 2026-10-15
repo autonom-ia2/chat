@@ -18,3 +18,13 @@ export const hybridRecoveryNoteKey = contentAttributes => {
   }
   return STATE_KEYS[state] || null;
 };
+
+// Modelo recuperado com imagem (ou outro arquivo) no cabeçalho: o texto veio, o
+// arquivo não (contentAttributes.hybridRecoveryHeader: 'image' | 'media').
+const HEADER_KEYS = {
+  image: 'CONVERSATION.HYBRID_RECOVERY.HEADER_IMAGE',
+  media: 'CONVERSATION.HYBRID_RECOVERY.HEADER_MEDIA',
+};
+
+export const hybridRecoveryHeaderKey = contentAttributes =>
+  HEADER_KEYS[contentAttributes?.hybridRecoveryHeader] || null;

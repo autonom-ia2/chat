@@ -86,7 +86,9 @@
       "PENDING": "Fetching the content from the phone…",
       "FAILED": "Couldn't recover this message. Check it on the phone.",
       "MEDIA": "This message has media. Check it on the phone.",
-      "RECOVERED": "recovered from the phone"
+      "RECOVERED": "recovered from the phone",
+      "HEADER_IMAGE": "This message has an image. Check it on the phone.",
+      "HEADER_MEDIA": "This message has media. Check it on the phone."
     },
     "WHATSAPP_FLOW_RESPONSE": "Submitted a flow response",
     "WHATSAPP_REFERRAL": {

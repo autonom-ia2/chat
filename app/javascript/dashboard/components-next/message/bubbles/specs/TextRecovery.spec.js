@@ -38,6 +38,7 @@ const mountText = contentAttributes => {
         CONVERSATION: {
           HYBRID_RECOVERY: {
             RECOVERED: 'recovered from the phone',
+            HEADER_IMAGE: 'This message has an image. Check it on the phone.',
             MEDIA: 'This message has media. Check it on the phone.',
           },
         },
@@ -62,6 +63,8 @@ const mountText = contentAttributes => {
 };
 
 const note = wrapper => wrapper.find('[data-test-id="hybrid-recovery-note"]');
+const header = wrapper =>
+  wrapper.find('[data-test-id="hybrid-recovery-header"]');
 
 describe('Text bubble recovered from the phone', () => {
   it('shows the recovered content with a small badge', () => {
@@ -84,5 +87,20 @@ describe('Text bubble recovered from the phone', () => {
 
   it('shows no badge on ordinary messages', () => {
     expect(note(mountText({})).exists()).toBe(false);
+    expect(header(mountText({})).exists()).toBe(false);
+  });
+});
+
+describe('Text bubble with a template header file', () => {
+  it('keeps the text and adds the image notice below it', () => {
+    const wrapper = mountText({
+      hybridRecovery: 'recovered',
+      hybridRecoveryHeader: 'image',
+    });
+
+    expect(wrapper.text()).toContain('Seu boleto vence amanhã.');
+    expect(header(wrapper).text()).toBe(
+      'This message has an image. Check it on the phone.'
+    );
   });
 });

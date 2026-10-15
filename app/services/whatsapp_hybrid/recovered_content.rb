@@ -13,8 +13,9 @@ class WhatsappHybrid::RecoveredContent
   Result = Struct.new(:kind, :text, :header_media)
 
   # Invólucros que só embrulham outra mensagem em `.message`.
-  WRAPPERS = %w[ephemeralMessage viewOnceMessage viewOnceMessageV2 viewOnceMessageV2Extension documentWithCaptionMessage
-                deviceSentMessage].freeze
+  WRAPPERS = %w[ephemeralMessage documentWithCaptionMessage deviceSentMessage].freeze
+  # Visualização única não vai ao painel: conta como mídia sem legenda, sem abrir o conteúdo.
+  VIEW_ONCE = %w[viewOnceMessage viewOnceMessageV2 viewOnceMessageV2Extension].freeze
   MEDIA = %w[imageMessage videoMessage audioMessage documentMessage stickerMessage ptvMessage].freeze
   HEADER_MEDIA = %w[videoMessage documentMessage locationMessage].freeze
   TEXT_READERS = %i[plain_text template_text interactive_text buttons_text list_text].freeze
@@ -30,17 +31,18 @@ class WhatsappHybrid::RecoveredContent
   def result
     message = proto_message
     return from_engine_fields if message.nil?
+    return Result.new(:media, nil) if VIEW_ONCE.any? { |name| field(message, name) }
 
     text = TEXT_READERS.lazy.filter_map { |reader| send(reader, message).presence }.first
-    return Result.new(:text, text, header_media(message)) if text
-
-    media = MEDIA.lazy.filter_map { |name| field(message, name) }.first
-    return Result.new(:media, string(field(media, 'caption'))) if media
-
-    Result.new(:empty, nil)
+    text ? Result.new(:text, text, header_media(message)) : media_result(message)
   end
 
   private
+
+  def media_result(message)
+    media = MEDIA.lazy.filter_map { |name| field(message, name) }.first
+    media ? Result.new(:media, string(field(media, 'caption'))) : Result.new(:empty, nil)
+  end
 
   def proto_message
     message = field(field(@payload, '_data'), 'message')

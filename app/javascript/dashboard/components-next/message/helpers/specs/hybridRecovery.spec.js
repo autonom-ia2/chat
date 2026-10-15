@@ -1,4 +1,7 @@
-import { hybridRecoveryNoteKey } from '../hybridRecovery.js';
+import {
+  hybridRecoveryNoteKey,
+  hybridRecoveryHeaderKey,
+} from '../hybridRecovery.js';
 
 describe('hybridRecoveryNoteKey', () => {
   it('maps each recovery state to its notice', () => {
@@ -26,5 +29,21 @@ describe('hybridRecoveryNoteKey', () => {
     expect(hybridRecoveryNoteKey({})).toBeNull();
     expect(hybridRecoveryNoteKey(undefined)).toBeNull();
     expect(hybridRecoveryNoteKey({ hybridRecovery: 'media' })).toBeNull();
+  });
+});
+
+describe('hybridRecoveryHeaderKey', () => {
+  it('maps the template header file to its notice', () => {
+    expect(hybridRecoveryHeaderKey({ hybridRecoveryHeader: 'image' })).toBe(
+      'CONVERSATION.HYBRID_RECOVERY.HEADER_IMAGE'
+    );
+    expect(hybridRecoveryHeaderKey({ hybridRecoveryHeader: 'media' })).toBe(
+      'CONVERSATION.HYBRID_RECOVERY.HEADER_MEDIA'
+    );
+  });
+
+  it('returns null without a header file', () => {
+    expect(hybridRecoveryHeaderKey({ hybridRecovery: 'recovered' })).toBeNull();
+    expect(hybridRecoveryHeaderKey(undefined)).toBeNull();
   });
 });

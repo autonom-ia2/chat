@@ -38,10 +38,12 @@ module Autonomia
             unsupported?(message)
         end
 
-        # Aviso de "mensagem não suportada" (chat#1489): não há o que responder. Quando o WhatsApp API recupera o
-        # conteúdo em até 2 minutos, quem chama a IA, uma vez, é o WhatsappHybrid::UnsupportedRecovery.
+        # Aviso de "mensagem não suportada" do WhatsApp (chat#1489): não há o que responder. Quando o WhatsApp API
+        # recupera o conteúdo, quem decide chamar a IA, uma vez, é o WhatsappHybrid::RecoveryAiWake. Instagram e TikTok
+        # também marcam `is_unsupported` (em mídia); lá a IA segue como antes.
         def unsupported?(message)
-          message.content_attributes.to_h.with_indifferent_access[:is_unsupported].present?
+          message.inbox&.channel_type == 'Channel::Whatsapp' &&
+            message.content_attributes.to_h.with_indifferent_access[:is_unsupported].present?
         end
       end
     end

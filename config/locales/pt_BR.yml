@@ -317,8 +317,6 @@ pt_BR:
         call_permission_request_body: 'Gostaríamos de ligar para você em relação à sua conversa.'
         flow_response: 'Enviou uma resposta de um Flow'
         unsupported_message: 'Esta mensagem não está disponível.'
-        recovered_header_image: '(Esta mensagem tem uma imagem. Veja no celular.)'
-        recovered_header_media: '(Esta mensagem tem mídia. Veja no celular.)'
         request_contact_info: "Você pode compartilhar seu número de telefone com a gente?"
       voice_call:
         twilio: 'Chamada de Voz'

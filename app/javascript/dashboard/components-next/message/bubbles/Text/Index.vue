@@ -8,7 +8,10 @@ import { MESSAGE_TYPES } from '../../constants';
 import { MESSAGE_STATUS } from 'shared/constants/messages';
 import { useMessageContext } from '../../provider.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
-import { hybridRecoveryNoteKey } from '../../helpers/hybridRecovery.js';
+import {
+  hybridRecoveryNoteKey,
+  hybridRecoveryHeaderKey,
+} from '../../helpers/hybridRecovery.js';
 
 const { content, attachments, contentAttributes, messageType, status } =
   useMessageContext();
@@ -44,6 +47,9 @@ const contactInfoRequestState = computed(() => {
 const recoveryNoteKey = computed(() =>
   hybridRecoveryNoteKey(contentAttributes.value)
 );
+const recoveryHeaderKey = computed(() =>
+  hybridRecoveryHeaderKey(contentAttributes.value)
+);
 
 const isEmpty = computed(() => {
   return !content.value && !attachments.value?.length;
@@ -78,6 +84,13 @@ const handleSeeOriginal = () => {
         class="text-xs font-medium text-n-slate-11"
       >
         {{ $t('CONVERSATION.REQUEST_CONTACT_INFO.STATES.IDENTITY_CONFLICT') }}
+      </span>
+      <span
+        v-if="recoveryHeaderKey"
+        class="text-xs text-n-slate-11"
+        data-test-id="hybrid-recovery-header"
+      >
+        {{ $t(recoveryHeaderKey) }}
       </span>
       <span
         v-if="recoveryNoteKey"

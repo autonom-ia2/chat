@@ -27,8 +27,7 @@ describe WhatsappHybrid::UnsupportedRecovery do
                                     'unsupported_error_code' => 131_060)
     end
 
-    it 'modelo com imagem no cabeçalho: recupera o texto e avisa no fim, no idioma da conta' do
-      account.update!(locale: 'pt_BR')
+    it 'modelo com imagem no cabeçalho: o texto vai ao content e a marca da imagem vai aos atributos (a bolha avisa)' do
       template = { 'Format' => nil, 'hydratedTemplate' => {
         'Title' => { 'ImageMessage' => { 'mimetype' => 'image/jpeg' } }, 'hydratedContentText' => template_body
       } }
@@ -36,7 +35,26 @@ describe WhatsappHybrid::UnsupportedRecovery do
 
       attempt!
 
-      expect(message.reload.content).to eq("#{template_body}\n\n(Esta mensagem tem uma imagem. Veja no celular.)")
+      expect(message.reload.content).to eq(template_body)
+      expect(attributes).to include('hybrid_recovery' => 'recovered', 'hybrid_recovery_header' => 'image')
+    end
+
+    it 'sem arquivo no cabeçalho, não grava a marca' do
+      stub_engine
+
+      attempt!
+
+      expect(attributes).not_to have_key('hybrid_recovery_header')
+    end
+
+    it 'a mesma mensagem devolvida por dois chats do contato conta uma vez' do
+      contact.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '551137016094@c.us' })
+      stub_engine
+      stub_request(:get, "https://waha.test/api/hybrid-test/chats/551137016094@c.us/messages/#{web_id}?downloadMedia=false")
+        .to_return(status: 200, body: engine_message.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      attempt!
+
       expect(attributes['hybrid_recovery']).to eq('recovered')
     end
 
@@ -152,16 +170,40 @@ describe WhatsappHybrid::UnsupportedRecovery do
       it_behaves_like 'keeps the notice', 'mismatch'
     end
 
-    context 'when there is more than one candidate' do
-      before { stub_engine([engine_message, engine_message]) }
+    context 'when two different messages match' do
+      before do
+        contact.update!(custom_attributes: { 'waha_whatsapp_lid' => '123456789@lid' })
+        stub_engine([engine_message, engine_message('id' => "false_123456789@lid_#{web_id}", 'from' => '123456789@lid')])
+      end
 
       it_behaves_like 'keeps the notice', 'ambiguous'
     end
+  end
 
-    context 'when nothing is readable' do
-      before { stub_engine(engine_message('_data' => { 'Message' => { 'protocolMessage' => { 'type' => 0 } } })) }
+  it 'a mesma mensagem repetida na resposta conta uma vez' do
+    stub_engine([engine_message, engine_message])
 
-      it_behaves_like 'keeps the notice', 'unreadable'
+    attempt!
+
+    expect(attributes['hybrid_recovery']).to eq('recovered')
+  end
+
+  describe 'resposta 200 sem mensagem utilizável: tenta de novo até o prazo' do
+    it 'corpo que não é objeto' do
+      [[], 'ok', nil, [1, 'x']].each do |body|
+        stub_engine(body)
+
+        expect(attempt!).to eq(:retry)
+      end
+      expect(attributes['hybrid_recovery']).to eq('pending')
+    end
+
+    it 'mensagem ainda sem nada legível' do
+      stub_engine(engine_message('_data' => { 'Message' => { 'protocolMessage' => { 'type' => 0 } } }))
+
+      expect(attempt!).to eq(:retry)
+      expect(message.reload.content).to eq(placeholder)
+      expect(attributes['hybrid_recovery']).to eq('pending')
     end
   end
 
@@ -216,6 +258,16 @@ describe WhatsappHybrid::UnsupportedRecovery do
     expect(attributes).to include('hybrid_recovery' => 'failed', 'hybrid_recovery_reason' => 'invalid_id')
   end
 
+  it 'fail! que não muda nada (já resolvida) não registra falha no log' do
+    message.update!(content_attributes: message.content_attributes.merge('hybrid_recovery' => 'recovered'))
+    allow(Rails.logger).to receive(:info)
+
+    described_class.new(message).fail!('timeout')
+
+    expect(Rails.logger).not_to have_received(:info).with(a_string_including('recovery failed'))
+    expect(attributes['hybrid_recovery']).to eq('recovered')
+  end
+
   it 'flag desligada no meio: falha com disabled' do
     account.disable_features!(described_class::FEATURE)
 
@@ -224,11 +276,11 @@ describe WhatsappHybrid::UnsupportedRecovery do
   end
 
   describe 'mídia (fica para a PR 3)' do
-    it 'com legenda: guarda a legenda, falha com media e não chama a IA' do
+    it 'com legenda: guarda a legenda, falha com media e chama a IA pela legenda' do
       stub_engine(engine_message('hasMedia' => true,
                                  '_data' => { 'Message' => { 'imageMessage' => { 'caption' => 'Foto do produto' } } }))
 
-      expect { attempt! }.not_to have_enqueued_job(reply_job)
+      expect { attempt! }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
 
       expect(message.reload.content).to eq('Foto do produto')
       expect(attributes).not_to have_key('is_unsupported')
@@ -238,10 +290,79 @@ describe WhatsappHybrid::UnsupportedRecovery do
     it 'sem legenda: o aviso fica' do
       stub_engine(engine_message('hasMedia' => true, '_data' => { 'Message' => { 'audioMessage' => { 'seconds' => 4 } } }))
 
-      attempt!
+      expect { attempt! }.not_to have_enqueued_job(reply_job)
 
       expect(message.reload.content).to eq(placeholder)
       expect(attributes).to include('is_unsupported' => true, 'hybrid_recovery' => 'failed', 'hybrid_recovery_reason' => 'media')
+    end
+
+    it 'visualização única: não abre, fica com o aviso (falha com media)' do
+      stub_engine(engine_message('_data' => { 'Message' => { 'viewOnceMessageV2' => {
+                                   'message' => { 'imageMessage' => { 'caption' => 'só uma vez' } }
+                                 } } }))
+
+      attempt!
+
+      expect(message.reload.content).to eq(placeholder)
+      expect(attributes).to include('is_unsupported' => true, 'hybrid_recovery_reason' => 'media')
+    end
+  end
+
+  describe 'quando a IA é chamada (RecoveryAiWake)' do
+    def outgoing!(private: false)
+      create(:message, message_type: :outgoing, conversation: conversation, account: account, inbox: inbox,
+                       content: 'Oi! Em que posso ajudar?', private: private)
+    end
+
+    def incoming!(content)
+      create(:message, message_type: :incoming, conversation: conversation, account: account, inbox: inbox, sender: contact,
+                       content: content)
+    end
+
+    before { stub_engine }
+
+    it 'A não suportada, B "oi?" respondida, A recuperada: a IA não é chamada de novo' do
+      message
+      incoming!('oi?')
+      outgoing!
+
+      expect { attempt! }.not_to have_enqueued_job(reply_job)
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+    end
+
+    it 'cliente mandou outra depois (ainda sem resposta): quem responde é o gatilho da mensagem nova' do
+      message
+      incoming!('oi?')
+
+      expect { attempt! }.not_to have_enqueued_job(reply_job)
+    end
+
+    it 'atendente respondeu depois do aviso: a IA não é chamada' do
+      message
+      outgoing!
+
+      expect { attempt! }.not_to have_enqueued_job(reply_job)
+    end
+
+    it 'nota privada depois não conta: a IA é chamada' do
+      message
+      outgoing!(private: true)
+
+      expect { attempt! }.to have_enqueued_job(reply_job).exactly(:once)
+    end
+
+    it 'modelo de outra empresa (hsm) acorda a IA uma vez, como qualquer outra' do
+      message.update!(content_attributes: message.content_attributes.merge('unsupported_type' => 'hsm'))
+
+      expect { attempt! }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+    end
+
+    it 'modelo (hsm) com resposta depois do aviso: não acorda' do
+      message.update!(content_attributes: message.content_attributes.merge('unsupported_type' => 'hsm'))
+      outgoing!
+
+      expect { attempt! }.not_to have_enqueued_job(reply_job)
     end
   end
 end

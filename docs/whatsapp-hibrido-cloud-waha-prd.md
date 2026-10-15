@@ -2104,22 +2104,31 @@ No spike de 15/10/2026 (conta 47, caixa 61), 6/6 eram modelos com botões de out
 motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?downloadMedia=false`.
 
 **Para todas as caixas WhatsApp (PR 0).**
-- A bolha guarda `unsupported_type` e `unsupported_error_code`. O tipo `unknown` vira a mesma bolha.
-- A nossa IA (`Autonomia::Agents::Operate::MessageListener`) não responde a mensagem com `is_unsupported`.
+- A bolha guarda `unsupported_type` e `unsupported_error_code`.
+- Na caixa WhatsApp, a nossa IA (`Autonomia::Agents::Operate::MessageListener`) não responde a mensagem com
+  `is_unsupported`. Instagram e TikTok também usam `is_unsupported` (em mídia): lá a IA segue como antes.
 
 **Com a flag `whatsapp_hybrid_recovery` (PR 2, bit 26 da `feature_flags_ext_1`, desligada por padrão).**
+- O tipo `unknown` recebido vira a mesma bolha. Flag desligada, ou eco de saída: o caminho de hoje (só log).
+- Só recupera `unsupported.type` de mensagem nova: `hsm`, `interactive`, `button`, `list`, `template` e sem tipo
+  (erro 131060). Edição, reação, voto, fixar, `keep_in_chat` e os demais ficam com o aviso, sem job.
 - Só na caixa cuja conexão está conectada, com o mesmo número e o envio automático ligado (`Connection#routable?`).
 - A bolha nasce com `whatsapp_web_id` (id físico tirado do wamid) e `hybrid_recovery: pending`.
 - `WhatsappHybrid::RecoverUnsupportedJob` pergunta ao motor (pull) em 5 s, 15 s, 30 s, 1 min, 2 min, 5 min, 10 min e
-  depois de 10 em 10 min, até 30 min do recebimento.
-- Casamento: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa, uma candidata só.
-- Recuperada: a própria mensagem recebe o texto (título, corpo, rodapé e os botões numerados; imagem no cabeçalho do
-  modelo vira a linha "(Esta mensagem tem uma imagem. Veja no celular.)", no idioma da conta), perde `is_unsupported`,
-  ganha `hybrid_recovery: recovered` e `recovered_via: web`. Posição e horário não mudam.
-- A IA é chamada uma vez se a recuperação chegar em até 2 min; depois disso, não responde.
+  depois de 10 em 10 min, até 30 min do recebimento. Resposta sem mensagem, ou mensagem ainda sem nada legível, tenta
+  de novo até o prazo.
+- Casamento: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa, uma candidata só (a mesma
+  mensagem devolvida por mais de um chat conta uma vez).
+- Recuperada: a própria mensagem recebe o texto (título, corpo, rodapé e os botões numerados), perde `is_unsupported`,
+  ganha `hybrid_recovery: recovered` e `recovered_via: web`. Posição e horário não mudam. Imagem (ou outro arquivo) no
+  cabeçalho do modelo não é baixada: grava `hybrid_recovery_header: image|media` e a bolha avisa para olhar no celular.
+- A IA é chamada uma vez (`WhatsappHybrid::RecoveryAiWake`) quando a recuperação chega em até 2 min **e** a mensagem
+  ainda é a última da conversa (o cliente não mandou outra e ninguém respondeu depois; nota privada não conta). Vale
+  também para modelo de outra empresa (`hsm`): o modelo de agentes já instrui a não dar trela para robô.
 - Falhou (`hybrid_recovery: failed`, motivo em `hybrid_recovery_reason`): `timeout`, `mismatch`, `ambiguous`,
-  `unreadable`, `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no meio) ou `media`.
-- Mídia fica para a PR 3: guarda só a legenda e a bolha manda olhar no celular.
+  `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no meio) ou `media`.
+- Mídia fica para a PR 3: guarda só a legenda (que acorda a IA pela mesma regra) e a bolha manda olhar no celular.
+  Visualização única não é aberta: fica com o aviso.
 - n8n/AgentBot, regras de automação e webhooks continuam vendo o aviso e o `message_updated` (PR 4).
 
 **Ligar (passo posterior, com OK do Rodrigo).** Super Admin → conta → `whatsapp_hybrid_recovery`, na conta 47 (stack
