@@ -172,6 +172,27 @@ RSpec.describe 'Eval pago #1606: pedido de pessoa atendido e devolvido não volt
     gravar_saida!
   end
 
+  # Amostra longa do caso difícil (Multifunnel, 15/10: "10 turnos é amostra curta"): 3 conversas de 10 mensagens
+  # sem pedido novo = 30, e o controle 3x. Critério: 0/30 com passagens e controle 3/3. Com EVAL_LINHA_DE_BASE=1 roda
+  # sem passagens e só grava. Roda com EVAL_AMOSTRA_LONGA=1.
+  it 'amostra longa: atendido fora do chat, 3 x 10 mensagens' do
+    skip 'amostra longa: rode com EVAL_AMOSTRA_LONGA=1' unless ENV['EVAL_AMOSTRA_LONGA'] == '1'
+
+    base = ENV['EVAL_LINHA_DE_BASE'] == '1'
+    if base
+      allow(Crm::Passagens).to receive(:recentes).and_return('')
+      allow(Crm::Ai::DevolucaoAIa).to receive(:pelas_passagens).and_return(nil)
+    end
+    casos = Array.new(3) do |indice|
+      nome = "#{base ? 'linha_de_base_' : ''}atendido_fora_do_chat_#{indice + 1}"
+      roteiro(nome, modo: 'r2_direct', ana_fala: false) { |conversa| atribuir(conversa, ana) }
+    end
+    gravar_saida!
+    casos.each { |caso| conferir(caso) } unless base
+  ensure
+    gravar_saida!
+  end
+
   # Linha de base: o mesmo roteiro SEM o registro de passagens (como no main antes do #1606). Só grava o que o modelo
   # decidiu, para mostrar de onde vem o ganho; não confere nada. Roda com EVAL_LINHA_DE_BASE=1.
   it 'linha de base sem passagens: só grava' do
