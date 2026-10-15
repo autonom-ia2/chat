@@ -166,8 +166,7 @@ class WhatsappHybrid::WebTransport
     # #1453: agenda ANTES de gravar `throttled`; sem a nova tentativa na fila, a mensagem não fica esperando à toa.
     return fail!(THROTTLE_ENQUEUE_ERROR) unless enqueue_retry
 
-    record_outcome!('throttled')
-    log('throttled')
+    log('throttled') if record_outcome!('throttled')
   end
 
   def enqueue_retry
@@ -188,8 +187,17 @@ class WhatsappHybrid::WebTransport
     @message.content_attributes.to_h['whatsapp_transport_fallback'].present?
   end
 
+  FINAL_OUTCOMES = %w[accepted failed uncertain].freeze
+
+  # #1453: `throttled` nunca sobrescreve resultado final (uma nova tentativa em voo depois de a campanha fechar a
+  # mensagem). Devolve false quando não gravou.
   def record_outcome!(value)
-    merge_attributes!(OUTCOME_KEY => value)
+    @message.with_lock do
+      attributes = @message.content_attributes.to_h
+      next false if value == 'throttled' && FINAL_OUTCOMES.include?(attributes[OUTCOME_KEY])
+
+      @message.update!(content_attributes: attributes.merge(OUTCOME_KEY => value))
+    end
   end
 
   # O eco da Meta (2 a 7 s depois do envio, às vezes antes da resposta do WAHA) e a marca de mensagem rica escrevem o

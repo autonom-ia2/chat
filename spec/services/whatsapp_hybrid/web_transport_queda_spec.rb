@@ -150,6 +150,14 @@ RSpec.describe WhatsappHybrid::WebTransport, :aggregate_failures do
       expect(message.content_attributes['external_error']).to eq(described_class::THROTTLE_ENQUEUE_ERROR)
     end
 
+    it 'nova tentativa em voo não regrava throttled por cima de um resultado final' do
+      message.update!(content_attributes: message.content_attributes.merge('whatsapp_transport_outcome' => 'failed'))
+
+      transport.perform
+
+      expect(outcome).to eq('failed')
+    end
+
     it 'mensagem comum: sem teto, continua esperando pelo SendReplyJob' do
       message.update!(content_attributes: {})
       described_class::THROTTLE_MAX_RETRIES.times { transport.perform }

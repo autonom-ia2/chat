@@ -4,13 +4,20 @@
 # message_id da entrega. Decide pelo resultado do WebTransport (whatsapp_transport_outcome, #1349):
 # - sem a marca do Híbrido: o modelo;
 # - `failed` (nada saiu): o modelo;
-# - `throttled` (o Híbrido tenta de novo a cada 15 s, com teto): o ConferenciaHibridoJob relê depois; na última leitura,
-#   depois do teto do Híbrido, se ainda estiver `throttled`, fecha como falha e manda o modelo;
+# - `throttled` (o Híbrido tenta de novo a cada 15 s, com teto): o ConferenciaHibridoJob relê depois; na leitura que
+#   passa do teto do Híbrido, se ainda estiver `throttled` DENTRO da trava, fecha como falha e manda o modelo;
 # - `accepted` (saiu) ou `uncertain` (pode ter saído): nunca o modelo (seria mensagem dupla); vai ao log;
-# - `pending` ou sem resultado com a marca: o Híbrido ainda está enviando (ou parou no meio); nunca o modelo, aviso no log.
+# - `pending` ou sem resultado com a marca: o Híbrido ainda está enviando (ou parou no meio); nunca o modelo agora.
+#   A conferência relê; na leitura tardia, se ainda estiver assim DENTRO da trava, fecha: sem o envio marcado
+#   (whatsapp_transport = web) é `failed` e o modelo sai; com ele, `uncertain`.
 # O modelo sai pelo QuedaJob: uma vez só (fell_back_at, sob trava) e com as mesmas travas do disparo.
 class CampaignJourney::ConversaAberta::QuedaHibrido
   FALLBACK_KEY = 'whatsapp_transport_fallback'.freeze
+
+  # A campanha já mandou o modelo para o texto desta mensagem (o plano B não assume mais o texto).
+  def self.template_sent?(message)
+    CampaignFreeTextDelivery.where(message_id: message.id, inbox_id: message.inbox_id).where.not(fell_back_at: nil).exists?
+  end
 
   # Chamado pelo WebTransport depois de uma falha certa (também a que chega na nova tentativa do throttled).
   def self.after_transport_failure(message)
@@ -28,8 +35,7 @@ class CampaignJourney::ConversaAberta::QuedaHibrido
   def seguir(tentativa = 0)
     case decisao
     when :modelo then pedir_modelo
-    when :conferir then conferir_depois(tentativa)
-    when :sem_resultado then registrar(:warn, 'o Híbrido ainda não gravou resultado; pode sair')
+    when :conferir, :sem_resultado then conferir_depois(tentativa)
     else registrar(:info, 'o Híbrido assumiu o texto')
     end
   end
@@ -53,17 +59,29 @@ class CampaignJourney::ConversaAberta::QuedaHibrido
 
   def conferir_depois(tentativa)
     job = CampaignJourney::ConversaAberta::ConferenciaHibridoJob
-    return desistir_do_hibrido(tentativa) if tentativa >= job::ESPERAS.size
+    return fechar(%w[throttled], tentativa) if outcome == 'throttled' && tentativa >= job::FECHA_THROTTLED
+    return fechar([nil, 'pending'], tentativa) if tentativa >= job::ESPERAS.size
 
     job.set(wait: job::ESPERAS[tentativa]).perform_later(@delivery.id, tentativa + 1)
   end
 
-  # A última conferência roda depois do teto de novas tentativas do Híbrido: ainda `throttled`, a nova tentativa não
-  # está mais na fila. Fecha sob trava (WhatsappHybrid::UnexpectedErrorOutcome) e, se nada saiu, manda o modelo.
-  def desistir_do_hibrido(tentativa)
-    final = WhatsappHybrid::UnexpectedErrorOutcome.settle!(message, external_error: WhatsappHybrid::WebTransport::THROTTLED_OUT_ERROR)
-    registrar(:warn, "ainda throttled depois de #{tentativa} conferências; fechado como #{final}")
-    pedir_modelo if final == 'failed'
+  # Fecha sob trava (WhatsappHybrid::UnexpectedErrorOutcome) só se o resultado ainda for um dos `estados`; se outro
+  # processo o mudou nesse meio tempo (a nova tentativa assumiu, o motor respondeu), nada é gravado. Em qualquer caso,
+  # decide de novo pelo que está no banco agora: nunca manda o modelo por uma leitura velha.
+  def fechar(estados, tentativa)
+    final = WhatsappHybrid::UnexpectedErrorOutcome.settle!(message, only_from: estados, external_error: erro_ao_fechar)
+    registrar(:warn, "conferência #{tentativa}: fechar #{estados.compact.join('/')}, no banco: #{final || 'ausente'}")
+    reler_e_seguir(tentativa)
+  end
+
+  def erro_ao_fechar
+    outcome == 'throttled' ? WhatsappHybrid::WebTransport::THROTTLED_OUT_ERROR : WhatsappHybrid::WebTransport::NO_ANSWER_ERROR
+  end
+
+  def reler_e_seguir(tentativa)
+    remove_instance_variable(:@message) if defined?(@message)
+    @attributes = nil
+    seguir(tentativa)
   end
 
   def registrar(level, motivo)

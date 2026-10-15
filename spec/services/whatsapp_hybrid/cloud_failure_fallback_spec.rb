@@ -84,6 +84,27 @@ describe WhatsappHybrid::CloudFailureFallback do
     expect(message.content_attributes).to include('whatsapp_transport_fallback' => true, 'whatsapp_transport_outcome' => 'accepted')
   end
 
+  it 'a repeated 131047 notice does not overwrite a resend in progress with the Meta failure (chat#1453)' do
+    message.update!(status: :sent, content_attributes: { 'whatsapp_transport_fallback' => true, 'whatsapp_transport_outcome' => 'throttled' })
+
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+
+    expect(client).not_to have_received(:send_text)
+    expect(message.reload).to be_sent
+    expect(message.content_attributes).not_to have_key('external_error')
+  end
+
+  it 'does not send the text after the campaign already sent the template for it (chat#1453)' do
+    campaign = create(:campaign, account: inbox.account, inbox: inbox, audience: [])
+    CampaignFreeTextDelivery.create!(account: inbox.account, campaign: campaign, campaign_recipient_id: 1, inbox_id: inbox.id,
+                                     source_id: message.source_id, message_id: message.id, fell_back_at: Time.current)
+
+    Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform
+
+    expect(client).not_to have_received(:send_text)
+    expect(message.reload).to be_failed
+  end
+
   it 'does not resend when the same 131047 notice arrives again (chat#1453)' do
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => false })
     Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: status_webhook(131_047)).perform

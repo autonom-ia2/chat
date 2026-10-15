@@ -44,13 +44,18 @@ as contas.
   - `accepted` (o motor aceitou) e `uncertain` (o motor não respondeu; pode ter saído): nunca o modelo, para não mandar
     duas mensagens. O motivo vai ao log (`[ConversaAberta] queda delivery=… outcome=…`);
   - `pending` (gravado sob trava quando o plano B assume e a cada nova tentativa, antes de chamar o motor): o Híbrido
-    ainda está enviando. Outro aviso ou a campanha, nesse meio tempo, nunca reenvia nem manda o modelo;
+    ainda está enviando. Outro aviso ou a campanha, nesse meio tempo, nunca reenvia nem manda o modelo; a conferência
+    relê depois. Na leitura tardia (~16 min), se ainda estiver `pending` (ou sem resultado), fecha sob trava: sem o
+    envio marcado (`whatsapp_transport = web`) é `failed` e o modelo sai uma vez; com ele, `uncertain`, sem modelo;
   - `throttled` (o Híbrido tenta de novo em 15 s, pelo `WhatsappHybrid::FallbackRetryJob`, até 20 vezes ≈ 5 min; depois
-    falha de forma certa): o `ConferenciaHibridoJob` relê a mensagem ~30 s, 2 min e 6 min depois do aviso. Se virar
-    `failed`, o modelo sai uma vez; `accepted`/`uncertain` encerram. Na última leitura, já depois do teto do Híbrido, se
-    ainda estiver `throttled`, fecha como falha e o modelo sai uma vez. A falha certa que chega na nova tentativa também
-    pede o modelo, pelo próprio `WebTransport`. A nova tentativa entra na fila antes de gravar `throttled`; se não
-    entrar, a mensagem falha de forma certa;
+    falha de forma certa): o `ConferenciaHibridoJob` relê a mensagem ~30 s, 2 min, 11 min e 16 min depois do aviso. Se
+    virar `failed`, o modelo sai uma vez; `accepted`/`uncertain` encerram. Na leitura de ~11 min (teto do Híbrido mais
+    5 min de folga para a fila), se ainda estiver `throttled` DENTRO da trava, fecha como falha e o modelo sai uma vez;
+    se a nova tentativa assumiu nesse meio tempo, nada é fechado e a conferência segue. `throttled` nunca sobrescreve
+    resultado final. A falha certa que chega na nova tentativa também pede o modelo, pelo próprio `WebTransport`. A
+    nova tentativa entra na fila antes de gravar `throttled`; se não entrar, a mensagem falha de forma certa;
+  - aviso 131047 repetido de mensagem que o plano B já assumiu não grava a falha da Meta por cima do envio em curso, e
+    o plano B não assume o texto de uma entrega que já caiu para o modelo (`fell_back_at`);
   - erro inesperado antes de o Híbrido marcar o envio pelo WhatsApp API (Redis, banco): a mensagem volta para a falha,
     mantém a marca, fecha como `failed` (`WhatsappHybrid::UnexpectedErrorOutcome`) e o modelo sai;
   - erro inesperado depois dessa marca (mesmo pouco antes do pedido ao motor): pode ter saído, fecha como `uncertain`,

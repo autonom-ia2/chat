@@ -54,10 +54,10 @@ RSpec.describe CampaignJourney::ConversaAberta::ConferenciaHibridoJob, :aggregat
   end
 
   # A última conferência roda depois do teto do Híbrido: a nova tentativa não está mais na fila, nada saiu.
-  it 'ainda throttled na última conferência: fecha como falha, manda o modelo e registra o motivo' do
+  it 'ainda throttled na conferência que passa do teto: fecha como falha, manda o modelo e registra o motivo' do
     allow(Rails.logger).to receive(:warn)
 
-    expect { described_class.perform_now(delivery.id, described_class::ESPERAS.size) }
+    expect { described_class.perform_now(delivery.id, described_class::FECHA_THROTTLED) }
       .to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob).with(delivery.id)
 
     expect(message.reload).to be_failed
@@ -66,19 +66,54 @@ RSpec.describe CampaignJourney::ConversaAberta::ConferenciaHibridoJob, :aggregat
     expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=throttled'))
   end
 
-  it 'a última conferência espera o teto do Híbrido' do
+  it 'a conferência que fecha o throttled espera o teto do Híbrido mais 5 min de folga' do
     teto = WhatsappHybrid::WebTransport::THROTTLE_MAX_RETRIES * WhatsappHybrid::WebTransport::THROTTLE_RETRY
 
-    expect(described_class::ESPERAS.sum).to be > teto
+    expect(described_class::ESPERAS.first(described_class::FECHA_THROTTLED).sum).to be >= teto + 5.minutes
+    expect(described_class::ESPERAS.sum).to be >= 15.minutes
   end
 
-  it 'virou pending (o Híbrido está enviando agora): sem modelo e com aviso' do
+  # BLOQUEIO da revisão: a conferência leu `throttled` fora da trava e, antes de fechar, a nova tentativa assumiu
+  # (`pending`). Fechar por cima mandaria o modelo e o texto: nada é fechado e a conferência segue.
+  it 'throttled lido, mas a nova tentativa assumiu antes da trava: não fecha nem manda o modelo' do
+    allow(WhatsappHybrid::UnexpectedErrorOutcome).to receive(:settle!).and_wrap_original do |original, *args, **kwargs|
+      resultado!('pending')
+      original.call(*args, **kwargs)
+    end
+
+    expect { described_class.perform_now(delivery.id, described_class::FECHA_THROTTLED) }
+      .to have_enqueued_job(described_class).with(delivery.id, described_class::FECHA_THROTTLED + 1)
+
+    expect(CampaignJourney::ConversaAberta::QuedaJob).not_to have_been_enqueued
+    expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('pending')
+    expect(message).not_to be_failed
+  end
+
+  it 'virou pending (o Híbrido está enviando agora): sem modelo, confere de novo' do
     resultado!('pending')
-    allow(Rails.logger).to receive(:warn)
 
-    expect { described_class.perform_now(delivery.id, 1) }.not_to have_enqueued_job
+    expect { described_class.perform_now(delivery.id, 1) }.to have_enqueued_job(described_class).with(delivery.id, 2)
 
-    expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=pending'))
+    expect(CampaignJourney::ConversaAberta::QuedaJob).not_to have_been_enqueued
+  end
+
+  it 'ainda pending na leitura tardia, sem o envio marcado: nada saiu, fecha como failed e manda o modelo' do
+    resultado!('pending')
+
+    expect { described_class.perform_now(delivery.id, described_class::ESPERAS.size) }
+      .to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob).with(delivery.id)
+
+    expect(message.reload).to be_failed
+    expect(message.content_attributes['whatsapp_transport_outcome']).to eq('failed')
+  end
+
+  it 'ainda pending na leitura tardia, com o envio marcado: pode ter saído, fecha como uncertain sem modelo' do
+    message.update!(content_attributes: message.content_attributes.merge('whatsapp_transport' => 'web', 'whatsapp_transport_outcome' => 'pending'))
+
+    expect { described_class.perform_now(delivery.id, described_class::ESPERAS.size) }
+      .not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+
+    expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('uncertain')
   end
 
   it 'entrega apagada: não faz nada' do

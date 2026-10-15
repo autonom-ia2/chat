@@ -8,6 +8,11 @@ module WhatsappHybrid::CloudFailureFallback
   private
 
   def update_message_with_status(message, status)
+    # #1453: aviso 131047 repetido de mensagem que o plano B já assumiu (ainda `pending` ou `throttled`) não volta a
+    # gravar a falha da Meta por cima do envio em curso. Pular o `super` aqui é o caminho mais curto: o resultado do
+    # WhatsApp API segue sendo a única fonte, e nada muda para os outros avisos.
+    return if window_closed_failure?(status) && already_taken?(message)
+
     super
     retry_through_web(message) if window_closed_failure?(status)
   end
@@ -33,7 +38,9 @@ module WhatsappHybrid::CloudFailureFallback
   # #1453: confere e marca sob trava. Dois avisos 131047 do mesmo wamid (simultâneos ou não) nunca reenviam duas vezes.
   # O roteador (Redis, leituras) é decidido antes, fora da trava.
   def take_over(message)
-    return [nil, nil] if already_taken?(message.reload)
+    # #1453: se a campanha já mandou o modelo para este texto (erro antes da marca, e um aviso repetido), não sai o
+    # texto depois do modelo.
+    return [nil, nil] if already_taken?(message.reload) || CampaignJourney::ConversaAberta::QuedaHibrido.template_sent?(message)
 
     router = fallback_router(message)
     return [nil, nil] if router.nil?

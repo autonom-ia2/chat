@@ -141,15 +141,15 @@ RSpec.describe CampaignJourney::ConversaAberta::QuedaHibrido, :aggregate_failure
     expect(tipos_enviados(sent)).to eq(%w[text])
   end
 
-  it 'marca e envio marcado sem resultado (não deveria ocorrer): sem modelo, com aviso no log' do
+  it 'marca e envio marcado sem resultado (não deveria ocorrer): sem modelo agora, a conferência relê depois' do
     stub_graph_messages
     delivery = campanha_disparada
     Message.find(delivery.message_id).update!(content_attributes: { 'whatsapp_transport_fallback' => true, 'whatsapp_transport' => 'web' })
-    allow(Rails.logger).to receive(:warn)
 
-    expect { described_class.new(delivery).seguir }.not_to have_enqueued_job(CampaignJourney::ConversaAberta::QuedaJob)
+    expect { described_class.new(delivery).seguir }
+      .to have_enqueued_job(CampaignJourney::ConversaAberta::ConferenciaHibridoJob).with(delivery.id, 1)
 
-    expect(Rails.logger).to have_received(:warn).with(include("delivery=#{delivery.id}", 'outcome=ausente'))
+    expect(CampaignJourney::ConversaAberta::QuedaJob).not_to have_been_enqueued
   end
 
   # A janela entre o plano B assumir (marca + pending) e o resultado do motor: outro aviso, ou a campanha, nesse meio

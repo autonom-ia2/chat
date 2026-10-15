@@ -13,9 +13,12 @@ module WhatsappHybrid::UnexpectedErrorOutcome
 
   OUTCOME_KEY = WhatsappHybrid::WebTransport::OUTCOME_KEY
 
-  def settle!(message, external_error: nil)
+  # only_from: fecha só se, DENTRO da trava, o resultado ainda for um destes (a conferência decide por uma leitura feita
+  # antes; outro processo pode ter mudado). Senão devolve o resultado atual, sem gravar nada.
+  def settle!(message, external_error: nil, only_from: nil)
     message.with_lock do
       attributes = message.content_attributes.to_h
+      next attributes[OUTCOME_KEY] if only_from&.exclude?(attributes[OUTCOME_KEY])
       next 'accepted' if attributes[OUTCOME_KEY] == 'accepted'
 
       outcome = final_outcome(attributes)
