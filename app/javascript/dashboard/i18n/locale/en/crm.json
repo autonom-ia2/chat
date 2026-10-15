@@ -5522,5 +5522,177 @@
     "FALTA": {
       "NOME": "give the reminder a name"
     }
+  },
+  "CRM_CALENDARIO": {
+    "HEROI": {
+      "ROTULO": "Today is {data}",
+      "OI_MANHA": "Good morning, {nome}",
+      "OI_TARDE": "Good afternoon, {nome}",
+      "OI_NOITE": "Good evening, {nome}",
+      "OI_MANHA_SEM_NOME": "Good morning",
+      "OI_TARDE_SEM_NOME": "Good afternoon",
+      "OI_NOITE_SEM_NOME": "Good evening",
+      "HOJE": "For today: {n} thing. | For today: {n} things.",
+      "HOJE_NADA": "Nothing planned for today.",
+      "ATRASADOS": "{n} was left behind. | {n} were left behind.",
+      "EM_DIA": "Nothing was left behind.",
+      "NOVO": "New"
+    },
+    "VISAO": {
+      "ROTULO": "How to view the calendar",
+      "DIA": "My day",
+      "SEMANA": "Week",
+      "MES": "Month"
+    },
+    "NAV": {
+      "ANTERIOR": "Back",
+      "SEGUINTE": "Forward",
+      "VOLTAR_HOJE": "Back to today",
+      "HOJE_CURTO": "Today",
+      "SEMANA_DE": "{de} to {ate}",
+      "MES_ANTERIOR": "Previous month",
+      "MES_SEGUINTE": "Next month",
+      "SEMANA_ANTERIOR": "Previous week",
+      "SEMANA_SEGUINTE": "Next week"
+    },
+    "MOSTRAR": {
+      "BOTAO": "Show",
+      "TITULO": "What to show",
+      "DE_QUEM": "Whose",
+      "QUEM_TODOS": "The whole team",
+      "QUEM_MEUS": "Only mine",
+      "FUNIL": "Which pipeline",
+      "TODOS_FUNIS": "All pipelines",
+      "O_QUE": "What shows up",
+      "FEITOS_TITULO": "Already done",
+      "FEITOS": "Show what is already done",
+      "PRONTO": "Done",
+      "CONFIG": "Settings",
+      "CONFIG_AGENDAMENTO": "Scheduling",
+      "CONFIG_CAIXAS": "CRM inboxes"
+    },
+    "TIPO": {
+      "LEMBRETE": "Reminder",
+      "REUNIAO": "Meeting",
+      "MENSAGEM": "Scheduled message",
+      "FECHAR": "Closing date",
+      "AGENDA": "From your calendar"
+    },
+    "TIPO_LONGO": {
+      "LEMBRETE": "What I agreed to do",
+      "REUNIAO": "Meetings",
+      "MENSAGEM": "Scheduled messages",
+      "FECHAR": "Closing dates",
+      "AGENDA": "From your calendar"
+    },
+    "EXEMPLO": {
+      "LEMBRETE": "E.g.: call a customer on Friday",
+      "REUNIAO": "Online or in person, booked through the CRM",
+      "MENSAGEM": "Sent on WhatsApp by themselves, on the day and time",
+      "FECHAR": "The day the deal should close",
+      "AGENDA": "Events from your Google or Outlook calendar"
+    },
+    "ITEM": {
+      "DIA_TODO": "All day",
+      "ONTEM": "Yesterday",
+      "HA_DIAS": "{n} day ago | {n} days ago",
+      "PARA": "For {nome}",
+      "REPETE": "Repeats",
+      "PAUSADO": "Paused",
+      "CONCLUIR": "Mark as done: {titulo}",
+      "CONCLUIR_CURTO": "Mark as done",
+      "ACAO": {
+        "ENTRAR": "Join meeting",
+        "VER_REUNIAO": "See meeting",
+        "VER_NEGOCIO": "See deal",
+        "VER_MENSAGEM": "See message",
+        "ABRIR_CONVERSA": "Open conversation",
+        "LIGAR": "Call",
+        "VER": "See"
+      }
+    },
+    "DIA": {
+      "HOJE": "Today",
+      "AMANHA": "Tomorrow",
+      "PARA_HOJE": "For today",
+      "ATRASADOS": "Left behind",
+      "ADIAR_TODOS": "Move all to tomorrow",
+      "AGORA": "Now, {hora}",
+      "PROXIMOS": "Next days",
+      "PROXIMO": "Next: {dia} — {titulo}.",
+      "NADA_A_FRENTE": "Nothing planned for the next days.",
+      "VAZIO_HOJE": "All caught up for today",
+      "VAZIO_DIA": "Nothing planned for {dia}",
+      "VAZIO_DIA_TEXTO": "This day is free.",
+      "NOVO": "Add something",
+      "NOVO_NO_DIA": "Add something on this day",
+      "FEITO_TITULO": "Done: {titulo}",
+      "FEITO_PERGUNTA": "Want to set the next step?",
+      "ATALHO": {
+        "AMANHA": "Tomorrow",
+        "TRES_DIAS": "In 3 days",
+        "SEMANA": "Next week"
+      },
+      "NAO_PRECISA": "No need",
+      "ANTIGOS": "And {n} older one | And {n} older ones",
+      "VER_ANTIGOS": "See",
+      "ESCONDER_ANTIGOS": "Hide"
+    },
+    "SEMANA": {
+      "VER_DIA": "See {dia}",
+      "MARCAR_EM": "Add something on {dia}",
+      "LIVRE": "Free"
+    },
+    "MES": {
+      "MAIS": "+{n} more"
+    },
+    "NOVO": {
+      "TITULO": "What do you want to add?",
+      "LEMBRETE": "Reminder",
+      "LEMBRETE_TEXTO": "A heads-up for you or the team, on the day and time.",
+      "REUNIAO": "Meeting with a customer",
+      "REUNIAO_TEXTO": "Book a talk with the customer, with day and time.",
+      "MENSAGEM": "Scheduled message",
+      "MENSAGEM_TEXTO": "A message that goes out by itself on WhatsApp, on the day and time.",
+      "CANCELAR": "Cancel",
+      "COM_QUEM": "Who is the meeting with?",
+      "COM_QUEM_TEXTO": "Search by the customer's or the deal's name.",
+      "BUSCA_ROTULO": "Customer or deal name",
+      "BUSCA_EXEMPLO": "E.g.: Mariana",
+      "BUSCA_DICA": "Type at least 2 letters.",
+      "BUSCANDO": "Searching…",
+      "BUSCA_FALHOU": "Could not search right now. Try again.",
+      "BUSCA_VAZIA": "No one with that name. Check the spelling.",
+      "VOLTAR": "Back",
+      "TITULO_TEXTO": "Pick one option.",
+      "SEM_NEGOCIO": "No deal yet",
+      "SEM_NEGOCIO_TEXTO": "{nome} has no deal yet. Meetings are booked on the customer's deal. For now, add a reminder.",
+      "SEM_NEGOCIO_CURTO": "No deal",
+      "MARCAR_LEMBRETE": "Add a reminder",
+      "FALTA_PAGINA": "To book meetings, create your scheduling page.",
+      "CRIAR_PAGINA": "Create page",
+      "FALTA_PAGINA_SEM_PERMISSAO": "To book meetings, an account admin needs to create the scheduling page."
+    },
+    "LEGENDA": {
+      "TITULO": "What shows up here"
+    },
+    "FUSO": "Times in the account time zone: {fuso}",
+    "ERRO": "Could not load the calendar.",
+    "TENTAR": "Try again",
+    "ALERTA": {
+      "ADIADOS": "{n} reminder moved to tomorrow. | {n} reminders moved to tomorrow.",
+      "PROXIMO_MARCADO": "Next step set.",
+      "ADIADOS_PARCIAL": "{ok} of {total} moved to tomorrow. The others stayed as they were.",
+      "NAO_CONCLUIU": "Could not mark it as done. Try again."
+    },
+    "REUNIAO": {
+      "ROTULO": "Meeting with a customer",
+      "TITULO": "Meeting with {nome}",
+      "TITULO_SEM_NOME": "Meeting with a customer",
+      "TEXTO_PAGINA": "Pick the day and a free time in your schedule.",
+      "TEXTO_EXTERNA": "The invite goes out through your Google or Microsoft calendar.",
+      "CANCELAR": "Cancel",
+      "MARCAR": "Book meeting"
+    }
   }
 }
