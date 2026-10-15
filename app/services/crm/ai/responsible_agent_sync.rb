@@ -10,17 +10,19 @@
 # (`pessoa_atribuida`, `fase2_desligada`, `sem_vinculo_na_caixa`…) não troca e fica no log; `ja_e_o_dono`, nada a fazer.
 #
 # Nada é pedido quando:
-# - uma pessoa está atribuída (ela vence: a decisão "a" mostra a ela a sugestão), ou a conversa espera uma pessoa;
+# - a conta está sem a Fase 2 dos Agentes (sem área, quem responde é sempre a porta);
+# - uma pessoa está atribuída (ela vence: a decisão "a" mostra a ela a sugestão), ou a conversa espera uma pessoa
+#   (espera do robô ou marca do motor de entrega);
 # - nenhum robô atende a conversa agora (sem ai_assignee): entregar a um robô seria tirá-la da fila de pessoas;
 # - a conversa não está aberta nem pendente (resolvida ou adiada): entregar a um robô a reabriria;
 # - o destino já é quem atende.
-# Funil arquivado, fora da caixa, com a IA do funil desligada, cujo responsável está parado ou não é mais área da caixa,
-# ou conta sem a Fase 2 dos Agentes (Crm::Ai::Config.areas_ligadas?): conta como funil sem responsável.
+# Funil arquivado, fora da caixa, com a IA do funil desligada, cujo responsável está parado ou não é mais área da caixa:
+# conta como funil sem responsável.
 #
 # Volta para a porta (a porta dos Agentes na caixa, Autonomia::Agents::QuemResponde.porta_da_caixa) quando o assunto em
 # atendimento é de um funil sem responsável: o foco passou para outro card (FOCO) ou o próprio card mudou de funil
-# (PIPELINE). O pedido do agente (ABRIR) nunca devolve à porta sozinho. Porta que não é agente nosso (robô externo):
-# nada a pedir, fica no log.
+# (PIPELINE). Só volta quem atende por um vínculo nosso da caixa: um robô externo com a conversa não é tirado. O pedido
+# do agente (ABRIR) nunca devolve à porta sozinho. Porta que não é agente nosso (robô externo): nada a pedir, fica no log.
 #
 # A troca fica também na atividade do card (ai_agent_changed), com o transfer_id do pedido do agente
 # (Crm::Subjects::Abrir) quando houver, que segue para a passagem e para o evento.
@@ -88,9 +90,12 @@ class Crm::Ai::ResponsibleAgentSync
     trocar(card, destino)
   end
 
+  # Sem a Fase 2 não há área nem passagem entre IAs (o PassarParaIa recusaria): nada a pedir. A espera de pessoa e a
+  # marca do motor de entrega (convite ou segurando) são da pessoa: o PassarParaIa as encerraria.
   def conversa_com_robo?
-    (@conversation.open? || @conversation.pending?) && @conversation.assignee_id.blank? &&
-      !@conversation.bot_handoff_waiting? && @conversation.ai_assignee.is_a?(AgentBot)
+    Crm::Ai::Config.areas_ligadas?(@account) && (@conversation.open? || @conversation.pending?) &&
+      @conversation.assignee_id.blank? && !@conversation.bot_handoff_waiting? && !@conversation.crm_delivery_pending? &&
+      @conversation.ai_assignee.is_a?(AgentBot)
   end
 
   # A regra única de "qual funil manda" (#1606, Crm::Assunto.funil_atual), relida sob a trava.
@@ -121,14 +126,20 @@ class Crm::Ai::ResponsibleAgentSync
     Crm::Ai::Config.responsible_agent(inbox: @conversation.inbox, pipeline: pipeline)
   end
 
+  # Só volta quem atende por um vínculo ativo nosso nesta caixa (a área): um robô externo com a conversa não é tirado.
   def volta_para_a_porta
-    return unless VOLTA_PARA_A_PORTA.include?(@motivo)
+    return unless VOLTA_PARA_A_PORTA.include?(@motivo) && dono_e_vinculo_da_caixa?
 
     vinculo = Autonomia::Agents::QuemResponde.porta_da_caixa(@conversation.inbox)
     return { bot: vinculo.agent_bot, agente: vinculo.agent } if vinculo&.agent
 
     Rails.logger.info("[crm][sync_dono] porta_sem_agente conversa=#{@conversation.id}")
     nil
+  end
+
+  def dono_e_vinculo_da_caixa?
+    Autonomia::Agents::AgentInbox.kept.exists?(account_id: @account.id, inbox_id: @conversation.inbox_id,
+                                               agent_bot_id: @conversation.assignee_agent_bot_id)
   end
 
   # A troca que segue um pedido do agente (Abrir) é registrada como ABRIR, com o transfer_id dele, qualquer que seja o

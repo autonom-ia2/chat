@@ -57,7 +57,7 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(sync.transfer_id).to be_nil
     end
 
-    it 'a troca que segue o pedido do agente sai como ABRIR, mesmo quando o sync do foco roda primeiro' do
+    it 'a troca que segue o pedido do agente fica como ABRIR na atividade, com o transfer_id no evento' do
       create_card(pipeline: comercial)
       eventos = []
       ActiveSupport::Notifications.subscribed(->(*, payload) { eventos << payload }, described_class::EVENTO_TROCA) do
@@ -140,12 +140,15 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload.ai_assignee).to eq(porta)
     end
 
-    it 'nem devolve à porta: o PassarParaIa recusa sem a Fase 2 (quem responde já é a porta)' do
+    it 'nem devolve à porta e nem chama o PassarParaIa (sem área, quem responde é sempre a porta)' do
       card = create_card(pipeline: suporte)
       conversation.update!(ai_assignee: espelho_area)
       card.update!(pipeline: comercial, stage: comercial.stages.first)
+      allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
 
-      expect(sync(described_class::PIPELINE, card_id: card.id)).to have_attributes(trocou: false, codigo: :fase2_desligada)
+      expect(sync(described_class::PIPELINE, card_id: card.id).trocou).to be(false)
+      expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
+      expect(conversation.reload.ai_assignee).to eq(espelho_area)
       expect(passagens).to be_empty
     end
   end
@@ -177,6 +180,15 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(sync.trocou).to be(false)
       expect(conversation.reload.assignee).to eq(admin)
       expect(trocas).to be_empty
+    end
+
+    it 'com a marca do motor de entrega (segurando para uma pessoa): a marca fica' do
+      Crm::Entrega::Marca.marcar(conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu', falha: 'ninguem_cuida')
+      conversation.save!
+
+      expect(sync.trocou).to be(false)
+      expect(conversation.reload).to have_attributes(ai_assignee: porta, crm_delivery_pending?: true)
+      expect(passagens).to be_empty
     end
 
     it 'com a conversa esperando uma pessoa' do
@@ -269,6 +281,15 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
 
       expect(sync(described_class::ABRIR).trocou).to be(false)
       expect(conversation.reload.ai_assignee).to eq(espelho_area)
+    end
+
+    it 'robô externo com a conversa não é tirado pela volta à porta' do
+      externo = create(:agent_bot, account: account, name: 'n8n')
+      conversation.update!(ai_assignee: externo)
+      create_card(pipeline: comercial)
+
+      expect(sync(described_class::FOCO).trocou).to be(false)
+      expect(conversation.reload.ai_assignee).to eq(externo)
     end
 
     it 'porta que não é agente nosso (robô externo): nada a pedir' do
