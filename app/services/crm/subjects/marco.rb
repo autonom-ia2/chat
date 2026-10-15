@@ -19,16 +19,19 @@ module Crm::Subjects::Marco
   # como o Redis::Alfred.delete_if_equals: se outro job gravou no meio, tenta de novo.
   def gravar(conversation_id, message_id)
     chave = chave(conversation_id)
-    Redis::Alfred.with do |conn|
-      TENTATIVAS.times do
-        gravado = conn.watch(chave) do
+    gravado = Redis::Alfred.with do |conn|
+      TENTATIVAS.times.any? do
+        conn.watch(chave) do
           novo = [conn.get(chave).to_i, message_id.to_i].max
           conn.multi { |transacao| transacao.set(chave, novo, ex: VALIDADE.to_i) }
         end
-        break if gravado
       end
     end
+    raise MarcoNaoGravado, "conversa=#{conversation_id} mensagem=#{message_id}" unless gravado
   end
+
+  # Outros jobs gravaram no meio TENTATIVAS vezes seguidas: quem chama decide (o IdentifyJob loga e segue).
+  class MarcoNaoGravado < StandardError; end
 
   def decidido_ate(conversation_id)
     valor = Redis::Alfred.get(chave(conversation_id))

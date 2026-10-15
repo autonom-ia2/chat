@@ -157,6 +157,32 @@ RSpec.describe Crm::Subjects::IdentifyJob do
       expect(dono_no_marco).to eq(espelho_area)
     end
 
+    # Pega o achado do revisor: o aviso em tempo real quebra DEPOIS de aplicar o assunto; antes o Sync não rodava e o
+    # marco saía com o dono antigo.
+    it 'a decisão quebra depois de aplicar o assunto: o Sync roda antes do marco e a exceção segue para o retry' do
+      mensagem = incoming
+      allow(identifier).to receive(:perform) do
+        create_card(pipeline: suporte)
+        raise ActiveRecord::StatementInvalid, 'aviso quebrou'
+      end
+      dono_no_marco = nil
+      callback = ->(*, payload) { dono_no_marco = Conversation.find(payload[:conversation_id]).ai_assignee }
+
+      ActiveSupport::Notifications.subscribed(callback, described_class::EVENTO) do
+        expect { described_class.perform_now(conversation.id, mensagem.id) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      expect(dono_no_marco).to eq(espelho_area)
+    end
+
+    it 'sem Redis o marco não sai, mas o job não esconde a decisão nem quebra por isso' do
+      mensagem = incoming
+      allow(Crm::Subjects::Marco).to receive(:gravar).and_raise(Crm::Subjects::Marco::MarcoNaoGravado)
+
+      expect { described_class.perform_now(conversation.id, mensagem.id) }.not_to raise_error
+      expect(identifier).to have_received(:perform)
+    end
+
     it 'fora da ordem do turno, o Sync não roda em linha (segue assíncrono, como hoje)' do
       Crm::InboxAiAgent.delete_all
       mensagem = incoming
@@ -187,6 +213,16 @@ RSpec.describe Crm::Subjects::IdentifyJob do
       described_class.perform_now(conversation.id, mensagem.id)
 
       expect(toque.reload.status).to eq('pending')
+    end
+
+    it 'a decisão quebrou: a cadência do assunto em foco para do mesmo jeito' do
+      card = create_card(pipeline: comercial)
+      toque = cadencia_ativa(card)
+      mensagem = incoming('Ainda tenho interesse')
+      allow(identifier).to receive(:perform).and_raise(ArgumentError)
+
+      expect { described_class.perform_now(conversation.id, mensagem.id) }.to raise_error(ArgumentError)
+      expect(toque.reload.status).to eq('canceled')
     end
 
     it 'o cliente respondeu no mesmo assunto: a cadência para' do
