@@ -66,7 +66,8 @@ const abrirConfiguracoes = async opcoes => {
   return router.currentRoute.value;
 };
 
-const DASHBOARD = `/app/accounts/${CONTA}/dashboard`;
+// Sem nenhuma tela permitida, o destino padrão é o perfil (#1647: primeira tela que a pessoa abre; por fim o perfil).
+const PRIMEIRA_TELA_PERMITIDA = `/app/accounts/${CONTA}/profile/settings`;
 const ADMIN = {
   role: 'administrator',
   custom_role_id: null,
@@ -120,21 +121,21 @@ describe('/settings em carregamento frio', () => {
     expect(rota.name).toBe('settings_inicio');
   });
 
-  it('só chaves do CRM: o guarda global deixa entrar; cartões com a flag, dashboard sem ela', async () => {
+  it('só chaves do CRM: o guarda global deixa entrar; cartões com a flag, primeira tela permitida sem ela', async () => {
     expect(
       (await abrirConfiguracoes({ conta: SO_CRM, menuNovo: true })).name
     ).toBe('settings_inicio');
     expect(
       (await abrirConfiguracoes({ conta: SO_CRM, menuNovo: false })).fullPath
-    ).toBe(DASHBOARD);
+    ).toBe(PRIMEIRA_TELA_PERMITIDA);
   });
 
-  it('sem nenhuma permissão de Configurações: o guarda global manda para o dashboard', async () => {
+  it('sem nenhuma permissão de Configurações: o guarda global manda para a primeira tela permitida', async () => {
     const rota = await abrirConfiguracoes({
       conta: { role: 'agent', custom_role_id: 7, permissions: ['custom_role'] },
       menuNovo: false,
     });
-    expect(rota.fullPath).toBe(DASHBOARD);
+    expect(rota.fullPath).toBe(PRIMEIRA_TELA_PERMITIDA);
   });
 
   it('accounts/get falha: não quebra e segue a regra de sempre (sem a flag)', async () => {
