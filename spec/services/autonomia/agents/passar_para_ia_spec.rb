@@ -88,6 +88,19 @@ RSpec.describe Autonomia::Agents::PassarParaIa, :um_turno do
       expect(contrato).to have_received(:registrar_passagem!).with(hash_including(card: card))
     end
 
+    it 'com o registro real do CRM (Crm::Passagens.registrar!): grava a passagem com card e quem pediu' do
+      allow(contrato).to receive(:registrar_passagem!).and_call_original
+      card = create_card(pipeline: suporte)
+      conversation.update!(assignee: pessoa)
+
+      passar(por: :pessoa, origem: pessoa, pedida_por: pessoa, transfer_id: 'tr-9')
+
+      expect(Crm::Passagem.where(conversation_id: conversation.id).sole).to have_attributes(
+        card_id: card.id, de_type: 'User', de_id: pessoa.id, para_type: 'Autonomia::Agents::Agent', para_id: area.id,
+        pedida_por_type: 'User', pedida_por_id: pessoa.id, motivo: 'pedido_pelo_nome', transfer_id: 'tr-9'
+      )
+    end
+
     it 'card fechado não vai ao registro' do
       card = create_card(pipeline: suporte)
       card.update_columns(status: Crm::Card.statuses[:won]) # rubocop:disable Rails/SkipsModelValidations
