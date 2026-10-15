@@ -243,4 +243,56 @@ RSpec.describe Whatsapp::Templates::SendComponents do
       end
     end
   end
+
+  # #1418: produtos do catálogo. Fonte oficial, lida em 14/10/2026: developers.facebook.com/documentation/
+  # business-messaging/whatsapp/catalogs/{spm,mpm,product-card-carousel}-template-messages.
+  describe 'catalog products' do
+    let(:body) { { 'type' => 'BODY', 'text' => 'Oi {{1}}' } }
+    let(:product) { ->(id) { { type: 'product', product: { product_retailer_id: id, catalog_id: 'cat-1' } } } }
+
+    context 'with one product (SPM)' do
+      let(:template) do
+        approved('destaque', { 'type' => 'HEADER', 'format' => 'PRODUCT' }, body,
+                 { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM', 'text' => 'Ver' }] })
+      end
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => ['sku-1'], 'catalog_id' => 'cat-1' } } }
+
+      it 'puts the product header before the body, with the catalog of the inbox' do
+        expect(components).to eq([{ type: 'header', parameters: [product.call('sku-1')] },
+                                  { type: 'body', parameters: [{ type: 'text', text: 'Ana' }] }])
+      end
+    end
+
+    context 'with several products (MPM)' do
+      let(:template) do
+        approved('vitrine', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Novidades' }, body,
+                 { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'MPM', 'text' => 'Ver itens' }] })
+      end
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => %w[a b] } } }
+
+      it 'ends with the MPM button: first product as the photo and one section' do
+        expect(components.pluck(:type)).to eq(%w[body button])
+        expect(components.last).to eq(
+          type: 'button', sub_type: 'mpm', index: 0,
+          parameters: [{ type: 'action', action: {
+            thumbnail_product_retailer_id: 'a',
+            sections: [{ title: 'Escolhidos para você', product_items: [{ product_retailer_id: 'a' }, { product_retailer_id: 'b' }] }]
+          } }]
+        )
+      end
+    end
+
+    context 'with a carousel of products' do
+      let(:card) { { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM' }] }] } }
+      let(:template) { approved('cartoes', body, { 'type' => 'CAROUSEL', 'cards' => [card, card] }) }
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => %w[a b c], 'catalog_id' => 'cat-1' } } }
+
+      it 'sends one card per chosen product after the body (the template has 2, the send up to 10)' do
+        expect(components.pluck(:type)).to eq(%w[body carousel])
+        expect(components.last[:cards]).to eq(
+          %w[a b c].each_with_index.map { |id, index| { card_index: index, components: [{ type: 'header', parameters: [product.call(id)] }] } }
+        )
+      end
+    end
+  end
 end

@@ -230,3 +230,34 @@ describe('PaginaBlocos · Marca reuniões', () => {
     expect(wrapper.find('[data-linha="agenda"]').exists()).toBe(false);
   });
 });
+
+// #1433 ("a, para todos os agentes"): o resumo "Onde e quando responde" mostra também as outras caixas em que
+// o agente recebe quando alguém passa.
+describe('PaginaBlocos · Também recebe', () => {
+  beforeEach(() => {
+    conta.agendaNova = false;
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+  });
+
+  it('lists the other inboxes under "Onde e quando responde"', async () => {
+    const wrapper = await montar({
+      temCanal: true,
+      textoOnde: 'No WhatsApp Vendas, sempre.',
+      tambemRecebe: ['WhatsApp Recepção', 'WhatsApp Suporte'],
+    });
+    const linha = wrapper.get('[data-linha="onde"]');
+    expect(linha.text()).toContain('No WhatsApp Vendas, sempre.');
+    expect(linha.get('[data-tambem-recebe]').text()).toContain(
+      'WhatsApp Recepção, WhatsApp Suporte'
+    );
+  });
+
+  it('says nothing more when the agent receives on no other inbox (no regression)', async () => {
+    const wrapper = await montar({
+      temCanal: true,
+      textoOnde: 'No X, sempre.',
+    });
+    expect(wrapper.find('[data-tambem-recebe]').exists()).toBe(false);
+  });
+});

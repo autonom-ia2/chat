@@ -97,9 +97,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/channels#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": true
   },
@@ -884,9 +884,9 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#destroy",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:37",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:39",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -6834,11 +6834,12 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -10494,11 +10495,11 @@
     "controller": "api/v1/accounts/autonomia/agents/channels#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:21",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:17",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:38",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:42"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
     ],
     "sem_corpo": false
   },
@@ -17287,10 +17288,11 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:29",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:30",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -17305,10 +17307,10 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:42",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:45",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:46",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:44",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -24674,11 +24676,12 @@
     "envelope": "template",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:75",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:79",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:59"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
     ],
     "sem_corpo": false
   },

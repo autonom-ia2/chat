@@ -225,3 +225,23 @@ export const salvarDaCaixa = (form, original) => ({
   ...paraSalvar(form),
   ...agentesParaSalvar(form, original),
 });
+
+// #1447/#1433 — recusas do servidor ao gravar os agentes de IA da caixa. `ehDosAgentes`: a etapa que resolve é a dos
+// agentes. `alerta`: a chave do texto próprio do motivo (em CRM_CAIXAS.EDITOR), ou null para o texto geral.
+const ALERTA_DO_ERRO = {
+  'crm.caixas.agente_nao_liga': 'AGENTE_NAO_LIGA',
+  'crm.caixas.principal_parado': 'PRINCIPAL_PARADO',
+  'crm.caixas.robo_externo': 'AGENTE_EXTERNO',
+};
+const ERROS_DOS_AGENTES = [
+  ...Object.keys(ALERTA_DO_ERRO),
+  'crm.caixas.agente_invalido',
+  'crm.caixas.agentes_desligados',
+  'crm.caixas.agentes_sem_permissao',
+  'crm.caixas.funil_com_dois_agentes',
+];
+
+export const erroDosAgentes = codigo => ({
+  ehDosAgentes: ERROS_DOS_AGENTES.includes(codigo),
+  alerta: ALERTA_DO_ERRO[codigo] || null,
+});

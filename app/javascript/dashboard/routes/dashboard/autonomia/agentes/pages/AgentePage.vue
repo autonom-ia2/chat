@@ -33,9 +33,10 @@ import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
+import { useFase2 } from '../composables/useFase2';
 import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
 import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
-import { caixasDaEquipe } from '../utils/ondeTrabalha';
+import { caixasDaEquipe, recebeEmOutrasCaixas } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
 import {
   GAVETA,
@@ -117,6 +118,19 @@ const equipe = computed(() => {
     ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
     : [];
 });
+// #1433 ("a, para todos os agentes"): quem atende primeiro também recebe em outras caixas quando alguém
+// passa. A gaveta "Onde e quando" mostra a escolha; o resumo, as caixas. Só com a Fase 2 e a leitura L2.
+const fase2 = useFase2();
+const recebeEmOutras = computed(
+  () => fase2.value && recebeEmOutrasCaixas(agente.value) && !naEquipe.value
+);
+const tambemRecebeEm = computed(() =>
+  recebeEmOutras.value &&
+  canais.estado.value === 'pronto' &&
+  !canais.semLeitura.value
+    ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
+    : []
+);
 const salvarEquipe = useSalvarEquipe();
 const EQUIPE = 'equipe';
 const AJUDA = 'ajuda';
@@ -741,6 +755,7 @@ const tirarPergunta = id => {
           :interno="interno"
           :tem-canal="temCanal"
           :texto-onde="textoOnde"
+          :tambem-recebe="tambemRecebeEm.map(canal => canal.name)"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
           :equipe="equipe"
@@ -793,6 +808,9 @@ const tirarPergunta = id => {
         :atuais="atuais"
         :sem-leitura="canais.semLeitura.value"
         :horarios="horarios"
+        :recebe-em-outras="recebeEmOutras"
+        :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
+        :caixas="caixas"
         @fechar="fechar"
         @pronto="depoisDeMudarOnde"
         @reler="canais.carregar()"

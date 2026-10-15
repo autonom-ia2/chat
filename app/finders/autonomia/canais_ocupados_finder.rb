@@ -8,7 +8,10 @@
 # O bot da caixa é lido pela associação da caixa: agent_bot_inboxes.account_id aceita nulo em linhas antigas.
 # `areas` (#1433, tema 13): os agentes da equipe da caixa (vínculo de papel área, ativo, de agente visível na API), por
 #   nome: [{ agent_id, agent_name, operating }]. Não ocupam a caixa; a tela lê daqui "Recebe quando alguém passar em".
-#   Quem pode receber um agente da equipe: a caixa cujo `occupied_by` é um agente nativo com `operating` true.
+#   Quem pode receber um agente da equipe: a caixa cujo `occupied_by` é um agente nativo com `operating` true, ou a
+#   caixa só de pessoas.
+# `so_de_pessoas` (#1433): sem porta e sem robô de fora (o `occupied_by` nil), a mesma regra do AgentInbox. O agente da
+#   equipe entra e só responde a conversa que alguém passar para ele.
 class Autonomia::CanaisOcupadosFinder
   EXTERNO = { kind: 'external' }.freeze
 
@@ -17,12 +20,13 @@ class Autonomia::CanaisOcupadosFinder
     @agents_scope = agents_scope
   end
 
-  # [{ inbox_id:, name:, channel_type:, occupied_by:, areas: }] por nome da caixa; no máximo 6 consultas, seja qual for o número
+  # [{ inbox_id:, name:, channel_type:, occupied_by:, so_de_pessoas:, areas: }] por nome da caixa; no máximo 6 consultas, seja qual for o número
   # de caixas.
   def call
     com_bot = caixas_com_bot
     @account.inboxes.order(:name, :id).pluck(:id, :name, :channel_type).map do |inbox_id, name, channel_type|
-      { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupante(inbox_id, com_bot),
+      ocupado_por = ocupante(inbox_id, com_bot)
+      { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupado_por, so_de_pessoas: ocupado_por.nil?,
         areas: areas_por_caixa.fetch(inbox_id, []) }
     end
   end
