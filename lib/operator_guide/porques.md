@@ -1559,7 +1559,7 @@
 - onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
 - diagnostic: `routing`
 - passos: O Guia verifica, por caixa, se a atribuição automática está ligada, se há agentes vinculados, se algum agente está online, se há limite por agente e se o horário de funcionamento está fora do expediente — e aponta o que ajustar nas Configurações da caixa.
-- gotchas: a atribuição automática só envia conversas para agentes 'Online'; fora do horário comercial a atribuição cai ou zera.
+- gotchas: a atribuição automática só envia conversas para agentes 'Online' e não olha o horário; fora do horário sai a mensagem de fora do horário, mas a atribuição continua.
 - nav_target: `—`
 - highlight: `—`
 
