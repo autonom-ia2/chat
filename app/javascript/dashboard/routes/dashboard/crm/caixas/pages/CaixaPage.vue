@@ -57,12 +57,14 @@ const form = ref(null);
 const etapa = ref(1);
 const alcancada = ref(1);
 const salvando = ref(false);
+const caixaSalva = ref(null);
 
 const carregar = async () => {
   estado.value = 'carregando';
   try {
     const dados = await CrmCaixasAPI.buscar(route.params.inboxId);
     funis.value = dados.funis;
+    caixaSalva.value = dados.caixa;
     original.value = formularioDaCaixa(dados.caixa, fase2.value);
     form.value = formularioDaCaixa(dados.caixa, fase2.value);
     // Caixa já no CRM: todas as etapas abertas para ir direto ao que mudar.
@@ -75,6 +77,16 @@ const carregar = async () => {
 };
 
 onMounted(carregar);
+
+// O payload da conta pode chegar (ou mudar) depois da caixa: os agentes de IA
+// aparecem ou somem com ele, a partir do que está salvo.
+watch(fase2, ligada => {
+  if (!caixaSalva.value || !form.value) return;
+  // Uma cópia para cada: o formulário muda a lista, o original não.
+  const agentes = () => formularioDaCaixa(caixaSalva.value, ligada).ai_agents;
+  original.value = { ...original.value, ai_agents: agentes() };
+  form.value = { ...form.value, ai_agents: agentes() };
+});
 
 const funisMarcados = computed(() =>
   form.value ? funisDaCaixa(form.value, funis.value) : []
