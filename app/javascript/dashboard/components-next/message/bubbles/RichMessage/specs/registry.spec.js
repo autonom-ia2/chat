@@ -1,6 +1,7 @@
 import { richMessageBubbleFor } from '../registry.js';
 import LinkButton from '../types/LinkButton.vue';
-import { MESSAGE_TYPES } from '../../../constants';
+import SentAsText from '../SentAsText.vue';
+import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../../constants';
 
 const message = (type, extra = {}) => ({
   messageType: MESSAGE_TYPES.OUTGOING,
@@ -50,6 +51,35 @@ describe('richMessageBubbleFor', () => {
         contentAttributes: { richMessage: {} },
       })
     ).toBeNull();
+  });
+
+  describe('saiu como texto (chat#1555), antes da escolha por tipo', () => {
+    const marcada = (extra = {}) =>
+      message('link_button', {
+        contentAttributes: {
+          richMessage: { type: 'link_button' },
+          richMessageSentAs: 'text',
+        },
+        ...extra,
+      });
+
+    it('com a marca devolve a bolha de texto enviado, para qualquer tipo', () => {
+      expect(richMessageBubbleFor(marcada())).toBe(SentAsText);
+    });
+
+    it('sem a marca devolve a bolha do tipo', () => {
+      expect(richMessageBubbleFor(message('link_button'))).toBe(LinkButton);
+    });
+
+    it('com a marca e falha devolve a bolha do tipo', () => {
+      expect(
+        richMessageBubbleFor(marcada({ status: MESSAGE_STATUS.FAILED }))
+      ).toBe(LinkButton);
+    });
+
+    it('com a marca em nota privada devolve null', () => {
+      expect(richMessageBubbleFor(marcada({ private: true }))).toBeNull();
+    });
   });
 
   it('devolve null para tipo que ainda não tem bolha', () => {

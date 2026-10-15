@@ -80,6 +80,7 @@ class WhatsappHybrid::WebTransport
     WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
     deliver(chat_id, physical_id)
     record_outcome!('accepted')
+    RichMessages.mark_sent_as_text!(@message)
     log('sent', physical_id)
   end
 

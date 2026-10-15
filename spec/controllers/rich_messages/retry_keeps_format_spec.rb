@@ -36,6 +36,23 @@ describe RichMessages::RetryKeepsFormat, type: :request do
     expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message, 'crm_follow_up_id' => 9)
   end
 
+  it 'drops the sent-as-text marks of the previous attempt (chat#1555)' do
+    message = failed_message(rich_message: rich_message, rich_message_sent_as: 'text', rich_message_sent_text: 'Abrir: x')
+
+    expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message)
+  end
+
+  it 'keeps the sent-as-text marks on an API inbox, whose webhook always delivers text (chat#1555)' do
+    channel = create(:channel_api, account: account, webhook_url: 'https://bridge.example.com/hook')
+    conversation = create(:conversation, account: account, inbox: channel.inbox)
+    message = create(:message, account: account, inbox: channel.inbox, conversation: conversation, message_type: :outgoing,
+                               status: :failed, content_attributes: { rich_message: rich_message, external_error: 'erro 500' })
+    marks = message.content_attributes.slice('rich_message_sent_as', 'rich_message_sent_text')
+
+    expect(marks).to include('rich_message_sent_as' => 'text')
+    expect(retry_message(message).content_attributes).to eq('rich_message' => rich_message, **marks)
+  end
+
   [{}, '', [], false].each do |value|
     it "keeps a rich_message that is #{value.inspect}, so the retry fails again instead of going out as plain text" do
       message = failed_message(rich_message: value)
