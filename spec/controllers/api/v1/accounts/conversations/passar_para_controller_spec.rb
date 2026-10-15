@@ -60,7 +60,7 @@ RSpec.describe 'Conversation Passar para API', type: :request do
 
       get url, headers: ana.create_new_auth_token
 
-      expect(response.parsed_body['com_ia']).to eq('id' => lia.id, 'name' => 'Lia')
+      expect(response.parsed_body['com_ia']).to eq('id' => lia.id, 'name' => 'Lia', 'bot_id' => bot.id)
       expect(response.parsed_body['origem']).to include('tipo' => 'pessoa', 'id' => ana.id, 'name' => 'Ana Souza', 'pode_receber' => true)
       expect(response.parsed_body['agentes'].first['com_a_conversa']).to be(true)
     end
@@ -130,17 +130,18 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     end
 
     # Pega: o CRM gravar uma segunda passagem quando quem grava é o serviço dos Agentes.
-    it 'para a Lia: chama o serviço dos Agentes com a pessoa como origem, e não grava passagem própria', :aggregate_failures do
-      post url, params: { destino: { tipo: 'ia', id: lia.id } }, headers: ana.create_new_auth_token, as: :json
+    # Pega também origem e pedida_por trocadas: quem estava com a conversa (Ana) não é quem pediu (Bruno).
+    it 'para a Lia: o serviço dos Agentes recebe a origem e quem pediu, e o CRM não grava passagem', :aggregate_failures do
+      post url, params: { destino: { tipo: 'ia', id: lia.id } }, headers: bruno.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(servico).to have_received(:call).with(conversation: conversation, agent: lia, por: :pessoa, motivo: 'passar_para',
-                                                   origem: ana, transfer_id: nil)
+                                                   origem: ana, pedida_por: bruno, transfer_id: nil)
       expect(Crm::Passagem.count).to eq(0)
     end
 
     it 'a Lia já está com a conversa (ja_e_o_dono): ok, sem erro' do
-      allow(servico).to receive(:call).and_return(resultado_da_ia(:ja_e_o_dono))
+      responder_ia(servico, :ja_e_o_dono)
 
       post url, params: { destino: { tipo: 'ia', id: lia.id } }, headers: ana.create_new_auth_token, as: :json
 
@@ -148,9 +149,9 @@ RSpec.describe 'Conversation Passar para API', type: :request do
     end
 
     # Pega: a recusa dos Agentes virar 500 ou sumir; a tela precisa do código para explicar.
-    %i[fase2_desligada nao_atende_cliente sem_vinculo_na_caixa outra_conta conversa_resolvida].each do |codigo|
+    %i[fase2_desligada nao_atende_cliente sem_vinculo_na_caixa outra_conta conversa_resolvida pessoa_atribuida].each do |codigo|
       it "recusa #{codigo}: 422 com o código" do
-        allow(servico).to receive(:call).and_return(resultado_da_ia(codigo))
+        responder_ia(servico, codigo)
 
         post url, params: { destino: { tipo: 'ia', id: lia.id } }, headers: ana.create_new_auth_token, as: :json
 

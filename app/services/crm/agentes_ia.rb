@@ -44,6 +44,15 @@ module Crm::AgentesIa
     settings[:selector_mode] == 'direct' ? rotulos(conversation).keys : []
   end
 
+  # A regra salva já apontava este agente: salvar o resto da Atribuição não pede de novo (a Fase 2 pode ter sido
+  # desligada, ou o agente parado, depois). Agente novo: escolhivel?.
+  def pode_salvar?(account, novo, antes)
+    antes = (antes || {}).to_h
+    return true if antes['pool_type'] == 'ai_agent' && antes['pool_id'].to_i == novo['pool_id'].to_i
+
+    escolhivel?(account, novo['pool_id'])
+  end
+
   # Pode ser salvo em "A mesma pessoa" (pool_type 'ai_agent'): com a Fase 2, agente desta conta que fala com cliente.
   # Parado pode: a tela avisa, e enquanto isso a conversa vai para alguém da equipe. Interno, de sistema, de outra conta
   # ou inexistente, não.

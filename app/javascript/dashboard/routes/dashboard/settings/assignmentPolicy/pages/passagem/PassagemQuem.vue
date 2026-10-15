@@ -56,10 +56,13 @@ const opcoesDePessoas = computed(() => {
   }));
   const atual = regra.value.pool_id;
   if (atual && !naEquipe(atual)) {
+    // Agente salvo antes que não aparece mais (os agentes de IA foram desligados na conta): sem o "ia:<id>" na tela.
     const fora = props.todas.find(item => item.id === atual);
     lista.push({
       value: atual,
-      label: t(`${Q}.FORA_DA_EQUIPE`, { nome: fora?.name || atual }),
+      label: ehAgente(atual)
+        ? t(`${Q}.IA_INDISPONIVEL`)
+        : t(`${Q}.FORA_DA_EQUIPE`, { nome: fora?.name || atual }),
     });
   }
   return lista;
@@ -309,7 +312,13 @@ const iniciais = nomeCompleto =>
         v-if="regra.pool_id && !naEquipe(regra.pool_id)"
         class="mb-0 text-sm text-n-amber-11"
       >
-        {{ t(`${Q}.AVISO_FORA_DA_EQUIPE`) }}
+        {{
+          t(
+            ehAgente(regra.pool_id)
+              ? `${Q}.AVISO_IA_INDISPONIVEL`
+              : `${Q}.AVISO_FORA_DA_EQUIPE`
+          )
+        }}
       </p>
       <p
         v-if="falta"

@@ -30,9 +30,23 @@ module PassarParaIaHelper
     # rubocop:enable RSpec/VerifiedDoubleReference
     allow(servico).to receive(:destinos_possiveis).and_return(destinos)
     allow(servico).to receive(:destinos_na_caixa).and_return(destinos)
-    allow(servico).to receive(:call).and_return(resultado_da_ia(codigo))
+    responder_ia(servico, codigo)
     stub_const('Autonomia::Agents::PassarParaIa', servico)
     servico
+  end
+
+  # O serviço passa a responder `codigo`, sempre conferindo os argumentos como o real.
+  def responder_ia(servico, codigo)
+    allow(servico).to receive(:call) do |**argumentos|
+      validar_chamada_da_ia!(argumentos)
+      resultado_da_ia(codigo)
+    end
+  end
+
+  # As regras de argumento do serviço real: por: :pessoa exige pedida_por; por: :crm não aceita.
+  def validar_chamada_da_ia!(argumentos)
+    raise ArgumentError, 'pedida_por com por: :crm' if argumentos[:por] == :crm && argumentos.key?(:pedida_por)
+    raise ArgumentError, 'por: :pessoa sem pedida_por' if argumentos[:por] == :pessoa && argumentos[:pedida_por].nil?
   end
 
   def resultado_da_ia(codigo)

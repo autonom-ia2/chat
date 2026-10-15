@@ -66,7 +66,7 @@ RSpec.describe Crm::Entrega do
 
     # Pega: o agente parar entre a leitura e a passagem; a recusa não pode deixar a conversa parada.
     it 'o serviço recusa: entrega de novo, sem IA, para alguém da equipe', :aggregate_failures do
-      allow(servico).to receive(:call).and_return(resultado_da_ia(:nao_atende_cliente))
+      responder_ia(servico, :nao_atende_cliente)
       conversa = conversa_do_robo
 
       resultado = entrega(conversa)
@@ -77,11 +77,25 @@ RSpec.describe Crm::Entrega do
 
     # Pega: o laço. A Lia pede pessoa e a regra a manda de volta para ela mesma.
     it 'o alvo já é o dono (ja_e_o_dono): vai para alguém da equipe', :aggregate_failures do
-      allow(servico).to receive(:call).and_return(resultado_da_ia(:ja_e_o_dono))
+      responder_ia(servico, :ja_e_o_dono)
       conversa = conversa_do_robo
 
       expect(entrega(conversa).status).to eq(:entregue)
       expect(conversa.reload.assignee_id).to eq(ana.id)
+    end
+
+    # Pega: uma pessoa assumiu entre a leitura e a passagem; a entrega não pode tirá-la nem dar a conversa a outra.
+    it 'pessoa já no nome (pessoa_atribuida): fica com ela, sem cair para a equipe', :aggregate_failures do
+      conversa = conversa_do_robo
+      allow(servico).to receive(:call) do
+        conversa.update_columns(assignee_id: admin.id) # rubocop:disable Rails/SkipsModelValidations
+        resultado_da_ia(:pessoa_atribuida)
+      end
+
+      resultado = entrega(conversa)
+
+      expect(resultado).to have_attributes(status: :nada, motivo: 'ja_tem_pessoa')
+      expect(conversa.reload.assignee_id).to eq(admin.id)
     end
 
     # Pega: sem a Fase 2, a regra salva com agente não pode virar silêncio nem chamar os Agentes.
@@ -108,8 +122,28 @@ RSpec.describe Crm::Entrega do
         .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
     end
 
+    # Pega: o Responder e a saída da triagem chamam bot_handoff! dentro de uma trava; a passagem ao agente não pode sair
+    # antes do commit dela (um rollback deixaria o agente com a conversa sem a passagem gravada).
+    it 'dentro da transação de quem chama: passa à Lia só depois do commit', :aggregate_failures do
+      conversa = conversa_do_robo
+      chamadas = 0
+      allow(servico).to receive(:call) do
+        chamadas += 1
+        resultado_da_ia(:passou)
+      end
+      chamadas_antes_do_commit = nil
+
+      ActiveRecord::Base.transaction do
+        conversa.bot_handoff!
+        chamadas_antes_do_commit = chamadas
+      end
+
+      expect(chamadas_antes_do_commit).to eq(0)
+      expect(chamadas).to eq(1)
+    end
+
     it 'na passagem do robô com recusa: alguém da equipe recebe e o aviso de passagem sai', :aggregate_failures do
-      allow(servico).to receive(:call).and_return(resultado_da_ia(:sem_vinculo_na_caixa))
+      responder_ia(servico, :sem_vinculo_na_caixa)
       conversa = conversa_do_robo
       allow(Rails.configuration.dispatcher).to receive(:dispatch)
 

@@ -29,6 +29,7 @@ const RECUSAS = [
   'sem_vinculo_na_caixa',
   'outra_conta',
   'conversa_resolvida',
+  'pessoa_atribuida',
   'pessoa_fora_da_caixa',
   'destino_invalido',
 ];
@@ -64,13 +65,17 @@ const lerRetrato = async () => {
 
 // O selo só existe com um robô no nome da conversa: aí vale perguntar ao servidor qual agente e quem passou.
 watch(
-  [conversaId, comRobo],
+  conversaId,
   () => {
     retrato.value = null;
     if (comRobo.value) lerRetrato();
   },
   { immediate: true }
 );
+watch(comRobo, comBot => {
+  if (comBot) lerRetrato();
+  else retrato.value = null;
+});
 
 const comIa = computed(() => retrato.value?.com_ia || null);
 const origem = computed(() => (comIa.value && retrato.value?.origem) || null);
@@ -172,27 +177,45 @@ const textoDaRecusa = codigo => {
   });
 };
 
+// Quem assumiu entra na conversa da lista na hora: a pessoa, ou o robô do agente de IA (o cabeçalho e o selo mudam
+// sem esperar o aviso do servidor).
+const atualizarConversa = (conversationId, data) => {
+  if (data.assignee) {
+    store.dispatch('setCurrentChatAssignee', {
+      conversationId,
+      assignee: data.assignee,
+    });
+  } else if (data.com_ia) {
+    store.dispatch('setCurrentChatAssignee', {
+      conversationId,
+      assignee: { id: data.com_ia.bot_id, name: data.com_ia.name },
+      assigneeType: 'AgentBot',
+    });
+  }
+};
+
 const confirmar = async () => {
   const destino = escolha.value;
+  // A pessoa pode trocar de conversa enquanto o pedido está em voo: a resposta vale só para a conversa pedida.
+  const pedido = conversaId.value;
   passando.value = true;
   recusa.value = '';
   try {
-    const { data } = await PassarParaAPI.passar(conversaId.value, {
+    const { data } = await PassarParaAPI.passar(pedido, {
       tipo: destino.devolver ? 'pessoa' : destino.tipo,
       id: destino.id,
     });
+    atualizarConversa(pedido, data);
+    if (pedido !== conversaId.value) return;
     retrato.value = data;
-    if (data.assignee) {
-      store.dispatch('setCurrentChatAssignee', {
-        conversationId: conversaId.value,
-        assignee: data.assignee,
-      });
-    }
     dialogRef.value?.close();
     useAlert(t(`${P}.PRONTO`, { nome: destino.nome }));
   } catch (erro) {
+    if (pedido !== conversaId.value) return;
     recusa.value = textoDaRecusa(erro?.response?.data?.codigo);
     escolhido.value = '';
+    // A lista se atualiza: quem parou ou saiu da caixa deixa de aparecer.
+    lerRetrato();
   } finally {
     passando.value = false;
   }

@@ -37,26 +37,25 @@ module ConversationBotHandoff
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
-  # A regra da Atribuição pode apontar um agente de IA (#1593): a passagem grava como se esperasse pessoa e, logo
-  # depois, o motor passa ao agente (Crm::Entrega#concluir_para_ia!). Com o agente no comando, não há aviso de passagem
-  # para pessoa; recusado, o motor entrega a alguém da equipe e o aviso sai como sempre.
+  # A regra da Atribuição pode apontar um agente de IA (#1593): a passagem grava como se esperasse pessoa e, depois do
+  # commit de TODAS as transações abertas (quem chama pode estar dentro de uma trava), o motor passa ao agente
+  # (Crm::Entrega#concluir_para_ia!), com o robô que passou como origem. Com o agente no comando, não há aviso de
+  # passagem para pessoa; recusado, o motor entrega a alguém da equipe e o aviso sai como sempre.
   def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
     para_ia = nil
+    quem_passou = nil
     self.class.transaction do
       take_fresh_assignee(release_assignee)
-      robo = keep_bot ? handoff_bot : nil
+      quem_passou = handoff_bot
+      robo = keep_bot ? quem_passou : nil
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
       para_ia = deliver_on_handoff(motivo, keep_bot)
-      if robo && assignee_id.blank?
-        wait_for_person_with(robo)
-      else
-        clear_bot_wait_mark
-      end
+      robo && assignee_id.blank? ? wait_for_person_with(robo) : clear_bot_wait_mark
       save!
     end
-    concluir_passagem(para_ia, dispatch_event)
+    depois_da_passagem(para_ia, dispatch_event, quem_passou)
   end
 
   def bot_handoff_waiting?
@@ -105,15 +104,24 @@ module ConversationBotHandoff
     ai_assignee.is_a?(AgentBot) ? ai_assignee : inbox_agent_bot
   end
 
-  # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
-  # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
-  # Depois da gravação: a passagem ao agente de IA, quando a regra o apontou. Com ele no comando, sem aviso de passagem.
-  def concluir_passagem(para_ia, dispatch_event)
-    com_ia = para_ia&.concluir_para_ia!&.status == :com_ia
+  # Sem agente de IA na regra, o aviso de passagem sai na hora, como sempre. Com ele, tudo espera o commit.
+  def depois_da_passagem(para_ia, dispatch_event, quem_passou)
+    if para_ia
+      ActiveRecord.after_all_transactions_commit { concluir_passagem(para_ia, dispatch_event, quem_passou) }
+    elsif dispatch_event
+      dispatch_bot_handoff_event
+    end
+  end
+
+  # Depois do commit: a passagem ao agente de IA que a regra apontou. Com ele no comando, sem aviso de passagem.
+  def concluir_passagem(para_ia, dispatch_event, quem_passou)
+    com_ia = para_ia.concluir_para_ia!(origem: quem_passou).status == :com_ia
     dispatch_bot_handoff_event if dispatch_event && !com_ia
   end
 
-  # Devolve a entrega quando ela aponta um agente de IA, para terminar depois da gravação.
+  # O motor de entrega (#1454), na mesma gravação da passagem: a pessoa escolhida entra junto com a abertura, e a
+  # marca de quem segura ou convida também. Já com pessoa no nome (a IA do CRM entregou antes), não há o que entregar.
+  # Devolve a entrega quando ela aponta um agente de IA (#1593), para terminar depois do commit.
   def deliver_on_handoff(motivo, keep_bot)
     return if assignee_id.present?
 

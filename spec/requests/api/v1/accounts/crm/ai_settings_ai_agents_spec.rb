@@ -77,6 +77,16 @@ RSpec.describe 'CRM AI settings: agentes de IA na Atribuição', type: :request 
     expect(pipeline.reload.metadata.dig('ai', 'handoff', 'pool_type')).not_to eq('ai_agent')
   end
 
+  # Pega: desligar a Fase 2 (ou o agente virar interno) travar o save de qualquer outra coisa da Atribuição.
+  it 'regra já salva com a Lia: salvar o resto continua funcionando sem a Fase 2' do
+    salvar({ enabled: true, pool_type: 'ai_agent', pool_id: lia.id })
+    allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(false)
+
+    salvar({ enabled: true, pool_type: 'ai_agent', pool_id: lia.id, prefer_online: false })
+
+    expect(response).to have_http_status(:ok)
+  end
+
   it 'sem a Fase 2: não aceita agente' do
     allow(Crm::Ai::Config).to receive(:areas_ligadas?).and_return(false)
 

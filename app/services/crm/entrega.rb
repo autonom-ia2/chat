@@ -58,14 +58,14 @@ class Crm::Entrega
   end
 
   # Fora de qualquer trava: o serviço dos Agentes trava a conversa e relê. A origem é o robô que estava com a conversa
-  # (o que passou). Só 'passou' é a IA assumindo: 'ja_e_o_dono' quer dizer que o alvo é quem acabou de passar, e a
-  # conversa vai para alguém da equipe, como qualquer recusa.
-  def concluir_para_ia!
+  # (o que passou). Só 'passou' é a IA assumindo. 'pessoa_atribuida': uma pessoa entrou no nome antes; ela fica com a
+  # conversa e nada muda. 'ja_e_o_dono' (o alvo é quem acabou de passar) e as recusas: alguém da equipe.
+  def concluir_para_ia!(origem: @conversation.ai_assignee)
     agente = @resultado.agente
-    codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :crm, motivo: MOTIVO_IA,
-                                          origem: @conversation.ai_assignee)
+    codigo = passar_ao_agente(agente, origem)
     registrar_ia(agente, codigo)
     return Resultado.new(status: :com_ia, agente: agente, card: @resultado.card) if codigo == Crm::Entrega::ParaIa::PASSOU
+    return Resultado.new(status: :nada, motivo: 'ja_tem_pessoa', card: @resultado.card) if codigo == Crm::Entrega::ParaIa::FICA_COM_A_PESSOA
 
     @sem_ia = true
     @conversation.reload
@@ -73,6 +73,14 @@ class Crm::Entrega
   end
 
   private
+
+  # Erro no serviço dos Agentes não deixa a conversa sem ninguém: conta como recusa, e a entrega segue sem IA.
+  def passar_ao_agente(agente, origem)
+    Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :crm, motivo: MOTIVO_IA, origem: origem)
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] passar ao agente falhou conversa=#{@conversation.id} agente=#{agente.id} erro=#{e.class}")
+    'erro'
+  end
 
   def planejar
     return nada('ja_tem_pessoa') if @conversation.assignee_id.present?

@@ -3035,7 +3035,9 @@
         "IA_PARADO": "{nome} is paused and does not receive conversations. Meanwhile, they go to someone on the team. Choose another one or turn {nome} back on in Agents.",
         "IA_SEM_CAIXA": "{nome} does not work any inbox of this pipeline and will not receive. Choose another one or add {nome} to an inbox in CRM Inboxes.",
         "IA_ALGUMAS_CAIXAS": "{nome} only works in {caixas}. In the other inboxes, the conversation goes to someone on the team.",
-        "IA_TODAS_AS_CAIXAS": "Works in every inbox of this pipeline."
+        "IA_TODAS_AS_CAIXAS": "Works in every inbox of this pipeline.",
+        "IA_INDISPONIVEL": "AI agent (unavailable)",
+        "AVISO_IA_INDISPONIVEL": "AI agents are not available in this account right now. Meanwhile, the conversation goes to someone on the team. Choose a person."
       },
       "COMO": {
         "TITULO": "Choose how",
@@ -3269,6 +3271,7 @@
         "FASE2_DESLIGADA": "AI agents are not turned on for this account. Choose a person.",
         "CONVERSA_RESOLVIDA": "This conversation is already resolved. Reopen it to pass it.",
         "OUTRA_CONTA": "{nome} belongs to another account. Choose someone from this inbox.",
+        "PESSOA_ATRIBUIDA": "Someone on the team already has this conversation. Open the list again.",
         "PESSOA_FORA_DA_CAIXA": "{nome} is not in this inbox anymore. Choose someone else.",
         "DESTINO_INVALIDO": "This option is no longer available. Close and open the list again.",
         "ERRO": "Could not pass it right now. Try again."

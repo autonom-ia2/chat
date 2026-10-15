@@ -3036,7 +3036,9 @@
         "IA_PARADO": "{nome} está com o atendimento parado e não recebe conversas. Enquanto isso, elas vão para alguém da equipe. Escolha outro ou ligue {nome} de novo em Agentes.",
         "IA_SEM_CAIXA": "{nome} não atende nenhuma caixa deste funil e não vai receber. Escolha outro ou coloque {nome} numa caixa em Caixas no CRM.",
         "IA_ALGUMAS_CAIXAS": "{nome} atende só em {caixas}. Nas outras caixas, a conversa vai para alguém da equipe.",
-        "IA_TODAS_AS_CAIXAS": "Atende em todas as caixas deste funil."
+        "IA_TODAS_AS_CAIXAS": "Atende em todas as caixas deste funil.",
+        "IA_INDISPONIVEL": "Agente de IA (indisponível)",
+        "AVISO_IA_INDISPONIVEL": "Os agentes de IA não estão disponíveis nesta conta agora. Enquanto isso, a conversa vai para alguém da equipe. Escolha uma pessoa."
       },
       "COMO": {
         "TITULO": "Escolha o jeito",
@@ -3270,6 +3272,7 @@
         "FASE2_DESLIGADA": "Os agentes de IA não estão ligados nesta conta. Escolha uma pessoa.",
         "CONVERSA_RESOLVIDA": "Esta conversa já foi resolvida. Reabra para passar.",
         "OUTRA_CONTA": "{nome} é de outra conta. Escolha alguém desta caixa.",
+        "PESSOA_ATRIBUIDA": "Uma pessoa da equipe já está com esta conversa. Abra a lista de novo.",
         "PESSOA_FORA_DA_CAIXA": "{nome} não está mais nesta caixa. Escolha outra pessoa.",
         "DESTINO_INVALIDO": "Esta opção não está mais disponível. Feche e abra a lista de novo.",
         "ERRO": "Não deu para passar agora. Tente de novo."

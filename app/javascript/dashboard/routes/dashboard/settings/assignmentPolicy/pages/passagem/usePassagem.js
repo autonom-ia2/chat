@@ -42,14 +42,16 @@ const destinoDoServidor = handoff => {
   };
 };
 
-export const regraParaServidor = regra =>
-  ehAgente(regra.pool_id)
-    ? {
-        ...regra,
-        pool_type: AGENTE_NO_SERVIDOR,
-        pool_id: idPositivo(String(regra.pool_id).slice(PREFIXO_IA.length)),
-      }
-    : regra;
+// Só "A mesma pessoa" leva o agente; com "Alguém da equipe" o "ia:<id>" que ficou guardado sai.
+export const regraParaServidor = regra => {
+  if (!ehAgente(regra.pool_id)) return regra;
+  if (regra.pool_type !== 'user') return { ...regra, pool_id: null };
+  return {
+    ...regra,
+    pool_type: AGENTE_NO_SERVIDOR,
+    pool_id: idPositivo(String(regra.pool_id).slice(PREFIXO_IA.length)),
+  };
+};
 
 export const regraDoServidor = handoff => ({
   enabled: handoff?.enabled === true,

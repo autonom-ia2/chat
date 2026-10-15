@@ -162,6 +162,28 @@ describe('usePassagem', () => {
     });
   });
 
+  // Pega: voltar para "Alguém da equipe" com a Lia escolhida antes salvava "A mesma pessoa = Lia".
+  it('"Alguém da equipe" depois de escolher a Lia: salva a equipe, sem o agente', async () => {
+    // Arrange
+    const passagem = usePassagem();
+    await passagem.carregar(9);
+    passagem.regra.value = {
+      ...passagem.regra.value,
+      pool_type: 'inbox',
+      pool_id: 'ia:4',
+    };
+
+    // Act
+    await passagem.salvar(9);
+
+    // Assert
+    const [, corpo] = CrmKanbanAPI.updateAiSettings.mock.calls[0];
+    expect(corpo.ai_settings.handoff).toMatchObject({
+      pool_type: 'inbox',
+      pool_id: null,
+    });
+  });
+
   it('sem a Fase 2 o servidor não manda agentes: a lista fica vazia', async () => {
     // Arrange
     const passagem = usePassagem();

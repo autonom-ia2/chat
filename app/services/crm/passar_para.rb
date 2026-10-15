@@ -32,7 +32,7 @@ class Crm::PassarPara
       fase2: ligado,
       sem_robo: ligado && ::Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox).blank?,
       agentes: Crm::AgentesIa.destinos(@conversation).map { |agente| item(agente, dono) },
-      com_ia: dono && { id: dono.id, name: dono.name },
+      com_ia: dono && { id: dono.id, name: dono.name, bot_id: @conversation.assignee_agent_bot_id },
       origem: dono && origem_de(dono)
     }
   end
@@ -86,7 +86,7 @@ class Crm::PassarPara
     return recusa('destino_invalido') if agente.nil?
 
     codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :pessoa, motivo: MOTIVO,
-                                          origem: @usuario)
+                                          origem: quem_esta_agora, pedida_por: @usuario)
     OK_DA_IA.include?(codigo) ? Resultado.new(ok: true) : recusa(codigo)
   end
 
@@ -94,6 +94,11 @@ class Crm::PassarPara
   def pessoa_da_caixa(user_id)
     candidatas = @inbox.assignable_agents.select { |user| user.id == user_id.to_i }
     Crm::Access::Recipients.new(@conversation).filter(candidatas).first
+  end
+
+  # Quem estava com a conversa antes de passar: o agente de IA dono, a pessoa no nome ou o robô (externo).
+  def quem_esta_agora
+    Crm::AgentesIa.dono(@conversation) || @conversation.assignee || @conversation.ai_assignee
   end
 
   def recusa(codigo)
