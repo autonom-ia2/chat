@@ -7,6 +7,11 @@
 # O espelho da área NÃO tem AgentBotInbox: assim inbox.agent_bot continua sendo a porta, e conversa nova continua
 # nascendo com a porta (Conversation#set_active_bot_conversation).
 #
+# Caixa só de pessoas (#1433, decisão do Rodrigo de 15/10 na #1593): sem porta e sem robô de fora (AgentBotInbox, como
+# o n8n), a área também pode entrar. Ali conversa nova nasce sem robô, então a área só responde quando vira dona da
+# conversa por uma passagem; ela nunca abre conversa sozinha (QuemResponde: sem dono e sem porta, ninguém responde).
+# Caixa com robô de fora continua recusada (CaixaNaoAceitaArea com :robo_externo).
+#
 # Os dois métodos são idempotentes e rodam em transação. Soltar arquiva o vínculo (deleted_at) e GUARDA o espelho:
 # ele é o autor das mensagens que a área já mandou (destruir o AgentBot apagaria o autor delas). Vincular de novo
 # reativa o mesmo vínculo e o mesmo espelho.
@@ -17,7 +22,6 @@ module Autonomia::Agents::Areas
   class AgenteInterno < StandardError; end
   class AgenteNaoAtende < StandardError; end
   class AgenteDeSistema < StandardError; end
-  class SemPortaAtendendo < StandardError; end
   class AgenteRascunho < StandardError; end
   class AgenteNaoPodeSerArea < StandardError; end
 
@@ -25,14 +29,52 @@ module Autonomia::Agents::Areas
   RECUSAS = { interno: AgenteInterno, sistema: AgenteDeSistema, rascunho: AgenteRascunho,
               fora_da_equipe: AgenteNaoPodeSerArea }.freeze
 
+  # A caixa não aceita agente da equipe agora; `codigo` é o do caixa_aceita_area? (ex.: :principal_parado).
+  class CaixaNaoAceitaArea < StandardError
+    attr_reader :codigo
+
+    def initialize(codigo)
+      @codigo = codigo
+      super("inbox does not accept a team agent: #{codigo}")
+    end
+  end
+
+  # Resposta de caixa_aceita_area?: `codigo` é um de CODIGOS.
+  CODIGOS = %i[ok principal_parado robo_externo fase2_desligada].freeze
+  Resultado = Struct.new(:codigo) do
+    def ok?
+      codigo == :ok
+    end
+  end
+
   module_function
 
+  # O LEITOR ÚNICO de "esta caixa pode receber um agente da equipe agora?" (#1433), para a tela dos Agentes, o CRM e o
+  # vincular!. Puro: não trava nada (o vincular! chama com a caixa já travada). -> Resultado com o código:
+  # - :fase2_desligada — a conta DA CAIXA não tem a Fase 2 (sem ela a área nunca responde);
+  # - :principal_parado — a caixa tem principal (porta ativa) e ele não está atendendo;
+  # - :robo_externo — sem principal e com robô de fora (AgentBotInbox, ex.: n8n);
+  # - :ok — principal atendendo, ou caixa só de pessoas.
+  # `conferir_fase2: false` é só do vincular!: a Fase 2 é regra da conta, conferida por quem chama (a API de canais e
+  # a tela do CRM). O vincular! confere sempre a regra da CAIXA.
+  # Tenancy: o principal é lido na conta da caixa.
+  def caixa_aceita_area?(inbox, conferir_fase2: true)
+    return Resultado.new(:fase2_desligada) if conferir_fase2 && !::Autonomia::Agents::Fase2.ligada?(inbox.account)
+
+    porta = ::Autonomia::Agents::AgentInbox.kept.porta.includes(:agent).find_by(inbox_id: inbox.id, account_id: inbox.account_id)
+    return Resultado.new(porta.agent&.operating? ? :ok : :principal_parado) if porta
+    return Resultado.new(:robo_externo) if ::Autonomia::Agents::AgentInbox.robo_externo_na_caixa?(inbox.id)
+
+    Resultado.new(:ok)
+  end
+
   # -> o AgentInbox de área ativo. Recusa o agente que não fala com cliente (mesmo predicado do
-  # InboxConnector#connect_locked!, mais o de sistema). ActiveRecord::RecordInvalid quando a caixa não tem porta
-  # ativa, o agente já é a porta dela, ou agente/caixa são de contas diferentes.
+  # InboxConnector#connect_locked!, mais o de sistema). CaixaNaoAceitaArea (com o `codigo` do caixa_aceita_area?)
+  # quando a caixa tem principal parado ou robô de fora; ActiveRecord::RecordInvalid quando o agente já é a porta dela,
+  # ou agente/caixa são de contas diferentes. Principal atendendo ou caixa só de pessoas aceita.
   #
   # Só entra quem `pode_ser_area?` (#1433), mesmo com `ativar`: senão AgenteInterno, AgenteDeSistema, AgenteRascunho
-  # ou AgenteNaoPodeSerArea (ajudante, Lia, parado de propósito com caixa).
+  # ou AgenteNaoPodeSerArea (ajudante, parado de propósito com caixa).
   #
   # `ativar: true` (#1366) — "pôr o agente nesta área e ligá-lo": aceita o agente parado SEM onde trabalhar e o liga
   # (active + enabled) na MESMA transação do vínculo, como o InboxConnector. É o caminho da área que volta depois que
@@ -41,19 +83,22 @@ module Autonomia::Agents::Areas
   # `de_rascunho: true` (com `ativar`) — só a criação do agente da equipe (POST channels com papel area): aceita o
   # rascunho cuja conversa de criação já fechou (tem instrução). Rascunho pela metade é sempre recusado. O CRM não manda.
   #
-  # `exigir_porta_atendendo: true` (#1433, tela do agente da equipe) — com a caixa já travada, confere que o principal
-  # dela (a porta) está atendendo; senão SemPortaAtendendo. A tela só oferece caixas assim, mas o principal pode parar
-  # entre a leitura e o clique.
+  # A regra da caixa é conferida SEMPRE, com a caixa já travada, pelo mesmo leitor da tela (caixa_aceita_area?): a tela
+  # só oferece caixas que aceitam, mas o principal pode parar entre a leitura e o clique.
   #
-  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem de todos os caminhos (InboxConnector, SoftDelete,
-  # AgentInbox#soltar_areas_da_caixa!): a conferência "a caixa tem porta ativa" e a saída da porta não se cruzam, e a
-  # parada automática do agente não espera por uma caixa que outro segura.
-  def vincular!(agent:, inbox:, ativar: false, exigir_porta_atendendo: false, de_rascunho: false)
+  # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem dos caminhos da Autonom.ia (InboxConnector, SoftDelete): entre eles,
+  # a conferência da caixa e a entrada ou saída de um principal não se cruzam, e a parada automática do agente não espera
+  # por uma caixa que outro segura. A garantia é PARCIAL: o painel do Chatwoot pluga um agente externo na caixa
+  # (Inbox#set_agent_bot / AgentBotInbox) sem travar a caixa, então ele pode entrar depois da conferência, ou numa
+  # caixa só de pessoas que já tem área. Barrar isso fica para o próximo PR, a marcação por caixa ("o agente externo
+  # desta caixa respeita quem é o dono", decisão do Rodrigo de 15/10). O comportamento de hoje está registrado em
+  # spec/services/autonomia/agents/areas_agente_externo_depois_spec.rb.
+  def vincular!(agent:, inbox:, ativar: false, de_rascunho: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.
       recusar_quem_nao_pode_ser_area!(agent, ativar: ativar, de_rascunho: de_rascunho)
       inbox.with_lock do
-        raise SemPortaAtendendo, "inbox #{inbox.id} has no operating porta" if exigir_porta_atendendo && !porta_atendendo?(inbox)
+        conferir_a_caixa!(inbox)
 
         vinculo = vincular_na_caixa!(agent, inbox)
         # Depois do vínculo: a validação de atender já o enxerga. Recusada, a transação desfaz o vínculo.
@@ -63,17 +108,17 @@ module Autonomia::Agents::Areas
     end
   end
 
-  # Solta o vínculo de área do agente na caixa (se houver). As conversas que ele atendia voltam à porta; com
-  # `porta_saindo: true` (a porta está saindo da caixa), vão direto para a equipe humana.
+  # Solta o vínculo de área do agente na caixa (se houver). As conversas que ele atendia voltam à porta; sem porta
+  # atendendo (caixa só de pessoas), vão para a equipe humana.
   # Nunca toca a porta: soltar a porta é o InboxConnector.
   # Agente e depois caixa, como o vincular!. Sendo a última área do agente, ele para (AgentInbox, #1366).
-  def desvincular!(agent:, inbox:, porta_saindo: false)
+  def desvincular!(agent:, inbox:)
     agent.with_lock do
       inbox.with_lock do
         vinculo = ::Autonomia::Agents::AgentInbox.kept.area.find_by(autonomia_agent_id: agent.id, inbox_id: inbox.id)
         next if vinculo.nil?
 
-        vinculo.release_bot_conversations!(porta_saindo: porta_saindo)
+        vinculo.release_bot_conversations!
         vinculo.update!(deleted_at: Time.current)
       end
     end
@@ -90,8 +135,10 @@ module Autonomia::Agents::Areas
     raise AgenteNaoAtende, "agent #{agent.id} is not operating" unless ativar || agent.operating?
   end
 
-  def porta_atendendo?(inbox)
-    ::Autonomia::Agents::AgentInbox.kept.porta.find_by(inbox_id: inbox.id)&.agent&.operating? || false
+  # O mesmo leitor da tela, com a caixa já travada.
+  def conferir_a_caixa!(inbox)
+    resultado = caixa_aceita_area?(inbox, conferir_fase2: false)
+    raise CaixaNaoAceitaArea, resultado.codigo unless resultado.ok?
   end
 
   def reativar!(vinculo)
@@ -106,5 +153,5 @@ module Autonomia::Agents::Areas
     espelho = AgentBot.new(account: agent.account, name: agent.name, bot_type: :webhook, outgoing_url: nil)
     ::Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: agent.account, agent_bot: espelho, papel: 'area')
   end
-  private_class_method :vincular_na_caixa!, :recusar_quem_nao_pode_ser_area!, :porta_atendendo?, :reativar!, :criar!
+  private_class_method :vincular_na_caixa!, :recusar_quem_nao_pode_ser_area!, :conferir_a_caixa!, :reativar!, :criar!
 end

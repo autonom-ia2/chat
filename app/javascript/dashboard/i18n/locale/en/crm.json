@@ -4082,7 +4082,9 @@
       "SALVOU": "Inbox saved.",
       "FALHOU": "We couldn't save. Try again.",
       "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
-      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again."
+      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
+      "PRINCIPAL_PARADO": "The main agent of this inbox is not answering. To add a team agent here, turn the main agent on first.",
+      "AGENTE_EXTERNO": "An external agent answers on this inbox. A team agent cannot join an inbox with an external agent yet."
     }
   },
   "CRM_FUNIL": {

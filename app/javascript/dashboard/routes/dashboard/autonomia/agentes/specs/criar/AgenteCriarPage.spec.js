@@ -1270,7 +1270,8 @@ describe('AgenteCriarPage', () => {
   });
 
   describe('Agente da equipe (#1433, tema 13)', () => {
-    // 11: Bia atende primeiro (atendendo); 10: livre; 12: Leo parado; 13: outro robô.
+    // 11: Bia atende primeiro (atendendo); 10: livre (leitura antiga, sem so_de_pessoas); 12: Leo parado;
+    // 13: outro robô; 14: só de pessoas (#1433).
     const L2_EQUIPE = [
       {
         inbox_id: 10,
@@ -1310,6 +1311,15 @@ describe('AgenteCriarPage', () => {
         name: 'Site',
         channel_type: 'Channel::WebWidget',
         occupied_by: { kind: 'external' },
+        so_de_pessoas: false,
+        areas: [],
+      },
+      {
+        inbox_id: 14,
+        name: 'WhatsApp da Recepção',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: null,
+        so_de_pessoas: true,
         areas: [],
       },
     ];
@@ -1386,7 +1396,7 @@ describe('AgenteCriarPage', () => {
         'AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'
       );
       expect(opcao(13).textContent).toContain(
-        'AGENTS.JORNADA.EQUIPE.SEM_PRINCIPAL'
+        'AGENTS.JORNADA.EQUIPE.OUTRO_ROBO'
       );
       expect(opcao(12).textContent).toContain(
         'AGENTS.JORNADA.EQUIPE.PRINCIPAL_PARADO'
@@ -1397,6 +1407,33 @@ describe('AgenteCriarPage', () => {
       await seguir();
       expect(passo()).toBe('canais');
       expect(document.body.querySelector('select')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('an inbox served only by people can be chosen, says so, and "Confira" says new conversations stay with people', async () => {
+      const wrapper = await montar({ query: { papel: 'area' } });
+      expect(opcao(14).getAttribute('aria-disabled')).toBeNull();
+      expect(opcao(14).querySelector('[data-motivo]')).toBeNull();
+      expect(opcao(14).textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.SO_PESSOAS_SEM_NOME'
+      );
+
+      await clicar(opcao(14));
+      expect(opcao(14).getAttribute('aria-checked')).toBe('true');
+      await seguir();
+      expect(passo()).toBe('confira');
+      const confira = document.body.querySelector('[data-confira-equipe]');
+      expect(confira.textContent).toContain('WhatsApp da Recepção');
+      expect(confira.textContent).toContain(
+        'AGENTS.JORNADA.EQUIPE.AVISO_PESSOAS_SEM_NOME'
+      );
+      await seguir();
+      expect(router.replace).toHaveBeenCalledWith({
+        query: { papel: 'area', caixas: '14' },
+      });
+      expect(wrapper.get('[data-onde-criacao]').text()).toContain(
+        'AGENTS.JORNADA.ONDE.RECEBE_PESSOAS'
+      );
       wrapper.unmount();
     });
 
