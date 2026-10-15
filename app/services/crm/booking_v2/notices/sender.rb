@@ -103,7 +103,7 @@ class Crm::BookingV2::Notices::Sender
     reason = blocking_reason
     return skip!(waha_gave_up?(reason) ? WAHA_UNAVAILABLE : reason) if reason
 
-    decision = route.decide
+    decision = route(heal: true).decide
     return skip!(decision.reason) unless decision.send?
 
     waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
@@ -177,9 +177,10 @@ class Crm::BookingV2::Notices::Sender
     @invite ||= Crm::BookingInvite.where(meeting_id: meeting.id).order(:id).last
   end
 
-  def route
-    @route ||= Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
-                                                  template: profile.notice_template(notice.kind), kind: notice.kind)
+  # heal (#1633): só o envio real liga a autocura dos modelos v2; o `will_send?` fica sem efeito.
+  def route(heal: false)
+    Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
+                                       template: profile.notice_template(notice.kind), kind: notice.kind, heal: heal)
   end
 
   # WAHA sem conversa: pergunta o chat id antes de abrir uma (`Notices::WahaChat`, #1270).
