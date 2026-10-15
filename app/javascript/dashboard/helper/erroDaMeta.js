@@ -36,8 +36,11 @@ export const CHAVES = [
   ...new Set([...Object.values(CHAVE_POR_CODIGO), DESCONHECIDO]),
 ];
 
+// Códigos da Meta têm de 3 a 6 dígitos; menos que isso ("10:30 …", "3: …") não é código.
+const MIN_DIGITOS = 3;
+
 const soDigitos = texto =>
-  texto.length > 0 && [...texto].every(c => c >= '0' && c <= '9');
+  texto.length >= MIN_DIGITOS && [...texto].every(c => c >= '0' && c <= '9');
 
 const trechoDoCodigo = texto => {
   if (texto.startsWith('(#')) {

@@ -63,6 +63,18 @@ describe('erroDaMeta', () => {
     });
   });
 
+  it('número curto no começo do texto não vira código', () => {
+    ['10:30 agendamento falhou', '3: tentativas esgotadas', '24'].forEach(
+      texto => {
+        expect(erroDaMeta(texto, true)).toEqual({
+          chave: null,
+          detalhe: texto,
+          podeReenviar: true,
+        });
+      }
+    );
+  });
+
   it('caixa que não é WhatsApp fica como hoje, mesmo com código', () => {
     expect(erroDaMeta('131042: Business eligibility', false)).toEqual({
       chave: null,
