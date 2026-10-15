@@ -1,18 +1,8 @@
 {
   "CRM_KANBAN": {
-    "CARD_STATUS": {
-      "WON": "Seguro ativo",
-      "LOST": "Não fechou"
-    },
     "DRAWER": {
       "STATUS_WON": "Seguro ativo",
       "STATUS_LOST": "Não fechou",
-      "WIN_DEAL": "Fechou o seguro",
-      "LOSE_DEAL": "Não fechou",
-      "WIN_DIALOG_TITLE": "Fechou o seguro?",
-      "WIN_CONFIRM": "Marcar: fechou o seguro",
-      "LOSE_DIALOG_TITLE": "Não fechou desta vez?",
-      "LOSE_CONFIRM": "Marcar: não fechou",
       "LOSE_REASON_PLACEHOLDER": "Por que não fechou?",
       "CLOSE_AS_TITLE": "Terminar como {label}",
       "ACTIVITY_WON": "Fechou o seguro",
@@ -61,10 +51,7 @@
     },
     "PIPELINE_DRAWER": {
       "DEFAULT_STAGE_LOST": "Não fechou",
-      "COUNTS_AS_SALE_ON": "Os cards terminam como Seguro ativo ou Não fechou, entram no total de vendas e podem avisar seus anúncios.",
-      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o seguro, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar.",
-      "META_SYNC_EVENT_WON": "Fechou o seguro (Purchase, com valor)",
-      "META_SYNC_EVENT_LOST": "Não fechou (OrderCanceled)"
+      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o seguro, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar."
     },
     "PIPELINE_EDITOR": {
       "AD_RESULTS_HELP": "Mostre quais anúncios viraram vendas. A venda conta quando o card fecha o seguro, em qualquer coluna.",
@@ -75,8 +62,6 @@
       }
     },
     "GOOGLE_SYNC": {
-      "EVENT_WON": "Fechou o seguro",
-      "EVENT_LOST": "Não fechou",
       "CONVERSION_NAME_WON": "Nome da conversão para seguros fechados",
       "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Seguro fechado",
       "CONVERSION_NAME_WON_HELP": "Os eventos de não fechou e de mudança de etapa usam os nomes de conversão padrão."

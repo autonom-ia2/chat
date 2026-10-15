@@ -1,13 +1,7 @@
 {
   "CRM_KANBAN": {
-    "CARD_STATUS": {
-      "WON": "Active plan"
-    },
     "DRAWER": {
       "STATUS_WON": "Active plan",
-      "WIN_DEAL": "Plan closed",
-      "WIN_DIALOG_TITLE": "Plan closed?",
-      "WIN_CONFIRM": "Mark as: plan closed",
       "ACTIVITY_WON": "Plan closed"
     },
     "META_SYNC_STATUS": {
@@ -28,9 +22,7 @@
       }
     },
     "PIPELINE_DRAWER": {
-      "COUNTS_AS_SALE_ON": "Cards end as Active plan or Not closed, count toward sales totals and can notify your ads.",
-      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card closes a plan, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy.",
-      "META_SYNC_EVENT_WON": "Plan closed (Purchase, with value)"
+      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card closes a plan, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy."
     },
     "PIPELINE_EDITOR": {
       "AD_RESULTS_HELP": "Show which ads became sales. A sale is counted when a card closes a plan, regardless of its column.",
@@ -41,7 +33,6 @@
       }
     },
     "GOOGLE_SYNC": {
-      "EVENT_WON": "Plan closed",
       "CONVERSION_NAME_WON": "Conversion name for closed plans",
       "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Plan closed"
     },

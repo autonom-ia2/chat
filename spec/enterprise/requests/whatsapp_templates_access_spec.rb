@@ -86,6 +86,40 @@ RSpec.describe 'Modelos do WhatsApp com função personalizada', type: :request 
     expect(response.parsed_body.dig('result', 'error')).to eq('suggestion_unavailable')
   end
 
+  # #1586: ver a autorização segue o gate de criar modelos; mudar é só do administrador (financeiro não se delega).
+  it 'autorização do sistema: whatsapp_templates_manage vê e recebe 403 ao mudar; só o administrador liga' do
+    path = "/api/v1/accounts/#{account.id}/whatsapp_template_consent"
+    ligar = { operacao: 'ligar', marcas: %w[utility], versao_aviso: Whatsapp::Templates::AvisoDeConsentimento::VERSAO }
+
+    viewer = role_user('whatsapp_templates_view')
+    call(viewer, :get, path)
+    expect(response).to have_http_status(:unauthorized)
+
+    manager = role_user('whatsapp_templates_manage')
+    call(manager, :get, path)
+    expect(response).to have_http_status(:ok)
+    call(manager, :post, path, ligar)
+    expect(response).to have_http_status(:forbidden)
+    expect(response.parsed_body['error']).to eq('somente_administrador')
+    expect(WhatsappTemplateConsent.count).to eq(0)
+
+    call(admin, :post, path, ligar)
+    expect(response).to have_http_status(:ok)
+    expect(WhatsappTemplateConsent.sole).to have_attributes(user_id: admin.id, acao: 'ligou')
+  end
+
+  it 'autorização do sistema sem a flag da conta: mudar dá 404 para todos, antes do 403 de quem não é administrador' do
+    path = "/api/v1/accounts/#{account.id}/whatsapp_template_consent"
+    ligar = { operacao: 'ligar', marcas: %w[utility], versao_aviso: Whatsapp::Templates::AvisoDeConsentimento::VERSAO }
+    account.disable_features!('whatsapp_templates_journey')
+
+    call(role_user('whatsapp_templates_manage'), :post, path, ligar)
+    expect(response).to have_http_status(:not_found)
+    call(admin, :post, path, ligar)
+    expect(response).to have_http_status(:not_found)
+    expect(WhatsappTemplateConsent.count).to eq(0)
+  end
+
   it 'campaign_manage sozinha não abre os modelos' do
     call(role_user('campaign_manage'), :get, base)
 

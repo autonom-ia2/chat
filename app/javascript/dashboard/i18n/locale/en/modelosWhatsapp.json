@@ -992,6 +992,72 @@
         "RESPONDERAM": "{n}% replied"
       },
       "USAR_MESMO_ASSIM": "Use it anyway"
+    },
+    "AUTORIZACAO": {
+      "TITULO": "Permission to create templates",
+      "AVISO": "You allow {marca} to create templates on its own. The templates you already have stay as they are.",
+      "SITUACAO": {
+        "LIGADA": "On",
+        "DESLIGADA": "Off"
+      },
+      "OPCIONAL": "(optional)",
+      "SERVICO": {
+        "ROTULO": "Service notice",
+        "EXPLICA": "Updates about a customer order or service, such as confirmations, reminders and payment notices."
+      },
+      "DIVULGACAO": {
+        "ROTULO": "Promotion",
+        "EXPLICA": "Offers, promotions and invitations for the customer to buy again.",
+        "TRAVADA": "Check Service notice to unlock this one.",
+        "LIBERADA": "Promotion too",
+        "NAO_LIBERADA": "Promotion not allowed",
+        "LIGAR": "Turn on Promotion",
+        "DESLIGAR": "Turn off Promotion"
+      },
+      "PRECO": "{valor} per delivered message",
+      "LIBERADO": "What is allowed",
+      "META": {
+        "TITULO": "What Meta charges and limits",
+        "COBRA": "Meta charges for every delivered message, even while the conversation is open.",
+        "TABELA": "Prices from Meta’s rate card for Brazil, in effect since {data}.",
+        "LIMITE_MODELOS": "Each WhatsApp account accepts up to {modelos} templates ({verificada} if the business is verified by Meta) and up to {porHora} new ones per hour.",
+        "LIMITE_DIVULGACAO": "Meta limits how many promotions each person receives. Some may not be delivered."
+      },
+      "LIGADA_POR": "Turned on by {nome} on {dia} at {hora}, in the account time zone ({fuso}).",
+      "LIGADA_POR_SEM_FUSO": "Turned on by {nome} on {dia} at {hora}, in your account time zone.",
+      "DESLIGADA_POR": "Turned off by {nome} on {dia} at {hora}, in the account time zone ({fuso}).",
+      "DESLIGADA_POR_SEM_FUSO": "Turned off by {nome} on {dia} at {hora}, in your account time zone.",
+      "ALGUEM": "someone no longer in the account",
+      "ACOES": {
+        "LIGAR": "Turn on permission",
+        "DESLIGAR": "Turn off permission"
+      },
+      "AGORA_NAO": "Not now",
+      "CONFIRMAR_LIGAR": {
+        "TITULO": "Turn on the permission?",
+        "SIM": "Yes, turn on"
+      },
+      "CONFIRMAR_DIVULGACAO": {
+        "TITULO": "Turn on Promotion?",
+        "SIM": "Yes, turn on"
+      },
+      "CONFIRMAR_DESLIGAR": {
+        "TITULO": "Turn off the permission?",
+        "SIM": "Yes, turn off"
+      },
+      "CONFIRMAR_DESLIGAR_DIVULGACAO": {
+        "TITULO": "Turn off Promotion?",
+        "SIM": "Yes, turn off"
+      },
+      "FALHOU": "That did not work. Please try again.",
+      "RESUMO": {
+        "TITULO": "Permission for {marca} to create templates",
+        "DESLIGADA": "Off. {marca} does not create templates on its own.",
+        "LIGADA_SERVICO": "On for Service notice.",
+        "LIGADA_TUDO": "On for Service notice and Promotion.",
+        "ABRIR": "See permission"
+      },
+      "SO_ADMIN": "Only account administrators can change this."
     }
   }
 }

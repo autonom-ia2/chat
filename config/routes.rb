@@ -944,6 +944,8 @@ Rails.application.routes.draw do
           resources :whatsapp_message_prices, only: [:index]
           # Criar com IA e Melhorar com IA na tela de Modelos (#1333): opções de texto, nada é salvo.
           resources :whatsapp_template_suggestions, only: [:create]
+          # Autorização do dono para o sistema criar modelos (#1586): estado, ligar e desligar.
+          resource :whatsapp_template_consent, only: [:show, :create]
 
           namespace :twitter do
             resource :authorization, only: [:create]

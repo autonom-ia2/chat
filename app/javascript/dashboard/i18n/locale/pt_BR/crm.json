@@ -677,9 +677,7 @@
       "URGENT": "Urgente"
     },
     "CARD_STATUS": {
-      "OPEN": "Aberto",
-      "WON": "Ganho",
-      "LOST": "Perdido"
+      "OPEN": "Aberto"
     },
     "FOLLOW_UP_FILTER": {
       "NONE": "Sem retorno",
@@ -1432,18 +1430,9 @@
       "STATUS_ARCHIVED": "Arquivado",
       "STATUS_RESOLVED": "Resolvido",
       "STATUS_CANCELLED": "Cancelado",
-      "WIN_DEAL": "Ganhar",
-      "LOSE_DEAL": "Perder",
       "REOPEN_DEAL": "Reabrir",
-      "WIN_DIALOG_TITLE": "Ganhar este negócio",
       "VALUE_AI_FILLED": "Valor preenchido pela IA a partir da conversa. Edite se necessário.",
-      "WIN_VALUE_LABEL": "Valor do negócio",
-      "WIN_CURRENCY_LABEL": "Moeda",
-      "WIN_CONFIRM": "Marcar como ganho",
-      "LOSE_DIALOG_TITLE": "Perder este negócio",
-      "LOSE_REASON_LABEL": "Motivo (opcional)",
       "LOSE_REASON_PLACEHOLDER": "Por que o negócio foi perdido?",
-      "LOSE_CONFIRM": "Marcar como perdido",
       "CLOSE_AS_TITLE": "Fechar como {label}",
       "MARK_AS": "Marcar como {label}",
       "CANCEL": "Cancelar",
@@ -1574,12 +1563,6 @@
       "WHEN_TO_USE": "Quando usar",
       "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais produtos ou casos entram aqui.",
       "WHEN_TO_USE_PLACEHOLDER": "Ex.: venda dos nossos dois produtos, Agentes de IA e Chat2You.",
-      "COUNTS_AS_SALE": "Fechar com sucesso aqui conta como venda",
-      "COUNTS_AS_SALE_ON": "Os cards fecham como Ganho ou Perdido, entram no total de vendas e podem avisar seus anúncios.",
-      "COUNTS_AS_SALE_OFF": "Os cards fecham como Resolvido ou Cancelado. Não entram no total de vendas nem avisam anúncios. Bom para pós-venda, sinistro, suporte.",
-      "OUTCOME_SUCCESS": "Nome para quando dá certo",
-      "OUTCOME_FAILURE": "Nome para quando não dá certo",
-      "OUTCOME_HELP": "Opcional. Ex.: \"Contratado\" e \"Desistiu\". Em branco, usa o nome padrão.",
       "MONTHLY_TARGET": "Meta mensal de vendas (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
@@ -1601,10 +1584,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "Em negociação",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "Quando um card for ganho, perdido ou mudar de etapa, a conversão volta para a Meta para otimizar seus anúncios de clique para WhatsApp por quem realmente fecha.",
-      "META_SYNC_EVENTS": "Quais eventos enviar",
-      "META_SYNC_EVENT_WON": "Ganho (Purchase, com valor)",
-      "META_SYNC_EVENT_LOST": "Perda (OrderCanceled)",
-      "META_SYNC_EVENT_MOVED": "Mudança de etapa (usa o mapeamento acima)",
       "META_SYNC_DATASET": "Dataset ID (avançado)",
       "META_SYNC_DATASET_PLACEHOLDER": "Deixe vazio para usar o da conexão do WhatsApp",
       "META_SYNC_DATASET_HELP": "Deixe vazio para derivar da conexão do WhatsApp. Só preencha se a Meta forneceu um dataset específico.",
@@ -1640,10 +1619,6 @@
       "TITLE": "Google Ads",
       "HELP": "Envie resultados do CRM ao Google Ads por um feed programado de conversões.",
       "TOGGLE": "Ativar conversões offline do Google Ads",
-      "EVENTS": "Quais eventos incluir",
-      "EVENT_WON": "Ganho",
-      "EVENT_LOST": "Perda",
-      "EVENT_MOVED": "Mudança de etapa",
       "CONVERSION_NAME_WON": "Nome da conversão para cards ganhos",
       "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Venda ganha",
       "CONVERSION_NAME_WON_HELP": "Perda e mudança de etapa usam os nomes de conversão padrão.",
@@ -4255,9 +4230,9 @@
       "O_INSTAGRAM": "o Instagram",
       "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada venda fechada conta no painel.",
       "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}.",
-      "ATENDER_LEMBRETES": "Avisamos o andamento e perguntamos se resolveu.",
-      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento do pedido.",
-      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu.",
+      "ATENDER_LEMBRETES": "Avisamos o andamento com {andamento} na mesma etapa e perguntamos se resolveu {resolveu} depois de {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento com {andamento} na mesma etapa.",
+      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu {resolveu} depois de {sucesso}.",
       "COBRAR_LEMBRETES": "Lembramos do pagamento antes, no dia e depois do vencimento.",
       "ATENDER_SEM_LEMBRETES": "Nenhum lembrete ligado."
     },
@@ -4544,13 +4519,17 @@
       "LEMBRETES": {
         "ANDAMENTO": {
           "TITULO": "Avisar o andamento",
-          "FRASE": "Se o pedido passa 1 dia na mesma etapa, avisamos o cliente que seguimos cuidando.",
-          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso."
+          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso.",
+          "FRASE_TEMPO": "Se o pedido passa {tempo} na mesma etapa, avisamos o cliente que seguimos cuidando.",
+          "TEMPO_ROTULO": "Tempo na mesma etapa",
+          "QUANDO": "{tempo} na mesma etapa"
         },
         "RESOLVEU": {
           "TITULO": "Perguntar se resolveu",
-          "FRASE": "1 dia depois de {sucesso}, perguntamos se deu tudo certo.",
-          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui."
+          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui.",
+          "FRASE_TEMPO": "{tempo} depois de {sucesso}, perguntamos se deu tudo certo.",
+          "TEMPO_ROTULO": "Tempo depois de {sucesso}",
+          "QUANDO": "{tempo} depois de {sucesso}"
         },
         "COBRAR": {
           "TITULO": "Lembrar do pagamento",
@@ -4565,7 +4544,14 @@
         "PREVIA_TITULO": "Com a Ana, de exemplo",
         "PREVIA_TEXTO": "Saem pelo WhatsApp, no horário de atendimento do funil. A mensagem de verdade é escrita olhando a conversa de cada cliente.",
         "VALOR_EXEMPLO": "R$ 350",
-        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho."
+        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho.",
+        "TEMPOS": {
+          "H4": "4 horas",
+          "H24": "1 dia",
+          "H48": "2 dias",
+          "H72": "3 dias",
+          "H168": "1 semana"
+        }
       }
     }
   },

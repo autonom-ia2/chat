@@ -1,13 +1,7 @@
 {
   "CRM_KANBAN": {
-    "CARD_STATUS": {
-      "WON": "Plano ativo"
-    },
     "DRAWER": {
       "STATUS_WON": "Plano ativo",
-      "WIN_DEAL": "Fechou o plano",
-      "WIN_DIALOG_TITLE": "Fechou o plano?",
-      "WIN_CONFIRM": "Marcar: fechou o plano",
       "ACTIVITY_WON": "Fechou o plano"
     },
     "META_SYNC_STATUS": {
@@ -28,9 +22,7 @@
       }
     },
     "PIPELINE_DRAWER": {
-      "COUNTS_AS_SALE_ON": "Os cards terminam como Plano ativo ou Não fechou, entram no total de vendas e podem avisar seus anúncios.",
-      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o plano, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar.",
-      "META_SYNC_EVENT_WON": "Fechou o plano (Purchase, com valor)"
+      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o plano, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar."
     },
     "PIPELINE_EDITOR": {
       "AD_RESULTS_HELP": "Mostre quais anúncios viraram vendas. A venda conta quando o card fecha o plano, em qualquer coluna.",
@@ -41,7 +33,6 @@
       }
     },
     "GOOGLE_SYNC": {
-      "EVENT_WON": "Fechou o plano",
       "CONVERSION_NAME_WON": "Nome da conversão para planos fechados",
       "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Plano fechado"
     },

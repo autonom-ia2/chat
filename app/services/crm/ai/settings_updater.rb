@@ -41,11 +41,21 @@ module Crm
         @pipeline.update!(metadata: metadata)
       end
 
-      # #1498: só as três chaves conhecidas; o que não vier mantém o valor de agora.
+      # #1498: só as três chaves conhecidas; o que não vier mantém o valor de agora. #1589: o tempo de cada lembrete só
+      # aceita as opções da tela; outro valor também mantém o de agora.
       def normalize_service_reminders(params)
         current = Config.service_reminders_settings(@pipeline)
-        Config::SERVICE_REMINDER_KINDS.index_with do |kind|
-          params.to_h.key?(kind) ? cast_boolean(params[kind], default: false) : current[kind]
+        incoming = params.to_h.stringify_keys
+        ligados = Config::SERVICE_REMINDER_KINDS.index_with do |kind|
+          incoming.key?(kind) ? cast_boolean(incoming[kind], default: false) : current[kind]
+        end
+        ligados.merge(normalize_reminder_hours(incoming, current))
+      end
+
+      def normalize_reminder_hours(incoming, current)
+        Config::SERVICE_REMINDER_HOURS.to_h do |kind, opcoes|
+          chave = "#{kind}_after_hours"
+          [chave, Config.service_reminder_option(opcoes, incoming[chave]) || current[chave]]
         end
       end
 

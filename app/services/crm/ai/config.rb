@@ -240,13 +240,32 @@ module Crm
       # Vêm ligados só em funil criado pelos modelos de Atender (metadata.template); funil antigo convertido fica
       # desligado até alguém ligar, para nada mudar sozinho na conversão.
       SERVICE_REMINDER_KINDS = %w[progress resolved_check payment].freeze
+      # #1589: o tempo de andamento e "deu certo?", em horas, escolhido na frase da tela. Só as opções dos botões valem;
+      # qualquer outro valor (ou nenhum) é 1 dia, o tempo de antes da escolha.
+      SERVICE_REMINDER_HOURS = { 'progress' => [4, 24, 48, 72], 'resolved_check' => [24, 48, 72, 168] }.freeze
+      DEFAULT_SERVICE_REMINDER_HOURS = 24
 
       def self.service_reminders_settings(pipeline)
         saved = pipeline_ai_settings(pipeline).fetch('service_reminders', {}).to_h
         defaults = default_service_reminders(pipeline)
-        SERVICE_REMINDER_KINDS.index_with do |kind|
+        ligados = SERVICE_REMINDER_KINDS.index_with do |kind|
           saved.key?(kind) ? BOOLEAN.cast(saved[kind]) == true : defaults[kind]
-        end.with_indifferent_access
+        end
+        ligados.merge(service_reminder_hours(saved)).with_indifferent_access
+      end
+
+      # { 'progress_after_hours' => 24, 'resolved_check_after_hours' => 24 }
+      def self.service_reminder_hours(saved)
+        SERVICE_REMINDER_HOURS.to_h do |kind, opcoes|
+          chave = "#{kind}_after_hours"
+          [chave, service_reminder_option(opcoes, saved[chave]) || DEFAULT_SERVICE_REMINDER_HOURS]
+        end
+      end
+
+      # A opção da tela que o valor é, exatamente (24 ou "24"); nil para qualquer outra coisa. Sem converter: "0x18" ou
+      # 24.0 e 24.9 não viram 24.
+      def self.service_reminder_option(opcoes, valor)
+        opcoes.find { |horas| horas.eql?(valor) || horas.to_s.eql?(valor) }
       end
 
       def self.default_service_reminders(pipeline)
