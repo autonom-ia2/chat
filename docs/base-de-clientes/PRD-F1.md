@@ -93,15 +93,16 @@ Está no mockup, mas é entrega própria, depois da F1:
 Depende de:
 - **#1306** (`last_activity_at` da Coexistência), para os grupos por tempo;
 - filtros de `contact_type` e `opted_out_at` em `filter_keys.yml` e `contactProvider.js`;
-- a decisão do menu (§6).
+- o menu lateral novo (#1617), que mantém "Relacionamentos".
 
 ---
 
 ## 6. Decisões em aberto para o Rodrigo
 
+**Decidido em 15/10/2026 (M1, nome do menu):** fica **"Relacionamentos"**, no grupo "Acompanhar" do menu lateral novo (#1617), com as abas Contatos e Empresas. A Base de clientes não ganha item próprio no menu: "Trazer minha lista" e "Listas trazidas" ficam dentro de Relacionamentos, em rotas filhas.
+
 | # | Decisão | Recomendação |
 |---|---|---|
-| M1 | **Nome do menu.** Hoje existem "Relacionamentos" e "Contatos" lado a lado. (i) Um item só, "Contatos", com as abas Pessoas e Empresas. (ii) Manter "Relacionamentos", com as abas Contatos e Empresas | (i): acaba com o item duplicado e é concreto. Não bloqueia a F1; bloqueia a remontagem |
 | D4 | Atualizar quem já existe | Completar como padrão; "Atualizar" só com valor antigo guardado |
 | D5 | Origem e permissão da lista | Uma pergunta por lista; "Peguei de outro lugar" bloqueia campanha |
 | D6 | Prazo do desfazer e quem pode | 7 dias; quem importou ou `contact_manage` |
