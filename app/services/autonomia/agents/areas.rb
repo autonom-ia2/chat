@@ -74,7 +74,7 @@ module Autonomia::Agents::Areas
   # ou agente/caixa são de contas diferentes. Principal atendendo ou caixa só de pessoas aceita.
   #
   # Só entra quem `pode_ser_area?` (#1433), mesmo com `ativar`: senão AgenteInterno, AgenteDeSistema, AgenteRascunho
-  # ou AgenteNaoPodeSerArea (ajudante, Lia, parado de propósito com caixa).
+  # ou AgenteNaoPodeSerArea (ajudante, parado de propósito com caixa).
   #
   # `ativar: true` (#1366) — "pôr o agente nesta área e ligá-lo": aceita o agente parado SEM onde trabalhar e o liga
   # (active + enabled) na MESMA transação do vínculo, como o InboxConnector. É o caminho da área que volta depois que

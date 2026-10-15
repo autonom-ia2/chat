@@ -69,7 +69,7 @@ class Crm::Caixas::RetratoDosAgentes
   end
 
   # Agentes da conta que podem ser área (Agent#pode_ser_area?, #1433): fora rascunho, parado de propósito, interno,
-  # sistema, ajudante e Lia.
+  # sistema e ajudante. A Lia entra (#1433, "lia b").
   def candidatos
     @candidatos ||= ::Autonomia::Agents::Agent.podem_ser_area(@account).order(:name, :id).to_a
   end
