@@ -1,6 +1,7 @@
 import store from 'dashboard/store';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import {
+  getCurrentAccount,
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
@@ -22,16 +23,14 @@ export const destinoDeConfiguracoes = async (to, landings) => {
   if (menuNovoLigado(store, params.accountId)) {
     return { name: 'settings_inicio', params };
   }
-  if (
-    store.getters.getCurrentRole === 'administrator' &&
-    store.getters.getCurrentCustomRoleId === null
-  ) {
+  // O papel vem da conta do endereço: o getCurrentRole lê a rota ATUAL, que no carregamento frio ainda não tem
+  // conta (e, ao trocar de conta, é a anterior).
+  const usuario = store.getters.getCurrentUser;
+  const conta = getCurrentAccount(usuario, Number(params.accountId)) || {};
+  if (conta.role === 'administrator' && !conta.custom_role_id) {
     return { name: 'general_settings_index', params };
   }
-  const permissions = getUserPermissions(
-    store.getters.getCurrentUser,
-    params.accountId
-  );
+  const permissions = getUserPermissions(usuario, params.accountId);
   const landing = landings.find(page =>
     hasPermissions(page.permissions, permissions)
   );

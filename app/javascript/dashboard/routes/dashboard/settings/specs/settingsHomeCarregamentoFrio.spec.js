@@ -41,10 +41,11 @@ const montarRouter = ({ papel, funcao, chaves, menuNovo }) => {
   // O guarda global do app (routes/index.js) espera o usuário antes de seguir.
   router.beforeEach(async () => {
     await Promise.resolve();
+    // Só o usuário: o getCurrentRole do app lê a rota atual, que no carregamento frio ainda não tem conta.
     Object.assign(store.getters, {
       getCurrentUser: usuario,
-      getCurrentRole: papel,
-      getCurrentCustomRoleId: funcao,
+      getCurrentRole: undefined,
+      getCurrentCustomRoleId: undefined,
     });
   });
   return router;
