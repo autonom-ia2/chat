@@ -60,6 +60,12 @@ const canaisApi = vi.hoisted(() => ({
   disconnect: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
+// Tema 14 (#1434): quem o ajudante ajuda (PUT /ajuda).
+const agentesApi = vi.hoisted(() => ({
+  getAjuda: vi.fn(),
+  updateAjuda: vi.fn(),
+}));
+vi.mock('dashboard/api/autonomia/agents', () => ({ default: agentesApi }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({
   default: { upload: vi.fn() },
 }));
@@ -1614,6 +1620,396 @@ describe('AgenteCriarPage', () => {
       await flushPromises();
       expect(wrapper.find('[data-criar-onde]').exists()).toBe(true);
       expect(passo()).toBe('canais');
+      wrapper.unmount();
+    });
+  });
+
+  // Tema 14 (#1434) — "Ajuda outros agentes": antes da conversa, quem ele vai ajudar (com o aviso) e quando
+  // chamar; a conversa abre com papel ajudante; "Começar a ajudar" grava o PUT /ajuda e liga, sem canal.
+  describe('Ajuda outros agentes (tema 14)', () => {
+    const CONTA = [
+      {
+        id: 3,
+        name: 'Clara',
+        status: 'active',
+        enabled: true,
+        actuation: 'external',
+        agent_type: 'support',
+      },
+      {
+        id: 4,
+        name: 'Bruno',
+        status: 'paused',
+        enabled: false,
+        actuation: 'external',
+        agent_type: 'sdr',
+      },
+      {
+        id: 5,
+        name: 'Ana',
+        status: 'active',
+        enabled: true,
+        actuation: 'internal',
+        agent_type: 'custom',
+      },
+      {
+        id: 6,
+        name: 'Lia',
+        status: 'active',
+        enabled: true,
+        actuation: 'external',
+        agent_type: 'insurance_quote',
+      },
+    ];
+    const DUDA = {
+      ...AGENTE,
+      agent_type: 'custom',
+      actuation: 'internal',
+      ajudante: true,
+      ajuda: [],
+    };
+    const QUANDO = 'Quando a dúvida for de troca';
+
+    const ligarFase2 = (ligada = true) => {
+      store.state['accounts/getAccount'] = () => ({
+        id: 1,
+        name: 'Loja da Ana',
+        autonomia_agents_fase2: ligada,
+      });
+    };
+
+    const prepararAjudante = ({ agente = DUDA } = {}) => {
+      prepararStore({ agente });
+      ligarFase2();
+      agentesApi.updateAjuda.mockReset();
+      agentesApi.updateAjuda.mockImplementation(async () => {
+        ordem.push('put:ajuda');
+        return {
+          data: { quando: QUANDO, principais: [{ id: 3, name: 'Clara' }] },
+        };
+      });
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === 'autonomiaAgents/get') {
+          ordem.push(acao);
+          const proprio = store.state['autonomiaAgents/getRecords'].filter(
+            item => item.id === 90
+          );
+          store.state['autonomiaAgents/getRecords'] = [...CONTA, ...proprio];
+          return null;
+        }
+        return original(acao, dados);
+      });
+    };
+
+    beforeEach(() => {
+      jornada.canaisOcupados.mockReset();
+      jornada.canaisOcupados.mockResolvedValue({ data: { payload: [] } });
+    });
+
+    const clicar = async elemento => {
+      elemento.click();
+      await flushPromises();
+    };
+    const opcao = valor =>
+      document.body.querySelector(`[data-opcao="${valor}"]`);
+    const seguir = () =>
+      clicar(document.body.querySelector('[data-seguir-ajudante]'));
+    const passo = () =>
+      document.body.querySelector('[data-ajudante-passos]')?.dataset.passo;
+    const inicios = () =>
+      store.dispatch.mock.calls.filter(
+        ([acao]) => acao === 'autonomiaBuildThreads/start'
+      );
+    const escrever = async texto => {
+      const campo = document.body.querySelector('[data-quando]');
+      campo.value = texto;
+      campo.dispatchEvent(new Event('input'));
+      await flushPromises();
+    };
+
+    it('opens with "who it will help" before the conversation: only customer agents, the quote one locked, and the warning', async () => {
+      prepararAjudante();
+      const wrapper = await montar({ query: { papel: 'ajudante' } });
+
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(true);
+      expect(passo()).toBe('quem');
+      expect(inicios()).toHaveLength(0);
+      expect(wrapper.find('[data-conversa]').exists()).toBe(false);
+      expect(ordem).toContain('autonomiaAgents/get');
+      // Ajudante não tem canal: nada de ler as caixas.
+      expect(jornada.canaisOcupados).not.toHaveBeenCalled();
+      expect(opcao(3)).not.toBeNull();
+      expect(opcao(4)).not.toBeNull();
+      expect(opcao(5)).toBeNull();
+      expect(opcao(6).getAttribute('aria-disabled')).toBe('true');
+      expect(opcao(6).textContent).toContain(
+        'AGENTS.JORNADA.AJUDANTE.QUEM.COTACAO'
+      );
+      expect(
+        document.body.querySelector('[data-aviso-ajudante]').textContent
+      ).toContain('AGENTS.JORNADA.AJUDANTE.AVISO_SEM_NOME');
+      await seguir();
+      expect(passo()).toBe('quem');
+      expect(document.body.querySelector('select')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('the choice goes to the URL, then the conversation opens as a helper (internal, papel ajudante)', async () => {
+      prepararAjudante();
+      const wrapper = await montar({ query: { papel: 'ajudante' } });
+      await clicar(opcao(3));
+      await seguir();
+      expect(passo()).toBe('quando');
+      await seguir();
+      expect(passo()).toBe('quando');
+      await escrever(QUANDO);
+      await seguir();
+
+      expect(router.replace).toHaveBeenCalledWith({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO },
+      });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      expect(inicios()).toHaveLength(1);
+      expect(inicios()[0][1]).toEqual({
+        type: 'custom',
+        actuation: 'internal',
+        with_knowledge: true,
+        papel: 'ajudante',
+      });
+      const topo = wrapper.get('[data-ajuda-criacao]');
+      expect(topo.text()).toContain(
+        'AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA_SEM_NOME'
+      );
+      expect(topo.text()).toContain('AGENTS.JORNADA.ONDE.AJUDA');
+      expect(topo.text()).toContain('AGENTS.JORNADA.AJUDANTE.QUANDO.RESUMO');
+      expect(wrapper.get('[data-intro]').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONTE.INTRO_AJUDANTE'
+      );
+      expect(wrapper.get('[data-exemplo]').text()).toContain(
+        'AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE'
+      );
+
+      // O rascunho nasce: a URL guarda o papel e a escolha junto do agente (F5).
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      await flushPromises();
+      expect(router.replace).toHaveBeenLastCalledWith({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      wrapper.unmount();
+    });
+
+    it('after F5, does not ask again: "Começar a ajudar" saves who it helps, then turns it on, without any channel', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      const comecar = wrapper.get('[data-comecar]');
+      expect(comecar.get('button').text()).toBe(
+        'AGENTS.JORNADA.AJUDANTE.COMECAR'
+      );
+      expect(comecar.text()).toContain('AGENTS.JORNADA.AJUDANTE.COMECAR_TEXTO');
+      expect(wrapper.text()).toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_AJUDANTE'
+      );
+
+      await comecar.get('button').trigger('click');
+      await flushPromises();
+
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(90, {
+        principalIds: [3],
+        quando: QUANDO,
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 90,
+        enabled: true,
+        status: 'active',
+      });
+      // Grava o vínculo antes de ligar: nunca um ajudante ligado sem ninguém para ajudar.
+      expect(ordem.indexOf('put:ajuda')).toBeLessThan(
+        ordem.indexOf('autonomiaAgents/update')
+      );
+      expect(canaisApi.connect).not.toHaveBeenCalled();
+      expect(document.body.querySelector('[data-comece]')).toBeNull();
+      expect(wrapper.get('#pronto-titulo').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.PRONTO.TITULO_AJUDANTE'
+      );
+      const pronto = wrapper.get('[data-ajuda-pronto]');
+      expect(pronto.text()).toContain('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA');
+      expect(pronto.text()).toContain('AGENTS.JORNADA.AJUDANTE.QUANDO.RESUMO');
+      expect(router.replace).toHaveBeenLastCalledWith({
+        query: {
+          papel: 'ajudante',
+          ajuda: '3',
+          quando: QUANDO,
+          agente: '90',
+          etapa: 'pronto',
+        },
+      });
+      wrapper.unmount();
+    });
+
+    it('shows the server reason and offers to choose again when the link is refused; the agent stays off', async () => {
+      prepararAjudante();
+      agentesApi.updateAjuda.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { error: 'Escolha agentes desta conta.' },
+        },
+      });
+      const wrapper = await montar({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      const erro = wrapper.get('[data-erro-ajuda]');
+      expect(erro.text()).toContain('Escolha agentes desta conta.');
+      expect(erro.text()).toContain('AGENTS.JORNADA.AJUDANTE.ERRO_GARANTIA');
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+      expect(wrapper.find('#pronto-titulo').exists()).toBe(false);
+
+      await erro.get('button').trigger('click');
+      await flushPromises();
+      expect(passo()).toBe('quem');
+      expect(opcao(3).getAttribute('aria-checked')).toBe('true');
+      wrapper.unmount();
+    });
+
+    it('saves only the chosen agents that can still be helped', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: {
+          papel: 'ajudante',
+          ajuda: '3,6,5,99',
+          quando: QUANDO,
+          agente: '90',
+        },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(90, {
+        principalIds: [3],
+        quando: QUANDO,
+      });
+      wrapper.unmount();
+    });
+
+    it('with none of the chosen agents still valid, goes back to the steps without saving nor turning on', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: {
+          papel: 'ajudante',
+          ajuda: '6,5',
+          quando: QUANDO,
+          agente: '90',
+        },
+      });
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+      expect(agentesApi.updateAjuda).not.toHaveBeenCalled();
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+      expect(passo()).toBe('quem');
+      wrapper.unmount();
+    });
+
+    it('a draft born as helper stays a helper without the Fase 2: "Começar" is blocked with the reason, never turned on as copilot', async () => {
+      prepararAjudante();
+      ligarFase2(false);
+      const wrapper = await montar({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      expect(wrapper.get('[data-ajuda-bloqueado]').text()).toContain(
+        'AGENTS.JORNADA.AJUDANTE.SEM_FASE2'
+      );
+      expect(wrapper.find('[data-confira]').exists()).toBe(true);
+      expect(wrapper.find('[data-comecar]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+      );
+      expect(wrapper.find('[data-alterar-ajuda]').exists()).toBe(false);
+      expect(agentesApi.updateAjuda).not.toHaveBeenCalled();
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('"Alterar" goes back to the steps with the choice marked', async () => {
+      prepararAjudante();
+      const wrapper = await montar({
+        query: { papel: 'ajudante', ajuda: '3', quando: QUANDO, agente: '90' },
+      });
+      await wrapper.get('[data-alterar-ajuda]').trigger('click');
+      await flushPromises();
+      expect(passo()).toBe('quem');
+      expect(opcao(3).getAttribute('aria-checked')).toBe('true');
+      expect(
+        document.body.querySelector('[data-aviso-ajudante]').textContent
+      ).toContain('AGENTS.JORNADA.AJUDANTE.AVISO');
+      wrapper.unmount();
+    });
+
+    it('back from the first step, with nothing chosen, returns to the "Criar agente" page', async () => {
+      prepararAjudante();
+      const wrapper = await montar({ query: { papel: 'ajudante' } });
+      await clicar(document.body.querySelector('[data-voltar-ajudante]'));
+      expect(router.replace).toHaveBeenCalledWith({ query: {} });
+      wrapper.unmount();
+    });
+
+    it('a helper draft continued from the list (only ?agente=) goes back to the steps', async () => {
+      prepararAjudante({ agente: { ...DUDA, has_instruction: false } });
+      const wrapper = await montar({ query: { agente: '90' } });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(true);
+      expect(passo()).toBe('quem');
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2, ?papel=ajudante is the normal creation: no steps, no papel in the start', async () => {
+      prepararAjudante();
+      ligarFase2(false);
+      const wrapper = await montar({ query: { papel: 'ajudante' } });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      expect(inicios()).toHaveLength(1);
+      expect(inicios()[0][1]).toEqual({
+        type: 'custom',
+        actuation: 'external',
+        with_knowledge: true,
+      });
+      wrapper.unmount();
+    });
+
+    it('keeps the team copilot as it was: internal start without papel, team questions and its own Começar', async () => {
+      prepararAjudante({ agente: { ...AGENTE, actuation: 'internal' } });
+      const wrapper = await montar({ query: { atuacao: 'interno' } });
+      expect(wrapper.find('[data-criar-ajuda]').exists()).toBe(false);
+      expect(inicios()[0][1]).toEqual({
+        type: 'custom',
+        actuation: 'internal',
+        with_knowledge: true,
+      });
+      conversaFecha();
+      store.state['autonomiaAgents/getRecords'] = [
+        { ...AGENTE, actuation: 'internal' },
+      ];
+      await flushPromises();
+      expect(wrapper.get('[data-comecar] button').text()).toBe(
+        'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
+      );
+      expect(wrapper.find('[data-ajuda-criacao]').exists()).toBe(false);
       wrapper.unmount();
     });
   });
