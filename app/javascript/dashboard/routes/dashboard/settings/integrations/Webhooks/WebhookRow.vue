@@ -42,7 +42,7 @@ const subscribedEvents = computed(() => {
         </div>
         <div class="block mt-1 text-sm text-n-slate-11">
           <span class="font-medium">
-            {{ $t('INTEGRATION_SETTINGS.WEBHOOK.SUBSCRIBED_EVENTS') }}:
+            {{ $t('INTEGRATION_SETTINGS.WEBHOOK.SUBSCRIBED_EVENTS_LABEL') }}
           </span>
           <ShowMore :text="subscribedEvents" :limit="60" />
         </div>

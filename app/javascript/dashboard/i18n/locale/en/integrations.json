@@ -64,6 +64,7 @@
     },
     "WEBHOOK": {
       "SUBSCRIBED_EVENTS": "Subscribed Events",
+      "SUBSCRIBED_EVENTS_LABEL": "Subscribed Events:",
       "LEARN_MORE": "Learn more about webhooks",
       "PAYWALL": {
         "TITLE": "Webhooks are available on paid plans",
