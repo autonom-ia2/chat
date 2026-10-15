@@ -61,10 +61,9 @@ module Crm::Repasse
   end
 
   # Alguém da equipe do funil, além da pessoa, está online agora? Sem ninguém, "Passar" deixa a conversa esperando (como a
-  # triagem), e a tela avisa antes (decisão 2a do Rodrigo, 15/10). Presença fora do ar conta como ninguém: o motor de
-  # entrega também segura nesse caso.
-  # true/false; nil quando a presença está fora do ar (desconhecido): a tela não diz "ninguém online" sem saber.
-  # Só a falha de leitura da presença (Redis) vira nil; qualquer outro erro sobe.
+  # triagem), e a tela avisa antes (decisão 2a do Rodrigo, 15/10). true/false; nil quando a presença está fora do ar
+  # (desconhecido): a tela não diz "ninguém online" sem saber. Só a falha de leitura da presença (Redis ou o pool dele)
+  # vira nil; qualquer outro erro sobe.
   def equipe_online?(conversation, card, user)
     equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas.map(&:id) - [user.id]
     online = presenca(conversation)
@@ -73,12 +72,18 @@ module Crm::Repasse
 
   def presenca(conversation)
     Crm::Entrega::Presenca.online_ids(conversation.account_id)
-  rescue Redis::BaseError => e
+  rescue Redis::BaseError, ConnectionPool::TimeoutError => e
     Rails.logger.warn("[crm][repasse] presença indisponível conversa=#{conversation.id} #{e.class}")
     nil
   end
 
-  # Tira o aviso (conversa resolvida ou adiada). Sem marca, nada grava.
+  # A conversa mudou de mãos: o aviso era da pessoa de antes e sai (a atribuição não gera aviso novo, de propósito).
+  def limpar_se_mudou_de_mao!(conversation)
+    marca = conversation.additional_attributes.to_h[CHAVE]
+    limpar!(conversation) if marca.present? && marca['user_id'] != conversation.assignee_id
+  end
+
+  # Tira o aviso (conversa resolvida ou adiada, ou que mudou de mãos). Sem marca, nada grava.
   def limpar!(conversation)
     return if conversation.additional_attributes.to_h[CHAVE].blank?
 

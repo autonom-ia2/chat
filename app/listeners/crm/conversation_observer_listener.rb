@@ -34,6 +34,8 @@ class Crm::ConversationObserverListener < BaseListener
     registrar_devolucao(conversation, event)
     Crm::SyncConversationCardJob.perform_later(conversation.id)
     enqueue_handoff_pickup(conversation, event)
+    # Decisão "a" (#1606): o aviso "O assunto virou X" era da pessoa de antes.
+    Crm::Repasse.limpar_se_mudou_de_mao!(conversation)
   end
 
   # Keep the card's team in sync on a team-only reassignment (e.g. an Autonomia

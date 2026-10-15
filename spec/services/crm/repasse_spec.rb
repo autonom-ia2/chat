@@ -73,6 +73,14 @@ RSpec.describe Crm::Repasse do
       expect(described_class.para(conversation.reload, ana)).to include(equipe_online: nil)
     end
 
+    it 'pool do Redis esgotado também é presença desconhecida' do
+      card_em(agentes)
+      described_class.sugerir!(conversation.reload)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(ConnectionPool::TimeoutError)
+
+      expect(described_class.para(conversation.reload, ana)).to include(equipe_online: nil)
+    end
+
     it 'outro erro na leitura da equipe não vira "ninguém online": sobe' do
       card_em(agentes)
       described_class.sugerir!(conversation.reload)
@@ -81,14 +89,31 @@ RSpec.describe Crm::Repasse do
       expect { described_class.para(conversation.reload, ana) }.to raise_error(ArgumentError)
     end
 
-    it 'conversa resolvida perde o aviso; reaberta, ele não volta' do
+    it 'conversa resolvida ou adiada perde o aviso; reaberta, ele não volta' do
+      card_em(agentes)
+      %i[resolved snoozed].each do |status|
+        described_class.sugerir!(conversation.reload)
+        expect(marca).to be_present
+        conversation.update!(status: status)
+        evento = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation.reload)
+
+        Crm::ConversationObserverListener.instance.conversation_status_changed(evento)
+        conversation.update!(status: :open)
+
+        expect(marca).to be_nil
+        expect(described_class.para(conversation.reload, ana)).to be_nil
+      end
+    end
+
+    it 'a conversa muda de mãos: o aviso da pessoa de antes sai e não volta quando ela pega de novo' do
       card_em(agentes)
       described_class.sugerir!(conversation.reload)
-      conversation.update!(status: :resolved)
-      evento = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation.reload)
+      evento = -> { Events::Base.new('assignee.changed', Time.zone.now, conversation: conversation.reload) }
 
-      Crm::ConversationObserverListener.instance.conversation_status_changed(evento)
-      conversation.update!(status: :open)
+      conversation.update!(assignee: nil)
+      Crm::ConversationObserverListener.instance.assignee_changed(evento.call)
+      conversation.update!(assignee: ana)
+      Crm::ConversationObserverListener.instance.assignee_changed(evento.call)
 
       expect(marca).to be_nil
       expect(described_class.para(conversation.reload, ana)).to be_nil
@@ -163,7 +188,7 @@ RSpec.describe Crm::Repasse do
       expect(Crm::RepassePorCardJob).to have_been_enqueued.with(card.id).once
     end
 
-    it 'o job do card avalia em lote as conversas em andamento com pessoa no nome' do
+    it 'o job do card avalia as conversas em andamento com pessoa no nome' do
       card = card_em(agentes)
       allow(described_class).to receive(:sugerir!)
 
