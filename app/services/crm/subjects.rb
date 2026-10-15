@@ -43,12 +43,14 @@ module Crm::Subjects
   def self.identificar_depois(message)
     return unless message.incoming? && ligado?(message.conversation)
 
-    job = if ordem_do_turno?(message.conversation)
+    # A regra do turno vai junto para o job: o Sync em linha segue a mesma decisão que escolheu a fila e a espera.
+    ordem = ordem_do_turno?(message.conversation)
+    job = if ordem
             Crm::Subjects::IdentifyJob.set(queue: :high, wait: DEBOUNCE_ORDEM)
           else
             Crm::Subjects::IdentifyJob.set(wait: DEBOUNCE)
           end
-    job.perform_later(message.conversation_id, message.id)
+    job.perform_later(message.conversation_id, message.id, ordem)
   end
 
   # A REGRA ÚNICA de "este turno espera o assunto" (#1606, contrato com o Agentes IA, que só lê): a IA de assunto está

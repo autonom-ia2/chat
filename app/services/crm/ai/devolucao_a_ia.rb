@@ -40,8 +40,8 @@ module Crm::Ai::DevolucaoAIa
   def pelas_passagens(conversation)
     return if conversation.blank? || conversation.assignee_id.present?
 
-    Crm::Passagem.where(conversation_id: conversation.id, para_type: 'User').where.not(motivo: Crm::Passagens::CONVITE)
-                 .em_ordem.first&.devolvida_em
+    Crm::Passagem.where(account_id: conversation.account_id, conversation_id: conversation.id, para_type: 'User')
+                 .where.not(motivo: Crm::Passagens::CONVITE).em_ordem.first&.devolvida_em
   end
 
   def pelo_card(card, conversation)

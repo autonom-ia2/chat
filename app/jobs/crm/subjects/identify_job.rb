@@ -9,6 +9,17 @@
 # mensagem mais nova, porque o marco daquela rajada vem do job dela. A exceção segue para o retry do job, que decide de
 # novo e regrava o marco (o marco só avança).
 #
+# `ordem`: a regra do turno no momento do ENQUEUE (Crm::Subjects.identificar_depois), a mesma que escolheu a fila e a
+# espera. O Sync em linha segue essa decisão: uma passagem que abre ou fecha nos segundos da espera não faz o Sync ser
+# pulado em silêncio. Job sem o argumento (enfileirado antes desta versão) lê a regra na hora.
+#
+# Marco que não grava (Redis fora, ou outros jobs gravando sem parar): a falha vai para o rastreador e o job levanta,
+# para o retry gravar de novo. Com a decisão já concluída, a reserva única (Crm::SubjectDecision, conversa + mensagem)
+# devolve a mesma decisão e o retry não pergunta o assunto outra vez; se a decisão quebrou antes de aplicar, a reserva
+# é desfeita e o retry pergunta de novo, como antes. Enquanto isso, o ReplyJob cai no teto de 20 s (fallback explícito).
+# Na exceção da decisão, o marco e o evento saem com estado 'erro' (contrato com o Agentes IA) e o retry os repete
+# com o estado real.
+#
 # O que vem depois da decisão (o Sync em linha e a parada da cadência de follow-up no card que é o assunto, corrida f)
 # roda mesmo quando a decisão quebrou no meio (o aviso em tempo real, por exemplo): o assunto pode já estar aplicado,
 # e sem isso o marco sairia antes do Sync e a cadência não pararia.
@@ -17,13 +28,17 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
 
   queue_as :low
 
-  def perform(conversation_id, message_id)
+  def perform(conversation_id, message_id, ordem = nil)
     @estado = 'erro'
     @mais_nova = false
-    return @estado = 'crm_desligado' unless Crm::Config.enabled?
-
-    @estado = identificar(conversation_id, message_id)
-  ensure
+    @ordem = ordem
+    begin
+      @estado = Crm::Config.enabled? ? identificar(conversation_id, message_id) : 'crm_desligado'
+    rescue StandardError
+      # A exceção da decisão é a que segue para o retry; o marco sai mesmo assim, e a falha dele só vai para o log.
+      marcar(conversation_id, message_id, levantar: false)
+      raise
+    end
     marcar(conversation_id, message_id) unless @mais_nova
   end
 
@@ -45,7 +60,7 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     decisao = Crm::Subjects::Identifier.new(conversation: conversation, message: message).perform
     decisao&.state || 'sem_decisao'
   ensure
-    depois_da_decisao(conversation.reload, message)
+    depois_da_decisao(conversation, message)
   end
 
   def mais_nova!
@@ -53,13 +68,16 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     'mensagem_mais_nova'
   end
 
+  # Cada passo relê a conversa dentro do próprio cuidado: uma falha ao reler (conversa apagada no meio) não esconde a
+  # exceção da decisão nem pula o outro passo.
   def depois_da_decisao(conversation, message)
-    cuidar('sync') { sincronizar_dono(conversation) }
-    cuidar('cadencia') { parar_cadencia(conversation, message) }
+    cuidar('sync') { sincronizar_dono(conversation.reload) }
+    cuidar('cadencia') { parar_cadencia(conversation.reload, message) }
   end
 
   def sincronizar_dono(conversation)
-    return unless Crm::Subjects.ordem_do_turno?(conversation)
+    ordem = @ordem.nil? ? Crm::Subjects.ordem_do_turno?(conversation) : @ordem
+    return unless ordem
 
     Crm::Ai::ResponsibleAgentSync.new(conversation: conversation, motivo: Crm::Ai::ResponsibleAgentSync::FOCO).perform
   end
@@ -78,11 +96,24 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     Rails.logger.error("[crm][assunto] depois_da_decisao_falhou passo=#{passo} erro=#{e.class}")
   end
 
-  def marcar(conversation_id, message_id)
+  def marcar(conversation_id, message_id, levantar: true)
+    gravar_marco(conversation_id, message_id, levantar)
+    avisar_decisao(conversation_id, message_id)
+  end
+
+  def gravar_marco(conversation_id, message_id, levantar)
     Crm::Subjects::Marco.gravar(conversation_id, message_id)
-    ActiveSupport::Notifications.instrument(EVENTO, conversation_id: conversation_id, message_id: message_id, estado: @estado)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e).capture_exception
     Rails.logger.error("[crm][assunto] marco_nao_gravado conversa=#{conversation_id} mensagem=#{message_id} erro=#{e.class}")
+    raise if levantar
+  end
+
+  # Quem assina o evento não derruba o job: o marco já foi gravado, e um retry só repetiria o aviso.
+  def avisar_decisao(conversation_id, message_id)
+    ActiveSupport::Notifications.instrument(EVENTO, conversation_id: conversation_id, message_id: message_id, estado: @estado)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e).capture_exception
+    Rails.logger.error("[crm][assunto] aviso_da_decisao_falhou conversa=#{conversation_id} mensagem=#{message_id} erro=#{e.class}")
   end
 end

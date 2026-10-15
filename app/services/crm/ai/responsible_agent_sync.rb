@@ -4,10 +4,11 @@
 # tem um agente responsável (Crm::InboxAiAgent), a conversa passa para ele; sem responsável, volta para a porta. Roda
 # no job (ou em linha, na ordem do turno), sob a trava da conversa, e confere tudo de novo com a conversa relida.
 #
-# A troca é SÓ pelo serviço de passagem dos Agentes (#1606): Autonomia::Agents::PassarParaIa, `por: :crm`, motivo
-# 'assunto', origem = o robô que atendia. Ele troca o dono, grava a passagem (Crm::Passagens) e, depois do commit,
-# publica o EVENTO_TROCA. Um escritor, um evento: o Sync não publica nada por conta própria. Recusa do serviço
-# (`pessoa_atribuida`, `fase2_desligada`, `sem_vinculo_na_caixa`…) não troca e fica no log; `ja_e_o_dono`, nada a fazer.
+# A troca é SÓ pelo serviço de passagem dos Agentes (#1606): Autonomia::Agents::PassarParaIa, `por: :crm`, com o MOTIVO
+# do disparo (foco, pipeline ou abrir) na passagem e no evento, origem = o robô que atendia. Ele troca o dono, grava a
+# passagem (Crm::Passagens) e, depois do commit, publica o EVENTO_TROCA. Um escritor, um evento: o Sync não publica
+# nada por conta própria. Recusa do serviço (`pessoa_atribuida`, `nao_atende_cliente`, `sem_vinculo_na_caixa`…) não
+# troca e fica no log; `ja_e_o_dono`, nada a fazer.
 #
 # Nada é pedido quando:
 # - a conta está sem a Fase 2 dos Agentes (sem área, quem responde é sempre a porta);
@@ -35,8 +36,6 @@ class Crm::Ai::ResponsibleAgentSync
   VOLTA_PARA_A_PORTA = [PIPELINE, FOCO].freeze
   EVENTO = 'ai_agent_changed'.freeze
   EVENTO_TROCA = 'crm.ai.responsible_agent_changed'.freeze
-  # O motivo da passagem gravada pelo PassarParaIa quando quem troca é o assunto.
-  MOTIVO_DA_PASSAGEM = 'assunto'.freeze
   # O pedido do agente (Abrir) vira troca no job logo em seguida; mais velho que isto, o transfer_id não é dele.
   JANELA_DO_PEDIDO = 10.minutes
 
@@ -108,6 +107,8 @@ class Crm::Ai::ResponsibleAgentSync
   end
 
   # { bot:, agente: } para quem a conversa vai, ou nil quando nada troca.
+  # Porta pausada (ou interna, de sistema): o PassarParaIa recusa com `nao_atende_cliente`, a área fica com a conversa
+  # e a recusa vai para o log (decisão do Multifunnel, 15/10). Quem responde segue sendo a área, que pode falar.
   def destino_para(card)
     agente = responsavel(card.pipeline)
     # Responsável que não é mais área da caixa não tem como postar: conta como funil sem responsável. Um agente de área
@@ -150,19 +151,19 @@ class Crm::Ai::ResponsibleAgentSync
     pedido = pedido_do_agente(card)
     troca = { motivo: pedido ? ABRIR : @motivo, transfer_id: pedido&.payload&.dig('transfer_id') }
     passagem = Autonomia::Agents::PassarParaIa.call(conversation: @conversation, agent: destino[:agente], por: :crm,
-                                                    motivo: MOTIVO_DA_PASSAGEM, origem: de_bot, transfer_id: troca[:transfer_id])
-    return recusada(passagem) unless passagem.trocou?
+                                                    motivo: troca[:motivo], origem: de_bot, transfer_id: troca[:transfer_id])
+    return recusada(passagem, troca[:motivo]) unless passagem.trocou?
 
     registrar_atividade(card, de_bot, destino, troca)
     Resultado.new(trocou: true, de_agent_bot_id: de_bot.id, para_agent_bot_id: destino[:bot].id,
                   autonomia_agent_id: destino[:agente].id, codigo: passagem.codigo, **troca)
   end
 
-  def recusada(passagem)
+  def recusada(passagem, motivo)
     unless passagem.codigo == :ja_e_o_dono
-      Rails.logger.info("[crm][sync_dono] passagem_recusada conversa=#{@conversation.id} codigo=#{passagem.codigo} motivo=#{@motivo}")
+      Rails.logger.info("[crm][sync_dono] passagem_recusada conversa=#{@conversation.id} codigo=#{passagem.codigo} motivo=#{motivo}")
     end
-    Resultado.new(trocou: false, motivo: @motivo, codigo: passagem.codigo)
+    Resultado.new(trocou: false, motivo: motivo, codigo: passagem.codigo)
   end
 
   def registrar_atividade(card, de_bot, destino, troca)

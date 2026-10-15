@@ -84,10 +84,11 @@ class Crm::Conversations::CardSyncer
     setting.present? && !setting.crm_enabled?
   end
 
-  # Com a IA de assunto ligada na caixa, quem para a cadência é o Crm::Subjects::IdentifyJob, depois de decidir o
-  # assunto (#1606, corrida f): aqui o foco ainda é o de antes da mensagem.
+  # Na ordem do turno, quem para a cadência é o Crm::Subjects::IdentifyJob, depois de decidir o assunto (#1606, corrida
+  # f): aqui o foco ainda é o de antes da mensagem. Fora dela (inclusive com a IA de assunto ligada, mas sem a Fase 2 ou
+  # sem área), para na hora, como sempre foi.
   def maybe_stop_ai_followup(card)
-    return if @message&.incoming? && Crm::Subjects.ligado?(@conversation)
+    return if @message&.incoming? && Crm::Subjects.ordem_do_turno?(@conversation)
 
     Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: @message).maybe_cancel
   end
