@@ -1001,7 +1001,7 @@
         "ASSIGNMENT_PRIORITY": {
           "LABEL": "Prioridade de atribuição",
           "EARLIEST_CREATED": {
-            "LABEL": "Criado recentemente",
+            "LABEL": "Mais antiga primeiro",
             "DESCRIPTION": "A conversa criada primeiro será atribuída primeiro."
           },
           "LONGEST_WAITING": {

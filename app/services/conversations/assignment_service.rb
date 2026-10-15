@@ -28,9 +28,9 @@ class Conversations::AssignmentService
   end
 
   # Desatribuir numa caixa com robô devolve a conversa a ele (#1377): sem pessoa, quem atende é o robô. Conversa de
-  # robô nunca fica pendente.
+  # robô nunca fica pendente. Com a Fase 2, volta ao agente responsável pelo funil, se houver (#1606).
   def hand_back_to_inbox_bot
-    conversation.ai_assignee = conversation.inbox_agent_bot
+    conversation.ai_assignee = Autonomia::Agents::QuemResponde.robo_da_devolucao(conversation)
     conversation.status = :open if conversation.ai_assignee.present? && conversation.pending?
   end
 

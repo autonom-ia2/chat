@@ -4,13 +4,16 @@ import { juntar, paraFormulario, paraSalvar } from './caixa';
 // conversas; cada agente de área cuida de alguns funis. Um funil tem um agente
 // de área só por caixa: marcar num agente tira do outro.
 //
-// O servidor manda `caixa.ai_agents` só com a Fase 2 dos Agentes ligada:
+// A parte dos agentes só aparece com a Fase 2 dos Agentes ligada na conta
+// (`autonomia_agents_fase2` do payload da conta, a mesma fonte da tela dos
+// Agentes, #1570). Com ela, o servidor manda `caixa.ai_agents`:
 // { porta, pode_mudar, areas: [{ id, name, pipeline_ids, parado,
 // ultima_caixa }], disponiveis: [{ id, name, parado }] }. No formulário, áreas
 // e disponíveis viram uma lista só (`agentes`): `na_caixa` diz quem já é área
 // aqui e `sai` marca quem vai ser tirado ao salvar.
 
-export const temAgentesIa = caixa => Boolean(caixa.ai_agents);
+export const temAgentesIa = (caixa, fase2) =>
+  fase2 === true && Boolean(caixa.ai_agents);
 
 export const portaDa = caixa => caixa.ai_agents?.porta || null;
 
@@ -216,9 +219,11 @@ export const mudancasDosAgentes = (antes, depois, funis, locale) => {
 };
 
 // O formulário e o PUT da caixa com os agentes de IA (#1447).
-export const formularioDaCaixa = caixa => ({
+export const formularioDaCaixa = (caixa, fase2) => ({
   ...paraFormulario(caixa),
-  ai_agents: agentesParaFormulario(caixa.ai_agents),
+  ai_agents: temAgentesIa(caixa, fase2)
+    ? agentesParaFormulario(caixa.ai_agents)
+    : null,
 });
 
 export const salvarDaCaixa = (form, original) => ({
@@ -230,6 +235,8 @@ export const salvarDaCaixa = (form, original) => ({
 // agentes. `alerta`: a chave do texto próprio do motivo (em CRM_CAIXAS.EDITOR), ou null para o texto geral.
 const ALERTA_DO_ERRO = {
   'crm.caixas.agente_nao_liga': 'AGENTE_NAO_LIGA',
+  // #1570 — rascunho tem frase própria.
+  'crm.caixas.agente_rascunho': 'AGENTE_RASCUNHO',
   'crm.caixas.principal_parado': 'PRINCIPAL_PARADO',
   'crm.caixas.robo_externo': 'AGENTE_EXTERNO',
 };

@@ -5,11 +5,12 @@
 # Por pessoa e por caixa (Crm::InboxAgentAccess). Sem linha, ou linha que libera tudo, nada muda: vale a regra de caixa
 # de sempre (R5). Com restrição, numa caixa a pessoa vê a conversa quando:
 # - está atribuída a ela ou ela participa (atribuído e participante sempre veem, decisão do Rodrigo em 11/10);
+# - em "Só as suas": é dona de um card que prende a conversa (R4, decisão do Rodrigo em 15/10, #1652);
 # - senão, se não é "Só as suas": algum card da conversa está num funil dela, ou a conversa não tem card e ela tem a
 #   triagem (R3).
 # Administrador vê tudo. Card arquivado, resolvido ou cancelado não conta como card (RELEASED). Card aberto manda
 # (decisão do Rodrigo em 11/10): com card aberto na conversa, só os funis dos abertos liberam; ganho e perdido só prendem
-# a conversa ao funil quando não há nenhum aberto.
+# a conversa ao funil quando não há nenhum aberto. O dono segue a mesma regra: com card aberto, só o dono de um aberto vê.
 #
 # Este filtro só RESTRINGE: quem chama já aplicou a regra de caixa (membro da caixa, time, função personalizada).
 class Crm::Access::ConversationScope
@@ -83,10 +84,11 @@ class Crm::Access::ConversationScope
 
   # A mesma regra do #condition, avaliada em memória sobre os dados de UMA conversa (Crm::Access::Recipients, que
   # decide muitas pessoas por evento). Mudou a regra num, mude no outro: o spec de paridade compara os dois.
-  # facts: assignee_id, participant_ids, card_pipeline_ids (cards que prendem, ver RELEASED).
+  # facts: assignee_id, participant_ids, e os funis (card_pipeline_ids) e donos (card_owner_ids) dos cards que prendem
+  # a conversa (fora RELEASED; com card aberto, só os abertos).
   def self.visible_by_facts?(access, user_id, facts)
     return true if facts[:assignee_id] == user_id || facts[:participant_ids].include?(user_id)
-    return false if access.only_own?
+    return facts[:card_owner_ids].include?(user_id) if access.only_own?
 
     pipelines = facts[:card_pipeline_ids]
     return access.triage? if pipelines.empty?
@@ -124,7 +126,9 @@ class Crm::Access::ConversationScope
 
   def condition(access)
     parts = [own_sql]
-    unless access.only_own?
+    if access.only_own?
+      parts << card_owner_sql
+    else
       parts << pipelines_sql(access)
       parts << "NOT (#{card_exists_sql})" if access.triage?
     end
@@ -144,10 +148,18 @@ class Crm::Access::ConversationScope
     return card_exists_sql if access.all_pipelines?
     return if access.agent_pipelines.empty?
 
-    in_pipelines = ' AND crm_access_cards.pipeline_id IN (:pipeline_ids)'
-    # Card aberto manda: um aberto num funil dela, ou nenhum aberto e um ganho/perdido num funil dela.
-    "(#{card_exists_sql(in_pipelines, 'IN (:open)')} OR (NOT #{card_exists_sql('', 'IN (:open)')} " \
-      "AND #{card_exists_sql(in_pipelines, 'IN (:closed)')}))"
+    binding_card_sql(' AND crm_access_cards.pipeline_id IN (:pipeline_ids)')
+  end
+
+  # "Só as suas" (#1652): dona de um card que prende a conversa.
+  def card_owner_sql
+    binding_card_sql(' AND crm_access_cards.owner_id = :user_id')
+  end
+
+  # Card aberto manda: um aberto que passa no filtro, ou nenhum aberto e um ganho/perdido que passa.
+  def binding_card_sql(filter)
+    "(#{card_exists_sql(filter, 'IN (:open)')} OR (NOT #{card_exists_sql('', 'IN (:open)')} " \
+      "AND #{card_exists_sql(filter, 'IN (:closed)')}))"
   end
 
   # A conversa tem card (não arquivado): a principal do card ou um vínculo em crm_card_conversations (#1141). Dois

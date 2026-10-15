@@ -23,6 +23,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     metadata = @stage.metadata || {}
     apply_funnel_stage_type!(metadata)
     apply_category!(metadata)
+    apply_template_variant!(metadata)
     @stage.metadata = metadata
     authorize @stage
     @stage.save!
@@ -126,6 +127,17 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     else
       metadata.delete('category')
     end
+  end
+
+  # #1548 (passo 2): a etapa nova que veio do modelo (template_position) segue a variante do tipo de conta, mesmo que a
+  # tela mande a categoria de hoje (painel em cache, por exemplo). Só ao criar: funil que já existe não muda.
+  def apply_template_variant!(metadata)
+    return if @pipeline.counts_as_sale?
+
+    category = Crm::PipelineStages::TemplateVariant.category_for(
+      account: Current.account, template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+    )
+    metadata['category'] = category if category
   end
 
   def apply_default_ai_criteria!(stage)

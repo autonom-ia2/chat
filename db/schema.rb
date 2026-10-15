@@ -3973,6 +3973,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
     t.string "public_id", null: false
     t.text "webhook_secret"
     t.datetime "down_alerted_at"
+    t.datetime "paused_at"
     t.index ["account_id"], name: "index_whatsapp_hybrid_connections_on_account_id"
     t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
     t.index ["public_id"], name: "index_whatsapp_hybrid_connections_on_public_id", unique: true
