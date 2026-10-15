@@ -41,28 +41,41 @@ class WhatsappHybrid::WakeSession
 
   # Verdadeiro quando dá para seguir: a sessão está de pé (conectada ou pedindo QR) ou o motor não a tem mais (o
   # reconectar recria). Falso quando ela não subiu dentro do teto.
+  # Motor sem resposta no start (timeout) também é "ainda subindo": o painel pede para tentar de novo.
   def call
     started_at = monotonic_now
     status = start_if_stopped!(timeout: STEP_TIMEOUT)
     return true unless WAKING.include?(status)
 
     wait_until_up(started_at)
+  rescue Waha::Client::Timeout
+    gave_up!
   end
 
   private
 
+  # O prazo é recalculado depois de cada espera: a consulta nunca passa do que falta para o teto.
   def wait_until_up(started_at)
     MAX_TRIES.times do
-      remaining = DEADLINE_SECONDS - (monotonic_now - started_at)
-      break if remaining <= 0
+      break if remaining(started_at) <= 0
 
       Kernel.sleep(WAIT_SECONDS)
-      return true if READY.include?(current_status([STEP_TIMEOUT, remaining.ceil].min))
+      left = remaining(started_at)
+      break if left <= 0
+      return true if READY.include?(current_status([STEP_TIMEOUT, left.ceil].min))
     end
-    Rails.logger.warn("[whatsapp_hybrid] wake session=#{@session_name}: não subiu em #{DEADLINE_SECONDS}s")
-    false
+    gave_up!
   rescue Waha::Client::NotFound
     true
+  end
+
+  def remaining(started_at)
+    DEADLINE_SECONDS - (monotonic_now - started_at)
+  end
+
+  def gave_up!
+    Rails.logger.warn("[whatsapp_hybrid] wake session=#{@session_name}: não subiu em #{DEADLINE_SECONDS}s")
+    false
   end
 
   # Sem resposta (timeout) conta como "ainda subindo"; 404 sobe para quem chamou.

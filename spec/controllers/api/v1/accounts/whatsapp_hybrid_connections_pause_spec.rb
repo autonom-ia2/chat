@@ -133,4 +133,16 @@ RSpec.describe 'WhatsApp Híbrido pause API', type: :request do
     expect(client).not_to have_received(:logout_session)
     expect(connection.reload).to be_paused
   end
+
+  it 'answers waking (not reconnect_failed) when the engine does not answer the start of a paused session' do
+    connection.update!(paused_at: Time.current, status: 'disconnected')
+    allow(client).to receive(:get_session).and_return(stopped)
+    allow(client).to receive(:start_session).and_raise(Waha::Client::Timeout, 'timeout')
+
+    post "#{base}/reconnect", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to eq('error' => 'waking')
+    expect(client).not_to have_received(:logout_session)
+    expect(connection.reload).to be_paused
+  end
 end

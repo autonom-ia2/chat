@@ -25,13 +25,26 @@ describe WhatsappHybrid::WakeSession do
     expect(wake.call).to be(true)
   end
 
-  it 'gives up within the limit when the session never comes up, and says so' do
+  it 'gives up at the time limit when the session never comes up, and says so' do
+    # Relógio: início 0; antes da espera 0; depois da espera 4 (faltam 2 s, a consulta usa 2 s, não 3); na volta
+    # seguinte 6 (acabou o prazo).
+    allow(wake).to receive(:monotonic_now).and_return(0, 0, 4, 6)
     allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' }, { 'status' => 'STARTING' })
     allow(Rails.logger).to receive(:warn)
 
     expect(wake.call).to be(false)
-    expect(client).to have_received(:get_session).at_most(described_class::MAX_TRIES + 1).times
+    # 1 leitura antes do start e 1 só consulta no laço: o prazo encerrou antes do MAX_TRIES.
+    expect(client).to have_received(:get_session).twice
+    expect(client).to have_received(:get_session).with('hybrid-wake', timeout: 2)
     expect(Rails.logger).to have_received(:warn).with(/não subiu/)
+  end
+
+  it 'asks to try again when the engine does not answer the start (timeout)' do
+    allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
+    allow(client).to receive(:start_session).and_raise(Waha::Client::Timeout, 'timeout')
+    allow(Rails.logger).to receive(:warn)
+
+    expect(wake.call).to be(false)
   end
 
   it 'treats an engine that stops answering as still starting' do
