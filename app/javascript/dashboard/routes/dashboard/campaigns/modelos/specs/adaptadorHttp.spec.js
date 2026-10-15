@@ -341,6 +341,7 @@ describe('adaptador HTTP de Modelos', () => {
     // #1418: produto esgotado ou fora do catálogo; catálogo desconectado.
     expect(motivo('template_product_unavailable')).toBe('produto_indisponivel');
     expect(motivo('template_catalog_missing')).toBe('sem_catalogo');
+    expect(motivo('template_products_disabled')).toBe('produtos_desligados');
   });
 
   it('shows usage the person can see and only a notice for the rest', () => {

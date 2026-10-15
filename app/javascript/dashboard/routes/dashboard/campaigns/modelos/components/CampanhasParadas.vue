@@ -32,6 +32,7 @@ const ESPERA = {
   // #1418: o modelo está certo; quando o produto voltar, Retomar confere de novo.
   produto_indisponivel: 'AGUARDE_PRODUTO',
   sem_catalogo: 'CONECTE_CATALOGO',
+  produtos_desligados: 'FALE_COM_SUPORTE',
 };
 const oQueFazer = campanha => ESPERA[campanha.motivo] || 'CORRIJA_PRIMEIRO';
 const { t } = useI18n();

@@ -202,7 +202,9 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
       stub_request(:get, "#{graph}/cat-1/products").with(query: hash_including({})).to_return(graph_answer(data: rows))
     end
 
-    def dispatch_products(processed)
+    # A campanha nasce com a flag ligada (a criação exige); `flag: false` simula desligá-la antes do disparo.
+    def dispatch_products(processed, flag: true)
+      flag ? account.enable_features!('whatsapp_campaign_products') : account.disable_features!('whatsapp_campaign_products')
       campaign = create(:campaign, account: account, inbox: inbox, audience: [], message: 'Chegou a oferta do mês.',
                                    template_params: params('cartoes_de_produtos', processed))
       CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: audience, variable_bindings: {}, variable_defaults: {})
@@ -245,6 +247,19 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
       expect(pause.reason_code).to eq('template_product_unavailable')
       expect(pause.source).to eq('template')
       expect(pause.details).to include('product_ids' => ['tenis'], 'product_names' => ['Tênis'])
+    end
+
+    it 'disparo: flag desligada depois da criação para a campanha inteira com motivo próprio, sem ler o catálogo' do
+      stub_catalog
+      sent = stub_graph_messages
+
+      campaign = dispatch_products(chosen, flag: false)
+
+      expect(sent).to be_empty
+      pause = CampaignPause.open_for(campaign)
+      expect(pause.reason_code).to eq('template_products_disabled')
+      expect(pause.source).to eq('template')
+      expect(a_request(:get, ->(uri) { uri.path.end_with?('/product_catalogs') })).not_to have_been_made
     end
   end
 

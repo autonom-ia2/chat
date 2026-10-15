@@ -26,6 +26,17 @@ RSpec.describe Whatsapp::Templates::ProductParams do
     Array.new(count) { |index| "sku-#{index}" }
   end
 
+  describe '.uses_catalog?' do
+    it 'sees any catalog part: PRODUCT header or SPM/MPM button, in the template or in a card' do
+      spm_only = { 'components' => [{ 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM' }] }] }
+      loose_card = template(body, { 'type' => 'CAROUSEL', 'cards' => [spm_only] })
+      only_header = template({ 'type' => 'HEADER', 'format' => 'PRODUCT' }, body)
+
+      expect([um, varios, carrossel, loose_card, only_header].map { |item| described_class.uses_catalog?(item) }).to all(be(true))
+      expect([media_carousel, template(body), nil].map { |item| described_class.uses_catalog?(item) }).to all(be(false))
+    end
+  end
+
   describe '.kind' do
     it 'reads the kind from the structure: SPM, MPM or carousel of product cards' do
       expect([um, varios, carrossel].map { |item| described_class.kind(item) }).to eq(%w[um varios carrossel])

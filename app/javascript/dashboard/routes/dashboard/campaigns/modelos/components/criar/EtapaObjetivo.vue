@@ -5,6 +5,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { FORMATOS, OBJETIVO_EM_BRANCO, OBJETIVOS } from '../../constants';
 import { useCanUseIA } from '../../helpers/useCanUseIA';
 import FormatoMiniatura from './FormatoMiniatura.vue';
+import SeloBeta from '../SeloBeta.vue';
 
 // Começar pronto: as sugestões com texto livre e o "começar do zero".
 const emit = defineEmits(['escolher', 'formato', 'ia']);
@@ -163,6 +164,7 @@ const podeUsarIA = useCanUseIA();
               </span>
             </span>
             <span class="flex flex-wrap gap-1.5 mt-auto">
+              <SeloBeta v-if="formato.beta" />
               <span
                 v-if="formato.soDivulgacao"
                 class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-amber-3 text-n-amber-11"

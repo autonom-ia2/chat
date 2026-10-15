@@ -204,6 +204,8 @@ export const FORMATOS = [
     tom: 'bg-n-teal-3 text-n-teal-11',
     tipo: 'divulgacao',
     soDivulgacao: true,
+    // Validado só com catálogo simulado (Rodrigo, 15/10): selo Beta.
+    beta: true,
   },
   {
     chave: 'catalogo',

@@ -6,6 +6,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import GavetaDeProdutos from './GavetaDeProdutos.vue';
+import SeloBeta from '../components/SeloBeta.vue';
 
 const props = defineProps({
   caixa: { type: [Number, String], required: true },
@@ -53,6 +54,7 @@ const podeTirar = computed(() => props.pedido.tipo !== 'um');
         {{ t(`${NS}.AJUDA.${pedido.tipo}`, { maximo: pedido.maximo }) }}
       </p>
     </div>
+    <SeloBeta com-aviso />
 
     <ol
       v-if="temEscolha"
@@ -72,10 +74,19 @@ const podeTirar = computed(() => props.pedido.tipo !== 'um');
           {{ indice + 1 }}
         </span>
         <img
+          v-if="produto.foto"
           :src="produto.foto"
           alt=""
           class="object-cover rounded-lg size-12 shrink-0 bg-n-slate-3"
         />
+        <!-- Produto sem foto no catálogo: um quadro com o ícone, nunca a imagem quebrada. -->
+        <span
+          v-else
+          class="grid rounded-lg place-items-center size-12 shrink-0 bg-n-slate-3 text-n-slate-10"
+          aria-hidden="true"
+        >
+          <span class="i-lucide-shopping-bag size-5" />
+        </span>
         <span class="flex flex-col flex-1 min-w-0">
           <span
             class="text-sm font-medium break-words line-clamp-2 text-n-slate-12"

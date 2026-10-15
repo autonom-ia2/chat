@@ -89,6 +89,19 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappCatalogs', type: :request do
                                             'message' => I18n.t('whatsapp_templates.errors.catalog_permission_denied', locale: :pt_BR))
   end
 
+  it 'says the catalog is gone or out of reach (100/33) with our own text, not the template one' do
+    stub_catalogs([{ 'id' => 'cat-1', 'name' => 'Loja', 'product_count' => 1 }])
+    stub_request(:get, "#{graph}/cat-1/products").with(query: hash_including({}))
+                                                 .to_return(status: 400, headers: json,
+                                                            body: { error: { code: 100, error_subcode: 33 } }.to_json)
+
+    call("#{base}/products")
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to include('error' => 'catalog_not_found',
+                                            'message' => I18n.t('whatsapp_templates.errors.catalog_not_found', locale: :pt_BR))
+  end
+
   it 'never reads an inbox of another account' do
     other = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
 

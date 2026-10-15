@@ -7,6 +7,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import EtapaCatalogo from './EtapaCatalogo.vue';
+import SeloBeta from '../SeloBeta.vue';
 import {
   JEITOS_DE_MOSTRAR_PRODUTOS,
   LIMITE_DO_TITULO_DOS_PRODUTOS,
@@ -48,6 +49,7 @@ const tituloErrado = computed(
 
 <template>
   <div data-etapa-produtos class="flex flex-col gap-6">
+    <SeloBeta com-aviso />
     <EtapaCatalogo v-if="!props.catalogo" :catalogo="null" />
 
     <fieldset class="flex flex-col gap-3 p-0 m-0 border-0">

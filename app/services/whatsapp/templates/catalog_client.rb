@@ -25,7 +25,10 @@ class Whatsapp::Templates::CatalogClient
   FIND_LIMIT = 100
   CATALOG_TTL = 5.minutes
   PRODUCT_FIELDS = 'retailer_id,name,price,image_url,availability'.freeze
-  IN_STOCK = 'in stock'.freeze
+  # Vendável: `availability` da Meta (enum: in stock, out of stock, preorder, available for order, discontinued, pending,
+  # mark_as_sold, mark_as_expired — developers.facebook.com/docs/marketing-api/reference/product-item/, lido em
+  # 15/10/2026). Encomenda e pré-venda também se compram; o resto fica de fora.
+  SELLABLE = ['in stock', 'available for order', 'preorder'].freeze
 
   def initialize(inbox:)
     raise Whatsapp::Templates::MetaClient::Unsupported unless Whatsapp::Templates::MetaClient.supported?(inbox)
@@ -78,7 +81,7 @@ class Whatsapp::Templates::CatalogClient
   def items(body)
     Array(body['data']).select { |row| row.is_a?(Hash) && row['retailer_id'].present? }.map do |row|
       Product.new(id: row['retailer_id'].to_s, name: row['name'].to_s, price: row['price'].to_s, image_url: row['image_url'].to_s,
-                  available: row['availability'].to_s.casecmp?(IN_STOCK))
+                  available: SELLABLE.include?(row['availability'].to_s.strip.downcase))
     end
   end
 

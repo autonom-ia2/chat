@@ -1,5 +1,9 @@
 {
   "MODELOS_WHATSAPP": {
+    "BETA": {
+      "SELO": "Beta",
+      "AVISO": "Recurso novo: se algo não funcionar, fale com o suporte."
+    },
     "CARREGANDO": "Carregando os modelos…",
     "ERRO": "Não conseguimos abrir os modelos agora.",
     "TENTAR_DE_NOVO": "Tentar de novo",
@@ -698,7 +702,8 @@
         "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha.",
         "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado.",
         "produto_indisponivel": "O produto “{produto}” acabou ou saiu do catálogo. Nada foi enviado.",
-        "sem_catalogo": "A conta do WhatsApp não tem mais catálogo de produtos conectado. Nada foi enviado."
+        "sem_catalogo": "A conta do WhatsApp não tem mais catálogo de produtos conectado. Nada foi enviado.",
+        "produtos_desligados": "Campanha com produtos do catálogo não está mais liberada para esta conta. Nada foi enviado."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",
@@ -717,6 +722,7 @@
       "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar.",
       "NOVA_DATA": "Crie a campanha de novo com uma data à frente.",
       "AGUARDE_PRODUTO": "Quando o produto voltar ao catálogo, toque em Retomar. Ou crie a campanha de novo com outro produto.",
+      "FALE_COM_SUPORTE": "Fale com o suporte para liberar os produtos do catálogo e toque em Retomar.",
       "CONECTE_CATALOGO": "Conecte o catálogo de novo no WhatsApp e toque em Retomar."
     },
     "PONTE": {

@@ -113,5 +113,19 @@ RSpec.describe Whatsapp::Templates::CatalogClient do
       expect(found.keys).to eq(['a'])
       expect(found['a'].available).to be(true)
     end
+
+    # Enum `availability` da Meta (developers.facebook.com/docs/marketing-api/reference/product-item/, lido em 15/10/2026).
+    it 'counts in stock, available for order and preorder as for sale, and nothing else' do
+      stub_catalogs([{ 'id' => 'cat-1', 'name' => 'Loja', 'product_count' => 8 }])
+      values = ['in stock', 'available for order', 'preorder', 'out of stock', 'discontinued', 'pending', 'mark_as_sold',
+                'mark_as_expired']
+      stub_request(:get, products_url).with(query: hash_including({}))
+                                      .to_return(status: 200, headers: json,
+                                                 body: { data: values.map { |value| product(value, value, availability: value) } }.to_json)
+
+      sellable = client.find(values).select { |_id, item| item.available }.keys
+
+      expect(sellable).to eq(['in stock', 'available for order', 'preorder'])
+    end
   end
 end

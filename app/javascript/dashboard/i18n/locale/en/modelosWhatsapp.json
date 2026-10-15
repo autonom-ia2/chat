@@ -1,5 +1,9 @@
 {
   "MODELOS_WHATSAPP": {
+    "BETA": {
+      "SELO": "Beta",
+      "AVISO": "New feature: if something does not work, contact support."
+    },
     "CARREGANDO": "Loading the templates…",
     "ERRO": "We couldn't open the templates right now.",
     "TENTAR_DE_NOVO": "Try again",
@@ -698,7 +702,8 @@
         "arquivo_do_topo": "The template “{modelo}” has a photo, video or document at the top and the file is not saved. Pick the file again in the template or add the link in the campaign.",
         "oferta_vencida": "The offer deadline passed before the send. Nothing was sent.",
         "produto_indisponivel": "The product “{produto}” is out of stock or left the catalog. Nothing was sent.",
-        "sem_catalogo": "The WhatsApp account no longer has a product catalog connected. Nothing was sent."
+        "sem_catalogo": "The WhatsApp account no longer has a product catalog connected. Nothing was sent.",
+        "produtos_desligados": "Campaigns with catalog products are no longer enabled for this account. Nothing was sent."
       },
       "ACOES": {
         "ABRIR_MODELO": "See the template",
@@ -717,6 +722,7 @@
       "AGUARDE_APROVAR": "Wait for WhatsApp to approve the template. Then tap Resume.",
       "NOVA_DATA": "Create the campaign again with a later date.",
       "AGUARDE_PRODUTO": "When the product is back in the catalog, tap Resume. Or create the campaign again with another product.",
+      "FALE_COM_SUPORTE": "Contact support to enable catalog products again, then tap Resume.",
       "CONECTE_CATALOGO": "Connect the catalog again on WhatsApp and tap Resume."
     },
     "PONTE": {

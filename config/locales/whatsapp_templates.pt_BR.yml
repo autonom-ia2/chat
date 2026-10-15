@@ -6,6 +6,7 @@ pt_BR:
       not_found_or_no_access: "O WhatsApp não encontrou este modelo ou o número não tem acesso a ele. Atualize a lista; se continuar, reconecte o número."
       meta_unreachable: "A Meta não respondeu. Tente de novo em alguns minutos."
       catalog_missing: "Esta conta do WhatsApp ainda não tem catálogo de produtos conectado."
+      catalog_not_found: "Não achamos o catálogo desta conta do WhatsApp, ou a conexão perdeu o acesso a ele. Confira o catálogo no Gerenciador de Comércio e reconecte a caixa em Configurações › Caixas de entrada."
       catalog_permission_denied: "A conexão deste WhatsApp não tem permissão para ler o catálogo de produtos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
       products_disabled: "Campanha com produtos do catálogo não está liberada para esta conta."
       sync_failed: "Não foi possível atualizar a lista de modelos agora. Tente de novo em alguns minutos."

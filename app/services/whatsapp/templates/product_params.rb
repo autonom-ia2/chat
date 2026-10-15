@@ -18,6 +18,7 @@ module Whatsapp::Templates::ProductParams
   SECTION_TITLES = { 'pt' => 'Escolhidos para você', 'es' => 'Elegidos para ti', 'en' => 'Picked for you' }.freeze
   DEFAULT_SECTION_LANGUAGE = 'en'.freeze
   EMPTY = { header: [], after_body: [], buttons: [] }.freeze
+  CATALOG_BUTTONS = %w[SPM MPM].freeze
 
   module_function
 
@@ -28,6 +29,20 @@ module Whatsapp::Templates::ProductParams
     return 'um' if types.include?('SPM')
 
     'carrossel' if product_cards?(components)
+  end
+
+  # Qualquer pedaço de catálogo — topo PRODUCT ou botão SPM/MPM, no modelo ou nos cartões —, mesmo fora dos formatos
+  # completos de `kind`: é o que a criação barra sem a flag `whatsapp_campaign_products`.
+  def uses_catalog?(template)
+    components = hashes(template.is_a?(Hash) ? template['components'] : nil)
+    cards = hashes(component(components, 'CAROUSEL')&.dig('cards')).flat_map { |card| hashes(card['components']) }
+    (components + cards).any? { |item| catalog_part?(item) }
+  end
+
+  def catalog_part?(item)
+    return item['format'].to_s.casecmp?('PRODUCT') if item['type'].to_s.casecmp?('HEADER')
+
+    item['type'].to_s.casecmp?('BUTTONS') && hashes(item['buttons']).any? { |button| CATALOG_BUTTONS.include?(button['type'].to_s.upcase) }
   end
 
   def product_cards?(components)

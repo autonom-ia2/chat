@@ -143,10 +143,18 @@ const total = computed(() =>
           class="flex items-center gap-2 py-1 ltr:pl-1 ltr:pr-3 rtl:pr-1 rtl:pl-3 rounded-full bg-n-alpha-2"
         >
           <img
+            v-if="produto.foto"
             :src="produto.foto"
             alt=""
             class="object-cover rounded-full size-7 bg-n-slate-3"
           />
+          <span
+            v-else
+            class="grid rounded-full place-items-center size-7 bg-n-slate-3 text-n-slate-10"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-shopping-bag size-3.5" />
+          </span>
           <span class="text-xs text-n-slate-12">
             {{ rotuloDoProduto(produto) }}
           </span>

@@ -11,6 +11,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import api from '../api/modelosWhatsapp';
+import { paginaPedida } from '../helpers/produtosNaCampanha';
 
 const props = defineProps({
   caixa: { type: [Number, String], required: true },
@@ -28,8 +29,8 @@ const busca = ref('');
 const produtos = ref([]);
 const catalogo = ref(null);
 const estado = ref('carregando');
-// Cursor da próxima página da Meta ('' = acabou).
-const depois = ref('');
+// Cursor da próxima página da Meta ('' = acabou) e a busca que o gerou.
+const lista = ref({ busca: '', depois: '' });
 const marcados = ref([...props.escolhidos]);
 
 // `mais`: soma a próxima página à lista ("Ver mais produtos"). Só vale a
@@ -39,17 +40,19 @@ const carregar = async ({ mais = false } = {}) => {
   ultimoPedido += 1;
   const este = ultimoPedido;
   estado.value = 'carregando';
-  if (!mais) depois.value = '';
+  const pedido = paginaPedida({
+    mais,
+    buscaDigitada: busca.value,
+    lista: lista.value,
+  });
+  if (!mais) lista.value = { busca: pedido.busca, depois: '' };
   try {
-    const pagina = await api.listarProdutos(props.caixa, {
-      busca: busca.value,
-      depois: mais ? depois.value : '',
-    });
+    const pagina = await api.listarProdutos(props.caixa, pedido);
     if (este !== ultimoPedido) return;
     produtos.value = mais
       ? [...produtos.value, ...pagina.produtos]
       : pagina.produtos;
-    depois.value = pagina.depois;
+    lista.value = { busca: pedido.busca, depois: pagina.depois };
     estado.value = 'pronto';
   } catch {
     if (este === ultimoPedido) estado.value = 'erro';
@@ -205,7 +208,7 @@ const contagem = computed(() => {
         </li>
       </ul>
       <Button
-        v-if="depois && produtos.length"
+        v-if="lista.depois && produtos.length"
         :label="t(`${NS}.VER_MAIS`)"
         :is-loading="estado === 'carregando'"
         variant="outline"

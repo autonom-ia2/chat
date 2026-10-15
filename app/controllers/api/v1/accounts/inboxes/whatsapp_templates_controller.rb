@@ -9,6 +9,7 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
   before_action :ensure_journey_enabled, only: WRITE_ACTIONS
   before_action :fetch_inbox
   before_action :check_authorization
+  before_action :ensure_products_enabled, only: %i[create update]
 
   rescue_from Whatsapp::Templates::MetaClient::NotFound, with: :template_not_found
   rescue_from Whatsapp::Templates::MetaClient::Unreachable, with: :meta_unreachable
@@ -53,6 +54,15 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
 
   def ensure_journey_enabled
     render_error('feature_disabled', :not_found) unless Current.account.feature_enabled?('whatsapp_templates_journey')
+  end
+
+  # #1418: modelo com produtos do catálogo só com a flag `whatsapp_campaign_products`. A tela já esconde o formato; o
+  # servidor barra também, antes de falar com a Meta.
+  def ensure_products_enabled
+    return if Current.account.feature_enabled?('whatsapp_campaign_products')
+    return unless params[:template].respond_to?(:key?) && Whatsapp::Templates::ProductParams.uses_catalog?(template_params)
+
+    render_error('products_disabled')
   end
 
   def fetch_inbox

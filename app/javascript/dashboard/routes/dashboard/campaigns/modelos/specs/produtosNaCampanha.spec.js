@@ -1,5 +1,6 @@
 import {
   levaProdutos,
+  paginaPedida,
   pedidoDeProdutos,
   produtosParaEnvio,
   produtosPendentes,
@@ -102,5 +103,22 @@ describe('produtosNaCampanha', () => {
 
   it('keeps the products in the full template (no written message instead)', () => {
     expect([um, varios, carrossel].every(soModeloCompleto)).toBe(true);
+  });
+});
+
+describe('paginaPedida (gaveta de produtos)', () => {
+  const lista = { busca: 'tenis', depois: 'cursor-2' };
+
+  it('"Ver mais" keeps the search that made the cursor, even after typing', () => {
+    expect(paginaPedida({ mais: true, buscaDigitada: 'camis', lista })).toEqual(
+      { busca: 'tenis', depois: 'cursor-2' }
+    );
+  });
+
+  it('a new search starts from the first page with what was typed', () => {
+    expect(paginaPedida({ buscaDigitada: 'camis', lista })).toEqual({
+      busca: 'camis',
+      depois: '',
+    });
   });
 });

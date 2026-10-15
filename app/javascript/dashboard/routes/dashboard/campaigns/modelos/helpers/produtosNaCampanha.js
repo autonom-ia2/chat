@@ -45,6 +45,14 @@ export const pedidoDeProdutos = template => {
 
 export const levaProdutos = template => Boolean(tipoDeProdutos(template));
 
+// Pedido de uma página da gaveta. "Ver mais" segue o cursor com a MESMA busca
+// que o gerou (`lista`), nunca o texto digitado depois: cursor de uma busca
+// com o termo de outra mistura as listas. Busca nova começa do zero.
+export const paginaPedida = ({ mais = false, buscaDigitada = '', lista }) =>
+  mais
+    ? { busca: lista.busca, depois: lista.depois }
+    : { busca: buscaDigitada, depois: '' };
+
 // Faltando produto, sobrando ou um que acabou depois de escolhido.
 export const produtosPendentes = (pedido, escolhidos = []) => {
   if (!pedido) return false;

@@ -88,7 +88,11 @@ module CampaignPauses::WhatsappDispatchGate
   end
 
   # #1418: each chosen product still in the inbox catalog and for sale; the catalog goes to every send.
+  # Sem a flag `whatsapp_campaign_products` (desligada depois de a campanha ser criada), a campanha de produtos para
+  # inteira com motivo próprio: nada sai.
   def products_verdict(verdict)
+    return products_disabled_verdict(verdict) if products_disabled?(verdict.template)
+
     processed = campaign.template_params.to_h['processed_params']
     check = Whatsapp::Templates::DispatchProducts.new(inbox: inbox, template: verdict.template, processed: processed).call
     @product_catalog_id = check.catalog_id
@@ -97,6 +101,17 @@ module CampaignPauses::WhatsappDispatchGate
     Whatsapp::Templates::DispatchCheck::Verdict.new(
       reason_code: check.reason_code, source: 'template',
       details: verdict.details.slice(:template_name, :language, :lookup_source).merge(check.details)
+    )
+  end
+
+  def products_disabled?(template)
+    Whatsapp::Templates::ProductParams.kind(template).present? && !campaign.account.feature_enabled?('whatsapp_campaign_products')
+  end
+
+  def products_disabled_verdict(verdict)
+    Whatsapp::Templates::DispatchCheck::Verdict.new(
+      reason_code: 'template_products_disabled', source: 'template',
+      details: verdict.details.slice(:template_name, :language, :lookup_source)
     )
   end
 
