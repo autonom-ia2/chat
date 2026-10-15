@@ -85,10 +85,16 @@ class Crm::ConversationObserverListener < BaseListener
   end
 
   # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
+  # Na ordem do turno (#1606), fila high e espera curta: o agente espera o assunto antes de responder.
   def enqueue_subject_identification(message)
     return unless message.incoming? && Crm::Subjects.ligado?(message.conversation)
 
-    Crm::Subjects::IdentifyJob.set(wait: Crm::Subjects::DEBOUNCE).perform_later(message.conversation_id, message.id)
+    job = if Crm::Subjects.ordem_do_turno?(message.conversation)
+            Crm::Subjects::IdentifyJob.set(queue: :high, wait: Crm::Subjects::DEBOUNCE_ORDEM)
+          else
+            Crm::Subjects::IdentifyJob.set(wait: Crm::Subjects::DEBOUNCE)
+          end
+    job.perform_later(message.conversation_id, message.id)
   end
 
   def ignored_message?(message)

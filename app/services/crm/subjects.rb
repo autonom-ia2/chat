@@ -10,6 +10,8 @@
 module Crm::Subjects
   # Espera depois da última mensagem, como a avaliação de etapa: uma rajada vira uma pergunta só.
   DEBOUNCE = 15.seconds
+  # Na ordem do turno (ordem_do_turno?), a espera é curta: o agente responde em ~6 s e espera o assunto até 20 s.
+  DEBOUNCE_ORDEM = 3.seconds
   # Abaixo disso o Jev está em dúvida e o modelo maior decide.
   CERTEZA_MINIMA = 0.8
   # Teto de perguntas ao Jev por conta e mês (o custo do Jev é nosso).
@@ -33,6 +35,18 @@ module Crm::Subjects
   # A IA do CRM está ligada na instalação e a caixa da conversa tem o CRM e a IA de assunto ligados.
   def self.ligado?(conversation)
     Crm::Ai::Config.enabled? && sugerir?(conversation)
+  end
+
+  # A REGRA ÚNICA de "este turno espera o assunto" (#1606, contrato com o Agentes IA, que só lê): a IA de assunto está
+  # ligada na caixa, a Fase 2 dos Agentes está ligada na conta (linhas de responsável numa conta sem ela não contam), e a
+  # caixa tem responsável por funil OU a conversa tem passagem em aberto. Verdadeira, a IA de assunto vai para a fila
+  # high com espera de DEBOUNCE_ORDEM, troca o dono em linha (ResponsibleAgentSync) e só então grava o marco
+  # (Crm::Subjects::Marco), que o ReplyJob espera. Falsa, nada muda: fila low, 15 s, Sync assíncrono, sem espera.
+  def self.ordem_do_turno?(conversation)
+    return false unless ligado?(conversation) && Crm::Ai::Config.areas_ligadas?(conversation.account)
+
+    Crm::InboxAiAgent.exists?(account_id: conversation.account_id, inbox_id: conversation.inbox_id) ||
+      Crm::Passagens.aberta?(conversation)
   end
 
   # O mesmo interruptor da IA do card: funil com a IA desligada fica fora da IA de assunto.
