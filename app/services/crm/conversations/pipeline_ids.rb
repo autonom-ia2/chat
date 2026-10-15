@@ -20,14 +20,14 @@ class Crm::Conversations::PipelineIds
   def self.for_current_user(conversations)
     return unless Crm::Config.enabled?
 
-    visible_for(conversations, user: Current.user, account: Current.account)
+    visible_for(conversations, user: Current.user, account: Current.account, account_user: Current.account_user)
   end
 
-  def self.visible_for(conversations, user:, account:)
+  def self.visible_for(conversations, user:, account:, account_user: nil)
     all = self.for(conversations)
     return {} if all.empty?
 
-    visible = Crm::Access::VisiblePipelines.new(user: user, account: account)
+    visible = Crm::Access::VisiblePipelines.new(user: user, account: account, account_user: account_user)
     all.transform_values do |pipeline_ids|
       shown = pipeline_ids.select { |pipeline_id| visible.visible?(pipeline_id) }
       { ids: shown, hidden: shown.size < pipeline_ids.size }

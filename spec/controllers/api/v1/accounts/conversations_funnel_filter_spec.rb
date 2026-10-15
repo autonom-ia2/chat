@@ -63,6 +63,13 @@ RSpec.describe 'Conversations API: filtro Funil', type: :request do
     expect(conversa['crm_pipeline_ids']).to eq([])
     expect(conversa['crm_pipeline_hidden']).to be(true)
     expect(response.body).not_to include(%("crm_pipeline_ids":[#{sinistro.first.id}]))
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa_sinistro.display_id}", headers: agent.create_new_auth_token
+    expect(response.parsed_body.slice('crm_pipeline_ids', 'crm_pipeline_hidden')).to eq('crm_pipeline_ids' => [], 'crm_pipeline_hidden' => true)
+
+    get "/api/v1/accounts/#{account.id}/contacts/#{conversa_sinistro.contact_id}/conversations", headers: agent.create_new_auth_token
+    expect(response.parsed_body['payload'].map { |item| item.slice('crm_pipeline_ids', 'crm_pipeline_hidden') })
+      .to eq([{ 'crm_pipeline_ids' => [], 'crm_pipeline_hidden' => true }])
   end
 
   it 'o websocket e o webhook não levam os funis: o payload também chega ao contato pelo widget' do

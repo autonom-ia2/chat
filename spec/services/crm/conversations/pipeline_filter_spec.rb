@@ -184,5 +184,15 @@ RSpec.describe Crm::Conversations::PipelineFilter do
       expect(queries { described_class.for(duas) }).to eq(2)
       expect(queries { described_class.for(conversas.values) }).to eq(2)
     end
+
+    it 'visible_for de quem tem restrição: o mesmo número de consultas para 2 ou para todas as conversas' do
+      access = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false, triage: true)
+      access.agent_pipelines.create!(account: account, pipeline: vendas.first)
+      account_user = AccountUser.find_by!(account: account, user: agent)
+      contar = ->(lista) { queries { described_class.visible_for(lista, user: agent, account: account, account_user: account_user) } }
+
+      expect(contar.call(conversas.values.first(2))).to eq(contar.call(conversas.values))
+      expect(contar.call(conversas.values)).to eq(7)
+    end
   end
 end

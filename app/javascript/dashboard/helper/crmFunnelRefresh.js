@@ -1,6 +1,6 @@
 // Filtro "Funil" da lista de conversas (multifunil #1150): quando um card muda, a conversa dele na lista relê os funis
 // da API (refreshConversationFunnel). Para não virar uma rajada de GETs (mover vários cards no Kanban, várias abas):
-// - só pede quando o funil ou o status do card mudou (card novo, ou que esta aba ainda não viu, conta como mudança);
+// - só pede quando o funil, o status ou a conversa do card mudou (card novo, ou que esta aba ainda não viu, conta como mudança);
 // - espera um instante e junta os avisos da mesma conversa num pedido só.
 export const FUNNEL_REFRESH_DEBOUNCE_MS = 300;
 
@@ -8,7 +8,7 @@ const lastSeenCards = new Map();
 const timers = new Map();
 
 export const cardFunnelChanged = card => {
-  const current = `${card.pipeline_id}:${card.status}`;
+  const current = `${card.pipeline_id}:${card.status}:${card.conversation?.display_id}`;
   const previous = lastSeenCards.get(card.id);
   lastSeenCards.set(card.id, current);
   return previous !== current;

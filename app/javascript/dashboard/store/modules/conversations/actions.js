@@ -86,7 +86,8 @@ const actions = {
   // ao contato pelo widget. Com filtro de funil (e sem pasta ou filtro avançado), a conversa da lista que está sem os
   // funis, ou cujo card mudou, tem os funis lidos da API. Só o campo muda, e só em conversa que ainda está na lista: a
   // leitura não põe conversa em Menções ou Em que participo nem passa por cima de um update mais novo do websocket.
-  // Se a leitura falhar, a conversa fica fora da lista filtrada e o próximo evento dela tenta de novo.
+  // Se a leitura falhar: conversa que nunca teve os funis fica fora da lista filtrada e o próximo evento dela tenta de
+  // novo; a que já tinha fica com os funis anteriores até a próxima mudança do card ou a próxima leitura da lista.
   refreshConversationFunnel: async (
     { state, getters, commit },
     conversationId
@@ -104,7 +105,7 @@ const actions = {
         crmPipelineHidden: data.crm_pipeline_hidden,
       });
     } catch {
-      // Sem acesso ou falha de rede: tenta de novo no próximo evento da conversa (needsCrmFunnel).
+      // Sem acesso ou falha de rede: fica o que havia (ver acima).
     }
   },
 
