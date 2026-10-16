@@ -23,6 +23,9 @@
 # O que vem depois da decisão (o Sync em linha e a parada da cadência de follow-up no card que é o assunto, corrida f)
 # roda mesmo quando a decisão quebrou no meio (o aviso em tempo real, por exemplo): o assunto pode já estar aplicado,
 # e sem isso o marco sairia antes do Sync e a cadência não pararia.
+#
+# Com a flag `crm_avaliar_toda_mensagem` (#1675), o último passo faz a IA do CRM reler o card em foco, já o do assunto
+# decidido (Crm::Conversations::CardEmFoco). Não repete o que a troca de foco ou o card novo já agendaram.
 class Crm::Subjects::IdentifyJob < ApplicationJob
   EVENTO = 'crm.subject.decided'.freeze
 
@@ -73,6 +76,13 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
   def depois_da_decisao(conversation, message)
     cuidar('sync') { sincronizar_dono(conversation.reload) }
     cuidar('cadencia') { parar_cadencia(conversation.reload, message) }
+    cuidar('avaliacao') { avaliar_card_em_foco(conversation, message) }
+  end
+
+  def avaliar_card_em_foco(conversation, message)
+    return unless Crm::Conversations::CardEmFoco.ligada?(conversation.account)
+
+    Crm::Conversations::CardEmFoco.new(conversation: conversation.reload, message: message).perform
   end
 
   def sincronizar_dono(conversation)
