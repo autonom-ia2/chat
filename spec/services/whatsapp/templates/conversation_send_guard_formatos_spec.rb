@@ -43,7 +43,7 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
   fixture['casos'].each do |caso|
     describe caso['nome'] do
       it "SendableFormat says #{caso['envio'] || 'sendable'}" do
-        result = Whatsapp::Templates::SendableFormat.check(caso['template'], recorded: caso['processed_params'], now: now)
+        result = Whatsapp::Templates::SendableFormat.check(caso['template'], recorded: caso['processed_params'], now: now, url_suffix: true)
 
         expect(result.reason_code).to eq(caso['envio'])
       end

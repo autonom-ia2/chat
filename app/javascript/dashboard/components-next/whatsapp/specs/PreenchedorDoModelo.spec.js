@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { nextTick, ref } from 'vue';
+import { nextTick } from 'vue';
 import formatos from '../../../../../../spec/fixtures/whatsapp_templates/formatos_da_conversa.json';
 import PreenchedorDoModelo from '../PreenchedorDoModelo.vue';
 
@@ -10,10 +10,10 @@ vi.mock('vue-i18n', () => ({
     t: (chave, valores) => `${chave}${JSON.stringify(valores || {})}`,
   }),
 }));
+// A conta de cada teste (a com fuso, ou sem fuso para o aviso).
+const conta = vi.hoisted(() => ({ value: null }));
 vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({
-    currentAccount: ref({ id: 1, timezone: 'America/Sao_Paulo' }),
-  }),
+  useAccount: () => ({ currentAccount: conta }),
 }));
 
 const modeloDo = nome =>
@@ -34,6 +34,7 @@ describe('PreenchedorDoModelo', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-16T12:00:00Z'));
+    conta.value = { id: 1, timezone: 'America/Sao_Paulo' };
   });
   afterEach(() => vi.useRealTimers());
 
@@ -124,5 +125,105 @@ describe('PreenchedorDoModelo', () => {
     expect(
       wrapper.find('[data-enviar]').attributes('disabled')
     ).toBeUndefined();
+  });
+
+  it('código digitado na caixa do Chatwoot (com campo no texto) também vai sem espaços', async () => {
+    const link = modeloDo('link_com_fim_preenchido');
+    const wrapper = montar({
+      ...link,
+      components: [
+        { type: 'BODY', text: 'Oi, {{1}}. Seu pedido saiu.' },
+        link.components[1],
+      ],
+    });
+    await nextTick();
+
+    const [corpo, fimDoLink] = wrapper.findAll('input[type="text"]');
+    await corpo.setValue('Ana');
+    await fimDoLink.setValue('  AB12 ');
+    await wrapper.find('[data-enviar]').trigger('click');
+
+    const [botao] =
+      wrapper.emitted('sendMessage')[0][0].templateParams.processed_params
+        .buttons;
+    expect(botao).toMatchObject({ type: 'url', parameter: 'AB12' });
+  });
+
+  it('link com o fim variável e sem campo no texto: só libera preenchido', async () => {
+    const wrapper = montar(modeloDo('link_com_fim_preenchido'));
+    await nextTick();
+    const enviar = wrapper.find('[data-enviar]');
+
+    expect(enviar.attributes('disabled')).toBeDefined();
+    await wrapper.find('[data-conversa-botao="0"] input').setValue('AB12');
+    expect(enviar.attributes('disabled')).toBeUndefined();
+  });
+
+  it('botão sem campo antes do cupom (posição vazia na lista) não quebra a tela', async () => {
+    const wrapper = montar({
+      name: 'cupom_com_resposta',
+      language: 'pt_BR',
+      components: [
+        { type: 'BODY', text: 'Oi, {{1}}. Use o cupom.' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Parar' },
+            { type: 'COPY_CODE', example: ['X1'] },
+          ],
+        },
+      ],
+    });
+    await nextTick();
+
+    const caixas = wrapper.findAll('input[type="text"]');
+    expect(caixas).toHaveLength(2);
+    await caixas[0].setValue('Ana');
+    await caixas[1].setValue(' X1 ');
+    await wrapper.find('[data-enviar]').trigger('click');
+
+    const { buttons } =
+      wrapper.emitted('sendMessage')[0][0].templateParams.processed_params;
+    expect(buttons[0]).toBeUndefined();
+    expect(buttons[1]).toEqual({ type: 'copy_code', parameter: 'X1' });
+  });
+
+  it('conta sem fuso: avisa o motivo e não deixa enviar a oferta', async () => {
+    conta.value = { id: 1 };
+    const wrapper = montar(modeloDo('oferta_com_validade_preenchida'));
+    await nextTick();
+
+    expect(wrapper.text()).toContain(
+      'MODELOS_WHATSAPP.CONVERSA.VALIDADE_SEM_FUSO'
+    );
+    expect(wrapper.text()).toContain(
+      'MODELOS_WHATSAPP.CONVERSA.VALIDADE_TITULO'
+    );
+    expect(
+      wrapper.find('[data-conversa-validade] input').attributes('disabled')
+    ).toBeDefined();
+    expect(wrapper.find('[data-enviar]').attributes('disabled')).toBeDefined();
+  });
+
+  it('validade que vence com a tela aberta desliga o envio em até 30 s', async () => {
+    const wrapper = montar(modeloDo('oferta_com_validade_preenchida'));
+    await nextTick();
+    const [corpo, cupom] = wrapper.findAll('input[type="text"]');
+    await corpo.setValue('Ana');
+    await cupom.setValue('HOJE25');
+    // 09:05 em São Paulo = 12:05 UTC, 5 minutos à frente.
+    await wrapper
+      .find('[data-conversa-validade] input')
+      .setValue('2026-10-16T09:05');
+    const enviar = wrapper.find('[data-enviar]');
+    expect(enviar.attributes('disabled')).toBeUndefined();
+
+    vi.advanceTimersByTime(6 * 60 * 1000);
+    await nextTick();
+
+    expect(enviar.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain(
+      'MODELOS_WHATSAPP.CONVERSA.VALIDADE_PASSADA'
+    );
   });
 });

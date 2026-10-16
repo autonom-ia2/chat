@@ -76,7 +76,7 @@ describe('envioNaConversa (#1705, revisão)', () => {
   });
 
   it('sem o fuso da conta a validade fica faltando (nunca o do navegador)', () => {
-    expect(validadeFaltando('2030-01-01T10:00', undefined)).toBe('VALIDADE');
+    expect(validadeFaltando('2030-01-01T10:00', undefined)).toBe('SEM_FUSO');
     expect(validadeFaltando('2030-01-01T10:00', 'America/Sao_Paulo')).toBe('');
   });
 });

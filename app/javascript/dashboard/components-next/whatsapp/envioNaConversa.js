@@ -71,10 +71,10 @@ export const envioCompleto = (template, params = {}, agora = Date.now()) =>
   validadeNoEnvio(template, params, agora);
 
 // A validade digitada (`2026-10-20T18:00`) vale no fuso da conta.
-// '' = pronta; 'VALIDADE' = falta; 'VALIDADE_PASSADA' = já passou. Sem o fuso
-// da conta, falta: a hora nunca é lida no fuso do navegador.
+// '' = pronta; 'VALIDADE' = falta; 'VALIDADE_PASSADA' = já passou;
+// 'SEM_FUSO' = a conta não tem fuso (a hora nunca é lida no do navegador).
 export const validadeFaltando = (local, fuso, agora = Date.now()) => {
-  if (!fuso) return 'VALIDADE';
+  if (!fuso) return 'SEM_FUSO';
   return (
     pendente({ validade: true }, { validade: local }, fuso, agora)[0] || ''
   );
@@ -83,7 +83,8 @@ export const validadeFaltando = (local, fuso, agora = Date.now()) => {
 // Os `processed_params` com a validade, no formato que o envio monta
 // (Whatsapp::Templates::SendComponents). Sem validade a pedir ou digitada, iguais.
 export const comValidade = (template, params, local, fuso) => {
-  if (!pedeValidade(template) || validadeFaltando(local, fuso) === 'VALIDADE') {
+  if (!pedeValidade(template)) return params;
+  if (!['', 'VALIDADE_PASSADA'].includes(validadeFaltando(local, fuso))) {
     return params;
   }
   const { limited_time_offer: oferta } = extrasParaEnvio(

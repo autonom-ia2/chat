@@ -108,6 +108,21 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(carousel, { 'carousel' => { 'cards' => [linked] } }).reason_code).to eq('carousel')
         expect(check(carousel, { 'carousel' => { 'cards' => [linked, {}] } }).reason_code).to eq('carousel')
         expect(check(carousel, {}).reason_code).to eq('carousel')
+        # #1705: os cartões fora do formato (de quem chama pela API) são recusa, nunca erro.
+        expect(check(carousel, { 'carousel' => [linked, saved] }).reason_code).to eq('carousel')
+      end
+
+      it 'asks the end of a variable link only when the caller opts in (url_suffix, the conversation send, #1705)' do
+        link = template(body, buttons({ 'type' => 'QUICK_REPLY', 'text' => 'Sim' }, { 'type' => 'URL', 'url' => 'https://a.com/{{1}}' }))
+        filled = { 'buttons' => [nil, { 'type' => 'url', 'parameter' => 'AB12' }] }
+
+        expect(described_class.check(link, recorded: {})).to be_sendable
+        expect(described_class.check(link, recorded: {}, url_suffix: true).reason_code).to eq('url_parameter')
+        expect(described_class.check(link, recorded: { 'buttons' => [nil, { 'type' => 'url', 'parameter' => ' ' }] }, url_suffix: true)
+                              .reason_code).to eq('url_parameter')
+        expect(described_class.check(link, recorded: filled, url_suffix: true)).to be_sendable
+        expect(described_class.check(template(body, buttons({ 'type' => 'URL', 'url' => 'https://a.com' })), recorded: {}, url_suffix: true))
+          .to be_sendable
       end
 
       it 'accepts a catalog button when the send marks it, and keeps multi and single product refused' do

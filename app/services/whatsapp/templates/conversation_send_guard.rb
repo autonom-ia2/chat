@@ -4,9 +4,10 @@
 # mensagem traz em `processed_params`. Modelo de produto (topo PRODUCT, SPM, MPM, botão de catálogo, cartões de produto)
 # sem os produtos e carrossel sem os cartões viram falha com o motivo na conversa, SEM chamar a Meta.
 #
-# #1705: cupom sem o código (1 a 15 letras) e oferta com contagem sem a validade, ou com ela já passada, também falham
-# aqui: a tela da conversa pede os dois (PreenchedorDoModelo) e o envio monta a oferta (`SendComponents`), mas a mensagem
-# que chega sem eles iria à Meta para ser recusada. Os outros motivos da regra (código de verificação, pedido de
+# #1705: cupom sem o código (1 a 15 letras), botão de link com o fim variável vazio (`url_suffix: true`) e oferta com
+# contagem sem a validade, ou com ela já passada, também falham aqui: a tela da conversa pede os três
+# (PreenchedorDoModelo) e o envio monta a oferta (`SendComponents`), mas a mensagem que chega sem eles iria à Meta para
+# ser recusada. Os outros motivos da regra (código de verificação, pedido de
 # ligação...) seguem o caminho de antes, porque quem chama pela API pode mandar o parâmetro que o Chatwoot já monta
 # (ex.: `{ type: 'otp', parameter: }`). Os exemplos que front e back leem: spec/fixtures/whatsapp_templates/
 # formatos_da_conversa.json.
@@ -20,7 +21,8 @@ module Whatsapp::Templates::ConversationSendGuard
   # Motivo do SendableFormat -> chave do texto (whatsapp_templates.errors.*).
   REFUSALS = {
     'catalog' => 'conversation_products', 'carousel' => 'conversation_carousel', 'copy_code' => 'conversation_coupon',
-    'limited_time_offer' => 'conversation_offer_expiration', 'offer_expired' => 'conversation_offer_expired'
+    'limited_time_offer' => 'conversation_offer_expiration', 'offer_expired' => 'conversation_offer_expired',
+    'url_parameter' => 'conversation_url_parameter'
   }.freeze
 
   private
@@ -39,7 +41,8 @@ module Whatsapp::Templates::ConversationSendGuard
     template = conversation_template
     return if template.blank?
 
-    reason = Whatsapp::Templates::SendableFormat.check(template, recorded: template_params['processed_params']).reason_code
+    reason = Whatsapp::Templates::SendableFormat.check(template, recorded: template_params['processed_params'], url_suffix: true)
+                                                .reason_code
     reason if REFUSALS.key?(reason)
   end
 

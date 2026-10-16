@@ -7,10 +7,12 @@
 //   - Oferta com contagem: pede até quando vale, no fuso da conta, e manda
 //     limited_time_offer.expiration_time_ms, que o servidor monta para a Meta
 //     (Whatsapp::Templates::SendComponents).
+//   - Botão de link com o fim variável: também só libera preenchido.
+// Todo valor de botão vai sem espaços em volta. A cada 30 s o "pronto" é
+// reavaliado: a validade que vence com a tela aberta desliga o envio.
 // Mesma regra do servidor (envioNaConversa.js ↔ SendableFormat). Usado pela
-// Nova conversa e pelo seletor de modelos da conversa; o arquivo do Chatwoot
-// fica intacto.
-import { computed, ref, watch } from 'vue';
+// Nova conversa e pelo seletor de modelos da conversa.
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import WhatsAppTemplateParser from './WhatsAppTemplateParser.vue';
@@ -37,6 +39,13 @@ const { currentAccount } = useAccount();
 
 const parser = ref(null);
 const validade = ref('');
+// Relógio leve: o "pronto" e o aviso da validade seguem a hora.
+const RELOGIO_MS = 30000;
+const agora = ref(Date.now());
+const relogio = setInterval(() => {
+  agora.value = Date.now();
+}, RELOGIO_MS);
+onBeforeUnmount(() => clearInterval(relogio));
 // Valor de cada botão que o preenchedor do Chatwoot não mostra (índice → texto).
 const botoesProprios = ref({});
 watch(
@@ -57,34 +66,46 @@ const botoesAPreencher = computed(() => {
     .map((botao, indice) => botao && { ...botao, indice })
     .filter(Boolean);
 });
+const aparado = botao =>
+  botao ? { ...botao, parameter: String(botao.parameter ?? '').trim() } : botao;
+// Os botões que o envio leva: os da caixa do Chatwoot ou os daqui, aparados.
 const paramsDoParser = computed(() => {
   const params = parser.value?.processedParams || {};
-  if (botoesNoParser.value || !params.buttons) return params;
-  return {
-    ...params,
-    buttons: params.buttons.map((botao, indice) =>
-      botao
-        ? {
-            ...botao,
-            parameter: String(botoesProprios.value[indice] ?? '').trim(),
-          }
-        : botao
-    ),
-  };
+  if (!params.buttons) return params;
+  const botoes = botoesNoParser.value
+    ? params.buttons
+    : params.buttons.map((botao, indice) =>
+        botao ? { ...botao, parameter: botoesProprios.value[indice] } : botao
+      );
+  return { ...params, buttons: botoes.map(aparado) };
 });
 
 const fuso = computed(() => fusoDaConta(currentAccount.value));
 const comOferta = computed(() => pedeValidade(props.template));
 const faltaNaValidade = computed(() =>
-  comOferta.value ? validadeFaltando(validade.value, fuso.value) : ''
+  comOferta.value
+    ? validadeFaltando(validade.value, fuso.value, agora.value)
+    : ''
 );
+
+// O erro embaixo da validade, quando há (senão, como o cliente a vê).
+const erroDaValidade = computed(() => {
+  if (faltaNaValidade.value === 'VALIDADE_PASSADA') {
+    return t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_PASSADA');
+  }
+  if (faltaNaValidade.value === 'SEM_FUSO') {
+    return t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_SEM_FUSO');
+  }
+  return '';
+});
 
 const paramsDoEnvio = computed(() =>
   comValidade(props.template, paramsDoParser.value, validade.value, fuso.value)
 );
 const pronto = computed(
   () =>
-    Boolean(parser.value) && envioCompleto(props.template, paramsDoEnvio.value)
+    Boolean(parser.value) &&
+    envioCompleto(props.template, paramsDoEnvio.value, agora.value)
 );
 const faltaCupom = computed(
   () =>
@@ -105,6 +126,7 @@ const aoMontar = payload => {
 
 // Confere de novo na hora: a validade pode ter passado com a tela aberta.
 const sendMessage = () => {
+  if (!parser.value) return;
   if (!envioCompleto(props.template, paramsDoEnvio.value)) return;
   parser.value.sendMessage();
 };
@@ -149,18 +171,17 @@ defineExpose({
           v-model="validade"
           type="datetime-local"
           :label="
-            t('MODELOS_WHATSAPP.CONVERSA.VALIDADE', {
-              zona: rotuloDoFuso(fuso),
-            })
+            fuso
+              ? t('MODELOS_WHATSAPP.CONVERSA.VALIDADE', {
+                  zona: rotuloDoFuso(fuso),
+                })
+              : t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_TITULO')
           "
           :message="
-            faltaNaValidade === 'VALIDADE_PASSADA'
-              ? t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_PASSADA')
-              : t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_AJUDA')
+            erroDaValidade || t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_AJUDA')
           "
-          :message-type="
-            faltaNaValidade === 'VALIDADE_PASSADA' ? 'error' : 'info'
-          "
+          :message-type="erroDaValidade ? 'error' : 'info'"
+          :disabled="!fuso"
           wrap-message
           custom-input-class="!h-11"
           data-conversa-validade

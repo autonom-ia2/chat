@@ -47,6 +47,7 @@ pt_BR:
       conversation_coupon: "Este modelo tem cupom, e o envio não trouxe o código (de 1 a 15 letras e números). Escreva o código e envie de novo."
       conversation_offer_expiration: "Esta oferta mostra a contagem, e o envio não disse até quando ela vale. Escolha a data e a hora e envie de novo."
       conversation_offer_expired: "A validade desta oferta já passou. Escolha uma data e hora à frente e envie de novo."
+      conversation_url_parameter: "Este modelo tem um link que termina com um dado deste cliente, e o envio não trouxe esse dado. Preencha o fim do link e envie de novo."
     # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
     # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
     consent:

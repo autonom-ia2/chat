@@ -47,6 +47,7 @@ en:
       conversation_coupon: "This template has a coupon, and the send did not bring the code (1 to 15 letters and numbers). Type the code and send again."
       conversation_offer_expiration: "This offer shows a countdown, and the send did not say until when it is valid. Choose the date and time and send again."
       conversation_offer_expired: "The validity of this offer has already passed. Choose a later date and time and send again."
+      conversation_url_parameter: "This template has a link that ends with a value of this customer, and the send did not bring it. Fill in the end of the link and send again."
     # Owner's permission for the system to create templates (#1586). The turn on/off text is what the screen shows in
     # the confirmation and what the record stores: when it changes, bump VERSAO in Whatsapp::Templates::AvisoDeConsentimento.
     consent:
