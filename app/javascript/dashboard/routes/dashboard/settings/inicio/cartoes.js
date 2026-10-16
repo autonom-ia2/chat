@@ -155,6 +155,8 @@ export const GRUPOS_DE_CARTOES = [
         id: 'ROBOS',
         origem: 'Settings Agent Bots',
         icone: 'i-lucide-bot',
+        // #1660: com a aba "Agente de IA" por caixa (#1648) os agentes de outro sistema vivem em Agentes.
+        exige: 'semAgenteIaPorCaixa',
       },
       {
         id: 'IMPORTAR',

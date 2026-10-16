@@ -72,8 +72,11 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [])
+                     fixos: [], contexto_do_turno: nil)
         @agent = agent
+        # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
+        # nada muda.
+        @contexto_do_turno = contexto_do_turno
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
@@ -298,8 +301,7 @@ module Autonomia
         return nil if credential.blank?
 
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
-        @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
-                                    images: @images, documents: @documents, audience: @audience)
+        @prompt = montar_prompt(snippets)
         @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
@@ -315,6 +317,11 @@ module Autonomia
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      def montar_prompt(snippets)
+        PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
+                          documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
