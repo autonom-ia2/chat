@@ -1,0 +1,356 @@
+require 'rails_helper'
+
+# #1693: uma mensagem pode tocar vários assuntos, em funis diferentes. Os cenários da Issue, ponta a ponta: a IA de
+# assunto (Jev + modelo maior, simulados) decide, o IdentifyJob agenda, e as avaliações agendadas rodam com a IA do CRM
+# simulada. Nada de IA paga: o Jev é um stub HTTP e o modelo da conta é um dublê do ResponsesClient.
+RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/DescribeClass
+  include ActiveJob::TestHelper
+
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:inbox) { create(:inbox, account: account) }
+  let(:contact) { create(:contact, account: account, name: 'João Souza') }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+  let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
+  # O que a IA viu e respondeu. movimentos: o que a IA do CRM responde para cada card, pelo título ({ etapa:,
+  # atributos:, handoff: }; sem entrada, mantém). revisao: a resposta do modelo maior na pergunta de vários assuntos.
+  let(:ia) { { chamadas: [], movimentos: {}, revisao: {}, passagens: [] } }
+  let(:vendas) { funil('Vendas', %w[Proposta Fechamento]) }
+
+  before do
+    allow(Crm::Config).to receive(:enabled?).and_return(true)
+    allow(Crm::Ai::Config).to receive_messages(enabled?: true, media_enabled?: false)
+    allow(Crm::Cards::Broadcaster).to receive(:broadcast)
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+    allow(TypesafeAi::Config).to receive_messages(configured?: true, api_key: 'ts_test_key_not_real', model: 'jev-1.13.0')
+    allow(Crm::Ai::CredentialResolver).to receive(:new)
+      .and_return(instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'k' }))
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+    allow(cliente).to receive(:create) { |**args| responder(args) }
+    allow(Crm::Ai::HandoffExecutor).to receive(:new) do |card:, handoff:, **|
+      passagens << [card.id, handoff]
+      instance_double(Crm::Ai::HandoffExecutor, perform: nil)
+    end
+    account.enable_features!(Crm::Conversations::CardEmFoco::FLAG)
+    account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: false, subject_ai_mode: :auto)
+    clear_enqueued_jobs
+  end
+
+  # Um funil ligado à caixa, com a IA movendo sozinha e um critério em cada etapa.
+  def funil(nome, etapas, handoff: nil)
+    pipeline, primeira = create_crm_pipeline(account: account, user: admin, name: nome)
+    ai = { 'auto_move_enabled' => true, 'attribute_extraction_enabled' => true }
+    ai['handoff'] = { 'enabled' => true, 'trigger' => handoff } if handoff
+    pipeline.update!(metadata: { 'ai' => ai })
+    primeira.update!(metadata: { 'ai_criteria' => 'Cliente chegou' })
+    etapas.each.with_index(1) do |etapa, posicao|
+      create_crm_stage(account: account, pipeline: pipeline, name: etapa, position: posicao)
+        .update!(metadata: { 'ai_criteria' => "Critério de #{etapa}" })
+    end
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: primeira, auto_create_card: false,
+                                         created_by: admin)
+    pipeline
+  end
+
+  def chamadas = ia[:chamadas]
+  def movimentos = ia[:movimentos]
+  def revisao = ia[:revisao]
+  def passagens = ia[:passagens]
+
+  def etapa(pipeline, nome)
+    pipeline.stages.find_by!(name: nome)
+  end
+
+  def card(pipeline, titulo, etapa_nome, focused_at:)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: etapa(pipeline, etapa_nome), contact: contact, inbox: inbox,
+                                     primary_conversation: conversation, title: titulo,
+                                     metadata: { 'subject' => { 'source' => 'ai' } }, last_activity_at: 3.days.ago)
+    Crm::CardConversation.find_or_create_by!(account: account, card: card, conversation: conversation)
+                         .update!(is_primary: true, focused_at: focused_at)
+    card
+  end
+
+  def stub_jev(choice, confidence: 0.95)
+    stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return(
+      status: 200,
+      body: { model: 'jev-1.13.0', usage: { input_tokens: 300, output_tokens: 5 },
+              answers: { decisao: { type: 'choice', choice: choice, confidence: confidence } } }.to_json
+    )
+  end
+
+  def responder(args)
+    chamadas << args
+    entrada = JSON.parse(args[:input])
+    corpo = case args.dig(:schema, :name)
+            when 'assuntos_revisao' then revisao
+            when 'stage_classification' then classificacao(entrada)
+            when 'stage_classification_cards' then { cards: entrada['cards'].map { |pacote| classificacao(pacote).merge(card_id: id(pacote)) } }
+            end
+    { text: corpo.to_json, usage: { input_tokens: 1000, output_tokens: 100 }, response_id: 'resp' }
+  end
+
+  def classificacao(pacote)
+    movimento = movimentos[pacote['card']['title']] || {}
+    destino = pacote['stages'].find { |stage| stage['name'] == movimento[:etapa] }
+    { suggested_stage_id: destino ? destino['id'] : pacote['card']['current_stage_id'], confidence: 0.95, reasoning: 'ok',
+      value: nil, handoff: movimento[:handoff], callback_request: nil,
+      extracted_attributes: { contact: [], conversation: [], card: movimento[:atributos] || [] }, score_signals: nil }
+  end
+
+  def id(pacote) = pacote.dig('card', 'id')
+
+  def avaliacoes
+    chamadas.select { |args| args.dig(:schema, :name).to_s.start_with?('stage_classification') }
+  end
+
+  # A mensagem do cliente: o IdentifyJob decide o assunto e agenda; depois do debounce, as avaliações agendadas rodam.
+  def receber(texto)
+    message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: texto)
+    clear_enqueued_jobs
+    Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+    rodar_avaliacoes
+    Crm::SubjectDecision.find_by!(message_id: message.id)
+  end
+
+  def rodar_avaliacoes
+    jobs = enqueued_jobs.select { |job| [Crm::Ai::EvaluateCardJob.name, Crm::Ai::EvaluateCardsJob.name].include?(job['job_class']) }
+    clear_enqueued_jobs
+    travel((Crm::Ai::Config::DEBOUNCE_SECONDS + 1).seconds) do
+      jobs.each { |job| job['job_class'].constantize.perform_now(*ActiveJob::Arguments.deserialize(job['arguments'])) }
+    end
+  end
+
+  def foco
+    Crm::Assunto.funil_atual(conversation.reload)
+  end
+
+  describe 'com um funil e dois cards (Auto em Fechamento, Residencial em Proposta)' do
+    let!(:auto) { card(vendas, 'Seguro auto', 'Fechamento', focused_at: 1.minute.ago) }
+    let!(:residencial) { card(vendas, 'Seguro residencial', 'Proposta', focused_at: 2.minutes.ago) }
+
+    it '(1) mensagem sobre o residencial: só o Residencial anda, numa avaliação de um card como a de hoje' do
+      stub_jev("card_#{residencial.id}")
+      movimentos['Seguro residencial'] = { etapa: 'Fechamento' }
+      movimentos['Seguro auto'] = { etapa: 'Proposta' }
+
+      decisao = receber('Pode seguir com o residencial, aceito a proposta')
+
+      expect(decisao).to have_attributes(action: 'focus', state: 'applied', card_id: residencial.id, touched_card_ids: [residencial.id])
+      expect(foco).to eq(residencial)
+      expect(residencial.reload.stage.name).to eq('Fechamento')
+      expect(auto.reload.stage.name).to eq('Fechamento')
+      expect(avaliacoes.size).to eq(1)
+      expect(avaliacoes.first.dig(:schema, :name)).to eq('stage_classification')
+      expect(JSON.parse(avaliacoes.first[:input])['card']['id']).to eq(residencial.id)
+    end
+  end
+
+  describe 'com um funil e só o Auto, em Proposta' do
+    let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
+
+    it '(2) "fecha o auto e quero cotação do residencial de 100 mil": o Auto anda, nasce o Residencial com o dado e fica em foco' do
+      create(:custom_attribute_definition, account: account, attribute_key: 'cobertura_incendio', attribute_model: 'card_attribute',
+                                           attribute_display_type: 'number')
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }],
+                     principal: 1, seguro: true, motivo: 'ok')
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+      movimentos['Seguro residencial'] = {
+        atributos: [{ key: 'cobertura_incendio', value: 100_000, confidence: 0.95, evidence: '100 mil de incêndio' }]
+      }
+
+      decisao = receber('Pode fechar o auto. E quero cotação do residencial, 100 mil de incêndio')
+
+      novo = account.crm_cards.find_by!(title: 'Seguro residencial')
+      expect(decisao).to have_attributes(action: 'create', state: 'applied', card_id: novo.id, touched_card_ids: [novo.id, auto.id])
+      expect(foco).to eq(novo)
+      expect(auto.reload.stage.name).to eq('Fechamento')
+      expect(novo.reload).to have_attributes(pipeline_id: vendas.id, status: 'open')
+      expect(novo.custom_attributes['cobertura_incendio']).to eq(100_000)
+      expect(avaliacoes.size).to eq(1)
+      expect(avaliacoes.first.dig(:schema, :name)).to eq('stage_classification_cards')
+    end
+
+    it 'vencida por uma mensagem mais nova depois de criar o outro pedido: o foco volta e só o card criado é avaliado' do
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },
+                                { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }], principal: 1, seguro: true, motivo: 'ok')
+      allow(Crm::Subjects::Applier).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { |applier| allow(applier).to receive(:mensagem_mais_nova?).and_return(false, true) }
+      end
+
+      decisao = receber('Quero cotar a moto e o residencial')
+
+      moto = account.crm_cards.find_by!(title: 'Seguro moto')
+      expect(decisao).to have_attributes(state: 'superseded', touched_card_ids: [moto.id])
+      expect(foco).to eq(auto)
+      expect(account.crm_cards.where(title: 'Seguro residencial')).to be_empty
+      expect(avaliacoes.size).to eq(1)
+    end
+  end
+
+  describe 'com dois funis (Vendas com o Auto, Pós-venda com o Sinistro)' do
+    let(:pos_venda) { funil('Pós-venda', %w[Análise Resolvido]) }
+    let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
+    let!(:sinistro) { card(pos_venda, 'Sinistro do carro', 'Novo Lead', focused_at: 2.minutes.ago) }
+
+    it '(3) mensagem sobre o sinistro: o foco vai para o Sinistro e só ele anda' do
+      stub_jev("card_#{sinistro.id}")
+      movimentos['Sinistro do carro'] = { etapa: 'Análise' }
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+
+      decisao = receber('Mandei as fotos da batida, o sinistro já pode ir para análise?')
+
+      expect(decisao.touched_card_ids).to eq([sinistro.id])
+      expect(foco).to eq(sinistro)
+      expect(sinistro.reload.stage.name).to eq('Análise')
+      expect(auto.reload.stage.name).to eq('Proposta')
+      expect(avaliacoes.size).to eq(1)
+    end
+  end
+
+  describe 'com três funis (Vendas, Pós-venda e Renovações)' do
+    let(:pos_venda) { funil('Pós-venda', %w[Análise Resolvido], handoff: 'O cliente pede um atendente do sinistro') }
+    let(:renovacoes) { funil('Renovações', %w[Renovando Renovado], handoff: 'O cliente pede um atendente da renovação') }
+    let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
+    let!(:sinistro) { card(pos_venda, 'Sinistro do carro', 'Novo Lead', focused_at: 2.minutes.ago) }
+    let!(:vida) { card(renovacoes, 'Renovação do vida', 'Novo Lead', focused_at: 3.minutes.ago) }
+
+    before do
+      card(vendas, 'Seguro viagem', 'Novo Lead', focused_at: 4.minutes.ago)
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "card_#{sinistro.id}", titulo: '' },
+                                { resposta: "card_#{vida.id}", titulo: '' }], principal: 2, seguro: true, motivo: 'ok')
+    end
+
+    it '(4) três assuntos em três funis: três cards tocados, cada um com o funil dele, numa chamada só' do
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+      movimentos['Sinistro do carro'] = { etapa: 'Análise' }
+      movimentos['Renovação do vida'] = { etapa: 'Renovando' }
+
+      decisao = receber('Fecha o auto, o sinistro já tem as fotos e quero renovar o vida')
+
+      expect(decisao.touched_card_ids).to eq([vida.id, auto.id, sinistro.id])
+      expect(foco).to eq(vida)
+      expect([auto, sinistro, vida].map { |card| card.reload.stage.name }).to eq(%w[Fechamento Análise Renovando])
+      expect(avaliacoes.pluck(:instructions)).to eq([Crm::Ai::ClassifierPrompt::TEXT_VARIOS])
+      entrada = JSON.parse(avaliacoes.first[:input])
+      expect(entrada['cards'].map { |pacote| [pacote['card']['id'], pacote['stages'].map { |stage| stage['name'] }] })
+        .to eq([[vida.id, ['Novo Lead', 'Renovando', 'Renovado']], [auto.id, ['Novo Lead', 'Proposta', 'Fechamento']],
+                [sinistro.id, ['Novo Lead', 'Análise', 'Resolvido']]])
+      expect(entrada['other_subjects']).to eq([{ 'title' => 'Seguro viagem', 'pipeline' => 'Vendas', 'stage' => 'Novo Lead' }])
+      expect(entrada['recent_messages'].pluck('content')).to include(a_string_including('quero renovar o vida'))
+    end
+
+    it 'o retry do IdentifyJob não agenda outra avaliação da mesma mensagem' do
+      decisao = receber('Fecha o auto, o sinistro já tem as fotos e quero renovar o vida')
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, decisao.message_id)
+      rodar_avaliacoes
+
+      expect(avaliacoes.size).to eq(1)
+    end
+
+    it 'o principal muda para uma etapa com outra regra de pedido de atendente: só então relê o pedido dele' do
+      etapa(renovacoes, 'Renovando').update!(metadata: { 'ai_criteria' => 'Critério de Renovando',
+                                                         'ai_handoff' => { 'enabled' => true, 'trigger' => 'Qualquer dúvida de preço' } })
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+      movimentos['Renovação do vida'] = { etapa: 'Renovando' }
+
+      receber('Fecha o auto, o sinistro já tem as fotos e quero renovar o vida')
+
+      expect(avaliacoes.map { |args| args.dig(:schema, :name) }).to eq(%w[stage_classification_cards stage_classification])
+      expect(JSON.parse(avaliacoes.last[:input])).to include('card' => include('id' => vida.id), 'handoff_trigger' => 'Qualquer dúvida de preço')
+    end
+
+    it 'no modo Sugerir: nenhum card nasce sozinho e o foco não muda; os assuntos abertos são avaliados juntos' do
+      account.crm_inbox_settings.find_by!(inbox: inbox).update!(subject_ai_mode: :suggest)
+      revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' }],
+                     principal: 0, seguro: true, motivo: 'ok')
+
+      decisao = receber('O sinistro já tem as fotos. E quero cotar a moto')
+
+      expect(decisao).to have_attributes(action: 'focus', state: 'suggested', card_id: sinistro.id, touched_card_ids: [sinistro.id])
+      expect(account.crm_cards.where(title: 'Seguro moto')).to be_empty
+      expect(foco).to eq(auto)
+      expect(avaliacoes.size).to eq(1)
+    end
+
+    it '(6) dois assuntos e um pedido de atendente: vale a regra do card principal' do
+      revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: "card_#{vida.id}", titulo: '' }],
+                     principal: 1, seguro: true, motivo: 'ok')
+      pedido = { intent: 'transferir', should_handoff: true, reason: 'Pediu atendente', suggested_agent: nil }
+      movimentos['Sinistro do carro'] = { handoff: pedido }
+      movimentos['Renovação do vida'] = { handoff: pedido }
+
+      receber('Sobre o sinistro e a renovação do vida, quero falar com um atendente')
+
+      expect(avaliacoes.size).to eq(1)
+      gatilhos = JSON.parse(avaliacoes.first[:input])['cards'].to_h { |pacote| [pacote['card']['id'], pacote['handoff_trigger']] }
+      expect(gatilhos).to eq(vida.id => 'O cliente pede um atendente da renovação', sinistro.id => 'O cliente pede um atendente do sinistro')
+      expect(passagens.map(&:first)).to eq([vida.id])
+    end
+  end
+
+  describe 'com um card em foco' do
+    let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
+
+    it '(5) "obrigado!" não chama a IA do CRM' do
+      stub_jev('sem_assunto')
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+
+      decisao = receber('obrigado!')
+
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [])
+      expect(avaliacoes).to be_empty
+      expect(auto.reload.stage.name).to eq('Proposta')
+      expect(auto.last_activity_at).to be < 1.day.ago
+    end
+
+    it 'assunto em dúvida: relê o card em foco, como no #1675' do
+      stub_jev('mesmo_assunto', confidence: 0.3)
+      revisao.merge!(assuntos: [], principal: 0, seguro: false, motivo: 'ambíguo')
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+
+      decisao = receber('hmm, talvez')
+
+      expect(decisao).to have_attributes(state: 'doubt', touched_card_ids: nil)
+      expect(avaliacoes.size).to eq(1)
+      expect(auto.reload.stage.name).to eq('Fechamento')
+    end
+
+    it 'decisão reaberta pelo WhatsApp Híbrido: volta a ser de um assunto só, sem lista' do
+      stub_jev('mesmo_assunto')
+      decisao = receber('Pode fechar o auto')
+      expect(decisao.touched_card_ids).to eq([auto.id])
+
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'mesmo_assunto', confidence: 0.95 } } }.to_json }
+      end
+      decisao.message.update!(content_attributes: { 'hybrid_recovered_at' => 5.seconds.from_now.iso8601 })
+      Crm::Subjects::Identifier.new(conversation: conversation, message: decisao.message.reload).perform
+
+      expect(requisicoes.first['questions']['decisao']['criteria'].keys).not_to include(Crm::Subjects::Question::VARIOS)
+      expect(decisao.reload.touched_card_ids).to be_nil
+    end
+
+    it '(7) flag desligada: a pergunta e a avaliação são as de hoje' do
+      account.disable_features!(Crm::Conversations::CardEmFoco::FLAG)
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'mesmo_assunto', confidence: 0.95 } } }.to_json }
+      end
+
+      decisao = receber('Pode fechar o auto')
+
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: nil)
+      expect(requisicoes.first['questions']['decisao']['criteria'].keys).not_to include(Crm::Subjects::Question::VARIOS)
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
+      expect(avaliacoes).to be_empty
+    end
+  end
+end

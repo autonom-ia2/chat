@@ -3,34 +3,74 @@ module Crm
     class Evaluator
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
 
-      def initialize(card:, trigger: 'message')
+      # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
+      # passar (#1693): este card pode pedir atendente. Na avaliação conjunta, só o principal (Crm::Ai::AvaliacaoConjunta).
+      def initialize(card:, trigger: 'message', tocado: false, passar: true)
         @card = card
         @account = card.account
         @trigger = trigger
+        @tocado = tocado
+        @passar = passar
       end
 
       def perform
-        return Result.new(status: :skipped, error: 'ai_disabled') unless Config.enabled?
-        return Result.new(status: :skipped, error: 'credentials_missing') unless credential_resolver.configured?
-        return Result.new(status: :skipped, error: 'pipeline_ai_disabled') unless pipeline_ai_enabled?
-        return Result.new(status: :skipped, error: 'debounced') if debounced? && @trigger != 'manual'
-        return Result.new(status: :skipped, error: 'card_not_open') unless @card.open?
-        # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa.
-        return Result.new(status: :skipped, error: 'not_current_subject') unless @trigger == 'manual' || ::Crm::Cards::CurrentSubject.card?(@card)
+        pular = motivo_para_pular
+        return Result.new(status: :skipped, error: pular) if pular
 
-        classification = classify_stage
+        aplicar(classify_stage)
+      rescue ResponsesClient::Error => e
+        Result.new(status: :failed, error: e.message)
+      rescue JSON::ParserError
+        Result.new(status: :failed, error: 'invalid_llm_json')
+      end
+
+      # As guardas de sempre, uma por card; nil quando o card pode ser avaliado.
+      def motivo_para_pular
+        return 'ai_disabled' unless Config.enabled?
+        return 'credentials_missing' unless credential_resolver.configured?
+        return 'pipeline_ai_disabled' unless pipeline_ai_enabled?
+        return 'debounced' if debounced? && @trigger != 'manual'
+        return 'card_not_open' unless @card.open?
+        # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa e o card
+        # tocado pela mensagem (#1693) é escolha da IA de assunto.
+        return 'not_current_subject' unless @trigger == 'manual' || @tocado || ::Crm::Cards::CurrentSubject.card?(@card)
+
+        nil
+      end
+
+      # O que vem depois da resposta da IA, igual para a avaliação de um card e para a conjunta (#1693). conjunta: depois
+      # de mover, o pedido de atendente só é relido se a etapa nova tem outra regra (a conjunta é uma chamada por
+      # mensagem; a de um card segue relendo como sempre).
+      def aplicar(classification, conjunta: false)
+        regra = handoff_config.slice(:enabled, :trigger) if conjunta
         result = apply_classification(classification)
         refresh_post_classification_context!
-        classification = refresh_handoff_classification_if_needed(classification, result)
+        classification = refresh_handoff_classification_if_needed(classification, result, regra)
         run_handoff(classification)
         run_callback(classification)
         attribute_extraction.apply(classification[:extracted_attributes])
         ScoreApplier.new(card: @card, signals: classification[:score_signals]).perform
         result
-      rescue ResponsesClient::Error => e
-        Result.new(status: :failed, error: e.message)
-      rescue JSON::ParserError
-        Result.new(status: :failed, error: 'invalid_llm_json')
+      end
+
+      # O classificador deste card, com o pacote do funil dele. A avaliação conjunta (#1693) usa o pacote; `fora` são os
+      # outros cards tocados, que saem da lista de outros pedidos.
+      def stage_classifier(client:, fora: [])
+        StageClassifier.new(
+          card: @card, client: client, stages: stages, context: ContextBuilder.new(card: @card, fora: fora).perform,
+          model: modelo, reasoning_effort: Config::CLASSIFY_REASONING_EFFORT,
+          handoff_enabled: handoff_config[:enabled], handoff_trigger: handoff_config[:trigger],
+          eligible_agents: eligible_agent_names, attribute_schema: attribute_extraction.schema
+        )
+      end
+
+      def modelo = auto_move_allowed? ? Config::MODEL_AUTO_MOVE : Config::MODEL_CLASSIFY
+
+      # cache_key_scope: :feature — o prefixo do classify é conta-agnóstico (StageClassifier#instructions),
+      # então roteamos por feature só (sem account) p/ consolidar o hit-rate de cache entre contas.
+      def classify_client
+        ResponsesClient.new(credential: credential_resolver.resolve, feature: 'avaliacao_card', account: @account,
+                            pipeline: @card.pipeline, cache_key_scope: :feature)
       end
 
       private
@@ -55,22 +95,7 @@ module Crm
 
       def classify_stage(enrich_media: true)
         MediaEnricher.new(card: @card).perform if enrich_media && Config.media_enabled?
-        # cache_key_scope: :feature — o prefixo do classify é conta-agnóstico (StageClassifier#instructions),
-        # então roteamos por feature só (sem account) p/ consolidar o hit-rate de cache entre contas.
-        client = ResponsesClient.new(
-          credential: credential_resolver.resolve,
-          feature: 'avaliacao_card', account: @account, pipeline: @card.pipeline,
-          cache_key_scope: :feature
-        )
-        context = ContextBuilder.new(card: @card).perform
-        model = auto_move_allowed? ? Config::MODEL_AUTO_MOVE : Config::MODEL_CLASSIFY
-        effort = Config::CLASSIFY_REASONING_EFFORT
-
-        StageClassifier.new(
-          card: @card, client: client, stages: stages, context: context, model: model, reasoning_effort: effort,
-          handoff_enabled: handoff_config[:enabled], handoff_trigger: handoff_config[:trigger],
-          eligible_agents: eligible_agent_names, attribute_schema: attribute_extraction.schema
-        ).perform
+        stage_classifier(client: classify_client).perform
       end
 
       def handoff_config
@@ -82,8 +107,10 @@ module Crm
         @handoff_config = nil
       end
 
-      def refresh_handoff_classification_if_needed(classification, result)
-        return classification unless result.status == :auto_moved
+      # regra (#1693): a regra de pedido de atendente que a avaliação conjunta já leu; a mesma regra não é relida.
+      def refresh_handoff_classification_if_needed(classification, result, regra = nil)
+        return classification unless @passar && result.status == :auto_moved
+        return classification if regra && handoff_config.slice(:enabled, :trigger) == regra
         return classification if HandoffIntent.requested?(classification[:handoff])
         return classification unless handoff_config[:enabled]
 
@@ -107,7 +134,7 @@ module Crm
       # Independent of the stage move. Guarded inside the executor; never let a
       # handoff failure break the evaluation result.
       def run_handoff(classification)
-        return unless handoff_config[:enabled]
+        return unless @passar && handoff_config[:enabled]
 
         HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger).perform
       rescue StandardError => e
@@ -134,34 +161,22 @@ module Crm
 
         confidence = classification[:confidence].to_f
         if auto_move_allowed? && confidence >= Config::AUTO_MOVE_THRESHOLD && stage_criteria_present?(target_stage)
-          suggestion = SuggestionRecorder.new(
-            card: @card,
-            from_stage: @card.stage,
-            to_stage: target_stage,
-            confidence: confidence,
-            reasoning: classification[:reasoning],
-            model_used: classification[:model_used],
-            status: :auto_applied,
-            metadata: { trigger: @trigger }
-          ).perform
-
+          suggestion = record_suggestion(target_stage, confidence, classification, :auto_applied)
           SuggestionApplier.new(card: @card, suggestion: suggestion, actor: nil, auto: true).perform
           Result.new(status: :auto_moved, suggestion: suggestion)
         elsif confidence >= Config::SUGGESTION_THRESHOLD
-          suggestion = SuggestionRecorder.new(
-            card: @card,
-            from_stage: @card.stage,
-            to_stage: target_stage,
-            confidence: confidence,
-            reasoning: classification[:reasoning],
-            model_used: classification[:model_used],
-            status: :pending,
-            metadata: { trigger: @trigger }
-          ).perform
-          Result.new(status: :suggested, suggestion: suggestion)
+          Result.new(status: :suggested, suggestion: record_suggestion(target_stage, confidence, classification, :pending))
         else
           Result.new(status: :below_threshold)
         end
+      end
+
+      def record_suggestion(target_stage, confidence, classification, status)
+        SuggestionRecorder.new(
+          card: @card, from_stage: @card.stage, to_stage: target_stage, confidence: confidence,
+          reasoning: classification[:reasoning], model_used: classification[:model_used], status: status,
+          metadata: { trigger: @trigger }
+        ).perform
       end
 
       def auto_move_allowed?

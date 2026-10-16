@@ -84,6 +84,10 @@ module Crm
         }
       }.freeze
 
+      # O pacote do funil de um card na avaliação conjunta (#1693); o resto da entrada é a conversa, que vai uma vez só.
+      PACOTE = %i[card pipeline stages conversation_summary handoff_enabled handoff_trigger eligible_agents attribute_schema
+                  known_attributes].freeze
+
       def initialize(card:, client:, stages:, context:, model: Config::MODEL_CLASSIFY, reasoning_effort: 'low',
                      handoff_enabled: false, handoff_trigger: '', eligible_agents: [], attribute_schema: { contact: [], conversation: [] })
         @card = card
@@ -114,16 +118,22 @@ module Crm
         )
       end
 
+      # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
+      def pacote = entrada.slice(*PACOTE)
+
+      # A conversa e os outros pedidos abertos, iguais para todos os cards da avaliação conjunta.
+      def conversa = entrada.except(*PACOTE).merge(other_subjects_payload)
+
       private
 
       # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
-      def instructions
-        ClassifierPrompt.para(@eligible_agents)
-      end
+      def instructions = ClassifierPrompt.para(@eligible_agents)
 
-      def user_input
-        {
+      def user_input = entrada.merge(other_subjects_payload).to_json
+
+      def entrada
+        @entrada ||= {
           card: card_payload,
           pipeline: pipeline_payload,
           stages: @stages.map { |stage| stage_payload(stage) },
@@ -142,7 +152,7 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.merge(other_subjects_payload).to_json
+        }.freeze
       end
 
       # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
