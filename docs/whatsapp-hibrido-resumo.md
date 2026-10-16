@@ -447,10 +447,11 @@ todas valerem; senão, `rich_message_sent_as: 'text'`, como hoje:
   `WAHA_RICH_NATIVE_ENGINES` (URLs separadas por vírgula; vazia por padrão = tudo em texto);
 - o motor declara o tipo em `GET /api/server/version`, campo `autonomia.rich_native` (ex.:
   `{ patch: 'c2y-rich-1', rich_native: ['options','location','contact'], list_reply: true }`); `options` só com
-  `list_reply: true`. Quem lê o motor é o `Waha::EngineCapabilitiesRefreshJob` (cron a cada minuto, no segundo 25),
-  que guarda por 10 min; a criação de mensagem e a lista de conversas só leem esse cache, nunca chamam o motor. Sem
-  valor no cache (motor nunca lido, ou falhando há mais de 10 min) = nenhum tipo. Todos os motores da lista usam a
-  mesma chave (`WAHA_API_KEY`); 401/403 vai ao rastreador de erros com o nome do motor. O webhook da caixa sempre tem
+  `list_reply: true`. Quem lê o motor é o `Waha::EngineCapabilitiesRefreshJob` (cron a cada 5 min; sem HTTP sem a
+  lista no ENV ou sem conta com a flag), que guarda por 10 min (cobre duas rodadas com falha); a criação de mensagem e
+  a lista de conversas só leem esse cache, nunca chamam o motor. Sem valor no cache (motor nunca lido, ou falhando há
+  mais de 10 min) = nenhum tipo. Todos os motores da lista usam a mesma chave (`WAHA_API_KEY`); 401/403 vai ao
+  rastreador de erros com o nome do motor, no máximo uma vez por hora por motor. O webhook da caixa sempre tem
   caminho (`<motor>/webhooks/chatwoot/...`): `webhook_url` igual à raiz do motor não casa e fica em texto;
 - o tradutor monta o pedido (`Waha::RichPayload.build`, com o `content` cru);
 - e as travas de sempre da caixa API: vai ao canal, caixa com webhook, conversa sem trava de transmissão, formato sem
@@ -464,9 +465,11 @@ marca: se a capacidade do motor mudar entre a criação e a entrega, marca e ped
 não leva o pedido.
 
 **Entrada (contrato `waha_list_reply`).** O conector cria a mensagem RECEBIDA com
-`content_attributes.waha_list_reply = { row_id, title }`. Na criação (`Waha::RichNative::ListReply`, só com a flag), a
-chave SEMPRE sai. Ela só vira escolha se uma lista NATIVA nossa da MESMA conversa e caixa ofereceu essa opção: com
-referência, a lista citada; sem referência, a última lista nativa da conversa com esse id. Aí grava
+`content_attributes.waha_list_reply = { row_id, title }` (em toda caixa). Sem a flag, a chave fica exatamente como o
+conector mandou, igual à main. Com a flag (`Waha::RichNative::ListReply`, na criação), a chave sai, e só vira escolha
+se uma lista NATIVA nossa da MESMA conversa e caixa ofereceu essa opção: com referência, a lista citada; sem
+referência, a última lista nativa da conversa com esse id (nas 50 últimas mensagens nossas: uma escolha forjada só
+pode apontar uma opção que nós mesmos oferecemos nessas listas; limite aceito). Aí grava
 `selected_option = { id original da opção, title }` (separado pelo último `|`, sem regex) e `in_reply_to` = a lista
 (se o conector não preencheu; `in_reply_to_external_id` só com o id físico, nunca o provisório). Sem lista que confira
 (forja, lista de outra conversa), a mensagem fica como texto comum.

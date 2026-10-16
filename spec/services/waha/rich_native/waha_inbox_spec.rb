@@ -184,13 +184,15 @@ describe Waha::RichNative::WahaInbox do
       expect(reply("manha|#{list.id}", in_reply_to: quoted.id).content_attributes['in_reply_to']).to eq(quoted.id)
     end
 
-    it 'converts nothing without the flag, but still drops the key' do
+    # O conector patchado manda a chave em toda caixa: sem a flag, ela fica exatamente como veio (igual à main).
+    it 'leaves waha_list_reply untouched and records no choice without the flag' do
       list = native_list(%w[manha])
       account.disable_features!(Waha::RichNative::FLAG)
 
       attributes = reply("manha|#{list.id}").content_attributes
 
-      expect(attributes.keys & %w[selected_option in_reply_to waha_list_reply]).to eq([])
+      expect(attributes['waha_list_reply']).to eq('row_id' => "manha|#{list.id}", 'title' => 'Manhã')
+      expect(attributes.keys & %w[selected_option in_reply_to]).to eq([])
     end
 
     it 'drops the key even when the conversion breaks' do
@@ -221,19 +223,49 @@ describe Waha::RichNative::WahaInbox do
     end
   end
 
-  describe 'retry on a WAHA inbox', type: :request do
-    it 'turns the native mark into text, since the message_updated delivers only the text' do
-      flag_on!
-      message = outgoing
-      message.update!(status: :failed)
-      agent = create(:user, account: account, role: :agent)
-      create(:inbox_member, inbox: inbox, user: agent)
+  describe 'retry (Waha::RichNative::RetryAsText)', type: :request do
+    let(:agent) { create(:user, account: account, role: :agent) }
 
-      post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/retry",
+    def native_failed(on_inbox, on_conversation)
+      message = create(:message, message_type: :outgoing, content: 'Qual horário?', conversation: on_conversation, inbox: on_inbox,
+                                 account: account, content_attributes: { rich_message: options })
+      message.update!(status: :failed, content_attributes: message.content_attributes.merge('rich_message_sent_as' => 'native'))
+      message
+    end
+
+    def retry_message(message)
+      create(:inbox_member, inbox: message.inbox, user: agent)
+      post "/api/v1/accounts/#{account.id}/conversations/#{message.conversation.display_id}/messages/#{message.id}/retry",
            headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      message.reload.content_attributes
+    end
 
-      expect(message.reload.content_attributes).to include('rich_message_sent_as' => 'text',
-                                                           'rich_message_sent_text' => "Qual horário?\n\n1. Manhã\n2. Tarde")
+    it 'turns the native mark into text on a WAHA inbox, since the message_updated delivers only the text' do
+      flag_on!
+
+      attributes = retry_message(native_failed(inbox, conversation))
+
+      expect(attributes).to include('rich_message_sent_as' => 'text', 'rich_message_sent_text' => "Qual horário?\n\n1. Manhã\n2. Tarde")
+    end
+
+    it 'changes nothing on an API inbox that is not WAHA (the mark stays, as RetryKeepsFormat keeps it there)' do
+      api = create(:channel_api, account: account, webhook_url: 'https://bridge.example.com/hook')
+      message = native_failed(api.inbox, create(:conversation, inbox: api.inbox, account: account))
+      marks = message.content_attributes.slice('rich_message_sent_as', 'rich_message_sent_text')
+
+      attributes = retry_message(message)
+
+      expect(attributes['rich_message_sent_as']).to eq('native')
+      expect(attributes.slice('rich_message_sent_as', 'rich_message_sent_text')).to eq(marks)
+    end
+
+    it 'changes nothing on a hybrid inbox (RetryKeepsFormat drops the mark, the next send decides again)' do
+      hybrid = create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false, account: account)
+
+      attributes = retry_message(native_failed(hybrid.inbox, create(:conversation, inbox: hybrid.inbox, account: account)))
+
+      expect(attributes.keys & %w[rich_message_sent_as rich_message_sent_text]).to eq([])
     end
   end
 

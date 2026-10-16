@@ -56,21 +56,28 @@ RSpec.describe Waha::EngineCapabilities do
     travel(described_class::CACHE_TTL + 1.second) { expect(described_class.types(engine)).to eq([]) }
   end
 
-  it 'reports 401/403 to the tracker with the engine name and without the key' do
+  it 'reports 401/403 to the tracker with the engine name and without the key, at most once an hour per engine' do
     tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
     allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
     stub_request(:get, url).to_return(status: 401, body: 'no')
+    stub_request(:get, 'https://outro.example/api/server/version').to_return(status: 403, body: 'no')
 
-    with_modified_env(WAHA_API_KEY: 'segredo-do-motor') { described_class.refresh!(engine) }
+    with_modified_env(WAHA_API_KEY: 'segredo-do-motor') do
+      3.times { described_class.refresh!(engine) }
+      described_class.refresh!('https://outro.example/')
+    end
 
-    expect(ChatwootExceptionTracker).to have_received(:new) do |error|
-      expect(error.message).to include(engine).and(include('401'))
+    expect(ChatwootExceptionTracker).to have_received(:new).twice do |error|
       expect(error.message).not_to include('segredo-do-motor')
     end
-    expect(tracker).to have_received(:capture_exception)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(having_attributes(message: a_string_including(engine, '401'))).once
+    travel(described_class::UNAUTHORIZED_REPORT_TTL + 1.second) { described_class.refresh!(engine) }
+    expect(tracker).to have_received(:capture_exception).exactly(3).times
   end
 
   describe Waha::EngineCapabilitiesRefreshJob do
+    before { create(:account).enable_features!(Waha::RichNative::FLAG) }
+
     it 'refreshes every listed engine, one failing not stopping the other' do
       stub_request(:get, url).to_timeout
       stub_request(:get, 'https://outro.example/api/server/version')
@@ -90,13 +97,21 @@ RSpec.describe Waha::EngineCapabilities do
       expect(HTTParty).not_to have_received(:get)
     end
 
-    it 'is a valid sidekiq-cron entry, every minute at second 25' do
+    it 'does not call the engines when no account has the flag' do
+      Account.find_each { |account| account.disable_features!(Waha::RichNative::FLAG) }
+      allow(HTTParty).to receive(:get)
+
+      described_class.perform_now
+
+      expect(HTTParty).not_to have_received(:get)
+    end
+
+    it 'is a valid sidekiq-cron entry, every 5 minutes' do
       entry = YAML.load_file(Rails.root.join('config/schedule.yml'))['waha_engine_capabilities_refresh_job']
       job = Sidekiq::Cron::Job.new(name: 'waha_engine_capabilities_refresh_job', **entry.symbolize_keys)
 
       expect(job.valid?).to be(true)
-      expect(entry).to include('class' => described_class.name, 'queue' => 'scheduled_jobs')
-      expect(Fugit.parse_cron(entry['cron']).next_time(Time.utc(2026, 10, 16, 12, 0, 0)).to_t.utc).to eq(Time.utc(2026, 10, 16, 12, 0, 25))
+      expect(entry).to include('cron' => '*/5 * * * *', 'class' => described_class.name, 'queue' => 'scheduled_jobs')
     end
   end
 end

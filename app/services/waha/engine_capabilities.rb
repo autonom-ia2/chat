@@ -9,10 +9,11 @@
 # `options` só conta com `list_reply: true` (o conector devolve a escolha do cliente em `waha_list_reply`).
 #
 # NADA aqui faz HTTP na criação de mensagem nem na lista de conversas: `types` só LÊ o cache. Quem consulta o motor é
-# o Waha::EngineCapabilitiesRefreshJob (cron a cada minuto), que grava o resultado por CACHE_TTL. Sem valor no cache
-# (motor nunca lido, ou falhando há mais de CACHE_TTL) = nenhum tipo: tudo sai em texto.
+# o Waha::EngineCapabilitiesRefreshJob (cron a cada 5 min), que grava o resultado por CACHE_TTL (10 min: cobre duas
+# rodadas com falha). Sem valor no cache (motor nunca lido, ou falhando há mais de CACHE_TTL) = nenhum tipo: tudo sai
+# em texto.
 # Todos os motores da lista usam a mesma chave do WAHA (`WAHA_API_KEY`, Waha::Config.api_key); motor com outra chave
-# responde 401/403, que vai ao rastreador de erros com o nome do motor.
+# responde 401/403, que vai ao rastreador de erros com o nome do motor, no máximo uma vez por hora por motor.
 module Waha::EngineCapabilities
   ENV_KEY = 'WAHA_RICH_NATIVE_ENGINES'.freeze
   VERSION_PATH = 'api/server/version'.freeze
@@ -21,6 +22,7 @@ module Waha::EngineCapabilities
   OPEN_TIMEOUT = 2
   READ_TIMEOUT = 3
   UNAUTHORIZED = [401, 403].freeze
+  UNAUTHORIZED_REPORT_TTL = 1.hour
 
   class Unauthorized < StandardError; end
 
@@ -63,14 +65,20 @@ module Waha::EngineCapabilities
     nil
   end
 
-  # 401/403: o motor não aceita a chave do WAHA (todos os motores da lista precisam da mesma). Vai ao rastreador.
+  # 401/403: o motor não aceita a chave do WAHA (todos os motores da lista precisam da mesma). Vai ao rastreador, no
+  # máximo uma vez por hora por motor (o cron roda a cada 5 min).
   def refused(engine, status)
     Rails.logger.warn("[waha] engine capabilities refused engine=#{engine} status=#{status}")
-    if UNAUTHORIZED.include?(status)
-      ChatwootExceptionTracker.new(Unauthorized.new("WAHA engine #{engine} answered #{status} to the shared WAHA_API_KEY"))
-                              .capture_exception
-    end
+    report_unauthorized(engine, status) if UNAUTHORIZED.include?(status)
     nil
+  end
+
+  def report_unauthorized(engine, status)
+    return unless Rails.cache.write("waha/engine_capabilities/unauthorized/#{engine}", true,
+                                    expires_in: UNAUTHORIZED_REPORT_TTL, unless_exist: true)
+
+    ChatwootExceptionTracker.new(Unauthorized.new("WAHA engine #{engine} answered #{status} to the shared WAHA_API_KEY"))
+                            .capture_exception
   end
 
   def declared(body)
