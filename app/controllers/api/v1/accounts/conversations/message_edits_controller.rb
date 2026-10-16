@@ -7,7 +7,7 @@ class Api::V1::Accounts::Conversations::MessageEditsController < Api::V1::Accoun
   def update
     return head :forbidden unless Current.user.is_a?(User)
 
-    error = Waha::RichNative::MessageActions.edit!(message, user: Current.user, content: params[:content])
+    error = Waha::RichNative::MessageActions.edit!(message, user: Current.user, content: params[:content].to_s)
     return head :forbidden if error == :forbidden
     return render json: { error: I18n.t('waha.message_actions.edit_invalid') }, status: :unprocessable_entity if error
 
