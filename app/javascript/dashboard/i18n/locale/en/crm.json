@@ -4087,6 +4087,10 @@
       "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
       "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
       "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
+      "SO_AS_DELE": "{nome} only sees their own conversations, so does not receive.",
+      "NINGUEM_RECEBE": "Nobody can receive conversations about {assuntos}. They wait until someone starts taking care of the subject.",
+      "CONFERINDO": "Checking who receives…",
+      "ERRO_QUEM_RECEBE": "Could not check who receives right now.",
       "ROBO": "{nome}, the AI agent, answers first. Then the people below.",
       "ROBO_EXTERNO": "{nome}, the external agent, answers first. Then the people below."
     },
