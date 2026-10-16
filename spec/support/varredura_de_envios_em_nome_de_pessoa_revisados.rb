@@ -23,6 +23,10 @@ module VarreduraDeEnviosEmNomeDePessoa
       'registro da ligação: quem atendeu (pessoa) ou o contato',
     # Remetente é o contato (canais de entrada) ou nenhum (eco, importação).
     'app/services/autonomia/agents/operate/reaction_materializer.rb#Autonomia::Agents::Operate::ReactionMaterializer#call' => 'contato',
+    'app/jobs/whatsapp_hybrid/rich_native/poll_vote_job.rb#WhatsappHybrid::RichNative::PollVoteJob#record_vote!' =>
+      'contato: o voto do cliente numa enquete nativa (#1709), registrado como mensagem dele',
+    'app/jobs/whatsapp_hybrid/rich_native/event_response_job.rb#WhatsappHybrid::RichNative::EventResponseJob#record!' =>
+      'contato: a resposta do cliente a um evento nativo (#1709), registrada como mensagem dele',
     'app/services/line/incoming_message_service.rb#Line::IncomingMessageService#message_created?' => 'contato',
     'app/services/sms/incoming_message_service.rb#Sms::IncomingMessageService#perform' => 'contato',
     'app/services/telegram/incoming_message_service.rb#Telegram::IncomingMessageService#perform' => 'contato do Telegram',
