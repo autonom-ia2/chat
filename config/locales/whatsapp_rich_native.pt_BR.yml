@@ -3,6 +3,13 @@ pt_BR:
     rich_payload:
       list_button: "Ver opções"
       location_title: "Localização"
+    call:
+      missed: "Ligação de voz perdida"
+      missed_video: "Chamada de vídeo perdida"
+      declined: "Ligação de voz recusada"
+      declined_video: "Chamada de vídeo recusada"
+      answered: "Ligação atendida no celular"
+      ended: "Ligação encerrada"
   whatsapp_hybrid:
     rich_native:
       restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."

@@ -3,6 +3,13 @@ en:
     rich_payload:
       list_button: "See options"
       location_title: "Location"
+    call:
+      missed: "Missed voice call"
+      missed_video: "Missed video call"
+      declined: "Voice call declined"
+      declined_video: "Video call declined"
+      answered: "Call answered on the phone"
+      ended: "Call ended"
   whatsapp_hybrid:
     rich_native:
       restore_failed: "The message was not sent: WhatsApp API refused the format and the text could not be sent. Send the message again."
