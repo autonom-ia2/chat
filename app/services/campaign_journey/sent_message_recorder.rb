@@ -15,18 +15,20 @@
 # Both: outgoing, the text the person received, source_id = the provider id (Meta, Twilio or
 # Bandwidth; the status callback updates it; Base::SendOnChannelService never sends a message
 # with a source_id), additional_attributes campaign_id (+ campaign_template_name on WhatsApp, or campaign_free_text for
-# the written message of #1335).
+# the written message of #1335; + campaign_template_enviado, the photo of the send, #1717).
 # Idempotent by inbox + source_id. No campaign mark here (D14). Best effort: a failure is logged
 # and never changes the recipient.
 class CampaignJourney::SentMessageRecorder
   MESSAGE_STATUSES = %w[sent delivered read].freeze
 
   # free_text (#1335): a mensagem escrita da conversa aberta — sem nome de modelo, marcada como texto da campanha.
-  def initialize(campaign:, recipient:, free_text: false)
+  # enviado (#1717): the photo of the send (Whatsapp::Templates::FotoDoEnvio), when the caller has it.
+  def initialize(campaign:, recipient:, free_text: false, enviado: nil)
     @campaign = campaign
     @recipient = recipient
     @inbox = campaign.inbox
     @free_text = free_text
+    @enviado = enviado
   end
 
   def record_at_send(destination)
@@ -71,7 +73,25 @@ class CampaignJourney::SentMessageRecorder
   def campaign_attributes
     return { campaign_id: @campaign.id, campaign_free_text: true } if @free_text
 
-    { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }.compact
+    name = @campaign.template_params.to_h['name']
+    { campaign_id: @campaign.id, campaign_template_name: name }.compact.merge(template_photo(name))
+  end
+
+  # #1717: the photo of what was sent, for the conversation to show it as it went out. It goes in its own key, never in
+  # template_params: a message with template_params counts as a template send (Whatsapp::TemplateSendCount,
+  # Whatsapp::Templates::Health, the service-message allowance), and the campaign recipient is already counted there.
+  # At send it is the photo of this person's send; at reply (no send in hand) it is rebuilt from the campaign: products
+  # from what the dispatch read, and a link whose variable was per person stays without an address.
+  def template_photo(name)
+    enviado = @enviado || campaign_photo
+    name.present? && enviado.present? ? { campaign_template_enviado: enviado } : {}
+  end
+
+  def campaign_photo
+    return unless @inbox.channel.is_a?(Channel::Whatsapp) && @campaign.template_params.present?
+
+    Whatsapp::TemplateProcessorService.new(channel: @inbox.channel, template_params: @campaign.template_params)
+                                      .foto_do_envio(catalogo: :guardado)
   end
 
   def message_status

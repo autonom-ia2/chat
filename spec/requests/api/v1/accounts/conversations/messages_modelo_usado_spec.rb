@@ -23,6 +23,33 @@ RSpec.describe 'Mensagens com o modelo usado', type: :request do
     expect(mensagens.find { |m| m['content'] == 'Olá' }).not_to have_key('additional_attributes')
   end
 
+  # #1717: a foto do que foi enviado sai junto com o nome e o idioma; processed_params (cupom, valores) nunca.
+  it 'traz a foto do envio (enviado) e nunca o processed_params' do
+    enviado = { 'versao' => 1, 'oferta' => { 'expira_em' => 1_760_659_200 },
+                'botoes' => [{ 'tipo' => 'copy_code', 'texto' => 'Copiar código' },
+                             { 'tipo' => 'url', 'texto' => 'Ver proposta', 'url' => 'https://loja.com.br/b/AB3K' }] }
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Oferta',
+                     additional_attributes: { 'template_params' => { 'name' => 'oferta', 'language' => 'pt_BR', 'enviado' => enviado,
+                                                                     'processed_params' => { 'buttons' => [{ 'parameter' => 'SEGREDO9' }] } } })
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages", headers: agente.create_new_auth_token, as: :json
+
+    mensagem = response.parsed_body['payload'].find { |m| m['content'] == 'Oferta' }
+    expect(mensagem['additional_attributes']).to eq('template_params' => { 'name' => 'oferta', 'language' => 'pt_BR', 'enviado' => enviado })
+    expect(response.body).not_to include('processed_params', 'SEGREDO9')
+  end
+
+  it 'na mensagem da campanha traz a foto gravada em campaign_template_enviado' do
+    enviado = { 'versao' => 1, 'produto' => { 'retailer_id' => 'SKU1' } }
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Vitrine',
+                     additional_attributes: { 'campaign_id' => 7, 'campaign_template_name' => 'vitrine', 'campaign_template_enviado' => enviado })
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages", headers: agente.create_new_auth_token, as: :json
+
+    mensagem = response.parsed_body['payload'].find { |m| m['content'] == 'Vitrine' }
+    expect(mensagem['additional_attributes']).to eq('template_params' => { 'name' => 'vitrine', 'enviado' => enviado })
+  end
+
   it 'na mensagem da jornada de campanha usa o nome gravado pela campanha' do
     create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Promo',
                      additional_attributes: { 'campaign_id' => 7, 'campaign_template_name' => 'promo_outubro' })
