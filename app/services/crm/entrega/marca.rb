@@ -74,6 +74,11 @@ module Crm::Entrega::Marca
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
+  # Um convite esperando a convidada pegar, ainda no prazo.
+  def convite_aberto?(conversation)
+    dados(conversation)&.dig('modo') == CONVITE && !convite_vencido?(conversation)
+  end
+
   def convite_vencido?(conversation, agora: Time.current)
     valor = dados(conversation)
     return false unless valor && valor['modo'] == CONVITE
