@@ -78,8 +78,9 @@ module Autonomia
           # começou. Descartar aqui deixaria o cliente sem cotação e sem explicação.
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
           motivo = ::Autonomia::Agents::Operate::RecoveredHeaderNote.silence_reason(answered, result) || motivo_do_silencio(result)
-          ::Autonomia::Agents::Operate::RecoveredHeaderNote.registrar_silencio(motivo, agent: @agent, conversation: @conversation,
-                                                                               message_id: @reply_to_message_id)
+          ::Autonomia::Agents::Operate::RecoveredHeaderNote.registrar_silencio(
+            motivo, agent: @agent, conversation: @conversation, message_id: @reply_to_message_id
+          )
           return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)
