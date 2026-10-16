@@ -398,6 +398,7 @@ defineExpose({ abrir });
             @escolher="escolherContato"
           />
           <CampoDeTelefone
+            :key="abertura"
             v-model="campos.telefone"
             :label="rotulo('TELEFONE')"
             :rotulo-do-pais="rotulo('PAIS')"

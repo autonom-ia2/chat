@@ -59,18 +59,31 @@ export const telefoneCompleto = (digitos, pais) => {
   return numero?.isValid() ? numero.number : '';
 };
 
-// Número que já vem completo (contato da base ou colado com +): separa país e
-// número. Sem + não adivinha: fica no país escolhido.
+// Número com + (contato da base, colado ou digitado): separa país e número
+// assim que o código do país fica claro ("+55" já é Brasil). Enquanto não fica
+// (só "+", "+1" de vários países, "+800" sem país), devolve o texto como está
+// em `cru`: o campo mostra o que a pessoa escreveu e não vale como número.
+// Sem + não adivinha: fica no país escolhido.
 export const separarTelefone = (texto, paisAtual = PAIS_PADRAO) => {
   const bruto = String(texto || '').trim();
-  const numero = bruto.startsWith('+')
-    ? parsePhoneNumberFromString(bruto)
-    : null;
-  if (numero) {
-    return {
-      pais: numero.country || paisAtual,
-      digitos: numero.nationalNumber,
-    };
+  if (!bruto.startsWith('+')) {
+    return { pais: paisAtual, digitos: soDigitosDoTelefone(bruto), cru: '' };
   }
-  return { pais: paisAtual, digitos: soDigitosDoTelefone(bruto) };
+  const leitor = new AsYouType();
+  leitor.input(bruto);
+  const pais = leitor.getCountry();
+  if (!pais) return { pais: paisAtual, digitos: '', cru: bruto };
+  return { pais, digitos: leitor.getNationalNumber(), cru: '' };
+};
+
+// Onde fica o cursor depois de formatar: logo depois do mesmo número de
+// dígitos que estavam antes dele.
+export const posicaoDepoisDosDigitos = (formatado, quantos) => {
+  if (quantos <= 0) return 0;
+  let vistos = 0;
+  for (let i = 0; i < formatado.length; i += 1) {
+    if (formatado[i] >= '0' && formatado[i] <= '9') vistos += 1;
+    if (vistos === quantos) return i + 1;
+  }
+  return formatado.length;
 };

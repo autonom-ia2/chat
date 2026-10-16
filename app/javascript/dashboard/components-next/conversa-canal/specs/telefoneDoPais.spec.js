@@ -3,6 +3,7 @@ import {
   exemploDoPais,
   formatarNoPais,
   paisesDoTelefone,
+  posicaoDepoisDosDigitos,
   separarTelefone,
   telefoneCompleto,
 } from '../mais/telefoneDoPais';
@@ -47,15 +48,40 @@ describe('telefone do contato com país (#1702)', () => {
     expect(separarTelefone('+5511987654321')).toEqual({
       pais: 'BR',
       digitos: '11987654321',
+      cru: '',
     });
     expect(separarTelefone('+351 912 345 678')).toEqual({
       pais: 'PT',
       digitos: '912345678',
+      cru: '',
     });
     expect(separarTelefone('(11) 98765-4321', 'PT')).toEqual({
       pais: 'PT',
       digitos: '11987654321',
+      cru: '',
     });
-    expect(separarTelefone('')).toEqual({ pais: 'BR', digitos: '' });
+    expect(separarTelefone('')).toEqual({ pais: 'BR', digitos: '', cru: '' });
+  });
+
+  it('com + e país ainda incerto (ou sem país, como +800): fica como está', () => {
+    expect(separarTelefone('+', 'PT')).toEqual({
+      pais: 'PT',
+      digitos: '',
+      cru: '+',
+    });
+    expect(separarTelefone('+1').cru).toBe('+1');
+    expect(separarTelefone('+800 1234 5678').cru).toBe('+800 1234 5678');
+    expect(separarTelefone('+55')).toEqual({
+      pais: 'BR',
+      digitos: '',
+      cru: '',
+    });
+  });
+
+  it('cursor volta para depois do mesmo dígito', () => {
+    expect(posicaoDepoisDosDigitos('(11) 98765-4321', 2)).toBe(3);
+    expect(posicaoDepoisDosDigitos('(11) 98765-4321', 7)).toBe(10);
+    expect(posicaoDepoisDosDigitos('(11) 98765-4321', 0)).toBe(0);
+    expect(posicaoDepoisDosDigitos('(11) 9', 9)).toBe(6);
   });
 });
