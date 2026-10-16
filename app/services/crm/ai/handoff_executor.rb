@@ -64,13 +64,12 @@ module Crm
       end
 
       # #1673 (decisão do Rodrigo, 16/10): com um agente nosso no nome, o pedido de pessoa é dele (bot_handoff! pela
-      # instrução); a IA do CRM não tira a conversa por conta própria. O espelho (AgentBot) conta como o agente, pela
-      # mesma regra do Crm::Passagens. O n8n e a conversa sem robô seguem como antes. Só com a Fase 2 dos Agentes.
+      # instrução); a IA do CRM não tira a conversa por conta própria. Só quando o agente pode responder agora (o
+      # mesmo dono do QuemResponde, com os Agentes e a Fase 2 ligados): espelho de vínculo arquivado ou de agente
+      # pausado não segura a conversa, senão ela ficaria sem ninguém. O n8n e a conversa sem robô seguem como antes.
       def com_agente_nosso?
-        robo = @conversation.ai_assignee
-        return false unless robo.is_a?(AgentBot) && ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
-
-        Crm::Passagens.ponta(robo, @conversation.account).classe == 'Autonomia::Agents::Agent'
+        ::Autonomia::Agents::Config.enabled?(@conversation.account) &&
+          ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).present?
       end
 
       def depois_da_entrega(entrega)

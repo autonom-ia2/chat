@@ -45,6 +45,16 @@ module Autonomia::Agents::QuemResponde
     true
   end
 
+  # #1673: o vínculo nosso que é dono da conversa e pode falar com o cliente agora (o espelho no nome é de um vínculo
+  # ativo desta caixa, com o agente atendendo), ou nil. Só com a Fase 2. Espelho de vínculo arquivado, agente pausado
+  # ou robô de fora (n8n): nil.
+  def dono_ativo(conversation)
+    return if conversation.blank? || !::Autonomia::Agents::Fase2.ligada?(conversation.account)
+
+    vinculos = ::Autonomia::Agents::AgentInbox.kept.where(inbox_id: conversation.inbox_id, account_id: conversation.account_id)
+    dono_da_conversa(vinculos, conversation)
+  end
+
   # Quem fica com a conversa depois da resposta pública do robô `sender`: ele, ou o dono que é outro vínculo ativo.
   def dono_depois_do_claim(conversation, sender)
     dono_ativo_outro?(conversation, sender) ? conversation.ai_assignee : sender

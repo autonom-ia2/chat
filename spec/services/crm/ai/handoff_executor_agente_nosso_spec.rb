@@ -21,8 +21,8 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     card.reload
   end
 
-  def entregar(card)
-    described_class.new(card: card, handoff: pedido).perform
+  def entregar(card, trigger: 'message')
+    described_class.new(card: card, handoff: pedido, trigger: trigger).perform
   end
 
   describe 'com um agente nosso no nome' do
@@ -45,6 +45,22 @@ RSpec.describe Crm::Ai::HandoffExecutor do
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
     end
 
+    # "Avaliar agora" (manual) e a fila antiga do card (drain) passam pelo executor: a regra é a mesma.
+    it 'vale também para o "Avaliar agora" e para a fila' do
+      card = card_com_regra(comercial)
+
+      expect(entregar(card, trigger: 'manual').error).to eq('owned_by_our_agent')
+      expect(entregar(card, trigger: 'drain').error).to eq('owned_by_our_agent')
+      expect(conversation.reload.assignee_id).to be_nil
+    end
+
+    it 'com uma pessoa já no nome, o motivo continua sendo o de sempre' do
+      card = card_com_regra(comercial)
+      conversation.update!(assignee: pessoa)
+
+      expect(entregar(card).error).to eq('already_assigned')
+    end
+
     it 'a troca por assunto continua: o funil Suporte leva a conversa à área' do
       card = card_com_regra(suporte)
 
@@ -65,6 +81,30 @@ RSpec.describe Crm::Ai::HandoffExecutor do
 
     expect(result).to have_attributes(status: :handed_off, assignee: pessoa)
     expect(conversation.reload.assignee_id).to eq(pessoa.id)
+  end
+
+  # O espelho que ficou no nome sem ninguém para responder por ele não segura a conversa: ela iria ficar sem ninguém.
+  describe 'com o espelho de um agente que não responde agora' do
+    it 'entrega quando o vínculo da porta foi arquivado' do
+      card = card_com_regra(comercial)
+      area_sumiu!(agente_da_porta)
+
+      expect(entregar(card)).to have_attributes(status: :handed_off, assignee: pessoa)
+    end
+
+    it 'entrega quando o agente da porta está desligado' do
+      card = card_com_regra(comercial)
+      agente_da_porta.update_columns(enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(entregar(card)).to have_attributes(status: :handed_off, assignee: pessoa)
+    end
+
+    it 'entrega quando os Agentes estão desligados na conta' do
+      card = card_com_regra(comercial)
+      allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false)
+
+      expect(entregar(card)).to have_attributes(status: :handed_off, assignee: pessoa)
+    end
   end
 
   it 'sem robô no nome, entrega pela regra, como hoje' do
