@@ -7,7 +7,8 @@
 #
 # O teto conta de quando a mensagem ficou pronta, isto é, de quando o conteúdo chegou (#1637): a que o WhatsApp Híbrido
 # recupera (#1489) traz o texto 15 a 60 s depois de criada e grava `content_attributes['hybrid_recovered_at']`
-# (ISO8601). Vale o mais tarde entre o created_at e esse horário; ausente ou inválido, o created_at.
+# (ISO8601). Vale esse horário quando está entre o created_at e agora; ausente, inválido, no futuro ou anterior à
+# criação, o created_at.
 #
 # Conta fora da Fase 2: nem pergunta ao CRM. O turno segue como sempre foi, sem leitura nenhuma a mais.
 class Autonomia::Agents::Operate::EsperaDoAssunto
@@ -55,9 +56,11 @@ class Autonomia::Agents::Operate::EsperaDoAssunto
     ((Time.current - pronta_em(mensagem)) * 1000).round
   end
 
+  # Sem offset, o horário é lido no fuso da aplicação (Time.zone), não no do processo. Recuperação no futuro (relógio
+  # torto) adiaria o teto sem fim, e anterior à criação não faz sentido: nos dois casos vale o created_at.
   def pronta_em(mensagem)
-    recuperada_em = Time.iso8601(mensagem.content_attributes.to_h['hybrid_recovered_at'].to_s)
-    [mensagem.created_at, recuperada_em].max
+    recuperada_em = Time.zone.iso8601(mensagem.content_attributes.to_h['hybrid_recovered_at'].to_s)
+    recuperada_em.between?(mensagem.created_at, Time.current) ? recuperada_em : mensagem.created_at
   rescue ArgumentError
     mensagem.created_at
   end
