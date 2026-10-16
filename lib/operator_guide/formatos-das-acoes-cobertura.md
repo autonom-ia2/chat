@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 612 |
+| No catálogo | 613 |
 | Sem corpo | 182 |
-| Com corpo | 430 |
-| Com corpo e formato completo | 352 (81,9%) |
-| Com corpo e formato incompleto | 78 |
+| Com corpo | 431 |
+| Com corpo e formato completo | 352 (81,7%) |
+| Com corpo e formato incompleto | 79 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 202 |
-| Leituras cruas tipadas | 148 de 232 |
+| Leituras cruas tipadas | 151 de 236 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 64 |
+| leitura crua sem tipo | 65 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -105,6 +105,7 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
+- `PUT autonomia/agents/:agent_id/onde_atende` — leitura crua sem tipo: response_window (repassada a ::Autonomia::Agents::OndeAtende.new)
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
@@ -121,6 +122,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/agents/build_threads#create` type — repassada a @thread.persist_start_options!
 - `api/v1/accounts/autonomia/agents/build_threads#create` with_knowledge — repassada a @thread.persist_start_options!
 - `api/v1/accounts/autonomia/agents/build_threads#messages` message — repassada a @thread.append_message!
+- `api/v1/accounts/autonomia/agents/onde_atende#update` response_window — repassada a ::Autonomia::Agents::OndeAtende.new
 - `api/v1/accounts/autonomia/agents/sources#create` descriptor.kind — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/agents/tools#test` params — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#chat` message — o código não converte nem compara o valor

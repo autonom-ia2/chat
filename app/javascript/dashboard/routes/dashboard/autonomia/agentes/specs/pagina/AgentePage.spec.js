@@ -70,6 +70,7 @@ const canaisApi = vi.hoisted(() => ({
   get: vi.fn(),
   connect: vi.fn(),
   disconnect: vi.fn(),
+  ondeAtende: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
@@ -236,8 +237,9 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(todos('[data-heroi]')).toHaveLength(1);
       expect(no('h1').textContent.trim()).toBe('Bia');
+      // #1720: o herói diz a mesma frase do resumo.
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.RESPONDE_NO'
+        'PAGINA.BLOCO_ONDE.PRIMEIRO'
       );
       const interruptor = no('[role="switch"]');
       expect(interruptor.getAttribute('aria-checked')).toBe('true');
@@ -471,7 +473,7 @@ describe('AgentePage', () => {
       );
       expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.PARADO_NO'
+        'PAGINA.BLOCO_ONDE.PRIMEIRO'
       );
 
       await clicar('[role="switch"]');
@@ -495,9 +497,9 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.NENHUM_CANAL'
+        'PAGINA.BLOCO_ONDE.NENHUM_LUGAR'
       );
-      expect(texto()).not.toContain('PAGINA.RESPONDE_NO');
+      expect(texto()).not.toContain('PAGINA.BLOCO_ONDE.PRIMEIRO');
 
       await clicar('[role="switch"]');
       expect(no('[role="dialog"]').textContent).toContain('ONDE_QUANDO.TITULO');
@@ -511,14 +513,16 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
-    it('reads the agent again after leaving the last channel (the server stopped it)', async () => {
-      canaisApi.disconnect.mockResolvedValue({});
+    it('reads the agent again after saving where it answers (the server may have stopped it)', async () => {
+      canaisApi.ondeAtende.mockResolvedValue({});
       const wrapper = await montar();
       await clicar('[data-alterar="onde"]');
-      await clicar('[data-nao-atender]');
-      await clicar('dialog[open] [data-botoes] [data-confirmar]');
+      await clicar('aside[role="dialog"] [data-confirmar]');
 
-      expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ primeiroInboxId: 1 })
+      );
       expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
       wrapper.unmount();
     });
@@ -545,7 +549,7 @@ describe('AgentePage', () => {
       });
       const wrapper = await montar();
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.NENHUM_CANAL'
+        'PAGINA.BLOCO_ONDE.NENHUM_LUGAR'
       );
       await clicar('[data-escolher-canal]');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
@@ -1108,7 +1112,9 @@ describe('AgentePage', () => {
       preparar({ canais: COM_AREA });
       ligarFase2(true);
       const wrapper = await montar();
-      expect(no('[data-linha="onde"] [data-tambem-recebe]')).not.toBeNull();
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.PRIMEIRO_E_RECEBE');
       await clicar('[data-alterar="onde"]');
       const secao = no('aside[role="dialog"] [data-tambem-recebe]');
       expect(secao).not.toBeNull();
@@ -1138,7 +1144,7 @@ describe('AgentePage', () => {
       preparar({ canais: COM_AREA });
       ligarFase2(false);
       const wrapper = await montar();
-      expect(no('[data-tambem-recebe]')).toBeNull();
+      expect(no('[data-resumo-onde]').textContent).not.toContain('RECEBE');
       await clicar('[data-alterar="onde"]');
       expect(no('aside[role="dialog"]')).not.toBeNull();
       expect(no('[data-tambem-recebe]')).toBeNull();
@@ -1180,9 +1186,16 @@ describe('AgentePage', () => {
         agente: bia({ na_equipe: true, tem_onde_trabalhar: true, ...extra }),
         canais: L2_EQUIPE,
       });
+    const ligarFase2 = ligada => {
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: ligada,
+      });
+    };
 
     it('says "Na equipe" (switch on), where it receives, and never the parked banner', async () => {
       prepararEquipe();
+      ligarFase2(true);
       const wrapper = await montar();
       expect(no('[data-interruptor]').getAttribute('aria-checked')).toBe(
         'true'
@@ -1190,42 +1203,54 @@ describe('AgentePage', () => {
       expect(no('[data-interruptor]').textContent).toContain(
         'AGENTS.JORNADA.STATUS.NA_EQUIPE'
       );
+      // #1720: a mesma frase do resumo, só recebe.
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'AGENTS.JORNADA.CARTAO.RECEBE_EM'
+        'PAGINA.BLOCO_ONDE.RECEBE'
       );
       expect(no('[data-faixa-parado]')).toBeNull();
       wrapper.unmount();
     });
 
-    it('swaps "Onde e quando responde" for "Onde {nome} trabalha", with only the inbox and the role', async () => {
+    // #1720: todo agente usa a mesma gaveta; sai o "Onde {nome} trabalha".
+    it('uses "Onde e quando responde" and the same drawer, answering "Não" with its team inboxes', async () => {
       prepararEquipe();
+      ligarFase2(true);
       const wrapper = await montar();
-      const bloco = no('[data-linha="onde-trabalha"]');
-      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.TITULO');
-      expect(bloco.textContent).toContain('WhatsApp do Centro');
-      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.RECEBE');
-      expect(bloco.textContent).not.toContain('Instagram');
-      expect(no('[data-linha="onde"]')).toBeNull();
+      expect(no('[data-linha="onde-trabalha"]')).toBeNull();
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.RECEBE');
+      await clicar('[data-alterar="onde"]');
+      const gaveta = no('aside[role="dialog"]');
+      expect(gaveta.textContent).toContain('PAGINA.ONDE.TITULO');
+      const nao = [...gaveta.querySelectorAll('[role="radio"]')].find(item =>
+        item.textContent.includes('PRIMEIRO_NAO')
+      );
+      expect(nao.getAttribute('aria-checked')).toBe('true');
+      expect(
+        gaveta.querySelector('[data-opcao="1"]').getAttribute('aria-checked')
+      ).toBe('true');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(7, {
+        primeiroInboxId: null,
+        areaInboxIds: [1],
+        responseWindow: 'always',
+        parar: false,
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
       wrapper.unmount();
     });
 
-    it('"Mudar" opens straight in the team steps, saves the change and reads the agent again', async () => {
+    it('without the inbox reading, says only that it receives when someone hands over', async () => {
       prepararEquipe();
+      ligarFase2(false);
       const wrapper = await montar();
-      await clicar('[data-mudar-equipe]');
-      expect(no('[data-equipe-canais]').dataset.passo).toBe('canais');
-      expect(no('[data-opcao="1"]').getAttribute('aria-checked')).toBe('true');
-      expect(no('[data-opcao="5"]').getAttribute('aria-disabled')).toBe('true');
-
-      await clicar('[data-opcao="2"]');
-      await clicar('[data-seguir-equipe]');
-      expect(no('[data-equipe-canais]').dataset.passo).toBe('confira');
-      await clicar('[data-seguir-equipe]');
-
-      expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { papel: 'area' });
-      expect(canaisApi.disconnect).not.toHaveBeenCalled();
-      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.EQUIPE.FEITO');
-      expect(no('[data-equipe-canais]')).toBeNull();
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.ONDE.RECEBE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).not.toContain(
+        'NENHUM_LUGAR'
+      );
       wrapper.unmount();
     });
 

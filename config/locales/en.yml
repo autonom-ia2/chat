@@ -578,6 +578,18 @@ en:
         caixa_com_agente_da_plataforma: 'This channel is handled by AI agents. To change who answers first, use the AI agent tab of the channel.'
         desconectar_agente_da_plataforma: 'This channel is handled by an AI agent. To change who answers first, use the AI agent tab of the channel.'
         agente_da_plataforma: 'This is a platform AI agent. To make it answer first, use the AI agent tab of the channel.'
+      # #1720 — the single "Save" of the Where and when drawer. Nothing changes when it refuses.
+      onde_atende:
+        pedido_invalido: "Could not understand the request. Reload and try again."
+        agente_interno: "%{nome} works only inside the dashboard and does not answer customers."
+        agente_parado: "%{nome} is paused. Turn %{nome} on before changing where it answers."
+        fase2_off: "Receiving when someone hands over the conversation is not available for this account yet."
+        confirmar_parado: "This way, %{nome} will not receive conversations in any channel. Confirm to keep it like this."
+        canal_com_outro_sistema: "An agent from another system answers first in %{canal}. Nothing changed."
+        primeiro_recusado: "%{nome} cannot answer first in %{canal} right now. Nothing changed."
+        saida_recusada: "Could not take %{nome} out of %{canal}. Nothing changed."
+        mudou_agora: "Someone changed these channels just now. Reload and try again."
+        generico: "Could not save where %{nome} answers. Nothing changed."
       quem_atende:
         pedido_invalido: 'Choose one AI agent, or nobody.'
         agente_interno: 'This agent only works inside the dashboard and cannot answer customers.'

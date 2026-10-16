@@ -19,19 +19,14 @@ import {
   useComecarAAtender,
 } from '../../composables/useComecarAAtender';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
-import { useSalvarEquipe } from '../../composables/useSalvarEquipe';
 import { trocaNoCanal } from '../../utils/canais';
-import {
-  mudancaDaEquipe,
-  outrasCaixasDaEquipe,
-} from '../../utils/ondeTrabalha';
+import { outrasCaixasDaEquipe } from '../../utils/ondeTrabalha';
 import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo T10 e "Voltar a atender") — onde e quando o agente responde.
-// - modo 'alterar', atendendo: escolher a caixa (livre ou ocupada, com troca) e o "quando". Trocar de
-//   caixa usa o useComecarAAtender (mesma sequência do Começar a atender) e depois tira o agente da
-//   caixa antiga; só o "quando" mudou = PATCH {id, config:{response_window}}.
+// - modo 'alterar', atendendo: escolher a caixa (livre ou ocupada, com troca) e o "quando". O "Salvar"
+//   é um pedido só (#1720, PUT onde_atende), que o servidor grava numa transação.
 // - modo 'alterar', parado (t10-parado): a caixa fica só para ler, com "Voltar a atender"; o
 //   "quando" continua editável.
 // - modo 'voltar' (T15 voltar): a mesma confirmação de canal do Começar a atender, com a caixa atual
@@ -43,13 +38,16 @@ import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 // #1433 (decisão do Rodrigo de 15/10, "a, para todos os agentes"): com `recebeEmOutras`, logo abaixo de
 // "Onde atende" vem "Também recebe quando alguém passar em:" (TambemRecebe), as outras caixas em que ele
 // fica como agente da equipe. Só no 'alterar' atendendo e com a leitura das caixas (L2): entrar numa
-// área liga o agente, então o agente parado não vê a seção. Salvar grava primeiro "Onde" e "Quando" e
-// depois entra/sai das outras caixas (useSalvarEquipe: POST channels com papel area, DELETE).
+// área liga o agente, então o agente parado não vê a seção.
 // #1720 (desenho do Rodrigo de 16/10) — "Onde atende" vira "{nome} atende primeiro as conversas novas?":
 // "Sim, no canal:" ou "Não, só quando alguém passar a conversa". O "Não" tira o agente das caixas em
 // que atende primeiro e deixa só "Recebe quando alguém passar em:". Um "Salvar" aplica tudo. "Não" sem
-// nenhuma caixa marcada pede confirmação em linha, no rodapé ("fica parado"), antes de gravar. Sai o
-// botão "Não atender em nenhum lugar".
+// nenhuma caixa marcada pede confirmação em linha, no rodapé, antes de gravar (o servidor também recusa
+// sem ela: confirmar_parado). Sai o botão "Não atender em nenhum lugar". Todo agente usa esta gaveta,
+// inclusive o que está só na equipe (na_equipe). A pergunta só aparece com a seção "Recebe quando…"
+// (Fase 2 e a leitura das caixas); sem ela, a escolha de canal de sempre e as áreas ficam como estão.
+// Um "Salvar" só: AutonomiaChannelsAPI.ondeAtende, numa transação no servidor. Recusado (422), nada
+// mudou e a tela mostra a explicação do servidor (inclusive a de não conseguir sair do canal antigo).
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -101,11 +99,9 @@ const escolherPrimeiro = valor => {
   escolheu.value = true;
   primeiro.value = valor;
 };
-const soQuandoPassar = computed(() => primeiro.value === 'nao');
 // Aviso em linha do "Não" sem nenhuma caixa: aberto até "Deixar parado" ou "Voltar".
 const avisoParado = ref(false);
 const quando = ref(quandoDoAgente(props.agente));
-const salvarEquipe = useSalvarEquipe();
 // Outras caixas marcadas. A leitura pode chegar depois de abrir: até a pessoa mexer, acompanha a atual.
 const outras = ref([...props.equipeAtual]);
 const mexeuNasOutras = ref(false);
@@ -142,6 +138,10 @@ const mostrarOutras = computed(
     !semLista.value &&
     !semCanal.value
 );
+// "{nome} atende primeiro…?" só com a seção "Recebe quando…" à vista.
+const soQuandoPassar = computed(
+  () => mostrarOutras.value && primeiro.value === 'nao'
+);
 // #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
 const porCaixa = useAgenteIaPorCaixa();
 // Fora da lista: no "Sim", as caixas em que ele é o principal agora e a escolhida. No "Não" ele sai
@@ -165,13 +165,18 @@ const outrasValidas = computed(() => {
     .map(({ canal }) => canal.inbox_id);
   return outras.value.filter(id => livres.includes(id));
 });
-const mudancaDasOutras = computed(() =>
-  mudancaDaEquipe(props.equipeAtual, outrasValidas.value)
-);
 const troca = computed(() =>
   soQuandoPassar.value
     ? null
     : trocaNoCanal(props.canais, onde.value, props.agente.id)
+);
+// Com a lista de canais à vista, o "Sim" precisa de um canal escolhido.
+const faltaCanal = computed(
+  () =>
+    !somenteLeitura.value &&
+    !semCanal.value &&
+    !soQuandoPassar.value &&
+    !onde.value
 );
 // No "Não", sem caixa marcada em "Recebe quando…", ele não fica em lugar nenhum.
 const ficaParado = computed(
@@ -271,30 +276,6 @@ const atualizar = dados =>
 
 const janelaMudou = () => quando.value !== quandoDoAgente(props.agente);
 
-// Sai das caixas antigas depois de entrar na nova. Se não conseguir, avisa que ficou nas duas.
-const sairDasAntigas = async () => {
-  const antigas = soQuandoPassar.value
-    ? props.atuais
-    : props.atuais.filter(canal => canal.inbox_id !== onde.value);
-  try {
-    await Promise.all(
-      antigas.map(canal =>
-        AutonomiaChannelsAPI.disconnect(props.agente.id, canal.inbox_id)
-      )
-    );
-    return true;
-  } catch {
-    useAlert(
-      t(`${NS}.CONTINUA_NO_ANTIGO`, {
-        nome: props.nome,
-        novo: nomeDoCanal(onde.value),
-        antigo: antigas.map(canal => canal.name).join(', '),
-      })
-    );
-    return false;
-  }
-};
-
 const entrarNaCaixa = async () => {
   const resultado = await comecar({
     agente: props.agente,
@@ -306,56 +287,53 @@ const entrarNaCaixa = async () => {
   return resultado.ok;
 };
 
-// Entra e sai das outras caixas (só com a seção à vista). Falhando, mostra o erro do servidor e relê.
-const salvarOutras = async () => {
-  if (!mostrarOutras.value) return true;
-  const { entram, saem } = mudancaDasOutras.value;
-  if (!entram.length && !saem.length) return true;
-  const feito = await salvarEquipe.salvar({
-    agenteId: props.agente.id,
-    nome: props.nome,
-    entram,
-    saem,
-  });
-  if (!feito) {
-    erro.value = salvarEquipe.erro.value;
-    emit('pronto');
-  }
-  return feito;
+// #1720 — o pedido do "Salvar": áreas só com a seção à vista (nulo = ficam como estão).
+const pedidoDeSalvar = parar => ({
+  primeiroInboxId: soQuandoPassar.value ? null : onde.value,
+  areaInboxIds: mostrarOutras.value ? outrasValidas.value : null,
+  responseWindow: quando.value,
+  parar,
+});
+
+const erroDoServidor = falha => {
+  const semRede =
+    (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+    !falha?.response;
+  if (semRede) return ERRO_DO_MOTIVO[MOTIVO.OFFLINE]();
+  return {
+    titulo: falha.response.data?.error || t(`${NS}.ERRO`),
+    garantia: t(`${NS}.ERRO_GARANTIA`),
+  };
 };
 
-// #1720 — "Não, só quando alguém passar": sai das caixas em que atende primeiro, grava o "quando" e
-// depois entra/sai das caixas marcadas em "Recebe quando…".
-const salvarSoQuandoPassar = async () => {
-  if (props.atuais.length && !(await sairDasAntigas())) {
-    emit('pronto');
-    emit('fechar');
-    return;
-  }
+// Sem a escolha de canal (agente parado ou sem canal na conta), só o "quando" muda.
+const salvarSoAJanela = async () => {
   if (janelaMudou()) {
     await atualizar({ config: { response_window: quando.value } });
   }
-  if (!(await salvarOutras())) return;
   terminar(t(`${NS}.PRONTO`));
 };
 
-const salvarAlteracao = async () => {
-  if (soQuandoPassar.value) {
-    await salvarSoQuandoPassar();
+const salvarAlteracao = async parar => {
+  if (somenteLeitura.value || semCanal.value) {
+    await salvarSoAJanela();
     return;
   }
-  if (!somenteLeitura.value && onde.value && onde.value !== inboxAtual.value) {
-    if (!(await entrarNaCaixa())) return;
-    const saiu = await sairDasAntigas();
-    if (!saiu) {
-      emit('pronto');
-      emit('fechar');
+  try {
+    await AutonomiaChannelsAPI.ondeAtende(
+      props.agente.id,
+      pedidoDeSalvar(parar)
+    );
+  } catch (falha) {
+    // O servidor pede a confirmação que a tela já pede (outra aba, leitura velha): o mesmo aviso.
+    if (falha?.response?.data?.code === 'confirmar_parado') {
+      avisoParado.value = true;
       return;
     }
-  } else if (janelaMudou()) {
-    await atualizar({ config: { response_window: quando.value } });
+    erro.value = erroDoServidor(falha);
+    emit('pronto');
+    return;
   }
-  if (!(await salvarOutras())) return;
   terminar(t(`${NS}.PRONTO`));
 };
 
@@ -389,7 +367,7 @@ const confirmar = async ({ parado = false } = {}) => {
   salvando.value = true;
   try {
     if (voltar.value) await voltarAAtender();
-    else await salvarAlteracao();
+    else await salvarAlteracao(parado);
   } catch {
     erro.value = erroDeSalvar();
   } finally {
@@ -535,7 +513,7 @@ const rotuloVoltar = computed(() => {
         <OndeQuandoEscolha
           v-model:quando="quando"
           :onde="onde"
-          :primeiro="primeiro"
+          :primeiro="mostrarOutras ? primeiro : null"
           :horario-de-cada="soQuandoPassar && outrasValidas.length > 0"
           :canais="canais"
           :agente-id="agente.id"
@@ -634,7 +612,7 @@ const rotuloVoltar = computed(() => {
           tamanho="lg"
           :carregando="ocupado"
           :rotulo-carregando="t(`${NS}.SALVANDO`)"
-          :desabilitado="semLista || (!soQuandoPassar && !onde)"
+          :desabilitado="semLista || faltaCanal"
           @click="confirmar()"
         >
           {{ t(`${NS}.SALVAR`) }}
