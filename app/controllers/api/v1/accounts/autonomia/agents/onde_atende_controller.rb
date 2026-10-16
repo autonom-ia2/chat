@@ -8,6 +8,10 @@
 #   parar:             true quando a tela confirmou que o agente fica sem receber conversa em nenhum canal.
 # 204 quando gravou; 422 { error, code } quando recusou (nada mudou). Caixa fora da conta: 404.
 class Api::V1::Accounts::Autonomia::Agents::OndeAtendeController < Api::V1::Accounts::Autonomia::BaseController
+  # O recurso é o agente: sem envelope no corpo (format: []), mas o Guia lê dele o formato de `response_window`
+  # (a validação de inclusão do Agent: always | business_hours | outside_business_hours), em formatos-das-acoes.json.
+  wrap_parameters ::Autonomia::Agents::Agent, format: []
+
   before_action :fetch_agent
 
   def update
@@ -15,7 +19,7 @@ class Api::V1::Accounts::Autonomia::Agents::OndeAtendeController < Api::V1::Acco
 
     resultado = ::Autonomia::Agents::OndeAtende.new(
       agent: @agent, primeiro: caixa_primeiro, areas: caixas_das_areas,
-      response_window: params[:response_window].presence, parar: parar?
+      response_window: janela, parar: parar?
     ).perform
     return recusar(resultado.code, inbox: resultado.inbox, motivo_da_area: resultado.motivo_da_area) unless resultado.ok?
 
@@ -29,10 +33,14 @@ class Api::V1::Accounts::Autonomia::Agents::OndeAtendeController < Api::V1::Acco
   end
 
   def pedido_valido?
-    janela = params[:response_window].presence
     ids = params[:area_inbox_ids]
     (janela.nil? || ::Autonomia::Agents::Operate::EngagementGate::RESPONSE_WINDOWS.include?(janela)) &&
       (ids.nil? || ids.is_a?(Array))
+  end
+
+  # O "Quando atende" é texto (um dos valores do Agent), ou nil quando não veio.
+  def janela
+    params[:response_window].to_s.presence
   end
 
   def caixa_primeiro

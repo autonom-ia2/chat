@@ -31,6 +31,17 @@ RSpec.describe Autonomia::Guide::Formatos do
     expect(described_class.todos.keys.sort).to eq(catalogo)
   end
 
+  # #1720 — o "Salvar" da gaveta Onde e quando: o "Quando atende" com os valores da validação do Agent.
+  it 'PUT onde_atende: completo, response_window um dos valores do agente', :aggregate_failures do
+    onde = formato('PUT autonomia/agents/:agent_id/onde_atende')
+
+    expect(onde).to include('completo' => true, 'modelo' => 'Autonomia::Agents::Agent')
+    expect(onde['campos']['response_window'])
+      .to include('tipo' => 'string', 'um_de' => Autonomia::Agents::Operate::EngagementGate::RESPONSE_WINDOWS)
+    expect(onde['campos']['area_inbox_ids']).to include('tipo' => 'lista')
+    expect(onde['campos']['parar']).to include('tipo' => 'booleano')
+  end
+
   it 'POST custom_roles: envelope, permissões só da lista e nome exigido pelo registro', :aggregate_failures do
     funcao = formato('POST custom_roles')
 

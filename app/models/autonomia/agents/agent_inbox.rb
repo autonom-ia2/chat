@@ -69,7 +69,11 @@ module Autonomia
       # #1366 — o PONTO ÚNICO da parada automática: todo caminho que tira um vínculo da caixa passa por um destes dois
       # (arquivar: desvincular a área; destroy, abaixo: desconectar a porta, caixa apagada). Saiu o último, o agente
       # para. O SoftDelete arquiva sem callback: o agente apagado já sai parado. O destroy do próprio agente não conta.
-      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? }
+      # #1720 — `vira_porta`: a área sai só porque o agente vai atender primeiro nesta mesma caixa, na mesma transação
+      # (um vínculo por agente e caixa). Ele não fica sem onde trabalhar, então não para nem grava parado_sem_onde_trabalhar.
+      attr_accessor :vira_porta
+
+      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? && !vira_porta }
 
       # Limpeza do espelho ao destruir o vínculo — centraliza o conserto de "caixa deletada"
       # E "agente deletado" num só lugar. Dispara quando o vínculo cai por:

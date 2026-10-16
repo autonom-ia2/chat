@@ -10,9 +10,10 @@
 # ORDEM SEGURA: primeiro tudo o que ENTRA (janela, áreas novas, a porta nova) e só depois o que SAI (portas antigas,
 # áreas desmarcadas). Assim o agente nunca fica, no meio do caminho, sem onde trabalhar — o AgentInbox o pararia
 # (parado_sem_onde_trabalhar, #1366). A exceção é a caixa que deixa de ser área para virar porta: o vínculo é um só
-# por agente e caixa, então a área sai logo antes de a porta entrar (o `ativar` da troca liga o agente de novo, se for
-# o caso). O agente só para quando a pessoa pediu "Não" sem nenhuma área E confirmou (`parar`); sem a confirmação,
-# recusa antes de mexer em qualquer coisa (confirmar_parado).
+# por agente e caixa, então a área sai logo antes de a porta entrar, com `vira_porta` (Areas.desvincular!): mesmo sendo
+# o único vínculo dele, o agente não para nem grava evento de uma parada que não acontece. O agente só para quando a
+# pessoa pediu "Não" sem nenhuma área E confirmou (`parar`); sem a confirmação, recusa antes de mexer em qualquer
+# coisa (confirmar_parado).
 #
 # NADA FICA PELA METADE: tudo roda numa transação. Qualquer recusa no meio (Recusa, erro das Areas, validação) desfaz o
 # que já tinha entrado; a tela recebe o código e a mensagem do passo que recusou, e "Nada mudou" é verdade.
@@ -176,9 +177,13 @@ class Autonomia::Agents::OndeAtende
   def por_no_primeiro!
     return if @primeiro.nil?
 
-    sair_da_area!(@primeiro) if areas_atuais.exists?(inbox_id: @primeiro.id)
+    area_vira_porta! if areas_atuais.exists?(inbox_id: @primeiro.id)
     resultado = ::Autonomia::Agents::TrocarQuemAtende.new(inbox: @primeiro, alvo: { tipo: 'plataforma', agent: @agent }).perform
     raise Recusa.new(resultado.code == :mudou_agora ? :mudou_agora : :primeiro_recusado, inbox: @primeiro) unless resultado.ok?
+  end
+
+  def area_vira_porta!
+    ::Autonomia::Agents::Areas.desvincular!(agent: @agent, inbox: @primeiro, vira_porta: true)
   end
 
   def sair_das_portas_antigas!

@@ -83,6 +83,19 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
     end
   end
 
+  # #1720 — a única área dele vira a porta: ele não para no meio, e nenhum evento de parada falso fica gravado.
+  it 'turns its only team channel into the first channel without stopping or recording a stop' do
+    area!(hubber, da_clara)
+
+    salvar(primeiro_inbox_id: da_clara.id, area_inbox_ids: [])
+
+    expect(response).to have_http_status(:no_content)
+    expect(portas).to eq([da_clara.id])
+    expect(areas).to be_empty
+    expect(hubber.reload).to have_attributes(status: 'active', enabled: true)
+    expect(hubber.events.parado_sem_onde_trabalhar.count).to eq(0)
+  end
+
   describe '"Não, só quando alguém passar a conversa"' do
     before { porta!(hubber, comunidade) }
 
