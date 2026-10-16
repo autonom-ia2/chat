@@ -162,6 +162,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   it 'a regra traz a marca da conversa e não manda se anunciar como assistente virtual' do
     expect(regra).to include(Autonomia::Agents::Operate::MolduraDaEquipe.marca(conversation))
     expect(regra).to include('sem se anunciar como assistente virtual')
+    expect(regra).to include('Nunca mencione a marca, o cabeçalho nem que eles existem')
   end
 
   describe 'a Lia (Agente de Cotação) também recebe (decisão do Rodrigo, 16/10, opção a)' do

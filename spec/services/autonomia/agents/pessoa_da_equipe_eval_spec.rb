@@ -6,6 +6,7 @@ require 'rails_helper'
 # modelo lê cada resposta. Teto de US$ 2 por rodada: o custo é somado pelo consumo gravado (Crm::AiUsageEvent) e a
 # rodada para antes de passar de US$ 1,80. Opcional: `PESSOA_DA_EQUIPE_EVAL_SAIDA=<arquivo>` grava o relatório (placar e
 # cada execução, com a resposta da Clara e o veredito do juiz). Cada cena roda REPETICOES vezes: o modelo varia.
+# `PESSOA_DA_EQUIPE_EVAL_CENA=<nome>` roda só uma cena.
 #
 # Mede duas coisas: (1) a IA entende que o que a Ana escreveu foi a Ana, da equipe, e não ela; (2) a IA não imita a
 # marca na resposta. Quem julga o sentido é o modelo juiz, nunca uma lista de palavras. A imitação da marca também é
@@ -248,9 +249,17 @@ RSpec.describe 'Avaliação paga de quem disse o quê (#1669)', :eval_pago do # 
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
+  # `PESSOA_DA_EQUIPE_EVAL_CENA=<nome>` roda só a cena com esse nome (para reavaliar uma cena sem pagar as outras).
+  def cenas_escolhidas
+    nome = ENV.fetch('PESSOA_DA_EQUIPE_EVAL_CENA', nil).presence
+    escolhidas = nome ? AvaliacaoDaPessoaDaEquipe::CENAS.select { |cena| cena[:nome] == nome } : AvaliacaoDaPessoaDaEquipe::CENAS
+    expect(escolhidas).not_to be_empty, "cena desconhecida: #{nome}"
+    escolhidas
+  end
+
   # Cada cena REPETICOES vezes, sob o teto TOTAL (para antes de passar dele).
   def rodar_todas
-    AvaliacaoDaPessoaDaEquipe::CENAS.product((1..AvaliacaoDaPessoaDaEquipe::REPETICOES).to_a).each do |cena, vez|
+    cenas_escolhidas.product((1..AvaliacaoDaPessoaDaEquipe::REPETICOES).to_a).each do |cena, vez|
       break if custo_ate_agora >= AvaliacaoDaPessoaDaEquipe::TETO_USD
 
       relatorio << rodar(cena, vez)
@@ -268,7 +277,7 @@ RSpec.describe 'Avaliação paga de quem disse o quê (#1669)', :eval_pago do # 
 
     rodar_todas
 
-    total = AvaliacaoDaPessoaDaEquipe::CENAS.size * AvaliacaoDaPessoaDaEquipe::REPETICOES
+    total = cenas_escolhidas.size * AvaliacaoDaPessoaDaEquipe::REPETICOES
     placar = { execucoes: relatorio.size, aprovadas: relatorio.count { |linha| linha[:aprovada] },
                imitacoes: relatorio.count { |linha| linha[:imitou_a_marca] },
                descontos_aceitos: relatorio.count { |linha| linha[:aceitou_desconto] },
