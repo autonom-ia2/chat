@@ -33,11 +33,25 @@ class Crm::Subjects::Applier
     return no_card_do_aviso(pipeline, titulo) if card_do_aviso
 
     atual = @question.atual
-    if @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
+    mesmo_funil = @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
+    @chegada = card_da_chegada(pipeline) unless mesmo_funil
+    if mesmo_funil || @chegada
       decidir('rename', card: atual, pipeline: pipeline, title: titulo)
     else
       decidir('create', pipeline: pipeline, title: titulo)
     end
+  end
+
+  # C36 (#1711): na caixa com card ao chegar, o cliente sem card aberto ganha um card sem nome no funil padrão antes de
+  # a IA de assunto decidir. Com a flag `crm_avaliar_toda_mensagem` e a caixa em Automática, o pedido de outro funil
+  # leva esse card para a 1ª etapa do funil do assunto e lhe dá o nome, em vez de deixar um card vazio para trás. Só o
+  # card que o sistema criou na chegada (crm_auto_sync), desta conversa, sem nome, que nunca mudou de etapa e em que
+  # nenhuma pessoa mexeu, e que pode ir para aquele funil (com o dono). O resto segue como antes: nasce outro card.
+  # Respeita a pessoa como a criação (#1260): quando criar viraria sugestão, o card da chegada não é tocado.
+  def card_da_chegada(pipeline)
+    return unless modo_efetivo('create', { pipeline: pipeline }) == 'auto'
+
+    Crm::Subjects::CardDaChegada.de(conversation: @conversation, card: @question.atual, mode: @mode, pipeline: pipeline)
   end
 
   def decidir(action, **atributos)
@@ -121,7 +135,28 @@ class Crm::Subjects::Applier
   end
 
   def renomear(card, titulo, pipeline)
-    card_do_aviso&.card&.id == card.id ? renomear_o_do_aviso(card, titulo, pipeline) : dar_nome(card, titulo)
+    return renomear_o_do_aviso(card, titulo, pipeline) if card_do_aviso&.card&.id == card.id
+    return adotar_a_chegada(card, titulo, pipeline) if @chegada&.card&.id == card.id
+
+    dar_nome(card, titulo)
+  end
+
+  # C36: confere de novo dentro do lock (a pessoa pode ter mexido enquanto a IA pensava), leva o card ao funil do
+  # assunto, dá o nome e agenda a IA do CRM nele, já no funil novo. Ele já é o assunto atual: o foco não muda. Se ele
+  # mudou no meio-tempo, o pedido não se perde: segue o caminho da criação, com a mesma regra de respeito à pessoa
+  # (#1260), relida aqui dentro da trava.
+  def adotar_a_chegada(card, titulo, pipeline)
+    return criar_no_lugar_da_chegada(pipeline, titulo) unless @chegada.recarregar.adotavel?(pipeline)
+
+    @chegada.mover_para(pipeline)
+    resultado = dar_nome_da_ia(card.reload, titulo)
+    Crm::Ai::Observer.new(card: card).schedule_evaluation
+    resultado
+  end
+
+  def criar_no_lugar_da_chegada(pipeline, titulo)
+    resultado = modo_efetivo('create', { pipeline: pipeline }) == 'auto' ? criar(pipeline, titulo) : sugerir
+    { action: 'create', card: nil }.merge(resultado)
   end
 
   # Leva ao funil do assunto real (se for outro), dá o nome novo e o card volta a ser o assunto atual, a menos que a
