@@ -2,8 +2,8 @@
 #
 # 1. Conversas que o motor de entrega segura (Crm::Entrega::Marca, #1454): tenta de novo, com a mesma regra, e entrega
 #    para quem tiver ficado online. Vale com ou sem CRM e sem a IA do CRM ligada: é o "segura e entrega quando alguém
-#    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) só perde a marca, e a conversa volta a poder
-#    ser pega pelo rodízio nativo.
+#    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) perde a marca, os administradores da
+#    caixa são avisados, e a conversa volta a poder ser pega pelo rodízio nativo.
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
 #
 # Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
@@ -162,19 +162,26 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_conversation(conversation)
-    if Crm::Entrega::Marca.convite_vencido?(conversation)
-      conversation.with_lock do
-        Crm::Entrega::Marca.tirar(conversation) if Crm::Entrega::Marca.convite_vencido?(conversation)
-        conversation.save! if conversation.changed?
-      end
-      return
-    end
+    return convite_vencido(conversation) if Crm::Entrega::Marca.convite_vencido?(conversation)
 
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
 
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
                      dono: dono_da_marca(conversation, marca)).call
+  end
+
+  # O convite venceu sem ninguém pegar: a marca sai (a conversa volta a poder ser pega pelo rodízio nativo) e os
+  # administradores da caixa são avisados (#1140, decisão 8). Relido sob a trava: quem pegou nesse meio tempo tirou a
+  # marca, e nada é avisado.
+  def convite_vencido(conversation)
+    conversation.with_lock do
+      next unless Crm::Entrega::Marca.convite_vencido?(conversation)
+
+      Crm::Entrega::Marca.tirar(conversation)
+      conversation.save!
+      Crm::Entrega::AvisoSemNinguem.new(conversation: conversation, card: Crm::Assunto.funil_atual(conversation)).convite_vencido!
+    end
   end
 
   # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela
