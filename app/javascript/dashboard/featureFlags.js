@@ -57,6 +57,8 @@ export const FEATURE_FLAGS = {
   NOVA_CONVERSA_TELA: 'nova_conversa_tela',
   CRM_LEMBRETES_V2: 'crm_lembretes_v2',
   CRM_CALENDARIO_OURO: 'crm_calendario_ouro',
+  MENU_LATERAL_NOVO: 'menu_lateral_novo',
+  HORARIO_UNICO_CAIXA: 'horario_unico_caixa',
   CRM_MENSAGEM_MARCADA: 'crm_mensagem_marcada',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

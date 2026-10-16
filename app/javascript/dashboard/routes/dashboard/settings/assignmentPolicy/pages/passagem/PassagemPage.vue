@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, provide, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -39,11 +39,27 @@ const {
   caixas,
   equipe,
   iaDoFunilLigada,
+  agentesIa,
   regra,
   etapas,
   alterado,
   regrasIncompletas,
 } = passagem;
+
+// #1593: os agentes de IA entram na lista de quem pode receber como "ia:<id>", com o selo; as pessoas continuam
+// com o id do usuário. Os nomes saem dessa lista em todas as telas e na prévia.
+const agentesDaPassagem = computed(() => agentesIa?.value || []);
+const todasComIa = computed(() => [
+  ...(Array.isArray(todas.value) ? todas.value : []),
+  ...agentesDaPassagem.value.map(agente => ({
+    id: `ia:${agente.id}`,
+    name: agente.name,
+    ia: true,
+    parado: agente.parado,
+    caixas: agente.caixas,
+  })),
+]);
+provide('passagemIa', { agentes: agentesDaPassagem, caixas });
 
 const view = ref('home');
 const passo = ref(0);
@@ -244,7 +260,7 @@ watch(
             <PassagemResumo
               :regra="regra"
               :etapas="etapas"
-              :pessoas="todas"
+              :pessoas="todasComIa"
               :incompletas="regrasIncompletas"
               :mostrar-erros="mostrarErros"
               :salvando="passagem.salvando.value"
@@ -264,7 +280,7 @@ watch(
             v-model="regra"
             nome="funil"
             :equipe="equipe"
-            :todas="todas"
+            :todas="todasComIa"
             :mostrar-erros="mostrarErros"
           />
           <PassagemComo
@@ -272,13 +288,13 @@ watch(
             v-model="regra"
             nome="funil"
             :equipe="equipe"
-            :todas="todas"
+            :todas="todasComIa"
             :mostrar-erros="mostrarErros"
           />
           <PassagemEtapas
             v-else-if="view === 'etapas'"
             :etapas="etapas"
-            :pessoas="todas"
+            :pessoas="todasComIa"
             :funil-ligado="regra.enabled"
             :incompletas="regrasIncompletas"
             :mostrar-erros="mostrarErros"
@@ -290,7 +306,7 @@ watch(
             v-model:passo="passo"
             :funil-ligado="regra.enabled"
             :equipe="equipe"
-            :todas="todas"
+            :todas="todasComIa"
             :mostrar-erros="mostrarErros"
           />
         </main>
@@ -306,7 +322,7 @@ watch(
             :etapa="etapa"
             :funil="funil"
             :equipe="equipe"
-            :todas="todas"
+            :todas="todasComIa"
             :ia-ligada="iaDoFunilLigada"
             :sem-caixa="!caixas.length"
           />

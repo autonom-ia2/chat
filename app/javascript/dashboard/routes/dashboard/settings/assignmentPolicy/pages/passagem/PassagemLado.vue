@@ -12,11 +12,13 @@ import PreviaQuadro from './previas/PreviaQuadro.vue';
 import {
   CENARIO_FORA,
   CENARIO_ONLINE,
+  agenteQueNaoRecebe,
   filaDoExemplo,
   nomeDe,
   primeiroNome,
   quemRecebeNoExemplo,
   regraDaEtapa,
+  regraQueVale,
 } from './passagem';
 
 // #1385 — a coluna da direita: em cada tela, o que acontece de verdade com a cliente de exemplo. Tudo sai do mesmo
@@ -53,12 +55,19 @@ const regraMostrada = computed(() => {
       : props.regra;
   return naTelaDoComo.value ? { ...base, prefer_online: true } : base;
 });
+// #1593: com o agente de IA parado, a prévia mostra o que acontece de verdade: alguém da equipe recebe.
+const agenteParado = computed(() =>
+  agenteQueNaoRecebe(regraMostrada.value, props.todas)
+);
+const regraDeVerdade = computed(() =>
+  regraQueVale(regraMostrada.value, props.todas)
+);
 const outra = computed(() =>
   primeiroNome(nomeDe(props.todas, regraMostrada.value.escalation_user_id))
 );
 const recebe = computed(() =>
   quemRecebeNoExemplo({
-    regra: regraMostrada.value,
+    regra: regraDeVerdade.value,
     equipe: props.equipe,
     todas: props.todas,
     cliente: cliente.value,
@@ -140,10 +149,15 @@ const moldura = computed(() => {
       />
       <PreviaQuando v-if="mostra === 'quando'" />
       <template v-else-if="mostra === 'quem'">
-        <PreviaFila :regra="regraMostrada" :fila="fila" :pessoa="recebe" />
-        <PreviaOnline
-          v-if="regraMostrada.pool_type !== 'user' || recebe"
+        <PreviaFila
           :regra="regraMostrada"
+          :fila="fila"
+          :pessoa="recebe"
+          :parado="agenteParado"
+        />
+        <PreviaOnline
+          v-if="regraDeVerdade.pool_type !== 'user' || recebe"
+          :regra="regraDeVerdade"
           :fila="fila"
           :pessoa="recebe"
         />
@@ -151,7 +165,7 @@ const moldura = computed(() => {
       <template v-else-if="mostra === 'conversa'">
         <PreviaCenario v-if="temDoisDias" v-model="cenario" />
         <PreviaConversa
-          :regra="regraMostrada"
+          :regra="regraDeVerdade"
           :recebe="recebe"
           :outra="outra"
           :ia-ligada="iaLigada"

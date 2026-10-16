@@ -297,7 +297,9 @@ module Crm
       HANDOFF_INVITE_TTL_SECONDS = 24 * 60 * 60
       HANDOFF_PICKUP_THRESHOLD_SECONDS = 15 * 60
       HANDOFF_MODES = %w[direct round_robin].freeze
-      HANDOFF_POOL_TYPES = %w[inbox user].freeze
+      # 'ai_agent' (#1593): "A mesma pessoa" é um agente de IA (pool_id = id do Autonomia::Agents::Agent). Só vale com a
+      # Fase 2 dos Agentes e na caixa em que ele trabalha; senão a conversa vai para alguém da equipe (Crm::Entrega).
+      HANDOFF_POOL_TYPES = %w[inbox user ai_agent].freeze
       HANDOFF_ESCALATION_ACTIONS = %w[renotify escalate].freeze
       HANDOFF_RENOTIFY_MAX = 8
       # Fluxo do handoff: r2_direct = atribui direto (comportamento legado);

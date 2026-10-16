@@ -50,6 +50,8 @@ import CrmSavedViews from '../components/list/CrmSavedViews.vue';
 import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
+import CrmAbaNumeros from '../components/numeros/CrmAbaNumeros.vue';
+import { useMenuNovo } from 'dashboard/components-next/sidebar/fork/useMenuNovo';
 import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
 // #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
@@ -160,7 +162,17 @@ const calendarioOuro = computed(
 const funilDoCalendario = ref(null);
 
 const currentPipelineId = ref('');
-const viewMode = ref(isCalendarOnly.value ? 'calendar' : 'kanban');
+// Menu novo (#1617): `?view=list|calendar` abre já na vista (a página Números volta por aqui) e a troca de
+// vista fica no endereço, para o recarregar abrir a mesma. Com a flag desligada, como sempre foi.
+const { ligado: menuNovo } = useMenuNovo();
+const VISTAS_PELO_ENDERECO = ['list', 'calendar'];
+const vistaDoEndereco = () =>
+  menuNovo.value
+    ? VISTAS_PELO_ENDERECO.find(vista => vista === route.query.view)
+    : undefined;
+const viewMode = ref(
+  isCalendarOnly.value ? 'calendar' : vistaDoEndereco() || 'kanban'
+);
 // The two CRM routes share this component, so the instance is reused on navigation:
 // keep viewMode in sync with the route (force calendar on the calendar-only page).
 watch(isCalendarOnly, only => {
@@ -1047,28 +1059,6 @@ const savePipeline = async payload => {
     );
   } catch {
     useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_SAVE_ERROR'));
-  }
-};
-
-const addPipelineInbox = async payload => {
-  try {
-    const link = await store.dispatch('crmKanban/createPipelineInbox', payload);
-    pipelineInboxes.value = [...pipelineInboxes.value, link];
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_ADDED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_SAVE_ERROR'));
-  }
-};
-
-const removePipelineInbox = async payload => {
-  try {
-    await store.dispatch('crmKanban/deletePipelineInbox', payload);
-    pipelineInboxes.value = pipelineInboxes.value.filter(
-      item => Number(item.inbox_id) !== Number(payload.inboxId)
-    );
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVE_ERROR'));
   }
 };
 
@@ -2272,6 +2262,13 @@ watch(
 
 const setViewMode = mode => {
   viewMode.value = mode;
+  if (!menuNovo.value || isCalendarOnly.value) return;
+  const resto = Object.fromEntries(
+    Object.entries(route.query).filter(([chave]) => chave !== 'view')
+  );
+  router.replace({
+    query: mode === 'kanban' ? resto : { ...resto, view: mode },
+  });
 };
 
 useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, handleRealtimeConnected);
@@ -2328,6 +2325,7 @@ onUnmounted(() => {
         <div
           v-if="!isCalendarOnly"
           class="flex items-center rounded-xl bg-n-alpha-2 p-1"
+          :class="{ 'flex-wrap': menuNovo }"
           role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
@@ -2347,6 +2345,7 @@ onUnmounted(() => {
             <span :class="mode.icon" class="size-3.5" aria-hidden="true" />
             {{ mode.label }}
           </button>
+          <CrmAbaNumeros />
         </div>
       </div>
 
@@ -3001,14 +3000,10 @@ onUnmounted(() => {
       :is-archiving="uiFlags.isArchivingPipeline"
       :is-deleting-stage="uiFlags.isDeletingStage"
       :is-loading-pipeline-inboxes="uiFlags.isFetchingPipelineInboxes"
-      :is-saving-pipeline-inbox="uiFlags.isSavingPipelineInbox"
-      :is-removing-pipeline-inbox="uiFlags.isRemovingPipelineInbox"
       :agents="agents"
       @save="savePipeline"
       @archive="archivePipeline"
       @delete-stage="deleteStage"
-      @add-pipeline-inbox="addPipelineInbox"
-      @remove-pipeline-inbox="removePipelineInbox"
       @close="closePipelineDrawer"
     />
 

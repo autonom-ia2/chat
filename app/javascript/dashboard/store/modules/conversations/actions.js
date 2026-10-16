@@ -65,8 +65,50 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
 
 const conversationListRequest = useAbortableRequest();
 
+// Filtro "Funil" (#1150) ligado na lista comum (pasta e filtro avançado não aplicam o funil).
+const isFunnelFilterActive = state =>
+  Boolean(state?.conversationFilters?.crmPipelineId) &&
+  !state.appliedFilters?.length;
+
+// Leitura mais recente dos funis de cada conversa: uma resposta mais velha que chega depois é descartada.
+const funnelReads = {};
+
+// A conversa do websocket entra (ou já está) na lista filtrada sem os funis: falta ler da API.
+const needsCrmFunnel = (state, conversationId) => {
+  if (!isFunnelFilterActive(state)) return false;
+  const listed = state.allConversations.find(({ id }) => id === conversationId);
+  return !Array.isArray(listed?.crm_pipeline_ids);
+};
+
 // actions
 const actions = {
+  // Filtro "Funil" da lista (#1150). O websocket não traz os funis da conversa (crm_pipeline_ids): o payload também vai
+  // ao contato pelo widget. Com filtro de funil (e sem pasta ou filtro avançado), a conversa da lista que está sem os
+  // funis, ou cujo card mudou, tem os funis lidos da API. Só o campo muda, e só em conversa que ainda está na lista: a
+  // leitura não põe conversa em Menções ou Em que participo nem passa por cima de um update mais novo do websocket.
+  // Se a leitura falhar: conversa que nunca teve os funis fica fora da lista filtrada e o próximo evento dela tenta de
+  // novo; a que já tinha fica com os funis anteriores até a próxima mudança do card ou a próxima leitura da lista.
+  refreshConversationFunnel: async (
+    { state, getters, commit },
+    conversationId
+  ) => {
+    if (!isFunnelFilterActive(state)) return;
+    if (!getters.getConversationById(conversationId)) return;
+    const read = (funnelReads[conversationId] || 0) + 1;
+    funnelReads[conversationId] = read;
+    try {
+      const { data } = await ConversationApi.show(conversationId);
+      if (funnelReads[conversationId] !== read) return;
+      commit(types.SET_CONVERSATION_CRM_PIPELINE_IDS, {
+        id: data.id,
+        crmPipelineIds: data.crm_pipeline_ids,
+        crmPipelineHidden: data.crm_pipeline_hidden,
+      });
+    } catch {
+      // Sem acesso ou falha de rede: fica o que havia (ver acima).
+    }
+  },
+
   getConversation: async ({ commit, dispatch }, conversationId) => {
     try {
       const response = await ConversationApi.show(conversationId);
@@ -524,6 +566,9 @@ const actions = {
     ) {
       commit(types.ADD_CONVERSATION, conversation);
       dispatch('contacts/setContact', sender);
+      if (isFunnelFilterActive(state)) {
+        dispatch('refreshConversationFunnel', conversation.id);
+      }
     }
   },
 
@@ -539,11 +584,13 @@ const actions = {
     }
   },
 
-  updateConversation({ commit, dispatch, rootGetters }, conversation) {
+  updateConversation({ commit, dispatch, state, rootGetters }, conversation) {
     const sender = conversation.meta?.sender;
+    const needsFunnel = needsCrmFunnel(state, conversation.id);
 
     commit(types.UPDATE_CONVERSATION, conversation);
     syncConversationCallVisibility(conversation, rootGetters?.getCurrentUserID);
+    if (needsFunnel) dispatch('refreshConversationFunnel', conversation.id);
 
     dispatch('conversationLabels/setConversationLabel', {
       id: conversation.id,

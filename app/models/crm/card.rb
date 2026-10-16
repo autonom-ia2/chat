@@ -106,6 +106,8 @@ class Crm::Card < ApplicationRecord
   after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id owner_id]) }
   # Agente de IA responsável por caixa + funil (#1447): o card em atendimento mudou de funil.
   after_commit :sync_responsible_agent, on: :update, if: :saved_change_to_pipeline_id?
+  # Decisão "a" (#1606): o card mudou de funil; a pessoa com a conversa pode não cuidar do funil novo.
+  after_commit :sugerir_repasse, on: :update, if: :saved_change_to_pipeline_id?
 
   validates :title, presence: true
   validates :currency, presence: true
@@ -174,6 +176,10 @@ class Crm::Card < ApplicationRecord
     return if resolved_inbox.blank?
 
     resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
+  end
+
+  def sugerir_repasse
+    Crm::RepassePorCardJob.perform_later(id)
   end
 
   def sync_responsible_agent

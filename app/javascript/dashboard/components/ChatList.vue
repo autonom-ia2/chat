@@ -13,6 +13,12 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
 import ChatTypeTabs from './widgets/ChatTypeTabs.vue';
+import FunnelFilter from 'dashboard/components-next/Conversation/FunnelFilter.vue';
+import {
+  FUNNEL_ALL,
+  readFunnelChoice,
+  writeFunnelChoice,
+} from 'dashboard/composables/useFunnelFilterChoice';
 import DeleteCustomViews from 'dashboard/routes/dashboard/customviews/DeleteCustomViews.vue';
 import ConversationBulkActions from './widgets/conversation/conversationBulkActions/Index.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
@@ -105,6 +111,15 @@ const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const currentAccountId = useMapGetter('getCurrentAccountId');
+
+// Filtro "Funil" (multifunil #1150): id do funil, "none" (Sem assunto) ou vazio (todos os meus). Lembrado por conta e
+// pessoa; vale para todas as listas de conversa.
+const isCrmEnabled = window.globalConfig?.CRM_KANBAN_ENABLED === 'true';
+const crmPipelineId = ref(
+  isCrmEnabled
+    ? readFunnelChoice(currentAccountId.value, currentUser.value?.id)
+    : FUNNEL_ALL
+);
 // We can't useFunctionGetter here since it needs to be called on setup?
 const getTeamFn = useMapGetter('teams/getTeam');
 const getConversationById = useMapGetter('getConversationById');
@@ -200,6 +215,14 @@ const assigneeTabItems = computed(() => {
   }));
 });
 
+// "Em que participo" abre na aba Todos (#1150): a conversa em que a pessoa participa costuma estar com outra pessoa.
+function defaultAssigneeTab() {
+  const { PARTICIPATING } = wootConstants.CONVERSATION_TYPE;
+  const { ALL, ME } = wootConstants.ASSIGNEE_TYPE;
+  const canSeeAll = assigneeTabItems.value.some(item => item.key === ALL);
+  return props.conversationType === PARTICIPATING && canSeeAll ? ALL : ME;
+}
+
 const showAssigneeInConversationCard = computed(() => {
   return (
     hasAppliedFiltersOrActiveFolders.value ||
@@ -269,6 +292,7 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
+    crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
   };
 });
 
@@ -298,7 +322,7 @@ const pageTitle = computed(() => {
   if (
     props.conversationType === wootConstants.CONVERSATION_TYPE.PARTICIPATING
   ) {
-    return t('CONVERSATION_PARTICIPANTS.SIDEBAR_MENU_TITLE');
+    return t('FORK_CONVERSATION_LIST.PARTICIPATING');
   }
   if (props.conversationType === wootConstants.CONVERSATION_TYPE.UNATTENDED) {
     return t('CHAT_LIST.UNATTENDED_HEADING');
@@ -817,6 +841,7 @@ useEmitter('fetch_conversation_stats', () => {
 });
 
 onMounted(() => {
+  activeAssigneeTab.value = defaultAssigneeTab();
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
   store.dispatch('setChatStatusFilter', activeStatus.value);
@@ -861,6 +886,10 @@ provide('isConversationSelected', isConversationSelected);
 provide('deleteConversation', handleDelete);
 
 watch(activeTeam, () => resetAndFetchData());
+watch(crmPipelineId, value => {
+  writeFunnelChoice(currentAccountId.value, currentUser.value?.id, value);
+  resetAndFetchData();
+});
 
 watch(
   computed(() => props.conversationInbox),
@@ -872,7 +901,14 @@ watch(
 );
 watch(
   computed(() => props.conversationType),
-  () => resetAndFetchData()
+  (type, previousType) => {
+    // Só entrar ou sair de "Em que participo" troca a aba; nas outras listas a escolha da pessoa fica.
+    const { PARTICIPATING } = wootConstants.CONVERSATION_TYPE;
+    if ([type, previousType].includes(PARTICIPATING)) {
+      activeAssigneeTab.value = defaultAssigneeTab();
+    }
+    resetAndFetchData();
+  }
 );
 
 watch(activeFolder, (newVal, oldVal) => {
@@ -934,6 +970,11 @@ watch(appliedFilters, () => resetBulkActions());
       :custom-views-id="foldersId"
       :open-last-item-after-delete="openLastItemAfterDeleteInFolder"
       @close="onCloseDeleteFoldersModal"
+    />
+
+    <FunnelFilter
+      v-if="isCrmEnabled && !hasAppliedFiltersOrActiveFolders"
+      v-model="crmPipelineId"
     />
 
     <ChatTypeTabs
