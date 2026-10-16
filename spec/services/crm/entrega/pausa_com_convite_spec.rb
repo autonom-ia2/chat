@@ -52,7 +52,8 @@ RSpec.describe 'Pausar agente de IA com convite aberto' do # rubocop:disable RSp
     expect(conversation.conversation_participants.pluck(:user_id)).to eq([ana.id])
   end
 
-  # Pega: o convite vencido prender a conversa sem robô; vencido, a passagem segue a regra de sempre (convida de novo).
+  # Pega: a guarda valer para o convite vencido e prender a conversa sem robô e sem ninguém (regressão do caminho de
+  # sempre: vencido, a passagem segue a regra e convida de novo).
   it 'convite já vencido: a regra convida de novo quem está online', :aggregate_failures do
     online(bruno)
 
