@@ -62,10 +62,10 @@ RSpec.describe 'CRM Caixas no CRM: quem recebe', type: :request do
         card = account.crm_cards.create!(pipeline: funil.first, stage: funil.last, contact: contact, title: funil.first.name,
                                          primary_conversation: conversa, inbox: inbox)
         motor = Crm::Entrega::QuemCuida.new(conversation: conversa, card: card).pessoas.map(&:id)
-        expect(motor).to eq(quem['funis'][funil.first.id.to_s])
+        expect(motor).to match_array(quem['funis'][funil.first.id.to_s])
       end
       sem_card = create(:conversation, account: account, inbox: inbox, contact: contact, status: :open).reload
-      expect(Crm::Entrega::QuemCuida.new(conversation: sem_card).pessoas.map(&:id)).to eq(quem['triagem'])
+      expect(Crm::Entrega::QuemCuida.new(conversation: sem_card).pessoas.map(&:id)).to match_array(quem['triagem'])
     end
 
     it 'follows the screen, not what is saved: unmarking "Só as que atende" makes Bruno receive' do
@@ -110,7 +110,9 @@ RSpec.describe 'CRM Caixas no CRM: quem recebe', type: :request do
       quem = quem_recebe
 
       expect(quem['funis'][pos_venda.first.id.to_s]).to eq([admin.id])
-      expect(quem['funis'][vendas.first.id.to_s]).to contain_exactly(admin.id, ana.id)
+      # Na ordem da tela, por nome: "Admin User" antes de "Ana Ribeiro".
+      expect(admin.available_name).to eq('Admin User')
+      expect(quem['funis'][vendas.first.id.to_s]).to eq([admin.id, ana.id])
     end
   end
 

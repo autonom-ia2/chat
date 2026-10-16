@@ -3249,6 +3249,7 @@
       "VOCE": "{nome} (você)",
       "COM_A_CONVERSA": "Está com a conversa",
       "NINGUEM": "Não há mais ninguém nesta caixa para receber agora.",
+      "ERRO_LISTA": "Não deu para ver quem pode receber agora.",
       "CONFIRMA_SAI": "{nome} assume a conversa e você sai dela.",
       "CONFIRMA": "{nome} assume a conversa.",
       "CANCELAR": "Cancelar",
