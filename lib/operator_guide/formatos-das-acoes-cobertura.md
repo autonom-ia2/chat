@@ -5,10 +5,10 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 609 |
+| No catálogo | 610 |
 | Sem corpo | 182 |
-| Com corpo | 427 |
-| Com corpo e formato completo | 349 (81,7%) |
+| Com corpo | 428 |
+| Com corpo e formato completo | 350 (81,8%) |
 | Com corpo e formato incompleto | 78 |
 
 ## Por dentro dos campos
@@ -205,8 +205,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 359 |
-| Com parâmetros conhecidos | 308 |
+| No catálogo | 361 |
+| Com parâmetros conhecidos | 310 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

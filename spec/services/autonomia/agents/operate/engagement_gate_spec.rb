@@ -86,6 +86,43 @@ RSpec.describe Autonomia::Agents::Operate::EngagementGate do
     end
   end
 
+  # #1619: com a flag, a porta lê só o horário do Chatwoot, no fuso da conta; desligada, como acima.
+  describe 'response window with the horario_unico_caixa flag' do
+    let(:account) { create(:account, reporting_timezone: 'America/Sao_Paulo') }
+    # Quarta: 15:00 (aberto em SP, fechado em UTC) e 17:30 (fechado no Chatwoot, aberto no calendário do CRM).
+    let(:afternoon) { Time.zone.parse('2026-09-02 15:00 -03:00') }
+    let(:late) { Time.zone.parse('2026-09-02 17:30 -03:00') }
+
+    before do
+      inbox.update!(working_hours_enabled: true) # padrão: seg-sex 9h-17h
+      inbox.update_column(:timezone, 'UTC') # rubocop:disable Rails/SkipsModelValidations
+      create(:crm_service_schedule, account: account, owner: inbox, weekdays: [1, 2, 3, 4, 5], hours: [['09:00', '18:00']])
+    end
+
+    it 'keeps preferring the inbox service schedule while the flag is off' do
+      travel_to(late) { expect(reason_for('response_window' => 'business_hours')).to be_nil }
+    end
+
+    context 'when the flag is on' do
+      before { account.enable_features!(Autonomia::HorarioUnicoCaixa::FEATURE) }
+
+      it 'ignores the inbox service schedule and follows the inbox working hours' do
+        travel_to(late) { expect(reason_for('response_window' => 'business_hours')).to eq('schedule') }
+        travel_to(late) { expect(reason_for('response_window' => 'outside_business_hours')).to be_nil }
+      end
+
+      it 'reads the working hours in the account timezone, not in the inbox column' do
+        travel_to(afternoon) { expect(reason_for('response_window' => 'business_hours')).to be_nil }
+      end
+
+      it 'treats the inbox as always open when its working hours are off' do
+        inbox.update!(working_hours_enabled: false)
+
+        travel_to(late) { expect(reason_for('response_window' => 'business_hours')).to be_nil }
+      end
+    end
+  end
+
   it 'treats an inbox without any schedule source as always open' do
     expect(reason_for('response_window' => 'business_hours')).to be_nil
     expect(reason_for('response_window' => 'outside_business_hours')).to be_nil

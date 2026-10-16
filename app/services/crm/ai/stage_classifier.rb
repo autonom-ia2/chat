@@ -116,10 +116,10 @@ module Crm
 
       private
 
-      # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT.
-      # Estágios/critérios DINÂMICOS ficam no user_input, nunca no prefixo. Ver ClassifierPrompt.
+      # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
+      # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
       def instructions
-        ClassifierPrompt::TEXT
+        ClassifierPrompt.para(@eligible_agents)
       end
 
       def user_input

@@ -3,7 +3,8 @@
 # (Crm::Access::ConversationScope, parte A).
 #
 # Sem linha de acesso restritiva na caixa (o caso de todo mundo hoje), uma consulta só e nada muda. Com restrição, os
-# dados da conversa são lidos uma vez (atendente, participantes, funis dos cards) e cada pessoa restrita é avaliada em
+# dados da conversa são lidos uma vez (atendente, participantes, funis e donos dos cards) e cada pessoa restrita é
+# avaliada em
 # memória pela mesma regra do link (ConversationScope.visible_by_facts?): o custo não cresce por pessoa, e isto roda
 # dentro do envio de cada mensagem.
 class Crm::Access::Recipients
@@ -86,23 +87,24 @@ class Crm::Access::Recipients
   end
 
   def conversation_facts
+    cards = binding_cards
     {
       assignee_id: @conversation.assignee_id,
       participant_ids: ConversationParticipant.where(conversation_id: @conversation.id).pluck(:user_id),
-      card_pipeline_ids: card_pipeline_ids
+      card_pipeline_ids: cards.map(&:first).uniq,
+      card_owner_ids: cards.filter_map(&:last).uniq
     }
   end
 
-  # Funis dos cards que prendem a conversa: a principal de cada card ou um vínculo em crm_card_conversations.
-  # Card aberto manda (decisão do Rodrigo em 11/10): com card aberto, só os funis dos abertos; senão os dos ganhos e
-  # perdidos. Mesma regra do ConversationScope#pipelines_sql.
-  def card_pipeline_ids
+  # [funil, status, dono] dos cards que prendem a conversa: a principal de cada card ou um vínculo em
+  # crm_card_conversations. Card aberto manda (decisão do Rodrigo em 11/10): com card aberto, só os abertos; senão os
+  # ganhos e perdidos. Mesma regra do ConversationScope#binding_card_sql, para o funil e para o dono (#1652).
+  def binding_cards
     linked = Crm::CardConversation.where(account_id: @conversation.account_id, conversation_id: @conversation.id).select(:card_id)
     cards = Crm::Card.where(account_id: @conversation.account_id)
                      .where.not(status: Crm::Access::ConversationScope::RELEASED)
-    rows = cards.where(conversation_id: @conversation.id).or(cards.where(id: linked)).distinct.pluck(:pipeline_id, :status)
+    rows = cards.where(conversation_id: @conversation.id).or(cards.where(id: linked)).distinct.pluck(:pipeline_id, :status, :owner_id)
     open_status = Crm::Card.statuses.key(Crm::Access::ConversationScope::OPEN.first)
-    open = rows.select { |_pipeline_id, status| status == open_status }
-    (open.presence || rows).map(&:first).uniq
+    rows.select { |_pipeline_id, status, _owner_id| status == open_status }.presence || rows
   end
 end

@@ -35,10 +35,15 @@ class Crm::Access::VisiblePipelines
 
   # Card avulso (sem caixa): o CardGuard só deixa pôr num funil que a pessoa enxerga.
   def visible?(pipeline_id)
-    !restricted? || ids(include_only_own: true).include?(pipeline_id.to_i)
+    !restricted? || kanban_ids.include?(pipeline_id.to_i)
   end
 
   private
+
+  # A lista de conversas pergunta por vários funis de uma vez (#1150): calcula uma vez só.
+  def kanban_ids
+    @kanban_ids ||= ids(include_only_own: true)
+  end
 
   # include_only_own: o Kanban mostra também os funis em que ela só vê os próprios cards ("Só as suas" e caixa em "só
   # atribuídas"); o painel não, porque soma os cards dos outros.

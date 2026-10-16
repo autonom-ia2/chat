@@ -101,8 +101,9 @@ class Crm::Card < ApplicationRecord
   # Ganho só existe em funil que conta como venda: quem comprou vira cliente (#1144). No modelo, para valer em todo
   # caminho que grava o ganho (fechar, criar já ganho, lote, automação).
   after_save :promote_contact_to_customer, if: -> { saved_change_to_status?(to: 'won') && contact.present? }
-  # Acesso por funil (#1148): funil, status e conversa principal do card decidem quem vê a conversa.
-  after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id]) }
+  # Acesso por funil (#1148): funil, status, conversa principal e dono (#1652, "Só as suas") do card decidem quem vê a
+  # conversa.
+  after_commit :invalidate_funnel_counts, if: -> { saved_changes.keys.intersect?(%w[pipeline_id status conversation_id owner_id]) }
   # Agente de IA responsável por caixa + funil (#1447): o card em atendimento mudou de funil.
   after_commit :sync_responsible_agent, on: :update, if: :saved_change_to_pipeline_id?
   # Decisão "a" (#1606): o card mudou de funil; a pessoa com a conversa pode não cuidar do funil novo.
@@ -187,10 +188,16 @@ class Crm::Card < ApplicationRecord
 
   def invalidate_funnel_counts
     return unless Crm::Access::AccountFlag.any?(account_id)
+    return if owner_change_only? && !Crm::InboxAgentAccess.exists?(account_id: account_id, only_own: true)
 
     previous_conversation_id = saved_changes['conversation_id']&.first
     conversation_ids = [conversation_id, previous_conversation_id] + card_conversations.pluck(:conversation_id)
     Crm::Access::CountInvalidation.card_changed!(account_id, conversation_ids)
+  end
+
+  # O dono só decide quem vê em "Só as suas" (#1652): sem ninguém nesse modo na conta, trocar o dono não muda a visão.
+  def owner_change_only?
+    !saved_changes.keys.intersect?(%w[pipeline_id status conversation_id])
   end
 
   def ensure_activity_defaults
