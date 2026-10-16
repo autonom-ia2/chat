@@ -70,7 +70,7 @@ describe('EtapaConfira', () => {
     [false, 'chegou', 'O card nasce assim que a conversa chega.'],
     [true, 'chegou', 'O card nasce com a primeira mensagem, e a IA dá o nome.'],
     [false, 'off', 'Nada acontece sozinho: a equipe cria o card.'],
-    [true, 'off', 'O sistema cria o card quando entende o assunto.'],
+    [true, 'off', 'O sistema cria um card para cada pedido do cliente.'],
   ])(
     'with one pipeline and the subject AI flag %s, sums up "%s" the same way as step 3 (#1676)',
     (ligada, modo, resumo) => {
@@ -112,7 +112,9 @@ describe('EtapaConfira', () => {
       .findAll('li')
       .map(item => item.text())
       .join(' ');
-    expect(muda).toContain('O sistema cria o card quando entende o assunto.');
+    expect(muda).toContain(
+      'O sistema cria um card para cada pedido do cliente.'
+    );
     expect(muda).not.toContain('a equipe cria o card');
   });
 

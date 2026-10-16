@@ -28,9 +28,10 @@ const iaDeAssunto = useIaDeAssunto();
 const chave = opcao => chaveDoModo(opcao, props.umFunil, iaDeAssunto.value);
 // O que o sistema faz com a opção, não o valor gravado: 'off' de 1 funil com a
 // IA de assunto entende o assunto como o 'auto' de vários.
-const entendeAssunto = opcao => ['AUTO', 'SUGGEST'].includes(chave(opcao));
+const entendeAssunto = opcao =>
+  ['AUTO', 'AUTO_UM', 'SUGGEST'].includes(chave(opcao));
 const usaIaDoFunil = opcao =>
-  ['AUTO', 'SUGGEST', 'CHEGOU_IA'].includes(chave(opcao));
+  ['AUTO', 'AUTO_UM', 'SUGGEST', 'CHEGOU_IA'].includes(chave(opcao));
 </script>
 
 <template>

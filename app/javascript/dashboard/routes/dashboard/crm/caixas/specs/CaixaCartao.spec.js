@@ -79,7 +79,7 @@ describe('CaixaCartao', () => {
     ['off', true, 'O card nasce assim que a conversa chega.'],
     ['auto', true, 'O card nasce com a primeira mensagem, e a IA dá o nome.'],
     ['off', false, 'Nada acontece sozinho: a equipe cria o card.'],
-    ['auto', false, 'O sistema cria o card quando entende o assunto.'],
+    ['auto', false, 'O sistema cria um card para cada pedido do cliente.'],
   ])(
     'one pipeline, saved subject AI %s, card on arrival %s: says what the system does (#1676)',
     (modo, chegou, frase) => {

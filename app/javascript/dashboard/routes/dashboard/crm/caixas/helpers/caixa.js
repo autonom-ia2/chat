@@ -178,9 +178,10 @@ export const mudancas = (
     }
   });
 
-  // #1676: compara o que o sistema faz, não o valor gravado. Com a IA de
-  // assunto em 1 funil, 'off' de 1 funil é o mesmo que 'auto' de vários. Antes
-  // de salvar vale a IA de assunto gravada na caixa; depois, a flag da conta.
+  // #1676: compara o que o sistema faz (a chave do texto), não o valor gravado.
+  // Com a IA de assunto em 1 funil, 'off' de 1 funil cria um card por pedido
+  // (AUTO_UM), diferente de 'off' de vários (à mão). Antes de salvar vale a IA
+  // de assunto gravada na caixa; depois, a flag da conta.
   const modoAntes = chaveDoModo(
     antes.modo,
     umFunilSo(antes, funis),

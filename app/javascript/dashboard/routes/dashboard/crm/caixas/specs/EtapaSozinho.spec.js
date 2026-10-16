@@ -6,9 +6,9 @@ import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
 // #1676 — com a flag crm_avaliar_toda_mensagem da conta, a caixa de 1 funil tem
-// a IA de assunto: "à mão" vira "quando entender o assunto" (o mesmo texto da
-// caixa de vários funis) e "assim que chega" diz que a IA dá o nome. Sem a
-// flag, os textos de sempre.
+// a IA de assunto: "à mão" vira "quando entender o assunto" (texto próprio de
+// 1 funil: um card para cada pedido) e "assim que chega" diz que a IA dá o
+// nome. Sem a flag, os textos de sempre. A caixa de vários funis não muda.
 const conta = vi.hoisted(() => ({ ia: false }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
@@ -60,7 +60,7 @@ describe('EtapaSozinho', () => {
     expect(opcao(wrapper, 'off')).toContain('A equipe cria cada card à mão.');
   });
 
-  it('with the flag: "by hand" becomes "when it understands", with the several-pipelines text', () => {
+  it('with the flag: "by hand" becomes "when it understands", with the one-pipeline text (a card per request)', () => {
     conta.ia = true;
     const wrapper = render({ modo: 'off' });
 
@@ -68,12 +68,13 @@ describe('EtapaSozinho', () => {
       'Criar o card quando entender o assunto'
     );
     expect(opcao(wrapper, 'off')).toContain(
-      'O sistema lê a conversa, escolhe o funil certo e cria o card.'
+      'O sistema lê a conversa e cria um card para cada pedido do cliente.'
     );
     expect(opcao(wrapper, 'off')).not.toContain('à mão');
+    expect(opcao(wrapper, 'off')).not.toContain('escolhe o funil certo');
     expect(wrapper.find('[data-exemplo] .i-lucide-hand').exists()).toBe(false);
     expect(wrapper.find('[data-exemplo]').text()).toContain(
-      'O sistema entende que é Vendas e cria o card.'
+      'O cliente pede dois produtos diferentes: são dois cards em Vendas.'
     );
   });
 
@@ -118,12 +119,15 @@ describe('EtapaSozinho', () => {
 
     expect(opcao(wrapper, 'off')).toContain('Não fazer nada sozinho');
     expect(wrapper.find('[data-modo="suggest"]').exists()).toBe(true);
+    expect(opcao(wrapper, 'auto')).toContain(
+      'O sistema lê a conversa, escolhe o funil certo e cria o card.'
+    );
   });
 });
 
 describe('chaveDoModo', () => {
   it.each([
-    ['off', true, true, 'AUTO'],
+    ['off', true, true, 'AUTO_UM'],
     ['chegou', true, true, 'CHEGOU_IA'],
     ['off', true, false, 'OFF'],
     ['chegou', true, false, 'CHEGOU'],
