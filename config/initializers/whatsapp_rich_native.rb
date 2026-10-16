@@ -29,9 +29,17 @@ Rails.application.config.to_prepare do
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::RetryAsText
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::RetryAsText)
   end
-  # Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron.
+  Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
+end
+
+# Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron (Waha::RichNative::ColdStart).
+# Registrado DEPOIS da inicialização (e de novo a cada recarga de código): carregar `Account` dentro do `to_prepare` da
+# partida carrega junto o `Team` (CacheKeys), cuja validação lê o I18n na carga da classe, antes de as traduções
+# existirem (a mensagem de "presença" ficaria "Translation missing").
+register_rich_native_cold_start = lambda do
   if Account._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::ColdStart }
     Account.after_update_commit Waha::RichNative::ColdStart
   end
-  Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
 end
+Rails.application.config.after_initialize { register_rich_native_cold_start.call }
+Rails.application.config.to_prepare { register_rich_native_cold_start.call if Rails.application.initialized? }
