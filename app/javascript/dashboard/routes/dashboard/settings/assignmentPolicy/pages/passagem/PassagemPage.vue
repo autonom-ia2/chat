@@ -13,11 +13,12 @@ import PassagemComo from './PassagemComo.vue';
 import PassagemEtapas from './PassagemEtapas.vue';
 import PassagemEtapa from './PassagemEtapa.vue';
 import PassagemAvisos from './PassagemAvisos.vue';
+import PassagemAvisoRegra from './PassagemAvisoRegra.vue';
 import PassagemLado from './PassagemLado.vue';
 import { usePassagem } from './usePassagem';
 import { usePassagemRodape } from './usePassagemRodape';
 import { usePassagemVolta } from './usePassagemVolta';
-import { ETAPA_PROPRIA } from './passagem';
+import { ETAPA_PROPRIA, fixasQueNaoRecebem } from './passagem';
 
 // #1385 — a tela "Atribuição e transferência para humano", na família das telas de funil (#1384): herói
 // escuro com o nome do funil, cartões-frase com "Alterar", prévia com a cliente de exemplo à direita e um botão azul por
@@ -40,6 +41,7 @@ const {
   equipe,
   iaDoFunilLigada,
   agentesIa,
+  recebemPorCaixa,
   regra,
   etapas,
   alterado,
@@ -170,6 +172,24 @@ const heroi = computed(() => {
   };
 });
 
+// #1140 (correção 3) — regra salva que não vai rodar como está: a IA do funil desligada, ou a pessoa fixa que não pode
+// receber numa caixa (quem pode receber vem do servidor, pela regra do motor de entrega).
+const temRegraLigada = computed(
+  () =>
+    regra.value.enabled ||
+    etapas.value.some(item => item.modo === ETAPA_PROPRIA)
+);
+const regraSemIa = computed(
+  () => !iaDoFunilLigada.value && temRegraLigada.value
+);
+const fixas = computed(() =>
+  fixasQueNaoRecebem({
+    regra: regra.value,
+    etapas: etapas.value,
+    recebemPorCaixa: recebemPorCaixa.value,
+  })
+);
+
 const aoVoltar = () => {
   if (view.value === 'home') {
     fechar();
@@ -251,9 +271,16 @@ watch(
       >
         <main class="flex min-w-0 flex-col gap-5 px-5 py-7 sm:px-8">
           <template v-if="view === 'home'">
+            <PassagemAvisoRegra
+              v-if="regraSemIa || fixas.length"
+              :sem-ia="regraSemIa"
+              :fixas="fixas"
+              :pessoas="todasComIa"
+              :funil-id="funilId"
+            />
             <PassagemAvisos
-              v-if="!iaDoFunilLigada || !caixas.length"
-              :ia-ligada="iaDoFunilLigada"
+              v-if="(!iaDoFunilLigada && !regraSemIa) || !caixas.length"
+              :ia-ligada="iaDoFunilLigada || regraSemIa"
               :sem-caixa="!caixas.length"
               :funil-id="funilId"
             />

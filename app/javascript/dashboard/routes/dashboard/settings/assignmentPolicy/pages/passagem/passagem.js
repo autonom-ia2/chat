@@ -377,3 +377,22 @@ export const fraseDaSituacao = situacao => {
   if (!situacao.total) return { chave: 'LIGADA_SEM_ETAPAS', jeito };
   return { chave: situacao.jeito ? 'LIGADA' : 'LIGADA_MISTO', jeito };
 };
+
+// #1140 (correção 3) — a pessoa fixa de cada regra ligada (a do funil e a de cada etapa do seu jeito) que o servidor diz
+// não poder receber numa caixa do funil (`recebem_por_caixa`, pela regra do motor de entrega). Lá a conversa vai para
+// quem cuida do funil. -> [{ etapa: nome ou null (a regra do funil), pessoaId, caixas: [nome] }]
+export const fixasQueNaoRecebem = ({ regra, etapas, recebemPorCaixa }) =>
+  [
+    ...(regra.enabled ? [{ etapa: null, regra }] : []),
+    ...etapas
+      .filter(etapa => etapa.modo === ETAPA_PROPRIA)
+      .map(etapa => ({ etapa: etapa.nome, regra: etapa.regra })),
+  ].flatMap(({ etapa, regra: daVez }) => {
+    const pessoaId = daVez.pool_id;
+    if (daVez.pool_type !== 'user' || !pessoaId || ehAgente(pessoaId))
+      return [];
+    const caixas = (recebemPorCaixa || [])
+      .filter(caixa => !caixa.user_ids.includes(pessoaId))
+      .map(caixa => caixa.name);
+    return caixas.length ? [{ etapa, pessoaId, caixas }] : [];
+  });

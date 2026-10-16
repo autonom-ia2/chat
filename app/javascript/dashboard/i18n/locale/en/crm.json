@@ -3072,6 +3072,13 @@
         "BOTAO_FUNIL": "Open the pipeline",
         "BOTAO_CAIXA": "Connect an inbox"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "This rule does not fully apply:",
+        "SEM_IA": "This pipeline's AI is turned off: it does not notice when the customer asks for a person. The rule still applies when the inbox bot or AI agent hands over the conversation and when the conversation leaves triage.",
+        "FIXA_FUNIL": "{nome} cannot receive conversations from this pipeline in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "FIXA_ETAPA": "In the {etapa} stage, {nome} cannot receive conversations in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "ALGUEM": "The chosen person"
+      },
       "PREVIA": {
         "SELO": "Preview",
         "SELO_AGORA": "Now",

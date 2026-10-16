@@ -6,7 +6,7 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
 
   def show
     authorize @pipeline, :manage_ai?
-    @ai_settings = Crm::Ai::SettingsPresenter.new(pipeline: @pipeline).perform
+    @ai_settings = Crm::Ai::SettingsPresenter.new(pipeline: @pipeline, quem_recebe: params[:quem_recebe].present?).perform
   end
 
   def update
