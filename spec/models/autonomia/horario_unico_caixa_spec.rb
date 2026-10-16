@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# #1619: com a flag `horario_unico_caixa`, a caixa segue o fuso da conta; desligada, vale a coluna.
+# #1619: com a flag `horario_unico_caixa`, a caixa segue o fuso da conta (ou o padrão do CRM, se a conta não tiver);
+# desligada, vale a coluna.
 RSpec.describe Autonomia::HorarioUnicoCaixa do
   let(:account) { create(:account, reporting_timezone: 'America/Sao_Paulo') }
   let(:inbox) { create(:inbox, account: account) }
@@ -43,10 +44,20 @@ RSpec.describe Autonomia::HorarioUnicoCaixa do
         expect(inbox).to be_valid
       end
 
-      it 'falls back to the column when the account has no valid timezone' do
-        account.update_column(:settings, account.settings.except('reporting_timezone')) # rubocop:disable Rails/SkipsModelValidations
+      # Conta sem fuso: o padrão do CRM, o mesmo que o painel recebe em CRM_DEFAULT_TIMEZONE, nunca a coluna da caixa.
+      context 'when the account has no timezone' do
+        before { account.update_column(:settings, account.settings.except('reporting_timezone')) } # rubocop:disable Rails/SkipsModelValidations
 
-        expect(inbox.reload.timezone).to eq('UTC')
+        it 'returns the CRM default timezone, not the column' do
+          expect(inbox.reload.timezone).to eq('America/Sao_Paulo')
+          expect(inbox[:timezone]).to eq('UTC')
+        end
+
+        it 'follows a configured CRM_DEFAULT_TIMEZONE, as the dashboard does' do
+          with_modified_env CRM_DEFAULT_TIMEZONE: 'America/Manaus' do
+            expect(inbox.reload.timezone).to eq('America/Manaus')
+          end
+        end
       end
 
       it 'reads the working hours in the account timezone' do

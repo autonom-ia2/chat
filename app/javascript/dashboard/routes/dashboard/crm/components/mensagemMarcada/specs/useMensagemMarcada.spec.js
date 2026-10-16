@@ -23,7 +23,7 @@ const novaLoja = () => {
   const store = {
     getters: {
       'inboxes/getInboxes': [OFICIAL, API],
-      'inboxes/getFilteredWhatsAppTemplates': () => [MODELO],
+      'inboxes/getConversationWhatsAppTemplates': () => [MODELO],
     },
     dispatch,
   };

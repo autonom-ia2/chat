@@ -86,12 +86,6 @@ const alternar = () => {
       />
       <template v-if="!recolhido">
         <span class="flex-1 min-w-0 truncate text-start">{{ rotulo }}</span>
-        <kbd
-          class="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium font-sans border"
-          :class="[tema.linha, tema.textoFilho]"
-        >
-          {{ tecla }}
-        </kbd>
       </template>
     </button>
     <ForkDica

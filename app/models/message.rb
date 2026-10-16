@@ -491,8 +491,11 @@ class Message < ApplicationRecord
     return unless incoming?
 
     conversation.open! if conversation.snoozed?
+    return unless conversation.resolved?
 
-    reopen_resolved_conversation if conversation.resolved?
+    reopen_resolved_conversation
+    # Fork (#1140): com o dono offline, o motor de entrega decide quem atende a conversa reaberta.
+    Crm::Entrega::Reabertura.new(conversation: conversation).call
   end
 
   def mark_pending_conversation_as_open_for_human_response

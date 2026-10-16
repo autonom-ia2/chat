@@ -10,6 +10,8 @@ import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 import OndeQuandoEscolha from '../OndeQuandoEscolha.vue';
+import NotaHorarioDoCanal from '../NotaHorarioDoCanal.vue';
+import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 import NotaQuemRecebe from './NotaQuemRecebe.vue';
 import TambemRecebe from '../onde/TambemRecebe.vue';
 import {
@@ -76,6 +78,7 @@ const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 const { podeConectarCanal } = usePermissoesDaJornada();
+const { ligado: horarioUnico } = useHorarioUnicoCaixa();
 const { comecar, comecando } = useComecarAAtender();
 const NS = 'AGENTS.JORNADA.PAGINA.ONDE';
 
@@ -518,6 +521,11 @@ const rotuloVoltar = computed(() => {
             v-model="quando"
             :rotulo="t(`${NS}.QUANDO_ROTULO`)"
             :opcoes="opcoesQuando"
+          />
+          <NotaHorarioDoCanal
+            v-if="horarioUnico"
+            :inbox-id="inboxAtual"
+            :horario="horarioAtual"
           />
         </section>
         <NotaQuemRecebe :nome="nome" />

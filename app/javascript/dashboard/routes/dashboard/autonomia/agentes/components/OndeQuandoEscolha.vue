@@ -11,6 +11,8 @@ import {
 } from '../utils/canais';
 import EscolhaRadio from './EscolhaRadio.vue';
 import EscolhaDoCanal from './EscolhaDoCanal.vue';
+import NotaHorarioDoCanal from './NotaHorarioDoCanal.vue';
+import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 
 // #1181 — "Onde e quando {nome} atende" (protótipo T05 e T10). Onde: caixas da leitura L2 (livre,
 // já com outro agente — com troca — ou com outro sistema, que não dá para escolher). Quando: sempre,
@@ -46,6 +48,7 @@ const emit = defineEmits(['update:onde', 'update:quando', 'update:primeiro']);
 const { t } = useI18n();
 const router = useRouter();
 const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
+const { ligado: horarioUnico } = useHorarioUnicoCaixa();
 
 const NS = 'AGENTS.JORNADA.ONDE_QUANDO';
 const QUANDO = {
@@ -220,6 +223,11 @@ const linkQuemRecebe = computed(
       >
         {{ t(`${NS}.HORARIO_DE_CADA`, { nome }) }}
       </p>
+      <NotaHorarioDoCanal
+        v-if="horarioUnico"
+        :inbox-id="ondeDoHorario"
+        :horario="horarioDe(ondeDoHorario)"
+      />
     </section>
 
     <div class="flex flex-col gap-1 p-3 text-sm rounded-xl bg-n-blue-2">

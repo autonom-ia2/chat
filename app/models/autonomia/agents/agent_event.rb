@@ -52,15 +52,18 @@ module Autonomia
       # teto). Gravado no AJUDANTE, com principal_id, tempo, rodadas e custo nos metadados; nunca texto.
       # skipped_assunto_atrasou (#1606): o turno esperou o assunto ser decidido, passou do teto e respondeu com o dono de
       # agora. O agente respondeu (o `replied` conta); este evento só mostra a causa, uma vez por conversa.
+      # silenciado_pessoa_respondeu (#1669): uma pessoa da equipe respondeu a mensagem do cliente e a IA não respondeu
+      # aquela mensagem. `message_id` aqui é a mensagem do CLIENTE do turno (não uma resposta postada); `metadata` leva
+      # só a etapa (`antes_da_ia`, `na_entrega`, `pedaco_<n>`). Nunca nome nem texto. Uma vez por mensagem do cliente.
       enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
                          skipped_escolhas_incompletas: 4, parado_sem_onde_trabalhar: 5, consulted: 6, consult_failed: 7,
-                         skipped_assunto_atrasou: 8 }
+                         skipped_assunto_atrasou: 8, silenciado_pessoa_respondeu: 9 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
       # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento
       # desses existe para o corretor ver a causa do silêncio, não para a conversa contar como atendida.
       NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas parado_sem_onde_trabalhar consulted consult_failed
-                                 skipped_assunto_atrasou].freeze
+                                 skipped_assunto_atrasou silenciado_pessoa_respondeu].freeze
       # Tema 14: os eventos do ajudante (consultado por outro agente, nunca dono da conversa).
       AJUDANTE_TYPES = %w[consulted consult_failed].freeze
 

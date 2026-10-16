@@ -3481,6 +3481,8 @@
         "INBOX_TITLE": "Inbox calendar — {name}",
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
+        "FUSO_DA_CONTA": "In the account time zone: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "In the account time zone.",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",
@@ -3495,6 +3497,7 @@
         "REMOVE_BLOCK": "Remove block",
         "START_LABEL": "Start",
         "END_LABEL": "End",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "End time must be after the start time",
         "NO_BLOCKS": "Closed",
         "SAVE": "Save calendar",
@@ -4034,6 +4037,8 @@
       "AUTO": "The system creates the card when it understands the subject.",
       "SUGGEST": "The system suggests the subject and the team confirms.",
       "OFF": "Nothing happens automatically: the team creates the card.",
+      "CHEGOU_IA": "The card is created with the first message, and the AI names it.",
+      "AUTO_UM": "The system creates a card for each customer request.",
       "CHEGOU": "The card is created as soon as the conversation arrives."
     },
     "ETAPAS": {
@@ -4067,9 +4072,16 @@
       "CHEGOU": "Create the card as soon as the conversation arrives",
       "CHEGOU_TEXTO": "Every new conversation becomes a card right away.",
       "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "CHEGOU_IA": "Create the card as soon as the conversation arrives",
+      "CHEGOU_IA_TEXTO": "The card is created with the first message, and the AI names it.",
+      "CHEGOU_IA_EXEMPLO": "The card starts in {funil}, at {etapa}, and the AI names it once it understands the request. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "AUTO_UM": "Create the card when it understands the subject",
+      "AUTO_UM_TEXTO": "The system reads the conversation and creates a card for each customer request.",
+      "AUTO_UM_EXEMPLO": "The customer asks for two different products: that makes two cards in {funil}.",
       "RECOMENDADO": "Recommended",
       "EXEMPLO": "Example",
       "MENSAGEM": "Hi! How much is it?",
+      "MENSAGEM_DOIS_PEDIDOS": "I want to know the price of the basic plan and also of the full plan.",
       "NAO_ENTENDEU": "If the subject isn't clear, the conversation stays without a subject and goes to whoever handles those.",
       "ALGUEM": "someone on the team",
       "SEM_IA": "AI is off in {funis}. Turn it on in Edit pipeline → Pipeline AI so it can recognize this subject."
