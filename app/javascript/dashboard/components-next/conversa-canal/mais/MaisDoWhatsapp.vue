@@ -1,6 +1,6 @@
 <script setup>
-// O "+" da barra de digitar (#1702), como o clipe do WhatsApp: documento e foto usam o
-// anexo de sempre; localização, contato, botão de link, opções e pedir localização
+// O "+" da barra de digitar (#1702), como o clipe do WhatsApp: documento e fotos
+// e vídeos entram pelo anexo de sempre; localização, contato, botão de link, opções e pedir localização
 // abrem uma janela curta com a prévia do que o cliente vai ver.
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -16,7 +16,7 @@ const props = defineProps({
   enviar: { type: Function, required: true },
 });
 
-const emit = defineEmits(['anexar']);
+const emit = defineEmits(['anexar', 'documentos']);
 
 const { t } = useI18n();
 const aberto = ref(false);
@@ -40,9 +40,11 @@ const viraTexto = computed(() => !ehOficial.value || soTexto.value);
 // cores do WhatsApp; ícones da biblioteca do painel. `separado`: linha antes,
 // como a que separa Catálogo e Resposta rápida no app.
 const ITENS = [
-  // Os dois abrem o seletor de arquivo do clipe; "Fotos e vídeos" só mostra mídia.
+  // Como no app: "Documento" manda qualquer arquivo como documento (foto e vídeo
+  // chegam como arquivo, sem compactar); "Fotos e vídeos" manda como mídia, pelo
+  // seletor do clipe, só com foto e vídeo.
   {
-    tipo: 'anexo',
+    tipo: 'documento',
     chave: 'DOCUMENTO',
     icone: 'i-ph-file-text-fill',
     cor: 'text-[#7F66FF]',
@@ -98,7 +100,7 @@ const itens = computed(() =>
   ITENS.filter(
     item =>
       (!item.soOficial || !viraTexto.value) &&
-      (item.tipo !== 'anexo' || !soTexto.value)
+      (!['anexo', 'documento'].includes(item.tipo) || !soTexto.value)
   )
 );
 
@@ -106,13 +108,26 @@ const fechar = () => {
   aberto.value = false;
 };
 
+const seletorDeDocumento = ref(null);
+
 const escolher = item => {
   fechar();
+  if (item.tipo === 'documento') {
+    seletorDeDocumento.value?.click();
+    return;
+  }
   if (item.tipo === 'anexo') {
     emit('anexar', item.filtro);
     return;
   }
   janela.value?.abrir(item.tipo);
+};
+
+const escolheuDocumentos = evento => {
+  const arquivos = [...(evento.target.files || [])];
+  // eslint-disable-next-line no-param-reassign
+  evento.target.value = '';
+  if (arquivos.length) emit('documentos', arquivos);
 };
 
 const menuRef = ref(null);
@@ -203,6 +218,16 @@ const aoTeclar = evento => {
         </button>
       </template>
     </div>
+    <input
+      ref="seletorDeDocumento"
+      type="file"
+      multiple
+      class="hidden"
+      tabindex="-1"
+      aria-hidden="true"
+      data-seletor-de-documento
+      @change="escolheuDocumentos"
+    />
     <JanelaDoMais
       ref="janela"
       :inbox-id="caixa.id"

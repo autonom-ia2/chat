@@ -57,7 +57,8 @@ class Messages::MessageBuilder
         file: uploaded_attachment
       )
 
-      attachment.file_type = attachment_file_type(uploaded_attachment)
+      # #1702: "Documento" do "+" manda como documento, mesmo sendo foto ou vídeo (como no WhatsApp).
+      attachment.file_type = ActiveModel::Type::Boolean.new.cast(@params[:send_as_document]) ? :file : attachment_file_type(uploaded_attachment)
       tag_voice_message(attachment)
     end
   end

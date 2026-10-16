@@ -15,6 +15,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDoWhatsapp.vue';
 import {
   abrirSeletorDeArquivo,
+  anexarComoDocumentos,
   usePeleDaResposta,
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 
@@ -189,6 +190,7 @@ export default {
       soTexto,
       classesDaResposta,
       abrirSeletorDeArquivo,
+      anexarComoDocumentos,
       setSignatureFlagForInbox,
       fetchSignatureFlagFromUISettings,
       uploadRef,
@@ -327,6 +329,7 @@ export default {
         :caixa="inbox"
         :enviar="enviarRico"
         @anexar="abrirSeletorDeArquivo"
+        @documentos="arquivos => anexarComoDocumentos(arquivos, onFileUpload)"
       />
       <NextButton
         v-if="!isEditorDisabled"

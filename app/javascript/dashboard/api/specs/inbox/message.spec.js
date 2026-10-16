@@ -96,6 +96,23 @@ describe('#ConversationAPI', () => {
       expect(formPayload.get('is_voice_message')).toEqual('true');
     });
 
+    it('appends send_as_document when sendAsDocument is true (#1702)', () => {
+      const formPayload = buildCreatePayload({
+        message: 'foto como documento',
+        echoId: 44,
+        isPrivate: false,
+        files: [new Blob(['png'], { type: 'image/png' })],
+        sendAsDocument: true,
+      });
+      expect(formPayload.get('send_as_document')).toEqual('true');
+      expect(
+        buildCreatePayload({
+          echoId: 45,
+          files: [new Blob(['png'], { type: 'image/png' })],
+        }).get('send_as_document')
+      ).toBeNull();
+    });
+
     it('does not append is_voice_message when isVoiceMessage is false', () => {
       const formPayload = buildCreatePayload({
         message: 'regular audio',

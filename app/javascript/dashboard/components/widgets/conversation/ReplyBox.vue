@@ -1214,6 +1214,7 @@ export default {
           thumb: reader.result,
           blobSignedId: blob ? blob.signed_id : undefined,
           isVoiceMessage: file?.isVoiceMessage || false,
+          comoDocumento: file?.comoDocumento || false,
         });
         this.enviarSeForAGravacao(file, chatId);
       };
@@ -1264,6 +1265,7 @@ export default {
             message: caption,
             sender: this.sender,
             isVoiceMessage: attachment.isVoiceMessage || false,
+            sendAsDocument: attachment.comoDocumento || false,
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
@@ -1311,6 +1313,7 @@ export default {
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
         this.attachedFiles.forEach(attachment => {
+          if (attachment.comoDocumento) messagePayload.sendAsDocument = true;
           if (this.globalConfig.directUploadsEnabled) {
             messagePayload.files.push(attachment.blobSignedId);
             if (attachment.isVoiceMessage) {

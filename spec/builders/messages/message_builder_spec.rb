@@ -164,6 +164,20 @@ describe Messages::MessageBuilder do
       end
     end
 
+    context 'when send_as_document is true (#1702)' do
+      let(:params) do
+        ActionController::Parameters.new({
+                                           content: 'foto como documento',
+                                           attachments: [Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png')],
+                                           send_as_document: 'true'
+                                         })
+      end
+
+      it 'saves the image as a file, so WhatsApp sends it as a document' do
+        expect(message_builder.attachments.first.file_type).to eq('file')
+      end
+    end
+
     context 'when is_voice_message is not provided' do
       let(:params) do
         ActionController::Parameters.new({

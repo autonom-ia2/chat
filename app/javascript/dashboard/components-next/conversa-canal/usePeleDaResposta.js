@@ -57,3 +57,16 @@ export const abrirSeletorDeArquivo = filtro => {
   }
   campo.click();
 };
+
+// "Documento" do "+": cada arquivo entra na caixa de resposta pelo caminho de
+// sempre (limite de tamanho, envio direto), marcado para sair como documento.
+export const anexarComoDocumentos = (arquivos, onFileUpload) =>
+  arquivos.forEach(file =>
+    onFileUpload({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      file,
+      comoDocumento: true,
+    })
+  );

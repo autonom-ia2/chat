@@ -13,6 +13,7 @@ export const buildCreatePayload = ({
   toEmails = '',
   templateParams,
   isVoiceMessage = false,
+  sendAsDocument = false,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -36,6 +37,10 @@ export const buildCreatePayload = ({
     }
     if (isVoiceMessage) {
       payload.append('is_voice_message', true);
+    }
+    // #1702: "Documento" do "+" — o anexo vai como documento, mesmo foto ou vídeo.
+    if (sendAsDocument) {
+      payload.append('send_as_document', true);
     }
   } else {
     payload = {
@@ -69,6 +74,7 @@ class MessageApi extends ApiClient {
     toEmails = '',
     templateParams,
     isVoiceMessage = false,
+    sendAsDocument = false,
   }) {
     return axios({
       method: 'post',
@@ -84,6 +90,7 @@ class MessageApi extends ApiClient {
         toEmails,
         templateParams,
         isVoiceMessage,
+        sendAsDocument,
       }),
     });
   }

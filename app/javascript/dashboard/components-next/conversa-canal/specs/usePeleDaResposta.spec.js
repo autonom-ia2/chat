@@ -4,7 +4,11 @@ import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import { PELES, fornecerPele } from '../pele';
-import { abrirSeletorDeArquivo, usePeleDaResposta } from '../usePeleDaResposta';
+import {
+  abrirSeletorDeArquivo,
+  anexarComoDocumentos,
+  usePeleDaResposta,
+} from '../usePeleDaResposta';
 import { idiomaDoPainel } from '../dataDaConversa';
 
 // Monta o hook dentro de uma "conversa" que fornece (ou não) a pele.
@@ -100,5 +104,22 @@ describe('abrirSeletorDeArquivo (#1702)', () => {
     abrirSeletorDeArquivo('image/*,video/*');
     campo.dispatchEvent(new Event('cancel'));
     expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
+  });
+});
+
+describe('anexarComoDocumentos (#1702)', () => {
+  it('cada arquivo entra pelo caminho de sempre, marcado como documento', () => {
+    const onFileUpload = vi.fn();
+    const foto = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    const pdf = new File(['y'], 'proposta.pdf', { type: 'application/pdf' });
+    anexarComoDocumentos([foto, pdf], onFileUpload);
+    expect(onFileUpload).toHaveBeenCalledTimes(2);
+    expect(onFileUpload).toHaveBeenNthCalledWith(1, {
+      name: 'foto.jpg',
+      type: 'image/jpeg',
+      size: 1,
+      file: foto,
+      comoDocumento: true,
+    });
   });
 });
