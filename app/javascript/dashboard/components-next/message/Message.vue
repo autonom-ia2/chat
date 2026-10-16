@@ -656,7 +656,11 @@ provideMessageContext({
           :referral="contentAttributes.referral"
         />
         <Component :is="componentToRender" />
-        <EditedMark v-if="isEdited" :history="contentAttributes.editHistory" />
+        <EditedMark
+          v-if="isEdited"
+          :history="contentAttributes.editHistory"
+          :current-user-id="currentUserId"
+        />
         <MessageReactions
           v-if="messageReactions.length"
           :reactions="messageReactions"
@@ -692,7 +696,6 @@ provideMessageContext({
         :message-id="id"
         :content="content || ''"
         :reactions="messageReactions"
-        :current-user-id="currentUserId"
       />
     </div>
   </div>

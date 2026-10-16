@@ -42,8 +42,11 @@ const props = defineProps({
 const emit = defineEmits(['retry']);
 
 // fork chat#1709 (fase 3): o registro escondido de reação, edição, voto retirado e toque de ligação (atividade com
-// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere.
-const isHidden = message => message.content_attributes?.c2y_hidden === true;
+// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere. Só ATIVIDADE se esconde:
+// a chave numa mensagem do cliente ou nossa nunca a tira da tela (o servidor também não a grava fora da atividade).
+const isHidden = message =>
+  message.message_type === MESSAGE_TYPES.ACTIVITY &&
+  message.content_attributes?.c2y_hidden === true;
 
 const allMessages = computed(() => {
   return useCamelCase(

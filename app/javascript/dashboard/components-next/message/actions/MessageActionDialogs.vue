@@ -10,18 +10,19 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import EmojiPicker from 'shared/components/emoji/EmojiPicker.vue';
 import WahaMessageActionsApi from 'dashboard/api/wahaMessageActions';
-import { myReaction } from './messageActions.js';
+import {
+  businessReaction,
+  EDIT_MAX_LENGTH,
+  EDIT_WINDOW_MINUTES,
+} from './messageActions.js';
 
 const props = defineProps({
   conversationId: { type: Number, required: true },
   messageId: { type: Number, required: true },
   content: { type: String, default: '' },
   reactions: { type: Array, default: () => [] },
-  currentUserId: { type: Number, default: null },
 });
 
-// O mesmo teto do texto do WhatsApp.
-const EDIT_MAX_LENGTH = 4096;
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 const { t } = useI18n();
@@ -31,9 +32,8 @@ const showPicker = ref(false);
 const draft = ref('');
 const isSaving = ref(false);
 
-const current = computed(() =>
-  myReaction(props.reactions, props.currentUserId)
-);
+// A reação da empresa (uma só por mensagem, de qualquer atendente ou do celular): trocar ou tirar vale para ela.
+const current = computed(() => businessReaction(props.reactions));
 const canSaveEdit = computed(
   () =>
     draft.value.trim().length > 0 &&
@@ -146,7 +146,9 @@ defineExpose({ openReaction, openEdit });
   <Dialog
     ref="editDialog"
     :title="t('MESSAGE_ACTIONS.EDIT_TITLE')"
-    :description="t('MESSAGE_ACTIONS.EDIT_DESCRIPTION')"
+    :description="
+      t('MESSAGE_ACTIONS.EDIT_DESCRIPTION', { minutes: EDIT_WINDOW_MINUTES })
+    "
     :confirm-button-label="t('MESSAGE_ACTIONS.EDIT_SAVE')"
     :disable-confirm-button="!canSaveEdit"
     :is-loading="isSaving"

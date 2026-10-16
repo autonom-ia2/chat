@@ -51,4 +51,26 @@ describe('MessageList com registros escondidos', () => {
     expect(wrapper.find('[data-message-reactions]').text()).toContain('👍');
     expect(wrapper.find('[data-edited-mark]').exists()).toBe(true);
   });
+
+  it('nunca esconde mensagem do cliente ou nossa, mesmo com a chave', () => {
+    const wrapper = mountList([
+      {
+        ...base,
+        id: 43,
+        message_type: 1,
+        content: 'Saiu para o cliente',
+        content_attributes: { c2y_hidden: true },
+      },
+      {
+        ...base,
+        id: 44,
+        message_type: 0,
+        content: 'Escrito pelo cliente',
+        content_attributes: { c2y_hidden: true },
+      },
+    ]);
+
+    expect(wrapper.text()).toContain('Saiu para o cliente');
+    expect(wrapper.text()).toContain('Escrito pelo cliente');
+  });
 });

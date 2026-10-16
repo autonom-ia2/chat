@@ -40,8 +40,7 @@ const montar = (props = {}) =>
       conversationId: 3,
       messageId: 41,
       content: 'Até amanhã',
-      reactions: [{ emoji: '👍', by: 'agent', userId: 7 }],
-      currentUserId: 7,
+      reactions: [{ emoji: '👍', by: 'business', userId: 9 }],
       ...props,
     },
     global: {
@@ -61,7 +60,7 @@ const montar = (props = {}) =>
 describe('diálogos de reagir e editar', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('reage com um emoji rápido e tira a reação do atendente', async () => {
+  it('reage com um emoji rápido e tira a reação da empresa', async () => {
     const wrapper = montar();
     wrapper.vm.openReaction();
     await nextTick();
@@ -76,7 +75,7 @@ describe('diálogos de reagir e editar', () => {
     await nextTick();
     const tirar = wrapper
       .findAll('button')
-      .find(button => button.text() === 'Tirar minha reação');
+      .find(button => button.text() === 'Tirar a reação da empresa');
     await tirar.trigger('click');
     await flushPromises();
     expect(WahaMessageActionsApi.react).toHaveBeenLastCalledWith(3, 41, '');

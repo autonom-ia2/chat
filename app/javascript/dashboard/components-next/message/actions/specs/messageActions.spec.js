@@ -2,12 +2,14 @@ import { config, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/richMessage.json';
 import MessageReactions from '../MessageReactions.vue';
+import EditedMark from '../EditedMark.vue';
 import {
   canEdit,
   canReact,
   groupReactions,
-  myReaction,
+  businessReaction,
   EDIT_WINDOW_SECONDS,
+  EDIT_WINDOW_MINUTES,
 } from '../messageActions.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../constants';
 
@@ -37,7 +39,7 @@ describe('quando o painel oferece reagir e editar', () => {
     expect(canReact(undefined, nossa())).toBe(false);
   });
 
-  it('não reage a nota, atividade nem mensagem apagada', () => {
+  it('não reage a nota, atividade, mensagem apagada nem falhada', () => {
     const acoes = conversa(['react']);
     expect(canReact(acoes, nossa({ private: true }))).toBe(false);
     expect(
@@ -45,6 +47,12 @@ describe('quando o painel oferece reagir e editar', () => {
     ).toBe(false);
     expect(
       canReact(acoes, nossa({ contentAttributes: { deleted: true } }))
+    ).toBe(false);
+    expect(canReact(acoes, nossa({ status: MESSAGE_STATUS.FAILED }))).toBe(
+      false
+    );
+    expect(
+      canReact(acoes, nossa({ contentAttributes: { externalError: 'x' } }))
     ).toBe(false);
     expect(
       canReact(acoes, nossa({ messageType: MESSAGE_TYPES.INCOMING }))
@@ -55,6 +63,7 @@ describe('quando o painel oferece reagir e editar', () => {
     const acoes = conversa(['edit']);
     const foraDaJanela = nossa({ createdAt: AGORA - EDIT_WINDOW_SECONDS - 1 });
 
+    expect(EDIT_WINDOW_MINUTES).toBe(14);
     expect(canEdit(acoes, foraDaJanela, AGORA)).toBe(false);
     expect(
       canEdit(acoes, nossa({ messageType: MESSAGE_TYPES.INCOMING }), AGORA)
@@ -72,37 +81,86 @@ describe('quando o painel oferece reagir e editar', () => {
     expect(
       canEdit(acoes, nossa({ status: MESSAGE_STATUS.FAILED }), AGORA)
     ).toBe(false);
+    expect(
+      canEdit(
+        acoes,
+        nossa({ contentAttributes: { externalError: 'x' } }),
+        AGORA
+      )
+    ).toBe(false);
   });
 });
 
 describe('reações na mensagem', () => {
   const reacoes = [
     { emoji: '👍', by: 'contact' },
-    { emoji: '👍', by: 'agent', userId: 7 },
-    { emoji: '❤️', by: 'phone' },
+    { emoji: '👍', by: 'business', userId: 7 },
   ];
 
-  it('agrupa por emoji e marca a do atendente', () => {
+  it('a reação da empresa é uma só, de qualquer atendente ou do celular', () => {
     expect(groupReactions(reacoes, 7)).toEqual([
-      { emoji: '👍', count: 2, mine: true },
-      { emoji: '❤️', count: 1, mine: false },
+      {
+        emoji: '👍',
+        count: 2,
+        fromContact: true,
+        fromBusiness: true,
+        mine: true,
+      },
     ]);
-    expect(myReaction(reacoes, 7)).toBe('👍');
-    expect(myReaction(reacoes, 8)).toBe('');
+    expect(groupReactions(reacoes, 8)[0].mine).toBe(false);
+    expect(businessReaction(reacoes)).toBe('👍');
+    expect(businessReaction([{ emoji: '❤️', by: 'phone' }])).toBe('❤️');
+    expect(businessReaction([{ emoji: '❤️', by: 'contact' }])).toBe('');
   });
 
-  it('desenha o chip com a contagem', () => {
+  it('diz em texto quem reagiu e destaca a do cliente', () => {
     const wrapper = mount(MessageReactions, {
-      props: { reactions: reacoes, currentUserId: 7 },
+      props: {
+        reactions: [
+          { emoji: '👍', by: 'contact' },
+          { emoji: '❤️', by: 'business', userId: 7 },
+        ],
+        currentUserId: 7,
+      },
     });
 
-    expect(
-      wrapper.findAll('li').map(item =>
-        item
-          .findAll('span')
-          .map(span => span.text())
-          .join('')
-      )
-    ).toEqual(['👍2', '❤️']);
+    const itens = wrapper.findAll('li');
+    expect(itens.map(item => item.find('.sr-only').text())).toEqual([
+      '👍 do cliente',
+      '❤️ da empresa, feita por você',
+    ]);
+    expect(itens[0].attributes('data-reaction-from-contact')).toBe('true');
+    expect(itens[1].attributes('data-reaction-from-contact')).toBeUndefined();
+  });
+});
+
+describe('selo "editada"', () => {
+  const historico = [
+    { content: 'Até logo', by: 'contact', editedAt: '2026-10-16T10:00:00Z' },
+    { content: 'Até já', userId: 7, editedAt: '2026-10-16T10:01:00Z' },
+  ];
+
+  it('é um botão que abre os textos anteriores com quem editou', async () => {
+    const wrapper = mount(EditedMark, {
+      props: { history: historico, currentUserId: 7 },
+    });
+    const botao = wrapper.find('button');
+
+    expect(botao.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('[data-edit-history]').isVisible()).toBe(false);
+
+    await botao.trigger('click');
+
+    expect(botao.attributes('aria-expanded')).toBe('true');
+    expect(botao.attributes('aria-controls')).toBe(
+      wrapper.find('[data-edit-history]').attributes('id')
+    );
+    expect(wrapper.find('[data-edit-history]').text()).toContain(
+      'Cliente escreveu antes:'
+    );
+    expect(wrapper.find('[data-edit-history]').text()).toContain(
+      'Antes da sua edição:'
+    );
+    expect(wrapper.find('[data-edit-history]').text()).toContain('Até já');
   });
 });
