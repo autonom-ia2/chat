@@ -78,8 +78,8 @@ mensagem não vai ao conector como pedido de reenvio.
 
 1. **link_button sem `image_url` sai como texto** (o de hoje), e não `send_text` com `linkPreview`: o motor dá 500 sem
    imagem e o texto de hoje já leva o link, que o WhatsApp mostra com a prévia automática. O `image_url` não ganhou
-   validação no tipo (para flag desligada continuar igual à main): só é usado se for https e até 2000 caracteres;
-   senão, sai texto.
+   validação no tipo (para flag desligada continuar igual à main). Depois da revisão, só a CÓPIA da instalação vai ao
+   motor (Waha::RichNative::PreviewImage, ver a seção da revisão); o endereço externo nunca.
 2. **`selected_options` continua em STORED_KEYS** (chave antiga, segue barrada contra forja). `waha_unknown_type`
    também.
 3. **Commits intermediários**: o initializer entrou no commit da base (`4049f086ea`) já registrando `PlayedReceipt` e
@@ -108,7 +108,9 @@ motor) é do lado do conector, passo 5 da ordem. O chat2you já trata os dois ca
 - AgentBot (n8n) recebe `message_updated` a cada reação, voto, resposta, apagada e áudio ouvido.
 - Reação `User` com `sender_id` nulo (celular da empresa): a tela precisa tratar.
 - `ringing`, `ended`, voto retirado como `options: []` e o formato de `order`: combinar com o Max.
-- Ligar a flag numa conta Híbrida reinicia cada sessão mais uma vez (assinatura nova com `event.response`).
+- Ligar a flag numa conta Híbrida: a sessão que já tem `poll.vote` só ganha `event.response` pela assinatura agendada
+  (`rake whatsapp_hybrid:poll_vote:subscribe`, um reinício por sessão, numa janela combinada). As outras sincronizações
+  não reiniciam mais por isso (revisão, achado 7).
 - Sem id pré-gerado, reenvio manual de link_button/evento pode duplicar.
 
 ## Validação no M4 (só specs focados, `: > log/test.log` antes e depois)
@@ -120,3 +122,47 @@ motor) é do lado do conector, passo 5 da ordem. O chat2you já trata os dois ca
 - Vitest (TZ=UTC) `components-next/message`: 183 testes, 0 falhas. ESLint: limpo.
 - `i18n:fork:check`: ok. `autonomia:guia:formatos:check`: em dia. `guia:check`: em dia.
 - Suíte ampla, build e snapshot: no M2, depois (passo 7 da ordem).
+
+## Revisão independente da rodada 2 — o que mudou
+
+Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/round2_review_spec.rb`, salvo indicação).
+
+| # | Achado | Correção |
+|---|---|---|
+| 1 | Localização com `content` nil chega vazia à IA Autonomia | `Waha::RichNative::AiLocationText` + prepend `ResponderLocation` no histórico e na pergunta: "Localização compartilhada pelo cliente: <nome, endereço>. Mapa: <link das coordenadas>" (ao vivo: avisa que é só o ponto inicial). Só caixa WAHA comum com a flag. AgentBot (n8n): recebe `content` nil + `shared_location` + anexo `location`, o MESMO contrato da Cloud oficial hoje — não mudei o payload dele. |
+| 2, 16 | `AttachmentMeta` mudava o JSON de todo áudio gravado pelo painel, em qualquer canal | Marcas só em anexo de mensagem da caixa WAHA comum com a flag. Spec: Cloud com flag e WAHA sem flag mantêm o JSON da main. |
+| 3 | `STORED_KEYS` de nome genérico apagadas em qualquer caixa | `INTERNAL_KEYS` (`c2y_hidden`, `waha_*`, `*_applied_to`) saem em toda caixa; `SCOPED_KEYS` (`reactions`, `forwarded`, `quoted_message`…) só na WAHA comum e na do WhatsApp (Híbrido). Vale no modelo e no controller. |
+| 4, 9 | `Context.after_commit` sem rescue: 500 ao conector e mensagem duplicada | `rescue StandardError` (log só da classe), atividade com `save!(validate: false)`, conversa com `save!(validate: false)`. Não virou job: com o rescue, a ordem dos after_commit deixa de importar (nada sobe). |
+| 5 | `PlayedReceipt` sem rescue | `rescue` em `record!` e no after_action; o PATCH responde como na main. |
+| 6, 11 | Citação podia apontar ou copiar nota privada | `.where(private: false)` no alvo; sem alvo público, cai no trecho do aparelho. |
+| 8 | `waha_media_failed`/`waha_order` sem `from_me`: a nota do celular da empresa virava mensagem do cliente | Guarda `message.incoming?` nos dois (o conector cria a nota do cliente INCOMING e a da empresa OUTGOING, `base.ts:324`, conferido no M2). Spec com a nota OUTGOING. **Conector**: acrescentar `from_me` em `WahaMediaFailedOf`/`WahaOrderOf` fica para o construtor do conector (checkout dele no M2 tem trabalho não commitado; o chat2you não depende do campo). |
+| 10 | `processed_message_content` com o texto do conector (link do job) | `Inbound` recalcula pela regra do modelo depois de transformar (e no rescue). Spec: `webhook_data` da mídia que falhou sem o link. |
+| 12 | Voto, resposta e reação pela ordem de chegada | `Waha::RichNative::EventTime`: `at` = hora do WhatsApp (voto em s, resposta em ms); a entrada do mesmo autor só é trocada por outra igual ou mais nova. Híbrido passa `timestamp` do `poll.vote` e `timestampMs` do `event.response`. Reação: o conector c2y-rich-3 ainda não manda a hora; o chat2you já lê `waha_reaction.timestamp` quando vier (pedido ao construtor do conector). |
+| 13 | `waha_call_summary.at` = hora do processamento, e cada desfecho o trocava | `at` = hora do primeiro evento da ligação (`timestamp` do conector quando vier, senão a chegada); o desfecho mantém o `at` da linha. O conector ainda não manda `timestamp` em `waha_call` (pedido ao construtor). |
+| 14 | Chaves gravadas sem tela que as leia; apagada piorava | A nota da main da apagada CONTINUA visível (só ganha `revoke_applied_to`); a original ganha `deleted_by_contact_at`. **Dependência de deploy: não ligar a flag em conta nenhuma antes do PR #1724 (Frontend geral, #1702) no ar, com cada chave conferida.** Depois dele, a nota passa a atividade escondida em PR próprio. |
+| 15 | SSRF pelo `image_url` do link_button | `Waha::RichNative::PreviewImage` (before_create, `prepend: true`, antes da decisão de envio): com a flag, na WAHA comum ou na do WhatsApp, baixa pelo SafeFetch (rede privada recusada a cada salto, só https, 5 MB, 5 s, só PNG/JPEG/WebP) e troca o `image_url` pelo endereço público da cópia (FRONTEND_URL). O `Waha::RichPayload` só monta o cartão com a cópia DESTA conta e manda o content-type real dela. Falhou o download: o campo sai e vai o texto. Custo: o download roda dentro da transação da criação (até 5 s), só para link_button com imagem. |
+| 17 | Trecho citado sem alvo podia ser forjado (from_me) | `quoted_message.unverified: true`. Combinar com o Max: a bolha mostra "trecho enviado pelo aparelho do cliente, não conferido" e nunca atribui à empresa pelo `from_me`. A IA Autonomia não lê `quoted_message` hoje. |
+| 18 | Em grupo, todos os participantes eram o mesmo eleitor | Enquete e evento nunca saem nativos em conversa de grupo (contato com identificador `@g.us`, que é como o conector cria o grupo); voto ou resposta que chegue em grupo fica como o texto do conector, visível. |
+| 19 | O robô perde o sinal do voto e da resposta | **Não mudei o código: é a decisão (a), pendente do Rodrigo e BLOQUEANTE do merge.** O `message_updated` da enquete vai ao AgentBot com `event: 'message_updated'` (agent_bot_listener.rb:46-54), não como mensagem nova; fluxo n8n que não filtra o evento reprocessa. |
+| 20 | Aviso para a equipe com voz de comando no `content` do cliente | Texto neutro: "Foto não recebida (o download falhou)" (en/pt_BR). O aviso "peça para reenviar" fica com a bolha (`media_unavailable`). |
+| 21 | I18n sem `default:` no aviso de temporárias | `default:` no idioma padrão, também em horas e dias. |
+| 22 | Chaves i18n mortas; data do evento no fuso do offset | `waha.event.cloud_when/cloud_where` removidas. `PollGate#build` passa o fuso da conta (Crm::Timezone::Resolver) ao tipo `event`. As mensagens de erro do tipo continuam no código, em português, como as dos outros tipos (resposta 422 da API, não texto de tela) — recusado com esse motivo. |
+| 23 | Event.vue sem `aria-live` e ícones lidos | `aria-live="polite"` nas respostas; ícones dentro de `span aria-hidden` (o `Icon` é funcional e não repassa `aria-hidden`). Spec no Event.spec.js. |
+| 24 | `from_connector?` com fallback para administrador | **Não mudei: o backfill do `account_token_owner_user_id` é escrita em banco de produção (exige OK do Rodrigo).** Plano: backfill de todas as caixas WAHA, conferir, e em PR seguinte tirar o fallback. Até lá, um administrador pode forjar `waha_revoke`/`waha_quote`/`waha_media_failed`/`c2y_played_at` pela API. |
+| 7 | Reinício de toda sessão híbrida depois do deploy | `event.response` só é exigido na assinatura agendada (`subscribe_poll_vote!`). |
+
+### Validação da revisão (M4, specs focados, `: > log/test.log` antes e depois)
+
+- Commits: `cbc6b82f29` (recebimento e envios), `1f43c98795` (bolha do evento).
+- RSpec: `spec/services/{rich_messages,waha}`, `spec/services/whatsapp_hybrid/rich_native*`, os 4 request specs da
+  rodada, `responder_spec`, `responder_pessoa_da_equipe_historico_spec`, `responder_eco_do_celular_spec`,
+  `responder_regra_do_turno_spec`: 797 exemplos, 0 falhas, 14 pendentes (renderer do #1740, já pendentes antes).
+  `formatos_spec` do Guia: 23 exemplos, 0 falhas.
+- RuboCop nos 38 arquivos Ruby tocados: sem ofensas. ESLint: 0 erros (4 avisos `RICH_MESSAGE` já existentes, os
+  mesmos do Poll.vue). Vitest (TZ=UTC) `components-next/message`: 184 testes, 0 falhas. `i18n:fork:check`: ok.
+
+### Pendências que não são deste lado
+
+- Construtor do conector: `from_me` em `WahaMediaFailedOf`/`WahaOrderOf`; `timestamp` em `waha_reaction` e `waha_call`.
+- Rodrigo: decisões (a) a (f) e o backfill do achado 24.
+- Max (#1724): `quoted_message.unverified`, selo da apagada, aviso da localização ao vivo, `media_unavailable`.
