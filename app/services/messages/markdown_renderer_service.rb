@@ -59,9 +59,11 @@ class Messages::MarkdownRendererService
   def render_whatsapp
     # Strip whitespace from whitespace-only lines to normalize newlines
     normalized_content = @content.gsub(/^[ \t]+$/m, '')
-    content_with_preserved_newlines = preserve_multiple_newlines(normalized_content)
-    renderer = Messages::MarkdownRenderers::WhatsAppRenderer.new
-    doc = CommonMarker.render_doc(content_with_preserved_newlines, [:DEFAULT, :STRIKETHROUGH_DOUBLE_TILDE])
+    renderers = Messages::MarkdownRenderers
+    # Linhas em branco preservadas sem desmontar o bloco ``` (#1732); ~~x~~ vira ~x~.
+    content_with_preserved_newlines = renderers::WhatsAppRenderer.preserve_newlines(normalized_content)
+    renderer = renderers::WhatsAppRenderer.new(content_with_preserved_newlines)
+    doc = CommonMarker.render_doc(content_with_preserved_newlines, [:DEFAULT, :STRIKETHROUGH_DOUBLE_TILDE], [:strikethrough])
     result = renderer.render(doc).gsub(/\n+\z/, '')
     restore_multiple_newlines(result)
   end

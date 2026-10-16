@@ -91,10 +91,34 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
         expect(result).to include("Para 1\n\n\n\nPara 2")
       end
 
-      it 'renders code blocks as plain text' do
+      it 'renders fenced code blocks as WhatsApp monospace' do
         content = "```\ncode here\n```"
         result = described_class.new(content, channel_type).render
-        expect(result.strip).to eq('code here')
+        expect(result).to eq('```code here```')
+      end
+
+      it 'keeps multi-line fenced code blocks inside one monospace block' do
+        content = "Antes\n\n```ruby\nx = 1\ny = 2\n```\n\nDepois"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("Antes\n\n```x = 1\ny = 2```\n\nDepois")
+      end
+
+      it 'keeps blank lines inside a fenced code block and between two blocks' do
+        content = "```\na\n\n\nb\n```\n\n\n```\nc\n```"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("```a\n\n\nb```\n\n\n```c```")
+      end
+
+      it 'keeps triple backticks typed inside a line as monospace' do
+        content = 'x ```mono``` e `cod` e **negrito**'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('x ```mono``` e `cod` e *negrito*')
+      end
+
+      it 'renders tilde fenced code blocks as WhatsApp monospace' do
+        content = "~~~\ncode here\n~~~"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('```code here```')
       end
 
       it 'renders indented code blocks as plain text preserving exact content' do
@@ -107,6 +131,72 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
         content = "    first line\n    🌐 second line\n"
         result = described_class.new(content, channel_type).render
         expect(result).to eq("first line\n🌐 second line")
+      end
+
+      it 'converts strikethrough to single tilde' do
+        content = '~~riscado~~'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('~riscado~')
+      end
+
+      it 'keeps single tilde strikethrough as typed' do
+        content = 'a ~x~ e ~~y~~'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('a ~x~ e ~y~')
+      end
+
+      it 'converts markdown italic with asterisk to underscore' do
+        content = '*itálico*'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('_itálico_')
+      end
+
+      it 'combines bold, italic and strikethrough' do
+        content = '**negrito _itálico_ ~~riscado~~**'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('*negrito _itálico_ ~riscado~*')
+      end
+
+      it 'keeps underscores inside words as text' do
+        content = 'arquivo snake_case_name.txt'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('arquivo snake_case_name.txt')
+      end
+
+      it 'renders a one-line quote' do
+        content = '> citação'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('> citação')
+      end
+
+      it 'prefixes every line of a multi-line quote' do
+        content = "> linha 1\n> linha 2"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("> linha 1\n> linha 2")
+      end
+
+      it 'prefixes every paragraph of a quote' do
+        content = "> a\n>\n> b"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("> a\n> b")
+      end
+
+      it 'keeps blank lines around loose lists' do
+        content = "Texto\n\n- a\n\n- b\n\n\nfim"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("Texto\n\n- a\n\n- b\n\n\nfim")
+      end
+
+      it 'keeps fenced code inside a list item' do
+        content = "- item\n\n    ```\n    x\n    ```"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("- item\n\n```x```")
+      end
+
+      it 'ends the quote before the next paragraph' do
+        content = "> citação\n\ndepois"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("> citação\n\ndepois")
       end
     end
 
