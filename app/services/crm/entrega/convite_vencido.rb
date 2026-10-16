@@ -2,8 +2,9 @@
 # (Crm::Ai::HandoffDrainJob): a marca sai (o rodízio nativo deixa de pular a conversa) e os administradores da caixa
 # são avisados (Crm::Entrega::AvisoSemNinguem#convite_vencido!).
 #
-# Relido sob a trava: quem pegou nesse meio tempo fica com a conversa, e a adiada guarda a marca (volta à fila quando
-# reabre); nas duas, nada muda e nada é avisado.
+# Relido sob a trava. Já com pessoa no nome, resolvida ou fechada: a marca vencida sai, sem aviso (senão ficaria
+# pendurada, a fila voltaria a ela a cada rodada e o rodízio nativo a pularia depois). Adiada: guarda a marca (volta à
+# fila quando reabre), sem aviso.
 class Crm::Entrega::ConviteVencido
   def initialize(conversation)
     @conversation = conversation
@@ -11,11 +12,13 @@ class Crm::Entrega::ConviteVencido
 
   def call
     @conversation.with_lock do
-      next unless Crm::Entrega::Marca.convite_vencido?(@conversation) && esperando_pessoa?
+      next unless Crm::Entrega::Marca.convite_vencido?(@conversation)
+      next if @conversation.snoozed?
 
+      avisa = esperando_pessoa?
       Crm::Entrega::Marca.tirar(@conversation)
       @conversation.save!
-      avisar
+      avisar if avisa
     end
   end
 

@@ -134,4 +134,21 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
 
     expect(avisos_ao_admin).to eq(1)
   end
+
+  # Pega: a marca de convite vencido pendurada numa conversa que já tem dono (gravada por fora dos callbacks): a fila
+  # voltava a ela a cada rodada sem limpar, e o rodízio nativo a pularia depois. Sai a marca, sem aviso e sem entrega.
+  it 'convite vencido com alguém no nome: a marca sai, sem aviso e sem entrega', :aggregate_failures do
+    Conversation.where(id: conversa.id).update_all(assignee_id: ana.id) # rubocop:disable Rails/SkipsModelValidations
+    allow(Crm::Entrega).to receive(:new).and_call_original
+
+    travel 2.hours do
+      Crm::Entrega::ConviteVencido.new(conversa.reload).call
+    end
+
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).to be_nil
+    expect(conversa.assignee_id).to eq(ana.id)
+    expect(avisos_ao_admin).to eq(0)
+    expect(atividades_de_aviso.count).to eq(0)
+    expect(Crm::Entrega).not_to have_received(:new)
+  end
 end
