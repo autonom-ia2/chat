@@ -56,8 +56,12 @@ import {
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useMacroExecution } from 'dashboard/composables/useMacroExecution';
+import { usePeleDaResposta } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
+import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
+import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
+import { createPendingMessage } from 'dashboard/helper/commons';
 import { isFileTypeAllowedForChannel } from 'shared/helpers/FileHelper';
 
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
@@ -74,6 +78,7 @@ export default {
     ArticleSearchPopover,
     AttachmentPreview,
     AudioRecorder,
+    GravadorDoWhatsapp,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
@@ -107,6 +112,8 @@ export default {
     const copilot = useCopilotReply();
     const macroExecution = useMacroExecution();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
+    // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
+    const { classesDaResposta, textoDoCampo } = usePeleDaResposta();
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
@@ -154,6 +161,8 @@ export default {
       copilot,
       shortcutKey,
       macroExecution,
+      classesDaResposta,
+      textoDoCampo,
     };
   },
   data() {
@@ -187,6 +196,8 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      // #1702: a seta do gravador do WhatsApp para e envia; o envio sai quando o áudio vira anexo.
+      enviarAudioAoAnexar: false,
       copilotAcceptedMessages: {},
     };
   },
@@ -304,6 +315,10 @@ export default {
     },
     messagePlaceHolder() {
       if (this.isEditorDisabled) {
+        // #1702: o aviso acima já explica as 24 h; o campo só diz o que fazer.
+        if (this.textoDoCampo && this.isAWhatsAppCloudChannel) {
+          return this.$t('CONVERSA_CANAL.CAIXA.SO_MODELO');
+        }
         if (this.isAWhatsAppChannel) {
           return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED_WHATSAPP');
         }
@@ -312,6 +327,7 @@ export default {
         }
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
+      if (!this.isPrivate && this.textoDoCampo) return this.textoDoCampo;
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -410,6 +426,9 @@ export default {
     },
     replyBoxClass() {
       return {
+        [this.classesDaResposta.caixa]: !this.isPrivate,
+        [this.classesDaResposta.gravando]:
+          !this.isPrivate && this.showAudioRecorderEditor,
         'is-private': this.isPrivate,
         'is-focused': this.isFocused || this.hasAttachments,
       };
@@ -632,6 +651,7 @@ export default {
 
     this.fetchAndSetReplyTo();
     emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
+    emitter.on(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -645,6 +665,7 @@ export default {
   unmounted() {
     document.removeEventListener('paste', this.onPaste);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
+    emitter.off(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -1014,6 +1035,25 @@ export default {
         useAlert(errorMessage);
       }
     },
+    // #1702: o "+" manda localização, contato, botão de link, opções e formulário pelo
+    // envio do robô (#1473), com resposta citada e assunto do CRM como o texto. Espera o
+    // servidor: a janela só fecha quando a mensagem foi aceita e mostra a recusa.
+    async onSendRichMessage({ content, richMessage }) {
+      const payload = this.setReplyToInPayload({
+        conversationId: this.currentChat.id,
+        message: content,
+        private: false,
+        sender: this.sender,
+        contentAttributes: { rich_message: richMessage },
+      });
+      await this.$store.dispatch(
+        'sendMessageWithData',
+        createPendingMessage(this.setCrmSubjectInPayload(payload))
+      );
+      this.resetReplyToMessage();
+      emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
+      emitter.emit(BUS_EVENTS.MESSAGE_SENT);
+    },
     async onSendWhatsAppReply(messagePayload) {
       this.sendMessage({
         conversationId: this.currentChat.id,
@@ -1084,6 +1124,24 @@ export default {
         this.resetAudioRecorderInput();
       }
     },
+    cancelarGravacao() {
+      this.toggleAudioRecorder();
+    },
+    enviarGravacao() {
+      this.enviarAudioAoAnexar = true;
+      this.$refs.audioRecorderInput?.stopRecording();
+    },
+    // #1702: o áudio da seta só sai se ainda for a mesma conversa em que foi gravado.
+    enviarSeForAGravacao(file, chatId) {
+      if (!file?.isVoiceMessage || !this.enviarAudioAoAnexar) return;
+      this.enviarAudioAoAnexar = false;
+      if (chatId !== this.currentChat.id) return;
+      this.$nextTick(() => this.onSendReply());
+    },
+    semMicrofone() {
+      this.toggleAudioRecorder();
+      useAlert(this.$t('CONVERSA_CANAL.GRAVACAO.SEM_MICROFONE'));
+    },
     toggleAudioRecorderPlayPause() {
       if (!this.$refs.audioRecorderInput) return;
       if (!this.recordingAudioState) {
@@ -1147,6 +1205,7 @@ export default {
 
       const reader = new FileReader();
       reader.readAsDataURL(file.file);
+      const chatId = this.currentChat.id;
       reader.onloadend = () => {
         this.attachedFiles.push({
           currentChatId: this.currentChat.id,
@@ -1156,6 +1215,7 @@ export default {
           blobSignedId: blob ? blob.signed_id : undefined,
           isVoiceMessage: file?.isVoiceMessage || false,
         });
+        this.enviarSeForAGravacao(file, chatId);
       };
     },
     removeAttachment(attachments) {
@@ -1338,6 +1398,7 @@ export default {
       this.showArticleSearchPopover = !this.showArticleSearchPopover;
     },
     resetAudioRecorderInput() {
+      this.enviarAudioAoAnexar = false;
       this.recordingAudioDurationText = '00:00';
       this.isRecordingAudio = false;
       this.recordingAudioState = '';
@@ -1405,7 +1466,11 @@ export default {
       leave-from-class="opacity-100 translate-y-0 scale-100"
       leave-to-class="opacity-0 translate-y-2 scale-[0.98]"
     >
-      <div :key="copilot.editorTransitionKey.value" class="reply-box__top">
+      <div
+        :key="copilot.editorTransitionKey.value"
+        class="reply-box__top"
+        :class="isPrivate ? '' : classesDaResposta.campo"
+      >
         <CrmReplySubject
           v-if="crmReplySubjectEnabled"
           v-model:card-id="crmSubjectCardId"
@@ -1432,8 +1497,20 @@ export default {
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
         />
+        <GravadorDoWhatsapp
+          v-if="showAudioRecorderEditor && textoDoCampo && !isPrivate"
+          ref="audioRecorderInput"
+          :audio-record-format="audioRecordFormat"
+          :duracao="recordingAudioDurationText"
+          @recorder-progress-changed="onRecordProgressChanged"
+          @finish-record="onFinishRecorder"
+          @record-error="onRecordError"
+          @mic-error="semMicrofone"
+          @cancelar="cancelarGravacao"
+          @enviar="enviarGravacao"
+        />
         <AudioRecorder
-          v-if="showAudioRecorderEditor"
+          v-else-if="showAudioRecorderEditor"
           ref="audioRecorderInput"
           :audio-record-format="audioRecordFormat"
           @recorder-progress-changed="onRecordProgressChanged"
@@ -1564,6 +1641,8 @@ export default {
         :message="message"
         :portal-slug="connectedPortalSlug"
         :new-conversation-modal-active="newConversationModalActive"
+        :enviar-rico="onSendRichMessage"
+        :campo-vazio="!hasMeaningfulEditorContent && !hasAttachments"
         @select-whatsapp-template="openWhatsappTemplateModal"
         @select-content-template="openContentTemplateModal"
         @toggle-insert-article="toggleInsertArticle"

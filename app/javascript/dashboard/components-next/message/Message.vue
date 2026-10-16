@@ -49,6 +49,7 @@ import { campaignRefFor } from 'dashboard/components-next/CampaignJourney/useCam
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+import { useAudioParaBaixar } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
 import { useBranding } from 'shared/composables/useBranding';
 
 /**
@@ -399,8 +400,12 @@ const shouldShowWhatsappReferral = computed(
     !!props.contentAttributes?.referral
 );
 
+// #1702: com a pele do WhatsApp, "Baixar" do áudio fica no menu da mensagem.
+const audioParaBaixar = useAudioParaBaixar(computed(() => props.attachments));
+
 const payloadForContextMenu = computed(() => {
   return {
+    audioParaBaixar: audioParaBaixar.value,
     id: props.id,
     content_attributes: props.contentAttributes,
     content: props.content,
@@ -435,6 +440,7 @@ const contextMenuEnabledOptions = computed(() => {
       isCaptainMessage.value &&
       !isMessageDeleted.value,
     reportAgent: isAutonomiaAgentMessage.value && !isMessageDeleted.value,
+    baixarAudio: !!audioParaBaixar.value && !isMessageDeleted.value,
   };
 });
 

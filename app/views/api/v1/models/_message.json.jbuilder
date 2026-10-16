@@ -7,6 +7,10 @@ json.message_type message.message_type_before_type_cast
 json.content_type message.content_type
 json.status message.status
 json.content_attributes message.content_attributes
+# #1702: qual modelo de WhatsApp a mensagem usou (nome e idioma), para a conversa desenhar os botões dele.
+atributos = message.additional_attributes
+modelo_usado = atributos['template_params'] if atributos.is_a?(Hash)
+json.additional_attributes({ template_params: modelo_usado.slice('name', 'language') }) if modelo_usado.is_a?(Hash) && modelo_usado['name'].present?
 json.created_at message.created_at.to_i
 json.private message.private
 json.source_id message.source_id

@@ -459,3 +459,104 @@ describe('ReplyBox CRM subject', () => {
     });
   });
 });
+
+describe('ReplyBox #1702 (conversa com a cara do WhatsApp)', () => {
+  const RICO = {
+    content: 'Escolha',
+    richMessage: { type: 'options', options: [] },
+  };
+
+  it('o "+" envia esperando o servidor, com o assunto do CRM e a resposta citada', async () => {
+    const { wrapper, store } = mountWith({
+      inbox: { channel_type: 'Channel::Whatsapp' },
+    });
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    wrapper.vm.crmSubjectCardId = 5;
+    wrapper.vm.inReplyTo = { id: 3 };
+
+    await wrapper.vm.onSendRichMessage(RICO);
+
+    const [acao, pendente] = dispatch.mock.calls.find(
+      ([nome]) => nome === 'sendMessageWithData'
+    );
+    expect(acao).toBe('sendMessageWithData');
+    expect(pendente).toMatchObject({
+      conversation_id: 1,
+      content: 'Escolha',
+      private: false,
+      contentAttributes: {
+        rich_message: RICO.richMessage,
+        in_reply_to: 3,
+        crm_card_id: 5,
+      },
+    });
+  });
+
+  it('o "+" devolve a recusa do servidor para a janela mostrar', async () => {
+    const { wrapper, store } = mountWith({
+      inbox: { channel_type: 'Channel::Whatsapp' },
+    });
+    const recusa = { response: { data: { error: 'Título repetido.' } } };
+    vi.spyOn(store, 'dispatch').mockImplementation(nome =>
+      nome === 'sendMessageWithData'
+        ? Promise.reject(recusa)
+        : Promise.resolve()
+    );
+
+    await expect(wrapper.vm.onSendRichMessage(RICO)).rejects.toBe(recusa);
+  });
+
+  describe('seta do gravador', () => {
+    const voz = { isVoiceMessage: true };
+
+    it('envia quando o áudio gravado vira anexo na mesma conversa', async () => {
+      const { wrapper } = mountWith({
+        inbox: { channel_type: 'Channel::Whatsapp' },
+      });
+      const enviar = vi.spyOn(wrapper.vm, 'onSendReply').mockImplementation();
+      wrapper.vm.enviarAudioAoAnexar = true;
+
+      wrapper.vm.enviarSeForAGravacao(voz, 1);
+      await nextTick();
+
+      expect(enviar).toHaveBeenCalledTimes(1);
+      expect(wrapper.vm.enviarAudioAoAnexar).toBe(false);
+    });
+
+    it('não envia sem a seta, com anexo comum ou se a conversa mudou', async () => {
+      const { wrapper } = mountWith({
+        inbox: { channel_type: 'Channel::Whatsapp' },
+      });
+      const enviar = vi.spyOn(wrapper.vm, 'onSendReply').mockImplementation();
+
+      wrapper.vm.enviarSeForAGravacao(voz, 1);
+      wrapper.vm.enviarAudioAoAnexar = true;
+      wrapper.vm.enviarSeForAGravacao({ isVoiceMessage: false }, 1);
+      wrapper.vm.enviarSeForAGravacao(voz, 2);
+      await nextTick();
+
+      expect(enviar).not.toHaveBeenCalled();
+      expect(wrapper.vm.enviarAudioAoAnexar).toBe(false);
+    });
+
+    it('cancelar ou trocar de conversa esquece o pedido de envio', () => {
+      const { wrapper } = mountWith({
+        inbox: { channel_type: 'Channel::Whatsapp' },
+      });
+      wrapper.vm.enviarAudioAoAnexar = true;
+      wrapper.vm.resetRecorderAndClearAttachments();
+      expect(wrapper.vm.enviarAudioAoAnexar).toBe(false);
+    });
+  });
+
+  it('com a chave desligada, a caixa fica como sempre', () => {
+    const { wrapper } = mountWith({
+      inbox: { channel_type: 'Channel::Whatsapp' },
+    });
+    expect(wrapper.vm.textoDoCampo).toBe('');
+    expect(wrapper.vm.messagePlaceHolder).toBe('CONVERSATION.FOOTER.MSG_INPUT');
+    expect(wrapper.findComponent({ name: 'GravadorDoWhatsapp' }).exists()).toBe(
+      false
+    );
+  });
+});

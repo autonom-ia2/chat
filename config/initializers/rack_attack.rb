@@ -70,6 +70,11 @@ class Rack::Attack
 
   throttle('req/ip', limit: ENV.fetch('RACK_ATTACK_LIMIT', '3000').to_i, period: 1.minute, &:ip)
 
+  # Busca de endereço do "+" da conversa (#1702): cada chamada custa no Google; uma pessoa digitando não passa disso.
+  throttle('conversa_canal_lugares/ip', limit: 60, period: 1.minute) do |req|
+    req.ip if req.get? && req.path.include?('/conversa_canal/lugares')
+  end
+
   throttle('public_tracked_links/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path_without_extensions.start_with?('/l/')
   end

@@ -1,6 +1,7 @@
 import financial from './financial.json';
 import relationships from './relationships.json';
 import richMessage from './richMessage.json';
+import conversaCanal from './conversaCanal.json';
 import prospecting from './prospecting.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
@@ -70,6 +71,7 @@ export default {
   ...financial,
   ...relationships,
   ...richMessage,
+  ...conversaCanal,
   ...prospecting,
   ...advancedFilters,
   ...agentBots,

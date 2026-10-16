@@ -455,3 +455,13 @@
   display_name: Mensagem marcada nova (para quem, quando, o que dizer)
   enabled: false
   column: feature_flags_ext_1
+
+# Conversa com a cara do canal (#1702, épico #1701): na caixa de WhatsApp (oficial, WAHA e híbrida) a conversa e a
+# caixa de resposta ganham o visual do app — fundo, balões, hora e tiques, separador de dia, barra de digitar — e o
+# botão "+" para o atendente mandar localização, contato, botão de link e opções. A posição na lista é o bit: o
+# próximo depois de `crm_mensagem_marcada`; se outra flag entrar antes na main, esta vai para o fim. Desligada
+# (padrão): a conversa de sempre. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: conversa_cara_do_canal
+  display_name: Conversa com a cara do canal (WhatsApp)
+  enabled: false
+  column: feature_flags_ext_1

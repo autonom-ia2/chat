@@ -41,6 +41,8 @@ import wootConstants, {
 } from 'dashboard/constants/globals';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 
 export default {
   components: {
@@ -52,6 +54,7 @@ export default {
     Spinner,
     ResizableEditorWrapper,
     ReferralBubble,
+    AvisoJanelaFechada,
   },
   mixins: [inboxMixin],
   setup() {
@@ -72,6 +75,8 @@ export default {
       useContactConversationNavigation();
 
     provide('contextMenuElementTarget', conversationPanelRef);
+    // #1702: conversa com a cara do canal (WhatsApp), atrás da chave da conta.
+    const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
 
     return {
       captainTasksEnabled,
@@ -86,6 +91,9 @@ export default {
       topBannerRef,
       containerHeight,
       topBannerHeight,
+      pele,
+      classesDaLista,
+      classesDaBarra,
     };
   },
   data() {
@@ -484,8 +492,11 @@ export default {
         :href-link="instagramRestrictionStatusUrl"
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
+      <AvisoJanelaFechada
+        v-if="!currentChat.can_reply && pele && isAWhatsAppCloudChannel"
+      />
       <Banner
-        v-if="!currentChat.can_reply"
+        v-else-if="!currentChat.can_reply"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"
@@ -502,6 +513,7 @@ export default {
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
+      :class="classesDaLista"
       :current-user-id="currentUserId"
       :first-unread-id="unReadMessages[0]?.id"
       :is-an-email-channel="isAnEmailChannel"
@@ -553,7 +565,7 @@ export default {
         />
       </template>
     </MessageList>
-    <div class="flex relative flex-col bg-n-surface-1">
+    <div class="flex relative flex-col bg-n-surface-1" :class="classesDaBarra">
       <div
         v-if="isAnyoneTyping"
         class="absolute flex items-center w-full h-0 -top-7"
