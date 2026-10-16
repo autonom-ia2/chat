@@ -23,6 +23,22 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes.keys).to eq(['outro'])
   end
 
+  # A criação de conversa com mensagem não passa pela trava do `messages#create`: o callback da Message tira a chave.
+  it 'never stores waha_native from a conversation created with a message' do
+    contact_inbox = create(:contact_inbox, inbox: channel.inbox, contact: create(:contact, account: account))
+
+    post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
+                                                         params: { source_id: contact_inbox.source_id,
+                                                                   message: { content: 'Oi', content_attributes: {
+                                                                     waha_native: { kind: 'sendList', payload: { message: { title: 'forjado' } } },
+                                                                     outro: 'fica'
+                                                                   } } }
+
+    expect(response).to have_http_status(:success)
+    message = account.conversations.find_by(display_id: response.parsed_body['id']).messages.outgoing.first
+    expect(message.content_attributes).not_to have_key('waha_native')
+  end
+
   it 'drops them also when content_attributes comes as JSON text' do
     message = create_message(content: 'Oi', content_attributes: { waha_native: { kind: 'sendList' }, outro: 'fica' }.to_json)
 

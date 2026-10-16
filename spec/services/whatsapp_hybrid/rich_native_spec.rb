@@ -230,7 +230,7 @@ describe WhatsappHybrid::RichNative do
       expect(reply.content_attributes['selected_option']['id']).to eq('x|7')
     end
 
-    it 'with the flag off, always drops the numeric suffix but links only a reference that matches (no search)' do
+    it 'with the flag off, links and drops the suffix only for a reference that matches a native list (no search)' do
       offered = native_list(%w[manha])
       native_list(%w[tarde])
       allow(WhatsappHybrid::RichNative::ReplyLink).to receive(:options_message_for).and_call_original
@@ -240,7 +240,7 @@ describe WhatsappHybrid::RichNative do
 
       expect(matched.content_attributes).to include('in_reply_to' => offered.id, 'selected_option' => { 'id' => 'manha', 'title' => 'Manhã' })
       expect(unmatched.content_attributes['in_reply_to']).to be_blank
-      expect(unmatched.content_attributes['selected_option']['id']).to eq('tarde')
+      expect(unmatched.content_attributes['selected_option']['id']).to eq('tarde|999999')
       expect(WhatsappHybrid::RichNative::ReplyLink).not_to have_received(:options_message_for)
     end
 

@@ -474,7 +474,8 @@ pode apontar uma opção que nós mesmos oferecemos nessas listas; limite aceito
 (se o conector não preencheu; `in_reply_to_external_id` só com o id físico, nunca o provisório). Sem lista que confira
 (forja, lista de outra conversa), a mensagem fica como texto comum.
 
-**Forja.** Pela API de mensagens, com ou sem a flag: `waha_native` e `rich_message_sent_as` saem sempre;
+**Forja.** `waha_native` nunca é gravado em mensagem nenhuma, venha de onde vier (callback `before_create`). Pela API
+de mensagens, com ou sem a flag, `rich_message_sent_as` também sai;
 `waha_list_reply` só fica em mensagem recebida (é como o conector cria), e mesmo assim só vira escolha com uma lista
 nativa conferida.
 

@@ -3,3 +3,6 @@ pt_BR:
     rich_payload:
       list_button: "Ver opções"
       location_title: "Localização"
+  whatsapp_hybrid:
+    rich_native:
+      restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."

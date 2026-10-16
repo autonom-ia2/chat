@@ -3,3 +3,6 @@ en:
     rich_payload:
       list_button: "See options"
       location_title: "Location"
+  whatsapp_hybrid:
+    rich_native:
+      restore_failed: "The message was not sent: WhatsApp API refused the format and the text could not be sent. Send the message again."

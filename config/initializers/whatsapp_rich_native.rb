@@ -29,6 +29,9 @@ Rails.application.config.to_prepare do
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::RetryAsText
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::RetryAsText)
   end
+  if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ContractGuard }
+    Message.before_create Waha::RichNative::ContractGuard
+  end
   Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
 end
 

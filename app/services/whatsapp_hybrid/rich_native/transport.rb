@@ -6,7 +6,8 @@
 # - 5xx, conexão fechada, sem resposta ou resposta ilegível: pode ter saído. Segue a regra do texto (incerto), sem
 #   texto por cima.
 module WhatsappHybrid::RichNative::Transport
-  RESTORE_FAILED = 'A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem.'.freeze
+  # O motivo gravado quando o envio fecha como falha (i18n: whatsapp_hybrid.rich_native.restore_failed, no idioma da conta).
+  RESTORE_FAILED_KEY = 'whatsapp_hybrid.rich_native.restore_failed'.freeze
   # Sinais (catch/throw, não exceção) que fecham o envio já marcado como falha: nenhum `rescue` do WebTransport os
   # reclassifica, e o `perform` termina sem regravar o resultado nem o motivo. `deliver` é o dono de CLOSED; ele passa
   # o fechamento ao `perform` (PERFORM_CLOSED). `perform` é a ÚNICA entrada: `deliver` chamado fora dele levanta
@@ -54,7 +55,7 @@ module WhatsappHybrid::RichNative::Transport
 
   # Antes do texto da recusa: o `source_id` volta ao id gerado, que é o que o texto leva ao motor (o ack procura por ele).
   # Se não der para gravar, nada saiu (a recusa foi explícita e o texto não foi pedido): a mensagem fica `failed` com
-  # RESTORE_FAILED e resultado 'failed', o erro vai ao tracker, e o envio fecha pelo sinal CLOSED (sem passar pelos
+  # o motivo RESTORE_FAILED_KEY e resultado 'failed', o erro vai ao tracker, e o envio fecha pelo sinal CLOSED (sem passar pelos
   # `rescue` do WebTransport, que regravariam o motivo). A campanha recebe a queda, como em toda falha certa: com o
   # resultado 'failed', ela manda o modelo (CampaignJourney::ConversaAberta::QuedaHibrido).
   # Se nem o `failed` gravar (banco fora), não fecha em silêncio: relança o erro original, e o job falha à vista
@@ -93,13 +94,17 @@ module WhatsappHybrid::RichNative::Transport
 
   # Sem as validações do modelo (a de rajada recusaria numa conversa movimentada).
   def write_failed!
-    failed = { 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => RESTORE_FAILED,
+    failed = { 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => restore_failed_text,
                WhatsappHybrid::WebTransport::OUTCOME_KEY => 'failed' }
     @message.with_lock do
       @message.status = :failed
       @message.content_attributes = @message.content_attributes.to_h.merge(failed)
       @message.save!(validate: false)
     end
+  end
+
+  def restore_failed_text
+    I18n.t(RESTORE_FAILED_KEY, locale: @message.account.locale, default: I18n.t(RESTORE_FAILED_KEY))
   end
 
   def deliver_native(native, chat_id, physical_id)

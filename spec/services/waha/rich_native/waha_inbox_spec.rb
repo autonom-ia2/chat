@@ -287,6 +287,24 @@ describe Waha::RichNative::WahaInbox do
       expect(RichMessages.delivery_mode(inbox: inbox, type: 'options', conversation: conversation)).to eq(:text)
     end
 
+    # Evento ao vivo (push_data) fora de um request: sem `Current.account` e sem a conta carregada. Sem motores na lista,
+    # a rota da caixa WAHA sai antes de ler a conta: o cálculo do campo não faz consulta nenhuma. (O push_data carrega a
+    # conta por conta própria, no presenter do Enterprise e no Contact#push_event_data.)
+    it 'adds no query outside a request when there is no engine list, and push_data answers no types' do
+      flag_on!
+      id = create(:conversation, inbox: inbox, account: account).id
+      fresh = Conversation.preload(inbox: :channel).find(id)
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+
+      with_modified_env(WAHA_RICH_NATIVE_ENGINES: '') do
+        ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { Waha::RichNative.types_for(fresh, api_reply: false) }
+        expect(Conversations::EventDataPresenter.new(Conversation.find(id)).push_data[:whatsapp_api_rich_native]).to eq([])
+      end
+
+      expect(queries).to be_empty
+    end
+
     [true, false].each do |flag|
       it "adds no query for WAHA conversations in the list with the flag #{flag ? 'on' : 'off'}" do
         flag_on! if flag

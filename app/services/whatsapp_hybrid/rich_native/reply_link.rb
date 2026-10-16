@@ -5,9 +5,9 @@
 #
 # Numa caixa híbrida, quando a resposta traz `selected_option` e não aponta mensagem nenhuma (`context`):
 # 1. `rowId` com referência ("<opção>|<mensagem>", Waha::RichNative.split_row_id, separado pelo último "|", sem regex):
-#    `selected_option.id` SEMPRE volta ao id ORIGINAL da opção (o robô lê o mesmo de antes), confira ou não a referência
-#    (ex.: lista de uma conversa anterior), com ou sem a flag. Se a mensagem existe NESTA conversa e é lista nativa com
-#    essa opção, `in_reply_to` = ela (vale até com a flag desligada depois do envio: é uma consulta por id).
+#    Se a mensagem existe NESTA conversa e é lista nativa com essa opção, `in_reply_to` = ela e `selected_option.id`
+#    volta ao id ORIGINAL da opção (o robô lê o mesmo de antes), com ou sem a flag. Com a flag, a referência que não
+#    confere (ex.: lista de uma conversa anterior) também sai do id; sem a flag, fica como chegou.
 #    Lista com id de opção que tem "|" não sai nativa (Waha::RichPayload): todo `rowId` nativo com "|" é nosso.
 # 2. Sem referência, ou referência que não confere, e com a flag: `in_reply_to` = a ÚLTIMA mensagem nossa de options
 #    que saiu nativa nesta conversa com uma opção de `id` IGUAL ao da opção (listas mandadas antes da referência).
@@ -16,17 +16,22 @@ module WhatsappHybrid::RichNative::ReplyLink
   LOOKBACK = Waha::RichNative::LOOKBACK
 
   # { in_reply_to:, selected_option: } a gravar (só as chaves que mudam), ou nil quando nada muda.
-  # O sufixo `|<dígitos>` sai SEMPRE (todo `rowId` com ele é nosso: lista com "|" no id não sai nativa). `search` (a
-  # flag da conta) controla só a busca pela última lista; sem ela, `in_reply_to` vem só da referência que confere
-  # (uma consulta por id).
+  # `search` (a flag da conta): com ela, o sufixo `|<dígitos>` sai sempre (todo `rowId` com ele é nosso: lista com "|"
+  # no id não sai nativa) e a busca pela última lista roda. Sem ela, só a referência que confere com uma lista nativa
+  # nossa da conversa (uma consulta por id) liga a resposta e tira o sufixo; o resto fica como chegou.
   def self.link(conversation, selected, search: true)
     option_id, reference = Waha::RichNative.split_row_id(selected[:id])
-    target = reference && referenced_message(conversation, reference, option_id)
-    target ||= options_message_for(conversation, option_id) if search
+    confirmed = reference && referenced_message(conversation, reference, option_id)
+    target = confirmed || (search ? options_message_for(conversation, option_id) : nil)
     changes = {}
     changes[:in_reply_to] = target.id if target
-    changes[:selected_option] = selected.merge(id: option_id) if option_id != selected[:id]
+    changes[:selected_option] = selected.merge(id: option_id) if strip_reference?(option_id, selected, confirmed, search)
     changes.presence
+  end
+
+  # O sufixo sai com a flag (todo `rowId` com ele é nosso), ou sem ela só quando a referência conferiu.
+  def self.strip_reference?(option_id, selected, confirmed, search)
+    option_id != selected[:id] && (confirmed.present? || search)
   end
 
   def self.referenced_message(conversation, message_id, option_id)

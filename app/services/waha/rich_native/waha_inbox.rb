@@ -26,7 +26,7 @@ module Waha::RichNative::WahaInbox
 
   # Rota de `Waha::RichNative.types_for` (o campo `whatsapp_api_rich_native` da conversa). Caixa WAHA não tem janela.
   def native_types_for(conversation, api_reply: nil) # rubocop:disable Lint/UnusedMethodArgument
-    return [] unless conversation.inbox&.channel_type == 'Channel::Api'
+    return [] unless conversation.inbox&.channel_type == 'Channel::Api' && Waha::EngineCapabilities.engines.any?
 
     types_for_inbox(conversation.inbox, Waha::RichNative.account_of(conversation))
   end

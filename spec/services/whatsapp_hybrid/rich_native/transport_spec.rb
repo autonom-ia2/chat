@@ -139,7 +139,7 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(tracker).to have_received(:capture_exception)
     expect(message.reload.status).to eq('failed')
     expect(message.content_attributes['whatsapp_transport_outcome']).to eq('failed')
-    expect(message.content_attributes['external_error']).to eq(described_class::RESTORE_FAILED)
+    expect(message.content_attributes['external_error']).to eq(I18n.t('whatsapp_hybrid.rich_native.restore_failed', locale: account.locale))
     # Como o WebTransport depois de um erro do motor: relê a sessão (só leitura).
     expect(client).to have_received(:get_session)
   end
@@ -198,7 +198,7 @@ describe WhatsappHybrid::RichNative::Transport do
 
     expect { transport.send(:deliver, '5511937016094@c.us', '3EB0AAAA') }.to raise_error(described_class::ClosedOutsidePerform)
     expect(message.reload.status).to eq('failed')
-    expect(message.content_attributes['external_error']).to eq(described_class::RESTORE_FAILED)
+    expect(message.content_attributes['external_error']).to eq(I18n.t('whatsapp_hybrid.rich_native.restore_failed', locale: account.locale))
   end
 
   it 'leaves a 5xx of the native send uncertain, without the text on top' do
