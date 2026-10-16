@@ -18,6 +18,12 @@ module Crm
         'ninguem_online' => 'no_online_agent', 'presenca_indisponivel' => 'presence_unavailable',
         'nao_conseguimos_chamar' => 'nobody_reached'
       }.freeze
+      # #1673 (decisão do Rodrigo, 16/10): com um agente nosso no nome, o pedido de pessoa é dele (bot_handoff! pela
+      # instrução); a IA do CRM não tira a conversa por conta própria. Só quando o agente pode responder agora (o dono
+      # do QuemResponde): espelho de vínculo arquivado ou de agente pausado não segura a conversa, senão ela ficaria sem
+      # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
+      OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
+      MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
       # a que o cliente o ligou, mesmo fora do foco. Basta o card seguir aberto nesta conversa.
@@ -35,7 +41,7 @@ module Crm
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
 
-        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: 'ia_crm', origem: @trigger, pelo_card: @pelo_card,
+        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
       end
@@ -58,6 +64,7 @@ module Crm
         # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
         return 'assunto_mudou' unless @pelo_card ? Crm::Assunto.da_conversa?(@card, @conversation) : Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
+        return OWNED_BY_OUR_AGENT if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)
         return 'cooldown' if registro.intervalo_ativo?

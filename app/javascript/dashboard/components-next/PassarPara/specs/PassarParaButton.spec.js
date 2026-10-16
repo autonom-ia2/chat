@@ -37,6 +37,7 @@ const BRUNO = { id: 8, name: 'Bruno Lima', thumbnail: '' };
 const retrato = (extra = {}) => ({
   fase2: true,
   sem_robo: false,
+  pessoas: [ANA, BRUNO],
   agentes: [{ id: 4, name: 'Lia', com_a_conversa: false }],
   com_ia: null,
   origem: null,
@@ -57,10 +58,8 @@ const montar = (
       getCurrentUser: () => ANA,
       getCurrentAccountId: () => 1,
       'accounts/getAccount': () => () => ({ autonomia_agents_fase2: fase2 }),
-      'inboxAssignableAgents/getAssignableAgents': () => () => [ANA, BRUNO],
     },
     actions: {
-      'inboxAssignableAgents/fetch': () => {},
       setCurrentChatAssignee: vi.fn(),
     },
   });
@@ -238,5 +237,82 @@ describe('PassarParaButton', () => {
     expect(wrapper.find('[data-recusa]').text()).toBe(
       'Could not pass it right now. Try again.'
     );
+  });
+
+  // #1140 (correção 5): a lista vem do servidor, já com a regra de quem pode receber.
+  it('lista só as pessoas que o servidor diz que podem receber', async () => {
+    // Arrange: Bruno é da caixa, mas o servidor não o oferece (só vê as dele).
+    api.quemPodeReceber.mockResolvedValue({
+      data: retrato({ pessoas: [ANA] }),
+    });
+    const wrapper = montar({ assignee: null, assignee_type: null });
+
+    // Act
+    await wrapper.find('[data-passar-para]').trigger('click');
+    await flushPromises();
+
+    // Assert
+    const nomes = wrapper.findAll('[data-opcao-pessoa]').map(o => o.text());
+    expect(nomes).toHaveLength(1);
+    expect(nomes[0]).toContain('Ana Souza');
+    expect(wrapper.text()).not.toContain('Bruno Lima');
+  });
+
+  it('sem resposta do servidor: diz que não deu e oferece tentar de novo', async () => {
+    // Arrange
+    api.quemPodeReceber.mockRejectedValueOnce(new Error('falhou'));
+    const wrapper = montar({ assignee: null, assignee_type: null });
+
+    // Act
+    await wrapper.find('[data-passar-para]').trigger('click');
+    await flushPromises();
+
+    // Assert
+    expect(wrapper.find('[data-falhou-ao-ler]').text()).toContain(
+      'Could not see who can receive right now.'
+    );
+    expect(wrapper.find('[data-opcao-pessoa]').exists()).toBe(false);
+
+    await wrapper.find('[data-falhou-ao-ler] button').trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('[data-opcao-pessoa]')).toHaveLength(2);
+  });
+
+  it('recusa e a releitura falha: a recusa e a lista de antes ficam na tela', async () => {
+    // Arrange
+    api.passar.mockRejectedValue({
+      response: { data: { codigo: 'nao_atende_cliente' } },
+    });
+    const wrapper = montar();
+    await wrapper.find('[data-passar-para]').trigger('click');
+    await flushPromises();
+    api.quemPodeReceber.mockRejectedValueOnce(new Error('rede'));
+
+    // Act
+    await wrapper.find('[data-opcao-ia] input').setValue(true);
+    await wrapper.find('[data-confirmar]').trigger('click');
+    await flushPromises();
+
+    // Assert
+    expect(wrapper.find('[data-recusa]').text()).toBe(
+      'Lia is paused. Choose another person or another agent.'
+    );
+    expect(wrapper.find('[data-falhou-ao-ler]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-opcao-pessoa]')).toHaveLength(2);
+  });
+
+  it('resposta sem a lista de pessoas conta como falha, não como "ninguém"', async () => {
+    // Arrange
+    const { pessoas, ...semPessoas } = retrato();
+    api.quemPodeReceber.mockResolvedValueOnce({ data: semPessoas });
+    const wrapper = montar({ assignee: null, assignee_type: null });
+
+    // Act
+    await wrapper.find('[data-passar-para]').trigger('click');
+    await flushPromises();
+
+    // Assert
+    expect(pessoas).toHaveLength(2);
+    expect(wrapper.find('[data-falhou-ao-ler]').exists()).toBe(true);
   });
 });
