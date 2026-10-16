@@ -31,6 +31,13 @@
       "CHOSEN": "The customer tapped \"{title}\"",
       "MIRROR": "Copy of what the customer received. Only the customer can tap these options."
     },
+    "POLL": {
+      "MIRROR": "Copy of the poll the customer received. Only the customer can vote.",
+      "SINGLE": "Poll: one answer",
+      "MULTIPLE": "Poll: one or more answers",
+      "VOTED": "Voted: {titles}",
+      "NO_VOTE": "No vote"
+    },
     "SENT_AS_TEXT": {
       "LABEL": "Sent as text"
     }

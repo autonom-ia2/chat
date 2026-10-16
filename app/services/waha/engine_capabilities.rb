@@ -7,6 +7,8 @@
 # O motor declara a capacidade em `GET <motor>/api/server/version`, no campo `autonomia.rich_native`:
 #   { "autonomia": { "patch": "c2y-rich-1", "rich_native": ["options", "location", "contact"], "list_reply": true } }
 # `options` só conta com `list_reply: true` (o conector devolve a escolha do cliente em `waha_list_reply`).
+# c2y-rich-2 (fase 3) acrescenta `poll` (só com `poll_vote: true`) e as ações `reactions: true` / `edit: true`, lidas por
+# `actions` (reagir e editar pelo painel).
 #
 # NADA aqui faz HTTP na criação de mensagem nem na lista de conversas: `types` só LÊ o cache. Quem consulta o motor é
 # o Waha::EngineCapabilitiesRefreshJob (cron a cada 5 min), que grava o resultado por CACHE_TTL (10 min: cobre duas
@@ -59,6 +61,7 @@ module Waha::EngineCapabilities
 
     types = declared(response.parsed_response)
     Rails.cache.write(cache_key(engine), types, expires_in: CACHE_TTL)
+    Rails.cache.write(actions_cache_key(engine), declared_actions(response.parsed_response), expires_in: CACHE_TTL)
     types
   rescue StandardError => e
     Rails.logger.warn("[waha] engine capabilities unavailable engine=#{engine} #{e.class}")
@@ -81,11 +84,39 @@ module Waha::EngineCapabilities
                             .capture_exception
   end
 
+  # `options` só com `list_reply: true`; `poll` só com `poll_vote: true` (o conector devolve o voto, c2y-rich-2).
   def declared(body)
-    autonomia = body.is_a?(Hash) ? body['autonomia'] : nil
-    return [] unless autonomia.is_a?(Hash) && autonomia['rich_native'].is_a?(Array)
+    autonomia = autonomia_block(body)
+    return [] unless autonomia['rich_native'].is_a?(Array)
 
     types = Waha::RichNative::KINDS & autonomia['rich_native'].map(&:to_s)
-    autonomia['list_reply'] == true ? types : types - ['options']
+    types -= ['options'] unless autonomia['list_reply'] == true
+    types -= ['poll'] unless autonomia['poll_vote'] == true
+    types
+  end
+
+  # Ações sobre mensagem já enviada que o conector leva ao motor (c2y-rich-2): `react` com `reactions: true` e `edit`
+  # com `edit: true`.
+  ACTION_FLAGS = { 'react' => 'reactions', 'edit' => 'edit' }.freeze
+
+  def declared_actions(body)
+    autonomia = autonomia_block(body)
+    ACTION_FLAGS.filter_map { |action, flag| action if autonomia[flag] == true }
+  end
+
+  def autonomia_block(body)
+    autonomia = body.is_a?(Hash) ? body['autonomia'] : nil
+    autonomia.is_a?(Hash) ? autonomia : {}
+  end
+
+  # As ações (`declared_actions`) do motor, do cache. Sem valor = nenhuma.
+  def actions(engine)
+    return [] if engine.blank?
+
+    Array(Rails.cache.read(actions_cache_key(engine)))
+  end
+
+  def actions_cache_key(engine)
+    "waha/engine_capabilities/actions/#{engine}"
   end
 end

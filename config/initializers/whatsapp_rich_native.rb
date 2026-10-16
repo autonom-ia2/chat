@@ -33,6 +33,14 @@ Rails.application.config.to_prepare do
     Message.before_create Waha::RichNative::ContractGuard
   end
   Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
+
+  # Fase 3: enquete (tipo `poll` só com a flag; na Cloud sai como texto), e a volta do conector c2y-rich-2 (voto,
+  # ligação, mensagem desconhecida, reação e edição: Waha::RichNative::Inbound).
+  RichMessages.singleton_class.prepend(Waha::RichNative::PollGate) unless RichMessages.singleton_class <= Waha::RichNative::PollGate
+  unless Whatsapp::Providers::WhatsappCloudService <= Waha::RichNative::PollCloudText
+    Whatsapp::Providers::WhatsappCloudService.prepend(Waha::RichNative::PollCloudText)
+  end
+  Message.before_create Waha::RichNative::Inbound if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound }
 end
 
 # Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron (Waha::RichNative::ColdStart).

@@ -31,6 +31,13 @@
       "CHOSEN": "O cliente tocou em \"{title}\"",
       "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
     },
+    "POLL": {
+      "MIRROR": "Cópia da enquete que o cliente recebeu. Só o cliente pode votar.",
+      "SINGLE": "Enquete: uma resposta",
+      "MULTIPLE": "Enquete: uma ou mais respostas",
+      "VOTED": "Votou: {titles}",
+      "NO_VOTE": "Sem voto"
+    },
     "SENT_AS_TEXT": {
       "LABEL": "Enviado como texto"
     }

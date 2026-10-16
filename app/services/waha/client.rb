@@ -116,35 +116,23 @@ module Waha
       get("/api/#{session}/new-message-id")['id']
     end
 
-    def send_text(session:, chat_id:, text:, id:)
-      post('/api/sendText', { session: session, chatId: chat_id, text: text, id: id })
+    # reply_to (chat#1709, fase 3): o id físico da mensagem citada (só o id, sem "true_<chat>_"). nil = a chave não vai
+    # no corpo, e o pedido fica igual ao de antes.
+    def send_text(session:, chat_id:, text:, id:, reply_to: nil)
+      post('/api/sendText', with_reply_to({ session: session, chatId: chat_id, text: text, id: id }, reply_to))
     end
 
-    # kind: sendImage | sendFile | sendVoice | sendVideo. media: { file: { url:, mimetype:, filename: }, caption: }
+    # kind: sendImage | sendFile | sendVoice | sendVideo. media: { file: { url:, mimetype:, filename: }, caption:, reply_to: }
+    # (`reply_to`, chat#1709 fase 3: o id físico da mensagem citada; sem ele, o pedido de antes).
     def send_media(kind, session:, chat_id:, id:, media:)
       body = { session: session, chatId: chat_id, file: media[:file], id: id }
       body[:caption] = media[:caption] if media[:caption].present?
       body[:convert] = true if %w[sendVoice sendVideo].include?(kind)
-      post("/api/#{kind}", body)
+      post("/api/#{kind}", with_reply_to(body, media[:reply_to]))
     end
 
-    # ---- ENVIO NATIVO DE MENSAGEM RICA (chat#1709) ----
-    # Payloads conferidos no motor 2026.9.2 GOWS. Quem monta a partir do `rich_message` é o Waha::RichPayload.
-    # message: { title:, description:, footer:, button:, sections: [{ title:, rows: [{ title:, rowId:, description: }] }] }
-    # Sem `id`: o pedido do `sendList` não aceita id gerado antes; o id físico volta na resposta.
-    def send_list(session:, chat_id:, message:)
-      post('/api/sendList', { session: session, chatId: chat_id, message: message })
-    end
-
-    # location: { latitude:, longitude:, title: } (o motor não tem endereço à parte: vai no título)
-    def send_location(session:, chat_id:, id:, location:)
-      post('/api/sendLocation', { session: session, chatId: chat_id, id: id, **location.slice(:latitude, :longitude, :title) })
-    end
-
-    # contacts: [{ fullName:, phoneNumber:, whatsappId:, organization: }] (`whatsappId` só dígitos, sem + nem @c.us)
-    def send_contact_vcard(session:, chat_id:, id:, contacts:)
-      post('/api/sendContactVcard', { session: session, chatId: chat_id, id: id, contacts: contacts })
-    end
+    # ---- ENVIO NATIVO DE MENSAGEM RICA E AÇÕES (chat#1709): Waha::Client::RichSends ----
+    include Waha::Client::RichSends
 
     # ---- APPS (conector de mensagens) ----
     def create_app(session:, app_id:, config:, app: 'chatwoot')

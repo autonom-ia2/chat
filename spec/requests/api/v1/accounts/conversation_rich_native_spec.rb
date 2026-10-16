@@ -29,7 +29,7 @@ RSpec.describe 'Conversation whatsapp_api_rich_native', type: :request do
   it 'lists the native types next to whatsapp_api_reply when the flag is on' do
     account.enable_features!('whatsapp_rich_native')
 
-    expect(rich_native).to eq(%w[options location contact])
+    expect(rich_native).to eq(%w[options location contact poll])
     expect(response.parsed_body['whatsapp_api_reply']).to be(true)
   end
 

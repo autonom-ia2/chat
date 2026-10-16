@@ -11,6 +11,8 @@
 # - options sai sempre como LISTA (`sendList`), mesmo com até 3 opções sem descrição: o motor (GOWS) não tem botões
 #   (`sendButtons` responde 501). O `id` de cada opção vira o `rowId`, que volta na resposta do cliente.
 # - location sai por `sendLocation`; contact por `sendContactVcard`.
+# - poll (enquete, chat#1709 fase 3) sai por `sendPoll`: a pergunta é o corpo, as opções vão pelo título (o voto volta
+#   pelo título) e `multiple` vira `multipleAnswers`.
 #
 # Teste em aparelho real (16/10/2026, motor 2026.9.2 GOWS PLUS): os três chegam nativos (comentário na #1709).
 class Waha::RichPayload
@@ -26,7 +28,12 @@ class Waha::RichPayload
   # As mesmas quebras de linha que o tipo `options` recusa.
   LINE_BREAKS = RichMessages::Types::Options::LINE_BREAKS
 
-  KINDS = %w[options location contact].freeze
+  # Limites do `sendPoll` do motor.
+  POLL_NAME_MAX = 255
+  POLL_OPTIONS = (2..12)
+  POLL_OPTION_MAX = 100
+
+  KINDS = %w[options location contact poll].freeze
 
   attr_reader :kind
 
@@ -55,11 +62,13 @@ class Waha::RichPayload
     when 'options' then list_message.present?
     when 'location' then coordinates?
     when 'contact' then contact.present?
+    when 'poll' then poll.present?
     else false
     end
   end
 
-  # `sendList` não aceita id gerado antes (não está no contrato do motor); `sendLocation` e `sendContactVcard` aceitam.
+  # `sendList` não aceita id gerado antes (não está no contrato do motor); `sendLocation`, `sendContactVcard` e `sendPoll`
+  # aceitam.
   def pre_generated_id?
     @kind != 'options'
   end
@@ -69,6 +78,7 @@ class Waha::RichPayload
     when 'options' then client.send_list(session: session, chat_id: chat_id, message: list_message)
     when 'location' then client.send_location(session: session, chat_id: chat_id, id: id, location: location)
     when 'contact' then client.send_contact_vcard(session: session, chat_id: chat_id, id: id, contacts: [contact])
+    when 'poll' then client.send_poll(session: session, chat_id: chat_id, id: id, poll: poll)
     end
   end
 
@@ -79,6 +89,7 @@ class Waha::RichPayload
     when 'options' then { 'kind' => 'sendList', 'payload' => { message: list_message } }
     when 'location' then { 'kind' => 'sendLocation', 'payload' => location }
     when 'contact' then { 'kind' => 'sendContactVcard', 'payload' => { contacts: [contact] } }
+    when 'poll' then { 'kind' => 'sendPoll', 'payload' => { poll: poll } }
     end&.deep_stringify_keys
   end
 
@@ -190,6 +201,27 @@ class Waha::RichPayload
 
     wa_id = @rich[:wa_id]
     { fullName: name, phoneNumber: phone, whatsappId: (wa_id if wa_id.is_a?(String) && wa_id.present?) }.compact
+  end
+
+  # ---- poll ----
+  # { name:, options: [títulos], multipleAnswers: }, ou nil quando não cabe nos limites do motor.
+  def poll
+    return @poll if defined?(@poll)
+
+    @poll = build_poll
+  end
+
+  def build_poll
+    titles = Array(@rich[:options]).map { |option| option[:title] if option.is_a?(Hash) }
+    return unless @body.strip.present? && @body.length <= POLL_NAME_MAX && poll_titles?(titles)
+
+    { name: @body, options: titles, multipleAnswers: @rich[:multiple] == true }
+  end
+
+  # De 2 a 12 títulos, cada um numa linha e até 100 caracteres, sem repetir (o voto volta pelo título).
+  def poll_titles?(titles)
+    POLL_OPTIONS.cover?(titles.size) && titles.all? { |title| line?(title, POLL_OPTION_MAX) } &&
+      titles.map(&:strip).uniq.size == titles.size
   end
 
   def line?(text, max)
