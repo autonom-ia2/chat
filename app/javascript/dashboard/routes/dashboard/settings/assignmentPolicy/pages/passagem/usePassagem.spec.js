@@ -126,6 +126,75 @@ describe('usePassagem', () => {
     expect(passagem.carregando.value).toBe(false);
   });
 
+  // #1593: "A mesma pessoa" num agente de IA. No servidor é pool_type 'ai_agent' + o id do agente; na tela, "ia:<id>".
+  it('lê e salva o agente de IA em "A mesma pessoa", no funil e numa etapa', async () => {
+    // Arrange
+    const comIa = { ...HANDOFF, pool_type: 'ai_agent', pool_id: 4 };
+    const lia = { id: 4, name: 'Lia', parado: false, caixas: [] };
+    CrmKanbanAPI.getAiSettings.mockImplementation(() =>
+      resposta({
+        ...ajustes,
+        handoff: comIa,
+        ai_agents: [lia],
+        stages: [{ id: 1, name: 'Novo', handoff_custom: true, handoff: comIa }],
+      })
+    );
+    const passagem = usePassagem();
+
+    // Act
+    await passagem.carregar(9);
+    await passagem.salvar(9);
+
+    // Assert
+    expect(passagem.agentesIa.value).toEqual([lia]);
+    expect(passagem.regra.value).toMatchObject({
+      pool_type: 'user',
+      pool_id: 'ia:4',
+    });
+    const [, corpo] = CrmKanbanAPI.updateAiSettings.mock.calls[0];
+    expect(corpo.ai_settings.handoff).toMatchObject({
+      pool_type: 'ai_agent',
+      pool_id: 4,
+    });
+    expect(corpo.stage_handoff[1]).toMatchObject({
+      pool_type: 'ai_agent',
+      pool_id: 4,
+    });
+  });
+
+  // Pega: voltar para "Alguém da equipe" com a Lia escolhida antes salvava "A mesma pessoa = Lia".
+  it('"Alguém da equipe" depois de escolher a Lia: salva a equipe, sem o agente', async () => {
+    // Arrange
+    const passagem = usePassagem();
+    await passagem.carregar(9);
+    passagem.regra.value = {
+      ...passagem.regra.value,
+      pool_type: 'inbox',
+      pool_id: 'ia:4',
+    };
+
+    // Act
+    await passagem.salvar(9);
+
+    // Assert
+    const [, corpo] = CrmKanbanAPI.updateAiSettings.mock.calls[0];
+    expect(corpo.ai_settings.handoff).toMatchObject({
+      pool_type: 'inbox',
+      pool_id: null,
+    });
+  });
+
+  it('sem a Fase 2 o servidor não manda agentes: a lista fica vazia', async () => {
+    // Arrange
+    const passagem = usePassagem();
+
+    // Act
+    await passagem.carregar(9);
+
+    // Assert
+    expect(passagem.agentesIa.value).toEqual([]);
+  });
+
   it('se o servidor recusar, avisa que não salvou', async () => {
     // Arrange
     const passagem = usePassagem();

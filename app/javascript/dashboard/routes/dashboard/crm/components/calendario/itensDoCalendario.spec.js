@@ -10,6 +10,21 @@ const AGORA = new Date('2026-10-14T18:00:00Z');
 const item = evento => paraItem(evento, { fuso: FUSO, agora: AGORA });
 
 describe('itensDoCalendario', () => {
+  it('mensagem marcada que não saiu traz o motivo (#1590)', () => {
+    const mensagem = {
+      id: 'follow_up_9',
+      event_type: 'follow_up_auto_send_message',
+      starts_at: '2026-10-14T12:00:00Z',
+      status: 'overdue',
+      send_error_code: 'sem_modelo',
+    };
+    expect(item(mensagem)).toMatchObject({
+      tipo: 'mensagem',
+      falha: 'sem_modelo',
+    });
+    expect(item({ ...mensagem, send_error_code: null }).falha).toBe('');
+  });
+
   it('o vencimento é dia todo, no dia que o back manda, sem hora', () => {
     const vencimento = item({
       id: 'expected_close_1',

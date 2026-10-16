@@ -106,4 +106,22 @@ RSpec.describe 'CRM pipeline inboxes API', type: :request do
     expect(second_pipeline.pipeline_inboxes.count).to eq(0)
     expect(first_pipeline.pipeline_inboxes.count).to eq(0)
   end
+
+  # #1149 (R16): o Editar funil mostra só as caixas com o CRM ligado. Caixa que saiu do CRM guarda o vínculo, desligado.
+  it 'tells which linked inboxes still have the CRM on' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    ligada = create_crm_inbox(account: account, members: [admin])
+    saiu = create_crm_inbox(account: account, members: [admin])
+    [ligada, saiu].each do |inbox|
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, created_by: admin)
+    end
+    account.crm_inbox_settings.create!(inbox: ligada, crm_enabled: true)
+    account.crm_inbox_settings.create!(inbox: saiu, crm_enabled: false)
+
+    get "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/inboxes", headers: auth_headers(admin)
+
+    no_crm = response.parsed_body['payload'].to_h { |item| [item['inbox_id'], item['caixa_no_crm']] }
+    expect(no_crm).to eq(ligada.id => true, saiu.id => false)
+  end
 end

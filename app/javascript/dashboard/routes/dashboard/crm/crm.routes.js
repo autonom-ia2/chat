@@ -1,10 +1,12 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
   CAMPAIGN_PERMISSIONS,
+  SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
 const CrmDashboardPage = () => import('./pages/CrmDashboardPage.vue');
@@ -34,13 +36,19 @@ const adminMeta = {
   permissions: ['administrator', CRM_ADMIN_PERMISSION],
 };
 
+// CRM › SLA is the only SLA screen (#1618): crm_admin keeps it, and sla_manage
+// (the key the SLA policy API checks) opens it too.
+const slaMeta = {
+  permissions: ['administrator', CRM_ADMIN_PERMISSION, SLA_MANAGE_PERMISSION],
+};
+
 // Campaign reports and CTWA links are campaign data (#452): their APIs check campaign_view.
 const campaignsMeta = {
   permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
 const ensureCrmEnabled = (to, _from, next) => {
-  if (window.globalConfig?.CRM_KANBAN_ENABLED === 'true') {
+  if (isCrmKanbanEnabled()) {
     next();
     return;
   }
@@ -48,10 +56,7 @@ const ensureCrmEnabled = (to, _from, next) => {
 };
 
 const ensureCrmAiEnabled = (to, _from, next) => {
-  if (
-    window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
-    window.globalConfig?.CRM_AI_ENABLED === 'true'
-  ) {
+  if (isCrmKanbanEnabled() && window.globalConfig?.CRM_AI_ENABLED === 'true') {
     next();
     return;
   }
@@ -132,7 +137,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/crm/sla'),
     name: 'crm_sla_index',
-    meta: adminMeta,
+    meta: slaMeta,
     beforeEnter: ensureCrmEnabled,
     component: CrmSlaPage,
   },

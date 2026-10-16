@@ -25,7 +25,14 @@ module Autonomia
 
         DEBOUNCE_KEY = 'autonomia_debounce'.freeze
 
-        def perform(conversation_id, message_id, phase = 'trigger')
+        # A marca do debounce aponta para esta mensagem: nenhuma mais nova do cliente abriu outro turno (#1606).
+        def self.turno_pendente?(conversation, message_id)
+          stamp = conversation.additional_attributes.to_h[DEBOUNCE_KEY]
+          stamp.is_a?(Hash) && stamp['pending_message_id'] == message_id.to_i
+        end
+
+        # `posse` (#1606): o id do vínculo cuja posse do turno quem enfileirou já tomou (Operate::ReenfileirarTurno).
+        def perform(conversation_id, message_id, phase = 'trigger', posse = nil)
           conversation = Conversation.find_by(id: conversation_id)
           return if conversation.blank?
 
@@ -38,7 +45,9 @@ module Autonomia
           agent_inbox = eligible_agent_inbox(conversation)
           return if agent_inbox.blank?
 
-          phase == 'settle' ? settle(conversation, agent_inbox, message_id) : trigger(conversation, agent_inbox, message_id)
+          return trigger(conversation, agent_inbox, message_id) unless phase == 'settle'
+
+          settle(conversation, agent_inbox, message_id, posse)
         end
 
         private
@@ -59,15 +68,32 @@ module Autonomia
               .perform_later(conversation.id, message_id, 'settle')
         end
 
-        # Fase 'settle': só prossegue se este ainda é o último trigger da janela.
-        def settle(conversation, agent_inbox, message_id)
+        # Fase 'settle': só prossegue se este ainda é o último trigger da janela. Com a Fase 2 (#1606), espera o
+        # assunto ser decidido (reagenda a si mesma, sem sleep) e responde no máximo uma vez por dono (PosseDoTurno).
+        # Quem responde é o `agent_inbox` relido nesta execução (perform), nunca o de uma rodada anterior.
+        def settle(conversation, agent_inbox, message_id, posse)
           return unless current_token?(conversation, message_id)
+          return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
+          return unless ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
+                                                                            message_id: message_id, job_id: job_id,
+                                                                            posse: posse)
 
           ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
             agent_inbox: agent_inbox,
-            reply_to_message_id: message_id
+            reply_to_message_id: message_id,
+            posse: ::Autonomia::Agents::Operate::PosseDoTurno.valor(job_id: job_id, posse: posse, agent_inbox: agent_inbox)
           ).perform
+        end
+
+        def esperar_o_assunto?(conversation, agent_inbox, message_id)
+          ::Autonomia::Agents::Operate::EsperaDoAssunto.esperar?(conversation: conversation, agent_inbox: agent_inbox,
+                                                                 message_id: message_id)
+        end
+
+        def esperar_o_assunto(conversation, message_id, posse)
+          self.class.set(wait: ::Autonomia::Agents::Operate::EsperaDoAssunto::INTERVALO)
+              .perform_later(conversation.id, message_id, 'settle', posse)
         end
 
         # Grava SÓ a chave do debounce via jsonb_set no servidor (merge per-chave, não

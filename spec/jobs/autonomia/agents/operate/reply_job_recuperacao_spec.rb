@@ -4,18 +4,17 @@ require 'rails_helper'
 # 'trigger', debounce e 'settle' — e o Responder responde UMA vez. Se o cliente manda outra mensagem nessa janela, o
 # settle da recuperada aborta e só a mais nova é respondida.
 #
-# Mecanismo coberto aqui: o token do debounce (`autonomia_debounce.pending_message_id`) que está na main da base desta
-# PR (cd9d030aa7). A posse do turno da Fase 2 ("um turno, uma ordem", PR #1627) ainda não está na main: este spec
-# ganha o caso com ela ligada quando o #1627 entrar e a main for mesclada aqui.
+# Aqui, o token do debounce (`autonomia_debounce.pending_message_id`). Com a Fase 2 ligada (#1627, na main desde
+# 15/10), a posse do turno e o `turno_superado`: reply_job_recuperacao_fase2_spec.rb.
 #
-# Checklist depois do #1627 (mesclar a main nesta branch):
-# [ ] spec com a Fase 2 ligada: a recuperada pega a posse do turno, responde uma vez e solta;
-# [ ] spec do `turno_superado`: cliente manda outra durante a chamada à IA -> resposta da recuperada descartada e só a
+# Checklist do merge com o #1627 (feito em 16/10):
+# [x] spec com a Fase 2 ligada: a recuperada pega a posse do turno e responde uma vez (a posse fica: dedupe);
+# [x] spec do `turno_superado`: cliente manda outra durante a chamada à IA -> resposta da recuperada descartada e só a
 #     mais nova responde;
-# [ ] rodar os specs do responder e do reply_job;
-# [ ] conferir o número do evento: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 10, 11, 12 e 13 (9 sem uso);
-# [ ] no merge com o #1627, manter as duas pontas do enum (AgentEvent), do ALLOWED_REASONS (EventLogger) e da posse no
-#     responder (as linhas do #1489 ficam: RecoveredHeaderNote no #history e no answer).
+# [x] rodar os specs do responder e do reply_job;
+# [x] eventos: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 10, 11, 12 e 13 (9 sem uso);
+# [x] mantidas as duas pontas do enum (AgentEvent), do ALLOWED_REASONS (EventLogger) e da posse no responder
+#     (`so_contexto_interno` entra nos SILENCIOS_DE_FALHA, como o `vazio`: solta a posse).
 describe Autonomia::Agents::Operate::ReplyJob do
   include_context 'with a pending unsupported hybrid message'
 

@@ -9,7 +9,8 @@ module Crm
     # então as guardas abaixo cortam antes de qualquer efeito.
     class HandoffExecutor
       Result = Struct.new(:status, :assignee, :error, keyword_init: true)
-      STATUS = { entregue: :handed_off, convidado: :invited, segurando: :held_online }.freeze
+      # com_ia (#1593): a regra levou a conversa a um agente de IA; o serviço dos Agentes já trocou o dono e avisou.
+      STATUS = { entregue: :handed_off, convidado: :invited, segurando: :held_online, com_ia: :handed_to_ai }.freeze
       # O motivo do motor no vocabulário de sempre deste executor (logs e specs).
       ERROS = {
         'ja_tem_pessoa' => 'already_assigned', 'intervalo' => 'cooldown', 'ninguem_cuida' => 'no_eligible_agent',
@@ -17,6 +18,12 @@ module Crm
         'ninguem_online' => 'no_online_agent', 'presenca_indisponivel' => 'presence_unavailable',
         'nao_conseguimos_chamar' => 'nobody_reached'
       }.freeze
+      # #1673 (decisão do Rodrigo, 16/10): com um agente nosso no nome, o pedido de pessoa é dele (bot_handoff! pela
+      # instrução); a IA do CRM não tira a conversa por conta própria. Só quando o agente pode responder agora (o dono
+      # do QuemResponde): espelho de vínculo arquivado ou de agente pausado não segura a conversa, senão ela ficaria sem
+      # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
+      OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
+      MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
 
       def initialize(card:, handoff:, trigger: 'message')
         @card = card
@@ -31,7 +38,7 @@ module Crm
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
 
-        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: 'ia_crm', origem: @trigger,
+        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
       end
@@ -45,7 +52,16 @@ module Crm
         return 'not_requested' unless requested?
         return 'disabled' unless settings[:enabled]
         return 'no_conversation' if @conversation.blank?
+
+        conversa_bloqueada
+      end
+
+      def conversa_bloqueada
+        # #1606 (corrida c): a avaliação leva de 15 a 25 s; se o assunto da conversa virou outro card nesse meio tempo,
+        # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
+        return 'assunto_mudou' unless Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
+        return OWNED_BY_OUR_AGENT if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)
         return 'cooldown' if registro.intervalo_ativo?
@@ -58,8 +74,9 @@ module Crm
         return skip(erro_de(entrega)) if status.nil?
 
         apos_entregar if status == :handed_off
-        # A espera agora fica na conversa (Crm::Entrega::Marca); a do card, anterior ao #1454, sai.
-        clear_handoff_hold! if status == :held_online
+        # A espera agora fica na conversa (Crm::Entrega::Marca); a do card, anterior ao #1454, sai. Com um agente de IA
+        # (#1593) também: a conversa já tem dono.
+        clear_handoff_hold! if %i[held_online handed_to_ai].include?(status)
         # Fora da trava e da transação do card (revisão da chat#665): um erro ao postar não desfaz o convite.
         ::Autonomia::Agents::NotaDoEncaminhamento.postar(@conversation) if status == :invited
         registrar(status == :held_online ? 'held_online' : status.to_s, agente: entrega.pessoa)

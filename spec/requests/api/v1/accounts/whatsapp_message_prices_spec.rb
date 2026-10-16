@@ -11,6 +11,9 @@ RSpec.describe 'WhatsApp message prices API (#1332)', type: :request do
   it 'gives the price table and how many free replies each number used this month' do
     conversation = create(:conversation, account: account, inbox: channel.inbox)
     create(:message, account: account, inbox: channel.inbox, conversation: conversation, message_type: :outgoing)
+    stub_request(:get, "https://graph.facebook.com/#{Whatsapp::Templates::MetaClient.api_version}/123456789")
+      .with(query: { fields: 'timezone_id' }).to_return(status: 200, body: { timezone_id: '25' }.to_json,
+                                                        headers: { 'Content-Type' => 'application/json' })
 
     get path, headers: admin.create_new_auth_token, as: :json
 

@@ -61,7 +61,8 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       'porta' => { 'id' => clara.id, 'name' => 'Clara' },
       'pode_mudar' => true,
       'areas' => [{ 'id' => maria.id, 'name' => 'Maria', 'pipeline_ids' => [vendas.id], 'parado' => false, 'ultima_caixa' => true }],
-      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }]
+      'disponiveis' => [{ 'id' => marta.id, 'name' => 'Marta', 'parado' => true }],
+      'externo' => nil
     )
   end
 
@@ -118,6 +119,96 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
     expect(linhas).to be_empty
   end
 
+  it 'com o principal pausado, a área que já está na caixa fica e troca de funil: o leitor só vale para quem entra (#1570)' do
+    clara.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+    salvar([{ id: maria.id, pipeline_ids: [suporte.id] }])
+
+    expect(response).to have_http_status(:ok)
+    expect(area?(maria)).to be(true)
+    expect(linhas).to eq([[suporte.id, maria.id]])
+  end
+
+  it 'a lista de caixas não consulta se a caixa aceita área; só a caixa aberta (#1570)' do
+    sem_principal = create_crm_inbox(account: account, name: 'WhatsApp Recepção', members: [admin])
+    allow(Autonomia::Agents::Areas).to receive(:caixa_aceita_area?).and_call_original
+
+    get url, headers: auth_headers(admin)
+    expect(response).to have_http_status(:ok)
+    expect(Autonomia::Agents::Areas).not_to have_received(:caixa_aceita_area?)
+
+    get "#{url}/#{sem_principal.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('porta' => nil, 'pode_mudar' => true)
+    expect(Autonomia::Agents::Areas).to have_received(:caixa_aceita_area?).once
+  end
+
+  it 'diz se quem atende primeiro é agente de IA ou agente externo (#1570)' do
+    get "#{url}/#{inbox.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Clara', 'tipo_do_principal' => 'ia')
+
+    externa = create(:inbox, account: account)
+    robo = create(:agent_bot, account: account, name: 'Robô n8n')
+    AgentBotInbox.create!(inbox: externa, agent_bot: robo, account: account, status: :active)
+    get "#{url}/#{externa.id}", headers: auth_headers(admin)
+    expect(response.parsed_body.dig('payload', 'caixa', 'agent_bot')).to include('name' => 'Robô n8n', 'tipo_do_principal' => 'externo')
+  end
+
+  # #1648 — com a aba "Agente de IA" por caixa: espelho de agente da plataforma nunca é agente externo
+  # (AgentInbox.espelhos, a regra da aba, do `externo` e da lista de Agentes externos), mesmo em outra caixa ou com a porta
+  # apagada. Sem ela, a regra da main: só o espelho da porta ativa da caixa, de agente não apagado, é 'ia'.
+  describe 'tipo_do_principal' do
+    let(:tipo) do
+      lambda do |caixa|
+        get "#{url}/#{caixa.id}", headers: auth_headers(admin)
+        response.parsed_body.dig('payload', 'caixa', 'agent_bot', 'tipo_do_principal')
+      end
+    end
+    let(:espelho) { inbox.agent_bot_inbox.agent_bot }
+    let(:outra) do
+      create(:inbox, account: account).tap do |caixa|
+        AgentBotInbox.create!(inbox: caixa, agent_bot: espelho, account: account, status: :active)
+      end
+    end
+
+    it 'com a aba por caixa: espelho nunca é agente externo, nem sobrando de porta apagada (#1648)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+
+      # O espelho da Clara ligado em outra caixa, onde ela não é a porta.
+      expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia ia])
+
+      # Agente apagado.
+      clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('ia')
+
+      # Vínculo da porta apagado com o espelho ainda ligado: nem tipo externo, nem cartão de agente externo.
+      clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('ia')
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents', 'externo')).to be_nil
+    end
+
+    it 'sem a aba por caixa: como a main, só o espelho da porta ativa da caixa, de agente não apagado, é ia' do
+      expect([tipo.call(inbox), tipo.call(outra)]).to eq(%w[ia externo])
+
+      clara.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('externo')
+
+      clara.update_columns(deleted_at: nil) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(tipo.call(inbox)).to eq('externo')
+    end
+  end
+
+  it 'o principal sai da caixa: ela fica só de pessoas e a área continua listada e ativa (#1570)' do
+    Autonomia::Agents::Operate::InboxConnector.new(agent: clara, inbox: inbox).perform(connect: false)
+
+    caixa = agentes_da_caixa
+    expect(caixa['porta']).to be_nil
+    expect(caixa['areas'].pluck('name')).to eq(['Maria'])
+    expect(area?(maria)).to be(true)
+    expect(maria.reload).to be_operating
+  end
+
   it 'funil arquivado não aparece na tela e o responsável dele fica' do
     arquivado = create_crm_pipeline(account: account, user: admin, name: 'Antigo').first
     account.crm_pipeline_inboxes.create!(inbox: inbox, pipeline: arquivado)
@@ -128,6 +219,78 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(linhas).to eq([[arquivado.id, maria.id]])
+  end
+
+  # #1433: a mesma regra da caixa da API dos Agentes e da gaveta (Areas.caixa_aceita_area?, leitor único).
+  describe 'caixa sem principal' do
+    let(:so_de_pessoas) { create_crm_inbox(account: account, name: 'WhatsApp Recepção', members: [admin]) }
+
+    before do
+      account.crm_inbox_settings.create!(inbox: so_de_pessoas, crm_enabled: true, subject_ai_mode: 'auto')
+      account.crm_pipeline_inboxes.create!(inbox: so_de_pessoas, pipeline: vendas)
+    end
+
+    def salvar_na(caixa, ai_agents)
+      put "#{url}/#{caixa.id}", params: { caixa: { pipeline_ids: [vendas.id], modo: 'chegou', people: [], ai_agents: ai_agents } },
+                                headers: auth_headers(admin), as: :json
+    end
+
+    it 'caixa só de pessoas aceita área pelo CRM, e a tela a oferece' do
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('porta' => nil, 'pode_mudar' => true)
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:ok)
+      expect(Autonomia::Agents::AgentInbox.kept.area.exists?(inbox: so_de_pessoas, agent: marta)).to be(true)
+      expect(marta.reload).to be_operating
+    end
+
+    # #1648 (decisão do Rodrigo de 15/10, opção B): o agente de outro sistema atende primeiro e a área fica na equipe.
+    it 'com a aba por caixa, caixa com agente de outro sistema aceita área pelo CRM, mostra o agente e a tela a oferece' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+      bot = create(:agent_bot, account: account, name: 'Automação')
+      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: bot, account: account)
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents'))
+        .to include('pode_mudar' => true, 'externo' => { 'id' => bot.id, 'name' => 'Automação' })
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:ok)
+      expect(Autonomia::Agents::AgentInbox.kept.area.exists?(inbox: so_de_pessoas, agent: marta)).to be(true)
+      expect(so_de_pessoas.reload.agent_bot).to eq(bot)
+    end
+
+    it 'sem a aba por caixa, caixa com agente de outro sistema recusa com crm.caixas.robo_externo (como antes do #1648)' do
+      AgentBotInbox.create!(inbox: so_de_pessoas, agent_bot: create(:agent_bot, account: account), account: account)
+      get "#{url}/#{so_de_pessoas.id}", headers: auth_headers(admin)
+      expect(response.parsed_body.dig('payload', 'caixa', 'ai_agents')).to include('pode_mudar' => false, 'disponiveis' => [])
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.robo_externo')
+      expect(Autonomia::Agents::AgentInbox.kept.where(inbox: so_de_pessoas)).to be_empty
+    end
+
+    it 'principal parado recusa com crm.caixas.principal_parado' do
+      clara.update_columns(status: Autonomia::Agents::Agent.statuses[:paused], enabled: false) # rubocop:disable Rails/SkipsModelValidations
+
+      salvar([{ id: maria.id, pipeline_ids: [vendas.id] }, { id: marta.id, pipeline_ids: [suporte.id] }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.principal_parado')
+      expect(area?(marta)).to be(false)
+    end
+
+    it 'a recusa que vem de dentro do Areas (caixa travada) também sai pelo código' do
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(Autonomia::Agents::Areas::CaixaNaoAceitaArea.new(:principal_parado))
+
+      salvar_na(so_de_pessoas, [{ id: marta.id, pipeline_ids: [vendas.id] }])
+
+      expect(response.parsed_body.dig('error', 'code')).to eq('crm.caixas.principal_parado')
+    end
   end
 
   describe 'recusa sem gravar nada' do
@@ -161,9 +324,9 @@ RSpec.describe 'CRM Caixas no CRM API — agentes de IA', type: :request do
       expect_recusa('crm.caixas.agente_invalido')
     end
 
-    it 'rascunho ou pausado de propósito como área: 422, nunca 500 (#1433)' do
+    it 'rascunho (código próprio, #1570) ou pausado de propósito como área: 422, nunca 500 (#1433)' do
       salvar([{ id: agente('Rascunho', status: :draft, enabled: false, instruction: 'Pronto.').id, pipeline_ids: [] }])
-      expect_recusa('crm.caixas.agente_invalido')
+      expect_recusa('crm.caixas.agente_rascunho')
 
       pausado = agente('Pausado')
       Autonomia::Agents::Operate::InboxConnector.new(agent: pausado, inbox: create(:inbox, account: account)).perform(connect: true)

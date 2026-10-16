@@ -18,6 +18,9 @@ module Waha
     class Timeout < Error; end
     # O recurso não existe no motor (ex.: sessão já apagada).
     class NotFound < Error; end
+    # Resposta 2xx com corpo que não é JSON: o motor executou o pedido, mas o resultado não dá para ler (#1453). Continua
+    # sendo Error para quem já trata Error; o envio do WhatsApp API a trata como incerta.
+    class InvalidResponse < Error; end
 
     DEFAULT_TIMEOUT = 20
 
@@ -49,8 +52,13 @@ module Waha
       get("/api/sessions?all=#{all}")
     end
 
-    def start_session(name)
-      post("/api/sessions/#{name}/start")
+    def start_session(name, timeout: DEFAULT_TIMEOUT)
+      post("/api/sessions/#{name}/start", timeout: timeout)
+    end
+
+    # Para a sessão sem desvincular o aparelho (diferente de logout): o start depois religa sem novo QR.
+    def stop_session(name)
+      post("/api/sessions/#{name}/stop")
     end
 
     def restart_session(name)
@@ -210,7 +218,7 @@ module Waha
       response.parsed_response
     rescue JSON::ParserError
       # A mensagem do erro de JSON traz um pedaço do corpo (pode ter credencial): só a classe.
-      raise Error, "WAHA #{method.upcase} #{path} resposta inválida (JSON::ParserError)"
+      raise InvalidResponse, "WAHA #{method.upcase} #{path} resposta inválida (JSON::ParserError)"
     rescue Net::ReadTimeout => e
       raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{scrub(e.message, body)}"
     rescue HTTParty::Error, SocketError, Net::OpenTimeout, Errno::ECONNREFUSED => e

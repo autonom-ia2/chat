@@ -9,6 +9,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ArquivoDaCampanha from './ArquivoDaCampanha.vue';
+import ProdutosDaCampanha from './ProdutosDaCampanha.vue';
 import api from '../api/modelosWhatsapp';
 import {
   arquivoGuardado,
@@ -66,7 +67,8 @@ const temAlgo = computed(
     pedido.value.validade ||
     pedido.value.cartoes.length ||
     pedido.value.catalogo ||
-    pedido.value.formulario
+    pedido.value.formulario ||
+    pedido.value.produtos
 );
 
 // Trocou de modelo enquanto o arquivo subia: o resultado é do modelo anterior e
@@ -143,6 +145,14 @@ const escolher = async (chave, { arquivo, local }, gravar) => {
           {{ t(`${NS}.AJUDA`) }}
         </p>
       </div>
+
+      <ProdutosDaCampanha
+        v-if="pedido.produtos"
+        :caixa="caixa"
+        :pedido="pedido.produtos"
+        :escolhidos="valores.produtos || []"
+        @update="produtos => atualizar({ produtos })"
+      />
 
       <ArquivoDaCampanha
         v-if="pedido.topo"

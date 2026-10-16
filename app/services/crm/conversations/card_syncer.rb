@@ -15,6 +15,9 @@ class Crm::Conversations::CardSyncer
     return unless load_conversation
     return if @conversation.inbox_id.blank?
 
+    # Cliente com card aberto que escreve por outra caixa (#1150, R13): liga ao card antes de pensar em criar outro.
+    Crm::Conversations::OutroCanal.new(conversation: @conversation, message: @message).perform
+
     pipeline_inbox = auto_create_pipeline_inbox
     return refresh_existing_card if pipeline_inbox.blank?
 
@@ -46,8 +49,21 @@ class Crm::Conversations::CardSyncer
 
     Crm::Cards::Broadcaster.broadcast(card, event_name) if card.present? && event_name.present?
     maybe_stop_ai_followup(card) if card.present?
-    schedule_ai_evaluation(card) if card.present?
+    schedule_ai_evaluation(card) if card.present? && (!foco_depois_do_assunto? || event_name == Events::Types::CRM_CARD_CREATED)
     card
+  end
+
+  # #1675: com a flag `crm_avaliar_toda_mensagem` e a IA de assunto ligada na caixa (também a de 1 funil com card ao
+  # chegar), a mensagem do cliente espera a decisão do assunto: o card que a deduplicação devolve aqui é o foco de ANTES
+  # da mensagem, e pode não ser o assunto dela. Quem agenda a IA e conta a atividade é o Crm::Subjects::IdentifyJob, no
+  # card em foco depois da decisão (Crm::Conversations::CardEmFoco). O resto da sincronização (dono, time, caixa) segue.
+  # Card que nasce aqui já é o foco e é avaliado como sempre: a decisão pode ter rodado antes dele existir (fila high), e
+  # se rodar depois, o Observer#agendada_desde? não agenda de novo.
+  def foco_depois_do_assunto?
+    return @foco_depois_do_assunto if defined?(@foco_depois_do_assunto)
+
+    @foco_depois_do_assunto = @message.present? && @message.incoming? &&
+                              Crm::Conversations::CardEmFoco.ligada?(@account) && Crm::Subjects.ligado?(@conversation)
   end
 
   # Auto-stop the AI follow-up cadence when the contact replies. Guarded internally
@@ -58,8 +74,23 @@ class Crm::Conversations::CardSyncer
   # automático, então um dono escolhido à mão segue intocado.
   # Só responsável e time (sincronização sem mensagem): a mensagem não avança a atividade desse card — senão o
   # StaleCardsJob voltaria a avaliá-lo com IA a cada período parado — nem abre lock em caixa que não tem card.
+  # Com a flag `crm_avaliar_toda_mensagem` (#1675), a mensagem do cliente conta no card em foco e a IA o avalia
+  # (Crm::Conversations::CardEmFoco), o que tira o motivo acima. Com a IA de assunto ligada na caixa, quem faz isso é o
+  # Crm::Subjects::IdentifyJob, depois de decidir o assunto: aqui o foco ainda é o de antes da mensagem.
   def refresh_existing_card
-    return if @message.present?
+    return mensagem_no_card_em_foco if @message.present?
+
+    refresh_card_without_message
+  end
+
+  def mensagem_no_card_em_foco
+    return unless Crm::Conversations::CardEmFoco.ligada?(@account) && @message.incoming?
+    return if foco_depois_do_assunto?
+
+    Crm::Conversations::CardEmFoco.new(conversation: @conversation, message: @message).perform
+  end
+
+  def refresh_card_without_message
     return if inbox_crm_disabled?
     return if primary_conversation_card.blank?
 
@@ -84,7 +115,12 @@ class Crm::Conversations::CardSyncer
     setting.present? && !setting.crm_enabled?
   end
 
+  # Na ordem do turno, quem para a cadência é o Crm::Subjects::IdentifyJob, depois de decidir o assunto (#1606, corrida
+  # f): aqui o foco ainda é o de antes da mensagem. Fora dela (inclusive com a IA de assunto ligada, mas sem a Fase 2 ou
+  # sem área), para na hora, como sempre foi.
   def maybe_stop_ai_followup(card)
+    return if @message&.incoming? && Crm::Subjects.ordem_do_turno?(@conversation)
+
     Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: @message).maybe_cancel
   end
 
@@ -156,18 +192,24 @@ class Crm::Conversations::CardSyncer
   end
 
   def refresh_attributes(card, auto_sync)
-    attributes = {
-      contact_id: @conversation.contact_id,
-      inbox_id: @conversation.inbox_id,
-      source: @conversation.inbox&.channel_type,
-      metadata: refreshed_metadata(card, auto_sync)
-    }.compact
+    attributes = { contact_id: @conversation.contact_id, **caixa_attributes(card), metadata: refreshed_metadata(card, auto_sync) }.compact
 
     merge_activity_attributes(attributes)
     attributes[:conversation_id] = @conversation.id if card.conversation_id.blank?
     attributes[:owner_id] = @conversation.assignee_id if sync_assignment?(card) && assignee_can_own?(card)
     attributes[:team_id] = @conversation.team_id if sync_team?(card)
     attributes.reject { |key, value| values_equal?(card.public_send(key), value) }
+  end
+
+  # A caixa (e o canal) do card é a da conversa principal dele. Uma conversa de outra caixa ligada ao card (outro canal,
+  # R13 do #1150, ou vínculo à mão) não o arrasta para a caixa dela: a caixa do card decide quem o vê no Kanban, e ele
+  # pularia de caixa a cada mensagem de um canal ou do outro. Card sem principal adota a caixa de quem o adota.
+  # Junto com a R13, atrás da flag `crm_outro_canal` (#1666): sem ela, a caixa do card segue a última conversa sincronizada.
+  def caixa_attributes(card)
+    da_caixa = card.conversation_id.blank? || own_conversation?(card)
+    return {} unless da_caixa || !@account.feature_enabled?(Crm::Conversations::OutroCanal::FLAG)
+
+    { inbox_id: @conversation.inbox_id, source: @conversation.inbox&.channel_type }
   end
 
   # Acesso por funil (#1148, decisão a): o atendente só vira dono se tiver o funil do card; senão o dono fica como está.
@@ -183,7 +225,7 @@ class Crm::Conversations::CardSyncer
   # activity clock — stage moves and linkers legitimately set last_activity_at to
   # Time.current, and a stale real-message date would regress it.
   def merge_activity_attributes(attributes)
-    return if @message.blank?
+    return if @message.blank? || foco_depois_do_assunto?
 
     real_message_at = last_message_at
     return if real_message_at.blank?

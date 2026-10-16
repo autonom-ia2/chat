@@ -45,7 +45,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
 
   def follow_up_events
     due_follow_ups.map do |follow_up|
-      Crm::FollowUps::SeriesCalendarEvents.follow_up_event(follow_up, conversation_id: visible_conversation_id(follow_up))
+      Crm::FollowUps::SeriesCalendarEvents.follow_up_event(follow_up, conversation_id: visible_conversation_id(follow_up), account: Current.account)
     end
   end
 

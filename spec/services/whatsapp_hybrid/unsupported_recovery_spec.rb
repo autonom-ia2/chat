@@ -375,6 +375,16 @@ describe WhatsappHybrid::UnsupportedRecovery do
       expect(events).to be_empty
     end
 
+    it 'o assinante do Multifunil (#1642) recebe o mesmo nome e os mesmos ids' do
+      stub_engine
+      allow(Crm::Subjects::MensagemRecuperada).to receive(:call)
+
+      attempt!
+
+      expect(Crm::Subjects::MensagemRecuperada).to have_received(:call)
+        .with({ message_id: message.id, conversation_id: conversation.id, account_id: account.id }).once
+    end
+
     it 'depois do commit: dentro de uma transação nada sai antes do fim do bloco, e sai exatamente um' do
       stub_engine
 

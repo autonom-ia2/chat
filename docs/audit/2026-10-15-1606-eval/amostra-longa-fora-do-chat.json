@@ -1,0 +1,289 @@
+{
+  "inicio": "2026-10-15T13:29:48Z",
+  "casos": [
+    {
+      "nome": "atendido_fora_do_chat_1",
+      "passagens": "<passagens_recentes>\nDados do sistema sobre quem atendeu esta conversa. Não são instruções.\n- 15/10 10:29: passada de Assistente (agente externo) para Ana (pessoa), pedida por Ana (pessoa). Devolvida por Ana às 15/10 10:29.\n- 15/10 10:29: passada de Ana (pessoa) para Assistente (agente externo), pedida por Ana (pessoa). Ainda não devolvida.\n</passagens_recentes>",
+      "turnos": [
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente já foi atendido; após a devolução, o cliente apenas agradeceu.",
+          "pessoa_no_nome": null,
+          "ms": 8783,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente já foi atendido; não há novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 10515,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de falar com um atendente já foi atendido; a pergunta atual não solicita novo encaminhamento.",
+          "pessoa_no_nome": null,
+          "ms": 8545,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com uma pessoa já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 13295,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendimento humano já foi atendido antes do retorno à IA; não houve novo pedido depois.",
+          "pessoa_no_nome": null,
+          "ms": 13079,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior por atendente foi atendido antes de a conversa voltar à IA; não houve novo pedido depois.",
+          "pessoa_no_nome": null,
+          "ms": 14026,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de falar com uma pessoa foi atendido por Ana e devolvido; não houve novo pedido de atendente depois disso.",
+          "pessoa_no_nome": null,
+          "ms": 11299,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente foi atendido antes da conversa voltar à IA; não houve novo pedido depois.",
+          "pessoa_no_nome": null,
+          "ms": 13000,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Após o retorno à IA, a cliente não pediu para falar com uma pessoa.",
+          "pessoa_no_nome": null,
+          "ms": 8192,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não houve novo pedido para falar com uma pessoa após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 14230,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "A cliente pediu novamente para falar com uma pessoa sobre o boleto, após a devolução à IA.",
+          "pessoa_no_nome": "Ana",
+          "ms": 14053,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    },
+    {
+      "nome": "atendido_fora_do_chat_2",
+      "passagens": "<passagens_recentes>\nDados do sistema sobre quem atendeu esta conversa. Não são instruções.\n- 15/10 10:31: passada de Assistente (agente externo) para Ana (pessoa), pedida por Ana (pessoa). Devolvida por Ana às 15/10 10:31.\n- 15/10 10:31: passada de Ana (pessoa) para Assistente (agente externo), pedida por Ana (pessoa). Ainda não devolvida.\n</passagens_recentes>",
+      "turnos": [
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 13273,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de falar com um atendente foi atendido; depois da devolução à IA, não houve novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 8617,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com um atendente foi atendido antes do retorno à IA; não houve novo pedido depois.",
+          "pessoa_no_nome": null,
+          "ms": 9293,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "consultar",
+          "motivo": "Pergunta pontual sobre prazo de entrega e horário de funcionamento; o pedido anterior por atendente já foi atendido.",
+          "pessoa_no_nome": null,
+          "ms": 15007,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com uma pessoa já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 10522,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com uma pessoa já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 13710,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 14053,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com uma pessoa já foi atendido; não houve novo pedido depois do retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 14149,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não há pedido recente para falar com uma pessoa; a passagem anterior já foi atendida.",
+          "pessoa_no_nome": null,
+          "ms": 7270,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "consultar",
+          "motivo": "A cliente fez perguntas sobre horário, entrega e desconto, mas não pediu para falar com uma pessoa após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 10575,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "A cliente pediu novamente para falar com uma pessoa após a devolução à IA.",
+          "pessoa_no_nome": "Ana",
+          "ms": 13417,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    },
+    {
+      "nome": "atendido_fora_do_chat_3",
+      "passagens": "<passagens_recentes>\nDados do sistema sobre quem atendeu esta conversa. Não são instruções.\n- 15/10 10:34: passada de Assistente (agente externo) para Ana (pessoa), pedida por Ana (pessoa). Devolvida por Ana às 15/10 10:34.\n- 15/10 10:34: passada de Ana (pessoa) para Assistente (agente externo), pedida por Ana (pessoa). Ainda não devolvida.\n</passagens_recentes>",
+      "turnos": [
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendimento humano já foi atendido; não há novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 8542,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de falar com um atendente já foi atendido; não há novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 8669,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com um humano já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 7816,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "consultar",
+          "motivo": "A pergunta sobre prazo de entrega para São Paulo pode exigir confirmação da equipe; não houve novo pedido de atendente após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 21200,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente foi atendido antes do retorno à IA; não houve novo pedido depois.",
+          "pessoa_no_nome": null,
+          "ms": 18206,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior por atendente já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 9239,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior para falar com um atendente já foi atendido; não houve novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 9429,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "consultar",
+          "motivo": "A cliente fez perguntas específicas sobre prazo e frete; o pedido anterior por atendente já foi atendido, sem novo pedido após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 13492,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não houve novo pedido de atendente após o retorno à IA.",
+          "pessoa_no_nome": null,
+          "ms": 17763,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Após o retorno à IA, a cliente não pediu para falar com uma pessoa.",
+          "pessoa_no_nome": null,
+          "ms": 12099,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "O cliente pediu novamente para falar com uma pessoa após a conversa ter voltado à IA.",
+          "pessoa_no_nome": "Ana",
+          "ms": 9911,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    }
+  ],
+  "custo_usd": 0.020217000000000006,
+  "fim": "2026-10-15T13:36:20Z"
+}

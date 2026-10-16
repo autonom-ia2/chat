@@ -1,9 +1,9 @@
 require 'administrate/field/base'
 
-# Nicho dos agentes da conta (#1429), em cartões, sem <select>. `data` é o Autonomia::Agents::Nicho::Escolha efetivo.
+# Segmento e nicho da conta (#1429, #1550), em cartões, sem <select>. `data` é o Autonomia::Agents::Nicho::Escolha efetivo.
 class AgentsNicheField < Administrate::Field::Base
   def self.permitted_attribute(attr, _options = nil)
-    { attr => %i[nicho perfil] }
+    { attr => %i[nicho perfil canal] }
   end
 
   def nicho
@@ -15,15 +15,40 @@ class AgentsNicheField < Administrate::Field::Base
     data.perfil || Autonomia::Agents::Nicho::PERFIL_PADRAO
   end
 
+  # O cartão de canal marcado fora da insurtech: o canal padrão, para quem trocar para insurtech.
+  def canal
+    data.canal || Autonomia::Agents::Nicho::CANAL_PADRAO
+  end
+
   def padrao
     Autonomia::Agents::Nicho.padrao_da_instalacao
   end
 
+  # Geral primeiro, como no mockup aprovado (#1550).
   def nichos
-    Autonomia::Agents::Nicho::NICHOS
+    [Autonomia::Agents::Nicho::GERAL, Autonomia::Agents::Nicho::SEGUROS]
   end
 
   def perfis
     Autonomia::Agents::Nicho::PERFIS
+  end
+
+  def canais
+    Autonomia::Agents::Nicho::CANAIS
+  end
+
+  # Prévia do formulário: como um card fechado (ganho, perdido) aparece para a equipe da conta, no idioma dela, com o
+  # pacote do perfil (nil = geral). Lê o mesmo catálogo das requisições, então mostra o texto real.
+  def previa(locale, perfil = nil)
+    camadas = perfil ? [Autonomia::Agents::Nicho::SEGUROS, "#{Autonomia::Agents::Nicho::SEGUROS}/#{perfil}"] : []
+    %w[won lost].map do |status|
+      chave = "crm.export.statuses.#{status}"
+      (camadas.any? && Autonomia::Segmentos::Catalogo.procurar(locale, chave, [], nil, camadas)) || I18n.t(chave, locale: locale)
+    end
+  end
+
+  # Desligadas as palavras por segmento na instalação, o formulário avisa que a escolha só fica guardada.
+  def pacotes_ligados?
+    Autonomia::Segmentos::Pacotes.enabled?
   end
 end

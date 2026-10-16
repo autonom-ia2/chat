@@ -1,4 +1,6 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
+import crmEn from 'dashboard/i18n/locale/en/crm.json';
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
@@ -6,8 +8,15 @@ import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
 // The drawer pulls global config + permissions; stub them so we can mount it in
 // isolation and focus on the form-reset reactivity that the realtime-churn fix
 // changed.
+// #1548 (passo 2): o pacote da conta (`autonomia_pacote`) vem da conta atual.
+const conta = vi.hoisted(() => ({ autonomia_pacote: null }));
 vi.mock('vuex', () => ({
-  useStore: () => ({ getters: {} }),
+  useStore: () => ({
+    getters: {
+      getCurrentAccountId: 1,
+      'accounts/getAccount': () => conta,
+    },
+  }),
 }));
 vi.mock('../composables/useCrmPermissions', () => ({
   useCrmPermissions: () => ({ canManageAi: ref(false) }),
@@ -441,11 +450,115 @@ describe('CrmPipelineDrawer Atender', () => {
     ]);
   });
 
+  describe('variant by account type (#1548)', () => {
+    afterEach(() => {
+      conta.autonomia_pacote = null;
+    });
+
+    const categoriasCriadas = async chave => {
+      const wrapper = mountDrawer({
+        mode: 'create',
+        pipeline: null,
+        stages: [],
+      });
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      await wrapper.get(`[data-modelo="${chave}"]`).trigger('click');
+      wrapper.vm.view = 'confira';
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-funil-principal]').trigger('click');
+      await flushPromises();
+      const [[payload]] = wrapper.emitted('save');
+      return payload.stages.map(stage => stage.category);
+    };
+
+    it('health account: Service E3 is in progress, not a pause', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'andamento',
+        'resolvido',
+      ]);
+    });
+
+    it('health account: other Serve templates keep today categories', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('POS_VENDA')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+
+    it('broker account or no package: Service keeps today categories', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+      conta.autonomia_pacote = null;
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+  });
+
   it('gives "Paid" back when leaving Collections for another template', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
     await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
     await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
     await wrapper.get('[data-modelo="POS_VENDA"]').trigger('click');
     expect(wrapper.vm.form.outcomeLabels.success).toBe('');
+  });
+});
+
+// #1149 (R16): caixa que saiu do CRM guarda o vínculo, mas não aparece como
+// ligada no funil (nem no resumo, nem em "Ligado em").
+describe('CrmPipelineDrawer — inboxes are read only', () => {
+  it('shows only the inboxes with the CRM on', async () => {
+    const wrapper = mount(CrmPipelineDrawer, {
+      props: {
+        show: true,
+        mode: 'edit',
+        pipeline: { id: 1, name: 'Funil' },
+        stages: makeStages(),
+        pipelineInboxes: [
+          { inbox_id: 2, inbox: { name: 'WhatsApp' }, caixa_no_crm: true },
+          {
+            inbox_id: 3,
+            inbox: { name: 'Old site chat' },
+            caixa_no_crm: false,
+          },
+        ],
+      },
+      global: {
+        plugins: [
+          createI18n({ legacy: false, locale: 'en', messages: { en: crmEn } }),
+        ],
+        stubs: {
+          CrmStageAutomationsPanel: true,
+          CrmAiSettingsPanel: true,
+          RouterLink: RouterLinkStub,
+        },
+      },
+    });
+
+    const resumo = wrapper.get('[data-setting="inboxes"]');
+    expect(resumo.text()).toContain('WhatsApp');
+    expect(resumo.text()).not.toContain('Old site chat');
+
+    await resumo.get('button').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('[data-caixa]').map(item => item.attributes('data-caixa'))
+    ).toEqual(['WhatsApp']);
+    wrapper.unmount();
   });
 });

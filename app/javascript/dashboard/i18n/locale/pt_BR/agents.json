@@ -625,7 +625,7 @@
         "OUTRO_TEXTO": "Para casos especiais. A maioria dos agentes começa por um modelo acima.",
         "EQUIPE": {
           "TITULO": "Agente da equipe",
-          "TEXTO": "Fica num canal que já tem agente principal e recebe a conversa quando alguém passa."
+          "TEXTO": "Fica num canal com agente principal ou atendido só por pessoas e recebe a conversa quando alguém passa."
         },
         "AJUDA": {
           "TITULO": "Ajuda outros agentes",
@@ -741,8 +741,8 @@
         "QUANDO": "Quando atende",
         "OCUPADO": "{canal} · Já tem {agente} respondendo aqui",
         "OCUPADO_TEXTO": "Colocar {nome} no lugar",
-        "EXTERNO": "{canal} · Já tem outro atendimento automático",
-        "EXTERNO_TEXTO": "Outro sistema já responde aqui. Para usar, pare o outro sistema antes.",
+        "EXTERNO": "{canal} · Já tem um agente externo atendendo aqui",
+        "EXTERNO_TEXTO": "Um agente externo já atende aqui. Para usar este canal, pare o agente externo antes.",
         "TROCA": "{outro} para de responder no {canal}, mas continua na sua lista. As conversas abertas no {canal} voltam para a equipe.",
         "TROCA_PARA": "{outro} não está em nenhum outro canal: para de atender até você escolher um canal para ele.",
         "TODOS_OCUPADOS": "Todos os seus canais já têm um agente. Coloque {nome} no lugar de um deles ou conecte outro canal.",
@@ -756,7 +756,10 @@
         "SEM_HORARIO": "Este canal ainda não tem horário de atendimento.",
         "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
         "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
-        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe."
+        "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe.",
+        "TAMBEM": "Também recebe quando alguém passar em:",
+        "TAMBEM_TEXTO": "Marque os outros canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
+        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher."
       },
       "COMPOSITOR": {
         "ESCREVA": "Escreva sua resposta",
@@ -1095,7 +1098,8 @@
           "TEXTO": "No {canal}, {quando}.",
           "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
-          "ESCOLHER_CANAL": "Escolher canal"
+          "ESCOLHER_CANAL": "Escolher canal",
+          "TAMBEM": "Também recebe quando alguém passar em: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Nome e jeito de falar",
@@ -1641,11 +1645,11 @@
       "EQUIPE": {
         "TITULO": "Em quais canais {nome} vai ficar na equipe?",
         "TITULO_SEM_NOME": "Em quais canais o agente que você está criando vai ficar na equipe?",
-        "TEXTO": "Escolha um ou mais. Só dá para escolher canais que já têm quem atenda primeiro.",
+        "TEXTO": "Escolha um ou mais. Dá para escolher canais com agente principal atendendo e canais atendidos só por pessoas.",
         "PRINCIPAL": "{outro} atende primeiro",
         "SEM_PRINCIPAL": "Ninguém atende primeiro neste canal ainda. O agente da equipe precisa de um agente principal no canal.",
         "PRINCIPAL_PARADO": "{outro} não está atendendo neste canal. O agente da equipe precisa de um agente principal atendendo.",
-        "NENHUM": "Nenhum canal tem um agente principal atendendo ainda. Ponha um agente para atender primeiro num canal e volte aqui.",
+        "NENHUM": "Nenhum canal pode receber o agente da equipe agora. Ele entra em canal com agente principal atendendo ou atendido só por pessoas.",
         "CONFIRA": "Confira como fica",
         "CONFIRA_TEXTO": "Nada muda para quem já atende primeiro.",
         "AVISO": "{outro} atende primeiro; {nome} recebe quando alguém passar.",
@@ -1665,7 +1669,13 @@
         "CARREGANDO": "Lendo os canais",
         "SALVANDO": "Salvando…",
         "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher.",
-        "ESCOLHER_DE_NOVO": "Escolher os canais de novo"
+        "ESCOLHER_DE_NOVO": "Escolher os canais de novo",
+        "SO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar",
+        "SO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar",
+        "OUTRO_ROBO": "Um agente externo atende neste canal. O agente da equipe ainda não entra em canal com agente externo.",
+        "AVISO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar. Conversa nova continua com as pessoas.",
+        "AVISO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar. Conversa nova continua com as pessoas.",
+        "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe."
       },
       "ONDE": {
         "TITULO": "Onde {nome} trabalha",
@@ -1674,7 +1684,8 @@
         "PRONTO_TITULO": "{nome} já está trabalhando",
         "MUDAR": "Mudar",
         "MUDAR_ARIA": "Mudar onde {nome} trabalha",
-        "AJUDA": "Ajuda: {agentes}"
+        "AJUDA": "Ajuda: {agentes}",
+        "RECEBE_PESSOAS": "Atendida só por pessoas; recebe quando alguém passar"
       },
       "AJUDANTE": {
         "QUEM": {
@@ -1724,6 +1735,106 @@
           "PARAR_FEITO": "{nome} parou de ajudar. Dá para voltar quando quiser."
         }
       }
+    },
+    "CAIXA_AGENTE_IA": {
+      "ABA": "Agente de IA",
+      "TITULO": "Agente de IA",
+      "CARREGANDO": "Carregando quem atende neste canal",
+      "ATENDE_PRIMEIRO": "Atende primeiro",
+      "ATENDE_PRIMEIRO_TEXTO": "Responde as conversas novas deste canal.",
+      "TAMBEM_RECEBEM": "Também recebem quando alguém passar: {nomes}",
+      "NINGUEM": "Ninguém atende primeiro neste canal",
+      "NINGUEM_TEXTO": "As conversas novas vão direto para as pessoas da equipe.",
+      "ABRIR": "Abrir agente",
+      "CAMPO": "Quem atende primeiro",
+      "CAMPO_AJUDA": "Escolha um dos agentes de IA da conta.",
+      "ESCOLHER": "Escolha um agente de IA",
+      "NINGUEM_OPCAO": "Ninguém, só pessoas",
+      "CONFIRMA_TROCA": "{antes} deixa de atender primeiro neste canal. {depois} passa a atender.",
+      "CONFIRMA_NOVO": "{depois} passa a atender primeiro neste canal.",
+      "CONFIRMA_TIRAR": "{antes} deixa de atender primeiro neste canal. As conversas novas vão direto para as pessoas.",
+      "TROCAR": "Trocar",
+      "CONFIRMAR": "Confirmar",
+      "CANCELAR": "Cancelar",
+      "TROCOU": "Pronto. {nome} atende primeiro neste canal.",
+      "TIROU": "Pronto. Ninguém atende primeiro neste canal.",
+      "FALHOU": "Não deu para trocar agora. Nada mudou neste canal.",
+      "RECUSA": {
+        "AGENTE_INTERNO": "Este agente trabalha só dentro do painel e não atende clientes.",
+        "AGENTE_RASCUNHO": "A criação deste agente ainda não terminou. Termine de criar antes de escolher esse agente.",
+        "AGENTE_PARADO": "Este agente está parado. Ligue esse agente na página do agente antes de escolher.",
+        "AGENTE_JA_E_DA_EQUIPE": "{nome} já recebe quando alguém passa neste canal. Para {nome} atender primeiro, tire esse agente da equipe do canal em CRM › Quem cuida do quê.",
+        "MUDOU_AGORA": "Alguém mudou este canal agora. Veja quem atende e tente de novo."
+      }
+    },
+    "CAIXA_USUARIOS": {
+      "ABA": "Usuários"
+    },
+    "OUTRO_SISTEMA": {
+      "CONECTAR": "Conectar agente de outro sistema",
+      "CONECTADO_POR": "Conectado por endereço de webhook",
+      "EXPLICA": "Use quando o agente foi montado em outro sistema. As conversas chegam ao agente por um endereço de webhook.",
+      "FOTO": "Foto",
+      "NOME": "Nome",
+      "NOME_EXEMPLO": "Ex.: Automação Vendas",
+      "DESCRICAO": "O que o agente faz",
+      "DESCRICAO_EXEMPLO": "Ex.: Responde dúvidas de preço e passa para a equipe.",
+      "ENDERECO": "Endereço do webhook",
+      "ENDERECO_AJUDA": "Quem montou o agente sabe qual é. Começa com https://",
+      "CHAVE": "Chave de acesso",
+      "CHAVE_AJUDA": "Cole esta chave no outro sistema. É com ela que o agente responde aqui.",
+      "MOSTRAR": "Mostrar",
+      "ESCONDER": "Esconder",
+      "COPIAR": "Copiar",
+      "COPIOU": "Chave copiada.",
+      "BOTAO_CONECTAR": "Conectar",
+      "SALVAR": "Salvar",
+      "SALVOU": "Agente salvo.",
+      "SALVAR_ERRO": "Não deu para salvar agora. Nada mudou.",
+      "APAGAR": "Apagar agente",
+      "CONCLUIR": "Concluir",
+      "APAGAR_TITULO": "Apagar {nome}?",
+      "APAGAR_TEXTO": "O agente para de atender nos canais em que está. As conversas novas vão para as pessoas da equipe.",
+      "APAGAR_CONFIRMAR": "Apagar",
+      "APAGOU": "Agente apagado.",
+      "PAGINA": {
+        "CARREGANDO": "Carregando o agente",
+        "BLOCO_FAZ": "O que o agente faz",
+        "FAZ_VAZIO": "Ainda sem descrição.",
+        "BLOCO_CONEXAO": "Como o agente se conecta",
+        "CONEXAO_TEXTO": "As conversas vão para este endereço. O outro sistema responde com a chave de acesso.",
+        "BLOCO_ONDE": "Onde atende",
+        "ONDE_TEXTO": "Atende primeiro as conversas novas destes canais.",
+        "ONDE_NENHUM": "Ainda não atende primeiro em nenhum canal.",
+        "ONDE_COMO": "Para trocar, abra o canal e use a aba Agente de IA.",
+        "ABRIR_CANAL": "Abrir canal",
+        "ALTERAR": "Alterar",
+        "MENU_NOME_FOTO": "Mudar nome e foto",
+        "TITULO_FAZ": "O que {nome} faz",
+        "TITULO_CONEXAO": "Como {nome} se conecta",
+        "TITULO_NOME_FOTO": "Nome e foto",
+        "CANCELAR": "Cancelar",
+        "APAGANDO": "Apagando…",
+        "APAGAR_ERRO": "Não deu para apagar agora.",
+        "APAGAR_ERRO_GARANTIA": "{nome} continua como estava."
+      },
+      "CONECTAR_PAGINA": {
+        "VOLTAR": "Voltar para Agentes",
+        "TITULO": "Conectar agente de outro sistema",
+        "ETAPA_NOME": "Quem é",
+        "ETAPA_ENDERECO": "Endereço",
+        "ETAPA_CHAVE": "Chave",
+        "PASSO1_TITULO": "Quem é o agente",
+        "PASSO2_TITULO": "Para onde vão as conversas",
+        "PASSO2_TEXTO": "Cole o endereço do webhook do outro sistema. As conversas novas vão para lá.",
+        "PASSO3_TITULO": "Falta um passo: copie a chave",
+        "PASSO3_TEXTO": "Cole a chave de acesso no outro sistema. Sem ela, {nome} não consegue responder aqui.",
+        "PASSO3_DEPOIS": "Para {nome} começar a atender, escolha esse agente na aba Agente de IA de um canal.",
+        "CONTINUAR": "Continuar",
+        "VOLTAR_PASSO": "Voltar",
+        "ERRO": "Não deu para conectar agora. Tente de novo."
+      },
+      "ESCOLHER_FOTO": "Escolher foto"
     }
   }
 }

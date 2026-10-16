@@ -2158,7 +2158,8 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
 Autonom.ia) e na conta 1 (stack Hub2You). Desligar é o mesmo caminho; mensagens já pendentes falham com `disabled` na
 próxima tentativa.
 
-**Depois do #1627 (Fase 2 dos Agentes):** mesclar a main e acrescentar o spec com a Fase 2 ligada (posse do turno e
-`turno_superado`) em `spec/jobs/autonomia/agents/operate/reply_job_recuperacao_spec.rb`; rodar os specs do responder e
-do reply_job; o #1627 usa o evento 8, o #1489 usa 10, 11, 12 e 13 (o 9 não é usado). No merge, manter as duas pontas do enum, do
-`ALLOWED_REASONS` e da posse no responder.
+**Fase 2 dos Agentes (#1627, mesclado em 16/10):** a recuperada passa pela posse do turno e responde uma vez; se o
+cliente escreve durante a chamada à IA, `turno_superado` descarta a resposta da recuperada e só a mais nova responde
+(`spec/jobs/autonomia/agents/operate/reply_job_recuperacao_fase2_spec.rb`). Eventos: o #1627 usa o 8, o #1489 usa 10,
+11, 12 e 13 (o 9 não é usado). `so_contexto_interno` solta a posse como o `vazio`. A flag `whatsapp_hybrid_recovery`
+fica no bit 30, no fim do `features.yml` da main de 16/10.

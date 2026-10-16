@@ -1,0 +1,90 @@
+{
+  "HORARIO_DO_CANAL": {
+    "TEXTO": {
+      "DIAS": {
+        "D0": "dom.",
+        "D1": "seg.",
+        "D2": "ter.",
+        "D3": "qua.",
+        "D4": "qui.",
+        "D5": "sex.",
+        "D6": "sáb."
+      },
+      "TODOS_OS_DIAS": "todos os dias",
+      "INTERVALO_DIAS": "{inicio} a {fim}",
+      "FAIXA": "das {abre} às {fecha}",
+      "E": "e",
+      "DIAS_E_FAIXAS": "{dias}, {faixas}",
+      "DIA_TODO": "{dias}, o dia todo",
+      "HORA": "{h}h",
+      "HORA_MINUTO": "{h}h{m}"
+    },
+    "CANAL": {
+      "LIGAR": "Usar horário de atendimento neste canal",
+      "LIGAR_AJUDA": "Fora do horário, quem chamar recebe a mensagem abaixo.",
+      "MENSAGEM": "Mensagem para quem chamar fora do horário",
+      "SEM_HORARIO": "Sem horário, o agente de IA deste canal atende a qualquer hora e o prazo do SLA conta o tempo corrido.",
+      "AVISO_TITULO": "Este é o horário do canal.",
+      "AVISO": "O agente de IA que atende \"só no horário\" e os prazos do SLA seguem este horário.",
+      "FUSO": "As horas valem no fuso da conta: {fuso}.",
+      "FUSO_SEM_NOME": "As horas valem no fuso da conta.",
+      "MUDAR_FUSO": "Mudar o fuso da conta",
+      "DIAS_E_HORAS": "Dias e horas",
+      "COLUNA_DIA": "Dia",
+      "COLUNA_HORARIO": "Horário",
+      "COLUNA_TOTAL": "Total",
+      "DIAS": {
+        "D0": "Domingo",
+        "D1": "Segunda-feira",
+        "D2": "Terça-feira",
+        "D3": "Quarta-feira",
+        "D4": "Quinta-feira",
+        "D5": "Sexta-feira",
+        "D6": "Sábado"
+      },
+      "DIA_TODO": "O dia todo",
+      "ATE": "até",
+      "FECHADO": "Fechado",
+      "ABRE_AS": "Abre às, {dia}",
+      "FECHA_AS": "Fecha às, {dia}",
+      "ERRO_HORAS": "A hora de fechar precisa ser depois da hora de abrir.",
+      "TOTAL_HORAS": "{h}h",
+      "TOTAL_HORAS_MINUTOS": "{h}h {m}min",
+      "TOTAL_MINUTOS": "{m}min",
+      "TOTAL_DIA_TODO": "24h",
+      "SALVAR": "Salvar horário",
+      "SALVO": "Horário salvo. O agente de IA e o SLA já seguem este horário.",
+      "ERRO_SALVAR": "Não deu para salvar o horário. Tente de novo."
+    },
+    "SLA": {
+      "DESCRICAO": "Prazos de resposta das conversas e o horário de cada pessoa.",
+      "PESSOAS_TITULO": "Horário de cada pessoa",
+      "PESSOAS_TEXTO": "Quando a conversa tem responsável, o prazo conta no horário dessa pessoa. Quem não tem horário próprio segue o horário do canal.",
+      "PESSOA_SEM_HORARIO": "Sem horário próprio: segue o horário do canal",
+      "ALTERAR": "Alterar",
+      "DEFINIR": "Definir horário",
+      "ALTERAR_ROTULO": "Alterar o horário de {nome}",
+      "DEFINIR_ROTULO": "Definir horário de {nome}",
+      "SEM_PESSOAS": "Ainda não há pessoas na equipe.",
+      "LER_ERRO": "Não deu para ler o horário das pessoas.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "CARREGANDO": "Carregando…",
+      "CANAIS_TITULO": "Horário dos canais",
+      "CANAIS_TEXTO": "O horário de cada canal fica na tela do canal. Ele vale para o agente de IA, para a mensagem de fora do horário e para o SLA, no fuso da conta ({fuso}).",
+      "CANAIS_TEXTO_SEM_FUSO": "O horário de cada canal fica na tela do canal. Ele vale para o agente de IA, para a mensagem de fora do horário e para o SLA, no fuso da conta.",
+      "CANAL_SEM_HORARIO": "Sem horário: atende a qualquer hora",
+      "VER_CANAL": "Ver horário do canal",
+      "DEFINIR_CANAL": "Definir horário do canal",
+      "VER_CANAL_ROTULO": "Ver horário do canal {nome}",
+      "DEFINIR_CANAL_ROTULO": "Definir horário do canal {nome}",
+      "SEM_CANAIS": "Ainda não há canais conectados."
+    },
+    "AGENTE": {
+      "FUSO": "O horário é o do canal, no fuso da conta ({fuso}).",
+      "FUSO_SEM_NOME": "O horário é o do canal, no fuso da conta.",
+      "MUDAR": "Mudar o horário do canal",
+      "DEFINIR": "Definir o horário do canal",
+      "NOVA_ABA": "(abre em nova aba)"
+    }
+  }
+}

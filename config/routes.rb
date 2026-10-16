@@ -380,6 +380,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Decisão "a" (#1606): o assunto mudou com uma pessoa no nome; passar para a equipe do assunto ou ficar.
+            post 'conversations/:conversation_id/repasse', to: 'conversation_cards#pass_subject'
+            post 'conversations/:conversation_id/repasse/manter', to: 'conversation_cards#keep_subject'
             # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
@@ -405,6 +408,9 @@ Rails.application.routes.draw do
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
+            # Leitura (#1140): quem receberia cada assunto com o que a tela marcou. POST porque leva a caixa inteira.
+            post 'caixas/:inbox_id/quem_recebe', to: 'caixas#quem_recebe'
+            get :meu_acesso, to: 'meu_acesso#show'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate
@@ -478,6 +484,10 @@ Rails.application.routes.draw do
             # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
             get 'numeros_da_semana', to: 'numeros_da_semana#index'
             get 'canais_ocupados', to: 'canais_ocupados#index'
+            # #1648 — quem atende a caixa e a troca (aba "Agente de IA" da caixa). Sem a chave da conta
+            # autonomia_agente_ia_por_caixa (Autonomia::Agents::AgenteIaPorCaixa), 404.
+            get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
+            put 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#update'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -715,6 +725,7 @@ Rails.application.routes.draw do
               end
               resource :contact_info_request, only: [:create]
               resources :assignments, only: [:create]
+              resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
@@ -898,6 +909,8 @@ Rails.application.routes.draw do
               post :connect, action: :create
               post :request_code
               post :reconnect
+              post :pause
+              post :resume
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
@@ -937,6 +950,10 @@ Rails.application.routes.draw do
                 get :usage
               end
               post :media, on: :collection
+            end
+            # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
+            resource :whatsapp_catalog, only: [:show], module: :inboxes do
+              get :products
             end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.

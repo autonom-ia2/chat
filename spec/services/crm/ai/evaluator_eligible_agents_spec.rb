@@ -26,10 +26,43 @@ RSpec.describe Crm::Ai::Evaluator do
     card
   end
 
-  def nomes_para_o_modelo(card)
+  def nomes_para_o_modelo(card, selector_mode: 'round_robin')
     evaluator = described_class.new(card: card)
-    allow(evaluator).to receive(:handoff_config).and_return({ enabled: true })
+    allow(evaluator).to receive(:handoff_config).and_return({ enabled: true, selector_mode: selector_mode })
     evaluator.send(:eligible_agent_names)
+  end
+
+  # #1593: com "pedido pelo nome", os agentes de IA que podem receber a conversa entram com o rótulo; o modelo decide.
+  describe 'agentes de IA' do
+    let(:lia) { criar_agente_ia(account, 'Lia') }
+
+    before do
+      ligar_agentes_ia!(account)
+      agente_na_caixa!(lia, caixa_whatsapp)
+    end
+
+    it 'pedido pelo nome ligado: a Lia entra com o rótulo de agente' do
+      nomes = nomes_para_o_modelo(card_com(primaria: conversa_viva), selector_mode: 'direct')
+
+      expect(nomes).to contain_exactly('Léo do WhatsApp', 'Lia (agente de IA)')
+    end
+
+    # Pega: dois agentes de mesmo nome viravam um só rótulo, e um deles sumia da lista do modelo.
+    it 'dois agentes com o mesmo nome: os dois entram, cada um com o id no rótulo, e o motor acha cada um', :aggregate_failures do
+      outra_lia = criar_agente_ia(account, 'Lia')
+      Autonomia::Agents::Areas.vincular!(agent: outra_lia, inbox: caixa_whatsapp)
+
+      nomes = nomes_para_o_modelo(card_com(primaria: conversa_viva), selector_mode: 'direct')
+
+      expect(nomes).to contain_exactly('Léo do WhatsApp', "Lia ##{lia.id} (agente de IA)", "Lia ##{outra_lia.id} (agente de IA)")
+      expect(Crm::AgentesIa.rotulos(conversa_viva).values).to contain_exactly(lia, outra_lia)
+    end
+
+    it 'rodízio: só pessoas (a IA não entra na vez)' do
+      nomes = nomes_para_o_modelo(card_com(primaria: conversa_viva))
+
+      expect(nomes).to contain_exactly('Léo do WhatsApp')
+    end
   end
 
   it 'oferece a equipe da caixa em que o cliente está falando, e não a da conversa primária' do

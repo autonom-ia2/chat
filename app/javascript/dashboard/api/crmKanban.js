@@ -294,6 +294,20 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/conversations/${conversationId}/cards`);
   }
 
+  // Decisão "a" (#1606): o assunto mudou depois que a pessoa recebeu; passar para a equipe do assunto ou ficar.
+  passSubjectToTeam(conversationId, cardId) {
+    return axios.post(`${this.url}/conversations/${conversationId}/repasse`, {
+      card_id: cardId,
+    });
+  }
+
+  keepSubjectWithMe(conversationId, cardId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/repasse/manter`,
+      { card_id: cardId }
+    );
+  }
+
   focusConversationSubject(conversationId, cardId) {
     return axios.post(`${this.url}/conversations/${conversationId}/focus`, {
       card_id: cardId,
@@ -351,8 +365,11 @@ class CrmKanbanAPI extends ApiClient {
     );
   }
 
-  getAiSettings(pipelineId) {
-    return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`);
+  // #1140: `quemRecebe` traz recebem_por_caixa (só a tela de Atribuição de um funil).
+  getAiSettings(pipelineId, { quemRecebe = false } = {}) {
+    return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`, {
+      params: quemRecebe ? { quem_recebe: 1 } : {},
+    });
   }
 
   updateAiSettings(pipelineId, payload) {

@@ -2,13 +2,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import YAML from 'yaml';
-
-const require = createRequire(import.meta.url);
-const i18nRequire = createRequire(require.resolve('vue-i18n'));
-const coreRequire = createRequire(i18nRequire.resolve('@intlify/core-base'));
-const { baseCompile } = coreRequire('@intlify/message-compiler');
+import {
+  camadasEncontradas,
+  checarPacotes,
+  parametros as parameters,
+} from './i18n-pacotes/checar.mjs';
+import { checarCobertura } from './i18n-pacotes/cobertura.mjs';
 
 const root = 'app/javascript/dashboard/i18n/locale';
 const registry = JSON.parse(readFileSync('config/fork_i18n.json', 'utf8'));
@@ -35,26 +35,6 @@ function leaves(value, prefix = '') {
   return Object.entries(value).flatMap(([key, child]) =>
     leaves(child, prefix ? `${prefix}.${key}` : key)
   );
-}
-
-function parameters(message, label) {
-  const { ast } = baseCompile(message, {
-    onError: error => {
-      throw new Error(`${label}: ${error.message}`);
-    },
-  });
-  const names = new Set();
-  function visit(node) {
-    if (!node || typeof node !== 'object') return;
-    if (node.type === 4) names.add(node.key);
-    if (node.type === 5) names.add(String(node.index));
-    Object.values(node).forEach(child => {
-      if (Array.isArray(child)) child.forEach(visit);
-      else if (child && typeof child === 'object') visit(child);
-    });
-  }
-  visit(ast);
-  return [...names].sort();
 }
 
 const locales = readdirSync(root, { withFileTypes: true })
@@ -125,6 +105,16 @@ if (process.env.CROWDIN_SYNC === 'true') {
     `Crowdin sync modifies fork-owned catalogs: ${overwritten.join(', ')}`
   );
 }
+// #1550 — pacotes de tradução por conta: chaves, idiomas, parâmetros e camadas.
+const erros = [
+  ...checarPacotes(registry.pacotes, { crowdin }),
+  // Todo ganho/perda do base tem decisão: pacote do segmento ou exceção com motivo.
+  ...checarCobertura(registry.pacotes),
+];
+assert.equal(erros.length, 0, erros.join('\n'));
+const pacotes =
+  camadasEncontradas(registry.pacotes.painel).length +
+  camadasEncontradas(registry.pacotes.servidor).length;
 console.log(
-  `${registry.catalogs.length} fork catalogs checked; ${messages} messages compiled; en/pt_BR keys and parameters covered.`
+  `${registry.catalogs.length} fork catalogs checked; ${messages} messages compiled; en/pt_BR keys and parameters covered; ${pacotes} translation packs checked.`
 );

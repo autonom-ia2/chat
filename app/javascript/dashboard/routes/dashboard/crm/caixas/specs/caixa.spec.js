@@ -4,7 +4,26 @@ import {
   mudancas,
   paraFormulario,
   paraSalvar,
+  portaOuRobo,
+  roboExterno,
 } from '../helpers/caixa';
+
+describe('porta ou robô (#1570)', () => {
+  const ia = { id: 1, name: 'Clara', tipo_do_principal: 'ia' };
+  const externo = { id: 2, name: 'Robô n8n', tipo_do_principal: 'externo' };
+
+  it('never takes an external agent as the AI door', () => {
+    expect(roboExterno(externo)).toBe(true);
+    expect(roboExterno(ia)).toBe(false);
+    expect(roboExterno(null)).toBe(false);
+    expect(portaOuRobo(null, externo)).toBeNull();
+    expect(portaOuRobo(null, ia)).toBe(ia);
+    expect(portaOuRobo({ id: 9, name: 'Porta' }, externo)).toEqual({
+      id: 9,
+      name: 'Porta',
+    });
+  });
+});
 
 const FUNIS = [
   { id: 1, name: 'Vendas', stages: [{ id: 11, name: 'Novo' }] },

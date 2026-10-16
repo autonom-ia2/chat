@@ -543,8 +543,10 @@
     "YOU_ARE_WATCHING": "You are participating",
     "API": {
       "ERROR_MESSAGE": "Could not update, try again!",
-      "SUCCESS_MESSAGE": "Participants updated!"
-    }
+      "SUCCESS_MESSAGE": "Participants updated!",
+      "SELF_ADD_RESTRICTED": "You can't add yourself to this conversation. Ask an administrator or the person handling it to add you."
+    },
+    "SELF_ADD_RESTRICTED_HINT": "Someone else can add you"
   },
   "TRANSLATE_MODAL": {
     "TITLE": "View translated content",

@@ -22,6 +22,10 @@ module Crm
       # A presença (Redis) não respondeu.
       class PresencaIndisponivel < StandardError; end
 
+      # Desempate do rodízio: quanto do registro de passagens é lido, e o lugar de quem não recebeu nesse prazo.
+      JANELA_DO_DESEMPATE = 30.days
+      NUNCA_RECEBEU = Time.zone.at(0)
+
       def initialize(
         inbox:,
         account_id:,
@@ -104,10 +108,32 @@ module Crm
         @require_online ? preferred_pool : eligible_members
       end
 
+      # Quem tem menos conversas abertas na caixa. Empate (#1140, decisão 10 do Rodrigo): quem recebeu há mais tempo,
+      # depois o menor id. Antes valia o primeiro de inbox.members (sem ORDER BY), quase sempre a mesma pessoa.
       def round_robin_agent
-        pool = preferred_pool
-        counts = @inbox.conversations.open.where(assignee_id: pool.map(&:id)).group(:assignee_id).count
-        pool.min_by { |user| counts[user.id] || 0 }
+        empatados = menor_carga(preferred_pool)
+        return empatados.first if empatados.one?
+
+        ultima = ultima_recebida(empatados)
+        empatados.min_by { |user| [ultima[user.id] || NUNCA_RECEBEU, user.id] }
+      end
+
+      # As pessoas com menos conversas abertas na caixa.
+      def menor_carga(pool)
+        abertas = @inbox.conversations.open.where(assignee_id: pool.map(&:id)).group(:assignee_id).count
+        carga = pool.index_with { |user| abertas[user.id] || 0 }
+        menor = carga.values.min
+        pool.select { |user| carga[user] == menor }
+      end
+
+      # Quando cada pessoa recebeu a última conversa na conta, pelo registro de passagens (Crm::Passagens, toda troca de
+      # pessoa: entrega, rodízio, "Atribuir a mim"). O convite não conta: a pessoa foi chamada, não recebeu. Só a janela
+      # recente (o índice da conta por data): quem não recebeu nela empata com quem nunca recebeu, e o id decide.
+      def ultima_recebida(pessoas)
+        Crm::Passagem.where(account_id: @account_id, para_type: 'User', para_id: pessoas.map(&:id))
+                     .where(created_at: JANELA_DO_DESEMPATE.ago..)
+                     .where('crm_passagens.motivo IS DISTINCT FROM ?', Crm::Passagens::CONVITE)
+                     .group(:para_id).maximum(:created_at)
       end
 
       # Prefer online agents; when online is required, keep only online agents.
@@ -124,11 +150,8 @@ module Crm
       end
 
       def online_agent_ids
-        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids(@account_id)
-      rescue StandardError => e
-        # Presença fora do ar não é "ninguém online": quem chama decide (o motor segura e a fila tenta de novo, #1454).
-        Rails.logger.error("[crm][entrega] presença indisponível conta=#{@account_id} erro=#{e.class}")
-        raise PresencaIndisponivel, e.class.name
+        # Falha vira PresencaIndisponivel no ponto único (Crm::Entrega::Presenca.online_ids!): quem chama segura.
+        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids!(@account_id)
       end
     end
   end

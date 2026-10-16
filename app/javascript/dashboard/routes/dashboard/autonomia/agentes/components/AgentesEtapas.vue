@@ -12,6 +12,8 @@ const props = defineProps({
     required: true,
     validator: v => v >= 1 && v <= 4,
   },
+  // #1648 — outro fluxo de três etapas (Conectar agente de outro sistema) passa os próprios nomes.
+  nomes: { type: Array, default: null },
 });
 
 const { t } = useI18n();
@@ -19,13 +21,15 @@ const { t } = useI18n();
 const NOMES = ['CONTE', 'CONFIRA', 'COMECE'];
 const NS = 'AGENTS.JORNADA.CRIAR.ETAPAS';
 
+const nomeDa = indice => props.nomes?.[indice] || t(`${NS}.${NOMES[indice]}`);
+
 const passos = computed(() =>
   NOMES.map((chave, indice) => {
     const numero = indice + 1;
     let estado = '';
     if (numero < props.atual) estado = 'feito';
     else if (numero === props.atual) estado = 'agora';
-    return { chave, numero, estado, nome: t(`${NS}.${chave}`) };
+    return { chave, numero, estado, nome: nomeDa(indice) };
   })
 );
 
@@ -33,7 +37,7 @@ const compacto = computed(() => {
   if (props.atual > NOMES.length) return t(`${NS}.PRONTO`);
   return t(`${NS}.COMPACTO`, {
     n: props.atual,
-    nome: t(`${NS}.${NOMES[props.atual - 1]}`),
+    nome: nomeDa(props.atual - 1),
   });
 });
 </script>

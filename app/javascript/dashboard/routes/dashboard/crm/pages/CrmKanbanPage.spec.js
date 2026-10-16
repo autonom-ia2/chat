@@ -117,6 +117,7 @@ const setGetters = ({
   inboxes = [],
   role = 'administrator',
   keys,
+  menuNovo = false,
 } = {}) => {
   Object.assign(storeGetters, {
     getCurrentRole: ref(role),
@@ -152,6 +153,9 @@ const setGetters = ({
     'teams/getTeams': ref([]),
     'accounts/isRTL': ref(false),
     'labels/getLabels': ref([]),
+    'accounts/isFeatureEnabledonAccount': ref(
+      (_id, flag) => menuNovo && flag === 'menu_lateral_novo'
+    ),
   });
 };
 
@@ -181,6 +185,8 @@ const mountPage = async ({
         CrmListExportButton: true,
         CrmTableColumnSettings: true,
         CrmSavedViews: true,
+        // Aba Números do menu novo (#1617): tem teste próprio (useAbaNumeros.spec.js).
+        CrmAbaNumeros: true,
         CrmResultTabs: true,
         CrmBulkActionBar: true,
         CrmCalendar: true,
@@ -213,6 +219,47 @@ const openConfiguration = async wrapper => {
 
 describe('CrmKanbanPage', () => {
   let wrapper;
+
+  // #1617 — com o menu novo, a vista fica no endereço (?view=); sem ele, como sempre foi.
+  describe('vista no endereço (menu novo)', () => {
+    const vistaMarcada = pagina =>
+      pagina.find('[role="group"] [aria-pressed="true"]').text();
+    const botaoDaVista = (pagina, chave) =>
+      pagina
+        .findAll('[role="group"] button')
+        .find(botao => botao.text() === chave);
+
+    afterEach(() => {
+      route.query = {};
+      replace.mockClear();
+      wrapper?.unmount();
+    });
+
+    it('flag desligada: ignora ?view= e não mexe no endereço ao trocar de vista', async () => {
+      route.query = { view: 'list' };
+      wrapper = await mountPage();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.KANBAN');
+      expect(wrapper.find('[role="group"]').classes()).not.toContain(
+        'flex-wrap'
+      );
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.LIST').trigger('click');
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('flag ligada: abre na vista do endereço e grava a troca com replace', async () => {
+      route.query = { view: 'list', pipeline_id: undefined };
+      wrapper = await mountPage({ account: { menuNovo: true } });
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.LIST');
+      expect(wrapper.find('[role="group"]').classes()).toContain('flex-wrap');
+      replace.mockClear();
+      route.query = { view: 'list' };
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.CALENDAR').trigger('click');
+      expect(replace).toHaveBeenLastCalledWith({ query: { view: 'calendar' } });
+      route.query = { view: 'calendar' };
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.KANBAN').trigger('click');
+      expect(replace).toHaveBeenLastCalledWith({ query: {} });
+    });
+  });
 
   // #1385 — a passagem volta para o Kanban no funil de onde a pessoa saiu.
   describe('passagem para a equipe', () => {
@@ -705,6 +752,32 @@ it('refreshes the messaging window and shows the template alert when creating a 
   expect(refreshMessagingWindow).toHaveBeenCalledOnce();
   expect(useAlert).toHaveBeenCalledWith(
     'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+  );
+  wrapper.unmount();
+});
+
+it('explains a past auto-send time without the raw Rails message', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = {
+        data: {
+          message: 'Due at must be in the future for auto-send follow-ups',
+          attributes: ['due_at'],
+          code: 'due_at_in_the_past',
+        },
+      };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(useAlert).toHaveBeenCalledWith(
+    'CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'
   );
   wrapper.unmount();
 });

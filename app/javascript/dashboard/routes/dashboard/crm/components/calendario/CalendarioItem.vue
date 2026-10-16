@@ -3,6 +3,8 @@
 // o que é e de quem, e UMA ação à direita (abrir conversa, ligar, entrar…).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { TIPOS, acaoDoItem } from './itensDoCalendario';
 import { diasEntre, formatarHora } from './tempoNaConta';
 
@@ -19,6 +21,13 @@ const props = defineProps({
 const emit = defineEmits(['concluir', 'abrir', 'acao']);
 const { t } = useI18n();
 const N = 'CRM_CALENDARIO.ITEM';
+// #1590: "Não saiu: …" só com a flag crm_mensagem_marcada; sem ela, como antes.
+const { isCloudFeatureEnabled } = useAccount();
+const falha = computed(() =>
+  props.item.falha && isCloudFeatureEnabled(FEATURE_FLAGS.CRM_MENSAGEM_MARCADA)
+    ? props.item.falha
+    : ''
+);
 
 const tipo = computed(() => TIPOS[props.item.tipo]);
 const acao = computed(() => acaoDoItem(props.item, { hoje: props.hoje }));
@@ -152,6 +161,18 @@ const detalhe = computed(() =>
         <span v-if="item.repete" class="inline-flex items-center gap-1">
           <span class="i-lucide-repeat size-3.5" aria-hidden="true" />
           {{ t(item.pausado ? `${N}.PAUSADO` : `${N}.REPETE`) }}
+        </span>
+        <span
+          v-if="falha"
+          data-item-falha
+          class="inline-flex items-center gap-1 font-medium text-n-ruby-11"
+        >
+          <span class="i-lucide-circle-alert size-3.5" aria-hidden="true" />
+          {{
+            t('CRM_MENSAGEM_MARCADA.FALHA.TITULO', {
+              motivo: t(`CRM_MENSAGEM_MARCADA.FALHA.${falha}`),
+            })
+          }}
         </span>
       </span>
     </button>

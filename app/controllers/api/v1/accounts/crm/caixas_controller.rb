@@ -1,10 +1,11 @@
 # Caixas no CRM (#1149): a tela CRM → Caixas no CRM. Listar as caixas, abrir uma e salvar a caixa inteira de uma vez.
+# `quem_recebe` (#1140) só lê: quem receberia cada assunto se a tela salvasse agora (Crm::Caixas::QuemRecebe).
 class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseController
   # A flag por conta protege a API também, não só a rota do painel: sem ela, nada aqui grava acesso por funil.
   before_action :ensure_caixas_enabled
-  before_action :authorize_index, only: [:index, :show]
+  before_action :authorize_index, only: [:index, :show, :quem_recebe]
   before_action :authorize_update, only: [:update]
-  before_action :fetch_inbox, only: [:show, :update]
+  before_action :fetch_inbox, only: [:show, :update, :quem_recebe]
 
   def index
     inboxes = Current.account.inboxes.includes(agent_bot_inbox: :agent_bot).order(:name)
@@ -26,6 +27,11 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   rescue ActiveRecord::RecordNotUnique
     # Dois salvamentos da mesma caixa ao mesmo tempo: o segundo pede para recarregar.
     render json: { error: { code: 'crm.caixas.conflito' } }, status: :conflict
+  end
+
+  def quem_recebe
+    quem = ::Crm::Caixas::QuemRecebe.new(account: Current.account, inbox: @inbox, dados: caixa_params).perform
+    render json: { payload: { quem_recebe: quem } }
   end
 
   private
@@ -53,7 +59,9 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def render_caixa
-    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?)
+    retrato = ::Crm::Caixas::Retrato.new(
+      account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?, detalhe: true
+    )
     render json: { payload: { caixa: retrato.caixa(@inbox), funis: retrato.funis } }
   end
 

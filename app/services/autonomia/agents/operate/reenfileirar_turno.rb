@@ -1,0 +1,124 @@
+# "Um turno, uma ordem" (#1606, ponto 2): o dono da conversa mudou no meio de um turno, então o turno é refeito pelo
+# dono novo em vez de morrer calado. Dois caminhos chegam aqui, e só um enfileira (PosseDoTurno, SET NX por destino):
+# - :responder     — o Responder do dono antigo viu, com estado fresco, que outro vínculo ativo da caixa virou dono;
+# - :evento_troca  — o `crm.ai.responsible_agent_changed` (Sync do CRM e PassarParaIa), depois do commit.
+#
+# Só refaz o turno que ainda está em andamento: a última mensagem pública é do cliente e é a que a marca do debounce
+# aponta. Pelo :responder, sem a janela do debounce: quem chama está com o turno na mão, depois da IA, que pode passar
+# dela; o limite é a vida da posse (PosseDoTurno::TTL). Pelo :evento_troca, a troca chega a qualquer hora, então só
+# turno recente (AgentInbox#turno_em_andamento?), e o settle refeito espera o fim da janela do debounce.
+# Pessoa atribuída, agente que não pode responder, conta fora da Fase 2: nada a refazer.
+class Autonomia::Agents::Operate::ReenfileirarTurno
+  ORIGENS = %i[responder evento_troca].freeze
+
+  # O assinante do evento de troca (config/initializers/autonomia_turno.rb). A Fase 2 vem antes de qualquer leitura: conta
+  # fora dela não consulta nem a última mensagem.
+  def self.ao_trocar_dono(payload)
+    conversation = payload.to_h[:conversation]
+    return if conversation.blank?
+    return false unless fase2?(conversation.account)
+
+    ultima = ultima_mensagem_publica(conversation)
+    return unless ultima&.incoming?
+
+    call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
+  # Roda depois do commit de quem trocou o dono (o Sync do CRM, o PassarParaIa), dentro do instrument dele: propagar não
+  # desfaz a troca já gravada, só derrubaria quem chamou e os outros assinantes do evento. Fica no log e no rastreador.
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][turno] reenfileirar_falhou conv=#{conversation&.id} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: conversation&.account).capture_exception
+    nil
+  end
+
+  def self.fase2?(account)
+    ::Autonomia::Agents::Config.enabled?(account) && ::Autonomia::Agents::Fase2.ligada?(account)
+  end
+
+  def self.ultima_mensagem_publica(conversation)
+    conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
+  end
+
+  # `quem_perdeu`: o vínculo que perdeu o turno (caminho :responder). `posse_de_quem_perdeu`: o valor com que ele tomou
+  # a chave (PosseDoTurno.valor); a chave dele só é solta se ainda tiver esse valor. Sem ele, nada é solto.
+  def self.call(conversation:, message_id:, origem:, quem_perdeu: nil, posse_de_quem_perdeu: nil)
+    new(conversation, message_id, origem, quem_perdeu: quem_perdeu, posse_de_quem_perdeu: posse_de_quem_perdeu).call
+  end
+
+  def initialize(conversation, message_id, origem, quem_perdeu: nil, posse_de_quem_perdeu: nil)
+    raise ArgumentError, "origem fora da lista: #{origem}" unless ORIGENS.include?(origem)
+
+    @conversation = conversation
+    @message_id = message_id.to_i
+    @origem = origem
+    @quem_perdeu = quem_perdeu
+    @posse_de_quem_perdeu = posse_de_quem_perdeu
+  end
+
+  # -> true quando enfileirou o turno para o dono novo.
+  def call
+    return false unless @message_id.positive? && self.class.fase2?(@conversation.account)
+
+    soltar_posse_de_quem_perdeu
+    destino = ::Autonomia::Agents::Operate.eligible_agent_inbox(@conversation.reload)
+    return false unless destino && turno_em_andamento?(destino)
+    return barrado(destino) unless ::Autonomia::Agents::Operate::PosseDoTurno.tomar?(@conversation.id, @message_id, destino.id)
+
+    enfileirar(destino)
+    true
+  end
+
+  private
+
+  def soltar_posse_de_quem_perdeu
+    return if @quem_perdeu.nil?
+
+    ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @message_id, @quem_perdeu.id, @posse_de_quem_perdeu)
+  end
+
+  def turno_em_andamento?(destino)
+    ultima = self.class.ultima_mensagem_publica(@conversation)
+    return false unless ultima&.id == @message_id && ultima.incoming?
+    return turno_do_responder?(ultima) if @origem == :responder
+
+    destino.turno_em_andamento?(@conversation, ultima)
+  end
+
+  def turno_do_responder?(ultima)
+    ultima.created_at >= ::Autonomia::Agents::Operate::PosseDoTurno::TTL.ago &&
+      ::Autonomia::Agents::Operate::ReplyJob.turno_pendente?(@conversation, @message_id)
+  end
+
+  def barrado(destino)
+    telemetria(:reenfileiramento_barrado, destino)
+    false
+  end
+
+  # Depois do commit: chamado de dentro do lock do Responder, o settle novo não pode ler a conversa antes de a
+  # transação de quem chamou terminar. Leva a posse junto: o settle enfileirado já é o dono deste turno.
+  def enfileirar(destino)
+    telemetria(:turno_reenfileirado, destino)
+    conversation_id = @conversation.id
+    message_id = @message_id
+    espera = espera_da_janela(destino)
+    ActiveRecord.after_all_transactions_commit do
+      ::Autonomia::Agents::Operate::ReplyJob.set(wait: espera).perform_later(conversation_id, message_id, 'settle', destino.id)
+    end
+  end
+
+  # Pelo :evento_troca, o turno refeito espera o fim da janela do debounce, como o settle do gatilho: o Sync do CRM troca
+  # o dono segundos depois da mensagem, e o dono novo não pode responder enquanto o cliente ainda digita. Uma mensagem
+  # nova na janela muda a marca, e este settle desiste. Pelo :responder a janela já passou (quem chama já fez a IA).
+  # A marca existe aqui: turno_em_andamento? já a conferiu.
+  def espera_da_janela(destino)
+    return 0.seconds unless @origem == :evento_troca
+
+    stamp = @conversation.additional_attributes.to_h[::Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY]
+    fim = stamp['at'].to_f + ::Autonomia::Agents::Config.debounce_seconds_for(destino.agent).to_f
+    [fim - Time.current.to_f, 0].max.seconds
+  end
+
+  def telemetria(evento, destino)
+    ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(evento, conversation_id: @conversation.id, msg: @message_id,
+                                                                      origem: @origem, agent_inbox: destino.id)
+  end
+end

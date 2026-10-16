@@ -18,7 +18,8 @@
 #   copy_code_example   — COPY_CODE without an example code of 1 to 15 letters and digits;
 #   carousel_cards      — carousel without 2 to 10 cards;
 #   carousel_media      — cards with different media (a photo in one, a video in another);
-#   carousel_card       — a card without a media header, body text or buttons;
+#   carousel_card       — a card without a media header, body text or buttons (a product card, #1418: PRODUCT header
+#                         and a button, no file nor text — the product comes from the catalog);
 #   offer_title         — limited-time offer without a title of 1 to 16 characters;
 #   offer_buttons       — limited-time offer without its URL button, or with a countdown and no COPY_CODE button.
 # In an edit (`edit_problems`), one more code:
@@ -151,7 +152,12 @@ module Whatsapp::Templates::SubmitFormat
     return ['carousel_cards'] unless CARDS.cover?(cards.size)
     return ['carousel_media'] if cards.map { |card| card_media(card) }.reject(&:empty?).uniq.size > 1
 
-    cards.flat_map { |card| card_problems(Whatsapp::Templates::SendableFormat.hashes(card['components'])) }
+    cards.flat_map { |card| any_card_problems(card) }
+  end
+
+  def any_card_problems(card)
+    parts = Whatsapp::Templates::SendableFormat.hashes(card['components'])
+    card_media(card) == 'PRODUCT' ? product_card_problems(parts) : card_problems(parts)
   end
 
   def card_media(card)
@@ -163,6 +169,10 @@ module Whatsapp::Templates::SubmitFormat
     complete = header && Array(header.dig('example', 'header_handle')).any?(&:present?) &&
                !blank?(component(parts, 'BODY')&.dig('text')) && buttons_of(parts).any?
     complete ? button_problems(buttons_of(parts)) : ['carousel_card']
+  end
+
+  def product_card_problems(parts)
+    buttons_of(parts).any? ? [] : ['carousel_card']
   end
 
   def offer_problems(offer, buttons)
