@@ -31,6 +31,7 @@ class Crm::PassarPara
     {
       fase2: ligado,
       sem_robo: ligado && ::Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox).blank?,
+      pessoas: pessoas_da_caixa.map { |user| pessoa(user) },
       agentes: Crm::AgentesIa.destinos(@conversation).map { |agente| item(agente, dono) },
       com_ia: dono && { id: dono.id, name: dono.name, bot_id: @conversation.assignee_agent_bot_id },
       origem: dono && origem_de(dono)
@@ -90,10 +91,19 @@ class Crm::PassarPara
     OK_DA_IA.include?(codigo) ? Resultado.new(ok: true) : recusa(codigo)
   end
 
-  # Quem pode ser atribuído na caixa e vê a conversa pelo acesso por funil (#1148).
+  # Quem pode ser atribuído na caixa (membros dela e administradores da conta, Inbox#assignable_agents) e vê a conversa
+  # pelo acesso por funil (#1148, o mesmo filtro do motor de entrega).
+  # A lista da tela e a aceitação do `passar!` leem daqui (#1140, correção 5): a tela só oferece quem o servidor aceita.
+  def pessoas_da_caixa
+    @pessoas_da_caixa ||= Crm::Access::Recipients.new(@conversation).filter(@inbox.assignable_agents)
+  end
+
   def pessoa_da_caixa(user_id)
-    candidatas = @inbox.assignable_agents.select { |user| user.id == user_id.to_i }
-    Crm::Access::Recipients.new(@conversation).filter(candidatas).first
+    pessoas_da_caixa.find { |user| user.id == user_id.to_i }
+  end
+
+  def pessoa(user)
+    { id: user.id, name: user.name, thumbnail: user.avatar_url, availability_status: user.availability_status }
   end
 
   # Quem estava com a conversa antes de passar: o agente de IA dono, a pessoa no nome ou o robô (externo).
