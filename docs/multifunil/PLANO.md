@@ -18,7 +18,7 @@ Vale para qualquer ramo. O que muda de uma conta para outra são os funis e o te
 | R1 | Contato e conversa podem ter **vários cards**, inclusive vários no mesmo funil. |
 | R2 | **O funil do card libera a visão da conversa.** O agente só vê uma conversa da caixa se ela tiver card num funil dele, de qualquer dono, aberto ou encerrado. |
 | R3 | **Sem funil** (triagem): só quem tem esse item vê e recebe conversas ainda sem card. |
-| R4 | Por pessoa e por caixa: **Todas** (todas as conversas dos funis dela) ou **Só as suas** (as que atende, participa ou de que é dona do card). |
+| R4 | Por pessoa e por caixa: **Todas** (todas as conversas dos funis dela) ou **Só as suas** (as que atende, participa ou de que é dona do card). Em "Só as suas", ser dona do card libera a conversa, não só o card (15/10, #1652). |
 | R5 | Padrão de quem já está na caixa: **Todos os funis, Todas**. Nada muda até o admin mexer. |
 | R6 | Caixa hoje em "Agente vê apenas atribuídos" migra para **Só as suas** em cada agente que não é admin. Ninguém ganha nem perde visão na troca. |
 | R7 | Caixa com mais de um funil não salva se ninguém tiver "Sem funil": conversa nunca fica invisível. Admin sempre vê tudo. |
@@ -206,3 +206,19 @@ A Entrega 3 precisa de uma conta com **mais de um funil** para o piloto do acess
   recente e entregue ao dono dele, sem passar pela triagem; card sem dono segue a triagem.
 - **Lista de conversas:** filtro "Funil" (inclui "Sem assunto") e o item do menu passa a se chamar "Participando".
   Protótipo em tela real antes do código.
+
+## 14. Decisões de 15/10/2026 (Rodrigo) — dono do card (#1652)
+
+- **R4: o dono do card vê a conversa.** Em "Só as suas", ser dona de um card ligado à conversa (a principal do card ou
+  um vínculo) libera a conversa em todos os pontos: lista, link, busca, notificação, tempo real, contadores, CRM,
+  Copiloto e ligações. Exemplo: a Ana é dona do card "Seguro do Onix", mas quem responde agora é o Bruno; ela lê a
+  conversa para retomar o pedido.
+- **Card aberto manda (#1339) também para o dono:** com card aberto na conversa, só o dono de um aberto vê; ganho e
+  perdido só contam quando não há nenhum aberto; resolvido, cancelado e arquivado nunca contam.
+- **Deixou de ser dono, deixa de ver:** trocar o dono do card (em conta com alguém em "Só as suas") dispara a mesma
+  sincronização de mudar o funil (contadores e tempo real: a nova dona recebe a conversa, a antiga a tira da lista).
+- **Em aberto (pergunta ao Rodrigo):** o rodízio nativo da caixa passa a poder escolher a dona em "Só as suas" para a
+  conversa do card dela (ela já vê a conversa); o motor de entrega (#1454) não a escolhe. Alinhar um ao outro?
+- Vale só para "Só as suas". Em "Todas" a pessoa já vê as conversas dos funis dela; a regra de funil não mudou.
+- Regra em `Crm::Access::ConversationScope` (SQL) e `Crm::Access::Recipients` (memória), cobertas pelo mesmo spec de
+  paridade.

@@ -4,7 +4,8 @@
 #   - público-alvo (config['audience']): árvore de condições sobre o contato/conversa;
 #   - horário de atuação (config['response_window']): always | business_hours | outside_business_hours.
 # Fonte do horário: Crm::ServiceSchedule da CAIXA (owner Inbox) quando usável; senão o horário
-# comercial da própria caixa (working_hours). Sem nenhuma fonte configurada, a caixa conta como
+# comercial da própria caixa (working_hours). Com a flag `horario_unico_caixa` (#1619), só o horário
+# comercial da caixa, no fuso da conta. Sem nenhuma fonte configurada, a caixa conta como
 # "sempre aberta" (mesmo contrato do Captain#available_now?).
 # Conversa SEM contato (alguns canais abrem a conversa antes de o contato existir): o público-alvo
 # não tem o que checar, então o dono escolhe em config['audience_unknown_contact'] —
@@ -64,7 +65,10 @@ class Autonomia::Agents::Operate::EngagementGate
     !inbox.out_of_office?
   end
 
+  # Com a flag `horario_unico_caixa`, o calendário de caixa do CRM não é lido (#1619).
   def service_schedule
+    return nil if ::Autonomia::HorarioUnicoCaixa.ligado?(@conversation.account)
+
     ::Crm::ServiceSchedule.find_by(account_id: @conversation.account_id, owner_type: 'Inbox', owner_id: @conversation.inbox_id)
   end
 

@@ -238,6 +238,58 @@ RSpec.describe AppliedSla, type: :model do
         expect(applied_sla.rt_due_at).to be_nil
       end
 
+      # #1619: com a flag, o SLA não lê o calendário de caixa do CRM; vale o da pessoa e, sem ele, o horário do
+      # Chatwoot no fuso da conta. Quarta 08:30: calendário da caixa (08-18) daria 09:00; Chatwoot (9-17) dá 09:30.
+      it 'keeps the inbox calendar while the horario_unico_caixa flag is off' do
+        conversation.update!(created_at: brt('2026-09-02 08:30'))
+
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:00').to_i)
+      end
+
+      it 'falls back to the inbox calendar when the agent calendar is unusable and the flag is off' do
+        create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']], enabled: false)
+        conversation.update!(created_at: brt('2026-09-02 08:30'))
+
+        expect(Sla::ScheduleResolver.for_conversation(conversation).owner).to eq(inbox)
+        expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:00').to_i)
+      end
+
+      context 'with the horario_unico_caixa flag on' do
+        let(:created_at) { brt('2026-09-02 08:30') }
+
+        before do
+          account.update!(reporting_timezone: 'America/Sao_Paulo')
+          inbox.update_column(:timezone, 'UTC') # rubocop:disable Rails/SkipsModelValidations
+          account.enable_features!(Autonomia::HorarioUnicoCaixa::FEATURE)
+        end
+
+        it 'ignores the inbox calendar and uses the inbox working hours in the account timezone' do
+          expect(Sla::BusinessHoursService).to receive(:new).and_call_original
+
+          expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:30').to_i)
+        end
+
+        it 'keeps the assigned agent calendar' do
+          create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']])
+
+          expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 14:30').to_i)
+        end
+
+        it 'uses the inbox working hours, not the inbox calendar, when the agent calendar is disabled' do
+          create(:crm_service_schedule, account: account, owner: agent, weekdays: [3], hours: [['14:00', '18:00']], enabled: false)
+
+          expect(Sla::ScheduleResolver.for_conversation(conversation)).to be_nil
+          expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:30').to_i)
+        end
+
+        it 'uses the inbox working hours when nobody is assigned' do
+          conversation.update!(assignee: nil)
+
+          expect(Sla::ScheduleResolver.for_conversation(conversation)).to be_nil
+          expect(applied_sla.frt_due_at).to eq(brt('2026-09-02 09:30').to_i)
+        end
+      end
+
       it 'resolves the schedule once while serializing all due times' do
         allow(Sla::ScheduleResolver).to receive(:for_conversation).and_call_original
 

@@ -167,6 +167,18 @@ module Crm
         agente if agente&.atende_cliente?
       end
 
+      # Contrato com o Agentes IA (#1606, devolução de pessoa para a IA): o espelho (AgentBot) de área do responsável do
+      # funil do assunto em foco (Crm::Assunto.funil_atual), com o mesmo critério do ResponsibleAgentSync#destino_para.
+      # nil sem a Fase 2, sem card aberto, com o funil fora da caixa ou com a IA do funil desligada, com o agente parado
+      # ou sem vínculo de área na caixa: aí quem recebe é a porta.
+      def self.robo_do_funil(conversation)
+        card = ::Crm::Assunto.funil_atual(conversation)
+        return if card.nil? || !funil_de_destino?(card.pipeline, conversation.inbox)
+
+        agente = responsible_agent(inbox: conversation.inbox, pipeline: card.pipeline)
+        agent_inbox_for(inbox: conversation.inbox, agent: agente)&.agent_bot
+      end
+
       # O vínculo de ÁREA do agente com a caixa (Autonomia::Agents::Areas): o espelho (AgentBot) dele ali é quem posta.
       # Sem vínculo, o agente não atende nessa caixa.
       def self.agent_inbox_for(inbox:, agent:)

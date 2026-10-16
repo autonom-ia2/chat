@@ -56,7 +56,7 @@ RSpec.describe Crm::ConversationObserverListener do
 
       described_class.instance.message_created(event_for(message))
 
-      expect(Crm::Subjects::IdentifyJob).to have_been_enqueued.with(conversation.id, message.id)
+      expect(Crm::Subjects::IdentifyJob).to have_been_enqueued.with(conversation.id, message.id, false)
     end
 
     it 'não pergunta com a IA desligada nem pela mensagem da equipe' do
