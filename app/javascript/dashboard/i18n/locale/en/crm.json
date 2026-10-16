@@ -4101,7 +4101,9 @@
       "AGENTE_ENTRA": "{nome} joins this inbox.",
       "AGENTE_ENTRA_E_LIGA": "{nome} joins this inbox and starts answering.",
       "AGENTE_SAI": "{nome} leaves this inbox.",
-      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox."
+      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox.",
+      "ABERTAS": "There is {n} open conversation in {funil} in this inbox. | There are {n} open conversations in {funil} in this inbox.",
+      "UM_FUNIL": "With a single funnel in this inbox, whoever takes care of {funil} and sees all conversations also takes care of the ones that have no subject yet. Whoever only sees their own stays that way."
     },
     "FUNIS": {
       "TIPO_SALES": "Sales: ends in won or lost",

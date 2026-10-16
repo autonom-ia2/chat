@@ -43,6 +43,37 @@ const funisMarcados = computed(() => funisDaCaixa(props.form, props.funis));
 const varios = computed(() => funisMarcados.value.length > 1);
 const nomes = pessoas => juntar(pessoas.map(primeiroNome), locale.value);
 
+// #1140 (decisão 7) — antes de salvar: as conversas em aberto de cada funil que
+// sai (contagem do servidor) e, ficando um funil só, quem cuida dele passa a
+// cuidar também das conversas sem assunto (é o que o servidor grava).
+const avisos = computed(() => {
+  const abertas = props.original.conversas_abertas || {};
+  const saem = props.original.pipeline_ids.filter(
+    id => !props.form.pipeline_ids.includes(id)
+  );
+  const frases = saem
+    .filter(id => abertas[String(id)] > 0)
+    .map(id =>
+      t(
+        'CRM_CAIXAS.MUDA.ABERTAS',
+        {
+          n: abertas[String(id)],
+          funil: props.funis.find(funil => funil.id === id)?.name || '',
+        },
+        abertas[String(id)]
+      )
+    );
+  if (
+    props.original.pipeline_ids.length > 1 &&
+    funisMarcados.value.length === 1
+  ) {
+    frases.push(
+      t('CRM_CAIXAS.MUDA.UM_FUNIL', { funil: funisMarcados.value[0].name })
+    );
+  }
+  return frases;
+});
+
 const pessoas = computed(() =>
   [...props.form.people]
     .sort(
@@ -324,6 +355,24 @@ const lista = computed(() =>
         </ul>
       </section>
     </template>
+
+    <section
+      v-if="avisos.length"
+      data-aviso-antes-de-salvar
+      class="flex flex-col gap-2 rounded-2xl border border-n-amber-7 bg-n-amber-2 p-5"
+    >
+      <p
+        v-for="(frase, indice) in avisos"
+        :key="indice"
+        class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-12"
+      >
+        <span
+          class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+          aria-hidden="true"
+        />
+        {{ frase }}
+      </p>
+    </section>
 
     <section
       class="flex flex-col gap-3 rounded-2xl border border-n-blue-7 bg-n-blue-2 p-5"

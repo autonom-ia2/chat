@@ -4102,7 +4102,9 @@
       "AGENTE_ENTRA": "{nome} entra nesta caixa.",
       "AGENTE_ENTRA_E_LIGA": "{nome} entra nesta caixa e passa a atender.",
       "AGENTE_SAI": "{nome} sai desta caixa.",
-      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa."
+      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa.",
+      "ABERTAS": "Há {n} conversa aberta em {funil} nesta caixa. | Há {n} conversas abertas em {funil} nesta caixa.",
+      "UM_FUNIL": "Com um funil só nesta caixa, quem cuida de {funil} e vê todas as conversas passa a cuidar também das que ainda não têm assunto. Quem só vê as dele continua assim."
     },
     "FUNIS": {
       "TIPO_SALES": "Vendas: termina em ganho ou perdido",
