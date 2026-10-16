@@ -36,6 +36,7 @@ vi.mock('./usePassagem', () => ({
     caixas: ref([{ id: 1 }]),
     equipe: ref([]),
     iaDoFunilLigada: ref(true),
+    recebemPorCaixa: ref([]),
     regra: ref({ enabled: true }),
     etapas: ref([]),
     alterado: ref(estado.alterado),

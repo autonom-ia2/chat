@@ -18,6 +18,15 @@ class CrmCaixasAPI extends ApiClient {
     return data.payload;
   }
 
+  // #1140 — só lê: quem receberia cada assunto com o que a tela marcou, pela
+  // regra do motor de entrega. { triagem: [ids], funis: { id: [ids] } }
+  async quemRecebe(inboxId, caixa) {
+    const { data } = await axios.post(`${this.url}/${inboxId}/quem_recebe`, {
+      caixa,
+    });
+    return data.payload.quem_recebe;
+  }
+
   async salvar(inboxId, caixa) {
     const { data } = await axios.put(`${this.url}/${inboxId}`, { caixa });
     return data.payload;

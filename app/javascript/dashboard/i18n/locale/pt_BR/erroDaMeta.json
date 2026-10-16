@@ -1,0 +1,87 @@
+{
+  "ERRO_DA_META": {
+    "NAO_SAIU": "Não saiu.",
+    "O_QUE_FAZER": "O que fazer:",
+    "DETALHE": "Detalhe para o suporte",
+    "SEM_PAGAMENTO": {
+      "O_QUE": "A conta do WhatsApp está sem forma de pagamento.",
+      "FAZER": "Quem cuida da conta precisa cadastrar o cartão no Gerenciador do WhatsApp."
+    },
+    "PASSOU_24_HORAS": {
+      "O_QUE": "O cliente não responde há mais de 24 horas. Agora o WhatsApp só aceita modelo de mensagem.",
+      "FAZER": "Envie um modelo aprovado. Quando o cliente responder, a conversa livre volta."
+    },
+    "NUMERO_NAO_RECEBE": {
+      "O_QUE": "Este número não recebe mensagens no WhatsApp.",
+      "FAZER": "Confira o número ou fale com o cliente por outro meio; ele pode precisar atualizar o WhatsApp."
+    },
+    "LIMITE_PROPAGANDA": {
+      "O_QUE": "O WhatsApp segurou esta propaganda porque o cliente já recebeu muitas.",
+      "FAZER": "Espere 1 dia antes de tentar de novo."
+    },
+    "CLIENTE_RECUSOU_PROPAGANDA": {
+      "O_QUE": "O cliente pediu para não receber propaganda desta empresa.",
+      "FAZER": "Não tente de novo; fale com ele quando ele escrever."
+    },
+    "TIPO_NAO_SUPORTADO": {
+      "O_QUE": "Este tipo de mensagem não pode ser enviado pelo WhatsApp.",
+      "FAZER": "Mande como texto, foto ou arquivo."
+    },
+    "ARQUIVO_RECUSADO": {
+      "O_QUE": "O WhatsApp não aceitou o arquivo.",
+      "FAZER": "Mande em outro formato, como PDF, JPG ou MP4."
+    },
+    "TESTE_DA_META": {
+      "O_QUE": "O número do cliente está num teste da própria Meta, e a propaganda não foi enviada.",
+      "FAZER": "Não é erro seu: espere o cliente escrever ou fale por outro meio."
+    },
+    "CONTA_BLOQUEADA": {
+      "O_QUE": "A conta do WhatsApp foi bloqueada pela Meta.",
+      "FAZER": "Quem cuida da conta precisa ver o aviso no Gerenciador do WhatsApp."
+    },
+    "LIMITE_SPAM": {
+      "O_QUE": "O WhatsApp limitou os envios deste número porque muita gente bloqueou ou marcou como spam.",
+      "FAZER": "Envie menos por um tempo e confira a qualidade no Gerenciador do WhatsApp."
+    },
+    "MUITAS_PARA_O_MESMO": {
+      "O_QUE": "Muitas mensagens para o mesmo cliente em pouco tempo.",
+      "FAZER": "Espere alguns minutos e tente de novo."
+    },
+    "LIGACAO_VENCEU": {
+      "O_QUE": "A ligação com o WhatsApp venceu.",
+      "FAZER": "Quem cuida da conta precisa conectar o WhatsApp de novo em Caixas de Entrada."
+    },
+    "MODELO_CAMPOS_VAZIOS": {
+      "O_QUE": "O modelo tem campos que ficaram sem preencher.",
+      "FAZER": "Preencha todos e envie de novo."
+    },
+    "MODELO_NAO_EXISTE": {
+      "O_QUE": "Este modelo não existe nesse idioma ou ainda não foi aprovado.",
+      "FAZER": "Escolha um modelo aprovado e envie de novo."
+    },
+    "MODELO_TEXTO_GRANDE": {
+      "O_QUE": "O texto do modelo ficou grande demais.",
+      "FAZER": "Use um texto mais curto nos campos."
+    },
+    "MODELO_RECUSADO": {
+      "O_QUE": "A Meta recusou o modelo porque o texto quebra uma regra dela.",
+      "FAZER": "Crie outro modelo com texto diferente."
+    },
+    "MODELO_FORMATO_ERRADO": {
+      "O_QUE": "Um campo do modelo está no formato errado.",
+      "FAZER": "Confira o que foi escrito em cada campo e envie de novo."
+    },
+    "MODELO_PAUSADO": {
+      "O_QUE": "Este modelo foi pausado porque teve reclamações.",
+      "FAZER": "Edite o modelo e espere a aprovação."
+    },
+    "MODELO_DESLIGADO": {
+      "O_QUE": "Este modelo foi desligado de vez por excesso de reclamações.",
+      "FAZER": "Crie um modelo novo, com outro texto."
+    },
+    "DESCONHECIDO": {
+      "O_QUE": "A Meta não entregou esta mensagem.",
+      "FAZER": "Tente de novo. Se não der, mande o detalhe abaixo para o suporte."
+    }
+  }
+}

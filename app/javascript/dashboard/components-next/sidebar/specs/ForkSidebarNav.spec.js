@@ -237,7 +237,7 @@ describe('ForkSidebarNav', () => {
     larguras.salva = 240;
   });
 
-  describe('abrir e fechar grupo (bug do Rodrigo: fechar não fechava)', () => {
+  describe('abrir e fechar grupo (#1661: nascem fechados, abrem só no clique)', () => {
     const irPara = async nome => {
       rota.path = `/${nome}`;
       rota.name = nome;
@@ -254,45 +254,44 @@ describe('ForkSidebarNav', () => {
       await irPara('crm_kanban_index');
     });
 
-    it('(a)(e) o grupo da tela atual nasce aberto e clicar fecha; fechado, ele fica realçado', async () => {
+    it('(a)(e) o grupo da tela atual nasce FECHADO e realçado; clicar abre e clicar de novo fecha (#1661)', async () => {
       await irPara('home');
       const { wrapper } = montar();
       await nextTick();
-      expect(aberto(wrapper, 'Conversation')).toBe('true');
-      await botao(wrapper, 'Conversation').trigger('click');
       expect(aberto(wrapper, 'Conversation')).toBe('false');
       expect(botao(wrapper, 'Conversation').classes()).toContain(
         'bg-n-blue-3/70'
       );
       await botao(wrapper, 'Conversation').trigger('click');
       expect(aberto(wrapper, 'Conversation')).toBe('true');
+      await botao(wrapper, 'Conversation').trigger('click');
+      expect(aberto(wrapper, 'Conversation')).toBe('false');
     });
 
-    it('(b) navegar para outra tela do mesmo grupo reabre', async () => {
+    it('(b) navegar para outra tela do mesmo grupo não abre sozinho', async () => {
+      await irPara('home');
+      const { wrapper } = montar();
+      await nextTick();
+      await irPara('conversation_mentions');
+      expect(aberto(wrapper, 'Conversation')).toBe('false');
+    });
+
+    it('(c) um aberto por vez: abrir outro grupo fecha o anterior', async () => {
       await irPara('home');
       const { wrapper } = montar();
       await nextTick();
       await botao(wrapper, 'Conversation').trigger('click');
-      expect(aberto(wrapper, 'Conversation')).toBe('false');
-      await irPara('conversation_mentions');
-      expect(aberto(wrapper, 'Conversation')).toBe('true');
-    });
-
-    it('(c) navegar para tela de outro grupo fecha o anterior e abre o novo', async () => {
-      await irPara('home');
-      const { wrapper } = montar();
-      await nextTick();
-      await irPara('agent_reports_index');
+      await botao(wrapper, 'Reports').trigger('click');
       expect(aberto(wrapper, 'Reports')).toBe('true');
       expect(aberto(wrapper, 'Conversation')).toBe('false');
     });
 
-    it('(d) Agenda nasce fechada e abre na tela filha', async () => {
-      await irPara('home');
+    it('(d) Agenda continua fechada na tela filha até o clique', async () => {
+      await irPara('crm_calendar_index');
       const { wrapper } = montar();
       await nextTick();
       expect(aberto(wrapper, 'Agenda')).toBe('false');
-      await irPara('crm_calendar_index');
+      await botao(wrapper, 'Agenda').trigger('click');
       expect(aberto(wrapper, 'Agenda')).toBe('true');
     });
   });
