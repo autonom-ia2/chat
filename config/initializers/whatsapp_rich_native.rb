@@ -29,5 +29,9 @@ Rails.application.config.to_prepare do
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::RetryAsText
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::RetryAsText)
   end
+  # Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron.
+  if Account._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::ColdStart }
+    Account.after_update_commit Waha::RichNative::ColdStart
+  end
   Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
 end
