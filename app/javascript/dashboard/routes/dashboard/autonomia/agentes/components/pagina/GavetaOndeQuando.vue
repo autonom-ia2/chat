@@ -10,7 +10,6 @@ import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 import OndeQuandoEscolha from '../OndeQuandoEscolha.vue';
-import DialogoAcao from './DialogoAcao.vue';
 import NotaQuemRecebe from './NotaQuemRecebe.vue';
 import TambemRecebe from '../onde/TambemRecebe.vue';
 import {
@@ -44,6 +43,11 @@ import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 // fica como agente da equipe. Só no 'alterar' atendendo e com a leitura das caixas (L2): entrar numa
 // área liga o agente, então o agente parado não vê a seção. Salvar grava primeiro "Onde" e "Quando" e
 // depois entra/sai das outras caixas (useSalvarEquipe: POST channels com papel area, DELETE).
+// #1720 (desenho do Rodrigo de 16/10) — "Onde atende" vira "{nome} atende primeiro as conversas novas?":
+// "Sim, no canal:" ou "Não, só quando alguém passar a conversa". O "Não" tira o agente das caixas em
+// que atende primeiro e deixa só "Recebe quando alguém passar em:". Um "Salvar" aplica tudo. "Não" sem
+// nenhuma caixa marcada pede confirmação em linha, no rodapé ("fica parado"), antes de gravar. Sai o
+// botão "Não atender em nenhum lugar".
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -77,14 +81,26 @@ const NS = 'AGENTS.JORNADA.PAGINA.ONDE';
 
 const inboxAtual = computed(() => props.atuais[0]?.inbox_id ?? null);
 const onde = ref(inboxAtual.value);
+// #1720: 'sim' (atende primeiro no canal `onde`) ou 'nao' (só quando alguém passar).
+const primeiroDe = inboxId => (inboxId ? 'sim' : 'nao');
+const primeiro = ref(primeiroDe(inboxAtual.value));
 const escolheu = ref(false);
 watch(inboxAtual, atual => {
-  if (!escolheu.value) onde.value = atual;
+  if (escolheu.value) return;
+  onde.value = atual;
+  primeiro.value = primeiroDe(atual);
 });
 const escolherOnde = inboxId => {
   escolheu.value = true;
   onde.value = inboxId;
 };
+const escolherPrimeiro = valor => {
+  escolheu.value = true;
+  primeiro.value = valor;
+};
+const soQuandoPassar = computed(() => primeiro.value === 'nao');
+// Aviso em linha do "Não" sem nenhuma caixa: aberto até "Deixar parado" ou "Voltar".
+const avisoParado = ref(false);
 const quando = ref(quandoDoAgente(props.agente));
 const salvarEquipe = useSalvarEquipe();
 // Outras caixas marcadas. A leitura pode chegar depois de abrir: até a pessoa mexer, acompanha a atual.
@@ -102,7 +118,6 @@ const escolherOutras = valor => {
 };
 const salvando = ref(false);
 const erro = ref(null);
-const dialogoNaoAtender = ref(null);
 
 const voltar = computed(() => props.modo === 'voltar');
 const somenteLeitura = computed(() => !voltar.value && !props.atendendo);
@@ -126,11 +141,14 @@ const mostrarOutras = computed(
 );
 // #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
 const porCaixa = useAgenteIaPorCaixa();
-// Fora da lista: as caixas em que ele é o principal agora e a escolhida em "Onde atende".
+// Fora da lista: no "Sim", as caixas em que ele é o principal agora e a escolhida. No "Não" ele sai
+// delas, então todas podem ser marcadas (a em que ainda é principal sai pelo outrasCaixasDaEquipe).
 const foraDasOutras = computed(() =>
-  [...props.atuais.map(canal => canal.inbox_id), onde.value].filter(
-    id => id !== null && id !== undefined
-  )
+  soQuandoPassar.value
+    ? []
+    : [...props.atuais.map(canal => canal.inbox_id), onde.value].filter(
+        id => id !== null && id !== undefined
+      )
 );
 // Só valem as marcadas que ainda podem ser escolhidas (e nunca a caixa principal escolhida).
 const outrasValidas = computed(() => {
@@ -148,7 +166,13 @@ const mudancaDasOutras = computed(() =>
   mudancaDaEquipe(props.equipeAtual, outrasValidas.value)
 );
 const troca = computed(() =>
-  trocaNoCanal(props.canais, onde.value, props.agente.id)
+  soQuandoPassar.value
+    ? null
+    : trocaNoCanal(props.canais, onde.value, props.agente.id)
+);
+// No "Não", sem caixa marcada em "Recebe quando…", ele não fica em lugar nenhum.
+const ficaParado = computed(
+  () => soQuandoPassar.value && !outrasValidas.value.length
 );
 const nomeDoCanal = inboxId =>
   props.canais.find(canal => canal.inbox_id === inboxId)?.name || '';
@@ -246,7 +270,9 @@ const janelaMudou = () => quando.value !== quandoDoAgente(props.agente);
 
 // Sai das caixas antigas depois de entrar na nova. Se não conseguir, avisa que ficou nas duas.
 const sairDasAntigas = async () => {
-  const antigas = props.atuais.filter(canal => canal.inbox_id !== onde.value);
+  const antigas = soQuandoPassar.value
+    ? props.atuais
+    : props.atuais.filter(canal => canal.inbox_id !== onde.value);
   try {
     await Promise.all(
       antigas.map(canal =>
@@ -295,7 +321,26 @@ const salvarOutras = async () => {
   return feito;
 };
 
+// #1720 — "Não, só quando alguém passar": sai das caixas em que atende primeiro, grava o "quando" e
+// depois entra/sai das caixas marcadas em "Recebe quando…".
+const salvarSoQuandoPassar = async () => {
+  if (props.atuais.length && !(await sairDasAntigas())) {
+    emit('pronto');
+    emit('fechar');
+    return;
+  }
+  if (janelaMudou()) {
+    await atualizar({ config: { response_window: quando.value } });
+  }
+  if (!(await salvarOutras())) return;
+  terminar(t(`${NS}.PRONTO`));
+};
+
 const salvarAlteracao = async () => {
+  if (soQuandoPassar.value) {
+    await salvarSoQuandoPassar();
+    return;
+  }
   if (!somenteLeitura.value && onde.value && onde.value !== inboxAtual.value) {
     if (!(await entrarNaCaixa())) return;
     const saiu = await sairDasAntigas();
@@ -330,8 +375,13 @@ const voltarAAtender = async () => {
   );
 };
 
-const confirmar = async () => {
+const confirmar = async ({ parado = false } = {}) => {
   if (ocupado.value) return;
+  if (!voltar.value && ficaParado.value && !parado) {
+    avisoParado.value = true;
+    return;
+  }
+  avisoParado.value = false;
   erro.value = null;
   salvando.value = true;
   try {
@@ -353,12 +403,11 @@ const acaoDoErro = () => {
   confirmar();
 };
 
-const naoAtender = async () => {
-  await AutonomiaChannelsAPI.disconnect(props.agente.id, inboxAtual.value);
-  onde.value = null;
-  emit('pronto');
-  useAlert(t(`${NS}.PRONTO`));
-};
+const deixarParado = () => confirmar({ parado: true });
+// Mexer na escolha fecha o aviso: ele vale para a escolha de quando apareceu.
+watch([primeiro, outrasValidas], () => {
+  avisoParado.value = false;
+});
 
 const titulo = computed(() =>
   voltar.value
@@ -475,25 +524,18 @@ const rotuloVoltar = computed(() => {
       </template>
 
       <template v-else>
-        <div v-if="!voltar && inboxAtual" class="flex justify-end">
-          <AgenteBotao
-            data-nao-atender
-            variante="fantasma"
-            icone="i-lucide-x"
-            @click="dialogoNaoAtender?.abrir()"
-          >
-            {{ t(`${NS}.NAO_ATENDER`) }}
-          </AgenteBotao>
-        </div>
         <OndeQuandoEscolha
           v-model:quando="quando"
           :onde="onde"
+          :primeiro="primeiro"
+          :horario-de-cada="soQuandoPassar && outrasValidas.length > 0"
           :canais="canais"
           :agente-id="agente.id"
           :nome="nome"
           :horarios="horarios"
           :sem-leitura="semLeitura"
           @update:onde="escolherOnde"
+          @update:primeiro="escolherPrimeiro"
         >
           <template v-if="mostrarOutras" #depoisDeOnde>
             <TambemRecebe
@@ -531,6 +573,45 @@ const rotuloVoltar = computed(() => {
           {{ t(`${NS}.VOLTAR_TEXTO`, { nome }) }}
         </p>
       </template>
+      <div
+        v-else-if="avisoParado"
+        data-aviso-parado
+        role="group"
+        aria-labelledby="onde-aviso-parado"
+        class="flex flex-col gap-3 p-3 rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
+      >
+        <p
+          id="onde-aviso-parado"
+          aria-live="polite"
+          class="flex items-start gap-2 m-0 text-sm text-n-slate-12"
+        >
+          <span
+            class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
+            aria-hidden="true"
+          />
+          {{ t(`${NS}.PARADO_AVISO`, { nome }) }}
+        </p>
+        <div class="flex flex-wrap justify-end gap-2">
+          <AgenteBotao
+            data-voltar-aviso
+            variante="contorno"
+            tamanho="lg"
+            :desabilitado="ocupado"
+            @click="avisoParado = false"
+          >
+            {{ t(`${NS}.PARADO_VOLTAR`) }}
+          </AgenteBotao>
+          <AgenteBotao
+            data-deixar-parado
+            tamanho="lg"
+            :carregando="ocupado"
+            :rotulo-carregando="t(`${NS}.SALVANDO`)"
+            @click="deixarParado"
+          >
+            {{ t(`${NS}.PARADO_CONFIRMAR`) }}
+          </AgenteBotao>
+        </div>
+      </div>
       <div v-else class="flex flex-wrap justify-end gap-2">
         <AgenteBotao
           variante="contorno"
@@ -545,25 +626,12 @@ const rotuloVoltar = computed(() => {
           tamanho="lg"
           :carregando="ocupado"
           :rotulo-carregando="t(`${NS}.SALVANDO`)"
-          :desabilitado="semLista"
-          @click="confirmar"
+          :desabilitado="semLista || (!soQuandoPassar && !onde)"
+          @click="confirmar()"
         >
           {{ t(`${NS}.SALVAR`) }}
         </AgenteBotao>
       </div>
     </template>
-
-    <DialogoAcao
-      ref="dialogoNaoAtender"
-      :titulo="t(`${NS}.NAO_ATENDER_TITULO`)"
-      :texto="
-        t(`${NS}.NAO_ATENDER_TEXTO`, { nome, canal: nomeDoCanal(inboxAtual) })
-      "
-      :confirmar="t(`${NS}.NAO_ATENDER_CONFIRMAR`)"
-      variante="perigo"
-      :erro-titulo="t(`${NS}.ERRO`)"
-      :erro-garantia="t(`${NS}.ERRO_GARANTIA`)"
-      :executar="naoAtender"
-    />
   </AgenteGaveta>
 </template>

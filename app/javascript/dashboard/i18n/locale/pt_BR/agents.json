@@ -753,9 +753,14 @@
         "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
         "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
         "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe.",
-        "TAMBEM": "Também recebe quando alguém passar em:",
-        "TAMBEM_TEXTO": "Marque os outros canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
-        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher."
+        "TAMBEM": "Recebe quando alguém passar em:",
+        "TAMBEM_TEXTO": "Marque os canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
+        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher.",
+        "PRIMEIRO_PERGUNTA": "{nome} atende primeiro as conversas novas?",
+        "PRIMEIRO_SIM": "Sim, no canal:",
+        "PRIMEIRO_NAO": "Não, só quando alguém passar a conversa",
+        "PRIMEIRO_CANAL": "Canal em que {nome} atende primeiro",
+        "HORARIO_DE_CADA": "O horário é o de cada canal em que {nome} recebe a conversa."
       },
       "COMPOSITOR": {
         "ESCREVA": "Escreva sua resposta",
@@ -1091,11 +1096,15 @@
         },
         "BLOCO_ONDE": {
           "TITULO": "Onde e quando responde",
-          "TEXTO": "No {canal}, {quando}.",
-          "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
           "ESCOLHER_CANAL": "Escolher canal",
-          "TAMBEM": "Também recebe quando alguém passar em: {caixas}."
+          "PRIMEIRO": "Atende primeiro no {canal}.",
+          "PRIMEIRO_N": "Atende primeiro em 1 canal. | Atende primeiro em {n} canais.",
+          "PRIMEIRO_E_RECEBE": "Atende primeiro no {canal} e recebe quando alguém passar no {caixas}. | Atende primeiro no {canal} e recebe quando alguém passar em {caixas}.",
+          "PRIMEIRO_N_E_RECEBE": "Atende primeiro em 1 canal e recebe quando alguém passar em {caixas}. | Atende primeiro em {n} canais e recebe quando alguém passar em {caixas}.",
+          "RECEBE_DE": "Recebe quando {outro} passar no {canal}.",
+          "RECEBE": "Recebe quando alguém passar no {caixas}. | Recebe quando alguém passar em {caixas}.",
+          "NENHUM_LUGAR": "Não atende em lugar nenhum."
         },
         "BLOCO_JEITO": {
           "TITULO": "Nome e jeito de falar",
@@ -1238,10 +1247,6 @@
           "ONDE": "Onde",
           "QUANDO": "Quando",
           "QUANDO_ROTULO": "Quando responde",
-          "NAO_ATENDER": "Não atender em nenhum lugar",
-          "NAO_ATENDER_TITULO": "Não atender em nenhum lugar?",
-          "NAO_ATENDER_TEXTO": "{nome} sai do {canal}. As conversas de lá voltam para a equipe.",
-          "NAO_ATENDER_CONFIRMAR": "Não atender",
           "SEM_CANAL": "Você ainda não conectou nenhum canal.",
           "PARADO": "Para trocar o canal, {nome} precisa voltar a atender.",
           "VOLTAR": "Voltar a atender",
@@ -1257,7 +1262,10 @@
           "CONTINUA_NO_ANTIGO": "{nome} começou a responder no {novo}, mas continua também no {antigo}.",
           "LER_ERRO": "Não deu para mostrar seus canais agora.",
           "LER_ERRO_GARANTIA": "Nada mudou.",
-          "CARREGANDO_CANAIS": "Carregando seus canais…"
+          "CARREGANDO_CANAIS": "Carregando seus canais…",
+          "PARADO_AVISO": "Assim {nome} não vai atender em lugar nenhum e fica parado.",
+          "PARADO_CONFIRMAR": "Deixar parado",
+          "PARADO_VOLTAR": "Voltar"
         },
         "HORARIO": {
           "DIAS": {

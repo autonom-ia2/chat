@@ -38,6 +38,7 @@ import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
 import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
 import { caixasDaEquipe, recebeEmOutrasCaixas } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
+import { resumoOnde } from '../utils/resumoOnde';
 import {
   GAVETA,
   chaveDoQuando,
@@ -195,6 +196,15 @@ const foto = computed(
   () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
 );
 
+// #1720: uma linha com onde atende primeiro e onde recebe quando alguém passar.
+const textoOnde = computed(() =>
+  resumoOnde(t, {
+    primeiro: umCanal.value,
+    quantosPrimeiro: quantosCanais.value,
+    recebe: tambemRecebeEm.value,
+  })
+);
+
 const ondeNoHeroi = computed(() => {
   if (ajudante.value) {
     const nomes = nomesQueAjuda(agente.value);
@@ -208,7 +218,7 @@ const ondeNoHeroi = computed(() => {
         })
       : t('AGENTS.JORNADA.ONDE.RECEBE');
   }
-  if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
+  if (!temCanal.value) return textoOnde.value;
   const ligado = atendendo.value;
   if (umCanal.value) {
     return t(ligado ? `${NS}.RESPONDE_NO` : `${NS}.PARADO_NO`, {
@@ -222,17 +232,6 @@ const ondeNoHeroi = computed(() => {
     { n, quando: quando.value },
     n
   );
-});
-
-const textoOnde = computed(() => {
-  if (umCanal.value) {
-    return t(`${NS}.BLOCO_ONDE.TEXTO`, {
-      canal: umCanal.value,
-      quando: quando.value,
-    });
-  }
-  const n = quantosCanais.value;
-  return t(`${NS}.BLOCO_ONDE.TEXTO_N`, { n, quando: quando.value }, n);
 });
 
 const horarios = computed(() => horariosDasCaixas(caixas.value, t));
