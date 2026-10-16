@@ -19,6 +19,8 @@ module Waha::RichNative::Inbound::Unknown
 
   def apply(message, data)
     return unless data.is_a?(Hash) && data['from_me'] != true
+    # O pedido (Waha::RichNative::Inbound::Order) já virou mensagem do cliente.
+    return if message.content_attributes.to_h.key?(Waha::RichNative::Inbound::Order::KEY)
 
     contact = message.conversation&.contact
     return if contact.nil?
@@ -28,6 +30,12 @@ module Waha::RichNative::Inbound::Unknown
     message.sender = contact
     message.content = I18n.t(TEXT_KEY, locale: message.account.locale, default: I18n.t(TEXT_KEY))
     message.content_attributes = message.content_attributes.to_h.merge('is_unsupported' => true, 'unsupported_kind' => kind_of(data))
+  end
+
+  # O aviso do motor de que uma visualização única do cliente não chegou ao aparelho vinculado (item 11): a main nunca
+  # recebe essa mensagem.
+  def unavailable_view_once?(data)
+    data.is_a?(Hash) && data['from_me'] != true && KINDS[data['content_type'].to_s] == 'view_once'
   end
 
   def kind_of(data)

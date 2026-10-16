@@ -93,3 +93,19 @@ register_rich_native_cold_start = lambda do
 end
 Rails.application.config.after_initialize { register_rich_native_cold_start.call }
 Rails.application.config.to_prepare { register_rich_native_cold_start.call if Rails.application.initialized? }
+
+Rails.application.config.to_prepare do
+  # Rodada 2: as marcas do anexo (voz, figurinha, visualização única) vão ao painel.
+  Attachment.prepend(Waha::RichNative::AttachmentMeta) unless Attachment <= Waha::RichNative::AttachmentMeta
+end
+
+Rails.application.config.to_prepare do
+  # Rodada 2: o recibo "ouvido" do áudio (parâmetro `c2y_played_at` do conector no PATCH de status) e o aviso de
+  # mensagens temporárias, criado depois da mensagem do cliente.
+  unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::PlayedReceipt
+    Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::PlayedReceipt)
+  end
+  if Message._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::Context }
+    Message.after_create_commit Waha::RichNative::Inbound::Context
+  end
+end

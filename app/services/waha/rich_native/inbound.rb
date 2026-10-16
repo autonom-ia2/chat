@@ -1,31 +1,47 @@
-# Callback `before_create` de Message (chat#1709, fase 3): os dados estruturados que o conector customizado do WAHA
-# (c2y-rich-2) acrescenta à mensagem que ele cria pela API. O conector roda para TODAS as contas e mantém o texto, o tipo
-# e a privacidade de antes; só junta uma destas chaves em `content_attributes`:
-#   waha_poll_vote  { poll_message_id, options: [títulos], vote_id, timestamp }  + in_reply_to (a enquete)
-#   waha_call       { call_id, event: received|accepted|rejected, is_video, by_me, reason }
-#   waha_unknown    { content_type, from_me }
-#   waha_reaction   { emoji ('' = removida), reacted_wa_id, from_me }            + in_reply_to (a reagida)
-#   waha_edit       { text, edited_wa_id, from_me }                               + in_reply_to (a editada)
-# Regra única:
-# - a chave SEMPRE sai. Só o conector pode mandá-las (`from_connector?`: o usuário da requisição é o dono do token da
-#   caixa; caixa antiga sem esse registro: um administrador da conta). De qualquer outro (agente, robô, job), a chave sai
-#   e nada mais muda: um agente não reescreve nem esconde mensagem dos outros por aqui.
+# Callback `before_create` de Message (chat#1709, fase 3 e rodada 2): os dados estruturados que o conector customizado
+# do WAHA (c2y-rich-2 e c2y-rich-3) acrescenta à mensagem que ele cria pela API. O conector roda para TODAS as contas e
+# mantém o texto, o tipo e a privacidade de antes; só junta chaves `waha_*` em `content_attributes` (contrato em
+# docs/audit/2026-10-16-1709-ricas-waha-rodada2.md). Regra única:
+# - as chaves SEMPRE saem. Só o conector pode mandá-las (`from_connector?`: o usuário da requisição é o dono do token da
+#   caixa; caixa antiga sem esse registro: um administrador da conta). De qualquer outro (agente, robô, job), as chaves
+#   saem e nada mais muda: um agente não reescreve nem esconde mensagem dos outros por aqui.
 # - flag `whatsapp_rich_native` DESLIGADA (ou caixa que não é a WAHA comum): nada mais muda. A mensagem fica IGUAL à da
-#   main (mesmo texto, tipo e privacidade). Exceção: o voto de uma enquete nativa enviada quando a flag estava ligada
-#   vira atividade escondida (na main o voto nunca chega; texto comum faria a IA responder "Sim").
-# - flag LIGADA na caixa WAHA comum: a mensagem vira a apresentação nova (Waha::RichNative::Inbound::<Tipo>). Erro em
-#   qualquer passo: a chave sai e a mensagem fica como a main (nunca interrompe a criação).
+#   main (mesmo texto, tipo e privacidade). Exceções, mensagens que a main nunca recebe: o voto de uma enquete nativa e
+#   a resposta a um evento nativo (enviados quando a flag estava ligada) e o aviso de visualização única que o motor não
+#   abriu viram atividade escondida (texto comum faria a IA responder "Sim").
+# - flag LIGADA na caixa WAHA comum: cada chave vira a apresentação nova (Waha::RichNative::Inbound::<Tipo>), numa ordem
+#   fixa (ORDER):
+#   1. as que ABSORVEM a mensagem (voto, resposta ao evento, reação, edição, apagada, ligação, álbum): exclusivas, a
+#      primeira presente decide e as outras saem; quando ela absorve (a mensagem vira atividade), nada mais roda;
+#   2. as que mudam o conteúdo (mídia que falhou, localização, contato, pedido, desconhecida);
+#   3. a mídia (`waha_media`); 4. a citação (`waha_quote`); 5. o contexto (`waha_context`: encaminhada, temporária).
+#   Erro num passo: só ele não vale (log com a classe do erro) e os outros seguem; a criação nunca é interrompida.
 class Waha::RichNative::Inbound
-  HANDLERS = {
+  ABSORBING = {
     'waha_poll_vote' => 'Waha::RichNative::Inbound::PollVote',
-    'waha_call' => 'Waha::RichNative::Inbound::Call',
-    'waha_unknown' => 'Waha::RichNative::Inbound::Unknown',
+    'waha_event_response' => 'Waha::RichNative::Inbound::EventResponse',
     'waha_reaction' => 'Waha::RichNative::Inbound::Reaction',
-    'waha_edit' => 'Waha::RichNative::Inbound::Edit'
+    'waha_edit' => 'Waha::RichNative::Inbound::Edit',
+    'waha_revoke' => 'Waha::RichNative::Inbound::Revoke',
+    'waha_call' => 'Waha::RichNative::Inbound::Call',
+    'waha_album' => 'Waha::RichNative::Inbound::Album'
   }.freeze
+  TRANSFORMING = {
+    'waha_media_failed' => 'Waha::RichNative::Inbound::MediaFailed',
+    'waha_location' => 'Waha::RichNative::Inbound::Location',
+    'waha_contacts' => 'Waha::RichNative::Inbound::Contacts',
+    'waha_order' => 'Waha::RichNative::Inbound::Order',
+    'waha_unknown' => 'Waha::RichNative::Inbound::Unknown',
+    'waha_media' => 'Waha::RichNative::Inbound::Media',
+    'waha_quote' => 'Waha::RichNative::Inbound::Quote',
+    'waha_context' => 'Waha::RichNative::Inbound::Context'
+  }.freeze
+  HANDLERS = ABSORBING.merge(TRANSFORMING).freeze
   KEYS = HANDLERS.keys.freeze
   HIDDEN_KEY = 'c2y_hidden'.freeze
   OWNER_KEY = 'account_token_owner_user_id'.freeze
+  # Sem a flag: a mensagem que só existe por causa do pacote vira atividade escondida (chave => tipo do texto).
+  HIDDEN_WITHOUT_FLAG = { 'waha_poll_vote' => 'poll_vote', 'waha_event_response' => 'event_response' }.freeze
 
   def self.before_create(message)
     attributes = message.content_attributes.to_h
@@ -35,29 +51,42 @@ class Waha::RichNative::Inbound
     message.content_attributes = attributes.except(*KEYS)
     return unless waha_inbox?(message) && from_connector?(message)
 
-    apply(message, present.first, attributes[present.first])
+    apply(message, attributes.slice(*present))
   rescue StandardError => e
     Rails.logger.error("[waha] rich native inbound #{e.class}")
     message.content_attributes = message.content_attributes.to_h.except(*KEYS)
   end
 
-  def self.apply(message, key, data)
-    if Waha::RichNative.enabled?(message.account)
-      HANDLERS[key].constantize.apply(message, data)
-    elsif key == 'waha_poll_vote' && message.incoming?
-      hide!(message, 'poll_vote')
-    end
+  # present: { chave => dados } das chaves que o conector mandou.
+  def self.apply(message, present)
+    return apply_without_flag(message, present) unless Waha::RichNative.enabled?(message.account)
+
+    absorbing = ABSORBING.keys.find { |key| present.key?(key) }
+    run(message, absorbing, present[absorbing]) if absorbing
+    return if message.activity?
+
+    TRANSFORMING.each_key { |key| run(message, key, present[key]) if present.key?(key) }
+  end
+
+  def self.apply_without_flag(message, present)
+    return unless message.incoming?
+
+    key = HIDDEN_WITHOUT_FLAG.keys.find { |candidate| present.key?(candidate) }
+    return hide!(message, HIDDEN_WITHOUT_FLAG[key]) if key
+
+    hide!(message, 'view_once') if Waha::RichNative::Inbound::Unknown.unavailable_view_once?(present['waha_unknown'])
+  end
+
+  def self.run(message, key, data)
+    HANDLERS.fetch(key).constantize.apply(message, data)
+  rescue StandardError => e
+    Rails.logger.error("[waha] rich native inbound #{key} #{e.class}")
   end
 
   # Caixa WAHA comum (Channel::Api com provider 'waha').
   def self.waha_inbox?(message)
     inbox = message.inbox
     inbox&.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) ? true : false
-  end
-
-  # Flag na conta e caixa WAHA comum (o que transforma a mensagem).
-  def self.transform?(message)
-    waha_inbox?(message) && Waha::RichNative.enabled?(message.account)
   end
 
   # O usuário desta requisição é o conector: o dono do token gravado na caixa pelo Waha::InboxProvisioner. Caixa sem
