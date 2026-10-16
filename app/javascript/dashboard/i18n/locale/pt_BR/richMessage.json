@@ -38,6 +38,12 @@
       "VOTED": "Votou: {titles}",
       "NO_VOTE": "Sem voto"
     },
+    "EVENT": {
+      "MIRROR": "Cópia do convite de evento que o cliente recebeu. Só o cliente pode responder.",
+      "WHEN_RANGE": "{start} até {end}",
+      "RESPONSES": "Vou: {going} · Não vou: {notGoing} · Talvez: {maybe}",
+      "NO_RESPONSE": "Sem resposta"
+    },
     "SENT_AS_TEXT": {
       "LABEL": "Enviado como texto"
     }
