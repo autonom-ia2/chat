@@ -210,7 +210,8 @@ RSpec.describe Account do
         # #1617: bit = posição no features.yml; só acrescentar no fim (#1322).
         feature_menu_lateral_novo: 1 << 25,
         feature_horario_unico_caixa: 1 << 26,
-        feature_crm_outro_canal: 1 << 27
+        feature_crm_outro_canal: 1 << 27,
+        feature_crm_mensagem_marcada: 1 << 28
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

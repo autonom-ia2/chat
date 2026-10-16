@@ -11,6 +11,7 @@ vi.mock('vue-i18n', () => ({
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     currentAccount: ref({ timezone: 'America/Sao_Paulo' }),
+    isCloudFeatureEnabled: () => false,
   }),
 }));
 vi.mock('vue-router', () => ({

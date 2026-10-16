@@ -1191,6 +1191,7 @@
       "FOLLOW_UP_SAVE_ERROR": "Could not save the follow-up.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Enter the free-form message for auto-send.",
       "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template.",
+      "FOLLOW_UP_DUE_AT_PAST": "This time has already passed. Pick a time from now on.",
       "CARD_REOPENED_ATENDER": "Request reopened.",
       "CARD_CLOSE_ERROR_ATENDER": "Could not update the request status."
     },
@@ -5756,6 +5757,120 @@
       "TEXTO_EXTERNA": "The invite goes out through your Google or Microsoft calendar.",
       "CANCELAR": "Cancel",
       "MARCAR": "Book meeting"
+    }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "ROTULO": "Scheduled message",
+    "MIGALHA": "Calendar",
+    "PASSO_DE": "Step {numero} of {total}",
+    "TITULO_LEMBRETE": "Message to {nome}",
+    "CANCELAR": "Cancel",
+    "VOLTAR": "Back",
+    "CONTINUAR": "Continue",
+    "MARCAR": "Schedule message",
+    "FALTA": {
+      "PARA_QUEM": "Choose who gets it.",
+      "QUANDO": "Choose the day and time.",
+      "PASSADO": "That time has passed.",
+      "CONFERINDO": "Checking WhatsApp…",
+      "PRONTA": "Choose a ready-made message.",
+      "CAMPOS": "Fill in the ready-made message.",
+      "TEXTO": "Write the message.",
+      "JANELA": "Check WhatsApp again."
+    },
+    "PARA_QUEM": {
+      "TITULO": "Who is the message for?",
+      "ROTULO": "Search for the customer or the deal",
+      "EXEMPLO": "Type a name",
+      "RECENTES": "Recently updated",
+      "ACHADOS": "Found",
+      "BUSCANDO": "Searching…",
+      "FALHOU": "Could not search right now. Try again.",
+      "VAZIO": "No one with that name.",
+      "SEM_WHATSAPP": "Has not talked on WhatsApp yet",
+      "RESUMO": "To",
+      "NEGOCIO": "· {negocio}",
+      "PELO_NEGOCIO": "Another WhatsApp: schedule from the deal"
+    },
+    "QUANDO": {
+      "TITULO": "When does the message go out?",
+      "DIA": "Which day?",
+      "HORA": "What time?",
+      "HOJE": "Today",
+      "AMANHA": "Tomorrow",
+      "OUTRO_DIA": "Another day",
+      "ESCOLHA_DIA": "Choose the day",
+      "OUTRA_HORA": "Another time",
+      "ESCOLHA_HORA": "Choose the time",
+      "NOME_HORA": {
+        "MANHA": "Morning",
+        "ALMOCO": "Lunchtime",
+        "TARDE": "Afternoon",
+        "FIM": "End of day"
+      },
+      "PASSADO": "That time has passed. Choose another one.",
+      "FUSO": "Time in {fuso}, the account time zone.",
+      "RESUMO": "When",
+      "FRASE": "{dia} at {hora}",
+      "HOJE_FRASE": "today",
+      "AMANHA_FRASE": "tomorrow"
+    },
+    "MENSAGEM": {
+      "TITULO": "What should {nome} read?",
+      "CONFERINDO": "Checking what WhatsApp allows at that time…",
+      "ERRO_JANELA": "Could not check WhatsApp right now.",
+      "TENTAR": "Try again",
+      "LIVRE": "At that time, {nome} can get whatever you write.",
+      "SO_PRONTA": "By then, more than 1 day will have passed since the last message from {nome}. WhatsApp then only allows an approved ready-made message.",
+      "PELO_CELULAR": "More than 1 day will have passed since the last message from {nome}, but the phone WhatsApp is connected: the message goes out through it, as you write it.",
+      "ESCOLHA_PRONTA": "Choose the ready-made message",
+      "RESUMO": "What to say",
+      "RESUMO_PRONTA": "Ready-made message",
+      "RESUMO_TEXTO": "“{inicio}”"
+    },
+    "CONFIRMAR": {
+      "TITULO": "Review and schedule",
+      "O_QUE_ACONTECE": "What will happen",
+      "SAI_POR": "Goes out through the “{caixa}” inbox, in the existing conversation.",
+      "SAI_PELO_CELULAR": "Goes out through the phone WhatsApp linked to the “{caixa}” inbox.",
+      "SE_FALHAR": "If it cannot be sent, {nome} sees a notice on screen and the reason stays on the deal.",
+      "SE_FALHAR_SEM_DONO": "If it cannot be sent, whoever handles the conversation sees a notice on screen and the reason stays on the deal.",
+      "ONDE_APARECE": "Shows on the calendar and on the deal until it goes out.",
+      "ANOTAR": "Add a note for the team",
+      "ANOTACAO": "Note for the team",
+      "ANOTACAO_EXEMPLO": "The customer does not see this note",
+      "ERRO": {
+        "PASSADO": "That time has passed. Go back and choose another one.",
+        "PRONTA": "At that time only a ready-made message can go out. Go back and choose one.",
+        "GERAL": "Could not schedule right now. Try again."
+      }
+    },
+    "PRONTO": {
+      "TITULO": "Message scheduled for {nome}",
+      "TEXTO": "Goes out {quando}.",
+      "FRASE": "Done. The message goes out {quando}.",
+      "ONDE": "It is already on the calendar and on the deal. You can change or cancel it until it goes out.",
+      "ABRIR_NEGOCIO": "Open the deal",
+      "FECHAR": "Close"
+    },
+    "PREVIA": {
+      "TITULO": "How {nome} will see it",
+      "TITULO_SEM_NOME": "How the customer will see it",
+      "TEXTO": "This is exactly what arrives on WhatsApp.",
+      "FANTASMA": "The message shows up here",
+      "SEM_HORA": "--:--",
+      "SEM_DIA": "Day not chosen yet"
+    },
+    "FALHA": {
+      "TITULO": "Not sent: {motivo}",
+      "sem_conversa": "the customer no longer has a WhatsApp conversation.",
+      "canal": "the conversation is not on WhatsApp.",
+      "sem_remetente": "no one on the team was set as owner.",
+      "celular_desconectado": "the phone WhatsApp was disconnected.",
+      "sem_modelo": "more than 1 day had passed and the ready-made message was missing.",
+      "modelo_invalido": "the ready-made message is not from this inbox.",
+      "recusou": "the customer asked not to get messages.",
+      "outro": "WhatsApp refused to send it."
     }
   },
   "CONVERSATION_FUNNEL_FILTER": {

@@ -444,3 +444,14 @@
   display_name: Conversa de outro canal vai para o card aberto e o dono
   enabled: false
   column: feature_flags_ext_1
+
+# Mensagem marcada nova (#1590): gaveta no padrão da casa — para quem, quando, o que dizer e confira, com o balão do
+# WhatsApp como o cliente vai ver. Abre pelo "+ Novo" do calendário e pelo "Mandar mensagem" do card (caixa oficial).
+# Bit 28 (268435456): a posição na lista é o bit e a flag vai no fim do que está na main — aqui, logo depois de
+# `crm_outro_canal` (bit 27). Desligada (padrão): tudo como antes — a janela antiga do calendário, o retorno do card,
+# sem "Não saiu", sem `send_error_code` na API e sem recusar horário passado. Nasce ligada nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy). Ligar nas demais: #1605.
+- name: crm_mensagem_marcada
+  display_name: Mensagem marcada nova (para quem, quando, o que dizer)
+  enabled: false
+  column: feature_flags_ext_1

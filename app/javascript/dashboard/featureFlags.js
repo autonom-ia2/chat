@@ -59,6 +59,7 @@ export const FEATURE_FLAGS = {
   CRM_CALENDARIO_OURO: 'crm_calendario_ouro',
   MENU_LATERAL_NOVO: 'menu_lateral_novo',
   HORARIO_UNICO_CAIXA: 'horario_unico_caixa',
+  CRM_MENSAGEM_MARCADA: 'crm_mensagem_marcada',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

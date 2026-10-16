@@ -220,6 +220,8 @@ const abrirFluxo = (opcao, extra = {}) => {
   }
   emit('novo', {
     date: dataDaChave(diaDoNovo.value),
+    // #1590: o dia escolhido como chave do fuso da conta (a Mensagem marcada usa direto).
+    dia: diaDoNovo.value,
     type: TIPO_DO_FLUXO[opcao],
   });
 };
