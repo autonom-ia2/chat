@@ -5877,7 +5877,7 @@
   "CONVERSATION_FUNNEL_FILTER": {
     "LABEL": "Funnel",
     "ARIA_LABEL": "Show conversations from which funnel",
-    "ALL": "All my funnels",
+    "ALL": "No funnel filter",
     "NONE": "No subject",
     "NONE_HINT": "Conversations that have no subject yet: triage.",
     "EMPTY": "No conversation in this funnel."
