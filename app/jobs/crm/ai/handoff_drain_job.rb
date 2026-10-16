@@ -181,9 +181,7 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
   # O card cuja regra vale (#1693), só se ainda é da conta da conversa; a Entrega confere se ele segue aberto nela.
   def card_da_marca(conversation, marca)
-    return if marca['card_id'].blank?
-
-    conversation.account.crm_cards.find_by(id: marca['card_id'])
+    conversation.account.crm_cards.find_by(id: marca['card_id']) if marca['card_id'].present?
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).
