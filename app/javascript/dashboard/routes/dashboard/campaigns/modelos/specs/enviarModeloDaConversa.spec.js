@@ -13,7 +13,7 @@ const api = vi.hoisted(() => ({
   conferirProdutos: vi.fn(),
   subirArquivoDaCampanha: vi.fn(),
 }));
-vi.mock('../api/modelosWhatsapp', () => ({ default: api }));
+vi.mock('../conversa/apiDaConversa', () => ({ default: api }));
 const perfil = vi.hoisted(() => ({ lerPerfilDoModelo: vi.fn() }));
 vi.mock('../conversa/perfilDoModelo', () => perfil);
 vi.mock('../conversa/useCompletaNaConversa', () => ({
@@ -36,7 +36,7 @@ const DialogFalso = {
 };
 const GavetaFalsa = {
   name: 'GavetaDeProdutos',
-  props: ['caixa', 'pedido', 'escolhidos'],
+  props: ['caixa', 'pedido', 'escolhidos', 'fonte'],
   emits: ['usar', 'fechar'],
   template: '<div data-gaveta />',
 };

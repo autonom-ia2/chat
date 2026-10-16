@@ -66,9 +66,10 @@ RSpec.describe Whatsapp::Templates::ConversationSend do
     { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => ids, 'names' => { 'sku-1' => 'Tênis', 'sku-2' => 'Mochila' } } }
   end
 
-  def photo(account_id = account.id)
-    ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: 'foto.png', content_type: 'image/png',
-                                           metadata: { 'account_id' => account_id })
+  def photo(account_id = account.id, upload: false)
+    metadata = { 'account_id' => account_id }
+    metadata['conversation_upload'] = true if upload
+    ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: 'foto.png', content_type: 'image/png', metadata: metadata)
   end
 
   def photo_cards(blobs, texts = %w[tênis mochila])
@@ -184,6 +185,13 @@ RSpec.describe Whatsapp::Templates::ConversationSend do
     stored = message.additional_attributes.dig('template_params', 'processed_params', 'carousel', 'cards')
     expect(stored.map { |card| card.dig('header', 'media_blob') }).to eq(blobs.map(&:signed_id))
     expect(message.additional_attributes.dig('template_params', 'enviado', 'cartoes').size).to eq(2)
+  end
+
+  it 'a computer photo used in a send stops being temporary (the conversation shows it)' do
+    uploaded = photo(upload: true)
+    send_message(photo_carousel, photo_cards([uploaded, photo]))
+
+    expect(uploaded.reload.metadata).to include('conversation_upload' => true, 'conversation_sent' => true)
   end
 
   it 'a photo from another account is refused without calling Meta' do

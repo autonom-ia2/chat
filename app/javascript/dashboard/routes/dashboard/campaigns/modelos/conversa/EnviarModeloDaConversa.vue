@@ -17,7 +17,7 @@ import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-ca
 import Dialog from 'next/dialog/Dialog.vue';
 import Button from 'next/button/Button.vue';
 import GavetaDeProdutos from '../ponte/GavetaDeProdutos.vue';
-import api from '../api/modelosWhatsapp';
+import api from './apiDaConversa';
 import { LIMITES_DE_PRODUTOS } from '../helpers/produtosNaCampanha';
 import EtapaDoCartao from './EtapaDoCartao.vue';
 import ProdutosEscolhidos from './ProdutosEscolhidos.vue';
@@ -425,6 +425,7 @@ defineExpose({ abrir });
       :caixa="caixa"
       :pedido="pedido"
       :escolhidos="produtos.filter(produto => produto.disponivel)"
+      :fonte="api"
       @usar="usarProdutos"
       @fechar="fecharGaveta"
     />

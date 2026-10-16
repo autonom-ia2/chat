@@ -964,6 +964,13 @@ Rails.application.routes.draw do
             resource :whatsapp_catalog, only: [:show], module: :inboxes do
               get :products
             end
+            # Modelo de produto e carrossel pela conversa (#1716): para quem atende a caixa, sem a tela de Modelos.
+            resource :whatsapp_conversation_assets, only: [], module: :inboxes do
+              get :catalog
+              get :products
+              get :template
+              post :media
+            end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
           resources :whatsapp_template_inboxes, only: [:index]

@@ -20,6 +20,9 @@ const props = defineProps({
   // { tipo: 'um' | 'varios' | 'carrossel', minimo, maximo }
   pedido: { type: Object, required: true },
   escolhidos: { type: Array, default: () => [] },
+  // De onde vêm o catálogo e os produtos: a API dos Modelos (campanha) ou a
+  // de quem atende a caixa (conversa, #1716). { obterCatalogo, listarProdutos }
+  fonte: { type: Object, default: () => api },
 });
 const emit = defineEmits(['usar', 'fechar']);
 
@@ -49,7 +52,7 @@ const carregar = async ({ mais = false } = {}) => {
   });
   if (!mais) lista.value = { busca: pedido.busca, depois: '' };
   try {
-    const pagina = await api.listarProdutos(props.caixa, pedido);
+    const pagina = await props.fonte.listarProdutos(props.caixa, pedido);
     if (este !== ultimoPedido) return;
     produtos.value = mais
       ? [...produtos.value, ...pagina.produtos]
@@ -64,7 +67,9 @@ const buscarDepois = useDebounceFn(() => carregar(), 300);
 watch(busca, buscarDepois);
 
 onMounted(async () => {
-  catalogo.value = await api.obterCatalogo(props.caixa).catch(() => null);
+  catalogo.value = await props.fonte
+    .obterCatalogo(props.caixa)
+    .catch(() => null);
   carregar();
 });
 

@@ -53,9 +53,21 @@ module Whatsapp::Templates::ConversationSend
     cards = Whatsapp::Templates::CardMedia.for_dispatch(processed, template, inbox)
     return failure('conversation_carousel_media') if cards.nil?
 
+    keep_conversation_uploads(cards)
     ok(Whatsapp::Templates::SendParams.apply_extras(processed, { cards: cards }))
   rescue Whatsapp::Templates::HeaderMedia::Invalid
     failure('conversation_carousel')
+  end
+
+  # A foto do computador usada neste envio deixa de ser temporária: a conversa mostra o que foi enviado com ela
+  # (`PurgeConversationUploadsJob` só tira as que nunca foram usadas).
+  def keep_conversation_uploads(cards)
+    cards.each_value do |media|
+      blob = ActiveStorage::Blob.find_signed(media['media_signed_id'].to_s)
+      next unless blob && blob.metadata['conversation_upload'] == true && blob.metadata['conversation_sent'] != true
+
+      blob.update!(metadata: blob.metadata.merge('conversation_sent' => true))
+    end
   end
 
   def ok(processed)

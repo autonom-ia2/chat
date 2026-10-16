@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 613 |
+| No catálogo | 614 |
 | Sem corpo | 182 |
-| Com corpo | 431 |
-| Com corpo e formato completo | 353 (81,9%) |
-| Com corpo e formato incompleto | 78 |
+| Com corpo | 432 |
+| Com corpo e formato completo | 353 (81,7%) |
+| Com corpo e formato incompleto | 79 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 202 |
-| Leituras cruas tipadas | 153 de 237 |
+| Leituras cruas tipadas | 153 de 238 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 64 |
+| leitura crua sem tipo | 65 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -93,6 +93,7 @@ Uma ação pode ter mais de um motivo.
 - `POST email_campaigns/reputation/provider_release` — leitura crua sem tipo: reason (repassada a ::EmailCampaigns::Reputation::ProviderRelease.new.call)
 - `POST inboxes/:id/set_agent_bot` — leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)
 - `POST inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
+- `POST inboxes/:inbox_id/whatsapp_conversation_assets/media` — leitura crua sem tipo: file
 - `POST inboxes/:inbox_id/whatsapp_templates/media` — leitura crua sem tipo: file (repassada a manager.upload)
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event (repassada a @hook.process_event)
 - `POST integrations/slack` — leitura crua sem tipo: code (repassada a Integrations::Slack::HookBuilder.new)
@@ -185,6 +186,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
+- `api/v1/accounts/inboxes/whatsapp_conversation_assets#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
@@ -205,8 +207,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 366 |
-| Com parâmetros conhecidos | 315 |
+| No catálogo | 369 |
+| Com parâmetros conhecidos | 318 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

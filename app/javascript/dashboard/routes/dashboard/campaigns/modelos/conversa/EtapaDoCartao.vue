@@ -7,7 +7,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import api from '../api/modelosWhatsapp';
+import api from './apiDaConversa';
 import { localeDoIntl } from '../helpers/datas';
 import { comEspacos, exemploDoCampo } from './modeloNaConversa';
 

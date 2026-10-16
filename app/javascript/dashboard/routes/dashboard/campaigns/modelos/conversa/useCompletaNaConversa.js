@@ -3,32 +3,21 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
-import {
-  PERMISSOES_PARA_CRIAR,
-  PERMISSOES_PARA_VER,
-} from '../helpers/usePodeCriarModelo';
 
 const WHATSAPP_CLOUD = 'whatsapp_cloud';
 
 // O que a escolha de modelo da conversa consegue completar (#1716), para o
-// getter `inboxes/getConversationWhatsAppTemplates`:
+// getter `inboxes/getConversationWhatsAppTemplates`. Decisão do Rodrigo
+// (16/10/2026): vale para quem atende a caixa, sem a tela de Modelos
+// (Whatsapp::Templates::ConversationAssetsPolicy no servidor):
 // - só no WhatsApp oficial (a caixa que fala com a Meta e tem catálogo);
-// - só para quem vê os modelos (WhatsappTemplatePolicy): a galeria de fotos e
-//   o catálogo vêm das telas de Modelos;
-// - produtos só com a flag whatsapp_campaign_products, como na campanha;
-// - foto do computador só para quem cria modelo, com a jornada de Modelos
-//   ligada (o mesmo upload de mídia dos Modelos).
+// - só numa caixa que a pessoa atende (a lista de caixas da tela já é a dela;
+//   o servidor confere de novo);
+// - produtos só com a flag whatsapp_campaign_products, como na campanha.
 export function useCompletaNaConversa(caixa) {
-  const usuario = useMapGetter('getCurrentUser');
-  const contaId = useMapGetter('getCurrentAccountId');
   const caixaPorId = useMapGetter('inboxes/getInbox');
   const { isCloudFeatureEnabled } = useAccount();
 
-  const permissoes = computed(() =>
-    getUserPermissions(usuario.value, contaId.value)
-  );
-  const tem = lista => permissoes.value.some(item => lista.includes(item));
   const oficial = computed(() => {
     const inbox = caixaPorId.value(unref(caixa)) || {};
     return (
@@ -38,7 +27,7 @@ export function useCompletaNaConversa(caixa) {
   });
 
   const opcoes = computed(() => {
-    if (!oficial.value || !tem(PERMISSOES_PARA_VER)) return {};
+    if (!oficial.value) return {};
     return {
       completa: {
         fotos: true,
@@ -49,11 +38,8 @@ export function useCompletaNaConversa(caixa) {
     };
   });
 
-  const podeSubirFoto = computed(
-    () =>
-      tem(PERMISSOES_PARA_CRIAR) &&
-      isCloudFeatureEnabled(FEATURE_FLAGS.WHATSAPP_TEMPLATES_JOURNEY)
-  );
+  // Quem atende a caixa também manda a foto do computador para um cartão.
+  const podeSubirFoto = oficial;
 
   return { opcoes, podeSubirFoto };
 }

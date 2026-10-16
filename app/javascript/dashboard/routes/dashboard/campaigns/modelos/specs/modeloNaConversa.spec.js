@@ -10,7 +10,7 @@ import {
   moverProduto,
   tipoNaConversa,
 } from '../conversa/modeloNaConversa';
-import { perfilDaLista } from '../conversa/perfilDoModelo';
+import { perfilDaApi } from '../conversa/perfilDoModelo';
 import { produtoDaApi } from '../api/adaptadorHttp';
 
 // Formato real da Meta (GET /message_templates), como a caixa guarda (#1716).
@@ -331,32 +331,28 @@ describe('montarEnvio: o processed_params da campanha', () => {
   });
 });
 
-describe('perfilDaLista: galeria e campos do perfil do modelo', () => {
+describe('perfilDaApi: galeria e campos do perfil do modelo', () => {
   it('as fotos aprovadas de cada cartão, com miniatura e referência', () => {
-    const lista = [
-      {
-        name: 'ofertas_da_semana',
-        language: 'pt_BR',
-        fields: { 1: 'cliente.primeiro_nome' },
-        card_media: [
-          {
-            card_index: 0,
-            file_name: 'a.jpg',
-            preview_url: 'https://s/a',
-            blob_signed_id: 'b1',
-          },
-          { card_index: 1, file_name: 'v.mp4' },
-        ],
-      },
-    ];
-    expect(perfilDaLista(lista, fotos)).toEqual({
+    const perfil = {
+      fields: { 1: 'cliente.primeiro_nome' },
+      card_media: [
+        {
+          card_index: 0,
+          file_name: 'a.jpg',
+          preview_url: 'https://s/a',
+          blob_signed_id: 'b1',
+        },
+        { card_index: 1, file_name: 'v.mp4' },
+      ],
+    };
+    expect(perfilDaApi(perfil)).toEqual({
       campos: { 1: 'cliente.primeiro_nome' },
       galeria: [
         { url: 'https://s/a', referencia: 'b1', nome: 'a.jpg', cartao: 0 },
       ],
       falhou: false,
     });
-    expect(perfilDaLista([], fotos)).toEqual({
+    expect(perfilDaApi(null)).toEqual({
       campos: {},
       galeria: [],
       falhou: false,
