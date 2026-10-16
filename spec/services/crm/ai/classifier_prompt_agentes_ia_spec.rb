@@ -7,8 +7,7 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
   let(:partes_de_antes) do
     [described_class::ROLE_AND_TASK, described_class::METHODOLOGY, described_class::CONFIDENCE, described_class::VALUE,
      described_class::HANDOFF, described_class::CALLBACK, described_class::ATTR_EXTRACTION, described_class::KNOWN_ATTRS,
-     described_class::OTHER_SUBJECTS, described_class::OUTPUT_DISCIPLINE, described_class::EXAMPLES,
-     described_class::DADOS_NAO_INSTRUCOES]
+     described_class::OTHER_SUBJECTS, described_class::OUTPUT_DISCIPLINE, described_class::EXAMPLES]
   end
 
   # Pega: o parágrafo novo vazando para o prefixo de quem não tem agente de IA (muda o prompt e quebra o cache).
@@ -16,7 +15,8 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
     [[], ['Ana Souza', 'Bruno Lima'], nil].each do |elegiveis|
       expect(described_class.para(elegiveis)).to equal(described_class::TEXT)
     end
-    expect(described_class::TEXT).to eq(partes_de_antes.join("\n\n"))
+    # #1140: o aviso de dados entra no fim, depois de todas as partes de antes.
+    expect(described_class::TEXT).to eq([*partes_de_antes, described_class::DADOS_NAO_INSTRUCOES].join("\n\n"))
     expect(described_class::TEXT).not_to include('(agente de IA)')
     expect(described_class::HANDOFF).to end_with('Não invente nomes fora da lista.')
   end
