@@ -3,8 +3,9 @@
 # vê) ou um texto com aviso. Com a flag vira mensagem VISÍVEL do cliente: a legenda, ou uma linha neutra, sem voz de
 # comando ("Foto não recebida (o download falhou)", waha.media_unavailable.<kind>), com `media_unavailable` { kind,
 # reason, at } para a bolha, que mostra à equipe o aviso "não foi possível baixar, peça para reenviar".
-# Só a nota do CLIENTE: o conector cria a nota de mídia do cliente como INCOMING privada e a do celular da empresa como
-# OUTGOING (a direção vem do `fromMe` do motor). A da empresa fica como a main.
+# Só a nota do CLIENTE, pelo `from_me` que o conector (c2y-rich-3b) manda sempre: `false` explícito. A direção da
+# mensagem não serve: toda nota privada do conector sai OUTGOING, inclusive a do cliente (base.ts, "Private notes can
+# only be sent as outgoing messages"). `from_me` true ou ausente (conector antigo): fica como a main.
 module Waha::RichNative::Inbound::MediaFailed
   KEY = 'media_unavailable'.freeze
   KINDS = %w[voice audio image video document sticker].freeze
@@ -13,7 +14,7 @@ module Waha::RichNative::Inbound::MediaFailed
   module_function
 
   def apply(message, data)
-    return unless customer_note?(message, data)
+    return unless customer_note?(data)
 
     contact = message.conversation&.contact
     return if contact.nil?
@@ -28,8 +29,8 @@ module Waha::RichNative::Inbound::MediaFailed
     )
   end
 
-  def customer_note?(message, data)
-    message.incoming? && data.is_a?(Hash) && data['from_me'] != true
+  def customer_note?(data)
+    data.is_a?(Hash) && data['from_me'] == false
   end
 
   def notice(account, kind)

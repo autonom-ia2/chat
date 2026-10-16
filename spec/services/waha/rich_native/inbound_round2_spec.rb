@@ -161,9 +161,10 @@ describe Waha::RichNative::Inbound do
       end
     end
 
+    # Forma real do conector: toda nota privada sai OUTGOING, inclusive a do cliente; quem diz a origem é o from_me.
     it 'makes a media of the customer that failed to download a visible customer message with a neutral line' do
-      note = from_connector({ waha_media_failed: { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError' } },
-                            private: true, content: 'mídia sem mídia (https://waha.example/jobs/1)')
+      note = from_connector({ waha_media_failed: { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError', from_me: false } },
+                            message_type: :outgoing, private: true, content: 'mídia sem mídia (https://waha.example/jobs/1)')
 
       expect(note).to be_incoming
       expect(note.private).to be(false)
@@ -174,18 +175,22 @@ describe Waha::RichNative::Inbound do
       expect(note.webhook_data[:processed_message_content].to_s).not_to include('jobs')
     end
 
-    it 'keeps the note of a media sent by the business phone (outgoing) as main, even without from_me' do
-      note = from_connector({ waha_media_failed: { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError' } },
-                            message_type: :outgoing, private: true, content: 'mídia sem mídia (job 1)')
-      order = from_connector({ waha_order: { order_id: 'O1', title: 'Pedido', text: 'quero' } },
-                             message_type: :outgoing, private: true, content: 'não suportada')
+    it 'keeps the note of a media or order sent by the business phone (from_me true) or of an old connector (no from_me) as main' do
+      failed = { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError' }
+      placed = { order_id: 'O1', title: 'Pedido', text: 'quero' }
+      [{ from_me: true }, {}].each do |origin|
+        note = from_connector({ waha_media_failed: failed.merge(origin) },
+                              message_type: :outgoing, private: true, content: 'mídia sem mídia (job 1)')
+        order = from_connector({ waha_order: placed.merge(origin) },
+                               message_type: :outgoing, private: true, content: 'não suportada')
 
-      [note, order].each do |message|
-        expect(message).to be_outgoing
-        expect(message.private).to be(true)
-        expect(message.content_attributes.keys & %w[media_unavailable order]).to eq([])
+        [note, order].each do |message|
+          expect(message).to be_outgoing
+          expect(message.private).to be(true)
+          expect(message.content_attributes.keys & %w[media_unavailable order]).to eq([])
+        end
+        expect(note.content).to eq('mídia sem mídia (job 1)')
       end
-      expect(note.content).to eq('mídia sem mídia (job 1)')
     end
 
     it 'marks the message deleted by the customer, keeps its content as proof and keeps the note of main' do
@@ -235,7 +240,7 @@ describe Waha::RichNative::Inbound do
       message = from_connector({ waha_order: { order_id: 'O1', title: 'Pedido', text: 'Quero 2', item_count: 2, total_amount: 59.9,
                                                currency: 'BRL', from_me: false },
                                  waha_unknown: { content_type: 'orderMessage', from_me: false } },
-                               private: true, content: 'não suportada')
+                               message_type: :outgoing, private: true, content: 'não suportada')
 
       expect(message).to be_incoming
       expect(message.content).to eq('Quero 2')

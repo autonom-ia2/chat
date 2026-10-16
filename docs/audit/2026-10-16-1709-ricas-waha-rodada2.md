@@ -135,7 +135,7 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 | 4, 9 | `Context.after_commit` sem rescue: 500 ao conector e mensagem duplicada | `rescue StandardError` (log só da classe), atividade com `save!(validate: false)`, conversa com `save!(validate: false)`. Não virou job: com o rescue, a ordem dos after_commit deixa de importar (nada sobe). |
 | 5 | `PlayedReceipt` sem rescue | `rescue` em `record!` e no after_action; o PATCH responde como na main. |
 | 6, 11 | Citação podia apontar ou copiar nota privada | `.where(private: false)` no alvo; sem alvo público, cai no trecho do aparelho. |
-| 8 | `waha_media_failed`/`waha_order` sem `from_me`: a nota do celular da empresa virava mensagem do cliente | Guarda `message.incoming?` nos dois (o conector cria a nota do cliente INCOMING e a da empresa OUTGOING, `base.ts:324`, conferido no M2). Spec com a nota OUTGOING. **Conector**: acrescentar `from_me` em `WahaMediaFailedOf`/`WahaOrderOf` fica para o construtor do conector (checkout dele no M2 tem trabalho não commitado; o chat2you não depende do campo). |
+| 8 | `waha_media_failed`/`waha_order` sem `from_me`: a nota do celular da empresa virava mensagem do cliente | Guarda `from_me == false` explícito nos dois; `true` ou ausente (conector antigo) fica como a main. Conector c2y-rich-3b manda `from_me` boolean sempre. **Verificação final:** a guarda `message.incoming?` desta rodada estava errada — toda nota privada do conector sai OUTGOING, inclusive a do cliente (`base.ts`, "Private notes can only be sent as outgoing messages", igual na tag limpa), então ela desligava a mídia sem legenda e o pedido. Specs com a forma real (nota OUTGOING privada + `from_me`). |
 | 10 | `processed_message_content` com o texto do conector (link do job) | `Inbound` recalcula pela regra do modelo depois de transformar (e no rescue). Spec: `webhook_data` da mídia que falhou sem o link. |
 | 12 | Voto, resposta e reação pela ordem de chegada | `Waha::RichNative::EventTime`: `at` = hora do WhatsApp (voto em s, resposta em ms); a entrada do mesmo autor só é trocada por outra igual ou mais nova. Híbrido passa `timestamp` do `poll.vote` e `timestampMs` do `event.response`. Reação: o conector c2y-rich-3 ainda não manda a hora; o chat2you já lê `waha_reaction.timestamp` quando vier (pedido ao construtor do conector). |
 | 13 | `waha_call_summary.at` = hora do processamento, e cada desfecho o trocava | `at` = hora do primeiro evento da ligação (`timestamp` do conector quando vier, senão a chegada); o desfecho mantém o `at` da linha. O conector ainda não manda `timestamp` em `waha_call` (pedido ao construtor). |
@@ -163,6 +163,6 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 
 ### Pendências que não são deste lado
 
-- Construtor do conector: `from_me` em `WahaMediaFailedOf`/`WahaOrderOf`; `timestamp` em `waha_reaction` e `waha_call`.
+- Construtor do conector: `timestamp` em `waha_reaction` e `waha_call` (o `from_me` em `WahaMediaFailedOf`/`WahaOrderOf` entrou na c2y-rich-3b, sincronizada em `infra/waha-c2y/`).
 - Rodrigo: decisões (a) a (f) e o backfill do achado 24.
 - Max (#1724): `quoted_message.unverified`, selo da apagada, aviso da localização ao vivo, `media_unavailable`.
