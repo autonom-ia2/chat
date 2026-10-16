@@ -29,7 +29,7 @@ Max avisado por SendMessage ("Frontend geral Max") com o branch e o SHA `e0e7965
 
 | Item | Chave do conector | O que o chat2you grava |
 |---|---|---|
-| 1 Voz (PTT) | `waha_media.kind = voice` | `attachments[].meta.is_voice_message`; nome `no-filename.*` → `audio-<AAAAMMDD-HHMMSS no fuso da conta>.ogg` (blob renomeado antes do upload, testado). |
+| 1 Voz (PTT) | `waha_media.kind = voice` | `attachments[].meta.is_voice_message: true` (áudio que é arquivo, `kind = audio`: `false` explícito); nome `no-filename.*` → `audio-<AAAAMMDD-HHMMSS no fuso da conta>.ogg` (blob renomeado antes do upload, testado). |
 | 2 Álbum | `waha_album` | o cabeçalho vira atividade escondida; as fotos seguem como mensagens e o painel as agrupa. |
 | 3/10 Localização | `waha_location` | anexo `location` + `shared_location {latitude, longitude, name?, address?, live?}`, `content` nil. Coordenada inválida: fica o texto. |
 | 4 Contato | `waha_contacts` | os `.vcf` saem; um anexo `contact` por telefone (meta `firstName/lastName`) + `shared_contacts`. 1 telefone = cartão com "Adicionar contato". |
@@ -41,7 +41,7 @@ Max avisado por SendMessage ("Frontend geral Max") com o branch e o SHA `e0e7965
 | 11 Visualização única | `waha_media.view_once` ou `waha_unknown.content_type = viewOnceMessage` | mídia que chegou: `meta.is_view_once` (fica gravada e visível); não chegou: `is_unsupported` + `unsupported_kind: view_once`. |
 | Encaminhada | `waha_context.forwarded/forwarding_score` | `forwarded: true`; `frequently_forwarded: true` com score ≥ 5. |
 | Áudio ouvido | parâmetro `c2y_played_at` no PATCH de status | `played_at` (1ª vez), só do conector, em áudio nosso (`Waha::RichNative::PlayedReceipt`, after_action). |
-| Pedido | `waha_order` | mensagem do cliente com `order {catalog_id: nil, text, product_items: [], order_id, item_count, total_amount, currency, title}`. |
+| Pedido | `waha_order` | mensagem do cliente com `order {catalog_id: nil, text, items: [], order_id (sempre, texto), item_count, total_amount (texto "150.00"), currency, title}`. |
 
 Ordem fixa no `Inbound`: absorventes (voto, resposta ao evento, reação, edição, apagada, ligação, álbum: a primeira
 decide) → conteúdo (mídia que falhou, localização, contato, pedido, desconhecida) → mídia → citação → contexto. Erro
@@ -166,3 +166,14 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 - Construtor do conector: `timestamp` em `waha_reaction` e `waha_call` (o `from_me` em `WahaMediaFailedOf`/`WahaOrderOf` entrou na c2y-rich-3b, sincronizada em `infra/waha-c2y/`).
 - Rodrigo: decisões (a) a (f) e o backfill do achado 24.
 - Max (#1724): `quoted_message.unverified`, selo da apagada, aviso da localização ao vivo, `media_unavailable`.
+
+## Ajuste final combinado com o Frontend geral (#1702)
+
+- `order.items` (não `product_items`); `order_id` sempre em texto; `total_amount` em texto decimal com ponto e 2 casas.
+- `media_unavailable.has_caption` (true/false); sem legenda, o `content` é o aviso do servidor.
+- Áudio que é arquivo (não PTT): `meta.is_voice_message: false`, só com a flag e na caixa WAHA.
+- `shared_contacts[].wa_id` só com dígitos (sem `@c.us`/`@lid` e sem `:<aparelho>`); `shared_location.live` só `true`
+  ou ausente; `quoted_message.sender_type` 'Contact' (cliente) ou 'User' (empresa, inclusive robô e automação).
+- Citação: `in_reply_to` = id local quando a citada está na conversa; senão `quoted_message` com o conteúdo.
+- Caixa WAHA nova nasce com `linkPreview: 'HG'` (prévia de link em alta qualidade); as existentes mudam numa operação
+  separada.

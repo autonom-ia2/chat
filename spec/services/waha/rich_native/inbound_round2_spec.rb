@@ -62,9 +62,8 @@ describe Waha::RichNative::Inbound do
       expect(voice.attachments.first.meta).to include('is_voice_message' => true)
       expect(blob_name(voice)).to start_with('audio-').and end_with('.ogg')
       expect(voice.attachments.first.push_event_data[:meta]).to include('is_voice_message' => true)
-      expect(audio.attachments.first.meta.to_h).not_to have_key('is_voice_message')
+      expect(audio.attachments.first.meta).to include('is_voice_message' => false)
       expect(blob_name(audio)).to eq('musica.mp3')
-      expect(audio.attachments.first.push_event_data).not_to have_key(:meta)
     end
 
     it 'turns a sticker into an image marked as sticker without text, and marks a view once media' do
@@ -244,8 +243,8 @@ describe Waha::RichNative::Inbound do
 
       expect(message).to be_incoming
       expect(message.content).to eq('Quero 2')
-      expect(message.content_attributes['order']).to include('order_id' => 'O1', 'item_count' => 2, 'total_amount' => 59.9,
-                                                             'currency' => 'BRL', 'product_items' => [])
+      expect(message.content_attributes['order']).to include('order_id' => 'O1', 'item_count' => 2, 'total_amount' => '59.90',
+                                                             'currency' => 'BRL', 'items' => [])
       expect(message.content_attributes).not_to have_key('is_unsupported')
     end
 

@@ -2,7 +2,8 @@
 # { kind, mimetype, filename, caption, reason }. Na main fica uma nota privada (o cliente parece ignorado e a IA não
 # vê) ou um texto com aviso. Com a flag vira mensagem VISÍVEL do cliente: a legenda, ou uma linha neutra, sem voz de
 # comando ("Foto não recebida (o download falhou)", waha.media_unavailable.<kind>), com `media_unavailable` { kind,
-# reason, at } para a bolha, que mostra à equipe o aviso "não foi possível baixar, peça para reenviar".
+# reason, at, has_caption } para a bolha (sem legenda, o `content` é o aviso do servidor), que mostra à equipe o aviso
+# "não foi possível baixar, peça para reenviar".
 # Só a nota do CLIENTE, pelo `from_me` que o conector (c2y-rich-3b) manda sempre: `false` explícito. A direção da
 # mensagem não serve: toda nota privada do conector sai OUTGOING, inclusive a do cliente (base.ts, "Private notes can
 # only be sent as outgoing messages"). `from_me` true ou ausente (conector antigo): fica como a main.
@@ -23,9 +24,10 @@ module Waha::RichNative::Inbound::MediaFailed
     message.message_type = :incoming
     message.private = false
     message.sender = contact
-    message.content = data['caption'].presence || notice(message.account, kind)
+    caption = data['caption'].presence
+    message.content = caption || notice(message.account, kind)
     message.content_attributes = message.content_attributes.to_h.merge(
-      KEY => { 'kind' => kind, 'reason' => 'download_failed', 'at' => Time.current.iso8601 }
+      KEY => { 'kind' => kind, 'reason' => 'download_failed', 'at' => Time.current.iso8601, 'has_caption' => caption.present? }
     )
   end
 

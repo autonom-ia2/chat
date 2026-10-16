@@ -4,8 +4,8 @@
 # - o alvo é `chatwoot_message_id` (o mapeamento do conector) ou, sem ele, a mensagem com `source_id` = id físico do
 #   WAHA, sempre na mesma caixa e do MESMO contato;
 # - alvo na mesma conversa: `in_reply_to` = alvo (o vínculo de sempre);
-# - alvo noutra conversa: `quoted_message` { message_id, conversation_id (display_id), content (280), sender_type,
-#   attachment_type };
+# - alvo noutra conversa: `quoted_message` { message_id, conversation_id (display_id), content (280), sender_type
+#   ('Contact' quando o cliente escreveu; 'User' para a empresa, inclusive robô e automação), attachment_type };
 # - sem alvo: `quoted_message` { message_id: nil, content: o trecho que o aparelho mandou, from_me, has_media,
 #   unverified: true }.
 # O alvo nunca é nota privada nem atividade (o conector mapeia também as notas que cria, com o link interno do job):
@@ -45,7 +45,7 @@ module Waha::RichNative::Inbound::Quote
 
   def from_target(target)
     { 'message_id' => target.id, 'conversation_id' => target.conversation.display_id,
-      'content' => target.content.to_s.first(EXCERPT), 'sender_type' => target.sender_type,
+      'content' => target.content.to_s.first(EXCERPT), 'sender_type' => target.incoming? ? 'Contact' : 'User',
       'attachment_type' => target.attachments.first&.file_type }.compact
   end
 

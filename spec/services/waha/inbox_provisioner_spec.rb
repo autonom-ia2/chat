@@ -63,6 +63,8 @@ RSpec.describe Waha::InboxProvisioner do
             enabled: true,
             config: hash_including(
               groups: 'OFF',
+              # #1709: caixa nova com prévia de link em alta qualidade (LinkPreview.HQ = 'HG' no conector).
+              linkPreview: 'HG',
               conversations: hash_including(
                 outgoing: 'message',
                 syncMessageStatus: true,

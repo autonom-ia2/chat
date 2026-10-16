@@ -22,8 +22,16 @@ module Waha::RichNative::Inbound::Contacts
   def valid_contacts(data)
     Array(data).select { |contact| contact.is_a?(Hash) }.map do |contact|
       { 'full_name' => contact['full_name'].to_s, 'phones' => Array(contact['phones']).map(&:to_s).compact_blank,
-        'wa_id' => contact['wa_id'].presence }
+        'wa_id' => digits_only(contact['wa_id']) }
     end
+  end
+
+  # Só os dígitos do número: sem `@c.us`/`@lid` e sem o sufixo `:<aparelho>` (ex.: "5511999998888:12@c.us"). nil sem
+  # nenhum dígito. Tirado por métodos de texto, sem regex.
+  def digits_only(wa_id)
+    user = wa_id.to_s.split('@').first.to_s.split(':').first.to_s
+    digits = user.delete('^0-9')
+    digits.presence
   end
 
   def attach!(message, contact)
