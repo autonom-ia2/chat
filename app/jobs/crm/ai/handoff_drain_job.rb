@@ -184,11 +184,13 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     conversation.with_lock do
       next unless Crm::Entrega::Marca.convite_vencido?(conversation) && esperando_pessoa?(conversation)
 
-      motivo = Crm::Entrega::Marca.dados(conversation)['motivo']
+      motivo = Crm::Entrega::Marca.dados(conversation)['motivo'].presence || 'convite_vencido'
       Crm::Entrega::Marca.tirar(conversation)
       conversation.save!
       avisar_convite_vencido(conversation)
     end
+    # Ainda dentro da transação da rodada (com_lock_timeout): a trava da conversa só sai no commit, e ninguém assume
+    # entre a saída da marca e a regra.
     return unless motivo && conversation.awaiting_person?
 
     Crm::Entrega.new(conversation: conversation, motivo: motivo, origem: 'fila').call

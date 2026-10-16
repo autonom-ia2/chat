@@ -104,6 +104,8 @@ RSpec.describe 'Pausar agente de IA com convite aberto' do # rubocop:disable RSp
   it 'a Lia pausada e o convite vence: a fila roda a regra de novo', :aggregate_failures do
     online(bruno)
     lia.update!(status: :paused)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE)
+    expect(conversation.reload).to be_awaiting_person
 
     travel 7.hours do
       Crm::Ai::HandoffDrainJob.perform_now
