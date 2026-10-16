@@ -41,5 +41,21 @@
     "SENT_AS_TEXT": {
       "LABEL": "Enviado como texto"
     }
+  },
+  "MESSAGE_ACTIONS": {
+    "REACTIONS_LABEL": "Reações",
+    "REACT": "Reagir",
+    "REACT_TITLE": "Reagir à mensagem",
+    "REACT_WITH": "Reagir com {emoji}",
+    "MORE_EMOJIS": "Mais emojis",
+    "REMOVE_REACTION": "Tirar minha reação",
+    "EDIT": "Editar",
+    "EDIT_TITLE": "Editar mensagem",
+    "EDIT_DESCRIPTION": "O cliente vê a mensagem marcada como editada no WhatsApp. Dá para editar até 15 minutos depois do envio.",
+    "EDIT_LABEL": "Texto novo",
+    "EDIT_SAVE": "Salvar",
+    "EDITED": "editada",
+    "EDIT_HISTORY": "Antes:",
+    "ERROR": "Não deu certo. Tente de novo."
   }
 }

@@ -65,6 +65,7 @@ json.can_reply conversation.can_reply?
 whatsapp_api_reply = conversation.whatsapp_api_reply? # fork: calculado uma vez para as duas chaves abaixo
 json.whatsapp_api_reply whatsapp_api_reply # fork chat#1067: aviso no editor
 json.whatsapp_api_rich_native Waha::RichNative.types_for(conversation, api_reply: whatsapp_api_reply) # fork chat#1709: tipos ricos nativos agora
+json.whatsapp_api_message_actions Waha::RichNative::WahaInbox.message_actions_for(conversation) # fork chat#1709: reagir/editar
 # Temporarily disable this action to avoid message-history lookups during conversation rendering.
 json.contact_info_request do
   json.available false

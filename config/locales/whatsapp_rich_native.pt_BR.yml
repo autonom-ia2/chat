@@ -10,6 +10,9 @@ pt_BR:
       declined_video: "Chamada de vídeo recusada"
       answered: "Ligação atendida no celular"
       ended: "Ligação encerrada"
+    message_actions:
+      reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
+      edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de 15 minutos, sem anexo nem formato especial, pode ser editado."
   whatsapp_hybrid:
     rich_native:
       restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."

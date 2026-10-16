@@ -49,7 +49,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open', 'close', 'replyTo'],
+  emits: ['open', 'close', 'replyTo', 'react', 'edit'],
   setup() {
     const { getPlainText } = useMessageFormatter();
 
@@ -142,6 +142,15 @@ export default {
       this.$emit('replyTo', this.message);
       this.handleClose();
     },
+    // fork chat#1709: reagir e editar pela caixa WAHA comum (o diálogo fica no Message.vue).
+    handleReact() {
+      this.handleClose();
+      this.$emit('react');
+    },
+    handleEdit() {
+      this.handleClose();
+      this.$emit('edit');
+    },
     openDeleteModal() {
       this.handleClose();
       this.showDeleteModal = true;
@@ -223,6 +232,24 @@ export default {
           }"
           variant="icon"
           @click.stop="handleReplyTo"
+        />
+        <MenuItem
+          v-if="enabledOptions['react']"
+          :option="{
+            icon: 'emoji-add',
+            label: $t('MESSAGE_ACTIONS.REACT'),
+          }"
+          variant="icon"
+          @click.stop="handleReact"
+        />
+        <MenuItem
+          v-if="enabledOptions['edit']"
+          :option="{
+            icon: 'edit',
+            label: $t('MESSAGE_ACTIONS.EDIT'),
+          }"
+          variant="icon"
+          @click.stop="handleEdit"
         />
         <MenuItem
           v-if="enabledOptions['copy']"

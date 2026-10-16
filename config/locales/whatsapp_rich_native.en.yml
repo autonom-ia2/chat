@@ -10,6 +10,9 @@ en:
       declined_video: "Video call declined"
       answered: "Call answered on the phone"
       ended: "Call ended"
+    message_actions:
+      reaction_invalid: "This message cannot get a reaction. Use a single emoji."
+      edit_invalid: "This message can no longer be edited. Only text sent less than 15 minutes ago, without attachment or special format, can be edited."
   whatsapp_hybrid:
     rich_native:
       restore_failed: "The message was not sent: WhatsApp API refused the format and the text could not be sent. Send the message again."

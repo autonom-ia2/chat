@@ -721,6 +721,7 @@ Rails.application.routes.draw do
                 member do
                   post :translate
                   post :retry
+                  post :reaction, to: 'message_reactions#create' # fork chat#1709: reagir pela caixa WAHA
                 end
               end
               resource :contact_info_request, only: [:create]

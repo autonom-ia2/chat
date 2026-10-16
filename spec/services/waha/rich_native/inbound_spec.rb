@@ -101,6 +101,81 @@ describe Waha::RichNative::Inbound do
     end
   end
 
+  describe 'reactions (waha_reaction)' do
+    let(:original) do
+      create(:message, message_type: :outgoing, content: 'Até amanhã', conversation: conversation, inbox: inbox, account: account,
+                       sender: agent)
+    end
+
+    def reaction(emoji, from_me: false)
+      from_connector({ in_reply_to: original.id, waha_reaction: { emoji: emoji, reacted_wa_id: 'W1', from_me: from_me } },
+                     content: emoji.present? ? "*Reagiu com* #{emoji}" : '*Reação removida*')
+    end
+
+    it 'keeps the new bubble of main without the flag' do
+      message = reaction('👍')
+
+      expect(message).to be_incoming
+      expect(message.content).to eq('*Reagiu com* 👍')
+      expect(original.reload.content_attributes).not_to have_key('reactions')
+    end
+
+    it 'sticks the reaction to the original, replaces and removes it, without a new bubble' do
+      flag_on!
+      first = reaction('👍')
+      reaction('😂')
+      reaction('❤️', from_me: true)
+
+      expect(first).to be_activity
+      expect(first.content_attributes).to include('c2y_hidden' => true, 'reaction_applied_to' => original.id)
+      expect(original.reload.content_attributes['reactions'].map { |item| item.slice('emoji', 'by') })
+        .to eq([{ 'emoji' => '😂', 'by' => 'contact' }, { 'emoji' => '❤️', 'by' => 'phone' }])
+
+      reaction('')
+      expect(original.reload.content_attributes['reactions'].pluck('by')).to eq(['phone'])
+      expect(conversation.messages.incoming).to be_empty
+    end
+  end
+
+  describe 'edits (waha_edit)' do
+    let(:original) do
+      create(:message, message_type: :incoming, content: 'Chego às 10', conversation: conversation, inbox: inbox, account: account,
+                       sender: conversation.contact)
+    end
+
+    def edited(text, from_me: false, target: original)
+      from_connector({ in_reply_to: target.id, waha_edit: { text: text, edited_wa_id: 'W2', from_me: from_me } },
+                     content: "#{text}\n\n✏️ *Editado no WhatsApp*")
+    end
+
+    it 'keeps the new bubble of main without the flag' do
+      message = edited('Chego às 11')
+
+      expect(message).to be_incoming
+      expect(original.reload.content).to eq('Chego às 10')
+    end
+
+    it 'replaces the text of the original, keeping the previous one, without a new bubble' do
+      flag_on!
+      message = edited('Chego às 11')
+
+      expect(message).to be_activity
+      expect(message.content_attributes).to include('c2y_hidden' => true, 'edit_applied_to' => original.id)
+      original.reload
+      expect(original.content).to eq('Chego às 11')
+      expect(original.content_attributes['edit_history'].sole).to include('content' => 'Chego às 10', 'by' => 'contact')
+      expect(original.content_attributes['edited_at']).to be_present
+    end
+
+    it 'only edits a message in the same direction' do
+      flag_on!
+      message = edited('Outro texto', from_me: true)
+
+      expect(message).to be_incoming
+      expect(original.reload.content).to eq('Chego às 10')
+    end
+  end
+
   it 'never lets an error stop the creation, and leaves the message as main' do
     flag_on!
     allow(Waha::RichNative::Inbound::Call).to receive(:apply).and_raise(StandardError)

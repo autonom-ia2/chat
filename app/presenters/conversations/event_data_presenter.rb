@@ -1,11 +1,10 @@
 class Conversations::EventDataPresenter < SimpleDelegator
   def push_data
-    api_reply = whatsapp_api_reply? # fork: calculado uma vez para as duas chaves abaixo
+    api_reply = whatsapp_api_reply? # fork: calculado uma vez para as chaves do WhatsApp API
     {
       additional_attributes: additional_attributes,
       can_reply: can_reply?,
-      whatsapp_api_reply: api_reply, # fork chat#1067: aviso no editor
-      whatsapp_api_rich_native: Waha::RichNative.types_for(__getobj__, api_reply: api_reply), # fork chat#1709: tipos ricos nativos
+      **whatsapp_api_fields(api_reply), # fork chat#1067 e chat#1709: aviso no editor, tipos ricos nativos, reagir/editar
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
       id: display_id,
@@ -34,6 +33,15 @@ class Conversations::EventDataPresenter < SimpleDelegator
   end
 
   private
+
+  # fork chat#1067 e chat#1709: as chaves do WhatsApp API, com o `whatsapp_api_reply?` calculado uma vez.
+  def whatsapp_api_fields(api_reply)
+    {
+      whatsapp_api_reply: api_reply,
+      whatsapp_api_rich_native: Waha::RichNative.types_for(__getobj__, api_reply: api_reply),
+      whatsapp_api_message_actions: Waha::RichNative::WahaInbox.message_actions_for(__getobj__)
+    }
+  end
 
   # Convite R3 pendente do card CRM vinculado (badge na lista de conversas).
   # Só consulta quando o CRM AI está ligado; olha todos os cards abertos da

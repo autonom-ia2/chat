@@ -41,14 +41,21 @@ const props = defineProps({
 
 const emit = defineEmits(['retry']);
 
+// fork chat#1709 (fase 3): o registro escondido de reação, edição, voto retirado e toque de ligação (atividade com
+// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere.
+const isHidden = message => message.content_attributes?.c2y_hidden === true;
+
 const allMessages = computed(() => {
-  return useCamelCase(props.messages, {
-    deep: true,
-    stopPaths: [
-      'content_attributes.translations',
-      'content_attributes.whatsapp_flow_response.response_json',
-    ],
-  });
+  return useCamelCase(
+    props.messages.filter(message => !isHidden(message)),
+    {
+      deep: true,
+      stopPaths: [
+        'content_attributes.translations',
+        'content_attributes.whatsapp_flow_response.response_json',
+      ],
+    }
+  );
 });
 
 const currentChat = useMapGetter('getSelectedChat');

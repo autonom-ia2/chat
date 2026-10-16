@@ -49,6 +49,11 @@ import { campaignRefFor } from 'dashboard/components-next/CampaignJourney/useCam
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+// fork chat#1709 (fase 3): reações coladas na mensagem, selo "editada" e reagir/editar pela caixa WAHA comum.
+import MessageReactions from './actions/MessageReactions.vue';
+import EditedMark from './actions/EditedMark.vue';
+import MessageActionDialogs from './actions/MessageActionDialogs.vue';
+import { canEdit, canReact } from './actions/messageActions.js';
 import { useBranding } from 'shared/composables/useBranding';
 
 /**
@@ -154,6 +159,25 @@ const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+
+// fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
+const selectedChat = useMapGetter('getSelectedChat');
+const messageActionDialogs = ref(null);
+const isReactable = computed(() => canReact(selectedChat.value, props));
+// A janela de edição é conferida na hora em que o menu abre (o computed não anda sozinho com o relógio).
+const menuOpenedAt = ref(Date.now() / 1000);
+const isEditable = computed(() =>
+  canEdit(selectedChat.value, props, menuOpenedAt.value)
+);
+const messageReactions = computed(() =>
+  Array.isArray(props.contentAttributes?.reactions)
+    ? props.contentAttributes.reactions
+    : []
+);
+const isEdited = computed(() => !!props.contentAttributes?.editedAt);
+const hasMessageExtras = computed(
+  () => messageReactions.value.length > 0 || isEdited.value
+);
 
 const isCaptainMessage = computed(() => {
   const senderType = props.sender?.type ?? props.senderType;
@@ -435,6 +459,8 @@ const contextMenuEnabledOptions = computed(() => {
       isCaptainMessage.value &&
       !isMessageDeleted.value,
     reportAgent: isAutonomiaAgentMessage.value && !isMessageDeleted.value,
+    react: isReactable.value,
+    edit: isEditable.value,
   };
 });
 
@@ -475,6 +501,7 @@ function openContextMenu(e) {
   if (e.type === 'contextmenu') {
     useTrack(ACCOUNT_EVENTS.OPEN_MESSAGE_CONTEXT_MENU);
   }
+  menuOpenedAt.value = Date.now() / 1000;
   contextMenuPosition.value = {
     x: e.pageX || e.clientX,
     y: e.pageY || e.clientY,
@@ -613,8 +640,10 @@ provideMessageContext({
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
           'flex-col items-start gap-2': shouldShowWhatsappReferral,
-          'flex-col gap-1': isCampaignMessage,
-          'items-end': isCampaignMessage && orientation === ORIENTATION.RIGHT,
+          'flex-col gap-1': isCampaignMessage || hasMessageExtras,
+          'items-end':
+            (isCampaignMessage || hasMessageExtras) &&
+            orientation === ORIENTATION.RIGHT,
         }"
         @contextmenu="openContextMenu($event)"
       >
@@ -627,6 +656,12 @@ provideMessageContext({
           :referral="contentAttributes.referral"
         />
         <Component :is="componentToRender" />
+        <EditedMark v-if="isEdited" :history="contentAttributes.editHistory" />
+        <MessageReactions
+          v-if="messageReactions.length"
+          :reactions="messageReactions"
+          :current-user-id="currentUserId"
+        />
       </div>
       <MessageError
         v-if="contentAttributes.externalError"
@@ -647,6 +682,17 @@ provideMessageContext({
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"
+        @react="messageActionDialogs?.openReaction()"
+        @edit="messageActionDialogs?.openEdit()"
+      />
+      <MessageActionDialogs
+        v-if="isReactable || isEditable"
+        ref="messageActionDialogs"
+        :conversation-id="conversationId"
+        :message-id="id"
+        :content="content || ''"
+        :reactions="messageReactions"
+        :current-user-id="currentUserId"
       />
     </div>
   </div>
