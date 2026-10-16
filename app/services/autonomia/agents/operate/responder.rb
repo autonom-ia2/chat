@@ -63,9 +63,11 @@ module Autonomia
           # da chamada cara de IA. Config vazia -> nil -> segue exatamente como antes.
           blocked = ::Autonomia::Agents::Operate::EngagementGate.new(agent: @agent, conversation: @conversation).blocked_reason
           return skip_for_humans(blocked) if blocked
+          # #1669: uma pessoa da equipe já respondeu esta mensagem do cliente -> nem chama a IA (não gasta).
+          return silencio_por_pessoa if pessoa_respondeu?
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
-          result = answer
+          result = sem_marca_da_equipe(answer)
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
           # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
@@ -207,15 +209,7 @@ module Autonomia
         # ROLLBACK e descartaria a mensagem recém-postada. Computa-se o Result numa variável.
         def classic_deliver(result)
           outcome = @conversation.with_lock do
-            if !still_eligible?
-              silencio_por_inelegibilidade
-            elsif turno_superado?
-              silencio_por_turno_superado
-            elsif already_replied?
-              Result.replied(nil)
-            else
-              Result.replied(post_reply!(result.reply))
-            end
+            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply))
           end
 
           # Fase F (ADITIVO/best-effort): só registra quando uma resposta NOVA foi postada
@@ -229,6 +223,17 @@ module Autonomia
           outcome
         end
 
+        # As guardas da hora de postar, na ordem de sempre, chamadas DENTRO do lock (estado fresco). -> o Result de quem
+        # não posta (silêncio, ou `replied(nil)` quando um settle anterior já respondeu) ou nil para postar. É um método,
+        # não um bloco: o `return` aqui não sai do with_lock.
+        def parada_na_hora_de_postar
+          return silencio_por_inelegibilidade unless still_eligible?
+          return silencio_por_turno_superado if turno_superado?
+          return silencio_por_pessoa if pessoa_respondeu?
+
+          Result.replied(nil) if already_replied?
+        end
+
         # ESPELHAMENTO DE ÁUDIO: só quando o cliente mandou áudio NESTE turno (media.transcripts) e o
         # recurso está ligado (ENV/por-agente). Caso contrário, fluxo de texto normal.
         def voice_reply_applies?
@@ -240,17 +245,8 @@ module Autonomia
         def deliver_voice(result)
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
-            if !still_eligible?
-              silencio_por_inelegibilidade
-            elsif turno_superado?
-              silencio_por_turno_superado
-            elsif already_replied?
-              Result.replied(nil)
-            elsif audio.present?
-              Result.replied(post_audio_reply!(audio))
-            else
-              Result.replied(post_reply!(result.reply)) # fallback texto
-            end
+            # Sem áudio (falha na síntese) -> fallback texto.
+            parada_na_hora_de_postar || Result.replied(audio.present? ? post_audio_reply!(audio) : post_reply!(result.reply))
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
@@ -303,8 +299,8 @@ module Autonomia
         # Guardas baratas aqui (idempotência/elegibilidade); as AUTORITATIVAS (lock + token + por-chunk)
         # vivem no ChunkedDeliveryJob. NÃO posta nada de forma síncrona.
         def deliver_humanized(result)
-          return Result.replied(nil) if already_replied?      # um settle anterior já entregou
-          return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
+          parada = parada_antes_dos_pedacos
+          return parada if parada
 
           chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
@@ -326,6 +322,14 @@ module Autonomia
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta)
           Result.replied(nil)
+        end
+
+        # As guardas baratas da entrega em pedaços, na ordem de sempre. -> o Result de quem não agenda, ou nil.
+        def parada_antes_dos_pedacos
+          return Result.replied(nil) if already_replied? # um settle anterior já entregou
+          return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
+
+          silencio_por_pessoa if pessoa_respondeu? # a pessoa respondeu durante a IA; o job reconfere a cada pedaço
         end
 
         # Motor de resposta em modo INSTRUÇÃO-DIRIGIDO: devolve a resposta do modelo como veio (sem
@@ -363,6 +367,7 @@ module Autonomia
         #                    saiu do ar) durante a chamada de IA, e o texto foi descartado.
         #   Na hora de postar (#1606): `dono_mudou` (outro agente da caixa virou o dono) e `turno_superado` (o cliente
         #   escreveu de novo durante a IA; responde o settle da mensagem nova).
+        #   `pessoa_respondeu` (#1669): uma pessoa da equipe respondeu esta mensagem do cliente, antes ou durante a IA.
         def motivo_do_silencio(result)
           return 'sinal' if silence_signal?(result)
           return 'ia_falhou' if result.nil?
@@ -409,6 +414,31 @@ module Autonomia
         def silencio_por_turno_superado
           registrar_silencio('turno_superado')
           Result.silenced
+        end
+
+        # #1669: uma pessoa da equipe respondeu publicamente depois da mensagem do cliente deste turno. Só com a Fase 2
+        # (PessoaDaEquipe). A posse do turno fica: este turno foi respondido, pela pessoa. A IA segue na conversa.
+        def pessoa_respondeu?
+          ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @reply_to_message_id)
+        end
+
+        def silencio_por_pessoa
+          registrar_silencio('pessoa_respondeu')
+          Result.silenced
+        end
+
+        # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
+        # com a Fase 2 (fora dela a moldura nem entra no histórico). Resposta que fica vazia cai no silêncio `vazio`.
+        def sem_marca_da_equipe(result)
+          return result if result.nil? || !::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+
+          limpa = ::Autonomia::Agents::Operate::PessoaDaEquipe.sem_marca(result.reply)
+          return result if limpa == result.reply
+
+          ::Autonomia::Agents::AnswerResult.new(reply: limpa, confidence: result.confidence, handoff: result.handoff,
+                                                used_knowledge: result.used_knowledge,
+                                                answered_from_knowledge: result.answered_from_knowledge,
+                                                raw_reply: result.raw_reply, error: result.error)
         end
 
         # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou
@@ -556,11 +586,19 @@ module Autonomia
 
         # history = a janela de `recent_messages`, em ordem cronológica, mapeada para o formato do
         # Answerer: incoming -> user, outgoing -> assistant. Activity/private já são excluídas pelo
-        # scope `chat`.
+        # scope `chat`. Com a Fase 2 (#1669), o que uma pessoa da equipe escreveu vai marcado como dela
+        # (PessoaDaEquipe.item_do_historico); robô e sistema seguem como sempre.
         def history
+          return history_com_a_equipe if ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+
           recent_messages.map do |message|
             { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
           end
+        end
+
+        def history_com_a_equipe
+          ActiveRecord::Associations::Preloader.new(records: recent_messages, associations: :sender).call
+          recent_messages.map { |message| ::Autonomia::Agents::Operate::PessoaDaEquipe.item_do_historico(message) }
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
