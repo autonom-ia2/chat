@@ -36,6 +36,7 @@ module ConversationBotHandoff
   # `keep_bot: false` solta o robô de vez: é o caminho de quem desliga o robô, não de quem passa a conversa.
   # `motivo`: por que a conversa precisa de alguém (log do motor de entrega).
   # `release_assignee`: tira quem atende na mesma gravação (saída da triagem): uma gravação só por passagem.
+  # `dono`: a pessoa a quem a entrega é dirigida (o dono do card, R13 do #1150); ver Crm::Entrega.
   # Uma gravação só, com a linha travada: quem chega primeiro (uma pessoa assumindo, outra passagem) decide.
   # A regra da Atribuição pode apontar um agente de IA (#1593): a passagem grava como se esperasse pessoa e, depois do
   # commit de TODAS as transações abertas (quem chama pode estar dentro de uma trava), o motor passa ao agente
@@ -43,15 +44,15 @@ module ConversationBotHandoff
   # passagem para pessoa; recusado, o motor entrega a alguém da equipe e o aviso sai como sempre.
   # O motivo da passagem vai no contexto do registro de passagens (#1606): a pessoa entra no save daqui, depois que a
   # Entrega já saiu, e a conversa prende o motivo nesse save (ConversationPassagem).
-  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false)
+  def bot_handoff!(dispatch_event: true, keep_bot: true, motivo: nil, release_assignee: false, dono: nil)
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
     para_ia, quem_passou = Crm::Passagens.com_motivo(motivo) do
-      passar_ao_atendimento!(keep_bot: keep_bot, motivo: motivo, release_assignee: release_assignee)
+      passar_ao_atendimento!(keep_bot: keep_bot, motivo: motivo, release_assignee: release_assignee, dono: dono)
     end
     depois_da_passagem(para_ia, dispatch_event, quem_passou, motivo)
   end
 
-  def passar_ao_atendimento!(keep_bot:, motivo:, release_assignee:)
+  def passar_ao_atendimento!(keep_bot:, motivo:, release_assignee:, dono:)
     para_ia = nil
     quem_passou = nil
     self.class.transaction do
@@ -61,7 +62,7 @@ module ConversationBotHandoff
       self.waiting_since = Time.current if waiting_since.blank?
       self.ai_assignee = nil
       self.status = :open
-      para_ia = deliver_on_handoff(motivo, keep_bot, quem_passou)
+      para_ia = deliver_on_handoff(motivo, keep_bot, quem_passou, dono: dono)
       robo && assignee_id.blank? ? wait_for_person_with(robo) : clear_bot_wait_mark
       save!
     end
@@ -149,12 +150,13 @@ module ConversationBotHandoff
   # Devolve a entrega quando ela aponta um agente de IA (#1593), para terminar depois do commit.
   # O robô só está passando quando nenhuma pessoa tinha a conversa: na saída da triagem quem sai é a pessoa (gravada no
   # banco), e o robô da caixa não pode ser barrado pela guarda do laço.
-  def deliver_on_handoff(motivo, keep_bot, quem_passou)
+  # `dono`: a entrega dirigida ao dono do card (R13 do #1150); ver Crm::Entrega.
+  def deliver_on_handoff(motivo, keep_bot, quem_passou, dono: nil)
     return if assignee_id.present?
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
     quem_passou = nil if attribute_in_database('assignee_id').present?
-    entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', quem_passou: quem_passou)
+    entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', quem_passou: quem_passou, dono: dono)
     entrega if entrega.na_passagem.status == :para_ia
   end
 

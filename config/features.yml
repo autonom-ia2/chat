@@ -435,3 +435,12 @@
   display_name: Horário único da caixa (horário do Chatwoot no fuso da conta)
   enabled: false
   column: feature_flags_ext_1
+
+# Outro canal (#1150, R13; PR #1664): o cliente com card aberto que escreve por outra caixa tem a conversa nova ligada
+# ao card e entregue ao dono, sem passar pela triagem. Bit 27 (134217728), o próximo depois de `horario_unico_caixa`
+# (bit 26): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
+# Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
+- name: crm_outro_canal
+  display_name: Conversa de outro canal vai para o card aberto e o dono
+  enabled: false
+  column: feature_flags_ext_1

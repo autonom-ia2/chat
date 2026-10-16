@@ -620,4 +620,37 @@ RSpec.describe Crm::Entrega do
       expect(Rails.configuration.dispatcher).not_to atribuicoes_de(conversa)
     end
   end
+
+  # Entrega dirigida ao dono do card (#1150, R13): a fila vira só ele, enquanto ele cuidar do funil na caixa.
+  describe 'dono' do
+    before do
+      membros(ana, bia)
+      acesso(ana, vendas)
+      acesso(bia, vendas)
+    end
+
+    # Pega: o rodízio escolhia quem tem menos conversas (a Bia) e a conversa ia para outra pessoa que não a dona.
+    it 'dono na fila recebe, mesmo com outra pessoa do funil mais livre' do
+      online(ana, bia)
+      create(:conversation, account: account, inbox: inbox, assignee: ana, status: :open)
+      conversa = conversa_do_robo
+      card_em(conversa, vendas)
+
+      conversa.bot_handoff!(dono: ana)
+
+      expect(conversa.reload.assignee_id).to eq(ana.id)
+    end
+
+    # Pega: dono sem o funil na caixa recebendo a conversa por fora do acesso por funil.
+    it 'dono fora da fila (sem o funil): vale a fila de sempre e a marca não guarda o dono', :aggregate_failures do
+      online
+      conversa = conversa_do_robo
+      card_em(conversa, vendas)
+
+      conversa.bot_handoff!(dono: tito)
+
+      expect(conversa.reload.assignee_id).to be_nil
+      expect(marca(conversa)).not_to have_key('dono_id')
+    end
+  end
 end

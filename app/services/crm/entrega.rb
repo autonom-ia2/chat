@@ -33,7 +33,11 @@ class Crm::Entrega
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card). `quem_passou`: o robô que está passando, na
   # passagem do robô (ConversationBotHandoff#bot_handoff!), que pode ser o da caixa quando a conversa não tinha robô.
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil) # rubocop:disable Metrics/ParameterLists
+  # `dono`: a pessoa a quem a conversa é dirigida (o dono do card, R13 do #1150), se está na fila de quem cuida (ver
+  # #fila). Sem regra no funil, a conversa espera por ela (a marca guarda o dono para a próxima tentativa); com regra, ela
+  # recebe (ou é convidada) quando está online, e nem o agente de IA da regra entra; offline, a regra decide, inclusive
+  # passando ao agente de IA. Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil) # rubocop:disable Metrics/ParameterLists
     @conversation = conversation
     @motivo = motivo.to_s
     @origem = origem.to_s
@@ -41,6 +45,7 @@ class Crm::Entrega
     @sugestao = pedido[:sugestao]
     @razao = pedido[:razao]
     @quem_passou = quem_passou
+    @dono = Crm::Entrega::Dono.new(conversation: conversation, pessoa: dono)
   end
 
   # Por conta própria: trava a conversa, relê e grava.
@@ -91,15 +96,16 @@ class Crm::Entrega
     settings = regra_do(card)
     return sem_regra(card) unless settings
 
-    agente = agente_da_regra(settings)
+    agente = agente_da_regra(card, settings)
     return Plano.new(acao: :ia, agente: agente, card: card, settings: settings) if agente
 
     pela_regra(card, Crm::Entrega::ParaIa.so_pessoas(settings))
   end
 
   # O agente de IA que a regra aponta e pode receber agora; nunca o robô que está passando (Crm::Entrega::ParaIa.alvo).
-  def agente_da_regra(settings)
-    return if @sem_ia
+  # A entrega dirigida ao dono do card que pode receber (R13, Crm::Entrega::Dono) passa na frente dele.
+  def agente_da_regra(card, settings)
+    return if @sem_ia || @dono.na_frente? { fila(card, settings) }
 
     Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao, quem_passa: @quem_passou || @quem_atendia)
   end
@@ -113,7 +119,7 @@ class Crm::Entrega
   # Sem regra: quem cuida da conversa e está online, com menos conversas abertas (decisão 2 do Rodrigo, 13/10).
   def sem_regra(card)
     selector = Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card),
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, nil),
       mode: 'round_robin', prefer_online: true, require_online: true, conversation: @conversation
     )
     escolher(selector, card, nil)
@@ -133,8 +139,8 @@ class Crm::Entrega
 
   def seletor(card, settings, require_online:)
     Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card),
-      mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online,
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, settings),
+      mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online || @dono.sem_presenca?,
       suggested_name: sugestao_de_pessoa, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
     )
   end
@@ -144,8 +150,10 @@ class Crm::Entrega
     Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
   end
 
-  def fila(card)
-    @fila ||= Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas
+  # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem
+  # memória entre chamadas: a nova tentativa depois de o agente de IA recusar (#concluir_para_ia!) decide de novo.
+  def fila(card, settings)
+    @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
   end
 
   def nada(motivo)
@@ -209,7 +217,7 @@ class Crm::Entrega
   def segurar(plano, gravar)
     vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
     falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao)
+    Marca.marcar(@conversation, modo: Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao, dono: @dono.dirigido)
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)

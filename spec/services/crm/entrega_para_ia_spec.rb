@@ -85,7 +85,9 @@ RSpec.describe Crm::Entrega do
       expect(entrega.status).to eq(:entregue)
       expect(conversation.reload).to have_attributes(assignee_id: ana.id)
       expect(conversation.ai_assignee).not_to eq(espelho_area)
-      expect(Crm::Passagem.where(conversation_id: conversation.id).map { |passagem| passagem.para.id }).not_to include(area.id)
+      # Classe e id: só o id coincide entre tabelas (a Ana e a área podem ter o mesmo número).
+      destinos = Crm::Passagem.where(conversation_id: conversation.id).map { |passagem| [passagem.para.classe, passagem.para.id] }
+      expect(destinos).not_to include(['Autonomia::Agents::Agent', area.id])
     end
 
     # Pega: o serviço troca o dono, commita e só depois levanta (no aviso, na telemetria). Tratar isso como "não trocou"
@@ -239,6 +241,58 @@ RSpec.describe Crm::Entrega do
 
       expect(entrega(sugestao: rotulo).pessoa).to eq(ana)
       expect(servico).not_to have_received(:call)
+    end
+  end
+
+  # R13 do #1150 (decisão do Rodrigo em 15/10): a entrega dirigida ao dono do card com a regra apontando um agente de IA.
+  describe 'entrega dirigida ao dono (outro canal)' do
+    before { regra!('pool_type' => 'ai_agent', 'pool_id' => area.id) }
+
+    def entrega_ao_dono
+      described_class.new(conversation: conversation, motivo: 'outro_canal', origem: 'outro_canal', dono: ana).call
+    end
+
+    # Pega: o agente de IA da regra passando na frente da dona que está online.
+    it 'dona online: recebe ela, e o agente de IA da regra não entra', :aggregate_failures do
+      expect(entrega_ao_dono).to have_attributes(status: :entregue, pessoa: ana)
+      expect(servico).not_to have_received(:call)
+      expect(conversation.reload.assignee_id).to eq(ana.id)
+    end
+
+    # Pega: a dona offline segurando a conversa quando a regra manda para a IA.
+    it 'dona offline: a regra decide, e passa ao agente de IA', :aggregate_failures do
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+
+      expect(entrega_ao_dono).to have_attributes(status: :com_ia, agente: area)
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
+    end
+
+    # Pega: a nova tentativa depois de o agente recusar reusando a decisão velha ("dona offline", fila inteira) quando a
+    # dona já entrou: o rodízio dava a conversa à Bia, mais livre, em vez da dona.
+    it 'o agente recusa e a dona entrou nesse meio tempo: a nova tentativa decide de novo e entrega à dona', :aggregate_failures do
+      bia = create(:user, account: account, role: :agent, name: 'Bia')
+      create(:inbox_member, inbox: inbox, user: bia)
+      create(:conversation, account: account, inbox: inbox, assignee: ana, status: :open)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ bia.id.to_s => 'online' })
+      antes_do_servico do
+        parar_area!
+        allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online', bia.id.to_s => 'online' })
+      end
+
+      expect(entrega_ao_dono).to have_attributes(status: :entregue, pessoa: ana)
+      expect(servico).to have_received(:call)
+    end
+
+    # Pega: sem regra no funil, a conversa caindo para outra pessoa em vez de esperar a dona.
+    it 'sem regra no funil: a conversa espera a dona, sem IA e sem outra pessoa', :aggregate_failures do
+      comercial.stages.first.update!(metadata: {})
+      outra = create(:user, account: account, role: :agent, name: 'Bia')
+      create(:inbox_member, inbox: inbox, user: outra)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ outra.id.to_s => 'online' })
+
+      expect(entrega_ao_dono).to have_attributes(status: :segurando)
+      expect(servico).not_to have_received(:call)
+      expect(Crm::Entrega::Marca.dados(conversation.reload)).to include('dono_id' => ana.id)
     end
   end
 end
