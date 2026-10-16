@@ -186,7 +186,11 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def largar_para_o_agente(conversation)
+    # Reconfere sob a trava: um pedido novo do próprio agente nesse meio tempo regravou a marca e não pode sumir.
     conversation.with_lock do
+      marca = Crm::Entrega::Marca.dados(conversation)
+      next unless marca && da_ia_do_crm_com_agente_nosso?(conversation, marca)
+
       Crm::Entrega::Marca.tirar(conversation)
       conversation.save! if conversation.changed?
     end
