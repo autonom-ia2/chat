@@ -174,14 +174,24 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   # O convite venceu sem ninguém pegar: a marca sai (o rodízio nativo deixa de pular a conversa) e os administradores
   # da caixa são avisados (#1140, decisão 8). Relido sob a trava: quem pegou nesse meio tempo fica com a conversa, e a
   # adiada guarda a marca (volta à fila quando reabre); nas duas, nada é avisado.
+  #
+  # Convite mantido por uma passagem (#1694: o robô pediu pessoa ou saiu de vez, e o convite seguiu): a conversa espera
+  # pessoa (sem robô, ou com ele à espera). Vencido, a regra roda de novo (convida, entrega ou segura com a marca); sem
+  # isso ela ficaria sem pessoa e sem a marca do motor, e ninguém a entregaria. O convite da IA do CRM com o robô ainda no
+  # comando só perde a marca, como sempre.
   def convite_vencido(conversation)
+    motivo = nil
     conversation.with_lock do
       next unless Crm::Entrega::Marca.convite_vencido?(conversation) && esperando_pessoa?(conversation)
 
+      motivo = Crm::Entrega::Marca.dados(conversation)['motivo']
       Crm::Entrega::Marca.tirar(conversation)
       conversation.save!
       avisar_convite_vencido(conversation)
     end
+    return unless motivo && conversation.awaiting_person?
+
+    Crm::Entrega.new(conversation: conversation, motivo: motivo, origem: 'fila').call
   end
 
   def esperando_pessoa?(conversation)

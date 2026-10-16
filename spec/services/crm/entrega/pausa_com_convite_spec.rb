@@ -83,4 +83,47 @@ RSpec.describe 'Pausar agente de IA com convite aberto' do # rubocop:disable RSp
     expect(ciclo['canceled_at']).to be_nil
     expect(conversation.conversation_participants.pluck(:user_id)).to eq([ana.id])
   end
+
+  # Pega: mantido o convite, a conversa ficava presa depois que ele vencia (a fila só tirava a marca): sem pessoa, sem
+  # marca do motor e com o robô à espera de pessoa para sempre. Vencido, a fila avisa e a regra roda de novo.
+  it 'a Lia pede a passagem e o convite vence: a fila roda a regra de novo e convida quem está online', :aggregate_failures do
+    online(bruno)
+    conversation.reload.bot_handoff!
+    expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE)
+
+    travel 7.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(ciclo).to include('invited_agent_id' => bruno.id)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE)
+    expect(conversation.reload).to be_bot_handoff_waiting
+  end
+
+  # Pega: o mesmo com a Lia pausada (sem robô): vencido o convite mantido, a conversa não fica sem ninguém e sem marca.
+  it 'a Lia pausada e o convite vence: a fila roda a regra de novo', :aggregate_failures do
+    online(bruno)
+    lia.update!(status: :paused)
+
+    travel 7.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(ciclo).to include('invited_agent_id' => bruno.id)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE)
+  end
+
+  # Pega: rodar a regra de novo no convite vencido da IA do CRM com o robô ainda no comando (sem pedido de pessoa): ali o
+  # convite vencido só sai, como sempre.
+  it 'convite da IA do CRM com o robô no comando: vencido, só sai a marca', :aggregate_failures do
+    online(bruno)
+
+    travel 7.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(marca).to be_nil
+    expect(ciclo).to include('invited_agent_id' => ana.id)
+    expect(conversation.reload.ai_assignee).to eq(porta)
+  end
 end
