@@ -32,7 +32,7 @@
         "nomeDaLista": "Escreva o nome do botão que abre a lista.",
         "coordenadas": "Não achei o lugar. Cole os números do Google Maps, como -23.5613, -46.6565.",
         "nome": "Escreva o nome.",
-        "telefone": "Escreva o telefone com + e o código do país. Ex.: +55 11 98765-4321.",
+        "telefone": "Digite um telefone que exista no país escolhido, com DDD.",
         "formulario": "Escolha o formulário.",
         "textoDoBotao": "Escreva o texto do botão.",
         "mensagemLonga": "A mensagem está longa demais para este formato. Encurte um pouco.",
@@ -90,11 +90,11 @@
         "TITULO": "Mandar um contato",
         "AJUDA": "O cliente recebe o cartão e pode conversar com esse número.",
         "NOME": "Nome",
-        "TELEFONE": "Telefone com DDD",
-        "TELEFONE_AJUDA": "Como está no WhatsApp, com + e o código do país. Ex.: +55 11 98765-4321.",
+        "TELEFONE": "Telefone",
+        "TELEFONE_AJUDA": "Escolha o país e digite o número com DDD.",
+        "PAIS": "País do telefone",
         "NOME_EXEMPLO": "Procure nos seus contatos ou escreva um nome",
-        "NOME_AJUDA": "Escolha um contato e o telefone vem junto.",
-        "TELEFONE_EXEMPLO": "+55 11 98765-4321"
+        "NOME_AJUDA": "Escolha um contato e o telefone vem junto."
       },
       "FORMULARIO": {
         "TITULO": "Mandar um formulário",

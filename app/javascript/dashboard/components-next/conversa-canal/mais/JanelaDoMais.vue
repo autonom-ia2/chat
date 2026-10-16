@@ -10,6 +10,7 @@ import ContactsAPI from 'dashboard/api/contacts';
 import Dialog from 'next/dialog/Dialog.vue';
 import ChoiceSelect from 'next/choice-select/ChoiceSelect.vue';
 import CampoDeBusca from './CampoDeBusca.vue';
+import CampoDeTelefone from './CampoDeTelefone.vue';
 import Input from 'next/input/Input.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import Button from 'next/button/Button.vue';
@@ -396,14 +397,12 @@ defineExpose({ abrir });
             icone="i-ph-user"
             @escolher="escolherContato"
           />
-          <Input
+          <CampoDeTelefone
             v-model="campos.telefone"
-            type="tel"
             :label="rotulo('TELEFONE')"
-            :placeholder="rotulo('TELEFONE_EXEMPLO')"
-            :message="erroDe('telefone') || rotulo('TELEFONE_AJUDA')"
-            :message-type="erroDe('telefone') ? 'error' : 'info'"
-            wrap-message
+            :rotulo-do-pais="rotulo('PAIS')"
+            :ajuda="rotulo('TELEFONE_AJUDA')"
+            :erro="erroDe('telefone')"
           />
         </template>
 

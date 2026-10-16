@@ -32,7 +32,7 @@
         "nomeDaLista": "Write the name of the button that opens the list.",
         "coordenadas": "Place not found. Paste the numbers from Google Maps, like -23.5613, -46.6565.",
         "nome": "Write the name.",
-        "telefone": "Write the phone with + and the country code. E.g.: +55 11 98765-4321.",
+        "telefone": "Type a phone number that exists in the chosen country, with area code.",
         "formulario": "Choose the form.",
         "textoDoBotao": "Write the button text.",
         "mensagemLonga": "The message is too long for this format. Shorten it a bit.",
@@ -90,11 +90,11 @@
         "TITULO": "Send a contact",
         "AJUDA": "The customer gets the card and can chat with this number.",
         "NOME": "Name",
-        "TELEFONE": "Phone with area code",
-        "TELEFONE_AJUDA": "As it is on WhatsApp, with + and the country code. E.g.: +55 11 98765-4321.",
+        "TELEFONE": "Phone",
+        "TELEFONE_AJUDA": "Choose the country and type the number with area code.",
+        "PAIS": "Phone country",
         "NOME_EXEMPLO": "Search your contacts or type a name",
-        "NOME_AJUDA": "Pick a contact and the phone comes along.",
-        "TELEFONE_EXEMPLO": "+55 11 98765-4321"
+        "NOME_AJUDA": "Pick a contact and the phone comes along."
       },
       "FORMULARIO": {
         "TITULO": "Send a form",
