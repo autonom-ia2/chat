@@ -50,8 +50,12 @@ RSpec.describe Crm::Subjects::Identifier do
     requests
   end
 
+  # A resposta serve às duas perguntas: a de um assunto e, com a flag `crm_avaliar_toda_mensagem` (#1693), a de vários
+  # assuntos (a lista com um item só, que é o principal).
   def stub_review(resposta:, titulo: '', seguro: true)
-    allow(cliente).to receive(:create).and_return(text: { resposta: resposta, titulo: titulo, seguro: seguro, motivo: 'ok' }.to_json)
+    resposta_dos_dois = { resposta: resposta, titulo: titulo, seguro: seguro, motivo: 'ok',
+                          assuntos: [{ resposta: resposta, titulo: titulo, seguro: seguro }], principal: 0 }
+    allow(cliente).to receive(:create).and_return(text: resposta_dos_dois.to_json)
   end
 
   def identify(message)

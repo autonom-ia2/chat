@@ -33,7 +33,8 @@ module Crm::Entrega::Marca
   # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela), `ate` (o fim do convite), `convidado` (quem
   # foi convidado) e `venceram` (ids de quem deixou um convite desta espera vencer, #1694; sobrevive às novas
   # tentativas, como `desde`). `decidido_em`: com `venceram`, quando a regra decidiu por último (a fila espaça a espera sem ninguém); sem
-  # ele, a marca não muda a cada tentativa.
+  # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
+  # não é o foco (#1693).
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -46,7 +47,8 @@ module Crm::Entrega::Marca
       'sugestao' => detalhes[:sugestao].presence,
       'dono_id' => detalhes[:dono]&.id,
       'ate' => detalhes[:ate]&.iso8601,
-      'convidado_id' => detalhes[:convidado]&.id
+      'convidado_id' => detalhes[:convidado]&.id,
+      'card_id' => detalhes[:card]&.id
     }.merge(vencimentos(anterior, detalhes[:venceram])).compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
   end
@@ -63,6 +65,12 @@ module Crm::Entrega::Marca
     return Time.current.iso8601 if modo == CONVITE && anterior['modo'] != CONVITE
 
     anterior['desde'].presence || Time.current.iso8601
+  end
+
+  # O card cuja regra vale (#1693), da conta da conversa; a Entrega confere se ele segue aberto nela.
+  def card(conversation)
+    id = dados(conversation)&.dig('card_id')
+    conversation.account.crm_cards.find_by(id: id) if id.present?
   end
 
   def tirar(conversation)

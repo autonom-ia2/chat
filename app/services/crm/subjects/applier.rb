@@ -6,6 +6,8 @@
 # tempo real sai depois (Identifier).
 # Sugerir: só grava a sugestão, com as mesmas checagens; a anterior que ninguém respondeu expira.
 class Crm::Subjects::Applier
+  include Crm::Subjects::VariosAssuntos
+
   # Decisões que não leram nada ou não chegaram ao fim: não passam na frente de uma mais antiga.
   SEM_EFEITO = %w[failed no_content no_quota].freeze
 

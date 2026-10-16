@@ -169,8 +169,9 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     return largar_para_o_agente(conversation) if da_ia_do_crm_com_agente_nosso?(conversation, marca)
     return if Crm::Entrega::ConviteVencido.espacar?(marca)
 
+    card = Crm::Entrega::Marca.card(conversation)
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca), excluir: marca['venceram']).call
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram']).call
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).
