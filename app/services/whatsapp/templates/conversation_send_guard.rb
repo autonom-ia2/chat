@@ -1,0 +1,49 @@
+# Envio de modelo pela conversa (#1703, épico #1320). O seletor da conversa já esconde os modelos que ela não consegue
+# mandar (`inboxes/getConversationWhatsAppTemplates`), mas a mensagem também chega pela API e por modelo escolhido
+# antes. Aqui o envio confere o formato pela regra única (`Whatsapp::Templates::SendableFormat`), com o que a própria
+# mensagem traz em `processed_params`. Modelo de produto (topo PRODUCT, SPM, MPM, botão de catálogo, cartões de produto)
+# sem os produtos e carrossel sem os cartões viram falha com o motivo na conversa, SEM chamar a Meta.
+#
+# Só esses dois motivos: são os que o envio do Chatwoot nunca monta sozinho e que o seletor esconde. Os outros motivos
+# da regra (cupom, código de verificação, oferta, pedido de ligação...) seguem o caminho de antes, porque quem chama pela
+# API pode mandar o parâmetro que o Chatwoot já monta (ex.: `{ type: 'otp', parameter: }`).
+#
+# Prependido em `Whatsapp::SendOnWhatsappService` (do Chatwoot) pelo `config/initializers/whatsapp_templates.rb`: o
+# arquivo do Chatwoot fica intacto. Confere antes de marcar o pedido de contato, para a recusa não deixar um pedido
+# pendente. A campanha não passa por aqui (`OneoffCampaignService` confere no `DispatchCheck`); o envio fora da janela
+# passa, com o mesmo `processed_params` que o `DispatchCheck` já liberou. Sem nome ou fora da lista da caixa, segue o
+# caminho do Chatwoot, como antes.
+module Whatsapp::Templates::ConversationSendGuard
+  # Motivo do SendableFormat -> chave do texto (whatsapp_templates.errors.*).
+  REFUSALS = { 'catalog' => 'conversation_products', 'carousel' => 'conversation_carousel' }.freeze
+
+  private
+
+  def perform_reply
+    reason = conversation_format_refusal unless broadcast_destination?
+    return super unless reason
+
+    Rails.logger.info("[whatsapp_templates][conversation_send] refused message=#{message.id} reason=#{reason}")
+    message.update!(status: :failed, external_error: I18n.t("whatsapp_templates.errors.#{REFUSALS.fetch(reason)}"))
+  end
+
+  def conversation_format_refusal
+    return if template_params.blank? || template_params['name'].blank?
+
+    template = conversation_template
+    return if template.blank?
+
+    reason = Whatsapp::Templates::SendableFormat.check(template, recorded: template_params['processed_params']).reason_code
+    reason if REFUSALS.key?(reason)
+  end
+
+  # A mesma busca do `Whatsapp::TemplateProcessorService#find_template` (nome, idioma e aprovado). Lida aqui, sem
+  # instanciar o processador: o pedido de contato recusado antes do envio não pode chegar a ele.
+  def conversation_template
+    language = template_params['language'].to_s.downcase
+    Array(channel.message_templates).find do |template|
+      template['name'] == template_params['name'] && template['language'].to_s.downcase == language &&
+        template['status'].to_s.casecmp?('approved')
+    end
+  end
+end

@@ -42,7 +42,18 @@ RSpec.describe 'CRM AI settings API: quem recebe por caixa', type: :request do
 
     motor = Crm::Entrega::QuemCuida.new(conversation: conversa, card: card).pessoas.map(&:id)
 
-    expect(recebem.find { |caixa| caixa['inbox_id'] == whatsapp.id }['user_ids']).to eq(motor)
+    expect(recebem.find { |caixa| caixa['inbox_id'] == whatsapp.id }['user_ids']).to match_array(motor)
+  end
+
+  # A ordem dos membros da caixa no banco não é fixa: a lista sai na ordem da tela (nome, desempate por id).
+  it 'lists people by name, then by id, whatever order they joined the inbox' do
+    zelia = create_crm_agent(account: account, name: 'Zélia Prado').first
+    abel = create_crm_agent(account: account, name: 'Abel Souza').first
+    outro_abel = create_crm_agent(account: account, name: 'abel souza').first
+    email = create_crm_inbox(account: account, name: 'E-mail', members: [outro_abel, zelia, abel])
+    account.crm_pipeline_inboxes.create!(inbox: email, pipeline: pos_venda.first)
+
+    expect(recebem.find { |caixa| caixa['inbox_id'] == email.id }['user_ids']).to eq([abel.id, outro_abel.id, zelia.id])
   end
 
   it 'leaves the list out unless the screen asks for it (the list of funnels reads every funnel)' do

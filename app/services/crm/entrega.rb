@@ -38,8 +38,12 @@ class Crm::Entrega
   # recebe (ou é convidada) quando está online, e nem o agente de IA da regra entra; offline, a regra decide, inclusive
   # passando ao agente de IA. Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
   # `pelo_card` (#1693, decisão 1a do Rodrigo, 16/10): a regra é a do `card` (o assunto a que o cliente ligou o pedido),
-  # e não a do assunto em foco, enquanto ele seguir aberto nesta conversa. Segurada, a marca guarda o card para a fila.
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, pelo_card: false) # rubocop:disable Metrics/ParameterLists
+  # e não a do assunto em foco, enquanto ele seguir aberto nesta conversa. Segurada ou convidada, a marca guarda o card
+  # para a fila e para o convite vencido.
+  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694, decisão do Rodrigo de 16/10): com regra, ficam
+  # fora da fila. Se eram todos, sem convite novo: a conversa vai ao primeiro de quem cuida que ficar online (#pela_regra).
+  # rubocop:disable Metrics/ParameterLists
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, pelo_card: false, excluir: [])
     @conversation = conversation
     @pelo_card = pelo_card
     @motivo = motivo.to_s
@@ -48,8 +52,9 @@ class Crm::Entrega
     @sugestao = pedido[:sugestao]
     @razao = pedido[:razao]
     @quem_passou = quem_passou
-    @dono = Crm::Entrega::Dono.new(conversation: conversation, pessoa: dono)
+    @dono = Crm::Entrega::Dono.new(conversation: conversation, pessoa: dono, excluir: excluir)
   end
+  # rubocop:enable Metrics/ParameterLists
 
   # Por conta própria: trava a conversa, relê e grava.
   def call
@@ -113,9 +118,12 @@ class Crm::Entrega
     Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao, quem_passa: @quem_passou || @quem_atendia)
   end
 
+  # Todos que cuidam deixaram um convite desta espera vencer (#1694, opção "a"): sem convite novo, a conversa vai para o
+  # primeiro deles que ficar online (Crm::Entrega::Dono#so_quem_venceu?), como no segurar de sempre.
   def pela_regra(card, settings)
-    convite = settings[:handoff_mode] == 'r3_invite'
-    selector = seletor(card, settings, require_online: convite ? false : settings[:prefer_online])
+    membros = fila(card, settings)
+    convite = settings[:handoff_mode] == 'r3_invite' && !@dono.so_quem_venceu?
+    selector = seletor(settings, require_online: !convite && (settings[:prefer_online] || @dono.so_quem_venceu?), membros: membros)
     escolher(selector, card, settings, acao: convite ? :convite : :pessoa)
   end
 
@@ -140,19 +148,21 @@ class Crm::Entrega
     Plano.new(acao: :segurar, card: card, settings: settings, motivo: 'presenca_indisponivel')
   end
 
-  def seletor(card, settings, require_online:)
+  # O nome pedido que era de um agente de IA que não pôde receber não é nome de pessoa para casar.
+  def seletor(settings, require_online:, membros:)
+    sugestao = Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
     Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, settings),
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: membros,
       mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online || @dono.sem_presenca?,
-      suggested_name: sugestao_de_pessoa, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
+      suggested_name: sugestao, pool_type: @dono.so_quem_venceu? ? 'inbox' : settings[:pool_type], pool_id: settings[:pool_id],
+      conversation: @conversation
     )
   end
 
-  # O nome pedido era de um agente de IA que não pôde receber: não é nome de pessoa para casar.
-  def sugestao_de_pessoa = Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
-
-  # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem
-  # memória entre chamadas: a nova tentativa depois de o agente de IA recusar (#concluir_para_ia!) decide de novo.
+  # Quem cuida (Crm::Entrega::QuemCuida), menos quem deixou um convite desta espera vencer (#1694; todos: ver
+  # #pela_regra), ou só o dono quando
+  # a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem memória entre chamadas: a nova tentativa depois de o
+  # agente de IA recusar (#concluir_para_ia!) decide de novo.
   def fila(card, settings)
     @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
   end
@@ -234,7 +244,7 @@ class Crm::Entrega
 
     convite_como_passagem!(plano)
     ate = Time.current + plano.settings[:invite_ttl_seconds].to_i.seconds
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate, card: (plano.card if @pelo_card))
+    Marca.marcar(@conversation, modo: Marca::CONVITE, motivo: @motivo, ate: ate, convidado: plano.pessoa, card: (plano.card if @pelo_card))
     @conversation.save! if gravar && @conversation.changed?
     resultado(:convidado, plano)
   end

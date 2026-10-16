@@ -23,6 +23,8 @@ import WhatsappSwitchAccount from './channels/whatsapp/WhatsappSwitchAccount.vue
 import InboxHealthAPI from 'dashboard/api/inboxHealth';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
+// #1619: com a flag horario_unico_caixa, o horário do canal do fork no lugar do WeeklyAvailability.
+import HorarioDoCanal from './components/HorarioDoCanal.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import ConnectionPage from './settingsPage/ConnectionPage.vue';
@@ -81,6 +83,7 @@ export default {
     SettingsFieldSection,
     SettingsAccordion,
     WeeklyAvailability,
+    HorarioDoCanal,
     SenderNameExamplePreview,
     LockToSingleConversationPreview,
     MicrosoftReauthorize,
@@ -160,6 +163,12 @@ export default {
     },
     isWahaInbox() {
       return Boolean(this.inbox?.waha_provider);
+    },
+    isHorarioUnicoCaixa() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.HORARIO_UNICO_CAIXA
+      );
     },
     isInboundEmailEnabled() {
       return this.isFeatureEnabledonAccount(
@@ -1531,7 +1540,8 @@ export default {
           <PreChatFormSettings :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'business-hours'">
-          <WeeklyAvailability :inbox="inbox" />
+          <HorarioDoCanal v-if="isHorarioUnicoCaixa" :inbox="inbox" />
+          <WeeklyAvailability v-else :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'bot-configuration'">
           <AbaAgenteDeIa v-if="agenteIaPorCaixa" :inbox="inbox" />

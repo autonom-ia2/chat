@@ -89,9 +89,14 @@ module Crm::Subjects::VariosAssuntos
   end
 
   # Como no principal: o assunto atual ainda sem nome, no mesmo funil, ganha o nome em vez de nascer outro card.
+  # Também como no principal (C36, #1712): o card sem nome que a caixa criou na chegada vai para o funil do pedido e ganha
+  # o nome, em vez de sobrar vazio quando o principal fica em dúvida.
   def criar_ou_dar_nome(pipeline, titulo)
     atual = @question.atual
     return dar_nome(atual.reload, titulo) if @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
+
+    @chegada = card_da_chegada(pipeline)
+    return adotar_a_chegada(atual.reload, titulo, pipeline) if @chegada
 
     criar(pipeline, titulo)
   end

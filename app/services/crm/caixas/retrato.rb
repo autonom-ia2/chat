@@ -35,7 +35,7 @@ class Crm::Caixas::Retrato
       crm_enabled: ligada,
       pipeline_ids: ligada ? links.fetch(inbox.id, []) : [],
       default_stage_id: setting&.default_stage_id,
-      subject_ai_mode: setting&.subject_ai_mode || 'off',
+      subject_ai_mode: setting&.subject_ai_mode || Crm::Caixas::IaDeAssunto.padrao(@account),
       auto_create_card: setting&.auto_create_card? || false,
       visibility_mode: setting&.visibility_mode || 'all_inbox_cards',
       agent_bot: robo(inbox),

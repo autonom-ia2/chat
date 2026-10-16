@@ -30,8 +30,11 @@ module Crm::Entrega::Marca
   # `falha`: por que ainda não foi entregue. `desde` e `avisado_em` sobrevivem às novas tentativas, para medir a espera
   # e avisar uma vez só; `tentado_em` é da fila (HandoffDrainJob).
   # `detalhes`: `sugestao` (o nome que a IA sugeriu, para a próxima tentativa), `dono` (a pessoa a quem a entrega é
-  # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela), `ate` (o fim do convite) e `card` (o card cuja
-  # regra vale, quando o pedido foi ligado a um assunto que não é o foco, #1693).
+  # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela), `ate` (o fim do convite), `convidado` (quem
+  # foi convidado) e `venceram` (ids de quem deixou um convite desta espera vencer, #1694; sobrevive às novas
+  # tentativas, como `desde`). `decidido_em`: com `venceram`, quando a regra decidiu por último (a fila espaça a espera sem ninguém); sem
+  # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
+  # não é o foco (#1693).
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -44,9 +47,16 @@ module Crm::Entrega::Marca
       'sugestao' => detalhes[:sugestao].presence,
       'dono_id' => detalhes[:dono]&.id,
       'ate' => detalhes[:ate]&.iso8601,
+      'convidado_id' => detalhes[:convidado]&.id,
       'card_id' => detalhes[:card]&.id
-    }.compact
+    }.merge(vencimentos(anterior, detalhes[:venceram])).compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
+  end
+
+  # Quem deixou vencer (sobrevive às tentativas) e, com isso, quando a regra decidiu por último.
+  def vencimentos(anterior, venceram)
+    venceram = (venceram || anterior['venceram']).presence
+    { 'venceram' => venceram, 'decidido_em' => venceram && Time.current.iso8601 }
   end
 
   # O prazo do convite conta do CONVITE: virar convite recomeça a contagem; o resto (inclusive convite → segurando)
@@ -55,6 +65,12 @@ module Crm::Entrega::Marca
     return Time.current.iso8601 if modo == CONVITE && anterior['modo'] != CONVITE
 
     anterior['desde'].presence || Time.current.iso8601
+  end
+
+  # O card cuja regra vale (#1693), da conta da conversa; a Entrega confere se ele segue aberto nela.
+  def card(conversation)
+    id = dados(conversation)&.dig('card_id')
+    conversation.account.crm_cards.find_by(id: id) if id.present?
   end
 
   def tirar(conversation)
@@ -74,6 +90,11 @@ module Crm::Entrega::Marca
   def avisado!(conversation)
     valor = (dados(conversation) || {}).merge('avisado_em' => Time.current.iso8601)
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
+  end
+
+  # Um convite esperando a convidada pegar, ainda no prazo.
+  def convite_aberto?(conversation)
+    dados(conversation)&.dig('modo') == CONVITE && !convite_vencido?(conversation)
   end
 
   def convite_vencido?(conversation, agora: Time.current)

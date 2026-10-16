@@ -242,6 +242,32 @@ describe('useCartoes', () => {
     listas['inboxes/getInboxes'] = [{ id: 1 }, { id: 2 }];
   });
 
+  it('"Agentes externos" some só onde a aba Agente de IA por caixa está ligada (#1660), sem cair em "Outros"', () => {
+    const comRobos = [
+      ...CONFIGURACOES,
+      folha('Settings Agent Bots', 'agent_bots'),
+    ];
+    const temRobos = () =>
+      montar()
+        .grupos.value.flatMap(grupo => grupo.cartoes.map(c => c.id))
+        .includes('ROBOS');
+    const conta = ligado => {
+      listas.getCurrentAccountId = 7;
+      listas['accounts/getAccount'] = () => ({
+        autonomia_agente_ia_por_caixa: ligado,
+      });
+    };
+    conta(false);
+    publicar(comRobos);
+    expect(temRobos()).toBe(true);
+    conta(true);
+    publicar(comRobos);
+    expect(temRobos()).toBe(false);
+    expect(montar().grupos.value.at(-1).id).not.toBe('OUTROS');
+    delete listas['accounts/getAccount'];
+    delete listas.getCurrentAccountId;
+  });
+
   it('configuração nova sem cartão aparece em "Outros"', () => {
     publicar([...CONFIGURACOES, folha('Settings Coisa Nova', 'coisa_nova')]);
     const grupos = montar().grupos.value;
