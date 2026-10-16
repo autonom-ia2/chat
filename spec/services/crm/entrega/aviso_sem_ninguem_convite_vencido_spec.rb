@@ -40,7 +40,7 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
   end
 
   # Pega: o convite vencia e ninguém sabia que a conversa ficou sem pessoa.
-  it 'convite vencido: tira a marca e avisa os administradores da caixa uma vez só', :aggregate_failures do
+  it 'convite vencido: tira a marca do convite e avisa os administradores da caixa uma vez só', :aggregate_failures do
     expect(Crm::Entrega::Marca.dados(conversa.reload)).to include('modo' => Crm::Entrega::Marca::CONVITE)
 
     travel 2.hours do
@@ -48,7 +48,8 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
       Crm::Ai::HandoffDrainJob.perform_now
     end
 
-    expect(Crm::Entrega::Marca.dados(conversa.reload)).to be_nil
+    # O robô tinha pedido pessoa: vencido o convite, a regra roda de novo (#1694) e, dentro do intervalo, segura.
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).to include('modo' => Crm::Entrega::Marca::SEGURANDO)
     expect(avisos_ao_admin).to eq(1)
     expect(atividades_de_aviso.count).to eq(1)
     expect(atividades_de_aviso.first.payload).to include('reason' => described_class::CONVITE_VENCIDO)
@@ -112,7 +113,7 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
   end
 
   # Pega: uma falha no aviso desfazer a saída da marca e prender a conversa fora do rodízio, tentada a cada rodada.
-  it 'aviso falha: a marca sai mesmo assim e o erro vai para o rastreador', :aggregate_failures do
+  it 'aviso falha: a marca do convite sai mesmo assim e o erro vai para o rastreador', :aggregate_failures do
     allow(NotificationBuilder).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
     allow(ChatwootExceptionTracker).to receive(:new).and_call_original
 
@@ -120,7 +121,7 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
       Crm::Ai::HandoffDrainJob.perform_now
     end
 
-    expect(Crm::Entrega::Marca.dados(conversa.reload)).to be_nil
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).not_to include('modo' => Crm::Entrega::Marca::CONVITE)
     expect(ChatwootExceptionTracker).to have_received(:new)
   end
 
