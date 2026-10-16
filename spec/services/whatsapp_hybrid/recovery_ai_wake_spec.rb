@@ -13,8 +13,10 @@ describe WhatsappHybrid::RecoveryAiWake do
   end
   let(:our_bot) { create(:agent_bot, account: account) }
 
+  let(:agent_inbox) { Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: our_bot) }
+
   before do
-    Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: our_bot)
+    allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox)
     message.update_columns(created_at: recovered_at) # rubocop:disable Rails/SkipsModelValidations
   end
 
@@ -28,7 +30,7 @@ describe WhatsappHybrid::RecoveryAiWake do
 
   shared_examples 'calls the AI once' do
     it 'chama a IA uma vez' do
-      expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
+      expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle').exactly(:once)
     end
   end
 
@@ -180,6 +182,37 @@ describe WhatsappHybrid::RecoveryAiWake do
       travel_to(recovered_at + 5.minutes) { described_class.call(message.reload) }
 
       expect(Autonomia::Agents::Operate::NaoSuportada).not_to have_received(:tarde)
+    end
+  end
+
+  describe 'marca do turno (debounce) não regride' do
+    def marca
+      conversation.reload.additional_attributes.to_h.dig('autonomia_debounce', 'pending_message_id')
+    end
+
+    def marcar!(id)
+      conversation.update!(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => id, 'at' => 1.0 } })
+    end
+
+    it 'sem marca ou com marca mais velha: grava a marca desta mensagem e agenda o settle' do
+      marcar!(message.id - 1)
+
+      expect { wake }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle').exactly(:once)
+      expect(marca).to eq(message.id)
+    end
+
+    it 'corrida: a marca já aponta para uma mensagem mais nova; não regride e a IA não é acordada de novo' do
+      marcar!(message.id + 1000)
+
+      expect { wake }.not_to have_enqueued_job(reply_job)
+      expect(marca).to eq(message.id + 1000)
+    end
+
+    it 'sem agente que responderia: nem grava a marca' do
+      allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(nil)
+
+      expect { wake }.not_to have_enqueued_job(reply_job)
+      expect(marca).to be_nil
     end
   end
 end

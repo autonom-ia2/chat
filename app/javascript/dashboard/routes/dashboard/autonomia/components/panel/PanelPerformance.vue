@@ -158,6 +158,8 @@ const REASON_LABEL_KEYS = {
     'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_acordar_falhou',
   recuperacao_passagem_falhou:
     'AGENTS.PERFORMANCE.REASONS.CODES.recuperacao_passagem_falhou',
+  recuperada_so_contexto:
+    'AGENTS.PERFORMANCE.REASONS.CODES.recuperada_so_contexto',
   other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
 };
 const reasonLabel = reason =>

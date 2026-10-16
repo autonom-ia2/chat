@@ -40,7 +40,7 @@ const modelo = defineModel('modelo', { type: Object, default: null });
 const P = 'NOVA_CONVERSA.MENSAGEM';
 const pronta = ref(null);
 
-const modelosDaCaixa = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
+const modelosDaCaixa = useMapGetter('inboxes/getConversationWhatsAppTemplates');
 const modelos = computed(() => modelosDaCaixa.value(props.canal.id));
 
 const livre = computed(() => props.tipo === TIPOS.WHATSAPP_LIVRE);

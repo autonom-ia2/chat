@@ -32,12 +32,15 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
 
     WhatsappHybrid::RecoveryAiWake.call(mensagem)
     rodar_turno!
-    WhatsappHybrid::RecoveryAiWake.call(mensagem.reload) # nova tentativa não responde de novo
-
-    rodar_turno!
     expect(respostas.count).to eq(1)
     expect(respostas.last.content_attributes['autonomia_reply_to_message_id']).to eq(mensagem.id)
     expect(posse_de(mensagem)).to be_present
+
+    # Outro settle do mesmo turno (job_id diferente) logo depois: a posse barra, nada novo sai, e fica a telemetria.
+    linhas = linhas_do_log { settle(mensagem) }
+
+    expect(respostas.count).to eq(1)
+    expect(linhas.join).to include("turno_em_curso conv=#{conversation.id} msg=#{mensagem.id}")
   end
 
   it 'turno_superado: o cliente escreve durante a IA; a resposta da recuperada é descartada e só a mais nova responde' do

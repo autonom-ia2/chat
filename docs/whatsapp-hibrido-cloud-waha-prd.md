@@ -2158,8 +2158,15 @@ motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?do
 Autonom.ia) e na conta 1 (stack Hub2You). Desligar é o mesmo caminho; mensagens já pendentes falham com `disabled` na
 próxima tentativa.
 
-**Fase 2 dos Agentes (#1627, mesclado em 16/10):** a recuperada passa pela posse do turno e responde uma vez; se o
-cliente escreve durante a chamada à IA, `turno_superado` descarta a resposta da recuperada e só a mais nova responde
-(`spec/jobs/autonomia/agents/operate/reply_job_recuperacao_fase2_spec.rb`). Eventos: o #1627 usa o 8, o #1489 usa 10,
-11, 12 e 13 (o 9 não é usado). `so_contexto_interno` solta a posse como o `vazio`. A flag `whatsapp_hybrid_recovery`
-fica no bit 30, no fim do `features.yml` da main de 16/10.
+**Fase 2 dos Agentes (#1627 e #1669, mesclados em 16/10):**
+- A recuperada passa pela posse do turno e responde uma vez; outro settle do mesmo turno é barrado (`turno_em_curso`).
+  Se o cliente escreve durante a chamada à IA, `turno_superado` descarta a resposta da recuperada e só a mais nova
+  responde (`spec/jobs/autonomia/agents/operate/reply_job_recuperacao_fase2_spec.rb`).
+- Acordar a IA grava a marca do turno (debounce) só se ela não apontar para uma mensagem mais nova (`jsonb_set`
+  condicional); se apontar, a IA não é acordada pela mensagem velha e o turno da nova cobre as duas.
+- Com a equipe na janela (#1669), o histórico vai pelo `HistoricoDaEquipe` e a linha de contexto da recuperada vai
+  junto. A resposta passa pelas duas limpezas (marca da equipe e linha de contexto).
+- `so_contexto_interno` solta a posse como o `vazio` e grava `skipped_recuperada_so_contexto` (aba Desempenho).
+- Eventos: o #1627 usa o 8, o #1669 o 9 e o #1489 o 10 a 14.
+- A flag `whatsapp_hybrid_recovery` fica no bit 30, no fim do `features.yml` da main de 16/10. Na conta 1 (Fase 2) só
+  liga depois do #1637 (EsperaDoAssunto contando o teto a partir de max(created_at, hybrid_recovered_at)).

@@ -14,7 +14,7 @@ module Autonomia
         # config estão incompletas — o motivo fica no evento com o próprio nome, não colapsado em `other`.
         ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule
                              escolhas_incompletas assunto_atrasou recuperada_tarde recuperacao_falhou
-                             recuperacao_acordar_falhou recuperacao_passagem_falhou other].freeze
+                             recuperacao_acordar_falhou recuperacao_passagem_falhou recuperada_so_contexto other].freeze
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
@@ -23,6 +23,20 @@ module Autonomia
             agent: agent, conversation: conversation, event_type: :"skipped_#{reason}",
             handoff_reason: curate_code(reason)
           )
+        end
+
+        # #1669: a IA calou porque uma pessoa da equipe respondeu a mensagem `message_id` do cliente. Ids e a etapa (rótulo
+        # nosso), nunca nome nem texto. Uma vez por mensagem do cliente, conferido antes de gravar; sem índice único (sem
+        # migration), uma duplicata rara na corrida é aceita.
+        def self.silenciado_pessoa_respondeu(agent:, conversation:, message_id:, etapa:)
+          return if message_id.blank?
+          return if agent.events.silenciado_pessoa_respondeu.exists?(conversation_id: conversation&.id, message_id: message_id)
+
+          create!(agent: agent, conversation: conversation, event_type: :silenciado_pessoa_respondeu,
+                  message_id: message_id, metadata: { 'etapa' => etapa.to_s })
+        rescue ActiveRecord::ActiveRecordError => e
+          Rails.logger.warn("[autonomia][events] log_skipped agent=#{agent&.id} #{e.class}")
+          nil
         end
 
         # `message` = a Message outgoing postada (liga o evento ao feedback do atendente).

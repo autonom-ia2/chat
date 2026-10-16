@@ -62,7 +62,7 @@ const templatesGetter = vi.fn(() => []);
 const mountGlobal = {
   provide: {
     store: {
-      getters: { 'inboxes/getFilteredWhatsAppTemplates': templatesGetter },
+      getters: { 'inboxes/getConversationWhatsAppTemplates': templatesGetter },
     },
   },
 };

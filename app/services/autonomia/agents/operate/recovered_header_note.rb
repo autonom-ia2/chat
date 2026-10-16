@@ -9,13 +9,24 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
     'media' => '[contexto interno, não repetir ao cliente: a mensagem tinha um arquivo que não foi lido]'
   }.freeze
   SILENCE_REASON = 'so_contexto_interno'.freeze
+  SKIPPED_REASON = 'recuperada_so_contexto'.freeze
 
   module_function
 
-  # O texto da mensagem para o histórico da IA.
-  def history_content(message)
-    note = NOTES[message.content_attributes.to_h['hybrid_recovery_header']]
-    [message.content.to_s, note].compact.join("\n")
+  # Os itens do histórico (`role`, `content`), um por mensagem e na mesma ordem, com a linha de contexto acrescentada
+  # ao da mensagem recuperada. Vale para o histórico de sempre e para o da equipe (HistoricoDaEquipe, #1669).
+  def com_contexto(itens, messages)
+    itens.zip(messages).map do |item, message|
+      note = message && NOTES[message.content_attributes.to_h['hybrid_recovery_header']]
+      note ? item.merge(content: [item[:content].to_s, note].join("\n")) : item
+    end
+  end
+
+  # Evento do agente (`skipped_recuperada_so_contexto`), para o silêncio por esse motivo aparecer na aba Desempenho.
+  def registrar_silencio(motivo, agent:, conversation:)
+    return unless motivo == SILENCE_REASON
+
+    ::Autonomia::Agents::Operate::EventLogger.skipped(agent: agent, conversation: conversation, reason: SKIPPED_REASON)
   end
 
   # A resposta do modelo sem as linhas de contexto. Sem linha nenhuma, o mesmo objeto.
@@ -32,10 +43,12 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
   end
 
   # O motivo do silêncio quando a resposta era só a linha de contexto; nil nos outros casos.
+  # Compara com a resposta crua: só quando ela trazia a linha e, sem ela, não sobrou nada.
   def silence_reason(answered, delivered)
     return if answered.nil? || answered.reply.blank?
+    return unless NOTES.values.any? { |note| answered.reply.to_s.include?(note) }
 
-    SILENCE_REASON if delivered.reply.blank?
+    SILENCE_REASON if delivered.nil? || delivered.reply.blank?
   end
 
   # Tira a linha de cada trecho em que ela aparece, junta o espaço duplo que sobra ali e descarta o trecho vazio.

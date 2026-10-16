@@ -12,9 +12,12 @@ require 'rails_helper'
 # [x] spec do `turno_superado`: cliente manda outra durante a chamada à IA -> resposta da recuperada descartada e só a
 #     mais nova responde;
 # [x] rodar os specs do responder e do reply_job;
-# [x] eventos: o #1627 usa o 8 (skipped_assunto_atrasou); o #1489 usa 10, 11, 12 e 13 (9 sem uso);
+# [x] eventos: o #1627 usa o 8 (skipped_assunto_atrasou), o #1669 o 9 (silenciado_pessoa_respondeu); o #1489 usa 10,
+#     11, 12, 13 e 14 (skipped_recuperada_so_contexto);
 # [x] mantidas as duas pontas do enum (AgentEvent), do ALLOWED_REASONS (EventLogger) e da posse no responder
 #     (`so_contexto_interno` entra nos SILENCIOS_DE_FALHA, como o `vazio`: solta a posse).
+# [ ] ligar a flag `whatsapp_hybrid_recovery` na conta 1 (Fase 2) só depois do #1637 (EsperaDoAssunto contando o teto a
+#     partir de max(created_at, hybrid_recovered_at)); nas contas sem Fase 2, sem essa trava.
 describe Autonomia::Agents::Operate::ReplyJob do
   include_context 'with a pending unsupported hybrid message'
 
@@ -42,8 +45,8 @@ describe Autonomia::Agents::Operate::ReplyJob do
     WhatsappHybrid::UnsupportedRecovery.new(message).attempt!
   end
 
-  it 'a recuperação enfileira a fase trigger do ReplyJob para a mensagem recuperada' do
-    expect { recover! }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
+  it 'a recuperação grava a marca do turno e agenda o settle do ReplyJob para a mensagem recuperada' do
+    expect { recover! }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle').exactly(:once)
   end
 
   it 'trigger, debounce e settle: o Responder responde uma vez, à mensagem recuperada' do

@@ -6,6 +6,13 @@ describe WhatsappHybrid::UnsupportedRecovery do
   include_context 'with a pending unsupported hybrid message'
 
   let(:reply_job) { Autonomia::Agents::Operate::ReplyJob }
+  let(:agent_inbox) do
+    agent = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom', status: :active,
+                                             enabled: true, instruction: 'Atenda o cliente.')
+    Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: create(:agent_bot, account: account))
+  end
+
+  before { allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox) }
 
   def attempt!
     described_class.new(message).attempt!
@@ -19,7 +26,7 @@ describe WhatsappHybrid::UnsupportedRecovery do
     it 'põe o texto do modelo na própria mensagem, tira o aviso e chama a IA uma vez' do
       stub_engine
 
-      expect { expect(attempt!).to eq(:done) }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
+      expect { expect(attempt!).to eq(:done) }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle').exactly(:once)
 
       expect(message.reload.content).to eq("#{template_body}\n\n1. Já paguei")
       expect(attributes).not_to have_key('is_unsupported')
@@ -299,7 +306,7 @@ describe WhatsappHybrid::UnsupportedRecovery do
       stub_engine(engine_message('hasMedia' => true,
                                  '_data' => { 'Message' => { 'imageMessage' => { 'caption' => 'Foto do produto' } } }))
 
-      expect { attempt! }.to have_enqueued_job(reply_job).with(conversation.id, message.id).exactly(:once)
+      expect { attempt! }.to have_enqueued_job(reply_job).with(conversation.id, message.id, 'settle').exactly(:once)
 
       expect(message.reload.content).to eq('Foto do produto')
       expect(attributes).not_to have_key('is_unsupported')

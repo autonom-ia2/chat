@@ -17,4 +17,6 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::TemplateParameterConverterService, Whatsapp::Templates::ForkParamKeys)
   # chat#1337: aviso da Meta sobre modelo (situação, qualidade, tipo) vai para o job do fork, com assinatura obrigatória.
   prepend_once.call(Webhooks::WhatsappController, Whatsapp::Templates::WebhookEntry)
+  # chat#1703: modelo de produto, carrossel e afins sem o que a Meta pede falham na conversa, sem chamar a Meta.
+  prepend_once.call(Whatsapp::SendOnWhatsappService, Whatsapp::Templates::ConversationSendGuard)
 end

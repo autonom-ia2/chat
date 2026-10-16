@@ -85,7 +85,7 @@ const mountStep = async (formValue = form(), textSetup = SETUP) => {
     global: {
       provide: {
         store: {
-          getters: { 'inboxes/getFilteredWhatsAppTemplates': () => [] },
+          getters: { 'inboxes/getConversationWhatsAppTemplates': () => [] },
         },
       },
     },
