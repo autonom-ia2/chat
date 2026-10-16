@@ -220,4 +220,63 @@ RSpec.describe 'CRM Caixas no CRM API', type: :request do
     get "#{url}/#{other_inbox.id}", headers: auth_headers(admin)
     expect(response).to have_http_status(:not_found)
   end
+
+  # #1676: a IA de assunto em Automática por padrão, atrás da flag do #1675 (contas 1, 16 e 18 por enquanto).
+  describe 'IA de assunto por padrão (#1676)' do
+    def setting
+      account.crm_inbox_settings.find_by(inbox: inbox)
+    end
+
+    def triagem
+      [pessoa(ana, triage: true, pipeline_ids: [vendas.first.id, pos_venda.first.id])]
+    end
+
+    def caixa_listada
+      inbox
+      get url, headers: auth_headers(admin)
+      response.parsed_body.dig('payload', 'caixas').find { |item| item.dig('inbox', 'id') == inbox.id }
+    end
+
+    context 'with the crm_avaliar_toda_mensagem flag' do
+      before { account.enable_features!(Crm::Conversations::CardEmFoco::FLAG) }
+
+      it 'saves a single-pipeline inbox with the subject AI on Automatic, in "chegou" and by hand', :aggregate_failures do
+        salvar(pipeline_ids: [vendas.first.id], modo: 'chegou', people: [])
+        expect(response).to have_http_status(:ok)
+        expect(setting).to have_attributes(auto_create_card: true, subject_ai_mode: 'auto')
+
+        salvar(pipeline_ids: [vendas.first.id], modo: 'off', people: [])
+        expect(setting).to have_attributes(auto_create_card: false, subject_ai_mode: 'auto')
+      end
+
+      it 'keeps what the screen sent with several pipelines, and off without pipelines', :aggregate_failures do
+        salvar(pipeline_ids: [vendas.first.id, pos_venda.first.id], modo: 'suggest', people: triagem)
+        expect(setting.subject_ai_mode).to eq('suggest')
+
+        salvar(pipeline_ids: [vendas.first.id, pos_venda.first.id], modo: 'off', people: triagem)
+        expect(setting.subject_ai_mode).to eq('off')
+
+        salvar(pipeline_ids: [], modo: 'off', people: [])
+        expect(setting).to have_attributes(crm_enabled: false, subject_ai_mode: 'off')
+      end
+
+      it 'shows Automatic for an inbox without CRM settings, and the saved mode for the others (no data change)' do
+        expect(caixa_listada['subject_ai_mode']).to eq('auto')
+
+        account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, subject_ai_mode: :off)
+        expect(caixa_listada['subject_ai_mode']).to eq('off')
+        expect(setting.reload.subject_ai_mode).to eq('off')
+      end
+    end
+
+    context 'without the flag' do
+      it 'keeps the subject AI off with one pipeline and shows off for an inbox without settings, as before',
+         :aggregate_failures do
+        expect(caixa_listada['subject_ai_mode']).to eq('off')
+
+        salvar(pipeline_ids: [vendas.first.id], modo: 'chegou', people: [])
+        expect(setting.subject_ai_mode).to eq('off')
+      end
+    end
+  end
 end

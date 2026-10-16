@@ -18,8 +18,12 @@ module Crm
         # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa.
         return Result.new(status: :skipped, error: 'not_current_subject') unless @trigger == 'manual' || ::Crm::Cards::CurrentSubject.card?(@card)
 
+        # O funil do card no começo: a resposta do modelo é sobre as etapas DELE (#1711).
+        @pipeline_inicial = @card.pipeline_id
         classification = classify_stage
         result = apply_classification(classification)
+        return result if @pipeline_mudou
+
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result)
         run_handoff(classification)
@@ -47,6 +51,8 @@ module Crm
       def debounced?
         last_evaluated_at = ai_metadata['last_evaluated_at']
         return false if last_evaluated_at.blank?
+        # O card mudou de funil depois da última avaliação (a IA de assunto o levou, #1711): ela era sobre outras etapas.
+        return false if ai_metadata['last_evaluated_pipeline_id'].present? && ai_metadata['last_evaluated_pipeline_id'].to_i != @card.pipeline_id
 
         Time.parse(last_evaluated_at) > Config::DEBOUNCE_SECONDS.seconds.ago
       rescue ArgumentError
@@ -128,6 +134,8 @@ module Crm
 
       def apply_classification(classification)
         touch_evaluation_metadata(classification)
+        return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
+
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
         return Result.new(status: :skipped, error: 'same_stage') if target_stage.id == @card.stage_id
@@ -200,9 +208,15 @@ module Crm
       def touch_evaluation_metadata(classification)
         # `with_lock` relê o card do banco (lock!), com o carimbo que chegou durante a avaliação.
         @card.with_lock do
+          # #1711: o card mudou de funil enquanto o modelo pensava (a IA de assunto o levou para o funil do pedido). A
+          # resposta é sobre as etapas do funil antigo: descartada, sem carimbo, para a avaliação nova não ser pulada.
+          @pipeline_mudou = @pipeline_inicial.present? && @card.pipeline_id != @pipeline_inicial
+          next if @pipeline_mudou
+
           metadata = (@card.metadata || {}).deep_dup
           metadata['ai'] = (metadata['ai'] || {}).merge(
             'last_evaluated_at' => Time.current.iso8601,
+            'last_evaluated_pipeline_id' => @card.pipeline_id,
             'last_model_used' => classification[:model_used],
             'last_trigger' => @trigger
           )
@@ -212,26 +226,9 @@ module Crm
         end
       end
 
-      # Auto-fill the deal value detected in the conversation, writing value_cents
-      # directly (product decision: "autopreenche sempre"). The ONLY guard is a
-      # human takeover: once someone edits the value manually (value_source =
-      # 'human'), a later eval must never undo that correction.
-      # #1498: funil de Atender não tem valor de venda; a IA não preenche (a Cobrança guarda o valor que a pessoa digita).
+      # O valor achado na conversa (Crm::Ai::ValorAchado).
       def apply_ai_value!(ai_metadata, value, attributes)
-        return unless @card.pipeline&.counts_as_sale?
-
-        value = value.respond_to?(:with_indifferent_access) ? value.with_indifferent_access : value
-        return if value.blank? || value[:amount_cents].blank? || value[:currency].blank?
-        return if ai_metadata['value_source'] == 'human'
-
-        amount = value[:amount_cents].to_i
-        currency = value[:currency].to_s.upcase
-        return if amount == @card.value_cents && currency == @card.currency
-
-        attributes[:value_cents] = amount
-        attributes[:currency] = currency
-        ai_metadata['value_source'] = 'ai'
-        ai_metadata['value_filled_at'] = Time.current.iso8601
+        ValorAchado.aplicar!(@card, ai_metadata, value, attributes)
       end
     end
   end
