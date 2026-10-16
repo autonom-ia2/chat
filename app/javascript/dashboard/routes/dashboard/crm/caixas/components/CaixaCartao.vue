@@ -25,7 +25,7 @@ import {
   portaDa,
   temAgentesIa,
 } from '../helpers/agentesIa';
-import { chaveDoModo, useIaDeAssunto } from '../helpers/iaDeAssunto';
+import { chaveDoModo, iaSalva } from '../helpers/modoDoAssunto';
 
 // #1149 — uma caixa na lista: o que chega, quem cuida e o que o sistema faz
 // sozinho, em frases. O botão abre a caixa nas etapas.
@@ -79,13 +79,13 @@ const areas = computed(() =>
 const triagem = computed(() =>
   juntar(quemFazTriagem(props.caixa).map(primeiroNome), locale.value)
 );
-// #1676 — com a IA de assunto na caixa de 1 funil, o mesmo texto da etapa 3.
-const iaDeAssunto = useIaDeAssunto();
+// #1676 — o que a caixa faz hoje: com a IA de assunto gravada na caixa de 1
+// funil, o mesmo texto da etapa 3.
 const sozinho = computed(() => {
   const chave = chaveDoModo(
     modoDaCaixa(props.caixa),
     umFunilSo(props.caixa, props.funis),
-    iaDeAssunto.value
+    iaSalva(props.caixa)
   );
   return t(`CRM_CAIXAS.MODO_RESUMO.${chave}`);
 });

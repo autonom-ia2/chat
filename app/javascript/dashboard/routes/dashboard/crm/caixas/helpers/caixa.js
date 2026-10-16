@@ -1,7 +1,7 @@
 // #1149 — regras da tela Caixas no CRM, sem Vue: o que cada pessoa vê, o que o
 // sistema faz sozinho e o que muda ao salvar. A tela só mostra.
 
-import { chaveDoModo } from './iaDeAssunto';
+import { chaveDoModo, iaSalva } from './modoDoAssunto';
 
 export const CORES_DE_FUNIL = [
   'bg-n-blue-9',
@@ -179,11 +179,12 @@ export const mudancas = (
   });
 
   // #1676: compara o que o sistema faz, não o valor gravado. Com a IA de
-  // assunto em 1 funil, 'off' de 1 funil é o mesmo que 'auto' de vários.
+  // assunto em 1 funil, 'off' de 1 funil é o mesmo que 'auto' de vários. Antes
+  // de salvar vale a IA de assunto gravada na caixa; depois, a flag da conta.
   const modoAntes = chaveDoModo(
     antes.modo,
     umFunilSo(antes, funis),
-    iaDeAssunto
+    iaSalva(antes)
   );
   const modoDepois = chaveDoModo(
     depois.modo,

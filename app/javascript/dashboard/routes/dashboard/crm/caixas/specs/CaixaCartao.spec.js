@@ -73,19 +73,24 @@ describe('CaixaCartao', () => {
     conta.ia = false;
   });
 
+  // O cartão diz o que a caixa faz hoje: vale a IA de assunto gravada, não a
+  // flag (caixa de antes da flag segue sem a IA até ser salva ou virada).
   it.each([
-    [false, true, 'O card nasce assim que a conversa chega.'],
-    [true, true, 'O card nasce com a primeira mensagem, e a IA dá o nome.'],
-    [false, false, 'Nada acontece sozinho: a equipe cria o card.'],
-    [true, false, 'O sistema cria o card quando entende o assunto.'],
+    ['off', true, 'O card nasce assim que a conversa chega.'],
+    ['auto', true, 'O card nasce com a primeira mensagem, e a IA dá o nome.'],
+    ['off', false, 'Nada acontece sozinho: a equipe cria o card.'],
+    ['auto', false, 'O sistema cria o card quando entende o assunto.'],
   ])(
-    'one pipeline, subject AI flag %s, card on arrival %s: says what the system does (#1676)',
-    (ia, chegou, frase) => {
-      conta.ia = ia;
+    'one pipeline, saved subject AI %s, card on arrival %s: says what the system does (#1676)',
+    (modo, chegou, frase) => {
+      conta.ia = true;
+      const caixa = {
+        ...CAIXA,
+        subject_ai_mode: modo,
+        auto_create_card: chegou,
+      };
 
-      expect(render({ ...CAIXA, auto_create_card: chegou }).text()).toContain(
-        frase
-      );
+      expect(render(caixa).text()).toContain(frase);
     }
   );
 

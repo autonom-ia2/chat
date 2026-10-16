@@ -99,6 +99,13 @@ describe('EtapaSozinho', () => {
     expect(wrapper.find('[data-sem-ia]').exists()).toBe(true);
   });
 
+  it('with the flag, "as soon as it arrives" also warns when the pipeline AI is off', () => {
+    conta.ia = true;
+    const wrapper = render({ funisSemIa: ['Vendas'] });
+
+    expect(wrapper.find('[data-sem-ia]').exists()).toBe(true);
+  });
+
   it('without the flag, one pipeline never shows the pipeline AI warning', () => {
     const wrapper = render({ modo: 'off', funisSemIa: ['Vendas'] });
 

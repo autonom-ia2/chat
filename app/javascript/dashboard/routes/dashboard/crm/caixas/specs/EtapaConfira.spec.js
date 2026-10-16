@@ -84,6 +84,26 @@ describe('EtapaConfira', () => {
     }
   );
 
+  it('with the flag, saving an inbox still without the subject AI lists that it turns on (#1676)', () => {
+    ia.ligada = true;
+    const muda = () =>
+      render(false)
+        .findAll('li')
+        .map(item => item.text())
+        .join(' ');
+
+    expect(muda()).toContain(
+      'O card nasce com a primeira mensagem, e a IA dá o nome.'
+    );
+
+    CAIXA.subject_ai_mode = 'auto';
+    try {
+      expect(muda()).not.toContain('A partir de agora');
+    } finally {
+      CAIXA.subject_ai_mode = 'off';
+    }
+  });
+
   it('lists the new mode in "What changes" with the subject AI text (#1676)', () => {
     ia.ligada = true;
     const wrapper = render(false, { modo: 'off' });

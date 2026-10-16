@@ -120,6 +120,19 @@ describe('caixa helpers', () => {
 
     // Vários funis "à mão" → 1 funil sem card na chegada: o valor gravado é o
     // mesmo ('off'), mas com a IA de assunto o sistema passa a criar o card.
+    // 1 funil gravado antes da flag (IA de assunto desligada), salvo sem mexer
+    // em nada: com a flag, salvar liga a IA, e a lista diz isso.
+    const umSemIa = { ...um, subject_ai_mode: 'off' };
+    expect(
+      mudancas(umSemIa, um, FUNIS, comIa).filter(item => item.chave === 'MODO')
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+    const umComIa = { ...um, subject_ai_mode: 'auto' };
+    expect(
+      mudancas(umComIa, umComIa, FUNIS, comIa).filter(
+        item => item.chave === 'MODO'
+      )
+    ).toEqual([]);
+
     const variosAMao = { ...varios, modo: 'off' };
     expect(
       mudancas(variosAMao, um, FUNIS, comIa).filter(
