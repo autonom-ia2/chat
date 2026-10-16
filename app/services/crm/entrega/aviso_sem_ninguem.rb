@@ -4,8 +4,14 @@
 #   - a conversa continua segura com o robô (não volta ao rodízio nativo, para não furar a regra do funil);
 #   - a marca passa a dizer "nao_conseguimos_chamar";
 #   - uma vez só: atividade no card e notificação aos administradores da caixa (ou da conta, se a caixa não tem nenhum).
+#
+# Convite que vence sem ninguém pegar (#1140, decisão 8 do Rodrigo em 16/10/2026): o mesmo aviso, com o motivo
+# "convite_vencido". Ex.: a IA do CRM convidou a Ana, ela não pegou em 24 h; os administradores da caixa são avisados
+# de que a conversa ficou sem pessoa. Uma vez só por convite: a fila (HandoffDrainJob) tira a marca do convite na mesma
+# trava em que avisa.
 class Crm::Entrega::AvisoSemNinguem
   FALHA = 'nao_conseguimos_chamar'.freeze
+  CONVITE_VENCIDO = 'convite_vencido'.freeze
   # Por que o convite não saiu. "intervalo" não entra: nesse caso um convite já saiu.
   FALHAS_DE_CONVITE = %w[convite_falhou ninguem_cuida nao_conseguimos_chamar].freeze
   EVENTO = 'entrega_sem_ninguem'.freeze
@@ -28,17 +34,26 @@ class Crm::Entrega::AvisoSemNinguem
     return if Crm::Entrega::Marca.dados(@conversation)&.dig('avisado_em').present?
 
     Crm::Entrega::Marca.avisado!(@conversation)
-    atividade!
-    administradores.each { |admin| notificar(admin) }
+    avisar_equipe!(FALHA)
+  end
+
+  # O convite venceu sem ninguém pegar. Quem chama tira a marca do convite sob a mesma trava (é o que faz sair uma vez).
+  def convite_vencido!
+    avisar_equipe!(CONVITE_VENCIDO)
   end
 
   private
 
-  def atividade!
+  def avisar_equipe!(motivo)
+    atividade!(motivo)
+    administradores.each { |admin| notificar(admin) }
+  end
+
+  def atividade!(motivo)
     return if @card.blank?
 
     Crm::ActivityLogger.new(card: @card, actor: nil, event_type: EVENTO, conversation: @conversation,
-                            payload: { reason: FALHA }).perform
+                            payload: { reason: motivo }).perform
   end
 
   def administradores
