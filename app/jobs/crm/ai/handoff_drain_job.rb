@@ -171,17 +171,33 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
                      dono: dono_da_marca(conversation, marca)).call
   end
 
-  # O convite venceu sem ninguém pegar: a marca sai (a conversa volta a poder ser pega pelo rodízio nativo) e os
-  # administradores da caixa são avisados (#1140, decisão 8). Relido sob a trava: quem pegou nesse meio tempo tirou a
-  # marca, e nada é avisado.
+  # O convite venceu sem ninguém pegar: a marca sai (o rodízio nativo deixa de pular a conversa) e os administradores
+  # da caixa são avisados (#1140, decisão 8). Relido sob a trava: quem pegou nesse meio tempo fica com a conversa, e a
+  # adiada guarda a marca (volta à fila quando reabre); nas duas, nada é avisado.
   def convite_vencido(conversation)
     conversation.with_lock do
-      next unless Crm::Entrega::Marca.convite_vencido?(conversation)
+      next unless Crm::Entrega::Marca.convite_vencido?(conversation) && esperando_pessoa?(conversation)
 
       Crm::Entrega::Marca.tirar(conversation)
       conversation.save!
-      Crm::Entrega::AvisoSemNinguem.new(conversation: conversation, card: Crm::Assunto.funil_atual(conversation)).convite_vencido!
+      avisar_convite_vencido(conversation)
     end
+  end
+
+  def esperando_pessoa?(conversation)
+    conversation.assignee_id.nil? && (conversation.open? || conversation.pending?)
+  end
+
+  # Savepoint próprio: uma falha no aviso não devolve a marca (a conversa ficaria presa fora do rodízio, tentada a cada
+  # rodada); fica no rastreador e no log, só com ids.
+  def avisar_convite_vencido(conversation)
+    card = Crm::Assunto.funil_atual(conversation)
+    Conversation.transaction(requires_new: true) do
+      Crm::Entrega::AvisoSemNinguem.new(conversation: conversation, card: card).convite_vencido!
+    end
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
+    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} aviso_convite_vencido_falhou erro=#{e.class}")
   end
 
   # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela

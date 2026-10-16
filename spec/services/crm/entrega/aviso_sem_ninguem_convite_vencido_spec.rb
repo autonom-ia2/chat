@@ -74,4 +74,64 @@ RSpec.describe Crm::Entrega::AvisoSemNinguem do
     expect(avisos_ao_admin).to eq(0)
     expect(atividades_de_aviso.count).to eq(0)
   end
+
+  # Pega: a atribuição que chega entre a consulta da fila e a trava (a marca ainda está lá) gerar aviso e tirar a marca.
+  it 'alguém pega entre a consulta e a trava: não avisa', :aggregate_failures do
+    original = Crm::Entrega::Marca.method(:convite_vencido?)
+    chamadas = 0
+    allow(Crm::Entrega::Marca).to receive(:convite_vencido?) do |*argumentos, **opcoes|
+      chamadas += 1
+      Conversation.where(id: conversa.id).update_all(assignee_id: ana.id) if chamadas == 1 # rubocop:disable Rails/SkipsModelValidations
+      original.call(*argumentos, **opcoes)
+    end
+
+    travel 2.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(conversa.reload.assignee_id).to eq(ana.id)
+    expect(avisos_ao_admin).to eq(0)
+  end
+
+  # Pega: a adiada perder a marca (ela volta à fila quando reabre) e gerar aviso.
+  it 'conversa adiada depois da consulta: guarda a marca e não avisa', :aggregate_failures do
+    original = Crm::Entrega::Marca.method(:convite_vencido?)
+    chamadas = 0
+    allow(Crm::Entrega::Marca).to receive(:convite_vencido?) do |*argumentos, **opcoes|
+      chamadas += 1
+      Conversation.where(id: conversa.id).update_all(status: Conversation.statuses[:snoozed]) if chamadas == 1 # rubocop:disable Rails/SkipsModelValidations
+      original.call(*argumentos, **opcoes)
+    end
+
+    travel 2.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).to include('modo' => Crm::Entrega::Marca::CONVITE)
+    expect(avisos_ao_admin).to eq(0)
+  end
+
+  # Pega: uma falha no aviso desfazer a saída da marca e prender a conversa fora do rodízio, tentada a cada rodada.
+  it 'aviso falha: a marca sai mesmo assim e o erro vai para o rastreador', :aggregate_failures do
+    allow(NotificationBuilder).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
+    allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+    travel 2.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).to be_nil
+    expect(ChatwootExceptionTracker).to have_received(:new)
+  end
+
+  # Pega: caixa sem administrador membro deixar o aviso sem destino (vale a conta, como no convite que nem saiu).
+  it 'caixa sem administrador: avisa os administradores da conta' do
+    InboxMember.find_by(inbox: inbox, user: admin).destroy!
+
+    travel 2.hours do
+      Crm::Ai::HandoffDrainJob.perform_now
+    end
+
+    expect(avisos_ao_admin).to eq(1)
+  end
 end
