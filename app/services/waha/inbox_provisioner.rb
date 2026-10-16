@@ -122,10 +122,7 @@ module Waha
         inboxId: inbox.id,
         inboxIdentifier: inbox.channel.identifier,
         locale: 'pt-BR',
-        # Prévia de link em alta qualidade (#1709): no conector, LinkPreview.HQ = 'HG' liga `linkPreview` e
-        # `linkPreviewHighQuality` no sendText (src/apps/chatwoot/consumers/inbox/message_created.ts), que o GOWS aceita.
-        # Só caixa nova; as existentes mudam numa operação separada.
-        linkPreview: 'HG',
+        linkPreview: 'OFF',
         groups: 'OFF',
         templates: {},
         commands: { server: true, queue: true },

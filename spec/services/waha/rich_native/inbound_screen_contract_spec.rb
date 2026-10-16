@@ -40,6 +40,16 @@ describe Waha::RichNative::Inbound do
       audio = from_connector({ waha_media: { kind: 'audio', ptt: false } }, content: nil, attachments: [mp3])
 
       expect(audio.attachments.first.meta).to include('is_voice_message' => false)
+      expect(audio.attachments.first.push_event_data[:meta]).to include('is_voice_message' => false)
+    end
+
+    {
+      '150' => '150.00', '15.9' => '15.90', -12.5 => '-12.50', -0.001 => '0.00', 1.005 => '1.01', '1.005' => '1.01',
+      'abc' => nil, Float::NAN => nil, Float::INFINITY => nil, [1] => nil
+    }.each do |value, expected|
+      it "formats the order total #{value.inspect} as #{expected.inspect}" do
+        expect(Waha::RichNative::Inbound::Order.amount(value)).to eq(expected)
+      end
     end
 
     it 'keeps only the digits of a shared contact wa_id' do
@@ -48,7 +58,8 @@ describe Waha::RichNative::Inbound do
                                                  { full_name: 'Ana', phones: [], wa_id: '5511977776666' },
                                                  { full_name: 'Sem', phones: [], wa_id: '@c.us' }] })
 
-      expect(message.content_attributes['shared_contacts'].pluck('wa_id')).to eq(['5511988887777', '123456789012345', '5511977776666', nil])
+      # O LID não é telefone: fica nil.
+      expect(message.content_attributes['shared_contacts'].pluck('wa_id')).to eq(['5511988887777', nil, '5511977776666', nil])
     end
 
     it 'writes shared_location.live only as exactly true' do

@@ -93,6 +93,9 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
 - [ ] Troca da imagem nos motores wa-hub e wa-autonomia, com cópia de segurança, volta escrita e conferência de saúde das sessões.
 - [ ] Motores habilitados (`WAHA_RICH_NATIVE_ENGINES`) e flag ligada nas contas piloto.
 - [ ] Teste final no piloto, em envio e recebimento, aprovado pelo Rodrigo.
+- [ ] Pendente, fora deste PR: prévia de link (`linkPreview`) na caixa WAHA, como operação separada com o OK do Rodrigo,
+  só depois de confirmar no código do GOWS como o motor busca a página (rede, proxy, bloqueio de IP privado; risco de
+  SSRF se o robô repetir um link do cliente).
 
 ### F. Fechamento
 - [ ] Documentação atualizada: resumo do Híbrido, README do motor, rotina para reaplicar o ajuste em cada versão nova do WAHA.

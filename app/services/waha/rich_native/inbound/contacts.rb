@@ -7,6 +7,7 @@
 module Waha::RichNative::Inbound::Contacts
   KEY = 'shared_contacts'.freeze
   VCARD_EXTENSION = '.vcf'.freeze
+  LID_SUFFIX = '@lid'.freeze
 
   module_function
 
@@ -26,9 +27,11 @@ module Waha::RichNative::Inbound::Contacts
     end
   end
 
-  # Só os dígitos do número: sem `@c.us`/`@lid` e sem o sufixo `:<aparelho>` (ex.: "5511999998888:12@c.us"). nil sem
-  # nenhum dígito. Tirado por métodos de texto, sem regex.
+  # Só os dígitos do número: sem `@c.us` e sem o sufixo `:<aparelho>` (ex.: "5511999998888:12@c.us"). nil sem nenhum
+  # dígito e nil para `@lid`: o LID é um identificador interno do WhatsApp, não telefone. Por métodos de texto, sem regex.
   def digits_only(wa_id)
+    return if wa_id.to_s.end_with?(LID_SUFFIX)
+
     user = wa_id.to_s.split('@').first.to_s.split(':').first.to_s
     digits = user.delete('^0-9')
     digits.presence

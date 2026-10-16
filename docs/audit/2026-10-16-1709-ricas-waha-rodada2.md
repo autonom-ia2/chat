@@ -163,6 +163,9 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 
 ### Pendências que não são deste lado
 
+- Prévia de link (`linkPreview`) na caixa WAHA: operação separada, com o OK do Rodrigo, depois de confirmar no código
+  do GOWS como o motor busca a página (rede, proxy, bloqueio de IP privado). Fora deste PR.
+
 - Construtor do conector: `timestamp` em `waha_reaction` e `waha_call` (o `from_me` em `WahaMediaFailedOf`/`WahaOrderOf` entrou na c2y-rich-3b, sincronizada em `infra/waha-c2y/`).
 - Rodrigo: decisões (a) a (f) e o backfill do achado 24.
 - Max (#1724): `quoted_message.unverified`, selo da apagada, aviso da localização ao vivo, `media_unavailable`.
@@ -175,5 +178,15 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 - `shared_contacts[].wa_id` só com dígitos (sem `@c.us`/`@lid` e sem `:<aparelho>`); `shared_location.live` só `true`
   ou ausente; `quoted_message.sender_type` 'Contact' (cliente) ou 'User' (empresa, inclusive robô e automação).
 - Citação: `in_reply_to` = id local quando a citada está na conversa; senão `quoted_message` com o conteúdo.
-- Caixa WAHA nova nasce com `linkPreview: 'HG'` (prévia de link em alta qualidade); as existentes mudam numa operação
-  separada.
+- Prévia de link na caixa WAHA: NÃO entra neste PR (o provisioner fica com `linkPreview: 'OFF'`, como na main). Ligar
+  muda toda caixa nova mesmo com a flag desligada e, com HQ, o motor busca a página de todo link que sai no texto,
+  possivelmente fora do proxy e alcançando endereço interno da rede do servidor (risco de SSRF se o robô repetir um link
+  do cliente). Vira operação separada, com o OK do Rodrigo, depois de confirmar no código do GOWS como ele busca a
+  prévia (rede, proxy, bloqueio de IP privado).
+- `shared_contacts[].wa_id` com `@lid` fica nil: o LID não é telefone.
+- `order.total_amount`: o sinal sai do valor já arredondado (nunca "-0.00"); meio centavo arredonda para cima
+  (1.005 → "1.01"); texto numérico vale; o que não é número fica nil.
+- Exceção do `Waha::RichNative::SilentUpdate`: vale também com a flag DESLIGADA. As 9 chaves (reactions,
+  read_receipt_sent_at, link_preview, played_at, deleted_by_contact_at, poll_votes, event_responses, edit_history,
+  edited_at) não vão ao webhook da caixa WAHA em `message_updated`, porque o conector reenviaria a mensagem (ele lê todo
+  `message_updated` com `external_error`, mesmo nulo, como pedido de reenvio) e ninguém na main grava essas chaves.
