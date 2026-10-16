@@ -12,13 +12,13 @@
 # Leitura para as telas (#1140): `QuemCuida.na_caixa` diz quem receberia uma conversa nova da caixa, com card num funil
 # (ou sem card), pela mesma regra. Conversa nova não tem atendente, participante nem dono de card: para ela o filtro do
 # passo 2 é a própria regra do passo 3, e fica de fora. `acessos:` troca as linhas gravadas pelas que a tela ainda vai
-# gravar (Crm::Caixas::Gravador#acessos_previstos). A lista sai na ordem da tela (nome, desempate por id): a ordem dos membros
+# gravar (Crm::Caixas::Gravador#acessos_previstos). A lista sai na ordem da tela (Crm::OrdemDeNome): a ordem dos membros
 # da caixa no banco não é fixa.
 class Crm::Entrega::QuemCuida
   def self.na_caixa(inbox:, pipeline_id: nil, acessos: nil)
     conversa = Conversation.new(account_id: inbox.account_id, inbox: inbox)
     card = pipeline_id && Crm::Card.new(account_id: inbox.account_id, pipeline_id: pipeline_id)
-    new(conversation: conversa, card: card, acessos: acessos).cuidam.sort_by { |user| [user.available_name.to_s.downcase, user.id] }
+    new(conversation: conversa, card: card, acessos: acessos).cuidam.sort_by { |user| Crm::OrdemDeNome.chave(user.available_name, user.id) }
   end
 
   def initialize(conversation:, card: nil, acessos: nil)

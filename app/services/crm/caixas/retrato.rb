@@ -119,7 +119,7 @@ class Crm::Caixas::Retrato
 
       pessoa(inbox, user, account_user.administrator?)
     end
-    lista.sort_by { |pessoa| pessoa[:name].to_s.downcase }
+    lista.sort_by { |pessoa| Crm::OrdemDeNome.chave(pessoa[:name], pessoa[:id]) }
   end
 
   def pessoa(inbox, user, administrador)
