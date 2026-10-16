@@ -95,14 +95,13 @@ module WhatsappHybrid::RichNative
     api_reply.nil? ? conversation.whatsapp_api_reply? : api_reply
   end
 
-  # A conta para ler a flag sem consulta por conversa: a já carregada na conversa, ou a do request (`Current.account`,
-  # que as rotas da conta preenchem) quando é a mesma. Fora de um request (evento de uma conversa só), carrega. Num job,
-  # `Current.account` pode ter sobrado na thread: a conferência por id evita ler a flag da conta errada.
   def account_of(conversation)
-    return conversation.account if conversation.association(:account).loaded?
-    return Current.account if Current.account&.id == conversation.account_id
+    Waha::RichNative.account_of(conversation)
+  end
 
-    conversation.account
+  # Rota de Waha::RichNative.types_for: todos os tipos, quando esta conversa manda nativo pelo WhatsApp API.
+  def native_types_for(conversation, api_reply: nil)
+    native_route?(conversation, api_reply: api_reply) ? SUPPORTED_TYPES.dup : []
   end
 
   # Sem consulta ao banco: o canal da caixa já carregada, as contas do Híbrido no ENV e a caixa híbrida no Redis.

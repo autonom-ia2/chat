@@ -434,3 +434,41 @@ flag, `in_reply_to` = a última lista nativa da conversa com uma opção de `id`
 `#send_contact_vcard`, e `WhatsappHybrid::RichNative` (prepends em `WhatsappHybrid::WebTransport`, `RichMessages` e
 `Whatsapp::IncomingMessageBaseService`, em `config/initializers/whatsapp_rich_native.rb`). `web_transport.rb` e o
 `echo_reconciler` não foram editados. Decisão e validação: `docs/audit/2026-10-16-1709-ricas-waha-fase1.md`.
+
+## Mensagem rica nativa na caixa WAHA comum (#1709, fase 2)
+
+Na caixa WAHA comum (`Channel::Api` com provider `waha`), quem envia é o **conector do WAHA** (customizado por outro
+construtor). O chat2you não chama o motor: decide na criação, entrega o pedido no webhook da caixa e lê a volta.
+
+**Decisão única, na criação** (`before_create`, `Waha::RichNative::ApiInboxDecision`). A mensagem é nativa só se
+todas valerem; senão, `rich_message_sent_as: 'text'`, como hoje:
+- flag `whatsapp_rich_native` na conta;
+- o `webhook_url` da caixa começa (`start_with?`, com a barra final) pela URL de um motor listado em
+  `WAHA_RICH_NATIVE_ENGINES` (URLs separadas por vírgula; vazia por padrão = tudo em texto);
+- o motor declara o tipo em `GET /api/server/version`, campo `autonomia.rich_native` (ex.:
+  `{ patch: 'c2y-rich-1', rich_native: ['options','location','contact'], list_reply: true }`); `options` só com
+  `list_reply: true`. `Waha::EngineCapabilities` guarda por 60 s; erro, sem resposta ou campo ausente = nenhum tipo. A
+  chave é a do WAHA (`Waha::Config.api_key`);
+- o tradutor monta o pedido (`Waha::RichPayload.build`, com o `content` cru);
+- e as travas de sempre da caixa API: vai ao canal, caixa com webhook, conversa sem trava de transmissão, formato sem
+  erro.
+
+**Saída (contrato `waha_native`).** Mensagem marcada `native`, no `message_created` do webhook da caixa:
+`content_attributes.waha_native = { kind: 'sendList' | 'sendLocation' | 'sendContactVcard', payload: {...} }`, sem
+`session` e `chatId` (o conector os põe). Na lista, `rowId` = `<id da opção>|<id da mensagem>`. O `content` continua o
+texto de reserva (corpo + versão em texto): motor sem o conector customizado manda o texto completo. A entrega lê só a
+marca: se a capacidade do motor mudar entre a criação e a entrega, marca e pedido seguem iguais. O `message_updated`
+não leva o pedido.
+
+**Entrada (contrato `waha_list_reply`).** O conector cria a mensagem RECEBIDA com
+`content_attributes.waha_list_reply = { row_id, title }`. Na criação (`Waha::RichNative::ListReply`), vira
+`selected_option = { id original da opção, title }` (separado pelo último `|`, sem regex), `in_reply_to` = a mensagem
+da referência quando ela é lista nativa da MESMA conversa e caixa (e o conector não preencheu), e a chave sai.
+
+**Forja.** Pela API de mensagens, `waha_native` e `rich_message_sent_as` saem sempre; `waha_list_reply` só fica em
+mensagem recebida (é como o conector cria), e mesmo assim só liga a resposta a uma lista nativa conferida.
+
+**Tela e consultas.** `whatsapp_api_rich_native` da conversa e `RichMessages.delivery_mode(message:)` respondem também
+pela caixa WAHA, com as mesmas condições (os tipos que o motor declara). Na lista de conversas, sem consulta ao banco
+(caixa e canal já carregados; conta do request). Sem migration. Decisão e validação:
+`docs/audit/2026-10-16-1709-ricas-waha-fase2.md`.

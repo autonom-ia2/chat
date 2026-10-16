@@ -84,16 +84,41 @@ module Waha::RichNative
     false
   end
 
-  # Quem pode mandar nativo (um por transporte). Cada um responde `native_route?(conversation, api_reply:)` fazendo
-  # primeiro as checagens sem consulta. Fase 2 (caixa WAHA comum): acrescentar o transporte dela aqui.
+  # Mensagem nossa de opções que saiu nativa. O conteúdo é JSON gravado como texto: o filtro é em Ruby, sobre poucas
+  # linhas.
+  def native_options?(message)
+    rich = message.content_attributes.to_h[RichMessages::KEY]
+    rich.is_a?(Hash) && rich['type'] == 'options' && sent_native?(message)
+  end
+
+  # Os ids das opções oferecidas (soltas ou em seções), em texto.
+  def option_ids(message)
+    rich = message.content_attributes.to_h[RichMessages::KEY]
+    options = rich['sections'].is_a?(Array) ? rich['sections'].flat_map { |section| Array(section.try(:[], 'options')) } : Array(rich['options'])
+    options.filter_map { |option| option['id'].to_s if option.is_a?(Hash) && option['id'].present? }
+  end
+
+  # Quem pode mandar nativo (um por transporte): o plano B do Híbrido (fase 1) e a caixa WAHA comum (fase 2). Cada um
+  # responde `native_types_for(conversation, api_reply:)` com os tipos que manda, fazendo primeiro as checagens sem
+  # consulta.
   def routes
-    [WhatsappHybrid::RichNative]
+    [WhatsappHybrid::RichNative, Waha::RichNative::WahaInbox]
   end
 
   # Os tipos que saem nativos nesta conversa agora (campo `whatsapp_api_rich_native` da conversa, para a tela do "+").
   # `api_reply`: o `whatsapp_api_reply?` já calculado por quem chama (o jbuilder e o evento ao vivo), para não
   # perguntar ao roteador duas vezes.
   def types_for(conversation, api_reply: nil)
-    routes.any? { |route| route.native_route?(conversation, api_reply: api_reply) } ? KINDS.dup : []
+    KINDS & routes.flat_map { |route| route.native_types_for(conversation, api_reply: api_reply) }
+  end
+
+  # A conta para ler a flag sem consulta por conversa: a já carregada na conversa, ou a do request (`Current.account`,
+  # que as rotas da conta preenchem) quando é a mesma. Fora de um request (evento de uma conversa só), carrega. Num job,
+  # `Current.account` pode ter sobrado na thread: a conferência por id evita ler a flag da conta errada.
+  def account_of(conversation)
+    return conversation.account if conversation.association(:account).loaded?
+    return Current.account if Current.account&.id == conversation.account_id
+
+    conversation.account
   end
 end

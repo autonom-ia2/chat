@@ -43,16 +43,12 @@ module WhatsappHybrid::RichNative::ReplyLink
                 .find { |message| native_options?(message) && option_ids(message).include?(option_id.to_s) }
   end
 
-  # O conteúdo é JSON gravado como texto: o filtro é em Ruby, sobre poucas linhas.
   def self.native_options?(message)
-    rich = message.content_attributes.to_h[RichMessages::KEY]
-    rich.is_a?(Hash) && rich['type'] == 'options' && Waha::RichNative.sent_native?(message)
+    Waha::RichNative.native_options?(message)
   end
 
   def self.option_ids(message)
-    rich = message.content_attributes.to_h[RichMessages::KEY]
-    options = rich['sections'].is_a?(Array) ? rich['sections'].flat_map { |section| Array(section.try(:[], 'options')) } : Array(rich['options'])
-    options.filter_map { |option| option['id'].to_s if option.is_a?(Hash) && option['id'].present? }
+    Waha::RichNative.option_ids(message)
   end
 
   private

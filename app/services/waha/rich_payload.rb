@@ -72,6 +72,16 @@ class Waha::RichPayload
     end
   end
 
+  # O pedido para quem chama o motor fora daqui (o conector da caixa WAHA comum, fase 2): o endpoint e o corpo, sem
+  # `session`, `chatId` nem `id`, que o conector põe. Chaves em texto, como vão no JSON do webhook.
+  def request
+    case @kind
+    when 'options' then { 'kind' => 'sendList', 'payload' => { message: list_message } }
+    when 'location' then { 'kind' => 'sendLocation', 'payload' => location }
+    when 'contact' then { 'kind' => 'sendContactVcard', 'payload' => { contacts: [contact] } }
+    end&.deep_stringify_keys
+  end
+
   # O id físico que o motor deu à mensagem, lido da resposta do envio: `id` como texto (`true_<chat>_<id>`, o mesmo
   # formato que o ack traz), `id` como objeto (`_serialized` ou `id`) ou `key.id`. nil quando a resposta não traz.
   def self.physical_id(response)
