@@ -17,6 +17,29 @@ pt_BR:
       edit: "Edição registrada na mensagem"
       call: "Ligação registrada"
       poll_vote: "Voto na enquete registrado"
+      album: "Cabeçalho do álbum registrado (as fotos vêm em seguida)"
+      revoke: "Exclusão pelo cliente registrada na mensagem"
+      event_response: "Resposta ao evento registrada"
+      view_once: "Visualização única registrada"
+    media_unavailable:
+      voice: "Mensagem de voz não pôde ser baixada. Peça para o cliente reenviar."
+      audio: "Áudio não pôde ser baixado. Peça para o cliente reenviar."
+      image: "Foto não pôde ser baixada. Peça para o cliente reenviar."
+      video: "Vídeo não pôde ser baixado. Peça para o cliente reenviar."
+      document: "Arquivo não pôde ser baixado. Peça para o cliente reenviar."
+      sticker: "Figurinha não pôde ser baixada. Peça para o cliente reenviar."
+    ephemeral:
+      "on": "Mensagens temporárias ativadas (%{duration}). O conteúdo fica guardado no chat2you."
+      "off": "Mensagens temporárias desativadas."
+      hours:
+        one: "%{count} hora"
+        other: "%{count} horas"
+      days:
+        one: "%{count} dia"
+        other: "%{count} dias"
+    event:
+      cloud_when: "Quando: %{when}"
+      cloud_where: "Onde: %{where}"
     message_actions:
       reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
       edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."
