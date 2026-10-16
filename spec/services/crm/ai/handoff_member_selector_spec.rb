@@ -63,9 +63,9 @@ RSpec.describe Crm::Ai::HandoffMemberSelector do
   describe 'empate em conversas abertas' do
     let(:conversa) { create(:conversation, account: account, inbox: inbox) }
 
-    def recebeu(user, atras:, motivo: 'atribuicao')
-      Crm::Passagem.create!(account: account, conversation: conversa, para_type: 'User', para_id: user.id, motivo: motivo,
-                            em: atras.ago, created_at: atras.ago)
+    def recebeu(user, atras:, motivo: 'atribuicao', em_conversa: conversa)
+      Crm::Passagem.create!(account: em_conversa.account, conversation: em_conversa, para_type: 'User', para_id: user.id,
+                            motivo: motivo, em: atras.ago, created_at: atras.ago)
     end
 
     def escolhido(*fila)
@@ -111,6 +111,35 @@ RSpec.describe Crm::Ai::HandoffMemberSelector do
       create(:conversation, account: account, inbox: inbox, assignee: busy_agent)
 
       expect(escolhido(busy_agent, agent)).to eq(agent)
+    end
+
+    # Pega: ler a primeira passagem (ou a mais antiga) em vez da última recebida.
+    it 'vale a última que cada pessoa recebeu' do
+      recebeu(agent, atras: 10.hours)
+      recebeu(agent, atras: 1.hour)
+      recebeu(busy_agent, atras: 5.hours)
+
+      expect(escolhido(agent, busy_agent)).to eq(busy_agent)
+    end
+
+    # Pega: a passagem sem motivo (gravada sem contexto, como automação e API) sumir do desempate.
+    it 'passagem sem motivo conta como recebida' do
+      recebeu(agent, atras: 1.hour, motivo: nil)
+      recebeu(busy_agent, atras: 3.hours)
+
+      expect(escolhido(agent, busy_agent)).to eq(busy_agent)
+    end
+
+    # Pega: passagem de outra conta (mesmo id de pessoa) ou fora da janela pesar no desempate.
+    it 'só a conta e a janela do desempate contam', :aggregate_failures do
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+      outra_conta = create(:conversation)
+      recebeu(agent, atras: 1.hour, em_conversa: outra_conta)
+      recebeu(busy_agent, atras: (described_class::JANELA_DO_DESEMPATE + 1.day))
+      primeiro = [agent, busy_agent].min_by(&:id)
+
+      expect(escolhido(agent, busy_agent)).to eq(primeiro)
+      expect(escolhido(busy_agent, agent)).to eq(primeiro)
     end
   end
 end
