@@ -1,9 +1,11 @@
 class Conversations::EventDataPresenter < SimpleDelegator
   def push_data
+    api_reply = whatsapp_api_reply? # fork: calculado uma vez para as duas chaves abaixo
     {
       additional_attributes: additional_attributes,
       can_reply: can_reply?,
-      whatsapp_api_reply: whatsapp_api_reply?, # fork chat#1067: aviso no editor
+      whatsapp_api_reply: api_reply, # fork chat#1067: aviso no editor
+      whatsapp_api_rich_native: Waha::RichNative.types_for(__getobj__, api_reply: api_reply), # fork chat#1709: tipos ricos nativos
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
       id: display_id,

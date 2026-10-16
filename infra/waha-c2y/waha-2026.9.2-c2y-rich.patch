@@ -1,0 +1,1225 @@
+diff --git a/src/apps/app_sdk/waha/WAHASelf.ts b/src/apps/app_sdk/waha/WAHASelf.ts
+index d277cff5..c786f453 100644
+--- a/src/apps/app_sdk/waha/WAHASelf.ts
++++ b/src/apps/app_sdk/waha/WAHASelf.ts
+@@ -5,13 +5,16 @@ import {
+ } from '@waha/structures/chats.dto';
+ import {
+   ChatRequest,
++  MessageContactVcardRequest,
+   MessageFileRequest,
+   MessageImageRequest,
++  MessageLocationRequest,
+   MessageTextRequest,
+   MessageVideoRequest,
+   MessageVoiceRequest,
+   WANumberExistResult,
+ } from '@waha/structures/chatting.dto';
++import { SendListRequest } from '@waha/structures/chatting.list.dto';
+ import { SessionInfo } from '@waha/structures/sessions.dto';
+ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+ import { ContactSortField } from '@waha/structures/contacts.dto';
+@@ -230,6 +233,33 @@ export class WAHASelf {
+       .then((response) => response.data);
+   }
+ 
++  async sendList(body: SendListRequest, opts?: RequestOptions): Promise<any> {
++    const url = `/api/sendList`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
++  async sendLocation(
++    body: MessageLocationRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url = `/api/sendLocation`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
++  async sendContactVcard(
++    body: MessageContactVcardRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url = `/api/sendContactVcard`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
+   async deleteMessage(
+     session: string,
+     chatId: string,
+@@ -423,6 +453,31 @@ export class WAHASessionAPI {
+     return this.api.sendFile(body, opts);
+   }
+ 
++  sendList(body: SendListRequest, opts?: RequestOptions): Promise<any> {
++    body.session = this.session;
++    return this.api.sendList(body, opts);
++  }
++
++  sendLocation(
++    body: MessageLocationRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    body.session = this.session;
++    return this.api.sendLocation(body, opts);
++  }
++
++  sendContactVcard(
++    body: MessageContactVcardRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    body.session = this.session;
++    return this.api.sendContactVcard(body, opts);
++  }
++
++  get name(): string {
++    return this.session;
++  }
++
+   deleteMessage(chatId: string, messageId: string, opts?: RequestOptions) {
+     return this.api.deleteMessage(this.session, chatId, messageId, opts);
+   }
+diff --git a/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts b/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts
+new file mode 100644
+index 00000000..91471d6d
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts
+@@ -0,0 +1,292 @@
++jest.mock('@waha/utils/promiseTimeout', () => ({
++  sleep: jest.fn(() => Promise.resolve()),
++}));
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: { WhatsAppMessageKeys: jest.fn() },
++}));
++
++import { UnrecoverableError } from 'bullmq';
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { AttributeKey } from '@waha/apps/chatwoot/const';
++import { MessageHandler } from '@waha/apps/chatwoot/consumers/inbox/message_created';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { DeterministicMessageId } from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++import { EngineHelper } from '@waha/apps/chatwoot/waha';
++
++const CHAT_ID = '5511999999999@c.us';
++const SESSION = 'hub2you';
++const SECRET_VCARD_PHONE = '+55 11 98888-7777';
++
++const LIST = {
++  title: 'Planos',
++  description: 'Escolha um plano',
++  footer: 'Hub2You',
++  button: 'Ver planos',
++  sections: [
++    { title: 'Auto', rows: [{ title: 'Básico', rowId: 'auto_basico' }] },
++  ],
++};
++
++function chatwootMessage(waha_native: any, extra: any = {}) {
++  return {
++    id: 501,
++    created_at: '2026-10-16T12:00:00Z',
++    content_type: 'text',
++    content: '1) Básico',
++    message_type: 'outgoing',
++    attachments: [],
++    content_attributes: { waha_native: waha_native },
++    conversation: {
++      id: 42,
++      meta: {
++        sender: {
++          custom_attributes: { [AttributeKey.WA_CHAT_ID]: CHAT_ID },
++        },
++      },
++    },
++    ...extra,
++  };
++}
++
++function httpError(status: number) {
++  const err: any = new Error(`Request failed with status code ${status}`);
++  err.isAxiosError = true;
++  err.config = {
++    headers: { 'X-Api-Key': 'super-secret-key' },
++    data: JSON.stringify({ phoneNumber: SECRET_VCARD_PHONE }),
++  };
++  err.response = { status: status, data: { message: 'x' } };
++  return err;
++}
++
++function setup() {
++  const sent = { id: { id: 'WAID', remote: CHAT_ID }, fromMe: true };
++  const session: any = {
++    name: SESSION,
++    sendList: jest.fn().mockResolvedValue(sent),
++    sendLocation: jest.fn().mockResolvedValue(sent),
++    sendContactVcard: jest.fn().mockResolvedValue(sent),
++    sendText: jest.fn().mockResolvedValue(sent),
++    readMessages: jest.fn().mockResolvedValue(undefined),
++    startTyping: jest.fn().mockResolvedValue(undefined),
++    stopTyping: jest.fn().mockResolvedValue(undefined),
++  };
++  const mapping: any = {
++    getMappingByChatwootCombinedKeyAndPart: jest.fn().mockResolvedValue(null),
++    getWhatsAppMessage: jest.fn().mockResolvedValue([
++      {
++        message_id: 'QUOTED',
++        chat_id: CHAT_ID,
++        from_me: false,
++        participant: null,
++      },
++    ]),
++    map: jest.fn().mockResolvedValue(undefined),
++  };
++  const status: any = { sync: jest.fn().mockResolvedValue(undefined) };
++  const config: any = {
++    conversations: { syncMessageStatus: true },
++    linkPreview: 'off',
++  };
++  const logger = JestLogger();
++  const handler = new MessageHandler(
++    mapping,
++    logger,
++    session,
++    config,
++    i18n.locale('en-US'),
++    status,
++  );
++  (EngineHelper.WhatsAppMessageKeys as jest.Mock).mockReturnValue({
++    timestamp: new Date(0),
++    from_me: true,
++    chat_id: CHAT_ID,
++    message_id: 'WAID',
++    participant: null,
++  });
++  return { handler, session, mapping, logger, status };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++describe('MessageHandler - waha_native (c2y-rich-1)', () => {
++  afterEach(() => jest.clearAllMocks());
++
++  it('sendList: uses the connector chatId and reply_to, maps the message, skips text', async () => {
++    const { handler, session, mapping, status } = setup();
++    const body = chatwootMessage(undefined, {
++      content_attributes: {
++        in_reply_to: 9,
++        waha_native: {
++          kind: 'sendList',
++          payload: { message: LIST, chatId: 'other@c.us', session: 'x' },
++        },
++      },
++    });
++
++    const result = await handler.handle(body);
++
++    expect(session.sendList).toHaveBeenCalledTimes(1);
++    const [request, opts] = session.sendList.mock.calls[0];
++    expect(request.chatId).toBe(CHAT_ID);
++    expect(request.message).toEqual(LIST);
++    expect(request.reply_to).toBe(`false_${CHAT_ID}_QUOTED`);
++    expect(request.session).toBe('');
++    expect(opts.signal).toBeDefined();
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(mapping.map).toHaveBeenCalledTimes(1);
++    const [chatwoot, whatsapp, part] = mapping.map.mock.calls[0];
++    expect(chatwoot).toMatchObject({
++      conversation_id: 42,
++      message_id: 501,
++      parts: 1,
++    });
++    expect(whatsapp.message_id).toBe('WAID');
++    expect(part).toBe(1);
++    expect(status.sync).toHaveBeenCalledWith({
++      conversation_id: 42,
++      message_id: 501,
++      parts: 1,
++    });
++    expect(result).toHaveLength(1);
++  });
++
++  it('sendLocation: sends with the deterministic id', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({
++        kind: 'sendLocation',
++        payload: { latitude: -23.5, longitude: -46.6, title: 'Escritório' },
++      }),
++    );
++    const [request] = session.sendLocation.mock.calls[0];
++    expect(request).toMatchObject({
++      chatId: CHAT_ID,
++      latitude: -23.5,
++      longitude: -46.6,
++      title: 'Escritório',
++      id: DeterministicMessageId(SESSION, 501, 'sendLocation'),
++    });
++    expect(session.sendText).not.toHaveBeenCalled();
++  });
++
++  it('sendContactVcard: sends with the deterministic id', async () => {
++    const { handler, session } = setup();
++    const contacts = [{ fullName: 'Maria', phoneNumber: SECRET_VCARD_PHONE }];
++    await handler.handle(
++      chatwootMessage({ kind: 'sendContactVcard', payload: { contacts } }),
++    );
++    const [request] = session.sendContactVcard.mock.calls[0];
++    expect(request).toMatchObject({
++      chatId: CHAT_ID,
++      contacts: contacts,
++      id: DeterministicMessageId(SESSION, 501, 'sendContactVcard'),
++    });
++    expect(session.sendText).not.toHaveBeenCalled();
++  });
++
++  it.each([400, 422, 501])(
++    'definitive refusal %p: sends the text once through the normal path',
++    async (code) => {
++      const { handler, session, mapping, logger } = setup();
++      session.sendList.mockRejectedValue(httpError(code));
++      await handler.handle(
++        chatwootMessage({ kind: 'sendList', payload: { message: LIST } }),
++      );
++      expect(session.sendList).toHaveBeenCalledTimes(1);
++      expect(session.sendText).toHaveBeenCalledTimes(1);
++      expect(session.sendText.mock.calls[0][0].text).toContain('1) Básico');
++      expect(session.sendText.mock.calls[0][0].chatId).toBe(CHAT_ID);
++      expect(mapping.map).toHaveBeenCalledTimes(1);
++      expect(logger.warn).toHaveBeenCalledWith(
++        expect.stringContaining(`status=${code}`),
++      );
++    },
++  );
++
++  it.each([
++    ['5xx', httpError(500)],
++    ['bad gateway', httpError(502)],
++    ['timeout', Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' })],
++  ])(
++    'uncertain failure (%s): unrecoverable, no text, no mapping',
++    async (_name, error) => {
++      const { handler, session, mapping } = setup();
++      session.sendContactVcard.mockRejectedValue(error);
++      const promise = handler.handle(
++        chatwootMessage({
++          kind: 'sendContactVcard',
++          payload: {
++            contacts: [{ fullName: 'Maria', phoneNumber: SECRET_VCARD_PHONE }],
++          },
++        }),
++      );
++      await expect(promise).rejects.toBeInstanceOf(UnrecoverableError);
++      expect(session.sendText).not.toHaveBeenCalled();
++      expect(mapping.map).not.toHaveBeenCalled();
++    },
++  );
++
++  it('never logs the error object, api key or payload', async () => {
++    const { handler, session, logger } = setup();
++    session.sendContactVcard.mockRejectedValue(httpError(500));
++    await handler
++      .handle(
++        chatwootMessage({
++          kind: 'sendContactVcard',
++          payload: {
++            contacts: [{ fullName: 'Maria', phoneNumber: SECRET_VCARD_PHONE }],
++          },
++        }),
++      )
++      .catch((err) => {
++        expect(err.message).not.toContain('super-secret-key');
++        expect(err.message).not.toContain(SECRET_VCARD_PHONE);
++      });
++    const logs = allLogs(logger);
++    expect(logs).toContain('kind=sendContactVcard');
++    expect(logs).toContain('status=500');
++    expect(logs).toContain('chatwoot_message_id=501');
++    expect(logs).toContain(`session=${SESSION}`);
++    expect(logs).not.toContain('super-secret-key');
++    expect(logs).not.toContain('X-Api-Key');
++    expect(logs).not.toContain(SECRET_VCARD_PHONE);
++    expect(logs).not.toContain('Maria');
++  });
++
++  it('skips the native send when the mapping already exists', async () => {
++    const { handler, session, mapping } = setup();
++    mapping.getMappingByChatwootCombinedKeyAndPart.mockResolvedValue({
++      id: 1,
++    });
++    await handler.handle(
++      chatwootMessage({ kind: 'sendList', payload: { message: LIST } }),
++    );
++    expect(session.sendList).not.toHaveBeenCalled();
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(mapping.map).not.toHaveBeenCalled();
++  });
++
++  it('message without waha_native keeps the original text flow', async () => {
++    const { handler, session } = setup();
++    const body = chatwootMessage(undefined);
++    body.content_attributes = {} as any;
++    await handler.handle(body);
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++    expect(session.sendList).not.toHaveBeenCalled();
++  });
++
++  it('unknown kind keeps the original text flow', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({ kind: 'sendButtons', payload: { buttons: [] } }),
++    );
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/inbox/message_created.ts b/src/apps/chatwoot/consumers/inbox/message_created.ts
+index b48d9328..e2121b67 100644
+--- a/src/apps/chatwoot/consumers/inbox/message_created.ts
++++ b/src/apps/chatwoot/consumers/inbox/message_created.ts
+@@ -20,12 +20,25 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
+ import { SessionManager } from '@waha/core/abc/manager.abc';
+ import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
+ import {
++  MessageContactVcardRequest,
+   MessageFileRequest,
+   MessageImageRequest,
++  MessageLocationRequest,
+   MessageTextRequest,
+   MessageVideoRequest,
+   MessageVoiceRequest,
+ } from '@waha/structures/chatting.dto';
++import { SendListRequest } from '@waha/structures/chatting.list.dto';
++import {
++  BuildWahaNativeRequest,
++  DeterministicMessageId,
++  IsDefinitiveRefusal,
++  ParseWahaNative,
++  WAHA_NATIVE_SEND_TIMEOUT_MS,
++  WahaHttpStatus,
++  WahaNative,
++  WahaNativeSendError,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/native';
+ import { sleep } from '@waha/utils/promiseTimeout';
+ import { Job } from 'bullmq';
+ import { PinoLogger } from 'nestjs-pino';
+@@ -116,6 +129,17 @@ export class MessageHandler {
+ 
+     // Send text (Part 1 if present)
+     const attachments = message.attachments || [];
++
++    // Autonom.ia c2y-rich-1: native list / location / contact
++    const native = attachments.length === 0 ? ParseWahaNative(message) : null;
++    if (native) {
++      const sent = await this.handleNative(native, message, chatId, replyTo);
++      if (sent !== null) {
++        return sent;
++      }
++      // WAHA refused it for good (nothing was sent) - send the text once
++    }
++
+     const sendText = content && attachments.length !== 1;
+     const parts = attachments.length + (sendText ? 1 : 0);
+     if (sendText) {
+@@ -167,6 +191,87 @@ export class MessageHandler {
+     return results;
+   }
+ 
++  /**
++   * Sends the native message as the single part of the Chatwoot message.
++   * Returns null when WAHA refused it for good, so the caller sends the text.
++   */
++  private async handleNative(
++    native: WahaNative,
++    message: any,
++    chatId: string,
++    replyTo: string | undefined,
++  ): Promise<any[] | null> {
++    const part = 1;
++    const parts = 1;
++    const exists = await this.getMapping(message, part);
++    if (exists) {
++      this.logger.warn(
++        `Skip part ${part}: mapping exists for Chatwoot message ${message.id}`,
++      );
++      return [];
++    }
++    const msg = await this.sendNative(native, message, chatId, replyTo);
++    if (msg === null) {
++      return null;
++    }
++    await this.saveMapping(message, msg, part, parts);
++    this.logger.info(
++      `ChatWoot => WhatsApp: native message sent: kind=${native.kind} ` +
++        `chatwoot_message_id=${message.id} session=${this.session.name}`,
++    );
++    if (this.config.conversations.syncMessageStatus) {
++      await this.syncStatus(message, parts);
++    }
++    return [msg];
++  }
++
++  private async sendNative(
++    native: WahaNative,
++    message: any,
++    chatId: string,
++    replyTo: string | undefined,
++  ): Promise<any | null> {
++    const id = DeterministicMessageId(
++      this.session.name,
++      message.id,
++      native.kind,
++    );
++    const request = BuildWahaNativeRequest(native, chatId, replyTo, id);
++    const opts = { signal: AbortSignal.timeout(WAHA_NATIVE_SEND_TIMEOUT_MS) };
++    try {
++      switch (native.kind) {
++        case 'sendList':
++          return await this.session.sendList(request as SendListRequest, opts);
++        case 'sendLocation':
++          return await this.session.sendLocation(
++            request as MessageLocationRequest,
++            opts,
++          );
++        case 'sendContactVcard':
++          return await this.session.sendContactVcard(
++            request as MessageContactVcardRequest,
++            opts,
++          );
++      }
++    } catch (err) {
++      // Never log err itself: it carries request config, headers and payload
++      const status = WahaHttpStatus(err);
++      const where =
++        `kind=${native.kind} status=${status ?? 'no-response'} ` +
++        `chatwoot_message_id=${message.id} session=${this.session.name}`;
++      if (IsDefinitiveRefusal(status)) {
++        this.logger.warn(
++          `ChatWoot => WhatsApp: native message refused, sending text instead: ${where}`,
++        );
++        return null;
++      }
++      this.logger.error(
++        `ChatWoot => WhatsApp: native message not confirmed, not retrying: ${where}`,
++      );
++      throw new WahaNativeSendError(native.kind, status, message.id);
++    }
++  }
++
+   /**
+    * Push acks that arrived before the last part was mapped, best effort
+    */
+diff --git a/src/apps/chatwoot/consumers/waha/base.ts b/src/apps/chatwoot/consumers/waha/base.ts
+index 0cf7fad8..efe4e635 100644
+--- a/src/apps/chatwoot/consumers/waha/base.ts
++++ b/src/apps/chatwoot/consumers/waha/base.ts
+@@ -41,6 +41,7 @@ import {
+ } from '@waha/apps/chatwoot/dto/config.dto';
+ import { clearContent } from '@waha/apps/chatwoot/consumers/utils';
+ import { SetExternalEcho } from '@waha/apps/chatwoot/api/webhook.guards';
++import { ExtractListReply } from '@waha/apps/chatwoot/messages/to/chatwoot/ListReply';
+ 
+ export function ListenEventsForChatWoot(config: ChatWootConfig) {
+   const events = [
+@@ -442,6 +443,11 @@ export abstract class MessageBaseHandler<
+         in_reply_to: replyTo,
+       },
+     };
++    // Autonom.ia c2y-rich-1: customer answered a list message
++    const listReply = ExtractListReply((payload as any)._data, this.logger);
++    if (listReply) {
++      (body.content_attributes as any).waha_list_reply = listReply;
++    }
+     if (payload.fromMe) {
+       SetExternalEcho(body);
+     }
+diff --git a/src/apps/chatwoot/error/ChatWootErrorReporter.ts b/src/apps/chatwoot/error/ChatWootErrorReporter.ts
+index ea116adf..16afd3ca 100644
+--- a/src/apps/chatwoot/error/ChatWootErrorReporter.ts
++++ b/src/apps/chatwoot/error/ChatWootErrorReporter.ts
+@@ -8,7 +8,7 @@ import { Conversation } from '@waha/apps/chatwoot/client/Conversation';
+ import { MessageType } from '@waha/apps/chatwoot/client/types';
+ import { ErrorRenderer } from '@waha/apps/chatwoot/error/ErrorRenderer';
+ import { Locale } from '@waha/apps/chatwoot/i18n/locale';
+-import { Job } from 'bullmq';
++import { Job, UnrecoverableError } from 'bullmq';
+ import { TKey } from '@waha/apps/chatwoot/i18n/templates';
+ 
+ const renderer: ErrorRenderer = new ErrorRenderer();
+@@ -38,7 +38,11 @@ export class ChatWootErrorReporter {
+       this.logger.error(`Error occurred while login details for error: ${err}`);
+     }
+     const template = this.l.key(TKey.JOB_REPORT_ERROR);
+-    const nextDelay = NextAttemptDelayInWholeSeconds(this.job);
++    // UnrecoverableError is never retried - report it now
++    const nextDelay =
++      error instanceof UnrecoverableError
++        ? null
++        : NextAttemptDelayInWholeSeconds(this.job);
+     if (nextDelay) {
+       // TODO: Add a way to enable it back in config
+       // https://github.com/devlikeapro/waha/issues/1395
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
+new file mode 100644
+index 00000000..33cc2657
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
+@@ -0,0 +1,158 @@
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { ExtractListReply } from '@waha/apps/chatwoot/messages/to/chatwoot/ListReply';
++
++/**
++ * Baileys is ESM-only and is not loaded under jest.
++ * Same unwrapping as Baileys normalizeMessageContent (ephemeral, view once),
++ * used only to exercise ExtractListReply. The real Baileys function is
++ * checked against the built dist separately (see README of the patch).
++ */
++function unwrap(message: any): any {
++  let content = message;
++  for (let i = 0; i < 5; i++) {
++    const inner =
++      content?.ephemeralMessage ||
++      content?.viewOnceMessage ||
++      content?.viewOnceMessageV2 ||
++      content?.viewOnceMessageV2Extension ||
++      content?.documentWithCaptionMessage;
++    if (!inner) {
++      break;
++    }
++    content = inner.message;
++  }
++  return content;
++}
++
++const NOWEB_REPLY = {
++  listResponseMessage: {
++    title: 'Básico',
++    listType: 1,
++    singleSelectReply: { selectedRowId: 'auto_basico' },
++  },
++};
++
++describe('ExtractListReply', () => {
++  it('NOWEB: plain list reply', () => {
++    const data = { message: NOWEB_REPLY };
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
++      row_id: 'auto_basico',
++      title: 'Básico',
++    });
++  });
++
++  it('NOWEB: ephemeral (disappearing messages)', () => {
++    const data = { message: { ephemeralMessage: { message: NOWEB_REPLY } } };
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
++      row_id: 'auto_basico',
++      title: 'Básico',
++    });
++  });
++
++  it('NOWEB: view once', () => {
++    const data = {
++      message: { viewOnceMessageV2: { message: NOWEB_REPLY } },
++    };
++    expect(ExtractListReply(data, undefined, unwrap)?.row_id).toBe('auto_basico');
++  });
++
++  it('GOWS: Go field names are camel cased before reading', () => {
++    const data = {
++      Message: {
++        EphemeralMessage: {
++          Message: {
++            ListResponseMessage: {
++              Title: 'Básico',
++              ListType: 1,
++              SingleSelectReply: { SelectedRowID: 'auto_basico' },
++            },
++          },
++        },
++      },
++    };
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
++      row_id: 'auto_basico',
++      title: 'Básico',
++    });
++  });
++
++  it('title missing becomes null', () => {
++    const data = {
++      message: {
++        listResponseMessage: { singleSelectReply: { selectedRowId: 'x' } },
++      },
++    };
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
++      row_id: 'x',
++      title: null,
++    });
++  });
++
++  it.each([
++    [undefined],
++    [null],
++    [{}],
++    [{ message: { conversation: 'oi' } }],
++    [{ message: { listResponseMessage: { title: 'sem row' } } }],
++    [{ Message: { Conversation: 'oi' } }],
++  ])('no list reply in %j', (data) => {
++    expect(ExtractListReply(data, undefined, unwrap)).toBeNull();
++  });
++});
++
++describe('ExtractListReply never breaks the incoming message', () => {
++  const PHONE = '5511988887777';
++  const data = {
++    message: {
++      ephemeralMessage: { message: NOWEB_REPLY },
++      extendedTextMessage: { text: `meu telefone ${PHONE}` },
++    },
++  };
++
++  function logged(logger: any): string {
++    return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++      .flatMap((level) => logger[level].mock.calls)
++      .map((args) => args.join(' '))
++      .join('\n');
++  }
++
++  it('extractor throws: returns null and logs only the error class', () => {
++    const logger = JestLogger();
++    const boom = () => {
++      throw new TypeError(`unexpected shape near ${PHONE} Básico`);
++    };
++    expect(ExtractListReply(data, logger, boom)).toBeNull();
++    expect(logger.warn).toHaveBeenCalledTimes(1);
++    const text = logged(logger);
++    expect(text).toContain('TypeError');
++    expect(text).not.toContain(PHONE);
++    expect(text).not.toContain('Básico');
++    expect(text).not.toContain('auto_basico');
++  });
++
++  it('Baileys not loaded (esm.b null): returns null instead of throwing', () => {
++    const logger = JestLogger();
++    // default extractor uses esm.b, which is never loaded under jest
++    expect(ExtractListReply(data, logger)).toBeNull();
++    expect(logger.warn).toHaveBeenCalledTimes(1);
++    expect(logged(logger)).not.toContain(PHONE);
++  });
++
++  it('malformed engine data (throwing getter): returns null', () => {
++    const logger = JestLogger();
++    const bad = {
++      get message() {
++        throw new Error(PHONE);
++      },
++    };
++    expect(ExtractListReply(bad, logger, unwrap)).toBeNull();
++    expect(logged(logger)).not.toContain(PHONE);
++  });
++
++  it('works without a logger', () => {
++    const boom = () => {
++      throw new Error('x');
++    };
++    expect(ExtractListReply(data, undefined, boom)).toBeNull();
++  });
++});
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts
+new file mode 100644
+index 00000000..fd3b77db
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts
+@@ -0,0 +1,66 @@
++import type { proto } from '@adiwajshing/baileys';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import { resolveProtoMessage } from '@waha/core/engines/gows/waproto';
++import esm from '@waha/vendor/esm';
++
++/**
++ * Autonom.ia patch c2y-rich-1 (autonom-ia2/chat#1709)
++ * Customer answered a list message -> content_attributes.waha_list_reply
++ */
++export interface WahaListReply {
++  row_id: string;
++  title: string | null;
++}
++
++type ExtractMessageContent = (
++  message: proto.IMessage | null | undefined,
++) => proto.IMessage | undefined;
++
++function baileysExtractMessageContent(
++  message: proto.IMessage | null | undefined,
++): proto.IMessage | undefined {
++  return esm.b.extractMessageContent(message);
++}
++
++/**
++ * Reads the list answer from the engine raw data (_data).
++ * extractMessageContent unwraps ephemeral and view once wrappers.
++ *
++ * It runs for EVERY incoming message of every inbox, so it never throws:
++ * any failure is logged (error class only - no content, no phone) and
++ * the message goes on without waha_list_reply.
++ */
++export function ExtractListReply(
++  data: any,
++  logger?: ILogger,
++  extract: ExtractMessageContent = baileysExtractMessageContent,
++): WahaListReply | null {
++  try {
++    return readListReply(data, extract);
++  } catch (err) {
++    const kind = err?.name || err?.constructor?.name || typeof err;
++    logger?.warn(
++      `WhatsApp => ChatWoot: list reply not read, message kept without it (${kind})`,
++    );
++    return null;
++  }
++}
++
++function readListReply(
++  data: any,
++  extract: ExtractMessageContent,
++): WahaListReply | null {
++  if (!data) {
++    return null;
++  }
++  const protoMessage = resolveProtoMessage(data);
++  if (!protoMessage) {
++    return null;
++  }
++  const reply = extract(protoMessage)?.listResponseMessage;
++  const rowId = reply?.singleSelectReply?.selectedRowId;
++  if (!rowId) {
++    return null;
++  }
++  return { row_id: rowId, title: reply.title || null };
++}
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/native.test.ts b/src/apps/chatwoot/messages/to/whatsapp/native.test.ts
+new file mode 100644
+index 00000000..e6fa2af1
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/native.test.ts
+@@ -0,0 +1,188 @@
++import { UnrecoverableError } from 'bullmq';
++import {
++  BuildWahaNativeRequest,
++  DeterministicMessageId,
++  IsDefinitiveRefusal,
++  ParseWahaNative,
++  WahaHttpStatus,
++  WahaNativeSendError,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++
++const LIST_PAYLOAD = {
++  message: {
++    title: 'Planos',
++    description: 'Escolha um plano',
++    footer: 'Hub2You',
++    button: 'Ver planos',
++    sections: [
++      { title: 'Auto', rows: [{ title: 'Básico', rowId: 'auto_basico' }] },
++    ],
++  },
++};
++
++describe('ParseWahaNative', () => {
++  it('reads a known kind with an object payload', () => {
++    const native = ParseWahaNative({
++      content_attributes: {
++        waha_native: { kind: 'sendList', payload: LIST_PAYLOAD },
++      },
++    });
++    expect(native).toEqual({ kind: 'sendList', payload: LIST_PAYLOAD });
++  });
++
++  it.each([
++    [undefined],
++    [{}],
++    [{ waha_native: null }],
++    [{ waha_native: 'sendList' }],
++    [{ waha_native: { kind: 'sendButtons', payload: {} } }],
++    [{ waha_native: { kind: 'sendText', payload: { text: 'x' } } }],
++    [{ waha_native: { kind: 'sendLocation' } }],
++    [{ waha_native: { kind: 'sendLocation', payload: [1, 2] } }],
++    [{ waha_native: { kind: 'sendLocation', payload: 'x' } }],
++  ])('ignores invalid content_attributes %j', (attrs) => {
++    expect(ParseWahaNative({ content_attributes: attrs })).toBeNull();
++  });
++
++  it('ignores a message without content_attributes', () => {
++    expect(ParseWahaNative({})).toBeNull();
++    expect(ParseWahaNative(null)).toBeNull();
++  });
++});
++
++describe('BuildWahaNativeRequest', () => {
++  const chatId = '5511999999999@c.us';
++  const replyTo = 'true_5511999999999@c.us_3EB0AAAA';
++
++  it('list: chatId comes from the connector, never from the payload', () => {
++    const request = BuildWahaNativeRequest(
++      {
++        kind: 'sendList',
++        payload: {
++          ...LIST_PAYLOAD,
++          chatId: 'attacker@c.us',
++          session: 'other',
++        },
++      },
++      chatId,
++      replyTo,
++      'ID',
++    );
++    expect(request).toEqual({
++      session: '',
++      chatId: chatId,
++      message: LIST_PAYLOAD.message,
++      reply_to: replyTo,
++    });
++  });
++
++  it('location: copies only the endpoint fields and the deterministic id', () => {
++    const request = BuildWahaNativeRequest(
++      {
++        kind: 'sendLocation',
++        payload: {
++          latitude: -23.5,
++          longitude: -46.6,
++          title: 'Escritório',
++          chatId: 'attacker@c.us',
++          extra: 'drop me',
++        },
++      },
++      chatId,
++      undefined,
++      '3EB0ID',
++    );
++    expect(request).toEqual({
++      session: '',
++      chatId: chatId,
++      id: '3EB0ID',
++      latitude: -23.5,
++      longitude: -46.6,
++      title: 'Escritório',
++      reply_to: undefined,
++    });
++  });
++
++  it('contact: copies contacts and the deterministic id', () => {
++    const contacts = [
++      {
++        fullName: 'Maria',
++        organization: 'Hub2You',
++        phoneNumber: '+55 11 99999-9999',
++        whatsappId: '5511999999999',
++      },
++    ];
++    const request = BuildWahaNativeRequest(
++      {
++        kind: 'sendContactVcard',
++        payload: { contacts: contacts, session: 'other' },
++      },
++      chatId,
++      replyTo,
++      '3EB0ID',
++    );
++    expect(request).toEqual({
++      session: '',
++      chatId: chatId,
++      id: '3EB0ID',
++      contacts: contacts,
++      reply_to: replyTo,
++    });
++  });
++});
++
++describe('DeterministicMessageId', () => {
++  it('is stable for the same Chatwoot message', () => {
++    const a = DeterministicMessageId('default', 123, 'sendLocation');
++    const b = DeterministicMessageId('default', 123, 'sendLocation');
++    expect(a).toEqual(b);
++    expect(a).toMatch(/^3EB0[0-9A-F]{18}$/);
++  });
++
++  it('changes with message, session and kind', () => {
++    const base = DeterministicMessageId('default', 123, 'sendLocation');
++    expect(DeterministicMessageId('default', 124, 'sendLocation')).not.toEqual(
++      base,
++    );
++    expect(DeterministicMessageId('other', 123, 'sendLocation')).not.toEqual(
++      base,
++    );
++    expect(
++      DeterministicMessageId('default', 123, 'sendContactVcard'),
++    ).not.toEqual(base);
++  });
++});
++
++describe('error classification', () => {
++  it.each([
++    [400, true],
++    [404, true],
++    [422, true],
++    [499, true],
++    [501, true],
++    [500, false],
++    [502, false],
++    [503, false],
++    [504, false],
++    [null, false],
++  ])('status %p definitive=%p', (status, expected) => {
++    expect(IsDefinitiveRefusal(status)).toBe(expected);
++  });
++
++  it('reads the HTTP status of an axios-like error', () => {
++    expect(WahaHttpStatus({ response: { status: 422 } })).toBe(422);
++    expect(WahaHttpStatus({ code: 'ECONNABORTED' })).toBeNull();
++    expect(WahaHttpStatus(new Error('boom'))).toBeNull();
++  });
++
++  it('WahaNativeSendError is unrecoverable and carries only safe fields', () => {
++    const err = new WahaNativeSendError('sendList', 500, 77);
++    expect(err).toBeInstanceOf(UnrecoverableError);
++    expect(err.name).toBe('UnrecoverableError');
++    expect(err.message).toContain('kind=sendList');
++    expect(err.message).toContain('status=500');
++    expect(err.message).toContain('chatwoot_message_id=77');
++    const timeout = new WahaNativeSendError('sendLocation', null, 78);
++    expect(timeout.message).toContain('status=no-response');
++  });
++});
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/native.ts b/src/apps/chatwoot/messages/to/whatsapp/native.ts
+new file mode 100644
+index 00000000..7304c6c9
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/native.ts
+@@ -0,0 +1,154 @@
++import { createHash } from 'node:crypto';
++import { UnrecoverableError } from 'bullmq';
++import { MessageContactVcardRequest } from '@waha/structures/chatting.dto';
++import { MessageLocationRequest } from '@waha/structures/chatting.dto';
++import { SendListRequest } from '@waha/structures/chatting.list.dto';
++
++/**
++ * Autonom.ia patch c2y-rich-1 (autonom-ia2/chat#1709)
++ * Chatwoot message -> native WhatsApp message (list, location, contact)
++ * Contract: content_attributes.waha_native = {kind, payload}
++ * payload follows the WAHA endpoint body WITHOUT chatId and session.
++ */
++export const WAHA_NATIVE_KINDS = [
++  'sendList',
++  'sendLocation',
++  'sendContactVcard',
++] as const;
++
++export type WahaNativeKind = (typeof WAHA_NATIVE_KINDS)[number];
++
++export interface WahaNative {
++  kind: WahaNativeKind;
++  payload: Record<string, any>;
++}
++
++export type WahaNativeRequest =
++  | SendListRequest
++  | MessageLocationRequest
++  | MessageContactVcardRequest;
++
++const HTTP_NOT_IMPLEMENTED = 501;
++
++/**
++ * Time limit for one native send call to the local WAHA API.
++ * Beyond it the send is treated as uncertain (could have been delivered).
++ */
++export const WAHA_NATIVE_SEND_TIMEOUT_MS = 60_000;
++
++export function ParseWahaNative(message: any): WahaNative | null {
++  const native = message?.content_attributes?.waha_native;
++  if (!native || typeof native !== 'object') {
++    return null;
++  }
++  if (!WAHA_NATIVE_KINDS.includes(native.kind)) {
++    return null;
++  }
++  const payload = native.payload;
++  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
++    return null;
++  }
++  return { kind: native.kind, payload: payload };
++}
++
++/**
++ * Deterministic WhatsApp message id from the Chatwoot message id,
++ * so a manual re-run of the same job can not deliver a second copy.
++ * Same shape as whatsmeow/Baileys ids: "3EB0" + 18 upper hex chars.
++ */
++export function DeterministicMessageId(
++  session: string,
++  chatwootMessageId: number | string,
++  kind: WahaNativeKind,
++): string {
++  const seed = `autonomia:c2y-rich-1:${session}:${chatwootMessageId}:${kind}`;
++  const hash = createHash('sha256').update(seed).digest('hex');
++  return `3EB0${hash.slice(0, 18).toUpperCase()}`;
++}
++
++/**
++ * Build the WAHA request from the payload.
++ * chatId and session ALWAYS come from the connector, never from the payload.
++ * Only the documented fields of each endpoint are copied.
++ */
++export function BuildWahaNativeRequest(
++  native: WahaNative,
++  chatId: string,
++  replyTo: string | undefined,
++  id: string,
++): WahaNativeRequest {
++  const p = native.payload;
++  switch (native.kind) {
++    case 'sendList':
++      return {
++        session: '',
++        chatId: chatId,
++        message: p.message,
++        reply_to: replyTo,
++      };
++    case 'sendLocation':
++      return {
++        session: '',
++        chatId: chatId,
++        id: id,
++        latitude: p.latitude,
++        longitude: p.longitude,
++        title: p.title,
++        reply_to: replyTo,
++      };
++    case 'sendContactVcard':
++      return {
++        session: '',
++        chatId: chatId,
++        id: id,
++        contacts: p.contacts,
++        reply_to: replyTo,
++      };
++  }
++}
++
++/**
++ * HTTP status of a failed call to the local WAHA API, null when there is no
++ * response (timeout, abort, connection error).
++ */
++export function WahaHttpStatus(err: any): number | null {
++  const status = err?.response?.status;
++  return typeof status === 'number' ? status : null;
++}
++
++/**
++ * WAHA refused the request for good (validation, unsupported chat, engine
++ * without the method). Nothing was sent, so the text fallback is safe.
++ */
++export function IsDefinitiveRefusal(status: number | null): boolean {
++  if (status == null) {
++    return false;
++  }
++  if (status === HTTP_NOT_IMPLEMENTED) {
++    return true;
++  }
++  return status >= 400 && status < 500;
++}
++
++/**
++ * Native send failed with an uncertain outcome (5xx, gRPC, timeout).
++ * No retry: a list can not carry a pre-generated id and a resend could
++ * duplicate it. The message carries only safe fields - never the original
++ * error, request config, headers, api key or payload.
++ */
++export class WahaNativeSendError extends UnrecoverableError {
++  constructor(
++    public readonly kind: WahaNativeKind,
++    public readonly status: number | null,
++    public readonly chatwootMessageId: number | string,
++  ) {
++    const statusText = status ?? 'no-response';
++    super(
++      `WhatsApp native message was not confirmed (kind=${kind}, ` +
++        `status=${statusText}, chatwoot_message_id=${chatwootMessageId}). ` +
++        'It was not retried to avoid a duplicate; ' +
++        'check the chat before sending again.',
++    );
++    this.name = 'UnrecoverableError';
++  }
++}
+diff --git a/src/structures/environment.dto.ts b/src/structures/environment.dto.ts
+index 70e5cead..b73d796c 100644
+--- a/src/structures/environment.dto.ts
++++ b/src/structures/environment.dto.ts
+@@ -36,4 +36,20 @@ export class WAHAEnvironment {
+   worker: {
+     id: string | null;
+   };
++
++  @ApiProperty({
++    example: {
++      patch: 'c2y-rich-1',
++      rich_native: ['options', 'location', 'contact'],
++      list_reply: true,
++    },
++    required: false,
++    description:
++      'Autonom.ia build patch (autonom-ia2/chat#1709): native list, location and contact from Chatwoot, list replies to Chatwoot.',
++  })
++  autonomia?: {
++    patch: string;
++    rich_native: string[];
++    list_reply: boolean;
++  };
+ }
+diff --git a/src/utils/bull/BaseWorkerHost.ts b/src/utils/bull/BaseWorkerHost.ts
+index 078d5d96..55d5e0c6 100644
+--- a/src/utils/bull/BaseWorkerHost.ts
++++ b/src/utils/bull/BaseWorkerHost.ts
+@@ -1,6 +1,6 @@
+ import { WorkerHost } from '@nestjs/bullmq';
+ import { JobDetailedError } from '@waha/utils/bull/JobDetailedError';
+-import { DelayedError, Job } from 'bullmq';
++import { DelayedError, Job, UnrecoverableError } from 'bullmq';
+ 
+ export abstract class BaseWorkerHost extends WorkerHost {
+   async process(job: Job, token?: string): Promise<any> {
+@@ -11,6 +11,10 @@ export abstract class BaseWorkerHost extends WorkerHost {
+       if (err instanceof DelayedError) {
+         throw err;
+       }
++      // pass UnrecoverableError as is, so BullMQ does not retry it
++      if (err instanceof UnrecoverableError) {
++        throw err;
++      }
+       throw new JobDetailedError(err);
+     }
+   }
+diff --git a/src/version.ts b/src/version.ts
+index 7a03361c..2604655c 100644
+--- a/src/version.ts
++++ b/src/version.ts
+@@ -54,6 +54,11 @@ export const VERSION: WAHAEnvironment = {
+   browser: getBrowser(),
+   platform: getPlatform(),
+   worker: getWorker(),
++  autonomia: {
++    patch: 'c2y-rich-1',
++    rich_native: ['options', 'location', 'contact'],
++    list_reply: true,
++  },
+ };
+ 
+ export const IsChrome = VERSION.browser

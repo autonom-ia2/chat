@@ -212,7 +212,9 @@ RSpec.describe Account do
         feature_horario_unico_caixa: 1 << 26,
         feature_crm_outro_canal: 1 << 27,
         feature_crm_mensagem_marcada: 1 << 28,
-        feature_crm_avaliar_toda_mensagem: 1 << 29
+        feature_crm_avaliar_toda_mensagem: 1 << 29,
+        # #1709: depois do que está na main; o bit pode mudar conforme a ordem de merge (#1489 e #1724 querem o 30).
+        feature_whatsapp_rich_native: 1 << 30
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

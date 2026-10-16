@@ -466,3 +466,14 @@
   display_name: Toda mensagem do cliente avalia o card em foco
   enabled: false
   column: feature_flags_ext_1
+
+# Mensagem rica nativa pelo WhatsApp API (#1709): plano B do WhatsApp Híbrido (fase 1) e caixa WAHA comum pelo conector
+# do WAHA (fase 2). Ligada: opções saem como lista, localização e contato saem nativos, e a resposta do cliente à lista
+# é ligada à pergunta. Bit 30 (1073741824), logo depois de `crm_avaliar_toda_mensagem` (bit 29, já na main): a posição
+# na lista é o bit; outros PRs abertos (#1489, #1724) também querem o 30, então o bit pode mudar conforme a ordem de
+# merge (esta vai para o fim do que estiver na main). Desligada (padrão): tudo sai como texto, como antes. Sem
+# migration; ligar é com a Orquestração.
+- name: whatsapp_rich_native
+  display_name: Mensagens ricas nativas pelo WhatsApp API (Híbrido e WAHA)
+  enabled: false
+  column: feature_flags_ext_1
