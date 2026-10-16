@@ -397,5 +397,7 @@ Com a flag, quando a mensagem sai pelo WhatsApp API (rota direta ou plano B do 1
   `Waha::Client#send_list`/`#send_location`/`#send_contact_vcard`, e `WhatsappHybrid::RichNative` (prepends em
   `WhatsappHybrid::WebTransport`, `RichMessages` e `Whatsapp::IncomingMessageBaseService`, em
   `config/initializers/whatsapp_rich_native.rb`).
-- A conferir no teste em aparelho antes de ligar: o formato da resposta do `sendList` (de onde sai o id físico) e o
-  título da lista sem cabeçalho (hoje o corpo vai como título).
+- Resposta do `sendList` conferida no teste real de 16/10/2026: `id._serialized` termina no id físico; guardamos só o
+  id curto (`3EB0...`), o mesmo formato do texto, que é o que o ack do webhook híbrido procura.
+- A conferir no teste em aparelho antes de ligar: o título da lista sem cabeçalho (hoje o corpo vai como título).
+- A conversa também leva `whatsapp_api_rich_native` no evento ao vivo (`Conversations::EventDataPresenter`).

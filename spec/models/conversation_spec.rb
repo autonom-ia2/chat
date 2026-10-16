@@ -739,6 +739,7 @@ RSpec.describe Conversation do
         timestamp: conversation.last_activity_at.to_i,
         can_reply: true,
         whatsapp_api_reply: false,
+        whatsapp_api_rich_native: [],
         channel: 'Channel::WebWidget',
         snoozed_until: conversation.snoozed_until,
         custom_attributes: conversation.custom_attributes,

@@ -126,6 +126,7 @@ RSpec.describe Waha::RichPayload do
       expect(described_class.physical_id({ 'id' => { '_serialized' => 'true_5511937016094@c.us_3EB0SER' } })).to eq('3EB0SER')
       expect(described_class.physical_id({ 'key' => { 'id' => '3EB0KEY' } })).to eq('3EB0KEY')
       expect(described_class.physical_id({})).to be_nil
+      expect(described_class.physical_id({ 'id' => '' })).to be_nil
       expect(described_class.physical_id(nil)).to be_nil
     end
   end

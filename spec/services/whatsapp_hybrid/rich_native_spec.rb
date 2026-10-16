@@ -67,6 +67,26 @@ describe WhatsappHybrid::RichNative do
       expect(WhatsappHybrid::WebTransport.message_for(connection, '3EB0LIST')).to eq(message)
     end
 
+    # Resposta real do sendList no teste de 16/10/2026: `id` com `_serialized` terminando no id físico. O source_id e o
+    # Redis guardam só o id curto, como o send_text (o id gerado, `3EB0...`), que é o que o ack do webhook procura
+    # (WhatsappHybrid::WebhookEventJob: `payload['id'].split('_').last`).
+    it 'keeps the short physical id of the real sendList answer, the same format the text send keeps' do
+      flag_on!
+      serialized = 'true_5511937016094@c.us_3EB0AD0AC2E780A4D758F5'
+      allow(client).to receive(:send_list).and_return({ 'id' => { 'fromMe' => true, 'remote' => '5511937016094@c.us',
+                                                                  'id' => '3EB0AD0AC2E780A4D758F5', '_serialized' => serialized } })
+      text = create(:message, message_type: :outgoing, content: 'Oi', conversation: conversation, account: account, inbox: inbox,
+                              sender: create(:user, account: account))
+      send_by_web(text)
+      list = outgoing(options)
+
+      send_by_web(list)
+
+      expect(text.reload.source_id).to eq('3EB0AAAA')
+      expect(list.reload.source_id).to eq('3EB0AD0AC2E780A4D758F5')
+      expect(WhatsappHybrid::WebTransport.message_for(connection, serialized.split('_').last)).to eq(list)
+    end
+
     it 'sends a location natively with the pre-generated id in the source_id' do
       flag_on!
       allow(client).to receive(:send_location).and_return({})
