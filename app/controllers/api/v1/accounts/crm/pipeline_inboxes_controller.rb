@@ -48,4 +48,12 @@ class Api::V1::Accounts::Crm::PipelineInboxesController < Api::V1::Accounts::Crm
   def pipeline_inbox_params
     parameter_set(:pipeline_inbox).permit(:inbox_id, :default_stage_id, :auto_create_card)
   end
+
+  # #1149 (R16): o Editar funil mostra só as caixas em que o CRM está ligado. Caixa que saiu do CRM guarda o vínculo
+  # (com a criação desligada) e não traz conversa nenhuma. Mesma leitura do Crm::Caixas::Retrato.
+  def caixa_no_crm?(inbox_id)
+    @caixas_no_crm ||= Current.account.crm_inbox_settings.where(crm_enabled: true).pluck(:inbox_id).to_set
+    @caixas_no_crm.include?(inbox_id)
+  end
+  helper_method :caixa_no_crm?
 end

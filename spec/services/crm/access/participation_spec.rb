@@ -73,6 +73,7 @@ RSpec.describe 'Acesso por funil e participação' do # rubocop:disable RSpec/De
       add(restricted, [restricted.id])
 
       expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['code']).to eq('participants.self_add_restricted')
       expect(conversation.conversation_participants.where(user: restricted)).not_to exist
     end
 
