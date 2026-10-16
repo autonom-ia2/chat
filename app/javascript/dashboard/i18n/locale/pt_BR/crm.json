@@ -1538,6 +1538,15 @@
         "SUGGESTION_FOCUS_ACCEPT": "Tratar este assunto",
         "SUGGESTION_DISMISS": "Ignorar",
         "SUGGESTION_ERROR": "Não foi possível responder à sugestão. Ela pode ter mudado; veja os assuntos de novo."
+      },
+      "REPASSE": {
+        "TEXT": "O assunto virou {pipeline}. Quer passar para a equipe de {pipeline}?",
+        "PASS": "Passar para a equipe de {pipeline}",
+        "KEEP": "Ficar com a conversa",
+        "NOBODY_ONLINE": "Ninguém da equipe de {pipeline} está online; a conversa vai esperar alguém entrar.",
+        "PASS_ANYWAY": "Passar mesmo assim",
+        "DONE": "Conversa passada para a equipe de {pipeline}.",
+        "ERROR": "Não foi possível responder. O assunto pode ter mudado; veja de novo."
       }
     },
     "PIPELINE_DRAWER": {

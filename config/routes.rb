@@ -380,6 +380,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Decisão "a" (#1606): o assunto mudou com uma pessoa no nome; passar para a equipe do assunto ou ficar.
+            post 'conversations/:conversation_id/repasse', to: 'conversation_cards#pass_subject'
+            post 'conversations/:conversation_id/repasse/manter', to: 'conversation_cards#keep_subject'
             # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'

@@ -8,6 +8,7 @@ import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
 import CrmReplySubject from './CrmReplySubject.vue';
+import CrmRepasseDoAssunto from './CrmRepasseDoAssunto.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
 import ReplyTopPanel from 'dashboard/components/widgets/WootWriter/ReplyTopPanel.vue';
 import ReplyEmailHead from './ReplyEmailHead.vue';
@@ -81,6 +82,7 @@ export default {
     ReplyEmailHead,
     ReplyToMessage,
     CrmReplySubject,
+    CrmRepasseDoAssunto,
     ReplyTopPanel,
     ContentTemplates,
     WhatsappTemplates,
@@ -1360,6 +1362,11 @@ export default {
 
 <template>
   <ReplyBoxBanner :message="message" :is-on-private-note="isOnPrivateNote" />
+  <CrmRepasseDoAssunto
+    v-if="crmReplySubjectEnabled"
+    :conversation-id="currentChat.id"
+    :assignee-id="currentChat.meta?.assignee?.id || null"
+  />
   <WhatsappApiReplyHint
     :conversation="currentChat"
     :is-on-private-note="isOnPrivateNote"

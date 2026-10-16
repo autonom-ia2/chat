@@ -14557,9 +14557,43 @@
     "controller": "api/v1/accounts/crm/conversation_cards#focus",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:31",
       "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/conversations/:conversation_id/repasse": {
+    "campos": {
+      "card_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#pass_subject",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/conversations/:conversation_id/repasse/manter": {
+    "campos": {
+      "card_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#keep_subject",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:51",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -14568,9 +14602,9 @@
     "controller": "api/v1/accounts/crm/conversation_cards#accept_suggestion",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:13",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:14",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": true
   },
@@ -14579,9 +14613,9 @@
     "controller": "api/v1/accounts/crm/conversation_cards#dismiss_suggestion",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": true
   },

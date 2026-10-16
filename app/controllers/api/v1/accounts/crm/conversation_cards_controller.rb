@@ -7,7 +7,8 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
   def index
     cards = conversation_cards.includes(:stage, :pipeline, :owner).to_a
     current_id = cards.first&.id if cards.first&.open?
-    render json: { payload: cards.map { |card| card_payload(card, current_id) }, suggestion: suggestion_payload }
+    render json: { payload: cards.map { |card| card_payload(card, current_id) }, suggestion: suggestion_payload,
+                   repasse: ::Crm::Repasse.para(@conversation, Current.user) }
   end
 
   def accept_suggestion
@@ -36,6 +37,21 @@ class Api::V1::Accounts::Crm::ConversationCardsController < Api::V1::Accounts::C
 
     ::Crm::Cards::Focus.new(account: Current.account, card: card, conversation: @conversation, user: Current.user).perform
     render json: { payload: { card_id: card.id } }
+  end
+
+  # Decisão "a" (#1606): só quem está com a conversa responde à sugestão de passar para a equipe do assunto novo.
+  def pass_subject
+    ::Crm::Repasse.passar!(@conversation, Current.user, params.require(:card_id))
+    head :no_content
+  rescue ::Crm::Repasse::Error => e
+    render_unprocessable("crm.conversation_cards.#{e.code}")
+  end
+
+  def keep_subject
+    ::Crm::Repasse.manter!(@conversation, Current.user, params.require(:card_id))
+    head :no_content
+  rescue ::Crm::Repasse::Error => e
+    render_unprocessable("crm.conversation_cards.#{e.code}")
   end
 
   private
