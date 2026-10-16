@@ -1,0 +1,5 @@
+pt_BR:
+  waha:
+    rich_payload:
+      list_button: "Ver opções"
+      location_title: "Localização"

@@ -362,3 +362,40 @@ Autonom.ia). Regra decidida em 14/10/2026:
   no motor (conectada, subindo ou com QR; uma consulta à lista de sessões, guardada por 1 minuto; motor fora = sem
   aviso). O número vem do aparelho da sessão quando o motor informa, senão do nome da sessão; celular brasileiro com e
   sem o 9 (antes de 6 a 9) é o mesmo número (`WhatsappHybrid::SameNumberInboxes`).
+
+## Mensagem rica nativa pelo WhatsApp API (#1709, fase 1)
+
+Atrás da flag por conta `whatsapp_rich_native` (desligada por padrão; ligar é com a Orquestração). Sem a flag, nada
+muda: opções, localização e contato saem como texto pelo WhatsApp API, com a marca "Enviado como texto" (#1555).
+
+Com a flag, quando a mensagem sai pelo WhatsApp API (rota direta ou plano B do 131047):
+
+| Formato do painel (`rich_message`) | Sai pelo motor | Observação |
+|---|---|---|
+| `options` | `sendList` (lista) | Sempre lista, mesmo com até 3 opções sem descrição: o motor GOWS não tem botões (`sendButtons` = 501). O `id` de cada opção vira `rowId`. Botão padrão "Ver opções" (i18n, idioma da conta) quando falta `button`. |
+| `location` | `sendLocation` | Nome e endereço vão juntos no título (o motor só tem título); sem os dois, "Localização". |
+| `contact` | `sendContactVcard` | `wa_id` vai como `whatsappId` só quando veio. |
+| `link_button`, `location_request`, `flow`, `link_preview` | texto, como antes | |
+
+- Limites da lista do WhatsApp: título da linha até 24, descrição até 72, botão até 20, no máximo 10 linhas, tudo em
+  uma linha só. Não cabe: sai texto, como antes.
+- Saiu nativa: a mensagem ganha `rich_message_sent_as: 'native'` (a bolha mostra o formato, como na oficial) e não
+  ganha a marca de texto. O id físico fica no `source_id` e no Redis, como no texto, para o ack e o eco. A lista não
+  aceita id gerado antes: vale o id que o motor devolve na resposta (`id` como `true_<chat>_<id>`, `id._serialized` ou
+  `key.id`); sem ele na resposta, fica o gerado e o log avisa (o ack dessa lista não a encontra).
+- Erro do motor no envio nativo segue as regras do texto (falha certa ou incerta). Não há segunda tentativa em texto,
+  para nunca sair duas mensagens.
+- `RichMessages.delivery_mode` responde `:native` para options, location e contact numa caixa híbrida com a flag e o
+  WhatsApp API pronto para a conversa. A conversa traz `whatsapp_api_rich_native` (lista de tipos, vazia sem a flag,
+  dentro da janela, com a conexão pausada ou caída) ao lado de `whatsapp_api_reply`, para a tela do "+".
+- Resposta à lista: a Meta não manda eco da lista enviada pelo aparelho e o `list_reply` que chega pela oficial vem
+  sem `context`. Com a flag, numa caixa híbrida, a resposta com `selected_option` e sem `in_reply_to` ganha
+  `in_reply_to` = id (numérico, do Chatwoot) da última mensagem nossa de options que saiu nativa na conversa com uma
+  opção de `id` igual ao tocado (comparação exata de id; procura nas 50 últimas mensagens nossas). É o que a bolha
+  "o cliente tocou em X" lê.
+- Código: `Waha::RichPayload` (tradução, independente do Híbrido, reaproveitável na caixa WAHA comum — fase 2),
+  `Waha::Client#send_list`/`#send_location`/`#send_contact_vcard`, e `WhatsappHybrid::RichNative` (prepends em
+  `WhatsappHybrid::WebTransport`, `RichMessages` e `Whatsapp::IncomingMessageBaseService`, em
+  `config/initializers/whatsapp_rich_native.rb`).
+- A conferir no teste em aparelho antes de ligar: o formato da resposta do `sendList` (de onde sai o id físico) e o
+  título da lista sem cabeçalho (hoje o corpo vai como título).

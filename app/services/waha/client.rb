@@ -128,6 +128,24 @@ module Waha
       post("/api/#{kind}", body)
     end
 
+    # ---- ENVIO NATIVO DE MENSAGEM RICA (chat#1709) ----
+    # Payloads conferidos no motor 2026.9.2 GOWS. Quem monta a partir do `rich_message` é o Waha::RichPayload.
+    # message: { title:, description:, footer:, button:, sections: [{ title:, rows: [{ title:, rowId:, description: }] }] }
+    # Sem `id`: o pedido do `sendList` não aceita id gerado antes; o id físico volta na resposta.
+    def send_list(session:, chat_id:, message:)
+      post('/api/sendList', { session: session, chatId: chat_id, message: message })
+    end
+
+    # location: { latitude:, longitude:, title: } (o motor não tem endereço à parte: vai no título)
+    def send_location(session:, chat_id:, id:, location:)
+      post('/api/sendLocation', { session: session, chatId: chat_id, id: id, **location.slice(:latitude, :longitude, :title) })
+    end
+
+    # contacts: [{ fullName:, phoneNumber:, whatsappId:, organization: }] (`whatsappId` só dígitos, sem + nem @c.us)
+    def send_contact_vcard(session:, chat_id:, id:, contacts:)
+      post('/api/sendContactVcard', { session: session, chatId: chat_id, id: id, contacts: contacts })
+    end
+
     # ---- APPS (conector de mensagens) ----
     def create_app(session:, app_id:, config:, app: 'chatwoot')
       post('/api/apps', { id: app_id, session: session, app: app, enabled: true, config: config })

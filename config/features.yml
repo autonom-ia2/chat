@@ -455,3 +455,12 @@
   display_name: Mensagem marcada nova (para quem, quando, o que dizer)
   enabled: false
   column: feature_flags_ext_1
+
+# Mensagem rica nativa no WhatsApp Híbrido (#1709, fase 1). Ligada: no plano B (WhatsApp API), opções saem como lista,
+# localização e contato saem nativos, e a resposta do cliente à lista é ligada à pergunta. Bit 29 (536870912), logo
+# depois de `crm_mensagem_marcada` (bit 28): a posição na lista é o bit; se outra flag entrar antes na main, esta vai
+# para o fim e o bit sobe. Desligada (padrão): tudo sai como texto, como antes. Sem migration; ligar é com a Orquestração.
+- name: whatsapp_rich_native
+  display_name: Mensagem rica nativa no WhatsApp Híbrido (lista, localização e contato)
+  enabled: false
+  column: feature_flags_ext_1
