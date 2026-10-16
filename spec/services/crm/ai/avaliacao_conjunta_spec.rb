@@ -38,6 +38,19 @@ RSpec.describe Crm::Ai::AvaliacaoConjunta do
     expect(cliente).to have_received(:create).once
   end
 
+  it 'erro ao gravar um card depois da resposta paga: falha só dele, sem levantar (o retry pagaria de novo)' do
+    allow(cliente).to receive(:create).and_return(text: { cards: [item(auto), item(residencial)] }.to_json)
+    allow(Crm::Ai::ScoreApplier).to receive(:new).and_call_original
+    allow(Crm::Ai::ScoreApplier).to receive(:new).with(card: residencial, signals: nil).and_raise(ActiveRecord::Deadlocked)
+    allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+    resultados = described_class.new(cards: [auto, residencial], principal: auto).perform
+
+    expect(resultados[residencial.id]).to have_attributes(status: :failed, error: 'ActiveRecord::Deadlocked')
+    expect(resultados[auto.id].status).not_to eq(:failed)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::Deadlocked))
+  end
+
   it 'falha da IA vira falha de cada card, sem levantar' do
     allow(cliente).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'timeout')
 

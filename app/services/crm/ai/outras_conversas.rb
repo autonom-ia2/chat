@@ -10,6 +10,10 @@
 # A mesma mensagem nos dois recortes se reconhece por papel, texto, hora e conversa. O conversation_id só vem escrito
 # quando o card tem mais de uma conversa; com uma só, a conversa é a dele. Assim, textos iguais no mesmo segundo em
 # canais diferentes continuam sendo duas mensagens.
+#
+# Revisão de segurança: na chamada conjunta os pacotes se veem. De cada card entram a conversa primária dele (como na
+# avaliação de um card só) e as vinculadas que chegam por uma caixa que alimenta o funil dele; uma conversa vinculada
+# de um canal que o funil não atende não vai para a chamada.
 class Crm::Ai::OutrasConversas
   MAX_POR_CARD = Crm::Ai::ContextBuilder::MAX_RECENT_MESSAGES
   MAX_TOTAL = Crm::Ai::ContextBuilder::MAX_MESSAGES_CAP
@@ -34,7 +38,9 @@ class Crm::Ai::OutrasConversas
   # O que o recorte do card traz e a janela do principal não tem, as mais recentes dele. Conversa ligada a dois cards
   # tocados vai nos dois pacotes (é dos dois pedidos) e conta duas vezes no limite total, que é o que segue na chamada.
   def candidatas(classificador, vistas)
-    proprias = mensagens(classificador).reject { |_mensagem, chave| vistas.include?(chave) }.last(MAX_POR_CARD)
+    permitidas = cards.dig(id(classificador), :permitidas).to_a
+    proprias = mensagens(classificador).select { |_mensagem, chave| permitidas.include?(chave[:conversation_id]) && vistas.exclude?(chave) }
+                                       .last(MAX_POR_CARD)
     proprias.map { |mensagem, _chave| [id(classificador), mensagem] }
   end
 
@@ -45,7 +51,7 @@ class Crm::Ai::OutrasConversas
   end
 
   def mensagens(classificador)
-    unica = conversas_unicas[id(classificador)]
+    unica = cards.dig(id(classificador), :unica)
     Array(classificador.conversa[:recent_messages]).map do |mensagem|
       [mensagem, mensagem.slice(:role, :content, :created_at).merge(conversation_id: mensagem[:conversation_id] || unica)]
     end
@@ -55,14 +61,37 @@ class Crm::Ai::OutrasConversas
     classificador.pacote.dig(:card, :id)
   end
 
-  # As mesmas conversas que o ContextBuilder lê de cada card (a primária e as vinculadas), em duas consultas para todos:
-  # { card_id => conversation_id } dos cards com uma conversa só.
-  def conversas_unicas
-    @conversas_unicas ||= begin
-      ids = @classificadores.map { |classificador| id(classificador) }
-      pares = Crm::Card.where(id: ids).pluck(:id, :conversation_id) +
-              Crm::CardConversation.where(card_id: ids).pluck(:card_id, :conversation_id)
-      pares.select(&:last).uniq.group_by(&:first).filter_map { |card, dele| [card, dele.first.last] if dele.one? }.to_h
-    end
+  # Uma leitura para todos os cards, nas mesmas conversas que o ContextBuilder lê (a primária e as vinculadas):
+  # { card_id => { unica: a conversa, se é uma só; permitidas: a primária e as vinculadas de caixas do funil } }.
+  def cards
+    @cards ||= linhas.to_h { |card_id, pipeline_id, primaria| [card_id, conversas_do_card(card_id, pipeline_id, primaria)] }
+  end
+
+  def ids
+    @classificadores.map { |classificador| id(classificador) }
+  end
+
+  def linhas
+    @linhas ||= Crm::Card.where(id: ids).pluck(:id, :pipeline_id, :conversation_id)
+  end
+
+  def conversas_do_card(card_id, pipeline_id, primaria)
+    ligadas = vinculos.filter_map { |card, conversa| conversa if card == card_id }
+    todas = [primaria, *ligadas].compact.uniq
+    do_funil = ligadas.select { |conversa| caixas_do_funil[pipeline_id].to_a.include?(caixa_da_conversa[conversa]) }
+    { unica: (todas.first if todas.one?), permitidas: [primaria, *do_funil].compact }
+  end
+
+  def vinculos
+    @vinculos ||= Crm::CardConversation.where(card_id: ids).pluck(:card_id, :conversation_id)
+  end
+
+  def caixa_da_conversa
+    @caixa_da_conversa ||= Conversation.where(id: vinculos.map(&:last)).pluck(:id, :inbox_id).to_h
+  end
+
+  def caixas_do_funil
+    @caixas_do_funil ||= Crm::PipelineInbox.where(pipeline_id: linhas.map(&:second)).pluck(:pipeline_id, :inbox_id)
+                                           .group_by(&:first).transform_values { |pares| pares.map(&:last) }
   end
 end

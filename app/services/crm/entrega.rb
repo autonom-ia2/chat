@@ -234,7 +234,7 @@ class Crm::Entrega
 
     convite_como_passagem!(plano)
     ate = Time.current + plano.settings[:invite_ttl_seconds].to_i.seconds
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate)
+    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate, card: (plano.card if @pelo_card))
     @conversation.save! if gravar && @conversation.changed?
     resultado(:convidado, plano)
   end

@@ -171,6 +171,42 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(avaliacoes.first.dig(:schema, :name)).to eq('stage_classification_cards')
     end
 
+    it 'erro no principal depois de criar o outro pedido: a decisão fica como falha e o retry não duplica o card' do
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },
+                                { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }], principal: 1, motivo: 'ok')
+      allow(Crm::Subjects::Applier).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { |applier| allow(applier).to receive(:aplicar).and_raise(ActiveRecord::StatementInvalid) }
+      end
+
+      decisao = receber('Quero cotar a moto e o residencial')
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, decisao.message_id)
+
+      moto = account.crm_cards.find_by!(title: 'Seguro moto')
+      expect(decisao.reload).to have_attributes(state: 'failed', reason: 'ActiveRecord::StatementInvalid', touched_card_ids: [moto.id])
+      expect(account.crm_cards.where(title: 'Seguro moto').count).to eq(1)
+      expect(foco).to eq(auto)
+    end
+
+    it 'erro depois de o card principal ser salvo: a decisão fica como falha, o foco fica nele e o retry não duplica' do
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }],
+                     principal: 1, motivo: 'ok')
+      allow(Crm::Subjects::Applier).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { |applier| allow(applier).to receive(:card_do_principal).and_raise(ActiveRecord::StatementInvalid) }
+      end
+
+      decisao = receber('Fecha o auto e quero cotar o residencial')
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, decisao.message_id)
+
+      residencial = account.crm_cards.find_by!(title: 'Seguro residencial')
+      expect(decisao.reload).to have_attributes(state: 'failed', action: 'create', card_id: residencial.id, title: 'Seguro residencial',
+                                                touched_card_ids: [residencial.id])
+      expect(Crm::Cards::Broadcaster).to have_received(:broadcast).with(residencial, Events::Types::CRM_CARD_CREATED)
+      expect(account.crm_cards.where(title: 'Seguro residencial').count).to eq(1)
+      expect(foco).to eq(residencial)
+    end
+
     it 'vencida por uma mensagem mais nova depois de criar o outro pedido: o foco volta e só o card criado é avaliado' do
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },
@@ -250,8 +286,11 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       end
 
       # Uma conversa de e-mail do João, ligada ao card, com as mensagens do cliente (um minuto entre elas, a partir de `desde`).
-      def conversa_de_email(card, textos, desde)
-        create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact).tap do |conversa|
+      # A caixa de e-mail alimenta o funil do card (senão as mensagens dela não entram no pacote, ver o caso abaixo).
+      def conversa_de_email(card, textos, desde, funil: true)
+        caixa = create(:inbox, account: account)
+        ligar_ao_funil(card.pipeline, caixa) if funil
+        create(:conversation, account: account, inbox: caixa, contact: contact).tap do |conversa|
           textos.each_with_index do |texto, minuto|
             create(:message, account: account, inbox: conversa.inbox, conversation: conversa, message_type: :incoming, content: texto,
                              created_at: desde + minuto.minutes)
@@ -260,6 +299,11 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
           conversa.messages.where.not(message_type: :incoming).delete_all
           Crm::CardConversation.create!(account: account, card: card, conversation: conversa)
         end
+      end
+
+      def ligar_ao_funil(pipeline, caixa)
+        account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: caixa, default_stage: pipeline.stages.first, auto_create_card: false,
+                                             created_by: admin)
       end
 
       def pacotes
@@ -278,6 +322,23 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
         expect(outras(auto)).to eq(['Mandei a CNH por aqui', 'Segue o documento do carro por e-mail'])
         expect(pacotes[auto.id]['other_conversations_messages'].last['conversation_id']).to eq(email.id)
         expect(pacotes[sinistro.id]).not_to have_key('other_conversations_messages')
+      end
+
+      it 'conversa de uma caixa que não alimenta o funil do Auto não entra no pacote dele' do
+        conversa_de_email(auto, ['Mensagem de um canal de outro funil'], 1.hour.ago, funil: false)
+
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(outras(auto)).to eq(['Mandei a CNH por aqui', 'Segue o documento do carro por e-mail'])
+      end
+
+      it 'a conversa primária do próprio card entra mesmo de uma caixa que não alimenta o funil (como num card só)' do
+        primaria = conversa_de_email(auto, ['O auto foi aberto por aqui'], 3.hours.ago, funil: false)
+        auto.update!(primary_conversation: primaria)
+
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(outras(auto)).to include('O auto foi aberto por aqui')
       end
 
       it 'limite por card: só as mais recentes de cada card' do
@@ -471,6 +532,9 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
 
       expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [])
       expect(avaliacoes).to be_empty
+      expect(a_request(:post, 'https://api.typesafe.ai/v1/systemone').with do |request|
+        JSON.parse(request.body)['state']['instructions'].include?('A greeting, a thank-you or a goodbye without a request')
+      end).to have_been_made
       expect(auto.reload.stage.name).to eq('Proposta')
       expect(auto.last_activity_at).to be < 1.day.ago
     end

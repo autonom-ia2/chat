@@ -70,7 +70,10 @@ class Crm::Ai::AvaliacaoConjunta
     modelos.include?(Crm::Ai::Config::MODEL_AUTO_MOVE) ? Crm::Ai::Config::MODEL_AUTO_MOVE : Crm::Ai::Config::MODEL_CLASSIFY
   end
 
-  # A falha de um card (a segunda leitura do pedido de atendente, depois de mover) não derruba os outros.
+  # A falha de um card (a segunda leitura do pedido de atendente, depois de mover, ou um erro ao gravar) não derruba os
+  # outros e não sobe: a chamada já foi paga, e o retry do job pagaria de novo. Vai para o rastreador. Aceito: o que já
+  # foi gravado nele antes do erro (etapa, valor, campos) fica, sem transação que desfaça, e o card sai como failed;
+  # nenhuma chamada se repete.
   def aplicar(avaliador, classificacao, passar:, pelo_card:)
     return pulado('sem_resposta') if classificacao.nil?
 
@@ -79,6 +82,9 @@ class Crm::Ai::AvaliacaoConjunta
     Crm::Ai::Evaluator::Result.new(status: :failed, error: e.message)
   rescue JSON::ParserError
     Crm::Ai::Evaluator::Result.new(status: :failed, error: 'invalid_llm_json')
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e).capture_exception
+    Crm::Ai::Evaluator::Result.new(status: :failed, error: e.class.name)
   end
 
   # O card em que está o pedido de atendente; sem pedido, o principal. A IA põe o pedido num card só; se puser em mais

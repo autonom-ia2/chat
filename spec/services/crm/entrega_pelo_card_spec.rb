@@ -67,9 +67,21 @@ RSpec.describe Crm::Entrega do
   it 'card do pedido que fechou no meio: vale o assunto em foco' do
     sinistro.update!(status: :lost, closed_at: Time.current)
 
-    described_class.new(conversation: conversa, card: sinistro, motivo: 'ia_crm', origem: 'message', pelo_card: true).call
+    allow(Rails.logger).to receive(:info).and_call_original
+
+    Crm::Ai::HandoffExecutor.new(card: sinistro, handoff: pedido, pelo_card: true).perform
 
     expect(conversa.reload.assignee_id).to eq(ana.id)
+    expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=desvio').and(including('motivo=pedido_card_fechado_foco')))
+  end
+
+  it 'convite pela regra do card do pedido: a marca guarda o card, para a fila seguir a mesma regra quando vencer' do
+    pos_venda.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite', 'pool_type' => 'user',
+                                                         'pool_id' => bruno.id } })
+
+    Crm::Ai::HandoffExecutor.new(card: sinistro, handoff: pedido, pelo_card: true).perform
+
+    expect(Crm::Entrega::Marca.dados(conversa.reload)).to include('modo' => 'convite', 'card_id' => sinistro.id)
   end
 
   it 'segurada até alguém ficar online, a fila tenta de novo pela regra do card do pedido' do

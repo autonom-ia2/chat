@@ -26,7 +26,7 @@ module Crm
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
-      # a que o cliente o ligou, mesmo fora do foco. Basta o card seguir aberto nesta conversa.
+      # a que o cliente o ligou, mesmo fora do foco, enquanto ele seguir aberto nesta conversa; senão, pela regra do foco.
       def initialize(card:, handoff:, trigger: 'message', pelo_card: false)
         @card = card
         @handoff = normalize(handoff)
@@ -41,6 +41,9 @@ module Crm
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
 
+        # Decisão do coordenador do Multifunil (16/10): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
+        # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
+        registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
         entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
@@ -62,7 +65,8 @@ module Crm
       def conversa_bloqueada
         # #1606 (corrida c): a avaliação leva de 15 a 25 s; se o assunto da conversa virou outro card nesse meio tempo,
         # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
-        return 'assunto_mudou' unless @pelo_card ? Crm::Assunto.da_conversa?(@card, @conversation) : Crm::Assunto.atual?(@card, @conversation)
+        # Com pelo_card, quem escolhe a regra é a Entrega: a do card do pedido, ou a do foco se ele saiu da conversa.
+        return 'assunto_mudou' unless @pelo_card || Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
         return OWNED_BY_OUR_AGENT if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
