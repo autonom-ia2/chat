@@ -5,6 +5,7 @@
 #   comportamento de sempre (InboxSetting + vínculo com auto_create_card).
 # - Vários funis: nenhum card nasce num funil fixo (R9). Quem cria é a IA de assunto ('auto' ou 'suggest') ou a
 #   equipe ('off').
+# - IA de assunto com 1 funil (#1676): Automática com a flag `crm_avaliar_toda_mensagem`; sem ela, desligada.
 # - Nenhum funil: a caixa sai do CRM. Os vínculos ficam, com a criação desligada, como o PipelineLinkSyncer faz.
 # - Caixa ainda em "Agente vê apenas atribuídos" (R6) só sai dele com escolha explícita ('manter' ou 'mudar'; com
 #   'manter' a tela já manda cada agente em "Só as que atende"). Sem escolha, nada é gravado.
@@ -113,9 +114,19 @@ class Crm::Caixas::Gravador
       default_pipeline_id: um_funil? ? pipeline_ids.first : nil,
       default_stage_id: etapa&.id,
       auto_create_card: um_funil? && modo == 'chegou',
-      subject_ai_mode: um_funil? || pipeline_ids.empty? ? 'off' : modo,
+      subject_ai_mode: modo_da_ia_de_assunto,
       visibility_mode: :all_inbox_cards
     )
+  end
+
+  # #1676: com a flag `crm_avaliar_toda_mensagem` (contas 1, 16 e 18 por enquanto), a IA de assunto fica em Automática
+  # também na caixa de 1 funil, em 'chegou' ou à mão: um funil pode ter mais de um assunto (seguro auto e residencial em
+  # Vendas). Sem a flag, desligada com 1 funil, como antes. Com vários funis vale o que a tela mandou.
+  def modo_da_ia_de_assunto
+    return 'off' if pipeline_ids.empty?
+    return modo unless um_funil?
+
+    Crm::Conversations::CardEmFoco.ligada?(@account) ? 'auto' : 'off'
   end
 
   # Devolve os funis que saíram da caixa.

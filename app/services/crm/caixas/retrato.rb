@@ -35,7 +35,7 @@ class Crm::Caixas::Retrato
       crm_enabled: ligada,
       pipeline_ids: ligada ? links.fetch(inbox.id, []) : [],
       default_stage_id: setting&.default_stage_id,
-      subject_ai_mode: setting&.subject_ai_mode || 'off',
+      subject_ai_mode: setting&.subject_ai_mode || modo_padrao_da_ia_de_assunto,
       auto_create_card: setting&.auto_create_card? || false,
       visibility_mode: setting&.visibility_mode || 'all_inbox_cards',
       agent_bot: robo(inbox),
@@ -44,6 +44,12 @@ class Crm::Caixas::Retrato
   end
 
   private
+
+  # Caixa que ainda não tem configuração do CRM: o que ela ganha ao salvar. Com a flag `crm_avaliar_toda_mensagem`
+  # (#1676), a IA de assunto já vem em Automática; sem ela, desligada, como antes.
+  def modo_padrao_da_ia_de_assunto
+    Crm::Conversations::CardEmFoco.ligada?(@account) ? 'auto' : 'off'
+  end
 
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
   # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é espelho de
