@@ -101,7 +101,7 @@ module Autonomia
       # arquivo do deploy com as escolhas da corretora (#380); para os demais é a própria coluna.
       def instructions
         [
-          @agent.scaffold,
+          @agent.effective_scaffold,
           @agent.instrucao_do_sistema,
           ::Autonomia::Agents::Tools::Native::Agenda.instrucao(@agent),
           persona_block,

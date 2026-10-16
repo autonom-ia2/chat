@@ -3463,6 +3463,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -3510,6 +3514,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -3522,7 +3530,7 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:202",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:185",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",
@@ -10401,6 +10409,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -10448,6 +10460,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -10460,7 +10476,7 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:202",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:293",
@@ -10788,14 +10804,16 @@
         "tipo_pela_leitura": "uso"
       },
       "papel": {},
-      "type": {},
+      "type": {
+        "tipo": "string"
+      },
       "with_knowledge": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#create",
     "modelo": "Autonomia::Agents::Agent",
     "motivos": [
-      "leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
+      "leitura crua sem tipo: message (repassada a @thread.append_message!), papel, with_knowledge (repassada a @thread.persist_start_options!)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:12",
@@ -21543,6 +21561,10 @@
           "insurance_quote"
         ]
       },
+      "company_name": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      },
       "config": {
         "tipo": "objeto_livre"
       },
@@ -21590,6 +21612,10 @@
           "paused"
         ]
       },
+      "supplemental_instruction": {
+        "max_caracteres": 50000,
+        "tipo": "string"
+      },
       "tone": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -21602,7 +21628,7 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:201",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:202",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:185",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:285",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:237",

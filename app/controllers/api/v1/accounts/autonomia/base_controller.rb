@@ -53,8 +53,8 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
   # Agentes de SISTEMA (config['system_key'], ex.: o Guia da Plataforma) ficam FORA da API de
   # agentes: não são listados, lidos, editados nem deletados pelo usuário (instruction = IP nosso).
   def agents_scope
-    ::Autonomia::Agents::Agent.kept.where(account: Current.account)
-                              .where("config->>'system_key' IS NULL")
+    scope = ::Autonomia::Agents::Agent.kept.where(account: Current.account).where("config->>'system_key' IS NULL")
+    Current.user.is_a?(SuperAdmin) ? scope : scope.where(principal_agent_id: nil)
   end
 
   def build_threads_scope

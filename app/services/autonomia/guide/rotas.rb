@@ -17,6 +17,8 @@ module Autonomia::Guide::Rotas
   # As rotas do próprio Guia (conversa, memória, pedido) ficam fora do alcance
   # dele (D3, #933): pela API ele conseguia apagar a própria conversa.
   DO_PROPRIO_GUIA = 'autonomia/guide'.freeze
+  # A contratação e a habilitação da Loja exigem o fluxo comercial explícito, não ações do Guia.
+  DA_LOJA = 'autonomia/financial/store'.freeze
 
   module_function
 
@@ -24,7 +26,7 @@ module Autonomia::Guide::Rotas
   def recurso(caminho)
     if caminho.start_with?(DENTRO_DA_CONTA)
       recurso = caminho.delete_prefix(DENTRO_DA_CONTA)
-      return recurso.start_with?(DO_PROPRIO_GUIA) ? nil : recurso.presence
+      return recurso.start_with?(DO_PROPRIO_GUIA, DA_LOJA) ? nil : recurso.presence
     end
     return CONTA if caminho == A_CONTA
     return "#{CONTA}/#{caminho.delete_prefix("#{A_CONTA}/")}" if caminho.start_with?("#{A_CONTA}/")

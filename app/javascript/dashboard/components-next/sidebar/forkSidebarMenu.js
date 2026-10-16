@@ -144,7 +144,7 @@ export const FILHOS_CONHECIDOS = {
     'CRM Booking Results',
   ],
   Insurance: ['Insurance Connections', 'Insurance Agent'],
-  Financial: ['Subscription', 'Invoices'],
+  Financial: ['Store', 'Subscription', 'Invoices'],
   Settings: [...ORIGENS_DOS_CARTOES, ...SAIRAM_DAS_CONFIGURACOES].filter(
     nome => nome !== 'Financial'
   ),

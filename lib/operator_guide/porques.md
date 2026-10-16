@@ -1788,6 +1788,16 @@
 - gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
+### loja_de_servicos
+- titulo: Consultar e publicar serviços na loja
+- rota: autonomia_financial_store
+- intent: Onde vejo os agentes da loja?; Como publico uma funcionalidade?; Por que o serviço não aparece no catálogo?; Onde configuro o ícone e preço?
+- onde_fica: Financeiro > Loja; agente > Serviço na loja
+- pre_requisitos: ser SuperAdmin da plataforma com acesso à conta, sessão Auth válida e integração da loja configurada
+- passos: 1. Abra Financeiro > Loja; 2. Confira os serviços agrupados em funcionalidades e agentes; 3. Abra Detalhes para consultar planos, preços e limites; 4. Conclua o checkout no Financeiro e aguarde a confirmação; 5. Em Meus serviços, escolha uma conta administrada e habilite o serviço; 6. Quando o agente estiver disponível, abra Configurar agente e defina nome, empresa e instruções complementares; 7. Inclua conhecimento próprio na aba Conhecimento e conecte a caixa de entrada na aba Canais; 8. Para publicar, use a aba Serviço na loja do agente principal e complete a configuração comercial no Financeiro.
+- gotchas: neste piloto a loja e a configuração dos agentes contratados são exclusivas de SuperAdmin; criar rascunho, retornar do checkout ou receber confirmação comercial não habilita recurso antes da autorização de capacidade; o ícone é configurado no serviço no Financeiro; a instância herda instruções, conhecimento e ferramentas sem copiar credenciais ou permitir alteração do principal; complementos e conhecimento locais ficam isolados por conta; desabilitar devolve capacidade e preserva os dados, sem desligar outra contratação válida; o agente só atua enquanto tiver autorização vigente; interrupções são retomadas pela intenção existente sem nova compra; se a reserva expirar, escolha Habilitar para iniciar outra ativação do serviço já contratado; sem uma sessão Auth renovável, a recuperação aguarda novo login; Gerenciar renovação cancela a renovação para todas as contas desse serviço, mantendo acesso até o fim do período pago e preservando os dados; retomar renovação exige autorização do Financeiro antes dessa data; Verificar pagamento reconcilia o checkout existente, sem criar uma nova cobrança; resultado incerto não autoriza comprar de novo.
+- nav_target: `autonomia_financial_store`
+
 ### faturas_e_pagamentos
 - titulo: Conferir faturas emitidas e o que já foi pago
 - rota: autonomia_financial_invoices

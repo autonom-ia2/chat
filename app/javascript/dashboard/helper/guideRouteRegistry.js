@@ -28,6 +28,7 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'autonomia_agents_builder',
   'autonomia_agents_index',
   'autonomia_financial_invoices',
+  'autonomia_financial_store',
   'autonomia_financial_subscription',
   'autonomia_insurance',
   'autonomia_insurance_agent',

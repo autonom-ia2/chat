@@ -581,13 +581,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
     t.integer "actuation", default: 0, null: false
     t.datetime "deleted_at"
     t.bigint "deleted_by_id"
+    t.bigint "principal_agent_id"
+    t.uuid "store_service_catalog_item_id"
+    t.string "company_name"
+    t.text "supplemental_instruction"
     t.index ["account_id", "actuation"], name: "idx_autonomia_agents_account_actuation"
     t.index ["account_id", "agent_type"], name: "index_autonomia_agents_on_account_id_and_agent_type"
     t.index ["account_id", "deleted_at"], name: "index_autonomia_agents_on_account_id_and_deleted_at"
+    t.index ["account_id", "principal_agent_id", "store_service_catalog_item_id"], name: "idx_store_agent_instance", unique: true, where: "(principal_agent_id IS NOT NULL)"
     t.index ["account_id", "status"], name: "index_autonomia_agents_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
     t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
+    t.index ["principal_agent_id"], name: "index_autonomia_agents_on_principal_agent_id"
   end
 
   create_table "autonomia_decisor_decisoes", force: :cascade do |t|
@@ -1046,6 +1052,114 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
     t.index ["default_crm_pipeline_id"], name: "idx_autonomia_prospecting_settings_default_pipeline"
     t.index ["default_crm_stage_id"], name: "idx_autonomia_prospecting_settings_default_stage"
     t.index ["scoring_profile_id"], name: "idx_autonomia_prospecting_settings_scoring_profile"
+  end
+
+  create_table "autonomia_store_activations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "account_id"
+    t.string "installation_id", null: false
+    t.uuid "product_catalog_item_id", null: false
+    t.string "buyer_subject", null: false
+    t.uuid "service_subscription_id", null: false
+    t.uuid "service_catalog_item_id", null: false
+    t.string "feature_key"
+    t.string "resource_id", null: false
+    t.string "metric_key", null: false
+    t.uuid "operation_intent", null: false
+    t.datetime "occurred_at", null: false
+    t.string "state", default: "preparing", null: false
+    t.uuid "reservation_id"
+    t.string "error_code"
+    t.boolean "reserve_attempted", default: false, null: false
+    t.uuid "processing_token"
+    t.datetime "processing_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "target", default: {}, null: false
+    t.bigint "agent_id"
+    t.datetime "next_recovery_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["account_id", "feature_key", "state"], name: "idx_store_activation_access"
+    t.index ["account_id"], name: "index_autonomia_store_activations_on_account_id"
+    t.index ["agent_id"], name: "index_autonomia_store_activations_on_agent_id"
+    t.index ["installation_id", "product_catalog_item_id", "next_recovery_at"], name: "idx_store_activation_recovery", where: "((state)::text <> ALL (ARRAY[('disabled'::character varying)::text, ('failed'::character varying)::text]))"
+    t.index ["reservation_id"], name: "index_autonomia_store_activations_on_reservation_id"
+    t.index ["user_id", "service_subscription_id", "account_id"], name: "idx_store_activation_owner_resource", unique: true
+    t.index ["user_id"], name: "index_autonomia_store_activations_on_user_id"
+  end
+
+  create_table "autonomia_store_checkout_intents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "account_id"
+    t.uuid "client_intent", null: false
+    t.string "installation_id", null: false
+    t.uuid "product_catalog_item_id", null: false
+    t.string "buyer_subject", null: false
+    t.jsonb "payload", null: false
+    t.string "state", default: "pending", null: false
+    t.uuid "checkout_session_id"
+    t.uuid "service_subscription_id"
+    t.decimal "access_version", precision: 30, default: "0", null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "target", default: {}, null: false
+    t.datetime "next_recovery_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.boolean "reconciliation_requested", default: false, null: false
+    t.string "reconciliation_state"
+    t.uuid "reconciliation_operation_id"
+    t.index ["account_id"], name: "index_autonomia_store_checkout_intents_on_account_id"
+    t.index ["installation_id", "product_catalog_item_id", "next_recovery_at"], name: "idx_store_checkout_recovery", where: "(((state)::text <> 'completed'::text) AND (((state)::text <> ALL (ARRAY[('expired'::character varying)::text, ('failed'::character varying)::text])) OR reconciliation_requested))"
+    t.index ["user_id", "client_intent"], name: "idx_store_checkout_intent", unique: true
+    t.index ["user_id"], name: "index_autonomia_store_checkout_intents_on_user_id"
+  end
+
+  create_table "autonomia_store_entitlements", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "installation_id", null: false
+    t.uuid "product_catalog_item_id", null: false
+    t.uuid "service_catalog_item_id", null: false
+    t.decimal "access_version", precision: 30, default: "0", null: false
+    t.jsonb "payload", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "installation_id", "product_catalog_item_id", "service_catalog_item_id"], name: "idx_store_entitlement_stream", unique: true
+    t.index ["account_id"], name: "index_autonomia_store_entitlements_on_account_id"
+  end
+
+  create_table "autonomia_store_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "body_sha256", null: false
+    t.jsonb "payload", null: false
+    t.string "state", default: "pending", null: false
+    t.datetime "processed_at"
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "next_recovery_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.index ["next_recovery_at"], name: "idx_store_inbox_recovery", where: "((state)::text = 'pending'::text)"
+    t.index ["state", "created_at"], name: "idx_store_events_pending"
+  end
+
+  create_table "autonomia_store_subscription_commands", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "buyer_subject", null: false
+    t.string "installation_id", null: false
+    t.uuid "product_catalog_item_id", null: false
+    t.uuid "service_subscription_id", null: false
+    t.uuid "client_intent", null: false
+    t.string "command_action", null: false
+    t.bigint "expected_version", null: false
+    t.string "state", default: "pending", null: false
+    t.jsonb "receipt"
+    t.string "error_code"
+    t.uuid "processing_token"
+    t.datetime "processing_at"
+    t.datetime "next_recovery_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["installation_id", "product_catalog_item_id", "next_recovery_at"], name: "idx_store_subscription_command_recovery", where: "((state)::text = 'pending'::text)"
+    t.index ["user_id", "client_intent"], name: "idx_store_subscription_command_intent", unique: true
+    t.index ["user_id", "installation_id", "product_catalog_item_id", "service_subscription_id"], name: "idx_store_subscription_pending_command", unique: true, where: "((state)::text = 'pending'::text)"
+    t.index ["user_id"], name: "index_autonomia_store_subscription_commands_on_user_id"
   end
 
   create_table "autonomia_user_links", force: :cascade do |t|
@@ -4117,6 +4231,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
   add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
+  add_foreign_key "autonomia_agents", "autonomia_agents", column: "principal_agent_id"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "accounts", on_delete: :cascade
@@ -4172,6 +4287,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
   add_foreign_key "autonomia_prospecting_settings", "autonomia_prospecting_scoring_profiles", column: "scoring_profile_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipeline_stages", column: "default_crm_stage_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipelines", column: "default_crm_pipeline_id", on_delete: :nullify
+  add_foreign_key "autonomia_store_activations", "accounts", on_delete: :nullify
+  add_foreign_key "autonomia_store_activations", "autonomia_agents", column: "agent_id", on_delete: :nullify
+  add_foreign_key "autonomia_store_activations", "users", on_delete: :nullify
+  add_foreign_key "autonomia_store_checkout_intents", "accounts", on_delete: :nullify
+  add_foreign_key "autonomia_store_checkout_intents", "users", on_delete: :nullify
+  add_foreign_key "autonomia_store_entitlements", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_store_subscription_commands", "users", on_delete: :nullify
   add_foreign_key "autonomia_user_links", "users", on_delete: :cascade
   add_foreign_key "brand_import_jobs", "accounts", on_delete: :cascade
   add_foreign_key "brand_import_jobs", "users", on_delete: :nullify

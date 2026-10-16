@@ -434,6 +434,7 @@ const montar = ({
   agendamento = true,
   relacionamentos = false,
   papel = 'administrator',
+  tipo = 'User',
   funcao = null,
   chaves = [],
 }) => {
@@ -455,7 +456,10 @@ const montar = ({
     getCurrentAccountId: ref(9),
     getCurrentRole: ref(papel),
     getCurrentCustomRoleId: ref(funcao),
-    getCurrentUser: ref({ accounts: [{ id: 9, permissions: chaves }] }),
+    getCurrentUser: ref({
+      type: tipo,
+      accounts: [{ id: 9, permissions: chaves }],
+    }),
     'accounts/getAccount': ref(() => ({
       id: 9,
       autonomia_agents_enabled: true,
@@ -619,6 +623,7 @@ const MENU_DE_SEMPRE = [
 
 const VARIANTES = [
   {},
+  { tipo: 'SuperAdmin' },
   { jornadas: false },
   { agendamento: false },
   { relacionamentos: true },
@@ -635,6 +640,34 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
   });
 
   const listas = () => VARIANTES.map(montar);
+
+  it('mantém a Loja exclusiva de SuperAdmin nos dois menus', () => {
+    const administrador = montar({});
+    const superadmin = montar({ tipo: 'SuperAdmin' });
+    expect(
+      administrador
+        .find(item => item.name === 'Financial')
+        .children.map(item => item.name)
+    ).not.toContain('Store');
+    expect(
+      superadmin
+        .find(item => item.name === 'Financial')
+        .children.map(item => item.name)
+    ).toContain('Store');
+    expect(
+      menuDeSempre({}).grupos.find(item => item.name === 'Financial').children
+    ).not.toContain('Store');
+    expect(
+      menuDeSempre({ tipo: 'SuperAdmin' }).grupos.find(
+        item => item.name === 'Financial'
+      ).children
+    ).toContain('Store');
+    expect(
+      organizeForkMenu(superadmin, ctx).rodape.find(
+        item => item.name === 'Settings'
+      ).activeOn
+    ).toContain('autonomia_financial_store');
+  });
 
   it('com a flag ligada, o menu novo recebe a mesma lista do menu de sempre e a organiza', () => {
     const itens = montar({});

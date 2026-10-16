@@ -1,0 +1,90 @@
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+export function useStoreLabels() {
+  const { t } = useI18n();
+  return computed(() => ({
+    separator: '\u00b7',
+    groups: {
+      feature: t('FINANCIAL.STORE.GROUPS.FEATURE'),
+      agent: t('FINANCIAL.STORE.GROUPS.AGENT'),
+    },
+    cycles: {
+      monthly: t('FINANCIAL.STORE.CYCLES.MONTHLY'),
+      yearly: t('FINANCIAL.STORE.CYCLES.YEARLY'),
+      one_time: t('FINANCIAL.STORE.CYCLES.ONE_TIME'),
+    },
+    usage: {
+      allocation: t('FINANCIAL.STORE.USAGE.ALLOCATION'),
+      consumption: t('FINANCIAL.STORE.USAGE.CONSUMPTION'),
+    },
+    reset: {
+      none: t('FINANCIAL.STORE.RESET.NONE'),
+      monthly: t('FINANCIAL.STORE.RESET.MONTHLY'),
+      yearly: t('FINANCIAL.STORE.RESET.YEARLY'),
+      billing_period: t('FINANCIAL.STORE.RESET.BILLING_PERIOD'),
+    },
+    activation: {
+      preparing: t('FINANCIAL.STORE.ACTIVATION_STATES.PREPARING'),
+      reserved: t('FINANCIAL.STORE.ACTIVATION_STATES.RESERVED'),
+      committed: t('FINANCIAL.STORE.ACTIVATION_STATES.COMMITTED'),
+      ready: t('FINANCIAL.STORE.ACTIVATION_STATES.READY'),
+      disabling: t('FINANCIAL.STORE.ACTIVATION_STATES.DISABLING'),
+      disabled: t('FINANCIAL.STORE.ACTIVATION_STATES.DISABLED'),
+      suspended: t('FINANCIAL.STORE.ACTIVATION_STATES.SUSPENDED'),
+      failed: t('FINANCIAL.STORE.ACTIVATION_STATES.FAILED'),
+    },
+    checkout: {
+      pending: t('FINANCIAL.STORE.CHECKOUT_STATES.PENDING'),
+      created: t('FINANCIAL.STORE.CHECKOUT_STATES.CREATED'),
+      payment_pending: t('FINANCIAL.STORE.CHECKOUT_STATES.PAYMENT_PENDING'),
+      confirmation_pending: t(
+        'FINANCIAL.STORE.CHECKOUT_STATES.CONFIRMATION_PENDING'
+      ),
+      reconciling: t('FINANCIAL.STORE.CHECKOUT_STATES.RECONCILING'),
+      completed: t('FINANCIAL.STORE.CHECKOUT_STATES.COMPLETED'),
+      expired: t('FINANCIAL.STORE.CHECKOUT_STATES.EXPIRED'),
+      failed: t('FINANCIAL.STORE.CHECKOUT_STATES.FAILED'),
+    },
+    features: {
+      prospecting: t('FINANCIAL.STORE.FEATURES.PROSPECTING'),
+      email_campaigns: t('FINANCIAL.STORE.FEATURES.EMAIL_CAMPAIGNS'),
+      whatsapp_api_campaigns: t(
+        'FINANCIAL.STORE.FEATURES.WHATSAPP_API_CAMPAIGNS'
+      ),
+    },
+    errors: {
+      SESSION_EXPIRED: t('FINANCIAL.STORE.SESSION_EXPIRED'),
+      LOAD_ERROR: t('FINANCIAL.STORE.LOAD_ERROR'),
+      CHECKOUT_PENDING: t('FINANCIAL.STORE.CHECKOUT_PENDING'),
+      CHECKOUT_ERROR: t('FINANCIAL.STORE.CHECKOUT_ERROR'),
+      CHECKOUT_ENDED: t('FINANCIAL.STORE.CHECKOUT_ENDED'),
+      ALREADY_CONTRACTED: t('FINANCIAL.STORE.ALREADY_CONTRACTED'),
+      PENDING_OTHER_PLAN: t('FINANCIAL.STORE.PENDING_OTHER_PLAN'),
+      ACTIVATION_PENDING: t('FINANCIAL.STORE.ACTIVATION_PENDING'),
+      ACTIVATION_ERROR: t('FINANCIAL.STORE.ACTIVATION_ERROR'),
+      LIMIT_EXCEEDED: t('FINANCIAL.STORE.LIMIT_EXCEEDED'),
+      RESERVATION_EXPIRED: t('FINANCIAL.STORE.RESERVATION_EXPIRED'),
+      COMMAND_PENDING: t('FINANCIAL.STORE.COMMAND_PENDING'),
+      COMMAND_CONFLICT: t('FINANCIAL.STORE.COMMAND_CONFLICT'),
+    },
+    renewal: {
+      renewing: t('FINANCIAL.STORE.CANCELLATION.RENEWING'),
+      non_renewal_scheduled: t('FINANCIAL.STORE.CANCELLATION.SCHEDULED'),
+      ended: t('FINANCIAL.STORE.CANCELLATION.ENDED'),
+    },
+    cancellationBlockers: {
+      trial_policy_not_defined: t(
+        'FINANCIAL.STORE.CANCELLATION.BLOCKERS.TRIAL'
+      ),
+      paid_period_unconfirmed: t(
+        'FINANCIAL.STORE.CANCELLATION.BLOCKERS.UNCONFIRMED'
+      ),
+      paid_period_expired: t('FINANCIAL.STORE.CANCELLATION.BLOCKERS.EXPIRED'),
+      subscription_canceled: t(
+        'FINANCIAL.STORE.CANCELLATION.BLOCKERS.CANCELED'
+      ),
+      payment_processing: t('FINANCIAL.STORE.CANCELLATION.BLOCKERS.PROCESSING'),
+    },
+  }));
+}

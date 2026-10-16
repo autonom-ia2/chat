@@ -124,6 +124,7 @@ module Autonomia
       # Quem atende: `operating?`, `atende_cliente?` e, desde o #1366, `tem_onde_trabalhar?` (validação de ativar e parada
       # automática). Moram juntos em Autonomia::Agents::OndeTrabalhar.
       include ::Autonomia::Agents::OndeTrabalhar
+      include ::Autonomia::Agents::StoreInstance
 
       # #1035 — quando o agente DEIXA de atender (pausa, desliga) as conversas que estavam com ele voltam
       # para a equipe e o espelho da caixa fica inativo (conversa nova nasce sem bot); quando VOLTA a
@@ -184,6 +185,8 @@ module Autonomia
       # retrieval/embedding no Answerer (agente sem base não paga embedding por mensagem nem
       # usa entries residuais). Mesmo contrato do jbuilder (`with_knowledge != false`).
       def knowledge_disabled?
+        return knowledge_agents.empty? if contracted_instance?
+
         [false, 'false'].include?(config.to_h['with_knowledge'])
       end
 
@@ -194,7 +197,7 @@ module Autonomia
       # agente não lê, e o cartão mentiria "salvo". A regra mora aqui, num predicado só; quem escreve
       # a coluna (abaixo e nos controllers) consulta este predicado, nunca o tipo direto.
       def instrucao_mantida?
-        agent_type == 'insurance_quote'
+        contracted_instance? || agent_type == 'insurance_quote'
       end
 
       # A guarda que cada escritor da coluna chama na primeira linha (`apply_builder_config!`,
@@ -211,6 +214,8 @@ module Autonomia
       # antes de as escolhas serem guardadas — a coluna, como sempre. Quem monta o prompt
       # (`PromptBuilder#instructions`) lê daqui, nunca de `instruction` direto.
       def instrucao_do_sistema
+        return contracted_instructions if contracted_instance?
+
         ::Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_principal(self) || instruction
       end
 
@@ -219,6 +224,8 @@ module Autonomia
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
       def ferramentas_nativas
+        return inherited_native_tools if contracted_instance?
+
         ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
           ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
       end

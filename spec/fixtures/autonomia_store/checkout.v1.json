@@ -1,0 +1,358 @@
+{
+  "checkoutRequest": {
+    "servicePlanPriceId": "55555555-5555-4555-8555-555555555555",
+    "limits": []
+  },
+  "checkoutResponse": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "buyer": {
+      "cognitoSub": "fictitious-cognito-sub-store-buyer"
+    },
+    "servicePlanPriceId": "55555555-5555-4555-8555-555555555555",
+    "checkoutIntentId": "88888888-8888-4888-8888-888888888888",
+    "checkoutSessionId": "77777777-7777-4777-8777-777777777777",
+    "checkoutUrl": "https://financial.example.test/store-checkout/fictitious",
+    "expiresAt": "2026-10-13T12:30:00Z",
+    "orderId": "99999999-9999-4999-8999-999999999999",
+    "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666"
+  },
+  "checkoutActorExtension": {
+    "checkoutIntentId": "88888888-8888-4888-8888-888888888888",
+    "idempotencyKeySha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "featureKey": "prospecting",
+    "returnContext": {
+      "accountId": "17",
+      "checkoutIntentId": "88888888-8888-4888-8888-888888888888"
+    }
+  },
+  "checkoutResolveRequest": {
+    "idempotencyKey": "fictitious:intent:0001"
+  },
+  "checkoutStatusResponse": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "buyer": {
+      "cognitoSub": "fictitious-cognito-sub-store-buyer"
+    },
+    "checkout": {
+      "id": "77777777-7777-4777-8777-777777777777",
+      "checkoutIntentId": "88888888-8888-4888-8888-888888888888",
+      "servicePlanPriceId": "55555555-5555-4555-8555-555555555555",
+      "status": "completed",
+      "checkoutUrl": null,
+      "expiresAt": "2026-10-13T12:30:00Z",
+      "orderId": "99999999-9999-4999-8999-999999999999",
+      "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666"
+    }
+  },
+  "serviceSubscriptionListResponse": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "buyer": {
+      "cognitoSub": "fictitious-cognito-sub-store-buyer"
+    },
+    "data": [
+      {
+        "subscription": {
+          "id": "66666666-6666-4666-8666-666666666666",
+          "buyer": {
+            "cognitoSub": "fictitious-cognito-sub-store-buyer"
+          },
+          "namespace": {
+            "installationId": "chat-test",
+            "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+          },
+          "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+          "planId": "44444444-4444-4444-8444-444444444444",
+          "planPriceId": "55555555-5555-4555-8555-555555555555",
+          "status": "active",
+          "currentPeriodStart": "2026-10-13T12:00:00Z",
+          "currentPeriodEnd": "2026-11-13T12:00:00Z",
+          "cancelAtPeriodEnd": false,
+          "access": {
+            "allowed": true,
+            "effectiveUntil": "2026-11-13T12:00:00Z"
+          },
+          "limits": [
+            {
+              "metricKey": "feature_activations",
+              "metricName": "Contas habilitadas",
+              "unit": "account",
+              "usageBehavior": "allocation",
+              "resetPeriod": "none",
+              "contractedQuantity": 2,
+              "usedQuantity": 1,
+              "reservedQuantity": 0,
+              "remainingQuantity": 1
+            }
+          ]
+        },
+        "service": {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "key": "store-feature-pilot",
+          "name": "Prospecção piloto fictício",
+          "description": null,
+          "logoUrl": "https://assets.example.test/prospecting.png"
+        },
+        "target": {
+          "type": "feature",
+          "featureKey": "prospecting"
+        },
+        "plan": {
+          "id": "44444444-4444-4444-8444-444444444444",
+          "name": "Plano piloto fictício"
+        },
+        "price": {
+          "id": "55555555-5555-4555-8555-555555555555",
+          "price": 20,
+          "currency": "BRL",
+          "billingCycle": "monthly"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "totalItems": 1,
+      "totalPages": 1
+    }
+  },
+  "serviceSubscriptionDetailResponse": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "buyer": {
+      "cognitoSub": "fictitious-cognito-sub-store-buyer"
+    },
+    "data": {
+      "subscription": {
+        "id": "66666666-6666-4666-8666-666666666666",
+        "buyer": {
+          "cognitoSub": "fictitious-cognito-sub-store-buyer"
+        },
+        "namespace": {
+          "installationId": "chat-test",
+          "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+        },
+        "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+        "planId": "44444444-4444-4444-8444-444444444444",
+        "planPriceId": "55555555-5555-4555-8555-555555555555",
+        "status": "active",
+        "currentPeriodStart": "2026-10-13T12:00:00Z",
+        "currentPeriodEnd": "2026-11-13T12:00:00Z",
+        "cancelAtPeriodEnd": false,
+        "access": {
+          "allowed": true,
+          "effectiveUntil": "2026-11-13T12:00:00Z"
+        },
+        "limits": [
+          {
+            "metricKey": "feature_activations",
+            "metricName": "Contas habilitadas",
+            "unit": "account",
+            "usageBehavior": "allocation",
+            "resetPeriod": "none",
+            "contractedQuantity": 2,
+            "usedQuantity": 1,
+            "reservedQuantity": 0,
+            "remainingQuantity": 1
+          }
+        ]
+      },
+      "service": {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "key": "store-feature-pilot",
+        "name": "Prospecção piloto fictício",
+        "description": null,
+        "logoUrl": "https://assets.example.test/prospecting.png"
+      },
+      "target": {
+        "type": "feature",
+        "featureKey": "prospecting"
+      },
+      "plan": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "name": "Plano piloto fictício"
+      },
+      "price": {
+        "id": "55555555-5555-4555-8555-555555555555",
+        "price": 20,
+        "currency": "BRL",
+        "billingCycle": "monthly"
+      }
+    }
+  },
+  "subscriptionUpdatedEvent": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "eventId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "type": "store.subscription.updated",
+    "accessVersion": "1",
+    "occurredAt": "2026-10-13T12:00:00Z",
+    "data": {
+      "buyer": {
+        "cognitoSub": "fictitious-cognito-sub-store-buyer"
+      },
+      "subscription": {
+        "id": "66666666-6666-4666-8666-666666666666",
+        "buyer": {
+          "cognitoSub": "fictitious-cognito-sub-store-buyer"
+        },
+        "namespace": {
+          "installationId": "chat-test",
+          "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+        },
+        "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+        "planId": "44444444-4444-4444-8444-444444444444",
+        "planPriceId": "55555555-5555-4555-8555-555555555555",
+        "status": "active",
+        "currentPeriodStart": "2026-10-13T12:00:00Z",
+        "currentPeriodEnd": "2026-11-13T12:00:00Z",
+        "cancelAtPeriodEnd": false,
+        "access": {
+          "allowed": true,
+          "effectiveUntil": "2026-11-13T12:00:00Z"
+        },
+        "limits": [
+          {
+            "metricKey": "feature_activations",
+            "metricName": "Contas habilitadas",
+            "unit": "account",
+            "usageBehavior": "allocation",
+            "resetPeriod": "none",
+            "contractedQuantity": 2,
+            "usedQuantity": 1,
+            "reservedQuantity": 0,
+            "remainingQuantity": 1
+          }
+        ]
+      },
+      "checkoutSessionId": "77777777-7777-4777-8777-777777777777",
+      "checkoutIntentId": "88888888-8888-4888-8888-888888888888"
+    }
+  },
+  "entitlementsSnapshotEvent": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "eventId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "type": "store.entitlements.snapshot",
+    "accessVersion": "1",
+    "occurredAt": "2026-10-13T12:00:00Z",
+    "data": {
+      "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+      "resourceRef": {
+        "type": "chatwoot.account",
+        "id": "17"
+      },
+      "grants": [
+        {
+          "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666",
+          "reservationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "status": "granted",
+          "effectiveUntil": "2026-11-13T12:00:00Z"
+        }
+      ],
+      "effectiveAccess": "granted"
+    }
+  },
+  "entitlementsResolveRequest": {
+    "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+    "resourceRef": {
+      "type": "chatwoot.account",
+      "id": "17"
+    }
+  },
+  "entitlementsResponse": {
+    "contractVersion": 1,
+    "namespace": {
+      "installationId": "chat-test",
+      "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+    },
+    "accessVersion": "1",
+    "data": {
+      "serviceCatalogItemId": "33333333-3333-4333-8333-333333333333",
+      "resourceRef": {
+        "type": "chatwoot.account",
+        "id": "17"
+      },
+      "grants": [
+        {
+          "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666",
+          "reservationId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "status": "granted",
+          "effectiveUntil": "2026-11-13T12:00:00Z"
+        }
+      ],
+      "effectiveAccess": "granted"
+    }
+  },
+  "storeWebhookHeaders": {
+    "x-store-event-id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "x-store-timestamp": "1791892800",
+    "x-store-signature": "v1=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "reserveRequest": {
+    "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666",
+    "metricKey": "feature_activations",
+    "quantity": 1,
+    "resourceRef": {
+      "type": "chatwoot.account",
+      "id": "17"
+    },
+    "idempotencyKey": "fictitious:reserve:0001",
+    "occurredAt": "2026-10-13T12:00:00Z"
+  },
+  "commitRequest": {
+    "idempotencyKey": "fictitious:commit:0001"
+  },
+  "releaseRequest": {
+    "idempotencyKey": "fictitious:release:0001",
+    "reason": "resource_disabled"
+  },
+  "reservationResponse": {
+    "reservation": {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "serviceSubscriptionId": "66666666-6666-4666-8666-666666666666",
+      "namespace": {
+        "installationId": "chat-test",
+        "productCatalogItemId": "22222222-2222-4222-8222-222222222222"
+      },
+      "metricKey": "feature_activations",
+      "usageBehavior": "allocation",
+      "resourceRef": {
+        "type": "chatwoot.account",
+        "id": "17"
+      },
+      "quantity": 1,
+      "status": "committed",
+      "periodStart": null,
+      "periodEnd": null,
+      "expiresAt": null
+    },
+    "balance": {
+      "includedQuantity": 2,
+      "usedQuantity": 1,
+      "reservedQuantity": 0,
+      "remainingQuantity": 1
+    },
+    "replayed": false
+  }
+}

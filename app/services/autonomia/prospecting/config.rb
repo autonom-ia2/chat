@@ -5,7 +5,7 @@ module Autonomia::Prospecting::Config
   RESEARCH_ATTR_KEY = 'autonomia_prospecting_research_enabled'.freeze
 
   def self.enabled?(account)
-    flag?(account, INTERNAL_ATTR_KEY)
+    flag?(account, INTERNAL_ATTR_KEY) || Autonomia::Store::Access.allowed?(account, 'prospecting')
   end
 
   def self.enable_for!(account)

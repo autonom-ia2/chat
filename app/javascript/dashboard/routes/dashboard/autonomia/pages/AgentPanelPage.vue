@@ -16,6 +16,8 @@ import PanelPerformance from '../components/panel/PanelPerformance.vue';
 import PanelTune from '../components/panel/PanelTune.vue';
 import PanelPublish from '../components/panel/PanelPublish.vue';
 import PanelTools from '../components/panel/PanelTools.vue';
+import PanelStore from '../components/panel/PanelStore.vue';
+import PanelContracted from '../components/panel/PanelContracted.vue';
 import { ativarPedeCanal } from '../components/panel/publicacao';
 
 const props = defineProps({
@@ -52,13 +54,21 @@ const TAB_ICONS = {
   knowledge: 'i-lucide-book-open',
   channels: 'i-lucide-radio',
   tools: 'i-lucide-wrench',
+  store: 'i-lucide-store',
   performance: 'i-lucide-bar-chart-3',
   tune: 'i-lucide-sliders-horizontal',
 };
 
 // The first four sit in the segmented group; "Ajustar" (tune) is pulled out to
 // the right of a divider because it edits the agent rather than inspecting it.
-const MAIN_TAB_KEYS = ['test', 'knowledge', 'tools', 'channels', 'performance'];
+const MAIN_TAB_KEYS = [
+  'test',
+  'knowledge',
+  'tools',
+  'store',
+  'channels',
+  'performance',
+];
 // View-only seats (autonomia_view without autonomia_manage) only test and read performance.
 const VIEW_ONLY_TAB_KEYS = ['test', 'performance'];
 
@@ -77,9 +87,11 @@ const visibleTabKeys = computed(() => {
   let keys = isInternal.value
     ? MAIN_TAB_KEYS.filter(key => key !== 'channels')
     : MAIN_TAB_KEYS;
+  if (agent.value?.contracted_instance)
+    keys = keys.filter(key => key !== 'store');
 
   if (!isSuperAdmin.value) {
-    keys = keys.filter(key => key !== 'tools');
+    keys = keys.filter(key => !['tools', 'store'].includes(key));
   }
 
   if (!canManage.value) {
@@ -109,10 +121,14 @@ const activeComponent = computed(() => {
       return PanelChannels;
     case 'tools':
       return isSuperAdmin.value ? PanelTools : PanelTest;
+    case 'store':
+      return isSuperAdmin.value && !agent.value?.contracted_instance
+        ? PanelStore
+        : PanelTest;
     case 'performance':
       return PanelPerformance;
     case 'tune':
-      return PanelTune;
+      return agent.value?.contracted_instance ? PanelContracted : PanelTune;
     // Superfície de publicação (o hub roteia rascunho pra cá): externo conecta
     // canal, interno ativa direto — não entra na barra de abas.
     case 'publish':
@@ -187,7 +203,7 @@ watch(
   ([internal, superAdmin, manage, tab]) => {
     if (
       (internal && tab === 'channels') ||
-      (!superAdmin && tab === 'tools') ||
+      (!superAdmin && ['tools', 'store'].includes(tab)) ||
       (!manage && !VIEW_ONLY_TAB_KEYS.includes(tab))
     ) {
       router.replace({
@@ -295,6 +311,40 @@ onMounted(() => {
     </header>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
+      <section
+        v-if="agent?.contracted_instance"
+        class="min-w-0 px-6 py-4 border-b border-n-weak"
+      >
+        <h2 class="text-sm font-medium text-n-slate-12">
+          {{
+            t('AGENTS.CONTRACTED.INHERITED', {
+              name: agent.inherited.principal_name,
+            })
+          }}
+        </h2>
+        <p class="text-sm text-n-slate-11">
+          {{
+            t('AGENTS.CONTRACTED.KNOWLEDGE', {
+              count: agent.inherited.knowledge_sources_count,
+            })
+          }}
+        </p>
+        <ul class="flex flex-wrap gap-2 p-0 list-none text-sm text-n-slate-11">
+          <li v-for="name in agent.inherited.tool_names" :key="name">
+            {{ name }}
+          </li>
+          <li v-for="slug in agent.inherited.native_tool_slugs" :key="slug">
+            {{ slug }}
+          </li>
+        </ul>
+        <p
+          v-if="!agent.store_access_allowed"
+          role="status"
+          class="text-sm text-n-amber-11"
+        >
+          {{ t('AGENTS.CONTRACTED.SUSPENDED') }}
+        </p>
+      </section>
       <div
         v-if="isLoading"
         class="flex items-center justify-center w-full h-full text-n-slate-11"

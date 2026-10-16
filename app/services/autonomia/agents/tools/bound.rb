@@ -25,10 +25,10 @@ class Autonomia::Agents::Tools::Bound
   # `especialista` é quem vai usar o catálogo, quando é um especialista (`Specialist#tools`); o
   # principal (`Answerer`) monta sem ele.
   def self.for_agent(agent, especialista: nil)
-    records = agent.tools.enabled.order(:id).map { |record| new(record: record, agent: agent) }
+    records = agent.effective_http_tools.map { |record| new(record: record, agent: agent) }
     natives = Autonomia::Agents::Tools::Registry.for_agent(agent)
                                                 .map { |klass| new(native: klass, agent: agent, especialista: especialista) }
-    records + natives
+    (records + natives).uniq(&:slug)
   end
 
   def initialize(agent:, record: nil, native: nil, especialista: nil)
@@ -241,7 +241,7 @@ class Autonomia::Agents::Tools::Bound
   end
 
   def run_http(args, delivery)
-    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args).call
+    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args, execution_agent: @agent).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
   end

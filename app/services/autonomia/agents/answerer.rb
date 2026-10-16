@@ -119,6 +119,11 @@ module Autonomia
       # -> Autonomia::Agents::AnswerResult
       # O estado da agenda é lido uma vez no turno (gate das ferramentas e instrução, #1307).
       def answer
+        unless @agent.store_access_allowed?
+          return AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
+                                  used_knowledge: [], answered_from_knowledge: false, raw_reply: nil, error: 'store_access_denied')
+        end
+
         ::Autonomia::Agents::Tools::Native::Agenda.no_turno { answer_no_turno }
       end
 
@@ -366,7 +371,7 @@ module Autonomia
       # TEMA 14 (#1434): o vínculo com um ajudante (o especialista que aponta para outro agente) só entra quando
       # `Ajudantes.disponivel?` deixa: Fase 2 ligada, ajudante ligado, interno e da mesma conta.
       def enabled_specialists
-        @enabled_specialists ||= @agent.specialists.enabled.order(:id).select do |specialist|
+        @enabled_specialists ||= @agent.effective_specialists.select do |specialist|
           next ::Autonomia::Agents::Ajudantes.disponivel?(specialist) if specialist.delegado?
 
           ::Autonomia::Insurance::QuoteAgent::Builder.disponivel?(specialist)
@@ -554,6 +559,10 @@ module Autonomia
       end
 
       def agent_has_kb?
+        if @agent.contracted_instance?
+          return @agent.knowledge_agents.any? { |agent| agent.accepted_sources.exists? || agent.knowledge_confidence.to_f.positive? }
+        end
+
         @agent.accepted_sources.exists? || @agent.knowledge_confidence.to_f.positive?
       end
 

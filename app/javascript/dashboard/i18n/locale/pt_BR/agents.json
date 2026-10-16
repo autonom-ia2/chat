@@ -1,5 +1,15 @@
 {
   "AGENTS": {
+    "CONTRACTED": {
+      "NAME": "Nome do agente",
+      "COMPANY": "Empresa",
+      "COMPLEMENTS": "Instruções complementares",
+      "SAVE": "Salvar",
+      "CONFIGURE": "Configurar agente",
+      "INHERITED": "Herdado de {name} (somente leitura)",
+      "KNOWLEDGE": "Conhecimento do principal: {count} fontes",
+      "SUSPENDED": "O agente contratado está indisponível. Verifique a autorização do serviço na loja."
+    },
     "HUB": {
       "TITLE": "Meus agentes",
       "SUBTITLE": "Seus agentes de IA respondem aos clientes automaticamente e transferem para um humano quando necessário.",
@@ -192,6 +202,7 @@
         "TEST": "Testar",
         "KNOWLEDGE": "Conhecimento",
         "TOOLS": "Ferramentas",
+        "STORE": "Loja",
         "CHANNELS": "Canais",
         "PERFORMANCE": "Desempenho",
         "TUNE": "Ajustar"

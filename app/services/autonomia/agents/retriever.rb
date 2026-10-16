@@ -77,7 +77,7 @@ class Autonomia::Agents::Retriever
   # :embedding_large (halfvec 3072), pois neighbor 0.2.3 não conhece halfvec. Ambos expõem
   # `neighbor_distance` na MESMA escala (distância de cosseno) — os patamares 0.75/0.45 valem igual.
   def candidate_rows(vector, top_k, model)
-    scope = @agent.knowledge_entries.ready.where.not(source_id: rejected_source_ids)
+    scope = knowledge_scope
     if Autonomia::Agents::Config.embedding_large?(model)
       nearest_by_halfvec(scope, vector, top_k)
     else
@@ -111,8 +111,14 @@ class Autonomia::Agents::Retriever
   # TIPO, mesmo negócio) que NÃO isola — ver scope_mismatched_source_ids. Salvaguarda anti-regressão
   # idêntica à do topic_map: só exclui mismatched quando RESTA conhecimento em escopo — nunca esvazia tudo.
   def rejected_source_ids
-    @agent.sources.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
-      scope_mismatched_source_ids
+    @agent.knowledge_agents.flat_map do |agent|
+      agent.sources.where(review_status: %w[needs_resend needs_review]).pluck(:id) + scope_mismatched_source_ids(agent)
+    end
+  end
+
+  def knowledge_scope
+    scope = Autonomia::Agents::KnowledgeEntry.ready.where(autonomia_agent_id: @agent.knowledge_agents.map(&:id))
+    scope.where.not(source_id: rejected_source_ids).or(scope.where(source_id: nil))
   end
 
   # Fontes ACEITAS porém de OUTRO NEGÓCIO: o Revisor marca isolamento de negócio com a frase "Fora do
@@ -123,8 +129,8 @@ class Autonomia::Agents::Retriever
   # isolamento real (leak S12: seguradora num agente de imobiliária) usa o marcador de NEGÓCIO, estrito.
   # Devolve [] quando TODAS as aceitas estão flagueadas (ou nenhuma) — não regredir um agente cujo KB
   # inteiro veio marcado (preserva o recall; mesma salvaguarda do in_scope_sources do agregado).
-  def scope_mismatched_source_ids
-    accepted = @agent.accepted_sources.to_a
+  def scope_mismatched_source_ids(agent = @agent)
+    accepted = agent.accepted_sources.to_a
     mismatched = accepted.select { |s| Autonomia::Agents::Knowledge::Reviewer.out_of_business?(s.review_summary) }
     return [] if mismatched.empty? || mismatched.size == accepted.size
 
@@ -150,11 +156,10 @@ class Autonomia::Agents::Retriever
 
     seen = vector_hits.map(&:id)
     clause = terms.map { 'content ILIKE ?' }.join(' OR ')
-    lex = @agent.knowledge_entries.ready
-                .where.not(source_id: rejected_source_ids)
-                .where(clause, *terms.map { |t| "%#{t}%" })
-                .limit(top_k)
-                .reject { |e| seen.include?(e.id) }
+    lex = knowledge_scope
+          .where(clause, *terms.map { |t| "%#{t}%" })
+          .limit(top_k)
+          .reject { |e| seen.include?(e.id) }
     # Hit lexical não passou pelo nearest_neighbors → o atributo SQL `neighbor_distance` (alias do
     # SELECT) não existe nessas instâncias. Define um reader singleton com o patamar de match forte
     # p/ uniformizar com os hits vetoriais (P2.1 lê .neighbor_distance p/ ancorar confiança):

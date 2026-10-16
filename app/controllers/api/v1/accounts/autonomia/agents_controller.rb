@@ -197,11 +197,11 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card
                    enabled status actuation]
     permitted << :instruction if manual_mode?
+    permitted.push(:company_name, :supplemental_instruction) if @agent&.contracted_instance?
     # Hash simples, não Parameters: um Hash gravado dentro de Parameters volta como "não permitido" no `new` (500).
     attrs = params.require(:agent).permit(*permitted, starter_questions: [], config: {}).to_h
     attrs[:config] = config_conferido(attrs[:config]) if attrs[:config].present?
-    permit_audience_config(attrs)
-    attrs
+    attrs.tap { |values| permit_audience_config(values) }
   end
 
   # #1211 — `permit(config: {})` deixava passar qualquer slug do catálogo, e o agente comum ganhava as

@@ -13,6 +13,9 @@ class Autonomia::Agents::SoftDelete
       deleted_at = Time.current
       archive_inbox_links!(deleted_at)
       archive_agent!(deleted_at)
+      Autonomia::Agents::Agent.kept.where(principal_agent_id: @agent.id).find_each do |instance|
+        Autonomia::Store::AgentInstance.sync_access!(instance)
+      end
       metadata = audit_metadata(deleted_at)
       Audited.audit_class.create!(
         auditable: @agent, associated: @agent.account, user: @actor,

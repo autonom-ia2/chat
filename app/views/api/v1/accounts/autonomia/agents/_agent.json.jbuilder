@@ -1,5 +1,18 @@
 json.id agent.id
 json.name agent.name
+if agent.contracted_instance?
+  json.contracted_instance true
+  json.company_name agent.company_name
+  json.supplemental_instruction agent.supplemental_instruction
+  json.store_access_allowed agent.store_access_allowed?
+  json.inherited do
+    json.principal_name agent.principal_agent.name
+    json.has_instruction agent.principal_agent.instrucao_do_sistema.present?
+    json.knowledge_sources_count agent.principal_agent.accepted_sources.count
+    json.tool_names(agent.principal_agent.tools.enabled.order(:id).pluck(:name) + agent.principal_agent.specialists.enabled.order(:id).pluck(:name))
+    json.native_tool_slugs Array(agent.principal_agent.ferramentas_nativas)
+  end
+end
 json.avatar_url agent.avatar_url
 json.agent_type agent.agent_type
 # V2.1 — onde o agente atua (external/internal/both) + se declarou ter base de conhecimento.
@@ -57,6 +70,6 @@ json.instruction agent.instruction if agent.manual?
 # #3 INSTRUÇÃO VIVA (C): booleano SEGURO (NUNCA o texto) para o FE saber se um agente guiado já tem
 # instrução (foi finalizado). Usado pelo PanelTest para avisar que um rascunho não-finalizado ainda
 # não reflete o comportamento real. IP OCULTO preservado: expõe presença, não conteúdo.
-json.has_instruction agent.instruction.present?
+json.has_instruction agent.contracted_instance? || agent.instruction.present?
 json.created_at agent.created_at
 json.updated_at agent.updated_at
