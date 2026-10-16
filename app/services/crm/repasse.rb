@@ -65,6 +65,8 @@ module Crm::Repasse
   # (desconhecido): a tela não diz "ninguém online" sem saber. Só a falha de leitura da presença (Redis ou o pool dele)
   # vira nil; qualquer outro erro sobe.
   def equipe_online?(conversation, card, user)
+    return true if agente_na_regra?(conversation, card)
+
     equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas.map(&:id) - [user.id]
     online = presenca(conversation)
     online.nil? ? nil : equipe.intersect?(online.to_a)
@@ -140,7 +142,18 @@ module Crm::Repasse
   # A pessoa não está na equipe do funil do card, e a equipe tem mais alguém para receber.
   def passa_para_outra_equipe?(conversation, card, pessoa)
     equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas
-    equipe.exclude?(pessoa) && equipe.any?
+    return false if equipe.include?(pessoa)
+
+    equipe.any? || agente_na_regra?(conversation, card)
+  end
+
+  # A Atribuição do funil aponta um agente de IA que pode receber agora (#1620, a mesma leitura do motor de entrega,
+  # Crm::Entrega::ParaIa.alvo): conta como "tem quem receba". Quem passa é a pessoa, então não há robô a excluir.
+  def agente_na_regra?(conversation, card)
+    settings = Crm::Ai::Config.handoff_settings(card.stage, card.pipeline)
+    return false unless settings[:enabled]
+
+    Crm::Entrega::ParaIa.alvo(conversation: conversation, settings: settings, sugestao: nil, quem_passa: nil).present?
   end
 
   def pessoa_no_nome(conversation)
