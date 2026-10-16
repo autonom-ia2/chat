@@ -383,12 +383,13 @@ máximo 10 linhas, tudo em uma linha só. O título da lista é o cabeçalho; se
 caber em 60 caracteres e numa linha só.
 
 **`rowId` com referência.** Cada linha leva `<id da opção>|<id da mensagem no Chatwoot>` (separador fixo `|`, só quando
-cabe nos 200 do `rowId`; senão, só o id da opção). O `list_reply.id` da Meta volta igual ao `rowId` enviado (teste de
-16/10/2026: veio "manha", o `rowId` mandado). Na volta, o recebimento separa pelo último `|` (sem regex), grava
-`selected_option.id` com o id ORIGINAL da opção (o robô lê o mesmo de antes) e `in_reply_to` = a mensagem referida,
-se ela é lista nativa desta conversa. Sem referência (listas mandadas antes) ou referência que não confere: com a
-flag, `in_reply_to` = a última lista nativa da conversa com uma opção de `id` igual (comparação exata; 50 últimas
-mensagens nossas). Resposta que aponta uma mensagem (`context`) nunca passa por essa busca.
+cabe nos 200 do `rowId` e o id da opção não tem `|`; senão, só o id da opção). O `list_reply.id` da Meta volta igual
+ao `rowId` enviado (teste de 16/10/2026: veio "manha", o `rowId` mandado). Na volta, o recebimento separa pelo último
+`|` (sem regex) e grava `selected_option.id` SEMPRE com o id ORIGINAL da opção (o robô lê o mesmo de antes), confira
+ou não a referência (ex.: lista de uma conversa anterior). `in_reply_to` = a mensagem referida, se ela é lista nativa
+desta conversa; senão, com a flag, a última lista nativa da conversa com uma opção de `id` igual ao da opção
+(comparação exata; 50 últimas mensagens nossas). Id inteiro que uma lista nativa da conversa oferece (opção com `|`)
+não é separado. Resposta que aponta uma mensagem (`context`) nunca passa por essa busca.
 
 **Resultado do envio.**
 - Saiu nativa: `rich_message_sent_as: 'native'` (a bolha mostra o formato) e nenhuma marca de texto. A marca e o
@@ -398,7 +399,8 @@ mensagens nossas). Resposta que aponta uma mensagem (`context`) nunca passa por 
   híbrido procura. `sendLocation` e `sendContactVcard` levam o id gerado antes. O `sendList` não aceita id antes: vale o
   da resposta (`id._serialized` termina no id físico, conferido no teste real de 16/10/2026).
 - Recusa explícita do motor (4xx ou 501), em que nada saiu: vai UMA vez o texto de sempre, com a marca 'text'. As
-  recusas do WhatsApp que o envio já trata (463, 475) seguem como hoje.
+  recusas do WhatsApp que o envio já trata (463, 475) seguem como hoje. Se o `source_id` não voltar ao id gerado antes
+  do texto, nada sai: a mensagem fica `failed` (com motivo, gravado sem validação) e o erro vai ao tracker.
 - 5xx, conexão fechada ou sem resposta: pode ter saído. Fica incerto, com o aviso de conferir no celular, sem texto por
   cima.
 - Antes do pedido da lista, o `source_id` recebe um valor provisório e único (`waha-native-pending-<id da mensagem>`):
@@ -413,10 +415,11 @@ mensagens nossas). Resposta que aponta uma mensagem (`context`) nunca passa por 
 - A conversa traz `whatsapp_api_rich_native` (lista de tipos) ao lado de `whatsapp_api_reply`, no JSON e no evento ao
   vivo. Duas linhas no core, no mesmo padrão do `whatsapp_api_reply` (jbuilder da conversa e
   `Conversations::EventDataPresenter`), que calculam o `whatsapp_api_reply?` uma vez e o reaproveitam. Vazia sem a flag,
-  dentro da janela, com a conexão pausada ou caída. Conversa comum não paga consulta.
-- `RichMessages.delivery_mode` responde `:native` só com a mesma regra do envio (roteador `route_for` e tradutor):
-  `location` e `contact` pelo tipo; `options` só com `message:` (argumento opcional) que o tradutor monte. Quem consulta
-  hoje: só o aviso de agendamento (`Crm::BookingV2::Notices::Button`, com `link_button`, que não muda).
+  dentro da janela, com a conexão pausada ou caída. Sem consulta por conversa: a flag é lida da conta já carregada ou
+  da conta do request (`Current.account`).
+- `RichMessages.delivery_mode` responde `:native` só com `message:` (argumento opcional novo) e a mesma regra do envio
+  (roteador `route_for` com a origem da mensagem, e tradutor). Sem a mensagem, o modo de antes (`:text`), para qualquer
+  tipo. Quem consulta hoje: só o aviso de agendamento (`Crm::BookingV2::Notices::Button`, com `link_button`).
 
 **Chaves de `content_attributes`:** `rich_message` (pedido, não muda), `rich_message_sent_as` ('native' ou 'text'),
 `in_reply_to` (id numérico da lista respondida), `selected_option` (`{ id, title }`, id original da opção) e as

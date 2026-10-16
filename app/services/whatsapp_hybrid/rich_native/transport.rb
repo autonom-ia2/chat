@@ -6,6 +6,8 @@
 # - 5xx, conexão fechada, sem resposta ou resposta ilegível: pode ter saído. Segue a regra do texto (incerto), sem
 #   texto por cima.
 module WhatsappHybrid::RichNative::Transport
+  RESTORE_FAILED = 'A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem.'.freeze
+
   private
 
   def deliver(chat_id, physical_id)
@@ -21,9 +23,21 @@ module WhatsappHybrid::RichNative::Transport
   end
 
   # Antes do texto da recusa: o `source_id` volta ao id gerado, que é o que o texto leva ao motor (o ack procura por ele).
+  # Se não der para gravar, nada saiu (a recusa foi explícita e o texto não foi pedido): a mensagem fica `failed` com o
+  # motivo, vai ao tracker, e o erro do motor fecha o envio como falha certa, em vez de ela ficar como enviada.
   def restore_text_source_id(physical_id)
     Waha::RichNative.write_source_id!(@message, physical_id) if @message.source_id != physical_id
     true
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
+    fail_without_send!
+    raise Waha::Client::Error, "WAHA envio nativo recusado e texto não enviado (#{e.class})"
+  end
+
+  def fail_without_send!
+    RichMessages.fail!(@message, RESTORE_FAILED)
+  rescue StandardError => e
+    Rails.logger.error("[whatsapp_hybrid] rich native fail not saved message=#{@message.id} #{e.class}")
   end
 
   def deliver_native(native, chat_id, physical_id)

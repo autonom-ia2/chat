@@ -19,9 +19,6 @@ module WhatsappHybrid::RichNative
   FLAG = Waha::RichNative::FLAG
   SENT_AS = Waha::RichNative::SENT_AS
   SUPPORTED_TYPES = Waha::RichNative::KINDS
-  # Tipos que saem nativos sempre que a mensagem passa na validação do tipo (o tradutor não tem limite a mais). A
-  # lista (`options`) depende do conteúdo: sem a mensagem, `delivery_mode` não promete `:native` para ela.
-  CONTENT_FREE_TYPES = %w[location contact].freeze
   # Status do motor em que o pedido foi recusado e nada saiu: 4xx e 501 (formato não implementado no motor).
   NOT_IMPLEMENTED = 501
   CAPPED_ERROR = 'error 475'.freeze
@@ -73,31 +70,38 @@ module WhatsappHybrid::RichNative
                           WhatsappHybrid::WebTransport::MESSAGE_KEY_TTL)
   end
 
-  # `delivery_mode` responde `:native` só quando o envio mandaria nativo: a MESMA regra do envio. O roteador decide
-  # `route_for(message) == :web` (janela fechada, conexão pronta, origem ligada, contato liberado) e o tradutor monta
-  # o pedido. Sem `message`, uma mensagem de rascunho do tipo (sem remetente: origem 'automation') responde pelo
-  # roteador, e só os tipos que não dependem do conteúdo (CONTENT_FREE_TYPES) podem ser `:native`.
+  # `delivery_mode` responde `:native` só quando o envio mandaria nativo ESTA mensagem: a MESMA regra do envio. O
+  # roteador decide `route_for(message) == :web` (janela fechada, conexão pronta, origem ligada, contato liberado) e o
+  # tradutor monta o pedido. Sem a mensagem não há como saber a origem nem o conteúdo: nunca `:native`.
   def native_for?(inbox, type, conversation, message: nil)
-    return false unless SUPPORTED_TYPES.include?(type) && enabled?(inbox.account) && hybrid?(inbox)
+    return false unless message_of_type?(message, type) && enabled?(inbox.account) && hybrid?(inbox)
 
-    draft = message || draft_message(inbox, type, conversation)
-    return false unless WhatsappHybrid::Router.new(conversation).route_for(draft) == :web
-
-    message ? payload_for(message).present? : CONTENT_FREE_TYPES.include?(type)
+    WhatsappHybrid::Router.new(conversation).route_for(message) == :web && payload_for(message).present?
   end
 
-  def draft_message(inbox, type, conversation)
-    Message.new(account_id: inbox.account_id, inbox: inbox, conversation: conversation, message_type: :outgoing,
-                content_type: :text, content_attributes: { RichMessages::KEY => { 'type' => type } })
+  # A mensagem traz `rich_message` de um tipo suportado, e é o tipo perguntado.
+  def message_of_type?(message, type)
+    return false if message.nil? || SUPPORTED_TYPES.exclude?(type) || RichMessages.type_class_of(message).nil?
+
+    message.content_attributes[RichMessages::KEY]['type'] == type
   end
 
   # Esta conversa manda nativo pelo WhatsApp API agora (Waha::RichNative.types_for). Checagens sem consulta primeiro
   # (canal da caixa já carregada, contas do Híbrido no ENV, caixa híbrida no Redis, `api_reply` já calculado), e só
   # então a flag da conta: a lista de conversas não paga consulta por conversa comum.
   def native_route?(conversation, api_reply: nil)
-    return false unless api_reply != false && hybrid_conversation?(conversation) && enabled?(conversation.account)
+    return false unless api_reply != false && hybrid_conversation?(conversation) && enabled?(account_of(conversation))
 
     api_reply.nil? ? conversation.whatsapp_api_reply? : api_reply
+  end
+
+  # A conta para ler a flag sem consulta por conversa: a já carregada na conversa, ou a do request (`Current.account`,
+  # que as rotas da conta preenchem) quando é a mesma. Fora de um request (evento de uma conversa só), carrega.
+  def account_of(conversation)
+    return conversation.account if conversation.association(:account).loaded?
+    return Current.account if Current.account&.id == conversation.account_id
+
+    conversation.account
   end
 
   # Sem consulta ao banco: o canal da caixa já carregada, as contas do Híbrido no ENV e a caixa híbrida no Redis.

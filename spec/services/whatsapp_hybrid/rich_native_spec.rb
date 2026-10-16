@@ -11,37 +11,42 @@ describe WhatsappHybrid::RichNative do
       RichMessages.delivery_mode(inbox: inbox, type: type, conversation: on, message: message)
     end
 
-    it 'is native for location and contact by type, with the flag and WhatsApp API ready for the closed window' do
-      flag_on!
-
-      expect(%w[location contact].map { |type| mode(type) }).to eq(%i[native native])
-      expect(mode('link_button')).to eq(:text)
+    def draft(rich_message, content: 'Qual horário?', sender: nil)
+      Message.new(account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content_type: :text,
+                  content: content, sender: sender, content_attributes: { rich_message: rich_message })
     end
 
-    # A lista depende do conteúdo (título, limites): sem a mensagem, nunca promete :native que vira texto.
-    it 'is native for options only with a message that the translator builds' do
-      flag_on!
-      fits = Message.new(account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content_type: :text,
-                         content: 'Qual horário?', content_attributes: { rich_message: options })
-      multiline = Message.new(account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content_type: :text,
-                              content: "Qual horário?\nResponda", content_attributes: { rich_message: options })
+    let(:location) { { type: 'location', latitude: -23.5, longitude: -46.6 } }
 
-      expect(mode('options')).to eq(:text)
-      expect(mode('options', message: fits)).to eq(:native)
-      expect(mode('options', message: multiline)).to eq(:text)
+    it 'is native only for a message that the send would deliver natively (route and translator)' do
+      flag_on!
+
+      expect(mode('options', message: draft(options))).to eq(:native)
+      expect(mode('location', message: draft(location, content: ''))).to eq(:native)
+      expect(mode('options', message: draft(options, content: "Qual horário?\nResponda"))).to eq(:text)
+      expect(mode('link_button', message: draft({ type: 'link_button', label: 'Abrir', url: 'https://exemplo.com.br' }))).to eq(:text)
     end
 
-    it 'follows the send route: text without the flag, without a conversation, with the session down or the origin off' do
-      expect(mode('location')).to eq(:text)
+    # Sem a mensagem não há origem nem conteúdo: o modo de antes, sem presumir nada.
+    it 'keeps the previous mode (text) for every type without a message' do
+      flag_on!
+
+      expect(%w[options location contact link_button].map { |type| mode(type) }).to eq(%i[text text text text])
+    end
+
+    it 'follows the send route: text without the flag, without a conversation, with the origin off or the session down' do
+      agent = create(:user, account: account)
+      expect(mode('location', message: draft(location, content: '', sender: agent))).to eq(:text)
 
       flag_on!
-      expect(mode('location', on: nil)).to eq(:text)
+      expect(mode('location', message: draft(location, content: '', sender: agent), on: nil)).to eq(:text)
 
-      connection.update!(disabled_origins: ['automation'])
-      expect(mode('location')).to eq(:text)
+      connection.update!(disabled_origins: ['human'])
+      expect(mode('location', message: draft(location, content: '', sender: agent))).to eq(:text)
+      expect(mode('location', message: draft(location, content: ''))).to eq(:native)
 
       connection.update!(disabled_origins: [], status: 'disconnected')
-      expect(mode('location')).to eq(:text)
+      expect(mode('location', message: draft(location, content: '', sender: agent))).to eq(:text)
     end
   end
 
@@ -86,6 +91,33 @@ describe WhatsappHybrid::RichNative do
       expect(Waha::RichNative.types_for(conversation, api_reply: false)).to eq([])
       expect(Waha::RichNative.types_for(conversation, api_reply: true)).to eq(%w[options location contact])
       expect(WhatsappHybrid::Router).not_to have_received(:new)
+    end
+
+    # Como na lista de conversas de um request: `Current.account` é a conta da rota, e a caixa vem carregada.
+    [true, false].each do |flag|
+      it "adds no query for hybrid conversations outside the window with the flag #{flag ? 'on' : 'off'}" do
+        flag_on! if flag
+        hybrid = Array.new(3) do |index|
+          contact = create(:contact, account: account, phone_number: "+55119370160#{index}0")
+          create(:conversation, account: account, inbox: inbox, contact: contact,
+                                contact_inbox: create(:contact_inbox, inbox: inbox, contact: contact, source_id: "55119370160#{index}0"))
+        end
+        loaded = Conversation.where(id: hybrid.map(&:id)).includes(:inbox).to_a
+        replies = loaded.map(&:whatsapp_api_reply?)
+        queries = []
+        callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+        Current.account = Account.find(account.id)
+
+        result = ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') do
+          loaded.zip(replies).map { |item, reply| Waha::RichNative.types_for(item, api_reply: reply) }
+        end
+
+        expect(replies).to all(be(true))
+        expect(result).to all(eq(flag ? %w[options location contact] : []))
+        expect(queries).to be_empty
+      ensure
+        Current.reset
+      end
     end
 
     it 'adds no query for a list of ordinary conversations with the flag off' do
@@ -158,7 +190,7 @@ describe WhatsappHybrid::RichNative do
         .to include('in_reply_to' => offered.id, 'selected_option' => { 'id' => 'manha', 'title' => 'Manhã' })
     end
 
-    it 'ignores a reference to a message of another conversation or that is not a native list, and searches instead' do
+    it 'drops a reference that does not match (other conversation, not a native list) and searches by the option id' do
       flag_on!
       latest = native_list(%w[manha])
       foreign = create(:message, message_type: :outgoing, account: account, inbox: inbox, content: 'x',
@@ -167,10 +199,31 @@ describe WhatsappHybrid::RichNative do
 
       [foreign.id, text_list.id].each do |reference|
         reply = receive_reply("manha|#{reference}")
-        expect(reply.content_attributes).not_to have_key('in_reply_to')
-        expect(reply.content_attributes['selected_option']['id']).to eq("manha|#{reference}")
+        expect(reply.content_attributes['in_reply_to']).to eq(latest.id)
+        expect(reply.content_attributes['selected_option']).to eq('id' => 'manha', 'title' => 'Manhã')
       end
-      expect(receive_reply('manha').content_attributes['in_reply_to']).to eq(latest.id)
+    end
+
+    it 'keeps the original option id when the customer taps a list of a PREVIOUS conversation' do
+      flag_on!
+      old_list = native_list(%w[manha tarde])
+      conversation.update!(status: :resolved)
+
+      reply = receive_reply("manha|#{old_list.id}")
+
+      expect(reply.conversation_id).not_to eq(conversation.id)
+      expect(reply.content_attributes['selected_option']).to eq('id' => 'manha', 'title' => 'Manhã')
+      expect(reply.content_attributes['in_reply_to']).to be_blank
+    end
+
+    it 'does not split an option id that has the separator itself (it goes without reference)' do
+      flag_on!
+      offered = native_list(['plano|2024'])
+
+      reply = receive_reply('plano|2024')
+
+      expect(reply.content_attributes['in_reply_to']).to eq(offered.id)
+      expect(reply.content_attributes['selected_option']['id']).to eq('plano|2024')
     end
 
     it 'uses the reference even with the flag turned off after the send' do

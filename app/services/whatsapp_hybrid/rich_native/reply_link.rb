@@ -5,23 +5,36 @@
 #
 # Numa caixa híbrida, quando a resposta traz `selected_option` e não aponta mensagem nenhuma (`context`):
 # 1. `rowId` com referência ("<opção>|<mensagem>", Waha::RichNative.split_row_id, separado pelo último "|", sem regex):
-#    se a mensagem existe NESTA conversa e é lista nativa com essa opção, `in_reply_to` = ela, e `selected_option.id`
-#    volta ao id ORIGINAL da opção (o robô lê o mesmo de antes). Vale mesmo com a flag desligada depois do envio.
+#    `selected_option.id` SEMPRE volta ao id ORIGINAL da opção (o robô lê o mesmo de antes), confira ou não a referência
+#    (ex.: o cliente tocou numa lista de uma conversa anterior). Se a mensagem existe NESTA conversa e é lista nativa com
+#    essa opção, `in_reply_to` = ela. Vale mesmo com a flag desligada depois do envio.
+#    Exceção: id de opção que já tem "|" vai sem referência (Waha::RichNative.row_id); se uma lista nativa desta
+#    conversa oferece o id inteiro, ele não é separado.
 # 2. Sem referência, ou referência que não confere, e com a flag: `in_reply_to` = a ÚLTIMA mensagem nossa de options
-#    que saiu nativa nesta conversa com uma opção de `id` IGUAL ao tocado (listas mandadas antes da referência).
-# Comparação exata de id, nunca de texto. Sem nenhuma, nada muda.
+#    que saiu nativa nesta conversa com uma opção de `id` IGUAL ao da opção (listas mandadas antes da referência).
+# Comparação exata de id, nunca de texto. Sem nenhuma, só o `selected_option` (sem referência) muda.
 module WhatsappHybrid::RichNative::ReplyLink
   # Quantas mensagens nossas, das mais novas, procurar. A lista respondida costuma ser a última.
   LOOKBACK = 50
 
-  # { in_reply_to:, selected_option: } a gravar, ou nil quando não liga a nada.
+  # { in_reply_to:, selected_option: } a gravar (só as chaves que mudam), ou nil quando nada muda.
   def self.link(conversation, selected, search: true)
-    option_id, reference = Waha::RichNative.split_row_id(selected[:id])
+    option_id, reference = option_and_reference(conversation, selected[:id])
     target = reference && referenced_message(conversation, reference, option_id)
-    return { in_reply_to: target.id, selected_option: selected.merge(id: option_id) } if target
+    target ||= options_message_for(conversation, option_id) if search
+    changes = {}
+    changes[:in_reply_to] = target.id if target
+    changes[:selected_option] = selected.merge(id: option_id) if option_id != selected[:id]
+    changes.presence
+  end
 
-    target = search ? options_message_for(conversation, selected[:id]) : nil
-    { in_reply_to: target.id } if target
+  # [id da opção, id da mensagem referida ou nil]. Id inteiro oferecido por uma lista nativa desta conversa (opção com
+  # "|" no id, que vai sem referência) não é separado.
+  def self.option_and_reference(conversation, row_id)
+    option_id, reference = Waha::RichNative.split_row_id(row_id)
+    return [row_id, nil] if reference.nil? || options_message_for(conversation, row_id)
+
+    [option_id, reference]
   end
 
   def self.referenced_message(conversation, message_id, option_id)

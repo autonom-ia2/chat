@@ -12,6 +12,7 @@ RSpec.describe Waha::RichNative do
     it 'keeps the row id whole when there is no numeric reference' do
       expect(described_class.row_id('manha', nil, max: 200)).to eq('manha')
       expect(described_class.row_id('manha', 123, max: 8)).to eq('manha')
+      expect(described_class.row_id('plano|2024', 123, max: 200)).to eq('plano|2024')
       expect(described_class.split_row_id('manha')).to eq(['manha', nil])
       expect(described_class.split_row_id('manha|tarde')).to eq(['manha|tarde', nil])
       expect(described_class.split_row_id('|123')).to eq(['|123', nil])

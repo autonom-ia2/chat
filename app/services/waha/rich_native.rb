@@ -28,9 +28,11 @@ module Waha::RichNative
     message.content_attributes.to_h[RichMessages::SENT_AS_KEY] == SENT_AS
   end
 
-  # "<opção>|<mensagem>" quando cabe em `max`; senão, só a opção (a volta cai na busca pela última lista).
+  # "<opção>|<mensagem>" quando cabe em `max`; senão, só a opção (a volta cai na busca pela última lista). Opção cujo id
+  # já tem o separador vai SEM referência: na volta, o id inteiro bate com a opção oferecida (ReplyLink confere isso
+  # antes de separar).
   def row_id(option_id, message_id, max:)
-    return option_id if message_id.blank?
+    return option_id if message_id.blank? || option_id.to_s.include?(REPLY_SEPARATOR)
 
     combined = [option_id, message_id].join(REPLY_SEPARATOR)
     combined.length <= max ? combined : option_id

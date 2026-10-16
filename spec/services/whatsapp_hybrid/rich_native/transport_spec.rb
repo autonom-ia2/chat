@@ -123,6 +123,25 @@ describe WhatsappHybrid::RichNative::Transport do
     end
   end
 
+  it 'fails the message (not stuck as sent) and reports when the source_id cannot go back before the refusal text' do
+    flag_on!
+    engine_session_up!
+    allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    message = outgoing(options)
+    allow(Waha::RichNative).to receive(:write_source_id!).and_call_original
+    allow(Waha::RichNative).to receive(:write_source_id!).with(message, '3EB0AAAA').and_raise(ActiveRecord::Deadlocked)
+
+    send_by_web(message)
+
+    expect(client).not_to have_received(:send_text)
+    expect(tracker).to have_received(:capture_exception)
+    expect(message.reload.status).to eq('failed')
+    expect(message.content_attributes['whatsapp_transport_outcome']).to eq('failed')
+    expect(message.content_attributes['external_error']).to be_present
+  end
+
   it 'leaves a 5xx of the native send uncertain, without the text on top' do
     flag_on!
     engine_session_up!
