@@ -1,8 +1,10 @@
 # Prepend em WhatsappHybrid::WebTransport (chat#1709): com a flag `whatsapp_rich_native`, a mensagem rica de tipo
 # suportado sai no formato nativo do motor em vez do texto. Todo o resto do envio (sessão, limite, contato, digitando,
 # id gerado antes, resultado, erros incertos) continua o do WebTransport: só o pedido final muda.
-# Erro do motor no pedido nativo segue as mesmas regras do texto (falha certa ou incerta); não há segunda tentativa
-# em texto, para nunca sair duas mensagens.
+# - Recusa explícita do motor (4xx, 501; nunca 463/475): nada saiu, então vai o texto de sempre, UMA vez, pelo caminho
+#   original (que grava a marca 'text').
+# - 5xx, conexão fechada, sem resposta ou resposta ilegível: pode ter saído. Segue a regra do texto (incerto), sem
+#   texto por cima.
 module WhatsappHybrid::RichNative::Transport
   private
 
@@ -10,18 +12,33 @@ module WhatsappHybrid::RichNative::Transport
     native = WhatsappHybrid::RichNative.payload_for(@message)
     return super if native.nil?
 
-    response = native.deliver(@client, session: session, chat_id: chat_id, id: physical_id)
+    response = deliver_native(native, chat_id, physical_id)
+    return super if response == :refused
+
     WhatsappHybrid::RichNative.mark_sent!(@message, @connection, native_physical_id(native, response, physical_id))
     response
   end
 
+  def deliver_native(native, chat_id, physical_id)
+    native.deliver(@client, session: session, chat_id: chat_id, id: physical_id)
+  rescue Waha::Client::Error => e
+    raise unless WhatsappHybrid::RichNative.nothing_sent?(e)
+
+    Rails.logger.warn("[whatsapp_hybrid] rich native refused status=#{e.status} message=#{@message.id}: sending text")
+    :refused
+  end
+
   # A lista não leva o id gerado antes: vale o que o motor devolveu. Sem ele na resposta, fica o gerado (o ack dessa
-  # mensagem não vai achá-la, e o log diz).
+  # mensagem não vai achá-la; a Meta não ecoa lista, então não há duplicata), e o log diz.
   def native_physical_id(native, response, physical_id)
     return physical_id if native.pre_generated_id?
 
     returned = Waha::RichPayload.physical_id(response)
-    Rails.logger.warn("[whatsapp_hybrid] rich native without id in response message=#{@message.id}") if returned.nil?
+    log_missing_id(response) if returned.nil?
     returned || physical_id
+  end
+
+  def log_missing_id(response)
+    Rails.logger.warn("[whatsapp_hybrid] rich native without id in response message=#{@message.id} response=#{response.class}")
   end
 end

@@ -1,7 +1,7 @@
 # Traduz o formato rico do painel (`content_attributes.rich_message`, chat#1473) para o envio nativo do WAHA (chat#1709).
 # Só conhece o motor: não sabe de caixa, conta, flag nem WhatsApp Híbrido, para servir também à caixa WAHA comum.
 #
-#   Waha::RichPayload.build(rich_message, body: 'Qual horário?', locale: 'pt_BR')  # => instância, ou nil
+#   Waha::RichPayload.build(rich_message, body: 'Qual horário?', locale: 'pt_BR', reference: 123)  # => instância, ou nil
 #   payload.deliver(client, session: 'hybrid-55...', chat_id: '55...@c.us', id: '3EB0...')
 #
 # nil quer dizer "não sai nativo": o tipo não tem envio nativo no motor (link_button, location_request, flow,
@@ -21,6 +21,8 @@ class Waha::RichPayload
   ROW_ID_MAX = 200
   BUTTON_MAX = 20
   SECTION_TITLE_MAX = 24
+  # O título da lista (o cabeçalho, ou o corpo quando não há cabeçalho): o limite do cabeçalho de texto da Meta.
+  TITLE_MAX = 60
   # As mesmas quebras de linha que o tipo `options` recusa.
   LINE_BREAKS = RichMessages::Types::Options::LINE_BREAKS
 
@@ -28,18 +30,21 @@ class Waha::RichPayload
 
   attr_reader :kind
 
-  def self.build(rich_message, body:, locale: I18n.default_locale)
+  # reference: o id da mensagem no Chatwoot, que vai em cada `rowId` da lista (Waha::RichNative.row_id) para a resposta
+  # do cliente voltar ligada a esta mensagem. Sem ela, o `rowId` é só o id da opção.
+  def self.build(rich_message, body:, locale: I18n.default_locale, reference: nil)
     return unless rich_message.is_a?(Hash)
 
     rich = rich_message.with_indifferent_access
     return unless KINDS.include?(rich[:type])
 
-    payload = new(rich, body: body.to_s, locale: locale)
+    payload = new(rich, body: body.to_s, locale: locale, reference: reference)
     payload if payload.valid?
   end
 
-  def initialize(rich, body:, locale:)
+  def initialize(rich, body:, locale:, reference: nil)
     @rich = rich
+    @reference = reference
     @body = body
     @locale = locale
     @kind = rich[:type]
@@ -89,11 +94,13 @@ class Waha::RichPayload
 
   def build_list_message
     sections = list_sections
-    return if sections.nil? || @body.blank? || !line?(button, BUTTON_MAX)
-
     header = @rich[:header].presence
+    title = header || @body
+    # Sem cabeçalho, o corpo vira o título: precisa caber nele (até 60, uma linha só), senão sai texto.
+    return if sections.nil? || @body.blank? || !line?(title, TITLE_MAX) || !line?(button, BUTTON_MAX)
+
     {
-      title: header || @body, description: (@body if header), footer: @rich[:footer].presence,
+      title: title, description: (@body if header), footer: @rich[:footer].presence,
       button: button, sections: sections
     }.compact
   end
@@ -133,7 +140,8 @@ class Waha::RichPayload
     description = option[:description]
     return unless description.nil? || line?(description, ROW_DESCRIPTION_MAX)
 
-    { title: option[:title], rowId: option[:id], description: description }.compact
+    row_id = Waha::RichNative.row_id(option[:id], @reference, max: ROW_ID_MAX)
+    { title: option[:title], rowId: row_id, description: description }.compact
   end
 
   # O texto que abre a lista: o do chamador, ou o padrão no idioma da conta.

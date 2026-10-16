@@ -67,6 +67,23 @@ RSpec.describe Waha::RichPayload do
     it 'falls back to text without a body' do
       expect(build(three, body: '')).to be_nil
     end
+
+    # Sem cabeçalho o corpo vira o título da lista: o limite do título (60) e a linha única valem para ele.
+    it 'falls back to text when the body cannot be the title (over 60 or multiline) and there is no header' do
+      expect(build(three, body: 'x' * 60)).to be_present
+      expect(build(three, body: 'x' * 61)).to be_nil
+      expect(build(three, body: "Qual horário?\nResponda abaixo")).to be_nil
+      expect(build(three.merge(header: 'Agenda'), body: "Qual horário?\nResponda abaixo")).to be_present
+    end
+
+    it 'puts the message reference in each rowId when it fits, and only the option id when it does not' do
+      long_id = 'x' * 198
+      rich = { type: 'options', options: [{ id: 'manha', title: 'Manhã' }, { id: long_id, title: 'Longa' }] }
+
+      rows = described_class.build(rich.deep_stringify_keys, body: 'Qual?', reference: 123).send(:list_message)[:sections][0][:rows]
+
+      expect(rows.pluck(:rowId)).to eq(['manha|123', long_id])
+    end
   end
 
   describe 'location' do
