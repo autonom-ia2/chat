@@ -22,10 +22,13 @@ RSpec.describe Crm::OrdemDeNome do
 
   # Pega: letra fora do latim virando "?" e passando na frente dos nomes latinos (como a tela, latim primeiro).
   it 'mantém nomes fora do latim depois dos latinos, sem trocar as letras', :aggregate_failures do
-    nomes = ['Иван', 'Zeca', 'Ênio', nil]
+    nomes = ['Иван', 'Zeca', 'Ênio', nil, 'Łukasz', 'Weiß', 'Ødegaard', 'Nguyễn']
+    ordenados = nomes.each_with_index.sort_by { |nome, id| described_class.chave(nome, id) }.map(&:first)
 
-    expect(nomes.each_with_index.sort_by { |nome, id| described_class.chave(nome, id) }.map(&:first)).to eq([nil, 'Ênio', 'Zeca', 'Иван'])
+    expect(ordenados).to eq([nil, 'Ênio', 'Łukasz', 'Nguyễn', 'Ødegaard', 'Weiß', 'Zeca', 'Иван'])
     expect(described_class.chave('Иван', 1)).to eq(['иван', 1])
+    expect(described_class.chave('Weiß', 1)).to eq(['weiss', 1])
+    expect(described_class.chave("Ana\xFF", 1).first).to start_with('ana')
   end
 
   # Pega: a lista de quem recebe (motor de entrega) sair numa ordem diferente da tela.
