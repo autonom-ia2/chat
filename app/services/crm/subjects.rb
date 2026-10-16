@@ -5,8 +5,9 @@
 # dúvida e quando é preciso dar nome ao assunto (o Jev só escolhe, não escreve). Na dúvida, nada muda.
 # Nunca regex nem lista de palavras para interpretar o cliente (R17).
 #
-# Desligada por padrão (subject_ai_mode off): o admin liga caixa por caixa, em Sugerir ou Automática (#1260). Só funis
-# com a IA do funil ligada (o mesmo interruptor da IA do card).
+# Desligada por padrão (subject_ai_mode off): o admin liga caixa por caixa, em Sugerir ou Automática (#1260). Com a flag
+# `crm_avaliar_toda_mensagem` (#1676), a tela de Caixas grava Automática também na caixa de 1 funil. Só funis com a IA
+# do funil ligada (o mesmo interruptor da IA do card).
 # Automática respeita a pessoa: o que ela acabou de escolher ou fechar vira sugestão, não troca sozinha.
 module Crm::Subjects
   # Espera depois da última mensagem, como a avaliação de etapa: uma rajada vira uma pergunta só.
