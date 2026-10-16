@@ -81,6 +81,20 @@ describe('bolha do convite de evento', () => {
     );
   });
 
+  it('anuncia a resposta nova ao leitor de tela e esconde os ícones dele', () => {
+    const wrapper = montar([resposta('going')]);
+
+    expect(wrapper.find('[data-event-responses]').attributes('aria-live')).toBe(
+      'polite'
+    );
+    const hidden = wrapper.findAll('[aria-hidden="true"]');
+    expect(hidden).toHaveLength(2);
+    expect(hidden.map(item => item.find('span').classes())).toEqual([
+      expect.arrayContaining(['i-lucide-calendar']),
+      expect.arrayContaining(['i-lucide-map-pin']),
+    ]);
+  });
+
   it('usa o fuso da conta, não o do navegador', () => {
     expect(montar([], 'Asia/Tokyo').find('[data-event-when]').text()).toContain(
       '02:00'

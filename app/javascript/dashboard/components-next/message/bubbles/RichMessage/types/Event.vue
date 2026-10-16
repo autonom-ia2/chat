@@ -48,7 +48,9 @@ const hasResponses = computed(
     <div class="flex flex-col gap-1.5 text-sm text-n-slate-12">
       <span class="sr-only">{{ t('RICH_MESSAGE.EVENT.MIRROR') }}</span>
       <div v-if="startLabel" data-event-when class="flex items-start gap-1.5">
-        <Icon icon="i-lucide-calendar" class="size-4 flex-shrink-0 mt-0.5" />
+        <span aria-hidden="true" class="flex-shrink-0 mt-0.5">
+          <Icon icon="i-lucide-calendar" class="size-4" />
+        </span>
         <span class="break-words">
           {{
             endLabel
@@ -65,7 +67,9 @@ const hasResponses = computed(
         data-event-where
         class="flex items-start gap-1.5"
       >
-        <Icon icon="i-lucide-map-pin" class="size-4 flex-shrink-0 mt-0.5" />
+        <span aria-hidden="true" class="flex-shrink-0 mt-0.5">
+          <Icon icon="i-lucide-map-pin" class="size-4" />
+        </span>
         <span class="break-words">{{ locationName }}</span>
       </div>
       <p
@@ -76,6 +80,7 @@ const hasResponses = computed(
       </p>
       <div
         data-event-responses
+        aria-live="polite"
         class="text-xs font-medium text-n-slate-11 break-words"
       >
         {{
