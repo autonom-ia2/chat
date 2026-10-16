@@ -58,19 +58,26 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
       message.content_attributes.to_h['external_echo'].present?
   end
 
-  # Da equipe e chegou ao cliente (com texto): é o que ganha moldura e traz a regra do turno.
+  # Da equipe e chegou ao cliente (com texto, ou com o resumo da localização/contato): é o que ganha moldura e traz a
+  # regra do turno.
   def com_moldura?(message, whatsapp)
-    message.content.present? && !message.failed? && (da_pessoa?(message) || (whatsapp && eco_do_celular?(message)))
+    texto(message).present? && !message.failed? && (da_pessoa?(message) || (whatsapp && eco_do_celular?(message)))
   end
 
   # O item do histórico para o Answerer. Da equipe -> moldura com a `marca`; da equipe que falhou -> sai (conteúdo
   # vazio, que o teto do histórico descarta); do cliente -> segunda camada contra moldura forjada; o resto, como sempre.
+  # Localização e contato sem `content` entram pelo resumo (#1715), na moldura ou no papel de quem enviou.
   def item_do_historico(message, marca:, whatsapp: false)
     da_equipe = conteudo_da_equipe(message, marca, whatsapp)
     return { role: 'user', content: da_equipe } unless da_equipe.nil?
-    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(message.content.to_s, marca) } if message.incoming?
+    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(texto(message), marca) } if message.incoming?
 
-    { role: 'assistant', content: message.content.to_s }
+    { role: 'assistant', content: texto(message) }
+  end
+
+  # O `content`, ou o resumo da localização/contato quando ele está vazio (ResumoDaMensagemRica).
+  def texto(message)
+    ::Autonomia::Agents::Operate::ResumoDaMensagemRica.texto(message)
   end
 
   # O conteúdo com moldura (ou '' quando falhou no envio) de uma mensagem da equipe; nil quando não é da equipe.
@@ -80,7 +87,7 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     return unless pessoa || (whatsapp && eco_do_celular?(message))
     return '' if message.failed?
 
-    pessoa ? moldura.da_pessoa(message.content.to_s, message.sender, marca) : moldura.do_celular(message.content.to_s, marca)
+    pessoa ? moldura.da_pessoa(texto(message), message.sender, marca) : moldura.do_celular(texto(message), marca)
   end
 
   # A regra do turno quando alguma mensagem da janela vai com moldura; senão nil (o pedido fica igual ao de antes).
