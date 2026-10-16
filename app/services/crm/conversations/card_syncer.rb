@@ -61,8 +61,23 @@ class Crm::Conversations::CardSyncer
   # automático, então um dono escolhido à mão segue intocado.
   # Só responsável e time (sincronização sem mensagem): a mensagem não avança a atividade desse card — senão o
   # StaleCardsJob voltaria a avaliá-lo com IA a cada período parado — nem abre lock em caixa que não tem card.
+  # Com a flag `crm_avaliar_toda_mensagem` (#1675), a mensagem do cliente conta no card em foco e a IA o avalia
+  # (Crm::Conversations::CardEmFoco), o que tira o motivo acima. Com a IA de assunto ligada na caixa, quem faz isso é o
+  # Crm::Subjects::IdentifyJob, depois de decidir o assunto: aqui o foco ainda é o de antes da mensagem.
   def refresh_existing_card
-    return if @message.present?
+    return mensagem_no_card_em_foco if @message.present?
+
+    refresh_card_without_message
+  end
+
+  def mensagem_no_card_em_foco
+    return unless Crm::Conversations::CardEmFoco.ligada?(@account) && @message.incoming?
+    return if Crm::Subjects.ligado?(@conversation)
+
+    Crm::Conversations::CardEmFoco.new(conversation: @conversation, message: @message).perform
+  end
+
+  def refresh_card_without_message
     return if inbox_crm_disabled?
     return if primary_conversation_card.blank?
 
