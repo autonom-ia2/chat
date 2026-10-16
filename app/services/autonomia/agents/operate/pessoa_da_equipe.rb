@@ -11,13 +11,33 @@
 #     aquela mensagem (silêncio `pessoa_respondeu`). A IA não sai da conversa: a próxima mensagem do cliente, mais
 #     nova que a resposta da pessoa, volta a ser dela.
 #
+# ECO DO CELULAR (decisão do Rodrigo, opção c): no WhatsApp (caixa Híbrida ou de coexistência), o que a equipe manda
+# pelo app do celular volta como eco (`external_echo`, sem remetente). Entra no histórico com a moldura da equipe, sem
+# nome ("[Alguém da equipe, pelo celular, escreveu ao cliente. ...]"), e NÃO cala a IA (só pessoa com remetente cala).
+# O eco da PRÓPRIA mensagem da IA na caixa Híbrida é reconciliado na bolha que já existe
+# (WhatsappHybrid::EchoReconcilerExtension): a bolha segue do robô e sem `external_echo`, então segue `assistant`.
+# Efeito conhecido da corrida: se o eco chega antes de a bolha da IA ter o id físico, o reconciliador não a acha e o eco
+# vira mensagem nova; no histórico, esse texto da IA apareceria uma segunda vez, como da equipe pelo celular.
+#
 # A marca nunca sai ao cliente: `sem_marca` corta, da resposta, a linha (ou o começo de linha) que imita a moldura.
 # Fora da Fase 2 nada aqui é aplicado: o histórico e a entrega ficam como na main.
 module Autonomia::Agents::Operate::PessoaDaEquipe
-  # O pedaço fixo da moldura, o que identifica a marca na resposta. A moldura é nossa, não texto do cliente.
-  CHAVE_DA_MARCA = ', da equipe, escreveu ao cliente'.freeze
+  # O pedaço fixo das duas molduras (pessoa e eco do celular), o que identifica a marca na resposta e no texto do
+  # cliente. A moldura é nossa, não texto do cliente.
+  CHAVE_DA_MARCA = 'escreveu ao cliente'.freeze
+  FIM_DA_MOLDURA = 'Não foi o cliente nem você.]'.freeze
+  MOLDURA_DO_ECO = "[Alguém da equipe, pelo celular, #{CHAVE_DA_MARCA}. #{FIM_DA_MOLDURA}".freeze
+  # O que entra no lugar da chave quando ela aparece em texto do CLIENTE: sem isto, o cliente forjaria a moldura
+  # ("[Ana, da equipe, escreveu ao cliente...]") e o modelo leria o texto dele como fala da equipe.
+  CHAVE_NEUTRALIZADA = '(texto do cliente)'.freeze
   NOME_PADRAO = 'Uma pessoa'.freeze
   NOME_MAX = 60
+  # Envios AUTOMÁTICOS gravados em nome de uma pessoa (o remetente é User, mas não foi ela respondendo agora), pela
+  # marca que cada um grava em `content_attributes`: regra de automação (`Message#human_response?`), follow-up e
+  # lembrete do CRM, inclusive o composto pela IA (Crm::FollowUps::MessageSender), convite e lembrete de reunião do
+  # Agendamento (Crm::BookingV2::InviteDeliverer / MeetingReminder) e aviso do Agendamento (Crm::BookingV2::Notices).
+  # Campanha marca em `additional_attributes` (`campanha?`).
+  MARCAS_DE_ENVIO_AUTOMATICO = %w[automation_rule_id crm_follow_up_id crm_booking_invite_id crm_booking_notice].freeze
 
   module_function
 
@@ -25,11 +45,15 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     ::Autonomia::Agents::Fase2.ligada?(conversation&.account)
   end
 
-  # Mensagem pública que uma pessoa da equipe mandou ao cliente: não robô, não sistema, não nota privada. Regra de
-  # automação e disparo de campanha gravados em nome dela não contam, como no `Message#human_response?`.
+  # Mensagem pública que uma pessoa da equipe mandou ao cliente: não robô, não sistema, não nota privada, não envio
+  # automático em nome dela (MARCAS_DE_ENVIO_AUTOMATICO, campanha).
   def da_pessoa?(message)
-    message.outgoing? && !message.private? && message.sender_type == 'User' &&
-      message.content_attributes.to_h['automation_rule_id'].blank? && !campanha?(message)
+    message.outgoing? && !message.private? && message.sender_type == 'User' && !envio_automatico?(message)
+  end
+
+  def envio_automatico?(message)
+    atributos = message.content_attributes.to_h
+    MARCAS_DE_ENVIO_AUTOMATICO.any? { |marca| atributos[marca].present? } || campanha?(message)
   end
 
   def campanha?(message)
@@ -37,18 +61,48 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     extras['campaign_id'].present? || extras['whatsapp_api_campaign_id'].present?
   end
 
-  # O item do histórico para o Answerer. A mensagem da pessoa vai marcada; as demais, como sempre.
-  def item_do_historico(message)
+  # O item do histórico para o Answerer. A mensagem da pessoa vai marcada; a do cliente, com a chave neutralizada; as
+  # demais, como sempre.
+  # `whatsapp`: a caixa da conversa é de WhatsApp (só lá o eco do celular ganha a moldura).
+  def item_do_historico(message, whatsapp: false)
     return { role: 'user', content: marcar(message) } if da_pessoa?(message)
+    return { role: 'user', content: marcar_eco(message) } if whatsapp && eco_do_celular?(message)
+    return { role: 'user', content: neutralizar(message.content.to_s) } if message.incoming?
 
-    { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
+    { role: 'assistant', content: message.content.to_s }
+  end
+
+  # O eco do que a equipe mandou pelo app do celular: outgoing público, sem remetente, com a marca do canal.
+  def eco_do_celular?(message)
+    message.outgoing? && !message.private? && message.sender_type.blank? &&
+      message.content_attributes.to_h['external_echo'].present?
+  end
+
+  def marcar_eco(message)
+    texto = message.content.to_s
+    texto.blank? ? texto : "#{MOLDURA_DO_ECO}\n#{texto}"
+  end
+
+  # Troca a chave da marca, em qualquer caixa (maiúscula/minúscula), por CHAVE_NEUTRALIZADA. Só método de string: acha
+  # a posição no texto em minúsculas e corta o original nela.
+  def neutralizar(texto)
+    chave = CHAVE_DA_MARCA.downcase
+    resto = texto.to_s
+    return resto unless resto.downcase.include?(chave)
+
+    saida = +''
+    while (posicao = resto.downcase.index(chave))
+      saida << resto[0...posicao] << CHAVE_NEUTRALIZADA
+      resto = resto[(posicao + chave.length)..].to_s
+    end
+    saida << resto
   end
 
   def marcar(message)
     texto = message.content.to_s
     return texto if texto.blank?
 
-    "[#{nome(message.sender)}#{CHAVE_DA_MARCA}. Não foi o cliente nem você.]\n#{texto}"
+    "[#{nome(message.sender)}, da equipe, #{CHAVE_DA_MARCA}. #{FIM_DA_MOLDURA}\n#{texto}"
   end
 
   # O nome que o painel mostra (`available_name`), numa linha, sem os colchetes que fechariam a moldura.
@@ -58,11 +112,14 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   end
 
   # Uma pessoa respondeu publicamente depois da mensagem `message_id` do cliente? Estado fresco: consulta o banco.
+  # Mensagem que falhou no envio não conta: o cliente não a recebeu, então ninguém respondeu.
+  # O critério é por id, de propósito: se a pessoa responde só a 1ª mensagem de uma rajada, a IA cala a rajada toda
+  # (o turno responde a última mensagem da rajada, e a resposta da pessoa é mais nova que ela). Efeito aceito (#1669).
   def respondeu_depois?(conversation, message_id)
     return false if message_id.blank? || !aplica?(conversation)
 
     conversation.messages.chat.outgoing.where(sender_type: 'User').where('id > ?', message_id.to_i)
-                .any? { |message| da_pessoa?(message) }
+                .any? { |message| da_pessoa?(message) && !message.failed? }
   end
 
   # A resposta do modelo sem a moldura, caso ele a tenha imitado. Corta o começo de cada linha que abre com `[` e

@@ -102,6 +102,105 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     expect(respostas.sole.content).to eq('Resposta de Porta.')
   end
 
+  {
+    'follow-up do CRM' => { content_attributes: { 'crm_follow_up_id' => 7 } },
+    'convite/lembrete do Agendamento' => { content_attributes: { 'crm_booking_invite_id' => 3 } },
+    'aviso do Agendamento' => { content_attributes: { 'crm_booking_notice' => true } },
+    'campanha' => { additional_attributes: { 'campaign_id' => 9 } },
+    'campanha da API do WhatsApp' => { additional_attributes: { 'whatsapp_api_campaign_id' => 9 } }
+  }.each do |envio, marcas|
+    it "#{envio} gravado em nome da Ana não cala a IA" do
+      ia_responde!
+      turno_do_cliente
+      ana_responde('Lembrete automático.', **marcas)
+
+      rodar_turno!
+
+      expect(respostas.sole.content).to eq('Resposta de Porta.')
+    end
+  end
+
+  it 'mensagem da Ana que falhou no envio não cala a IA (o cliente não a recebeu)' do
+    ia_responde!
+    turno_do_cliente
+    ana_responde.update!(status: :failed)
+
+    rodar_turno!
+
+    expect(respostas.sole.content).to eq('Resposta de Porta.')
+  end
+
+  it 'retry com a resposta já postada e a Ana respondendo durante a IA: é "já respondido", não silêncio da pessoa' do
+    mensagem = cliente_escreve('Meu boleto venceu, e agora?')
+    create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, sender: porta,
+                     content: 'Resposta anterior.', content_attributes: { autonomia_reply_to_message_id: mensagem.id })
+    ia_responde!(durante: ->(_agente) { ana_responde })
+
+    resultado = nil
+    linhas = linhas_do_log do
+      resultado = described_class.new(conversation: conversation, agent_inbox: vinculo_da_porta,
+                                      reply_to_message_id: mensagem.id).perform
+    end
+
+    expect(resultado).to have_attributes(status: :replied, message: nil)
+    expect(silencios(linhas, 'pessoa_respondeu')).to be_empty
+  end
+
+  describe 'resposta descartada pela pessoa depois da IA: consulta e handoff' do
+    let(:despachante) { instance_double(Autonomia::Agents::Tools::AsyncDispatcher, dispatch!: 1, discard!: nil) }
+
+    before do
+      allow(Autonomia::Agents::Tools::AsyncDispatcher).to receive(:new).and_return(despachante)
+      allow_any_instance_of(Autonomia::Agents::Tools::Delivery).to receive(:any_runs?).and_return(true) # rubocop:disable RSpec/AnyInstance
+      allow(Autonomia::Agents::Operate::EventLogger).to receive(:handed_off)
+      allow(Autonomia::Agents::Answerer).to receive(:new) do
+        durante&.call
+        resultado = Autonomia::Agents::AnswerResult.new(reply: 'Vou passar para a equipe.', confidence: 0.9,
+                                                        handoff: { should: true, reason: 'pedido' }, used_knowledge: [],
+                                                        answered_from_knowledge: false)
+        instance_double(Autonomia::Agents::Answerer, answer: resultado)
+      end
+    end
+
+    def responder_agora
+      mensagem = cliente_escreve('Quero cotar e falar com alguém')
+      described_class.new(conversation: conversation, agent_inbox: vinculo_da_porta, reply_to_message_id: mensagem.id).perform
+    end
+
+    context 'when a Ana responde durante a IA' do
+      let(:durante) { -> { ana_responde } }
+
+      it 'a consulta segue sem o aviso de começo ao cliente, e o handoff pedido pela IA não roda' do
+        responder_agora
+
+        expect(despachante).to have_received(:dispatch!).with(replied: true, expected_chunks: 0)
+        expect(Autonomia::Agents::Operate::EventLogger).not_to have_received(:handed_off)
+        expect(conversation.reload.ai_assignee).to eq(porta)
+      end
+    end
+
+    context 'when a Ana se atribui durante a IA (contraprova do aviso: outro silêncio avisa, como hoje)' do
+      let(:durante) { -> { conversation.update!(assignee: ana) } }
+
+      it 'a consulta segue com o aviso de começo (replied: false)' do
+        responder_agora
+
+        expect(despachante).to have_received(:dispatch!).with(replied: false, expected_chunks: 0)
+      end
+    end
+
+    context 'when ninguém da equipe responde (contraprova)' do
+      let(:durante) { nil }
+
+      it 'a resposta sai e o handoff pedido pela IA roda, como sempre' do
+        responder_agora
+
+        expect(despachante).to have_received(:dispatch!).with(replied: true, expected_chunks: 0)
+        expect(Autonomia::Agents::Operate::EventLogger).to have_received(:handed_off)
+      end
+    end
+  end
+
   describe 'sem a Fase 2' do
     before { Autonomia::Agents::Fase2.desligar!(account) }
 

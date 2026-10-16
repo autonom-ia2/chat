@@ -77,8 +77,7 @@ module Autonomia
           return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)
-          dispatch_async(replied: outcome.status == :replied)
-          handoff_if_signaled(result)
+          depois_da_entrega(result, outcome)
           outcome
         rescue ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas => e
           # ESCOLHAS INCOMPLETAS (#380): o Agente de Cotação não montou o prompt — a chave
@@ -229,9 +228,9 @@ module Autonomia
         def parada_na_hora_de_postar
           return silencio_por_inelegibilidade unless still_eligible?
           return silencio_por_turno_superado if turno_superado?
-          return silencio_por_pessoa if pessoa_respondeu?
+          return Result.replied(nil) if already_replied? # um settle anterior já entregou (retry): não é silêncio
 
-          Result.replied(nil) if already_replied?
+          silencio_por_pessoa if pessoa_respondeu?
         end
 
         # ESPELHAMENTO DE ÁUDIO: só quando o cliente mandou áudio NESTE turno (media.transcripts) e o
@@ -423,8 +422,19 @@ module Autonomia
         end
 
         def silencio_por_pessoa
+          @calou_pela_pessoa = true
           registrar_silencio('pessoa_respondeu')
           Result.silenced
+        end
+
+        # Depois da entrega: despacha a consulta assíncrona aceita no turno e honra o handoff pedido pela instrução.
+        # #1669: se a resposta foi descartada porque uma pessoa da equipe respondeu (`pessoa_respondeu`), a pessoa já
+        # está atendendo. A consulta que já começou segue (como no `turno_superado`), mas SEM o aviso de começo ao
+        # cliente (`replied: true` = não avisa): o aviso seria a IA falando por cima da pessoa. E o handoff pedido pela IA
+        # não roda: passar a conversa para "humanos" com a pessoa já nela abriria a fila de espera à toa.
+        def depois_da_entrega(result, outcome)
+          dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
+          handoff_if_signaled(result) unless @calou_pela_pessoa
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
@@ -548,7 +558,11 @@ module Autonomia
           message = last_incoming_message
           base = message&.content.to_s
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
-          [quoted_context(message), base.presence, *transcribed].compact.join("\n")
+          texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
+          # #1669: com a Fase 2, a chave da moldura da equipe escrita pelo cliente é neutralizada (não se forja a moldura).
+          return texto unless ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+
+          ::Autonomia::Agents::Operate::PessoaDaEquipe.neutralizar(texto)
         end
 
         def last_incoming_message
@@ -598,7 +612,8 @@ module Autonomia
 
         def history_com_a_equipe
           ActiveRecord::Associations::Preloader.new(records: recent_messages, associations: :sender).call
-          recent_messages.map { |message| ::Autonomia::Agents::Operate::PessoaDaEquipe.item_do_historico(message) }
+          whatsapp = @conversation.inbox.whatsapp?
+          recent_messages.map { |message| ::Autonomia::Agents::Operate::PessoaDaEquipe.item_do_historico(message, whatsapp: whatsapp) }
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
