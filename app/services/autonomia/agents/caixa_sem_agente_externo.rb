@@ -25,7 +25,7 @@ module Autonomia::Agents::CaixaSemAgenteExterno
       codigo = codigo_da_recusa
       super if codigo.nil?
     end
-    recusar(codigo) if codigo
+    responder_recusa(codigo) if codigo
   end
 
   private
@@ -50,7 +50,7 @@ module Autonomia::Agents::CaixaSemAgenteExterno
     :desconectar_agente_da_plataforma if espelho
   end
 
-  def recusar(codigo)
+  def responder_recusa(codigo)
     Rails.logger.warn("[autonomia][set_agent_bot] recusado code=#{codigo} account=#{Current.account.id} inbox=#{@inbox.id} " \
                       "agent_bot=#{@agent_bot&.id}")
     render json: { error: I18n.t("autonomia.agents.caixa_externo.#{codigo}"), code: codigo.to_s },
