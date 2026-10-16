@@ -76,6 +76,10 @@ describe('EtapaSozinho', () => {
     expect(wrapper.find('[data-exemplo]').text()).toContain(
       'O cliente pede dois produtos diferentes: são dois cards em Vendas.'
     );
+    expect(wrapper.find('[data-exemplo]').text()).toContain(
+      'Quero saber o preço do plano básico e também do plano completo.'
+    );
+    expect(wrapper.find('[data-exemplo]').text()).not.toContain('Quanto custa');
   });
 
   it('with the flag: "as soon as it arrives" says the AI names the card', () => {
@@ -87,6 +91,9 @@ describe('EtapaSozinho', () => {
     );
     expect(wrapper.find('[data-exemplo]').text()).toContain(
       'e a IA dá o nome quando entende o pedido'
+    );
+    expect(wrapper.find('[data-exemplo]').text()).toContain(
+      'Oi! Quanto custa?'
     );
   });
 

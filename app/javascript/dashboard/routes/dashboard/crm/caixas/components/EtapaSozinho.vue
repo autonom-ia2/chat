@@ -90,7 +90,11 @@ const usaIaDoFunil = opcao =>
         <p
           class="mb-0 max-w-xs self-start rounded-2xl rounded-tl-md bg-n-solid-1 px-4 py-2.5 text-[0.9375rem] text-n-slate-12 shadow-sm"
         >
-          {{ $t('CRM_CAIXAS.SOZINHO.MENSAGEM') }}
+          {{
+            chave(opcao) === 'AUTO_UM'
+              ? $t('CRM_CAIXAS.SOZINHO.MENSAGEM_DOIS_PEDIDOS')
+              : $t('CRM_CAIXAS.SOZINHO.MENSAGEM')
+          }}
         </p>
         <p class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-12">
           <span

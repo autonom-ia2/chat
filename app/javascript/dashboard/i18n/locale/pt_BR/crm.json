@@ -4071,6 +4071,7 @@
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",
+      "MENSAGEM_DOIS_PEDIDOS": "Quero saber o preço do plano básico e também do plano completo.",
       "NAO_ENTENDEU": "Se não der para entender o assunto, a conversa fica sem assunto e vai para quem cuida dessas conversas.",
       "ALGUEM": "alguém da equipe",
       "SEM_IA": "A IA está desligada em {funis}. Ligue em Editar funil → IA do funil para ela reconhecer esse assunto."
