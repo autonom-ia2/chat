@@ -2738,7 +2738,7 @@
     },
     {
      "id": "10.18",
-     "titulo": "Caixas no CRM: o que chega e quem cuida",
+     "titulo": "Canais de cada funil: o que chega e quem cuida",
      "para_que_serve": "Decidir, por caixa de entrada, quais funis ela atende, quem cuida de cada assunto (inclusive das conversas ainda sem assunto) e o que o sistema faz sozinho quando chega mensagem.",
      "publico": "admin",
      "prioridade": "P1",
@@ -2754,7 +2754,7 @@
      "requer": "crm_configurar_caixas",
      "prints": [],
      "fontes": [
-      "porques: Ver as caixas no CRM",
+      "porques: Ver os canais de cada funil",
       "porques: Alterar o que chega numa caixa e quem cuida"
      ],
      "revisar": false,
