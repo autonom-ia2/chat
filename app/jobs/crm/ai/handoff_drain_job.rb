@@ -166,8 +166,8 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
-    return if Crm::Entrega::ConviteVencido.espacar?(marca)
     return largar_para_o_agente(conversation) if da_ia_do_crm_com_agente_nosso?(conversation, marca)
+    return if Crm::Entrega::ConviteVencido.espacar?(marca)
 
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
                      dono: dono_da_marca(conversation, marca), excluir: marca['venceram']).call

@@ -133,6 +133,7 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     deixa_vencer(21)
     expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id, bruno.id, carla.id])
 
+    segurada = marca.except('tentado_em')
     davi = create(:user, account: account, role: :agent, name: 'Davi')
     create(:inbox_member, inbox: inbox, user: davi)
     online(davi)
@@ -140,6 +141,8 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
 
     travel_to(21.hours.from_now + 10.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
     expect(Crm::Entrega).not_to have_received(:new)
+    expect(marca.except('tentado_em')).to eq(segurada)
+    expect(marca['tentado_em']).to be_present
 
     travel_to(21.hours.from_now + Crm::Entrega::ConviteVencido::ESPERA_SEM_NINGUEM + 1.minute) { Crm::Ai::HandoffDrainJob.perform_now }
     expect(convidada).to eq(davi.id)

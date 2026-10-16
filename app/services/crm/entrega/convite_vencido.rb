@@ -16,7 +16,8 @@ class Crm::Entrega::ConviteVencido
   # Todos que cuidam do funil deixaram vencer: não há a quem convidar, e a presença não muda isso. A fila tenta de novo
   # só depois deste intervalo (alguém pode ter passado a cuidar do funil), e não a cada rodada de 2 minutos.
   ESPERA_SEM_NINGUEM = 30.minutes
-  SEM_NINGUEM = %w[ninguem_cuida nao_conseguimos_chamar].freeze
+  # `convite_vencido`: a marca que o próprio vencimento grava, quando a regra em seguida não a regrava.
+  SEM_NINGUEM = %w[ninguem_cuida nao_conseguimos_chamar convite_vencido].freeze
 
   # A fila (HandoffDrainJob) pula esta conversa nesta rodada? Só a espera sem ninguém de quem já deixou vencer, e só
   # dentro do intervalo. Segurando por presença ("ninguém online") ou pelo intervalo entre convites segue a cada rodada.
