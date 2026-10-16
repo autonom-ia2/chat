@@ -25,14 +25,15 @@ module Autonomia
         end
 
         # #1669: a IA calou porque uma pessoa da equipe respondeu a mensagem `message_id` do cliente. Ids e a etapa (rótulo
-        # nosso), nunca nome nem texto. Uma vez por mensagem do cliente: o retry e a cadeia em pedaços não duplicam.
+        # nosso), nunca nome nem texto. Uma vez por mensagem do cliente, conferido antes de gravar; sem índice único (sem
+        # migration), uma duplicata rara na corrida é aceita.
         def self.silenciado_pessoa_respondeu(agent:, conversation:, message_id:, etapa:)
           return if message_id.blank?
           return if agent.events.silenciado_pessoa_respondeu.exists?(conversation_id: conversation&.id, message_id: message_id)
 
           create!(agent: agent, conversation: conversation, event_type: :silenciado_pessoa_respondeu,
                   message_id: message_id, metadata: { 'etapa' => etapa.to_s })
-        rescue StandardError => e
+        rescue ActiveRecord::ActiveRecordError => e
           Rails.logger.warn("[autonomia][events] log_skipped agent=#{agent&.id} #{e.class}")
           nil
         end

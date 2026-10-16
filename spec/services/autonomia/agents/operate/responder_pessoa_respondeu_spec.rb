@@ -328,6 +328,22 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
       expect(jobs_de(UmTurnoHelper::REPLY_JOB)).to be_empty
     end
 
+    it 'retry de um pedaço que já entrou, com a Ana respondendo depois: é "já postado", não silêncio da pessoa' do
+      ia_responde!(texto: texto_longo)
+      turno_do_cliente
+      rodar_turno!
+      primeiro = jobs_de(UmTurnoHelper::CHUNK_JOB).sole
+      rodar_rodada!(UmTurnoHelper::CHUNK_JOB) # 1º pedaço entra
+      clear_enqueued_jobs
+      ana_responde
+
+      linhas = linhas_do_log { primeiro[:job].perform_now(*ActiveJob::Arguments.deserialize(primeiro[:args])) }
+
+      expect(respostas.count).to eq(1)
+      expect(linhas.grep(/motivo=pessoa_respondeu/)).to be_empty
+      expect(Autonomia::Agents::AgentEvent.silenciado_pessoa_respondeu.where(conversation_id: conversation.id)).to be_empty
+    end
+
     it 'a Ana responde no meio da cadeia: o resto não sai' do
       ia_responde!(texto: texto_longo)
       turno_do_cliente

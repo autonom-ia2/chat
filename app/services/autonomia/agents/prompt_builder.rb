@@ -79,7 +79,8 @@ module Autonomia
       # A SUPERFÍCIE decide a audiência (não só agent.actuation). Agente de sistema (system_key) força
       # :system independentemente do que foi passado.
       # contexto_do_turno: texto de regra do sistema para ESTE turno (ex.: #1669, a equipe escreveu na conversa), que
-      #           entra como item próprio logo antes da pergunta. nil (padrão): o input fica byte a byte o de antes.
+      #           entra como item `developer` (regra nossa, como a LEAN_TURN_NOTE do Construtor) logo antes da pergunta.
+      #           nil (padrão): o input fica byte a byte o de antes.
       def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer,
                      contexto_do_turno: nil)
         @agent = agent
@@ -233,7 +234,7 @@ module Autonomia
         messages = [segmento_message].compact + history_messages
         messages << context_message if @snippets.any?
         messages << documents_message if @documents.any?
-        messages << message('user', @contexto_do_turno) if @contexto_do_turno
+        messages << message('developer', @contexto_do_turno) if @contexto_do_turno
         messages << user_message(@query)
         messages
       end

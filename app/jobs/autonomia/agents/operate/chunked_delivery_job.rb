@@ -38,7 +38,7 @@ module Autonomia
 
           # Cliente mandou nova mensagem durante a entrega, ou um humano assumiu, ou acabaram os chunks:
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
-          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
           typing.off # parando, ou a pausa ANTES deste pedaço já passou e estamos prestes a postar
           posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s) if motivo.nil?
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
@@ -69,12 +69,14 @@ module Autonomia
                                                                posse_de_quem_perdeu: meta['posse'])
         end
 
-        # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou, :pessoa_respondeu).
+        # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou, :ja_postado, :pessoa_respondeu).
+        # `ja_postado` vem antes de `pessoa_respondeu`: o retry de um pedaço que já entrou não é silêncio da pessoa.
         # `pessoa_respondeu` (#1669, só com a Fase 2): uma pessoa da equipe respondeu a mensagem do cliente antes deste
         # pedaço; o resto da cadeia não sai. A IA segue na conversa e responde a próxima mensagem do cliente.
-        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
           return :turno_mudou unless current_turn?(conversation, reply_to_message_id)
           return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
+          return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
 
           :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
         end
@@ -121,8 +123,7 @@ module Autonomia
             # Revalidação AUTORITATIVA com estado fresco DENTRO do lock (fecha a corrida entre o check
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
-            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
-            motivo ||= :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
+            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
             posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text) if motivo.nil?
           end
           [posted, motivo]

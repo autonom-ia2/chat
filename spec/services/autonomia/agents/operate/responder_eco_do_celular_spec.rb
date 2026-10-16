@@ -20,7 +20,10 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
   end
   let(:historicos) { [] }
-  let(:moldura) { Autonomia::Agents::Operate::PessoaDaEquipe::MOLDURA_DO_ECO }
+  let(:moldura) do
+    marca = Autonomia::Agents::Operate::MolduraDaEquipe.marca(conversation)
+    "#{marca} Alguém da equipe, pelo celular, escreveu ao cliente. Não foi o cliente nem você."
+  end
   # O reconciliador de verdade, como no spec dele: liga o wamid do eco à bolha que já existe.
   let(:reconciliador) do
     Class.new do

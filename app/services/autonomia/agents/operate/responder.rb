@@ -452,9 +452,9 @@ module Autonomia
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
         # com a Fase 2 (fora dela a moldura nem entra no histórico). Resposta que fica vazia cai no silêncio `vazio`.
         def sem_marca_da_equipe(result)
-          return result if result.nil? || !::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+          return result if result.nil? || !equipe.aplica?
 
-          limpa = ::Autonomia::Agents::Operate::PessoaDaEquipe.sem_marca(result.reply)
+          limpa = equipe.resposta(result.reply)
           return result if limpa == result.reply
 
           ::Autonomia::Agents::AnswerResult.new(reply: limpa, confidence: result.confidence, handoff: result.handoff,
@@ -571,10 +571,8 @@ module Autonomia
           base = message&.content.to_s
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
-          # #1669: com a Fase 2, a chave da moldura da equipe escrita pelo cliente é neutralizada (não se forja a moldura).
-          return texto unless ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
-
-          ::Autonomia::Agents::Operate::PessoaDaEquipe.neutralizar(texto)
+          # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
+          equipe.aplica? ? equipe.pergunta(texto) : texto
         end
 
         def last_incoming_message
@@ -613,28 +611,24 @@ module Autonomia
         # history = a janela de `recent_messages`, em ordem cronológica, mapeada para o formato do
         # Answerer: incoming -> user, outgoing -> assistant. Activity/private já são excluídas pelo
         # scope `chat`. Com a Fase 2 (#1669), o que uma pessoa da equipe escreveu vai marcado como dela
-        # (PessoaDaEquipe.item_do_historico); robô e sistema seguem como sempre.
+        # (HistoricoDaEquipe); robô e sistema seguem como sempre.
         def history
-          return history_com_a_equipe if ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+          return equipe.historico(recent_messages) if equipe.aplica?
 
           recent_messages.map do |message|
             { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
           end
         end
 
-        # #1669: a regra do turno (PessoaDaEquipe::REGRA_DO_TURNO) quando a janela tem mensagem da equipe com moldura.
-        # Vai como contexto do turno, nunca na instrução do agente (que é do dono). nil fora da Fase 2 ou sem mensagem
-        # da equipe: o Answerer nem recebe o argumento, e o pedido fica igual ao de antes.
+        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. Vai como contexto do turno
+        # (`developer`), nunca na instrução do agente (que é do dono). nil sem moldura ou sem mensagem da equipe: o
+        # Answerer nem recebe o argumento, e o pedido fica igual ao de antes.
         def contexto_do_turno
-          return unless ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
-
-          ::Autonomia::Agents::Operate::PessoaDaEquipe.regra_do_turno(recent_messages, whatsapp: @conversation.inbox.whatsapp?)
+          equipe.regra(recent_messages) if equipe.aplica?
         end
 
-        def history_com_a_equipe
-          ActiveRecord::Associations::Preloader.new(records: recent_messages, associations: :sender).call
-          whatsapp = @conversation.inbox.whatsapp?
-          recent_messages.map { |message| ::Autonomia::Agents::Operate::PessoaDaEquipe.item_do_historico(message, whatsapp: whatsapp) }
+        def equipe
+          @equipe ||= ::Autonomia::Agents::Operate::HistoricoDaEquipe.new(conversation: @conversation)
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`
