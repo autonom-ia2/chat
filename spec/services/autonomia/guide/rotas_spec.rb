@@ -28,6 +28,15 @@ RSpec.describe Autonomia::Guide::Rotas do
       expect(described_class.caminho(16, %w[inboxes 3])).to eq('/api/v1/accounts/16/inboxes/3')
       expect(described_class.caminho(16, %w[conta])).to eq('/api/v1/accounts/16')
     end
+
+    it 'deixa a contratação e a habilitação da Loja fora dos catálogos do Guia', :aggregate_failures do
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/financial/store/checkout')).to be_nil
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/financial/store/subscriptions/:id/cancellation')).to be_nil
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/financial/store/activations')).to be_nil
+      expect(Autonomia::Guide::Acoes.new(account: conta, user: admin).catalogo.grep(%r{autonomia/financial/store})).to be_empty
+      expect(Autonomia::Guide::Consulta.new(account: conta, user: admin).catalogo.grep(%r{autonomia/financial/store})).to be_empty
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/financial/invoices')).to eq('autonomia/financial/invoices')
+    end
   end
 
   it 'nenhum recurso dos catálogos sai com o caminho inteiro', :aggregate_failures do

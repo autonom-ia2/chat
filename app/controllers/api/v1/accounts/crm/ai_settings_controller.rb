@@ -6,7 +6,7 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
 
   def show
     authorize @pipeline, :manage_ai?
-    @ai_settings = Crm::Ai::SettingsPresenter.new(pipeline: @pipeline).perform
+    @ai_settings = Crm::Ai::SettingsPresenter.new(pipeline: @pipeline, quem_recebe: params[:quem_recebe].present?).perform
   end
 
   def update
@@ -47,6 +47,7 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
         :enabled, :mode, :max_touches, :tone_instructions,
         { intervals_hours: [], allowed_days: [], quiet_hours: [:start, :end, :tz] }
       ],
+      service_reminders: [:progress, :resolved_check, :payment, :progress_after_hours, :resolved_check_after_hours],
       handoff: [
         :enabled, :mode, :selector_mode, :handoff_mode, :trigger, :prefer_online, :pickup_threshold_seconds,
         :escalation_user_id, :pool_type, :pool_id, :renotify_after_seconds, :escalation_action

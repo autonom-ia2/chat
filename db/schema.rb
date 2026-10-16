@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -503,9 +503,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "delegate_agent_id"
     t.index ["account_id", "enabled"], name: "idx_autonomia_agent_specialists_account_enabled"
+    t.index ["autonomia_agent_id", "delegate_agent_id"], name: "idx_autonomia_agent_specialists_par_delegate", unique: true, where: "(delegate_agent_id IS NOT NULL)"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_specialists_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_specialists_on_autonomia_agent_id"
+    t.index ["delegate_agent_id"], name: "idx_autonomia_agent_specialists_delegate", where: "(delegate_agent_id IS NOT NULL)"
   end
 
   create_table "autonomia_agent_tool_runs", force: :cascade do |t|
@@ -2415,6 +2418,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.index ["pipeline_id"], name: "index_crm_inbox_agent_pipelines_on_pipeline_id"
   end
 
+  create_table "crm_inbox_ai_agents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.bigint "autonomia_agent_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_inbox_ai_agents_on_account_id"
+    t.index ["autonomia_agent_id"], name: "index_crm_inbox_ai_agents_on_autonomia_agent_id"
+    t.index ["inbox_id", "pipeline_id"], name: "idx_crm_inbox_ai_agents_unique", unique: true
+    t.index ["pipeline_id"], name: "index_crm_inbox_ai_agents_on_pipeline_id"
+  end
+
   create_table "crm_inbox_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -2726,6 +2742,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.index ["account_id", "created_at"], name: "idx_crm_meta_conv_account_created"
     t.index ["card_id"], name: "idx_crm_meta_conv_card"
     t.index ["event_id"], name: "idx_crm_meta_conv_event_id", unique: true
+  end
+
+  create_table "crm_passagens", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "card_id"
+    t.bigint "pipeline_id"
+    t.string "de_type"
+    t.bigint "de_id"
+    t.string "de_nome"
+    t.string "para_type", null: false
+    t.bigint "para_id", null: false
+    t.string "para_nome"
+    t.string "pedida_por_type"
+    t.bigint "pedida_por_id"
+    t.string "pedida_por_nome"
+    t.string "motivo"
+    t.bigint "message_id"
+    t.string "transfer_id"
+    t.datetime "em", null: false
+    t.datetime "devolvida_em"
+    t.string "devolvida_por_type"
+    t.bigint "devolvida_por_id"
+    t.string "devolvida_por_nome"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_crm_passagens_account_created"
+    t.index ["card_id"], name: "index_crm_passagens_on_card_id"
+    t.index ["conversation_id", "id"], name: "idx_crm_passagens_conversation"
+    t.index ["conversation_id"], name: "idx_crm_passagens_abertas", where: "(devolvida_em IS NULL)"
+    t.index ["pipeline_id"], name: "index_crm_passagens_on_pipeline_id"
   end
 
   create_table "crm_pipeline_inboxes", force: :cascade do |t|
@@ -4040,10 +4087,33 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.string "public_id", null: false
     t.text "webhook_secret"
     t.datetime "down_alerted_at"
+    t.datetime "paused_at"
     t.index ["account_id"], name: "index_whatsapp_hybrid_connections_on_account_id"
     t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
     t.index ["public_id"], name: "index_whatsapp_hybrid_connections_on_public_id", unique: true
     t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
+  end
+
+  create_table "whatsapp_out_of_window_sends", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "message_id"
+    t.bigint "crm_follow_up_id"
+    t.bigint "whatsapp_template_consent_id"
+    t.string "tipo", null: false
+    t.string "caminho", null: false
+    t.string "escolha"
+    t.string "template_name", null: false
+    t.string "template_language", null: false
+    t.string "categoria", null: false
+    t.string "origem", null: false
+    t.string "motivo"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_whatsapp_oow_sends_account_created"
+    t.index ["crm_follow_up_id"], name: "index_whatsapp_out_of_window_sends_on_crm_follow_up_id"
+    t.index ["inbox_id", "tipo"], name: "idx_whatsapp_oow_sends_inbox_tipo"
+    t.index ["message_id"], name: "index_whatsapp_out_of_window_sends_on_message_id", unique: true
+    t.index ["whatsapp_template_consent_id"], name: "idx_whatsapp_oow_sends_consent"
   end
 
   create_table "whatsapp_proxy_assignments", force: :cascade do |t|
@@ -4081,6 +4151,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["proxy_address"], name: "index_whatsapp_proxy_quarantines_on_proxy_address", unique: true
+  end
+
+  create_table "whatsapp_template_consents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "marca", null: false
+    t.string "acao", null: false
+    t.string "versao_aviso", null: false
+    t.text "texto_aviso", null: false
+    t.jsonb "precos", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.string "user_name"
+    t.index ["account_id", "created_at"], name: "idx_whatsapp_template_consents_account_created"
+    t.index ["account_id", "marca", "created_at"], name: "idx_whatsapp_template_consents_account_marca_created"
+    t.index ["user_id"], name: "index_whatsapp_template_consents_on_user_id"
   end
 
   create_table "whatsapp_template_profiles", force: :cascade do |t|
@@ -4141,6 +4226,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
   add_foreign_key "autonomia_agent_specialists", "accounts"
+  add_foreign_key "autonomia_agent_specialists", "autonomia_agents", column: "delegate_agent_id", on_delete: :cascade
   add_foreign_key "autonomia_agent_tool_runs", "accounts"
   add_foreign_key "autonomia_agent_tools", "accounts"
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
@@ -4292,6 +4378,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
   add_foreign_key "crm_inbox_agent_pipelines", "accounts", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_inbox_agent_accesses", column: "access_id", on_delete: :cascade
   add_foreign_key "crm_inbox_agent_pipelines", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "accounts", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "autonomia_agents", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_inbox_ai_agents", "inboxes", on_delete: :cascade
   add_foreign_key "crm_inbox_settings", "accounts"
   add_foreign_key "crm_inbox_settings", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_inbox_settings", "crm_pipelines", column: "default_pipeline_id"
@@ -4324,6 +4414,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_28_150000) do
   add_foreign_key "crm_meta_advisor_actions", "users", column: "opened_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "users", column: "resolved_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_runs", "accounts", on_delete: :cascade
+  add_foreign_key "crm_passagens", "accounts", on_delete: :cascade
+  add_foreign_key "crm_passagens", "conversations", on_delete: :cascade
+  add_foreign_key "crm_passagens", "crm_cards", column: "card_id", on_delete: :nullify
+  add_foreign_key "crm_passagens", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"
@@ -4420,6 +4514,34 @@ AS $function$ BEGIN IF OLD.triggered_at IS NOT NULL AND NOT (NOT OLD.blocked AND
 
   # no candidate create_trigger statement could be found, creating an adapter-specific one
   execute("CREATE TRIGGER email_reputation_snapshot_immutable BEFORE UPDATE ON \"email_reputation_states\" FOR EACH ROW EXECUTE FUNCTION email_reputation_snapshot_immutable()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.whatsapp_out_of_window_sends_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'whatsapp_out_of_window_sends: registro append-only, % recusado', TG_OP; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_out_of_window_sends_append_only_row BEFORE DELETE OR UPDATE ON \"whatsapp_out_of_window_sends\" FOR EACH ROW EXECUTE FUNCTION whatsapp_out_of_window_sends_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_out_of_window_sends_append_only_truncate BEFORE TRUNCATE ON \"whatsapp_out_of_window_sends\" FOR EACH STATEMENT EXECUTE FUNCTION whatsapp_out_of_window_sends_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute(<<-SQL)
+CREATE OR REPLACE FUNCTION public.whatsapp_template_consents_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$ BEGIN RAISE EXCEPTION 'whatsapp_template_consents: registro append-only, % recusado', TG_OP; END; $function$
+  SQL
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_template_consents_append_only_row BEFORE DELETE OR UPDATE ON \"whatsapp_template_consents\" FOR EACH ROW EXECUTE FUNCTION whatsapp_template_consents_append_only()")
+
+  # no candidate create_trigger statement could be found, creating an adapter-specific one
+  execute("CREATE TRIGGER whatsapp_template_consents_append_only_truncate BEFORE TRUNCATE ON \"whatsapp_template_consents\" FOR EACH STATEMENT EXECUTE FUNCTION whatsapp_template_consents_append_only()")
 
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

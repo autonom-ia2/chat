@@ -18,7 +18,6 @@ export const useFunilMoldura = ({
   salvando,
   apagandoEtapa,
   hasUnnamedStages,
-  caixaAberta,
   passoGoogle,
   onSubmit,
   fechar,
@@ -110,7 +109,12 @@ export const useFunilMoldura = ({
         rotulo: t(`${FUNIL}.${subtela.chave}.ROTULO`),
         icone: subtela.icone,
         titulo: t(`${FUNIL}.${subtela.chave}.${subtela.titulo || 'TITULO'}`),
-        texto: t(`${FUNIL}.${subtela.chave}.TEXTO`),
+        // #1498 — Atender: os lembretes falam do andamento, não de chamar de volta.
+        texto: t(
+          !form.countsAsSale && view.value === 'returns'
+            ? `${FUNIL}.RETORNO.TEXTO_ATENDER`
+            : `${FUNIL}.${subtela.chave}.TEXTO`
+        ),
       };
     const topo = TOPO[view.value] || TOPO.nome;
     return {
@@ -222,7 +226,6 @@ export const useFunilMoldura = ({
           rotulo: t('CRM_FUNIL.PRONTO'),
           icone: 'i-lucide-check',
           acao: pronto,
-          neutro: view.value === 'inboxes' && caixaAberta.value,
         },
       };
     // Tela aberta de dentro de outra volta com "Pronto"; as partes de um funil

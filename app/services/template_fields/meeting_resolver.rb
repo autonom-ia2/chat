@@ -6,8 +6,11 @@
 class TemplateFields::MeetingResolver
   include TemplateFields::FieldReader
 
+  # `horario.link_codigo` (#1518/#1524): só o código do link de gestão (o fim de `/b/<código>`), para o botão de URL
+  # dinâmica do modelo (`https://<base>/b/{{1}}`). Lido do próprio link de gestão, sem outra regra de montar o link.
   READERS = {
-    'horario.data_hora' => :when_text, 'horario.data' => :date, 'horario.hora' => :time, 'horario.link_gestao' => :manage_url
+    'horario.data_hora' => :when_text, 'horario.data' => :date, 'horario.hora' => :time, 'horario.link_gestao' => :manage_url,
+    'horario.link_codigo' => :manage_code
   }.freeze
   NOTICE_KEYS = %w[cliente.primeiro_nome horario.data_hora horario.link_gestao].freeze
 
@@ -34,6 +37,11 @@ class TemplateFields::MeetingResolver
 
   def manage_url
     invite&.url
+  end
+
+  def manage_code
+    url = manage_url
+    url && URI.parse(url).path.to_s.split('/').last
   end
 
   # O mesmo fuso de `Notices::Text.when_text`.

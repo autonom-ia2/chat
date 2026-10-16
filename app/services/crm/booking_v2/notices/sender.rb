@@ -18,6 +18,8 @@
 # 6. Regra do canal (`Notices::Route`): janela e modelo aprovado no oficial e no canal API; WAHA manda texto sem janela.
 #    Oficial sem modelo que resolva e WhatsApp Híbrido pronto para o contato (#1349): texto pela sessão também,
 #    mandado sem remetente para o roteador do Híbrido contar como `automation` (ver `#notice_sender`).
+#    Modelo v2 com botões (#1524): o `Route` o põe na frente do configurado quando aprovado; corpo e botões pelo
+#    `Notices::TemplateFill` (ver `#template_fill`).
 #    WAHA sem conversa: antes de abrir uma, o chat id real vem da WAHA (`Notices::WahaChat`) → `no_whatsapp` ou
 #    `waha_unavailable` quando não dá, ou `waha_refused` quando a WAHA recusa o pedido. `no_whatsapp` e `waha_refused`
 #    são definitivos. `waha_unavailable` não: a consulta não mandou nada,
@@ -27,6 +29,10 @@
 #    a WAHA).
 # 7. Envio (`Notices::Delivery`) → `sent` com a mensagem; erro do envio → `failed` com a classe do erro (e o erro vai
 #    ao tracker). Falha de entrega posterior do provedor: ver `NoticeDispatchJob` (`delivery_failed`).
+# 8. Aviso com botão (#1562, `Notices::Text#button?`): a mensagem 1 é o aviso sem a linha de parar, com o botão "Ver
+#    meu horário"; a mensagem 2 (botão "Parar avisos") sai pelo `NoticeStopPartJob`, enfileirado aqui com atraso,
+#    depois que a 1 saiu (ver o job: ordem, idempotência e falhas). O aviso continua UM só: `message_id` = a mensagem 1,
+#    e os tetos contam 1 aviso (contam avisos, não mensagens).
 #
 # Pulado por motivo que exige ação (sem modelo, fora da janela, teto, sem caixa...) ou falha: registra e avisa o
 # responsável UMA vez por reunião. Nada aqui altera a reunião (J5-A4).
@@ -76,6 +82,16 @@ class Crm::BookingV2::Notices::Sender
 
   private_class_method :automatic, :recent_tests
 
+  # O cliente parou os avisos (passo 3 do cabeçalho), nesta precedência. Também usado pelo `NoticeStopPartJob` antes
+  # de criar a mensagem 2 (#1562).
+  def self.stop_reason(meeting)
+    contact = meeting.card.contact
+    return 'opted_out' if contact&.opted_out?
+    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
+
+    'stopped' if meeting.reminders_stopped_at.present?
+  end
+
   # waha_outage: as caixas WAHA que já falharam nesta rodada do cron (`Notices::WahaOutage`).
   def initialize(notice, waha_outage: nil)
     @notice = notice
@@ -87,7 +103,7 @@ class Crm::BookingV2::Notices::Sender
     reason = blocking_reason
     return skip!(waha_gave_up?(reason) ? WAHA_UNAVAILABLE : reason) if reason
 
-    decision = route.decide
+    decision = route(heal: true).decide
     return skip!(decision.reason) unless decision.send?
 
     waha_problem = waha_chat.prepare if Crm::BookingV2::Notices::WahaChat.needed?(decision, profile.notice_inbox)
@@ -134,10 +150,7 @@ class Crm::BookingV2::Notices::Sender
   end
 
   def stop_reason
-    return 'opted_out' if contact&.opted_out?
-    return 'stopped' if Crm::BookingNoticeStop.stopped?(account_id: meeting.account_id, contact_id: contact&.id)
-
-    'stopped' if meeting.reminders_stopped_at.present?
+    self.class.stop_reason(meeting)
   end
 
   def setup_reason
@@ -164,9 +177,10 @@ class Crm::BookingV2::Notices::Sender
     @invite ||= Crm::BookingInvite.where(meeting_id: meeting.id).order(:id).last
   end
 
-  def route
-    @route ||= Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
-                                                  template: profile.notice_template(notice.kind))
+  # heal (#1633): só o envio real liga a autocura dos modelos v2; o `will_send?` fica sem efeito.
+  def route(heal: false)
+    Crm::BookingV2::Notices::Route.new(inbox: profile.notice_inbox, contact: contact, conversation: meeting.conversation,
+                                       template: profile.notice_template(notice.kind), kind: notice.kind, heal: heal)
   end
 
   # WAHA sem conversa: pergunta o chat id antes de abrir uma (`Notices::WahaChat`, #1270).
@@ -201,9 +215,17 @@ class Crm::BookingV2::Notices::Sender
     reason == 'past_due' && notice.error_code == WAHA_UNAVAILABLE
   end
 
+  # Com o botão (#1562), a mensagem 2 ("Parar avisos") sai pelo `NoticeStopPartJob`, depois que a 1 saiu.
   def deliver!(decision)
-    message = delivery(decision).perform
+    Crm::BookingV2::NoticeStopPartJob.enqueue(notice) if send_notice!(decision)
+  end
+
+  # A mensagem 1 (a única, sem botão). Devolve true quando ela levou o botão e a mensagem 2 tem de sair.
+  def send_notice!(decision)
+    text = notice_text(decision)
+    message = notice_delivery(decision, text).perform
     notice.update!(status: :sent, sent_at: Time.current, message_id: message.id, skip_reason: nil, error_code: nil)
+    text.button?
   rescue StandardError => e
     # Erro do envio (provedor, validação da mensagem, conversa): registrado no aviso, no log e no tracker, e o
     # responsável é avisado; a reunião não muda. Não relança: o cron segue para o próximo aviso.
@@ -211,15 +233,30 @@ class Crm::BookingV2::Notices::Sender
     ChatwootExceptionTracker.new(e, account: meeting.account).capture_exception
     notice.update!(status: :failed, error_code: e.class.name.first(255))
     alert!
+    false
   end
 
-  def delivery(decision)
+  def notice_text(decision)
     button = Crm::BookingV2::Notices::Button.allowed?(decision, profile.notice_inbox)
-    text = Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
+    Crm::BookingV2::Notices::Text.new(meeting: meeting, invite: invite, kind: notice.kind, page: profile, button: button)
+  end
+
+  def notice_delivery(decision, text)
     Crm::BookingV2::Notices::Delivery.new(
       decision: decision, inbox: profile.notice_inbox, contact: contact, sender: notice_sender(decision),
-      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message
+      content: text.to_s, values: text.template_values, appendix: text.appendix, rich_message: text.rich_message,
+      **template_fill(decision)
     )
+  end
+
+  # Modelo v2 (#1524): corpo e botões pelo catálogo de campos, e a marca do aviso na mensagem, que prova ao
+  # `Crm::BookingNoticeStopReplyListener` que o toque em "Parar avisos" responde a um aviso nosso. Uma mensagem só: o
+  # "Parar avisos" já vai no próprio modelo (sem `NoticeStopPartJob`, que só sai do texto pela sessão com botão).
+  def template_fill(decision)
+    return {} if decision.campos.blank?
+
+    { filled: Crm::BookingV2::Notices::TemplateFill.new(decision, meeting: meeting, invite: invite).call,
+      marks: { crm_booking_notice_id: notice.id } }
   end
 
   # Pelo WhatsApp Híbrido (#1349) o aviso automático sai sem remetente, para o roteador do Híbrido contar como

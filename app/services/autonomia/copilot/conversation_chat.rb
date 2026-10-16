@@ -79,15 +79,11 @@ module Autonomia
         @account ||= conversation.account
       end
 
-      # Only the account's own INTERNAL/BOTH agents are usable as team copilots.
+      # Only the account's own team copilots (internal/both, never a system agent nor a helper of another agent).
       def resolve_agent
         return nil if @agent_id.blank?
 
-        Autonomia::Agents::Agent.kept
-                                .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
-                                .where.not(instruction: [nil, ''])
-                                .where("config->>'system_key' IS NULL") # nunca rodar um agente de sistema (Guia) pelo copiloto
-                                .find_by(id: @agent_id)
+        Autonomia::Agents::Agent.kept.where(account: account).copilotos_da_equipe.find_by(id: @agent_id)
       end
 
       # The agent receives the operator's question PREFIXED with the conversation transcript as

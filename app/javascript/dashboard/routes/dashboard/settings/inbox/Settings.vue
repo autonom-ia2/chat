@@ -33,6 +33,9 @@ import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
+// #1648 — com a aba "Agente de IA" por caixa ligada na conta, a aba do robô vira o componente do fork.
+import AbaAgenteDeIa from 'dashboard/routes/dashboard/autonomia/agentes/components/AbaAgenteDeIa.vue';
+import { agenteIaPorCaixaLigado } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import AccountHealth from './components/AccountHealth.vue';
 import TwilioHealth from './components/TwilioHealth.vue';
 import WhatsappManualMigrationDialog from './components/WhatsappManualMigrationDialog.vue';
@@ -51,7 +54,8 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import Editor from 'dashboard/components-next/Editor/Editor.vue';
 import ColorPicker from 'dashboard/components-next/colorpicker/ColorPicker.vue';
-import SelectInput from 'dashboard/components-next/select/Select.vue';
+// Escolha única sem <select> nativo (regra do Rodrigo, 18/09/2026; #1487).
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Widget from 'dashboard/modules/widget-preview/components/Widget.vue';
 import AccessToken from 'dashboard/routes/dashboard/settings/profile/AccessToken.vue';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
@@ -59,6 +63,7 @@ import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 export default {
   components: {
+    AbaAgenteDeIa,
     Banner,
     BotConfiguration,
     CollaboratorsPage,
@@ -90,7 +95,7 @@ export default {
     Editor,
     Avatar,
     ColorPicker,
-    SelectInput,
+    ChoiceSelect,
     AccountHealth,
     TwilioHealth,
     WhatsappManualMigrationDialog,
@@ -139,12 +144,20 @@ export default {
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
+      getAccount: 'accounts/getAccount',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
       isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
       uiFlags: 'inboxes/getUIFlags',
       portals: 'portals/allPortals',
     }),
+    // #1648 — aba "Agente de IA" por caixa (piloto); desligada, as abas de sempre.
+    agenteIaPorCaixa() {
+      return (
+        typeof this.getAccount === 'function' &&
+        agenteIaPorCaixaLigado(this.getAccount(this.accountId))
+      );
+    },
     isWahaInbox() {
       return Boolean(this.inbox?.waha_provider);
     },
@@ -204,7 +217,9 @@ export default {
         },
         {
           key: 'collaborators',
-          name: this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
+          name: this.agenteIaPorCaixa
+            ? this.$t('AGENTS.CAIXA_USUARIOS.ABA')
+            : this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
         },
       ];
 
@@ -261,7 +276,9 @@ export default {
           ...visibleToAllChannelTabs,
           {
             key: 'bot-configuration',
-            name: this.$t('INBOX_MGMT.TABS.BOT_CONFIGURATION'),
+            name: this.agenteIaPorCaixa
+              ? this.$t('AGENTS.CAIXA_AGENTE_IA.ABA')
+              : this.$t('INBOX_MGMT.TABS.BOT_CONFIGURATION'),
           },
         ];
       }
@@ -825,9 +842,10 @@ export default {
   >
     <SpinnerLoader :size="28" class="text-n-blue-9" />
   </div>
+  <!-- #1487: a coluna da grade não passa da largura da tela (no celular, a barra de abas e os cartões esticavam a página). -->
   <div
     v-else
-    class="grid grid-rows-[auto_1fr] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
+    class="grid grid-rows-[auto_1fr] grid-cols-[minmax(0,1fr)] h-full flex-grow flex-shrink pr-0 pl-0 w-full min-w-0 settings"
   >
     <SettingIntroBanner
       :header-image="inbox.avatarUrl"
@@ -1037,8 +1055,9 @@ export default {
               :label="$t('INBOX_MGMT.HELP_CENTER.LABEL')"
               :help-text="$t('INBOX_MGMT.HELP_CENTER.SUB_TEXT')"
             >
-              <SelectInput
+              <ChoiceSelect
                 v-model="selectedPortalSlug"
+                class="w-fit"
                 :aria-label="$t('INBOX_MGMT.HELP_CENTER.LABEL')"
                 :placeholder="$t('INBOX_MGMT.HELP_CENTER.PLACEHOLDER')"
                 :options="[
@@ -1175,15 +1194,20 @@ export default {
               >
                 <div class="flex items-center gap-6">
                   <div class="flex items-center gap-2">
-                    <label class="text-n-slate-11 text-heading-3">
+                    <label
+                      for="widget-bubble-position"
+                      class="text-n-slate-11 text-heading-3"
+                    >
                       {{
                         $t(
                           'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_POSITION_LABEL'
                         )
                       }}
                     </label>
-                    <SelectInput
+                    <ChoiceSelect
                       v-model="widgetBubblePosition"
+                      class="w-fit"
+                      trigger-id="widget-bubble-position"
                       :aria-label="
                         $t(
                           'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_POSITION_LABEL'
@@ -1207,15 +1231,20 @@ export default {
                   </div>
                   <div class="h-3 w-px bg-n-weak rounded-lg" />
                   <div class="flex items-center gap-2">
-                    <label class="text-n-slate-11 text-heading-3">
+                    <label
+                      for="widget-bubble-type"
+                      class="text-n-slate-11 text-heading-3"
+                    >
                       {{
                         $t(
                           'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_TYPE_LABEL'
                         )
                       }}
                     </label>
-                    <SelectInput
+                    <ChoiceSelect
                       v-model="widgetBubbleType"
+                      class="w-fit"
+                      trigger-id="widget-bubble-type"
                       :aria-label="
                         $t(
                           'INBOX_MGMT.WIDGET_BUILDER.WIDGET_OPTIONS.WIDGET_BUBBLE_TYPE_LABEL'
@@ -1263,8 +1292,9 @@ export default {
                   $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.REPLY_TIME.HELP_TEXT')
                 "
               >
-                <SelectInput
+                <ChoiceSelect
                   v-model="replyTime"
+                  class="w-fit"
                   :aria-label="
                     $t('INBOX_MGMT.ADD.WEBSITE_CHANNEL.REPLY_TIME.TITLE')
                   "
@@ -1504,7 +1534,8 @@ export default {
           <WeeklyAvailability :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'bot-configuration'">
-          <BotConfiguration :inbox="inbox" />
+          <AbaAgenteDeIa v-if="agenteIaPorCaixa" :inbox="inbox" />
+          <BotConfiguration v-else :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-health'">
           <!-- chat#1217: trocar a caixa de conta do WhatsApp sem perder a caixa -->

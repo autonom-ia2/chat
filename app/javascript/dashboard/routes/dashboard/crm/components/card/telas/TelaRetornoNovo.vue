@@ -6,12 +6,22 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import CampoQuando from '../CampoQuando.vue';
 import CampoIdioma from '../campos/CampoIdioma.vue';
 import { atalhosDeData } from '../atalhosDeData';
+import CampoRepetir from '../../lembrete/CampoRepetir.vue';
+import CampoQuemRecebe from '../../lembrete/CampoQuemRecebe.vue';
 
 // #1423 — marcar um retorno, numa tela só: primeiro o nome (vazio, com
 // exemplos), depois o que fazer (três cartões), quando
 // (atalhos, calendário e hora, sem o campo nativo) e, se for mensagem, o texto
 // e a mensagem pronta quando o WhatsApp exigir. O estado mora na gaveta
 // (useCardRetorno), para o rascunho sobreviver e a prévia ver o mesmo.
+const props = defineProps({
+  funil: { type: String, default: '' },
+  // #1461: sem card só existe "Me lembrar"; os cartões somem.
+  soLembrete: { type: Boolean, default: false },
+  // #1590: "Mandar mensagem" abre a gaveta da Mensagem marcada (o card avisa).
+  mensagemNova: { type: Boolean, default: false },
+});
+const emit = defineEmits(['mensagemNova']);
 const r = inject('cardRetorno');
 const { t } = useI18n();
 const N = 'CRM_CARD.RETORNO';
@@ -23,6 +33,34 @@ const MODO = {
 };
 
 const atalhos = computed(() => atalhosDeData(t));
+
+// #1462: "Me lembrar" só quando o aviso é para quem marca. Para outras
+// pessoas, o cartão diz para quem vai.
+const souEu = computed(() => {
+  const { tipo } = r.form.quemRecebe;
+  const { dono, eu } = r.contexto;
+  return tipo === 'eu' || (tipo === 'dono' && dono.value?.id === eu.value?.id);
+});
+const avisaOutros = computed(
+  () =>
+    r.lembretesV2.value && !souEu.value && Boolean(r.previa.value.quemRecebe)
+);
+const tituloDoModo = modo =>
+  modo === 'reminder_only' && avisaOutros.value
+    ? t('CRM_LEMBRETE.MODO_OUTROS.TITULO')
+    : t(`${N}.MODO.${MODO[modo].chave}.TITULO`);
+const textoDoModo = modo =>
+  modo === 'reminder_only' && avisaOutros.value
+    ? t('CRM_LEMBRETE.MODO_OUTROS.TEXTO', { nomes: r.previa.value.quemRecebe })
+    : t(`${N}.MODO.${MODO[modo].chave}.TEXTO`);
+const escolherModo = modo => {
+  if (props.mensagemNova && modo === 'auto_send_message') {
+    emit('mensagemNova');
+    return;
+  }
+  r.form.automationMode = modo;
+};
+const soEstaVez = computed(() => r.edicao.value?.qual === 'esta');
 
 const envia = computed(() => r.form.automationMode === 'auto_send_message');
 const avisoJanela = computed(() => {
@@ -73,7 +111,7 @@ const TOM = {
       :message="faltaTitulo ? t(`${N}.TITULO_FALTA`) : t(`${N}.TITULO_DICA`)"
       :message-type="faltaTitulo ? 'error' : 'info'"
     />
-    <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <fieldset v-if="!soLembrete" class="m-0 flex flex-col gap-2 border-0 p-0">
       <legend class="mb-1 p-0 text-base font-semibold text-n-slate-12">
         {{ t(`${N}.O_QUE`) }}
       </legend>
@@ -91,7 +129,7 @@ const TOM = {
               ? 'bg-n-blue-2 ring-2 ring-n-blue-8'
               : 'ring-n-weak bg-n-solid-1 hover:ring-n-slate-7'
           "
-          @click="r.form.automationMode = modo.valor"
+          @click="escolherModo(modo.valor)"
         >
           <span
             class="size-5 text-n-blue-11"
@@ -99,13 +137,13 @@ const TOM = {
             aria-hidden="true"
           />
           <span class="text-[0.9375rem] font-semibold text-n-slate-12">
-            {{ t(`${N}.MODO.${MODO[modo.valor].chave}.TITULO`) }}
+            {{ tituloDoModo(modo.valor) }}
           </span>
           <span class="text-sm text-n-slate-11">
             {{
               modo.desligado
                 ? t(`${N}.PRECISA_CONVERSA`)
-                : t(`${N}.MODO.${MODO[modo.valor].chave}.TEXTO`)
+                : textoDoModo(modo.valor)
             }}
           </span>
         </button>
@@ -117,6 +155,40 @@ const TOM = {
       data-retorno-quando
       :rotulo="t(`${N}.QUANDO`)"
       :atalhos="atalhos"
+    />
+    <p
+      v-if="r.lembretesV2.value"
+      class="-mt-4 mb-0 text-xs text-n-slate-11"
+      data-retorno-fuso
+    >
+      {{
+        t('CRM_LEMBRETE.FUSO_DA_CONTA', { fuso: r.contexto.fusoRotulo.value })
+      }}
+    </p>
+
+    <!-- #1460: repetir. -->
+    <CampoRepetir
+      v-if="
+        r.lembretesV2.value &&
+        !soEstaVez &&
+        r.form.automationMode === 'reminder_only'
+      "
+      v-model="r.form.repetir"
+      :inicio="r.form.dueAt"
+      :sem-uma-vez="r.edicao.value?.qual === 'proximas'"
+      :fuso="r.contexto.fusoRotulo.value"
+    />
+    <!-- #1462: quem recebe o aviso. -->
+    <CampoQuemRecebe
+      v-if="r.lembretesV2.value"
+      v-model="r.form.quemRecebe"
+      :dono="r.contexto.dono.value"
+      :eu="r.contexto.eu.value"
+      :agentes="r.contexto.agentes.value"
+      :barrados="r.contexto.barrados.value"
+      :funil="funil"
+      :times="r.contexto.times.value"
+      :membros="r.contexto.membros.value"
     />
 
     <section v-if="envia" class="flex flex-col gap-4" data-retorno-mensagem>

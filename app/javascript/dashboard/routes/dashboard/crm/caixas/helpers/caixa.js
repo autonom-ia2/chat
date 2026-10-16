@@ -82,12 +82,13 @@ export const quemCuida = (caixa, funilId) =>
 export const quemFazTriagem = caixa =>
   agentes(caixa).filter(pessoa => pessoa.triage);
 
-export const juntar = (nomes, locale) => {
+// tipo 'disjunction' junta com "ou" ("Bruno ou Diego").
+export const juntar = (nomes, locale, tipo = 'conjunction') => {
   if (!nomes.length) return '';
   try {
     return new Intl.ListFormat(locale.replace('_', '-'), {
       style: 'long',
-      type: 'conjunction',
+      type: tipo,
     }).format(nomes);
   } catch {
     return nomes.join(', ');
@@ -95,6 +96,15 @@ export const juntar = (nomes, locale) => {
 };
 
 export const primeiroNome = pessoa => pessoa.name.split(' ')[0];
+
+// #1570 — o robô que atende primeiro é de outro sistema (n8n, Zapier...): na
+// tela é "agente externo", nunca a porta dos Agentes de IA.
+export const roboExterno = robo => robo?.tipo_do_principal === 'externo';
+
+// #1570 — quem aparece como porta (agente de IA que atende primeiro): a porta
+// dos Agentes ou, sem ela, o robô da caixa, desde que não seja externo.
+export const portaOuRobo = (porta, robo) =>
+  porta || (roboExterno(robo) ? null : robo);
 
 // O que muda em relação ao que está salvo, em frases curtas para a etapa
 // Confira. Cada item: { chave, valores } para o i18n. `semAssunto` é o nome

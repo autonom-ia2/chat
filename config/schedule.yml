@@ -112,6 +112,12 @@ crm_booking_v2_notice_dispatch_job:
   class: 'Crm::BookingV2::NoticeDispatchJob'
   queue: scheduled_jobs
 
+# Lembretes de Atender (#1498): cria e cancela os lembretes por data; quem envia é o crm_follow_up_due_job.
+crm_service_reminders_job:
+  cron: '*/15 * * * *'
+  class: 'Crm::ServiceRemindersJob'
+  queue: scheduled_jobs
+
 # executed every 6 hours; feature flags checked inside the job
 crm_ai_stale_cards_job:
   cron: '0 */6 * * *'

@@ -113,14 +113,20 @@ const setPermissions = overrides => {
 // `bookingV2` liga a opção da conta `crm_booking_v2` (agendamento novo, #1212).
 const setGetters = ({
   bookingV2 = false,
+  calendarioOuro = false,
+  inboxes = [],
   role = 'administrator',
   keys,
+  menuNovo = false,
 } = {}) => {
   Object.assign(storeGetters, {
     getCurrentRole: ref(role),
     'accounts/getAccount': ref(() => ({
       id: 1,
-      features: { crm_booking_v2: bookingV2 },
+      features: {
+        crm_booking_v2: bookingV2,
+        crm_calendario_ouro: calendarioOuro,
+      },
     })),
     'crmKanban/getPipelines': ref([PIPELINE]),
     'crmKanban/getStages': ref(
@@ -142,11 +148,14 @@ const setGetters = ({
       accounts: [{ id: 1, permissions: keys || [] }],
     }),
     getCurrentAccountId: ref(1),
-    'inboxes/getInboxes': ref([]),
+    'inboxes/getInboxes': ref(inboxes),
     'agents/getAgents': ref([]),
     'teams/getTeams': ref([]),
     'accounts/isRTL': ref(false),
     'labels/getLabels': ref([]),
+    'accounts/isFeatureEnabledonAccount': ref(
+      (_id, flag) => menuNovo && flag === 'menu_lateral_novo'
+    ),
   });
 };
 
@@ -176,9 +185,12 @@ const mountPage = async ({
         CrmListExportButton: true,
         CrmTableColumnSettings: true,
         CrmSavedViews: true,
+        // Aba Números do menu novo (#1617): tem teste próprio (useAbaNumeros.spec.js).
+        CrmAbaNumeros: true,
         CrmResultTabs: true,
         CrmBulkActionBar: true,
         CrmCalendar: true,
+        CalendarioOuro: true,
         CrmCalendarQuickAdd: true,
         CrmCalendarMeetingScheduler: true,
         CrmMeetingDetail: true,
@@ -207,6 +219,47 @@ const openConfiguration = async wrapper => {
 
 describe('CrmKanbanPage', () => {
   let wrapper;
+
+  // #1617 — com o menu novo, a vista fica no endereço (?view=); sem ele, como sempre foi.
+  describe('vista no endereço (menu novo)', () => {
+    const vistaMarcada = pagina =>
+      pagina.find('[role="group"] [aria-pressed="true"]').text();
+    const botaoDaVista = (pagina, chave) =>
+      pagina
+        .findAll('[role="group"] button')
+        .find(botao => botao.text() === chave);
+
+    afterEach(() => {
+      route.query = {};
+      replace.mockClear();
+      wrapper?.unmount();
+    });
+
+    it('flag desligada: ignora ?view= e não mexe no endereço ao trocar de vista', async () => {
+      route.query = { view: 'list' };
+      wrapper = await mountPage();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.KANBAN');
+      expect(wrapper.find('[role="group"]').classes()).not.toContain(
+        'flex-wrap'
+      );
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.LIST').trigger('click');
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('flag ligada: abre na vista do endereço e grava a troca com replace', async () => {
+      route.query = { view: 'list', pipeline_id: undefined };
+      wrapper = await mountPage({ account: { menuNovo: true } });
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.LIST');
+      expect(wrapper.find('[role="group"]').classes()).toContain('flex-wrap');
+      replace.mockClear();
+      route.query = { view: 'list' };
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.CALENDAR').trigger('click');
+      expect(replace).toHaveBeenLastCalledWith({ query: { view: 'calendar' } });
+      route.query = { view: 'calendar' };
+      await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.KANBAN').trigger('click');
+      expect(replace).toHaveBeenLastCalledWith({ query: {} });
+    });
+  });
 
   // #1385 — a passagem volta para o Kanban no funil de onde a pessoa saiu.
   describe('passagem para a equipe', () => {
@@ -267,6 +320,173 @@ describe('CrmKanbanPage', () => {
     wrapper = null;
     document.body.innerHTML = '';
     delete window.globalConfig;
+  });
+
+  // #1568: com a flag, o calendário abre o "Meu dia" sem o topo antigo e
+  // busca todos os funis; sem ela, nada muda (os testes acima e abaixo).
+  describe('Calendário Meu dia (crm_calendario_ouro)', () => {
+    it('com a flag, abre a tela nova sem o topo antigo e sem exigir funil', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        true
+      );
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.find('header').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain('CRM_KANBAN.ACTIONS.CONFIGURE');
+
+      wrapper
+        .findComponent({ name: 'CalendarioOuro' })
+        .vm.$emit('rangeChange', { from: 'a', to: 'b' });
+      await flushPromises();
+      const busca = dispatch.mock.calls.filter(
+        ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+      );
+      expect(busca.at(-1)[1].pipeline_id).toBeUndefined();
+    });
+
+    const ouro = () => wrapper.findComponent({ name: 'CalendarioOuro' });
+
+    it('Mensagem marcada só com WhatsApp que não pede para reconectar', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: {
+          calendarioOuro: true,
+          inboxes: [
+            {
+              channel_type: 'Channel::Whatsapp',
+              reauthorization_required: true,
+            },
+          ],
+        },
+      });
+      expect(ouro().props('temWhatsapp')).toBe(false);
+      wrapper.unmount();
+
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: {
+          calendarioOuro: true,
+          inboxes: [
+            {
+              channel_type: 'Channel::Whatsapp',
+              reauthorization_required: false,
+            },
+          ],
+        },
+      });
+      expect(ouro().props('temWhatsapp')).toBe(true);
+    });
+
+    it('concluir que falha devolve a linha e avisa', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockImplementation(async tipo => {
+        if (tipo === 'crmKanban/completeFollowUp') throw new Error('falhou');
+        return [];
+      });
+      const falhou = vi.fn();
+      ouro().vm.$emit('concluir', { evento: { id: 'follow_up_5' }, falhou });
+      await flushPromises();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/completeFollowUp', '5');
+      expect(falhou).toHaveBeenCalled();
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_CALENDARIO.ALERTA.NAO_CONCLUIU'
+      );
+    });
+
+    it('"Passar tudo" diz quantos passaram quando parte falha', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockImplementation(async (tipo, carga) => {
+        if (tipo === 'crmKanban/rescheduleFollowUp' && carga.id === '2')
+          throw new Error('falhou');
+        return [];
+      });
+      ouro().vm.$emit('adiarAtrasados', {
+        eventos: [
+          { id: 'follow_up_1' },
+          { id: 'follow_up_2' },
+          { id: 'follow_up_3' },
+        ],
+        quando: '2026-10-15T12:00:00.000Z',
+      });
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_CALENDARIO.ALERTA.ADIADOS_PARCIAL:{"ok":2,"total":3}'
+      );
+    });
+
+    it('reunião marcada no Meu dia avisa e recarrega o calendário', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockClear();
+      ouro().vm.$emit('reuniaoMarcada', { id: 1 });
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        'CRM_KANBAN.BOOKING_AGENDA.SUCCESS'
+      );
+      expect(dispatch).toHaveBeenCalledWith(
+        'crmKanban/fetchCalendarEvents',
+        expect.any(Object)
+      );
+      expect(
+        wrapper
+          .findComponent({ name: 'CrmCalendarMeetingScheduler' })
+          .props('show')
+      ).toBe(false);
+    });
+
+    it('as configurações do topo antigo continuam no Mostrar', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      expect(ouro().props('podeCaixas')).toBe(true);
+      expect(ouro().props('podeAgendamento')).toBe(true);
+
+      ouro().vm.$emit('abrirAgendamento');
+      await flushPromises();
+      expect(
+        wrapper
+          .findComponent({ name: 'CrmBookingProfilesDrawer' })
+          .props('show')
+      ).toBe(true);
+    });
+
+    it('sem a flag, o calendário continua o de sempre', async () => {
+      wrapper = await mountPage({ calendarOnly: true });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        true
+      );
+    });
+
+    it('com a flag, só a página do calendário muda; o Kanban não', async () => {
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+
+      expect(wrapper.findComponent({ name: 'CalendarioOuro' }).exists()).toBe(
+        false
+      );
+      expect(wrapper.text()).toContain('CRM_KANBAN.ACTIONS.CONFIGURE');
+    });
   });
 
   it('keeps inbox settings in the Agenda, without funnel actions', async () => {
@@ -532,6 +752,32 @@ it('refreshes the messaging window and shows the template alert when creating a 
   expect(refreshMessagingWindow).toHaveBeenCalledOnce();
   expect(useAlert).toHaveBeenCalledWith(
     'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+  );
+  wrapper.unmount();
+});
+
+it('explains a past auto-send time without the raw Rails message', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = {
+        data: {
+          message: 'Due at must be in the future for auto-send follow-ups',
+          attributes: ['due_at'],
+          code: 'due_at_in_the_past',
+        },
+      };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(useAlert).toHaveBeenCalledWith(
+    'CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'
   );
   wrapper.unmount();
 });

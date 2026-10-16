@@ -17,6 +17,16 @@ module Crm::Entrega::Presenca
     Thread.current.thread_variable_set(CHAVE, anterior)
   end
 
+  # O ponto único de quem pergunta "quem está online" para entregar (o seletor e o dono da R13 na Crm::Entrega): qualquer
+  # falha da leitura vira PresencaIndisponivel, com log só de ids. Presença fora do ar não é "ninguém online": quem chama
+  # segura, e a fila tenta de novo (#1454).
+  def online_ids!(account_id)
+    online_ids(account_id)
+  rescue StandardError => e
+    Rails.logger.error("[crm][entrega] presença indisponível conta=#{account_id} erro=#{e.class}")
+    raise Crm::Ai::HandoffMemberSelector::PresencaIndisponivel, e.class.name
+  end
+
   def online_ids(account_id)
     cache = Thread.current.thread_variable_get(CHAVE)
     return ler(account_id) unless cache

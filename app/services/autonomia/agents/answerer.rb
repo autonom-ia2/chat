@@ -129,6 +129,8 @@ module Autonomia
 
       def answer_no_turno
         @conferencia_da_fala = conferencia_da_fala
+        # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
+        @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
         parsed = generate(snippets)
         return trust_instruction_result(conferir_fala(parsed), snippets) if @trust_instruction
@@ -366,8 +368,12 @@ module Autonomia
       # SÓ OS QUE ATENDEM NESTA CONTA (`Builder.disponivel?`): o especialista de um ramo que a corretora não cota
       # fica fora da lista da Lia, e não reserva nada. As ferramentas dele também ficam fora do catálogo do agente
       # (`Builder.ferramentas_mantidas`), e por isso a consulta de CEP não aparece para a Lia sem residencial.
+      # TEMA 14 (#1434): o vínculo com um ajudante (o especialista que aponta para outro agente) só entra quando
+      # `Ajudantes.disponivel?` deixa: Fase 2 ligada, ajudante ligado, interno e da mesma conta.
       def enabled_specialists
         @enabled_specialists ||= @agent.effective_specialists.select do |specialist|
+          next ::Autonomia::Agents::Ajudantes.disponivel?(specialist) if specialist.delegado?
+
           ::Autonomia::Insurance::QuoteAgent::Builder.disponivel?(specialist)
         end
       end
@@ -441,11 +447,26 @@ module Autonomia
       # o bilhete deixa de ser a única fonte do que o cliente disse.
       def run_specialist(specialist, call)
         args = JSON.parse(call['arguments'].presence || '{}')
+        return consultar_ajudante(specialist, args) if specialist.delegado?
+
         Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM],
                                 delivery: @delivery, history: @history, documents: @documents).call
       rescue JSON::ParserError
         Tools::Recusa.para_modelo('invalid_tool_arguments', slug: call['name'], delivery: @delivery,
                                                             agente: @agent)
+      end
+
+      # TEMA 14 (#1434): a consulta ao ajudante é o MESMO Runner, com dois tetos por resposta (consultas e prazo,
+      # `Ajudantes::Orcamento`). Passou do teto, a consulta não roda e o modelo lê "responda com o que tem". A volta é a
+      # resposta do ajudante cercada como dado (`Specialists::Ajudante`).
+      def consultar_ajudante(vinculo, args)
+        limite = @orcamento_dos_ajudantes.reservar
+        return Ajudantes.recusar_por_limite(vinculo: vinculo, limite: limite, delivery: @delivery) if limite
+
+        prazo = [Ajudantes::PRAZO_DA_CONSULTA, @orcamento_dos_ajudantes.restante].min
+        runner = Specialists::Runner.new(specialist: vinculo, request: args[Specialist::REQUEST_PARAM], delivery: @delivery,
+                                         history: @history, documents: @documents, prazo: prazo)
+        Specialists::Ajudante.new(vinculo: vinculo, delivery: @delivery).consultar(runner)
       end
 
       def build_result(parsed, snippets)

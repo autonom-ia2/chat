@@ -1,6 +1,7 @@
 import { dataDoVencimento, diaDoVencimento } from '../closeDate';
 import {
   eventStart,
+  eventTime,
   isOverdue,
 } from '../../components/calendar/calendarEvents';
 
@@ -42,6 +43,16 @@ describe('vencimento no calendário', () => {
 
   it('fica no dia gravado', () => {
     expect(eventStart(vencimento).getDate()).toBe(20);
+  });
+
+  it('não mostra hora no vencimento, mas mostra nos outros eventos', () => {
+    expect(eventTime(vencimento)).toBe('');
+    expect(
+      eventTime({
+        event_type: 'reminder',
+        starts_at: new Date(2026, 9, 20, 9, 30),
+      })
+    ).toBe('09:30');
   });
 
   it('só atrasa depois que o dia acaba', () => {

@@ -2,7 +2,9 @@
 # apaga nem altera nenhum deles (duplicar pode). Decidido pelo nome técnico exato que cada recurso cria ou procura:
 # - agendamento: os avisos prontos (`Crm::BookingV2::NoticeTemplates::Catalog.names`);
 # - anúncios: resumo e alerta do relatório da Meta (`Crm::MetaAds::WhatsappReport::TemplateStatus::NAMES`);
-# - satisfação: a pesquisa de satisfação do Chatwoot (`customer_satisfaction_survey_<caixa>[_<versão>]`).
+# - satisfação: a pesquisa de satisfação do Chatwoot (`customer_satisfaction_survey_<caixa>[_<versão>]`);
+# - avisos por finalidade (#1518): os prontos que o `Garantir` cria (`Finalidades`), com o dono de cada um (cobrança);
+# - fora da janela (#1587): o modelo que a IA escreve por (caixa, tipo), `c2y_<tipo>_<caixa>` (`EnvioForaDaJanela::Tipos`).
 module Whatsapp::Templates::SystemTemplates
   module_function
 
@@ -10,6 +12,9 @@ module Whatsapp::Templates::SystemTemplates
     name = name.to_s
     return 'agendamento' if Crm::BookingV2::NoticeTemplates::Catalog.names.include?(name)
     return 'anuncios' if Crm::MetaAds::WhatsappReport::TemplateStatus::NAMES.value?(name)
+
+    finalidade = Whatsapp::Templates::Finalidades.dono_de(name) || Whatsapp::Templates::EnvioForaDaJanela::Tipos.dono_de(name)
+    return finalidade if finalidade
 
     'satisfacao' if name.start_with?(CsatTemplateNameService::CSAT_BASE_NAME)
   end

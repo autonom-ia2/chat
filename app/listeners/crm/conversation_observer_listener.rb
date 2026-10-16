@@ -6,7 +6,8 @@ class Crm::ConversationObserverListener < BaseListener
     return if ignored_message?(message)
 
     Crm::SyncConversationCardJob.perform_later(message.conversation_id, message.id)
-    enqueue_subject_identification(message)
+    # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
+    Crm::Subjects.identificar_depois(message)
   end
 
   # SLA auto-apply v1 (gatilho "conversa criada"): hand off to a job so listener
@@ -33,6 +34,8 @@ class Crm::ConversationObserverListener < BaseListener
     registrar_devolucao(conversation, event)
     Crm::SyncConversationCardJob.perform_later(conversation.id)
     enqueue_handoff_pickup(conversation, event)
+    # Decisão "a" (#1606): o aviso "O assunto virou X" era da pessoa de antes.
+    Crm::Repasse.limpar_se_mudou_de_mao!(conversation)
   end
 
   # Keep the card's team in sync on a team-only reassignment (e.g. an Autonomia
@@ -63,6 +66,16 @@ class Crm::ConversationObserverListener < BaseListener
     Crm::Cards::RebroadcastConversationCardsJob.perform_later(conversation.id)
   end
 
+  # Decisão "a" (#1606): conversa resolvida ou adiada sai do aviso "O assunto virou X"; na reabertura ele não volta.
+  def conversation_status_changed(event)
+    return unless Crm::Config.enabled?
+
+    conversation, = extract_conversation_and_account(event)
+    return unless conversation&.resolved? || conversation&.snoozed?
+
+    Crm::Repasse.limpar!(conversation)
+  end
+
   private
 
   # Falha ao carimbar não pode custar a sincronização do card nem o registro de quem pegou o convite, que vêm logo
@@ -82,13 +95,6 @@ class Crm::ConversationObserverListener < BaseListener
     return unless Crm::Ai::Config.enabled?
 
     Crm::Ai::HandoffPickupJob.perform_later(conversation.id, conversation.assignee_id, event.timestamp.iso8601)
-  end
-
-  # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
-  def enqueue_subject_identification(message)
-    return unless message.incoming? && Crm::Subjects.ligado?(message.conversation)
-
-    Crm::Subjects::IdentifyJob.set(wait: Crm::Subjects::DEBOUNCE).perform_later(message.conversation_id, message.id)
   end
 
   def ignored_message?(message)

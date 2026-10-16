@@ -386,3 +386,72 @@
   display_name: Follow-up de IA com dados reais do card nos modelos
   enabled: false
   column: feature_flags_ext_1
+
+# Lembretes novos do CRM (#1460 repetir, #1461 sem card, #1462 quem recebe). Bit 22 (4194304), reservado pela
+# Orquestração: fica LOGO ABAIXO de `followup_template_real_values` (#1336, bit 21).
+# Desligada (padrão): o "Novo lembrete" do calendário abre a janela antiga e o card, o Relacionamento e o calendário
+# não mostram repetir nem quem recebe; a API (#1537) continua, sem uso. Ligar: #1527.
+- name: crm_lembretes_v2
+  display_name: Lembretes que repetem, sem card e com quem recebe
+  enabled: false
+  column: feature_flags_ext_1
+
+# Calendário novo "Meu dia" (#1568). Bit 23 (8388608), reservado pela Orquestração: fica LOGO ABAIXO de
+# `crm_lembretes_v2` (#1542, bit 22) — este PR só entra depois do #1542. Desligada (padrão): CRM > Agendamento >
+# Calendário continua a tela de sempre. Ligada: abre no Meu dia, com semana e mês de apoio e filtros no "Mostrar".
+# Sem migration. Ligar: #1574.
+- name: crm_calendario_ouro
+  display_name: Calendário Meu dia (o que fazer hoje)
+  enabled: false
+  column: feature_flags_ext_1
+
+# Campanha com produtos do catálogo da WABA (#1418, épico #1320): um produto, vários e carrossel de produtos, na Nova
+# campanha e na criação de modelos. Bit 24 (16777216), confirmado pela Orquestração: fica DEPOIS de
+# `crm_lembretes_v2` (bit 22) e `crm_calendario_ouro` (bit 23, #1568) — este PR só entra depois dos dois (a posição na
+# lista é o bit). Desligada (padrão): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
+# modelo de produtos. Beta (validado com catálogo simulado). Liga: #1573.
+- name: whatsapp_campaign_products
+  display_name: Campanha do WhatsApp com produtos do catálogo
+  enabled: false
+  column: feature_flags_ext_1
+
+# Menu lateral novo e página inicial de Configurações com cartões (#1617).
+# Bit = posição na lista; só acrescentar no fim (combinado com a Orquestração, #1322). Nunca inserir antes de uma flag
+# que já está na main: o bit gravado nas contas mudaria de significado.
+# Desligada (padrão): o menu e as Configurações de sempre. Ligada: menu por objetivo (Atender, Acompanhar, Crescer,
+# No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
+- name: menu_lateral_novo
+  display_name: Menu lateral novo e Configurações em cartões
+  enabled: false
+  column: feature_flags_ext_1
+
+# Horário único da caixa (#1619, flag #1649). A posição na lista é o bit: entra no FIM, e a Orquestração confere a
+# posição na main antes de ligar. Ligada: o fuso da caixa (`inbox.timezone`) é o fuso da conta (`reporting_timezone`)
+# e a IA (`EngagementGate`) e o SLA (`Sla::ScheduleResolver`) deixam de ler o calendário de caixa do CRM
+# (`Crm::ServiceSchedule` com dono Inbox): valem o horário do Chatwoot (`working_hours`) e o calendário da pessoa.
+# Desligada (padrão): tudo como antes, com a coluna `inboxes.timezone` e o calendário de caixa do CRM. Sem migration;
+# nasce ligada nas contas 1, 16 e 18 da Hub2You pela Orquestração. Voltar = desligar a flag.
+- name: horario_unico_caixa
+  display_name: Horário único da caixa (horário do Chatwoot no fuso da conta)
+  enabled: false
+  column: feature_flags_ext_1
+
+# Outro canal (#1150, R13; PR #1664): o cliente com card aberto que escreve por outra caixa tem a conversa nova ligada
+# ao card e entregue ao dono, sem passar pela triagem. Bit 27 (134217728), o próximo depois de `horario_unico_caixa`
+# (bit 26): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
+# Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
+- name: crm_outro_canal
+  display_name: Conversa de outro canal vai para o card aberto e o dono
+  enabled: false
+  column: feature_flags_ext_1
+
+# Mensagem marcada nova (#1590): gaveta no padrão da casa — para quem, quando, o que dizer e confira, com o balão do
+# WhatsApp como o cliente vai ver. Abre pelo "+ Novo" do calendário e pelo "Mandar mensagem" do card (caixa oficial).
+# Bit 28 (268435456): a posição na lista é o bit e a flag vai no fim do que está na main — aqui, logo depois de
+# `crm_outro_canal` (bit 27). Desligada (padrão): tudo como antes — a janela antiga do calendário, o retorno do card,
+# sem "Não saiu", sem `send_error_code` na API e sem recusar horário passado. Nasce ligada nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy). Ligar nas demais: #1605.
+- name: crm_mensagem_marcada
+  display_name: Mensagem marcada nova (para quem, quando, o que dizer)
+  enabled: false
+  column: feature_flags_ext_1

@@ -603,6 +603,61 @@ pt_BR:
   automation:
     system_name: 'Sistema de Automação'
   crm:
+    # #1498: título dos lembretes de Atender (aparecem na agenda do card).
+    service_reminders:
+      progress: 'Avisar o andamento'
+      resolved_check: 'Perguntar se resolveu'
+      payment_before: 'Lembrar do pagamento: 3 dias antes'
+      payment_due: 'Lembrar do pagamento: no dia'
+      payment_after: 'Lembrar do pagamento: depois do vencimento'
+      aviso:
+        titulo: 'A mensagem ao cliente não saiu sozinha: fale com ele.'
+        em_analise: 'O modelo de mensagem deste aviso está em análise no WhatsApp.'
+        sem_finalidade_de_modelo: 'Fora das 24 horas do WhatsApp este aviso não tem modelo de mensagem.'
+        canal_sem_modelo_oficial: 'A conversa não é de um número oficial do WhatsApp, que é o único que manda modelo.'
+        campo_sem_valor: 'Falta um dado do card para preencher a mensagem (nome, valor, assunto ou vencimento).'
+        sem_whatsapp_oficial: 'A caixa não é um número oficial do WhatsApp.'
+        idioma_sem_pronto: 'Ainda não há modelo pronto neste idioma.'
+        formato: 'O modelo tem um formato que ainda não conseguimos mandar.'
+        recusado: 'O WhatsApp recusou o modelo de mensagem deste aviso.'
+        pausado: 'O WhatsApp pausou o modelo de mensagem deste aviso.'
+        desativado: 'O modelo de mensagem deste aviso foi desativado.'
+        situacao_desconhecida: 'Não deu para saber a situação do modelo de mensagem.'
+        meta_fora: 'O WhatsApp não respondeu agora.'
+        sem_permissao: 'A conta do WhatsApp não deu permissão para usar modelos.'
+        meta_recusou: 'O WhatsApp recusou o envio.'
+        closure: 'Pela conversa, o assunto já tinha acabado (pagou, resolveu ou não precisa mais).'
+        template_offer_expired: 'A oferta do modelo de mensagem venceu.'
+        no_conversation: 'O card não tem mais conversa ligada.'
+        texto_diferente: 'O modelo aprovado no WhatsApp tem um texto diferente do esperado.'
+        sem_consentimento: 'O dono da conta não autorizou o sistema a criar modelos do WhatsApp (Modelos › Autorização).'
+        perfil_invalido: 'O perfil do WhatsApp da caixa não está completo para usar modelos.'
+        categoria_propaganda: 'O WhatsApp classificou o modelo como propaganda; nada foi mandado ao cliente.'
+        template_missing: 'O modelo de mensagem não existe mais no WhatsApp.'
+        template_not_approved: 'O modelo de mensagem não está aprovado no WhatsApp.'
+        template_category_changed: 'O WhatsApp mudou a categoria do modelo de mensagem.'
+        template_structure_changed: 'O modelo de mensagem mudou e precisa ser conferido.'
+        template_format_unsupported: 'O modelo tem um formato que ainda não conseguimos mandar.'
+        templates_not_synced: 'A lista de modelos do WhatsApp ainda não foi atualizada.'
+        template_unverifiable: 'Não deu para conferir o modelo de mensagem com o WhatsApp.'
+        no_template: 'Fora das 24 horas do WhatsApp nenhum modelo aprovado serviu para este aviso.'
+        not_composable: 'Pela conversa, não fazia sentido mandar a mensagem agora.'
+        send_failed: 'O envio falhou depois de algumas tentativas.'
+        unverified_quote: 'A mensagem escrita não batia com a conversa e não foi mandada.'
+        whatsapp_api_unavailable: 'O WhatsApp da caixa não estava pronto para mandar.'
+        # #1587: ponto único fora da janela (Whatsapp::Templates::EnvioForaDaJanela).
+        sem_consentimento_propaganda: 'Esta mensagem é propaganda, e o dono da conta não autorizou modelos de propaganda (Modelos › Autorização).'
+        contato_recusou: 'O cliente pediu para não receber mensagens de propaganda.'
+        sem_contato: 'A mensagem é propaganda e o card não tem contato para conferir se ele aceita.'
+        conferencia_sem_meta: 'O WhatsApp não respondeu à conferência do modelo agora; nada foi mandado com modelo sem conferir.'
+        numero_eua: 'O WhatsApp não entrega modelos de propaganda a números dos EUA (+1).'
+        botoes_diferentes: 'O modelo aprovado no WhatsApp tem botões diferentes do esperado.'
+        sem_base_url: 'O endereço do link do modelo não está configurado neste ambiente.'
+        sem_campos: 'O modelo aprovado não tem os dados do card ligados aos campos.'
+        ia_indisponivel: 'A IA que escreve o modelo de mensagem não respondeu agora.'
+        ia_sem_opcao: 'A IA não conseguiu escrever um modelo que o WhatsApp aceitaria para esta mensagem.'
+        limite_de_modelos: 'A conta do WhatsApp chegou ao limite de 250 modelos de mensagem.'
+        limite_por_hora: 'A conta do WhatsApp chegou ao limite de 100 modelos novos por hora.'
     export:
       sheet_name: 'Cards'
       file_prefix: 'crm'
@@ -895,6 +950,8 @@ pt_BR:
       done: 'Pronto, feito.'
       failed: 'Não consegui fazer isso agora.'
       unknown_action: 'Isto o Guia não faz.'
+      only_on_screen:
+        whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
@@ -985,6 +1042,29 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      caixa_externo:
+        caixa_com_agente_da_plataforma: 'Este canal é atendido por agentes de IA. Para trocar quem atende primeiro, use a aba Agente de IA do canal.'
+        desconectar_agente_da_plataforma: 'Este canal é atendido por um agente de IA. Para trocar quem atende primeiro, use a aba Agente de IA do canal.'
+        agente_da_plataforma: 'Este é um agente de IA da plataforma. Para esse agente atender primeiro, use a aba Agente de IA do canal.'
+      quem_atende:
+        pedido_invalido: 'Escolha um agente de IA, ou ninguém.'
+        agente_interno: 'Este agente trabalha só dentro do painel e não atende clientes.'
+        agente_rascunho: 'A criação deste agente ainda não terminou. Termine de criar antes de escolher esse agente.'
+        agente_parado: 'Este agente está parado. Ligue esse agente na página do agente antes de escolher.'
+        agente_ja_e_da_equipe: 'Este agente já recebe conversas quando alguém passa neste canal. Para esse agente atender primeiro, tire o agente da equipe do canal em CRM › Quem cuida do quê.'
+        mudou_agora: 'Alguém mudou este canal agora. Recarregue e tente de novo.'
+        conexao_recusada: 'Este agente não pode atender primeiro neste canal agora.'
+      ajudante:
+        outra_conta: 'O ajudante e os agentes que ele ajuda precisam ser desta conta.'
+        ele_mesmo: 'Um agente não pode ajudar a si mesmo.'
+        tipo_proibido: 'O Agente de Cotação e os agentes do sistema não ajudam nem recebem ajuda.'
+        ajudante_interno: 'O ajudante nunca fala com o cliente: ele precisa ser um agente interno.'
+        profundidade: 'Ajudante não chama outro ajudante, e um agente interno não tem ajudantes.'
+        sem_principal: 'Escolha pelo menos um agente para este ajudante ajudar.'
+        principal_invalido: 'Escolha agentes desta conta pelo id.'
+        principal_rascunho: 'O agente escolhido ainda está em rascunho. Termine a criação dele antes de pôr um ajudante.'
+        principal_ajudante: 'Um ajudante não recebe ajuda de outro ajudante. Escolha um agente que conversa com clientes.'
+        sem_marca: 'Só um agente criado como "Ajuda outros agentes" pode ser ajudante. Um Copiloto da equipe não pode.'
       native_tool_not_allowed: 'Este agente não pode usar uma ou mais das ferramentas nativas pedidas. Nada foi salvo.'
       escolhas_incompletas: "O Agente de Cotação não conseguiu montar a instrução: a escolha '%{campo}' está faltando no cadastro dele. Isso não se corrige por aqui — acione o suporte da Autonom.ia."
       booking_page_forbidden: 'Só quem pode ver o Agendamento (CRM › Agendamento) escolhe a página que a IA usa para marcar.'
@@ -999,9 +1079,19 @@ pt_BR:
           generic: "Não foi possível conectar esta caixa de entrada ao agente."
           agent_internal_not_connectable: "Este é um agente interno (copiloto da equipe) e não pode ser conectado a uma caixa de entrada de clientes."
           agent_not_active: "Ative o agente antes de conectar uma caixa de entrada."
-          inbox_has_webhook_bot: "Esta caixa de entrada já está conectada a outro bot. Desconecte-o primeiro."
+          inbox_has_webhook_bot: "Um agente externo já atende nesta caixa de entrada. Pare o agente externo primeiro."
           inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
           not_connected: "Esta caixa de entrada não está conectada ao agente."
+        # #1433 (tema 13) — agente da equipe (papel área) numa caixa.
+        area_errors:
+          generic: "Não deu para pôr %{nome} na equipe de %{canal}. Nada mudou."
+          fase2_off: "O agente da equipe ainda não está disponível nesta conta."
+          agent_internal: "%{nome} é um agente interno (copiloto da equipe) e nunca fala com cliente, então não pode ficar na equipe de um canal."
+          already_linked: "%{nome} já está em %{canal}."
+          rascunho: "%{nome} ainda não está pronto. Termine a conversa que cria o agente e depois ponha ele na equipe de %{canal}."
+          nao_pode_ser_area: "%{nome} não pode ficar na equipe de %{canal}. Agente pausado que ainda tem canal e ajudante ficam fora da equipe."
+          sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
+          robo_externo: "Um agente externo atende em %{canal}. O agente da equipe ainda não entra em canal com agente externo."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'

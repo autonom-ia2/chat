@@ -97,6 +97,17 @@ class Autonomia::Guide::Acoes
     'POST crm/meta_ads_connection/facebook_login'
   ].freeze
 
+  # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
+  # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma
+  # proposta do Guia não mostra esse texto. Vale para o catálogo e para o formato (`Formatos::RotasDeEscrita`).
+  # A chave é a resposta que o Guia dá ao pedido (autonomia.guide.only_on_screen.*), com o caminho da tela.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }.freeze
+
+  # O que só se faz na tela: a resposta diz onde, em vez de "isto o Guia não faz" (também em `formato_da_acao`).
+  def self.so_na_tela(acao)
+    I18n.t("autonomia.guide.only_on_screen.#{SO_NA_TELA.fetch(acao.to_s)}")
+  end
+
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são
   # para o modelo: o formato do que a plataforma recusou e o que ela pode ter
   # descartado (#900).
@@ -117,7 +128,8 @@ class Autonomia::Guide::Acoes
       next unless VERBOS.include?(verbo)
 
       recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
-      "#{verbo} #{recurso}" if recurso
+      acao = "#{verbo} #{recurso}" if recurso
+      acao unless SO_NA_TELA.key?(acao)
     end.uniq.sort
   end
 
@@ -210,6 +222,7 @@ class Autonomia::Guide::Acoes
   def conferencia(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados), conta: @account)
 
   def garantir_permitida!(acao)
+    raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
     raise Recusada, traduzir('admin_only') unless administrador?
   end
@@ -245,6 +258,8 @@ class Autonomia::Guide::Acoes
   def corpo_de(dados)
     (dados[:corpo] || {}).to_h
   end
+
+  def so_na_tela(acao) = self.class.so_na_tela(acao)
 
   def traduzir(chave, **valores)
     I18n.t("autonomia.guide.#{chave}", **valores)

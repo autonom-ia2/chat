@@ -11,6 +11,8 @@ import {
   CONTACT_VIEW_PERMISSION,
   REPORTS_PERMISSIONS,
   PORTAL_PERMISSIONS,
+  CRM_VIEW_PERMISSION,
+  CAMPAIGN_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
 export const routeIsAccessibleFor = (route, userPermissions = []) => {
@@ -18,27 +20,44 @@ export const routeIsAccessibleFor = (route, userPermissions = []) => {
   return hasPermissions(routePermissions, userPermissions);
 };
 
+// The CRM screens send everyone back to the dashboard while the CRM is off (crm.routes.js).
+export const isCrmKanbanEnabled = () =>
+  window.globalConfig?.CRM_KANBAN_ENABLED === 'true';
+
+// Where someone lands when the screen they asked for is not theirs (#1643).
+// The first page the person can open wins, in this order: conversations (every
+// administrator and agent stops here, as before), contacts, CRM, campaigns,
+// reports, help center. Each entry's permissions must open the destination
+// route's meta.permissions — routeHelpersLanding.spec.js checks it against the real routes.
+const LANDING_PAGES = [
+  { path: 'dashboard', permissions: [...ROLES, ...CONVERSATION_PERMISSIONS] },
+  {
+    path: 'contacts',
+    permissions: [CONTACT_PERMISSIONS, CONTACT_VIEW_PERMISSION],
+  },
+  {
+    path: 'crm',
+    permissions: [CRM_VIEW_PERMISSION],
+    isAvailable: isCrmKanbanEnabled,
+  },
+  { path: 'campaigns', permissions: CAMPAIGN_PERMISSIONS },
+  { path: 'reports/overview', permissions: [REPORTS_PERMISSIONS] },
+  { path: 'portals', permissions: [PORTAL_PERMISSIONS] },
+];
+
+// Opens for every seat (administrator, agent or custom role): a role with none
+// of the pages above lands here instead of bouncing off the dashboard forever.
+const ALWAYS_OPEN_PAGE = 'profile/settings';
+
 export const defaultRedirectPage = (to, permissions) => {
   const { accountId } = to.params;
 
-  const permissionRoutes = [
-    {
-      permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
-      path: 'dashboard',
-    },
-    {
-      permissions: [CONTACT_PERMISSIONS, CONTACT_VIEW_PERMISSION],
-      path: 'contacts',
-    },
-    { permissions: [REPORTS_PERMISSIONS], path: 'reports/overview' },
-    { permissions: [PORTAL_PERMISSIONS], path: 'portals' },
-  ];
-
-  const route = permissionRoutes.find(({ permissions: routePermissions }) =>
-    hasPermissions(routePermissions, permissions)
+  const page = LANDING_PAGES.find(
+    ({ permissions: pagePermissions, isAvailable = () => true }) =>
+      hasPermissions(pagePermissions, permissions) && isAvailable()
   );
 
-  return `accounts/${accountId}/${route ? route.path : 'dashboard'}`;
+  return `accounts/${accountId}/${page ? page.path : ALWAYS_OPEN_PAGE}`;
 };
 
 const validateActiveAccountRoutes = (to, user) => {
@@ -58,8 +77,11 @@ const validateActiveAccountRoutes = (to, user) => {
   // the WhatsApp templates opening "new" lands on the list, not on a blank page).
   const { fallbackPath } = to.meta || {};
   if (fallbackPath) return `accounts/${to.params.accountId}/${fallbackPath}`;
-  // If the route is not accessible for the user, return to dashboard screen
-  return defaultRedirectPage(to, userPermissions);
+  // Otherwise, the first screen the person can open (#1643).
+  const landingPage = defaultRedirectPage(to, userPermissions);
+  // Already on the always-open page (an account payload without permissions):
+  // stay instead of redirecting to itself forever.
+  return to.path?.endsWith(`/${landingPage}`) ? null : landingPage;
 };
 
 export const validateLoggedInRoutes = (to, user) => {

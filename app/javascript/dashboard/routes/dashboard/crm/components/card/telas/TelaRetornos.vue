@@ -1,11 +1,14 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmCardAutoFollowupStatus from '../../CrmCardAutoFollowupStatus.vue';
 import CampoQuando from '../CampoQuando.vue';
 import { atrasado } from '../proximoPasso';
 import { atalhosDeData } from '../atalhosDeData';
+import LembretesQueRepetem from '../../lembrete/LembretesQueRepetem.vue';
 
 // #1423 — os retornos do card. "Combinado com o cliente": o atrasado em
 // vermelho, com Feito e Cancelar na própria linha (RT-02). Depois, o "Chamar
@@ -22,7 +25,11 @@ const props = defineProps({
   podeIa: { type: Boolean, default: false },
   podeRegistros: { type: Boolean, default: false },
 });
-const emit = defineEmits(['feito', 'cancelar', 'adiar', 'mudou']);
+const emit = defineEmits(['feito', 'cancelar', 'adiar', 'mudou', 'serie']);
+// #1460: a vez pendente de um lembrete que repete aparece em "Repetem", com a
+// visão da repetição; fora dela, em "Já marcado", como sempre.
+const retorno = inject('cardRetorno');
+const daSerie = item => Boolean(item.series_id && item.series);
 
 const { t } = useI18n();
 const R = 'CRM_CARD.RETORNOS';
@@ -31,8 +38,12 @@ const agora = new Date();
 const abertos = computed(() =>
   props.retornos
     .filter(item => ABERTOS.includes(item.status))
+    .filter(item => !(daSerie(item) && item.status === 'pending'))
     .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
     .map(item => ({ ...item, atrasado: atrasado(item, agora) }))
+);
+const queRepetem = computed(() =>
+  props.retornos.filter(item => daSerie(item) && item.status === 'pending')
 );
 const fechados = computed(() =>
   props.retornos.filter(item => !ABERTOS.includes(item.status))
@@ -58,6 +69,16 @@ const confirmarAdiar = item => {
 };
 const situacao = item =>
   t(`CRM_KANBAN.FOLLOW_UP_STATUS.${String(item.status).toUpperCase()}`);
+// #1590: por que a mensagem marcada não saiu, numa frase (o servidor manda só o
+// código). Só com a flag crm_mensagem_marcada; sem ela, como antes.
+const { isCloudFeatureEnabled } = useAccount();
+const falha = item =>
+  item.send_error_code &&
+  isCloudFeatureEnabled(FEATURE_FLAGS.CRM_MENSAGEM_MARCADA)
+    ? t('CRM_MENSAGEM_MARCADA.FALHA.TITULO', {
+        motivo: t(`CRM_MENSAGEM_MARCADA.FALHA.${item.send_error_code}`),
+      })
+    : '';
 </script>
 
 <template>
@@ -70,6 +91,13 @@ const situacao = item =>
       <span class="i-lucide-loader-2 size-4 animate-spin" aria-hidden="true" />
       {{ t('CRM_CARD.CARREGANDO') }}
     </p>
+
+    <LembretesQueRepetem
+      :retornos="queRepetem"
+      :contexto="retorno.contexto"
+      :formato="formato"
+      @ver="serie => emit('serie', serie)"
+    />
 
     <section class="flex flex-col gap-3">
       <h3 class="mb-0 text-base font-semibold text-n-slate-12">
@@ -123,6 +151,17 @@ const situacao = item =>
                 {{ item.title }}
               </p>
               <p class="mb-0 text-sm text-n-slate-11">{{ modo(item) }}</p>
+              <p
+                v-if="falha(item)"
+                data-retorno-falha
+                class="mb-0 flex items-start gap-2 text-sm font-medium text-n-ruby-11"
+              >
+                <span
+                  class="i-lucide-circle-alert mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                {{ falha(item) }}
+              </p>
               <p v-if="item.description" class="mb-0 text-sm text-n-slate-12">
                 {{ item.description }}
               </p>
@@ -238,6 +277,13 @@ const situacao = item =>
             <span v-if="item.description" class="text-sm text-n-slate-11">{{
               item.description
             }}</span>
+            <span
+              v-if="falha(item)"
+              data-retorno-falha
+              class="text-sm font-medium text-n-ruby-11"
+            >
+              {{ falha(item) }}
+            </span>
           </span>
           <span
             class="shrink-0 rounded-lg bg-n-slate-4 px-2 py-0.5 text-xs font-medium text-n-slate-11"

@@ -31,7 +31,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   SCAFFOLD
 
   def index
-    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes).order(created_at: :desc)
+    @agents = agents_scope.with_attached_avatar.includes(:agent_inboxes, vinculos_de_ajudante: :agent).order(created_at: :desc)
   end
 
   def show; end
@@ -190,7 +190,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # usuário, visível). `scaffold` JAMAIS vem do params. Em guiado, instruction também é ignorada.
   # Chaves de SISTEMA que o usuário NUNCA pode setar via API: forjar `system_key` tornaria um agente
   # invisível/imutável (agents_scope o esconde) e permitiria se passar pelo Guia da Plataforma.
-  RESERVED_CONFIG_KEYS = %w[system_key hidden_from_hub].freeze
+  # `papel` (tema 14): a marca de origem do ajudante só nasce pelo início do Construtor (BuildThread), nunca pela API.
+  RESERVED_CONFIG_KEYS = %w[system_key hidden_from_hub papel].freeze
 
   def agent_params
     permitted = %i[name agent_type mode tone greeting fallback_message handoff_rule human_card

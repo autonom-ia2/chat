@@ -117,6 +117,7 @@ const montar = (componente, props = {}) =>
         VoiceCallButton: true,
         RelationshipActionMenu: true,
         ContactOpportunityLink: true,
+        LembreteNaFicha: true,
       },
     },
   });

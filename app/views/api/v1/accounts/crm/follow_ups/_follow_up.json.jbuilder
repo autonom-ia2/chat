@@ -15,6 +15,8 @@ safe_assignee ||= follow_up.assignee if Current.account_user&.administrator?
 json.extract! follow_up, :id, :account_id, :card_id, :title, :description, :follow_up_type, :status, :automation_mode,
               :timezone
 json.metadata follow_up.metadata.to_h.stringify_keys.except('send_error')
+# #1590: o motivo de a mensagem não ter saído, como código, só com a flag crm_mensagem_marcada; o texto cru fica fora.
+json.send_error_code Crm::FollowUps::SendErrorCode.for(follow_up) if Crm::FollowUps::SendErrorCode.enabled?(Current.account)
 json.contact_id safe_contact&.id
 json.inbox_id safe_inbox&.id
 json.assignee_id safe_assignee&.id

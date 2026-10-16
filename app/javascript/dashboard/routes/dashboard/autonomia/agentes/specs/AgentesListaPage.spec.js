@@ -5,6 +5,7 @@ import AgentesListaPage from '../pages/AgentesListaPage.vue';
 const estado = vi.hoisted(() => ({
   podeGerenciar: true,
   podeConectarCanal: true,
+  admin: true,
 }));
 
 const store = vi.hoisted(() => ({ dispatch: vi.fn(), state: null }));
@@ -18,6 +19,10 @@ vi.mock('dashboard/composables/store', async () => {
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return { useCanManage: () => computed(() => estado.podeGerenciar) };
+});
+vi.mock('dashboard/composables/useAdmin', async () => {
+  const { computed } = await import('vue');
+  return { useAdmin: () => ({ isAdmin: computed(() => estado.admin) }) };
 });
 vi.mock('../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
@@ -94,6 +99,7 @@ describe('AgentesListaPage', () => {
     vi.useRealTimers();
     estado.podeGerenciar = true;
     estado.podeConectarCanal = true;
+    estado.admin = true;
     prepararStore();
     api.semana.mockResolvedValue({
       data: { payload: [{ agent_id: 3, answered: 12, handed: 3 }] },
@@ -129,6 +135,42 @@ describe('AgentesListaPage', () => {
       expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.LISTA.TITULO');
       expect(wrapper.get('[data-contagem]').text()).toContain(
         'AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO'
+      );
+      wrapper.unmount();
+    });
+
+    it('counts helpers apart and shows them as "Ajudando" with who they help (tema 14)', async () => {
+      prepararStore({
+        agentes: [
+          ...AGENTES,
+          agente(6, {
+            name: 'Duda',
+            actuation: 'internal',
+            channels_count: 0,
+            tem_onde_trabalhar: true,
+            ajudante: true,
+            ajuda: [{ id: 3, name: 'Bia' }],
+          }),
+        ],
+      });
+      const wrapper = await montar();
+      expect(wrapper.get('[data-contagem]').text()).toContain(
+        'AGENTS.JORNADA.LISTA.CONTAGEM_AJUDANDO'
+      );
+      const nomes = wrapper.findAll('[data-cartao] h2').map(n => n.text());
+      expect(nomes).toEqual(['Bia', 'Duda', 'Leo', 'Rascunho']);
+      const cartao = wrapper.findAll('[data-cartao]')[1];
+      expect(cartao.text()).toContain('AGENTS.JORNADA.STATUS.AJUDANDO');
+      expect(cartao.get('[data-ajuda]').text()).toBe(
+        'AGENTS.JORNADA.ONDE.AJUDA'
+      );
+      wrapper.unmount();
+    });
+
+    it('has no helper count when there is no helper', async () => {
+      const wrapper = await montar();
+      expect(wrapper.get('[data-contagem]').text()).not.toContain(
+        'CONTAGEM_AJUDANDO'
       );
       wrapper.unmount();
     });
@@ -611,6 +653,122 @@ describe('AgentesListaPage', () => {
       expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(false);
       expect(wrapper.find('[data-copiloto]').exists()).toBe(false);
       expect(textoDosBotoes(wrapper)).toEqual([]);
+      wrapper.unmount();
+    });
+  });
+
+  // #1648 — agentes de outro sistema (AgentBot webhook) na mesma lista, sem seção à parte.
+  describe('agentes de outro sistema', () => {
+    const BOTS = [
+      { id: 31, name: 'Automação Vendas', system_bot: false },
+      { id: 32, name: 'Atendimento Parceiro', system_bot: false },
+      { id: 33, name: 'Robô do sistema', system_bot: true },
+    ];
+    const canal = (inboxId, nome, ocupadoPor) => ({
+      inbox_id: inboxId,
+      name: nome,
+      occupied_by: ocupadoPor,
+    });
+
+    // A aba "Agente de IA" por caixa ligada na conta (#1648).
+    const ligarPorCaixa = (ligada = true) => {
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agente_ia_por_caixa: ligada,
+      });
+      store.state.getCurrentAccountId = 1;
+    };
+
+    beforeEach(() => {
+      ligarPorCaixa();
+      store.state['agentBots/getBots'] = BOTS;
+      api.canaisOcupados.mockResolvedValue({
+        data: {
+          payload: [
+            canal(10, 'WhatsApp do Centro', {
+              kind: 'agent',
+              agent_id: 3,
+              agent_name: 'Bia',
+            }),
+            canal(14, 'WhatsApp Parceiro', {
+              kind: 'external',
+              agent_bot_id: 31,
+              operating: true,
+            }),
+            canal(15, 'Site', {
+              kind: 'external',
+              agent_bot_id: 32,
+              operating: false,
+            }),
+          ],
+        },
+      });
+    });
+
+    it('lists them among our agents: answering with an active inbox, stopped without one, never system bots', async () => {
+      const wrapper = await montar();
+      const cartoes = wrapper.findAll('[data-cartao]');
+      const nomes = cartoes.map(c => c.text());
+
+      expect(store.dispatch).toHaveBeenCalledWith('agentBots/get');
+      expect(nomes.findIndex(n => n.includes('Automação Vendas'))).toBe(1);
+      expect(nomes.some(n => n.includes('Robô do sistema'))).toBe(false);
+      const automacao = wrapper.get('[data-outro-sistema]');
+      expect(automacao.text()).toContain('AGENTS.JORNADA.CARTAO.ONDE_CANAL');
+      expect(automacao.get('a').attributes('href')).toBe(
+        '/app/autonomia_agent_panel'
+      );
+      const parceiro = wrapper.findAll('[data-outro-sistema]')[1];
+      expect(parceiro.text()).toContain('Atendimento Parceiro');
+      expect(parceiro.text()).toContain('AGENTS.JORNADA.CARTAO.ONDE_NENHUM');
+      wrapper.unmount();
+    });
+
+    it('with the AI agent tab per inbox off, the list is as before: no agents from another system, no Connect', async () => {
+      ligarPorCaixa(false);
+      const wrapper = await montar();
+
+      expect(wrapper.find('[data-outro-sistema]').exists()).toBe(false);
+      expect(wrapper.find('[data-conectar-outro]').exists()).toBe(false);
+      expect(store.dispatch).not.toHaveBeenCalledWith('agentBots/get');
+      wrapper.unmount();
+    });
+
+    it('opens the agent page with origem=webhook', async () => {
+      const wrapper = await montar();
+      await wrapper.get('[data-outro-sistema] a').trigger('click');
+
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agent_panel',
+        params: { agentId: 31 },
+        query: { origem: 'webhook' },
+      });
+      wrapper.unmount();
+    });
+
+    it('connects a new one on a full page, only for administrators', async () => {
+      const wrapper = await montar();
+      await wrapper.get('[data-conectar-outro]').trigger('click');
+
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+        query: { conectar: 'outro' },
+      });
+      wrapper.unmount();
+
+      estado.admin = false;
+      const semAdmin = await montar();
+      expect(semAdmin.find('[data-conectar-outro]').exists()).toBe(false);
+      semAdmin.unmount();
+    });
+
+    it('is not an empty list when the account only has agents from another system', async () => {
+      prepararStore({ agentes: [] });
+      ligarPorCaixa();
+      store.state['agentBots/getBots'] = BOTS;
+      const wrapper = await montar();
+
+      expect(wrapper.findAll('[data-outro-sistema]')).toHaveLength(2);
+      expect(wrapper.find('[data-usar]').exists()).toBe(false);
       wrapper.unmount();
     });
   });

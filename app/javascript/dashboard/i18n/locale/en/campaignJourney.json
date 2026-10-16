@@ -414,7 +414,9 @@
           "CAROUSEL_FIELD_REQUIRED": "A card of this template has a field the campaign does not fill yet.",
           "FREE_TEXT_INVALID": "The written message cannot go like this. Go back to Message and check the text (links only through the field button).",
           "FREE_TEXT_DISABLED": "The written message is not enabled for this account. Remove it to send only the template.",
-          "FREE_TEXT_RICH_TEMPLATE": "This template has a coupon, a limited-time offer or a carousel: everyone gets the full template. Go back to Message and remove the written message."
+          "FREE_TEXT_RICH_TEMPLATE": "This template has a coupon, a limited-time offer or a carousel: everyone gets the full template. Go back to Message and remove the written message.",
+          "PRODUCTS_REQUIRED": "Choose the products of the message: 1 for one product, up to 30 in the list and 2 to 10 in the cards.",
+          "PRODUCTS_DISABLED": "Campaigns with catalog products are not enabled for this account yet."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {

@@ -6,23 +6,32 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
-import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
+import {
+  ATUACAO_INTERNA_NA_QUERY,
+  PAPEL_AJUDANTE_NA_QUERY,
+  PAPEL_AREA_NA_QUERY,
+} from '../constants/criacao';
+import { useFase2 } from '../composables/useFase2';
 
 // #1543 — "Criar agente" em página inteira, no lugar da gaveta da lista (protótipo aprovado na
 // rodada 3, #1366/#1424). O agente normal é o destaque: os modelos e "Do meu jeito" seguem a criação
 // de hoje (`?modelo=`; o canal é escolhido no fim, em Comece). Embaixo, discreto, "Precisa de outro
 // tipo?" só com o Copiloto da equipe (`?atuacao=interno`, #1494/#1497).
-// Os outros dois tipos do protótipo entram nesta mesma lista quando existirem de verdade, nunca
-// antes como botão escondido ou desabilitado: "Agente da equipe" (tema 13, #1433/#1447) e "Ajuda
-// outros agentes" (tema 14, #1434).
+// #1433 (tema 13): "Agente da equipe" (`?papel=area`), só com a Fase 2 ligada na conta (piloto): fica
+// num canal que já tem agente principal e recebe a conversa quando alguém passa.
+// Tema 14 (#1434): "Ajuda outros agentes" (`?papel=ajudante`), também só com a Fase 2, na ordem do
+// protótipo (depois do agente da equipe): responde só para outro agente, nunca para o cliente.
 // A rota já exige autonomia_manage; quem só vê não chega aqui, mas a página também não oferece ação.
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
 const router = useRouter();
 const podeGerenciar = useCanManage('autonomia_manage');
+const fase2 = useFase2();
 const NS = 'AGENTS.JORNADA.ESCOLHER';
 const COPILOTO = 'copiloto';
+const EQUIPE = 'equipe';
+const AJUDANTE = 'ajudante';
 const comecando = ref(null);
 
 const escolher = (chave, query) => {
@@ -34,6 +43,9 @@ const escolher = (chave, query) => {
 const usarModelo = chave => escolher(chave, { modelo: chave });
 const usarCopiloto = () =>
   escolher(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
+const usarEquipe = () => escolher(EQUIPE, { papel: PAPEL_AREA_NA_QUERY });
+const usarAjudante = () =>
+  escolher(AJUDANTE, { papel: PAPEL_AJUDANTE_NA_QUERY });
 
 const voltar = () => router.push({ name: 'autonomia_agents_index' });
 </script>
@@ -106,7 +118,68 @@ const voltar = () => router.push({ name: 'autonomia_agents_index' });
             {{ t(`${NS}.OUTRO_TEXTO`) }}
           </p>
         </div>
-        <ul class="grid grid-cols-1 gap-3 p-0 m-0 list-none md:grid-cols-2">
+        <ul
+          class="grid grid-cols-1 gap-3 p-0 m-0 list-none md:grid-cols-2"
+          :class="fase2 ? 'lg:grid-cols-3' : ''"
+        >
+          <li v-if="fase2">
+            <button
+              type="button"
+              data-outro="equipe"
+              data-agente-da-equipe
+              :disabled="!!comecando && comecando !== EQUIPE"
+              class="flex items-start w-full h-full gap-3 p-4 transition text-start rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:ring-n-slate-8 hover:shadow-sm min-h-11 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+              @click="usarEquipe"
+            >
+              <span
+                aria-hidden="true"
+                class="grid rounded-xl place-items-center size-10 shrink-0 bg-n-alpha-2 text-n-slate-11"
+              >
+                <span class="i-lucide-hand-helping size-5" />
+              </span>
+              <span class="flex flex-col gap-0.5 grow min-w-0">
+                <span class="text-sm font-semibold text-n-slate-12">
+                  {{ t(`${NS}.EQUIPE.TITULO`) }}
+                </span>
+                <span class="text-sm text-n-slate-11">
+                  {{ t(`${NS}.EQUIPE.TEXTO`) }}
+                </span>
+              </span>
+              <span
+                class="self-center i-lucide-chevron-right size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
+                aria-hidden="true"
+              />
+            </button>
+          </li>
+          <li v-if="fase2">
+            <button
+              type="button"
+              data-outro="ajudante"
+              data-ajudante
+              :disabled="!!comecando && comecando !== AJUDANTE"
+              class="flex items-start w-full h-full gap-3 p-4 transition text-start rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak hover:ring-n-slate-8 hover:shadow-sm min-h-11 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+              @click="usarAjudante"
+            >
+              <span
+                aria-hidden="true"
+                class="grid rounded-xl place-items-center size-10 shrink-0 bg-n-alpha-2 text-n-slate-11"
+              >
+                <span class="i-lucide-bot size-5" />
+              </span>
+              <span class="flex flex-col gap-0.5 grow min-w-0">
+                <span class="text-sm font-semibold text-n-slate-12">
+                  {{ t(`${NS}.AJUDA.TITULO`) }}
+                </span>
+                <span class="text-sm text-n-slate-11">
+                  {{ t(`${NS}.AJUDA.TEXTO`) }}
+                </span>
+              </span>
+              <span
+                class="self-center i-lucide-chevron-right size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
+                aria-hidden="true"
+              />
+            </button>
+          </li>
           <li>
             <button
               type="button"

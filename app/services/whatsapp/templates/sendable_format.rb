@@ -11,10 +11,12 @@
 #   LIMITED_TIME_OFFER — with has_expiration, limited_time_offer.expiration_time_ms still ahead (offer_expired after);
 #   CAROUSEL           — one card per template card, each header with media_blob (file chosen in the campaign), media_url
 #                        or media_stored (the template's saved file);
-#   CATALOG button     — buttons[i] = { type: 'catalog' }.
+#   CATALOG button     — buttons[i] = { type: 'catalog' };
+#   catalog products   — one product (SPM), several (MPM) or a carousel of product cards (#1418), with the number of
+#                        products Meta accepts in products.retailer_ids (Whatsapp::Templates::ProductParams).
 # Not sendable, each with its reason code:
 #   verification_code (OTP: a one-time code is asked by one person in an app, never sent to a list),
-#   catalog (MPM/SPM, LIST, PRODUCT: they need products chosen per send), location_header,
+#   catalog (MPM/SPM or product cards without the chosen products; LIST, PRODUCT), location_header,
 #   call_permission_request, unsupported_header, unsupported_component (a component type Meta adds later), no_components.
 #
 # Public for every consumer (campaign dispatch now; Route.fillable_template? of the booking notices,
@@ -60,6 +62,8 @@ module Whatsapp::Templates::SendableFormat
 
   # The campaign free text (#1335) never replaces these: whoever got the text would lose the offer (#1456).
   def offer_format?(template)
+    return true if Whatsapp::Templates::ProductParams.kind(template)
+
     components = hashes(template.is_a?(Hash) ? template['components'] : nil)
     components.any? { |component| OFFER_COMPONENTS.include?(upcase(component['type'])) } ||
       button_types(components).include?(OFFER_BUTTON)
@@ -70,8 +74,25 @@ module Whatsapp::Templates::SendableFormat
     return Result.new(reason_code: NO_COMPONENTS, warnings: []) if components.empty?
 
     recorded = recorded.is_a?(Hash) ? recorded : {}
+    return products_result(template, components, recorded) if Whatsapp::Templates::ProductParams.kind(template)
+
     reason = components.lazy.filter_map { |component| component_reason(component, recorded, now) }.first
     Result.new(reason_code: reason, warnings: warnings(components, recorded))
+  end
+
+  # #1418: the products decide; the rest of the template (body, text header, footer) is checked as usual.
+  def products_result(template, components, recorded)
+    reason = 'catalog' unless Whatsapp::Templates::ProductParams.ready?(template, recorded)
+    reason ||= components.lazy.filter_map { |component| product_template_reason(component) }.first
+    Result.new(reason_code: reason, warnings: [])
+  end
+
+  def product_template_reason(component)
+    type = upcase(component['type'])
+    return if %w[BODY FOOTER BUTTONS CAROUSEL].include?(type)
+    return if type == 'HEADER' && %w[PRODUCT TEXT].include?(upcase(component['format']))
+
+    type == 'HEADER' ? 'unsupported_header' : COMPONENT_REASONS.fetch(type, 'unsupported_component')
   end
 
   def component_reason(component, recorded, now)

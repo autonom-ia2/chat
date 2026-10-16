@@ -2,22 +2,26 @@ pt_BR:
   helpers:
     label:
       account:
-        agents_niche: Nicho dos agentes de IA
+        agents_niche: Segmento e nicho da conta
   autonomia_agents_niche:
-    label: Nicho dos agentes de IA
-    help: De qual base partem as instruções dos agentes novos.
+    label: Segmento e nicho da conta
+    help: Muda as palavras do painel, do Guia, da Central de Ajuda e dos agentes para o jeito de trabalhar desta conta.
     installation_default: "Padrão desta instalação: %{niche}"
     is_default: (padrão desta instalação)
-    warning: Trocar o nicho não muda agentes que já existem; eles só mudam pelo botão Atualizar com a nova base.
-    profile_label: Perfil em seguros
+    warning: A troca aparece na próxima vez que a equipe abrir o painel. Funis já criados não mudam. Agentes que já existem só mudam pelo botão Atualizar com a nova base.
+    switch_off: Enquanto as palavras por segmento estiverem desligadas nesta instalação, a escolha fica guardada e começa a valer quando forem ligadas.
+    profile_label: Tipo de empresa
+    channel_label: Como vende
+    preview_label: "Para a equipe desta conta, um card fechado aparece como"
+    preview_label_off: "Quando as palavras por segmento forem ligadas, um card fechado vai aparecer como"
     separator: " · "
     niches:
       seguros:
         title: Seguros
-        text: Base de seguros.
+        text: Para empresas de seguros.
       geral:
         title: Geral
-        text: Base geral, para qualquer negócio.
+        text: Para qualquer negócio.
     profiles:
       corretora:
         title: Corretora
@@ -28,3 +32,16 @@ pt_BR:
       insurtech:
         title: Insurtech
         text: Empresa de seguros digital.
+      saude_beneficios:
+        title: Saúde e benefícios
+        text: Planos de saúde, odonto e benefícios (regras da ANS).
+    channels:
+      direto:
+        title: Direto ao cliente
+        text: Pelo site, app ou WhatsApp.
+      corretores:
+        title: Por corretores parceiros
+        text: Corretores vendem os seus seguros.
+      parceiros:
+        title: Por parceiros
+        text: Junto com a compra de outra empresa.

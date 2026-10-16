@@ -3,6 +3,8 @@
 // Tab e leitor de tela vêm do navegador. Mesmo desenho da opção da passagem
 // (#1385): o escolhido ganha o visto e a borda azul. O valor pode ser texto
 // ou número (o id do canal ou do modelo).
+// shrink-0: numa lista com rolagem (muitos modelos), o min-h-11 deixava o
+// cartão encolher até 44 px e o texto sobrepunha o do cartão de baixo (#1597).
 defineProps({
   name: { type: String, required: true },
   value: { type: [String, Number], required: true },
@@ -19,7 +21,7 @@ const escolhido = defineModel({ type: [String, Number], default: null });
 
 <template>
   <label
-    class="relative flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border bg-n-solid-1 p-4 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-n-brand"
+    class="relative flex min-h-11 shrink-0 cursor-pointer items-start gap-3 rounded-2xl border bg-n-solid-1 p-4 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-n-brand"
     :class="
       escolhido === value
         ? 'border-n-blue-8 bg-n-blue-2 shadow-sm'

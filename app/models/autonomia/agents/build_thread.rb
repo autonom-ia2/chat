@@ -72,16 +72,21 @@ module Autonomia
       end
 
       ACTUATIONS = %w[external internal both].freeze
+      PAPEL_AJUDANTE = ::Autonomia::Agents::OndeTrabalhar::PAPEL_AJUDANTE
 
       # V2.1 — grava as escolhas da abertura (tipo + atuação + base) num único merge no jsonb `state`.
       # `actuation` normaliza para um valor válido (fallback external = comportamento atual);
       # `with_knowledge=false` também semeia `no_materials_declared` para reusar o portão sem-material
       # do Builder (não pedir documentos no 1º turno). Valores ausentes mantêm os defaults de hoje.
-      def persist_start_options!(type:, actuation: nil, with_knowledge: nil)
+      #
+      # `papel: 'ajudante'` (tema 14, #1434) — "Ajuda outros agentes": o agente nasce interno e com a marca de origem
+      # (`config['papel']`, gravada pelo Builder no rascunho). É o único jeito de a marca nascer. Outro valor é ignorado.
+      def persist_start_options!(type:, actuation: nil, with_knowledge: nil, papel: nil)
         persist_agent_type!(type)
         merged = (state || {}).dup
 
         merged['actuation'] = ACTUATIONS.include?(actuation.to_s) ? actuation.to_s : 'external' unless actuation.nil?
+        merged = merged.merge('papel' => PAPEL_AJUDANTE, 'actuation' => 'internal') if papel.to_s == PAPEL_AJUDANTE
 
         # with_knowledge=false NÃO semeia no_materials_declared: aquele flag é o portão de FECHAMENTO
         # ("sem material, feche") e fecharia o build no 1º turno sem coletar o essencial. A orientação de

@@ -3,6 +3,8 @@
 # Relacionamento). Quem recebe vem do RecipientParams. A repetição é só para lembrete da equipe (fase 1).
 class Crm::FollowUps::Creator
   RECURRENCE_KEYS = %i[frequency weekdays weekdays_only ends_mode ends_on occurrences_count].freeze
+  # #1590: folga para o relógio de quem marca "agora" e para a ida e volta da requisição.
+  PAST_GRACE = 1.minute
 
   def initialize(account:, user:, card:, conversation:, attributes:)
     @account = account
@@ -14,7 +16,7 @@ class Crm::FollowUps::Creator
 
   def perform
     attributes = base_attributes
-    return @account.crm_follow_ups.create!(attributes) if recurrence.blank?
+    return create_single(attributes) if recurrence.blank?
 
     create_series(attributes)
   end
@@ -29,6 +31,25 @@ class Crm::FollowUps::Creator
   end
 
   private
+
+  def create_single(attributes)
+    follow_up = @account.crm_follow_ups.new(attributes)
+    reject_past_auto_send!(follow_up)
+    follow_up.save!
+    follow_up
+  end
+
+  # #1590: mensagem automática com horário que já passou não tem como sair "na hora marcada" (sairia na hora, no
+  # primeiro giro do cron). Reagendar tem trava parecida, sem a folga (Rescheduler). Só com a flag
+  # crm_mensagem_marcada: sem ela, venha de onde vier a criação, aceita como sempre aceitou.
+  def reject_past_auto_send!(follow_up)
+    return unless follow_up.auto_send_message?
+    return unless Crm::FollowUps::SendErrorCode.enabled?(@account)
+    return if follow_up.due_at.blank? || follow_up.due_at >= PAST_GRACE.ago
+
+    follow_up.errors.add(:due_at, :in_the_past, message: 'must be in the future for auto-send follow-ups')
+    raise ActiveRecord::RecordInvalid, follow_up
+  end
 
   def base_attributes
     resolved = Crm::FollowUps::ParamsResolver.new(

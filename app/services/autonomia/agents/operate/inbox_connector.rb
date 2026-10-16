@@ -33,8 +33,20 @@ module Autonomia
 
         private
 
+        # Agente e depois caixa (#1648): a conferência da caixa (robô de fora, porta já ocupada) roda com a caixa travada.
+        # O set_agent_bot da aba "Agente externo" trava a mesma caixa (Autonomia::Agents::CaixaSemAgenteExterno), então
+        # um dos dois espera o outro e enxerga o que ele gravou; agent_bot_inboxes não tem índice único por caixa.
         def connect!
-          @agent.with_lock { connect_locked! }
+          @agent.with_lock do
+            travar_caixa!
+            connect_locked!
+          end
+        end
+
+        # A trava da caixa vale até o fim da transação do agente. Trava uma cópia lida do banco, não o @inbox de quem
+        # chamou: `@inbox.lock!` o recarregaria (e às associações dele) por baixo de quem chamou.
+        def travar_caixa!
+          ::Inbox.lock.find(@inbox.id)
         end
 
         def connect_locked!
@@ -69,9 +81,13 @@ module Autonomia
         end
 
         # #1366 — trava o AGENTE primeiro (ordem agente → caixa, a mesma do connect!, das Areas e do SoftDelete): se este
-        # era o último vínculo, a parada automática relê os vínculos com ele travado.
+        # era o último vínculo, a parada automática relê os vínculos com ele travado. A caixa também (#1648): a saída da
+        # porta e um set_agent_bot na mesma caixa não se cruzam.
         def disconnect!
-          @agent.with_lock { disconnect_locked! }
+          @agent.with_lock do
+            travar_caixa!
+            disconnect_locked!
+          end
         end
 
         def disconnect_locked!
@@ -80,10 +96,8 @@ module Autonomia
           return disconnect_area! if agent_inbox.area?
 
           ActiveRecord::Base.transaction do
-            # #1433: área só existe em caixa com porta ativa. sair_da_caixa! trava os agentes das áreas e depois a caixa
-            # (como o Areas.vincular!) e solta as áreas antes das conversas da porta; as conversas delas vão direto para
-            # a equipe humana.
-            agent_inbox.sair_da_caixa!
+            # #1433: as áreas da caixa ficam (a caixa passa a ser só de pessoas); saem só as conversas da porta.
+            agent_inbox.release_bot_conversations!
             # Destrói o VÍNCULO primeiro: o after_destroy :cleanup_mirror_bot do AgentInbox remove o
             # AgentBotInbox-espelho + o AgentBot-espelho (outgoing_url NULL) NA ORDEM SEGURA. Destruir
             # o AgentBot antes violava a FK autonomia_agent_inboxes.agent_bot_id (null:false, sem

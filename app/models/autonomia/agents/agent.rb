@@ -352,9 +352,9 @@ module Autonomia
         agent_inboxes.kept.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
       end
 
-      # #1433: sendo porta, solta antes as áreas da caixa (mesma ordem do InboxConnector#disconnect!).
+      # #1433: sendo porta, as áreas da caixa ficam (a caixa passa a ser só de pessoas); saem só as conversas dele.
       def release_bot_conversations
-        agent_inboxes.kept.find_each(&:sair_da_caixa!)
+        agent_inboxes.kept.find_each(&:release_bot_conversations!)
       end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução

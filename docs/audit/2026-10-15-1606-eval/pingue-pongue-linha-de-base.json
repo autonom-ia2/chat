@@ -1,0 +1,289 @@
+{
+  "inicio": "2026-10-15T10:45:59Z",
+  "casos": [
+    {
+      "nome": "linha_de_base_atribuicao_pela_tela",
+      "passagens": "",
+      "turnos": [
+        {
+          "intent": "continuar",
+          "motivo": "A atendente Ana já prestou ajuda e a cliente agradeceu, sem novo pedido de atendimento humano.",
+          "pessoa_no_nome": null,
+          "ms": 8242,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior já foi atendido pela equipe; não há novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 6266,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendimento humano já foi atendido; a conversa seguiu normalmente.",
+          "pessoa_no_nome": null,
+          "ms": 6024,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "consultar",
+          "motivo": "A cliente pergunta pelo prazo de entrega, uma dúvida pontual que pode exigir consulta à equipe; o pedido anterior por atendente já foi atendido.",
+          "pessoa_no_nome": null,
+          "ms": 12762,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior por atendente já foi atendido; não há novo pedido de transferência nas mensagens recentes.",
+          "pessoa_no_nome": null,
+          "ms": 7008,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não há novo pedido explícito para falar com um atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 9494,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 10324,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não há pedido explícito de falar com uma pessoa nas mensagens apresentadas.",
+          "pessoa_no_nome": null,
+          "ms": 9099,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano após a devolução à IA.",
+          "pessoa_no_nome": null,
+          "ms": 4791,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 5618,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "A cliente pediu explicitamente para falar com uma pessoa novamente.",
+          "pessoa_no_nome": "Ana",
+          "ms": 6470,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    },
+    {
+      "nome": "linha_de_base_convite_aceito",
+      "passagens": "",
+      "turnos": [
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente humano já foi atendido por Ana e a conversa seguiu normalmente.",
+          "pessoa_no_nome": null,
+          "ms": 7290,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente já foi atendido por Ana e não houve novo pedido após isso.",
+          "pessoa_no_nome": null,
+          "ms": 7168,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente humano já foi atendido; não houve novo pedido após isso.",
+          "pessoa_no_nome": null,
+          "ms": 6014,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior por atendente já foi atendido por Ana; depois disso, a conversa seguiu com perguntas normais.",
+          "pessoa_no_nome": null,
+          "ms": 10886,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior por atendente já foi atendido; depois disso, a conversa seguiu com perguntas normais.",
+          "pessoa_no_nome": null,
+          "ms": 8653,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "Não há pedido recente explícito para falar com uma pessoa.",
+          "pessoa_no_nome": null,
+          "ms": 4941,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A ajuda de Ana já foi prestada e não há novo pedido de atendimento humano.",
+          "pessoa_no_nome": null,
+          "ms": 12664,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano nas mensagens recentes.",
+          "pessoa_no_nome": null,
+          "ms": 7401,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 5178,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 6025,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "A cliente pediu para falar com uma pessoa para tratar do boleto errado.",
+          "pessoa_no_nome": null,
+          "ms": 11326,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    },
+    {
+      "nome": "linha_de_base_atendido_fora_do_chat",
+      "passagens": "",
+      "turnos": [
+        {
+          "intent": "transferir",
+          "motivo": "O cliente pediu para falar com um atendente humano, e a equipe informou que chamaria alguém.",
+          "pessoa_no_nome": "Ana",
+          "ms": 6654,
+          "mensagem": "Obrigado pela ajuda, Ana!",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "O cliente pediu para falar com um atendente humano.",
+          "pessoa_no_nome": "Ana",
+          "ms": 7222,
+          "mensagem": "Então fica combinado assim.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido inicial de atendente foi seguido por conversa normal, sem novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 12125,
+          "mensagem": "Vocês abrem no sábado?",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "O cliente pediu explicitamente um atendente humano, e não há registro de atendimento humano concluído.",
+          "pessoa_no_nome": "Ana",
+          "ms": 17798,
+          "mensagem": "Qual o prazo de entrega para São Paulo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido anterior de atendente já foi reconhecido e a conversa seguiu com outras perguntas, sem novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 15303,
+          "mensagem": "Tem desconto no pix?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente humano ocorreu antes; depois, a cliente seguiu com perguntas comerciais sem fazer um novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 12073,
+          "mensagem": "Pode me mandar o link do catálogo?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "O pedido de atendente ocorreu antes; depois a conversa seguiu com perguntas comerciais, sem novo pedido de transferência.",
+          "pessoa_no_nome": null,
+          "ms": 19624,
+          "mensagem": "Beleza, vou olhar com calma.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "A cliente pediu para falar com um atendente humano e não há mensagem de atendimento humano na conversa.",
+          "pessoa_no_nome": "Ana",
+          "ms": 24307,
+          "mensagem": "Meu CEP é 01310-100, serve para o frete?",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu explicitamente para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 11153,
+          "mensagem": "Ok, entendi.",
+          "controle": false
+        },
+        {
+          "intent": "continuar",
+          "motivo": "A cliente não pediu explicitamente para falar com uma pessoa ou atendente humano.",
+          "pessoa_no_nome": null,
+          "ms": 10541,
+          "mensagem": "Valeu, até mais.",
+          "controle": false
+        },
+        {
+          "intent": "transferir",
+          "motivo": "O cliente pediu novamente para falar com uma pessoa.",
+          "pessoa_no_nome": "Ana",
+          "ms": 13414,
+          "mensagem": "Agora preciso falar com uma pessoa de novo, é outro problema: meu boleto veio errado.",
+          "controle": true
+        }
+      ]
+    }
+  ],
+  "custo_usd": 0.019892999999999997,
+  "fim": "2026-10-15T10:51:16Z"
+}

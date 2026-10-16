@@ -47,6 +47,17 @@ RSpec.describe Autonomia::Guide::Acoes do
       %w[checkout subscription topup billing].each { |palavra| expect(catalogo).not_to include(palavra) }
     end
 
+    # #1586: o aceite do dono para o sistema criar modelos só vale dado na tela, onde o texto do aviso é mostrado.
+    it 'deixa de fora o que só se faz na tela, também no formato das ações', :aggregate_failures do
+      expect(described_class::SO_NA_TELA.keys).to eq(['POST whatsapp_template_consent'])
+      expect(para(admin).catalogo).not_to include('POST whatsapp_template_consent')
+      expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include('POST whatsapp_template_consent')
+      I18n.with_locale(:pt_BR) do
+        expect { para(admin).conferir!('POST whatsapp_template_consent', {}) }
+          .to raise_error(described_class::Recusada, 'Isto só se faz na tela: Modelos › Autorização.')
+      end
+    end
+
     it 'não esconde área nenhuma do administrador' do
       expect(para(admin).catalogo).to include('POST campaigns', 'POST webhooks', 'DELETE inboxes/:id')
     end
