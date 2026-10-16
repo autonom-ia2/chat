@@ -13,10 +13,14 @@ teste local, com a estrutura das contas piloto 16 e 18. Conversas sintéticas de
    ("Auto e Residencial") faz a IA recusar seguro de vida (3 conversas; na Fase B a dúvida derruba também o outro assunto da mensagem); na Fase B, o pedido de atendente se perde
    quando a IA o põe no card que não é o principal (regressão nova); e o cliente com card ganho que volta por outro
    assunto deixa um card vazio no funil padrão.
-4. **Custo total registrado pelo sistema: US$ 0,959** de US$ 3,00 (Fase A e ajustes do harness US$ 0,57; Fase B
-   US$ 0,40). Por mensagem do cliente: cerca de US$ 0,001 na IA de assunto e US$ 0,0007 na de movimentação.
+4. **Custo total registrado pelo sistema: US$ 1,144** de US$ 3,00 (Fase A e ajustes do harness US$ 0,57; Fase B
+   US$ 0,40; Fase B2 US$ 0,19). Por mensagem do cliente: cerca de US$ 0,001 na IA de assunto e US$ 0,0007 na de
+   movimentação.
 5. **Corrigir primeiro:** o pedido de atendente na avaliação conjunta (#1700, código) e o filtro pelo nome do funil
    (prompt/regra). Depois o card vazio do cliente que volta (código).
+6. **Fase B2 (#1700 no head c76dde5a88, só as que falhavam + 10 de controle):** o pedido de atendente perdido (C26)
+   e a dúvida que derrubava os outros assuntos (C27) estão corrigidos, e as 10 de controle seguem passando. Sobram
+   o nome do funil (C09, C27 no vida, C32) e o card vazio (C36). Ver a seção "Fase B2".
 
 ## Como foi feito
 
@@ -208,7 +212,7 @@ Custo registrado pelo sistema (`crm_ai_usage_events`, preço de tabela do `Crm::
 - A Fase B custa ~20% a mais na IA de assunto (o modelo maior responde a lista de assuntos) e o mesmo na
   movimentação: uma chamada conjunta por mensagem em vez de uma por card (na Fase B, 66 avaliações foram de 2 ou 3
   cards numa chamada só).
-- Gasto total: **US$ 0,959** (FUMAÇA e validações do harness US$ 0,035; rascunho A0 e uma rodada interrompida
+- Gasto total: **US$ 1,144** (Fase B2 US$ 0,19; FUMAÇA e validações do harness US$ 0,035; rascunho A0 e uma rodada interrompida
   US$ 0,20; Fase A US$ 0,34; Fase B US$ 0,38; diagnóstico da causa 3 US$ 0,004). A Fase A inteira ficou em US$ 0,57,
   abaixo do teto de US$ 1,20.
 
@@ -244,6 +248,36 @@ Custo registrado pelo sistema (`crm_ai_usage_events`, preço de tabela do `Crm::
   (Ana ↔ Bruno), porque o principal escolhido mudou.
 - **Igual:** nome do funil (causa 2) e card vazio (causa 4) não são do escopo do #1700.
 - **Custo:** +20% na IA de assunto, igual na movimentação, latência igual.
+
+## Fase B2 — #1700 no head c76dde5a88
+
+O #1700 ganhou o commit c76dde5a88 ("dúvida por assunto e pedido de atendente pela regra do card ligado"). Rodei de
+novo, com IA real e 3 rodadas, só as conversas que falharam na Fase B (C09, C26, C27, C32, C36), a C25 (pedido de
+atendente com dois assuntos) e 10 que passavam, para ver se algo quebrou (C01, C07, C10, C17, C19, C28, C33, C42,
+C44, C47). Mesma estrutura do harness (o export de produção já tinha sido apagado). Base local: main + #1687 +
+#1674 + #1700. O merge do #1700 novo com o #1674 conflita numa linha do `HandoffExecutor` (`motivo:` do #1674 e
+`pelo_card:` do #1700); juntei os dois para o teste. Quem mesclar os dois PRs vai ver o mesmo conflito.
+
+**Resultado: 36 de 48 execuções (75%).** IA de assunto 126/138 (91%), movimentação 102/105 (97%). Gasto US$ 0,19.
+As taxas não se comparam com as da Fase B, porque a amostra é de propósito a das conversas difíceis.
+
+| Conversa | Fase B | Fase B2 | O que mudou |
+|---|---|---|---|
+| C26 pedido de pessoa + sinistro + residencial | FALHOU 0/3 (ninguém atribuído) | PASSOU 3/3 | Corrigido: o Bruno recebe pela regra do Sinistro, o card em que a IA pôs o pedido (o foco ficou em Vendas) |
+| C27 rajada pedido + vida + sinistro do celular | FALHOU 0/3 (nenhum card) | FALHOU 0/3 | Melhorou: o sinistro nasce e o Bruno recebe; o vida segue em dúvida (causa 2) |
+| C25 casa + sinistro + "me passa pra alguém" | PASSOU 3/3 (Bruno) | PASSOU 3/3 (Bruno) | Igual |
+| C09 vida + "pode fechar o carro" | FALHOU 0/3 | FALHOU 0/3 | Igual (causa 2) |
+| C32 vida em 3 funis | FALHOU 0/3 | FALHOU 0/3 | Igual (causa 2) |
+| C36 card ganho volta com roubo | FALHOU 0/3 | FALHOU 0/3 | Igual (causa 4) |
+| 10 de controle | 30/30 | 30/30 | Nada quebrou |
+
+Nenhum resultado mudou entre as 3 rodadas.
+
+**O que ainda falha depois da B2:**
+1. O nome do funil vira filtro e o seguro de vida fica sem card (C09, C27 no vida, C32). Prompt e regra.
+2. O card vazio do cliente com card ganho que volta (C36). Código.
+3. A regra de produto do cenário 6 continua aberta. Agora quem recebe é a regra do card em que a IA pôs o pedido, e
+   não a do foco: no C26 o Bruno (Sinistro) recebe com o foco em Vendas. Vale confirmar se é isso que se quer.
 
 ## Tabela por conversa
 
@@ -349,7 +383,7 @@ ruby script/stress/multifunil/tabelas.rb tmp/stress/fase-B/resultado.json "Fase 
 - Snapshot: `/Users/Shared/maccluster-workspaces/chat2you/20261016-052100-b6c59773-a6900788ad-7818e594` (M2 e M4).
 - Banco `chatwoot_stress` no Postgres de teste do M2 e o arquivo de chaves descartáveis
   `/Users/Shared/maccluster-test-services/stress-cofre.env` (M2).
-- Worktree `~/dev/worktrees/chat2you/1140-stress-multifunil` e as branches locais `stress/fase-a` e `stress/fase-b`
+- Worktree `~/dev/worktrees/chat2you/1140-stress-multifunil` e as branches locais `stress/fase-a`, `stress/fase-b` e `stress/fase-b2`
   (merges só locais, nunca enviados).
 
 ## Apêndice: tabelas por execução
@@ -715,3 +749,81 @@ Mensagens do cliente processadas: 192.
 Rodadas por conversa: 3. Instáveis (o resultado mudou entre rodadas): nenhuma.
 
 ### Rascunho A0 (estrutura modelada, antes do espelho): 31 de 46 execuções passaram (67%). Gasto registrado: US$ 0.1051.
+
+### Fase B2 (#1700 c76dde5a88: 6 que falhavam ou importavam + 10 de controle): 36 de 48 execuções passaram (75%). Gasto registrado: US$ 0.1855.
+
+| Conversa | Cen. | Variação | Esperado | Obtido (só o que diferiu) | Resultado | Latência IA s (assunto / mov.) | Custo US$ |
+|---|---|---|---|---|---|---|---|
+| C01 r1 | 1 | informal | foco,ref:resid; sem_card_novo; etapa,ref:resid,valor:[proposta]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.7 / 8.5 | 0.0005 |
+| C07 r1 | 2 | frase base | card_novo,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart]; etapa,ref:auto,valor:[fechamento]; valor,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart],nao:10000000 | igual ao esperado | PASSOU | 4.2 / 23.1 | 0.0039 |
+| C09 r1 | 2 | ordem invertida | card_novo,funil:vendas,titulo_tem:[vida]; etapa,ref:auto,valor:[fechamento] | card_novo: [] | FALHOU | 7.3 / 12.2 | 0.0040 |
+| C10 r1 | 2 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[resid,apart,apto,casa,imovel]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 3.7 / 28.1 | 0.0040 |
+| C17 r1 | 4 | frase base | card_novo,funil:vendas,titulo_tem:[carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,casa,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 5.3 / 18.8 | 0.0045 |
+| C19 r1 | 4 | mensagem longa | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,fazer,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,apart,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 4.1 / 23.7 | 0.0043 |
+| C25 r1 | 6 | frase base | card_novo,funil:vendas,titulo_tem:[casa,resid,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 4.0 / 32.0 | 0.0042 |
+| C26 r1 | 6 | informal, pedido primeiro | card_novo,funil:vendas,titulo_tem:[resid,casa,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 3.3 / 25.8 | 0.0037 |
+| C27 r1 | 6 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[vida]; card_novo,funil:sinistro,titulo_tem:[celular,roubo,furto,sinistro]; atendente,valor:[atribuido] | card_novo: [vendas: Mateus Queiroz,sinistro: Sinistro de celular roubado] | FALHOU | 5.2 / 25.4 | 0.0043 |
+| C28 r1 | 7 | frase base | card_novo,funil:vendas,titulo_tem:[onix,carro,auto]; novos_no_funil,funil:vendas,valor:1; etapa,funil:vendas,titulo_tem:[onix,carro,auto],valor:[fechamento]; campo,contato:true,chave:cidade,contem:campinas; campo,contato:true,chave:cep,contem:13087 | igual ao esperado | PASSOU | 4.6 / 46.4 | 0.0050 |
+| C32 r1 | 7 | três funis, vida | card_novo,funil:vendas,titulo_tem:[vida]; novos_no_funil,funil:vendas,valor:1; novos_no_funil,funil:sinistro,valor:0; novos_no_funil,funil:renovacao,valor:0; etapa,funil:vendas,titulo_tem:[vida],valor:[fechamento] | card_novo: [vendas: Daniela Moraes]; etapa: card não existe | FALHOU | 14.7 / 30.4 | 0.0098 |
+| C33 r1 | 7 | retorno combinado | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; etapa,funil:vendas,titulo_tem:[renegade,carro,auto],valor:[proposta,fechamento]; retorno,funil:vendas,titulo_tem:[renegade,carro,auto],valor:true | igual ao esperado | PASSOU | 4.5 / 41.2 | 0.0046 |
+| C36 r1 | 8 | volta com sinistro | card_novo,funil:sinistro,titulo_tem:[roubo,furto,carro,tracker,sinistro]; status,ref:auto,valor:[won]; novos_no_funil,funil:vendas,valor:0 | novos_no_funil: 1 | FALHOU | 4.4 / 5.7 | 0.0025 |
+| C42 r1 | 10 | com regra, alguém online | atendente,valor:[atribuido],pessoa:ana; sem_card_novo | igual ao esperado | PASSOU | 3.3 / 17.7 | 0.0031 |
+| C44 r1 | 10 | sem regra | atendente,valor:[ninguem] | igual ao esperado | PASSOU | 5.0 / 9.8 | 0.0029 |
+| C47 r1 | 11 | WhatsApp + e-mail: proposta assinada por e-mail | sem_card_novo; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.5 / 13.3 | 0.0009 |
+| C01 r2 | 1 | informal | foco,ref:resid; sem_card_novo; etapa,ref:resid,valor:[proposta]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.6 / 9.4 | 0.0007 |
+| C07 r2 | 2 | frase base | card_novo,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart]; etapa,ref:auto,valor:[fechamento]; valor,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart],nao:10000000 | igual ao esperado | PASSOU | 4.6 / 25.1 | 0.0040 |
+| C09 r2 | 2 | ordem invertida | card_novo,funil:vendas,titulo_tem:[vida]; etapa,ref:auto,valor:[fechamento] | card_novo: [] | FALHOU | 5.7 / 11.9 | 0.0038 |
+| C10 r2 | 2 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[resid,apart,apto,casa,imovel]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 4.7 / 22.8 | 0.0044 |
+| C17 r2 | 4 | frase base | card_novo,funil:vendas,titulo_tem:[carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,casa,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 4.4 / 13.3 | 0.0036 |
+| C19 r2 | 4 | mensagem longa | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,fazer,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,apart,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 4.0 / 32.8 | 0.0049 |
+| C25 r2 | 6 | frase base | card_novo,funil:vendas,titulo_tem:[casa,resid,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 4.1 / 24.8 | 0.0038 |
+| C26 r2 | 6 | informal, pedido primeiro | card_novo,funil:vendas,titulo_tem:[resid,casa,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 3.6 / 20.1 | 0.0036 |
+| C27 r2 | 6 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[vida]; card_novo,funil:sinistro,titulo_tem:[celular,roubo,furto,sinistro]; atendente,valor:[atribuido] | card_novo: [vendas: Mateus Queiroz,sinistro: Sinistro de celular roubado] | FALHOU | 5.0 / 19.9 | 0.0042 |
+| C28 r2 | 7 | frase base | card_novo,funil:vendas,titulo_tem:[onix,carro,auto]; novos_no_funil,funil:vendas,valor:1; etapa,funil:vendas,titulo_tem:[onix,carro,auto],valor:[fechamento]; campo,contato:true,chave:cidade,contem:campinas; campo,contato:true,chave:cep,contem:13087 | igual ao esperado | PASSOU | 4.7 / 43.4 | 0.0049 |
+| C32 r2 | 7 | três funis, vida | card_novo,funil:vendas,titulo_tem:[vida]; novos_no_funil,funil:vendas,valor:1; novos_no_funil,funil:sinistro,valor:0; novos_no_funil,funil:renovacao,valor:0; etapa,funil:vendas,titulo_tem:[vida],valor:[fechamento] | card_novo: [vendas: Daniela Moraes]; etapa: card não existe | FALHOU | 14.3 / 31.5 | 0.0099 |
+| C33 r2 | 7 | retorno combinado | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; etapa,funil:vendas,titulo_tem:[renegade,carro,auto],valor:[proposta,fechamento]; retorno,funil:vendas,titulo_tem:[renegade,carro,auto],valor:true | igual ao esperado | PASSOU | 5.0 / 37.9 | 0.0045 |
+| C36 r2 | 8 | volta com sinistro | card_novo,funil:sinistro,titulo_tem:[roubo,furto,carro,tracker,sinistro]; status,ref:auto,valor:[won]; novos_no_funil,funil:vendas,valor:0 | novos_no_funil: 1 | FALHOU | 3.7 / 10.0 | 0.0027 |
+| C42 r2 | 10 | com regra, alguém online | atendente,valor:[atribuido],pessoa:ana; sem_card_novo | igual ao esperado | PASSOU | 3.2 / 15.0 | 0.0030 |
+| C44 r2 | 10 | sem regra | atendente,valor:[ninguem] | igual ao esperado | PASSOU | 4.1 / 10.4 | 0.0029 |
+| C47 r2 | 11 | WhatsApp + e-mail: proposta assinada por e-mail | sem_card_novo; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.5 / 11.4 | 0.0008 |
+| C01 r3 | 1 | informal | foco,ref:resid; sem_card_novo; etapa,ref:resid,valor:[proposta]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.4 / 5.9 | 0.0005 |
+| C07 r3 | 2 | frase base | card_novo,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart]; etapa,ref:auto,valor:[fechamento]; valor,funil:vendas,titulo_tem:[resid,casa,incend,lar,imovel,apart],nao:10000000 | igual ao esperado | PASSOU | 3.9 / 29.6 | 0.0042 |
+| C09 r3 | 2 | ordem invertida | card_novo,funil:vendas,titulo_tem:[vida]; etapa,ref:auto,valor:[fechamento] | card_novo: [] | FALHOU | 7.1 / 11.7 | 0.0041 |
+| C10 r3 | 2 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[resid,apart,apto,casa,imovel]; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 4.3 / 27.8 | 0.0041 |
+| C17 r3 | 4 | frase base | card_novo,funil:vendas,titulo_tem:[carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,casa,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 5.1 / 28.0 | 0.0043 |
+| C19 r3 | 4 | mensagem longa | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; card_novo,funil:sinistro,titulo_tem:[moto,fazer,batida,colis,sinistro]; card_novo,funil:renovacao,titulo_tem:[resid,apart,renov]; cards_abertos,valor:3 | igual ao esperado | PASSOU | 4.9 / 21.8 | 0.0041 |
+| C25 r3 | 6 | frase base | card_novo,funil:vendas,titulo_tem:[casa,resid,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 5.0 / 34.9 | 0.0044 |
+| C26 r3 | 6 | informal, pedido primeiro | card_novo,funil:vendas,titulo_tem:[resid,casa,lar]; card_novo,funil:sinistro,titulo_tem:[carro,batida,colis,sinistro,auto]; atendente,valor:[atribuido] | igual ao esperado | PASSOU | 4.0 / 27.3 | 0.0037 |
+| C27 r3 | 6 | rajada de 3 mensagens | card_novo,funil:vendas,titulo_tem:[vida]; card_novo,funil:sinistro,titulo_tem:[celular,roubo,furto,sinistro]; atendente,valor:[atribuido] | card_novo: [vendas: Mateus Queiroz,sinistro: Sinistro de celular roubado] | FALHOU | 5.7 / 23.8 | 0.0045 |
+| C28 r3 | 7 | frase base | card_novo,funil:vendas,titulo_tem:[onix,carro,auto]; novos_no_funil,funil:vendas,valor:1; etapa,funil:vendas,titulo_tem:[onix,carro,auto],valor:[fechamento]; campo,contato:true,chave:cidade,contem:campinas; campo,contato:true,chave:cep,contem:13087 | igual ao esperado | PASSOU | 5.9 / 42.5 | 0.0048 |
+| C32 r3 | 7 | três funis, vida | card_novo,funil:vendas,titulo_tem:[vida]; novos_no_funil,funil:vendas,valor:1; novos_no_funil,funil:sinistro,valor:0; novos_no_funil,funil:renovacao,valor:0; etapa,funil:vendas,titulo_tem:[vida],valor:[fechamento] | card_novo: [vendas: Daniela Moraes]; etapa: card não existe | FALHOU | 15.4 / 30.6 | 0.0097 |
+| C33 r3 | 7 | retorno combinado | card_novo,funil:vendas,titulo_tem:[renegade,carro,auto]; etapa,funil:vendas,titulo_tem:[renegade,carro,auto],valor:[proposta,fechamento]; retorno,funil:vendas,titulo_tem:[renegade,carro,auto],valor:true | igual ao esperado | PASSOU | 4.7 / 39.8 | 0.0045 |
+| C36 r3 | 8 | volta com sinistro | card_novo,funil:sinistro,titulo_tem:[roubo,furto,carro,tracker,sinistro]; status,ref:auto,valor:[won]; novos_no_funil,funil:vendas,valor:0 | novos_no_funil: 1 | FALHOU | 3.9 / 8.4 | 0.0025 |
+| C42 r3 | 10 | com regra, alguém online | atendente,valor:[atribuido],pessoa:ana; sem_card_novo | igual ao esperado | PASSOU | 4.0 / 15.9 | 0.0029 |
+| C44 r3 | 10 | sem regra | atendente,valor:[ninguem] | igual ao esperado | PASSOU | 3.8 / 7.1 | 0.0027 |
+| C47 r3 | 11 | WhatsApp + e-mail: proposta assinada por e-mail | sem_card_novo; etapa,ref:auto,valor:[fechamento] | igual ao esperado | PASSOU | 0.4 / 16.0 | 0.0009 |
+
+| IA | Checagens certas | Acerto |
+|---|---|---|
+| IA de assunto (Jev + revisão) | 126/138 | 91% |
+| IA de movimentação (avaliação do card) | 102/105 | 97% |
+
+| Cenário | Execuções que passaram | Acerto |
+|---|---|---|
+| 1 | 3/3 | 100% |
+| 2 | 6/9 | 67% |
+| 4 | 6/6 | 100% |
+| 6 | 6/9 | 67% |
+| 7 | 6/9 | 67% |
+| 8 | 0/3 | 0% |
+| 10 | 6/6 | 100% |
+| 11 | 3/3 | 100% |
+
+Mensagens do cliente processadas: 69.
+
+| IA | Custo US$ | Chamadas | Custo médio por mensagem do cliente US$ |
+|---|---|---|---|
+| IA de assunto (Jev + revisão) | 0.1176 | 117 | 0.00170 |
+| IA de movimentação (avaliação do card) | 0.0679 | 123 | 0.00098 |
+
+Rodadas por conversa: 3. Instáveis (o resultado mudou entre rodadas): nenhuma.
