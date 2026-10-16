@@ -64,9 +64,7 @@ const ouvido = ref(false);
 const velocidade = ref(1);
 const arrastando = ref(false);
 
-const endereco = computed(() =>
-  timeStampAppendedURL(props.attachment.dataUrl)
-);
+const endereco = computed(() => timeStampAppendedURL(props.attachment.dataUrl));
 
 // A onda: uma vez, quando o balão aparece na tela.
 const cancelar = new AbortController();
@@ -172,7 +170,9 @@ const aoTeclar = evento => {
 
 const trocarVelocidade = () => {
   const proxima =
-    VELOCIDADES[(VELOCIDADES.indexOf(velocidade.value) + 1) % VELOCIDADES.length];
+    VELOCIDADES[
+      (VELOCIDADES.indexOf(velocidade.value) + 1) % VELOCIDADES.length
+    ];
   velocidade.value = proxima;
   if (player.value) player.value.playbackRate = proxima;
 };
