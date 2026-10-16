@@ -5,6 +5,10 @@
 # marco, espera mais um pouco, até o TETO contado da última mensagem da rajada; passado o teto, segue com o dono de
 # agora e deixa o rastro `assunto_atrasou`. Quem responde NÃO é guardado entre as rodadas: o ReplyJob relê a cada uma.
 #
+# O teto conta de quando a mensagem ficou pronta, isto é, de quando o conteúdo chegou (#1637): a que o WhatsApp Híbrido
+# recupera (#1489) traz o texto 15 a 60 s depois de criada e grava `content_attributes['hybrid_recovered_at']`
+# (ISO8601). Vale o mais tarde entre o created_at e esse horário; ausente ou inválido, o created_at.
+#
 # Conta fora da Fase 2: nem pergunta ao CRM. O turno segue como sempre foi, sem leitura nenhuma a mais.
 class Autonomia::Agents::Operate::EsperaDoAssunto
   TETO = 20.seconds
@@ -45,10 +49,17 @@ class Autonomia::Agents::Operate::EsperaDoAssunto
 
   # Mensagem sumida conta como teto estourado: não há o que esperar.
   def decorrido_ms
-    criada_em = @conversation.messages.where(id: @message_id).pick(:created_at)
-    return TETO.in_milliseconds.to_i if criada_em.nil?
+    mensagem = @conversation.messages.find_by(id: @message_id)
+    return TETO.in_milliseconds.to_i if mensagem.nil?
 
-    ((Time.current - criada_em) * 1000).round
+    ((Time.current - pronta_em(mensagem)) * 1000).round
+  end
+
+  def pronta_em(mensagem)
+    recuperada_em = Time.iso8601(mensagem.content_attributes.to_h['hybrid_recovered_at'].to_s)
+    [mensagem.created_at, recuperada_em].max
+  rescue ArgumentError
+    mensagem.created_at
   end
 
   # Uma linha por turno; no painel do agente, um evento por conversa (a segunda vez não repete).
