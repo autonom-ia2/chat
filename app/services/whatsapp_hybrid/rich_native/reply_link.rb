@@ -5,9 +5,9 @@
 #
 # Numa caixa híbrida, quando a resposta traz `selected_option` e não aponta mensagem nenhuma (`context`):
 # 1. `rowId` com referência ("<opção>|<mensagem>", Waha::RichNative.split_row_id, separado pelo último "|", sem regex):
-#    `selected_option.id` volta ao id ORIGINAL da opção (o robô lê o mesmo de antes). Se a mensagem existe NESTA conversa
-#    e é lista nativa com essa opção, `in_reply_to` = ela (vale até com a flag desligada depois do envio: é uma consulta
-#    por id). Com a flag, a referência que não confere (ex.: lista de uma conversa anterior) também sai do id.
+#    `selected_option.id` SEMPRE volta ao id ORIGINAL da opção (o robô lê o mesmo de antes), confira ou não a referência
+#    (ex.: lista de uma conversa anterior), com ou sem a flag. Se a mensagem existe NESTA conversa e é lista nativa com
+#    essa opção, `in_reply_to` = ela (vale até com a flag desligada depois do envio: é uma consulta por id).
 #    Lista com id de opção que tem "|" não sai nativa (Waha::RichPayload): todo `rowId` nativo com "|" é nosso.
 # 2. Sem referência, ou referência que não confere, e com a flag: `in_reply_to` = a ÚLTIMA mensagem nossa de options
 #    que saiu nativa nesta conversa com uma opção de `id` IGUAL ao da opção (listas mandadas antes da referência).
@@ -17,14 +17,13 @@ module WhatsappHybrid::RichNative::ReplyLink
   LOOKBACK = 50
 
   # { in_reply_to:, selected_option: } a gravar (só as chaves que mudam), ou nil quando nada muda.
-  # `search` (a flag da conta): sem ela, só a referência que confere com uma lista nativa desta conversa (uma consulta
-  # por id) liga a resposta e limpa o sufixo; nada de busca nem de limpeza sem confirmação.
+  # O sufixo `|<dígitos>` sai SEMPRE (todo `rowId` com ele é nosso: lista com "|" no id não sai nativa). `search` (a
+  # flag da conta) controla só a busca pela última lista; sem ela, `in_reply_to` vem só da referência que confere
+  # (uma consulta por id).
   def self.link(conversation, selected, search: true)
     option_id, reference = Waha::RichNative.split_row_id(selected[:id])
     target = reference && referenced_message(conversation, reference, option_id)
-    return if target.nil? && !search
-
-    target ||= options_message_for(conversation, option_id)
+    target ||= options_message_for(conversation, option_id) if search
     changes = {}
     changes[:in_reply_to] = target.id if target
     changes[:selected_option] = selected.merge(id: option_id) if option_id != selected[:id]

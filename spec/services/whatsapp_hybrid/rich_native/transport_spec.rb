@@ -140,12 +140,14 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(message.reload.status).to eq('failed')
     expect(message.content_attributes['whatsapp_transport_outcome']).to eq('failed')
     expect(message.content_attributes['external_error']).to eq(described_class::RESTORE_FAILED)
-    expect(client).not_to have_received(:get_session)
+    # Como o WebTransport depois de um erro do motor: relê a sessão (só leitura).
+    expect(client).to have_received(:get_session)
   end
 
   # Falha certa de um texto de campanha que o plano B assumiu: a campanha manda o modelo, como em todo `failed`.
   it 'hands the failure to the campaign fallback when it closes the refused send as failed' do
     flag_on!
+    engine_session_up!
     allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
     allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: nil))
     allow(CampaignJourney::ConversaAberta::QuedaHibrido).to receive(:after_transport_failure)
@@ -158,7 +160,9 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(CampaignJourney::ConversaAberta::QuedaHibrido).to have_received(:after_transport_failure).with(message).once
   end
 
-  it 'logs and reports when even the failed mark cannot be written (rare limit)' do
+  # Banco fora: sem o `failed` gravado, não fecha em silêncio. O job falha à vista com o erro original, e o `source_id`
+  # provisório impede um novo envio pelo motor.
+  it 're-raises the original error when even the failed mark cannot be written, and a retry does not call the engine' do
     flag_on!
     allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
     tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
@@ -170,10 +174,31 @@ describe WhatsappHybrid::RichNative::Transport do
     allow(message).to receive(:status=).and_call_original
     allow(message).to receive(:status=).with(:failed).and_raise(ActiveRecord::ConnectionFailed)
 
-    expect { send_by_web(message) }.not_to raise_error
+    expect { send_by_web(message) }.to raise_error(ActiveRecord::Deadlocked)
 
     expect(client).not_to have_received(:send_text)
     expect(tracker).to have_received(:capture_exception).twice
+    expect(message.reload.source_id).to eq("waha-native-pending-#{message.id}")
+    allow(Waha::Client).to receive(:new).and_return(client)
+    SendReplyJob.perform_now(message.id)
+    expect(client).to have_received(:send_list).once
+  end
+
+  # `perform` é a única entrada. Chamado direto, `deliver` não deixa throw sem dono: a mensagem já está `failed` e o
+  # erro é claro.
+  it 'raises a clear error when deliver closes the send outside perform' do
+    flag_on!
+    engine_session_up!
+    allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: nil))
+    message = outgoing(options)
+    allow(Waha::RichNative).to receive(:write_source_id!).and_call_original
+    allow(Waha::RichNative).to receive(:write_source_id!).with(message, '3EB0AAAA').and_raise(ActiveRecord::Deadlocked)
+    transport = WhatsappHybrid::WebTransport.new(message: message, connection: connection, origin: 'human', client: client)
+
+    expect { transport.send(:deliver, '5511937016094@c.us', '3EB0AAAA') }.to raise_error(described_class::ClosedOutsidePerform)
+    expect(message.reload.status).to eq('failed')
+    expect(message.content_attributes['external_error']).to eq(described_class::RESTORE_FAILED)
   end
 
   it 'leaves a 5xx of the native send uncertain, without the text on top' do

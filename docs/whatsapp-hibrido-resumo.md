@@ -386,11 +386,11 @@ caber em 60 caracteres e numa linha só.
 cabe nos 200 do `rowId`; senão, só o id da opção). Lista com algum id de opção que tem `|` não sai nativa: sai texto,
 como antes; assim todo `rowId` nativo com `|` é nosso, com a referência numérica no fim. O `list_reply.id` da Meta volta igual
 ao `rowId` enviado (teste de 16/10/2026: veio "manha", o `rowId` mandado). Na volta, o recebimento separa pelo último
-`|` (sem regex) e grava `selected_option.id` com o id ORIGINAL da opção (o robô lê o mesmo de antes). `in_reply_to` =
-a mensagem referida, se ela é lista nativa desta conversa (uma consulta por id; vale até com a flag desligada depois do
-envio). Com a flag, a referência que não confere (ex.: lista de uma conversa anterior) também sai do id, e
-`in_reply_to` = a última lista nativa da conversa com uma opção de `id` igual ao da opção (comparação exata; 50 últimas
-mensagens nossas). Sem a flag, não há busca. Resposta que aponta uma mensagem (`context`) nunca passa por isso.
+`|` (sem regex) e grava `selected_option.id` SEMPRE com o id ORIGINAL da opção (o robô lê o mesmo de antes), confira
+ou não a referência (ex.: lista de uma conversa anterior), com ou sem a flag. `in_reply_to` = a mensagem referida, se
+ela é lista nativa desta conversa (uma consulta por id; vale até com a flag desligada depois do envio). Senão, com a
+flag, `in_reply_to` = a última lista nativa da conversa com uma opção de `id` igual ao da opção (comparação exata; 50
+últimas mensagens nossas). Sem a flag, não há busca. Resposta que aponta uma mensagem (`context`) nunca passa por isso.
 
 **Resultado do envio.**
 - Saiu nativa: `rich_message_sent_as: 'native'` (a bolha mostra o formato) e nenhuma marca de texto. A marca e o
@@ -402,8 +402,9 @@ mensagens nossas). Sem a flag, não há busca. Resposta que aponta uma mensagem 
 - Recusa explícita do motor (4xx ou 501), em que nada saiu: vai UMA vez o texto de sempre, com a marca 'text'. As
   recusas do WhatsApp que o envio já trata (463, 475) seguem como hoje. Se o `source_id` não voltar ao id gerado antes
   do texto, nada sai: a mensagem fica `failed` com o motivo próprio e resultado 'failed' (gravados sem validação), o
-  erro vai ao tracker e a campanha recebe a queda (manda o modelo, como em toda falha certa). Se nem essa gravação
-  passar (limite raro aceito), log e tracker.
+  erro vai ao tracker, a sessão é relida (como depois de todo erro do motor) e a campanha recebe a queda (manda o
+  modelo, como em toda falha certa). Se nem essa gravação passar (banco fora), o erro original é relançado e o job
+  falha à vista (Sidekiq e tracker); o `source_id` provisório impede um novo envio pelo motor.
 - 5xx, conexão fechada ou sem resposta: pode ter saído. Fica incerto, com o aviso de conferir no celular, sem texto por
   cima.
 - Antes do pedido da lista, o `source_id` recebe um valor provisório e único (`waha-native-pending-<id da mensagem>`):
