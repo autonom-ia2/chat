@@ -251,14 +251,20 @@ export const montarContato = campos =>
       ['nome', 'nomeDoContatoLongo', passa(campos.nome, LIMITES.nomeDoContato)],
       ['telefone', 'telefone', !telefoneInternacional(campos.telefone)],
     ]),
-    () => ({
-      content: '',
-      richMessage: {
-        type: 'contact',
-        name: limpo(campos.nome),
-        phone: telefoneInternacional(campos.telefone),
-      },
-    })
+    () => {
+      const phone = telefoneInternacional(campos.telefone);
+      // Com o wa_id (os dígitos do número), o WhatsApp mostra "Conversar" no cartão;
+      // sem ele, mostra "Convidar para o WhatsApp" até para quem já usa (teste real de 16/10).
+      return {
+        content: '',
+        richMessage: {
+          type: 'contact',
+          name: limpo(campos.nome),
+          phone,
+          wa_id: phone.slice(1),
+        },
+      };
+    }
   );
 
 // Formulário aprovado na Meta (WhatsApp Flows). Abre na primeira tela do formulário
