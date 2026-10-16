@@ -206,7 +206,7 @@ class FakeVPS:
             self.hashes[f'/etc/systemd/system/{unit}'] = digest
         self.execs = set(tool.REQUIRED_EXECUTABLES) | {'/usr/bin/aws', '/usr/bin/session-manager-plugin'}
         self.counts.update({'xvnc_rfbunixpath': '1', 'xvnc_rfbunixmode': '1', 'xvnc_rfbport': '1',
-                            'max_userns': '63000', 'userns_clone': 'absent', 'systemd': '255'})
+                            'max_userns': '63000', 'userns_clone': 'absent', 'systemd': '255', 'serve_443': '0'})
 
     def session_procs(self, stack):
         # manager.sh runs session-manager.mjs, or the waiter whose children are the browser/manager.
@@ -799,6 +799,7 @@ class PreflightTests(Harness):
             'legacy_dir': lambda v: v.put('/var/lib/instagram-autonomia/publisher'),
             'home_owner': fs('/var/lib/instagram-gateway-hub2you/gateway', 1, 'root'),
             'gateway_url': lambda v: v.counts.__setitem__('url_hub2you', '0'),
+            'serve_on_443': lambda v: v.counts.__setitem__('serve_443', '1'),
             'disk': lambda v: setattr(v, 'df', 10),
             'xvnc_flags': lambda v: v.counts.__setitem__('xvnc_rfbunixpath', '0'),
             'etc_meta_writable': fs('/etc/instagram-meta', 3, '722'),

@@ -37,6 +37,8 @@ UNITS = tuple(f'instagram-vps-{role}@{stack}.service' for stack in STACKS for ro
 TEMPLATES = tuple(f'instagram-vps-{role}@.service' for role in ROLES)
 PORTS = {'hub2you': 18441, 'autonomia': 18442}
 GATEWAY_HOST = 'srv707880-claudete.tail0c0b18.ts.net'
+# Port 443 belongs to the Easypanel Traefik; a Serve there takes every site down on reboot (#1751).
+OPERATOR_SERVE_PORT = 8443
 NODE_DIR = '/opt/instagram-meta-tools/node-v24.21.0-linux-x64'
 NODE = NODE_DIR + '/bin/node'
 NPM_CLI = NODE_DIR + '/lib/node_modules/npm/bin/npm-cli.js'
@@ -404,10 +406,10 @@ def counts_body():
             *waiter_counts(stack),
             f'printf \'flag_{stack} %s\\n\' "$(grep -cxF INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED=true '
             f'/etc/instagram-meta/{stack}/manager.env)"',
-            f'printf \'url_{stack} %s\\n\' "$(grep -cxF INSTAGRAM_TESTER_OPERATOR_BROWSER_URL=https://{GATEWAY_HOST}/'
-            f'{stack}/ /etc/instagram-meta/{stack}/gateway.env)"',
+            f'printf \'url_{stack} %s\\n\' "$(grep -cxF INSTAGRAM_TESTER_OPERATOR_BROWSER_URL=https://{GATEWAY_HOST}:'
+            f'{OPERATOR_SERVE_PORT}/{stack}/ /etc/instagram-meta/{stack}/gateway.env)"',
             f'printf \'procs_{stack} %s\\n\' "$(ps -o pid= -u {users} | wc -l)"']
-    parts += ['h="$(/usr/bin/Xtigervnc -help 2>&1)"',
+    parts += ['printf \'serve_443 %s\\n\' "$(tailscale serve status --json | grep -cF \'"443":\')"','h="$(/usr/bin/Xtigervnc -help 2>&1)"',
               'for f in rfbunixpath rfbunixmode rfbport; do printf \'xvnc_%s %s\\n\' "$f" '
               '"$(printf \'%s\' "$h" | grep -ciF "$f")"; done',
               'printf \'max_userns %s\\n\' "$(cat /proc/sys/user/max_user_namespaces)"',
@@ -946,6 +948,7 @@ class Tool:
     def check_gateway_url(self, c, s):
         for stack in STACKS:
             c.add(f'gateway_url:{stack}', s.counts.get(f'url_{stack}') == '1')
+        c.add('serve_not_on_443', s.counts.get('serve_443') == '0')
 
     def check_locks(self, c, s, stacks=STACKS):
         for stack in stacks:
