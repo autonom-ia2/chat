@@ -116,6 +116,14 @@ module Crm::Ai::ClassifierPrompt
     suggested_agent=null. Não invente nomes fora da lista.
   HANDOFF
 
+  # #1593: só entra quando a lista de elegíveis tem um agente de IA (a Fase 2 dos Agentes). Sem ele, o prefixo é o TEXT,
+  # idêntico ao de antes (o cache de prompt das contas fora do piloto não muda).
+  AGENTES_IA = <<~AGENTES.strip
+    Itens de eligible_agents que terminam em "(agente de IA)" são agentes de IA da equipe: valem como qualquer nome
+    (o cliente pedir a Lia, ou o atendente dizer que vai passar para ela). Copie o item exatamente como está na lista.
+    Pedir pelo nome um agente de IA da lista conta como pedir um atendente.
+  AGENTES
+
   # Estático (prefix-stable): os valores temporais (now_local, weekday, timezone, default_hour) NÃO
   # são interpolados — vão nos DADOS DE ENTRADA, senão o relógio mudaria o prefixo a cada chamada.
   CALLBACK = <<~CB.strip
@@ -195,7 +203,7 @@ module Crm::Ai::ClassifierPrompt
       confiança alta. Sem declaração explícita, NÃO trate atraso ou silêncio como perda.
   EX
 
-  TEXT = [
+  PARTES = [
     ROLE_AND_TASK,
     METHODOLOGY,
     CONFIDENCE,
@@ -207,5 +215,13 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES
-  ].join("\n\n").freeze
+  ].freeze
+  TEXT = PARTES.join("\n\n").freeze
+  # O mesmo prefixo, com o parágrafo dos agentes de IA logo depois do HANDOFF. Também congelado: estável por variante.
+  TEXT_COM_AGENTES_IA = PARTES.flat_map { |parte| parte.equal?(HANDOFF) ? [HANDOFF, AGENTES_IA] : [parte] }.join("\n\n").freeze
+
+  # O prefixo desta chamada: com algum agente de IA entre os elegíveis, a variante que explica o rótulo.
+  def self.para(eligible_agents)
+    Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
+  end
 end
