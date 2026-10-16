@@ -37,9 +37,15 @@ class Crm::Entrega::AvisoSemNinguem
     avisar_equipe!(FALHA)
   end
 
-  # O convite venceu sem ninguém pegar. Quem chama tira a marca do convite sob a mesma trava (é o que faz sair uma vez).
+  # O convite venceu sem ninguém pegar. Uma vez só na espera (#1694, decisão do Rodrigo de 16/10): a marca guarda
+  # `avisado_em`, e o convite seguinte que vencer na mesma espera não avisa de novo. Na memória da conversa: quem chama
+  # grava.
   def convite_vencido!
+    return if Crm::Entrega::Marca.dados(@conversation)&.dig('avisado_em').present?
+
     avisar_equipe!(CONVITE_VENCIDO)
+    # Só depois de o aviso sair: se ele falhar, a próxima vez que um convite desta espera vencer avisa.
+    Crm::Entrega::Marca.avisado!(@conversation) if Crm::Entrega::Marca.presente?(@conversation)
   end
 
   private
