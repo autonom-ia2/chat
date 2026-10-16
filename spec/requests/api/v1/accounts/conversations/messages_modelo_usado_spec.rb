@@ -22,4 +22,18 @@ RSpec.describe 'Mensagens com o modelo usado', type: :request do
       .to eq('template_params' => { 'name' => 'boas_vindas', 'language' => 'pt_BR' })
     expect(mensagens.find { |m| m['content'] == 'Olá' }).not_to have_key('additional_attributes')
   end
+
+  it 'na mensagem da jornada de campanha usa o nome gravado pela campanha' do
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Promo',
+                     additional_attributes: { 'campaign_id' => 7, 'campaign_template_name' => 'promo_outubro' })
+    create(:message, conversation: conversa, account: account, inbox: caixa, message_type: :outgoing, content: 'Livre',
+                     additional_attributes: { 'campaign_id' => 7, 'campaign_free_text' => true })
+
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages", headers: agente.create_new_auth_token, as: :json
+
+    mensagens = response.parsed_body['payload']
+    expect(mensagens.find { |m| m['content'] == 'Promo' }['additional_attributes'])
+      .to eq('template_params' => { 'name' => 'promo_outubro' })
+    expect(mensagens.find { |m| m['content'] == 'Livre' }).not_to have_key('additional_attributes')
+  end
 end
