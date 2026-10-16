@@ -7,7 +7,8 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
   let(:partes_de_antes) do
     [described_class::ROLE_AND_TASK, described_class::METHODOLOGY, described_class::CONFIDENCE, described_class::VALUE,
      described_class::HANDOFF, described_class::CALLBACK, described_class::ATTR_EXTRACTION, described_class::KNOWN_ATTRS,
-     described_class::OTHER_SUBJECTS, described_class::OUTPUT_DISCIPLINE, described_class::EXAMPLES]
+     described_class::OTHER_SUBJECTS, described_class::OUTPUT_DISCIPLINE, described_class::EXAMPLES,
+     described_class::DADOS_NAO_INSTRUCOES]
   end
 
   # Pega: o parágrafo novo vazando para o prefixo de quem não tem agente de IA (muda o prompt e quebra o cache).
