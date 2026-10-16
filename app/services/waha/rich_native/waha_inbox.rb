@@ -27,16 +27,24 @@ module Waha::RichNative::WahaInbox
   # As ações sobre mensagem já enviada (chat#1709, fase 3: 'react', 'edit') que o motor desta caixa declara, com a flag.
   # As mesmas checagens baratas de `types_for_inbox`, na mesma ordem. 'edit' só com o renderer do WhatsApp do chat#1740
   # (o conector exige o texto já formatado, Waha::RichNative::OutgoingHints.renderer_ready?).
+  # Caixa sem `secret` (criada antes da migration 20260324070828, que não preencheu as antigas): nenhuma ação. O
+  # webhook sairia sem assinatura e o conector c2y-rich-2b recusa os eventos `c2y_*` sem ela (401): o painel gravaria a
+  # reação e nada chegaria ao cliente.
   def actions_for_inbox(inbox, account)
     return [] unless inbox&.channel_type == 'Channel::Api' && Waha::EngineCapabilities.engines.any?
 
     channel = inbox.channel
-    return [] unless channel.waha_provider?
+    return [] unless signed_waha?(channel)
 
     engine = Waha::EngineCapabilities.engine_for(channel.webhook_url)
     return [] if engine.nil? || !Waha::RichNative.enabled?(account)
 
     with_renderer(Waha::EngineCapabilities.actions(engine))
+  end
+
+  # Caixa WAHA comum cujo webhook sai assinado (`secret` preenchido).
+  def signed_waha?(channel)
+    channel.waha_provider? && channel.secret.present?
   end
 
   # `edit` precisa do texto já formatado pelo renderer do chat#1740.

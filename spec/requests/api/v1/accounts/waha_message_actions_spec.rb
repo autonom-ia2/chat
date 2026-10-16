@@ -65,6 +65,20 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events.last[:c2y_reaction]).to eq(emoji: '')
     end
 
+    it 'offers no action on an inbox without secret (the connector refuses unsigned c2y events)' do
+      channel.update_column(:secret, nil) # rubocop:disable Rails/SkipsModelValidations
+      customer = create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: channel.inbox,
+                                  account: account)
+      events.clear
+
+      expect(Waha::RichNative::WahaInbox.message_actions_for(conversation.reload)).to eq([])
+      react(customer, '👍')
+
+      expect(response).to have_http_status(:forbidden)
+      expect(customer.reload.content_attributes).not_to have_key('reactions')
+      expect(events).to be_empty
+    end
+
     it 'refuses more than one emoji, notes, activities and failed messages (no event, no resend)' do
       react(ours, '👍👍')
       expect(response).to have_http_status(:unprocessable_entity)

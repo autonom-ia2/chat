@@ -740,6 +740,7 @@ RSpec.describe Conversation do
         can_reply: true,
         whatsapp_api_reply: false,
         whatsapp_api_rich_native: [],
+        whatsapp_api_message_actions: [],
         channel: 'Channel::WebWidget',
         snoozed_until: conversation.snoozed_until,
         custom_attributes: conversation.custom_attributes,
