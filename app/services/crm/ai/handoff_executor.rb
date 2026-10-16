@@ -55,11 +55,22 @@ module Crm
         # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
         return 'assunto_mudou' unless Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
+        return 'owned_by_our_agent' if com_agente_nosso?
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)
         return 'cooldown' if registro.intervalo_ativo?
 
         nil
+      end
+
+      # #1673 (decisão do Rodrigo, 16/10): com um agente nosso no nome, o pedido de pessoa é dele (bot_handoff! pela
+      # instrução); a IA do CRM não tira a conversa por conta própria. O espelho (AgentBot) conta como o agente, pela
+      # mesma regra do Crm::Passagens. O n8n e a conversa sem robô seguem como antes. Só com a Fase 2 dos Agentes.
+      def com_agente_nosso?
+        robo = @conversation.ai_assignee
+        return false unless robo.is_a?(AgentBot) && ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+
+        Crm::Passagens.ponta(robo, @conversation.account).classe == 'Autonomia::Agents::Agent'
       end
 
       def depois_da_entrega(entrega)
