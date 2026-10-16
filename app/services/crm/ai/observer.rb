@@ -8,7 +8,7 @@ module Crm
       def schedule_evaluation
         return unless Config.enabled?
 
-        token = schedule_token
+        token = marcar(Time.current.to_f)
         Crm::Ai::EvaluateCardJob.set(wait: Config::DEBOUNCE_SECONDS.seconds).perform_later(@card.id, token)
       end
 
@@ -19,10 +19,9 @@ module Crm
         token.present? && token.to_f > momento.to_f
       end
 
-      private
-
-      def schedule_token
-        token = Time.current.to_f
+      # Grava o token do agendamento no card (#1693: a avaliação conjunta usa o mesmo token em todos os cards dela). Uma
+      # avaliação agendada antes, deste card, fica velha e não roda (EvaluateCardJob e EvaluateCardsJob).
+      def marcar(token)
         # Lido de novo dentro da trava: o card em memória pode ser de antes de outro processo gravar o metadata
         # (estado do follow-up, última avaliação) e sobrescrevê-lo.
         # Um registro novo, não o @card: quem chamou pode ter alterações ainda não salvas nele.

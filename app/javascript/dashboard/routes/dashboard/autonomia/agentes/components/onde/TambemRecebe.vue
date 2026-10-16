@@ -19,7 +19,7 @@ import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 // lista nativa), com o tipo do canal na etiqueta. Podem ser escolhidas as caixas
 // com principal atendendo e as atendidas só por pessoas; outro robô e principal parado ficam bloqueados
 // com o motivo. A caixa principal dele (e a escolhida em "Onde atende", em `fora`) não aparece.
-// Quem grava é a gaveta (useSalvarEquipe), junto com o resto.
+// Quem grava é a gaveta, junto com o resto, num pedido só (#1720, PUT onde_atende).
 const props = defineProps({
   agenteId: { type: Number, required: true },
   nome: { type: String, required: true },

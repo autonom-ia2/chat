@@ -102,6 +102,45 @@ describe('caixa helpers', () => {
     ]);
   });
 
+  it('compares what the system does, not the saved mode (#1676)', () => {
+    const varios = paraFormulario(caixa());
+    varios.modo = 'auto';
+    const um = { ...paraFormulario(caixa()), pipeline_ids: [1], modo: 'off' };
+    const comIa = { ...opcoes, iaDeAssunto: true };
+
+    // Vários funis em "criar ao entender" → 1 funil sem card na chegada: com a
+    // IA de assunto em 1 funil, a lista diz o que vale com um funil só (um card
+    // para cada pedido); sem ela, que passa a não fazer nada.
+    expect(
+      mudancas(varios, um, FUNIS, comIa).filter(item => item.chave === 'MODO')
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+    expect(
+      mudancas(varios, um, FUNIS, opcoes).filter(item => item.chave === 'MODO')
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+
+    // 1 funil gravado antes da flag (IA de assunto desligada), salvo sem mexer
+    // em nada: com a flag, salvar liga a IA, e a lista diz isso.
+    const umSemIa = { ...um, subject_ai_mode: 'off' };
+    expect(
+      mudancas(umSemIa, um, FUNIS, comIa).filter(item => item.chave === 'MODO')
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+    const umComIa = { ...um, subject_ai_mode: 'auto' };
+    expect(
+      mudancas(umComIa, umComIa, FUNIS, comIa).filter(
+        item => item.chave === 'MODO'
+      )
+    ).toEqual([]);
+
+    // Vários funis "à mão" → 1 funil sem card na chegada: o valor gravado é o
+    // mesmo ('off'), mas com a IA de assunto o sistema passa a criar o card.
+    const variosAMao = { ...varios, modo: 'off' };
+    expect(
+      mudancas(variosAMao, um, FUNIS, comIa).filter(
+        item => item.chave === 'MODO'
+      )
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+  });
+
   it('measures an "assigned only" inbox against what people see today', () => {
     const legado = caixa({ visibility_mode: 'assigned_only' });
     const antes = paraFormulario(legado);

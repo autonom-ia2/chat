@@ -26,6 +26,30 @@ class AutonomiaChannelsAPI extends ApiClient {
   disconnect(agentId, inboxId) {
     return axios.delete(`${this.url}/${agentId}/channels/${inboxId}`);
   }
+
+  // #1720 — o "Salvar" da gaveta Onde e quando, numa transação só no servidor: onde atende primeiro
+  // (`primeiroInboxId`, null = só quando alguém passar), onde recebe quando alguém passa (`areaInboxIds`)
+  // e o "Quando atende". `parar`: a tela confirmou que ele fica sem receber conversa em canal nenhum.
+  // `manterPrimeiro`: a pessoa não trocou o canal; as portas ficam como estão. Só com a Fase 2.
+  // 422 { error, code } quando recusa; nada muda.
+  ondeAtende(
+    agentId,
+    {
+      primeiroInboxId,
+      manterPrimeiro = false,
+      areaInboxIds,
+      responseWindow,
+      parar = false,
+    }
+  ) {
+    return axios.put(`${this.url}/${agentId}/onde_atende`, {
+      primeiro_inbox_id: primeiroInboxId,
+      manter_primeiro: manterPrimeiro,
+      area_inbox_ids: areaInboxIds,
+      response_window: responseWindow,
+      parar,
+    });
+  }
 }
 
 export default new AutonomiaChannelsAPI();

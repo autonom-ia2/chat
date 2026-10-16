@@ -84,4 +84,31 @@ RSpec.describe Autonomia::Agents::Operate::EventLogger do
       expect(Autonomia::Agents::AgentEvent.count).to eq(0)
     end
   end
+
+  # #1669: o silêncio `pessoa_respondeu` vira evento; falha de banco ao gravá-lo não derruba o turno, mas um erro de
+  # programação (fora do ActiveRecord) não é engolido.
+  describe '.silenciado_pessoa_respondeu' do
+    def gravar
+      described_class.silenciado_pessoa_respondeu(agent: agent, conversation: conversation, message_id: 77, etapa: 'na_entrega')
+    end
+
+    it 'grava uma vez por mensagem do cliente, com ids e etapa' do
+      2.times { gravar }
+
+      evento = Autonomia::Agents::AgentEvent.silenciado_pessoa_respondeu.sole
+      expect(evento).to have_attributes(conversation_id: conversation.id, message_id: 77, metadata: { 'etapa' => 'na_entrega' })
+    end
+
+    it 'falha do ActiveRecord ao gravar: devolve nil, sem levantar' do
+      allow(agent).to receive(:events).and_raise(ActiveRecord::StatementInvalid, 'x')
+
+      expect(gravar).to be_nil
+    end
+
+    it 'erro que não é do ActiveRecord não é engolido' do
+      allow(agent).to receive(:events).and_raise(NoMethodError)
+
+      expect { gravar }.to raise_error(NoMethodError)
+    end
+  end
 end

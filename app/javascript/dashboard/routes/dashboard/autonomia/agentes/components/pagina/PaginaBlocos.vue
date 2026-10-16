@@ -36,6 +36,9 @@ const props = defineProps({
   // #1433: linhas da L2 em que o agente está na equipe, ou null quando ele não é agente da equipe.
   equipe: { type: Array, default: null },
   caixas: { type: Array, default: () => [] },
+  // #1720 — com a Fase 2, "Onde e quando responde" é uma linha só (`textoOnde`, a mesma do herói) e "Alterar"
+  // vale também para quem só recebe quando alguém passa. Sem ela, como antes.
+  fase2: { type: Boolean, default: false },
   // Tema 14: { principais: [{ id, name }], quando } quando o agente é ajudante, ou null.
   ajuda: { type: Object, default: null },
 });
@@ -401,11 +404,18 @@ onMounted(() => {
             >
               {{ t(`${NS}.BLOCO_ONDE.TITULO`) }}
             </h3>
-            <p class="m-0 text-sm text-n-slate-12">
+            <p
+              v-if="fase2"
+              data-resumo-onde
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{ textoOnde }}
+            </p>
+            <p v-else class="m-0 text-sm text-n-slate-12">
               {{ temCanal ? textoOnde : t(`${NS}.NENHUM_CANAL`) }}
             </p>
             <p
-              v-if="tambemRecebe.length"
+              v-if="!fase2 && tambemRecebe.length"
               data-tambem-recebe
               class="m-0 text-sm text-n-slate-12"
             >
@@ -419,7 +429,7 @@ onMounted(() => {
         </div>
         <template v-if="podeGerenciar">
           <AgenteBotao
-            v-if="temCanal"
+            v-if="temCanal || (fase2 && tambemRecebe.length)"
             data-alterar="onde"
             class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
             variante="fantasma"
