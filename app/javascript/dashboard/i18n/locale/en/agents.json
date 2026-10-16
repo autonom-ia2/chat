@@ -1101,7 +1101,10 @@
           "RECEBE": "Receives in {caixas} when someone hands over the conversation · {quando} | Receives in {caixas} when someone hands over the conversation · {quando}",
           "NENHUM_LUGAR": "Does not answer anywhere.",
           "PARADO": "In {canais} · {quando} | In {canais} · {quando}",
-          "PARADO_N": "In 1 channel · {quando} | In {n} channels · {quando}"
+          "PARADO_N": "In 1 channel · {quando} | In {n} channels · {quando}",
+          "TEXTO": "On {canal}, {quando}.",
+          "TEXTO_N": "On 1 channel, {quando}. | On {n} channels, {quando}.",
+          "TAMBEM": "Also receives when someone hands over on: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Name and way of talking",
@@ -1448,7 +1451,11 @@
             "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
         },
-        "INTERRUPTOR_AJUDANTE": "{nome} helping other agents"
+        "INTERRUPTOR_AJUDANTE": "{nome} helping other agents",
+        "RESPONDE_NO": "Answers on {canal} · {quando}",
+        "PARADO_NO": "On {canal} · {quando}",
+        "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
+        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}"
       },
       "CRIAR": {
         "TITULO": "Create agent",
@@ -1679,7 +1686,8 @@
         "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
         "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
         "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
-        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team."
+        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team.",
+        "FEITO": "Done. {nome} now works on the chosen channels."
       },
       "ONDE": {
         "TITULO": "Where {nome} works",

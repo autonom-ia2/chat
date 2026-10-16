@@ -207,10 +207,15 @@ class Autonomia::Agents::OndeAtende
     conversas
   end
 
-  # As conversas da área ficam com ele, agora pelo espelho da porta nova. Os eventos da conversa saem no commit.
+  # As conversas da área ficam com ele, agora pelo espelho da porta nova: pelo mesmo caminho de atribuir um robô pelo
+  # painel (Conversations::AssignmentService, com a linha travada e relida), e o turno que estava em andamento é refeito
+  # pela porta, como no devolver_conversas_a_porta! (AgentInbox#responder_mensagem_pendente, depois do commit).
   def passar_para_a_porta!(conversas)
-    espelho = portas_atuais.find_by!(inbox_id: @primeiro.id).agent_bot
-    conversas.each { |conversa| conversa.update!(ai_assignee: espelho) }
+    porta = portas_atuais.find_by!(inbox_id: @primeiro.id)
+    conversas.each do |conversa|
+      ::Conversations::AssignmentService.new(conversation: conversa, assignee_id: porta.agent_bot_id, assignee_type: 'AgentBot').perform
+      porta.responder_mensagem_pendente(conversa)
+    end
   end
 
   def sair_das_portas_antigas!

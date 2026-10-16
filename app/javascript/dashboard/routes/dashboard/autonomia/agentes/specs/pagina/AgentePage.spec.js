@@ -237,9 +237,8 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(todos('[data-heroi]')).toHaveLength(1);
       expect(no('h1').textContent.trim()).toBe('Bia');
-      // #1720: o herói diz a mesma frase do resumo.
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.PRIMEIRO'
+        'PAGINA.RESPONDE_NO'
       );
       const interruptor = no('[role="switch"]');
       expect(interruptor.getAttribute('aria-checked')).toBe('true');
@@ -472,12 +471,8 @@ describe('AgentePage', () => {
         'PAGINA.PARADO_FAIXA'
       );
       expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
-      // #1720: parado, o herói só diz os canais ("No X · sempre"), nunca "Atende primeiro".
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.PARADO'
-      );
-      expect(no('[data-heroi] [data-onde]').textContent).not.toContain(
-        'BLOCO_ONDE.PRIMEIRO'
+        'PAGINA.PARADO_NO'
       );
 
       await clicar('[role="switch"]');
@@ -501,9 +496,9 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.NENHUM_LUGAR'
+        'PAGINA.NENHUM_CANAL'
       );
-      expect(texto()).not.toContain('PAGINA.BLOCO_ONDE.PRIMEIRO');
+      expect(texto()).not.toContain('PAGINA.RESPONDE_NO');
 
       await clicar('[role="switch"]');
       expect(no('[role="dialog"]').textContent).toContain('ONDE_QUANDO.TITULO');
@@ -551,7 +546,7 @@ describe('AgentePage', () => {
       });
       const wrapper = await montar();
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.NENHUM_LUGAR'
+        'PAGINA.NENHUM_CANAL'
       );
       await clicar('[data-escolher-canal]');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
@@ -1114,9 +1109,13 @@ describe('AgentePage', () => {
       preparar({ canais: COM_AREA });
       ligarFase2(true);
       const wrapper = await montar();
+      // #1720, com a Fase 2: uma linha só, a mesma do herói.
       expect(
         no('[data-linha="onde"] [data-resumo-onde]').textContent
       ).toContain('BLOCO_ONDE.PRIMEIRO_E_RECEBE');
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'BLOCO_ONDE.PRIMEIRO_E_RECEBE'
+      );
       await clicar('[data-alterar="onde"]');
       const secao = no('aside[role="dialog"] [data-tambem-recebe]');
       expect(secao).not.toBeNull();
@@ -1146,6 +1145,19 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    it('with the Fase 2, a stopped agent hero lists the channels and never says "answers first"', async () => {
+      preparar({ agente: bia({ status: 'paused' }), canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      const heroi = no('[data-heroi] [data-onde]').textContent;
+      expect(heroi).toContain('BLOCO_ONDE.PARADO');
+      expect(heroi).not.toContain('BLOCO_ONDE.PRIMEIRO');
+      expect(no('[data-resumo-onde]').textContent).toContain(
+        'BLOCO_ONDE.PARADO'
+      );
+      wrapper.unmount();
+    });
+
     it('the quote agent (Lia) gets the section too', async () => {
       preparar({
         agente: bia({ name: 'Lia', agent_type: 'insurance_quote' }),
@@ -1162,11 +1174,18 @@ describe('AgentePage', () => {
       preparar({ canais: COM_AREA });
       ligarFase2(false);
       const wrapper = await montar();
-      expect(no('[data-resumo-onde]').textContent).not.toContain('RECEBE');
+      expect(no('[data-tambem-recebe]')).toBeNull();
+      // #1720: sem a Fase 2, os textos de antes (herói e resumo) e a gaveta de antes.
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.RESPONDE_NO'
+      );
+      expect(no('[data-linha="onde"]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.TEXTO'
+      );
+      expect(no('[data-resumo-onde]')).toBeNull();
       await clicar('[data-alterar="onde"]');
       expect(no('aside[role="dialog"]')).not.toBeNull();
       expect(no('[data-tambem-recebe]')).toBeNull();
-      // #1720: sem a Fase 2, a gaveta de antes, com "Não atender em nenhum lugar" e sem a pergunta nova.
       expect(no('aside[role="dialog"] [data-nao-atender]')).not.toBeNull();
       expect(no('aside[role="dialog"] [data-primeiro]')).toBeNull();
       wrapper.unmount();
@@ -1216,7 +1235,6 @@ describe('AgentePage', () => {
 
     it('says "Na equipe" (switch on), where it receives, and never the parked banner', async () => {
       prepararEquipe();
-      ligarFase2(true);
       const wrapper = await montar();
       expect(no('[data-interruptor]').getAttribute('aria-checked')).toBe(
         'true'
@@ -1224,15 +1242,58 @@ describe('AgentePage', () => {
       expect(no('[data-interruptor]').textContent).toContain(
         'AGENTS.JORNADA.STATUS.NA_EQUIPE'
       );
-      // #1720: a mesma frase do resumo, só recebe.
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.RECEBE'
+        'AGENTS.JORNADA.CARTAO.RECEBE_EM'
       );
       expect(no('[data-faixa-parado]')).toBeNull();
       wrapper.unmount();
     });
 
-    // #1720: todo agente usa a mesma gaveta; sai o "Onde {nome} trabalha".
+    it('swaps "Onde e quando responde" for "Onde {nome} trabalha", with only the inbox and the role', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      const bloco = no('[data-linha="onde-trabalha"]');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.TITULO');
+      expect(bloco.textContent).toContain('WhatsApp do Centro');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.RECEBE');
+      expect(bloco.textContent).not.toContain('Instagram');
+      expect(no('[data-linha="onde"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('"Mudar" opens straight in the team steps, saves the change and reads the agent again', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      await clicar('[data-mudar-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('canais');
+      expect(no('[data-opcao="1"]').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-opcao="5"]').getAttribute('aria-disabled')).toBe('true');
+
+      await clicar('[data-opcao="2"]');
+      await clicar('[data-seguir-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('confira');
+      await clicar('[data-seguir-equipe]');
+
+      expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { papel: 'area' });
+      expect(canaisApi.disconnect).not.toHaveBeenCalled();
+      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.EQUIPE.FEITO');
+      expect(no('[data-equipe-canais]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('with the Fase 2, the hero says the same line: receives when someone hands over', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.NA_EQUIPE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.RECEBE'
+      );
+      wrapper.unmount();
+    });
+
     it('uses "Onde e quando responde" and the same drawer, answering "Não" with its team inboxes', async () => {
       prepararEquipe();
       ligarFase2(true);
@@ -1265,7 +1326,9 @@ describe('AgentePage', () => {
 
     it('without the inbox reading, says only that it receives when someone hands over', async () => {
       prepararEquipe();
-      ligarFase2(false);
+      ligarFase2(true);
+      canaisApi.get.mockRejectedValue(new Error('500'));
+      jornadaApi.canaisOcupados.mockRejectedValue(new Error('500'));
       const wrapper = await montar();
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
         'AGENTS.JORNADA.ONDE.RECEBE'

@@ -233,8 +233,37 @@ describe('PaginaBlocos · Marca reuniões', () => {
 
 // #1433 ("a, para todos os agentes"): o resumo "Onde e quando responde" mostra também as outras caixas em que
 // o agente recebe quando alguém passa.
+describe('PaginaBlocos · Também recebe', () => {
+  beforeEach(() => {
+    conta.agendaNova = false;
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+  });
+
+  it('lists the other inboxes under "Onde e quando responde"', async () => {
+    const wrapper = await montar({
+      temCanal: true,
+      textoOnde: 'No WhatsApp Vendas, sempre.',
+      tambemRecebe: ['WhatsApp Recepção', 'WhatsApp Suporte'],
+    });
+    const linha = wrapper.get('[data-linha="onde"]');
+    expect(linha.text()).toContain('No WhatsApp Vendas, sempre.');
+    expect(linha.get('[data-tambem-recebe]').text()).toContain(
+      'WhatsApp Recepção, WhatsApp Suporte'
+    );
+  });
+
+  it('says nothing more when the agent receives on no other inbox (no regression)', async () => {
+    const wrapper = await montar({
+      temCanal: true,
+      textoOnde: 'No X, sempre.',
+    });
+    expect(wrapper.find('[data-tambem-recebe]').exists()).toBe(false);
+  });
+});
+
 // #1720 — o resumo "Onde e quando responde" é uma linha só (a mesma do herói, utils/resumoOnde).
-describe('PaginaBlocos · resumo de onde atende', () => {
+describe('PaginaBlocos · resumo de onde atende (Fase 2)', () => {
   beforeEach(() => {
     conta.agendaNova = false;
     paginasApi.get.mockReset();
@@ -243,6 +272,7 @@ describe('PaginaBlocos · resumo de onde atende', () => {
 
   it('shows the one-line summary and "Alterar" for an agent that only receives', async () => {
     const wrapper = await montar({
+      fase2: true,
       temCanal: false,
       textoOnde:
         'Recebe no 5511944547873 quando alguém passar a conversa · sempre',
@@ -258,6 +288,7 @@ describe('PaginaBlocos · resumo de onde atende', () => {
 
   it('offers to choose a channel when it answers nowhere', async () => {
     const wrapper = await montar({
+      fase2: true,
       temCanal: false,
       textoOnde: 'Não atende em lugar nenhum.',
     });
@@ -267,7 +298,11 @@ describe('PaginaBlocos · resumo de onde atende', () => {
   });
 
   it('no longer has "Onde {nome} trabalha"', async () => {
-    const wrapper = await montar({ temCanal: true, textoOnde: 'x' });
+    const wrapper = await montar({
+      fase2: true,
+      temCanal: true,
+      textoOnde: 'x',
+    });
     expect(wrapper.find('[data-linha="onde-trabalha"]').exists()).toBe(false);
   });
 });

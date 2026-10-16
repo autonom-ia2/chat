@@ -23,6 +23,7 @@ import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
+import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import AjudantePassos from '../components/onde/AjudantePassos.vue';
 import {
   ESTADO_PAGINA,
@@ -31,10 +32,11 @@ import {
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
+import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
 import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
-import { TRABALHANDO } from '../utils/estadoDoAgente';
+import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
 import { caixasDaEquipe, recebeEmOutrasCaixas } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
 import { resumoOnde } from '../utils/resumoOnde';
@@ -58,11 +60,12 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // uma gaveta (T08–T14); Mudar conversando (T11) troca o conteúdo da página. Parar (T15) e Excluir
 // (T16) pedem confirmação; voltar a atender passa pela confirmação de canal. Quem só vê lê e testa.
 // `gaveta` vem do seletor da rota (o :tab antigo traduzido) e abre a gaveta certa ao carregar.
-// #1433 (tema 13): o agente da equipe (`na_equipe`) aparece "Na equipe". Ligar de novo um agente da equipe parado
-// não pede canal: as caixas dele continuam.
-// #1720 (decisão do Rodrigo de 16/10): todo agente usa a mesma gaveta "Onde e quando", inclusive o da equipe (sai o
-// "Onde {nome} trabalha" da página). O herói e o resumo dizem a mesma frase (utils/resumoOnde) em todos os estados.
-// A gaveta nova (GavetaOndeQuandoFase2) só com a Fase 2; sem ela, a GavetaOndeQuando de antes, igual à main.
+// #1433 (tema 13): o agente da equipe (`na_equipe`) aparece "Na equipe", com "Onde {nome} trabalha" (caixa e
+// papel) no lugar de "Onde e quando responde"; "Mudar" abre direto os passos do agente da equipe (EquipeCanais).
+// Ligar de novo um agente da equipe parado não pede canal: as caixas dele continuam.
+// #1720 (decisão do Rodrigo de 16/10) — SÓ COM A FASE 2: todo agente usa a gaveta nova (GavetaOndeQuandoFase2), inclusive o
+// da equipe (sem "Onde {nome} trabalha"), e o herói e o resumo dizem a mesma frase (utils/resumoOnde). Sem a Fase 2, a
+// página é a de antes, igual à main (textos, gaveta, "Onde {nome} trabalha").
 // Tema 14 (#1434): o ajudante aparece "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
 // equipe"; "Quem {nome} ajuda" e "Quando chamar" ("GET /ajuda") com "Mudar" abrindo os passos do ajudante.
 const props = defineProps({
@@ -110,11 +113,20 @@ const nome = computed(
   () => agente.value?.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
 const estadoDaPagina = computed(() => estadoDeOperacao(agente.value));
+const atendendo = computed(() => estadoDaPagina.value === ESTADO.ATENDENDO);
 const trabalhando = computed(() => TRABALHANDO.includes(estadoDaPagina.value));
 const naEquipe = computed(() => agente.value?.na_equipe === true);
+const fase2 = useFase2();
+// Caixas em que ele está na equipe (L2), ou [] sem a leitura; null quando não é agente da equipe.
+const equipe = computed(() => {
+  if (fase2.value || !naEquipe.value) return null;
+  return canais.estado.value === 'pronto' && !canais.semLeitura.value
+    ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
+    : [];
+});
 // #1433 ("a, para todos os agentes"): quem atende primeiro também recebe em outras caixas quando alguém
 // passa. A gaveta "Onde e quando" mostra a escolha; o resumo, as caixas. Só com a Fase 2 e a leitura L2.
-const fase2 = useFase2();
+// #1720: com a Fase 2, o agente da equipe também (a mesma gaveta para todos).
 const recebeEmOutras = computed(
   () => fase2.value && recebeEmOutrasCaixas(agente.value)
 );
@@ -125,6 +137,8 @@ const tambemRecebeEm = computed(() =>
     ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
     : []
 );
+const salvarEquipe = useSalvarEquipe();
+const EQUIPE = 'equipe';
 const AJUDA = 'ajuda';
 const ajudante = computed(() => ehAjudante(agente.value));
 const ajudaDoAgente = useAjudaDoAgente();
@@ -165,10 +179,10 @@ const quando = computed(() =>
   t(`${NS}.QUANDO.${chaveDoQuando(quandoDoAgente(agente.value))}`)
 );
 const atuais = computed(() => canais.atuais.value);
-// Antes da leitura das caixas, a contagem do servidor (porta e área juntas); o agente só da equipe não atende
-// primeiro em nenhuma.
+// Antes da leitura das caixas, a contagem do servidor (porta e área juntas). #1720, com a Fase 2: o agente só da
+// equipe não atende primeiro em nenhuma.
 const quantosAntesDaLeitura = computed(() =>
-  naEquipe.value ? 0 : agente.value?.channels_count || 0
+  fase2.value && naEquipe.value ? 0 : agente.value?.channels_count || 0
 );
 const quantosCanais = computed(() =>
   canais.estado.value === 'pronto'
@@ -192,9 +206,9 @@ const foto = computed(
   () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
 );
 
-// #1720: uma linha com onde atende primeiro e onde recebe quando alguém passar. O agente da equipe sem a leitura
-// das caixas (ou sem a Fase 2) diz só que recebe quando alguém passa, nunca "Não atende em lugar nenhum".
-const textoOnde = computed(() => {
+// #1720, só com a Fase 2: uma linha com onde atende primeiro e onde recebe quando alguém passar; parado, só os
+// canais. O agente da equipe sem a leitura das caixas diz só que recebe quando alguém passa.
+const resumoDaFase2 = computed(() => {
   if (naEquipe.value && !tambemRecebeEm.value.length) {
     return t('AGENTS.JORNADA.ONDE.RECEBE');
   }
@@ -213,7 +227,40 @@ const ondeNoHeroi = computed(() => {
     return nomes ? t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: nomes }) : '';
   }
   if (interno.value) return '';
-  return textoOnde.value;
+  if (fase2.value) return resumoDaFase2.value;
+  if (equipe.value) {
+    return equipe.value.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
+          caixas: equipe.value.map(canal => canal.name).join(', '),
+        })
+      : t('AGENTS.JORNADA.ONDE.RECEBE');
+  }
+  if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
+  const ligado = atendendo.value;
+  if (umCanal.value) {
+    return t(ligado ? `${NS}.RESPONDE_NO` : `${NS}.PARADO_NO`, {
+      canal: umCanal.value,
+      quando: quando.value,
+    });
+  }
+  const n = quantosCanais.value;
+  return t(
+    ligado ? `${NS}.RESPONDE_EM_N` : `${NS}.PARADO_EM_N`,
+    { n, quando: quando.value },
+    n
+  );
+});
+
+const textoOnde = computed(() => {
+  if (fase2.value) return resumoDaFase2.value;
+  if (umCanal.value) {
+    return t(`${NS}.BLOCO_ONDE.TEXTO`, {
+      canal: umCanal.value,
+      quando: quando.value,
+    });
+  }
+  const n = quantosCanais.value;
+  return t(`${NS}.BLOCO_ONDE.TEXTO_N`, { n, quando: quando.value }, n);
 });
 
 const horarios = computed(() => horariosDasCaixas(caixas.value, t));
@@ -307,7 +354,11 @@ const tirarGavetaDaConsulta = () => {
 // Escolher o canal: atendendo, a gaveta de onde e quando; parado, a de voltar a atender (escolhe a caixa e
 // liga na mesma ação). #1525 — vale também para o :tab channels da URL, por onde o módulo de Cotação e o
 // cartão da lista trazem a Lia que nasceu parada: cair na gaveta só de leitura pediria mais um clique.
-const gavetaDoCanal = () => (trabalhando.value ? GAVETA.ONDE : GAVETA.VOLTAR);
+// #1720, com a Fase 2: o agente da equipe ligado também abre a gaveta de onde e quando.
+const gavetaDoCanal = () =>
+  (fase2.value ? trabalhando.value : atendendo.value)
+    ? GAVETA.ONDE
+    : GAVETA.VOLTAR;
 
 const abrirDaUrl = () => {
   if (!pronto.value || !props.gaveta || props.gaveta === gavetaDaUrlAberta) {
@@ -421,6 +472,13 @@ const escrever = () => {
 
 const escolherCanal = () => abrir(gavetaDoCanal());
 
+// #1433: "Mudar" de "Onde {nome} trabalha" do agente da equipe.
+const mudarEquipe = () => {
+  if (!podeGerenciar.value) return;
+  canais.carregar();
+  aberta.value = EQUIPE;
+};
+
 // Tema 14: "Mudar" de "Quem {nome} ajuda" (passo 1) ou de "Quando chamar" (passo 2). A página só leu este
 // agente: a lista da conta é lida ao abrir, para a escolha estar em dia.
 const lerAgentes = async () => {
@@ -493,6 +551,23 @@ const depoisDeMudarOnde = async () => {
   } catch {
     // O canal já mudou; a tela relê o agente ao abrir de novo.
   }
+};
+
+const salvarMudancaDaEquipe = async ({ entram, saem }) => {
+  const feito = await salvarEquipe.salvar({
+    agenteId: agente.value.id,
+    nome: nome.value,
+    entram,
+    saem,
+  });
+  // Falhou no meio: relê onde ele está, e a próxima tentativa manda só o que ainda falta.
+  if (!feito) {
+    canais.carregar();
+    return;
+  }
+  useAlert(t('AGENTS.JORNADA.EQUIPE.FEITO', { nome: nome.value }));
+  fechar();
+  depoisDeMudarOnde();
 };
 
 const alternar = ligar => {
@@ -715,12 +790,16 @@ const tirarPergunta = id => {
           :tambem-recebe="tambemRecebeEm.map(canal => canal.name)"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
+          :equipe="equipe"
+          :fase2="fase2"
+          :caixas="caixas"
           :ajuda="ajuda"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
           @escrever="escrever"
           @escolher-canal="escolherCanal"
+          @mudar-equipe="mudarEquipe"
           @mudar-ajuda="mudarAjuda"
         />
       </template>
@@ -778,7 +857,7 @@ const tirarPergunta = id => {
         :agente="agente"
         :nome="nome"
         :modo="aberta === GAVETA.VOLTAR ? 'voltar' : 'alterar'"
-        :atendendo="trabalhando"
+        :atendendo="atendendo"
         :canais="canais.canais.value"
         :estado-canais="canais.estado.value"
         :atuais="atuais"
@@ -792,6 +871,32 @@ const tirarPergunta = id => {
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
+      <AgenteGaveta
+        v-else-if="aberta === EQUIPE"
+        :titulo="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
+        @fechar="fechar"
+      >
+        <EquipeCanais
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :canais="canais.canais.value"
+          :caixas="caixas"
+          :leitura="
+            canais.estado.value === 'pronto' && canais.semLeitura.value
+              ? 'erro'
+              : canais.estado.value
+          "
+          :inicial="(equipe || []).map(canal => canal.inbox_id)"
+          :salvando="salvarEquipe.salvando.value"
+          :erro="salvarEquipe.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="canais.carregar()"
+          @pronto="salvarMudancaDaEquipe"
+        />
+      </AgenteGaveta>
       <AgenteGaveta
         v-else-if="aberta === AJUDA"
         :titulo="t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome })"

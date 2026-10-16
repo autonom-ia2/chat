@@ -100,6 +100,20 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
       expect(aberta.bot_handoff_waiting?).to be(false)
     end
 
+    it 'redoes, through the new first channel, the turn that was in progress (once, after the commit)' do
+      area!(hubber, da_clara)
+      aberta = create(:conversation, account: account, inbox: da_clara, status: :open)
+      aberta.update!(ai_assignee: AgentBot.find(espelho(hubber, da_clara, 'area')))
+      pergunta = create(:message, account: account, conversation: aberta, message_type: :incoming, content: 'e o boleto?')
+      aberta.update!(additional_attributes: aberta.additional_attributes.to_h.merge(
+        Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => pergunta.id, 'at' => Time.current.to_f }
+      ))
+
+      expect { salvar(primeiro_inbox_id: da_clara.id, area_inbox_ids: []) }
+        .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).with(aberta.id, pergunta.id).exactly(:once)
+      expect(aberta.reload.assignee_agent_bot_id).to eq(espelho(hubber, da_clara, 'porta'))
+    end
+
     it 'never removes an agent from another system, even an inactive one' do
       porta!(hubber, comercial)
       outro = create(:agent_bot, account: account, name: 'Automação', outgoing_url: 'https://automacao.example.com/hook')
@@ -257,6 +271,58 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
       expect(pendente.reload.status).to eq('open')
       expect(Rails.configuration.dispatcher).to have_received(:dispatch)
         .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, hash_including(conversation: pendente)).once
+    end
+  end
+
+  # #1720 — a regra da Atribuição dentro da passagem (bot_handoff!) das conversas de quem sai do canal.
+  describe 'hand-off with the Atribuição rule' do
+    let!(:pendente) { create(:conversation, account: account, inbox: da_clara, status: :pending) }
+    let(:outro_agente) { create(:agent_bot, account: account, name: 'Lia', outgoing_url: nil) }
+
+    before do
+      allow_any_instance_of(Crm::Entrega).to receive(:na_passagem) # rubocop:disable RSpec/AnyInstance
+        .and_return(Crm::Entrega::Resultado.new(status: :para_ia))
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+    end
+
+    def avisos
+      have_received(:dispatch).with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, hash_including(conversation: pendente))
+    end
+
+    it 'sends no hand-off event when the rule hands the conversation to an AI agent' do
+      robo = outro_agente
+      allow_any_instance_of(Crm::Entrega).to receive(:concluir_para_ia!) do # rubocop:disable RSpec/AnyInstance
+        pendente.reload.update!(ai_assignee: robo)
+        Crm::Entrega::Resultado.new(status: :com_ia)
+      end
+
+      salvar(primeiro_inbox_id: da_clara.id)
+
+      expect(response).to have_http_status(:no_content)
+      expect(Rails.configuration.dispatcher).not_to avisos
+    end
+
+    it 'sends exactly one hand-off event when the AI agent refuses and the conversation goes to the team' do
+      allow_any_instance_of(Crm::Entrega).to receive(:concluir_para_ia!) # rubocop:disable RSpec/AnyInstance
+        .and_return(Crm::Entrega::Resultado.new(status: :nada))
+
+      salvar(primeiro_inbox_id: da_clara.id)
+
+      expect(response).to have_http_status(:no_content)
+      expect(Rails.configuration.dispatcher).to avisos.once
+    end
+
+    it 'keeps sending the other events when a conversation is deleted before the commit' do
+      allow_any_instance_of(Crm::Entrega).to receive(:concluir_para_ia!) # rubocop:disable RSpec/AnyInstance
+        .and_return(Crm::Entrega::Resultado.new(status: :nada))
+      apagada = create(:conversation, account: account, inbox: da_clara, status: :pending)
+
+      ActiveRecord::Base.transaction do
+        Autonomia::Agents::Operate::InboxConnector.new(agent: clara, inbox: da_clara).perform(connect: false)
+        apagada.destroy!
+      end
+
+      expect(Rails.configuration.dispatcher).to avisos.once
     end
   end
 

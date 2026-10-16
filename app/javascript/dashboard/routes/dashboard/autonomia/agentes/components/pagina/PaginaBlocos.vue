@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgendaEstado from './AgendaEstado.vue';
+import ResumoOndeTrabalha from '../onde/ResumoOndeTrabalha.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
 import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
 import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
@@ -15,7 +16,8 @@ import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
 //   (DECISOES.md item 8); quem recebe é definido lá, de propósito.
 // Agente escrito à mão troca "Mudar conversando" por "Editar instruções". Cotação mostra só onde e
 // quando e leva o resto ao módulo de cotação. Interno não tem onde e quando. Quem só vê lê e testa.
-// #1720: o agente da equipe também usa "Onde e quando responde" (a mesma frase do herói e a mesma gaveta).
+// #1433 (tema 13): o agente da equipe troca "Onde e quando responde" por "Onde {nome} trabalha" (caixa e
+// papel); "Mudar" abre direto nos passos do agente da equipe.
 // Tema 14 (#1434): o ajudante não fala com cliente: sem "Testar" (como cliente) e sem "Quando passa para a
 // equipe". No lugar, "Quem {nome} ajuda" e "Quando chamar", e cada "Mudar" abre direto os passos do ajudante.
 const props = defineProps({
@@ -28,10 +30,15 @@ const props = defineProps({
   temCanal: { type: Boolean, default: false },
   textoOnde: { type: String, default: '' },
   // #1433: nomes das outras caixas em que ele também recebe quando alguém passa (agente da equipe nelas).
-  // #1720: o resumo (textoOnde) já diz quais são; aqui só decide entre "Alterar" e "Escolher canal".
   tambemRecebe: { type: Array, default: () => [] },
   quantasFontes: { type: Number, default: 0 },
   quantasPerguntas: { type: Number, default: 0 },
+  // #1433: linhas da L2 em que o agente está na equipe, ou null quando ele não é agente da equipe.
+  equipe: { type: Array, default: null },
+  caixas: { type: Array, default: () => [] },
+  // #1720 — com a Fase 2, "Onde e quando responde" é uma linha só (`textoOnde`, a mesma do herói) e "Alterar"
+  // vale também para quem só recebe quando alguém passa. Sem ela, como antes.
+  fase2: { type: Boolean, default: false },
   // Tema 14: { principais: [{ id, name }], quando } quando o agente é ajudante, ou null.
   ajuda: { type: Object, default: null },
 });
@@ -42,6 +49,7 @@ const emit = defineEmits([
   'mudar',
   'escrever',
   'escolherCanal',
+  'mudarEquipe',
   'mudarAjuda',
 ]);
 
@@ -331,6 +339,51 @@ onMounted(() => {
       </template>
 
       <div
+        v-else-if="equipe"
+        data-linha="onde-trabalha"
+        role="group"
+        :aria-labelledby="`${base}-onde-trabalha`"
+        class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+      >
+        <div class="flex items-start flex-1 min-w-0 gap-3">
+          <span
+            class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-map-pin size-5 text-n-slate-11" />
+          </span>
+          <div class="flex flex-col flex-1 min-w-0 gap-2">
+            <h3
+              :id="`${base}-onde-trabalha`"
+              class="m-0 text-sm font-semibold text-n-slate-11"
+            >
+              {{ t('AGENTS.JORNADA.ONDE.TITULO', { nome }) }}
+            </h3>
+            <ResumoOndeTrabalha
+              v-if="equipe.length"
+              :canais="equipe"
+              :caixas="caixas"
+            />
+            <p v-else class="m-0 text-sm text-n-slate-12">
+              {{ t('AGENTS.JORNADA.ONDE.RECEBE') }}
+            </p>
+            <!-- #1433: aqui entra "Escolher de quais funis ele cuida", quando a tela do CRM existir
+              (a rota vem do Multifunnel, #1447). Até lá, sem botão. -->
+          </div>
+        </div>
+        <AgenteBotao
+          v-if="podeGerenciar"
+          data-mudar-equipe
+          class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+          variante="fantasma"
+          :aria-label="t('AGENTS.JORNADA.ONDE.MUDAR_ARIA', { nome })"
+          @click="emit('mudarEquipe')"
+        >
+          {{ t('AGENTS.JORNADA.ONDE.MUDAR') }}
+        </AgenteBotao>
+      </div>
+
+      <div
         v-else-if="!interno"
         data-linha="onde"
         role="group"
@@ -351,14 +404,32 @@ onMounted(() => {
             >
               {{ t(`${NS}.BLOCO_ONDE.TITULO`) }}
             </h3>
-            <p data-resumo-onde class="m-0 text-sm text-n-slate-12">
+            <p
+              v-if="fase2"
+              data-resumo-onde
+              class="m-0 text-sm text-n-slate-12"
+            >
               {{ textoOnde }}
+            </p>
+            <p v-else class="m-0 text-sm text-n-slate-12">
+              {{ temCanal ? textoOnde : t(`${NS}.NENHUM_CANAL`) }}
+            </p>
+            <p
+              v-if="!fase2 && tambemRecebe.length"
+              data-tambem-recebe
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{
+                t(`${NS}.BLOCO_ONDE.TAMBEM`, {
+                  caixas: tambemRecebe.join(', '),
+                })
+              }}
             </p>
           </div>
         </div>
         <template v-if="podeGerenciar">
           <AgenteBotao
-            v-if="temCanal || tambemRecebe.length"
+            v-if="temCanal || (fase2 && tambemRecebe.length)"
             data-alterar="onde"
             class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
             variante="fantasma"
