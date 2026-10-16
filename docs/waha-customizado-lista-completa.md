@@ -182,3 +182,23 @@ Grau de certeza:
 - Relatos de terceiros, tratados como relato e não como fato: WAHA #2050, whatsmeow #1197, #1074 e #810, Baileys #2441.
 
 Algumas leituras foram feitas na v1.0.49, que não está no ar. Antes de virarem código, precisam ser conferidas na versão de produção: a nova consulta de restrição depois do 463, a conexão por proxy e o tempo entre reconexões.
+
+---
+
+## 6. Fase 3 no chat2you (16/10/2026, branch do #1709)
+
+Feito no chat2you, atrás da flag `whatsapp_rich_native` (desligada = igual a hoje). Na caixa comum, cada item só
+funciona com o conector `c2y-rich-2`; o lado do conector é outro trabalho (`infra/waha-c2y/`). Detalhes, contrato e
+desvios em `docs/audit/2026-10-16-1709-ricas-waha-fase3.md`.
+
+| Item | Caixa comum | Reserva do Híbrido |
+|---|---|---|
+| Enquete e voto de volta ("Votou: X") | Sim | Sim (ligar a flag reinicia a sessão uma vez) |
+| Foto e vídeo como mídia | Pedido ao conector | Foto fora de JPG/PNG vira JPEG; GIF vira vídeo |
+| Responder citando | Já existia | Sim |
+| Apagar para todos | Já existia | Sim |
+| Ligação perdida ou recusada como aviso | Sim | Não se aplica (a Cloud recebe) |
+| Mensagem desconhecida visível | Sim | Não se aplica |
+| Reações nos dois sentidos | Sim (botão "Reagir") | Fora deste pacote |
+| Edição nos dois sentidos | Sim (até 14 min, botão "Editar") | Fora deste pacote |
+| Formatação pelo mesmo renderer da Cloud | Sim (regras completas com o #1740) | Já usava o texto do painel |
