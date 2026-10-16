@@ -20,6 +20,14 @@ RSpec.describe Crm::OrdemDeNome do
     expect(pessoas.sort_by { |nome, id| described_class.chave(nome, id) }.map(&:last)).to eq(ordem_esperada)
   end
 
+  # Pega: letra fora do latim virando "?" e passando na frente dos nomes latinos (como a tela, latim primeiro).
+  it 'mantém nomes fora do latim depois dos latinos, sem trocar as letras', :aggregate_failures do
+    nomes = ['Иван', 'Zeca', 'Ênio', nil]
+
+    expect(nomes.each_with_index.sort_by { |nome, id| described_class.chave(nome, id) }.map(&:first)).to eq([nil, 'Ênio', 'Zeca', 'Иван'])
+    expect(described_class.chave('Иван', 1)).to eq(['иван', 1])
+  end
+
   # Pega: a lista de quem recebe (motor de entrega) sair numa ordem diferente da tela.
   it 'Crm::Entrega::QuemCuida.na_caixa usa a mesma ordem' do
     expect(Crm::Entrega::QuemCuida.na_caixa(inbox: inbox).map(&:id)).to eq(ordem_esperada)
