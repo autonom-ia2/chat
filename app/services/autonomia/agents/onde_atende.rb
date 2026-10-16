@@ -15,6 +15,13 @@
 # pessoa pediu "Não" sem nenhuma área E confirmou (`parar`); sem a confirmação, recusa antes de mexer em qualquer
 # coisa (confirmar_parado).
 #
+# `manter_primeiro` (a pessoa não trocou o canal, só a janela ou as áreas): as portas ficam como estão, todas — o
+# agente com mais de uma porta não perde nenhuma. As portas só mudam quando o "primeiro" muda de fato.
+#
+# Nunca tira agente de outro sistema (nem o inativo): isso é da aba "Agente de IA" da caixa, com a permissão de canais.
+# A área que vira porta leva junto as conversas que atendia na caixa: passam direto para o espelho da porta nova, sem a
+# devolução à porta que sai. Os avisos de passagem (bot_handoff!) só saem depois do commit (AgentInbox).
+#
 # NADA FICA PELA METADE: tudo roda numa transação. Qualquer recusa no meio (Recusa, erro das Areas, validação) desfaz o
 # que já tinha entrado; a tela recebe o código e a mensagem do passo que recusou, e "Nada mudou" é verdade.
 #
@@ -48,15 +55,18 @@ class Autonomia::Agents::OndeAtende
   }.freeze
   MOTIVO_DA_CAIXA = { principal_parado: :sem_principal, robo_externo: :robo_externo }.freeze
 
-  # `primeiro`: a caixa de "Sim, no canal", ou nil ("Não"). `areas`: as caixas de "Recebe quando alguém passar em", ou
-  # nil para não mexer nelas.
+  # O pedido da gaveta. `primeiro`: a caixa de "Sim, no canal", ou nil ("Não"). `manter_primeiro`: o canal não mudou, as
+  # portas ficam. `areas`: as caixas de "Recebe quando alguém passar em", ou nil para não mexer nelas.
+  Pedido = Struct.new(:primeiro, :manter_primeiro, :areas, :response_window, :parar, keyword_init: true)
+
   # Quem chama já achou as caixas e o agente na conta (404 fora dela).
-  def initialize(agent:, primeiro:, areas:, response_window: nil, parar: false)
+  def initialize(agent:, pedido:)
     @agent = agent
-    @primeiro = primeiro
-    @areas = areas&.uniq(&:id)
-    @response_window = response_window
-    @parar = parar
+    @manter_primeiro = pedido.manter_primeiro == true
+    @primeiro = @manter_primeiro ? nil : pedido.primeiro
+    @areas = pedido.areas&.uniq(&:id)
+    @response_window = pedido.response_window
+    @parar = pedido.parar == true
   end
 
   def perform
@@ -72,7 +82,7 @@ class Autonomia::Agents::OndeAtende
     Resultado.new
   rescue Recusa => e
     recusada(e.code, inbox: e.inbox, motivo_da_area: e.motivo_da_area)
-  rescue ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout
+  rescue ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout, ActiveRecord::RecordNotUnique
     recusada(:mudou_agora)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.warn("[autonomia][onde_atende] invalido model=#{e.record.class.name} account=#{@agent.account_id} agent=#{@agent.id}")
@@ -124,24 +134,29 @@ class Autonomia::Agents::OndeAtende
     recusa_das_areas || (:confirmar_parado if fica_parado? && !@parar)
   end
 
-  # A caixa de "Sim" não pode estar também em "Recebe quando…"; áreas só com a Fase 2 ligada na conta.
+  # A caixa de "Sim" e as caixas em que ele atende primeiro hoje não entram em "Recebe quando…" (a tela não oferece).
   def recusa_das_areas
     return if @areas.blank?
-    return :pedido_invalido if @primeiro && @areas.any? { |caixa| caixa.id == @primeiro.id }
 
-    :fase2_off unless ::Autonomia::Agents::Fase2.ligada?(@agent.account)
+    proibidas = [@primeiro&.id, *portas_atuais.pluck(:inbox_id)].compact
+    :pedido_invalido if @areas.any? { |caixa| proibidas.include?(caixa.id) }
+  end
+
+  def portas_atuais
+    vinculos_do_agente.porta
   end
 
   # "Não" sem nenhuma área (as pedidas, ou as de hoje quando não vieram), tendo hoje onde trabalhar: o agente vai parar.
   def fica_parado?
+    sem_portas = @manter_primeiro ? !portas_atuais.exists? : @primeiro.nil?
     sem_areas = @areas.nil? ? !areas_atuais.exists? : @areas.empty?
-    @primeiro.nil? && sem_areas && vinculos_do_agente.exists?
+    sem_portas && sem_areas && vinculos_do_agente.exists?
   end
 
-  # A gaveta não oferece caixa com agente de outro sistema atendendo primeiro; a troca da aba da caixa tiraria ele em
-  # silêncio, então aqui recusa.
+  # A gaveta não oferece caixa com agente de outro sistema; a troca da aba da caixa tiraria ele (ativo ou inativo) em
+  # silêncio, então aqui recusa. Tirar agente de outro sistema é só da aba "Agente de IA" da caixa.
   def conferir_o_primeiro!
-    return unless ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(@primeiro).exists?
+    return unless ::Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(@primeiro, so_ativos: false).exists?
 
     raise Recusa.new(:canal_com_outro_sistema, inbox: @primeiro)
   end
@@ -177,16 +192,30 @@ class Autonomia::Agents::OndeAtende
   def por_no_primeiro!
     return if @primeiro.nil?
 
-    area_vira_porta! if areas_atuais.exists?(inbox_id: @primeiro.id)
+    conversas = area_vira_porta! if areas_atuais.exists?(inbox_id: @primeiro.id)
     resultado = ::Autonomia::Agents::TrocarQuemAtende.new(inbox: @primeiro, alvo: { tipo: 'plataforma', agent: @agent }).perform
     raise Recusa.new(resultado.code == :mudou_agora ? :mudou_agora : :primeiro_recusado, inbox: @primeiro) unless resultado.ok?
+
+    passar_para_a_porta!(conversas) if conversas.present?
   end
 
+  # A área sai sem devolver as conversas (`vira_porta`); -> as conversas abertas e pendentes que ela atendia na caixa.
   def area_vira_porta!
+    vinculo = areas_atuais.find_by(inbox_id: @primeiro.id)
+    conversas = @primeiro.conversations.where(status: %i[open pending], assignee_agent_bot_id: vinculo.agent_bot_id).to_a
     ::Autonomia::Agents::Areas.desvincular!(agent: @agent, inbox: @primeiro, vira_porta: true)
+    conversas
+  end
+
+  # As conversas da área ficam com ele, agora pelo espelho da porta nova. Os eventos da conversa saem no commit.
+  def passar_para_a_porta!(conversas)
+    espelho = portas_atuais.find_by!(inbox_id: @primeiro.id).agent_bot
+    conversas.each { |conversa| conversa.update!(ai_assignee: espelho) }
   end
 
   def sair_das_portas_antigas!
+    return if @manter_primeiro
+
     vinculos_do_agente.porta.where.not(inbox_id: @primeiro&.id).includes(:inbox).find_each do |vinculo|
       resultado = ::Autonomia::Agents::Operate::InboxConnector.new(agent: @agent, inbox: vinculo.inbox).perform(connect: false)
       raise Recusa.new(:saida_recusada, inbox: vinculo.inbox) unless resultado.success?

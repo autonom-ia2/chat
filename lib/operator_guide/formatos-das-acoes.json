@@ -21455,6 +21455,10 @@
         "tipo": "lista",
         "tipo_pela_leitura": "uso"
       },
+      "manter_primeiro": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "parar": {
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
@@ -21477,15 +21481,17 @@
     "controller": "api/v1/accounts/autonomia/agents/onde_atende#update",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:17",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:56",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:54",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:63",
       "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:47",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:36",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:32"
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:36"
     ],
     "sem_corpo": false
   },

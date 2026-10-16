@@ -14,6 +14,7 @@ import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
 import GavetaOQueSabe from '../components/pagina/GavetaOQueSabe.vue';
 import GavetaOndeQuando from '../components/pagina/GavetaOndeQuando.vue';
+import GavetaOndeQuandoFase2 from '../components/pagina/GavetaOndeQuandoFase2.vue';
 import GavetaConversas from '../components/pagina/GavetaConversas.vue';
 import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
@@ -61,6 +62,7 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // não pede canal: as caixas dele continuam.
 // #1720 (decisão do Rodrigo de 16/10): todo agente usa a mesma gaveta "Onde e quando", inclusive o da equipe (sai o
 // "Onde {nome} trabalha" da página). O herói e o resumo dizem a mesma frase (utils/resumoOnde) em todos os estados.
+// A gaveta nova (GavetaOndeQuandoFase2) só com a Fase 2; sem ela, a GavetaOndeQuando de antes, igual à main.
 // Tema 14 (#1434): o ajudante aparece "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
 // equipe"; "Quem {nome} ajuda" e "Quando chamar" ("GET /ajuda") com "Mudar" abrindo os passos do ajudante.
 const props = defineProps({
@@ -201,6 +203,7 @@ const textoOnde = computed(() => {
     quantosPrimeiro: quantosCanais.value,
     recebe: tambemRecebeEm.value,
     quando: quando.value,
+    parado: !trabalhando.value,
   });
 });
 
@@ -746,6 +749,28 @@ const tirarPergunta = id => {
         @fechar="fechar"
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"
+      />
+      <GavetaOndeQuandoFase2
+        v-else-if="
+          fase2 && (aberta === GAVETA.ONDE || aberta === GAVETA.VOLTAR)
+        "
+        :key="aberta"
+        :agente="agente"
+        :nome="nome"
+        :modo="aberta === GAVETA.VOLTAR ? 'voltar' : 'alterar'"
+        :atendendo="trabalhando"
+        :canais="canais.canais.value"
+        :estado-canais="canais.estado.value"
+        :atuais="atuais"
+        :sem-leitura="canais.semLeitura.value"
+        :horarios="horarios"
+        :recebe-em-outras="recebeEmOutras"
+        :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
+        :caixas="caixas"
+        @fechar="fechar"
+        @pronto="depoisDeMudarOnde"
+        @reler="canais.carregar()"
+        @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
       <GavetaOndeQuando
         v-else-if="aberta === GAVETA.ONDE || aberta === GAVETA.VOLTAR"

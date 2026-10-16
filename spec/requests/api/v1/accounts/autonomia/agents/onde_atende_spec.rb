@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # chat#1720 — o "Salvar" da gaveta "Onde e quando {nome} responde" (PUT agents/:id/onde_atende): onde atende primeiro
-# (porta), onde recebe quando alguém passa (áreas) e o "Quando atende", numa transação só.
+# (porta), onde recebe quando alguém passa (áreas) e o "Quando atende", numa transação só. Só com a Fase 2.
 RSpec.describe 'Autonomia onde_atende', type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -33,17 +33,21 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
     Autonomia::Agents::Areas.vincular!(agent: agent, inbox: caixa)
   end
 
-  def salvar(agent = hubber, conta: account, **params)
-    put "/api/v1/accounts/#{conta.id}/autonomia/agents/#{agent.id}/onde_atende",
-        params: params, headers: admin.create_new_auth_token, as: :json
+  def salvar(agent = hubber, user: admin, **params)
+    put "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/onde_atende",
+        params: params, headers: user.create_new_auth_token, as: :json
   end
 
   def portas(agent = hubber)
-    Autonomia::Agents::AgentInbox.kept.porta.where(autonomia_agent_id: agent.id).pluck(:inbox_id)
+    Autonomia::Agents::AgentInbox.kept.porta.where(autonomia_agent_id: agent.id).pluck(:inbox_id).sort
   end
 
   def areas(agent = hubber)
-    Autonomia::Agents::AgentInbox.kept.area.where(autonomia_agent_id: agent.id).pluck(:inbox_id)
+    Autonomia::Agents::AgentInbox.kept.area.where(autonomia_agent_id: agent.id).pluck(:inbox_id).sort
+  end
+
+  def espelho(agent, caixa, papel)
+    Autonomia::Agents::AgentInbox.kept.find_by(autonomia_agent_id: agent.id, inbox_id: caixa.id, papel: papel).agent_bot_id
   end
 
   def codigo
@@ -71,8 +75,7 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
       expect(portas(clara)).to be_empty
     end
 
-    it 'turns a team channel into the first channel' do
-      porta!(hubber, comercial)
+    it 'turns its only team channel into the first channel without stopping or recording a stop' do
       area!(hubber, da_clara)
 
       salvar(primeiro_inbox_id: da_clara.id, area_inbox_ids: [])
@@ -80,20 +83,80 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
       expect(response).to have_http_status(:no_content)
       expect(portas).to eq([da_clara.id])
       expect(areas).to be_empty
+      expect(hubber.reload).to have_attributes(status: 'active', enabled: true)
+      expect(hubber.events.parado_sem_onde_trabalhar.count).to eq(0)
+    end
+
+    it 'keeps with the agent the conversations it answered as a team agent there (no hand-back)' do
+      area!(hubber, da_clara)
+      # A conversa que alguém passou para ele na caixa da Clara (o espelho da área é o dono dela).
+      aberta = create(:conversation, account: account, inbox: da_clara, status: :open)
+      aberta.update!(ai_assignee: AgentBot.find(espelho(hubber, da_clara, 'area')))
+
+      salvar(primeiro_inbox_id: da_clara.id, area_inbox_ids: [])
+
+      expect(response).to have_http_status(:no_content)
+      expect(aberta.reload).to have_attributes(status: 'open', assignee_agent_bot_id: espelho(hubber, da_clara, 'porta'))
+      expect(aberta.bot_handoff_waiting?).to be(false)
+    end
+
+    it 'never removes an agent from another system, even an inactive one' do
+      porta!(hubber, comercial)
+      outro = create(:agent_bot, account: account, name: 'Automação', outgoing_url: 'https://automacao.example.com/hook')
+      AgentBotInbox.create!(inbox: comunidade, agent_bot: outro, account: account, status: :inactive)
+
+      salvar(primeiro_inbox_id: comunidade.id)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(codigo).to eq('canal_com_outro_sistema')
+      expect(AgentBotInbox.where(inbox_id: comunidade.id, agent_bot_id: outro.id)).to exist
+      expect(portas).to eq([comercial.id])
+    end
+
+    it 'works for the quote agent (Lia) too' do
+      lia = agente('Lia', agent_type: 'insurance_quote')
+
+      salvar(lia, primeiro_inbox_id: comunidade.id, area_inbox_ids: [da_clara.id])
+
+      expect(response).to have_http_status(:no_content)
+      expect(portas(lia)).to eq([comunidade.id])
+      expect(areas(lia)).to eq([da_clara.id])
     end
   end
 
-  # #1720 — a única área dele vira a porta: ele não para no meio, e nenhum evento de parada falso fica gravado.
-  it 'turns its only team channel into the first channel without stopping or recording a stop' do
+  describe 'agent first in two channels' do
+    before do
+      porta!(hubber, comunidade)
+      porta!(hubber, comercial)
+    end
+
+    it 'keeps both when only the window changes' do
+      salvar(manter_primeiro: true, primeiro_inbox_id: comunidade.id, response_window: 'outside_business_hours')
+
+      expect(response).to have_http_status(:no_content)
+      expect(portas).to eq([comunidade.id, comercial.id].sort)
+      expect(hubber.reload.response_window).to eq('outside_business_hours')
+    end
+
+    it 'keeps both when only the team channels change' do
+      salvar(manter_primeiro: true, area_inbox_ids: [da_clara.id])
+
+      expect(response).to have_http_status(:no_content)
+      expect(portas).to eq([comunidade.id, comercial.id].sort)
+      expect(areas).to eq([da_clara.id])
+    end
+  end
+
+  it 'removes a team channel with area_inbox_ids [] and keeps the first channel' do
+    porta!(hubber, comunidade)
     area!(hubber, da_clara)
 
-    salvar(primeiro_inbox_id: da_clara.id, area_inbox_ids: [])
+    salvar(manter_primeiro: true, area_inbox_ids: [])
 
     expect(response).to have_http_status(:no_content)
-    expect(portas).to eq([da_clara.id])
+    expect(portas).to eq([comunidade.id])
     expect(areas).to be_empty
     expect(hubber.reload).to have_attributes(status: 'active', enabled: true)
-    expect(hubber.events.parado_sem_onde_trabalhar.count).to eq(0)
   end
 
   describe '"Não, só quando alguém passar a conversa"' do
@@ -148,32 +211,97 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
       expect(hubber.reload.response_window).to be_nil
     end
 
-    it 'undoes everything with its own message when leaving the old first channel fails' do
-      original = Autonomia::Agents::Operate::InboxConnector.instance_method(:perform)
-      allow_any_instance_of(Autonomia::Agents::Operate::InboxConnector).to receive(:perform) do |conector, connect:| # rubocop:disable RSpec/AnyInstance
-        if connect
-          original.bind_call(conector, connect: connect)
-        else
-          Autonomia::Agents::Operate::InboxConnector::Result.new(status: :error, error: :not_connected)
+    context 'when leaving the old first channel fails' do
+      before do
+        original = Autonomia::Agents::Operate::InboxConnector.instance_method(:perform)
+        hubber_id = hubber.id
+        allow_any_instance_of(Autonomia::Agents::Operate::InboxConnector).to receive(:perform) do |conector, connect:| # rubocop:disable RSpec/AnyInstance
+          if connect || conector.instance_variable_get(:@agent).id != hubber_id
+            original.bind_call(conector, connect: connect)
+          else
+            Autonomia::Agents::Operate::InboxConnector::Result.new(status: :error, error: :not_connected)
+          end
         end
       end
 
-      salvar(primeiro_inbox_id: comunidade.id, area_inbox_ids: [da_clara.id])
+      it 'undoes everything with its own message' do
+        salvar(primeiro_inbox_id: comunidade.id, area_inbox_ids: [da_clara.id])
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(codigo).to eq('saida_recusada')
-      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.onde_atende.saida_recusada', nome: 'Hubber', canal: 'Comercial'))
-      expect(portas).to eq([comercial.id])
-      expect(areas).to be_empty
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(codigo).to eq('saida_recusada')
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.onde_atende.saida_recusada', nome: 'Hubber', canal: 'Comercial'))
+        expect(portas).to eq([comercial.id])
+        expect(areas).to be_empty
+      end
+
+      it 'sends no hand-off event for the conversations of the agent that left (the change was undone)' do
+        pendente = create(:conversation, account: account, inbox: da_clara, status: :pending)
+        allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+        salvar(primeiro_inbox_id: da_clara.id)
+
+        expect(codigo).to eq('saida_recusada')
+        expect(portas(clara)).to eq([da_clara.id])
+        expect(pendente.reload.status).to eq('pending')
+        expect(Rails.configuration.dispatcher).not_to have_received(:dispatch).with(Events::Types::CONVERSATION_BOT_HANDOFF, any_args)
+      end
+    end
+
+    it 'sends the hand-off event after the commit when the change goes through' do
+      pendente = create(:conversation, account: account, inbox: da_clara, status: :pending)
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+      salvar(primeiro_inbox_id: da_clara.id)
+
+      expect(response).to have_http_status(:no_content)
+      expect(pendente.reload.status).to eq('open')
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, hash_including(conversation: pendente)).once
     end
   end
 
-  describe 'tenancy' do
-    let(:outra_conta) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  describe 'who can and which agent' do
+    it 'refuses without the Fase 2 and changes nothing' do
+      porta!(hubber, comunidade)
+      Autonomia::Agents::Fase2.desligar!(account)
+
+      salvar(primeiro_inbox_id: comercial.id, area_inbox_ids: [])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(codigo).to eq('fase2_off')
+      expect(portas).to eq([comunidade.id])
+    end
+
+    it 'refuses a member without autonomia_manage' do
+      porta!(hubber, comunidade)
+      membro = create(:user, account: account, role: :agent)
+
+      salvar(user: membro, primeiro_inbox_id: comercial.id)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(portas).to eq([comunidade.id])
+    end
+
+    it 'refuses an internal agent' do
+      interno = agente('Copiloto', actuation: :internal)
+
+      salvar(interno, primeiro_inbox_id: comunidade.id)
+
+      expect(codigo).to eq('agente_interno')
+      expect(portas(interno)).to be_empty
+    end
+
+    it 'does not find a system agent' do
+      guia = agente('Guia', config: { 'system_key' => 'guide' })
+
+      salvar(guia, primeiro_inbox_id: comunidade.id)
+
+      expect(response).to have_http_status(:not_found)
+    end
 
     it 'does not find a channel of another account' do
       porta!(hubber, comunidade)
-      de_fora = create(:inbox, account: outra_conta)
+      de_fora = create(:inbox, account: create(:account))
 
       salvar(primeiro_inbox_id: nil, area_inbox_ids: [de_fora.id])
 
@@ -182,7 +310,8 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
     end
 
     it 'does not find an agent of another account' do
-      de_fora = Autonomia::Agents::Agent.create!(account: outra_conta, name: 'Fora', agent_type: 'custom', status: :active, enabled: true)
+      outra = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
+      de_fora = Autonomia::Agents::Agent.create!(account: outra, name: 'Fora', agent_type: 'custom', status: :active, enabled: true)
 
       salvar(de_fora, primeiro_inbox_id: comunidade.id)
 
@@ -191,33 +320,47 @@ RSpec.describe 'Autonomia onde_atende', type: :request do
     end
   end
 
-  it 'leaves the team channels alone when the screen did not show them (no area_inbox_ids)' do
-    porta!(hubber, comunidade)
-    area!(hubber, da_clara)
+  describe 'request shape' do
+    before { porta!(hubber, comunidade) }
 
-    salvar(primeiro_inbox_id: comercial.id, response_window: 'always')
+    it 'leaves the team channels alone when the screen did not show them (no area_inbox_ids)' do
+      area!(hubber, da_clara)
 
-    expect(response).to have_http_status(:no_content)
-    expect(portas).to eq([comercial.id])
-    expect(areas).to eq([da_clara.id])
-  end
+      salvar(primeiro_inbox_id: comercial.id, response_window: 'always')
 
-  it 'refuses team channels without the Fase 2, and the same channel as first and team' do
-    porta!(hubber, comunidade)
+      expect(response).to have_http_status(:no_content)
+      expect(portas).to eq([comercial.id])
+      expect(areas).to eq([da_clara.id])
+    end
 
-    salvar(primeiro_inbox_id: comunidade.id, area_inbox_ids: [comunidade.id])
-    expect(codigo).to eq('pedido_invalido')
+    it 'answers mudou_agora when the database refuses a duplicate saved at the same time' do
+      allow(Autonomia::Agents::Areas).to receive(:vincular!).and_raise(ActiveRecord::RecordNotUnique)
 
-    Autonomia::Agents::Fase2.desligar!(account)
-    salvar(primeiro_inbox_id: comunidade.id, area_inbox_ids: [da_clara.id])
-    expect(codigo).to eq('fase2_off')
-    expect(areas).to be_empty
-  end
+      salvar(manter_primeiro: true, area_inbox_ids: [da_clara.id])
 
-  it 'refuses an invalid window' do
-    salvar(primeiro_inbox_id: comunidade.id, response_window: 'midnight')
+      expect(codigo).to eq('mudou_agora')
+      expect(portas).to eq([comunidade.id])
+    end
 
-    expect(response).to have_http_status(:unprocessable_entity)
-    expect(codigo).to eq('pedido_invalido')
+    it 'refuses the same channel as first and team' do
+      salvar(primeiro_inbox_id: comunidade.id, area_inbox_ids: [comunidade.id])
+
+      expect(codigo).to eq('pedido_invalido')
+    end
+
+    it 'refuses wrong types and an invalid window', :aggregate_failures do
+      [
+        { primeiro_inbox_id: comercial.id, response_window: 'midnight' },
+        { primeiro_inbox_id: [comercial.id] },
+        { primeiro_inbox_id: 'abc' },
+        { area_inbox_ids: da_clara.id },
+        { area_inbox_ids: ['x'] },
+        { area_inbox_ids: [{ id: da_clara.id }] }
+      ].each do |pedido|
+        salvar(**pedido)
+        expect(codigo).to eq('pedido_invalido'), pedido.inspect
+      end
+      expect(portas).to eq([comunidade.id])
+    end
   end
 end

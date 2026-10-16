@@ -1050,7 +1050,7 @@ pt_BR:
       onde_atende:
         pedido_invalido: "Não deu para entender o pedido. Recarregue e tente de novo."
         agente_interno: "%{nome} trabalha só dentro do painel e não atende clientes."
-        agente_parado: "%{nome} está parado. Ligue %{nome} antes de mudar onde atende."
+        agente_parado: "%{nome} não está atendendo agora. Ligue antes de mudar onde atende."
         fase2_off: "Receber quando alguém passar a conversa ainda não está disponível nesta conta."
         confirmar_parado: "Assim, %{nome} não vai receber conversa em nenhum canal. Confirme para deixar assim."
         canal_com_outro_sistema: "Um agente de outro sistema atende primeiro em %{canal}. Nada mudou."

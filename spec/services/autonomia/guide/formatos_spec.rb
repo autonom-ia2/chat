@@ -40,6 +40,7 @@ RSpec.describe Autonomia::Guide::Formatos do
       .to include('tipo' => 'string', 'um_de' => Autonomia::Agents::Operate::EngagementGate::RESPONSE_WINDOWS)
     expect(onde['campos']['area_inbox_ids']).to include('tipo' => 'lista')
     expect(onde['campos']['parar']).to include('tipo' => 'booleano')
+    expect(onde['campos']['manter_primeiro']).to include('tipo' => 'booleano')
   end
 
   it 'POST custom_roles: envelope, permissões só da lista e nome exigido pelo registro', :aggregate_failures do

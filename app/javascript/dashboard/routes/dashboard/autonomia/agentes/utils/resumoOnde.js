@@ -6,14 +6,33 @@
 // `primeiro`: nome da caixa em que atende primeiro (ou null) e `quantosPrimeiro`, a contagem quando o
 // nome não está à mão (sem a leitura ou mais de uma caixa). `recebe`: linhas da L2 em que está na
 // equipe. `quando`: a frase curta da janela (PAGINA.QUANDO).
+// `parado`: o agente parado não "atende" nem "recebe": só os canais em que está ("No X · sempre"), como antes.
 const NS = 'AGENTS.JORNADA.PAGINA.BLOCO_ONDE';
 
 const nomesDe = recebe => recebe.map(canal => canal.name).join(', ');
 
+// Parado: os canais em que ele está, sem dizer que atende. Sem os nomes (sem a leitura), a contagem.
+const resumoParado = (t, { primeiro, quantosPrimeiro, recebe, quando }) => {
+  if (!primeiro && quantosPrimeiro) {
+    const n = quantosPrimeiro + recebe.length;
+    return t(`${NS}.PARADO_N`, { n, quando }, n);
+  }
+  const canais = [primeiro, ...recebe.map(canal => canal.name)].filter(Boolean);
+  if (!canais.length) return t(`${NS}.NENHUM_LUGAR`);
+  return t(
+    `${NS}.PARADO`,
+    { canais: canais.join(', '), quando },
+    canais.length
+  );
+};
+
 export const resumoOnde = (
   t,
-  { primeiro, quantosPrimeiro, recebe = [], quando }
+  { primeiro, quantosPrimeiro, recebe = [], quando, parado = false }
 ) => {
+  if (parado) {
+    return resumoParado(t, { primeiro, quantosPrimeiro, recebe, quando });
+  }
   const caixas = nomesDe(recebe);
   if (!quantosPrimeiro) {
     return recebe.length

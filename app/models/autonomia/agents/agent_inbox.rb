@@ -134,7 +134,7 @@ module Autonomia
         pending = inbox.conversations.where(status: :pending, assignee_agent_bot_id: [nil, agent_bot_id])
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
         # Desligar não é passar a conversa: o robô sai de vez, sem ficar esperando pessoa (#1377).
-        pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
+        pending.or(held_by_mirror).find_each { |conversation| passar_a_equipe!(conversation) }
       end
 
       # O turno desta mensagem ainda está em andamento: a marca do debounce do ReplyJob (a mesma que o settle confere)
@@ -160,12 +160,24 @@ module Autonomia
         refaz_o_turno = refaz_o_turno_com?(robo_da_porta)
         inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
           if robo_da_porta.nil? || conversation.bot_handoff_waiting?
-            conversation.bot_handoff!(keep_bot: false)
+            passar_a_equipe!(conversation)
           else
             ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: robo_da_porta.id,
                                                    assignee_type: 'AgentBot').perform
             responder_mensagem_pendente(conversation) if refaz_o_turno
           end
+        end
+      end
+
+      # #1720 — o robô sai de vez e a conversa vai para a equipe. O aviso de passagem (CONVERSATION_BOT_HANDOFF, que vira
+      # webhook) só sai depois do commit de TODAS as transações, como na troca da aba "Agente de IA"
+      # (TrocarQuemAtende#tirar_robo!): se quem chamou desfizer tudo (Autonomia::Agents::OndeAtende), ninguém é avisado de
+      # uma passagem que não houve. Sem transação aberta, sai na hora. A conversa que a regra da Atribuição passou a um
+      # agente de IA já não está com a equipe: o aviso não sai (o motor de entrega decide, como no bot_handoff!).
+      def passar_a_equipe!(conversation)
+        conversation.bot_handoff!(keep_bot: false, dispatch_event: false)
+        ActiveRecord.after_all_transactions_commit do
+          conversation.dispatch_bot_handoff_event if conversation.reload.ai_assignee.nil?
         end
       end
 

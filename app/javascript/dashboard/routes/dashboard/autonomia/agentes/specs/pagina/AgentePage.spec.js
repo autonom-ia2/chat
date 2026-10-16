@@ -472,8 +472,12 @@ describe('AgentePage', () => {
         'PAGINA.PARADO_FAIXA'
       );
       expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
+      // #1720: parado, o herói só diz os canais ("No X · sempre"), nunca "Atende primeiro".
       expect(no('[data-heroi] [data-onde]').textContent).toContain(
-        'PAGINA.BLOCO_ONDE.PRIMEIRO'
+        'PAGINA.BLOCO_ONDE.PARADO'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).not.toContain(
+        'BLOCO_ONDE.PRIMEIRO'
       );
 
       await clicar('[role="switch"]');
@@ -513,16 +517,14 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
-    it('reads the agent again after saving where it answers (the server may have stopped it)', async () => {
-      canaisApi.ondeAtende.mockResolvedValue({});
+    it('reads the agent again after leaving the last channel (the server stopped it)', async () => {
+      canaisApi.disconnect.mockResolvedValue({});
       const wrapper = await montar();
       await clicar('[data-alterar="onde"]');
-      await clicar('aside[role="dialog"] [data-confirmar]');
+      await clicar('[data-nao-atender]');
+      await clicar('dialog[open] [data-botoes] [data-confirmar]');
 
-      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(
-        7,
-        expect.objectContaining({ primeiroInboxId: 1 })
-      );
+      expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
       expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
       wrapper.unmount();
     });
@@ -1128,6 +1130,22 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    it('reads the agent again after saving where it answers (the server may have stopped it)', async () => {
+      canaisApi.ondeAtende.mockResolvedValue({});
+      preparar({ canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ primeiroInboxId: 1, manterPrimeiro: true })
+      );
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
     it('the quote agent (Lia) gets the section too', async () => {
       preparar({
         agente: bia({ name: 'Lia', agent_type: 'insurance_quote' }),
@@ -1148,6 +1166,9 @@ describe('AgentePage', () => {
       await clicar('[data-alterar="onde"]');
       expect(no('aside[role="dialog"]')).not.toBeNull();
       expect(no('[data-tambem-recebe]')).toBeNull();
+      // #1720: sem a Fase 2, a gaveta de antes, com "Não atender em nenhum lugar" e sem a pergunta nova.
+      expect(no('aside[role="dialog"] [data-nao-atender]')).not.toBeNull();
+      expect(no('aside[role="dialog"] [data-primeiro]')).toBeNull();
       wrapper.unmount();
     });
   });
@@ -1233,6 +1254,7 @@ describe('AgentePage', () => {
       await clicar('aside[role="dialog"] [data-confirmar]');
       expect(canaisApi.ondeAtende).toHaveBeenCalledWith(7, {
         primeiroInboxId: null,
+        manterPrimeiro: false,
         areaInboxIds: [1],
         responseWindow: 'always',
         parar: false,

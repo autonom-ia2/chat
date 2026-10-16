@@ -1099,7 +1099,9 @@
           "PRIMEIRO_E_RECEBE": "Answers first in {canal} and receives in {caixas} when someone hands over · {quando} | Answers first in {canal} and receives in {caixas} when someone hands over · {quando}",
           "PRIMEIRO_N_E_RECEBE": "Answers first in 1 channel and receives in {caixas} when someone hands over · {quando} | Answers first in {n} channels and receives in {caixas} when someone hands over · {quando}",
           "RECEBE": "Receives in {caixas} when someone hands over the conversation · {quando} | Receives in {caixas} when someone hands over the conversation · {quando}",
-          "NENHUM_LUGAR": "Does not answer anywhere."
+          "NENHUM_LUGAR": "Does not answer anywhere.",
+          "PARADO": "In {canais} · {quando} | In {canais} · {quando}",
+          "PARADO_N": "In 1 channel · {quando} | In {n} channels · {quando}"
         },
         "BLOCO_JEITO": {
           "TITULO": "Name and way of talking",
@@ -1259,7 +1261,12 @@
           "CARREGANDO_CANAIS": "Loading your channels…",
           "PARADO_AVISO": "This way, {nome} will not receive conversations in any channel.",
           "PARADO_CONFIRMAR": "Confirm",
-          "PARADO_VOLTAR": "Go back"
+          "PARADO_VOLTAR": "Go back",
+          "NAO_ATENDER": "Do not answer anywhere",
+          "NAO_ATENDER_TITULO": "Do not answer anywhere?",
+          "NAO_ATENDER_TEXTO": "{nome} leaves {canal}. The conversations there go back to the team.",
+          "NAO_ATENDER_CONFIRMAR": "Do not answer",
+          "CONTINUA_NO_ANTIGO": "{nome} started answering on {novo}, but is still on {antigo} too."
         },
         "HORARIO": {
           "DIAS": {

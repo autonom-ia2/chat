@@ -39,7 +39,8 @@ RSpec.describe Autonomia::Agents::OndeAtende, :relationships_committed_fixtures 
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do |conexao|
           conexao.execute("SET lock_timeout = '10s'")
-          described_class.new(agent: Autonomia::Agents::Agent.find(agent.id), primeiro: Inbox.find(disputado.id), areas: []).perform
+          pedido = described_class::Pedido.new(primeiro: Inbox.find(disputado.id), areas: [])
+          described_class.new(agent: Autonomia::Agents::Agent.find(agent.id), pedido: pedido).perform
         end
       end
     end.map(&:value)

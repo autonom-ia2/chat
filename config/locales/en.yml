@@ -582,7 +582,7 @@ en:
       onde_atende:
         pedido_invalido: "Could not understand the request. Reload and try again."
         agente_interno: "%{nome} works only inside the dashboard and does not answer customers."
-        agente_parado: "%{nome} is paused. Turn %{nome} on before changing where it answers."
+        agente_parado: "%{nome} is not answering right now. Turn it on before changing where it answers."
         fase2_off: "Receiving when someone hands over the conversation is not available for this account yet."
         confirmar_parado: "This way, %{nome} will not receive conversations in any channel. Confirm to keep it like this."
         canal_com_outro_sistema: "An agent from another system answers first in %{canal}. Nothing changed."

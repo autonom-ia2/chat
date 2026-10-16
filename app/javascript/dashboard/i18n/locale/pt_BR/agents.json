@@ -1099,7 +1099,9 @@
           "PRIMEIRO_E_RECEBE": "Atende primeiro no {canal} e recebe no {caixas} quando alguém passar · {quando} | Atende primeiro no {canal} e recebe em {caixas} quando alguém passar · {quando}",
           "PRIMEIRO_N_E_RECEBE": "Atende primeiro em 1 canal e recebe em {caixas} quando alguém passar · {quando} | Atende primeiro em {n} canais e recebe em {caixas} quando alguém passar · {quando}",
           "RECEBE": "Recebe no {caixas} quando alguém passar a conversa · {quando} | Recebe em {caixas} quando alguém passar a conversa · {quando}",
-          "NENHUM_LUGAR": "Não atende em lugar nenhum."
+          "NENHUM_LUGAR": "Não atende em lugar nenhum.",
+          "PARADO": "No {canais} · {quando} | Em {canais} · {quando}",
+          "PARADO_N": "Em 1 canal · {quando} | Em {n} canais · {quando}"
         },
         "BLOCO_JEITO": {
           "TITULO": "Nome e jeito de falar",
@@ -1259,7 +1261,12 @@
           "CARREGANDO_CANAIS": "Carregando seus canais…",
           "PARADO_AVISO": "Assim, {nome} não vai receber conversa em nenhum canal.",
           "PARADO_CONFIRMAR": "Confirmar",
-          "PARADO_VOLTAR": "Voltar"
+          "PARADO_VOLTAR": "Voltar",
+          "NAO_ATENDER": "Não atender em nenhum lugar",
+          "NAO_ATENDER_TITULO": "Não atender em nenhum lugar?",
+          "NAO_ATENDER_TEXTO": "{nome} sai do {canal}. As conversas de lá voltam para a equipe.",
+          "NAO_ATENDER_CONFIRMAR": "Não atender",
+          "CONTINUA_NO_ANTIGO": "{nome} começou a responder no {novo}, mas continua também no {antigo}."
         },
         "HORARIO": {
           "DIAS": {

@@ -27,11 +27,7 @@ vi.mock('../../composables/usePermissoesDaJornada', async () => {
 vi.mock('vue-router', () => ({
   useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
 }));
-const canaisApi = vi.hoisted(() => ({
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  ondeAtende: vi.fn(),
-}));
+const canaisApi = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn() }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 
 const no = seletor => document.querySelector(seletor);
@@ -109,8 +105,6 @@ describe('GavetaOndeQuando', () => {
     canaisApi.connect.mockResolvedValue({});
     canaisApi.disconnect.mockReset();
     canaisApi.disconnect.mockResolvedValue({});
-    canaisApi.ondeAtende.mockReset();
-    canaisApi.ondeAtende.mockResolvedValue({});
     alerta.mockReset();
     permissoes.conectar = true;
   });
@@ -119,25 +113,18 @@ describe('GavetaOndeQuando', () => {
     document.body.innerHTML = '';
   });
 
-  // #1720 — o "Salvar" do modo alterar é um pedido só (PUT onde_atende), gravado numa transação.
-  const pedido = () => canaisApi.ondeAtende.mock.calls[0];
-
-  it('saves the response window in the single request when only "when" changed', async () => {
+  it('saves only the response window when only "when" changed', async () => {
     const wrapper = montar();
     radio('AGENTS.JORNADA.ONDE_QUANDO.DENTRO').click();
     await nextTick();
     await clicar('[data-confirmar]');
 
-    expect(pedido()).toEqual([
-      7,
-      {
-        primeiroInboxId: 1,
-        areaInboxIds: null,
-        responseWindow: 'business_hours',
-        parar: false,
-      },
+    expect(store.dispatch.mock.calls).toEqual([
+      [
+        'autonomiaAgents/update',
+        { id: 7, config: { response_window: 'business_hours' } },
+      ],
     ]);
-    expect(store.dispatch).not.toHaveBeenCalled();
     expect(canaisApi.connect).not.toHaveBeenCalled();
     expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.PAGINA.ONDE.PRONTO');
     expect(wrapper.emitted('pronto')).toHaveLength(1);
@@ -145,20 +132,25 @@ describe('GavetaOndeQuando', () => {
     wrapper.unmount();
   });
 
-  it('moves to a free inbox in one request; the server leaves the old one', async () => {
+  it('moves to a free inbox with the start-answering sequence, then leaves the old one', async () => {
     const wrapper = montar();
     radio('Instagram').click();
     await nextTick();
     await clicar('[data-confirmar]');
 
-    expect(pedido()[1]).toMatchObject({ primeiroInboxId: 2, parar: false });
-    expect(canaisApi.connect).not.toHaveBeenCalled();
-    expect(canaisApi.disconnect).not.toHaveBeenCalled();
+    // #1366: ligar é o próprio POST do canal (ativar); não há PATCH de status.
+    expect(store.dispatch).not.toHaveBeenCalledWith(
+      'autonomiaAgents/update',
+      expect.anything()
+    );
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { ativar: true });
+    expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
+    expect(canaisApi.disconnect).not.toHaveBeenCalledWith(9, expect.anything());
     naoMandouCamposDoPainelAntigo();
     wrapper.unmount();
   });
 
-  it('warns about the swap of a busy inbox and sends it in the same request', async () => {
+  it('swaps a busy inbox: takes the other agent out first', async () => {
     const wrapper = montar();
     expect(radio('ONDE_QUANDO.OCUPADO').className).toContain('bg-n-amber-2');
     expect(radio('Instagram').className).not.toContain('bg-n-amber-2');
@@ -169,22 +161,15 @@ describe('GavetaOndeQuando', () => {
     expect(no('[data-troca] .i-lucide-triangle-alert')).not.toBeNull();
     await clicar('[data-confirmar]');
 
-    expect(pedido()[1]).toMatchObject({ primeiroInboxId: 3 });
-    expect(canaisApi.disconnect).not.toHaveBeenCalled();
+    expect(canaisApi.disconnect.mock.calls[0]).toEqual([9, 3]);
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 3, { ativar: true });
+    expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
     wrapper.unmount();
   });
 
-  it('shows the server explanation and keeps the drawer open when it refuses (nothing changed)', async () => {
-    canaisApi.ondeAtende.mockRejectedValueOnce(
-      Object.assign(new Error('422'), {
-        response: {
-          status: 422,
-          data: {
-            error: 'Não deu para tirar Bia de WhatsApp do Centro. Nada mudou.',
-            code: 'saida_recusada',
-          },
-        },
-      })
+  it('shows the channel error with "Choose another one" when the inbox refuses', async () => {
+    canaisApi.connect.mockRejectedValueOnce(
+      Object.assign(new Error('422'), { response: { status: 422 } })
     );
     const wrapper = montar();
     radio('Instagram').click();
@@ -192,32 +177,39 @@ describe('GavetaOndeQuando', () => {
     await clicar('[data-confirmar]');
 
     const erro = no('[data-erro]');
-    expect(erro.textContent).toContain(
-      'Não deu para tirar Bia de WhatsApp do Centro. Nada mudou.'
-    );
-    expect(erro.textContent).toContain('PAGINA.ONDE.ERRO_GARANTIA');
-    expect(wrapper.emitted('pronto')).toHaveLength(1);
+    expect(erro.textContent).toContain('AGENTS.JORNADA.ERRO.CANAL');
+    expect(erro.textContent).toContain('AGENTS.JORNADA.ERRO.CANAL_ACAO');
+    expect(canaisApi.disconnect).not.toHaveBeenCalled();
     expect(wrapper.emitted('fechar')).toBeUndefined();
-    expect(alerta).not.toHaveBeenCalled();
+
+    erro.querySelector('button').click();
+    await nextTick();
+    expect(no('[data-erro]')).toBeNull();
+    expect(radio('WhatsApp do Centro').getAttribute('aria-checked')).toBe(
+      'true'
+    );
     wrapper.unmount();
   });
 
-  it('says the standard save error when the request does not reach the server', async () => {
-    canaisApi.ondeAtende.mockRejectedValueOnce(new Error('network'));
+  it('says the standard save error when saving the window fails', async () => {
+    store.dispatch.mockRejectedValueOnce(new Error('500'));
     const wrapper = montar();
     radio('AGENTS.JORNADA.ONDE_QUANDO.FORA').click();
     await nextTick();
     await clicar('[data-confirmar]');
     expect(no('[data-erro]').textContent).toContain(
-      'AGENTS.JORNADA.ERRO.OFFLINE'
+      'PAGINA.ONDE.ERRO_GARANTIA'
     );
     wrapper.unmount();
   });
 
-  it('no longer offers "do not answer anywhere"', () => {
+  it('stops answering anywhere after confirming', async () => {
     const wrapper = montar();
-    expect(no('[data-nao-atender]')).toBeNull();
-    expect(document.querySelector('dialog')).toBeNull();
+    await clicar('[data-nao-atender]');
+    await clicar('dialog [data-botoes] [data-confirmar]');
+    expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(wrapper.emitted('pronto')).toHaveLength(1);
     wrapper.unmount();
   });
 

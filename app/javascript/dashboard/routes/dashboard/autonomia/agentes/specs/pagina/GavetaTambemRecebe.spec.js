@@ -26,20 +26,13 @@ vi.mock('../../composables/usePermissoesDaJornada', async () => {
 vi.mock('vue-router', () => ({
   useRouter: () => ({ resolve: rota => ({ href: `/app/${rota.name}` }) }),
 }));
-const canaisApi = vi.hoisted(() => ({
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-  ondeAtende: vi.fn(),
-}));
+const canaisApi = vi.hoisted(() => ({ connect: vi.fn(), disconnect: vi.fn() }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 
 // #1433 (decisão do Rodrigo de 15/10, "a, para todos os agentes") — na gaveta "Onde e quando", logo abaixo
 // de "Onde atende": "Também recebe quando alguém passar em:", as outras caixas em que o agente fica como
 // agente da equipe. Selecionáveis: principal atendendo e só de pessoas; bloqueadas com o motivo: outro robô
-// e principal parado.
-// #1720 — "{nome} atende primeiro as conversas novas?" (Sim, no canal / Não, só quando alguém passar a
-// conversa) e "Recebe quando alguém passar em:". Um "Salvar" só: PUT onde_atende com tudo junto. "Não" sem
-// nenhuma caixa marcada pede a confirmação em linha antes de gravar.
+// e principal parado. Salvar entra (POST channels papel area) e sai (DELETE) dessas caixas.
 
 const no = seletor => document.querySelector(seletor);
 const opcao = valor => no(`[data-tambem-recebe] [data-opcao="${valor}"]`);
@@ -112,8 +105,6 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     canaisApi.connect.mockResolvedValue({});
     canaisApi.disconnect.mockReset();
     canaisApi.disconnect.mockResolvedValue({});
-    canaisApi.ondeAtende.mockReset();
-    canaisApi.ondeAtende.mockResolvedValue({});
     alerta.mockReset();
   });
 
@@ -127,7 +118,7 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
       h.textContent.trim()
     );
     expect(secoes.slice(0, 3)).toEqual([
-      'AGENTS.JORNADA.ONDE_QUANDO.PRIMEIRO_PERGUNTA',
+      'AGENTS.JORNADA.ONDE_QUANDO.ONDE',
       'AGENTS.JORNADA.ONDE_QUANDO.TAMBEM',
       'AGENTS.JORNADA.ONDE_QUANDO.QUANDO',
     ]);
@@ -153,106 +144,35 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     expect(opcao(5).querySelector('.size-12')).toBeNull();
   });
 
-  const radio = texto =>
-    [...document.querySelectorAll('[role="radio"]')].find(item =>
-      item.textContent.includes(texto)
-    );
-  const pedido = () => canaisApi.ondeAtende.mock.calls[0];
-
-  it('(b) "Sim": answers first in the inbox and saves the checked inboxes in one request', async () => {
+  it('saves entering and leaving: POST with papel area, then DELETE, and closes', async () => {
     const wrapper = montar();
-    expect(radio('PRIMEIRO_SIM').getAttribute('aria-checked')).toBe('true');
-    expect(no('[data-canais-primeiro]')).not.toBeNull();
     await clicar(opcao(5));
     await clicar(opcao(3));
     await clicar(opcao(4)); // bloqueada: não marca
     await clicar(no('[data-confirmar]'));
 
-    expect(pedido()).toEqual([
-      7,
-      {
-        primeiroInboxId: 1,
-        areaInboxIds: [5],
-        responseWindow: 'always',
-        parar: false,
-      },
-    ]);
-    expect(canaisApi.connect).not.toHaveBeenCalled();
-    expect(canaisApi.disconnect).not.toHaveBeenCalled();
+    expect(canaisApi.connect).toHaveBeenCalledTimes(1);
+    expect(canaisApi.connect).toHaveBeenCalledWith(7, 5, { papel: 'area' });
+    expect(canaisApi.disconnect).toHaveBeenCalledTimes(1);
+    expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 3);
+    expect(canaisApi.connect.mock.invocationCallOrder[0]).toBeLessThan(
+      canaisApi.disconnect.mock.invocationCallOrder[0]
+    );
     expect(store.dispatch).not.toHaveBeenCalled();
     expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.PAGINA.ONDE.PRONTO');
     expect(wrapper.emitted('fechar')).toBeTruthy();
   });
 
-  it('(a) "Não": hides the inbox list, explains the hours and saves only the checked inboxes', async () => {
-    montar();
-    await clicar(radio('PRIMEIRO_NAO'));
-    expect(no('[data-canais-primeiro]')).toBeNull();
-    expect(no('[data-horario-de-cada]').textContent).toContain(
-      'ONDE_QUANDO.HORARIO_DE_CADA'
-    );
-    await clicar(no('[data-confirmar]'));
-
-    expect(pedido()[1]).toEqual({
-      primeiroInboxId: null,
-      areaInboxIds: [3],
-      responseWindow: 'always',
-      parar: false,
-    });
-    expect(no('[data-aviso-parado]')).toBeNull();
-  });
-
-  it('(c) "Não" with nothing checked: warns in the drawer before saving, "Voltar" keeps it as it was', async () => {
-    const wrapper = montar();
-    await clicar(radio('PRIMEIRO_NAO'));
-    await clicar(opcao(3));
-    expect(no('[data-horario-de-cada]')).toBeNull();
-    await clicar(no('[data-confirmar]'));
-
-    expect(canaisApi.ondeAtende).not.toHaveBeenCalled();
-    const aviso = no('[data-aviso-parado]');
-    expect(aviso.textContent).toContain('PAGINA.ONDE.PARADO_AVISO');
-    expect(no('dialog')).toBeNull();
-    await clicar(no('[data-voltar-aviso]'));
-    expect(no('[data-aviso-parado]')).toBeNull();
-    expect(wrapper.emitted('fechar')).toBeFalsy();
-
-    await clicar(no('[data-confirmar]'));
-    await clicar(no('[data-deixar-parado]'));
-    expect(pedido()[1]).toEqual({
-      primeiroInboxId: null,
-      areaInboxIds: [],
-      responseWindow: 'always',
-      parar: true,
-    });
-    expect(wrapper.emitted('fechar')).toBeTruthy();
-  });
-
-  it('(c) changing the choice closes the warning', async () => {
-    montar();
-    await clicar(radio('PRIMEIRO_NAO'));
-    await clicar(opcao(3));
-    await clicar(no('[data-confirmar]'));
-    await clicar(opcao(5));
-    expect(no('[data-aviso-parado]')).toBeNull();
-  });
-
-  it('shows the same warning when the server asks for the confirmation', async () => {
-    canaisApi.ondeAtende.mockRejectedValueOnce({
-      response: { status: 422, data: { code: 'confirmar_parado', error: 'x' } },
-    });
+  it('nothing changed in the other inboxes: no channel call', async () => {
     montar();
     await clicar(no('[data-confirmar]'));
-    expect(no('[data-aviso-parado]')).not.toBeNull();
-    expect(no('[data-erro]')).toBeNull();
+    expect(canaisApi.connect).not.toHaveBeenCalled();
+    expect(canaisApi.disconnect).not.toHaveBeenCalled();
   });
 
   it('shows the server refusal and keeps the drawer open', async () => {
-    canaisApi.ondeAtende.mockRejectedValue({
-      response: {
-        status: 422,
-        data: { error: 'Outro robô atende em WhatsApp Recepção.' },
-      },
+    canaisApi.connect.mockRejectedValue({
+      response: { data: { error: 'Outro robô atende em WhatsApp Recepção.' } },
     });
     const wrapper = montar();
     await clicar(opcao(5));
@@ -265,19 +185,12 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     expect(wrapper.emitted('pronto')).toBeTruthy();
   });
 
-  it('without the section, keeps the old channel choice and leaves the team inboxes alone', async () => {
-    montar({ recebeEmOutras: false });
-    expect(radio('PRIMEIRO_SIM')).toBeUndefined();
-    await clicar(no('[data-confirmar]'));
-    expect(pedido()[1]).toMatchObject({
-      primeiroInboxId: 1,
-      areaInboxIds: null,
-    });
-  });
-
   it('the inbox chosen in "Onde atende" leaves the list', async () => {
     montar();
-    await clicar(radio('ONDE_QUANDO.OCUPADO'));
+    const jardins = [...document.querySelectorAll('[role="radio"]')].find(
+      item => item.textContent.includes('ONDE_QUANDO.OCUPADO')
+    );
+    await clicar(jardins);
     expect(opcao(3)).toBeNull();
   });
 

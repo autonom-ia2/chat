@@ -117,14 +117,15 @@ module Autonomia::Agents::Areas
   # Nunca toca a porta: soltar a porta é o InboxConnector.
   # Agente e depois caixa, como o vincular!. Sendo a última área do agente, ele para (AgentInbox, #1366).
   # `vira_porta: true` (#1720) — a área sai porque o agente vai atender primeiro nesta mesma caixa logo em seguida, na
-  # mesma transação (Autonomia::Agents::OndeAtende): ele não para e nenhum evento de parada é gravado.
+  # mesma transação (Autonomia::Agents::OndeAtende): ele não para, nenhum evento de parada é gravado e as conversas da
+  # área NÃO voltam para a porta que sai — quem chama as passa para o espelho da porta nova.
   def desvincular!(agent:, inbox:, vira_porta: false)
     agent.with_lock do
       inbox.with_lock do
         vinculo = ::Autonomia::Agents::AgentInbox.kept.area.find_by(autonomia_agent_id: agent.id, inbox_id: inbox.id)
         next if vinculo.nil?
 
-        vinculo.release_bot_conversations!
+        vinculo.release_bot_conversations! unless vira_porta
         vinculo.vira_porta = vira_porta
         vinculo.update!(deleted_at: Time.current)
       end
