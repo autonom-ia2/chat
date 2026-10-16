@@ -1154,6 +1154,13 @@
         "ABRIR": "Ver autorização"
       },
       "SO_ADMIN": "Só quem administra a conta pode mudar."
+    },
+    "CONVERSA": {
+      "CUPOM": "Código do cupom",
+      "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
+      "VALIDADE_AJUDA": "O cliente vê a contagem regressiva até essa hora.",
+      "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
+      "CUPOM_FALTA": "Escreva o código do cupom, com até {n} letras e números, para enviar."
     }
   }
 }

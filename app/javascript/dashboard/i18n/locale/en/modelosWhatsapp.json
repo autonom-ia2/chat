@@ -1154,6 +1154,13 @@
         "ABRIR": "See permission"
       },
       "SO_ADMIN": "Only account administrators can change this."
+    },
+    "CONVERSA": {
+      "CUPOM": "Coupon code",
+      "VALIDADE": "The offer is valid until (account time zone: {zona})",
+      "VALIDADE_AJUDA": "The customer sees a countdown until this time.",
+      "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
+      "CUPOM_FALTA": "Type the coupon code, with up to {n} letters and numbers, to send."
     }
   }
 }
