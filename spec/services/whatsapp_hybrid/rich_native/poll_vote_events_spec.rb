@@ -33,13 +33,14 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
 
     manager.refresh!
     expect(client).to have_received(:update_session)
-      .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote])]))
+      .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote
+                                                                                               event.response])]))
       .once
   end
 
   it 'does not write again once subscribed' do
     connection.account.enable_features!(Waha::RichNative::FLAG)
-    allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote]))
+    allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote event.response]))
 
     manager.refresh!
 
@@ -53,10 +54,11 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
 
       expect(manager.subscribe_poll_vote!).to eq(:subscribed)
       expect(client).to have_received(:update_session)
-        .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote])]))
+        .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote
+                                                                                                 event.response])]))
         .once
 
-      allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote]))
+      allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote event.response]))
       expect(manager.subscribe_poll_vote!).to eq(:already)
     end
 
@@ -105,6 +107,24 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
     it 'ignores the vote without the flag, as main ignores unknown events' do
       connection
       expect { post_signed }.not_to have_enqueued_job(WhatsappHybrid::RichNative::PollVoteJob)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'queues the reply to our event with the flag, and drops an unknown answer' do
+      connection.account.enable_features!(Waha::RichNative::FLAG)
+      reply = lambda do |answer|
+        { id: "evt_#{SecureRandom.hex(8)}", timestamp: (Time.current.to_f * 1000).to_i, event: 'event.response', session: 'hybrid-poll',
+          payload: { id: 'R1', from: '5511@c.us', fromMe: false, eventCreationKey: { id: 'true_5511@c.us_3EB0EVT' },
+                     eventResponse: { response: answer, timestampMs: 1, extraGuestCount: 0 } } }.to_json
+      end
+      sign = ->(text) { { 'CONTENT_TYPE' => 'application/json', 'X-Webhook-Hmac' => OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', text) } }
+
+      going = reply.call('GOING')
+      expect { post path, params: going, headers: sign.call(going) }.to have_enqueued_job(WhatsappHybrid::RichNative::EventResponseJob)
+        .with(connection.id, { 'event_id' => 'true_5511@c.us_3EB0EVT', 'response' => 'going', 'extra_guests' => 0, 'response_id' => 'R1',
+                               'from_me' => false })
+      unknown = reply.call('UNKNOWN')
+      expect { post path, params: unknown, headers: sign.call(unknown) }.not_to have_enqueued_job(WhatsappHybrid::RichNative::EventResponseJob)
       expect(response).to have_http_status(:ok)
     end
   end

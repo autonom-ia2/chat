@@ -1,5 +1,7 @@
 # Prepend em WhatsappHybrid::SessionManager (chat#1709, fase 3): com a flag `whatsapp_rich_native`, a sessão do plano B
-# também assina o evento `poll.vote` (o voto na enquete nativa volta ao painel, WhatsappHybrid::RichNative::PollVoteJob).
+# também assina os eventos `poll.vote` (o voto na enquete nativa volta ao painel, WhatsappHybrid::RichNative::PollVoteJob)
+# e `event.response` (a resposta ao convite de evento, rodada 2, WhatsappHybrid::RichNative::EventResponseJob). A sessão
+# que já assinava só o voto ganha a resposta na próxima assinatura agendada (um reinício a mais).
 # Gravar a configuração REINICIA a sessão no motor. Por isso:
 # - no envio de mensagem e ao reconectar (modo :skip do `sync_remote_config!`), a assinatura NÃO é conferida: a sessão
 #   conta como configurada e nada é gravado;
@@ -10,6 +12,9 @@
 #   flag.
 module WhatsappHybrid::RichNative::PollVoteEvents
   EVENT = 'poll.vote'.freeze
+  # Rodada 2: a resposta ao convite de evento (WhatsappHybrid::RichNative::EventResponseJob) vem na MESMA assinatura.
+  EVENT_RESPONSE = 'event.response'.freeze
+  EVENTS = [EVENT, EVENT_RESPONSE].freeze
 
   # Grava a assinatura que falta (reinicia a sessão uma vez). Devolve :subscribed, :already ou :skipped (pausada, sem
   # flag ou sem sessão no motor).
@@ -34,7 +39,7 @@ module WhatsappHybrid::RichNative::PollVoteEvents
     config = super
     return config unless poll_vote_wanted?
 
-    config.merge(webhooks: config[:webhooks].map { |hook| hook.merge(events: (hook[:events] + [EVENT]).uniq) })
+    config.merge(webhooks: config[:webhooks].map { |hook| hook.merge(events: (hook[:events] + EVENTS).uniq) })
   end
 
   def sync_remote_config!(remote, proxy_mode:)
@@ -49,7 +54,7 @@ module WhatsappHybrid::RichNative::PollVoteEvents
     return configured unless configured && @poll_vote_config_mode != :skip && poll_vote_wanted?
 
     Array(remote.dig('config', 'webhooks')).any? do |hook|
-      hook.is_a?(Hash) && hook['url'] == connection.webhook_url && Array(hook['events']).include?(EVENT)
+      hook.is_a?(Hash) && hook['url'] == connection.webhook_url && (EVENTS - Array(hook['events'])).empty?
     end
   end
 

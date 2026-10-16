@@ -163,23 +163,25 @@ describe WhatsappHybrid::RichNative::Quote do
                                              'vote_id' => vote_id, 'from_me' => from_me })
     end
 
-    it 'creates the customer vote linked to the poll, once per vote id' do
+    it 'records the vote on the poll, once per vote id, as a hidden activity' do
       poll_message = native_poll
 
       2.times { vote(['Não']) }
 
-      answer = conversation.messages.incoming.sole
-      expect(answer.content).to eq('Não')
-      expect(answer.content_attributes).to include('in_reply_to' => poll_message.id, 'selected_option' => { 'id' => 'nao', 'title' => 'Não' })
+      expect(conversation.messages.incoming).to be_empty
+      expect(conversation.messages.activity.sole.content_attributes).to include('poll_vote_applied_to' => poll_message.id)
+      expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq(['Não'])
     end
 
-    it 'records a removed vote as a hidden activity and ignores votes from the company phone' do
-      native_poll
+    it 'records a removed vote and ignores votes from the company phone' do
+      poll_message = native_poll
+      vote(['Sim'], vote_id: 'V1')
       vote([], vote_id: 'V2')
       vote(['Sim'], vote_id: 'V3', from_me: true)
 
       expect(conversation.messages.incoming).to be_empty
-      expect(conversation.messages.activity.last.content_attributes).to include('c2y_hidden' => true, 'selected_options' => [])
+      expect(conversation.messages.activity.last.content_attributes).to include('c2y_hidden' => true)
+      expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq([])
     end
   end
 end
