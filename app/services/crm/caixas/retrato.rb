@@ -40,10 +40,26 @@ class Crm::Caixas::Retrato
       visibility_mode: setting&.visibility_mode || 'all_inbox_cards',
       agent_bot: robo(inbox),
       people: pessoas(inbox)
-    }.merge(agentes_de_ia_da(inbox))
+    }.merge(agentes_de_ia_da(inbox)).merge(do_detalhe(inbox))
   end
 
   private
+
+  # A caixa aberta (#1682, decisão 7 do #1140): { funil => conversas em aberto desta caixa presas a um card aberto dele },
+  # para a tela avisar antes de tirar um funil. Em aberto é aberta ou pendente. Presa ao card como no acesso por funil
+  # (Crm::Access::ConversationScope): a conversa principal do card ou uma ligada a ele (crm_card_conversations).
+  def do_detalhe(inbox)
+    @detalhe ? { conversas_abertas: conversas_abertas(inbox) } : {}
+  end
+
+  def conversas_abertas(inbox)
+    abertas = Conversation.where(inbox_id: inbox.id, status: Conversation.statuses.values_at('open', 'pending'))
+    cards = Crm::Card.active.where(account_id: @account.id)
+    principais = cards.where(conversation_id: abertas.select(:id)).pluck(:pipeline_id, :conversation_id)
+    ligadas = Crm::CardConversation.where(conversation_id: abertas.select(:id), card_id: cards.select(:id))
+                                   .joins(:card).pluck('crm_cards.pipeline_id', 'crm_card_conversations.conversation_id')
+    (principais + ligadas).uniq.group_by(&:first).transform_values(&:size)
+  end
 
   # O robô que atende primeiro na caixa. O card mostra este como responsável quando não há pessoa nem robô atribuído à
   # conversa (Crm::Card#responsible_agent_bot, #1377). `tipo_do_principal` (#1570): 'ia' quando o robô é espelho de

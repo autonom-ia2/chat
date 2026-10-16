@@ -118,7 +118,8 @@ RSpec.describe 'Public::Api::V2::Invites', type: :request do
 
   describe 'POST viewed' do
     it 'records first and last opening and counts every opening' do
-      first = Time.zone.parse('2026-10-09 10:00:00')
+      # Relativo ao relógio: com data fixa o convite nasce no passado e expira (#1706).
+      first = 2.hours.ago.change(usec: 0)
       travel_to(first) { viewed(invite.code) }
       expect(response).to have_http_status(:no_content)
       travel_to(first + 1.hour) { viewed(invite.code) }

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import AgenteIa from './AgenteIa.vue';
 import { useAgenteIaPorCaixa } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import FunilSelo from './FunilSelo.vue';
@@ -33,7 +34,12 @@ const props = defineProps({
   form: { type: Object, required: true },
   original: { type: Object, required: true },
   funis: { type: Array, required: true },
+  // #1140 — { triagem, funis } do servidor; null enquanto confere.
+  quemRecebe: { type: Object, default: null },
+  quemRecebeErro: { type: Boolean, default: false },
 });
+
+defineEmits(['conferirDeNovo']);
 
 const { t, locale } = useI18n();
 // #1648 — com a aba "Agente de IA" por caixa, o agente de outro sistema é um agente de IA como os nossos.
@@ -42,6 +48,37 @@ const porCaixa = useAgenteIaPorCaixa();
 const funisMarcados = computed(() => funisDaCaixa(props.form, props.funis));
 const varios = computed(() => funisMarcados.value.length > 1);
 const nomes = pessoas => juntar(pessoas.map(primeiroNome), locale.value);
+
+// #1140 (decisão 7) — antes de salvar: as conversas em aberto de cada funil que
+// sai (contagem do servidor) e, ficando um funil só, quem cuida dele passa a
+// cuidar também das conversas sem assunto (é o que o servidor grava).
+const avisos = computed(() => {
+  const abertas = props.original.conversas_abertas || {};
+  const saem = props.original.pipeline_ids.filter(
+    id => !props.form.pipeline_ids.includes(id)
+  );
+  const frases = saem
+    .filter(id => abertas[String(id)] > 0)
+    .map(id =>
+      t(
+        'CRM_CAIXAS.MUDA.ABERTAS',
+        {
+          n: abertas[String(id)],
+          funil: props.funis.find(funil => funil.id === id)?.name || '',
+        },
+        abertas[String(id)]
+      )
+    );
+  if (
+    props.original.pipeline_ids.length > 1 &&
+    funisMarcados.value.length === 1
+  ) {
+    frases.push(
+      t('CRM_CAIXAS.MUDA.UM_FUNIL', { funil: funisMarcados.value[0].name })
+    );
+  }
+  return frases;
+});
 
 const pessoas = computed(() =>
   [...props.form.people]
@@ -122,32 +159,68 @@ const comAPorta = computed(() => {
     : '';
 });
 
+// #1140 — quem recebe é a resposta do servidor (regra do motor de entrega). A
+// tela só junta os nomes e diz quem marcou o assunto mas fica de fora por ver
+// só as dele.
+const recebem = chave => {
+  const ids =
+    (chave === 'triagem'
+      ? props.quemRecebe?.triagem
+      : props.quemRecebe?.funis?.[String(chave)]) || [];
+  return ids
+    .map(id => props.form.people.find(pessoa => pessoa.id === id))
+    .filter(Boolean);
+};
+const linhaDoRodizio = (chave, marcadas) => {
+  const daFila = recebem(chave);
+  const foraDaFila = marcadas.filter(
+    pessoa => pessoa.only_own && !daFila.some(item => item.id === pessoa.id)
+  );
+  return {
+    chave,
+    quem: nomes(daFila),
+    ou: juntar(daFila.map(primeiroNome), locale.value, 'disjunction'),
+    quantas: daFila.length,
+    fora: foraDaFila.map(pessoa =>
+      t('CRM_CAIXAS.CONFIRA.SO_AS_DELE', { nome: primeiroNome(pessoa) })
+    ),
+  };
+};
+
 const rodizio = computed(() => [
   ...(varios.value
     ? [
         {
-          chave: 'triagem',
+          ...linhaDoRodizio('triagem', quemFazTriagem(props.form)),
           nome: t('CRM_CAIXAS.CONFIRA.SEM_ASSUNTO_TITULO'),
           cor: 'bg-n-slate-8',
-          quem: nomes(quemFazTriagem(props.form)),
         },
       ]
     : []),
   // #1447: com agente de área, ele atende primeiro e fica fora do rodízio; as
   // pessoas recebem quando o cliente pede uma pessoa.
-  ...funisMarcados.value.map(funil => {
-    const daCaixa = quemCuida(props.form, funil.id);
-    return {
-      chave: funil.id,
-      nome: funil.name,
-      cor: corDoFunil(props.funis, funil.id),
-      quem: nomes(daCaixa),
-      agente: donoDoFunil(areas.value, funil.id)?.name || '',
-      ou: juntar(daCaixa.map(primeiroNome), locale.value, 'disjunction'),
-      quantas: daCaixa.length,
-    };
-  }),
+  ...funisMarcados.value.map(funil => ({
+    ...linhaDoRodizio(funil.id, quemCuida(props.form, funil.id)),
+    nome: funil.name,
+    cor: corDoFunil(props.funis, funil.id),
+    agente: donoDoFunil(areas.value, funil.id)?.name || '',
+  })),
 ]);
+
+const ninguemRecebe = computed(() => {
+  if (!props.quemRecebe) return '';
+  // Assunto com agente de área: ele assume a conversa, e a linha dele já diz
+  // quando não há pessoa para quem o cliente pedir.
+  const vazios = rodizio.value.filter(item => !item.quantas && !item.agente);
+  return vazios.length
+    ? t('CRM_CAIXAS.CONFIRA.NINGUEM_RECEBE', {
+        assuntos: juntar(
+          vazios.map(item => item.nome),
+          locale.value
+        ),
+      })
+    : '';
+});
 
 const lista = computed(() =>
   [
@@ -267,7 +340,43 @@ const lista = computed(() =>
               : $t('CRM_CAIXAS.CONFIRA.ROBO', { nome: form.agent_bot.name })
           }}
         </p>
-        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+        <div
+          v-if="quemRecebeErro"
+          role="alert"
+          class="flex flex-wrap items-center gap-3 text-[0.9375rem] text-n-ruby-11"
+        >
+          <span class="min-w-0 flex-1">
+            {{ $t('CRM_CAIXAS.CONFIRA.ERRO_QUEM_RECEBE') }}
+          </span>
+          <Button
+            :label="$t('CRM_CAIXAS.LISTA.TENTAR_DE_NOVO')"
+            icon="i-lucide-refresh-cw"
+            slate
+            faded
+            class="!min-h-11"
+            @click="$emit('conferirDeNovo')"
+          />
+        </div>
+        <p
+          v-else-if="!quemRecebe"
+          role="status"
+          aria-busy="true"
+          class="mb-0 text-[0.9375rem] text-n-slate-11"
+        >
+          {{ $t('CRM_CAIXAS.CONFIRA.CONFERINDO') }}
+        </p>
+        <p
+          v-if="ninguemRecebe"
+          data-ninguem-recebe
+          class="mb-0 flex items-start gap-2 rounded-xl border border-n-amber-7 bg-n-amber-2 p-3 text-[0.9375rem] text-n-slate-12"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+            aria-hidden="true"
+          />
+          {{ ninguemRecebe }}
+        </p>
+        <ul v-if="quemRecebe" class="m-0 flex list-none flex-col gap-2 p-0">
           <li
             v-for="item in rodizio"
             :key="item.chave"
@@ -320,10 +429,40 @@ const lista = computed(() =>
                 }}
               </span>
             </span>
+            <span
+              v-for="frase in item.fora"
+              :key="frase"
+              data-rodizio-fora
+              class="flex basis-full items-start gap-2 ps-[1.125rem] text-sm text-n-slate-11"
+            >
+              <span
+                class="i-lucide-eye-off mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              {{ frase }}
+            </span>
           </li>
         </ul>
       </section>
     </template>
+
+    <section
+      v-if="avisos.length"
+      data-aviso-antes-de-salvar
+      class="flex flex-col gap-2 rounded-2xl border border-n-amber-7 bg-n-amber-2 p-5"
+    >
+      <p
+        v-for="(frase, indice) in avisos"
+        :key="indice"
+        class="mb-0 flex items-start gap-2 text-[0.9375rem] text-n-slate-12"
+      >
+        <span
+          class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0 text-n-amber-11"
+          aria-hidden="true"
+        />
+        {{ frase }}
+      </p>
+    </section>
 
     <section
       class="flex flex-col gap-3 rounded-2xl border border-n-blue-7 bg-n-blue-2 p-5"

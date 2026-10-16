@@ -23,7 +23,7 @@ describe('useFunnelFilterChoice (#1150)', () => {
     expect(readFunnelChoice(1, 8)).toBe(FUNNEL_ALL);
   });
 
-  it('"Todos os meus funis" apaga a chave', () => {
+  it('"Sem filtro de funil" apaga a chave', () => {
     writeFunnelChoice(1, 7, '12');
     writeFunnelChoice(1, 7, FUNNEL_ALL);
 
@@ -43,7 +43,7 @@ describe('useFunnelFilterChoice (#1150)', () => {
     expect(readFunnelChoice(1, 7)).toBe(FUNNEL_ALL);
   });
 
-  it('funil guardado que deixou de ser visível volta para "Todos os meus funis"', () => {
+  it('funil guardado que deixou de ser visível volta para "Sem filtro de funil"', () => {
     expect(visibleFunnelChoice('12', [12, 13])).toBe('12');
     expect(visibleFunnelChoice('99', [12, 13])).toBe(FUNNEL_ALL);
     expect(visibleFunnelChoice(FUNNEL_NONE, [])).toBe(FUNNEL_NONE);

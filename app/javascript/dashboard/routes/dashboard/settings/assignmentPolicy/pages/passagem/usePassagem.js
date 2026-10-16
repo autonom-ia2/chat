@@ -102,6 +102,8 @@ export function usePassagem() {
   const iaDoFunilLigada = ref(true);
   // #1593: os agentes de IA das caixas do funil (só com a Fase 2 dos Agentes; sem ela o servidor não manda a lista).
   const agentesIa = ref([]);
+  // #1140: em cada caixa do funil, quem pode receber (a regra do motor de entrega, do servidor).
+  const recebemPorCaixa = ref([]);
   const regra = ref(regraDoServidor({}));
   const etapas = ref([]);
   const original = ref('');
@@ -124,7 +126,7 @@ export function usePassagem() {
     copias = [];
     try {
       const [ajustes, listaDeFunis] = await Promise.all([
-        CrmKanbanAPI.getAiSettings(funilId),
+        CrmKanbanAPI.getAiSettings(funilId, { quemRecebe: true }),
         CrmKanbanAPI.getPipelines(),
       ]);
       if (funilId !== pedido) return;
@@ -134,6 +136,7 @@ export function usePassagem() {
       equipe.value = equipeDoServidor(dados.team);
       iaDoFunilLigada.value = dados.enabled !== false;
       agentesIa.value = dados.ai_agents || [];
+      recebemPorCaixa.value = dados.recebem_por_caixa || [];
       regra.value = regraDoServidor(dados.handoff);
       etapas.value = (dados.stages || []).map(etapa => ({
         id: etapa.id,
@@ -212,6 +215,7 @@ export function usePassagem() {
     equipe,
     iaDoFunilLigada,
     agentesIa,
+    recebemPorCaixa,
     regra,
     etapas,
     alterado,

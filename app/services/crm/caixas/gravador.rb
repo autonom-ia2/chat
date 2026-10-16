@@ -45,7 +45,16 @@ class Crm::Caixas::Gravador
     end
   end
 
+  # Leitura (#1140): as linhas de acesso que `perform` gravaria para as pessoas da tela, sem gravar nada. Quem fica sem
+  # linha (cuida de tudo) vem como nil.
+  def acessos_previstos = (agentes.keys & pessoas.keys).index_with { |user_id| acesso_previsto(user_id) if restrito?(user_id) }
+
   private
+
+  def acesso_previsto(user_id)
+    Crm::InboxAgentAccess.new(all_pipelines: todos_os_funis?(user_id), triage: triagem?(user_id), only_own: so_as_suas?(user_id),
+                              agent_pipelines: funis_da_pessoa(user_id).map { |id| Crm::InboxAgentPipeline.new(pipeline_id: id) })
+  end
 
   def validar!
     erro = primeiro_erro
