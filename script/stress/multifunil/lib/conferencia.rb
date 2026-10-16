@@ -33,16 +33,31 @@ class Stress::Conferencia
     { tipo: tipo, ia: item['ia'] || 'assunto', esperado: item, obtido: "checagem inválida: #{e.message.first(80)}", ok: false }
   end
 
+  # A IA não rodar não pode passar por "nada mudou": falha, configuração ausente e turno sem decisão de assunto são FALHA.
+  SEM_IA = %w[ai_disabled credentials_missing pipeline_ai_disabled].freeze
+  ASSUNTO_SEM_EFEITO = %w[failed no_quota no_content].freeze
+
   def automaticas
-    falhas_de_assunto = @turnos.flat_map { |t| t[:assunto] }.select { |d| d[:estado] == 'failed' }
-    falhas_de_avaliacao = @turnos.flat_map { |t| t[:avaliacoes] }.select { |a| a[:status] == :failed }
-    [
-      { tipo: 'sem_erro_de_job', ia: 'sistema', esperado: 0, obtido: @erros, ok: @erros.empty? },
-      { tipo: 'ia_de_assunto_respondeu', ia: 'assunto', esperado: 'nenhuma decisão failed',
-        obtido: falhas_de_assunto.pluck(:motivo), ok: falhas_de_assunto.empty? },
-      { tipo: 'ia_de_movimentacao_respondeu', ia: 'movimentacao', esperado: 'nenhuma avaliação failed',
-        obtido: falhas_de_avaliacao.pluck(:erro), ok: falhas_de_avaliacao.empty? }
-    ]
+    [{ tipo: 'sem_erro_de_job', ia: 'sistema', esperado: 0, obtido: @erros, ok: @erros.empty? }, assunto_respondeu,
+     movimentacao_respondeu]
+  end
+
+  def assunto_respondeu
+    falhas = @turnos.flat_map { |t| t[:assunto] }.select { |d| ASSUNTO_SEM_EFEITO.include?(d[:estado]) }.pluck(:estado, :motivo)
+    sem_decisao = @turnos.count { |t| t[:assunto].empty? }
+    falhas << "#{sem_decisao} turno(s) sem decisão" if sem_decisao.positive?
+    { tipo: 'ia_de_assunto_respondeu', ia: 'assunto', esperado: 'uma decisão por turno, nenhuma failed', obtido: falhas,
+      ok: falhas.empty? }
+  end
+
+  def movimentacao_respondeu
+    falhas = @turnos.flat_map { |t| t[:avaliacoes] }.select { |a| sem_efeito?(a) }.pluck(:erro)
+    { tipo: 'ia_de_movimentacao_respondeu', ia: 'movimentacao', esperado: 'nenhuma avaliação failed ou sem IA',
+      obtido: falhas, ok: falhas.empty? }
+  end
+
+  def sem_efeito?(avaliacao)
+    avaliacao[:status].nil? || avaliacao[:status] == :failed || SEM_IA.include?(avaliacao[:erro])
   end
 
   public
@@ -115,7 +130,8 @@ class Stress::Conferencia
 
   def checar_campo(item)
     valor = item['contato'] ? @final.dig(:contato_campos, item['chave']) : alvo(item)&.dig(:campos, item['chave'])
-    [normal(valor).include?(normal(item['contem'])), valor]
+    contem = normal(item.fetch('contem'))
+    [contem.present? && valor.present? && normal(valor).include?(contem), valor]
   end
 
   private

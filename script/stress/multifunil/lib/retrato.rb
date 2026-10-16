@@ -79,7 +79,7 @@ class Stress::Retrato
     card.reload
     rotulo(card).merge(etapa: @mundo.chave_da_etapa(card.stage), status: card.status, valor_cents: card.value_cents,
                        nomeado: Crm::Subjects::Naming.named?(card),
-                       campos: card.custom_attributes, retornos: Crm::FollowUp.where(card_id: card.id).count,
+                       campos: card.custom_attributes, retornos: Crm::FollowUp.where(card_id: card.id, status: %i[pending overdue]).count,
                        ultima_avaliacao: card.metadata.to_h.dig('ai', 'last_evaluated_at'))
   end
 

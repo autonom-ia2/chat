@@ -21,7 +21,10 @@ CRED=/Users/rodrigosilva/dev/claudete-ops/.secrets/credentials.env
 SEGREDO="/Users/Shared/maccluster-test-services/stress-segredos-$$.env"
 
 /usr/bin/tar -C "$RAIZ" -cf - script/stress/multifunil | ssh m2 "cd '$WS' && /usr/bin/tar -xf -"
-trap 'ssh m2 "/bin/rm -f $SEGREDO" >/dev/null 2>&1 || true' EXIT
+apagar_segredo() { ssh m2 "/bin/rm -f $SEGREDO" || echo "[stress] ATENÇÃO: apague à mão $SEGREDO no M2" >&2; }
+trap apagar_segredo EXIT
+trap 'exit 130' INT TERM HUP
+case "$LOG" in warn|info|error) ;; *) echo '[stress] STRESS_LOG_LEVEL só aceita warn, info ou error (debug grava SQL com valores)' >&2; exit 64 ;; esac
 /usr/bin/grep -E '^(export )?(OPENAI_API_KEY|TYPESAFE_API_KEY)=' "$CRED" | ssh m2 "umask 077; /bin/cat > $SEGREDO"
 
 ssh m2 /bin/bash -s -- "$WS" "$FASE" "$TETO" "$SO" "$SEGREDO" "$RODADAS" "$LOG" <<'REMOTO'
@@ -32,7 +35,11 @@ N=/Users/Shared/maccluster-tools/node-v24.11.0
 cd "$WS"
 # Chaves de criptografia descartáveis, só deste banco de teste (o cofre de credenciais exige alguma).
 CHAVES=/Users/Shared/maccluster-test-services/stress-cofre.env
-[[ -f "$CHAVES" ]] || { umask 077; printf 'P=%s\nD=%s\nS=%s\n' "$(openssl rand -hex 16)" "$(openssl rand -hex 16)" "$(openssl rand -hex 16)" > "$CHAVES"; }
+if [[ ! -f "$CHAVES" ]]; then
+  P=$(openssl rand -hex 16); D=$(openssl rand -hex 16); S=$(openssl rand -hex 16)
+  [[ ${#P} -eq 32 && ${#D} -eq 32 && ${#S} -eq 32 ]] || { echo '[stress] openssl rand falhou' >&2; exit 70; }
+  (umask 077; printf 'P=%s\nD=%s\nS=%s\n' "$P" "$D" "$S" > "$CHAVES")
+fi
 P=$(/usr/bin/sed -n 's/^P=//p' "$CHAVES"); D=$(/usr/bin/sed -n 's/^D=//p' "$CHAVES"); S=$(/usr/bin/sed -n 's/^S=//p' "$CHAVES")
 /usr/bin/env -i HOME="$HOME" USER="$USER" PATH="$R/bin:$N/bin:/usr/bin:/bin:/usr/sbin:/sbin" LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
   GEM_HOME="$R/lib/ruby/gems/3.4.0" GEM_PATH="$R/lib/ruby/gems/3.4.0" BUNDLE_GEMFILE="$WS/Gemfile" BUNDLE_IGNORE_CONFIG=1 BUNDLE_FROZEN=true \

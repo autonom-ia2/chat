@@ -13,6 +13,7 @@
 abort('[stress] defina STRESS_MULTIFUNIL=1 (teste com IA paga, nunca no CI)') unless ENV['STRESS_MULTIFUNIL'] == '1'
 abort('[stress] proibido em produção') if Rails.env.production? || ENV['CI'].present?
 abort('[stress] o banco precisa ser chatwoot_stress') unless ActiveRecord::Base.connection.current_database == 'chatwoot_stress'
+abort('[stress] o banco precisa ser local (127.0.0.1)') unless %w[127.0.0.1 localhost].include?(ActiveRecord::Base.connection_db_config.host)
 abort('[stress] precisa do adaptador :test do ActiveJob') unless ActiveJob::Base.queue_adapter.is_a?(ActiveJob::QueueAdapters::TestAdapter)
 
 module Stress; end
@@ -43,12 +44,15 @@ class Stress::Execucao
     selecionadas.each do |dados|
       break if sem_orcamento?(dados, resultados)
 
+      Stress::Espiao.ler! # descarta o que uma conversa que quebrou deixou para trás
       resultados << rodar_uma(dados, relogio)
       gravar(resultados)
     end
     relogio.soltar
     gravar(resultados)
     puts resumo(resultados)
+  ensure
+    esquecer_chaves
   end
 
   private
@@ -106,9 +110,9 @@ class Stress::Execucao
   end
 
   def gravar(resultados)
-    File.write(@saida.join('resultado.json'),
-               JSON.pretty_generate(fase: @fase, gerado_em: Time.now.utc.iso8601, gasto_fase_usd: (gasto_total - @gasto_inicial).round(6),
-                                    gasto_total_usd: gasto_total.round(6), conversas: resultados))
+    dados = { fase: @fase, gerado_em: Time.now.utc.iso8601, gasto_fase_usd: (gasto_total - @gasto_inicial).round(6),
+              gasto_total_usd: gasto_total.round(6), conversas: resultados }
+    File.write(@saida.join('resultado.json'), redigir(JSON.pretty_generate(dados)))
   end
 
   def resumo(resultados)
@@ -143,7 +147,18 @@ class Stress::Execucao
   end
 
   def limpo(texto)
-    @segredos.values.reduce(texto.to_s.first(300)) { |acc, segredo| acc.gsub(segredo, '<REDACTED>') }
+    redigir(texto.to_s).first(300)
+  end
+
+  # Troca o valor exato de cada segredo (sem regex) antes de qualquer corte: nem um pedaço sai.
+  def redigir(texto)
+    @segredos.values.reduce(texto) { |acc, segredo| acc.gsub(segredo, '<REDACTED>') }
+  end
+
+  # As chaves não ficam no banco de teste depois da execução.
+  def esquecer_chaves
+    InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
+    AiProviderCredential.where(provider: 'typesafe').destroy_all
   end
 end
 

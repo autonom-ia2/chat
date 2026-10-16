@@ -35,7 +35,7 @@ class Stress::Bomba
 
       entrada = proxima
       momento = entrada[:at] ? Time.zone.at(entrada[:at]) : nil
-      next @descartados["#{entrada[:job]} (depois do teto)"] += 1 if momento && momento > limite
+      next perder(entrada[:job].to_s, 'agendado depois do teto') if momento && momento > limite
 
       @relogio.ir_para(momento) if momento
       executar(entrada)
@@ -68,7 +68,7 @@ class Stress::Bomba
 
     chave = entrada['job_id']
     @repeticoes[chave] += 1
-    return @descartados["#{nome} (retry excedido)"] += 1 if @repeticoes[chave] > MAX_REPETICOES_DO_MESMO_JOB
+    return perder(nome, 'retry excedido') if @repeticoes[chave] > MAX_REPETICOES_DO_MESMO_JOB
 
     cronometrar(nome) { ActiveJob::Base.execute(entrada) }
   rescue StandardError => e
@@ -89,11 +89,21 @@ class Stress::Bomba
     nome_evento, momento, dados = job.arguments
     evento = Events::Base.new(nome_evento, momento, dados)
     ouvinte = Crm::ConversationObserverListener.instance
-    ouvinte.public_send(evento.method_name, evento) if ouvinte.respond_to?(evento.method_name)
+    return @descartados["evento sem ouvinte do CRM: #{evento.method_name}"] += 1 unless ouvinte.respond_to?(evento.method_name)
+
+    ouvinte.public_send(evento.method_name, evento)
+  end
+
+  # Job do coração do multifunil que não rodou é erro (a conversa FALHA); qualquer outro só é contado.
+  def perder(nome, motivo)
+    return @descartados["#{nome} (#{motivo})"] += 1 unless EXECUTA.include?(nome) || nome == 'EventDispatcherJob'
+
+    @erros << { job: nome, erro: 'nao_rodou', mensagem: motivo }
   end
 
   # Nenhuma mensagem de erro sai com o valor de um segredo (comparação exata de texto, sem regex).
   def limpo(texto)
-    @segredos.reduce(texto.to_s.first(300)) { |acc, segredo| segredo.present? ? acc.gsub(segredo, '<REDACTED>') : acc }
+    redigido = @segredos.reduce(texto.to_s) { |acc, segredo| segredo.present? ? acc.gsub(segredo, '<REDACTED>') : acc }
+    redigido.first(300)
   end
 end

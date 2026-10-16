@@ -13,7 +13,7 @@ teste local, com a estrutura das contas piloto 16 e 18. Conversas sintéticas de
    ("Auto e Residencial") faz a IA recusar seguro de vida (3 conversas; na Fase B a dúvida derruba também o outro assunto da mensagem); na Fase B, o pedido de atendente se perde
    quando a IA o põe no card que não é o principal (regressão nova); e o cliente com card ganho que volta por outro
    assunto deixa um card vazio no funil padrão.
-4. **Custo total registrado pelo sistema: US$ 0,955** de US$ 3,00 (Fase A e ajustes do harness US$ 0,57; Fase B
+4. **Custo total registrado pelo sistema: US$ 0,959** de US$ 3,00 (Fase A e ajustes do harness US$ 0,57; Fase B
    US$ 0,40). Por mensagem do cliente: cerca de US$ 0,001 na IA de assunto e US$ 0,0007 na de movimentação.
 5. **Corrigir primeiro:** o pedido de atendente na avaliação conjunta (#1700, código) e o filtro pelo nome do funil
    (prompt/regra). Depois o card vazio do cliente que volta (código).
@@ -208,7 +208,7 @@ Custo registrado pelo sistema (`crm_ai_usage_events`, preço de tabela do `Crm::
 - A Fase B custa ~20% a mais na IA de assunto (o modelo maior responde a lista de assuntos) e o mesmo na
   movimentação: uma chamada conjunta por mensagem em vez de uma por card (na Fase B, 66 avaliações foram de 2 ou 3
   cards numa chamada só).
-- Gasto total: **US$ 0,955** (FUMAÇA e validações do harness US$ 0,03; rascunho A0 e uma rodada interrompida
+- Gasto total: **US$ 0,959** (FUMAÇA e validações do harness US$ 0,035; rascunho A0 e uma rodada interrompida
   US$ 0,20; Fase A US$ 0,34; Fase B US$ 0,38; diagnóstico da causa 3 US$ 0,004). A Fase A inteira ficou em US$ 0,57,
   abaixo do teto de US$ 1,20.
 
@@ -303,6 +303,15 @@ Latência e custo são médias por mensagem e por execução.
 | C49 | 11 | WhatsApp + e-mail: documentos do sinistro | sem_card_novo; etapa,sin,analise; etapa,auto,proposta | igual ao esperado | PASSOU 3/3 | igual ao esperado | PASSOU 3/3 | 0.5 / 24.0 → 0.5 / 19.9 | 0.0011 → 0.0012 |
 
 As tabelas por execução (147 linhas por fase), com o obtido de cada rodada, estão no apêndice.
+
+## Revisão do harness
+
+Um revisor independente leu o harness depois das rodadas e apontou casos em que o teste poderia dar PASSOU sem a IA
+ter rodado. Conferi nos resultados das duas fases que nenhum aconteceu: todo turno teve decisão de assunto, nenhuma
+avaliação foi pulada por IA desligada ou sem chave, nenhum job do coração do multifunil foi descartado e nenhuma
+conversa quebrou no harness. Mesmo assim o harness passou a tratar esses casos como FALHA, a redigir os segredos no
+resultado inteiro antes de gravar, a apagar as chaves do banco de teste no fim e a apagar o arquivo de chaves também
+em Ctrl-C. Validado de novo com C01 e C42 (passaram) e RuboCop sem ofensas.
 
 ## Ajustes no esperado (transparência)
 
