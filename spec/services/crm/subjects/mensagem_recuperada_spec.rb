@@ -38,7 +38,7 @@ RSpec.describe Crm::Subjects::MensagemRecuperada do
       publicar(message_id: message.id)
 
       expect(Crm::Subjects::IdentifyJob).to have_been_enqueued
-        .with(conversation.id, message.id).at(Crm::Subjects::DEBOUNCE.from_now).exactly(:once)
+        .with(conversation.id, message.id, false).at(Crm::Subjects::DEBOUNCE.from_now).exactly(:once)
     end
   end
 
@@ -114,7 +114,7 @@ RSpec.describe Crm::Subjects::MensagemRecuperada do
       'message_id' => message.id, 'conversation_id' => conversation.id, 'account_id' => account.id
     )
 
-    expect(Crm::Subjects::IdentifyJob).to have_been_enqueued.with(conversation.id, message.id).exactly(:once)
+    expect(Crm::Subjects::IdentifyJob).to have_been_enqueued.with(conversation.id, message.id, false).exactly(:once)
   end
 
   it 'não derruba quem publicou quando o enfileiramento falha, e o log leva só ids e classe' do
