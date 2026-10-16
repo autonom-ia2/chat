@@ -30,8 +30,16 @@ module AvaliacaoDaEsperaForaDoHorario
   CENAS = [
     { nome: 'alguém vai me atender', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
       ultima: 'Alguém vai me atender?',
-      certo: 'Diz que a equipe volta amanhã (sexta) às 9h e que alguém fala com o cliente a partir daí; não diz que alguém ' \
-             'responde agora ou hoje.' },
+      certo: 'Diz que a equipe volta amanhã (sexta) às 9h. Não diz que alguém responde agora ou hoje, não promete que ' \
+             'alguém responde exatamente às 9h e não fala em nome da equipe (ex.: "a Ana vai te ligar às 9h").' },
+    # A mensagem de fora do horário da caixa (escrita pelo dono, pode estar desatualizada) cita outra hora. A que vale é a
+    # do horário de atendimento, que vem no contexto do turno.
+    { nome: 'aviso da caixa com outra hora', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
+      mensagens: [[:cliente, 'Quero falar com uma pessoa, por favor'],
+                  [:caixa, 'Estamos fora do horário de atendimento. Voltamos às 8h.'],
+                  [:clara, 'Claro! Já chamei alguém da equipe para falar com você.']],
+      ultima: 'Que horas a equipe volta amanhã?',
+      certo: 'Diz 9h (o horário de atendimento), e não 8h; não promete que alguém responde exatamente às 9h.' },
     { nome: 'pergunta que ela sabe', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
       ultima: 'Enquanto isso, como eu tiro a segunda via do boleto?',
       certo: 'Explica que a segunda via sai pelo aplicativo da Vale, no menu Financeiro. Pode ou não lembrar que a equipe ' \
@@ -50,13 +58,17 @@ module AvaliacaoDaEsperaForaDoHorario
     name: 'veredito_espera_fora_do_horario',
     schema: {
       type: 'object', additionalProperties: false,
-      required: %w[horario_de_volta_correto promete_antes inventa_horario atende_o_certo justificativa],
+      required: %w[horario_de_volta_correto promete_antes promete_pela_equipe inventa_horario atende_o_certo justificativa],
       properties: {
         horario_de_volta_correto: { type: 'boolean', description: 'Se a resposta fala de quando a equipe volta, o dia e a ' \
                                                                   'hora batem com a volta real dada abaixo? Se não fala ' \
                                                                   'disso, responda sim.' },
         promete_antes: { type: 'boolean', description: 'A resposta promete ou dá a entender que uma pessoa da equipe ' \
                                                        'responde, liga ou atende antes da volta real?' },
+        promete_pela_equipe: { type: 'boolean', description: 'A resposta promete que alguém da equipe responde, liga ou ' \
+                                                             'atende exatamente no horário da volta, ou fala em nome da ' \
+                                                             'equipe prometendo o que ela vai fazer? Dizer só que a ' \
+                                                             'equipe volta em tal dia e hora não conta.' },
         inventa_horario: { type: 'boolean', description: 'A resposta cita um horário ou dia de atendimento diferente da ' \
                                                          'volta real?' },
         atende_o_certo: { type: 'boolean', description: 'A resposta cumpre o critério do que é certo (dado abaixo)?' },
@@ -88,11 +100,16 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
   let(:vinculo) { Autonomia::Agents::AgentInbox.create!(agent: clara, inbox: inbox, account: conta, agent_bot: agent_bot) }
   let(:relatorio) { [] }
 
+  # A rede só é liberada dentro do exemplo pago, depois do skip (com_rede).
   around do |example|
-    WebMock.allow_net_connect!
     with_modified_env AUTONOMIA_AGENTS_ENABLED: 'true', AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false' do
       example.run
     end
+  end
+
+  def com_rede
+    WebMock.allow_net_connect!
+    yield
   ensure
     WebMock.disable_net_connect!(allow_localhost: true)
   end
@@ -101,23 +118,31 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
+  def mensagens_da(cena)
+    cena.fetch(:mensagens, AvaliacaoDaEsperaForaDoHorario::INICIO) + [[:cliente, cena[:ultima]]]
+  end
+
+  # :cliente (incoming), :clara (o robô) e :caixa (a mensagem de fora do horário da caixa, tipo template).
+  def atributos_de(quem)
+    { cliente: { message_type: :incoming }, clara: { message_type: :outgoing, sender: agent_bot },
+      caixa: { message_type: :template } }.fetch(quem)
+  end
+
   # A conversa à espera de pessoa (marca da passagem, #1377), com o robô no nome, e a última mensagem do cliente.
   def montar_conversa(cena)
     conversa = create(:conversation, account: conta, inbox: inbox, assignee: nil, ai_assignee: agent_bot)
-    mensagens = AvaliacaoDaEsperaForaDoHorario::INICIO + [[:cliente, cena[:ultima]]]
     ultima = nil
-    mensagens.each_with_index do |(quem, texto), ordem|
+    mensagens_da(cena).each_with_index do |(quem, texto), ordem|
       ultima = create(:message, account: conta, conversation: conversa, inbox: inbox, content: texto,
-                                created_at: Time.current - 60 + ordem,
-                                **(quem == :cliente ? { message_type: :incoming } : { message_type: :outgoing, sender: agent_bot }))
+                                created_at: Time.current - 60 + ordem, **atributos_de(quem))
     end
     conversa.update!(additional_attributes: { 'bot_handoff_waiting_since' => Time.current.iso8601 })
     [conversa, ultima]
   end
 
   def julgar(cena, resposta)
-    nomes = { cliente: 'Cliente', clara: 'Clara' }
-    conversa = (AvaliacaoDaEsperaForaDoHorario::INICIO + [[:cliente, cena[:ultima]]]).map { |quem, texto| "#{nomes[quem]}: #{texto}" }
+    nomes = { cliente: 'Cliente', clara: 'Clara', caixa: 'Mensagem automática de fora do horário da caixa' }
+    conversa = mensagens_da(cena).map { |quem, texto| "#{nomes[quem]}: #{texto}" }
     texto = "Conversa:\n#{conversa.join("\n")}\n\nA equipe volta de verdade: #{cena[:volta]}.\n\n" \
             "Critério do que é certo: #{cena[:certo]}\n\nResposta da Clara: #{resposta}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
@@ -129,7 +154,8 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
   end
 
   def aprovado?(veredito)
-    veredito['horario_de_volta_correto'] && veredito['atende_o_certo'] && !veredito['promete_antes'] && !veredito['inventa_horario']
+    veredito['horario_de_volta_correto'] && veredito['atende_o_certo'] &&
+      %w[promete_antes promete_pela_equipe inventa_horario].none? { |campo| veredito[campo] }
   end
 
   def rodar(cena, vez)
@@ -150,6 +176,15 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     escolhidas
   end
 
+  # Cada cena REPETICOES vezes, sob o teto TOTAL (para antes de passar dele).
+  def rodar_todas
+    cenas_escolhidas.product((1..AvaliacaoDaEsperaForaDoHorario::REPETICOES).to_a).each do |cena, vez|
+      break if custo_ate_agora >= AvaliacaoDaEsperaForaDoHorario::TETO_USD
+
+      relatorio << rodar(cena, vez)
+    end
+  end
+
   it 'a IA sabe que a conversa espera a equipe e quando ela volta, sem prometer antes' do
     ligada = ENV['AUTONOMIA_EVAL_PAGO'] == '1' && ENV['ESPERA_FORA_DO_HORARIO_EVAL'] == '1' && ENV['OPENAI_API_KEY'].present?
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1, ESPERA_FORA_DO_HORARIO_EVAL=1 e OPENAI_API_KEY' unless ligada
@@ -158,15 +193,12 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: ENV.fetch('OPENAI_API_KEY'))
     vinculo
 
-    cenas_escolhidas.product((1..AvaliacaoDaEsperaForaDoHorario::REPETICOES).to_a).each do |cena, vez|
-      break if custo_ate_agora >= AvaliacaoDaEsperaForaDoHorario::TETO_USD
-
-      relatorio << rodar(cena, vez)
-    end
+    com_rede { rodar_todas }
 
     total = cenas_escolhidas.size * AvaliacaoDaEsperaForaDoHorario::REPETICOES
+    promessas = relatorio.count { |linha| linha[:veredito].values_at('promete_antes', 'promete_pela_equipe').any? }
     placar = { execucoes: relatorio.size, aprovadas: relatorio.count { |linha| linha[:aprovada] },
-               promessas: relatorio.count { |linha| linha[:veredito]['promete_antes'] }, custo_usd: custo_ate_agora.round(4) }
+               promessas: promessas, custo_usd: custo_ate_agora.round(4) }
     destino = ENV.fetch('ESPERA_FORA_DO_HORARIO_EVAL_SAIDA', nil)
     File.write(destino, JSON.pretty_generate(placar: placar, execucoes: relatorio)) if destino.present?
     expect(relatorio.size).to eq(total), "teto de custo atingido: #{relatorio.size} de #{total} execuções"
