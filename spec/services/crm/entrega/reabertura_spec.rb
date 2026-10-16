@@ -19,7 +19,11 @@ RSpec.describe Crm::Entrega::Reabertura do
     account.crm_cards.create!(pipeline: seguros.first, stage: seguros.last, contact: joao, title: 'Seguro do Onix',
                               primary_conversation: conversa, inbox: inbox, owner: ana)
     online(bruno)
+    allow(ChatwootExceptionTracker).to receive(:new).and_call_original
   end
+
+  # A Reabertura engole o erro para não derrubar a mensagem: nenhum cenário pode passar por causa disso.
+  after { expect(ChatwootExceptionTracker).not_to have_received(:new) } # rubocop:disable RSpec/ExpectInHook
 
   def online(*users)
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return(users.to_h { |user| [user.id.to_s, 'online'] })
@@ -97,5 +101,52 @@ RSpec.describe Crm::Entrega::Reabertura do
     create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :outgoing, sender: ana)
 
     expect(conversa.reload).to have_attributes(status: 'resolved', assignee_id: ana.id)
+  end
+
+  # Pega: a caixa com robô reabre pendente para o robô; sem a dona, o robô fica no nome e responde enquanto ela não vem.
+  it 'caixa com robô, dona offline e sem regra: o robô atende e a conversa espera a dona', :aggregate_failures do
+    robo = create(:agent_bot, account: account)
+    create(:agent_bot_inbox, inbox: inbox, agent_bot: robo)
+
+    joao_volta
+
+    expect(conversa).to have_attributes(status: 'open', assignee_id: nil, ai_assignee: robo)
+    expect(conversa).to be_bot_handoff_waiting
+    expect(Crm::Entrega::Marca.dados(conversa)).to include('dono_id' => ana.id)
+  end
+
+  # Pega: a dona que saiu da caixa prender a conversa (fora da fila de quem cuida, vale a fila de sempre, como no outro
+  # canal).
+  it 'dona fora da caixa: quem cuida e está online recebe' do
+    InboxMember.find_by(inbox: inbox, user: ana).destroy!
+
+    joao_volta
+
+    expect(conversa.assignee_id).to eq(bruno.id)
+  end
+
+  # Pega: tirar a conversa de quem assumiu entre a leitura da presença e a trava.
+  it 'outra pessoa assumiu antes da trava: fica com ela' do
+    regra!
+    allow(Crm::Entrega::Presenca).to receive(:online_ids!).and_wrap_original do |original, *argumentos|
+      Conversation.where(id: conversa.id).update_all(assignee_id: bruno.id) # rubocop:disable Rails/SkipsModelValidations
+      original.call(*argumentos)
+    end
+    allow(Crm::Entrega).to receive(:new).and_call_original
+
+    joao_volta
+
+    expect(conversa.assignee_id).to eq(bruno.id)
+    expect(Crm::Entrega).not_to have_received(:new)
+  end
+
+  # Pega: a adiada que volta (não estava resolvida) passando pelo motor.
+  it 'conversa adiada que o cliente reabre: fica com a dona' do
+    regra!
+    conversa.update!(status: :snoozed)
+
+    joao_volta
+
+    expect(conversa).to have_attributes(status: 'open', assignee_id: ana.id)
   end
 end
