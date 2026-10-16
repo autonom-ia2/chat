@@ -125,9 +125,10 @@ RSpec.describe Crm::Entrega do
       expect(marca(conversa)).to include('modo' => 'segurando')
     end
 
-    # Pega: o convite da regra (r3) não atribui, não cala o robô e deixa a marca que o nativo respeita; vencido, a
-    # marca sai.
-    it 'convite: convida quem cuida do funil, o robô segue, e a marca sai quando o convite vence', :aggregate_failures do
+    # Pega: o convite da regra (r3) não atribui, não cala o robô e deixa a marca que o nativo respeita. Vencido, a regra
+    # roda de novo (#1694, decisão do Rodrigo de 16/10): o robô pediu pessoa, e a conversa não pode ficar sem pessoa e
+    # sem a marca do motor. Dentro do intervalo de um convite para outro, segura com a marca.
+    it 'convite: convida quem cuida do funil, o robô segue, e vencido o convite a regra roda de novo', :aggregate_failures do
       online(ana)
       conversa = conversa_do_robo
       card = card_em(conversa, vendas)
@@ -144,8 +145,9 @@ RSpec.describe Crm::Entrega do
         Crm::Ai::HandoffDrainJob.perform_now
       end
 
-      expect(marca(conversa)).to be_nil
-      expect(conversa.reload.assignee_id).to be_nil
+      expect(marca(conversa)).to include('modo' => 'segurando', 'falha' => 'intervalo')
+      expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+      expect(conversa).to be_bot_handoff_waiting
     end
 
     # Pega: a conversa viva está noutra caixa do mesmo card; a fila tem de ser da caixa onde o cliente fala (#553).
