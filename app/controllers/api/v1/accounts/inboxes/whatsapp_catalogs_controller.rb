@@ -16,7 +16,11 @@ class Api::V1::Accounts::Inboxes::WhatsappCatalogsController < Api::V1::Accounts
     render json: { catalog: catalog && { name: catalog.name, product_count: catalog.product_count } }
   end
 
+  # Com `ids` (#1716), os produtos escolhidos, relidos na hora de enviar pela conversa: o que acabou volta com
+  # `available: false` e o que saiu do catálogo não volta. Sem `ids`, uma página da busca pelo nome.
   def products
+    return render_chosen if params.key?(:ids)
+
     page = client.products(search: params[:q], after: params[:after])
     render json: { payload: page.products.map(&:to_h), meta: { after: page.after } }
   end
@@ -38,6 +42,14 @@ class Api::V1::Accounts::Inboxes::WhatsappCatalogsController < Api::V1::Accounts
 
   def client
     @client ||= Whatsapp::Templates::CatalogClient.new(inbox: @inbox)
+  end
+
+  # Até 30 códigos (o máximo de produtos de um modelo, `ProductParams::LIMITS`).
+  def render_chosen
+    ids = Array(params[:ids]).map { |id| id.to_s.strip }.compact_blank.uniq
+    return render_error('products_invalid') unless ids.size.between?(1, Whatsapp::Templates::ProductParams::LIMITS['varios'].max)
+
+    render json: { payload: client.find(ids).values.map(&:to_h), meta: { after: nil } }
   end
 
   # Os três abaixo rodam fora do `around_action` do idioma (#1419): cada um reabre o idioma da pessoa ou da conta.

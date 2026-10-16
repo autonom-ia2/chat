@@ -173,12 +173,10 @@ class Whatsapp::Templates::Manager
     profile&.header_file&.attached? ? profile.header_file.filename.to_s : nil
   end
 
-  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada".
+  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada"; a conversa monta a
+  # galeria do modelo (#1716, `CardMedia.listed`).
   def card_media(profile)
-    return [] unless profile
-
-    profile.card_files.map { |file| { 'card_index' => file.blob.metadata['card_index'].to_i, 'file_name' => file.filename.to_s } }
-           .sort_by { |media| media['card_index'] }
+    profile ? Whatsapp::Templates::CardMedia.listed(profile) : []
   end
 
   def profile_for(template)

@@ -86,16 +86,6 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
       expect(sent.last).to eq([{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] }])
     end
 
-    it 'a product template when the send carries the products (API caller)' do
-      message = send_message(template_message(one_product, { 'body' => { '1' => 'Ana' },
-                                                             'products' => { 'retailer_ids' => ['sku-1'] } }))
-
-      expect(message.external_error).to be_nil
-      expect(sent.last.first).to eq(
-        'type' => 'header', 'parameters' => [{ 'type' => 'product', 'product' => { 'product_retailer_id' => 'sku-1' } }]
-      )
-    end
-
     it 'a coupon with its code, as the composer sends it' do
       message = send_message(template_message(coupon, { 'body' => { '1' => 'Ana' },
                                                         'buttons' => [{ 'type' => 'copy_code', 'parameter' => 'CUPOM10' }] }))

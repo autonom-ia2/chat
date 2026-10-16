@@ -7,6 +7,7 @@ en:
       meta_unreachable: "Meta did not answer. Try again in a few minutes."
       catalog_missing: "This WhatsApp account has no product catalog connected yet."
       catalog_not_found: "We could not find this WhatsApp account’s catalog, or the connection lost access to it. Check the catalog in Commerce Manager and reconnect the inbox in Settings › Inboxes."
+      products_invalid: "Choose from 1 to 30 products."
       catalog_permission_denied: "This WhatsApp connection is not allowed to read the product catalog. Reconnect the inbox in Settings › Inboxes and try again."
       products_disabled: "Campaigns with catalog products are not enabled for this account."
       sync_failed: "We could not update the template list right now. Try again in a few minutes."
@@ -42,8 +43,13 @@ en:
       meta_text: "WhatsApp did not accept the request. Check the text, the examples and the buttons and try again."
       suggestion_unavailable: "Could not write it right now. Try again in a moment or write it your own way."
       suggestion_invalid: "Check the request: say what the message needs to do, or send a text of up to 1024 characters."
-      conversation_products: "This template shows catalog products, and the send did not say which ones. Send it in a campaign, choosing the products, or pick another template."
-      conversation_carousel: "This template is a carousel, and the send did not bring its cards. Send it in a campaign, filling in the cards, or pick another template."
+      conversation_products: "This template shows catalog products, and the send did not say which ones. Choose the products when sending, or pick another template."
+      conversation_carousel: "This template is a carousel, and the send did not bring every card with its photo and text. Fill in the cards when sending, or pick another template."
+      conversation_products_disabled: "This account does not send catalog products yet. Pick another template."
+      conversation_catalog_missing: "This WhatsApp has no product catalog connected. Connect the catalog on Meta, or pick another template."
+      conversation_catalog_unreachable: "Could not read the catalog right now. Try again in a few minutes."
+      conversation_product_unavailable: "Not sent: %{products} sold out or left the catalog. Swap the product and send again."
+      conversation_carousel_media: "Could not find the photo of a card. Choose the photo again and send."
     # Owner's permission for the system to create templates (#1586). The turn on/off text is what the screen shows in
     # the confirmation and what the record stores: when it changes, bump VERSAO in Whatsapp::Templates::AvisoDeConsentimento.
     consent:

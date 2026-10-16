@@ -3,7 +3,8 @@
 // do catálogo do WhatsApp da caixa. Busca pelo nome, foto e preço de cada um.
 // Um produto: tocar escolhe (botão comum: escolher já fecha a gaveta). Vários ou carrossel: tocar marca, na ordem em que
 // vão (o número aparece na foto); "Usar estes produtos" confirma. Esgotado
-// aparece apagado, com o motivo.
+// aparece apagado, com o motivo. Também na conversa (#1716): produto sem foto
+// mostra o ícone e, em promoção, o preço cheio aparece riscado.
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
@@ -12,6 +13,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import api from '../api/modelosWhatsapp';
 import { paginaPedida } from '../helpers/produtosNaCampanha';
+import PrecoDoProduto from '../conversa/PrecoDoProduto.vue';
 
 const props = defineProps({
   caixa: { type: [Number, String], required: true },
@@ -183,6 +185,14 @@ const contagem = computed(() => {
                 alt=""
                 class="object-cover size-full"
               />
+              <span
+                v-else
+                class="grid size-full place-items-center text-n-slate-10"
+                data-produto-sem-foto
+                aria-hidden="true"
+              >
+                <span class="i-lucide-shopping-bag size-8" />
+              </span>
             </span>
             <span
               v-if="posicao(produto) >= 0"
@@ -196,7 +206,10 @@ const contagem = computed(() => {
               <span class="text-sm font-medium text-n-slate-12">
                 {{ produto.nome }}
               </span>
-              <span class="text-sm text-n-slate-11">{{ produto.preco }}</span>
+              <PrecoDoProduto
+                :produto="produto"
+                class="text-sm text-n-slate-11"
+              />
               <span
                 v-if="!produto.disponivel"
                 class="text-xs font-medium text-n-ruby-11"

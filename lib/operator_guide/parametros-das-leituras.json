@@ -1718,6 +1718,7 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#products",
     "parametros": [
       "after",
+      "ids",
       "q"
     ]
   },

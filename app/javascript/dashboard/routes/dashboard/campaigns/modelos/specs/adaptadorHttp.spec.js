@@ -426,6 +426,39 @@ describe('adaptador HTTP de Modelos', () => {
     expect(await adaptador.obterCatalogo(8)).toBeNull();
   });
 
+  // #1716: a conversa relê os produtos escolhidos pelo código, na hora de enviar.
+  it('rereads the chosen products by their codes', async () => {
+    http.getCatalogProducts.mockReturnValue(
+      ok({
+        payload: [
+          {
+            id: 'tenis',
+            name: 'Tênis',
+            price: 'R$299,90',
+            sale_price: 'R$249,90',
+            image_url: '',
+            available: true,
+          },
+        ],
+        meta: { after: null },
+      })
+    );
+
+    expect(await adaptador.conferirProdutos(8, ['tenis', 'mochila'])).toEqual([
+      {
+        id: 'tenis',
+        nome: 'Tênis',
+        preco: 'R$249,90',
+        precoAntes: 'R$299,90',
+        foto: '',
+        disponivel: true,
+      },
+    ]);
+    expect(http.getCatalogProducts).toHaveBeenCalledWith(8, {
+      ids: ['tenis', 'mochila'],
+    });
+  });
+
   it('lists one page of products with the search and the next page', async () => {
     http.getCatalogProducts.mockReturnValue(
       ok({
@@ -450,6 +483,7 @@ describe('adaptador HTTP de Modelos', () => {
           id: 'tenis',
           nome: 'Tênis',
           preco: 'R$299,90',
+          precoAntes: '',
           foto: 'https://cdn/t.jpg',
           disponivel: false,
         },

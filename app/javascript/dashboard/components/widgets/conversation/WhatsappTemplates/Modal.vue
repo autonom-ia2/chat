@@ -1,10 +1,14 @@
 <script>
 import TemplatesPicker from './TemplatesPicker.vue';
 import WhatsAppTemplateReply from './WhatsAppTemplateReply.vue';
+// Fork #1716: produto e carrossel seguem pela tela própria da conversa.
+import EnviarModeloDaConversa from 'dashboard/routes/dashboard/campaigns/modelos/conversa/EnviarModeloDaConversa.vue';
+import { tipoNaConversa } from 'dashboard/routes/dashboard/campaigns/modelos/conversa/modeloNaConversa';
 export default {
   components: {
     TemplatesPicker,
     WhatsAppTemplateReply,
+    EnviarModeloDaConversa,
   },
   props: {
     show: {
@@ -24,7 +28,8 @@ export default {
       default: false,
     },
   },
-  emits: ['onSend', 'cancel', 'update:show'],
+  // Fork #1716: 'close' repassado do woot-modal (o template agora tem duas raízes).
+  emits: ['onSend', 'cancel', 'update:show', 'close'],
   data() {
     return {
       selectedWaTemplate: null,
@@ -57,6 +62,11 @@ export default {
   },
   methods: {
     pickTemplate(template) {
+      if (tipoNaConversa(template)) {
+        this.$emit('cancel');
+        this.$refs.modeloDaConversa.abrir(template);
+        return;
+      }
       this.selectedWaTemplate = template;
     },
     onResetTemplate() {
@@ -73,7 +83,12 @@ export default {
 </script>
 
 <template>
-  <woot-modal v-model:show="localShow" :on-close="onClose" size="modal-big">
+  <woot-modal
+    v-model:show="localShow"
+    :on-close="onClose"
+    size="modal-big"
+    @close="$emit('close')"
+  >
     <woot-modal-header
       :header-title="$t('WHATSAPP_TEMPLATES.MODAL.TITLE')"
       :header-content="modalHeaderContent"
@@ -94,6 +109,12 @@ export default {
       />
     </div>
   </woot-modal>
+  <EnviarModeloDaConversa
+    v-if="inboxId"
+    ref="modeloDaConversa"
+    :caixa="inboxId"
+    @enviar="onSendMessage"
+  />
 </template>
 
 <style scoped>

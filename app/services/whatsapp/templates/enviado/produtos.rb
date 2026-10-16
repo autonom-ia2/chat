@@ -67,8 +67,9 @@ module Whatsapp::Templates::Enviado::Produtos
     Rails.cache.read_multi(*chaves.keys).transform_keys { |chave| chaves[chave] }
   end
 
+  # O preço que o cliente vê: o de promoção dentro do período dela (#1716), senão o cheio.
   def valores(produto)
-    { 'name' => produto.name, 'price' => produto.price, 'image_url' => produto.image_url }
+    { 'name' => produto.name, 'price' => produto.sale_price.presence || produto.price, 'image_url' => produto.image_url }
   end
 
   def chave(inbox, id)

@@ -7,6 +7,7 @@ pt_BR:
       meta_unreachable: "A Meta não respondeu. Tente de novo em alguns minutos."
       catalog_missing: "Esta conta do WhatsApp ainda não tem catálogo de produtos conectado."
       catalog_not_found: "Não achamos o catálogo desta conta do WhatsApp, ou a conexão perdeu o acesso a ele. Confira o catálogo no Gerenciador de Comércio e reconecte a caixa em Configurações › Caixas de entrada."
+      products_invalid: "Escolha de 1 a 30 produtos."
       catalog_permission_denied: "A conexão deste WhatsApp não tem permissão para ler o catálogo de produtos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
       products_disabled: "Campanha com produtos do catálogo não está liberada para esta conta."
       sync_failed: "Não foi possível atualizar a lista de modelos agora. Tente de novo em alguns minutos."
@@ -42,8 +43,13 @@ pt_BR:
       meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."
       suggestion_unavailable: "Não consegui escrever agora. Tente de novo em instantes ou escreva do seu jeito."
       suggestion_invalid: "Confira o pedido: escreva o que a mensagem precisa fazer, ou um texto de até 1024 letras."
-      conversation_products: "Este modelo mostra produtos do catálogo, e o envio não disse quais. Mande por uma campanha, escolhendo os produtos, ou escolha outro modelo."
-      conversation_carousel: "Este modelo é um carrossel, e o envio não trouxe os cartões. Mande por uma campanha, montando os cartões, ou escolha outro modelo."
+      conversation_products: "Este modelo mostra produtos do catálogo, e o envio não disse quais. Escolha os produtos ao enviar, ou escolha outro modelo."
+      conversation_carousel: "Este modelo é um carrossel, e o envio não trouxe todos os cartões com foto e texto. Monte os cartões ao enviar, ou escolha outro modelo."
+      conversation_products_disabled: "Esta conta ainda não manda produtos do catálogo. Escolha outro modelo."
+      conversation_catalog_missing: "Este WhatsApp não tem catálogo de produtos conectado. Conecte o catálogo na Meta, ou escolha outro modelo."
+      conversation_catalog_unreachable: "Não consegui ler o catálogo agora. Tente de novo em alguns minutos."
+      conversation_product_unavailable: "Não enviado: %{products} acabou ou saiu do catálogo. Troque o produto e envie de novo."
+      conversation_carousel_media: "Não achei a foto de um cartão. Escolha a foto de novo e envie."
     # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
     # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
     consent:

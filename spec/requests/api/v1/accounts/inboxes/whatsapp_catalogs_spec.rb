@@ -70,9 +70,34 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappCatalogs', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq(
-      'payload' => [{ 'id' => 'tenis', 'name' => 'Tênis', 'price' => 'R$299,90', 'image_url' => 'https://cdn/t.jpg', 'available' => true }],
+      'payload' => [{ 'id' => 'tenis', 'name' => 'Tênis', 'price' => 'R$299,90', 'sale_price' => '', 'image_url' => 'https://cdn/t.jpg',
+                      'available' => true }],
       'meta' => { 'after' => 'c2' }
     )
+  end
+
+  # #1716: a conversa relê os produtos escolhidos na hora de enviar.
+  it 'rereads the chosen products by their codes' do
+    stub_catalogs([{ id: 'cat-1', name: 'Loja', product_count: 2 }])
+    request = stub_request(:get, "#{graph}/cat-1/products")
+              .with(query: hash_including('filter' => { retailer_id: { is_any: %w[tenis mochila] } }.to_json))
+              .to_return(status: 200, headers: json,
+                         body: { data: [{ retailer_id: 'mochila', name: 'Mochila', price: 'R$99', availability: 'out of stock' }] }.to_json)
+
+    call("#{base}/products", { ids: %w[tenis mochila] })
+
+    expect(request).to have_been_made
+    expect(response.parsed_body['payload']).to eq([{ 'id' => 'mochila', 'name' => 'Mochila', 'price' => 'R$99', 'sale_price' => '',
+                                                     'image_url' => '', 'available' => false }])
+  end
+
+  it 'refuses an empty or too long list of codes before Meta' do
+    [[' '], Array.new(31) { |index| "sku-#{index}" }].each do |ids|
+      call("#{base}/products", { ids: ids })
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('products_invalid')
+    end
+    expect(a_request(:get, ->(uri) { uri.host == 'graph.facebook.com' })).not_to have_been_made
   end
 
   it 'says the catalog is missing and the permission problem in the language of the account' do
