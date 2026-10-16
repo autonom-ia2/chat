@@ -25,6 +25,20 @@ module Waha::Client::RichSends
     post('/api/sendPoll', with_reply_to({ session: session, chatId: chat_id, id: id, poll: poll }, reply_to))
   end
 
+  # Cartão de prévia do link (rodada 2): text (contém preview[:url]) e preview: { url:, title:, description:, image: { url:,
+  # mimetype: } }. Sem `id`: o pedido não aceita id gerado antes; o id físico volta na resposta. Sem `image` o motor
+  # GOWS 2026.9.2 dá 500 (Waha::RichPayload só monta com a imagem).
+  def send_link_custom_preview(session:, chat_id:, text:, preview:, reply_to: nil)
+    body = { session: session, chatId: chat_id, text: text, preview: preview, linkPreviewHighQuality: true }
+    post('/api/send/link-custom-preview', with_reply_to(body, reply_to))
+  end
+
+  # Convite de evento (rodada 2): event: { name:, description:, startTime: (s), endTime:, location: { name: },
+  # extraGuestsAllowed: }. Sem `id` gerado antes. A resposta do cliente volta pelo evento `event.response`.
+  def send_event(session:, chat_id:, event:, reply_to: nil)
+    post("/api/#{session}/events", with_reply_to({ chatId: chat_id, event: event }, reply_to))
+  end
+
   # Apaga "para todos" (fase 3). message_id no formato que o motor exige: "true_<chatId>_<id físico>".
   def delete_message(session:, chat_id:, message_id:)
     chat = URI.encode_www_form_component(chat_id)

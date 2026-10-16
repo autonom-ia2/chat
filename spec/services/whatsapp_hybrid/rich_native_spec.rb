@@ -54,8 +54,8 @@ describe WhatsappHybrid::RichNative do
     it 'lists the native types with the flag, outside the 24h window and with WhatsApp API ready' do
       flag_on!
 
-      expect(Waha::RichNative.types_for(conversation)).to eq(%w[options location contact poll])
-      expect(Waha::RichNative.types_for(conversation, api_reply: true)).to eq(%w[options location contact poll])
+      expect(Waha::RichNative.types_for(conversation)).to eq(%w[options location contact poll link_button event])
+      expect(Waha::RichNative.types_for(conversation, api_reply: true)).to eq(%w[options location contact poll link_button event])
     end
 
     it 'is empty without the flag' do
@@ -89,7 +89,7 @@ describe WhatsappHybrid::RichNative do
       allow(WhatsappHybrid::Router).to receive(:new).and_call_original
 
       expect(Waha::RichNative.types_for(conversation, api_reply: false)).to eq([])
-      expect(Waha::RichNative.types_for(conversation, api_reply: true)).to eq(%w[options location contact poll])
+      expect(Waha::RichNative.types_for(conversation, api_reply: true)).to eq(%w[options location contact poll link_button event])
       expect(WhatsappHybrid::Router).not_to have_received(:new)
     end
 
@@ -113,7 +113,7 @@ describe WhatsappHybrid::RichNative do
         end
 
         expect(replies).to all(be(true))
-        expect(result).to all(eq(flag ? %w[options location contact poll] : []))
+        expect(result).to all(eq(flag ? %w[options location contact poll link_button event] : []))
         expect(queries).to be_empty
       ensure
         Current.reset

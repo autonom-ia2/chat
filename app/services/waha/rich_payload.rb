@@ -4,7 +4,7 @@
 #   Waha::RichPayload.build(rich_message, body: 'Qual horário?', locale: 'pt_BR', reference: 123)  # => instância, ou nil
 #   payload.deliver(client, session: 'hybrid-55...', chat_id: '55...@c.us', id: '3EB0...')
 #
-# nil quer dizer "não sai nativo": o tipo não tem envio nativo no motor (link_button, location_request, flow,
+# nil quer dizer "não sai nativo": o tipo não tem envio nativo no motor (location_request, flow,
 # link_preview), a entrada está fora do contrato, ou não cabe nos limites da lista do WhatsApp. Quem chama manda o
 # texto, como antes.
 #
@@ -13,9 +13,13 @@
 # - location sai por `sendLocation`; contact por `sendContactVcard`.
 # - poll (enquete, chat#1709 fase 3) sai por `sendPoll`: a pergunta é o corpo, as opções vão pelo título (o voto volta
 #   pelo título) e `multiple` vira `multipleAnswers`.
+# - link_button (rodada 2) sai por `sendLinkCustomPreview` (cartão com título, descrição e imagem), só com `image_url`.
+# - event (rodada 2) sai por `sendEvent` (convite com "Vou / Não vou"); cancelar o evento o motor não faz.
 #
 # Teste em aparelho real (16/10/2026, motor 2026.9.2 GOWS PLUS): os três chegam nativos (comentário na #1709).
 class Waha::RichPayload
+  include Waha::RichPayload::LinkAndEvent
+
   # Limites da lista do WhatsApp. Passou de um deles, sai texto.
   ROWS_MAX = 10
   ROW_TITLE_MAX = 24
@@ -33,7 +37,12 @@ class Waha::RichPayload
   POLL_OPTIONS = (2..12)
   POLL_OPTION_MAX = 100
 
-  KINDS = %w[options location contact poll].freeze
+  KINDS = %w[options location contact poll link_button event].freeze
+  # Envios sem id gerado antes (o id físico volta na resposta).
+  RETURNED_ID_KINDS = %w[options link_button event].freeze
+  # O endpoint do motor de cada tipo, no pedido ao conector (`request`).
+  ENDPOINTS = { 'options' => 'sendList', 'location' => 'sendLocation', 'contact' => 'sendContactVcard', 'poll' => 'sendPoll',
+                'link_button' => 'sendLinkCustomPreview', 'event' => 'sendEvent' }.freeze
 
   attr_reader :kind
 
@@ -63,14 +72,16 @@ class Waha::RichPayload
     when 'location' then coordinates?
     when 'contact' then contact.present?
     when 'poll' then poll.present?
+    when 'link_button' then link_preview.present?
+    when 'event' then event.present?
     else false
     end
   end
 
-  # `sendList` não aceita id gerado antes (não está no contrato do motor); `sendLocation`, `sendContactVcard` e `sendPoll`
-  # aceitam.
+  # `sendList`, `sendLinkCustomPreview` e `sendEvent` não aceitam id gerado antes (não está no contrato do motor);
+  # `sendLocation`, `sendContactVcard` e `sendPoll` aceitam.
   def pre_generated_id?
-    @kind != 'options'
+    RETURNED_ID_KINDS.exclude?(@kind)
   end
 
   def deliver(client, session:, chat_id:, id:)
@@ -79,18 +90,26 @@ class Waha::RichPayload
     when 'location' then client.send_location(session: session, chat_id: chat_id, id: id, location: location)
     when 'contact' then client.send_contact_vcard(session: session, chat_id: chat_id, id: id, contacts: [contact])
     when 'poll' then client.send_poll(session: session, chat_id: chat_id, id: id, poll: poll)
+    when 'link_button' then client.send_link_custom_preview(session: session, chat_id: chat_id, **link_preview)
+    when 'event' then client.send_event(session: session, chat_id: chat_id, event: event)
     end
   end
 
   # O pedido para quem chama o motor fora daqui (o conector da caixa WAHA comum, fase 2): o endpoint e o corpo, sem
   # `session`, `chatId` nem `id`, que o conector põe. Chaves em texto, como vão no JSON do webhook.
   def request
+    { 'kind' => ENDPOINTS.fetch(@kind), 'payload' => request_payload }.deep_stringify_keys
+  end
+
+  def request_payload
     case @kind
-    when 'options' then { 'kind' => 'sendList', 'payload' => { message: list_message } }
-    when 'location' then { 'kind' => 'sendLocation', 'payload' => location }
-    when 'contact' then { 'kind' => 'sendContactVcard', 'payload' => { contacts: [contact] } }
-    when 'poll' then { 'kind' => 'sendPoll', 'payload' => { poll: poll } }
-    end&.deep_stringify_keys
+    when 'options' then { message: list_message }
+    when 'location' then location
+    when 'contact' then { contacts: [contact] }
+    when 'poll' then { poll: poll }
+    when 'link_button' then link_preview
+    when 'event' then { event: event }
+    end
   end
 
   # O id físico que o motor deu à mensagem, lido da resposta do envio: `id` como texto (`true_<chat>_<id>`, o mesmo

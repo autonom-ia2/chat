@@ -1,7 +1,7 @@
 # O cliente do motor de um envio que cita outra mensagem (chat#1709, fase 3, WhatsappHybrid::RichNative::Quote): todo
 # pedido de envio leva `reply_to` com o id físico da citada. O resto passa direto ao Waha::Client.
 class WhatsappHybrid::RichNative::QuotingClient < SimpleDelegator
-  SENDS = %i[send_text send_list send_location send_contact_vcard send_poll].freeze
+  SENDS = %i[send_text send_list send_location send_contact_vcard send_poll send_link_custom_preview send_event].freeze
 
   def initialize(client, reply_to)
     super(client)

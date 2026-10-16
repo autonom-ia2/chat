@@ -84,7 +84,8 @@ module Waha::EngineCapabilities
                             .capture_exception
   end
 
-  # `options` só com `list_reply: true`; `poll` só com `poll_vote: true` (o conector devolve o voto, c2y-rich-2).
+  # `options` só com `list_reply: true`; `poll` só com `poll_vote: true` (o conector devolve o voto, c2y-rich-2); `event`
+  # só com `event_response: true` (o conector devolve a resposta "Vou / Não vou", c2y-rich-3).
   def declared(body)
     autonomia = autonomia_block(body)
     return [] unless autonomia['rich_native'].is_a?(Array)
@@ -92,6 +93,7 @@ module Waha::EngineCapabilities
     types = Waha::RichNative::KINDS & autonomia['rich_native'].map(&:to_s)
     types -= ['options'] unless autonomia['list_reply'] == true
     types -= ['poll'] unless autonomia['poll_vote'] == true
+    types -= ['event'] unless autonomia['event_response'] == true
     types
   end
 
