@@ -5,10 +5,14 @@
 # - sem regra de Atribuição no funil: a fila é só o dono, e a conversa espera por ele;
 # - com regra: o dono online é a fila inteira, e nem o agente de IA da regra entra; offline, a regra decide entre todos,
 #   inclusive passando ao agente de IA;
-# - presença fora do ar (Presenca.online_ids!, o ponto único): não se sabe se ele está online, então segue dirigida a
-#   ele, e o seletor, ao ler a presença, segura (a marca guarda o dono para a fila tentar de novo).
+# - presença fora do ar (Presenca.online_ids!, o ponto único): não se sabe se ele está online, então a entrega segue
+#   dirigida a ele e a Entrega exige presença do seletor (#sem_presenca?), que relê, não consegue e segura, qualquer que
+#   seja a regra. Nunca entrega no escuro; a marca guarda o dono para a fila tentar de novo.
+#
+# Decide de novo a cada fila pedida: a nova tentativa depois de o agente de IA recusar (Crm::Entrega#concluir_para_ia!)
+# não reusa a decisão da primeira.
 class Crm::Entrega::Dono
-  # Para quem a entrega foi dirigida nesta rodada (a marca de segurar guarda o id), ou nil.
+  # Para quem a entrega foi dirigida nesta fila (a marca de segurar guarda o id), ou nil.
   attr_reader :dirigido
 
   def initialize(conversation:, pessoa:)
@@ -17,8 +21,9 @@ class Crm::Entrega::Dono
   end
 
   def fila(pessoas, regra:)
+    @sem_presenca = false
     dono = @pessoa && pessoas.find { |pessoa| pessoa.id == @pessoa.id }
-    @dirigido = dono if dono && (regra.nil? || online?(dono))
+    @dirigido = dono && (regra.nil? || online?(dono)) ? dono : nil
     @dirigido ? [@dirigido] : pessoas
   end
 
@@ -30,11 +35,16 @@ class Crm::Entrega::Dono
     @dirigido.present?
   end
 
+  # A presença não respondeu na última fila: a Entrega pede presença ao seletor, que segura.
+  def sem_presenca?
+    @sem_presenca == true
+  end
+
   private
 
   def online?(pessoa)
     Crm::Entrega::Presenca.online_ids!(@conversation.account_id).include?(pessoa.id)
   rescue Crm::Ai::HandoffMemberSelector::PresencaIndisponivel
-    true
+    @sem_presenca = true
   end
 end

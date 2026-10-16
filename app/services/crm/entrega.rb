@@ -140,7 +140,7 @@ class Crm::Entrega
   def seletor(card, settings, require_online:)
     Crm::Ai::HandoffMemberSelector.new(
       inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, settings),
-      mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online,
+      mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online || @dono.sem_presenca?,
       suggested_name: sugestao_de_pessoa, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
     )
   end
@@ -150,9 +150,10 @@ class Crm::Entrega
     Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
   end
 
-  # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono).
+  # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem
+  # memória entre chamadas: a nova tentativa depois de o agente de IA recusar (#concluir_para_ia!) decide de novo.
   def fila(card, settings)
-    @fila ||= @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
+    @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
   end
 
   def nada(motivo)

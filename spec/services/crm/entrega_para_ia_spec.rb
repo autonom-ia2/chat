@@ -267,6 +267,22 @@ RSpec.describe Crm::Entrega do
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
     end
 
+    # Pega: a nova tentativa depois de o agente recusar reusando a decisão velha ("dona offline", fila inteira) quando a
+    # dona já entrou: o rodízio dava a conversa à Bia, mais livre, em vez da dona.
+    it 'o agente recusa e a dona entrou nesse meio tempo: a nova tentativa decide de novo e entrega à dona', :aggregate_failures do
+      bia = create(:user, account: account, role: :agent, name: 'Bia')
+      create(:inbox_member, inbox: inbox, user: bia)
+      create(:conversation, account: account, inbox: inbox, assignee: ana, status: :open)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ bia.id.to_s => 'online' })
+      antes_do_servico do
+        parar_area!
+        allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online', bia.id.to_s => 'online' })
+      end
+
+      expect(entrega_ao_dono).to have_attributes(status: :entregue, pessoa: ana)
+      expect(servico).to have_received(:call)
+    end
+
     # Pega: sem regra no funil, a conversa caindo para outra pessoa em vez de esperar a dona.
     it 'sem regra no funil: a conversa espera a dona, sem IA e sem outra pessoa', :aggregate_failures do
       comercial.stages.first.update!(metadata: {})

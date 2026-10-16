@@ -366,6 +366,18 @@ RSpec.describe 'Outro canal (R13): conversa nova ligada ao card aberto' do # rub
     end
   end
 
+  # Pega: regra que não olha presença entregando à dona "no escuro" com a presença fora do ar.
+  it 'presença fora do ar e regra sem "só para quem está online": segura mesmo assim, guardando a dona', :aggregate_failures do
+    seguros.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'prefer_online' => false } })
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(RuntimeError)
+    conversation, message = email_do_joao
+
+    sincronizar(conversation, message)
+
+    expect(conversation.assignee_id).to be_nil
+    expect(Crm::Entrega::Marca.dados(conversation)).to include('falha' => 'presenca_indisponivel', 'dono_id' => ana.id)
+  end
+
   it 'presença com erro genérico e sem regra no funil: segura guardando a dona', :aggregate_failures do
     allow(OnlineStatusTracker).to receive(:get_available_users).and_raise(RuntimeError)
     conversation, message = email_do_joao
