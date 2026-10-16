@@ -3073,6 +3073,13 @@
         "BOTAO_FUNIL": "Abrir o funil",
         "BOTAO_CAIXA": "Ligar uma caixa"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "Esta regra não vale por completo:",
+        "SEM_IA": "A IA deste funil está desligada: ela não percebe quando o cliente pede uma pessoa. A regra continua valendo quando o robô ou o agente de IA da caixa passa a conversa e quando a conversa sai da triagem.",
+        "FIXA_FUNIL": "{nome} não pode receber conversas deste funil em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "FIXA_ETAPA": "Na etapa {etapa}, {nome} não pode receber conversas em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "ALGUEM": "A pessoa escolhida"
+      },
       "PREVIA": {
         "SELO": "Prévia",
         "SELO_AGORA": "Agora",
