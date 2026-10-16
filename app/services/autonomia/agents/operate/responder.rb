@@ -64,7 +64,7 @@ module Autonomia
           blocked = ::Autonomia::Agents::Operate::EngagementGate.new(agent: @agent, conversation: @conversation).blocked_reason
           return skip_for_humans(blocked) if blocked
           # #1669: uma pessoa da equipe já respondeu esta mensagem do cliente -> nem chama a IA (não gasta).
-          return silencio_por_pessoa if pessoa_respondeu?
+          return silencio_por_pessoa('antes_da_ia').tap { evento_da_pessoa } if pessoa_respondeu?
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
           result = sem_marca_da_equipe(answer)
@@ -230,7 +230,7 @@ module Autonomia
           return silencio_por_turno_superado if turno_superado?
           return Result.replied(nil) if already_replied? # um settle anterior já entregou (retry): não é silêncio
 
-          silencio_por_pessoa if pessoa_respondeu?
+          silencio_por_pessoa('na_entrega') if pessoa_respondeu?
         end
 
         # ESPELHAMENTO DE ÁUDIO: só quando o cliente mandou áudio NESTE turno (media.transcripts) e o
@@ -328,7 +328,7 @@ module Autonomia
           return Result.replied(nil) if already_replied? # um settle anterior já entregou
           return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
 
-          silencio_por_pessoa if pessoa_respondeu? # a pessoa respondeu durante a IA; o job reconfere a cada pedaço
+          silencio_por_pessoa('na_entrega') if pessoa_respondeu? # a pessoa respondeu durante a IA; o job reconfere a cada pedaço
         end
 
         # Motor de resposta em modo INSTRUÇÃO-DIRIGIDO: devolve a resposta do modelo como veio (sem
@@ -344,7 +344,8 @@ module Autonomia
             documents: media.documents,
             trust_instruction: true,
             delivery: delivery,
-            **rodadas_do_turno
+            **rodadas_do_turno,
+            **{ contexto_do_turno: contexto_do_turno }.compact
           ).answer
         end
 
@@ -421,10 +422,20 @@ module Autonomia
           ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @reply_to_message_id)
         end
 
-        def silencio_por_pessoa
-          @calou_pela_pessoa = true
+        # `etapa`: onde calou (`antes_da_ia` | `na_entrega`). O evento é gravado FORA do lock (evento_da_pessoa), para que
+        # uma falha ao gravá-lo nunca contamine a transação da hora de postar.
+        def silencio_por_pessoa(etapa)
+          @calou_pela_pessoa = etapa
           registrar_silencio('pessoa_respondeu')
           Result.silenced
+        end
+
+        def evento_da_pessoa
+          return unless @calou_pela_pessoa
+
+          ::Autonomia::Agents::Operate::EventLogger.silenciado_pessoa_respondeu(
+            agent: @agent, conversation: @conversation, message_id: @reply_to_message_id, etapa: @calou_pela_pessoa
+          )
         end
 
         # Depois da entrega: despacha a consulta assíncrona aceita no turno e honra o handoff pedido pela instrução.
@@ -435,6 +446,7 @@ module Autonomia
         def depois_da_entrega(result, outcome)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
           handoff_if_signaled(result) unless @calou_pela_pessoa
+          evento_da_pessoa
         end
 
         # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
@@ -608,6 +620,15 @@ module Autonomia
           recent_messages.map do |message|
             { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
           end
+        end
+
+        # #1669: a regra do turno (PessoaDaEquipe::REGRA_DO_TURNO) quando a janela tem mensagem da equipe com moldura.
+        # Vai como contexto do turno, nunca na instrução do agente (que é do dono). nil fora da Fase 2 ou sem mensagem
+        # da equipe: o Answerer nem recebe o argumento, e o pedido fica igual ao de antes.
+        def contexto_do_turno
+          return unless ::Autonomia::Agents::Operate::PessoaDaEquipe.aplica?(@conversation)
+
+          ::Autonomia::Agents::Operate::PessoaDaEquipe.regra_do_turno(recent_messages, whatsapp: @conversation.inbox.whatsapp?)
         end
 
         def history_com_a_equipe

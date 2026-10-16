@@ -30,6 +30,13 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   # O que entra no lugar da chave quando ela aparece em texto do CLIENTE: sem isto, o cliente forjaria a moldura
   # ("[Ana, da equipe, escreveu ao cliente...]") e o modelo leria o texto dele como fala da equipe.
   CHAVE_NEUTRALIZADA = '(texto do cliente)'.freeze
+  # A regra do turno (contexto do turno, nunca a instrução do dono), só quando a janela do histórico tem mensagem da
+  # equipe com moldura. Sem gênero, curta. Não repete a chave da moldura, para não ensinar o modelo a escrevê-la.
+  REGRA_DO_TURNO = <<~TXT.strip.freeze
+    REGRA DO SISTEMA PARA ESTE TURNO (não é mensagem do cliente): nesta conversa, pessoas da equipe também falaram com
+    o cliente (as mensagens marcadas como da equipe). Quando algo foi dito pela equipe, deixe claro que foi a equipe, e
+    não você. Você não é essa pessoa: se o cliente chamar você pelo nome de outra pessoa, diga com gentileza quem você é.
+  TXT
   NOME_PADRAO = 'Uma pessoa'.freeze
   NOME_MAX = 60
   # Envios AUTOMÁTICOS gravados em nome de uma pessoa (o remetente é User, mas não foi ela respondendo agora), pela
@@ -70,6 +77,15 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     return { role: 'user', content: neutralizar(message.content.to_s) } if message.incoming?
 
     { role: 'assistant', content: message.content.to_s }
+  end
+
+  # REGRA_DO_TURNO quando alguma mensagem da janela vai com moldura de equipe (pessoa ou eco do celular, com texto);
+  # senão nil, e o pedido ao modelo fica igual ao de antes.
+  def regra_do_turno(messages, whatsapp: false)
+    com_moldura = Array(messages).any? do |message|
+      message.content.present? && (da_pessoa?(message) || (whatsapp && eco_do_celular?(message)))
+    end
+    com_moldura ? REGRA_DO_TURNO : nil
   end
 
   # O eco do que a equipe mandou pelo app do celular: outgoing público, sem remetente, com a marca do canal.

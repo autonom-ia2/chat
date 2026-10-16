@@ -201,6 +201,55 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
     end
   end
 
+  describe 'telemetria do silêncio' do
+    def eventos
+      Autonomia::Agents::AgentEvent.silenciado_pessoa_respondeu.where(conversation_id: conversation.id)
+    end
+
+    it 'antes da IA: um evento com a mensagem do cliente e a etapa, sem nome nem texto' do
+      ia_responde!
+      mensagem = turno_do_cliente
+      ana_responde
+
+      rodar_turno!
+
+      evento = eventos.sole
+      expect(evento).to have_attributes(message_id: mensagem.id, autonomia_agent_id: agente_da_porta.id, account_id: account.id)
+      expect(evento.metadata).to eq('etapa' => 'antes_da_ia')
+      expect(evento.handoff_reason).to be_nil
+    end
+
+    it 'durante a IA: evento com etapa na_entrega; o mesmo turno de novo não duplica' do
+      ia_responde!(durante: ->(_agente) { ana_responde })
+      mensagem = turno_do_cliente
+      rodar_turno!
+
+      described_class.new(conversation: conversation, agent_inbox: vinculo_da_porta, reply_to_message_id: mensagem.id).perform
+
+      expect(eventos.sole).to have_attributes(message_id: mensagem.id, metadata: { 'etapa' => 'na_entrega' })
+    end
+
+    it 'o evento não conta a conversa como atendida' do
+      ia_responde!
+      turno_do_cliente
+      ana_responde
+      rodar_turno!
+
+      expect(Autonomia::Agents::AgentEvent.atendimentos.where(conversation_id: conversation.id)).to be_empty
+    end
+
+    it 'sem a Fase 2, nenhum evento' do
+      Autonomia::Agents::Fase2.desligar!(account)
+      ia_responde!
+      turno_do_cliente
+      ana_responde
+
+      rodar_turno!
+
+      expect(eventos).to be_empty
+    end
+  end
+
   describe 'sem a Fase 2' do
     before { Autonomia::Agents::Fase2.desligar!(account) }
 
@@ -291,6 +340,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder, :um_turno do
 
       expect(respostas.count).to eq(1)
       expect(linhas.grep(/motivo=pessoa_respondeu pedaco=1/).size).to eq(1)
+      expect(Autonomia::Agents::AgentEvent.silenciado_pessoa_respondeu.where(conversation_id: conversation.id).sole.metadata)
+        .to eq('etapa' => 'pedaco_1')
     end
 
     it 'sem a Fase 2, igual à main: a cadeia inteira sai mesmo com a Ana respondendo' do

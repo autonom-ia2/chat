@@ -45,7 +45,7 @@ module Autonomia
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
           return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta) if motivo == :dono_mudou
-          return avisar_pessoa_respondeu(agent_inbox, conversation, index) if motivo == :pessoa_respondeu
+          return avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index) if motivo == :pessoa_respondeu
           return unless posted
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
@@ -79,10 +79,14 @@ module Autonomia
           :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
         end
 
-        # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou.
-        def avisar_pessoa_respondeu(agent_inbox, conversation, index)
+        # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou: o log e
+        # o evento (fora do lock; o post_chunk! já devolveu).
+        def avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
           Rails.logger.info("[autonomia][operate] silencio agent=#{agent_inbox.agent.id} conv=#{conversation.id} " \
                             "motivo=pessoa_respondeu pedaco=#{index}")
+          ::Autonomia::Agents::Operate::EventLogger.silenciado_pessoa_respondeu(
+            agent: agent_inbox.agent, conversation: conversation, message_id: reply_to_message_id, etapa: "pedaco_#{index}"
+          )
         end
 
         def dono_novo?(conversation, agent_inbox)
