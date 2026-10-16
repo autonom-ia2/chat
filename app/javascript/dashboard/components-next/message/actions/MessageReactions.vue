@@ -18,7 +18,6 @@ const groups = computed(() =>
 
 <template>
   <ul
-    v-if="groups.length"
     class="flex flex-wrap gap-1"
     data-message-reactions
     :aria-label="t('MESSAGE_ACTIONS.REACTIONS_LABEL')"
