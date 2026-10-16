@@ -27,6 +27,7 @@
       "AVISO_TITULO": "Este é o horário do canal.",
       "AVISO": "O agente de IA que atende \"só no horário\" e os prazos do SLA seguem este horário.",
       "FUSO": "As horas valem no fuso da conta: {fuso}.",
+      "FUSO_SEM_NOME": "As horas valem no fuso da conta.",
       "MUDAR_FUSO": "Mudar o fuso da conta",
       "DIAS_E_HORAS": "Dias e horas",
       "COLUNA_DIA": "Dia",
@@ -70,6 +71,7 @@
       "CARREGANDO": "Carregando…",
       "CANAIS_TITULO": "Horário dos canais",
       "CANAIS_TEXTO": "O horário de cada canal fica na tela do canal. Ele vale para o agente de IA, para a mensagem de fora do horário e para o SLA, no fuso da conta ({fuso}).",
+      "CANAIS_TEXTO_SEM_FUSO": "O horário de cada canal fica na tela do canal. Ele vale para o agente de IA, para a mensagem de fora do horário e para o SLA, no fuso da conta.",
       "CANAL_SEM_HORARIO": "Sem horário: atende a qualquer hora",
       "VER_CANAL": "Ver horário do canal",
       "DEFINIR_CANAL": "Definir horário do canal",
@@ -79,6 +81,7 @@
     },
     "AGENTE": {
       "FUSO": "O horário é o do canal, no fuso da conta ({fuso}).",
+      "FUSO_SEM_NOME": "O horário é o do canal, no fuso da conta.",
       "MUDAR": "Mudar o horário do canal",
       "DEFINIR": "Definir o horário do canal",
       "NOVA_ABA": "(abre em nova aba)"

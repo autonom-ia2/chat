@@ -3403,6 +3403,7 @@
         "AGENT_TITLE": "Calendário do agente — {name}",
         "TIMEZONE_LABEL": "Fuso horário",
         "FUSO_DA_CONTA": "No fuso da conta: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "No fuso da conta.",
         "ENABLED_LABEL": "Calendário ativo",
         "DAYS": {
           "SUNDAY": "Domingo",

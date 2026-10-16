@@ -175,9 +175,11 @@ const onSave = async () => {
           class="m-0 text-sm text-n-slate-11"
         >
           {{
-            t('CRM_SLA.SCHEDULES.EDITOR.FUSO_DA_CONTA', {
-              fuso: rotuloFusoDaConta,
-            })
+            rotuloFusoDaConta
+              ? t('CRM_SLA.SCHEDULES.EDITOR.FUSO_DA_CONTA', {
+                  fuso: rotuloFusoDaConta,
+                })
+              : t('CRM_SLA.SCHEDULES.EDITOR.FUSO_DA_CONTA_SEM_NOME')
           }}
         </p>
         <div v-else class="grid gap-1.5">

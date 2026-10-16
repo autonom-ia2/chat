@@ -3402,6 +3402,7 @@
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
         "FUSO_DA_CONTA": "In the account time zone: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "In the account time zone.",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",

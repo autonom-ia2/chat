@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
-import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import {
   comMaiuscula,
   diasDoCanal,
@@ -22,7 +22,10 @@ const { t } = useI18n();
 const NS = 'HORARIO_DO_CANAL.SLA';
 
 const caixas = useMapGetter('inboxes/getInboxes');
-const { fuso } = useHorarioUnicoCaixa();
+// O fuso que o servidor devolve nas caixas: com a flag, é o mesmo em todas (o da conta, ou o padrão do CRM).
+const fuso = computed(() =>
+  rotuloDoFuso((caixas.value || []).find(caixa => caixa.timezone)?.timezone)
+);
 
 // O link só para quem abre a tela do canal (meta.permissions de settings_inbox_show).
 const usuario = useMapGetter('getCurrentUser');
@@ -59,7 +62,11 @@ const linhas = computed(() =>
         {{ t(`${NS}.CANAIS_TITULO`) }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">
-        {{ t(`${NS}.CANAIS_TEXTO`, { fuso }) }}
+        {{
+          fuso
+            ? t(`${NS}.CANAIS_TEXTO`, { fuso })
+            : t(`${NS}.CANAIS_TEXTO_SEM_FUSO`)
+        }}
       </p>
     </div>
 

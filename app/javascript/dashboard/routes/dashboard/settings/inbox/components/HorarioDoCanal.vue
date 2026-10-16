@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
-import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import SettingsToggleSection from 'dashboard/components-next/Settings/SettingsToggleSection.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
@@ -27,7 +27,8 @@ const NS = 'HORARIO_DO_CANAL.CANAL';
 const canManage = useCanManage('inbox_manage');
 const papel = useMapGetter('getCurrentRole');
 const uiFlags = useMapGetter('inboxes/getUIFlags');
-const { fuso } = useHorarioUnicoCaixa();
+// O fuso que o servidor devolve na caixa: com a flag, já é o efetivo (o da conta, ou o padrão do CRM).
+const fuso = computed(() => rotuloDoFuso(props.inbox?.timezone));
 
 // A tela de Configurações da conta (onde fica o fuso) é só do administrador.
 const podeMudarFuso = computed(() => papel.value === 'administrator');
@@ -123,7 +124,7 @@ const salvar = async () => {
           {{ t(`${NS}.AVISO`) }}
         </p>
         <p class="m-0">
-          {{ t(`${NS}.FUSO`, { fuso }) }}
+          {{ fuso ? t(`${NS}.FUSO`, { fuso }) : t(`${NS}.FUSO_SEM_NOME`) }}
           <router-link
             v-if="podeMudarFuso"
             data-mudar-fuso

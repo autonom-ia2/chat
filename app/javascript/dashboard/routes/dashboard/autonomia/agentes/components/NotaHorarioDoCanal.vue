@@ -1,15 +1,16 @@
 <script setup>
-import { computed, getCurrentInstance, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useEventListener } from '@vueuse/core';
-import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 
-// #1619 (flag `horario_unico_caixa`) — abaixo de "Quando atende": o horário mostrado é o do canal, o
-// mesmo que o agente obedece, no fuso da conta. Com horário: a linha do fuso e "Mudar o horário do
-// canal"; sem horário: "Definir o horário do canal". O link abre a tela do canal em outra aba; ao
-// voltar para esta, as caixas são relidas e o horário novo já aparece aqui.
+// #1619 (flag `horario_unico_caixa`; quem usa só monta com a flag ligada) — abaixo de "Quando atende":
+// o horário mostrado é o do canal, o mesmo que o agente obedece, no fuso da conta. Com horário: a linha
+// do fuso e "Mudar o horário do canal"; sem horário: "Definir o horário do canal". O link abre a tela do
+// canal em outra aba; ao voltar para esta, as caixas são relidas e o horário novo já aparece aqui.
 // `horario`: texto (tem horário), null (sem horário) ou undefined (caixa fora do mapa: nada).
 const props = defineProps({
   inboxId: { type: Number, default: null },
@@ -18,17 +19,20 @@ const props = defineProps({
 
 const { t } = useI18n();
 const router = useRouter();
-// A store da instância (como no useStore), só para reler as caixas ao voltar da outra aba.
-const instancia = getCurrentInstance();
-const { ligado, fuso } = useHorarioUnicoCaixa();
+const store = useStore();
+const caixaPorId = useMapGetter('inboxes/getInbox');
 // Mesmas permissões de quem conecta canal: administrador ou inbox_manage, que editam o horário.
 const { podeConectarCanal } = usePermissoesDaJornada();
 const NS = 'HORARIO_DO_CANAL.AGENTE';
 
+// O fuso que o servidor devolve na caixa: com a flag, já é o efetivo (o da conta, ou o padrão do CRM).
+const fuso = computed(() =>
+  rotuloDoFuso(caixaPorId.value?.(props.inboxId)?.timezone)
+);
 const temHorario = computed(() => typeof props.horario === 'string');
 const semHorario = computed(() => props.horario === null);
 const mostrar = computed(
-  () => ligado.value && props.inboxId && (temHorario.value || semHorario.value)
+  () => props.inboxId && (temHorario.value || semHorario.value)
 );
 
 const link = computed(
@@ -43,7 +47,7 @@ const aguardando = ref(false);
 useEventListener(document, 'visibilitychange', () => {
   if (!aguardando.value || document.visibilityState !== 'visible') return;
   aguardando.value = false;
-  instancia.proxy.$store.dispatch('inboxes/get');
+  store.dispatch('inboxes/get');
 });
 </script>
 
@@ -52,7 +56,7 @@ useEventListener(document, 'visibilitychange', () => {
   <div class="contents">
     <div v-if="mostrar" data-horario-do-canal class="flex flex-col">
       <p v-if="temHorario" data-fuso class="m-0 text-sm text-n-slate-11">
-        {{ t(`${NS}.FUSO`, { fuso }) }}
+        {{ fuso ? t(`${NS}.FUSO`, { fuso }) : t(`${NS}.FUSO_SEM_NOME`) }}
       </p>
       <a
         v-if="podeConectarCanal"

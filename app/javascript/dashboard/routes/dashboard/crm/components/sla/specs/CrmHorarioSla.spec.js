@@ -27,6 +27,8 @@ const CAIXAS = [
     id: 1,
     name: 'WhatsApp Vendas',
     channel_type: 'Channel::Whatsapp',
+    // Com a flag, o servidor devolve o fuso efetivo (o da conta) em cada caixa.
+    timezone: 'America/Manaus',
     working_hours_enabled: true,
     working_hours: [1, 2, 3, 4, 5].map(d => linha(d, 540, 1080)),
   },
@@ -34,6 +36,7 @@ const CAIXAS = [
     id: 2,
     name: 'Instagram da loja',
     channel_type: 'Channel::Instagram',
+    timezone: 'America/Manaus',
     working_hours_enabled: false,
     working_hours: [],
   },
@@ -97,7 +100,7 @@ describe('CrmHorarioPessoas', () => {
             owner_type: 'User',
             owner_id: 11,
             enabled: true,
-            timezone: 'America/Cuiaba',
+            timezone: 'America/Manaus',
             blocks: [1, 2, 3, 4, 5].map(d => ({
               day_of_week: d,
               start_minute: 480,
@@ -108,7 +111,7 @@ describe('CrmHorarioPessoas', () => {
             owner_type: 'User',
             owner_id: 13,
             enabled: true,
-            timezone: 'America/Cuiaba',
+            timezone: 'America/Manaus',
             blocks: [1, 2, 3, 4, 5].flatMap(d => [
               { day_of_week: d, start_minute: 540, end_minute: 720 },
               { day_of_week: d, start_minute: 780, end_minute: 1080 },
@@ -164,7 +167,7 @@ describe('CrmHorarioPessoas', () => {
 describe('CrmHorarioCanais', () => {
   it('mostra o horário de cada canal no fuso da conta e leva à tela do canal', () => {
     const wrapper = montar(CrmHorarioCanais);
-    expect(wrapper.text()).toContain('no fuso da conta (America/Cuiaba).');
+    expect(wrapper.text()).toContain('no fuso da conta (America/Manaus).');
     expect(wrapper.text()).not.toContain('Brasília');
 
     const [vendas, insta] = wrapper.findAll('[data-canal]');

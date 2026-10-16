@@ -34,7 +34,8 @@ vi.mock('dashboard/api/autonomia/channels', () => ({
 
 const HORARIO = 'seg. a sex., das 9h às 18h';
 
-const criarStore = flag => {
+// O fuso mostrado é o que o servidor devolve na caixa (inbox.timezone), não o da conta no painel.
+const criarStore = (flag, fusoDaCaixa = 'America/Sao_Paulo') => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
@@ -43,8 +44,9 @@ const criarStore = flag => {
         flag && nome === 'horario_unico_caixa',
       'accounts/getAccount': () => () => ({
         id: 1,
-        custom_attributes: { timezone: 'America/Sao_Paulo' },
+        custom_attributes: { timezone: 'America/Cuiaba' },
       }),
+      'inboxes/getInbox': () => id => ({ id, timezone: fusoDaCaixa }),
       getUISettings: () => ({}),
     },
   });
@@ -52,8 +54,8 @@ const criarStore = flag => {
   return store;
 };
 
-const montarNota = ({ flag = true, ...props }) => {
-  const store = criarStore(flag);
+const montarNota = ({ fusoDaCaixa, ...props }) => {
+  const store = criarStore(true, fusoDaCaixa);
   const wrapper = mount(NotaHorarioDoCanal, {
     props: { inboxId: 10, ...props },
     global: { plugins: [store] },
@@ -100,9 +102,11 @@ describe('NotaHorarioDoCanal', () => {
     expect(wrapper.find('[data-horario-do-canal]').exists()).toBe(false);
   });
 
-  it('sem a flag: nada', () => {
-    const { wrapper } = montarNota({ flag: false, horario: HORARIO });
-    expect(wrapper.find('[data-horario-do-canal]').exists()).toBe(false);
+  it('caixa sem fuso: a frase sem o nome, nunca com espaço em branco', () => {
+    const { wrapper } = montarNota({ horario: HORARIO, fusoDaCaixa: '' });
+    expect(wrapper.find('[data-fuso]').text()).toBe(
+      'O horário é o do canal, no fuso da conta.'
+    );
   });
 
   it('ao voltar da aba do canal, relê as caixas uma vez', async () => {
@@ -151,6 +155,9 @@ describe('OndeQuandoEscolha com o horário do canal', () => {
     const semHorario = montarEscolha({ flag: false, onde: 11 });
     expect(comHorario.find('[data-horario-do-canal]').exists()).toBe(false);
     expect(semHorario.find('[data-horario-do-canal]').exists()).toBe(false);
+    // Nem a nota é montada: o DOM fica igual ao da main.
+    expect(comHorario.findComponent(NotaHorarioDoCanal).exists()).toBe(false);
+    expect(comHorario.find('.contents').exists()).toBe(false);
     expect(semHorario.text()).toContain(
       'Este canal ainda não tem horário de atendimento.'
     );

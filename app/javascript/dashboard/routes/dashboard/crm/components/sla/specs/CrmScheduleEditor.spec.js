@@ -19,7 +19,7 @@ const CALENDARIO = {
   blocks: [{ day_of_week: 1, start_minute: 540, end_minute: 1080 }],
 };
 
-const montar = flag => {
+const montar = (flag, fusoDaConta = 'America/Cuiaba') => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
@@ -27,7 +27,7 @@ const montar = flag => {
         flag && nome === 'horario_unico_caixa',
       'accounts/getAccount': () => () => ({
         id: 1,
-        custom_attributes: { timezone: 'America/Cuiaba' },
+        custom_attributes: { timezone: fusoDaConta },
       }),
     },
   });
@@ -81,5 +81,18 @@ describe('CrmScheduleEditor', () => {
 
     const enviado = await salvar(wrapper);
     expect(enviado.timezone).toBe('America/Sao_Paulo');
+  });
+
+  it('com a flag e sem fuso: a frase sem o nome e nada é salvo sem fuso', async () => {
+    const wrapper = montar(true, '');
+    expect(wrapper.find('[data-fuso-da-conta]').text()).toBe(
+      'No fuso da conta.'
+    );
+    const botao = wrapper
+      .findAll('button')
+      .find(item => item.text() === 'Salvar calendário');
+    await botao.trigger('click');
+    await flushPromises();
+    expect(api.create).not.toHaveBeenCalled();
   });
 });

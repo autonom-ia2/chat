@@ -34,7 +34,8 @@ const CAIXA = {
   channel_type: 'Channel::Whatsapp',
   working_hours_enabled: true,
   out_of_office_message: 'Voltamos às 9h.',
-  timezone: 'UTC',
+  // Com a flag, o servidor já devolve o fuso efetivo da caixa (o da conta, ou o padrão do CRM).
+  timezone: 'America/Sao_Paulo',
   working_hours: [
     { day_of_week: 0, closed_all_day: true },
     ...[1, 2, 3, 4, 5].map(d => linha(d, 540, 1080)),
@@ -53,7 +54,8 @@ const montar = ({ inbox = CAIXA, papel = 'administrator' } = {}) => {
       'accounts/isFeatureEnabledonAccount': () => () => true,
       'accounts/getAccount': () => () => ({
         id: 1,
-        custom_attributes: { timezone: 'America/Sao_Paulo' },
+        // Diferente do da caixa: a tela mostra o que o servidor devolve na caixa.
+        custom_attributes: { timezone: 'America/Cuiaba' },
       }),
       'inboxes/getUIFlags': () => ({ isUpdating: false }),
     },
@@ -96,7 +98,26 @@ describe('HorarioDoCanal', () => {
       'general_settings_index'
     );
     expect(wrapper.text()).not.toContain('Selecionar fuso horário');
-    expect(wrapper.text()).not.toContain('UTC');
+    expect(wrapper.text()).not.toContain('Cuiaba');
+  });
+
+  it('caixa sem fuso: a frase sem o nome, nunca com espaço em branco', () => {
+    const { wrapper } = montar({ inbox: { ...CAIXA, timezone: '' } });
+    expect(wrapper.find('[data-aviso]').text()).toContain(
+      'As horas valem no fuso da conta.'
+    );
+    expect(wrapper.find('[data-aviso]').text()).not.toContain('conta: ');
+  });
+
+  it('ligar o horário sem clicar em Salvar não grava nada', async () => {
+    const { wrapper, dispatch } = montar({
+      inbox: { ...CAIXA, working_hours_enabled: false, working_hours: [] },
+    });
+    await wrapper.find('[role="switch"]').trigger('click');
+    await flushPromises();
+    // A sugestão seg. a sex., 09:00 às 18:00 aparece, mas só vai ao servidor no Salvar.
+    expect(wrapper.findAll('[data-total]')).toHaveLength(5);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('esconde o atalho do fuso de quem não é administrador', () => {
