@@ -74,9 +74,14 @@ class Waha::RichNative::Inbound
 
     absorbing = ABSORBING.keys.find { |key| present.key?(key) }
     run(message, absorbing, present[absorbing]) if absorbing
-    return if message.activity?
+    return if absorbed?(message)
 
     TRANSFORMING.each_key { |key| run(message, key, present[key]) if present.key?(key) }
+  end
+
+  # Absorvida: virou atividade escondida, ou o turno do cliente para a IA (voto, resposta ao evento).
+  def self.absorbed?(message)
+    message.activity? || Waha::RichNative::AiTurn.turn?(message)
   end
 
   def self.apply_without_flag(message, present)

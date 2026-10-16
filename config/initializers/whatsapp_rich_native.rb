@@ -44,6 +44,10 @@ Rails.application.config.to_prepare do
     Whatsapp::Providers::WhatsappCloudService.prepend(Waha::RichNative::PollCloudText)
   end
   Message.before_create Waha::RichNative::Inbound if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound }
+  # A IA não responde a bolha "abra no celular" nem a mensagem apagada pelo cliente (Waha::RichNative::AgentTurnGuard).
+  unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::AgentTurnGuard
+    Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::AgentTurnGuard)
+  end
   # O `in_reply_to` do conector antes de o Chatwoot apagar o que é de outra conversa (reação/edição numa conversa nova).
   if Message._validation_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::ReplyTarget }
     Message.before_validation Waha::RichNative::Inbound::ReplyTarget, on: :create

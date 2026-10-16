@@ -34,10 +34,15 @@ module Waha::RichNative::PollVote
     selected if selected.size == titles.size
   end
 
-  # Grava o voto na enquete e transforma a mensagem do voto (ainda não gravada) em atividade escondida. timestamp: a
-  # hora do voto no WhatsApp (segundos), quando o motor a mandou.
+  # Grava o voto na enquete. A mensagem do voto (ainda não gravada) vira o turno do cliente para a IA quando o voto é
+  # novo e escolhe algo (Waha::RichNative::AiTurn); voto retirado ou antigo vira atividade escondida. timestamp: a hora
+  # do voto no WhatsApp (segundos), quando o motor a mandou.
   def record_vote!(message, poll, selected, timestamp: nil)
-    Waha::RichNative::PollVotes.apply!(poll, sender: poll.conversation.contact, titles: selected.pluck('title'), timestamp: timestamp)
-    Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => poll.id)
+    titles = selected.pluck('title')
+    applied = Waha::RichNative::PollVotes.apply!(poll, sender: poll.conversation.contact, titles: titles, timestamp: timestamp)
+    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => poll.id) unless applied && titles.any?
+
+    text = Waha::RichNative::AiTurn.poll_text(poll.account, poll, titles)
+    Waha::RichNative::AiTurn.record!(message, text, APPLIED_KEY => poll.id)
   end
 end

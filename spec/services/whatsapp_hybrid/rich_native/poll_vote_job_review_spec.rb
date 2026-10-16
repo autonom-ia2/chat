@@ -27,11 +27,10 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
       poll_message = native_poll
       vote(['Sim'])
 
-      record = conversation.messages.activity.sole
+      record = conversation.messages.incoming.sole
       expect(record.additional_attributes).to include('c2y_window_neutral' => true)
       expect(record.content_attributes).to include('c2y_hidden' => true, 'poll_vote_applied_to' => poll_message.id)
       expect(poll_message.reload.content_attributes['poll_votes'].sole).to include('sender_type' => 'Contact', 'options' => ['Sim'])
-      expect(conversation.messages.incoming).to be_empty
       expect(Conversations::MessageWindowService.new(conversation.reload).can_reply?).to be(false)
       expect(WhatsappHybrid::Router.new(conversation).cloud_window_open?).to be(false)
     end
@@ -60,8 +59,11 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
     vote(['Sim'], vote_id: 'V2')
     vote([], vote_id: 'V3')
 
-    expect(conversation.messages.activity.pluck(:source_id)).to eq(%w[waha-poll-vote-V2 waha-poll-vote-V3])
-    expect(conversation.messages.activity.last.content_attributes).to include('c2y_hidden' => true)
+    # O voto (V2) é o turno do cliente para a IA; o voto retirado (V3) fica atividade escondida.
+    expect(conversation.messages.incoming.pluck(:source_id)).to eq(%w[waha-poll-vote-V2])
+    expect(conversation.messages.activity.pluck(:source_id)).to eq(%w[waha-poll-vote-V3])
+    expect(conversation.messages.where(source_id: %w[waha-poll-vote-V2 waha-poll-vote-V3]).map { |message| message.content_attributes['c2y_hidden'] })
+      .to all(be(true))
     expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq([])
   end
 

@@ -67,14 +67,15 @@ describe Waha::RichNative::PollVote do
   describe 'the vote (waha_poll_vote)' do
     before { account.enable_features!(Waha::RichNative::FLAG) }
 
-    it 'aggregates the vote on the poll by the offered titles and hides the vote message' do
+    # A mensagem do voto é o turno do cliente para a IA (recebida, com o texto claro) e fica escondida na tela.
+    it 'aggregates the vote on the poll by the offered titles and makes the vote a hidden customer turn' do
       poll = poll_message
       inbox_payload(poll)
 
       answer = vote(poll.reload, %w[Não Sim])
 
-      expect(answer).to be_activity
-      expect(answer.content).to eq('Poll vote saved')
+      expect(answer).to be_incoming
+      expect(answer.content).to eq("Voted in the poll 'Vem amanhã?': Não, Sim")
       expect(answer.content_attributes).to include('c2y_hidden' => true, 'poll_vote_applied_to' => poll.id)
       expect(answer.content_attributes.keys & %w[selected_option selected_options waha_poll_vote]).to eq([])
       vote_entry = poll.reload.content_attributes['poll_votes'].sole

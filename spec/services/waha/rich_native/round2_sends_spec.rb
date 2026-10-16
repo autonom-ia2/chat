@@ -122,7 +122,7 @@ describe 'WAHA rich native round 2 sends' do # rubocop:disable RSpec/DescribeCla
                                                    'extra_guests' => 0, 'response_id' => response_id, 'from_me' => false })
     end
 
-    it 'aggregates one reply per person on our native event, once per reply id, as a hidden activity' do
+    it 'aggregates one reply per person on our native event, once per reply id, as a hidden customer turn' do
       event = native_event
       expect(event.content_attributes['rich_message_sent_as']).to eq('native')
 
@@ -131,10 +131,12 @@ describe 'WAHA rich native round 2 sends' do # rubocop:disable RSpec/DescribeCla
       reply('not_going', response_id: 'R2')
 
       expect(event.reload.content_attributes['event_responses'].sole).to include('sender_type' => 'Contact', 'response' => 'not_going')
-      activities = conversation.messages.activity
-      expect(activities.pluck(:source_id)).to eq(%w[waha-event-response-R1 waha-event-response-R2])
-      expect(activities.first.content_attributes).to include('c2y_hidden' => true, 'event_response_applied_to' => event.id)
-      expect(conversation.messages.incoming).to be_empty
+      turns = conversation.messages.incoming.order(:id)
+      expect(turns.pluck(:source_id)).to eq(%w[waha-event-response-R1 waha-event-response-R2])
+      expect(turns.first.content_attributes).to include('c2y_hidden' => true, 'event_response_applied_to' => event.id)
+      expect(turns.map(&:content)).to all(start_with('Replied to the invitation'))
+      expect(turns.last.content).to end_with(': Not going')
+      expect(conversation.messages.activity).to be_empty
     end
   end
 end

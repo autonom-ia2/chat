@@ -40,6 +40,12 @@ en:
     ai:
       location: "Location shared by the customer: %{place}. Map: %{url}"
       live_location: "Live location shared by the customer (this is only the starting point; they may have moved): %{place}. Map: %{url}"
+      poll_vote: "Voted in the poll '%{question}': %{options}"
+      event_response: "Replied to the invitation '%{name}': %{response}"
+      event_answers:
+        going: "Going"
+        not_going: "Not going"
+        maybe: "Maybe"
     message_actions:
       reaction_invalid: "This message cannot get a reaction. Use a single emoji."
       edit_invalid: "This message can no longer be edited. Only text sent less than %{minutes} minutes ago, without attachment or special format and up to %{max_length} characters, can be edited."

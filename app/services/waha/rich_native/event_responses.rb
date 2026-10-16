@@ -53,9 +53,12 @@ module Waha::RichNative::EventResponses
     entry.is_a?(Hash) && entry['sender_type'] == sender.class.name && entry['sender_id'] == sender.id
   end
 
-  # Grava a resposta no evento e transforma a mensagem da resposta (ainda não gravada) em atividade escondida.
+  # Grava a resposta no evento. A mensagem da resposta (ainda não gravada) vira o turno do cliente para a IA quando a
+  # resposta é nova (Waha::RichNative::AiTurn); uma antiga (job refeito) vira atividade escondida.
   def record_response!(message, event, response:, extra_guests: 0, timestamp: nil)
-    apply!(event, sender: event.conversation.contact, response: response, extra_guests: extra_guests, timestamp: timestamp)
-    Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => event.id)
+    applied = apply!(event, sender: event.conversation.contact, response: response, extra_guests: extra_guests, timestamp: timestamp)
+    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => event.id) unless applied
+
+    Waha::RichNative::AiTurn.record!(message, Waha::RichNative::AiTurn.event_text(event.account, event, response), APPLIED_KEY => event.id)
   end
 end

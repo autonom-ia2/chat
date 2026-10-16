@@ -190,3 +190,18 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
   read_receipt_sent_at, link_preview, played_at, deleted_by_contact_at, poll_votes, event_responses, edit_history,
   edited_at) não vão ao webhook da caixa WAHA em `message_updated`, porque o conector reenviaria a mensagem (ele lê todo
   `message_updated` com `external_error`, mesmo nulo, como pedido de reenvio) e ninguém na main grava essas chaves.
+
+## Decisões aprovadas pelo Rodrigo (16/10/2026) — agente de IA
+
+- Voto na enquete e resposta ao convite são TURNO DO CLIENTE para a IA (`Waha::RichNative::AiTurn`): com a flag, a
+  mensagem do voto (ou da resposta) fica RECEBIDA, com texto claro no idioma da conta ("Votou na enquete 'Qual
+  horário?': Tarde"; "Respondeu ao convite 'Visita técnica': Vou") e `c2y_hidden: true` (a tela esconde; o voto segue
+  agregado em `poll_votes`/`event_responses`). Segue o caminho normal da mensagem do cliente (debounce, posse do turno,
+  espera do assunto); voto trocado dentro do debounce responde só à última escolha. Voto retirado ou antigo continua
+  atividade escondida. No Híbrido, a janela da Cloud não abre por ele (`c2y_window_neutral`). Sem a flag, igual à main.
+- A IA fica calada diante da bolha "abra no celular" (`is_unsupported`) na caixa WAHA com a flag, com o evento
+  `skipped_mensagem_sem_suporte` (valor 15 do enum, pulando 10 a 14 de outros PRs; conta como não atendimento).
+- A IA não responde mensagem apagada pelo cliente (`deleted_by_contact_at`) e ela sai do histórico que vai à IA
+  (`Waha::RichNative::AgentTurnGuard`).
+- Edição só pelo autor ou administrador: já coberta (spec de ações de mensagem). Contato só como cartão: já coberto
+  (o .vcf sai). Nova tentativa de download: sem mudança.

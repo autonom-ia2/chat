@@ -40,6 +40,12 @@ pt_BR:
     ai:
       location: "Localização compartilhada pelo cliente: %{place}. Mapa: %{url}"
       live_location: "Localização ao vivo compartilhada pelo cliente (este é só o ponto inicial; ele pode ter se movido): %{place}. Mapa: %{url}"
+      poll_vote: "Votou na enquete '%{question}': %{options}"
+      event_response: "Respondeu ao convite '%{name}': %{response}"
+      event_answers:
+        going: "Vou"
+        not_going: "Não vou"
+        maybe: "Talvez"
     message_actions:
       reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
       edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."
