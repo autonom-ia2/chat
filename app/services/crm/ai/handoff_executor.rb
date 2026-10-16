@@ -41,7 +41,7 @@ module Crm
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
 
-        # Decisão do coordenador do Multifunil (16/10): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
+        # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
         registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
         entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
