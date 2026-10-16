@@ -79,11 +79,33 @@ function openContactNewTab(contactId) {
   window.open(url, '_blank');
 }
 
+const onlyDigits = text =>
+  Array.from(text || '')
+    .filter(char => char >= '0' && char <= '9')
+    .join('');
+
+// Cadastro sem nome de verdade: vazio ou o próprio telefone no lugar do nome.
+const lacksName = contact =>
+  !contact.name?.trim() || onlyDigits(contact.name) === rawPhoneNumber.value;
+
 // Procura o contato pelo telefone com "+" (como ele é gravado) e cria se não existir.
+// #1702: achou sem nome de verdade e o cartão traz o nome? Completa o cadastro; nome
+// que alguém já deu ao contato não é trocado.
 async function findOrCreateContact() {
-  let contact = await filterContactByNumber(`+${rawPhoneNumber.value}`);
+  const contact = await filterContactByNumber(`+${rawPhoneNumber.value}`);
   if (!contact) {
-    contact = await $store.dispatch('contacts/create', getContactObject());
+    const created = await $store.dispatch(
+      'contacts/create',
+      getContactObject()
+    );
+    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
+    return created;
+  }
+  if (contactName.value && lacksName(contact)) {
+    await $store.dispatch('contacts/update', {
+      id: contact.id,
+      name: contactName.value,
+    });
     useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
   }
   return contact;
