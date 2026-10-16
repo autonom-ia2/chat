@@ -45,6 +45,24 @@ Rails.application.config.to_prepare do
   WebhookListener.prepend(Waha::RichNative::OutgoingHints) unless WebhookListener <= Waha::RichNative::OutgoingHints
 end
 
+Rails.application.config.to_prepare do
+  # Fase 3, plano B do Híbrido (web_transport.rb e echo_reconciler_extension.rb intocados): citação no envio, foto
+  # como foto, apagar para todos e o voto da enquete de volta (assinatura `poll.vote` com a flag).
+  WhatsappHybrid::WebTransport.prepend(WhatsappHybrid::RichNative::Quote) unless WhatsappHybrid::WebTransport <= WhatsappHybrid::RichNative::Quote
+  unless WhatsappHybrid::WebTransport <= WhatsappHybrid::RichNative::MediaAsMedia
+    WhatsappHybrid::WebTransport.prepend(WhatsappHybrid::RichNative::MediaAsMedia)
+  end
+  unless WhatsappHybrid::SessionManager <= WhatsappHybrid::RichNative::PollVoteEvents
+    WhatsappHybrid::SessionManager.prepend(WhatsappHybrid::RichNative::PollVoteEvents)
+  end
+  unless Webhooks::WhatsappHybridController <= WhatsappHybrid::RichNative::PollVoteWebhook
+    Webhooks::WhatsappHybridController.prepend(WhatsappHybrid::RichNative::PollVoteWebhook)
+  end
+  if Message._commit_callbacks.none? { |callback| callback.filter == WhatsappHybrid::RichNative::RevokeOnDelete }
+    Message.after_update_commit WhatsappHybrid::RichNative::RevokeOnDelete
+  end
+end
+
 # Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron (Waha::RichNative::ColdStart).
 # Registrado DEPOIS da inicialização (e de novo a cada recarga de código): carregar `Account` dentro do `to_prepare` da
 # partida carrega junto o `Team` (CacheKeys), cuja validação lê o I18n na carga da classe, antes de as traduções
