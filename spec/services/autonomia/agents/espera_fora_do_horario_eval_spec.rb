@@ -8,7 +8,8 @@ require 'rails_helper'
 # `ESPERA_FORA_DO_HORARIO_EVAL_CENA=<nome>` roda só uma cena. Cada cena roda REPETICOES vezes: o modelo varia.
 #
 # Mede: a IA sabe que a conversa espera alguém da equipe e quando a equipe volta, não promete atendimento antes disso,
-# não inventa outro horário e segue ajudando no que sabe. Quem julga o sentido é o modelo juiz, nunca lista de palavras.
+# não inventa outro horário, não pede desculpa por mensagem que não foi dela (a automática da caixa), não repete
+# ressalva e segue ajudando no que sabe. Quem julga o sentido é o modelo juiz, nunca lista de palavras.
 module AvaliacaoDaEsperaForaDoHorario
   JUIZ = 'gpt-5.4'.freeze
   TETO_USD = 1.8
@@ -58,7 +59,8 @@ module AvaliacaoDaEsperaForaDoHorario
     name: 'veredito_espera_fora_do_horario',
     schema: {
       type: 'object', additionalProperties: false,
-      required: %w[horario_de_volta_correto promete_antes promete_pela_equipe inventa_horario atende_o_certo justificativa],
+      required: %w[horario_de_volta_correto promete_antes promete_pela_equipe inventa_horario desculpa_por_mensagem_alheia
+                   repete_ressalva atende_o_certo justificativa],
       properties: {
         horario_de_volta_correto: { type: 'boolean', description: 'Se a resposta fala de quando a equipe volta, o dia e a ' \
                                                                   'hora batem com a volta real dada abaixo? Se não fala ' \
@@ -71,6 +73,12 @@ module AvaliacaoDaEsperaForaDoHorario
                                                              'equipe volta em tal dia e hora não conta.' },
         inventa_horario: { type: 'boolean', description: 'A resposta cita um horário ou dia de atendimento diferente da ' \
                                                          'volta real?' },
+        desculpa_por_mensagem_alheia: { type: 'boolean', description: 'A Clara pede desculpa por, ou assume como dela, uma ' \
+                                                                      'mensagem que ela não escreveu (por exemplo, a ' \
+                                                                      'mensagem automática da caixa)?' },
+        repete_ressalva: { type: 'boolean', description: 'A resposta repete ressalvas defensivas (como "não consigo ' \
+                                                         'garantir...") mais de uma vez, ou soa na defensiva em vez de ' \
+                                                         'natural?' },
         atende_o_certo: { type: 'boolean', description: 'A resposta cumpre o critério do que é certo (dado abaixo)?' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
@@ -155,7 +163,7 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
 
   def aprovado?(veredito)
     veredito['horario_de_volta_correto'] && veredito['atende_o_certo'] &&
-      %w[promete_antes promete_pela_equipe inventa_horario].none? { |campo| veredito[campo] }
+      %w[promete_antes promete_pela_equipe inventa_horario desculpa_por_mensagem_alheia repete_ressalva].none? { |campo| veredito[campo] }
   end
 
   def rodar(cena, vez)
@@ -197,12 +205,15 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
 
     total = cenas_escolhidas.size * AvaliacaoDaEsperaForaDoHorario::REPETICOES
     promessas = relatorio.count { |linha| linha[:veredito].values_at('promete_antes', 'promete_pela_equipe').any? }
+    desculpas = relatorio.count { |linha| linha[:veredito]['desculpa_por_mensagem_alheia'] }
     placar = { execucoes: relatorio.size, aprovadas: relatorio.count { |linha| linha[:aprovada] },
-               promessas: promessas, custo_usd: custo_ate_agora.round(4) }
+               promessas: promessas, desculpas_alheias: desculpas,
+               ressalvas_repetidas: relatorio.count { |linha| linha[:veredito]['repete_ressalva'] }, custo_usd: custo_ate_agora.round(4) }
     destino = ENV.fetch('ESPERA_FORA_DO_HORARIO_EVAL_SAIDA', nil)
     File.write(destino, JSON.pretty_generate(placar: placar, execucoes: relatorio)) if destino.present?
     expect(relatorio.size).to eq(total), "teto de custo atingido: #{relatorio.size} de #{total} execuções"
     expect(placar[:promessas]).to eq(0)
+    expect(placar[:desculpas_alheias]).to eq(0)
     expect(placar[:aprovadas]).to be >= total - AvaliacaoDaEsperaForaDoHorario::MAXIMO_DE_REPROVADAS
   end
 

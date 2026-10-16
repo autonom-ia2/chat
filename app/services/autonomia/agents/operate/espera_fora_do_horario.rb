@@ -14,10 +14,14 @@ class Autonomia::Agents::Operate::EsperaForaDoHorario
   DIAS_DA_SEMANA = %w[domingo segunda-feira terça-feira quarta-feira quinta-feira sexta-feira sábado].freeze
   SEM_DATA_DE_VOLTA = 'Esta caixa não tem dia de atendimento marcado: não há data de volta da equipe, e você não deve ' \
                       'inventar uma.'.freeze
-  COMO_DIZER = 'Você decide se e como contar isso ao cliente. Se disser quando a equipe volta, não prometa que alguém ' \
-               'responde nesse horário exato, não prometa resposta antes dele e não fale em nome da equipe. A hora que ' \
-               'vale é a deste horário de atendimento: se outra mensagem da conversa citar outra hora, siga esta. ' \
-               'Continue ajudando no que souber.'.freeze
+  # Revisão (eval de 16/10): sem o "diga uma vez" e o "sem ressalva", a IA repetia "não consigo garantir..." em toda
+  # resposta.
+  COMO_DIZER = 'Você decide se e como contar isso ao cliente. Diga quando a equipe volta uma vez só, com naturalidade ' \
+               '(se já disse nesta conversa, não repita), e não repita ressalvas como "não consigo garantir". Não ' \
+               'prometa que alguém responde nesse horário exato nem antes dele, e não fale em nome da equipe. Se o ' \
+               'cliente perguntar se alguém vai responder, responda com naturalidade que a equipe volta nesse horário. ' \
+               'A hora que vale é a deste horário de atendimento: se outra mensagem da conversa citar outra hora, siga ' \
+               'esta. Ofereça ajuda com o que você souber.'.freeze
 
   def initialize(conversation:)
     @conversation = conversation

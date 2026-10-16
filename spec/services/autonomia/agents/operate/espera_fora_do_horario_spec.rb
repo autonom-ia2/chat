@@ -102,9 +102,11 @@ RSpec.describe Autonomia::Agents::Operate::EsperaForaDoHorario do
       esperando!
       texto = described_class.new(conversation: conversation).texto
 
-      expect(texto).to include('não prometa que alguém responde nesse horário exato')
+      expect(texto).to include('prometa que alguém responde nesse horário exato nem antes dele')
       expect(texto).to include('não fale em nome da equipe')
       expect(texto).to include('se outra mensagem da conversa citar outra hora, siga esta')
+      expect(texto).to include('Diga quando a equipe volta uma vez só')
+      expect(texto).to include('não repita ressalvas')
     end
   end
 
