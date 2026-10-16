@@ -11,7 +11,9 @@
 # Sem `rich_message`, o mesmo resumo sai do ANEXO de localização ou contato: é como chegam pelo webhook do canal
 # (WhatsApp, Telegram, Twilio) o eco do que a equipe mandou pelo app do celular e o que o próprio cliente manda.
 #   anexo `location`: `fallback_title` ("nome, endereço", ou vazio)             -> "Localização: nome, endereço"
-#   anexo `contact`: `meta.firstName`/`lastName` (o `fallback_title` é o TELEFONE) -> "Contato: nome"
+#   anexo `contact`: nome em `meta` (`firstName`/`lastName` no WhatsApp, `first_name`/`last_name` no Telegram;
+#                    o `fallback_title` é o TELEFONE e nunca entra)            -> "Contato: nome"
+# No WhatsApp oficial o contato já vem com o nome em `content` (formatted_name); o resumo é para o anexo sem texto.
 # Limite aceito: o nome do contato é o que quem enviou escreveu; se puser o número no nome, ele vai junto.
 # Os outros tipos levam o texto em `content` e não passam por aqui. Só a Fase 2 chama (PessoaDaEquipe); a moldura
 # (pessoa, celular, automática) ou o papel (IA, cliente) é de quem chama.
@@ -44,7 +46,9 @@ module Autonomia::Agents::Operate::ResumoDaMensagemRica
   end
 
   def nome_do_contato(meta)
-    meta.to_h.stringify_keys.values_at('firstName', 'lastName').select { |parte| parte.is_a?(String) }.join(' ')
+    dados = meta.to_h.stringify_keys
+    partes = dados.values_at('firstName', 'lastName').compact_blank.presence || dados.values_at('first_name', 'last_name')
+    partes.select { |parte| parte.is_a?(String) }.join(' ')
   end
 
   def resumo(payload)

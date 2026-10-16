@@ -94,16 +94,30 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       eco.attachments.create!(account_id: account.id, **anexo)
     end
 
-    it 'o contato mandado pelo celular (eco, anexo) chega com a moldura do celular e só o nome' do
+    # No WhatsApp oficial o eco de contato chega com o nome em `content` (formatted_name) e o telefone só no anexo.
+    it 'o contato mandado pelo celular (eco) chega com a moldura do celular e só o nome, sem o telefone' do
       escreve(:incoming, 'Com quem eu falo?')
-      eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473',
-                    meta: { firstName: 'Recepção', lastName: 'Unidade Centro' })
+      eco = eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473',
+                          meta: { firstName: 'Recepção', lastName: 'Unidade Centro' })
+      eco.message.update!(content: 'Recepção Unidade Centro')
       responder(escreve(:incoming, 'Obrigado!'))
       historico = historicos.sole
 
-      expect(historico.second).to eq(role: 'user', content: "#{moldura_do_celular}\nContato: Recepção Unidade Centro")
+      expect(historico.second).to eq(role: 'user', content: "#{moldura_do_celular}\nRecepção Unidade Centro")
       expect(historico.second[:content]).not_to include('4000')
       expect(contextos.sole).to include(marca)
+    end
+
+    # Anexo de contato sem texto (como grava o Telegram, com `first_name`/`last_name`): o resumo leva só o nome.
+    it 'o contato do cliente sem texto chega pelo nome do anexo, sem o telefone' do
+      contato_do_cliente = create(:message, account: account, conversation: conversation, inbox: inbox,
+                                            message_type: :incoming, content: '')
+      contato_do_cliente.attachments.create!(account_id: account.id, file_type: :contact, fallback_title: '+55 11 98888-7777',
+                                             meta: { first_name: 'Carla', last_name: 'Dias' })
+      responder(escreve(:incoming, 'Esse é o contato da minha esposa'))
+
+      expect(historicos.sole.first).to eq(role: 'user', content: 'Contato: Carla Dias')
+      expect(historicos.sole.first[:content]).not_to include('98888')
     end
 
     it 'a localização mandada pelo celular (eco, anexo) chega com a moldura do celular' do
