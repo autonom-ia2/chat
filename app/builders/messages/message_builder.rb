@@ -51,14 +51,14 @@ class Messages::MessageBuilder
   def process_attachments
     return if @attachments.blank?
 
-    @attachments.each do |uploaded_attachment|
+    @attachments.each_with_index do |uploaded_attachment, posicao|
       attachment = @message.attachments.build(
         account_id: @message.account_id,
         file: uploaded_attachment
       )
 
       # #1702: "Documento" do "+" manda como documento, mesmo sendo foto ou vídeo (como no WhatsApp).
-      attachment.file_type = ConversaCanal::ComoDocumento.pedido?(@params, @conversation.inbox) ? :file : attachment_file_type(uploaded_attachment)
+      attachment.file_type = ConversaCanal::ComoDocumento.tipo(@params, @conversation.inbox, posicao) || attachment_file_type(uploaded_attachment)
       tag_voice_message(attachment)
     end
   end

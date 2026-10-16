@@ -6,8 +6,7 @@ import { createI18n } from 'vue-i18n';
 import { PELES, fornecerPele } from '../pele';
 import {
   anexarArquivos,
-  documentoMisturadoComMidia,
-  todosComoDocumento,
+  indicesDeDocumento,
   usePeleDaResposta,
 } from '../usePeleDaResposta';
 import { idiomaDoPainel } from '../dataDaConversa';
@@ -96,20 +95,16 @@ describe('anexarArquivos (#1702)', () => {
   });
 });
 
-describe('documento e mídia no mesmo rascunho (#1702)', () => {
-  const doc = { comoDocumento: true };
-  const midia = { comoDocumento: false };
-  const clipe = {};
-
-  it('a marca de documento só vai numa mensagem quando todos são documento', () => {
-    expect(todosComoDocumento([doc, doc])).toBe(true);
-    expect(todosComoDocumento([doc, midia])).toBe(false);
-    expect(todosComoDocumento([])).toBe(false);
-  });
-
-  it('documento junto de mídia pede uma mensagem por anexo', () => {
-    expect(documentoMisturadoComMidia([doc, clipe])).toBe(true);
-    expect(documentoMisturadoComMidia([doc, doc])).toBe(false);
-    expect(documentoMisturadoComMidia([midia, clipe])).toBe(false);
+describe('indicesDeDocumento (#1702)', () => {
+  it('diz a posição de cada anexo que vai como documento', () => {
+    expect(
+      indicesDeDocumento([
+        { comoDocumento: true },
+        {},
+        { comoDocumento: false },
+        { comoDocumento: true },
+      ])
+    ).toEqual([0, 3]);
+    expect(indicesDeDocumento([])).toEqual([]);
   });
 });

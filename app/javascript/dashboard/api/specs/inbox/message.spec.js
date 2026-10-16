@@ -96,21 +96,24 @@ describe('#ConversationAPI', () => {
       expect(formPayload.get('is_voice_message')).toEqual('true');
     });
 
-    it('appends send_as_document when sendAsDocument is true (#1702)', () => {
+    it('appends document_indexes for the attachments sent as documents (#1702)', () => {
       const formPayload = buildCreatePayload({
         message: 'foto como documento',
         echoId: 44,
         isPrivate: false,
-        files: [new Blob(['png'], { type: 'image/png' })],
-        sendAsDocument: true,
+        files: [
+          new Blob(['png'], { type: 'image/png' }),
+          new Blob(['png'], { type: 'image/png' }),
+        ],
+        documentIndexes: [1],
       });
-      expect(formPayload.get('send_as_document')).toEqual('true');
+      expect(formPayload.getAll('document_indexes[]')).toEqual(['1']);
       expect(
         buildCreatePayload({
           echoId: 45,
           files: [new Blob(['png'], { type: 'image/png' })],
-        }).get('send_as_document')
-      ).toBeNull();
+        }).getAll('document_indexes[]')
+      ).toEqual([]);
     });
 
     it('does not append is_voice_message when isVoiceMessage is false', () => {

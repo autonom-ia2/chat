@@ -57,8 +57,7 @@ import {
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useMacroExecution } from 'dashboard/composables/useMacroExecution';
 import {
-  documentoMisturadoComMidia,
-  todosComoDocumento,
+  indicesDeDocumento,
   usePeleDaResposta,
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
@@ -914,12 +913,7 @@ export default {
         // To handle both cases, text and attachments are always sent as separate messages.
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
-        // #1702: documento e mídia no mesmo rascunho saem um por mensagem, cada um com o seu tipo.
-        const misturaDocumento = documentoMisturadoComMidia(this.attachedFiles);
-        if (
-          (isOnWhatsApp || isOnInstagram || isOnTiktok || misturaDocumento) &&
-          !this.isPrivate
-        ) {
+        if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
           this.sendMessageAsMultipleMessages(
             this.message,
             copilotAcceptedMessage
@@ -1274,7 +1268,7 @@ export default {
             message: caption,
             sender: this.sender,
             isVoiceMessage: attachment.isVoiceMessage || false,
-            sendAsDocument: attachment.comoDocumento || false,
+            documentIndexes: indicesDeDocumento([attachment]),
           };
 
           attachmentPayload = this.setReplyToInPayload(attachmentPayload);
@@ -1333,9 +1327,8 @@ export default {
         });
       }
 
-      if (todosComoDocumento(this.attachedFiles)) {
-        messagePayload.sendAsDocument = true;
-      }
+      const documentos = indicesDeDocumento(this.attachedFiles);
+      if (documentos.length) messagePayload.documentIndexes = documentos;
 
       if (this.ccEmails && !this.isOnPrivateNote) {
         messagePayload.ccEmails = this.ccEmails;

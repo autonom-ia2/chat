@@ -164,34 +164,36 @@ describe Messages::MessageBuilder do
       end
     end
 
-    context 'when send_as_document is true (#1702)' do
+    context 'when document_indexes is provided (#1702)' do
       let(:params) do
         ActionController::Parameters.new({
                                            content: 'foto como documento',
-                                           attachments: [Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png')],
-                                           send_as_document: 'true'
+                                           attachments: [Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png'),
+                                                         Rack::Test::UploadedFile.new('spec/assets/avatar.png', 'image/png')],
+                                           document_indexes: ['1']
                                          })
       end
+      let(:tipos) { message_builder.attachments.map(&:file_type) }
 
       context 'with a WhatsApp inbox' do
         let(:inbox) { create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false).inbox }
 
-        it 'saves the image as a file, so WhatsApp sends it as a document' do
-          expect(message_builder.attachments.first.file_type).to eq('file')
+        it 'saves only the marked image as a file, so WhatsApp sends it as a document' do
+          expect(tipos).to eq(%w[image file])
         end
       end
 
       context 'with a WAHA inbox' do
         let(:inbox) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox }
 
-        it 'saves the image as a file' do
-          expect(message_builder.attachments.first.file_type).to eq('file')
+        it 'saves only the marked image as a file' do
+          expect(tipos).to eq(%w[image file])
         end
       end
 
       context 'with any other inbox' do
         it 'ignores the request and keeps the image type' do
-          expect(message_builder.attachments.first.file_type).to eq('image')
+          expect(tipos).to eq(%w[image image])
         end
       end
     end

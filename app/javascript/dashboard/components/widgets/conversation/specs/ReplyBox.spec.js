@@ -560,3 +560,41 @@ describe('ReplyBox #1702 (conversa com a cara do WhatsApp)', () => {
     );
   });
 });
+
+describe('ReplyBox #1702: Documento do "+" marca o anexo, não o envio', () => {
+  const anexo = (nome, comoDocumento) => ({
+    resource: { file: new File(['x'], nome) },
+    comoDocumento,
+  });
+
+  it('num envio só (WAHA), diz quais anexos vão como documento', () => {
+    const { wrapper } = mountWith({ inbox: { channel_type: 'Channel::Api' } });
+    wrapper.vm.attachedFiles = [
+      anexo('foto.jpg', false),
+      anexo('foto-original.jpg', true),
+    ];
+    const payload = wrapper.vm.getMessagePayload('Oi');
+    expect(payload.files).toHaveLength(2);
+    expect(payload.documentIndexes).toEqual([1]);
+  });
+
+  it('sem documento, o envio fica como sempre', () => {
+    const { wrapper } = mountWith({ inbox: { channel_type: 'Channel::Api' } });
+    wrapper.vm.attachedFiles = [anexo('foto.jpg', false)];
+    expect(wrapper.vm.getMessagePayload('Oi')).not.toHaveProperty(
+      'documentIndexes'
+    );
+  });
+
+  it('um envio por anexo (WhatsApp oficial): cada um leva a sua marca', () => {
+    const { wrapper } = mountWith({
+      inbox: { channel_type: 'Channel::Whatsapp' },
+    });
+    wrapper.vm.attachedFiles = [
+      anexo('foto.jpg', false),
+      anexo('foto-original.jpg', true),
+    ];
+    const payloads = wrapper.vm.getMultipleMessagesPayload('Oi');
+    expect(payloads.map(p => p.documentIndexes)).toEqual([[], [0]]);
+  });
+});

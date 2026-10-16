@@ -51,11 +51,7 @@ export const anexarArquivos = ({ arquivos, comoDocumento }, onFileUpload) =>
     })
   );
 
-// Envio numa mensagem só (WAHA, híbrida): a marca de documento vale para todos os
-// anexos, então só vai quando todos são documento. Rascunho com os dois tipos sai
-// um anexo por mensagem, cada um com o seu tipo.
-export const todosComoDocumento = anexos =>
-  anexos.length > 0 && anexos.every(anexo => anexo.comoDocumento);
-
-export const documentoMisturadoComMidia = anexos =>
-  anexos.some(anexo => anexo.comoDocumento) && !todosComoDocumento(anexos);
+// Posição (em files do envio) de cada anexo que sai como documento. A marca é por
+// anexo: documento e foto no mesmo rascunho saem cada um com o seu tipo.
+export const indicesDeDocumento = anexos =>
+  anexos.flatMap((anexo, indice) => (anexo.comoDocumento ? [indice] : []));
