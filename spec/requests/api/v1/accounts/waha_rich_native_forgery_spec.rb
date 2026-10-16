@@ -39,6 +39,22 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes).not_to have_key('waha_native')
   end
 
+  # chat#1709 (fase 3, revisão): as chaves que o chat2you grava (esconder, reação, edição) também saem nesse caminho,
+  # com ou sem a flag: um agente não cria mensagem que vai ao cliente e some do painel.
+  it 'never stores c2y_hidden, reactions or an edit history from a conversation created with a message' do
+    contact_inbox = create(:contact_inbox, inbox: channel.inbox, contact: create(:contact, account: account))
+    forged = { c2y_hidden: true, reactions: [{ emoji: '👍', by: 'contact' }], edit_history: [{ content: 'falso' }],
+               edited_at: '2026-10-16T10:00:00Z', waha_poll_vote: { poll_message_id: 1 }, outro: 'fica' }
+
+    post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
+                                                         params: { source_id: contact_inbox.source_id,
+                                                                   message: { content: 'Oi', content_attributes: forged } }
+
+    expect(response).to have_http_status(:success)
+    message = account.conversations.find_by(display_id: response.parsed_body['id']).messages.outgoing.first
+    expect(message.content_attributes).to eq('outro' => 'fica')
+  end
+
   it 'drops them also when content_attributes comes as JSON text' do
     message = create_message(content: 'Oi', content_attributes: { waha_native: { kind: 'sendList' }, outro: 'fica' }.to_json)
 

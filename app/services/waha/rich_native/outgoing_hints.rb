@@ -2,8 +2,11 @@
 # o `message_created` de uma mensagem nossa leva ao webhook da caixa dois pedidos ao conector customizado (c2y-rich-2):
 # - `waha_text`: o texto já no formato do WhatsApp, pelo MESMO renderer da Cloud (Messages::MarkdownRendererService com
 #   'Channel::Whatsapp'). O conector usa este texto em vez do conversor próprio dele (que não segue as regras do editor:
-#   ~x~, crases, citação de várias linhas, marcador colado em palavra). Mensagem rica que sai como texto leva o corpo
-#   mais a versão em texto do tipo, o mesmo que o RichMessages::ApiInboxWebhook manda em `content`.
+#   ~x~, crases, citação de várias linhas, marcador colado em palavra). Mensagem rica leva SEMPRE o corpo mais a versão
+#   em texto do tipo (RichMessages.text_with_fallback), o mesmo `content` que o RichMessages::ApiInboxWebhook manda:
+#   quando o motor recusa o envio nativo, o conector manda este texto, que precisa ter as opções numeradas.
+#   Só sai quando o renderer do WhatsApp do chat#1740 está no código (`renderer_ready?`). Sem ele, o renderer antigo
+#   perderia ~~x~~, as crases do bloco e o # do título: o conector segue com o conversor dele, como hoje.
 # - `waha_media_as_media: true`: há foto ou vídeo; o conector manda como mídia mesmo fora de JPG/PNG/MP4 (converte), em
 #   vez de arquivo.
 # Nada disso é gravado (Waha::RichNative::ContractGuard e ForgeryGuard tiram as duas chaves). Sem a flag, em outra caixa,
@@ -13,9 +16,18 @@ module Waha::RichNative::OutgoingHints
   CHANNEL = 'Channel::Whatsapp'.freeze
   MEDIA_TYPES = %w[image video].freeze
 
-  # O texto no formato do WhatsApp (também usado na edição pelo painel, Waha::RichNative::MessageActions).
-  def self.whatsapp_text(text)
-    Messages::MarkdownRendererService.new(text.to_s, CHANNEL).render.to_s
+  # O renderer do chat#1740 (blocos cercados sem quebrar a cerca, ~x~, crases contadas, dialeto do robô): é a mesma
+  # fonte da Cloud. Enquanto ele não está na main, o `waha_text` não sai e a edição pelo painel fica fora (o conector
+  # exige o texto pronto).
+  def self.renderer_ready?
+    Messages::MarkdownRenderers.const_defined?(:WhatsAppNewlines) && Messages.const_defined?(:EnvioAutomatico)
+  end
+
+  # O texto no formato do WhatsApp (também usado na edição pelo painel, Waha::RichNative::MessageActions). Mensagem do
+  # robô, da IA ou de envio automático segue o dialeto do WhatsApp (*x* negrito), como na Cloud.
+  def self.whatsapp_text(text, message = nil)
+    automatico = message.present? && Messages::EnvioAutomatico.automatico?(message)
+    Messages::MarkdownRendererService.new(text.to_s, CHANNEL, nil, automatico: automatico).render.to_s
   end
 
   private
@@ -45,15 +57,15 @@ module Waha::RichNative::OutgoingHints
 
   def waha_hints_for(message, payload)
     hints = {}
-    text = waha_base_text(message, payload[:content].to_s)
-    hints['waha_text'] = Waha::RichNative::OutgoingHints.whatsapp_text(text) if message.content_type == 'text' && text.present?
+    hints['waha_text'] = waha_text_for(message, payload[:content].to_s) if message.content_type == 'text'
     hints['waha_media_as_media'] = true if message.attachments.any? { |attachment| MEDIA_TYPES.include?(attachment.file_type.to_s) }
-    hints
+    hints.compact
   end
 
-  def waha_base_text(message, content)
-    return content unless RichMessages.rich?(message) && !Waha::RichNative.sent_native?(message)
+  def waha_text_for(message, content)
+    return unless Waha::RichNative::OutgoingHints.renderer_ready?
 
-    RichMessages.text_with_fallback(message, content)
+    text = RichMessages.rich?(message) ? RichMessages.text_with_fallback(message, content) : content
+    Waha::RichNative::OutgoingHints.whatsapp_text(text, message) if text.present?
   end
 end

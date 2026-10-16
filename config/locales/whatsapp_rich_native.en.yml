@@ -4,17 +4,25 @@ en:
       list_button: "See options"
       location_title: "Location"
     call:
-      missed: "Missed voice call"
+      ringing_voice: "Voice call received"
+      ringing_video: "Video call received"
+      missed_voice: "Missed voice call"
       missed_video: "Missed video call"
-      declined: "Voice call declined"
+      declined_voice: "Voice call declined"
       declined_video: "Video call declined"
       answered: "Call answered on the phone"
-      ended: "Call ended"
+      ended: "Call answered and ended"
+    hidden:
+      reaction: "Reaction saved on the message"
+      edit: "Edit saved on the message"
+      call: "Call saved"
+      poll_vote: "Poll vote saved"
     poll:
       vote_removed: "Vote removed"
     message_actions:
       reaction_invalid: "This message cannot get a reaction. Use a single emoji."
-      edit_invalid: "This message can no longer be edited. Only text sent less than 15 minutes ago, without attachment or special format, can be edited."
+      edit_invalid: "This message can no longer be edited. Only text sent less than %{minutes} minutes ago, without attachment or special format and up to %{max_length} characters, can be edited."
+      edit_not_author: "Only who sent the message, or an administrator, can edit it."
   whatsapp_hybrid:
     rich_native:
       restore_failed: "The message was not sent: WhatsApp API refused the format and the text could not be sent. Send the message again."

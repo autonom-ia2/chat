@@ -4664,9 +4664,9 @@
     "controller": "api/v1/accounts/conversations/message_edits#update",
     "modelo": "User",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:7",
-      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:20",
-      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:23",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:11",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -13427,9 +13427,9 @@
     "controller": "api/v1/accounts/conversations/message_reactions#create",
     "modelo": "User",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:6",
-      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:19",
-      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:9",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:20",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:10",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false

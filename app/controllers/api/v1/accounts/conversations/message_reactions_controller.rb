@@ -1,6 +1,7 @@
 # Reagir pelo painel a uma mensagem da caixa WAHA comum (chat#1709, fase 3).
 #   POST /api/v1/accounts/:account_id/conversations/:conversation_id/messages/:id/reaction  { "emoji": "👍" }
-# Emoji vazio remove a reação do atendente. Só com a flag `whatsapp_rich_native` e motor que declara `react`
+# A reação é da empresa (uma por mensagem, como no WhatsApp): a de um atendente troca a de outro, e emoji vazio a
+# remove. Mensagem falhada não recebe reação. Só com a flag `whatsapp_rich_native` e motor que declara `react`
 # (Waha::RichNative::MessageActions); a reação vai ao WhatsApp pelo conector customizado.
 class Api::V1::Accounts::Conversations::MessageReactionsController < Api::V1::Accounts::Conversations::BaseController
   def create

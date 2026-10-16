@@ -17,6 +17,9 @@ RSpec.describe 'WAHA message actions API', type: :request do
 
   before do
     allow(Waha::EngineCapabilities).to receive(:actions) { |url| url == "#{engine}/" ? actions : [] }
+    # O renderer do chat#1740 (a edição só existe com ele); o texto renderizado é marcado para o teste.
+    allow(Waha::RichNative::OutgoingHints).to receive(:renderer_ready?).and_return(true)
+    allow(Waha::RichNative::OutgoingHints).to receive(:whatsapp_text) { |text, _message = nil| "WA[#{text}]" }
     allow(WebhookJob).to receive(:perform_later) { |_url, payload, kind, **| events << payload if kind == :api_inbox_webhook }
     account.enable_features!(Waha::RichNative::FLAG)
   end
@@ -30,27 +33,31 @@ RSpec.describe 'WAHA message actions API', type: :request do
                        sender: agent }.merge(attrs)).tap { events.clear }
   end
 
-  def react(message, emoji)
-    post message_url(message, 'reaction'), params: { emoji: emoji }, headers: agent.create_new_auth_token, as: :json
+  def react(message, emoji, user: agent)
+    post message_url(message, 'reaction'), params: { emoji: emoji }, headers: user.create_new_auth_token, as: :json
   end
 
-  def edit(message, content)
-    patch message_url(message, 'content'), params: { content: content }, headers: agent.create_new_auth_token, as: :json
+  def edit(message, content, user: agent)
+    patch message_url(message, 'content'), params: { content: content }, headers: user.create_new_auth_token, as: :json
   end
 
   describe 'reaction' do
-    it 'stores one reaction per agent and sends the event to the connector; an empty emoji removes it' do
+    let(:colleague) { create(:user, account: account, role: :agent) }
+
+    before { create(:inbox_member, user: colleague, inbox: channel.inbox) }
+
+    it 'stores ONE business reaction (any agent replaces it) and sends the event to the connector; empty removes it' do
       customer = create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: channel.inbox,
                                   account: account)
       events.clear
 
       react(customer, '👍')
-      react(customer, '❤️')
+      react(customer, '❤️', user: colleague)
 
       expect(response).to have_http_status(:ok)
       reactions = customer.reload.content_attributes['reactions']
       expect(reactions.map { |reaction| reaction.slice('emoji', 'by', 'user_id') })
-        .to eq([{ 'emoji' => '❤️', 'by' => 'agent', 'user_id' => agent.id }])
+        .to eq([{ 'emoji' => '❤️', 'by' => 'business', 'user_id' => colleague.id }])
       expect(events.last).to include(event: 'c2y_message_reaction', id: customer.id, c2y_reaction: { emoji: '❤️' })
 
       react(customer, '')
@@ -58,12 +65,17 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events.last[:c2y_reaction]).to eq(emoji: '')
     end
 
-    it 'refuses more than one emoji, notes and activities' do
+    it 'refuses more than one emoji, notes, activities and failed messages (no event, no resend)' do
       react(ours, '👍👍')
       expect(response).to have_http_status(:unprocessable_entity)
 
       react(ours('nota', private: true), '👍')
       expect(response).to have_http_status(:unprocessable_entity)
+
+      failed = ours('falhou', status: :failed, content_attributes: { external_error: 'timeout' })
+      react(failed, '👍')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(failed.reload.content_attributes).not_to have_key('reactions')
       expect(events).to be_empty
     end
 
@@ -92,21 +104,39 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(message.content).to eq('**Até** depois')
       expect(message.content_attributes['edit_history'].sole).to include('content' => '**Até** amanhã', 'user_id' => agent.id)
       expect(message.content_attributes['edited_at']).to be_present
-      expect(events.last).to include(event: 'c2y_message_edit', id: message.id,
-                                     c2y_edit: { waha_text: Waha::RichNative::OutgoingHints.whatsapp_text('**Até** depois') })
+      expect(events.last).to include(event: 'c2y_message_edit', id: message.id, c2y_edit: { waha_text: 'WA[**Até** depois]' })
     end
 
-    it 'refuses after the window, messages from the customer, attachments-free rule breakers and blank text' do
+    it 'refuses after the window, messages from the customer, rich, failed, blank and too long text' do
       old = travel_to(15.minutes.ago) { ours }
       customer = create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: channel.inbox,
                                   account: account)
       rich = ours('Qual?', content_attributes: { rich_message: { type: 'options', options: [{ id: 'a', title: 'A' }] } })
+      failed = ours('falhou', status: :failed, content_attributes: { external_error: 'timeout' })
+      too_long = 'x' * (Waha::RichNative::Edits::MAX_LENGTH + 1)
 
-      [[old, 'novo'], [customer, 'novo'], [rich, 'novo'], [ours, '  ']].each do |message, content|
+      [[old, 'novo'], [customer, 'novo'], [rich, 'novo'], [failed, 'novo'], [ours, '  '], [ours, too_long]].each do |message, content|
         edit(message, content)
         expect(response).to have_http_status(:unprocessable_entity), message.content
       end
+      expect(response.parsed_body['error']).to include('14 minutos').or include('14 minutes')
       expect(events.select { |event| event[:event] == 'c2y_message_edit' }).to be_empty
+    end
+
+    it 'lets only the author edit; an administrator edits anyone, including the bot' do
+      colleague = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: colleague, inbox: channel.inbox)
+      bot_message = ours('Resposta da IA', sender: create(:agent_bot, account: account))
+
+      edit(ours, 'novo', user: colleague)
+      expect(response).to have_http_status(:forbidden)
+
+      edit(ours('do colega', sender: colleague), 'do colega, corrigido', user: colleague)
+      expect(response).to have_http_status(:ok)
+
+      edit(bot_message, 'Resposta corrigida')
+      expect(response).to have_http_status(:ok)
+      expect(bot_message.reload.content).to eq('Resposta corrigida')
     end
 
     it 'is forbidden without the engine action' do
@@ -116,9 +146,13 @@ RSpec.describe 'WAHA message actions API', type: :request do
     end
   end
 
-  it 'exposes the actions in the conversation only with the flag' do
+  it 'exposes the actions in the conversation only with the flag, and edit only with the chat#1740 renderer' do
     get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}", headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body['whatsapp_api_message_actions']).to eq(%w[react edit])
+
+    allow(Waha::RichNative::OutgoingHints).to receive(:renderer_ready?).and_return(false)
+    get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}", headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['whatsapp_api_message_actions']).to eq(%w[react])
 
     account.disable_features!(Waha::RichNative::FLAG)
     get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}", headers: agent.create_new_auth_token, as: :json

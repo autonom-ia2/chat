@@ -4,11 +4,13 @@ require 'rails_helper'
 # (`waha_poll_vote`, Waha::RichNative::Inbound).
 describe Waha::RichNative::PollVote do
   let(:engine) { 'https://waha.example' }
+  let(:account) { create(:account) }
+  let(:connector) { create(:user, account: account, role: :administrator) }
   let(:channel) do
-    create(:channel_api, webhook_url: "#{engine}/webhooks/chatwoot/abc", additional_attributes: { 'provider' => 'waha', 'session' => 's1' })
+    create(:channel_api, account: account, webhook_url: "#{engine}/webhooks/chatwoot/abc",
+                         additional_attributes: { 'provider' => 'waha', 'session' => 's1', 'account_token_owner_user_id' => connector.id })
   end
   let(:inbox) { channel.inbox }
-  let(:account) { channel.account }
   let(:conversation) { create(:conversation, inbox: inbox, account: account) }
   let(:poll_rich) { { type: 'poll', options: [{ id: 'sim', title: 'Sim' }, { id: 'nao', title: 'Não' }], multiple: true } }
   let(:capabilities) { %w[options location contact poll] }
@@ -29,12 +31,18 @@ describe Waha::RichNative::PollVote do
     payloads.sole
   end
 
+  after { Current.reset }
+
+  # O voto chega pela API com o token do conector.
   def vote(poll, options, extra = {})
+    Current.user = connector
     create(:message, message_type: :incoming, content: options.join(', '), conversation: conversation, inbox: inbox,
                      account: account, sender: conversation.contact,
                      content_attributes: { in_reply_to: poll.id,
                                            waha_poll_vote: { poll_message_id: poll.id, options: options, vote_id: 'v1', timestamp: 1 } }
                        .merge(extra)).reload
+  ensure
+    Current.user = nil
   end
 
   it 'sends the poll natively with the flag and an engine that returns the vote' do
@@ -94,13 +102,13 @@ describe Waha::RichNative::PollVote do
       end
     end
 
-    it 'only drops the key without the flag, as in main' do
+    it 'hides the vote of a poll sent before the flag was turned off (main never gets a vote)' do
       account.disable_features!(Waha::RichNative::FLAG)
       poll = poll_message
       answer = vote(poll, ['Sim'])
 
-      expect(answer).to be_incoming
-      expect(answer.content).to eq('Sim')
+      expect(answer).to be_activity
+      expect(answer.content_attributes).to include('c2y_hidden' => true)
       expect(answer.content_attributes.keys & %w[selected_option waha_poll_vote]).to eq([])
     end
   end

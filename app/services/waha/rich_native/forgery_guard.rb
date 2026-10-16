@@ -12,12 +12,14 @@
 #   SEMPRE. Forjada, `c2y_hidden` esconderia uma mensagem do painel.
 # - `waha_poll_vote` (o voto do cliente), como a escolha de lista, só em mensagem RECEBIDA. As outras chaves do conector
 #   (`waha_call`, `waha_unknown`, `waha_reaction`, `waha_edit`) também vêm em nota ou mensagem nossa (eventos do celular
-#   da empresa) e ficam: Waha::RichNative::Inbound limita o efeito à mesma conversa e caixa.
+#   da empresa) e ficam aqui: Waha::RichNative::Inbound só as aceita de quem é o conector (o dono do token da caixa) e
+#   as tira de qualquer outro usuário, em qualquer caminho de criação.
+# A mesma limpeza roda no modelo (Waha::RichNative::ContractGuard), para os caminhos que não passam por aqui (criação de
+# conversa com mensagem); esta, no controller, segue como primeira barreira.
 # INCONDICIONAL: vale com ou sem a flag `whatsapp_rich_native` (uma chave forjada ficaria guardada e valeria quando a
 # flag fosse ligada). Entra como before_action, sem sobrescrever `create` (o Guia lê o formato da ação no método original).
 module Waha::RichNative::ForgeryGuard
-  STORED_BY_C2Y = %w[c2y_hidden reactions edit_history edited_at selected_options reaction_applied_to edit_applied_to
-                     waha_call_summary waha_unknown_type].freeze
+  STORED_BY_C2Y = Waha::RichNative::ContractGuard::STORED_KEYS
   ALWAYS_DROPPED = (['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY] + STORED_BY_C2Y).freeze
   INCOMING_ONLY_KEYS = %w[waha_list_reply waha_poll_vote].freeze
 

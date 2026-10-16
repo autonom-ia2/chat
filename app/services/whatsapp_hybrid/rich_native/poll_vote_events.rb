@@ -1,11 +1,32 @@
 # Prepend em WhatsappHybrid::SessionManager (chat#1709, fase 3): com a flag `whatsapp_rich_native`, a sessão do plano B
 # também assina o evento `poll.vote` (o voto na enquete nativa volta ao painel, WhatsappHybrid::RichNative::PollVoteJob).
-# Gravar a configuração REINICIA a sessão no motor: a assinatura só é gravada fora do envio de mensagem (o modo :skip do
-# `sync_remote_config!` conta a sessão como configurada), ou seja, na próxima atualização da aba, ao reconectar ou ao
-# criar a sessão. Ligar a flag numa conta = um reinício da sessão híbrida (agendar). Desligar não regrava: o controller
-# ignora o voto sem a flag.
+# Gravar a configuração REINICIA a sessão no motor. Por isso:
+# - no envio de mensagem e ao reconectar (modo :skip do `sync_remote_config!`), a assinatura NÃO é conferida: a sessão
+#   conta como configurada e nada é gravado;
+# - a gravação acontece ao criar a sessão, no `refresh!` com proxy (a aba da conexão aberta por alguém) ou, o caminho
+#   certo, pela assinatura agendada: `subscribe_poll_vote!` (WhatsappHybrid::RichNative::PollVoteSubscribeJob, rake
+#   `whatsapp_hybrid:poll_vote:subscribe`), que só grava o webhook, sem mexer no proxy. Ligar a flag numa conta = um
+#   reinício de cada sessão híbrida dela, num horário escolhido. Desligar não regrava: o controller ignora o voto sem a
+#   flag.
 module WhatsappHybrid::RichNative::PollVoteEvents
   EVENT = 'poll.vote'.freeze
+
+  # Grava a assinatura que falta (reinicia a sessão uma vez). Devolve :subscribed, :already ou :skipped (pausada, sem
+  # flag ou sem sessão no motor).
+  def subscribe_poll_vote!
+    return :skipped if connection.paused? || !poll_vote_wanted?
+
+    remote = fetch_remote
+    return :skipped if remote.blank?
+
+    @poll_vote_config_mode = :subscribe
+    return :already if webhook_configured?(remote)
+
+    write_config!(remote, nil)
+    :subscribed
+  ensure
+    @poll_vote_config_mode = nil
+  end
 
   private
 

@@ -46,6 +46,41 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
     expect(client).not_to have_received(:update_session)
   end
 
+  describe 'scheduled subscription (subscribe_poll_vote!)' do
+    it 'writes only the webhook, once, with the flag (no proxy change)' do
+      connection.account.enable_features!(Waha::RichNative::FLAG)
+      allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack]))
+
+      expect(manager.subscribe_poll_vote!).to eq(:subscribed)
+      expect(client).to have_received(:update_session)
+        .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote])]))
+        .once
+
+      allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote]))
+      expect(manager.subscribe_poll_vote!).to eq(:already)
+    end
+
+    it 'skips without the flag and on a paused connection' do
+      allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack]))
+      expect(manager.subscribe_poll_vote!).to eq(:skipped)
+
+      connection.account.enable_features!(Waha::RichNative::FLAG)
+      allow(connection).to receive(:paused?).and_return(true)
+      expect(manager.subscribe_poll_vote!).to eq(:skipped)
+      expect(client).not_to have_received(:update_session)
+    end
+
+    it 'runs for every connection of the account through the job' do
+      connection.account.enable_features!(Waha::RichNative::FLAG)
+      allow(WhatsappHybrid::SessionManager).to receive(:new).and_return(manager)
+      allow(manager).to receive(:subscribe_poll_vote!).and_return(:subscribed)
+
+      WhatsappHybrid::RichNative::PollVoteSubscribeJob.perform_now(connection.account_id)
+
+      expect(manager).to have_received(:subscribe_poll_vote!).once
+    end
+  end
+
   describe Webhooks::WhatsappHybridController, type: :request do
     let(:path) { "/webhooks/whatsapp_hybrid/#{connection.public_id}" }
     let(:body) do

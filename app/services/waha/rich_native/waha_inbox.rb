@@ -25,7 +25,8 @@ module Waha::RichNative::WahaInbox
   end
 
   # As ações sobre mensagem já enviada (chat#1709, fase 3: 'react', 'edit') que o motor desta caixa declara, com a flag.
-  # As mesmas checagens baratas de `types_for_inbox`, na mesma ordem.
+  # As mesmas checagens baratas de `types_for_inbox`, na mesma ordem. 'edit' só com o renderer do WhatsApp do chat#1740
+  # (o conector exige o texto já formatado, Waha::RichNative::OutgoingHints.renderer_ready?).
   def actions_for_inbox(inbox, account)
     return [] unless inbox&.channel_type == 'Channel::Api' && Waha::EngineCapabilities.engines.any?
 
@@ -35,7 +36,12 @@ module Waha::RichNative::WahaInbox
     engine = Waha::EngineCapabilities.engine_for(channel.webhook_url)
     return [] if engine.nil? || !Waha::RichNative.enabled?(account)
 
-    Waha::EngineCapabilities.actions(engine)
+    with_renderer(Waha::EngineCapabilities.actions(engine))
+  end
+
+  # `edit` precisa do texto já formatado pelo renderer do chat#1740.
+  def with_renderer(actions)
+    Waha::RichNative::OutgoingHints.renderer_ready? ? actions : actions - ['edit']
   end
 
   # Campo `whatsapp_api_message_actions` da conversa (o painel mostra "Reagir" e "Editar" só com ele).

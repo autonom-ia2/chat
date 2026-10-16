@@ -4,17 +4,25 @@ pt_BR:
       list_button: "Ver opções"
       location_title: "Localização"
     call:
-      missed: "Ligação de voz perdida"
-      missed_video: "Chamada de vídeo perdida"
-      declined: "Ligação de voz recusada"
-      declined_video: "Chamada de vídeo recusada"
+      ringing_voice: "Ligação de voz recebida"
+      ringing_video: "Ligação de vídeo recebida"
+      missed_voice: "Ligação de voz perdida"
+      missed_video: "Ligação de vídeo perdida"
+      declined_voice: "Ligação de voz recusada"
+      declined_video: "Ligação de vídeo recusada"
       answered: "Ligação atendida no celular"
-      ended: "Ligação encerrada"
+      ended: "Ligação atendida e encerrada"
+    hidden:
+      reaction: "Reação registrada na mensagem"
+      edit: "Edição registrada na mensagem"
+      call: "Ligação registrada"
+      poll_vote: "Voto na enquete registrado"
     poll:
       vote_removed: "Voto retirado"
     message_actions:
       reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
-      edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de 15 minutos, sem anexo nem formato especial, pode ser editado."
+      edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."
+      edit_not_author: "Só quem enviou a mensagem, ou um administrador, pode editá-la."
   whatsapp_hybrid:
     rich_native:
       restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."

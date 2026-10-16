@@ -33,7 +33,10 @@ Rails.application.config.to_prepare do
     Message.before_create Waha::RichNative::ContractGuard
   end
   Message.before_create Waha::RichNative::ListReply if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::ListReply }
+end
 
+# Depois do bloco acima (os `to_prepare` rodam na ordem): o Inbound fica depois do ContractGuard e do ListReply.
+Rails.application.config.to_prepare do
   # Fase 3: enquete (tipo `poll` só com a flag; na Cloud sai como texto), e a volta do conector c2y-rich-2 (voto,
   # ligação, mensagem desconhecida, reação e edição: Waha::RichNative::Inbound).
   RichMessages.singleton_class.prepend(Waha::RichNative::PollGate) unless RichMessages.singleton_class <= Waha::RichNative::PollGate
@@ -41,8 +44,17 @@ Rails.application.config.to_prepare do
     Whatsapp::Providers::WhatsappCloudService.prepend(Waha::RichNative::PollCloudText)
   end
   Message.before_create Waha::RichNative::Inbound if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound }
+  # O `in_reply_to` do conector antes de o Chatwoot apagar o que é de outra conversa (reação/edição numa conversa nova).
+  if Message._validation_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::ReplyTarget }
+    Message.before_validation Waha::RichNative::Inbound::ReplyTarget, on: :create
+  end
   # Texto no formato do WhatsApp e foto/vídeo como mídia: o mais externo do webhook da caixa (depois do InboxWebhook).
   WebhookListener.prepend(Waha::RichNative::OutgoingHints) unless WebhookListener <= Waha::RichNative::OutgoingHints
+  # Reação e edição gravadas não mandam `message_updated` ao conector (ele o leria como pedido de reenvio).
+  WebhookListener.prepend(Waha::RichNative::SilentUpdate) unless WebhookListener <= Waha::RichNative::SilentUpdate
+  # A atividade escondida (`c2y_hidden`) não sobe a conversa na lista nem vai às integrações da conta.
+  Message.prepend(Waha::RichNative::HiddenActivity) unless Message <= Waha::RichNative::HiddenActivity
+  HookListener.prepend(Waha::RichNative::HiddenActivityHooks) unless HookListener <= Waha::RichNative::HiddenActivityHooks
 end
 
 Rails.application.config.to_prepare do
@@ -60,6 +72,13 @@ Rails.application.config.to_prepare do
   end
   if Message._commit_callbacks.none? { |callback| callback.filter == WhatsappHybrid::RichNative::RevokeOnDelete }
     Message.after_update_commit WhatsappHybrid::RichNative::RevokeOnDelete
+  end
+  # O voto do plano B não abre a janela de 24 h da Cloud; o `unsupported` da Meta sobre a enquete nossa não vira bolha.
+  unless Conversations::MessageWindowService <= WhatsappHybrid::RichNative::WindowNeutral
+    Conversations::MessageWindowService.prepend(WhatsappHybrid::RichNative::WindowNeutral)
+  end
+  unless Whatsapp::IncomingMessageBaseService <= WhatsappHybrid::RichNative::PollVoteCloudEcho
+    Whatsapp::IncomingMessageBaseService.prepend(WhatsappHybrid::RichNative::PollVoteCloudEcho)
   end
 end
 
