@@ -45,8 +45,9 @@ export const useModeloDaMensagem = mensagem => {
     const modelos = caixaPorId.value(mensagem.value.inboxId)?.message_templates;
     const doNome = (modelos || []).filter(m => m.name === params.name);
     // Com idioma gravado, só o modelo daquele idioma: os botões de outro idioma
-    // mostrariam ao atendente algo que o cliente não recebeu.
-    if (!params.language) return doNome[0] || null;
+    // mostrariam ao atendente algo que o cliente não recebeu. Sem idioma (jornada
+    // de campanha grava só o nome), só quando o nome tem um idioma só.
+    if (!params.language) return doNome.length === 1 ? doNome[0] : null;
     return doNome.find(m => m.language === params.language) || null;
   });
 

@@ -173,8 +173,26 @@ describe Messages::MessageBuilder do
                                          })
       end
 
-      it 'saves the image as a file, so WhatsApp sends it as a document' do
-        expect(message_builder.attachments.first.file_type).to eq('file')
+      context 'with a WhatsApp inbox' do
+        let(:inbox) { create(:channel_whatsapp, account: account, validate_provider_config: false, sync_templates: false).inbox }
+
+        it 'saves the image as a file, so WhatsApp sends it as a document' do
+          expect(message_builder.attachments.first.file_type).to eq('file')
+        end
+      end
+
+      context 'with a WAHA inbox' do
+        let(:inbox) { create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }).inbox }
+
+        it 'saves the image as a file' do
+          expect(message_builder.attachments.first.file_type).to eq('file')
+        end
+      end
+
+      context 'with any other inbox' do
+        it 'ignores the request and keeps the image type' do
+          expect(message_builder.attachments.first.file_type).to eq('image')
+        end
       end
     end
 

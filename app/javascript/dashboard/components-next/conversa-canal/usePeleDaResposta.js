@@ -37,36 +37,25 @@ export const usePeleDaResposta = () => {
   };
 };
 
-// "Documento" e "Fotos e vídeos" do "+" abrem o mesmo seletor de arquivo do clipe.
-// Com `filtro` (ex.: 'image/*,video/*'), o seletor só mostra esses arquivos; o
-// filtro de sempre volta quando a pessoa escolhe ou desiste.
-export const abrirSeletorDeArquivo = filtro => {
-  const campo = document.querySelector('#conversationAttachment');
-  if (!campo) return;
-  if (filtro) {
-    const deSempre = campo.getAttribute('accept');
-    const devolver = () => {
-      if (deSempre === null) campo.removeAttribute('accept');
-      else campo.setAttribute('accept', deSempre);
-      campo.removeEventListener('change', devolver);
-      campo.removeEventListener('cancel', devolver);
-    };
-    campo.setAttribute('accept', filtro);
-    campo.addEventListener('change', devolver);
-    campo.addEventListener('cancel', devolver);
-  }
-  campo.click();
-};
-
-// "Documento" do "+": cada arquivo entra na caixa de resposta pelo caminho de
-// sempre (limite de tamanho, envio direto), marcado para sair como documento.
-export const anexarComoDocumentos = (arquivos, onFileUpload) =>
+// "Documento" e "Fotos e vídeos" do "+": cada arquivo entra na caixa de resposta
+// pelo caminho de sempre (limite de tamanho, envio direto). `comoDocumento`: sai
+// como documento no WhatsApp, mesmo sendo foto ou vídeo.
+export const anexarArquivos = ({ arquivos, comoDocumento }, onFileUpload) =>
   arquivos.forEach(file =>
     onFileUpload({
       name: file.name,
       type: file.type,
       size: file.size,
       file,
-      comoDocumento: true,
+      comoDocumento,
     })
   );
+
+// Envio numa mensagem só (WAHA, híbrida): a marca de documento vale para todos os
+// anexos, então só vai quando todos são documento. Rascunho com os dois tipos sai
+// um anexo por mensagem, cada um com o seu tipo.
+export const todosComoDocumento = anexos =>
+  anexos.length > 0 && anexos.every(anexo => anexo.comoDocumento);
+
+export const documentoMisturadoComMidia = anexos =>
+  anexos.some(anexo => anexo.comoDocumento) && !todosComoDocumento(anexos);

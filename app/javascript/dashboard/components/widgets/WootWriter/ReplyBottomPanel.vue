@@ -14,8 +14,7 @@ import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDoWhatsapp.vue';
 import {
-  abrirSeletorDeArquivo,
-  anexarComoDocumentos,
+  anexarArquivos,
   usePeleDaResposta,
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 
@@ -189,8 +188,7 @@ export default {
       ehWhatsapp,
       soTexto,
       classesDaResposta,
-      abrirSeletorDeArquivo,
-      anexarComoDocumentos,
+      anexarArquivos,
       setSignatureFlagForInbox,
       fetchSignatureFlagFromUISettings,
       uploadRef,
@@ -328,8 +326,7 @@ export default {
         v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
         :caixa="inbox"
         :enviar="enviarRico"
-        @anexar="abrirSeletorDeArquivo"
-        @documentos="arquivos => anexarComoDocumentos(arquivos, onFileUpload)"
+        @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
       />
       <NextButton
         v-if="!isEditorDisabled"

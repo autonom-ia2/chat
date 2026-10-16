@@ -5,8 +5,9 @@ import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import { PELES, fornecerPele } from '../pele';
 import {
-  abrirSeletorDeArquivo,
-  anexarComoDocumentos,
+  anexarArquivos,
+  documentoMisturadoComMidia,
+  todosComoDocumento,
   usePeleDaResposta,
 } from '../usePeleDaResposta';
 import { idiomaDoPainel } from '../dataDaConversa';
@@ -75,44 +76,15 @@ describe('idiomaDoPainel', () => {
   });
 });
 
-describe('abrirSeletorDeArquivo (#1702)', () => {
-  let campo;
-  beforeEach(() => {
-    campo = document.createElement('input');
-    campo.type = 'file';
-    campo.id = 'conversationAttachment';
-    campo.setAttribute('accept', 'image/*,audio/*,.pdf');
-    campo.click = vi.fn();
-    document.body.appendChild(campo);
-  });
-  afterEach(() => campo.remove());
-
-  it('Documento abre o seletor de sempre', () => {
-    abrirSeletorDeArquivo();
-    expect(campo.click).toHaveBeenCalled();
-    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
-  });
-
-  it('Fotos e vídeos filtra a mídia e devolve o filtro de sempre depois', () => {
-    abrirSeletorDeArquivo('image/*,video/*');
-    expect(campo.getAttribute('accept')).toBe('image/*,video/*');
-    campo.dispatchEvent(new Event('change'));
-    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
-  });
-
-  it('desistir também devolve o filtro de sempre', () => {
-    abrirSeletorDeArquivo('image/*,video/*');
-    campo.dispatchEvent(new Event('cancel'));
-    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
-  });
-});
-
-describe('anexarComoDocumentos (#1702)', () => {
-  it('cada arquivo entra pelo caminho de sempre, marcado como documento', () => {
+describe('anexarArquivos (#1702)', () => {
+  it('cada arquivo entra pelo caminho de sempre, com o tipo escolhido no "+"', () => {
     const onFileUpload = vi.fn();
     const foto = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
     const pdf = new File(['y'], 'proposta.pdf', { type: 'application/pdf' });
-    anexarComoDocumentos([foto, pdf], onFileUpload);
+    anexarArquivos(
+      { arquivos: [foto, pdf], comoDocumento: true },
+      onFileUpload
+    );
     expect(onFileUpload).toHaveBeenCalledTimes(2);
     expect(onFileUpload).toHaveBeenNthCalledWith(1, {
       name: 'foto.jpg',
@@ -121,5 +93,23 @@ describe('anexarComoDocumentos (#1702)', () => {
       file: foto,
       comoDocumento: true,
     });
+  });
+});
+
+describe('documento e mídia no mesmo rascunho (#1702)', () => {
+  const doc = { comoDocumento: true };
+  const midia = { comoDocumento: false };
+  const clipe = {};
+
+  it('a marca de documento só vai numa mensagem quando todos são documento', () => {
+    expect(todosComoDocumento([doc, doc])).toBe(true);
+    expect(todosComoDocumento([doc, midia])).toBe(false);
+    expect(todosComoDocumento([])).toBe(false);
+  });
+
+  it('documento junto de mídia pede uma mensagem por anexo', () => {
+    expect(documentoMisturadoComMidia([doc, clipe])).toBe(true);
+    expect(documentoMisturadoComMidia([doc, doc])).toBe(false);
+    expect(documentoMisturadoComMidia([midia, clipe])).toBe(false);
   });
 });

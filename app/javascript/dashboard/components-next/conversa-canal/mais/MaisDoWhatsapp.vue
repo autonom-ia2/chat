@@ -1,6 +1,6 @@
 <script setup>
 // O "+" da barra de digitar (#1702), como o clipe do WhatsApp: documento e fotos
-// e vídeos entram pelo anexo de sempre; localização, contato, botão de link, opções e pedir localização
+// e vídeos entram no anexo de sempre, cada um pelo seu seletor; localização, contato, botão de link, opções e pedir localização
 // abrem uma janela curta com a prévia do que o cliente vai ver.
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -16,7 +16,7 @@ const props = defineProps({
   enviar: { type: Function, required: true },
 });
 
-const emit = defineEmits(['anexar', 'documentos']);
+const emit = defineEmits(['arquivos']);
 
 const { t } = useI18n();
 const aberto = ref(false);
@@ -39,10 +39,15 @@ const viraTexto = computed(() => !ehOficial.value || soTexto.value);
 // Como o menu de anexar do app: só o desenho colorido (sem bolinha atrás), nas
 // cores do WhatsApp; ícones da biblioteca do painel. `separado`: linha antes,
 // como a que separa Catálogo e Resposta rápida no app.
+// Seletor próprio de cada item de arquivo: o campo do clipe do Chatwoot fica intacto.
+const SELETORES = {
+  documento: { comoDocumento: true },
+  fotos_e_videos: { filtro: 'image/*,video/*', comoDocumento: false },
+};
 const ITENS = [
   // Como no app: "Documento" manda qualquer arquivo como documento (foto e vídeo
-  // chegam como arquivo, sem compactar); "Fotos e vídeos" manda como mídia, pelo
-  // seletor do clipe, só com foto e vídeo.
+  // chegam como arquivo, sem compactar); "Fotos e vídeos" manda como mídia, só
+  // com foto e vídeo. Cada um tem o seu seletor (SELETORES).
   {
     tipo: 'documento',
     chave: 'DOCUMENTO',
@@ -50,11 +55,10 @@ const ITENS = [
     cor: 'text-[#7F66FF]',
   },
   {
-    tipo: 'anexo',
+    tipo: 'fotos_e_videos',
     chave: 'FOTOS_E_VIDEOS',
     icone: 'i-ph-images-fill',
     cor: 'text-[#007BFC]',
-    filtro: 'image/*,video/*',
   },
   {
     tipo: 'localizacao',
@@ -100,7 +104,7 @@ const itens = computed(() =>
   ITENS.filter(
     item =>
       (!item.soOficial || !viraTexto.value) &&
-      (!['anexo', 'documento'].includes(item.tipo) || !soTexto.value)
+      (!SELETORES[item.tipo] || !soTexto.value)
   )
 );
 
@@ -108,26 +112,26 @@ const fechar = () => {
   aberto.value = false;
 };
 
-const seletorDeDocumento = ref(null);
+const seletores = {};
+const guardarSeletor = tipo => campo => {
+  seletores[tipo] = campo;
+};
 
 const escolher = item => {
   fechar();
-  if (item.tipo === 'documento') {
-    seletorDeDocumento.value?.click();
-    return;
-  }
-  if (item.tipo === 'anexo') {
-    emit('anexar', item.filtro);
+  if (SELETORES[item.tipo]) {
+    seletores[item.tipo]?.click();
     return;
   }
   janela.value?.abrir(item.tipo);
 };
 
-const escolheuDocumentos = evento => {
+const escolheuArquivos = (tipo, evento) => {
   const arquivos = [...(evento.target.files || [])];
   // eslint-disable-next-line no-param-reassign
   evento.target.value = '';
-  if (arquivos.length) emit('documentos', arquivos);
+  if (!arquivos.length) return;
+  emit('arquivos', { arquivos, comoDocumento: SELETORES[tipo].comoDocumento });
 };
 
 const menuRef = ref(null);
@@ -204,9 +208,7 @@ const aoTeclar = evento => {
           type="button"
           role="menuitem"
           class="flex items-center gap-4 w-full h-12 px-3 rounded-xl text-start text-base text-[#111B21] dark:text-[#E9EDEF] hover:bg-[#F5F6F6] dark:hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#111B21] dark:focus-visible:ring-[#E9EDEF]"
-          :data-item="
-            item.tipo === 'anexo' ? item.chave.toLowerCase() : item.tipo
-          "
+          :data-item="item.tipo"
           @click="escolher(item)"
         >
           <Icon
@@ -219,14 +221,17 @@ const aoTeclar = evento => {
       </template>
     </div>
     <input
-      ref="seletorDeDocumento"
+      v-for="(seletor, tipo) in SELETORES"
+      :key="tipo"
+      :ref="guardarSeletor(tipo)"
       type="file"
       multiple
+      :accept="seletor.filtro"
       class="hidden"
       tabindex="-1"
       aria-hidden="true"
-      data-seletor-de-documento
-      @change="escolheuDocumentos"
+      :data-seletor="tipo"
+      @change="evento => escolheuArquivos(tipo, evento)"
     />
     <JanelaDoMais
       ref="janela"

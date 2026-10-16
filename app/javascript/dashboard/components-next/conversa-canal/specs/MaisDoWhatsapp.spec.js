@@ -27,31 +27,47 @@ const abrirMenu = async wrapper => {
   await wrapper.find('[data-mais-do-whatsapp]').trigger('click');
 };
 
+const escolherArquivo = async (wrapper, item, arquivo) => {
+  const seletor = wrapper.find(`[data-seletor="${item}"]`);
+  const clicar = vi.spyOn(seletor.element, 'click');
+  await abrirMenu(wrapper);
+  await wrapper.find(`[data-item="${item}"]`).trigger('click');
+  expect(clicar).toHaveBeenCalledTimes(1);
+  Object.defineProperty(seletor.element, 'files', { value: [arquivo] });
+  await seletor.trigger('change');
+  return seletor;
+};
+
 describe('MaisDoWhatsapp: Documento e Fotos e vídeos (#1702)', () => {
-  it('Fotos e vídeos abre o seletor do anexo só com foto e vídeo', async () => {
+  const foto = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+
+  it('Fotos e vídeos tem seletor próprio só com foto e vídeo e manda como mídia', async () => {
     const wrapper = montar();
-    await abrirMenu(wrapper);
-    await wrapper.find('[data-item="fotos_e_videos"]').trigger('click');
-    expect(wrapper.emitted('anexar')).toEqual([['image/*,video/*']]);
-    expect(wrapper.emitted('documentos')).toBeUndefined();
+    const seletor = await escolherArquivo(wrapper, 'fotos_e_videos', foto);
+    expect(seletor.attributes('accept')).toBe('image/*,video/*');
+    expect(wrapper.emitted('arquivos')).toEqual([
+      [{ arquivos: [foto], comoDocumento: false }],
+    ]);
   });
 
-  it('Documento abre um seletor sem filtro e manda os arquivos como documento', async () => {
+  it('Documento tem seletor sem filtro e manda qualquer arquivo como documento', async () => {
     const wrapper = montar();
-    const seletor = wrapper.find('[data-seletor-de-documento]');
+    const seletor = await escolherArquivo(wrapper, 'documento', foto);
     expect(seletor.attributes('accept')).toBeUndefined();
     expect(seletor.attributes('multiple')).toBeDefined();
-    const clicar = vi.spyOn(seletor.element, 'click');
+    expect(wrapper.emitted('arquivos')).toEqual([
+      [{ arquivos: [foto], comoDocumento: true }],
+    ]);
+  });
 
-    await abrirMenu(wrapper);
-    await wrapper.find('[data-item="documento"]').trigger('click');
-    expect(clicar).toHaveBeenCalledTimes(1);
-    expect(wrapper.emitted('anexar')).toBeUndefined();
-
-    const foto = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
-    Object.defineProperty(seletor.element, 'files', { value: [foto] });
-    await seletor.trigger('change');
-    expect(wrapper.emitted('documentos')).toEqual([[[foto]]]);
+  it('o "+" não mexe no campo de anexo do Chatwoot', async () => {
+    const campo = document.createElement('input');
+    campo.id = 'conversationAttachment';
+    campo.setAttribute('accept', 'image/*,audio/*,.pdf');
+    document.body.appendChild(campo);
+    await escolherArquivo(montar(), 'fotos_e_videos', foto);
+    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
+    campo.remove();
   });
 
   it('no número reserva (só texto) Documento e Fotos e vídeos somem', async () => {

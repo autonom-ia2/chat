@@ -22,7 +22,11 @@ const GANCHOS = [
     BaseAttachment,
     ['min-w-64', 'gap-3', 'size-8', 'space-y-1', 'bg-n-solid-3'],
   ],
-  ['message/bubbles/RichMessage/Frame.vue', Frame, ['flex flex-col gap-1"']],
+  [
+    'message/bubbles/RichMessage/Frame.vue',
+    Frame,
+    ['class="flex flex-col gap-1"'],
+  ],
   ['message/bubbles/RichMessage/ActionRow.vue', ActionRow, ['bg-n-solid-3']],
   [
     'message/bubbles/RichMessage/types/LinkButton.vue',

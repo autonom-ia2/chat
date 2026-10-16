@@ -56,7 +56,11 @@ import {
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useMacroExecution } from 'dashboard/composables/useMacroExecution';
-import { usePeleDaResposta } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
+import {
+  documentoMisturadoComMidia,
+  todosComoDocumento,
+  usePeleDaResposta,
+} from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
@@ -910,7 +914,12 @@ export default {
         // To handle both cases, text and attachments are always sent as separate messages.
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
-        if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
+        // #1702: documento e mídia no mesmo rascunho saem um por mensagem, cada um com o seu tipo.
+        const misturaDocumento = documentoMisturadoComMidia(this.attachedFiles);
+        if (
+          (isOnWhatsApp || isOnInstagram || isOnTiktok || misturaDocumento) &&
+          !this.isPrivate
+        ) {
           this.sendMessageAsMultipleMessages(
             this.message,
             copilotAcceptedMessage
@@ -1313,7 +1322,6 @@ export default {
       if (this.attachedFiles && this.attachedFiles.length) {
         messagePayload.files = [];
         this.attachedFiles.forEach(attachment => {
-          if (attachment.comoDocumento) messagePayload.sendAsDocument = true;
           if (this.globalConfig.directUploadsEnabled) {
             messagePayload.files.push(attachment.blobSignedId);
             if (attachment.isVoiceMessage) {
@@ -1323,6 +1331,10 @@ export default {
             messagePayload.files.push(attachment.resource.file);
           }
         });
+      }
+
+      if (todosComoDocumento(this.attachedFiles)) {
+        messagePayload.sendAsDocument = true;
       }
 
       if (this.ccEmails && !this.isOnPrivateNote) {
