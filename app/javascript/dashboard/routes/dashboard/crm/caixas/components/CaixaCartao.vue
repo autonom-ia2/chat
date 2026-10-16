@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useFase2 } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useFase2';
+import { useAgenteIaPorCaixa } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import CaixaIcone from './CaixaIcone.vue';
 import FunilSelo from './FunilSelo.vue';
 import {
@@ -44,6 +45,8 @@ const pessoas = computed(() => props.caixa.people.length);
 // #1447 — com a Fase 2 dos Agentes (da conta, #1570): a porta e os agentes de
 // área que cuidam de algum funil da caixa. Sem ela, o robô que atende primeiro, como sempre.
 const fase2 = useFase2();
+// #1648 — com a aba "Agente de IA" por caixa, o agente de outro sistema é um agente de IA como os nossos.
+const porCaixa = useAgenteIaPorCaixa();
 const comAgentes = computed(() => temAgentesIa(props.caixa, fase2.value));
 const porta = computed(() =>
   portaOuRobo(portaDa(props.caixa), props.caixa.agent_bot)
@@ -55,7 +58,7 @@ const externo = computed(
 );
 const fraseDoRobo = computed(() => {
   const nome = props.caixa.agent_bot?.name;
-  return roboExterno(props.caixa.agent_bot)
+  return roboExterno(props.caixa.agent_bot) && !porCaixa.value
     ? t('CRM_CAIXAS.CARTAO.ROBO_EXTERNO', { nome })
     : t('CRM_CAIXAS.CARTAO.ROBO', { nome });
 });

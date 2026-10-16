@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgentesDaCaixa from './AgentesDaCaixa.vue';
+import { useAgenteIaPorCaixa } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import { corDoFunil, portaOuRobo, roboExterno } from '../helpers/caixa';
 import { aoTeclarNoGrupo } from '../helpers/setas';
 
@@ -31,10 +32,19 @@ const pessoas = defineModel('pessoas', { type: Array, required: true });
 const aiAgents = defineModel('aiAgents', { type: Object, default: null });
 
 const porta = computed(() => portaOuRobo(aiAgents.value?.porta, props.robo));
+// Agente de outro sistema que atende primeiro, como o servidor diz
+// (`ai_agents.externo`, #1648). Só com a aba "Agente de IA" por caixa ligada na
+// conta: os agentes da equipe convivem com ele (decisão do Rodrigo de 15/10,
+// opção B) e, sem agente marcado no assunto, ele continua. Desligada, como antes.
+const porCaixa = useAgenteIaPorCaixa();
+const externo = computed(() =>
+  porCaixa.value ? aiAgents.value?.externo || null : null
+);
 // A frase do robô: sem a Fase 2, como sempre; com ela, só quando o robô não
-// entra como porta (agente externo, #1570).
+// entra como porta nem como o cartão do agente externo (#1570, #1648).
 const mostraORobo = computed(
-  () => Boolean(props.robo) && (!aiAgents.value || !porta.value)
+  () =>
+    Boolean(props.robo) && (!aiAgents.value || (!porta.value && !externo.value))
 );
 const agentesIa = computed({
   get: () => aiAgents.value?.agentes || [],
@@ -45,7 +55,9 @@ const agentesIa = computed({
 const temAgentes = computed(
   () =>
     Boolean(aiAgents.value) &&
-    (Boolean(porta.value) || agentesIa.value.length > 0)
+    (Boolean(porta.value) ||
+      Boolean(externo.value) ||
+      agentesIa.value.length > 0)
 );
 
 const atualizar = (pessoa, mudanca) => {
@@ -101,7 +113,7 @@ const chipClasse = ativo =>
     >
       <span class="i-lucide-bot mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {{
-        roboExterno(robo)
+        roboExterno(robo) && !porCaixa
           ? $t('CRM_CAIXAS.PESSOAS.ROBO_EXTERNO', { nome: robo.name })
           : $t('CRM_CAIXAS.PESSOAS.ROBO', { nome: robo.name })
       }}
@@ -150,10 +162,27 @@ const chipClasse = ativo =>
         </h3>
         <p data-regra class="mb-0 text-[0.9375rem] text-n-slate-11">
           {{
-            porta
-              ? $t('CRM_CAIXAS.PESSOAS.REGRA', { porta: porta.name })
+            porta || externo
+              ? $t('CRM_CAIXAS.PESSOAS.REGRA', {
+                  porta: (porta || externo).name,
+                })
               : $t('CRM_CAIXAS.PESSOAS.REGRA_SEM_PORTA')
           }}
+        </p>
+      </div>
+      <div
+        v-if="externo"
+        data-externo
+        class="flex items-center gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-4"
+      >
+        <span
+          class="grid size-9 shrink-0 place-items-center rounded-full bg-n-slate-3 text-n-slate-11"
+          aria-hidden="true"
+        >
+          <span class="i-lucide-plug size-5" />
+        </span>
+        <p class="mb-0 min-w-0 flex-1 text-base font-semibold text-n-slate-12">
+          {{ $t('CRM_CAIXAS.PESSOAS.EXTERNO', { nome: externo.name }) }}
         </p>
       </div>
       <AgentesDaCaixa

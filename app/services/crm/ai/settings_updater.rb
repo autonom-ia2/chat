@@ -159,6 +159,9 @@ module Crm
           renotify_after_seconds = normalize_positive_integer(cfg[:renotify_after_seconds])
           renotify_after_seconds ? result['renotify_after_seconds'] = renotify_after_seconds : result.delete('renotify_after_seconds')
         end
+        # #1593: "A mesma pessoa" num agente de IA, só quando muda: com a Fase 2 e um agente desta conta que fala com
+        # cliente. Senão, 422.
+        Crm::AgentesIa.validar_pool!(@pipeline, result, existing) if cfg.key?(:pool_type) || cfg.key?(:pool_id)
         result
       end
 

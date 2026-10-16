@@ -168,6 +168,7 @@ const nomesSemFrase = computed(() =>
     icone="i-lucide-inbox"
     tom="bg-n-teal-3 text-n-teal-11"
     :titulo="$t('CRM_FUNIL.CAIXAS.ROTULO')"
+    so-ver
     @alterar="$emit('abrir', 'inboxes')"
   >
     <I18nT

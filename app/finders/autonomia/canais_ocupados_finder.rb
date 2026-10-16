@@ -4,6 +4,9 @@
 #   `caixas` (#1366): quantos vínculos ativos (porta ou área) o agente tem na conta. Com 1, trocá-lo desta caixa o para,
 #   e a tela avisa.
 # - Atendimento automático externo, sem nome: bot de webhook na caixa ou vínculo de agente fora da API (de sistema).
+#   Agente de outro sistema (#1648: AgentBotInbox de um AgentBot que não é espelho) diz qual é e se atende:
+#   { kind: 'external', agent_bot_id, operating } (operating = AgentBotInbox ativo). A lista de Agentes e a página dele
+#   leem daqui onde ele atende primeiro.
 # - Livre (nil): sem bot e sem vínculo kept — a mesma regra das caixas elegíveis de agents/:id/channels.
 # O bot da caixa é lido pela associação da caixa: agent_bot_inboxes.account_id aceita nulo em linhas antigas.
 # `areas` (#1433, tema 13): os agentes da equipe da caixa (vínculo de papel área, ativo, de agente visível na API), por
@@ -20,10 +23,11 @@ class Autonomia::CanaisOcupadosFinder
     @agents_scope = agents_scope
   end
 
-  # [{ inbox_id:, name:, channel_type:, occupied_by:, so_de_pessoas:, areas: }] por nome da caixa; no máximo 6 consultas, seja qual for o número
+  # [{ inbox_id:, name:, channel_type:, occupied_by:, so_de_pessoas:, areas: }] por nome da caixa; no máximo 7 consultas, seja qual for o número
   # de caixas.
   def call
     com_bot = caixas_com_bot
+    robos_de_outro_sistema # sempre, para o número de consultas não depender das caixas
     @account.inboxes.order(:name, :id).pluck(:id, :name, :channel_type).map do |inbox_id, name, channel_type|
       ocupado_por = ocupante(inbox_id, com_bot)
       { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupado_por, so_de_pessoas: ocupado_por.nil?,
@@ -36,7 +40,9 @@ class Autonomia::CanaisOcupadosFinder
   def ocupante(inbox_id, com_bot)
     agente = agentes[vinculos[inbox_id]]
     return nativo(*agente, caixas_por_agente.fetch(agente.first, 0)) if agente
-    return EXTERNO if vinculos.key?(inbox_id) || com_bot.include?(inbox_id)
+    return EXTERNO if vinculos.key?(inbox_id)
+    return de_outro_sistema(*robos_de_outro_sistema[inbox_id]) if robos_de_outro_sistema.key?(inbox_id)
+    return EXTERNO if com_bot.include?(inbox_id)
 
     nil
   end
@@ -75,6 +81,20 @@ class Autonomia::CanaisOcupadosFinder
 
   def area(agent_id, agent_name, status, enabled)
     { agent_id: agent_id, agent_name: agent_name, operating: enabled && status == 'active' }
+  end
+
+  def de_outro_sistema(agent_bot_id, status)
+    { kind: 'external', agent_bot_id: agent_bot_id, operating: status == 'active' }
+  end
+
+  # { inbox_id => [agent_bot_id, status] } dos agentes de outro sistema (#1648), pela associação da caixa como
+  # caixas_com_bot. Com mais de um na caixa (dado antigo), fica o primeiro por id.
+  def robos_de_outro_sistema
+    @robos_de_outro_sistema ||= @account.inboxes.joins(:agent_bot_inbox)
+                                        .where.not(agent_bot_inboxes: { agent_bot_id: ::Autonomia::Agents::AgentInbox.espelhos })
+                                        .order('agent_bot_inboxes.id')
+                                        .pluck(:id, 'agent_bot_inboxes.agent_bot_id', 'agent_bot_inboxes.status')
+                                        .each_with_object({}) { |(inbox_id, bot_id, status), mapa| mapa[inbox_id] ||= [bot_id, status] }
   end
 
   def caixas_com_bot

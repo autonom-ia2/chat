@@ -1,0 +1,709 @@
+{
+  "issue": "autonom-ia2/chat#1606",
+  "o_que": "Clara (porta) -> Lia (area de Seguros) -> Clara, 5 repeticoes, cada uma em conta nova, com a IA de assunto real (Jev jev-1.13.0) e o revisor do assunto, o Answerer e a IA do CRM reais (OpenAI). Canal de teste: nada sai para cliente.",
+  "base": {
+    "branch": "teste/1606-cadeia (worktree descartavel, so local)",
+    "head": "184c3d1f46",
+    "main": "8e7609a653",
+    "pr_a": "#1627 feat/1606-um-turno-a 85653b59d2",
+    "pr_b": "#1628 feat/1606-um-turno fd2c860ee5",
+    "c": "#1623 8d9a123443",
+    "d": "#1625 f06e59507b",
+    "como": "main + merge do PR-B (que traz o PR-A) + merge do C (que traz o #1622) + merge do D"
+  },
+  "turnos_do_roteiro": [
+    [
+      "Oi",
+      "clara"
+    ],
+    [
+      "Quero seguro para a moto",
+      "lia"
+    ],
+    [
+      "Qual o endereco da loja?",
+      "clara"
+    ]
+  ],
+  "medidas": {
+    "a": "o assunto decidido (SubjectDecision fora de pending) antes da primeira resposta do turno, nos 3 turnos",
+    "b": "turno 2 respondido so pela Lia, com o funil atual = Seguros",
+    "c": "turno 3 respondido pela Clara e o registro de passagens com a volta Lia -> Clara e a ida para a Lia devolvida",
+    "d": "cada turno com um agente so, uma geracao do Answerer e no maximo uma troca de dono; nenhuma passagem repetida"
+  },
+  "resultado": {
+    "a": "5/5",
+    "b": "5/5",
+    "c": "0/5",
+    "d": "5/5"
+  },
+  "por_que_c_falhou": [
+    "Turno 3: o Jev (revisado) cria o card no funil Geral, que nao tem responsavel. A troca e de FOCO, e o ResponsibleAgentSync so devolve a porta quando o proprio card em atendimento muda de funil (motivo PIPELINE). A Lia continua dona e responde (5/5).",
+    "Crm::Passagens fica vazio nas 5: a troca robo -> robo pelo Sync (Clara -> Lia) nao grava passagem. Hoje so gravam o listener (destino pessoa e devolucao pela tela) e o PassarParaIa, que ainda nao tem chamador na cadeia (o chamador do CRM e o #1620)."
+  ],
+  "custo_usd": {
+    "esta_rodada": 0.3678,
+    "calibracao_1_repeticao": 0.0727,
+    "evals_anteriores": 0.095,
+    "total_1606": 0.5355,
+    "teto": 2.0
+  },
+  "chaves": "TYPESAFE_API_KEY (Jev, por stub de TypesafeAi::Config.api_key) e OPENAI_API_KEY (CAPTAIN_OPEN_AI_API_KEY no banco de teste), carregadas so no processo do eval; nenhum valor gravado aqui.",
+  "repeticoes": [
+    {
+      "n": 1,
+      "turnos": [
+        {
+          "esperado": "clara",
+          "responderam": [
+            "clara"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Clara"
+          ],
+          "dono_no_fim": "clara",
+          "funil_atual": null,
+          "jobs": {
+            "EventDispatcherJob": 14,
+            "ActionCableBroadcastJob": 12,
+            "SendReplyJob": 2,
+            "Crm::SlaAutoApplyJob": 1,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 3,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Avatar::AvatarFromGravatarJob": 2,
+            "Avatar::AvatarFromUrlJob": 2,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "kept",
+            "acao": "none",
+            "por": "jev",
+            "certeza": 1.0,
+            "motivo_curto": null,
+            "pipeline": null
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 2.5,
+          "segundos_ate_responder": 8.5,
+          "trocas_de_dono": 0
+        },
+        {
+          "esperado": "lia",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Seguros",
+          "jobs": {
+            "ActionCableBroadcastJob": 12,
+            "EventDispatcherJob": 12,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 3,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.99,
+            "motivo_curto": null,
+            "pipeline": "Seguros"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 11.0,
+          "trocas_de_dono": 1
+        },
+        {
+          "esperado": "clara",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Geral",
+          "jobs": {
+            "ActionCableBroadcastJob": 8,
+            "EventDispatcherJob": 7,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::SyncConversationCardJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.96,
+            "motivo_curto": null,
+            "pipeline": "Geral"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 8.0,
+          "trocas_de_dono": 0
+        }
+      ],
+      "passagens": [],
+      "medidas": {
+        "a": true,
+        "b": true,
+        "c": false,
+        "d": true,
+        "t1_ok": true
+      },
+      "custo_usd": 0.0718
+    },
+    {
+      "n": 2,
+      "turnos": [
+        {
+          "esperado": "clara",
+          "responderam": [
+            "clara"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Clara"
+          ],
+          "dono_no_fim": "clara",
+          "funil_atual": null,
+          "jobs": {
+            "EventDispatcherJob": 14,
+            "ActionCableBroadcastJob": 12,
+            "SendReplyJob": 2,
+            "Crm::SlaAutoApplyJob": 1,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 3,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Avatar::AvatarFromGravatarJob": 2,
+            "Avatar::AvatarFromUrlJob": 2,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "kept",
+            "acao": "none",
+            "por": "jev",
+            "certeza": 1.0,
+            "motivo_curto": null,
+            "pipeline": null
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 2.5,
+          "segundos_ate_responder": 8.5,
+          "trocas_de_dono": 0
+        },
+        {
+          "esperado": "lia",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Seguros",
+          "jobs": {
+            "ActionCableBroadcastJob": 12,
+            "EventDispatcherJob": 12,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 3,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.99,
+            "motivo_curto": null,
+            "pipeline": "Seguros"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 9.0,
+          "trocas_de_dono": 1
+        },
+        {
+          "esperado": "clara",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Geral",
+          "jobs": {
+            "ActionCableBroadcastJob": 8,
+            "EventDispatcherJob": 7,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::SyncConversationCardJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.95,
+            "motivo_curto": null,
+            "pipeline": "Geral"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 10.0,
+          "trocas_de_dono": 0
+        }
+      ],
+      "passagens": [],
+      "medidas": {
+        "a": true,
+        "b": true,
+        "c": false,
+        "d": true,
+        "t1_ok": true
+      },
+      "custo_usd": 0.0744
+    },
+    {
+      "n": 3,
+      "turnos": [
+        {
+          "esperado": "clara",
+          "responderam": [
+            "clara"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Clara"
+          ],
+          "dono_no_fim": "clara",
+          "funil_atual": null,
+          "jobs": {
+            "EventDispatcherJob": 14,
+            "ActionCableBroadcastJob": 12,
+            "SendReplyJob": 2,
+            "Crm::SlaAutoApplyJob": 1,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 3,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Avatar::AvatarFromGravatarJob": 2,
+            "Avatar::AvatarFromUrlJob": 2,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "kept",
+            "acao": "none",
+            "por": "jev",
+            "certeza": 1.0,
+            "motivo_curto": null,
+            "pipeline": null
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 2.8,
+          "segundos_ate_responder": 9.8,
+          "trocas_de_dono": 0
+        },
+        {
+          "esperado": "lia",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Seguros",
+          "jobs": {
+            "ActionCableBroadcastJob": 12,
+            "EventDispatcherJob": 12,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 3,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.99,
+            "motivo_curto": null,
+            "pipeline": "Seguros"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 10.0,
+          "trocas_de_dono": 1
+        },
+        {
+          "esperado": "clara",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Geral",
+          "jobs": {
+            "ActionCableBroadcastJob": 8,
+            "EventDispatcherJob": 7,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::SyncConversationCardJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.89,
+            "motivo_curto": null,
+            "pipeline": "Geral"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 11.0,
+          "trocas_de_dono": 0
+        }
+      ],
+      "passagens": [],
+      "medidas": {
+        "a": true,
+        "b": true,
+        "c": false,
+        "d": true,
+        "t1_ok": true
+      },
+      "custo_usd": 0.0725
+    },
+    {
+      "n": 4,
+      "turnos": [
+        {
+          "esperado": "clara",
+          "responderam": [
+            "clara"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Clara"
+          ],
+          "dono_no_fim": "clara",
+          "funil_atual": null,
+          "jobs": {
+            "EventDispatcherJob": 14,
+            "ActionCableBroadcastJob": 12,
+            "SendReplyJob": 2,
+            "Crm::SlaAutoApplyJob": 1,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 3,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Avatar::AvatarFromGravatarJob": 2,
+            "Avatar::AvatarFromUrlJob": 2,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "kept",
+            "acao": "none",
+            "por": "jev",
+            "certeza": 1.0,
+            "motivo_curto": null,
+            "pipeline": null
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 10.0,
+          "trocas_de_dono": 0
+        },
+        {
+          "esperado": "lia",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Seguros",
+          "jobs": {
+            "ActionCableBroadcastJob": 12,
+            "EventDispatcherJob": 12,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 3,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.99,
+            "motivo_curto": null,
+            "pipeline": "Seguros"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 9.0,
+          "trocas_de_dono": 1
+        },
+        {
+          "esperado": "clara",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Geral",
+          "jobs": {
+            "ActionCableBroadcastJob": 8,
+            "EventDispatcherJob": 7,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::SyncConversationCardJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.89,
+            "motivo_curto": null,
+            "pipeline": "Geral"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 10.0,
+          "trocas_de_dono": 0
+        }
+      ],
+      "passagens": [],
+      "medidas": {
+        "a": true,
+        "b": true,
+        "c": false,
+        "d": true,
+        "t1_ok": true
+      },
+      "custo_usd": 0.0735
+    },
+    {
+      "n": 5,
+      "turnos": [
+        {
+          "esperado": "clara",
+          "responderam": [
+            "clara"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Clara"
+          ],
+          "dono_no_fim": "clara",
+          "funil_atual": null,
+          "jobs": {
+            "EventDispatcherJob": 14,
+            "ActionCableBroadcastJob": 12,
+            "SendReplyJob": 2,
+            "Crm::SlaAutoApplyJob": 1,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 3,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Avatar::AvatarFromGravatarJob": 2,
+            "Avatar::AvatarFromUrlJob": 2,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "kept",
+            "acao": "none",
+            "por": "jev",
+            "certeza": 1.0,
+            "motivo_curto": null,
+            "pipeline": null
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 2.9,
+          "segundos_ate_responder": 8.9,
+          "trocas_de_dono": 0
+        },
+        {
+          "esperado": "lia",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Seguros",
+          "jobs": {
+            "ActionCableBroadcastJob": 12,
+            "EventDispatcherJob": 12,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 3,
+            "Crm::SyncConversationCardJob": 3,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Crm::Ai::HandoffPickupJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.99,
+            "motivo_curto": null,
+            "pipeline": "Seguros"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 10.0,
+          "trocas_de_dono": 1
+        },
+        {
+          "esperado": "clara",
+          "responderam": [
+            "lia"
+          ],
+          "mensagens_postadas": 1,
+          "geracoes": [
+            "Lia"
+          ],
+          "dono_no_fim": "lia",
+          "funil_atual": "Geral",
+          "jobs": {
+            "ActionCableBroadcastJob": 8,
+            "EventDispatcherJob": 7,
+            "SendReplyJob": 2,
+            "Autonomia::Agents::Operate::ReplyJob": 2,
+            "Crm::SyncConversationCardJob": 2,
+            "Crm::Subjects::IdentifyJob": 1,
+            "Crm::Ai::UsageBroadcastJob": 5,
+            "Crm::Ai::ResponsibleAgentSyncJob": 1,
+            "Autonomia::Agents::Operate::ChunkedDeliveryJob": 1,
+            "Crm::Ai::EvaluateCardJob": 1,
+            "ConversationReplyEmailJob": 1,
+            "ActionMailer::MailDeliveryJob": 1
+          },
+          "decisao": {
+            "estado": "applied",
+            "acao": "create",
+            "por": "review",
+            "certeza": 0.86,
+            "motivo_curto": null,
+            "pipeline": "Geral"
+          },
+          "decidido_antes_da_resposta": true,
+          "segundos_ate_decidir": 3.0,
+          "segundos_ate_responder": 11.0,
+          "trocas_de_dono": 0
+        }
+      ],
+      "passagens": [],
+      "medidas": {
+        "a": true,
+        "b": true,
+        "c": false,
+        "d": true,
+        "t1_ok": true
+      },
+      "custo_usd": 0.0757
+    }
+  ]
+}

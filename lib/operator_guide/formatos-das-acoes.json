@@ -4,9 +4,7 @@
     "controller": "api/v1/accounts/agent_bots#destroy",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:26",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:26"
     ],
     "sem_corpo": true
   },
@@ -15,9 +13,7 @@
     "controller": "api/v1/accounts/agent_bots#avatar",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:21",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:21"
     ],
     "sem_corpo": true
   },
@@ -1121,9 +1117,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:16",
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:48",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -8064,9 +8058,7 @@
     "controller": "api/v1/accounts/agent_bots#reset_access_token",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:31",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:31"
     ],
     "sem_corpo": true
   },
@@ -8075,9 +8067,7 @@
     "controller": "api/v1/accounts/agent_bots#reset_secret",
     "modelo": "AgentBot",
     "origem": [
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:36",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:36"
     ],
     "sem_corpo": true
   },
@@ -13474,6 +13464,22 @@
     ],
     "sem_corpo": false
   },
+  "POST conversations/:conversation_id/passar_para": {
+    "campos": {
+      "id": {},
+      "tipo": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/passar_para#create",
+    "corpo_plano": false,
+    "envelope": "destino",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:13",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:33",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+    ],
+    "sem_corpo": false
+  },
   "POST conversations/:id/custom_attributes": {
     "campos": {
       "custom_attributes": {
@@ -14108,6 +14114,46 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/caixas/:inbox_id/quem_recebe": {
+    "campos": {
+      "ai_agents": {
+        "campos": {
+          "id": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "default_stage_id": {},
+      "legado": {},
+      "modo": {},
+      "people": {
+        "campos": {
+          "id": {},
+          "only_own": {},
+          "pipeline_ids": {
+            "tipo": "lista"
+          },
+          "triage": {}
+        },
+        "tipo": "objeto"
+      },
+      "pipeline_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/caixas#quem_recebe",
+    "corpo_plano": true,
+    "envelope": "caixa",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:73",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:69"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/cards": {
     "campos": {
       "contact_id": {
@@ -14541,9 +14587,43 @@
     "controller": "api/v1/accounts/crm/conversation_cards#focus",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:31",
       "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/conversations/:conversation_id/repasse": {
+    "campos": {
+      "card_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#pass_subject",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/conversations/:conversation_id/repasse/manter": {
+    "campos": {
+      "card_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/conversation_cards#keep_subject",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:51",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": false
   },
@@ -14552,9 +14632,9 @@
     "controller": "api/v1/accounts/crm/conversation_cards#accept_suggestion",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:13",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:14",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": true
   },
@@ -14563,9 +14643,9 @@
     "controller": "api/v1/accounts/crm/conversation_cards#dismiss_suggestion",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:44"
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/conversation_cards_controller.rb:60"
     ],
     "sem_corpo": true
   },
@@ -17101,7 +17181,6 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:69",
       "app/controllers/api/v1/accounts/inboxes_controller.rb:115",
       "app/controllers/api/v1/accounts/inboxes_controller.rb:120"
     ],
@@ -19118,9 +19197,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:16",
       "app/controllers/api/v1/accounts/agent_bots_controller.rb:48",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:44",
-      "app/controllers/api/v1/accounts/agent_bots_controller.rb:43"
+      "app/controllers/api/v1/accounts/agent_bots_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -21602,6 +21679,35 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/inboxes/:inbox_id/quem_atende": {
+    "campos": {
+      "agent_bot_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "agent_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "nenhum": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/quem_atende#update",
+    "modelo": "Autonomia::Agents::Agent",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:58",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:74",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:68",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/quem_atende_controller.rb:42"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/prospecting/leads/:id": {
     "campos": {
       "discard_reason": {
@@ -22924,9 +23030,9 @@
     "corpo_plano": true,
     "envelope": "caixa",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:20",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:73",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:69"
     ],
     "sem_corpo": false
   },

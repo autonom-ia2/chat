@@ -93,6 +93,8 @@ export const paraItem = (evento, { fuso, agora }) => {
     pausado: evento.status === 'paused',
     atrasado: tipo === 'lembrete' && !feito && !virtual && inicio < agora,
     podeConcluir: tipo === 'lembrete' && !feito && !virtual,
+    // #1590: por que a mensagem marcada não saiu (código; a frase é da tela).
+    falha: evento.send_error_code || '',
   };
 };
 

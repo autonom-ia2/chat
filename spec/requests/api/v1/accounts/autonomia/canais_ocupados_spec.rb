@@ -112,13 +112,17 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(occupied_by(inbox)).to include('kind' => 'agent', 'operating' => false)
     end
 
-    it 'marks an inbox held by an external webhook bot as external, without a name' do
+    # #1648: o agente de outro sistema diz qual é (a lista de Agentes e a página dele) e se atende (AgentBotInbox ativo).
+    it 'marks an inbox held by an agent from another system as external, with its agent_bot_id and whether it answers' do
       inbox = create(:inbox, account: account)
-      link_webhook(inbox)
+      parada = create(:inbox, account: account)
+      bot_inbox = link_webhook(inbox)
+      link_webhook(parada).update!(status: :inactive)
 
       get_canais
 
-      expect(occupied_by(inbox)).to eq('kind' => 'external')
+      expect(occupied_by(inbox)).to eq('kind' => 'external', 'agent_bot_id' => bot_inbox.agent_bot_id, 'operating' => true)
+      expect(occupied_by(parada)).to include('kind' => 'external', 'operating' => false)
     end
 
     # #1433: só a caixa sem principal e sem robô de fora é "só de pessoas" (pode receber o agente da equipe).
@@ -138,11 +142,12 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
 
     it 'still sees the external bot when its agent_bot_inboxes row has no account_id' do
       inbox = create(:inbox, account: account)
-      link_webhook(inbox).update_column(:account_id, nil) # rubocop:disable Rails/SkipsModelValidations
+      bot_inbox = link_webhook(inbox)
+      bot_inbox.update_column(:account_id, nil) # rubocop:disable Rails/SkipsModelValidations
 
       get_canais
 
-      expect(occupied_by(inbox)).to eq('kind' => 'external')
+      expect(occupied_by(inbox)).to eq('kind' => 'external', 'agent_bot_id' => bot_inbox.agent_bot_id, 'operating' => true)
     end
 
     it 'frees the inbox of a deleted agent' do

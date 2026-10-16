@@ -339,4 +339,18 @@ describe('#CrmKanbanAPI', () => {
       '/api/v1/accounts/85/crm/stage_automations/22'
     );
   });
+
+  it('answers the subject handoff suggestion (#1606, decision a)', () => {
+    crmKanban.passSubjectToTeam(9, 31);
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/conversations/9/repasse',
+      { card_id: 31 }
+    );
+
+    crmKanban.keepSubjectWithMe(9, 31);
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/conversations/9/repasse/manter',
+      { card_id: 31 }
+    );
+  });
 });

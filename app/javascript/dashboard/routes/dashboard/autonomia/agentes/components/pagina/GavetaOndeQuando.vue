@@ -26,6 +26,7 @@ import {
   mudancaDaEquipe,
   outrasCaixasDaEquipe,
 } from '../../utils/ondeTrabalha';
+import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo T10 e "Voltar a atender") — onde e quando o agente responde.
@@ -126,6 +127,8 @@ const mostrarOutras = computed(
     !semLista.value &&
     !semCanal.value
 );
+// #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
+const porCaixa = useAgenteIaPorCaixa();
 // Fora da lista: as caixas em que ele é o principal agora e a escolhida em "Onde atende".
 const foraDasOutras = computed(() =>
   [...props.atuais.map(canal => canal.inbox_id), onde.value].filter(
@@ -137,7 +140,8 @@ const outrasValidas = computed(() => {
   const livres = outrasCaixasDaEquipe(
     props.canais,
     props.agente.id,
-    foraDasOutras.value
+    foraDasOutras.value,
+    { comOutroSistema: porCaixa.value }
   )
     .filter(({ bloqueio }) => !bloqueio)
     .map(({ canal }) => canal.inbox_id);

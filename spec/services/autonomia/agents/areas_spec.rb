@@ -35,14 +35,13 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(described_class.vincular!(agent: agente_da_area, inbox: inbox)).to eq(primeiro)
     end
 
-    # #1433: caixa sem porta só aceita se for só de pessoas (areas_caixa_so_de_pessoas_spec); com robô de fora, recusa.
-    it 'recusa caixa sem porta ativa e com robô de fora, sem deixar espelho para trás' do
+    # #1648 (decisão do Rodrigo de 15/10, opção B): caixa sem porta e com agente de outro sistema aceita a área.
+    it 'aceita caixa sem porta ativa e com agente de outro sistema, com a aba por caixa' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
       outra_caixa = create(:inbox, account: account)
       AgentBotInbox.create!(inbox: outra_caixa, agent_bot: create(:agent_bot, account: account), account: account)
 
-      expect { described_class.vincular!(agent: agente_da_area, inbox: outra_caixa) }
-        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
-        .and(not_change(AgentBot, :count))
+      expect(described_class.vincular!(agent: agente_da_area, inbox: outra_caixa)).to have_attributes(papel: 'area')
     end
 
     it 'recusa o próprio agente da porta como área da mesma caixa' do

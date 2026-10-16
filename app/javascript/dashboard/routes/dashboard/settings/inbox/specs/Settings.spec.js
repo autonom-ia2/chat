@@ -19,14 +19,24 @@ const webWidgetInbox = {
   selected_feature_flags: [],
 };
 
-const mountSettings = ({ horarioUnico = false, tab } = {}) => {
+const mountSettings = ({
+  horarioUnico = false,
+  tab,
+  porCaixa = false,
+  robos = false,
+} = {}) => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
+      'accounts/getAccount': () => () => ({
+        id: 1,
+        autonomia_agente_ia_por_caixa: porCaixa,
+      }),
       getCurrentUser: () => ({ id: 1, accounts: [] }),
       getCurrentCustomRoleId: () => null,
-      'accounts/isFeatureEnabledonAccount': () => (_, flag) =>
-        horarioUnico && flag === 'horario_unico_caixa',
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        (horarioUnico && flag === 'horario_unico_caixa') ||
+        (robos && flag === 'agent_bots'),
       'globalConfig/isOnChatwootCloud': () => false,
       'globalConfig/isMetaMessageSendingDisabled': () => false,
       'inboxes/getUIFlags': () => ({ isFetching: false }),
@@ -115,4 +125,48 @@ describe('Inbox Settings', () => {
       expect(wrapper.findComponent({ name: some }).exists()).toBe(false);
     }
   );
+  // #1648 — a aba "Agente de IA" por caixa só com a chave da conta; desligada, as abas da main.
+  describe('AI agent tab per inbox', () => {
+    const aba = (wrapper, chave) =>
+      wrapper.vm.tabs.find(tab => tab.key === chave)?.name;
+    const abrirAbaDoRobo = async wrapper => {
+      wrapper.vm.selectedTabIndex = wrapper.vm.tabs.findIndex(
+        tab => tab.key === 'bot-configuration'
+      );
+      await flushPromises();
+    };
+
+    it('off: the Bot tab with the original BotConfiguration and the Collaborators tab, as on main', async () => {
+      const wrapper = mountSettings({ robos: true });
+      await flushPromises();
+
+      expect(aba(wrapper, 'bot-configuration')).toBe(
+        'INBOX_MGMT.TABS.BOT_CONFIGURATION'
+      );
+      expect(aba(wrapper, 'collaborators')).toBe(
+        'INBOX_MGMT.TABS.COLLABORATORS'
+      );
+      await abrirAbaDoRobo(wrapper);
+      expect(wrapper.findComponent({ name: 'BotConfiguration' }).exists()).toBe(
+        true
+      );
+      expect(wrapper.findComponent({ name: 'AbaAgenteDeIa' }).exists()).toBe(
+        false
+      );
+    });
+
+    it('on: the AI agent tab and the Users tab', async () => {
+      const wrapper = mountSettings({ robos: true, porCaixa: true });
+      await flushPromises();
+
+      expect(aba(wrapper, 'bot-configuration')).toBe(
+        'AGENTS.CAIXA_AGENTE_IA.ABA'
+      );
+      expect(aba(wrapper, 'collaborators')).toBe('AGENTS.CAIXA_USUARIOS.ABA');
+      await abrirAbaDoRobo(wrapper);
+      expect(wrapper.findComponent({ name: 'AbaAgenteDeIa' }).exists()).toBe(
+        true
+      );
+    });
+  });
 });

@@ -7,12 +7,13 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 // #1570 — "Quem cuida" mostra os agentes de IA só com a Fase 2 dos Agentes
 // ligada no payload da conta (`autonomia_agents_fase2`), a mesma fonte da tela
 // dos Agentes; a caixa trazer `ai_agents` não basta.
-const conta = vi.hoisted(() => ({ fase2: false }));
+const conta = vi.hoisted(() => ({ fase2: false, porCaixa: false }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   const getters = {
     'accounts/getAccount': () => () => ({
       autonomia_agents_fase2: conta.fase2,
+      autonomia_agente_ia_por_caixa: conta.porCaixa,
     }),
     getCurrentAccountId: () => 1,
   };
@@ -67,6 +68,7 @@ const render = (caixa = CAIXA) =>
 describe('CaixaCartao', () => {
   beforeEach(() => {
     conta.fase2 = false;
+    conta.porCaixa = false;
   });
 
   it('with phase 2 on in the account shows the AI agents of the inbox', () => {
@@ -109,5 +111,17 @@ describe('CaixaCartao', () => {
       'Robô n8n (agente externo) atende primeiro'
     );
     expect(quemCuida.text()).not.toContain('Robô n8n atende primeiro');
+  });
+  it('with the AI agent tab per inbox on, calls the agent from another system an AI agent (#1648)', () => {
+    conta.porCaixa = true;
+    const wrapper = render({
+      ...CAIXA,
+      agent_bot: { id: 99, name: 'Robô antigo', tipo_do_principal: 'externo' },
+    });
+
+    expect(wrapper.text()).toContain(
+      'Robô antigo (agente de IA) atende primeiro'
+    );
+    conta.porCaixa = false;
   });
 });

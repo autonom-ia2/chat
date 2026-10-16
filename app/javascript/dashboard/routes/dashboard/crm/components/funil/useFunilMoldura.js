@@ -18,7 +18,6 @@ export const useFunilMoldura = ({
   salvando,
   apagandoEtapa,
   hasUnnamedStages,
-  caixaAberta,
   passoGoogle,
   onSubmit,
   fechar,
@@ -227,7 +226,6 @@ export const useFunilMoldura = ({
           rotulo: t('CRM_FUNIL.PRONTO'),
           icone: 'i-lucide-check',
           acao: pronto,
-          neutro: view.value === 'inboxes' && caixaAberta.value,
         },
       };
     // Tela aberta de dentro de outra volta com "Pronto"; as partes de um funil

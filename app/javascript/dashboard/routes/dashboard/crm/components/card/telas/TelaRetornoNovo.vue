@@ -14,11 +14,14 @@ import CampoQuemRecebe from '../../lembrete/CampoQuemRecebe.vue';
 // (atalhos, calendário e hora, sem o campo nativo) e, se for mensagem, o texto
 // e a mensagem pronta quando o WhatsApp exigir. O estado mora na gaveta
 // (useCardRetorno), para o rascunho sobreviver e a prévia ver o mesmo.
-defineProps({
+const props = defineProps({
   funil: { type: String, default: '' },
   // #1461: sem card só existe "Me lembrar"; os cartões somem.
   soLembrete: { type: Boolean, default: false },
+  // #1590: "Mandar mensagem" abre a gaveta da Mensagem marcada (o card avisa).
+  mensagemNova: { type: Boolean, default: false },
 });
+const emit = defineEmits(['mensagemNova']);
 const r = inject('cardRetorno');
 const { t } = useI18n();
 const N = 'CRM_CARD.RETORNO';
@@ -50,6 +53,13 @@ const textoDoModo = modo =>
   modo === 'reminder_only' && avisaOutros.value
     ? t('CRM_LEMBRETE.MODO_OUTROS.TEXTO', { nomes: r.previa.value.quemRecebe })
     : t(`${N}.MODO.${MODO[modo].chave}.TEXTO`);
+const escolherModo = modo => {
+  if (props.mensagemNova && modo === 'auto_send_message') {
+    emit('mensagemNova');
+    return;
+  }
+  r.form.automationMode = modo;
+};
 const soEstaVez = computed(() => r.edicao.value?.qual === 'esta');
 
 const envia = computed(() => r.form.automationMode === 'auto_send_message');
@@ -119,7 +129,7 @@ const TOM = {
               ? 'bg-n-blue-2 ring-2 ring-n-blue-8'
               : 'ring-n-weak bg-n-solid-1 hover:ring-n-slate-7'
           "
-          @click="r.form.automationMode = modo.valor"
+          @click="escolherModo(modo.valor)"
         >
           <span
             class="size-5 text-n-blue-11"

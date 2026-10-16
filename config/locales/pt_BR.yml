@@ -1042,6 +1042,18 @@ pt_BR:
     agents:
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
+      caixa_externo:
+        caixa_com_agente_da_plataforma: 'Este canal é atendido por agentes de IA. Para trocar quem atende primeiro, use a aba Agente de IA do canal.'
+        desconectar_agente_da_plataforma: 'Este canal é atendido por um agente de IA. Para trocar quem atende primeiro, use a aba Agente de IA do canal.'
+        agente_da_plataforma: 'Este é um agente de IA da plataforma. Para esse agente atender primeiro, use a aba Agente de IA do canal.'
+      quem_atende:
+        pedido_invalido: 'Escolha um agente de IA, ou ninguém.'
+        agente_interno: 'Este agente trabalha só dentro do painel e não atende clientes.'
+        agente_rascunho: 'A criação deste agente ainda não terminou. Termine de criar antes de escolher esse agente.'
+        agente_parado: 'Este agente está parado. Ligue esse agente na página do agente antes de escolher.'
+        agente_ja_e_da_equipe: 'Este agente já recebe conversas quando alguém passa neste canal. Para esse agente atender primeiro, tire o agente da equipe do canal em CRM › Quem cuida do quê.'
+        mudou_agora: 'Alguém mudou este canal agora. Recarregue e tente de novo.'
+        conexao_recusada: 'Este agente não pode atender primeiro neste canal agora.'
       ajudante:
         outra_conta: 'O ajudante e os agentes que ele ajuda precisam ser desta conta.'
         ele_mesmo: 'Um agente não pode ajudar a si mesmo.'
