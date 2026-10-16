@@ -4027,6 +4027,7 @@
       "AUTO": "O sistema cria o card quando entende o assunto.",
       "SUGGEST": "O sistema sugere o assunto e a equipe confirma.",
       "OFF": "Nada acontece sozinho: a equipe cria o card.",
+      "CHEGOU_IA": "O card nasce com a primeira mensagem, e a IA dá o nome.",
       "CHEGOU": "O card nasce assim que a conversa chega."
     },
     "ETAPAS": {
@@ -4060,6 +4061,9 @@
       "CHEGOU": "Criar o card assim que a conversa chegar",
       "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
       "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "CHEGOU_IA": "Criar o card assim que a conversa chegar",
+      "CHEGOU_IA_TEXTO": "O card nasce com a primeira mensagem, e a IA dá o nome.",
+      "CHEGOU_IA_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}, e a IA dá o nome quando entende o pedido. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",

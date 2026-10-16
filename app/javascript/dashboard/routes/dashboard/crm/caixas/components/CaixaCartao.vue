@@ -17,6 +17,7 @@ import {
   primeiroNome,
   quemFazTriagem,
   roboExterno,
+  umFunilSo,
 } from '../helpers/caixa';
 import {
   areasDa,
@@ -24,6 +25,7 @@ import {
   portaDa,
   temAgentesIa,
 } from '../helpers/agentesIa';
+import { chaveDoModo, useIaDeAssunto } from '../helpers/iaDeAssunto';
 
 // #1149 — uma caixa na lista: o que chega, quem cuida e o que o sistema faz
 // sozinho, em frases. O botão abre a caixa nas etapas.
@@ -77,9 +79,16 @@ const areas = computed(() =>
 const triagem = computed(() =>
   juntar(quemFazTriagem(props.caixa).map(primeiroNome), locale.value)
 );
-const sozinho = computed(() =>
-  t(`CRM_CAIXAS.MODO_RESUMO.${modoDaCaixa(props.caixa).toUpperCase()}`)
-);
+// #1676 — com a IA de assunto na caixa de 1 funil, o mesmo texto da etapa 3.
+const iaDeAssunto = useIaDeAssunto();
+const sozinho = computed(() => {
+  const chave = chaveDoModo(
+    modoDaCaixa(props.caixa),
+    umFunilSo(props.caixa, props.funis),
+    iaDeAssunto.value
+  );
+  return t(`CRM_CAIXAS.MODO_RESUMO.${chave}`);
+});
 
 const aviso = computed(() => {
   if (!ligada.value) return '';

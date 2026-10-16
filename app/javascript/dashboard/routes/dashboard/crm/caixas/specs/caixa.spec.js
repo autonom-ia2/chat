@@ -102,6 +102,32 @@ describe('caixa helpers', () => {
     ]);
   });
 
+  it('compares what the system does, not the saved mode (#1676)', () => {
+    const varios = paraFormulario(caixa());
+    varios.modo = 'auto';
+    const um = { ...paraFormulario(caixa()), pipeline_ids: [1], modo: 'off' };
+    const comIa = { ...opcoes, iaDeAssunto: true };
+
+    // Vários funis em "criar ao entender" → 1 funil sem card na chegada: com a
+    // IA de assunto em 1 funil, o sistema faz o mesmo; sem ela, passa a não
+    // fazer nada.
+    expect(
+      mudancas(varios, um, FUNIS, comIa).filter(item => item.chave === 'MODO')
+    ).toEqual([]);
+    expect(
+      mudancas(varios, um, FUNIS, opcoes).filter(item => item.chave === 'MODO')
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+
+    // Vários funis "à mão" → 1 funil sem card na chegada: o valor gravado é o
+    // mesmo ('off'), mas com a IA de assunto o sistema passa a criar o card.
+    const variosAMao = { ...varios, modo: 'off' };
+    expect(
+      mudancas(variosAMao, um, FUNIS, comIa).filter(
+        item => item.chave === 'MODO'
+      )
+    ).toEqual([{ chave: 'MODO', valores: { modo: 'off' } }]);
+  });
+
   it('measures an "assigned only" inbox against what people see today', () => {
     const legado = caixa({ visibility_mode: 'assigned_only' });
     const antes = paraFormulario(legado);

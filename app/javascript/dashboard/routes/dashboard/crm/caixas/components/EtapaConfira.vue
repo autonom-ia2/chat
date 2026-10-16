@@ -16,6 +16,7 @@ import {
   quemCuida,
   quemFazTriagem,
   roboExterno,
+  umFunilSo,
 } from '../helpers/caixa';
 import {
   agentesDoFormulario,
@@ -26,6 +27,7 @@ import {
   mudancasDosAgentes,
   nomesDosFunis,
 } from '../helpers/agentesIa';
+import { chaveDoModo, useIaDeAssunto } from '../helpers/iaDeAssunto';
 
 // #1149 — etapa 4: a caixa inteira em frases antes do Salvar, com o que muda
 // em relação ao que está salvo hoje.
@@ -38,6 +40,12 @@ const props = defineProps({
 const { t, locale } = useI18n();
 // #1648 — com a aba "Agente de IA" por caixa, o agente de outro sistema é um agente de IA como os nossos.
 const porCaixa = useAgenteIaPorCaixa();
+// #1676 — o resumo do modo segue o texto da etapa 3 (1 funil com a IA de assunto).
+const iaDeAssunto = useIaDeAssunto();
+const resumoDoModo = modo =>
+  t(
+    `CRM_CAIXAS.MODO_RESUMO.${chaveDoModo(modo, umFunilSo(props.form, props.funis), iaDeAssunto.value)}`
+  );
 
 const funisMarcados = computed(() => funisDaCaixa(props.form, props.funis));
 const varios = computed(() => funisMarcados.value.length > 1);
@@ -154,6 +162,7 @@ const lista = computed(() =>
     ...mudancas(props.original, props.form, props.funis, {
       semAssunto: t('CRM_CAIXAS.CONFIRA.SEM_ASSUNTO'),
       locale: locale.value,
+      iaDeAssunto: iaDeAssunto.value,
     }),
     ...mudancasDosAgentes(
       props.original,
@@ -164,9 +173,7 @@ const lista = computed(() =>
   ].map(({ chave, valores }) =>
     t(`CRM_CAIXAS.MUDA.${chave}`, {
       ...valores,
-      resumo: valores.modo
-        ? t(`CRM_CAIXAS.MODO_RESUMO.${valores.modo.toUpperCase()}`)
-        : '',
+      resumo: valores.modo ? resumoDoModo(valores.modo) : '',
     })
   )
 );
@@ -197,7 +204,7 @@ const lista = computed(() =>
           />
         </div>
         <p class="mb-0 text-[0.9375rem] text-n-slate-11">
-          {{ $t(`CRM_CAIXAS.MODO_RESUMO.${form.modo.toUpperCase()}`) }}
+          {{ resumoDoModo(form.modo) }}
         </p>
       </section>
 

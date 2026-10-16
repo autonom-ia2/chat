@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { aoTeclarNoGrupo } from '../helpers/setas';
+import { chaveDoModo, useIaDeAssunto } from '../helpers/iaDeAssunto';
 
 // #1149 — etapa 3: o que o sistema faz sozinho quando chega mensagem. Com
 // vários funis, o card nasce quando o assunto é identificado (R9/R17); com um
@@ -22,7 +23,14 @@ const opcoes = computed(() =>
   props.umFunil ? ['chegou', 'off'] : ['auto', 'suggest', 'off']
 );
 
-const chave = opcao => opcao.toUpperCase();
+// #1676 — com a IA de assunto na caixa de 1 funil, os textos de 1 funil mudam.
+const iaDeAssunto = useIaDeAssunto();
+const chave = opcao => chaveDoModo(opcao, props.umFunil, iaDeAssunto.value);
+// O que o sistema faz com a opção, não o valor gravado: 'off' de 1 funil com a
+// IA de assunto entende o assunto como o 'auto' de vários.
+const entendeAssunto = opcao => ['AUTO', 'SUGGEST'].includes(chave(opcao));
+const usaIaDoFunil = opcao =>
+  ['AUTO', 'SUGGEST', 'CHEGOU_IA'].includes(chave(opcao));
 </script>
 
 <template>
@@ -87,7 +95,7 @@ const chave = opcao => opcao.toUpperCase();
           <span
             class="mt-0.5 size-4 shrink-0"
             :class="
-              opcao === 'off'
+              chave(opcao) === 'OFF'
                 ? 'i-lucide-hand'
                 : 'i-lucide-sparkles text-n-blue-11'
             "
@@ -101,14 +109,11 @@ const chave = opcao => opcao.toUpperCase();
             })
           }}
         </p>
-        <p
-          v-if="opcao === 'auto' || opcao === 'suggest'"
-          class="mb-0 text-sm text-n-slate-11"
-        >
+        <p v-if="entendeAssunto(opcao)" class="mb-0 text-sm text-n-slate-11">
           {{ $t('CRM_CAIXAS.SOZINHO.NAO_ENTENDEU') }}
         </p>
         <p
-          v-if="(opcao === 'auto' || opcao === 'suggest') && funisSemIa.length"
+          v-if="usaIaDoFunil(opcao) && funisSemIa.length"
           data-sem-ia
           role="status"
           class="mb-0 flex items-start gap-2 rounded-lg bg-n-amber-3 px-3 py-2 text-[0.9375rem] text-n-slate-12"
