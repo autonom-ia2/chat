@@ -3481,6 +3481,8 @@
         "INBOX_TITLE": "Inbox calendar — {name}",
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
+        "FUSO_DA_CONTA": "In the account time zone: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "In the account time zone.",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",
@@ -3495,6 +3497,7 @@
         "REMOVE_BLOCK": "Remove block",
         "START_LABEL": "Start",
         "END_LABEL": "End",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "End time must be after the start time",
         "NO_BLOCKS": "Closed",
         "SAVE": "Save calendar",
