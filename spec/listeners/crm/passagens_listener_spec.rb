@@ -138,7 +138,8 @@ RSpec.describe Crm::PassagensListener do
     end
 
     # Pega a corrida (c): a IA do CRM avaliou o card de Vendas, o assunto virou Suporte; a entrega relê o assunto sob a
-    # trava e segue a regra do funil atual.
+    # trava e segue a regra do funil atual. O Tito fica só na triagem: sem linha de acesso ele cuida de tudo, empata com a
+    # Bia no rodízio (0 conversas abertas cada) e o empate cai na ordem dos membros da caixa, que não é garantida (#1671).
     it 'o card passado pela IA do CRM ficou velho: entrega pelo assunto atual', :aggregate_failures do
       conversa = conversa_do_robo
       velho = card_em(conversa, vendas, focused_at: 1.minute.ago)
@@ -147,6 +148,7 @@ RSpec.describe Crm::PassagensListener do
       regra!(suporte)
       acesso(ana, vendas)
       acesso(bia, suporte)
+      acesso(tito, triage: true)
 
       resultado = Crm::Entrega.new(conversation: conversa, card: velho, motivo: 'ia_crm', origem: 'message').call
 

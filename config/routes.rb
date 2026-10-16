@@ -380,6 +380,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Decisão "a" (#1606): o assunto mudou com uma pessoa no nome; passar para a equipe do assunto ou ficar.
+            post 'conversations/:conversation_id/repasse', to: 'conversation_cards#pass_subject'
+            post 'conversations/:conversation_id/repasse/manter', to: 'conversation_cards#keep_subject'
             # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
@@ -405,6 +408,7 @@ Rails.application.routes.draw do
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
+            get :meu_acesso, to: 'meu_acesso#show'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate
@@ -719,6 +723,7 @@ Rails.application.routes.draw do
               end
               resource :contact_info_request, only: [:create]
               resources :assignments, only: [:create]
+              resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]

@@ -756,6 +756,32 @@ it('refreshes the messaging window and shows the template alert when creating a 
   wrapper.unmount();
 });
 
+it('explains a past auto-send time without the raw Rails message', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 7 };
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/createFollowUp') {
+      const error = new Error('Validation failed');
+      error.response = {
+        data: {
+          message: 'Due at must be in the future for auto-send follow-ups',
+          attributes: ['due_at'],
+          code: 'due_at_in_the_past',
+        },
+      };
+      throw error;
+    }
+    return [];
+  });
+
+  await wrapper.vm.createFollowUp({ card_id: 7, title: 'Retomar' });
+
+  expect(useAlert).toHaveBeenCalledWith(
+    'CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'
+  );
+  wrapper.unmount();
+});
+
 it('shows the raw API message for any other follow-up creation failure', async () => {
   const refreshMessagingWindow = vi.fn();
   const DrawerStub = {

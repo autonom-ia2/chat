@@ -1,4 +1,6 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
+import crmEn from 'dashboard/i18n/locale/en/crm.json';
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
@@ -513,5 +515,50 @@ describe('CrmPipelineDrawer Atender', () => {
     await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
     await wrapper.get('[data-modelo="POS_VENDA"]').trigger('click');
     expect(wrapper.vm.form.outcomeLabels.success).toBe('');
+  });
+});
+
+// #1149 (R16): caixa que saiu do CRM guarda o vínculo, mas não aparece como
+// ligada no funil (nem no resumo, nem em "Ligado em").
+describe('CrmPipelineDrawer — inboxes are read only', () => {
+  it('shows only the inboxes with the CRM on', async () => {
+    const wrapper = mount(CrmPipelineDrawer, {
+      props: {
+        show: true,
+        mode: 'edit',
+        pipeline: { id: 1, name: 'Funil' },
+        stages: makeStages(),
+        pipelineInboxes: [
+          { inbox_id: 2, inbox: { name: 'WhatsApp' }, caixa_no_crm: true },
+          {
+            inbox_id: 3,
+            inbox: { name: 'Old site chat' },
+            caixa_no_crm: false,
+          },
+        ],
+      },
+      global: {
+        plugins: [
+          createI18n({ legacy: false, locale: 'en', messages: { en: crmEn } }),
+        ],
+        stubs: {
+          CrmStageAutomationsPanel: true,
+          CrmAiSettingsPanel: true,
+          RouterLink: RouterLinkStub,
+        },
+      },
+    });
+
+    const resumo = wrapper.get('[data-setting="inboxes"]');
+    expect(resumo.text()).toContain('WhatsApp');
+    expect(resumo.text()).not.toContain('Old site chat');
+
+    await resumo.get('button').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('[data-caixa]').map(item => item.attributes('data-caixa'))
+    ).toEqual(['WhatsApp']);
+    wrapper.unmount();
   });
 });

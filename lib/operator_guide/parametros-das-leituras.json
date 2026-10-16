@@ -909,6 +909,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -940,6 +941,10 @@
     "controller": "api/v1/accounts/conversations/participants#show",
     "parametros": []
   },
+  "conversations/:conversation_id/passar_para": {
+    "controller": "api/v1/accounts/conversations/passar_para#show",
+    "parametros": []
+  },
   "conversations/:id": {
     "controller": "api/v1/accounts/conversations#show",
     "parametros": []
@@ -963,6 +968,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -979,6 +985,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -1290,6 +1297,10 @@
       "since",
       "until"
     ]
+  },
+  "crm/meu_acesso": {
+    "controller": "api/v1/accounts/crm/meu_acesso#show",
+    "parametros": []
   },
   "crm/my_booking_hours": {
     "controller": "api/v1/accounts/crm/my_booking_hours#show",

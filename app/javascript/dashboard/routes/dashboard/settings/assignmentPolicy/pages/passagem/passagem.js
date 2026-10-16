@@ -5,6 +5,24 @@ export const ETAPA_IGUAL = 'igual';
 export const ETAPA_DESLIGADA = 'desligada';
 export const ETAPA_PROPRIA = 'propria';
 
+// #1593: o agente de IA escolhido em "A mesma pessoa" vem como "ia:<id>"; a pessoa, com o id do usuário.
+export const PREFIXO_IA = 'ia:';
+export const ehAgente = valor => String(valor || '').startsWith(PREFIXO_IA);
+
+// #1593: agente de IA parado (ou que não aparece mais na lista, como sem a Fase 2) é como pessoa fora: a conversa vai
+// para alguém da equipe. -> { nome } desse agente, ou null quando a regra não aponta agente ou ele pode receber.
+export const agenteQueNaoRecebe = (regra, todas) => {
+  if (regra.pool_type !== 'user' || !ehAgente(regra.pool_id)) return null;
+  const agente = (todas || []).find(item => item.id === regra.pool_id);
+  return !agente || agente.parado ? { nome: agente?.name || '' } : null;
+};
+
+// A regra que vale de verdade na prévia: com o agente parado, a de alguém da equipe.
+export const regraQueVale = (regra, todas) =>
+  agenteQueNaoRecebe(regra, todas)
+    ? { ...regra, pool_type: 'inbox', pool_id: null }
+    : regra;
+
 export const ESPERAS_EM_MINUTOS = [5, 10, 15, 30, 60];
 
 export const minutosDe = regra =>
@@ -220,6 +238,10 @@ export const cenaDaPrevia = ({
       { tipo: 'robo', chave: 'ROBO_SEGUE' },
     ];
   }
+  // #1593: agente de IA não fica fora nem recebe convite: assume na hora, qualquer dia.
+  if (ehAgente(regra.pool_id) && regra.pool_type === 'user') {
+    return [...comeco, evento('IA_ASSUME', 'verde', { nome: recebe })];
+  }
   if (online) return [...comeco, ...comEquipeOnline(regra, recebe)];
   const resto =
     regra.handoff_mode === 'r3_invite'
@@ -234,6 +256,8 @@ export const quemComParteFora = ({ regra, fila, pessoa }) => {
   const convite = regra.handoff_mode === 'r3_invite';
   if (regra.pool_type === 'user') {
     if (!pessoa) return { chave: 'FALTA' };
+    // #1593: agente de IA não fica fora; assume na hora.
+    if (ehAgente(regra.pool_id)) return { chave: 'IA', nome: pessoa };
     if (convite) return { chave: 'PESSOA_CONVITE', nome: pessoa };
     return {
       chave: regra.prefer_online ? 'PESSOA_ESPERA' : 'PESSOA_FORA',

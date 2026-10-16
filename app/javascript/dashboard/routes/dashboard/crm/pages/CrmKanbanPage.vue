@@ -56,6 +56,7 @@ import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
 // #1460/#1461/#1462: lembrete pelo calendário na gaveta nova (flag crm_lembretes_v2).
 import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
+import MensagemMarcadaGaveta from '../components/mensagemMarcada/MensagemMarcadaGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
 import {
@@ -108,6 +109,9 @@ const lembreteGaveta = ref({
   serieId: null,
   followUpId: null,
 });
+// #1590: a Mensagem marcada nova (flag crm_mensagem_marcada), pelo "+ Novo" do
+// calendário; o card abre a mesma gaveta por conta própria.
+const mensagemMarcada = ref({ show: false, dia: '' });
 const uiFlags = useMapGetter('crmKanban/getUIFlags');
 const storedFilters = useMapGetter('crmKanban/getFilters');
 const listPrefs = useMapGetter('crmKanban/getListPrefs');
@@ -1058,28 +1062,6 @@ const savePipeline = async payload => {
   }
 };
 
-const addPipelineInbox = async payload => {
-  try {
-    const link = await store.dispatch('crmKanban/createPipelineInbox', payload);
-    pipelineInboxes.value = [...pipelineInboxes.value, link];
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_ADDED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_SAVE_ERROR'));
-  }
-};
-
-const removePipelineInbox = async payload => {
-  try {
-    await store.dispatch('crmKanban/deletePipelineInbox', payload);
-    pipelineInboxes.value = pipelineInboxes.value.filter(
-      item => Number(item.inbox_id) !== Number(payload.inboxId)
-    );
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVE_ERROR'));
-  }
-};
-
 const loadPipelineStagesForSettings = async pipelineId => {
   if (!pipelineId || inboxSettingStagesByPipeline.value[String(pipelineId)]) {
     return inboxSettingStagesByPipeline.value[String(pipelineId)] || [];
@@ -1113,6 +1095,12 @@ const loadInboxSettings = async () => {
 
 // Lembretes novos (#1460/#1461/#1462): com a flag, "Novo lembrete" do
 // calendário abre a gaveta nova; sem ela, a janela de sempre.
+const mensagemMarcadaNova = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_MENSAGEM_MARCADA
+    ] === true
+);
 const lembretesV2 = computed(
   () =>
     getAccount.value(currentAccountId.value)?.features?.[
@@ -1485,6 +1473,12 @@ const createFollowUp = async payload => {
     if (isTemplateFallbackError(error)) {
       await cardDrawerRef.value?.refreshMessagingWindow?.();
       useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'));
+      return;
+    }
+    // #1590: com a flag crm_mensagem_marcada, mensagem automática com horário que já
+    // passou é recusada na criação; o retorno de sempre (Twilio, caixa API) ainda passa aqui.
+    if (error?.response?.data?.code === 'due_at_in_the_past') {
+      useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_DUE_AT_PAST'));
       return;
     }
     const apiMessage = error?.response?.data?.message;
@@ -2002,6 +1996,13 @@ const openMeetingReschedule = async (meetingLike, date) => {
 };
 
 const onCalendarQuickAdd = (payload = {}) => {
+  if (mensagemMarcadaNova.value && payload.type === 'whatsapp') {
+    // Só o Calendário novo pede "mensagem" (o antigo manda sempre 'reminder'), e
+    // ele manda o dia como chave no fuso da conta. Sem dia, a gaveta começa sem
+    // dia escolhido e conta o "hoje" no fuso da conta — nunca no do navegador.
+    mensagemMarcada.value = { show: true, dia: payload.dia || '' };
+    return;
+  }
   if (lembretesV2.value && (!payload.type || payload.type === 'reminder')) {
     lembreteGaveta.value = {
       show: true,
@@ -2898,6 +2899,20 @@ onUnmounted(() => {
       @salvou="loadCurrentCalendar"
       @close="lembreteGaveta = { ...lembreteGaveta, show: false }"
     />
+    <MensagemMarcadaGaveta
+      v-if="mensagemMarcadaNova"
+      :show="mensagemMarcada.show"
+      :dia="mensagemMarcada.dia"
+      :caixas="inboxes"
+      @salvou="loadCurrentCalendar"
+      @abrir-negocio="
+        id => {
+          mensagemMarcada = { ...mensagemMarcada, show: false };
+          openCardDrawer({ id }, { initialTab: 'followups' });
+        }
+      "
+      @close="mensagemMarcada = { ...mensagemMarcada, show: false }"
+    />
     <CrmCalendarQuickAdd
       :show="showQuickAdd"
       :date="quickAddDate"
@@ -2985,14 +3000,10 @@ onUnmounted(() => {
       :is-archiving="uiFlags.isArchivingPipeline"
       :is-deleting-stage="uiFlags.isDeletingStage"
       :is-loading-pipeline-inboxes="uiFlags.isFetchingPipelineInboxes"
-      :is-saving-pipeline-inbox="uiFlags.isSavingPipelineInbox"
-      :is-removing-pipeline-inbox="uiFlags.isRemovingPipelineInbox"
       :agents="agents"
       @save="savePipeline"
       @archive="archivePipeline"
       @delete-stage="deleteStage"
-      @add-pipeline-inbox="addPipelineInbox"
-      @remove-pipeline-inbox="removePipelineInbox"
       @close="closePipelineDrawer"
     />
 

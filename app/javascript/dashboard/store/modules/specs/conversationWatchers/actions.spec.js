@@ -54,6 +54,26 @@ describe('#actions', () => {
   });
 
   describe('#update', () => {
+    // #1148/#1149: o 403 de quem tem acesso restrito segue com o código, para a
+    // tela trocar pelo texto traduzido.
+    it('keeps the API code when a restricted agent adds themselves', async () => {
+      axios.patch.mockRejectedValue({
+        response: {
+          status: 403,
+          data: {
+            error: 'Restricted agents cannot add themselves',
+            code: 'participants.self_add_restricted',
+          },
+        },
+      });
+      await expect(
+        actions.update({ commit }, { conversationId: 1, userIds: [1] })
+      ).rejects.toMatchObject({
+        code: 'participants.self_add_restricted',
+        message: 'Restricted agents cannot add themselves',
+      });
+    });
+
     it('sends correct actions if API is success', async () => {
       axios.patch.mockResolvedValue({ data: [{ id: 2 }] });
       await actions.update(

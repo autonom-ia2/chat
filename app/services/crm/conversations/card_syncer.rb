@@ -15,6 +15,9 @@ class Crm::Conversations::CardSyncer
     return unless load_conversation
     return if @conversation.inbox_id.blank?
 
+    # Cliente com card aberto que escreve por outra caixa (#1150, R13): liga ao card antes de pensar em criar outro.
+    Crm::Conversations::OutroCanal.new(conversation: @conversation, message: @message).perform
+
     pipeline_inbox = auto_create_pipeline_inbox
     return refresh_existing_card if pipeline_inbox.blank?
 
@@ -84,7 +87,12 @@ class Crm::Conversations::CardSyncer
     setting.present? && !setting.crm_enabled?
   end
 
+  # Na ordem do turno, quem para a cadência é o Crm::Subjects::IdentifyJob, depois de decidir o assunto (#1606, corrida
+  # f): aqui o foco ainda é o de antes da mensagem. Fora dela (inclusive com a IA de assunto ligada, mas sem a Fase 2 ou
+  # sem área), para na hora, como sempre foi.
   def maybe_stop_ai_followup(card)
+    return if @message&.incoming? && Crm::Subjects.ordem_do_turno?(@conversation)
+
     Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: @message).maybe_cancel
   end
 
@@ -156,18 +164,24 @@ class Crm::Conversations::CardSyncer
   end
 
   def refresh_attributes(card, auto_sync)
-    attributes = {
-      contact_id: @conversation.contact_id,
-      inbox_id: @conversation.inbox_id,
-      source: @conversation.inbox&.channel_type,
-      metadata: refreshed_metadata(card, auto_sync)
-    }.compact
+    attributes = { contact_id: @conversation.contact_id, **caixa_attributes(card), metadata: refreshed_metadata(card, auto_sync) }.compact
 
     merge_activity_attributes(attributes)
     attributes[:conversation_id] = @conversation.id if card.conversation_id.blank?
     attributes[:owner_id] = @conversation.assignee_id if sync_assignment?(card) && assignee_can_own?(card)
     attributes[:team_id] = @conversation.team_id if sync_team?(card)
     attributes.reject { |key, value| values_equal?(card.public_send(key), value) }
+  end
+
+  # A caixa (e o canal) do card é a da conversa principal dele. Uma conversa de outra caixa ligada ao card (outro canal,
+  # R13 do #1150, ou vínculo à mão) não o arrasta para a caixa dela: a caixa do card decide quem o vê no Kanban, e ele
+  # pularia de caixa a cada mensagem de um canal ou do outro. Card sem principal adota a caixa de quem o adota.
+  # Junto com a R13, atrás da flag `crm_outro_canal` (#1666): sem ela, a caixa do card segue a última conversa sincronizada.
+  def caixa_attributes(card)
+    da_caixa = card.conversation_id.blank? || own_conversation?(card)
+    return {} unless da_caixa || !@account.feature_enabled?(Crm::Conversations::OutroCanal::FLAG)
+
+    { inbox_id: @conversation.inbox_id, source: @conversation.inbox&.channel_type }
   end
 
   # Acesso por funil (#1148, decisão a): o atendente só vira dono se tiver o funil do card; senão o dono fica como está.

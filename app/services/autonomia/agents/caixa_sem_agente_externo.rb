@@ -8,7 +8,9 @@
 # - agente_da_plataforma: pediu o espelho de um agente da plataforma (#1626: espelho não é robô) que não é a porta desta
 #   caixa. O agente da plataforma entra pela aba Agente de IA ou pela página dele.
 # Caixa só com agente da equipe (área) aceita: a área fica e convive com o agente de outro sistema (decisão do Rodrigo
-# de 15/10, opção B; o risco de os dois responderem ficou na #1636). Vale para todas as contas, com ou sem a Fase 2.
+# de 15/10, opção B; o risco de os dois responderem ficou na #1636). Só age nas contas com a chave
+# `autonomia_agente_ia_por_caixa` ligada (Autonomia::Agents::AgenteIaPorCaixa), com ou sem a Fase 2; nas outras, o
+# set_agent_bot do Chatwoot, sem recusa.
 #
 # TRAVA OS AGENTES DA CAIXA E DEPOIS A CAIXA, a ordem dos caminhos da Autonom.ia (Areas e InboxConnector travam o
 # agente e depois a caixa). Quem serializa com um agente entrando agora (que ainda não tem vínculo para ser travado

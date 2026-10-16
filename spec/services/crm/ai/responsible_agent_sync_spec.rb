@@ -12,6 +12,16 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
     Crm::Activity.where(conversation_id: conversation.id, event_type: described_class::EVENTO)
   end
 
+  def passagens
+    Crm::Passagem.where(conversation_id: conversation.id).order(:id)
+  end
+
+  def eventos_durante(&)
+    eventos = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { eventos << payload }, described_class::EVENTO_TROCA, &)
+    eventos
+  end
+
   describe 'troca para o responsável' do
     it 'entrega a conversa ao espelho do agente do funil em atendimento e grava a troca' do
       card = create_card(pipeline: suporte)
@@ -23,6 +33,16 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload).to have_attributes(ai_assignee: espelho_area, assignee_id: nil, status: 'open')
       expect(trocas.sole).to have_attributes(card_id: card.id)
       expect(trocas.sole.payload).to include('motivo' => 'foco', 'para_agent_bot_id' => espelho_area.id)
+    end
+
+    it 'troca pelo PassarParaIa: uma passagem da porta para a área, com o motivo do disparo (foco), pedida pelo sistema' do
+      card = create_card(pipeline: suporte)
+
+      expect(sync).to have_attributes(trocou: true, codigo: :passou)
+
+      expect(passagens.sole).to have_attributes(de_type: 'Autonomia::Agents::Agent', de_id: agente_da_porta.id,
+                                                para_type: 'Autonomia::Agents::Agent', para_id: area.id, motivo: 'foco',
+                                                pedida_por_type: nil, card_id: card.id, devolvida_em: nil)
     end
 
     it 'grava o transfer_id do pedido do agente (Abrir) e não o reaproveita numa troca seguinte' do
@@ -37,7 +57,7 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(sync.transfer_id).to be_nil
     end
 
-    it 'a troca que segue o pedido do agente sai como ABRIR, mesmo quando o sync do foco roda primeiro' do
+    it 'a troca que segue o pedido do agente fica como ABRIR na atividade, com o transfer_id no evento' do
       create_card(pipeline: comercial)
       eventos = []
       ActiveSupport::Notifications.subscribed(->(*, payload) { eventos << payload }, described_class::EVENTO_TROCA) do
@@ -47,7 +67,7 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
         end
       end
 
-      expect(eventos.sole).to include(motivo: 'abrir', transfer_id: 'tr-7', to_bot: espelho_area)
+      expect(eventos.sole).to include(motivo: 'abrir', transfer_id: 'tr-7', to_bot: espelho_area, por: :crm)
       expect(trocas.sole.payload).to include('motivo' => 'abrir', 'transfer_id' => 'tr-7')
     end
 
@@ -59,12 +79,12 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(Crm::Ai::Config.destinos_para(conversation.reload)).to eq([])
     end
 
-    it 'no pedido do agente (ABRIR) entrega mesmo a conversa resolvida: o agente está atendendo agora' do
+    it 'nem no pedido do agente (ABRIR) entrega a conversa resolvida: o PassarParaIa não reabre conversa' do
       create_card(pipeline: suporte)
       conversation.update!(status: :resolved)
 
-      expect(sync(described_class::ABRIR).trocou).to be(true)
-      expect(conversation.reload).to have_attributes(ai_assignee: espelho_area, status: 'open')
+      expect(sync(described_class::ABRIR).trocou).to be(false)
+      expect(conversation.reload).to have_attributes(ai_assignee: porta, status: 'resolved')
     end
 
     it 'não usa o transfer_id de um pedido antigo que não virou troca' do
@@ -78,7 +98,7 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       end
     end
 
-    it 'publica o evento da troca depois do commit, para o Agentes IA enfileirar a resposta do destino' do
+    it 'um evento só, o do PassarParaIa, depois do commit' do
       create_card(pipeline: suporte)
       eventos = []
       callback = ->(*, payload) { eventos << payload }
@@ -91,7 +111,22 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       end
 
       expect(eventos.sole).to eq(conversation: conversation, from_bot: porta, to_bot: espelho_area, agent: area,
-                                 transfer_id: nil, motivo: 'foco')
+                                 transfer_id: nil, motivo: 'foco', origem: porta, por: :crm)
+    end
+
+    it 'recusa do PassarParaIa (pessoa_atribuida) não troca, não grava atividade nem passagem e não publica' do
+      create_card(pipeline: suporte)
+      recusa = Autonomia::Agents::PassarParaIa::Resultado.recusa(:pessoa_atribuida)
+      allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_return(recusa)
+      resultado = nil
+
+      eventos = eventos_durante { resultado = sync }
+
+      expect(resultado).to have_attributes(trocou: false, codigo: :pessoa_atribuida)
+      expect(Autonomia::Agents::PassarParaIa).to have_received(:call)
+        .with(conversation: conversation, agent: area, por: :crm, motivo: 'foco', origem: porta, transfer_id: nil)
+      expect([eventos, trocas, passagens]).to all(be_empty)
+      expect(conversation.reload.ai_assignee).to eq(porta)
     end
   end
 
@@ -105,13 +140,16 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(conversation.reload.ai_assignee).to eq(porta)
     end
 
-    it 'só devolve à porta quando o card em atendimento muda de funil' do
+    it 'nem devolve à porta e nem chama o PassarParaIa (sem área, quem responde é sempre a porta)' do
       card = create_card(pipeline: suporte)
       conversation.update!(ai_assignee: espelho_area)
       card.update!(pipeline: comercial, stage: comercial.stages.first)
+      allow(Autonomia::Agents::PassarParaIa).to receive(:call).and_call_original
 
-      expect(sync(described_class::PIPELINE, card_id: card.id)).to have_attributes(trocou: true, para_agent_bot_id: porta.id)
-      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(sync(described_class::PIPELINE, card_id: card.id).trocou).to be(false)
+      expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
+      expect(conversation.reload.ai_assignee).to eq(espelho_area)
+      expect(passagens).to be_empty
     end
   end
 
@@ -142,6 +180,15 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
       expect(sync.trocou).to be(false)
       expect(conversation.reload.assignee).to eq(admin)
       expect(trocas).to be_empty
+    end
+
+    it 'com a marca do motor de entrega (segurando para uma pessoa): a marca fica' do
+      Crm::Entrega::Marca.marcar(conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu', falha: 'ninguem_cuida')
+      conversation.save!
+
+      expect(sync.trocou).to be(false)
+      expect(conversation.reload).to have_attributes(ai_assignee: porta, crm_delivery_pending?: true)
+      expect(passagens).to be_empty
     end
 
     it 'com a conversa esperando uma pessoa' do
@@ -184,15 +231,24 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
   describe 'volta para a porta' do
     let!(:card) { create_card(pipeline: suporte) }
 
-    before { conversation.update!(ai_assignee: espelho_area) }
+    # A ida de verdade: a porta passa para a área pelo assunto (passagem 1, em aberto).
+    before { raise 'a ida não trocou' unless sync.trocou }
+
+    def volta_gravada!(motivo)
+      ida, volta = passagens.to_a
+      expect(ida).to have_attributes(para_id: area.id, devolvida_em: be_present, devolvida_por_id: area.id)
+      expect(volta).to have_attributes(de_id: area.id, para_type: 'Autonomia::Agents::Agent', para_id: agente_da_porta.id,
+                                       motivo: motivo, devolvida_em: nil)
+    end
 
     it 'quando o card em atendimento passa para um funil sem responsável' do
       card.update!(pipeline: comercial, stage: comercial.stages.first)
 
       resultado = sync(described_class::PIPELINE, card_id: card.id)
 
-      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id, autonomia_agent_id: nil)
+      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id, autonomia_agent_id: agente_da_porta.id)
       expect(conversation.reload.ai_assignee).to eq(porta)
+      volta_gravada!('pipeline')
     end
 
     it 'quando o card em atendimento passa para um funil cujo responsável não é mais área da caixa' do
@@ -204,12 +260,68 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
 
       resultado = sync(described_class::PIPELINE, card_id: card.id)
 
-      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id, autonomia_agent_id: nil)
+      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id, autonomia_agent_id: agente_da_porta.id)
       expect(conversation.reload.ai_assignee).to eq(porta)
     end
 
-    it 'não volta sozinha na troca de foco para um funil sem responsável' do
+    it 'quando o foco passa para outro card, de funil sem responsável: um evento e a devolução gravada' do
       create_card(pipeline: comercial)
+      resultado = nil
+
+      eventos = eventos_durante { resultado = sync(described_class::FOCO) }
+
+      expect(resultado).to have_attributes(trocou: true, para_agent_bot_id: porta.id)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(eventos.sole).to include(from_bot: espelho_area, to_bot: porta, agent: agente_da_porta, motivo: 'foco')
+      volta_gravada!('foco')
+    end
+
+    it 'o pedido do agente (ABRIR) não devolve à porta sozinho' do
+      create_card(pipeline: comercial)
+
+      expect(sync(described_class::ABRIR).trocou).to be(false)
+      expect(conversation.reload.ai_assignee).to eq(espelho_area)
+    end
+
+    it 'a área que saiu da caixa (vínculo removido) com a conversa: volta à porta' do
+      area_sumiu!
+      create_card(pipeline: comercial)
+
+      expect(sync(described_class::FOCO)).to have_attributes(trocou: true, para_agent_bot_id: porta.id)
+      expect(conversation.reload.ai_assignee).to eq(porta)
+      expect(passagens.last).to have_attributes(de_id: area.id, para_id: agente_da_porta.id, motivo: 'foco')
+    end
+
+    # Decisão do Multifunnel (15/10): porta pausada não recebe; a área fica com a conversa e a recusa vai para o log.
+    it 'porta pausada: a área fica com a conversa e a recusa fica no log' do
+      agente_da_porta.update_columns(enabled: false) # rubocop:disable Rails/SkipsModelValidations
+      create_card(pipeline: comercial)
+      saida = StringIO.new
+      original = Rails.logger
+      Rails.logger = ActiveSupport::Logger.new(saida)
+
+      begin
+        expect(sync(described_class::FOCO)).to have_attributes(trocou: false, codigo: :nao_atende_cliente)
+      ensure
+        Rails.logger = original
+      end
+
+      expect(conversation.reload.ai_assignee).to eq(espelho_area)
+      expect(saida.string).to include("passagem_recusada conversa=#{conversation.id} codigo=nao_atende_cliente motivo=foco")
+    end
+
+    it 'robô externo com a conversa não é tirado pela volta à porta' do
+      externo = create(:agent_bot, account: account, name: 'n8n')
+      conversation.update!(ai_assignee: externo)
+      create_card(pipeline: comercial)
+
+      expect(sync(described_class::FOCO).trocou).to be(false)
+      expect(conversation.reload.ai_assignee).to eq(externo)
+    end
+
+    it 'porta que não é agente nosso (robô externo): nada a pedir' do
+      create_card(pipeline: comercial)
+      allow(Autonomia::Agents::QuemResponde).to receive(:porta_da_caixa).and_return(nil)
 
       expect(sync(described_class::FOCO).trocou).to be(false)
       expect(conversation.reload.ai_assignee).to eq(espelho_area)

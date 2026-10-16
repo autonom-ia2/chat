@@ -29,7 +29,12 @@ module ConversationPassagem
     transacao = self.class.connection.current_transaction
     anterior = @troca_da_passagem if @transacao_da_troca.equal?(transacao)
     @transacao_da_troca = transacao
-    @troca_da_passagem = (anterior || antes_desta_troca).dup.tap { |troca| completar(troca, Crm::Passagens::Contexto) }
+    @troca_da_passagem = (anterior || antes_desta_troca).dup.tap do |troca|
+      # A marca do rodízio (#1657) é só do save do próprio rodízio: outra troca de pessoa depois dele na mesma transação
+      # não sai como rodízio (a R13 soltaria quem não foi o rodízio que pôs).
+      troca.motivo = nil if anterior && troca.motivo == Crm::Passagens::Rodizio::MOTIVO
+      completar(troca, Crm::Passagens::Contexto)
+    end
   end
 
   def completar(troca, contexto)

@@ -63,13 +63,8 @@ RSpec.describe Crm::Ai::ResponsibleAgentSync do
                                     motivo: described_class::PIPELINE)
   end
 
-  # Na main de 15/10 o Sync troca o robô pelo AssignmentService e grava a atividade do card (ai_agent_changed), mas não
-  # grava a passagem: o Crm::Passagens só registra troca de PESSOA (ConversationPassagem, assignee_id). Fazer o Sync
-  # passar pela Autonomia::Agents::PassarParaIa (que grava a passagem) é o #1625, do Multifunnel. Quando ele entrar,
-  # este exemplo passa e o RSpec avisa para tirar o `pending`.
+  # Com o #1625 (o Sync pela Autonomia::Agents::PassarParaIa), a troca robô → área também grava a passagem.
   it 'ponta a ponta: a área vira a ai_assignee, com exatamente 1 passagem registrada e 1 evento' do
-    pending 'a passagem do Sync robô → área no Crm::Passagens vem no #1625 (Sync pela PassarParaIa)'
-
     eventos = mudar_o_assunto_para_suporte
 
     expect(conversation.reload.ai_assignee).to eq(vinculo_da_area.agent_bot)

@@ -93,10 +93,11 @@ class Whatsapp::Templates::EnvioForaDaJanela::Despacho
     }
   end
 
-  # O que fica guardado de cada envio (#1585): o tipo, o caminho, o modelo, a categoria, a origem e a autorização vigente.
+  # O que fica guardado de cada envio (#1585): o tipo, o caminho, o modelo e o idioma, a categoria, a origem e a autorização
+  # vigente. O Followup devolve este hash ao `registrar_envio` depois que a mensagem sai (tabela `whatsapp_out_of_window_sends`).
   def registro(plano)
     { 'tipo' => plano['tipo'], 'caminho' => plano['caminho'], 'escolha' => plano['escolha'], 'modelo' => plano['nome'],
-      'categoria' => plano['categoria'], 'origem' => plano['origem'],
+      'idioma' => plano['idioma'], 'categoria' => plano['categoria'], 'origem' => plano['origem'],
       'consentimento_id' => Regras.consentimento_vigente(@inbox.account, plano['categoria']) }
   end
 
