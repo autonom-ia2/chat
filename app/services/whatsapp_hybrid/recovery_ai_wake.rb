@@ -28,6 +28,8 @@ module WhatsappHybrid::RecoveryAiWake
   # só é gravada se não apontar para uma mensagem mais nova. Se apontar, o turno da mensagem nova já cobre esta, e a IA
   # não é acordada de novo por uma mensagem mais velha.
   def acordar(message)
+    return unless ::Autonomia::Agents::Config.enabled?(message.account)
+
     agent_inbox = ::Autonomia::Agents::Operate.eligible_agent_inbox(message.conversation)
     return if agent_inbox.nil? || !marcar_turno?(message)
 

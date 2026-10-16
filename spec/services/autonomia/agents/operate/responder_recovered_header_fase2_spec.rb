@@ -80,6 +80,19 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(conversation.messages.outgoing.where(private: false, sender_type: 'AgentBot')).to be_empty
     end
 
+    it 'o evento do painel sai uma vez por mensagem recuperada, mesmo com o turno retomado' do
+      ia_responde!(note)
+      recuperada = recuperada_depois_da_ana
+
+      2.times do
+        described_class.new(conversation: conversation, agent_inbox: agent_inbox, reply_to_message_id: recuperada.id,
+                            posse: posse).perform
+      end
+
+      eventos = Autonomia::Agents::AgentEvent.skipped_recuperada_so_contexto.where(conversation_id: conversation.id)
+      expect(eventos.pluck(:message_id)).to eq([recuperada.id])
+    end
+
     it 'a chave da posse some do Redis' do
       ia_responde!(note)
       recuperada = recuperada_depois_da_ana

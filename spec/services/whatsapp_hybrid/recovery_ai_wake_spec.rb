@@ -16,6 +16,7 @@ describe WhatsappHybrid::RecoveryAiWake do
   let(:agent_inbox) { Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: our_bot) }
 
   before do
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
     allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox)
     message.update_columns(created_at: recovered_at) # rubocop:disable Rails/SkipsModelValidations
   end
@@ -206,6 +207,14 @@ describe WhatsappHybrid::RecoveryAiWake do
 
       expect { wake }.not_to have_enqueued_job(reply_job)
       expect(marca).to eq(message.id + 1000)
+    end
+
+    it 'Agentes desligados na conta: sai antes de gravar a marca e não acorda' do
+      allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false)
+
+      expect { wake }.not_to have_enqueued_job(reply_job)
+      expect(marca).to be_nil
+      expect(Autonomia::Agents::Operate).not_to have_received(:eligible_agent_inbox)
     end
 
     it 'sem agente que responderia: nem grava a marca' do

@@ -12,7 +12,10 @@ describe WhatsappHybrid::UnsupportedRecovery do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: create(:agent_bot, account: account))
   end
 
-  before { allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox) }
+  before do
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+    allow(Autonomia::Agents::Operate).to receive(:eligible_agent_inbox).and_return(agent_inbox)
+  end
 
   def attempt!
     described_class.new(message).attempt!

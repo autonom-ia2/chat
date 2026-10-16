@@ -22,11 +22,15 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
     end
   end
 
-  # Evento do agente (`skipped_recuperada_so_contexto`), para o silêncio por esse motivo aparecer na aba Desempenho.
-  def registrar_silencio(motivo, agent:, conversation:)
+  # Evento do agente (`skipped_recuperada_so_contexto`), para o silêncio por esse motivo aparecer na aba Desempenho. Uma
+  # vez por mensagem (mesmo padrão do `assunto_atrasou`): o turno que falha e é retomado não repete o evento.
+  def registrar_silencio(motivo, agent:, conversation:, message_id:)
     return unless motivo == SILENCE_REASON
+    return if agent.events.skipped_recuperada_so_contexto.exists?(conversation_id: conversation.id, message_id: message_id)
 
-    ::Autonomia::Agents::Operate::EventLogger.skipped(agent: agent, conversation: conversation, reason: SKIPPED_REASON)
+    ::Autonomia::Agents::Operate::EventLogger.create!(agent: agent, conversation: conversation,
+                                                      event_type: :skipped_recuperada_so_contexto,
+                                                      handoff_reason: SKIPPED_REASON, message_id: message_id)
   end
 
   # A resposta do modelo sem as linhas de contexto. Sem linha nenhuma, o mesmo objeto.
