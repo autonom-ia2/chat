@@ -96,7 +96,8 @@ module WhatsappHybrid::RichNative
   end
 
   # A conta para ler a flag sem consulta por conversa: a já carregada na conversa, ou a do request (`Current.account`,
-  # que as rotas da conta preenchem) quando é a mesma. Fora de um request (evento de uma conversa só), carrega.
+  # que as rotas da conta preenchem) quando é a mesma. Fora de um request (evento de uma conversa só), carrega. Num job,
+  # `Current.account` pode ter sobrado na thread: a conferência por id evita ler a flag da conta errada.
   def account_of(conversation)
     return conversation.account if conversation.association(:account).loaded?
     return Current.account if Current.account&.id == conversation.account_id

@@ -7,6 +7,13 @@
 #   texto por cima.
 module WhatsappHybrid::RichNative::Transport
   RESTORE_FAILED = 'A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem.'.freeze
+  # Sinal (catch/throw, não exceção) que fecha o envio já marcado como falha: nenhum `rescue` do WebTransport o
+  # reclassifica, e o `perform` termina sem regravar o resultado nem o motivo.
+  CLOSED = :whatsapp_hybrid_rich_native_closed
+
+  def perform
+    catch(CLOSED) { super }
+  end
 
   private
 
@@ -23,21 +30,38 @@ module WhatsappHybrid::RichNative::Transport
   end
 
   # Antes do texto da recusa: o `source_id` volta ao id gerado, que é o que o texto leva ao motor (o ack procura por ele).
-  # Se não der para gravar, nada saiu (a recusa foi explícita e o texto não foi pedido): a mensagem fica `failed` com o
-  # motivo, vai ao tracker, e o erro do motor fecha o envio como falha certa, em vez de ela ficar como enviada.
+  # Se não der para gravar, nada saiu (a recusa foi explícita e o texto não foi pedido): a mensagem fica `failed` com
+  # RESTORE_FAILED e resultado 'failed', o erro vai ao tracker, e o envio fecha pelo sinal CLOSED (sem passar pelos
+  # `rescue` do WebTransport, que regravariam o motivo). A campanha recebe a queda, como em toda falha certa: com o
+  # resultado 'failed', ela manda o modelo (CampaignJourney::ConversaAberta::QuedaHibrido).
   def restore_text_source_id(physical_id)
     Waha::RichNative.write_source_id!(@message, physical_id) if @message.source_id != physical_id
     true
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
-    fail_without_send!
-    raise Waha::Client::Error, "WAHA envio nativo recusado e texto não enviado (#{e.class})"
+    close_as_failed!
+    throw CLOSED
   end
 
-  def fail_without_send!
-    RichMessages.fail!(@message, RESTORE_FAILED)
+  def close_as_failed!
+    write_failed!
+    log('failed')
+    campaign_fallback_after_failure
   rescue StandardError => e
+    # Limite raro aceito (#1709): o banco recusou as duas gravações. A mensagem pode ficar como estava; log e tracker.
     Rails.logger.error("[whatsapp_hybrid] rich native fail not saved message=#{@message.id} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
+  end
+
+  # Sem as validações do modelo (a de rajada recusaria numa conversa movimentada).
+  def write_failed!
+    failed = { 'whatsapp_transport' => 'web', 'whatsapp_transport_origin' => @origin, 'external_error' => RESTORE_FAILED,
+               WhatsappHybrid::WebTransport::OUTCOME_KEY => 'failed' }
+    @message.with_lock do
+      @message.status = :failed
+      @message.content_attributes = @message.content_attributes.to_h.merge(failed)
+      @message.save!(validate: false)
+    end
   end
 
   def deliver_native(native, chat_id, physical_id)

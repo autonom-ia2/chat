@@ -134,8 +134,11 @@ class Waha::RichPayload
     { title: title, rows: rows } unless rows.any?(&:nil?)
   end
 
+  # Id de opção com o separador da referência ("|") não sai nativo: na volta não daria para separar a opção da
+  # referência sem ambiguidade (Waha::RichNative.split_row_id). Sai texto, como antes.
   def row(option)
     return unless option.is_a?(Hash) && line?(option[:title], ROW_TITLE_MAX) && line?(option[:id], ROW_ID_MAX)
+    return if option[:id].include?(Waha::RichNative::REPLY_SEPARATOR)
 
     description = option[:description]
     return unless description.nil? || line?(description, ROW_DESCRIPTION_MAX)

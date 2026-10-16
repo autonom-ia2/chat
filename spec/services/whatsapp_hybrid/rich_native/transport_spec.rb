@@ -123,7 +123,7 @@ describe WhatsappHybrid::RichNative::Transport do
     end
   end
 
-  it 'fails the message (not stuck as sent) and reports when the source_id cannot go back before the refusal text' do
+  it 'fails the message with its own reason (not stuck as sent) when the source_id cannot go back before the refusal text' do
     flag_on!
     engine_session_up!
     allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
@@ -139,7 +139,41 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(tracker).to have_received(:capture_exception)
     expect(message.reload.status).to eq('failed')
     expect(message.content_attributes['whatsapp_transport_outcome']).to eq('failed')
-    expect(message.content_attributes['external_error']).to be_present
+    expect(message.content_attributes['external_error']).to eq(described_class::RESTORE_FAILED)
+    expect(client).not_to have_received(:get_session)
+  end
+
+  # Falha certa de um texto de campanha que o plano B assumiu: a campanha manda o modelo, como em todo `failed`.
+  it 'hands the failure to the campaign fallback when it closes the refused send as failed' do
+    flag_on!
+    allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: nil))
+    allow(CampaignJourney::ConversaAberta::QuedaHibrido).to receive(:after_transport_failure)
+    message = outgoing(options)
+    allow(Waha::RichNative).to receive(:write_source_id!).and_call_original
+    allow(Waha::RichNative).to receive(:write_source_id!).with(message, '3EB0AAAA').and_raise(ActiveRecord::Deadlocked)
+
+    send_by_web(message)
+
+    expect(CampaignJourney::ConversaAberta::QuedaHibrido).to have_received(:after_transport_failure).with(message).once
+  end
+
+  it 'logs and reports when even the failed mark cannot be written (rare limit)' do
+    flag_on!
+    allow(client).to receive(:send_list).and_raise(Waha::Client::Error.new('WAHA POST /api/sendList -> 400: no', status: 400))
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow(Rails.logger).to receive(:error)
+    message = outgoing(options)
+    allow(Waha::RichNative).to receive(:write_source_id!).and_call_original
+    allow(Waha::RichNative).to receive(:write_source_id!).with(message, '3EB0AAAA').and_raise(ActiveRecord::Deadlocked)
+    allow(message).to receive(:status=).and_call_original
+    allow(message).to receive(:status=).with(:failed).and_raise(ActiveRecord::ConnectionFailed)
+
+    expect { send_by_web(message) }.not_to raise_error
+
+    expect(client).not_to have_received(:send_text)
+    expect(tracker).to have_received(:capture_exception).twice
   end
 
   it 'leaves a 5xx of the native send uncertain, without the text on top' do

@@ -216,14 +216,32 @@ describe WhatsappHybrid::RichNative do
       expect(reply.content_attributes['in_reply_to']).to be_blank
     end
 
-    it 'does not split an option id that has the separator itself (it goes without reference)' do
+    # Lista com id `x|7` nunca sai nativa (sai texto). A resposta a ela só chega por outro caminho, com `context` (lista
+    # da oficial, aqui de uma conversa anterior): nada é separado.
+    it 'never splits an option id with the separator: such a list goes as text, and its answer comes with context' do
       flag_on!
-      offered = native_list(['plano|2024'])
+      official = create(:message, message_type: :outgoing, conversation: conversation, inbox: inbox, account: account,
+                                  content: 'Escolha', source_id: 'wamid.lista-oficial-x7')
+      conversation.update!(status: :resolved)
 
-      reply = receive_reply('plano|2024')
+      reply = receive_reply('x|7', context: { from: channel.phone_number, id: official.source_id })
 
-      expect(reply.content_attributes['in_reply_to']).to eq(offered.id)
-      expect(reply.content_attributes['selected_option']['id']).to eq('plano|2024')
+      expect(reply.conversation_id).not_to eq(conversation.id)
+      expect(reply.content_attributes['selected_option']['id']).to eq('x|7')
+    end
+
+    it 'with the flag off, only cleans a reference that matches a native list of this conversation (no search)' do
+      offered = native_list(%w[manha])
+      native_list(%w[tarde])
+      allow(WhatsappHybrid::RichNative::ReplyLink).to receive(:options_message_for).and_call_original
+
+      matched = receive_reply("manha|#{offered.id}")
+      unmatched = receive_reply('tarde|999999')
+
+      expect(matched.content_attributes).to include('in_reply_to' => offered.id, 'selected_option' => { 'id' => 'manha', 'title' => 'Manhã' })
+      expect(unmatched.content_attributes['in_reply_to']).to be_blank
+      expect(unmatched.content_attributes['selected_option']['id']).to eq('tarde|999999')
+      expect(WhatsappHybrid::RichNative::ReplyLink).not_to have_received(:options_message_for)
     end
 
     it 'uses the reference even with the flag turned off after the send' do

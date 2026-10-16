@@ -54,7 +54,8 @@ RSpec.describe Waha::RichPayload do
       'a button over 20 (ignored by the Meta buttons)' => ->(rich) { rich[:button] = 'x' * 21 },
       'more than 10 rows' => ->(rich) { rich[:options] = (1..11).map { |n| { id: "o#{n}", title: "Opção #{n}" } } },
       'a multiline title' => ->(rich) { rich[:options][0][:title] = "Manhã\ncedo" },
-      'no options' => ->(rich) { rich[:options] = [] }
+      'no options' => ->(rich) { rich[:options] = [] },
+      'an option id with the reference separator' => ->(rich) { rich[:options][0][:id] = 'x|7' }
     }.each do |reason, change|
       it "falls back to text (nil) with #{reason}" do
         rich = three.deep_dup
