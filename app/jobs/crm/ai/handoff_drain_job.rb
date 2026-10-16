@@ -172,9 +172,26 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
+    return largar_para_o_agente(conversation) if da_ia_do_crm_com_agente_nosso?(conversation, marca)
 
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
                      dono: dono_da_marca(conversation, marca)).call
+  end
+
+  # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).
+  # Ela não tira a conversa dele: a marca sai e o pedido de pessoa fica com a instrução do agente. A espera que nasceu
+  # de um pedido do próprio agente (bot_handoff!) tem outro motivo e segue para a entrega.
+  def da_ia_do_crm_com_agente_nosso?(conversation, marca)
+    marca['motivo'] == Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA && Autonomia::Agents::QuemResponde.dono_ativo(conversation).present?
+  end
+
+  def largar_para_o_agente(conversation)
+    conversation.with_lock do
+      Crm::Entrega::Marca.tirar(conversation)
+      conversation.save! if conversation.changed?
+    end
+    Rails.logger.info("[crm][handoff] conversa=#{conversation.id} gatilho=fila desfecho=skipped " \
+                      "motivo=#{Crm::Ai::HandoffExecutor::OWNED_BY_OUR_AGENT}")
   end
 
   # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela
