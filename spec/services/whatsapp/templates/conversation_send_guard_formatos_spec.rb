@@ -3,10 +3,10 @@ require 'rails_helper'
 # #1705: front and back read the same examples (spec/fixtures/whatsapp_templates/formatos_da_conversa.json, real Meta
 # format). The front side is app/javascript/dashboard/components-next/whatsapp/specs/formatosDaConversa.spec.js. A rule
 # changed on one side alone fails one of the two.
-RSpec.describe 'WhatsApp template formats shared by the conversation front and back' do
+RSpec.describe Whatsapp::Templates::ConversationSendGuard do
   fixture = JSON.parse(Rails.root.join('spec/fixtures/whatsapp_templates/formatos_da_conversa.json').read)
-  now = Time.zone.at(fixture['agora_ms'] / 1000)
 
+  let(:now) { Time.zone.at(fixture['agora_ms'] / 1000) }
   let(:channel) do
     create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false,
                               message_templates: fixture['casos'].map { |caso| caso['template'] }.uniq)

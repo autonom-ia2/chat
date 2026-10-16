@@ -139,7 +139,8 @@ module Whatsapp::Templates::SendableFormat
   def offer_reason(component, recorded, now)
     return unless component.dig('limited_time_offer', 'has_expiration')
 
-    expiration = Integer(recorded.dig('limited_time_offer', 'expiration_time_ms').to_s, exception: false)
+    offer = recorded['limited_time_offer']
+    expiration = Integer(offer['expiration_time_ms'].to_s, exception: false) if offer.is_a?(Hash)
     return 'limited_time_offer' unless expiration
     return if expiration > (now.to_f * 1000).to_i
 

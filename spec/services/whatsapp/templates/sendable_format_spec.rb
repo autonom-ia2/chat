@@ -86,6 +86,8 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(offer, {}).reason_code).to eq('limited_time_offer')
         expect(check(offer, { 'limited_time_offer' => { 'expiration_time_ms' => (now - 1.minute).to_i * 1000 } }).reason_code)
           .to eq('offer_expired')
+        # #1705: a validade fora do formato (de quem chama pela API) é recusa, nunca erro.
+        expect(check(offer, { 'limited_time_offer' => '1792238400000' }).reason_code).to eq('limited_time_offer')
       end
 
       it 'accepts an offer without expiration details with nothing recorded' do

@@ -34,7 +34,6 @@ const emit = defineEmits(['sendMessage', 'resetTemplate', 'back']);
 
 const { t } = useI18n();
 const { currentAccount } = useAccount();
-const NS = 'MODELOS_WHATSAPP.CONVERSA';
 
 const parser = ref(null);
 const validade = ref('');
@@ -49,13 +48,13 @@ watch(
 );
 
 // O Chatwoot só mostra as caixas dos botões quando há campo no texto ou mídia.
-const botoesNoParser = computed(
-  () => Boolean(parser.value?.hasVariables || parser.value?.hasMediaHeader)
+const botoesNoParser = computed(() =>
+  Boolean(parser.value?.hasVariables || parser.value?.hasMediaHeader)
 );
 const botoesAPreencher = computed(() => {
   if (!parser.value || botoesNoParser.value) return [];
   return (parser.value.processedParams?.buttons || [])
-    .map((botao, indice) => ({ ...botao, indice }))
+    .map((botao, indice) => botao && { ...botao, indice })
     .filter(Boolean);
 });
 const paramsDoParser = computed(() => {
@@ -65,7 +64,10 @@ const paramsDoParser = computed(() => {
     ...params,
     buttons: params.buttons.map((botao, indice) =>
       botao
-        ? { ...botao, parameter: botoesProprios.value[indice] ?? '' }
+        ? {
+            ...botao,
+            parameter: String(botoesProprios.value[indice] ?? '').trim(),
+          }
         : botao
     ),
   };
@@ -81,7 +83,8 @@ const paramsDoEnvio = computed(() =>
   comValidade(props.template, paramsDoParser.value, validade.value, fuso.value)
 );
 const pronto = computed(
-  () => Boolean(parser.value) && envioCompleto(props.template, paramsDoEnvio.value)
+  () =>
+    Boolean(parser.value) && envioCompleto(props.template, paramsDoEnvio.value)
 );
 const faltaCupom = computed(
   () =>
@@ -100,8 +103,9 @@ const aoMontar = payload => {
   });
 };
 
+// Confere de novo na hora: a validade pode ter passado com a tela aberta.
 const sendMessage = () => {
-  if (!pronto.value) return;
+  if (!envioCompleto(props.template, paramsDoEnvio.value)) return;
   parser.value.sendMessage();
 };
 
@@ -130,7 +134,7 @@ defineExpose({
           :model-value="botoesProprios[botao.indice] || ''"
           :label="
             botao.type === 'copy_code'
-              ? t(`${NS}.CUPOM`)
+              ? t('MODELOS_WHATSAPP.CONVERSA.CUPOM')
               : t('WHATSAPP_TEMPLATES.PARSER.BUTTON_PARAMETER')
           "
           custom-input-class="!h-11"
@@ -144,11 +148,15 @@ defineExpose({
           v-if="comOferta"
           v-model="validade"
           type="datetime-local"
-          :label="t(`${NS}.VALIDADE`, { zona: rotuloDoFuso(fuso) })"
+          :label="
+            t('MODELOS_WHATSAPP.CONVERSA.VALIDADE', {
+              zona: rotuloDoFuso(fuso),
+            })
+          "
           :message="
             faltaNaValidade === 'VALIDADE_PASSADA'
-              ? t(`${NS}.VALIDADE_PASSADA`)
-              : t(`${NS}.VALIDADE_AJUDA`)
+              ? t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_PASSADA')
+              : t('MODELOS_WHATSAPP.CONVERSA.VALIDADE_AJUDA')
           "
           :message-type="
             faltaNaValidade === 'VALIDADE_PASSADA' ? 'error' : 'info'
@@ -162,7 +170,7 @@ defineExpose({
           class="m-0 text-sm text-n-slate-11"
           data-conversa-cupom-falta
         >
-          {{ t(`${NS}.CUPOM_FALTA`, { n: CODIGO_MAXIMO }) }}
+          {{ t('MODELOS_WHATSAPP.CONVERSA.CUPOM_FALTA', { n: CODIGO_MAXIMO }) }}
         </p>
       </div>
       <slot
