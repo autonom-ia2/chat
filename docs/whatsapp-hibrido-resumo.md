@@ -447,8 +447,11 @@ todas valerem; senão, `rich_message_sent_as: 'text'`, como hoje:
   `WAHA_RICH_NATIVE_ENGINES` (URLs separadas por vírgula; vazia por padrão = tudo em texto);
 - o motor declara o tipo em `GET /api/server/version`, campo `autonomia.rich_native` (ex.:
   `{ patch: 'c2y-rich-1', rich_native: ['options','location','contact'], list_reply: true }`); `options` só com
-  `list_reply: true`. `Waha::EngineCapabilities` guarda por 60 s; erro, sem resposta ou campo ausente = nenhum tipo. A
-  chave é a do WAHA (`Waha::Config.api_key`);
+  `list_reply: true`. Quem lê o motor é o `Waha::EngineCapabilitiesRefreshJob` (cron a cada minuto, no segundo 25),
+  que guarda por 10 min; a criação de mensagem e a lista de conversas só leem esse cache, nunca chamam o motor. Sem
+  valor no cache (motor nunca lido, ou falhando há mais de 10 min) = nenhum tipo. Todos os motores da lista usam a
+  mesma chave (`WAHA_API_KEY`); 401/403 vai ao rastreador de erros com o nome do motor. O webhook da caixa sempre tem
+  caminho (`<motor>/webhooks/chatwoot/...`): `webhook_url` igual à raiz do motor não casa e fica em texto;
 - o tradutor monta o pedido (`Waha::RichPayload.build`, com o `content` cru);
 - e as travas de sempre da caixa API: vai ao canal, caixa com webhook, conversa sem trava de transmissão, formato sem
   erro.
@@ -461,12 +464,19 @@ marca: se a capacidade do motor mudar entre a criação e a entrega, marca e ped
 não leva o pedido.
 
 **Entrada (contrato `waha_list_reply`).** O conector cria a mensagem RECEBIDA com
-`content_attributes.waha_list_reply = { row_id, title }`. Na criação (`Waha::RichNative::ListReply`), vira
-`selected_option = { id original da opção, title }` (separado pelo último `|`, sem regex), `in_reply_to` = a mensagem
-da referência quando ela é lista nativa da MESMA conversa e caixa (e o conector não preencheu), e a chave sai.
+`content_attributes.waha_list_reply = { row_id, title }`. Na criação (`Waha::RichNative::ListReply`, só com a flag), a
+chave SEMPRE sai. Ela só vira escolha se uma lista NATIVA nossa da MESMA conversa e caixa ofereceu essa opção: com
+referência, a lista citada; sem referência, a última lista nativa da conversa com esse id. Aí grava
+`selected_option = { id original da opção, title }` (separado pelo último `|`, sem regex) e `in_reply_to` = a lista
+(se o conector não preencheu; `in_reply_to_external_id` só com o id físico, nunca o provisório). Sem lista que confira
+(forja, lista de outra conversa), a mensagem fica como texto comum.
 
-**Forja.** Pela API de mensagens, `waha_native` e `rich_message_sent_as` saem sempre; `waha_list_reply` só fica em
-mensagem recebida (é como o conector cria), e mesmo assim só liga a resposta a uma lista nativa conferida.
+**Forja.** Pela API de mensagens, com ou sem a flag: `waha_native` e `rich_message_sent_as` saem sempre;
+`waha_list_reply` só fica em mensagem recebida (é como o conector cria), e mesmo assim só vira escolha com uma lista
+nativa conferida.
+
+**Reenvio.** O reenvio sai pelo `message_updated`, que não leva o pedido ao motor: o cliente recebe o texto, e a marca
+da mensagem passa de 'native' a 'text'.
 
 **Tela e consultas.** `whatsapp_api_rich_native` da conversa e `RichMessages.delivery_mode(message:)` respondem também
 pela caixa WAHA, com as mesmas condições (os tipos que o motor declara). Na lista de conversas, sem consulta ao banco

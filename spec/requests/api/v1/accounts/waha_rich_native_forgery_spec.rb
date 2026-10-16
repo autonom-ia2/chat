@@ -29,10 +29,26 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes).to eq('outro' => 'fica')
   end
 
-  it 'keeps waha_list_reply on an incoming message (the connector) and converts it' do
-    message = create_message(content: 'Manhã', message_type: 'incoming',
-                             content_attributes: { waha_list_reply: { row_id: 'manha', title: 'Manhã' }, waha_native: { kind: 'x' } })
+  # O conector cria a recebida por esta API, então a chave chega. Mas uma escolha sem lista nativa nossa que a ofereceu
+  # (forja) não vira escolha: fica texto comum, mesmo com a flag ligada.
+  it 'does not turn a forged incoming waha_list_reply into a choice' do
+    account.enable_features!(Waha::RichNative::FLAG)
 
-    expect(message.content_attributes).to eq('selected_option' => { 'id' => 'manha', 'title' => 'Manhã' })
+    message = create_message(content: 'Manhã', message_type: 'incoming',
+                             content_attributes: { waha_list_reply: { row_id: 'manha|1', title: 'Manhã' }, waha_native: { kind: 'x' } })
+
+    expect(message.content_attributes).to eq({})
+  end
+
+  it 'turns an incoming waha_list_reply into the choice when our native list offered it' do
+    account.enable_features!(Waha::RichNative::FLAG)
+    list = create(:message, message_type: :outgoing, content: 'Qual?', conversation: conversation, inbox: channel.inbox, account: account,
+                            content_attributes: { rich_message: { type: 'options', options: [{ id: 'manha', title: 'Manhã' }] } })
+    list.update!(content_attributes: list.content_attributes.merge('rich_message_sent_as' => 'native'))
+
+    message = create_message(content: 'Manhã', message_type: 'incoming',
+                             content_attributes: { waha_list_reply: { row_id: "manha|#{list.id}", title: 'Manhã' } })
+
+    expect(message.content_attributes).to include('selected_option' => { 'id' => 'manha', 'title' => 'Manhã' }, 'in_reply_to' => list.id)
   end
 end

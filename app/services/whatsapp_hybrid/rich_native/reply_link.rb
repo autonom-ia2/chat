@@ -13,8 +13,7 @@
 #    que saiu nativa nesta conversa com uma opção de `id` IGUAL ao da opção (listas mandadas antes da referência).
 # Comparação exata de id, nunca de texto. Sem nenhuma, só o `selected_option` (sem referência) muda.
 module WhatsappHybrid::RichNative::ReplyLink
-  # Quantas mensagens nossas, das mais novas, procurar. A lista respondida costuma ser a última.
-  LOOKBACK = 50
+  LOOKBACK = Waha::RichNative::LOOKBACK
 
   # { in_reply_to:, selected_option: } a gravar (só as chaves que mudam), ou nil quando nada muda.
   # O sufixo `|<dígitos>` sai SEMPRE (todo `rowId` com ele é nosso: lista com "|" no id não sai nativa). `search` (a
@@ -36,11 +35,7 @@ module WhatsappHybrid::RichNative::ReplyLink
   end
 
   def self.options_message_for(conversation, option_id)
-    return if conversation.nil? || option_id.blank?
-
-    conversation.messages.where(message_type: :outgoing).where.not(status: :failed)
-                .reorder(id: :desc).limit(LOOKBACK)
-                .find { |message| native_options?(message) && option_ids(message).include?(option_id.to_s) }
+    Waha::RichNative.latest_native_list(conversation, option_id)
   end
 
   def self.native_options?(message)

@@ -345,3 +345,11 @@ whatsapp_proxy_reconcile_job:
   cron: '7,17,27,37,47,57 * * * *'
   class: 'WhatsappProxy::ReconcileJob'
   queue: scheduled_jobs
+
+# Mensagem rica nativa na caixa WAHA comum (#1709): lê a capacidade de cada motor de WAHA_RICH_NATIVE_ENGINES e guarda
+# por 10 minutos; a criação de mensagem e a lista de conversas só leem o cache. A cada minuto, no segundo 25 (formato de
+# 6 campos, com segundos), fora do segundo 0 dos outros crons de minuto. Sem a lista no ENV, não faz nada.
+waha_engine_capabilities_refresh_job:
+  cron: '25 * * * * *'
+  class: 'Waha::EngineCapabilitiesRefreshJob'
+  queue: scheduled_jobs

@@ -84,6 +84,18 @@ module Waha::RichNative
     false
   end
 
+  # Quantas mensagens nossas, das mais novas, procurar na busca pela última lista. A lista respondida costuma ser a última.
+  LOOKBACK = 50
+
+  # A última mensagem nossa de options que saiu nativa nesta conversa com uma opção de `id` IGUAL (comparação exata).
+  def latest_native_list(conversation, option_id)
+    return if conversation.nil? || option_id.blank?
+
+    conversation.messages.where(message_type: :outgoing).where.not(status: :failed)
+                .reorder(id: :desc).limit(LOOKBACK)
+                .find { |message| native_options?(message) && option_ids(message).include?(option_id.to_s) }
+  end
+
   # Mensagem nossa de opções que saiu nativa. O conteúdo é JSON gravado como texto: o filtro é em Ruby, sobre poucas
   # linhas.
   def native_options?(message)

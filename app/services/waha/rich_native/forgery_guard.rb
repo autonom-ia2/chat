@@ -4,9 +4,10 @@
 #   Guardado na mensagem, iria ao conector e o motor mandaria o que quem criou quisesse.
 # - `rich_message_sent_as` (a marca) é decidida na criação (Waha::RichNative::ApiInboxDecision): sai SEMPRE.
 # - `waha_list_reply` (a escolha do cliente) só vale em mensagem RECEBIDA, que é como o conector a cria; em qualquer
-#   outra, sai. Na recebida, Waha::RichNative::ListReply a confere antes de ligar a resposta (lista nativa da mesma
-#   conversa e caixa).
-# Entra como before_action, sem sobrescrever `create` (o Guia lê o formato da ação no método original).
+#   outra, sai. Na recebida, Waha::RichNative::ListReply só a converte em escolha se uma lista nativa nossa da mesma
+#   conversa e caixa ofereceu essa opção; senão, a chave sai e a mensagem fica como texto comum.
+# INCONDICIONAL: vale com ou sem a flag `whatsapp_rich_native` (uma chave forjada ficaria guardada e valeria quando a
+# flag fosse ligada). Entra como before_action, sem sobrescrever `create` (o Guia lê o formato da ação no método original).
 module Waha::RichNative::ForgeryGuard
   ALWAYS_DROPPED = ['waha_native', RichMessages::SENT_AS_KEY].freeze
   INCOMING_ONLY = 'waha_list_reply'.freeze

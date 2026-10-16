@@ -117,9 +117,12 @@ describe Waha::RichNative::WahaInbox do
   end
 
   describe 'the customer choice (waha_list_reply)' do
+    before { flag_on! }
+
     # A marca da criação depende do motor: aqui a lista já saiu nativa.
-    def native_list(ids, on: conversation)
+    def native_list(ids, on: conversation, source_id: '3EB0LISTA')
       list = create(:message, message_type: :outgoing, content: 'Qual?', conversation: on, inbox: on.inbox, account: account,
+                              source_id: source_id,
                               content_attributes: { rich_message: { type: 'options', options: ids.map { |id| { id: id, title: id } } } })
       list.update!(content_attributes: list.content_attributes.merge('rich_message_sent_as' => 'native'))
       list
@@ -136,28 +139,42 @@ describe Waha::RichNative::WahaInbox do
       attributes = reply("manha|#{list.id}").content_attributes
 
       expect(attributes['selected_option']).to eq('id' => 'manha', 'title' => 'Manhã')
-      expect(attributes['in_reply_to']).to eq(list.id)
+      expect(attributes).to include('in_reply_to' => list.id, 'in_reply_to_external_id' => '3EB0LISTA')
       expect(attributes).not_to have_key('waha_list_reply')
     end
 
-    it 'keeps the id whole and links nothing without a reference' do
-      native_list(%w[manha])
+    it 'without a reference, links to the latest native list of the conversation that offered that exact option' do
+      older = native_list(%w[manha tarde])
+      native_list(%w[noite])
 
-      attributes = reply('manha').content_attributes
+      attributes = reply('tarde').content_attributes
 
-      expect(attributes['selected_option']).to eq('id' => 'manha', 'title' => 'Manhã')
-      expect(attributes['in_reply_to']).to be_blank
+      expect(attributes['selected_option']).to eq('id' => 'tarde', 'title' => 'Manhã')
+      expect(attributes['in_reply_to']).to eq(older.id)
     end
 
-    it 'never links to a list of another conversation or inbox, but still drops the reference from the option id' do
+    # Escolha sem lista nossa que a ofereceu (forja, lista de outra conversa ou caixa, lista que saiu como texto): fica
+    # texto comum.
+    it 'records no choice when no native list of this conversation and inbox offered the option' do
       other_conversation = native_list(%w[manha], on: create(:conversation, inbox: inbox, account: account))
       other_inbox = native_list(%w[manha], on: create(:conversation, inbox: create(:channel_api, account: account).inbox, account: account))
+      text_list = create(:message, message_type: :outgoing, content: 'Qual?', conversation: conversation, inbox: inbox, account: account,
+                                   content_attributes: { rich_message: { type: 'options', options: [{ id: 'tarde', title: 'Tarde' }] } })
+      text_list.update!(content_attributes: text_list.content_attributes.merge('rich_message_sent_as' => 'text'))
 
-      [other_conversation, other_inbox].each do |list|
-        attributes = reply("manha|#{list.id}").content_attributes
-        expect(attributes['in_reply_to']).to be_blank
-        expect(attributes['selected_option']['id']).to eq('manha')
+      ["manha|#{other_conversation.id}", "manha|#{other_inbox.id}", 'manha', "tarde|#{text_list.id}", 'tarde'].each do |row_id|
+        attributes = reply(row_id).content_attributes
+        expect(attributes.keys & %w[selected_option in_reply_to waha_list_reply]).to eq([]), row_id
       end
+    end
+
+    it 'does not write the provisional source_id as in_reply_to_external_id' do
+      list = native_list(%w[manha], source_id: 'waha-native-pending-1')
+
+      attributes = reply("manha|#{list.id}").content_attributes
+
+      expect(attributes['in_reply_to']).to eq(list.id)
+      expect(attributes['in_reply_to_external_id']).to be_blank
     end
 
     it 'keeps the in_reply_to the connector already filled' do
@@ -165,6 +182,58 @@ describe Waha::RichNative::WahaInbox do
       quoted = create(:message, message_type: :outgoing, content: 'x', conversation: conversation, inbox: inbox, account: account)
 
       expect(reply("manha|#{list.id}", in_reply_to: quoted.id).content_attributes['in_reply_to']).to eq(quoted.id)
+    end
+
+    it 'converts nothing without the flag, but still drops the key' do
+      list = native_list(%w[manha])
+      account.disable_features!(Waha::RichNative::FLAG)
+
+      attributes = reply("manha|#{list.id}").content_attributes
+
+      expect(attributes.keys & %w[selected_option in_reply_to waha_list_reply]).to eq([])
+    end
+
+    it 'drops the key even when the conversion breaks' do
+      list = native_list(%w[manha])
+      allow(Waha::RichNative).to receive(:split_row_id).and_raise(ActiveRecord::ConnectionFailed)
+
+      expect(reply("manha|#{list.id}").content_attributes).not_to have_key('waha_list_reply')
+    end
+  end
+
+  # Nada de HTTP ao criar a mensagem: só o cache, que o job do cron preenche. Sem stub no WebMock, uma chamada ao motor
+  # quebraria o teste.
+  describe 'with the real engine capability cache' do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+    before do
+      allow(Rails).to receive(:cache).and_return(cache)
+      allow(Waha::EngineCapabilities).to receive(:types).and_call_original
+      flag_on!
+    end
+
+    it 'goes as text with nothing cached, and natively once the job cached the engine, never calling the engine' do
+      expect(outgoing.reload.content_attributes['rich_message_sent_as']).to eq('text')
+
+      cache.write(Waha::EngineCapabilities.cache_key("#{engine}/"), %w[options], expires_in: 10.minutes)
+      expect(outgoing.reload.content_attributes['rich_message_sent_as']).to eq('native')
+      expect(a_request(:get, "#{engine}/api/server/version")).not_to have_been_made
+    end
+  end
+
+  describe 'retry on a WAHA inbox', type: :request do
+    it 'turns the native mark into text, since the message_updated delivers only the text' do
+      flag_on!
+      message = outgoing
+      message.update!(status: :failed)
+      agent = create(:user, account: account, role: :agent)
+      create(:inbox_member, inbox: inbox, user: agent)
+
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/messages/#{message.id}/retry",
+           headers: agent.create_new_auth_token, as: :json
+
+      expect(message.reload.content_attributes).to include('rich_message_sent_as' => 'text',
+                                                           'rich_message_sent_text' => "Qual horário?\n\n1. Manhã\n2. Tarde")
     end
   end
 
