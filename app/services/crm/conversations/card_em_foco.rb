@@ -7,9 +7,11 @@
 #   2. conta como atividade dele (last_message_at e last_activity_at com a hora da mensagem, só para a frente).
 #
 # Quem chama: o CardSyncer, com a IA de assunto desligada na caixa; o Crm::Subjects::IdentifyJob, depois da decisão do
-# assunto, com ela ligada (o card em foco já é o do assunto decidido). Não agenda de novo quando a troca de foco, o card
-# novo ou o card ao chegar já agendaram depois que a mensagem chegou, ou depois que o WhatsApp Híbrido trouxe o texto
-# real dela (#1638).
+# assunto, com ela ligada (o card em foco já é o do assunto decidido). Com ela ligada, vale também para a caixa de 1 funil
+# com card ao chegar: o CardSyncer não agenda nem conta atividade no card da chegada (o foco de antes da mensagem), e
+# um cliente com dois assuntos no mesmo funil tem lido o card do assunto da mensagem. Não agenda de novo quando a troca
+# de foco ou o card novo já agendaram depois que a mensagem chegou, ou depois que o WhatsApp Híbrido trouxe o texto real
+# dela (#1638).
 #
 # A atividade avança junto com a avaliação de propósito: o StaleCardsJob só reavalia card cuja última avaliação é anterior
 # à última atividade, então a mensagem avaliada não volta a ser avaliada por estar parada.

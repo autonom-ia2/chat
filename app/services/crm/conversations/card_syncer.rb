@@ -49,8 +49,21 @@ class Crm::Conversations::CardSyncer
 
     Crm::Cards::Broadcaster.broadcast(card, event_name) if card.present? && event_name.present?
     maybe_stop_ai_followup(card) if card.present?
-    schedule_ai_evaluation(card) if card.present?
+    schedule_ai_evaluation(card) if card.present? && (!foco_depois_do_assunto? || event_name == Events::Types::CRM_CARD_CREATED)
     card
+  end
+
+  # #1675: com a flag `crm_avaliar_toda_mensagem` e a IA de assunto ligada na caixa (também a de 1 funil com card ao
+  # chegar), a mensagem do cliente espera a decisão do assunto: o card que a deduplicação devolve aqui é o foco de ANTES
+  # da mensagem, e pode não ser o assunto dela. Quem agenda a IA e conta a atividade é o Crm::Subjects::IdentifyJob, no
+  # card em foco depois da decisão (Crm::Conversations::CardEmFoco). O resto da sincronização (dono, time, caixa) segue.
+  # Card que nasce aqui já é o foco e é avaliado como sempre: a decisão pode ter rodado antes dele existir (fila high), e
+  # se rodar depois, o Observer#agendada_desde? não agenda de novo.
+  def foco_depois_do_assunto?
+    return @foco_depois_do_assunto if defined?(@foco_depois_do_assunto)
+
+    @foco_depois_do_assunto = @message.present? && @message.incoming? &&
+                              Crm::Conversations::CardEmFoco.ligada?(@account) && Crm::Subjects.ligado?(@conversation)
   end
 
   # Auto-stop the AI follow-up cadence when the contact replies. Guarded internally
@@ -72,7 +85,7 @@ class Crm::Conversations::CardSyncer
 
   def mensagem_no_card_em_foco
     return unless Crm::Conversations::CardEmFoco.ligada?(@account) && @message.incoming?
-    return if Crm::Subjects.ligado?(@conversation)
+    return if foco_depois_do_assunto?
 
     Crm::Conversations::CardEmFoco.new(conversation: @conversation, message: @message).perform
   end
@@ -212,7 +225,7 @@ class Crm::Conversations::CardSyncer
   # activity clock — stage moves and linkers legitimately set last_activity_at to
   # Time.current, and a stale real-message date would regress it.
   def merge_activity_attributes(attributes)
-    return if @message.blank?
+    return if @message.blank? || foco_depois_do_assunto?
 
     real_message_at = last_message_at
     return if real_message_at.blank?

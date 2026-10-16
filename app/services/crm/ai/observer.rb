@@ -12,8 +12,8 @@ module Crm
         Crm::Ai::EvaluateCardJob.set(wait: Config::DEBOUNCE_SECONDS.seconds).perform_later(@card.id, token)
       end
 
-      # Alguém já agendou a avaliação deste card depois de `momento` (#1675): a troca de foco, o card novo ou o card ao
-      # chegar da mesma mensagem. Lê o token do card como ele veio do banco.
+      # Alguém já agendou a avaliação deste card depois de `momento` (#1675): a troca de foco ou o card novo da mesma
+      # mensagem. Lê o token do card como ele veio do banco.
       def agendada_desde?(momento)
         token = @card.metadata.to_h.dig('ai', 'evaluate_token')
         token.present? && token.to_f > momento.to_f

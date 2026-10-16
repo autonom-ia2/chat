@@ -244,16 +244,145 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliados).to eq([auto.id])
     end
 
-    it 'com a IA de assunto ligada: o card ao chegar já agendou, e a decisão não agenda de novo' do
+    it 'com a IA de assunto ligada: avalia depois da decisão, uma vez só' do
       account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :auto)
       allow(identifier).to receive(:perform).and_return(instance_double(Crm::SubjectDecision, state: 'kept'))
       message = incoming
       sincronizar(message)
+      expect(avaliacoes_agendadas).to be_empty
 
       Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
 
       expect(avaliacoes_agendadas).to eq([auto.id])
       expect(avaliados).to eq([auto.id])
+    end
+  end
+
+  # Caso do Rodrigo (16/10): o funil Vendas vende seguro auto e residencial; o cliente tem dois cards nele, auto em
+  # Fechamento e residencial em Proposta. Caixa de 1 funil com card ao chegar e IA de assunto Automática.
+  describe 'na caixa de 1 funil com dois assuntos no mesmo funil' do
+    let(:proposta) { create_crm_stage(account: account, pipeline: vendas.first, name: 'Proposta', position: 1) }
+    let(:fechamento) { create_crm_stage(account: account, pipeline: vendas.first, name: 'Fechamento', position: 2) }
+    let!(:auto) { create_card(vendas, 'Seguro auto', focused_at: 1.minute.ago) }
+    let!(:residencial) { create_card(vendas, 'Seguro residencial', focused_at: 2.minutes.ago) }
+
+    before do
+      account.crm_pipeline_inboxes.find_by(pipeline: pos_venda.first).destroy!
+      account.crm_pipeline_inboxes.find_by(pipeline: vendas.first).update!(auto_create_card: true)
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(auto_create_card: true, subject_ai_mode: :auto)
+      auto.update!(stage: fechamento)
+      residencial.update!(stage: proposta)
+      clear_enqueued_jobs
+    end
+
+    def decide_foco_em(card)
+      allow(identifier).to receive(:perform) do
+        Crm::Subjects::Acoes.focar(conversation: conversation, card: card)
+        instance_double(Crm::SubjectDecision, state: 'applied')
+      end
+    end
+
+    def mantem_assunto
+      allow(identifier).to receive(:perform).and_return(instance_double(Crm::SubjectDecision, state: 'kept'))
+    end
+
+    it 'mensagem do residencial: o foco vai para ele e só ele é lido; o card auto da chegada não ganha avaliação nem atividade',
+       :aggregate_failures do
+      decide_foco_em(residencial)
+      message = incoming('E o seguro da casa, já dá para fechar?')
+
+      expect(sincronizar(message)).to eq(auto)
+      expect(avaliacoes_agendadas).to be_empty
+      expect(auto.reload.last_activity_at).to be < 1.day.ago
+      expect(Crm::Assunto.funil_atual(conversation)).to eq(auto)
+
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+
+      expect(Crm::Assunto.funil_atual(conversation)).to eq(residencial)
+      expect(avaliacoes_agendadas).to eq([residencial.id])
+      expect(residencial.reload.last_activity_at).to be_within(1.second).of(message.created_at)
+      expect(auto.reload.last_activity_at).to be < 1.day.ago
+      expect(avaliados).to eq([residencial.id])
+    end
+
+    it 'mensagem do auto: o card auto, que está em foco, é lido; o residencial não' do
+      mantem_assunto
+      message = incoming('Fechado, quero contratar o do carro')
+      sincronizar(message)
+
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+
+      expect(avaliados).to eq([auto.id])
+      expect(auto.reload.last_activity_at).to be_within(1.second).of(message.created_at)
+      expect(residencial.reload.last_activity_at).to be < 1.day.ago
+    end
+
+    it 'a IA move o card lido: residencial vai de Proposta para Fechamento, o auto fica onde está' do
+      decide_foco_em(residencial)
+      message = incoming('Pode fechar o da casa também')
+      sincronizar(message)
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+      allow(Crm::Ai::Evaluator).to receive(:new) do |card:, **|
+        instance_double(Crm::Ai::Evaluator, perform: card.update!(stage: fechamento))
+      end
+
+      travel(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second) do
+        enqueued_jobs.select { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }
+                     .each { |job| Crm::Ai::EvaluateCardJob.perform_now(*job['arguments']) }
+      end
+
+      expect(residencial.reload.stage).to eq(fechamento)
+      expect(Crm::Ai::Evaluator).to have_received(:new).once
+      expect(Crm::Ai::Evaluator).to have_received(:new).with(card: residencial, trigger: 'message')
+    end
+
+    it 'rajada no mesmo assunto: uma avaliação, no card em foco' do
+      mantem_assunto
+      mensagens = Array.new(3) { |i| incoming("parte #{i}") }
+      mensagens.each do |message|
+        sincronizar(message)
+        Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+      end
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+      expect(avaliados).to eq([auto.id])
+    end
+
+    it 'mensagem da equipe: o card da chegada segue como hoje (a decisão do assunto é só da mensagem do cliente)' do
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Já te mando')
+
+      sincronizar(message)
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+    end
+
+    it 'decisão que roda antes de o card da chegada existir: o card novo é avaliado uma vez' do
+      [auto, residencial].each { |card| card.update!(status: :archived) }
+      mantem_assunto
+      message = incoming('Quero um seguro para o carro')
+
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+      expect(avaliacoes_agendadas).to be_empty
+      novo = sincronizar(message)
+
+      expect(novo).to be_present
+      expect(avaliacoes_agendadas).to eq([novo.id])
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+      expect(avaliacoes_agendadas).to eq([novo.id])
+    end
+
+    it 'sem a flag, como hoje: o card da chegada é avaliado na hora e a decisão não agenda nada' do
+      account.disable_features!(described_class::FLAG)
+      decide_foco_em(residencial)
+      message = incoming('E o seguro da casa?')
+      sincronizar(message)
+      expect(avaliacoes_agendadas).to eq([auto.id])
+      expect(auto.reload.last_activity_at).to be_within(1.second).of(message.created_at)
+
+      clear_enqueued_jobs
+      Crm::Subjects::IdentifyJob.perform_now(conversation.id, message.id)
+
+      expect(avaliacoes_agendadas).to eq([residencial.id])
     end
   end
 end
