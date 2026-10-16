@@ -86,9 +86,23 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     deixa_vencer(28)
 
     expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id, bruno.id, carla.id])
-    expect(convidada).to eq(carla.id)
+    expect(card.reload.metadata.dig('ai', 'handoffs').size).to eq(3)
     expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
     expect(conversa).to be_bot_handoff_waiting
     expect(avisos_ao_admin).to eq(1)
+  end
+
+  # Pega: a marca de convite gravada antes do #1694 (sem convidado_id) reconvidar quem deixou vencer: vale o ciclo do card.
+  it 'marca antiga sem convidado: a convidada sai pelo ciclo do card', :aggregate_failures do
+    antiga = Crm::Entrega::Marca.dados(conversa.reload).except('convidado_id')
+    Conversation.where(id: conversa.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ['additional_attributes = jsonb_set(additional_attributes, ?, ?::jsonb)', "{#{Crm::Entrega::Marca::CHAVE}}", antiga.to_json]
+    )
+    online(ana, bruno)
+
+    deixa_vencer(7)
+
+    expect(convidada).to eq(bruno.id)
+    expect(marca).to include('venceram' => [ana.id])
   end
 end
