@@ -5,12 +5,16 @@
 # A comparação é em JANELAS com `casecmp?` sobre o próprio texto: nada de `downcase.index` + corte no original, que sai
 # do lugar quando a minúscula tem outro tamanho.
 module Autonomia::Agents::Operate::TextoSemDisfarce
-  # Os codepoints da categoria Unicode Cf (formato, invisíveis), por faixa. Lista fechada da tabela Unicode 15.
+  # Os codepoints invisíveis removidos antes de comparar, por faixa: a categoria Unicode Cf (formato, tabela Unicode 15)
+  # e os invisíveis de fora dela listados no fim.
   FAIXAS_DE_FORMATO = [
     0x00AD..0x00AD, 0x0600..0x0605, 0x061C..0x061C, 0x06DD..0x06DD, 0x070F..0x070F, 0x0890..0x0891, 0x08E2..0x08E2,
     0x180E..0x180E, 0x200B..0x200F, 0x202A..0x202E, 0x2060..0x2064, 0x2066..0x206F, 0xFEFF..0xFEFF, 0xFFF9..0xFFFB,
     0x110BD..0x110BD, 0x110CD..0x110CD, 0x13430..0x1343F, 0x1BCA0..0x1BCA3, 0x1D173..0x1D17A, 0xE0001..0xE0001,
-    0xE0020..0xE007F
+    0xE0020..0xE007F,
+    # Invisíveis que não são Cf mas passam por letra ou espaço vazio: seletores de variação, o combinante que não junta
+    # (U+034F) e os preenchimentos do Hangul (U+115F, U+1160, U+3164, U+FFA0).
+    0x034F..0x034F, 0x115F..0x1160, 0x3164..0x3164, 0xFFA0..0xFFA0, 0xFE00..0xFE0F, 0xE0100..0xE01EF
   ].freeze
 
   module_function
@@ -29,6 +33,13 @@ module Autonomia::Agents::Operate::TextoSemDisfarce
     return false if chave.empty? || texto.length < chave.length
 
     (0..(texto.length - chave.length)).any? { |inicio| texto[inicio, chave.length].casecmp?(chave) }
+  end
+
+  # A posição da primeira ocorrência da `chave` a partir de `desde`, sem diferenciar caixa, ou nil.
+  def posicao(texto, chave, desde = 0)
+    return if chave.empty?
+
+    (desde..(texto.length - chave.length)).find { |inicio| texto[inicio, chave.length].casecmp?(chave) }
   end
 
   def contem_alguma?(texto, chaves)

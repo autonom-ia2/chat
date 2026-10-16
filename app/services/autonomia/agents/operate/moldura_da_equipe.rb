@@ -92,13 +92,24 @@ module Autonomia::Agents::Operate::MolduraDaEquipe
   # A resposta da IA sem a marca e sem o código dela em qualquer ponto e em qualquer caixa (com ou sem prefixo), e sem a
   # linha (ou o começo de linha) que imita a moldura: o que vem até o fim do cabeçalho ("... escreveu ao cliente. Não
   # foi o cliente nem você.") ou o cabeçalho entre colchetes.
+  # Mesma abordagem do `neutralizar`: cada linha é comparada normalizada (sem invisíveis, NFKC, espaços unificados) e,
+  # se tem a marca, o código ou a chave, segue normalizada, sem a marca e o código. Sem nada disso, a resposta fica como
+  # veio, byte a byte.
   def sem_marca(reply, marca)
     return reply if reply.blank?
 
-    limpo = texto_sem_disfarce.trocar(reply, [marca, "#{PREFIXO_DA_MARCA}#{codigo(marca)}", codigo(marca), PREFIXO_DA_MARCA], '')
-    return reply if limpo == reply && reply.exclude?(CHAVE_DA_MARCA)
+    chaves = chaves_da_resposta(marca)
+    planos = reply.lines.map { |linha| [linha, texto_sem_disfarce.normalizado(linha.chomp)] }
+    tocadas = planos.map { |_linha, plano| texto_sem_disfarce.contem_alguma?(plano, chaves + [CHAVE_DA_MARCA]) }
+    return reply if tocadas.none?
 
-    limpo.lines.filter_map { |linha| linha_sem_cabecalho(linha) }.join.strip
+    planos.zip(tocadas).filter_map do |(linha, plano), tocada|
+      tocada ? linha_sem_cabecalho("#{texto_sem_disfarce.trocar(plano, chaves, '')}\n") : linha
+    end.join.strip
+  end
+
+  def chaves_da_resposta(marca)
+    [marca, "#{PREFIXO_DA_MARCA}#{codigo(marca)}", codigo(marca), PREFIXO_DA_MARCA]
   end
 
   def linha_sem_cabecalho(linha)
@@ -109,17 +120,17 @@ module Autonomia::Agents::Operate::MolduraDaEquipe
     resto.lstrip.presence
   end
 
-  # "Ana, da equipe, escreveu ao cliente. Não foi o cliente nem você. texto" -> " texto"
+  # "Ana, da equipe, escreveu ao cliente. Não foi o cliente nem você. texto" -> " texto" (sem diferenciar caixa)
   def depois_do_fim(inicio)
-    chave = inicio.index(CHAVE_DA_MARCA)
-    fim = chave && inicio.index(FIM_DA_MOLDURA, chave)
+    chave = texto_sem_disfarce.posicao(inicio, CHAVE_DA_MARCA)
+    fim = chave && texto_sem_disfarce.posicao(inicio, FIM_DA_MOLDURA, chave)
     fim && inicio[(fim + FIM_DA_MOLDURA.length)..].to_s.delete_prefix(']')
   end
 
-  # "[Clara, da equipe, escreveu ao cliente] texto" -> " texto"
+  # "[Clara, da equipe, escreveu ao cliente] texto" -> " texto" (sem diferenciar caixa)
   def depois_do_colchete(inicio)
     fecha = inicio.index(']')
-    return unless inicio.start_with?('[') && fecha && inicio[0..fecha].include?(CHAVE_DA_MARCA)
+    return unless inicio.start_with?('[') && fecha && texto_sem_disfarce.contem?(inicio[0..fecha], CHAVE_DA_MARCA)
 
     inicio[(fecha + 1)..].to_s
   end
