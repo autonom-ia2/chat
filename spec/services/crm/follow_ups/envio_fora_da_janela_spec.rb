@@ -106,11 +106,40 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
       expect(Whatsapp::Templates::EnvioForaDaJanela).to have_received(:planejar)
     end
 
-    it 'o plano gravado ainda estava criando e a Meta já aprovou: o ponto único relê a caixa e envia' do
+    it 'o plano gravado ainda estava criando (formato real, sem campos) e a Meta já aprovou: replaneja e envia com os campos do modelo de agora' do
       conferencia
-      marca(plano: plano_do_pronto.merge('caminho' => 'criando'))
+      marca(plano: plano_do_pronto.except('campos', 'texto').merge('caminho' => 'criando'))
+
+      result = envio
+
+      expect(result).to be_enviar
+      expect(result.metadata['template_processed_params']['body'].keys).to match_array(pronto.campos.keys)
+    end
+
+    it 'o plano gravado era de outro modelo (campos diferentes): os valores saem do modelo do plano de agora, nunca trocados' do
+      conferencia
+      marca(plano: plano_do_pronto.merge('caminho' => 'criando', 'campos' => { '1' => 'negocio.titulo', '2' => 'cliente.primeiro_nome' }))
+
+      body = envio.metadata['template_processed_params']['body']
+
+      expect(body).to include('1' => 'Lead')
+      expect(body.keys).to match_array(pronto.campos.keys)
+      expect(pronto.campos.values).to include('negocio.valor')
+      expect(body.values).to include('R$ 350,00')
+    end
+
+    it 'plano da equipe gravado pelo pré-voo (sem campos) e o modelo já aprovado no horário: envia, sem motivo falso de campo sem valor' do
+      conferencia
+      marca(plano: { 'versao' => 1, 'tipo' => 'cobranca_no_dia', 'caminho' => 'equipe', 'motivo' => 'meta_fora', 'ja_recusado' => false })
 
       expect(envio).to be_enviar
+    end
+
+    it 'sem modelo no horário e o pré-voo tinha o motivo de autorização: o aviso conserva o motivo mais específico' do
+      scenario[:inbox].channel.update_columns(message_templates: []) # rubocop:disable Rails/SkipsModelValidations
+      marca(plano: { 'versao' => 1, 'tipo' => 'cobranca_no_dia', 'caminho' => 'equipe', 'motivo' => 'sem_consentimento', 'ja_recusado' => false })
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'sem_consentimento')
     end
 
     it 'campo do plano sem valor (ou fora do catálogo): não manda nada' do

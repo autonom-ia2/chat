@@ -55,7 +55,7 @@ class Crm::FollowUps::EnvioForaDaJanela
     impedimento = motivo_para_nao_tentar
     return lembrar(impedimento) if impedimento
 
-    preparar(@plano || self.class.plano_gravado(@follow_up) || planejar)
+    preparar(plano_do_horario)
   rescue StandardError => e
     # Meta fora ou lenta: avisa a equipe em vez de repetir a cada minuto dentro da trava do follow-up.
     Rails.logger.warn("[crm][envio_fora_da_janela] follow_up_id=#{@follow_up.id} #{e.class.name}: #{e.message.to_s[0, 160]}")
@@ -88,8 +88,27 @@ class Crm::FollowUps::EnvioForaDaJanela
                    contato: contato, criar: false)
   end
 
+  # O plano do pré-voo só vale para o envio quando já é um modelo aprovado. Em análise (`criando`) ou da equipe, o ponto único
+  # replaneja no horário e pode escolher OUTRO modelo, com outros campos: planejar aqui, antes de calcular os valores, mantém
+  # valores e modelo do mesmo plano. O motivo mais específico do pré-voo (ex.: sem autorização) não se perde.
+  def plano_do_horario
+    return @plano.to_h.deep_stringify_keys if @plano
+
+    gravado = self.class.plano_gravado(@follow_up)&.to_h&.deep_stringify_keys
+    return gravado if gravado && gravado['caminho'] == Ponto::MODELO
+
+    conservar_motivo(planejar.to_h.deep_stringify_keys, gravado)
+  end
+
+  def conservar_motivo(atual, gravado)
+    return atual unless atual['motivo'] == 'no_template' && gravado&.dig('caminho') == Ponto::EQUIPE
+
+    atual.merge('motivo' => gravado['motivo'])
+  end
+
   def preparar(plano)
-    plano = plano.to_h.deep_stringify_keys
+    return lembrar(plano['motivo']) if plano['caminho'] == Ponto::EQUIPE
+
     envio = Ponto.enviar(inbox: inbox, plano: plano, valores: valores(plano['campos'].to_h), contato: contato)
     return lembrar(envio.motivo) unless envio.enviar?
     return lembrar('categoria_propaganda') if cobranca? && propaganda?(envio.metadata['template_params_category'])

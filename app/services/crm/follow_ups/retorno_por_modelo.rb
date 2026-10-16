@@ -22,7 +22,9 @@ module Crm::FollowUps::RetornoPorModelo
   def compor_antes
     @send_mode = :choose_template
     @candidates = callback_template_candidates
-    [compose, assinatura_dos_candidatos]
+    detect_hybrid_free_form
+    # Sem modelo aprovado e com o Híbrido pronto, o envio vai direto ao texto livre: não há o que compor nem criar agora.
+    [(compose unless hybrid_free_form?), assinatura_dos_candidatos]
   end
 
   # A IA disse que há o que enviar e nenhum modelo aprovado serve: é aqui que o modelo do tipo (retorno) entra.

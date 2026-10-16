@@ -78,6 +78,24 @@ RSpec.describe Crm::FollowUps::Preflight do
       expect(Whatsapp::Templates::EnvioForaDaJanela).not_to have_received(:planejar)
     end
 
+    context 'with the hybrid ready and no approved template' do
+      let(:scenario) { build_crm_hybrid_scenario(templates: [], hybrid: true, last_inbound_ago: 30.hours.ago) }
+
+      around { |example| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: '*') { example.run } }
+
+      it 'o envio vai direto ao texto livre: o pré-voo não paga a IA nem cria modelo' do
+        stub_crm_hybrid_ai
+        planejando_retorno
+
+        marca = pre_voo
+
+        expect(marca).to include('estado' => 'pronto', 'composicao' => nil)
+        expect(marca).not_to have_key('plano')
+        expect(ai_calls).to be_empty
+        expect(Whatsapp::Templates::EnvioForaDaJanela).not_to have_received(:planejar)
+      end
+    end
+
     it 'idempotente: a segunda rodada não chama a IA nem o ponto único de novo' do
       stub_crm_hybrid_ai(sem_modelo_que_sirva)
       planejando_retorno
