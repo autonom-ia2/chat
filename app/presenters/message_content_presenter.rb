@@ -3,7 +3,8 @@ class MessageContentPresenter < SimpleDelegator
     Messages::MarkdownRendererService.new(
       content_with_survey_link,
       conversation.inbox.channel_type,
-      conversation.inbox.channel
+      conversation.inbox.channel,
+      automatico: Messages::EnvioAutomatico.automatico?(__getobj__)
     ).render
   end
 

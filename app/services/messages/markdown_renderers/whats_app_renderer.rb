@@ -6,18 +6,25 @@ class Messages::MarkdownRenderers::WhatsAppRenderer < Messages::MarkdownRenderer
   # `source`: o mesmo texto entregue ao CommonMarker. As posições dos nós apontam para
   # ele: separa o bloco cercado (vira mono) do recuado (texto), conta as crases do código
   # em linha e acha marcador colado em letra ou número.
-  def initialize(source)
+  # `automatico`: texto de robô, IA ou envio automático (Messages::EnvioAutomatico), que
+  # escreve no dialeto do WhatsApp: *x* é negrito, como **x**. O editor grava itálico como
+  # *x*, então para a pessoa digitando no painel *x* segue itálico.
+  def initialize(source, automatico: false)
     super()
     @list_item_number = 0
     @quote_depth = 0
+    @bold_depth = 0
+    @automatico = automatico
     @source_lines = source.to_s.split("\n", -1)
   end
 
   def strong(node)
-    wrap(node, '*')
+    bold(node)
   end
 
   def emph(node)
+    return bold(node) if @automatico && delimiter_of(node) == '*'
+
     wrap(node, '_')
   end
 
@@ -86,6 +93,19 @@ class Messages::MarkdownRenderers::WhatsAppRenderer < Messages::MarkdownRenderer
 
   def quote_prefix
     '> ' * @quote_depth
+  end
+
+  # Negrito dentro de negrito (***x*** do robô) fica um negrito só: *x*.
+  def bold(node)
+    return out(:children) if @bold_depth.positive?
+
+    @bold_depth += 1
+    wrap(node, '*')
+    @bold_depth -= 1
+  end
+
+  def delimiter_of(node)
+    byte_slice(node.sourcepos[:start_line], node.sourcepos[:start_column], 1)
   end
 
   # No WhatsApp, marcador grudado em letra ou número (2*3*4) não formata. O CommonMarker

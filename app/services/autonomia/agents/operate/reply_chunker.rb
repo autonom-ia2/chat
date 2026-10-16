@@ -69,7 +69,6 @@ module Autonomia
               .gsub(/[ \t]+\n/, "\n")
               .gsub(/\n{3,}/, "\n\n")
               .gsub(/[ \t]{2,}/, ' ')
-              .gsub(/\*\*(.+?)\*\*/m, '*\\1*')          # **negrito** -> *negrito* (WhatsApp)
               .strip
         end
 

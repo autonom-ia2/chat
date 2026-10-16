@@ -119,24 +119,73 @@ const tipoDaLinha = itens => {
   return { tipo: 'paragrafo', pular: 0 };
 };
 
-// 4º passo: os marcadores dentro da linha.
-const podeAbrir = (itens, i, ate) =>
-  i + 1 < ate && !ehEspaco(itens[i + 1]) && !ehLetraOuNumero(itens[i - 1]);
+// 4º passo: os marcadores dentro da linha. `largura` é 1 (*x*); no modo tolerante, para
+// texto de robô e IA, também 2 (**x**, ~~x~~) e 3 (***x***), como o envio lê
+// (WhatsAppRenderer, automatico: true).
+const repete = (itens, i, marca, largura) =>
+  Array.from({ length: largura }).every((_, k) => itens[i + k] === marca);
 
-const ondeFecha = (itens, i, ate) => {
-  for (let j = i + 2; j < ate; j += 1) {
-    if (
-      itens[j] === itens[i] &&
-      !ehEspaco(itens[j - 1]) &&
-      !ehLetraOuNumero(itens[j + 1])
+const podeAbrir = (itens, i, ate, largura) =>
+  i + largura < ate &&
+  !ehEspaco(itens[i + largura]) &&
+  !ehLetraOuNumero(itens[i - 1]);
+
+const ondeFecha = (itens, i, ate, largura, tolerante) => {
+  for (let j = i + largura + 1; j + largura <= ate; j += 1) {
+    // Tolerante: numa sequência maior (***), fecha no fim dela (**a *b***).
+    let fim = j;
+    while (
+      tolerante &&
+      fim + largura < ate &&
+      itens[fim + largura] === itens[i]
     ) {
-      return j;
+      fim += 1;
+    }
+    if (
+      repete(itens, j, itens[i], largura) &&
+      !ehEspaco(itens[j - 1]) &&
+      !ehLetraOuNumero(itens[fim + largura])
+    ) {
+      return fim;
     }
   }
   return -1;
 };
 
-const lerTrecho = (itens, de, ate) => {
+const LARGURAS_TOLERANTES = { '*': 3, '~': 2 };
+
+const tamanhoDaSequencia = (itens, i) => {
+  let tamanho = 1;
+  while (itens[i + tamanho] === itens[i]) tamanho += 1;
+  return tamanho;
+};
+
+// As larguras a tentar, da maior para a menor.
+const largurasEm = (itens, i, tolerante) => {
+  const maxima = tolerante ? LARGURAS_TOLERANTES[itens[i]] || 1 : 1;
+  const maior = Math.min(maxima, tamanhoDaSequencia(itens, i));
+  return Array.from({ length: maior }, (_, k) => maior - k);
+};
+
+// Onde a marca em `i` abre e fecha: { largura, fim }, ou null quando é texto.
+const marcaEm = (itens, i, ate, tolerante) =>
+  largurasEm(itens, i, tolerante).reduce((achada, largura) => {
+    if (achada || !podeAbrir(itens, i, ate, largura)) return achada;
+    const fim = ondeFecha(itens, i, ate, largura, tolerante);
+    return fim < 0 ? null : { largura, fim };
+  }, null);
+
+// Negrito dentro de negrito vira um negrito só, como no envio do robô.
+const semNegrito = nos =>
+  nos.flatMap(no => {
+    if (no.tipo === 'negrito') return semNegrito(no.filhos);
+    return no.filhos ? [{ ...no, filhos: semNegrito(no.filhos) }] : [no];
+  });
+
+const filhosDe = (tipo, filhos, tolerante) =>
+  tolerante && tipo === 'negrito' ? semNegrito(filhos) : filhos;
+
+const lerTrecho = (itens, de, ate, tolerante) => {
   const nos = [];
   let texto = '';
   const soltarTexto = () => {
@@ -147,16 +196,16 @@ const lerTrecho = (itens, de, ate) => {
   while (i < ate) {
     const item = itens[i];
     const tipo = ehTexto(item) ? MARCAS[item] : null;
-    const fim =
-      tipo && podeAbrir(itens, i, ate) ? ondeFecha(itens, i, ate) : -1;
+    const marca = tipo ? marcaEm(itens, i, ate, tolerante) : null;
     if (!ehTexto(item)) {
       soltarTexto();
       nos.push(item);
       i += 1;
-    } else if (fim < 0) {
+    } else if (!marca) {
       texto += item;
       i += 1;
     } else {
+      const { largura, fim } = marca;
       soltarTexto();
       nos.push(
         tipo === 'codigo'
@@ -167,9 +216,16 @@ const lerTrecho = (itens, de, ate) => {
                 .map(textoDoItem)
                 .join(''),
             }
-          : { tipo, filhos: lerTrecho(itens, i + 1, fim) }
+          : {
+              tipo,
+              filhos: filhosDe(
+                tipo,
+                lerTrecho(itens, i + largura, fim, tolerante),
+                tolerante
+              ),
+            }
       );
-      i = fim + 1;
+      i = fim + largura;
     }
   }
   soltarTexto();
@@ -179,11 +235,12 @@ const lerTrecho = (itens, de, ate) => {
 const MESMO_BLOCO = { marcador: 'lista', numerada: 'lista' };
 
 // Lê o texto e devolve os blocos: paragrafo/citacao (linhas) e lista (itens).
-export const lerFormatacao = texto => {
+// `tolerante`: texto de robô/IA, que mistura o markdown (**x**, ~~x~~) com o WhatsApp.
+export const lerFormatacao = (texto, { tolerante = false } = {}) => {
   const blocos = [];
   separarLinhas(separarMono(texto || '')).forEach(itens => {
     const linha = tipoDaLinha(itens);
-    const nos = lerTrecho(itens, linha.pular, itens.length);
+    const nos = lerTrecho(itens, linha.pular, itens.length, tolerante);
     const grupo = MESMO_BLOCO[linha.tipo] || linha.tipo;
     const ultimo = blocos[blocos.length - 1];
     const bloco = ultimo?.tipo === grupo ? ultimo : { tipo: grupo, linhas: [] };
@@ -245,5 +302,5 @@ const htmlDoBloco = bloco => {
 };
 
 // HTML do texto com a formatação do WhatsApp. Texto escapado; links validados.
-export const formatarWhatsapp = texto =>
-  lerFormatacao(texto).map(htmlDoBloco).join('');
+export const formatarWhatsapp = (texto, opcoes) =>
+  lerFormatacao(texto, opcoes).map(htmlDoBloco).join('');

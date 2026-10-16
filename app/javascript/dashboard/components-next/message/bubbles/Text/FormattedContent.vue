@@ -4,7 +4,6 @@ import { useMessageContext } from '../../provider.js';
 
 import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { MESSAGE_VARIANTS } from '../../constants';
-import { formatarWhatsapp } from 'dashboard/components-next/conversa-canal/formatacaoWhatsapp';
 import { useFormatoDoWhatsapp } from 'dashboard/components-next/conversa-canal/useFormatoDoWhatsapp';
 
 const props = defineProps({
@@ -15,7 +14,7 @@ const props = defineProps({
 });
 
 const { variant } = useMessageContext();
-// Pele do WhatsApp (#1732): texto escrito no app sai com a formatação do app.
+// Pele do WhatsApp (#1732): texto no formato do WhatsApp sai com a formatação do app.
 const formatoDoWhatsapp = useFormatoDoWhatsapp();
 
 const formattedContent = computed(() => {
@@ -23,7 +22,7 @@ const formattedContent = computed(() => {
     return props.content;
   }
 
-  if (formatoDoWhatsapp.value) return formatarWhatsapp(props.content);
+  if (formatoDoWhatsapp.value) return formatoDoWhatsapp.value(props.content);
 
   return new MessageFormatter(props.content).formattedMessage;
 });

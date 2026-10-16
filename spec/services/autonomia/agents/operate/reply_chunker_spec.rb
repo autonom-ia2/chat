@@ -3,6 +3,13 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::Operate::ReplyChunker do
   # Defeito real de produção: o agente pediu 6 documentos para cotação de seguro e o quebrador
   # partiu a lista entre o 4º e o 5º item — o cliente recebeu a lista picotada em 4 mensagens.
+  # #1732: o texto do LLM é gravado como veio; a conversão para o WhatsApp é do envio
+  # (WhatsAppRenderer no dialeto do robô: *x* e **x** saem negrito).
+  it 'grava **negrito** e *negrito* como o modelo escreveu' do
+    chunks = described_class.call('Seu **pedido** saiu e o *prazo* é amanhã.')
+    expect(chunks.map { |chunk| chunk['text'] }.join(' ')).to eq('Seu **pedido** saiu e o *prazo* é amanhã.')
+  end
+
   describe 'listas nunca são fragmentadas' do
     let(:items) do
       [

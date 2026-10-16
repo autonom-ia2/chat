@@ -218,6 +218,57 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
       end
     end
 
+    context 'when channel is Channel::Whatsapp and the message is automatic (robot, AI, automation)' do
+      def render_automatic(content)
+        described_class.new(content, 'Channel::Whatsapp', nil, automatico: true).render
+      end
+
+      it 'reads *x* as bold, like WhatsApp' do
+        expect(render_automatic('*negrito*')).to eq('*negrito*')
+      end
+
+      it 'reads **x** as bold too' do
+        expect(render_automatic('**negrito**')).to eq('*negrito*')
+      end
+
+      it 'keeps _x_ as italic' do
+        expect(render_automatic('_itálico_')).to eq('_itálico_')
+      end
+
+      it 'reads ~x~ and ~~x~~ as strikethrough' do
+        expect(render_automatic('~a~ e ~~b~~')).to eq('~a~ e ~b~')
+      end
+
+      it 'keeps mono and inline code' do
+        expect(render_automatic('```mono``` e `cod`')).to eq('```mono``` e `cod`')
+      end
+
+      it 'merges nested bold into one' do
+        expect(render_automatic('***tudo***')).to eq('*tudo*')
+      end
+
+      it 'combines bold and italic' do
+        expect(render_automatic('*Olá*, _tudo bem_? **Seu pedido**: ~cancelado~')).to eq('*Olá*, _tudo bem_? *Seu pedido*: ~cancelado~')
+      end
+
+      it 'keeps markers glued to letters or digits as typed' do
+        expect(render_automatic('2*3*4 e a**b**c e nome_do_arquivo')).to eq('2*3*4 e a**b**c e nome_do_arquivo')
+      end
+
+      it 'keeps lists' do
+        expect(render_automatic("Itens:\n- *um*\n- dois")).to eq("Itens:\n- *um*\n- dois")
+      end
+
+      it 'still reads *x* as italic for a message typed in the editor' do
+        expect(described_class.new('*itálico*', 'Channel::Whatsapp').render).to eq('_itálico_')
+      end
+
+      it 'does not change other channels' do
+        result = described_class.new('*x*', 'Channel::Instagram', nil, automatico: true).render
+        expect(result).to eq(described_class.new('*x*', 'Channel::Instagram').render)
+      end
+    end
+
     context 'when channel is Channel::Instagram' do
       let(:channel_type) { 'Channel::Instagram' }
 

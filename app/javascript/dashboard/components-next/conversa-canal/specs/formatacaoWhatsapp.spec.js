@@ -1,5 +1,5 @@
 import { formatarWhatsapp, lerFormatacao } from '../formatacaoWhatsapp';
-import { escritoNoWhatsapp } from '../useFormatoDoWhatsapp';
+import { FORMATOS, formatoDoTexto } from '../useFormatoDoWhatsapp';
 import { MESSAGE_TYPES } from '../../message/constants';
 
 const p = html => `<p>${html}</p>`;
@@ -126,15 +126,48 @@ describe('formatarWhatsapp (#1732)', () => {
   });
 });
 
-describe('escritoNoWhatsapp (#1732)', () => {
-  const { INCOMING, OUTGOING, ACTIVITY, TEMPLATE } = MESSAGE_TYPES;
+describe('formatarWhatsapp tolerante, para robô e IA (#1732)', () => {
+  const tolerante = texto => formatarWhatsapp(texto, { tolerante: true });
 
   it.each([
-    ['recebida do cliente', { messageType: INCOMING }, true],
+    ['**negrito**', '<strong>negrito</strong>'],
+    ['*negrito*', '<strong>negrito</strong>'],
+    ['~~riscado~~', '<s>riscado</s>'],
+    ['~riscado~', '<s>riscado</s>'],
+    ['_itálico_', '<em>itálico</em>'],
+    ['**_os dois_**', '<strong><em>os dois</em></strong>'],
+    [
+      'Seu **pedido**: *ok*',
+      'Seu <strong>pedido</strong>: <strong>ok</strong>',
+    ],
+    ['2*3*4', '2*3*4'],
+    ['***tudo***', '<strong>tudo</strong>'],
+    ['**Pedido *urgente***', '<strong>Pedido urgente</strong>'],
+    ['*a _b_ c*', '<strong>a <em>b</em> c</strong>'],
+    // Grudado em letra: o envio manda como foi escrito, e a tela também.
+    ['a**b**c', 'a**b**c'],
+    // ** com espaço depois: o envio manda cru; o leitor abre no 2º asterisco (borda,
+    // a conferir no aparelho).
+    ['** solto**', '<strong>* solto*</strong>'],
+  ])('%s', (entrada, html) => {
+    expect(tolerante(entrada)).toBe(p(html));
+  });
+
+  it('sem a opção, **x** fica com os asteriscos (texto do app)', () => {
+    expect(formatarWhatsapp('**x**')).toBe(p('<strong>*x</strong>*'));
+  });
+});
+
+describe('formatoDoTexto (#1732)', () => {
+  const { INCOMING, OUTGOING, ACTIVITY, TEMPLATE } = MESSAGE_TYPES;
+  const { APP, ROBO } = FORMATOS;
+
+  it.each([
+    ['recebida do cliente', { messageType: INCOMING }, APP],
     [
       'eco do celular',
       { messageType: OUTGOING, contentAttributes: { externalEcho: true } },
-      true,
+      APP,
     ],
     [
       'modelo da Meta',
@@ -142,14 +175,74 @@ describe('escritoNoWhatsapp (#1732)', () => {
         messageType: OUTGOING,
         additionalAttributes: { templateParams: { name: 'boas_vindas' } },
       },
-      true,
+      APP,
     ],
-    ['enviada pelo painel (markdown)', { messageType: OUTGOING }, false],
-    ['nota privada', { messageType: OUTGOING, privada: true }, false],
-    ['nota privada recebida', { messageType: INCOMING, privada: true }, false],
-    ['atividade', { messageType: ACTIVITY }, false],
-    ['template do Chatwoot', { messageType: TEMPLATE }, false],
+    [
+      'robô (sender.type)',
+      { messageType: OUTGOING, tipoDoRemetente: 'agent_bot' },
+      ROBO,
+    ],
+    [
+      'robô (sender_type cru)',
+      { messageType: OUTGOING, tipoDoRemetente: 'AgentBot' },
+      ROBO,
+    ],
+    [
+      'assistente',
+      { messageType: OUTGOING, tipoDoRemetente: 'captain_assistant' },
+      ROBO,
+    ],
+    [
+      'follow-up em nome de pessoa',
+      {
+        messageType: OUTGOING,
+        tipoDoRemetente: 'user',
+        contentAttributes: { crmFollowUpId: 7 },
+      },
+      ROBO,
+    ],
+    [
+      'regra de automação',
+      { messageType: OUTGOING, contentAttributes: { automationRuleId: 1 } },
+      ROBO,
+    ],
+    [
+      'convite do Agendamento',
+      { messageType: OUTGOING, contentAttributes: { crmBookingInviteId: 2 } },
+      ROBO,
+    ],
+    [
+      'aviso do Agendamento',
+      { messageType: OUTGOING, contentAttributes: { crmBookingNotice: 'x' } },
+      ROBO,
+    ],
+    [
+      'campanha',
+      { messageType: OUTGOING, additionalAttributes: { campaignId: 3 } },
+      ROBO,
+    ],
+    [
+      'campanha da API do WhatsApp',
+      {
+        messageType: OUTGOING,
+        additionalAttributes: { whatsappApiCampaignId: 4 },
+      },
+      ROBO,
+    ],
+    [
+      'pessoa no painel (markdown)',
+      { messageType: OUTGOING, tipoDoRemetente: 'user' },
+      null,
+    ],
+    [
+      'nota privada do robô',
+      { messageType: OUTGOING, privada: true, tipoDoRemetente: 'agent_bot' },
+      null,
+    ],
+    ['nota privada recebida', { messageType: INCOMING, privada: true }, null],
+    ['atividade', { messageType: ACTIVITY }, null],
+    ['template do Chatwoot', { messageType: TEMPLATE }, null],
   ])('%s', (_, mensagem, esperado) => {
-    expect(escritoNoWhatsapp(mensagem)).toBe(esperado);
+    expect(formatoDoTexto(mensagem)).toBe(esperado);
   });
 });
