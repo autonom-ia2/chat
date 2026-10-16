@@ -1,0 +1,116 @@
+{
+  "_leia": "Espelho da configuração das contas piloto 16 (Hub2You) e 18 (Placement), lida em 16/10/2026 (export só de configuração). Igual à produção: as etapas e os critérios de cada funil (texto exato), a IA do funil (ligada, mover sozinho, retorno, nota, extração de campos), a regra de Atribuição (rodízio na caixa, r2_direct, só para quem está online, gatilho), a caixa com card criado ao chegar e os campos personalizados. Montado por cima para caber nos cenários (não existe na produção): os nomes de corretora dos funis, a ligação de 2 ou 3 funis na mesma caixa (na produção cada caixa tem 1 funil), a IA de assunto em Automática (na produção está desligada; fica assim depois do SQL do #1676), a regra de Atribuição no funil de Sinistro (o Suporte da produção não tem), quem cuida de cada funil (a produção não usa acesso por funil) e a caixa de e-mail ligada aos mesmos funis.",
+  "funis": {
+    "vendas": {
+      "chave": "vendas", "nome": "Vendas: Auto e Residencial", "venda": true,
+      "descricao": "Funil Seguro Auto e Residencial",
+      "_espelho": "pipelines 3 (Viagem, conta 18) e 6 (Email Comercial, conta 16): etapas, critérios, IA e Atribuição",
+      "ia": { "enabled": true, "auto_move_enabled": true, "callback_enabled": true, "callback_mode": "both", "score_enabled": true,
+              "attribute_extraction_enabled": true, "stale_hours": 168,
+              "auto_followup": { "mode": "auto_send", "enabled": true, "max_touches": 1, "intervals_hours": [6], "allowed_days": [0, 1, 2, 3, 4, 5, 6], "quiet_hours": { "tz": "contact", "start": 8, "end": 20 }, "tone_instructions": "" },
+              "handoff": { "enabled": true, "mode": "round_robin", "pool_type": "inbox", "pool_id": null, "handoff_mode": "r2_direct", "prefer_online": true,
+                           "escalation_action": "renotify", "escalation_user_id": null, "pickup_threshold_seconds": 900,
+                           "trigger": "Quando o agente informar que irá transferir para a equipe ou quando o usuário pedir para falar com um humano ou alguém da equipe." } },
+      "etapas": [
+        { "chave": "novo", "nome": "Novo", "criterio": "Primeiro contato ou lead recém-criado. Cliente demonstrou interesse inicial, fez primeira pergunta ou respondeu pela primeira vez. Ainda não há diagnóstico de necessidade nem proposta enviada." },
+        { "chave": "atendimento", "nome": "Em atendimento", "criterio": "Conversa ativa com qualificação em andamento: agente ou IA está entendendo necessidade, coletando dados, tirando dúvidas ou agendando. Ainda não houve envio formal de proposta, orçamento ou condições comerciais." },
+        { "chave": "proposta", "nome": "Proposta", "criterio": "Proposta, orçamento, plano ou condições comerciais já foram apresentados. Cliente está avaliando, negociando valores, prazos ou comparando opções. Ainda não confirmou fechamento nem recusa definitiva." },
+        { "chave": "fechamento", "nome": "Fechamento", "criterio": "Cliente confirmou intenção de compra, aceitou proposta, solicitou link de pagamento, assinatura ou próximo passo operacional de contratação. Conversa indica conversão iminente ou concluída." },
+        { "chave": "perdido", "nome": "Perdido", "criterio": "Lead encerrado sem conversão: cliente recusou explicitamente, pediu para não ser contatado, informou que fechou com concorrente, número inválido ou sem resposta após tentativas definidas pelo funil, ou conversa foi encerrada pelo agente como perdida. Não usar para leads ainda em negociação ativa ou que apenas disseram \"vou pensar\"." }
+      ]
+    },
+    "vendas_sem_regra": {
+      "chave": "vendas", "nome": "Vendas: Auto e Residencial", "venda": true,
+      "descricao": "Funil Seguro Auto e Residencial",
+      "_espelho": "pipeline 4 (RC Médico, conta 18): IA ligada e SEM regra de Atribuição",
+      "ia": { "enabled": true, "auto_move_enabled": true, "callback_enabled": true, "callback_mode": "both", "score_enabled": true,
+              "attribute_extraction_enabled": false, "stale_hours": 480,
+              "auto_followup": { "enabled": true, "max_touches": 1, "intervals_hours": [20], "quiet_hours": { "tz": "contact", "start": 8, "end": 20 }, "tone_instructions": "", "trigger_idle_hours": 6 } },
+      "etapas": [
+        { "chave": "novo", "nome": "Novo", "criterio": "Primeiro contato ou lead recém-criado. Cliente demonstrou interesse inicial, fez primeira pergunta ou respondeu pela primeira vez. Ainda não há diagnóstico de necessidade nem proposta enviada." },
+        { "chave": "atendimento", "nome": "Em atendimento", "criterio": "Conversa ativa com qualificação em andamento: agente ou IA está entendendo necessidade, coletando dados, tirando dúvidas ou agendando. Ainda não houve envio formal de proposta, orçamento ou condições comerciais." },
+        { "chave": "proposta", "nome": "Proposta", "criterio": "Proposta, orçamento, plano ou condições comerciais já foram apresentados. Cliente está avaliando, negociando valores, prazos ou comparando opções. Ainda não confirmou fechamento nem recusa definitiva." },
+        { "chave": "fechamento", "nome": "Fechamento", "criterio": "Cliente confirmou intenção de compra, aceitou proposta, solicitou link de pagamento, assinatura ou próximo passo operacional de contratação. Conversa indica conversão iminente ou concluída." },
+        { "chave": "perdido", "nome": "Perdido", "criterio": "Lead encerrado sem conversão: cliente recusou explicitamente, pediu para não ser contatado, informou que fechou com concorrente, número inválido ou sem resposta após tentativas definidas pelo funil, ou conversa foi encerrada pelo agente como perdida. Não usar para leads ainda em negociação ativa ou que apenas disseram \"vou pensar\"." }
+      ]
+    },
+    "sinistro": {
+      "chave": "sinistro", "nome": "Pós-venda / Sinistro", "venda": false,
+      "descricao": "Funil inicial do CRM Kanban",
+      "quando_usar": "já é cliente e precisa de ajuda",
+      "_espelho": "pipeline 29 (Suporte, conta 16, modelo ATENDIMENTO): etapas, critérios, quando usar e IA. Regra de Atribuição montada por cima (a do Vendas).",
+      "ia": { "enabled": true, "auto_move_enabled": true, "callback_enabled": true, "callback_mode": "reminder", "score_enabled": true,
+              "attribute_extraction_enabled": true, "stale_hours": 168,
+              "service_reminders": { "payment": false, "progress": true, "resolved_check": true, "progress_after_hours": 48, "resolved_check_after_hours": 168 },
+              "handoff": { "enabled": true, "mode": "round_robin", "pool_type": "inbox", "pool_id": null, "handoff_mode": "r2_direct", "prefer_online": true,
+                           "escalation_action": "renotify", "escalation_user_id": null, "pickup_threshold_seconds": 900,
+                           "trigger": "Quando o agente informar que irá transferir para a equipe ou quando o usuário pedir para falar com um humano ou alguém da equipe." } },
+      "etapas": [
+        { "chave": "aberto", "nome": "Novo pedido", "criterio": "O cliente acabou de pedir ajuda: contou um problema ou fez uma pergunta. Ninguém começou a resolver ainda." },
+        { "chave": "analise", "nome": "Em atendimento", "criterio": "Alguém da equipe já está cuidando do pedido: entendendo o problema, pedindo dados ou resolvendo. Ainda não está resolvido." },
+        { "chave": "aguardando", "nome": "Esperando o cliente", "criterio": "Pedimos algo ao cliente, como uma foto, um dado ou uma resposta, e estamos esperando ele mandar." },
+        { "chave": "resolvido", "nome": "Resolvido", "criterio": "O pedido do cliente foi resolvido: ele confirmou que deu certo ou não precisa de mais nada." }
+      ]
+    },
+    "renovacao": {
+      "chave": "renovacao", "nome": "Renovação", "venda": true,
+      "descricao": "Funil Renovação de apólices",
+      "_espelho": "pipeline 7 (Funil Comercial, conta 16): etapas, critérios, IA e Atribuição (direct na caixa)",
+      "ia": { "enabled": true, "auto_move_enabled": true, "callback_enabled": true, "callback_mode": "reminder", "score_enabled": true,
+              "attribute_extraction_enabled": true, "stale_hours": 168,
+              "handoff": { "enabled": true, "mode": "direct", "pool_type": "inbox", "pool_id": null, "handoff_mode": "r2_direct", "prefer_online": true,
+                           "escalation_action": "renotify", "escalation_user_id": null, "pickup_threshold_seconds": 900,
+                           "trigger": "Quando o agente disse que irá encaminhar para o time comercial para continuar o atendimento." } },
+      "etapas": [
+        { "chave": "novo", "nome": "Novo", "criterio": "Primeiro contato ou lead recém-criado. Cliente demonstrou interesse inicial, fez primeira pergunta ou respondeu pela primeira vez. Ainda não há diagnóstico de necessidade nem proposta enviada." },
+        { "chave": "atendimento", "nome": "Em atendimento", "criterio": "Conversa ativa com qualificação em andamento: agente ou IA está entendendo necessidade, coletando dados, tirando dúvidas ou agendando. Ainda não houve envio formal de proposta, orçamento ou condições comerciais." },
+        { "chave": "proposta", "nome": "Proposta", "criterio": "Proposta, orçamento, plano ou condições comerciais já foram apresentados. Cliente está avaliando, negociando valores, prazos ou comparando opções. Ainda não confirmou fechamento nem recusa definitiva." },
+        { "chave": "fechamento", "nome": "Fechamento", "criterio": "Cliente confirmou intenção de compra, aceitou proposta, solicitou link de pagamento, assinatura ou próximo passo operacional de contratação. Conversa indica conversão iminente ou concluída." },
+        { "chave": "perdido", "nome": "Perdido", "criterio": "Lead encerrado sem conversão: cliente recusou explicitamente, pediu para não ser contatado, informou que fechou com concorrente, número inválido ou sem resposta após tentativas definidas pelo funil, ou conversa foi encerrada pelo agente como perdida. Não usar para leads ainda em negociação ativa ou que apenas disseram \"vou pensar\"." }
+      ]
+    }
+  },
+  "_atributos": "Os campos da conta 16 (os de WhatsApp interno ficam de fora: o sistema grava, não a IA).",
+  "atributos": [
+    { "chave": "cpf", "nome": "CPF", "tipo": "text", "modelo": "contact_attribute", "descricao": "Quando o usuário informar o CPF na conversa realizando a cotação. Grave apenas os numeros. ex: 12345678900" },
+    { "chave": "cidade", "nome": "Cidade", "tipo": "text", "modelo": "contact_attribute" },
+    { "chave": "uf", "nome": "UF", "tipo": "text", "modelo": "contact_attribute" },
+    { "chave": "cep", "nome": "CEP", "tipo": "text", "modelo": "contact_attribute" },
+    { "chave": "cnpj", "nome": "CNPJ", "tipo": "text", "modelo": "card_attribute", "descricao": "Capturar o CNPJ da Empresa no formato: 00.000.000/000-00" }
+  ],
+  "modelos": {
+    "vendas_1funil": {
+      "_espelho": "caixa WhatsApp com 1 funil e card ao chegar (como as caixas WhatsApp das contas 16 e 18)",
+      "flags": ["crm_avaliar_toda_mensagem"],
+      "caixa": { "nome": "WhatsApp 1", "ia_de_assunto": "auto", "cria_card": true, "funil_padrao": "vendas", "funis": ["vendas"] },
+      "atendentes": [{ "chave": "ana", "nome": "Ana Ribeiro" }, { "chave": "bruno", "nome": "Bruno Tavares" }],
+      "funis": ["vendas"]
+    },
+    "vendas_sem_regra": {
+      "flags": ["crm_avaliar_toda_mensagem"],
+      "caixa": { "nome": "WhatsApp 2", "ia_de_assunto": "auto", "cria_card": true, "funil_padrao": "vendas", "funis": ["vendas"] },
+      "atendentes": [{ "chave": "ana", "nome": "Ana Ribeiro" }, { "chave": "bruno", "nome": "Bruno Tavares" }],
+      "funis": ["vendas_sem_regra"]
+    },
+    "vendas_e_sinistro": {
+      "flags": ["crm_avaliar_toda_mensagem"],
+      "caixa": { "nome": "WhatsApp 1", "ia_de_assunto": "auto", "cria_card": true, "funil_padrao": "vendas", "funis": ["vendas", "sinistro"] },
+      "atendentes": [{ "chave": "ana", "nome": "Ana Ribeiro", "funis": ["vendas"] }, { "chave": "bruno", "nome": "Bruno Tavares", "funis": ["sinistro"] }],
+      "funis": ["vendas", "sinistro"]
+    },
+    "vendas_e_sinistro_email": {
+      "_espelho": "a caixa de e-mail da conta 16 não cria card ao chegar",
+      "flags": ["crm_avaliar_toda_mensagem", "crm_outro_canal"],
+      "caixa": { "nome": "WhatsApp 1", "ia_de_assunto": "auto", "cria_card": true, "funil_padrao": "vendas", "funis": ["vendas", "sinistro"] },
+      "outras_caixas": [{ "chave": "email", "nome": "E-mail 1", "tipo": "email", "cria_card": false }],
+      "atendentes": [{ "chave": "ana", "nome": "Ana Ribeiro", "funis": ["vendas"] }, { "chave": "bruno", "nome": "Bruno Tavares", "funis": ["sinistro"] }],
+      "funis": ["vendas", "sinistro"]
+    },
+    "tres_funis": {
+      "flags": ["crm_avaliar_toda_mensagem"],
+      "caixa": { "nome": "WhatsApp 1", "ia_de_assunto": "auto", "cria_card": true, "funil_padrao": "vendas", "funis": ["vendas", "sinistro", "renovacao"] },
+      "atendentes": [{ "chave": "ana", "nome": "Ana Ribeiro", "funis": ["vendas", "renovacao"] }, { "chave": "bruno", "nome": "Bruno Tavares", "funis": ["sinistro"] }],
+      "funis": ["vendas", "sinistro", "renovacao"]
+    }
+  }
+}
