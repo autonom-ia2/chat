@@ -501,6 +501,8 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
+              put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
