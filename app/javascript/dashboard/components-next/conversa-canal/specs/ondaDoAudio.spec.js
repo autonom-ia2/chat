@@ -7,15 +7,31 @@ import {
 } from '../audio/ondaDoAudio';
 
 describe('onda do áudio (#1702)', () => {
-  it('uma barra por trecho, do silêncio ao pico, normalizada pelo maior', () => {
-    const amostras = Float32Array.from({ length: 360 }, (_, i) =>
-      i < 180 ? 0.1 : -0.5
+  it('uma barra por trecho, do ruído de fundo (chão) ao pico (teto)', () => {
+    const amostras = Float32Array.from({ length: BARRAS * 100 }, (_, i) =>
+      i < BARRAS * 50 ? 0.05 : -0.5
     );
     const barras = barrasDoAudio(amostras);
     expect(barras).toHaveLength(BARRAS);
-    expect(barras[0]).toBe(Math.round((0.1 / 0.5) * (NIVEIS - 1)));
+    expect(barras[0]).toBe(0);
     expect(barras[BARRAS - 1]).toBe(NIVEIS - 1);
     expect(Math.max(...barras)).toBeLessThan(NIVEIS);
+  });
+
+  it('suaviza com as vizinhas: um pico isolado não vira dente solto', () => {
+    const amostras = new Float32Array(BARRAS * 100).fill(0.05);
+    amostras.fill(0.8, 20 * 100, 21 * 100);
+    const barras = barrasDoAudio(amostras);
+    expect(barras[20]).toBe(NIVEIS - 1);
+    expect(barras[19]).toBeGreaterThan(0);
+    expect(barras[19]).toBeLessThan(NIVEIS - 1);
+    expect(barras[21]).toBe(barras[19]);
+    expect(barras[10]).toBe(0);
+  });
+
+  it('som constante fica no alto, não no chão', () => {
+    const barras = barrasDoAudio(new Float32Array(BARRAS * 100).fill(0.3));
+    expect(barras).toEqual(Array(BARRAS).fill(NIVEIS - 1));
   });
 
   it('silêncio ou áudio vazio: barras no chão, sem quebrar', () => {

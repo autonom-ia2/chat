@@ -1,18 +1,19 @@
 // A onda do áudio no balão do WhatsApp (#1702): o volume do próprio áudio em
-// poucas barras, como no app. Cada barra vira um nível de 0 a NIVEIS - 1, que a
-// tela desenha com alturas fixas (sem estilo inline).
+// barras finas, como no app. Cada barra vira um nível de 0 a NIVEIS - 1, que a
+// tela desenha com alturas fixas (sem estilo inline); o nível 0 ainda aparece,
+// para o silêncio não sumir.
 import Decoder from 'wavesurfer.js/dist/decoder.js';
 
-export const BARRAS = 36;
-export const NIVEIS = 8;
+export const BARRAS = 48;
+export const NIVEIS = 12;
 const TAXA = 8000;
+// O chão da onda é o ruído de fundo: o volume abaixo do qual fica 1 em cada 10
+// trechos. Nunca passa da metade do maior, senão som constante viraria chão.
+const FUNDO = 0.1;
 
-// Volume médio (RMS) de cada trecho, normalizado pelo maior: a fala tem altos e
-// baixos como no app (o pico deixaria quase todas as barras no teto).
-export const barrasDoAudio = (amostras, total = BARRAS) => {
-  if (!amostras?.length) return Array(total).fill(0);
+const volumes = (amostras, total) => {
   const tamanho = Math.max(1, Math.floor(amostras.length / total));
-  const picos = Array.from({ length: total }, (_, i) => {
+  return Array.from({ length: total }, (_, i) => {
     const inicio = i * tamanho;
     const fim = Math.min(amostras.length, inicio + tamanho);
     if (fim <= inicio) return 0;
@@ -20,10 +21,29 @@ export const barrasDoAudio = (amostras, total = BARRAS) => {
     for (let j = inicio; j < fim; j += 1) soma += amostras[j] * amostras[j];
     return Math.sqrt(soma / (fim - inicio));
   });
-  const maior = Math.max(...picos);
+};
+
+// Média com as vizinhas (peso 1-2-1): a onda fica com forma de fala, sem dente.
+const suavizar = valores =>
+  valores.map(
+    (valor, i) =>
+      ((valores[i - 1] ?? valor) + 2 * valor + (valores[i + 1] ?? valor)) / 4
+  );
+
+// Volume médio (RMS) de cada trecho, suavizado, do ruído de fundo ao maior: a
+// fala tem altos e baixos como no app, e o silêncio fica no chão.
+export const barrasDoAudio = (amostras, total = BARRAS) => {
+  if (!amostras?.length) return Array(total).fill(0);
+  const suaves = suavizar(volumes(amostras, total));
+  const ordenados = [...suaves].sort((x, y) => x - y);
+  const maior = ordenados[ordenados.length - 1];
   if (!maior) return Array(total).fill(0);
-  return picos.map(pico =>
-    Math.min(NIVEIS - 1, Math.round((pico / maior) * (NIVEIS - 1)))
+  const chao = Math.min(
+    ordenados[Math.floor(ordenados.length * FUNDO)],
+    maior / 2
+  );
+  return suaves.map(valor =>
+    Math.round(Math.max(0, (valor - chao) / (maior - chao)) * (NIVEIS - 1))
   );
 };
 

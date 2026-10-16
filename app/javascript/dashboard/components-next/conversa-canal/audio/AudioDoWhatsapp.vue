@@ -29,18 +29,26 @@ const { t } = useI18n();
 const { sender } = useMessageContext();
 const { uid } = getCurrentInstance();
 
+// Uma altura por nível, de 4 px (silêncio, ainda visível) a 26 px.
 const ALTURAS = [
-  'h-[3px]',
+  'h-[4px]',
   'h-[6px]',
-  'h-[9px]',
+  'h-[8px]',
+  'h-[10px]',
   'h-[12px]',
-  'h-[15px]',
-  'h-[19px]',
-  'h-[23px]',
-  'h-[27px]',
+  'h-[14px]',
+  'h-[16px]',
+  'h-[18px]',
+  'h-[20px]',
+  'h-[22px]',
+  'h-[24px]',
+  'h-[26px]',
 ];
 // Enquanto a onda não chega (ou se o arquivo não puder ser lido): barras neutras.
-const NEUTRAS = Array.from({ length: BARRAS }, (_, i) => [1, 3, 2, 4, 2][i % 5]);
+const NEUTRAS = Array.from(
+  { length: BARRAS },
+  (_, i) => [2, 4, 6, 3, 5, 2, 3][i % 7]
+);
 const VELOCIDADES = [1, 1.5, 2];
 const PULO = 5;
 
@@ -228,7 +236,7 @@ const nome = computed(() => sender.value?.name || '');
           :aria-valuemax="Math.round(duracao)"
           :aria-valuenow="Math.round(atual)"
           :aria-valuetext="tempo"
-          class="relative flex items-center justify-between h-[30px] cursor-pointer touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-[#00A884] rounded"
+          class="relative flex items-center justify-between gap-px h-[30px] cursor-pointer touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-[#00A884] rounded"
           data-onda-do-audio
           @pointerdown="comecarArraste"
           @pointermove="arrastar"
@@ -239,10 +247,10 @@ const nome = computed(() => sender.value?.name || '');
           <span
             v-for="(nivel, indice) in niveis"
             :key="indice"
-            class="relative flex items-center justify-center w-[3px] h-full"
+            class="relative flex items-center justify-center w-[2px] flex-shrink-0 h-full"
           >
             <span
-              class="w-[3px] rounded-full"
+              class="w-[2px] rounded-full"
               :class="[
                 ALTURAS[nivel],
                 indice <= barraAtual && (tocando || atual > 0)
