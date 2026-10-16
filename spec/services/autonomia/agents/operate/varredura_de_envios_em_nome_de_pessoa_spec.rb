@@ -31,6 +31,49 @@ RSpec.describe VarreduraDeEnviosEmNomeDePessoa do
     expect(described_class::REVISADOS.keys - described_class.envios.map(&:id)).to be_empty
   end
 
+  it 'o método revisado tem o número de envios para o qual foi revisado (um envio novo nele pede revisão de novo)' do
+    expect(described_class.revisados_com_envio_a_mais(described_class::REVISADOS)).to be_empty
+  end
+
+  it 'conta como envio a mais um segundo envio no método revisado' do
+    revisados = { 'app/services/macros/execution_service.rb#Macros::ExecutionService#send_message' => 'macro' }
+    allow(described_class).to receive(:envios).and_wrap_original do |original|
+      lista = original.call
+      lista + [lista.find { |envio| revisados.key?(envio.id) }]
+    end
+
+    expect(described_class.revisados_com_envio_a_mais(revisados).sole).to include('2 envios, revisado para 1')
+  end
+
+  # LIMITE CONHECIDO: o remetente atribuído DEPOIS da criação (`m = conversa.messages.new(content: 'oi');
+  # m.sender = user; m.save!`) não aparece na chamada; a criação sem `sender:` não é envio com remetente aqui. Quem
+  # escrever assim precisa da marca do mesmo jeito; a revisão humana do PR é a rede para esse caso.
+  it 'limite: remetente atribuído depois do new não é visto (documentado)' do
+    envio = envios_do(<<~RUBY)
+      class Lembrete
+        def enviar(user, conversa)
+          mensagem = conversa.messages.new(content: 'oi', message_type: :outgoing)
+          mensagem.sender = user
+          mensagem.save!
+        end
+      end
+    RUBY
+
+    expect(envio).to be_empty
+  end
+
+  it 'content_attributes: nil conta como sem marca' do
+    envio = envios_do(<<~RUBY)
+      class Lembrete
+        def enviar(user, conversa)
+          conversa.messages.create!(sender: user, message_type: :outgoing, content_attributes: nil)
+        end
+      end
+    RUBY
+
+    expect(envio).to eq([[:com_remetente, false]])
+  end
+
   describe 'um follow-up novo em nome de pessoa' do
     it 'pelo builder, sem marca: reprova; com crm_follow_up_id em content_attributes: passa' do
       sem = envios_do(<<~RUBY)

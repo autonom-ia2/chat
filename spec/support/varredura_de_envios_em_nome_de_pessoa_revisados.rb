@@ -1,6 +1,6 @@
 # Os envios com remetente que NÃO precisam da marca de envio automático (#1669), cada um com o motivo, conferidos um a
 # um em 16/10/2026. Usado pela guarda varredura_de_envios_em_nome_de_pessoa_spec: um envio novo fora daqui e sem marca
-# reprova. "arquivo#Dono#método" => motivo.
+# reprova. "arquivo#Dono#método" => motivo (um envio no método) ou { motivo:, envios: N }.
 module VarreduraDeEnviosEmNomeDePessoa
   REVISADOS = {
     # Remetente é a própria pessoa, no painel ou numa ferramenta dela.
@@ -61,7 +61,7 @@ module VarreduraDeEnviosEmNomeDePessoa
     'app/services/message_templates/template/csat_survey.rb#MessageTemplates::Template::CsatSurvey#perform' =>
       'mensagem de sistema (template), sem remetente',
     'app/services/message_templates/template/email_collect.rb#MessageTemplates::Template::EmailCollect#perform' =>
-      'mensagem de sistema (template), sem remetente',
+      { motivo: 'duas mensagens de sistema (template), sem remetente', envios: 2 },
     'app/services/message_templates/template/greeting.rb#MessageTemplates::Template::Greeting#perform' =>
       'mensagem de sistema (template), sem remetente',
     'app/services/message_templates/template/out_of_office.rb#MessageTemplates::Template::OutOfOffice#perform' =>

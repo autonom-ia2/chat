@@ -68,7 +68,7 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   def item_do_historico(message, marca:, whatsapp: false)
     da_equipe = conteudo_da_equipe(message, marca, whatsapp)
     return { role: 'user', content: da_equipe } unless da_equipe.nil?
-    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(message.content.to_s) } if message.incoming?
+    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(message.content.to_s, marca) } if message.incoming?
 
     { role: 'assistant', content: message.content.to_s }
   end

@@ -24,7 +24,7 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
   end
 
   def pergunta(texto)
-    moldura.neutralizar(texto)
+    moldura.neutralizar(texto, marca)
   end
 
   def resposta(reply)

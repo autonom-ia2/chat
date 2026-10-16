@@ -43,7 +43,7 @@ module VarreduraDeEnviosEmNomeDePessoa
         seguir(valor, contexto) { |alvo| chaves_de_retorno(alvo, contexto) }
       end
     when Prism::LocalVariableReadNode then seguir(valor, contexto) { |alvo| chaves_do_valor(alvo, contexto) }
-    else []
+    else [] # inclusive `nil` (NilNode): sem marca
     end
   end
 
@@ -89,6 +89,19 @@ module VarreduraDeEnviosEmNomeDePessoa
       envios_em(arvore, arquivo).reject do |envio|
         revisados.key?(envio.id) || (envio.tipo == :com_remetente && marcado?(envio, arvore))
       end
+    end
+  end
+
+  # Quantos envios o método revisado pode ter: 1 (o motivo vale para aquele envio) ou o número declarado em
+  # `{ motivo:, envios: }`. Um envio a mais no mesmo método não herda o motivo: o método volta a ser revisado.
+  def envios_esperados(revisao)
+    revisao.is_a?(Hash) ? revisao.fetch(:envios) : 1
+  end
+
+  def revisados_com_envio_a_mais(revisados)
+    contagem = envios.map(&:id).tally
+    revisados.filter_map do |id, revisao|
+      "#{id}: #{contagem[id]} envios, revisado para #{envios_esperados(revisao)}" if contagem[id] != envios_esperados(revisao)
     end
   end
 end
