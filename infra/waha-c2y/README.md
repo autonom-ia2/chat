@@ -2,22 +2,8 @@
 
 Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
 
-## Neste diretório (versionado no chat2you)
-
-- `waha-2026.9.2-c2y-rich.patch`, `build-waha-c2y-rich.sh`, `dist-sha256.txt` e este README.
-- `autonomia-waha-c2y-rich_2026.9.2-c2y-rich-1.tar.sha256`: o sha256 do tarball da imagem. O tarball (2,27 GB) NÃO
-  entra no git; quem o tem confere com `shasum -a 256 -c` antes de `docker load`.
-- Base de produção (a mesma dos dois motores): `devlikeapro/waha-plus@sha256:ac5d6c131155df16e4a29c29efdbdf977788a0a4908dbe9d8edf4366202e9598`,
-  config digest `sha256:a6b5fc41fcfd1a8eec373663675a9fb2f247a677744fdb08876fd79a66c70641`.
-- Resultado do build (M2, 16/10/2026): imagem `autonomia-waha-c2y-rich:2026.9.2-c2y-rich-1`, linux/amd64, config digest
-  `sha256:da6d8e135c74d7f057f35002ca35123227a12cf658e0bad04d2cfd9b874b61f1`, 9 JS conferidos contra `dist-sha256.txt`.
-  Smoke de execução pendente (o daemon do M2 é aarch64): fica para o canário amd64. Detalhe em "Imagem construída".
-- O contrato com o chat2you (`waha_native` na saída, `waha_list_reply` na entrada, `autonomia.rich_native` na versão)
-  está em `docs/whatsapp-hibrido-resumo.md` (seção da fase 2) e `docs/audit/2026-10-16-1709-ricas-waha-fase2.md`.
-- O `listreply-real-baileys.js` citado abaixo ficou fora do repositório (roteiro de conferência local).
-
 - Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`
-- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `2deeeb0f7482d07c9a4cbbddac87f173a0a668bf7288a10c1ead22b923b8cb43`. Passa em `git apply --check` sobre a tag limpa.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `cf25028650d86ae7bcb8beb63caf4d9f112ab46b5aee18b302783f7418bdb52e`. Passa em `git apply --check` sobre a tag limpa.
 - `/api/server/version` ganha o campo `autonomia = {patch:'c2y-rich-1', rich_native:['options','location','contact'], list_reply:true}`.
 
 ## O que o conector faz
@@ -32,6 +18,8 @@ Este pacote é só código e build local. Não houve deploy, push nem contato co
 - o log traz só kind, status HTTP, id da mensagem no Chatwoot e sessão. O objeto de erro nunca é logado.
 
 **Entrada.** Quando a mensagem do WhatsApp é resposta a uma lista, `content_attributes.waha_list_reply = {row_id, title}`. A leitura usa `resolveProtoMessage` + `extractMessageContent` do Baileys, que cobrem mensagem temporária e visualização única em GOWS e NOWEB.
+
+Essa leitura roda em toda mensagem recebida, de todas as caixas, e por isso nunca lança erro. Ela fica dentro de um try/catch. Se algo falhar (`esm.b` não carregado, formato inesperado), sai um `warn` curto com a classe do erro, sem conteúdo nem telefone, e a mensagem segue para o Chatwoot sem `waha_list_reply`. Isso foi pedido na revisão final.
 
 ## Dois ajustes fora dos arquivos pedidos (necessários)
 
@@ -63,7 +51,7 @@ Atualizações: os arquivos da base e da imagem final agora são lidos com `dock
 ## Validação feita (no M2)
 
 - `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos arquivos tocados: 0.
-- Testes novos: 3 suítes, 52 testes, todos passando. Os casos de lista, localização e contato usam o chatId do conector, o reply_to, o id determinístico e o mapeamento. Há casos de 400, 422 e 501 caindo para texto uma vez, e de 500, 502 e timeout virando `UnrecoverableError` sem texto e sem mapeamento. Outro teste confere que o log não tem chave, header, telefone nem nome. A resposta de lista é testada em NOWEB e GOWS, nas versões temporária e de visualização única.
+- Testes novos: 3 suítes, 56 testes, todos passando. Os casos de lista, localização e contato usam o chatId do conector, o reply_to, o id determinístico e o mapeamento. Há casos de 400, 422 e 501 caindo para texto uma vez, e de 500, 502 e timeout virando `UnrecoverableError` sem texto e sem mapeamento. Outro teste confere que o log não tem chave, header, telefone nem nome. A resposta de lista é testada em NOWEB e GOWS, nas versões temporária e de visualização única. Quatro testes cobrem a exceção: o extrator lança, o Baileys não está carregado, um getter quebrado, e a chamada sem logger. Nos quatro a função devolve `null`, e o log não leva telefone nem conteúdo. Sem o try/catch, os quatro falham; isso foi conferido.
 - Suíte unit completa: 10 testes falham em 4 suítes, exatamente as mesmas da tag sem patch (ESM do Baileys no jest e ambiente). O patch não traz falha nova.
 - `listreply-real-baileys.js`: roda o `ListReply.js` do dist com o **Baileys real**. Os 8 casos passam.
 - Servidor local (`node dist/main`, NOWEB, sem sessão): `/api/server/version` devolveu o campo `autonomia`, e o log não tem a chave.
@@ -85,12 +73,12 @@ Atualizações: os arquivos da base e da imagem final agora são lidos com `dock
   ```
 
 - Imagem final: `autonomia-waha-c2y-rich:2026.9.2-c2y-rich-1`, linux/amd64, 46 camadas (28 da base e 18 de COPY).
-  - ID local (índice OCI): `sha256:e15eab23db27c9ce0c25ec4b41fcaba242d3ba3208d655bf438efdcdc40ecba8`;
-  - manifest amd64: `sha256:015452153784d3e5911cc28b39147ed5f9f3ee1f6b85eb653ce4ba455c6a35ae`;
-  - config digest: `sha256:da6d8e135c74d7f057f35002ca35123227a12cf658e0bad04d2cfd9b874b61f1`. É esse o image ID que aparece depois de um `docker load` num host com o store clássico.
-  - O índice também traz uma attestation de proveniência do buildx (`sha256:af2aa0ad…09aa`).
+  - ID local (índice OCI): `sha256:e69aa891582b70f8ce2484702ba551d871162b4e295fd92b76419a2e690c7221`;
+  - manifest amd64: `sha256:657d6e5c30f6df1a5a289e6cf6b5e0223b1a06dbbf8a9758b0b7c3d1279416a5`;
+  - config digest: `sha256:6831d87ea851e878e01ef2f58572bec5aca33209f64d8a11e7109bf36c40e97f`. É esse o image ID que aparece depois de um `docker load` num host com o store clássico.
+  - O índice também traz uma attestation de proveniência do buildx (`sha256:741d2724…b2d`).
 - Os 9 JS foram conferidos dentro da imagem com `docker create` + `docker cp` + sha256 local, e todos batem com a coluna "depois".
-- Tarball: `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-1.tar`, com 2269703168 bytes e sha256 `7fb73e8a90ce71c1e45e0e7f1b507b710f22ee74aebb27a3bd3c009a26a2a4b1`.
+- Tarball: `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-1.tar`, com 2269703168 bytes e sha256 `b89d2ec8ef1e5079947ffa3dbad024a233a10c99483cefe22492df2212f76261`.
 - O smoke de execução não rodou: o daemon do M2 é aarch64 e não há emulação amd64. Ele fica para o canário.
 
 ### Docker temporário no M2 (para remover depois)
@@ -106,6 +94,59 @@ Para remover, nesta ordem:
 3. apagar `~/opt/c2y-docker` (330 MB: binários, `docker-config` e o `env.sh`).
 
 `~/.docker` não foi criado. Para usar o docker: `. ~/opt/c2y-docker/env.sh`. O colima ignorou `COLIMA_HOME` e usou `~/.colima`.
+
+## ROLLBACK da imagem (só documentação; executar só com OK do Rodrigo)
+
+Estado lido em 16/10, só leitura, no manager `autonomia`:
+- o serviço `waha_waha-plus` é do stack `waha`, `replicated 1/1`;
+- a imagem atual é `devlikeapro/waha-plus@sha256:ac5d6c13…9598`;
+- não há healthcheck na imagem nem no serviço;
+- o update é `stop-first`, com `FailureAction=rollback` e `Monitor=5s`;
+- o rollback é `stop-first`, com `FailureAction=pause`.
+
+Como é uma réplica só com `stop-first`, a troca de imagem (para frente ou para trás) derruba o WAHA por alguns instantes. Repita o processo em cada motor que receber a imagem c2y.
+
+**Antes do deploy**, guarde o spec atual no manager:
+
+```sh
+docker service inspect waha_waha-plus > /tmp/waha_waha-plus_spec_$(date +%Y%m%d%H%M%S).json
+```
+
+O arquivo tem env, então ele fica só no host e não é impresso.
+
+**Comando de rollback**, no manager do Swarm de cada motor:
+
+```sh
+docker service update \
+  --image devlikeapro/waha-plus@sha256:ac5d6c131155df16e4a29c29efdbdf977788a0a4908dbe9d8edf4366202e9598 \
+  --with-registry-auth \
+  waha_waha-plus
+```
+
+- O digest é fixo e a imagem já está no nó, então não há pull. O `--with-registry-auth` só cobre o caso de a tarefa cair em outro nó.
+- Se a última mudança no serviço tiver sido justamente o deploy da c2y, `docker service rollback waha_waha-plus` volta ao spec anterior. O comando acima é preferível, porque não depende do histórico.
+- Portainer: se o stack `waha` é gerido pelo Portainer, volte também a linha `image:` do stack para o digest acima e salve sem "re-pull". Sem isso, o próximo "Update the stack" reinstala a imagem c2y.
+
+**Tempo estimado:** de 1 a 2 minutos até o container novo responder (parar a tarefa, até cerca de 10 s, mais a subida do WAHA, de 20 a 40 s), e de 1 a 3 minutos a mais até as sessões voltarem a `WORKING`.
+
+**Conferência de saúde depois:**
+
+```sh
+docker service ps waha_waha-plus --no-trunc --format '{{.Image}} {{.CurrentState}} {{.Error}}' | head -3
+# a primeira linha precisa mostrar o digest ac5d6c13… com "Running"
+
+CID=$(docker ps -q --filter label=com.docker.swarm.service.name=waha_waha-plus | head -1)
+docker exec "$CID" curl -fsS http://127.0.0.1:3000/ping
+# a chave fica dentro do container e nunca aparece no terminal
+docker exec "$CID" sh -c 'curl -fsS -H "X-Api-Key: $WAHA_API_KEY" http://127.0.0.1:3000/api/server/version'
+# precisa ter "version":"2026.9.2" e "tier":"PLUS", e NÃO pode ter o campo "autonomia"
+docker exec "$CID" sh -c 'curl -fsS -H "X-Api-Key: $WAHA_API_KEY" http://127.0.0.1:3000/api/sessions' \
+  | grep -o '"status":"[A-Z_]*"' | sort | uniq -c
+# todas as sessões em WORKING
+```
+
+- Se o `WAHA_API_KEY` do serviço estiver guardado como hash (`sha512:`), use a chave do cofre em vez dele.
+- Depois, mande uma mensagem de teste numa caixa de teste. Uma caixa de cliente real não serve para isso.
 
 ## O que NÃO foi validado
 

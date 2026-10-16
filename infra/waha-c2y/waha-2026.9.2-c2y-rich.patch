@@ -520,7 +520,7 @@ index b48d9328..e2121b67 100644
     * Push acks that arrived before the last part was mapped, best effort
     */
 diff --git a/src/apps/chatwoot/consumers/waha/base.ts b/src/apps/chatwoot/consumers/waha/base.ts
-index 0cf7fad8..b0f5e649 100644
+index 0cf7fad8..efe4e635 100644
 --- a/src/apps/chatwoot/consumers/waha/base.ts
 +++ b/src/apps/chatwoot/consumers/waha/base.ts
 @@ -41,6 +41,7 @@ import {
@@ -536,7 +536,7 @@ index 0cf7fad8..b0f5e649 100644
        },
      };
 +    // Autonom.ia c2y-rich-1: customer answered a list message
-+    const listReply = ExtractListReply((payload as any)._data);
++    const listReply = ExtractListReply((payload as any)._data, this.logger);
 +    if (listReply) {
 +      (body.content_attributes as any).waha_list_reply = listReply;
 +    }
@@ -571,10 +571,11 @@ index ea116adf..16afd3ca 100644
        // https://github.com/devlikeapro/waha/issues/1395
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
 new file mode 100644
-index 00000000..766cfd58
+index 00000000..33cc2657
 --- /dev/null
 +++ b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,158 @@
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
 +import { ExtractListReply } from '@waha/apps/chatwoot/messages/to/chatwoot/ListReply';
 +
 +/**
@@ -610,7 +611,8 @@ index 00000000..766cfd58
 +
 +describe('ExtractListReply', () => {
 +  it('NOWEB: plain list reply', () => {
-+    expect(ExtractListReply({ message: NOWEB_REPLY }, unwrap)).toEqual({
++    const data = { message: NOWEB_REPLY };
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
 +      row_id: 'auto_basico',
 +      title: 'Básico',
 +    });
@@ -618,7 +620,7 @@ index 00000000..766cfd58
 +
 +  it('NOWEB: ephemeral (disappearing messages)', () => {
 +    const data = { message: { ephemeralMessage: { message: NOWEB_REPLY } } };
-+    expect(ExtractListReply(data, unwrap)).toEqual({
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
 +      row_id: 'auto_basico',
 +      title: 'Básico',
 +    });
@@ -628,7 +630,7 @@ index 00000000..766cfd58
 +    const data = {
 +      message: { viewOnceMessageV2: { message: NOWEB_REPLY } },
 +    };
-+    expect(ExtractListReply(data, unwrap)?.row_id).toBe('auto_basico');
++    expect(ExtractListReply(data, undefined, unwrap)?.row_id).toBe('auto_basico');
 +  });
 +
 +  it('GOWS: Go field names are camel cased before reading', () => {
@@ -645,7 +647,7 @@ index 00000000..766cfd58
 +        },
 +      },
 +    };
-+    expect(ExtractListReply(data, unwrap)).toEqual({
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
 +      row_id: 'auto_basico',
 +      title: 'Básico',
 +    });
@@ -657,7 +659,7 @@ index 00000000..766cfd58
 +        listResponseMessage: { singleSelectReply: { selectedRowId: 'x' } },
 +      },
 +    };
-+    expect(ExtractListReply(data, unwrap)).toEqual({
++    expect(ExtractListReply(data, undefined, unwrap)).toEqual({
 +      row_id: 'x',
 +      title: null,
 +    });
@@ -671,16 +673,74 @@ index 00000000..766cfd58
 +    [{ message: { listResponseMessage: { title: 'sem row' } } }],
 +    [{ Message: { Conversation: 'oi' } }],
 +  ])('no list reply in %j', (data) => {
-+    expect(ExtractListReply(data, unwrap)).toBeNull();
++    expect(ExtractListReply(data, undefined, unwrap)).toBeNull();
++  });
++});
++
++describe('ExtractListReply never breaks the incoming message', () => {
++  const PHONE = '5511988887777';
++  const data = {
++    message: {
++      ephemeralMessage: { message: NOWEB_REPLY },
++      extendedTextMessage: { text: `meu telefone ${PHONE}` },
++    },
++  };
++
++  function logged(logger: any): string {
++    return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++      .flatMap((level) => logger[level].mock.calls)
++      .map((args) => args.join(' '))
++      .join('\n');
++  }
++
++  it('extractor throws: returns null and logs only the error class', () => {
++    const logger = JestLogger();
++    const boom = () => {
++      throw new TypeError(`unexpected shape near ${PHONE} Básico`);
++    };
++    expect(ExtractListReply(data, logger, boom)).toBeNull();
++    expect(logger.warn).toHaveBeenCalledTimes(1);
++    const text = logged(logger);
++    expect(text).toContain('TypeError');
++    expect(text).not.toContain(PHONE);
++    expect(text).not.toContain('Básico');
++    expect(text).not.toContain('auto_basico');
++  });
++
++  it('Baileys not loaded (esm.b null): returns null instead of throwing', () => {
++    const logger = JestLogger();
++    // default extractor uses esm.b, which is never loaded under jest
++    expect(ExtractListReply(data, logger)).toBeNull();
++    expect(logger.warn).toHaveBeenCalledTimes(1);
++    expect(logged(logger)).not.toContain(PHONE);
++  });
++
++  it('malformed engine data (throwing getter): returns null', () => {
++    const logger = JestLogger();
++    const bad = {
++      get message() {
++        throw new Error(PHONE);
++      },
++    };
++    expect(ExtractListReply(bad, logger, unwrap)).toBeNull();
++    expect(logged(logger)).not.toContain(PHONE);
++  });
++
++  it('works without a logger', () => {
++    const boom = () => {
++      throw new Error('x');
++    };
++    expect(ExtractListReply(data, undefined, boom)).toBeNull();
 +  });
 +});
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts
 new file mode 100644
-index 00000000..cb9ab6fd
+index 00000000..fd3b77db
 --- /dev/null
 +++ b/src/apps/chatwoot/messages/to/chatwoot/ListReply.ts
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,66 @@
 +import type { proto } from '@adiwajshing/baileys';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
 +import { resolveProtoMessage } from '@waha/core/engines/gows/waproto';
 +import esm from '@waha/vendor/esm';
 +
@@ -706,10 +766,30 @@ index 00000000..cb9ab6fd
 +/**
 + * Reads the list answer from the engine raw data (_data).
 + * extractMessageContent unwraps ephemeral and view once wrappers.
++ *
++ * It runs for EVERY incoming message of every inbox, so it never throws:
++ * any failure is logged (error class only - no content, no phone) and
++ * the message goes on without waha_list_reply.
 + */
 +export function ExtractListReply(
 +  data: any,
++  logger?: ILogger,
 +  extract: ExtractMessageContent = baileysExtractMessageContent,
++): WahaListReply | null {
++  try {
++    return readListReply(data, extract);
++  } catch (err) {
++    const kind = err?.name || err?.constructor?.name || typeof err;
++    logger?.warn(
++      `WhatsApp => ChatWoot: list reply not read, message kept without it (${kind})`,
++    );
++    return null;
++  }
++}
++
++function readListReply(
++  data: any,
++  extract: ExtractMessageContent,
 +): WahaListReply | null {
 +  if (!data) {
 +    return null;
