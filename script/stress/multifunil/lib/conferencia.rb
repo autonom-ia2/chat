@@ -6,7 +6,7 @@
 class Stress::Conferencia
   IA_PADRAO = {
     'cards_abertos' => 'assunto', 'card_novo' => 'assunto', 'sem_card_novo' => 'assunto', 'novos_no_funil' => 'assunto',
-    'nenhum_assunto_novo' => 'assunto',
+    'nenhum_assunto_novo' => 'assunto', 'sem_card_com_titulo' => 'assunto',
     'foco' => 'assunto', 'etapa' => 'movimentacao', 'status' => 'movimentacao', 'atendente' => 'movimentacao',
     'retorno' => 'movimentacao', 'valor' => 'movimentacao', 'campo' => 'movimentacao'
   }.freeze
@@ -70,6 +70,12 @@ class Stress::Conferencia
   def checar_card_novo(item)
     achados = novos.select { |c| c[:funil] == item['funil'] && c[:status] == 'open' && titulo_bate?(c, item) }
     [achados.any?, novos.map { |c| "#{c[:funil]}: #{c[:titulo]}" }]
+  end
+
+  # Nenhum card novo do funil com nome que bate (ex.: não há funil de vida, então nada de card "Seguro de vida").
+  def checar_sem_card_com_titulo(item)
+    achados = novos.select { |c| c[:funil] == item['funil'] && titulo_bate?(c, item) }
+    [achados.empty?, achados.map { |c| "#{c[:funil]}: #{c[:titulo]}" }]
   end
 
   def checar_sem_card_novo(_item)

@@ -164,7 +164,7 @@
       "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Kicks", "foco": true }],
       "turnos": [{ "texto": "quero fazer um seguro de vida pra mim e pro meu marido. ah, e o do carro pode fechar sim" }],
       "esperado": [
-        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["vida"] },
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida, então dúvida e sem card de vida" },
         { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
       ]
     },
@@ -397,9 +397,9 @@
         { "texto": "e tb abrir um sinistro do celular q foi roubado, ele tem seguro com vcs", "depois_s": 5 }
       ],
       "esperado": [
-        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["vida"] },
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida" },
         { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["celular", "roubo", "furto", "sinistro"] },
-        { "tipo": "atendente", "valor": ["atribuido"] }
+        { "tipo": "atendente", "valor": ["atribuido"], "pessoa": "bruno" }
       ]
     },
     {
@@ -484,9 +484,9 @@
         { "texto": "fechado, quero contratar" }
       ],
       "esperado": [
-        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["vida"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida" }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
         { "tipo": "novos_no_funil", "funil": "sinistro", "valor": 0 }, { "tipo": "novos_no_funil", "funil": "renovacao", "valor": 0 },
-        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["vida"], "valor": ["fechamento"] }
+        { "tipo": "etapa", "funil": "vendas", "valor": ["fechamento"], "por_que": "sem card de vida, o card da conversa (o da chegada) ainda tem de andar" }
       ]
     },
     {

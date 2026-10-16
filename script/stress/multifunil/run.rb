@@ -95,9 +95,9 @@ class Stress::Execucao
                         .merge(resultado.slice(:checagens, :turnos, :final, :descartados))
   end
 
-  # Para ANTES de passar do teto: a próxima conversa é estimada pela mais cara até aqui (no mínimo US$ 0,05).
+  # Para ANTES de passar do teto: a próxima conversa é estimada pela mais cara até aqui (no mínimo US$ 0,005).
   def sem_orcamento?(dados, resultados)
-    estimativa = [resultados.map { |r| r[:custo_usd].to_f }.max.to_f, 0.05].max
+    estimativa = [resultados.map { |r| r[:custo_usd].to_f }.max.to_f, 0.005].max
     gasto_fase = gasto_total - @gasto_inicial
     return false if gasto_fase + estimativa <= @teto_fase && gasto_total + estimativa <= @teto_total
 
