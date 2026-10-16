@@ -22,7 +22,11 @@ vi.mock('dashboard/composables/store', async () => {
   return { useMapGetter: nome => computed(() => getters[nome]()) };
 });
 
-const api = vi.hoisted(() => ({ buscar: vi.fn(), salvar: vi.fn() }));
+const api = vi.hoisted(() => ({
+  buscar: vi.fn(),
+  salvar: vi.fn(),
+  quemRecebe: vi.fn(),
+}));
 vi.mock('dashboard/api/crmCaixas', () => ({ default: api }));
 
 const alerta = vi.hoisted(() => vi.fn());
@@ -79,6 +83,7 @@ describe('CaixaPage', () => {
     conta.estado.fase2 = null;
     rota.query.etapa = '2';
     api.buscar.mockResolvedValue({ caixa: CAIXA, funis: FUNIS });
+    api.quemRecebe.mockResolvedValue({ triagem: [], funis: { 1: [] } });
   });
 
   it('shows the AI agents when phase 2 arrives in the account payload after the inbox', async () => {
@@ -142,4 +147,58 @@ describe('CaixaPage', () => {
       expect(wrapper.find('[data-porta]').exists()).toBe(true);
     }
   );
+});
+
+// #1140 — quem recebe vem do servidor nas etapas 3 e 4, com o que está marcado.
+describe('CaixaPage: quem recebe', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    conta.estado.fase2 = null;
+    api.buscar.mockResolvedValue({ caixa: CAIXA, funis: FUNIS });
+    api.quemRecebe.mockResolvedValue({ triagem: [], funis: { 1: [] } });
+  });
+
+  it('does not ask while the person is choosing who takes care of what', async () => {
+    rota.query.etapa = '2';
+    render();
+    await flushPromises();
+
+    expect(api.quemRecebe).not.toHaveBeenCalled();
+  });
+
+  it('asks the server once on the check step, with what is marked', async () => {
+    rota.query.etapa = '4';
+    const wrapper = render();
+    await flushPromises();
+
+    expect(api.quemRecebe).toHaveBeenCalledTimes(1);
+    expect(api.quemRecebe).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ pipeline_ids: [1], people: [] })
+    );
+    expect(wrapper.find('[data-ninguem-recebe]').text()).toContain('Comercial');
+  });
+
+  it('asks again after an error when the person leaves and comes back to step 3', async () => {
+    rota.query.etapa = '4';
+    api.quemRecebe.mockRejectedValueOnce(new Error('falhou'));
+    const wrapper = render();
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      'Não deu para conferir quem recebe agora.'
+    );
+
+    const voltar = () =>
+      wrapper
+        .findAll('footer button')
+        .find(botao => botao.text() === 'Voltar')
+        .trigger('click');
+    await voltar();
+    await voltar();
+    await flushPromises();
+    await wrapper.get('[data-continuar]').trigger('click');
+    await flushPromises();
+
+    expect(api.quemRecebe).toHaveBeenCalledTimes(2);
+  });
 });

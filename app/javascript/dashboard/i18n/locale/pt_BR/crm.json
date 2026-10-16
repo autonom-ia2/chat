@@ -4088,6 +4088,10 @@
       "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
       "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
       "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
+      "SO_AS_DELE": "{nome} só vê as dele, não recebe.",
+      "NINGUEM_RECEBE": "Ninguém pode receber as conversas de {assuntos}. Elas esperam até alguém passar a cuidar do assunto.",
+      "CONFERINDO": "Conferindo quem recebe…",
+      "ERRO_QUEM_RECEBE": "Não deu para conferir quem recebe agora.",
       "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo.",
       "ROBO_EXTERNO": "Primeiro atende {nome}, o agente externo. Depois, as pessoas abaixo."
     },
