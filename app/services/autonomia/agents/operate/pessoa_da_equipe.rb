@@ -19,6 +19,10 @@
 # reconciliador não a acha e o eco vira mensagem nova; no histórico, esse texto da IA apareceria uma segunda vez, como
 # da equipe pelo celular.
 #
+# MENSAGEM AUTOMÁTICA DO CANAL (#1691): o template da caixa, a saída sem remetente (automação) e o envio automático em
+# nome de alguém (envio_automatico?) ganham moldura com a mesma marca e o cabeçalho "Mensagem automática do canal", e
+# uma regra própria do turno: é o que o atendimento já enviou ao cliente. Não calam a IA (não são pessoa).
+#
 # Mensagem que FALHOU no envio (`status: failed`) não chegou ao cliente: não cala a IA, não ganha moldura e sai do
 # histórico (ninguém a disse ao cliente). Fora da Fase 2 nada aqui é aplicado: o histórico e a entrega ficam como na main.
 module Autonomia::Agents::Operate::PessoaDaEquipe
@@ -58,10 +62,12 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
       message.content_attributes.to_h['external_echo'].present?
   end
 
-  # Da equipe e chegou ao cliente (com texto, ou com o resumo da localização/contato): é o que ganha moldura e traz a
-  # regra do turno.
-  def com_moldura?(message, whatsapp)
-    texto(message).present? && !message.failed? && (da_pessoa?(message) || (whatsapp && eco_do_celular?(message)))
+  # Que moldura a mensagem ganha: :pessoa, :celular (eco do app no WhatsApp), :automatica (do canal) ou nil.
+  def moldura_de(message, whatsapp)
+    return :pessoa if da_pessoa?(message)
+    return :celular if whatsapp && eco_do_celular?(message)
+
+    :automatica if automatica?(message)
   end
 
   # O item do histórico para o Answerer. Da equipe -> moldura com a `marca`; da equipe que falhou -> sai (conteúdo
@@ -80,21 +86,44 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     ::Autonomia::Agents::Operate::ResumoDaMensagemRica.texto(message)
   end
 
-  # O conteúdo com moldura (ou '' quando falhou no envio) de uma mensagem da equipe; nil quando não é da equipe.
+  # O conteúdo com moldura (ou '' quando falhou no envio) de uma mensagem da equipe ou automática do canal; nil quando
+  # não é nenhuma das duas.
   def conteudo_da_equipe(message, marca, whatsapp)
-    moldura = ::Autonomia::Agents::Operate::MolduraDaEquipe
-    pessoa = da_pessoa?(message)
-    return unless pessoa || (whatsapp && eco_do_celular?(message))
+    tipo = moldura_de(message, whatsapp)
+    return if tipo.nil?
     return '' if message.failed?
 
-    pessoa ? moldura.da_pessoa(texto(message), message.sender, marca) : moldura.do_celular(texto(message), marca)
+    moldura = ::Autonomia::Agents::Operate::MolduraDaEquipe
+    case tipo
+    when :pessoa then moldura.da_pessoa(texto(message), message.sender, marca)
+    when :celular then moldura.do_celular(texto(message), marca)
+    else moldura.automatica(texto(message), marca)
+    end
   end
 
-  # A regra do turno quando alguma mensagem da janela vai com moldura; senão nil (o pedido fica igual ao de antes).
-  def regra_do_turno(messages, marca:, whatsapp: false)
-    return unless Array(messages).any? { |message| com_moldura?(message, whatsapp) }
+  # #1691: mensagem automática do canal, que nem a IA nem uma pessoa escreveu agora: o template da caixa (fora do
+  # horário, saudação, coleta de e-mail, pesquisa) ou a saída pública sem remetente que não é eco do app (automação).
+  # Antes ia como `assistant`, e a IA pedia desculpa pelo que ela dizia ("informei o horário errado antes").
+  # Também o envio automático gravado em nome de alguém (envio_automatico?: follow-up, convite e aviso de reunião,
+  # automação com remetente, campanha), que a IA também lia como dela.
+  def automatica?(message)
+    return false if message.private?
+    return true if message.template?
+    return false unless message.outgoing?
 
-    ::Autonomia::Agents::Operate::MolduraDaEquipe.regra(marca)
+    envio_automatico?(message) || (message.sender_type.blank? && message.content_attributes.to_h['external_echo'].blank?)
+  end
+
+  # As regras do turno para as mensagens com moldura que chegaram ao cliente (com texto ou com o resumo da
+  # localização/contato, #1715): a da equipe e/ou a da mensagem automática; nil sem nenhuma (o pedido fica igual).
+  def regra_do_turno(messages, marca:, whatsapp: false)
+    tipos = Array(messages).select { |message| texto(message).present? && !message.failed? }
+                           .map { |message| moldura_de(message, whatsapp) }
+    moldura = ::Autonomia::Agents::Operate::MolduraDaEquipe
+    regras = []
+    regras << moldura.regra(marca) if tipos.intersect?(%i[pessoa celular])
+    regras << moldura.regra_automatica(marca) if tipos.include?(:automatica)
+    regras.join("\n\n").presence
   end
 
   # Uma pessoa respondeu publicamente depois da mensagem `message_id` do cliente? Estado fresco: consulta o banco.

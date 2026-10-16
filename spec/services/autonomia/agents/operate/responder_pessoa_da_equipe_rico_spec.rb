@@ -103,11 +103,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(historico.second).to eq(role: 'assistant', content: 'Localização: Unidade Centro — Rua das Flores, 123 - Centro')
     end
 
-    it 'o contato de um envio automático em nome da Ana chega como assistant, sem moldura' do
+    # #1691 + #1715: o envio automático (aqui, follow-up em nome da Ana) é do atendimento, não da IA nem da Ana.
+    it 'o contato de um envio automático em nome da Ana chega com a moldura automática e traz a regra dela' do
       historico = historico_com(content_attributes: contato.merge('crm_follow_up_id' => 7))
+      moldura = Autonomia::Agents::Operate::MolduraDaEquipe
 
-      expect(historico.second).to eq(role: 'assistant', content: 'Contato: Recepção da Unidade Centro')
-      expect(contextos.sole).to be_nil
+      expect(historico.second).to eq(role: 'user',
+                                     content: "#{moldura.automatica('x', marca).delete_suffix('x')}Contato: Recepção da Unidade Centro")
+      expect(contextos.sole).to include(moldura::CABECALHO_AUTOMATICA)
+    end
+
+    it 'a localização de uma automação (sem remetente) chega com a moldura automática' do
+      escreve(:incoming, 'Onde fica a loja?')
+      # Sem remetente e sem `external_echo` (o trait): a saída de uma automação.
+      create(:message, :bot_message, account: account, conversation: conversation, inbox: inbox, content: '',
+                                     status: :delivered, content_attributes: localizacao)
+      responder(escreve(:incoming, 'Obrigado!'))
+      historico = historicos.sole
+
+      expect(historico.second[:role]).to eq('user')
+      expect(historico.second[:content]).to start_with("#{marca} Mensagem automática do canal")
+      expect(historico.second[:content]).to end_with("\nLocalização: Unidade Centro — Rua das Flores, 123 - Centro")
     end
 
     it 'localização sem nome nem endereço diz só que foi uma localização, sem as coordenadas' do

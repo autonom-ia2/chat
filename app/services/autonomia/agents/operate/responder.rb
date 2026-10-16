@@ -620,11 +620,15 @@ module Autonomia
           end
         end
 
-        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. Vai como contexto do turno
-        # (`developer`), nunca na instrução do agente (que é do dono). nil sem moldura ou sem mensagem da equipe: o
-        # Answerer nem recebe o argumento, e o pedido fica igual ao de antes.
+        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. #1691: a conversa espera uma pessoa
+        # e a equipe está fora do horário da caixa (EsperaForaDoHorario). Vão como contexto do turno (`developer`), nunca
+        # na instrução do agente (que é do dono), e só com a Fase 2. nil sem nenhum dos dois: o Answerer nem recebe o
+        # argumento, e o pedido fica igual ao de antes.
         def contexto_do_turno
-          equipe.regra(recent_messages) if equipe.aplica?
+          return unless equipe.aplica?
+
+          espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
+          [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
         end
 
         def equipe
