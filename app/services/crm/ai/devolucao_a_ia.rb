@@ -28,8 +28,23 @@ module Crm::Ai::DevolucaoAIa
              .distinct.find_each { |card| carimbar!(card, conversation, momento) }
   end
 
-  # -> o instante em que a conversa voltou para a IA, ou nil (sem devolução depois da última passagem direta).
+  # -> o instante em que a conversa voltou para a IA, ou nil. O mais recente entre o carimbo do card (só a passagem
+  # direta pela regra do funil) e o registro durável de passagens (#1606: também o convite aceito, a entrega sem regra do
+  # funil e a atribuição pela tela).
   def em(card, conversation)
+    [pelo_card(card, conversation), pelas_passagens(conversation)].compact.max
+  end
+
+  # A última passagem para uma pessoa desta conversa foi devolvida, e a conversa segue sem ninguém. Convite não conta:
+  # o convite fechado por outra passagem não foi atendido por ninguém.
+  def pelas_passagens(conversation)
+    return if conversation.blank? || conversation.assignee_id.present?
+
+    Crm::Passagem.where(account_id: conversation.account_id, conversation_id: conversation.id, para_type: 'User')
+                 .where.not(motivo: Crm::Passagens::CONVITE).em_ordem.first&.devolvida_em
+  end
+
+  def pelo_card(card, conversation)
     ai = ai_de(card)
     return unless devolvida_esta?(ai, conversation)
 
