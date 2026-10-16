@@ -41,7 +41,7 @@ const { botoes, cartoes, oferta, produto } = useModeloDaMensagem(mensagem);
 const falhou = computed(() => mensagem.value.status === MESSAGE_STATUS.FAILED);
 
 const LINHA =
-  'flex items-center justify-center gap-1.5 min-h-11 -mx-[9px] w-[calc(100%+16px)] px-3 border-t border-[#111B21]/10 dark:border-white/10 text-[#027EB5] dark:text-[#53BDEB] text-[14.2px] font-medium';
+  'flex items-center justify-center gap-1.5 min-h-11 -mx-[9px] w-[calc(100%+16px)] px-3 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] text-[14.2px] font-medium';
 const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
 </script>
 
@@ -54,10 +54,10 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
     >
       <div
         v-if="produto"
-        class="flex items-center gap-3 p-2 rounded-md bg-[#111B21]/5 dark:bg-black/20"
+        class="flex items-center gap-3 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
       >
         <span
-          class="grid place-content-center size-12 rounded bg-[#111B21]/10 dark:bg-white/10"
+          class="grid place-content-center size-12 rounded bg-[#0A0A0A]/10 dark:bg-white/10"
         >
           <Icon icon="i-ph-storefront" class="size-6 opacity-70" />
         </span>
@@ -67,7 +67,7 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
       </div>
       <div
         v-if="oferta"
-        class="flex items-start gap-2 p-2 rounded-md bg-[#111B21]/5 dark:bg-black/20"
+        class="flex items-start gap-2 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
       >
         <Icon icon="i-ph-timer-bold" class="size-5 mt-0.5 text-[#E53935]" />
         <span class="flex flex-col">
@@ -77,7 +77,7 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
               t('CONVERSA_CANAL.MODELO.OFERTA')
             }}
           </span>
-          <span class="text-[12px] text-[#667781] dark:text-[#8696A0]">
+          <span class="text-[12px] text-[#666666] dark:text-[#A7A8A8]">
             {{ t('CONVERSA_CANAL.MODELO.OFERTA') }}
           </span>
         </span>
@@ -115,11 +115,11 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
         <div
           v-for="(cartao, indice) in cartoes"
           :key="indice"
-          class="flex flex-col flex-shrink-0 w-56 p-[3px] snap-start rounded-[7.5px] bg-[#D9FDD3] dark:bg-[#005C4B] text-[#111B21] dark:text-[#E9EDEF]"
+          class="flex flex-col flex-shrink-0 w-56 p-[3px] snap-start rounded-[10px] bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA]"
           :class="SOMBRA"
         >
           <div
-            class="grid place-content-center h-32 rounded-[6px] bg-[#111B21]/10 dark:bg-black/20"
+            class="grid place-content-center h-32 rounded-[8px] bg-[#0A0A0A]/10 dark:bg-[#000]/20"
           >
             <Icon :icon="cartao.midia" class="size-8 opacity-60" />
           </div>
@@ -129,7 +129,7 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
           <div
             v-for="(botao, i) in cartao.botoes"
             :key="i"
-            class="flex items-center justify-center gap-1.5 min-h-11 border-t border-[#111B21]/10 dark:border-white/10 text-[#027EB5] dark:text-[#53BDEB] text-[14px] font-medium"
+            class="flex items-center justify-center gap-1.5 min-h-11 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] text-[14px] font-medium"
           >
             <Icon :icon="botao.icone" class="size-4" />
             {{ botao.texto }}

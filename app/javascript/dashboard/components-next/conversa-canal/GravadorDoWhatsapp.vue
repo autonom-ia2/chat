@@ -3,12 +3,12 @@
 // vermelho com o tempo, a onda ao vivo, pausar/continuar e a seta que para e envia
 // num toque. Por dentro é o gravador de sempre (AudioRecorder): mesma conversão para o
 // formato que o WhatsApp aceita e o mesmo anexo de mensagem de voz.
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
 
-defineProps({
+const props = defineProps({
   audioRecordFormat: { type: String, required: true },
   duracao: { type: String, default: '' },
 });
@@ -25,6 +25,11 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
+// "0:04" como no app (o gravador de sempre manda "00:04").
+const tempo = computed(() => {
+  const texto = props.duracao || '0:00';
+  return texto.length === 5 && texto.startsWith('0') ? texto.slice(1) : texto;
+});
 const gravador = ref(null);
 const pausado = ref(false);
 
@@ -47,12 +52,16 @@ const playPause = () => gravador.value?.playPause();
 defineExpose({ stopRecording, playPause });
 
 const BOTAO =
-  'grid place-content-center size-10 rounded-full flex-shrink-0 text-[#54656F] dark:text-[#AEBAC1] hover:bg-[#111B21]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00A884]';
+  'grid place-content-center size-10 rounded-full flex-shrink-0 text-[#3B3B3B] dark:text-[#FAFAFA] hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A0A0A]';
 </script>
 
 <template>
+  <!-- Como no app: tudo alinhado à direita dentro da pílula. Gravando: lixeira, ponto
+       vermelho e tempo, a onda ao vivo, pausa vermelha e a seta preta. Pausado: o ponto
+       fica cinza e a pausa vira o microfone vermelho para continuar. Ouvir antes de
+       terminar não existe aqui: o gravador só entrega o áudio quando para. -->
   <div
-    class="flex items-center gap-2 w-full min-h-[52px] px-1"
+    class="flex items-center justify-end gap-3 w-full min-h-[52px] pe-0"
     role="group"
     :aria-label="t('CONVERSA_CANAL.GRAVACAO.GRAVANDO')"
     data-gravador-do-whatsapp
@@ -67,19 +76,24 @@ const BOTAO =
     >
       <Icon icon="i-ph-trash" class="size-6" />
     </button>
-    <span
-      class="size-2.5 rounded-full bg-[#F15C6D] flex-shrink-0"
-      :class="{ 'animate-pulse': !pausado }"
-      aria-hidden="true"
-    />
-    <span
-      class="w-12 text-[17px] tabular-nums text-[#111B21] dark:text-[#E9EDEF] flex-shrink-0"
-      aria-live="off"
-    >
-      {{ duracao || '00:00' }}
+    <span class="flex items-center gap-2.5 flex-shrink-0">
+      <span
+        class="size-2.5 rounded-full"
+        :class="pausado ? 'bg-[#A7A8A8]' : 'bg-[#EA0038] animate-pulse'"
+        aria-hidden="true"
+      />
+      <span
+        class="text-[20px] leading-6 tabular-nums text-[#0A0A0A] dark:text-[#FAFAFA]"
+        aria-live="off"
+      >
+        {{ tempo }}
+      </span>
     </span>
     <!-- A onda do gravador de sempre, em cinza como a do app. -->
-    <div class="flex-1 min-w-0 h-10 overflow-hidden grayscale opacity-60">
+    <div
+      class="w-[140px] max-md:w-[90px] flex-shrink min-w-0 h-10 overflow-hidden grayscale"
+      :class="pausado ? 'opacity-40' : 'opacity-60'"
+    >
       <AudioRecorder
         ref="gravador"
         :audio-record-format="audioRecordFormat"
@@ -94,7 +108,8 @@ const BOTAO =
     </div>
     <button
       type="button"
-      :class="BOTAO"
+      class="grid place-content-center size-9 rounded-full flex-shrink-0 text-[#C3002F] dark:text-[#F15C6D] hover:bg-[#FDE7EB] dark:hover:bg-[#F15C6D]/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C3002F]"
+      :class="{ 'bg-[#FDE7EB] dark:bg-[#F15C6D]/15': pausado }"
       :aria-label="
         pausado
           ? t('CONVERSA_CANAL.GRAVACAO.CONTINUAR')
@@ -111,12 +126,11 @@ const BOTAO =
       <Icon
         :icon="pausado ? 'i-ph-microphone-fill' : 'i-ph-pause-fill'"
         class="size-6"
-        :class="{ 'text-[#F15C6D]': !pausado }"
       />
     </button>
     <button
       type="button"
-      class="grid place-content-center size-11 rounded-full flex-shrink-0 bg-[#00A884] hover:bg-[#008F72] text-white dark:text-[#111B21] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00A884]"
+      class="grid place-content-center size-10 rounded-full flex-shrink-0 bg-[#0A0A0A] hover:bg-[#2B2B2B] text-white dark:bg-[#21C063] dark:hover:bg-[#1DA855] dark:text-[#0A0A0A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A0A0A]"
       :aria-label="t('CONVERSA_CANAL.GRAVACAO.ENVIAR')"
       :title="t('CONVERSA_CANAL.GRAVACAO.ENVIAR')"
       data-enviar-gravacao

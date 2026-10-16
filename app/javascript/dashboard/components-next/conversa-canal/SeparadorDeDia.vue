@@ -1,6 +1,6 @@
 <script setup>
 // Etiqueta do dia no meio da conversa (#1702): "Hoje", "Ontem", o dia da semana ou a
-// data, no fuso da conta, como no WhatsApp.
+// data, no fuso da conta, como no WhatsApp. Gruda no topo enquanto a conversa rola.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFuso } from './pele';
@@ -29,7 +29,10 @@ const rotulo = computed(() =>
 </script>
 
 <template>
-  <li class="flex justify-center list-none my-3" data-separador-de-dia>
+  <li
+    class="sticky top-2 z-10 flex justify-center list-none my-3 pointer-events-none"
+    data-separador-de-dia
+  >
     <span :class="CLASSES_DO_SEPARADOR_DE_DIA">{{ rotulo }}</span>
   </li>
 </template>

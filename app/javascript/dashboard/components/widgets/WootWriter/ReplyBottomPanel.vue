@@ -319,7 +319,7 @@ export default {
 <template>
   <div
     class="flex justify-between p-3"
-    :class="[wrapClass, ehWhatsapp && !isNote ? classesDaResposta.painel : '']"
+    :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
   >
     <div class="left-wrap">
       <MaisDoWhatsapp
@@ -454,26 +454,28 @@ export default {
       <button
         v-if="microfoneNaDireita"
         type="button"
-        class="grid place-content-center size-11 rounded-full bg-[#00A884] hover:bg-[#008F72] text-white dark:text-[#111B21]"
+        :class="classesDaResposta.microfone"
         :aria-label="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
         :title="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
         data-microfone-do-whatsapp
         @click="toggleAudioRecorder"
       >
-        <span class="i-ph-microphone-fill size-6" />
+        <span class="i-ph-microphone size-6" />
       </button>
       <NextButton
         v-else
-        v-tooltip.top-end="ehWhatsapp && !isNote ? sendButtonText : null"
-        :label="ehWhatsapp && !isNote ? '' : sendButtonText"
-        :icon="ehWhatsapp && !isNote ? classesDaResposta.iconeEnviar : ''"
+        v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
+        :label="ehWhatsapp ? '' : sendButtonText"
+        :icon="ehWhatsapp ? classesDaResposta.iconeEnviar : ''"
         :aria-label="sendButtonText"
         type="submit"
         sm
         :color="isNote ? 'amber' : 'blue'"
         :disabled="isSendDisabled"
         class="flex-shrink-0"
-        :class="isNote ? '' : classesDaResposta.enviar"
+        :class="
+          isNote ? classesDaResposta.enviarNota : classesDaResposta.enviar
+        "
         @click="onSend"
       />
     </div>

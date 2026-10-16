@@ -151,6 +151,15 @@
       "ONDA": "Posição do áudio",
       "VELOCIDADE": "Mudar a velocidade",
       "BAIXAR": "Baixar"
+    },
+    "MIDIA": {
+      "BAIXAR": "Baixar {nome}",
+      "VIDEO": "Vídeo. Toque para abrir",
+      "DESCER": "Ir para a mensagem mais recente",
+      "MENU": "Opções da mensagem",
+      "FECHAR": "Fechar",
+      "VER_OPCOES": "Ver opções",
+      "ESCOLHIDA": "Escolhida pelo cliente"
     }
   }
 }

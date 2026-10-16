@@ -429,7 +429,9 @@ export default {
     },
     replyBoxClass() {
       return {
-        [this.classesDaResposta.caixa]: !this.isPrivate,
+        [this.classesDaResposta.caixa]: true,
+        [this.classesDaResposta.soResposta]: !this.isPrivate,
+        [this.classesDaResposta.nota]: this.isPrivate,
         [this.classesDaResposta.gravando]:
           !this.isPrivate && this.showAudioRecorderEditor,
         'is-private': this.isPrivate,
@@ -1477,7 +1479,7 @@ export default {
       <div
         :key="copilot.editorTransitionKey.value"
         class="reply-box__top"
-        :class="isPrivate ? '' : classesDaResposta.campo"
+        :class="classesDaResposta.campo"
       >
         <CrmReplySubject
           v-if="crmReplySubjectEnabled"

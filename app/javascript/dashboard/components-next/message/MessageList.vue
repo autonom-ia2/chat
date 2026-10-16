@@ -7,6 +7,7 @@ import { useMapGetter } from 'dashboard/composables/store.js';
 import MessageApi from 'dashboard/api/inbox/message.js';
 import SeparadorDeDia from '../conversa-canal/SeparadorDeDia.vue';
 import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
+import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 
 /**
@@ -130,10 +131,7 @@ const shouldGroupWithNext = (index, searchList) => {
 };
 
 // #1702: com a pele do canal, bico no 1º balão da sequência e etiqueta do dia.
-const { abreODia, pele } = useSequenciaDaConversa(
-  allMessages,
-  shouldGroupWithNext
-);
+const { abreODia, pele } = useSequenciaDaConversa(allMessages);
 
 /**
  * Gets the message that was replied to
@@ -196,5 +194,6 @@ const getInReplyToMessage = parentMessage => {
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
     </template>
     <slot name="after" />
+    <BotaoDeDescer v-if="pele" />
   </ul>
 </template>

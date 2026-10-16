@@ -151,6 +151,15 @@
       "ONDA": "Audio position",
       "VELOCIDADE": "Change speed",
       "BAIXAR": "Download"
+    },
+    "MIDIA": {
+      "BAIXAR": "Download {nome}",
+      "VIDEO": "Video. Tap to open",
+      "DESCER": "Go to the latest message",
+      "MENU": "Message options",
+      "FECHAR": "Close",
+      "VER_OPCOES": "View options",
+      "ESCOLHIDA": "Chosen by the customer"
     }
   }
 }

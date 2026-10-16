@@ -482,6 +482,7 @@ export default {
   <div
     ref="messagesViewRef"
     class="flex flex-col justify-between flex-grow h-full min-w-0 m-0"
+    :class="{ relative: pele }"
   >
     <div ref="topBannerRef">
       <Banner

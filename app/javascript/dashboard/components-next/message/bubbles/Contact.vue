@@ -5,6 +5,9 @@ import { useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../provider.js';
 import BaseAttachmentBubble from './BaseAttachment.vue';
+import BaseBubble from './Base.vue';
+import ContatoDoWhatsapp from '../../conversa-canal/midia/ContatoDoWhatsapp.vue';
+import { usePele } from '../../conversa-canal/pele';
 
 import {
   DuplicateContactException,
@@ -12,6 +15,8 @@ import {
 } from 'shared/helpers/CustomErrors';
 
 const { attachments } = useMessageContext();
+// #1702: com a pele do WhatsApp, o cartão de contato do app.
+const pele = usePele();
 
 const $store = useStore();
 const { t } = useI18n();
@@ -94,6 +99,10 @@ async function addContact() {
   }
 }
 
+const temAcao = computed(
+  () => formattedPhoneNumber.value && !isContactInfoResponse.value
+);
+
 const action = computed(() => ({
   label: t('CONVERSATION.SAVE_CONTACT'),
   onClick: addContact,
@@ -101,12 +110,24 @@ const action = computed(() => ({
 </script>
 
 <template>
+  <BaseBubble
+    v-if="pele"
+    class="!p-[3px]"
+    :data-bubble-name="temAcao ? 'contact-acao' : 'contact'"
+  >
+    <ContatoDoWhatsapp
+      :nome="contactName"
+      :telefone="phoneNumber"
+      :acao="temAcao ? action : null"
+    />
+  </BaseBubble>
   <BaseAttachmentBubble
+    v-else
     icon="i-teenyicons-user-circle-solid"
     icon-bg-color="bg-[#D6409F]"
     sender-translation-key="CONVERSATION.SHARED_ATTACHMENT.CONTACT"
     :title="contactName"
     :content="phoneNumber"
-    :action="formattedPhoneNumber && !isContactInfoResponse ? action : null"
+    :action="temAcao ? action : null"
   />
 </template>

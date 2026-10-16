@@ -14,6 +14,10 @@ const VAZIO = {
   gravando: '',
   enviar: '',
   iconeEnviar: '',
+  enviarNota: '',
+  soResposta: '',
+  nota: '',
+  microfone: '',
 };
 
 export const usePeleDaResposta = () => {

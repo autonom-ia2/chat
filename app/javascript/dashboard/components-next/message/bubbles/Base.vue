@@ -14,6 +14,8 @@ import { MESSAGE_VARIANTS, ORIENTATION, SENDER_TYPES } from '../constants';
 import { usePeleDoBalao } from '../../conversa-canal/usePeleDoBalao';
 import BicoDoBalao from '../../conversa-canal/BicoDoBalao.vue';
 import BotoesDoModelo from '../../conversa-canal/BotoesDoModelo.vue';
+import BotaoDoMenu from '../../conversa-canal/BotaoDoMenu.vue';
+import CitacaoDoWhatsapp from '../../conversa-canal/CitacaoDoWhatsapp.vue';
 
 const props = defineProps({
   hideMeta: { type: Boolean, default: false },
@@ -136,6 +138,7 @@ const replyToPreview = computed(() => {
       },
     ]"
   >
+    <BotaoDoMenu v-if="peleDoBalao.ativa.value" />
     <BicoDoBalao
       v-if="peleDoBalao.bico.value"
       :lado="orientation"
@@ -148,8 +151,14 @@ const replyToPreview = computed(() => {
       {{ peleDoBalao.remetente.value }}
     </div>
     <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="topo" />
+    <CitacaoDoWhatsapp
+      v-if="inReplyTo && peleDoBalao.ativa.value"
+      :mensagem="inReplyTo"
+      :previa="replyToPreview"
+      @ir="scrollToMessage"
+    />
     <div
-      v-if="inReplyTo"
+      v-else-if="inReplyTo"
       class="p-2 -mx-1 mb-2 rounded-lg cursor-pointer bg-n-alpha-black1"
       @click="scrollToMessage"
     >

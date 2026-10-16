@@ -133,7 +133,8 @@ const copyConversationId = async () => {
       <Avatar
         :name="currentContact.name"
         :src="currentContact.thumbnail"
-        :size="32"
+        :size="classesDoTopo ? 40 : 32"
+        :rounded-full="!!classesDoTopo"
         :status="currentContact.availability_status"
         hide-offline-status
       />
@@ -141,6 +142,9 @@ const copyConversationId = async () => {
         <div class="flex flex-row items-center max-w-full gap-1 p-0 m-0">
           <span
             class="text-sm font-medium truncate leading-tight text-n-slate-12"
+            :class="{
+              '!text-base !text-[#0A0A0A] dark:!text-[#FAFAFA]': classesDoTopo,
+            }"
           >
             {{ currentContact.name }}
           </span>
