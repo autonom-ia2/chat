@@ -1,12 +1,15 @@
 module Crm
   module Ai
     class SettingsPresenter
-      def initialize(pipeline:)
+      # `quem_recebe: true` (só a tela de Atribuição de um funil, #1140) traz `recebem_por_caixa`; a lista de funis não paga
+      # essa conta.
+      def initialize(pipeline:, quem_recebe: false)
         @pipeline = pipeline
+        @quem_recebe = quem_recebe
       end
 
       def perform
-        ajustes.merge(ai_agents)
+        ajustes.merge(ai_agents).merge(@quem_recebe ? { recebem_por_caixa: recebem_por_caixa } : {})
       end
 
       private
@@ -51,6 +54,16 @@ module Crm
             .where(account_users: { account_id: @pipeline.account_id })
             .distinct.order(:name, :id).pluck(:id, :name)
             .map { |id, name| { id: id, name: name } }
+      end
+
+      # #1140 (correção 3): em cada caixa do funil, quem pode receber uma conversa dele, pela regra do motor de entrega
+      # (Crm::Entrega::QuemCuida.na_caixa). A tela avisa quando a pessoa fixa de uma regra não está entre elas: lá a
+      # conversa vai para quem cuida do funil.
+      def recebem_por_caixa
+        @pipeline.inboxes.order(:name, :id).map do |inbox|
+          { inbox_id: inbox.id, name: inbox.name,
+            user_ids: Crm::Entrega::QuemCuida.na_caixa(inbox: inbox, pipeline_id: @pipeline.id).map(&:id) }
+        end
       end
 
       # #1593: os agentes de IA das caixas do funil, só com a Fase 2 dos Agentes (sem ela a chave não vai e a tela mostra

@@ -1316,7 +1316,9 @@
   },
   "crm/pipelines/:pipeline_id/ai_settings": {
     "controller": "api/v1/accounts/crm/ai_settings#show",
-    "parametros": []
+    "parametros": [
+      "quem_recebe"
+    ]
   },
   "crm/pipelines/:pipeline_id/inboxes": {
     "controller": "api/v1/accounts/crm/pipeline_inboxes#index",
