@@ -42,6 +42,8 @@ en:
       meta_text: "WhatsApp did not accept the request. Check the text, the examples and the buttons and try again."
       suggestion_unavailable: "Could not write it right now. Try again in a moment or write it your own way."
       suggestion_invalid: "Check the request: say what the message needs to do, or send a text of up to 1024 characters."
+      conversation_products: "This template shows catalog products, and the send did not say which ones. Send it in a campaign, choosing the products, or pick another template."
+      conversation_carousel: "This template is a carousel, and the send did not bring its cards. Send it in a campaign, filling in the cards, or pick another template."
     # Owner's permission for the system to create templates (#1586). The turn on/off text is what the screen shows in
     # the confirmation and what the record stores: when it changes, bump VERSAO in Whatsapp::Templates::AvisoDeConsentimento.
     consent:

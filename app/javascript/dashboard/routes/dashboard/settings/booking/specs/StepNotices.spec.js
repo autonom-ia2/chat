@@ -38,7 +38,10 @@ config.global.provide = {
   ...config.global.provide,
   store: {
     getters: {
-      'inboxes/getFilteredWhatsAppTemplates': vi.fn(() => [lembrete, outro]),
+      'inboxes/getConversationWhatsAppTemplates': vi.fn(() => [
+        lembrete,
+        outro,
+      ]),
     },
   },
 };

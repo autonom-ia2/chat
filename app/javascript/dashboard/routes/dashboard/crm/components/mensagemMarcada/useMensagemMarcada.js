@@ -107,7 +107,7 @@ export const useMensagemMarcada = ({ store, fuso, caixasDaTela }) => {
   );
   const modelos = computed(() =>
     alvo.value?.caixaId
-      ? store.getters['inboxes/getFilteredWhatsAppTemplates'](
+      ? store.getters['inboxes/getConversationWhatsAppTemplates'](
           alvo.value.caixaId
         ) || []
       : []
