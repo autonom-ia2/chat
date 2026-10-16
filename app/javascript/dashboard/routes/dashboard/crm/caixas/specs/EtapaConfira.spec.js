@@ -5,6 +5,16 @@ import { formularioDaCaixa } from '../helpers/agentesIa';
 import en from 'dashboard/i18n/locale/en/crm.json';
 import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
+// #1648 — a aba "Agente de IA" por caixa da conta (desligada: como a main).
+const porCaixa = vi.hoisted(() => ({ ligada: false }));
+vi.mock(
+  'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa',
+  async () => {
+    const { computed } = await import('vue');
+    return { useAgenteIaPorCaixa: () => computed(() => porCaixa.ligada) };
+  }
+);
+
 // #1570 — a conferência diz "agente externo" quando quem atende primeiro é
 // robô de outro sistema, com ou sem a Fase 2, e nunca o mostra como porta.
 const FUNIS = [
@@ -42,6 +52,19 @@ const render = fase2 => {
 };
 
 describe('EtapaConfira', () => {
+  beforeEach(() => {
+    porCaixa.ligada = false;
+  });
+
+  it('with the AI agent tab per inbox on, calls the agent from another system an AI agent (#1648)', () => {
+    porCaixa.ligada = true;
+    const wrapper = render(true);
+
+    expect(wrapper.find('[data-robo]').text()).toBe(
+      'Primeiro atende Robô n8n, o agente de IA. Depois, as pessoas abaixo.'
+    );
+  });
+
   it.each([
     ['off', false],
     ['on', true],

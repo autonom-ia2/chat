@@ -18,10 +18,18 @@ export const principalDaCaixa = canal =>
   canal?.occupied_by?.kind === 'agent' ? canal.occupied_by : null;
 
 // Por que a caixa não pode receber este agente da equipe, ou null quando pode.
-export const bloqueioDaCaixa = (canal, agenteId) => {
+// `comOutroSistema` (#1648, opção B): com a aba "Agente de IA" por caixa ligada na conta, o canal com
+// agente de outro sistema atendendo primeiro também aceita (o servidor confere de novo).
+export const bloqueioDaCaixa = (
+  canal,
+  agenteId,
+  { comOutroSistema = false } = {}
+) => {
   if (soDePessoas(canal)) return null;
   const principal = principalDaCaixa(canal);
-  if (canal?.occupied_by?.kind === 'external') return BLOQUEIO.OUTRO_ROBO;
+  if (canal?.occupied_by?.kind === 'external') {
+    return comOutroSistema ? null : BLOQUEIO.OUTRO_ROBO;
+  }
   if (!principal || principal.agent_id === agenteId) {
     return BLOQUEIO.SEM_PRINCIPAL;
   }
@@ -60,7 +68,12 @@ export const recebeEmOutrasCaixas = agente =>
 // As outras caixas da seção "Também recebe quando alguém passar em": fora as em que ele é o principal e a
 // escolhida em "Onde atende" (`fora`). [{ canal, bloqueio }], na ordem da leitura. Onde ele já está na
 // equipe continua escolhível mesmo bloqueada, para poder sair.
-export const outrasCaixasDaEquipe = (canais, agenteId, fora = []) =>
+export const outrasCaixasDaEquipe = (
+  canais,
+  agenteId,
+  fora = [],
+  opcoes = {}
+) =>
   (canais || [])
     .filter(
       canal =>
@@ -73,6 +86,6 @@ export const outrasCaixasDaEquipe = (canais, agenteId, fora = []) =>
       );
       return {
         canal,
-        bloqueio: naEquipe ? null : bloqueioDaCaixa(canal, agenteId),
+        bloqueio: naEquipe ? null : bloqueioDaCaixa(canal, agenteId, opcoes),
       };
     });

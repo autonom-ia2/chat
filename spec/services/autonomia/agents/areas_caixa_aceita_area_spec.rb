@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # #1433 — o leitor único de "esta caixa pode receber um agente da equipe agora?", usado pela tela dos Agentes, pelo
-# CRM e pelo vincular! (com a caixa travada). Códigos fechados: :ok, :principal_parado, :robo_externo, :fase2_desligada.
+# CRM e pelo vincular! (com a caixa travada). Códigos fechados: :ok, :principal_parado, :fase2_desligada.
+# #1648 (decisão do Rodrigo de 15/10, opção B): caixa com agente de outro sistema aceita área.
 RSpec.describe Autonomia::Agents::Areas do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
@@ -17,7 +18,7 @@ RSpec.describe Autonomia::Agents::Areas do
     agent
   end
 
-  def robo_externo(caixa)
+  def agente_de_outro_sistema(caixa)
     AgentBotInbox.create!(inbox: caixa, agent_bot: create(:agent_bot, account: caixa.account), account: caixa.account)
   end
 
@@ -38,24 +39,50 @@ RSpec.describe Autonomia::Agents::Areas do
       expect(codigo).to have_attributes(codigo: :ok, ok?: true)
     end
 
+    def porta_apagada_com_espelho_sobrando
+      principal(inbox)
+      Autonomia::Agents::AgentInbox.kept.porta.find_by!(inbox: inbox).update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      expect(AgentBotInbox.where(inbox_id: inbox.id).count).to eq(1)
+    end
+
+    it ':ok para a caixa com o espelho que sobrou de uma porta apagada, com a aba por caixa (#1648)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+      porta_apagada_com_espelho_sobrando
+
+      expect(codigo.codigo).to eq(:ok)
+    end
+
+    it ':robo_externo para o espelho que sobrou de uma porta apagada, sem a aba por caixa (o predicado da main)' do
+      porta_apagada_com_espelho_sobrando
+
+      expect(codigo.codigo).to eq(:robo_externo)
+    end
+
     it ':principal_parado quando o principal não está atendendo' do
       principal(inbox, status: Autonomia::Agents::Agent.statuses[:paused], enabled: false)
 
       expect(codigo).to have_attributes(codigo: :principal_parado, ok?: false)
     end
 
-    it ':robo_externo sem principal e com robô de fora' do
-      robo_externo(inbox)
+    it ':ok sem principal e com agente de outro sistema atendendo primeiro, com a aba por caixa ligada (#1648, opção B)' do
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+      agente_de_outro_sistema(inbox)
+
+      expect(codigo).to have_attributes(codigo: :ok, ok?: true)
+    end
+
+    it ':robo_externo sem principal e com agente de outro sistema, sem a aba por caixa (como antes do #1648)' do
+      agente_de_outro_sistema(inbox).update!(status: :inactive)
 
       expect(codigo).to have_attributes(codigo: :robo_externo, ok?: false)
     end
 
     it ':fase2_desligada quando a conta da caixa não tem a Fase 2, antes de olhar a caixa' do
       Autonomia::Agents::Fase2.desligar!(account)
-      robo_externo(inbox)
+      principal(inbox, status: Autonomia::Agents::Agent.statuses[:paused], enabled: false)
 
       expect(codigo.codigo).to eq(:fase2_desligada)
-      expect(codigo(conferir_fase2: false).codigo).to eq(:robo_externo)
+      expect(codigo(conferir_fase2: false).codigo).to eq(:principal_parado)
     end
 
     it 'só devolve códigos da lista fechada' do
@@ -94,7 +121,7 @@ RSpec.describe Autonomia::Agents::Areas do
 
   describe '.vincular! usa o mesmo leitor' do
     it 'confere a caixa pelo caixa_aceita_area?, já travada, e levanta CaixaNaoAceitaArea com o mesmo código' do
-      robo_externo(inbox)
+      principal(inbox, status: Autonomia::Agents::Agent.statuses[:paused], enabled: false)
       travada = false
       allow(inbox).to receive(:with_lock).and_wrap_original do |original, *args, &bloco|
         original.call(*args) do
@@ -108,7 +135,7 @@ RSpec.describe Autonomia::Agents::Areas do
       end
 
       expect { described_class.vincular!(agent: agente('Equipe'), inbox: inbox) }
-        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:robo_externo) }
+        .to raise_error(described_class::CaixaNaoAceitaArea) { |erro| expect(erro.codigo).to eq(:principal_parado) }
       expect(described_class).to have_received(:caixa_aceita_area?).with(inbox, conferir_fase2: false)
     end
 

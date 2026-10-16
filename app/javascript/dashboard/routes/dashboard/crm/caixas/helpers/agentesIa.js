@@ -25,6 +25,9 @@ export const agentesParaFormulario = aiAgents =>
     ? {
         porta: aiAgents.porta,
         pode_mudar: aiAgents.pode_mudar,
+        // #1648 — agente de outro sistema que atende primeiro ({ id, name } ou null); a
+        // tela só mostra com a aba "Agente de IA" por caixa ligada na conta.
+        externo: aiAgents.externo || null,
         agentes: [
           ...aiAgents.areas.map(agente => ({
             ...agente,

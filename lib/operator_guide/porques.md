@@ -51,9 +51,9 @@
 - titulo: Gerenciar agentes da caixa
 - rota: settings_inbox_show
 - intent: Como coloco agentes em uma caixa?; Onde removo um agente do inbox?; Por que um agente nao ve uma caixa?; Como ajusto autoatribuicao da caixa?
-- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores (aba Usuarios nas contas com a aba Agente de IA por caixa)
 - pre_requisitos: caixa criada; agentes convidados/ativos na conta
-- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores; 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
+- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores (Usuarios nas contas com a aba Agente de IA por caixa); 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
 - gotchas: o agente precisa estar ativo na conta; sem estar associado a caixa, ele pode nao receber/visualizar conversas daquele canal.
 
 ### ligar_rodizio_de_atendimento
@@ -931,9 +931,9 @@
 - rota: autonomia_agents_builder
 - intent: "Como crio um agente que recebe a conversa quando alguém passa?"; "Quero um segundo agente no mesmo WhatsApp"; "O que é agente da equipe?"; "Por que o canal aparece bloqueado para o agente da equipe?"
 - onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Agente da equipe
-- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo ou atendido só por pessoas (sem agente principal e sem agente externo).
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo, atendido só por pessoas ou (com a aba Agente de IA por caixa ligada na conta) com um agente de outro sistema atendendo primeiro.
 - passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (os que têm agente principal atendendo e os atendidos só por pessoas) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal, ou que o canal é atendido só por pessoas, e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde ele trabalha, Mudar troca os canais.
-- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; no canal atendido só por pessoas, conversa nova continua com as pessoas e ele só responde a conversa que alguém passar para ele, nunca começa sozinho; canal com agente externo ou com o principal parado aparece bloqueado com o motivo; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; no canal atendido só por pessoas, conversa nova continua com as pessoas e ele só responde a conversa que alguém passar para ele, nunca começa sozinho; no canal com agente de outro sistema atendendo primeiro, só nas contas com a aba Agente de IA por caixa, conversa nova vai para ele e o agente da equipe responde a conversa que alguém passar (se o outro sistema não olhar quem é o dono da conversa, os dois podem responder); nas outras contas esse canal aparece bloqueado com o motivo, como o canal com o principal parado; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
 
 ### criar_ajudante_de_agentes
 - titulo: Criar um agente que ajuda outros agentes (ajudante)
@@ -1095,15 +1095,45 @@
 - gotchas: as abas de widget so aparecem para caixas web widget; restringir dominios bloqueia embeds fora da lista; mobile apps podem precisar da opcao de webview; o script aparece no final da criacao e tambem no preview/configuracao da caixa.
 
 ### gerenciar_agent_bots_nativos
-- titulo: Gerenciar agent bots nativos
+- titulo: Gerenciar agentes de outro sistema (agent bots)
 - rota: agent_bots
-- intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?
-- onde_fica: Sidebar > Configuracoes > Agent Bots; para conectar na caixa: Configuracoes > Caixas de entrada > selecionar caixa > Bot Configuration
+- intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?; Como conecto um agente montado em outro sistema?
+- onde_fica: com a nova jornada de Agentes e a aba Agente de IA por caixa ligada na conta (piloto): Agentes > Conectar agente de outro sistema (e a pagina do agente pela lista de Agentes); sem ela: Sidebar > Configuracoes > Robos. Para escolher quem atende primeiro na caixa: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA (no piloto) ou aba Robo (nas outras contas)
 - perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
-- passos: 1. Abra Agent Bots; 2. Crie ou edite um bot com nome, descricao, avatar e webhook URL; 3. Copie o access token e secret quando forem exibidos; 4. Abra a caixa desejada e entre em Bot Configuration; 5. Selecione o bot e salve; 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
-- gotchas: nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` aparecem na lista mas nao podem ser editados/excluidos; desconectar bot da caixa nao apaga o bot do catalogo.
+- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
+- gotchas: para quem usa, agente da plataforma e agente de outro sistema sao todos agentes de IA, na mesma lista e na mesma escolha da caixa; nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` nao aparecem na lista de Agentes; tirar o agente da caixa nao apaga o agente; os espelhos dos agentes da plataforma nao aparecem na lista de Robos nem se editam por ela; a troca pela aba Agente de IA e completa: quem atendia primeiro sai pelo caminho certo e as conversas dele vao para as pessoas; no canal em que um agente da plataforma atende primeiro, por o agente de outro sistema e pela aba Agente de IA do canal, que tira o agente da plataforma e poe o outro de uma vez; no canal so com agentes da equipe, o agente de outro sistema entra e os agentes da equipe continuam recebendo quando alguem passa.
 - highlight: `settings-add-bot`
+
+### trocar_quem_atende_primeiro_na_caixa
+- titulo: Trocar quem atende primeiro numa caixa (aba Agente de IA)
+- rota: settings_inbox_show
+- intent: Como troco o agente que atende esta caixa?; Como coloco um agente de IA no WhatsApp?; Como tiro a IA de uma caixa?; Quem atende primeiro neste canal?; Por que nao consigo escolher um agente de outro sistema nesta caixa?
+- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA
+- perfil: ver: quem abre as configuracoes da caixa; trocar: administrador ou funcao com inbox_manage
+- pre_requisitos: a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; caixa criada; o agente que vai atender ja criado (na plataforma, terminado e nao interno; ou conectado de outro sistema)
+- passos: 1. Abra a caixa em Configuracoes > Caixas de entrada; 2. Entre na aba Agente de IA; 3. Veja quem atende primeiro e quem tambem recebe quando alguem passar; 4. Em Quem atende primeiro, escolha outro agente de IA, ou Ninguem, so pessoas; 5. Leia o aviso de troca e clique em Trocar (ou Confirmar quando ninguem atendia); 6. Abrir agente leva a pagina do agente.
+- gotchas: a troca e completa e numa vez so: quem atendia primeiro sai (as conversas dele vao para as pessoas) e o novo entra; os agentes da equipe da caixa (recebem quando alguem passa) ficam, inclusive quando o novo e um agente de outro sistema; se o outro sistema nao olhar quem e o dono da conversa, ele e o agente da equipe podem responder a mesma conversa; agente que ja e da equipe desta caixa nao vira o primeiro direto, tire esse agente da equipe antes; agente parado de proposito, rascunho ou interno e recusado com o motivo; agente parado sem canal entra e passa a atender; enquanto a leitura nao chega a aba fica carregando e tenta de novo, sem tela de erro.
+
+### conectar_agente_de_outro_sistema
+- titulo: Conectar agente de outro sistema
+- rota: autonomia_agents_builder
+- intent: Como conecto um agente que fiz em outro sistema?; Onde coloco o endereco do webhook do meu agente?; Onde fica a chave de acesso do agente?; Como uso meu agente de outro sistema no WhatsApp?
+- onde_fica: Agentes > Conectar agente de outro sistema (pagina inteira, em tres etapas)
+- perfil: somente `administrator`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; endereco HTTPS do webhook do outro sistema
+- passos: 1. Abra Agentes e clique em Conectar agente de outro sistema; 2. Quem e: foto (opcional), nome e o que o agente faz, e Continuar; 3. Endereco: cole o endereco do webhook e clique em Conectar; 4. Chave: copie a chave de acesso e cole no outro sistema; 5. Clique em Concluir para abrir a pagina do agente; 6. Para o agente comecar a atender, escolha esse agente na aba Agente de IA de um canal.
+- gotchas: sem foto aparece a inicial do nome; sem a chave colada no outro sistema o agente nao consegue responder; recem-conectado, o agente aparece como Parado ate atender primeiro em algum canal; Voltar para Agentes nas duas primeiras etapas sai sem criar nada.
+
+### pagina_do_agente_de_outro_sistema
+- titulo: Pagina do agente de outro sistema
+- rota: autonomia_agent_panel
+- intent: Onde vejo o agente de outro sistema?; Como mudo o endereco do webhook?; Onde copio a chave de acesso de novo?; Como apago um agente de outro sistema?; Em quais canais o agente atende?
+- onde_fica: Agentes > clicar no cartao do agente de outro sistema (Conectado por endereco de webhook)
+- perfil: ver: quem abre Agentes; mudar, apagar e ver a chave: somente `administrator`
+- pre_requisitos: a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; agente de outro sistema conectado
+- passos: 1. Abra Agentes e clique no cartao do agente; 2. Em O que o agente faz e em Como o agente se conecta, use Alterar e depois Salvar; 3. Em Chave de acesso, use Mostrar e Copiar; 4. Em Onde atende, Abrir canal leva a aba Agente de IA do canal, onde se troca quem atende; 5. Em Mais opcoes, Mudar nome e foto ou Apagar agente.
+- gotchas: o selo Atendendo aparece quando o agente atende primeiro em algum canal ativo, senao Parado; apagar tira o agente de todos os canais e as conversas novas vao para as pessoas; trocar de canal nao e por esta pagina, e pela aba Agente de IA do canal; agente que nao existe mais volta para a lista.
 
 ### usar_busca_global
 - titulo: Usar busca global

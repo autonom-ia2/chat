@@ -482,6 +482,10 @@ Rails.application.routes.draw do
             # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
             get 'numeros_da_semana', to: 'numeros_da_semana#index'
             get 'canais_ocupados', to: 'canais_ocupados#index'
+            # #1648 — quem atende a caixa e a troca (aba "Agente de IA" da caixa). Sem a chave da conta
+            # autonomia_agente_ia_por_caixa (Autonomia::Agents::AgenteIaPorCaixa), 404.
+            get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
+            put 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#update'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'

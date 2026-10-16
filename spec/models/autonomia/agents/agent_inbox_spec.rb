@@ -82,25 +82,30 @@ RSpec.describe Autonomia::Agents::AgentInbox do
       expect(build_link(papel: 'gerente')).not_to be_valid
     end
 
-    # #1433: sem porta, a área só entra na caixa atendida só por pessoas (sem robô de fora).
-    it 'aceita área em caixa só de pessoas e recusa em caixa sem porta com robô de fora' do
+    # #1433: sem porta, a área entra na caixa só de pessoas; #1648 (decisão do Rodrigo de 15/10, opção B): também na caixa
+    # com agente de outro sistema atendendo primeiro.
+    it 'aceita área em caixa só de pessoas e, só com a aba por caixa, em caixa sem porta com agente de outro sistema' do
       expect(area).to be_valid
 
       AgentBotInbox.create!(inbox: inbox, agent_bot: AgentBot.create!(account: account, name: 'Parceiro'), account: account)
       expect(area).not_to be_valid
       expect(area.tap(&:valid?).errors[:papel]).to be_present
+
+      Autonomia::Agents::AgenteIaPorCaixa.ligar!(account)
+      expect(area).to be_valid
     end
 
-    it 'com porta ativa, o AgentBotInbox do espelho dela não conta como robô de fora' do
-      porta
-      AgentBotInbox.create!(inbox: inbox, agent_bot: agent_bot, account: account)
-
-      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(false)
-      expect(area).to be_valid
-
+    it 'espelho de agente, apagado ou de outra caixa, não é agente de outro sistema; bot de webhook é (#1648)' do
+      outra = create(:inbox, account: account)
+      AgentBotInbox.create!(inbox: outra, agent_bot: agent_bot, account: account)
       porta.update_columns(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      expect(described_class.robo_externo_na_caixa?(inbox.id)).to be(true)
-      expect(area).not_to be_valid
+      de_outro_sistema = -> { Autonomia::Agents::QuemAtendeACaixa.robos_de_outro_sistema(outra).pluck(:agent_bot_id) }
+
+      expect(de_outro_sistema.call).to be_empty
+
+      n8n = AgentBot.create!(account: account, name: 'Automação')
+      AgentBotInbox.create!(inbox: outra, agent_bot: n8n, account: account)
+      expect(de_outro_sistema.call).to eq([n8n.id])
     end
 
     it 'aceita área em caixa com porta ativa, e mais de uma área por caixa' do

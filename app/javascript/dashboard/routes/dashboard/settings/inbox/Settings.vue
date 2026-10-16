@@ -33,6 +33,9 @@ import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
+// #1648 — com a aba "Agente de IA" por caixa ligada na conta, a aba do robô vira o componente do fork.
+import AbaAgenteDeIa from 'dashboard/routes/dashboard/autonomia/agentes/components/AbaAgenteDeIa.vue';
+import { agenteIaPorCaixaLigado } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 import AccountHealth from './components/AccountHealth.vue';
 import TwilioHealth from './components/TwilioHealth.vue';
 import WhatsappManualMigrationDialog from './components/WhatsappManualMigrationDialog.vue';
@@ -60,6 +63,7 @@ import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 export default {
   components: {
+    AbaAgenteDeIa,
     Banner,
     BotConfiguration,
     CollaboratorsPage,
@@ -140,12 +144,20 @@ export default {
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
+      getAccount: 'accounts/getAccount',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
       isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
       uiFlags: 'inboxes/getUIFlags',
       portals: 'portals/allPortals',
     }),
+    // #1648 — aba "Agente de IA" por caixa (piloto); desligada, as abas de sempre.
+    agenteIaPorCaixa() {
+      return (
+        typeof this.getAccount === 'function' &&
+        agenteIaPorCaixaLigado(this.getAccount(this.accountId))
+      );
+    },
     isWahaInbox() {
       return Boolean(this.inbox?.waha_provider);
     },
@@ -205,7 +217,9 @@ export default {
         },
         {
           key: 'collaborators',
-          name: this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
+          name: this.agenteIaPorCaixa
+            ? this.$t('AGENTS.CAIXA_USUARIOS.ABA')
+            : this.$t('INBOX_MGMT.TABS.COLLABORATORS'),
         },
       ];
 
@@ -262,7 +276,9 @@ export default {
           ...visibleToAllChannelTabs,
           {
             key: 'bot-configuration',
-            name: this.$t('INBOX_MGMT.TABS.BOT_CONFIGURATION'),
+            name: this.agenteIaPorCaixa
+              ? this.$t('AGENTS.CAIXA_AGENTE_IA.ABA')
+              : this.$t('INBOX_MGMT.TABS.BOT_CONFIGURATION'),
           },
         ];
       }
@@ -1518,7 +1534,8 @@ export default {
           <WeeklyAvailability :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'bot-configuration'">
-          <BotConfiguration :inbox="inbox" />
+          <AbaAgenteDeIa v-if="agenteIaPorCaixa" :inbox="inbox" />
+          <BotConfiguration v-else :inbox="inbox" />
         </div>
         <div v-if="selectedTabKey === 'whatsapp-health'">
           <!-- chat#1217: trocar a caixa de conta do WhatsApp sem perder a caixa -->

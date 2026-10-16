@@ -208,6 +208,10 @@
     "controller": "api/v1/accounts/autonomia/financial#subscription",
     "parametros": []
   },
+  "autonomia/inboxes/:inbox_id/quem_atende": {
+    "controller": "api/v1/accounts/autonomia/quem_atende#show",
+    "parametros": []
+  },
   "autonomia/insurance/connection": {
     "controller": "api/v1/accounts/autonomia/insurance/connection#show",
     "parametros": [
