@@ -1,15 +1,18 @@
 diff --git a/src/apps/app_sdk/waha/WAHASelf.ts b/src/apps/app_sdk/waha/WAHASelf.ts
-index d277cff5..c786f453 100644
+index d277cff5..a20c86ec 100644
 --- a/src/apps/app_sdk/waha/WAHASelf.ts
 +++ b/src/apps/app_sdk/waha/WAHASelf.ts
-@@ -5,13 +5,16 @@ import {
+@@ -5,13 +5,19 @@ import {
  } from '@waha/structures/chats.dto';
  import {
    ChatRequest,
++  EditMessageRequest,
 +  MessageContactVcardRequest,
    MessageFileRequest,
    MessageImageRequest,
 +  MessageLocationRequest,
++  MessagePollRequest,
++  MessageReactionRequest,
    MessageTextRequest,
    MessageVideoRequest,
    MessageVoiceRequest,
@@ -19,7 +22,7 @@ index d277cff5..c786f453 100644
  import { SessionInfo } from '@waha/structures/sessions.dto';
  import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
  import { ContactSortField } from '@waha/structures/contacts.dto';
-@@ -230,6 +233,33 @@ export class WAHASelf {
+@@ -230,6 +236,65 @@ export class WAHASelf {
        .then((response) => response.data);
    }
  
@@ -50,10 +53,42 @@ index d277cff5..c786f453 100644
 +      .then((response) => response.data);
 +  }
 +
++  async sendPoll(body: MessagePollRequest, opts?: RequestOptions): Promise<any> {
++    const url = `/api/sendPoll`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
++  async setReaction(
++    body: MessageReactionRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url = `/api/reaction`;
++    return await this.client
++      .put(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
++  async editMessage(
++    session: string,
++    chatId: string,
++    messageId: string,
++    body: EditMessageRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url =
++      `/api/${encodeURIComponent(session)}/chats/${encodeURIComponent(chatId)}` +
++      `/messages/${encodeURIComponent(messageId)}`;
++    return await this.client
++      .put(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
    async deleteMessage(
      session: string,
      chatId: string,
-@@ -423,6 +453,31 @@ export class WAHASessionAPI {
+@@ -423,6 +488,53 @@ export class WAHASessionAPI {
      return this.api.sendFile(body, opts);
    }
  
@@ -78,6 +113,28 @@ index d277cff5..c786f453 100644
 +    return this.api.sendContactVcard(body, opts);
 +  }
 +
++  sendPoll(body: MessagePollRequest, opts?: RequestOptions): Promise<any> {
++    body.session = this.session;
++    return this.api.sendPoll(body, opts);
++  }
++
++  setReaction(
++    body: MessageReactionRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    body.session = this.session;
++    return this.api.setReaction(body, opts);
++  }
++
++  editMessage(
++    chatId: string,
++    messageId: string,
++    body: EditMessageRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    return this.api.editMessage(this.session, chatId, messageId, body, opts);
++  }
++
 +  get name(): string {
 +    return this.session;
 +  }
@@ -85,6 +142,1733 @@ index d277cff5..c786f453 100644
    deleteMessage(chatId: string, messageId: string, opts?: RequestOptions) {
      return this.api.deleteMessage(this.session, chatId, messageId, opts);
    }
+diff --git a/src/apps/chatwoot/api/c2y.signature.test.ts b/src/apps/chatwoot/api/c2y.signature.test.ts
+new file mode 100644
+index 00000000..5df09544
+--- /dev/null
++++ b/src/apps/chatwoot/api/c2y.signature.test.ts
+@@ -0,0 +1,196 @@
++import { createHmac } from 'crypto';
++import {
++  C2Y_SIGNATURE_MAX_AGE_SECONDS,
++  C2ySignatureVerifier,
++  IsValidC2ySignature,
++} from '@waha/apps/chatwoot/api/c2y.signature';
++import { keepChatwootWebhookRawBody } from '@waha/apps/chatwoot/api/rawbody';
++
++const SECRET = 's3cr3t-inbox';
++const TS = '1760620000';
++const NOW = 1760620000;
++// Rails JSON (escapes < > as < >, keeps UTF-8): the raw bytes
++// are signed, never a re-serialization
++const RAW = Buffer.from(
++  '{"event":"c2y_message_reaction","c2y_reaction":{"emoji":"👍"},' +
++    '"content":"\\u003cb\\u003eé\\u003c/b\\u003e"}',
++  'utf8',
++);
++// OpenSSL::HMAC.hexdigest('SHA256', SECRET, "#{TS}.#{RAW}") in Ruby, as
++// lib/webhooks/trigger.rb of chat2you signs it
++const RUBY_SIGNATURE =
++  'sha256=290ed9040047d15ce24e931103f1d309a0ecc8b41686d3dac821229145f91d89';
++
++function sign(secret: string, ts: string, raw: Buffer): string {
++  return (
++    'sha256=' +
++    createHmac('sha256', secret)
++      .update(`${ts}.`)
++      .update(raw)
++      .digest('hex')
++  );
++}
++
++function input(extra: any = {}) {
++  return {
++    secret: SECRET,
++    rawBody: RAW,
++    timestamp: TS,
++    signature: RUBY_SIGNATURE,
++    nowSeconds: NOW,
++    ...extra,
++  };
++}
++
++describe('IsValidC2ySignature (c2y-rich-2, review)', () => {
++  it('accepts the signature made by chat2you (Ruby vector)', () => {
++    expect(IsValidC2ySignature(input())).toBe(true);
++  });
++
++  it('accepts within the clock window, both ways', () => {
++    const max = C2Y_SIGNATURE_MAX_AGE_SECONDS;
++    expect(IsValidC2ySignature(input({ nowSeconds: NOW + max }))).toBe(true);
++    expect(IsValidC2ySignature(input({ nowSeconds: NOW - max }))).toBe(true);
++  });
++
++  it.each([
++    ['wrong secret', { secret: 'other' }],
++    ['no secret', { secret: null }],
++    ['empty secret', { secret: '' }],
++    ['tampered body', { rawBody: Buffer.from(RAW.toString() + ' ') }],
++    ['no raw body', { rawBody: undefined }],
++    ['too old', { nowSeconds: NOW + C2Y_SIGNATURE_MAX_AGE_SECONDS + 1 }],
++    [
++      'from the future',
++      { nowSeconds: NOW - C2Y_SIGNATURE_MAX_AGE_SECONDS - 1 },
++    ],
++    ['other timestamp signed', { timestamp: String(NOW + 1) }],
++    ['timestamp not an integer', { timestamp: `${TS}.0` }],
++    ['timestamp with spaces', { timestamp: ` ${TS}` }],
++    ['no timestamp', { timestamp: undefined }],
++    ['no signature', { signature: undefined }],
++    ['without the sha256= prefix', { signature: RUBY_SIGNATURE.slice(7) }],
++    ['truncated signature', { signature: RUBY_SIGNATURE.slice(0, -2) }],
++    [
++      'uppercase hex',
++      { signature: 'sha256=' + RUBY_SIGNATURE.slice(7).toUpperCase() },
++    ],
++    ['header given twice (array)', { signature: [RUBY_SIGNATURE] }],
++  ])('refuses: %s', (_name, extra) => {
++    expect(IsValidC2ySignature(input(extra))).toBe(false);
++  });
++});
++
++describe('C2ySignatureVerifier (c2y-rich-2, review)', () => {
++  const config = {
++    url: 'https://chat.example',
++    accountId: 1,
++    accountToken: 'token',
++    inboxId: 7,
++  };
++
++  function headers(secret = SECRET, ts = TS) {
++    return {
++      'x-chatwoot-timestamp': ts,
++      'x-chatwoot-signature': sign(secret, ts, RAW),
++    };
++  }
++
++  function setup(secrets: Array<string | null | Error>) {
++    let now = NOW * 1000;
++    const loader = jest.fn(async () => {
++      const next = secrets.length > 1 ? secrets.shift() : secrets[0];
++      if (next instanceof Error) {
++        throw next;
++      }
++      return next;
++    });
++    const verifier = new C2ySignatureVerifier(loader, () => now);
++    const advance = (ms: number) => (now += ms);
++    return { verifier, loader, advance };
++  }
++
++  it('ok, and the secret is cached per app', async () => {
++    const { verifier, loader } = setup([SECRET]);
++    expect(await verifier.verify('app_1', config, RAW, headers())).toBe('ok');
++    expect(await verifier.verify('app_1', config, RAW, headers())).toBe('ok');
++    expect(loader).toHaveBeenCalledTimes(1);
++    expect(loader).toHaveBeenCalledWith(config);
++  });
++
++  it('invalid signature: invalid, and Chatwoot is not hammered', async () => {
++    const { verifier, loader } = setup([SECRET]);
++    await verifier.verify('app_1', config, RAW, headers());
++    for (let i = 0; i < 5; i++) {
++      expect(
++        await verifier.verify('app_1', config, RAW, headers('forged')),
++      ).toBe('invalid');
++    }
++    // Inside the 30 s window: no reload
++    expect(loader).toHaveBeenCalledTimes(1);
++  });
++
++  it('rotated secret: reloads once after the window and accepts', async () => {
++    const { verifier, loader, advance } = setup([SECRET, 'rotated']);
++    await verifier.verify('app_1', config, RAW, headers());
++    advance(31 * 1000);
++    expect(
++      await verifier.verify(
++        'app_1',
++        config,
++        RAW,
++        headers('rotated', String(NOW + 31)),
++      ),
++    ).toBe('ok');
++    expect(loader).toHaveBeenCalledTimes(2);
++  });
++
++  it('secret not readable (non-admin token): no-secret', async () => {
++    const { verifier } = setup([null]);
++    expect(await verifier.verify('app_1', config, RAW, headers())).toBe(
++      'no-secret',
++    );
++  });
++
++  it('Chatwoot unreachable: no-secret (fail closed)', async () => {
++    const { verifier } = setup([new Error('ECONNREFUSED token=abc')]);
++    expect(await verifier.verify('app_1', config, RAW, headers())).toBe(
++      'no-secret',
++    );
++  });
++
++  it('the secret is read again after the TTL', async () => {
++    const { verifier, loader, advance } = setup([SECRET]);
++    await verifier.verify('app_1', config, RAW, headers());
++    advance(5 * 60 * 1000);
++    const ts = String(NOW + 300);
++    expect(
++      await verifier.verify('app_1', config, RAW, headers(SECRET, ts)),
++    ).toBe('ok');
++    expect(loader).toHaveBeenCalledTimes(2);
++  });
++
++  it('apps do not share secrets', async () => {
++    const { verifier, loader } = setup([SECRET, 'second-app']);
++    await verifier.verify('app_1', config, RAW, headers());
++    expect(await verifier.verify('app_2', config, RAW, headers())).toBe(
++      'invalid',
++    );
++    expect(loader).toHaveBeenCalledTimes(2);
++  });
++});
++
++describe('keepChatwootWebhookRawBody', () => {
++  it('keeps the raw body only for the Chatwoot webhook routes', () => {
++    const buf = Buffer.from('{}');
++    const webhook: any = { originalUrl: '/webhooks/chatwoot/hub2you/app_1' };
++    const other: any = { originalUrl: '/api/sendText' };
++    const lookalike: any = { originalUrl: '/api/webhooks/chatwoot/x' };
++    keepChatwootWebhookRawBody(webhook, null, buf);
++    keepChatwootWebhookRawBody(other, null, buf);
++    keepChatwootWebhookRawBody(lookalike, null, buf);
++    expect(webhook.rawBody).toBe(buf);
++    expect(other.rawBody).toBeUndefined();
++    expect(lookalike.rawBody).toBeUndefined();
++  });
++});
+diff --git a/src/apps/chatwoot/api/c2y.signature.ts b/src/apps/chatwoot/api/c2y.signature.ts
+new file mode 100644
+index 00000000..395c54ca
+--- /dev/null
++++ b/src/apps/chatwoot/api/c2y.signature.ts
+@@ -0,0 +1,160 @@
++import ChatwootClient from '@figuro/chatwoot-sdk';
++import { createHmac, timingSafeEqual } from 'crypto';
++
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * The c2y_message_reaction / c2y_message_edit events change messages that
++ * were already delivered, so they are accepted only with the signature
++ * chat2you puts on the inbox webhook (Webhooks::Trigger):
++ *
++ *   X-Chatwoot-Timestamp: <unix seconds>
++ *   X-Chatwoot-Signature: sha256=<hex HMAC-SHA256(inbox secret, "<ts>.<raw body>")>
++ *
++ * The secret is the API inbox `secret`, read with the app token (Chatwoot
++ * shows it to administrators). Only the c2y_* events are checked; every
++ * other event keeps the behaviour it had before the patch.
++ * Nothing here logs the secret, the signature or the body.
++ */
++export const C2Y_SIGNATURE_HEADER = 'x-chatwoot-signature';
++export const C2Y_TIMESTAMP_HEADER = 'x-chatwoot-timestamp';
++/** Accepted clock difference between chat2you and WAHA, both ways */
++export const C2Y_SIGNATURE_MAX_AGE_SECONDS = 300;
++const SIGNATURE_PREFIX = 'sha256=';
++/** The secret is read again after this time (rotation in Chatwoot) */
++const SECRET_TTL_MS = 5 * 60 * 1000;
++/** A failed check reloads the secret at most once in this window */
++const SECRET_MIN_RELOAD_MS = 30 * 1000;
++
++export interface C2ySignatureInput {
++  secret: string | null | undefined;
++  rawBody: Buffer | null | undefined;
++  timestamp: unknown;
++  signature: unknown;
++  nowSeconds: number;
++}
++
++export function IsValidC2ySignature(input: C2ySignatureInput): boolean {
++  const { secret, rawBody, timestamp, signature, nowSeconds } = input;
++  if (typeof secret !== 'string' || secret.length === 0) {
++    return false;
++  }
++  if (!Buffer.isBuffer(rawBody)) {
++    return false;
++  }
++  if (typeof timestamp !== 'string' || typeof signature !== 'string') {
++    return false;
++  }
++  const ts = Number(timestamp);
++  if (!Number.isInteger(ts) || String(ts) !== timestamp) {
++    return false;
++  }
++  if (Math.abs(nowSeconds - ts) > C2Y_SIGNATURE_MAX_AGE_SECONDS) {
++    return false;
++  }
++  if (!signature.startsWith(SIGNATURE_PREFIX)) {
++    return false;
++  }
++  const expected = createHmac('sha256', secret)
++    .update(`${timestamp}.`)
++    .update(rawBody)
++    .digest('hex');
++  const given = Buffer.from(signature.slice(SIGNATURE_PREFIX.length), 'utf8');
++  const wanted = Buffer.from(expected, 'utf8');
++  return given.length === wanted.length && timingSafeEqual(given, wanted);
++}
++
++export interface C2yAppConfig {
++  url: string;
++  accountId: number;
++  accountToken: string;
++  inboxId: number;
++}
++
++export type InboxSecretLoader = (
++  config: C2yAppConfig,
++) => Promise<string | null>;
++
++/** GET /api/v1/accounts/:account/inboxes/:inbox -> secret (admin token) */
++export const ChatwootInboxSecret: InboxSecretLoader = async (config) => {
++  const client = new ChatwootClient({
++    config: {
++      basePath: config.url,
++      with_credentials: true,
++      credentials: 'include',
++      token: config.accountToken,
++    },
++  });
++  const inbox: any = await client.inboxes.get({
++    accountId: config.accountId,
++    id: config.inboxId,
++  });
++  const secret = inbox?.secret;
++  return typeof secret === 'string' && secret.length > 0 ? secret : null;
++};
++
++interface SecretEntry {
++  secret: string | null;
++  loadedAt: number;
++}
++
++export type C2yVerdict = 'ok' | 'invalid' | 'no-secret';
++
++export class C2ySignatureVerifier {
++  private secrets = new Map<string, SecretEntry>();
++
++  constructor(
++    private readonly loader: InboxSecretLoader = ChatwootInboxSecret,
++    private readonly nowMs: () => number = () => Date.now(),
++  ) {}
++
++  async verify(
++    appId: string,
++    config: C2yAppConfig,
++    rawBody: Buffer | null | undefined,
++    headers: Record<string, unknown>,
++  ): Promise<C2yVerdict> {
++    const check = (secret: string | null) =>
++      IsValidC2ySignature({
++        secret: secret,
++        rawBody: rawBody,
++        timestamp: headers?.[C2Y_TIMESTAMP_HEADER],
++        signature: headers?.[C2Y_SIGNATURE_HEADER],
++        nowSeconds: Math.floor(this.nowMs() / 1000),
++      });
++
++    let entry = await this.secret(appId, config, false);
++    if (check(entry.secret)) {
++      return 'ok';
++    }
++    // The secret may have been rotated in Chatwoot: read it again, rarely
++    if (this.nowMs() - entry.loadedAt >= SECRET_MIN_RELOAD_MS) {
++      entry = await this.secret(appId, config, true);
++      if (check(entry.secret)) {
++        return 'ok';
++      }
++    }
++    return entry.secret ? 'invalid' : 'no-secret';
++  }
++
++  private async secret(
++    appId: string,
++    config: C2yAppConfig,
++    reload: boolean,
++  ): Promise<SecretEntry> {
++    const now = this.nowMs();
++    const cached = this.secrets.get(appId);
++    if (!reload && cached && now - cached.loadedAt < SECRET_TTL_MS) {
++      return cached;
++    }
++    let secret: string | null = null;
++    try {
++      secret = await this.loader(config);
++    } catch (err) {
++      // Fail closed. The error is not kept: it may carry the request
++      secret = null;
++    }
++    const entry = { secret: secret, loadedAt: now };
++    this.secrets.set(appId, entry);
++    return entry;
++  }
++}
+diff --git a/src/apps/chatwoot/api/chatwoot.webhook.c2y2.e2e.test.ts b/src/apps/chatwoot/api/chatwoot.webhook.c2y2.e2e.test.ts
+new file mode 100644
+index 00000000..faca9ae6
+--- /dev/null
++++ b/src/apps/chatwoot/api/chatwoot.webhook.c2y2.e2e.test.ts
+@@ -0,0 +1,143 @@
++const findEnabledAppById = jest.fn();
++jest.mock('@waha/apps/app_sdk/storage/AppRepository', () => ({
++  AppRepository: jest.fn().mockImplementation(() => ({
++    findEnabledAppById: findEnabledAppById,
++  })),
++}));
++// The CLI pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/cli', () => ({ CommandPrefix: 'wa/' }));
++
++import { INestApplication } from '@nestjs/common';
++import { Test } from '@nestjs/testing';
++import { createHmac } from 'crypto';
++import { json } from 'express';
++import { AddressInfo } from 'net';
++import { C2ySignatureVerifier } from '@waha/apps/chatwoot/api/c2y.signature';
++import { ChatwootWebhookController } from '@waha/apps/chatwoot/api/chatwoot.webhook.controller';
++import { keepChatwootWebhookRawBody } from '@waha/apps/chatwoot/api/rawbody';
++import { ChatWootQueueService } from '@waha/apps/chatwoot/services/ChatWootQueueService';
++import { SessionManager } from '@waha/core/abc/manager.abc';
++
++/**
++ * Autonom.ia c2y-rich-2: the whole HTTP path, with the same body parser
++ * setup as main.ts (json 50mb + verify, before the Nest default parser).
++ */
++const SECRET = 'inbox-secret';
++const PATH = '/webhooks/chatwoot/hub2you/app_1';
++
++describe('Chatwoot webhook c2y signature over HTTP (c2y-rich-2, review)', () => {
++  let app: INestApplication;
++  let base: string;
++  const queue: any = {
++    addJobToQueue: jest.fn().mockResolvedValue(undefined),
++    addMessageCreatedJob: jest.fn().mockResolvedValue(undefined),
++  };
++  const loader = jest.fn().mockResolvedValue(SECRET);
++
++  beforeAll(async () => {
++    findEnabledAppById.mockResolvedValue({
++      id: 'app_1',
++      session: 'hub2you',
++      config: { url: 'https://chat.example', accountId: 1, inboxId: 7 },
++    });
++    const moduleRef = await Test.createTestingModule({
++      controllers: [ChatwootWebhookController],
++      providers: [
++        { provide: ChatWootQueueService, useValue: queue },
++        {
++          provide: SessionManager,
++          useValue: { store: { getWAHADatabase: () => ({}) } },
++        },
++      ],
++    }).compile();
++    app = moduleRef.createNestApplication({ logger: false });
++    app.use(json({ limit: '50mb', verify: keepChatwootWebhookRawBody }));
++    (app.get(
++      ChatwootWebhookController,
++    ) as any).c2ySignature = new C2ySignatureVerifier(loader);
++    await app.listen(0, '127.0.0.1');
++    const port = (app.getHttpServer().address() as AddressInfo).port;
++    base = `http://127.0.0.1:${port}`;
++  });
++
++  afterAll(async () => {
++    await app.close();
++  });
++
++  afterEach(() => {
++    queue.addJobToQueue.mockClear();
++    queue.addMessageCreatedJob.mockClear();
++  });
++
++  function post(raw: string, headers: Record<string, string> = {}) {
++    return fetch(`${base}${PATH}`, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json', ...headers },
++      body: raw,
++    });
++  }
++
++  function signed(raw: string, secret = SECRET) {
++    const ts = String(Math.floor(Date.now() / 1000));
++    const sig = createHmac('sha256', secret)
++      .update(`${ts}.${raw}`)
++      .digest('hex');
++    return {
++      'X-Chatwoot-Timestamp': ts,
++      'X-Chatwoot-Signature': `sha256=${sig}`,
++    };
++  }
++
++  // Rails-style escapes and UTF-8: the signature is over these exact bytes
++  const reaction = JSON.stringify({
++    event: 'c2y_message_reaction',
++    id: 501,
++    message_type: 'incoming',
++    private: false,
++    conversation: { id: 42, meta: { sender: {} } },
++    c2y_reaction: { emoji: '👍' },
++  }).replace('"incoming"', '"in\\u0063oming"');
++
++  it('signed c2y event: 201 and queued', async () => {
++    const res = await post(reaction, signed(reaction));
++    expect(res.status).toBe(201);
++    expect(queue.addJobToQueue).toHaveBeenCalledWith(
++      'c2y_message_reaction',
++      expect.objectContaining({ app: 'app_1', session: 'hub2you' }),
++    );
++  });
++
++  it('unsigned c2y event: 401, not queued', async () => {
++    const res = await post(reaction);
++    expect(res.status).toBe(401);
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++  });
++
++  it('signed with another secret: 401, not queued', async () => {
++    const res = await post(reaction, signed(reaction, 'guessed'));
++    expect(res.status).toBe(401);
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++  });
++
++  it('body changed after signing: 401, not queued', async () => {
++    const headers = signed(reaction);
++    const forged = reaction.replace('👍', '💩');
++    const res = await post(forged, headers);
++    expect(res.status).toBe(401);
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++  });
++
++  it('message_created without signature: accepted as before', async () => {
++    const created = JSON.stringify({
++      event: 'message_created',
++      id: 502,
++      message_type: 'outgoing',
++      private: false,
++      content: 'oi',
++      conversation: { id: 42, meta: { sender: {} } },
++    });
++    const res = await post(created);
++    expect(res.status).toBe(201);
++    expect(queue.addMessageCreatedJob).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/src/apps/chatwoot/api/chatwoot.webhook.controller.c2y2.test.ts b/src/apps/chatwoot/api/chatwoot.webhook.controller.c2y2.test.ts
+new file mode 100644
+index 00000000..b81e39b5
+--- /dev/null
++++ b/src/apps/chatwoot/api/chatwoot.webhook.controller.c2y2.test.ts
+@@ -0,0 +1,157 @@
++const findEnabledAppById = jest.fn();
++jest.mock('@waha/apps/app_sdk/storage/AppRepository', () => ({
++  AppRepository: jest.fn().mockImplementation(() => ({
++    findEnabledAppById: findEnabledAppById,
++  })),
++}));
++// The CLI pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/cli', () => ({ CommandPrefix: 'wa/' }));
++
++import { NotFoundException, UnauthorizedException } from '@nestjs/common';
++import { ChatwootWebhookController } from '@waha/apps/chatwoot/api/chatwoot.webhook.controller';
++
++function setup(app: any = { id: 'app_1', session: 'hub2you' }) {
++  findEnabledAppById.mockResolvedValue(app);
++  const queue: any = {
++    addJobToQueue: jest.fn().mockResolvedValue(undefined),
++    addMessageCreatedJob: jest.fn().mockResolvedValue(undefined),
++  };
++  const manager: any = { store: { getWAHADatabase: () => ({}) } };
++  const controller = new ChatwootWebhookController(queue, manager);
++  // Signature checked in c2y.signature.test.ts and the e2e below
++  const verify = jest.fn().mockResolvedValue('ok');
++  (controller as any).c2ySignature = { verify };
++  return { controller, queue, verify };
++}
++
++function body(extra: any = {}) {
++  return {
++    event: 'c2y_message_reaction',
++    id: 501,
++    message_type: 'incoming',
++    private: false,
++    content_attributes: {},
++    conversation: { id: 42, meta: { sender: {} } },
++    c2y_reaction: { emoji: '👍' },
++    ...extra,
++  };
++}
++
++afterEach(() => jest.clearAllMocks());
++
++describe('ChatwootWebhookController - c2y events (c2y-rich-2)', () => {
++  it('reaction to an INCOMING message is queued (before the incoming filter)', async () => {
++    const { controller, queue } = setup();
++    await controller.webhook('hub2you', 'app_1', body());
++    expect(queue.addJobToQueue).toHaveBeenCalledWith('c2y_message_reaction', {
++      session: 'hub2you',
++      app: 'app_1',
++      body: expect.objectContaining({ id: 501 }),
++    });
++  });
++
++  it('edit of an echo (external_echo) message is queued too', async () => {
++    const { controller, queue } = setup();
++    await controller.webhook(
++      'hub2you',
++      'app_1',
++      body({
++        event: 'c2y_message_edit',
++        message_type: 'outgoing',
++        content_attributes: { external_echo: true },
++        c2y_edit: { waha_text: 'x' },
++      }),
++    );
++    expect(queue.addJobToQueue).toHaveBeenCalledWith(
++      'c2y_message_edit',
++      expect.anything(),
++    );
++  });
++
++  it('private note: ignored', async () => {
++    const { controller, queue } = setup();
++    await controller.webhook('hub2you', 'app_1', body({ private: true }));
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++  });
++
++  it('unknown app or other session: 404, nothing queued', async () => {
++    const { controller, queue } = setup(null);
++    await expect(
++      controller.webhook('hub2you', 'app_1', body()),
++    ).rejects.toBeInstanceOf(NotFoundException);
++    findEnabledAppById.mockResolvedValue({ id: 'app_1', session: 'other' });
++    await expect(
++      controller.webhook('hub2you', 'app_1', body()),
++    ).rejects.toBeInstanceOf(NotFoundException);
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++  });
++
++  it('regular incoming message_created is still ignored', async () => {
++    const { controller, queue } = setup();
++    await controller.webhook(
++      'hub2you',
++      'app_1',
++      body({ event: 'message_created' }),
++    );
++    expect(queue.addJobToQueue).not.toHaveBeenCalled();
++    expect(queue.addMessageCreatedJob).not.toHaveBeenCalled();
++  });
++});
++
++describe('ChatwootWebhookController - c2y signature (c2y-rich-2, review)', () => {
++  const req = {
++    rawBody: Buffer.from('{"event":"c2y_message_reaction"}'),
++    headers: {
++      'x-chatwoot-signature': 'sha256=abc',
++      'x-chatwoot-timestamp': '1',
++    },
++  };
++
++  it('passes the app config, raw body and headers to the verifier', async () => {
++    const app = { id: 'app_1', session: 'hub2you', config: { inboxId: 7 } };
++    const { controller, queue, verify } = setup(app);
++    await controller.webhook('hub2you', 'app_1', body(), req);
++    expect(verify).toHaveBeenCalledWith(
++      'app_1',
++      app.config,
++      req.rawBody,
++      req.headers,
++    );
++    expect(queue.addJobToQueue).toHaveBeenCalledTimes(1);
++  });
++
++  it.each([['invalid'], ['no-secret']])(
++    'verdict %s: 401 and nothing queued',
++    async (verdict) => {
++      const { controller, queue, verify } = setup();
++      verify.mockResolvedValue(verdict);
++      await expect(
++        controller.webhook('hub2you', 'app_1', body(), req),
++      ).rejects.toBeInstanceOf(UnauthorizedException);
++      expect(queue.addJobToQueue).not.toHaveBeenCalled();
++    },
++  );
++
++  it('unknown app: 404 before any signature work', async () => {
++    const { controller, verify } = setup(null);
++    await expect(
++      controller.webhook('hub2you', 'app_1', body(), req),
++    ).rejects.toBeInstanceOf(NotFoundException);
++    expect(verify).not.toHaveBeenCalled();
++  });
++
++  it('other events never go through the signature check', async () => {
++    const { controller, queue, verify } = setup();
++    await controller.webhook(
++      'hub2you',
++      'app_1',
++      body({
++        event: 'message_created',
++        message_type: 'outgoing',
++        c2y_reaction: undefined,
++      }),
++    );
++    expect(verify).not.toHaveBeenCalled();
++    expect(queue.addMessageCreatedJob).toHaveBeenCalledTimes(1);
++  });
++});
+diff --git a/src/apps/chatwoot/api/chatwoot.webhook.controller.ts b/src/apps/chatwoot/api/chatwoot.webhook.controller.ts
+index 45720a78..2b641821 100644
+--- a/src/apps/chatwoot/api/chatwoot.webhook.controller.ts
++++ b/src/apps/chatwoot/api/chatwoot.webhook.controller.ts
+@@ -1,9 +1,12 @@
+ import {
+   Body,
+   Controller,
++  Logger,
+   NotFoundException,
+   Param,
+   Post,
++  Req,
++  UnauthorizedException,
+ } from '@nestjs/common';
+ import { ApiOperation } from '@nestjs/swagger';
+ import { IsCommandsChat } from '@waha/apps/chatwoot/client/ids';
+@@ -14,9 +17,15 @@ import { SessionManager } from '@waha/core/abc/manager.abc';
+ import { AppRepository } from '@waha/apps/app_sdk/storage/AppRepository';
+ import { CommandPrefix } from '@waha/apps/chatwoot/cli';
+ import { IsExternalEcho } from '@waha/apps/chatwoot/api/webhook.guards';
++import { IsC2yActionEvent } from '@waha/apps/chatwoot/messages/to/whatsapp/actions';
++import { C2ySignatureVerifier } from '@waha/apps/chatwoot/api/c2y.signature';
+ 
+ @Controller('webhooks/chatwoot/')
+ export class ChatwootWebhookController {
++  private readonly logger = new Logger('ChatwootWebhookController');
++  // Autonom.ia c2y-rich-2: signature of the c2y_* events (one cache per process)
++  private c2ySignature = new C2ySignatureVerifier();
++
+   constructor(
+     private readonly chatWootQueueService: ChatWootQueueService,
+     private readonly manager: SessionManager,
+@@ -31,11 +40,18 @@ export class ChatwootWebhookController {
+     @Param('session') session: string,
+     @Param('id') id: string,
+     @Body() body: any,
++    @Req() req?: any,
+   ) {
+     if (!body || !body?.event) {
+       return { success: true };
+     }
+ 
++    // Autonom.ia c2y-rich-2: reaction / edit made in chat2you.
++    // Before the incoming and echo filters: the target can be any message.
++    if (IsC2yActionEvent(body.event)) {
++      return await this.c2yAction(session, id, body, req);
++    }
++
+     // Ignore all incoming messages
+     if (body.message_type == MessageType.INCOMING) {
+       return { success: true };
+@@ -117,4 +133,35 @@ export class ChatwootWebhookController {
+         return { success: true };
+     }
+   }
++
++  private async c2yAction(session: string, id: string, body: any, req: any) {
++    if (body.private || IsCommandsChat(body)) {
++      return { success: true };
++    }
++    const knex = this.manager.store.getWAHADatabase();
++    const repo = new AppRepository(knex);
++    const app = await repo.findEnabledAppById(id);
++    if (!app || app.session !== session) {
++      throw new NotFoundException(`App '${id}' not found`);
++    }
++    const verdict = await this.c2ySignature.verify(
++      id,
++      app.config as any,
++      req?.rawBody,
++      req?.headers || {},
++    );
++    if (verdict !== 'ok') {
++      // Only ids in the log: never the secret, the signature or the body
++      this.logger.warn(
++        verdict === 'no-secret'
++          ? `c2y event refused: inbox secret not readable for app '${id}' ` +
++              '(token without administrator role, or Chatwoot unreachable)'
++          : `c2y event refused: invalid or missing signature for app '${id}'`,
++      );
++      throw new UnauthorizedException('Invalid signature');
++    }
++    const data: InboxData = { session: session, app: id, body: body };
++    await this.chatWootQueueService.addJobToQueue(body.event, data);
++    return { success: true };
++  }
+ }
+diff --git a/src/apps/chatwoot/api/rawbody.ts b/src/apps/chatwoot/api/rawbody.ts
+new file mode 100644
+index 00000000..3aa9dea5
+--- /dev/null
++++ b/src/apps/chatwoot/api/rawbody.ts
+@@ -0,0 +1,18 @@
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * body-parser `verify` hook: keeps the raw JSON body of the Chatwoot inbox
++ * webhook (POST /webhooks/chatwoot/...) on req.rawBody, so the c2y_* events
++ * can be checked against the HMAC signature. Every other route is untouched.
++ */
++export const CHATWOOT_WEBHOOK_PATH_PREFIX = '/webhooks/chatwoot/';
++
++export function keepChatwootWebhookRawBody(
++  req: any,
++  _res: unknown,
++  buf: Buffer,
++): void {
++  const url: unknown = req?.originalUrl ?? req?.url;
++  if (typeof url === 'string' && url.startsWith(CHATWOOT_WEBHOOK_PATH_PREFIX)) {
++    req.rawBody = buf;
++  }
++}
+diff --git a/src/apps/chatwoot/app.module.ts b/src/apps/chatwoot/app.module.ts
+index f6eef82c..db7bb3e5 100644
+--- a/src/apps/chatwoot/app.module.ts
++++ b/src/apps/chatwoot/app.module.ts
+@@ -29,6 +29,11 @@ import { WAHASessionStatusConsumer } from './consumers/waha/session.status';
+ import { WAHACallAcceptedConsumer } from './consumers/waha/call.accepted';
+ import { WAHACallReceivedConsumer } from './consumers/waha/call.received';
+ import { WAHACallRejectedConsumer } from './consumers/waha/call.rejected';
++import { WAHAPollVoteConsumer } from './consumers/waha/poll.vote';
++import {
++  ChatWootInboxC2yEditConsumer,
++  ChatWootInboxC2yReactionConsumer,
++} from './consumers/inbox/c2y_actions';
+ import { ChatWootQueueService } from './services/ChatWootQueueService';
+ import { ChatWootScheduleService } from './services/ChatWootScheduleService';
+ import { ChatWootWAHAQueueService } from './services/ChatWootWAHAQueueService';
+@@ -103,6 +108,10 @@ const IMPORTS = lodash.flatten([
+     name: QueueName.WAHA_CALL_REJECTED,
+     defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
+   }),
++  RegisterAppQueue({
++    name: QueueName.WAHA_POLL_VOTE,
++    defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
++  }),
+   RegisterAppQueue({
+     name: QueueName.WAHA_SESSION_STATUS,
+     defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
+@@ -131,6 +140,14 @@ const IMPORTS = lodash.flatten([
+     name: QueueName.INBOX_COMMANDS,
+     defaultJobOptions: merge(NoRetriesJobOptions, JobRemoveOptions),
+   }),
++  RegisterAppQueue({
++    name: QueueName.INBOX_C2Y_REACTION,
++    defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
++  }),
++  RegisterAppQueue({
++    name: QueueName.INBOX_C2Y_EDIT,
++    defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
++  }),
+ ]);
+ 
+ const PROVIDERS = [
+@@ -141,6 +158,8 @@ const PROVIDERS = [
+   ChatWootConversationCreatedConsumer,
+   ChatWootConversationStatusChangedConsumer,
+   ChatWootInboxCommandsConsumer,
++  ChatWootInboxC2yReactionConsumer,
++  ChatWootInboxC2yEditConsumer,
+   // Tasks
+   TaskContactsPullConsumer,
+   TaskMessagesPullConsumer,
+@@ -154,6 +173,7 @@ const PROVIDERS = [
+   WAHACallReceivedConsumer,
+   WAHACallAcceptedConsumer,
+   WAHACallRejectedConsumer,
++  WAHAPollVoteConsumer,
+   // Scheduled
+   MessageCleanupConsumer,
+   CheckVersionConsumer,
+diff --git a/src/apps/chatwoot/consumers/QueueName.ts b/src/apps/chatwoot/consumers/QueueName.ts
+index fa8f4818..091528e1 100644
+--- a/src/apps/chatwoot/consumers/QueueName.ts
++++ b/src/apps/chatwoot/consumers/QueueName.ts
+@@ -24,6 +24,8 @@ export enum QueueName {
+   WAHA_CALL_RECEIVED = 'chatwoot.waha | call.received',
+   WAHA_CALL_ACCEPTED = 'chatwoot.waha | call.accepted',
+   WAHA_CALL_REJECTED = 'chatwoot.waha | call.rejected',
++  // Autonom.ia c2y-rich-2
++  WAHA_POLL_VOTE = 'chatwoot.waha | poll.vote',
+   //
+   // ChatWoot Events - Real
+   //
+@@ -36,6 +38,11 @@ export enum QueueName {
+   //
+   INBOX_MESSAGE_DELETED = 'chatwoot.inbox | message_deleted',
+   INBOX_COMMANDS = 'chatwoot.inbox | commands',
++  //
++  // Autonom.ia c2y-rich-2 - custom events sent by chat2you
++  //
++  INBOX_C2Y_REACTION = 'chatwoot.inbox | c2y_message_reaction',
++  INBOX_C2Y_EDIT = 'chatwoot.inbox | c2y_message_edit',
+ }
+ 
+ export enum FlowProducerName {
+diff --git a/src/apps/chatwoot/consumers/inbox/c2y_actions.test.ts b/src/apps/chatwoot/consumers/inbox/c2y_actions.test.ts
+new file mode 100644
+index 00000000..2e1516cf
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/c2y_actions.test.ts
+@@ -0,0 +1,265 @@
++import { UnrecoverableError } from 'bullmq';
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import {
++  C2yEditHandler,
++  ChatWootInboxC2yEditConsumer,
++  ChatWootInboxC2yReactionConsumer,
++  ReportBody,
++  C2yReactionHandler,
++} from '@waha/apps/chatwoot/consumers/inbox/c2y_actions';
++
++const CHAT_ID = '5511999999999@c.us';
++const SESSION = 'hub2you';
++
++const PART = {
++  chat_id: CHAT_ID,
++  message_id: '3EB0ABC',
++  from_me: true,
++  participant: null,
++};
++
++function body(extra: any = {}) {
++  return {
++    id: 501,
++    message_type: 'outgoing',
++    content: 'texto antigo',
++    conversation: { id: 42 },
++    ...extra,
++  };
++}
++
++function setup(parts: any[] = [PART]) {
++  const session: any = {
++    name: SESSION,
++    setReaction: jest.fn().mockResolvedValue({ id: 'R' }),
++    editMessage: jest.fn().mockResolvedValue({ id: 'E' }),
++  };
++  const mapping: any = {
++    getWhatsAppMessage: jest.fn().mockResolvedValue(parts),
++  };
++  const logger = JestLogger();
++  return { session, mapping, logger };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++afterEach(() => jest.clearAllMocks());
++
++describe('C2yReactionHandler (c2y-rich-2, item 6)', () => {
++  it('reacts to the mapped WhatsApp message', async () => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await handler.handle(body({ c2y_reaction: { emoji: '👍' } }));
++    expect(mapping.getWhatsAppMessage).toHaveBeenCalledWith({
++      conversation_id: 42,
++      message_id: 501,
++    });
++    expect(session.setReaction).toHaveBeenCalledWith({
++      session: '',
++      messageId: `true_${CHAT_ID}_3EB0ABC`,
++      reaction: '👍',
++    });
++  });
++
++  it('reacts to a customer message (incoming) too', async () => {
++    const { session, mapping, logger } = setup([
++      { ...PART, from_me: false, message_id: 'CUSTOMER1' },
++    ]);
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await handler.handle(
++      body({ message_type: 'incoming', c2y_reaction: { emoji: '❤️' } }),
++    );
++    expect(session.setReaction.mock.calls[0][0].messageId).toBe(
++      `false_${CHAT_ID}_CUSTOMER1`,
++    );
++  });
++
++  it("'' removes the reaction", async () => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await handler.handle(body({ c2y_reaction: { emoji: '' } }));
++    expect(session.setReaction.mock.calls[0][0].reaction).toBe('');
++  });
++
++  it('without mapping: unrecoverable error (reported at once, no retry)', async () => {
++    const { session, mapping, logger } = setup([]);
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await expect(
++      handler.handle(body({ c2y_reaction: { emoji: '👍' } })),
++    ).rejects.toBeInstanceOf(UnrecoverableError);
++    expect(session.setReaction).not.toHaveBeenCalled();
++  });
++
++  it.each([
++    [{}],
++    [{ c2y_reaction: null }],
++    [{ c2y_reaction: { emoji: 1 } }],
++    [{ c2y_reaction: { emoji: 'x'.repeat(33) } }],
++  ])('invalid payload %j: nothing is sent', async (extra) => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await expect(handler.handle(body(extra))).resolves.toBeNull();
++    expect(session.setReaction).not.toHaveBeenCalled();
++  });
++
++  it('logs carry no emoji and no phone', async () => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yReactionHandler(mapping, logger, session);
++    await handler.handle(body({ c2y_reaction: { emoji: '🦄' } }));
++    const logs = allLogs(logger);
++    expect(logs).not.toContain('🦄');
++    expect(logs).not.toContain('5511999999999');
++  });
++});
++
++describe('C2yEditHandler (c2y-rich-2, item 7)', () => {
++  const config: any = { linkPreview: 'OFF' };
++
++  it('edits the single mapped text with the preformatted text', async () => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await handler.handle(body({ c2y_edit: { waha_text: 'texto *novo*' } }));
++    expect(session.editMessage).toHaveBeenCalledWith(
++      CHAT_ID,
++      `true_${CHAT_ID}_3EB0ABC`,
++      {
++        text: 'texto *novo*',
++        linkPreview: false,
++        linkPreviewHighQuality: false,
++      },
++    );
++  });
++
++  it('message sent in more than one part: unrecoverable, nothing edited', async () => {
++    const { session, mapping, logger } = setup([
++      PART,
++      { ...PART, message_id: '3EB0DEF' },
++    ]);
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await expect(
++      handler.handle(body({ c2y_edit: { waha_text: 'novo' } })),
++    ).rejects.toBeInstanceOf(UnrecoverableError);
++    expect(session.editMessage).not.toHaveBeenCalled();
++  });
++
++  it('without mapping: unrecoverable, nothing edited', async () => {
++    const { session, mapping, logger } = setup([]);
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await expect(
++      handler.handle(body({ c2y_edit: { waha_text: 'novo' } })),
++    ).rejects.toBeInstanceOf(UnrecoverableError);
++  });
++
++  it.each([
++    [{}],
++    [{ c2y_edit: {} }],
++    [{ c2y_edit: { waha_text: '   ' } }],
++    [{ c2y_edit: { waha_text: 7 } }],
++  ])('invalid payload %j: nothing is sent', async (extra) => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await expect(handler.handle(body(extra))).resolves.toBeNull();
++    expect(session.editMessage).not.toHaveBeenCalled();
++  });
++
++  it('WAHA error propagates (the reporter posts the error note)', async () => {
++    const { session, mapping, logger } = setup();
++    session.editMessage.mockRejectedValue(new Error('500'));
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await expect(
++      handler.handle(body({ c2y_edit: { waha_text: 'novo' } })),
++    ).rejects.toThrow('500');
++  });
++
++  it('logs carry no text and no phone', async () => {
++    const { session, mapping, logger } = setup();
++    const handler = new C2yEditHandler(mapping, logger, session, config);
++    await handler.handle(body({ c2y_edit: { waha_text: 'SegredoEditado' } }));
++    const logs = allLogs(logger);
++    expect(logs).not.toContain('SegredoEditado');
++    expect(logs).not.toContain('5511999999999');
++  });
++});
++
++describe('c2y action error note (c2y-rich-2, review)', () => {
++  function consumerWithReporter(Klass: any) {
++    const reporter = {
++      ReportError: jest.fn().mockResolvedValue(undefined),
++      ReportSucceeded: jest.fn().mockResolvedValue(undefined),
++    };
++    const conversation = { id: 42 };
++    const container: any = {
++      Locale: () => ({ key: () => ({ render: () => 'Erro ao enviar' }) }),
++      ContactConversationService: () => ({
++        ConversationById: jest.fn().mockReturnValue(conversation),
++      }),
++      ChatWootErrorReporter: jest.fn().mockReturnValue(reporter),
++    };
++    // No constructor: only the reporting path is exercised
++    const consumer = Object.create(Klass.prototype);
++    consumer.DIContainer = jest.fn().mockResolvedValue(container);
++    return { consumer, reporter, conversation };
++  }
++
++  const job: any = {
++    data: { app: 'app-1', session: SESSION },
++    attemptsMade: 3,
++  };
++
++  it.each([
++    ['reaction', ChatWootInboxC2yReactionConsumer],
++    ['edit', ChatWootInboxC2yEditConsumer],
++  ])(
++    '%s on an INCOMING message reports an OUTGOING private note',
++    async (_name, Klass) => {
++      const { consumer, reporter, conversation } = consumerWithReporter(Klass);
++      const err = new UnrecoverableError('no mapping');
++      const incoming = body({ message_type: 'incoming' });
++      await expect(
++        consumer.ReportErrorForMessage(job, err, incoming),
++      ).rejects.toBe(err);
++      expect(reporter.ReportError).toHaveBeenCalledTimes(1);
++      expect(reporter.ReportError).toHaveBeenCalledWith(
++        conversation,
++        'Erro ao enviar',
++        'outgoing',
++        err,
++        501,
++      );
++      // The job body is not changed
++      expect(incoming.message_type).toBe('incoming');
++    },
++  );
++
++  it.each([
++    ['reaction', ChatWootInboxC2yReactionConsumer],
++    ['edit', ChatWootInboxC2yEditConsumer],
++  ])('%s recovered report also uses OUTGOING', async (_name, Klass) => {
++    const { consumer, reporter, conversation } = consumerWithReporter(Klass);
++    await consumer.ReportErrorRecovered(
++      job,
++      body({ message_type: 'incoming' }),
++    );
++    expect(reporter.ReportSucceeded).toHaveBeenCalledWith(
++      conversation,
++      'outgoing',
++      501,
++    );
++  });
++
++  it('ReportBody keeps every other field', () => {
++    const original = body({
++      message_type: 'incoming',
++      c2y_reaction: { emoji: '👍' },
++    });
++    expect(ReportBody(original)).toEqual({
++      ...original,
++      message_type: 'outgoing',
++    });
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/inbox/c2y_actions.ts b/src/apps/chatwoot/consumers/inbox/c2y_actions.ts
+new file mode 100644
+index 00000000..d308366a
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/c2y_actions.ts
+@@ -0,0 +1,200 @@
++import { Processor } from '@nestjs/bullmq';
++import { JOB_CONCURRENCY } from '@waha/apps/app_sdk/constants';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import { WAHASessionAPI } from '@waha/apps/app_sdk/waha/WAHASelf';
++import { SerializeWhatsAppKey } from '@waha/apps/chatwoot/client/ids';
++import { MessageType } from '@waha/apps/chatwoot/client/types';
++import { ChatWootInboxMessageConsumer } from '@waha/apps/chatwoot/consumers/inbox/base';
++import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
++import { DIContainer } from '@waha/apps/chatwoot/di/DIContainer';
++import {
++  ChatWootConfig,
++  LinkPreview,
++} from '@waha/apps/chatwoot/dto/config.dto';
++import { TKey } from '@waha/apps/chatwoot/i18n/templates';
++import {
++  ParseC2yEdit,
++  ParseC2yReaction,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/actions';
++import {
++  MessageMappingService,
++  WhatsAppMessage,
++} from '@waha/apps/chatwoot/storage';
++import { SessionManager } from '@waha/core/abc/manager.abc';
++import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
++import { Job, UnrecoverableError } from 'bullmq';
++import { PinoLogger } from 'nestjs-pino';
++
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Reaction and edit made by an agent in chat2you -> WhatsApp.
++ * The log carries only ids (Chatwoot message, session) - never the emoji,
++ * the text or the phone.
++ */
++
++/**
++ * The error note of a reaction / edit is always an OUTGOING private note,
++ * even when the target message is incoming: the upstream reporter copies
++ * body.message_type, and before the patch it never saw incoming events.
++ * Returns a copy; the job body is not changed.
++ */
++export function ReportBody(body: any): any {
++  return { ...body, message_type: MessageType.OUTGOING };
++}
++
++async function WhatsAppParts(
++  mapping: MessageMappingService,
++  body: any,
++): Promise<WhatsAppMessage[]> {
++  const messages = await mapping.getWhatsAppMessage({
++    conversation_id: body.conversation.id,
++    message_id: body.id,
++  });
++  return messages || [];
++}
++
++@Processor(QueueName.INBOX_C2Y_REACTION, { concurrency: JOB_CONCURRENCY })
++export class ChatWootInboxC2yReactionConsumer extends ChatWootInboxMessageConsumer {
++  constructor(
++    protected readonly manager: SessionManager,
++    log: PinoLogger,
++    rmutex: RMutexService,
++  ) {
++    super(manager, log, rmutex, 'ChatWootInboxC2yReactionConsumer');
++  }
++
++  ErrorHeaderKey(): TKey | null {
++    return TKey.WHATSAPP_MESSAGE_SENDING_ERROR;
++  }
++
++  protected async ReportErrorForMessage(job: Job, err: any, body: any) {
++    return super.ReportErrorForMessage(job, err, ReportBody(body));
++  }
++
++  protected async ReportErrorRecovered(job: Job, body: any) {
++    return super.ReportErrorRecovered(job, ReportBody(body));
++  }
++
++  protected async Process(container: DIContainer, body, job: Job) {
++    const session = new WAHASessionAPI(job.data.session, container.WAHASelf());
++    const handler = new C2yReactionHandler(
++      container.MessageMappingService(),
++      container.Logger(),
++      session,
++    );
++    return await handler.handle(body);
++  }
++}
++
++export class C2yReactionHandler {
++  constructor(
++    private mappingService: MessageMappingService,
++    private logger: ILogger,
++    private session: WAHASessionAPI,
++  ) {}
++
++  async handle(body: any) {
++    const reaction = ParseC2yReaction(body);
++    if (!reaction) {
++      this.logger.warn(
++        `c2y_message_reaction without a valid emoji ignored: chatwoot_message_id=${body?.id}`,
++      );
++      return null;
++    }
++    const parts = await WhatsAppParts(this.mappingService, body);
++    if (parts.length === 0) {
++      throw new UnrecoverableError(
++        `No WhatsApp message found for Chatwoot message '${body.id}', ` +
++          'the reaction was not sent',
++      );
++    }
++    const messageId = SerializeWhatsAppKey(parts[0]);
++    const result = await this.session.setReaction({
++      session: '',
++      messageId: messageId,
++      reaction: reaction.emoji,
++    });
++    this.logger.info(
++      `ChatWoot => WhatsApp: reaction ${reaction.emoji ? 'set' : 'removed'}: ` +
++        `chatwoot_message_id=${body.id} session=${this.session.name}`,
++    );
++    return result;
++  }
++}
++
++@Processor(QueueName.INBOX_C2Y_EDIT, { concurrency: JOB_CONCURRENCY })
++export class ChatWootInboxC2yEditConsumer extends ChatWootInboxMessageConsumer {
++  constructor(
++    protected readonly manager: SessionManager,
++    log: PinoLogger,
++    rmutex: RMutexService,
++  ) {
++    super(manager, log, rmutex, 'ChatWootInboxC2yEditConsumer');
++  }
++
++  ErrorHeaderKey(): TKey | null {
++    return TKey.WHATSAPP_MESSAGE_SENDING_ERROR;
++  }
++
++  protected async ReportErrorForMessage(job: Job, err: any, body: any) {
++    return super.ReportErrorForMessage(job, err, ReportBody(body));
++  }
++
++  protected async ReportErrorRecovered(job: Job, body: any) {
++    return super.ReportErrorRecovered(job, ReportBody(body));
++  }
++
++  protected async Process(container: DIContainer, body, job: Job) {
++    const session = new WAHASessionAPI(job.data.session, container.WAHASelf());
++    const handler = new C2yEditHandler(
++      container.MessageMappingService(),
++      container.Logger(),
++      session,
++      container.ChatWootConfig(),
++    );
++    return await handler.handle(body);
++  }
++}
++
++export class C2yEditHandler {
++  constructor(
++    private mappingService: MessageMappingService,
++    private logger: ILogger,
++    private session: WAHASessionAPI,
++    private config: ChatWootConfig,
++  ) {}
++
++  async handle(body: any) {
++    const edit = ParseC2yEdit(body);
++    if (!edit) {
++      this.logger.warn(
++        `c2y_message_edit without a valid text ignored: chatwoot_message_id=${body?.id}`,
++      );
++      return null;
++    }
++    const parts = await WhatsAppParts(this.mappingService, body);
++    if (parts.length !== 1) {
++      throw new UnrecoverableError(
++        `Chatwoot message '${body.id}' has ${parts.length} WhatsApp parts; ` +
++          'only a message sent as a single text can be edited',
++      );
++    }
++    const whatsapp = parts[0];
++    const result = await this.session.editMessage(
++      whatsapp.chat_id,
++      SerializeWhatsAppKey(whatsapp),
++      {
++        text: edit.text,
++        linkPreview: [LinkPreview.LQ, LinkPreview.HQ].includes(
++          this.config.linkPreview,
++        ),
++        linkPreviewHighQuality: this.config.linkPreview == LinkPreview.HQ,
++      },
++    );
++    this.logger.info(
++      `ChatWoot => WhatsApp: message edited: chatwoot_message_id=${body.id} ` +
++        `session=${this.session.name}`,
++    );
++    return result;
++  }
++}
+diff --git a/src/apps/chatwoot/consumers/inbox/message_created.c2y2.test.ts b/src/apps/chatwoot/consumers/inbox/message_created.c2y2.test.ts
+new file mode 100644
+index 00000000..56ddde0c
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/message_created.c2y2.test.ts
+@@ -0,0 +1,368 @@
++jest.mock('@waha/utils/promiseTimeout', () => ({
++  sleep: jest.fn(() => Promise.resolve()),
++}));
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: { WhatsAppMessageKeys: jest.fn() },
++}));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { AttributeKey } from '@waha/apps/chatwoot/const';
++import { MessageHandler } from '@waha/apps/chatwoot/consumers/inbox/message_created';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { DeterministicMessageId } from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++import { EngineHelper } from '@waha/apps/chatwoot/waha';
++
++const CHAT_ID = '5511999999999@c.us';
++const GROUP_ID = '120363000000000000@g.us';
++const SESSION = 'hub2you';
++const SECRET_URL_TOKEN = 'eyJfcmFpbHMiOnsiZGF0YSI6NDJ9fQ';
++
++function chatwootMessage(extra: any = {}, chatId: string = CHAT_ID) {
++  return {
++    id: 777,
++    created_at: '2026-10-16T12:00:00Z',
++    content_type: 'text',
++    content: 'Olá **cliente**',
++    message_type: 'outgoing',
++    attachments: [],
++    content_attributes: {},
++    conversation: {
++      id: 42,
++      meta: {
++        sender: {
++          custom_attributes: { [AttributeKey.WA_CHAT_ID]: chatId },
++        },
++      },
++    },
++    ...extra,
++  };
++}
++
++function attachment(name: string, fileType: string) {
++  return {
++    file_type: fileType,
++    data_url: `https://chat.example/rails/active_storage/blobs/redirect/${SECRET_URL_TOKEN}/${name}`,
++  };
++}
++
++function setup() {
++  const sent = { id: { id: 'WAID', remote: CHAT_ID }, fromMe: true };
++  const session: any = {
++    name: SESSION,
++    sendPoll: jest.fn().mockResolvedValue(sent),
++    sendText: jest.fn().mockResolvedValue(sent),
++    sendImage: jest.fn().mockResolvedValue(sent),
++    sendVideo: jest.fn().mockResolvedValue(sent),
++    sendFile: jest.fn().mockResolvedValue(sent),
++    sendVoice: jest.fn().mockResolvedValue(sent),
++    readMessages: jest.fn().mockResolvedValue(undefined),
++    startTyping: jest.fn().mockResolvedValue(undefined),
++    stopTyping: jest.fn().mockResolvedValue(undefined),
++  };
++  const mapping: any = {
++    getMappingByChatwootCombinedKeyAndPart: jest.fn().mockResolvedValue(null),
++    getWhatsAppMessage: jest.fn().mockResolvedValue([]),
++    map: jest.fn().mockResolvedValue(undefined),
++  };
++  const status: any = { sync: jest.fn().mockResolvedValue(undefined) };
++  const config: any = {
++    conversations: { syncMessageStatus: false },
++    linkPreview: 'OFF',
++  };
++  const media = {
++    fetch: jest.fn().mockResolvedValue(Buffer.from('original-image')),
++    toJpeg: jest.fn().mockResolvedValue(Buffer.from('jpeg-bytes')),
++  };
++  const logger = JestLogger();
++  const handler = new MessageHandler(
++    mapping,
++    logger,
++    session,
++    config,
++    i18n.locale('en-US'),
++    status,
++    media,
++  );
++  (EngineHelper.WhatsAppMessageKeys as jest.Mock).mockReturnValue({
++    timestamp: new Date(0),
++    from_me: true,
++    chat_id: CHAT_ID,
++    message_id: 'WAID',
++    participant: null,
++  });
++  return { handler, session, mapping, logger, media };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++afterEach(() => jest.clearAllMocks());
++
++describe('MessageHandler - sendPoll (c2y-rich-2, item 1)', () => {
++  const POLL = {
++    name: 'Qual plano?',
++    options: ['Básico', 'Completo'],
++    multipleAnswers: true,
++  };
++
++  it('sends the native poll with the deterministic id and maps it as 1 part', async () => {
++    const { handler, session, mapping } = setup();
++    const result = await handler.handle(
++      chatwootMessage({
++        content: 'Qual plano?\n\n1. Básico\n2. Completo',
++        content_attributes: {
++          waha_native: {
++            kind: 'sendPoll',
++            payload: { poll: POLL, chatId: 'attacker@c.us' },
++          },
++        },
++      }),
++    );
++    expect(session.sendPoll).toHaveBeenCalledTimes(1);
++    const [request, opts] = session.sendPoll.mock.calls[0];
++    expect(request).toEqual({
++      session: '',
++      chatId: CHAT_ID,
++      id: DeterministicMessageId(SESSION, 777, 'sendPoll'),
++      poll: POLL,
++      reply_to: undefined,
++    });
++    expect(opts.signal).toBeDefined();
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(mapping.map).toHaveBeenCalledTimes(1);
++    expect(result).toHaveLength(1);
++  });
++
++  it('refused poll (422): sends the numbered text once', async () => {
++    const { handler, session } = setup();
++    const err: any = new Error('Request failed with status code 422');
++    err.response = { status: 422 };
++    session.sendPoll.mockRejectedValue(err);
++    await handler.handle(
++      chatwootMessage({
++        content: 'Qual plano?\n\n1. Básico\n2. Completo',
++        content_attributes: {
++          waha_native: { kind: 'sendPoll', payload: { poll: POLL } },
++        },
++      }),
++    );
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++    expect(session.sendText.mock.calls[0][0].text).toContain('1. Básico');
++  });
++});
++
++describe('MessageHandler - waha_text (c2y-rich-2, item 8)', () => {
++  it('without the key: converts markdown as before', async () => {
++    const { handler, session } = setup();
++    await handler.handle(chatwootMessage());
++    expect(session.sendText.mock.calls[0][0].text).toBe('Olá *cliente*');
++  });
++
++  it('with the key: sends waha_text as is, no markdown conversion', async () => {
++    const { handler, session } = setup();
++    const wahaText = 'Olá *cliente* _it_ ~risco~ `x` 2*3*4 a**b**c';
++    await handler.handle(
++      chatwootMessage({ content_attributes: { waha_text: wahaText } }),
++    );
++    expect(session.sendText.mock.calls[0][0].text).toBe(wahaText);
++  });
++
++  it('with the key in a group: mentions are read from waha_text', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage(
++        { content_attributes: { waha_text: 'Oi @5511988887777 tudo *bem*' } },
++        GROUP_ID,
++      ),
++    );
++    const request = session.sendText.mock.calls[0][0];
++    expect(request.mentions).toEqual(['5511988887777@c.us']);
++    expect(request.text).toContain('tudo *bem*');
++  });
++
++  it('ignores a non-string waha_text', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({ content_attributes: { waha_text: { x: 1 } } }),
++    );
++    expect(session.sendText.mock.calls[0][0].text).toBe('Olá *cliente*');
++  });
++
++  it('caption of a single attachment uses waha_text too', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: { waha_text: 'legenda *pronta*' },
++        attachments: [attachment('foto.jpg', 'image')],
++      }),
++    );
++    expect(session.sendImage.mock.calls[0][0].caption).toBe(
++      'legenda *pronta*',
++    );
++  });
++});
++
++describe('MessageHandler - media as media (c2y-rich-2, item 2)', () => {
++  const asMedia = { waha_media_as_media: true };
++
++  it.each([
++    ['foto.webp'],
++    ['foto.bmp'],
++    ['foto.tiff'],
++    ['foto.avif'],
++    ['foto.heic'],
++  ])('%s with the flag: converted to JPEG and sent as image', async (name) => {
++    const { handler, session, media } = setup();
++    await handler.handle(
++      chatwootMessage({
++        content: 'veja',
++        content_attributes: asMedia,
++        attachments: [attachment(name, 'image')],
++      }),
++    );
++    expect(media.fetch).toHaveBeenCalledWith(
++      expect.stringContaining(`/${name}`),
++    );
++    expect(session.sendFile).not.toHaveBeenCalled();
++    const request = session.sendImage.mock.calls[0][0];
++    expect(request.file).toEqual({
++      data: Buffer.from('jpeg-bytes').toString('base64'),
++      mimetype: 'image/jpeg',
++      filename: 'foto.jpg',
++    });
++    expect(request.caption).toBe('veja');
++    expect(request.chatId).toBe(CHAT_ID);
++  });
++
++  it('webp WITHOUT the flag: sent as a file, exactly as before', async () => {
++    const { handler, session, media } = setup();
++    await handler.handle(
++      chatwootMessage({ attachments: [attachment('foto.webp', 'image')] }),
++    );
++    expect(media.fetch).not.toHaveBeenCalled();
++    expect(session.sendImage).not.toHaveBeenCalled();
++    expect(session.sendFile).toHaveBeenCalledTimes(1);
++    expect(session.sendFile.mock.calls[0][0].file).toMatchObject({
++      filename: 'foto.webp',
++      mimetype: 'image/webp',
++    });
++  });
++
++  it('gif with the flag: sent as a video with convert', async () => {
++    const { handler, session, media } = setup();
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: asMedia,
++        attachments: [attachment('anim.gif', 'image')],
++      }),
++    );
++    expect(media.fetch).not.toHaveBeenCalled();
++    const request = session.sendVideo.mock.calls[0][0];
++    expect(request.convert).toBe(true);
++    expect(request.file).toMatchObject({
++      mimetype: 'image/gif',
++      filename: 'anim.gif',
++    });
++  });
++
++  it('conversion fails: falls back to a file and logs only the error class', async () => {
++    const { handler, session, media, logger } = setup();
++    const err: any = new Error(`fetch ${SECRET_URL_TOKEN} failed`);
++    err.name = 'AxiosError';
++    media.fetch.mockRejectedValue(err);
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: asMedia,
++        attachments: [attachment('foto.heic', 'image')],
++      }),
++    );
++    expect(session.sendImage).not.toHaveBeenCalled();
++    expect(session.sendFile).toHaveBeenCalledTimes(1);
++    expect(logger.warn).toHaveBeenCalledWith(
++      expect.stringContaining('(AxiosError)'),
++    );
++    const warns = (logger.warn as jest.Mock).mock.calls.map((a) => String(a[0])).join('\n');
++    expect(warns).not.toContain(SECRET_URL_TOKEN);
++  });
++
++  it('sharp can not decode: falls back to a file', async () => {
++    const { handler, session, media } = setup();
++    media.toJpeg.mockRejectedValue(new Error('unsupported image format'));
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: asMedia,
++        attachments: [attachment('foto.heic', 'image')],
++      }),
++    );
++    expect(session.sendFile).toHaveBeenCalledTimes(1);
++  });
++
++  it.each([['foto.jpg'], ['foto.png']])(
++    '%s with the flag: same sendImage by url as before',
++    async (name) => {
++      const { handler, session, media } = setup();
++      await handler.handle(
++        chatwootMessage({
++          content_attributes: asMedia,
++          attachments: [attachment(name, 'image')],
++        }),
++      );
++      expect(media.fetch).not.toHaveBeenCalled();
++      expect(session.sendImage.mock.calls[0][0].file.url).toContain(name);
++    },
++  );
++
++  it.each([
++    ['clip.mov', 'video/quicktime'],
++    ['clip.webm', 'video/webm'],
++    ['clip.mkv', 'video/x-matroska'],
++  ])('%s with the flag: sendVideo with convert', async (name, mimetype) => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: asMedia,
++        attachments: [attachment(name, 'video')],
++      }),
++    );
++    expect(session.sendFile).not.toHaveBeenCalled();
++    const request = session.sendVideo.mock.calls[0][0];
++    expect(request.convert).toBe(true);
++    expect(request.file).toMatchObject({ mimetype: mimetype, filename: name });
++  });
++
++  it('mov WITHOUT the flag: sent as a file, exactly as before', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({ attachments: [attachment('clip.mov', 'video')] }),
++    );
++    expect(session.sendVideo).not.toHaveBeenCalled();
++    expect(session.sendFile).toHaveBeenCalledTimes(1);
++  });
++
++  it('mp4 without the flag: unchanged sendVideo', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({ attachments: [attachment('clip.mp4', 'video')] }),
++    );
++    expect(session.sendVideo.mock.calls[0][0].file).toMatchObject({
++      mimetype: 'video/mp4',
++      filename: 'clip.mp4',
++    });
++  });
++
++  it('logs carry no phone', async () => {
++    const { handler, logger } = setup();
++    await handler.handle(
++      chatwootMessage({
++        content_attributes: asMedia,
++        attachments: [attachment('foto.webp', 'image')],
++      }),
++    );
++    expect(allLogs(logger)).not.toContain('5511999999999');
++  });
++});
 diff --git a/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts b/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts
 new file mode 100644
 index 00000000..91471d6d
@@ -384,10 +2168,10 @@ index 00000000..91471d6d
 +  });
 +});
 diff --git a/src/apps/chatwoot/consumers/inbox/message_created.ts b/src/apps/chatwoot/consumers/inbox/message_created.ts
-index b48d9328..e2121b67 100644
+index b48d9328..eec9cf40 100644
 --- a/src/apps/chatwoot/consumers/inbox/message_created.ts
 +++ b/src/apps/chatwoot/consumers/inbox/message_created.ts
-@@ -20,12 +20,25 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
+@@ -20,12 +20,38 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
  import { SessionManager } from '@waha/core/abc/manager.abc';
  import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
  import {
@@ -395,6 +2179,7 @@ index b48d9328..e2121b67 100644
    MessageFileRequest,
    MessageImageRequest,
 +  MessageLocationRequest,
++  MessagePollRequest,
    MessageTextRequest,
    MessageVideoRequest,
    MessageVoiceRequest,
@@ -410,10 +2195,54 @@ index b48d9328..e2121b67 100644
 +  WahaNative,
 +  WahaNativeSendError,
 +} from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++import {
++  WahaFormattedText,
++  WantsMediaAsMedia,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/hints';
++import {
++  DefaultMediaTools,
++  GIF_MIMETYPE,
++  JPEG_MIMETYPE,
++  JpegFilename,
++  MediaTools,
++  WHATSAPP_VIDEO_MIMETYPE,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/media';
  import { sleep } from '@waha/utils/promiseTimeout';
  import { Job } from 'bullmq';
  import { PinoLogger } from 'nestjs-pino';
-@@ -116,6 +129,17 @@ export class MessageHandler {
+@@ -80,6 +106,7 @@ export class MessageHandler {
+     private config: ChatWootConfig,
+     private l: Locale,
+     private statusService: MessageStatusService,
++    private media: MediaTools = DefaultMediaTools,
+   ) {}
+ 
+   async handle(body: any) {
+@@ -95,16 +122,20 @@ export class MessageHandler {
+       return;
+     }
+ 
+-    let content: string = message.content;
++    // Autonom.ia c2y-rich-2: text already in WhatsApp format from chat2you
++    const wahaText = WahaFormattedText(message);
++    let content: string = wahaText ?? message.content;
+     let mentions: null | string[] = null;
+     if (isJidGroup(chatId)) {
+       // Parse any mention in the text and get a new clean text if required
+-      const parsed = parseMentionsFromText(message.content);
++      const parsed = parseMentionsFromText(content);
+       content = parsed.text;
+       mentions = parsed.mentions;
+     }
+ 
+-    content = MarkdownToWhatsApp(content);
++    if (wahaText === null) {
++      content = MarkdownToWhatsApp(content);
++    }
+     const results = [];
+     let part = 0; // Start from 0 and increment before each send/check
+     const replyTo = await this.getReplyTo(message).catch((err) => {
+@@ -116,6 +147,17 @@ export class MessageHandler {
  
      // Send text (Part 1 if present)
      const attachments = message.attachments || [];
@@ -431,7 +2260,23 @@ index b48d9328..e2121b67 100644
      const sendText = content && attachments.length !== 1;
      const parts = attachments.length + (sendText ? 1 : 0);
      if (sendText) {
-@@ -167,6 +191,87 @@ export class MessageHandler {
+@@ -154,7 +196,14 @@ export class MessageHandler {
+         chatwoot: body,
+         singleAttachment: attachments.length == 1,
+       });
+-      const msg = await this.sendFile(chatId, caption, replyTo, mentions, file);
++      const msg = await this.sendFile(
++        chatId,
++        caption,
++        replyTo,
++        mentions,
++        file,
++        WantsMediaAsMedia(message),
++      );
+       this.logger.info(
+         `File message sent: ${msg.id} - ${file.data_url} - ${file.file_type}`,
+       );
+@@ -167,6 +216,92 @@ export class MessageHandler {
      return results;
    }
  
@@ -496,6 +2341,11 @@ index b48d9328..e2121b67 100644
 +            request as MessageContactVcardRequest,
 +            opts,
 +          );
++        case 'sendPoll':
++          return await this.session.sendPoll(
++            request as MessagePollRequest,
++            opts,
++          );
 +      }
 +    } catch (err) {
 +      // Never log err itself: it carries request config, headers and payload
@@ -519,8 +2369,120 @@ index b48d9328..e2121b67 100644
    /**
     * Push acks that arrived before the last part was mapped, best effort
     */
+@@ -274,6 +409,7 @@ export class MessageHandler {
+     replyTo: string,
+     mentions: string[] | null,
+     file: MessageAttachment,
++    asMedia: boolean = false,
+   ) {
+     const url = file.data_url;
+     let filename = url.split('/').pop();
+@@ -286,6 +422,20 @@ export class MessageHandler {
+     switch (file.file_type) {
+       case 'image':
+         if (mimetype != 'image/jpeg' && mimetype != 'image/png') {
++          if (asMedia) {
++            const sent = await this.sendImageAsMedia(
++              chatId,
++              content,
++              replyTo,
++              mentions,
++              url,
++              mimetype,
++              filename,
++            );
++            if (sent) {
++              return sent;
++            }
++          }
+           // Send it as a file
+           break;
+         }
+@@ -302,7 +452,8 @@ export class MessageHandler {
+         };
+         return session.sendImage(imageRequest);
+       case 'video':
+-        if (mimetype != 'video/mp4') {
++        // Autonom.ia c2y-rich-2: any video format, converted to mp4 by WAHA
++        if (mimetype != 'video/mp4' && !asMedia) {
+           break;
+         }
+         const videoRequest: MessageVideoRequest = {
+@@ -312,7 +463,7 @@ export class MessageHandler {
+           reply_to: replyTo,
+           file: {
+             url: url,
+-            mimetype: mimetype,
++            mimetype: mimetype || WHATSAPP_VIDEO_MIMETYPE,
+             filename: filename,
+           },
+           convert: true,
+@@ -347,4 +498,63 @@ export class MessageHandler {
+     };
+     return session.sendFile(fileRequest);
+   }
++
++  /**
++   * Autonom.ia c2y-rich-2: image WhatsApp does not show as a photo.
++   * GIF goes as a video (WAHA converts it to mp4); the rest is converted to
++   * JPEG here. Returns null when the image can not be converted, so the
++   * caller sends it as a file, as before.
++   */
++  private async sendImageAsMedia(
++    chatId: string,
++    content: string,
++    replyTo: string,
++    mentions: string[] | null,
++    url: string,
++    mimetype: string | false,
++    filename: string | undefined,
++  ) {
++    const session = this.session;
++    if (mimetype === GIF_MIMETYPE) {
++      const gifRequest: MessageVideoRequest = {
++        session: '',
++        caption: content,
++        chatId: chatId,
++        reply_to: replyTo,
++        file: {
++          url: url,
++          mimetype: mimetype,
++          filename: filename,
++        },
++        convert: true,
++        mentions: mentions,
++      };
++      return session.sendVideo(gifRequest);
++    }
++    let jpeg: Buffer;
++    try {
++      const original = await this.media.fetch(url);
++      jpeg = await this.media.toJpeg(original);
++    } catch (err) {
++      // Never log err itself: an axios error carries the request
++      const kind = err?.name || err?.constructor?.name || typeof err;
++      this.logger.warn(
++        `ChatWoot => WhatsApp: image not converted to JPEG, sending as file (${kind})`,
++      );
++      return null;
++    }
++    const imageRequest: MessageImageRequest = {
++      session: '',
++      caption: content,
++      chatId: chatId,
++      reply_to: replyTo,
++      file: {
++        data: jpeg.toString('base64'),
++        mimetype: JPEG_MIMETYPE,
++        filename: JpegFilename(filename),
++      },
++      mentions: mentions,
++    };
++    return session.sendImage(imageRequest);
++  }
+ }
 diff --git a/src/apps/chatwoot/consumers/waha/base.ts b/src/apps/chatwoot/consumers/waha/base.ts
-index 0cf7fad8..efe4e635 100644
+index 0cf7fad8..18cff867 100644
 --- a/src/apps/chatwoot/consumers/waha/base.ts
 +++ b/src/apps/chatwoot/consumers/waha/base.ts
 @@ -41,6 +41,7 @@ import {
@@ -531,7 +2493,35 @@ index 0cf7fad8..efe4e635 100644
  
  export function ListenEventsForChatWoot(config: ChatWootConfig) {
    const events = [
-@@ -442,6 +443,11 @@ export abstract class MessageBaseHandler<
+@@ -52,6 +53,12 @@ export function ListenEventsForChatWoot(config: ChatWootConfig) {
+     WAHAEvents.CALL_RECEIVED,
+     WAHAEvents.CALL_ACCEPTED,
+     WAHAEvents.CALL_REJECTED,
++    // Autonom.ia c2y-rich-2: votes of polls sent natively by the connector.
++    // GOWS routes a vote whose Votes list is null to poll.vote.failed (a
++    // retracted vote may come so, not yet seen on a device); both go to the
++    // same consumer, which only acts on our own native polls.
++    WAHAEvents.POLL_VOTE,
++    WAHAEvents.POLL_VOTE_FAILED,
+   ];
+   const conversations = config.conversations;
+   if (conversations.markAsRead || conversations.syncMessageStatus) {
+@@ -215,6 +222,9 @@ export interface ChatWootMessagePartial {
+   content: string;
+   attachments: SendAttachment[];
+   private?: boolean;
++  // Autonom.ia c2y-rich-2: structured data next to the unchanged content
++  // (waha_call, waha_unknown, waha_reaction, waha_edit)
++  content_attributes?: Record<string, unknown>;
+ }
+ 
+ export interface MessageBaseHandlerPayload {
+@@ -439,9 +449,16 @@ export abstract class MessageBaseHandler<
+       private: private_,
+       attachments: message.attachments as any,
+       content_attributes: {
++        // Autonom.ia c2y-rich-2: never overrides in_reply_to
++        ...(message.content_attributes || {}),
          in_reply_to: replyTo,
        },
      };
@@ -543,6 +2533,961 @@ index 0cf7fad8..efe4e635 100644
      if (payload.fromMe) {
        SetExternalEcho(body);
      }
+diff --git a/src/apps/chatwoot/consumers/waha/call.0.base.ts b/src/apps/chatwoot/consumers/waha/call.0.base.ts
+index 949eb212..93c62b97 100644
+--- a/src/apps/chatwoot/consumers/waha/call.0.base.ts
++++ b/src/apps/chatwoot/consumers/waha/call.0.base.ts
+@@ -56,3 +56,37 @@ export function BuildCallMessagePayload(
+     source: MessageSource.APP,
+   };
+ }
++
++/**
++ * Autonom.ia c2y-rich-2: structured call data next to the unchanged content.
++ * content_attributes.waha_call - chat2you turns it into an activity notice
++ * only for accounts with the feature on, and removes it otherwise.
++ */
++export interface WahaCall {
++  call_id: string;
++  event: 'received' | 'accepted' | 'rejected';
++  is_video: boolean;
++  by_me: boolean;
++  reason: string | null;
++}
++
++const WAHA_CALL_EVENT = {
++  [WAHAEvents.CALL_RECEIVED]: 'received',
++  [WAHAEvents.CALL_ACCEPTED]: 'accepted',
++  [WAHAEvents.CALL_REJECTED]: 'rejected',
++} as const;
++
++export function BuildWahaCall(
++  payload: CallMessagePayload,
++  event: Events,
++  byMe: boolean,
++): WahaCall {
++  const reason = payload._data?.Reason;
++  return {
++    call_id: payload.callId,
++    event: WAHA_CALL_EVENT[event],
++    is_video: Boolean(payload.isVideo),
++    by_me: byMe,
++    reason: typeof reason === 'string' ? reason : null,
++  };
++}
+diff --git a/src/apps/chatwoot/consumers/waha/call.accepted.ts b/src/apps/chatwoot/consumers/waha/call.accepted.ts
+index 42977915..72efc326 100644
+--- a/src/apps/chatwoot/consumers/waha/call.accepted.ts
++++ b/src/apps/chatwoot/consumers/waha/call.accepted.ts
+@@ -12,6 +12,7 @@ import {
+ import {
+   BuildCallMessagePayload,
+   BuildFakeCallMessageId,
++  BuildWahaCall,
+   CallMessagePayload,
+   ShouldProcessCall,
+ } from '@waha/apps/chatwoot/consumers/waha/call.0.base';
+@@ -80,6 +81,9 @@ export class CallAcceptedMessageHandler extends MessageBaseHandler<CallMessagePa
+       content: WhatsappToMarkdown(content),
+       attachments: [],
+       private: true,
++      content_attributes: {
++        waha_call: BuildWahaCall(payload, WAHAEvents.CALL_ACCEPTED, false),
++      },
+     };
+   }
+ 
+diff --git a/src/apps/chatwoot/consumers/waha/call.received.ts b/src/apps/chatwoot/consumers/waha/call.received.ts
+index de8425e8..726f0699 100644
+--- a/src/apps/chatwoot/consumers/waha/call.received.ts
++++ b/src/apps/chatwoot/consumers/waha/call.received.ts
+@@ -12,6 +12,7 @@ import {
+ } from '@waha/apps/chatwoot/consumers/waha/base';
+ import {
+   BuildCallMessagePayload,
++  BuildWahaCall,
+   CallMessagePayload,
+   ShouldProcessCall,
+ } from '@waha/apps/chatwoot/consumers/waha/call.0.base';
+@@ -72,7 +73,7 @@ export class WAHACallReceivedConsumer extends ChatWootWAHABaseConsumer {
+ 
+ export class CallReceivedMessageHandler extends MessageBaseHandler<CallMessagePayload> {
+   protected async getMessage(
+-    payload: MessageBaseHandlerPayload & CallData,
++    payload: CallMessagePayload,
+   ): Promise<ChatWootMessagePartial> {
+     const content = this.l
+       .key(TKey.WA_TO_CW_CALL_RECEIVED)
+@@ -81,6 +82,9 @@ export class CallReceivedMessageHandler extends MessageBaseHandler<CallMessagePa
+       content: WhatsappToMarkdown(content),
+       attachments: [],
+       private: false,
++      content_attributes: {
++        waha_call: BuildWahaCall(payload, WAHAEvents.CALL_RECEIVED, false),
++      },
+     };
+   }
+ 
+diff --git a/src/apps/chatwoot/consumers/waha/call.rejected.ts b/src/apps/chatwoot/consumers/waha/call.rejected.ts
+index 6446b428..34b8355c 100644
+--- a/src/apps/chatwoot/consumers/waha/call.rejected.ts
++++ b/src/apps/chatwoot/consumers/waha/call.rejected.ts
+@@ -12,6 +12,7 @@ import {
+ import {
+   BuildCallMessagePayload,
+   BuildFakeCallMessageId,
++  BuildWahaCall,
+   CallMessagePayload,
+   ShouldProcessCall,
+ } from '@waha/apps/chatwoot/consumers/waha/call.0.base';
+@@ -94,6 +95,9 @@ export class CallRejectedMessageHandler extends MessageBaseHandler<CallMessagePa
+       content: WhatsappToMarkdown(content),
+       attachments: [],
+       private: private_,
++      content_attributes: {
++        waha_call: BuildWahaCall(payload, WAHAEvents.CALL_REJECTED, private_),
++      },
+     };
+   }
+ 
+diff --git a/src/apps/chatwoot/consumers/waha/inbound.c2y2.test.ts b/src/apps/chatwoot/consumers/waha/inbound.c2y2.test.ts
+new file mode 100644
+index 00000000..1d6a583f
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/inbound.c2y2.test.ts
+@@ -0,0 +1,246 @@
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: {
++    ChatID: jest.fn((p: any) => p.from),
++    CallChatID: jest.fn((c: any) => c.from),
++  },
++}));
++jest.mock('@waha/apps/chatwoot/messages/to/chatwoot/ListReply', () => ({
++  ExtractListReply: jest.fn(() => null),
++}));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { CallAcceptedMessageHandler } from '@waha/apps/chatwoot/consumers/waha/call.accepted';
++import { CallReceivedMessageHandler } from '@waha/apps/chatwoot/consumers/waha/call.received';
++import { CallRejectedMessageHandler } from '@waha/apps/chatwoot/consumers/waha/call.rejected';
++import { MessageReactionHandler } from '@waha/apps/chatwoot/consumers/waha/message.reaction';
++import { ChatWootOutgoingMode } from '@waha/apps/chatwoot/dto/config.dto';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { TKey } from '@waha/apps/chatwoot/i18n/templates';
++import { MessageEdited } from '@waha/apps/chatwoot/messages/to/chatwoot/MessageEdited';
++import { UnknownContentType } from '@waha/apps/chatwoot/messages/to/chatwoot/UnknownContentType';
++import { UnsupportedMessage } from '@waha/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage';
++
++const CUSTOMER = '5511999999999@c.us';
++const l = i18n.locale('en-US');
++
++function deps(mappingResult: any = null) {
++  const mapping: any = {
++    getChatWootMessage: jest.fn().mockResolvedValue(mappingResult),
++  };
++  const logger = JestLogger();
++  const info: any = { onConversationId: jest.fn(), onMessageType: jest.fn() };
++  return { mapping, logger, info };
++}
++
++function handlerOf(Cls: any, mappingResult: any = null) {
++  const { mapping, logger, info } = deps(mappingResult);
++  const handler = new Cls(
++    { id: 'job-1', queueName: 'q' },
++    mapping,
++    {},
++    logger,
++    info,
++    { name: 'hub2you' },
++    l,
++    {},
++    ChatWootOutgoingMode.PRIVATE_NOTE,
++  );
++  return { handler, mapping, logger };
++}
++
++function call(extra: any = {}, data: any = {}) {
++  return {
++    id: `false_${CUSTOMER}_CALL1`,
++    callId: 'CALL1',
++    from: CUSTOMER,
++    fromMe: false,
++    timestamp: Math.floor(Date.now() / 1000),
++    isVideo: false,
++    isGroup: false,
++    _data: data,
++    ...extra,
++  };
++}
++
++describe('calls: content and private unchanged + waha_call (item 4)', () => {
++  it('received: same content/private as before, waha_call received', async () => {
++    const { handler } = handlerOf(CallReceivedMessageHandler);
++    const msg = await handler.getMessage(call({ isVideo: true }));
++    expect(msg.private).toBe(false);
++    expect(msg.content).toContain('Video');
++    expect(msg.content_attributes).toEqual({
++      waha_call: {
++        call_id: 'CALL1',
++        event: 'received',
++        is_video: true,
++        by_me: false,
++        reason: null,
++      },
++    });
++  });
++
++  it('accepted: private note as before, waha_call accepted', async () => {
++    const { handler } = handlerOf(CallAcceptedMessageHandler);
++    const msg = await handler.getMessage(call());
++    expect(msg.private).toBe(true);
++    expect(msg.content_attributes.waha_call.event).toBe('accepted');
++    expect(msg.content_attributes.waha_call.by_me).toBe(false);
++  });
++
++  it.each([
++    [{ Data: { Tag: 'reject' } }, true, null],
++    [{ Reason: 'rejected_elsewhere' }, true, 'rejected_elsewhere'],
++    [{ api: true }, true, null],
++    [{ Reason: 'timeout' }, false, 'timeout'],
++    [{}, false, null],
++  ])(
++    'rejected %j: private = by_me = %p, reason %p',
++    async (data, byMe, reason) => {
++      const { handler } = handlerOf(CallRejectedMessageHandler);
++      const msg = await handler.getMessage(call({}, data));
++      expect(msg.private).toBe(byMe);
++      expect(msg.content_attributes.waha_call).toEqual({
++        call_id: 'CALL1',
++        event: 'rejected',
++        is_video: false,
++        by_me: byMe,
++        reason: reason,
++      });
++    },
++  );
++});
++
++describe('reaction: content unchanged + waha_reaction (item 6)', () => {
++  function reaction(text: string, fromMe = false) {
++    return {
++      id: `false_${CUSTOMER}_REACT1`,
++      from: CUSTOMER,
++      fromMe: fromMe,
++      timestamp: Math.floor(Date.now() / 1000),
++      reaction: { text: text, messageId: `true_${CUSTOMER}_TARGET1` },
++    };
++  }
++
++  it('added', async () => {
++    const { handler } = handlerOf(MessageReactionHandler);
++    const msg = await handler.getMessage(reaction('👍'));
++    expect(msg.content).toBe(
++      l.key(TKey.WHATSAPP_REACTION_ADDED).render({ emoji: '👍' }),
++    );
++    expect(msg.private).toBeUndefined();
++    expect(msg.content_attributes).toEqual({
++      waha_reaction: {
++        emoji: '👍',
++        reacted_wa_id: 'TARGET1',
++        from_me: false,
++      },
++    });
++  });
++
++  it('removed, from the business phone', async () => {
++    const { handler } = handlerOf(MessageReactionHandler);
++    const msg = await handler.getMessage(reaction('', true));
++    expect(msg.content).toBe(l.key(TKey.WHATSAPP_REACTION_REMOVED).render());
++    expect(msg.content_attributes.waha_reaction).toEqual({
++      emoji: '',
++      reacted_wa_id: 'TARGET1',
++      from_me: true,
++    });
++  });
++
++  it('final body: in_reply_to kept, waha_reaction merged next to it', async () => {
++    const { handler } = handlerOf(MessageReactionHandler, {
++      conversation_id: 42,
++      message_id: 555,
++    });
++    const body = await handler.buildChatWootMessage(reaction('👍'));
++    expect(body.message_type).toBe('incoming');
++    expect(body.private).toBe(false);
++    expect(body.content_attributes).toEqual({
++      waha_reaction: {
++        emoji: '👍',
++        reacted_wa_id: 'TARGET1',
++        from_me: false,
++      },
++      in_reply_to: 555,
++    });
++  });
++});
++
++describe('edited: content unchanged + waha_edit (item 7)', () => {
++  it('keeps the old content and adds the new text', () => {
++    const converter = new MessageEdited(l);
++    const msg = converter.convert(
++      {
++        id: `false_${CUSTOMER}_EDIT1`,
++        from: CUSTOMER,
++        fromMe: false,
++        body: 'novo *texto*',
++        editedMessageId: 'ORIG1',
++      } as any,
++      null,
++    );
++    expect(msg.content).toBe(
++      l
++        .key(TKey.MESSAGE_EDITED_IN_WHATSAPP)
++        .render({ text: msg.content_attributes.waha_edit['text'] }),
++    );
++    expect(msg.content_attributes).toEqual({
++      waha_edit: {
++        text: 'novo **texto**',
++        edited_wa_id: 'ORIG1',
++        from_me: false,
++      },
++    });
++  });
++});
++
++describe('unknown message: private note unchanged + waha_unknown (item 5)', () => {
++  const job: any = { id: 'job-1', queueName: 'chatwoot.waha | message.any' };
++
++  it('note stays private, with the proto content type', () => {
++    const converter = new UnsupportedMessage(
++      l,
++      job,
++      JestLogger(),
++      () => 'stickerPackMessage',
++    );
++    const msg = converter.convert(
++      { fromMe: false } as any,
++      { stickerPackMessage: {} } as any,
++    );
++    expect(msg.private).toBe(true);
++    expect(msg.content).toContain('job-1');
++    expect(msg.content_attributes).toEqual({
++      waha_unknown: { content_type: 'stickerPackMessage', from_me: false },
++    });
++  });
++
++  it('from me', () => {
++    const converter = new UnsupportedMessage(l, job, JestLogger(), () => 'x');
++    const msg = converter.convert({ fromMe: true } as any, {} as any);
++    expect(msg.content_attributes.waha_unknown['from_me']).toBe(true);
++  });
++
++  it('content type reader throws: null, logged by class only, never throws', () => {
++    const logger = JestLogger();
++    const boom = () => {
++      const e = new TypeError('secret content 5511999999999');
++      throw e;
++    };
++    expect(UnknownContentType({ a: 1 } as any, logger, boom)).toBeNull();
++    expect(logger.warn).toHaveBeenCalledWith(
++      expect.stringContaining('(TypeError)'),
++    );
++    expect(String((logger.warn as jest.Mock).mock.calls[0][0])).not.toContain('5511');
++  });
++
++  it('Baileys not loaded under jest: default reader fails closed (null)', () => {
++    expect(UnknownContentType({ a: 1 } as any, JestLogger())).toBeNull();
++  });
++
++  it('no proto message: null', () => {
++    expect(UnknownContentType(null)).toBeNull();
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/waha/message.any.ts b/src/apps/chatwoot/consumers/waha/message.any.ts
+index 7cee3394..567bd835 100644
+--- a/src/apps/chatwoot/consumers/waha/message.any.ts
++++ b/src/apps/chatwoot/consumers/waha/message.any.ts
+@@ -154,7 +154,7 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+       return msg;
+     }
+ 
+-    converter = new UnsupportedMessage(this.l, this.job);
++    converter = new UnsupportedMessage(this.l, this.job, this.logger);
+     msg = await converter.convert(payload, protoMessage);
+     if (this.shouldLogUnsupported) {
+       this.logger.warn(
+diff --git a/src/apps/chatwoot/consumers/waha/message.reaction.ts b/src/apps/chatwoot/consumers/waha/message.reaction.ts
+index ef6d4115..2cedd210 100644
+--- a/src/apps/chatwoot/consumers/waha/message.reaction.ts
++++ b/src/apps/chatwoot/consumers/waha/message.reaction.ts
+@@ -84,6 +84,14 @@ export class MessageReactionHandler extends MessageBaseHandler<WAMessageReaction
+       content: content,
+       attachments: [],
+       private: undefined,
++      content_attributes: {
++        // Autonom.ia c2y-rich-2: chat2you sticks it to the reacted message
++        waha_reaction: {
++          emoji: emoji || '',
++          reacted_wa_id: this.getReplyToWhatsAppID(payload) ?? null,
++          from_me: Boolean(payload.fromMe),
++        },
++      },
+     };
+   }
+ 
+diff --git a/src/apps/chatwoot/consumers/waha/poll.vote.test.ts b/src/apps/chatwoot/consumers/waha/poll.vote.test.ts
+new file mode 100644
+index 00000000..c082cdca
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/poll.vote.test.ts
+@@ -0,0 +1,279 @@
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({ EngineHelper: {} }));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import {
++  POLL_VOTE_REMOVED_KEY,
++  PollVoteHandler,
++} from '@waha/apps/chatwoot/consumers/waha/poll.vote';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { ListenEventsForChatWoot } from '@waha/apps/chatwoot/consumers/waha/base';
++import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
++import { ChatWootWAHAQueueService } from '@waha/apps/chatwoot/services/ChatWootWAHAQueueService';
++import { WAHAEvents } from '@waha/structures/enums.dto';
++import { DeterministicMessageId } from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++
++const SESSION = 'hub2you';
++const CUSTOMER = '5511999999999@c.us';
++const POLL_CW_ID = 900;
++const OUR_POLL_ID = DeterministicMessageId(SESSION, POLL_CW_ID, 'sendPoll');
++
++function votePayload(extra: any = {}, vote: any = {}) {
++  return {
++    poll: {
++      id: `true_${CUSTOMER}_${OUR_POLL_ID}`,
++      to: CUSTOMER,
++      from: 'me@c.us',
++      fromMe: true,
++    },
++    vote: {
++      id: `false_${CUSTOMER}_VOTE1`,
++      from: CUSTOMER,
++      to: CUSTOMER,
++      fromMe: false,
++      selectedOptions: ['Sim'],
++      timestamp: 1760620000000,
++      ...vote,
++    },
++    _data: { Info: { Chat: CUSTOMER, PushName: 'Maria' } },
++    ...extra,
++  };
++}
++
++function setup(locale = 'en-US') {
++  const pollRow = {
++    id: 1,
++    conversation_id: 42,
++    message_id: POLL_CW_ID,
++    timestamp: new Date(0),
++  };
++  const mapping: any = {
++    getChatWootMessage: jest.fn(async (key) =>
++      key.message_id === OUR_POLL_ID ? pollRow : null,
++    ),
++    map: jest.fn().mockResolvedValue(undefined),
++  };
++  const conversation: any = {
++    send: jest.fn().mockResolvedValue({
++      id: 1001,
++      conversation_id: 42,
++      created_at: 1760620001,
++    }),
++  };
++  const repo: any = {
++    ConversationById: jest.fn().mockReturnValue(conversation),
++  };
++  const info: any = {
++    onConversationId: jest.fn(),
++    onMessageType: jest.fn(),
++  };
++  const logger = JestLogger();
++  const handler = new PollVoteHandler(
++    mapping,
++    repo,
++    logger,
++    i18n.locale(locale),
++    info,
++    SESSION,
++  );
++  return { handler, mapping, conversation, repo, info, logger };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++afterEach(() => jest.clearAllMocks());
++
++describe('PollVoteHandler (c2y-rich-2, item 1)', () => {
++  it('vote on our native poll: incoming message in the poll conversation', async () => {
++    const { handler, conversation, repo, info, mapping } = setup();
++    await handler.handle(votePayload() as any);
++
++    expect(repo.ConversationById).toHaveBeenCalledWith(42);
++    expect(info.onConversationId).toHaveBeenCalledWith(42);
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++    const body = conversation.send.mock.calls[0][0];
++    expect(body).toEqual({
++      content: 'Sim',
++      message_type: 'incoming',
++      private: false,
++      content_attributes: {
++        in_reply_to: POLL_CW_ID,
++        waha_poll_vote: {
++          poll_message_id: POLL_CW_ID,
++          options: ['Sim'],
++          vote_id: `false_${CUSTOMER}_VOTE1`,
++          timestamp: 1760620000000,
++        },
++      },
++    });
++    // the vote is mapped, so a retry does not create it twice
++    expect(mapping.map).toHaveBeenCalledTimes(1);
++    const [cw, wa, part] = mapping.map.mock.calls[0];
++    expect(cw).toMatchObject({ conversation_id: 42, message_id: 1001 });
++    expect(wa).toMatchObject({
++      chat_id: CUSTOMER,
++      message_id: 'VOTE1',
++      from_me: false,
++    });
++    expect(part).toBe(1);
++  });
++
++  it('multiple answers: options joined in the content and kept in the list', async () => {
++    const { handler, conversation } = setup();
++    await handler.handle(
++      votePayload({}, { selectedOptions: ['Auto', 'Vida'] }) as any,
++    );
++    const body = conversation.send.mock.calls[0][0];
++    expect(body.content).toBe('Auto, Vida');
++    expect(body.content_attributes.waha_poll_vote.options).toEqual([
++      'Auto',
++      'Vida',
++    ]);
++  });
++
++  it.each([
++    ['en-US', 'Vote removed'],
++    ['pt-BR', 'Voto retirado'],
++    ['es-ES', 'Vote removed'],
++  ])('vote removed (%s): "%s" and empty options', async (locale, text) => {
++    const { handler, conversation } = setup(locale);
++    await handler.handle(votePayload({}, { selectedOptions: [] }) as any);
++    const body = conversation.send.mock.calls[0][0];
++    expect(body.content).toBe(text);
++    expect(body.content).not.toBe(POLL_VOTE_REMOVED_KEY);
++    expect(body.content_attributes.waha_poll_vote.options).toEqual([]);
++  });
++
++  it.each([[null], [undefined]])(
++    'poll.vote.failed shape (selectedOptions %s) on our poll: vote removed',
++    async (selected) => {
++      const { handler, conversation, mapping } = setup('pt-BR');
++      await handler.handle(
++        votePayload({}, { selectedOptions: selected }) as any,
++      );
++      expect(conversation.send).toHaveBeenCalledTimes(1);
++      const body = conversation.send.mock.calls[0][0];
++      expect(body.content).toBe('Voto retirado');
++      expect(body.content_attributes.waha_poll_vote.options).toEqual([]);
++      expect(body.content_attributes.in_reply_to).toBe(POLL_CW_ID);
++      expect(mapping.map).toHaveBeenCalledTimes(1);
++    },
++  );
++
++  it('poll.vote.failed shape on a poll created on the phone: ignored', async () => {
++    const { handler, conversation } = setup();
++    await handler.handle(
++      votePayload(
++        { poll: { id: `true_${CUSTOMER}_3EB0PHONEPOLL`, fromMe: true } },
++        { selectedOptions: null },
++      ) as any,
++    );
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('poll not mapped in Chatwoot (created on the phone): ignored, as before', async () => {
++    const { handler, conversation, mapping } = setup();
++    await handler.handle(
++      votePayload({
++        poll: { id: `true_${CUSTOMER}_3EB0PHONEPOLL`, fromMe: true },
++      }) as any,
++    );
++    expect(conversation.send).not.toHaveBeenCalled();
++    expect(mapping.map).not.toHaveBeenCalled();
++  });
++
++  it('mapped message that was not a native poll (other id): ignored', async () => {
++    const { handler, conversation, mapping } = setup();
++    // the poll message is mapped, the vote is not
++    mapping.getChatWootMessage.mockImplementation(async (key) =>
++      key.message_id === 'VOTE1'
++        ? null
++        : { conversation_id: 42, message_id: POLL_CW_ID },
++    );
++    await handler.handle(
++      votePayload({
++        poll: { id: `true_${CUSTOMER}_3EB0NOTDETERMINISTIC`, fromMe: true },
++      }) as any,
++    );
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('poll of another session: the deterministic id does not match, ignored', async () => {
++    const other = DeterministicMessageId('other', POLL_CW_ID, 'sendPoll');
++    const { handler, conversation, mapping } = setup();
++    // the poll message is mapped, the vote is not
++    mapping.getChatWootMessage.mockImplementation(async (key) =>
++      key.message_id === 'VOTE1'
++        ? null
++        : { conversation_id: 42, message_id: POLL_CW_ID },
++    );
++    await handler.handle(
++      votePayload({ poll: { id: `true_${CUSTOMER}_${other}` } }) as any,
++    );
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('vote by the business phone (fromMe): ignored', async () => {
++    const { handler, conversation } = setup();
++    await handler.handle(votePayload({}, { fromMe: true }) as any);
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('vote already mapped (retry): not created twice', async () => {
++    const { handler, conversation, mapping } = setup();
++    mapping.getChatWootMessage.mockImplementation(async (key) =>
++      key.message_id === OUR_POLL_ID
++        ? { conversation_id: 42, message_id: POLL_CW_ID }
++        : { conversation_id: 42, message_id: 1001 },
++    );
++    await handler.handle(votePayload() as any);
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it.each([
++    [{ poll: null }],
++    [{ poll: { id: 42 } }],
++    [{ poll: { id: 'a_b' } }],
++  ])('invalid poll id %j: ignored without throwing', async (extra) => {
++    const { handler, conversation } = setup();
++    await expect(handler.handle(votePayload(extra) as any)).resolves.toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('logs carry no phone, no option and no name', async () => {
++    const { handler, logger } = setup();
++    await handler.handle(
++      votePayload({}, { selectedOptions: ['SegredoOpcao'] }) as any,
++    );
++    const logs = allLogs(logger);
++    expect(logs).not.toContain('5511999999999');
++    expect(logs).not.toContain('SegredoOpcao');
++    expect(logs).not.toContain('Maria');
++  });
++});
++
++describe('poll.vote.failed subscription (c2y-rich-2, review)', () => {
++  it('the connector listens to poll.vote and poll.vote.failed', () => {
++    const events = ListenEventsForChatWoot({
++      conversations: { markAsRead: false, syncMessageStatus: false },
++    } as any);
++    expect(events).toContain(WAHAEvents.POLL_VOTE);
++    expect(events).toContain(WAHAEvents.POLL_VOTE_FAILED);
++  });
++
++  it('both events go to the poll vote queue', () => {
++    const registry: any = { queue: jest.fn((name) => ({ name })) };
++    const service: any = new ChatWootWAHAQueueService(registry);
++    expect(service.getQueueForEvent(WAHAEvents.POLL_VOTE).name).toBe(
++      QueueName.WAHA_POLL_VOTE,
++    );
++    expect(service.getQueueForEvent(WAHAEvents.POLL_VOTE_FAILED).name).toBe(
++      QueueName.WAHA_POLL_VOTE,
++    );
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/waha/poll.vote.ts b/src/apps/chatwoot/consumers/waha/poll.vote.ts
+new file mode 100644
+index 00000000..e9e03b2f
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/poll.vote.ts
+@@ -0,0 +1,263 @@
++import { conversation_message_create } from '@figuro/chatwoot-sdk';
++import { Processor } from '@nestjs/bullmq';
++import { JOB_CONCURRENCY } from '@waha/apps/app_sdk/constants';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import { ContactConversationService } from '@waha/apps/chatwoot/client/ContactConversationService';
++import { MessageType } from '@waha/apps/chatwoot/client/types';
++import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
++import { EventData } from '@waha/apps/chatwoot/consumers/types';
++import {
++  ChatWootWAHABaseConsumer,
++  IMessageInfo,
++} from '@waha/apps/chatwoot/consumers/waha/base';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { Locale } from '@waha/apps/chatwoot/i18n/locale';
++import { DeterministicMessageId } from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++import {
++  ChatwootMessage,
++  MessageMappingService,
++  WhatsAppMessage,
++} from '@waha/apps/chatwoot/storage';
++import { SessionManager } from '@waha/core/abc/manager.abc';
++import { parseMessageIdSerialized } from '@waha/core/utils/ids';
++import { isJidGroup, toCusFormat } from '@waha/core/utils/jids';
++import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
++import { WAHAEvents } from '@waha/structures/enums.dto';
++import {
++  PollVotePayload,
++  WAHAWebhookPollVote,
++} from '@waha/structures/webhooks.dto';
++import { Job } from 'bullmq';
++import { PinoLogger } from 'nestjs-pino';
++
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Vote on a poll the connector sent natively (sendPoll) -> incoming message
++ * in the poll conversation, with content_attributes.waha_poll_vote.
++ * Votes on any other poll are ignored, as before the patch.
++ * Also receives poll.vote.failed: GOWS routes a vote whose Votes list is
++ * null there (a retracted vote may come so); with no options it becomes
++ * "Vote removed", same as an empty list.
++ */
++export const POLL_VOTE_REMOVED_KEY = 'whatsapp.to.chatwoot.poll.vote.removed';
++
++export interface WahaPollVote {
++  poll_message_id: number;
++  options: string[];
++  vote_id: string;
++  timestamp: number | null;
++}
++
++@Processor(QueueName.WAHA_POLL_VOTE, { concurrency: JOB_CONCURRENCY })
++export class WAHAPollVoteConsumer extends ChatWootWAHABaseConsumer {
++  constructor(
++    protected readonly manager: SessionManager,
++    log: PinoLogger,
++    rmutex: RMutexService,
++  ) {
++    super(manager, log, rmutex, 'WAHAPollVoteConsumer');
++  }
++
++  GetChatId(event: WAHAWebhookPollVote): string {
++    return PollChatId(event.payload) ?? 'poll.vote';
++  }
++
++  async Process(
++    job: Job<EventData, any, WAHAEvents>,
++    info: IMessageInfo,
++  ): Promise<any> {
++    const container = await this.DIContainer(job, job.data.app);
++    const event: WAHAWebhookPollVote = job.data.event as any;
++    const handler = new PollVoteHandler(
++      container.MessageMappingService(),
++      container.ContactConversationService(),
++      container.Logger(),
++      container.Locale(),
++      info,
++      event.session,
++    );
++    return await handler.handle(event.payload);
++  }
++}
++
++function PollChatId(payload: PollVotePayload): string | null {
++  const id = payload?.poll?.id;
++  if (typeof id !== 'string' || !id) {
++    return null;
++  }
++  try {
++    const key = parseMessageIdSerialized(id, true);
++    return key.remoteJid ? toCusFormat(key.remoteJid) : null;
++  } catch (err) {
++    return null;
++  }
++}
++
++function SelectedOptions(payload: PollVotePayload): string[] {
++  const options = payload?.vote?.selectedOptions;
++  if (!Array.isArray(options)) {
++    return [];
++  }
++  return options.filter((o) => typeof o === 'string' && o.length > 0);
++}
++
++export class PollVoteHandler {
++  constructor(
++    private mappingService: MessageMappingService,
++    private repo: ContactConversationService,
++    private logger: ILogger,
++    private l: Locale,
++    private info: IMessageInfo,
++    private session: string,
++  ) {}
++
++  async handle(
++    payload: PollVotePayload,
++  ): Promise<conversation_message_create | null> {
++    const poll = await this.findOurPoll(payload);
++    if (!poll) {
++      return null;
++    }
++    if (payload.vote?.fromMe) {
++      // The business phone voted on its own poll - not a customer answer
++      this.logger.info(
++        `Poll vote from me ignored: chatwoot_message_id=${poll.message_id}`,
++      );
++      return null;
++    }
++    const voteKey = this.voteKey(payload);
++    if (!voteKey) {
++      this.logger.warn(
++        `Poll vote without a valid id ignored: chatwoot_message_id=${poll.message_id}`,
++      );
++      return null;
++    }
++    const existing = await this.mappingService.getChatWootMessage({
++      chat_id: voteKey.chat_id,
++      message_id: voteKey.message_id,
++    });
++    if (existing) {
++      this.logger.debug(`Skipping existing poll vote '${voteKey.message_id}'`);
++      return null;
++    }
++
++    this.info.onMessageType(MessageType.INCOMING);
++    this.info.onConversationId(poll.conversation_id);
++    const conversation = this.repo.ConversationById(poll.conversation_id);
++    const message = this.buildMessage(poll, payload);
++    const response = await conversation.send(message);
++    await this.saveMapping(response, voteKey);
++    this.logger.info(
++      `WhatsApp => ChatWoot: poll vote created for chatwoot_message_id=${poll.message_id}`,
++    );
++    return message;
++  }
++
++  /**
++   * The mapped Chatwoot message of the poll, only when its WhatsApp id is
++   * the deterministic id the connector gave to a native poll.
++   */
++  private async findOurPoll(
++    payload: PollVotePayload,
++  ): Promise<ChatwootMessage | null> {
++    const pollId = payload?.poll?.id;
++    if (typeof pollId !== 'string' || !pollId) {
++      return null;
++    }
++    let key;
++    try {
++      key = parseMessageIdSerialized(pollId, true);
++    } catch (err) {
++      return null;
++    }
++    if (!key?.id) {
++      return null;
++    }
++    const chatwoot = await this.mappingService.getChatWootMessage({
++      chat_id: key.remoteJid ? toCusFormat(key.remoteJid) : '',
++      message_id: key.id,
++    });
++    if (!chatwoot) {
++      this.logger.debug('Poll vote for a poll not mapped in Chatwoot, ignored');
++      return null;
++    }
++    const expected = DeterministicMessageId(
++      this.session,
++      chatwoot.message_id,
++      'sendPoll',
++    );
++    if (key.id !== expected) {
++      this.logger.debug(
++        `Poll vote for a poll not sent natively, ignored: chatwoot_message_id=${chatwoot.message_id}`,
++      );
++      return null;
++    }
++    return chatwoot;
++  }
++
++  private voteKey(payload: PollVotePayload): WhatsAppMessage | null {
++    const id = payload?.vote?.id;
++    if (typeof id !== 'string' || !id) {
++      return null;
++    }
++    try {
++      const key = parseMessageIdSerialized(id, true);
++      if (!key?.id) {
++        return null;
++      }
++      const remoteJid = key.remoteJid || '';
++      const timestamp = Number(payload.vote.timestamp);
++      return {
++        timestamp: new Date(Number.isFinite(timestamp) ? timestamp : 0),
++        chat_id: toCusFormat(remoteJid),
++        message_id: key.id,
++        from_me: Boolean(key.fromMe),
++        participant: isJidGroup(remoteJid) ? key.participant || null : null,
++      };
++    } catch (err) {
++      return null;
++    }
++  }
++
++  private removedText(): string {
++    const text = this.l.r(POLL_VOTE_REMOVED_KEY);
++    if (text && text !== POLL_VOTE_REMOVED_KEY) {
++      return text;
++    }
++    // Locale without the key: fall back to English
++    return i18n.locale('en-US').r(POLL_VOTE_REMOVED_KEY);
++  }
++
++  buildMessage(
++    poll: ChatwootMessage,
++    payload: PollVotePayload,
++  ): conversation_message_create {
++    const options = SelectedOptions(payload);
++    const content = options.length ? options.join(', ') : this.removedText();
++    const timestamp = Number(payload.vote?.timestamp);
++    const vote: WahaPollVote = {
++      poll_message_id: poll.message_id,
++      options: options,
++      vote_id: String(payload.vote?.id ?? ''),
++      timestamp: Number.isFinite(timestamp) ? timestamp : null,
++    };
++    return {
++      content: content,
++      message_type: MessageType.INCOMING as any,
++      private: false,
++      content_attributes: {
++        in_reply_to: poll.message_id,
++        waha_poll_vote: vote,
++      } as any,
++    };
++  }
++
++  private async saveMapping(chatwootMessage: any, whatsapp: WhatsAppMessage) {
++    const chatwoot: Omit<ChatwootMessage, 'id'> = {
++      timestamp: new Date(chatwootMessage.created_at * 1000),
++      conversation_id: chatwootMessage.conversation_id,
++      message_id: chatwootMessage.id,
++    };
++    await this.mappingService.map(chatwoot, whatsapp, 1);
++  }
++}
 diff --git a/src/apps/chatwoot/error/ChatWootErrorReporter.ts b/src/apps/chatwoot/error/ChatWootErrorReporter.ts
 index ea116adf..16afd3ca 100644
 --- a/src/apps/chatwoot/error/ChatWootErrorReporter.ts
@@ -569,6 +3514,36 @@ index ea116adf..16afd3ca 100644
      if (nextDelay) {
        // TODO: Add a way to enable it back in config
        // https://github.com/devlikeapro/waha/issues/1395
+diff --git a/src/apps/chatwoot/i18n/locales/en-US.yaml b/src/apps/chatwoot/i18n/locales/en-US.yaml
+index db865cee..90a0f8aa 100644
+--- a/src/apps/chatwoot/i18n/locales/en-US.yaml
++++ b/src/apps/chatwoot/i18n/locales/en-US.yaml
+@@ -191,6 +191,10 @@ whatsapp.to.chatwoot.message.poll: |-
+   {{/options}}
+   {{/poll}}
+ 
++# Autonom.ia c2y-rich-2: the customer removed the vote on a native poll
++whatsapp.to.chatwoot.poll.vote.removed: |-
++  Vote removed
++
+ whatsapp.to.chatwoot.message.list: |-
+   {{#message.listMessage}}
+   {{#title}}
+diff --git a/src/apps/chatwoot/i18n/locales/pt-BR.yaml b/src/apps/chatwoot/i18n/locales/pt-BR.yaml
+index 0509464b..630fb920 100644
+--- a/src/apps/chatwoot/i18n/locales/pt-BR.yaml
++++ b/src/apps/chatwoot/i18n/locales/pt-BR.yaml
+@@ -406,6 +406,10 @@ whatsapp.to.chatwoot.message.poll: |-
+   {{/options}}
+   {{/poll}}
+ 
++# Autonom.ia c2y-rich-2: the customer removed the vote on a native poll
++whatsapp.to.chatwoot.poll.vote.removed: |-
++  Voto retirado
++
+ whatsapp.to.chatwoot.message.list: |-
+   {{#message.listMessage}}
+   {{#title}}
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
 new file mode 100644
 index 00000000..33cc2657
@@ -805,6 +3780,565 @@ index 00000000..fd3b77db
 +  }
 +  return { row_id: rowId, title: reply.title || null };
 +}
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts b/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts
+index 66cfb10b..cbebba43 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts
+@@ -2,7 +2,7 @@ import { ChatWootMessagePartial } from '@waha/apps/chatwoot/consumers/waha/base'
+ import { Locale } from '@waha/apps/chatwoot/i18n/locale';
+ import { TKey } from '@waha/apps/chatwoot/i18n/templates';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
+-import { WAMessage } from '@waha/structures/responses.dto';
++import { WAMessageEditedBody } from '@waha/structures/webhooks.dto';
+ import type { proto } from '@adiwajshing/baileys';
+ import { WhatsappToMarkdown } from '@waha/apps/chatwoot/messages/to/chatwoot/utils/markdown';
+ 
+@@ -10,7 +10,7 @@ export class MessageEdited implements MessageToChatWootConverter {
+   constructor(private readonly locale: Locale) {}
+ 
+   convert(
+-    payload: WAMessage,
++    payload: WAMessageEditedBody,
+     protoMessage: proto.Message | null,
+   ): ChatWootMessagePartial | null {
+     void protoMessage;
+@@ -23,6 +23,14 @@ export class MessageEdited implements MessageToChatWootConverter {
+       content,
+       attachments: [],
+       private: undefined,
++      content_attributes: {
++        // Autonom.ia c2y-rich-2: chat2you replaces the original text with it
++        waha_edit: {
++          text: formatted,
++          edited_wa_id: payload.editedMessageId ?? null,
++          from_me: Boolean(payload.fromMe),
++        },
++      },
+     };
+   }
+ }
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/UnknownContentType.ts b/src/apps/chatwoot/messages/to/chatwoot/UnknownContentType.ts
+new file mode 100644
+index 00000000..2ed8ebd6
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/UnknownContentType.ts
+@@ -0,0 +1,47 @@
++import type { proto } from '@adiwajshing/baileys';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import esm from '@waha/vendor/esm';
++
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Message type the connector does not convert -> content_attributes.waha_unknown
++ */
++export interface WahaUnknown {
++  content_type: string | null;
++  from_me: boolean;
++}
++
++export type ContentTypeOf = (
++  message: proto.IMessage | null | undefined,
++) => string | null | undefined;
++
++function baileysContentType(
++  message: proto.IMessage | null | undefined,
++): string | null | undefined {
++  return esm.b.getContentType(esm.b.normalizeMessageContent(message));
++}
++
++/**
++ * Proto content type (e.g. "stickerPackMessage"), or null.
++ * It never throws: the unsupported note must reach Chatwoot anyway.
++ * Only the error class is logged - no content, no phone.
++ */
++export function UnknownContentType(
++  protoMessage: proto.IMessage | null | undefined,
++  logger?: ILogger,
++  contentTypeOf: ContentTypeOf = baileysContentType,
++): string | null {
++  if (!protoMessage) {
++    return null;
++  }
++  try {
++    const type = contentTypeOf(protoMessage);
++    return typeof type === 'string' && type ? type : null;
++  } catch (err) {
++    const kind = err?.name || err?.constructor?.name || typeof err;
++    logger?.warn(
++      `WhatsApp => ChatWoot: unsupported message type not read (${kind})`,
++    );
++    return null;
++  }
++}
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
+index 79eb97f9..0456f3a0 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
+@@ -1,4 +1,5 @@
+ import { JobLink } from '@waha/apps/app_sdk/JobUtils';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
+ import { Locale } from '@waha/apps/chatwoot/i18n/locale';
+ import { TKey } from '@waha/apps/chatwoot/i18n/templates';
+ import { Job } from 'bullmq';
+@@ -6,19 +7,23 @@ import { ChatWootMessagePartial } from '@waha/apps/chatwoot/consumers/waha/base'
+ import type { proto } from '@adiwajshing/baileys';
+ import { WAMessage } from '@waha/structures/responses.dto';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
++import {
++  ContentTypeOf,
++  UnknownContentType,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/UnknownContentType';
+ 
+ export class UnsupportedMessage implements MessageToChatWootConverter {
+   constructor(
+     private readonly locale: Locale,
+     private readonly job: Job,
++    private readonly logger?: ILogger,
++    private readonly contentTypeOf?: ContentTypeOf,
+   ) {}
+ 
+   convert(
+     payload: WAMessage,
+     protoMessage: proto.Message | null,
+   ): ChatWootMessagePartial {
+-    void payload;
+-    void protoMessage;
+     const content = this.locale
+       .key(TKey.WA_TO_CW_MESSAGE_UNSUPPORTED)
+       .render({ details: JobLink(this.job) });
+@@ -27,6 +32,17 @@ export class UnsupportedMessage implements MessageToChatWootConverter {
+       content,
+       attachments: [],
+       private: true,
++      content_attributes: {
++        // Autonom.ia c2y-rich-2: chat2you can show it as a customer bubble
++        waha_unknown: {
++          content_type: UnknownContentType(
++            protoMessage,
++            this.logger,
++            this.contentTypeOf,
++          ),
++          from_me: Boolean(payload?.fromMe),
++        },
++      },
+     };
+   }
+ }
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/actions.ts b/src/apps/chatwoot/messages/to/whatsapp/actions.ts
+new file mode 100644
+index 00000000..7dc134ee
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/actions.ts
+@@ -0,0 +1,47 @@
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Custom events chat2you posts to the inbox webhook when an agent reacts to
++ * or edits a message in the panel. A connector without the patch ignores
++ * them (unknown event).
++ *
++ *   {event:'c2y_message_reaction', ...message.webhook_data, c2y_reaction:{emoji}}
++ *   {event:'c2y_message_edit', ...message.webhook_data, c2y_edit:{waha_text}}
++ */
++export enum C2yActionEvent {
++  REACTION = 'c2y_message_reaction',
++  EDIT = 'c2y_message_edit',
++}
++
++/** A reaction is one emoji; this only bounds the size of the field */
++const MAX_REACTION_LENGTH = 32;
++
++/** WhatsApp text limit */
++const MAX_EDIT_TEXT_LENGTH = 65536;
++
++export function IsC2yActionEvent(event: unknown): boolean {
++  return event === C2yActionEvent.REACTION || event === C2yActionEvent.EDIT;
++}
++
++/** {emoji} - '' removes the reaction. null when the payload is invalid. */
++export function ParseC2yReaction(body: any): { emoji: string } | null {
++  const emoji = body?.c2y_reaction?.emoji;
++  if (typeof emoji !== 'string') {
++    return null;
++  }
++  if (emoji.length > MAX_REACTION_LENGTH) {
++    return null;
++  }
++  return { emoji: emoji };
++}
++
++/** {text} already in WhatsApp format. null when the payload is invalid. */
++export function ParseC2yEdit(body: any): { text: string } | null {
++  const text = body?.c2y_edit?.waha_text;
++  if (typeof text !== 'string') {
++    return null;
++  }
++  if (text.trim().length === 0 || text.length > MAX_EDIT_TEXT_LENGTH) {
++    return null;
++  }
++  return { text: text };
++}
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/c2y2.helpers.test.ts b/src/apps/chatwoot/messages/to/whatsapp/c2y2.helpers.test.ts
+new file mode 100644
+index 00000000..bc168251
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/c2y2.helpers.test.ts
+@@ -0,0 +1,133 @@
++import {
++  C2yActionEvent,
++  IsC2yActionEvent,
++  ParseC2yEdit,
++  ParseC2yReaction,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/actions';
++import {
++  WahaFormattedText,
++  WantsMediaAsMedia,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/hints';
++import { JpegFilename } from '@waha/apps/chatwoot/messages/to/whatsapp/media';
++import {
++  BuildWahaNativeRequest,
++  DeterministicMessageId,
++  ParseWahaNative,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++
++describe('c2y-rich-2 helpers', () => {
++  it('IsC2yActionEvent accepts only the two custom events', () => {
++    expect(IsC2yActionEvent(C2yActionEvent.REACTION)).toBe(true);
++    expect(IsC2yActionEvent(C2yActionEvent.EDIT)).toBe(true);
++    expect(IsC2yActionEvent('message_created')).toBe(false);
++    expect(IsC2yActionEvent('message_updated')).toBe(false);
++    expect(IsC2yActionEvent(undefined)).toBe(false);
++  });
++
++  it('ParseC2yReaction', () => {
++    expect(ParseC2yReaction({ c2y_reaction: { emoji: '👍' } })).toEqual({
++      emoji: '👍',
++    });
++    expect(ParseC2yReaction({ c2y_reaction: { emoji: '' } })).toEqual({
++      emoji: '',
++    });
++    expect(ParseC2yReaction({})).toBeNull();
++    expect(ParseC2yReaction(null)).toBeNull();
++  });
++
++  it('ParseC2yEdit', () => {
++    expect(ParseC2yEdit({ c2y_edit: { waha_text: 'a' } })).toEqual({
++      text: 'a',
++    });
++    expect(ParseC2yEdit({ c2y_edit: { waha_text: '' } })).toBeNull();
++    expect(
++      ParseC2yEdit({ c2y_edit: { waha_text: 'x'.repeat(65537) } }),
++    ).toBeNull();
++  });
++
++  it('WahaFormattedText / WantsMediaAsMedia read only exact types', () => {
++    expect(WahaFormattedText({ content_attributes: { waha_text: '' } })).toBe(
++      '',
++    );
++    expect(WahaFormattedText({ content_attributes: {} })).toBeNull();
++    expect(WahaFormattedText(null)).toBeNull();
++    expect(
++      WantsMediaAsMedia({ content_attributes: { waha_media_as_media: true } }),
++    ).toBe(true);
++    expect(
++      WantsMediaAsMedia({ content_attributes: { waha_media_as_media: 'true' } }),
++    ).toBe(false);
++    expect(WantsMediaAsMedia({})).toBe(false);
++  });
++
++  it('JpegFilename', () => {
++    expect(JpegFilename('foto.webp')).toBe('foto.jpg');
++    expect(JpegFilename('IMG 001.HEIC')).toBe('IMG 001.jpg');
++    expect(JpegFilename('semext')).toBe('semext.jpg');
++    expect(JpegFilename(undefined)).toBe('image.jpg');
++    expect(JpegFilename('')).toBe('image.jpg');
++  });
++});
++
++describe('native sendPoll (c2y-rich-2, item 1)', () => {
++  const chatId = '5511999999999@c.us';
++
++  it('ParseWahaNative accepts sendPoll', () => {
++    const native = ParseWahaNative({
++      content_attributes: {
++        waha_native: { kind: 'sendPoll', payload: { poll: { name: 'x' } } },
++      },
++    });
++    expect(native?.kind).toBe('sendPoll');
++  });
++
++  it('BuildWahaNativeRequest copies only name, options and multipleAnswers', () => {
++    const request = BuildWahaNativeRequest(
++      {
++        kind: 'sendPoll',
++        payload: {
++          chatId: 'attacker@c.us',
++          session: 'x',
++          poll: {
++            name: 'Qual?',
++            options: ['A', 'B'],
++            multipleAnswers: 'yes',
++            extra: 1,
++          },
++        },
++      },
++      chatId,
++      'true_x@c.us_Q',
++      'ID1',
++    );
++    expect(request).toEqual({
++      session: '',
++      chatId: chatId,
++      id: 'ID1',
++      poll: { name: 'Qual?', options: ['A', 'B'], multipleAnswers: true },
++      reply_to: 'true_x@c.us_Q',
++    });
++  });
++
++  it('payload without poll: request still built, WAHA validation refuses it', () => {
++    const request: any = BuildWahaNativeRequest(
++      { kind: 'sendPoll', payload: {} },
++      chatId,
++      undefined,
++      'ID1',
++    );
++    expect(request.poll).toEqual({
++      name: undefined,
++      options: undefined,
++      multipleAnswers: false,
++    });
++  });
++
++  it('deterministic id is stable and depends on the kind', () => {
++    const a = DeterministicMessageId('s', 1, 'sendPoll');
++    expect(a).toBe(DeterministicMessageId('s', 1, 'sendPoll'));
++    expect(a).not.toBe(DeterministicMessageId('s', 1, 'sendLocation'));
++    expect(a.startsWith('3EB0')).toBe(true);
++    expect(a).toHaveLength(22);
++  });
++});
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/hints.ts b/src/apps/chatwoot/messages/to/whatsapp/hints.ts
+new file mode 100644
+index 00000000..5cfab110
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/hints.ts
+@@ -0,0 +1,19 @@
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Hints chat2you adds to the message_created webhook payload (never stored),
++ * only for accounts with the feature on. Without them the connector keeps
++ * its original behavior.
++ *
++ * - content_attributes.waha_text: text already in WhatsApp format
++ *   (same renderer as the Cloud channel); used as is, no markdown conversion
++ * - content_attributes.waha_media_as_media: true - images and videos in any
++ *   format go as photo / playable video, not as a document
++ */
++export function WahaFormattedText(message: any): string | null {
++  const text = message?.content_attributes?.waha_text;
++  return typeof text === 'string' ? text : null;
++}
++
++export function WantsMediaAsMedia(message: any): boolean {
++  return message?.content_attributes?.waha_media_as_media === true;
++}
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/media.test.ts b/src/apps/chatwoot/messages/to/whatsapp/media.test.ts
+new file mode 100644
+index 00000000..b706c9df
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/media.test.ts
+@@ -0,0 +1,104 @@
++import * as http from 'http';
++import { AddressInfo } from 'net';
++import {
++  FetchLimited,
++  MAX_IMAGE_DOWNLOAD_BYTES,
++  MAX_IMAGE_INPUT_PIXELS,
++  SharpToJpeg,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/media';
++
++/**
++ * Autonom.ia c2y-rich-2: the image conversion must not load an unbounded
++ * download or decode an unbounded image in the shared WAHA process.
++ */
++describe('c2y-rich-2 media limits', () => {
++  let server: http.Server;
++  let base: string;
++
++  beforeAll(async () => {
++    server = http.createServer((req, res) => {
++      const size = Number(req.url.split('/').pop());
++      res.writeHead(200, { 'Content-Type': 'image/webp' });
++      // Streamed in chunks, without Content-Length: the limit must hold
++      // while streaming, not only from the header
++      const chunk = Buffer.alloc(1024, 1);
++      let left = size;
++      const write = () => {
++        while (left > 0) {
++          const part = left >= chunk.length ? chunk : chunk.subarray(0, left);
++          left -= part.length;
++          if (!res.write(part)) {
++            res.once('drain', write);
++            return;
++          }
++        }
++        res.end();
++      };
++      res.on('error', () => undefined);
++      write();
++    });
++    await new Promise<void>((resolve) =>
++      server.listen(0, '127.0.0.1', resolve),
++    );
++    const port = (server.address() as AddressInfo).port;
++    base = `http://127.0.0.1:${port}`;
++  });
++
++  afterAll(async () => {
++    server.closeAllConnections?.();
++    await new Promise((resolve) => server.close(resolve));
++  });
++
++  it('download cap is the WhatsApp media limit (16 MB)', () => {
++    expect(MAX_IMAGE_DOWNLOAD_BYTES).toBe(16 * 1024 * 1024);
++  });
++
++  it('downloads a body within the limit', async () => {
++    const body = await FetchLimited(`${base}/img/2048`, 4096);
++    expect(body.length).toBe(2048);
++  });
++
++  it('rejects a body above the limit', async () => {
++    await expect(FetchLimited(`${base}/img/65536`, 4096)).rejects.toThrow(
++      /maxContentLength/,
++    );
++  });
++
++  it('pixel cap is explicit and below the sharp default', () => {
++    expect(MAX_IMAGE_INPUT_PIXELS).toBe(50_000_000);
++    expect(MAX_IMAGE_INPUT_PIXELS).toBeLessThan(0x3fff * 0x3fff);
++  });
++
++  it('converts an image within the pixel limit', async () => {
++    // eslint-disable-next-line @typescript-eslint/no-var-requires
++    const sharp = require('sharp');
++    const png = await sharp({
++      create: {
++        width: 20,
++        height: 20,
++        channels: 3,
++        background: { r: 255, g: 0, b: 0 },
++      },
++    })
++      .png()
++      .toBuffer();
++    const jpeg = await SharpToJpeg(png, 400);
++    expect(jpeg.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
++  });
++
++  it('refuses an image above the pixel limit', async () => {
++    // eslint-disable-next-line @typescript-eslint/no-var-requires
++    const sharp = require('sharp');
++    const png = await sharp({
++      create: {
++        width: 30,
++        height: 30,
++        channels: 3,
++        background: { r: 0, g: 0, b: 255 },
++      },
++    })
++      .png()
++      .toBuffer();
++    await expect(SharpToJpeg(png, 400)).rejects.toThrow(/pixel limit/);
++  });
++});
+diff --git a/src/apps/chatwoot/messages/to/whatsapp/media.ts b/src/apps/chatwoot/messages/to/whatsapp/media.ts
+new file mode 100644
+index 00000000..02151121
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/whatsapp/media.ts
+@@ -0,0 +1,82 @@
++import * as path from 'path';
++import axios from 'axios';
++import { Agent as HttpsAgent } from 'https';
++// @ts-ignore
++import * as UserAgent from 'user-agents';
++
++/**
++ * Autonom.ia patch c2y-rich-2 (autonom-ia2/chat#1709)
++ * Images WhatsApp does not show as a photo (webp, bmp, tiff, avif, heic...)
++ * are converted to JPEG before sendImage. GIF goes as a video (ffmpeg).
++ */
++export const WHATSAPP_VIDEO_MIMETYPE = 'video/mp4';
++export const GIF_MIMETYPE = 'image/gif';
++export const JPEG_MIMETYPE = 'image/jpeg';
++const JPEG_QUALITY = 85;
++
++/**
++ * The image is downloaded into the memory of the WAHA process, shared by
++ * every session. Above this size it is not converted: it goes as a file,
++ * as before the patch. 16 MB is the WhatsApp media limit.
++ */
++export const MAX_IMAGE_DOWNLOAD_BYTES = 16 * 1024 * 1024;
++
++/**
++ * Decoded size bound for sharp (its default is ~268 MP). 50 MP covers the
++ * 48 MP photos of current phones; above it the image goes as a file.
++ */
++export const MAX_IMAGE_INPUT_PIXELS = 50_000_000;
++
++// Same TLS and User-Agent as utils/fetch.ts fetchBuffer (self-hosted Chatwoot)
++const InsecureHttpsAgent = new HttpsAgent({
++  rejectUnauthorized: false,
++});
++
++export interface MediaTools {
++  fetch(url: string): Promise<Buffer>;
++  toJpeg(input: Buffer): Promise<Buffer>;
++}
++
++/**
++ * Downloads at most maxBytes; bigger bodies are aborted while streaming
++ * (axios maxContentLength) and the promise rejects.
++ */
++export async function FetchLimited(
++  url: string,
++  maxBytes: number = MAX_IMAGE_DOWNLOAD_BYTES,
++): Promise<Buffer> {
++  const res = await axios.get(url, {
++    responseType: 'arraybuffer',
++    httpsAgent: InsecureHttpsAgent,
++    headers: {
++      'User-Agent': new UserAgent().toString(),
++    },
++    maxContentLength: maxBytes,
++    maxBodyLength: maxBytes,
++  });
++  return Buffer.from(res.data);
++}
++
++export async function SharpToJpeg(
++  input: Buffer,
++  maxPixels: number = MAX_IMAGE_INPUT_PIXELS,
++): Promise<Buffer> {
++  // CJS module, loaded on first use only
++  // eslint-disable-next-line @typescript-eslint/no-var-requires
++  const sharp = require('sharp');
++  return sharp(input, { limitInputPixels: maxPixels })
++    .rotate()
++    .jpeg({ quality: JPEG_QUALITY })
++    .toBuffer();
++}
++
++export const DefaultMediaTools: MediaTools = {
++  fetch: (url: string) => FetchLimited(url),
++  toJpeg: (input: Buffer) => SharpToJpeg(input),
++};
++
++/** "foto.webp" -> "foto.jpg"; empty name -> "image.jpg" */
++export function JpegFilename(filename: string | undefined | null): string {
++  const name = filename ? path.parse(filename).name : '';
++  return `${name || 'image'}.jpg`;
++}
 diff --git a/src/apps/chatwoot/messages/to/whatsapp/native.test.ts b/src/apps/chatwoot/messages/to/whatsapp/native.test.ts
 new file mode 100644
 index 00000000..e6fa2af1
@@ -1001,19 +4535,20 @@ index 00000000..e6fa2af1
 +});
 diff --git a/src/apps/chatwoot/messages/to/whatsapp/native.ts b/src/apps/chatwoot/messages/to/whatsapp/native.ts
 new file mode 100644
-index 00000000..7304c6c9
+index 00000000..f63b8bbc
 --- /dev/null
 +++ b/src/apps/chatwoot/messages/to/whatsapp/native.ts
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,171 @@
 +import { createHash } from 'node:crypto';
 +import { UnrecoverableError } from 'bullmq';
 +import { MessageContactVcardRequest } from '@waha/structures/chatting.dto';
 +import { MessageLocationRequest } from '@waha/structures/chatting.dto';
++import { MessagePollRequest } from '@waha/structures/chatting.dto';
 +import { SendListRequest } from '@waha/structures/chatting.list.dto';
 +
 +/**
-+ * Autonom.ia patch c2y-rich-1 (autonom-ia2/chat#1709)
-+ * Chatwoot message -> native WhatsApp message (list, location, contact)
++ * Autonom.ia patch c2y-rich-1/c2y-rich-2 (autonom-ia2/chat#1709)
++ * Chatwoot message -> native WhatsApp message (list, location, contact, poll)
 + * Contract: content_attributes.waha_native = {kind, payload}
 + * payload follows the WAHA endpoint body WITHOUT chatId and session.
 + */
@@ -1021,6 +4556,7 @@ index 00000000..7304c6c9
 +  'sendList',
 +  'sendLocation',
 +  'sendContactVcard',
++  'sendPoll',
 +] as const;
 +
 +export type WahaNativeKind = (typeof WAHA_NATIVE_KINDS)[number];
@@ -1033,7 +4569,8 @@ index 00000000..7304c6c9
 +export type WahaNativeRequest =
 +  | SendListRequest
 +  | MessageLocationRequest
-+  | MessageContactVcardRequest;
++  | MessageContactVcardRequest
++  | MessagePollRequest;
 +
 +const HTTP_NOT_IMPLEMENTED = 501;
 +
@@ -1062,6 +4599,8 @@ index 00000000..7304c6c9
 + * Deterministic WhatsApp message id from the Chatwoot message id,
 + * so a manual re-run of the same job can not deliver a second copy.
 + * Same shape as whatsmeow/Baileys ids: "3EB0" + 18 upper hex chars.
++ * The seed keeps "c2y-rich-1" on purpose: ids stay stable across patches,
++ * and a poll vote is matched against the id of the poll (c2y-rich-2).
 + */
 +export function DeterministicMessageId(
 +  session: string,
@@ -1109,6 +4648,18 @@ index 00000000..7304c6c9
 +        chatId: chatId,
 +        id: id,
 +        contacts: p.contacts,
++        reply_to: replyTo,
++      };
++    case 'sendPoll':
++      return {
++        session: '',
++        chatId: chatId,
++        id: id,
++        poll: {
++          name: p.poll?.name,
++          options: p.poll?.options,
++          multipleAnswers: Boolean(p.poll?.multipleAnswers),
++        },
 +        reply_to: replyTo,
 +      };
 +  }
@@ -1159,29 +4710,145 @@ index 00000000..7304c6c9
 +    this.name = 'UnrecoverableError';
 +  }
 +}
+diff --git a/src/apps/chatwoot/services/ChatWootQueueService.ts b/src/apps/chatwoot/services/ChatWootQueueService.ts
+index 7fa3d62e..4c3fcc5c 100644
+--- a/src/apps/chatwoot/services/ChatWootQueueService.ts
++++ b/src/apps/chatwoot/services/ChatWootQueueService.ts
+@@ -4,6 +4,7 @@ import { InboxData } from '@waha/apps/chatwoot/consumers/types';
+ import { Queue } from 'bullmq';
+ 
+ import { QueueName } from '../consumers/QueueName';
++import { C2yActionEvent } from '@waha/apps/chatwoot/messages/to/whatsapp/actions';
+ import { QueueRegistry } from './QueueRegistry';
+ 
+ /**
+@@ -46,6 +47,10 @@ export class ChatWootQueueService {
+         return this.queueRegistry.queue(QueueName.INBOX_MESSAGE_DELETED);
+       case 'commands':
+         return this.queueRegistry.queue(QueueName.INBOX_COMMANDS);
++      case C2yActionEvent.REACTION:
++        return this.queueRegistry.queue(QueueName.INBOX_C2Y_REACTION);
++      case C2yActionEvent.EDIT:
++        return this.queueRegistry.queue(QueueName.INBOX_C2Y_EDIT);
+       default:
+         return null;
+     }
+diff --git a/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts b/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
+index 86c7457e..f38bda05 100644
+--- a/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
++++ b/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
+@@ -44,6 +44,9 @@ export class ChatWootWAHAQueueService {
+         return this.queueRegistry.queue(QueueName.WAHA_CALL_ACCEPTED);
+       case WAHAEvents.CALL_REJECTED:
+         return this.queueRegistry.queue(QueueName.WAHA_CALL_REJECTED);
++      case WAHAEvents.POLL_VOTE:
++      case WAHAEvents.POLL_VOTE_FAILED:
++        return this.queueRegistry.queue(QueueName.WAHA_POLL_VOTE);
+       default:
+         return null;
+     }
+diff --git a/src/apps/chatwoot/services/QueueManager.ts b/src/apps/chatwoot/services/QueueManager.ts
+index 490f0ba9..a44f96e3 100644
+--- a/src/apps/chatwoot/services/QueueManager.ts
++++ b/src/apps/chatwoot/services/QueueManager.ts
+@@ -32,12 +32,15 @@ export class QueueManager {
+       [QueueName.WAHA_CALL_RECEIVED]: Managable,
+       [QueueName.WAHA_CALL_ACCEPTED]: Managable,
+       [QueueName.WAHA_CALL_REJECTED]: Managable,
++      [QueueName.WAHA_POLL_VOTE]: Managable,
+       [QueueName.INBOX_MESSAGE_CREATED]: Managable,
+       [QueueName.INBOX_MESSAGE_UPDATED]: Managable,
+       [QueueName.INBOX_CONVERSATION_CREATED]: Managable,
+       [QueueName.INBOX_CONVERSATION_STATUS_CHANGED]: Managable,
+       [QueueName.INBOX_MESSAGE_DELETED]: Managable,
+       [QueueName.INBOX_COMMANDS]: Locked,
++      [QueueName.INBOX_C2Y_REACTION]: Managable,
++      [QueueName.INBOX_C2Y_EDIT]: Managable,
+     } satisfies Record<QueueName, boolean>;
+   }
+ 
+diff --git a/src/apps/chatwoot/services/QueueRegistry.ts b/src/apps/chatwoot/services/QueueRegistry.ts
+index fab10c11..453d375a 100644
+--- a/src/apps/chatwoot/services/QueueRegistry.ts
++++ b/src/apps/chatwoot/services/QueueRegistry.ts
+@@ -52,6 +52,12 @@ export class QueueRegistry {
+     private readonly inboxMessageDeletedQueue: Queue,
+     @InjectQueue(QueueName.INBOX_COMMANDS)
+     private readonly inboxCommandsQueue: Queue,
++    @InjectQueue(QueueName.WAHA_POLL_VOTE)
++    private readonly wahaPollVoteQueue: Queue,
++    @InjectQueue(QueueName.INBOX_C2Y_REACTION)
++    private readonly inboxC2yReactionQueue: Queue,
++    @InjectQueue(QueueName.INBOX_C2Y_EDIT)
++    private readonly inboxC2yEditQueue: Queue,
+   ) {
+     // Strictly typed object literal
+     this.queues = {
+@@ -77,6 +83,9 @@ export class QueueRegistry {
+         this.inboxConversationStatusChangedQueue,
+       [QueueName.INBOX_MESSAGE_DELETED]: this.inboxMessageDeletedQueue,
+       [QueueName.INBOX_COMMANDS]: this.inboxCommandsQueue,
++      [QueueName.WAHA_POLL_VOTE]: this.wahaPollVoteQueue,
++      [QueueName.INBOX_C2Y_REACTION]: this.inboxC2yReactionQueue,
++      [QueueName.INBOX_C2Y_EDIT]: this.inboxC2yEditQueue,
+     } satisfies Record<QueueName, Queue>;
+   }
+ 
+diff --git a/src/main.ts b/src/main.ts
+index 45f2230f..a1e7c4e9 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -18,6 +18,8 @@ import { AppModuleCore } from './core/app.module.core';
+ import { AllExceptionsFilter } from './nestjs/AllExceptionsFilter';
+ import { getWAHAVersion, VERSION, WAHAVersion } from './version';
+ import { loadESMModules } from '@waha/vendor/esm';
++// Autonom.ia c2y-rich-2: raw body of the Chatwoot webhook, for the c2y_* signature
++import { keepChatwootWebhookRawBody } from '@waha/apps/chatwoot/api/rawbody';
+ import { setGlobalDispatcher, EnvHttpProxyAgent } from 'undici';
+ 
+ // honor HTTP(S)_PROXY / NO_PROXY for global fetch (media downloads); direct connection otherwise
+@@ -92,7 +94,7 @@ async function bootstrap() {
+   // app.useGlobalPipes(new ValidationPipe({ transform: true }));
+ 
+   // Allow sending big body - for images and attachments
+-  app.use(json({ limit: '50mb' }));
++  app.use(json({ limit: '50mb', verify: keepChatwootWebhookRawBody }));
+   app.use(urlencoded({ limit: '50mb', extended: false }));
+   app.useWebSocketAdapter(new WsAdapter(app));
+ 
 diff --git a/src/structures/environment.dto.ts b/src/structures/environment.dto.ts
-index 70e5cead..b73d796c 100644
+index 70e5cead..c7c28103 100644
 --- a/src/structures/environment.dto.ts
 +++ b/src/structures/environment.dto.ts
-@@ -36,4 +36,20 @@ export class WAHAEnvironment {
+@@ -36,4 +36,30 @@ export class WAHAEnvironment {
    worker: {
      id: string | null;
    };
 +
 +  @ApiProperty({
 +    example: {
-+      patch: 'c2y-rich-1',
-+      rich_native: ['options', 'location', 'contact'],
++      patch: 'c2y-rich-2',
++      rich_native: ['options', 'location', 'contact', 'poll'],
 +      list_reply: true,
++      poll_vote: true,
++      reactions: true,
++      edit: true,
++      media_as_media: true,
++      format: 'c2y-1',
 +    },
 +    required: false,
 +    description:
-+      'Autonom.ia build patch (autonom-ia2/chat#1709): native list, location and contact from Chatwoot, list replies to Chatwoot.',
++      'Autonom.ia build patch (autonom-ia2/chat#1709): native list, location, contact and poll from Chatwoot; list replies, poll votes, calls, reactions, edits and unknown messages to Chatwoot as structured data; reactions and edits from Chatwoot; media as media; preformatted text.',
 +  })
 +  autonomia?: {
 +    patch: string;
 +    rich_native: string[];
 +    list_reply: boolean;
++    poll_vote: boolean;
++    reactions: boolean;
++    edit: boolean;
++    media_as_media: boolean;
++    format: string;
 +  };
  }
 diff --git a/src/utils/bull/BaseWorkerHost.ts b/src/utils/bull/BaseWorkerHost.ts
@@ -1208,17 +4875,22 @@ index 078d5d96..55d5e0c6 100644
      }
    }
 diff --git a/src/version.ts b/src/version.ts
-index 7a03361c..2604655c 100644
+index 7a03361c..4439567e 100644
 --- a/src/version.ts
 +++ b/src/version.ts
-@@ -54,6 +54,11 @@ export const VERSION: WAHAEnvironment = {
+@@ -54,6 +54,16 @@ export const VERSION: WAHAEnvironment = {
    browser: getBrowser(),
    platform: getPlatform(),
    worker: getWorker(),
 +  autonomia: {
-+    patch: 'c2y-rich-1',
-+    rich_native: ['options', 'location', 'contact'],
++    patch: 'c2y-rich-2',
++    rich_native: ['options', 'location', 'contact', 'poll'],
 +    list_reply: true,
++    poll_vote: true,
++    reactions: true,
++    edit: true,
++    media_as_media: true,
++    format: 'c2y-1',
 +  },
  };
  
