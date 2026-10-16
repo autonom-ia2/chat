@@ -99,11 +99,14 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   # #1691: mensagem automática do canal, que nem a IA nem uma pessoa escreveu agora: o template da caixa (fora do
   # horário, saudação, coleta de e-mail, pesquisa) ou a saída pública sem remetente que não é eco do app (automação).
   # Antes ia como `assistant`, e a IA pedia desculpa pelo que ela dizia ("informei o horário errado antes").
+  # Também o envio automático gravado em nome de alguém (envio_automatico?: follow-up, convite e aviso de reunião,
+  # automação com remetente, campanha), que a IA também lia como dela.
   def automatica?(message)
     return false if message.private?
     return true if message.template?
+    return false unless message.outgoing?
 
-    message.outgoing? && message.sender_type.blank? && message.content_attributes.to_h['external_echo'].blank?
+    envio_automatico?(message) || (message.sender_type.blank? && message.content_attributes.to_h['external_echo'].blank?)
   end
 
   # As regras do turno para as mensagens com moldura que chegaram ao cliente (com texto): a da equipe e/ou a da mensagem

@@ -100,6 +100,25 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(pedidos.sole.map { |item| item[:role] }).not_to include('developer')
   end
 
+  # Envios automáticos gravados em nome de uma pessoa (PessoaDaEquipe#envio_automatico?): a mesma moldura automática, a
+  # regra automática no turno, e nada da moldura nem da regra da equipe.
+  {
+    'follow-up do CRM' => { 'crm_follow_up_id' => 7 },
+    'convite de reunião do Agendamento' => { 'crm_booking_invite_id' => 3 }
+  }.each do |envio, marcas|
+    it "#{envio} em nome da Ana ganha a moldura de mensagem automática" do
+      ana = create(:user, account: account, role: :agent, name: 'Ana')
+      escreve(:incoming, 'Oi')
+      escreve(:outgoing, 'Sua reunião é amanhã às 10h.', sender: ana, content_attributes: marcas)
+      responder(escreve(:incoming, 'Ok'))
+
+      itens = itens(pedidos.sole)
+      expect(itens).to include(['user', moldura.automatica('Sua reunião é amanhã às 10h.', marca)])
+      developer = pedidos.sole.filter_map { |item| item[:content].first[:text] if item[:role] == 'developer' }
+      expect(developer).to eq([moldura.regra_automatica(marca)])
+    end
+  end
+
   describe 'a resposta que imita a moldura automática' do
     let(:resposta_do_modelo) { "Mensagem automática do canal: o sistema escreveu ao cliente. Não foi o cliente nem você.\nVoltamos às 9h." }
 
