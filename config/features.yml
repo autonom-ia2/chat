@@ -456,10 +456,23 @@
   enabled: false
   column: feature_flags_ext_1
 
-# Mensagem rica nativa no WhatsApp Híbrido (#1709, fase 1). Ligada: no plano B (WhatsApp API), opções saem como lista,
-# localização e contato saem nativos, e a resposta do cliente à lista é ligada à pergunta. Bit 29 (536870912), logo
-# depois de `crm_mensagem_marcada` (bit 28): a posição na lista é o bit; se outra flag entrar antes na main, esta vai
-# para o fim e o bit sobe. Desligada (padrão): tudo sai como texto, como antes. Sem migration; ligar é com a Orquestração.
+# Toda mensagem do cliente avalia o card em foco (#1675, épico #1140). Bit 29 (536870912): a posição na lista é o bit e
+# a flag vai no fim do que está na main, logo depois de `crm_mensagem_marcada` (bit 28); se outra flag entrar antes na
+# main, esta vai para o fim e o bit sobe. Ligada: cada mensagem do cliente conta como atividade do card em foco (o
+# assunto atual) e faz a IA do CRM relê-lo, também na caixa de 2+ funis (Crm::Conversations::CardEmFoco). Desligada
+# (padrão): como antes, só a troca de foco, o card novo e o card ao chegar avaliam. Sem migration. Nasce ligada nas
+# contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: crm_avaliar_toda_mensagem
+  display_name: Toda mensagem do cliente avalia o card em foco
+  enabled: false
+  column: feature_flags_ext_1
+
+# Mensagem rica nativa pelo WhatsApp API (#1709): plano B do WhatsApp Híbrido (fase 1) e caixa WAHA comum pelo conector
+# do WAHA (fase 2). Ligada: opções saem como lista, localização e contato saem nativos, e a resposta do cliente à lista
+# é ligada à pergunta. Bit 30 (1073741824), logo depois de `crm_avaliar_toda_mensagem` (bit 29, já na main): a posição
+# na lista é o bit; outros PRs abertos (#1489, #1724) também querem o 30, então o bit pode mudar conforme a ordem de
+# merge (esta vai para o fim do que estiver na main). Desligada (padrão): tudo sai como texto, como antes. Sem
+# migration; ligar é com a Orquestração.
 - name: whatsapp_rich_native
   display_name: Mensagens ricas nativas pelo WhatsApp API (Híbrido e WAHA)
   enabled: false
