@@ -33,6 +33,26 @@ describe Waha::RichNative::SilentUpdate do
     expect(inbox_payloads(edit)).to be_empty
   end
 
+  # As chaves que a tela grava na "pele" da mensagem (#1702b): numa mensagem com `external_error: nil`, o conector leria
+  # o `message_updated` como pedido de reenvio.
+  it 'does not send an update of only read_receipt_sent_at or only link_preview to the connector' do
+    read_receipt = { 'content_attributes' => [{ 'external_error' => nil },
+                                              { 'external_error' => nil, 'read_receipt_sent_at' => Time.current.iso8601 }],
+                     'updated_at' => [1.minute.ago, Time.current] }
+    link_preview = { 'content_attributes' => [{ 'external_error' => nil },
+                                              { 'external_error' => nil, 'link_preview' => { 'url' => 'https://exemplo.com.br' } }] }
+
+    expect(inbox_payloads(read_receipt)).to be_empty
+    expect(inbox_payloads(link_preview)).to be_empty
+  end
+
+  it 'keeps the silent keys exactly the list agreed with the screen (#1702b)' do
+    expect(described_class::SILENT_KEYS).to contain_exactly(
+      'reactions', 'read_receipt_sent_at', 'link_preview', 'played_at', 'deleted_by_contact_at', 'poll_votes', 'event_responses',
+      'edit_history', 'edited_at'
+    )
+  end
+
   it 'sends any other update as before (status, delete, error, content without history)' do
     [
       { 'status' => %w[sent delivered] },
