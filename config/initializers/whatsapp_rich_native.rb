@@ -41,6 +41,8 @@ Rails.application.config.to_prepare do
     Whatsapp::Providers::WhatsappCloudService.prepend(Waha::RichNative::PollCloudText)
   end
   Message.before_create Waha::RichNative::Inbound if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound }
+  # Texto no formato do WhatsApp e foto/vídeo como mídia: o mais externo do webhook da caixa (depois do InboxWebhook).
+  WebhookListener.prepend(Waha::RichNative::OutgoingHints) unless WebhookListener <= Waha::RichNative::OutgoingHints
 end
 
 # Flag ligada numa conta: a capacidade dos motores é lida na hora, sem esperar o cron (Waha::RichNative::ColdStart).
