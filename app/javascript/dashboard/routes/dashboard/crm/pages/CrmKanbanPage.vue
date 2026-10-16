@@ -1058,28 +1058,6 @@ const savePipeline = async payload => {
   }
 };
 
-const addPipelineInbox = async payload => {
-  try {
-    const link = await store.dispatch('crmKanban/createPipelineInbox', payload);
-    pipelineInboxes.value = [...pipelineInboxes.value, link];
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_ADDED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_SAVE_ERROR'));
-  }
-};
-
-const removePipelineInbox = async payload => {
-  try {
-    await store.dispatch('crmKanban/deletePipelineInbox', payload);
-    pipelineInboxes.value = pipelineInboxes.value.filter(
-      item => Number(item.inbox_id) !== Number(payload.inboxId)
-    );
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_INBOX_REMOVE_ERROR'));
-  }
-};
-
 const loadPipelineStagesForSettings = async pipelineId => {
   if (!pipelineId || inboxSettingStagesByPipeline.value[String(pipelineId)]) {
     return inboxSettingStagesByPipeline.value[String(pipelineId)] || [];
@@ -2985,14 +2963,10 @@ onUnmounted(() => {
       :is-archiving="uiFlags.isArchivingPipeline"
       :is-deleting-stage="uiFlags.isDeletingStage"
       :is-loading-pipeline-inboxes="uiFlags.isFetchingPipelineInboxes"
-      :is-saving-pipeline-inbox="uiFlags.isSavingPipelineInbox"
-      :is-removing-pipeline-inbox="uiFlags.isRemovingPipelineInbox"
       :agents="agents"
       @save="savePipeline"
       @archive="archivePipeline"
       @delete-stage="deleteStage"
-      @add-pipeline-inbox="addPipelineInbox"
-      @remove-pipeline-inbox="removePipelineInbox"
       @close="closePipelineDrawer"
     />
 

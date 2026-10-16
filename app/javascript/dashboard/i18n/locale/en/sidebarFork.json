@@ -161,7 +161,7 @@
         "TEXTO": "Who changed what, and when."
       },
       "QUEM_CUIDA": {
-        "TITULO": "Who handles what",
+        "TITULO": "Channels per pipeline",
         "TEXTO": "Who on the team serves each inbox and each CRM pipeline."
       },
       "CUSTOS_WHATSAPP": {

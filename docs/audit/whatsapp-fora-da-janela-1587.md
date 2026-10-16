@@ -48,8 +48,29 @@ Juiz do eval (#1333): a rubrica da calibração não está no git (scratchpad da
 
 ## Registro por envio
 
-Nesta entrega vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, categoria, origem,
-`consentimento_id`) e no log (sem texto do cliente).
+Vai no metadata (`envio_fora_da_janela`: tipo, caminho, escolha, modelo, idioma, categoria, origem, `consentimento_id`)
+e no log (sem texto do cliente). Na tabela própria `whatsapp_out_of_window_sends` (PR #1587b, depende do #1631), uma
+linha append-only por mensagem: o Followup chama `EnvioForaDaJanela.registrar_envio(message:, registro:)` numa linha
+depois do `:sent` do `MessageSender`, com o hash acima mais `crm_follow_up_id` e `motivo` (opcionais).
+- Idempotente por `message_id` (índice único; a corrida devolve a linha que ganhou).
+- Nunca levanta: em erro, log com a classe e os ids e devolve nil. Grava num savepoint, para não invalidar a transação
+  de quem chama.
+- Guardada para sempre (Rodrigo, 15/10/2026: "Sim, trava no banco"; "Precisa guardar porque o cliente pode entrar na
+  justiça tempos depois"): sem chave estrangeira, conta, caixa, mensagem, follow-up ou autorização apagados deixam a
+  linha intacta, com o id de origem. Na criação, o model confere que cada referência existe e é da conta.
+- A linha gravada não muda nem sai: o app recusa (`readonly?`) e o Postgres também (gatilho BEFORE UPDATE OR DELETE por
+  linha e BEFORE TRUNCATE). O mesmo vale para `whatsapp_template_consents` (migration 20261104100000, que também tira as
+  FKs de conta e usuário e grava `user_name`).
+- Gatilho nos bancos de teste: o dumper do `hairtrigger` (já no Gemfile) escreve função e gatilhos no `db/schema.rb`
+  como bloco `execute`, e o `db:schema:load` (local e CI) os recria. A suíte limpa por transação, sem TRUNCATE.
+- A trava é contra comando comum (UPDATE/DELETE/TRUNCATE do app ou de psql). O dono da tabela ou um superusuário ainda
+  conseguem `ALTER TABLE ... DISABLE TRIGGER`, `SET session_replication_role = replica`, `DROP TRIGGER` ou `DROP TABLE`.
+  Correção legítima (aceite gravado errado, pedido de LGPD) = migration revisada que desliga o gatilho, corrige e religa.
+- Volta (`down`) das duas migrations: recusa com `IrreversibleMigration` se a tabela tiver linha; vazia, tira gatilhos e
+  função (a de envios apaga a tabela; a de autorização tira `user_name`) e nunca recria FK com cascade.
+- `user_name` na tela: a cópia gravada primeiro; o usuário atual só para linha antiga sem cópia (gravada pelo código
+  antigo durante o deploy, risco aceito pelo Rodrigo em 15/10/2026).
+- Falha ao gravar o registro de envio: log e alerta no `ChatwootExceptionTracker`, só com ids e classe; sem nova tentativa.
 
 ## Decisões do Rodrigo (15/10/2026)
 
