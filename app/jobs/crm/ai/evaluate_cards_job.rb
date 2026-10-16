@@ -10,6 +10,11 @@ class Crm::Ai::EvaluateCardsJob < ApplicationJob
     cards = cards.reject { |card| card.metadata.to_h.dig('ai', 'evaluate_token').to_f > token.to_f }
     return if cards.empty?
 
-    Crm::Ai::AvaliacaoConjunta.new(cards: cards, principal: cards.find { |card| card.id == principal_id }).perform
+    Crm::Ai::AvaliacaoConjunta.new(cards: cards, principal: principal(cards, principal_id)).perform
+  end
+
+  # O principal da decisão; se ele saiu (agendamento mais novo, card fechado), o card em foco, se está entre eles.
+  def principal(cards, principal_id)
+    cards.find { |card| card.id == principal_id } || cards.find { |card| Crm::Cards::CurrentSubject.card?(card) }
   end
 end

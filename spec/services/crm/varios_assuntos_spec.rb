@@ -27,8 +27,8 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       .and_return(instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'k' }))
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
     allow(cliente).to receive(:create) { |**args| responder(args) }
-    allow(Crm::Ai::HandoffExecutor).to receive(:new) do |card:, handoff:, **|
-      passagens << [card.id, handoff]
+    allow(Crm::Ai::HandoffExecutor).to receive(:new) do |card:, handoff:, pelo_card: false, **|
+      passagens << [card.id, handoff&.as_json, pelo_card]
       instance_double(Crm::Ai::HandoffExecutor, perform: nil)
     end
     account.enable_features!(Crm::Conversations::CardEmFoco::FLAG)
@@ -82,7 +82,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
     chamadas << args
     entrada = JSON.parse(args[:input])
     corpo = case args.dig(:schema, :name)
-            when 'assuntos_revisao' then revisao
+            when 'assuntos_revisao' then revisao.merge(assuntos: revisao[:assuntos].map { |assunto| assunto.reverse_merge(seguro: true) })
             when 'stage_classification' then classificacao(entrada)
             when 'stage_classification_cards' then { cards: entrada['cards'].map { |pacote| classificacao(pacote).merge(card_id: id(pacote)) } }
             end
@@ -153,7 +153,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
                                            attribute_display_type: 'number')
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }],
-                     principal: 1, seguro: true, motivo: 'ok')
+                     principal: 1, motivo: 'ok')
       movimentos['Seguro auto'] = { etapa: 'Fechamento' }
       movimentos['Seguro residencial'] = {
         atributos: [{ key: 'cobertura_incendio', value: 100_000, confidence: 0.95, evidence: '100 mil de incêndio' }]
@@ -174,7 +174,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
     it 'vencida por uma mensagem mais nova depois de criar o outro pedido: o foco volta e só o card criado é avaliado' do
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },
-                                { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }], principal: 1, seguro: true, motivo: 'ok')
+                                { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }], principal: 1, motivo: 'ok')
       allow(Crm::Subjects::Applier).to receive(:new).and_wrap_original do |original, **argumentos|
         original.call(**argumentos).tap { |applier| allow(applier).to receive(:mensagem_mais_nova?).and_return(false, true) }
       end
@@ -208,6 +208,37 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(avaliacoes.size).to eq(1)
     end
 
+    describe 'no modo Sugerir' do
+      let(:pedido) { { intent: 'transferir', should_handoff: true, reason: 'Pediu atendente', suggested_agent: nil } }
+
+      before { account.crm_inbox_settings.find_by!(inbox: inbox).update!(subject_ai_mode: :suggest) }
+
+      it 'um card tocado só (fora do foco) com pedido de atendente: vale a regra de antes, a do foco' do
+        pos_venda.update!(metadata: { 'ai' => pos_venda.metadata['ai'].merge('handoff' => { 'enabled' => true }) })
+        stub_jev("card_#{sinistro.id}")
+        movimentos['Sinistro do carro'] = { handoff: pedido }
+
+        decisao = receber('quero falar com alguém sobre o sinistro')
+
+        expect(decisao).to have_attributes(state: 'suggested', touched_card_ids: [sinistro.id])
+        expect(foco).to eq(auto)
+        expect(avaliacoes.map { |args| args.dig(:schema, :name) }).to eq(['stage_classification'])
+        expect(passagens).to eq([[sinistro.id, pedido.as_json, false]])
+      end
+
+      it 'principal em dúvida e o outro pedido sem virar card: sem lista, relê o card em foco (#1675)' do
+        stub_jev(Crm::Subjects::Question::VARIOS)
+        revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' },
+                                  { resposta: "card_#{sinistro.id}", titulo: '', seguro: false }], principal: 1, motivo: 'x')
+
+        decisao = receber('quero cotar a moto e o outro lá')
+
+        expect(decisao).to have_attributes(state: 'doubt', touched_card_ids: nil)
+        expect(account.crm_cards.where(title: 'Seguro moto')).to be_empty
+        expect(avaliacoes.map { |args| JSON.parse(args[:input]).dig('card', 'id') }).to eq([auto.id])
+      end
+    end
+
     describe 'com o Auto ligado também ao e-mail (#1664)' do
       let(:email) { conversa_de_email(auto, ['Mandei a CNH por aqui', 'Segue o documento do carro por e-mail'], 2.hours.ago) }
       let(:assuntos) { [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "card_#{sinistro.id}", titulo: '' }] }
@@ -215,7 +246,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       before do
         email
         stub_jev(Crm::Subjects::Question::VARIOS)
-        revisao.merge!(assuntos: assuntos, principal: assuntos.size - 1, seguro: true, motivo: 'ok')
+        revisao.merge!(assuntos: assuntos, principal: assuntos.size - 1, motivo: 'ok')
       end
 
       # Uma conversa de e-mail do João, ligada ao card, com as mensagens do cliente (um minuto entre elas, a partir de `desde`).
@@ -308,7 +339,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       card(vendas, 'Seguro viagem', 'Novo Lead', focused_at: 4.minutes.ago)
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "card_#{sinistro.id}", titulo: '' },
-                                { resposta: "card_#{vida.id}", titulo: '' }], principal: 2, seguro: true, motivo: 'ok')
+                                { resposta: "card_#{vida.id}", titulo: '' }], principal: 2, motivo: 'ok')
     end
 
     it '(4) três assuntos em três funis: três cards tocados, cada um com o funil dele, numa chamada só' do
@@ -353,7 +384,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
     it 'no modo Sugerir: nenhum card nasce sozinho e o foco não muda; os assuntos abertos são avaliados juntos' do
       account.crm_inbox_settings.find_by!(inbox: inbox).update!(subject_ai_mode: :suggest)
       revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: "novo_#{vendas.id}", titulo: 'Seguro moto' }],
-                     principal: 0, seguro: true, motivo: 'ok')
+                     principal: 0, motivo: 'ok')
 
       decisao = receber('O sinistro já tem as fotos. E quero cotar a moto')
 
@@ -363,9 +394,9 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(avaliacoes.size).to eq(1)
     end
 
-    it '(6) dois assuntos e um pedido de atendente: vale a regra do card principal' do
+    it '(6) dois assuntos e o pedido de atendente nos dois: vale o principal' do
       revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: "card_#{vida.id}", titulo: '' }],
-                     principal: 1, seguro: true, motivo: 'ok')
+                     principal: 1, motivo: 'ok')
       pedido = { intent: 'transferir', should_handoff: true, reason: 'Pediu atendente', suggested_agent: nil }
       movimentos['Sinistro do carro'] = { handoff: pedido }
       movimentos['Renovação do vida'] = { handoff: pedido }
@@ -376,6 +407,56 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       gatilhos = JSON.parse(avaliacoes.first[:input])['cards'].to_h { |pacote| [pacote['card']['id'], pacote['handoff_trigger']] }
       expect(gatilhos).to eq(vida.id => 'O cliente pede um atendente da renovação', sinistro.id => 'O cliente pede um atendente do sinistro')
       expect(passagens.map(&:first)).to eq([vida.id])
+    end
+  end
+
+  # Do teste de estresse de 16/10 (docs/multifunil/STRESS-TEST-2026-10-16.md, PR #1708), cliente novo, sem card.
+  describe 'teste de estresse: pedido de atendente e assunto em dúvida' do
+    let(:vendas) { funil('Vendas', %w[Proposta Fechamento], handoff: 'O cliente pede um atendente de vendas') }
+    let(:pos_venda) { funil('Sinistro', %w[Análise Resolvido], handoff: 'O cliente pede um atendente do sinistro') }
+    let(:pedido) { { intent: 'transferir', should_handoff: true, reason: 'Pediu atendente', suggested_agent: nil } }
+
+    before { stub_jev(Crm::Subjects::Question::VARIOS) }
+
+    def dois_pedidos_novos
+      revisao.merge!(assuntos: [{ resposta: "novo_#{pos_venda.id}", titulo: 'Sinistro do carro' },
+                                { resposta: "novo_#{vendas.id}", titulo: 'Seguro residencial' }], principal: 1, motivo: 'ok')
+    end
+
+    it 'C26: o pedido ligado ao sinistro vai pela regra do sinistro, mesmo com o residencial em foco' do
+      dois_pedidos_novos
+      movimentos['Sinistro do carro'] = { handoff: pedido }
+
+      receber('preciso falar com uma pessoa. é sobre o sinistro do meu carro (bateram) e quero cotar residencial tb')
+
+      sinistro, residencial = ['Sinistro do carro', 'Seguro residencial'].map { |titulo| account.crm_cards.find_by!(title: titulo) }
+      expect(foco).to eq(residencial)
+      expect(JSON.parse(avaliacoes.first[:input])['cards'].to_h { |pacote| [id(pacote), pacote['principal']] })
+        .to eq(residencial.id => true, sinistro.id => false)
+      expect(passagens).to eq([[sinistro.id, pedido.as_json, true]])
+    end
+
+    it 'pedido sem ligação a um assunto: a IA o põe no principal, e vale a regra dele' do
+      dois_pedidos_novos
+      movimentos['Seguro residencial'] = { handoff: pedido }
+
+      receber('quero falar com uma pessoa. tenho um sinistro do carro e quero cotar residencial')
+
+      expect(passagens.map(&:first)).to eq([account.crm_cards.find_by!(title: 'Seguro residencial').id])
+    end
+
+    it 'C27: o vida em dúvida não segura o sinistro, que nasce e leva o pedido de atendente' do
+      revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro de vida', seguro: false },
+                                { resposta: "novo_#{pos_venda.id}", titulo: 'Sinistro do celular' }], principal: 0, motivo: 'vida?')
+      movimentos['Sinistro do celular'] = { handoff: pedido }
+
+      decisao = receber('me passa pra um atendente. é pra cotar seguro de vida. e tb abrir um sinistro do celular q foi roubado')
+
+      sinistro = account.crm_cards.find_by!(title: 'Sinistro do celular')
+      expect(decisao).to have_attributes(state: 'doubt', title: 'Seguro de vida', touched_card_ids: [sinistro.id])
+      expect(account.crm_cards.where(title: 'Seguro de vida')).to be_empty
+      expect(foco).to eq(sinistro)
+      expect(passagens).to eq([[sinistro.id, pedido.as_json, false]])
     end
   end
 
@@ -396,7 +477,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
 
     it 'assunto em dúvida: relê o card em foco, como no #1675' do
       stub_jev('mesmo_assunto', confidence: 0.3)
-      revisao.merge!(assuntos: [], principal: 0, seguro: false, motivo: 'ambíguo')
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '', seguro: false }], principal: 0, motivo: 'ambíguo')
       movimentos['Seguro auto'] = { etapa: 'Fechamento' }
 
       decisao = receber('hmm, talvez')

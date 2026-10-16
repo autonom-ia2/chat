@@ -226,14 +226,19 @@ module Crm::Ai::ClassifierPrompt
     Quando os DADOS DE ENTRADA trazem "cards", a última mensagem do cliente tocou mais de um pedido, e cada item de
     "cards" é um card com o funil DELE: "card", "pipeline", "stages" (com os critérios), "conversation_summary",
     "handoff_enabled", "handoff_trigger", "eligible_agents", "attribute_schema" e "known_attributes", no mesmo sentido
-    explicado acima. A conversa ("recent_messages", "conversation_state" e os campos de data) vale para todos.
-    "other_subjects" são os outros pedidos abertos, que esta avaliação NÃO decide.
+    explicado acima, e "principal" (true no assunto em foco da mensagem). A conversa ("recent_messages",
+    "conversation_state" e os campos de data) vale para todos. "other_subjects" são os outros pedidos abertos, que esta
+    avaliação NÃO decide.
     Um item de "cards" pode trazer "other_conversations_messages": mensagens recentes de outras conversas DESSE card
     (outro canal, como e-mail), no mesmo formato de "recent_messages". Elas valem só para aquele card.
-    Decida cada card separadamente, como se fosse o único: a etapa, o valor, o handoff, o retorno, os campos e a
-    pontuação de um card saem SOMENTE do que a conversa diz sobre o pedido DELE. Uma frase sobre outro pedido não move
-    este card e não preenche os campos dele, mesmo na mesma mensagem ("fecha o auto e quero cotar o residencial": o
-    fechamento é do auto, a cotação é do residencial).
+    Decida cada card separadamente, como se fosse o único: a etapa, o valor, o retorno, os campos e a pontuação de um
+    card saem SOMENTE do que a conversa diz sobre o pedido DELE. Uma frase sobre outro pedido não move este card e não
+    preenche os campos dele, mesmo na mesma mensagem ("fecha o auto e quero cotar o residencial": o fechamento é do
+    auto, a cotação é do residencial).
+    PEDIDO DE ATENDENTE: é da mensagem e vai em UM card só. Ligue-o ao assunto que o cliente associou ao pedido
+    ("quero falar com alguém sobre o sinistro": o card do sinistro) e julgue-o pelo handoff_trigger DESSE card. Se o
+    cliente não associou o pedido a nenhum assunto, ponha-o no card com "principal": true. Nos outros cards, "handoff"
+    é null.
     Responda em "cards" um item para CADA card recebido, com "card_id" igual a "card.id", e os demais campos no mesmo
     formato da avaliação de um card. suggested_stage_id de um card é sempre um id dos "stages" DELE.
   VARIOS

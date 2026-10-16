@@ -9,8 +9,9 @@
 # (card_id, action, title) e a lista dos cards tocados (touched_card_ids), que a IA do CRM avalia numa chamada só
 # (Crm::Conversations::CardsTocados). Com a flag, um assunto só também grava a lista.
 class Crm::Subjects::Identifier
-  # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by.
-  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, keyword_init: true)
+  # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
+  # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao).
+  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, keyword_init: true)
   LEITURAS = %w[mensagens_com_respostas].freeze
   SEM_MUDANCA = (Crm::Subjects::Applier::SEM_EFEITO + %w[kept doubt superseded]).freeze
 
@@ -93,8 +94,17 @@ class Crm::Subjects::Identifier
     resultado = aplicar(escolha)
     @aplicado = true
     @evento = resultado.delete(:evento)
+    tocados = lista_de_tocados(resultado)
+    concluir(**resultado, decided_by: escolha.decided_by, **tocados)
+  end
+
+  # A lista de cards tocados (#1693), tirada do resultado. Dúvida sem nenhum outro assunto aplicado fica sem lista: a
+  # IA do CRM relê o card em foco (#1675).
+  def lista_de_tocados(resultado)
     tocados = resultado.delete(:tocados)
-    concluir(**resultado, decided_by: escolha.decided_by, **(tocados ? { touched_card_ids: tocados.map(&:id) } : {}))
+    return {} if tocados.nil? || (resultado[:state] == 'doubt' && tocados.empty?)
+
+    { touched_card_ids: tocados.map(&:id) }
   end
 
   def aplicar(escolha)
@@ -102,7 +112,7 @@ class Crm::Subjects::Identifier
                                          anterior: @retrato)
     return applier.aplicar(escolha.opcao, escolha.titulo) unless question.varios?
 
-    applier.aplicar_varios(escolha, Array(escolha.outros))
+    applier.aplicar_varios((escolha if escolha.opcao), Array(escolha.outros), duvida: escolha.duvida)
   end
 
   # A mesma sugestão já espera uma pessoa (#1693): o card de volta ainda é o assunto da mensagem; o pedido novo não
@@ -175,22 +185,27 @@ class Crm::Subjects::Identifier
     veredito = Crm::Subjects::Reviewer.new(question).revisar(estado, @jev)
     opcao = question.opcao(veredito.resposta)
     duvida = !veredito.seguro || (opcao.tipo == :novo && veredito.titulo.blank?)
-    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros(veredito)) unless duvida
+    outros = outros(veredito)
+    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros) unless duvida
 
-    concluir(state: 'doubt', decided_by: 'review', title: veredito.titulo.presence, pipeline: opcao.pipeline,
-             reason: veredito.motivo)
+    em_duvida = { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo }
+    # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27).
+    return Escolha.new(decided_by: 'review', outros: outros, duvida: em_duvida) if outros.any?
+
+    concluir(**em_duvida, decided_by: 'review')
     nil
   end
 
   # Os outros assuntos da lista (#1693), sem o principal: o mesmo assunto repetido sai (o card aberto, ou o pedido novo
-  # com o mesmo funil e o mesmo nome), pedido novo sem nome sai, e a lista inteira respeita MAX_ASSUNTOS.
+  # com o mesmo funil e o mesmo nome), pedido novo sem nome sai, assunto em dúvida sai (nada muda nele), e a lista
+  # inteira respeita MAX_ASSUNTOS.
   def outros(veredito)
     return [] if veredito.assuntos.blank?
 
     vistos = [identidade(veredito.assuntos[veredito.principal])]
     escolhas = veredito.assuntos.filter_map do |assunto|
       identidade = identidade(assunto)
-      next if vistos.include?(identidade) || (identidade.is_a?(Array) && assunto.titulo.blank?)
+      next if !assunto.seguro || vistos.include?(identidade) || (identidade.is_a?(Array) && assunto.titulo.blank?)
 
       vistos << identidade
       Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo)

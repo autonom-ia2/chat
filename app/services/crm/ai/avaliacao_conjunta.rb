@@ -8,8 +8,11 @@
 # só, é a avaliação de sempre, com a mesma entrada. Sobrando dois ou mais, uma chamada (Crm::Ai::ClassificacaoConjunta)
 # e cada resposta aplicada no seu card (Evaluator#aplicar).
 #
-# O pedido de atendente segue a regra do card principal: só ele pode passar a conversa (Evaluator `passar:`), e o
-# HandoffExecutor mantém as guardas dele (assunto em foco, pessoa no nome, agente nosso como dono, intervalo).
+# Pedido de atendente (decisão 1a do Rodrigo, 16/10): vale a regra do assunto a que o cliente ligou o pedido, ou seja,
+# do card em que a IA o pôs; sem ligação, a IA o põe no principal. Só esse card passa a conversa (Evaluator#aplicar
+# `passar:`); fora do principal, pela regra dele mesmo fora do foco (HandoffExecutor `pelo_card`), com as outras guardas
+# de sempre (pessoa no nome, agente nosso como dono, intervalo). Sem pedido em nenhum card, o principal segue como
+# antes. Com um card só (sem chamada conjunta), vale a regra de antes: a do assunto em foco.
 #
 # Custo: uma chamada por mensagem, registrada pelo ResponsesClient como sempre (feature avaliacao_card, no funil do
 # primeiro card). Uma segunda só quando o principal muda de etapa e a etapa nova tem outra regra de pedido de atendente.
@@ -24,7 +27,7 @@ class Crm::Ai::AvaliacaoConjunta
     resultados = {}
     prontos = []
     @cards.each do |card|
-      avaliador = Crm::Ai::Evaluator.new(card: card, trigger: @trigger, tocado: true, passar: card.id == @principal&.id)
+      avaliador = Crm::Ai::Evaluator.new(card: card, trigger: @trigger, tocado: true)
       motivo = avaliador.motivo_para_pular
       motivo ? resultados[card.id] = pulado(motivo) : prontos << [card, avaliador]
     end
@@ -39,19 +42,26 @@ class Crm::Ai::AvaliacaoConjunta
   def avaliar_juntos(prontos)
     ids = prontos.map { |card, _avaliador| card.id }
     Crm::Ai::MediaEnricher.new(card: prontos[0][0]).perform if Crm::Ai::Config.media_enabled?
-    classificacoes = classificar(prontos, ids)
-    Rails.logger.info("[crm][avaliacao_conjunta] cards=#{ids.join(',')} sem_resposta=#{(ids - classificacoes.keys).join(',')}")
-    prontos.to_h { |card, avaliador| [card.id, aplicar(card, avaliador, classificacoes[card.id])] }
+    aplicar_todos(prontos, ids, classificar(prontos, ids))
   rescue Crm::Ai::ResponsesClient::Error => e
     ids.index_with { Crm::Ai::Evaluator::Result.new(status: :failed, error: e.message) }
   rescue JSON::ParserError
     ids.index_with { Crm::Ai::Evaluator::Result.new(status: :failed, error: 'invalid_llm_json') }
   end
 
+  def aplicar_todos(prontos, ids, classificacoes)
+    Rails.logger.info("[crm][avaliacao_conjunta] cards=#{ids.join(',')} sem_resposta=#{(ids - classificacoes.keys).join(',')}")
+    passa = quem_passa(ids, classificacoes)
+    prontos.to_h do |card, avaliador|
+      [card.id, aplicar(avaliador, classificacoes[card.id], passar: card.id == passa, pelo_card: card.id == passa && passa != @principal&.id)]
+    end
+  end
+
   def classificar(prontos, ids)
     client = prontos[0][1].classify_client
     classificadores = prontos.map { |card, avaliador| avaliador.stage_classifier(client: client, fora: ids - [card.id]) }
-    Crm::Ai::ClassificacaoConjunta.new(client: client, classificadores: classificadores, model: modelo(prontos)).perform
+    Crm::Ai::ClassificacaoConjunta.new(client: client, classificadores: classificadores, model: modelo(prontos),
+                                       principal_id: @principal&.id).perform
   end
 
   # Um card com movimento automático liberado pede o modelo dele, como na avaliação de um card.
@@ -61,22 +71,24 @@ class Crm::Ai::AvaliacaoConjunta
   end
 
   # A falha de um card (a segunda leitura do pedido de atendente, depois de mover) não derruba os outros.
-  def aplicar(card, avaliador, classificacao)
+  def aplicar(avaliador, classificacao, passar:, pelo_card:)
     return pulado('sem_resposta') if classificacao.nil?
 
-    pedido_fora_do_principal(card, classificacao)
-    avaliador.aplicar(classificacao, conjunta: true)
+    avaliador.aplicar(classificacao, conjunta: true, passar: passar, pelo_card: pelo_card)
   rescue Crm::Ai::ResponsesClient::Error => e
     Crm::Ai::Evaluator::Result.new(status: :failed, error: e.message)
   rescue JSON::ParserError
     Crm::Ai::Evaluator::Result.new(status: :failed, error: 'invalid_llm_json')
   end
 
-  # O pedido de atendente segue a regra do principal: o de outro card não passa a conversa, e fica no log.
-  def pedido_fora_do_principal(card, classificacao)
-    return if card.id == @principal&.id || !Crm::Ai::HandoffIntent.requested?(classificacao[:handoff])
+  # O card em que está o pedido de atendente; sem pedido, o principal. A IA põe o pedido num card só; se puser em mais
+  # de um, vale o principal, ou o primeiro da lista, e o resto fica no log.
+  def quem_passa(ids, classificacoes)
+    pedem = ids.select { |id| Crm::Ai::HandoffIntent.requested?(classificacoes.dig(id, :handoff)) }
+    return @principal&.id if pedem.empty? || pedem.include?(@principal&.id)
 
-    Rails.logger.info("[crm][avaliacao_conjunta] pedido de atendente fora do principal card=#{card.id}")
+    Rails.logger.info("[crm][avaliacao_conjunta] pedido de atendente em mais de um card=#{pedem.join(',')}") if pedem.many?
+    pedem.first
   end
 
   def pulado(motivo)

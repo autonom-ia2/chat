@@ -2,7 +2,8 @@
 # assunto (pedido novo), que o Jev não escreve. Pela chave de IA da conta (custo do cliente, feature assunto_revisao).
 #
 # Com vários assuntos por mensagem (#1693), a resposta é uma LISTA: cada assunto que a mensagem toca (um aberto ou um
-# pedido novo, com nome) e qual deles é o principal. A chamada é a mesma (uma só), com outro schema.
+# pedido novo, com nome) e qual deles é o principal. A chamada é a mesma (uma só), com outro schema. A certeza é de
+# cada assunto: um em dúvida não segura os outros (teste de estresse, C27).
 class Crm::Subjects::Reviewer
   class Error < StandardError; end
 
@@ -11,7 +12,7 @@ class Crm::Subjects::Reviewer
   MAX_MOTIVO = 300
   Veredito = Struct.new(:resposta, :titulo, :seguro, :motivo, :assuntos, :principal, keyword_init: true)
   # Um assunto da lista (#1693): a chave da opção e, para pedido novo, o nome.
-  Assunto = Struct.new(:resposta, :titulo, keyword_init: true)
+  Assunto = Struct.new(:resposta, :titulo, :seguro, keyword_init: true)
   INSTRUCOES = <<~TEXT.freeze
     You decide which request (subject) a customer conversation is about, for a CRM where each request is its own card.
     Pick one answer key from the options, using the options' descriptions and the conversation. A fast classifier already
@@ -36,7 +37,9 @@ class Crm::Subjects::Reviewer
     (for example "Seguro do Onix", "Agentes de IA"), without personal data. For an open subject, leave titulo empty.
     principal: the position (starting at 0) in assuntos of the request the customer is focused on now. Usually the last
     one asked in the message, unless the message makes clear that another one is the focus. 0 when the list is empty.
-    seguro: true only when the conversation makes the answer clear. When it is ambiguous, false: nothing will change.
+    seguro, in each item: true only when the conversation makes THAT request clear (which open subject, or which
+    pipeline). When one request is ambiguous, mark only that one false: the clear ones still go ahead, and nothing
+    changes for the ambiguous one.
     motivo: one short sentence in Brazilian Portuguese explaining why, without personal data.
   TEXT
 
@@ -78,12 +81,13 @@ class Crm::Subjects::Reviewer
   end
 
   def schema_varios
-    item = { type: 'object', additionalProperties: false, required: %w[resposta titulo],
-             properties: { resposta: { type: 'string', enum: @question.chaves_de_assunto }, titulo: { type: 'string' } } }
+    item = { type: 'object', additionalProperties: false, required: %w[resposta titulo seguro],
+             properties: { resposta: { type: 'string', enum: @question.chaves_de_assunto }, titulo: { type: 'string' },
+                           seguro: { type: 'boolean' } } }
     { name: 'assuntos_revisao',
-      schema: { type: 'object', additionalProperties: false, required: %w[assuntos principal seguro motivo],
+      schema: { type: 'object', additionalProperties: false, required: %w[assuntos principal motivo],
                 properties: { assuntos: { type: 'array', items: item }, principal: { type: 'integer', minimum: 0 },
-                              seguro: { type: 'boolean' }, motivo: { type: 'string' } } } }
+                              motivo: { type: 'string' } } } }
   end
 
   def veredito(resposta)
@@ -94,14 +98,15 @@ class Crm::Subjects::Reviewer
   end
 
   # A lista vem conferida item a item: chave fora das opções invalida a resposta inteira (como no veredito de um
-  # assunto). O principal fora da lista também. Lista vazia é "nenhum assunto" (sem_assunto).
+  # assunto). O principal fora da lista também. Lista vazia é "nenhum assunto" (sem_assunto). `seguro` do veredito é o
+  # do principal.
   def veredito_varios(resposta)
     raise Error, 'resposta_invalida' unless resposta.is_a?(Hash) && resposta['assuntos'].is_a?(Array)
 
     assuntos = resposta['assuntos'].map { |item| assunto(item) }
     principal = principal(resposta['principal'], assuntos)
-    foco = assuntos[principal] || Assunto.new(resposta: Crm::Subjects::Question::SEM_ASSUNTO, titulo: '')
-    Veredito.new(resposta: foco.resposta, titulo: foco.titulo, seguro: resposta['seguro'] == true,
+    foco = assuntos[principal] || Assunto.new(resposta: Crm::Subjects::Question::SEM_ASSUNTO, titulo: '', seguro: true)
+    Veredito.new(resposta: foco.resposta, titulo: foco.titulo, seguro: foco.seguro,
                  motivo: resposta['motivo'].to_s.first(MAX_MOTIVO), assuntos: assuntos, principal: principal)
   end
 
@@ -115,7 +120,7 @@ class Crm::Subjects::Reviewer
   def assunto(item)
     raise Error, 'resposta_invalida' unless item.is_a?(Hash) && @question.chaves_de_assunto.include?(item['resposta'])
 
-    Assunto.new(resposta: item['resposta'], titulo: titulo(item['titulo']))
+    Assunto.new(resposta: item['resposta'], titulo: titulo(item['titulo']), seguro: item['seguro'] == true)
   end
 
   def titulo(texto)

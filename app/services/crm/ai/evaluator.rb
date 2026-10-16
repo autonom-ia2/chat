@@ -4,13 +4,11 @@ module Crm
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
-      # passar (#1693): este card pode pedir atendente. Na avaliação conjunta, só o principal (Crm::Ai::AvaliacaoConjunta).
-      def initialize(card:, trigger: 'message', tocado: false, passar: true)
+      def initialize(card:, trigger: 'message', tocado: false)
         @card = card
         @account = card.account
         @trigger = trigger
         @tocado = tocado
-        @passar = passar
       end
 
       def perform
@@ -40,8 +38,12 @@ module Crm
 
       # O que vem depois da resposta da IA, igual para a avaliação de um card e para a conjunta (#1693). conjunta: depois
       # de mover, o pedido de atendente só é relido se a etapa nova tem outra regra (a conjunta é uma chamada por
-      # mensagem; a de um card segue relendo como sempre).
-      def aplicar(classification, conjunta: false)
+      # mensagem; a de um card segue relendo como sempre). passar: este card pode passar a conversa (na conjunta, só o
+      # card em que está o pedido, ou o principal, Crm::Ai::AvaliacaoConjunta). pelo_card: o pedido que o cliente ligou a
+      # este card, fora do principal, vai pela regra dele mesmo fora do foco (decisão 1a do Rodrigo, 16/10).
+      def aplicar(classification, conjunta: false, passar: true, pelo_card: false)
+        @passar = passar
+        @pelo_card = pelo_card
         regra = handoff_config.slice(:enabled, :trigger) if conjunta
         result = apply_classification(classification)
         refresh_post_classification_context!
@@ -136,7 +138,7 @@ module Crm
       def run_handoff(classification)
         return unless @passar && handoff_config[:enabled]
 
-        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger).perform
+        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI handoff] #{e.class}: #{e.message}")
       end

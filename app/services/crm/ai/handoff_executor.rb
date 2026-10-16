@@ -19,10 +19,13 @@ module Crm
         'nao_conseguimos_chamar' => 'nobody_reached'
       }.freeze
 
-      def initialize(card:, handoff:, trigger: 'message')
+      # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
+      # a que o cliente o ligou, mesmo fora do foco. Basta o card seguir aberto nesta conversa.
+      def initialize(card:, handoff:, trigger: 'message', pelo_card: false)
         @card = card
         @handoff = normalize(handoff)
         @trigger = trigger
+        @pelo_card = pelo_card
         # A CONVERSA VIVA, e não a primária do card (issue #553): com card por contato, a primária é a primeira conversa
         # dele, e o responsável ia parar lá enquanto o cliente esperava na conversa nova.
         @conversation = card.conversa_em_atendimento
@@ -32,7 +35,7 @@ module Crm
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
 
-        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: 'ia_crm', origem: @trigger,
+        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: 'ia_crm', origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
       end
@@ -53,7 +56,7 @@ module Crm
       def conversa_bloqueada
         # #1606 (corrida c): a avaliação leva de 15 a 25 s; se o assunto da conversa virou outro card nesse meio tempo,
         # não passa pelo card antigo. A regra é a mesma da entrega (Crm::Assunto.funil_atual).
-        return 'assunto_mudou' unless Crm::Assunto.atual?(@card, @conversation)
+        return 'assunto_mudou' unless @pelo_card ? Crm::Assunto.da_conversa?(@card, @conversation) : Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)

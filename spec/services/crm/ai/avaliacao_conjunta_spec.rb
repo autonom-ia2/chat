@@ -47,7 +47,7 @@ RSpec.describe Crm::Ai::AvaliacaoConjunta do
   end
 
   describe Crm::Ai::EvaluateCardsJob do
-    it 'pula o card que ganhou um agendamento mais novo' do
+    it 'pula o card que ganhou um agendamento mais novo; sem o principal, vale o card em foco' do
       allow(Crm::Ai::AvaliacaoConjunta).to receive(:new).and_return(instance_double(Crm::Ai::AvaliacaoConjunta, perform: {}))
       token = Time.current.to_f
       Crm::Ai::Observer.new(card: auto).marcar(token)
@@ -55,7 +55,7 @@ RSpec.describe Crm::Ai::AvaliacaoConjunta do
 
       described_class.perform_now([auto.id, residencial.id], residencial.id, token)
 
-      expect(Crm::Ai::AvaliacaoConjunta).to have_received(:new).with(cards: [auto], principal: nil)
+      expect(Crm::Ai::AvaliacaoConjunta).to have_received(:new).with(cards: [auto], principal: auto)
     end
   end
 end

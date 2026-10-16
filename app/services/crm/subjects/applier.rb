@@ -31,15 +31,16 @@ class Crm::Subjects::Applier
   # o foco termina nele. Assunto aberto só entra na lista (a IA do CRM avalia); pedido novo cria o card só na
   # Automática e sem pessoa a respeitar (Sugerir e o respeito à pessoa valem para cada um). Devolve os atributos da
   # decisão e `tocados`: os cards que a mensagem tocou, o principal primeiro. "Nenhum assunto" não toca nada; vencida
-  # por uma mais nova no meio, só os cards que ela já criou.
-  def aplicar_varios(principal, outros)
+  # por uma mais nova no meio, só os cards que ela já criou. Principal em dúvida (nil): os outros seguem, e o resultado
+  # é `duvida` (os atributos da decisão em dúvida).
+  def aplicar_varios(principal, outros, duvida: nil)
     criados = []
     tocados = outros.filter_map { |escolha| tocar(escolha.opcao, escolha.titulo, criados) }
-    resultado = aplicar(principal.opcao, principal.titulo)
+    resultado = principal ? aplicar(principal.opcao, principal.titulo) : duvida.dup
     devolver_foco(resultado, criados) if criados.any?
     return resultado.merge(tocados: criados) if resultado[:state] == 'superseded'
 
-    do_principal = card_do_principal(principal.opcao, resultado)
+    do_principal = card_do_principal(principal&.opcao, resultado)
     resultado.merge(tocados: [do_principal, *tocados].compact.uniq(&:id))
   end
 
@@ -82,7 +83,7 @@ class Crm::Subjects::Applier
   end
 
   def card_do_principal(opcao, resultado)
-    return if opcao.tipo == :sem_assunto || %w[applied kept suggested].exclude?(resultado[:state])
+    return if opcao.nil? || opcao.tipo == :sem_assunto || %w[applied kept suggested].exclude?(resultado[:state])
 
     resultado[:card]
   end

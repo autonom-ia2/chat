@@ -23,26 +23,26 @@ RSpec.describe Crm::Subjects::Reviewer do
     described_class.new(question(varios: varios)).revisar(estado, jev)
   end
 
-  it 'devolve a lista e o principal, com o schema e as instruções de vários assuntos' do
-    veredito = revisar({ assuntos: [{ resposta: "novo_#{pipeline.id}", titulo: 'Seguro auto' },
-                                    { resposta: "novo_#{pipeline.id}", titulo: 'Seguro residencial' }],
-                         principal: 1, seguro: true, motivo: 'ok' })
+  it 'devolve a lista, o principal e a certeza de cada assunto, com o schema e as instruções de vários assuntos' do
+    veredito = revisar({ assuntos: [{ resposta: "novo_#{pipeline.id}", titulo: 'Seguro auto', seguro: false },
+                                    { resposta: "novo_#{pipeline.id}", titulo: 'Seguro residencial', seguro: true }],
+                         principal: 1, motivo: 'ok' })
 
     expect(veredito).to have_attributes(resposta: "novo_#{pipeline.id}", titulo: 'Seguro residencial', seguro: true, principal: 1)
-    expect(veredito.assuntos.map(&:titulo)).to eq(['Seguro auto', 'Seguro residencial'])
+    expect(veredito.assuntos.map { |assunto| [assunto.titulo, assunto.seguro] }).to eq([['Seguro auto', false], ['Seguro residencial', true]])
     expect(cliente).to have_received(:create).with(hash_including(instructions: described_class::INSTRUCOES_VARIOS,
                                                                   schema: hash_including(name: 'assuntos_revisao')))
   end
 
   it 'lista vazia é nenhum assunto' do
-    expect(revisar({ assuntos: [], principal: 0, seguro: true, motivo: 'só agradeceu' }).resposta)
-      .to eq(Crm::Subjects::Question::SEM_ASSUNTO)
+    expect(revisar({ assuntos: [], principal: 0, motivo: 'só agradeceu' })).to have_attributes(seguro: true, resposta:
+      Crm::Subjects::Question::SEM_ASSUNTO)
   end
 
   it 'recusa a resposta inteira com uma chave fora das opções ou o principal fora da lista' do
-    expect { revisar({ assuntos: [{ resposta: 'card_999', titulo: '' }], principal: 0, seguro: true, motivo: 'x' }) }
+    expect { revisar({ assuntos: [{ resposta: 'card_999', titulo: '', seguro: true }], principal: 0, motivo: 'x' }) }
       .to raise_error(described_class::Error, 'resposta_invalida')
-    expect { revisar({ assuntos: [{ resposta: "novo_#{pipeline.id}", titulo: 'A' }], principal: 3, seguro: true, motivo: 'x' }) }
+    expect { revisar({ assuntos: [{ resposta: "novo_#{pipeline.id}", titulo: 'A', seguro: true }], principal: 3, motivo: 'x' }) }
       .to raise_error(described_class::Error, 'resposta_invalida')
   end
 

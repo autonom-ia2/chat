@@ -37,8 +37,11 @@ class Crm::Entrega
   # #fila). Sem regra no funil, a conversa espera por ela (a marca guarda o dono para a próxima tentativa); com regra, ela
   # recebe (ou é convidada) quando está online, e nem o agente de IA da regra entra; offline, a regra decide, inclusive
   # passando ao agente de IA. Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil) # rubocop:disable Metrics/ParameterLists
+  # `pelo_card` (#1693, decisão 1a do Rodrigo, 16/10): a regra é a do `card` (o assunto a que o cliente ligou o pedido),
+  # e não a do assunto em foco, enquanto ele seguir aberto nesta conversa. Segurada, a marca guarda o card para a fila.
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, pelo_card: false) # rubocop:disable Metrics/ParameterLists
     @conversation = conversation
+    @pelo_card = pelo_card
     @motivo = motivo.to_s
     @origem = origem.to_s
     @card = card
@@ -146,9 +149,7 @@ class Crm::Entrega
   end
 
   # O nome pedido era de um agente de IA que não pôde receber: não é nome de pessoa para casar.
-  def sugestao_de_pessoa
-    Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
-  end
+  def sugestao_de_pessoa = Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
 
   # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem
   # memória entre chamadas: a nova tentativa depois de o agente de IA recusar (#concluir_para_ia!) decide de novo.
@@ -156,17 +157,16 @@ class Crm::Entrega
     @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
   end
 
-  def nada(motivo)
-    Plano.new(acao: :nada, motivo: motivo)
-  end
+  def nada(motivo) = Plano.new(acao: :nada, motivo: motivo)
 
   # O card do assunto em atendimento, relido aqui, sob a trava (#1606, regra única Crm::Assunto.funil_atual). O card que
   # a IA do CRM passou é o da avaliação; se o assunto mudou desde então, vale o atual (corrida c). Sem olhar a chave do
   # CRM: o card aberto que existe já decide quem vê a conversa (Crm::Access::Recipients), e a fila usa o mesmo funil.
+  # `pelo_card` (#1693): o card do pedido, enquanto seguir aberto nesta conversa, em foco ou não.
   def card_em_atendimento
     atual = Crm::Assunto.funil_atual(@conversation)
     @assunto_mudou = @card.present? && atual&.id != @card.id
-    atual
+    @pelo_card && Crm::Assunto.da_conversa?(@card, @conversation) ? @card : atual
   end
 
   # O robô que estava com a conversa antes desta entrega: o valor do banco, porque na passagem do robô
@@ -217,7 +217,8 @@ class Crm::Entrega
   def segurar(plano, gravar)
     vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
     falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
-    Marca.marcar(@conversation, modo: Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao, dono: @dono.dirigido)
+    Marca.marcar(@conversation, modo: Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao, dono: @dono.dirigido,
+                                card: (plano.card if @pelo_card))
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)

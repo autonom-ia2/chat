@@ -24,8 +24,11 @@ class Crm::Ai::ClassificacaoConjunta
     }
   }.freeze
 
-  def initialize(client:, classificadores:, model:, reasoning_effort: Crm::Ai::Config::CLASSIFY_REASONING_EFFORT)
+  # principal_id: o card principal da mensagem; o pacote dele vai com "principal": true (onde fica o pedido de
+  # atendente que o cliente não ligou a nenhum assunto).
+  def initialize(client:, classificadores:, model:, principal_id: nil, reasoning_effort: Crm::Ai::Config::CLASSIFY_REASONING_EFFORT)
     @client = client
+    @principal_id = principal_id
     @classificadores = classificadores
     @model = model
     @reasoning_effort = reasoning_effort
@@ -46,8 +49,9 @@ class Crm::Ai::ClassificacaoConjunta
   def entrada
     outras = Crm::Ai::OutrasConversas.por_card(@classificadores)
     pacotes = @classificadores.map do |classificador|
-      mensagens = outras[classificador.pacote.dig(:card, :id)]
-      mensagens ? classificador.pacote.merge(other_conversations_messages: mensagens) : classificador.pacote
+      id = classificador.pacote.dig(:card, :id)
+      pacote = classificador.pacote.merge(principal: id == @principal_id)
+      outras[id] ? pacote.merge(other_conversations_messages: outras[id]) : pacote
     end
     @classificadores.first.conversa.merge(cards: pacotes)
   end

@@ -173,8 +173,16 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
 
+    card = card_da_marca(conversation, marca)
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca)).call
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?).call
+  end
+
+  # O card cuja regra vale (#1693), só se ainda é da conta da conversa; a Entrega confere se ele segue aberto nela.
+  def card_da_marca(conversation, marca)
+    return if marca['card_id'].blank?
+
+    conversation.account.crm_cards.find_by(id: marca['card_id'])
   end
 
   # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela

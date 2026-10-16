@@ -12,7 +12,8 @@
 #     deixa velha qualquer avaliação dele agendada antes (a troca de foco e o card novo da mesma mensagem): uma
 #     mensagem, uma chamada. Se todos já têm avaliação agendada depois da mensagem (retry do IdentifyJob, ou a troca de
 #     foco de um assunto só), não agenda de novo.
-# Pede atendente só o principal, e só se ele estiver na lista (o card da decisão).
+# O principal é o card da decisão; com o principal em dúvida (#1693, C27), o card em foco, se a mensagem o tocou. É nele
+# que a IA põe o pedido de atendente que o cliente não ligou a nenhum assunto.
 class Crm::Conversations::CardsTocados < Crm::Conversations::CardEmFoco
   def perform
     decisao = Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
@@ -40,9 +41,15 @@ class Crm::Conversations::CardsTocados < Crm::Conversations::CardEmFoco
   def agendar(cards, principal_id)
     token = Time.current.to_f
     ids = cards.map(&:id)
-    Crm::Ai::EvaluateCardsJob.set(wait: Crm::Ai::Config::DEBOUNCE_SECONDS.seconds)
-                             .perform_later(ids, (principal_id if ids.include?(principal_id)), token)
+    Crm::Ai::EvaluateCardsJob.set(wait: Crm::Ai::Config::DEBOUNCE_SECONDS.seconds).perform_later(ids, principal(ids, principal_id), token)
     cards.each { |card| Crm::Ai::Observer.new(card: card).marcar(token) }
+  end
+
+  def principal(ids, principal_id)
+    return principal_id if ids.include?(principal_id)
+
+    foco = Crm::Assunto.funil_atual(@conversation)&.id
+    foco if ids.include?(foco)
   end
 
   def so_a_mensagem
