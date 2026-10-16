@@ -30,7 +30,9 @@ module Crm::Entrega::Marca
   # `falha`: por que ainda não foi entregue. `desde` e `avisado_em` sobrevivem às novas tentativas, para medir a espera
   # e avisar uma vez só; `tentado_em` é da fila (HandoffDrainJob).
   # `detalhes`: `sugestao` (o nome que a IA sugeriu, para a próxima tentativa), `dono` (a pessoa a quem a entrega é
-  # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela) e `ate` (o fim do convite).
+  # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela), `ate` (o fim do convite), `convidado` (quem
+  # foi convidado) e `venceram` (ids de quem deixou um convite desta espera vencer, #1694; sobrevive às novas
+  # tentativas, como `desde`).
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -42,7 +44,9 @@ module Crm::Entrega::Marca
       'tentado_em' => anterior['tentado_em'].presence,
       'sugestao' => detalhes[:sugestao].presence,
       'dono_id' => detalhes[:dono]&.id,
-      'ate' => detalhes[:ate]&.iso8601
+      'ate' => detalhes[:ate]&.iso8601,
+      'convidado_id' => detalhes[:convidado]&.id,
+      'venceram' => (detalhes[:venceram] || anterior['venceram']).presence
     }.compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
   end

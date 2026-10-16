@@ -37,7 +37,10 @@ class Crm::Entrega
   # #fila). Sem regra no funil, a conversa espera por ela (a marca guarda o dono para a próxima tentativa); com regra, ela
   # recebe (ou é convidada) quando está online, e nem o agente de IA da regra entra; offline, a regra decide, inclusive
   # passando ao agente de IA. Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil) # rubocop:disable Metrics/ParameterLists
+  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694, decisão do Rodrigo de 16/10): ficam fora da
+  # fila. Sem ninguém que sobre, a entrega segura esperando alguém online, sem convite novo.
+  # rubocop:disable Metrics/ParameterLists
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, excluir: [])
     @conversation = conversation
     @motivo = motivo.to_s
     @origem = origem.to_s
@@ -45,8 +48,9 @@ class Crm::Entrega
     @sugestao = pedido[:sugestao]
     @razao = pedido[:razao]
     @quem_passou = quem_passou
-    @dono = Crm::Entrega::Dono.new(conversation: conversation, pessoa: dono)
+    @dono = Crm::Entrega::Dono.new(conversation: conversation, pessoa: dono, excluir: excluir)
   end
+  # rubocop:enable Metrics/ParameterLists
 
   # Por conta própria: trava a conversa, relê e grava.
   def call
@@ -150,8 +154,9 @@ class Crm::Entrega
     Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
   end
 
-  # Quem cuida (Crm::Entrega::QuemCuida), ou só o dono quando a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem
-  # memória entre chamadas: a nova tentativa depois de o agente de IA recusar (#concluir_para_ia!) decide de novo.
+  # Quem cuida (Crm::Entrega::QuemCuida), menos quem deixou um convite desta espera vencer (#1694), ou só o dono quando
+  # a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem memória entre chamadas: a nova tentativa depois de o
+  # agente de IA recusar (#concluir_para_ia!) decide de novo.
   def fila(card, settings)
     @dono.fila(Crm::Entrega::QuemCuida.new(conversation: @conversation, card: card).pessoas, regra: settings)
   end
@@ -233,7 +238,7 @@ class Crm::Entrega
 
     convite_como_passagem!(plano)
     ate = Time.current + plano.settings[:invite_ttl_seconds].to_i.seconds
-    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate)
+    Crm::Entrega::Marca.marcar(@conversation, modo: Crm::Entrega::Marca::CONVITE, motivo: @motivo, ate: ate, convidado: plano.pessoa)
     @conversation.save! if gravar && @conversation.changed?
     resultado(:convidado, plano)
   end

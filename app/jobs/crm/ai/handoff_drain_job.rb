@@ -162,54 +162,13 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_conversation(conversation)
-    return convite_vencido(conversation) if Crm::Entrega::Marca.convite_vencido?(conversation)
+    return Crm::Entrega::ConviteVencido.new(conversation).call if Crm::Entrega::Marca.convite_vencido?(conversation)
 
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
 
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca)).call
-  end
-
-  # O convite venceu sem ninguém pegar: a marca sai (o rodízio nativo deixa de pular a conversa) e os administradores
-  # da caixa são avisados (#1140, decisão 8). Relido sob a trava: quem pegou nesse meio tempo fica com a conversa, e a
-  # adiada guarda a marca (volta à fila quando reabre); nas duas, nada é avisado.
-  #
-  # Convite mantido por uma passagem (#1694: o robô pediu pessoa ou saiu de vez, e o convite seguiu): a conversa espera
-  # pessoa (sem robô, ou com ele à espera). Vencido, a regra roda de novo (convida, entrega ou segura com a marca); sem
-  # isso ela ficaria sem pessoa e sem a marca do motor, e ninguém a entregaria. O convite da IA do CRM com o robô ainda no
-  # comando só perde a marca, como sempre.
-  def convite_vencido(conversation)
-    motivo = nil
-    conversation.with_lock do
-      next unless Crm::Entrega::Marca.convite_vencido?(conversation) && esperando_pessoa?(conversation)
-
-      motivo = Crm::Entrega::Marca.dados(conversation)['motivo'].presence || 'convite_vencido'
-      Crm::Entrega::Marca.tirar(conversation)
-      conversation.save!
-      avisar_convite_vencido(conversation)
-    end
-    # Ainda dentro da transação da rodada (com_lock_timeout): a trava da conversa só sai no commit, e ninguém assume
-    # entre a saída da marca e a regra.
-    return unless motivo && conversation.awaiting_person?
-
-    Crm::Entrega.new(conversation: conversation, motivo: motivo, origem: 'fila').call
-  end
-
-  def esperando_pessoa?(conversation)
-    conversation.assignee_id.nil? && (conversation.open? || conversation.pending?)
-  end
-
-  # Savepoint próprio: uma falha no aviso não devolve a marca (a conversa ficaria presa fora do rodízio, tentada a cada
-  # rodada); fica no rastreador e no log, só com ids.
-  def avisar_convite_vencido(conversation)
-    card = Crm::Assunto.funil_atual(conversation)
-    Conversation.transaction(requires_new: true) do
-      Crm::Entrega::AvisoSemNinguem.new(conversation: conversation, card: card).convite_vencido!
-    end
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
-    Rails.logger.error("[crm][entrega] fila conversa=#{conversation.id} aviso_convite_vencido_falhou erro=#{e.class}")
+                     dono: dono_da_marca(conversation, marca), excluir: marca['venceram']).call
   end
 
   # A pessoa por quem a entrega espera (R13 do #1150), só se ainda é da conta da conversa; a Entrega confere se ela

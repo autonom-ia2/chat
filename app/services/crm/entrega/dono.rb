@@ -15,13 +15,16 @@ class Crm::Entrega::Dono
   # Para quem a entrega foi dirigida nesta fila (a marca de segurar guarda o id), ou nil.
   attr_reader :dirigido
 
-  def initialize(conversation:, pessoa:)
+  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694); saem da fila antes de tudo, o dono também.
+  def initialize(conversation:, pessoa:, excluir: [])
     @conversation = conversation
     @pessoa = pessoa
+    @excluir = Array(excluir).map(&:to_i)
   end
 
   def fila(pessoas, regra:)
     @sem_presenca = false
+    pessoas = sem_os_excluidos(pessoas)
     dono = @pessoa && pessoas.find { |pessoa| pessoa.id == @pessoa.id }
     @dirigido = dono && (regra.nil? || online?(dono)) ? dono : nil
     @dirigido ? [@dirigido] : pessoas
@@ -41,6 +44,10 @@ class Crm::Entrega::Dono
   end
 
   private
+
+  def sem_os_excluidos(pessoas)
+    pessoas.reject { |pessoa| @excluir.include?(pessoa.id) }
+  end
 
   def online?(pessoa)
     Crm::Entrega::Presenca.online_ids!(@conversation.account_id).include?(pessoa.id)
