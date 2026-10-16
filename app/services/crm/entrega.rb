@@ -37,8 +37,8 @@ class Crm::Entrega
   # #fila). Sem regra no funil, a conversa espera por ela (a marca guarda o dono para a próxima tentativa); com regra, ela
   # recebe (ou é convidada) quando está online, e nem o agente de IA da regra entra; offline, a regra decide, inclusive
   # passando ao agente de IA. Fora da fila (sem o funil, saiu da caixa), vale a fila de sempre.
-  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694, decisão do Rodrigo de 16/10): ficam fora da
-  # fila. Sem ninguém que sobre, a entrega segura esperando alguém online, sem convite novo.
+  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694, decisão do Rodrigo de 16/10): com regra, ficam
+  # fora da fila. Se eram todos, sem convite novo: a conversa vai ao primeiro de quem cuida que ficar online (#pela_regra).
   # rubocop:disable Metrics/ParameterLists
   def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, excluir: [])
     @conversation = conversation
@@ -150,7 +150,8 @@ class Crm::Entrega
     Crm::Ai::HandoffMemberSelector.new(
       inbox: @conversation.inbox, account_id: @conversation.account_id, members: membros,
       mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online || @dono.sem_presenca?,
-      suggested_name: sugestao, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
+      suggested_name: sugestao, pool_type: @dono.so_quem_venceu? ? 'inbox' : settings[:pool_type], pool_id: settings[:pool_id],
+      conversation: @conversation
     )
   end
 

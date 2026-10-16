@@ -4,8 +4,9 @@
 # - Os administradores da caixa são avisados (#1140, decisão 8), uma vez só na espera (Crm::Entrega::AvisoSemNinguem).
 # - Conversa que espera pessoa (o robô pediu pessoa ou saiu de vez, e o convite seguiu, #1694): a regra roda de novo
 #   deixando de fora quem já deixou vencer (decisão do Rodrigo de 16/10, opção "a"), guardado na marca (`venceram`).
-#   Ex.: a Ana deixou vencer, o Bruno é convidado; ele deixou vencer, a Carla. Sem ninguém que sobre, segura esperando
-#   alguém online, sem convite novo. Pessoa fixa da regra que deixou vencer: a regra cai para quem cuida do funil.
+#   Ex.: a Ana deixou vencer, o Bruno é convidado; ele deixou vencer, a Carla. Se todos deixaram vencer, sem convite
+#   novo: a conversa vai para o primeiro de quem cuida que ficar online (inclusive quem deixou vencer), pela presença a
+#   cada rodada. Pessoa fixa da regra que deixou vencer: a regra cai para quem cuida do funil.
 # - Robô no comando (o convite da IA do CRM com o robô atendendo, sem pedir pessoa): a marca sai e os administradores
 #   são avisados, sem rodar a regra.
 #
@@ -13,8 +14,9 @@
 # pendurada, a fila voltaria a ela a cada rodada e o rodízio nativo a pularia depois). Adiada: guarda a marca (volta à
 # fila quando reabre), sem aviso.
 class Crm::Entrega::ConviteVencido
-  # Todos que cuidam do funil deixaram vencer: não há a quem convidar, e a presença não muda isso. A fila tenta de novo
-  # só depois deste intervalo (alguém pode ter passado a cuidar do funil), e não a cada rodada de 2 minutos.
+  # Ninguém na fila de quem cuida (todos saíram da caixa ou do funil) depois de convites vencidos: não há a quem
+  # entregar, e a presença não muda isso. A fila tenta de novo só depois deste intervalo (alguém pode ter passado a
+  # cuidar do funil), e não a cada rodada de 2 minutos. Segurar por presença segue a cada rodada.
   ESPERA_SEM_NINGUEM = 30.minutes
   # `convite_vencido`: a marca que o próprio vencimento grava, quando a regra em seguida não a regrava.
   SEM_NINGUEM = %w[ninguem_cuida nao_conseguimos_chamar convite_vencido].freeze

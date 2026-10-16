@@ -25,7 +25,7 @@ class Crm::Entrega::Dono
 
   def fila(pessoas, regra:)
     @sem_presenca = false
-    pessoas = sem_os_excluidos(pessoas)
+    pessoas = sem_os_excluidos(pessoas, regra)
     dono = @pessoa && pessoas.find { |pessoa| pessoa.id == @pessoa.id }
     @dirigido = dono && (regra.nil? || online?(dono)) ? dono : nil
     @dirigido ? [@dirigido] : pessoas
@@ -51,8 +51,12 @@ class Crm::Entrega::Dono
 
   private
 
-  # Todos da fila deixaram vencer: a fila fica inteira, e a Entrega entrega ao primeiro que ficar online, sem convite.
-  def sem_os_excluidos(pessoas)
+  # Só com regra (sem regra não há convite a vencer). Todos da fila deixaram vencer: a fila fica inteira, e a Entrega
+  # entrega ao primeiro que ficar online, sem convite.
+  def sem_os_excluidos(pessoas, regra)
+    @so_quem_venceu = false
+    return pessoas if regra.nil?
+
     restantes = pessoas.reject { |pessoa| @excluir.include?(pessoa.id) }
     @so_quem_venceu = @excluir.any? && restantes.empty? && pessoas.any?
     @so_quem_venceu ? pessoas : restantes

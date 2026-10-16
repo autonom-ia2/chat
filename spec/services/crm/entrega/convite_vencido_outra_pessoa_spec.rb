@@ -144,6 +144,63 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     expect(marca['avisado_em']).to be_present
   end
 
+  # Pega: o primeiro online que deixou vencer não ser o primeiro da lista (o Bruno, e não a Ana).
+  it 'todos deixaram vencer: o Bruno fica online e recebe', :aggregate_failures do
+    online(ana, bruno)
+    deixa_vencer(7)
+    online(ana, bruno, carla)
+    deixa_vencer(14)
+    online
+    deixa_vencer(21)
+
+    online(bruno)
+    travel_to(21.hours.from_now + 2.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
+
+    expect(conversa.reload.assignee_id).to eq(bruno.id)
+  end
+
+  # Pega: a pessoa fixa da regra ("A mesma pessoa") que deixou vencer prender a conversa enquanto outro de quem cuida está
+  # online.
+  it 'pessoa fixa deixou vencer e todos também: quem cuida e fica online recebe' do
+    vendas.last.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite', 'invite_ttl_seconds' => 3600,
+                                                      'pool_type' => 'user', 'pool_id' => ana.id } })
+    InboxMember.where(inbox: inbox, user: [carla]).destroy_all
+    online(ana, bruno)
+    deixa_vencer(7)
+    online
+    deixa_vencer(14)
+
+    online(bruno)
+    travel_to(14.hours.from_now + 2.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
+
+    expect(conversa.reload.assignee_id).to eq(bruno.id)
+  end
+
+  # Pega: a espera sem ninguém na fila (todos saíram da caixa) depois de convites vencidos rodar a entrega inteira a cada
+  # 2 minutos, para sempre. Espaça; quem passar a cuidar do funil recebe na tentativa seguinte.
+  it 'ninguém na fila depois do vencimento: a fila espaça e o Davi, que entrou na caixa, é convidado', :aggregate_failures do
+    InboxMember.where(inbox: inbox, user: [bruno, carla]).destroy_all
+    online
+    deixa_vencer(7)
+    InboxMember.where(inbox: inbox, user: ana).destroy_all
+    deixa_vencer(14)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id])
+    expect(Crm::Entrega::ConviteVencido::SEM_NINGUEM).to include(marca['falha'])
+    segurada = marca.except('tentado_em')
+
+    davi = create(:user, account: account, role: :agent, name: 'Davi')
+    create(:inbox_member, inbox: inbox, user: davi)
+    online(davi)
+    allow(Crm::Entrega).to receive(:new).and_call_original
+
+    travel_to(14.hours.from_now + 10.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
+    expect(Crm::Entrega).not_to have_received(:new)
+    expect(marca.except('tentado_em')).to eq(segurada)
+
+    travel_to(14.hours.from_now + Crm::Entrega::ConviteVencido::ESPERA_SEM_NINGUEM + 1.minute) { Crm::Ai::HandoffDrainJob.perform_now }
+    expect(convidada).to eq(davi.id)
+  end
+
   # Pega: a espera sem ninguém na fila (ninguém cuida do funil) com quem já deixou vencer rodar a entrega inteira a cada 2
   # minutos, para sempre. Segurar por presença não espaça: quem fica online recebe na rodada seguinte.
   it 'espaçamento: só a espera sem ninguém na fila, e só dentro do intervalo', :aggregate_failures do
