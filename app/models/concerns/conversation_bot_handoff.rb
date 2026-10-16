@@ -151,21 +151,19 @@ module ConversationBotHandoff
   # O robô só está passando quando nenhuma pessoa tinha a conversa: na saída da triagem quem sai é a pessoa (gravada no
   # banco), e o robô da caixa não pode ser barrado pela guarda do laço.
   # `dono`: a entrega dirigida ao dono do card (R13 do #1150); ver Crm::Entrega.
-  # Robô saindo de vez (pausado, desligado) com um convite em aberto (#1140, correção 6): o convite continua, e a
-  # conversa espera a convidada até ela pegar ou o convite vencer (a fila avisa). Ex.: a IA do CRM convidou a Ana numa
-  # conversa da Lia e alguém pausa a Lia: a Ana segue convidada, sem convite novo a outra pessoa por cima.
+  # Convite em aberto (#1140, correção 6 e decisão do Rodrigo de 16/10): a passagem não replaneja. O convite continua,
+  # sem convite novo a outra pessoa por cima, e a conversa espera a convidada até ela pegar ou o convite vencer (a fila
+  # avisa). Vale para o robô saindo de vez (pausado, desligado: sai do nome) e para o robô que pede a passagem
+  # (Responder do Agentes IA, n8n: fica no nome, à espera de pessoa). Ex.: a IA do CRM convidou a Ana numa conversa da
+  # Lia e alguém pausa a Lia, ou a Lia pede uma pessoa: a Ana segue convidada.
   def deliver_on_handoff(motivo, keep_bot, quem_passou, dono: nil)
     return if assignee_id.present?
-    return if convite_segue?(keep_bot)
+    return if Crm::Entrega::Marca.convite_aberto?(self)
 
     motivo ||= keep_bot ? 'robo_pediu' : 'robo_desligado'
     quem_passou = nil if attribute_in_database('assignee_id').present?
     entrega = Crm::Entrega.new(conversation: self, motivo: motivo, origem: 'passagem', quem_passou: quem_passou, dono: dono)
     entrega if entrega.na_passagem.status == :para_ia
-  end
-
-  def convite_segue?(keep_bot)
-    !keep_bot && Crm::Entrega::Marca.convite_aberto?(self)
   end
 
   def wait_for_person_with(robo)

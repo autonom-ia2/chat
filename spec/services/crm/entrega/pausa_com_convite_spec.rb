@@ -2,7 +2,8 @@ require 'rails_helper'
 
 # Pausar um agente de IA não apaga o convite aberto (#1140, correção 6): a IA do CRM convidou a Ana numa conversa da
 # Lia (o agente que atende a caixa) e alguém pausa a Lia. O robô sai (AgentInbox#release_bot_conversations! →
-# bot_handoff!(keep_bot: false)), e o convite continua: a conversa espera a Ana até ela pegar ou o convite vencer.
+# bot_handoff!(keep_bot: false)), e o convite continua: a conversa espera a Ana até ela pegar ou o convite vencer. O
+# mesmo quando a Lia pede a passagem (bot_handoff! com keep_bot: true; decisão do Rodrigo de 16/10).
 RSpec.describe 'Pausar agente de IA com convite aberto' do # rubocop:disable RSpec/DescribeClass
   include_context 'with crm responsible agent'
 
@@ -63,5 +64,23 @@ RSpec.describe 'Pausar agente de IA com convite aberto' do # rubocop:disable RSp
 
     expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: nil)
     expect(ciclo).to include('invited_agent_id' => bruno.id)
+  end
+
+  # Decisão do Rodrigo (16/10): o robô que PEDE a passagem (Responder do Agentes IA, n8n) com o convite no prazo também
+  # não troca o convite nem chama outra pessoa. A Lia segue no nome, marcada "à espera de pessoa": não volta a responder
+  # como se a conversa fosse só dela (Autonomia::Agents::Operate.espelho_no_comando?).
+  it 'a Lia pede a passagem com o convite da Ana no prazo: o convite continua e a Lia fica à espera de pessoa', :aggregate_failures do
+    convite = marca
+    online(bruno)
+
+    conversation.reload.bot_handoff!
+
+    expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: porta, status: 'open')
+    expect(conversation).to be_bot_handoff_waiting
+    expect(Autonomia::Agents::Operate.espelho_no_comando?(conversation, vinculo_da_porta)).to be(false)
+    expect(marca).to eq(convite)
+    expect(ciclo).to include('invited_agent_id' => ana.id)
+    expect(ciclo['canceled_at']).to be_nil
+    expect(conversation.conversation_participants.pluck(:user_id)).to eq([ana.id])
   end
 end
