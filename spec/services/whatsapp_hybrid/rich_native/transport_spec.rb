@@ -117,7 +117,8 @@ describe WhatsappHybrid::RichNative::Transport do
 
       expect(client).to have_received(:send_list).once
       expect(client).to have_received(:send_text).with(hash_including(id: '3EB0AAAA')).once
-      expect(message.reload.status).not_to eq('failed')
+      expect(message.reload.source_id).to eq('3EB0AAAA')
+      expect(message.status).not_to eq('failed')
       expect(message.content_attributes).to include('rich_message_sent_as' => 'text', 'whatsapp_transport_outcome' => 'accepted')
     end
   end
@@ -145,7 +146,8 @@ describe WhatsappHybrid::RichNative::Transport do
     send_by_web(message)
 
     expect(client).not_to have_received(:send_text)
-    expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('uncertain')
+    expect(message.reload.source_id).to eq("waha-native-pending-#{message.id}")
+    expect(message.content_attributes['whatsapp_transport_outcome']).to eq('uncertain')
     expect(message.content_attributes['external_error']).to eq(WhatsappHybrid::WebTransport::UNCONFIRMED_ERROR)
   end
 
@@ -162,7 +164,7 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(message.reload.status).to eq('failed')
   end
 
-  it 'keeps the generated id and logs the response class and the message id when the list answer has no id' do
+  it 'keeps the provisional source_id and logs the response class and the message id when the list answer has no id' do
     flag_on!
     allow(client).to receive(:send_list).and_return({ 'status' => 'ok' })
     allow(Rails.logger).to receive(:warn)
@@ -172,8 +174,41 @@ describe WhatsappHybrid::RichNative::Transport do
 
     expect(Rails.logger).to have_received(:warn)
       .with("[whatsapp_hybrid] rich native without id in response message=#{message.id} response=Hash")
-    expect(message.reload.source_id).to eq('3EB0AAAA')
+    expect(message.reload.source_id).to eq("waha-native-pending-#{message.id}")
     expect(message.content_attributes).to include('rich_message_sent_as' => 'native', 'whatsapp_transport_outcome' => 'accepted')
+  end
+
+  it 'writes the provisional source_id before calling the engine, and swaps it for the physical id after' do
+    flag_on!
+    message = outgoing(options)
+    seen = nil
+    allow(client).to receive(:send_list) do
+      seen = message.reload.source_id
+      { 'id' => 'true_5511937016094@c.us_3EB0LIST' }
+    end
+
+    send_by_web(message)
+
+    expect(seen).to eq("waha-native-pending-#{message.id}")
+    expect(message.reload.source_id).to eq('3EB0LIST')
+    expect(Redis::Alfred.get(WhatsappHybrid::WebTransport.message_key(connection, "waha-native-pending-#{message.id}"))).to be_nil
+  end
+
+  # A lista não leva id ao motor: um `source_id` provisório é gravado ANTES do pedido. Com `source_id`, o
+  # Base::SendOnChannelService ignora a mensagem, e um novo SendReplyJob não reenvia a lista.
+  it 'does not send the list again when something breaks right after sendList and the SendReplyJob runs again' do
+    flag_on!
+    allow(Waha::Client).to receive(:new).and_return(client)
+    allow(client).to receive(:send_list).and_return({ 'id' => 'true_5511937016094@c.us_3EB0LIST' })
+    allow(WhatsappHybrid::RichNative).to receive(:mark_sent!).and_raise(ActiveRecord::ConnectionFailed)
+    message = outgoing(options)
+
+    expect { SendReplyJob.perform_now(message.id) }.to raise_error(ActiveRecord::ConnectionFailed)
+    expect(message.reload.source_id).to eq("waha-native-pending-#{message.id}")
+    SendReplyJob.perform_now(message.id)
+
+    expect(client).to have_received(:send_list).once
+    expect(client).not_to have_received(:send_text)
   end
 
   describe 'the native mark (Waha::RichNative.mark_sent!)' do

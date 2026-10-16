@@ -48,6 +48,24 @@ module Waha::RichNative
     text.present? && text.delete('0-9').empty?
   end
 
+  # `source_id` provisório de quem vai ao motor sem id gerado antes (a lista): gravado ANTES do pedido, para um novo
+  # SendReplyJob não reenviar (o Base::SendOnChannelService ignora mensagem com `source_id`) se algo quebrar depois
+  # do pedido e antes de o id físico ser gravado. A resposta troca pelo id físico; sem id na resposta, fica o
+  # provisório. Nem o ack (Redis pelo id físico) nem a ligação da resposta (id da mensagem no `rowId`) leem este valor.
+  PENDING_PREFIX = 'waha-native-pending-'.freeze
+
+  def pending_source_id(message)
+    "#{PENDING_PREFIX}#{message.id}"
+  end
+
+  # Sem as validações do modelo (a de rajada recusaria numa conversa movimentada). Levanta: é antes do pedido, nada saiu.
+  def write_source_id!(message, source_id)
+    message.with_lock do
+      message.source_id = source_id
+      message.save!(validate: false)
+    end
+  end
+
   # Grava, depois que o motor aceitou, a marca do formato e o id físico no source_id. Sem as validações do modelo: a
   # de rajada (`prevent_message_flooding`) recusaria a gravação numa conversa movimentada, e a mensagem já saiu.
   # Devolve true quando gravou. Erro aqui não derruba o envio (viraria falha e reenvio): vai para o log e o tracker.

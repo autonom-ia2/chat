@@ -401,7 +401,11 @@ mensagens nossas). Resposta que aponta uma mensagem (`context`) nunca passa por 
   recusas do WhatsApp que o envio já trata (463, 475) seguem como hoje.
 - 5xx, conexão fechada ou sem resposta: pode ter saído. Fica incerto, com o aviso de conferir no celular, sem texto por
   cima.
-- **Limitação aceita:** a lista sem resposta (incerta) ou com resposta sem id fica com o id gerado no `source_id`; o ack
+- Antes do pedido da lista, o `source_id` recebe um valor provisório e único (`waha-native-pending-<id da mensagem>`):
+  com `source_id`, um novo SendReplyJob não reenvia a mensagem se algo quebrar depois do pedido. A resposta troca pelo
+  id físico; na recusa explícita, volta o id gerado, que o texto leva ao motor. Nem o ack (Redis pelo id físico) nem a
+  ligação da resposta (id da mensagem no `rowId`) leem o provisório.
+- **Limitação aceita:** a lista sem resposta (incerta) ou com resposta sem id fica com o `source_id` provisório; o ack
   dela não a encontra (o log traz a classe da resposta e o id da mensagem). Como a Meta não ecoa lista enviada pelo
   aparelho, não há eco que a duplique.
 
