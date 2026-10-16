@@ -88,7 +88,9 @@ module AvaliacaoDaEsperaForaDoHorario
                                                                   'hora batem com a volta real dada abaixo? Se não fala ' \
                                                                   'disso, responda sim.' },
         promete_antes: { type: 'boolean', description: 'A resposta promete ou dá a entender que uma pessoa da equipe ' \
-                                                       'responde, liga ou atende antes da volta real?' },
+                                                       'responde, liga ou atende antes da volta real? A Clara oferecer a ' \
+                                                       'própria ajuda pelo chat enquanto isso NÃO conta: ela é a ' \
+                                                       'assistente, não a pessoa que o cliente espera.' },
         promete_pela_equipe: { type: 'boolean', description: 'A resposta promete que alguém da equipe responde, liga ou ' \
                                                              'atende exatamente no horário da volta, ou fala em nome da ' \
                                                              'equipe prometendo o que ela vai fazer? Dizer só que a ' \
