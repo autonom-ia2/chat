@@ -77,6 +77,17 @@ describe WhatsappHybrid::WebTransport do
     expect(message.status).to eq('failed')
   end
 
+  it 'grava throttled numa rajada e deixa a nova tentativa agendada' do
+    allow(client).to receive(:send_text)
+    allow_any_instance_of(WhatsappHybrid::RateLimit).to receive(:exceeded?).and_return(true) # rubocop:disable RSpec/AnyInstance
+    flood!
+
+    expect { perform }.not_to raise_error
+
+    expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('throttled')
+    expect(client).not_to have_received(:send_text)
+  end
+
   it 'o fechamento por erro inesperado também grava numa rajada' do
     flood!
     message.update_columns(content_attributes: { 'whatsapp_transport' => 'web' }) # rubocop:disable Rails/SkipsModelValidations
