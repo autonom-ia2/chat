@@ -31,7 +31,7 @@ vi.mock('dashboard/composables/store', () => ({
     const getters = {
       'inboxes/getInboxes': [],
       'contacts/getContactById': id => ({ id: Number(id), name: 'Ana Souza' }),
-      'inboxes/getFilteredWhatsAppTemplates': () => estado.modelos,
+      'inboxes/getConversationWhatsAppTemplates': () => estado.modelos,
       'inboxes/getInbox': () => ({}),
       'accounts/isRTL': false,
       getCurrentUser: { id: 3 },

@@ -12,6 +12,7 @@ import AnalyticsHelper from '../../helper/AnalyticsHelper';
 import camelcaseKeys from 'camelcase-keys';
 import { ACCOUNT_EVENTS } from '../../helper/AnalyticsHelper/events';
 import { channelActions, buildInboxData } from './inboxes/channelActions';
+import { vaiNaConversa } from './inboxes/conversationTemplates';
 
 export const state = {
   records: [],
@@ -71,6 +72,9 @@ export const getters = {
     // Sendable-template filtering is shared with the mobile app via @chatwoot/utils.
     return templates.filter(isSendableTemplate);
   },
+  // Fork #1703: envio a uma pessoa, sem produto nem carrossel.
+  getConversationWhatsAppTemplates: (_state, $getters) => inboxId =>
+    $getters.getFilteredWhatsAppTemplates(inboxId).filter(vaiNaConversa),
   getNewConversationInboxes($state) {
     return $state.records.filter(inbox => {
       const { channel_type: channelType, phone_number: phoneNumber = '' } =
