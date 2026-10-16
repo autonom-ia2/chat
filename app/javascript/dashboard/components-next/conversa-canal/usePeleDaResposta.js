@@ -37,6 +37,23 @@ export const usePeleDaResposta = () => {
   };
 };
 
-// O "Documento" e o "Foto" do "+" abrem o mesmo seletor de arquivo do clipe.
-export const abrirSeletorDeArquivo = () =>
-  document.querySelector('#conversationAttachment')?.click();
+// "Documento" e "Fotos e vídeos" do "+" abrem o mesmo seletor de arquivo do clipe.
+// Com `filtro` (ex.: 'image/*,video/*'), o seletor só mostra esses arquivos; o
+// filtro de sempre volta quando a pessoa escolhe ou desiste.
+export const abrirSeletorDeArquivo = filtro => {
+  const campo = document.querySelector('#conversationAttachment');
+  if (!campo) return;
+  if (filtro) {
+    const deSempre = campo.getAttribute('accept');
+    const devolver = () => {
+      if (deSempre === null) campo.removeAttribute('accept');
+      else campo.setAttribute('accept', deSempre);
+      campo.removeEventListener('change', devolver);
+      campo.removeEventListener('cancel', devolver);
+    };
+    campo.setAttribute('accept', filtro);
+    campo.addEventListener('change', devolver);
+    campo.addEventListener('cancel', devolver);
+  }
+  campo.click();
+};

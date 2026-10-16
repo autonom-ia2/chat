@@ -17,7 +17,8 @@
       "BOTAO_DE_LINK": "Link button",
       "OPCOES": "Reply options",
       "FORMULARIO": "Form",
-      "ARQUIVO": "Photo, video or document",
+      "DOCUMENTO": "Document",
+      "FOTOS_E_VIDEOS": "Photos & videos",
       "SO_TEXTO": "Outside the 24 hours the reply goes through the backup number, as text only. Photos, audio and documents don't go."
     },
     "JANELA": {

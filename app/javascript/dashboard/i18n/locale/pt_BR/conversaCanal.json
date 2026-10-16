@@ -17,7 +17,8 @@
       "BOTAO_DE_LINK": "Botão de link",
       "OPCOES": "Opções de resposta",
       "FORMULARIO": "Formulário",
-      "ARQUIVO": "Foto, vídeo ou documento",
+      "DOCUMENTO": "Documento",
+      "FOTOS_E_VIDEOS": "Fotos e vídeos",
       "SO_TEXTO": "Fora das 24 horas a resposta sai pelo número reserva e só em texto. Foto, áudio e documento não vão."
     },
     "JANELA": {

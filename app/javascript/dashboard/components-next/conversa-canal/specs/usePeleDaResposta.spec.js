@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import { PELES, fornecerPele } from '../pele';
-import { usePeleDaResposta } from '../usePeleDaResposta';
+import { abrirSeletorDeArquivo, usePeleDaResposta } from '../usePeleDaResposta';
 import { idiomaDoPainel } from '../dataDaConversa';
 
 // Monta o hook dentro de uma "conversa" que fornece (ou não) a pele.
@@ -68,5 +68,37 @@ describe('idiomaDoPainel', () => {
     expect(idiomaDoPainel('pt_BR')).toBe('pt-BR');
     expect(idiomaDoPainel('en')).toBe('en');
     expect(idiomaDoPainel(undefined)).toBe('en');
+  });
+});
+
+describe('abrirSeletorDeArquivo (#1702)', () => {
+  let campo;
+  beforeEach(() => {
+    campo = document.createElement('input');
+    campo.type = 'file';
+    campo.id = 'conversationAttachment';
+    campo.setAttribute('accept', 'image/*,audio/*,.pdf');
+    campo.click = vi.fn();
+    document.body.appendChild(campo);
+  });
+  afterEach(() => campo.remove());
+
+  it('Documento abre o seletor de sempre', () => {
+    abrirSeletorDeArquivo();
+    expect(campo.click).toHaveBeenCalled();
+    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
+  });
+
+  it('Fotos e vídeos filtra a mídia e devolve o filtro de sempre depois', () => {
+    abrirSeletorDeArquivo('image/*,video/*');
+    expect(campo.getAttribute('accept')).toBe('image/*,video/*');
+    campo.dispatchEvent(new Event('change'));
+    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
+  });
+
+  it('desistir também devolve o filtro de sempre', () => {
+    abrirSeletorDeArquivo('image/*,video/*');
+    campo.dispatchEvent(new Event('cancel'));
+    expect(campo.getAttribute('accept')).toBe('image/*,audio/*,.pdf');
   });
 });
