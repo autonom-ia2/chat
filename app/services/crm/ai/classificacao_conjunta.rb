@@ -6,6 +6,9 @@
 #   # => { card_id => classificação (como StageClassifier#perform) }, só dos cards que a IA respondeu
 #
 # classificadores: um StageClassifier por card, o principal primeiro (a conversa e os outros pedidos saem dele).
+#
+# Card tocado ligado a outras conversas (outro canal, #1664): as mensagens delas vão no pacote dele, em
+# `other_conversations_messages` (Crm::Ai::OutrasConversas, com os limites por card e por chamada).
 class Crm::Ai::ClassificacaoConjunta
   ITEM = Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA[:schema].then do |schema|
     schema.merge(properties: { card_id: { type: 'integer' } }.merge(schema[:properties]),
@@ -41,7 +44,12 @@ class Crm::Ai::ClassificacaoConjunta
   end
 
   def entrada
-    @classificadores.first.conversa.merge(cards: @classificadores.map(&:pacote))
+    outras = Crm::Ai::OutrasConversas.por_card(@classificadores)
+    pacotes = @classificadores.map do |classificador|
+      mensagens = outras[classificador.pacote.dig(:card, :id)]
+      mensagens ? classificador.pacote.merge(other_conversations_messages: mensagens) : classificador.pacote
+    end
+    @classificadores.first.conversa.merge(cards: pacotes)
   end
 
   # Resposta sem um card, ou com card que não foi perguntado: aquele card fica sem avaliação nesta rodada.

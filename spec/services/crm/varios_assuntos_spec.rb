@@ -207,6 +207,94 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(auto.reload.stage.name).to eq('Proposta')
       expect(avaliacoes.size).to eq(1)
     end
+
+    describe 'com o Auto ligado também ao e-mail (#1664)' do
+      let(:email) { conversa_de_email(auto, ['Mandei a CNH por aqui', 'Segue o documento do carro por e-mail'], 2.hours.ago) }
+      let(:assuntos) { [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "card_#{sinistro.id}", titulo: '' }] }
+
+      before do
+        email
+        stub_jev(Crm::Subjects::Question::VARIOS)
+        revisao.merge!(assuntos: assuntos, principal: assuntos.size - 1, seguro: true, motivo: 'ok')
+      end
+
+      # Uma conversa de e-mail do João, ligada ao card, com as mensagens do cliente (um minuto entre elas, a partir de `desde`).
+      def conversa_de_email(card, textos, desde)
+        create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact).tap do |conversa|
+          textos.each_with_index do |texto, minuto|
+            create(:message, account: account, inbox: conversa.inbox, conversation: conversa, message_type: :incoming, content: texto,
+                             created_at: desde + minuto.minutes)
+          end
+          # Só o que o cliente escreveu: as mensagens automáticas da caixa nova (pedido de e-mail) não importam aqui.
+          conversa.messages.where.not(message_type: :incoming).delete_all
+          Crm::CardConversation.create!(account: account, card: card, conversation: conversa)
+        end
+      end
+
+      def pacotes
+        JSON.parse(avaliacoes.first[:input])['cards'].index_by { |pacote| id(pacote) }
+      end
+
+      def outras(card)
+        pacotes[card.id]['other_conversations_messages']&.pluck('content')
+      end
+
+      it 'mensagem nova no WhatsApp: a chamada conjunta leva as mensagens do e-mail no pacote do Auto' do
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(avaliacoes.size).to eq(1)
+        expect(JSON.parse(avaliacoes.first[:input])['recent_messages'].pluck('content')).not_to include('Mandei a CNH por aqui')
+        expect(outras(auto)).to eq(['Mandei a CNH por aqui', 'Segue o documento do carro por e-mail'])
+        expect(pacotes[auto.id]['other_conversations_messages'].last['conversation_id']).to eq(email.id)
+        expect(pacotes[sinistro.id]).not_to have_key('other_conversations_messages')
+      end
+
+      it 'limite por card: só as mais recentes de cada card' do
+        stub_const('Crm::Ai::OutrasConversas::MAX_POR_CARD', 1)
+
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(outras(auto)).to eq(['Segue o documento do carro por e-mail'])
+      end
+
+      describe 'com o Seguro viagem ligado a outro e-mail, mais novo' do
+        let!(:viagem) { card(vendas, 'Seguro viagem', 'Novo Lead', focused_at: 3.minutes.ago) }
+        let(:assuntos) do
+          [{ resposta: 'mesmo_assunto', titulo: '' }, { resposta: "card_#{viagem.id}", titulo: '' },
+           { resposta: "card_#{sinistro.id}", titulo: '' }]
+        end
+
+        it 'limite total: as mais recentes entre todos os cards, e não na ordem dos cards' do
+          conversa_de_email(viagem, ['Vou viajar dia 20'], 10.minutes.ago)
+          stub_const('Crm::Ai::OutrasConversas::MAX_TOTAL', 2)
+
+          receber('O sinistro já tem as fotos, o auto posso fechar e a viagem confirmo')
+
+          expect(outras(viagem)).to eq(['Vou viajar dia 20'])
+          expect(outras(auto)).to eq(['Segue o documento do carro por e-mail'])
+        end
+      end
+
+      it 'não repete o que a janela do principal já tem' do
+        Crm::CardConversation.create!(account: account, card: sinistro, conversation: email)
+
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(JSON.parse(avaliacoes.first[:input])['recent_messages'].pluck('content')).to include('Mandei a CNH por aqui')
+        expect(pacotes[auto.id]).not_to have_key('other_conversations_messages')
+      end
+
+      it 'texto igual no mesmo segundo em outro canal continua sendo outra mensagem' do
+        igual = email.messages.find_by!(content: 'Mandei a CNH por aqui')
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                         content: igual.content, created_at: igual.created_at)
+
+        receber('O sinistro já tem as fotos. E o auto, posso fechar?')
+
+        expect(JSON.parse(avaliacoes.first[:input])['recent_messages'].pluck('content')).to include('Mandei a CNH por aqui')
+        expect(outras(auto)).to include('Mandei a CNH por aqui')
+      end
+    end
   end
 
   describe 'com três funis (Vendas, Pós-venda e Renovações)' do

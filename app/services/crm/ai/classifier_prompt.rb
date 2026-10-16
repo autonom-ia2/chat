@@ -228,6 +228,8 @@ module Crm::Ai::ClassifierPrompt
     "handoff_enabled", "handoff_trigger", "eligible_agents", "attribute_schema" e "known_attributes", no mesmo sentido
     explicado acima. A conversa ("recent_messages", "conversation_state" e os campos de data) vale para todos.
     "other_subjects" são os outros pedidos abertos, que esta avaliação NÃO decide.
+    Um item de "cards" pode trazer "other_conversations_messages": mensagens recentes de outras conversas DESSE card
+    (outro canal, como e-mail), no mesmo formato de "recent_messages". Elas valem só para aquele card.
     Decida cada card separadamente, como se fosse o único: a etapa, o valor, o handoff, o retorno, os campos e a
     pontuação de um card saem SOMENTE do que a conversa diz sobre o pedido DELE. Uma frase sobre outro pedido não move
     este card e não preenche os campos dele, mesmo na mesma mensagem ("fecha o auto e quero cotar o residencial": o
