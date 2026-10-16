@@ -39,6 +39,10 @@ const mensagem = computed(() =>
 const { botoes, cartoes, oferta, produto } = useModeloDaMensagem(mensagem);
 // Mensagem que não saiu: o cliente não recebeu botão nenhum.
 const falhou = computed(() => mensagem.value.status === MESSAGE_STATUS.FAILED);
+// A parte que aparece: nenhuma sem a pele ou com a mensagem que não saiu.
+const parteVisivel = computed(() =>
+  pele.value && !falhou.value ? props.parte : null
+);
 
 const LINHA =
   'flex items-center justify-center gap-1.5 min-h-11 -mx-[9px] w-[calc(100%+16px)] px-3 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] text-[14.2px] font-medium';
@@ -46,96 +50,93 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
 </script>
 
 <template>
-  <template v-if="pele && !falhou">
+  <div
+    v-if="parteVisivel === 'topo' && (oferta || produto)"
+    class="flex flex-col gap-1.5 mb-1.5"
+    data-topo-do-modelo
+  >
     <div
-      v-if="parte === 'topo' && (oferta || produto)"
-      class="flex flex-col gap-1.5 mb-1.5"
-      data-topo-do-modelo
+      v-if="produto"
+      class="flex items-center gap-3 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
     >
-      <div
-        v-if="produto"
-        class="flex items-center gap-3 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
+      <span
+        class="grid place-content-center size-12 rounded bg-[#0A0A0A]/10 dark:bg-white/10"
       >
-        <span
-          class="grid place-content-center size-12 rounded bg-[#0A0A0A]/10 dark:bg-white/10"
-        >
-          <Icon icon="i-ph-storefront" class="size-6 opacity-70" />
-        </span>
-        <span class="text-[13px] font-medium">
-          {{ t('CONVERSA_CANAL.MODELO.PRODUTO') }}
-        </span>
-      </div>
-      <div
-        v-if="oferta"
-        class="flex items-start gap-2 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
-      >
-        <Icon icon="i-ph-timer-bold" class="size-5 mt-0.5 text-[#E53935]" />
-        <span class="flex flex-col">
-          <span class="text-[14px] font-medium break-words">
-            {{
-              oferta.limited_time_offer?.text ||
-              t('CONVERSA_CANAL.MODELO.OFERTA')
-            }}
-          </span>
-          <span class="text-[12px] text-[#666666] dark:text-[#A7A8A8]">
-            {{ t('CONVERSA_CANAL.MODELO.OFERTA') }}
-          </span>
-        </span>
-      </div>
+        <Icon icon="i-ph-storefront" class="size-6 opacity-70" />
+      </span>
+      <span class="text-[13px] font-medium">
+        {{ t('CONVERSA_CANAL.MODELO.PRODUTO') }}
+      </span>
     </div>
-
     <div
-      v-else-if="parte === 'botoes' && botoes.length"
-      class="flex flex-col mt-1 -mb-[8px]"
-      role="group"
-      :aria-label="t('CONVERSA_CANAL.MODELO.BOTOES')"
-      data-botoes-do-modelo
+      v-if="oferta"
+      class="flex items-start gap-2 p-2 rounded-md bg-[#0A0A0A]/5 dark:bg-[#000]/20"
+    >
+      <Icon icon="i-ph-timer-bold" class="size-5 mt-0.5 text-[#E53935]" />
+      <span class="flex flex-col">
+        <span class="text-[14px] font-medium break-words">
+          {{
+            oferta.limited_time_offer?.text || t('CONVERSA_CANAL.MODELO.OFERTA')
+          }}
+        </span>
+        <span class="text-[12px] text-[#666666] dark:text-[#A7A8A8]">
+          {{ t('CONVERSA_CANAL.MODELO.OFERTA') }}
+        </span>
+      </span>
+    </div>
+  </div>
+
+  <div
+    v-else-if="parteVisivel === 'botoes' && botoes.length"
+    class="flex flex-col mt-1 -mb-[8px]"
+    role="group"
+    :aria-label="t('CONVERSA_CANAL.MODELO.BOTOES')"
+    data-botoes-do-modelo
+  >
+    <div
+      v-for="(botao, indice) in botoes"
+      :key="indice"
+      :class="LINHA"
+      :data-tipo-do-botao="botao.tipo"
+    >
+      <Icon :icon="botao.icone" class="size-4 flex-shrink-0" />
+      <span class="min-w-0 break-words">{{ botao.texto }}</span>
+    </div>
+  </div>
+
+  <li
+    v-else-if="parteVisivel === 'carrossel' && cartoes.length"
+    class="list-none flex -mt-1 mb-2 ltr:ml-auto rtl:mr-auto ltr:mr-8 rtl:ml-8 max-w-full"
+    data-carrossel-do-modelo
+  >
+    <div
+      class="flex gap-2 max-w-[min(100%,640px)] overflow-x-auto pb-1 snap-x"
+      tabindex="0"
+      :aria-label="t('CONVERSA_CANAL.MODELO.CARROSSEL')"
     >
       <div
-        v-for="(botao, indice) in botoes"
+        v-for="(cartao, indice) in cartoes"
         :key="indice"
-        :class="LINHA"
-        :data-tipo-do-botao="botao.tipo"
-      >
-        <Icon :icon="botao.icone" class="size-4 flex-shrink-0" />
-        <span class="min-w-0 break-words">{{ botao.texto }}</span>
-      </div>
-    </div>
-
-    <li
-      v-else-if="parte === 'carrossel' && cartoes.length"
-      class="list-none flex -mt-1 mb-2 ltr:ml-auto rtl:mr-auto ltr:mr-8 rtl:ml-8 max-w-full"
-      data-carrossel-do-modelo
-    >
-      <div
-        class="flex gap-2 max-w-[min(100%,640px)] overflow-x-auto pb-1 snap-x"
-        tabindex="0"
-        :aria-label="t('CONVERSA_CANAL.MODELO.CARROSSEL')"
+        class="flex flex-col flex-shrink-0 w-56 p-[3px] snap-start rounded-[10px] bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA]"
+        :class="SOMBRA"
       >
         <div
-          v-for="(cartao, indice) in cartoes"
-          :key="indice"
-          class="flex flex-col flex-shrink-0 w-56 p-[3px] snap-start rounded-[10px] bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA]"
-          :class="SOMBRA"
+          class="grid place-content-center h-32 rounded-[8px] bg-[#0A0A0A]/10 dark:bg-[#000]/20"
         >
-          <div
-            class="grid place-content-center h-32 rounded-[8px] bg-[#0A0A0A]/10 dark:bg-[#000]/20"
-          >
-            <Icon :icon="cartao.midia" class="size-8 opacity-60" />
-          </div>
-          <p class="px-1.5 pt-1.5 pb-1 text-[14px] leading-[19px] break-words">
-            {{ cartao.texto }}
-          </p>
-          <div
-            v-for="(botao, i) in cartao.botoes"
-            :key="i"
-            class="flex items-center justify-center gap-1.5 min-h-11 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] text-[14px] font-medium"
-          >
-            <Icon :icon="botao.icone" class="size-4" />
-            {{ botao.texto }}
-          </div>
+          <Icon :icon="cartao.midia" class="size-8 opacity-60" />
+        </div>
+        <p class="px-1.5 pt-1.5 pb-1 text-[14px] leading-[19px] break-words">
+          {{ cartao.texto }}
+        </p>
+        <div
+          v-for="(botao, i) in cartao.botoes"
+          :key="i"
+          class="flex items-center justify-center gap-1.5 min-h-11 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] text-[14px] font-medium"
+        >
+          <Icon :icon="botao.icone" class="size-4" />
+          {{ botao.texto }}
         </div>
       </div>
-    </li>
-  </template>
+    </div>
+  </li>
 </template>

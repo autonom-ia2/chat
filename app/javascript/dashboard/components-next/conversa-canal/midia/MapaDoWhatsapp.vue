@@ -30,13 +30,15 @@ const endereco = computed(() => {
 </script>
 
 <template>
-  <img
-    v-if="pele && chave && ponto && !falhou"
-    :src="endereco"
-    alt=""
-    loading="lazy"
-    class="absolute inset-0 size-full object-cover"
-    data-mapa-do-whatsapp
-    @error="falhou = true"
-  />
+  <!-- Invólucro sem caixa: a pele esconde o resto do ícone, não ele. -->
+  <span class="contents" data-mapa-do-whatsapp>
+    <img
+      v-if="pele && chave && ponto && !falhou"
+      :src="endereco"
+      alt=""
+      loading="lazy"
+      class="absolute inset-0 size-full object-cover"
+      @error="falhou = true"
+    />
+  </span>
 </template>

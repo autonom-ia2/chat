@@ -25,7 +25,7 @@ describe('MapaDoWhatsapp', () => {
 
   it('mostra o mapa estático do Google no ponto, com a chave de navegador', () => {
     window.chatwootConfig = { googleMapsBrowserApiKey: 'chave-navegador' };
-    const img = montar().find('[data-mapa-do-whatsapp]');
+    const img = montar().find('[data-mapa-do-whatsapp] img');
     const url = new URL(img.attributes('src'));
     expect(url.origin + url.pathname).toBe(
       'https://maps.googleapis.com/maps/api/staticmap'
