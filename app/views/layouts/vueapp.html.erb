@@ -43,6 +43,8 @@
         tiktokAppId: '<%= @global_config['TIKTOK_APP_ID'] %>',
         googleOAuthClientId: '<%= ENV.fetch('GOOGLE_OAUTH_CLIENT_ID', nil) %>',
         googleOAuthCallbackUrl: '<%= ENV.fetch('GOOGLE_OAUTH_CALLBACK_URL', nil) %>',
+        // #1702: chave de navegador do Google Maps (presa ao domínio no Google), para a miniatura do mapa na conversa.
+        googleMapsBrowserApiKey: <%= ENV.fetch('GOOGLE_MAPS_BROWSER_API_KEY', '').to_json.html_safe %>,
         autonomiaSsoEnabled: '<%= ENV.fetch('AUTONOMIA_SSO_ENABLED', false) %>',
         autonomiaSsoAutoRedirect: '<%= ENV.fetch('AUTONOMIA_SSO_AUTO_REDIRECT', false) %>',
         autonomiaSsoUrl: '<%= ENV.fetch('AUTONOMIA_SSO_URL', '/auth/autonomia') %>',

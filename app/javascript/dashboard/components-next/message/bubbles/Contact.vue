@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
@@ -8,6 +8,7 @@ import BaseAttachmentBubble from './BaseAttachment.vue';
 import BaseBubble from './Base.vue';
 import ContatoDoWhatsapp from '../../conversa-canal/midia/ContatoDoWhatsapp.vue';
 import { usePele } from '../../conversa-canal/pele';
+import NovaConversaEntrada from '../../NovaConversa/NovaConversaEntrada.vue';
 
 import {
   DuplicateContactException,
@@ -78,24 +79,47 @@ function openContactNewTab(contactId) {
   window.open(url, '_blank');
 }
 
+// Procura o contato pelo telefone com "+" (como ele é gravado) e cria se não existir.
+async function findOrCreateContact() {
+  let contact = await filterContactByNumber(`+${rawPhoneNumber.value}`);
+  if (!contact) {
+    contact = await $store.dispatch('contacts/create', getContactObject());
+    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
+  }
+  return contact;
+}
+
+function alertContactError(error) {
+  if (error instanceof DuplicateContactException) {
+    if (error.data.includes('phone_number')) {
+      useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
+    }
+  } else if (error instanceof ExceptionWithMessage) {
+    useAlert(error.data);
+  } else {
+    useAlert(t('CONTACT_FORM.ERROR_MESSAGE'));
+  }
+}
+
 async function addContact() {
   try {
-    let contact = await filterContactByNumber(rawPhoneNumber);
-    if (!contact) {
-      contact = await $store.dispatch('contacts/create', getContactObject());
-      useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
-    }
+    const contact = await findOrCreateContact();
     openContactNewTab(contact.id);
   } catch (error) {
-    if (error instanceof DuplicateContactException) {
-      if (error.data.includes('phone_number')) {
-        useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
-      }
-    } else if (error instanceof ExceptionWithMessage) {
-      useAlert(error.data);
-    } else {
-      useAlert(t('CONTACT_FORM.ERROR_MESSAGE'));
-    }
+    alertContactError(error);
+  }
+}
+
+// #1702: "Conversar", como no WhatsApp: a Nova conversa abre e recebe o contato assim
+// que ele é achado ou criado. Contato que nunca falou com a caixa começa por modelo
+// aprovado, e quem conduz isso é a própria Nova conversa.
+const contactToTalk = ref(null);
+async function talkToContact() {
+  try {
+    const contact = await findOrCreateContact();
+    contactToTalk.value = String(contact.id);
+  } catch (error) {
+    alertContactError(error);
   }
 }
 
@@ -119,7 +143,22 @@ const action = computed(() => ({
       :nome="contactName"
       :telefone="phoneNumber"
       :acao="temAcao ? action : null"
-    />
+    >
+      <template v-if="temAcao" #conversar>
+        <NovaConversaEntrada :contact-id="contactToTalk">
+          <template #trigger>
+            <button
+              type="button"
+              class="w-full h-10 text-[14px] font-medium text-[#1A6B42] dark:text-[#6FD07E] hover:bg-[#000]/[0.03] dark:hover:bg-white/[0.03]"
+              data-conversar-com-contato
+              @click="talkToContact"
+            >
+              {{ t('CONVERSA_CANAL.CONTATO.CONVERSAR') }}
+            </button>
+          </template>
+        </NovaConversaEntrada>
+      </template>
+    </ContatoDoWhatsapp>
   </BaseBubble>
   <BaseAttachmentBubble
     v-else

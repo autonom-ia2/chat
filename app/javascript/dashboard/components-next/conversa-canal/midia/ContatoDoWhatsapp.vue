@@ -1,8 +1,7 @@
 <script setup>
 // #1702: cartão de contato como no WhatsApp: foto redonda, nome, telefone e, embaixo
-// de uma linha fina, a ação em verde. Recebido do cliente: "Salvar contato" (o
-// "Conversar" do app abriria a mesma tela do contato, então fica uma ação só).
-// Enviado por nós: sem ação, o contato já é nosso.
+// de uma linha fina, as ações em verde. Recebido do cliente: "Conversar" (slot, abre a
+// Nova conversa) e "Salvar contato". Enviado por nós: sem ação, o contato já é nosso.
 defineProps({
   nome: { type: String, default: '' },
   telefone: { type: String, default: '' },
@@ -35,13 +34,20 @@ defineProps({
         </span>
       </span>
     </div>
-    <button
-      v-if="acao"
-      type="button"
-      class="w-full h-10 -mb-1 text-[14px] font-medium border-t border-[#000]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] hover:bg-[#000]/[0.03] dark:hover:bg-white/[0.03]"
-      @click="acao.onClick"
+    <!-- Embaixo de uma linha fina, as ações lado a lado, como no app. -->
+    <div
+      v-if="acao || $slots.conversar"
+      class="flex -mb-1 border-t border-[#000]/10 dark:border-white/10 divide-x divide-[#000]/10 dark:divide-white/10 [&>*]:flex-1"
     >
-      {{ acao.label }}
-    </button>
+      <slot name="conversar" />
+      <button
+        v-if="acao"
+        type="button"
+        class="h-10 text-[14px] font-medium text-[#1A6B42] dark:text-[#6FD07E] hover:bg-[#000]/[0.03] dark:hover:bg-white/[0.03]"
+        @click="acao.onClick"
+      >
+        {{ acao.label }}
+      </button>
+    </div>
   </div>
 </template>

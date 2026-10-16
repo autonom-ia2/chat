@@ -160,6 +160,9 @@
       "FECHAR": "Close",
       "VER_OPCOES": "View options",
       "ESCOLHIDA": "Chosen by the customer"
+    },
+    "CONTATO": {
+      "CONVERSAR": "Message"
     }
   }
 }

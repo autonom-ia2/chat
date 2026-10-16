@@ -6,6 +6,7 @@
 import Icon from 'next/icon/Icon.vue';
 import BaseBubble from '../Base.vue';
 import ActionRow from './ActionRow.vue';
+import MapaDoWhatsapp from '../../../conversa-canal/midia/MapaDoWhatsapp.vue';
 
 defineProps({
   bubbleName: { type: String, required: true },
@@ -16,6 +17,8 @@ defineProps({
   detail: { type: String, default: '' },
   actionLabel: { type: String, default: '' },
   actionHref: { type: String, default: '' },
+  // #1702: "lat,long" da localização; com a pele do WhatsApp, vira a miniatura do mapa.
+  mapa: { type: String, default: '' },
 });
 </script>
 
@@ -28,6 +31,7 @@ defineProps({
           :class="iconBgColor"
         >
           <Icon :icon="icon" class="text-white size-4" />
+          <MapaDoWhatsapp v-if="mapa" :ponto="mapa" />
         </div>
         <div class="space-y-1 min-w-0">
           <div v-if="heading" class="text-sm text-n-slate-12 break-words">

@@ -160,6 +160,9 @@
       "FECHAR": "Fechar",
       "VER_OPCOES": "Ver opções",
       "ESCOLHIDA": "Escolhida pelo cliente"
+    },
+    "CONTATO": {
+      "CONVERSAR": "Conversar"
     }
   }
 }

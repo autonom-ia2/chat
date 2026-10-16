@@ -7,7 +7,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../../provider.js';
 import SharedCard from './SharedCard.vue';
-import { mapHrefOf } from './mapLink.js';
+import { mapHrefOf, pointOf } from './mapLink.js';
 
 const { contentAttributes, attachments, sender } = useMessageContext();
 const { t } = useI18n();
@@ -23,6 +23,15 @@ const mapHref = computed(() => {
   return (
     mapHrefOf(location.value.latitude, location.value.longitude) ||
     mapHrefOf(attachment.coordinatesLat, attachment.coordinatesLong)
+  );
+});
+
+// O mesmo ponto do link, para a miniatura do mapa (#1702).
+const point = computed(() => {
+  const attachment = attachments.value?.[0] ?? {};
+  return (
+    pointOf(location.value.latitude, location.value.longitude) ||
+    pointOf(attachment.coordinatesLat, attachment.coordinatesLong)
   );
 });
 
@@ -42,5 +51,6 @@ const heading = computed(() => {
     :detail="textOf(location.address)"
     :action-label="t('RICH_MESSAGE.LOCATION.SEE_ON_MAP')"
     :action-href="mapHref"
+    :mapa="point"
   />
 </template>
