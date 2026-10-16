@@ -61,7 +61,7 @@ class Messages::MarkdownRendererService
     normalized_content = @content.gsub(/^[ \t]+$/m, '')
     renderers = Messages::MarkdownRenderers
     # Linhas em branco preservadas sem desmontar o bloco ``` (#1732); ~~x~~ vira ~x~.
-    content_with_preserved_newlines = renderers::WhatsAppRenderer.preserve_newlines(normalized_content)
+    content_with_preserved_newlines = renderers::WhatsAppNewlines.preserve(normalized_content)
     renderer = renderers::WhatsAppRenderer.new(content_with_preserved_newlines)
     doc = CommonMarker.render_doc(content_with_preserved_newlines, [:DEFAULT, :STRIKETHROUGH_DOUBLE_TILDE], [:strikethrough])
     result = renderer.render(doc).gsub(/\n+\z/, '')

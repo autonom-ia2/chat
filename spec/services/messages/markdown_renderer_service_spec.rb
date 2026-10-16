@@ -115,6 +115,24 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
         expect(result).to eq('x ```mono``` e `cod` e *negrito*')
       end
 
+      it 'keeps triple backticks after accented text (byte columns)' do
+        content = 'Olá, código: ```x``` e `y`'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('Olá, código: ```x``` e `y`')
+      end
+
+      it 'keeps an indented code block that starts with backticks as plain text' do
+        content = "Texto\n\n    ```\n    x"
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq("Texto\n\n```\nx")
+      end
+
+      it 'keeps markers glued to letters or digits as typed' do
+        content = '2*3*4 e a**b**c e olá*x* e **ok**!'
+        result = described_class.new(content, channel_type).render
+        expect(result).to eq('2*3*4 e a**b**c e olá*x* e *ok*!')
+      end
+
       it 'renders tilde fenced code blocks as WhatsApp monospace' do
         content = "~~~\ncode here\n~~~"
         result = described_class.new(content, channel_type).render

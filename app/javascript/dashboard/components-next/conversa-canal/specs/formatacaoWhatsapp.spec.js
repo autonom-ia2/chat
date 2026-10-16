@@ -101,6 +101,25 @@ describe('formatarWhatsapp (#1732)', () => {
     );
   });
 
+  it.each([
+    ['_https://x.com_', '<em><a href="https://x.com">https://x.com</a></em>'],
+    [
+      '*https://x.com/a*',
+      '<strong><a href="https://x.com/a">https://x.com/a</a></strong>',
+    ],
+    ['~www.x.com~', '<s><a href="http://www.x.com">www.x.com</a></s>'],
+    [
+      'veja (https://x.com).',
+      'veja (<a href="https://x.com">https://x.com</a>).',
+    ],
+  ])('marcador em volta do link: %s', (entrada, esperado) => {
+    const html = formatarWhatsapp(entrada).replaceAll(
+      ' class="link" rel="noreferrer noopener nofollow" target="_blank"',
+      ''
+    );
+    expect(html).toBe(p(esperado));
+  });
+
   it('não cria link javascript:', () => {
     // eslint-disable-next-line no-script-url
     expect(formatarWhatsapp('javascript:alert(1)')).not.toContain('<a');

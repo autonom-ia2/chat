@@ -52,20 +52,40 @@ const separarMono = texto => {
   return partes;
 };
 
-// Links viram um item só, para um _ ou * dentro do endereço não formatar nada.
-const itensComLinks = trecho => {
-  const achados = md.linkify.match(trecho) || [];
-  const itens = [];
-  let desde = 0;
-  achados.forEach(achado => {
-    if (!md.validateLink(achado.url)) return;
-    itens.push(...Array.from(trecho.slice(desde, achado.index)));
-    itens.push({ tipo: 'link', url: achado.url, texto: achado.text });
-    desde = achado.lastIndex;
-  });
-  itens.push(...Array.from(trecho.slice(desde)));
-  return itens;
+// Um marcador no fim do endereço que foi aberto antes do link (*site.com*) fecha a
+// formatação; não é do link. Sem abertura antes (site.com/_a_), fica no endereço.
+const fimSemMarcador = (trecho, achado) => {
+  const antes = trecho.slice(0, achado.index);
+  let fim = achado.lastIndex;
+  const ehMarcadorAberto = c => MARCAS[c] && c !== '`' && antes.includes(c);
+  while (fim > achado.index && ehMarcadorAberto(trecho[fim - 1])) fim -= 1;
+  return fim;
 };
+
+// Pedaços de texto e links. O texto entre eles fica como veio.
+const pedacosComLinks = trecho => {
+  const pedacos = [];
+  let desde = 0;
+  (md.linkify.match(trecho) || []).forEach(achado => {
+    const fim = fimSemMarcador(trecho, achado);
+    const url = achado.url.slice(
+      0,
+      achado.url.length - (achado.lastIndex - fim)
+    );
+    if (fim <= achado.index || !md.validateLink(url)) return;
+    pedacos.push(trecho.slice(desde, achado.index));
+    pedacos.push({ tipo: 'link', url, texto: trecho.slice(achado.index, fim) });
+    desde = fim;
+  });
+  pedacos.push(trecho.slice(desde));
+  return pedacos;
+};
+
+// Links viram um item só, para um _ ou * dentro do endereço não formatar nada.
+const itensComLinks = trecho =>
+  pedacosComLinks(trecho).flatMap(pedaco =>
+    ehTexto(pedaco) ? Array.from(pedaco) : [pedaco]
+  );
 
 // 2º passo: as linhas. Cada linha é uma lista de caracteres e itens (mono, link).
 const separarLinhas = partes => {
@@ -185,16 +205,24 @@ const escapar = texto =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
+const htmlDoLink = no => {
+  const href = escapar(md.normalizeLink(no.url));
+  return `<a href="${href}" class="link" rel="noreferrer noopener nofollow" target="_blank">${escapar(no.texto)}</a>`;
+};
+
+// Texto solto: o link que um marcador escondia na leitura da linha (_https://..._) aparece aqui.
+const htmlDoTexto = texto =>
+  pedacosComLinks(texto)
+    .map(pedaco => (ehTexto(pedaco) ? escapar(pedaco) : htmlDoLink(pedaco)))
+    .join('');
+
 const htmlDoNo = no => {
-  if (no.tipo === 'texto') return escapar(no.texto);
+  if (no.tipo === 'texto') return htmlDoTexto(no.texto);
   if (no.tipo === 'codigo') return `<code>${escapar(no.texto)}</code>`;
   if (no.tipo === 'mono') {
     return `<span class="font-mono whitespace-pre-wrap">${escapar(no.texto)}</span>`;
   }
-  if (no.tipo === 'link') {
-    const href = escapar(md.normalizeLink(no.url));
-    return `<a href="${href}" class="link" rel="noreferrer noopener nofollow" target="_blank">${escapar(no.texto)}</a>`;
-  }
+  if (no.tipo === 'link') return htmlDoLink(no);
   const tag = TAGS[no.tipo];
   return `<${tag}>${no.filhos.map(htmlDoNo).join('')}</${tag}>`;
 };
