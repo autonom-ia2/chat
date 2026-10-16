@@ -17,8 +17,8 @@ import {
   funisDaCaixa,
   faltaEscolherLegado,
   legadoPendente,
+  paraSalvar,
   primeiroNome,
-  quemCuida,
 } from '../helpers/caixa';
 import {
   formularioDaCaixa,
@@ -126,13 +126,47 @@ watch(
   }
 );
 
+// #1140 — quem recebe cada assunto vem do servidor, pela regra do motor de
+// entrega, com o que está marcado agora (ainda sem salvar). A tela não decide
+// quem recebe. Só a última pergunta vale.
+const quemRecebe = ref(null);
+const quemRecebeErro = ref(false);
+let perguntaAtual = '';
+const conferirQuemRecebe = async ({ deNovo = false } = {}) => {
+  const dados = paraSalvar(form.value);
+  const pergunta = JSON.stringify([dados.pipeline_ids, dados.people]);
+  if (!deNovo && pergunta === perguntaAtual) return;
+  perguntaAtual = pergunta;
+  quemRecebe.value = null;
+  quemRecebeErro.value = false;
+  try {
+    const resposta = await CrmCaixasAPI.quemRecebe(route.params.inboxId, dados);
+    if (pergunta === perguntaAtual) quemRecebe.value = resposta;
+  } catch {
+    if (pergunta !== perguntaAtual) return;
+    quemRecebeErro.value = true;
+    // Voltar às etapas 3 e 4 pergunta de novo.
+    perguntaAtual = '';
+  }
+};
+
+// Nas etapas 3 e 4 o exemplo e a conferência dizem quem recebe.
+watch(
+  () => estado.value === 'pronto' && etapa.value >= 3,
+  precisa => {
+    if (precisa) conferirQuemRecebe();
+  },
+  { immediate: true }
+);
+
 const exemplo = computed(() => {
   const funil = funisMarcados.value[0];
   if (!funil) return {};
   const etapaInicial =
     funil.stages.find(item => item.id === form.value.default_stage_id) ||
     funil.stages[0];
-  const proxima = quemCuida(form.value, funil.id)[0];
+  const primeiroId = quemRecebe.value?.funis?.[String(funil.id)]?.[0];
+  const proxima = form.value.people.find(pessoa => pessoa.id === primeiroId);
   return {
     funil: funil.name,
     etapa: etapaInicial?.name || '',
@@ -317,6 +351,9 @@ const salvar = async () => {
             :form="form"
             :original="original"
             :funis="funis"
+            :quem-recebe="quemRecebe"
+            :quem-recebe-erro="quemRecebeErro"
+            @conferir-de-novo="conferirQuemRecebe({ deNovo: true })"
           />
         </template>
       </div>

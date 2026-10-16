@@ -33,7 +33,7 @@ export const writeFunnelChoice = (accountId, userId, value) => {
   }
 };
 
-// O funil guardado deixou de ser visível (acesso mudou, funil arquivado): volta para "Todos os meus funis".
+// O funil guardado deixou de ser visível (acesso mudou, funil arquivado): volta para "Sem filtro de funil".
 export const visibleFunnelChoice = (value, pipelineIds) => {
   if (value === FUNNEL_ALL || value === FUNNEL_NONE) return value;
   return pipelineIds.map(String).includes(String(value)) ? value : FUNNEL_ALL;

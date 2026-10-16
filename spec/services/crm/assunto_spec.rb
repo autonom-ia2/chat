@@ -106,7 +106,9 @@ RSpec.describe Crm::Assunto do
       expect(Crm::Entrega).not_to have_received(:new)
     end
 
+    # Sem robô no nome: com a porta (agente nosso) dona da conversa, a IA do CRM não entrega por conta própria (#1673).
     it 'passa quando o card ainda é o assunto' do
+      conversation.update!(ai_assignee: nil)
       card = create_card(pipeline: suporte)
       card.stage.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct' } })
       entrega = instance_double(Crm::Entrega, call: Crm::Entrega::Resultado.new(status: :segurando, motivo: 'ninguem_online'))
