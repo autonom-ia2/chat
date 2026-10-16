@@ -905,6 +905,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -963,6 +964,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -979,6 +981,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",

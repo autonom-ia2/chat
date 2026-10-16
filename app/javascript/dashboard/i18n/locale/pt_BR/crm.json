@@ -5749,5 +5749,16 @@
       "CANCELAR": "Cancelar",
       "MARCAR": "Marcar reunião"
     }
+  },
+  "CONVERSATION_FUNNEL_FILTER": {
+    "LABEL": "Funil",
+    "ARIA_LABEL": "Mostrar conversas de qual funil",
+    "ALL": "Todos os meus funis",
+    "NONE": "Sem assunto",
+    "NONE_HINT": "Conversas que ainda não têm assunto: a triagem.",
+    "EMPTY": "Nenhuma conversa neste funil."
+  },
+  "FORK_CONVERSATION_LIST": {
+    "PARTICIPATING": "Em que participo"
   }
 }

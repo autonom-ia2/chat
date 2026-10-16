@@ -5748,5 +5748,16 @@
       "CANCELAR": "Cancel",
       "MARCAR": "Book meeting"
     }
+  },
+  "CONVERSATION_FUNNEL_FILTER": {
+    "LABEL": "Funnel",
+    "ARIA_LABEL": "Show conversations from which funnel",
+    "ALL": "All my funnels",
+    "NONE": "No subject",
+    "NONE_HINT": "Conversations that have no subject yet: triage.",
+    "EMPTY": "No conversation in this funnel."
+  },
+  "FORK_CONVERSATION_LIST": {
+    "PARTICIPATING": "Participating"
   }
 }
