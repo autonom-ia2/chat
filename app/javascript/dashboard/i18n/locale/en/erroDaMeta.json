@@ -1,0 +1,87 @@
+{
+  "ERRO_DA_META": {
+    "NAO_SAIU": "Not sent.",
+    "O_QUE_FAZER": "What to do:",
+    "DETALHE": "Detail for support",
+    "SEM_PAGAMENTO": {
+      "O_QUE": "The WhatsApp account has no payment method.",
+      "FAZER": "The account admin needs to add a card in WhatsApp Manager."
+    },
+    "PASSOU_24_HORAS": {
+      "O_QUE": "The customer hasn't replied in over 24 hours, so WhatsApp only accepts a message template now.",
+      "FAZER": "Send an approved template; free chat returns when they reply."
+    },
+    "NUMERO_NAO_RECEBE": {
+      "O_QUE": "This number can't receive WhatsApp messages.",
+      "FAZER": "Check the number or reach the customer another way; they may need to update WhatsApp."
+    },
+    "LIMITE_PROPAGANDA": {
+      "O_QUE": "WhatsApp held this promotional message because the customer already got many.",
+      "FAZER": "Wait 1 day before trying again."
+    },
+    "CLIENTE_RECUSOU_PROPAGANDA": {
+      "O_QUE": "The customer asked not to receive promotions from this business.",
+      "FAZER": "Don't retry; talk to them when they write."
+    },
+    "TIPO_NAO_SUPORTADO": {
+      "O_QUE": "This message type can't be sent on WhatsApp.",
+      "FAZER": "Send it as text, photo or file."
+    },
+    "ARQUIVO_RECUSADO": {
+      "O_QUE": "WhatsApp didn't accept the file.",
+      "FAZER": "Send it in another format, like PDF, JPG or MP4."
+    },
+    "TESTE_DA_META": {
+      "O_QUE": "The customer's number is in a Meta test, so the promotion wasn't sent.",
+      "FAZER": "Not your fault: wait for them to write or reach them another way."
+    },
+    "CONTA_BLOQUEADA": {
+      "O_QUE": "Meta blocked the WhatsApp account.",
+      "FAZER": "The account admin needs to check the notice in WhatsApp Manager."
+    },
+    "LIMITE_SPAM": {
+      "O_QUE": "WhatsApp limited this number because many people blocked it or marked it as spam.",
+      "FAZER": "Send less for a while and check quality in WhatsApp Manager."
+    },
+    "MUITAS_PARA_O_MESMO": {
+      "O_QUE": "Too many messages to the same customer in a short time.",
+      "FAZER": "Wait a few minutes and try again."
+    },
+    "LIGACAO_VENCEU": {
+      "O_QUE": "The WhatsApp connection expired.",
+      "FAZER": "The account admin needs to reconnect it in Inboxes."
+    },
+    "MODELO_CAMPOS_VAZIOS": {
+      "O_QUE": "The template has empty fields.",
+      "FAZER": "Fill them all and send again."
+    },
+    "MODELO_NAO_EXISTE": {
+      "O_QUE": "This template doesn't exist in that language or isn't approved yet.",
+      "FAZER": "Pick an approved template and send again."
+    },
+    "MODELO_TEXTO_GRANDE": {
+      "O_QUE": "The template text is too long.",
+      "FAZER": "Use shorter text in the fields."
+    },
+    "MODELO_RECUSADO": {
+      "O_QUE": "Meta rejected the template for breaking one of its rules.",
+      "FAZER": "Create another template with different text."
+    },
+    "MODELO_FORMATO_ERRADO": {
+      "O_QUE": "A template field has the wrong format.",
+      "FAZER": "Check each field and send again."
+    },
+    "MODELO_PAUSADO": {
+      "O_QUE": "This template was paused after complaints.",
+      "FAZER": "Edit it and wait for approval."
+    },
+    "MODELO_DESLIGADO": {
+      "O_QUE": "This template was permanently disabled after too many complaints.",
+      "FAZER": "Create a new one with different text."
+    },
+    "DESCONHECIDO": {
+      "O_QUE": "Meta didn't deliver this message.",
+      "FAZER": "Try again; if it fails, send the detail below to support."
+    }
+  }
+}

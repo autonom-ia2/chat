@@ -16,6 +16,7 @@ import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
 import novaConversa from './novaConversa.json';
+import horarioDoCanal from './horarioDoCanal.json';
 import sidebarFork from './sidebarFork.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
@@ -45,6 +46,7 @@ import inboxMgmt from './inboxMgmt.json';
 import insurance from './insurance.json';
 import onboardingTrail from './onboardingTrail.json';
 import modelosWhatsapp from './modelosWhatsapp.json';
+import erroDaMeta from './erroDaMeta.json';
 import integrationApps from './integrationApps.json';
 import integrations from './integrations.json';
 import labelsMgmt from './labelsMgmt.json';
@@ -86,6 +88,7 @@ export default {
   ...campaignImport,
   ...campaignJourney,
   ...novaConversa,
+  ...horarioDoCanal,
   ...sidebarFork,
   ...brandKits,
   ...booking,
@@ -115,6 +118,7 @@ export default {
   ...insurance,
   ...onboardingTrail,
   ...modelosWhatsapp,
+  ...erroDaMeta,
   ...integrationApps,
   ...integrations,
   ...labelsMgmt,

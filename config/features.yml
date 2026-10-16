@@ -456,11 +456,22 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Toda mensagem do cliente avalia o card em foco (#1675, épico #1140). Bit 29 (536870912): a posição na lista é o bit e
+# a flag vai no fim do que está na main, logo depois de `crm_mensagem_marcada` (bit 28); se outra flag entrar antes na
+# main, esta vai para o fim e o bit sobe. Ligada: cada mensagem do cliente conta como atividade do card em foco (o
+# assunto atual) e faz a IA do CRM relê-lo, também na caixa de 2+ funis (Crm::Conversations::CardEmFoco). Desligada
+# (padrão): como antes, só a troca de foco, o card novo e o card ao chegar avaliam. Sem migration. Nasce ligada nas
+# contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: crm_avaliar_toda_mensagem
+  display_name: Toda mensagem do cliente avalia o card em foco
+  enabled: false
+  column: feature_flags_ext_1
+
 # Conversa com a cara do canal (#1702, épico #1701): na caixa de WhatsApp (oficial, WAHA e híbrida) a conversa e a
 # caixa de resposta ganham o visual do app — fundo, balões, hora e tiques, separador de dia, barra de digitar — e o
-# botão "+" para o atendente mandar localização, contato, botão de link e opções. A posição na lista é o bit: o
-# próximo depois de `crm_mensagem_marcada`; se outra flag entrar antes na main, esta vai para o fim. Desligada
-# (padrão): a conversa de sempre. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# botão "+" para o atendente mandar localização, contato, botão de link e opções. Bit 30 (1073741824): a
+# posição na lista é o bit, no fim do que está na main, logo depois de `crm_avaliar_toda_mensagem` (bit 29).
+# Desligada (padrão): a conversa de sempre. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
 - name: conversa_cara_do_canal
   display_name: Conversa com a cara do canal (WhatsApp)
   enabled: false

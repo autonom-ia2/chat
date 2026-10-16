@@ -6,6 +6,7 @@ import { useOnboardingTrail } from 'dashboard/composables/useOnboardingTrail';
 import { useMenuPublicado } from 'dashboard/components-next/sidebar/fork/menuPublicado';
 import { FILHOS_CONHECIDOS } from 'dashboard/components-next/sidebar/forkSidebarMenu';
 import { GRUPOS_DE_CARTOES } from './cartoes';
+import { agenteIaPorCaixaLigado } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 
 // Os cartões da página inicial de Configurações (#1617): quais a pessoa vê, para onde levam, e o estado de
 // cada um com o dado que já está à mão (a trilha de Primeiros passos e as listas que o menu já carrega).
@@ -35,6 +36,10 @@ const EXIGENCIAS = {
   campanhasPorEmail: () =>
     window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
     window.globalConfig?.CRM_KANBAN_ENABLED === 'true',
+  semAgenteIaPorCaixa: store =>
+    !agenteIaPorCaixaLigado(
+      store.getters['accounts/getAccount']?.(store.getters.getCurrentAccountId)
+    ),
 };
 
 const minuscula = texto =>
@@ -125,7 +130,7 @@ export function useCartoes() {
   };
 
   const montarCartao = (cartao, grupo) => {
-    if (cartao.exige && !EXIGENCIAS[cartao.exige]()) return null;
+    if (cartao.exige && !EXIGENCIAS[cartao.exige](store)) return null;
     const to = destinoDoCartao(cartao);
     if (!to || !podeAbrir(to)) return null;
     return {

@@ -27,6 +27,9 @@
       "file": "emailCampaignImportRecovery.json"
     },
     {
+      "file": "erroDaMeta.json"
+    },
+    {
       "file": "emailCampaignProtection.json"
     },
     {
@@ -43,6 +46,9 @@
     },
     {
       "file": "modelosWhatsapp.json"
+    },
+    {
+      "file": "horarioDoCanal.json"
     },
     {
       "file": "novaConversa.json"
