@@ -108,4 +108,13 @@ Rails.application.config.to_prepare do
   if Message._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::Context }
     Message.after_create_commit Waha::RichNative::Inbound::Context
   end
+  # A imagem do cartão de prévia do link vira cópia da instalação ANTES de qualquer decisão de envio (a da caixa WAHA
+  # comum, RichMessages::ApiInboxSentAsText, é registrada num initializer anterior): por isso `prepend: true`.
+  # A localização que virou cartão de mapa (`content` nil) chega à IA Autonomia como texto.
+  unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::ResponderLocation
+    Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::ResponderLocation)
+  end
+  if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::PreviewImage }
+    Message.before_create Waha::RichNative::PreviewImage, prepend: true
+  end
 end

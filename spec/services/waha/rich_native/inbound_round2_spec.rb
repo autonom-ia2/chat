@@ -148,7 +148,7 @@ describe Waha::RichNative::Inbound do
         expect(linked.content_attributes['quoted_message'])
           .to include('message_id' => quoted.id, 'conversation_id' => older.display_id, 'content' => 'Proposta enviada', 'sender_type' => 'User')
         expect(unknown.content_attributes['quoted_message'])
-          .to eq('message_id' => nil, 'content' => 'b' * 280, 'from_me' => true, 'has_media' => false)
+          .to eq('message_id' => nil, 'content' => 'b' * 280, 'from_me' => true, 'has_media' => false, 'unverified' => true)
       end
 
       it 'never links a message of another contact' do
@@ -161,18 +161,34 @@ describe Waha::RichNative::Inbound do
       end
     end
 
-    it 'makes a media that failed to download a visible customer message asking for a resend' do
+    it 'makes a media of the customer that failed to download a visible customer message with a neutral line' do
       note = from_connector({ waha_media_failed: { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError' } },
-                            message_type: :outgoing, private: true, content: 'mídia sem mídia (job 1)')
+                            private: true, content: 'mídia sem mídia (https://waha.example/jobs/1)')
 
       expect(note).to be_incoming
       expect(note.private).to be(false)
       expect(note.sender).to eq(conversation.contact)
-      expect(note.content).to eq('Foto não pôde ser baixada. Peça para o cliente reenviar.')
+      expect(note.content).to eq('Foto não recebida (o download falhou)')
       expect(note.content_attributes['media_unavailable']).to include('kind' => 'image', 'reason' => 'download_failed')
+      expect(note.processed_message_content).to eq('Foto não recebida (o download falhou)')
+      expect(note.webhook_data[:processed_message_content].to_s).not_to include('jobs')
     end
 
-    it 'marks the message deleted by the customer and keeps its content as proof' do
+    it 'keeps the note of a media sent by the business phone (outgoing) as main, even without from_me' do
+      note = from_connector({ waha_media_failed: { kind: 'image', mimetype: 'image/jpeg', reason: 'TimeoutError' } },
+                            message_type: :outgoing, private: true, content: 'mídia sem mídia (job 1)')
+      order = from_connector({ waha_order: { order_id: 'O1', title: 'Pedido', text: 'quero' } },
+                             message_type: :outgoing, private: true, content: 'não suportada')
+
+      [note, order].each do |message|
+        expect(message).to be_outgoing
+        expect(message.private).to be(true)
+        expect(message.content_attributes.keys & %w[media_unavailable order]).to eq([])
+      end
+      expect(note.content).to eq('mídia sem mídia (job 1)')
+    end
+
+    it 'marks the message deleted by the customer, keeps its content as proof and keeps the note of main' do
       original = create(:message, message_type: :incoming, content: 'Meu CPF é 1', conversation: conversation, inbox: inbox,
                                   account: account, sender: conversation.contact)
 
@@ -181,14 +197,14 @@ describe Waha::RichNative::Inbound do
       phone = from_connector({ in_reply_to: original.id, waha_revoke: { revoked_wa_id: 'W1', from_me: true } },
                              message_type: :outgoing, private: true, content: 'Esta mensagem foi excluída no WhatsApp')
 
-      expect(described_class.hidden?(note)).to be(true)
+      expect(described_class.hidden?(note)).to be(false)
+      expect(note).to have_attributes(private: true, content: 'Esta mensagem foi excluída no WhatsApp')
       expect(note.content_attributes['revoke_applied_to']).to eq(original.id)
       original.reload
       expect(original.content).to eq('Meu CPF é 1')
       expect(original.content_attributes['deleted_by_contact_at']).to be_present
       expect(original.content_attributes).not_to have_key('deleted')
-      expect(phone).to be_outgoing
-      expect(phone.private).to be(true)
+      expect(phone).to have_attributes(message_type: 'outgoing', private: true)
     end
 
     it 'marks forwarded messages' do
@@ -219,7 +235,7 @@ describe Waha::RichNative::Inbound do
       message = from_connector({ waha_order: { order_id: 'O1', title: 'Pedido', text: 'Quero 2', item_count: 2, total_amount: 59.9,
                                                currency: 'BRL', from_me: false },
                                  waha_unknown: { content_type: 'orderMessage', from_me: false } },
-                               message_type: :outgoing, private: true, content: 'não suportada')
+                               private: true, content: 'não suportada')
 
       expect(message).to be_incoming
       expect(message.content).to eq('Quero 2')

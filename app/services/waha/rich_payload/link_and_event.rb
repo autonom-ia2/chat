@@ -1,16 +1,17 @@
 # Os envios nativos da rodada 2 do chat#1709 (botão de link como cartão de prévia e convite de evento), separados do
 # Waha::RichPayload, que os inclui. Leem `@rich` e `@body` dele.
 module Waha::RichPayload::LinkAndEvent
-  # Imagem do cartão de prévia do link (link_button): https, até este tamanho (o mesmo teto do endereço do botão).
+  # Imagem do cartão de prévia do link (link_button): até este tamanho (o mesmo teto do endereço do botão).
   IMAGE_URL_MAX = 2000
-  PREVIEW_IMAGE_MIMETYPE = 'image/jpeg'.freeze
 
   private
 
   # ---- link_button → cartão de prévia do link (rodada 2) ----
   # { text: "<corpo>\n\n<url>", preview: { url, title, description, image: { url, mimetype } } }. Só com `image_url`
-  # (https, até IMAGE_URL_MAX): o motor GOWS 2026.9.2 dá erro 500 sem a imagem. Sem ela, nil: sai o texto de hoje, e o
-  # WhatsApp mostra a prévia automática do site. O texto contém a url, como o motor exige.
+  # que é a CÓPIA da instalação (Waha::RichNative::PreviewImage, feita na criação da mensagem pelo SafeFetch), nunca o
+  # endereço externo que quem criou mandou: o motor busca a imagem a partir da VPS (revisão da rodada 2: SSRF). O
+  # `mimetype` é o da cópia. O motor GOWS 2026.9.2 dá erro 500 sem a imagem. Sem ela (ou sem a conta), nil: sai o texto
+  # de hoje, e o WhatsApp mostra a prévia automática do site. O texto contém a url, como o motor exige.
   def link_preview
     return @link_preview if defined?(@link_preview)
 
@@ -25,7 +26,7 @@ module Waha::RichPayload::LinkAndEvent
     label = @rich[:label].to_s
     { text: "#{@body}\n\n#{url}",
       preview: { url: url, title: @rich[:header].presence || label, description: @rich[:footer].presence || label,
-                 image: { url: image, mimetype: PREVIEW_IMAGE_MIMETYPE } } }
+                 image: image } }
   end
 
   # O endereço do botão, como o tipo o valida (RichMessages::Types::LinkButton). nil quando o botão é inválido.
@@ -34,14 +35,13 @@ module Waha::RichPayload::LinkAndEvent
     @rich[:url] if button.error_for(@body).nil?
   end
 
+  # { url, mimetype } da cópia nossa, ou nil.
   def preview_image_url
     value = @rich[:image_url]
-    return unless value.is_a?(String) && value.length <= IMAGE_URL_MAX
+    return unless @account && value.is_a?(String) && value.length <= IMAGE_URL_MAX
 
-    uri = URI.parse(value)
-    value if uri.is_a?(URI::HTTPS) && uri.host.present?
-  rescue URI::InvalidURIError
-    nil
+    blob = Waha::RichNative::PreviewImage.own(value, @account)
+    { url: value, mimetype: blob.content_type } if blob
   end
 
   # ---- event → convite de evento (rodada 2) ----

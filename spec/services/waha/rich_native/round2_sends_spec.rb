@@ -41,21 +41,30 @@ describe 'WAHA rich native round 2 sends' do # rubocop:disable RSpec/DescribeCla
   describe Waha::RichPayload do
     let(:link) { { type: 'link_button', label: 'Ver proposta', url: 'https://exemplo.com.br/p', header: 'Proposta', footer: 'Válida hoje' } }
 
-    it 'sends the link button as a custom preview card only with an https image' do
-      native = payload(link.merge(image_url: 'https://cdn.exemplo.com.br/capa.jpg'), body: 'Segue a proposta')
-      allow(engine_client).to receive(:send_link_custom_preview).and_return({ 'id' => 'true_5511@c.us_3EB0LINK' })
+    it 'sends the link button as a custom preview card only with our own copy of the image, with its real type' do
+      with_modified_env FRONTEND_URL: 'https://chat.exemplo.com.br' do
+        account = create(:account)
+        blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: 'capa.png', content_type: 'image/png',
+                                                      identify: false, metadata: { 'c2y_preview_account_id' => account.id })
+        own = Waha::RichNative::PreviewImage.public_url(blob)
+        build = ->(rich, owner) { described_class.build(rich.deep_stringify_keys, body: 'Segue a proposta', locale: 'pt_BR', account: owner) }
+        native = build.call(link.merge(image_url: own), account)
+        allow(engine_client).to receive(:send_link_custom_preview).and_return({ 'id' => 'true_5511@c.us_3EB0LINK' })
 
-      native.deliver(engine_client, session: 's1', chat_id: '5511@c.us', id: 'ignored')
+        native.deliver(engine_client, session: 's1', chat_id: '5511@c.us', id: 'ignored')
 
-      expect(native.pre_generated_id?).to be(false)
-      expect(engine_client).to have_received(:send_link_custom_preview).with(
-        session: 's1', chat_id: '5511@c.us', text: "Segue a proposta\n\nhttps://exemplo.com.br/p",
-        preview: { url: 'https://exemplo.com.br/p', title: 'Proposta', description: 'Válida hoje',
-                   image: { url: 'https://cdn.exemplo.com.br/capa.jpg', mimetype: 'image/jpeg' } }
-      )
-      expect(native.request['kind']).to eq('sendLinkCustomPreview')
-      expect(payload(link, body: 'Segue')).to be_nil
-      expect(payload(link.merge(image_url: 'http://inseguro.com/a.jpg'), body: 'Segue')).to be_nil
+        expect(native.pre_generated_id?).to be(false)
+        expect(engine_client).to have_received(:send_link_custom_preview).with(
+          session: 's1', chat_id: '5511@c.us', text: "Segue a proposta\n\nhttps://exemplo.com.br/p",
+          preview: { url: 'https://exemplo.com.br/p', title: 'Proposta', description: 'Válida hoje',
+                     image: { url: own, mimetype: 'image/png' } }
+        )
+        expect(native.request['kind']).to eq('sendLinkCustomPreview')
+        refused = [build.call(link, account), build.call(link.merge(image_url: 'https://cdn.exemplo.com.br/capa.jpg'), account),
+                   build.call(link.merge(image_url: 'https://169.254.169.254/latest/meta-data'), account),
+                   build.call(link.merge(image_url: own), nil), build.call(link.merge(image_url: own), create(:account))]
+        expect(refused).to eq([nil] * 5)
+      end
     end
 
     it 'sends the event with epoch times and no cancel' do

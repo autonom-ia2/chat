@@ -28,6 +28,16 @@ module Waha::RichNative
     message.content_attributes.to_h[RichMessages::SENT_AS_KEY] == SENT_AS
   end
 
+  # Tipos que juntam a resposta de cada pessoa num registro só (enquete e convite de evento). Em GRUPO (revisão da
+  # rodada 2) eles saem como texto: o conector cria a conversa do grupo com o contato = o grupo (identificador
+  # '<id>@g.us'), então todos os participantes seriam o mesmo eleitor e um voto apagaria o do outro.
+  PER_PERSON_TYPES = %w[poll event].freeze
+  GROUP_SUFFIX = '@g.us'.freeze
+
+  def group_conversation?(conversation)
+    conversation&.contact&.identifier.to_s.end_with?(GROUP_SUFFIX)
+  end
+
   # "<opção>|<mensagem>" quando cabe em `max`; senão, só a opção (a volta cai na busca pela última lista). Lista com id de
   # opção que tem o separador nunca sai nativa (Waha::RichPayload): todo `rowId` nativo com "|" é nosso, com a
   # referência numérica no fim.

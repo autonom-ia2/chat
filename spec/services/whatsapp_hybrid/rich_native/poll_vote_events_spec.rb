@@ -47,6 +47,20 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
     expect(client).not_to have_received(:update_session)
   end
 
+  it 'does not restart a session that already has poll.vote on a refresh: event.response waits for the scheduled run' do
+    connection.account.enable_features!(Waha::RichNative::FLAG)
+    allow(client).to receive(:get_session).and_return(remote(%w[session.status message.ack poll.vote]))
+
+    manager.refresh!
+    expect(client).not_to have_received(:update_session)
+
+    expect(manager.subscribe_poll_vote!).to eq(:subscribed)
+    expect(client).to have_received(:update_session)
+      .with('hybrid-poll', config: hash_including('webhooks' => [hash_including('events' => %w[session.status message.ack poll.vote
+                                                                                               event.response])]))
+      .once
+  end
+
   describe 'scheduled subscription (subscribe_poll_vote!)' do
     it 'writes only the webhook, once, with the flag (no proxy change)' do
       connection.account.enable_features!(Waha::RichNative::FLAG)
@@ -100,7 +114,8 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
       connection.account.enable_features!(Waha::RichNative::FLAG)
 
       expect { post_signed }.to have_enqueued_job(WhatsappHybrid::RichNative::PollVoteJob)
-        .with(connection.id, { 'poll_id' => 'true_5511@c.us_3EB0POLL', 'options' => ['Sim'], 'vote_id' => 'V1', 'from_me' => false })
+        .with(connection.id, { 'poll_id' => 'true_5511@c.us_3EB0POLL', 'options' => ['Sim'], 'vote_id' => 'V1', 'from_me' => false,
+                               'timestamp' => 1 })
       expect(response).to have_http_status(:ok)
     end
 
@@ -122,7 +137,7 @@ describe WhatsappHybrid::RichNative::PollVoteEvents do
       going = reply.call('GOING')
       expect { post path, params: going, headers: sign.call(going) }.to have_enqueued_job(WhatsappHybrid::RichNative::EventResponseJob)
         .with(connection.id, { 'event_id' => 'true_5511@c.us_3EB0EVT', 'response' => 'going', 'extra_guests' => 0, 'response_id' => 'R1',
-                               'from_me' => false })
+                               'from_me' => false, 'timestamp' => 1 })
       unknown = reply.call('UNKNOWN')
       expect { post path, params: unknown, headers: sign.call(unknown) }.not_to have_enqueued_job(WhatsappHybrid::RichNative::EventResponseJob)
       expect(response).to have_http_status(:ok)

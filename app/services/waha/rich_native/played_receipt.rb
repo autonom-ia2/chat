@@ -24,6 +24,8 @@ module Waha::RichNative::PlayedReceipt
     nil
   end
 
+  # Nunca levanta: o status já foi gravado pelo update de sempre, e um erro aqui (trava, banco) voltaria 500 ao
+  # conector, que repetiria o sync. Falhou: só o `played_at` não fica (log com a classe do erro e o id).
   def self.record!(message, played_at)
     message.with_lock do
       next if message.content_attributes.to_h[KEY].present?
@@ -31,6 +33,8 @@ module Waha::RichNative::PlayedReceipt
       message.content_attributes = message.content_attributes.to_h.merge(KEY => played_at)
       message.save!(validate: false)
     end
+  rescue StandardError => e
+    Rails.logger.error("[waha] rich native played receipt message=#{message.id} #{e.class}")
   end
 
   private
@@ -42,5 +46,7 @@ module Waha::RichNative::PlayedReceipt
 
     played_at = receipt.parse(value)
     receipt.record!(@message, played_at) if played_at && receipt.applicable?(@message)
+  rescue StandardError => e
+    Rails.logger.error("[waha] rich native played receipt #{e.class}")
   end
 end

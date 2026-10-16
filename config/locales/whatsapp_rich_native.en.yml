@@ -22,12 +22,12 @@ en:
       event_response: "Event reply saved"
       view_once: "View once message saved"
     media_unavailable:
-      voice: "Voice message could not be downloaded. Ask the customer to send it again."
-      audio: "Audio could not be downloaded. Ask the customer to send it again."
-      image: "Photo could not be downloaded. Ask the customer to send it again."
-      video: "Video could not be downloaded. Ask the customer to send it again."
-      document: "File could not be downloaded. Ask the customer to send it again."
-      sticker: "Sticker could not be downloaded. Ask the customer to send it again."
+      voice: "Voice message not received (download failed)"
+      audio: "Audio not received (download failed)"
+      image: "Photo not received (download failed)"
+      video: "Video not received (download failed)"
+      document: "File not received (download failed)"
+      sticker: "Sticker not received (download failed)"
     ephemeral:
       "on": "Disappearing messages turned on (%{duration}). The content stays saved in chat2you."
       "off": "Disappearing messages turned off."
@@ -37,9 +37,9 @@ en:
       days:
         one: "%{count} day"
         other: "%{count} days"
-    event:
-      cloud_when: "When: %{when}"
-      cloud_where: "Where: %{where}"
+    ai:
+      location: "Location shared by the customer: %{place}. Map: %{url}"
+      live_location: "Live location shared by the customer (this is only the starting point; they may have moved): %{place}. Map: %{url}"
     message_actions:
       reaction_invalid: "This message cannot get a reaction. Use a single emoji."
       edit_invalid: "This message can no longer be edited. Only text sent less than %{minutes} minutes ago, without attachment or special format and up to %{max_length} characters, can be edited."

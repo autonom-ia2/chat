@@ -1,7 +1,9 @@
 # Prepend em WhatsappHybrid::SessionManager (chat#1709, fase 3): com a flag `whatsapp_rich_native`, a sessão do plano B
 # também assina os eventos `poll.vote` (o voto na enquete nativa volta ao painel, WhatsappHybrid::RichNative::PollVoteJob)
 # e `event.response` (a resposta ao convite de evento, rodada 2, WhatsappHybrid::RichNative::EventResponseJob). A sessão
-# que já assinava só o voto ganha a resposta na próxima assinatura agendada (um reinício a mais).
+# que já assinava só o voto ganha a resposta SÓ na assinatura agendada (`subscribe_poll_vote!`, um reinício a mais, numa
+# janela combinada): nas outras sincronizações, ter o `poll.vote` basta (revisão da rodada 2: sem isso, toda sessão
+# híbrida com a flag reiniciaria na primeira sincronização depois do deploy, sem janela).
 # Gravar a configuração REINICIA a sessão no motor. Por isso:
 # - no envio de mensagem e ao reconectar (modo :skip do `sync_remote_config!`), a assinatura NÃO é conferida: a sessão
 #   conta como configurada e nada é gravado;
@@ -53,9 +55,15 @@ module WhatsappHybrid::RichNative::PollVoteEvents
     configured = super
     return configured unless configured && @poll_vote_config_mode != :skip && poll_vote_wanted?
 
+    required = required_events
     Array(remote.dig('config', 'webhooks')).any? do |hook|
-      hook.is_a?(Hash) && hook['url'] == connection.webhook_url && (EVENTS - Array(hook['events'])).empty?
+      hook.is_a?(Hash) && hook['url'] == connection.webhook_url && (required - Array(hook['events'])).empty?
     end
+  end
+
+  # `event.response` só é exigido na assinatura agendada; nas outras sincronizações, o `poll.vote` basta.
+  def required_events
+    @poll_vote_config_mode == :subscribe ? EVENTS : [EVENT]
   end
 
   def poll_vote_wanted?

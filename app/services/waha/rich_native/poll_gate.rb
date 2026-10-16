@@ -6,6 +6,7 @@
 # - delivery_mode: flag desligada = :refused (como tipo desconhecido). Com ela, no WhatsApp oficial com a janela aberta
 #   a resposta original seria :native, mas a Cloud não tem enquete nem convite de evento: sai texto (:text). O plano B
 #   do Híbrido (janela fechada) continua :native, pela regra do WhatsappHybrid::RichNative::DeliveryMode.
+# - build: o convite de evento recebe o fuso da conta, para a data da versão em texto.
 module Waha::RichNative::PollGate
   TYPE = 'poll'.freeze
   FLAG_TYPES = %w[poll event].freeze
@@ -23,6 +24,14 @@ module Waha::RichNative::PollGate
     return mode unless FLAG_TYPES.include?(type) && mode == :native && whatsapp_cloud?(inbox)
 
     native_by_hybrid?(inbox, type, conversation, options[:message]) ? mode : :text
+  end
+
+  # O convite de evento escreve a data da versão em texto no fuso da conta.
+  def build(message)
+    return super unless type_class_of(message) == RichMessages::Types::Event
+
+    zone = Crm::Timezone::Resolver.new(account: message.account).zone_or_default
+    RichMessages::Types::Event.new(message.content_attributes[RichMessages::KEY], zone: zone)
   end
 
   def flag_type_message?(message)

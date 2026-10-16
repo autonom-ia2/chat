@@ -13,7 +13,8 @@
 # - location sai por `sendLocation`; contact por `sendContactVcard`.
 # - poll (enquete, chat#1709 fase 3) sai por `sendPoll`: a pergunta é o corpo, as opções vão pelo título (o voto volta
 #   pelo título) e `multiple` vira `multipleAnswers`.
-# - link_button (rodada 2) sai por `sendLinkCustomPreview` (cartão com título, descrição e imagem), só com `image_url`.
+# - link_button (rodada 2) sai por `sendLinkCustomPreview` (cartão com título, descrição e imagem), só com `image_url`
+#   que é a cópia da instalação (Waha::RichNative::PreviewImage) e com a conta (`account:`).
 # - event (rodada 2) sai por `sendEvent` (convite com "Vou / Não vou"); cancelar o evento o motor não faz.
 #
 # Teste em aparelho real (16/10/2026, motor 2026.9.2 GOWS PLUS): os três chegam nativos (comentário na #1709).
@@ -48,21 +49,24 @@ class Waha::RichPayload
 
   # reference: o id da mensagem no Chatwoot, que vai em cada `rowId` da lista (Waha::RichNative.row_id) para a resposta
   # do cliente voltar ligada a esta mensagem. Sem ela, o `rowId` é só o id da opção.
-  def self.build(rich_message, body:, locale: I18n.default_locale, reference: nil)
+  # account: a conta da mensagem; só o cartão de prévia do link a usa (a imagem precisa ser a cópia desta conta,
+  # Waha::RichNative::PreviewImage). Sem ela, o link_button não sai nativo.
+  def self.build(rich_message, body:, locale: I18n.default_locale, reference: nil, account: nil)
     return unless rich_message.is_a?(Hash)
 
     rich = rich_message.with_indifferent_access
     return unless KINDS.include?(rich[:type])
 
-    payload = new(rich, body: body.to_s, locale: locale, reference: reference)
+    payload = new(rich, body: body.to_s, locale: locale, reference: reference, account: account)
     payload if payload.valid?
   end
 
-  def initialize(rich, body:, locale:, reference: nil)
+  def initialize(rich, body:, locale:, reference: nil, account: nil)
     @rich = rich
     @reference = reference
     @body = body
     @locale = locale
+    @account = account
     @kind = rich[:type]
   end
 

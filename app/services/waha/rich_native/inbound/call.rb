@@ -2,8 +2,10 @@
 # do cliente (a IA respondia "Chamada de voz recebida"). A atividade não vai a webhook nem dispara a IA. Uma ligação =
 # UMA linha na conversa, com o resumo em `waha_call_summary` (formato da tela do Frontend geral, #1702):
 #   { call_id, outcome: missed | rejected | accepted (| ringing enquanto toca), is_video, at: ISO 8601, ended?: true }
-# `ended: true` marca a ligação atendida que terminou; `at` é a hora do evento. Por dentro, o texto da linha segue o
-# estado (ringing, missed, declined, answered, ended):
+# `ended: true` marca a ligação atendida que terminou; `at` é a hora da ligação: a do primeiro evento dela (o toque, ou
+# o desfecho que chegou sem toque), no relógio do WhatsApp quando o conector manda `timestamp` (Waha::RichNative::
+# EventTime), senão a hora em que chegou. O desfecho troca o texto e o outcome, e mantém o `at` da linha. Por dentro, o
+# texto da linha segue o estado (ringing, missed, declined, answered, ended):
 # - received: "Ligação de voz/vídeo recebida" (ringing). Fica VISÍVEL: na sessão do WAHA (aparelho vinculado), atender
 #   ou recusar no celular da empresa chega como accepted/rejected_elsewhere, e o motor (GOWS) descarta esse fim; se
 #   nenhum desfecho chegar, a linha da ligação continua na conversa.
@@ -34,14 +36,16 @@ module Waha::RichNative::Inbound::Call
     is_video = data['is_video'] == true
     line = call_line(message.conversation, call_id)
     state = state_for(line, data)
-    return show!(message, summary(call_id, state, is_video)) if line.nil?
+    at = line&.content_attributes.to_h.dig(SUMMARY_KEY, 'at').presence || Waha::RichNative::EventTime.iso8601(data['timestamp'])
+    summary = summary(call_id, state, is_video, at)
+    return show!(message, summary) if line.nil?
 
-    update_line!(line, summary(call_id, state, is_video)) unless state == 'ringing'
-    Waha::RichNative::Inbound.hide!(message, 'call', SUMMARY_KEY => summary(call_id, state, is_video))
+    update_line!(line, summary) unless state == 'ringing'
+    Waha::RichNative::Inbound.hide!(message, 'call', SUMMARY_KEY => summary)
   end
 
-  def summary(call_id, state, is_video)
-    base = { 'call_id' => call_id, 'outcome' => OUTCOMES.fetch(state), 'is_video' => is_video, 'at' => Time.current.iso8601 }
+  def summary(call_id, state, is_video, at)
+    base = { 'call_id' => call_id, 'outcome' => OUTCOMES.fetch(state), 'is_video' => is_video, 'at' => at }
     state == 'ended' ? base.merge('ended' => true) : base
   end
 

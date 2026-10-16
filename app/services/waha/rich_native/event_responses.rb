@@ -32,21 +32,30 @@ module Waha::RichNative::EventResponses
     RESPONSES.include?(response)
   end
 
-  def apply!(event, sender:, response:, extra_guests: 0)
+  # timestamp: a hora da resposta no WhatsApp (`timestampMs`, Waha::RichNative::EventTime). A resposta guardada da mesma
+  # pessoa só é substituída por uma igual ou mais nova: um job refeito com a resposta antiga não troca a atual.
+  def apply!(event, sender:, response:, extra_guests: 0, timestamp: nil)
+    at = Waha::RichNative::EventTime.iso8601(timestamp)
     event.with_lock do
-      responses = Array(event.content_attributes.to_h[KEY]).reject do |entry|
-        entry.is_a?(Hash) && entry['sender_type'] == sender.class.name && entry['sender_id'] == sender.id
-      end
+      current = Array(event.content_attributes.to_h[KEY])
+      previous = current.find { |entry| same_person?(entry, sender) }
+      next if previous && !Waha::RichNative::EventTime.replaces?(at, previous['at'])
+
+      responses = current.reject { |entry| same_person?(entry, sender) }
       responses << { 'sender_type' => sender.class.name, 'sender_id' => sender.id, 'response' => response,
-                     'extra_guests' => extra_guests.to_i, 'at' => Time.current.iso8601 }
+                     'extra_guests' => extra_guests.to_i, 'at' => at }
       event.content_attributes = event.content_attributes.to_h.merge(KEY => responses)
       event.save!(validate: false)
     end
   end
 
+  def same_person?(entry, sender)
+    entry.is_a?(Hash) && entry['sender_type'] == sender.class.name && entry['sender_id'] == sender.id
+  end
+
   # Grava a resposta no evento e transforma a mensagem da resposta (ainda não gravada) em atividade escondida.
-  def record_response!(message, event, response:, extra_guests: 0)
-    apply!(event, sender: event.conversation.contact, response: response, extra_guests: extra_guests)
+  def record_response!(message, event, response:, extra_guests: 0, timestamp: nil)
+    apply!(event, sender: event.conversation.contact, response: response, extra_guests: extra_guests, timestamp: timestamp)
     Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => event.id)
   end
 end

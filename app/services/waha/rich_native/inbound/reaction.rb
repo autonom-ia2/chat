@@ -17,7 +17,7 @@ module Waha::RichNative::Inbound::Reaction
              else
                Waha::RichNative::Reactions.contact_author(message.conversation.contact_id)
              end
-    Waha::RichNative::Reactions.apply!(target, emoji: data['emoji'].to_s, author: author)
+    Waha::RichNative::Reactions.apply!(target, emoji: data['emoji'].to_s, author: author, timestamp: data['timestamp'])
     Waha::RichNative::Inbound.hide!(message, 'reaction', 'reaction_applied_to' => target.id)
   end
 end

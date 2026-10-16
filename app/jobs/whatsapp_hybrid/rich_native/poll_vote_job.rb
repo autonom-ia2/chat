@@ -22,7 +22,7 @@ class WhatsappHybrid::RichNative::PollVoteJob < ApplicationJob
     return Rails.logger.info("[whatsapp_hybrid] poll vote without our poll inbox=#{connection.inbox_id}") if poll.nil?
 
     selected = Waha::RichNative::PollVote.selected_for(poll, fields['options'])
-    record_vote!(poll, selected, fields['vote_id']) if selected
+    record_vote!(poll, selected, fields) if selected
   end
 
   private
@@ -36,14 +36,15 @@ class WhatsappHybrid::RichNative::PollVoteJob < ApplicationJob
     WhatsappHybrid::RichNative::PollLookup.find(connection.inbox_id, physical_id)
   end
 
-  def record_vote!(poll, selected, vote_id)
+  def record_vote!(poll, selected, fields)
+    vote_id = fields['vote_id']
     source_id = "#{SOURCE_PREFIX}#{vote_id}" if vote_id.present?
     return if source_id && poll.conversation.messages.exists?(source_id: source_id)
 
     message = poll.conversation.messages.new(account_id: poll.account_id, inbox_id: poll.inbox_id, message_type: :incoming,
                                              sender: poll.conversation.contact, source_id: source_id,
                                              additional_attributes: { WhatsappHybrid::RichNative::WindowNeutral::KEY => true })
-    Waha::RichNative::PollVote.record_vote!(message, poll, selected)
+    Waha::RichNative::PollVote.record_vote!(message, poll, selected, timestamp: fields['timestamp'])
     Waha::RichNative::InternalWrite.mark!(message).save!
   end
 end

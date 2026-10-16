@@ -60,10 +60,15 @@ module Waha::RichNative::WahaInbox
   end
 
   # Rota de `Waha::RichNative.types_for` (o campo `whatsapp_api_rich_native` da conversa). Caixa WAHA não tem janela.
+  # Em conversa de grupo, sem enquete nem convite de evento (Waha::RichNative::PER_PERSON_TYPES).
   def native_types_for(conversation, api_reply: nil) # rubocop:disable Lint/UnusedMethodArgument
     return [] unless conversation.inbox&.channel_type == 'Channel::Api' && Waha::EngineCapabilities.engines.any?
 
-    types_for_inbox(conversation.inbox, Waha::RichNative.account_of(conversation))
+    types = types_for_inbox(conversation.inbox, Waha::RichNative.account_of(conversation))
+    # Só olha o contato quando há enquete ou evento a tirar (a lista de conversas já traz o contato carregado).
+    return types if !types.intersect?(Waha::RichNative::PER_PERSON_TYPES) || !Waha::RichNative.group_conversation?(conversation)
+
+    types - Waha::RichNative::PER_PERSON_TYPES
   end
 
   # A decisão de uma mensagem: tipo que o motor declara (checagens baratas primeiro: caixa de outro tipo ou lista de
@@ -71,15 +76,23 @@ module Waha::RichNative::WahaInbox
   # RichMessages::ApiInboxSentAsText), formato sem erro e pedido que o tradutor monta.
   def native_for?(message)
     return false unless RichMessages.rich?(message) && RichMessages.type_class_of(message)
-    return false unless types_for_inbox(message.inbox, message.account).include?(message.content_attributes[RichMessages::KEY]['type'])
+    return false unless sendable_type?(message, message.content_attributes[RichMessages::KEY]['type'])
     return false unless RichMessages.goes_to_channel?(message) && RichMessages::ApiInboxSentAsText.delivered_by_inbox_webhook?(message)
 
     RichMessages.error_for(message).nil? && payload_for(message).present?
   end
 
+  # O motor da caixa declara o tipo; enquete e convite de evento, nunca em grupo (Waha::RichNative::PER_PERSON_TYPES).
+  def sendable_type?(message, type)
+    return false unless types_for_inbox(message.inbox, message.account).include?(type)
+
+    !(Waha::RichNative::PER_PERSON_TYPES.include?(type) && Waha::RichNative.group_conversation?(message.conversation))
+  end
+
   # O pedido ao motor. `reference`: o id da mensagem, que vai em cada `rowId` da lista (na criação ainda não existe).
   def payload_for(message, reference: nil)
     rich = message.content_attributes[RichMessages::KEY]
-    Waha::RichPayload.build(rich, body: message.content.to_s, locale: message.account.locale, reference: reference)
+    Waha::RichPayload.build(rich, body: message.content.to_s, locale: message.account.locale, reference: reference,
+                                  account: message.account)
   end
 end

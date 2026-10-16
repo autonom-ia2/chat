@@ -8,11 +8,13 @@ module Waha::RichNative::Inbound::PollVote
 
   def apply(message, data)
     return unless message.incoming? && data.is_a?(Hash)
+    # Em grupo o voto não é agregado (todos seriam o mesmo eleitor): fica o texto do conector, visível.
+    return if Waha::RichNative.group_conversation?(message.conversation)
 
     poll = Waha::RichNative::PollVote.poll_for(data['poll_message_id'], conversation_id: message.conversation_id, inbox_id: message.inbox_id)
     return if poll.nil?
 
     selected = Waha::RichNative::PollVote.selected_for(poll, data['options'])
-    Waha::RichNative::PollVote.record_vote!(message, poll, selected) if selected
+    Waha::RichNative::PollVote.record_vote!(message, poll, selected, timestamp: data['timestamp']) if selected
   end
 end

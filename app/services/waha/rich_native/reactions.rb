@@ -31,15 +31,26 @@ module Waha::RichNative::Reactions
     { 'sender_type' => USER_TYPE, 'sender_id' => user_id }
   end
 
-  # author: contact_author ou business_author.
-  def apply!(message, emoji:, author:)
+  # author: contact_author ou business_author. timestamp: a hora da reação no WhatsApp, quando o conector a mandar
+  # (Waha::RichNative::EventTime); a reação guardada do mesmo autor só muda por uma igual ou mais nova. Sem ela (o
+  # painel, e o conector c2y-rich-3, que ainda não manda a hora da reação), vale a ordem de chegada.
+  def apply!(message, emoji:, author:, timestamp: nil)
+    at = Waha::RichNative::EventTime.iso8601(timestamp)
     message.with_lock do
-      reactions = Array(message.content_attributes.to_h[KEY]).reject { |reaction| same_author?(reaction, author) }
-      reactions << { 'emoji' => emoji }.merge(author).merge('at' => Time.current.iso8601) if emoji.present?
+      current = Array(message.content_attributes.to_h[KEY])
+      next if stale?(current.find { |reaction| same_author?(reaction, author) }, at, timestamp)
+
+      reactions = current.reject { |reaction| same_author?(reaction, author) }
+      reactions << { 'emoji' => emoji }.merge(author).merge('at' => at) if emoji.present?
       attributes = message.content_attributes.to_h
       message.content_attributes = reactions.empty? ? attributes.except(KEY) : attributes.merge(KEY => reactions)
       message.save!(validate: false)
     end
+  end
+
+  # Só com a hora do WhatsApp: a reação guardada é mais nova que esta.
+  def stale?(previous, at, timestamp)
+    timestamp.present? && previous.present? && !Waha::RichNative::EventTime.replaces?(at, previous['at'])
   end
 
   def same_author?(reaction, author)

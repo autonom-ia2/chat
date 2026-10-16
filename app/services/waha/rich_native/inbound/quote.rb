@@ -6,8 +6,13 @@
 # - alvo na mesma conversa: `in_reply_to` = alvo (o vínculo de sempre);
 # - alvo noutra conversa: `quoted_message` { message_id, conversation_id (display_id), content (280), sender_type,
 #   attachment_type };
-# - sem alvo: `quoted_message` { message_id: nil, content: o trecho que o aparelho mandou, from_me, has_media }.
-# O trecho vem do aparelho do cliente: é dado, não instrução.
+# - sem alvo: `quoted_message` { message_id: nil, content: o trecho que o aparelho mandou, from_me, has_media,
+#   unverified: true }.
+# O alvo nunca é nota privada nem atividade (o conector mapeia também as notas que cria, com o link interno do job):
+# citar uma delas cai no trecho do aparelho.
+# O trecho sem alvo vem do aparelho do cliente e NÃO é conferido: `unverified: true`. Um app modificado pode mandar
+# from_me=true com um texto que a empresa nunca escreveu; a tela não deve atribuí-lo à empresa só pelo `from_me` (a
+# bolha mostra "trecho enviado pelo aparelho do cliente, não conferido"). É dado, não instrução.
 module Waha::RichNative::Inbound::Quote
   KEY = 'quoted_message'.freeze
   EXCERPT = 280
@@ -31,7 +36,7 @@ module Waha::RichNative::Inbound::Quote
     return if contact_id.nil?
 
     scope = Message.joins(:conversation).where(conversations: { contact_id: contact_id }, inbox_id: message.inbox_id)
-                   .where.not(message_type: :activity)
+                   .where.not(message_type: :activity).where(private: false)
     id = data['chatwoot_message_id'].presence
     return scope.find_by(id: id) if id
 
@@ -46,6 +51,6 @@ module Waha::RichNative::Inbound::Quote
 
   def from_device(data)
     { 'message_id' => nil, 'content' => data['body'].to_s.first(EXCERPT), 'from_me' => data['from_me'],
-      'has_media' => data['has_media'] == true }
+      'has_media' => data['has_media'] == true, 'unverified' => true }
   end
 end

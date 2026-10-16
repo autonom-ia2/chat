@@ -12,7 +12,8 @@
 # - flag LIGADA na caixa WAHA comum: cada chave vira a apresentação nova (Waha::RichNative::Inbound::<Tipo>), numa ordem
 #   fixa (ORDER):
 #   1. as que ABSORVEM a mensagem (voto, resposta ao evento, reação, edição, apagada, ligação, álbum): exclusivas, a
-#      primeira presente decide e as outras saem; quando ela absorve (a mensagem vira atividade), nada mais roda;
+#      primeira presente decide e as outras saem; quando ela absorve (a mensagem vira atividade), nada mais roda. A
+#      apagada, por ora, marca a original e mantém a nota da main visível (Waha::RichNative::Inbound::Revoke);
 #   2. as que mudam o conteúdo (mídia que falhou, localização, contato, pedido, desconhecida);
 #   3. a mídia (`waha_media`); 4. a citação (`waha_quote`); 5. o contexto (`waha_context`: encaminhada, temporária).
 #   Erro num passo: só ele não vale (log com a classe do erro) e os outros seguem; a criação nunca é interrompida.
@@ -52,9 +53,19 @@ class Waha::RichNative::Inbound
     return unless waha_inbox?(message) && from_connector?(message)
 
     apply(message, attributes.slice(*present))
+    refresh_processed_content(message)
   rescue StandardError => e
     Rails.logger.error("[waha] rich native inbound #{e.class}")
     message.content_attributes = message.content_attributes.to_h.except(*KEYS)
+    refresh_processed_content(message)
+  end
+
+  # Este callback é `before_create`, que roda DEPOIS dos `before_save`: o `processed_message_content` foi calculado do
+  # texto do conector (a nota da mídia que falhou traz o link interno do job; a localização tinha o texto antigo). Ele
+  # vai a todo webhook e à condição "conteúdo contém" das automações: recalcular do `content` transformado, pela mesma
+  # regra do modelo (Message#ensure_processed_message_content).
+  def self.refresh_processed_content(message)
+    message.send(:ensure_processed_message_content)
   end
 
   # present: { chave => dados } das chaves que o conector mandou.

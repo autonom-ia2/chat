@@ -6,7 +6,9 @@
 # é desconhecido, como na main). Nativo só pelo motor WAHA (`sendEvent`, plano B do Híbrido e caixa WAHA comum com o
 # conector c2y-rich-3): a Cloud API não tem convite de evento, então lá sai como texto e a bolha mostra "Enviado como
 # texto". O motor não cancela evento: cancelar não é oferecido (mande um texto).
-# A data no texto sai no fuso que veio no `start_at` (quem manda usa o fuso da conta), sem nome de fuso.
+# A data no texto sai no fuso da conta (Crm::Timezone::Resolver, passado por Waha::RichNative::PollGate#build), sem
+# nome de fuso; sem a conta, no fuso que veio no `start_at`. As mensagens de erro ficam em português no código, como as
+# dos outros tipos (RichMessages::Types::*): são a resposta 422 da API, não texto de tela.
 class RichMessages::Types::Event
   BODY_MAX = 255
   LOCATION_MAX = 255
@@ -21,7 +23,9 @@ class RichMessages::Types::Event
   LOCATION_INVALID = "O local do convite de evento precisa ser um texto de até #{LOCATION_MAX} caracteres, em uma linha só.".freeze
   DESCRIPTION_INVALID = "A descrição do convite de evento precisa ser um texto de até #{DESCRIPTION_MAX} caracteres.".freeze
 
-  def initialize(payload)
+  # zone: o fuso da conta (ActiveSupport::TimeZone) para o texto; nil = o fuso que veio.
+  def initialize(payload, zone: nil)
+    @zone = zone
     @start_text = payload['start_at']
     @end_text = payload['end_at']
     @location_name = payload['location_name']
@@ -51,12 +55,18 @@ class RichMessages::Types::Event
 
   # Data e hora (e o fim), o local e a descrição, uma linha cada. Sem palavras: serve a qualquer idioma.
   def fallback_text(_body)
-    when_line = "🕐 #{start_at.strftime(DATE_FORMAT)}"
-    when_line += "–#{end_at.strftime(end_at.to_date == start_at.to_date ? TIME_FORMAT : DATE_FORMAT)}" if end_at
+    starts = local(start_at)
+    ends = end_at && local(end_at)
+    when_line = "🕐 #{starts.strftime(DATE_FORMAT)}"
+    when_line += "–#{ends.strftime(ends.to_date == starts.to_date ? TIME_FORMAT : DATE_FORMAT)}" if ends
     [when_line, (@location_name.presence && "📍 #{@location_name}"), @description.presence].compact.join("\n")
   end
 
   private
+
+  def local(time)
+    @zone ? time.in_time_zone(@zone) : time
+  end
 
   def date_error
     return START_INVALID if start_at.nil? || start_at <= Time.current

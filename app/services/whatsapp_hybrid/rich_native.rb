@@ -39,7 +39,8 @@ module WhatsappHybrid::RichNative
     return unless RichMessages.rich?(message) && enabled?(message.account)
 
     rich = message.content_attributes[RichMessages::KEY]
-    Waha::RichPayload.build(rich, body: RichMessages.body_text(message), locale: message.account.locale, reference: message.id)
+    Waha::RichPayload.build(rich, body: RichMessages.body_text(message), locale: message.account.locale, reference: message.id,
+                                  account: message.account)
   end
 
   # O motor recusou o pedido e nada saiu: dá para mandar o texto sem duplicar. Sem resposta, resposta ilegível, 5xx

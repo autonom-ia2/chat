@@ -36,35 +36,46 @@ module Waha::RichNative::Inbound::Context
     previous.nil? ? expiration.positive? : previous != expiration
   end
 
-  # after_create_commit de Message.
+  # after_create_commit de Message. Nunca levanta: a mensagem do cliente já está gravada, e uma exceção aqui voltaria
+  # 500 ao conector (que repetiria o job e gravaria a mensagem DE NOVO) e, pela ordem inversa dos after_commit, ainda
+  # tiraria o `message_created` dela. Falhou: só o aviso não sai (log com a classe do erro).
   def after_commit(message)
     return unless message.instance_variable_defined?(PENDING)
 
     expiration = message.instance_variable_get(PENDING)
     message.remove_instance_variable(PENDING)
     notify!(message.conversation, expiration)
+  rescue StandardError => e
+    Rails.logger.error("[waha] rich native ephemeral notice message=#{message.id} #{e.class}")
   end
 
+  # Sem as validações do modelo (a de rajada recusaria o aviso numa conversa movimentada), como as outras gravações.
   def notify!(conversation, expiration)
-    conversation.update!(additional_attributes: conversation.additional_attributes.to_h.merge(CONVERSATION_KEY => expiration))
+    conversation.additional_attributes = conversation.additional_attributes.to_h.merge(CONVERSATION_KEY => expiration)
+    conversation.save!(validate: false)
     activity = conversation.messages.new(account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :activity,
                                          content: notice(conversation.account, expiration),
                                          content_attributes: { ACTIVITY_KEY => { 'expiration_seconds' => expiration,
                                                                                  'at' => Time.current.iso8601 } })
-    Waha::RichNative::InternalWrite.mark!(activity).save!
+    Waha::RichNative::InternalWrite.mark!(activity).save!(validate: false)
   end
 
   def notice(account, expiration)
     key = expiration.positive? ? 'waha.ephemeral.on' : 'waha.ephemeral.off'
-    I18n.t(key, locale: account.locale, duration: duration(account, expiration))
+    translate(key, account, duration: duration(account, expiration))
   end
 
   def duration(account, seconds)
     return '' unless seconds.positive?
 
     days = seconds / 1.day.to_i
-    return I18n.t('waha.ephemeral.hours', count: seconds / 1.hour.to_i, locale: account.locale) if days.zero?
+    return translate('waha.ephemeral.hours', account, count: seconds / 1.hour.to_i) if days.zero?
 
-    I18n.t('waha.ephemeral.days', count: days, locale: account.locale)
+    translate('waha.ephemeral.days', account, count: days)
+  end
+
+  # No idioma da conta; sem a chave nele (só há en e pt_BR), no idioma padrão.
+  def translate(key, account, **)
+    I18n.t(key, **, locale: account.locale, default: I18n.t(key, **))
   end
 end

@@ -41,7 +41,7 @@ module WhatsappHybrid::RichNative::PollVoteWebhook
     poll = payload['poll'].is_a?(Hash) ? payload['poll'] : {}
     vote = payload['vote'].is_a?(Hash) ? payload['vote'] : {}
     { 'poll_id' => poll['id'].to_s, 'options' => Array(vote['selectedOptions']).grep(String), 'vote_id' => vote['id'].to_s,
-      'from_me' => vote['fromMe'] == true }
+      'from_me' => vote['fromMe'] == true, 'timestamp' => vote['timestamp'] }
   end
 
   # payload: { id, from, fromMe, eventCreationKey: { id }, eventResponse: { response, timestampMs, extraGuestCount } }.
@@ -53,6 +53,6 @@ module WhatsappHybrid::RichNative::PollVoteWebhook
     return if response.nil?
 
     { 'event_id' => key['id'].to_s, 'response' => response, 'extra_guests' => answer['extraGuestCount'].to_i,
-      'response_id' => payload['id'].to_s, 'from_me' => payload['fromMe'] == true }
+      'response_id' => payload['id'].to_s, 'from_me' => payload['fromMe'] == true, 'timestamp' => answer['timestampMs'] }
   end
 end
