@@ -78,7 +78,65 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     conversa_com_aviso
 
     expect(itens(pedidos.sole)[-2]).to eq(['developer', moldura.regra_automatica(marca)])
-    expect(moldura.regra_automatica(marca)).to include('não peça desculpa por elas')
+  end
+
+  # Revisão final: o que o atendimento já enviou; continuar o assunto, sem saudação dupla, sem desculpa nem negar a
+  # autoria; só o horário de atendimento cede; data e convite valem; o cabeçalho distingue da mensagem da equipe.
+  it 'a regra trata a mensagem automática como o que o atendimento já enviou' do
+    regra = moldura.regra_automatica(marca)
+
+    expect(regra).to include("começam com #{marca} seguida de \"Mensagem automática do canal\"")
+    expect(regra).to include('o que o atendimento já enviou automaticamente ao cliente')
+    expect(regra).to include('o que distingue a automática é o cabeçalho "Mensagem automática do canal"')
+    expect(regra).to include('Continue o assunto delas com naturalidade')
+    expect(regra).to include('não cumprimente de novo')
+    expect(regra).to include('Não peça desculpa por elas e não diga ao cliente que não foi você')
+    expect(regra).to include('vale o horário que você sabe agora; datas e convites de reunião valem como foram enviados')
+  end
+
+  it 'regra do turno com pessoa e automática juntas: a da equipe e a automática, nessa ordem' do
+    ana = create(:user, account: account, role: :agent, name: 'Ana')
+    mensagens = [escreve(:incoming, 'Oi'), escreve(:template, aviso), escreve(:outgoing, 'Já vejo para você.', sender: ana)]
+
+    regra = Autonomia::Agents::Operate::PessoaDaEquipe.regra_do_turno(mensagens, marca: marca)
+
+    expect(regra).to eq("#{moldura.regra(marca)}\n\n#{moldura.regra_automatica(marca)}")
+  end
+
+  describe 'caixa WhatsApp com template e eco do celular' do
+    let(:inbox) do
+      create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                validate_provider_config: false).inbox
+    end
+
+    def eco(texto)
+      create(:message, :bot_message, account: account, conversation: conversation, inbox: inbox, content: texto,
+                                     status: :delivered, content_attributes: { external_echo: true },
+                                     created_at: Time.current - 60 + conversation.messages.count)
+    end
+
+    it 'o eco fica com a moldura do celular e o template com a automática; cada um traz a sua regra' do
+      escreve(:incoming, 'Oi')
+      escreve(:template, aviso)
+      eco('Te respondo amanhã cedo.')
+      responder(escreve(:incoming, 'Ok'))
+
+      itens = itens(pedidos.sole)
+      expect(itens).to include(['user', moldura.do_celular('Te respondo amanhã cedo.', marca)])
+      expect(itens).to include(['user', moldura.automatica(aviso, marca)])
+      expect(itens).not_to include(['user', moldura.automatica('Te respondo amanhã cedo.', marca)])
+      expect(itens[-2]).to eq(['developer', "#{moldura.regra(marca)}\n\n#{moldura.regra_automatica(marca)}"])
+    end
+
+    it 'só o eco: moldura do celular e só a regra da equipe, sem a automática' do
+      escreve(:incoming, 'Oi')
+      eco('Te respondo amanhã cedo.')
+      responder(escreve(:incoming, 'Ok'))
+
+      itens = itens(pedidos.sole)
+      expect(itens).to include(['user', moldura.do_celular('Te respondo amanhã cedo.', marca)])
+      expect(itens[-2]).to eq(['developer', moldura.regra(marca)])
+    end
   end
 
   it 'saída pública sem remetente (automação) também ganha a moldura; o eco do app fora do WhatsApp não' do
@@ -120,7 +178,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   describe 'a resposta que imita a moldura automática' do
-    let(:resposta_do_modelo) { "Mensagem automática do canal: o sistema escreveu ao cliente. Não foi o cliente nem você.\nVoltamos às 9h." }
+    let(:resposta_do_modelo) { "Mensagem automática do canal: o atendimento escreveu ao cliente. Não foi o cliente nem você.\nVoltamos às 9h." }
 
     it 'sai sem o cabeçalho' do
       conversa_com_aviso

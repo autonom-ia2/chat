@@ -19,9 +19,9 @@
 # reconciliador não a acha e o eco vira mensagem nova; no histórico, esse texto da IA apareceria uma segunda vez, como
 # da equipe pelo celular.
 #
-# MENSAGEM AUTOMÁTICA DO CANAL (#1691): o template da caixa e a saída sem remetente (automação) também ganham moldura,
-# com a mesma marca ("Mensagem automática do canal: o sistema escreveu ao cliente"), e uma regra própria do turno: a IA
-# não as escreveu e não pede desculpa por elas. Não calam a IA (não são pessoa).
+# MENSAGEM AUTOMÁTICA DO CANAL (#1691): o template da caixa, a saída sem remetente (automação) e o envio automático em
+# nome de alguém (envio_automatico?) ganham moldura com a mesma marca e o cabeçalho "Mensagem automática do canal", e
+# uma regra própria do turno: é o que o atendimento já enviou ao cliente. Não calam a IA (não são pessoa).
 #
 # Mensagem que FALHOU no envio (`status: failed`) não chegou ao cliente: não cala a IA, não ganha moldura e sai do
 # histórico (ninguém a disse ao cliente). Fora da Fase 2 nada aqui é aplicado: o histórico e a entrega ficam como na main.

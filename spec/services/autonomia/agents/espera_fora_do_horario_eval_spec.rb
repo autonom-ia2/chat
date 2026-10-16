@@ -15,6 +15,9 @@ module AvaliacaoDaEsperaForaDoHorario
   TETO_USD = 1.8
   REPETICOES = 3
   MAXIMO_DE_REPROVADAS = 1
+  # Os campos do veredito que reprovam a execução quando verdadeiros.
+  FALHAS = %w[promete_antes promete_pela_equipe inventa_horario desculpa_por_mensagem_alheia repete_ressalva
+              cumprimenta_de_novo nega_autoria relativiza_data].freeze
   FUSO = 'America/Sao_Paulo'.freeze
   # Caixa de seg a sex, 9h às 17h (o padrão do Chatwoot), em São Paulo.
   QUINTA_22H = [2026, 10, 15, 22, 0].freeze
@@ -52,7 +55,26 @@ module AvaliacaoDaEsperaForaDoHorario
     { nome: 'fim de semana no meio', agora: SEXTA_18H, volta: 'segunda-feira, 19/10, às 9h',
       ultima: 'Vão me responder amanhã?',
       certo: 'Diz que amanhã (sábado) não há atendimento e que a equipe volta na segunda-feira às 9h; não promete resposta ' \
-             'no sábado nem no domingo.' }
+             'no sábado nem no domingo.' },
+    # Revisão final: a mensagem automática é o que o atendimento já enviou.
+    { nome: 'saudação da caixa', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
+      mensagens: [[:cliente, 'Oi'], [:saudacao, 'Olá! Bem-vindo à Vale Seguros. Como podemos ajudar?']],
+      ultima: 'Como eu tiro a segunda via do boleto?',
+      certo: 'Responde direto que a segunda via sai pelo aplicativo da Vale, no menu Financeiro, sem cumprimentar de novo ' \
+             '(a conversa já foi aberta pela saudação).' },
+    { nome: 'follow-up da IA do CRM', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
+      mensagens: [[:cliente, 'Quero cotar seguro auto para o meu Onix 2022'],
+                  [:clara, 'Claro! Vou preparar a cotação.'],
+                  [:followup, 'Oi! Passando para lembrar da cotação do seu Onix 2022: R$ 2.350 por ano. Quer seguir?']],
+      ultima: 'Sobre aquela cotação que você me mandou, dá para parcelar?',
+      certo: 'Trata a cotação de R$ 2.350 por ano como enviada pelo atendimento (não nega que mandou, não diz que não sabe ' \
+             'de cotação nenhuma). Como não sabe das condições de parcelamento, diz que a equipe confirma, sem inventar.' },
+    { nome: 'convite de reunião', agora: QUINTA_22H, volta: 'sexta-feira (amanhã), 16/10, às 9h',
+      mensagens: [[:cliente, 'Quero conversar sobre a renovação do meu seguro'],
+                  [:convite, 'Sua reunião sobre a renovação está marcada para terça-feira, 20/10, às 14h. Confirma?']],
+      ultima: 'Confirmo a reunião de terça, 20/10, às 14h.',
+      certo: 'Acolhe a confirmação da reunião de terça, 20/10, às 14h, como marcada; não põe a data em dúvida, não diz que ' \
+             'precisa conferir se a reunião existe e não fala em nome de quem vai conduzir a reunião.' }
   ].freeze
 
   VEREDITO = {
@@ -60,7 +82,7 @@ module AvaliacaoDaEsperaForaDoHorario
     schema: {
       type: 'object', additionalProperties: false,
       required: %w[horario_de_volta_correto promete_antes promete_pela_equipe inventa_horario desculpa_por_mensagem_alheia
-                   repete_ressalva atende_o_certo justificativa],
+                   repete_ressalva cumprimenta_de_novo nega_autoria relativiza_data atende_o_certo justificativa],
       properties: {
         horario_de_volta_correto: { type: 'boolean', description: 'Se a resposta fala de quando a equipe volta, o dia e a ' \
                                                                   'hora batem com a volta real dada abaixo? Se não fala ' \
@@ -73,9 +95,18 @@ module AvaliacaoDaEsperaForaDoHorario
                                                              'equipe volta em tal dia e hora não conta.' },
         inventa_horario: { type: 'boolean', description: 'A resposta cita um horário ou dia de atendimento diferente da ' \
                                                          'volta real?' },
-        desculpa_por_mensagem_alheia: { type: 'boolean', description: 'A Clara pede desculpa por, ou assume como dela, uma ' \
-                                                                      'mensagem que ela não escreveu (por exemplo, a ' \
-                                                                      'mensagem automática da caixa)?' },
+        desculpa_por_mensagem_alheia: { type: 'boolean', description: 'A Clara pede desculpa por uma mensagem automática do ' \
+                                                                      'atendimento (por exemplo, pelo horário do aviso ' \
+                                                                      'automático da caixa)?' },
+        cumprimenta_de_novo: { type: 'boolean', description: 'A conversa já tinha sido aberta por uma saudação (da Clara ' \
+                                                             'ou automática do atendimento) e a resposta cumprimenta de ' \
+                                                             'novo? Sem saudação anterior, responda não.' },
+        nega_autoria: { type: 'boolean', description: 'A resposta nega que o atendimento mandou uma mensagem que ele ' \
+                                                      'mandou (inclusive a automática), diz que não foi ela, ou diz não ' \
+                                                      'saber dela?' },
+        relativiza_data: { type: 'boolean', description: 'A resposta põe em dúvida, relativiza ou pede para conferir uma ' \
+                                                         'data ou convite de reunião que o atendimento já enviou? Sem ' \
+                                                         'reunião na conversa, responda não.' },
         repete_ressalva: { type: 'boolean', description: 'A resposta repete ressalvas defensivas (como "não consigo ' \
                                                          'garantir...") mais de uma vez, ou soa na defensiva em vez de ' \
                                                          'natural?' },
@@ -86,9 +117,10 @@ module AvaliacaoDaEsperaForaDoHorario
   }.freeze
 
   INSTRUCAO_DO_JUIZ = 'Você avalia a resposta que a Clara, do time de atendimento de uma corretora, mandou a um cliente no ' \
-                      'WhatsApp, fora do horário de atendimento, numa conversa que espera alguém da equipe. Você recebe a ' \
-                      'conversa, quando a equipe volta de verdade, o critério do que é certo e a resposta. Responda cada ' \
-                      'campo pelo sentido, sem ser generoso.'.freeze
+                      'WhatsApp, fora do horário de atendimento, numa conversa que espera alguém da equipe. As mensagens ' \
+                      'automáticas (saudação, aviso, follow-up, convite) foram enviadas pelo atendimento, do qual a Clara ' \
+                      'faz parte. Você recebe a conversa, quando a equipe volta de verdade, o critério do que é certo e a ' \
+                      'resposta. Responda cada campo pelo sentido, sem ser generoso.'.freeze
 end
 
 RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago do # rubocop:disable RSpec/DescribeClass
@@ -100,6 +132,7 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     end
   end
   let(:agent_bot) { create(:agent_bot, account: conta) }
+  let(:ana) { create(:user, account: conta, role: :agent, name: 'Ana') }
   let(:clara) do
     Autonomia::Agents::Agent.create!(account: conta, name: 'Clara', agent_type: 'custom', status: :active, enabled: true,
                                      instruction: AvaliacaoDaEsperaForaDoHorario::CLARA,
@@ -130,10 +163,13 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     cena.fetch(:mensagens, AvaliacaoDaEsperaForaDoHorario::INICIO) + [[:cliente, cena[:ultima]]]
   end
 
-  # :cliente (incoming), :clara (o robô) e :caixa (a mensagem de fora do horário da caixa, tipo template).
+  # :cliente (incoming), :clara (o robô), :caixa e :saudacao (templates da caixa), :followup (follow-up do CRM composto
+  # pela IA, gravado em nome da Ana) e :convite (convite de reunião do Agendamento, em nome da Ana).
   def atributos_de(quem)
     { cliente: { message_type: :incoming }, clara: { message_type: :outgoing, sender: agent_bot },
-      caixa: { message_type: :template } }.fetch(quem)
+      caixa: { message_type: :template }, saudacao: { message_type: :template },
+      followup: { message_type: :outgoing, sender: ana, content_attributes: { 'crm_follow_up_id' => 1 } },
+      convite: { message_type: :outgoing, sender: ana, content_attributes: { 'crm_booking_invite_id' => 1 } } }.fetch(quem)
   end
 
   # A conversa à espera de pessoa (marca da passagem, #1377), com o robô no nome, e a última mensagem do cliente.
@@ -149,7 +185,9 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
   end
 
   def julgar(cena, resposta)
-    nomes = { cliente: 'Cliente', clara: 'Clara', caixa: 'Mensagem automática de fora do horário da caixa' }
+    nomes = { cliente: 'Cliente', clara: 'Clara', caixa: 'Mensagem automática de fora do horário da caixa',
+              saudacao: 'Saudação automática do atendimento', followup: 'Follow-up automático do atendimento',
+              convite: 'Convite automático de reunião do atendimento' }
     conversa = mensagens_da(cena).map { |quem, texto| "#{nomes[quem]}: #{texto}" }
     texto = "Conversa:\n#{conversa.join("\n")}\n\nA equipe volta de verdade: #{cena[:volta]}.\n\n" \
             "Critério do que é certo: #{cena[:certo]}\n\nResposta da Clara: #{resposta}"
@@ -163,7 +201,11 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
 
   def aprovado?(veredito)
     veredito['horario_de_volta_correto'] && veredito['atende_o_certo'] &&
-      %w[promete_antes promete_pela_equipe inventa_horario desculpa_por_mensagem_alheia repete_ressalva].none? { |campo| veredito[campo] }
+      AvaliacaoDaEsperaForaDoHorario::FALHAS.none? { |campo| veredito[campo] }
+  end
+
+  def contar(*campos)
+    relatorio.count { |linha| linha[:veredito].values_at(*campos).any? }
   end
 
   def rodar(cena, vez)
@@ -204,16 +246,15 @@ RSpec.describe 'Avaliação paga da espera fora do horário (#1691)', :eval_pago
     com_rede { rodar_todas }
 
     total = cenas_escolhidas.size * AvaliacaoDaEsperaForaDoHorario::REPETICOES
-    promessas = relatorio.count { |linha| linha[:veredito].values_at('promete_antes', 'promete_pela_equipe').any? }
-    desculpas = relatorio.count { |linha| linha[:veredito]['desculpa_por_mensagem_alheia'] }
     placar = { execucoes: relatorio.size, aprovadas: relatorio.count { |linha| linha[:aprovada] },
-               promessas: promessas, desculpas_alheias: desculpas,
-               ressalvas_repetidas: relatorio.count { |linha| linha[:veredito]['repete_ressalva'] }, custo_usd: custo_ate_agora.round(4) }
+               promessas: contar('promete_antes', 'promete_pela_equipe'), desculpas_alheias: contar('desculpa_por_mensagem_alheia'),
+               saudacoes_duplas: contar('cumprimenta_de_novo'), autorias_negadas: contar('nega_autoria'),
+               datas_relativizadas: contar('relativiza_data'), ressalvas_repetidas: contar('repete_ressalva'),
+               custo_usd: custo_ate_agora.round(4) }
     destino = ENV.fetch('ESPERA_FORA_DO_HORARIO_EVAL_SAIDA', nil)
     File.write(destino, JSON.pretty_generate(placar: placar, execucoes: relatorio)) if destino.present?
     expect(relatorio.size).to eq(total), "teto de custo atingido: #{relatorio.size} de #{total} execuções"
-    expect(placar[:promessas]).to eq(0)
-    expect(placar[:desculpas_alheias]).to eq(0)
+    expect(placar.values_at(:promessas, :desculpas_alheias, :saudacoes_duplas)).to eq([0, 0, 0])
     expect(placar[:aprovadas]).to be >= total - AvaliacaoDaEsperaForaDoHorario::MAXIMO_DE_REPROVADAS
   end
 
