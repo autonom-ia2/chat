@@ -105,4 +105,21 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     expect(convidada).to eq(bruno.id)
     expect(marca).to include('venceram' => [ana.id])
   end
+
+  # Pega: o aviso que falhou contar como dado (avisado_em gravado) e a espera nunca avisar os administradores.
+  it 'aviso que falha não conta: o convite seguinte que vence avisa', :aggregate_failures do
+    online(ana, bruno)
+    allow(NotificationBuilder).to receive(:new).and_call_original
+    allow(NotificationBuilder).to receive(:new).with(hash_including(user: admin)).and_raise(ActiveRecord::RecordInvalid)
+    deixa_vencer(7)
+    expect(convidada).to eq(bruno.id)
+    expect(marca['avisado_em']).to be_nil
+
+    allow(NotificationBuilder).to receive(:new).and_call_original
+    online(ana, bruno, carla)
+    deixa_vencer(14)
+
+    expect(avisos_ao_admin).to eq(1)
+    expect(marca['avisado_em']).to be_present
+  end
 end

@@ -43,8 +43,9 @@ class Crm::Entrega::AvisoSemNinguem
   def convite_vencido!
     return if Crm::Entrega::Marca.dados(@conversation)&.dig('avisado_em').present?
 
-    Crm::Entrega::Marca.avisado!(@conversation) if Crm::Entrega::Marca.presente?(@conversation)
     avisar_equipe!(CONVITE_VENCIDO)
+    # Só depois de o aviso sair: se ele falhar, a próxima vez que um convite desta espera vencer avisa.
+    Crm::Entrega::Marca.avisado!(@conversation) if Crm::Entrega::Marca.presente?(@conversation)
   end
 
   private
