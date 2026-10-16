@@ -64,12 +64,14 @@ module Crm::Repasse
   # triagem), e a tela avisa antes (decisão 2a do Rodrigo, 15/10). true/false; nil quando a presença está fora do ar
   # (desconhecido): a tela não diz "ninguém online" sem saber. Só a falha de leitura da presença (Redis ou o pool dele)
   # vira nil; qualquer outro erro sobe.
+  # O agente de IA da regra só é consultado quando ninguém da equipe está online (o caso comum para logo na presença).
   def equipe_online?(conversation, card, user)
-    return true if agente_na_regra?(conversation, card)
-
     equipe = Crm::Entrega::QuemCuida.new(conversation: conversation, card: card).pessoas.map(&:id) - [user.id]
     online = presenca(conversation)
-    online.nil? ? nil : equipe.intersect?(online.to_a)
+    return true if online && equipe.intersect?(online.to_a)
+    return true if agente_na_regra?(conversation, card)
+
+    online.nil? ? nil : false
   end
 
   def presenca(conversation)
@@ -148,12 +150,14 @@ module Crm::Repasse
   end
 
   # A Atribuição do funil aponta um agente de IA que pode receber agora (#1620, a mesma leitura do motor de entrega,
-  # Crm::Entrega::ParaIa.alvo): conta como "tem quem receba". Quem passa é a pessoa, então não há robô a excluir.
+  # Crm::Entrega::ParaIa.alvo): conta como "tem quem receba". O robô a excluir é o mesmo que o motor exclui na saída da
+  # pessoa: o que está gravado como ai_assignee (Crm::Entrega#robo_que_atendia), se houver.
   def agente_na_regra?(conversation, card)
     settings = Crm::Ai::Config.handoff_settings(card.stage, card.pipeline)
     return false unless settings[:enabled]
 
-    Crm::Entrega::ParaIa.alvo(conversation: conversation, settings: settings, sugestao: nil, quem_passa: nil).present?
+    robo = conversation.ai_assignee.is_a?(AgentBot) ? conversation.ai_assignee : nil
+    Crm::Entrega::ParaIa.alvo(conversation: conversation, settings: settings, sugestao: nil, quem_passa: robo).present?
   end
 
   def pessoa_no_nome(conversation)

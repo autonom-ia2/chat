@@ -21,15 +21,29 @@ RSpec.describe Crm::Repasse do
     acesso.agent_pipelines.create!(account: account, pipeline: comercial)
     # Ninguém online: só a regra com o agente de IA pode fazer o aviso de "ninguém online" sumir.
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
-    conversation.update!(assignee: ana)
+    # Pessoa no nome sem robô gravado: o estado que a atribuição de uma pessoa deixa.
+    conversation.update!(assignee: ana, ai_assignee: nil)
     create_card(pipeline: comercial, focused_at: 1.minute.ago)
   end
 
   after { Current.reset }
 
-  def regra_aponta_a_area!
+  def regra_aponta!(agente)
     suporte.stages.first.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct',
-                                                               'pool_type' => 'ai_agent', 'pool_id' => area.id } })
+                                                               'pool_type' => 'ai_agent', 'pool_id' => agente.id } })
+  end
+
+  def regra_aponta_a_area!
+    regra_aponta!(area)
+  end
+
+  it 'regra apontando a porta (sem robô gravado na conversa): também conta como quem recebe' do
+    regra_aponta!(agente_da_porta)
+    create_card(pipeline: suporte)
+
+    described_class.sugerir!(conversation.reload)
+
+    expect(described_class.para(conversation.reload, ana)).to include(equipe_online: true)
   end
 
   it 'regra com agente de IA: sugere, e o aviso de "ninguém online" não aparece' do
@@ -59,5 +73,11 @@ RSpec.describe Crm::Repasse do
 
     expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: espelho_area)
     expect(conversation.additional_attributes[described_class::CHAVE]).to be_nil
+    # O registro: a Ana sai pelo assunto (para o robô que espera), e o motor passa à área depois do commit.
+    passagens = Crm::Passagem.where(conversation_id: conversation.id).order(:id).to_a
+    saida = passagens.find { |passagem| passagem.de_type == 'User' && passagem.de_id == ana.id }
+    expect(saida).to have_attributes(motivo: 'assunto', devolvida_em: be_present)
+    expect(passagens.last).to have_attributes(para_type: 'Autonomia::Agents::Agent', para_id: area.id, devolvida_em: nil)
+    expect(Crm::Passagem.where(conversation_id: conversation.id, para_type: 'User', para_id: ana.id).abertas).to be_empty
   end
 end
