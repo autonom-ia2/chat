@@ -487,7 +487,7 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela do
         'message_body' => 'Olá, Júlia! Aqui é da Studio Exemplo. Seu pedido Seguro auto segue em andamento; avisamos o próximo ' \
                           'passo por aqui.',
         'envio_fora_da_janela' => { 'tipo' => 'andamento', 'caminho' => 'modelo', 'escolha' => 'do_tipo', 'modelo' => proprio,
-                                    'categoria' => 'UTILITY', 'origem' => 'sistema', 'consentimento_id' => consentimento.id }
+                                    'idioma' => 'pt_BR', 'categoria' => 'UTILITY', 'origem' => 'sistema', 'consentimento_id' => consentimento.id }
       )
       expect(Whatsapp::Templates::DispatchCheck).to have_received(:new).with(
         having_attributes(template_params: { 'name' => proprio, 'language' => 'pt_BR', 'category' => 'UTILITY',
