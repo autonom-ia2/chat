@@ -32,7 +32,8 @@ module Crm::Entrega::Marca
   # `detalhes`: `sugestao` (o nome que a IA sugeriu, para a próxima tentativa), `dono` (a pessoa a quem a entrega é
   # dirigida, R13 do #1150: a próxima tentativa segue esperando por ela), `ate` (o fim do convite), `convidado` (quem
   # foi convidado) e `venceram` (ids de quem deixou um convite desta espera vencer, #1694; sobrevive às novas
-  # tentativas, como `desde`).
+  # tentativas, como `desde`). `decidido_em`: com `venceram`, quando a regra decidiu por último (a fila espaça a espera sem ninguém); sem
+  # ele, a marca não muda a cada tentativa.
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -45,10 +46,15 @@ module Crm::Entrega::Marca
       'sugestao' => detalhes[:sugestao].presence,
       'dono_id' => detalhes[:dono]&.id,
       'ate' => detalhes[:ate]&.iso8601,
-      'convidado_id' => detalhes[:convidado]&.id,
-      'venceram' => (detalhes[:venceram] || anterior['venceram']).presence
-    }.compact
+      'convidado_id' => detalhes[:convidado]&.id
+    }.merge(vencimentos(anterior, detalhes[:venceram])).compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
+  end
+
+  # Quem deixou vencer (sobrevive às tentativas) e, com isso, quando a regra decidiu por último.
+  def vencimentos(anterior, venceram)
+    venceram = (venceram || anterior['venceram']).presence
+    { 'venceram' => venceram, 'decidido_em' => venceram && Time.current.iso8601 }
   end
 
   # O prazo do convite conta do CONVITE: virar convite recomeça a contagem; o resto (inclusive convite → segurando)

@@ -13,6 +13,22 @@
 # pendurada, a fila voltaria a ela a cada rodada e o rodízio nativo a pularia depois). Adiada: guarda a marca (volta à
 # fila quando reabre), sem aviso.
 class Crm::Entrega::ConviteVencido
+  # Todos que cuidam do funil deixaram vencer: não há a quem convidar, e a presença não muda isso. A fila tenta de novo
+  # só depois deste intervalo (alguém pode ter passado a cuidar do funil), e não a cada rodada de 2 minutos.
+  ESPERA_SEM_NINGUEM = 30.minutes
+  SEM_NINGUEM = %w[ninguem_cuida nao_conseguimos_chamar].freeze
+
+  # A fila (HandoffDrainJob) pula esta conversa nesta rodada? Só a espera sem ninguém de quem já deixou vencer, e só
+  # dentro do intervalo. Segurando por presença ("ninguém online") ou pelo intervalo entre convites segue a cada rodada.
+  def self.espacar?(marca)
+    return false if marca['venceram'].blank? || SEM_NINGUEM.exclude?(marca['falha'])
+
+    decidido = Time.zone.parse(marca['decidido_em'].to_s)
+    decidido.present? && decidido > ESPERA_SEM_NINGUEM.ago
+  rescue ArgumentError
+    false
+  end
+
   def initialize(conversation)
     @conversation = conversation
   end

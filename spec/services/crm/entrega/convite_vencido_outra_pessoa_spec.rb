@@ -122,4 +122,26 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     expect(avisos_ao_admin).to eq(1)
     expect(marca['avisado_em']).to be_present
   end
+
+  # Pega: com todos fora (ninguém que possa ser convidado), a fila rodava a entrega inteira a cada 2 minutos, para
+  # sempre. Agora espaça (ESPERA_SEM_NINGUEM) e volta a tentar depois: quem passar a cuidar do funil é convidado.
+  it 'todos deixaram vencer: a fila espaça as tentativas e convida quem passou a cuidar do funil', :aggregate_failures do
+    online(ana, bruno)
+    deixa_vencer(7)
+    online(ana, bruno, carla)
+    deixa_vencer(14)
+    deixa_vencer(21)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id, bruno.id, carla.id])
+
+    davi = create(:user, account: account, role: :agent, name: 'Davi')
+    create(:inbox_member, inbox: inbox, user: davi)
+    online(davi)
+    allow(Crm::Entrega).to receive(:new).and_call_original
+
+    travel_to(21.hours.from_now + 10.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
+    expect(Crm::Entrega).not_to have_received(:new)
+
+    travel_to(21.hours.from_now + Crm::Entrega::ConviteVencido::ESPERA_SEM_NINGUEM + 1.minute) { Crm::Ai::HandoffDrainJob.perform_now }
+    expect(convidada).to eq(davi.id)
+  end
 end
