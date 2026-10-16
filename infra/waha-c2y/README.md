@@ -1,9 +1,152 @@
-# WAHA 2026.9.2 + patch c2y-rich-2 (autonom-ia2/chat#1709)
+# WAHA 2026.9.2 + patch c2y-rich-3, revisão 3b (autonom-ia2/chat#1709, rodada 2)
 
 Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
 
-- Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`
-- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `ec2861d600ba74377bd458f059b47a9951e4a492682f465688a1dbe12eefb52c` (47 arquivos). Passa em `git apply --check` sobre a tag limpa. Contém o c2y-rich-1 inteiro mais o c2y-rich-2, já com as correções da revisão (revisão **2b**, abaixo).
+- Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `bd4668c1109f24284537c678704872c93b302f4a7128a9b57b675986ba8eb19f` (63 arquivos). Contém a c2y-rich-3 mais as correções da revisão do conector (**3b**, abaixo). Passa em `git apply --check` sobre a tag limpa (`git archive 90ba445a`).
+- A c2y-rich-3 sem as correções (patch `980e37b8…a9d2`, imagem `…:2026.9.2-c2y-rich-3`, tarball `5a566498…88b4`) fica **substituída**: não usar em deploy. Guardada no M2 como `waha-2026.9.2-c2y-rich-3.patch`, `build-waha-c2y-rich-3.sh` e `dist-sha256-3.txt`.
+- `/api/server/version` não muda: `autonomia.patch` continua `'c2y-rich-3'`, como a 2b continuou `'c2y-rich-2'`. A label `autonomia.patch-sha256` é o que diferencia as duas.
+
+## Revisão 3b: achados da revisão do conector
+
+1. **Resposta a evento criado no celular da empresa** (médio). Antes, o `isOurEvent` aceitava qualquer evento do nosso número, e o evento criado no app do celular também é espelhado e mapeado. Correção: além do número, o evento precisa ter sido enviado pelo conector. A marca é o `parts` do mapeamento: o `message_created` grava `parts` (≥ 1) em toda mensagem que o conector envia, e o espelhado do celular fica com `parts` nulo (`migrations/002_message_status.ts`, `ChatwootMessage.parts`: "null - mirrored from WhatsApp"). O `sendEvent` não aceita id (GOWS `sendEvent`, `MessageRequest` sem `id`), então não dá para usar um id determinístico como na enquete sem mexer no motor. Função nova: `SentByConnector`. O lado do chat2you (esconder a resposta a evento não nativo) fica com o chat2you.
+2. **Falha de download com `media` nulo** (baixo). Agora só conta como falha quando o motor diz que falhou (`media.error`). Evidência no código: em `MediaManager.processMedia`, download desligado ou mimetype filtrado devolvem `{url:null, filename, mimetype}` **sem** erro, e o erro de download vira `media.error`. `media` nulo só aparece quando o processador nem rodou (`downloadMediaSafe` lançou, ou outro motor). Nesse caso fica a nota da main, sem `waha_media_failed` e sem nova tentativa (antes eram 2 chamadas `getMessageById` por mídia).
+3. **Aviso de temporária oscilando** (médio, plausível). `ephemeral_expiration` passa a ser `null` quando a mensagem não informa: sem `contextInfo` (texto puro `conversation`), `contextInfo` sem `expiration`, ou `0` com `_data.IsEphemeral === true`. Só sai `0` quando vem `0` explícito. O `events.Message` do whatsmeow tem `IsEphemeral`, mas não tem os segundos, por isso ele só serve para descartar um `0` contraditório. O chat2you já ignora valor que não é Integer (`inbound/context.rb`), então `null` não muda o estado da conversa. Limite: se o motor nunca mandar `expiration: 0` explícito, o aviso "desativadas" não aparece. Fica para o teste em aparelho.
+4. **Busca do evento com `from` em @lid** (médio, plausível): **recusado com evidência**. `MessageMappingService.getChatWootMessage` chama `WhatsAppMessageRepository.getByMessageId`, que filtra só por `app_pk` e `message_id`. O `chat_id` passado não entra na busca, então um cliente em @lid acha o evento mapeado com o jid do telefone. Ficaram um comentário no código e um teste com `from` em @lid.
+5. **`from_me` ausente em `waha_media_failed` e `waha_order`** (alto). As duas chaves agora levam **sempre** `from_me` boolean (`payload.fromMe === true`). Sem `fromMe` no payload, vai `false`. Contrato com o chat2you: `media_failed` e `order` só transformam com `from_me == false`. Ausente = fica a main. Pulam também `outgoing? && !private`. **Atenção ao chat2you:** a nota privada que o conector cria sai sempre OUTGOING (`base.ts`: "Private notes can only be sent as outgoing messages"), **inclusive a do cliente**. A paridade mostra `failed_no_caption` e `order` como `outgoing/private` com `fromMe:false`. Por isso `message.incoming?` não serve de guarda.
+
+## Validação da 3b (M2, 16/10/2026)
+
+- `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos 6 arquivos tocados: 0 avisos, 0 erros.
+- Suíte unit completa: 47 suítes e 639 testes. Falham 10 testes em 4 suítes (PixMessage, message.ack.utils, PhoneNumbersCacheRepository e session.abc), os mesmos 10 da tag limpa. As 4 suítes do pacote rodaram depois do teste de presença de `from_me`: 164 de 164.
+- Testes novos: download desligado, mimetype filtrado, `media` nulo e ausente não são falha e não pedem nova tentativa; `from_me` em `waha_media_failed` e `waha_order` com cliente, celular da empresa e `fromMe` ausente, sempre boolean, nos três caminhos (com legenda, sem legenda e pedido); `ephemeral_expiration` nulo sem `contextInfo` ou sem `expiration`, `0` explícito, `0` com `IsEphemeral`, e um chat de 24 h alternando texto com e sem `contextInfo` sem nunca dar `0`; evento espelhado do celular (`parts` nulo ou ausente) ignorado sem criar nem mapear nada; resposta com `from` em @lid achada pelo id.
+- Mutação: 8 guardas quebradas, uma de cada vez, e todas derrubaram testes.
+  - A checagem de origem do evento (2 falhas), `media` nulo tratado como falha (4), sem `expiration` virando `0` (5), `IsEphemeral` ignorado (1), `from_me` fixo em `false` na mídia (3) e no pedido (2).
+  - Tirar o `from_me` das duas chaves derruba a suíte já na compilação de tipos (TS2741).
+  - Os arquivos foram restaurados e conferidos por sha256.
+- Com o Baileys real, sobre o `dist`: `validate/r5-real-baileys.js` passa 37 de 37 (com os nomes do Go para `ContextInfo`, `Expiration` e `OrderMessage`) e `listreply-real-baileys.js` passa 8 de 8.
+- Paridade com a main: `r4-parity-run.js` sobre `dist-base` e sobre o `dist`, mais `r4-parity-compare.js`, dá 23 de 23. A fixture `failed_no_caption` (`media` nulo) agora sai sem `waha_media_failed`, que é o esperado pelo achado 2.
+- Dist: mudam 3 dos 47 arquivos (`c2y3.js`, `event.response.js`, `UnsupportedMessage.js`). O dist inteiro comparado com `dist-base` dá exatamente os mesmos 47 (34 alterados e 13 novos), sem nenhum arquivo removido.
+
+## Imagem construída (M2, 16/10/2026, c2y-rich-3b)
+
+- Chamada: igual à da c2y-rich-3 (abaixo), com a tag `autonomia-waha-c2y-rich:2026.9.2-c2y-rich-3b`.
+- Imagem linux/amd64 com 120 camadas, como a 3 (nenhum arquivo novo).
+  - ID local (índice OCI): `sha256:900c80be6454f5e5f5b850b5bc43086a690e72487e681118ed93c41067b75a4e`;
+  - manifest amd64: `sha256:79d2561675d64c22b8ca5b2280b2af44711648162482add0e041ea526f48d165`;
+  - config: `sha256:6f7a748272786500d69d9105cd84e1cc6f920e67ef069930fb6fbb90c57567a0`;
+  - LABELs `autonomia.patch=c2y-rich-3` e `autonomia.patch-sha256=bd4668c1…eb19f`.
+- O script conferiu os 47 arquivos dentro da imagem.
+- Tarball: `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-3b.tar`, 2269913600 bytes, sha256 `d4172389f5e04df4ec65b40f7a114dce04eed7d110161d9ebfdfbc69358eed9a`.
+- Rollback: para a 2b ou para a base de produção, como na seção ROLLBACK. A imagem e o tarball da c2y-rich-3 continuam no M2, mas não devem ser usados.
+- Não validado: o smoke amd64 (o daemon do M2 é aarch64) e nada em aparelho. Em especial, ainda falta ver em aparelho se o GOWS manda `expiration: 0` explícito ao desligar a temporária, e a resposta a um evento criado no celular (deve ser ignorada).
+
+---
+
+## Histórico: c2y-rich-3 (antes da revisão 3b)
+
+Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
+
+- Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `980e37b8e08bf5865f7f3365cf6d91be4a2fc79b8a375697fc7a21c6d246a9d2` (63 arquivos). Contém o c2y-rich-2b inteiro mais a rodada 2.
+  - Passa em `git apply --check` sobre a tag limpa (`git archive 90ba445a`).
+  - Aplicado sobre a tag limpa e compilado (`yarn build`), reproduz os 47 hashes do `dist-sha256.txt` (47 de 47).
+- Patch anterior (c2y-rich-2b, sha256 `ec2861d6…b52c`): guardado no M2 como `waha-2026.9.2-c2y-rich-2b.patch`, com o script `build-waha-c2y-rich-2b.sh` e a tabela `dist-sha256-2b.txt`, para rollback de código.
+- `/api/server/version` passa a dizer `autonomia = {patch:'c2y-rich-3', rich_native:['options','location','contact','poll','link_button','event'], list_reply:true, poll_vote:true, reactions:true, edit:true, media_as_media:true, format:'c2y-1', event_response:true}`.
+
+## Rodada 2 (c2y-rich-3): o que o conector faz
+
+A regra continua a mesma: na entrada, o conector cria **a mesma mensagem da main** (mesmo `content`, `message_type`, `private`, anexos e `in_reply_to`) e só acrescenta chaves `waha_*` em `content_attributes`. Quem muda a apresentação é o chat2you, com a flag `whatsapp_rich_native`. A prova está em `validate/r4-parity-*.js`: 23 cenários passam pelo `dist` limpo da tag e pelo `dist` com o patch, e o resultado é idêntico depois de tirar as chaves `waha_*`.
+
+Chaves novas (conector → chat2you):
+
+| Chave | Quando | Formato |
+|---|---|---|
+| `waha_media` | mensagem com anexo baixado (`TextMessage`) | `{kind: voice\|audio\|image\|video\|document\|sticker, mimetype, filename\|null, ptt, view_once, animated, lottie}` |
+| `waha_album` | cabeçalho de álbum (`AlbumMessage`) | `{expected_images, expected_videos}` |
+| `waha_location` | localização e localização ao vivo | `{latitude:Number, longitude:Number, name, address, url, live, caption}`; não sai se as coordenadas não forem números |
+| `waha_contacts` | contato(s) compartilhado(s) | `[{full_name, phones:[...], wa_id}]`, na ordem dos `.vcf`; não sai se algum vCard falhar |
+| `waha_quote` | mensagem que cita outra (`payload.replyTo`) | `{wa_id, participant, from_me, body (≤280 caracteres), has_media, chatwoot_message_id}` |
+| `waha_media_failed` | o download da mídia falhou | `{kind, mimetype, filename, caption, reason}`; `reason` = só a classe do erro |
+| `waha_revoke` | nota "apagada no WhatsApp" | `{revoked_wa_id, from_me}` |
+| `waha_context` | toda mensagem ao vivo do `message.any` | `{ephemeral_expiration (s, 0 = desligada), forwarded, forwarding_score}` |
+| `waha_order` | pedido (`orderMessage`) na nota de não suportada | `{order_id, title, text, item_count, total_amount, currency, status, seller_jid}` |
+| `waha_unknown.gif` | não suportada que é GIF | `true` (só aparece quando é) |
+| `waha_event_response` | resposta a evento nosso (mensagem nova, INCOMING) | `{event_message_id, response: going\|not_going\|maybe, extra_guests, response_id, timestamp}` + `in_reply_to` |
+
+E mais:
+- **Áudio ouvido:** quando chega o ack `PLAYED` de mensagem nossa, o PATCH de status manda também `c2y_played_at` (ISO 8601). Sem o ack `PLAYED`, o corpo do PATCH é o da main (`{status}`).
+- **Saída, botão de link:** `waha_native.kind = 'sendLinkCustomPreview'`, payload `{text, preview:{url, title, description, image?:{url, mimetype}}}`. Com imagem: `POST /api/send/link-custom-preview` (`linkPreviewHighQuality: true`, sem id: o endpoint não aceita). Sem imagem: `sendText` com `linkPreview: true` e o id determinístico (o GOWS dá 500 sem imagem). Texto sem a url, url que não é http(s), título ou descrição que não são texto: não envia e manda o texto uma vez (o controller do WAHA responde 500, não 4xx, nesses casos).
+- **Saída, evento:** `waha_native.kind = 'sendEvent'`, payload `{event:{name, description?, startTime (s), endTime?, location?:{name}}}`. `POST /api/{sessão}/events`, sem id, `extraGuestsAllowed` sempre `false`. Nome vazio, hora que não é inteiro em segundos ou fim antes do início: não envia e manda o texto uma vez. Cancelar evento não existe no motor e não foi oferecido.
+- **Entrada, resposta ao evento:** o conector ouve `event.response` (fila nova `chatwoot.waha | event.response`). `event.response.failed` não é ouvido.
+- 4xx/501 nos dois envios novos: texto uma vez. 5xx ou timeout: `UnrecoverableError` sem texto, como as outras nativas.
+
+## Desvios do contrato (e por quê)
+
+1. **Nova tentativa de download desligada por padrão.** O contrato pede 2 tentativas (3 s e 10 s). Ela muda o resultado da main para quem não tem a flag (mídia em vez do aviso), e a decisão (b) é do Rodrigo. Ficou atrás de `WAHA_C2Y_MEDIA_RETRY=true` no motor. Além disso, as esperas viraram **2 s e 4 s**, com teto de 4 s por chamada (pior caso 14 s), porque o job segura o mutex do chat por no máximo 20 s (`JOB_LOCK_TTL`); com 3 s + 10 s + downloads o lock venceria e outra mensagem do mesmo chat entraria fora de ordem. A tentativa só acontece quando o motor **tentou e falhou** (`media.error`, ou `media` nulo); mídia não baixada de propósito (download desligado, mimetype filtrado) não é pedida de novo. Não roda na importação de histórico.
+2. **`waha_context` sai em toda mensagem ao vivo**, mesmo com os valores padrão. O contrato dizia "quando algum valor não é padrão", mas o chat2you precisa do `0` para perceber que as mensagens temporárias foram desligadas. Não sai na importação de histórico (senão cada mensagem antiga mudaria o estado da conversa).
+3. **`waha_quote.from_me`** só é calculado quando a citada **não** está mapeada (o único caso em que o chat2you usa o campo): compara o `participant` com o número e o lid da sessão (`GET /api/sessions/{sessão}`). Se não der para ler, fica `null` e o log leva só a classe do erro.
+4. **Resposta de evento: perspectiva da chave.** O GOWS entrega a chave do evento como o **cliente** a escreveu (diferente do voto de enquete, que passa por `fixPollCreationKey`): o nosso evento chega como `{remoteJid: nosso número, fromMe: false}` e o evento do próprio cliente como `{remoteJid: nosso número, fromMe: true}`. Por isso o "só quando `eventCreationKey.fromMe`" do contrato daria o resultado ao contrário. O handler trata as duas perspectivas: chave apontando para o nosso número → nosso se `fromMe: false`; apontando para o cliente → nosso se `fromMe: true`; grupo → nosso se o `participant` da chave é o nosso número. Além disso, o evento precisa estar no mapeamento.
+5. **Resposta de status (status reply) fica igual à main:** sem chaves `waha_*` e sem `waha_quote` (a citada é o status, e o conteúdo já é montado em volta dele).
+6. **Item 11 (visualização única), parte do motor: NÃO implementada.** A ordem do contrato pede a verificação no canário antes de escrever o patch no `session.gows.core.ts`, e a decisão (f) é do Rodrigo. O que já existe: se a mídia de visualização única chegar, `waha_media.view_once = true` (pelos flags `IsViewOnce*` do whatsmeow, pelos invólucros `viewOnceMessage*` ou pelo campo `viewOnce` da mídia). O evento interno `c2y.message.unavailable` não existe nesta imagem.
+7. **Normalização** (`normalizeMessageContent` do Baileys) também na detecção de localização e contato, como o item 8 pede. O whatsmeow já desembrulha `ephemeralMessage`/`viewOnce*`, então no GOWS isso não muda nada na prática; a prova de paridade confirma a mesma saída.
+
+## Arquivos que mudam na rodada 2
+
+Fonte (16 a mais, 63 no total): `c2y3.ts` e `c2y3.retry.ts` (novos, helpers puros), `consumers/waha/event.response.ts` (novo), `TextMessage.ts`, `LocationMessage.ts`, `ShareContactMessage.ts`, `AlbumMessage.ts`, `HasMediaWithNoMediaMessage.ts`, `UnsupportedMessage.ts`, `message.any.ts`, `base.ts`, `message.revoked.ts`, `message.ack.ts`, `MessageStatusService.ts`, `client/Conversation.ts`, `native.ts`, `message_created.ts`, `WAHASelf.ts`, a fila (`QueueName`, `QueueRegistry`, `QueueManager`, `ChatWootWAHAQueueService`, `app.module`), os 2 YAML, `version.ts`, `environment.dto.ts`, e 4 arquivos de teste novos.
+
+Dist (47; eram 35): lista em `dist-sha256.txt`. Mudam 34 e surgem 13 (os 10 novos da 2b mais `c2y3.js`, `c2y3.retry.js` e `event.response.js`). Comparando o `dist` com o build da tag limpa (`dist-base`, sem `.map`, `.d.ts` e testes), mudam exatamente esses 47 e nenhum some.
+
+## Validação da rodada 2 (M2, 16/10/2026)
+
+- `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos 29 `.ts` tocados: 0 avisos, 0 erros.
+- `prettier`: **não aplicado**. O do repositório é o 1.19.1, que não lê `import type` nem `satisfies` e reformatava linhas do upstream e da 2b; a formatação foi feita à mão no padrão do arquivo.
+- Suíte unit completa (`jest --selectProjects unit`): 47 suítes, 620 testes; 10 falham em 4 suítes (PixMessage, message.ack.utils, PhoneNumbersCacheRepository, session.abc). São exatamente os mesmos 10 da tag limpa (`diff` dos nomes vazio).
+- 142 testes novos em 4 suítes (`c2y3.test.ts`, `inbound.c2y3.test.ts`, `event.response.test.ts`, `message_created.c2y3.test.ts`), todos passando.
+- Mutação: 11 guardas quebradas uma de cada vez (falha de download sem erro, flag da nova tentativa, perspectiva da chave do evento, texto sem url, imagem do link, status reply, saneamento do `reason`, `from_me` só sem mapeamento, contexto no histórico, `played_at` só no `PLAYED`, resposta do próprio número): todas derrubam pelo menos 1 teste. Os arquivos foram restaurados e conferidos por sha256.
+- Com o Baileys real, sobre o `dist`: `validate/r4-real-baileys.js` 29 de 29 (chaves do GOWS em camelCase e em PascalCase, invólucros `ephemeral`/`viewOnce*`/`documentWithCaption`, figurinha Lottie, pedido com os nomes do Go, i18n, handshake). `listreply-real-baileys.js` continua 8 de 8.
+- Paridade com a main: `validate/r4-parity-run.js` + `r4-parity-compare.js`, 23 de 23.
+- Logs novos: só ids (mensagem do Chatwoot, id curto do WhatsApp, sessão) e classe do erro. Testes garantem que telefone, chave e texto não aparecem.
+
+## Imagem construída (M2, 16/10/2026, c2y-rich-3)
+
+- Base: a mesma de produção, `devlikeapro/waha-plus@sha256:ac5d6c13…9598` (ID local `sha256:7179f432…aff4`). O passo 1 passou: os 34 arquivos originais batem com "antes" e os 13 novos não existem nela.
+- Chamada:
+
+  ```sh
+  WAHA_C2Y_BASE=sha256:7179f432b837e5f902f49005ec5ca762bf5fbc09cf2b8538af95a077e6d5aff4 \
+  WAHA_C2Y_BASE_SOURCE=devlikeapro/waha-plus@sha256:ac5d6c131155df16e4a29c29efdbdf977788a0a4908dbe9d8edf4366202e9598 \
+  WAHA_C2Y_DIST_DIR=…/waha/dist WAHA_C2Y_OUT_DIR=…/out WAHA_C2Y_SKIP_SMOKE=1 \
+  ./build-waha-c2y-rich.sh autonomia-waha-c2y-rich:2026.9.2-c2y-rich-3
+  ```
+
+- Imagem: `autonomia-waha-c2y-rich:2026.9.2-c2y-rich-3`, linux/amd64, **120 camadas** (28 da base e 92 de COPY). O limite do overlay2 é 128: sobram 8. Um pacote futuro com mais de 4 JS novos precisa juntar os COPY (por exemplo, um COPY por diretório).
+  - ID local (índice OCI): `sha256:9ee4d8886d7cf22c9e6267990a3980001c3c8244def4cbedf1ebda16f488cf70`;
+  - manifest amd64: `sha256:366af7ebcfe72d6d2e62b1ed80adbefbae0591f9cdf131d8b8b4d8c02b6d8c7f`;
+  - config digest: `sha256:1ca4a90407f37aa7d36502939e8201bc5a741c9a849c51ce1b7c78b64344e545`;
+  - LABELs: `autonomia.patch=c2y-rich-3`, `autonomia.patch-sha256=980e37b8…a9d2`, `base-digest`, `base-ref`, `base-image-id`, `waha-sha`, `waha-tag`, `issue=chat#1709`.
+- Os 47 arquivos foram conferidos dentro da imagem pelo script e de novo à parte (`docker create` + `docker cp`): 47 hashes certos e os 45 `.map`.
+- Tarball: `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-3.tar`, 2269912064 bytes, sha256 `5a566498e509efab431ec4e83468fb6aa473bdc14acdb67263bd1f38f66588b4`.
+- A imagem e o tarball da 2b continuam no M2 (rollback).
+
+## Para ligar no canário (só com OK do Rodrigo)
+
+- Ordem: primeiro o PR do chat2you que tira e transforma as chaves novas; depois a troca da imagem. Um chat2you sem o PR guarda as chaves `waha_*` em `content_attributes` sem efeito na tela.
+- `WAHA_C2Y_MEDIA_RETRY=true` só depois da decisão (b). Sem a variável, o motor se comporta como a 2b nesse ponto.
+- A sessão precisa receber o evento `event.response`: a lista de eventos do app muda com a imagem nova (`ListenEventsForChatWoot`).
+- Rollback (para a 2b ou para a base de produção), tempo estimado e conferência de saúde: seção **ROLLBACK da imagem**, mais abaixo; vale para a c2y-rich-3. Na conferência, o `/api/server/version` da 2b mostra `"patch":"c2y-rich-2"` e o da base não tem o campo `autonomia`.
+
+## O que NÃO foi validado na rodada 2
+
+- Nada com WhatsApp, Chatwoot, Redis ou BullMQ de verdade: handlers testados com dublês. Em aparelho falta ver: PTT, álbum, localização (fixa e ao vivo), contato, citação de mensagem antiga, mídia que falha, apagada, temporária (24 h / 7 dias / desligada), figurinha (estática, animada, Lottie), visualização única, encaminhada (score), áudio ouvido (`PLAYED`), pedido, botão de link (com e sem imagem) e evento com as três respostas.
+- O formato real da chave do `event.response` no GOWS (a perspectiva do item 4 dos desvios) foi lido do código, não visto em evento real; os dois lados estão cobertos.
+- `link-custom-preview` e `events` no GOWS 2026.9.2: lidos do código-fonte (`chatting.controller.ts`, `events.controller.ts`, `session.gows.core.ts`), não chamados.
+- Smoke de execução amd64 (`/api/server/version`, vazamento no log): o daemon do M2 é aarch64. Fica para o canário.
+- Item 11, parte do motor (`c2y.message.unavailable`): não implementado (desvio 6).
+
+## Histórico: c2y-rich-2 (revisão 2b)
+
+- Patch: `waha-2026.9.2-c2y-rich-2b.patch`, sha256 `ec2861d600ba74377bd458f059b47a9951e4a492682f465688a1dbe12eefb52c` (47 arquivos). Contém o c2y-rich-1 inteiro mais o c2y-rich-2, já com as correções da revisão (revisão **2b**, abaixo).
 - A revisão anterior do c2y-rich-2 (patch `7164eecd…7626`, imagem `…:2026.9.2-c2y-rich-2`, tarball `8bbe0262…1875`) fica **substituída**: não usar em deploy.
 - Patch anterior (c2y-rich-1, sha256 `cf250286…b52e`): guardado no M2 como `waha-2026.9.2-c2y-rich-1.patch`, para rollback de código.
 - `/api/server/version` ganha `autonomia = {patch:'c2y-rich-2', rich_native:['options','location','contact','poll'], list_reply:true, poll_vote:true, reactions:true, edit:true, media_as_media:true, format:'c2y-1'}`.
@@ -150,6 +293,7 @@ docker service update \
 ```
 
 - O digest é fixo e a imagem já está no nó, então não há pull. O `--with-registry-auth` só cobre o caso de a tarefa cair em outro nó.
+- **Rollback parcial, da c2y-rich-3 para a c2y-rich-2b** (mantém lista, enquete, reações e edição; tira as chaves da rodada 2, o `event.response`, o link e o evento): `docker load -i autonomia-waha-c2y-rich_2026.9.2-c2y-rich-2b.tar` no nó (conferir antes o sha256 `bd57c4c7…7863`), depois `docker service update --image autonomia-waha-c2y-rich:2026.9.2-c2y-rich-2b waha_waha-plus`. Mesmo tempo de troca do rollback total. Um evento ou link já enviado continua no WhatsApp; respostas a eventos deixam de chegar.
 - Se a última mudança no serviço tiver sido justamente o deploy da c2y, `docker service rollback waha_waha-plus` volta ao spec anterior. O comando acima é preferível, porque não depende do histórico.
 - Portainer: se o stack `waha` é gerido pelo Portainer, volte também a linha `image:` do stack para o digest acima e salve sem "re-pull". Sem isso, o próximo "Update the stack" reinstala a imagem c2y.
 

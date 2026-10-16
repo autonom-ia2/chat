@@ -1,8 +1,8 @@
 diff --git a/src/apps/app_sdk/waha/WAHASelf.ts b/src/apps/app_sdk/waha/WAHASelf.ts
-index d277cff5..a20c86ec 100644
+index d277cff5..2cdeae38 100644
 --- a/src/apps/app_sdk/waha/WAHASelf.ts
 +++ b/src/apps/app_sdk/waha/WAHASelf.ts
-@@ -5,13 +5,19 @@ import {
+@@ -5,13 +5,21 @@ import {
  } from '@waha/structures/chats.dto';
  import {
    ChatRequest,
@@ -10,6 +10,7 @@ index d277cff5..a20c86ec 100644
 +  MessageContactVcardRequest,
    MessageFileRequest,
    MessageImageRequest,
++  MessageLinkCustomPreviewRequest,
 +  MessageLocationRequest,
 +  MessagePollRequest,
 +  MessageReactionRequest,
@@ -19,10 +20,11 @@ index d277cff5..a20c86ec 100644
    WANumberExistResult,
  } from '@waha/structures/chatting.dto';
 +import { SendListRequest } from '@waha/structures/chatting.list.dto';
++import { EventMessageRequest } from '@waha/structures/events.dto';
  import { SessionInfo } from '@waha/structures/sessions.dto';
  import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
  import { ContactSortField } from '@waha/structures/contacts.dto';
-@@ -230,6 +236,65 @@ export class WAHASelf {
+@@ -230,6 +238,86 @@ export class WAHASelf {
        .then((response) => response.data);
    }
  
@@ -60,6 +62,27 @@ index d277cff5..a20c86ec 100644
 +      .then((response) => response.data);
 +  }
 +
++  async sendLinkCustomPreview(
++    body: MessageLinkCustomPreviewRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url = `/api/send/link-custom-preview`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
++  async sendEvent(
++    session: string,
++    body: EventMessageRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    const url = `/api/${encodeURIComponent(session)}/events`;
++    return await this.client
++      .post(url, body, { signal: opts?.signal })
++      .then((response) => response.data);
++  }
++
 +  async setReaction(
 +    body: MessageReactionRequest,
 +    opts?: RequestOptions,
@@ -88,7 +111,7 @@ index d277cff5..a20c86ec 100644
    async deleteMessage(
      session: string,
      chatId: string,
-@@ -423,6 +488,53 @@ export class WAHASessionAPI {
+@@ -423,6 +511,65 @@ export class WAHASessionAPI {
      return this.api.sendFile(body, opts);
    }
  
@@ -116,6 +139,18 @@ index d277cff5..a20c86ec 100644
 +  sendPoll(body: MessagePollRequest, opts?: RequestOptions): Promise<any> {
 +    body.session = this.session;
 +    return this.api.sendPoll(body, opts);
++  }
++
++  sendLinkCustomPreview(
++    body: MessageLinkCustomPreviewRequest,
++    opts?: RequestOptions,
++  ): Promise<any> {
++    body.session = this.session;
++    return this.api.sendLinkCustomPreview(body, opts);
++  }
++
++  sendEvent(body: EventMessageRequest, opts?: RequestOptions): Promise<any> {
++    return this.api.sendEvent(this.session, body, opts);
 +  }
 +
 +  setReaction(
@@ -935,14 +970,15 @@ index 00000000..3aa9dea5
 +  }
 +}
 diff --git a/src/apps/chatwoot/app.module.ts b/src/apps/chatwoot/app.module.ts
-index f6eef82c..db7bb3e5 100644
+index f6eef82c..ad9e6a76 100644
 --- a/src/apps/chatwoot/app.module.ts
 +++ b/src/apps/chatwoot/app.module.ts
-@@ -29,6 +29,11 @@ import { WAHASessionStatusConsumer } from './consumers/waha/session.status';
+@@ -29,6 +29,12 @@ import { WAHASessionStatusConsumer } from './consumers/waha/session.status';
  import { WAHACallAcceptedConsumer } from './consumers/waha/call.accepted';
  import { WAHACallReceivedConsumer } from './consumers/waha/call.received';
  import { WAHACallRejectedConsumer } from './consumers/waha/call.rejected';
 +import { WAHAPollVoteConsumer } from './consumers/waha/poll.vote';
++import { WAHAEventResponseConsumer } from './consumers/waha/event.response';
 +import {
 +  ChatWootInboxC2yEditConsumer,
 +  ChatWootInboxC2yReactionConsumer,
@@ -950,7 +986,7 @@ index f6eef82c..db7bb3e5 100644
  import { ChatWootQueueService } from './services/ChatWootQueueService';
  import { ChatWootScheduleService } from './services/ChatWootScheduleService';
  import { ChatWootWAHAQueueService } from './services/ChatWootWAHAQueueService';
-@@ -103,6 +108,10 @@ const IMPORTS = lodash.flatten([
+@@ -103,6 +109,14 @@ const IMPORTS = lodash.flatten([
      name: QueueName.WAHA_CALL_REJECTED,
      defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
    }),
@@ -958,10 +994,14 @@ index f6eef82c..db7bb3e5 100644
 +    name: QueueName.WAHA_POLL_VOTE,
 +    defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
 +  }),
++  RegisterAppQueue({
++    name: QueueName.WAHA_EVENT_RESPONSE,
++    defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
++  }),
    RegisterAppQueue({
      name: QueueName.WAHA_SESSION_STATUS,
      defaultJobOptions: merge(ExponentialRetriesJobOptions, JobRemoveOptions),
-@@ -131,6 +140,14 @@ const IMPORTS = lodash.flatten([
+@@ -131,6 +145,14 @@ const IMPORTS = lodash.flatten([
      name: QueueName.INBOX_COMMANDS,
      defaultJobOptions: merge(NoRetriesJobOptions, JobRemoveOptions),
    }),
@@ -976,7 +1016,7 @@ index f6eef82c..db7bb3e5 100644
  ]);
  
  const PROVIDERS = [
-@@ -141,6 +158,8 @@ const PROVIDERS = [
+@@ -141,6 +163,8 @@ const PROVIDERS = [
    ChatWootConversationCreatedConsumer,
    ChatWootConversationStatusChangedConsumer,
    ChatWootInboxCommandsConsumer,
@@ -985,28 +1025,56 @@ index f6eef82c..db7bb3e5 100644
    // Tasks
    TaskContactsPullConsumer,
    TaskMessagesPullConsumer,
-@@ -154,6 +173,7 @@ const PROVIDERS = [
+@@ -154,6 +178,8 @@ const PROVIDERS = [
    WAHACallReceivedConsumer,
    WAHACallAcceptedConsumer,
    WAHACallRejectedConsumer,
 +  WAHAPollVoteConsumer,
++  WAHAEventResponseConsumer,
    // Scheduled
    MessageCleanupConsumer,
    CheckVersionConsumer,
+diff --git a/src/apps/chatwoot/client/Conversation.ts b/src/apps/chatwoot/client/Conversation.ts
+index 745e21da..54422f48 100644
+--- a/src/apps/chatwoot/client/Conversation.ts
++++ b/src/apps/chatwoot/client/Conversation.ts
+@@ -47,9 +47,18 @@ export class Conversation {
+   /**
+    * Update message status (sent/delivered/read/failed)
+    */
+-  public async updateMessageStatus(messageId: number, status: MessageStatus) {
++  public async updateMessageStatus(
++    messageId: number,
++    status: MessageStatus,
++    extra?: { c2y_played_at?: string },
++  ) {
+     // The SDK model has no "status" field, but the endpoint accepts only status (and external_error)
+-    const data = { status: status } as unknown as conversation_message_update;
++    // Autonom.ia c2y-rich-3: c2y_played_at (voice played) - ignored by a chat2you without it
++    const data = (
++      extra?.c2y_played_at
++        ? { status: status, c2y_played_at: extra.c2y_played_at }
++        : { status: status }
++    ) as unknown as conversation_message_update;
+     return this.accountAPI.messages.update({
+       accountId: this.accountId,
+       conversationId: this.conversationId,
 diff --git a/src/apps/chatwoot/consumers/QueueName.ts b/src/apps/chatwoot/consumers/QueueName.ts
-index fa8f4818..091528e1 100644
+index fa8f4818..06ab261c 100644
 --- a/src/apps/chatwoot/consumers/QueueName.ts
 +++ b/src/apps/chatwoot/consumers/QueueName.ts
-@@ -24,6 +24,8 @@ export enum QueueName {
+@@ -24,6 +24,10 @@ export enum QueueName {
    WAHA_CALL_RECEIVED = 'chatwoot.waha | call.received',
    WAHA_CALL_ACCEPTED = 'chatwoot.waha | call.accepted',
    WAHA_CALL_REJECTED = 'chatwoot.waha | call.rejected',
 +  // Autonom.ia c2y-rich-2
 +  WAHA_POLL_VOTE = 'chatwoot.waha | poll.vote',
++  // Autonom.ia c2y-rich-3
++  WAHA_EVENT_RESPONSE = 'chatwoot.waha | event.response',
    //
    // ChatWoot Events - Real
    //
-@@ -36,6 +38,11 @@ export enum QueueName {
+@@ -36,6 +40,11 @@ export enum QueueName {
    //
    INBOX_MESSAGE_DELETED = 'chatwoot.inbox | message_deleted',
    INBOX_COMMANDS = 'chatwoot.inbox | commands',
@@ -1869,6 +1937,421 @@ index 00000000..56ddde0c
 +    expect(allLogs(logger)).not.toContain('5511999999999');
 +  });
 +});
+diff --git a/src/apps/chatwoot/consumers/inbox/message_created.c2y3.test.ts b/src/apps/chatwoot/consumers/inbox/message_created.c2y3.test.ts
+new file mode 100644
+index 00000000..4d1f2652
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/message_created.c2y3.test.ts
+@@ -0,0 +1,409 @@
++jest.mock('@waha/utils/promiseTimeout', () => ({
++  sleep: jest.fn(() => Promise.resolve()),
++}));
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: { WhatsAppMessageKeys: jest.fn() },
++}));
++
++import { UnrecoverableError } from 'bullmq';
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { AttributeKey } from '@waha/apps/chatwoot/const';
++import { MessageHandler } from '@waha/apps/chatwoot/consumers/inbox/message_created';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import {
++  BuildWahaNativeRequest,
++  DeterministicMessageId,
++  HasPreviewImage,
++  NativeRequestProblem,
++  ParseWahaNative,
++  WAHA_NATIVE_KINDS,
++} from '@waha/apps/chatwoot/messages/to/whatsapp/native';
++import { EngineHelper } from '@waha/apps/chatwoot/waha';
++
++const CHAT_ID = '5511999999999@c.us';
++const SESSION = 'hub2you';
++const URL = 'https://hub2you.ai/seguro-auto?utm=c2y';
++const TEXT = `Veja o plano\n\n${URL}`;
++const START = 2063137000;
++
++const LINK_PAYLOAD = {
++  text: TEXT,
++  preview: {
++    url: URL,
++    title: 'Seguro Auto',
++    description: 'Cotação em 2 minutos',
++    image: { url: 'https://hub2you.ai/og.jpg', mimetype: 'image/jpeg' },
++  },
++};
++
++const EVENT_PAYLOAD = {
++  event: {
++    name: 'Vistoria do carro',
++    description: 'Leve o documento',
++    startTime: START,
++    endTime: START + 3600,
++    location: { name: 'Rua A, 10' },
++    extraGuestsAllowed: true,
++  },
++};
++
++function chatwootMessage(waha_native: any, extra: any = {}) {
++  return {
++    id: 501,
++    created_at: '2026-10-16T12:00:00Z',
++    content_type: 'text',
++    content: 'Seguro Auto: https://hub2you.ai/seguro-auto?utm=c2y',
++    message_type: 'outgoing',
++    attachments: [],
++    content_attributes: { waha_native: waha_native },
++    conversation: {
++      id: 42,
++      meta: {
++        sender: {
++          custom_attributes: { [AttributeKey.WA_CHAT_ID]: CHAT_ID },
++        },
++      },
++    },
++    ...extra,
++  };
++}
++
++function httpError(status: number) {
++  const err: any = new Error(`Request failed with status code ${status}`);
++  err.isAxiosError = true;
++  err.config = { headers: { 'X-Api-Key': 'super-secret-key' } };
++  err.response = { status: status, data: { message: 'x' } };
++  return err;
++}
++
++function setup() {
++  const sent = { id: { id: 'WAID', remote: CHAT_ID }, fromMe: true };
++  const session: any = {
++    name: SESSION,
++    sendLinkCustomPreview: jest.fn().mockResolvedValue(sent),
++    sendEvent: jest.fn().mockResolvedValue(sent),
++    sendText: jest.fn().mockResolvedValue(sent),
++    readMessages: jest.fn().mockResolvedValue(undefined),
++    startTyping: jest.fn().mockResolvedValue(undefined),
++    stopTyping: jest.fn().mockResolvedValue(undefined),
++  };
++  const mapping: any = {
++    getMappingByChatwootCombinedKeyAndPart: jest.fn().mockResolvedValue(null),
++    getWhatsAppMessage: jest.fn().mockResolvedValue([]),
++    map: jest.fn().mockResolvedValue(undefined),
++  };
++  const status: any = { sync: jest.fn().mockResolvedValue(undefined) };
++  const config: any = {
++    conversations: { syncMessageStatus: false },
++    linkPreview: 'off',
++  };
++  const logger = JestLogger();
++  const handler = new MessageHandler(
++    mapping,
++    logger,
++    session,
++    config,
++    i18n.locale('en-US'),
++    status,
++  );
++  (EngineHelper.WhatsAppMessageKeys as jest.Mock).mockReturnValue({
++    timestamp: new Date(0),
++    from_me: true,
++    chat_id: CHAT_ID,
++    message_id: 'WAID',
++    participant: null,
++  });
++  return { handler, session, mapping, logger };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++describe('native.ts c2y-rich-3 (items 12 and 13)', () => {
++  it('kinds and parsing', () => {
++    expect(WAHA_NATIVE_KINDS).toEqual([
++      'sendList',
++      'sendLocation',
++      'sendContactVcard',
++      'sendPoll',
++      'sendLinkCustomPreview',
++      'sendEvent',
++    ]);
++    expect(
++      ParseWahaNative({
++        content_attributes: {
++          waha_native: { kind: 'sendEvent', payload: EVENT_PAYLOAD },
++        },
++      }),
++    ).toEqual({ kind: 'sendEvent', payload: EVENT_PAYLOAD });
++    expect(
++      ParseWahaNative({
++        content_attributes: { waha_native: { kind: 'cancelEvent', payload: {} } },
++      }),
++    ).toBeNull();
++  });
++
++  it('link: copies only the documented fields, chatId from the connector, no id', () => {
++    const request: any = BuildWahaNativeRequest(
++      {
++        kind: 'sendLinkCustomPreview',
++        payload: {
++          ...LINK_PAYLOAD,
++          chatId: 'other@c.us',
++          session: 'x',
++          preview: {
++            ...LINK_PAYLOAD.preview,
++            image: { ...LINK_PAYLOAD.preview.image, data: 'BASE64' },
++            extra: 1,
++          },
++        },
++      },
++      CHAT_ID,
++      'false_x_Q',
++      'IGNORED',
++    );
++    expect(request).toEqual({
++      session: '',
++      chatId: CHAT_ID,
++      text: TEXT,
++      linkPreviewHighQuality: true,
++      preview: {
++        url: URL,
++        title: 'Seguro Auto',
++        description: 'Cotação em 2 minutos',
++        image: { url: 'https://hub2you.ai/og.jpg', mimetype: 'image/jpeg' },
++      },
++      reply_to: 'false_x_Q',
++    });
++  });
++
++  it('event: copies only the documented fields, extra guests always off, no id', () => {
++    const request: any = BuildWahaNativeRequest(
++      {
++        kind: 'sendEvent',
++        payload: { ...EVENT_PAYLOAD, chatId: 'other@c.us' },
++      },
++      CHAT_ID,
++      undefined,
++      'IGNORED',
++    );
++    expect(request).toEqual({
++      chatId: CHAT_ID,
++      event: {
++        name: 'Vistoria do carro',
++        description: 'Leve o documento',
++        startTime: START,
++        endTime: START + 3600,
++        location: { name: 'Rua A, 10' },
++        extraGuestsAllowed: false,
++      },
++      reply_to: undefined,
++    });
++  });
++
++  it('event without location: no location object', () => {
++    const request: any = BuildWahaNativeRequest(
++      {
++        kind: 'sendEvent',
++        payload: { event: { name: 'X', startTime: START, location: {} } },
++      },
++      CHAT_ID,
++      undefined,
++      'IGNORED',
++    );
++    expect(request.event.location).toBeUndefined();
++  });
++
++  it.each([
++    [{ ...LINK_PAYLOAD, text: 'sem url' }, 'text-without-url'],
++    [{ ...LINK_PAYLOAD, text: '' }, 'text'],
++    [{ ...LINK_PAYLOAD, preview: { ...LINK_PAYLOAD.preview, url: 'ftp://x' } }, 'preview.url'],
++    [{ ...LINK_PAYLOAD, preview: { ...LINK_PAYLOAD.preview, url: 'javascript:alert(1)' } }, 'preview.url'],
++    [{ ...LINK_PAYLOAD, preview: { ...LINK_PAYLOAD.preview, title: 1 } }, 'preview.title'],
++    [{ ...LINK_PAYLOAD, preview: { ...LINK_PAYLOAD.preview, description: null } }, 'preview.description'],
++    [LINK_PAYLOAD, null],
++  ])('link problem %#', (payload, problem) => {
++    const request = BuildWahaNativeRequest(
++      { kind: 'sendLinkCustomPreview', payload },
++      CHAT_ID,
++      undefined,
++      'X',
++    );
++    expect(NativeRequestProblem('sendLinkCustomPreview', request)).toBe(problem);
++  });
++
++  it.each([
++    [{ event: { ...EVENT_PAYLOAD.event, name: ' ' } }, 'event.name'],
++    [{ event: { ...EVENT_PAYLOAD.event, startTime: 1.5 } }, 'event.startTime'],
++    [{ event: { ...EVENT_PAYLOAD.event, startTime: '2063137000' } }, 'event.startTime'],
++    [{ event: { ...EVENT_PAYLOAD.event, endTime: START } }, 'event.endTime'],
++    [{ event: { ...EVENT_PAYLOAD.event, endTime: -1 } }, 'event.endTime'],
++    [{ event: { ...EVENT_PAYLOAD.event, description: 5 } }, 'event.description'],
++    [{}, 'event.name'],
++    [{ event: { name: 'X', startTime: START } }, null],
++    [EVENT_PAYLOAD, null],
++  ])('event problem %#', (payload, problem) => {
++    const request = BuildWahaNativeRequest(
++      { kind: 'sendEvent', payload },
++      CHAT_ID,
++      undefined,
++      'X',
++    );
++    expect(NativeRequestProblem('sendEvent', request)).toBe(problem);
++  });
++
++  it('HasPreviewImage', () => {
++    const build = (preview: any) =>
++      BuildWahaNativeRequest(
++        { kind: 'sendLinkCustomPreview', payload: { text: TEXT, preview } },
++        CHAT_ID,
++        undefined,
++        'X',
++      );
++    expect(HasPreviewImage(build(LINK_PAYLOAD.preview))).toBe(true);
++    expect(HasPreviewImage(build({ url: URL }))).toBe(false);
++    expect(HasPreviewImage(build({ url: URL, image: { url: 'file:///etc/passwd' } }))).toBe(false);
++  });
++});
++
++describe('MessageHandler - link card and event (c2y-rich-3)', () => {
++  afterEach(() => jest.clearAllMocks());
++
++  it('link with image: sendLinkCustomPreview once, mapped, no text', async () => {
++    const { handler, session, mapping } = setup();
++    const body = chatwootMessage({
++      kind: 'sendLinkCustomPreview',
++      payload: LINK_PAYLOAD,
++    });
++    const result = await handler.handle(body);
++    expect(session.sendLinkCustomPreview).toHaveBeenCalledTimes(1);
++    const [request, opts] = session.sendLinkCustomPreview.mock.calls[0];
++    expect(request.chatId).toBe(CHAT_ID);
++    expect(request.text).toBe(TEXT);
++    expect(request.preview.image.url).toBe('https://hub2you.ai/og.jpg');
++    expect(opts.signal).toBeDefined();
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(mapping.map).toHaveBeenCalledTimes(1);
++    expect(result).toHaveLength(1);
++  });
++
++  it('link without image: text with automatic link preview (deterministic id), not the custom endpoint', async () => {
++    const { handler, session } = setup();
++    const body = chatwootMessage({
++      kind: 'sendLinkCustomPreview',
++      payload: { text: TEXT, preview: { url: URL, title: 'T', description: 'D' } },
++    });
++    await handler.handle(body);
++    expect(session.sendLinkCustomPreview).not.toHaveBeenCalled();
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++    const [request] = session.sendText.mock.calls[0];
++    expect(request).toMatchObject({
++      chatId: CHAT_ID,
++      text: TEXT,
++      linkPreview: true,
++      linkPreviewHighQuality: true,
++      id: DeterministicMessageId(SESSION, 501, 'sendLinkCustomPreview'),
++    });
++  });
++
++  it('link refused (4xx/501): the text once', async () => {
++    for (const status of [400, 422, 501]) {
++      const { handler, session } = setup();
++      session.sendLinkCustomPreview.mockRejectedValueOnce(httpError(status));
++      await handler.handle(
++        chatwootMessage({ kind: 'sendLinkCustomPreview', payload: LINK_PAYLOAD }),
++      );
++      expect(session.sendText).toHaveBeenCalledTimes(1);
++      expect(session.sendText.mock.calls[0][0].text).toContain(URL);
++    }
++  });
++
++  it('link text without the url (WAHA would answer 500): not sent, text once', async () => {
++    const { handler, session, logger } = setup();
++    await handler.handle(
++      chatwootMessage({
++        kind: 'sendLinkCustomPreview',
++        payload: { ...LINK_PAYLOAD, text: 'sem link' },
++      }),
++    );
++    expect(session.sendLinkCustomPreview).not.toHaveBeenCalled();
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++    expect(allLogs(logger)).toContain('text-without-url');
++  });
++
++  it('link 5xx or timeout: UnrecoverableError, no text, no secret in logs', async () => {
++    const { handler, session, logger } = setup();
++    session.sendLinkCustomPreview.mockRejectedValueOnce(httpError(500));
++    await expect(
++      handler.handle(
++        chatwootMessage({ kind: 'sendLinkCustomPreview', payload: LINK_PAYLOAD }),
++      ),
++    ).rejects.toBeInstanceOf(UnrecoverableError);
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(allLogs(logger)).not.toContain('super-secret-key');
++  });
++
++  it('event: sendEvent once, mapped, no text', async () => {
++    const { handler, session, mapping } = setup();
++    await handler.handle(
++      chatwootMessage({ kind: 'sendEvent', payload: EVENT_PAYLOAD }, {
++        content_attributes: {
++          in_reply_to: undefined,
++          waha_native: { kind: 'sendEvent', payload: EVENT_PAYLOAD },
++        },
++      }),
++    );
++    expect(session.sendEvent).toHaveBeenCalledTimes(1);
++    const [request] = session.sendEvent.mock.calls[0];
++    expect(request.chatId).toBe(CHAT_ID);
++    expect(request.event.extraGuestsAllowed).toBe(false);
++    expect(request.id).toBeUndefined();
++    expect(session.sendText).not.toHaveBeenCalled();
++    expect(mapping.map).toHaveBeenCalledTimes(1);
++  });
++
++  it('event invalid (end before start): not sent, text once', async () => {
++    const { handler, session } = setup();
++    await handler.handle(
++      chatwootMessage({
++        kind: 'sendEvent',
++        payload: { event: { ...EVENT_PAYLOAD.event, endTime: START - 1 } },
++      }),
++    );
++    expect(session.sendEvent).not.toHaveBeenCalled();
++    expect(session.sendText).toHaveBeenCalledTimes(1);
++  });
++
++  it('event refused (501 engine without events): text once; 5xx: Unrecoverable', async () => {
++    const a = setup();
++    a.session.sendEvent.mockRejectedValueOnce(httpError(501));
++    await a.handler.handle(
++      chatwootMessage({ kind: 'sendEvent', payload: EVENT_PAYLOAD }),
++    );
++    expect(a.session.sendText).toHaveBeenCalledTimes(1);
++
++    const b = setup();
++    b.session.sendEvent.mockRejectedValueOnce(httpError(502));
++    await expect(
++      b.handler.handle(
++        chatwootMessage({ kind: 'sendEvent', payload: EVENT_PAYLOAD }),
++      ),
++    ).rejects.toBeInstanceOf(UnrecoverableError);
++    expect(b.session.sendText).not.toHaveBeenCalled();
++  });
++
++  it('already mapped (manual re-run): nothing is sent again', async () => {
++    const { handler, session, mapping } = setup();
++    mapping.getMappingByChatwootCombinedKeyAndPart.mockResolvedValue({ id: 1 });
++    await handler.handle(
++      chatwootMessage({ kind: 'sendEvent', payload: EVENT_PAYLOAD }),
++    );
++    expect(session.sendEvent).not.toHaveBeenCalled();
++    expect(session.sendText).not.toHaveBeenCalled();
++  });
++});
 diff --git a/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts b/src/apps/chatwoot/consumers/inbox/message_created.native.test.ts
 new file mode 100644
 index 00000000..91471d6d
@@ -2168,16 +2651,17 @@ index 00000000..91471d6d
 +  });
 +});
 diff --git a/src/apps/chatwoot/consumers/inbox/message_created.ts b/src/apps/chatwoot/consumers/inbox/message_created.ts
-index b48d9328..eec9cf40 100644
+index b48d9328..27fd4fce 100644
 --- a/src/apps/chatwoot/consumers/inbox/message_created.ts
 +++ b/src/apps/chatwoot/consumers/inbox/message_created.ts
-@@ -20,12 +20,38 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
+@@ -20,12 +20,42 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
  import { SessionManager } from '@waha/core/abc/manager.abc';
  import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
  import {
 +  MessageContactVcardRequest,
    MessageFileRequest,
    MessageImageRequest,
++  MessageLinkCustomPreviewRequest,
 +  MessageLocationRequest,
 +  MessagePollRequest,
    MessageTextRequest,
@@ -2185,10 +2669,13 @@ index b48d9328..eec9cf40 100644
    MessageVoiceRequest,
  } from '@waha/structures/chatting.dto';
 +import { SendListRequest } from '@waha/structures/chatting.list.dto';
++import { EventMessageRequest } from '@waha/structures/events.dto';
 +import {
 +  BuildWahaNativeRequest,
 +  DeterministicMessageId,
++  HasPreviewImage,
 +  IsDefinitiveRefusal,
++  NativeRequestProblem,
 +  ParseWahaNative,
 +  WAHA_NATIVE_SEND_TIMEOUT_MS,
 +  WahaHttpStatus,
@@ -2210,7 +2697,7 @@ index b48d9328..eec9cf40 100644
  import { sleep } from '@waha/utils/promiseTimeout';
  import { Job } from 'bullmq';
  import { PinoLogger } from 'nestjs-pino';
-@@ -80,6 +106,7 @@ export class MessageHandler {
+@@ -80,6 +110,7 @@ export class MessageHandler {
      private config: ChatWootConfig,
      private l: Locale,
      private statusService: MessageStatusService,
@@ -2218,7 +2705,7 @@ index b48d9328..eec9cf40 100644
    ) {}
  
    async handle(body: any) {
-@@ -95,16 +122,20 @@ export class MessageHandler {
+@@ -95,16 +126,20 @@ export class MessageHandler {
        return;
      }
  
@@ -2242,7 +2729,7 @@ index b48d9328..eec9cf40 100644
      const results = [];
      let part = 0; // Start from 0 and increment before each send/check
      const replyTo = await this.getReplyTo(message).catch((err) => {
-@@ -116,6 +147,17 @@ export class MessageHandler {
+@@ -116,6 +151,17 @@ export class MessageHandler {
  
      // Send text (Part 1 if present)
      const attachments = message.attachments || [];
@@ -2260,7 +2747,7 @@ index b48d9328..eec9cf40 100644
      const sendText = content && attachments.length !== 1;
      const parts = attachments.length + (sendText ? 1 : 0);
      if (sendText) {
-@@ -154,7 +196,14 @@ export class MessageHandler {
+@@ -154,7 +200,14 @@ export class MessageHandler {
          chatwoot: body,
          singleAttachment: attachments.length == 1,
        });
@@ -2276,7 +2763,7 @@ index b48d9328..eec9cf40 100644
        this.logger.info(
          `File message sent: ${msg.id} - ${file.data_url} - ${file.file_type}`,
        );
-@@ -167,6 +216,92 @@ export class MessageHandler {
+@@ -167,6 +220,125 @@ export class MessageHandler {
      return results;
    }
  
@@ -2326,9 +2813,42 @@ index b48d9328..eec9cf40 100644
 +      native.kind,
 +    );
 +    const request = BuildWahaNativeRequest(native, chatId, replyTo, id);
++    // Autonom.ia c2y-rich-3: a request WAHA would refuse with a 500 is not sent
++    const problem = NativeRequestProblem(native.kind, request);
++    if (problem) {
++      this.logger.warn(
++        `ChatWoot => WhatsApp: native message invalid (${problem}), sending text instead: ` +
++          `kind=${native.kind} chatwoot_message_id=${message.id} session=${this.session.name}`,
++      );
++      return null;
++    }
 +    const opts = { signal: AbortSignal.timeout(WAHA_NATIVE_SEND_TIMEOUT_MS) };
 +    try {
 +      switch (native.kind) {
++        case 'sendLinkCustomPreview': {
++          const link = request as MessageLinkCustomPreviewRequest;
++          if (!HasPreviewImage(link)) {
++            // No image: text with the automatic link preview (same id rule)
++            return await this.session.sendText(
++              {
++                session: '',
++                chatId: chatId,
++                id: id,
++                text: link.text,
++                reply_to: replyTo,
++                linkPreview: true,
++                linkPreviewHighQuality: true,
++              },
++              opts,
++            );
++          }
++          return await this.session.sendLinkCustomPreview(link, opts);
++        }
++        case 'sendEvent':
++          return await this.session.sendEvent(
++            request as EventMessageRequest,
++            opts,
++          );
 +        case 'sendList':
 +          return await this.session.sendList(request as SendListRequest, opts);
 +        case 'sendLocation':
@@ -2369,7 +2889,7 @@ index b48d9328..eec9cf40 100644
    /**
     * Push acks that arrived before the last part was mapped, best effort
     */
-@@ -274,6 +409,7 @@ export class MessageHandler {
+@@ -274,6 +446,7 @@ export class MessageHandler {
      replyTo: string,
      mentions: string[] | null,
      file: MessageAttachment,
@@ -2377,7 +2897,7 @@ index b48d9328..eec9cf40 100644
    ) {
      const url = file.data_url;
      let filename = url.split('/').pop();
-@@ -286,6 +422,20 @@ export class MessageHandler {
+@@ -286,6 +459,20 @@ export class MessageHandler {
      switch (file.file_type) {
        case 'image':
          if (mimetype != 'image/jpeg' && mimetype != 'image/png') {
@@ -2398,7 +2918,7 @@ index b48d9328..eec9cf40 100644
            // Send it as a file
            break;
          }
-@@ -302,7 +452,8 @@ export class MessageHandler {
+@@ -302,7 +489,8 @@ export class MessageHandler {
          };
          return session.sendImage(imageRequest);
        case 'video':
@@ -2408,7 +2928,7 @@ index b48d9328..eec9cf40 100644
            break;
          }
          const videoRequest: MessageVideoRequest = {
-@@ -312,7 +463,7 @@ export class MessageHandler {
+@@ -312,7 +500,7 @@ export class MessageHandler {
            reply_to: replyTo,
            file: {
              url: url,
@@ -2417,7 +2937,7 @@ index b48d9328..eec9cf40 100644
              filename: filename,
            },
            convert: true,
-@@ -347,4 +498,63 @@ export class MessageHandler {
+@@ -347,4 +535,63 @@ export class MessageHandler {
      };
      return session.sendFile(fileRequest);
    }
@@ -2482,18 +3002,23 @@ index b48d9328..eec9cf40 100644
 +  }
  }
 diff --git a/src/apps/chatwoot/consumers/waha/base.ts b/src/apps/chatwoot/consumers/waha/base.ts
-index 0cf7fad8..18cff867 100644
+index 0cf7fad8..b6c431a9 100644
 --- a/src/apps/chatwoot/consumers/waha/base.ts
 +++ b/src/apps/chatwoot/consumers/waha/base.ts
-@@ -41,6 +41,7 @@ import {
+@@ -41,6 +41,12 @@ import {
  } from '@waha/apps/chatwoot/dto/config.dto';
  import { clearContent } from '@waha/apps/chatwoot/consumers/utils';
  import { SetExternalEcho } from '@waha/apps/chatwoot/api/webhook.guards';
 +import { ExtractListReply } from '@waha/apps/chatwoot/messages/to/chatwoot/ListReply';
++import {
++  JidUser,
++  WahaQuote,
++  WahaQuoteOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
  
  export function ListenEventsForChatWoot(config: ChatWootConfig) {
    const events = [
-@@ -52,6 +53,12 @@ export function ListenEventsForChatWoot(config: ChatWootConfig) {
+@@ -52,6 +58,14 @@ export function ListenEventsForChatWoot(config: ChatWootConfig) {
      WAHAEvents.CALL_RECEIVED,
      WAHAEvents.CALL_ACCEPTED,
      WAHAEvents.CALL_REJECTED,
@@ -2503,10 +3028,12 @@ index 0cf7fad8..18cff867 100644
 +    // same consumer, which only acts on our own native polls.
 +    WAHAEvents.POLL_VOTE,
 +    WAHAEvents.POLL_VOTE_FAILED,
++    // Autonom.ia c2y-rich-3: answers to events sent natively by the connector
++    WAHAEvents.EVENT_RESPONSE,
    ];
    const conversations = config.conversations;
    if (conversations.markAsRead || conversations.syncMessageStatus) {
-@@ -215,6 +222,9 @@ export interface ChatWootMessagePartial {
+@@ -215,6 +229,9 @@ export interface ChatWootMessagePartial {
    content: string;
    attachments: SendAttachment[];
    private?: boolean;
@@ -2516,12 +3043,22 @@ index 0cf7fad8..18cff867 100644
  }
  
  export interface MessageBaseHandlerPayload {
-@@ -439,9 +449,16 @@ export abstract class MessageBaseHandler<
+@@ -404,6 +421,8 @@ export abstract class MessageBaseHandler<
+         return undefined;
+       },
+     );
++    // Autonom.ia c2y-rich-3: the quoted message, also when it is not mapped
++    const quote = await this.c2yQuote(payload, replyTo);
+ 
+     // Send the message as a private note or as a regular message?
+     let private_ = message.private;
+@@ -439,15 +458,71 @@ export abstract class MessageBaseHandler<
        private: private_,
        attachments: message.attachments as any,
        content_attributes: {
 +        // Autonom.ia c2y-rich-2: never overrides in_reply_to
 +        ...(message.content_attributes || {}),
++        ...(quote ? { waha_quote: quote } : {}),
          in_reply_to: replyTo,
        },
      };
@@ -2533,6 +3070,60 @@ index 0cf7fad8..18cff867 100644
      if (payload.fromMe) {
        SetExternalEcho(body);
      }
+     return body;
+   }
+ 
++  /**
++   * Autonom.ia c2y-rich-3: false for converters that must keep the main
++   * shape (status replies)
++   */
++  protected c2yQuoteEnabled(payload: Payload): boolean {
++    void payload;
++    return true;
++  }
++
++  /**
++   * Autonom.ia c2y-rich-3: content_attributes.waha_quote when the message
++   * quotes another one. from_me is looked up only when the quoted message is
++   * not mapped (the only case chat2you uses it); unknown = null.
++   * Never throws: the message must reach Chatwoot anyway.
++   */
++  private async c2yQuote(
++    payload: Payload,
++    replyTo: number | undefined,
++  ): Promise<WahaQuote | null> {
++    const quoted = (payload as any)?.replyTo;
++    if (!quoted?.id || !this.c2yQuoteEnabled(payload)) {
++      return null;
++    }
++    let fromMe: boolean | null = null;
++    if (!replyTo && quoted.participant) {
++      fromMe = await this.c2yIsMe(quoted.participant);
++    }
++    return WahaQuoteOf(quoted, replyTo ?? null, fromMe);
++  }
++
++  private async c2yIsMe(jid: string): Promise<boolean | null> {
++    const user = JidUser(jid);
++    if (!user) {
++      return null;
++    }
++    try {
++      const info: any = await this.session.getSessionInfo();
++      const me = info?.me;
++      return user === JidUser(me?.id) || user === JidUser(me?.lid) || null;
++    } catch (err) {
++      const kind = err?.name || err?.constructor?.name || typeof err;
++      this.logger.warn(
++        `WhatsApp => ChatWoot: quoted author not checked (${kind})`,
++      );
++      return null;
++    }
++  }
++
+   async getReplyToChatWootMessageID(
+     payload: Payload,
+   ): Promise<number | undefined> {
 diff --git a/src/apps/chatwoot/consumers/waha/call.0.base.ts b/src/apps/chatwoot/consumers/waha/call.0.base.ts
 index 949eb212..93c62b97 100644
 --- a/src/apps/chatwoot/consumers/waha/call.0.base.ts
@@ -2650,6 +3241,612 @@ index 6446b428..34b8355c 100644
      };
    }
  
+diff --git a/src/apps/chatwoot/consumers/waha/event.response.test.ts b/src/apps/chatwoot/consumers/waha/event.response.test.ts
+new file mode 100644
+index 00000000..4e0c7367
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/event.response.test.ts
+@@ -0,0 +1,266 @@
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({ EngineHelper: {} }));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import {
++  EVENT_RESPONSE_KEYS,
++  EventResponseHandler,
++  SentByConnector,
++} from '@waha/apps/chatwoot/consumers/waha/event.response';
++import { ListenEventsForChatWoot } from '@waha/apps/chatwoot/consumers/waha/base';
++import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { ChatWootWAHAQueueService } from '@waha/apps/chatwoot/services/ChatWootWAHAQueueService';
++import { WAHAEvents } from '@waha/structures/enums.dto';
++
++const CUSTOMER = '5511999999999@c.us';
++const ME = '5511888888888@c.us';
++const EVENT_WA_ID = '3EB0EVENT0000000001';
++
++function payload(extra: any = {}, response: any = {}, key?: string) {
++  return {
++    id: `false_${CUSTOMER}_RESP1`,
++    from: CUSTOMER,
++    fromMe: false,
++    timestamp: 1760620000,
++    // as GOWS gives it: the key as the customer wrote it (points to us)
++    eventCreationKey: {
++      id: key ?? `false_${ME}_${EVENT_WA_ID}`,
++      to: ME,
++      from: ME,
++    },
++    eventResponse: {
++      response: 'GOING',
++      timestampMs: 1760620000123,
++      extraGuestCount: 0,
++      ...response,
++    },
++    _data: {},
++    ...extra,
++  } as any;
++}
++
++// parts: set by message_created only when the connector sends the event
++function setup(
++  locale = 'en-US',
++  existing: any = null,
++  eventRow: any = { id: 1, conversation_id: 42, message_id: 900, parts: 1 },
++) {
++  const mapping: any = {
++    getChatWootMessage: jest.fn(async (key) => {
++      if (key.message_id === EVENT_WA_ID) return eventRow;
++      if (key.message_id === 'RESP1') return existing;
++      return null;
++    }),
++    map: jest.fn().mockResolvedValue(undefined),
++  };
++  const conversation: any = {
++    send: jest.fn().mockResolvedValue({
++      id: 1001,
++      conversation_id: 42,
++      created_at: 1760620001,
++    }),
++  };
++  const repo: any = { ConversationById: jest.fn(() => conversation) };
++  const info: any = { onConversationId: jest.fn(), onMessageType: jest.fn() };
++  const session: any = {
++    getSessionInfo: jest.fn().mockResolvedValue({
++      me: { id: ME, lid: '777@lid' },
++    }),
++  };
++  const logger = JestLogger();
++  const handler = new EventResponseHandler(
++    mapping,
++    repo,
++    logger,
++    i18n.locale(locale),
++    info,
++    session,
++  );
++  return { handler, mapping, conversation, session, info, logger };
++}
++
++describe('event.response (item 13)', () => {
++  it.each([
++    ['GOING', 'going', 'Going'],
++    ['NOT_GOING', 'not_going', 'Not going'],
++    ['MAYBE', 'maybe', 'Maybe'],
++  ])('%s on our event: incoming answer + waha_event_response', async (engine, answer, text) => {
++    const { handler, conversation, mapping, info } = setup();
++    const result = await handler.handle(
++      payload({}, { response: engine, extraGuestCount: 2 }),
++    );
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++    expect(result).toEqual({
++      content: text,
++      message_type: 'incoming',
++      private: false,
++      content_attributes: {
++        in_reply_to: 900,
++        waha_event_response: {
++          event_message_id: 900,
++          response: answer,
++          extra_guests: 2,
++          response_id: `false_${CUSTOMER}_RESP1`,
++          timestamp: 1760620000123,
++        },
++      },
++    });
++    expect(info.onConversationId).toHaveBeenCalledWith(42);
++    expect(mapping.map).toHaveBeenCalledWith(
++      { timestamp: new Date(1760620001000), conversation_id: 42, message_id: 1001 },
++      expect.objectContaining({ message_id: 'RESP1', chat_id: CUSTOMER }),
++      1,
++    );
++  });
++
++  it('pt-BR texts', async () => {
++    const texts = [];
++    for (const response of ['GOING', 'NOT_GOING', 'MAYBE']) {
++      const { handler } = setup('pt-BR');
++      texts.push((await handler.handle(payload({}, { response }))).content);
++    }
++    expect(texts).toEqual(['Vou', 'Não vou', 'Talvez']);
++  });
++
++  it('locale without the keys falls back to English', async () => {
++    const { handler } = setup('es-ES');
++    expect((await handler.handle(payload())).content).toBe('Going');
++  });
++
++  it('key in our own perspective (fromMe true, chat = customer) is also ours', async () => {
++    const { handler, conversation } = setup();
++    await handler.handle(payload({}, {}, `true_${CUSTOMER}_${EVENT_WA_ID}`));
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++  });
++
++  it('key pointing to our lid', async () => {
++    const { handler, conversation } = setup();
++    await handler.handle(payload({}, {}, `false_777@lid_${EVENT_WA_ID}`));
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++  });
++
++  it("customer's own event (fromMe true in the customer's key): ignored", async () => {
++    const { handler, conversation } = setup();
++    const r = await handler.handle(payload({}, {}, `true_${ME}_${EVENT_WA_ID}`));
++    expect(r).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('event of someone else (customer perspective, other chat): ignored', async () => {
++    const { handler, conversation } = setup();
++    const r = await handler.handle(
++      payload({}, {}, `false_${CUSTOMER}_${EVENT_WA_ID}`),
++    );
++    expect(r).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('group: ours when the key participant is our number', async () => {
++    const group = '120363000000000000@g.us';
++    const { handler, conversation } = setup();
++    await handler.handle(
++      payload({ from: group }, {}, `false_${group}_${EVENT_WA_ID}_${ME}`),
++    );
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++    const other = setup();
++    await other.handler.handle(
++      payload({ from: group }, {}, `false_${group}_${EVENT_WA_ID}_${CUSTOMER}`),
++    );
++    expect(other.conversation.send).not.toHaveBeenCalled();
++  });
++
++  // Review c2y-rich-3 (finding 1)
++  it.each([
++    ['parts null (mirrored from the phone)', null],
++    ['parts missing', undefined],
++  ])('event created on the business phone (%s): ignored, nothing created', async (_n, parts) => {
++    const row = { id: 1, conversation_id: 42, message_id: 900, parts: parts };
++    const { handler, conversation, mapping } = setup('en-US', null, row);
++    expect(await handler.handle(payload())).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++    expect(mapping.map).not.toHaveBeenCalled();
++  });
++
++  it('SentByConnector', () => {
++    expect(SentByConnector({ parts: 1 } as any)).toBe(true);
++    expect(SentByConnector({ parts: 3 } as any)).toBe(true);
++    expect(SentByConnector({ parts: null } as any)).toBe(false);
++    expect(SentByConnector({} as any)).toBe(false);
++    expect(SentByConnector({ parts: 0 } as any)).toBe(false);
++    expect(SentByConnector(null)).toBe(false);
++  });
++
++  // Review c2y-rich-3 (finding 4): the mapping lookup is by message id only
++  // (WhatsAppMessageRepository.getByMessageId: app_pk + message_id), so a
++  // customer answering from a @lid jid still finds the event.
++  it('customer answering from a @lid jid: found by the event message id', async () => {
++    const { handler, conversation, mapping } = setup();
++    await handler.handle(payload({ from: '123456789@lid' }));
++    expect(conversation.send).toHaveBeenCalledTimes(1);
++    expect(mapping.getChatWootMessage).toHaveBeenCalledWith(
++      expect.objectContaining({ message_id: EVENT_WA_ID }),
++    );
++  });
++
++  it('event not mapped: ignored', async () => {
++    const { handler, conversation } = setup();
++    const r = await handler.handle(payload({}, {}, `false_${ME}_OTHERID`));
++    expect(r).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('answer from the business phone: ignored', async () => {
++    const { handler, conversation, session } = setup();
++    expect(await handler.handle(payload({ fromMe: true }))).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++    expect(session.getSessionInfo).not.toHaveBeenCalled();
++  });
++
++  it.each(['UNKNOWN', undefined, null])('answer %p: ignored', async (response) => {
++    const { handler, conversation } = setup();
++    expect(await handler.handle(payload({}, { response }))).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('same response twice (retry): created once', async () => {
++    const { handler, conversation } = setup('en-US', { message_id: 1001 });
++    expect(await handler.handle(payload())).toBeNull();
++    expect(conversation.send).not.toHaveBeenCalled();
++  });
++
++  it('own number not readable: throws (job retried), log by class only', async () => {
++    const { handler, session, logger, conversation } = setup();
++    session.getSessionInfo.mockRejectedValueOnce(
++      new TypeError('key secret 5511999999999'),
++    );
++    await expect(handler.handle(payload())).rejects.toThrow(TypeError);
++    expect(conversation.send).not.toHaveBeenCalled();
++    const warn = String((logger.warn as jest.Mock).mock.calls[0][0]);
++    expect(warn).toContain('(TypeError)');
++    expect(warn).not.toContain('5511');
++  });
++
++  it('i18n keys exist in en-US and pt-BR', () => {
++    for (const key of Object.values(EVENT_RESPONSE_KEYS)) {
++      expect(i18n.locale('en-US').r(key)).not.toBe(key);
++      expect(i18n.locale('pt-BR').r(key)).not.toBe(key);
++    }
++  });
++
++  it('connector listens to event.response and routes it to its queue', () => {
++    const service0 = new ChatWootWAHAQueueService({
++      queue: jest.fn((name) => name),
++    } as any);
++    const events = ListenEventsForChatWoot({
++      conversations: { markAsRead: false, syncMessageStatus: false },
++    } as any);
++    expect(events).toContain(WAHAEvents.EVENT_RESPONSE);
++    expect(events).not.toContain(WAHAEvents.EVENT_RESPONSE_FAILED);
++    expect((service0 as any).getQueueForEvent(WAHAEvents.EVENT_RESPONSE_FAILED)).toBeNull();
++    const service = service0;
++    expect((service as any).getQueueForEvent(WAHAEvents.EVENT_RESPONSE)).toBe(
++      QueueName.WAHA_EVENT_RESPONSE,
++    );
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/waha/event.response.ts b/src/apps/chatwoot/consumers/waha/event.response.ts
+new file mode 100644
+index 00000000..3db70774
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/event.response.ts
+@@ -0,0 +1,328 @@
++import { conversation_message_create } from '@figuro/chatwoot-sdk';
++import { Processor } from '@nestjs/bullmq';
++import { JOB_CONCURRENCY } from '@waha/apps/app_sdk/constants';
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import { ContactConversationService } from '@waha/apps/chatwoot/client/ContactConversationService';
++import { MessageType } from '@waha/apps/chatwoot/client/types';
++import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
++import { EventData } from '@waha/apps/chatwoot/consumers/types';
++import {
++  ChatWootWAHABaseConsumer,
++  IMessageInfo,
++} from '@waha/apps/chatwoot/consumers/waha/base';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { Locale } from '@waha/apps/chatwoot/i18n/locale';
++import {
++  ChatwootMessage,
++  MessageMappingService,
++  WhatsAppMessage,
++} from '@waha/apps/chatwoot/storage';
++import { SessionManager } from '@waha/core/abc/manager.abc';
++import { parseMessageIdSerialized } from '@waha/core/utils/ids';
++import { isJidGroup, toCusFormat } from '@waha/core/utils/jids';
++import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
++import { WAHAEvents } from '@waha/structures/enums.dto';
++import { EventResponsePayload } from '@waha/structures/events.dto';
++import { WAHAWebhookEventResponse } from '@waha/structures/webhooks.dto';
++import { Job } from 'bullmq';
++import { PinoLogger } from 'nestjs-pino';
++import { WAHASessionAPI } from '@waha/apps/app_sdk/waha/WAHASelf';
++import { JidUser } from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
++
++/**
++ * Autonom.ia patch c2y-rich-3 (autonom-ia2/chat#1709, round 2, item 13)
++ * Answer (going / not going / maybe) to an event the connector sent
++ * (sendEvent) -> incoming message in the event conversation, with
++ * content_attributes.waha_event_response. Answers to any other event, and
++ * the business phone's own answers, are ignored, as before the patch.
++ * "Sent by the connector" = the event's Chatwoot mapping has `parts` (set
++ * only by message_created when the connector sends); an event created on
++ * the business phone is mirrored with parts null and is ignored.
++ * The engine can not cancel events, so there is nothing about cancelling.
++ */
++export const EVENT_RESPONSE_KEYS = {
++  going: 'whatsapp.to.chatwoot.event.response.going',
++  not_going: 'whatsapp.to.chatwoot.event.response.not_going',
++  maybe: 'whatsapp.to.chatwoot.event.response.maybe',
++} as const;
++
++export type WahaEventAnswer = keyof typeof EVENT_RESPONSE_KEYS;
++
++const ANSWER_BY_ENGINE: Record<string, WahaEventAnswer> = {
++  GOING: 'going',
++  NOT_GOING: 'not_going',
++  MAYBE: 'maybe',
++};
++
++export interface WahaEventResponse {
++  event_message_id: number;
++  response: WahaEventAnswer;
++  extra_guests: number;
++  response_id: string;
++  timestamp: number | null;
++}
++
++@Processor(QueueName.WAHA_EVENT_RESPONSE, { concurrency: JOB_CONCURRENCY })
++export class WAHAEventResponseConsumer extends ChatWootWAHABaseConsumer {
++  constructor(
++    protected readonly manager: SessionManager,
++    log: PinoLogger,
++    rmutex: RMutexService,
++  ) {
++    super(manager, log, rmutex, 'WAHAEventResponseConsumer');
++  }
++
++  GetChatId(event: WAHAWebhookEventResponse): string {
++    const from = event?.payload?.from;
++    return typeof from === 'string' && from ? from : 'event.response';
++  }
++
++  async Process(
++    job: Job<EventData, any, WAHAEvents>,
++    info: IMessageInfo,
++  ): Promise<any> {
++    const container = await this.DIContainer(job, job.data.app);
++    const event: WAHAWebhookEventResponse = job.data.event as any;
++    const handler = new EventResponseHandler(
++      container.MessageMappingService(),
++      container.ContactConversationService(),
++      container.Logger(),
++      container.Locale(),
++      info,
++      new WAHASessionAPI(event.session, container.WAHASelf()),
++    );
++    return await handler.handle(event.payload);
++  }
++}
++
++function EventKey(payload: EventResponsePayload) {
++  const id = payload?.eventCreationKey?.id;
++  if (typeof id !== 'string' || !id) {
++    return null;
++  }
++  try {
++    const key = parseMessageIdSerialized(id, true);
++    return key?.id ? key : null;
++  } catch (err) {
++    return null;
++  }
++}
++
++/**
++ * message_created saves `parts` (>= 1) on every message the connector sends;
++ * a message mirrored from the phone is saved without it (null).
++ */
++export function SentByConnector(chatwoot: ChatwootMessage | null): boolean {
++  const parts = Number(chatwoot?.parts);
++  return chatwoot?.parts != null && Number.isInteger(parts) && parts > 0;
++}
++
++export interface SessionInfoSource {
++  getSessionInfo(): Promise<any>;
++}
++
++export class EventResponseHandler {
++  constructor(
++    private mappingService: MessageMappingService,
++    private repo: ContactConversationService,
++    private logger: ILogger,
++    private l: Locale,
++    private info: IMessageInfo,
++    private session: SessionInfoSource,
++  ) {}
++
++  async handle(
++    payload: EventResponsePayload,
++  ): Promise<conversation_message_create | null> {
++    if (payload?.fromMe) {
++      // The business phone answered its own event - not a customer answer
++      return null;
++    }
++    const answer = ANSWER_BY_ENGINE[String(payload?.eventResponse?.response)];
++    if (!answer) {
++      this.logger.debug('Event response without a known answer, ignored');
++      return null;
++    }
++    const event = await this.findOurEvent(payload);
++    if (!event) {
++      return null;
++    }
++    const responseKey = this.responseKey(payload);
++    if (!responseKey) {
++      this.logger.warn(
++        `Event response without a valid id ignored: chatwoot_message_id=${event.message_id}`,
++      );
++      return null;
++    }
++    const existing = await this.mappingService.getChatWootMessage({
++      chat_id: responseKey.chat_id,
++      message_id: responseKey.message_id,
++    });
++    if (existing) {
++      this.logger.debug(
++        `Skipping existing event response '${responseKey.message_id}'`,
++      );
++      return null;
++    }
++
++    this.info.onMessageType(MessageType.INCOMING);
++    this.info.onConversationId(event.conversation_id);
++    const conversation = this.repo.ConversationById(event.conversation_id);
++    const message = this.buildMessage(event, payload, answer);
++    const response = await conversation.send(message);
++    await this.saveMapping(response, responseKey);
++    this.logger.info(
++      `WhatsApp => ChatWoot: event response created for chatwoot_message_id=${event.message_id}`,
++    );
++    return message;
++  }
++
++  /**
++   * The mapped Chatwoot message of the event, only when the event was sent
++   * by this number AND by the connector (sendEvent).
++   * The lookup is by WhatsApp message id only: MessageMappingService
++   * .getChatWootMessage -> WhatsAppMessageRepository.getByMessageId filters
++   * by app and message_id, never by chat_id, so a customer answering from a
++   * @lid jid finds the event mapped with its phone jid (and vice versa).
++   */
++  private async findOurEvent(
++    payload: EventResponsePayload,
++  ): Promise<ChatwootMessage | null> {
++    const key = EventKey(payload);
++    if (!key) {
++      return null;
++    }
++    if (!(await this.isOurEvent(key))) {
++      this.logger.debug('Event response for an event not sent by us, ignored');
++      return null;
++    }
++    const chatwoot = await this.mappingService.getChatWootMessage({
++      chat_id: toCusFormat(payload.from || ''),
++      message_id: key.id,
++    });
++    if (!chatwoot) {
++      this.logger.debug(
++        'Event response for an event not mapped in Chatwoot, ignored',
++      );
++      return null;
++    }
++    if (!SentByConnector(chatwoot)) {
++      // Event created on the business phone and mirrored: not ours (main)
++      this.logger.debug(
++        `Event response for an event not sent by the connector, ignored: chatwoot_message_id=${chatwoot.message_id}`,
++      );
++      return null;
++    }
++    return chatwoot;
++  }
++
++  /**
++   * GOWS gives the event key as the CUSTOMER wrote it (no perspective fix,
++   * unlike poll votes, see fixPollCreationKey): in a DM our event comes as
++   * {remoteJid: our number, fromMe: false}, and the customer's own event as
++   * {remoteJid: our number, fromMe: true}. Both perspectives are handled:
++   * - DM, key points to our number: ours when fromMe is false;
++   * - DM, key points to the customer: ours when fromMe is true;
++   * - group: ours when the key participant is our number, or fromMe with
++   *   no participant.
++   */
++  private async isOurEvent(key: {
++    fromMe?: boolean;
++    remoteJid?: string;
++    participant?: string;
++  }): Promise<boolean> {
++    let me: any;
++    try {
++      const info = await this.session.getSessionInfo();
++      me = info?.me;
++    } catch (err) {
++      const kind = err?.name || err?.constructor?.name || typeof err;
++      this.logger.warn(`Event response: own number not read (${kind})`);
++      throw err;
++    }
++    const own = [JidUser(me?.id), JidUser(me?.lid)].filter(Boolean);
++    if (own.length === 0) {
++      return false;
++    }
++    const participant = JidUser(key.participant);
++    if (isJidGroup(key.remoteJid || '')) {
++      if (participant !== null) {
++        return own.includes(participant);
++      }
++      return key.fromMe === true;
++    }
++    const chat = JidUser(key.remoteJid);
++    if (chat !== null && own.includes(chat)) {
++      return key.fromMe === false;
++    }
++    return key.fromMe === true;
++  }
++
++  private responseKey(payload: EventResponsePayload): WhatsAppMessage | null {
++    const id = payload?.id;
++    if (typeof id !== 'string' || !id) {
++      return null;
++    }
++    try {
++      const key = parseMessageIdSerialized(id, true);
++      if (!key?.id) {
++        return null;
++      }
++      const remoteJid = key.remoteJid || '';
++      const timestamp = Number(payload.eventResponse?.timestampMs);
++      return {
++        timestamp: new Date(Number.isFinite(timestamp) ? timestamp : 0),
++        chat_id: toCusFormat(remoteJid),
++        message_id: key.id,
++        from_me: Boolean(key.fromMe),
++        participant: isJidGroup(remoteJid) ? key.participant || null : null,
++      };
++    } catch (err) {
++      return null;
++    }
++  }
++
++  private answerText(answer: WahaEventAnswer): string {
++    const key = EVENT_RESPONSE_KEYS[answer];
++    const text = this.l.r(key);
++    if (text && text !== key) {
++      return text;
++    }
++    // Locale without the key: fall back to English
++    return i18n.locale('en-US').r(key);
++  }
++
++  buildMessage(
++    event: ChatwootMessage,
++    payload: EventResponsePayload,
++    answer: WahaEventAnswer,
++  ): conversation_message_create {
++    const timestamp = Number(payload.eventResponse?.timestampMs);
++    const guests = Number(payload.eventResponse?.extraGuestCount);
++    const response: WahaEventResponse = {
++      event_message_id: event.message_id,
++      response: answer,
++      extra_guests: Number.isFinite(guests) && guests > 0 ? guests : 0,
++      response_id: String(payload.id ?? ''),
++      timestamp: Number.isFinite(timestamp) ? timestamp : null,
++    };
++    return {
++      content: this.answerText(answer),
++      message_type: MessageType.INCOMING as any,
++      private: false,
++      content_attributes: {
++        in_reply_to: event.message_id,
++        waha_event_response: response,
++      } as any,
++    };
++  }
++
++  private async saveMapping(chatwootMessage: any, whatsapp: WhatsAppMessage) {
++    const chatwoot: Omit<ChatwootMessage, 'id'> = {
++      timestamp: new Date(chatwootMessage.created_at * 1000),
++      conversation_id: chatwootMessage.conversation_id,
++      message_id: chatwootMessage.id,
++    };
++    await this.mappingService.map(chatwoot, whatsapp, 1);
++  }
++}
 diff --git a/src/apps/chatwoot/consumers/waha/inbound.c2y2.test.ts b/src/apps/chatwoot/consumers/waha/inbound.c2y2.test.ts
 new file mode 100644
 index 00000000..1d6a583f
@@ -2902,16 +4099,953 @@ index 00000000..1d6a583f
 +    expect(UnknownContentType(null)).toBeNull();
 +  });
 +});
+diff --git a/src/apps/chatwoot/consumers/waha/inbound.c2y3.test.ts b/src/apps/chatwoot/consumers/waha/inbound.c2y3.test.ts
+new file mode 100644
+index 00000000..63aafe51
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/waha/inbound.c2y3.test.ts
+@@ -0,0 +1,765 @@
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: {
++    ChatID: jest.fn((p: any) => p.from),
++    IsReplyToStatus: jest.fn(() => false),
++    ExtractQuotedMedia: jest.fn(() => null),
++  },
++}));
++jest.mock('@waha/apps/chatwoot/messages/to/chatwoot/ListReply', () => ({
++  ExtractListReply: jest.fn(() => null),
++}));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { Conversation } from '@waha/apps/chatwoot/client/Conversation';
++import { MessageStatus } from '@waha/apps/chatwoot/client/types';
++import { PlayedAt } from '@waha/apps/chatwoot/consumers/waha/message.ack';
++import { MessageAnyHandler } from '@waha/apps/chatwoot/consumers/waha/message.any';
++import { MessageRevokedHandler } from '@waha/apps/chatwoot/consumers/waha/message.revoked';
++import { ChatWootOutgoingMode } from '@waha/apps/chatwoot/dto/config.dto';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import { TKey } from '@waha/apps/chatwoot/i18n/templates';
++import { ProtoReader } from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
++import {
++  MEDIA_RETRY_ENV,
++  MediaRetryFromEnv,
++  RetryMediaDownload,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3.retry';
++import { MessageStatusService } from '@waha/apps/chatwoot/services/MessageStatusService';
++import { EngineHelper } from '@waha/apps/chatwoot/waha';
++import { WAMessageAck } from '@waha/structures/enums.dto';
++
++const CUSTOMER = '5511999999999@c.us';
++const ME = '5511888888888@c.us';
++const l = i18n.locale('en-US');
++
++/** Baileys-like reader (Baileys itself is ESM, see c2y3.test.ts) */
++const reader: ProtoReader = {
++  normalize(message: any) {
++    const inner = message?.ephemeralMessage?.message;
++    return inner || message;
++  },
++  contentType(message: any) {
++    if (!message) return undefined;
++    return Object.keys(message).find(
++      (k) => k === 'conversation' || k.endsWith('Message'),
++    );
++  },
++};
++
++function setup(opts: { mapped?: any; history?: boolean } = {}) {
++  const mapping: any = {
++    getChatWootMessage: jest.fn().mockResolvedValue(opts.mapped ?? null),
++  };
++  const logger = JestLogger();
++  const info: any = { onConversationId: jest.fn(), onMessageType: jest.fn() };
++  const session: any = {
++    name: 'hub2you',
++    getSessionInfo: jest.fn().mockResolvedValue({
++      me: { id: ME, lid: '777@lid' },
++    }),
++    getMessageById: jest.fn().mockResolvedValue(null),
++  };
++  const waha: any = {
++    fetch: jest.fn().mockResolvedValue(Buffer.from('bytes')),
++  };
++  const Cls: any = opts.history
++    ? class extends MessageAnyHandler {
++        protected get historyMessage() {
++          return true;
++        }
++      }
++    : MessageAnyHandler;
++  const handler = new Cls(
++    { id: 'job-1', queueName: 'chatwoot.waha | message.any' },
++    mapping,
++    {},
++    logger,
++    info,
++    session,
++    l,
++    waha,
++    ChatWootOutgoingMode.PRIVATE_NOTE,
++  );
++  handler.c2yReader = reader;
++  handler.c2yMediaRetry = { enabled: false, waitsMs: [], timeoutMs: 1 };
++  return { handler, mapping, logger, session, waha };
++}
++
++function message(extra: any = {}, proto: any = { conversation: 'oi' }) {
++  return {
++    id: `false_${CUSTOMER}_MSG1`,
++    timestamp: Math.floor(Date.now() / 1000),
++    from: CUSTOMER,
++    fromMe: false,
++    body: 'oi',
++    hasMedia: false,
++    media: null,
++    _data: { Info: { Chat: CUSTOMER }, Message: proto },
++    ...extra,
++  };
++}
++
++function allLogs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++describe('message.any: main content kept + waha_* keys (round 2)', () => {
++  afterEach(() => jest.clearAllMocks());
++
++  it('plain text: same content, only waha_context added', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(message());
++    expect(body.content).toBe('oi');
++    expect(body.private).toBe(false);
++    expect(body.message_type).toBe('incoming');
++    expect(body.content_attributes).toEqual({
++      waha_context: {
++        // plain text has no contextInfo: the message does not tell
++        ephemeral_expiration: null,
++        forwarded: false,
++        forwarding_score: 0,
++      },
++      in_reply_to: undefined,
++    });
++  });
++
++  it('voice note: attachment as before (no-filename.oga) + waha_media voice', async () => {
++    const { handler } = setup();
++    const payload = message(
++      {
++        body: null,
++        hasMedia: true,
++        media: {
++          url: 'http://localhost:3000/api/files/s/a.oga',
++          mimetype: 'audio/ogg; codecs=opus',
++          filename: null,
++        },
++      },
++      { audioMessage: { ptt: true } },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.content).toBeNull();
++    expect(body.attachments).toHaveLength(1);
++    expect(body.attachments[0].filename).toBe('no-filename.oga');
++    expect(body.content_attributes.waha_media).toEqual({
++      kind: 'voice',
++      mimetype: 'audio/ogg; codecs=opus',
++      filename: null,
++      ptt: true,
++      view_once: false,
++      animated: false,
++      lottie: false,
++    });
++  });
++
++  it('caption + failed download: same text warning as before + waha_media_failed', async () => {
++    const { handler } = setup();
++    const payload = message(
++      {
++        body: 'olha',
++        hasMedia: true,
++        media: {
++          url: null,
++          mimetype: 'image/jpeg',
++          filename: null,
++          error: { details: 'AxiosError: 410 5511999999999' },
++        },
++      },
++      { imageMessage: { caption: 'olha' } },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    // same warning text as main (caption + job link)
++    expect(body.content).toContain('olha');
++    expect(body.content).toContain("couldn't download");
++    expect(body.private).toBe(false);
++    expect(body.content_attributes.waha_media_failed).toEqual({
++      kind: 'image',
++      mimetype: 'image/jpeg',
++      filename: null,
++      caption: 'olha',
++      reason: 'AxiosError',
++      from_me: false,
++    });
++  });
++
++  it('no caption + failed download: private note as before + waha_media_failed', async () => {
++    const { handler } = setup();
++    const payload = message(
++      {
++        body: null,
++        hasMedia: true,
++        media: {
++          url: null,
++          mimetype: 'video/mp4',
++          filename: null,
++          error: { details: 'TimeoutError: x' },
++        },
++      },
++      { videoMessage: {} },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.private).toBe(true);
++    expect(body.message_type).toBe('outgoing');
++    expect(body.content_attributes.waha_media_failed).toEqual({
++      kind: 'video',
++      mimetype: 'video/mp4',
++      filename: null,
++      caption: null,
++      reason: 'TimeoutError',
++      from_me: false,
++    });
++  });
++
++  // Review c2y-rich-3 (finding 2)
++  it('media null (engine did not say it failed): private note as before, no waha_media_failed', async () => {
++    const { handler } = setup();
++    const payload = message(
++      { body: null, hasMedia: true, media: null },
++      { videoMessage: {} },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.private).toBe(true);
++    expect(body.content_attributes.waha_media_failed).toBeUndefined();
++  });
++
++  // Review c2y-rich-3 (finding 5): the business phone's own media
++  it.each([
++    ['with caption (text warning)', 'olha'],
++    ['without caption (private note)', null],
++  ])('failed download sent by the business phone, %s: from_me true', async (_n, caption) => {
++    const { handler } = setup();
++    const payload = message(
++      {
++        id: `true_${CUSTOMER}_MSG9`,
++        fromMe: true,
++        body: caption,
++        hasMedia: true,
++        media: {
++          url: null,
++          mimetype: 'image/jpeg',
++          filename: null,
++          error: { details: 'AxiosError: x' },
++        },
++      },
++      { imageMessage: caption ? { caption: caption } : {} },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.message_type).toBe('outgoing');
++    expect(body.content_attributes.waha_media_failed.from_me).toBe(true);
++  });
++
++  it('media skipped on purpose (download off): no waha_media_failed', async () => {
++    const { handler } = setup();
++    const payload = message(
++      {
++        body: null,
++        hasMedia: true,
++        media: { url: null, mimetype: 'video/mp4', filename: null },
++      },
++      { videoMessage: {} },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.private).toBe(true);
++    expect(body.content_attributes.waha_media_failed).toBeUndefined();
++  });
++
++  it('location: same text as before + waha_location', async () => {
++    const { handler } = setup();
++    const proto = {
++      locationMessage: { degreesLatitude: -23.5, degreesLongitude: -46.6 },
++    };
++    const payload = message(
++      {
++        body: null,
++        location: {
++          live: false,
++          latitude: '-23.5',
++          longitude: '-46.6',
++          name: 'Sé',
++          address: 'SP',
++          url: null,
++        },
++      },
++      proto,
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.content).toBe(
++      l.key(TKey.WA_TO_CW_MESSAGE_LOCATION).r({ payload, message: proto as any }),
++    );
++    expect(body.content).toContain('-23.5');
++    expect(body.attachments).toEqual([]);
++    expect(body.content_attributes.waha_location).toEqual({
++      latitude: -23.5,
++      longitude: -46.6,
++      name: 'Sé',
++      address: 'SP',
++      url: null,
++      live: false,
++      caption: null,
++    });
++  });
++
++  it('location inside an ephemeral wrapper is still a location', async () => {
++    const { handler } = setup();
++    const proto = {
++      ephemeralMessage: {
++        message: {
++          locationMessage: { degreesLatitude: 1, degreesLongitude: 2 },
++        },
++      },
++    };
++    const body = await handler.buildChatWootMessage(
++      message({ body: null }, proto),
++    );
++    expect(body.content_attributes.waha_location.latitude).toBe(1);
++    expect(body.private).toBe(false);
++  });
++
++  it('shared contact: text + vcf as before + waha_contacts', async () => {
++    const { handler } = setup();
++    const vcard = [
++      'BEGIN:VCARD',
++      'VERSION:3.0',
++      'FN:Ana Souza',
++      'TEL;type=CELL;waid=5511977776666:+55 11 97777-6666',
++      'END:VCARD',
++    ].join('\n');
++    const body = await handler.buildChatWootMessage(
++      message({ body: null }, { contactMessage: { vcard } }),
++    );
++    expect(body.attachments).toHaveLength(1);
++    expect(body.attachments[0].filename).toBe('vcard-1.vcf');
++    expect(body.content).toContain('Ana Souza');
++    expect(body.content_attributes.waha_contacts).toEqual([
++      {
++        full_name: 'Ana Souza',
++        phones: ['+55 11 97777-6666'],
++        wa_id: '5511977776666',
++      },
++    ]);
++  });
++
++  it('album header: same text as before + waha_album', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message(
++        { body: null },
++        { albumMessage: { expectedImageCount: 4, expectedVideoCount: 0 } },
++      ),
++    );
++    expect(body.content).toContain('4');
++    expect(body.attachments).toEqual([]);
++    expect(body.content_attributes.waha_album).toEqual({
++      expected_images: 4,
++      expected_videos: 0,
++    });
++  });
++
++  it('order: private note as before + waha_unknown + waha_order', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message(
++        { body: null },
++        {
++          orderMessage: {
++            orderId: '9',
++            itemCount: 1,
++            totalAmount1000: 5000,
++            totalCurrencyCode: 'BRL',
++          },
++        },
++      ),
++    );
++    expect(body.private).toBe(true);
++    expect(body.content_attributes.waha_unknown.from_me).toBe(false);
++    expect(body.content_attributes.waha_order).toMatchObject({
++      order_id: '9',
++      item_count: 1,
++      total_amount: 5,
++      currency: 'BRL',
++      from_me: false,
++    });
++  });
++
++  // Review c2y-rich-3 (finding 5)
++  // Contract with chat2you: media_failed and order only transform with
++  // from_me === false, so the key must ALWAYS be there, as a boolean.
++  it.each([
++    ['customer', false, false],
++    ['business phone', true, true],
++    ['fromMe missing', undefined, false],
++  ])('from_me always present (boolean) in waha_media_failed and waha_order: %s', async (_n, fromMe, expected) => {
++    const failedMedia = {
++      url: null,
++      mimetype: 'image/jpeg',
++      filename: null,
++      error: { details: 'AxiosError: x' },
++    };
++    const cases = [
++      [{ body: 'olha', hasMedia: true, media: failedMedia }, { imageMessage: { caption: 'olha' } }, 'waha_media_failed'],
++      [{ body: null, hasMedia: true, media: failedMedia }, { imageMessage: {} }, 'waha_media_failed'],
++      [{ body: null }, { orderMessage: { orderId: '9' } }, 'waha_order'],
++    ];
++    for (const [extra, proto, key] of cases as any[]) {
++      const { handler } = setup();
++      const payload: any = message(extra, proto);
++      if (fromMe === undefined) {
++        delete payload.fromMe;
++      } else {
++        payload.fromMe = fromMe;
++        payload.id = `${fromMe}_${CUSTOMER}_MSG7`;
++      }
++      const body = await handler.buildChatWootMessage(payload);
++      const data = body.content_attributes[key];
++      expect(data).toHaveProperty('from_me');
++      expect(typeof data.from_me).toBe('boolean');
++      expect(data.from_me).toBe(expected);
++    }
++  });
++
++  it('order sent from the business phone: waha_order.from_me true', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message(
++        { id: `true_${CUSTOMER}_MSG9`, fromMe: true, body: null },
++        { orderMessage: { orderId: '9', itemCount: 1 } },
++      ),
++    );
++    expect(body.message_type).toBe('outgoing');
++    expect(body.content_attributes.waha_order.from_me).toBe(true);
++    expect(body.content_attributes.waha_unknown.from_me).toBe(true);
++  });
++
++  it('ephemeral + forwarded: waha_context filled', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message(
++        { body: 'x' },
++        {
++          extendedTextMessage: {
++            text: 'x',
++            contextInfo: {
++              expiration: 86400,
++              isForwarded: true,
++              forwardingScore: 5,
++            },
++          },
++        },
++      ),
++    );
++    expect(body.content_attributes.waha_context).toEqual({
++      ephemeral_expiration: 86400,
++      forwarded: true,
++      forwarding_score: 5,
++    });
++  });
++
++  it('history import: no waha_context, no retry', async () => {
++    const { handler, session } = setup({ history: true });
++    handler.c2yMediaRetry = {
++      enabled: true,
++      waitsMs: [0],
++      timeoutMs: 100,
++      sleep: () => Promise.resolve(),
++    };
++    const body = await handler.buildChatWootMessage(
++      message({ hasMedia: true, media: null, body: 'x' }),
++    );
++    expect(body.content_attributes.waha_context).toBeUndefined();
++    expect(session.getMessageById).not.toHaveBeenCalled();
++  });
++
++  it('status reply: keeps the main shape (no waha_* keys, no waha_quote)', async () => {
++    const { handler } = setup();
++    (EngineHelper.IsReplyToStatus as jest.Mock).mockReturnValueOnce(true);
++    // own media in the reply: TextMessage would add waha_media
++    const payload = message(
++      {
++        body: 'lindo',
++        hasMedia: true,
++        media: { url: 'http://x/f.jpg', mimetype: 'image/jpeg' },
++        replyTo: { id: 'STATUS1', body: 'meu status', _data: {} },
++      },
++      { imageMessage: { caption: 'lindo' } },
++    );
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.content).toContain('lindo');
++    expect(Object.keys(body.content_attributes)).toEqual(['in_reply_to']);
++  });
++});
++
++describe('waha_quote (item 5)', () => {
++  afterEach(() => jest.clearAllMocks());
++
++  it('quoted message mapped: in_reply_to as before + waha_quote with the id', async () => {
++    const { handler, mapping, session } = setup({
++      mapped: { conversation_id: 1, message_id: 555 },
++    });
++    const body = await handler.buildChatWootMessage(
++      message({
++        replyTo: {
++          id: 'QUOTED1',
++          participant: CUSTOMER,
++          body: 'antiga',
++          hasMedia: false,
++        },
++      }),
++    );
++    expect(mapping.getChatWootMessage).toHaveBeenCalled();
++    expect(body.content_attributes.in_reply_to).toBe(555);
++    expect(body.content_attributes.waha_quote).toEqual({
++      wa_id: 'QUOTED1',
++      participant: CUSTOMER,
++      from_me: null,
++      body: 'antiga',
++      has_media: false,
++      chatwoot_message_id: 555,
++    });
++    // from_me is only looked up when there is no mapping
++    expect(session.getSessionInfo).not.toHaveBeenCalled();
++  });
++
++  it('not mapped, quoted from the business phone: from_me true', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message({
++        replyTo: { id: 'Q', participant: '5511888888888:3@s.whatsapp.net', body: 'x' },
++      }),
++    );
++    expect(body.content_attributes.in_reply_to).toBeUndefined();
++    expect(body.content_attributes.waha_quote.from_me).toBe(true);
++    expect(body.content_attributes.waha_quote.chatwoot_message_id).toBeNull();
++  });
++
++  it('not mapped, quoted from our lid: from_me true', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message({ replyTo: { id: 'Q', participant: '777@lid', body: 'x' } }),
++    );
++    expect(body.content_attributes.waha_quote.from_me).toBe(true);
++  });
++
++  it('not mapped, quoted from the customer: from_me null', async () => {
++    const { handler } = setup();
++    const body = await handler.buildChatWootMessage(
++      message({ replyTo: { id: 'Q', participant: CUSTOMER, body: 'x' } }),
++    );
++    expect(body.content_attributes.waha_quote.from_me).toBeNull();
++  });
++
++  it('own number not readable: from_me null, logged by class only, message still created', async () => {
++    const { handler, session, logger } = setup();
++    session.getSessionInfo.mockRejectedValueOnce(
++      new TypeError('key super-secret 5511999999999'),
++    );
++    const body = await handler.buildChatWootMessage(
++      message({ replyTo: { id: 'Q', participant: CUSTOMER, body: 'x' } }),
++    );
++    expect(body.content_attributes.waha_quote.from_me).toBeNull();
++    const logs = allLogs(logger);
++    expect(logs).toContain('(TypeError)');
++    expect(logs).not.toContain('super-secret');
++    expect(logs).not.toContain('5511999999999');
++  });
++});
++
++describe('media retry (item 6) - off unless WAHA_C2Y_MEDIA_RETRY=true', () => {
++  afterEach(() => jest.clearAllMocks());
++  const failed = () =>
++    message(
++      {
++        body: null,
++        hasMedia: true,
++        media: { url: null, mimetype: 'image/jpeg', error: { details: 'E: x' } },
++      },
++      { imageMessage: {} },
++    );
++
++  it('env flag', () => {
++    expect(MediaRetryFromEnv({}).enabled).toBe(false);
++    expect(MediaRetryFromEnv({ [MEDIA_RETRY_ENV]: 'false' }).enabled).toBe(false);
++    expect(MediaRetryFromEnv({ [MEDIA_RETRY_ENV]: 'true' }).enabled).toBe(true);
++    // waits + timeouts stay under the chat mutex TTL (20 s)
++    const o = MediaRetryFromEnv({});
++    const worst = o.waitsMs.reduce((a, b) => a + b, 0) + o.waitsMs.length * o.timeoutMs;
++    expect(worst).toBeLessThanOrEqual(14_000);
++  });
++
++  it('off (default): nothing is asked again, same note as main', async () => {
++    const { handler, session } = setup();
++    handler.c2yMediaRetry = {
++      ...MediaRetryFromEnv({}),
++      sleep: () => Promise.resolve(),
++    };
++    expect(handler.c2yMediaRetry.waitsMs.length).toBeGreaterThan(0);
++    const body = await handler.buildChatWootMessage(failed());
++    expect(session.getMessageById).not.toHaveBeenCalled();
++    expect(body.private).toBe(true);
++  });
++
++  it('on: second try downloads -> regular attachment, no failure key', async () => {
++    const { handler, session, waha } = setup();
++    const sleeps: number[] = [];
++    handler.c2yMediaRetry = {
++      enabled: true,
++      waitsMs: [2000, 4000],
++      timeoutMs: 4000,
++      sleep: (ms) => {
++        sleeps.push(ms);
++        return Promise.resolve();
++      },
++    };
++    session.getMessageById
++      .mockRejectedValueOnce(new Error('timeout'))
++      .mockResolvedValueOnce({
++        media: { url: 'http://localhost/f.jpg', mimetype: 'image/jpeg' },
++      });
++    const body = await handler.buildChatWootMessage(failed());
++    expect(sleeps).toEqual([2000, 4000]);
++    expect(session.getMessageById).toHaveBeenCalledTimes(2);
++    const [chatId, id, download, opts] = session.getMessageById.mock.calls[0];
++    expect([chatId, id, download]).toEqual([
++      CUSTOMER,
++      `false_${CUSTOMER}_MSG1`,
++      true,
++    ]);
++    expect(opts.signal).toBeDefined();
++    expect(waha.fetch).toHaveBeenCalledWith('http://localhost/f.jpg');
++    expect(body.attachments).toHaveLength(1);
++    expect(body.private).toBe(false);
++    expect(body.content_attributes.waha_media.kind).toBe('image');
++    expect(body.content_attributes.waha_media_failed).toBeUndefined();
++  });
++
++  it('on: never downloads -> failure key, logs carry only the message id', async () => {
++    const { handler, session, logger } = setup();
++    handler.c2yMediaRetry = {
++      enabled: true,
++      waitsMs: [0, 0],
++      timeoutMs: 10,
++      sleep: () => Promise.resolve(),
++    };
++    session.getMessageById.mockResolvedValue({ media: { url: null } });
++    const body = await handler.buildChatWootMessage(failed());
++    expect(session.getMessageById).toHaveBeenCalledTimes(2);
++    expect(body.content_attributes.waha_media_failed.reason).toBe('E');
++    const logs = allLogs(logger);
++    expect(logs).toContain('message_id=MSG1');
++    expect(logs).not.toContain('5511999999999');
++  });
++
++  // Review c2y-rich-3 (finding 2): download off must not cost 2 calls per media
++  it.each([
++    ['download off ({url:null})', { url: null, mimetype: 'image/jpeg' }],
++    ['media null', null],
++  ])('on: %s is not asked again', async (_n, media) => {
++    const session: any = { getMessageById: jest.fn() };
++    const payload: any = message({ hasMedia: true, media: media });
++    const result = await RetryMediaDownload(payload, session, JestLogger(), {
++      enabled: true,
++      waitsMs: [0, 0],
++      timeoutMs: 1,
++      sleep: () => Promise.resolve(),
++    });
++    expect(result).toBe(payload);
++    expect(session.getMessageById).not.toHaveBeenCalled();
++  });
++
++  it('on: media that was not a failure is not asked again', async () => {
++    const session: any = { getMessageById: jest.fn() };
++    const payload: any = message({ hasMedia: true, media: { url: null } });
++    const result = await RetryMediaDownload(payload, session, JestLogger(), {
++      enabled: true,
++      waitsMs: [0],
++      timeoutMs: 1,
++      sleep: () => Promise.resolve(),
++    });
++    expect(result).toBe(payload);
++    expect(session.getMessageById).not.toHaveBeenCalled();
++  });
++});
++
++describe('revoked (item 7): note as before + waha_revoke', () => {
++  function revoked(fromMe: boolean) {
++    return {
++      payload: {
++        revokedMessageId: 'ORIG1',
++        after: { from: CUSTOMER, fromMe: fromMe },
++      },
++    } as any;
++  }
++
++  it.each([false, true])('fromMe %p', async (fromMe) => {
++    const conversation: any = { send: jest.fn().mockResolvedValue({}) };
++    const repo: any = { ConversationById: jest.fn(() => conversation) };
++    const mapping: any = {
++      getChatWootMessage: jest
++        .fn()
++        .mockResolvedValue({ conversation_id: 3, message_id: 30 }),
++    };
++    const info: any = { onConversationId: jest.fn(), onMessageType: jest.fn() };
++    const handler = new MessageRevokedHandler(mapping, repo, JestLogger(), l, info);
++    await handler.handle(revoked(fromMe));
++    const sent = conversation.send.mock.calls[0][0];
++    expect(sent.private).toBe(true);
++    expect(sent.content).toBe(l.key(TKey.MESSAGE_REMOVED_IN_WHATSAPP).render());
++    expect(sent.message_type).toBe(fromMe ? 'outgoing' : 'incoming');
++    expect(sent.content_attributes).toEqual({
++      in_reply_to: 30,
++      waha_revoke: { revoked_wa_id: 'ORIG1', from_me: fromMe },
++    });
++  });
++});
++
++describe('played audio: c2y_played_at on the status PATCH', () => {
++  it('PlayedAt only for PLAYED with a valid time', () => {
++    const ts = Date.UTC(2026, 9, 16, 12, 0, 0);
++    expect(PlayedAt(WAMessageAck.PLAYED, ts)).toBe('2026-10-16T12:00:00.000Z');
++    expect(PlayedAt(WAMessageAck.READ, ts)).toBeNull();
++    expect(PlayedAt(WAMessageAck.PLAYED, 'x')).toBeNull();
++    expect(PlayedAt(WAMessageAck.PLAYED, 0)).toBeNull();
++  });
++
++  it('status service passes it to the PATCH; without it the body is the main one', async () => {
++    const conv = { updateMessageStatus: jest.fn().mockResolvedValue({}) };
++    const service = new MessageStatusService(
++      {
++        getWhatsAppMessage: jest.fn().mockResolvedValue([{ message_id: 'A' }]),
++      } as any,
++      { minimumAck: jest.fn().mockResolvedValue(WAMessageAck.PLAYED) } as any,
++      { ConversationById: () => conv } as any,
++    );
++    const key = { conversation_id: 1, message_id: 2, parts: 1 };
++    await service.sync(key, { c2y_played_at: '2026-10-16T12:00:00.000Z' });
++    await service.sync(key);
++    expect(conv.updateMessageStatus.mock.calls[0]).toEqual([
++      2,
++      MessageStatus.READ,
++      { c2y_played_at: '2026-10-16T12:00:00.000Z' },
++    ]);
++    expect(conv.updateMessageStatus.mock.calls[1]).toEqual([
++      2,
++      MessageStatus.READ,
++      undefined,
++    ]);
++  });
++
++  it('Conversation.updateMessageStatus body', async () => {
++    const update = jest.fn().mockResolvedValue({});
++    const api: any = { messages: { update } };
++    const conversation = new Conversation(api, 10, 20);
++    await conversation.updateMessageStatus(5, MessageStatus.READ);
++    await conversation.updateMessageStatus(5, MessageStatus.READ, {
++      c2y_played_at: '2026-10-16T12:00:00.000Z',
++    });
++    expect(update.mock.calls[0][0].data).toEqual({ status: 'read' });
++    expect(update.mock.calls[1][0].data).toEqual({
++      status: 'read',
++      c2y_played_at: '2026-10-16T12:00:00.000Z',
++    });
++  });
++});
+diff --git a/src/apps/chatwoot/consumers/waha/message.ack.ts b/src/apps/chatwoot/consumers/waha/message.ack.ts
+index 2978c4d2..b53cb954 100644
+--- a/src/apps/chatwoot/consumers/waha/message.ack.ts
++++ b/src/apps/chatwoot/consumers/waha/message.ack.ts
+@@ -13,7 +13,7 @@ import { Locale } from '@waha/apps/chatwoot/i18n/locale';
+ import { WAHASessionAPI } from '@waha/apps/app_sdk/waha/WAHASelf';
+ import { SessionManager } from '@waha/core/abc/manager.abc';
+ import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
+-import { WAHAEvents } from '@waha/structures/enums.dto';
++import { WAHAEvents, WAMessageAck } from '@waha/structures/enums.dto';
+ import {
+   WAHAWebhookMessageAck,
+   WAMessageAckBody,
+@@ -142,7 +142,12 @@ class MessageAckHandler {
+     if (!chatwoot) {
+       return;
+     }
+-    await this.statusService.sync(chatwoot);
++    // Autonom.ia c2y-rich-3: the recipient played our voice / audio message
++    const playedAt = PlayedAt(payload.ack, event.timestamp);
++    await this.statusService.sync(
++      chatwoot,
++      playedAt ? { c2y_played_at: playedAt } : undefined,
++    );
+   }
+ 
+   private async markConversationAsRead(event: WAHAWebhookMessageAck) {
+@@ -195,3 +200,19 @@ class MessageAckHandler {
+     }
+   }
+ }
++
++/**
++ * Autonom.ia c2y-rich-3: ISO time of a PLAYED ack, null for any other ack
++ * or an invalid timestamp
++ */
++export function PlayedAt(ack: WAMessageAck, timestamp: unknown): string | null {
++  if (ack !== WAMessageAck.PLAYED) {
++    return null;
++  }
++  const ms = Number(timestamp);
++  if (!Number.isFinite(ms) || ms <= 0) {
++    return null;
++  }
++  const date = new Date(ms);
++  return Number.isNaN(date.getTime()) ? null : date.toISOString();
++}
 diff --git a/src/apps/chatwoot/consumers/waha/message.any.ts b/src/apps/chatwoot/consumers/waha/message.any.ts
-index 7cee3394..567bd835 100644
+index 7cee3394..f19e3fd3 100644
 --- a/src/apps/chatwoot/consumers/waha/message.any.ts
 +++ b/src/apps/chatwoot/consumers/waha/message.any.ts
-@@ -154,7 +154,7 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+@@ -34,6 +34,16 @@ import {
+ } from '@waha/apps/chatwoot/messages/to/chatwoot';
+ import { EngineHelper } from '@waha/apps/chatwoot/waha';
+ import { HasMediaWithNoMediaMessage } from '@waha/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage';
++import {
++  BaileysProtoReader,
++  ProtoReader,
++  WahaContextOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
++import {
++  MediaRetryFromEnv,
++  MediaRetryOptions,
++  RetryMediaDownload,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3.retry';
+ 
+ @Processor(QueueName.WAHA_MESSAGE_ANY, { concurrency: JOB_CONCURRENCY })
+ export class WAHAMessageAnyConsumer extends ChatWootWAHABaseConsumer {
+@@ -73,13 +83,48 @@ export class WAHAMessageAnyConsumer extends ChatWootWAHABaseConsumer {
+ 
+ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+   public shouldLogUnsupported: boolean = false;
++  // Autonom.ia c2y-rich-3
++  public c2yReader: ProtoReader = BaileysProtoReader;
++  public c2yMediaRetry: MediaRetryOptions = MediaRetryFromEnv();
++  private c2yStatusReply = false;
++
++  protected c2yQuoteEnabled(payload: WAMessage): boolean {
++    void payload;
++    return !this.c2yStatusReply;
++  }
+ 
+   protected async getMessage(
+     payload: WAMessage,
++  ): Promise<ChatWootMessagePartial> {
++    // Autonom.ia c2y-rich-3: one more download try (off unless enabled),
++    // then waha_context next to whatever the converters create
++    if (!this.historyMessage) {
++      payload = await RetryMediaDownload(
++        payload,
++        this.session,
++        this.logger,
++        this.c2yMediaRetry,
++      );
++    }
++    const msg = await this.convertMessage(payload);
++    if (!msg || this.historyMessage || this.c2yStatusReply) {
++      return msg;
++    }
++    const protoMessage = resolveProtoMessage(payload._data);
++    msg.content_attributes = {
++      ...(msg.content_attributes || {}),
++      waha_context: WahaContextOf(payload, protoMessage, this.c2yReader),
++    };
++    return msg;
++  }
++
++  private async convertMessage(
++    payload: WAMessage,
+   ): Promise<ChatWootMessagePartial> {
+     let converter: MessageToChatWootConverter;
+     let msg: ChatWootMessagePartial;
+     const protoMessage = resolveProtoMessage(payload._data);
++    this.c2yStatusReply = false;
+ 
+     // Check for Facebook Ad first - but let it use the normal flow later
+     converter = new FacebookAdMessage(this.l, this.logger);
+@@ -97,22 +142,31 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+     );
+     msg = await converter.convert(payload, protoMessage);
+     if (msg) {
++      // Autonom.ia c2y-rich-3: a status reply keeps the main shape
++      this.c2yStatusReply = true;
++      msg.content_attributes = undefined;
+       return msg;
+     }
+ 
+-    converter = new TextMessage(this.l, this.logger, this.waha, this.job);
+-    msg = await converter.convert(payload, null);
++    converter = new TextMessage(
++      this.l,
++      this.logger,
++      this.waha,
++      this.job,
++      this.c2yReader,
++    );
++    msg = await converter.convert(payload, protoMessage);
+     if (msg) {
+       return msg;
+     }
+ 
+-    converter = new LocationMessage(this.l);
++    converter = new LocationMessage(this.l, this.c2yReader);
+     msg = await converter.convert(payload, protoMessage);
+     if (msg) {
+       return msg;
+     }
+ 
+-    converter = new ShareContactMessage(this.l, this.logger);
++    converter = new ShareContactMessage(this.l, this.logger, this.c2yReader);
+     msg = await converter.convert(payload, protoMessage);
+     if (msg) {
+       return msg;
+@@ -148,13 +202,23 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+       return msg;
+     }
+ 
+-    converter = new HasMediaWithNoMediaMessage(this.l, this.job);
++    converter = new HasMediaWithNoMediaMessage(
++      this.l,
++      this.job,
++      this.c2yReader,
++    );
+     msg = await converter.convert(payload, protoMessage);
+     if (msg) {
        return msg;
      }
  
 -    converter = new UnsupportedMessage(this.l, this.job);
-+    converter = new UnsupportedMessage(this.l, this.job, this.logger);
++    converter = new UnsupportedMessage(
++      this.l,
++      this.job,
++      this.logger,
++      undefined,
++      this.c2yReader,
++    );
      msg = await converter.convert(payload, protoMessage);
      if (this.shouldLogUnsupported) {
        this.logger.warn(
@@ -2934,6 +5068,23 @@ index ef6d4115..2cedd210 100644
      };
    }
  
+diff --git a/src/apps/chatwoot/consumers/waha/message.revoked.ts b/src/apps/chatwoot/consumers/waha/message.revoked.ts
+index 808c69e6..a9ac7530 100644
+--- a/src/apps/chatwoot/consumers/waha/message.revoked.ts
++++ b/src/apps/chatwoot/consumers/waha/message.revoked.ts
+@@ -78,6 +78,12 @@ export class MessageRevokedHandler {
+     }
+     const conversation = this.repo.ConversationById(chatwoot.conversation_id);
+     const message = this.buildChatWootMessage(chatwoot, payload.after.fromMe);
++    // Autonom.ia c2y-rich-3: chat2you marks the original as deleted by the
++    // customer and keeps its content; the note stays as before
++    (message.content_attributes as any).waha_revoke = {
++      revoked_wa_id: messageId,
++      from_me: Boolean(payload.after.fromMe),
++    };
+     this.info.onConversationId(chatwoot.conversation_id);
+     this.info.onMessageType(message.message_type as MessageType);
+     await conversation.send(message);
 diff --git a/src/apps/chatwoot/consumers/waha/poll.vote.test.ts b/src/apps/chatwoot/consumers/waha/poll.vote.test.ts
 new file mode 100644
 index 00000000..c082cdca
@@ -3515,10 +5666,10 @@ index ea116adf..16afd3ca 100644
        // TODO: Add a way to enable it back in config
        // https://github.com/devlikeapro/waha/issues/1395
 diff --git a/src/apps/chatwoot/i18n/locales/en-US.yaml b/src/apps/chatwoot/i18n/locales/en-US.yaml
-index db865cee..90a0f8aa 100644
+index db865cee..e294c0da 100644
 --- a/src/apps/chatwoot/i18n/locales/en-US.yaml
 +++ b/src/apps/chatwoot/i18n/locales/en-US.yaml
-@@ -191,6 +191,10 @@ whatsapp.to.chatwoot.message.poll: |-
+@@ -191,6 +191,20 @@ whatsapp.to.chatwoot.message.poll: |-
    {{/options}}
    {{/poll}}
  
@@ -3526,14 +5677,24 @@ index db865cee..90a0f8aa 100644
 +whatsapp.to.chatwoot.poll.vote.removed: |-
 +  Vote removed
 +
++# Autonom.ia c2y-rich-3: the customer answered a native event
++whatsapp.to.chatwoot.event.response.going: |-
++  Going
++
++whatsapp.to.chatwoot.event.response.not_going: |-
++  Not going
++
++whatsapp.to.chatwoot.event.response.maybe: |-
++  Maybe
++
  whatsapp.to.chatwoot.message.list: |-
    {{#message.listMessage}}
    {{#title}}
 diff --git a/src/apps/chatwoot/i18n/locales/pt-BR.yaml b/src/apps/chatwoot/i18n/locales/pt-BR.yaml
-index 0509464b..630fb920 100644
+index 0509464b..8d5688d8 100644
 --- a/src/apps/chatwoot/i18n/locales/pt-BR.yaml
 +++ b/src/apps/chatwoot/i18n/locales/pt-BR.yaml
-@@ -406,6 +406,10 @@ whatsapp.to.chatwoot.message.poll: |-
+@@ -406,6 +406,20 @@ whatsapp.to.chatwoot.message.poll: |-
    {{/options}}
    {{/poll}}
  
@@ -3541,9 +5702,87 @@ index 0509464b..630fb920 100644
 +whatsapp.to.chatwoot.poll.vote.removed: |-
 +  Voto retirado
 +
++# Autonom.ia c2y-rich-3: the customer answered a native event
++whatsapp.to.chatwoot.event.response.going: |-
++  Vou
++
++whatsapp.to.chatwoot.event.response.not_going: |-
++  Não vou
++
++whatsapp.to.chatwoot.event.response.maybe: |-
++  Talvez
++
  whatsapp.to.chatwoot.message.list: |-
    {{#message.listMessage}}
    {{#title}}
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/AlbumMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/AlbumMessage.ts
+index 4a00224a..902fd390 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/AlbumMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/AlbumMessage.ts
+@@ -6,6 +6,7 @@ import * as lodash from 'lodash';
+ import type { proto } from '@adiwajshing/baileys';
+ import { WAMessage } from '@waha/structures/responses.dto';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
++import { WahaAlbumOf } from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
+ 
+ export class AlbumMessage implements MessageToChatWootConverter {
+   constructor(private readonly locale: Locale) {}
+@@ -38,6 +39,8 @@ export class AlbumMessage implements MessageToChatWootConverter {
+       content,
+       attachments: [],
+       private: undefined,
++      // Autonom.ia c2y-rich-3: chat2you hides this header, the media follow
++      content_attributes: { waha_album: WahaAlbumOf(albumInfo) },
+     };
+   }
+ }
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage.ts
+index 538b7dca..91dbf0f7 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage.ts
+@@ -6,18 +6,24 @@ import { ChatWootMessagePartial } from '@waha/apps/chatwoot/consumers/waha/base'
+ import type { proto } from '@adiwajshing/baileys';
+ import { WAMessage } from '@waha/structures/responses.dto';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
++import {
++  BaileysProtoReader,
++  IsMediaDownloadFailure,
++  ProtoReader,
++  WahaMediaFailedOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
+ 
+ export class HasMediaWithNoMediaMessage implements MessageToChatWootConverter {
+   constructor(
+     private readonly locale: Locale,
+     private readonly job: Job,
++    private readonly reader: ProtoReader = BaileysProtoReader,
+   ) {}
+ 
+   convert(
+     payload: WAMessage,
+     protoMessage: proto.Message | null,
+   ): ChatWootMessagePartial {
+-    void protoMessage;
+     if (!payload.hasMedia) {
+       return null;
+     }
+@@ -34,6 +40,16 @@ export class HasMediaWithNoMediaMessage implements MessageToChatWootConverter {
+       content,
+       attachments: [],
+       private: true,
++      // Autonom.ia c2y-rich-3: chat2you shows it as a visible customer bubble
++      content_attributes: IsMediaDownloadFailure(payload)
++        ? {
++            waha_media_failed: WahaMediaFailedOf(
++              payload,
++              protoMessage,
++              this.reader,
++            ),
++          }
++        : undefined,
+     };
+   }
+ }
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts b/src/apps/chatwoot/messages/to/chatwoot/ListReply.test.ts
 new file mode 100644
 index 00000000..33cc2657
@@ -3780,6 +6019,62 @@ index 00000000..fd3b77db
 +  }
 +  return { row_id: rowId, title: reply.title || null };
 +}
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/LocationMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/LocationMessage.ts
+index 2e1f8eea..984868ea 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/LocationMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/LocationMessage.ts
+@@ -6,32 +6,47 @@ import * as lodash from 'lodash';
+ import type { proto } from '@adiwajshing/baileys';
+ import { WAMessage } from '@waha/structures/responses.dto';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
++import {
++  BaileysProtoReader,
++  ProtoReader,
++  ReadProtoMessage,
++  WahaLocationOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
+ 
+ export class LocationMessage implements MessageToChatWootConverter {
+-  constructor(private readonly locale: Locale) {}
++  constructor(
++    private readonly locale: Locale,
++    private readonly reader: ProtoReader = BaileysProtoReader,
++  ) {}
+ 
+   convert(
+     payload: WAMessage,
+     protoMessage: proto.Message | null,
+   ): ChatWootMessagePartial | null {
+-    const hasLocation = !lodash.isEmpty(protoMessage?.locationMessage);
+-    const hasLiveLocation = !lodash.isEmpty(protoMessage?.liveLocationMessage);
++    // Autonom.ia c2y-rich-3: also inside ephemeral / view once wrappers
++    const message = (ReadProtoMessage(protoMessage, this.reader).content ??
++      protoMessage) as proto.Message | null;
++    const hasLocation = !lodash.isEmpty(message?.locationMessage);
++    const hasLiveLocation = !lodash.isEmpty(message?.liveLocationMessage);
+     if (!hasLocation && !hasLiveLocation) {
+       return null;
+     }
+ 
+     const content = this.locale
+       .key(TKey.WA_TO_CW_MESSAGE_LOCATION)
+-      .r({ payload, message: protoMessage });
++      .r({ payload, message: message });
+ 
+     if (isEmptyString(content)) {
+       return null;
+     }
+ 
++    // Autonom.ia c2y-rich-3: chat2you turns it into the map card
++    const location = WahaLocationOf(payload, message, this.reader);
+     return {
+       content,
+       attachments: [],
+       private: undefined,
++      content_attributes: location ? { waha_location: location } : undefined,
+     };
+   }
+ }
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts b/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts
 index 66cfb10b..cbebba43 100644
 --- a/src/apps/chatwoot/messages/to/chatwoot/MessageEdited.ts
@@ -3817,6 +6112,125 @@ index 66cfb10b..cbebba43 100644
      };
    }
  }
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/ShareContactMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/ShareContactMessage.ts
+index c3c308bf..7fc9ecbe 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/ShareContactMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/ShareContactMessage.ts
+@@ -8,11 +8,18 @@ import * as lodash from 'lodash';
+ import type { proto } from '@adiwajshing/baileys';
+ import { WAMessage } from '@waha/structures/responses.dto';
+ import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
++import {
++  BaileysProtoReader,
++  ProtoReader,
++  ReadProtoMessage,
++  WahaContactsOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
+ 
+ export class ShareContactMessage implements MessageToChatWootConverter {
+   constructor(
+     private readonly locale: Locale,
+     private readonly logger: ILogger,
++    private readonly reader: ProtoReader = BaileysProtoReader,
+   ) {}
+ 
+   convert(
+@@ -20,7 +27,10 @@ export class ShareContactMessage implements MessageToChatWootConverter {
+     protoMessage: proto.Message | null,
+   ): ChatWootMessagePartial | null {
+     void payload;
+-    const vcards = collectVcards(protoMessage);
++    // Autonom.ia c2y-rich-3: also inside ephemeral / view once wrappers
++    const message = (ReadProtoMessage(protoMessage, this.reader).content ??
++      protoMessage) as proto.Message | null;
++    const vcards = collectVcards(message);
+     if (vcards.length === 0) {
+       return null;
+     }
+@@ -48,10 +58,13 @@ export class ShareContactMessage implements MessageToChatWootConverter {
+       .key(TKey.WA_TO_CW_MESSAGE_CONTACTS)
+       .r({ contacts });
+ 
++    // Autonom.ia c2y-rich-3: chat2you turns it into the contact card
++    const shared = WahaContactsOf(contacts, vcards.length);
+     return {
+       content,
+       attachments,
+       private: undefined,
++      content_attributes: shared ? { waha_contacts: shared } : undefined,
+     };
+   }
+ }
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/TextMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/TextMessage.ts
+index 0a637b8d..200adf5d 100644
+--- a/src/apps/chatwoot/messages/to/chatwoot/TextMessage.ts
++++ b/src/apps/chatwoot/messages/to/chatwoot/TextMessage.ts
+@@ -12,6 +12,13 @@ import { WhatsappToMarkdown } from '@waha/apps/chatwoot/messages/to/chatwoot/uti
+ import { JobLink } from '@waha/apps/app_sdk/JobUtils';
+ import { Job } from 'bullmq';
+ import { WAMedia } from '@waha/structures/media.dto';
++import {
++  BaileysProtoReader,
++  IsMediaDownloadFailure,
++  ProtoReader,
++  WahaMediaFailedOf,
++  WahaMediaOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
+ 
+ // eslint-disable-next-line @typescript-eslint/no-var-requires
+ const mime = require('mime-types');
+@@ -22,13 +29,13 @@ export class TextMessage implements MessageToChatWootConverter {
+     protected readonly logger: ILogger,
+     protected readonly waha: WAHASelf,
+     protected readonly job: Job,
++    protected readonly reader: ProtoReader = BaileysProtoReader,
+   ) {}
+ 
+   async convert(
+     payload: WAMessage,
+     protoMessage: proto.Message | null,
+   ): Promise<ChatWootMessagePartial | null> {
+-    void protoMessage;
+     const attachments = await this.getAttachments(payload);
+     let content = this.locale.key(TKey.WA_TO_CW_MESSAGE).render({ payload });
+     if (isEmptyString(content) && attachments.length === 0) {
+@@ -55,9 +62,36 @@ export class TextMessage implements MessageToChatWootConverter {
+       content: WhatsappToMarkdown(content),
+       attachments: attachments,
+       private: undefined,
++      content_attributes: this.c2yAttributes(payload, protoMessage, attachments),
+     };
+   }
+ 
++  /**
++   * Autonom.ia c2y-rich-3: waha_media next to the attachment, or
++   * waha_media_failed when the download failed. Content and attachments
++   * stay as before.
++   */
++  private c2yAttributes(
++    payload: WAMessage,
++    protoMessage: proto.Message | null,
++    attachments: SendAttachment[],
++  ): Record<string, unknown> | undefined {
++    if (attachments.length > 0) {
++      const media = WahaMediaOf(payload, protoMessage, this.reader);
++      return media ? { waha_media: media } : undefined;
++    }
++    if (IsMediaDownloadFailure(payload)) {
++      return {
++        waha_media_failed: WahaMediaFailedOf(
++          payload,
++          protoMessage,
++          this.reader,
++        ),
++      };
++    }
++    return undefined;
++  }
++
+   protected async getAttachments(payload: {
+     media?: WAMedia;
+   }): Promise<SendAttachment[]> {
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/UnknownContentType.ts b/src/apps/chatwoot/messages/to/chatwoot/UnknownContentType.ts
 new file mode 100644
 index 00000000..2ed8ebd6
@@ -3871,7 +6285,7 @@ index 00000000..2ed8ebd6
 +  }
 +}
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts b/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
-index 79eb97f9..0456f3a0 100644
+index 79eb97f9..b14b21a6 100644
 --- a/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
 +++ b/src/apps/chatwoot/messages/to/chatwoot/UnsupportedMessage.ts
 @@ -1,4 +1,5 @@
@@ -3880,7 +6294,7 @@ index 79eb97f9..0456f3a0 100644
  import { Locale } from '@waha/apps/chatwoot/i18n/locale';
  import { TKey } from '@waha/apps/chatwoot/i18n/templates';
  import { Job } from 'bullmq';
-@@ -6,19 +7,23 @@ import { ChatWootMessagePartial } from '@waha/apps/chatwoot/consumers/waha/base'
+@@ -6,27 +7,59 @@ import { ChatWootMessagePartial } from '@waha/apps/chatwoot/consumers/waha/base'
  import type { proto } from '@adiwajshing/baileys';
  import { WAMessage } from '@waha/structures/responses.dto';
  import { MessageToChatWootConverter } from '@waha/apps/chatwoot/messages/to/chatwoot';
@@ -3888,6 +6302,13 @@ index 79eb97f9..0456f3a0 100644
 +  ContentTypeOf,
 +  UnknownContentType,
 +} from '@waha/apps/chatwoot/messages/to/chatwoot/UnknownContentType';
++import {
++  BaileysProtoReader,
++  IsGif,
++  ProtoReader,
++  ReadProtoMessage,
++  WahaOrderOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
  
  export class UnsupportedMessage implements MessageToChatWootConverter {
    constructor(
@@ -3895,6 +6316,7 @@ index 79eb97f9..0456f3a0 100644
      private readonly job: Job,
 +    private readonly logger?: ILogger,
 +    private readonly contentTypeOf?: ContentTypeOf,
++    private readonly reader: ProtoReader = BaileysProtoReader,
    ) {}
  
    convert(
@@ -3906,24 +6328,1339 @@ index 79eb97f9..0456f3a0 100644
      const content = this.locale
        .key(TKey.WA_TO_CW_MESSAGE_UNSUPPORTED)
        .render({ details: JobLink(this.job) });
-@@ -27,6 +32,17 @@ export class UnsupportedMessage implements MessageToChatWootConverter {
+ 
++    // Autonom.ia c2y-rich-2: chat2you can show it as a customer bubble
++    const unknown: Record<string, unknown> = {
++      content_type: UnknownContentType(
++        protoMessage,
++        this.logger,
++        this.contentTypeOf,
++      ),
++      from_me: Boolean(payload?.fromMe),
++    };
++    // Autonom.ia c2y-rich-3: GIF flag and the order data, when present
++    const read = ReadProtoMessage(protoMessage, this.reader);
++    if (IsGif(read)) {
++      unknown.gif = true;
++    }
++    const attributes: Record<string, unknown> = { waha_unknown: unknown };
++    const order = WahaOrderOf(read, Boolean(payload?.fromMe));
++    if (order) {
++      attributes.waha_order = order;
++    }
+     return {
        content,
        attachments: [],
        private: true,
-+      content_attributes: {
-+        // Autonom.ia c2y-rich-2: chat2you can show it as a customer bubble
-+        waha_unknown: {
-+          content_type: UnknownContentType(
-+            protoMessage,
-+            this.logger,
-+            this.contentTypeOf,
-+          ),
-+          from_me: Boolean(payload?.fromMe),
-+        },
-+      },
++      content_attributes: attributes,
      };
    }
  }
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/c2y3.retry.ts b/src/apps/chatwoot/messages/to/chatwoot/c2y3.retry.ts
+new file mode 100644
+index 00000000..4ce35524
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/c2y3.retry.ts
+@@ -0,0 +1,108 @@
++import { ILogger } from '@waha/apps/app_sdk/ILogger';
++import { IsMediaDownloadFailure } from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
++import { EngineHelper } from '@waha/apps/chatwoot/waha';
++import { parseMessageIdSerialized } from '@waha/core/utils/ids';
++import { WAMessage } from '@waha/structures/responses.dto';
++import { sleep } from '@waha/utils/promiseTimeout';
++
++/**
++ * Autonom.ia patch c2y-rich-3 (autonom-ia2/chat#1709, round 2, item 6)
++ *
++ * The engine could not download the media of an incoming message. Ask it
++ * again (GetMessageById + download) a couple of times before the connector
++ * gives up and creates the "media not downloaded" message.
++ *
++ * OFF unless WAHA_C2Y_MEDIA_RETRY=true: when it works it changes what an
++ * account without the chat2you flag sees (media instead of the warning), so
++ * it waits for Rodrigo's decision.
++ *
++ * The job holds the chat mutex for at most JOB_LOCK_TTL (20 s), so the whole
++ * retry (waits + calls) stays under 14 s.
++ */
++export const MEDIA_RETRY_ENV = 'WAHA_C2Y_MEDIA_RETRY';
++export const MEDIA_RETRY_WAITS_MS: readonly number[] = [2_000, 4_000];
++export const MEDIA_RETRY_TIMEOUT_MS = 4_000;
++
++export interface MediaRetryOptions {
++  enabled: boolean;
++  waitsMs: readonly number[];
++  timeoutMs: number;
++  sleep?: (ms: number) => Promise<void>;
++}
++
++export function MediaRetryFromEnv(
++  env: Record<string, string | undefined> = process.env,
++): MediaRetryOptions {
++  return {
++    enabled: env[MEDIA_RETRY_ENV] === 'true',
++    waitsMs: MEDIA_RETRY_WAITS_MS,
++    timeoutMs: MEDIA_RETRY_TIMEOUT_MS,
++  };
++}
++
++export interface MessageByIdSource {
++  getMessageById(
++    chatId: string,
++    messageId: string,
++    media: boolean,
++    opts?: { signal?: AbortSignal },
++  ): Promise<any>;
++}
++
++function shortId(id: string): string {
++  try {
++    return parseMessageIdSerialized(id, true)?.id || 'unknown';
++  } catch (err) {
++    return 'unknown';
++  }
++}
++
++function errorKind(err: any): string {
++  return err?.name || err?.constructor?.name || typeof err;
++}
++
++/**
++ * Same payload with the downloaded media, or the payload untouched.
++ * Never throws. Logs only the WhatsApp message id (no chat, phone or text).
++ */
++export async function RetryMediaDownload(
++  payload: WAMessage,
++  source: MessageByIdSource,
++  logger: ILogger,
++  options: MediaRetryOptions,
++): Promise<WAMessage> {
++  if (!options.enabled || !IsMediaDownloadFailure(payload)) {
++    return payload;
++  }
++  const wait = options.sleep ?? sleep;
++  const id = shortId(payload.id);
++  let chatId: string;
++  try {
++    chatId = EngineHelper.ChatID(payload);
++  } catch (err) {
++    return payload;
++  }
++  for (let attempt = 0; attempt < options.waitsMs.length; attempt++) {
++    await wait(options.waitsMs[attempt]);
++    try {
++      const fresh = await source.getMessageById(chatId, payload.id, true, {
++        signal: AbortSignal.timeout(options.timeoutMs),
++      });
++      const url = fresh?.media?.url;
++      if (typeof url === 'string' && url) {
++        logger.info(
++          `WhatsApp => ChatWoot: media downloaded on retry ${attempt + 1}: message_id=${id}`,
++        );
++        return { ...payload, media: fresh.media };
++      }
++    } catch (err) {
++      logger.warn(
++        `WhatsApp => ChatWoot: media retry ${attempt + 1} failed (${errorKind(err)}): message_id=${id}`,
++      );
++    }
++  }
++  logger.warn(
++    `WhatsApp => ChatWoot: media not downloaded after ${options.waitsMs.length} retries: message_id=${id}`,
++  );
++  return payload;
++}
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/c2y3.test.ts b/src/apps/chatwoot/messages/to/chatwoot/c2y3.test.ts
+new file mode 100644
+index 00000000..95b3b737
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/c2y3.test.ts
+@@ -0,0 +1,640 @@
++import {
++  IsGif,
++  IsMediaDownloadFailure,
++  JidUser,
++  MediaFailureReason,
++  ProtoReader,
++  QUOTE_BODY_MAX_CHARS,
++  ReadProtoMessage,
++  TruncateChars,
++  WahaAlbumOf,
++  WahaContactsOf,
++  WahaContextOf,
++  WahaLocationOf,
++  WahaMediaFailedOf,
++  WahaMediaOf,
++  WahaOrderOf,
++  WahaQuoteOf,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
++
++/**
++ * Same contract as Baileys normalizeMessageContent + getContentType, enough
++ * for the shapes below (Baileys itself is ESM and can not load under jest;
++ * validate/r4-real-baileys.js runs the same cases against the real one).
++ */
++const WRAPPERS = [
++  'ephemeralMessage',
++  'viewOnceMessage',
++  'viewOnceMessageV2',
++  'viewOnceMessageV2Extension',
++  'documentWithCaptionMessage',
++];
++const reader: ProtoReader = {
++  normalize(message: any) {
++    let current = message;
++    for (let i = 0; i < 5 && current; i++) {
++      const wrapper = WRAPPERS.find((key) => current[key]?.message);
++      if (!wrapper) {
++        break;
++      }
++      current = current[wrapper].message;
++    }
++    return current;
++  },
++  contentType(message: any) {
++    if (!message) return undefined;
++    return Object.keys(message).find(
++      (k) => k === 'conversation' || k.endsWith('Message'),
++    );
++  },
++};
++const broken: ProtoReader = {
++  normalize: () => {
++    throw new TypeError('boom 5511999999999');
++  },
++  contentType: () => {
++    throw new TypeError('boom');
++  },
++};
++
++function media(extra: any = {}) {
++  return {
++    url: 'http://localhost:3000/api/files/s/abc.oga',
++    mimetype: 'audio/ogg; codecs=opus',
++    filename: null,
++    ...extra,
++  };
++}
++
++describe('ReadProtoMessage', () => {
++  it('unwraps and reads the type', () => {
++    const read = ReadProtoMessage(
++      { ephemeralMessage: { message: { imageMessage: { a: 1 } } } } as any,
++      reader,
++    );
++    expect(read.type).toBe('imageMessage');
++    expect(read.content).toEqual({ imageMessage: { a: 1 } });
++  });
++
++  it('reader throws: raw message, unknown type, never throws', () => {
++    const raw: any = { imageMessage: {} };
++    expect(ReadProtoMessage(raw, broken)).toEqual({ content: raw, type: null });
++  });
++
++  it('default Baileys reader under jest fails closed', () => {
++    const raw: any = { imageMessage: {} };
++    expect(ReadProtoMessage(raw)).toEqual({ content: raw, type: null });
++  });
++
++  it('no message', () => {
++    expect(ReadProtoMessage(null, reader)).toEqual({
++      content: null,
++      type: null,
++    });
++  });
++});
++
++describe('waha_media (items 1, 9, 11)', () => {
++  it('voice note (PTT): kind voice, ptt true, filename null', () => {
++    const payload = { media: media() };
++    const proto: any = { audioMessage: { ptt: true, seconds: 3 } };
++    expect(WahaMediaOf(payload, proto, reader)).toEqual({
++      kind: 'voice',
++      mimetype: 'audio/ogg; codecs=opus',
++      filename: null,
++      ptt: true,
++      view_once: false,
++      animated: false,
++      lottie: false,
++    });
++  });
++
++  it('audio file (forwarded mp3): kind audio, ptt false', () => {
++    const payload = {
++      media: media({ mimetype: 'audio/mpeg', filename: 'song.mp3' }),
++    };
++    const proto: any = { audioMessage: { ptt: false } };
++    const result = WahaMediaOf(payload, proto, reader);
++    expect(result.kind).toBe('audio');
++    expect(result.ptt).toBe(false);
++    expect(result.filename).toBe('song.mp3');
++  });
++
++  it.each([
++    [{ stickerMessage: {} }, false, false],
++    [{ stickerMessage: { isAnimated: true } }, true, false],
++    [{ stickerMessage: { isLottie: true, isAnimated: true } }, true, true],
++    [{ stickerMessage: { mimetype: 'application/was' } }, false, true],
++  ])('sticker %j: animated %p lottie %p', (proto, animated, lottie) => {
++    const result = WahaMediaOf(
++      { media: media({ mimetype: 'image/webp' }) },
++      proto as any,
++      reader,
++    );
++    expect(result.kind).toBe('sticker');
++    expect(result.animated).toBe(animated);
++    expect(result.lottie).toBe(lottie);
++  });
++
++  it.each([
++    ['imageMessage', 'image/jpeg', 'image'],
++    ['videoMessage', 'video/mp4', 'video'],
++    ['ptvMessage', 'video/mp4', 'video'],
++    ['documentMessage', 'application/pdf', 'document'],
++  ])('%s -> %s', (type, mimetype, kind) => {
++    const result = WahaMediaOf(
++      { media: media({ mimetype }) },
++      { [type]: {} } as any,
++      reader,
++    );
++    expect(result.kind).toBe(kind);
++  });
++
++  it('document with caption is unwrapped', () => {
++    const proto: any = {
++      documentWithCaptionMessage: { message: { documentMessage: {} } },
++    };
++    expect(
++      WahaMediaOf({ media: media({ mimetype: 'application/pdf' }) }, proto, reader)
++        .kind,
++    ).toBe('document');
++  });
++
++  it.each([
++    ['image/png', 'image'],
++    ['video/quicktime', 'video'],
++    ['audio/aac', 'audio'],
++    ['application/zip', 'document'],
++    [null, 'document'],
++  ])('type unknown: by mimetype %p -> %s', (mimetype, kind) => {
++    const result = WahaMediaOf(
++      { media: media({ mimetype }) },
++      { somethingElse: {} } as any,
++      broken,
++    );
++    expect(result.kind).toBe(kind);
++  });
++
++  it('view once: flag from whatsmeow (unwrapped message)', () => {
++    const payload = {
++      media: media({ mimetype: 'image/jpeg' }),
++      _data: { IsViewOnceV2: true },
++    };
++    expect(
++      WahaMediaOf(payload, { imageMessage: {} } as any, reader).view_once,
++    ).toBe(true);
++  });
++
++  it.each(['viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension'])(
++    'view once: %s wrapper',
++    (wrapper) => {
++      const proto: any = { [wrapper]: { message: { imageMessage: {} } } };
++      const result = WahaMediaOf(
++        { media: media({ mimetype: 'image/jpeg' }) },
++        proto,
++        reader,
++      );
++      expect(result.view_once).toBe(true);
++      expect(result.kind).toBe('image');
++    },
++  );
++
++  it('view once: viewOnce field of the media message', () => {
++    const proto: any = { videoMessage: { viewOnce: true } };
++    expect(
++      WahaMediaOf({ media: media({ mimetype: 'video/mp4' }) }, proto, reader)
++        .view_once,
++    ).toBe(true);
++  });
++
++  it('no downloaded media: no key', () => {
++    expect(WahaMediaOf({ media: null }, {} as any, reader)).toBeNull();
++    expect(WahaMediaOf({ media: media({ url: null }) }, {} as any, reader)).toBeNull();
++    expect(WahaMediaOf({}, {} as any, reader)).toBeNull();
++  });
++});
++
++describe('waha_media_failed (item 6)', () => {
++  it('reason: class only, from an Error', () => {
++    const err = new TypeError('secret 5511999999999 https://mmg.whatsapp.net/x');
++    expect(MediaFailureReason({ error: err })).toBe('TypeError');
++  });
++
++  it('reason: class from the stack text that survives the job JSON', () => {
++    const error = {
++      details:
++        'AxiosError: Request failed with status code 410 5511999999999\n    at x (y.js:1:1)',
++    };
++    expect(MediaFailureReason({ error })).toBe('AxiosError');
++  });
++
++  it.each([
++    [{ details: 'not a class: 5511999999999' }, 'unknown'],
++    [{ details: 'with space: x' }, 'unknown'],
++    [{}, 'unknown'],
++    [{ name: 'RangeError' }, 'RangeError'],
++  ])('reason %j -> %s', (error, reason) => {
++    expect(MediaFailureReason({ error })).toBe(reason);
++  });
++
++  it('reason: no media / not downloaded', () => {
++    expect(MediaFailureReason(null)).toBe('no_media');
++    expect(MediaFailureReason({ url: null })).toBe('not_downloaded');
++  });
++
++  it('failure only when a download failed (not when skipped on purpose)', () => {
++    expect(
++      IsMediaDownloadFailure({ hasMedia: true, media: { url: null, error: {} } }),
++    ).toBe(true);
++    expect(IsMediaDownloadFailure({ hasMedia: false, media: null })).toBe(
++      false,
++    );
++  });
++
++  // Review c2y-rich-3 (finding 2): the engine did not say it failed
++  it.each([
++    ['download off (MediaManager: {url:null} without error)', { url: null, filename: null, mimetype: 'image/jpeg' }],
++    ['mimetype filtered (same shape)', { url: null, filename: 'a.pdf', mimetype: 'application/pdf' }],
++    ['media null (engine did not try / other engine)', null],
++    ['media missing', undefined],
++  ])('not a failure: %s', (_name, media) => {
++    expect(IsMediaDownloadFailure({ hasMedia: true, media: media })).toBe(
++      false,
++    );
++  });
++
++  it('downloaded: not a failure', () => {
++    expect(
++      IsMediaDownloadFailure({ hasMedia: true, media: { url: 'http://x' } }),
++    ).toBe(false);
++  });
++
++  it('shape', () => {
++    const payload = {
++      hasMedia: true,
++      body: 'olha a foto',
++      media: {
++        url: null,
++        mimetype: 'image/jpeg',
++        filename: null,
++        error: { details: 'AxiosError: x' },
++      },
++    };
++    expect(
++      WahaMediaFailedOf(payload, { imageMessage: {} } as any, reader),
++    ).toEqual({
++      kind: 'image',
++      mimetype: 'image/jpeg',
++      filename: null,
++      caption: 'olha a foto',
++      reason: 'AxiosError',
++      from_me: false,
++    });
++  });
++
++  // Review c2y-rich-3 (finding 5): chat2you must know it was the business phone
++  it('from_me comes from the payload', () => {
++    const failed = { url: null, error: { details: 'AxiosError: x' } };
++    expect(
++      WahaMediaFailedOf({ hasMedia: true, fromMe: true, media: failed }, null, reader)
++        .from_me,
++    ).toBe(true);
++    expect(
++      WahaMediaFailedOf({ hasMedia: true, fromMe: false, media: failed }, null, reader)
++        .from_me,
++    ).toBe(false);
++    expect(
++      WahaMediaFailedOf({ hasMedia: true, media: failed }, null, reader).from_me,
++    ).toBe(false);
++  });
++
++  it('kind from the proto when the engine gave no mimetype', () => {
++    expect(
++      WahaMediaFailedOf(
++        { hasMedia: true, media: { url: null, error: {} } },
++        { audioMessage: { ptt: true } } as any,
++        reader,
++      ),
++    ).toEqual({
++      kind: 'voice',
++      mimetype: null,
++      filename: null,
++      caption: null,
++      reason: 'unknown',
++      from_me: false,
++    });
++  });
++});
++
++describe('waha_context (items 8 and forwarded)', () => {
++  // Review c2y-rich-3 (finding 3): no contextInfo = the message does not say
++  it('plain text (no contextInfo): expiration null, never 0', () => {
++    expect(
++      WahaContextOf({}, { conversation: 'oi' } as any, reader),
++    ).toEqual({
++      ephemeral_expiration: null,
++      forwarded: false,
++      forwarding_score: 0,
++    });
++  });
++
++  it('contextInfo without expiration: null', () => {
++    const proto: any = {
++      extendedTextMessage: { text: 'x', contextInfo: { isForwarded: true } },
++    };
++    expect(WahaContextOf({}, proto, reader)).toEqual({
++      ephemeral_expiration: null,
++      forwarded: true,
++      forwarding_score: 0,
++    });
++  });
++
++  it('explicit 0: 0 (timer off), unless the engine says the message is ephemeral', () => {
++    const proto: any = {
++      extendedTextMessage: { text: 'x', contextInfo: { expiration: 0 } },
++    };
++    expect(WahaContextOf({}, proto, reader).ephemeral_expiration).toBe(0);
++    expect(
++      WahaContextOf({ _data: { IsEphemeral: true } }, proto, reader)
++        .ephemeral_expiration,
++    ).toBeNull();
++    expect(
++      WahaContextOf({ _data: { IsEphemeral: false } }, proto, reader)
++        .ephemeral_expiration,
++    ).toBe(0);
++  });
++
++  it('a chat at 24 h: texts with and without contextInfo never flip to 0', () => {
++    const withCtx: any = {
++      extendedTextMessage: { text: 'a', contextInfo: { expiration: 86400 } },
++    };
++    const plain: any = { conversation: 'b' };
++    const seen = [withCtx, plain, withCtx, plain].map(
++      (p) => WahaContextOf({}, p, reader).ephemeral_expiration,
++    );
++    expect(seen).toEqual([86400, null, 86400, null]);
++    expect(seen).not.toContain(0);
++  });
++
++  it('ephemeral + forwarded many times', () => {
++    const proto: any = {
++      ephemeralMessage: {
++        message: {
++          extendedTextMessage: {
++            text: 'x',
++            contextInfo: {
++              expiration: 86400,
++              isForwarded: true,
++              forwardingScore: 7,
++            },
++          },
++        },
++      },
++    };
++    expect(WahaContextOf({}, proto, reader)).toEqual({
++      ephemeral_expiration: 86400,
++      forwarded: true,
++      forwarding_score: 7,
++    });
++  });
++
++  it('numbers as text (protojson int64) and garbage', () => {
++    const proto: any = {
++      imageMessage: {
++        contextInfo: { expiration: '604800', forwardingScore: 'x' },
++      },
++    };
++    expect(WahaContextOf({}, proto, reader)).toEqual({
++      ephemeral_expiration: 604800,
++      forwarded: false,
++      forwarding_score: 0,
++    });
++  });
++
++  it('no proto / reader broken: defaults', () => {
++    expect(WahaContextOf({}, null, reader).ephemeral_expiration).toBeNull();
++    expect(WahaContextOf({}, { a: 1 } as any, broken).forwarded).toBe(false);
++  });
++});
++
++describe('waha_location (items 3 and 10)', () => {
++  it('pin with name and address: numbers from the engine text', () => {
++    const payload = {
++      location: {
++        live: false,
++        latitude: '-23.5505',
++        longitude: '-46.6333',
++        name: 'Praça da Sé',
++        address: 'São Paulo',
++        url: 'https://maps.google.com/x',
++        description: null,
++      },
++    };
++    expect(WahaLocationOf(payload, null, reader)).toEqual({
++      latitude: -23.5505,
++      longitude: -46.6333,
++      name: 'Praça da Sé',
++      address: 'São Paulo',
++      url: 'https://maps.google.com/x',
++      live: false,
++      caption: null,
++    });
++  });
++
++  it('live location: live true and caption', () => {
++    const payload = {
++      location: {
++        live: true,
++        latitude: '1.5',
++        longitude: '2.5',
++        description: 'indo',
++      },
++    };
++    const result = WahaLocationOf(payload, null, reader);
++    expect(result.live).toBe(true);
++    expect(result.caption).toBe('indo');
++    expect(result.name).toBeNull();
++  });
++
++  it('payload without location: read from the unwrapped proto', () => {
++    const proto: any = {
++      ephemeralMessage: {
++        message: {
++          locationMessage: { degreesLatitude: 10, degreesLongitude: 20 },
++        },
++      },
++    };
++    const result = WahaLocationOf({}, proto, reader);
++    expect([result.latitude, result.longitude, result.live]).toEqual([
++      10,
++      20,
++      false,
++    ]);
++  });
++
++  it.each([
++    [{ latitude: 'abc', longitude: '1' }],
++    [{ latitude: '1' }],
++    [{ latitude: null, longitude: null }],
++    [{ latitude: 'Infinity', longitude: '1' }],
++  ])('invalid coordinates %j: no key', (location) => {
++    expect(WahaLocationOf({ location }, null, reader)).toBeNull();
++  });
++});
++
++describe('waha_contacts (item 4)', () => {
++  it('same order as the vcf files', () => {
++    expect(
++      WahaContactsOf(
++        [
++          {
++            fullName: 'Ana Souza',
++            phoneNumbers: ['+55 11 98888-7777'],
++            whatsappId: '5511988887777',
++          },
++          { fullName: 'Bia', phoneNumbers: [], whatsappId: null },
++        ],
++        2,
++      ),
++    ).toEqual([
++      {
++        full_name: 'Ana Souza',
++        phones: ['+55 11 98888-7777'],
++        wa_id: '5511988887777',
++      },
++      { full_name: 'Bia', phones: [], wa_id: null },
++    ]);
++  });
++
++  it('parse failed (fewer contacts than vcards) or none: no key', () => {
++    expect(
++      WahaContactsOf([{ fullName: 'A', phoneNumbers: [], whatsappId: null }], 2),
++    ).toBeNull();
++    expect(WahaContactsOf([], 1)).toBeNull();
++  });
++});
++
++describe('waha_quote (item 5)', () => {
++  it('mapped quote', () => {
++    expect(
++      WahaQuoteOf(
++        {
++          id: 'ABC',
++          participant: '5511999999999@c.us',
++          body: 'texto',
++          hasMedia: false,
++        },
++        77,
++        null,
++      ),
++    ).toEqual({
++      wa_id: 'ABC',
++      participant: '5511999999999@c.us',
++      from_me: null,
++      body: 'texto',
++      has_media: false,
++      chatwoot_message_id: 77,
++    });
++  });
++
++  it('body cut at 280 characters, never in the middle of an emoji', () => {
++    const body = '😀'.repeat(300);
++    const quote = WahaQuoteOf({ id: 'A', body }, null, true);
++    expect(Array.from(quote.body)).toHaveLength(QUOTE_BODY_MAX_CHARS);
++    expect(quote.body).toBe('😀'.repeat(280));
++    expect(quote.from_me).toBe(true);
++    expect(quote.chatwoot_message_id).toBeNull();
++  });
++
++  it('media without caption: empty body, has_media', () => {
++    const quote = WahaQuoteOf({ id: 'A', hasMedia: true }, undefined, false);
++    expect(quote.body).toBe('');
++    expect(quote.has_media).toBe(true);
++    expect(quote.from_me).toBeNull();
++  });
++
++  it('no quoted id: no key', () => {
++    expect(WahaQuoteOf({ body: 'x' }, 1, null)).toBeNull();
++    expect(WahaQuoteOf(null, 1, null)).toBeNull();
++  });
++
++  it('TruncateChars keeps short text as is', () => {
++    expect(TruncateChars('abc', 280)).toBe('abc');
++  });
++});
++
++describe('JidUser', () => {
++  it.each([
++    ['5511999999999@c.us', '5511999999999'],
++    ['5511999999999:12@s.whatsapp.net', '5511999999999'],
++    ['123456@lid', '123456'],
++    ['', null],
++    [null, null],
++    [42, null],
++  ])('%p -> %p', (jid, user) => {
++    expect(JidUser(jid)).toBe(user);
++  });
++});
++
++describe('waha_album (item 2)', () => {
++  it('counts', () => {
++    expect(
++      WahaAlbumOf({ expectedImageCount: 4, expectedVideoCount: 1 }),
++    ).toEqual({ expected_images: 4, expected_videos: 1 });
++  });
++
++  it('no album info: zeros', () => {
++    expect(WahaAlbumOf(undefined)).toEqual({
++      expected_images: 0,
++      expected_videos: 0,
++    });
++  });
++});
++
++describe('waha_order and gif (unknown message)', () => {
++  it('order in the Cloud-like fields', () => {
++    const read = ReadProtoMessage(
++      {
++        orderMessage: {
++          orderId: '123',
++          orderTitle: 'Pedido',
++          message: 'quero',
++          itemCount: 2,
++          totalAmount1000: '15990',
++          totalCurrencyCode: 'BRL',
++          status: 'INQUIRY',
++          sellerJid: '5511@s.whatsapp.net',
++        },
++      } as any,
++      reader,
++    );
++    expect(WahaOrderOf(read, false)).toEqual({
++      order_id: '123',
++      title: 'Pedido',
++      text: 'quero',
++      item_count: 2,
++      total_amount: 15.99,
++      currency: 'BRL',
++      status: 'INQUIRY',
++      seller_jid: '5511@s.whatsapp.net',
++      from_me: false,
++    });
++    // Review c2y-rich-3 (finding 5)
++    expect(WahaOrderOf(read, true).from_me).toBe(true);
++  });
++
++  it('not an order', () => {
++    expect(
++      WahaOrderOf(ReadProtoMessage({ a: {} } as any, reader), false),
++    ).toBeNull();
++  });
++
++  it('gif flag', () => {
++    expect(
++      IsGif(ReadProtoMessage({ videoMessage: { gifPlayback: true } } as any, reader)),
++    ).toBe(true);
++    expect(IsGif(ReadProtoMessage({ videoMessage: {} } as any, reader))).toBe(
++      false,
++    );
++  });
++});
+diff --git a/src/apps/chatwoot/messages/to/chatwoot/c2y3.ts b/src/apps/chatwoot/messages/to/chatwoot/c2y3.ts
+new file mode 100644
+index 00000000..a086f500
+--- /dev/null
++++ b/src/apps/chatwoot/messages/to/chatwoot/c2y3.ts
+@@ -0,0 +1,539 @@
++import type { proto } from '@adiwajshing/baileys';
++import { extractWALocation } from '@waha/core/engines/waproto/locaiton';
++import { SimpleVCardInfo } from '@waha/core/vcard';
++import esm from '@waha/vendor/esm';
++
++/**
++ * Autonom.ia patch c2y-rich-3 (autonom-ia2/chat#1709, round 2)
++ *
++ * Structured data the connector puts NEXT TO the message it already creates
++ * (same content, message_type, private and in_reply_to). chat2you always
++ * strips these keys and only changes the presentation with its account flag.
++ *
++ * Pure helpers: no network, no logging, never throw. Message text, phones
++ * and keys never reach a log from here.
++ */
++
++export type WahaMediaKind =
++  | 'voice'
++  | 'audio'
++  | 'image'
++  | 'video'
++  | 'document'
++  | 'sticker';
++
++export interface WahaMedia {
++  kind: WahaMediaKind;
++  mimetype: string | null;
++  filename: string | null;
++  ptt: boolean;
++  view_once: boolean;
++  animated: boolean;
++  lottie: boolean;
++}
++
++export interface WahaMediaFailed {
++  kind: WahaMediaKind;
++  mimetype: string | null;
++  filename: string | null;
++  caption: string | null;
++  reason: string;
++  from_me: boolean;
++}
++
++export interface WahaContext {
++  // null = the message does not say (no contextInfo / no expiration)
++  ephemeral_expiration: number | null;
++  forwarded: boolean;
++  forwarding_score: number;
++}
++
++export interface WahaLocation {
++  latitude: number;
++  longitude: number;
++  name: string | null;
++  address: string | null;
++  url: string | null;
++  live: boolean;
++  caption: string | null;
++}
++
++export interface WahaSharedContact {
++  full_name: string;
++  phones: string[];
++  wa_id: string | null;
++}
++
++export interface WahaQuote {
++  wa_id: string;
++  participant: string | null;
++  from_me: boolean | null;
++  body: string;
++  has_media: boolean;
++  chatwoot_message_id: number | null;
++}
++
++export interface WahaAlbum {
++  expected_images: number;
++  expected_videos: number;
++}
++
++export interface WahaOrder {
++  order_id: string | null;
++  title: string | null;
++  text: string | null;
++  item_count: number | null;
++  total_amount: number | null;
++  currency: string | null;
++  status: string | null;
++  seller_jid: string | null;
++  from_me: boolean;
++}
++
++export const QUOTE_BODY_MAX_CHARS = 280;
++
++/** Lottie stickers come with this mimetype from WhatsApp (see LottieMediaProcessorWrapper) */
++const LOTTIE_MIMETYPE = 'application/was';
++
++const VIEW_ONCE_WRAPPERS = [
++  'viewOnceMessage',
++  'viewOnceMessageV2',
++  'viewOnceMessageV2Extension',
++] as const;
++
++/** whatsmeow unwraps view-once messages and flags them on events.Message */
++const VIEW_ONCE_FLAGS = [
++  'IsViewOnce',
++  'IsViewOnceV2',
++  'IsViewOnceV2Extension',
++] as const;
++
++const KIND_BY_TYPE: Record<string, WahaMediaKind> = {
++  imageMessage: 'image',
++  videoMessage: 'video',
++  ptvMessage: 'video',
++  stickerMessage: 'sticker',
++  documentMessage: 'document',
++  documentWithCaptionMessage: 'document',
++};
++
++const KIND_BY_MIME_FAMILY: Record<string, WahaMediaKind> = {
++  image: 'image',
++  video: 'video',
++  audio: 'audio',
++};
++
++/**
++ * Reads the proto content type. The default uses Baileys (ESM, loaded at
++ * runtime by WAHA); tests inject their own reader.
++ */
++export interface ProtoReader {
++  normalize(
++    message: proto.IMessage | null | undefined,
++  ): proto.IMessage | null | undefined;
++  contentType(message: proto.IMessage | null | undefined): string | undefined;
++}
++
++export const BaileysProtoReader: ProtoReader = {
++  normalize: (message) => esm.b.normalizeMessageContent(message),
++  contentType: (message) => esm.b.getContentType(message),
++};
++
++export interface ReadProto {
++  content: any | null;
++  type: string | null;
++}
++
++/**
++ * Normalized content (ephemeral / view once / document with caption
++ * unwrapped) and its content type. Never throws: when the reader fails the
++ * raw message is used and the type is unknown.
++ */
++export function ReadProtoMessage(
++  protoMessage: proto.IMessage | null | undefined,
++  reader: ProtoReader = BaileysProtoReader,
++): ReadProto {
++  if (!protoMessage || typeof protoMessage !== 'object') {
++    return { content: null, type: null };
++  }
++  let content: any = protoMessage;
++  try {
++    content = reader.normalize(protoMessage) || protoMessage;
++  } catch (err) {
++    content = protoMessage;
++  }
++  let type: string | null = null;
++  try {
++    const value = reader.contentType(content);
++    type = typeof value === 'string' && value ? value : null;
++  } catch (err) {
++    type = null;
++  }
++  return { content: content, type: type };
++}
++
++function isObject(value: unknown): value is Record<string, any> {
++  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
++}
++
++function textOrNull(value: unknown): string | null {
++  return typeof value === 'string' && value.length > 0 ? value : null;
++}
++
++function finiteNumber(value: unknown): number | null {
++  if (value === null || value === undefined || value === '') {
++    return null;
++  }
++  if (typeof value !== 'number' && typeof value !== 'string') {
++    // Long-like objects from protobuf
++    if (isObject(value) && typeof value.toString === 'function') {
++      return finiteNumber(value.toString());
++    }
++    return null;
++  }
++  const n = Number(value);
++  return Number.isFinite(n) ? n : null;
++}
++
++/** Cuts by characters (code points), never in the middle of an emoji */
++export function TruncateChars(text: string, max: number): string {
++  const chars = Array.from(text);
++  if (chars.length <= max) {
++    return text;
++  }
++  return chars.slice(0, max).join('');
++}
++
++export function MediaKind(read: ReadProto, mimetype: unknown): WahaMediaKind {
++  const type = read.type;
++  if (type === 'audioMessage') {
++    return read.content?.audioMessage?.ptt === true ? 'voice' : 'audio';
++  }
++  if (type && KIND_BY_TYPE[type]) {
++    return KIND_BY_TYPE[type];
++  }
++  if (typeof mimetype === 'string') {
++    const family = mimetype.split('/')[0];
++    if (KIND_BY_MIME_FAMILY[family]) {
++      return KIND_BY_MIME_FAMILY[family];
++    }
++  }
++  return 'document';
++}
++
++export function IsViewOnce(
++  protoMessage: proto.IMessage | null | undefined,
++  data: any,
++  read: ReadProto,
++): boolean {
++  if (isObject(data) && VIEW_ONCE_FLAGS.some((flag) => data[flag] === true)) {
++    return true;
++  }
++  if (isObject(protoMessage)) {
++    const raw = protoMessage as Record<string, any>;
++    if (VIEW_ONCE_WRAPPERS.some((key) => isObject(raw[key]))) {
++      return true;
++    }
++  }
++  const media = read.type ? read.content?.[read.type] : null;
++  return isObject(media) && media.viewOnce === true;
++}
++
++/**
++ * content_attributes.waha_media - only when the message has a downloaded
++ * attachment (payload.media.url).
++ */
++export function WahaMediaOf(
++  payload: any,
++  protoMessage: proto.IMessage | null | undefined,
++  reader: ProtoReader = BaileysProtoReader,
++): WahaMedia | null {
++  const media = payload?.media;
++  if (!isObject(media) || !textOrNull(media.url)) {
++    return null;
++  }
++  const read = ReadProtoMessage(protoMessage, reader);
++  const sticker = read.content?.stickerMessage;
++  return {
++    kind: MediaKind(read, media.mimetype),
++    mimetype: textOrNull(media.mimetype),
++    filename: textOrNull(media.filename),
++    ptt: read.type === 'audioMessage' && read.content?.audioMessage?.ptt === true,
++    view_once: IsViewOnce(protoMessage, payload?._data, read),
++    animated: isObject(sticker) && sticker.isAnimated === true,
++    lottie:
++      isObject(sticker) &&
++      (sticker.isLottie === true || sticker.mimetype === LOTTIE_MIMETYPE),
++  };
++}
++
++function isIdentifier(text: string): boolean {
++  if (text.length === 0 || text.length > 64) {
++    return false;
++  }
++  for (const ch of text) {
++    const code = ch.charCodeAt(0);
++    const digit = code >= 48 && code <= 57;
++    const upper = code >= 65 && code <= 90;
++    const lower = code >= 97 && code <= 122;
++    if (!digit && !upper && !lower && ch !== '_') {
++      return false;
++    }
++  }
++  return true;
++}
++
++/**
++ * Error CLASS of a failed download, never its message or stack.
++ * The error object reaches the connector through the job JSON, where
++ * Error#name is gone and only `details` (the stack) is left: the class is
++ * the text before the first ':' of its first line.
++ */
++export function MediaFailureReason(media: any): string {
++  if (!isObject(media)) {
++    return 'no_media';
++  }
++  const err = media.error;
++  if (!err) {
++    return 'not_downloaded';
++  }
++  const candidates: unknown[] = [];
++  if (err instanceof Error) {
++    candidates.push(err.name, err.constructor?.name);
++  }
++  if (isObject(err)) {
++    candidates.push(err.name);
++    if (typeof err.details === 'string') {
++      candidates.push(err.details.split('\n')[0].split(':')[0].trim());
++    }
++  }
++  for (const candidate of candidates) {
++    if (typeof candidate === 'string' && isIdentifier(candidate)) {
++      return candidate;
++    }
++  }
++  return 'unknown';
++}
++
++/**
++ * The media could not be downloaded: only when the engine says so
++ * (media.error, set by MediaManager.processMedia when the download throws).
++ * Not a failure:
++ * - media skipped on purpose: download off or mimetype filtered come as
++ *   {url: null} without error (MediaManager.processMedia);
++ * - media null or missing: the engine did not try (another engine, or the
++ *   media processor not run), so the main note stays as it is.
++ */
++export function IsMediaDownloadFailure(payload: any): boolean {
++  if (!payload?.hasMedia) {
++    return false;
++  }
++  const media = payload.media;
++  if (!isObject(media)) {
++    return false;
++  }
++  if (textOrNull(media.url)) {
++    return false;
++  }
++  return Boolean(media.error);
++}
++
++/** content_attributes.waha_media_failed */
++export function WahaMediaFailedOf(
++  payload: any,
++  protoMessage: proto.IMessage | null | undefined,
++  reader: ProtoReader = BaileysProtoReader,
++): WahaMediaFailed {
++  const media = isObject(payload?.media) ? payload.media : null;
++  const read = ReadProtoMessage(protoMessage, reader);
++  return {
++    kind: MediaKind(read, media?.mimetype),
++    mimetype: textOrNull(media?.mimetype),
++    filename: textOrNull(media?.filename),
++    caption: textOrNull(payload?.body),
++    reason: MediaFailureReason(media),
++    // The business phone's own media: chat2you keeps the main note
++    from_me: payload?.fromMe === true,
++  };
++}
++
++/**
++ * ephemeral_expiration of the message, in seconds:
++ * - the expiration in the contextInfo, when the message has one (0 only when
++ *   it comes as 0);
++ * - null when the message does not say: no contextInfo (plain `conversation`
++ *   text has none), contextInfo without expiration, or a 0 contradicted by
++ *   the engine (whatsmeow `IsEphemeral` on events.Message, which carries no
++ *   seconds). chat2you only acts on an Integer, so null never flips the
++ *   conversation state.
++ */
++function EphemeralExpiration(
++  ctx: Record<string, any> | null,
++  data: any,
++): number | null {
++  if (!ctx || !Object.prototype.hasOwnProperty.call(ctx, 'expiration')) {
++    return null;
++  }
++  const expiration = finiteNumber(ctx.expiration);
++  if (expiration === null || expiration < 0) {
++    return null;
++  }
++  if (expiration === 0 && isObject(data) && data.IsEphemeral === true) {
++    return null;
++  }
++  return Math.trunc(expiration);
++}
++
++/**
++ * content_attributes.waha_context, on every live message.
++ * ephemeral_expiration is null when the message does not tell (see
++ * EphemeralExpiration): chat2you needs an explicit 0 to say "turned off".
++ */
++export function WahaContextOf(
++  payload: any,
++  protoMessage: proto.IMessage | null | undefined,
++  reader: ProtoReader = BaileysProtoReader,
++): WahaContext {
++  const read = ReadProtoMessage(protoMessage, reader);
++  const media = read.type ? read.content?.[read.type] : null;
++  const contextInfo = isObject(media) ? media.contextInfo : null;
++  const ctx = isObject(contextInfo) ? contextInfo : null;
++  const score = finiteNumber(ctx?.forwardingScore);
++  return {
++    ephemeral_expiration: EphemeralExpiration(ctx, payload?._data),
++    forwarded: ctx?.isForwarded === true,
++    forwarding_score: score !== null && score > 0 ? Math.trunc(score) : 0,
++  };
++}
++
++/** content_attributes.waha_location - null when the coordinates are not numbers */
++export function WahaLocationOf(
++  payload: any,
++  protoMessage: proto.IMessage | null | undefined,
++  reader: ProtoReader = BaileysProtoReader,
++): WahaLocation | null {
++  let location: any = payload?.location;
++  if (!isObject(location)) {
++    const read = ReadProtoMessage(protoMessage, reader);
++    try {
++      location = read.content ? extractWALocation(read.content) : null;
++    } catch (err) {
++      location = null;
++    }
++  }
++  if (!isObject(location)) {
++    return null;
++  }
++  const latitude = finiteNumber(location.latitude);
++  const longitude = finiteNumber(location.longitude);
++  if (latitude === null || longitude === null) {
++    return null;
++  }
++  return {
++    latitude: latitude,
++    longitude: longitude,
++    name: textOrNull(location.name),
++    address: textOrNull(location.address),
++    url: textOrNull(location.url),
++    live: location.live === true,
++    caption: textOrNull(location.description),
++  };
++}
++
++/**
++ * content_attributes.waha_contacts, same order as the .vcf attachments.
++ * null when any vCard could not be parsed.
++ */
++export function WahaContactsOf(
++  contacts: SimpleVCardInfo[],
++  vcardCount: number,
++): WahaSharedContact[] | null {
++  if (!Array.isArray(contacts) || contacts.length === 0) {
++    return null;
++  }
++  if (contacts.length !== vcardCount) {
++    return null;
++  }
++  return contacts.map((contact) => ({
++    full_name: typeof contact?.fullName === 'string' ? contact.fullName : '',
++    phones: Array.isArray(contact?.phoneNumbers)
++      ? contact.phoneNumbers.filter((p) => typeof p === 'string' && p)
++      : [],
++    wa_id: textOrNull(contact?.whatsappId),
++  }));
++}
++
++/** content_attributes.waha_quote - null without a quoted message id */
++export function WahaQuoteOf(
++  replyTo: any,
++  chatwootMessageId: number | null | undefined,
++  fromMe: boolean | null,
++): WahaQuote | null {
++  if (!isObject(replyTo) || !textOrNull(replyTo.id)) {
++    return null;
++  }
++  const body = typeof replyTo.body === 'string' ? replyTo.body : '';
++  return {
++    wa_id: replyTo.id,
++    participant: textOrNull(replyTo.participant),
++    from_me: fromMe === true ? true : null,
++    body: TruncateChars(body, QUOTE_BODY_MAX_CHARS),
++    has_media: replyTo.hasMedia === true,
++    chatwoot_message_id:
++      typeof chatwootMessageId === 'number' ? chatwootMessageId : null,
++  };
++}
++
++/** User part of a JID ("5511...@c.us", "123:4@s.whatsapp.net", "99@lid") */
++export function JidUser(jid: unknown): string | null {
++  if (typeof jid !== 'string' || !jid) {
++    return null;
++  }
++  const user = jid.split('@')[0].split(':')[0];
++  return user || null;
++}
++
++/** content_attributes.waha_album */
++export function WahaAlbumOf(albumMessage: any): WahaAlbum {
++  const images = finiteNumber(albumMessage?.expectedImageCount);
++  const videos = finiteNumber(albumMessage?.expectedVideoCount);
++  return {
++    expected_images: images !== null && images > 0 ? Math.trunc(images) : 0,
++    expected_videos: videos !== null && videos > 0 ? Math.trunc(videos) : 0,
++  };
++}
++
++/** content_attributes.waha_order - null when the message is not an order */
++export function WahaOrderOf(
++  read: ReadProto,
++  fromMe: boolean,
++): WahaOrder | null {
++  const order = read.content?.orderMessage;
++  if (!isObject(order)) {
++    return null;
++  }
++  const total1000 = finiteNumber(order.totalAmount1000);
++  const itemCount = finiteNumber(order.itemCount);
++  const status =
++    typeof order.status === 'string' || typeof order.status === 'number'
++      ? String(order.status)
++      : null;
++  return {
++    order_id: textOrNull(order.orderId),
++    title: textOrNull(order.orderTitle),
++    text: textOrNull(order.message),
++    item_count: itemCount,
++    total_amount: total1000 === null ? null : total1000 / 1000,
++    currency: textOrNull(order.totalCurrencyCode),
++    status: status,
++    seller_jid: textOrNull(order.sellerJid),
++    // The business phone's own order: chat2you keeps the main note
++    from_me: fromMe === true,
++  };
++}
++
++/** waha_unknown.gif - a GIF the connector did not convert */
++export function IsGif(read: ReadProto): boolean {
++  const video = read.content?.videoMessage;
++  return isObject(video) && video.gifPlayback === true;
++}
 diff --git a/src/apps/chatwoot/messages/to/whatsapp/actions.ts b/src/apps/chatwoot/messages/to/whatsapp/actions.ts
 new file mode 100644
 index 00000000..7dc134ee
@@ -4535,20 +8272,23 @@ index 00000000..e6fa2af1
 +});
 diff --git a/src/apps/chatwoot/messages/to/whatsapp/native.ts b/src/apps/chatwoot/messages/to/whatsapp/native.ts
 new file mode 100644
-index 00000000..f63b8bbc
+index 00000000..bab676ae
 --- /dev/null
 +++ b/src/apps/chatwoot/messages/to/whatsapp/native.ts
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,290 @@
 +import { createHash } from 'node:crypto';
 +import { UnrecoverableError } from 'bullmq';
 +import { MessageContactVcardRequest } from '@waha/structures/chatting.dto';
 +import { MessageLocationRequest } from '@waha/structures/chatting.dto';
 +import { MessagePollRequest } from '@waha/structures/chatting.dto';
 +import { SendListRequest } from '@waha/structures/chatting.list.dto';
++import { MessageLinkCustomPreviewRequest } from '@waha/structures/chatting.dto';
++import { EventMessageRequest } from '@waha/structures/events.dto';
 +
 +/**
-+ * Autonom.ia patch c2y-rich-1/c2y-rich-2 (autonom-ia2/chat#1709)
-+ * Chatwoot message -> native WhatsApp message (list, location, contact, poll)
++ * Autonom.ia patch c2y-rich-1/c2y-rich-2/c2y-rich-3 (autonom-ia2/chat#1709)
++ * Chatwoot message -> native WhatsApp message (list, location, contact, poll,
++ * link card with custom preview, event)
 + * Contract: content_attributes.waha_native = {kind, payload}
 + * payload follows the WAHA endpoint body WITHOUT chatId and session.
 + */
@@ -4557,6 +8297,9 @@ index 00000000..f63b8bbc
 +  'sendLocation',
 +  'sendContactVcard',
 +  'sendPoll',
++  // Autonom.ia c2y-rich-3
++  'sendLinkCustomPreview',
++  'sendEvent',
 +] as const;
 +
 +export type WahaNativeKind = (typeof WAHA_NATIVE_KINDS)[number];
@@ -4570,7 +8313,9 @@ index 00000000..f63b8bbc
 +  | SendListRequest
 +  | MessageLocationRequest
 +  | MessageContactVcardRequest
-+  | MessagePollRequest;
++  | MessagePollRequest
++  | MessageLinkCustomPreviewRequest
++  | EventMessageRequest;
 +
 +const HTTP_NOT_IMPLEMENTED = 501;
 +
@@ -4662,7 +8407,118 @@ index 00000000..f63b8bbc
 +        },
 +        reply_to: replyTo,
 +      };
++    case 'sendLinkCustomPreview': {
++      // Autonom.ia c2y-rich-3: no id - the endpoint does not accept one
++      const preview = p.preview || {};
++      const image = preview.image;
++      return {
++        session: '',
++        chatId: chatId,
++        text: p.text,
++        linkPreviewHighQuality: true,
++        preview: {
++          url: preview.url,
++          title: preview.title,
++          description: preview.description,
++          image:
++            image && typeof image === 'object'
++              ? ({ url: image.url, mimetype: image.mimetype } as any)
++              : undefined,
++        },
++        reply_to: replyTo,
++      };
++    }
++    case 'sendEvent': {
++      // Autonom.ia c2y-rich-3: no id - the endpoint does not accept one
++      const event = p.event || {};
++      const locationName = event.location?.name;
++      return {
++        chatId: chatId,
++        event: {
++          name: event.name,
++          description: event.description,
++          startTime: event.startTime,
++          endTime: event.endTime,
++          location: locationName ? { name: locationName } : undefined,
++          extraGuestsAllowed: false,
++        },
++        reply_to: replyTo,
++      };
++    }
 +  }
++}
++
++function isHttpUrl(value: unknown): boolean {
++  if (typeof value !== 'string' || !value) {
++    return false;
++  }
++  try {
++    const url = new URL(value);
++    return url.protocol === 'https:' || url.protocol === 'http:';
++  } catch (err) {
++    return false;
++  }
++}
++
++function isText(value: unknown): boolean {
++  return typeof value === 'string' && value.trim().length > 0;
++}
++
++function isEpochSeconds(value: unknown): boolean {
++  return typeof value === 'number' && Number.isInteger(value) && value > 0;
++}
++
++/**
++ * Autonom.ia c2y-rich-3: why the request can not go to WAHA as is, or null.
++ * A request with a problem is never sent: the caller sends the text once.
++ * Needed because WAHA answers 500 (not 4xx) for some of these, which the
++ * connector reads as an uncertain send and would not fall back to text.
++ */
++export function NativeRequestProblem(
++  kind: WahaNativeKind,
++  request: WahaNativeRequest,
++): string | null {
++  if (kind === 'sendLinkCustomPreview') {
++    const r = request as MessageLinkCustomPreviewRequest;
++    if (!isText(r.text)) return 'text';
++    if (!isHttpUrl(r.preview?.url)) return 'preview.url';
++    // The controller throws (500) when the text lacks the url
++    if (!r.text.includes(r.preview.url)) return 'text-without-url';
++    if (typeof r.preview.title !== 'string') return 'preview.title';
++    if (typeof r.preview.description !== 'string') {
++      return 'preview.description';
++    }
++    return null;
++  }
++  if (kind === 'sendEvent') {
++    const event = (request as EventMessageRequest).event;
++    if (!event || !isText(event.name)) return 'event.name';
++    if (!isEpochSeconds(event.startTime)) return 'event.startTime';
++    if (event.endTime !== undefined && event.endTime !== null) {
++      if (!isEpochSeconds(event.endTime)) return 'event.endTime';
++      if (event.endTime <= event.startTime) return 'event.endTime';
++    }
++    if (
++      event.description !== undefined &&
++      event.description !== null &&
++      typeof event.description !== 'string'
++    ) {
++      return 'event.description';
++    }
++    return null;
++  }
++  return null;
++}
++
++/**
++ * Autonom.ia c2y-rich-3: link card without an image. GOWS needs the image
++ * (fileToMedia(undefined) -> 500), so it goes as text with the automatic
++ * link preview instead.
++ */
++export function HasPreviewImage(request: WahaNativeRequest): boolean {
++  const image = (request as MessageLinkCustomPreviewRequest)?.preview
++    ?.image as any;
++  return Boolean(image) && isHttpUrl(image.url);
 +}
 +
 +/**
@@ -4734,28 +8590,56 @@ index 7fa3d62e..4c3fcc5c 100644
          return null;
      }
 diff --git a/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts b/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
-index 86c7457e..f38bda05 100644
+index 86c7457e..b604b052 100644
 --- a/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
 +++ b/src/apps/chatwoot/services/ChatWootWAHAQueueService.ts
-@@ -44,6 +44,9 @@ export class ChatWootWAHAQueueService {
+@@ -44,6 +44,11 @@ export class ChatWootWAHAQueueService {
          return this.queueRegistry.queue(QueueName.WAHA_CALL_ACCEPTED);
        case WAHAEvents.CALL_REJECTED:
          return this.queueRegistry.queue(QueueName.WAHA_CALL_REJECTED);
 +      case WAHAEvents.POLL_VOTE:
 +      case WAHAEvents.POLL_VOTE_FAILED:
 +        return this.queueRegistry.queue(QueueName.WAHA_POLL_VOTE);
++      case WAHAEvents.EVENT_RESPONSE:
++        return this.queueRegistry.queue(QueueName.WAHA_EVENT_RESPONSE);
        default:
          return null;
      }
+diff --git a/src/apps/chatwoot/services/MessageStatusService.ts b/src/apps/chatwoot/services/MessageStatusService.ts
+index b74a9e0f..a6c5f504 100644
+--- a/src/apps/chatwoot/services/MessageStatusService.ts
++++ b/src/apps/chatwoot/services/MessageStatusService.ts
+@@ -35,7 +35,10 @@ export class MessageStatusService {
+    * Pushes the status to Chatwoot once every part has an ack, uses the lowest one
+    * @returns the status sent to Chatwoot, null if nothing to update yet
+    */
+-  async sync(message: ChatwootMessageStatusKey): Promise<MessageStatus | null> {
++  async sync(
++    message: ChatwootMessageStatusKey,
++    extra?: { c2y_played_at?: string },
++  ): Promise<MessageStatus | null> {
+     // Messages mirrored from WhatsApp (and old rows) do not know how many parts were sent
+     if (!message.parts) {
+       return null;
+@@ -57,7 +60,7 @@ export class MessageStatusService {
+     // Chatwoot only moves status forward, so re-sending the same status is harmless
+     await this.contactConversationService
+       .ConversationById(message.conversation_id)
+-      .updateMessageStatus(message.message_id, status);
++      .updateMessageStatus(message.message_id, status, extra);
+     return status;
+   }
+ 
 diff --git a/src/apps/chatwoot/services/QueueManager.ts b/src/apps/chatwoot/services/QueueManager.ts
-index 490f0ba9..a44f96e3 100644
+index 490f0ba9..74fe8f71 100644
 --- a/src/apps/chatwoot/services/QueueManager.ts
 +++ b/src/apps/chatwoot/services/QueueManager.ts
-@@ -32,12 +32,15 @@ export class QueueManager {
+@@ -32,12 +32,16 @@ export class QueueManager {
        [QueueName.WAHA_CALL_RECEIVED]: Managable,
        [QueueName.WAHA_CALL_ACCEPTED]: Managable,
        [QueueName.WAHA_CALL_REJECTED]: Managable,
 +      [QueueName.WAHA_POLL_VOTE]: Managable,
++      [QueueName.WAHA_EVENT_RESPONSE]: Managable,
        [QueueName.INBOX_MESSAGE_CREATED]: Managable,
        [QueueName.INBOX_MESSAGE_UPDATED]: Managable,
        [QueueName.INBOX_CONVERSATION_CREATED]: Managable,
@@ -4768,15 +8652,17 @@ index 490f0ba9..a44f96e3 100644
    }
  
 diff --git a/src/apps/chatwoot/services/QueueRegistry.ts b/src/apps/chatwoot/services/QueueRegistry.ts
-index fab10c11..453d375a 100644
+index fab10c11..a4ad83e9 100644
 --- a/src/apps/chatwoot/services/QueueRegistry.ts
 +++ b/src/apps/chatwoot/services/QueueRegistry.ts
-@@ -52,6 +52,12 @@ export class QueueRegistry {
+@@ -52,6 +52,14 @@ export class QueueRegistry {
      private readonly inboxMessageDeletedQueue: Queue,
      @InjectQueue(QueueName.INBOX_COMMANDS)
      private readonly inboxCommandsQueue: Queue,
 +    @InjectQueue(QueueName.WAHA_POLL_VOTE)
 +    private readonly wahaPollVoteQueue: Queue,
++    @InjectQueue(QueueName.WAHA_EVENT_RESPONSE)
++    private readonly wahaEventResponseQueue: Queue,
 +    @InjectQueue(QueueName.INBOX_C2Y_REACTION)
 +    private readonly inboxC2yReactionQueue: Queue,
 +    @InjectQueue(QueueName.INBOX_C2Y_EDIT)
@@ -4784,11 +8670,12 @@ index fab10c11..453d375a 100644
    ) {
      // Strictly typed object literal
      this.queues = {
-@@ -77,6 +83,9 @@ export class QueueRegistry {
+@@ -77,6 +85,10 @@ export class QueueRegistry {
          this.inboxConversationStatusChangedQueue,
        [QueueName.INBOX_MESSAGE_DELETED]: this.inboxMessageDeletedQueue,
        [QueueName.INBOX_COMMANDS]: this.inboxCommandsQueue,
 +      [QueueName.WAHA_POLL_VOTE]: this.wahaPollVoteQueue,
++      [QueueName.WAHA_EVENT_RESPONSE]: this.wahaEventResponseQueue,
 +      [QueueName.INBOX_C2Y_REACTION]: this.inboxC2yReactionQueue,
 +      [QueueName.INBOX_C2Y_EDIT]: this.inboxC2yEditQueue,
      } satisfies Record<QueueName, Queue>;
@@ -4817,10 +8704,10 @@ index 45f2230f..a1e7c4e9 100644
    app.useWebSocketAdapter(new WsAdapter(app));
  
 diff --git a/src/structures/environment.dto.ts b/src/structures/environment.dto.ts
-index 70e5cead..c7c28103 100644
+index 70e5cead..cebb9363 100644
 --- a/src/structures/environment.dto.ts
 +++ b/src/structures/environment.dto.ts
-@@ -36,4 +36,30 @@ export class WAHAEnvironment {
+@@ -36,4 +36,32 @@ export class WAHAEnvironment {
    worker: {
      id: string | null;
    };
@@ -4849,6 +8736,8 @@ index 70e5cead..c7c28103 100644
 +    edit: boolean;
 +    media_as_media: boolean;
 +    format: string;
++    // Autonom.ia c2y-rich-3
++    event_response?: boolean;
 +  };
  }
 diff --git a/src/utils/bull/BaseWorkerHost.ts b/src/utils/bull/BaseWorkerHost.ts
@@ -4875,22 +8764,30 @@ index 078d5d96..55d5e0c6 100644
      }
    }
 diff --git a/src/version.ts b/src/version.ts
-index 7a03361c..4439567e 100644
+index 7a03361c..c679ffa9 100644
 --- a/src/version.ts
 +++ b/src/version.ts
-@@ -54,6 +54,16 @@ export const VERSION: WAHAEnvironment = {
+@@ -54,6 +54,24 @@ export const VERSION: WAHAEnvironment = {
    browser: getBrowser(),
    platform: getPlatform(),
    worker: getWorker(),
 +  autonomia: {
-+    patch: 'c2y-rich-2',
-+    rich_native: ['options', 'location', 'contact', 'poll'],
++    patch: 'c2y-rich-3',
++    rich_native: [
++      'options',
++      'location',
++      'contact',
++      'poll',
++      'link_button',
++      'event',
++    ],
 +    list_reply: true,
 +    poll_vote: true,
 +    reactions: true,
 +    edit: true,
 +    media_as_media: true,
 +    format: 'c2y-1',
++    event_response: true,
 +  },
  };
  
