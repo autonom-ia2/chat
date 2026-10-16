@@ -19,7 +19,12 @@ const webWidgetInbox = {
   selected_feature_flags: [],
 };
 
-const mountSettings = ({ porCaixa = false, robos = false } = {}) => {
+const mountSettings = ({
+  horarioUnico = false,
+  tab,
+  porCaixa = false,
+  robos = false,
+} = {}) => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
@@ -30,7 +35,8 @@ const mountSettings = ({ porCaixa = false, robos = false } = {}) => {
       getCurrentUser: () => ({ id: 1, accounts: [] }),
       getCurrentCustomRoleId: () => null,
       'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
-        robos && flag === 'agent_bots',
+        (horarioUnico && flag === 'horario_unico_caixa') ||
+        (robos && flag === 'agent_bots'),
       'globalConfig/isOnChatwootCloud': () => false,
       'globalConfig/isMetaMessageSendingDisabled': () => false,
       'inboxes/getUIFlags': () => ({ isFetching: false }),
@@ -47,7 +53,7 @@ const mountSettings = ({ porCaixa = false, robos = false } = {}) => {
       renderStubDefaultSlot: true,
       mocks: {
         $t: key => key,
-        $route: { params: { inboxId: '7' }, query: {}, name: 'x' },
+        $route: { params: { inboxId: '7', tab }, query: {}, name: 'x' },
         $router: { replace: vi.fn(), push: vi.fn() },
       },
     },
@@ -104,6 +110,21 @@ describe('Inbox Settings', () => {
     ).toBeGreaterThanOrEqual(4);
     expect(wrapper.find('select').exists()).toBe(false);
   });
+
+  // #1619: com a flag horario_unico_caixa, a aba de horário mostra o horário do canal do fork.
+  it.each([
+    [false, 'WeeklyAvailability', 'HorarioDoCanal'],
+    [true, 'HorarioDoCanal', 'WeeklyAvailability'],
+  ])(
+    'business hours tab with horario_unico_caixa=%s renders %s',
+    async (horarioUnico, aparece, some) => {
+      const wrapper = mountSettings({ horarioUnico, tab: 'business-hours' });
+      await flushPromises();
+
+      expect(wrapper.findComponent({ name: aparece }).exists()).toBe(true);
+      expect(wrapper.findComponent({ name: some }).exists()).toBe(false);
+    }
+  );
   // #1648 — a aba "Agente de IA" por caixa só com a chave da conta; desligada, as abas da main.
   describe('AI agent tab per inbox', () => {
     const aba = (wrapper, chave) =>

@@ -3073,6 +3073,13 @@
         "BOTAO_FUNIL": "Abrir o funil",
         "BOTAO_CAIXA": "Ligar uma caixa"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "Esta regra não vale por completo:",
+        "SEM_IA": "A IA deste funil está desligada: ela não percebe quando o cliente pede uma pessoa. A regra continua valendo quando o robô ou o agente de IA da caixa passa a conversa e quando a conversa sai da triagem.",
+        "FIXA_FUNIL": "{nome} não pode receber conversas deste funil em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "FIXA_ETAPA": "Na etapa {etapa}, {nome} não pode receber conversas em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "ALGUEM": "A pessoa escolhida"
+      },
       "PREVIA": {
         "SELO": "Prévia",
         "SELO_AGORA": "Agora",
@@ -3242,6 +3249,7 @@
       "VOCE": "{nome} (você)",
       "COM_A_CONVERSA": "Está com a conversa",
       "NINGUEM": "Não há mais ninguém nesta caixa para receber agora.",
+      "ERRO_LISTA": "Não deu para ver quem pode receber agora.",
       "CONFIRMA_SAI": "{nome} assume a conversa e você sai dela.",
       "CONFIRMA": "{nome} assume a conversa.",
       "CANCELAR": "Cancelar",
@@ -3474,6 +3482,8 @@
         "INBOX_TITLE": "Calendário da caixa de entrada — {name}",
         "AGENT_TITLE": "Calendário do agente — {name}",
         "TIMEZONE_LABEL": "Fuso horário",
+        "FUSO_DA_CONTA": "No fuso da conta: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "No fuso da conta.",
         "ENABLED_LABEL": "Calendário ativo",
         "DAYS": {
           "SUNDAY": "Domingo",
@@ -3488,6 +3498,7 @@
         "REMOVE_BLOCK": "Remover bloco",
         "START_LABEL": "Início",
         "END_LABEL": "Fim",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "O horário final deve ser depois do inicial",
         "NO_BLOCKS": "Fechado",
         "SAVE": "Salvar calendário",
@@ -4097,6 +4108,10 @@
       "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
       "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
       "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
+      "SO_AS_DELE": "{nome} só vê as dele, não recebe.",
+      "NINGUEM_RECEBE": "Ninguém pode receber as conversas de {assuntos}. Elas esperam até alguém passar a cuidar do assunto.",
+      "CONFERINDO": "Conferindo quem recebe…",
+      "ERRO_QUEM_RECEBE": "Não deu para conferir quem recebe agora.",
       "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo.",
       "ROBO_EXTERNO": "Primeiro atende {nome}, o agente externo. Depois, as pessoas abaixo."
     },
@@ -4111,7 +4126,9 @@
       "AGENTE_ENTRA": "{nome} entra nesta caixa.",
       "AGENTE_ENTRA_E_LIGA": "{nome} entra nesta caixa e passa a atender.",
       "AGENTE_SAI": "{nome} sai desta caixa.",
-      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa."
+      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa.",
+      "ABERTAS": "Há {n} conversa aberta em {funil} nesta caixa. | Há {n} conversas abertas em {funil} nesta caixa.",
+      "UM_FUNIL": "Com um funil só nesta caixa, quem cuida de {funil} e vê todas as conversas passa a cuidar também das que ainda não têm assunto. Quem só vê as dele continua assim."
     },
     "FUNIS": {
       "TIPO_SALES": "Vendas: termina em ganho ou perdido",
@@ -5887,7 +5904,7 @@
   "CONVERSATION_FUNNEL_FILTER": {
     "LABEL": "Funil",
     "ARIA_LABEL": "Mostrar conversas de qual funil",
-    "ALL": "Todos os meus funis",
+    "ALL": "Sem filtro de funil",
     "NONE": "Sem assunto",
     "NONE_HINT": "Conversas que ainda não têm assunto: a triagem.",
     "EMPTY": "Nenhuma conversa neste funil."

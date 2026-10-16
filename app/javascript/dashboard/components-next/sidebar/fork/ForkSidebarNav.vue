@@ -94,26 +94,12 @@ const todos = computed(() => [
 ]);
 const ativa = computed(() => acharAtivo(todos.value, route, resolvePath));
 
-// Um item aberto por vez, além do que contém a tela atual. O aberto fica guardado (uiSettings) para a próxima.
-const abertoNome = ref(uiSettings.value?.menu_grupo_aberto || null);
+// Grupos começam fechados e só abrem no clique (#1661, pedido do Rodrigo): abrir sozinho empurrava os outros grupos
+// para fora da tela. Um aberto por vez. O grupo fechado que contém a tela atual continua realçado.
+const abertoNome = ref(null);
 const alternar = nome => {
   abertoNome.value = abertoNome.value === nome ? null : nome;
-  updateUISettings({ menu_grupo_aberto: abertoNome.value });
 };
-// O grupo da tela atual abre sozinho quando a pessoa NAVEGA para uma tela dele (e ao carregar). Depois ela pode
-// fechá-lo, e ele fica fechado até a próxima navegação para uma tela dele. Não grava: é a rota, não a escolha.
-const grupoDaTela = computed(() =>
-  ativa.value?.item.children ? ativa.value.item.name : null
-);
-watch(
-  () => [route.fullPath, grupoDaTela.value],
-  ([, grupo], anterior) => {
-    const mesmaTela = anterior && anterior[0] === route.fullPath;
-    if (!grupo || (mesmaTela && anterior[1] === grupo)) return;
-    abertoNome.value = grupo;
-  },
-  { immediate: true }
-);
 
 const contagemDe = item => {
   const chave = item.getterKeys?.count;

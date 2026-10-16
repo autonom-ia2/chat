@@ -7,6 +7,7 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
+import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 
 const props = defineProps({
   ownerType: { type: String, required: true }, // 'Inbox' | 'User'
@@ -59,7 +60,17 @@ const hydrateDays = () => {
   return days;
 };
 
+// #1619: com a flag horario_unico_caixa, o calendário segue o fuso da conta: sem escolha de fuso na
+// tela, e salvar grava o fuso da conta. Sem a flag, a escolha de hoje.
+const {
+  ligado: horarioUnico,
+  fuso: rotuloFusoDaConta,
+  fusoIana: fusoDaConta,
+} = useHorarioUnicoCaixa();
 const timezone = ref(props.schedule?.timezone || 'America/Sao_Paulo');
+const fusoAoSalvar = computed(() =>
+  horarioUnico.value ? fusoDaConta.value : timezone.value
+);
 const enabled = ref(props.schedule?.enabled ?? true);
 const days = reactive(hydrateDays());
 const isSaving = ref(false);
@@ -107,7 +118,7 @@ const removeBlock = (dayIndex, blockIndex) => {
 };
 
 const onSave = async () => {
-  if (hasInvalidBlocks.value || !timezone.value) return;
+  if (hasInvalidBlocks.value || !fusoAoSalvar.value) return;
 
   isSaving.value = true;
   try {
@@ -122,7 +133,7 @@ const onSave = async () => {
       service_schedule: {
         owner_type: props.ownerType,
         owner_id: props.ownerId,
-        timezone: timezone.value,
+        timezone: fusoAoSalvar.value,
         enabled: enabled.value,
         blocks,
       },
@@ -158,7 +169,20 @@ const onSave = async () => {
           />
         </div>
 
-        <div class="grid gap-1.5">
+        <p
+          v-if="horarioUnico"
+          data-fuso-da-conta
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{
+            rotuloFusoDaConta
+              ? t('CRM_SLA.SCHEDULES.EDITOR.FUSO_DA_CONTA', {
+                  fuso: rotuloFusoDaConta,
+                })
+              : t('CRM_SLA.SCHEDULES.EDITOR.FUSO_DA_CONTA_SEM_NOME')
+          }}
+        </p>
+        <div v-else class="grid gap-1.5">
           <label class="text-sm font-medium text-n-slate-12">
             {{ t('CRM_SLA.SCHEDULES.EDITOR.TIMEZONE_LABEL') }}
           </label>
@@ -206,7 +230,9 @@ const onSave = async () => {
                     :aria-label="t('CRM_SLA.SCHEDULES.EDITOR.START_LABEL')"
                     class="reset-base !mb-0 h-8 rounded-lg border-0 bg-n-alpha-black2 px-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
                   />
-                  <span class="text-sm text-n-slate-10">–</span>
+                  <span class="text-sm text-n-slate-10" aria-hidden="true">{{
+                    t('CRM_SLA.SCHEDULES.EDITOR.RANGE_SEPARATOR')
+                  }}</span>
                   <input
                     v-model="block.end"
                     type="time"
@@ -257,7 +283,7 @@ const onSave = async () => {
             type="button"
             :label="t('CRM_SLA.SCHEDULES.EDITOR.SAVE')"
             :is-loading="isSaving"
-            :disabled="hasInvalidBlocks || !timezone"
+            :disabled="hasInvalidBlocks || !fusoAoSalvar"
             @click="onSave"
           />
         </div>

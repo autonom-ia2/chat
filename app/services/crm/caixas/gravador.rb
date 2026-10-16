@@ -46,7 +46,16 @@ class Crm::Caixas::Gravador
     end
   end
 
+  # Leitura (#1140): as linhas de acesso que `perform` gravaria para as pessoas da tela, sem gravar nada. Quem fica sem
+  # linha (cuida de tudo) vem como nil.
+  def acessos_previstos = (agentes.keys & pessoas.keys).index_with { |user_id| acesso_previsto(user_id) if restrito?(user_id) }
+
   private
+
+  def acesso_previsto(user_id)
+    Crm::InboxAgentAccess.new(all_pipelines: todos_os_funis?(user_id), triage: triagem?(user_id), only_own: so_as_suas?(user_id),
+                              agent_pipelines: funis_da_pessoa(user_id).map { |id| Crm::InboxAgentPipeline.new(pipeline_id: id) })
+  end
 
   def validar!
     erro = primeiro_erro
@@ -114,19 +123,9 @@ class Crm::Caixas::Gravador
       default_pipeline_id: um_funil? ? pipeline_ids.first : nil,
       default_stage_id: etapa&.id,
       auto_create_card: um_funil? && modo == 'chegou',
-      subject_ai_mode: modo_da_ia_de_assunto,
+      subject_ai_mode: Crm::Caixas::IaDeAssunto.ao_gravar(account: @account, pipeline_ids: pipeline_ids, modo: modo),
       visibility_mode: :all_inbox_cards
     )
-  end
-
-  # #1676: com a flag `crm_avaliar_toda_mensagem` (contas 1, 16 e 18 por enquanto), a IA de assunto fica em Automática
-  # também na caixa de 1 funil, em 'chegou' ou à mão: um funil pode ter mais de um assunto (seguro auto e residencial em
-  # Vendas). Sem a flag, desligada com 1 funil, como antes. Com vários funis vale o que a tela mandou.
-  def modo_da_ia_de_assunto
-    return 'off' if pipeline_ids.empty?
-    return modo unless um_funil?
-
-    Crm::Conversations::CardEmFoco.ligada?(@account) ? 'auto' : 'off'
   end
 
   # Devolve os funis que saíram da caixa.

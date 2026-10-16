@@ -3072,6 +3072,13 @@
         "BOTAO_FUNIL": "Open the pipeline",
         "BOTAO_CAIXA": "Connect an inbox"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "This rule does not fully apply:",
+        "SEM_IA": "This pipeline's AI is turned off: it does not notice when the customer asks for a person. The rule still applies when the inbox bot or AI agent hands over the conversation and when the conversation leaves triage.",
+        "FIXA_FUNIL": "{nome} cannot receive conversations from this pipeline in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "FIXA_ETAPA": "In the {etapa} stage, {nome} cannot receive conversations in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "ALGUEM": "The chosen person"
+      },
       "PREVIA": {
         "SELO": "Preview",
         "SELO_AGORA": "Now",
@@ -3241,6 +3248,7 @@
       "VOCE": "{nome} (you)",
       "COM_A_CONVERSA": "Has the conversation",
       "NINGUEM": "There is no one else in this inbox to receive right now.",
+      "ERRO_LISTA": "Could not see who can receive right now.",
       "CONFIRMA_SAI": "{nome} takes over the conversation and you leave it.",
       "CONFIRMA": "{nome} takes over the conversation.",
       "CANCELAR": "Cancel",
@@ -3473,6 +3481,8 @@
         "INBOX_TITLE": "Inbox calendar — {name}",
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
+        "FUSO_DA_CONTA": "In the account time zone: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "In the account time zone.",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",
@@ -3487,6 +3497,7 @@
         "REMOVE_BLOCK": "Remove block",
         "START_LABEL": "Start",
         "END_LABEL": "End",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "End time must be after the start time",
         "NO_BLOCKS": "Closed",
         "SAVE": "Save calendar",
@@ -4096,6 +4107,10 @@
       "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
       "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
       "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
+      "SO_AS_DELE": "{nome} only sees their own conversations, so does not receive.",
+      "NINGUEM_RECEBE": "Nobody can receive conversations about {assuntos}. They wait until someone starts taking care of the subject.",
+      "CONFERINDO": "Checking who receives…",
+      "ERRO_QUEM_RECEBE": "Could not check who receives right now.",
       "ROBO": "{nome}, the AI agent, answers first. Then the people below.",
       "ROBO_EXTERNO": "{nome}, the external agent, answers first. Then the people below."
     },
@@ -4110,7 +4125,9 @@
       "AGENTE_ENTRA": "{nome} joins this inbox.",
       "AGENTE_ENTRA_E_LIGA": "{nome} joins this inbox and starts answering.",
       "AGENTE_SAI": "{nome} leaves this inbox.",
-      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox."
+      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox.",
+      "ABERTAS": "There is {n} open conversation in {funil} in this inbox. | There are {n} open conversations in {funil} in this inbox.",
+      "UM_FUNIL": "With a single funnel in this inbox, whoever takes care of {funil} and sees all conversations also takes care of the ones that have no subject yet. Whoever only sees their own stays that way."
     },
     "FUNIS": {
       "TIPO_SALES": "Sales: ends in won or lost",
@@ -5886,7 +5903,7 @@
   "CONVERSATION_FUNNEL_FILTER": {
     "LABEL": "Funnel",
     "ARIA_LABEL": "Show conversations from which funnel",
-    "ALL": "All my funnels",
+    "ALL": "No funnel filter",
     "NONE": "No subject",
     "NONE_HINT": "Conversations that have no subject yet: triage.",
     "EMPTY": "No conversation in this funnel."

@@ -408,6 +408,8 @@ Rails.application.routes.draw do
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
+            # Leitura (#1140): quem receberia cada assunto com o que a tela marcou. POST porque leva a caixa inteira.
+            post 'caixas/:inbox_id/quem_recebe', to: 'caixas#quem_recebe'
             get :meu_acesso, to: 'meu_acesso#show'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
