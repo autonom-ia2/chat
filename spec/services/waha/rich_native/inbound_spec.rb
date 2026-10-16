@@ -60,7 +60,8 @@ describe Waha::RichNative::Inbound do
       expect(ring.content).to eq('Ligação de voz recebida')
       expect(ring.content_attributes).not_to have_key('c2y_hidden')
       expect(ring.reload.content).to eq('Ligação de voz perdida')
-      expect(ring.content_attributes['waha_call_summary']).to eq('call_id' => 'C1', 'outcome' => 'missed', 'is_video' => false)
+      expect(ring.content_attributes['waha_call_summary']).to include('call_id' => 'C1', 'outcome' => 'missed', 'is_video' => false,
+                                                                      'at' => a_kind_of(String))
       expect(missed).to be_activity
       expect(missed.content_attributes).to include('c2y_hidden' => true)
     end
@@ -76,11 +77,21 @@ describe Waha::RichNative::Inbound do
     it 'tells declined, answered and ended calls apart, video included' do
       flag_on!
 
-      expect(call('rejected', by_me: true, is_video: true, call_id: 'C3').content).to eq('Ligação de vídeo recusada')
+      declined = call('rejected', by_me: true, is_video: true, call_id: 'C3')
+      expect(declined.content).to eq('Ligação de vídeo recusada')
+      expect(declined.content_attributes['waha_call_summary']).to include('outcome' => 'rejected', 'is_video' => true)
       answered = call('accepted', call_id: 'C2')
       expect(answered.content).to eq('Ligação atendida no celular')
+      expect(answered.content_attributes['waha_call_summary']).to include('outcome' => 'accepted')
+      expect(answered.content_attributes['waha_call_summary']).not_to have_key('ended')
       call('rejected', call_id: 'C2')
       expect(answered.reload.content).to eq('Ligação atendida e encerrada')
+      expect(answered.content_attributes['waha_call_summary']).to include('outcome' => 'accepted', 'ended' => true)
+    end
+
+    it 'keeps the transitory ringing outcome while the call rings' do
+      flag_on!
+      expect(call('received', call_id: 'C5').content_attributes['waha_call_summary']).to include('outcome' => 'ringing')
     end
 
     it 'does not turn a late ring back into a received call' do
@@ -125,7 +136,20 @@ describe Waha::RichNative::Inbound do
       expect(message.private).to be(false)
       expect(message.sender).to eq(conversation.contact)
       expect(message.content).to eq(I18n.t('conversations.messages.whatsapp.unsupported_message', locale: 'pt_BR'))
-      expect(message.content_attributes).to include('is_unsupported' => true, 'waha_unknown_type' => 'eventMessage')
+      expect(message.content_attributes).to include('is_unsupported' => true, 'unsupported_kind' => 'unknown')
+      expect(message.content_attributes).not_to have_key('waha_unknown_type')
+    end
+
+    it 'records the kind when the engine knows it (exact table, gif flag), unknown otherwise' do
+      flag_on!
+      kinds = { 'pollCreationMessageV3' => 'poll', 'pinInChatMessage' => 'pinned', 'editedMessage' => 'edit',
+                'viewOnceMessageV2' => 'view_once', 'eventMessage' => 'unknown', nil => 'unknown' }
+      kinds.each do |content_type, kind|
+        message = from_connector({ waha_unknown: { content_type: content_type, from_me: false } }, message_type: :outgoing, private: true)
+        expect(message.content_attributes['unsupported_kind']).to eq(kind), content_type.inspect
+      end
+      gif = from_connector({ waha_unknown: { content_type: 'videoMessage', gif: true, from_me: false } }, message_type: :outgoing, private: true)
+      expect(gif.content_attributes['unsupported_kind']).to eq('gif')
     end
 
     it 'keeps the note when it came from the company phone' do
@@ -162,11 +186,14 @@ describe Waha::RichNative::Inbound do
       expect(first).to be_activity
       expect(first.content).to eq('Reação registrada na mensagem')
       expect(first.content_attributes).to include('c2y_hidden' => true, 'reaction_applied_to' => original.id)
-      expect(original.reload.content_attributes['reactions'].map { |item| item.slice('emoji', 'by') })
-        .to eq([{ 'emoji' => '😂', 'by' => 'contact' }, { 'emoji' => '❤️', 'by' => 'business' }])
+      expect(original.reload.content_attributes['reactions'].map { |item| item.slice('emoji', 'sender_type', 'sender_id') })
+        .to eq([{ 'emoji' => '😂', 'sender_type' => 'Contact', 'sender_id' => conversation.contact_id },
+                { 'emoji' => '❤️', 'sender_type' => 'User', 'sender_id' => nil }])
 
       reaction('')
-      expect(original.reload.content_attributes['reactions'].pluck('by')).to eq(['business'])
+      expect(original.reload.content_attributes['reactions'].pluck('sender_type')).to eq(['User'])
+      reaction('', from_me: true)
+      expect(original.reload.content_attributes).not_to have_key('reactions')
       expect(conversation.messages.incoming).to be_empty
     end
 
@@ -176,8 +203,8 @@ describe Waha::RichNative::Inbound do
 
       reaction('❤️', from_me: true)
 
-      expect(original.reload.content_attributes['reactions'].map { |item| item.slice('emoji', 'by') })
-        .to eq([{ 'emoji' => '❤️', 'by' => 'business' }])
+      expect(original.reload.content_attributes['reactions'].map { |item| item.slice('emoji', 'sender_type', 'sender_id') })
+        .to eq([{ 'emoji' => '❤️', 'sender_type' => 'User', 'sender_id' => nil }])
     end
 
     it 'applies to the original in an older conversation of the same contact and still hides the new message' do
@@ -236,8 +263,19 @@ describe Waha::RichNative::Inbound do
       expect(message.content_attributes).to include('c2y_hidden' => true, 'edit_applied_to' => original.id)
       original.reload
       expect(original.content).to eq('Chego às 11')
-      expect(original.content_attributes['edit_history'].sole).to include('content' => 'Chego às 10', 'by' => 'contact')
+      expect(original.content_attributes['edit_history'].sole)
+        .to include('content' => 'Chego às 10', 'sender_type' => 'Contact', 'sender_id' => conversation.contact_id)
       expect(original.content_attributes['edited_at']).to be_present
+    end
+
+    it 'records an edit from the company phone as User without sender_id' do
+      flag_on!
+      ours = create(:message, message_type: :outgoing, content: 'Até 10h', conversation: conversation, inbox: inbox, account: account,
+                              sender: agent)
+
+      edited('Até 11h', from_me: true, target: ours)
+
+      expect(ours.reload.content_attributes['edit_history'].sole).to include('sender_type' => 'User', 'sender_id' => nil)
     end
 
     it 'only edits a message in the same direction' do

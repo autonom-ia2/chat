@@ -67,27 +67,31 @@ describe Waha::RichNative::PollVote do
   describe 'the vote (waha_poll_vote)' do
     before { account.enable_features!(Waha::RichNative::FLAG) }
 
-    it 'records the chosen options by the offered titles and links the vote to the poll' do
+    it 'aggregates the vote on the poll by the offered titles and hides the vote message' do
       poll = poll_message
       inbox_payload(poll)
 
       answer = vote(poll.reload, %w[Não Sim])
 
-      expect(answer).to be_incoming
-      expect(answer.content_attributes).to include('in_reply_to' => poll.id, 'selected_option' => { 'id' => 'nao', 'title' => 'Não' },
-                                                   'selected_options' => [{ 'id' => 'nao', 'title' => 'Não' },
-                                                                          { 'id' => 'sim', 'title' => 'Sim' }])
-      expect(answer.content_attributes).not_to have_key('waha_poll_vote')
+      expect(answer).to be_activity
+      expect(answer.content).to eq('Poll vote saved')
+      expect(answer.content_attributes).to include('c2y_hidden' => true, 'poll_vote_applied_to' => poll.id)
+      expect(answer.content_attributes.keys & %w[selected_option selected_options waha_poll_vote]).to eq([])
+      vote_entry = poll.reload.content_attributes['poll_votes'].sole
+      expect(vote_entry).to include('sender_type' => 'Contact', 'sender_id' => conversation.contact_id, 'options' => %w[Não Sim])
+      expect(vote_entry['at']).to be_present
     end
 
-    it 'turns a removed vote into a hidden activity' do
+    it 'keeps one entry per voter: a new vote replaces the previous one and a removed vote keeps the voter' do
       poll = poll_message
       inbox_payload(poll)
 
-      answer = vote(poll.reload, [])
+      vote(poll.reload, ['Sim'])
+      vote(poll.reload, ['Não'])
+      expect(poll.reload.content_attributes['poll_votes'].sole['options']).to eq(['Não'])
 
-      expect(answer).to be_activity
-      expect(answer.content_attributes).to include('c2y_hidden' => true, 'selected_options' => [], 'in_reply_to' => poll.id)
+      expect(vote(poll.reload, [])).to be_activity
+      expect(poll.reload.content_attributes['poll_votes'].sole['options']).to eq([])
     end
 
     it 'stays plain text when the poll is not ours, not native, or the title was not offered' do
@@ -100,6 +104,7 @@ describe Waha::RichNative::PollVote do
         expect(answer).to be_incoming
         expect(answer.content_attributes.keys & %w[selected_option selected_options waha_poll_vote c2y_hidden]).to eq([])
       end
+      expect(native.reload.content_attributes).not_to have_key('poll_votes')
     end
 
     it 'hides the vote of a poll sent before the flag was turned off (main never gets a vote)' do
@@ -110,6 +115,7 @@ describe Waha::RichNative::PollVote do
       expect(answer).to be_activity
       expect(answer.content_attributes).to include('c2y_hidden' => true)
       expect(answer.content_attributes.keys & %w[selected_option waha_poll_vote]).to eq([])
+      expect(poll.reload.content_attributes).not_to have_key('poll_votes')
     end
   end
 

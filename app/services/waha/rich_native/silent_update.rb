@@ -5,11 +5,12 @@
 # motor é o evento próprio (`c2y_message_reaction` / `c2y_message_edit`, Waha::RichNative::MessageActions); a reação ou
 # edição do cliente já veio do motor.
 # Só quando a mudança é SÓ isso: colunas `content`, `content_attributes`, `updated_at` e `processed_message_content`,
-# e, dentro de `content_attributes`, só `reactions`, `edit_history` e `edited_at` (`content` só muda junto com o
+# e, dentro de `content_attributes`, só SILENT_KEYS (reação, edição, voto agregado na enquete, resposta ao evento,
+# apagada pelo cliente e áudio ouvido; `content` só muda junto com o
 # histórico). Os webhooks da conta, a tela (ActionCable) e o robô seguem recebendo a atualização. Qualquer outra
 # mudança (status, apagar, erro de envio) vai ao conector como sempre.
 module Waha::RichNative::SilentUpdate
-  SILENT_KEYS = %w[reactions edit_history edited_at].freeze
+  SILENT_KEYS = %w[reactions edit_history edited_at poll_votes event_responses deleted_by_contact_at played_at].freeze
   ALLOWED_COLUMNS = %w[content content_attributes updated_at processed_message_content].freeze
 
   def self.silent?(previous_changes)

@@ -1,14 +1,18 @@
 # `waha_call` (chat#1709, fase 3): ligação pelo WhatsApp na caixa WAHA comum vira AVISO de atividade, e não mensagem
 # do cliente (a IA respondia "Chamada de voz recebida"). A atividade não vai a webhook nem dispara a IA. Uma ligação =
-# UMA linha na conversa, com o resumo em `waha_call_summary` = { call_id, outcome, is_video }:
+# UMA linha na conversa, com o resumo em `waha_call_summary` (formato da tela do Frontend geral, #1702):
+#   { call_id, outcome: missed | rejected | accepted (| ringing enquanto toca), is_video, at: ISO 8601, ended?: true }
+# `ended: true` marca a ligação atendida que terminou; `at` é a hora do evento. Por dentro, o texto da linha segue o
+# estado (ringing, missed, declined, answered, ended):
 # - received: "Ligação de voz/vídeo recebida" (ringing). Fica VISÍVEL: na sessão do WAHA (aparelho vinculado), atender
 #   ou recusar no celular da empresa chega como accepted/rejected_elsewhere, e o motor (GOWS) descarta esse fim; se
 #   nenhum desfecho chegar, a linha da ligação continua na conversa.
 # - o desfecho troca o texto da linha da mesma ligação (mesmo call_id), e a mensagem do desfecho vira atividade
 #   escondida. Sem a linha (o desfecho chegou antes do toque, ou numa conversa nova), o desfecho vira a linha:
-#   - accepted: "Ligação atendida no celular" (answered);
-#   - rejected depois de atendida: "Ligação atendida e encerrada" (ended);
-#   - rejected por nós (by_me: recusada no celular da empresa ou pela API): "Ligação de voz/vídeo recusada" (declined);
+#   - accepted: "Ligação atendida no celular" (answered → accepted);
+#   - rejected depois de atendida: "Ligação atendida e encerrada" (ended → accepted + ended);
+#   - rejected por nós (by_me: recusada no celular da empresa ou pela API): "Ligação de voz/vídeo recusada" (declined →
+#     rejected);
 #   - rejected sem atender: "Ligação de voz/vídeo perdida" (missed).
 # - toque que chega depois do desfecho não volta a linha para "recebida".
 # Textos em config/locales/whatsapp_rich_native.*.yml (waha.call.*), no idioma da conta.
@@ -17,6 +21,9 @@ module Waha::RichNative::Inbound::Call
   # Quantas atividades recentes da conversa olhar para achar a linha da mesma ligação.
   LOOKBACK = 20
   BY_MEDIA = %w[ringing missed declined].freeze
+  # Estado interno (o texto da linha) => outcome gravado.
+  OUTCOMES = { 'ringing' => 'ringing', 'missed' => 'missed', 'declined' => 'rejected', 'answered' => 'accepted',
+               'ended' => 'accepted' }.freeze
 
   module_function
 
@@ -26,27 +33,36 @@ module Waha::RichNative::Inbound::Call
     call_id = data['call_id'].to_s
     is_video = data['is_video'] == true
     line = call_line(message.conversation, call_id)
-    outcome = outcome_for(line, data)
-    return show!(message, summary(call_id, outcome, is_video)) if line.nil?
+    state = state_for(line, data)
+    return show!(message, summary(call_id, state, is_video)) if line.nil?
 
-    update_line!(line, summary(call_id, outcome, is_video)) unless outcome == 'ringing'
-    Waha::RichNative::Inbound.hide!(message, 'call', SUMMARY_KEY => summary(call_id, outcome, is_video))
+    update_line!(line, summary(call_id, state, is_video)) unless state == 'ringing'
+    Waha::RichNative::Inbound.hide!(message, 'call', SUMMARY_KEY => summary(call_id, state, is_video))
   end
 
-  def summary(call_id, outcome, is_video)
-    { 'call_id' => call_id, 'outcome' => outcome, 'is_video' => is_video }
+  def summary(call_id, state, is_video)
+    base = { 'call_id' => call_id, 'outcome' => OUTCOMES.fetch(state), 'is_video' => is_video, 'at' => Time.current.iso8601 }
+    state == 'ended' ? base.merge('ended' => true) : base
   end
 
-  def outcome_for(line, data)
-    previous = line&.content_attributes.to_h.dig(SUMMARY_KEY, 'outcome')
+  # O estado interno de um resumo gravado, ou nil.
+  def state_of(summary)
+    return unless summary.is_a?(Hash)
+    return 'ended' if summary['ended'] == true
+
+    OUTCOMES.key(summary['outcome'])
+  end
+
+  def state_for(line, data)
+    previous = state_of(line&.content_attributes.to_h[SUMMARY_KEY])
     case data['event']
     when 'received' then previous || 'ringing'
     when 'accepted' then 'answered'
-    else rejected_outcome(previous, data)
+    else rejected_state(previous, data)
     end
   end
 
-  def rejected_outcome(previous, data)
+  def rejected_state(previous, data)
     return 'ended' if %w[answered ended].include?(previous)
     return 'declined' if data['by_me'] == true
 
@@ -80,9 +96,9 @@ module Waha::RichNative::Inbound::Call
   end
 
   def text_for(account, summary)
-    outcome = summary['outcome']
-    key = "waha.call.#{outcome}"
-    key = "#{key}_#{summary['is_video'] ? 'video' : 'voice'}" if BY_MEDIA.include?(outcome)
+    state = state_of(summary)
+    key = "waha.call.#{state}"
+    key = "#{key}_#{summary['is_video'] ? 'video' : 'voice'}" if BY_MEDIA.include?(state)
     I18n.t(key, locale: account.locale, default: I18n.t(key))
   end
 end

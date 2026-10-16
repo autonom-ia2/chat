@@ -17,8 +17,6 @@ pt_BR:
       edit: "Edição registrada na mensagem"
       call: "Ligação registrada"
       poll_vote: "Voto na enquete registrado"
-    poll:
-      vote_removed: "Voto retirado"
     message_actions:
       reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
       edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."

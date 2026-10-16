@@ -1,18 +1,16 @@
 <script setup>
-// Enquete (chat#1709, fase 3): `{ type: 'poll', options: [{ id, title }], multiple? }`, com a pergunta em `content`.
-// Mostra as opções como o cliente recebeu (só leitura) e o voto mais recente ("Votou: X"); o voto trocado atualiza
-// sozinho e o retirado volta a "sem voto" (pollAnswer.js).
+// Enquete (chat#1709): `{ type: 'poll', options: [{ id, title }], multiple? }`, com a pergunta em `content`. Mostra as
+// opções como o cliente recebeu (só leitura) e o voto ("Votou: X"), lido dos votos agregados na própria enquete
+// (`poll_votes`, pollAnswer.js): o voto trocado atualiza sozinho e o retirado volta a "sem voto".
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
 import Icon from 'next/icon/Icon.vue';
 import { useMessageContext } from '../../../provider.js';
 import Frame from '../Frame.vue';
-import { pollVoteFor } from '../pollAnswer.js';
+import { pollVotedTitles } from '../pollAnswer.js';
 
-const { id, contentAttributes } = useMessageContext();
+const { contentAttributes } = useMessageContext();
 const { t } = useI18n();
-const currentChat = useMapGetter('getSelectedChat');
 
 // Tudo vem de quem chamou a API: só texto entra na tela.
 const textOf = value => (typeof value === 'string' ? value : '');
@@ -25,23 +23,13 @@ const options = computed(() =>
 );
 const isMultiple = computed(() => richMessage.value.multiple === true);
 
-const vote = computed(() => pollVoteFor(id.value, currentChat.value?.messages));
-const votedIds = computed(() => (vote.value ?? []).map(option => option.id));
-const isVoted = option => votedIds.value.includes(option.id);
-
-// O título como foi oferecido; se a opção não está na enquete, o que o voto trouxe.
 const votedTitles = computed(() =>
-  (vote.value ?? [])
-    .map(
-      option =>
-        options.value.find(offered => offered.id === option.id)?.title ||
-        textOf(option.title)
-    )
-    .filter(Boolean)
+  pollVotedTitles(contentAttributes.value?.pollVotes)
 );
+const isVoted = option => (votedTitles.value ?? []).includes(option.title);
 
 const voteLine = computed(() => {
-  if (vote.value === null) return '';
+  if (votedTitles.value === null) return '';
   if (!votedTitles.value.length) return t('RICH_MESSAGE.POLL.NO_VOTE');
   return t('RICH_MESSAGE.POLL.VOTED', { titles: votedTitles.value.join(', ') });
 });

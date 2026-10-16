@@ -1,7 +1,8 @@
-# `waha_poll_vote` (chat#1709, fase 3): o voto do cliente numa enquete nativa nossa vira a resposta à enquete
-# (Waha::RichNative::PollVote: `selected_option`, `selected_options` e `in_reply_to`). O conector só cria o voto de
-# enquete com o id determinístico nosso; mesmo assim, aqui a enquete é conferida de novo (mensagem de saída `poll`,
-# nativa, na mesma conversa e caixa) e cada título precisa ser de uma opção oferecida. Sem isso, fica o texto comum.
+# `waha_poll_vote` (chat#1709, fase 3): o voto do cliente numa enquete nativa nossa fica agregado na enquete
+# (`poll_votes`, Waha::RichNative::PollVotes) e a mensagem do voto vira atividade escondida (`poll_vote_applied_to`),
+# como a reação. O conector só cria o voto de enquete com o id determinístico nosso; mesmo assim, aqui a enquete é
+# conferida de novo (mensagem de saída `poll`, nativa, na mesma conversa e caixa) e cada título precisa ser de uma
+# opção oferecida. Sem isso, fica o texto comum.
 module Waha::RichNative::Inbound::PollVote
   module_function
 
@@ -12,6 +13,6 @@ module Waha::RichNative::Inbound::PollVote
     return if poll.nil?
 
     selected = Waha::RichNative::PollVote.selected_for(poll, data['options'])
-    Waha::RichNative::PollVote.assign!(message, poll, selected) if selected
+    Waha::RichNative::PollVote.record_vote!(message, poll, selected) if selected
   end
 end

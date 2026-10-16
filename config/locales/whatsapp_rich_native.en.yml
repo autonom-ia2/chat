@@ -17,8 +17,6 @@ en:
       edit: "Edit saved on the message"
       call: "Call saved"
       poll_vote: "Poll vote saved"
-    poll:
-      vote_removed: "Vote removed"
     message_actions:
       reaction_invalid: "This message cannot get a reaction. Use a single emoji."
       edit_invalid: "This message can no longer be edited. Only text sent less than %{minutes} minutes ago, without attachment or special format and up to %{max_length} characters, can be edited."

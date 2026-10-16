@@ -14,10 +14,14 @@ const { t } = useI18n();
 const isOpen = ref(false);
 const listId = useId();
 
+// Autor no formato da tela do Frontend geral (#1702): `senderType` 'Contact' (o cliente) ou 'User' (a empresa:
+// `senderId` do atendente pelo painel, ou nulo quando editou no celular da empresa).
 const authorOf = entry => {
-  if (entry.by === 'contact') return t('MESSAGE_ACTIONS.EDITED_BY_CONTACT');
-  if (entry.by === 'phone') return t('MESSAGE_ACTIONS.EDITED_BY_PHONE');
-  if (props.currentUserId != null && entry.userId === props.currentUserId) {
+  if (entry.senderType === 'Contact') {
+    return t('MESSAGE_ACTIONS.EDITED_BY_CONTACT');
+  }
+  if (entry.senderId == null) return t('MESSAGE_ACTIONS.EDITED_BY_PHONE');
+  if (props.currentUserId != null && entry.senderId === props.currentUserId) {
     return t('MESSAGE_ACTIONS.EDITED_BY_YOU');
   }
   return t('MESSAGE_ACTIONS.EDITED_BY_AGENT');

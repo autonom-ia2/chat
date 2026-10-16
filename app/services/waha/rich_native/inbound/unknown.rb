@@ -2,10 +2,18 @@
 # pacote novo, visualização única que o motor não abre). Antes era uma nota privada (só a equipe via, com o link do
 # job). Agora é uma bolha curta do cliente, como no WhatsApp oficial: o mesmo texto e a mesma marca `is_unsupported`
 # do Chatwoot (incoming_message_base_service.rb), e a tela mostra a bolha "não suportada" do upstream (abra no
-# celular). O tipo original fica em `waha_unknown_type`. Mensagem que saiu do celular da empresa (from_me) continua
-# nota, como antes.
+# celular). O tipo, quando o motor sabe, fica em `unsupported_kind` (formato da tela do Frontend geral, #1702):
+# poll | gif | pinned | edit | view_once | unknown, pela tabela KINDS (igualdade exata do tipo do proto, sem regex).
+# Mensagem que saiu do celular da empresa (from_me) continua nota, como antes.
 module Waha::RichNative::Inbound::Unknown
   TEXT_KEY = 'conversations.messages.whatsapp.unsupported_message'.freeze
+  KINDS = {
+    'pollCreationMessage' => 'poll', 'pollCreationMessageV2' => 'poll', 'pollCreationMessageV3' => 'poll',
+    'pinInChatMessage' => 'pinned',
+    'editedMessage' => 'edit', 'protocolMessage' => 'edit',
+    'viewOnceMessage' => 'view_once', 'viewOnceMessageV2' => 'view_once', 'viewOnceMessageV2Extension' => 'view_once'
+  }.freeze
+  UNKNOWN_KIND = 'unknown'.freeze
 
   module_function
 
@@ -19,7 +27,12 @@ module Waha::RichNative::Inbound::Unknown
     message.private = false
     message.sender = contact
     message.content = I18n.t(TEXT_KEY, locale: message.account.locale, default: I18n.t(TEXT_KEY))
-    message.content_attributes = message.content_attributes.to_h.merge('is_unsupported' => true,
-                                                                       'waha_unknown_type' => data['content_type'])
+    message.content_attributes = message.content_attributes.to_h.merge('is_unsupported' => true, 'unsupported_kind' => kind_of(data))
+  end
+
+  def kind_of(data)
+    return 'gif' if data['gif'] == true
+
+    KINDS.fetch(data['content_type'].to_s, UNKNOWN_KIND)
   end
 end

@@ -24,12 +24,14 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
 
   describe 'the 24 h window of the Cloud' do
     it 'does not count the vote as the customer opening the window' do
-      native_poll
+      poll_message = native_poll
       vote(['Sim'])
 
-      answer = conversation.messages.incoming.sole
-      expect(answer.additional_attributes).to include('c2y_window_neutral' => true)
-      expect(answer.content_attributes['selected_option']).to eq('id' => 'sim', 'title' => 'Sim')
+      record = conversation.messages.activity.sole
+      expect(record.additional_attributes).to include('c2y_window_neutral' => true)
+      expect(record.content_attributes).to include('c2y_hidden' => true, 'poll_vote_applied_to' => poll_message.id)
+      expect(poll_message.reload.content_attributes['poll_votes'].sole).to include('sender_type' => 'Contact', 'options' => ['Sim'])
+      expect(conversation.messages.incoming).to be_empty
       expect(Conversations::MessageWindowService.new(conversation.reload).can_reply?).to be(false)
       expect(WhatsappHybrid::Router.new(conversation).cloud_window_open?).to be(false)
     end
@@ -49,15 +51,18 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
 
     vote(['Não'], vote_id: 'V9')
 
-    expect(conversation.messages.incoming.sole.content_attributes['in_reply_to']).to eq(poll_message.id)
+    expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq(['Não'])
   end
 
-  it 'keeps the stored keys of its own vote (internal write), which the API can never send' do
-    native_poll
-    vote([], vote_id: 'V2')
+  it 'keeps the stored keys of its own record (internal write), which the API can never send, and records each vote once' do
+    poll_message = native_poll
+    vote(['Sim'], vote_id: 'V2')
+    vote(['Sim'], vote_id: 'V2')
+    vote([], vote_id: 'V3')
 
-    removed = conversation.messages.activity.last
-    expect(removed.content_attributes).to include('c2y_hidden' => true, 'selected_options' => [])
+    expect(conversation.messages.activity.pluck(:source_id)).to eq(%w[waha-poll-vote-V2 waha-poll-vote-V3])
+    expect(conversation.messages.activity.last.content_attributes).to include('c2y_hidden' => true)
+    expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq([])
   end
 
   describe 'the unsupported the Meta may send to the Cloud for the vote' do

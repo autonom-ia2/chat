@@ -1,10 +1,12 @@
-# Edição de uma mensagem já gravada (chat#1709, fase 3), pelo cliente (volta do conector) ou pelo atendente (painel).
-# O texto novo substitui o `content`; o anterior fica guardado em `content_attributes.edit_history`:
-#   [{ "content" => "texto anterior", "edited_at" => ISO 8601, "by" => "contact" | "phone" } | { ..., "user_id" => 7 }]
-# e `edited_at` marca a última edição (a bolha mostra "editada" e o histórico). O histórico guarda as HISTORY_LIMIT
-# edições mais recentes; o texto tem o teto do WhatsApp (MAX_LENGTH, o mesmo do painel em messageActions.js). Grava sob
-# trava e sem as validações do modelo (a de rajada recusaria numa conversa movimentada); o `message_updated` leva a
-# mudança à tela.
+# Edição de uma mensagem já gravada (chat#1709; formato da tela do Frontend geral, #1702), pelo cliente (volta do
+# conector), pelo celular da empresa ou pelo atendente (painel). O texto novo substitui o `content`; o anterior fica em
+#   content_attributes.edit_history = [{ "content" => "texto anterior", "edited_at" => ISO 8601,
+#                                        "sender_type" => "Contact" | "User", "sender_id" => 12 | nil }]
+# do mais antigo para o mais novo, e `edited_at` marca a última edição. Autor: Contact + contact_id (o cliente);
+# User + user.id (atendente pelo painel); User + nil (celular da empresa). O histórico guarda as HISTORY_LIMIT edições
+# mais recentes; o texto tem o teto do WhatsApp (MAX_LENGTH, o mesmo do painel em messageActions.js). Grava sob trava e
+# sem as validações do modelo (a de rajada recusaria numa conversa movimentada); o `message_updated` leva a mudança à
+# tela.
 module Waha::RichNative::Edits
   HISTORY_KEY = 'edit_history'.freeze
   EDITED_AT_KEY = 'edited_at'.freeze
@@ -18,7 +20,16 @@ module Waha::RichNative::Edits
     text.is_a?(String) && text.strip.present? && text.length <= MAX_LENGTH
   end
 
-  # author: { 'by' => 'contact' } ou { 'user_id' => 7 }. Devolve false quando o texto é o mesmo (nada a gravar).
+  def contact_author(contact_id)
+    { 'sender_type' => 'Contact', 'sender_id' => contact_id }
+  end
+
+  # `user_id` nil: o celular da empresa.
+  def user_author(user_id = nil)
+    { 'sender_type' => 'User', 'sender_id' => user_id }
+  end
+
+  # author: contact_author ou user_author. Devolve false quando o texto é o mesmo (nada a gravar).
   def apply!(message, content:, author:)
     message.with_lock do
       next false if message.content.to_s == content

@@ -1,14 +1,17 @@
-# Reações gravadas na mensagem reagida (chat#1709, fase 3): `content_attributes.reactions`, uma lista de
-#   { "emoji" => "👍", "by" => "contact" | "business", "user_id" => 7 (quem reagiu pelo painel), "at" => ISO 8601 }
-# No WhatsApp cada número tem UMA reação por mensagem. O número da empresa é um só: atendentes, IA e o celular da
-# empresa são o mesmo autor ('business'). Por isso há no máximo duas reações por mensagem, a do contato e a da empresa:
-# a nova de qualquer atendente (ou do celular) troca a anterior da empresa, e emoji vazio remove a da empresa, igual ao
-# que o cliente vê. `user_id` só diz quem reagiu pelo painel (o celular não tem). Grava sob trava e sem as validações
-# do modelo (a de rajada recusaria numa conversa movimentada); o `message_updated` leva a mudança à tela.
+# Reações gravadas na mensagem reagida (chat#1709; formato da tela do Frontend geral, #1702):
+#   content_attributes.reactions = [{ "emoji" => "👍", "sender_type" => "Contact" | "User", "sender_id" => 12 | nil,
+#                                     "at" => ISO 8601 }]
+# No WhatsApp cada número tem UMA reação por mensagem.
+# - Contact: o contato da conversa (`sender_id` = contact_id); uma por (sender_type, sender_id).
+# - User: o número da EMPRESA. Atendentes, IA e o celular da empresa são o mesmo autor, então há uma só reação 'User':
+#   a nova de qualquer atendente (ou do celular) troca a anterior, e emoji vazio remove, igual ao que o cliente vê.
+#   `sender_id` = o atendente que reagiu pelo painel, ou nil quando veio do celular da empresa.
+# Emoji vazio remove a reação do autor; lista vazia tira a chave. Grava sob trava e sem as validações do modelo (a de
+# rajada recusaria numa conversa movimentada); o `message_updated` (after_update_commit) leva a mudança à tela.
 module Waha::RichNative::Reactions
   KEY = 'reactions'.freeze
-  CONTACT = { 'by' => 'contact' }.freeze
-  BUSINESS = 'business'.freeze
+  CONTACT_TYPE = 'Contact'.freeze
+  USER_TYPE = 'User'.freeze
   # O WhatsApp reage com um emoji só (um grafema, que pode juntar vários códigos: bandeira, tom de pele).
   MAX_GRAPHEMES = 1
 
@@ -18,22 +21,30 @@ module Waha::RichNative::Reactions
     emoji.is_a?(String) && emoji.grapheme_clusters.size <= MAX_GRAPHEMES && emoji.bytesize <= 64
   end
 
-  # A empresa reagindo; `user_id` quando foi pelo painel.
-  def business_author(user_id = nil)
-    { 'by' => BUSINESS, 'user_id' => user_id }.compact
+  # O contato reagindo.
+  def contact_author(contact_id)
+    { 'sender_type' => CONTACT_TYPE, 'sender_id' => contact_id }
   end
 
-  # author: CONTACT ou business_author.
+  # A empresa reagindo; `user_id` quando foi pelo painel (nil: celular da empresa).
+  def business_author(user_id = nil)
+    { 'sender_type' => USER_TYPE, 'sender_id' => user_id }
+  end
+
+  # author: contact_author ou business_author.
   def apply!(message, emoji:, author:)
     message.with_lock do
       reactions = Array(message.content_attributes.to_h[KEY]).reject { |reaction| same_author?(reaction, author) }
-      reactions << author.merge('emoji' => emoji, 'at' => Time.current.iso8601) if emoji.present?
-      message.content_attributes = message.content_attributes.to_h.merge(KEY => reactions)
+      reactions << { 'emoji' => emoji }.merge(author).merge('at' => Time.current.iso8601) if emoji.present?
+      attributes = message.content_attributes.to_h
+      message.content_attributes = reactions.empty? ? attributes.except(KEY) : attributes.merge(KEY => reactions)
       message.save!(validate: false)
     end
   end
 
   def same_author?(reaction, author)
-    reaction.is_a?(Hash) && reaction['by'] == author['by']
+    return false unless reaction.is_a?(Hash) && reaction['sender_type'] == author['sender_type']
+
+    author['sender_type'] == USER_TYPE || reaction['sender_id'] == author['sender_id']
   end
 end

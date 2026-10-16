@@ -56,12 +56,12 @@ RSpec.describe 'WAHA message actions API', type: :request do
 
       expect(response).to have_http_status(:ok)
       reactions = customer.reload.content_attributes['reactions']
-      expect(reactions.map { |reaction| reaction.slice('emoji', 'by', 'user_id') })
-        .to eq([{ 'emoji' => '❤️', 'by' => 'business', 'user_id' => colleague.id }])
+      expect(reactions.map { |reaction| reaction.slice('emoji', 'sender_type', 'sender_id') })
+        .to eq([{ 'emoji' => '❤️', 'sender_type' => 'User', 'sender_id' => colleague.id }])
       expect(events.last).to include(event: 'c2y_message_reaction', id: customer.id, c2y_reaction: { emoji: '❤️' })
 
       react(customer, '')
-      expect(customer.reload.content_attributes['reactions']).to eq([])
+      expect(customer.reload.content_attributes).not_to have_key('reactions')
       expect(events.last[:c2y_reaction]).to eq(emoji: '')
     end
 
@@ -116,7 +116,8 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(response).to have_http_status(:ok)
       message.reload
       expect(message.content).to eq('**Até** depois')
-      expect(message.content_attributes['edit_history'].sole).to include('content' => '**Até** amanhã', 'user_id' => agent.id)
+      expect(message.content_attributes['edit_history'].sole)
+        .to include('content' => '**Até** amanhã', 'sender_type' => 'User', 'sender_id' => agent.id)
       expect(message.content_attributes['edited_at']).to be_present
       expect(events.last).to include(event: 'c2y_message_edit', id: message.id, c2y_edit: { waha_text: 'WA[**Até** depois]' })
     end

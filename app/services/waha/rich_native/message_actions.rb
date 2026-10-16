@@ -34,7 +34,7 @@ module Waha::RichNative::MessageActions
     return :forbidden unless allowed?(message.conversation, 'edit')
     return :invalid unless editable?(message) && Waha::RichNative::Edits.valid_text?(content)
     return :not_author unless administrator || author?(message, user)
-    return nil unless Waha::RichNative::Edits.apply!(message, content: content, author: { 'user_id' => user.id })
+    return nil unless Waha::RichNative::Edits.apply!(message, content: content, author: Waha::RichNative::Edits.user_author(user.id))
 
     deliver(message, EDIT_EVENT, c2y_edit: { waha_text: Waha::RichNative::OutgoingHints.whatsapp_text(content, message) })
     nil

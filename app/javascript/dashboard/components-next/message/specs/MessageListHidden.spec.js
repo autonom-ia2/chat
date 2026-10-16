@@ -30,11 +30,21 @@ describe('MessageList com registros escondidos', () => {
         content: 'Até amanhã',
         content_attributes: {
           reactions: [
-            { emoji: '👍', by: 'contact', at: '2026-10-16T10:00:00Z' },
+            {
+              emoji: '👍',
+              sender_type: 'Contact',
+              sender_id: 3,
+              at: '2026-10-16T10:00:00Z',
+            },
           ],
           edited_at: '2026-10-16T10:01:00Z',
           edit_history: [
-            { content: 'Até logo', edited_at: '2026-10-16T10:01:00Z' },
+            {
+              content: 'Até logo',
+              edited_at: '2026-10-16T10:01:00Z',
+              sender_type: 'Contact',
+              sender_id: 3,
+            },
           ],
         },
       },

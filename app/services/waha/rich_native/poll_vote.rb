@@ -1,14 +1,12 @@
 # O voto numa enquete nativa nossa (chat#1709, fase 3), comum à caixa WAHA comum (Waha::RichNative::Inbound, chave
 # `waha_poll_vote` do conector) e ao plano B do Híbrido (WhatsappHybrid::RichNative::PollVoteJob, evento `poll.vote`).
 # O motor devolve os TÍTULOS das opções marcadas: cada um vira a opção oferecida de título IGUAL (comparação exata).
-# Grava na mensagem do voto, que é a resposta à enquete:
-#   in_reply_to       = a enquete;
-#   selected_options  = [{ id, title }, ...] (todas as marcadas; vazio = voto retirado);
-#   selected_option   = a primeira (o mesmo campo da escolha de lista, que o robô e a bolha já leem).
-# Voto retirado (nenhuma marcada) vira atividade escondida (`c2y_hidden`): a bolha da enquete volta a "sem voto" e a IA
-# não responde. A enquete precisa ser NOSSA: mensagem de saída `poll` que saiu nativa, na mesma conversa e caixa.
+# A enquete precisa ser NOSSA: mensagem de saída `poll` que saiu nativa, na mesma conversa e caixa. O voto fica
+# agregado na enquete (Waha::RichNative::PollVotes); a mensagem do voto vira atividade escondida (`record_vote!`).
 module Waha::RichNative::PollVote
   TYPE = 'poll'.freeze
+  HIDDEN_KIND = 'poll_vote'.freeze
+  APPLIED_KEY = 'poll_vote_applied_to'.freeze
 
   module_function
 
@@ -36,16 +34,9 @@ module Waha::RichNative::PollVote
     selected if selected.size == titles.size
   end
 
-  # Grava o voto na mensagem que está sendo criada (antes do INSERT).
-  def assign!(message, poll, selected)
-    attributes = message.content_attributes.to_h.merge('in_reply_to' => poll.id, 'selected_options' => selected)
-    if selected.empty?
-      message.message_type = :activity
-      message.private = false
-      attributes = attributes.except('selected_option').merge('c2y_hidden' => true)
-    else
-      attributes['selected_option'] = selected.first
-    end
-    message.content_attributes = attributes
+  # Grava o voto na enquete e transforma a mensagem do voto (ainda não gravada) em atividade escondida.
+  def record_vote!(message, poll, selected)
+    Waha::RichNative::PollVotes.apply!(poll, sender: poll.conversation.contact, titles: selected.pluck('title'))
+    Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => poll.id)
   end
 end

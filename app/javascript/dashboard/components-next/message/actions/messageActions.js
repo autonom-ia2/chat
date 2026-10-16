@@ -9,9 +9,11 @@ export const EDIT_WINDOW_SECONDS = EDIT_WINDOW_MINUTES * 60;
 // Teto do texto do WhatsApp, igual ao servidor (Waha::RichNative::Edits::MAX_LENGTH).
 export const EDIT_MAX_LENGTH = 4096;
 
-// O número da empresa reage uma vez por mensagem: atendentes, IA e o celular da empresa são o mesmo autor. 'agent' e
-// 'phone' são os nomes antigos do mesmo autor.
-const BUSINESS_AUTHORS = ['business', 'agent', 'phone'];
+// A reação é de um contato (`senderType` 'Contact') ou da empresa ('User'): o número da empresa reage uma vez por
+// mensagem, e atendentes, IA e o celular da empresa (`senderId` nulo) são o mesmo autor. Formato da tela do Frontend
+// geral (#1702): `content_attributes.reactions = [{ emoji, sender_type, sender_id, at }]`.
+const CONTACT = 'Contact';
+const USER = 'User';
 
 const actionsOf = conversation =>
   Array.isArray(conversation?.whatsapp_api_message_actions)
@@ -49,8 +51,7 @@ export const canEdit = (
   !isDeleted(message) &&
   nowSeconds - message.createdAt <= EDIT_WINDOW_SECONDS;
 
-export const isBusinessReaction = reaction =>
-  BUSINESS_AUTHORS.includes(reaction?.by);
+export const isBusinessReaction = reaction => reaction?.senderType === USER;
 
 const validReactions = reactions =>
   (Array.isArray(reactions) ? reactions : []).filter(
@@ -74,13 +75,13 @@ export const groupReactions = (reactions, currentUserId) => {
     groups.set(emoji, {
       ...group,
       count: group.count + 1,
-      fromContact: group.fromContact || reaction.by === 'contact',
+      fromContact: group.fromContact || reaction.senderType === CONTACT,
       fromBusiness: group.fromBusiness || business,
       mine:
         group.mine ||
         (business &&
           currentUserId != null &&
-          reaction.userId === currentUserId),
+          reaction.senderId === currentUserId),
     });
   });
   return [...groups.values()];

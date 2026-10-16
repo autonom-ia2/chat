@@ -93,8 +93,8 @@ describe('quando o painel oferece reagir e editar', () => {
 
 describe('reações na mensagem', () => {
   const reacoes = [
-    { emoji: '👍', by: 'contact' },
-    { emoji: '👍', by: 'business', userId: 7 },
+    { emoji: '👍', senderType: 'Contact', senderId: 3 },
+    { emoji: '👍', senderType: 'User', senderId: 7 },
   ];
 
   it('a reação da empresa é uma só, de qualquer atendente ou do celular', () => {
@@ -109,16 +109,20 @@ describe('reações na mensagem', () => {
     ]);
     expect(groupReactions(reacoes, 8)[0].mine).toBe(false);
     expect(businessReaction(reacoes)).toBe('👍');
-    expect(businessReaction([{ emoji: '❤️', by: 'phone' }])).toBe('❤️');
-    expect(businessReaction([{ emoji: '❤️', by: 'contact' }])).toBe('');
+    expect(
+      businessReaction([{ emoji: '❤️', senderType: 'User', senderId: null }])
+    ).toBe('❤️');
+    expect(
+      businessReaction([{ emoji: '❤️', senderType: 'Contact', senderId: 3 }])
+    ).toBe('');
   });
 
   it('diz em texto quem reagiu e destaca a do cliente', () => {
     const wrapper = mount(MessageReactions, {
       props: {
         reactions: [
-          { emoji: '👍', by: 'contact' },
-          { emoji: '❤️', by: 'business', userId: 7 },
+          { emoji: '👍', senderType: 'Contact', senderId: 3 },
+          { emoji: '❤️', senderType: 'User', senderId: 7 },
         ],
         currentUserId: 7,
       },
@@ -136,8 +140,24 @@ describe('reações na mensagem', () => {
 
 describe('selo "editada"', () => {
   const historico = [
-    { content: 'Até logo', by: 'contact', editedAt: '2026-10-16T10:00:00Z' },
-    { content: 'Até já', userId: 7, editedAt: '2026-10-16T10:01:00Z' },
+    {
+      content: 'Até logo',
+      senderType: 'Contact',
+      senderId: 3,
+      editedAt: '2026-10-16T10:00:00Z',
+    },
+    {
+      content: 'Até já',
+      senderType: 'User',
+      senderId: 7,
+      editedAt: '2026-10-16T10:01:00Z',
+    },
+    {
+      content: 'Até mais',
+      senderType: 'User',
+      senderId: null,
+      editedAt: '2026-10-16T10:02:00Z',
+    },
   ];
 
   it('é um botão que abre os textos anteriores com quem editou', async () => {
@@ -162,5 +182,8 @@ describe('selo "editada"', () => {
       'Antes da sua edição:'
     );
     expect(wrapper.find('[data-edit-history]').text()).toContain('Até já');
+    expect(wrapper.find('[data-edit-history]').text()).toContain(
+      'Antes da edição no celular da empresa:'
+    );
   });
 });

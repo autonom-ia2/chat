@@ -14,7 +14,8 @@ module Waha::RichNative::Inbound::Edit
     target = Waha::RichNative::Inbound.target_of(message, message_type: from_me ? :outgoing : :incoming)
     return if target.nil?
 
-    Waha::RichNative::Edits.apply!(target, content: data['text'], author: { 'by' => from_me ? 'phone' : 'contact' })
+    author = from_me ? Waha::RichNative::Edits.user_author : Waha::RichNative::Edits.contact_author(message.conversation.contact_id)
+    Waha::RichNative::Edits.apply!(target, content: data['text'], author: author)
     Waha::RichNative::Inbound.hide!(message, 'edit', 'edit_applied_to' => target.id)
   end
 

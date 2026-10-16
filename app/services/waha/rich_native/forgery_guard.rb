@@ -7,10 +7,11 @@
 #   outra, sai. Na recebida, Waha::RichNative::ListReply só a converte em escolha se uma lista nativa nossa da mesma
 #   conversa e caixa ofereceu essa opção; senão, a chave sai e a mensagem fica como texto comum.
 # - Fase 3: `waha_text` e `waha_media_as_media` (pedidos ao conector, como o `waha_native`) e as chaves que o chat2you
-#   GRAVA ao transformar o que o conector manda (`c2y_hidden`, `reactions`, `edit_history`, `edited_at`,
-#   `selected_options`, `reaction_applied_to`, `edit_applied_to`, `waha_call_summary`, `waha_unknown_type`): saem
-#   SEMPRE. Forjada, `c2y_hidden` esconderia uma mensagem do painel.
-# - `waha_poll_vote` (o voto do cliente), como a escolha de lista, só em mensagem RECEBIDA. As outras chaves do conector
+#   GRAVA ao transformar o que o conector manda (Waha::RichNative::ContractGuard::STORED_KEYS: `c2y_hidden`,
+#   `reactions`, `edit_history`, `poll_votes`, `deleted_by_contact_at` etc.): saem SEMPRE. Forjada, `c2y_hidden`
+#   esconderia uma mensagem do painel.
+# - `waha_poll_vote` (o voto do cliente) e `waha_event_response` (a resposta ao evento), como a escolha de lista, só em
+#   mensagem RECEBIDA. As outras chaves do conector
 #   (`waha_call`, `waha_unknown`, `waha_reaction`, `waha_edit`) também vêm em nota ou mensagem nossa (eventos do celular
 #   da empresa) e ficam aqui: Waha::RichNative::Inbound só as aceita de quem é o conector (o dono do token da caixa) e
 #   as tira de qualquer outro usuário, em qualquer caminho de criação.
@@ -21,7 +22,7 @@
 module Waha::RichNative::ForgeryGuard
   STORED_BY_C2Y = Waha::RichNative::ContractGuard::STORED_KEYS
   ALWAYS_DROPPED = (['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY] + STORED_BY_C2Y).freeze
-  INCOMING_ONLY_KEYS = %w[waha_list_reply waha_poll_vote].freeze
+  INCOMING_ONLY_KEYS = Waha::RichNative::ContractGuard::INCOMING_ONLY_KEYS
 
   def self.prepended(controller)
     controller.before_action :drop_waha_contract_keys, only: :create

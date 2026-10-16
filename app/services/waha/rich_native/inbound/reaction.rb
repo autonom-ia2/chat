@@ -12,7 +12,11 @@ module Waha::RichNative::Inbound::Reaction
     target = Waha::RichNative::Inbound.target_of(message)
     return if target.nil?
 
-    author = data['from_me'] == true ? Waha::RichNative::Reactions.business_author : Waha::RichNative::Reactions::CONTACT
+    author = if data['from_me'] == true
+               Waha::RichNative::Reactions.business_author
+             else
+               Waha::RichNative::Reactions.contact_author(message.conversation.contact_id)
+             end
     Waha::RichNative::Reactions.apply!(target, emoji: data['emoji'].to_s, author: author)
     Waha::RichNative::Inbound.hide!(message, 'reaction', 'reaction_applied_to' => target.id)
   end

@@ -40,7 +40,7 @@ const montar = (props = {}) =>
       conversationId: 3,
       messageId: 41,
       content: 'Até amanhã',
-      reactions: [{ emoji: '👍', by: 'business', userId: 9 }],
+      reactions: [{ emoji: '👍', senderType: 'User', senderId: 9 }],
       ...props,
     },
     global: {

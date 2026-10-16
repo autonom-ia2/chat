@@ -43,8 +43,10 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
   # com ou sem a flag: um agente não cria mensagem que vai ao cliente e some do painel.
   it 'never stores c2y_hidden, reactions or an edit history from a conversation created with a message' do
     contact_inbox = create(:contact_inbox, inbox: channel.inbox, contact: create(:contact, account: account))
-    forged = { c2y_hidden: true, reactions: [{ emoji: '👍', by: 'contact' }], edit_history: [{ content: 'falso' }],
-               edited_at: '2026-10-16T10:00:00Z', waha_poll_vote: { poll_message_id: 1 }, outro: 'fica' }
+    forged = { c2y_hidden: true, reactions: [{ emoji: '👍', sender_type: 'Contact', sender_id: 1 }], edit_history: [{ content: 'falso' }],
+               edited_at: '2026-10-16T10:00:00Z', waha_poll_vote: { poll_message_id: 1 }, outro: 'fica',
+               poll_votes: [{ options: ['Sim'] }], deleted_by_contact_at: '2026-10-16T10:00:00Z', quoted_message: { content: 'x' },
+               event_responses: [{ response: 'going' }], waha_event_response: { response: 'going' }, played_at: '2026-10-16T10:00:00Z' }
 
     post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
                                                          params: { source_id: contact_inbox.source_id,
