@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
-import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
 import {
   comMaiuscula,
@@ -14,13 +13,12 @@ import CrmScheduleEditor from './CrmScheduleEditor.vue';
 
 // #1619 (flag `horario_unico_caixa`) — "Horário de cada pessoa" em CRM › SLA: o calendário de SLA com
 // dono pessoa (Crm::ServiceSchedule owner User), o mesmo de Configurações › Agentes, aberto também
-// daqui pelo CrmScheduleEditor. Um calendário novo começa no fuso da conta.
+// daqui pelo CrmScheduleEditor, que com a flag grava o fuso da conta.
 const { t } = useI18n();
 const store = useStore();
 const NS = 'HORARIO_DO_CANAL.SLA';
 
 const pessoas = useMapGetter('agents/getAgents');
-const { fusoIana } = useHorarioUnicoCaixa();
 
 const calendarios = ref([]);
 const carregou = ref(false);
@@ -167,7 +165,6 @@ const salvo = calendario => {
       :owner-id="editando.id"
       :owner-name="editando.nome"
       :schedule="editando.calendario"
-      :default-timezone="fusoIana"
       @saved="salvo"
       @close="editando = null"
     />

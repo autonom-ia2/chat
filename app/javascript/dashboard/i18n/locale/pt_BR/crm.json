@@ -3402,6 +3402,7 @@
         "INBOX_TITLE": "Calendário da caixa de entrada — {name}",
         "AGENT_TITLE": "Calendário do agente — {name}",
         "TIMEZONE_LABEL": "Fuso horário",
+        "FUSO_DA_CONTA": "No fuso da conta: {fuso}",
         "ENABLED_LABEL": "Calendário ativo",
         "DAYS": {
           "SUNDAY": "Domingo",

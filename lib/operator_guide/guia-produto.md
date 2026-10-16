@@ -75,8 +75,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa criada
-- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ligue **Usar horário de atendimento neste canal** e escreva a mensagem para quem chamar fora do horário; 4. Marque os dias e escolha as horas de abrir e fechar (ou **O dia todo**); 5. Clique em **Salvar horário**.
-- gotchas: este é o horário do canal: o agente de IA que atende "só no horário", os prazos do SLA e a mensagem de fora do horário seguem este horário; as horas valem no fuso da conta, que se muda em Configurações > Conta (só administrador); sem horário ligado, o agente de IA atende a qualquer hora e o prazo do SLA conta o tempo corrido; cada dia tem uma faixa só, que fecha no máximo às 23:59.
+- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ligue o horário de atendimento do canal e escreva a mensagem para quem chamar fora do horário; 4. Marque os dias e escolha as horas de abrir e fechar (ou o dia todo); 5. Salve o horário.
+- gotchas: a mensagem de fora do horário segue este horário; nas contas com o horário único (#1619), o agente de IA que atende "só no horário" e os prazos do SLA também usam este horário, no fuso da conta (que se muda em Configurações > Conta, só administrador), e a tela não tem campo de fuso; nas demais contas, a caixa usa o fuso escolhido nesta tela (a caixa herda o fuso da conta ao ser criada, e a tela mostra o fuso salvo, inclusive UTC), e o calendário de caixa do CRM SLA, se existir, vale antes deste horário para a IA e o SLA; sem horário ligado, o agente de IA atende a qualquer hora e o prazo do SLA conta o tempo corrido; cada dia tem uma faixa só, que fecha no máximo às 23:59.
 - leitura: horario
 - nav_target: `settings_inbox_show`
 
@@ -564,8 +564,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_sla_index` - `/app/accounts/:accountId/crm/sla`
 - gate: papel `administrator` ou `crm_admin` ou `sla_manage`
 - pre_requisitos: funis e caixas para associar políticas e agendas.
-- passos: Abra CRM SLA; crie/edite políticas de SLA por funil; em **Horário de cada pessoa**, use **Alterar** ou **Definir horário** para o horário de quem atende; em **Horário dos canais**, confira o horário de cada canal e use **Ver horário do canal** ou **Definir horário do canal** para mudar na tela do canal; volte ao CRM para validar impacto nos cards.
-- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; horário incorreto gera leitura errada de prazo; o prazo conta no horário do responsável da conversa e, sem horário próprio, no horário do canal, que vale no fuso da conta; o horário do canal se muda na tela do canal, não aqui; função só com `sla_manage` edita as políticas, mas o horário das pessoas fica para administrador ou `crm_admin`.
+- passos: Abra CRM SLA; crie/edite políticas de SLA por funil; nas contas com o horário único (#1619), use **Horário de cada pessoa** (**Alterar** ou **Definir horário**) para o horário de quem atende e **Horário dos canais** (**Ver horário do canal** ou **Definir horário do canal**) para ir à tela do canal; nas demais contas, configure a agenda de cada caixa em Calendários de atendimento; volte ao CRM para validar impacto nos cards.
+- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; horário incorreto gera leitura errada de prazo; o prazo conta no horário do responsável da conversa e, sem horário próprio, no horário da caixa; nas contas com o horário único (#1619), o horário da caixa é o da tela do canal, no fuso da conta, e o horário da pessoa também usa o fuso da conta; nas demais, vale antes o calendário da caixa configurado aqui, no fuso escolhido nele; função só com `sla_manage` edita as políticas, mas os calendários (de pessoa ou de caixa) ficam para administrador ou `crm_admin`.
 - nav_target: `crm_sla_index`
 - highlight: `crm-new-sla`
 

@@ -3401,6 +3401,7 @@
         "INBOX_TITLE": "Inbox calendar — {name}",
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
+        "FUSO_DA_CONTA": "In the account time zone: {fuso}",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",

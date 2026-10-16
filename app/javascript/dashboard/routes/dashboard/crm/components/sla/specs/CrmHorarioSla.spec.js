@@ -143,8 +143,10 @@ describe('CrmHorarioPessoas', () => {
       ownerType: 'User',
       ownerId: 12,
       ownerName: 'Bruno Lima',
-      defaultTimezone: 'America/Cuiaba',
     });
+    expect(editor.find('[data-fuso-da-conta]').text()).toBe(
+      'No fuso da conta: America/Cuiaba'
+    );
   });
 
   it('leitura falhou: avisa e não deixa editar por cima', async () => {
