@@ -15,7 +15,8 @@ class Crm::Entrega::Dono
   # Para quem a entrega foi dirigida nesta fila (a marca de segurar guarda o id), ou nil.
   attr_reader :dirigido
 
-  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694); saem da fila antes de tudo, o dono também.
+  # `excluir`: ids de quem deixou um convite desta espera vencer (#1694); saem da fila antes de tudo, o dono também,
+  # menos quando são todos (#so_quem_venceu?).
   def initialize(conversation:, pessoa:, excluir: [])
     @conversation = conversation
     @pessoa = pessoa
@@ -38,6 +39,11 @@ class Crm::Entrega::Dono
     @dirigido.present?
   end
 
+  # Na última fila, só sobrou quem deixou um convite desta espera vencer (#1694, opção "a").
+  def so_quem_venceu?
+    @so_quem_venceu == true
+  end
+
   # A presença não respondeu na última fila: a Entrega pede presença ao seletor, que segura.
   def sem_presenca?
     @sem_presenca == true
@@ -45,8 +51,11 @@ class Crm::Entrega::Dono
 
   private
 
+  # Todos da fila deixaram vencer: a fila fica inteira, e a Entrega entrega ao primeiro que ficar online, sem convite.
   def sem_os_excluidos(pessoas)
-    pessoas.reject { |pessoa| @excluir.include?(pessoa.id) }
+    restantes = pessoas.reject { |pessoa| @excluir.include?(pessoa.id) }
+    @so_quem_venceu = @excluir.any? && restantes.empty? && pessoas.any?
+    @so_quem_venceu ? pessoas : restantes
   end
 
   def online?(pessoa)

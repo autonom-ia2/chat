@@ -114,9 +114,12 @@ class Crm::Entrega
     Crm::Entrega::ParaIa.alvo(conversation: @conversation, settings: settings, sugestao: @sugestao, quem_passa: @quem_passou || @quem_atendia)
   end
 
+  # Todos que cuidam deixaram um convite desta espera vencer (#1694, opção "a"): sem convite novo, a conversa vai para o
+  # primeiro deles que ficar online (Crm::Entrega::Dono#so_quem_venceu?), como no segurar de sempre.
   def pela_regra(card, settings)
-    convite = settings[:handoff_mode] == 'r3_invite'
-    selector = seletor(card, settings, require_online: convite ? false : settings[:prefer_online])
+    membros = fila(card, settings)
+    convite = settings[:handoff_mode] == 'r3_invite' && !@dono.so_quem_venceu?
+    selector = seletor(settings, require_online: !convite && (settings[:prefer_online] || @dono.so_quem_venceu?), membros: membros)
     escolher(selector, card, settings, acao: convite ? :convite : :pessoa)
   end
 
@@ -141,20 +144,18 @@ class Crm::Entrega
     Plano.new(acao: :segurar, card: card, settings: settings, motivo: 'presenca_indisponivel')
   end
 
-  def seletor(card, settings, require_online:)
+  # O nome pedido que era de um agente de IA que não pôde receber não é nome de pessoa para casar.
+  def seletor(settings, require_online:, membros:)
+    sugestao = Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
     Crm::Ai::HandoffMemberSelector.new(
-      inbox: @conversation.inbox, account_id: @conversation.account_id, members: fila(card, settings),
+      inbox: @conversation.inbox, account_id: @conversation.account_id, members: membros,
       mode: settings[:selector_mode], prefer_online: settings[:prefer_online], require_online: require_online || @dono.sem_presenca?,
-      suggested_name: sugestao_de_pessoa, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
+      suggested_name: sugestao, pool_type: settings[:pool_type], pool_id: settings[:pool_id], conversation: @conversation
     )
   end
 
-  # O nome pedido era de um agente de IA que não pôde receber: não é nome de pessoa para casar.
-  def sugestao_de_pessoa
-    Crm::AgentesIa.rotulo_de_agente?(@sugestao) ? nil : @sugestao
-  end
-
-  # Quem cuida (Crm::Entrega::QuemCuida), menos quem deixou um convite desta espera vencer (#1694), ou só o dono quando
+  # Quem cuida (Crm::Entrega::QuemCuida), menos quem deixou um convite desta espera vencer (#1694; todos: ver
+  # #pela_regra), ou só o dono quando
   # a entrega é dirigida a ele (R13, Crm::Entrega::Dono). Sem memória entre chamadas: a nova tentativa depois de o
   # agente de IA recusar (#concluir_para_ia!) decide de novo.
   def fila(card, settings)

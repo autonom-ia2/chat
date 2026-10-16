@@ -75,21 +75,42 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
   end
 
   # Pega: depois de todos deixarem vencer, a regra convidava de novo alguém que já tinha deixado vencer.
-  it 'todos deixam vencer: segura esperando alguém online, sem convite novo e sem outro aviso', :aggregate_failures do
+  it 'todos deixam vencer, ninguém online: segura sem convite novo e sem outro aviso', :aggregate_failures do
     online(ana, bruno)
     deixa_vencer(7)
     online(ana, bruno, carla)
     deixa_vencer(14)
     expect(convidada).to eq(carla.id)
 
+    online
     deixa_vencer(21)
     deixa_vencer(28)
 
-    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id, bruno.id, carla.id])
+    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'falha' => 'ninguem_online',
+                             'venceram' => [ana.id, bruno.id, carla.id])
     expect(card.reload.metadata.dig('ai', 'handoffs').size).to eq(3)
     expect(conversa.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
     expect(conversa).to be_bot_handoff_waiting
     expect(avisos_ao_admin).to eq(1)
+  end
+
+  # Promessa ao Rodrigo (opção "a"): todos deixaram vencer, a conversa vai para o PRIMEIRO que ficar online, inclusive
+  # quem deixou vencer, sem convite novo e sem esperar o espaçamento de 30 minutos.
+  it 'todos deixaram vencer: a Ana fica online e recebe a conversa na rodada seguinte', :aggregate_failures do
+    online(ana, bruno)
+    deixa_vencer(7)
+    online(ana, bruno, carla)
+    deixa_vencer(14)
+    online
+    deixa_vencer(21)
+    expect(conversa.reload.assignee_id).to be_nil
+
+    online(ana)
+    travel_to(21.hours.from_now + 2.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
+
+    expect(conversa.reload).to have_attributes(assignee_id: ana.id, ai_assignee: nil)
+    expect(marca).to be_nil
+    expect(card.reload.metadata.dig('ai', 'handoffs').size).to eq(3)
   end
 
   # Pega: a marca de convite gravada antes do #1694 (sem convidado_id) reconvidar quem deixou vencer: vale o ciclo do card.
@@ -123,28 +144,15 @@ RSpec.describe 'Convite vencido convida outra pessoa' do # rubocop:disable RSpec
     expect(marca['avisado_em']).to be_present
   end
 
-  # Pega: com todos fora (ninguém que possa ser convidado), a fila rodava a entrega inteira a cada 2 minutos, para
-  # sempre. Agora espaça (ESPERA_SEM_NINGUEM) e volta a tentar depois: quem passar a cuidar do funil é convidado.
-  it 'todos deixaram vencer: a fila espaça as tentativas e convida quem passou a cuidar do funil', :aggregate_failures do
-    online(ana, bruno)
-    deixa_vencer(7)
-    online(ana, bruno, carla)
-    deixa_vencer(14)
-    deixa_vencer(21)
-    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'venceram' => [ana.id, bruno.id, carla.id])
+  # Pega: a espera sem ninguém na fila (ninguém cuida do funil) com quem já deixou vencer rodar a entrega inteira a cada 2
+  # minutos, para sempre. Segurar por presença não espaça: quem fica online recebe na rodada seguinte.
+  it 'espaçamento: só a espera sem ninguém na fila, e só dentro do intervalo', :aggregate_failures do
+    sem_ninguem = { 'venceram' => [ana.id], 'falha' => 'ninguem_cuida', 'decidido_em' => 10.minutes.ago.iso8601 }
+    espaca = ->(marca) { Crm::Entrega::ConviteVencido.espacar?(marca) }
 
-    segurada = marca.except('tentado_em')
-    davi = create(:user, account: account, role: :agent, name: 'Davi')
-    create(:inbox_member, inbox: inbox, user: davi)
-    online(davi)
-    allow(Crm::Entrega).to receive(:new).and_call_original
-
-    travel_to(21.hours.from_now + 10.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
-    expect(Crm::Entrega).not_to have_received(:new)
-    expect(marca.except('tentado_em')).to eq(segurada)
-    expect(marca['tentado_em']).to be_present
-
-    travel_to(21.hours.from_now + Crm::Entrega::ConviteVencido::ESPERA_SEM_NINGUEM + 1.minute) { Crm::Ai::HandoffDrainJob.perform_now }
-    expect(convidada).to eq(davi.id)
+    expect(espaca.call(sem_ninguem)).to be(true)
+    expect(espaca.call(sem_ninguem.merge('decidido_em' => 31.minutes.ago.iso8601))).to be(false)
+    expect(espaca.call(sem_ninguem.merge('falha' => 'ninguem_online'))).to be(false)
+    expect(espaca.call(sem_ninguem.except('venceram'))).to be(false)
   end
 end
