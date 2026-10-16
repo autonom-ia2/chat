@@ -146,7 +146,9 @@ class Crm::Subjects::Applier
   # mudou no meio-tempo, o pedido não se perde: segue o caminho da criação, com a mesma regra de respeito à pessoa
   # (#1260), relida aqui dentro da trava.
   def adotar_a_chegada(card, titulo, pipeline)
-    return criar_no_lugar_da_chegada(pipeline, titulo) unless @chegada.recarregar.adotavel?(pipeline)
+    unless @chegada.recarregar.adotavel?(pipeline) && modo_efetivo('create', { pipeline: pipeline }) == 'auto'
+      return criar_no_lugar_da_chegada(pipeline, titulo)
+    end
 
     @chegada.mover_para(pipeline)
     resultado = dar_nome_da_ia(card.reload, titulo)

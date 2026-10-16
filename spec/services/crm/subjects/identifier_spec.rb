@@ -910,6 +910,15 @@ RSpec.describe Crm::Subjects::Identifier do
       account.crm_cards.where(status: :open)
     end
 
+    # Roda o bloco depois de a IA escolher o card da chegada e antes da trava em que ela aplica.
+    # O bloco roda depois que este método já voltou (quando a IA chama .de): por isso guardado, não yield.
+    def enquanto_a_ia_pensa(&mexida)
+      acao = mexida
+      allow(Crm::Subjects::CardDaChegada).to receive(:de).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { acao.call }
+      end
+    end
+
     it 'leva o card da chegada para o funil do sinistro e dá o nome: nenhum card vazio em Comercial', :aggregate_failures do
       message, chegada = chega('roubaram meu carro hoje de madrugada 😭 o que eu faço?')
       expect(chegada).to have_attributes(pipeline_id: comercial.id, title: 'Joana Lima')
@@ -930,11 +939,15 @@ RSpec.describe Crm::Subjects::Identifier do
     it 'agenda a IA do CRM no card já no funil do sinistro' do
       message, chegada = chega('roubaram meu carro hoje de madrugada')
       jev_no_sinistro
-      allow(Crm::Ai::Observer).to receive(:new).and_call_original
+      funis_na_chamada = []
+      allow(Crm::Ai::Observer).to receive(:new).and_wrap_original do |original, card:|
+        funis_na_chamada << [card.id, card.pipeline_id]
+        original.call(card: card)
+      end
 
       identify(message)
 
-      expect(Crm::Ai::Observer).to have_received(:new).with(card: have_attributes(id: chegada.id, pipeline_id: sinistro.id))
+      expect(funis_na_chamada).to include([chegada.id, sinistro.id])
     end
 
     it 'uma pessoa escolheu o assunto há pouco: vira sugestão, como a criação, e o card da chegada não se move (#1260)' do
@@ -949,12 +962,10 @@ RSpec.describe Crm::Subjects::Identifier do
     it 'o card mudou enquanto a IA pensava: o pedido não se perde, nasce o card do sinistro' do
       message, chegada = chega('roubaram meu carro hoje de madrugada')
       jev_no_sinistro
-      # A pessoa dá nome ao card entre a decisão e a trava: a 2ª conferência (dentro da trava) recusa a adoção.
-      allow(Crm::Subjects::CardDaChegada).to receive(:de).and_wrap_original do |original, **argumentos|
-        original.call(**argumentos).tap do |chegada_da_ia|
-          chegada.update!(title: 'Renovação da frota')
-          allow(chegada_da_ia).to receive(:adotavel?).and_return(false)
-        end
+      # A pessoa dá nome ao card entre a decisão e a trava (mexida real, com ator): a 2ª conferência recusa a adoção.
+      enquanto_a_ia_pensa do
+        chegada.update!(title: 'Renovação da frota')
+        Crm::ActivityLogger.new(card: chegada, actor: admin, event_type: 'update', payload: { title: 'Renovação da frota' }).perform
       end
 
       decision = identify(message)
@@ -962,6 +973,33 @@ RSpec.describe Crm::Subjects::Identifier do
       expect(decision).to have_attributes(action: 'create', state: 'applied', pipeline_id: sinistro.id)
       expect(decision.card_id).not_to eq(chegada.id)
       expect(chegada.reload).to have_attributes(pipeline_id: comercial.id, title: 'Renovação da frota')
+    end
+
+    it 'a pessoa foca outro assunto enquanto a IA pensa: vira sugestão, nada é adotado (#1260)' do
+      message, chegada = chega('roubaram meu carro hoje de madrugada')
+      outro = account.crm_cards.create!(pipeline: comercial, stage: first_stage, contact: contact, title: 'Renovação',
+                                        primary_conversation: conversation, inbox: inbox)
+      jev_no_sinistro
+      enquanto_a_ia_pensa do
+        Crm::Cards::Focus.new(account: account, card: outro, conversation: conversation, user: admin).perform
+      end
+
+      expect(identify(message)).to have_attributes(action: 'create', state: 'suggested', card_id: nil)
+      expect(chegada.reload).to have_attributes(pipeline_id: comercial.id, title: 'Joana Lima')
+      expect(abertos.where(pipeline_id: sinistro.id)).to be_empty
+    end
+
+    it 'a pessoa fecha um card de Sinistro desta conversa enquanto a IA pensa: vira sugestão, nada é adotado (#1260)' do
+      message, chegada = chega('roubaram meu carro hoje de madrugada')
+      jev_no_sinistro
+      enquanto_a_ia_pensa do
+        account.crm_cards.create!(pipeline: sinistro, stage: sinistro_e_etapa.last, contact: contact, title: 'Sinistro antigo',
+                                  primary_conversation: conversation, inbox: inbox, status: :lost, closed_at: Time.current)
+      end
+
+      expect(identify(message)).to have_attributes(action: 'create', state: 'suggested')
+      expect(chegada.reload.pipeline_id).to eq(comercial.id)
+      expect(abertos.where(pipeline_id: sinistro.id)).to be_empty
     end
 
     context 'with access per pipeline (#1148)' do
