@@ -1098,12 +1098,11 @@
           "TITULO": "Where and when it answers",
           "ALTERAR_ARIA": "Change where and when it answers",
           "ESCOLHER_CANAL": "Choose channel",
-          "PRIMEIRO": "Answers first in {canal}.",
-          "PRIMEIRO_N": "Answers first in 1 channel. | Answers first in {n} channels.",
-          "PRIMEIRO_E_RECEBE": "Answers first in {canal} and receives when someone hands over in {caixas}. | Answers first in {canal} and receives when someone hands over in {caixas}.",
-          "PRIMEIRO_N_E_RECEBE": "Answers first in 1 channel and receives when someone hands over in {caixas}. | Answers first in {n} channels and receives when someone hands over in {caixas}.",
-          "RECEBE_DE": "Receives when {outro} hands over in {canal}.",
-          "RECEBE": "Receives when someone hands over in {caixas}. | Receives when someone hands over in {caixas}.",
+          "PRIMEIRO": "Answers first in {canal} · {quando}",
+          "PRIMEIRO_N": "Answers first in 1 channel · {quando} | Answers first in {n} channels · {quando}",
+          "PRIMEIRO_E_RECEBE": "Answers first in {canal} and receives in {caixas} when someone hands over · {quando} | Answers first in {canal} and receives in {caixas} when someone hands over · {quando}",
+          "PRIMEIRO_N_E_RECEBE": "Answers first in 1 channel and receives in {caixas} when someone hands over · {quando} | Answers first in {n} channels and receives in {caixas} when someone hands over · {quando}",
+          "RECEBE": "Receives in {caixas} when someone hands over the conversation · {quando} | Receives in {caixas} when someone hands over the conversation · {quando}",
           "NENHUM_LUGAR": "Does not answer anywhere."
         },
         "BLOCO_JEITO": {
@@ -1263,8 +1262,8 @@
           "LER_ERRO": "Could not show your channels right now.",
           "LER_ERRO_GARANTIA": "Nothing changed.",
           "CARREGANDO_CANAIS": "Loading your channels…",
-          "PARADO_AVISO": "This way {nome} will not answer anywhere and stays paused.",
-          "PARADO_CONFIRMAR": "Leave paused",
+          "PARADO_AVISO": "This way, {nome} will not receive conversations in any channel.",
+          "PARADO_CONFIRMAR": "Confirm",
           "PARADO_VOLTAR": "Go back"
         },
         "HORARIO": {

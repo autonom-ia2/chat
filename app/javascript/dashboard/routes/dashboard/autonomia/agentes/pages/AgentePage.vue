@@ -202,6 +202,7 @@ const textoOnde = computed(() =>
     primeiro: umCanal.value,
     quantosPrimeiro: quantosCanais.value,
     recebe: tambemRecebeEm.value,
+    quando: quando.value,
   })
 );
 
@@ -211,10 +212,13 @@ const ondeNoHeroi = computed(() => {
     return nomes ? t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: nomes }) : '';
   }
   if (interno.value) return '';
+  // #1720: o agente da equipe lê o mesmo resumo da página; sem a leitura, a frase de sempre.
   if (equipe.value) {
     return equipe.value.length
-      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
-          caixas: equipe.value.map(canal => canal.name).join(', '),
+      ? resumoOnde(t, {
+          quantosPrimeiro: 0,
+          recebe: equipe.value,
+          quando: quando.value,
         })
       : t('AGENTS.JORNADA.ONDE.RECEBE');
   }

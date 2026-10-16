@@ -1098,12 +1098,11 @@
           "TITULO": "Onde e quando responde",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
           "ESCOLHER_CANAL": "Escolher canal",
-          "PRIMEIRO": "Atende primeiro no {canal}.",
-          "PRIMEIRO_N": "Atende primeiro em 1 canal. | Atende primeiro em {n} canais.",
-          "PRIMEIRO_E_RECEBE": "Atende primeiro no {canal} e recebe quando alguém passar no {caixas}. | Atende primeiro no {canal} e recebe quando alguém passar em {caixas}.",
-          "PRIMEIRO_N_E_RECEBE": "Atende primeiro em 1 canal e recebe quando alguém passar em {caixas}. | Atende primeiro em {n} canais e recebe quando alguém passar em {caixas}.",
-          "RECEBE_DE": "Recebe quando {outro} passar no {canal}.",
-          "RECEBE": "Recebe quando alguém passar no {caixas}. | Recebe quando alguém passar em {caixas}.",
+          "PRIMEIRO": "Atende primeiro no {canal} · {quando}",
+          "PRIMEIRO_N": "Atende primeiro em 1 canal · {quando} | Atende primeiro em {n} canais · {quando}",
+          "PRIMEIRO_E_RECEBE": "Atende primeiro no {canal} e recebe no {caixas} quando alguém passar · {quando} | Atende primeiro no {canal} e recebe em {caixas} quando alguém passar · {quando}",
+          "PRIMEIRO_N_E_RECEBE": "Atende primeiro em 1 canal e recebe em {caixas} quando alguém passar · {quando} | Atende primeiro em {n} canais e recebe em {caixas} quando alguém passar · {quando}",
+          "RECEBE": "Recebe no {caixas} quando alguém passar a conversa · {quando} | Recebe em {caixas} quando alguém passar a conversa · {quando}",
           "NENHUM_LUGAR": "Não atende em lugar nenhum."
         },
         "BLOCO_JEITO": {
@@ -1263,8 +1262,8 @@
           "LER_ERRO": "Não deu para mostrar seus canais agora.",
           "LER_ERRO_GARANTIA": "Nada mudou.",
           "CARREGANDO_CANAIS": "Carregando seus canais…",
-          "PARADO_AVISO": "Assim {nome} não vai atender em lugar nenhum e fica parado.",
-          "PARADO_CONFIRMAR": "Deixar parado",
+          "PARADO_AVISO": "Assim, {nome} não vai receber conversa em nenhum canal.",
+          "PARADO_CONFIRMAR": "Confirmar",
           "PARADO_VOLTAR": "Voltar"
         },
         "HORARIO": {
