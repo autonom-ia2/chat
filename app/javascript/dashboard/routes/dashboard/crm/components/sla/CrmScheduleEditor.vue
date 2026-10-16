@@ -13,6 +13,8 @@ const props = defineProps({
   ownerId: { type: Number, required: true },
   ownerName: { type: String, default: '' },
   schedule: { type: Object, default: null }, // existing payload row or null
+  // #1619: calendário novo abre no fuso da conta (fusoDaConta), não num fuso fixo.
+  defaultTimezone: { type: String, default: '' },
 });
 
 const emit = defineEmits(['close', 'saved']);
@@ -59,7 +61,9 @@ const hydrateDays = () => {
   return days;
 };
 
-const timezone = ref(props.schedule?.timezone || 'America/Sao_Paulo');
+const timezone = ref(
+  props.schedule?.timezone || props.defaultTimezone || 'America/Sao_Paulo'
+);
 const enabled = ref(props.schedule?.enabled ?? true);
 const days = reactive(hydrateDays());
 const isSaving = ref(false);
@@ -206,7 +210,9 @@ const onSave = async () => {
                     :aria-label="t('CRM_SLA.SCHEDULES.EDITOR.START_LABEL')"
                     class="reset-base !mb-0 h-8 rounded-lg border-0 bg-n-alpha-black2 px-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
                   />
-                  <span class="text-sm text-n-slate-10">–</span>
+                  <span class="text-sm text-n-slate-10" aria-hidden="true">{{
+                    t('CRM_SLA.SCHEDULES.EDITOR.RANGE_SEPARATOR')
+                  }}</span>
                   <input
                     v-model="block.end"
                     type="time"

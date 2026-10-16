@@ -19,13 +19,14 @@ const webWidgetInbox = {
   selected_feature_flags: [],
 };
 
-const mountSettings = () => {
+const mountSettings = ({ horarioUnico = false, tab } = {}) => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
       getCurrentUser: () => ({ id: 1, accounts: [] }),
       getCurrentCustomRoleId: () => null,
-      'accounts/isFeatureEnabledonAccount': () => () => false,
+      'accounts/isFeatureEnabledonAccount': () => (_, flag) =>
+        horarioUnico && flag === 'horario_unico_caixa',
       'globalConfig/isOnChatwootCloud': () => false,
       'globalConfig/isMetaMessageSendingDisabled': () => false,
       'inboxes/getUIFlags': () => ({ isFetching: false }),
@@ -42,7 +43,7 @@ const mountSettings = () => {
       renderStubDefaultSlot: true,
       mocks: {
         $t: key => key,
-        $route: { params: { inboxId: '7' }, query: {}, name: 'x' },
+        $route: { params: { inboxId: '7', tab }, query: {}, name: 'x' },
         $router: { replace: vi.fn(), push: vi.fn() },
       },
     },
@@ -99,4 +100,19 @@ describe('Inbox Settings', () => {
     ).toBeGreaterThanOrEqual(4);
     expect(wrapper.find('select').exists()).toBe(false);
   });
+
+  // #1619: com a flag horario_unico_caixa, a aba de horário mostra o horário do canal do fork.
+  it.each([
+    [false, 'WeeklyAvailability', 'HorarioDoCanal'],
+    [true, 'HorarioDoCanal', 'WeeklyAvailability'],
+  ])(
+    'business hours tab with horario_unico_caixa=%s renders %s',
+    async (horarioUnico, aparece, some) => {
+      const wrapper = mountSettings({ horarioUnico, tab: 'business-hours' });
+      await flushPromises();
+
+      expect(wrapper.findComponent({ name: aparece }).exists()).toBe(true);
+      expect(wrapper.findComponent({ name: some }).exists()).toBe(false);
+    }
+  );
 });

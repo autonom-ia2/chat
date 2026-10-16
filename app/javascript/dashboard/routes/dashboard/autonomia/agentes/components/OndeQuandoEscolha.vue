@@ -10,6 +10,7 @@ import {
   trocaNoCanal,
 } from '../utils/canais';
 import EscolhaRadio from './EscolhaRadio.vue';
+import NotaHorarioDoCanal from './NotaHorarioDoCanal.vue';
 
 // #1181 — "Onde e quando {nome} atende" (protótipo T05 e T10). Onde: caixas da leitura L2 (livre,
 // já com outro agente — com troca — ou com outro sistema, que não dá para escolher). Quando: sempre,
@@ -195,6 +196,7 @@ const linkQuemRecebe = computed(
       <p v-if="semHorario" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.SEM_HORARIO') }}
       </p>
+      <NotaHorarioDoCanal :inbox-id="onde" :horario="horarioDe(onde)" />
     </section>
 
     <div class="flex flex-col gap-1 p-3 text-sm rounded-xl bg-n-blue-2">

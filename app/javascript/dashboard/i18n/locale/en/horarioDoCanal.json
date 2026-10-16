@@ -1,0 +1,87 @@
+{
+  "HORARIO_DO_CANAL": {
+    "TEXTO": {
+      "DIAS": {
+        "D0": "Sun",
+        "D1": "Mon",
+        "D2": "Tue",
+        "D3": "Wed",
+        "D4": "Thu",
+        "D5": "Fri",
+        "D6": "Sat"
+      },
+      "TODOS_OS_DIAS": "every day",
+      "INTERVALO_DIAS": "{inicio} to {fim}",
+      "FAIXA": "{abre} to {fecha}",
+      "E": "and",
+      "DIAS_E_FAIXAS": "{dias}, {faixas}",
+      "DIA_TODO": "{dias}, all day",
+      "HORA": "{h}:00",
+      "HORA_MINUTO": "{h}:{m}"
+    },
+    "CANAL": {
+      "LIGAR": "Use business hours in this channel",
+      "LIGAR_AJUDA": "Outside business hours, whoever reaches out gets the message below.",
+      "MENSAGEM": "Message for people who reach out outside business hours",
+      "SEM_HORARIO": "Without business hours, this channel's AI agent answers at any time and the SLA deadline counts all the time.",
+      "AVISO_TITULO": "These are the channel's business hours.",
+      "AVISO": "The AI agent that answers \"only during business hours\" and the SLA deadlines follow these hours.",
+      "FUSO": "Hours are in the account time zone: {fuso}.",
+      "MUDAR_FUSO": "Change the account time zone",
+      "DIAS_E_HORAS": "Days and hours",
+      "COLUNA_DIA": "Day",
+      "COLUNA_HORARIO": "Hours",
+      "COLUNA_TOTAL": "Total",
+      "DIAS": {
+        "D0": "Sunday",
+        "D1": "Monday",
+        "D2": "Tuesday",
+        "D3": "Wednesday",
+        "D4": "Thursday",
+        "D5": "Friday",
+        "D6": "Saturday"
+      },
+      "DIA_TODO": "All day",
+      "ATE": "to",
+      "FECHADO": "Closed",
+      "ABRE_AS": "Opens at, {dia}",
+      "FECHA_AS": "Closes at, {dia}",
+      "ERRO_HORAS": "The closing time must be after the opening time.",
+      "TOTAL_HORAS": "{h}h",
+      "TOTAL_HORAS_MINUTOS": "{h}h {m}min",
+      "TOTAL_MINUTOS": "{m}min",
+      "TOTAL_DIA_TODO": "24h",
+      "SALVAR": "Save business hours",
+      "SALVO": "Business hours saved. The AI agent and the SLA now follow these hours.",
+      "ERRO_SALVAR": "We couldn't save the business hours. Try again."
+    },
+    "SLA": {
+      "DESCRICAO": "Response deadlines for conversations and each person's hours.",
+      "PESSOAS_TITULO": "Each person's hours",
+      "PESSOAS_TEXTO": "When the conversation has an assignee, the deadline counts during that person's hours. People without their own hours follow the channel's hours.",
+      "PESSOA_SEM_HORARIO": "No hours of their own: follows the channel's hours",
+      "ALTERAR": "Change",
+      "DEFINIR": "Set hours",
+      "ALTERAR_ROTULO": "Change {nome}'s hours",
+      "DEFINIR_ROTULO": "Set hours for {nome}",
+      "SEM_PESSOAS": "There are no people on the team yet.",
+      "LER_ERRO": "We couldn't read the people's hours.",
+      "TENTAR_DE_NOVO": "Try again",
+      "CARREGANDO": "Loading…",
+      "CANAIS_TITULO": "Channel hours",
+      "CANAIS_TEXTO": "Each channel's hours are set on the channel screen. They apply to the AI agent, to the out-of-hours message and to the SLA, in the account time zone ({fuso}).",
+      "CANAL_SEM_HORARIO": "No business hours: answers at any time",
+      "VER_CANAL": "See channel hours",
+      "DEFINIR_CANAL": "Set channel hours",
+      "VER_CANAL_ROTULO": "See channel hours: {nome}",
+      "DEFINIR_CANAL_ROTULO": "Set channel hours: {nome}",
+      "SEM_CANAIS": "There are no connected channels yet."
+    },
+    "AGENTE": {
+      "FUSO": "These are the channel's hours, in the account time zone ({fuso}).",
+      "MUDAR": "Change the channel's hours",
+      "DEFINIR": "Set the channel's hours",
+      "NOVA_ABA": "(opens in a new tab)"
+    }
+  }
+}

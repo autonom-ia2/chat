@@ -3415,6 +3415,7 @@
         "REMOVE_BLOCK": "Remove block",
         "START_LABEL": "Start",
         "END_LABEL": "End",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "End time must be after the start time",
         "NO_BLOCKS": "Closed",
         "SAVE": "Save calendar",

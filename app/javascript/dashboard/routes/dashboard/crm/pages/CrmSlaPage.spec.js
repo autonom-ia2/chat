@@ -26,7 +26,12 @@ vi.mock('dashboard/api/crmKanban', () => ({
 
 const passa = { template: '<div><slot /></div>' };
 
-const montar = ({ role, customRoleId = null, keys = [] }) => {
+const montar = ({
+  role,
+  customRoleId = null,
+  keys = [],
+  horarioUnico = false,
+}) => {
   Object.assign(getters, {
     getCurrentAccountId: ref(9),
     getCurrentRole: ref(role),
@@ -37,6 +42,17 @@ const montar = ({ role, customRoleId = null, keys = [] }) => {
   });
   return mount(CrmSlaPage, {
     global: {
+      // #1619: a flag horario_unico_caixa, que o useHorarioUnicoCaixa lê da store da instância.
+      mocks: {
+        $store: {
+          getters: {
+            getCurrentAccountId: 9,
+            'accounts/getAccount': () => ({ id: 9 }),
+            'accounts/isFeatureEnabledonAccount': (_, flag) =>
+              horarioUnico && flag === 'horario_unico_caixa',
+          },
+        },
+      },
       stubs: {
         BaseTable: {
           props: ['items', 'headers'],
@@ -54,6 +70,8 @@ const montar = ({ role, customRoleId = null, keys = [] }) => {
           name: 'CrmInboxScheduleList',
           template: '<i />',
         },
+        CrmHorarioPessoas: { name: 'CrmHorarioPessoas', template: '<i />' },
+        CrmHorarioCanais: { name: 'CrmHorarioCanais', template: '<i />' },
       },
     },
   });
@@ -69,6 +87,8 @@ const tela = wrapper => ({
     .text()
     .includes('CRM_SLA.POLICIES.TABLE.ACTIONS'),
   calendarios: wrapper.findComponent({ name: 'CrmInboxScheduleList' }).exists(),
+  pessoas: wrapper.findComponent({ name: 'CrmHorarioPessoas' }).exists(),
+  canais: wrapper.findComponent({ name: 'CrmHorarioCanais' }).exists(),
 });
 
 describe('CrmSlaPage por papel', () => {
@@ -82,6 +102,8 @@ describe('CrmSlaPage por papel', () => {
       apagar: false,
       colunaAcoes: false,
       calendarios: true,
+      pessoas: false,
+      canais: false,
     });
   });
 
@@ -95,6 +117,8 @@ describe('CrmSlaPage por papel', () => {
       apagar: true,
       colunaAcoes: true,
       calendarios: false,
+      pessoas: false,
+      canais: false,
     });
   });
 
@@ -106,6 +130,39 @@ describe('CrmSlaPage por papel', () => {
       apagar: true,
       colunaAcoes: true,
       calendarios: true,
+      pessoas: false,
+      canais: false,
     });
+  });
+
+  // #1619: com a flag horario_unico_caixa sai o calendário por caixa; entram as pessoas (só quem
+  // edita calendário) e o horário dos canais (todos que veem a página).
+  it('com horário único, o administrador vê pessoas e canais, sem o calendário por caixa', () => {
+    const wrapper = montar({ role: 'administrator', horarioUnico: true });
+    expect(tela(wrapper)).toMatchObject({
+      politica: true,
+      calendarios: false,
+      pessoas: true,
+      canais: true,
+    });
+    expect(wrapper.text()).toContain('HORARIO_DO_CANAL.SLA.DESCRICAO');
+  });
+
+  it('com horário único, sla_manage vê só o horário dos canais', () => {
+    expect(
+      tela(
+        montar({
+          role: 'agent',
+          customRoleId: 7,
+          keys: ['sla_manage'],
+          horarioUnico: true,
+        })
+      )
+    ).toMatchObject({ calendarios: false, pessoas: false, canais: true });
+  });
+
+  it('sem a flag, a descrição é a de hoje', () => {
+    const wrapper = montar({ role: 'administrator' });
+    expect(wrapper.text()).toContain('CRM_SLA.HEADER.DESCRIPTION');
   });
 });

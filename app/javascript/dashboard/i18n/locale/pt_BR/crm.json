@@ -3416,6 +3416,7 @@
         "REMOVE_BLOCK": "Remover bloco",
         "START_LABEL": "Início",
         "END_LABEL": "Fim",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "O horário final deve ser depois do inicial",
         "NO_BLOCKS": "Fechado",
         "SAVE": "Salvar calendário",

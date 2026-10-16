@@ -10,6 +10,7 @@ import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 import OndeQuandoEscolha from '../OndeQuandoEscolha.vue';
+import NotaHorarioDoCanal from '../NotaHorarioDoCanal.vue';
 import DialogoAcao from './DialogoAcao.vue';
 import NotaQuemRecebe from './NotaQuemRecebe.vue';
 import TambemRecebe from '../onde/TambemRecebe.vue';
@@ -466,6 +467,7 @@ const rotuloVoltar = computed(() => {
             :rotulo="t(`${NS}.QUANDO_ROTULO`)"
             :opcoes="opcoesQuando"
           />
+          <NotaHorarioDoCanal :inbox-id="inboxAtual" :horario="horarioAtual" />
         </section>
         <NotaQuemRecebe :nome="nome" />
       </template>
