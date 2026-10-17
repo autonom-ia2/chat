@@ -1269,6 +1269,14 @@
     "controller": "api/v1/accounts/crm/meetings#show",
     "parametros": []
   },
+  "crm/memoria/cards/:card_id/fatos": {
+    "controller": "api/v1/accounts/crm/memoria_fatos#index",
+    "parametros": []
+  },
+  "crm/memoria/chaves": {
+    "controller": "api/v1/accounts/crm/memoria_chaves#index",
+    "parametros": []
+  },
   "crm/meta_ads_connection": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#show",
     "parametros": []

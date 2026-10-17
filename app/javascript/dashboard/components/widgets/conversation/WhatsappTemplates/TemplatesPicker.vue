@@ -29,7 +29,7 @@ const query = ref('');
 const isRefreshing = ref(false);
 
 const whatsAppTemplateMessages = useFunctionGetter(
-  'inboxes/getFilteredWhatsAppTemplates',
+  'inboxes/getConversationWhatsAppTemplates',
   toRef(props, 'inboxId')
 );
 

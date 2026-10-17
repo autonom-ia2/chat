@@ -22,6 +22,17 @@ RSpec.describe Crm::BookingV2::PreviewImage::DrawLimit do
     end
   end
 
+  # No teste, cada conexão do pool `$alfred` é um MockRedis com dados próprios (config/initializers/01_redis.rb). Com
+  # threads, uma pegava a vaga numa conexão e soltava em outra, e o teto deixava de ser um só. Um pool de UMA conexão
+  # faz o papel do Redis de verdade: um banco só, um comando por vez.
+  around do |example|
+    original = $alfred # rubocop:disable Style/GlobalVars
+    $alfred = ConnectionPool.new(size: 1, timeout: 5) { Redis::Namespace.new('alfred', redis: MockRedis.new) } # rubocop:disable Style/GlobalVars
+    example.run
+  ensure
+    $alfred = original # rubocop:disable Style/GlobalVars
+  end
+
   before { clear_slots }
   after { clear_slots }
 

@@ -1,5 +1,6 @@
 <script setup>
-import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/WhatsAppTemplateParser.vue';
+// Fork #1705: o preenchedor com a regra do cupom e a validade da oferta.
+import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/PreenchedorDoModelo.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useI18n } from 'vue-i18n';
 

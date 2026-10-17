@@ -70,6 +70,7 @@ const canaisApi = vi.hoisted(() => ({
   get: vi.fn(),
   connect: vi.fn(),
   disconnect: vi.fn(),
+  ondeAtende: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
@@ -1108,7 +1109,13 @@ describe('AgentePage', () => {
       preparar({ canais: COM_AREA });
       ligarFase2(true);
       const wrapper = await montar();
-      expect(no('[data-linha="onde"] [data-tambem-recebe]')).not.toBeNull();
+      // #1720, com a Fase 2: uma linha só, a mesma do herói.
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.PRIMEIRO_E_RECEBE');
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'BLOCO_ONDE.PRIMEIRO_E_RECEBE'
+      );
       await clicar('[data-alterar="onde"]');
       const secao = no('aside[role="dialog"] [data-tambem-recebe]');
       expect(secao).not.toBeNull();
@@ -1119,6 +1126,35 @@ describe('AgentePage', () => {
         secao.querySelector('[data-opcao="4"]').getAttribute('aria-disabled')
       ).toBeNull();
       expect(secao.querySelector('[data-opcao="1"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('reads the agent again after saving where it answers (the server may have stopped it)', async () => {
+      canaisApi.ondeAtende.mockResolvedValue({});
+      preparar({ canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ primeiroInboxId: 1, manterPrimeiro: true })
+      );
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('with the Fase 2, a stopped agent hero lists the channels and never says "answers first"', async () => {
+      preparar({ agente: bia({ status: 'paused' }), canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      const heroi = no('[data-heroi] [data-onde]').textContent;
+      expect(heroi).toContain('BLOCO_ONDE.PARADO');
+      expect(heroi).not.toContain('BLOCO_ONDE.PRIMEIRO');
+      expect(no('[data-resumo-onde]').textContent).toContain(
+        'BLOCO_ONDE.PARADO'
+      );
       wrapper.unmount();
     });
 
@@ -1139,9 +1175,19 @@ describe('AgentePage', () => {
       ligarFase2(false);
       const wrapper = await montar();
       expect(no('[data-tambem-recebe]')).toBeNull();
+      // #1720: sem a Fase 2, os textos de antes (herói e resumo) e a gaveta de antes.
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.RESPONDE_NO'
+      );
+      expect(no('[data-linha="onde"]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.TEXTO'
+      );
+      expect(no('[data-resumo-onde]')).toBeNull();
       await clicar('[data-alterar="onde"]');
       expect(no('aside[role="dialog"]')).not.toBeNull();
       expect(no('[data-tambem-recebe]')).toBeNull();
+      expect(no('aside[role="dialog"] [data-nao-atender]')).not.toBeNull();
+      expect(no('aside[role="dialog"] [data-primeiro]')).toBeNull();
       wrapper.unmount();
     });
   });
@@ -1180,6 +1226,12 @@ describe('AgentePage', () => {
         agente: bia({ na_equipe: true, tem_onde_trabalhar: true, ...extra }),
         canais: L2_EQUIPE,
       });
+    const ligarFase2 = ligada => {
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: ligada,
+      });
+    };
 
     it('says "Na equipe" (switch on), where it receives, and never the parked banner', async () => {
       prepararEquipe();
@@ -1226,6 +1278,64 @@ describe('AgentePage', () => {
       expect(canaisApi.disconnect).not.toHaveBeenCalled();
       expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.EQUIPE.FEITO');
       expect(no('[data-equipe-canais]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('with the Fase 2, the hero says the same line: receives when someone hands over', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.NA_EQUIPE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.RECEBE'
+      );
+      wrapper.unmount();
+    });
+
+    it('uses "Onde e quando responde" and the same drawer, answering "Não" with its team inboxes', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="onde-trabalha"]')).toBeNull();
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.RECEBE');
+      await clicar('[data-alterar="onde"]');
+      const gaveta = no('aside[role="dialog"]');
+      expect(gaveta.textContent).toContain('PAGINA.ONDE.TITULO');
+      const nao = [...gaveta.querySelectorAll('[role="radio"]')].find(item =>
+        item.textContent.includes('PRIMEIRO_NAO')
+      );
+      expect(nao.getAttribute('aria-checked')).toBe('true');
+      expect(
+        gaveta.querySelector('[data-opcao="1"]').getAttribute('aria-checked')
+      ).toBe('true');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(7, {
+        primeiroInboxId: null,
+        manterPrimeiro: false,
+        areaInboxIds: [1],
+        responseWindow: 'always',
+        parar: false,
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('without the inbox reading, says only that it receives when someone hands over', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      canaisApi.get.mockRejectedValue(new Error('500'));
+      jornadaApi.canaisOcupados.mockRejectedValue(new Error('500'));
+      const wrapper = await montar();
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.ONDE.RECEBE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).not.toContain(
+        'NENHUM_LUGAR'
+      );
       wrapper.unmount();
     });
 

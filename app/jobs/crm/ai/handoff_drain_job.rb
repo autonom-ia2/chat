@@ -2,8 +2,8 @@
 #
 # 1. Conversas que o motor de entrega segura (Crm::Entrega::Marca, #1454): tenta de novo, com a mesma regra, e entrega
 #    para quem tiver ficado online. Vale com ou sem CRM e sem a IA do CRM ligada: é o "segura e entrega quando alguém
-#    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) só perde a marca, e a conversa volta a poder
-#    ser pega pelo rodízio nativo.
+#    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) perde a marca, os administradores da
+#    caixa são avisados, e a conversa volta a poder ser pega pelo rodízio nativo.
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
 #
 # Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
@@ -162,20 +162,16 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def drain_conversation(conversation)
-    if Crm::Entrega::Marca.convite_vencido?(conversation)
-      conversation.with_lock do
-        Crm::Entrega::Marca.tirar(conversation) if Crm::Entrega::Marca.convite_vencido?(conversation)
-        conversation.save! if conversation.changed?
-      end
-      return
-    end
+    return Crm::Entrega::ConviteVencido.new(conversation).call if Crm::Entrega::Marca.convite_vencido?(conversation)
 
     marca = Crm::Entrega::Marca.dados(conversation)
     return unless marca && marca['modo'] == Crm::Entrega::Marca::SEGURANDO
     return largar_para_o_agente(conversation) if da_ia_do_crm_com_agente_nosso?(conversation, marca)
+    return if Crm::Entrega::ConviteVencido.espacar?(marca)
 
+    card = Crm::Entrega::Marca.card(conversation)
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca)).call
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram']).call
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).

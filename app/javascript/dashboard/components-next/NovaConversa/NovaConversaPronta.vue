@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watchEffect } from 'vue';
-import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/WhatsAppTemplateParser.vue';
+import PreenchedorDoModelo from 'dashboard/components-next/whatsapp/PreenchedorDoModelo.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import NovaConversaCartao from './NovaConversaCartao.vue';
 import NovaConversaOpcao from './NovaConversaOpcao.vue';
@@ -37,7 +37,8 @@ const escolhida = computed({
   },
 });
 
-// Cabeçalho com mídia e botão com variável ainda são do preenchedor antigo.
+// Cabeçalho com mídia, botão com variável e oferta com validade ainda são do
+// preenchedor antigo.
 const comPreenchedorProprio = computed(
   () => !modelo.value || preenchedorProprioCobre(modelo.value)
 );
@@ -112,10 +113,11 @@ defineExpose({ montar });
       :template="modelo"
       @send-message="montada = $event"
     />
-    <!-- Só para modelo com mídia no cabeçalho ou botão com variável: o
-         preenchedor antigo, com o resumo dele (nome, idioma, categoria)
-         escondido, porque a prévia ao lado já mostra a mensagem. -->
-    <WhatsAppTemplateParser
+    <!-- Só para modelo com mídia no cabeçalho, botão com variável ou oferta
+         com validade: o preenchedor antigo (com a regra do cupom e a validade,
+         #1705), com o resumo dele (nome, idioma, categoria) escondido, porque
+         a prévia ao lado já mostra a mensagem. -->
+    <PreenchedorDoModelo
       v-else
       ref="preenchedor"
       :template="modelo"

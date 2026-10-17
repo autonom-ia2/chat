@@ -405,6 +405,14 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            # Memória das IAs (#1601): o catálogo de chaves (admin) e os fatos do card com a procedência.
+            get 'memoria/chaves', to: 'memoria_chaves#index'
+            patch 'memoria/chaves/:id', to: 'memoria_chaves#update'
+            get 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#index'
+            post 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#create'
+            post 'memoria/cards/:card_id/fatos/:id/nao_vale_mais', to: 'memoria_fatos#nao_vale_mais'
+            post 'memoria/cards/:card_id/fatos/:id/aceitar', to: 'memoria_fatos#aceitar'
+            post 'memoria/cards/:card_id/fatos/:id/destravar', to: 'memoria_fatos#destravar'
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
@@ -510,6 +518,8 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
+              put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
