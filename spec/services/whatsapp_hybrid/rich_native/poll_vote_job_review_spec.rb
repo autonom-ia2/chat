@@ -158,11 +158,44 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
       expect { message.update!(content: 'apagada', content_attributes: { deleted: true }) }
         .to have_enqueued_job(WhatsappHybrid::RichNative::RevokeJob).once
       expect { message.update!(content_attributes: message.content_attributes.merge('external_error' => nil)) }
-        .not_to have_enqueued_job(WhatsappHybrid::RichNative::RevokeJob)
+        .not_to have_enqueued_job(described_class)
     end
   end
 
   describe WhatsappHybrid::RichNative::RevokeJob do
+    # Contrato com a pele do Max (#1793): o motor confirmou o apagar para todos → revogada_no_canal; erro → nada.
+    def deleted_message
+      create(:message, message_type: :outgoing, content: 'apagada', conversation: conversation, account: account, inbox: inbox,
+                       source_id: '3EB0SENT', content_attributes: { deleted: true })
+    end
+
+    it 'marks revogada_no_canal when the engine confirms, without asking to revoke again' do
+      flag_on!
+      message = deleted_message
+      allow(Waha::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:delete_message).and_return({})
+      Redis::Alfred.setex('whatsapp_hybrid:chat_id:hybrid-test:5511937016094', '5511937016094@c.us', 60)
+
+      expect { described_class.perform_now(message.id, '3EB0SENT') }
+        .not_to have_enqueued_job(described_class)
+
+      expect(client).to have_received(:delete_message).once
+      expect(message.reload.content_attributes).to include('deleted' => true, 'revogada_no_canal' => true)
+    end
+
+    it 'does not mark it when the engine refuses' do
+      flag_on!
+      message = deleted_message
+      allow(Waha::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:delete_message).and_raise(Waha::Client::Error.new('WAHA DELETE x -> 400', status: 400))
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      Redis::Alfred.setex('whatsapp_hybrid:chat_id:hybrid-test:5511937016094', '5511937016094@c.us', 60)
+
+      described_class.perform_now(message.id, '3EB0SENT')
+
+      expect(message.reload.content_attributes).not_to have_key('revogada_no_canal')
+    end
+
     it 'reports only the class and the status, never the phone in the path' do
       flag_on!
       message = create(:message, message_type: :outgoing, content: 'oops', conversation: conversation, account: account, inbox: inbox,
