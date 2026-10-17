@@ -480,6 +480,7 @@
           "audience": "Fora do público-alvo",
           "schedule": "Fora do horário de atuação",
           "mensagem_sem_suporte": "Mensagem que o WhatsApp só mostra no celular (a IA ficou calada)",
+          "mensagem_apagada": "Mensagem apagada pelo cliente (a IA ficou calada)",
           "other": "Outro / não especificado"
         }
       },

@@ -34,19 +34,40 @@ module Waha::RichNative::EventResponses
 
   # timestamp: a hora da resposta no WhatsApp (`timestampMs`, Waha::RichNative::EventTime). A resposta guardada da mesma
   # pessoa só é substituída por uma igual ou mais nova: um job refeito com a resposta antiga não troca a atual.
+  # Devolve :changed (resposta nova de fato: primeira, diferente, ou hora do motor estritamente mais nova), :same
+  # (a mesma resposta refeita) ou nil (antiga, nada gravado). Só :changed vira turno do cliente para a IA.
   def apply!(event, sender:, response:, extra_guests: 0, timestamp: nil)
     at = Waha::RichNative::EventTime.iso8601(timestamp)
+    result = nil
     event.with_lock do
       current = Array(event.content_attributes.to_h[KEY])
       previous = current.find { |entry| same_person?(entry, sender) }
       next if previous && !Waha::RichNative::EventTime.replaces?(at, previous['at'])
 
-      responses = current.reject { |entry| same_person?(entry, sender) }
-      responses << { 'sender_type' => sender.class.name, 'sender_id' => sender.id, 'response' => response,
-                     'extra_guests' => extra_guests.to_i, 'at' => at }
-      event.content_attributes = event.content_attributes.to_h.merge(KEY => responses)
-      event.save!(validate: false)
+      result = changed?(previous, response, extra_guests, timestamp) ? :changed : :same
+      store!(event, current, sender, { 'response' => response, 'extra_guests' => extra_guests.to_i, 'at' => at })
     end
+    result
+  end
+
+  def store!(event, current, sender, fields)
+    responses = current.reject { |entry| same_person?(entry, sender) }
+    responses << { 'sender_type' => sender.class.name, 'sender_id' => sender.id }.merge(fields)
+    event.content_attributes = event.content_attributes.to_h.merge(KEY => responses)
+    event.save!(validate: false)
+  end
+
+  def changed?(previous, response, extra_guests, timestamp)
+    previous.nil? || previous['response'] != response || previous['extra_guests'].to_i != extra_guests.to_i ||
+      Waha::RichNative::EventTime.newer?(timestamp, previous['at'])
+  end
+
+  # A resposta desta pessoa ainda guardada no evento é `response`? (Conferido no settle, Waha::RichNative::AgentTurnGuard.)
+  def current?(event, sender_type:, sender_id:, response:)
+    entry = Array(event.content_attributes.to_h[KEY]).find do |item|
+      item.is_a?(Hash) && item['sender_type'] == sender_type && item['sender_id'] == sender_id
+    end
+    entry.present? && entry['response'] == response
   end
 
   def same_person?(entry, sender)
@@ -57,8 +78,9 @@ module Waha::RichNative::EventResponses
   # resposta é nova (Waha::RichNative::AiTurn); uma antiga (job refeito) vira atividade escondida.
   def record_response!(message, event, response:, extra_guests: 0, timestamp: nil)
     applied = apply!(event, sender: event.conversation.contact, response: response, extra_guests: extra_guests, timestamp: timestamp)
-    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => event.id) unless applied
+    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => event.id) unless applied == :changed
 
-    Waha::RichNative::AiTurn.record!(message, Waha::RichNative::AiTurn.event_text(event.account, event, response), APPLIED_KEY => event.id)
+    extra = { APPLIED_KEY => event.id }.merge(Waha::RichNative::AiTurn.choice('event_response', event, response))
+    Waha::RichNative::AiTurn.record!(message, Waha::RichNative::AiTurn.event_text(event.account, event, response), extra)
   end
 end

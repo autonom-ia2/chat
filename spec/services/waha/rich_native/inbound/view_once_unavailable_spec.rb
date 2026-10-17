@@ -50,6 +50,25 @@ describe Waha::RichNative::Inbound::ViewOnceUnavailable do
       expect(other.reload.content_attributes).not_to have_key('c2y_hidden')
     end
 
+    # O conector 4: a mídia pode chegar noutra conversa (a do aviso resolvida). Mesma caixa e mesmo contato: o aviso sai.
+    it 'finds the notice by notice_message_id in another conversation of the same inbox and contact' do
+      aviso_message = notice
+      conversation.update!(status: :resolved)
+      nova = create(:conversation, inbox: inbox, account: account, contact: conversation.contact)
+      media = from_connector({ waha_view_once_resolved: { id: 'x', notice_message_id: aviso_message.id } },
+                             content: nil, attachments: [jpg], target_conversation: nova)
+
+      expect(aviso_message.reload.content_attributes).to include('c2y_hidden' => true, 'view_once_resolved_by' => media.id)
+    end
+
+    it 'never hides the notice of another contact (forged notice_message_id)' do
+      outra = create(:conversation, inbox: inbox, account: account)
+      aviso_alheio = from_connector({ waha_view_once_unavailable: { from_me: false, id: 'VO2' } }, target_conversation: outra)
+      from_connector({ waha_view_once_resolved: { id: 'x', notice_message_id: aviso_alheio.id } }, content: nil, attachments: [jpg])
+
+      expect(aviso_alheio.reload.content_attributes).not_to have_key('c2y_hidden')
+    end
+
     it 'keeps the media and touches nothing else when there is no matching notice' do
       other = notice
       media = from_connector({ waha_view_once_resolved: { id: 'OUTRO' } }, content: nil, attachments: [jpg])

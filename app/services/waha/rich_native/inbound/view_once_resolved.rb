@@ -1,8 +1,8 @@
 # `waha_view_once_resolved` (chat#1709, conector c2y-rich-3c): a mídia de uma visualização única chegou depois do aviso
 # (Waha::RichNative::Inbound::ViewOnceUnavailable), { id, notice_message_id } (o id do aviso no Chatwoot). Tolerante: a
-# mídia desta mensagem ganha `meta.is_view_once` e o aviso, achado por `notice_message_id` (ou, sem ele, pelo `id`
-# entre as últimas mensagens), sai da tela (`c2y_hidden`) e aponta a mídia (`view_once_resolved_by`). O aviso precisa
-# ser um aviso de visualização única recebido nesta conversa e caixa. Sem aviso, só a mídia.
+# mídia desta mensagem ganha `meta.is_view_once` e o aviso, achado por `notice_message_id` (mesma caixa e mesmo
+# contato, também noutra conversa) ou, sem ele, pelo `id` entre as últimas mensagens desta conversa, sai da tela
+# (`c2y_hidden`) e aponta a mídia (`view_once_resolved_by`). Sem aviso, só a mídia.
 # Erro ao esconder o aviso: log com a classe; a mensagem nova é criada assim mesmo.
 module Waha::RichNative::Inbound::ViewOnceResolved
   RESOLVED_BY_KEY = 'view_once_resolved_by'.freeze
@@ -20,11 +20,14 @@ module Waha::RichNative::Inbound::ViewOnceResolved
     message.instance_variable_set(:@c2y_view_once_notice, notice) if notice
   end
 
+  # Por `notice_message_id`: na MESMA caixa e do MESMO contato, também noutra conversa (a do aviso pode ter sido
+  # resolvida e a mídia chegar numa conversa nova). De outro contato ou caixa (id forjado), nada.
   def notice_by_message_id(message, notice_message_id)
-    return if notice_message_id.blank? || message.conversation_id.nil?
+    contact_id = message.conversation&.contact_id
+    return if notice_message_id.blank? || contact_id.nil?
 
-    notice = Message.find_by(id: notice_message_id, conversation_id: message.conversation_id, inbox_id: message.inbox_id,
-                             message_type: :incoming)
+    notice = Message.joins(:conversation).where(conversations: { contact_id: contact_id })
+                    .find_by(id: notice_message_id, inbox_id: message.inbox_id, message_type: :incoming)
     notice if notice && Waha::RichNative::Inbound::ViewOnceUnavailable.notice?(notice)
   end
 

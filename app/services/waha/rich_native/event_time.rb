@@ -40,6 +40,14 @@ module Waha::RichNative::EventTime
     stored.nil? || fresh.nil? || fresh >= stored
   end
 
+  # A hora do evento que chegou (`timestamp`, do motor) é ESTRITAMENTE mais nova que a guardada? Sem hora do motor, ou
+  # sem hora guardada legível, não: um retry sem hora não conta como escolha nova.
+  def newer?(timestamp, stored_at)
+    fresh = at(timestamp)
+    stored = parse(stored_at)
+    fresh.present? && stored.present? && fresh > stored
+  end
+
   def parse(text)
     Time.iso8601(text.to_s)
   rescue ArgumentError

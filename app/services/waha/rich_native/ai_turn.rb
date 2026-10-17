@@ -8,7 +8,15 @@
 # Voto retirado (sem opção) ou antigo (um job refeito, que não troca a escolha atual): continua atividade escondida,
 # sem turno para a IA. Sem a flag, nada aqui roda (Waha::RichNative::Inbound#apply_without_flag, como na main).
 module Waha::RichNative::AiTurn
+  # A escolha do turno ({ kind, target_id, choice }), para o settle conferir se ela ainda vale
+  # (Waha::RichNative::TurnKinds.choice_current?). Chave interna: a API não a forja (Waha::RichNative::ContractGuard).
+  CHOICE_KEY = 'c2y_ai_turn'.freeze
+
   module_function
+
+  def choice(kind, target, value)
+    { CHOICE_KEY => { 'kind' => kind, 'target_id' => target.id, 'choice' => value } }
+  end
 
   def poll_text(account, poll, titles)
     translate(account, 'waha.ai.poll_vote', question: excerpt(poll.content), options: titles.join(', '))

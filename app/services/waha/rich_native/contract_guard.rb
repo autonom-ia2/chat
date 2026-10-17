@@ -21,7 +21,7 @@ class Waha::RichNative::ContractGuard
   REQUEST_KEYS = %w[waha_native waha_text waha_media_as_media].freeze
   INTERNAL_KEYS = %w[
     c2y_hidden waha_unknown_type waha_call_summary waha_ephemeral reaction_applied_to edit_applied_to
-    poll_vote_applied_to event_response_applied_to revoke_applied_to
+    poll_vote_applied_to event_response_applied_to revoke_applied_to c2y_ai_turn
   ].freeze
   SCOPED_KEYS = %w[
     reactions edit_history edited_at selected_options poll_votes event_responses deleted_by_contact_at unsupported_kind

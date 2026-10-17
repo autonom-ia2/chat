@@ -83,6 +83,38 @@ describe Waha::RichNative::PollVote do
       expect(vote_entry['at']).to be_present
     end
 
+    # Resposta dupla da IA: o mesmo voto refeito (retry do conector, mesma hora ou sem hora) não é turno novo. Caminho
+    # real: conector -> recebimento -> record_vote! -> listener do agente.
+    it 'makes only one customer turn when the same vote arrives twice, and a new turn when the choice changes' do
+      allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+      poll = poll_message
+      inbox_payload(poll)
+      listener = Autonomia::Agents::Operate::MessageListener.instance
+      ouvir = ->(message) { listener.message_created(Events::Base.new('message.created', Time.zone.now, message: message)) }
+
+      primeiro = vote(poll.reload, ['Sim'])
+      repetido = vote(poll.reload, ['Sim'])
+      trocado = vote(poll.reload, ['Não'])
+
+      expect([primeiro, repetido, trocado].map(&:message_type)).to eq(%w[incoming activity incoming])
+      expect { [primeiro, repetido, trocado].each { |message| ouvir.call(message) } }
+        .to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob).exactly(2).times
+      expect(primeiro.content_attributes['c2y_ai_turn']).to include('kind' => 'poll_vote', 'target_id' => poll.id, 'choice' => ['Sim'])
+    end
+
+    it 'makes a new turn for the same choice only when the engine time is strictly newer' do
+      poll = poll_message
+      inbox_payload(poll)
+      hora = Time.zone.now.to_i - 60
+
+      vote(poll.reload, ['Sim'], waha_poll_vote: { poll_message_id: poll.id, options: ['Sim'], vote_id: 'v1', timestamp: hora })
+      igual = vote(poll.reload, ['Sim'], waha_poll_vote: { poll_message_id: poll.id, options: ['Sim'], vote_id: 'v1', timestamp: hora })
+      mais_novo = vote(poll.reload, ['Sim'], waha_poll_vote: { poll_message_id: poll.id, options: ['Sim'], vote_id: 'v2', timestamp: hora + 30 })
+
+      expect(igual).to be_activity
+      expect(mais_novo).to be_incoming
+    end
+
     it 'keeps one entry per voter: a new vote replaces the previous one and a removed vote keeps the voter' do
       poll = poll_message
       inbox_payload(poll)

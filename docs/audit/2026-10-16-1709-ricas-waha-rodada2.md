@@ -220,3 +220,31 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
 - `view_once_unavailable`, `view_once_id` e `view_once_resolved_by` entram nas chaves que a API não forja; as `waha_*`
   só valem do conector. A capacidade `autonomia.view_once_notice` do motor não é lida: a chave só vem de motor com o
   patch.
+
+## Revisão das decisões (`ee49c1939b..c64a545df6`) e decisão do coordenador
+
+**O voto e a resposta ao convite SÃO resposta do cliente.** Os efeitos de mensagem recebida ficam como estão, iguais a
+uma resposta de lista na Cloud (lista do revisor): reabrir a conversa resolvida; SLA (primeira resposta e próxima
+resposta); contagem de não lidas; push e e-mail ao atendente; regras de automação ("mensagem criada"); jornada de
+campanha (a resposta conta como resposta do cliente); CRM e identificação do assunto; robô n8n (AgentBot) e webhooks da
+conta recebendo o texto ("Votou na enquete …"); integrações (Slack etc.); `last_activity_at` da conversa. A tela
+esconde o balão pelo `c2y_hidden` na 1702b do Frontend geral. **Dependência: a 1702b no ar antes de ligar a flag**
+(sem ela, o voto aparece como balão do cliente).
+
+Correções:
+1. Turno da IA só quando a escolha guardada MUDOU (primeiro voto, opções/resposta diferentes) ou a hora do motor é
+   estritamente mais nova; o mesmo voto refeito (mesma hora, sem hora, retry do conector) vira atividade escondida.
+2. O turno só é calado quando TODAS as mensagens do cliente nele são bolha "abra no celular", aviso de visualização
+   única ou apagada; com mensagem real, a IA responde e o histórico sai sem as outras. Só apagadas: evento
+   `skipped_mensagem_apagada` (enum 16, não atendimento, com rótulo no Desempenho).
+3. Os filtros de apagada e de aviso, no turno e no histórico, só na caixa WAHA com a flag; fora disso, como na main.
+4. `c2y_hidden` e `view_once_resolved_by` entram no `SilentUpdate` (não vão ao conector); o Frontend geral inclui as
+   duas na lista única `AtualizacaoDaPele::CHAVES`.
+5. O turno calado de propósito não solta a posse do turno (só o que falhou solta).
+6. No settle, a escolha do turno (`c2y_ai_turn`: enquete/evento e a escolha) precisa continuar guardada; retirada ou
+   trocada dentro do debounce, não há resposta.
+7. O aviso de visualização única é achado pelo `notice_message_id` também noutra conversa da MESMA caixa e do MESMO
+   contato (o conector 4 avisa que a mídia pode chegar noutra conversa); de outro contato, nunca.
+
+**Diferença conhecida (aceita):** com a flag desligada, o aviso de visualização única numa conversa nova deixa a conversa
+criada pelo conector só com a atividade escondida. O cliente de fato mandou algo; na main isso sumia sem rastro.

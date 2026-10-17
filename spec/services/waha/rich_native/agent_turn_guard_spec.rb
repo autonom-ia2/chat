@@ -1,5 +1,7 @@
 require 'rails_helper'
 
+RSpec::Matchers.define_negated_matcher :not_include, :include
+
 # chat#1709 (aprovado pelo Rodrigo em 16/10/2026): o agente de IA e o que o recebimento da caixa WAHA grava.
 # - O voto na enquete e a resposta ao convite são turnos do cliente (mensagem recebida, escondida na tela) e seguem o
 #   caminho real do turno (gatilho, debounce, settle, Responder), com a Fase 2 dos agentes ligada.
@@ -127,16 +129,74 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
     end
   end
 
-  describe 'the message deleted by the customer' do
-    it 'is not answered' do
-      apagada = cliente_escreve('Quero cancelar')
+  describe 'a burst with a real message' do
+    it 'answers when the turn has a real message besides the unsupported one, without the deleted one in the history' do
+      apagada = cliente_escreve('Mensagem apagada')
       apagada.update_column(:content_attributes, { 'deleted_by_contact_at' => Time.current.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+      cliente_escreve('Olha o que mandei')
+      sem = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                             content: 'Mensagem não suportada', content_attributes: { 'is_unsupported' => true })
+      gatilho(sem)
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:history].pluck(:content)).to include('Olha o que mandei').and(not_include('Mensagem apagada'))
+      expect(Autonomia::Agents::AgentEvent.where(conversation_id: conversation.id)
+                                          .where(event_type: %i[skipped_mensagem_sem_suporte skipped_mensagem_apagada])).to be_empty
+    end
+  end
+
+  describe 'a vote taken back inside the debounce' do
+    it 'does not answer when the choice of the turn is no longer stored on the poll' do
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => [] }] }) # rubocop:disable Rails/SkipsModelValidations
+      voto = turno_do_voto("Votou na enquete 'Qual horário?': Tarde")
+      voto.update_column(:content_attributes, voto.content_attributes.merge( # rubocop:disable Rails/SkipsModelValidations
+                                                'c2y_ai_turn' => { 'kind' => 'poll_vote', 'target_id' => poll.id, 'choice' => ['Tarde'] }
+                                              ))
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      expect(respostas).to be_empty
+    end
+  end
+
+  describe 'the message deleted by the customer' do
+    def apagar!(message)
+      message.update_column(:content_attributes, { 'deleted_by_contact_at' => Time.current.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+      message
+    end
+
+    it 'is not answered, leaves skipped_mensagem_apagada and keeps the turn ownership (deliberate silence)' do
+      apagada = apagar!(cliente_escreve('Quero cancelar'))
       gatilho(apagada)
 
       rodar_turno!
 
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
       expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada.pluck(:message_id)).to eq([apagada.id])
+      chave = Autonomia::Agents::Operate::PosseDoTurno.chave(conversation.id, apagada.id, vinculo_da_porta.id)
+      expect(Redis::Alfred.get(chave)).to be_present
+    end
+
+    it 'is answered as in main without the flag' do
+      account.disable_features!(Waha::RichNative::FLAG)
+      gatilho(apagar!(cliente_escreve('Quero cancelar')))
+      rodar_turno!
+      expect(respostas.count).to eq(1)
+      expect(consultas.last[:history].pluck(:content)).to include('Quero cancelar')
+    end
+
+    it 'is answered as in main in an inbox that is not the WAHA one' do
+      inbox.channel.update!(additional_attributes: { 'provider' => 'outro' })
+      gatilho(apagar!(cliente_escreve('Quero cancelar')))
+      rodar_turno!
+      expect(respostas.count).to eq(1)
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada).to be_empty
     end
 
     it 'leaves the history the AI reads' do

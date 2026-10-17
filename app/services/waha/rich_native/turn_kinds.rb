@@ -1,0 +1,49 @@
+# O que o agente de IA faz com cada mensagem do cliente que o recebimento WAHA marca (chat#1709). Usado por
+# Waha::RichNative::AgentTurnGuard, que só pergunta na caixa WAHA comum com a flag `whatsapp_rich_native`.
+module Waha::RichNative::TurnKinds
+  UNSUPPORTED_KEY = 'is_unsupported'.freeze
+  DELETED_KEY = 'deleted_by_contact_at'.freeze
+  VIEW_ONCE_KEY = 'view_once_unavailable'.freeze
+
+  module_function
+
+  # :unsupported (bolha "abra no celular" ou aviso de visualização única), :deleted (apagada pelo cliente) ou nil
+  # (mensagem real, que a IA responde).
+  def kind(message)
+    attributes = message.content_attributes.to_h
+    return :deleted if attributes[DELETED_KEY].present?
+
+    :unsupported if attributes[UNSUPPORTED_KEY] == true || attributes[VIEW_ONCE_KEY] == true
+  end
+
+  # Fora do histórico que vai à IA: apagada e aviso de visualização única (não há conteúdo para ler).
+  def out_of_history?(message)
+    attributes = message.content_attributes.to_h
+    attributes[DELETED_KEY].present? || attributes[VIEW_ONCE_KEY] == true
+  end
+
+  # O motivo para calar o turno, ou nil quando há mensagem real nele. Só quando TODAS são sem conteúdo.
+  def silent_reason(turn_messages)
+    kinds = turn_messages.map { |message| kind(message) }
+    return if kinds.empty? || kinds.include?(nil)
+
+    kinds.include?(:unsupported) ? Waha::RichNative::AgentTurnGuard::UNSUPPORTED_REASON : Waha::RichNative::AgentTurnGuard::DELETED_REASON
+  end
+
+  # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda é a guardada? Mensagem que não é
+  # escolha: sempre.
+  def choice_current?(message)
+    choice = message.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY]
+    return true unless choice.is_a?(Hash)
+
+    target = Message.find_by(id: choice['target_id'], conversation_id: message.conversation_id)
+    return false if target.nil?
+
+    voter = { sender_type: message.sender_type, sender_id: message.sender_id }
+    case choice['kind']
+    when 'poll_vote' then Waha::RichNative::PollVotes.current?(target, **voter, titles: choice['choice'])
+    when 'event_response' then Waha::RichNative::EventResponses.current?(target, **voter, response: choice['choice'])
+    else true
+    end
+  end
+end

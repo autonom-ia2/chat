@@ -14,8 +14,10 @@ module Waha::RichNative::SilentUpdate
   # grava na "pele" da mensagem e nunca pode chegar ao conector (ele reenvia a mensagem em todo `message_updated` com
   # `external_error`, mesmo nulo). Quando o #1702b estiver na main, isto delega para
   # `ConversaCanal::AtualizacaoDaPele.so_da_pele?`, e a lista sai daqui.
+  # `c2y_hidden` e `view_once_resolved_by`: o aviso de visualização única que sai da tela quando a mídia chega
+  # (Waha::RichNative::Inbound::ViewOnceResolved). Também na lista do #1702b.
   SILENT_KEYS = %w[reactions read_receipt_sent_at link_preview played_at deleted_by_contact_at poll_votes event_responses
-                   edit_history edited_at].freeze
+                   edit_history edited_at c2y_hidden view_once_resolved_by].freeze
   ALLOWED_COLUMNS = %w[content content_attributes updated_at processed_message_content].freeze
 
   def self.silent?(previous_changes)

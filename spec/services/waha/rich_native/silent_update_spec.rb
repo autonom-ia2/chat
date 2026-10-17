@@ -49,7 +49,7 @@ describe Waha::RichNative::SilentUpdate do
   it 'keeps the silent keys exactly the list agreed with the screen (#1702b)' do
     expect(described_class::SILENT_KEYS).to contain_exactly(
       'reactions', 'read_receipt_sent_at', 'link_preview', 'played_at', 'deleted_by_contact_at', 'poll_votes', 'event_responses',
-      'edit_history', 'edited_at'
+      'edit_history', 'edited_at', 'c2y_hidden', 'view_once_resolved_by'
     )
   end
 

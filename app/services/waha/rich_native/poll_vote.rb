@@ -40,9 +40,9 @@ module Waha::RichNative::PollVote
   def record_vote!(message, poll, selected, timestamp: nil)
     titles = selected.pluck('title')
     applied = Waha::RichNative::PollVotes.apply!(poll, sender: poll.conversation.contact, titles: titles, timestamp: timestamp)
-    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => poll.id) unless applied && titles.any?
+    return Waha::RichNative::Inbound.hide!(message, HIDDEN_KIND, APPLIED_KEY => poll.id) unless applied == :changed && titles.any?
 
     text = Waha::RichNative::AiTurn.poll_text(poll.account, poll, titles)
-    Waha::RichNative::AiTurn.record!(message, text, APPLIED_KEY => poll.id)
+    Waha::RichNative::AiTurn.record!(message, text, { APPLIED_KEY => poll.id }.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, titles)))
   end
 end
