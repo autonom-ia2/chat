@@ -4038,6 +4038,8 @@
       "AUTO": "O sistema cria o card quando entende o assunto.",
       "SUGGEST": "O sistema sugere o assunto e a equipe confirma.",
       "OFF": "Nada acontece sozinho: a equipe cria o card.",
+      "CHEGOU_IA": "O card nasce com a primeira mensagem, e a IA dá o nome.",
+      "AUTO_UM": "O sistema cria um card para cada pedido do cliente.",
       "CHEGOU": "O card nasce assim que a conversa chega."
     },
     "ETAPAS": {
@@ -4071,9 +4073,16 @@
       "CHEGOU": "Criar o card assim que a conversa chegar",
       "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
       "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "CHEGOU_IA": "Criar o card assim que a conversa chegar",
+      "CHEGOU_IA_TEXTO": "O card nasce com a primeira mensagem, e a IA dá o nome.",
+      "CHEGOU_IA_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}, e a IA dá o nome quando entende o pedido. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "AUTO_UM": "Criar o card quando entender o assunto",
+      "AUTO_UM_TEXTO": "O sistema lê a conversa e cria um card para cada pedido do cliente.",
+      "AUTO_UM_EXEMPLO": "O cliente pede dois produtos diferentes: são dois cards em {funil}.",
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",
+      "MENSAGEM_DOIS_PEDIDOS": "Quero saber o preço do plano básico e também do plano completo.",
       "NAO_ENTENDEU": "Se não der para entender o assunto, a conversa fica sem assunto e vai para quem cuida dessas conversas.",
       "ALGUEM": "alguém da equipe",
       "SEM_IA": "A IA está desligada em {funis}. Ligue em Editar funil → IA do funil para ela reconhecer esse assunto."

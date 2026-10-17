@@ -42,6 +42,12 @@ pt_BR:
       meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."
       suggestion_unavailable: "Não consegui escrever agora. Tente de novo em instantes ou escreva do seu jeito."
       suggestion_invalid: "Confira o pedido: escreva o que a mensagem precisa fazer, ou um texto de até 1024 letras."
+      conversation_products: "Este modelo mostra produtos do catálogo, e o envio não disse quais. Mande por uma campanha, escolhendo os produtos, ou escolha outro modelo."
+      conversation_carousel: "Este modelo é um carrossel, e o envio não trouxe os cartões. Mande por uma campanha, montando os cartões, ou escolha outro modelo."
+      conversation_coupon: "Este modelo tem cupom, e o envio não trouxe o código (de 1 a 15 letras e números). Escreva o código e envie de novo."
+      conversation_offer_expiration: "Esta oferta mostra a contagem, e o envio não disse até quando ela vale. Escolha a data e a hora e envie de novo."
+      conversation_offer_expired: "A validade desta oferta já passou. Escolha uma data e hora à frente e envie de novo."
+      conversation_url_parameter: "Este modelo tem um link que termina com um dado deste cliente, e o envio não trouxe esse dado. Preencha o fim do link e envie de novo."
     # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
     # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
     consent:

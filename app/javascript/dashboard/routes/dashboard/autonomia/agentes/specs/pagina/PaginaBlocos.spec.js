@@ -261,3 +261,48 @@ describe('PaginaBlocos · Também recebe', () => {
     expect(wrapper.find('[data-tambem-recebe]').exists()).toBe(false);
   });
 });
+
+// #1720 — o resumo "Onde e quando responde" é uma linha só (a mesma do herói, utils/resumoOnde).
+describe('PaginaBlocos · resumo de onde atende (Fase 2)', () => {
+  beforeEach(() => {
+    conta.agendaNova = false;
+    paginasApi.get.mockReset();
+    paginasApi.get.mockResolvedValue({ data: { payload: [] } });
+  });
+
+  it('shows the one-line summary and "Alterar" for an agent that only receives', async () => {
+    const wrapper = await montar({
+      fase2: true,
+      temCanal: false,
+      textoOnde:
+        'Recebe no 5511944547873 quando alguém passar a conversa · sempre',
+      tambemRecebe: ['5511944547873'],
+    });
+    const linha = wrapper.get('[data-linha="onde"]');
+    expect(linha.get('[data-resumo-onde]').text()).toBe(
+      'Recebe no 5511944547873 quando alguém passar a conversa · sempre'
+    );
+    expect(linha.find('[data-alterar="onde"]').exists()).toBe(true);
+    expect(linha.find('[data-escolher-canal]').exists()).toBe(false);
+  });
+
+  it('offers to choose a channel when it answers nowhere', async () => {
+    const wrapper = await montar({
+      fase2: true,
+      temCanal: false,
+      textoOnde: 'Não atende em lugar nenhum.',
+    });
+    const linha = wrapper.get('[data-linha="onde"]');
+    expect(linha.text()).toContain('Não atende em lugar nenhum.');
+    expect(linha.find('[data-escolher-canal]').exists()).toBe(true);
+  });
+
+  it('no longer has "Onde {nome} trabalha"', async () => {
+    const wrapper = await montar({
+      fase2: true,
+      temCanal: true,
+      textoOnde: 'x',
+    });
+    expect(wrapper.find('[data-linha="onde-trabalha"]').exists()).toBe(false);
+  });
+});

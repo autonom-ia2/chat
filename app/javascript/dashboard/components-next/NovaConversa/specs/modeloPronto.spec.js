@@ -293,6 +293,40 @@ describe('preenchedorProprioCobre', () => {
     expect(preenchedorProprioCobre(comMidia)).toBe(false);
     expect(preenchedorProprioCobre(comBotao)).toBe(false);
   });
+
+  it('#1705: oferta com contagem vai para o preenchedor que pede a validade', () => {
+    const oferta = {
+      ...base,
+      components: [
+        {
+          type: 'LIMITED_TIME_OFFER',
+          limited_time_offer: { text: 'Só hoje!', has_expiration: true },
+        },
+        { type: 'BODY', text: 'Oi, {{1}}.' },
+      ],
+    };
+
+    expect(preenchedorProprioCobre(oferta)).toBe(false);
+  });
+});
+
+describe('modeloCompleto com cupom (#1705)', () => {
+  const cupom = {
+    ...base,
+    components: [
+      { type: 'BODY', text: 'Use o cupom.' },
+      { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', example: ['X1'] }] },
+    ],
+  };
+
+  it('não dá o modelo por pronto sem o código, mesmo sem campo no texto', () => {
+    expect(modeloCompleto(cupom, paramsVazios(cupom))).toBe(false);
+    expect(
+      modeloCompleto(cupom, {
+        buttons: [{ type: 'copy_code', parameter: 'X1' }],
+      })
+    ).toBe(true);
+  });
 });
 
 const com = (params, chave, valor) =>

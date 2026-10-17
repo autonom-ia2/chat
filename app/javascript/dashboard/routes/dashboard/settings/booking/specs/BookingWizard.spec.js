@@ -33,14 +33,14 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
   },
 }));
 
-// Modelos aprovados da caixa vêm do store de caixas (inboxes/getFilteredWhatsAppTemplates).
+// Modelos aprovados da caixa vêm do store de caixas (inboxes/getConversationWhatsAppTemplates).
 const templatesGetter = vi.fn(() => []);
 // O painel relê o usuário (validityCheck) quando a foto vira a do perfil (#1298).
 const storeDispatch = vi.fn();
 config.global.provide = {
   ...config.global.provide,
   store: {
-    getters: { 'inboxes/getFilteredWhatsAppTemplates': templatesGetter },
+    getters: { 'inboxes/getConversationWhatsAppTemplates': templatesGetter },
     dispatch: storeDispatch,
   },
 };

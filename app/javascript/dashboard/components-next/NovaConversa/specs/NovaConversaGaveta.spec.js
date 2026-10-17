@@ -39,7 +39,7 @@ vi.mock('dashboard/composables/store', () => ({
         id: Number(id),
         name: Number(id) === 10 ? 'Bia Lima' : estado.nome,
       }),
-      'inboxes/getFilteredWhatsAppTemplates': () => estado.modelos,
+      'inboxes/getConversationWhatsAppTemplates': () => estado.modelos,
       'inboxes/getInbox': () => ({}),
       'accounts/isRTL': false,
       getCurrentUser: { id: 3 },
