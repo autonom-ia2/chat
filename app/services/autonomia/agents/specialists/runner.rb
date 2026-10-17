@@ -143,7 +143,9 @@ class Autonomia::Agents::Specialists::Runner
                                                           documents: @documents, agent: @specialist.agent,
                                                           faixa: ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(@specialist))
     pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
-    materia.mensagens + Array(@laco_do_ajudante&.base(@request)) + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
+    # A memória do cliente (#1755), a mesma do principal: a cotação não pede de novo o que o cliente já deu.
+    memoria = ::Autonomia::Agents::Operate::MemoriaDoTurno.itens_do_especialista(conversation: @delivery&.conversation, agent: @specialist.agent)
+    materia.mensagens + memoria + Array(@laco_do_ajudante&.base(@request)) + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
   end
 
   # A etiqueta de consumo e os relógios do laço: os da Cotação, ou os do ajudante (tema 14).
