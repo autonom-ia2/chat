@@ -106,6 +106,12 @@ crm_booking_v2_notice_dispatch_job:
   class: 'Crm::BookingV2::NoticeDispatchJob'
   queue: scheduled_jobs
 
+# Pré-voo (#1624): 10 min antes de um follow-up automático sair fora da janela de 24 h, cria o modelo e grava a composição.
+crm_follow_up_preflight_job:
+  cron: '*/1 * * * *'
+  class: 'Crm::FollowUpPreflightJob'
+  queue: scheduled_jobs
+
 # Lembretes de Atender (#1498): cria e cancela os lembretes por data; quem envia é o crm_follow_up_due_job.
 crm_service_reminders_job:
   cron: '*/15 * * * *'
