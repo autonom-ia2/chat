@@ -2489,11 +2489,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_06_104214) do
     t.index ["account_id", "contact_id", "escopo"], name: "idx_crm_memoria_fatos_contato"
     t.index ["idempotency_key"], name: "index_crm_memoria_fatos_on_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["prova_message_ids"], name: "idx_crm_memoria_fatos_provas", using: :gin
-    t.check_constraint "cardinality(prova_message_ids) > 0 OR (fonte::text = ANY (ARRAY['pessoa_corrigiu'::character varying, 'sistema'::character varying, 'ferramenta_resultado'::character varying]::text[]))", name: "crm_memoria_fatos_prova"
+    t.check_constraint "cardinality(prova_message_ids) > 0 OR (fonte::text = ANY ('{pessoa_corrigiu,sistema,ferramenta_resultado}'::text[]))", name: "crm_memoria_fatos_prova"
     t.check_constraint "char_length(valor) <= 300 AND char_length(prova_trecho) <= 300", name: "crm_memoria_fatos_tamanho"
     t.check_constraint "escopo::text = 'card'::text AND card_id IS NOT NULL AND conversation_id IS NULL OR escopo::text = 'conversa'::text AND conversation_id IS NOT NULL AND card_id IS NULL OR escopo::text = 'contato'::text AND card_id IS NULL AND conversation_id IS NULL", name: "crm_memoria_fatos_escopo"
-    t.check_constraint "status::text <> 'confirmado'::text OR (fonte::text = ANY (ARRAY['ferramenta_resultado'::character varying, 'sistema'::character varying, 'pessoa_corrigiu'::character varying]::text[]))", name: "crm_memoria_fatos_so_codigo_confirma"
-    t.check_constraint "status::text = ANY (ARRAY['alegado'::character varying, 'confirmado'::character varying]::text[])", name: "crm_memoria_fatos_status"
+    t.check_constraint "status::text <> 'confirmado'::text OR (fonte::text = ANY ('{ferramenta_resultado,sistema,pessoa_corrigiu}'::text[]))", name: "crm_memoria_fatos_so_codigo_confirma"
+    t.check_constraint "status::text = ANY ('{alegado,confirmado}'::text[])", name: "crm_memoria_fatos_status"
   end
 
   create_table "crm_meta_ad_frequency_windows", force: :cascade do |t|
