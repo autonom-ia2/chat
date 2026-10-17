@@ -164,6 +164,21 @@ describe('botões do modelo (#1702, B2)', () => {
     ]);
   });
 
+  it('modelo editado com os links trocados de lugar: cada rótulo não abre o link do outro', () => {
+    const botoes = montar({
+      modelo: LOJA,
+      enviado: {
+        versao: 1,
+        botoes: [
+          { tipo: 'url', texto: 'Pedido', url: 'https://loja.test/p/123' },
+          { tipo: 'url', texto: 'Catálogo', url: 'https://loja.test/catalogo' },
+        ],
+      },
+    });
+
+    expect(botoes.find('a').exists()).toBe(false);
+  });
+
   it('posição que no envio era outro tipo não vira link', () => {
     const botoes = montar({
       enviado: { versao: 1, botoes: [{ tipo: 'quick_reply' }] },

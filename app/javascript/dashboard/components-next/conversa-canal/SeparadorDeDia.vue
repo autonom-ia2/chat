@@ -60,10 +60,7 @@ onBeforeUnmount(() => {
     class="sticky top-2 z-10 flex justify-center list-none my-3 pointer-events-none"
     data-separador-de-dia
   >
-    <span
-      :class="[CLASSES_DO_SEPARADOR_DE_DIA, { 'opacity-0': escondida }]"
-      :aria-hidden="escondida || undefined"
-    >
+    <span :class="[CLASSES_DO_SEPARADOR_DE_DIA, { 'opacity-0': escondida }]">
       {{ rotulo }}
     </span>
   </li>

@@ -129,6 +129,50 @@ describe('revisão do PR de ajustes (#1702)', () => {
     expect(citacao.emitted('dismiss')).toHaveLength(1);
   });
 
+  it('a citação na caixa de resposta não é botão (não leva a lugar nenhum)', () => {
+    const citacao = mount(CitacaoNaResposta, {
+      props: {
+        message: { id: 7, content: 'Oi', message_type: MESSAGE_TYPES.INCOMING },
+      },
+      global: {
+        plugins: [i18n()],
+        directives: {
+          dompurifyHtml: (el, { value }) => {
+            el.innerHTML = value;
+          },
+        },
+      },
+    });
+
+    expect(citacao.find('[role="button"]').exists()).toBe(false);
+    expect(citacao.find('[tabindex="0"]').exists()).toBe(false);
+  });
+
+  it('citação de figurinha diz Figurinha, como o balão', () => {
+    const citacao = mount(CitacaoNaResposta, {
+      props: {
+        message: {
+          id: 8,
+          content: '',
+          message_type: MESSAGE_TYPES.INCOMING,
+          attachments: [
+            { file_type: 'image', extension: 'webp', is_sticker: true },
+          ],
+        },
+      },
+      global: {
+        plugins: [i18n()],
+        directives: {
+          dompurifyHtml: (el, { value }) => {
+            el.innerHTML = value;
+          },
+        },
+      },
+    });
+
+    expect(citacao.text()).toContain(en.CONVERSA_CANAL.MIDIA.FIGURINHA);
+  });
+
   it('citação de foto sem texto mostra "Foto"', () => {
     const citacao = mount(CitacaoNaResposta, {
       props: {

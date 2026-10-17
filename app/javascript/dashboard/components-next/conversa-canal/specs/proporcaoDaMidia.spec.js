@@ -11,8 +11,11 @@ describe('formatoDaMidia (#1702)', () => {
     expect(formatoDaMidia(1500, 1000)).toBe(FORMATOS.deitada);
   });
 
-  it('quadrada e 3:4 ficam em pé: 330 de altura, largura pela proporção', () => {
+  it('quadrada sai como a deitada: 330 x 330', () => {
     expect(formatoDaMidia(1000, 1000)).toBe(FORMATOS.deitada);
+  });
+
+  it('3:4 fica em pé: 330 de altura, largura pela proporção', () => {
     expect(formatoDaMidia(900, 1200)).toBe(FORMATOS.emPe);
   });
 

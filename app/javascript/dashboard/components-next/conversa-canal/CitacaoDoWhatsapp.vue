@@ -18,6 +18,8 @@ const props = defineProps({
   previa: { type: String, default: '' },
   // Resultado de citacaoSolta(); no lugar de `mensagem` e `previa`.
   solta: { type: Object, default: null },
+  // Sem ir a lugar nenhum (a citação em cima da caixa de resposta): sem papel de botão.
+  inerte: { type: Boolean, default: false },
   // Nome do cliente da conversa, para a citação solta de mensagem dele.
   nomeDoCliente: { type: String, default: '' },
 });
@@ -45,7 +47,7 @@ const NOMES_DO_ANEXO = {
   midia: 'CONVERSA_CANAL.CITACAO.MIDIA',
 };
 
-const clicavel = computed(() => !props.solta);
+const clicavel = computed(() => !props.solta && !props.inerte);
 const naoConferida = computed(() => Boolean(props.solta?.naoConferida));
 const doCliente = computed(() =>
   props.solta

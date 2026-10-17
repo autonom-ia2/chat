@@ -1,8 +1,7 @@
 // O modelo de WhatsApp que a mensagem usou (#1702), lido do modelo aprovado guardado na
 // caixa (`message_templates`) pelo nome e idioma gravados na mensagem. Modelo apagado
 // ou renomeado na Meta: nada aparece (o balão fica só com o texto, sem espaço vazio).
-// Limite conhecido: mostra o modelo de hoje; guardar a foto dos botões no envio fica
-// para depois (combinado com o Modelos WhatsApp).
+// Os botões vêm do modelo de hoje; o endereço de cada link vem da foto do envio (#1717).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -33,6 +32,8 @@ const ICONE_DA_MIDIA = {
   PRODUCT: 'i-ph-storefront',
 };
 const PADRAO = 'i-ph-arrow-bend-up-left-bold';
+// O servidor guarda o texto do botão na foto do envio com até 40 caracteres.
+const TEXTO_MAX = 40;
 // O endereço que o cliente abre ao tocar no botão de link (B2, teste do Rodrigo em
 // 17/10): o da foto do envio (#1717, `enviado.botoes[i].url`), que o servidor já
 // montou com o final variável e validou. Só http(s); o resto não vira link.
@@ -72,15 +73,22 @@ export const useModeloDaMensagem = mensagem => {
     () => mensagem.value?.additionalAttributes?.templateParams?.enviado || {}
   );
 
+  // O botão da foto do envio é o mesmo de hoje: link nos dois e, quando a foto guarda o
+  // texto, o mesmo texto (modelo editado com botões trocados não leva o link do outro).
+  const mesmoBotao = (b, enviadoDoBotao) =>
+    b.type === 'URL' &&
+    enviadoDoBotao?.tipo === 'url' &&
+    (!enviadoDoBotao.texto ||
+      enviadoDoBotao.texto === (b.text || '').trim().slice(0, TEXTO_MAX));
+
   const botao = (b, enviadoDoBotao) => ({
     tipo: b.type,
     texto: b.text || (TEXTO_DO_APP[b.type] ? t(TEXTO_DO_APP[b.type]) : ''),
     icone: ICONE[b.type] || PADRAO,
     // O tipo também confere: modelo editado depois do envio não leva o link de outro botão.
-    endereco:
-      b.type === 'URL' && enviadoDoBotao?.tipo === 'url'
-        ? enderecoDoBotao(enviadoDoBotao.url)
-        : '',
+    endereco: mesmoBotao(b, enviadoDoBotao)
+      ? enderecoDoBotao(enviadoDoBotao.url)
+      : '',
   });
 
   const botoes = computed(() =>

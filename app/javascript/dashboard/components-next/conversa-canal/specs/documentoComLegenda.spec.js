@@ -110,6 +110,16 @@ describe('documento com legenda (#1702)', () => {
     expect(cartao.find('svg').exists()).toBe(false);
   });
 
+  it('foto grande mandada como documento fica com o ícone (não baixa o original)', () => {
+    const cartao = montar(
+      defineComponent({ setup: () => () => h(DocumentoDoWhatsapp) }),
+      { anexos: [{ ...FOTO, fileSize: 30 * 1024 * 1024 }] }
+    );
+
+    expect(cartao.find('[data-miniatura-do-documento]').exists()).toBe(false);
+    expect(cartao.find('svg').exists()).toBe(true);
+  });
+
   it('miniatura que não carrega volta ao ícone do tipo', async () => {
     const cartao = montar(
       defineComponent({ setup: () => () => h(DocumentoDoWhatsapp) }),

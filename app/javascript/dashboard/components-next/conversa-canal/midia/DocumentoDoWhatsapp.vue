@@ -30,13 +30,19 @@ const resumo = computed(() =>
 );
 const ehPdf = computed(() => extensao.value === 'PDF');
 // Foto mandada como documento: o app mostra a miniatura dela no lugar do ícone. O
-// servidor só faz miniatura de anexo de imagem; o documento usa o próprio arquivo.
+// servidor só faz miniatura de anexo de imagem; o documento usa o próprio arquivo, só
+// até 2 MB (acima disso, baixar o original para um quadrado de 78 px pesa demais).
 // Se a imagem não carregar (link vencido), volta o ícone do tipo.
 const IMAGENS = ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'];
+const ORIGINAL_MAX = 2 * 1024 * 1024;
 const miniaturaFalhou = ref(false);
+const fonteDaMiniatura = computed(() => {
+  if (anexo.value.thumbUrl) return anexo.value.thumbUrl;
+  return anexo.value.fileSize <= ORIGINAL_MAX ? anexo.value.dataUrl : null;
+});
 const miniatura = computed(() =>
   IMAGENS.includes(extensao.value) && !miniaturaFalhou.value
-    ? anexo.value.thumbUrl || anexo.value.dataUrl
+    ? fonteDaMiniatura.value
     : null
 );
 const enviada = computed(() => orientation?.value === 'right');
