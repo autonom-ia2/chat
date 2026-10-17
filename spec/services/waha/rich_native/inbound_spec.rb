@@ -284,11 +284,23 @@ describe Waha::RichNative::Inbound do
       expect(late).to be_activity
       original.reload
       expect(original.content).to eq('Chego às 12')
-      expect(original.content_attributes['edited_at']).to eq((at + 60).iso8601)
-      expect(original.content_attributes['edit_history'].pluck('content')).to eq(['Chego às 10'])
+      expect(original.content_attributes['edit_history'].pluck('content', 'source_at')).to eq([['Chego às 10', (at + 60).iso8601]])
 
       edit.call('Chego às 13', at + 120)
       expect(original.reload.content).to eq('Chego às 13')
+    end
+
+    # Revisão da rodada de correção, risco 8: a ordem compara só hora do WhatsApp; o edited_at do servidor (de uma edição
+    # pelo painel, ou o relógio adiantado do servidor) não descarta uma edição legítima do cliente.
+    it 'never compares the WhatsApp time with the server clock of a previous edit' do
+      flag_on!
+      original.update_column(:content_attributes, { 'edited_at' => 1.hour.from_now.iso8601, # rubocop:disable Rails/SkipsModelValidations
+                                                    'edit_history' => [{ 'content' => 'x', 'edited_at' => 1.hour.from_now.iso8601 }] })
+
+      from_connector({ in_reply_to: original.id, waha_edit: { text: 'Chego às 11', edited_wa_id: 'W2', from_me: false,
+                                                              timestamp: Time.current.to_i } }, content: 'Chego às 11')
+
+      expect(original.reload.content).to eq('Chego às 11')
     end
 
     it 'records an edit from the company phone as User without sender_id' do
