@@ -33,12 +33,21 @@ module Waha::RichNative::TurnKinds
   # O motivo para calar o turno inteiro, a regra do settle (Waha::RichNative::AgentTurnGuard) e do rastro da bolha
   # (Waha::RichNative::UnsupportedTurnJob): o voto/resposta que não vale mais sai do turno; sem nada que sobre, a
   # escolha retirada; na caixa WAHA com a flag (`waha`), o que sobra sem conteúdo (silent_reason). nil: responder.
-  def turn_silence(turn_messages, waha: true)
-    remaining = turn_messages.select { |message| choice_current?(message) }
+  # `choices`: aplicar o filtro do voto retirado (só com a flag). Fora da caixa WAHA com a flag, só a regra da apagada
+  # (`deleted_by_contact_at`, que só existe quando algo a gravou: #1702b na Cloud, o conector): turno só de apagadas.
+  def turn_silence(turn_messages, waha: true, choices: true)
+    remaining = choices ? turn_messages.select { |message| choice_current?(message) } : turn_messages
     return Waha::RichNative::AgentTurnGuard::STALE_CHOICE_REASON if turn_messages.any? && remaining.empty?
-    return unless waha
 
-    silent_reason(remaining)
+    waha ? silent_reason(remaining) : deleted_reason(remaining)
+  end
+
+  def deleted_reason(turn_messages)
+    Waha::RichNative::AgentTurnGuard::DELETED_REASON if turn_messages.any? && turn_messages.all? { |message| deleted?(message) }
+  end
+
+  def deleted?(message)
+    message.content_attributes.to_h[DELETED_KEY].present?
   end
 
   # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda é a guardada? Mensagem que não é

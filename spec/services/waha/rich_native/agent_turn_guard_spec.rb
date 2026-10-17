@@ -335,20 +335,23 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(Redis::Alfred.get(chave)).to be_present
     end
 
-    it 'is answered as in main without the flag' do
+    # Item 9 (alinhado com o Max e o Agentes IA): a regra da apagada vale em qualquer caixa em que a chave exista; ela
+    # só existe quando algo a gravou (o conector, ou o #1702b na Cloud).
+    it 'is not answered without the flag either, when the key is there' do
       account.disable_features!(Waha::RichNative::FLAG)
-      gatilho(apagar!(cliente_escreve('Quero cancelar')))
+      apagada = apagar!(cliente_escreve('Quero cancelar'))
+      gatilho(apagada)
       rodar_turno!
-      expect(respostas.count).to eq(1)
-      expect(consultas.last[:history].pluck(:content)).to include('Quero cancelar')
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada.pluck(:message_id)).to eq([apagada.id])
     end
 
-    it 'is answered as in main in an inbox that is not the WAHA one' do
+    it 'is not answered in an inbox that is not the WAHA one either' do
       inbox.channel.update!(additional_attributes: { 'provider' => 'outro' })
       gatilho(apagar!(cliente_escreve('Quero cancelar')))
       rodar_turno!
-      expect(respostas.count).to eq(1)
-      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada).to be_empty
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada.count).to eq(1)
     end
 
     it 'leaves the history the AI reads' do
@@ -505,6 +508,54 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
         completo = Waha::RichNative::AiTurn.full_text(account, voto.reload.content_attributes['c2y_ai_turn'])
         expect(consultas.sole[:history].last[:content]).to eq(completo)
       end
+    end
+  end
+
+  # Item 9: na Cloud oficial (e no híbrido em coexistência), o #1702b grava `deleted_by_contact_at` mantendo o texto. A
+  # mensagem é marcada à mão aqui, como ele faria.
+  describe 'the message deleted by the customer on the official Cloud inbox' do
+    let(:inbox) do
+      create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                validate_provider_config: false).inbox
+    end
+
+    def apagar!(message)
+      message.update_column(:content_attributes, { 'deleted_by_contact_at' => Time.current.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+      message
+    end
+
+    it 'keeps the AI quiet on a turn with only the deleted message (silence 16)' do
+      apagada = apagar!(cliente_escreve('Quero cancelar'))
+      gatilho(apagada)
+
+      rodar_turno!
+
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_apagada.pluck(:message_id)).to eq([apagada.id])
+    end
+
+    it 'answers the text of a turn with a text and a deleted message, without the deleted one' do
+      cliente_escreve('Qual o horário de amanhã?')
+      apagada = apagar!(cliente_escreve('Quero cancelar'))
+      gatilho(apagada)
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include('Qual o horário de amanhã?').and(not_include('Quero cancelar'))
+      expect(consultas.sole[:history].pluck(:content)).not_to include('Quero cancelar')
+    end
+
+    it 'is identical to main without the key' do
+      account.disable_features!(Waha::RichNative::FLAG)
+      gatilho(cliente_escreve('Quero cancelar'))
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:history].pluck(:content)).to include('Quero cancelar')
+      expect(Autonomia::Agents::AgentEvent.where(event_type: %i[skipped_mensagem_apagada skipped_mensagem_sem_suporte skipped_escolha_retirada]))
+        .to be_empty
     end
   end
 end

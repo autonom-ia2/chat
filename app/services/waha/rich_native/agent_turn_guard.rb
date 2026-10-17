@@ -1,6 +1,8 @@
 # Prepend em Autonomia::Agents::Operate::Responder (chat#1709, aprovado pelo Rodrigo em 16/10/2026): o que o agente de
 # IA não responde nem lê como atual, do que o recebimento grava. Só na caixa WAHA comum com a flag
-# `whatsapp_rich_native`; noutra caixa, ou sem a flag, tudo como na main (exceto o voto, abaixo).
+# `whatsapp_rich_native`; noutra caixa, ou sem a flag, tudo como na main (exceto o voto, abaixo, e a apagada pelo
+# cliente, que vale em qualquer caixa em que a mensagem tenha `deleted_by_contact_at`: sai do histórico e o turno só de
+# apagadas cala com `skipped_mensagem_apagada`).
 # - O turno (as mensagens do cliente depois da última resposta) é calado só quando TODAS são o que não há como
 #   responder: a bolha "abra no celular" (`is_unsupported`), o aviso de visualização única (`view_once_unavailable`) ou
 #   apagada pelo cliente (`deleted_by_contact_at`). Com uma mensagem real no meio, a IA responde, e o histórico sai
@@ -40,8 +42,11 @@ module Waha::RichNative::AgentTurnGuard
     @recent_messages = raw.reject { |message| c2y_out_of_history?(message) }
   end
 
-  # Com a flag: a escolha que não vale mais (qualquer caixa) e, na caixa WAHA, a apagada e o aviso de visualização única.
+  # A apagada pelo cliente (`deleted_by_contact_at`), em QUALQUER caixa: a chave só existe quando algo a gravou (o
+  # #1702b na Cloud e no híbrido, o conector na WAHA), e quem não ligou nada fica como na main. Com a flag: a escolha
+  # que não vale mais (qualquer caixa) e, na caixa WAHA, o aviso de visualização única.
   def c2y_out_of_history?(message)
+    return true if Waha::RichNative::TurnKinds.deleted?(message)
     return false unless c2y_flag?
 
     c2y_stale_choice?(message) || (c2y_waha_with_flag? && Waha::RichNative::TurnKinds.out_of_history?(message))
@@ -84,10 +89,9 @@ module Waha::RichNative::AgentTurnGuard
     @c2y_stale.fetch(message.id) { @c2y_stale[message.id] = !Waha::RichNative::TurnKinds.choice_current?(message) }
   end
 
+  # Com a flag, as regras do guard; sem ela (ou fora da caixa WAHA), só a da apagada, que vale em qualquer caixa.
   def c2y_turn_skip_reason
-    return unless c2y_flag?
-
-    Waha::RichNative::TurnKinds.turn_silence(c2y_turn_incoming, waha: c2y_waha_with_flag?)
+    Waha::RichNative::TurnKinds.turn_silence(c2y_turn_incoming, waha: c2y_waha_with_flag?, choices: c2y_flag?)
   rescue StandardError => e
     c2y_report(e, 'c2y_turn_guard_failed')
     nil
