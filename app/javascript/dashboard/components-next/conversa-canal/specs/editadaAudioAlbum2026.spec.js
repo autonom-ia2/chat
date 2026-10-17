@@ -216,6 +216,8 @@ describe('álbum (#1702)', () => {
           id: ref(mensagens[0].id),
           createdAt: ref(mensagens[0].createdAt),
           status: ref(mensagens[0].status),
+          // Como no Message.vue: o contexto sempre traz o tipo (0 = recebida).
+          messageType: ref(mensagens[0].messageType ?? 0),
           variant: ref('user'),
           contentAttributes: ref(mensagens[0].contentAttributes),
         });
