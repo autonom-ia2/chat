@@ -50,11 +50,14 @@ module Waha::RichNative::TurnKinds
     message.content_attributes.to_h[DELETED_KEY].present?
   end
 
-  # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda é a guardada? Mensagem que não é
-  # escolha: sempre.
+  # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda vale? Mensagem que não é escolha:
+  # sempre. CONTRATO PÚBLICO (a memória da IA, #1601): nome, assinatura e semântica não mudam.
+  # Vale só a MAIS NOVA escolha daquele eleitor naquele alvo, e só se o valor ainda bate com o guardado: num Tarde →
+  # Manhã → Tarde, o primeiro "Tarde" tem o mesmo valor do atual, mas foi superado.
   def choice_current?(message)
     choice = message.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY]
     return true unless choice.is_a?(Hash)
+    return false if newer_choice?(message, choice)
 
     target = Message.find_by(id: choice['target_id'], conversation_id: message.conversation_id)
     return false if target.nil?
@@ -64,6 +67,34 @@ module Waha::RichNative::TurnKinds
     when 'poll_vote' then Waha::RichNative::PollVotes.current?(target, **voter, titles: choice['choice'])
     when 'event_response' then Waha::RichNative::EventResponses.current?(target, **voter, response: choice['choice'])
     else true
+    end
+  end
+
+  CHOICE_COLUMN = 'messages.content_attributes'.freeze
+
+  # Há uma escolha mais nova do mesmo eleitor no mesmo alvo (nos dois formatos da coluna, Waha::RichNative::JsonColumn).
+  def newer_choice?(message, choice)
+    choices_of(message).where('messages.id > ?', message.id).exists?(["#{target_sql} = ?", choice['target_id'].to_s])
+  end
+
+  # As escolhas (turnos de voto/resposta) do eleitor da mensagem na conversa.
+  def choices_of(message)
+    Message.where(conversation_id: message.conversation_id, message_type: :incoming, sender_type: message.sender_type,
+                  sender_id: message.sender_id)
+  end
+
+  def target_sql
+    Waha::RichNative::JsonColumn.path_text(CHOICE_COLUMN, :json, [Waha::RichNative::AiTurn::CHOICE_KEY, 'target_id'])
+  end
+
+  # { [sender_type, sender_id, target_id] => id da escolha mais nova } da conversa, numa consulta só (o histórico do
+  # agente pergunta por todas as mensagens: Waha::RichNative::AgentTurnGuard).
+  def latest_choice_ids(conversation)
+    rows = Message.where(conversation_id: conversation.id, message_type: :incoming)
+                  .where("#{target_sql} IS NOT NULL").pluck(:id, :sender_type, :sender_id, Arel.sql(target_sql))
+    rows.each_with_object({}) do |(id, sender_type, sender_id, target_id), latest|
+      key = [sender_type, sender_id, target_id]
+      latest[key] = id if latest[key].nil? || id > latest[key]
     end
   end
 end

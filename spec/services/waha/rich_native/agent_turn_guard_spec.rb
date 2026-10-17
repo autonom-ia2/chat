@@ -627,4 +627,26 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       Current.user = nil
     end
   end
+
+  # Testador da IA, B1: votos alternados com o mesmo valor do atual não ficam todos no histórico.
+  it 'keeps one vote in the history after 26 alternating votes among 25 real messages' do
+    poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+    inicio = 3.hours.ago
+    (1..25).each do |numero|
+      cliente_escreve("real #{numero}").update_column(:created_at, inicio + (numero * 2).minutes) # rubocop:disable Rails/SkipsModelValidations
+    end
+    titulos = (1..26).map { |numero| numero.even? ? 'Tarde' : 'Manhã' }
+    titulos.each_with_index do |titulo, indice|
+      voto = turno_do_voto("Votou: #{titulo}")
+      voto.update_columns(created_at: inicio + ((indice * 2) + 1).minutes, # rubocop:disable Rails/SkipsModelValidations
+                          content_attributes: voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, [titulo])))
+    end
+    poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Tarde'] }] }) # rubocop:disable Rails/SkipsModelValidations
+    gatilho(cliente_escreve('E agora?'))
+
+    rodar_turno!
+
+    votos = consultas.sole[:history].count { |item| item[:content].to_s.end_with?(': Tarde', ': Manhã') }
+    expect(votos).to eq(1)
+  end
 end

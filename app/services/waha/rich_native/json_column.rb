@@ -18,6 +18,11 @@ module Waha::RichNative::JsonColumn
     "(#{object(column, type)} ->> #{ActiveRecord::Base.connection.quote(key)})"
   end
 
+  # O texto de um caminho dentro do objeto (ex.: %w[c2y_ai_turn target_id]), ou NULL.
+  def path_text(column, type, path)
+    "(#{object(column, type)} #>> #{ActiveRecord::Base.connection.quote("{#{path.join(',')}}")})"
+  end
+
   # A chave PRESENTE no mesmo sentido do `present?` do Ruby (Waha::RichNative::TurnKinds.deleted?): não nula, nem texto
   # em branco, nem false, nem lista ou objeto vazios.
   def present(column, type, key)
