@@ -2,7 +2,9 @@
 # conector), pelo celular da empresa ou pelo atendente (painel). O texto novo substitui o `content`; o anterior fica em
 #   content_attributes.edit_history = [{ "content" => "texto anterior", "edited_at" => ISO 8601,
 #                                        "sender_type" => "Contact" | "User", "sender_id" => 12 | nil }]
-# do mais antigo para o mais novo, e `edited_at` marca a última edição. Autor: Contact + contact_id (o cliente);
+# do mais antigo para o mais novo, e `edited_at` marca a última edição, na hora do SERVIDOR (o que a tela mostra). A
+# edição que vem do WhatsApp com hora (conector c2y-rich-5) guarda essa hora em `source_at`, na entrada do histórico que
+# ela criou; a ordem das edições (out_of_order?) compara só esses `source_at`, nunca o `edited_at`. Autor: Contact + contact_id (o cliente);
 # User + user.id (atendente pelo painel); User + nil (celular da empresa). O histórico guarda as HISTORY_LIMIT edições
 # mais recentes; o texto tem o teto do WhatsApp (MAX_LENGTH, o mesmo do painel em messageActions.js). Grava sob trava e
 # sem as validações do modelo (a de rajada recusaria numa conversa movimentada); o `message_updated` leva a mudança à
