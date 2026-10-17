@@ -1,6 +1,6 @@
 # Funções personalizadas: modelo de permissões
 
-**Data:** 17/10/2026 (segunda versão do dia) · **Base:** `origin/main` em `21d16067fc` · **Estado:** proposta para decisão. A regra das duas listas ("só o dono" e "delegável com proteção") já foi aprovada pelo Rodrigo em 17/10 e está no PR #1783. Nada foi mudado no código.
+**Data:** 17/10/2026 · **Versão:** 4, revisada pelos 8 chats donos de módulo · **Base:** `origin/main` em `21d16067fc` · **Estado:** proposta para decisão. A regra das duas listas ("só o dono" e "delegável com proteção") já foi aprovada pelo Rodrigo em 17/10 e está no PR #1783. Nada foi mudado no código.
 
 Fontes: inventário de rotas e policies (OSS e `enterprise/`), Issues #452, #722, #879, #888, #894, #1136, #1140, #1148, #1157, #1158, #1585, #1652, o diagnóstico local `docs/funcoes-personalizadas/DIAGNOSTICO-2026-10-17.md` e as decisões do Rodrigo de 17/10 (exercício da empresa estruturada, que depois ele esclareceu ser só um exemplo: o modelo vale para empresa de qualquer porte).
 
@@ -8,7 +8,18 @@ As brechas aparecem aqui só como fato. Por decisão do Rodrigo, elas não são 
 
 **Convenção:** **[NOVO]** = não existe no código, é proposta. **[HIPÓTESE]** = deduzido, ainda não conferido. O resto foi visto no código.
 
-## O que mudou nesta versão
+## O que mudou na versão 4 (revisão dos chats donos de módulo)
+
+Os 8 chats donos de módulo leram a versão 3 em 17/10. Nenhum contrariou o modelo. As respostas trouxeram correções, que entraram assim:
+
+- **Inventário (seção 2):** entraram as rotas de produto e carrossel pela conversa (#1716, #1749), o convite pelo topo da conversa e a criação automática do modelo de aviso. "Lembrar reunião" e "novo link" passaram do CRM para o Agendamento. Os calendários de SLA foram corrigidos (desde o #1618, tela e API pedem administrador ou `crm_admin`). Ficaram registrados o vazamento das conversas por resultado do agente de IA, a caixa de campanha aceita sem ser membro e o token do criador da caixa WAHA. O botão v1 "Criar os modelos na Meta" saiu: será retirado por decisão do Rodrigo.
+- **Cobertura (seção 3):** recontada pelo mesmo script. Passou de 620 para 622 ações.
+- **Catálogo (seção 5):** área Agendamento explícita; recorte exato do `campaign_send`; `sales_value_view` só para valor somado em R$; regra G nos 4 caminhos; nova seção 5.16 com as regras de compatibilidade.
+- **Tela e plano (seção 6):** avisos novos na tela; etapa 3 em lotes, um por vez.
+- **Dúvidas (seção 7):** Z1 resolvida pela proposta do Multifunnel. J com "de acordo" do Multifunnel. Dez dúvidas novas (7.4).
+- **Seção 8:** virou o registro da etapa 2.
+
+## O que mudou na versão 3
 
 0. **O modelo vale para qualquer porte; a matriz de C-levels é um exemplo.** Nenhum nome de cargo fica preso a um conjunto de permissões. Numa empresa pequena, a pessoa de marketing também vende, e o administrador marca Marketing e CRM no mesmo cargo. A seção 4 agora traz três exemplos: pequena, média e estruturada.
 1. **Cargo tem três eixos:** área (o que abre), nível (Não vê / Só olha / Pode mexer, mais ações delicadas à parte) e alcance (de quem são os dados). Caixa e funil continuam como camadas que só restringem.
@@ -44,7 +55,7 @@ Hoje nenhum dos três fecha. Para a pessoa de marketing cuidar dos anúncios, el
 
 | Eixo | Pergunta | Valores |
 |---|---|---|
-| **Área** | o que a pessoa abre | Conversas, Contatos, CRM, Marketing, IA e automações, Canais e integrações, Relatórios, Financeiro, Pessoas |
+| **Área** | o que a pessoa abre | Conversas, Contatos, CRM, Agendamento, Marketing, IA e automações, Canais e integrações, Relatórios, Financeiro, Pessoas |
 | **Nível** | o que ela faz na área | Não vê · Só olha · Pode mexer. Ações delicadas (exportar, excluir, disparar, IA com custo) ficam à parte, desligadas por padrão |
 | **Alcance** | de quem são os dados que ela vê | Sempre: Só os meus · Empresa toda. Só com hierarquia configurada: Meu time · Times abaixo de mim · Toda a minha área |
 
@@ -67,7 +78,7 @@ Decisões do Multifunnel que continuam valendo:
 - **Time não fura funil.** Alcance "Meu time" continua cortado pela caixa e pelo funil.
 - **Atribuído ou participante sempre vê** a conversa dele.
 - **Card aberto manda:** a conversa presa a um card segue a regra do card.
-- **Integração sem acesso por funil:** token de integração não passa pelo filtro de funil (`conversation_scope.rb:122-125`).
+- **Integração sem acesso por funil nem alcance do cargo:** token de integração (n8n, MCP) não passa pelo filtro de funil (`conversation_scope.rb:122-125`) e também fica fora do alcance do cargo. O limite dele é o próprio token (Multifunnel, 17/10).
 
 ### 1.6 Por que importa
 
@@ -126,7 +137,7 @@ O nosso modelo segue isso e soma a hierarquia de times, opcional, que nesses pro
 
 Cada linha é uma ação que o administrador consegue fazer. A coluna "quem passa hoje" diz quem mais consegue. Ela é fato; só o que vem depois da seta (→) é proposta.
 
-O inventário foi levantado em `f2488a9e9a`. Até `21d16067fc`, os arquivos de permissão só ganharam as rotas de #1702 e #1716, que não estão aqui (seção 5.14).
+O inventário foi levantado em `f2488a9e9a`. Até `21d16067fc`, os arquivos de permissão só ganharam as rotas de #1702 e #1716. As do #1716 entraram na versão 4 (seção 2.6). As do #1702 continuam fora (seção 5.14). A versão 4 também incorporou o que os chats donos de módulo apontaram (Agendamento, Campanhas, Agentes de IA, Modelos, WhatsApp Híbrido).
 
 **Como ler "quem passa hoje":**
 - **chave:** só quem tem a chave do cargo (o administrador sempre passa; o agente sem cargo às vezes passa, está escrito na coluna "chave hoje");
@@ -301,8 +312,8 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | criar política de SLA | criar | POST /sla_policies | chave | sla_manage | ep/sla_policy_policy.rb:14-16 |
 | editar política de SLA | editar | PATCH /sla_policies/:id | chave | sla_manage | ep/sla_policy_policy.rb:6-8 |
 | excluir política de SLA | excluir | DELETE /sla_policies/:id | chave | sla_manage | ep/sla_policy_policy.rb:18-20 |
-| ver calendários de atendimento (a tela aceita sla_manage, a API não) | ver | GET /crm/service_schedules | chave | crm_admin | ep/crm/service_schedule_policy.rb:6,24-29 |
-| criar, editar, excluir calendário de atendimento | configurar | POST/PATCH/DELETE /crm/service_schedules | chave | crm_admin | ep/crm/service_schedule_policy.rb:10,14,18 |
+| ver calendários de atendimento (desde o #1618, tela e API pedem administrador ou crm_admin; sla_manage sozinho não passa) | ver | GET /crm/service_schedules | chave | crm_admin | ep/enterprise/crm/service_schedule_policy.rb:6-8,24-30; app/javascript/dashboard/routes/dashboard/crm/pages/CrmSlaPage.vue:29-35 |
+| criar, editar, excluir calendário de atendimento | configurar | POST/PATCH/DELETE /crm/service_schedules | chave | crm_admin | ep/enterprise/crm/service_schedule_policy.rb:10-20 |
 
 ### 2.5 Caixas de entrada (Conexões)
 
@@ -333,7 +344,7 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ver modelo da pesquisa de satisfação | ver | GET /inboxes/:id/csat_template | membro da caixa | inbox_view | c/inbox_csat_templates_controller.rb:49 |
 | criar modelo da pesquisa na Meta | criar | POST /inboxes/:id/csat_template | membro da caixa | — | p/inbox_policy.rb:35-38 |
 | analisar texto da pesquisa com IA | executar | POST /inboxes/:id/csat_template/analyze | membro da caixa | — | c/inbox_csat_templates_controller.rb:67-71 |
-| criar caixa WhatsApp por QR (WAHA) | criar | POST /waha_inboxes | chave | inbox_manage | c/waha_inboxes_controller.rb:15 |
+| criar caixa WhatsApp por QR (WAHA). A caixa usa o token de quem a criou; com o #1709, só aceita eventos desse dono. Se essa pessoa for removida, o conector para | criar | POST /waha_inboxes | chave | inbox_manage | c/waha_inboxes_controller.rb:15; app/services/waha/inbox_provisioner.rb:82 |
 | ver status, QR e reconectar WAHA | executar | GET/POST /waha_inboxes/:id/... | chave | inbox_manage | c/waha_inboxes_controller.rb:67-69 |
 | ver conexão híbrida | ver | GET /whatsapp_hybrid_connections/:id | chave | inbox_manage | c/whatsapp_hybrid_connections_controller.rb:71-73 |
 | conectar, código, reconectar, pausar, retomar, ajustar, desligar o híbrido | configurar | POST/PATCH/DELETE /whatsapp_hybrid_connections/:id/... | chave (não é credencial: só pareia o número) | inbox_manage | c/whatsapp_hybrid_connections_controller.rb:18-68 |
@@ -376,6 +387,9 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ver catálogo de produtos | ver | GET /inboxes/:id/whatsapp_catalog | chave | whatsapp_templates_view | c/inboxes/whatsapp_catalogs_controller.rb:6-8,35-37 |
 | buscar produtos do catálogo | ver | GET .../whatsapp_catalog/products | chave | whatsapp_templates_view | c/inboxes/whatsapp_catalogs_controller.rb:19-22 |
 | abrir a tela antiga de modelos em Campanhas | ver | tela campaigns_templates_index | só admin | — | app/javascript/dashboard/routes/dashboard/campaigns/campaigns.routes.js:82 |
+| mandar modelo de produto ou carrossel pela conversa: catálogo, produtos, fotos aprovadas do modelo, foto do computador (#1716, no ar pelo #1749). Decisão do Rodrigo em 16/10: "liberar para quem atende a caixa". Sem chave, e não vira `whatsapp_templates_view` | ver | GET/POST /inboxes/:id/whatsapp_conversation_assets/catalog, /products, /template, /media | membro da caixa | — | p/whatsapp/templates/conversation_assets_policy.rb:5-26; routes.rb:978-983 |
+
+O reenvio do modelo (#1768) não tem rota própria: herda o responder da conversa (membro da caixa).
 
 ### 2.7 Campanhas
 
@@ -405,7 +419,7 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ver linhas com problema e pessoas do público | ver | GET /campaign_imports/:id/problem_rows, /contacts | chave | campaign_view | p/campaign_import_policy.rb:72,77 |
 | criar campanha multicanal pela jornada | disparar | POST /campaign_journey/campaigns | chave | campaign_manage | c/campaign_journey/campaigns_controller.rb:11,83 |
 | ver prévia de quem recebe | ver | POST /campaign_journey/recipient_previews | chave | campaign_manage | c/campaign_journey/recipient_previews_controller.rb:7,24 |
-| ver conversa aberta e pedir texto à IA | executar | GET/POST /campaign_journey/conversa_aberta | chave | campaign_manage | c/campaign_journey/conversa_aberta_controller.rb:11,52 |
+| ver conversa aberta e pedir texto à IA (o POST autoriza criar campanha, e o envio manda o modelo) | executar | GET/POST /campaign_journey/conversa_aberta | chave | campaign_manage | c/campaign_journey/conversa_aberta_controller.rb:11,52 |
 | ver painel geral de campanhas | ver | GET /campaign_journey/overview | chave | campaign_view | c/campaign_journey/overviews_controller.rb:10 |
 | ver campanhas paradas | ver | GET /campaign_journey/campaign_pauses | chave | campaign_view | c/campaign_journey/campaign_pauses_controller.rb:19,51 |
 | retomar campanha parada | disparar | POST .../campaign_pauses/:id/resume | chave | campaign_manage | c/campaign_journey/campaign_pauses_controller.rb:20,55 |
@@ -440,6 +454,8 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ver campanhas de anúncio para filtrar (métricas pedem crm_view_reports) | ver | GET /ctwa_campaigns | qualquer membro | crm_view_reports para métricas | c/ctwa_campaigns_controller.rb:108-109 |
 | ver links rastreados (receita só admin) | ver | GET /ctwa_tracked_links | chave | campaign_view | c/ctwa_tracked_links_controller.rb:10,111-112 |
 | criar, editar, excluir link rastreado | editar | POST/PATCH/DELETE /ctwa_tracked_links | chave | campaign_manage | c/ctwa_tracked_links_controller.rb:19,27,35 |
+
+**Caixa da campanha aceita sem ser membro (fato, conferido pelo chat de Campanhas).** Ao montar a campanha, a tela lista só as caixas em que a pessoa é membro (`p/inbox_policy.rb:13-15`). O servidor aceita qualquer caixa da conta nos 4 pontos de criação: `app/services/campaign_journey/audience_campaign_creator.rb:71`, `app/services/campaign_journey/whatsapp_api_campaign_creator.rb:111`, `app/services/campaign_journey/email_campaign_creator.rb:75` e `c/campaign_journey/conversa_aberta_controller.rb:58`. Dúvida 7.4-5.
 
 ### 2.8 Anúncios Meta
 
@@ -495,7 +511,7 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ligar ou desligar conversa do card | editar | POST .../link_conversation, /unlink_conversation | chave | crm_manage_cards | ep/enterprise/crm/card_policy.rb:37,41 |
 | ligar ou desligar contato do card | editar | POST .../link_contact, /unlink_contact | chave | crm_manage_cards | ep/enterprise/crm/card_policy.rb:45,49 |
 | criar contato a partir do card | criar | POST /crm/cards/:id/contact | chave | crm_manage_cards + criar contato | crm/cards/contacts_controller.rb:13-15 |
-| ação em massa: mover, atribuir, status, excluir | executar | POST /crm/cards/bulk | chave | crm_view (só "ver") | crm/cards/bulk_controller.rb:7; app/services/crm/cards/bulk_action.rb:45-49 |
+| ação em massa: mover, atribuir, status, excluir (o "excluir" em massa arquiva o card, `archive_card!`) | executar | POST /crm/cards/bulk | chave | crm_view (só "ver") | crm/cards/bulk_controller.rb:7; app/services/crm/cards/bulk_action.rb:45-49 |
 | ver sugestão de etapa da IA | ver | GET /crm/cards/:id/current_ai_suggestion | chave | crm_view | ep/enterprise/crm/card_policy.rb:65 |
 | IA avalia o card | executar | POST /crm/cards/:id/evaluate_ai | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:53 |
 | IA resume o card | executar | POST /crm/cards/:id/summarize | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:57 |
@@ -522,8 +538,6 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | marcar reunião | criar | POST /crm/meetings | chave | crm_manage_cards | crm/meetings_controller.rb:39-40 |
 | remarcar, cancelar, resultado, resumo | editar | PATCH/DELETE/POST /crm/meetings/:id... | chave | crm_manage_cards | crm/meetings_controller.rb:64,81,96,135 |
 | sugerir horários e rascunho do convite com IA | executar | POST /crm/meetings/suggest_times, /draft_invite | chave | crm_manage_cards | crm/meetings_controller.rb:116,127 |
-| lembrar o cliente da reunião (manda mensagem) | executar | POST /crm/meetings/:id/remind | outro (crm_view + funil) | — | crm/meeting_actions_controller.rb:42-51 |
-| mandar link para remarcar | executar | POST /crm/meetings/:id/rebook_link | outro (quem pode atender + funil) | — | crm/meeting_actions_controller.rb:31,42-51 |
 | ver os 8 relatórios do CRM | ver | GET /crm/reports/* | chave | crm_view_reports (agente sem cargo passa) | ep/enterprise/crm/report_policy.rb:4 |
 | ver quanto a IA do CRM gastou | ver | GET /crm/ai_usage | chave | crm_view_reports (agente sem cargo passa) | crm/ai_usage_controller.rb:4-5,26 |
 | baixar custo de IA | exportar | GET /crm/ai_usage/export | chave | crm_view_reports | crm/ai_usage_controller.rb:12,26 |
@@ -536,7 +550,7 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | ver quem vê o quê nas caixas e simular quem recebe | ver | GET /crm/caixas...; POST .../quem_recebe | chave | crm_admin | crm/caixas_controller.rb:5-6,44; ep/enterprise/crm/inbox_agent_access_policy.rb:5 |
 | salvar configuração da caixa (pode dar a si mesmo "Todos os funis") | configurar | PUT /crm/caixas/:id | chave | crm_admin (+ autonomia_manage para IA) | crm/caixas_controller.rb:7,21,48-55,69; app/services/crm/caixas/gravador.rb:178-200 |
 | ver em quais caixas eu tenho acesso restrito | ver | GET /crm/meu_acesso | qualquer membro | — | crm/meu_acesso_controller.rb:4-6 |
-| ver catálogo de chaves da memória | ver | GET /crm/memoria/chaves | só admin | — | crm/memoria_chaves_controller.rb:6,26-27 |
+| ver catálogo de chaves da memória (#1601) | ver | GET /crm/memoria/chaves | só admin | — | crm/memoria_chaves_controller.rb:6,26-27 |
 | editar chave do catálogo da memória | configurar | PATCH /crm/memoria/chaves/:id | só admin | — | crm/memoria_chaves_controller.rb:6,26-27 |
 | ver fatos que a IA guardou do cliente | ver | GET /crm/memoria/cards/:id/fatos | chave | crm_view | crm/memoria_fatos_controller.rb:14 |
 | anotar, invalidar, aceitar, destravar fato | editar | POST /crm/memoria/cards/:id/fatos... | chave | crm_manage_cards + funil | crm/memoria_fatos_controller.rb:21,33,39,47 |
@@ -558,19 +572,24 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | mudar quem atende na página | configurar | PUT /crm/booking_pages/:id/people | chave | agendamento_manage | p/crm/booking_page_policy.rb:19-21 |
 | passar reuniões de uma pessoa a outra | executar | GET reassign_preview; POST reassign | chave | agendamento_manage | p/crm/booking_page_policy.rb:19-21 |
 | IA sugere modelo e texto de aviso; ver estado | executar | POST/GET .../notice_* | chave | agendamento_manage | p/crm/booking_page_policy.rb:19-21 |
-| criar modelos de aviso na Meta | configurar | POST .../notice_templates/create | só admin (deixa de ser sensível: é criar modelo, como em `whatsapp_templates_manage`) | — | p/crm/booking_page_policy.rb:24-27 |
+| criar sozinho o modelo de aviso na Meta ao publicar a página ou trocar a caixa de avisos (só com a autorização do dono ligada) | executar | efeito de POST/PATCH /crm/booking_pages... | chave | agendamento_manage (+ autorização ativa) | app/models/concerns/crm/booking_notice_template_ensure.rb:18-28 |
 | salvar identidade visual na conta | configurar | POST .../save_identity | só admin → protegida (`account_settings_manage`) | — | p/crm/booking_page_policy.rb:29-33 |
 | conferir se o link curto está livre | ver | GET /crm/booking_pages/short_name | chave | agendamento_manage | crm/booking_page_short_names_controller.rb:13-14 |
 | ver páginas para marcar e horários livres | ver | GET /crm/booking_pages/bookable, /:id/slots | outro (quem pode atender) | — | p/crm/booking_page_meeting_policy.rb:7-23; host_eligibility.rb:12,31-34 |
 | marcar reunião pelo painel | criar | POST /crm/booking_pages/:id/meetings | outro (quem pode atender + card ou contato) | — | crm/booking_page_meetings_controller.rb:65-75 |
 | ajustar os próprios horários | editar | GET/PUT /crm/my_booking_hours | outro (quem pode atender) | — | crm/my_booking_hours_controller.rb:9,33-34 |
 | ver e gerar link por cliente (lista da equipe pede agendamento_view) | criar | GET/POST /crm/booking_invites | outro (quem pode atender) | agendamento_view amplia | p/crm/booking_invite_policy.rb:8-14,34-39 |
+| gerar link pelo topo da conversa | criar | POST /crm/booking_invites com conversation_id | outro (quem pode atender + vê a conversa) | — | crm/booking_invites_controller.rb:27-35,101-104 |
+| lembrar o cliente da reunião (manda mensagem) | executar | POST /crm/meetings/:id/remind | outro (crm_view + funil) | — | crm/meeting_actions_controller.rb:42-51 |
+| mandar novo link para remarcar | executar | POST /crm/meetings/:id/rebook_link | outro (quem pode atender + funil) | — | crm/meeting_actions_controller.rb:31,42-51 |
 | entregar ou copiar link | executar | POST /crm/booking_invites/:id/deliver, /copied | outro (agendamento_view ou quem criou) | — | p/crm/booking_invite_policy.rb:16-27 |
 | cancelar link | excluir | DELETE /crm/booking_invites/:id | outro (agendamento_manage ou quem criou) | — | p/crm/booking_invite_policy.rb:29-31 |
-| ver números e "abriu e não marcou" | ver | GET /crm/booking_stats... | outro (meus; equipe com agendamento_view) | — | p/crm/booking_stats_policy.rb:8-18 |
+| ver números e "abriu e não marcou" ("Meus números" = links que a pessoa criou e reuniões em que ela é quem atende) | ver | GET /crm/booking_stats... | outro (meus; equipe com agendamento_view) | — | p/crm/booking_stats_policy.rb:8-18; app/services/crm/booking_v2/results.rb:22-24 |
 | reenviar link para quem não marcou | executar | POST .../opened_not_booked/:id/resend | outro (quem pode atender) | — | p/crm/booking_stats_policy.rb:20-22 |
 
-"Quem pode atender" = administrador, agente sem cargo, ou cargo com `crm_view` ou `crm_admin` (`host_eligibility.rb:31-34`).
+"Quem pode atender" = administrador, agente sem cargo, ou cargo com `crm_view` ou `crm_admin` (`host_eligibility.rb:31-34`). Essa elegibilidade não olha funil. Reunião marcada pelo painel grava em `crm_meetings.created_by_id` quem atende; quem marcou fica em `metadata.booked_by_user_id`.
+
+**Saiu da tabela: botão v1 "Criar os modelos na Meta"** (`POST .../notice_templates/create`, `create_notice_templates?` em `p/crm/booking_page_policy.rb:24-27`). Será retirado, junto com a rota, por decisão do Rodrigo em 17/10, no PR do Agendamento (#1612). Ele usava o criador sem a garantia e sem a autorização (`creator.rb:44-50`). Ainda está na main até esse PR mesclar. Não vai para nenhuma chave. A criação de modelo de aviso continua só pelo caminho automático (linha "criar sozinho" acima), travada pela autorização, que hoje é só do administrador.
 
 ### 2.11 Agentes de IA (Autonom.ia)
 
@@ -585,18 +604,18 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | testar no playground (gasta IA) | executar | POST /autonomia/agents/:id/test | chave | autonomia_view | au/agents/playground_controller.rb:11-17,28-31 |
 | rascunho de resposta no teste | executar | POST /autonomia/agents/:id/suggest | chave | autonomia_view | au/agents/playground_controller.rb:20-24 |
 | ver desempenho | ver | GET /autonomia/agents/:id/analytics | chave | autonomia_view | au/agents/analytics_controller.rb:7 |
-| ver conversas por resultado (não confere caixa nem funil) | ver | GET .../analytics/conversations | chave | autonomia_view | au/agents/analytics_controller.rb:15 |
+| ver conversas por resultado. **Vazamento:** só confere a conta; com `autonomia_view`, a pessoa vê até 50 conversas de caixas em que não é membro | ver | GET .../analytics/conversations | chave | autonomia_view | au/agents/analytics_controller.rb:15-33; app/services/autonomia/agents/analytics.rb:61-70 |
 | ver conhecimento | ver | GET /autonomia/agents/:id/sources | chave | autonomia_view | au/agents/sources_controller.rb:5 |
 | pôr conhecimento | criar | POST /autonomia/agents/:id/sources | chave | autonomia_manage | au/agents/sources_controller.rb:9 |
 | apagar conhecimento | excluir | DELETE .../sources/:id | chave | autonomia_manage | au/agents/sources_controller.rb:37 |
 | reler conhecimento | executar | POST .../sources/:id/resync | chave | autonomia_manage | au/agents/sources_controller.rb:46 |
 | ver caixas onde atende | ver | GET /autonomia/agents/:id/channels | chave | autonomia_view | au/agents/channels_controller.rb:11 |
-| ligar agente a qualquer caixa (sem ser membro nem inbox_manage) | configurar | POST /autonomia/agents/:id/channels | chave | autonomia_manage | au/agents/channels_controller.rb:7,18,105 |
+| ligar agente a qualquer caixa (sem ser membro nem inbox_manage; a lista mostra a conta toda) | configurar | POST /autonomia/agents/:id/channels | chave | autonomia_manage | au/agents/channels_controller.rb:7,18,43-44,105-110 |
 | tirar agente da caixa | configurar | DELETE .../channels/:id | chave | autonomia_manage | au/agents/channels_controller.rb:30 |
-| salvar onde e quando atende | configurar | PUT /autonomia/agents/:id/onde_atende | chave | autonomia_manage | au/agents/onde_atende_controller.rb:20-21 |
+| salvar onde e quando atende (também liga em qualquer caixa da conta) | configurar | PUT /autonomia/agents/:id/onde_atende | chave | autonomia_manage | au/agents/onde_atende_controller.rb:20-21,65,73 |
 | ver o ajudante | ver | GET /autonomia/agents/:id/ajuda | chave | autonomia_view | au/agents/ajuda_controller.rb:5,8,24-25 |
 | definir o ajudante | configurar | PUT /autonomia/agents/:id/ajuda | chave | autonomia_manage | au/agents/ajuda_controller.rb:14-20 |
-| ver ferramentas do agente | ver | GET .../tools | super admin | — | au/agents/tools_controller.rb:2,48-49 |
+| ver ferramentas do agente (guardam cabeçalho secreto) | ver | GET .../tools | super admin | — | au/agents/tools_controller.rb:2,48-49,77-83 |
 | criar, editar, apagar ferramenta | configurar | POST/PATCH/DELETE .../tools | super admin | — | au/agents/tools_controller.rb:12-29 |
 | testar ferramenta | executar | POST .../tools/:id/test | super admin | — | au/agents/tools_controller.rb:37 |
 | ver sugestões de FAQ | ver | GET .../faq_suggestions | chave | autonomia_view | p/autonomia/agents/faq_suggestion_policy.rb:4-6 |
@@ -794,7 +813,7 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 | convidar várias pessoas | criar | POST /agents/bulk_create | só admin → protegida (`user_manage`) | — | p/user_policy.rb:18-20 |
 | editar pessoa (papel, cargo; sem o campo do cargo, o cargo é apagado; tornar administrador está na linha de baixo) | editar | PATCH /agents/:id | só admin → protegida (`user_manage`) | — | p/user_policy.rb:10-12; eec/agents_controller.rb:9-12,23 |
 | tornar alguém administrador (campo papel no convite ou na edição) | editar | POST/PATCH /agents (campo `role`) | só admin → só o dono | — | p/user_policy.rb:6-12; app/models/account_user.rb:36 |
-| remover pessoa | excluir | DELETE /agents/:id | só admin → protegida (`user_manage`) | — | p/user_policy.rb:14-16 |
+| remover pessoa (se ela criou uma caixa WAHA, o conector dessa caixa para) | excluir | DELETE /agents/:id | só admin → protegida (`user_manage`) | — | p/user_policy.rb:14-16 |
 | ver times | ver | GET /teams | qualquer membro | — | p/team_policy.rb:2-12 |
 | criar time | criar | POST /teams | só admin → protegida (`team_manage`) | — | p/team_policy.rb:14-16 |
 | editar time | editar | PATCH /teams/:id | só admin → protegida (`team_manage`) | — | p/team_policy.rb:6-8 |
@@ -893,6 +912,8 @@ Ações iguais que apareciam mais de uma vez no inventário (Anúncios Meta, Cap
 
 Contagem feita por script sobre as tabelas da seção 2 (uma linha = uma ação; ações agrupadas no inventário continuam agrupadas). O script foi conferido antes: rodado na versão anterior, ele devolve os mesmos números dela (619, 298, 73, 47, 8, 162, 21, 10). A diferença de 619 para 620 é a linha nova "tornar alguém administrador", separada de "editar pessoa".
 
+**Versão 4: de 620 para 622.** O script, rodado de novo, devolve os mesmos números da versão 3 em todos os módulos que não mudaram. Mudaram três: Modelos (+1, produto e carrossel pela conversa, aberta a membro da caixa); Agendamento (+3: entraram o convite pelo topo da conversa, a criação automática do modelo de aviso, e "lembrar" e "novo link", que vieram do CRM; saiu o botão v1 retirado); CRM (−2, "lembrar" e "novo link" foram para o Agendamento).
+
 | Módulo | Ações | Só o dono | Delegável com proteção | Com chave | (dessas, vão para chave protegida) | Só admin (não sensível) | Sem checagem | Aberto | Regra própria | Super admin ou ninguém |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Conversas | 66 | 0 | 0 | 0 | 0 | 1 | 1 | 64 | 0 | 0 |
@@ -900,11 +921,11 @@ Contagem feita por script sobre as tabelas da seção 2 (uma linha = uma ação;
 | Etiquetas, atributos, respostas prontas e macros | 15 | 0 | 0 | 8 | 0 | 0 | 0 | 7 | 0 | 0 |
 | Automações e SLA | 17 | 0 | 0 | 16 | 0 | 0 | 0 | 1 | 0 | 0 |
 | Caixas de entrada (Conexões) | 49 | 0 | 5 | 26 | 4 | 0 | 4 | 11 | 3 | 0 |
-| Modelos do WhatsApp | 14 | 0 | 1 | 12 | 0 | 1 | 0 | 0 | 0 | 0 |
+| Modelos do WhatsApp | 15 | 0 | 1 | 12 | 0 | 1 | 0 | 1 | 0 | 0 |
 | Campanhas | 59 | 0 | 1 | 54 | 1 | 0 | 1 | 1 | 0 | 2 |
 | Anúncios Meta | 9 | 0 | 3 | 0 | 0 | 6 | 0 | 0 | 0 | 0 |
-| CRM | 86 | 0 | 1 | 77 | 4 | 2 | 0 | 2 | 4 | 0 |
-| Agendamento | 19 | 0 | 1 | 7 | 0 | 3 | 0 | 0 | 8 | 0 |
+| CRM | 84 | 0 | 1 | 77 | 4 | 2 | 0 | 2 | 2 | 0 |
+| Agendamento | 22 | 0 | 1 | 8 | 0 | 2 | 0 | 0 | 11 | 0 |
 | Agentes de IA (Autonom.ia) | 35 | 0 | 0 | 32 | 0 | 0 | 0 | 0 | 0 | 3 |
 | Prospecção | 26 | 0 | 0 | 26 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Cotação (seguros) | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -919,7 +940,7 @@ Contagem feita por script sobre as tabelas da seção 2 (uma linha = uma ação;
 | Segurança | 5 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Importação de outro sistema | 5 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Fora da conta (só para registro) | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 1 |
-| **Total** | **620** | **5** | **68** | **298** | **10** | **48** | **8** | **162** | **21** | **10** |
+| **Total** | **622** | **5** | **68** | **299** | **10** | **47** | **8** | **163** | **22** | **10** |
 
 **Como ler:**
 - **Só o dono:** hoje só o administrador; no novo modelo, só o dono da conta.
@@ -929,16 +950,16 @@ Contagem feita por script sobre as tabelas da seção 2 (uma linha = uma ação;
 - **Sem checagem:** brecha. Fica para o épico.
 - **Aberto:** passa por ser membro da caixa ou da conta. Em Conversas é de propósito: o trio `conversation_*` só estreita o alcance.
 
-**Números principais (620 ações):**
+**Números principais (622 ações):**
 - **5 só do dono:** iniciar assinatura, escolher moeda do contrato, abrir o portal de pagamento, pedir exclusão da conta, tornar alguém administrador. "Transferir a conta" não tem endpoint hoje **[NOVO]**.
 - **68 delegáveis com proteção** (hoje só admin): 20 de integrações, 14 de configurações da conta, 6 de equipes, 6 do financeiro para ver, 5 de segurança, 4 de usuários, 4 de cargos, 3 de tokens, 3 da conexão de Anúncios Meta, 2 do financeiro para mexer, 1 do histórico de auditoria.
-- **298 com chave** (48%). Dessas, **10 saem para chave protegida**: 5 credenciais e webhooks hoje em `inbox_manage` ou no Notion vão para `integration_manage`; 4 tokens do CRM saem de `crm_admin` para `token_manage`; o domínio de envio de e-mail sai de `campaign_manage` para `account_settings_manage`.
-- **48 só admin sem motivo de segurança.** As maiores: 18 de distribuição e capacidade (ganham `assignment_manage`), 13 do Captain (fora da matriz), 6 de Anúncios Meta (ganham `meta_ads_view` e `meta_ads_manage`).
-- **8 sem checagem** e **162 abertas por desenho**, como antes.
+- **299 com chave** (48%). Dessas, **10 saem para chave protegida**: 5 credenciais e webhooks hoje em `inbox_manage` ou no Notion vão para `integration_manage`; 4 tokens do CRM saem de `crm_admin` para `token_manage`; o domínio de envio de e-mail sai de `campaign_manage` para `account_settings_manage`.
+- **47 só admin sem motivo de segurança.** As maiores: 18 de distribuição e capacidade (ganham `assignment_manage`), 13 do Captain (fora da matriz), 6 de Anúncios Meta (ganham `meta_ads_view` e `meta_ads_manage`).
+- **8 sem checagem** e **163 abertas por desenho** (a nova é produto e carrossel pela conversa, decisão do Rodrigo de 16/10).
 
 **O que mudou de marcação e por quê:**
 - **Híbrido do WhatsApp:** deixou de ser "sensível". O controller só recebe ajustes de rota e de limite (`whatsapp_hybrid_connections_controller.rb:86-87`), sem credencial colada. É parear número, como o WAHA. Fica em `inbox_manage`.
-- **Modelos de aviso do Agendamento na Meta:** deixou de ser "sensível". É criar modelo do WhatsApp, o que `whatsapp_templates_manage` já faz na tela de Modelos. Continua só admin até o épico decidir a chave (proposta: `agendamento_manage` + `whatsapp_templates_manage`).
+- **Modelos de aviso do Agendamento na Meta (corrigido na versão 4):** a versão 3 dizia que isso "deixou de ser sensível". Estava errado. O sensível é a **autorização de gasto** com a Meta, não criar o modelo. O botão v1 sai por decisão do Rodrigo (#1612) e não vai para chave nenhuma. A criação automática ao publicar a página fica em `agendamento_manage`, porque só roda com a autorização ligada. A autorização segue só admin (dúvida X e 7.4-6).
 - **Credencial do portal de cotação (3 linhas):** continua em `insurance_manage`. A Lia fica fora das mudanças gerais.
 
 **Destaques:**
@@ -1006,10 +1027,10 @@ O exercício que deu origem ao documento. Mostra o modelo no limite: muitas áre
 
 1. **CEO, Relatórios "V" em vez de "M".** Relatório é só leitura. Não existe "mexer" em relatório.
 2. **CFO, Contatos "V".** Mantido, mas dá a base inteira de clientes (nome, telefone, e-mail). Se o CFO não precisa, vira "—".
-3. **CFO, CRM "V + valores".** Hoje o valor do card aparece para qualquer um com `crm_view` (`app/services/crm/cards/payload_builder.rb:4`). Só a receita dos links rastreados é só admin (`ctwa_tracked_links_controller.rb:112`). "Valores" depende da dúvida Z1.
+3. **CFO, CRM "V + valores".** Hoje o valor do card aparece para qualquer um com `crm_view` (`app/services/crm/cards/payload_builder.rb:4`). Só a receita dos links rastreados é só admin (`ctwa_tracked_links_controller.rb:112`). "Valores" = `sales_value_view`, só o somado em R$ (Z1, resolvida pela proposta do Multifunnel).
 4. **CMO, "conectar anúncios".** Conectar a conta de anúncios grava token da Meta. Isso é `meta_ads_manage`, chave protegida: o dono entrega.
 5. **CMO, IA e automações "V" em vez de "M (marketing)".** Não existe automação "só de marketing". `automation_manage` e `autonomia_manage` valem para todas as regras e todos os agentes da conta. Se o CMO receber "M", mexe também nas automações do atendimento. A automação de marketing de verdade (jornada de campanha) já está em Marketing.
-6. **CMO, Canais "—".** Mantido. [HIPÓTESE] Montar campanha pede escolher a caixa de envio. Sem `inbox_view`, a lista de caixas mostra só as caixas em que a pessoa é membro (`app/policies/inbox_policy.rb:18-19`). Pode precisar de Canais "V". Conferir no mockup.
+6. **CMO, Canais "—".** Mantido. Montar campanha pede escolher a caixa de envio, e a tela lista só as caixas em que a pessoa é membro (`app/policies/inbox_policy.rb:13-15`). Campanhas confirmou: não dar `inbox_view`. Basta ser membro da caixa (dúvida 7.4-5).
 7. **CSO, Relatórios "V (CRM)".** Não existe filtro "só vendas" em `report_manage`. Vendas = `crm_view_reports` (os 8 relatórios do CRM). Os de atendimento (`report_manage`) são opcionais.
 8. **CHRO, Relatórios "V (produtividade)".** `report_manage` dá os relatórios por agente. Cuidado: o detalhamento abre a conversa por trás do número. Para o CHRO, que não vê conversas, o detalhamento tem de respeitar Conversas "—" (dúvida I).
 9. **COO, "+ distribuição".** Operação precisa das regras de distribuição e capacidade, que são 18 ações só admin hoje. Entra `assignment_manage` (dúvida K, resolvida).
@@ -1103,22 +1124,58 @@ Pela decisão de 08/10 (#1157), o dado do contato continua aparecendo dentro da 
 
 | Chave | Tipo | O que cobre | Status |
 |---|---|---|---|
-| `crm_manage_cards` | editar | cards, lembretes, reuniões, assunto, memória; **juntar** sincronizar e lembrar reunião e a ação em massa | existe, *juntar* |
-| `crm_delete_cards` | excluir | excluir card, um ou em massa | **nova**, *dividir* (a) |
+| `crm_manage_cards` | editar | cards, lembretes, reuniões, assunto, fatos da memória (`memoria_fatos` usa a policy do card); **juntar** sincronizar reunião e a ação em massa (atribuir, status). Mover em massa exige `crm_move_cards`, como mover um card | existe, *juntar* |
+| `crm_delete_cards` | excluir | excluir card, um ou em massa. O "excluir" em massa hoje arquiva (`archive_card!`): se arquivar fica aqui ou em `crm_manage_cards` é a dúvida 7.4-2 | **nova**, *dividir* (a) |
 | `crm_view_reports` | ver | os 8 relatórios | existe; custo de IA sai para `ai_cost_view` |
 | `crm_admin` | pacote | todo o CRM e a tela Caixas | existe; tokens saem para `token_manage`; proteção 3 impede editar a própria linha na tela Caixas (`gravador.rb:178-200`) |
-| `sales_value_view` 🔒 | ver | valor de vendas e receita (receita dos links rastreados, totais em dinheiro) | **nova** (dúvida Z1) |
+| `crm_manage_pipelines` | configurar | funis, etapas, automações de etapa; se o Rodrigo delegar, também o catálogo de chaves da memória (#1601, hoje só admin em `memoria_chaves_controller.rb:6`) | existe |
+| `sales_value_view` 🔒 | ver | só o valor **somado** em R$: totais do Kanban e do funil, receita dos links rastreados, relatórios em R$. O valor do próprio card continua visível para quem vê o card | **nova** (Z1 resolvida); nasce **ligada** para todo cargo que já tem `crm_view` (5.16) |
 | `ai_cost_view` 🔒 | ver | quanto a IA gastou, com exportação | **nova** |
 
 **Marketing (Campanhas, Anúncios Meta, Modelos, kit de marca)**
 
 | Chave | Tipo | O que cobre | Status |
 |---|---|---|---|
-| `campaign_send` | disparar | criar com disparo, enviar agora, agendar, retomar | **nova**, *dividir* (a) |
-| `meta_ads_view` | ver | painel de Anúncios, números, IA do dia, mensagem sugerida | **nova** (decidida no #1158) |
+| `campaign_send` | disparar | os pontos de disparo, na lista abaixo | **nova**, *dividir* (a) |
+| `meta_ads_view` | ver | painel de Anúncios, números, IA do dia, mensagem sugerida (as duas últimas gastam IA, ver 5.12) | **nova** (decidida no #1158) |
 | `meta_ads_manage` 🔒 | configurar | conectar (token ou login do Facebook), escolher conta, pixel, destinos, funil, resumo no WhatsApp, aceitar ou dispensar ação do consultor, desconectar | **nova** |
 
-**IA e automações:** sem chave nova. `automation_*` e `autonomia_*` continuam. Dúvida G continua aberta.
+**Recorte do `campaign_send`** (lista do chat de Campanhas, 17/10):
+- E-mail: enviar agora, agendar e retomar (`p/email_campaign_policy.rb:22-48`). Pausar e cancelar ficam em `campaign_manage`.
+- Jornada: o POST que cria e já dispara (`c/campaign_journey/campaigns_controller.rb:11,83`) e retomar campanha parada (`campaign_pauses`).
+- WhatsApp API: o POST cria e dispara junto, sem rascunho. Quem só tem `campaign_manage` deixaria de criar (dúvida 7.4-3).
+- Campanha clássica: criar ou editar com `scheduled_at` conta como disparar.
+- Conversa aberta: o POST autoriza criar campanha (`conversa_aberta_controller.rb:52`) e o envio manda o modelo.
+- E-mail de teste (até 5 endereços): fica fora do disparo se a dúvida 7.4-4 for para `campaign_manage`, como recomenda Campanhas.
+
+**Modelos do WhatsApp (regra única, confirmada pelo chat de Modelos):**
+- `whatsapp_templates_view` e `whatsapp_templates_manage` valem para a tela de Modelos e para as ações dentro dela.
+- "Atualizar" **continua com ver**: só relê a Meta, e já roda sozinho a cada 5 minutos.
+- A tela antiga `campaigns_templates_index` (hoje só admin) entra na regra única.
+- `whatsapp_api_message_template_policy` (modelos internos da caixa API, com `campaign_view` e `campaign_manage`) **fica com Campanhas**. Não unificar.
+- Produto e carrossel pela conversa (#1716/#1749) ficam com quem atende a caixa, sem chave.
+
+**Remetente de e-mail:** ver remetentes fica em `campaign_view`; cadastrar domínio vai para `account_settings_manage` 🔒 (dúvida L). Quem monta campanha sem remetente vê "peça ao administrador" (seção 6, etapa 7).
+
+**Agendamento**
+
+As chaves já existem (#1401; `p/crm/booking_page_policy.rb:1-2,7-22`). Não há chave nova.
+
+| Chave | Tipo | O que cobre | Status |
+|---|---|---|---|
+| `agendamento_view` | ver | páginas de agendamento e pessoas; números e convites da equipe | existe |
+| `agendamento_manage` | configurar | criar, editar, publicar, pausar página; quem atende; passar reuniões; textos de aviso; criação automática do modelo de aviso ao publicar (só com a autorização ligada) | existe |
+
+- **Fica fora de chave:** o botão v1 "Criar os modelos na Meta" será retirado (#1612, decisão do Rodrigo). Salvar identidade visual na conta vai para `account_settings_manage` 🔒.
+- **Alcance (proposta do chat de Agendamento):** reuniões, "lembrar" e "novo link" seguem o alcance do CRM pelo card, porque o card aberto manda (`crm/meetings_controller.rb:193-197`). O alcance do Agendamento vale para convites e números (time de quem criou). A página é "minha" ou "do meu time" quando todos que atendem nela estão no alcance. "Passar reuniões" (`reassigner.rb:57`) exige origem e destino no alcance. "Meus horários" é sempre "Só os meus".
+- **Quem pode atender** continua sendo a elegibilidade (`host_eligibility.rb:14-19`). Quando vier a soma de cargos, ler a união (hoje lê um cargo só, `:27,34`). Se a dúvida J for aprovada, `crm_manage_cards` entra na lista de chaves que dão elegibilidade.
+
+**IA e automações:** sem chave nova. `automation_*` e `autonomia_*` continuam.
+
+- **Regra G (recomendada, Agentes IA de acordo):** pôr ou tirar agente de uma caixa exige ser membro da caixa ou ter `inbox_manage`, nos 4 caminhos: `channels#create` e `#destroy`, `onde_atende#update`, `quem_atende` e `Crm::Caixas::GravadorDeAgentes`. A lista de caixas mostra só as alcançáveis. O lado da caixa já pede `inbox_manage` + `autonomia_manage` (`quem_atende_controller.rb:23,26`; `crm/caixas_controller.rb:47-51`).
+- **Conversas por resultado:** passam pelo filtro de conversas da pessoa (`Conversations::PermissionFilterService`) antes do limite de 50. Os totais da lista podem continuar da conta. O chat de Agentes IA se ofereceu para fazer no PR dele.
+- **Ferramentas do agente (#1430):** ficam para depois, numa chave protegida 🔒, porque guardam cabeçalho secreto (`tools_controller.rb:77-83`).
+- Cotação: a Lia fica fora (`insurance_manage` em `quote_agent_controller.rb`, sem mudança).
 
 **Canais e integrações**
 
@@ -1129,6 +1186,8 @@ Pela decisão de 08/10 (#1157), o dado do contato continua aparecendo dentro da 
 | `token_manage` 🔒 | configurar | chaves que a plataforma emite: tokens de integração do CRM, token e segredo de robô, segredo da caixa API, HMAC | **nova** |
 
 Regra simples para separar as duas: `integration_manage` liga a conta a sistemas de fora (inclusive colando credencial de terceiro). `token_manage` cria a chave que dá a um sistema de fora acesso à nossa API.
+
+**WhatsApp Híbrido e WAHA (confirmado pelo chat do Híbrido):** criar caixa WAHA, QR, reconectar e a conexão híbrida ficam em `inbox_manage`. Reação e edição de mensagem (#1709) são da conversa. A caixa WAHA usa o token de quem a criou: remover essa pessoa para o conector (aviso na seção 6, etapa 7).
 
 **Relatórios:** `report_manage` existe e ganha o detalhamento, que passa a respeitar o alcance de Conversas (dúvida I).
 
@@ -1230,7 +1289,9 @@ Como cada proteção vira regra de servidor **[NOVO]**:
 
 **Sem hierarquia configurada,** a tela mostra só "Só os meus" e "Empresa toda". Em Conversas, continuam as opções que já existem: as dela e as da fila (o trio `conversation_*`). Ninguém precisa montar organograma. A empresa pequena usa cargos sem nunca abrir a tela de Equipes.
 
-**Se a empresa tirar a hierarquia depois,** o cargo que usava "Meu time" ou acima não pode ganhar "Empresa toda" em silêncio. [NOVO] Ele cai para "Só os meus" e o administrador vê um aviso para escolher de novo. Segue o princípio 10.
+**Se a empresa tirar a hierarquia depois,** o cargo que usava "Meu time" ou acima não pode ganhar "Empresa toda" em silêncio. [NOVO] Ele cai para "Só os meus" e o administrador vê o aviso "caiu para Só os meus", com a ação "Escolher de novo". Segue o princípio 10.
+
+**Três "só os meus" diferentes:** o alcance do cargo, o `only_own` do funil e o `assigned_only` da caixa. Ver a dúvida 7.4-1.
 
 **Hierarquia de times [NOVO], opcional:**
 - `team_parents` (account_id, team_id, parent_team_id): o time-pai. Tabela do fork, sem coluna em `teams`.
@@ -1243,7 +1304,7 @@ Como cada proteção vira regra de servidor **[NOVO]**:
 |---|---|
 | Conversas | `team_id` da conversa (já existe no Chatwoot) ou o time do atendente (dúvida W) |
 | CRM | time do dono do card ou do atendente da conversa principal. Sem coluna `team_id` no card (decisão do Multifunnel) |
-| Agendamento | time de quem atende a reunião [HIPÓTESE] |
+| Agendamento | reuniões, "lembrar" e "novo link" seguem o CRM pelo card; convites e números, pelo time de quem criou; "Meus horários" sempre "Só os meus" (proposta do chat de Agendamento, seção 5.3) |
 | Prospecção | time de quem criou a busca [HIPÓTESE] |
 | Relatórios | filtro por time e agente, que já existe nos números ao vivo (`c2/live_reports_controller.rb`) |
 | Contatos, Campanhas, Marketing | só "Empresa toda" nesta versão: contato e campanha não têm dono hoje |
@@ -1319,13 +1380,13 @@ Nenhuma muda de nome (decisão #452).
 | inbox_view | mantém |
 | inbox_manage | mantém; credenciais e webhooks vão para `integration_manage` 🔒 (c) |
 | canned_response_manage, label_manage, attribute_manage, macro_manage | mantém |
-| sla_manage | mantém; ganha os calendários do CRM |
+| sla_manage | mantém; pode ganhar os calendários de SLA, mantendo `crm_admin` (dúvida 7.4-8) |
 | prospecting_view | mantém; exportar sai (c) |
 | prospecting_manage, prospecting_view_all_searches | mantém |
 | insurance_view, insurance_manage | mantém (Lia fora das mudanças gerais) |
 | automation_view, automation_manage | mantém |
-| agendamento_view, agendamento_manage | mantém |
-| whatsapp_templates_view, whatsapp_templates_manage | mantém |
+| agendamento_view, agendamento_manage | mantém; agora área explícita no catálogo (5.3) |
+| whatsapp_templates_view, whatsapp_templates_manage | mantém; regra única para a tela de Modelos, inclusive a tela antiga `campaigns_templates_index`; "Atualizar" continua com ver |
 
 ### 5.11 Ações que hoje não têm chave e ganham uma
 
@@ -1335,11 +1396,13 @@ Nenhuma muda de nome (decisão #452).
 | Apagar mensagem | quem vê a conversa | `conversation_message_delete` para quem tem cargo |
 | Ler conversa sem operar | não existe | `conversation_view` |
 | Excluir contato e empresa | só admin | `contact_delete` |
-| Card em massa (excluir, atribuir) | `crm_view` | `crm_delete_cards` / `crm_manage_cards` |
-| Sincronizar e lembrar reunião | `crm_view` + funil | `crm_manage_cards` |
+| Card em massa (excluir/arquivar, atribuir, mover) | `crm_view` | `crm_delete_cards` ou `crm_manage_cards` (dúvida 7.4-2) / `crm_manage_cards` / `crm_move_cards` |
+| Sincronizar e lembrar reunião | `crm_view` + funil | `crm_manage_cards`, no alcance do CRM pelo card |
 | Exportar busca e lista da Prospecção | `prospecting_view` | `prospecting_manage` |
 | Painel e conexão de Anúncios Meta | só admin | `meta_ads_view` / `meta_ads_manage` 🔒 |
-| Calendários de atendimento | `crm_admin` | + `sla_manage` |
+| Catálogo de chaves da memória (#1601) | só admin | `crm_manage_pipelines` (ou `crm_admin`), se o Rodrigo delegar |
+| Valor somado de vendas em R$ | `crm_view` (totais) ou só admin (receita dos links) | `sales_value_view` 🔒 |
+| Calendários de atendimento | administrador ou `crm_admin` (tela e API, desde o #1618) | + `sla_manage`, mantendo `crm_admin` (dúvida 7.4-8) |
 | Detalhamento dos relatórios | só admin | `report_manage`, respeitando o alcance |
 | Regras de distribuição e capacidade | só admin | `assignment_manage` |
 | Pessoas, times, cargos | só admin | `user_manage` / `team_manage` / `role_manage` 🔒 |
@@ -1358,6 +1421,7 @@ Nenhuma muda de nome (decisão #452).
 - Sugestão de local da Prospecção chama o Google (custo) com só `prospecting_view` (`searches_controller.rb:21,32`).
 - Testar agente no playground gasta IA com só `autonomia_view` (decidido no #452, decisão 4).
 - Ver saúde da conexão grava estado (`inbox_health_management.rb:5`).
+- IA do dia e mensagem sugerida dos Anúncios Meta gastam IA com só `meta_ads_view` (`crm/meta_ads_ai_controller.rb:15,77-80`). Apontado pelo chat de Campanhas.
 
 ### 5.13 Brechas sem checagem ou fora da regra (só fato, ficam para o épico)
 
@@ -1370,17 +1434,19 @@ Nenhuma muda de nome (decisão #452).
 - Ação em massa nos cards com só `crm_view` (`cards/bulk_controller.rb:7`; `bulk_action.rb:45-49`).
 - Rodar macro em conversas que a pessoa não vê (`macros_controller.rb:50-54`).
 - Linear acha a conversa na conta sem conferir se a pessoa a vê (`linear_controller.rb:109-111`).
-- Conversas por resultado do agente de IA com `autonomia_view`, sem conferir caixa ou funil (`analytics_controller.rb:15`).
+- Conversas por resultado do agente de IA com `autonomia_view`: só confere a conta e mostra até 50 conversas de caixas alheias (`au/agents/analytics_controller.rb:15-33`; `app/services/autonomia/agents/analytics.rb:61-70`). Correção: `Conversations::PermissionFilterService` antes do limite.
+- Caixa da campanha: o servidor aceita caixa em que a pessoa não é membro, nos 4 pontos de criação (seção 2.7).
+- Agentes de IA ligados a qualquer caixa com só `autonomia_manage` (`channels_controller.rb:43-44`; `onde_atende_controller.rb:65,73`). Regra G.
 - `crm_admin` pode se dar "Todos os funis" na tela Caixas (`gravador.rb:178-200`; `caixas_controller.rb:69`). A proteção 3 fecha.
 - Agente de cotação nasce com só `insurance_manage` (`quote_agent_controller.rb:15-17`). Registrar sem mexer.
 - Origem do contato mostra os públicos sem filtrar por `campaign_view` (`contact_origins_controller.rb:10`).
 
 ### 5.14 Lacunas não conferidas
 
-- **Valor de vendas:** o valor do card vai no payload de qualquer card visível (`payload_builder.rb:4`). Não conferi relatórios e totais. Pesa na dúvida Z1.
+- **Valor de vendas:** resolvido pela proposta do Multifunnel (Z1). O valor do card continua no payload (`payload_builder.rb:4`); `sales_value_view` cobre só o somado em R$.
 - **Busca geral:** não conferi se aplica o acesso por funil nem `contact_view` (`search_service.rb:160`).
 - **"Aceitar" do consultor de Anúncios:** não conferi se muda algo na Meta. Por isso foi para `meta_ads_manage`.
-- **Rotas novas desde o inventário:** a main ganhou `conversa_canal/*` (#1702) e `inboxes/:id/whatsapp_conversation_assets/*` (#1716, `conversation_assets_policy.rb`). Não estão na seção 2.
+- **Rotas novas desde o inventário:** `conversa_canal/*` (#1702) ainda não está na seção 2. As de `inboxes/:id/whatsapp_conversation_assets/*` (#1716) entraram na 2.6.
 
 ### 5.15 Pendências do próprio conceito (para o épico)
 
@@ -1388,6 +1454,13 @@ Nenhuma muda de nome (decisão #452).
 2. **Editar pessoa sem o campo do cargo apaga o cargo** (`enterprise/.../agents_controller.rb:23`).
 3. **No CRM, editar não implica ver** (`crm_permissions.rb:29`). Dúvida J.
 4. **Cargo de token aparece na lista e pode ser editado** (`crm/integration_token.rb:97-101`). Com `role_manage` delegado, isso piora: precisa esconder antes de entregar `role_manage` (etapa 3).
+
+### 5.16 Regras de compatibilidade (pedidas pelos chats na etapa 2)
+
+1. **Todo cargo que já existe nasce com CRM em "Empresa toda (nas caixas e funis dela)".** Hoje o cargo vê todos os cards das caixas em que a pessoa é membro (`app/services/crm/cards/visible_scope_query.rb:26-27`, `all_inbox_cards`). Se nascesse em "Só os meus", vendedores perderiam cards no dia do deploy. Apontado pelo Multifunnel como crítico.
+2. **Spec "nada muda sem mexer no cargo".** Um request spec prova que, depois do deploy, cada cargo salvo vê e faz o mesmo que antes, até alguém editá-lo.
+3. **Chave que divide uma atual nasce ligada para quem tem a atual.** É o caminho (a) da seção 5.2. Vale também para `sales_value_view`, que nasce ligada para quem tem `crm_view`: é a única protegida com essa exceção, porque só mantém os totais que esses cargos já veem hoje. A receita dos links rastreados, hoje só admin, não vem junto.
+4. **Nenhuma chave protegida 🔒 antes do merge do PR #1783.** É ele que põe a regra das duas listas no `CLAUDE.md` e no `AGENTS.md`.
 
 ---
 
@@ -1399,9 +1472,11 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 
 **Etapa 1. Inventário.** Feito: seções 2 e 3 deste documento.
 
-**Etapa 2. Conversar com os chats donos de módulo sobre o modelo.** Cada chat recebe a sua parte (seção 8) e responde antes de qualquer código.
+**Etapa 2. Conversar com os chats donos de módulo sobre o modelo.** Concluída em 17/10 (seção 8).
 
 **Etapa 3. Criar as chaves e fazer o servidor respeitá-las, com as proteções e o histórico de auditoria.** As brechas de cada área se fecham aqui, junto com a chave da área. Cada PR traz um request spec que reproduz a brecha antes de corrigir.
+
+**Em lotes, um por vez** (pedido da Orquestração). Antes de cada lote, a lista de arquivos vai para a Orquestração e para o chat dono do módulo. O próximo lote só começa depois do anterior no ar. Cada chave nova segue o checklist do `CLAUDE.md` (`CustomRole::PERMISSIONS`, policy ou controller, `permissionMatrix.js`, i18n `CUSTOM_ROLE.MATRIX` em en e pt_BR, `meta.permissions` da rota, menu e `useCanManage`). Cada lote regera o Guia (`pnpm guia:build`) e os formatos (`autonomia:guia:formatos`). As regras da seção 5.16 valem em todos os lotes. Avisar os chats donos antes de mexer em `whatsapp_template_policy`, `whatsapp_template_consents_controller` ou `ConversationAssetsPolicy` (Modelos).
 - 3.1 `CustomRole::Catalog` **[NOVO]**: para cada chave, área, nível, implicações, se é protegida, se é de empresa maior (dúvida Y), flag da conta e o que o agente sem cargo recebe. Já nasce com o eixo de alcance, mesmo que só Conversas use no começo.
 - 3.2 `effective_permissions` no payload do usuário; o front para de recalcular.
 - 3.3 policies migradas para o catálogo, com specs de caracterização antes.
@@ -1428,7 +1503,16 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 - sem `<select>` nativo: `ChoiceSelect` e alvo de toque de 44 px;
 - áreas e nível montam o cargo; ajustes sensíveis à parte; chaves de empresa maior em "Mais opções"; chaves protegidas só aparecem para o dono;
 - passo "quem usa e onde" absorve a #1149 (D2 do diagnóstico);
-- excluir com destino; `guia:build`, `porques.md` e `autonomia:guia:formatos`.
+- excluir com destino; `guia:build`, `porques.md` e `autonomia:guia:formatos`;
+- manter o esqueleto do `CustomRoleEditor` (já está no padrão novo);
+- a régua de alcance mostra só as opções que existem: sem hierarquia, não aparece "Meu time" em cinza;
+- aviso "caiu para Só os meus", com a ação "Escolher de novo";
+- aviso na tela de cargos: "trocar o cargo pode pausar páginas de agendamento" (quem deixa de poder atender sai das páginas);
+- aviso ao remover usuário: "esta pessoa criou a caixa WAHA X; remover para o conector";
+- quem monta campanha de e-mail sem remetente vê "peça ao administrador";
+- `meta.permissions` continua nas rotas, porque é a fonte do Guia;
+- menu: grupo sem nenhum item visível some; item não pisca (fica escondido até a permissão chegar); avisar antes a sessão "Reorganização do sidebar", dona do menu;
+- tela de Equipes: campos novos em `components-next`, com `ChoiceSelect` para "Time acima" e "Quem lidera". Forma depende da dúvida 7.4-7. Chamar o chat de Frontend no mockup (etapa 6).
 
 **Depois (não é pré-requisito de nenhuma etapa):**
 - mais de um cargo por pessoa (`account_user_roles` **[NOVO]**, seção 5.8), útil para empresa grande;
@@ -1455,13 +1539,14 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 | **O. O que entra em meta_ads_view** | resolvida: painel, IA do dia e mensagem sugerida em `meta_ads_view`; conexão e consultor em `meta_ads_manage` 🔒 |
 | **D3 do diagnóstico. Hierarquia** | resolvida: entra como opcional, com vários níveis via time-pai (etapa 4). Sem ela, o alcance tem só "Só os meus" e "Empresa toda" |
 | **D6 do diagnóstico. conversation_view** | resolvida: entra no catálogo, etapa 3 (é peça de empresa maior, ver dúvida Y) |
+| **Z1. Valor de vendas** | resolvida pela proposta do Multifunnel (17/10): `sales_value_view` cobre só o valor somado em R$ (totais do Kanban e do funil, receita dos links, relatórios em R$). O valor do próprio card continua visível. Nasce ligada para quem tem `crm_view`. A decisão final é do Rodrigo |
 
 ### 7.2 Continuam abertas
 
 **G. Pôr agente de IA numa caixa**
 - Contexto: `autonomia_manage` liga a IA em qualquer caixa da conta, sem ser membro e sem `inbox_manage`.
 - Opções: (1) exigir também `inbox_manage` ou ser membro; (2) manter.
-- Recomendação: (1). O cargo não escolhe caixa.
+- Recomendação: (1). O cargo não escolhe caixa. O chat de Agentes IA concorda e detalhou os 4 caminhos e a lista filtrada (seção 5.3).
 
 **H. Credencial do portal de cotação**
 - Contexto: `insurance_manage` grava login e senha do portal. A Lia fica fora das mudanças gerais.
@@ -1475,7 +1560,7 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 
 **J. Editar implica ver no CRM**
 - Opções: (1) alinhar com o resto; (2) manter a exceção.
-- Recomendação: (1).
+- Recomendação: (1). Multifunnel: de acordo. Se aprovada, `crm_manage_cards` passa a dar elegibilidade no Agendamento. A decisão final é do Rodrigo.
 
 **M. contact_view no servidor e seletores**
 - Opções: (1) fechar o módulo e liberar busca mínima para quem atende; (2) fechar tudo.
@@ -1528,7 +1613,7 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 **X. Autorização para criar modelos com custo na Meta**
 - Contexto: o #1585 diz "aceite do dono". Hoje é só admin (`whatsapp_template_consents_controller.rb:15-18`). A regra das duas listas não cita.
 - Opções: (1) só o dono; (2) `financial_manage` 🔒 (CFO).
-- Recomendação: (2). É gasto, e o CFO cuida do gasto. Se você entende "dono" do #1585 ao pé da letra, (1).
+- Recomendação: (2). É gasto, e o CFO cuida do gasto. Se você entende "dono" do #1585 ao pé da letra, (1). Modelos WhatsApp: de acordo com `financial_manage`; o aceite já é só de acréscimo e grava o nome de quem aceitou (#1635); ver a autorização (GET) pode ficar em `whatsapp_templates_view`. Ver também a 7.4-6.
 
 **Y. 21 chaves novas, não 15**
 - Contexto: seção 5.4.
@@ -1544,33 +1629,83 @@ A regra das duas listas ("só o dono" e "delegável com proteção") já está n
 - Ficar no modo avançado não tira a chave do servidor: a regra vale igual, só não aparece na primeira tela. O administrador continua fazendo tudo.
 - Recomendação: manter as 21 no catálogo e no servidor (etapa 3). Na tela (etapa 7), mostrar as 9 sempre e as 12 num "Mais opções". Se for cortar, os dois primeiros cortes da lista acima são os de menor custo.
 
-**Z1. Valor de vendas**
-- Contexto: hoje o valor do card aparece para quem tem `crm_view` (`payload_builder.rb:4`). Só a receita dos links é só admin. A decisão 10 do #1158 diz "valor de vendas só admin".
-- Opções: (1) `sales_value_view` cobre só a receita agregada (links e totais em dinheiro); o valor do card segue com `crm_view`; (2) `sales_value_view` cobre também o valor do card, e quem só tem `crm_view` deixa de ver (caminho c, tira de quem vê hoje).
-- Recomendação: (1) agora. (2) muda o Kanban de todos os vendedores e precisa de mockup.
-
 **Z2. Dono nas contas que já existem**
 - Contexto: hoje há só administradores. Ao criar o dono, as 5 ações saem do administrador comum.
 - Opções: (1) marcar dono o administrador mais antigo da conta [HIPÓTESE: dá para saber por `account_users.created_at`]; (2) todos os administradores de hoje viram donos, e o dono tira os demais depois; (3) Rodrigo marca conta a conta.
 - Recomendação: (2). Ninguém perde nada no dia do deploy. Na conta 43 (cliente real), só leitura até combinar.
 
+### 7.4 Novas da etapa 2 (17/10)
+
+**7.4-1. Três "só os meus"**
+- Contexto: há três regras com o mesmo nome: o alcance do cargo, o `only_own` do funil e o `assigned_only` da caixa. A pessoa não sabe qual a barrou.
+- Opções: (a) unificar: o alcance do cargo absorve o `assigned_only`, e o `only_own` vira exceção por caixa; (b) manter as três com nomes diferentes, e a ficha da pessoa mostra qual barrou.
+- Recomendação: (a), do Multifunnel.
+
+**7.4-2. "Excluir" em massa no CRM arquiva**
+- Contexto: a ação em massa "excluir" chama `archive_card!`. O nome na tela precisa bater com a chave.
+- Opções: (a) arquivar fica em `crm_manage_cards`; (b) arquivar fica em `crm_delete_cards`.
+- Recomendação: o Multifunnel pede decisão, sem preferência. Usar o mesmo nome na tela nos dois casos.
+
+**7.4-3. WhatsApp API cria e dispara junto**
+- Contexto: o POST da campanha de WhatsApp API cria e dispara na mesma hora. Com `campaign_send` separado, quem só tem `campaign_manage` deixa de criar.
+- Opções: (a) criar rascunho, e disparar vira um segundo passo com `campaign_send`; (b) aceitar a perda: quem só monta não cria campanha de WhatsApp API.
+- Recomendação: Campanhas pede decisão explícita. (a) mantém o "montar" útil, mas é mudança de fluxo.
+
+**7.4-4. E-mail de teste**
+- Contexto: mandar o e-mail de teste para até 5 endereços.
+- Opções: (a) `campaign_manage`; (b) `campaign_send`.
+- Recomendação: (a), de Campanhas. É conferência de quem monta, não disparo em massa.
+
+**7.4-5. Caixa da campanha**
+- Contexto: a tela lista só as caixas em que a pessoa é membro, mas o servidor aceita qualquer caixa da conta (seção 2.7). Dar `inbox_view` não é a saída.
+- Opções: (a) ser membro da caixa é o alcance da campanha, e o servidor passa a exigir; (b) lista própria de caixas por `campaign_manage`.
+- Recomendação: (a), de Campanhas.
+
+**7.4-6. "Aceite do dono" (#1585) e `financial_manage` delegável**
+- Contexto: o #1585 diz que o sistema só cria modelo com custo com o aceite do dono. A dúvida X propõe `financial_manage` 🔒, que o dono pode entregar.
+- Opções: (a) o aceite vale do dono ou de quem recebeu `financial_manage` dele; (b) só o dono, ao pé da letra.
+- Recomendação: Modelos WhatsApp devolve a decisão ao Rodrigo. O botão v1 do Agendamento sai antes disso (#1612).
+
+**7.4-7. Tela de Equipes**
+- Contexto: a tela de Equipes é antiga (7 rotas, nota 3,5 a 4: assistente antigo, Options API, checkbox cru em `TeamForm.vue:165-166`). A hierarquia pede dois campos novos.
+- Opções: (a) reformular a tela inteira; (b) um bloco "Hierarquia" no padrão novo, com o próprio Salvar.
+- Recomendação: (b), do Frontend. A reformulação vira Issue própria. Trocar ao menos o checkbox cru.
+
+**7.4-8. Calendários de SLA**
+- Contexto: desde o #1618, tela e API pedem administrador ou `crm_admin`.
+- Opções: (a) somar `sla_manage`, mantendo `crm_admin`; (b) manter como está.
+- Recomendação: (a), do Agendamento, com a trava de ninguém editar o próprio calendário de SLA.
+
+**7.4-9. "Meu time" restringe a lista de páginas para marcar?**
+- Contexto: hoje a lista de páginas para marcar mostra todas (#1265, #1271).
+- Opções: (a) "Meu time" restringe às páginas do time; (b) continua mostrando todas.
+- Recomendação: o Agendamento pede decisão, sem preferência.
+
+**7.4-10. Quem pode atender não olha funil**
+- Contexto: a elegibilidade de quem atende não confere funil, e `booker.rb:185` usa o dono do card sem olhar o funil.
+- Opções: (a) a elegibilidade passa a conferir o funil; (b) manter e registrar.
+- Recomendação: o Agendamento registra como lacuna e pede decisão.
+
 **Ainda em aberto de antes:** #726 (Modelos pela área de Campanhas); D1, D2, D4, D5, D7, D8 e D9 do diagnóstico local; rodízio e dona em "Só as suas" (`PLANO.md:218`).
 
 ---
 
-## 8. Próximo passo
+## 8. Etapa 2 concluída em 17/10
 
-Etapa 2 do plano: levar este documento aos chats donos de módulo, cada um com a sua parte. Deixar claro que a matriz de C-levels é só um exemplo e que o modelo vale para qualquer porte. Formato da mensagem: número da Issue, chat dono, o que é, em uma frase.
+Os 8 chats donos de módulo leram a versão 3. Nenhum contrariou o modelo. Tudo o que pediram está nesta versão 4.
 
-| Chat dono | O que precisa ajustar ou responder |
+| Chat dono | Resposta em uma linha |
 |---|---|
-| **Multifunnel / CRM** | régua de alcance no CRM (card pelo time do dono ou do atendente, sem `team_id` no card); `team_leaders` sem entrar no rodízio; tokens saindo de `crm_admin`; proteção 3 na tela Caixas; `sales_value_view` (Z1); `ai_cost_view`; ação em massa, sync e remind; dúvida J |
-| **Campanhas** | `campaign_send` (a); `meta_ads_view` e `meta_ads_manage`; domínio de envio indo para `account_settings_manage`; se o CMO precisa de `inbox_view` para montar campanha (ajuste 6 da matriz) |
-| **Agendamento** | alcance por time de quem atende; modelos de aviso na Meta deixando de ser só admin; "quem pode atender" quando vier a soma de cargos (etapa posterior) |
-| **Modelos WhatsApp** | autorização com custo indo para `financial_manage` (X); "Atualizar" sincroniza com só ver; #726 |
-| **Agentes IA** | dúvida G; conversas por resultado sem filtro de caixa; IA e automações só "V" para o CMO; `autonomia_tools_manage` (#1430) |
-| **Frontend** | cargos prontos como atalho (desmarcar, somar, "Montar eu"); régua de alcance com e sem hierarquia; dois campos novos e opcionais na tela de Equipes; chaves de empresa maior em "Mais opções"; chaves protegidas só para o dono; `ChoiceSelect`, sem `<select>`; flag nas contas 1, 16 e 18 |
+| **Modelos WhatsApp** | regra única ok; faltava produto e carrossel pela conversa (#1749, membro da caixa, sem chave); "Atualizar" continua com ver; modelos da caixa API ficam com Campanhas; X ok, com a 7.4-6 para o Rodrigo |
+| **Multifunnel / CRM** | nada contraria; cargo existente nasce em "Empresa toda" (crítico); Z1 só valor somado; excluir em massa arquiva; mover em massa pede `crm_move_cards`; três "só os meus"; J de acordo |
+| **WhatsApp Híbrido** | sem conflito; WAHA e híbrido em `inbox_manage`; remover o criador da caixa WAHA para o conector |
+| **Campanhas** | nada contraria; lista exata do `campaign_send`; IA paga em `meta_ads_view`; "peça ao administrador" sem remetente; caixa aceita sem ser membro em 4 pontos |
+| **Frontend geral** | sem conflito; manter o esqueleto do `CustomRoleEditor`; tela de Equipes antiga; `meta.permissions` como fonte do Guia; menu sem piscar; régua só com opções que existem |
+| **Agentes IA** | nada contraria a Fase 2; regra G nos 4 caminhos; vazamento nas conversas por resultado (corrige no PR dele); ferramentas depois, com chave protegida |
+| **Agendamento** | faltava a área Agendamento; alcance pelo card nas reuniões; botão v1 sai (#1612, decisão do Rodrigo); calendários desatualizados no doc; aviso de páginas pausadas |
+| **Orquestração** | pediu a etapa 3 em lotes, um por vez, com a lista de arquivos antes |
 
-Também avisar: **Conexões / WhatsApp híbrido** (credenciais saindo de `inbox_manage`; híbrido fica), **Prospecção** (exportar sobe para "mexer"), **dono da Lia** (dúvida H), **Guia** (Vigias em configurações da conta).
-
-Depois das respostas: abrir o épico com uma Issue por etapa, na ordem da seção 6.
+**Próximo passo:**
+1. O Rodrigo decide as dúvidas abertas (seções 7.2, 7.3 e 7.4).
+2. Abrir o épico com uma Issue por etapa, na ordem da seção 6.
+3. Começar a etapa 3 pelo primeiro lote, com a lista de arquivos enviada à Orquestração e ao chat dono. Chaves protegidas só depois do merge do PR #1783.
