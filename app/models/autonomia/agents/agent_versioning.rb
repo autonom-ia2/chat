@@ -117,23 +117,26 @@ module Autonomia::Agents::AgentVersioning
     ultima_versao(instruction_versions.na_lista.where(id: ...@versao_do_construtor.id))
   end
 
-  # #1428 — o que o dono não pediu fica idêntico: devolve, sob a trava, os campos dados ao valor da versão de antes.
-  # Só escreve se o agente ainda é o que a escrita do Construtor deixou (`esperado`, o updated_at) e segue guiado.
-  # `colunas` são nomes de coluna (a instrução volta da coluna da versão); `chaves`, do jsonb config.
-  def desfazer_do_construtor!(versao_antes_id, colunas:, chaves:, esperado:)
-    versao = instruction_versions.find_by(id: versao_antes_id)
+  # #1428 — o que o dono não pediu fica idêntico: devolve, sob a trava, os campos dados ao valor da versão de antes e,
+  # na mesma trava, regrava a versão da aplicação (`versoes: { antes:, aplicacao: }`, ids). Só escreve se o agente ainda é o que a escrita do
+  # Construtor deixou (`esperado`, o updated_at), segue guiado, e se a geração (`thread_id` + `token`) ainda é a ativa:
+  # um job antigo cujo token já foi tomado não desfaz nada. `colunas` são nomes de coluna (a instrução volta da coluna
+  # da versão); `chaves`, do jsonb config.
+  def desfazer_do_construtor!(versoes:, colunas:, chaves:, esperado:, geracao:)
+    versao = instruction_versions.find_by(id: versoes[:antes])
     return false if versao.nil?
 
     with_lock do
-      next false if deleted? || manual? || updated_at.iso8601(6) != esperado
+      next false unless desfazer_permitido?(esperado, geracao)
 
       update_columns(atributos_para_desfazer(versao, colunas, chaves).merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
+      regravar_versao_do_construtor!(versoes[:aplicacao], versoes[:antes])
       true
     end
   end
 
-  # Depois de desfazer: a versão da aplicação passa a guardar o agente como ficou; se ficou igual ao de antes, sai da
-  # lista (uma aplicação desfeita inteira não é versão nova).
+  # Depois de desfazer (dentro da trava de desfazer_do_construtor!): a versão da aplicação passa a guardar o agente
+  # como ficou; se ficou igual ao de antes, sai da lista (uma aplicação desfeita inteira não é versão nova).
   def regravar_versao_do_construtor!(versao_id, versao_antes_id)
     versao = instruction_versions.find_by(id: versao_id)
     return if versao.nil?
@@ -146,6 +149,14 @@ module Autonomia::Agents::AgentVersioning
   end
 
   private
+
+  # Sob a trava: o agente é o que a escrita deixou, guiado, e a geração (`{ thread_id:, token: }`) ainda é a ativa.
+  def desfazer_permitido?(esperado, geracao)
+    return false if deleted? || manual? || updated_at.iso8601(6) != esperado
+
+    build_threads.exists?(id: geracao[:thread_id], build_token: geracao[:token],
+                          status: ::Autonomia::Agents::BuildThread.statuses[:processing])
+  end
 
   def atributos_para_desfazer(versao, colunas, chaves)
     agente = versao.metadata.to_h['agente'].to_h

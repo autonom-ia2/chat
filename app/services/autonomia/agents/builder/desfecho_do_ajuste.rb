@@ -1,10 +1,12 @@
 # #1428 (tema 6, parte 2) — o fim do turno de AJUSTE no piloto: o que não foi pedido volta a ser como era, e o que vai
 # ao dono, a pendência e o state. Incluído no Builder junto com AjusteConferido e FechamentoDoAjuste.
 #
-# O QUE NÃO FOI PEDIDO FICA IDÊNTICO: um item da lista que a conferência diz que o dono não pediu é desfeito, sob a
-# trava, com o valor da versão de antes (só as colunas que nenhum item pedido também escreve). Se nada pedido entrou, o
-# turno fecha como sem mudança e a versão da aplicação sai da lista; se entrou parte, o dono recebe o que entrou. Não se
-# pergunta ao dono para desfazer o que ele não pediu.
+# O QUE NÃO FOI PEDIDO: os itens são agrupados pelo `pedido` que o próprio Construtor escreveu (comparação do texto,
+# sem ler linguagem). Um item com o mesmo `pedido` de um item pedido é destino secundário desse pedido (a tabela manda
+# "no máximo 2 frases" para o tom E a instrução) e nunca é desfeito. Só quando TODOS os itens estão sem pedido o código
+# desfaz sozinho, sob a trava, com o valor da versão de antes, e o turno fecha como não aplicado. Quando só parte está
+# sem pedido, tudo fica aplicado e o dono decide: "também mudei …, quer que eu desfaça?" vira pendência, e a resposta
+# dele desfaz pelo caminho normal do ajuste.
 #
 # Ao dono só vão textos do código e dos campos próprios do Construtor (`resposta_ao_dono`, a pergunta de esclarecimento
 # dele): nunca um `next_question` que afirme aplicação. Com aviso de desfecho ou com falta apontada, needs_more_info.
@@ -15,21 +17,21 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
 
   private
 
-  # -> a conferência com `desfeito` ({ campos, tudo, ok }) quando havia item sem pedido do dono.
-  def desfazer_o_que_nao_foi_pedido(dados, conferencia)
-    sem_pedido = Array(conferencia['itens']).select { |item| item['pedido_pelo_dono'] == false }
+  # -> a conferência com `sem_pedido` (os itens que o dono não pediu, quando é só parte) ou `desfeito`
+  # ({ campos, ok }, quando era tudo e o código desfez).
+  def desfazer_o_que_nao_foi_pedido(token, dados, conferencia)
+    itens = Array(conferencia['itens'])
+    sem_pedido = itens_sem_pedido(itens)
     return conferencia if sem_pedido.empty?
+    return conferencia.merge('sem_pedido' => sem_pedido) if sem_pedido.size < itens.size
 
-    pedidos = Array(conferencia['itens']) - sem_pedido
-    colunas, chaves = colunas_so_dos_nao_pedidos(sem_pedido, pedidos)
-    ok = colunas.empty? && chaves.empty? ? true : desfazer!(dados, colunas, chaves)
-    conferencia.merge('desfeito' => { 'campos' => regras_do_ajuste.campos(sem_pedido), 'tudo' => pedidos.empty?, 'ok' => ok })
+    conferencia.merge('desfeito' => { 'campos' => regras_do_ajuste.campos(itens), 'ok' => desfazer!(token, dados, itens) })
   end
 
-  def colunas_so_dos_nao_pedidos(sem_pedido, pedidos)
-    colunas, chaves = colunas_e_chaves(regras_do_ajuste.campos(sem_pedido))
-    colunas_pedidas, chaves_pedidas = colunas_e_chaves(regras_do_ajuste.campos(pedidos))
-    [colunas - colunas_pedidas, chaves - chaves_pedidas]
+  # Sem pedido do dono E sem o mesmo `pedido` de um item pedido (destino secundário do mesmo pedido conta como pedido).
+  def itens_sem_pedido(itens)
+    pedidos = itens.reject { |item| item['pedido_pelo_dono'] == false }.pluck('pedido')
+    itens.select { |item| item['pedido_pelo_dono'] == false && pedidos.exclude?(item['pedido']) }
   end
 
   # As colunas e as chaves do config destes campos.
@@ -38,20 +40,17 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
      campos.filter_map { |campo| regras_do_ajuste::CHAVES_DA_CONFIG_POR_CAMPO[campo] }]
   end
 
-  def desfazer!(dados, colunas, chaves)
-    agent = @thread.agent
-    ok = agent.desfazer_do_construtor!(dados['versao_antes_id'], colunas: colunas, chaves: chaves,
-                                                                 esperado: dados['agente_updated_at'])
-    agent.regravar_versao_do_construtor!(dados.dig('correcao', 'versao_id') || dados['versao_id'], dados['versao_antes_id']) if ok
-    ok
+  def desfazer!(token, dados, itens)
+    colunas, chaves = colunas_e_chaves(regras_do_ajuste.campos(itens))
+    versoes = { antes: dados['versao_antes_id'], aplicacao: dados.dig('correcao', 'versao_id') || dados['versao_id'] }
+    @thread.agent.desfazer_do_construtor!(versoes: versoes, colunas: colunas, chaves: chaves, esperado: dados['agente_updated_at'],
+                                          geracao: { thread_id: @thread.id, token: token })
   end
 
-  # Fecha o turno aplicado. Ao dono vão, nesta ordem: a resposta à pergunta dele, o que entrou (quando parte foi
-  # desfeita), o aviso do desfecho e a pendência.
+  # Fecha o turno aplicado. Ao dono vão, nesta ordem: a resposta à pergunta dele, o aviso do desfecho e a pendência.
   def fechar_ajuste!(token, dados, conferencia, desfecho)
-    desfeito = conferencia['desfeito'].to_h
     resposta = dados.dig('correcao', 'resposta') || dados['resposta'].to_h
-    return fechar_desfeito!(token, resposta, conferencia) if desfeito['tudo'] && desfeito['ok']
+    return fechar_desfeito!(token, resposta, conferencia) if conferencia.dig('desfeito', 'ok') == true
 
     mensagens, pendencia, aviso = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia, aviso, conferencia),
@@ -61,16 +60,19 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     log_do_ajuste(conferencia, desfecho)
   end
 
-  # -> [mensagens ao dono, pendência, aviso]
+  # -> [mensagens ao dono, pendência, aviso]. A pergunta do que o dono não pediu soma-se à pendência do turno.
   def conversa_do_fechamento(dados, conferencia, desfecho, resposta)
-    pendencia = pergunta_do_modelo(resposta) || pendencia_da_conferencia(conferencia, desfecho)
-    aviso = aviso_do_desfecho(desfecho, dados, conferencia['desfeito'].to_h)
-    [[resposta['resposta_ao_dono'].to_s.strip, o_que_entrou(conferencia), aviso, pendencia].compact_blank, pendencia, aviso]
+    nao_pedido = conferencia['sem_pedido'].presence &&
+                 Autonomia::Agents::Builder::TextosDoAjuste.pergunta_do_nao_pedido(conferencia['sem_pedido'], idioma_do_ajuste)
+    pendencia = [pergunta_do_modelo(resposta) || pendencia_da_conferencia(conferencia, desfecho), nao_pedido]
+                .compact_blank.join(' ').presence
+    aviso = aviso_do_desfecho(desfecho, dados, conferencia)
+    [[resposta['resposta_ao_dono'].to_s.strip, aviso, pendencia].compact_blank, pendencia, aviso]
   end
 
   def estado_aplicado(dados, conferencia, pendencia)
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
-      'conferencia' => conferencia, 'pergunta_pendente' => pendencia.to_s, 'ajuste_em_curso' => nil }
+      'conferencia' => conferencia, 'ajuste_em_curso' => nil }.merge(pendencia_no_estado(pendencia))
   end
 
   # Com aviso de desfecho, pendência ou qualquer falta apontada, a conversa segue aberta.
@@ -78,24 +80,20 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     pendencia.present? || aviso.present? || conferencia['falta'] == true
   end
 
-  # Tudo o que entrou não tinha sido pedido e foi desfeito: o turno é de sem mudança.
+  # Tudo o que entrou não tinha sido pedido e foi desfeito: o turno não aplicou nada, e o dono sabe o que foi desfeito.
   def fechar_desfeito!(token, resposta, conferencia)
-    sem_mudanca!(token, resposta, 'conferencia' => conferencia)
+    texto = Autonomia::Agents::Builder::TextosDoAjuste.desfiz_o_nao_pedido(conferencia['itens'], idioma_do_ajuste)
+    sem_mudanca!(token, resposta, { 'conferencia' => conferencia }, texto: texto)
     log_do_ajuste(conferencia, :desfeito)
   end
 
-  def o_que_entrou(conferencia)
-    desfeito = conferencia['desfeito'].to_h
-    return unless desfeito['ok'] && desfeito['tudo'] == false
+  def aviso_do_desfecho(desfecho, dados, conferencia)
+    textos = Autonomia::Agents::Builder::TextosDoAjuste
+    return textos.nao_desfiz(conferencia['itens'], idioma_do_ajuste) if conferencia.dig('desfeito', 'ok') == false
 
-    pedidos = Array(conferencia['itens']).reject { |item| item['pedido_pelo_dono'] == false }
-    Autonomia::Agents::Builder::TextosDoAjuste.o_que_entrou(pedidos, idioma_do_ajuste)
-  end
-
-  def aviso_do_desfecho(desfecho, dados, desfeito)
-    return texto_do_ajuste(:agente_mudou) if desfeito.present? && desfeito['ok'] == false
     if desfecho == :nao_conferido
-      return texto_do_ajuste(:nao_conferido, pedidos: dados.dig('correcao', 'mudancas').to_a.pluck('pedido').uniq.join('; '))
+      pedidos = textos.lista(dados.dig('correcao', 'mudancas'), 'pedido')
+      return texto_do_ajuste(:nao_conferido, pedidos: pedidos)
     end
 
     AVISOS_DO_DESFECHO[desfecho] && texto_do_ajuste(AVISOS_DO_DESFECHO[desfecho])
@@ -125,7 +123,7 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
       "conferencias_ms=#{@conferencias_ms.join(',')} correcao=#{conferencia['correcao'] == true} " \
       "desfecho=#{desfecho || '-'} conferencia=#{conferencia['erro'] || 'ok'} " \
       "falta=#{conferencia['falta'] == true} conflito=#{conferencia['conflito'] == true} " \
-      "desfeito=#{conferencia.dig('desfeito', 'campos').to_a.join(',')}"
+      "desfeito=#{conferencia.dig('desfeito', 'campos').to_a.join(',')} sem_pedido=#{Array(conferencia['sem_pedido']).size}"
     )
   end
 end

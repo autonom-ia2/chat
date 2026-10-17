@@ -588,7 +588,9 @@ en:
         correcao_superada: 'Part of what you asked was left out: a newer adjustment of this agent started while I was checking. Review the agent when it finishes.'
         agente_mudou: 'The agent was changed some other way while I was checking, so I did not fix what was missing. Review the agent and tell me what you still want to change.'
         sem_resposta: 'I could not answer that right now. Can you ask in another way?'
-        entrou: 'What went in: %{resumos}.'
+        tambem_mudei: 'I also changed %{resumos}, which you did not ask for. Do you want me to undo it?'
+        desfiz_nao_pedido: 'I undid what you had not asked for: %{resumos}. What do you want to change?'
+        nao_desfiz: 'The agent was changed some other way while I was checking, so I did not undo what you had not asked for: %{resumos}. Review the agent and tell me what you want.'
         nao_conferido: 'I tried again to apply what was missing, but there was no time left to check it. Review the agent: %{pedidos}.'
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
       caixa_externo:

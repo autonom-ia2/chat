@@ -23,7 +23,9 @@ module AvaliacaoDoAjustePorLista
 
   # Cada cena: a fala do dono e o que é certo. `aplica`: se a cena deve gravar algo. `so` (opcional): os únicos campos
   # que podem mudar. `historico` (opcional): as mensagens antes da fala. `itens` (opcional): quantos pedidos a
-  # conferência tem de dar como atendidos.
+  # conferência tem de dar como atendidos. `aplica: :nada`: nada visível muda (pergunta ou o desfeito do que ninguém
+  # pediu). `nada_desfeito`: nenhum destino do pedido foi tratado como sem pedido. `pendente`: a pergunta aberta antes da
+  # fala; `pendencia`: :resolvida (sai) ou :mantida (continua).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
@@ -53,7 +55,23 @@ module AvaliacaoDoAjustePorLista
     { nome: 'pedido_e_pergunta', fala: 'Responda em no máximo 2 frases. E o que o Hubber faz hoje?', aplica: true,
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases E a resposta ao dono explica, com palavras ' \
-             'simples, o que o Hubber faz hoje, sem copiar trechos da instrução.' }
+             'simples, o que o Hubber faz hoje, sem copiar trechos da instrução.' },
+    # Revisão da parte 2 (ALTO): um pedido com dois destinos (tom e instrução) entra inteiro, nada é desfeito.
+    { nome: 'parcial_dois_destinos', fala: 'Responda em no máximo 2 frases.', aplica: true, itens: 2, nada_desfeito: true,
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases no tom E na instrução, e a resposta ao dono não ' \
+             'oferece desfazer nada.' },
+    # Revisão da parte 2 (ALTO, prova B2): o que ninguém pediu nunca fica no agente.
+    { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
+      certo: 'Nada muda no agente, e a resposta ao dono explica o que ele faz hoje (ou diz o que foi desfeito), sem ' \
+             'dizer que aplicou algo.' },
+    # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
+    { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
+      historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
+      certo: 'O agente DEPOIS tem tom formal, e a resposta ao dono não repete a pergunta "Mais formal ou informal?".' },
+    { nome: 'pedido_novo_sem_responder', fala: 'Troque a saudação para: Olá! Aqui é o Hubber.', aplica: true, so: %w[greeting],
+      pendente: 'Mais formal ou informal?', pendencia: :mantida,
+      historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
+      certo: 'Só a saudação muda, para a frase pedida. O tom fica como estava (a pergunta sobre ele segue aberta).' }
   ].freeze
 
   VEREDITO = {
@@ -110,9 +128,15 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     antes = retrato(agente)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
+    abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
     thread.append_message!('user', cena[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     [agente, antes, retrato(agente), thread.reload.state.to_h]
+  end
+
+  def abrir_pendencia(thread, pergunta)
+    thread.update!(state: thread.state.to_h.merge('needs_more_info' => true, 'next_question' => pergunta,
+                                                  'pergunta_pendente' => pergunta))
   end
 
   def julgar(cena, antes, depois, resposta)
@@ -132,9 +156,28 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     certo = case cena[:aplica]
             when false then nao_aplicou?(agente, antes, depois, estado)
             when true then aplicou_sem_falta?(cena, estado)
+            when :nada then nada_visivel?(agente, antes, depois, estado)
             else estado['needs_more_info'] == true
             end
-    certo && so_os_permitidos?(cena, antes, depois)
+    certo && so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado)
+  end
+
+  # Nada mudou no agente e nenhuma versão do Construtor ficou na lista (pergunta, ou o desfeito do que ninguém pediu).
+  def nada_visivel?(agente, antes, depois, estado)
+    estado['applied'] != true && antes == depois &&
+      agente.instruction_versions.na_lista.where(reason: 'builder_adjust').none?
+  end
+
+  def pendencia_certa?(cena, estado)
+    case cena[:pendencia]
+    when :resolvida then estado['pergunta_pendente'].to_s.empty?
+    when :mantida then estado['pergunta_pendente'] == cena[:pendente]
+    else true
+    end
+  end
+
+  def nada_desfeito?(cena, estado)
+    !cena[:nada_desfeito] || !estado['conferencia'].to_h.keys.intersect?(%w[desfeito sem_pedido])
   end
 
   def nao_aplicou?(agente, antes, depois, estado)

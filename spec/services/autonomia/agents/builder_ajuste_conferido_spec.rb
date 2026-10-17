@@ -344,67 +344,98 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
-  # Crítica (2ª rodada, ALTO): o que a conferência diz que o dono não pediu volta a ser como era, sem perguntar.
+  # Revisão da parte 2 (ALTO dos dois revisores): o que o dono não pediu. Os itens se agrupam pelo `pedido` que o
+  # Construtor escreveu; o código só desfaz sozinho quando TODOS estão sem pedido.
   describe 'quando a conferência aponta mudança sem pedido do dono' do
-    def sem_pedido(*indices)
+    def sem_pedido(*indices, mudou_antes: false)
       allow(conferente).to receive(:conferir) do |**kwargs|
         recebidas << kwargs
+        Autonomia::Agents::Agent.where(id: agent.id).update_all(updated_at: 1.minute.from_now) if mudou_antes # rubocop:disable Rails/SkipsModelValidations
         conferencia_de(kwargs[:mudancas]).then do |conf|
           conf.merge('itens' => conf['itens'].each_with_index.map { |item, i| item.merge('pedido_pelo_dono' => indices.exclude?(i)) })
         end
       end
     end
 
-    it 'tudo sem pedido (prova B2): desfaz, fecha como sem mudança e a versão sai da lista' do
-      respostas << saida('human_card' => 'O Hubber atende clientes da corretora.', 'mudancas' => [mudanca('human_card', 'explica')])
+    it 'tudo sem pedido (prova B2): desfaz, não fecha como aplicado, diz o que desfez e a versão sai da lista' do
+      respostas << saida('human_card' => 'O Hubber atende clientes da corretora.',
+                         'mudancas' => [mudanca('human_card', 'explica', 'Reescrevi o cartão.')])
       sem_pedido(0)
 
       run_turn
 
       expect(agent.reload.human_card).to eq('O Hubber atende os clientes.')
-      expect(estado).to include('applied' => false, 'needs_more_info' => true, 'next_question' => texto(:sem_mudanca))
-      expect(estado.dig('conferencia', 'desfeito')).to eq('campos' => ['human_card'], 'tudo' => true, 'ok' => true)
+      expect(estado).to include('applied' => false, 'needs_more_info' => true,
+                                'next_question' => texto(:desfiz_nao_pedido, resumos: 'Reescrevi o cartão'))
+      expect(estado.dig('conferencia', 'desfeito')).to eq('campos' => ['human_card'], 'ok' => true)
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to be_empty
       expect(versoes_do_construtor.sole.metadata).to include('fora_da_lista' => true, 'desfeita' => true)
     end
 
-    it 'parte sem pedido: o pedido fica, o não pedido volta, e o dono recebe o que entrou' do
+    it 'um pedido com dois destinos: o destino que a conferência marcou sem pedido NÃO é desfeito' do
+      respostas << saida('tone' => 'curto', 'instruction' => 'Responda em no máximo 2 frases.',
+                         'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('instruction', fala, 'No máximo 2 frases.')])
+      sem_pedido(1)
+
+      run_turn
+
+      expect(agent.reload).to have_attributes(tone: 'curto', instruction: 'Responda em no máximo 2 frases.')
+      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'pergunta_pendente' => '')
+      expect(estado['conferencia'].keys).not_to include('desfeito', 'sem_pedido')
+    end
+
+    it 'parte sem pedido: nada é desfeito, e o dono decide pela pendência' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
                          'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
       sem_pedido(1)
 
       run_turn
 
-      expect(agent.reload).to have_attributes(tone: 'curto', greeting: 'Oi! Aqui é o Hubber.')
-      expect(estado).to include('applied' => true, 'needs_more_info' => false)
-      expect(thread.messages.last).to include('content' => texto(:entrou, resumos: 'Respostas curtas.'))
-      versao = versoes_do_construtor.sole
-      expect(versao.metadata['agente']).to include('tone' => 'curto', 'greeting' => 'Oi! Aqui é o Hubber.')
-      expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to eq([versao])
+      pergunta = texto(:tambem_mudei, resumos: 'Saudação nova')
+      expect(agent.reload).to have_attributes(tone: 'curto', greeting: 'Olá!')
+      expect(estado).to include('applied' => true, 'needs_more_info' => true, 'next_question' => pergunta,
+                                'pergunta_pendente' => pergunta)
+      expect(thread.messages.last).to include('content' => pergunta)
+      expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
     end
 
-    it 'coluna que um item pedido também escreve não é desfeita (a instrução pedida leva o cartão)' do
-      respostas << saida('instruction' => 'Nova.', 'human_card' => 'Cartão novo.',
-                         'mudancas' => [mudanca('instruction'), mudanca('human_card', 'x')])
-      sem_pedido(1)
+    it 'o agente mudou por outro caminho antes de desfazer: não desfaz e diz o que ficou sem pedido' do
+      respostas << saida('greeting' => 'Olá!', 'mudancas' => [mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(0, mudou_antes: true)
 
       run_turn
 
-      expect(agent.reload).to have_attributes(instruction: 'Nova.', human_card: 'Cartão novo.')
+      expect(agent.reload.greeting).to eq('Olá!')
+      expect(estado).to include('applied' => true, 'needs_more_info' => true,
+                                'next_question' => texto(:nao_desfiz, resumos: 'Saudação nova'))
     end
 
-    it 'o agente mudou por outro caminho antes de desfazer: não desfaz e avisa' do
-      respostas << saida('tone' => 'curto', 'greeting' => 'Olá!', 'mudancas' => [mudanca('tone'), mudanca('greeting', 'x')])
+    it 'o token da geração foi tomado antes de desfazer: não desfaz (job antigo)' do
+      respostas << saida('greeting' => 'Olá!', 'mudancas' => [mudanca('greeting', 'x', 'Saudação nova.')])
       allow(conferente).to receive(:conferir) do |**kwargs|
-        Autonomia::Agents::Agent.where(id: agent.id).update_all(updated_at: 1.minute.from_now) # rubocop:disable Rails/SkipsModelValidations
+        Autonomia::Agents::BuildThread.where(id: thread.id).update_all(build_token: 'outro') # rubocop:disable Rails/SkipsModelValidations
         conf = conferencia_de(kwargs[:mudancas])
-        conf.merge('itens' => [conf['itens'][0], conf['itens'][1].merge('pedido_pelo_dono' => false)])
+        conf.merge('itens' => conf['itens'].map { |item| item.merge('pedido_pelo_dono' => false) })
       end
 
       run_turn
 
       expect(agent.reload.greeting).to eq('Olá!')
-      expect(estado).to include('needs_more_info' => true, 'next_question' => texto(:agente_mudou))
+    end
+
+    # Mutante q9: a versão de antes é a imediatamente anterior à aplicação, não a primeira do agente.
+    it 'com versões antigas antes da base, volta ao estado de logo antes do ajuste' do
+      agent.update!(greeting: 'Saudação antiga')
+      agent.record_instruction_version!(reason: 'manual_edit')
+      agent.update!(instruction: 'Instrução do meio.', greeting: 'Oi! Aqui é o Hubber.')
+      agent.record_instruction_version!(reason: 'manual_edit')
+      respostas << saida('instruction' => 'Instrução do meio.', 'greeting' => 'Olá!',
+                         'mudancas' => [mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(0)
+
+      run_turn
+
+      expect(agent.reload).to have_attributes(greeting: 'Oi! Aqui é o Hubber.', instruction: 'Instrução do meio.')
     end
   end
 
@@ -445,6 +476,26 @@ RSpec.describe Autonomia::Agents::Builder do
     before do
       respostas << saida('tone' => 'curto', 'mudancas' => [mudanca('tone'), mudanca('handoff_rule', 'preço')])
       conferencias << { nao: [1] }
+    end
+
+    # Mutante q10: o teto conta do ÚLTIMO toque (a primeira escrita), não do começo do turno.
+    it 'o teto conta do último toque: turno longo antes da escrita ainda corrige' do
+      allow(fake_client).to receive(:create) do |**params|
+        calls << params
+        travel(150.seconds) if calls.size == 1
+        resposta = calls.size == 1 ? respostas.shift : correcao_do_preco
+        { text: resposta.to_json, usage: {}, tools_used: [] }
+      end
+      allow(conferente).to receive(:conferir) do |**kwargs|
+        recebidas << kwargs
+        travel(100.seconds) if recebidas.size == 1
+        conferencia_de(kwargs[:mudancas], nao: recebidas.size == 1 ? [1] : [])
+      end
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(agent.reload.handoff_rule).to eq('Preço vai à equipe.')
     end
 
     it 'a correção não tem nova tentativa' do

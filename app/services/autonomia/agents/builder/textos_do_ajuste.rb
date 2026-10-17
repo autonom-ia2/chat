@@ -22,18 +22,33 @@ module Autonomia::Agents::Builder::TextosDoAjuste
   # A pergunta ao dono quando ficou item sem aplicar, com os pedidos que o Construtor listou. A explicação da correção
   # (texto do Construtor) vem no lugar da pergunta genérica.
   def pergunta_do_que_faltou(conferencia, locale, explicacao: nil)
-    pedidos = Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia).pluck('pedido').compact_blank.uniq
-    inicio = pedidos.any? ? texto(:nao_consegui, locale, pedidos: pedidos.join('; ')) : texto(:nao_consegui_tudo, locale)
+    pedidos = lista(Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia), 'pedido')
+    inicio = pedidos.present? ? texto(:nao_consegui, locale, pedidos: pedidos) : texto(:nao_consegui_tudo, locale)
     [inicio, explicacao.to_s.strip.presence || texto(:de_outro_jeito, locale)].join(' ')
   end
 
   # Tudo entrou, mas a conferência viu conflito com o resto do agente: o dono decide.
   def pergunta_do_conflito(mudancas, locale)
-    texto(:conflito, locale, pedidos: mudancas.pluck('pedido').compact_blank.uniq.join('; '))
+    texto(:conflito, locale, pedidos: lista(mudancas, 'pedido'))
   end
 
-  # O que entrou, pelos resumos do Construtor, quando parte da escrita foi desfeita.
-  def o_que_entrou(mudancas, locale)
-    texto(:entrou, locale, resumos: mudancas.pluck('resumo').compact_blank.uniq.join('; '))
+  # Parte do que entrou o dono não pediu: fica aplicado, e ele decide. A resposta volta como pendência.
+  def pergunta_do_nao_pedido(itens, locale)
+    texto(:tambem_mudei, locale, resumos: lista(itens, 'resumo'))
+  end
+
+  # Tudo o que entrou não tinha sido pedido e foi desfeito.
+  def desfiz_o_nao_pedido(itens, locale)
+    texto(:desfiz_nao_pedido, locale, resumos: lista(itens, 'resumo'))
+  end
+
+  # O desfazer foi recusado (o agente mudou por outro caminho): o que não foi pedido ficou.
+  def nao_desfiz(itens, locale)
+    texto(:nao_desfiz, locale, resumos: lista(itens, 'resumo'))
+  end
+
+  # Os textos de um campo dos itens, sem repetição e sem o ponto final de cada um (o texto fixo põe o dele).
+  def lista(itens, campo)
+    Array(itens).map { |item| item[campo].to_s.strip.chomp('.') }.compact_blank.uniq.join('; ')
   end
 end

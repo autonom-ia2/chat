@@ -20,7 +20,7 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
     dados, conferencia, desfecho = conferir_e_corrigir(token, dados)
     return if desfecho == :token_perdido
 
-    fechar_ajuste!(token, dados, desfazer_o_que_nao_foi_pedido(dados, conferencia), desfecho)
+    fechar_ajuste!(token, dados, desfazer_o_que_nao_foi_pedido(token, dados, conferencia), desfecho)
   end
 
   # -> [dados, conferência final, desfecho da correção]

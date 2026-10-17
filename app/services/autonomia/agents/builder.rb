@@ -992,8 +992,11 @@ module Autonomia
           "\"#{question}\". Pedidos ACUMULAM: se a última fala do usuário trouxe um pedido NOVO sem " \
           'responder esta pergunta, isso NÃO é ordem de fechar. APLIQUE o pedido novo E REPITA esta ' \
           'pergunta em next_question (needs_more_info=true). Se a fala respondeu a pergunta, siga normal ' \
-          'e não a repita.'
+          "e não a repita.#{PENDENCIA_RESOLVIDA_NOTA if ajuste_da_fase2?}"
       end
+
+      # #1428 — ajuste do piloto: a resposta à pendência se marca, não se repete (senão ela volta todo turno).
+      PENDENCIA_RESOLVIDA_NOTA = ' Se a fala respondeu esta pergunta, marque pendencia_resolvida=true em vez de repeti-la.'.freeze
 
       # A pendência a repetir: primeiro a HERDADA da sessão anterior; senão, a pergunta viva desta thread
       # — e esta só em AJUSTE. Na entrevista de CRIAÇÃO uma pergunta aberta por turno é o fluxo normal, e

@@ -1056,7 +1056,9 @@ pt_BR:
         correcao_superada: 'Parte do que você pediu ficou de fora: um ajuste mais novo deste agente começou enquanto eu conferia. Confira o agente quando ele terminar.'
         agente_mudou: 'O agente mudou por outro caminho enquanto eu conferia, então não corrigi o que faltou. Confira o agente e me diga o que ainda quer mudar.'
         sem_resposta: 'Não consegui responder agora. Pode perguntar de outro jeito?'
-        entrou: 'O que entrou: %{resumos}.'
+        tambem_mudei: 'Também mudei %{resumos}, que você não pediu. Quer que eu desfaça?'
+        desfiz_nao_pedido: 'Desfiz o que você não tinha pedido: %{resumos}. O que você quer mudar?'
+        nao_desfiz: 'O agente mudou por outro caminho enquanto eu conferia, então não desfiz o que você não tinha pedido: %{resumos}. Confira o agente e me diga o que quer.'
         nao_conferido: 'Tentei aplicar de novo o que faltou, mas não deu tempo de conferir. Confira o agente: %{pedidos}.'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
       caixa_externo:

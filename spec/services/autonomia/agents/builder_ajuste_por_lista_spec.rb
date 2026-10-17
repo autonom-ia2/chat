@@ -162,6 +162,35 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(estado).to include('pergunta_pendente' => 'E o tom, mais curto?')
       end
 
+      # Revisão da parte 2 (MÉDIO): a pendência não fica presa para sempre.
+      it 'a pendência preservada sai depois do teto de turnos, e a contagem segue para a próxima sessão' do
+        segundo_turno(saida('greeting' => 'Olá', 'mudancas' => [mudanca('greeting', 'saudação Olá')]))
+        expect(estado).to include('pergunta_pendente' => 'Mais formal ou informal?', 'pendencia_turnos' => 1)
+
+        proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+        proxima.inherit_pending_question!
+        expect(proxima.reload.state).to include('pending_question' => 'Mais formal ou informal?', 'pendencia_turnos' => 1)
+
+        turnos = (2...described_class::AjusteConferido::TETO_DE_TURNOS_DA_PENDENCIA + 1).map do |vez|
+          proxima.append_message!('user', "Mude o fallback #{vez}")
+          respostas << saida('fallback_message' => "F #{vez}", 'mudancas' => [mudanca('fallback_message', "fallback #{vez}")])
+          described_class.new(account: account, build_thread: proxima.reload).tap do |outro|
+            allow(outro).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+            outro.run!(proxima.begin_build!)
+          end
+          proxima.reload.state.values_at('pergunta_pendente', 'pendencia_turnos')
+        end
+        expect(turnos).to eq([['Mais formal ou informal?', 2], ['', 0]])
+      end
+
+      it 'o aviso de pendência do piloto manda marcar pendencia_resolvida em vez de repetir' do
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
+        run_turn
+
+        contexto = described_class.new(account: account, build_thread: thread.reload).send(:pending_request_context)
+        expect(contexto).to include('pendencia_resolvida=true')
+      end
+
       it 'nada muda e o modelo não resolve: a pendência anterior continua' do
         segundo_turno(saida('next_question' => 'Pronto', 'mudancas' => [mudanca('greeting', 'saudação')]))
 

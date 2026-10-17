@@ -116,10 +116,13 @@ module Autonomia
                        .where.not(id: id).order(id: :desc).first
         return if previous.blank?
 
-        question = pending_question_of(previous.state.to_h)
+        anterior = previous.state.to_h
+        question = pending_question_of(anterior)
         return if question.blank?
 
-        update!(state: state.to_h.merge('pending_question' => question))
+        # #1428: no piloto, a contagem de turnos da pendência segue para a sessão nova (o teto vale entre sessões).
+        turnos = anterior.slice('pendencia_turnos').compact
+        update!(state: state.to_h.merge('pending_question' => question).merge(turnos))
       end
 
       # A pergunta que ficou aberta numa thread anterior. #1428: no ajuste do piloto o Builder grava a pendência de

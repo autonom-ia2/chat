@@ -19,6 +19,11 @@
 # desde o último toque na thread: o job é síncrono e a thread presa vira stale em 5 min.
 # Depois que a primeira escrita venceu, nenhuma falha da correção derruba o turno.
 module Autonomia::Agents::Builder::AjusteConferido
+  # REDE DA PENDÊNCIA: a pergunta preservada sem o modelo resolvê-la sai depois de tantos turnos do dono. Escolhido em
+  # vez de "limpar quando um pedido sai sem falta na conferência", que apagaria a pergunta que o dono nunca respondeu
+  # (prova E: ele pede outra coisa, ela entra sem falta). O teto só encerra o laço de pergunta presa, sem adivinhar.
+  TETO_DE_TURNOS_DA_PENDENCIA = 3
+
   private
 
   # Decidido uma vez por turno (run! zera): o turno não muda de caminho no meio.
@@ -55,6 +60,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     @campos_truncados = []
     @explicacao_da_correcao = nil
     @pendencia_anterior = pending_question
+    @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
     ajuste_em_curso(token) ? :retomar : :seguir
   end
 
@@ -105,9 +111,9 @@ module Autonomia::Agents::Builder::AjusteConferido
 
   # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado. Ao dono, só o texto
   # fixo e, se o modelo pediu esclarecimento, a pergunta dele: nunca um texto do modelo que afirme ter aplicado.
-  def sem_mudanca!(token, parsed, extra = {})
+  def sem_mudanca!(token, parsed, extra = {}, texto: nil)
     pergunta = pergunta_do_modelo(parsed)
-    perguntar!(token, parsed, [texto_do_ajuste(:sem_mudanca), pergunta].compact,
+    perguntar!(token, parsed, [texto || texto_do_ajuste(:sem_mudanca), pergunta].compact,
                { 'so_pergunta' => false, 'pergunta_pendente' => pergunta || pendencia_mantida(parsed) }.merge(extra))
   end
 
@@ -135,11 +141,24 @@ module Autonomia::Agents::Builder::AjusteConferido
     parsed.to_h['pendencia_resolvida'] == true ? '' : @pendencia_anterior.to_s
   end
 
+  # A pendência e há quantos turnos ela segue sem resposta. A mesma pergunta de antes conta um turno a mais; no teto,
+  # sai. Pergunta nova (ou nenhuma) zera.
+  def pendencia_no_estado(pendencia)
+    pendencia = pendencia.to_s
+    return { 'pergunta_pendente' => pendencia, 'pendencia_turnos' => 0 } if pendencia.blank? || pendencia != @pendencia_anterior.to_s
+
+    turnos = @turnos_da_pendencia + 1
+    return { 'pergunta_pendente' => '', 'pendencia_turnos' => 0 } if turnos >= TETO_DE_TURNOS_DA_PENDENCIA
+
+    { 'pergunta_pendente' => pendencia, 'pendencia_turnos' => turnos }
+  end
+
   # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência.
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
              .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil).merge(extra)
+    estado = estado.merge(pendencia_no_estado(estado['pergunta_pendente']))
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
 

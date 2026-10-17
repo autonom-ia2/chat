@@ -29,7 +29,10 @@ class Autonomia::Agents::ConferenciaDoAjuste
     - nao_atendidos: os indices das mudancas que o agente DEPOIS nao atende inteiras. Pedido mais restrito que o que ja
       havia (ex.: "no maximo 2 frases" quando o agente ja era "breve") so conta como atendido se a restricao nova estiver
       escrita.
-    - sem_pedido_do_dono: os indices das mudancas que a fala do dono nao pediu.
+    - sem_pedido_do_dono: os indices das mudancas que a fala do dono nao pediu de jeito nenhum. Um mesmo pedido pode
+      ter varios destinos (ex.: "no maximo 2 frases" vai para tone E para instruction; "nao fale de preco" vai para
+      guardrails E para instruction). Cada destino de um pedido que o dono fez conta como pedido: destino secundario
+      nunca e "sem pedido".
     - faltou_fora_da_lista: true se a fala do dono pede alguma mudanca que nenhum item da lista cobre.
     - conflito: true se os pedidos se contradizem, ou contradizem o resto do agente, de um jeito que o dono precisa
       decidir.
