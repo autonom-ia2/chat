@@ -418,6 +418,44 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.messages.pluck('content')).not_to include(texto(:tambem_mudei, resumos: 'Saudação nova'))
     end
 
+    def turno_seguinte(fala_do_dono, saida_do_modelo)
+      thread.append_message!('user', fala_do_dono)
+      respostas << saida_do_modelo
+      described_class.new(account: account, build_thread: thread.reload).tap do |outro|
+        allow(outro).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+        outro.run!(thread.begin_build!)
+      end
+    end
+
+    # Revisão crítica do 66d97ac642 (BAIXO): a instrução sem pedido volta com o andaime e o cartão de antes.
+    it 'instrução não pedida: o turno seguinte recebe a instrução, o andaime e o cartão de antes' do
+      respostas << saida('greeting' => 'Olá!', 'instruction' => 'Outra instrução.', 'scaffold' => 'outro andaime',
+                         'human_card' => 'Outro cartão.',
+                         'mudancas' => [mudanca('greeting', 'saudação Olá'), mudanca('instruction', 'x', 'Instrução nova.')])
+      sem_pedido(1)
+      run_turn
+      allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
+
+      turno_seguinte('Tira o que você mudou na instrução', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
+
+      contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+      expect(contexto).to include('instruction: Atenda o cliente da corretora com cordialidade.', 'scaffold: andaime',
+                                  'human_card: O Hubber atende os clientes.')
+    end
+
+    # Revisão crítica do 66d97ac642 (BAIXO, mutante u5): o turno seguinte que não aplica nada também limpa a referência.
+    it 'o turno seguinte só com pergunta do dono limpa a referência do não pedido' do
+      respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
+                         'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(1)
+      run_turn
+      expect(estado['nao_pedido_anterior']).to be_present
+
+      turno_seguinte('O que você faz hoje?', saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.'))
+
+      expect(estado).to include('applied' => false, 'nao_pedido_anterior' => nil)
+    end
+
     # Rodada 7 (crítico MÉDIO): o "é só me dizer o que tirar" funciona: o turno seguinte recebe o valor de antes.
     it 'o turno seguinte recebe o valor de antes do campo não pedido, e a chave sai depois' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
@@ -425,7 +463,10 @@ RSpec.describe Autonomia::Agents::Builder do
       sem_pedido(1)
       run_turn
       expect(estado['nao_pedido_anterior'].to_json).not_to include('Oi! Aqui')
-      allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
+      allow(conferente).to receive(:conferir) do |**kwargs|
+        recebidas << kwargs
+        conferencia_de(kwargs[:mudancas])
+      end
 
       thread.append_message!('user', 'Tira a saudação nova')
       respostas << saida('greeting' => 'Oi! Aqui é o Hubber.', 'mudancas' => [mudanca('greeting', 'tira a saudação nova')])
@@ -436,6 +477,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
       expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
+      # Eval de 17/10: a conferência também precisa do valor de antes, senão julga "como era" sem saber o que era.
+      expect(recebidas.last[:pedido]).to include('Tira a saudação nova', 'greeting: Oi! Aqui é o Hubber.')
       expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
       expect(estado['nao_pedido_anterior']).to be_nil
     end

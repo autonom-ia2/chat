@@ -65,8 +65,9 @@ module AvaliacaoDoAjustePorLista
              'oferece desfazer nada.' },
     # Revisão da parte 2 (ALTO, prova B2): o que ninguém pediu nunca fica no agente.
     { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
-      certo: 'Nada muda no agente, e a resposta ao dono explica o que ele faz hoje (ou diz o que foi desfeito), sem ' \
-             'dizer que aplicou algo.' },
+      certo: 'Nada muda no agente, e a resposta ao dono explica o que ele faz hoje pelo cartão (human_card) e pelo ' \
+             'comportamento visível (saudação, tom, quando passa para a equipe), ou diz o que foi desfeito, sem dizer que ' \
+             'aplicou algo. Não precisa citar a instrução interna, que é sigilosa.' },
     # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
     { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
@@ -74,7 +75,8 @@ module AvaliacaoDoAjustePorLista
     { nome: 'pedido_novo_sem_responder', fala: 'Troque a saudação para: Olá! Aqui é o Hubber.', aplica: true, so: %w[greeting],
       pendente: 'Mais formal ou informal?', pendencia: :mantida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
-      certo: 'Só a saudação muda, para a frase pedida. O tom fica como estava (a pergunta sobre ele segue aberta).' },
+      certo: 'Só a saudação muda, para a frase pedida. O tom fica como estava, e a resposta ao dono pode repetir a ' \
+             'pergunta que ficou aberta ("Mais formal ou informal?"): repetir essa pergunta é o certo.' },
     # Rodada 6: o que o dono não pediu, quando é só parte, fica aplicado e é informado, sem pergunta.
     { nome: 'parcial_informa_sem_perguntar', fala: 'Deixe o tom mais caloroso.', aplica: true, informa_sem_perguntar: true,
       certo: 'O agente DEPOIS tem tom mais caloroso. Se algo mais mudou, a resposta ao dono só informa o que mudou, sem ' \

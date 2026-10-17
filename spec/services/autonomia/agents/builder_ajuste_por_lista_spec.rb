@@ -54,6 +54,16 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(described_class::AjustePorLista::MUDANCA.dig(:properties, :pedido, :description)).to include('mesmo pedido')
     end
 
+    # Eval de 17/10: sem ver o cartão atual, o modelo o devolvia vazio (o item instruction grava o cartão) e o turno
+    # travava em "preciso de mais contexto". O ajuste do piloto manda o nome e o cartão atuais.
+    it 'manda o nome e o cartão atuais como contexto interno, logo depois da tabela' do
+      run_turn
+
+      cartao = calls.first[:input].second
+      expect(cartao[:role]).to eq('user')
+      expect(cartao[:content].first[:text]).to include('CONTEXTO INTERNO', 'name: Hubber', 'human_card: O Hubber atende os clientes.')
+    end
+
     it 'a tabela manda responder o que o agente faz hoje pelo cartão e pelo comportamento visível, citando a seção 11' do
       expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('human_card', 'comportamento visivel',
                                                                             'secao 11', 'resposta_ao_dono')
@@ -113,6 +123,43 @@ RSpec.describe Autonomia::Agents::Builder do
         proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
         proxima.inherit_pending_question!
         expect(proxima.reload.state['pending_question']).to be_nil
+      end
+
+      # Revisão crítica do 66d97ac642 (MÉDIO, cena R3): o so_pergunta do piloto não cala a pergunta do turno legado.
+      it 'pergunta no piloto, desliga, turno legado com esclarecimento: a pergunta volta no turno seguinte e na sessão nova' do
+        respostas << saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.')
+        run_turn
+        Autonomia::Agents::Fase2.desligar!(account)
+        thread.update!(state: thread.state.merge('ajuste_em_curso' => { 'token' => 'de outra geração' }))
+        thread.append_message!('user', 'Mude a cor')
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Qual cor?')
+        described_class.new(account: account.reload, build_thread: thread.reload).tap do |legado|
+          allow(legado).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+          legado.run!(thread.begin_build!)
+        end
+
+        expect(estado.keys).not_to include('so_pergunta', 'conferencia', 'parcial', 'ajuste_em_curso', 'aplicado_em_token')
+        seguinte = described_class.new(account: account.reload, build_thread: thread.reload)
+        expect(seguinte.send(:pending_question)).to eq('Qual cor?')
+        proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+        proxima.inherit_pending_question!
+        expect(proxima.reload.state['pending_question']).to eq('Qual cor?')
+      end
+
+      it 'o turno legado que é re-run do mesmo token mantém a prova da primeira escrita' do
+        respostas << saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.')
+        run_turn
+        Autonomia::Agents::Fase2.desligar!(account)
+        token = thread.begin_build!
+        thread.guardar_no_estado!(token, 'ajuste_em_curso' => { 'token' => token }, 'aplicado_em_token' => token)
+        respostas << saida('greeting' => 'Olá')
+        described_class.new(account: account.reload, build_thread: thread.reload).tap do |legado|
+          allow(legado).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+          legado.run!(token)
+        end
+
+        expect(estado).to include('aplicado_em_token' => token)
+        expect(estado.keys).not_to include('so_pergunta')
       end
 
       # Rodada 7 (BAIXO): o turno legado apaga o que o piloto deixou; religar não traz a pendência de volta.

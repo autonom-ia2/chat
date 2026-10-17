@@ -760,7 +760,7 @@ module Autonomia
 
         # Chave desligada depois do piloto: o que ele deixou no state (a pendência e o resto) sai antes do turno legado,
         # para nada voltar se a chave for religada.
-        @thread.esquecer_do_estado!(token, CHAVES_DO_PILOTO) unless ajuste_da_fase2?
+        @thread.esquecer_do_estado!(token, chaves_do_piloto_a_esquecer(token)) unless ajuste_da_fase2?
 
         text = single_full_call? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
@@ -809,7 +809,11 @@ module Autonomia
       # No ajuste do piloto (#1428), a tabela de destino vai num item developer antes do contexto: a instrução-mãe de
       # quem está fora do piloto não muda.
       def built_input
-        @built_input ||= ajuste_da_fase2? ? [AjustePorLista.item_da_tabela, *contexto_do_nao_pedido] + build_input : build_input
+        @built_input ||= if ajuste_da_fase2?
+                           [AjustePorLista.item_da_tabela, contexto_do_cartao, *contexto_do_nao_pedido] + build_input
+                         else
+                           build_input
+                         end
       end
 
       # Turno de UMA chamada completa, sem a enxuta: o AJUSTE inteiro (decisão do gestor, #1367: o "Mudar
@@ -1003,7 +1007,20 @@ module Autonomia
       end
 
       # #1428 — o que o ajuste do piloto guarda no state entre turnos.
-      CHAVES_DO_PILOTO = %w[pergunta_pendente pendencia_turnos pendencia_no_teto nao_pedido_anterior].freeze
+      CHAVES_DO_PILOTO = %w[pergunta_pendente pendencia_turnos pendencia_no_teto nao_pedido_anterior so_pergunta conferencia
+                            parcial].freeze
+      # As que protegem a idempotência de um ajuste do piloto em voo (o re-run do mesmo token só confere e fecha).
+      CHAVES_DO_AJUSTE_EM_CURSO = %w[ajuste_em_curso aplicado_em_token].freeze
+
+      # O turno legado esquece o que o piloto deixou. As chaves do ajuste em curso só saem se elas são de OUTRA geração:
+      # o begin_build! deste turno já tomou o token dela, então ela não escreve mais nem pode ser retomada (a retomada
+      # exige o mesmo token e a Fase 2). Se forem deste mesmo token (re-run de um ajuste que caiu e a chave desligou no
+      # meio), ficam: são a prova de que a primeira escrita já venceu.
+      def chaves_do_piloto_a_esquecer(token)
+        em_curso = @thread.state.to_h['ajuste_em_curso']
+        do_mesmo_token = em_curso.is_a?(Hash) && em_curso['token'] == token
+        do_mesmo_token ? CHAVES_DO_PILOTO : CHAVES_DO_PILOTO + CHAVES_DO_AJUSTE_EM_CURSO
+      end
 
       # #1428 — ajuste do piloto: a resposta à pendência se marca, não se repete (senão ela volta todo turno).
       PENDENCIA_RESOLVIDA_NOTA = ' Se a fala respondeu esta pergunta, marque pendencia_resolvida=true em vez de repeti-la.'.freeze

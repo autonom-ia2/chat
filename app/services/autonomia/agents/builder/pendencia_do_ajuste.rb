@@ -39,6 +39,21 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
       'pendencia_no_teto' => turnos >= TETO_DE_TURNOS_DA_PENDENCIA }
   end
 
+  # #1428 — o nome e o cartão que o dono vê, atuais. O contexto do ajuste (adjust_context, de todas as contas) não os
+  # traz, e no piloto o item `instruction` grava o cartão junto: sem vê-lo, o modelo o devolvia vazio e o turno travava
+  # (eval de 17/10). Só no ajuste do piloto; os dois são texto que o dono vê, não sigilo.
+  def contexto_do_cartao
+    agent = @thread.agent
+    texto = "CONTEXTO INTERNO (nao e fala do usuario). Campos que o dono ve, atuais (devolva iguais o que nao for pedido):\n" \
+            "name: #{agent.name}\nhuman_card: #{agent.human_card}"
+    { role: 'user', content: [{ type: 'input_text', text: texto }] }
+  end
+
+  # O texto do valor de antes do que o dono não pediu (o mesmo que o Construtor recebe), para a conferência.
+  def valores_antes_do_nao_pedido
+    contexto_do_nao_pedido.map { |item| item.dig(:content, 0, :text) }.join
+  end
+
   # #1428 — o turno anterior mudou campos que o dono não pediu e o avisou ("é só me dizer o que tirar"). O Construtor
   # recebe, como CONTEXTO INTERNO, o valor de antes desses campos, lido da versão: um "tira isso" volta ao original. A
   # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale só para este turno.
@@ -49,11 +64,17 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
     versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
     return [] if versao.nil?
 
-    antes = retrato_da_versao(versao)
-    linhas = Array(dados['campos']).map { |campo| "#{campo}: #{Array.wrap(antes[campo]).join(' | ')}" }
+    antes = retrato_da_versao(versao).merge('scaffold' => versao.metadata.to_h.dig('agente', 'scaffold').to_s)
+    linhas = campos_com_o_que_acompanha(dados['campos']).map { |campo| "#{campo}: #{Array.wrap(antes[campo]).join(' | ')}" }
     texto = ['CONTEXTO INTERNO (nao e fala do usuario). O ultimo ajuste tambem mudou, sem o dono pedir, os campos ' \
              'abaixo, e o dono foi avisado. Se ele pedir para tirar ou voltar, use o valor antes do ultimo ajuste:', *linhas]
     [{ role: 'user', content: [{ type: 'input_text', text: texto.join("\n") }] }]
+  end
+
+  # A instrução grava junto o andaime e o cartão: os três voltam juntos.
+  def campos_com_o_que_acompanha(campos)
+    campos = Array(campos)
+    campos.include?('instruction') ? (campos + %w[scaffold human_card]).uniq : campos
   end
 
   # No teto, a pendência segue como contexto, sem a ordem de repetir.
