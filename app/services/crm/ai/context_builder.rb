@@ -16,9 +16,12 @@ module Crm
                      'ou "external_agent" (bot ou automação externa).'.freeze
 
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
-      def initialize(card:, fora: [])
+      # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
+      # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
+      def initialize(card:, fora: [], memoria: false)
         @card = card
         @fora = fora
+        @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
       end
 
       def perform
@@ -33,10 +36,14 @@ module Crm
           conversation_state: conversation_state,
           temporal: temporal_context,
           other_subjects: other_subjects
-        }
+        }.merge(memoria_payload)
       end
 
       private
+
+      def memoria_payload
+        @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}
+      end
 
       # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
       # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
@@ -183,6 +190,7 @@ module Crm
 
       def format_message(message)
         payload = {
+          **(@numeracao ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
           content: message_content(message).truncate(2000),
           created_at: message.created_at.iso8601
