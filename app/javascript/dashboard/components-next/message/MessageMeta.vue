@@ -173,7 +173,7 @@ const statusToShow = computed(() => {
       </time>
     </div>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
-    <span v-if="transportLabel" class="whitespace-nowrap">
+    <span v-if="transportLabel" class="whitespace-nowrap" data-transporte>
       {{ transportLabel }}
     </span>
     <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />

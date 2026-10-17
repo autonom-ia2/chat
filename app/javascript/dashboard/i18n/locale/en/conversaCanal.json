@@ -204,7 +204,9 @@
     },
     "APAGADA": {
       "PELO_CLIENTE": "Deleted by the customer",
-      "AJUDA": "The customer deleted this message on WhatsApp. They no longer see it; your team still does."
+      "AJUDA": "The customer deleted this message on WhatsApp. They no longer see it; your team still does.",
+      "ENVIADA": "You deleted this message",
+      "RECEBIDA": "This message was deleted"
     },
     "EDITADA": {
       "ROTULO": "Edited",

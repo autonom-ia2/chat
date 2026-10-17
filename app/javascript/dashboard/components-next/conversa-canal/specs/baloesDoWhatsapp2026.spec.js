@@ -79,7 +79,7 @@ describe('apagada pelo cliente (#1702)', () => {
     expect(balao(wrapper, 'text').text()).toContain('Olá');
   });
 
-  it('sem a pele, nada muda; apagada pela equipe segue o Chatwoot', () => {
+  it('sem a pele, nada muda; apagada pela equipe não ganha o selo do cliente', () => {
     expect(
       montar({ contentAttributes: atributos }, { pele: null })
         .find('[data-apagada-pelo-cliente]')
@@ -90,6 +90,34 @@ describe('apagada pelo cliente (#1702)', () => {
         .find('[data-apagada-pelo-cliente]')
         .exists()
     ).toBe(false);
+  });
+});
+
+describe('apagada pela equipe (#1702)', () => {
+  it('com a pele, o aviso do WhatsApp no lugar do texto, de cada lado', () => {
+    const recebida = balao(
+      montar({ contentAttributes: { deleted: true } }),
+      'apagada'
+    );
+    expect(recebida.text()).toContain('This message was deleted');
+    expect(recebida.find('.i-ph-prohibit').exists()).toBe(true);
+    const enviada = balao(
+      montar({
+        messageType: MESSAGE_TYPES.OUTGOING,
+        sender: { id: 1, name: 'Ana', type: 'User' },
+        contentAttributes: { deleted: true },
+      }),
+      'apagada'
+    );
+    expect(enviada.text()).toContain('You deleted this message');
+  });
+
+  it('sem a pele, segue o balão do Chatwoot', () => {
+    const wrapper = montar(
+      { contentAttributes: { deleted: true } },
+      { pele: null }
+    );
+    expect(balao(wrapper, 'apagada').exists()).toBe(false);
   });
 });
 

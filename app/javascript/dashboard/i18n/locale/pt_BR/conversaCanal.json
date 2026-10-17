@@ -204,7 +204,9 @@
     },
     "APAGADA": {
       "PELO_CLIENTE": "Apagada pelo cliente",
-      "AJUDA": "O cliente apagou esta mensagem no WhatsApp. Ele não vê mais; a equipe continua vendo."
+      "AJUDA": "O cliente apagou esta mensagem no WhatsApp. Ele não vê mais; a equipe continua vendo.",
+      "ENVIADA": "Você apagou esta mensagem",
+      "RECEBIDA": "Esta mensagem foi apagada"
     },
     "EDITADA": {
       "ROTULO": "Editada",

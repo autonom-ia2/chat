@@ -7,6 +7,7 @@ import PedidoDoWhatsapp from './pedido/PedidoDoWhatsapp.vue';
 import ContatosDoWhatsapp from './midia/ContatosDoWhatsapp.vue';
 import EmojiGrandeDoWhatsapp from './midia/EmojiGrandeDoWhatsapp.vue';
 import NaoSuportadaDoWhatsapp from './NaoSuportadaDoWhatsapp.vue';
+import ApagadaDoWhatsapp from './ApagadaDoWhatsapp.vue';
 import MidiaIndisponivelDoWhatsapp from './MidiaIndisponivelDoWhatsapp.vue';
 import ReceivedLocation from '../message/bubbles/RichMessage/ReceivedLocation.vue';
 import ContactBubble from '../message/bubbles/Contact.vue';
@@ -45,6 +46,7 @@ export const balaoDaPele = mensagem => {
     return tipoNaoSuportado(atributos) ? NaoSuportadaDoWhatsapp : null;
   }
   if (mensagem.private) return null;
+  if (atributos.deleted) return ApagadaDoWhatsapp;
   if (midiaIndisponivel(atributos)) return MidiaIndisponivelDoWhatsapp;
   if (ehEnquete(atributos)) return EnqueteDoWhatsapp;
   if (ehPedido(atributos)) return PedidoDoWhatsapp;

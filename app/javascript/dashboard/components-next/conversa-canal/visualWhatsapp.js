@@ -101,6 +101,10 @@ const RECHEIO = [
   '[&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:block [&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:px-1.5',
   // Editada: "Editada" entra antes da hora, e o espaço reservado na última linha cresce.
   '[&[data-bubble-name=text]:has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[116px]',
+  // Caixa híbrida: o rótulo do transporte ("WhatsApp API · plano B") também fica na
+  // linha da hora; sem o espaço a mais, ele cobria o fim do texto.
+  '[&[data-bubble-name=text]:has([data-transporte])_.prose-bubble>p:last-child]:after:!w-[210px]',
+  '[&[data-bubble-name=text]:has([data-transporte]):has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[262px]',
 ].join(' ');
 
 // Citação (resposta a uma mensagem): faixa verde à esquerda e fundo levemente
