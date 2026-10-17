@@ -95,8 +95,10 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
     rodar_turno!
 
     expect(voto.content).not_to include('Qual horário?')
-    expect(consultas.sole[:query]).to include(completo)
+    # Um caminho só (revisão, risco 10): o texto completo vai no histórico, uma vez; a pergunta do turno é a da main.
     expect(consultas.sole[:history].last).to include(role: 'user', content: completo)
+    expect(consultas.sole[:history].count { |item| item[:content].to_s.include?(completo) }).to eq(1)
+    expect(consultas.sole[:query]).not_to include('Qual horário?')
   end
 
   describe 'the unsupported bubble ("open it on the phone")' do
