@@ -1,5 +1,16 @@
 {
   "CONVERSA_CANAL": {
+    "FORMULARIO": {
+      "NOME": "Formulário: {nome}",
+      "SEM_NOME": "Formulário do WhatsApp",
+      "RESPONDIDO": "Respondido",
+      "RESPOSTA_ENVIADA": "Resposta enviada",
+      "VER_RESPOSTA": "Ver resposta",
+      "OCULTAR_RESPOSTA": "Ocultar resposta",
+      "ILEGIVEL": "Não deu para ler os campos desta resposta. Eles continuam na API e nos webhooks.",
+      "SIM": "Sim",
+      "NAO": "Não"
+    },
     "DIA": {
       "HOJE": "Hoje",
       "ONTEM": "Ontem"
@@ -155,6 +166,154 @@
       "ONDA": "Posição do áudio",
       "VELOCIDADE": "Mudar a velocidade",
       "BAIXAR": "Baixar"
+    },
+    "MIDIA": {
+      "BAIXAR": "Baixar {nome}",
+      "VIDEO": "Vídeo. Toque para abrir",
+      "FIGURINHA": "Figurinha",
+      "DESCER": "Ir para a mensagem mais recente",
+      "MENU": "Opções da mensagem",
+      "FECHAR": "Fechar",
+      "VER_OPCOES": "Ver opções",
+      "ESCOLHIDA": "Escolhida pelo cliente"
+    },
+    "ALBUM": {
+      "ROTULO": "Álbum com {total} fotos e vídeos",
+      "FOTO": "Foto {n} de {total}. Toque para abrir",
+      "VIDEO": "Vídeo {n} de {total}. Toque para abrir",
+      "MAIS": "Mais {n} fotos e vídeos. Toque para abrir",
+      "MAIS_CURTO": "+{n}",
+      "APAGADAS_EM_PARTE": "{apagadas} de {total} fotos apagadas. Tente de novo para as outras."
+    },
+    "CONTATO": {
+      "CONVERSAR": "Conversar"
+    },
+    "REACOES": {
+      "ROTULO": "{nome} reagiu com {emoji}",
+      "CLIENTE": "Cliente",
+      "EQUIPE": "Equipe"
+    },
+    "REAGIR": {
+      "BOTAO": "Reagir",
+      "MENU": "Reagir",
+      "BARRA": "Escolha uma reação",
+      "COM": "Reagir com {emoji}",
+      "TIRAR": "Tirar a reação {emoji}",
+      "MAIS": "Mais emojis",
+      "FORA_DA_JANELA": "O cliente não escreve há mais de 24 horas. O WhatsApp oficial só aceita reação com a conversa aberta.",
+      "FALHOU": "Não deu para mandar a reação. Tente de novo."
+    },
+    "VISUALIZACAO_UNICA": {
+      "ROTULO": "Visualização única"
+    },
+    "APAGADA": {
+      "PELO_CLIENTE": "Apagada pelo cliente",
+      "AJUDA": "O cliente apagou esta mensagem no WhatsApp. Ele não vê mais; a equipe continua vendo.",
+      "ENVIADA": "Você apagou esta mensagem",
+      "RECEBIDA": "Esta mensagem foi apagada"
+    },
+    "EDITADA": {
+      "ROTULO": "Editada",
+      "TITULO": "Versões anteriores",
+      "TROCADA_AS": "Trocada às {hora}",
+      "SEM_VERSOES": "O texto anterior não foi guardado."
+    },
+    "ENCAMINHADA": {
+      "SIMPLES": "Encaminhada",
+      "FREQUENTE": "Encaminhada com frequência"
+    },
+    "NAO_SUPORTADA": {
+      "poll": "O cliente mandou uma enquete. Abra no celular para ver.",
+      "gif": "O cliente mandou um GIF. Abra no celular para ver.",
+      "pinned": "O cliente fixou uma mensagem. Abra no celular para ver qual.",
+      "edit": "O cliente editou uma mensagem. Abra no celular para ver o texto novo.",
+      "view_once": "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular.",
+      "unknown": "O cliente mandou uma mensagem que o WhatsApp não mostra aqui. Abra no celular para ver."
+    },
+    "CITACAO": {
+      "VOCE": "Você",
+      "OUTRA_CONVERSA": "De outra conversa",
+      "NAO_CONFERIDA": "Trecho enviado pelo aparelho do cliente, não conferido",
+      "FOTO": "Foto",
+      "VIDEO": "Vídeo",
+      "AUDIO": "Áudio",
+      "DOCUMENTO": "Documento",
+      "LOCALIZACAO": "Localização",
+      "CONTATO": "Contato",
+      "MIDIA": "Mídia",
+      "SEM_TEXTO": "Mensagem"
+    },
+    "MIDIA_INDISPONIVEL": {
+      "voice": "Não foi possível baixar esta mensagem de voz",
+      "audio": "Não foi possível baixar este áudio",
+      "image": "Não foi possível baixar esta foto",
+      "video": "Não foi possível baixar este vídeo",
+      "document": "Não foi possível baixar este documento",
+      "sticker": "Não foi possível baixar esta figurinha"
+    },
+    "LOCALIZACAO_AO_VIVO": "Localização em tempo real · só o ponto inicial",
+    "TEMPORARIAS": {
+      "ATIVADAS": "Mensagens temporárias ativadas. Novas mensagens vão desaparecer desta conversa após {duracao}.",
+      "DESATIVADAS": "Mensagens temporárias desativadas.",
+      "GUARDADAS": "Aqui a equipe continua vendo as mensagens.",
+      "DIAS": "{n} dia | {n} dias",
+      "HORAS": "{n} hora | {n} horas"
+    },
+    "PEDIDO": {
+      "TITULO": "Pedido",
+      "ITENS": "{n} item | {n} itens",
+      "VER": "Ver pedido",
+      "OCULTAR": "Ocultar itens",
+      "ITEM": "{quantidade} × {codigo}"
+    },
+    "LIGACAO": {
+      "VOZ_PERDIDA": "Ligação de voz perdida",
+      "VIDEO_PERDIDA": "Ligação de vídeo perdida",
+      "VOZ_RECUSADA": "Ligação de voz recusada",
+      "VIDEO_RECUSADA": "Ligação de vídeo recusada",
+      "VOZ": "Ligação de voz",
+      "VIDEO": "Ligação de vídeo"
+    },
+    "ENQUETE": {
+      "UMA": "Selecione uma opção",
+      "VARIAS": "Selecione uma ou mais opções",
+      "VOTOS": "{n} voto | {n} votos",
+      "OPCAO": "{titulo}: {votos}",
+      "TITULO_E_VOTOS": "{titulo} · {votos}",
+      "VER_VOTOS": "Ver votos",
+      "OCULTAR_VOTOS": "Ocultar votos",
+      "SEM_VOTOS": "Ninguém votou ainda"
+    },
+    "CONTATOS": {
+      "RESUMO": "{nome} e mais {n} contato | {nome} e mais {n} contatos",
+      "VER_TODOS": "Ver todos",
+      "OCULTAR": "Ocultar",
+      "SEM_NOME": "Contato sem nome"
+    },
+    "PREVIA_DE_LINK": {
+      "ABRIR": "{titulo}. Abre {site} em uma nova aba"
+    },
+    "AUDIO_OUVIDO": "O cliente ouviu este áudio",
+    "ENCAMINHAR": {
+      "MENU": "Encaminhar",
+      "BOTAO": "Encaminhar",
+      "MARCAR": "Marcar mensagem para encaminhar",
+      "SAIR": "Sair da seleção",
+      "SELECIONADAS": "{n} selecionada | {n} selecionadas",
+      "ENVIAR_SELECAO": "Encaminhar mensagens selecionadas",
+      "TITULO": "Encaminhar mensagem para",
+      "FECHAR": "Fechar",
+      "BUSCAR": "Pesquisar nome, número ou {'@'}nomedeusuário",
+      "RECENTES": "Conversas recentes",
+      "NADA": "Nenhuma conversa encontrada",
+      "CARREGANDO": "Carregando conversas…",
+      "ENVIAR": "Enviar",
+      "LIMITE_DESTINOS": "Dá para encaminhar para até {limite} conversas de uma vez.",
+      "LIMITE_MENSAGENS": "Dá para encaminhar até {limite} mensagens de uma vez.",
+      "ENVIADO": "Mensagem encaminhada | Mensagens encaminhadas",
+      "DESTINO_FALHOU": "{nome}: {erro}",
+      "NAO_FOI": "Não foi para estas conversas. Elas continuam marcadas para tentar de novo:",
+      "FALHOU": "Não deu para encaminhar. Tente de novo."
     }
   }
 }

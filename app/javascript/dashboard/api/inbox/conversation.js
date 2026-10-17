@@ -82,8 +82,11 @@ class ConversationApi extends ApiClient {
     return axios.post(`${this.url}/${conversationId}/assignments`, params);
   }
 
-  markMessageRead({ id }) {
-    return axios.post(`${this.url}/${id}/update_last_seen`);
+  // #1702: readReceipt = o atendente abriu a conversa; o servidor marca a última recebida como lida no WhatsApp.
+  markMessageRead({ id, readReceipt = false }) {
+    const url = `${this.url}/${id}/update_last_seen`;
+    if (!readReceipt) return axios.post(url);
+    return axios.post(url, { read_receipt: true });
   }
 
   markMessagesUnread({ id }) {

@@ -246,7 +246,12 @@ describe('montarMensagem (#1702)', () => {
     ).toEqual({
       pedido: {
         content: '',
-        richMessage: { type: 'contact', name: 'Ana', phone: '+5511987654321' },
+        richMessage: {
+          type: 'contact',
+          name: 'Ana',
+          phone: '+5511987654321',
+          wa_id: '5511987654321',
+        },
       },
     });
   });

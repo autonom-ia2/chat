@@ -1,4 +1,8 @@
 class SafeFetch::Fetcher
+  # Sinal interno de `truncate_at_max_bytes`: levantar dentro do bloco é o que impede o Net::HTTP de ler o resto do
+  # corpo em memória depois dele (ver `stream_response`). Nunca sai do Fetcher.
+  class Truncated < StandardError; end
+
   def initialize(options)
     @options = options
   end
@@ -7,6 +11,7 @@ class SafeFetch::Fetcher
     @deadline = SafeFetch::Deadline.new(options.total_timeout)
     with_tempfile do |tempfile|
       response = stream_response(tempfile)
+      response = @truncated_response if response.nil? && @truncated_response
       raise http_error(response) unless response.is_a?(Net::HTTPSuccess)
 
       tempfile.rewind
@@ -39,22 +44,30 @@ class SafeFetch::Fetcher
     bytes_written = 0
 
     perform_request do |res|
-      if res.is_a?(Net::HTTPRedirection) && options.follow_redirects?
-        refuse_cross_origin_redirect!(res)
-        next
-      end
+      next if redirect_to_follow?(res)
       raise http_error(res, error_excerpt(res)) unless res.is_a?(Net::HTTPSuccess)
 
       validate_content_type!(res['content-type'])
       validate_announced_size!(res['content-length'])
       bytes_written = write_response_body(res, tempfile, bytes_written)
     end
+  rescue Truncated
+    nil
   rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, OpenSSL::SSL::SSLError,
          IOError, Errno::ECONNABORTED, Errno::ECONNREFUSED, Errno::ECONNRESET,
          Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, Errno::ETIMEDOUT => e
     raise SafeFetch::TotalTimeoutError, deadline.exceeded_message if e.is_a?(Net::ReadTimeout) && deadline.binding?
 
     raise SafeFetch::FetchError, e.message
+  end
+
+  # Um 3xx que vai ser seguido: as recusas de origem e de porta levantam aqui, antes do salto.
+  def redirect_to_follow?(response)
+    return false unless response.is_a?(Net::HTTPRedirection) && options.follow_redirects?
+
+    refuse_cross_origin_redirect!(response)
+    refuse_port_redirect!(response)
+    true
   end
 
   def perform_request(&)
@@ -78,6 +91,15 @@ class SafeFetch::Fetcher
     return if options.cross_origin_redirects? || location.blank? || options.same_origin_location?(location)
 
     raise SafeFetch::CrossOriginRedirectError
+  end
+
+  # Com `allowed_ports`, um salto para porta fora da lista é recusado ANTES de ir até lá (o ssrf_filter revalida o IP
+  # a cada salto, mas não a porta).
+  def refuse_port_redirect!(response)
+    location = response['location']
+    return if location.blank? || options.allowed_port_location?(location)
+
+    raise SafeFetch::UnsafeUrlError, 'redirect to a port that is not allowed'
   end
 
   # O começo do corpo de uma resposta de erro, até `error_body_bytes`, dentro do prazo. Parar de ler
@@ -117,7 +139,7 @@ class SafeFetch::Fetcher
   # O tamanho anunciado reprova antes do primeiro byte: um `Content-Length` acima do teto não precisa
   # ser lido para ser recusado. O teto medido (abaixo) continua valendo para quem não anuncia.
   def validate_announced_size!(content_length)
-    return if content_length.blank? || content_length.to_i <= options.effective_max_bytes
+    return if options.truncate_at_max_bytes? || content_length.blank? || content_length.to_i <= options.effective_max_bytes
 
     raise SafeFetch::FileTooLargeError, "announced #{content_length.to_i} bytes, limit #{options.effective_max_bytes}"
   end
@@ -134,13 +156,23 @@ class SafeFetch::Fetcher
     deadline.enforce!(socket)
     response.read_body do |chunk|
       bytes_written += chunk.bytesize
-      raise SafeFetch::FileTooLargeError, "exceeded #{options.effective_max_bytes} bytes" if bytes_written > options.effective_max_bytes
+      truncate!(response, tempfile, chunk, bytes_written) if bytes_written > options.effective_max_bytes
 
       tempfile.write(chunk)
       deadline.enforce!(socket)
     end
 
     bytes_written
+  end
+
+  # Acima do teto: recusa, ou, com `truncate_at_max_bytes`, grava só o que cabe e encerra a leitura levantando
+  # `Truncated` (a resposta fica guardada para o `fetch` montar o resultado).
+  def truncate!(response, tempfile, chunk, bytes_written)
+    raise SafeFetch::FileTooLargeError, "exceeded #{options.effective_max_bytes} bytes" unless options.truncate_at_max_bytes?
+
+    tempfile.write(chunk.byteslice(0, chunk.bytesize - (bytes_written - options.effective_max_bytes)))
+    @truncated_response = response
+    raise Truncated
   end
 
   def allowed_content_type?(value)

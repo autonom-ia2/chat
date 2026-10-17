@@ -904,6 +904,12 @@
     "controller": "api/v1/accounts/contacts#summary",
     "parametros": []
   },
+  "conversa_canal/encaminhamentos": {
+    "controller": "api/v1/accounts/conversa_canal/encaminhamentos#index",
+    "parametros": [
+      "termo"
+    ]
+  },
   "conversa_canal/formularios": {
     "controller": "api/v1/accounts/conversa_canal/formularios#index",
     "parametros": [

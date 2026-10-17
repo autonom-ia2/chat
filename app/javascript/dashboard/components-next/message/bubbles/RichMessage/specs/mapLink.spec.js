@@ -1,4 +1,4 @@
-import { mapHrefOf } from '../mapLink.js';
+import { mapHrefOf, pointOf } from '../mapLink.js';
 
 const LINK = 'https://maps.google.com/?q=';
 
@@ -27,5 +27,12 @@ describe('mapHrefOf', () => {
     ['coordenada que não é número', Number.NaN, 1],
   ])('não cria link com %s', (_titulo, latitude, longitude) => {
     expect(mapHrefOf(latitude, longitude)).toBe('');
+  });
+});
+
+describe('pointOf', () => {
+  it('devolve "lat,long" validado, ou vazio', () => {
+    expect(pointOf(-23.5613, -46.6565)).toBe('-23.5613,-46.6565');
+    expect(pointOf('-23.5', 1)).toBe('');
   });
 });

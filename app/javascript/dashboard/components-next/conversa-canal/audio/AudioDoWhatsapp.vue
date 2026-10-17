@@ -20,29 +20,44 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../../message/provider.js';
 import { BARRAS, carregarOnda, tempoDoAudio } from './ondaDoAudio';
+import { audioArquivo, audioDeVoz, audioOuvido } from '../marcasDaMensagem';
 
 const props = defineProps({
   attachment: { type: Object, required: true },
 });
 
 const { t } = useI18n();
-const { sender } = useMessageContext();
+const { sender, orientation, contentAttributes } = useMessageContext();
+// Enviada (direita): a foto fica à esquerda, como no app; recebida: à direita.
+const enviada = computed(() => orientation?.value === 'right');
 const { uid } = getCurrentInstance();
+// Enviada que o cliente já ouviu (played_at): o microfone fica azul, como no app.
+const ouvidoPeloCliente = computed(
+  () => enviada.value && audioOuvido(contentAttributes?.value)
+);
 
-// Uma altura por nível, de 4 px (silêncio, ainda visível) a 26 px.
+// Áudio de voz (PTT, #1709): `meta.is_voice_message`. Sem a marca, o balão segue o
+// mesmo desenho de voz (a Cloud e o painel antigo não marcam); a marca fica registrada
+// no balão para o desenho de "arquivo de áudio" quando vier o sinal do contrário.
+const deVoz = computed(() => audioDeVoz(props.attachment));
+// Arquivo de áudio: no app, círculo laranja com fone de ouvido no lugar da foto.
+const deArquivo = computed(() => audioArquivo(props.attachment));
+
+// Uma altura por nível, de 5 a 22 px, como no app: o silêncio vira barra baixa, não
+// ponto (print do WhatsApp do Rodrigo, 16/10).
 const ALTURAS = [
-  'h-[4px]',
+  'h-[5px]',
   'h-[6px]',
   'h-[8px]',
-  'h-[10px]',
+  'h-[9px]',
+  'h-[11px]',
   'h-[12px]',
   'h-[14px]',
-  'h-[16px]',
+  'h-[15px]',
+  'h-[17px]',
   'h-[18px]',
   'h-[20px]',
   'h-[22px]',
-  'h-[24px]',
-  'h-[26px]',
 ];
 // Enquanto a onda não chega (ou se o arquivo não puder ser lido): barras neutras.
 const NEUTRAS = Array.from(
@@ -195,7 +210,13 @@ const nome = computed(() => sender.value?.name || '');
 </script>
 
 <template>
-  <div ref="raiz" class="flex flex-col w-full" data-audio-do-whatsapp>
+  <div
+    ref="raiz"
+    class="flex flex-col w-full"
+    :class="enviada ? '' : 'pb-3'"
+    data-audio-do-whatsapp
+    :data-audio-de-voz="deVoz ? '' : undefined"
+  >
     <audio
       ref="player"
       class="hidden"
@@ -208,97 +229,123 @@ const nome = computed(() => sender.value?.name || '');
       @pause="tocando = false"
       @ended="aoTerminar"
     />
-    <div class="flex items-center gap-2 w-full min-w-0 py-1 ps-1">
-      <button
-        type="button"
-        class="grid place-content-center size-11 flex-shrink-0 rounded-full text-[#54656F] dark:text-[#AEBAC1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00A884]"
-        :aria-label="
-          tocando
-            ? t('CONVERSA_CANAL.AUDIO.PAUSAR')
-            : t('CONVERSA_CANAL.AUDIO.TOCAR')
-        "
-        data-tocar-audio
-        @click="tocarOuPausar"
+    <div
+      class="flex items-center gap-2.5 w-full min-w-0"
+      :class="enviada ? 'flex-row-reverse' : ''"
+    >
+      <div
+        class="flex items-center flex-1 min-w-0 gap-1.5"
+        :class="enviada ? 'pe-1' : 'ps-1'"
       >
-        <Icon
-          :icon="tocando ? 'i-ph-pause-fill' : 'i-ph-play-fill'"
-          class="size-7"
-        />
-      </button>
-
-      <div class="flex flex-col flex-1 min-w-0 pt-3">
-        <div
-          ref="trilha"
-          role="slider"
-          tabindex="0"
-          :aria-label="t('CONVERSA_CANAL.AUDIO.ONDA')"
-          :aria-valuemin="0"
-          :aria-valuemax="Math.round(duracao)"
-          :aria-valuenow="Math.round(atual)"
-          :aria-valuetext="tempo"
-          class="relative flex items-center justify-between gap-px h-[30px] cursor-pointer touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-[#00A884] rounded"
-          data-onda-do-audio
-          @pointerdown="comecarArraste"
-          @pointermove="arrastar"
-          @pointerup="soltar"
-          @pointercancel="soltar"
-          @keydown="aoTeclar"
+        <button
+          type="button"
+          class="grid place-content-center size-11 flex-shrink-0 rounded-full text-[#3B3B3B] dark:text-[#FAFAFA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#53BDEB]"
+          :aria-label="
+            tocando
+              ? t('CONVERSA_CANAL.AUDIO.PAUSAR')
+              : t('CONVERSA_CANAL.AUDIO.TOCAR')
+          "
+          data-tocar-audio
+          @click="tocarOuPausar"
         >
-          <span
-            v-for="(nivel, indice) in niveis"
-            :key="indice"
-            class="relative flex items-center justify-center w-[2px] flex-shrink-0 h-full"
+          <Icon
+            :icon="tocando ? 'i-ph-pause-fill' : 'i-ph-play-fill'"
+            class="size-5"
+          />
+        </button>
+
+        <div class="flex flex-col flex-1 min-w-0 pt-4">
+          <div
+            ref="trilha"
+            role="slider"
+            tabindex="0"
+            :aria-label="t('CONVERSA_CANAL.AUDIO.ONDA')"
+            :aria-valuemin="0"
+            :aria-valuemax="Math.round(duracao)"
+            :aria-valuenow="Math.round(atual)"
+            :aria-valuetext="tempo"
+            class="relative flex items-center justify-between h-[26px] cursor-pointer touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-[#53BDEB] rounded"
+            data-onda-do-audio
+            @pointerdown="comecarArraste"
+            @pointermove="arrastar"
+            @pointerup="soltar"
+            @pointercancel="soltar"
+            @keydown="aoTeclar"
           >
             <span
-              class="w-[2px] rounded-full"
-              :class="[
-                ALTURAS[nivel],
-                indice <= barraAtual && (tocando || atual > 0)
-                  ? 'bg-[#00A884]'
-                  : 'bg-[#111B21]/25 dark:bg-white/30',
-              ]"
-            />
-            <span
-              v-if="indice === barraAtual"
-              class="absolute size-3 rounded-full bg-[#00A884] dark:bg-[#06CF9C]"
-              :class="{ 'scale-125': arrastando }"
-              aria-hidden="true"
-            />
+              v-for="(nivel, indice) in niveis"
+              :key="indice"
+              class="relative flex items-center justify-center w-[3px] flex-shrink-0 h-full"
+            >
+              <span
+                class="w-[3px] rounded-full"
+                :class="[
+                  ALTURAS[nivel],
+                  indice <= barraAtual && (tocando || atual > 0)
+                    ? 'bg-[#0A0A0A]/60 dark:bg-white/75'
+                    : 'bg-[#0A0A0A]/25 dark:bg-white/40',
+                ]"
+              />
+              <span
+                v-if="indice === barraAtual"
+                class="absolute size-[13px] rounded-full bg-[#53BDEB]"
+                :class="{ 'scale-125': arrastando }"
+                aria-hidden="true"
+              />
+            </span>
+          </div>
+          <span
+            class="mt-1 text-[11px] leading-4 tabular-nums text-[#666666] dark:text-[#A7A8A8]"
+            data-tempo-do-audio
+          >
+            {{ tempo }}
           </span>
         </div>
-        <span
-          class="mt-0.5 text-[11px] leading-4 tabular-nums text-[#667781] dark:text-[#8696A0]"
-          data-tempo-do-audio
-        >
-          {{ tempo }}
-        </span>
       </div>
 
       <button
         v-if="mostrarVelocidade"
         type="button"
-        class="grid place-content-center h-7 min-w-11 px-2 flex-shrink-0 rounded-full bg-[#111B21]/10 dark:bg-white/15 text-[13px] font-semibold text-[#54656F] dark:text-[#E9EDEF]"
+        class="grid place-content-center h-[26px] w-[52px] flex-shrink-0 rounded-full bg-[#0A0A0A]/[0.08] dark:bg-[#000]/30 text-[13px] font-semibold tabular-nums text-[#0A0A0A] dark:text-[#FAFAFA]"
         :aria-label="t('CONVERSA_CANAL.AUDIO.VELOCIDADE')"
         data-velocidade-do-audio
         @click="trocarVelocidade"
       >
-        {{ `${velocidade}×`.replace('.', ',') }}
+        {{ `${velocidade.toFixed(1)}×`.replace('.', ',') }}
       </button>
+      <span
+        v-else-if="deArquivo"
+        class="grid place-content-center size-[52px] flex-shrink-0 rounded-full bg-[#FF9500] text-white"
+        aria-hidden="true"
+        data-audio-arquivo
+      >
+        <Icon icon="i-ph-headphones-fill" class="size-7" />
+      </span>
       <span v-else class="relative flex-shrink-0" aria-hidden="true">
-        <Avatar :name="nome" :src="foto" :size="48" rounded-full />
+        <Avatar :name="nome" :src="foto" :size="52" rounded-full />
         <span
-          class="absolute -bottom-0.5 ltr:-left-1 rtl:-right-1 grid place-content-center"
-          :class="
-            ouvido ? 'text-[#53BDEB]' : 'text-[#00A884] dark:text-[#06CF9C]'
-          "
+          class="absolute bottom-0 grid place-content-center"
+          :class="[
+            enviada ? 'ltr:right-0 rtl:left-0' : 'ltr:left-0 rtl:right-0',
+            ouvidoPeloCliente
+              ? 'text-[#53BDEB]'
+              : enviada
+                ? 'text-[#0A0A0A]/45 dark:text-white/50'
+                : ouvido
+                  ? 'text-[#53BDEB]'
+                  : 'text-[#21C063]',
+          ]"
         >
-          <Icon icon="i-ph-microphone-fill" class="size-[18px]" />
+          <Icon icon="i-ph-microphone-fill" class="size-[22px]" />
         </span>
+      </span>
+      <span v-if="ouvidoPeloCliente" class="sr-only" data-audio-ouvido>
+        {{ t('CONVERSA_CANAL.AUDIO_OUVIDO') }}
       </span>
     </div>
     <p
       v-if="attachment.transcribedText"
-      class="mt-1 px-2 pb-1 text-[13px] leading-5 break-words text-[#3B4A54] dark:text-[#D1D7DB]"
+      class="mt-1 px-2 pb-1 text-[13px] leading-5 break-words text-[#3B4A54] dark:text-[#FAFAFA]"
       data-transcricao-do-audio
     >
       {{ attachment.transcribedText }}

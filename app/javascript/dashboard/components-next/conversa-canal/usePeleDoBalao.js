@@ -2,7 +2,11 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../message/provider.js';
-import { ORIENTATION, SENDER_TYPES } from '../message/constants';
+import {
+  MESSAGE_STATUS,
+  ORIENTATION,
+  SENDER_TYPES,
+} from '../message/constants';
 import { PELES, usePele, usePrimeiras } from './pele';
 import { useModeloDaMensagem } from './useModeloDaMensagem';
 import {
@@ -28,6 +32,7 @@ export const usePeleDoBalao = nomeDoBalao => {
     contentAttributes,
     additionalAttributes,
     inboxId,
+    status,
   } = useMessageContext();
   // Modelo com botões: a hora fica numa linha só dela, acima dos botões.
   const { botoes: botoesDoModelo } = useModeloDaMensagem(
@@ -42,7 +47,11 @@ export const usePeleDoBalao = nomeDoBalao => {
     variante: variant.value,
     lado: orientation.value,
     primeira: primeiras.value.has(id.value),
-    nomeDoBalao: botoesDoModelo.value.length ? 'modelo' : nomeDoBalao,
+    // Modelo que não saiu não mostra botões (BotoesDoModelo): fica o balão de texto.
+    nomeDoBalao:
+      botoesDoModelo.value.length && status?.value !== MESSAGE_STATUS.FAILED
+        ? 'modelo'
+        : nomeDoBalao,
   }));
 
   // Nome de quem mandou, só no 1º balão enviado da sequência.

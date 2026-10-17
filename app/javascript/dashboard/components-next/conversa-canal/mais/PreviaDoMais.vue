@@ -41,9 +41,9 @@ const emTexto = computed(() => {
 const { t } = useI18n();
 
 const BALAO =
-  'relative max-w-full rounded-lg ltr:rounded-tr-none rtl:rounded-tl-none bg-[#D9FDD3] dark:bg-[#005C4B] text-[#111B21] dark:text-[#E9EDEF] text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
+  'relative max-w-full rounded-lg ltr:rounded-tr-none rtl:rounded-tl-none bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA] text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
 const LINHA_DE_BOTAO =
-  'flex items-center justify-center gap-1.5 min-h-10 px-3 border-t border-[#111B21]/10 dark:border-white/10 text-[#027EB5] dark:text-[#53BDEB] font-medium text-sm';
+  'flex items-center justify-center gap-1.5 min-h-10 px-3 border-t border-[#0A0A0A]/10 dark:border-white/10 text-[#1A6B42] dark:text-[#6FD07E] font-medium text-sm';
 
 const opcoes = computed(() => opcoesPreenchidas(props.campos.opcoes || []));
 const lista = computed(() => viraLista(props.campos.opcoes || []));
@@ -64,7 +64,7 @@ const vazio = texto => !String(texto || '').trim();
   >
     <p
       v-if="viraTexto"
-      class="self-stretch mb-1 px-2 py-1 rounded-md text-xs bg-white/80 dark:bg-black/30 text-[#54656F] dark:text-[#AEBAC1]"
+      class="self-stretch mb-1 px-2 py-1 rounded-md text-xs bg-white/80 dark:bg-[#000]/30 text-[#3B3B3B] dark:text-[#FAFAFA]"
     >
       {{ t('CONVERSA_CANAL.PREVIA.VIRA_TEXTO') }}
     </p>
@@ -73,16 +73,16 @@ const vazio = texto => !String(texto || '').trim();
       class="w-[15rem] max-w-full px-2.5 pt-1.5 pb-1"
       :class="BALAO"
     >
-      <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#005C4B]" />
+      <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#144D37]" />
       <p class="whitespace-pre-wrap break-words">
         {{ emTexto || t('CONVERSA_CANAL.PREVIA.SUA_MENSAGEM') }}
       </p>
-      <div class="text-end text-[11px] text-[#667781] dark:text-[#FFFFFF]/60">
+      <div class="text-end text-[11px] text-[#666666] dark:text-[#FFFFFF]/60">
         {{ hora }}
       </div>
     </div>
     <div v-else class="w-[15rem] max-w-full" :class="BALAO">
-      <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#005C4B]" />
+      <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#144D37]" />
 
       <template v-if="tipo === 'localizacao'">
         <div class="p-1">
@@ -92,7 +92,7 @@ const vazio = texto => !String(texto || '').trim();
             <Icon
               icon="i-ph-map-pin-fill"
               class="size-8"
-              :class="temCoordenadas ? 'text-[#E53935]' : 'text-[#8696A0]'"
+              :class="temCoordenadas ? 'text-[#E53935]' : 'text-[#A7A8A8]'"
             />
           </div>
           <div class="px-1.5 pt-1.5">
@@ -101,7 +101,7 @@ const vazio = texto => !String(texto || '').trim();
             </div>
             <div
               v-if="campos.endereco"
-              class="text-xs text-[#667781] dark:text-[#8696A0] break-words"
+              class="text-xs text-[#666666] dark:text-[#A7A8A8] break-words"
             >
               {{ campos.endereco }}
             </div>
@@ -132,7 +132,7 @@ const vazio = texto => !String(texto || '').trim();
         <p
           class="px-2.5 pt-1.5 pb-1 whitespace-pre-wrap break-words"
           :class="{
-            'text-[#667781] dark:text-[#8696A0] italic': vazio(campos.mensagem),
+            'text-[#666666] dark:text-[#A7A8A8] italic': vazio(campos.mensagem),
           }"
         >
           {{
@@ -142,7 +142,7 @@ const vazio = texto => !String(texto || '').trim();
           }}
         </p>
         <div
-          class="px-2.5 pb-1 text-end text-[11px] text-[#667781] dark:text-[#FFFFFF]/60"
+          class="px-2.5 pb-1 text-end text-[11px] text-[#666666] dark:text-[#FFFFFF]/60"
         >
           {{ hora }}
         </div>
@@ -169,7 +169,7 @@ const vazio = texto => !String(texto || '').trim();
       <div
         v-for="(opcao, indice) in opcoes"
         :key="indice"
-        class="w-[15rem] max-w-full grid place-content-center min-h-10 px-3 rounded-lg bg-white dark:bg-[#202C33] text-[#027EB5] dark:text-[#53BDEB] text-sm font-medium shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] break-words text-center"
+        class="w-[15rem] max-w-full grid place-content-center min-h-10 px-3 rounded-lg bg-white dark:bg-[#242626] text-[#1A6B42] dark:text-[#6FD07E] text-sm font-medium shadow-[0_1px_0.5px_rgba(11,20,26,0.13)] break-words text-center"
       >
         {{ opcao }}
       </div>

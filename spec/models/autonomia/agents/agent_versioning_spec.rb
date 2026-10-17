@@ -395,7 +395,7 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
       it 'com config que não é hash, restaura só a instrução e registra' do
         # Arrange
-        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('config' => 'texto'))
+        versao = versao_com(rascunho.instruction_versions.order(:id).last.metadata['agente'].merge('config' => 'texto'))
         antes = retrato(rascunho)
         allow(Rails.logger).to receive(:warn)
 
@@ -409,7 +409,7 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
       it 'com agent_type fora da lista, restaura só a instrução' do
         # Arrange
-        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('agent_type' => 'hacker'))
+        versao = versao_com(rascunho.instruction_versions.order(:id).last.metadata['agente'].merge('agent_type' => 'hacker'))
         antes = retrato(rascunho)
 
         # Act
@@ -421,7 +421,7 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
       it 'com chave desconhecida, restaura só a instrução' do
         # Arrange
-        versao = versao_com(rascunho.instruction_versions.last.metadata['agente'].merge('status' => 'active'))
+        versao = versao_com(rascunho.instruction_versions.order(:id).last.metadata['agente'].merge('status' => 'active'))
         antes = retrato(rascunho)
 
         # Act
@@ -644,13 +644,13 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
       agent = Autonomia::Agents::Agent.create!(account: account, name: 'G', agent_type: 'custom', instruction: 'v1',
                                                greeting: 'oi 1')
       agent.record_instruction_version!(reason: 'kb_refresh')
-      alvo = agent.instruction_versions.last
+      alvo = agent.instruction_versions.order(:id).last
       agent.update!(instruction: 'v2', greeting: 'oi 2')
 
       agent.restore_instruction!(alvo)
 
       expect(agent.reload).to have_attributes(instruction: 'v1', greeting: 'oi 2')
-      expect(agent.instruction_versions.pluck(:reason)).to eq(%w[kb_refresh rollback])
+      expect(agent.instruction_versions.order(:id).pluck(:reason)).to eq(%w[kb_refresh rollback])
     end
   end
 

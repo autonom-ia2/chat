@@ -11,6 +11,9 @@ import { useMessageContext } from '../provider.js';
 import { downloadFile } from '@chatwoot/utils';
 
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
+import FigurinhaDoWhatsapp from '../../conversa-canal/midia/FigurinhaDoWhatsapp.vue';
+import { usePele } from '../../conversa-canal/pele';
+import { eFigurinha } from '../../conversa-canal/figurinha';
 
 const { t } = useI18n();
 
@@ -19,6 +22,12 @@ const { filteredCurrentChatAttachments, attachments } = useMessageContext();
 const attachment = computed(() => {
   return attachments.value[0];
 });
+
+// #1702: com a pele do WhatsApp, a figurinha fica solta, sem balão, como no app.
+const pele = usePele();
+const figurinha = computed(
+  () => Boolean(pele.value) && eFigurinha(attachment.value)
+);
 
 const { isLoaded, hasError, loadWithRetry } = useLoadWithRetry();
 
@@ -50,8 +59,8 @@ const handleImageError = () => {
 
 <template>
   <BaseBubble
-    class="overflow-hidden p-3"
-    data-bubble-name="image"
+    :class="figurinha ? '' : 'overflow-hidden p-3'"
+    :data-bubble-name="figurinha ? 'sticker' : 'image'"
     @click="showGallery = true"
   >
     <div v-if="hasError" class="flex items-center gap-1 text-center rounded-lg">
@@ -60,6 +69,12 @@ const handleImageError = () => {
         {{ $t('COMPONENTS.MEDIA.IMAGE_UNAVAILABLE') }}
       </p>
     </div>
+    <FigurinhaDoWhatsapp
+      v-else-if="figurinha"
+      :attachment="attachment"
+      :carregada="isLoaded"
+      @error="handleImageError"
+    />
     <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
       <img
         class="skip-context-menu"

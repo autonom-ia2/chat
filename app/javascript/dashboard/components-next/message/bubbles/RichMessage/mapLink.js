@@ -26,11 +26,17 @@ const decimalOf = value => {
   return `${sign}0.${'0'.repeat(-Number(exponent) - 1)}${digits}`;
 };
 
-// O link do ponto, ou '' quando alguma coordenada não é válida.
-export const mapHrefOf = (latitude, longitude) => {
+// "lat,long" do ponto, ou '' quando alguma coordenada não é válida. Também serve à miniatura do mapa (#1702).
+export const pointOf = (latitude, longitude) => {
   const lat = coordinateOf(latitude, LATITUDE_MAX);
   const long = coordinateOf(longitude, LONGITUDE_MAX);
   if (lat === null || long === null) return '';
 
-  return `${MAP_LINK}${decimalOf(lat)},${decimalOf(long)}`;
+  return `${decimalOf(lat)},${decimalOf(long)}`;
+};
+
+// O link do ponto, ou '' quando alguma coordenada não é válida.
+export const mapHrefOf = (latitude, longitude) => {
+  const point = pointOf(latitude, longitude);
+  return point ? `${MAP_LINK}${point}` : '';
 };
