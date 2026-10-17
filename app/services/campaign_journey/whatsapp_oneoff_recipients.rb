@@ -64,14 +64,17 @@ module CampaignJourney::WhatsappOneoffRecipients
   # campaigns only; label campaigns keep Chatwoot's behaviour). No conversation is created.
   def send_whatsapp_template_message(recipient:, to:, template_params:)
     result = super
-    record_sent_message(recipient, to)
+    record_sent_message(recipient, to, template_params)
     result
   end
 
-  def record_sent_message(recipient, destination)
+  # #1717: with the photo of what this person received (Whatsapp::Templates::FotoDoEnvio), from the same params the send
+  # used; products come from what the dispatch already read (never one Meta call per person).
+  def record_sent_message(recipient, destination, template_params)
     return unless audience_link.present? && accepted_by_provider.include?(recipient.id)
 
-    CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient).record_at_send(destination)
+    enviado = Whatsapp::TemplateProcessorService.new(channel: channel, template_params: template_params).foto_do_envio(catalogo: :guardado)
+    CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient, enviado: enviado).record_at_send(destination)
   end
 
   def process_recipients(recipients)

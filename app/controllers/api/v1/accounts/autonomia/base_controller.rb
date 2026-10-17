@@ -9,6 +9,7 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
   # #380 — a instrução do Agente de Cotação é mantida pela Autonom.ia. O model levanta em cada escritor
   # da coluna (rollback, refresh, Construtor) e os controllers na porta; a resposta é uma só.
   rescue_from ::Autonomia::Agents::Agent::InstrucaoMantida, with: :render_instrucao_mantida
+  rescue_from ::Autonomia::Agents::Agent::ModoManual, with: :render_modo_manual
   # #380 (rodada 4) — a chave `agente_de_cotacao` do config presente e incompleta (só escrita fora do
   # Builder produz isso) para a montagem do prompt com `EscolhasIncompletas`. O Responder registra o
   # evento; aqui, o Testar e o Copilot (os outros chamadores do mesmo `Answerer`) respondiam 500 sem o
@@ -17,6 +18,10 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
   rescue_from ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas, with: :render_escolhas_incompletas
 
   private
+
+  def render_modo_manual
+    render_unprocessable(I18n.t('autonomia.agents.modo_manual'))
+  end
 
   def render_instrucao_mantida
     render_unprocessable(I18n.t('autonomia.agents.instrucao_mantida'))

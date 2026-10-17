@@ -1,4 +1,5 @@
 class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autonomia::BaseController
+  include ::Autonomia::ModoDoAgente
   before_action :fetch_agent, only: [:show, :update, :destroy, :avatar]
 
   # #1211 — `config.native_tool_slugs` com ferramenta de outro fluxo (ou que não existe). Recusa com o
@@ -48,8 +49,9 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
-    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?).
-    @agent.save!(context: %i[create ativacao])
+    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?). Nascendo manual com
+    # instrução, o texto é do dono e vira a primeira versão manual_edit (#1484).
+    @agent.save!(context: %i[create ativacao]) && record_manual_instruction_version(nil)
     render :show, status: :created
   end
 
@@ -74,7 +76,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     attrs = agent_params
     return if recusar_pagina_de_agendamento_sem_permissao(attrs[:config])
 
-    instruction_before = ::Autonomia::Agents::Agent.muda_atendimento?(attrs) ? @agent.with_lock { salvar_update(attrs) } : salvar_update(attrs)
+    # A troca para manual também vai sob a trava (revisão adversarial do #1492): sem ela, o Construtor podia gravar a
+    # instrução gerada entre o descarte e o save, e o agente ficava manual com ela visível.
+    travar = ::Autonomia::Agents::Agent.muda_atendimento?(attrs) || troca_para_manual?
+    instruction_before = travar ? @agent.with_lock { salvar_update(attrs) } : salvar_update(attrs)
     # performed?: reject_internal_with_channels já respondeu 422, sem salvar.
     record_manual_instruction_version(instruction_before) unless performed?
     render :show unless performed?
@@ -130,7 +135,8 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     return unless @agent.manual?
     return if @agent.instruction.to_s == instruction_before.to_s
 
-    @agent.record_instruction_version!(reason: 'manual_edit', created_by: Current.user)
+    # Sob a trava e relido: uma volta de versão ao mesmo tempo não deixa o topo do histórico diferente do banco.
+    @agent.with_lock { @agent.record_instruction_version!(reason: 'manual_edit', created_by: Current.user) if @agent.manual? }
   rescue StandardError => e
     # Best-effort: o histórico é auditoria — falhar aqui NÃO pode derrubar o update do agente que
     # já foi persistido (mesmo padrão do InstructionRefresher). Loga a classe, nunca o texto.
@@ -172,19 +178,6 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   # Em modo manual o `scaffold` é SEMPRE setado pelo backend (andaime oculto), nunca pelo params.
-  # Em modo guiado, instruction/scaffold vêm do Construtor (Builder) — jamais do controller.
-  def apply_manual_scaffold
-    @agent.scaffold = MANUAL_SCAFFOLD if @agent.manual?
-  end
-
-  # Ao transicionar um agente GUIADO -> MANUAL, a `instruction` antiga foi gerada pelo Construtor
-  # (IP OCULTO) e o jbuilder passa a expô-la em modo manual. Descartamos esse texto gerado antes de
-  # qualquer assign: se o usuário mandar a instrução DELE neste request, ela entra logo a seguir via
-  # agent_params; se não mandar, fica em branco (nunca vazamos a instrução do Construtor).
-  def discard_generated_instruction_on_manual_switch
-    requested = params.dig(:agent, :mode).to_s
-    @agent.instruction = nil if requested == 'manual' && @agent.guided?
-  end
 
   # Campos visíveis permitidos. `instruction` só é aceita em modo manual (texto do próprio
   # usuário, visível). `scaffold` JAMAIS vem do params. Em guiado, instruction também é ignorada.
@@ -287,13 +280,6 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
 
   def config_salvo
     @agent ? @agent.config.to_h : {}
-  end
-
-  def manual_mode?
-    requested = params.dig(:agent, :mode).to_s
-    return requested == 'manual' if requested.present?
-
-    @agent&.manual? || false
   end
 
   # V2.1 — não deixa um agente ficar INTERNO enquanto tem canais conectados (deixaria um vínculo

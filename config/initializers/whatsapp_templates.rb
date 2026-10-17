@@ -14,6 +14,8 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::ProcessorLookup)
   # chat#1334: o envio monta os componentes dos formatos novos (oferta, carrossel, Flow, catálogo) quando a campanha os traz.
   prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::SendComponents)
+  # chat#1717: a foto do que o envio levou vai para a mensagem; por fora do SendComponents, que troca os parâmetros.
+  prepend_once.call(Whatsapp::TemplateProcessorService, Whatsapp::Templates::FotoDoEnvio)
   prepend_once.call(Whatsapp::TemplateParameterConverterService, Whatsapp::Templates::ForkParamKeys)
   # chat#1337: aviso da Meta sobre modelo (situação, qualidade, tipo) vai para o job do fork, com assinatura obrigatória.
   prepend_once.call(Webhooks::WhatsappController, Whatsapp::Templates::WebhookEntry)

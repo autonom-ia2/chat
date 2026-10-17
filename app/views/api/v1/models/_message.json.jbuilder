@@ -9,9 +9,13 @@ json.status message.status
 json.content_attributes message.content_attributes
 # #1702: qual modelo de WhatsApp a mensagem usou (nome e idioma), para a conversa desenhar os botões dele.
 # A jornada de campanha só grava o nome (campaign_template_name): sem idioma, vale o primeiro modelo com esse nome.
+# #1717: e a foto do que foi enviado (`enviado`, versão 1); na campanha ela fica em campaign_template_enviado.
+# `processed_params` nunca sai daqui.
 atributos = message.additional_attributes.is_a?(Hash) ? message.additional_attributes : {}
-modelo_usado = atributos['template_params'].is_a?(Hash) ? atributos['template_params'].slice('name', 'language') : {}
-modelo_usado = { 'name' => atributos['campaign_template_name'] } if modelo_usado['name'].blank?
+modelo_usado = atributos['template_params'].is_a?(Hash) ? atributos['template_params'].slice('name', 'language', 'enviado') : {}
+if modelo_usado['name'].blank?
+  modelo_usado = { 'name' => atributos['campaign_template_name'], 'enviado' => atributos['campaign_template_enviado'] }.compact
+end
 json.additional_attributes({ template_params: modelo_usado }) if modelo_usado['name'].present?
 json.created_at message.created_at.to_i
 json.private message.private

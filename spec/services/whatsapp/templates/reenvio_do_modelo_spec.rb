@@ -65,6 +65,10 @@ RSpec.describe Whatsapp::Templates::ReenvioDoModelo, :aggregate_failures do
       enviados << JSON.parse(request.body)
       { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { messages: [{ id: "wamid.#{enviados.size}" }] }.to_json }
     end
+    # A foto do envio (#1717) lê o produto no catálogo para nome, preço e foto; vazio, guarda só o retailer_id.
+    stub_request(:get, 'https://graph.facebook.com/v22.0/CAT-9/products')
+      .with(query: hash_including({}))
+      .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
     %i[info warn error].each do |level|
       allow(Rails.logger).to receive(level).and_wrap_original do |original, *args, &block|
         logs << args.first.to_s
