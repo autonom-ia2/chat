@@ -154,3 +154,10 @@ Rails.application.config.to_prepare do
   # A bolha "abra no celular" e o aviso de visualização única não pedem a IA de assunto.
   Crm::Subjects.singleton_class.prepend(Waha::RichNative::SubjectsSkip) unless Crm::Subjects.singleton_class <= Waha::RichNative::SubjectsSkip
 end
+
+# A ordem de entrega por conversa no plano B do Híbrido: o mais externo do WebTransport (depois de todos os outros).
+Rails.application.config.to_prepare do
+  unless WhatsappHybrid::WebTransport <= WhatsappHybrid::RichNative::SendOrder
+    WhatsappHybrid::WebTransport.prepend(WhatsappHybrid::RichNative::SendOrder)
+  end
+end
