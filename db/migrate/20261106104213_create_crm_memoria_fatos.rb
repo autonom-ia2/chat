@@ -8,15 +8,11 @@
 # item) pelo índice único parcial (decisões acumulam e ficam fora dele). FK com CASCADE no contato e no card: apagar
 # o contato (ou o card) apaga a memória dele no banco.
 #
-# Também: o card em foco na abertura de uma execução de ferramenta (W5) e, na telemetria de custo, o agente e o card
-# (adendo 9; colunas nulas, sem índice, numa tabela quente).
+# As colunas novas em tabelas quentes (ToolRun e telemetria de custo) ficam na migration seguinte, com lock_timeout.
 class CreateCrmMemoriaFatos < ActiveRecord::Migration[7.2]
   def change
     create_chaves
     create_fatos
-    add_column :autonomia_agent_tool_runs, :card_id, :bigint
-    add_column :crm_ai_usage_events, :agent_id, :bigint
-    add_column :crm_ai_usage_events, :card_id, :bigint
   end
 
   private
