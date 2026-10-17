@@ -45,6 +45,38 @@ describe ConversaCanal::PreviaDeLinkJob do
       expect { mensagem }.not_to have_enqueued_job(described_class)
     end
 
+    it 'agenda o texto comum enviado pela Cloud API, que sai com preview_url' do
+      expect { mensagem(message_type: :outgoing) }.to have_enqueued_job(described_class)
+    end
+
+    it 'não agenda mensagem de modelo: o cliente não viu cartão' do
+      extras = { 'template_params' => { 'name' => 'promocao', 'language' => 'pt_BR' } }
+      expect { mensagem(message_type: :outgoing, additional_attributes: extras) }.not_to have_enqueued_job(described_class)
+    end
+
+    it 'não agenda mensagem de campanha' do
+      extras = { 'campaign_id' => 7, 'campaign_template_name' => 'promocao' }
+      expect { mensagem(message_type: :outgoing, additional_attributes: extras) }.not_to have_enqueued_job(described_class)
+    end
+
+    it 'não agenda a enviada por um provedor que não manda preview_url' do
+      canal_360 = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+      conversa_360 = create(:conversation, account: account, inbox: canal_360.inbox)
+
+      expect do
+        create(:message, account: account, inbox: canal_360.inbox, conversation: conversa_360, message_type: :outgoing, content: url)
+      end.not_to have_enqueued_job(described_class)
+    end
+
+    it 'agenda a recebida em qualquer caixa de WhatsApp' do
+      canal_360 = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+      conversa_360 = create(:conversation, account: account, inbox: canal_360.inbox)
+
+      expect do
+        create(:message, account: account, inbox: canal_360.inbox, conversation: conversa_360, message_type: :incoming, content: url)
+      end.to have_enqueued_job(described_class)
+    end
+
     it 'não agenda fora do WhatsApp' do
       outra = create(:inbox, account: account)
       conversa_fora = create(:conversation, account: account, inbox: outra)

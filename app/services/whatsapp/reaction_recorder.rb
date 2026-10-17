@@ -58,7 +58,7 @@ class Whatsapp::ReactionRecorder
     return if reactions == current
 
     attrs = reactions.empty? ? attrs.except(KEY) : attrs.merge(KEY => reactions)
-    message.update!(content_attributes: attrs)
+    ConversaCanal::GravarNaMensagem.atualizar!(message, content_attributes: attrs)
   end
 
   def author?(reaction, author)

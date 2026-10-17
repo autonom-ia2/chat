@@ -60,8 +60,11 @@ class ConversaCanal::LeituraNoCanal
   def mensagem
     return @mensagem if defined?(@mensagem)
 
-    # reorder: Message tem default_scope por created_at asc.
-    ultima = @conversation.messages.incoming.where.not(source_id: [nil, '']).reorder(created_at: :desc, id: :desc).first
+    # reorder: Message tem default_scope por created_at asc. A Cloud marca pelo wamid (source_id); o WAHA marca o chat
+    # inteiro (sendSeen sem messageIds), e o conector nem sempre grava source_id na recebida.
+    recebidas = @conversation.messages.incoming
+    recebidas = recebidas.where.not(source_id: [nil, '']) if canal.is_a?(Channel::Whatsapp)
+    ultima = recebidas.reorder(created_at: :desc, id: :desc).first
     @mensagem = ultima if ultima && ultima.created_at >= PRAZO.ago
   end
 
@@ -108,7 +111,7 @@ class ConversaCanal::LeituraNoCanal
       attrs = mensagem.content_attributes.to_h
       next if attrs[CHAVE].present?
 
-      mensagem.update!(content_attributes: attrs.merge(CHAVE => Time.current.iso8601))
+      ConversaCanal::GravarNaMensagem.atualizar!(mensagem, content_attributes: attrs.merge(CHAVE => Time.current.iso8601))
     end
   end
 end

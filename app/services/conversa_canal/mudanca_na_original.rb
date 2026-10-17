@@ -12,6 +12,8 @@
 class ConversaCanal::MudancaNaOriginal
   APAGADA = 'revoke'.freeze
   EDITADA = 'edit'.freeze
+  # Mesmo teto do WhatsApp Híbrido (#1709): as 10 versões anteriores mais recentes.
+  LIMITE_DO_HISTORICO = 10
 
   def initialize(inbox:, data:, outgoing_echo: false)
     @inbox = inbox
@@ -51,7 +53,7 @@ class ConversaCanal::MudancaNaOriginal
     attrs = original.content_attributes.to_h
     return if attrs['deleted_by_contact_at'].present?
 
-    original.update!(content_attributes: attrs.merge('deleted_by_contact_at' => quando.iso8601))
+    ConversaCanal::GravarNaMensagem.atualizar!(original, content_attributes: attrs.merge('deleted_by_contact_at' => quando.iso8601))
   end
 
   def editar(original)
@@ -60,8 +62,10 @@ class ConversaCanal::MudancaNaOriginal
     return if novo == original.content
 
     attrs = original.content_attributes.to_h
-    historico = Array(attrs['edit_history']) + [entrada_do_historico(original)]
-    original.update!(content: novo, content_attributes: attrs.merge('edited_at' => quando.iso8601, 'edit_history' => historico))
+    historico = (Array(attrs['edit_history']) + [entrada_do_historico(original)]).last(LIMITE_DO_HISTORICO)
+    ConversaCanal::GravarNaMensagem.atualizar!(
+      original, content: novo, content_attributes: attrs.merge('edited_at' => quando.iso8601, 'edit_history' => historico)
+    )
   end
 
   def entrada_do_historico(original)

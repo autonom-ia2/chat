@@ -15,7 +15,7 @@ module ConversaCanal::AudioOuvido
       attrs = message.content_attributes.to_h
       next if attrs[CHAVE].present?
 
-      message.update!(content_attributes: attrs.merge(CHAVE => quando(status).iso8601))
+      ConversaCanal::GravarNaMensagem.atualizar!(message, content_attributes: attrs.merge(CHAVE => quando(status).iso8601))
     end
   end
 

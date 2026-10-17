@@ -157,6 +157,15 @@ describe ConversaCanal::LeituraNoCanal do
       expect(ultima.reload.content_attributes['read_receipt_sent_at']).to be_present
     end
 
+    it 'manda sendSeen mesmo quando o conector não gravou source_id na recebida' do
+      ultima.update!(source_id: nil)
+
+      marcar(conversa)
+
+      expect(WebMock).to have_requested(:post, seen_url).once
+      expect(ultima.reload.content_attributes['read_receipt_sent_at']).to be_present
+    end
+
     it 'não manda para grupo' do
       contato.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '120363000000000000@g.us' })
 

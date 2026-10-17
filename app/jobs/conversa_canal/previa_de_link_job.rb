@@ -59,8 +59,9 @@ class ConversaCanal::PreviaDeLinkJob < ApplicationJob
     previa = pagina.except('image_source').merge('image_url' => imagem).compact
 
     message.with_lock do
-      message.content_attributes = message.content_attributes.merge(ConversaCanal::PreviaDeLink::CHAVE => previa)
-      message.save!
+      ConversaCanal::GravarNaMensagem.atualizar!(
+        message, content_attributes: message.content_attributes.merge(ConversaCanal::PreviaDeLink::CHAVE => previa)
+      )
     end
   end
 

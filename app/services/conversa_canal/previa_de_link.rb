@@ -9,6 +9,8 @@ module ConversaCanal::PreviaDeLink
   CHAVE = 'link_preview'.freeze
   FLAG = ConversaCanal::Pele::FLAG
   TIPOS_DA_MENSAGEM = %w[incoming outgoing].freeze
+  # Marcas de envio que não leva a prévia: modelo, campanha e campanha da API do WhatsApp (Message#campaign_message?).
+  SEM_CARTAO_NO_ENVIO = %w[template_params campaign_id whatsapp_api_campaign_id campaign_template_name].freeze
 
   module_function
 
@@ -29,7 +31,21 @@ module ConversaCanal::PreviaDeLink
   # painel), texto puro sem anexo (no WhatsApp a legenda de foto não ganha prévia) e com endereço válido.
   def buscar?(message)
     tipo_que_ganha_previa?(message) && sem_previa_ainda?(message) && texto_comum_ou_previa?(message) &&
-      endereco(message.content).present? && ligada?(message.inbox)
+      cliente_viu_o_cartao?(message) && endereco(message.content).present? && ligada?(message.inbox)
+  end
+
+  # O painel só mostra o cartão que o cliente também viu. A recebida traz o cartão do app de quem mandou. A enviada só
+  # o ganha quando sai como texto comum pela Cloud API com `preview_url` (ConversaCanal::PreviaDeLinkNoEnvio): modelo,
+  # campanha e envio pelo WAHA (linkPreview desligado) chegam ao cliente sem cartão. A enviada pelo celular da empresa
+  # (eco da coexistência) passa: o app monta a prévia.
+  def cliente_viu_o_cartao?(message)
+    return true if message.incoming?
+
+    extras = message.additional_attributes.to_h
+    return false if extras.values_at(*SEM_CARTAO_NO_ENVIO).any?(&:present?)
+
+    channel = message.inbox.channel
+    channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud'
   end
 
   def tipo_que_ganha_previa?(message)
