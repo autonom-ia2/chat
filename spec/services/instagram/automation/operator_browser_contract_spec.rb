@@ -14,7 +14,7 @@ RSpec.describe SuperAdmin::InstagramAutomationsController do
   let(:environment) do
     {
       'INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you',
-      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid:8443/hub2you/',
       'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => 'ab' * 32, 'FRONTEND_URL' => 'https://hub.invalid'
     }
   end
@@ -58,7 +58,7 @@ RSpec.describe SuperAdmin::InstagramAutomationsController do
     controller.process(:browser)
     page = Nokogiri::HTML(controller.response.body)
     form = page.at_css('form')
-    expect(form['action']).to eq('https://gateway.invalid/hub2you/grant')
+    expect(form['action']).to eq('https://gateway.invalid:8443/hub2you/grant')
     expect(form['method']).to eq('post')
     expect(form.at_css('input[name="authenticity_token"]')).to be_nil
     expect(form.css('[name]').map { |field| field['name'] }).to eq(['ticket'])

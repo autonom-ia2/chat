@@ -13,6 +13,9 @@ from urllib.parse import urlsplit
 RELEASE = '/opt/instagram-meta/current/scripts/instagram_testers/runtime/vps'
 STACKS = {'hub2you': (':91', '18441', 'hub2you'), 'autonomia': (':92', '18442', 'financial')}
 HEX = '0123456789abcdefABCDEF'
+# Port 443 of this host belongs to the Easypanel Traefik (Swarm, host mode). A Tailscale Serve on 443
+# wins the bind when tailscaled boots first and takes every site of the VPS down (issue #1751).
+OPERATOR_SERVE_PORT = 8443
 
 
 def require(condition):
@@ -36,12 +39,12 @@ def private_path(path, uid, mode, directory=False, gid=None):
     require(directory or info.st_size > 0)
 
 
-def origin(value):
+def origin(value, port=None):
     parsed = urlsplit(value)
     require(parsed.scheme == 'https' and parsed.hostname and parsed.username is None
             and parsed.password is None and not parsed.query and not parsed.fragment)
-    require(parsed.port in (None, 443) and parsed.path in ('', '/'))
-    require(value == f'https://{parsed.hostname}')
+    require(parsed.port == port and parsed.path in ('', '/'))
+    require(value == f'https://{parsed.hostname}' + (f':{port}' if port else ''))
     return value
 
 
@@ -130,7 +133,7 @@ def validate(stack, role, env, uid, gid=None):
         require('REQUIRED_' not in key)
         browser = urlsplit(env['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL'])
         require(browser.path == f'/{stack}/')
-        origin(env['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL'].removesuffix(f'/{stack}/'))
+        origin(env['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL'].removesuffix(f'/{stack}/'), OPERATOR_SERVE_PORT)
         origin(env['INSTAGRAM_TESTER_OPERATOR_ISSUER'])
         require(not any(name.startswith('INSTAGRAM_TESTER_PROXY_') for name in env))
     require(not any(env.get(name) for name in ('DEBUG', 'PWDEBUG', 'NODE_OPTIONS')))

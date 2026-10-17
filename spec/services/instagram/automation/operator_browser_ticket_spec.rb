@@ -12,7 +12,7 @@ RSpec.describe Instagram::Automation::OperatorBrowserTicket do
   let(:environment) do
     {
       'INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you',
-      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid:8443/hub2you/',
       'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => hex_key, 'FRONTEND_URL' => 'https://hub.invalid/'
     }
   end
@@ -31,7 +31,7 @@ RSpec.describe Instagram::Automation::OperatorBrowserTicket do
       'deadline' => now.to_i - 120 + 3600, 'stack' => 'hub2you'
     )
     expect(claims.fetch('jti')).to match(Instagram::Automation::OperatorControl::UUID)
-    expect(grant.fetch(:grant_url)).to eq('https://gateway.invalid/hub2you/grant')
+    expect(grant.fetch(:grant_url)).to eq('https://gateway.invalid:8443/hub2you/grant')
     expect(grant.fetch(:grant_url)).not_to include(grant.fetch(:ticket))
   end
 
@@ -46,11 +46,11 @@ RSpec.describe Instagram::Automation::OperatorBrowserTicket do
 
   it 'binds each stack to its own URL and audience' do
     with_modified_env('INSTAGRAM_TESTER_RUNTIME_STACK' => 'autonomia',
-                      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/autonomia/') do
+                      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid:8443/autonomia/') do
       grant = described_class.new.call(control: control, actor_id: 42)
       claims = JWT.decode(grant.fetch(:ticket), [hex_key].pack('H*'), true, algorithm: 'HS256').first
       expect(claims).to include('aud' => 'instagram-operator-browser:autonomia', 'stack' => 'autonomia')
-      expect(grant.fetch(:grant_url)).to eq('https://gateway.invalid/autonomia/grant')
+      expect(grant.fetch(:grant_url)).to eq('https://gateway.invalid:8443/autonomia/grant')
     end
   end
 
@@ -80,6 +80,8 @@ RSpec.describe Instagram::Automation::OperatorBrowserTicket do
       ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'https://gateway.invalid/hub2you/#synthetic'],
       ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'https://gateway.invalid/autonomia/'],
       ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'https://gateway.invalid/hub2you'],
+      ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'https://gateway.invalid/hub2you/'],
+      ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'https://gateway.invalid:443/hub2you/'],
       ['INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', 'invalid url'], ['FRONTEND_URL', 'http://hub.invalid'],
       ['FRONTEND_URL', 'https://user:synthetic@hub.invalid'], ['FRONTEND_URL', 'https://hub.invalid/?ticket=synthetic']
     ].each do |key, value|
