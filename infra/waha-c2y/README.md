@@ -555,6 +555,9 @@ O arquivo tem env, então ele fica só no host e não é impresso.
    Sem apagar, o valor antigo vale até o `CACHE_TTL` (10 min). Isso pesa sobretudo no rollback parcial, em que o motor **continua** na lista: o cache diria `link_button` e `event` até o próximo `EngineCapabilitiesRefreshJob` (a cada 5 min) ler a versão da 2b.
 3. Só então troque a imagem, abaixo.
 
+**Mensagens já marcadas como apagadas:** continuam fora da IA depois do rollback (a regra da apagada vale em qualquer
+caixa, com ou sem a flag). É intencional, o cliente apagou de verdade: não limpe `deleted_by_contact_at`.
+
 **Comando de rollback**, no manager do Swarm de cada motor:
 
 ```sh

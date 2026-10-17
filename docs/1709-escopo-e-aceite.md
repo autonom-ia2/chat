@@ -131,6 +131,11 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
   working at any time" (https://waha.devlike.pro/docs/how-to/send-messages/). Por isso, quando o motor recusa a lista
   (4xx), ela sai como texto, uma vez, sem duplicar.
 
+- **Mensagens apagadas continuam fora da IA depois de desligar a flag.** A apagada pelo cliente
+  (`content_attributes.deleted_by_contact_at`) sai do histórico do agente de IA em qualquer caixa, com ou sem a flag
+  (`Waha::RichNative::AgentTurnGuard`). É intencional: o cliente apagou de verdade. No rollback (flag desligada ou
+  imagem antiga), NÃO limpe a chave das mensagens já marcadas.
+
 ### Pré-requisitos para LIGAR a flag `whatsapp_rich_native`
 
 - [ ] #1740 (renderer do WhatsApp) e #1702b (tela do Frontend geral) no ar.
