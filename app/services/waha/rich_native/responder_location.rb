@@ -1,8 +1,10 @@
-# Prepend em Autonomia::Agents::Operate::Responder (chat#1709, revisão da rodada 2): a localização do cliente que virou
-# cartão de mapa (`content` nil) chega à IA como texto (Waha::RichNative::AiLocationText), no histórico e na pergunta
-# do turno. Só mexe no item de mensagem que tenha a localização gravada (com legenda, a localização vem depois dela);
-# qualquer outro fica igual. Com a
-# moldura da equipe (#1669), o texto passa pela mesma neutralização do texto do cliente.
+# Prepend em Autonomia::Agents::Operate::Responder (chat#1709): o que a IA lê de uma localização do cliente que virou
+# cartão de mapa (Waha::RichNative::AiLocationText: só nome e endereço, sem coordenadas nem link) e de um cartão de
+# contato, da equipe ou do cliente (Waha::RichNative::AiContactText, com o telefone), no histórico e na pergunta do
+# turno. Só mexe no item da mensagem que traz um dos dois; com `content` (a legenda da localização ao vivo, o texto do
+# conector), o resumo vem depois dele. Com a moldura da equipe (#1669), o texto passa pela mesma neutralização do texto
+# do cliente. Quando o #1753 (Autonomia::Agents::Operate::ResumoDaMensagemRica) estiver na main, a localização passa a
+# sair dele: fica para o merge.
 module Waha::RichNative::ResponderLocation
   private
 
@@ -28,8 +30,9 @@ module Waha::RichNative::ResponderLocation
     location ? item.merge(content: [item[:content].to_s.strip.presence, location].compact.join("\n")) : item
   end
 
+  # A localização (só nome e endereço) ou o cartão de contato (com o telefone) que a mensagem traz.
   def location_text_for(message)
-    text = Waha::RichNative::AiLocationText.for(message)
+    text = Waha::RichNative::AiLocationText.for(message) || Waha::RichNative::AiContactText.for(message)
     return if text.nil?
 
     equipe.aplica? ? equipe.pergunta(text) : text

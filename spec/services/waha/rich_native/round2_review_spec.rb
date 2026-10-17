@@ -284,51 +284,75 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
     end
   end
 
-  describe 'location for the AI (ResponderLocation)' do
+  # Decisão do Rodrigo (17/10/2026): a localização chega à IA só com nome e endereço (sem coordenadas nem link), no
+  # formato do #1753; o cartão de contato chega com o telefone, da equipe ou do cliente.
+  describe 'location and contact for the AI (ResponderLocation)' do
     let(:responder) { Autonomia::Agents::Operate::Responder.allocate }
 
     before { responder.instance_variable_set(:@conversation, conversation) }
 
-    it 'keeps the caption of a live location and adds the place after it' do
-      flag_on!
-      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
-                                 content: 'Estou chegando', sender: conversation.contact,
-                                 content_attributes: { 'shared_location' => { 'latitude' => 1.5, 'longitude' => 2.5, 'live' => true } })
+    def ai_reads(message)
       allow(responder).to receive_messages(recent_messages: [message], last_incoming_message: message,
                                            equipe: instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: false),
                                            media: Autonomia::Agents::Operate::MessageMedia::EMPTY)
-
-      content = responder.send(:history).sole[:content]
-      expect(content).to start_with("Estou chegando\nLocalização ao vivo compartilhada pelo cliente")
-      expect(responder.send(:query)).to eq(content)
+      responder.send(:history).sole[:content]
     end
 
-    def location_message(shared)
-      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: nil,
+    def location_message(shared, content: nil)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: content,
                        sender: conversation.contact, content_attributes: { 'shared_location' => shared })
     end
 
-    it 'gives the AI the place and a map link instead of an empty customer turn, only with the flag' do
-      message = location_message('latitude' => -23.55, 'longitude' => -46.63, 'name' => 'Praça da Sé', 'address' => 'Centro')
-      allow(responder).to receive_messages(recent_messages: [message], last_incoming_message: message,
-                                           equipe: instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: false),
-                                           media: Autonomia::Agents::Operate::MessageMedia::EMPTY)
-
-      expect(responder.send(:history)).to eq([{ role: 'user', content: '' }])
+    it 'gives the AI only the name and the address, never coordinates nor a map link, only with the flag' do
+      message = location_message({ 'latitude' => -23.55, 'longitude' => -46.63, 'name' => 'Praça da Sé', 'address' => 'Centro' })
+      expect(ai_reads(message)).to eq('')
 
       flag_on!
-      text = 'Localização compartilhada pelo cliente: Praça da Sé, Centro. Mapa: https://www.google.com/maps/search/?api=1&query=-23.55,-46.63'
-      expect(responder.send(:history)).to eq([{ role: 'user', content: text }])
-      expect(responder.send(:query)).to eq(text)
+      expect(ai_reads(message)).to eq('Localização: Praça da Sé — Centro')
+      expect(responder.send(:query)).to eq('Localização: Praça da Sé — Centro')
+      expect(ai_reads(message)).not_to include('-23.55', 'maps', 'http')
     end
 
-    it 'warns the AI that a live location is only the starting point' do
+    it 'says when the location has neither name nor address' do
       flag_on!
-      message = location_message('latitude' => 1.5, 'longitude' => 2.5, 'live' => true)
 
-      expect(Waha::RichNative::AiLocationText.for(message))
-        .to eq('Localização ao vivo compartilhada pelo cliente (este é só o ponto inicial; ele pode ter se movido): 1.5,2.5. ' \
-               'Mapa: https://www.google.com/maps/search/?api=1&query=1.5,2.5')
+      expect(ai_reads(location_message({ 'latitude' => 1.5, 'longitude' => 2.5 }))).to eq('Localização (sem nome nem endereço)')
+    end
+
+    it 'keeps the caption of a live location before the same text' do
+      flag_on!
+      message = location_message({ 'latitude' => 1.5, 'longitude' => 2.5, 'live' => true, 'name' => 'Casa' }, content: 'Estou chegando')
+
+      content = ai_reads(message)
+      expect(content).to eq("Estou chegando\nLocalização: Casa")
+      expect(responder.send(:query)).to eq(content)
+    end
+
+    it 'gives the AI the phone of a contact card from the customer' do
+      flag_on!
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                                 content: 'Ana Souza', sender: conversation.contact,
+                                 content_attributes: { 'shared_contacts' => [{ 'full_name' => 'Ana Souza', 'phones' => ['+55 11 98888-7777'],
+                                                                               'wa_id' => '5511988887777' }] })
+
+      expect(ai_reads(message)).to eq("Ana Souza\nContato: Ana Souza — +55 11 98888-7777")
+    end
+
+    it 'gives the AI the phone of a contact card sent by the team' do
+      flag_on!
+      card = { 'type' => 'contact', 'name' => 'Recepção', 'phone' => '+55 11 4000-0473' }
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: '',
+                                 content_attributes: { 'rich_message' => card })
+
+      expect(ai_reads(message)).to eq('Contato: Recepção — +55 11 4000-0473')
+    end
+
+    it 'leaves the contact card as in main without the flag' do
+      contacts = [{ 'full_name' => 'Ana', 'phones' => ['+5511'] }]
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Ana',
+                                 sender: conversation.contact, content_attributes: { 'shared_contacts' => contacts })
+
+      expect(ai_reads(message)).to eq('Ana')
     end
   end
 end

@@ -39,8 +39,6 @@ en:
         one: "%{count} day"
         other: "%{count} days"
     ai:
-      location: "Location shared by the customer: %{place}. Map: %{url}"
-      live_location: "Live location shared by the customer (this is only the starting point; they may have moved): %{place}. Map: %{url}"
       poll_vote: "Voted in the poll '%{question}': %{options}"
       event_response: "Replied to the invitation '%{name}': %{response}"
       poll_vote_choice: "Voted: %{options}"
