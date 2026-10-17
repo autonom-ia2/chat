@@ -116,13 +116,16 @@ module Crm
       # json ("{\"crm_follow_up_id\":1}") e `content_attributes ->> 'chave'` devolve sempre NULL.
       # O filtro SQL que estava aqui não excluía nada — falha silenciosa, que é o pior tipo.
       # A varredura é limitada porque a cadência tem no máximo um punhado de toques seguidos.
+      # #1601: os mesmos papéis do #role_for — o eco do celular conta como fala humana; o follow-up, o convite e o aviso
+      # do Agendamento, não.
       def last_human_agent_at
-        Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
-                      sender_type: 'User', private: false)
-               .where.not(message_type: :activity)
+        Message.where(conversation_id: conversation_ids, account_id: @card.account_id, private: false)
+               .where(sender_type: 'User').or(Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
+                                                            private: false, sender_type: nil))
+               .outgoing
                .reorder(id: :desc)
                .limit(FOLLOW_UP_SCAN_LIMIT)
-               .find { |message| message.content_attributes.to_h['crm_follow_up_id'].blank? }
+               .find { |message| role_for(message) == 'human_agent' }
                &.created_at
       end
 
@@ -199,7 +202,12 @@ module Crm
         # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
         # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
         # ScoreCalculator conhece só quatro.
-        return 'platform_agent' if message.content_attributes.to_h['crm_follow_up_id'].present?
+        # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
+        # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
+        # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
+        # casou a tempo vira mensagem nova e aparece aqui como pessoa.
+        return 'platform_agent' if envio_da_plataforma?(message)
+        return 'human_agent' if eco_do_celular?(message)
 
         case message.sender_type
         when 'User' then 'human_agent'
@@ -208,6 +216,18 @@ module Crm
         # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
         else 'external_agent'
         end
+      end
+
+      # As marcas que o Agendamento grava no convite e no aviso (Crm::BookingV2::InviteDeliverer / Notices).
+      MARCAS_DO_AGENDAMENTO = %w[crm_booking_invite_id crm_booking_notice].freeze
+
+      def envio_da_plataforma?(message)
+        atributos = message.content_attributes.to_h
+        atributos['crm_follow_up_id'].present? || MARCAS_DO_AGENDAMENTO.any? { |marca| atributos[marca].present? }
+      end
+
+      def eco_do_celular?(message)
+        message.sender_type.blank? && message.content_attributes.to_h['external_echo'].present?
       end
 
       # Bot da plataforma = AgentBot criado por um agente Autonom.ia (Operate::Responder posta com
