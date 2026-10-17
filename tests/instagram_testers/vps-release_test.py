@@ -554,6 +554,29 @@ class FakeVPS:
         return 0, ''
 
 
+class OperatorServePortTests(unittest.TestCase):
+    def test_gateway_probe_sends_the_8443_authority_the_gateway_compares(self):
+        for stack in STACKS:
+            self.assertEqual(tool.gateway_probe(stack).split()[-1], 'srv707880-claudete.tail0c0b18.ts.net:8443')
+
+    def test_serve_status_is_fail_closed(self):
+        body = tool.counts_body()
+        start = body.index('if s="$(tailscale serve status --json)"')
+        snippet = body[start:body.index('fi', start) + 2]
+        outputs = {'missing': None, 'empty': 'echo "{}"', 'only_8443': 'echo \'{"TCP":{"8443":{}}}\'',
+                   'on_443': 'echo \'{"TCP":{"443":{}}}\'', 'failing': 'exit 1'}
+        expected = {'missing': 'unknown', 'empty': '0', 'only_8443': '0', 'on_443': '1', 'failing': 'unknown'}
+        for name, script in outputs.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as bindir:
+                if script is not None:
+                    stub = Path(bindir, 'tailscale')
+                    stub.write_text(f'#!/bin/sh\n{script}\n')
+                    stub.chmod(0o755)
+                out = subprocess.run(['/bin/sh', '-c', snippet], env={'PATH': f'{bindir}:/usr/bin:/bin'},
+                                     capture_output=True, text=True, check=True).stdout
+                self.assertEqual(out, f'serve_443 {expected[name]}\n')
+
+
 class Harness(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -800,6 +823,7 @@ class PreflightTests(Harness):
             'home_owner': fs('/var/lib/instagram-gateway-hub2you/gateway', 1, 'root'),
             'gateway_url': lambda v: v.counts.__setitem__('url_hub2you', '0'),
             'serve_on_443': lambda v: v.counts.__setitem__('serve_443', '1'),
+            'serve_status_unreadable': lambda v: v.counts.__setitem__('serve_443', 'unknown'),
             'disk': lambda v: setattr(v, 'df', 10),
             'xvnc_flags': lambda v: v.counts.__setitem__('xvnc_rfbunixpath', '0'),
             'etc_meta_writable': fs('/etc/instagram-meta', 3, '722'),

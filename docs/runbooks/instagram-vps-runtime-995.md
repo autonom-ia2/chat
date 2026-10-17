@@ -269,7 +269,15 @@ mandava usar a 443. Os dois conviviam por ordem de inicialização até o reboot
 Hostinger em 16/10/2026: o `tailscaled` subiu antes do Docker, ocupou
 `100.78.34.82:443`, o Traefik entrou em loop (`driver failed programming external
 connectivity`), a overlay `easypanel` ficou sem namespace e todo site respondeu
-502. Recuperação: `tailscale serve reset` e `systemctl restart docker`.
+502. Naquela recuperação o `tailscale serve reset` foi usado porque o único Serve
+da máquina era o da 443 e os sites estavam fora; em seguida veio
+`systemctl restart docker` para recriar a overlay. Fora de uma emergência assim, a
+regra acima vale: retire só os mounts com `off` (ver Rollback), nunca `reset`,
+que derruba também o Serve da 8443.
+
+A 8443 foi conferida livre no host em 16/10/2026 (`ss -ltnp`). Antes de trocar a
+porta de novo, confira que nenhum contêiner publica a escolhida em modo host: a
+mesma corrida de bind volta com qualquer porta compartilhada.
 
 Três guardas impedem a repetição:
 
