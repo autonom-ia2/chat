@@ -186,7 +186,8 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
 
       expect(respostas.count).to eq(1)
       expect(consultas.sole[:query]).to include('Qual o preço?').and(not_include('Mensagem não suportada'))
-      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+      # A IA respondeu ao turno: não houve silêncio, e o card "Quando a IA ficou calada" não conta a bolha.
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte).to be_empty
     end
 
     it '[U]: no turn, no answer, and the trace once per message' do
@@ -209,6 +210,18 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
 
       expect(respostas.count).to eq(1)
       expect(consultas.sole[:query]).to include('Recebeu minha foto?').and(not_include('Mensagem não suportada'))
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte).to be_empty
+    end
+
+    it 'counts the bubble as a silence when a person answered it (the AI kept quiet for the whole turn)' do
+      sem = bolha
+      ouvir(sem)
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Pode mandar de novo?',
+                       sender: create(:user, account: account))
+
+      rodar_tudo!
+
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
     end
 
     it 'ignores the view once notice too' do
