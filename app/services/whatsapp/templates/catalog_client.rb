@@ -30,10 +30,13 @@ class Whatsapp::Templates::CatalogClient
   # 15/10/2026). Encomenda e pré-venda também se compram; o resto fica de fora.
   SELLABLE = ['in stock', 'available for order', 'preorder'].freeze
 
-  def initialize(inbox:)
+  # timeout/insistir: a foto do envio (#1717) pergunta com prazo curto e uma tentativa só, para não segurar o envio.
+  def initialize(inbox:, timeout: REQUEST_TIMEOUT, insistir: true)
     raise Whatsapp::Templates::MetaClient::Unsupported unless Whatsapp::Templates::MetaClient.supported?(inbox)
 
     @inbox = inbox
+    @timeout = timeout
+    @insistir = insistir
   end
 
   # O catálogo da WABA da caixa, ou nil. Guardado por alguns minutos para a tela; o disparo pede `fresh: true`.
@@ -53,10 +56,11 @@ class Whatsapp::Templates::CatalogClient
 
   # Os produtos aprovados, pelo código (retailer_id), para conferir no disparo: o que não volta não está aprovado ou
   # saiu do catálogo. { código => Product }.
-  def find(ids)
+  # catalog_id: o catálogo já conhecido (a foto do envio, #1717) poupa a leitura do catálogo da WABA.
+  def find(ids, catalog_id: nil)
     filter = { retailer_id: { is_any: Array(ids).map(&:to_s) } }.to_json
     query = { fields: PRODUCT_FIELDS, limit: FIND_LIMIT, filter: filter, return_only_approved_products: true }
-    items(get("#{catalog_id!}/products", query)).index_by(&:id)
+    items(get("#{catalog_id || catalog_id!}/products", query)).index_by(&:id)
   end
 
   private
@@ -86,13 +90,17 @@ class Whatsapp::Templates::CatalogClient
   end
 
   def get(path, query)
-    with_retry do
-      response = HTTParty.get(graph_url(path), query: query, headers: headers, timeout: REQUEST_TIMEOUT)
-      next payload(response) if response.success?
+    return request(path, query) unless @insistir
 
-      retry_later!(response)
-      fail_with(response)
-    end
+    with_retry { request(path, query) }
+  end
+
+  def request(path, query)
+    response = HTTParty.get(graph_url(path), query: query, headers: headers, timeout: @timeout)
+    return payload(response) if response.success?
+
+    retry_later!(response)
+    fail_with(response)
   end
 
   def cache_key
