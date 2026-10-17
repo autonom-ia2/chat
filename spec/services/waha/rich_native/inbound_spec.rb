@@ -54,6 +54,8 @@ describe Waha::RichNative::Inbound do
     # Item 10 (decisão do Rodrigo, 17/10): a ligação perdida ou recusada do cliente reabre a conversa resolvida, pelo
     # caminho da mensagem recebida, sem virar turno da IA.
     describe 'reopening a resolved conversation' do
+      before { Redis::Alfred.scan_each(match: 'waha:call_reopen:*') { |key| Redis::Alfred.delete(key) } }
+
       it 'reopens on a missed call, and the AI gets no turn' do
         flag_on!
         conversation.resolved!
@@ -77,6 +79,20 @@ describe Waha::RichNative::Inbound do
         call('received', call_id: 'C2')
         expect(conversation.reload).to be_resolved
         call('rejected', call_id: 'C2', reason: 'timeout')
+        expect(conversation.reload).to be_open
+      end
+
+      it 'reopens once per call: the same missed event repeated does not reopen it again' do
+        flag_on!
+        conversation.resolved!
+        call('rejected', call_id: 'C9', reason: 'timeout')
+        expect(conversation.reload).to be_open
+
+        conversation.resolved!
+        call('rejected', call_id: 'C9', reason: 'timeout')
+        expect(conversation.reload).to be_resolved
+
+        call('rejected', call_id: 'C10', reason: 'timeout')
         expect(conversation.reload).to be_open
       end
 
