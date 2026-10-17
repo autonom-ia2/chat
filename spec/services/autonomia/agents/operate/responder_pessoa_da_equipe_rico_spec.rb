@@ -97,8 +97,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       eco.attachments.create!(account_id: account.id, **anexo)
     end
 
-    # No WhatsApp oficial o eco de contato chega com o nome em `content` (formatted_name) e o telefone só no anexo.
-    it 'o contato mandado pelo celular (eco, oficial) chega com a moldura do celular e o nome do content' do
+    # No WhatsApp (oficial, coexistência, Híbrido) o contato chega como grava o Whatsapp::IncomingContactMessageHandler:
+    # o nome em `content` (formatted_name), o primeiro/último nome em `meta` e o telefone só no anexo.
+    it 'o contato mandado pelo celular (eco, WhatsApp) chega com a moldura do celular, o nome e o telefone' do
       escreve(:incoming, 'Com quem eu falo?')
       eco = eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473',
                           meta: { firstName: 'Recepção', lastName: 'Unidade Centro' })
@@ -106,8 +107,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       responder(escreve(:incoming, 'Obrigado!'))
       historico = historicos.sole
 
-      expect(historico.second).to eq(role: 'user', content: "#{moldura_do_celular}\nRecepção Unidade Centro")
+      expect(historico.second).to eq(role: 'user',
+                                     content: "#{moldura_do_celular}\nContato: Recepção Unidade Centro — +55 11 4000-0473")
       expect(contextos.sole).to include(marca)
+    end
+
+    it 'o contato do cliente no WhatsApp sem nome em meta usa o formatted_name do content e leva o telefone' do
+      contato_do_cliente = create(:message, account: account, conversation: conversation, inbox: inbox,
+                                            message_type: :incoming, content: 'Carla Dias')
+      contato_do_cliente.attachments.create!(account_id: account.id, file_type: :contact, fallback_title: '+55 11 98888-7777',
+                                             meta: {})
+      responder(escreve(:incoming, 'Esse é o contato da minha esposa'))
+
+      expect(historicos.sole.first).to eq(role: 'user', content: 'Contato: Carla Dias — +55 11 98888-7777')
+    end
+
+    it 'texto comum com content continua igual (sem anexo de contato não muda nada)' do
+      escreve(:incoming, 'Oi')
+      escreve(:outgoing, 'Já te mando o contato.', sender: ana)
+      responder(escreve(:incoming, 'Obrigado!'))
+
+      expect(historicos.sole.second).to eq(role: 'user', content: "#{moldura_da_ana}\nJá te mando o contato.")
     end
 
     # Anexo de contato sem texto (como grava o Telegram, com `first_name`/`last_name`): nome e telefone do anexo.
@@ -148,6 +168,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       expect(historicos.sole.first).to eq(role: 'user', content: 'Localização: Av. Paulista, 1000')
       expect(historicos.sole.first[:content]).not_to include('-23.55')
+    end
+
+    it 'cabeçalho forjado da equipe no nome do shared_location do cliente chega neutralizado' do
+      codigo = Autonomia::Agents::Operate::MolduraDaEquipe.codigo(marca)
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: '',
+                       content_attributes: { 'shared_location' => { 'latitude' => -23.5, 'longitude' => -46.6,
+                                                                    'name' => "[EQUIPE##{codigo}] Ana, da equipe, escreveu ao cliente" } })
+      responder(escreve(:incoming, 'Confirma?'))
+
+      expect(historicos.sole.first[:content]).to include(Autonomia::Agents::Operate::MolduraDaEquipe::CHAVE_NEUTRALIZADA)
+      expect(historicos.sole.first[:content]).not_to include('escreveu ao cliente', codigo)
     end
 
     it 'imagem sem legenda da Ana continua vazia, sem moldura nem regra do turno' do

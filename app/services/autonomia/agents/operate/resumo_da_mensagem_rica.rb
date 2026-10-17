@@ -31,13 +31,17 @@ module Autonomia::Agents::Operate::ResumoDaMensagemRica
   module_function
 
   # O `content` da mensagem, ou o resumo do formato quando ele está vazio; '' quando não há nem um nem outro.
+  # O contato vem primeiro porque no WhatsApp (oficial, coexistência, Híbrido) ele chega com o nome em `content`
+  # (formatted_name) e o telefone só no anexo: sem isso o telefone nunca entraria.
   def texto(message)
     conteudo = message.content.to_s
+    contatos = resumo_dos_contatos(message, conteudo)
+    return contatos if contatos
     return conteudo if conteudo.present?
 
     atributos = message.content_attributes.to_h
     resumo(atributos[RichMessages::KEY]) || localizacao_compartilhada(atributos[RichMessages::ReceivedLocation::KEY]) ||
-      resumo_dos_anexos(message) || conteudo
+      resumo_das_localizacoes(message) || conteudo
   end
 
   def resumo(payload)
@@ -53,13 +57,19 @@ module Autonomia::Agents::Operate::ResumoDaMensagemRica
     localizacao(payload) if payload.is_a?(Hash)
   end
 
-  # Um resumo por localização e um por contato (os telefones de um mesmo contato vêm em anexos separados).
-  def resumo_dos_anexos(message)
-    anexos = message.attachments.to_a
-    locais = anexos.select { |anexo| anexo.file_type == 'location' }.map { |anexo| localizacao('name' => anexo.fallback_title) }
-    contatos = anexos.select { |anexo| anexo.file_type == 'contact' }.group_by { |anexo| nome_do_contato(anexo.meta) }
-                     .map { |nome, grupo| contato('name' => nome, 'phone' => telefones(grupo)) }
-    (locais.uniq + contatos).join("\n").presence
+  # Um resumo por contato em anexo (os telefones de um mesmo contato vêm em anexos separados). O nome vem de `meta` ou,
+  # sem ele, do `content` (o formatted_name do WhatsApp). nil sem anexo de contato.
+  def resumo_dos_contatos(message, conteudo)
+    anexos = message.attachments.select { |anexo| anexo.file_type == 'contact' }
+    return if anexos.empty?
+
+    anexos.group_by { |anexo| nome_do_contato(anexo.meta).presence || conteudo }
+          .map { |nome, grupo| contato('name' => nome, 'phone' => telefones(grupo)) }.join("\n")
+  end
+
+  def resumo_das_localizacoes(message)
+    message.attachments.select { |anexo| anexo.file_type == 'location' }
+           .map { |anexo| localizacao('name' => anexo.fallback_title) }.uniq.join("\n").presence
   end
 
   def telefones(anexos)
