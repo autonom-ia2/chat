@@ -158,7 +158,7 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
       expect { message.update!(content: 'apagada', content_attributes: { deleted: true }) }
         .to have_enqueued_job(WhatsappHybrid::RichNative::RevokeJob).once
       expect { message.update!(content_attributes: message.content_attributes.merge('external_error' => nil)) }
-        .not_to have_enqueued_job(described_class)
+        .not_to have_enqueued_job(WhatsappHybrid::RichNative::RevokeJob)
     end
   end
 
@@ -181,6 +181,23 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
 
       expect(client).to have_received(:delete_message).once
       expect(message.reload.content_attributes).to include('deleted' => true, 'revogada_no_canal' => true)
+    end
+
+    it 'logs only the class when the mark cannot be written, and does not run the job again' do
+      flag_on!
+      message = deleted_message
+      allow(Waha::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:delete_message).and_return({})
+      Redis::Alfred.setex('whatsapp_hybrid:chat_id:hybrid-test:5511937016094', '5511937016094@c.us', 60)
+      allow_any_instance_of(Message).to receive(:save!).and_raise(ActiveRecord::ConnectionNotEstablished, 'detalhe do banco') # rubocop:disable RSpec/AnyInstance
+      allow(Rails.logger).to receive(:error)
+
+      expect { described_class.perform_now(message.id, '3EB0SENT') }.not_to have_enqueued_job(described_class)
+
+      expect(client).to have_received(:delete_message).once
+      expect(Rails.logger).to have_received(:error)
+        .with("[whatsapp_hybrid] revoke mark failed message=#{message.id} ActiveRecord::ConnectionNotEstablished")
+      expect(message.reload.content_attributes).not_to have_key('revogada_no_canal')
     end
 
     it 'does not mark it when the engine refuses' do
