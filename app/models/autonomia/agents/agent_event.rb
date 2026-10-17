@@ -59,17 +59,19 @@ module Autonomia
       # da caixa WAHA com a flag `whatsapp_rich_native`; a IA não responde. `message_id` é essa mensagem. Uma vez por
       # mensagem. O 15 pula 10 a 14, reservados por outros PRs abertos (o número é o valor gravado: nunca reaproveitar).
       # skipped_mensagem_apagada (#1709): o turno do cliente tinha só mensagem apagada por ele; a IA não responde.
+      # skipped_escolha_retirada (#1709): o turno tinha só voto/resposta ao convite que o cliente retirou ou trocou dentro
+      # do debounce; a IA não responde.
       enum event_type: { replied: 0, handed_off: 1, skipped_audience: 2, skipped_schedule: 3,
                          skipped_escolhas_incompletas: 4, parado_sem_onde_trabalhar: 5, consulted: 6, consult_failed: 7,
                          skipped_assunto_atrasou: 8, silenciado_pessoa_respondeu: 9, skipped_mensagem_sem_suporte: 15,
-                         skipped_mensagem_apagada: 16 }
+                         skipped_mensagem_apagada: 16, skipped_escolha_retirada: 17 }
 
       HANDOFF_TYPES = %w[handed_off skipped_audience skipped_schedule].freeze
       # O que NÃO é atendimento: o agente nem respondeu nem passou a conversa a humanos. Um evento
       # desses existe para o corretor ver a causa do silêncio, não para a conversa contar como atendida.
       NAO_ATENDIMENTO_TYPES = %w[skipped_escolhas_incompletas parado_sem_onde_trabalhar consulted consult_failed
                                  skipped_assunto_atrasou silenciado_pessoa_respondeu skipped_mensagem_sem_suporte
-                                 skipped_mensagem_apagada].freeze
+                                 skipped_mensagem_apagada skipped_escolha_retirada].freeze
       # Tema 14: os eventos do ajudante (consultado por outro agente, nunca dono da conversa).
       AJUDANTE_TYPES = %w[consulted consult_failed].freeze
 

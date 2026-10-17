@@ -42,10 +42,13 @@ const props = defineProps({
 const emit = defineEmits(['retry']);
 
 // fork chat#1709 (fase 3): o registro escondido de reação, edição, voto retirado e toque de ligação (atividade com
-// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere. Só ATIVIDADE se esconde:
-// a chave numa mensagem do cliente ou nossa nunca a tira da tela (o servidor também não a grava fora da atividade).
+// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere. Também se esconde a
+// mensagem RECEBIDA com a chave: o voto na enquete e a resposta ao convite (turno do cliente para a IA; o voto aparece
+// agregado na enquete) e o aviso de visualização única trocado pela mídia. Mensagem nossa (saída) nunca se esconde. O
+// servidor só grava a chave nesses casos (a API não a forja).
+const HIDDEN_TYPES = [MESSAGE_TYPES.ACTIVITY, MESSAGE_TYPES.INCOMING];
 const isHidden = message =>
-  message.message_type === MESSAGE_TYPES.ACTIVITY &&
+  HIDDEN_TYPES.includes(message.message_type) &&
   message.content_attributes?.c2y_hidden === true;
 
 const allMessages = computed(() => {

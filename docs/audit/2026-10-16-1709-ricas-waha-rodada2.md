@@ -248,3 +248,15 @@ Correções:
 
 **Diferença conhecida (aceita):** com a flag desligada, o aviso de visualização única numa conversa nova deixa a conversa
 criada pelo conector só com a atividade escondida. O cliente de fato mandou algo; na main isso sumia sem rastro.
+
+## Fechamento antes de ligar a flag (segunda revisão)
+
+- Tela: `MessageList.vue` esconde também a mensagem RECEBIDA com `c2y_hidden` (voto, resposta ao convite, aviso de
+  visualização única trocado pela mídia), sem depender do visual novo do #1702. Mensagem nossa nunca se esconde. Com
+  isto, a dependência da 1702b para esconder o voto deixa de existir; o Frontend geral mantém a mesma regra na
+  resolução do conflito.
+- **Comportamento conhecido do app do celular (aceito):** o app do Chatwoot não lê `c2y_hidden` e mostra o balão
+  "Votou na enquete 'Qual horário?': Tarde" (ou "Respondeu ao convite …: Vou"). O texto é a resposta do cliente.
+- Rajada "texto + voto + voto retirado": só a escolha que não vale mais sai do turno e do histórico; a IA responde ao
+  que sobrou. Se não sobrar nada, fica calada com o evento `skipped_escolha_retirada` (enum 17, não atendimento, com
+  rótulo no Desempenho).

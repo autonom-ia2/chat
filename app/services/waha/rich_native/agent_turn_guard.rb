@@ -6,14 +6,16 @@
 #   apagada pelo cliente (`deleted_by_contact_at`). Com uma mensagem real no meio, a IA responde, e o histórico sai
 #   sem as outras. Evento no painel de Desempenho, uma vez por mensagem: `skipped_mensagem_sem_suporte` (com bolha ou
 #   aviso no turno) ou `skipped_mensagem_apagada` (só apagadas).
-# - Voto na enquete e resposta ao convite (Waha::RichNative::AiTurn, também no plano B do Híbrido): no settle, a escolha
-#   do turno precisa continuar guardada na enquete/evento. Retirada ou trocada dentro do debounce, não há resposta.
+# - Voto na enquete e resposta ao convite (Waha::RichNative::AiTurn, também no plano B do Híbrido), com a flag: no settle,
+#   a escolha precisa continuar guardada na enquete/evento. A que não vale mais (retirada ou trocada dentro do debounce)
+#   sai do turno e do histórico; se não sobrar mensagem no turno, a IA fica calada, com o evento
+#   `skipped_escolha_retirada`.
 # O turno calado de propósito NÃO solta a posse do turno (Autonomia::Agents::Operate::PosseDoTurno: só turno que falhou
 # solta). Só depois da elegibilidade de sempre: turno que deixou de ser da IA segue o caminho original (sem evento).
 module Waha::RichNative::AgentTurnGuard
   UNSUPPORTED_REASON = 'mensagem_sem_suporte'.freeze
   DELETED_REASON = 'mensagem_apagada'.freeze
-  STALE_CHOICE_REASON = 'escolha_mudou'.freeze
+  STALE_CHOICE_REASON = 'escolha_retirada'.freeze
 
   def perform
     reason = c2y_turn_skip_reason
@@ -32,15 +34,30 @@ module Waha::RichNative::AgentTurnGuard
     raw = super
     @c2y_raw_messages = raw
     @c2y_filtered = true
-    @recent_messages = c2y_waha_with_flag? ? raw.reject { |message| Waha::RichNative::TurnKinds.out_of_history?(message) } : raw
+    @recent_messages = raw.reject { |message| c2y_out_of_history?(message) }
+  end
+
+  # Com a flag: a escolha que não vale mais (qualquer caixa) e, na caixa WAHA, a apagada e o aviso de visualização única.
+  def c2y_out_of_history?(message)
+    return false unless c2y_flag?
+
+    c2y_stale_choice?(message) || (c2y_waha_with_flag? && Waha::RichNative::TurnKinds.out_of_history?(message))
+  end
+
+  def c2y_stale_choice?(message)
+    @c2y_stale ||= {}
+    @c2y_stale.fetch(message.id) { @c2y_stale[message.id] = !Waha::RichNative::TurnKinds.choice_current?(message) }
   end
 
   def c2y_turn_skip_reason
-    return unless Waha::RichNative.enabled?(@conversation.account)
-    return STALE_CHOICE_REASON if c2y_turn_message && !Waha::RichNative::TurnKinds.choice_current?(c2y_turn_message)
+    return unless c2y_flag?
+
+    turn = c2y_turn_incoming
+    remaining = turn.reject { |message| c2y_stale_choice?(message) }
+    return STALE_CHOICE_REASON if turn.any? && remaining.empty?
     return unless c2y_waha_with_flag?
 
-    Waha::RichNative::TurnKinds.silent_reason(c2y_turn_incoming)
+    Waha::RichNative::TurnKinds.silent_reason(remaining)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] c2y_turn_guard_failed conv=#{@conversation.id} #{e.class}")
     nil
@@ -61,17 +78,22 @@ module Waha::RichNative::AgentTurnGuard
     Array(window).select(&:incoming?)
   end
 
+  def c2y_flag?
+    return @c2y_flag if defined?(@c2y_flag)
+
+    @c2y_flag = Waha::RichNative.enabled?(@conversation.account)
+  end
+
   def c2y_waha_with_flag?
     return @c2y_waha_with_flag if defined?(@c2y_waha_with_flag)
 
     inbox = @conversation.inbox
-    @c2y_waha_with_flag = inbox&.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) == true &&
-                          Waha::RichNative.enabled?(@conversation.account)
+    @c2y_waha_with_flag = inbox&.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) == true && c2y_flag?
   end
 
   def c2y_skip_turn!(reason)
     registrar_silencio(reason)
-    c2y_log_event(reason) unless reason == STALE_CHOICE_REASON
+    c2y_log_event(reason)
     self.class::Result.silenced
   end
 

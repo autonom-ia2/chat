@@ -481,6 +481,7 @@
           "schedule": "Outside the schedule",
           "mensagem_sem_suporte": "Message WhatsApp only shows on the phone (AI stayed quiet)",
           "mensagem_apagada": "Message deleted by the customer (AI stayed quiet)",
+          "escolha_retirada": "Vote or reply taken back by the customer (AI stayed quiet)",
           "other": "Other / unspecified"
         }
       },

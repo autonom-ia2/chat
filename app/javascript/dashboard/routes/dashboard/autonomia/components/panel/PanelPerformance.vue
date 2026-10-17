@@ -154,6 +154,7 @@ const REASON_LABEL_KEYS = {
   policy: 'AGENTS.PERFORMANCE.REASONS.CODES.policy',
   mensagem_sem_suporte: 'AGENTS.PERFORMANCE.REASONS.CODES.mensagem_sem_suporte',
   mensagem_apagada: 'AGENTS.PERFORMANCE.REASONS.CODES.mensagem_apagada',
+  escolha_retirada: 'AGENTS.PERFORMANCE.REASONS.CODES.escolha_retirada',
   other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
 };
 const reasonLabel = reason =>

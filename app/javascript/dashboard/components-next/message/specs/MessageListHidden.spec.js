@@ -62,7 +62,7 @@ describe('MessageList com registros escondidos', () => {
     expect(wrapper.find('[data-edited-mark]').exists()).toBe(true);
   });
 
-  it('nunca esconde mensagem do cliente ou nossa, mesmo com a chave', () => {
+  it('nunca esconde mensagem nossa, mesmo com a chave', () => {
     const wrapper = mountList([
       {
         ...base,
@@ -71,16 +71,30 @@ describe('MessageList com registros escondidos', () => {
         content: 'Saiu para o cliente',
         content_attributes: { c2y_hidden: true },
       },
+    ]);
+
+    expect(wrapper.text()).toContain('Saiu para o cliente');
+  });
+
+  it('esconde a mensagem recebida com a chave (voto, resposta ao convite) e mostra a recebida sem ela', () => {
+    const wrapper = mountList([
       {
         ...base,
         id: 44,
         message_type: 0,
+        content: "Votou na enquete 'Qual horário?': Tarde",
+        content_attributes: { c2y_hidden: true, poll_vote_applied_to: 40 },
+      },
+      {
+        ...base,
+        id: 45,
+        message_type: 0,
         content: 'Escrito pelo cliente',
-        content_attributes: { c2y_hidden: true },
+        content_attributes: {},
       },
     ]);
 
-    expect(wrapper.text()).toContain('Saiu para o cliente');
+    expect(wrapper.text()).not.toContain('Votou na enquete');
     expect(wrapper.text()).toContain('Escrito pelo cliente');
   });
 });

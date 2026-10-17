@@ -161,6 +161,25 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
 
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
       expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_escolha_retirada.pluck(:message_id)).to eq([voto.id])
+    end
+
+    it 'drops only the vote that no longer counts and answers the text of the same burst' do
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => [] }] }) # rubocop:disable Rails/SkipsModelValidations
+      cliente_escreve('Prefiro falar com alguém')
+      voto = turno_do_voto("Votou na enquete 'Qual horário?': Tarde")
+      voto.update_column(:content_attributes, voto.content_attributes.merge( # rubocop:disable Rails/SkipsModelValidations
+                                                'c2y_ai_turn' => { 'kind' => 'poll_vote', 'target_id' => poll.id, 'choice' => ['Tarde'] }
+                                              ))
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include('Prefiro falar com alguém').and(not_include('Votou na enquete'))
+      expect(consultas.sole[:history].pluck(:content)).not_to include("Votou na enquete 'Qual horário?': Tarde")
+      expect(Autonomia::Agents::AgentEvent.skipped_escolha_retirada).to be_empty
     end
   end
 

@@ -173,6 +173,17 @@ describe WhatsappHybrid::RichNative::Quote do
       expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq(['Não'])
     end
 
+    # A conferência da escolha no settle (Waha::RichNative::TurnKinds.choice_current?) no plano B do Híbrido.
+    it 'checks the choice of the vote turn against the poll: valid until the vote is taken back' do
+      native_poll
+      vote(['Sim'], vote_id: 'V1')
+      turno = conversation.messages.incoming.find_by!(source_id: 'waha-poll-vote-V1')
+
+      expect(Waha::RichNative::TurnKinds.choice_current?(turno)).to be(true)
+      vote([], vote_id: 'V2')
+      expect(Waha::RichNative::TurnKinds.choice_current?(turno.reload)).to be(false)
+    end
+
     it 'records a removed vote and ignores votes from the company phone' do
       poll_message = native_poll
       vote(['Sim'], vote_id: 'V1')

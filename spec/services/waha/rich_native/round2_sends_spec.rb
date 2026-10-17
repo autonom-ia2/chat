@@ -122,6 +122,16 @@ describe 'WAHA rich native round 2 sends' do # rubocop:disable RSpec/DescribeCla
                                                    'extra_guests' => 0, 'response_id' => response_id, 'from_me' => false })
     end
 
+    it 'makes no new turn when the same reply is redone (another reply id, no engine time), and a turn when it changes' do
+      native_event
+      reply('going', response_id: 'R1')
+      reply('going', response_id: 'R3')
+      reply('maybe', response_id: 'R4')
+
+      expect(conversation.messages.where(source_id: 'waha-event-response-R3').sole).to be_activity
+      expect(conversation.messages.incoming.pluck(:source_id)).to eq(%w[waha-event-response-R1 waha-event-response-R4])
+    end
+
     it 'aggregates one reply per person on our native event, once per reply id, as a hidden customer turn' do
       event = native_event
       expect(event.content_attributes['rich_message_sent_as']).to eq('native')
