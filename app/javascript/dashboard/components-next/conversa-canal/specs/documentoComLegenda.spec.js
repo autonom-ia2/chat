@@ -35,7 +35,8 @@ const FOTO = {
   extension: 'png',
   fileSize: 20 * 1024,
   dataUrl: 'https://s3.test/foto.png',
-  thumbUrl: 'https://s3.test/foto-mini.png',
+  // O servidor não faz miniatura de anexo `file` (Attachment#thumb_url).
+  thumbUrl: '',
 };
 
 const i18n = () =>
@@ -105,8 +106,20 @@ describe('documento com legenda (#1702)', () => {
     );
 
     const miniatura = cartao.find('[data-miniatura-do-documento]');
-    expect(miniatura.attributes('src')).toBe(FOTO.thumbUrl);
+    expect(miniatura.attributes('src')).toBe(FOTO.dataUrl);
     expect(cartao.find('svg').exists()).toBe(false);
+  });
+
+  it('miniatura que não carrega volta ao ícone do tipo', async () => {
+    const cartao = montar(
+      defineComponent({ setup: () => () => h(DocumentoDoWhatsapp) }),
+      { anexos: [FOTO] }
+    );
+
+    await cartao.find('[data-miniatura-do-documento]').trigger('error');
+
+    expect(cartao.find('[data-miniatura-do-documento]').exists()).toBe(false);
+    expect(cartao.find('svg').exists()).toBe(true);
   });
 
   it('PDF continua com o ícone vermelho, sem miniatura', () => {

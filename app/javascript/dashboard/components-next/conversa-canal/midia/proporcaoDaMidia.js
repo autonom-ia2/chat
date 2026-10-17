@@ -9,7 +9,7 @@ export const PROPORCAO_MINIMA = 0.72;
 
 export const FORMATOS = {
   deitada: 'w-[330px] h-auto max-w-full',
-  emPe: 'h-[330px] w-auto max-w-full',
+  emPe: 'h-[330px] w-auto max-w-full object-cover',
   alta: 'h-[330px] w-[238px] max-w-full object-cover',
 };
 

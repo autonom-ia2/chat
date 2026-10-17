@@ -5,6 +5,7 @@ import FormattedContent from './FormattedContent.vue';
 import PreviaDeLink from 'dashboard/components-next/conversa-canal/PreviaDeLink.vue';
 import { usePreviaDeLink } from 'dashboard/components-next/conversa-canal/usePreviaDeLink';
 import DocumentoDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/DocumentoDoWhatsapp.vue';
+import MidiaComLegenda from 'dashboard/components-next/conversa-canal/midia/MidiaComLegenda.vue';
 import { usePele } from 'dashboard/components-next/conversa-canal/pele';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
@@ -21,16 +22,21 @@ const { hasTranslations, translationContent } =
 
 const previaDeLink = usePreviaDeLink();
 
-// #1702: com a pele, documento com legenda vira o cartão do app em cima da legenda; os
-// outros anexos seguem nos chips de sempre.
+// #1702: com a pele, documento, foto e vídeo com legenda ficam como no app (cartão ou
+// mídia no tamanho do app, em cima da legenda); os outros anexos seguem nos chips.
 const pele = usePele();
 const ehDocumento = anexo => anexo.fileType === ATTACHMENT_TYPES.FILE;
-const documentos = computed(() =>
-  pele.value ? (attachments.value || []).filter(ehDocumento) : []
-);
+const MIDIAS = [ATTACHMENT_TYPES.IMAGE, ATTACHMENT_TYPES.VIDEO];
+const ehMidia = anexo => MIDIAS.includes(anexo.fileType);
+const doTipo = filtro =>
+  computed(() => (pele.value ? (attachments.value || []).filter(filtro) : []));
+const documentos = doTipo(ehDocumento);
+const midias = doTipo(ehMidia);
 const outrosAnexos = computed(() =>
   pele.value
-    ? (attachments.value || []).filter(anexo => !ehDocumento(anexo))
+    ? (attachments.value || []).filter(
+        anexo => !ehDocumento(anexo) && !ehMidia(anexo)
+      )
     : attachments.value
 );
 
@@ -73,6 +79,7 @@ const handleSeeOriginal = () => {
       <span v-if="isEmpty" class="text-n-slate-11">
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
+      <MidiaComLegenda v-for="midia in midias" :key="midia.id" :anexo="midia" />
       <DocumentoDoWhatsapp
         v-for="documento in documentos"
         :key="documento.id"

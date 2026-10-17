@@ -178,7 +178,10 @@ const replyToPreview = computed(() => {
       },
     ]"
   >
-    <BotaoDoMenu v-if="peleDoBalao.ativa.value" />
+    <!-- #1702: aviso de atividade não tem menu (é uma pílula do sistema). -->
+    <BotaoDoMenu
+      v-if="peleDoBalao.ativa.value && variant !== MESSAGE_VARIANTS.ACTIVITY"
+    />
     <BicoDoBalao
       v-if="peleDoBalao.bico.value"
       :lado="orientation"

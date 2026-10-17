@@ -29,10 +29,13 @@ const resumo = computed(() =>
   resumoDoArquivo(anexo.value, idiomaDoPainel(locale.value))
 );
 const ehPdf = computed(() => extensao.value === 'PDF');
-// Foto mandada como documento: o app mostra a miniatura dela no lugar do ícone.
+// Foto mandada como documento: o app mostra a miniatura dela no lugar do ícone. O
+// servidor só faz miniatura de anexo de imagem; o documento usa o próprio arquivo.
+// Se a imagem não carregar (link vencido), volta o ícone do tipo.
 const IMAGENS = ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'];
+const miniaturaFalhou = ref(false);
 const miniatura = computed(() =>
-  IMAGENS.includes(extensao.value)
+  IMAGENS.includes(extensao.value) && !miniaturaFalhou.value
     ? anexo.value.thumbUrl || anexo.value.dataUrl
     : null
 );
@@ -67,8 +70,10 @@ const baixar = async () => {
       v-if="miniatura"
       :src="miniatura"
       alt=""
+      loading="lazy"
       class="size-[78px] flex-shrink-0 object-cover skip-context-menu"
       data-miniatura-do-documento
+      @error="miniaturaFalhou = true"
     />
     <svg
       v-else
