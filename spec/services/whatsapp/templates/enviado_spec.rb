@@ -179,7 +179,7 @@ RSpec.describe Whatsapp::Templates::Enviado do
     let(:catalogo) { :guardado }
 
     before do
-      camiseta = Whatsapp::Templates::CatalogClient::Product.new(id: 'SKU1', name: 'Camiseta', price: 'R$ 59,90',
+      camiseta = Whatsapp::Templates::CatalogClient::Product.new(id: 'SKU1', name: 'Camiseta', price: 'R$ 59,90', sale_price: '',
                                                                  image_url: 'https://cdn.loja.com.br/1.jpg', available: true)
       Whatsapp::Templates::Enviado::Produtos.lembrar(inbox, [camiseta])
     end
@@ -361,7 +361,7 @@ RSpec.describe Whatsapp::Templates::Enviado do
                           { 'type' => 'BODY', 'text' => 'Itens' },
                           { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'MPM', 'text' => longo }] })
       Whatsapp::Templates::Enviado::Produtos.lembrar(inbox, ids.map do |id|
-        Whatsapp::Templates::CatalogClient::Product.new(id: id, name: longo, price: longo, image_url: link, available: true)
+        Whatsapp::Templates::CatalogClient::Product.new(id: id, name: longo, price: longo, sale_price: '', image_url: link, available: true)
       end)
 
       processed = { 'products' => { 'retailer_ids' => ids + %w[a b c] }, 'header' => { '1' => longo } }

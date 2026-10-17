@@ -17472,6 +17472,22 @@
     ],
     "sem_corpo": false
   },
+  "POST inboxes/:inbox_id/whatsapp_conversation_assets/media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#media",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_conversation_assets_controller.rb:24",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_conversation_assets_controller.rb:25",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_catalogs_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
   "POST inboxes/:inbox_id/whatsapp_templates": {
     "campos": {
       "card_media": {

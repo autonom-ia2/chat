@@ -1732,7 +1732,27 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#products",
     "parametros": [
       "after",
+      "ids",
       "q"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/catalog": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#catalog",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/products": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#products",
+    "parametros": [
+      "after",
+      "ids",
+      "q"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/template": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#template",
+    "parametros": [
+      "language",
+      "name"
     ]
   },
   "inboxes/:inbox_id/whatsapp_templates": {

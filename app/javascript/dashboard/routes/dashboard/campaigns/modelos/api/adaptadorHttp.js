@@ -406,10 +406,13 @@ const obterCatalogo = async caixa => {
 };
 
 // Uma página dos produtos aprovados, pelo nome; `depois` pede a próxima.
-const produtoDaApi = produto => ({
+// #1716: em promoção (dentro do período, conferido no servidor), `preco` é o
+// que o cliente vê e `precoAntes` o preço cheio, riscado na tela.
+export const produtoDaApi = produto => ({
   id: produto.id,
   nome: produto.name,
-  preco: produto.price,
+  preco: produto.sale_price || produto.price,
+  precoAntes: produto.sale_price ? produto.price : '',
   foto: produto.image_url,
   disponivel: produto.available,
 });
@@ -418,6 +421,13 @@ const listarProdutos = async (caixa, { busca = '', depois = '' } = {}) => {
     api.getCatalogProducts(caixa, { search: busca.trim(), after: depois })
   );
   return { produtos: payload.map(produtoDaApi), depois: meta?.after || '' };
+};
+
+// #1716: os produtos escolhidos relidos do catálogo, na hora de enviar pela
+// conversa. O que saiu do catálogo não volta.
+const conferirProdutos = async (caixa, ids) => {
+  const { payload } = await chamar(api.getCatalogProducts(caixa, { ids }));
+  return payload.map(produtoDaApi);
 };
 
 // Ainda sem backend (formulários do WhatsApp): a tela esconde esse formato
@@ -518,6 +528,7 @@ export default {
   apagarModelo,
   obterCatalogo,
   listarProdutos,
+  conferirProdutos,
   listarFormularios,
   criarComIA,
   melhorarComIA,

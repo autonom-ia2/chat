@@ -81,9 +81,33 @@ RSpec.describe Whatsapp::Templates::CatalogClient do
       expect(request).to have_been_made
       expect(page.after).to eq('c2')
       expect(page.products.map(&:to_h)).to eq(
-        [{ id: 'tenis', name: 'Tênis preto', price: 'R$59,90', image_url: 'https://cdn.loja.com/tenis.jpg', available: true },
-         { id: 'fone', name: 'Fone', price: 'R$59,90', image_url: 'https://cdn.loja.com/fone.jpg', available: false }]
+        [{ id: 'tenis', name: 'Tênis preto', price: 'R$59,90', sale_price: '', image_url: 'https://cdn.loja.com/tenis.jpg', available: true },
+         { id: 'fone', name: 'Fone', price: 'R$59,90', sale_price: '', image_url: 'https://cdn.loja.com/fone.jpg', available: false }]
       )
+    end
+
+    # #1716: o preço de promoção só dentro do período (sale_price_effective_date no catálogo; início e fim na Graph).
+    it 'gives the sale price only inside its period, and the full price outside it' do
+      travel_to Time.zone.parse('2026-10-16T12:00:00Z') do
+        sale = lambda do |id, start, finish|
+          product(id, id).merge('sale_price' => 'R$49,90', 'sale_price_start_date' => start, 'sale_price_end_date' => finish)
+        end
+        rows = [sale.call('dentro', '2026-10-01T00:00:00+0000', '2026-10-31T23:59:00+0000'),
+                sale.call('sem_periodo', nil, nil),
+                sale.call('sem_fim', '2026-10-01T00:00:00-0300', ''),
+                sale.call('ainda_nao', '2026-10-20T00:00:00+0000', '2026-10-31T23:59:00+0000'),
+                sale.call('acabou', '2026-09-01T00:00:00+0000', '2026-10-15T23:59:00+0000'),
+                sale.call('data_ilegivel', 'amanhã', ''),
+                sale.call('ultimo_dia', '2026-10-01', '2026-10-16'),
+                product('sem_promocao', 'Sem promoção')]
+        stub_request(:get, products_url).with(query: hash_including('fields' => described_class::PRODUCT_FIELDS))
+                                        .to_return(status: 200, headers: json, body: { data: rows }.to_json)
+
+        expect(client.products.products.to_h { |item| [item.id, item.sale_price] }).to eq(
+          'dentro' => 'R$49,90', 'sem_periodo' => 'R$49,90', 'sem_fim' => 'R$49,90', 'ainda_nao' => '', 'acabou' => '',
+          'data_ilegivel' => '', 'ultimo_dia' => 'R$49,90', 'sem_promocao' => ''
+        )
+      end
     end
 
     it 'has no next page when Meta sends no next link' do

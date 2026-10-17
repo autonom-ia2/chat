@@ -15,7 +15,8 @@ RSpec.describe Whatsapp::Templates::DispatchProducts do
   let(:catalog) { Whatsapp::Templates::CatalogClient::Catalog.new(id: 'cat-1', name: 'Loja', product_count: 2) }
 
   def product(id, available: true)
-    Whatsapp::Templates::CatalogClient::Product.new(id: id, name: "Nome #{id}", price: 'R$1', image_url: '', available: available)
+    Whatsapp::Templates::CatalogClient::Product.new(id: id, name: "Nome #{id}", price: 'R$1', sale_price: '', image_url: '',
+                                                    available: available)
   end
 
   before { allow(Whatsapp::Templates::CatalogClient).to receive(:new).with(inbox: inbox).and_return(client) }

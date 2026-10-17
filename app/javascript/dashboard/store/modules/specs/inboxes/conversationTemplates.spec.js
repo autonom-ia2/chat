@@ -93,10 +93,10 @@ const estadoCom = templates => ({
   ],
 });
 
-const daConversa = (state, inboxId) =>
+const daConversa = (state, inboxId, opcoes) =>
   getters.getConversationWhatsAppTemplates(state, {
     getFilteredWhatsAppTemplates: getters.getFilteredWhatsAppTemplates(state),
-  })(inboxId);
+  })(inboxId, opcoes);
 
 describe('inboxes/getConversationWhatsAppTemplates (#1703)', () => {
   const todos = [
@@ -197,5 +197,66 @@ describe('inboxes/getConversationWhatsAppTemplates (#1703)', () => {
 
   it('returns an empty list for an inbox without templates', () => {
     expect(daConversa({ records: [{ id: 8 }] }, 8)).toEqual([]);
+  });
+});
+
+// #1716: a escolha de modelo da conversa pede os que ela sabe completar.
+describe('inboxes/getConversationWhatsAppTemplates with what the conversation completes (#1716)', () => {
+  const todos = [
+    normal,
+    umProduto,
+    variosProdutos,
+    carrosselDeProdutos,
+    carrosselDeMidia,
+  ];
+  const nomes = opcoes =>
+    daConversa(estadoCom(todos), 7, opcoes).map(template => template.name);
+
+  it('offers products and the photo carousel when both are complete', () => {
+    expect(nomes({ completa: { fotos: true, produtos: true } })).toEqual(
+      todos.map(template => template.name)
+    );
+  });
+
+  it('products only with the products flag', () => {
+    expect(nomes({ completa: { fotos: true, produtos: false } })).toEqual([
+      'boas_vindas',
+      'carrossel_de_fotos',
+    ]);
+  });
+
+  it('without completa (new conversation, CRM, booking) as before', () => {
+    expect(nomes(undefined)).toEqual(['boas_vindas']);
+    expect(nomes({})).toEqual(['boas_vindas']);
+  });
+
+  it('still hides what the screen cannot complete (catalog button, video carousel)', () => {
+    const catalogo = {
+      ...normal,
+      name: 'catalogo',
+      components: [
+        corpo,
+        { type: 'BUTTONS', buttons: [{ type: 'CATALOG', text: 'Catálogo' }] },
+      ],
+    };
+    const video = {
+      ...carrosselDeMidia,
+      name: 'carrossel_de_videos',
+      components: [
+        corpo,
+        {
+          type: 'CAROUSEL',
+          cards: [0, 1].map(() => ({
+            components: [
+              { type: 'HEADER', format: 'VIDEO' },
+              { type: 'BODY', text: 'Cartão' },
+            ],
+          })),
+        },
+      ],
+    };
+    const completa = { completa: { fotos: true, produtos: true } };
+
+    expect(daConversa(estadoCom([catalogo, video]), 7, completa)).toEqual([]);
   });
 });

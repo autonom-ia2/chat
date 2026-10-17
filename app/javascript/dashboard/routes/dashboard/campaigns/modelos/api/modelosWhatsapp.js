@@ -39,8 +39,12 @@ import adaptador from './adaptadorHttp';
 // obterCatalogo(caixa?) → { nome, produtos } | null  (#1418; sem catálogo ou
 //   com a flag whatsapp_campaign_products desligada: null)
 // listarProdutos(caixa, { busca, depois }) → { produtos: [Produto], depois }
-//   Produto = { id (retailer_id da Meta), nome, preco (texto da Meta), foto,
-//               disponivel }  (só aprovados; o esgotado vem com disponivel false)
+//   Produto = { id (retailer_id da Meta), nome, preco (texto da Meta: o de
+//               promoção dentro do período), precoAntes (o cheio, só em
+//               promoção), foto, disponivel }  (só aprovados; o esgotado vem
+//               com disponivel false)
+// conferirProdutos(caixa, ids) → [Produto]  (#1716: os escolhidos relidos; o
+//   que saiu do catálogo não volta)
 // listarFormularios() → []: ainda sem backend.
 // criarComIA({ objetivo, tom, tipo?, exemplo }) → { status, pergunta,
 //   sugestoes, opcoes: [{ id, nome, tipo, motivo, conteudo }] }

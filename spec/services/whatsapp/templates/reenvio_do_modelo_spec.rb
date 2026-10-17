@@ -52,6 +52,18 @@ RSpec.describe Whatsapp::Templates::ReenvioDoModelo, :aggregate_failures do
     message.reload
   end
 
+  # #1716: o envio pela conversa relê o catálogo da WABA da caixa (o mesmo CAT-9), com o produto à venda.
+  def produto_a_venda(retailer_id)
+    account.enable_features!(described_class::PRODUTOS_FLAG)
+    json = { 'Content-Type' => 'application/json' }
+    stub_request(:get, ->(uri) { uri.path.end_with?('/product_catalogs') })
+      .to_return(status: 200, headers: json, body: { data: [{ 'id' => 'CAT-9', 'name' => 'Loja' }] }.to_json)
+    produto = { 'retailer_id' => retailer_id, 'name' => 'Tênis', 'price' => 'R$ 10', 'availability' => 'in stock' }
+    stub_request(:get, 'https://graph.facebook.com/v22.0/CAT-9/products')
+      .with(query: hash_including({}))
+      .to_return(status: 200, headers: json, body: { data: [produto] }.to_json)
+  end
+
   def reenviar(original)
     described_class.call(message_original: original, destino: destino, remetente: nil)
   end
@@ -96,7 +108,7 @@ RSpec.describe Whatsapp::Templates::ReenvioDoModelo, :aggregate_failures do
       ] } }]
     }.each do |caso, (nome, processed)|
       it caso do
-        account.enable_features!(described_class::PRODUTOS_FLAG) if nome == 'produto_unico'
+        produto_a_venda('SKU-1') if nome == 'produto_unico'
         travel_to(agora) do
           original = enviar(modelo_enviado(modelos.find { |item| item['name'] == nome }, processed))
           resultado = reenviar(original)
