@@ -75,7 +75,8 @@ describe Waha::RichNative::PollVote do
       answer = vote(poll.reload, %w[Não Sim])
 
       expect(answer).to be_incoming
-      expect(answer.content).to eq("Voted in the poll 'Vem amanhã?': Não, Sim")
+      expect(answer.content).to eq('Voted: Não, Sim')
+      expect(Waha::RichNative::AiChoiceText.for(answer)).to eq("Voted in the poll 'Vem amanhã?': Não, Sim")
       expect(answer.content_attributes).to include('c2y_hidden' => true, 'poll_vote_applied_to' => poll.id)
       expect(answer.content_attributes.keys & %w[selected_option selected_options waha_poll_vote]).to eq([])
       vote_entry = poll.reload.content_attributes['poll_votes'].sole

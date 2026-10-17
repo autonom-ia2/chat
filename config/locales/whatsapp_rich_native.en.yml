@@ -43,6 +43,9 @@ en:
       live_location: "Live location shared by the customer (this is only the starting point; they may have moved): %{place}. Map: %{url}"
       poll_vote: "Voted in the poll '%{question}': %{options}"
       event_response: "Replied to the invitation '%{name}': %{response}"
+      poll_vote_choice: "Voted: %{options}"
+      event_response_choice: "Replied to the invitation: %{response}"
+      choice_no_longer_valid: "(the customer later took back or changed this choice; it no longer counts)"
       event_answers:
         going: "Going"
         not_going: "Not going"

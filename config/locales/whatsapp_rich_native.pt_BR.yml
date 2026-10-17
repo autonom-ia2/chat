@@ -43,6 +43,9 @@ pt_BR:
       live_location: "Localização ao vivo compartilhada pelo cliente (este é só o ponto inicial; ele pode ter se movido): %{place}. Mapa: %{url}"
       poll_vote: "Votou na enquete '%{question}': %{options}"
       event_response: "Respondeu ao convite '%{name}': %{response}"
+      poll_vote_choice: "Votou: %{options}"
+      event_response_choice: "Respondeu ao convite: %{response}"
+      choice_no_longer_valid: "(o cliente retirou ou trocou esta escolha depois; ela não vale mais)"
       event_answers:
         going: "Vou"
         not_going: "Não vou"

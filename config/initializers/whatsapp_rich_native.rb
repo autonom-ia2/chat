@@ -128,6 +128,16 @@ Rails.application.config.to_prepare do
   unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::ResponderLocation
     Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::ResponderLocation)
   end
+  # O voto e a resposta ao convite chegam às IAs com a pergunta, e a escolha que não vale mais vem marcada.
+  unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::ResponderChoice
+    Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::ResponderChoice)
+  end
+  unless Crm::Ai::ContextBuilder <= Waha::RichNative::AiChoiceContext::ContextBuilder
+    Crm::Ai::ContextBuilder.prepend(Waha::RichNative::AiChoiceContext::ContextBuilder)
+  end
+  unless Autonomia::Decisores::Estado <= Waha::RichNative::AiChoiceContext::Estado
+    Autonomia::Decisores::Estado.prepend(Waha::RichNative::AiChoiceContext::Estado)
+  end
   if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::PreviewImage }
     Message.before_create Waha::RichNative::PreviewImage, prepend: true
   end

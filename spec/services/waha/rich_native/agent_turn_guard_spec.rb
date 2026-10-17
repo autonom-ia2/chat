@@ -83,6 +83,22 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
     end
   end
 
+  # Rodada de correção, item 15: o `content` do turno é só a escolha; a IA lê a pergunta pelo contexto.
+  it 'gives the AI the question of a real vote turn, whose content is only the choice' do
+    poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+    poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Tarde'] }] }) # rubocop:disable Rails/SkipsModelValidations
+    voto = turno_do_voto(Waha::RichNative::AiTurn.poll_text(account, poll, ['Tarde']))
+    voto.update_column(:content_attributes, voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, ['Tarde']))) # rubocop:disable Rails/SkipsModelValidations
+    completo = Waha::RichNative::AiTurn.full_text(account, voto.reload.content_attributes['c2y_ai_turn'])
+    gatilho(voto)
+
+    rodar_turno!
+
+    expect(voto.content).not_to include('Qual horário?')
+    expect(consultas.sole[:query]).to include(completo)
+    expect(consultas.sole[:history].last).to include(role: 'user', content: completo)
+  end
+
   describe 'the unsupported bubble ("open it on the phone")' do
     def sem_suporte
       create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
