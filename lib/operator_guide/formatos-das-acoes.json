@@ -5260,6 +5260,43 @@
     ],
     "sem_corpo": false
   },
+  "PATCH crm/memoria/chaves/:id": {
+    "campos": {
+      "cardinalidade": {
+        "padrao": 1,
+        "tipo": "inteiro",
+        "um_de": [
+          1,
+          2
+        ]
+      },
+      "identidade": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "item_natural": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "obrigatoria": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "validade_dias": {
+        "maior_que": 0,
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/memoria_chaves#update",
+    "modelo": "Crm::MemoriaChave",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_chaves_controller.rb:13",
+      "app/controllers/api/v1/accounts/crm/memoria_chaves_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/memoria_chaves_controller.rb:14"
+    ],
+    "sem_corpo": false
+  },
   "PATCH crm/meta_ads_connection": {
     "campos": {
       "access_token": {
@@ -15006,6 +15043,66 @@
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200"
     ],
     "sem_corpo": false
+  },
+  "POST crm/memoria/cards/:card_id/fatos": {
+    "campos": {
+      "chave": {
+        "obrigatorio": true
+      },
+      "grupo": {
+        "obrigatorio": true,
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "item_ref": {},
+      "valor": {
+        "obrigatorio": true
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/memoria_fatos#create",
+    "motivos": [
+      "leitura crua sem tipo: chave (repassada a ::Crm::Memoria::Correcao.corrigir!), item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:18",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:22",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:20",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:56"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/memoria/cards/:card_id/fatos/:id/aceitar": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/memoria_fatos#aceitar",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:62"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/memoria/cards/:card_id/fatos/:id/destravar": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/memoria_fatos#destravar",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:62"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/memoria_fatos#nao_vale_mais",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:29",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:62"
+    ],
+    "sem_corpo": true
   },
   "POST crm/meta_ads_connection/advisor_actions/:id/accept": {
     "completo": true,

@@ -190,7 +190,7 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
   def params_for_update
     attributes = follow_up_params.except(:card_id, :conversation_id, :contact_id, :company_id, :recurrence)
     attributes = attributes.except(*RECIPIENT_KEYS).merge(recipient_changes(attributes))
-    attributes[:metadata] &&= ::Crm::FollowUps::MetadataSanitizer.without_server_keys(attributes[:metadata])
+    attributes[:metadata] &&= ::Crm::FollowUps::MetadataSanitizer.for_update(attributes[:metadata], @follow_up.metadata)
     attributes
   end
 

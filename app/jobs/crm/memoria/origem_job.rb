@@ -12,5 +12,6 @@ class Crm::Memoria::OrigemJob < ApplicationJob
 
     origem = Crm::Memoria::Origem.gravar!(message)
     Crm::Memoria::Compromissos.depois_da_mensagem!(origem) if origem
+    Crm::Memoria::Recalcular.mensagem_apagada!(message) if Crm::Memoria::Recalcular.apagada?(message)
   end
 end

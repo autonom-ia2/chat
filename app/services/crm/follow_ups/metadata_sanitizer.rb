@@ -14,11 +14,20 @@ class Crm::FollowUps::MetadataSanitizer
     touch
   ].freeze
 
-  # Escritas só pelo servidor (runners de IA): o cliente nunca as define (chat#1349).
-  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason].freeze
+  # Escritas só pelo servidor (runners de IA): o cliente nunca as define (chat#1349). `memoria` (#1601): a marca da
+  # tarefa de retomar o atendimento; o cliente não cria nem apaga.
+  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason memoria].freeze
+  # Ficam no PATCH que troca o metadata inteiro (#1601): sem a marca, a tarefa sem prazo viraria um lembrete comum e o
+  # DueProcessor passaria a vencê-la e avisar.
+  KEPT_ON_UPDATE = %w[memoria].freeze
 
   def self.without_server_keys(metadata)
     metadata.to_h.stringify_keys.except(*SERVER_OWNED_KEYS)
+  end
+
+  # O metadata do cliente, sem as chaves do servidor, mais as que o PATCH não pode apagar.
+  def self.for_update(metadata, current)
+    without_server_keys(metadata).merge(current.to_h.stringify_keys.slice(*KEPT_ON_UPDATE))
   end
 
   # Única fonte do que conta como "modelo nativo configurado": nome E idioma, os dois presentes. Usado pelo

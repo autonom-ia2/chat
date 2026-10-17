@@ -137,7 +137,12 @@ class ContactMergeAction
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
                                                                            tokens: [@base_contact.contact_inboxes.filter_map(&:pubsub_token)])
-    @base_contact.update!(merged_attributes)
+    atualizar_contato_que_fica(merged_attributes)
+  end
+
+  # #1601: copiar os atributos do absorvido não é correção de uma pessoa na memória das IAs.
+  def atualizar_contato_que_fica(merged_attributes)
+    Crm::Memoria::Correcao.sem_correcao(@base_contact) { @base_contact.update!(merged_attributes) }
   end
 
   # #1144: cliente é da pessoa. Se um dos dois já era cliente, o que fica é cliente, com a data mais antiga.
