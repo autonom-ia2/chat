@@ -14,7 +14,7 @@ Situação: **Pronto** = no PR #1741 · **Rodada 1** = em construção · **Roda
 
 | O atendente ou a IA manda no chat2you… | O cliente recebe no WhatsApp | Situação |
 |---|---|---|
-| Pergunta com opções | Lista de verdade ("Ver opções"): o WhatsApp não aceita botões de número não oficial | Pronto |
+| Pergunta com opções | Lista de verdade ("Ver opções"): o WhatsApp não aceita botões de número não oficial. Exige **cabeçalho** (vira o título; o corpo vira a descrição). Sem cabeçalho, sai como texto (corpo + opções numeradas), uma vez | Pronto |
 | Localização | Mapa clicável | Pronto |
 | Contato | Cartão de contato | Pronto |
 | Enquete | Enquete nativa para votar | Rodada 1 |
@@ -127,6 +127,11 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
   other means" (envio automatizado) em conta que não é da API oficial
   (https://www.whatsapp.com/legal/terms-of-service). Usar o motor WAHA tem risco de restrição ou bloqueio do número. A
   blindagem do #1725 é o que mitiga esse risco.
+- **Lista sem cabeçalho não aparece no celular.** Provado em aparelho (17/10/2026,
+  `docs/audit/2026-10-17-1709-lista-nao-exibe.md`): a lista sem `description` chega ao protocolo mas o app não a exibe
+  (V0); com `description`, com ou sem rodapé, aparece (V1 e V2). Por isso a lista nativa exige cabeçalho (título =
+  cabeçalho, descrição = corpo); sem cabeçalho, sai como texto, com a marca `rich_message_sent_as = 'text'`. Vale para a
+  caixa WAHA e o plano B do Híbrido.
 - **Lista pelo motor não oficial é frágil.** A documentação do WAHA diz que "List Messages are fragile... may stop
   working at any time" (https://waha.devlike.pro/docs/how-to/send-messages/). Por isso, quando o motor recusa a lista
   (4xx), ela sai como texto, uma vez, sem duplicar.

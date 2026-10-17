@@ -8,8 +8,9 @@
 # link_preview), a entrada está fora do contrato, ou não cabe nos limites da lista do WhatsApp. Quem chama manda o
 # texto, como antes.
 #
-# - options sai sempre como LISTA (`sendList`), mesmo com até 3 opções sem descrição: o motor (GOWS) não tem botões
-#   (`sendButtons` responde 501). O `id` de cada opção vira o `rowId`, que volta na resposta do cliente.
+# - options sai como LISTA (`sendList`), mesmo com até 3 opções sem descrição: o motor (GOWS) não tem botões
+#   (`sendButtons` responde 501). Só com cabeçalho (sem ele, o app não exibe a lista: sai texto). O `id` de cada opção
+#   vira o `rowId`, que volta na resposta do cliente.
 # - location sai por `sendLocation`; contact por `sendContactVcard`.
 # - poll (enquete, chat#1709 fase 3) sai por `sendPoll`: a pergunta é o corpo, as opções vão pelo título (o voto volta
 #   pelo título) e `multiple` vira `multipleAnswers`.
@@ -28,7 +29,7 @@ class Waha::RichPayload
   ROW_ID_MAX = 200
   BUTTON_MAX = 20
   SECTION_TITLE_MAX = 24
-  # O título da lista (o cabeçalho, ou o corpo quando não há cabeçalho): o limite do cabeçalho de texto da Meta.
+  # O título da lista (o cabeçalho, obrigatório): o limite do cabeçalho de texto da Meta.
   TITLE_MAX = 60
   # As mesmas quebras de linha que o tipo `options` recusa.
   LINE_BREAKS = RichMessages::Types::Options::LINE_BREAKS
@@ -136,17 +137,16 @@ class Waha::RichPayload
     @list_message = build_list_message
   end
 
+  # Lista nativa só COM cabeçalho: título = cabeçalho, descrição = corpo (obrigatória), rodapé se houver. Provado em
+  # aparelho (17/10/2026, docs/audit/2026-10-17-1709-lista-nao-exibe.md): a lista sem `description` chega ao protocolo
+  # mas o app do WhatsApp não a exibe. Sem cabeçalho (decisão do Rodrigo), não sai lista: nil, e quem chama manda o
+  # texto (corpo + opções numeradas), uma vez, com a marca 'text'. Vale para a caixa WAHA e o plano B do Híbrido.
   def build_list_message
     sections = list_sections
     header = @rich[:header].presence
-    title = header || @body
-    # Sem cabeçalho, o corpo vira o título: precisa caber nele (até 60, uma linha só), senão sai texto.
-    return if sections.nil? || @body.blank? || !line?(title, TITLE_MAX) || !line?(button, BUTTON_MAX)
+    return if sections.nil? || header.nil? || @body.blank? || !line?(header, TITLE_MAX) || !line?(button, BUTTON_MAX)
 
-    {
-      title: title, description: (@body if header), footer: @rich[:footer].presence,
-      button: button, sections: sections
-    }.compact
+    { title: header, description: @body, footer: @rich[:footer].presence, button: button, sections: sections }.compact
   end
 
   def list_sections

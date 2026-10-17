@@ -23,7 +23,7 @@ describe WhatsappHybrid::RichNative do
 
       expect(mode('options', message: draft(options))).to eq(:native)
       expect(mode('location', message: draft(location, content: ''))).to eq(:native)
-      expect(mode('options', message: draft(options, content: "Qual horário?\nResponda"))).to eq(:text)
+      expect(mode('options', message: draft(options.except(:header)))).to eq(:text)
       expect(mode('link_button', message: draft({ type: 'link_button', label: 'Abrir', url: 'https://exemplo.com.br' }))).to eq(:text)
     end
 

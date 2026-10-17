@@ -95,16 +95,19 @@ describe WhatsappHybrid::RichNative::Transport do
     expect(message.reload.content_attributes['rich_message_sent_as']).to eq('text')
   end
 
-  it 'sends text when the options do not fit the WhatsApp list (button or a body that cannot be the title)' do
+  it 'sends text ONCE when the options do not fit the WhatsApp list (button too long, or no header)' do
     flag_on!
-    long_button = outgoing({ type: 'options', button: 'Um botão comprido demais', options: [{ id: 'a', title: 'A' }] })
-    multiline_body = outgoing(options, content: "Qual horário?\nResponda abaixo")
+    long_button = outgoing({ type: 'options', header: 'Horários', button: 'Um botão comprido demais', options: [{ id: 'a', title: 'A' }] })
+    # Teste em aparelho (17/10/2026): a lista sem cabeçalho (sem `description`) não aparece no app; sai texto.
+    no_header = outgoing(options.except(:header))
+    allow(client).to receive(:send_list)
 
     send_by_web(long_button)
-    send_by_web(multiline_body)
+    send_by_web(no_header)
 
+    expect(client).not_to have_received(:send_list)
     expect(client).to have_received(:send_text).twice
-    expect([long_button, multiline_body].map { |message| message.reload.content_attributes['rich_message_sent_as'] }).to eq(%w[text text])
+    expect([long_button, no_header].map { |message| message.reload.content_attributes['rich_message_sent_as'] }).to eq(%w[text text])
   end
 
   { 'a 400' => 400, 'a 422' => 422, 'the 501 of a format the engine does not have' => 501 }.each do |title, status|

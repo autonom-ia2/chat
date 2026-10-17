@@ -13,19 +13,28 @@ RSpec.describe Waha::RichPayload do
   end
 
   describe 'options' do
-    let(:three) { { type: 'options', options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }, { id: 'noite', title: 'Noite' }] } }
+    let(:three) do
+      { type: 'options', header: 'Horários',
+        options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }, { id: 'noite', title: 'Noite' }] }
+    end
 
-    it 'sends up to 3 options without description as a LIST, with the default button in the account language' do
+    it 'sends up to 3 options without description as a LIST, with the header as title and the body as description' do
       allow(client).to receive(:send_list).and_return({ 'id' => 'true_5511937016094@c.us_3EB0LIST' })
 
       deliver(build(three))
 
       expect(client).to have_received(:send_list).with(
         session: 'hybrid-5511', chat_id: '5511937016094@c.us',
-        message: { title: 'Qual horário fica melhor?', button: 'Ver opções',
+        message: { title: 'Horários', description: 'Qual horário fica melhor?', button: 'Ver opções',
                    sections: [{ title: 'Ver opções', rows: [{ title: 'Manhã', rowId: 'manha' }, { title: 'Tarde', rowId: 'tarde' },
                                                             { title: 'Noite', rowId: 'noite' }] }] }
       )
+    end
+
+    # Teste em aparelho (17/10/2026): a lista sem `description` chega mas o app não a exibe. Sem cabeçalho, sai texto.
+    it 'falls back to text (nil) without a header: never a list without description' do
+      expect(build(three.except(:header))).to be_nil
+      expect(build(three.merge(header: ''))).to be_nil
     end
 
     it 'uses the English default button for an English account' do
@@ -69,17 +78,30 @@ RSpec.describe Waha::RichPayload do
       expect(build(three, body: '')).to be_nil
     end
 
-    # Sem cabeçalho o corpo vira o título da lista: o limite do título (60) e a linha única valem para ele.
-    it 'falls back to text when the body cannot be the title (over 60 or multiline) and there is no header' do
-      expect(build(three, body: 'x' * 60)).to be_present
-      expect(build(three, body: 'x' * 61)).to be_nil
-      expect(build(three, body: "Qual horário?\nResponda abaixo")).to be_nil
-      expect(build(three.merge(header: 'Agenda'), body: "Qual horário?\nResponda abaixo")).to be_present
+    # Guarda: nenhuma combinação de entrada pode gerar listMessage sem `description` (o app não a exibe).
+    it 'never builds a list without description, for any combination of header, footer, sections and body' do
+      headers = [nil, '', 'Horários']
+      footers = [nil, 'Toque numa opção']
+      bodies = ['', 'Qual horário fica melhor?', "Qual horário?\nResponda"]
+      shapes = [three.except(:header), { type: 'options', sections: [{ title: 'Semana', options: [{ id: 'seg', title: 'Segunda' }] }] }]
+      built = shapes.product(headers, footers, bodies).filter_map do |shape, header, footer, body|
+        build(shape.merge(header: header, footer: footer).compact, body: body)&.request&.dig('payload', 'message')
+      end
+
+      expect(built).not_to be_empty
+      expect(built).to all(include('description' => be_present, 'title' => be_present))
+    end
+
+    it 'keeps the header within the title limits (60, one line) and allows a multiline body as description' do
+      expect(build(three.merge(header: 'x' * 60))).to be_present
+      expect(build(three.merge(header: 'x' * 61))).to be_nil
+      expect(build(three.merge(header: "Agenda\nda semana"))).to be_nil
+      expect(build(three, body: "Qual horário?\nResponda abaixo")).to be_present
     end
 
     it 'puts the message reference in each rowId when it fits, and only the option id when it does not' do
       long_id = 'x' * 198
-      rich = { type: 'options', options: [{ id: 'manha', title: 'Manhã' }, { id: long_id, title: 'Longa' }] }
+      rich = { type: 'options', header: 'Horários', options: [{ id: 'manha', title: 'Manhã' }, { id: long_id, title: 'Longa' }] }
 
       rows = described_class.build(rich.deep_stringify_keys, body: 'Qual?', reference: 123).send(:list_message)[:sections][0][:rows]
 

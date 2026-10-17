@@ -13,7 +13,8 @@ RSpec.shared_context 'with a hybrid inbox for rich native' do
       connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current, status_checked_at: Time.current
     )
   end
-  let(:options) { { type: 'options', options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }] } }
+  # A lista nativa exige cabeçalho (sem ele o app não a exibe: sai texto, chat#1709 teste em aparelho).
+  let(:options) { { type: 'options', header: 'Horários', options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }] } }
 
   around { |example| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: inbox.account_id.to_s) { example.run } }
 

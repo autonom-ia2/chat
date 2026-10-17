@@ -10,7 +10,8 @@ describe Waha::RichNative::WahaInbox do
   let(:inbox) { channel.inbox }
   let(:account) { channel.account }
   let(:conversation) { create(:conversation, inbox: inbox, account: account) }
-  let(:options) { { type: 'options', options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }] } }
+  # A lista nativa exige cabeçalho (sem ele o app não a exibe: sai texto, chat#1709 teste em aparelho).
+  let(:options) { { type: 'options', header: 'Horários', options: [{ id: 'manha', title: 'Manhã' }, { id: 'tarde', title: 'Tarde' }] } }
   let(:capabilities) { %w[options location contact] }
   let(:listener) { WebhookListener.instance }
 
@@ -34,6 +35,18 @@ describe Waha::RichNative::WahaInbox do
     payloads.sole
   end
 
+  # Teste em aparelho (17/10/2026): sem cabeçalho o app não exibe a lista. Sai texto, marcado 'text', sem pedido nativo.
+  it 'sends options without a header as text, marked text, with no native request' do
+    flag_on!
+    message = outgoing(options.except(:header))
+
+    payload = inbox_payload(message)
+
+    expect(message.reload.content_attributes['rich_message_sent_as']).to eq('text')
+    expect(payload[:content]).to eq("Qual horário?\n\n1. Manhã\n2. Tarde")
+    expect(payload[:content_attributes]).not_to have_key('waha_native')
+  end
+
   describe 'the single decision at creation' do
     it 'marks native and delivers the engine request with the message reference, keeping the text as the content' do
       flag_on!
@@ -46,7 +59,7 @@ describe Waha::RichNative::WahaInbox do
       expect(payload[:content]).to eq("Qual horário?\n\n1. Manhã\n2. Tarde")
       expect(payload[:content_attributes]['waha_native']).to eq(
         'kind' => 'sendList',
-        'payload' => { 'message' => { 'title' => 'Qual horário?', 'button' => 'Ver opções',
+        'payload' => { 'message' => { 'title' => 'Horários', 'description' => 'Qual horário?', 'button' => 'Ver opções',
                                       'sections' => [{ 'title' => 'Ver opções',
                                                        'rows' => [{ 'title' => 'Manhã', 'rowId' => "manha|#{message.id}" },
                                                                   { 'title' => 'Tarde', 'rowId' => "tarde|#{message.id}" }] }] } }
