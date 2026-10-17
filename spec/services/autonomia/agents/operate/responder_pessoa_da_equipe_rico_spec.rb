@@ -2,7 +2,8 @@ require 'rails_helper'
 
 # #1715: localização e contato (chat#1473; o "+" do atendente, #1702) vão com `content` vazio e o dado em
 # `content_attributes.rich_message`. Com a Fase 2, o histórico leva um resumo ("Localização: ...", "Contato: ...") na
-# moldura ou no papel de quem enviou; o telefone do contato nunca vai. Sem a Fase 2, igual à main (item vazio).
+# moldura ou no papel de quem enviou; o telefone do contato vai, as coordenadas não (decisões do Rodrigo, 17/10). Sem a
+# Fase 2, igual à main (item vazio).
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) { conta_da_fase2 }
   let(:channel) do
@@ -79,11 +80,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(contextos.sole).to include(marca)
     end
 
-    it 'o contato da Ana chega com a moldura dela e só o nome, sem telefone nem wa_id' do
+    # Decisão do Rodrigo (17/10): o telefone do contato entra; o wa_id (id interno do WhatsApp) não acrescenta nada.
+    it 'o contato da Ana chega com a moldura dela, o nome e o telefone' do
       historico = historico_com(content_attributes: contato)
 
-      expect(historico.second).to eq(role: 'user', content: "#{moldura_da_ana}\nContato: Recepção da Unidade Centro")
-      expect(historico.second[:content]).not_to include('4000', '551140000473')
+      expect(historico.second).to eq(role: 'user',
+                                     content: "#{moldura_da_ana}\nContato: Recepção da Unidade Centro — +55 11 4000-0473")
+      expect(historico.second[:content]).not_to include('551140000473')
     end
 
     # O eco do app do celular chega pelo webhook do canal como ANEXO (Whatsapp::IncomingMessageBaseService): localização
@@ -95,7 +98,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
 
     # No WhatsApp oficial o eco de contato chega com o nome em `content` (formatted_name) e o telefone só no anexo.
-    it 'o contato mandado pelo celular (eco) chega com a moldura do celular e só o nome, sem o telefone' do
+    it 'o contato mandado pelo celular (eco, oficial) chega com a moldura do celular e o nome do content' do
       escreve(:incoming, 'Com quem eu falo?')
       eco = eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473',
                           meta: { firstName: 'Recepção', lastName: 'Unidade Centro' })
@@ -104,20 +107,58 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       historico = historicos.sole
 
       expect(historico.second).to eq(role: 'user', content: "#{moldura_do_celular}\nRecepção Unidade Centro")
-      expect(historico.second[:content]).not_to include('4000')
       expect(contextos.sole).to include(marca)
     end
 
-    # Anexo de contato sem texto (como grava o Telegram, com `first_name`/`last_name`): o resumo leva só o nome.
-    it 'o contato do cliente sem texto chega pelo nome do anexo, sem o telefone' do
+    # Anexo de contato sem texto (como grava o Telegram, com `first_name`/`last_name`): nome e telefone do anexo.
+    it 'o contato do cliente sem texto chega com o nome e o telefone do anexo' do
       contato_do_cliente = create(:message, account: account, conversation: conversation, inbox: inbox,
                                             message_type: :incoming, content: '')
       contato_do_cliente.attachments.create!(account_id: account.id, file_type: :contact, fallback_title: '+55 11 98888-7777',
                                              meta: { first_name: 'Carla', last_name: 'Dias' })
       responder(escreve(:incoming, 'Esse é o contato da minha esposa'))
 
-      expect(historicos.sole.first).to eq(role: 'user', content: 'Contato: Carla Dias')
-      expect(historicos.sole.first[:content]).not_to include('98888')
+      expect(historicos.sole.first).to eq(role: 'user', content: 'Contato: Carla Dias — +55 11 98888-7777')
+    end
+
+    # WhatsApp com `content` vazio: nome em `meta.firstName`/`lastName`, um anexo por telefone; o "sem telefone" do
+    # Chatwoot não entra.
+    it 'o contato em anexo do WhatsApp junta os telefones do mesmo nome numa linha só' do
+      escreve(:incoming, 'Com quem eu falo?')
+      eco = eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473', meta: { firstName: 'Recepção', lastName: 'Centro' })
+      eco.message.attachments.create!(account_id: account.id, file_type: :contact, fallback_title: '+55 11 4000-0474',
+                                      meta: { firstName: 'Recepção', lastName: 'Centro' })
+      eco.message.attachments.create!(account_id: account.id, file_type: :contact, fallback_title: 'Phone number is not available',
+                                      meta: { firstName: 'Plantão' })
+      responder(escreve(:incoming, 'Obrigado!'))
+
+      contatos = "Contato: Recepção Centro — +55 11 4000-0473, +55 11 4000-0474\nContato: Plantão"
+      expect(historicos.sole.second).to eq(role: 'user', content: "#{moldura_do_celular}\n#{contatos}")
+    end
+
+    # A localização do cliente no WhatsApp oficial: nome e endereço separados em `shared_location` (o `fallback_title`
+    # do anexo fica vazio quando não há nome). Coordenadas nunca entram (decisão do Rodrigo, 17/10).
+    it 'a localização do cliente com endereço e sem nome sai do shared_location, sem coordenadas' do
+      local = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: '',
+                               content_attributes: { 'shared_location' => { 'latitude' => -23.55, 'longitude' => -46.63,
+                                                                            'address' => 'Av. Paulista, 1000' } })
+      local.attachments.create!(account_id: account.id, file_type: :location, fallback_title: '', coordinates_lat: -23.55,
+                                coordinates_long: -46.63)
+      responder(escreve(:incoming, 'Estou aqui'))
+
+      expect(historicos.sole.first).to eq(role: 'user', content: 'Localização: Av. Paulista, 1000')
+      expect(historicos.sole.first[:content]).not_to include('-23.55')
+    end
+
+    it 'imagem sem legenda da Ana continua vazia, sem moldura nem regra do turno' do
+      escreve(:incoming, 'Manda a foto do boleto?')
+      foto = escreve(:outgoing, '', sender: ana)
+      foto.attachments.create!(account_id: account.id, file_type: :image,
+                               file: fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png'))
+      responder(escreve(:incoming, 'Recebi'))
+
+      expect(historicos.sole.second).to eq(role: 'user', content: '')
+      expect(contextos.sole).to be_nil
     end
 
     it 'a localização mandada pelo celular (eco, anexo) chega com a moldura do celular' do
@@ -130,12 +171,12 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
                                            content: "#{moldura_do_celular}\nLocalização: Unidade Centro, Rua das Flores, 123")
     end
 
-    it 'contato sem nome pelo celular diz só que foi um contato, sem o telefone' do
+    it 'contato sem nome pelo celular leva o telefone' do
       escreve(:incoming, 'Com quem eu falo?')
       eco_com_anexo(file_type: :contact, fallback_title: '+55 11 4000-0473', meta: {})
       responder(escreve(:incoming, 'Obrigado!'))
 
-      expect(historicos.sole.second).to eq(role: 'user', content: "#{moldura_do_celular}\nContato (sem nome)")
+      expect(historicos.sole.second).to eq(role: 'user', content: "#{moldura_do_celular}\nContato: +55 11 4000-0473")
     end
 
     # A localização que o cliente manda chega como anexo também; o nome vem dele, então passa pela segunda camada.
@@ -164,8 +205,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       historico = historico_com(content_attributes: contato.merge('crm_follow_up_id' => 7))
       moldura = Autonomia::Agents::Operate::MolduraDaEquipe
 
-      expect(historico.second).to eq(role: 'user',
-                                     content: "#{moldura.automatica('x', marca).delete_suffix('x')}Contato: Recepção da Unidade Centro")
+      cabecalho = moldura.automatica('x', marca).delete_suffix('x')
+      expect(historico.second).to eq(role: 'user', content: "#{cabecalho}Contato: Recepção da Unidade Centro — +55 11 4000-0473")
       expect(contextos.sole).to include(moldura::CABECALHO_AUTOMATICA)
     end
 
