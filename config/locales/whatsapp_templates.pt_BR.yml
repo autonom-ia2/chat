@@ -66,3 +66,19 @@ pt_BR:
         aviso_mudou: "Os preços da Meta mudaram enquanto você lia. Confira o aviso de novo e confirme."
         utility_desligada: "A Divulgação só liga com o Aviso de serviço ligado."
         somente_administrador: "Só quem administra a conta pode mudar."
+    # Reenvio do mesmo modelo para outra conversa (#1767, Whatsapp::Templates::ReenvioDoModelo): por que não foi.
+    reenvio:
+      motivos:
+        conta_diferente: "Esta conversa é de outra conta."
+        caixa_nao_oficial: "Esta conversa não está numa caixa do WhatsApp oficial, a única que envia modelos."
+        nao_e_modelo: "Esta mensagem não é um modelo do WhatsApp, então não dá para reenviá-la como modelo."
+        sem_parametros: "Não achamos os dados deste envio da campanha para remontar a mensagem."
+        modelo_indisponivel: "Este modelo não está mais aprovado na caixa desta conversa."
+        modelo_mudou: "Este modelo foi editado depois do envio e os valores de antes não cabem mais nele."
+        oferta_vencida: "A validade desta oferta já passou."
+        produto_indisponivel: "Um produto deste modelo esgotou ou saiu do catálogo."
+        formato_nao_suportado: "Este modelo usa um formato que ainda não conseguimos enviar."
+        midia_indisponivel: "O arquivo deste modelo (topo ou cartão) não está mais disponível."
+        produtos_desligados: "Modelos com produtos do catálogo não estão ligados nesta conta."
+        nao_aceito_pela_meta: "O WhatsApp não aceita modelo de autenticação para este contato, que não tem número de telefone."
+        erro: "Não deu para enviar agora. Tente de novo em instantes."
