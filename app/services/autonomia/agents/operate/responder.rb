@@ -216,7 +216,8 @@ module Autonomia
           # o caso still_eligible?==false, que virou handoff). EventLogger nunca levanta.
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(
-              agent: @agent, conversation: @conversation, result: result, message: outcome.message
+              agent: @agent, conversation: @conversation, result: result, message: outcome.message,
+              metadata: metadata_da_memoria
             )
           end
           outcome
@@ -249,7 +250,7 @@ module Autonomia
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
-                                                              message: outcome.message)
+                                                              message: outcome.message, metadata: metadata_da_memoria)
           end
           outcome
         end
@@ -314,7 +315,7 @@ module Autonomia
           meta = {
             'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
             'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
-            'posse' => @posse
+            'posse' => @posse, **metadata_da_memoria
           }
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
@@ -345,8 +346,21 @@ module Autonomia
             trust_instruction: true,
             delivery: delivery,
             **rodadas_do_turno,
-            **{ contexto_do_turno: contexto_do_turno }.compact
+            **{ contexto_do_turno: contexto_do_turno, memoria: (memoria unless memoria.vazio?) }.compact
           ).answer
+        end
+
+        # A memória do turno (#1601/#1755): vazia sem a Fase 2 ou sem a flag `memoria_ia` (o pedido fica igual).
+        def memoria
+          @memoria ||= ::Autonomia::Agents::Operate::MemoriaDoTurno.blocos(conversation: @conversation, agent: @agent,
+                                                                           finalidade: :responder)
+        end
+
+        # Os ids dos fatos que foram ao modelo neste turno, para o evento `replied` (só os enviados; o que o modelo diz ter
+        # usado não é prova). {} sem memória.
+        def metadata_da_memoria
+          ids = @memoria&.ids.to_a
+          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
 
         # As rodadas do turno: as do principal com ajudante (tema 14, #1434) ou, sem ajudante, as de sempre — seis para a
@@ -620,11 +634,15 @@ module Autonomia
           end
         end
 
-        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. Vai como contexto do turno
-        # (`developer`), nunca na instrução do agente (que é do dono). nil sem moldura ou sem mensagem da equipe: o
-        # Answerer nem recebe o argumento, e o pedido fica igual ao de antes.
+        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. #1691: a conversa espera uma pessoa
+        # e a equipe está fora do horário da caixa (EsperaForaDoHorario). Vão como contexto do turno (`developer`), nunca
+        # na instrução do agente (que é do dono), e só com a Fase 2. nil sem nenhum dos dois: o Answerer nem recebe o
+        # argumento, e o pedido fica igual ao de antes.
         def contexto_do_turno
-          equipe.regra(recent_messages) if equipe.aplica?
+          return unless equipe.aplica?
+
+          espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
+          [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
         end
 
         def equipe

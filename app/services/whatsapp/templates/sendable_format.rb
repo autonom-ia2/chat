@@ -13,7 +13,9 @@
 #                        or media_stored (the template's saved file);
 #   CATALOG button     — buttons[i] = { type: 'catalog' };
 #   catalog products   — one product (SPM), several (MPM) or a carousel of product cards (#1418), with the number of
-#                        products Meta accepts in products.retailer_ids (Whatsapp::Templates::ProductParams).
+#                        products Meta accepts in products.retailer_ids (Whatsapp::Templates::ProductParams);
+#   URL ending in {{1}} — only with `url_suffix: true` (the conversation send, #1705): buttons[i].parameter
+#                        (reason url_parameter).
 # Not sendable, each with its reason code:
 #   verification_code (OTP: a one-time code is asked by one person in an app, never sent to a list),
 #   catalog (MPM/SPM or product cards without the chosen products; LIST, PRODUCT), location_header,
@@ -69,15 +71,22 @@ module Whatsapp::Templates::SendableFormat
       button_types(components).include?(OFFER_BUTTON)
   end
 
-  def check(template, recorded: {}, now: Time.current)
+  def check(template, recorded: {}, now: Time.current, url_suffix: false)
     components = hashes(template.is_a?(Hash) ? template['components'] : nil)
     return Result.new(reason_code: NO_COMPONENTS, warnings: []) if components.empty?
 
     recorded = recorded.is_a?(Hash) ? recorded : {}
     return products_result(template, components, recorded) if Whatsapp::Templates::ProductParams.kind(template)
 
-    reason = components.lazy.filter_map { |component| component_reason(component, recorded, now) }.first
+    reason = components_reason(components, recorded, now, url_suffix)
     Result.new(reason_code: reason, warnings: warnings(components, recorded))
+  end
+
+  def components_reason(components, recorded, now, url_suffix)
+    reason = components.lazy.filter_map { |component| component_reason(component, recorded, now) }.first
+    return reason if reason || !url_suffix
+
+    Whatsapp::Templates::UrlSuffix.reason(components, recorded)
   end
 
   # #1418: the products decide; the rest of the template (body, text header, footer) is checked as usual.
@@ -139,7 +148,8 @@ module Whatsapp::Templates::SendableFormat
   def offer_reason(component, recorded, now)
     return unless component.dig('limited_time_offer', 'has_expiration')
 
-    expiration = Integer(recorded.dig('limited_time_offer', 'expiration_time_ms').to_s, exception: false)
+    offer = recorded['limited_time_offer']
+    expiration = Integer(offer['expiration_time_ms'].to_s, exception: false) if offer.is_a?(Hash)
     return 'limited_time_offer' unless expiration
     return if expiration > (now.to_f * 1000).to_i
 
@@ -147,7 +157,8 @@ module Whatsapp::Templates::SendableFormat
   end
 
   def carousel_reason(component, recorded)
-    cards = Array(recorded.dig('carousel', 'cards'))
+    carousel = recorded['carousel']
+    cards = carousel.is_a?(Hash) ? Array(carousel['cards']) : []
     template_cards = hashes(component['cards'])
     return 'carousel' if template_cards.empty? || cards.size != template_cards.size
 

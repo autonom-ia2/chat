@@ -51,6 +51,10 @@ pt_BR:
       conversation_catalog_unreachable: "Não consegui ler o catálogo agora. Tente de novo em alguns minutos."
       conversation_product_unavailable: "Não enviado: %{products} acabou ou saiu do catálogo. Troque o produto e envie de novo."
       conversation_carousel_media: "Não achei a foto de um cartão. Escolha a foto de novo e envie."
+      conversation_coupon: "Este modelo tem cupom, e o envio não trouxe o código (de 1 a 15 letras e números). Escreva o código e envie de novo."
+      conversation_offer_expiration: "Esta oferta mostra a contagem, e o envio não disse até quando ela vale. Escolha a data e a hora e envie de novo."
+      conversation_offer_expired: "A validade desta oferta já passou. Escolha uma data e hora à frente e envie de novo."
+      conversation_url_parameter: "Este modelo tem um link que termina com um dado deste cliente, e o envio não trouxe esse dado. Preencha o fim do link e envie de novo."
     # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
     # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
     consent:
@@ -69,3 +73,19 @@ pt_BR:
         aviso_mudou: "Os preços da Meta mudaram enquanto você lia. Confira o aviso de novo e confirme."
         utility_desligada: "A Divulgação só liga com o Aviso de serviço ligado."
         somente_administrador: "Só quem administra a conta pode mudar."
+    # Reenvio do mesmo modelo para outra conversa (#1767, Whatsapp::Templates::ReenvioDoModelo): por que não foi.
+    reenvio:
+      motivos:
+        conta_diferente: "Esta conversa é de outra conta."
+        caixa_nao_oficial: "Esta conversa não está numa caixa do WhatsApp oficial, a única que envia modelos."
+        nao_e_modelo: "Esta mensagem não é um modelo do WhatsApp, então não dá para reenviá-la como modelo."
+        sem_parametros: "Não achamos os dados deste envio da campanha para remontar a mensagem."
+        modelo_indisponivel: "Este modelo não está mais aprovado na caixa desta conversa."
+        modelo_mudou: "Este modelo foi editado depois do envio e os valores de antes não cabem mais nele."
+        oferta_vencida: "A validade desta oferta já passou."
+        produto_indisponivel: "Um produto deste modelo esgotou ou saiu do catálogo."
+        formato_nao_suportado: "Este modelo usa um formato que ainda não conseguimos enviar."
+        midia_indisponivel: "O arquivo deste modelo (topo ou cartão) não está mais disponível."
+        produtos_desligados: "Modelos com produtos do catálogo não estão ligados nesta conta."
+        nao_aceito_pela_meta: "O WhatsApp não aceita modelo de autenticação para este contato, que não tem número de telefone."
+        erro: "Não deu para enviar agora. Tente de novo em instantes."

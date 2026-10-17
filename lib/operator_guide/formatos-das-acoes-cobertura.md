@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 614 |
-| Sem corpo | 182 |
-| Com corpo | 432 |
-| Com corpo e formato completo | 353 (81,7%) |
-| Com corpo e formato incompleto | 79 |
+| No catálogo | 619 |
+| Sem corpo | 185 |
+| Com corpo | 434 |
+| Com corpo e formato completo | 354 (81,6%) |
+| Com corpo e formato incompleto | 80 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 202 |
-| Leituras cruas tipadas | 153 de 238 |
+| Leituras cruas tipadas | 154 de 242 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 65 |
+| leitura crua sem tipo | 66 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -78,6 +78,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/cards/bulk` — leitura crua sem tipo: action_name, bulk_action
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
+- `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
@@ -165,6 +166,9 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meetings#suggest_times` date — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#suggest_times` duration_minutes — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meetings#sync` force — o código não converte nem compara o valor
+- `api/v1/accounts/crm/memoria_fatos#create` chave — o código não converte nem compara o valor
+- `api/v1/accounts/crm/memoria_fatos#create` item_ref — repassada a ::Crm::Memoria::Correcao.corrigir!
+- `api/v1/accounts/crm/memoria_fatos#create` valor — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
@@ -207,8 +211,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 369 |
-| Com parâmetros conhecidos | 318 |
+| No catálogo | 371 |
+| Com parâmetros conhecidos | 320 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

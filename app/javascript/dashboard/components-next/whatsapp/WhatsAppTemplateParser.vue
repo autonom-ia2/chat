@@ -322,18 +322,21 @@ defineExpose({
         <p class="mb-2.5 text-sm font-semibold">
           {{ t('WHATSAPP_TEMPLATES.PARSER.BUTTON_PARAMETERS') }}
         </p>
-        <div
+        <!-- Fork #1705: só o botão com campo tem posição na lista (os outros
+             ficam vazios); a posição vazia não vira caixa. -->
+        <template
           v-for="(button, index) in processedParams.buttons"
           :key="`button-${index}`"
-          class="flex items-center mb-2.5"
         >
-          <Input
-            v-model="processedParams.buttons[index].parameter"
-            type="text"
-            class="flex-1"
-            :placeholder="t('WHATSAPP_TEMPLATES.PARSER.BUTTON_PARAMETER')"
-          />
-        </div>
+          <div v-if="button" class="flex items-center mb-2.5">
+            <Input
+              v-model="processedParams.buttons[index].parameter"
+              type="text"
+              class="flex-1"
+              :placeholder="t('WHATSAPP_TEMPLATES.PARSER.BUTTON_PARAMETER')"
+            />
+          </div>
+        </template>
       </div>
       <p
         v-if="v$.$dirty && v$.$invalid"

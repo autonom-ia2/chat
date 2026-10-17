@@ -130,4 +130,69 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob, :um_turno do
       expect(contrato).not_to have_received(:decidido_ate)
     end
   end
+
+  # #1637: a mensagem que o Híbrido recupera (#1489) chega com o conteúdo 15 a 60 s depois de criada. O teto conta de
+  # quando ela ficou pronta: `[created_at, content_attributes['hybrid_recovered_at']].max`.
+  describe '#1637: mensagem recuperada pelo Híbrido conta o teto de quando o conteúdo chegou' do
+    def recuperada_40s_depois!(recuperada_em = nil)
+      mensagem = cliente_escreve('Mensagem não suportada')
+      travel 40.seconds
+      mensagem.update!(content: 'quero o boleto',
+                       content_attributes: { 'hybrid_recovered_at' => recuperada_em || Time.current.utc.iso8601 })
+      mensagem
+    end
+
+    it 'recuperada 40 s depois espera o assunto normalmente, sem assunto_atrasou' do
+      contrato!(ordem: true)
+      mensagem = recuperada_40s_depois!
+      gatilho(mensagem)
+
+      rodar_rodada! # o settle do debounce: sem marco, reagenda em vez de estourar o teto
+      expect(respostas).to be_empty
+      expect(settles_na_fila.size).to eq(1)
+
+      travel 2.seconds
+      marco!(mensagem)
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(eventos_de_atraso).to be_empty
+    end
+
+    it 'sem o campo, conta do created_at como sempre: 40 s depois segue com o dono de agora e grava assunto_atrasou' do
+      contrato!(ordem: true)
+      mensagem = cliente_escreve('quero o boleto')
+      travel 40.seconds
+      gatilho(mensagem)
+
+      expect(rodar_turno!).to eq(1)
+
+      expect(respostas.sole.sender_id).to eq(porta.id)
+      expect(eventos_de_atraso.count).to eq(1)
+    end
+
+    it 'campo inválido cai no created_at' do
+      contrato!(ordem: true)
+      mensagem = recuperada_40s_depois!('ontem à tarde')
+      gatilho(mensagem)
+
+      expect(rodar_turno!).to eq(1)
+
+      expect(respostas.count).to eq(1)
+      expect(eventos_de_atraso.count).to eq(1)
+    end
+
+    it 'fora da Fase 2, igual à main: responde no settle do debounce sem perguntar ao CRM' do
+      Autonomia::Agents::Fase2.desligar!(account)
+      contrato!(ordem: true)
+      mensagem = recuperada_40s_depois!
+      gatilho(mensagem)
+
+      expect(rodar_turno!).to eq(1)
+
+      expect(respostas.sole.sender_id).to eq(porta.id)
+      expect(contrato).not_to have_received(:ordem_do_turno?)
+      expect(eventos_de_atraso).to be_empty
+    end
+  end
 end

@@ -95,7 +95,8 @@ namespace :crm do
   task followup_eval: :environment do
     path = ENV.fetch('FOLLOWUP_EVAL_CASES', Rails.root.join('lib/tasks/crm_followup_cases.json').to_s)
     credential = { api_key: ENV.fetch('OPENAI_API_KEY'), api_base: 'https://api.openai.com', source: :env }
-    card = Struct.new(:id, :title).new(0, 'Lead')
+    # `pipeline` nil: o composer lê `@card.pipeline&.kind` (#1498) e, sem funil, trata como venda ("sell"), como antes.
+    card = Struct.new(:id, :title, :pipeline).new(0, 'Lead', nil)
 
     results = JSON.parse(File.read(path)).map { |kase| FollowUpEvalCase.new(kase, card, credential).run }
 

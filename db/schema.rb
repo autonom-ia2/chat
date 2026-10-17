@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_06_104214) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -532,6 +532,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "faixa", default: "", null: false
+    t.bigint "card_id"
     t.index ["account_id", "slug", "created_at"], name: "idx_autonomia_tool_runs_account_slug"
     t.index ["conversation_id", "created_at"], name: "idx_autonomia_tool_runs_conversation"
     t.index ["conversation_id", "slug", "faixa"], name: "idx_autonomia_tool_runs_active", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
@@ -2020,6 +2021,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
     t.integer "latency_ms"
     t.datetime "created_at", null: false
     t.integer "cache_write_tokens", default: 0, null: false
+    t.bigint "agent_id"
+    t.bigint "card_id"
     t.index ["account_id", "created_at"], name: "idx_crm_ai_usage_account_created"
     t.index ["account_id", "feature", "created_at"], name: "idx_crm_ai_usage_account_feature_created"
   end
@@ -2434,6 +2437,63 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
     t.index ["external_event_id", "provider"], name: "idx_crm_meetings_external_unique", unique: true, where: "(external_event_id IS NOT NULL)"
     t.index ["inbox_id"], name: "index_crm_meetings_on_inbox_id"
     t.index ["reminder_id"], name: "index_crm_meetings_on_reminder_id"
+  end
+
+  create_table "crm_memoria_chaves", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "attribute_model", null: false
+    t.string "chave", null: false
+    t.string "rotulo"
+    t.string "nivel", null: false
+    t.integer "cardinalidade", default: 1, null: false
+    t.boolean "item_natural", default: false, null: false
+    t.boolean "identidade", default: false, null: false
+    t.boolean "obrigatoria", default: false, null: false
+    t.integer "validade_dias"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "attribute_model", "chave"], name: "idx_crm_memoria_chaves_unica", unique: true
+  end
+
+  create_table "crm_memoria_fatos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "escopo", null: false
+    t.bigint "card_id"
+    t.bigint "conversation_id"
+    t.string "tipo", null: false
+    t.string "chave", null: false
+    t.string "item_ref", default: "", null: false
+    t.text "valor"
+    t.jsonb "valor_json"
+    t.string "fonte", null: false
+    t.string "status", null: false
+    t.string "situacao", null: false
+    t.bigint "divergente_de_id"
+    t.bigint "prova_message_ids", default: [], null: false, array: true
+    t.text "prova_trecho"
+    t.datetime "valido_desde", null: false
+    t.datetime "vence_em"
+    t.datetime "registrado_em", null: false
+    t.datetime "expirado_em"
+    t.integer "versao", default: 1, null: false
+    t.bigint "substitui_id"
+    t.boolean "travado", default: false, null: false
+    t.bigint "travado_por_user_id"
+    t.string "gerado_por", null: false
+    t.string "idempotency_key"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, escopo, COALESCE(card_id, (0)::bigint), COALESCE(conversation_id, (0)::bigint), contact_id, chave, item_ref", name: "idx_crm_memoria_fatos_vigente", unique: true, where: "(((situacao)::text = 'vigente'::text) AND (expirado_em IS NULL) AND ((tipo)::text <> 'decisao'::text))"
+    t.index ["account_id", "card_id"], name: "idx_crm_memoria_fatos_card", where: "(expirado_em IS NULL)"
+    t.index ["account_id", "contact_id", "escopo"], name: "idx_crm_memoria_fatos_contato"
+    t.index ["idempotency_key"], name: "index_crm_memoria_fatos_on_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
+    t.index ["prova_message_ids"], name: "idx_crm_memoria_fatos_provas", using: :gin
+    t.check_constraint "cardinality(prova_message_ids) > 0 OR (fonte::text = ANY ('{pessoa_corrigiu,sistema,ferramenta_resultado}'::text[]))", name: "crm_memoria_fatos_prova"
+    t.check_constraint "char_length(valor) <= 300 AND char_length(prova_trecho) <= 300", name: "crm_memoria_fatos_tamanho"
+    t.check_constraint "escopo::text = 'card'::text AND card_id IS NOT NULL AND conversation_id IS NULL OR escopo::text = 'conversa'::text AND conversation_id IS NOT NULL AND card_id IS NULL OR escopo::text = 'contato'::text AND card_id IS NULL AND conversation_id IS NULL", name: "crm_memoria_fatos_escopo"
+    t.check_constraint "status::text <> 'confirmado'::text OR (fonte::text = ANY ('{ferramenta_resultado,sistema,pessoa_corrigiu}'::text[]))", name: "crm_memoria_fatos_so_codigo_confirma"
+    t.check_constraint "status::text = ANY ('{alegado,confirmado}'::text[])", name: "crm_memoria_fatos_status"
   end
 
   create_table "crm_meta_ad_frequency_windows", force: :cascade do |t|
@@ -4280,6 +4340,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
+  add_foreign_key "crm_memoria_chaves", "accounts", on_delete: :cascade
+  add_foreign_key "crm_memoria_fatos", "contacts", on_delete: :cascade
+  add_foreign_key "crm_memoria_fatos", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_meta_ad_frequency_windows", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_insights_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_links", "accounts", on_delete: :cascade

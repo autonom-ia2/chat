@@ -196,7 +196,7 @@ class WhatsappHybrid::WebTransport
       attributes = @message.content_attributes.to_h
       next false if value == 'throttled' && FINAL_OUTCOMES.include?(attributes[OUTCOME_KEY])
 
-      @message.update!(content_attributes: attributes.merge(OUTCOME_KEY => value))
+      save_without_validation!(content_attributes: attributes.merge(OUTCOME_KEY => value))
     end
   end
 
@@ -205,8 +205,16 @@ class WhatsappHybrid::WebTransport
   # nunca devolve o hash lido antes do envio.
   def merge_attributes!(extra, columns = {})
     @message.with_lock do
-      @message.update!(columns.merge(content_attributes: @message.content_attributes.to_h.merge(extra)))
+      save_without_validation!(columns.merge(content_attributes: @message.content_attributes.to_h.merge(extra)))
     end
+  end
+
+  # Gravação do resultado do envio, sem validação: `Message#prevent_message_flooding` roda em todo `update!` e, numa
+  # rajada da conversa, levantaria DEPOIS de o motor aceitar o envio (o job falha com a mensagem já entregue) ou deixaria
+  # uma falha sem registro (a tela continua "enviada" para o que não saiu). Os callbacks continuam, a tela é avisada.
+  def save_without_validation!(attributes)
+    @message.assign_attributes(attributes)
+    @message.save!(validate: false)
   end
 
   def fail!(reason, outcome = 'failed')

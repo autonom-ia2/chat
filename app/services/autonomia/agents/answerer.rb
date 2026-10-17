@@ -72,8 +72,10 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil)
+                     fixos: [], contexto_do_turno: nil, memoria: nil)
         @agent = agent
+        # Os blocos de memória do turno (#1601/#1755), repassados ao PromptBuilder. nil: nada muda.
+        @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
         # nada muda.
         @contexto_do_turno = contexto_do_turno
@@ -321,7 +323,8 @@ module Autonomia
 
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
-                          documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno)
+                          documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
+                          memoria: @memoria)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o

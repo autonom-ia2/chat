@@ -1235,7 +1235,14 @@
         "PASSO_3": "Come back and pick the template again.",
         "OUTRO_MODELO": "Pick another template"
       },
-      "IDIOMA": "Language: {idioma}"
+      "IDIOMA": "Language: {idioma}",
+      "CUPOM": "Coupon code",
+      "VALIDADE": "The offer is valid until (account time zone: {zona})",
+      "VALIDADE_AJUDA": "The customer sees a countdown until this time.",
+      "VALIDADE_TITULO": "The offer is valid until",
+      "VALIDADE_SEM_FUSO": "This account has no time zone yet. An administrator chooses it in Settings > Account, and then you can send this offer.",
+      "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
+      "CUPOM_FALTA": "Type the coupon code, with up to {n} letters and numbers, to send."
     }
   }
 }

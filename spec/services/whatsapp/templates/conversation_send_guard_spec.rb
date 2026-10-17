@@ -54,6 +54,10 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
       sent << JSON.parse(request.body).dig('template', 'components')
       { status: 200, body: { messages: [{ id: 'wamid.1' }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
     end
+    # A foto do envio (#1717) lê o catálogo para nome, preço e foto do produto; sem catálogo, guarda só o retailer_id.
+    stub_request(:get, 'https://graph.facebook.com/v22.0/123456789/product_catalogs')
+      .with(query: hash_including({}))
+      .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
   it 'is prepended into the Chatwoot send service by the initializer' do

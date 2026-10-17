@@ -1,0 +1,293 @@
+{
+  "_sobre": "#1705: a mesma lista de modelos lida pelos dois lados. Formato real da Meta (GET /message_templates, como a caixa guarda; envio em developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/limited-time-offer-templates, Updated Jun 17, 2026). Cada caso diz o veredito esperado: conversa = o seletor da conversa do WhatsApp oficial oferece o modelo (inboxes/getConversationWhatsAppTemplates com completa { fotos, produtos }, a flag whatsapp_campaign_products ligada); conversa_sem_a_flag = o mesmo com a flag desligada (ausente = igual a conversa); tipo = o que a conversa completa (#1716, modeloNaConversa.tipoNaConversa: um, varios, carrossel, cartoes; ausente = modelo comum, que as outras telas também oferecem); produtos = leva produtos do catálogo (produtosNaCampanha.levaProdutos); pronto = o envio da conversa libera o botão com esse processed_params (só quando conversa = true; no modelo comum, envioNaConversa.envioCompleto; com tipo, o processed_params é o que modeloNaConversa.montarEnvio monta com a tela, e só existe tela no pedido completo; FOTO_n = o arquivo escolhido, que o Ruby troca pelo signed_id de uma foto da conta); envio = motivo do Whatsapp::Templates::SendableFormat com url_suffix: true, como a guarda chama (null = vai); guarda = chave do texto da recusa do Whatsapp::Templates::ConversationSendGuard (null = segue para a Meta). Spec do Ruby: spec/services/whatsapp/templates/conversation_send_guard_formatos_spec.rb; do front: app/javascript/dashboard/components-next/whatsapp/specs/formatosDaConversa.spec.js. guarda_sem_a_flag = a recusa do pedido completo de produto com a flag desligada. Mudou a regra de um lado só, um dos dois falha.",
+  "agora_ms": 1792152000000,
+  "casos": [
+    {
+      "nome": "texto_simples",
+      "template": {
+        "name": "boas_vindas", "language": "pt_BR", "status": "APPROVED", "category": "UTILITY",
+        "components": [{ "type": "BODY", "text": "Olá! Como podemos ajudar?" }]
+      },
+      "processed_params": {},
+      "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    },
+    {
+      "nome": "cupom_com_codigo",
+      "template": {
+        "name": "cupom", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Use o cupom e ganhe 10% de desconto." },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["CUPOM10"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "copy_code", "parameter": "CUPOM10" }] },
+      "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    },
+    {
+      "nome": "cupom_com_codigo_vazio",
+      "template": {
+        "name": "cupom", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Use o cupom e ganhe 10% de desconto." },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["CUPOM10"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "copy_code", "parameter": "  " }] },
+      "conversa": true, "produtos": false, "pronto": false, "envio": "copy_code", "guarda": "conversation_coupon"
+    },
+    {
+      "nome": "cupom_sem_o_botao_no_envio",
+      "template": {
+        "name": "cupom", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Use o cupom e ganhe 10% de desconto." },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["CUPOM10"] }] }
+        ]
+      },
+      "processed_params": {},
+      "conversa": true, "produtos": false, "pronto": false, "envio": "copy_code", "guarda": "conversation_coupon"
+    },
+    {
+      "nome": "cupom_com_mais_de_15_letras",
+      "template": {
+        "name": "cupom", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Use o cupom e ganhe 10% de desconto." },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["CUPOM10"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "copy_code", "parameter": "CUPOMDEZESSEISXX" }] },
+      "conversa": true, "produtos": false, "pronto": false, "envio": "copy_code", "guarda": "conversation_coupon"
+    },
+    {
+      "nome": "link_com_fim_preenchido",
+      "template": {
+        "name": "rastreio", "language": "pt_BR", "status": "APPROVED", "category": "UTILITY",
+        "components": [
+          { "type": "BODY", "text": "Seu pedido saiu para entrega." },
+          { "type": "BUTTONS", "buttons": [{ "type": "URL", "text": "Rastrear", "url": "https://loja.exemplo.com.br/rastreio/{{1}}", "example": ["https://loja.exemplo.com.br/rastreio/AB12"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "url", "parameter": "AB12" }] },
+      "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    },
+    {
+      "nome": "link_com_fim_vazio",
+      "template": {
+        "name": "rastreio", "language": "pt_BR", "status": "APPROVED", "category": "UTILITY",
+        "components": [
+          { "type": "BODY", "text": "Seu pedido saiu para entrega." },
+          { "type": "BUTTONS", "buttons": [{ "type": "URL", "text": "Rastrear", "url": "https://loja.exemplo.com.br/rastreio/{{1}}", "example": ["https://loja.exemplo.com.br/rastreio/AB12"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "url", "parameter": "  " }] },
+      "conversa": true, "produtos": false, "pronto": false, "envio": "url_parameter", "guarda": "conversation_url_parameter"
+    },
+    {
+      "nome": "oferta_com_validade_preenchida",
+      "template": {
+        "name": "oferta_relampago", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "LIMITED_TIME_OFFER", "limited_time_offer": { "text": "Só hoje!", "has_expiration": true } },
+          { "type": "BODY", "text": "Oi {{1}}, sua oferta chegou." , "example": { "body_text": [["Ana"]] } },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["HOJE25"] }] }
+        ]
+      },
+      "processed_params": {
+        "body": { "1": "Ana" },
+        "buttons": [{ "type": "copy_code", "parameter": "HOJE25" }],
+        "limited_time_offer": { "expiration_time_ms": 1792238400000 }
+      },
+      "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    },
+    {
+      "nome": "oferta_sem_a_validade",
+      "template": {
+        "name": "oferta_relampago", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "LIMITED_TIME_OFFER", "limited_time_offer": { "text": "Só hoje!", "has_expiration": true } },
+          { "type": "BODY", "text": "Oi {{1}}, sua oferta chegou." , "example": { "body_text": [["Ana"]] } },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["HOJE25"] }] }
+        ]
+      },
+      "processed_params": {
+        "body": { "1": "Ana" },
+        "buttons": [{ "type": "copy_code", "parameter": "HOJE25" }]
+      },
+      "conversa": true, "produtos": false, "pronto": false, "envio": "limited_time_offer", "guarda": "conversation_offer_expiration"
+    },
+    {
+      "nome": "oferta_com_validade_vencida",
+      "template": {
+        "name": "oferta_relampago", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "LIMITED_TIME_OFFER", "limited_time_offer": { "text": "Só hoje!", "has_expiration": true } },
+          { "type": "BODY", "text": "Oi {{1}}, sua oferta chegou." , "example": { "body_text": [["Ana"]] } },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["HOJE25"] }] }
+        ]
+      },
+      "processed_params": {
+        "body": { "1": "Ana" },
+        "buttons": [{ "type": "copy_code", "parameter": "HOJE25" }],
+        "limited_time_offer": { "expiration_time_ms": 1792065600000 }
+      },
+      "conversa": true, "produtos": false, "pronto": false, "envio": "offer_expired", "guarda": "conversation_offer_expired"
+    },
+    {
+      "nome": "oferta_sem_contagem",
+      "template": {
+        "name": "oferta_sem_prazo", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "LIMITED_TIME_OFFER", "limited_time_offer": { "text": "Oferta!" } },
+          { "type": "BODY", "text": "Sua oferta chegou." },
+          { "type": "BUTTONS", "buttons": [{ "type": "COPY_CODE", "text": "Copiar código", "example": ["OFERTA5"] }] }
+        ]
+      },
+      "processed_params": { "buttons": [{ "type": "copy_code", "parameter": "OFERTA5" }] },
+      "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    },
+    {
+      "nome": "carrossel_de_fotos",
+      "template": {
+        "name": "carrossel_de_fotos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja as novidades." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Primeiro" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] },
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Segundo" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] }
+          ] }
+        ]
+      },
+      "processed_params": {},
+      "tipo": "cartoes", "conversa": true, "produtos": false, "pronto": false, "envio": "carousel", "guarda": "conversation_carousel"
+    },
+    {
+      "nome": "um_produto",
+      "template": {
+        "name": "produto_unico", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "PRODUCT" },
+          { "type": "BODY", "text": "Separamos este produto para você." },
+          { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }
+        ]
+      },
+      "processed_params": {},
+      "tipo": "um", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
+    },
+    {
+      "nome": "varios_produtos",
+      "template": {
+        "name": "lista_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "TEXT", "text": "Novidades" },
+          { "type": "BODY", "text": "Separamos estes produtos." },
+          { "type": "BUTTONS", "buttons": [{ "type": "MPM", "text": "Ver itens" }] }
+        ]
+      },
+      "processed_params": {},
+      "tipo": "varios", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
+    },
+    {
+      "nome": "carrossel_de_produtos",
+      "template": {
+        "name": "carrossel_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja os destaques." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] },
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] }
+          ] }
+        ]
+      },
+      "processed_params": {},
+      "tipo": "carrossel", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
+    },
+    {
+      "nome": "botao_de_catalogo",
+      "template": {
+        "name": "catalogo", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Conheça o nosso catálogo." },
+          { "type": "BUTTONS", "buttons": [{ "type": "CATALOG", "text": "Ver catálogo" }] }
+        ]
+      },
+      "processed_params": {},
+      "conversa": false, "produtos": false, "envio": "catalog", "guarda": "conversation_products"
+    },
+    {
+      "nome": "um_produto_escolhido",
+      "template": {
+        "name": "produto_unico", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "PRODUCT" },
+          { "type": "BODY", "text": "Separamos este produto para você." },
+          { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-1", "nome": "Tênis" }] },
+      "processed_params": { "body": {}, "products": { "retailer_ids": ["sku-1"], "names": { "sku-1": "Tênis" } } },
+      "tipo": "um", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "varios_produtos_escolhidos",
+      "template": {
+        "name": "lista_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "TEXT", "text": "Novidades" },
+          { "type": "BODY", "text": "Separamos estes produtos." },
+          { "type": "BUTTONS", "buttons": [{ "type": "MPM", "text": "Ver itens" }] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-2", "nome": "Mochila" }, { "id": "sku-1", "nome": "Tênis" }] },
+      "processed_params": {
+        "body": {},
+        "products": { "retailer_ids": ["sku-2", "sku-1"], "names": { "sku-2": "Mochila", "sku-1": "Tênis" } }
+      },
+      "tipo": "varios", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "carrossel_de_produtos_escolhidos",
+      "template": {
+        "name": "carrossel_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja os destaques." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] },
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] }
+          ] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-1", "nome": "Tênis" }, { "id": "sku-2", "nome": "Mochila" }] },
+      "processed_params": {
+        "body": {},
+        "products": { "retailer_ids": ["sku-1", "sku-2"], "names": { "sku-1": "Tênis", "sku-2": "Mochila" } }
+      },
+      "tipo": "carrossel", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "carrossel_de_fotos_com_as_fotos",
+      "template": {
+        "name": "carrossel_de_fotos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja as novidades." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Primeiro" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] },
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Segundo" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] }
+          ] }
+        ]
+      },
+      "tela": { "corpo": {}, "cartoes": { "0": { "referencia": "FOTO_1", "campos": {} }, "1": { "referencia": "FOTO_2", "campos": {} } } },
+      "processed_params": {
+        "body": {},
+        "carousel": { "cards": [{ "header": { "media_blob": "FOTO_1" }, "body": {} }, { "header": { "media_blob": "FOTO_2" }, "body": {} }] }
+      },
+      "tipo": "cartoes", "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
+    }
+  ]
+}

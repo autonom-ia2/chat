@@ -1,7 +1,7 @@
 json.payload do
   json.array! @versions,
               partial: 'api/v1/accounts/autonomia/agents/instruction_versions/instruction_version',
-              as: :instruction_version
+              as: :instruction_version, locals: { escritos_pelo_dono: @escritos_pelo_dono }
 end
 
 # Espelha o índice de agentes/sources para o factory `get` do FE (lê meta.total_count/meta.page).
