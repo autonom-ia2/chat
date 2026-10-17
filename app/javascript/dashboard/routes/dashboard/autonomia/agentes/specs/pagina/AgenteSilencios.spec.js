@@ -82,12 +82,50 @@ describe('AgenteSilencios', () => {
     expect(api.analytics).not.toHaveBeenCalled();
   });
 
-  it('hides the block when the API fails', async () => {
-    api.analytics.mockRejectedValueOnce({ response: { status: 500 } });
+  it('hides the block when the API fails, and logs only the status', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    api.analytics.mockRejectedValueOnce({
+      response: { status: 500, data: { cliente: 'Quero cancelar' } },
+    });
 
     const wrapper = montar();
     await flushPromises();
 
     expect(wrapper.find('[data-bloco="silencios"]').exists()).toBe(false);
+    expect(aviso).toHaveBeenCalledWith(
+      '[agentes] silencios: leitura falhou',
+      500
+    );
+    expect(JSON.stringify(aviso.mock.calls)).not.toContain('Quero cancelar');
+    aviso.mockRestore();
+  });
+
+  it('drops the answer of the previous agent when it arrives after the switch', async () => {
+    let soltarAntiga;
+    api.analytics
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolver => {
+            soltarAntiga = resolver;
+          })
+      )
+      .mockResolvedValueOnce({
+        data: { silences: [{ reason: 'mensagem_apagada', count: 1 }] },
+      });
+
+    const wrapper = montar();
+    await wrapper.setProps({ agentId: 8, nome: 'Caio' });
+    await flushPromises();
+    soltarAntiga({
+      data: { silences: [{ reason: 'mensagem_sem_suporte', count: 9 }] },
+    });
+    await flushPromises();
+
+    expect(api.analytics).toHaveBeenNthCalledWith(2, 8, { range: '7d' });
+    const linhas = wrapper.findAll('[data-motivo]');
+    expect(linhas.map(linha => linha.attributes('data-motivo'))).toEqual([
+      'mensagem_apagada',
+    ]);
+    expect(wrapper.text()).toContain('When Caio did not answer');
   });
 });

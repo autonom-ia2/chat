@@ -10,8 +10,10 @@ import { idiomaDoNavegador } from '../../utils/pagina';
 // O bloco some quando:
 // - o agente não fala com o cliente (`falaComCliente`, decidido pela página: ajudante, interno, cotação);
 // - não houve conversa esta semana (`numeros`, o mesmo dado do AgenteSemana: null ou zero e zero);
-// - a leitura ainda não chegou ou falhou (é um aviso, não um dado de que a tela dependa).
-// Nenhuma vez: uma frase dizendo que o agente respondeu sempre.
+// - a leitura ainda não chegou ou falhou (é um aviso, não um dado de que a tela dependa; a falha vai ao console só com
+//   o status ou a classe do erro, sem dado da conversa).
+// Com conversa na semana e nenhum silêncio: "{nome} não deixou de responder nenhuma vez esta semana." (o texto
+// aprovado no mockup). Trocando de agente, a resposta que chega do agente anterior é descartada.
 const props = defineProps({
   agentId: { type: Number, required: true },
   nome: { type: String, required: true },
@@ -37,15 +39,23 @@ const teveConversa = computed(
 );
 const aparece = computed(() => props.falaComCliente && teveConversa.value);
 
+// O status HTTP, ou a classe do erro: nunca a mensagem nem o corpo da resposta.
+const resumoDoErro = erro => erro?.response?.status ?? erro?.name ?? 'erro';
+
 const ler = async () => {
   silencios.value = null;
   if (!aparece.value) return;
+  const pedido = props.agentId;
   try {
-    const { data } = await AgentsAPI.analytics(props.agentId, { range: '7d' });
+    const { data } = await AgentsAPI.analytics(pedido, { range: '7d' });
+    if (pedido !== props.agentId) return;
     silencios.value = (data?.silences || []).filter(linha =>
       MOTIVOS.includes(linha.reason)
     );
-  } catch {
+  } catch (erro) {
+    if (pedido !== props.agentId) return;
+    // eslint-disable-next-line no-console
+    console.warn('[agentes] silencios: leitura falhou', resumoDoErro(erro));
     silencios.value = null;
   }
 };
