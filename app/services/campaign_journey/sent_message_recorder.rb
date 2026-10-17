@@ -91,7 +91,7 @@ class CampaignJourney::SentMessageRecorder
     return unless @inbox.channel.is_a?(Channel::Whatsapp) && @campaign.template_params.present?
 
     Whatsapp::TemplateProcessorService.new(channel: @inbox.channel, template_params: @campaign.template_params)
-                                      .foto_do_envio(catalogo: :guardado)
+                                      .foto_do_envio(catalogo: :guardado, perfil: true)
   end
 
   def message_status

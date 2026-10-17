@@ -54,11 +54,10 @@ module Whatsapp::Templates::CardMedia
     files.transform_values { |file| dispatch_media(file) }
   end
 
-  # O link assinado vai à Meta; a referência assinada do arquivo (`media_signed_id`) fica para a foto do envio (#1717)
-  # gravar o endereço permanente do nosso armazenamento. A Meta não a recebe (`SendComponents#card_payload`).
+  # O link assinado vai à Meta e a referência assinada fica para a foto do envio (#1717): `HeaderMedia.dispatch_file`.
+  # A Meta não a recebe (`SendComponents#card_payload`).
   def dispatch_media(file)
-    blob = file.is_a?(ActiveStorage::Blob) ? file : file.blob
-    Whatsapp::Templates::HeaderMedia.signed_media(blob).merge('media_signed_id' => blob.signed_id)
+    Whatsapp::Templates::HeaderMedia.dispatch_file(file.is_a?(ActiveStorage::Blob) ? file : file.blob)
   end
 
   def headers_of(processed)

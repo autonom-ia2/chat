@@ -108,7 +108,7 @@ module Whatsapp::Templates::HeaderMedia
     { 'media_url' => blob.url(expires_in: URL_TTL), 'media_name' => blob.filename.to_s }
   end
 
-  # { 'media_url' => link assinado, 'media_name' => nome do arquivo } para o envio: o arquivo escolhido na campanha
+  # { 'media_url' => link assinado, 'media_name' => nome do arquivo, 'media_signed_id' } para o envio: o arquivo escolhido na campanha
   # (`media_blob`) ou, sem ele, o guardado no perfil do modelo. nil quando o arquivo sumiu ou não serve mais (conferido de
   # novo aqui: a referência pode ter sido gravada por fora da criação).
   def dispatch_media(header, inbox, template)
@@ -116,11 +116,18 @@ module Whatsapp::Templates::HeaderMedia
     return profile_media(inbox, template) if chosen.blank?
 
     blob = ActiveStorage::Blob.find_signed(chosen)
-    signed_media(blob) if blob_accepted?(blob, media_type(template), inbox.account_id)
+    dispatch_file(blob) if blob_accepted?(blob, media_type(template), inbox.account_id)
   end
 
   def profile_media(inbox, template)
     file = profile_file(inbox, template)
-    file && signed_media(file)
+    file && dispatch_file(file.blob)
+  end
+
+  # O link assinado vai à Meta; a referência assinada do arquivo (`media_signed_id`) fica para a foto do envio (#1717)
+  # gravar o endereço permanente do nosso armazenamento. O envio à Meta só lê media_url, media_type e media_name.
+  # Também usado pelos cartões do carrossel (`CardMedia`).
+  def dispatch_file(blob)
+    signed_media(blob).merge('media_signed_id' => blob.signed_id)
   end
 end

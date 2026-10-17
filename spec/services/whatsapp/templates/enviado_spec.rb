@@ -54,10 +54,11 @@ RSpec.describe Whatsapp::Templates::Enviado do
         'buttons' => [{ 'type' => 'copy_code', 'parameter' => 'SEGREDO9' }, { 'type' => 'url', 'parameter' => 'AB3K' }] }
     end
 
-    it 'grava a validade em segundos e os botões; o código do cupom nunca entra' do
+    it 'grava o título e a validade da oferta, o topo e os botões; o código do cupom nunca entra' do
       expect(foto).to eq(
         'versao' => 1,
-        'oferta' => { 'expira_em' => 1_760_659_200 },
+        'oferta' => { 'texto' => 'Só hoje!', 'expira_em' => 1_760_659_200 },
+        'topo' => { 'tipo' => 'image', 'url' => nil, 'nome' => nil },
         'botoes' => [{ 'tipo' => 'copy_code', 'texto' => 'Copiar código' },
                      { 'tipo' => 'url', 'texto' => 'Ver proposta', 'url' => 'https://loja.com.br/b/AB3K' }]
       )
@@ -65,10 +66,19 @@ RSpec.describe Whatsapp::Templates::Enviado do
       expect(foto.to_json).not_to include('processed_params')
     end
 
-    it 'sem a validade no envio, não há oferta' do
+    it 'sem a validade no envio, a oferta continua com o título' do
       processed.delete('limited_time_offer')
 
-      expect(foto).not_to have_key('oferta')
+      expect(foto['oferta']).to eq('texto' => 'Só hoje!')
+    end
+
+    it 'oferta sem validade no modelo (has_expiration false): só o título, mesmo com a validade no envio' do
+      template['components'][1]['limited_time_offer'] = { 'text' => 'Frete grátis', 'has_expiration' => false }
+
+      expect(processed.dig('limited_time_offer', 'expiration_time_ms')).to eq(1_760_659_200_000)
+
+      expect(foto['oferta']).to eq('texto' => 'Frete grátis')
+      expect(foto.to_json).not_to include('SEGREDO9')
     end
 
     it 'link com variável sem valor fica sem endereço (nunca "{{1}}" na tela)' do
@@ -252,24 +262,115 @@ RSpec.describe Whatsapp::Templates::Enviado do
     end
   end
 
+  describe 'topo do modelo comum' do
+    let(:url_helpers) { Rails.application.routes.url_helpers }
+    let(:topo_de) do
+      lambda do |formato|
+        approved('aviso', { 'type' => 'HEADER', 'format' => formato, 'example' => { 'header_handle' => ['4::YXJx'] } },
+                 { 'type' => 'BODY', 'text' => 'Segue o arquivo.' })
+      end
+    end
+    let(:pdf) do
+      ActiveStorage::Blob.create_and_upload!(io: StringIO.new('%PDF'), filename: 'proposta-ana.pdf', content_type: 'application/pdf',
+                                             metadata: { 'account_id' => account.id })
+    end
+
+    it 'documento nosso (o disparo marcou): endereço permanente e o nome do arquivo' do
+      header = { 'media_url' => 'https://s3.example.com/p.pdf?X-Amz-Expires=86400', 'media_type' => 'document',
+                 'media_name' => 'proposta-ana.pdf', 'media_signed_id' => pdf.signed_id }
+      foto = described_class.montar(template: topo_de.call('DOCUMENT'), processed: { 'header' => header }, inbox: inbox)
+
+      expect(foto['topo']).to eq('tipo' => 'document', 'url' => url_helpers.rails_blob_url(pdf), 'nome' => 'proposta-ana.pdf')
+      expect(foto.to_json).not_to include('X-Amz', 'media_signed_id')
+    end
+
+    it 'documento por link digitado: sem endereço, com o nome que o envio levou' do
+      header = { 'media_url' => 'https://loja.com.br/tabela.pdf', 'media_type' => 'document', 'media_name' => 'tabela.pdf' }
+      foto = described_class.montar(template: topo_de.call('DOCUMENT'), processed: { 'header' => header }, inbox: inbox)
+
+      expect(foto['topo']).to eq('tipo' => 'document', 'url' => nil, 'nome' => 'tabela.pdf')
+    end
+
+    it 'imagem com link da Meta ou handle do exemplo nunca vira endereço' do
+      header = { 'media_url' => 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=9', 'media_type' => 'image' }
+      foto = described_class.montar(template: topo_de.call('IMAGE'), processed: { 'header' => header }, inbox: inbox)
+
+      expect(foto['topo']).to eq('tipo' => 'image', 'url' => nil, 'nome' => nil)
+      expect(foto.to_json).not_to include('fbsbx', '4::YXJx')
+    end
+
+    it 'imagem escolhida na campanha, de outra conta, não vira endereço' do
+      alheio = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: 'x.png', content_type: 'image/png',
+                                                      metadata: { 'account_id' => account.id + 1 })
+      foto = described_class.montar(template: topo_de.call('IMAGE'), processed: { 'header' => { 'media_blob' => alheio.signed_id } },
+                                    inbox: inbox)
+
+      expect(foto['topo']).to eq('tipo' => 'image', 'url' => nil, 'nome' => nil)
+    end
+
+    it 'vídeo sem link nem referência (campanha relida na resposta): o arquivo aprovado no perfil do modelo' do
+      profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'aviso', language: 'pt_BR')
+      profile.header_file.attach(io: StringIO.new('mp4'), filename: 'tour.mp4', content_type: 'video/mp4')
+      foto = described_class.montar(template: topo_de.call('VIDEO'), processed: { 'body' => {} }, inbox: inbox, perfil: true)
+
+      expect(foto['topo']).to eq('tipo' => 'video', 'url' => url_helpers.rails_blob_url(profile.header_file.blob), 'nome' => nil)
+    end
+
+    it 'envio sem topo (conversa): sem topo, mesmo com o arquivo no perfil' do
+      WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'aviso', language: 'pt_BR')
+                             .header_file.attach(io: StringIO.new('mp4'), filename: 'tour.mp4', content_type: 'video/mp4')
+
+      expect(described_class.montar(template: topo_de.call('VIDEO'), processed: { 'body' => {} }, inbox: inbox)).not_to have_key('topo')
+    end
+
+    it 'texto com os valores enviados; campo sem valor deixa o texto nil' do
+      template = approved('boas_vindas', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Oi, {{1}}!',
+                                           'example' => { 'header_text' => ['Ana'] } },
+                          { 'type' => 'BODY', 'text' => 'Bem-vinda.' })
+
+      expect(described_class.montar(template: template, processed: { 'header' => { '1' => 'Ana' } }, inbox: inbox)['topo'])
+        .to eq('tipo' => 'text', 'texto' => 'Oi, Ana!')
+      expect(described_class.montar(template: template, processed: { 'header' => { '1' => ' ' } }, inbox: inbox)['topo'])
+        .to eq('tipo' => 'text', 'texto' => nil)
+    end
+
+    it 'texto fixo, sem variável: vem do modelo' do
+      template = approved('fixo', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Novidade' }, { 'type' => 'BODY', 'text' => 'x' })
+
+      expect(described_class.montar(template: template, processed: {}, inbox: inbox)['topo']).to eq('tipo' => 'text', 'texto' => 'Novidade')
+    end
+
+    it 'topo de produto fica em produto, nunca em topo' do
+      template = approved('spm', { 'type' => 'HEADER', 'format' => 'PRODUCT' }, { 'type' => 'BODY', 'text' => 'x' },
+                          { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM', 'text' => 'Ver' }] })
+      foto = described_class.montar(template: template, processed: { 'products' => { 'retailer_ids' => ['SKU1'] } }, inbox: inbox,
+                                    catalogo: :guardado)
+
+      expect(foto).not_to have_key('topo')
+      expect(foto['produto']).to eq('retailer_id' => 'SKU1')
+    end
+  end
+
   describe 'teto de tamanho' do
     let(:longo) { 'Á' * 500 }
     let(:link) { "https://cdn.loja.com.br/#{'a' * 480}.jpg" }
 
     it 'MPM com 30 produtos no limite de cada campo cabe em 32 KB' do
       ids = Array.new(30) { |index| "#{index.to_s.rjust(2, '0')}-#{'x' * 97}" } # 100 caracteres, o máximo da Meta
-      template = approved('mpm', { 'type' => 'BODY', 'text' => 'Itens' },
+      template = approved('mpm', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Olha {{1}}' },
+                          { 'type' => 'BODY', 'text' => 'Itens' },
                           { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'MPM', 'text' => longo }] })
       Whatsapp::Templates::Enviado::Produtos.lembrar(inbox, ids.map do |id|
         Whatsapp::Templates::CatalogClient::Product.new(id: id, name: longo, price: longo, image_url: link, available: true)
       end)
 
-      foto = described_class.montar(template: template, processed: { 'products' => { 'retailer_ids' => ids + %w[a b c] } }, inbox: inbox,
-                                    catalogo: :guardado)
+      processed = { 'products' => { 'retailer_ids' => ids + %w[a b c] }, 'header' => { '1' => longo } }
+      foto = described_class.montar(template: template, processed: processed, inbox: inbox, catalogo: :guardado)
 
       expect(foto['produtos'].size).to eq(30)
       expect(foto['produtos'].first.keys).to eq(%w[retailer_id nome preco foto_url])
       expect(foto['produtos'].first['nome'].length).to eq(60)
+      expect(foto['topo']['texto'].length).to eq(60)
       expect(foto.to_json.bytesize).to be <= 32.kilobytes
     end
 
