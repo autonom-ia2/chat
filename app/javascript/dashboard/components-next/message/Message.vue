@@ -134,7 +134,7 @@ const props = defineProps({
   },
   conversationId: { type: Number, required: true },
   createdAt: { type: Number, required: true }, // eslint-disable-line vue/no-unused-properties
-  currentUserId: { type: Number, required: true }, // eslint-disable-line vue/no-unused-properties
+  currentUserId: { type: Number, required: true },
   groupWithNext: { type: Boolean, default: false },
   inboxId: { type: Number, default: null }, // eslint-disable-line vue/no-unused-properties
   inboxSupportsReplyTo: { type: Object, default: () => ({}) },
@@ -166,8 +166,13 @@ const messageActionDialogs = ref(null);
 const isReactable = computed(() => canReact(selectedChat.value, props));
 // A janela de edição é conferida na hora em que o menu abre (o computed não anda sozinho com o relógio).
 const menuOpenedAt = ref(Date.now() / 1000);
+// Só o autor ou um administrador edita, como o servidor confere.
+const currentRole = useMapGetter('getCurrentRole');
 const isEditable = computed(() =>
-  canEdit(selectedChat.value, props, menuOpenedAt.value)
+  canEdit(selectedChat.value, props, menuOpenedAt.value, {
+    userId: props.currentUserId,
+    isAdmin: currentRole.value === 'administrator',
+  })
 );
 const messageReactions = computed(() =>
   Array.isArray(props.contentAttributes?.reactions)

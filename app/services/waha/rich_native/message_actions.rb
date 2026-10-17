@@ -41,10 +41,12 @@ module Waha::RichNative::MessageActions
   end
 
   # Mensagem da conversa que foi ao cliente: nem nota, nem atividade, nem apagada, nem falhada (gravar numa falhada
-  # mandaria o `external_error` de volta ao conector, que o lê como pedido de reenvio).
+  # mandaria o `external_error` de volta ao conector, que o lê como pedido de reenvio), nem o aviso de visualização única
+  # (não é mensagem do cliente no WhatsApp: não há onde a reação cair).
   def reactable?(message)
     (message.incoming? || message.outgoing?) && !message.private? && !message.failed? &&
-      !message.content_attributes.to_h['deleted'] && message.content_attributes.to_h['external_error'].blank?
+      !message.content_attributes.to_h['deleted'] && message.content_attributes.to_h['external_error'].blank? &&
+      !Waha::RichNative::Inbound::ViewOnceUnavailable.notice?(message)
   end
 
   # Só texto nosso, sem anexo nem formato, que não falhou, dentro da janela do WhatsApp.

@@ -93,6 +93,19 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events).to be_empty
     end
 
+    it 'refuses the view once notice (rodada de correção, item 10)' do
+      notice = create(:message, message_type: :incoming, content: 'Você recebeu uma mensagem de visualização única.',
+                                conversation: conversation, inbox: channel.inbox, account: account)
+      notice.update_column(:content_attributes, { 'view_once_unavailable' => true }) # rubocop:disable Rails/SkipsModelValidations
+      events.clear
+
+      react(notice, '👍')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(notice.reload.content_attributes).not_to have_key('reactions')
+      expect(events).to be_empty
+    end
+
     it 'is forbidden without the flag or without the engine action' do
       message = ours
       account.disable_features!(Waha::RichNative::FLAG)

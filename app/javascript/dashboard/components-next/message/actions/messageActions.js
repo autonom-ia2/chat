@@ -27,6 +27,10 @@ const isFailed = message =>
   message.status === MESSAGE_STATUS.FAILED ||
   Boolean(message.contentAttributes?.externalError);
 
+// O aviso de visualização única não é mensagem do cliente no WhatsApp: não há o que reagir.
+const isViewOnceNotice = message =>
+  Boolean(message.contentAttributes?.viewOnceUnavailable);
+
 export const canReact = (conversation, message) =>
   actionsOf(conversation).includes('react') &&
   [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING].includes(
@@ -34,14 +38,24 @@ export const canReact = (conversation, message) =>
   ) &&
   !message.private &&
   !isFailed(message) &&
-  !isDeleted(message);
+  !isDeleted(message) &&
+  !isViewOnceNotice(message);
+
+// Quem pode editar, como o servidor (author? ou administrador): `viewer` = { userId, isAdmin }.
+const mayEdit = (message, viewer = {}) =>
+  viewer.isAdmin === true ||
+  (viewer.userId != null &&
+    message.senderType === USER &&
+    message.senderId === viewer.userId);
 
 export const canEdit = (
   conversation,
   message,
-  nowSeconds = Date.now() / 1000
+  nowSeconds = Date.now() / 1000,
+  viewer = {}
 ) =>
   actionsOf(conversation).includes('edit') &&
+  mayEdit(message, viewer) &&
   message.messageType === MESSAGE_TYPES.OUTGOING &&
   !message.private &&
   message.contentType === 'text' &&

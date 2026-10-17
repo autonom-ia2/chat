@@ -18,6 +18,7 @@ config.global.plugins = [
 ];
 
 const AGORA = 1_000_000;
+const AUTOR = { userId: 7, isAdmin: false };
 const conversa = actions => ({ whatsapp_api_message_actions: actions });
 const nossa = (extra = {}) => ({
   messageType: MESSAGE_TYPES.OUTGOING,
@@ -27,6 +28,8 @@ const nossa = (extra = {}) => ({
   contentAttributes: {},
   status: MESSAGE_STATUS.SENT,
   createdAt: AGORA - 60,
+  senderType: 'User',
+  senderId: 7,
   ...extra,
 });
 
@@ -34,8 +37,8 @@ describe('quando o painel oferece reagir e editar', () => {
   it('só com a ação no campo da conversa', () => {
     expect(canReact(conversa([]), nossa())).toBe(false);
     expect(canReact(conversa(['react']), nossa())).toBe(true);
-    expect(canEdit(conversa(['react']), nossa(), AGORA)).toBe(false);
-    expect(canEdit(conversa(['edit']), nossa(), AGORA)).toBe(true);
+    expect(canEdit(conversa(['react']), nossa(), AGORA, AUTOR)).toBe(false);
+    expect(canEdit(conversa(['edit']), nossa(), AGORA, AUTOR)).toBe(true);
     expect(canReact(undefined, nossa())).toBe(false);
   });
 
@@ -64,30 +67,70 @@ describe('quando o painel oferece reagir e editar', () => {
     const foraDaJanela = nossa({ createdAt: AGORA - EDIT_WINDOW_SECONDS - 1 });
 
     expect(EDIT_WINDOW_MINUTES).toBe(14);
-    expect(canEdit(acoes, foraDaJanela, AGORA)).toBe(false);
+    expect(canEdit(acoes, foraDaJanela, AGORA, AUTOR)).toBe(false);
     expect(
-      canEdit(acoes, nossa({ messageType: MESSAGE_TYPES.INCOMING }), AGORA)
+      canEdit(
+        acoes,
+        nossa({ messageType: MESSAGE_TYPES.INCOMING }),
+        AGORA,
+        AUTOR
+      )
     ).toBe(false);
-    expect(canEdit(acoes, nossa({ attachments: [{ id: 1 }] }), AGORA)).toBe(
-      false
-    );
+    expect(
+      canEdit(acoes, nossa({ attachments: [{ id: 1 }] }), AGORA, AUTOR)
+    ).toBe(false);
     expect(
       canEdit(
         acoes,
         nossa({ contentAttributes: { richMessage: { type: 'options' } } }),
-        AGORA
+        AGORA,
+        AUTOR
       )
     ).toBe(false);
     expect(
-      canEdit(acoes, nossa({ status: MESSAGE_STATUS.FAILED }), AGORA)
+      canEdit(acoes, nossa({ status: MESSAGE_STATUS.FAILED }), AGORA, AUTOR)
     ).toBe(false);
     expect(
       canEdit(
         acoes,
         nossa({ contentAttributes: { externalError: 'x' } }),
-        AGORA
+        AGORA,
+        AUTOR
       )
     ).toBe(false);
+  });
+});
+
+describe('quem pode editar (igual ao author? do servidor)', () => {
+  const acoes = conversa(['edit']);
+
+  it('só o autor da mensagem ou um administrador', () => {
+    expect(canEdit(acoes, nossa(), AGORA, AUTOR)).toBe(true);
+    expect(canEdit(acoes, nossa(), AGORA, { userId: 8 })).toBe(false);
+    expect(canEdit(acoes, nossa(), AGORA, { userId: 8, isAdmin: true })).toBe(
+      true
+    );
+    expect(canEdit(acoes, nossa(), AGORA)).toBe(false);
+  });
+
+  it('a do robô ou da IA, só o administrador', () => {
+    const doRobo = nossa({ senderType: 'AgentBot', senderId: 7 });
+
+    expect(canEdit(acoes, doRobo, AGORA, AUTOR)).toBe(false);
+    expect(canEdit(acoes, doRobo, AGORA, { userId: 7, isAdmin: true })).toBe(
+      true
+    );
+  });
+});
+
+describe('o aviso de visualização única', () => {
+  it('não recebe reação', () => {
+    const aviso = nossa({
+      messageType: MESSAGE_TYPES.INCOMING,
+      contentAttributes: { viewOnceUnavailable: true },
+    });
+
+    expect(canReact(conversa(['react']), aviso)).toBe(false);
   });
 });
 
