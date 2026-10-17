@@ -13299,8 +13299,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversa_canal/reacoes#create",
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:8",
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:24"
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:9",
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:25"
     ],
     "sem_corpo": false
   },

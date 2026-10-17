@@ -178,6 +178,19 @@ describe ConversaCanal::Encaminhamento do
     end
   end
 
+  # Teste de estresse do #1702 (17/10): a cópia desfeita fica pendurada em destino.messages (autosave) e um save
+  # posterior do mesmo objeto a gravaria sem validação.
+  it 'lote desfeito não volta num save posterior do destino' do
+    segunda = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :incoming, content: 'Segunda')
+
+    with_modified_env CONVERSATION_MESSAGE_PER_MINUTE_LIMIT: '1' do
+      expect(encaminhar([texto.id, segunda.id]).first).to include(ok: false)
+    end
+    destino.update!(updated_at: Time.current)
+
+    expect(copias_em(destino)).to be_empty
+  end
+
   it 'falha inesperada num destino fica nele: os outros seguem' do
     falha = create(:conversation, account: account, inbox: caixa)
     original = Messages::MessageBuilder.method(:new)

@@ -89,6 +89,9 @@ class ConversaCanal::Encaminhamento
     resultado(destino)
   # Qualquer falha fica naquele destino (transação desfeita); os outros seguem e cada um volta com o seu resultado.
   rescue StandardError => e
+    # As cópias desfeitas continuam penduradas em destino.messages (o MessageBuilder as monta ali), e
+    # Conversation#messages é autosave: um save futuro do destino as gravaria sem validação.
+    destino.association(:messages).reset
     Rails.logger.warn("[conversa_canal][encaminhar] origem=#{@origem.id} destino=#{destino.id} #{e.class}")
     ChatwootExceptionTracker.new(e, account: destino.account).capture_exception
     resultado(destino, erro: frase(:falhou))
