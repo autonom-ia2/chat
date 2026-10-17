@@ -347,6 +347,20 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
       expect(ai_reads(message)).to eq('Contato: Recepção — +55 11 4000-0473')
     end
 
+    it 'follows the #1753 format: one line per contact, phone alone without a name, never the no-phone placeholder' do
+      flag_on!
+      contacts = [{ 'full_name' => 'Ana Souza', 'phones' => ['+55 11 98888-7777', '+55 11 3333-4444'] },
+                  { 'full_name' => '', 'phones' => ['+55 21 97777-6666'] },
+                  { 'full_name' => 'Bruno', 'phones' => ['Phone number is not available'] },
+                  { 'full_name' => '', 'phones' => [] }]
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: nil,
+                                 sender: conversation.contact, content_attributes: { 'shared_contacts' => contacts })
+
+      expect(ai_reads(message)).to eq(['Contato: Ana Souza — +55 11 98888-7777, +55 11 3333-4444', 'Contato: +55 21 97777-6666',
+                                       'Contato: Bruno', 'Contato (sem nome)'].join("\n"))
+      expect(ai_reads(message)).not_to include('not available')
+    end
+
     it 'leaves the contact card as in main without the flag' do
       contacts = [{ 'full_name' => 'Ana', 'phones' => ['+5511'] }]
       message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Ana',
