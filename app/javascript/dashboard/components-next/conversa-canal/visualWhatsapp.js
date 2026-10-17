@@ -88,8 +88,7 @@ const RECHEIO = [
   '[&[data-bubble-name=image]]:!p-[3px] [&[data-bubble-name=video]]:!p-[3px]',
   // Foto: canto de 6 px por dentro e sem os botões do painel por cima (abrir é tocar na foto).
   '[&[data-bubble-name=image]_.rounded-lg]:!rounded-[8px] [&[data-bubble-name=image]_.inset-0]:!hidden [&[data-bubble-name=image]_.right-2]:!hidden',
-  // Foto até 330 px de lado; a retrato é cortada embaixo, como no app.
-  '[&[data-bubble-name=image]_img]:!w-[330px] [&[data-bubble-name=image]_img]:max-w-full [&[data-bubble-name=image]_img]:!h-auto [&[data-bubble-name=image]_img]:max-h-[330px] [&[data-bubble-name=image]_img]:object-cover [&[data-bubble-name=image]_img]:object-top',
+  // O tamanho da foto vem do próprio balão (midia/proporcaoDaMidia), pela proporção dela.
   // Documento: o cartão com 3 px de moldura, 320 px, e a hora embaixo.
   '[&[data-bubble-name=attachment]]:!p-[3px] [&[data-bubble-name=attachment]]:w-[320px] [&[data-bubble-name=attachment]]:max-w-full [&[data-bubble-name=attachment]>[class*=mt-]]:!px-[5px] [&[data-bubble-name=attachment]>[class*=mt-]]:!pb-[2px]',
   // Foto com legenda: a foto grande em cima e a legenda embaixo, como no app.
