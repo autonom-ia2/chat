@@ -1267,7 +1267,15 @@
         "UPDATE_ERROR": "Could not save the card field",
         "DELETE_SUCCESS": "Card field cleared",
         "DELETE_ERROR": "Could not clear the card field",
-        "HELP_ATENDER": "Information specific to this request."
+        "HELP_ATENDER": "Information specific to this request.",
+        "ORIGEM": {
+          "CLIENTE": "customer said on {quando}",
+          "EQUIPE": "team said on {quando}",
+          "FERRAMENTA": "tool result on {quando}",
+          "CORRIGIDO": "corrected by {nome} on {quando}",
+          "VER_MENSAGEM": "view message",
+          "SEPARADOR": "·"
+        }
       },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",

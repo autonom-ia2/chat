@@ -1267,7 +1267,15 @@
         "UPDATE_ERROR": "Não foi possível salvar o campo do card",
         "DELETE_SUCCESS": "Campo do card limpo",
         "DELETE_ERROR": "Não foi possível limpar o campo do card",
-        "HELP_ATENDER": "Informações próprias deste atendimento."
+        "HELP_ATENDER": "Informações próprias deste atendimento.",
+        "ORIGEM": {
+          "CLIENTE": "cliente informou em {quando}",
+          "EQUIPE": "equipe informou em {quando}",
+          "FERRAMENTA": "resultado de ferramenta em {quando}",
+          "CORRIGIDO": "corrigido por {nome} em {quando}",
+          "VER_MENSAGEM": "ver mensagem",
+          "SEPARADOR": "·"
+        }
       },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
