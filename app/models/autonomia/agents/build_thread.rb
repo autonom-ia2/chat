@@ -122,15 +122,23 @@ module Autonomia
         update!(state: state.to_h.merge('pending_question' => question))
       end
 
-      # A pergunta que ficou aberta numa thread anterior. #1428: a resposta a uma pergunta do dono (so_pergunta, ajuste
-      # do piloto) não é pergunta pendente.
+      # A pergunta que ficou aberta numa thread anterior. #1428: no ajuste do piloto o Builder grava a pendência de
+      # verdade em `pergunta_pendente` (a resposta a uma pergunta do dono e os avisos fixos nunca são pendência).
       def pending_question_of(previous_state)
+        if previous_state.key?('pergunta_pendente') && ::Autonomia::Agents::Fase2.ligada?(account)
+          return previous_state['pergunta_pendente'].to_s.strip
+        end
         return '' unless previous_state['needs_more_info'] == true
-        return '' if previous_state['so_pergunta'] == true && ::Autonomia::Agents::Fase2.ligada?(account)
 
         previous_state['next_question'].to_s.strip
       end
       private :pending_question_of
+
+      # #1428 — grava chaves no `state` sem mudar o status, guardado pelo token. Toca o updated_at: o turno longo do
+      # ajuste (conferência e correção) não passa por preso.
+      def guardar_no_estado!(token, chaves)
+        guarded_update(token, state: (state || {}).merge(chaves))
+      end
 
       # E3 — janela de "geração presa": o SubmitJob é síncrono e leva segundos; se a thread ficou
       # `processing` por mais tempo que isto, o job morreu/perdeu-se sem mark_failed! (o token-guard

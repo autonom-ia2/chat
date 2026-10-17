@@ -1,22 +1,23 @@
 # #1428 (tema 6, parte 2) — o turno de AJUSTE no piloto (Fase 2): pergunta não é pedido, só o que foi pedido é
 # gravado, e um segundo modelo confere. Incluído no Builder; fora do piloto nada daqui roda.
 #
-#   1. so_pergunta=true, lista vazia (com ou sem pergunta do modelo): NÃO aplica. O turno vira resposta
-#      (needs_more_info=true, next_question = a resposta ou o esclarecimento). Nunca "Pronto" falso.
-#   2. Aplica só os campos listados (AjustePorLista.so_os_pedidos). O resto do agente fica idêntico. Se o modelo listou
-#      pedidos claros E perguntou pelo vago, os claros entram e a pergunta dele segue para o dono.
-#   3. Confere (ConferenciaDoAjuste). Faltou algo: UMA correção (chamada completa do Construtor com o aviso do que
-#      faltou) e uma nova conferência. Ainda faltando: vira pergunta ao dono; o que entrou fica aplicado. Quando o
-#      próprio modelo já pergunta, não há correção: a pergunta dele é a do turno.
-#   4. O resultado vai no state da thread (`conferencia`) e na versão builder_adjust gravada (`pedido`, `mudancas`,
-#      `conferencia`), para a tela da parte 3.
-# Depois que a primeira escrita venceu, nenhuma falha da correção derruba o turno: o agente já mudou, e o state não pode
-# dizer que nada foi aplicado.
+#   1. so_pergunta=true ou lista vazia (com ou sem pergunta do modelo): NÃO aplica. O turno vira resposta
+#      (needs_more_info=true). Nunca "Pronto" falso: a escrita que não muda nada também não fecha como aplicada.
+#   2. Aplica só os campos listados (AjustePorLista.so_os_pedidos). O resto do agente fica idêntico. Pedido claro e
+#      pergunta no mesmo turno: o claro entra e a resposta (`resposta_ao_dono`) vai junto, sem virar pendência.
+#   3. Confere (ConferenciaDoAjuste, só índices). Item não atendido: UMA correção e uma nova conferência; ainda
+#      faltando, vira pergunta ao dono, e o que entrou fica aplicado. Conflito sem falta vira pergunta, sem correção.
+#   4. O resultado vai no state da thread (`conferencia`) e na versão builder_adjust (`pedido`, `mudancas`,
+#      `conferencia`). Com correção, a versão da primeira escrita sai da lista e a da correção leva `correcao_de`.
+#
+# A PENDÊNCIA de verdade fica em `pergunta_pendente`: a resposta a uma pergunta do dono e os avisos fixos nunca são
+# pendência, e a pendência anterior sobrevive a eles.
+#
+# IDEMPOTÊNCIA E TEMPO: depois que a primeira escrita vence, o state guarda `ajuste_em_curso` (o token, a lista, o
+# agente antes). Um re-run do mesmo token pula o Construtor e vai conferir e fechar. A conferência e a correção têm teto
+# menor, e a correção não roda depois de LIMITE_PARA_CORRIGIR_S: o job é síncrono e a thread presa vira stale em 5 min.
+# Depois que a primeira escrita venceu, nenhuma falha da correção derruba o turno.
 module Autonomia::Agents::Builder::AjusteConferido
-  # Erros da correção que não podem virar "falhou" depois de a primeira escrita ter vencido.
-  FALHAS_DA_CORRECAO = [Crm::Ai::ResponsesClient::Error, ActiveRecord::ActiveRecordError,
-                        Autonomia::Agents::Agent::ModoManual].freeze
-
   private
 
   def ajuste_da_fase2?
@@ -31,22 +32,48 @@ module Autonomia::Agents::Builder::AjusteConferido
     Autonomia::Agents::Builder::AjustePorLista
   end
 
-  def ajustar_pela_lista(token, parsed)
+  def texto_do_ajuste(chave, **)
+    Autonomia::Agents::Builder::TextosDoAjuste.texto(chave, @account, **)
+  end
+
+  # Começo do turno: zera o estado do turno, resolve a credencial uma vez e diz se é a retomada de um turno que já
+  # gravou (mesmo token).
+  def preparar_ajuste!(token)
+    @credential = nil
+    credential
+    @inicio_do_ajuste = Time.current
+    @conferencias_ms = []
     @campos_truncados = []
     @explicacao_da_correcao = nil
-    @sem_pergunta = false
+    @pendencia_anterior = pending_question
+    ajuste_em_curso(token) ? :retomar : :seguir
+  end
+
+  def ajuste_em_curso(token)
+    dados = @thread.state.to_h['ajuste_em_curso']
+    dados if dados.is_a?(Hash) && dados['token'] == token
+  end
+
+  def retomar_ajuste!(token)
+    dados = ajuste_em_curso(token)
+    @inicio_do_ajuste = Time.zone.parse(dados['inicio'].to_s) || Time.current
+    Rails.logger.info("[autonomia][builder] ajuste retomado thread=#{@thread.id}")
+    conferir_e_fechar(token, dados)
+  end
+
+  def ajustar_pela_lista(token, parsed)
     mudancas = regras_do_ajuste.mudancas(parsed)
     motivo = motivo_para_nao_aplicar(parsed, mudancas)
     return responder_sem_aplicar(token, parsed, motivo) if motivo
 
-    @closed = true
     antes = regras_do_ajuste.retrato(@thread.agent)
+    antes_comparavel = regras_do_ajuste.comparavel(@thread.agent)
     declare_gaps!(parsed)
-    return marcar_sem_aplicar(token, parsed) unless aplicar_lista(token, parsed, mudancas)
+    return escrita_perdida!(token, parsed) unless aplicar_lista(token, parsed, mudancas)
+    return sem_mudanca!(token, parsed) if regras_do_ajuste.comparavel(@thread.agent) == antes_comparavel
 
-    @parsed_final = parsed
-    conferencia = pergunta_do_modelo ? conferir(antes, mudancas).merge('correcao' => false) : conferir_e_corrigir(token, antes, mudancas)
-    fechar_ajuste!(token, conferencia)
+    dados = registrar_aplicacao!(token, parsed, mudancas, antes)
+    conferir_e_fechar(token, dados) if dados
   end
 
   # Por que este turno não aplica nada (nil = aplica). Quem leu a fala foi o modelo, nos campos do schema.
@@ -57,21 +84,46 @@ module Autonomia::Agents::Builder::AjusteConferido
     :incompleto if regras_do_ajuste.essencial_em_branco?(parsed, mudancas)
   end
 
+  # A pergunta do modelo é a pendência nova; a resposta a uma pergunta do dono e os textos fixos mantêm a anterior.
   def responder_sem_aplicar(token, parsed, motivo)
-    @closed = false
-    texto = parsed['next_question'].to_s.strip.presence if %i[pergunta esclarecimento].include?(motivo)
-    texto ||= motivo == :incompleto ? regras_do_ajuste::INCOMPLETO : regras_do_ajuste::SEM_PEDIDO
-    perguntar!(token, parsed, texto, 'so_pergunta' => motivo == :pergunta, 'conferencia' => nil)
+    texto = case motivo
+            when :pergunta then parsed['next_question'].to_s.strip.presence || resposta_ao_dono(parsed)
+            when :esclarecimento then parsed['next_question'].to_s.strip.presence
+            end
+    texto ||= texto_do_ajuste(motivo == :incompleto ? :incompleto : :sem_pedido)
+    pendencia = motivo == :esclarecimento ? texto : @pendencia_anterior
+    perguntar!(token, parsed, texto, 'so_pergunta' => motivo == :pergunta, 'pergunta_pendente' => pendencia)
   end
 
-  # A escrita não venceu (um ajuste mais novo do agente): tira a thread de `processing` dizendo que nada entrou.
-  def marcar_sem_aplicar(token, parsed)
-    @closed = false
-    perguntar!(token, parsed, regras_do_ajuste::SUPERADO, 'so_pergunta' => false, 'conferencia' => nil)
+  # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado.
+  def sem_mudanca!(token, parsed)
+    pergunta = pergunta_do_modelo(parsed)
+    texto = resposta_ao_dono(parsed) || pergunta || texto_do_ajuste(:sem_mudanca)
+    perguntar!(token, parsed, texto, 'so_pergunta' => false, 'pergunta_pendente' => pergunta || @pendencia_anterior)
+  end
+
+  # A primeira escrita não venceu. Token perdido: outra geração desta thread é dona do turno, nada a marcar.
+  def escrita_perdida!(token, parsed)
+    motivo = motivo_da_escrita_perdida(token)
+    return if motivo == :token_perdido
+
+    texto = texto_do_ajuste(motivo == :apagado ? :agente_apagado : :superado)
+    perguntar!(token, parsed, texto, 'so_pergunta' => false, 'pergunta_pendente' => @pendencia_anterior)
+  end
+
+  def motivo_da_escrita_perdida(token)
+    viva = Autonomia::Agents::BuildThread.exists?(id: @thread.id, build_token: token,
+                                                  status: Autonomia::Agents::BuildThread.statuses[:processing])
+    return :token_perdido unless viva
+    return :apagado if Autonomia::Agents::Agent.where(id: @thread.autonomia_agent_id).where.not(deleted_at: nil).exists?
+
+    :superado
   end
 
   def perguntar!(token, parsed, texto, extra)
-    estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => texto)).merge(extra)
+    @closed = false
+    estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => texto))
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil).merge(extra)
     persist_assistant_turn!(texto) if @thread.mark_ready!(token, state: estado)
   end
 
@@ -86,89 +138,16 @@ module Autonomia::Agents::Builder::AjusteConferido
     agent.apply_builder_config!(token, attrs)
   end
 
-  def conferir_e_corrigir(token, antes, mudancas)
-    conferencia = conferir(antes, mudancas)
-    return conferencia.merge('correcao' => false) if conferencia['pendencias'].blank? || conferencia['erro']
-
-    correcao = corrigir(token, conferencia)
-    return conferencia.merge('correcao' => false) if correcao.nil?
-
-    conferir(antes, mudancas + correcao).merge('correcao' => true)
-  end
-
-  # Conferência de UMA aplicação, anotada na versão que ela gravou. A versão guarda a fala do dono; a conferência lê
-  # também a mensagem anterior do Construtor, para entender um "sim" ou "o segundo".
-  def conferir(antes, mudancas)
-    fala = regras_do_ajuste.pedido(ultima_fala_do_dono)
-    conferencia = Autonomia::Agents::ConferenciaDoAjuste.new(account: @account, credential: credential)
-                                                        .conferir(pedido: regras_do_ajuste.pedido_com_contexto(fala, mensagem_anterior),
-                                                                  mudancas: mudancas, antes: antes,
-                                                                  depois: regras_do_ajuste.retrato(@thread.agent))
-    anotar_versao(fala, mudancas, conferencia)
-    conferencia
-  end
-
-  # A anotação é rastro para a tela; falhar nela não desfaz o que já entrou no agente.
-  def anotar_versao(fala, mudancas, conferencia)
-    @thread.agent.anotar_versao_do_construtor!('pedido' => fala, 'mudancas' => mudancas, 'conferencia' => conferencia)
-  rescue ActiveRecord::ActiveRecordError => e
-    Rails.logger.warn("[autonomia][builder] anotacao da versao falhou thread=#{@thread.id} #{e.class}")
-  end
-
-  # UMA tentativa: chamada completa do Construtor, com a configuração já aplicada no contexto e o aviso do que faltou.
-  # -> a lista que a correção aplicou, ou nil quando ela não aplicou nada (a explicação dela, se houver, vai à pergunta).
-  def corrigir(token, conferencia)
-    @built_input = nil
-    parsed = parse_output(call_model(full_phase, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL,
-                                     aviso: regras_do_ajuste.item_de_correcao(conferencia)))
-    return nil if parsed.nil?
-
-    mudancas = regras_do_ajuste.mudancas(parsed)
-    if motivo_para_nao_aplicar(parsed, mudancas)
-      @explicacao_da_correcao = parsed['next_question'].to_s.strip.presence if parsed['needs_more_info'] == true
-      return nil
-    end
-    return nil unless aplicar_lista(token, parsed, mudancas)
-
-    @parsed_final = parsed
-    mudancas
-  rescue *FALHAS_DA_CORRECAO => e
-    Rails.logger.warn("[autonomia][builder] correcao indisponivel thread=#{@thread.id} #{e.class}")
-    # Agente que virou manual no meio do turno: o Construtor não fala mais com ele, então não há pergunta a fazer.
-    @sem_pergunta = e.is_a?(Autonomia::Agents::Agent::ModoManual)
-    nil
-  end
-
-  # O que ainda falta vira PERGUNTA ao dono; o que entrou fica aplicado.
-  def fechar_ajuste!(token, conferencia)
-    pergunta = pergunta_do_modelo || pergunta_da_conferencia(conferencia)
-    parsed = @parsed_final.merge('needs_more_info' => pergunta.present?, 'next_question' => pergunta.to_s)
-    estado = estado_do_ajuste(parsed).merge('applied' => true, 'truncated_fields' => @campos_truncados,
-                                            'so_pergunta' => false, 'conferencia' => conferencia)
-    marcou = @thread.mark_ready!(token, state: estado)
-    persist_assistant_turn!(pergunta) if marcou && pergunta.present?
-    log_do_ajuste(conferencia)
-  end
-
-  # A pergunta que o próprio Construtor fez sobre o que ficou vago, junto com os pedidos claros que ele aplicou.
-  def pergunta_do_modelo
-    return unless @parsed_final['needs_more_info'] == true
-
-    @parsed_final['next_question'].to_s.strip.presence
-  end
-
-  def pergunta_da_conferencia(conferencia)
-    return if conferencia['pendencias'].blank? || @sem_pergunta
-
-    regras_do_ajuste.pergunta_do_que_faltou(conferencia, explicacao: @explicacao_da_correcao)
-  end
-
-  # Só metadados: quantas conferências e correções, e quantas pendências. Nunca conteúdo.
-  def log_do_ajuste(conferencia)
-    Rails.logger.info(
-      "[autonomia][builder] ajuste thread=#{@thread.id} calls=#{@calls.size} correcao=#{conferencia['correcao'] == true} " \
-      "conferencia=#{conferencia['erro'] || 'ok'} pendencias=#{Array(conferencia['pendencias']).size}"
-    )
+  # A primeira escrita venceu: o state guarda o que um re-run precisa para só conferir e fechar (e o updated_at da
+  # thread é tocado). nil quando o token já não é o ativo.
+  def registrar_aplicacao!(token, parsed, mudancas, antes)
+    @closed = true
+    agent = @thread.agent
+    versao_id = agent.versao_do_construtor&.id
+    dados = { 'token' => token, 'inicio' => @inicio_do_ajuste.iso8601(3), 'mudancas' => mudancas, 'antes' => antes,
+              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono'), 'versao_id' => versao_id,
+              'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados }
+    dados if @thread.guardar_no_estado!(token, 'ajuste_em_curso' => dados, 'aplicado_em_token' => token)
   end
 
   # O state do turno, com o rascunho lido do AGENTE (o que de fato está gravado).
@@ -176,16 +155,17 @@ module Autonomia::Agents::Builder::AjusteConferido
     self.class.state_for(parsed.merge(regras_do_ajuste.rascunho_do_agente(@thread.agent)))
   end
 
+  # A última fala do dono, mesmo vazia (turno só com imagem).
   def ultima_fala_do_dono
-    Array(@thread.messages).reverse.find { |m| m['role'] == 'user' && m['content'].to_s.present? }.to_h['content']
+    Array(@thread.messages).reverse.find { |m| m['role'] == 'user' }.to_h['content'].to_s
   end
 
   # A mensagem do Construtor logo antes da última fala do dono, ou a pergunta herdada da sessão anterior.
   def mensagem_anterior
-    mensagens = Array(@thread.messages).select { |m| m['content'].to_s.present? }
+    mensagens = Array(@thread.messages)
     indice = mensagens.rindex { |m| m['role'] == 'user' }
     anterior = indice&.positive? ? mensagens[indice - 1] : nil
-    return anterior['content'].to_s if anterior && anterior['role'] == 'assistant'
+    return anterior['content'].to_s if anterior && anterior['role'] == 'assistant' && anterior['content'].present?
 
     @thread.state.to_h['pending_question'].to_s
   end

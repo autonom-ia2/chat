@@ -215,6 +215,26 @@ describe('MudarConversando', () => {
     wrapper.unmount();
   });
 
+  // #1428 — part of the request went in and the builder still asks about the
+  // rest: the screen shows what went in, with the question open below it.
+  it('shows that something went in while the builder still asks a question', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getMessages`] = [
+      { role: 'user', content: 'Curto e melhore a saudação' },
+      { role: 'assistant', content: 'Como você quer a saudação?' },
+    ];
+    store.state[`${ESTADO}getStatus`] = 'open';
+    store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
+    await nextTick();
+
+    expect(no('[data-feito]')).not.toBeNull();
+    expect(no('[data-jeito-novo]')).not.toBeNull();
+    expect(todos('[data-mensagem="assistant"]').pop().textContent).toContain(
+      'Como você quer a saudação?'
+    );
+    wrapper.unmount();
+  });
+
   it('says nothing about the name when it did not change', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getAgent`] = { ...AGENTE };

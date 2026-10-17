@@ -1,70 +1,10 @@
 require 'rails_helper'
 
-# #1428 (tema 6, parte 2) — "Mudar conversando" aplica o pedido inteiro, só ele, e confere. Só no piloto (Fase 2) e só
-# no ajuste. O Construtor e a conferência são dublados; quem lê a fala de verdade é o eval pago
-# (builder_ajuste_por_lista_eval_spec).
+# #1428 (tema 6, parte 2) — "Mudar conversando" aplica o pedido inteiro, só ele, e nunca diz "Pronto" sem ter feito. Só
+# no piloto (Fase 2) e só no ajuste. O Construtor e a conferência são dublados (spec/support/ajuste_por_lista_contexto);
+# a conferência e a correção estão em builder_ajuste_conferido_spec, e quem lê a fala de verdade é o eval pago.
 RSpec.describe Autonomia::Agents::Builder do
-  let(:account) { conta_da_fase2 }
-  let(:agent) do
-    Autonomia::Agents::Agent.create!(
-      account: account, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: 'Atenda o cliente da corretora com cordialidade.', scaffold: 'andaime', tone: 'cordial',
-      greeting: 'Oi! Aqui é o Hubber.', fallback_message: 'Vou confirmar com a equipe.',
-      handoff_rule: 'Passe para a equipe quando o cliente pedir.', starter_questions: ['Como funciona?'],
-      human_card: 'O Hubber atende os clientes.', config: { 'guardrails' => ['Não invente valores.'], 'voice' => 'masculina',
-                                                            'with_knowledge' => false }
-    )
-  end
-  let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agent) }
-  let(:builder) { described_class.new(account: account, build_thread: thread) }
-  let(:fake_client) { instance_double(Crm::Ai::ResponsesClient) }
-  let(:conferente) { instance_double(Autonomia::Agents::ConferenciaDoAjuste) }
-  let(:calls) { [] }
-  let(:respostas) { [] }
-  let(:conferencias) { [] }
-  let(:fala) { 'Responda em no máximo 2 frases' }
-
-  # A saída do Construtor no ajuste: a config atual, com o que o teste mudar por cima.
-  def saida(overrides = {})
-    { 'name' => 'Hubber', 'agent_type' => 'support', 'instruction' => agent.instruction, 'scaffold' => 'andaime',
-      'human_card' => agent.human_card, 'greeting' => agent.greeting, 'fallback_message' => agent.fallback_message,
-      'handoff_rule' => agent.handoff_rule, 'starter_questions' => agent.starter_questions, 'tone' => agent.tone,
-      'guardrails' => ['Não invente valores.'], 'voice' => 'masculina', 'needs_more_info' => false, 'next_question' => '',
-      'user_asked_to_close' => false, 'so_pergunta' => false, 'mudancas' => [] }.merge(overrides)
-  end
-
-  def tudo_atendido(pedido = fala)
-    { 'itens' => [{ 'pedido' => pedido, 'atendido' => true, 'onde' => 'tone e instruction', 'observacao' => 'Entrou.' }],
-      'conflitos' => [], 'pergunta' => '', 'pendencias' => [] }
-  end
-
-  def faltou(pedido)
-    { 'itens' => [{ 'pedido' => pedido, 'atendido' => false, 'onde' => '', 'observacao' => 'Não aparece no agente.' }],
-      'conflitos' => [], 'pergunta' => 'Você quer dizer passar para a equipe quando perguntarem preço?',
-      'pendencias' => [pedido] }
-  end
-
-  before do
-    allow(builder).to receive_messages(credential: { api_key: 'chave-de-teste' }, client: fake_client)
-    allow(fake_client).to receive(:create) do |**params|
-      calls << params
-      resposta = respostas.shift || saida
-      raise Crm::Ai::ResponsesClient::Error, 'timeout' if resposta == :falha
-
-      { text: resposta.to_json, usage: {}, tools_used: [] }
-    end
-    allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new).and_return(conferente)
-    allow(conferente).to receive(:conferir) { conferencias.shift || tudo_atendido }
-    thread.append_message!('user', fala)
-  end
-
-  def run_turn
-    builder.run!(thread.begin_build!)
-  end
-
-  def versoes_do_construtor
-    agent.instruction_versions.where(reason: 'builder_adjust')
-  end
+  include_context 'with ajuste por lista'
 
   describe 'fora da Fase 2' do
     let(:account) { conta_da_fase2(ligada: false) }
@@ -77,9 +17,9 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(calls.size).to eq(1)
       expect(calls.first[:schema]).to equal(described_class::BUILDER_SCHEMA)
-      expect(calls.first[:schema][:schema][:properties].keys).not_to include(:so_pergunta, :mudancas)
+      expect(calls.first[:schema][:schema][:properties].keys).not_to include(:so_pergunta, :mudancas, :resposta_ao_dono)
       expect(calls.first[:input]).to eq(esperado)
-      expect(calls.first[:input].pluck(:role)).not_to include('developer')
+      expect(calls.first.keys).not_to include(:timeout)
       expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
     end
 
@@ -89,8 +29,8 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(agent.reload.greeting).to eq('Olá!')
-      expect(thread.reload.state).to include('applied' => true)
-      expect(thread.state.keys).not_to include('so_pergunta', 'conferencia')
+      expect(estado).to include('applied' => true)
+      expect(estado.keys).not_to include('so_pergunta', 'conferencia', 'pergunta_pendente', 'ajuste_em_curso')
     end
   end
 
@@ -100,11 +40,16 @@ RSpec.describe Autonomia::Agents::Builder do
 
       schema = calls.first[:schema]
       expect(schema).to equal(described_class::AjustePorLista::SCHEMA)
-      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas')
+      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono')
       expect(schema[:schema][:properties][:mudancas][:items][:properties][:campo][:enum])
         .to eq(%w[instruction tone handoff_rule greeting fallback_message starter_questions guardrails human_card name voice])
       expect(calls.first[:input].first).to eq(described_class::AjustePorLista.item_da_tabela)
       expect(calls.first[:instructions]).to equal(described_class::MOTHER_INSTRUCTION)
+    end
+
+    it 'a tabela manda responder o que o agente faz hoje pelo cartão e pelo comportamento visível, citando a seção 11' do
+      expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('human_card', 'comportamento visivel',
+                                                                            'secao 11', 'resposta_ao_dono')
     end
 
     describe 'quando a fala é só pergunta (so_pergunta=true)' do
@@ -116,30 +61,20 @@ RSpec.describe Autonomia::Agents::Builder do
       it 'não aplica, não grava versão e devolve a resposta' do
         expect { run_turn }.not_to(change { [agent.reload.attributes.except('updated_at'), versoes_do_construtor.count] })
 
-        expect(thread.reload.state).to include('needs_more_info' => true, 'next_question' => resposta, 'applied' => false,
-                                               'so_pergunta' => true, 'conferencia' => nil)
+        expect(estado).to include('needs_more_info' => true, 'next_question' => resposta, 'applied' => false,
+                                  'so_pergunta' => true, 'conferencia' => nil, 'pergunta_pendente' => '')
         expect(thread.messages.last).to include('role' => 'assistant', 'content' => resposta)
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
       end
 
       it 'mesmo com uma lista junto, nada entra' do
         respostas.replace([saida('so_pergunta' => true, 'next_question' => resposta, 'greeting' => 'Outra',
-                                 'mudancas' => [{ 'pedido' => 'x', 'campo' => 'greeting', 'resumo' => 'y' }])])
+                                 'mudancas' => [mudanca('greeting')])])
 
         run_turn
 
         expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
-        expect(thread.reload.state).to include('applied' => false, 'next_question' => resposta)
-      end
-
-      it 'com a Fase 2 desligada depois, a chave antiga não muda nada: vale a herança de antes' do
-        run_turn
-        Autonomia::Agents::Fase2.desligar!(account)
-
-        proxima = Autonomia::Agents::BuildThread.create!(account: account.reload, agent: agent)
-        proxima.inherit_pending_question!
-
-        expect(proxima.reload.state['pending_question']).to eq(resposta)
+        expect(estado).to include('applied' => false, 'next_question' => resposta)
       end
 
       it 'a resposta não vira pergunta pendente no turno seguinte nem na próxima sessão' do
@@ -150,18 +85,53 @@ RSpec.describe Autonomia::Agents::Builder do
         proxima.inherit_pending_question!
         expect(proxima.reload.state.to_h['pending_question']).to be_nil
       end
+
+      it 'com a Fase 2 desligada depois, a chave nova não muda nada: vale a herança de antes' do
+        run_turn
+        Autonomia::Agents::Fase2.desligar!(account)
+
+        proxima = Autonomia::Agents::BuildThread.create!(account: account.reload, agent: agent)
+        proxima.inherit_pending_question!
+
+        expect(proxima.reload.state['pending_question']).to eq(resposta)
+      end
+    end
+
+    # Prova D da revisão: a pergunta do dono no meio de um esclarecimento aberto não apaga a pendência.
+    describe 'quando há um esclarecimento aberto e o dono faz uma pergunta' do
+      let(:fala) { 'Mude o tom' }
+
+      before do
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
+        run_turn
+        thread.append_message!('user', 'O que você faz hoje?')
+        respostas << saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.')
+        described_class.new(account: account, build_thread: thread.reload).tap do |segundo|
+          allow(segundo).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+          segundo.run!(thread.begin_build!)
+        end
+      end
+
+      it 'a pendência anterior continua: no turno seguinte e na próxima sessão' do
+        terceiro = described_class.new(account: account, build_thread: thread.reload)
+
+        expect(terceiro.send(:pending_request_context)).to include('Mais formal ou informal?')
+        proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+        proxima.inherit_pending_question!
+        expect(proxima.reload.state['pending_question']).to eq('Mais formal ou informal?')
+      end
     end
 
     describe 'quando a lista vem vazia' do
       before { respostas << saida('greeting' => 'Olá, mudei!', 'next_question' => 'Pronto!') }
 
-      it 'não aplica nem diz "Pronto": pergunta o que mudar' do
+      it 'não aplica nem diz "Pronto": pergunta o que mudar, e o texto fixo não vira pendência' do
         run_turn
 
         expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
         expect(versoes_do_construtor).to be_empty
-        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => false, 'so_pergunta' => false,
-                                               'next_question' => described_class::AjustePorLista::SEM_PEDIDO)
+        expect(estado).to include('needs_more_info' => true, 'applied' => false, 'so_pergunta' => false,
+                                  'next_question' => texto(:sem_pedido), 'pergunta_pendente' => '')
       end
     end
 
@@ -171,12 +141,13 @@ RSpec.describe Autonomia::Agents::Builder do
                            'tone' => 'curto')
       end
 
-      it 'não aplica e devolve a pergunta dele' do
+      it 'não aplica e a pergunta dele é a pendência' do
         run_turn
 
         expect(agent.reload.tone).to eq('cordial')
-        expect(thread.reload.state).to include('needs_more_info' => true, 'so_pergunta' => false, 'applied' => false,
-                                               'next_question' => 'Duas frases no total ou por mensagem?')
+        expect(estado).to include('needs_more_info' => true, 'applied' => false,
+                                  'next_question' => 'Duas frases no total ou por mensagem?',
+                                  'pergunta_pendente' => 'Duas frases no total ou por mensagem?')
       end
     end
 
@@ -186,8 +157,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       before do
         respostas << saida('needs_more_info' => true, 'next_question' => pergunta, 'tone' => 'cordial e curto',
-                           'mudancas' => [{ 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'Curto.' }])
-        conferencias << faltou('melhore a saudação')
+                           'mudancas' => [mudanca('tone', 'no máximo 2 frases')])
+        conferencias << { nao: [0] }
       end
 
       it 'o claro entra, a pergunta dele segue para o dono e não há correção' do
@@ -196,65 +167,70 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(agent.reload.tone).to eq('cordial e curto')
         expect(calls.size).to eq(1)
         expect(conferente).to have_received(:conferir).once
-        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta)
+        expect(estado).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta,
+                                  'pergunta_pendente' => pergunta)
         expect(thread.messages.last).to include('role' => 'assistant', 'content' => pergunta)
+      end
+    end
+
+    # D da revisão (e prova C): pedido claro com pergunta do dono no mesmo turno.
+    describe 'quando a fala traz pedido e pergunta' do
+      let(:fala) { 'Responda curto. E o que você faz hoje?' }
+
+      it 'aplica e entrega a resposta_ao_dono junto, sem virar pendência' do
+        respostas << saida('tone' => 'curto', 'resposta_ao_dono' => 'Hoje eu atendo os clientes.',
+                           'mudancas' => [mudanca('tone', 'curto')])
+
+        run_turn
+
+        expect(agent.reload.tone).to eq('curto')
+        expect(estado).to include('needs_more_info' => false, 'applied' => true, 'pergunta_pendente' => '')
+        expect(thread.messages.last).to include('role' => 'assistant', 'content' => 'Hoje eu atendo os clientes.')
+      end
+
+      it 'a resposta que o modelo pôs em next_question, sem pergunta dele, também chega ao dono' do
+        respostas << saida('tone' => 'curto', 'next_question' => 'Hoje eu atendo...', 'mudancas' => [mudanca('tone', 'curto')])
+
+        run_turn
+
+        expect(estado).to include('needs_more_info' => false, 'applied' => true)
+        expect(thread.messages.last).to include('role' => 'assistant', 'content' => 'Hoje eu atendo...')
+      end
+    end
+
+    # C da revisão (e prova B): a escrita que não muda nada não fecha como aplicada.
+    describe 'quando o modelo lista um campo e devolve o mesmo valor' do
+      let(:fala) { 'Me explica o que faz hoje' }
+
+      before { respostas << saida('mudancas' => [mudanca('human_card', 'explica', 'Expliquei.')]) }
+
+      it 'vira resposta: needs_more_info, sem aplicado, sem conferência e sem versão na lista' do
+        run_turn
+
+        expect(estado).to include('needs_more_info' => true, 'applied' => false, 'next_question' => texto(:sem_mudanca),
+                                  'pergunta_pendente' => '')
+        expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
+        expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to be_empty
       end
     end
 
     describe 'quando um campo essencial listado vem em branco' do
       it 'não grava instrução vazia: pede mais contexto' do
-        respostas << saida('instruction' => '', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'instruction', 'resumo' => 'x' }])
+        respostas << saida('instruction' => '', 'mudancas' => [mudanca('instruction')])
 
         run_turn
 
         expect(agent.reload.instruction).to eq('Atenda o cliente da corretora com cordialidade.')
-        expect(thread.reload.state['next_question']).to eq(described_class::AjustePorLista::INCOMPLETO)
+        expect(estado['next_question']).to eq(texto(:incompleto))
       end
 
       it 'não grava nome vazio' do
-        respostas << saida('name' => ' ', 'mudancas' => [{ 'pedido' => 'tira o nome', 'campo' => 'name', 'resumo' => 'x' }])
+        respostas << saida('name' => ' ', 'mudancas' => [mudanca('name', 'tira o nome')])
 
         run_turn
 
         expect(agent.reload.name).to eq('Hubber')
-        expect(thread.reload.state['next_question']).to eq(described_class::AjustePorLista::INCOMPLETO)
-      end
-    end
-
-    describe 'quando um ajuste mais novo do agente já começou' do
-      before do
-        respostas << saida('tone' => 'curto', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'x' }])
-        thread
-        Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
-      end
-
-      it 'nada entra, e a tela não ouve "Pronto"' do
-        run_turn
-
-        expect(agent.reload.tone).to eq('cordial')
-        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => false,
-                                               'next_question' => described_class::AjustePorLista::SUPERADO)
-        expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
-      end
-    end
-
-    describe 'quando a fala responde a uma pergunta do Construtor' do
-      let(:fala) { 'sim' }
-
-      before do
-        thread.update!(messages: [{ 'role' => 'user', 'content' => 'Deixe as respostas curtas' },
-                                  { 'role' => 'assistant', 'content' => 'No máximo 2 frases?' },
-                                  { 'role' => 'user', 'content' => 'sim' }])
-        mudanca = { 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'x' }
-        respostas << saida('tone' => 'curto', 'mudancas' => [mudanca])
-      end
-
-      it 'a conferência lê a pergunta anterior junto, e a versão guarda só a fala do dono' do
-        run_turn
-
-        expect(conferente).to have_received(:conferir)
-          .with(hash_including(pedido: "Mensagem anterior do Construtor: No máximo 2 frases?\nResposta do dono: sim"))
-        expect(versoes_do_construtor.sole.metadata['pedido']).to eq('sim')
+        expect(estado['next_question']).to eq(texto(:incompleto))
       end
     end
 
@@ -263,7 +239,7 @@ RSpec.describe Autonomia::Agents::Builder do
         respostas << saida('tone' => 'cordial; responde em no máximo 2 frases', 'greeting' => 'Saudação reescrita',
                            'agent_type' => 'sdr', 'voice' => 'feminina', 'guardrails' => ['Outra regra'],
                            'handoff_rule' => 'Outra regra de passagem', 'name' => 'Outro nome',
-                           'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'Respostas curtas.' }])
+                           'mudancas' => [mudanca('tone', fala, 'Respostas curtas.')])
       end
 
       it 'só os campos listados mudam: a saudação, o tipo, a voz e o resto ficam idênticos' do
@@ -274,17 +250,15 @@ RSpec.describe Autonomia::Agents::Builder do
         agent.reload
         expect(agent.tone).to eq('cordial; responde em no máximo 2 frases')
         expect(agent.attributes.except('tone', 'updated_at')).to eq(antes)
-        expect(thread.reload.state['draft_config']).to include('greeting' => 'Oi! Aqui é o Hubber.', 'agent_type' => 'support',
-                                                               'tone' => 'cordial; responde em no máximo 2 frases')
+        expect(estado['draft_config']).to include('greeting' => 'Oi! Aqui é o Hubber.', 'agent_type' => 'support',
+                                                  'tone' => 'cordial; responde em no máximo 2 frases')
       end
     end
 
     describe 'quando a instrução está na lista' do
       before do
         respostas << saida('instruction' => 'Nova instrução.', 'scaffold' => 'novo andaime', 'human_card' => 'Novo cartão.',
-                           'voice' => 'feminina',
-                           'mudancas' => [{ 'pedido' => fala, 'campo' => 'instruction', 'resumo' => 'x' },
-                                          { 'pedido' => 'voz feminina', 'campo' => 'voice', 'resumo' => 'y' }])
+                           'voice' => 'feminina', 'mudancas' => [mudanca('instruction'), mudanca('voice', 'voz feminina')])
       end
 
       it 'leva junto o andaime e o cartão; a voz entra no config sem apagar as outras chaves' do
@@ -297,169 +271,8 @@ RSpec.describe Autonomia::Agents::Builder do
       end
     end
 
-    describe 'com tudo atendido na conferência' do
-      let(:mudancas) do
-        [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'Respostas curtas.' },
-         { 'pedido' => fala, 'campo' => 'instruction', 'resumo' => 'No máximo 2 frases.' }]
-      end
-
-      before do
-        respostas << saida('tone' => 'cordial e curto', 'instruction' => 'Responda em no máximo 2 frases.',
-                           'mudancas' => mudancas, 'next_question' => '')
-      end
-
-      it 'chama a conferência com a fala, a lista e o agente antes e depois' do
-        run_turn
-
-        expect(Autonomia::Agents::ConferenciaDoAjuste).to have_received(:new).with(account: account, credential: anything).once
-        expect(conferente).to have_received(:conferir).once.with(
-          pedido: fala, mudancas: mudancas,
-          antes: hash_including('tone' => 'cordial', 'instruction' => 'Atenda o cliente da corretora com cordialidade.',
-                                'greeting' => 'Oi! Aqui é o Hubber.', 'voice' => 'masculina'),
-          depois: hash_including('tone' => 'cordial e curto', 'instruction' => 'Responda em no máximo 2 frases.')
-        )
-      end
-
-      it 'guarda o resultado no state e na versão builder_adjust, e fecha sem pergunta' do
-        run_turn
-
-        expect(thread.reload.state).to include('needs_more_info' => false, 'applied' => true, 'so_pergunta' => false,
-                                               'conferencia' => tudo_atendido.merge('correcao' => false))
-        versao = versoes_do_construtor.sole
-        expect(versao.metadata).to include('pedido' => fala, 'mudancas' => mudancas, 'conferencia' => tudo_atendido)
-        expect(versao.metadata['agente']).to include('tone' => 'cordial e curto')
-        expect(calls.size).to eq(1)
-      end
-    end
-
-    describe 'quando a conferência acha falta' do
-      let(:preco) { 'preço passa para a equipe' }
-      let(:fala) { "Responda em no máximo 2 frases e #{preco}" }
-
-      before do
-        respostas << saida('tone' => 'cordial e curto',
-                           'mudancas' => [{ 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'Curto.' }])
-        conferencias << faltou(preco)
-      end
-
-      it 'faz UMA correção com o aviso do que faltou e confere de novo' do
-        respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
-                           'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'Preço vai à equipe.' }])
-        conferencias << tudo_atendido(preco)
-
-        run_turn
-
-        expect(calls.size).to eq(2)
-        aviso = calls.last[:input].last
-        expect(aviso[:role]).to eq('developer')
-        expect(aviso[:content].first[:text]).to include('faltou aplicar', preco)
-        expect(calls.last[:input]).to include(hash_including(content: [hash_including(text: a_string_including('tone: cordial e curto'))]))
-        expect(agent.reload).to have_attributes(tone: 'cordial e curto', handoff_rule: 'Passe para a equipe quando perguntarem preço.')
-        expect(conferente).to have_received(:conferir).twice
-      end
-
-      it 'com a correção atendida, fecha sem pergunta e cada versão leva a sua conferência' do
-        respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
-                           'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'Preço vai à equipe.' }])
-        conferencias << tudo_atendido(preco)
-
-        run_turn
-
-        expect(thread.reload.state).to include('needs_more_info' => false, 'applied' => true)
-        expect(thread.state['conferencia']).to include('correcao' => true, 'pendencias' => [])
-        expect(versoes_do_construtor.order(:id).map { |versao| versao.metadata['conferencia'] })
-          .to eq([faltou(preco), tudo_atendido(preco)])
-      end
-
-      it 'se ainda faltar, vira pergunta ao dono e o que entrou fica aplicado' do
-        respostas << saida('handoff_rule' => 'Outra coisa.',
-                           'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'x' }])
-        conferencias << faltou(preco)
-
-        run_turn
-
-        expect(calls.size).to eq(2)
-        expect(agent.reload.tone).to eq('cordial e curto')
-        estado = thread.reload.state
-        expect(estado).to include('needs_more_info' => true, 'applied' => true, 'so_pergunta' => false)
-        expect(estado['next_question'])
-          .to eq("Não consegui aplicar: #{preco}. Você quer dizer passar para a equipe quando perguntarem preço?")
-        expect(estado['conferencia']).to include('correcao' => true, 'pendencias' => [preco])
-        expect(thread.messages.last).to include('role' => 'assistant', 'content' => estado['next_question'])
-      end
-
-      it 'se a correção não aplicar nada, vira pergunta sem segunda conferência' do
-        respostas << saida('needs_more_info' => true, 'next_question' => 'Qual equipe?')
-
-        run_turn
-
-        expect(conferente).to have_received(:conferir).once
-        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true)
-        expect(thread.state['next_question']).to eq("Não consegui aplicar: #{preco}. Qual equipe?")
-        expect(thread.state['conferencia']).to include('correcao' => false)
-      end
-
-      # A segunda aplicação (a da correção) falha; a primeira já venceu.
-      def falhar_na_correcao(erro)
-        vezes = 0
-        allow(builder).to receive(:aplicar_lista).and_wrap_original do |original, *args|
-          vezes += 1
-          raise erro if vezes == 2
-
-          original.call(*args)
-        end
-      end
-
-      it 'erro de banco na correção não vira falha: o que entrou fica aplicado' do
-        respostas << saida('handoff_rule' => 'x', 'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'x' }])
-        falhar_na_correcao(ActiveRecord::StatementInvalid.new('falhou'))
-
-        run_turn
-
-        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true)
-        expect(agent.reload.tone).to eq('cordial e curto')
-      end
-
-      it 'agente que virou manual durante a correção: fecha sem pergunta ao dono' do
-        respostas << saida('handoff_rule' => 'x', 'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'x' }])
-        falhar_na_correcao(Autonomia::Agents::Agent::ModoManual)
-
-        run_turn
-
-        expect(thread.reload.state).to include('needs_more_info' => false, 'next_question' => '', 'applied' => true)
-      end
-
-      it 'se a chamada da correção falhar, o que entrou fica aplicado e o turno não vira falha' do
-        respostas << :falha
-
-        run_turn
-
-        expect(agent.reload.tone).to eq('cordial e curto')
-        expect(thread.reload).to be_ready
-        expect(thread.state).to include('needs_more_info' => true, 'applied' => true)
-        expect(thread.state['next_question']).to start_with("Não consegui aplicar: #{preco}.")
-      end
-    end
-
-    describe 'quando a conferência está indisponível' do
-      before do
-        respostas << saida('tone' => 'curto', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'x' }])
-        conferencias << Autonomia::Agents::ConferenciaDoAjuste::INDISPONIVEL.dup
-      end
-
-      it 'o que entrou fica aplicado, sem correção, e o state registra a falta da conferência' do
-        run_turn
-
-        expect(calls.size).to eq(1)
-        expect(agent.reload.tone).to eq('curto')
-        expect(thread.reload.state['conferencia']).to include('erro' => 'conferencia_indisponivel')
-      end
-    end
-
     describe 'as recusas continuam' do
-      before do
-        respostas << saida('tone' => 'curto', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'x' }])
-      end
+      before { respostas << saida('tone' => 'curto', 'mudancas' => [mudanca('tone')]) }
 
       it 'a Lia (insurance_quote) nunca muda' do
         lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote',
@@ -477,6 +290,43 @@ RSpec.describe Autonomia::Agents::Builder do
         expect { run_turn }.to raise_error(Autonomia::Agents::Agent::ModoManual)
         expect(agent.reload.tone).to eq('cordial')
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
+      end
+    end
+
+    describe 'quando a primeira escrita não vence' do
+      before { respostas << saida('tone' => 'curto', 'mudancas' => [mudanca('tone')]) }
+
+      it 'um ajuste mais novo do agente já começou: nada entra, e a tela não ouve "Pronto"' do
+        thread
+        Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+
+        run_turn
+
+        expect(agent.reload.tone).to eq('cordial')
+        expect(estado).to include('needs_more_info' => true, 'applied' => false, 'next_question' => texto(:superado))
+      end
+
+      it 'o agente foi apagado no meio do turno: mensagem própria' do
+        allow_any_instance_of(Autonomia::Agents::Agent).to receive(:apply_builder_config!) do # rubocop:disable RSpec/AnyInstance
+          Autonomia::Agents::Agent.where(id: agent.id).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          false
+        end
+
+        run_turn
+
+        expect(estado).to include('needs_more_info' => true, 'applied' => false, 'next_question' => texto(:agente_apagado))
+      end
+
+      it 'o token foi perdido (outra geração desta thread assumiu): não marca nada' do
+        allow_any_instance_of(Autonomia::Agents::Agent).to receive(:apply_builder_config!) do # rubocop:disable RSpec/AnyInstance
+          Autonomia::Agents::BuildThread.where(id: thread.id).update_all(build_token: 'outro') # rubocop:disable Rails/SkipsModelValidations
+          false
+        end
+
+        run_turn
+
+        expect(thread.reload).to be_processing
+        expect(estado.to_h['next_question']).to be_nil
       end
     end
   end

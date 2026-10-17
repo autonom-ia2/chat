@@ -83,13 +83,30 @@ module Autonomia::Agents::AgentVersioning
     venceu
   end
 
-  # #1428 (tema 6, parte 2) — junta à versão que a última aplicação do Construtor gravou neste objeto o que o dono
-  # pediu e a conferência (`pedido`, `mudancas`, `conferencia`), para a tela da parte 3. No-op quando a aplicação não
-  # gravou versão (fora do piloto, escrita que não venceu).
-  def anotar_versao_do_construtor!(dados)
-    return if @versao_do_construtor.nil?
+  # #1428 (tema 6, parte 2) — a versão que a última aplicação do Construtor gravou neste objeto (nil fora do piloto ou
+  # quando a escrita não venceu).
+  def versao_do_construtor
+    @versao_do_construtor
+  end
 
-    @versao_do_construtor.update!(metadata: @versao_do_construtor.metadata.to_h.merge(dados))
+  # Junta a uma versão deste agente o que o dono pediu e a conferência (`pedido`, `mudancas`, `conferencia`), para a
+  # tela da parte 3. No-op sem a versão.
+  def anotar_versao!(versao_id, dados)
+    versao = versao_id && instruction_versions.find_by(id: versao_id)
+    versao&.update!(metadata: versao.metadata.to_h.merge(dados))
+  end
+
+  # Uma aplicação, uma versão na lista: no turno com correção, a versão da primeira escrita sai da lista (fica no
+  # banco, com `corrigida_por`) e a da correção leva `correcao_de`.
+  def marcar_correcao!(primeira_id, correcao_id)
+    primeira = instruction_versions.find_by(id: primeira_id)
+    correcao = instruction_versions.find_by(id: correcao_id)
+    return if primeira.nil? || correcao.nil?
+
+    transaction do
+      correcao.update!(metadata: correcao.metadata.to_h.merge('correcao_de' => primeira.id))
+      primeira.update!(metadata: primeira.metadata.to_h.merge('fora_da_lista' => true, 'corrigida_por' => correcao.id))
+    end
   end
 
   private

@@ -10,6 +10,7 @@ module Autonomia
     class Builder
       # #1428 (tema 6, parte 2): o ajuste do piloto por lista de mudanças, com conferência. Fora do piloto não roda.
       include AjusteConferido
+      include FechamentoDoAjuste
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
@@ -749,6 +750,10 @@ module Autonomia
         @full_asked_to_close = nil
         @user_asked_to_close = nil
         @materials_gate_decision = nil
+        # #1428 — ajuste do piloto: credencial resolvida uma vez no começo do turno, e o re-run de um turno que já
+        # gravou (mesmo token) não chama o Construtor de novo: vai direto conferir e fechar.
+        return retomar_ajuste!(token) if ajuste_da_fase2? && preparar_ajuste!(token) == :retomar
+
         text = single_full_call? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
         log_turn
@@ -776,8 +781,9 @@ module Autonomia
       # deixa a completa ler do cache o que a enxuta acabou de escrever (#1367). A enxuta só acrescenta, no FIM, o
       # aviso LEAN_TURN_NOTE e desliga a busca por tool_choice 'none', que não mexe no prefixo (doc da OpenAI,
       # "Prompt caching": desligar ferramenta por tool_choice em vez de tirá-la da lista).
-      # `aviso` (#1428, só no ajuste do piloto): item developer no FIM do input, o da tentativa de correção.
-      def call_model(phase, reasoning_effort, lean: false, aviso: nil)
+      # `aviso` e `correcao` (#1428, só no ajuste do piloto): os itens da tentativa de correção no FIM do input, com o
+      # cliente de teto menor.
+      def call_model(phase, reasoning_effort, lean: false, aviso: nil, correcao: false)
         tools = Crm::Ai::WebSearch.tools
         params = { model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
                    schema: builder_schema, reasoning_effort: reasoning_effort, tools: tools }
@@ -785,8 +791,9 @@ module Autonomia
           params[:input] = built_input + [{ role: 'developer', content: [{ type: 'input_text', text: LEAN_TURN_NOTE }] }]
           params[:tool_choice] = 'none' if tools.present?
         end
-        params[:input] = built_input + [aviso] if aviso
-        result = client(phase).create(**params)
+        params[:input] = built_input + Array.wrap(aviso) if aviso
+        params[:timeout] = FechamentoDoAjuste::TIMEOUT_DA_CORRECAO_S if correcao
+        result = (correcao ? cliente_da_correcao : client(phase)).create(**params)
         @calls << { phase: phase, lean: lean, tools: lean ? nil : tools, result: result }
         result[:text]
       end
@@ -992,9 +999,10 @@ module Autonomia
         state = @thread.state.to_h
         inherited = state['pending_question'].to_s.strip
         return inherited if inherited.present?
+        # #1428: no ajuste do piloto, a pendência de verdade (a resposta a uma pergunta do dono e os avisos fixos nunca
+        # são pendência).
+        return state['pergunta_pendente'].to_s.strip if ajuste_da_fase2? && state.key?('pergunta_pendente')
         return '' unless adjust_mode? && state['needs_more_info'] == true
-        # #1428: a resposta a uma pergunta do dono (so_pergunta) não é pergunta pendente.
-        return '' if state['so_pergunta'] == true && ajuste_da_fase2?
 
         state['next_question'].to_s.strip
       end
@@ -1805,11 +1813,14 @@ module Autonomia
                                                          account: @account, cache_key: "agente_builder:#{@account.id}")
       end
 
+      # Resolvida uma vez por turno (#1428): as chamadas do turno usam a mesma credencial.
       def credential
-        cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
-        raise Crm::Ai::ResponsesClient::Error, 'ai_not_configured' if cred.blank?
+        @credential ||= begin
+          cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
+          raise Crm::Ai::ResponsesClient::Error, 'ai_not_configured' if cred.blank?
 
-        cred
+          cred
+        end
       end
     end
   end

@@ -48,7 +48,12 @@ module AvaliacaoDoAjustePorLista
     # Revisão do #1428: o "sim" que responde a um esclarecimento é o pedido inteiro, não uma fala vazia.
     { nome: 'responde_ao_esclarecimento', fala: 'sim', aplica: true,
       historico: [['user', 'Deixe as respostas mais curtas'], ['assistant', 'Quer no máximo 2 frases por resposta?']],
-      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases: o "sim" confirmou a pergunta anterior.' }
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases: o "sim" confirmou a pergunta anterior.' },
+    # Revisão do #1428 (D): pedido claro e pergunta do dono no mesmo turno. O pedido entra e a resposta chega junto.
+    { nome: 'pedido_e_pergunta', fala: 'Responda em no máximo 2 frases. E o que o Hubber faz hoje?', aplica: true,
+      so: %w[tone instruction human_card],
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases E a resposta ao dono explica, com palavras ' \
+             'simples, o que o Hubber faz hoje, sem copiar trechos da instrução.' }
   ].freeze
 
   VEREDITO = {
@@ -139,7 +144,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
 
   def aplicou_sem_falta?(cena, estado)
     atendidos = Array(estado.dig('conferencia', 'itens')).count { |item| item['atendido'] }
-    estado['applied'] == true && Array(estado.dig('conferencia', 'pendencias')).empty? && atendidos >= cena[:itens].to_i
+    estado['applied'] == true && estado.dig('conferencia', 'falta') == false && atendidos >= cena[:itens].to_i
   end
 
   def so_os_permitidos?(cena, antes, depois)
