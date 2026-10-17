@@ -30,6 +30,17 @@ module Waha::RichNative::TurnKinds
     kinds.include?(:unsupported) ? Waha::RichNative::AgentTurnGuard::UNSUPPORTED_REASON : Waha::RichNative::AgentTurnGuard::DELETED_REASON
   end
 
+  # O motivo para calar o turno inteiro, a regra do settle (Waha::RichNative::AgentTurnGuard) e do rastro da bolha
+  # (Waha::RichNative::UnsupportedTurnJob): o voto/resposta que não vale mais sai do turno; sem nada que sobre, a
+  # escolha retirada; na caixa WAHA com a flag (`waha`), o que sobra sem conteúdo (silent_reason). nil: responder.
+  def turn_silence(turn_messages, waha: true)
+    remaining = turn_messages.select { |message| choice_current?(message) }
+    return Waha::RichNative::AgentTurnGuard::STALE_CHOICE_REASON if turn_messages.any? && remaining.empty?
+    return unless waha
+
+    silent_reason(remaining)
+  end
+
   # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda é a guardada? Mensagem que não é
   # escolha: sempre.
   def choice_current?(message)

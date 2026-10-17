@@ -8,6 +8,7 @@
 class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
   queue_as :medium
   EVENT_TYPE = :skipped_mensagem_sem_suporte
+  SILENCE_TYPES = %i[skipped_mensagem_sem_suporte skipped_mensagem_apagada skipped_escolha_retirada].freeze
 
   def perform(conversation_id, message_id, phase = 'trigger')
     message = Message.find_by(id: message_id, conversation_id: conversation_id)
@@ -15,7 +16,8 @@ class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
     return if agent.nil?
     return wait_for_the_turn(agent, conversation_id, message_id) unless phase == 'settle'
 
-    record!(agent, message.conversation, message) if silent_turn?(message.conversation, message)
+    turn = turn_of(message.conversation, message)
+    record!(agent, message.conversation, message, turn) if Waha::RichNative::TurnKinds.turn_silence(turn).present?
   end
 
   private
@@ -31,18 +33,22 @@ class Waha::RichNative::UnsupportedTurnJob < ApplicationJob
   end
 
   # As mensagens do cliente entre a última resposta (nossa, de pessoa ou robô) antes da bolha e a primeira depois dela.
-  def silent_turn?(conversation, message)
+  # O silêncio é decidido pela regra do settle (Waha::RichNative::TurnKinds.turn_silence), com o mesmo filtro do voto
+  # retirado ou trocado.
+  def turn_of(conversation, message)
     chat = conversation.messages.where(private: false).where.not(message_type: :activity).reorder(:id)
     replies = chat.where.not(message_type: :incoming)
     before = replies.where(id: ...message.id).last
     after = replies.where('id > ?', message.id).first
     turn = chat.incoming.where('id > ?', before&.id.to_i)
-    turn = turn.where(id: ...after.id) if after
-    Waha::RichNative::TurnKinds.silent_reason(turn.to_a).present?
+    turn = after ? turn.where(id: ...after.id) : turn
+    turn.to_a
   end
 
-  def record!(agent, conversation, message)
-    return if agent.events.exists?(event_type: EVENT_TYPE, conversation_id: conversation.id, message_id: message.id)
+  # Um silêncio por turno: o settle (Waha::RichNative::AgentTurnGuard) já pode ter gravado o dele para outra mensagem do
+  # mesmo turno (um voto retirado junto da bolha).
+  def record!(agent, conversation, message, turn)
+    return if agent.events.exists?(event_type: SILENCE_TYPES, conversation_id: conversation.id, message_id: turn.map(&:id))
 
     ::Autonomia::Agents::Operate::EventLogger.create!(agent: agent, conversation: conversation, event_type: EVENT_TYPE,
                                                       message_id: message.id,

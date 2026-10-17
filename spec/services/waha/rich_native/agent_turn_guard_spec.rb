@@ -226,6 +226,35 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
     end
 
+    # Revisão, item 4: o rastro usa o mesmo filtro do voto retirado/trocado do settle (TurnKinds.turn_silence).
+    def voto_retirado
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => [] }] }) # rubocop:disable Rails/SkipsModelValidations
+      voto = turno_do_voto('Votou: Tarde')
+      voto.update_column(:content_attributes, voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, ['Tarde']))) # rubocop:disable Rails/SkipsModelValidations
+      voto
+    end
+
+    it 'counts the bubble as a silence when the only other message of the turn is a vote taken back' do
+      voto_retirado
+      sem = bolha
+
+      Waha::RichNative::UnsupportedTurnJob.perform_now(conversation.id, sem.id, 'settle')
+
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+    end
+
+    it 'records one silence per turn when the settle already silenced it ([vote taken back, bubble])' do
+      ouvir(voto_retirado)
+      ouvir(bolha)
+
+      rodar_tudo!
+
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.where(conversation_id: conversation.id)
+                                          .where(event_type: %i[skipped_mensagem_sem_suporte skipped_escolha_retirada]).count).to eq(1)
+    end
+
     it 'ignores the view once notice too' do
       aviso = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
                                content: 'Você recebeu uma mensagem de visualização única.', content_attributes: {})

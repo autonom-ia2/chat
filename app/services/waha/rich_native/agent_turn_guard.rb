@@ -61,12 +61,7 @@ module Waha::RichNative::AgentTurnGuard
   def c2y_turn_skip_reason
     return unless c2y_flag?
 
-    turn = c2y_turn_incoming
-    remaining = turn.reject { |message| c2y_stale_choice?(message) }
-    return STALE_CHOICE_REASON if turn.any? && remaining.empty?
-    return unless c2y_waha_with_flag?
-
-    Waha::RichNative::TurnKinds.silent_reason(remaining)
+    Waha::RichNative::TurnKinds.turn_silence(c2y_turn_incoming, waha: c2y_waha_with_flag?)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] c2y_turn_guard_failed conv=#{@conversation.id} #{e.class}")
     nil
