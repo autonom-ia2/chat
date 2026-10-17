@@ -112,6 +112,20 @@ describe('GavetaOndeQuando · Também recebe quando alguém passar', () => {
     document.body.innerHTML = '';
   });
 
+  // Regra G (#1788): caixa de que a pessoa não é membro fica bloqueada com o motivo, mesmo com Bia na equipe dela.
+  it('blocks an inbox out of reach with the reason', () => {
+    montar({
+      canais: CANAIS.map(canal =>
+        canal.inbox_id === 3 ? { ...canal, alcanca: false } : canal
+      ),
+    });
+
+    expect(opcao(3).getAttribute('aria-disabled')).toBe('true');
+    expect(opcao(3).textContent).toContain(
+      'AGENTS.JORNADA.EQUIPE.FORA_DO_ALCANCE'
+    );
+  });
+
   it('comes right below "Onde atende", without the main inbox, and blocked inboxes say why', () => {
     montar();
     const secoes = [...document.querySelectorAll('section h3')].map(h =>
