@@ -1,5 +1,5 @@
-# Como o cliente de modelos (#1330) fala com a Graph API quando algo dá errado, no molde do
-# `Crm::BookingV2::NoticeTemplates::Creator` (#1280): tenta de novo quando a Meta está fora do ar ou pede calma (5xx/429,
+# Como o cliente de modelos (#1330) fala com a Graph API quando algo dá errado, no molde herdado do antigo criador dos
+# avisos v1 do agendamento (#1280, retirado em #1612): tenta de novo quando a Meta está fora do ar ou pede calma (5xx/429,
 # pelo código HTTP), reconhece falta de permissão pelo código numérico da Meta e nunca devolve o token no texto.
 # Incluído em `Whatsapp::Templates::MetaClient`; usa `@inbox` e `channel` dele.
 module Whatsapp::Templates::GraphErrors

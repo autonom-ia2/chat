@@ -17,13 +17,8 @@ class Crm::BookingPagePolicy < ApplicationPolicy
   end
 
   %i[create? update? destroy? publish? pause? preview_token? logo? logo_dark? destroy_logo_dark? photo? update_people? test_invite?
-     reassign? reassign_preview? notice_template_suggestions? notice_templates? notice_text_suggestions? apply_identity?].each do |action|
+     reassign? reassign_preview? notice_template_suggestions? notice_text_suggestions? apply_identity?].each do |action|
     define_method(action) { manage? }
-  end
-
-  # Criar modelos na Meta (#1272) escreve na conta do WhatsApp do cliente: só o administrador da conta.
-  def create_notice_templates?
-    manage? && account_user&.administrator? == true
   end
 
   # Salvar a identidade (#1289) grava na conta e a foto de quem atende: "conta" não se delega por função, então só
