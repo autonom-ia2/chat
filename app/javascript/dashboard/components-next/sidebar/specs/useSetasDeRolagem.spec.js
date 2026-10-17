@@ -119,7 +119,7 @@ describe('ForkSidebarSeta', () => {
     const chevron = botao.find('span');
     expect(chevron.classes()).toEqual(
       expect.arrayContaining([
-        'i-lucide-chevron-down',
+        'i-lucide-chevrons-down',
         'size-6',
         'text-white/70',
       ])
@@ -130,7 +130,7 @@ describe('ForkSidebarSeta', () => {
   it('acima usa o chevron para cima; sem contagem, rótulo curto', () => {
     const botao = seta({ lado: 'acima' }).find('button');
     expect(botao.attributes('aria-label')).toBe('FORK_SIDEBAR.ROLAR_ACIMA');
-    expect(botao.find('span').classes()).toContain('i-lucide-chevron-up');
+    expect(botao.find('span').classes()).toContain('i-lucide-chevrons-up');
   });
 
   it('invisível não renderiza o botão', () => {

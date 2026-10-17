@@ -308,14 +308,14 @@ const navegou = () => {
         v-if="setas.acima.value"
         data-esmaecido-cima
         aria-hidden="true"
-        class="absolute inset-x-0 top-0 h-10 to-transparent opacity-80 pointer-events-none z-[1]"
+        class="absolute inset-x-0 top-0 h-11 to-transparent opacity-95 pointer-events-none z-[1]"
         :class="tema.esmaecidoCima"
       />
       <div
         v-if="setas.abaixo.value"
         data-esmaecido-baixo
         aria-hidden="true"
-        class="absolute inset-x-0 bottom-0 h-10 to-transparent opacity-80 pointer-events-none z-[1]"
+        class="absolute inset-x-0 bottom-0 h-11 to-transparent opacity-95 pointer-events-none z-[1]"
         :class="tema.esmaecidoBaixo"
       />
       <ForkSidebarSeta

@@ -2,8 +2,8 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-// Seta flutuante do menu novo (#1781): só o chevron, sem fundo nem contorno, centrada a ~10 px da borda sobre o
-// esmaecido. O toque é um círculo invisível de 44 px; o leitor de tela ouve quantos itens estão fora da vista.
+// Seta flutuante do menu novo (#1781): chevron duplo (não se confunde com o de abrir grupo), sem fundo nem contorno,
+// dentro do esmaecido com o centro a ~14 px da borda. O toque é um círculo invisível de 44 px; o leitor de tela ouve quantos itens estão fora da vista.
 const props = defineProps({
   lado: { type: String, required: true },
   visivel: { type: Boolean, default: false },
@@ -51,13 +51,13 @@ const deslocamento = computed(() => {
       :aria-label="rotulo"
       :aria-controls="controla"
       class="group absolute inset-x-0 z-[2] flex items-center justify-center mx-auto size-11 rounded-full"
-      :class="[tema.foco, emCima ? 'top-0' : 'bottom-0']"
+      :class="[tema.foco, emCima ? '-top-2' : '-bottom-2']"
       @click="emit('rolar')"
     >
       <span
         class="size-6 transition duration-300 ease-in-out motion-reduce:transition-none"
         :class="[
-          emCima ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down',
+          emCima ? 'i-lucide-chevrons-up' : 'i-lucide-chevrons-down',
           tema.seta,
           tema.setaPassar,
           deslocamento,
