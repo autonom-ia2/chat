@@ -22,7 +22,12 @@
 # INCONDICIONAL: vale com ou sem a flag `whatsapp_rich_native` (uma chave forjada ficaria guardada e valeria quando a
 # flag fosse ligada). Entra como before_action, sem sobrescrever `create` (o Guia lê o formato da ação no método original).
 module Waha::RichNative::ForgeryGuard
-  ALWAYS_DROPPED = ['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY].freeze
+  # `deleted_by_contact_at` (a apagada pelo cliente): a regra do agente de IA vale em QUALQUER caixa
+  # (Waha::RichNative::AgentTurnGuard), então ela sai da API pública em todas, também em Channel::Api comum (um
+  # integrador com token calaria a IA). Quem grava por dentro (conector via Waha::RichNative::Inbound::Revoke, o #1702b)
+  # continua gravando.
+  ALWAYS_DROPPED = ['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY,
+                    Waha::RichNative::TurnKinds::DELETED_KEY].freeze
   INCOMING_ONLY_KEYS = Waha::RichNative::ContractGuard::INCOMING_ONLY_KEYS
 
   def self.prepended(controller)

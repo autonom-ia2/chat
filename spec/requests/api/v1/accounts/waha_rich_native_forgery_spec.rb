@@ -81,6 +81,32 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes).to eq('outro' => 'fica')
   end
 
+  # Revisão: a regra da apagada vale em qualquer caixa; a chave sai da API pública também numa Channel::Api comum.
+  context 'with a plain Channel::Api inbox (not WAHA)' do
+    let(:plain) { create(:channel_api, account: account).inbox }
+    let(:plain_conversation) { create(:conversation, inbox: plain, account: account) }
+
+    it 'drops deleted_by_contact_at on messages#create and on a conversation created with a message' do
+      forged = { content: 'Quero cancelar', message_type: 'incoming',
+                 content_attributes: { deleted_by_contact_at: Time.current.iso8601, outro: 'fica' } }
+      post "/api/v1/accounts/#{account.id}/conversations/#{plain_conversation.display_id}/messages",
+           headers: admin.create_new_auth_token, as: :json, params: forged
+      expect(response).to have_http_status(:ok)
+      message = Message.find(response.parsed_body['id'])
+      expect(message.content_attributes).to eq('outro' => 'fica')
+      # Sem a chave, a IA responde normal: o turno não é calado.
+      expect(Waha::RichNative::TurnKinds.turn_silence([message], waha: false, choices: false)).to be_nil
+
+      contact_inbox = create(:contact_inbox, inbox: plain, contact: create(:contact, account: account))
+      post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
+                                                           params: { source_id: contact_inbox.source_id, inbox_id: plain.id,
+                                                                     message: { content: 'Oi', content_attributes: { deleted_by_contact_at: 'x' } } }
+      expect(response).to have_http_status(:success)
+      message = account.conversations.find_by(display_id: response.parsed_body['id']).messages.first
+      expect(message.content_attributes).not_to have_key('deleted_by_contact_at')
+    end
+  end
+
   it 'drops a forged view_once_unavailable from a message created by the API' do
     message = create_message(content: 'Oi', content_attributes: { view_once_unavailable: true, outro: 'fica' })
 
