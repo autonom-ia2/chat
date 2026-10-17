@@ -82,8 +82,8 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
   def conferir(mudancas, dados, versao_id)
     fala = Autonomia::Agents::ConferenciaDoAjuste.pedido(ultima_fala_do_dono)
     conferencia = Autonomia::Agents::ConferenciaDoAjuste.new(account: @account, credential: credential).conferir(
-      pedido: [Autonomia::Agents::ConferenciaDoAjuste.pedido_com_contexto(fala, mensagem_anterior),
-               valores_antes_do_nao_pedido.presence].compact.join("\n\n"), mudancas: mudancas,
+      pedido: Autonomia::Agents::ConferenciaDoAjuste.pedido_com_contexto(fala, mensagem_anterior), mudancas: mudancas,
+      valores_antes: valores_antes_do_nao_pedido,
       antes: retrato_de_antes(dados), depois: regras_do_ajuste.retrato(@thread.agent)
     )
     @conferencias_ms << conferencia['duracao_ms']

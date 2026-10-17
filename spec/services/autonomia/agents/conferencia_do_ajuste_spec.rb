@@ -63,6 +63,21 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
     end
   end
 
+  # Rodada 9 (obrigatória): o valor de antes vai numa mensagem própria, rotulada, nunca dentro da fala do dono.
+  it 'o valor de antes do último ajuste vai numa mensagem separada, fora da fala do dono' do
+    conferencia.conferir(pedido: 'Tira isso', mudancas: mudancas, antes: antes, depois: depois,
+                         valores_antes: 'greeting: Oi! Aqui é o Hubber.')
+
+    expect(fake_client).to have_received(:create) do |**params|
+      fala, valores, agente = params[:input].map { |mensagem| mensagem[:content].first[:text] }
+      expect(fala).to include('Tira isso')
+      expect(fala).not_to include('Oi! Aqui')
+      expect(valores).to start_with('VALOR ANTES DO ÚLTIMO AJUSTE (não é fala do dono)')
+      expect(valores).to include('greeting: Oi! Aqui é o Hubber.')
+      expect(agente).to include('AGENTE ANTES')
+    end
+  end
+
   it 'marca cada mudança com os índices válidos e diz se falta algo' do
     resultado = conferir
 

@@ -754,9 +754,15 @@ module Autonomia
         @materials_gate_decision = nil
         @ajuste_da_fase2 = nil
         @idioma_do_ajuste = nil
-        # #1428 — ajuste do piloto: credencial resolvida uma vez no começo do turno, e o re-run de um turno que já
-        # gravou (mesmo token) não chama o Construtor de novo: vai direto conferir e fechar.
-        return retomar_ajuste!(token) if ajuste_da_fase2? && preparar_ajuste!(token) == :retomar
+        # #1428 — o re-run de um ajuste do piloto que já gravou (mesmo token) não chama o Construtor de novo: vai direto
+        # conferir e fechar, ANTES de olhar a chave. O turno nasceu no piloto; se a chave desligou no meio, voltar pelo
+        # caminho legado aplicaria de novo. No ajuste do piloto, a credencial é resolvida uma vez no começo do turno.
+        if ajuste_em_curso(token)
+          @ajuste_da_fase2 = true
+          preparar_ajuste!(token)
+          return retomar_ajuste!(token)
+        end
+        preparar_ajuste!(token) if ajuste_da_fase2?
 
         # Chave desligada depois do piloto: o que ele deixou no state (a pendência e o resto) sai antes do turno legado,
         # para nada voltar se a chave for religada.
@@ -1012,14 +1018,11 @@ module Autonomia
       # As que protegem a idempotência de um ajuste do piloto em voo (o re-run do mesmo token só confere e fecha).
       CHAVES_DO_AJUSTE_EM_CURSO = %w[ajuste_em_curso aplicado_em_token].freeze
 
-      # O turno legado esquece o que o piloto deixou. As chaves do ajuste em curso só saem se elas são de OUTRA geração:
-      # o begin_build! deste turno já tomou o token dela, então ela não escreve mais nem pode ser retomada (a retomada
-      # exige o mesmo token e a Fase 2). Se forem deste mesmo token (re-run de um ajuste que caiu e a chave desligou no
-      # meio), ficam: são a prova de que a primeira escrita já venceu.
-      def chaves_do_piloto_a_esquecer(token)
-        em_curso = @thread.state.to_h['ajuste_em_curso']
-        do_mesmo_token = em_curso.is_a?(Hash) && em_curso['token'] == token
-        do_mesmo_token ? CHAVES_DO_PILOTO : CHAVES_DO_PILOTO + CHAVES_DO_AJUSTE_EM_CURSO
+      # O turno legado esquece o que o piloto deixou, inclusive o ajuste em curso: o do mesmo token já foi retomado no
+      # começo do run! (nunca chega aqui), e o de outra geração perdeu o token para o begin_build! deste turno, então não
+      # escreve mais nem pode ser retomado.
+      def chaves_do_piloto_a_esquecer(_token)
+        CHAVES_DO_PILOTO + CHAVES_DO_AJUSTE_EM_CURSO
       end
 
       # #1428 — ajuste do piloto: a resposta à pendência se marca, não se repete (senão ela volta todo turno).

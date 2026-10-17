@@ -100,13 +100,13 @@ module Autonomia::Agents::Builder::AjustePorLista
       tambem instruction quando muda o que o agente faz na conversa.
     - assunto que o agente nao pode tratar ou limite (ex.: "nao fale de preco"): guardrails E instruction.
     - o que o agente faz, sabe, pergunta ou coleta: instruction.
-    Ao mudar a instruction, mude so o trecho que o pedido exige; nao acrescente nem reescreva regras que o dono nao
-    pediu.
     - a primeira mensagem ao cliente: greeting.
     - o que dizer quando nao souber responder: fallback_message.
     - as sugestoes de perguntas iniciais: starter_questions.
     - a descricao do agente para o dono: human_card.
     - o nome do agente: name. A voz (feminina ou masculina): voice.
+    Ao mudar a instruction, mude so o trecho que o pedido exige; nao acrescente nem reescreva regras que o dono nao
+    pediu.
     EXCECAO: um pedido do dono MAIS RESTRITO que o padrao, ou que uma regra geral que ja existe (ex.: "no maximo 2
     frases" quando a instrucao ja diz "seja breve"), SEMPRE e gravado nos campos acima. Nunca descarte um pedido por
     parecer coberto por outra regra.

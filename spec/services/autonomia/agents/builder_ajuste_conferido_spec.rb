@@ -436,11 +436,15 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
       allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
 
+      a_conferencia_le = described_class.new(account: account, build_thread: thread.reload).send(:valores_antes_do_nao_pedido)
       turno_seguinte('Tira o que você mudou na instrução', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
 
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
       expect(contexto).to include('instruction: Atenda o cliente da corretora com cordialidade.', 'scaffold: andaime',
                                   'human_card: O Hubber atende os clientes.')
+      # À conferência o andaime não vai.
+      expect(a_conferencia_le).to include('instruction: Atenda', 'human_card: O Hubber')
+      expect(a_conferencia_le).not_to include('scaffold')
     end
 
     # Revisão crítica do 66d97ac642 (BAIXO, mutante u5): o turno seguinte que não aplica nada também limpa a referência.
@@ -478,7 +482,10 @@ RSpec.describe Autonomia::Agents::Builder do
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
       expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
       # Eval de 17/10: a conferência também precisa do valor de antes, senão julga "como era" sem saber o que era.
-      expect(recebidas.last[:pedido]).to include('Tira a saudação nova', 'greeting: Oi! Aqui é o Hubber.')
+      expect(recebidas.last[:valores_antes]).to include('greeting: Oi! Aqui é o Hubber.')
+      # Rodada 9 (obrigatória): o valor de antes nunca vai dentro da fala do dono.
+      expect(recebidas.last[:pedido]).to include('Tira a saudação nova')
+      expect(recebidas.last[:pedido]).not_to include('Oi! Aqui é o Hubber.')
       expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
       expect(estado['nao_pedido_anterior']).to be_nil
     end

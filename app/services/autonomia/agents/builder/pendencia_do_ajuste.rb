@@ -44,28 +44,40 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
   # (eval de 17/10). Só no ajuste do piloto; os dois são texto que o dono vê, não sigilo.
   def contexto_do_cartao
     agent = @thread.agent
+    # Em JSON, como o retrato: uma quebra de linha no nome não vira uma linha de contexto nova.
     texto = "CONTEXTO INTERNO (nao e fala do usuario). Campos que o dono ve, atuais (devolva iguais o que nao for pedido):\n" \
-            "name: #{agent.name}\nhuman_card: #{agent.human_card}"
+            "#{JSON.generate('name' => agent.name.to_s, 'human_card' => agent.human_card.to_s)}"
     { role: 'user', content: [{ type: 'input_text', text: texto }] }
   end
 
-  # O texto do valor de antes do que o dono não pediu (o mesmo que o Construtor recebe), para a conferência.
+  # O valor de antes do que o dono não pediu, para a conferência (numa mensagem própria, fora da fala do dono). Sem o
+  # andaime: a conferência não precisa dele para julgar.
   def valores_antes_do_nao_pedido
-    contexto_do_nao_pedido.map { |item| item.dig(:content, 0, :text) }.join
+    valores_de_antes(com_andaime: false).map { |campo, valor| "#{campo}: #{Array.wrap(valor).join(' | ')}" }.join("\n")
+  end
+
+  # Os valores de antes, lidos da versão, dos campos que o último ajuste mudou sem o dono pedir.
+  def valores_de_antes(com_andaime:)
+    dados = @thread.state.to_h['nao_pedido_anterior']
+    return {} unless dados.is_a?(Hash)
+
+    versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
+    return {} if versao.nil?
+
+    antes = retrato_da_versao(versao).merge('scaffold' => versao.metadata.to_h.dig('agente', 'scaffold').to_s)
+    campos = campos_com_o_que_acompanha(dados['campos'])
+    campos -= ['scaffold'] unless com_andaime
+    campos.index_with { |campo| antes[campo] }
   end
 
   # #1428 — o turno anterior mudou campos que o dono não pediu e o avisou ("é só me dizer o que tirar"). O Construtor
   # recebe, como CONTEXTO INTERNO, o valor de antes desses campos, lido da versão: um "tira isso" volta ao original. A
   # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale só para este turno.
   def contexto_do_nao_pedido
-    dados = @thread.state.to_h['nao_pedido_anterior']
-    return [] unless dados.is_a?(Hash)
+    valores = valores_de_antes(com_andaime: true)
+    return [] if valores.empty?
 
-    versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
-    return [] if versao.nil?
-
-    antes = retrato_da_versao(versao).merge('scaffold' => versao.metadata.to_h.dig('agente', 'scaffold').to_s)
-    linhas = campos_com_o_que_acompanha(dados['campos']).map { |campo| "#{campo}: #{Array.wrap(antes[campo]).join(' | ')}" }
+    linhas = valores.map { |campo, valor| "#{campo}: #{Array.wrap(valor).join(' | ')}" }
     texto = ['CONTEXTO INTERNO (nao e fala do usuario). O ultimo ajuste tambem mudou, sem o dono pedir, os campos ' \
              'abaixo, e o dono foi avisado. Se ele pedir para tirar ou voltar, use o valor antes do ultimo ajuste:', *linhas]
     [{ role: 'user', content: [{ type: 'input_text', text: texto.join("\n") }] }]
