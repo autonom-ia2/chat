@@ -68,4 +68,47 @@ describe Waha::RichNative::AiChoiceText do
     expect(message.reload.content).to eq('Respondeu ao convite: Vou')
     expect(described_class.for(message)).to eq("Respondeu ao convite 'Vistoria': Vou")
   end
+
+  # Revisão da rodada de correção: os outros leitores do turno de escolha.
+  describe 'other readers of the choice turn' do
+    it 'gives the Decisor reading ultima_mensagem the full text with the stale mark' do
+      vote!([])
+      stale = turn(['Não'])
+
+      estado = Autonomia::Decisores::Estado.new(conversation: conversation, message: stale, leituras: %w[ultima_mensagem])
+
+      expect(estado.conversa[:last_message]).to eq(described_class.for(stale))
+      expect(estado.conversa[:last_message]).to include("'Quer cancelar?'").and(include('não vale mais'))
+    end
+
+    it 'never takes a vote "Não" as an opt-out, without asking the model (structured mark, not the text)' do
+      vote!(['Não'])
+      message = turn(['Não'])
+      allow(Crm::Ai::ResponsesClient).to receive(:new)
+
+      result = Crm::Ai::OptOutClassifier.new(account: account, message: message).perform
+
+      expect(result).to eq(decision: 'nao', motivo: 'resposta_ao_assunto')
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
+
+    it 'still asks the model for a real message' do
+      message = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'SAIR')
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+
+      expect { Crm::Ai::OptOutClassifier.new(account: account, message: message).perform }
+        .to raise_error(Crm::Ai::OptOutClassifier::Unavailable)
+    end
+
+    it 'gives the attendant copilot the full text' do
+      vote!(['Não'])
+      message = turn(['Não'])
+
+      transcript = Autonomia::Copilot::ConversationCopilot.new(conversation: conversation, task: 'summarize').send(:transcript)
+      chat = Autonomia::Copilot::ConversationChat.new(conversation: conversation, agent_id: nil, message: 'resuma').send(:transcript)
+
+      expect(transcript).to include("Cliente: #{described_class.for(message)}")
+      expect(chat).to include("Cliente: #{described_class.for(message)}")
+    end
+  end
 end

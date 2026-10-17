@@ -128,6 +128,13 @@ Rails.application.config.to_prepare do
   unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::ResponderLocation
     Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::ResponderLocation)
   end
+  if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::PreviewImage }
+    Message.before_create Waha::RichNative::PreviewImage, prepend: true
+  end
+end
+
+# Rodada de correção (#1709): o que as IAs leem do voto e da bolha sem suporte.
+Rails.application.config.to_prepare do
   # O voto e a resposta ao convite chegam às IAs com a pergunta, e a escolha que não vale mais vem marcada.
   unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::ResponderChoice
     Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::ResponderChoice)
@@ -138,9 +145,12 @@ Rails.application.config.to_prepare do
   unless Autonomia::Decisores::Estado <= Waha::RichNative::AiChoiceContext::Estado
     Autonomia::Decisores::Estado.prepend(Waha::RichNative::AiChoiceContext::Estado)
   end
+  unless Crm::Ai::OptOutClassifier <= Waha::RichNative::AiChoiceContext::OptOut
+    Crm::Ai::OptOutClassifier.prepend(Waha::RichNative::AiChoiceContext::OptOut)
+  end
+  [Autonomia::Copilot::ConversationCopilot, Autonomia::Copilot::ConversationChat].each do |copilot|
+    copilot.prepend(Waha::RichNative::AiChoiceContext::Copilot) unless copilot <= Waha::RichNative::AiChoiceContext::Copilot
+  end
   # A bolha "abra no celular" e o aviso de visualização única não pedem a IA de assunto.
   Crm::Subjects.singleton_class.prepend(Waha::RichNative::SubjectsSkip) unless Crm::Subjects.singleton_class <= Waha::RichNative::SubjectsSkip
-  if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::PreviewImage }
-    Message.before_create Waha::RichNative::PreviewImage, prepend: true
-  end
 end
