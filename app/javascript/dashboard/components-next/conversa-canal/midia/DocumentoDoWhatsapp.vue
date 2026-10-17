@@ -1,8 +1,10 @@
 <script setup>
 // Documento no balão com a cara do WhatsApp (#1702): o cartão do app, com o ícone do
-// tipo (PDF em vermelho), o nome, "PDF • 107 KB" e o botão de baixar à direita.
-import { computed } from 'vue';
+// tipo (PDF em vermelho), o nome, "PDF • 107 KB" e o botão de baixar à direita, que
+// salva o arquivo com o nome dele (o link direto abria o arquivo noutra aba).
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import { useMessageContext } from '../../message/provider.js';
 import { idiomaDoPainel } from '../dataDaConversa';
 import {
@@ -10,6 +12,7 @@ import {
   nomeDoArquivo,
   resumoDoArquivo,
 } from './tamanhoDoArquivo';
+import { baixarArquivo } from './baixarArquivo';
 
 const { t, locale } = useI18n();
 const { attachments, orientation } = useMessageContext();
@@ -24,6 +27,19 @@ const resumo = computed(() =>
 );
 const ehPdf = computed(() => extensao.value === 'PDF');
 const enviada = computed(() => orientation?.value === 'right');
+
+const baixando = ref(false);
+const baixar = async () => {
+  if (baixando.value) return;
+  baixando.value = true;
+  try {
+    await baixarArquivo({ url: anexo.value.dataUrl, nome: nome.value });
+  } catch {
+    useAlert(t('GALLERY_VIEW.ERROR_DOWNLOADING'));
+  } finally {
+    baixando.value = false;
+  }
+};
 </script>
 
 <template>
@@ -72,16 +88,21 @@ const enviada = computed(() => orientation?.value === 'right');
         {{ resumo }}
       </span>
     </div>
-    <a
+    <button
       v-if="anexo.dataUrl"
-      :href="anexo.dataUrl"
-      target="_blank"
-      rel="noreferrer noopener nofollow"
-      class="grid place-content-center size-10 flex-shrink-0 rounded-full text-[#8C8C8C] dark:text-[#A7A8A8] hover:bg-[#000]/5 dark:hover:bg-white/5 skip-context-menu"
+      type="button"
+      class="grid place-content-center size-10 flex-shrink-0 rounded-full text-[#8C8C8C] dark:text-[#A7A8A8] hover:bg-[#000]/5 dark:hover:bg-white/5 disabled:opacity-50 skip-context-menu"
       :aria-label="t('CONVERSA_CANAL.MIDIA.BAIXAR', { nome })"
-      @click.stop
+      :disabled="baixando"
+      :aria-busy="baixando"
+      data-baixar-documento
+      @click.stop="baixar"
     >
-      <span class="i-ph-download-simple size-7" aria-hidden="true" />
-    </a>
+      <span
+        :class="baixando ? 'i-ph-spinner animate-spin' : 'i-ph-download-simple'"
+        class="size-7"
+        aria-hidden="true"
+      />
+    </button>
   </div>
 </template>
