@@ -43,6 +43,7 @@ module WhatsappHybrid::RichNative::Transport
     return hand_closed_send! if closed
     return response if as_text
 
+    Waha::RichNative.went_native!(@message)
     WhatsappHybrid::RichNative.mark_sent!(@message, @connection, native_physical_id(native, response, physical_id))
     response
   end

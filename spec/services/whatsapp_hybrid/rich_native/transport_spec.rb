@@ -303,6 +303,22 @@ describe WhatsappHybrid::RichNative::Transport do
       expect(message.content_attributes['rich_message_sent_as']).to eq('native')
     end
 
+    # Rodada de correção, item 13: a marca nativa não gravou, mas a mensagem saiu nativa. A marca de texto, gravada depois
+    # de todo envio, não pode dizer que ela saiu como texto.
+    it 'never stamps text on a message that went native when the native mark could not be written' do
+      flag_on!
+      allow(client).to receive(:send_list).and_return({ 'id' => 'true_5511937016094@c.us_3EB0LIST' })
+      allow(Waha::RichNative).to receive(:mark_sent!).and_return(false)
+      message = outgoing(options)
+
+      send_by_web(message)
+
+      expect(client).to have_received(:send_list).once
+      expect(client).not_to have_received(:send_text)
+      expect(message.reload.content_attributes['rich_message_sent_as']).not_to eq('text')
+      expect(message.content_attributes).not_to have_key('rich_message_sent_text')
+    end
+
     it 'logs and reports to the tracker when the write breaks, without raising' do
       message = outgoing(options)
       tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)

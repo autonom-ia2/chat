@@ -24,8 +24,9 @@ module WhatsappHybrid::RichNative::DeliveryMode
     message.content_attributes.to_h.dig(RichMessages::KEY, 'type') == type && Waha::RichNative::WahaInbox.native_for?(message)
   end
 
+  # Também quando a marca 'native' não chegou a ser gravada: o sinal em memória do envio (Waha::RichNative.went_native?).
   def mark_sent_as_text!(message)
-    return if WhatsappHybrid::RichNative.sent_native?(message)
+    return if WhatsappHybrid::RichNative.sent_native?(message) || Waha::RichNative.went_native?(message)
 
     super
   end

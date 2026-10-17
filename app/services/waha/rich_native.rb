@@ -94,6 +94,21 @@ module Waha::RichNative
     false
   end
 
+  # Sinal, só em memória, de que a mensagem SAIU nativa (o motor aceitou o pedido nativo), dado antes de gravar a marca:
+  # se a gravação da marca falhar (mark_sent! devolve false), quem grava a marca de texto depois de todo envio
+  # (RichMessages.mark_sent_as_text!, WhatsappHybrid::RichNative::DeliveryMode) não carimba 'text' numa mensagem que foi
+  # nativa. Não é coluna nem chave: nada de fora consegue mandá-lo.
+  WENT_NATIVE = :@c2y_went_native
+
+  def went_native!(message)
+    message.instance_variable_set(WENT_NATIVE, true)
+    message
+  end
+
+  def went_native?(message)
+    message.instance_variable_get(WENT_NATIVE) == true
+  end
+
   # Quantas mensagens nossas, das mais novas, procurar na busca pela última lista. A lista respondida costuma ser a última.
   LOOKBACK = 50
 
