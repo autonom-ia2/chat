@@ -17,4 +17,11 @@ module Waha::RichNative::JsonColumn
   def text(column, type, key)
     "(#{object(column, type)} ->> #{ActiveRecord::Base.connection.quote(key)})"
   end
+
+  # A chave PRESENTE no mesmo sentido do `present?` do Ruby (Waha::RichNative::TurnKinds.deleted?): não nula, nem texto
+  # em branco, nem false, nem lista ou objeto vazios.
+  def present(column, type, key)
+    value = text(column, type, key)
+    "(#{value} IS NOT NULL AND btrim(#{value}) NOT IN ('', 'false', '[]', '{}'))"
+  end
 end

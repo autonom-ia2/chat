@@ -82,7 +82,7 @@ module Waha::RichNative::AgentTurnGuard
     column = 'messages.content_attributes'
     flags = c2y_waha_with_flag? ? UNCOUNTED_FLAGS : %w[c2y_hidden]
     conditions = flags.map { |key| "#{Waha::RichNative::JsonColumn.text(column, :json, key)} = 'true'" }
-    conditions << "#{Waha::RichNative::JsonColumn.text(column, :json, 'deleted_by_contact_at')} IS NOT NULL" if c2y_waha_with_flag?
+    conditions << Waha::RichNative::JsonColumn.present(column, :json, 'deleted_by_contact_at') if c2y_waha_with_flag?
     chat.incoming.where(conditions.join(' OR ')).pluck(:id)
   end
 
