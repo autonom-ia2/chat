@@ -31,6 +31,19 @@ RSpec.describe 'Api::V1::Accounts::Crm::MemoriaFatos', type: :request do
     expect(response.parsed_body['payload']).to be_empty
   end
 
+  it 'a lista traz quem corrigiu (nome do cadastro) e a conversa da mensagem de prova, para a linha de origem' do
+    prova = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'placa ABC1D23')
+    Crm::Memoria::Gravador.gravar!(account_id: account.id, contact_id: contact.id, escopo: 'card', card_id: card.id, tipo: 'fato',
+                                   chave: 'placa', valor: 'ABC1D23', fonte: 'cliente', prova_message_ids: [prova.id], gerado_por: 't')
+    Crm::Memoria::Correcao.corrigir!(card: card, user: admin, grupo: 'contato', chave: 'placa', valor: 'X')
+
+    get base, headers: admin.create_new_auth_token, as: :json
+
+    linhas = response.parsed_body['payload'].index_by { |linha| linha['fonte'] }
+    expect(linhas['cliente']).to include('prova_message_id' => prova.id, 'prova_conversation_display_id' => conversation.display_id)
+    expect(linhas['pessoa_corrigiu']).to include('corrigido_por_nome' => admin.name, 'prova_message_id' => nil)
+  end
+
   it 'chave fora do catálogo é recusada' do
     post base, headers: admin.create_new_auth_token, params: { grupo: 'pedido', chave: 'inventada', valor: 'x' }, as: :json
 
