@@ -44,6 +44,15 @@ module Waha::RichNative::AgentTurnGuard
     c2y_stale_choice?(message) || (c2y_waha_with_flag? && Waha::RichNative::TurnKinds.out_of_history?(message))
   end
 
+  # A pergunta da IA sai da última mensagem do cliente que é turno de verdade: na caixa WAHA com a flag, a bolha "abra no
+  # celular", o aviso de visualização única e a apagada (Waha::RichNative::TurnKinds.kind) não são a pergunta, mesmo
+  # quando chegaram por último na rajada.
+  def last_incoming_message
+    return super unless c2y_waha_with_flag?
+
+    recent_messages.reverse.find { |message| message.incoming? && Waha::RichNative::TurnKinds.kind(message).nil? }
+  end
+
   def c2y_stale_choice?(message)
     @c2y_stale ||= {}
     @c2y_stale.fetch(message.id) { @c2y_stale[message.id] = !Waha::RichNative::TurnKinds.choice_current?(message) }

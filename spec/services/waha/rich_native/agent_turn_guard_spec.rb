@@ -147,6 +147,79 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
     end
   end
 
+  # Rodada de correção, itens 2 e 3: a bolha e o aviso não são turno. O listener não os dispara (o rastro sai por um job
+  # próprio), e a pergunta da IA vem da última mensagem real, mesmo quando um settle antigo cai na bolha.
+  describe 'bursts mixing a real message with the unsupported bubble' do
+    def bolha
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                       content: 'Mensagem não suportada', content_attributes: { 'is_unsupported' => true })
+    end
+
+    def rodar_tudo!
+      rodar_turno!
+      rodar_turno!('Waha::RichNative::UnsupportedTurnJob')
+    end
+
+    it '[A, U]: the listener ignores U, and A is answered (query from A)' do
+      texto = cliente_escreve('Qual o preço?')
+      ouvir(texto)
+      sem = bolha
+      expect { ouvir(sem) }.not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+
+      rodar_tudo!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include('Qual o preço?').and(not_include('Mensagem não suportada'))
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+    end
+
+    it '[U]: no turn, no answer, and the trace once per message' do
+      sem = bolha
+      ouvir(sem)
+      ouvir(sem)
+
+      rodar_tudo!
+
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+    end
+
+    it '[U, A]: A is answered' do
+      ouvir(bolha)
+      ouvir(cliente_escreve('Recebeu minha foto?'))
+
+      rodar_tudo!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include('Recebeu minha foto?').and(not_include('Mensagem não suportada'))
+    end
+
+    it 'ignores the view once notice too' do
+      aviso = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                               content: 'Você recebeu uma mensagem de visualização única.', content_attributes: {})
+      aviso.update_column(:content_attributes, { 'view_once_unavailable' => true }) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { ouvir(aviso) }.not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    end
+
+    it 'takes the query from the real message even when the settle lands on the bubble' do
+      cliente_escreve('Quero agendar')
+      gatilho(bolha)
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include('Quero agendar').and(not_include('Mensagem não suportada'))
+    end
+
+    it 'keeps main without the flag: the bubble triggers the turn' do
+      account.disable_features!(Waha::RichNative::FLAG)
+
+      expect { ouvir(bolha) }.to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+    end
+  end
+
   describe 'a vote taken back inside the debounce' do
     it 'does not answer when the choice of the turn is no longer stored on the poll' do
       poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')

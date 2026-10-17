@@ -51,6 +51,10 @@ Rails.application.config.to_prepare do
   unless Autonomia::Agents::Operate::Responder <= Waha::RichNative::AgentTurnGuard
     Autonomia::Agents::Operate::Responder.prepend(Waha::RichNative::AgentTurnGuard)
   end
+  # A bolha "abra no celular" e o aviso de visualização única não disparam o turno da IA (só o rastro no Desempenho).
+  unless Autonomia::Agents::Operate::MessageListener <= Waha::RichNative::AgentListenerGuard
+    Autonomia::Agents::Operate::MessageListener.prepend(Waha::RichNative::AgentListenerGuard)
+  end
   # O `in_reply_to` do conector antes de o Chatwoot apagar o que é de outra conversa (reação/edição numa conversa nova).
   if Message._validation_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::ReplyTarget }
     Message.before_validation Waha::RichNative::Inbound::ReplyTarget, on: :create
