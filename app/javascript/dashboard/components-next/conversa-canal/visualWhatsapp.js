@@ -43,7 +43,6 @@ const COR = {
   recebida: `!bg-white dark:!bg-[#242626] ${TEXTO}`,
   // Nota só para a equipe: nada parecido com o WhatsApp, para ninguém achar que o cliente viu.
   nota: '!bg-[#FFF3C4] dark:!bg-[#3D3214] text-[#4A3B00] dark:text-[#F5E3A3] border border-dashed border-[#D9B44A] dark:border-[#8C7426]',
-  erro: '!bg-[#FDE7E9] dark:!bg-[#3B1F24] text-[#7A1F2B] dark:text-[#F4C7CD]',
   naoSuportada:
     '!bg-[#FFF3C4] dark:!bg-[#3D3214] border border-dashed border-[#D9B44A] text-[#4A3B00] dark:text-[#F5E3A3]',
 };
@@ -57,9 +56,14 @@ const COR_POR_VARIANTE = {
   [MESSAGE_VARIANTS.TEMPLATE]: COR.enviada,
   [MESSAGE_VARIANTS.USER]: COR.recebida,
   [MESSAGE_VARIANTS.PRIVATE]: COR.nota,
-  [MESSAGE_VARIANTS.ERROR]: COR.erro,
   [MESSAGE_VARIANTS.UNSUPPORTED]: COR.naoSuportada,
 };
+
+// Cor pelo lado, não pelo tipo: o aviso de tipo do cliente e a mensagem que falhou.
+// No app a que falhou é um balão enviado comum; a falha aparece no ícone vermelho ao
+// lado da hora (MessageMeta), não na cor do balão.
+const corPeloLado = ({ variante, nomeDoBalao }) =>
+  nomeDoBalao === NAO_SUPORTADA_COM_TIPO || variante === MESSAGE_VARIANTS.ERROR;
 
 // Botões das mensagens ricas (botão de link, opções): no app eles ficam dentro do
 // balão, separados por uma linha fina, com o texto azul no meio.
@@ -149,10 +153,9 @@ export const classesDoBalao = ({ variante, lado, primeira, nomeDoBalao }) => {
     const emoji = nomeDoBalao === EMOJI ? ' !pb-[22px]' : '';
     return `group/balao relative !p-0 !bg-transparent !shadow-none ${TEXTO}${emoji}${primeira ? ' mt-[10px]' : ''}`;
   }
-  const cor =
-    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
-      ? corDoLado(lado)
-      : COR_POR_VARIANTE[variante] || COR.recebida;
+  const cor = corPeloLado({ variante, nomeDoBalao })
+    ? corDoLado(lado)
+    : COR_POR_VARIANTE[variante] || COR.recebida;
   const cantos = [
     'group/balao relative !rounded-[10px]',
     SOMBRA,
@@ -189,15 +192,11 @@ export const temBico = ({ variante, primeira, nomeDoBalao }) =>
   ].includes(variante);
 
 export const corDoBico = ({ variante, lado, nomeDoBalao }) => {
-  const doCliente =
-    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
-      ? lado !== ORIENTATION.RIGHT
-      : variante === MESSAGE_VARIANTS.USER;
+  const doCliente = corPeloLado({ variante, nomeDoBalao })
+    ? lado !== ORIENTATION.RIGHT
+    : variante === MESSAGE_VARIANTS.USER;
   if (doCliente) {
     return 'text-white dark:text-[#242626]';
-  }
-  if (variante === MESSAGE_VARIANTS.ERROR) {
-    return 'text-[#FDE7E9] dark:text-[#3B1F24]';
   }
   if (
     variante === MESSAGE_VARIANTS.UNSUPPORTED &&
@@ -215,6 +214,7 @@ const COR_DA_HORA = {
   [MESSAGE_VARIANTS.AGENT]: HORA_NO_ENVIADO,
   [MESSAGE_VARIANTS.BOT]: HORA_NO_ENVIADO,
   [MESSAGE_VARIANTS.TEMPLATE]: HORA_NO_ENVIADO,
+  [MESSAGE_VARIANTS.ERROR]: HORA_NO_ENVIADO,
 };
 
 // Foto e vídeo sem legenda: hora e tiques brancos por cima da mídia, num degradê.

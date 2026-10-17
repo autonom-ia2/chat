@@ -152,7 +152,20 @@
       "PRODUTO": "Catalog product",
       "BOTOES": "Template buttons",
       "ABRE_EM_OUTRA_ABA": "Opens in a new tab",
-      "SO_NO_CELULAR": "The customer taps this on their phone. Here it is only shown."
+      "SO_NO_CELULAR": "The customer taps this on their phone. Here it is only shown.",
+      "VER_TODAS": "See all options",
+      "TODAS_AS_OPCOES": "All options",
+      "FECHAR": "Close",
+      "TOPO_FOTO": "Template image",
+      "TOPO_VIDEO": "Template video",
+      "TOPO_DOCUMENTO": "Document",
+      "OFERTA_TERMINA": "Ends {data}"
+    },
+    "ORIGEM": {
+      "ANUNCIO": "Ad",
+      "ABRIR_ANUNCIO": "Open the ad in a new tab",
+      "PRODUTO": "Catalog product",
+      "CODIGO": "Code {codigo}"
     },
     "GRAVACAO": {
       "GRAVANDO": "Recording audio",
@@ -167,7 +180,8 @@
       "PAUSAR": "Pause audio",
       "ONDA": "Audio position",
       "VELOCIDADE": "Change speed",
-      "BAIXAR": "Download"
+      "BAIXAR": "Download",
+      "ENVIANDO": "Sending audio"
     },
     "MIDIA": {
       "BAIXAR": "Download {nome}",
@@ -178,6 +192,11 @@
       "FECHAR": "Close",
       "VER_OPCOES": "View options",
       "ESCOLHIDA": "Chosen by the customer"
+    },
+    "ROLAGEM": {
+      "NAO_LIDAS": "{n} unread message | {n} unread messages",
+      "NOVAS": "{n} new message | {n} new messages",
+      "CITADA_NAO_ENCONTRADA": "We couldn't find the quoted message in this conversation."
     },
     "ALBUM": {
       "ROTULO": "Album with {total} photos and videos",
@@ -212,7 +231,14 @@
       "PELO_CLIENTE": "Deleted by the customer",
       "AJUDA": "The customer deleted this message on WhatsApp. They no longer see it; your team still does.",
       "ENVIADA": "You deleted this message",
-      "RECEBIDA": "This message was deleted"
+      "RECEBIDA": "This message was deleted",
+      "ENVIADA_SO_AQUI": "You deleted this message only here. The customer still sees it."
+    },
+    "FALHA": {
+      "NAO_ENVIADA": "Not sent"
+    },
+    "TEXTO_LONGO": {
+      "LER_MAIS": "Read more"
     },
     "EDITADA": {
       "ROTULO": "Edited",
@@ -274,7 +300,8 @@
       "VOZ_RECUSADA": "Declined voice call",
       "VIDEO_RECUSADA": "Declined video call",
       "VOZ": "Voice call",
-      "VIDEO": "Video call"
+      "VIDEO": "Video call",
+      "VOZ_SEM_RESPOSTA": "Voice call, no answer"
     },
     "ENQUETE": {
       "UMA": "Select one option",
@@ -289,7 +316,7 @@
     "CONTATOS": {
       "RESUMO": "{nome} and {n} other contact | {nome} and {n} other contacts",
       "VER_TODOS": "View all",
-      "OCULTAR": "Hide",
+      "TITULO": "{n} contact | {n} contacts",
       "SEM_NOME": "Unnamed contact"
     },
     "PREVIA_DE_LINK": {

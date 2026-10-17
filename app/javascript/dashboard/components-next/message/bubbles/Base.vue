@@ -14,6 +14,7 @@ import { MESSAGE_VARIANTS, ORIENTATION, SENDER_TYPES } from '../constants';
 import { usePeleDoBalao } from '../../conversa-canal/usePeleDoBalao';
 import BicoDoBalao from '../../conversa-canal/BicoDoBalao.vue';
 import BotoesDoModelo from '../../conversa-canal/BotoesDoModelo.vue';
+import OrigemDaMensagem from '../../conversa-canal/OrigemDaMensagem.vue';
 import BotaoDoMenu from '../../conversa-canal/BotaoDoMenu.vue';
 import CitacaoDoWhatsapp from '../../conversa-canal/CitacaoDoWhatsapp.vue';
 import SeloDeReacoes from '../../conversa-canal/SeloDeReacoes.vue';
@@ -26,8 +27,9 @@ import {
   apagadaPeloCliente,
   encaminhamento,
 } from '../../conversa-canal/marcasDaMensagem';
-import { eFigurinha } from '../../conversa-canal/figurinha';
+import { previaDoAnexoCitado } from '../../conversa-canal/citacaoDoAnexo';
 import { citacaoSolta } from '../../conversa-canal/citacaoSolta';
+import { previaDaCitada } from '../../conversa-canal/useFormatoDoWhatsapp';
 
 const props = defineProps({
   hideMeta: { type: Boolean, default: false },
@@ -151,14 +153,17 @@ const replyToPreview = computed(() => {
 
   const { content, attachments } = inReplyTo.value;
 
+  // #1740: com a pele, a citação lê o texto como o balão dela (formato do WhatsApp).
+  if (content && peleDoBalao.ativa.value)
+    return previaDaCitada(inReplyTo.value);
   if (content) return new MessageFormatter(content).formattedMessage;
   if (attachments?.length) {
-    const firstAttachment = attachments[0];
-    const fileType = firstAttachment.fileType ?? firstAttachment.file_type;
-    // #1702: com a pele, a citação de figurinha diz "Figurinha", como no app.
-    if (peleDoBalao.ativa.value && eFigurinha(firstAttachment)) {
-      return t('CONVERSA_CANAL.MIDIA.FIGURINHA');
+    // #1702: com a pele, os rótulos da citação do app ("Foto", "Figurinha", o nome do
+    // documento); o ícone e a miniatura saem na própria CitacaoDoWhatsapp.
+    if (peleDoBalao.ativa.value) {
+      return previaDoAnexoCitado(inReplyTo.value, t);
     }
+    const fileType = attachments[0].fileType ?? attachments[0].file_type;
 
     return t(`CHAT_LIST.ATTACHMENTS.${fileType}.CONTENT`);
   }
@@ -195,6 +200,8 @@ const replyToPreview = computed(() => {
     </div>
     <SeloApagadaPeloCliente v-if="apagada" />
     <RotuloEncaminhada v-if="encaminhada" :tipo="encaminhada" />
+    <!-- #1702: anúncio ou produto do catálogo que o cliente citou. -->
+    <OrigemDaMensagem v-if="peleDoBalao.ativa.value" />
     <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="topo" />
     <CitacaoDoWhatsapp
       v-if="inReplyTo && peleDoBalao.ativa.value"
@@ -219,6 +226,7 @@ const replyToPreview = computed(() => {
     />
     <SeloVisualizacaoUnica v-if="visualizacaoUnica" />
     <slot />
+    <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="rodape" />
     <template v-if="shouldShowMeta">
       <CaptainGenerationDetails
         v-if="isCaptainMessage"

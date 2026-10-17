@@ -49,3 +49,13 @@ export const rotuloDoDia = ({ quando, agora, fuso, t, idioma = 'pt-BR' }) => {
     new Date(quando * 1000)
   );
 };
+
+// Data e hora completas da dica (ao parar o mouse na hora do balão), no fuso da conta
+// e no idioma do painel: "17 de out. de 2026, 14:32". Sem o nome do fuso (regra #1456).
+export const dataEHoraDaMensagem = (quando, fuso, idioma = 'pt-BR') =>
+  formatador(idioma, {
+    timeZone: fuso,
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    calendar: 'gregory',
+  }).format(new Date(quando * 1000));

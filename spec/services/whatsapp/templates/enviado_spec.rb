@@ -351,6 +351,22 @@ RSpec.describe Whatsapp::Templates::Enviado do
     end
   end
 
+  describe 'rodapé do modelo' do
+    it 'grava o rodapé que o cliente viu, aparado no limite da Meta' do
+      template = approved('aviso', { 'type' => 'BODY', 'text' => 'Oi' }, { 'type' => 'FOOTER', 'text' => "  #{'r' * 70}  " })
+
+      expect(described_class.montar(template: template, processed: {}, inbox: inbox)['rodape']).to eq('r' * 60)
+    end
+
+    it 'modelo sem rodapé (ou com rodapé vazio): sem rodape' do
+      sem = approved('sem', { 'type' => 'BODY', 'text' => 'Oi' })
+      vazio = approved('vazio', { 'type' => 'BODY', 'text' => 'Oi' }, { 'type' => 'FOOTER', 'text' => ' ' })
+
+      expect(described_class.montar(template: sem, processed: {}, inbox: inbox)).not_to have_key('rodape')
+      expect(described_class.montar(template: vazio, processed: {}, inbox: inbox)).not_to have_key('rodape')
+    end
+  end
+
   describe 'teto de tamanho' do
     let(:longo) { 'Á' * 500 }
     let(:link) { "https://cdn.loja.com.br/#{'a' * 480}.jpg" }

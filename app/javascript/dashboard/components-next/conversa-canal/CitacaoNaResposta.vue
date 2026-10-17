@@ -5,10 +5,10 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
-import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
 import CitacaoDoWhatsapp from './CitacaoDoWhatsapp.vue';
-import { eFigurinha } from './figurinha';
+import { previaDoAnexoCitado } from './citacaoDoAnexo';
+import { previaDaCitada } from './useFormatoDoWhatsapp';
 
 const props = defineProps({
   // A mensagem da lista da conversa (chaves do servidor, snake_case).
@@ -17,24 +17,12 @@ const props = defineProps({
 const emit = defineEmits(['dismiss']);
 const { t } = useI18n();
 
-// Chaves escritas por extenso: a trava de i18n confere cada uma.
-const NOMES_DO_ANEXO = {
-  image: 'CONVERSA_CANAL.CITACAO.FOTO',
-  video: 'CONVERSA_CANAL.CITACAO.VIDEO',
-  audio: 'CONVERSA_CANAL.CITACAO.AUDIO',
-  file: 'CONVERSA_CANAL.CITACAO.DOCUMENTO',
-  location: 'CONVERSA_CANAL.CITACAO.LOCALIZACAO',
-  contact: 'CONVERSA_CANAL.CITACAO.CONTATO',
-};
-
 const mensagem = computed(() => useCamelCase(props.message, { deep: true }));
 const previa = computed(() => {
-  const { content, attachments } = mensagem.value;
-  if (content) return new MessageFormatter(content).formattedMessage;
-  // A figurinha é anexo de imagem; o balão a chama de Figurinha, a citação também.
-  if (eFigurinha(attachments?.[0])) return t('CONVERSA_CANAL.MIDIA.FIGURINHA');
-  const chave = NOMES_DO_ANEXO[attachments?.[0]?.fileType];
-  return t(chave || 'CONVERSA_CANAL.CITACAO.SEM_TEXTO');
+  // Lido como o balão da citada o mostra (#1740): do cliente, no formato do app.
+  if (mensagem.value.content) return previaDaCitada(mensagem.value);
+  // Os mesmos rótulos da citação no balão ("Foto", "Figurinha", o nome do documento).
+  return previaDoAnexoCitado(mensagem.value, t);
 });
 </script>
 

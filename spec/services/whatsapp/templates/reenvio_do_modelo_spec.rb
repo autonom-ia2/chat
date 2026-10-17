@@ -127,6 +127,25 @@ RSpec.describe Whatsapp::Templates::ReenvioDoModelo, :aggregate_failures do
     expect(a_request(:get, %r{/#{outra.waba_id}/message_templates})).to have_been_made
   end
 
+  # #1702: o encaminhamento confere fora da transação e grava dentro dela.
+  it 'em duas etapas: conferir fala com a Meta e não grava; criar_conferido grava sem falar com a Meta' do
+    original = enviar(modelo_enviado(aviso, { 'body' => { '1' => 'Ana', '2' => '123' } }))
+    WebMock.reset_executed_requests!
+
+    conferido = described_class.conferir(message_original: original, destino: destino)
+
+    expect(conferido).to match(status: :conferido, reenvio: an_instance_of(described_class))
+    expect(a_request(:get, %r{/message_templates})).to have_been_made
+    expect(destino.messages.outgoing).to be_empty
+
+    WebMock.reset_executed_requests!
+    criado = conferido[:reenvio].criar_conferido
+
+    expect(criado).to match(status: :criado, message: an_instance_of(Message))
+    expect(criado[:message].additional_attributes['template_params']).to include('name' => aviso['name'])
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'valor com chaves fica literal: o Liquid não roda de novo no valor do cliente' do
     original = modelo_enviado(aviso, { 'body' => { '1' => 'Ana', '2' => '123' } })
     gravado = original.additional_attributes.deep_dup

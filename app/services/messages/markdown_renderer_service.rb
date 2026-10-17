@@ -12,10 +12,16 @@ class Messages::MarkdownRendererService
     'Channel::TwilioSms' => :render_plain_text
   }.freeze
 
-  def initialize(content, channel_type, channel = nil)
+  # Só o WhatsApp usa os dois, e só com a pele ligada na conta (ConversaCanal::Pele, #1702):
+  # `pele`: o texto sai no formato do app (WhatsAppDaPeleRenderer). Sem ela, segue o caminho do Chatwoot.
+  # `automatico`: a mensagem é de robô, IA ou envio automático (Messages::EnvioAutomatico):
+  # lê o texto no dialeto do app (*x* negrito) em vez de markdown.
+  def initialize(content, channel_type, channel = nil, pele: false, automatico: false)
     @content = content
     @channel_type = channel_type
     @channel = channel
+    @pele = pele
+    @automatico = automatico
   end
 
   def render
@@ -57,11 +63,24 @@ class Messages::MarkdownRendererService
   end
 
   def render_whatsapp
+    return render_whatsapp_da_pele if @pele
+
     # Strip whitespace from whitespace-only lines to normalize newlines
     normalized_content = @content.gsub(/^[ \t]+$/m, '')
     content_with_preserved_newlines = preserve_multiple_newlines(normalized_content)
     renderer = Messages::MarkdownRenderers::WhatsAppRenderer.new
     doc = CommonMarker.render_doc(content_with_preserved_newlines, [:DEFAULT, :STRIKETHROUGH_DOUBLE_TILDE])
+    result = renderer.render(doc).gsub(/\n+\z/, '')
+    restore_multiple_newlines(result)
+  end
+
+  def render_whatsapp_da_pele
+    normalized_content = @content.gsub(/^[ \t]+$/m, '')
+    renderers = Messages::MarkdownRenderers
+    # Linhas em branco preservadas sem desmontar o bloco ``` (#1732); ~~x~~ vira ~x~.
+    content_with_preserved_newlines = renderers::WhatsAppNewlines.preserve(normalized_content)
+    renderer = renderers::WhatsAppDaPeleRenderer.new(content_with_preserved_newlines, automatico: @automatico)
+    doc = CommonMarker.render_doc(content_with_preserved_newlines, [:DEFAULT, :STRIKETHROUGH_DOUBLE_TILDE], [:strikethrough])
     result = renderer.render(doc).gsub(/\n+\z/, '')
     restore_multiple_newlines(result)
   end

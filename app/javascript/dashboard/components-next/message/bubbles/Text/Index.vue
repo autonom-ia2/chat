@@ -7,6 +7,7 @@ import { usePreviaDeLink } from 'dashboard/components-next/conversa-canal/usePre
 import DocumentoDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/DocumentoDoWhatsapp.vue';
 import MidiaComLegenda from 'dashboard/components-next/conversa-canal/midia/MidiaComLegenda.vue';
 import { usePele } from 'dashboard/components-next/conversa-canal/pele';
+import { cortarTextoLongo } from 'dashboard/components-next/conversa-canal/textoLongo';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
 import { ATTACHMENT_TYPES, MESSAGE_TYPES } from '../../constants';
@@ -54,6 +55,12 @@ const renderContent = computed(() => {
   return content.value;
 });
 
+// #1702: com a pele, texto longo sai cortado com "Ler mais", como no app (textoLongo.js).
+const lerTudo = ref(false);
+const textoCortado = computed(() =>
+  pele.value && !lerTudo.value ? cortarTextoLongo(renderContent.value) : null
+);
+
 const isTemplate = computed(() => {
   return messageType.value === MESSAGE_TYPES.TEMPLATE;
 });
@@ -86,7 +93,19 @@ const handleSeeOriginal = () => {
         :anexo="documento"
       />
       <PreviaDeLink v-if="previaDeLink" :previa="previaDeLink" />
-      <FormattedContent v-if="renderContent" :content="renderContent" />
+      <FormattedContent
+        v-if="renderContent"
+        :content="textoCortado || renderContent"
+      />
+      <button
+        v-if="textoCortado"
+        type="button"
+        class="-mt-3 self-start text-[14.2px] leading-[19px] font-medium text-[#027EB5] dark:text-[#53BDEB] hover:underline"
+        data-ler-mais
+        @click="lerTudo = true"
+      >
+        {{ $t('CONVERSA_CANAL.TEXTO_LONGO.LER_MAIS') }}
+      </button>
       <span
         v-if="contactInfoRequestState === 'pending'"
         class="text-xs font-medium text-n-slate-11"
