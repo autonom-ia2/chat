@@ -5,6 +5,7 @@
 # Cada endereço de imagem é baixado no máximo uma vez a cada 24 h (o mesmo prazo da página): as próximas mensagens
 # copiam o arquivo que já está conosco, e uma imagem recusada fica recusada. Sem isso, repetir a mesma mensagem fazia
 # o servidor buscar a imagem de novo a cada vez, fora da cota de leituras da conta (revisão adversarial, 17/10).
+# A lembrança é por conta: uma conta nunca lê arquivo guardado por outra.
 class ConversaCanal::ImagemDaPrevia
   TIPOS = %w[image/jpeg image/png image/webp image/gif].freeze
   MAX_BYTES = 1.megabyte
@@ -21,7 +22,10 @@ class ConversaCanal::ImagemDaPrevia
   def guardar
     guardada = Rails.cache.read(chave)
     return if guardada == SEM_IMAGEM
-    return copiar(guardada) if guardada.present?
+
+    # O arquivo guardado pode ter saído (mensagem apagada): aí baixa de novo em vez de ficar sem imagem até vencer.
+    copia = copiar(guardada) if guardada.present?
+    return copia if copia
 
     baixar.tap { |caminho| lembrar(caminho ? anexo.blob.id : SEM_IMAGEM) }
   rescue SafeFetch::Error
@@ -32,7 +36,7 @@ class ConversaCanal::ImagemDaPrevia
   private
 
   def chave
-    "conversa_canal:previa_de_link:imagem:#{Digest::SHA256.hexdigest(@url)}"
+    "conversa_canal:previa_de_link:imagem:#{@message.account_id}:#{Digest::SHA256.hexdigest(@url)}"
   end
 
   def lembrar(valor)

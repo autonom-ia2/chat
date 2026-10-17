@@ -91,6 +91,14 @@ RSpec.describe 'Encaminhar mensagens', type: :request do
         expect(destino.messages.count).to eq(0)
       end
 
+      it 'a lista de destinos também é só do painel: token pessoal recebe 403 antes de ler contatos' do
+        get "/api/v1/accounts/#{account.id}/conversa_canal/encaminhamentos",
+            params: { termo: '' }, headers: { api_access_token: agente.access_token.token }, as: :json
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body).not_to have_key('payload')
+      end
+
       it 'token pessoal de uma pessoa (script, automação): 403' do
         encaminhar_com_token(agente.access_token.token)
 

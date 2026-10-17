@@ -50,6 +50,19 @@ describe ConversaCanal::Encaminhamento do
     expect(copiado.file_type).to eq('image')
   end
 
+  it 'apagar a original não apaga o arquivo da cópia (o blob com outro anexo não é purgado)' do
+    foto = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :incoming, content: nil)
+    anexo(foto, :image)
+    encaminhar([foto.id])
+    copiado = copias_em(destino).sole.attachments.sole
+
+    perform_enqueued_jobs { foto.destroy! }
+
+    expect(ActiveStorage::PurgeJob).to have_been_performed
+    expect(copiado.reload.file).to be_attached
+    expect(copiado.file.blob.service.exist?(copiado.file.blob.key)).to be(true)
+  end
+
   it 'documento continua documento e áudio de voz continua de voz' do
     mensagem = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :incoming, content: nil)
     anexo(mensagem, :audio, arquivo: 'sample.ogg', mime: 'audio/ogg', meta: { 'is_voice_message' => true })

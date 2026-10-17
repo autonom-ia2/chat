@@ -60,12 +60,13 @@ class Whatsapp::ReactionRecorder
     mine, others = current.partition { |reaction| author?(reaction, author) }
     return if stale?(message, author, mine)
 
-    remember_removal(message, author) if @emoji.empty?
     reactions = next_reactions(others, author)
-    return if reactions == current
-
-    attrs = reactions.empty? ? attrs.except(KEY) : attrs.merge(KEY => reactions)
-    ConversaCanal::GravarNaMensagem.atualizar!(message, content_attributes: attrs)
+    if reactions != current
+      attrs = reactions.empty? ? attrs.except(KEY) : attrs.merge(KEY => reactions)
+      ConversaCanal::GravarNaMensagem.atualizar!(message, content_attributes: attrs)
+    end
+    # A lápide só depois do banco: se a gravação falhar, nada fica dizendo que a reação foi tirada.
+    remember_removal(message, author) if @emoji.empty?
   end
 
   def author?(reaction, author)

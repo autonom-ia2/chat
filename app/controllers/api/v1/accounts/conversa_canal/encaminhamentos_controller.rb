@@ -7,8 +7,8 @@
 # (robô, agente da Autonomia, integração, automação, campanha ou script com o token pessoal) recebe 403 antes de
 # qualquer leitura; o painel entra pela sessão (devise_token_auth), nunca por esse cabeçalho.
 class Api::V1::Accounts::ConversaCanal::EncaminhamentosController < Api::V1::Accounts::ConversaCanal::BaseController
-  prepend_before_action :recusar_automacao, only: :create
-  before_action :exigir_pessoa, only: :create
+  prepend_before_action :recusar_automacao
+  before_action :exigir_pessoa
 
   def index
     destinos = ConversaCanal::DestinosDoEncaminhamento.new(user: Current.user, account: Current.account, termo: params[:termo]).perform

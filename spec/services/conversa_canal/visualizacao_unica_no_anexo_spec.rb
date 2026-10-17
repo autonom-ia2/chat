@@ -6,6 +6,8 @@ require 'rails_helper'
 describe ConversaCanal::VisualizacaoUnicaNoAnexo do
   let(:message) { create(:message) }
 
+  before { message.account.enable_features!('conversa_cara_do_canal') }
+
   def anexo(meta)
     message.attachments.create!(account_id: message.account_id, file_type: :image, meta: meta,
                                 file: fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png'))
@@ -27,6 +29,12 @@ describe ConversaCanal::VisualizacaoUnicaNoAnexo do
 
   it 'leaves a regular photo without the key' do
     expect(anexo({}).push_event_data).not_to have_key(:is_view_once)
+  end
+
+  it 'with the skin off, the attachment goes out as on main (the mark comes from #1709, not from the skin)' do
+    message.account.disable_features!('conversa_cara_do_canal')
+
+    expect(anexo('is_view_once' => true).push_event_data).not_to have_key(:is_view_once)
   end
 
   it 'ignores a mark that is not exactly true' do

@@ -74,6 +74,24 @@ describe Whatsapp::ReactionRecorder do
     expect(reactions).to be_nil
   end
 
+  it 'a remoção que chega antes da reação (fora de ordem) também segura a reação atrasada' do
+    react(nil, at: Time.zone.parse('2026-10-16 10:05'))
+    react('👍', at: Time.zone.parse('2026-10-16 10:00'))
+
+    expect(reactions).to be_nil
+  end
+
+  it 'gravação que falha não deixa lápide: a reação mais antiga ainda pode entrar' do
+    react('👍', at: Time.zone.parse('2026-10-16 10:00'))
+    allow(ConversaCanal::GravarNaMensagem).to receive(:atualizar!).and_raise(ActiveRecord::StatementInvalid)
+    expect { react(nil, at: Time.zone.parse('2026-10-16 10:05')) }.to raise_error(ActiveRecord::StatementInvalid)
+    allow(ConversaCanal::GravarNaMensagem).to receive(:atualizar!).and_call_original
+
+    react('❤️', at: Time.zone.parse('2026-10-16 10:01'))
+
+    expect(reactions.pluck('emoji')).to eq(['❤️'])
+  end
+
   it 'reação nova depois de tirada entra' do
     react(nil, at: Time.zone.parse('2026-10-16 10:05'))
     react('❤️', at: Time.zone.parse('2026-10-16 10:06'))

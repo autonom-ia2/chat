@@ -145,6 +145,36 @@ describe ConversaCanal::PreviaDeLinkJob do
       expect(segunda.previa_de_link_imagem.blob).not_to eq(primeira.reload.previa_de_link_imagem.blob)
     end
 
+    it 'arquivo guardado que saiu (mensagem apagada): baixa de novo em vez de ficar sem imagem' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      primeira = mensagem
+      described_class.perform_now(primeira.id)
+      primeira.reload.previa_de_link_imagem.purge
+      segunda = mensagem
+
+      described_class.perform_now(segunda.id)
+
+      expect(a_request(:get, imagem)).to have_been_made.twice
+      expect(segunda.reload.previa_de_link_imagem).to be_attached
+    end
+
+    it 'a lembrança da imagem é por conta: outra conta não copia o arquivo guardado por esta' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      described_class.perform_now(mensagem.id)
+      outra_conta = create(:account)
+      outra_conta.enable_features!('conversa_cara_do_canal')
+      outro_canal = create(:channel_whatsapp, account: outra_conta, provider: 'whatsapp_cloud', validate_provider_config: false,
+                                              sync_templates: false)
+      outra_conversa = create(:conversation, account: outra_conta, inbox: outro_canal.inbox)
+      dela = create(:message, account: outra_conta, inbox: outro_canal.inbox, conversation: outra_conversa,
+                              message_type: :incoming, content: "veja #{url}")
+
+      described_class.perform_now(dela.id)
+
+      expect(a_request(:get, imagem)).to have_been_made.twice
+      expect(dela.reload.previa_de_link_imagem).to be_attached
+    end
+
     it 'imagem recusada fica recusada: não é buscada de novo a cada mensagem' do
       allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
       stub_request(:get, imagem).to_return(status: 404)
