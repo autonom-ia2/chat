@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
 
         <div
           v-if="escolhidas.length"
-          class="flex items-center gap-4 min-h-[72px] ltr:pl-6 ltr:pr-4 rtl:pr-6 rtl:pl-4 bg-[#F7F5F3] dark:bg-[#1D1F1F]"
+          class="flex items-center gap-4 min-h-[72px] ps-6 pe-4 bg-[#F7F5F3] dark:bg-[#1D1F1F]"
           data-rodape-de-encaminhar
         >
           <span
