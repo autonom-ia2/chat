@@ -7,8 +7,12 @@
 # aplicação com versão completa), antes_de_voltar (o estado de antes de uma volta, quando não estava em
 # versão nenhuma), manual_edit, kb_refresh e rollback (nomes que já estão no banco).
 #
-# O que é oculto não sai pela API: o jbuilder da versão não lê o retrato, e o texto da instrução só sai de
-# versão gravada em modo manual (`InstructionVersion#instrucao_visivel?`, #1484).
+# O que é oculto não sai pela API: o jbuilder da versão não lê o retrato, e o texto da instrução só sai quando
+# foi escrito pelo dono (`InstructionVersion#instrucao_visivel?`, #1484). Isso vale para todas as contas.
+#
+# SÓ NO PILOTO (Fase 2 dos Agentes, contas 1/16/18): a versão do agente inteiro, a volta que devolve todos os
+# campos e a versão a cada aplicação do Construtor. Fora dele, como antes: a volta devolve só a instrução e o
+# Construtor não grava versão.
 module Autonomia::Agents::AgentVersioning
   extend ActiveSupport::Concern
 
@@ -47,11 +51,16 @@ module Autonomia::Agents::AgentVersioning
 
     transaction do
       lock!
-      gravar_versao!('antes_de_voltar', created_by&.id) unless estado_atual_guardado?
+      gravar_versao!('antes_de_voltar', created_by&.id) if versao_completa? && !estado_atual_guardado?
       update_columns(atributos_da_versao(version).merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
-      gravar_versao!('rollback', created_by&.id)
+      gravar_versao!('rollback', created_by&.id, extra: { 'voltou_para' => version.id })
     end
     true
+  end
+
+  # Os hashes das instruções que o dono escreveu à mão (as `manual_edit`): a prova de que um texto é dele.
+  def hashes_escritos_pelo_dono
+    instruction_versions.where(reason: 'manual_edit').distinct.pluck(:instruction_hash).to_set
   end
 
   # Envolve a escrita do Construtor (`apply_builder_config!`, dentro da trava do agente). Antes: se o agente
@@ -60,19 +69,28 @@ module Autonomia::Agents::AgentVersioning
   # sobrescreve trabalho sem rastro. Depois, se a escrita venceu, grava 1 versão da aplicação — mesmo sem
   # mudança, porque é o rastro da aplicação.
   def versionar_aplicacao_do_construtor(autor_id)
+    return yield unless versao_completa?
+
     antes = estado_versionado
     criacao = instruction.blank?
     gravar_versao!('base', nil) unless criacao || estado_atual_guardado?
     venceu = yield
     # Sem instrução não há versão (a coluna é obrigatória); a escrita do Construtor não cai por isso.
-    return venceu unless venceu && instruction.present?
-
-    extra = estado_versionado == antes ? { 'sem_mudanca' => true } : {}
-    gravar_versao!(criacao ? 'builder_create' : 'builder_adjust', autor_id, extra: extra)
+    gravar_versao_da_aplicacao!(criacao, antes, autor_id) if venceu && instruction.present?
     venceu
   end
 
   private
+
+  def gravar_versao_da_aplicacao!(criacao, antes, autor_id)
+    extra = estado_versionado == antes ? { 'sem_mudanca' => true } : {}
+    gravar_versao!(criacao ? 'builder_create' : 'builder_adjust', autor_id, extra: extra)
+  end
+
+  # A versão do agente inteiro vale só no piloto (Fase 2 dos Agentes).
+  def versao_completa?
+    ::Autonomia::Agents::Fase2.ligada?(account)
+  end
 
   def estado_versionado
     { 'instruction' => instruction.to_s, 'agente' => retrato_da_versao }
@@ -103,10 +121,13 @@ module Autonomia::Agents::AgentVersioning
   # depois também fica guiada, portanto oculta.
   def atributos_da_versao(version)
     atributos = atributos_guardados(version)
-    version.instrucao_visivel? ? atributos : atributos.merge('mode' => 'guided')
+    version.instrucao_visivel?(hashes_escritos_pelo_dono) ? atributos : atributos.merge('mode' => 'guided')
   end
 
+  # Fora do piloto, só a instrução (como antes das versões completas).
   def atributos_guardados(version)
+    return { 'instruction' => version.instruction } unless versao_completa?
+
     agente = version.metadata.to_h['agente']
     return { 'instruction' => version.instruction } if agente.nil?
     return retrato_invalido(version) unless Autonomia::Agents::RetratoDaVersao.valido?(agente)

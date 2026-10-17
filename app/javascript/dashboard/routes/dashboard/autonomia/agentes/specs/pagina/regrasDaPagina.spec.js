@@ -298,4 +298,17 @@ describe('#1369 — quando foi e de onde veio', () => {
       origemDaVolta({ id: 9, reason: 'rollback', instruction_hash: 'z' }, [])
     ).toBeNull();
   });
+
+  it('uses the version the rollback recorded, even when the text repeats (#1428)', () => {
+    const versoes = [
+      { id: 5, reason: 'rollback', instruction_hash: 'a', voltou_para: 1 },
+      { id: 4, reason: 'base', instruction_hash: 'a' },
+      { id: 1, reason: 'builder_adjust', instruction_hash: 'a' },
+    ];
+    expect(origemDaVolta(versoes[0], versoes)).toBe(versoes[2]);
+    // A versão de destino já saiu da lista: a frase genérica.
+    expect(
+      origemDaVolta({ ...versoes[0], voltou_para: 99 }, versoes)
+    ).toBeNull();
+  });
 });

@@ -183,7 +183,12 @@ export const quandoFoi = (segundos, idioma, agora = new Date()) => {
 // escolhido, e sem nenhum o jeito já saiu da lista (a API guarda os 50 mais novos): null, e a tela
 // usa a frase genérica. `versoes` vem do mais novo para o mais antigo, como a API devolve.
 export const origemDaVolta = (versao, versoes) => {
-  if (versao?.reason !== 'rollback' || !versao.instruction_hash) return null;
+  if (versao?.reason !== 'rollback') return null;
+  // A volta gravada depois do #1428 diz para qual versão foi; a de antes, só pelo texto.
+  if (versao.voltou_para) {
+    return versoes.find(item => item.id === versao.voltou_para) || null;
+  }
+  if (!versao.instruction_hash) return null;
   const posicao = versoes.indexOf(versao);
   const iguais = versoes
     .slice(posicao + 1)

@@ -47,17 +47,17 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   # Versões que o Construtor grava: a instrução é dele, seja qual for o modo gravado.
   DO_CONSTRUTOR = %w[builder_create builder_adjust].freeze
 
-  # #1484 — o texto só sai de versão gravada em modo MANUAL (texto do próprio dono). Quem decide é o modo da
-  # VERSÃO, nunca o modo atual do agente: a instrução gerada pelo Construtor não aparece nem depois que o
-  # agente passa a manual. Versão antiga, sem retrato: só a edição manual (gravada sempre em modo manual).
-  # Versão do Construtor nunca: gravada em modo manual, exporia a instrução gerada e a volta a ela deixaria
-  # essa instrução num agente manual.
-  def instrucao_visivel?
+  # #1484 — o texto só sai quando foi ESCRITO PELO DONO. A edição à mão (`manual_edit`) é a prova: é a única
+  # gravação que nasce do texto que a pessoa digitou. As outras versões de um agente manual (`base`,
+  # `antes_de_voltar`, `rollback`) só mostram o texto se ele é um que o dono escreveu (o mesmo hash de uma
+  # `manual_edit` deste agente) — um agente manual que recebeu o Construtor antes da recusa do #1514 não expõe
+  # a instrução gerada por nenhum caminho. Versão do Construtor e versão guiada, nunca. Na dúvida, oculta.
+  # `escritos_pelo_dono`: os hashes das `manual_edit` do agente (o controller passa uma vez para a lista toda).
+  def instrucao_visivel?(escritos_pelo_dono = agent.hashes_escritos_pelo_dono)
     return false if DO_CONSTRUTOR.include?(reason)
+    return true if reason == 'manual_edit'
 
     agente = metadata.to_h['agente']
-    return agente['mode'] == 'manual' if agente.is_a?(Hash)
-
-    reason == 'manual_edit'
+    agente.is_a?(Hash) && agente['mode'] == 'manual' && escritos_pelo_dono.include?(instruction_hash)
   end
 end

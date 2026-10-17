@@ -7,4 +7,6 @@ json.instruction_hash instruction_version.instruction_hash
 # IP OCULTO: o TEXTO da instrução só sai de versão gravada em modo MANUAL (texto do próprio usuário).
 # Versão guiada tem instrução gerada pelo Construtor (IP nosso) → nunca expomos o conteúdo, qualquer que
 # seja o modo atual do agente (#1484); só metadados que ainda permitem a volta. O retrato não sai.
-json.instruction instruction_version.instruction if instruction_version.instrucao_visivel?
+json.instruction instruction_version.instruction if instruction_version.instrucao_visivel?(escritos_pelo_dono)
+# A volta diz para qual versão foi (#1428): a tela não precisa adivinhar pelo texto, que se repete.
+json.voltou_para instruction_version.metadata.to_h['voltou_para'] if instruction_version.reason == 'rollback'

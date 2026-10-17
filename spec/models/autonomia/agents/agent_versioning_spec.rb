@@ -5,7 +5,8 @@ require 'timeout'
 # Construtor "aplicou" uma pergunta e regravou o agente sem deixar versão; não havia como saber o que
 # mudou nem como voltar.
 RSpec.describe Autonomia::Agents::AgentVersioning do
-  let(:account) { create(:account) }
+  # A versão do agente inteiro vale só no piloto (Fase 2 dos Agentes); fora dele, ver 'fora do piloto'.
+  let(:account) { conta_da_fase2 }
   let(:user) { create(:user, account: account) }
 
   let(:campos) { Autonomia::Agents::AgentVersioning::CAMPOS }
@@ -439,7 +440,7 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
   describe 'voltar durante uma aplicação do Construtor', :relationships_committed_fixtures do
     self.use_transactional_tests = false
 
-    let!(:account) { create(:account) }
+    let!(:account) { conta_da_fase2 }
     let!(:user) { create(:user, account: account) }
     let(:workers) { [] }
     let(:liberar_construtor) { Queue.new }
@@ -513,5 +514,103 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
         .to eq(['oi v1', 'oi escrito a mao', 'oi v2', 'oi v1'])
       expect(rascunho.reload.greeting).to eq('oi v1')
     end
+  end
+
+  describe '#1514: o Construtor não aplica em agente manual' do
+    it 'recusa no fechamento e não grava nada' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
+                                               instruction: 'texto do dono')
+
+      expect { aplicar(agent, gerado('v1')) }.to raise_error(Autonomia::Agents::Agent::ModoManual)
+      expect(agent.reload.instruction).to eq('texto do dono')
+      expect(agent.instruction_versions.count).to eq(0)
+    end
+  end
+
+  # Revisão crítica (17/10): agente manual que recebeu o Construtor ANTES da recusa (dado legado) não pode expor a
+  # instrução gerada nas versões base/antes_de_voltar/rollback. O texto só aparece se o dono o escreveu.
+  describe 'a instrução só aparece quando o dono a escreveu' do
+    let(:agent) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
+                                       instruction: 'texto do dono')
+    end
+
+    before { agent.record_instruction_version!(reason: 'manual_edit', created_by: user) }
+
+    def legado_com_instrucao_gerada!
+      agent.update_columns(instruction: 'GERADA pelo Construtor', greeting: 'oi') # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'antes_de_voltar e rollback de um agente manual com instrução gerada ficam ocultos' do
+      legado_com_instrucao_gerada!
+      agent.reload.restore_instruction!(agent.instruction_versions.find_by(reason: 'manual_edit'))
+
+      antes = agent.instruction_versions.find_by(reason: 'antes_de_voltar')
+      expect(antes.instruction).to eq('GERADA pelo Construtor')
+      expect(antes.instrucao_visivel?).to be(false)
+    end
+
+    it 'a volta ao texto do dono mostra o texto (é dele)' do
+      legado_com_instrucao_gerada!
+      agent.reload.restore_instruction!(agent.instruction_versions.find_by(reason: 'manual_edit'))
+
+      volta = agent.instruction_versions.find_by(reason: 'rollback')
+      expect(volta.instruction).to eq('texto do dono')
+      expect(volta.instrucao_visivel?).to be(true)
+      expect(agent.reload).to be_manual
+    end
+
+    it 'voltar a uma versão de texto gerado num agente manual deixa o agente guiado' do
+      legado_com_instrucao_gerada!
+      agent.reload.restore_instruction!(agent.instruction_versions.find_by(reason: 'manual_edit'))
+      gerada = agent.instruction_versions.find_by(reason: 'antes_de_voltar')
+
+      agent.reload.restore_instruction!(gerada)
+
+      expect(agent.reload).to be_guided
+    end
+
+    it 'a volta grava para qual versão foi' do
+      alvo = agent.instruction_versions.find_by(reason: 'manual_edit')
+      agent.update!(greeting: 'outra')
+
+      agent.restore_instruction!(alvo)
+
+      expect(agent.instruction_versions.find_by(reason: 'rollback').metadata['voltou_para']).to eq(alvo.id)
+    end
+  end
+
+  describe 'fora do piloto (sem a Fase 2): como antes' do
+    let(:account) { conta_da_fase2(ligada: false) }
+
+    it 'o Construtor não grava versão' do
+      aplicar(rascunho, gerado('v1'))
+
+      expect(rascunho.instruction_versions.count).to eq(0)
+    end
+
+    it 'voltar devolve só a instrução, sem antes_de_voltar' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'G', agent_type: 'custom', instruction: 'v1',
+                                               greeting: 'oi 1')
+      agent.record_instruction_version!(reason: 'kb_refresh')
+      alvo = agent.instruction_versions.last
+      agent.update!(instruction: 'v2', greeting: 'oi 2')
+
+      agent.restore_instruction!(alvo)
+
+      expect(agent.reload).to have_attributes(instruction: 'v1', greeting: 'oi 2')
+      expect(agent.instruction_versions.pluck(:reason)).to eq(%w[kb_refresh rollback])
+    end
+  end
+
+  # Declarado no PR: a versão da aplicação é gravada na mesma transação da escrita do Construtor. Se ela falhar,
+  # a aplicação inteira falha (o ajuste não fica sem rastro).
+  it 'se a versão não puder ser gravada, a aplicação do Construtor não acontece' do
+    agent = Autonomia::Agents::Agent.create!(account: account, name: 'G', agent_type: 'custom', instruction: 'antes')
+    # Sem o hash, a versão não passa na validação (`instruction_hash` obrigatório).
+    allow(Digest::SHA256).to receive(:hexdigest).and_return(nil)
+
+    expect { aplicar(agent, gerado('v1')) }.to raise_error(ActiveRecord::RecordInvalid)
+    expect(agent.reload.instruction).to eq('antes')
   end
 end

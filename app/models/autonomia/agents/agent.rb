@@ -106,6 +106,11 @@ module Autonomia
       # mantida pela Autonom.ia. A API devolve 422 com `autonomia.agents.instrucao_mantida`.
       class InstrucaoMantida < StandardError; end
 
+      # #1514 (decisão do Rodrigo, 17/10/2026) — o Construtor ("Mudar conversando") não aplica em agente MANUAL: a
+      # instrução dele é a que o dono escreveu, e a gerada pelo Construtor ficaria visível no GET e no histórico.
+      # A API devolve 422 com `autonomia.agents.modo_manual`.
+      class ModoManual < StandardError; end
+
       # Tetos PRÓPRIOS de `tone` e `instruction`. O ApplicationRecord aplica um teto genérico
       # anti-DOS a toda coluna de texto (255 para string, 20.000 para text) e só sai da frente
       # quando o model declara a sua própria validação de tamanho. Declarar aqui evita mexer na
@@ -206,6 +211,12 @@ module Autonomia
         raise InstrucaoMantida if instrucao_mantida?
       end
 
+      # A guarda do Construtor contra agente manual (#1514): na porta (build_threads) e no fechamento, que é o
+      # último lugar antes da escrita (o agente pode ter passado a manual durante a geração).
+      def recusar_se_modo_manual!
+        raise ModoManual if manual?
+      end
+
       # A INSTRUÇÃO QUE VAI AO MODELO (#380). Para o Agente de Cotação é o arquivo do deploy com as
       # escolhas da corretora guardadas em `config` (`QuoteAgent::Builder.instrucao_do_principal`):
       # um agente já criado recebe o texto novo sem ser recriado, como o especialista desde a
@@ -232,6 +243,7 @@ module Autonomia
       # esta geração ganhou a escrita.
       def apply_builder_config!(build_token, attrs)
         recusar_se_instrucao_mantida!
+        recusar_se_modo_manual!
         return false if build_token.blank?
 
         transaction do

@@ -3,7 +3,7 @@ require 'rails_helper'
 # G2 — endpoint de histórico + rollback da instrução. Escopo por conta/agente (404 cross-account),
 # IP OCULTO (texto só em modo manual) e rollback atômico.
 RSpec.describe 'Autonomia agent instruction versions', type: :request do
-  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
+  let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_agents_fase2' => true }) }
   let(:administrator) { create(:user, account: account, role: :administrator) }
 
   let(:manual_agent) do
