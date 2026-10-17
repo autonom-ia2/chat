@@ -31,11 +31,16 @@ import { useCardDono } from './useCardDono';
 import { useCardMover } from './useCardMover';
 import TelaOrigem from './telas/TelaOrigem.vue';
 import TelaHistorico from './telas/TelaHistorico.vue';
+import LembreteSerie from '../lembrete/LembreteSerie.vue';
+import MensagemMarcadaGaveta from '../mensagemMarcada/MensagemMarcadaGaveta.vue';
+import { usaGavetaNova } from '../mensagemMarcada/useMensagemMarcada';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { passosDoCard } from './proximoPasso';
 import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
 import { useCardRetorno } from './useCardRetorno';
 import { useCardHistorico } from './useCardHistorico';
 import { useCardDesfecho } from './useCardDesfecho';
+import { useCardTipo } from './useCardTipo';
 import { useCardConversao } from './useCardConversao';
 import { useCardCliente } from './useCardCliente';
 import { useCardNomes } from './useCardNomes';
@@ -111,11 +116,12 @@ const podeIa = computed(
 );
 const podeGerenciar = computed(() => props.canManageCards);
 const podeMover = computed(() => props.canMoveCards);
-const { nome, titulo, subtitulo } = useCardNomes({ t, card });
 const funil = computed(() => {
   const id = Number(card.value.pipeline_id || props.pipelineId);
   return props.pipelines.find(item => item.id === id);
 });
+// #1498 — Negócio (Vender) ou Assunto (Atender), e Cobrança.
+const jeito = useCardTipo({ t, funil });
 const etapaDoCard = computed(
   () =>
     props.stages.find(etapa => etapa.id === card.value.stage_id)?.name ||
@@ -128,25 +134,21 @@ const migalha = computed(() => [funil.value?.name].filter(Boolean));
 // ——— Desfecho (ST-01 a ST-07) ———
 const { status, venda, rotulosProprios, rotuloGanhar, rotuloPerder, desfecho } =
   useCardDesfecho({ t, card, funil });
+const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
 const negocio = useCardNegocio();
-const retorno = useCardRetorno({
-  t,
-  store,
-  card,
-  emit,
-  podeGerenciar,
-  formato,
-});
-provide('cardRetorno', retorno);
 const atividades = computed(() => card.value.activities || []);
 const { porDia } = useCardHistorico({
   t,
   te,
   locale,
   activities: atividades,
-  textos: 'CRM_CARD.HISTORICO.EVENTO',
+  // #1498 — Atender tem frases próprias ("Atendimento reaberto").
+  textos: () =>
+    jeito.atender.value
+      ? ['CRM_CARD.HISTORICO.EVENTO_ATENDER', 'CRM_CARD.HISTORICO.EVENTO']
+      : ['CRM_CARD.HISTORICO.EVENTO'],
 });
 const sugestao = useSugestaoEtapa({
   t,
@@ -203,6 +205,54 @@ const voltarSemGuarda = () => {
   pilha.value = pilha.value.slice(0, -1);
 };
 
+const useAccountFlags = useAccount();
+const retorno = useCardRetorno({
+  t,
+  store,
+  card,
+  emit,
+  podeGerenciar,
+  formato,
+  agentes: computed(() => props.agents),
+  locale,
+  lembretesV2: computed(() =>
+    useAccountFlags.isCloudFeatureEnabled(FEATURE_FLAGS.CRM_LEMBRETES_V2)
+  ),
+  // Mudança de um lembrete que repete salva direto na API (#1460): volta à
+  // repetição, que recarrega.
+  aoSalvarEdicao: () => {
+    voltarSemGuarda();
+    emit('refreshCard');
+  },
+});
+provide('cardRetorno', retorno);
+// #1590: com a flag, "Mandar mensagem" de um card da caixa oficial abre a
+// gaveta da Mensagem marcada (já com o cliente); fora disso, o retorno de sempre.
+const mensagemNova = computed(
+  () =>
+    useAccountFlags.isCloudFeatureEnabled(FEATURE_FLAGS.CRM_MENSAGEM_MARCADA) &&
+    usaGavetaNova(card.value, props.inboxes)
+);
+const mensagemAberta = ref(false);
+// Marcou pela tela do retorno: volta para a Agenda, onde a mensagem aparece.
+const mensagemMarcou = () => {
+  emit('refreshCard');
+  if (tela.value === 'retorno-novo') voltarSemGuarda();
+};
+// #1460: a visão da repetição de um lembrete, dentro do card.
+const serieAberta = ref(null);
+const serieTitulo = ref('');
+const telaSerie = ref(null);
+const abrirSerie = serieId => {
+  serieAberta.value = serieId;
+  irPara('retorno-serie');
+};
+// "Só a próxima" abre o lembrete sem repetição; "esta e as próximas", com ela.
+const mudarSerie = escolha => {
+  retorno.editarSerie(escolha);
+  irPara('retorno-novo');
+};
+
 // ——— Quem cuida (DN-02/OB-07): troca o dono na própria gaveta ———
 const dono = useCardDono({
   card,
@@ -231,7 +281,13 @@ const descarte = useCardGuarda({
   editando,
   rascunhos: () =>
     [
-      negocio.sujo.value && editando.value && t('CRM_CARD.SAIR.NEGOCIO'),
+      negocio.sujo.value &&
+        editando.value &&
+        t(
+          jeito.atender.value
+            ? 'CRM_CARD.SAIR.ASSUNTO'
+            : 'CRM_CARD.SAIR.NEGOCIO'
+        ),
       retorno.sujo.value && t('CRM_CARD.SAIR.RETORNO'),
       donoSujo.value && t('CRM_CARD.SAIR.DONO'),
       telaCliente.value?.sujo && t('CRM_CARD.SAIR.CLIENTE'),
@@ -337,6 +393,11 @@ const cancelarRetorno = item =>
 // Agenda já chega marcada.
 const novoRetorno = (modo = 'reminder_only') => {
   if (!podeGerenciar.value) return;
+  // #1590: a mensagem no dia abre a gaveta da Mensagem marcada.
+  if (modo === 'auto_send_message' && mensagemNova.value) {
+    mensagemAberta.value = true;
+    return;
+  }
   retorno.reiniciar(modo);
   irPara('retorno-novo');
 };
@@ -373,8 +434,11 @@ const {
 // A página chama o 3º argumento quando salvou: a tela volta ao resumo.
 const salvarNegocio = () => {
   if (!podeGerenciar.value || !negocio.valido.value) return;
-  emit('save', payloadDoNegocio(negocio.form), undefined, () => {
-    negocio.carregar({ ...props.card, ...payloadDoNegocio(negocio.form) });
+  const payload = payloadDoNegocio(negocio.form, {
+    cobranca: jeito.cobranca.value,
+  });
+  emit('save', payload, undefined, () => {
+    negocio.carregar({ ...props.card, ...payload });
     if (tela.value === 'negocio') voltarSemGuarda();
   });
 };
@@ -390,13 +454,16 @@ const { heroi, rodape } = useCardMoldura({
   subtitulo,
   migalha,
   nome,
+  jeito,
   etapa: etapaDoCard,
   contatoInicial: computed(() => props.initialContact),
   permissoes: { gerenciar: podeGerenciar },
   estado: {
     salvando: computed(() => props.isSaving),
     negocioValido: negocio.valido,
-    salvandoRetorno: computed(() => props.isSavingFollowUp),
+    salvandoRetorno: computed(
+      () => props.isSavingFollowUp || retorno.salvandoEdicao.value
+    ),
     retornoPronto: retorno.pronto,
     modoRetorno: computed(() => retorno.form.automationMode),
     salvandoReuniao: computed(() => Boolean(telaReuniao.value?.salvando)),
@@ -407,6 +474,8 @@ const { heroi, rodape } = useCardMoldura({
     link: computed(() => telaLink.value?.principal || null),
     donoSujo,
     retornoFalta: retorno.faltaFrase,
+    serieTitulo,
+    edicaoRetorno: computed(() => retorno.edicao.value?.qual || ''),
     cliente: computed(() => telaCliente.value),
     criacao: computed(() => criacao.value),
   },
@@ -418,6 +487,7 @@ const { heroi, rodape } = useCardMoldura({
     confirmarReuniao,
     novoRetorno,
     criarRetorno,
+    abrirMudarSerie: () => telaSerie.value?.abrirMudar(),
     desfazerCliente: () => telaCliente.value?.desfazer(),
     passo1: () => {
       tela.value = 'criar-1';
@@ -549,6 +619,7 @@ defineExpose({
         :aberto="desfecho.aberto"
         :ganhar="rotuloGanhar"
         :perder="rotuloPerder"
+        :venda="venda"
         :pode-gerenciar="podeGerenciar"
         :carregando="isLoadingDetails"
         @ganhou="ganhou"
@@ -588,6 +659,7 @@ defineExpose({
                 :tem-conversa="Boolean(card.conversation?.display_id)"
                 :ocupado="isSavingFollowUp || sugestao.respondendo.value"
                 :status="desfecho.status"
+                :venda="venda"
                 @responder="abrirConversa()"
                 @feito="feito"
                 @retorno="novoRetorno"
@@ -616,6 +688,7 @@ defineExpose({
                 :pode-registros="canManageRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
+                :jeito="jeito"
                 @abrir="abrir"
                 @arquivar="arquivar"
                 @conversa="abrirConversa()"
@@ -650,7 +723,9 @@ defineExpose({
               v-model:urgencia="negocio.form.priority"
               v-model:atencao="negocio.form.score"
               v-model:fechar-ate="negocio.form.expectedCloseAt"
+              v-model:promessa="negocio.form.paymentPromiseAt"
               :card="card"
+              :jeito="jeito"
               :pode-gerenciar="podeGerenciar"
             />
             <TelaQuemCuida
@@ -688,7 +763,22 @@ defineExpose({
               @abrir="abrirConversa"
               @atualizar="resumoConversa.gerar"
             />
-            <TelaRetornoNovo v-else-if="tela === 'retorno-novo'" />
+            <TelaRetornoNovo
+              v-else-if="tela === 'retorno-novo'"
+              :funil="funil?.name || ''"
+              :mensagem-nova="mensagemNova"
+              @mensagem-nova="mensagemAberta = true"
+            />
+            <LembreteSerie
+              v-else-if="tela === 'retorno-serie' && serieAberta"
+              ref="telaSerie"
+              :serie-id="serieAberta"
+              :pode-gerenciar="podeGerenciar"
+              :formato="formato"
+              @carregou="serie => (serieTitulo = serie.title)"
+              @mudou="emit('refreshCard')"
+              @mudar="mudarSerie"
+            />
             <TelaReuniaoNova
               v-else-if="tela === 'reuniao-nova'"
               ref="telaReuniao"
@@ -741,6 +831,7 @@ defineExpose({
                   @cancelar="cancelarRetorno"
                   @adiar="adiarRetorno"
                   @mudou="emit('refreshCard')"
+                  @serie="abrirSerie"
                 />
               </template>
             </TelaAgenda>
@@ -754,6 +845,7 @@ defineExpose({
               v-else-if="tela === 'historico'"
               :dias="porDia"
               :carregando="isLoadingDetails"
+              :venda="venda"
             />
           </main>
 
@@ -770,6 +862,8 @@ defineExpose({
               :exemplo="editando ? titulo : t('CRM_CARD.LADO.CLIENTE_NOVO')"
               :formato="formato"
               :negocio="tela === 'negocio' ? negocio.form : null"
+              :atender="jeito.atender.value"
+              :cobranca="jeito.cobranca.value"
               :retorno="tela === 'retorno-novo' ? retorno.previa.value : null"
               :dono="donoNome"
               :reuniao="reuniao.reuniao.value"
@@ -791,6 +885,14 @@ defineExpose({
         v-if="rodape"
         :rodape="rodape"
         :ocupado="Boolean(ocupado())"
+      />
+      <MensagemMarcadaGaveta
+        v-if="mensagemNova"
+        :show="mensagemAberta"
+        :card="card"
+        :caixas="inboxes"
+        @salvou="mensagemMarcou"
+        @close="mensagemAberta = false"
       />
     </div>
   </transition>

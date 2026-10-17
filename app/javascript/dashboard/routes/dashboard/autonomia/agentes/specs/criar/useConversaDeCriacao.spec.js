@@ -92,6 +92,25 @@ describe('useConversaDeCriacao', () => {
     );
   });
 
+  it('opens the Builder as a team copilot when asked (#1494)', async () => {
+    const { conversa } = montar({ modelo: 'custom', atuacao: 'internal' });
+    conversa.comecar();
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaBuildThreads/start', {
+      type: 'custom',
+      actuation: 'internal',
+      with_knowledge: true,
+    });
+
+    // O primeiro turno, se a abertura falhou, também vai como copiloto.
+    await conversa.enviar({ texto: 'Resumir conversas' });
+    expect(chamadas('autonomiaBuildThreads/start')[1][1]).toEqual({
+      type: 'custom',
+      actuation: 'internal',
+      with_knowledge: true,
+      message: 'Resumir conversas',
+    });
+  });
+
   it('continues a draft that already has an instruction straight into the test, without opening a thread', async () => {
     const { conversa } = montar();
     await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });
@@ -536,5 +555,372 @@ describe('useConversaDeCriacao', () => {
       'voce',
       'material',
     ]);
+  });
+
+  // #1503 — a base de conhecimento da criação: a mesma lista do clipe, para a caixa do Conte.
+  describe('base de conhecimento (#1503)', () => {
+    const criarFonte = () => {
+      let proxima = 40;
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === 'autonomiaSources/create') {
+          proxima += 1;
+          return { id: proxima };
+        }
+        return null;
+      });
+    };
+
+    it('the base holds files and websites from the clip, never photos', async () => {
+      comThread();
+      criarFonte();
+      fotos.upload.mockResolvedValue({ data: { signed_id: 'img-1' } });
+      const { conversa } = montar();
+      await conversa.enviar({
+        texto: 'Olha',
+        anexos: [
+          arquivo('tabela.pdf', 'application/pdf'),
+          arquivo('vitrine.png', 'image/png'),
+        ],
+      });
+      await flushPromises();
+      expect(conversa.base.value.map(m => [m.nome, m.tipo])).toEqual([
+        ['tabela.pdf', 'arquivo'],
+      ]);
+    });
+
+    it('a file sent by the box shows in the conversation too', async () => {
+      comThread();
+      respondeu(1);
+      criarFonte();
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('Cardápio.pdf', 'application/pdf'));
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { file: expect.any(File), kind: 'knowledge' },
+      });
+      const naConversa = conversa.falas.value.filter(f => f.de === 'material');
+      expect(naConversa).toHaveLength(1);
+      expect(naConversa[0].material.nome).toBe('Cardápio.pdf');
+      expect(conversa.base.value[0].fonteId).toBe(41);
+      // Nada vai para o Construtor: o material não é turno.
+      expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    });
+
+    it('a website sent by the box goes to the base as a link and shows in the conversation', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      conversa.anexarSite('https://www.loja.com.br/precos');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: {
+          url: 'https://www.loja.com.br/precos',
+          kind: 'knowledge',
+        },
+      });
+      expect(conversa.base.value[0]).toMatchObject({
+        nome: 'www.loja.com.br/precos',
+        tipo: 'site',
+        fonteId: 41,
+      });
+      expect(conversa.falas.value.some(f => f.material?.tipo === 'site')).toBe(
+        true
+      );
+    });
+
+    it('a website before the draft exists waits in line, then goes', async () => {
+      const { conversa } = montar();
+      conversa.anexarSite('https://loja.com.br/');
+      expect(conversa.estadoDoMaterial(conversa.base.value[0])).toBe('fila');
+      expect(chamadas('autonomiaSources/create')).toHaveLength(0);
+
+      criarFonte();
+      comThread(7, 90);
+      await nextTick();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 90,
+        descriptor: { url: 'https://loja.com.br/', kind: 'knowledge' },
+      });
+      expect(conversa.base.value[0].nome).toBe('loja.com.br');
+    });
+
+    it('removing from the box removes from the conversation and from the base', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      conversa.anexarSite('https://loja.com.br/');
+      await conversa.enviar({ anexos: [arquivo('t.pdf', 'application/pdf')] });
+      await flushPromises();
+      const site = conversa.base.value[0];
+      conversa.tirar(site);
+
+      expect(conversa.base.value.map(m => m.nome)).toEqual(['t.pdf']);
+      expect(conversa.falas.value.some(f => f.material?.id === site.id)).toBe(
+        false
+      );
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/remove', {
+        agentId: 90,
+        sourceId: site.fonteId,
+      });
+    });
+
+    it('removing a website still in line never reaches the server', async () => {
+      const { conversa } = montar();
+      conversa.anexarSite('https://loja.com.br/');
+      conversa.tirar(conversa.base.value[0]);
+      criarFonte();
+      comThread(7, 90);
+      await nextTick();
+      await flushPromises();
+      expect(chamadas('autonomiaSources/create')).toHaveLength(0);
+      expect(conversa.base.value).toHaveLength(0);
+    });
+
+    it('a continued draft brings back what was already in the base, in the box only', async () => {
+      store.dispatch.mockImplementation(async acao =>
+        acao === 'autonomiaSources/fetch'
+          ? [
+              {
+                id: 5,
+                source_type: 'file',
+                reference: 'Antigo.pdf',
+                status: 'ready',
+                review: { status: 'accepted' },
+              },
+              {
+                id: 6,
+                source_type: 'link',
+                external_link: 'https://loja.com.br/',
+                status: 'processing',
+              },
+              {
+                id: 7,
+                source_type: 'file',
+                reference: 'foto.png',
+                kind: 'media',
+              },
+            ]
+          : null
+      );
+      const { conversa } = montar();
+      await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/fetch', {
+        agentId: 4,
+      });
+      expect(conversa.base.value.map(m => [m.nome, m.tipo, m.fonteId])).toEqual(
+        [
+          ['Antigo.pdf', 'arquivo', 5],
+          ['loja.com.br', 'site', 6],
+        ]
+      );
+      expect(conversa.falas.value.some(f => f.de === 'material')).toBe(false);
+    });
+
+    it('says when the base of a continued draft could not be read, and reads it again', async () => {
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === 'autonomiaSources/fetch') throw new Error('500');
+        return null;
+      });
+      const { conversa } = montar();
+      await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });
+      await flushPromises();
+      expect(conversa.erroDaBase.value).toBe(true);
+
+      store.dispatch.mockImplementation(async acao =>
+        acao === 'autonomiaSources/fetch'
+          ? [{ id: 5, source_type: 'file', reference: 'Antigo.pdf' }]
+          : null
+      );
+      await conversa.carregarBase();
+      expect(conversa.erroDaBase.value).toBe(false);
+      expect(conversa.base.value).toHaveLength(1);
+      // Ler de novo não duplica o que já está na caixa.
+      await conversa.carregarBase();
+      expect(conversa.base.value).toHaveLength(1);
+    });
+
+    it('removing a file still uploading also removes it from the server when the upload ends', async () => {
+      comThread();
+      let terminar;
+      store.dispatch.mockImplementation(acao =>
+        acao === 'autonomiaSources/create'
+          ? new Promise(resolve => {
+              terminar = resolve;
+            })
+          : Promise.resolve(null)
+      );
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('Cardápio.pdf', 'application/pdf'));
+      conversa.tirar(conversa.base.value[0]);
+      expect(chamadas('autonomiaSources/remove')).toHaveLength(0);
+
+      terminar({ id: 77 });
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/remove', {
+        agentId: 90,
+        sourceId: 77,
+      });
+      expect(chamadas('autonomiaSources/remove')).toHaveLength(1);
+      expect(conversa.base.value).toHaveLength(0);
+      expect(conversa.falas.value.some(f => f.de === 'material')).toBe(false);
+      expect(conversa.falhaAoTirar.value).toBeNull();
+    });
+
+    it('when the server does not remove an item, it comes back in place and the box is told', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('A.pdf', 'application/pdf'));
+      conversa.anexarArquivo(arquivo('B.pdf', 'application/pdf'));
+      await flushPromises();
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === 'autonomiaSources/remove') throw new Error('500');
+        return original(acao, dados);
+      });
+
+      await conversa.tirar(conversa.base.value[0]);
+      expect(conversa.base.value.map(m => [m.nome, m.fonteId])).toEqual([
+        ['A.pdf', 41],
+        ['B.pdf', 42],
+      ]);
+      expect(conversa.falhaAoTirar.value).toEqual({ nome: 'A.pdf' });
+      // Tentar de novo limpa o aviso.
+      store.dispatch.mockImplementation(original);
+      await conversa.tirar(conversa.base.value[0]);
+      expect(conversa.falhaAoTirar.value).toBeNull();
+      expect(conversa.base.value.map(m => m.nome)).toEqual(['B.pdf']);
+    });
+
+    it('when an item removed while uploading cannot leave the server, it comes back with a notice', async () => {
+      comThread();
+      let terminar;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/create') {
+          return new Promise(resolve => {
+            terminar = resolve;
+          });
+        }
+        if (acao === 'autonomiaSources/remove') {
+          return Promise.reject(new Error('500'));
+        }
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      conversa.anexarArquivo(arquivo('Cardápio.pdf', 'application/pdf'));
+      conversa.tirar(conversa.base.value[0]);
+      expect(conversa.base.value).toHaveLength(0);
+
+      terminar({ id: 77 });
+      await flushPromises();
+      expect(conversa.base.value).toHaveLength(1);
+      expect(conversa.base.value[0]).toMatchObject({
+        nome: 'Cardápio.pdf',
+        fonteId: 77,
+        estado: 'base',
+      });
+      expect(conversa.falhaAoTirar.value).toEqual({ nome: 'Cardápio.pdf' });
+    });
+
+    it('a base read in flight never brings back what was just removed', async () => {
+      let responderLeitura;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/fetch') {
+          return new Promise(resolve => {
+            responderLeitura = resolve;
+          });
+        }
+        if (acao === 'autonomiaSources/create')
+          return Promise.resolve({ id: 41 });
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      comThread();
+      conversa.anexarArquivo(arquivo('A.pdf', 'application/pdf'));
+      await flushPromises();
+      const leitura = conversa.carregarBase();
+      await conversa.tirar(conversa.base.value[0]);
+      responderLeitura([{ id: 41, source_type: 'pdf', reference: 'A.pdf' }]);
+      await leitura;
+      expect(conversa.base.value).toHaveLength(0);
+    });
+
+    it('the conversation clip also stops at the base limit, and says why', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar();
+      Array.from({ length: 30 }, (_, i) =>
+        conversa.anexarArquivo(arquivo(`f${i}.pdf`, 'application/pdf'))
+      );
+      // Grande demais não ocupa vaga.
+      await conversa.enviar({
+        anexos: [arquivo('enorme.pdf', 'application/pdf', 26 * 1024 * 1024)],
+      });
+      await flushPromises();
+      expect(chamadas('autonomiaSources/create')).toHaveLength(30);
+
+      await conversa.enviar({
+        anexos: [arquivo('mais.pdf', 'application/pdf')],
+      });
+      await flushPromises();
+      expect(chamadas('autonomiaSources/create')).toHaveLength(30);
+      const ultimo = conversa.base.value.at(-1);
+      expect(ultimo.nome).toBe('mais.pdf');
+      expect(conversa.estadoDoMaterial(ultimo)).toBe('limite');
+    });
+
+    it('reading the base twice at once, or while a file uploads, never duplicates it', async () => {
+      let terminarCriar;
+      store.dispatch.mockImplementation(acao => {
+        if (acao === 'autonomiaSources/fetch') {
+          return Promise.resolve([
+            { id: 5, source_type: 'pdf', reference: 'Antigo.pdf' },
+            { id: 77, source_type: 'pdf', reference: 'Novo.pdf' },
+          ]);
+        }
+        if (acao === 'autonomiaSources/create') {
+          return new Promise(resolve => {
+            terminarCriar = resolve;
+          });
+        }
+        return Promise.resolve(null);
+      });
+      const { conversa } = montar();
+      await conversa.continuar({ id: 4, name: 'Lia', has_instruction: true });
+      conversa.anexarArquivo(arquivo('Novo.pdf', 'application/pdf'));
+      await Promise.all([conversa.carregarBase(), conversa.carregarBase()]);
+      await flushPromises();
+      expect(chamadas('autonomiaSources/fetch').length).toBeLessThanOrEqual(2);
+
+      terminarCriar({ id: 77 });
+      await flushPromises();
+      expect(conversa.base.value.map(m => m.nome).sort()).toEqual([
+        'Antigo.pdf',
+        'Novo.pdf',
+      ]);
+      expect(conversa.base.value.filter(m => m.fonteId === 77)).toHaveLength(1);
+    });
+
+    it('the team copilot also has a base (#1494)', async () => {
+      comThread();
+      criarFonte();
+      const { conversa } = montar({ modelo: 'custom', atuacao: 'internal' });
+      conversa.anexarArquivo(
+        arquivo('Manual da equipe.pdf', 'application/pdf')
+      );
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaSources/create',
+        expect.objectContaining({ agentId: 90 })
+      );
+      expect(conversa.base.value).toHaveLength(1);
+    });
   });
 });

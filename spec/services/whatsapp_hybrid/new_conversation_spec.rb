@@ -92,6 +92,22 @@ describe WhatsappHybrid::NewConversation, type: :request do
     it('is true') { expect(service_flag).to be(true) }
   end
 
+  # chat#1486: com o WhatsApp limitando conversas novas, a tela oferece só mensagem pronta.
+  context 'when WhatsApp limits new conversations' do
+    it 'is false while the limit is active and true again after it ends' do
+      connection = create_connection
+      timelock = WhatsappHybrid::Timelock.new(connection)
+      timelock.apply!('isActive' => true, 'timeEnforcementEnds' => 6.hours.from_now.to_i)
+      expect(service_flag).to be(false)
+      expect(api_flag).to be(false)
+
+      timelock.apply!('isActive' => false)
+      expect(service_flag).to be(true)
+    ensure
+      Redis::Alfred.delete(timelock.key) if timelock
+    end
+  end
+
   context 'when the global kill switch is on' do
     before { create_connection }
 

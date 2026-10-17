@@ -595,22 +595,39 @@
         "NOVA_ABA": "(opens in a new tab)",
         "NOVO_AGENTE": "New agent",
         "CLIENTE": "Customer",
+        "EQUIPE": "Team",
         "AGENTE": "Agent",
         "ESCREVENDO": "Typing…",
         "USOU": "Used: {arquivo}",
         "IDEIAS": "Ideas to start with",
         "QUEM_DISSE": "{quem}:",
-        "FOTO_ENVIADA": "Photo sent"
+        "FOTO_ENVIADA": "Photo sent",
+        "PRINCIPAL": "Main agent"
       },
       "MENU": {
-        "AGENTES": "Agents",
-        "CRIAR_AGENTE": "Create agent"
+        "AGENTES": "Agents"
       },
       "STATUS": {
         "ATENDENDO": "Answering",
         "PARADO": "Stopped",
         "FALTA_TERMINAR": "Not finished",
-        "COTACAO": "Quotes"
+        "COTACAO": "Quotes",
+        "NA_EQUIPE": "On the team",
+        "AJUDANDO": "Helping"
+      },
+      "ESCOLHER": {
+        "TITULO": "Create agent",
+        "TEXTO": "Pick a ready-made template. Then tell it your way and choose the channel at the end.",
+        "OUTRO_TIPO": "Need another kind?",
+        "OUTRO_TEXTO": "For special cases. Most agents start from a template above.",
+        "EQUIPE": {
+          "TITULO": "Team agent",
+          "TEXTO": "Stays on a channel with a main agent or served only by people, and receives the conversation when someone hands over."
+        },
+        "AJUDA": {
+          "TITULO": "Helps other agents",
+          "TEXTO": "Answers only another agent, never the customer."
+        }
       },
       "MODELOS": {
         "ROTULO": "Ready-made templates",
@@ -619,6 +636,8 @@
         "EXEMPLO": "Example",
         "EXEMPLO_SR": "Example conversation, not a real agent",
         "DO_MEU_JEITO": "My own way: tell it in my own words",
+        "COPILOTO": "Team copilot",
+        "COPILOTO_TEXTO": "Helps your team inside conversations. Never talks to customers.",
         "ESCOLHA": "Pick a ready-made template. You chat for a bit, test the answers and decide when to start answering.",
         "SUPPORT": {
           "TITULO": "Answer customer questions",
@@ -655,7 +674,9 @@
         "CARREGANDO": "Loading your agents",
         "SEUS_AGENTES": "Your agents",
         "CONTAGEM_ATENDENDO": "None answering | 1 answering | {n} answering",
-        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped"
+        "CONTAGEM_PARADOS": "None stopped | 1 stopped | {n} stopped",
+        "CONTAGEM_NA_EQUIPE": "None on the team | 1 on the team | {n} on the team",
+        "CONTAGEM_AJUDANDO": "None helping | 1 helping | {n} helping"
       },
       "CARTAO": {
         "ONDE_NENHUM": "Not on any channel yet",
@@ -667,11 +688,12 @@
         "PARADO": "Not answering anyone right now.",
         "PARADO_SEM_CANAL": "Not on any channel yet.",
         "RASCUNHO": "You started and did not finish.",
-        "COTACAO": "Opens in the quotes module",
+        "COTACAO": "Quotes insurance with your clients",
         "CONTINUAR": "Continue",
         "CONTINUAR_ARIA": "Continue {nome}",
         "MAIS_OPCOES": "More options for {nome}",
-        "EXCLUIR_RASCUNHO": "Delete draft"
+        "EXCLUIR_RASCUNHO": "Delete draft",
+        "RECEBE_EM": "Receives when someone hands over in: {caixas}"
       },
       "EXCLUIR": {
         "TITULO": "Delete this draft?",
@@ -716,9 +738,10 @@
         "QUANDO": "When it answers",
         "OCUPADO": "{canal} · {agente} already answers here",
         "OCUPADO_TEXTO": "Put {nome} in their place",
-        "EXTERNO": "{canal} · Another automatic service already answers here",
-        "EXTERNO_TEXTO": "Another system already answers here. To use it, stop the other system first.",
+        "EXTERNO": "{canal} · An external agent already answers here",
+        "EXTERNO_TEXTO": "An external agent already answers here. To use this channel, stop the external agent first.",
         "TROCA": "{outro} stops answering on {canal}, but stays on your list. The open conversations on {canal} go back to the team.",
+        "TROCA_PARA": "{outro} is on no other channel: it stops answering until you choose a channel for it.",
         "TODOS_OCUPADOS": "All your channels already have an agent. Put {nome} in the place of one of them or connect another channel.",
         "SEM_LEITURA": "Channels that already have an agent are not shown here.",
         "SEMPRE": "Always",
@@ -730,7 +753,15 @@
         "SEM_HORARIO": "This channel has no business hours yet.",
         "QUEM_RECEBE": "When it does not know, {nome} hands the conversation to the team. Who receives it is set in Assignment.",
         "ESCOLHER_QUEM_RECEBE": "Choose who receives",
-        "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives."
+        "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives.",
+        "TAMBEM": "Receives when someone hands over in:",
+        "TAMBEM_TEXTO": "Check the channels where {nome} receives the conversation when someone hands it over. In them, {nome} does not answer first.",
+        "TAMBEM_NENHUMA": "There is no other channel to choose yet.",
+        "PRIMEIRO_PERGUNTA": "Does {nome} answer new conversations first?",
+        "PRIMEIRO_SIM": "Yes, in the channel:",
+        "PRIMEIRO_NAO": "No, only when someone hands over the conversation",
+        "PRIMEIRO_CANAL": "Channel where {nome} answers first",
+        "HORARIO_DE_CADA": "The hours are those of each channel where {nome} receives the conversation."
       },
       "COMPOSITOR": {
         "ESCREVA": "Write your answer",
@@ -1028,10 +1059,6 @@
         "ERRO_ABRIR": "Could not open {nome} right now.",
         "ERRO_ABRIR_SEM_NOME": "Could not open this agent right now.",
         "ERRO_ABRIR_GARANTIA": "Nothing was changed.",
-        "RESPONDE_NO": "Answers on {canal} · {quando}",
-        "PARADO_NO": "On {canal} · {quando}",
-        "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
-        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}",
         "NENHUM_CANAL": "Not on any channel yet.",
         "QUANDO": {
           "ALWAYS": "always",
@@ -1066,10 +1093,19 @@
         },
         "BLOCO_ONDE": {
           "TITULO": "Where and when it answers",
+          "ALTERAR_ARIA": "Change where and when it answers",
+          "ESCOLHER_CANAL": "Choose channel",
+          "PRIMEIRO": "Answers first in {canal} · {quando}",
+          "PRIMEIRO_N": "Answers first in 1 channel · {quando} | Answers first in {n} channels · {quando}",
+          "PRIMEIRO_E_RECEBE": "Answers first in {canal} and receives in {caixas} when someone hands over · {quando} | Answers first in {canal} and receives in {caixas} when someone hands over · {quando}",
+          "PRIMEIRO_N_E_RECEBE": "Answers first in 1 channel and receives in {caixas} when someone hands over · {quando} | Answers first in {n} channels and receives in {caixas} when someone hands over · {quando}",
+          "RECEBE": "Receives in {caixas} when someone hands over the conversation · {quando} | Receives in {caixas} when someone hands over the conversation · {quando}",
+          "NENHUM_LUGAR": "Does not answer anywhere.",
+          "PARADO": "In {canais} · {quando} | In {canais} · {quando}",
+          "PARADO_N": "In 1 channel · {quando} | In {n} channels · {quando}",
           "TEXTO": "On {canal}, {quando}.",
           "TEXTO_N": "On 1 channel, {quando}. | On {n} channels, {quando}.",
-          "ALTERAR_ARIA": "Change where and when it answers",
-          "ESCOLHER_CANAL": "Choose channel"
+          "TAMBEM": "Also receives when someone hands over on: {caixas}."
         },
         "BLOCO_JEITO": {
           "TITULO": "Name and way of talking",
@@ -1212,13 +1248,10 @@
           "ONDE": "Where",
           "QUANDO": "When",
           "QUANDO_ROTULO": "When it answers",
-          "NAO_ATENDER": "Do not answer anywhere",
-          "NAO_ATENDER_TITULO": "Do not answer anywhere?",
-          "NAO_ATENDER_TEXTO": "{nome} leaves {canal}. The conversations there go back to the team.",
-          "NAO_ATENDER_CONFIRMAR": "Do not answer",
           "SEM_CANAL": "You have not connected any channel yet.",
           "PARADO": "To change the channel, {nome} needs to start answering again.",
           "VOLTAR": "Start answering again",
+          "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "VOLTOU": "Whoever messages {canal} now talks to {nome}.",
@@ -1227,10 +1260,17 @@
           "PRONTO": "Done. It applies to the next conversations.",
           "ERRO": "Could not save.",
           "ERRO_GARANTIA": "Nothing changed.",
-          "CONTINUA_NO_ANTIGO": "{nome} started answering on {novo}, but is still on {antigo} too.",
           "LER_ERRO": "Could not show your channels right now.",
           "LER_ERRO_GARANTIA": "Nothing changed.",
-          "CARREGANDO_CANAIS": "Loading your channels…"
+          "CARREGANDO_CANAIS": "Loading your channels…",
+          "PARADO_AVISO": "This way, {nome} will not receive conversations in any channel.",
+          "PARADO_CONFIRMAR": "Confirm",
+          "PARADO_VOLTAR": "Go back",
+          "NAO_ATENDER": "Do not answer anywhere",
+          "NAO_ATENDER_TITULO": "Do not answer anywhere?",
+          "NAO_ATENDER_TEXTO": "{nome} leaves {canal}. The conversations there go back to the team.",
+          "NAO_ATENDER_CONFIRMAR": "Do not answer",
+          "CONTINUA_NO_ANTIGO": "{nome} started answering on {novo}, but is still on {antigo} too."
         },
         "HORARIO": {
           "DIAS": {
@@ -1412,7 +1452,12 @@
             "AGENTE": "Sure! For {pagina}, I have Tuesday at 10am or Wednesday at 3pm. Which one works best for you?",
             "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
-        }
+        },
+        "INTERRUPTOR_AJUDANTE": "{nome} helping other agents",
+        "RESPONDE_NO": "Answers on {canal} · {quando}",
+        "PARADO_NO": "On {canal} · {quando}",
+        "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
+        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}"
       },
       "CRIAR": {
         "TITULO": "Create agent",
@@ -1434,12 +1479,12 @@
           "TEXTO": "{nome} stays on the list as Not finished.",
           "FICAR": "Stay here",
           "SAIR": "Leave",
-          "FEITO": "{nome} stayed on the list as Not finished.",
-          "DEPOIS": "Not now, finish later"
+          "FEITO": "{nome} stayed on the list as Not finished."
         },
         "CONTE": {
           "ROTULO": "Conversation to create the agent",
           "INTRO": "I will ask you a few short questions. The agent only starts answering when you say so.",
+          "INTRO_COPILOTO": "I will ask you a few short questions. The agent only starts helping your team when you say so.",
           "CONVERSA": "Conversation",
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
@@ -1453,6 +1498,7 @@
           "ANEXO_FRASE": "Do you have a menu, a price list or your website? {acao} It is optional.",
           "ANEXO_ACAO": "Send it here.",
           "EXEMPLO_DO_MEU_JEITO": "E.g.: answer price and delivery questions for my store",
+          "EXEMPLO_COPILOTO": "E.g.: summarize conversations and suggest replies for the team",
           "MAIS": "Want to tell me anything else? Write here.",
           "FOTO": "I sent a photo.",
           "TESTAR_AGORA": "Test now",
@@ -1464,7 +1510,9 @@
             "DOCES": "Bakery",
             "ESTETICA": "Beauty clinic",
             "OFICINA": "Car repair shop"
-          }
+          },
+          "INTRO_AJUDANTE": "I will ask you a few short questions. The agent only starts helping other agents when you say so.",
+          "EXEMPLO_AJUDANTE": "E.g.: answer the hardest questions about the products for the other agents"
         },
         "MATERIAL": {
           "VOCE_MANDOU": "You sent:",
@@ -1476,20 +1524,28 @@
           "GRANDE": "This file is over 25 MB. Try a smaller one.",
           "MANDAR_OUTRO": "Send another",
           "TIRAR": "Remove",
-          "TIRAR_ARIA": "Remove {nome}"
+          "TIRAR_ARIA": "Remove {nome}",
+          "LIMITE": "There are already {n} files and websites. Remove one to send another."
         },
         "EXEMPLO": {
           "TITULO": "This is what your customers will see",
-          "LEGENDA": "After you tell me about it, {nome} answers the way your business does."
+          "TITULO_COPILOTO": "This is how your team will use it",
+          "LEGENDA": "After you tell me about it, {nome} answers the way your business does.",
+          "COPILOTO": "Inside a conversation, someone on the team asks for help and {nome} summarizes, suggests the next step or drafts a reply. {nome} never talks to customers.",
+          "TITULO_AJUDANTE": "This is how the other agents will use it",
+          "AJUDANTE": "In the middle of a conversation, the main agent asks {nome}, gets the answer and replies to the customer. {nome} never talks to customers.",
+          "AJUDANTE_SEM_NOME": "In the middle of a conversation, the main agent asks the agent you are creating, gets the answer and replies to the customer. That agent never talks to customers."
         },
         "CONFIRA": {
           "TITULO": "Test it as if you were a customer",
+          "TITULO_COPILOTO": "Test it as if you were on the team",
           "TEXTO": "Nobody gets these messages. It is just a test.",
           "VAZIO": "Tap a question or write your own.",
           "VAZIO_CELULAR": "Tap a question below to test.",
           "ESCREVA": "Write a question",
           "PERGUNTAS_ROTULO": "Questions to test",
           "ATENDIDO_POR": "Answered by {nome}",
+          "AJUDA_DA_EQUIPE": "{nome} · team helper",
           "ESCREVENDO": "{nome} is typing…",
           "LIMPAR": "Clear test",
           "ATUALIZADO": "Updated. Test again.",
@@ -1499,12 +1555,14 @@
           "FOTO": "Look at this photo.",
           "FALHA": "{nome} did not answer right now.",
           "FALHA_GARANTIA": "This does not affect your customers.",
+          "FALHA_GARANTIA_COPILOTO": "It is just a test: nobody gets this answer.",
           "DEMORA": "This is taking too long. Try again.",
           "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
           "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
-          "PERGUNTE": "Ask a question to see how {nome} answers.",
           "COMECAR_NO": "Start answering on {canal}",
           "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
+          "COMECAR_COPILOTO": "Start helping the team",
+          "COMECAR_TEXTO_COPILOTO": "{nome} starts helping your team inside conversations. Never talks to customers.",
           "VOLTAR_CONVERSA": "Back to the conversation",
           "PERGUNTAS": {
             "QUANTO_CUSTA": "How much is it?",
@@ -1513,8 +1571,20 @@
             "PEDIDO": "I want to place an order",
             "DESCONTO": "Is there a discount?",
             "AJUDA": "Hi, I need help",
-            "TROCAR": "I want to exchange a product"
-          }
+            "TROCAR": "I want to exchange a product",
+            "COMO_RESPONDO": "A customer asked for a discount. How do I reply?",
+            "PROXIMO_PASSO": "The customer stopped replying. What is the next step?",
+            "RASCUNHO": "Draft a reply about the delivery time",
+            "AJUDANTE_O_QUE_SABE": "What can you help me with?",
+            "AJUDANTE_CLIENTE": "A customer asked something about your subject. What should I answer?",
+            "AJUDANTE_NAO_SABE": "If you do not know the answer, what do you send back?"
+          },
+          "TESTE_OPCIONAL": "If you like, test first: ask a question and see how {nome} answers.",
+          "AJUSTES": "Make advanced adjustments",
+          "AJUSTES_TEXTO": "{nome} stays paused until you turn it on.",
+          "AJUSTES_ERRO": "Could not open the adjustments for {nome} now. Nothing changed.",
+          "TITULO_AJUDANTE": "Test as if you were the main agent",
+          "AJUDA_AOS_AGENTES": "{nome} helps other agents"
         },
         "CANAL": {
           "WHATSAPP": "WhatsApp",
@@ -1528,17 +1598,21 @@
           "COMECAR": "Start answering",
           "TROCAR": "Swap and start answering",
           "VOLTAR_TESTE": "Back to the test",
-          "ERRO_INTERNO": "Could not start answering. Nothing changed: {nome} is still not answering."
+          "ERRO_INTERNO": "Could not start helping the team. Nothing changed: {nome} is not helping yet."
         },
         "PRONTO": {
           "TITULO": "{nome} is now answering on {canal}",
           "TITULO_SEM_CANAL": "{nome} is now answering",
+          "TITULO_COPILOTO": "{nome} is already helping the team",
           "AGORA": "Whoever messages {canal} now talks to {nome}.",
           "DENTRO": "{nome} answers on {canal} only during business hours.",
           "FORA": "{nome} answers on {canal} only outside business hours.",
           "EQUIPE": "When {nome} does not know, the conversation goes to the team.",
+          "EQUIPE_COPILOTO": "Inside conversations, the team asks {nome} for help. {nome} never talks to customers.",
           "TROCA": "{outro} stopped answering on {canal}.",
-          "VER": "See {nome}"
+          "VER": "See {nome}",
+          "TITULO_AJUDANTE": "{nome} is already helping",
+          "EQUIPE_AJUDANTE": "The chosen agents call {nome} when they need to. {nome} never talks to customers."
         },
         "HORARIO": {
           "DIAS": {
@@ -1556,8 +1630,225 @@
           "E": "{antes}, and {depois}",
           "HORA": "{h}:00",
           "HORA_MIN": "{h}:{m}"
+        },
+        "BASE": {
+          "TITULO": "{nome}’s knowledge base",
+          "TEXTO": "What {nome} reads to answer. What you send with the clip in the conversation also shows here.",
+          "LISTA": "{nome}’s files and websites",
+          "VAZIO": "Nothing here yet. Send a menu, a price list or your website address.",
+          "ADICIONAR": "Add a file or website",
+          "SITE_EXEMPLO": "www.yourstore.com",
+          "GRANDE_TEXTO": "This file is over 25 MB. Remove it and send a smaller one.",
+          "TIRAR_TITULO": "Remove {item}?",
+          "TIRAR_TEXTO": "{nome} stops using what is in it. It leaves the conversation too.",
+          "TIRAR": "Remove",
+          "ENTROU": "{item} was added to the base.",
+          "TIROU": "{item} was removed from the base.",
+          "ERRO_LER": "Could not show what was already in the base.",
+          "ERRO_LER_GARANTIA": "Nothing was deleted.",
+          "BOTAO": "Base",
+          "BOTAO_ARIA": "{titulo}: {n}",
+          "TITULO_SEM_NOME": "Agent’s knowledge base",
+          "TEXTO_SEM_NOME": "What the agent reads to answer. What you send with the clip in the conversation also shows here.",
+          "LISTA_SEM_NOME": "The agent’s files and websites",
+          "TIRAR_TEXTO_SEM_NOME": "The agent stops using what is in it. It leaves the conversation too.",
+          "TIRAR_ERRO": "Could not remove {item} now.",
+          "TIRAR_ERRO_GARANTIA": "It stays in the base."
+        }
+      },
+      "EQUIPE": {
+        "TITULO": "On which channels will {nome} be on the team?",
+        "TITULO_SEM_NOME": "On which channels will the agent you are creating be on the team?",
+        "TEXTO": "Choose one or more. You can choose channels with a main agent answering and channels served only by people.",
+        "PRINCIPAL": "{outro} answers first",
+        "SEM_PRINCIPAL": "No one answers first on this channel yet. A team agent needs a main agent on the channel.",
+        "PRINCIPAL_PARADO": "{outro} is not answering on this channel. A team agent needs a main agent that is answering.",
+        "NENHUM": "No channel can take a team agent right now. It joins channels with a main agent answering or served only by people.",
+        "CONFIRA": "Check how it works",
+        "CONFIRA_TEXTO": "Nothing changes for who already answers first.",
+        "AVISO": "{outro} answers first; {nome} receives when someone hands over.",
+        "AVISO_SEM_NOME": "{outro} answers first; the agent you are creating receives when someone hands over.",
+        "SAI": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to {outro}.",
+        "PASSO": "Step {n} of {total}",
+        "CONTINUAR": "Continue",
+        "COMECAR": "Start working",
+        "SALVAR": "Save",
+        "VOLTAR": "Back",
+        "SEM_MUDANCA": "Nothing changed. Choose or remove a channel to save.",
+        "ERRO_LER": "Could not read the channels right now.",
+        "ERRO_LER_GARANTIA": "Nothing changed in {nome}. Try again in a moment.",
+        "ERRO": "Could not put {nome} on the team.",
+        "ERRO_GARANTIA": "The channels that were already set stay as they are. Try again.",
+        "CARREGANDO": "Reading the channels",
+        "SALVANDO": "Saving…",
+        "COMECAR_TEXTO": "{nome} receives the conversation when someone hands over, on the channels you choose.",
+        "ESCOLHER_DE_NOVO": "Choose the channels again",
+        "SO_PESSOAS": "Served only by people; {nome} receives when someone hands over",
+        "SO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over",
+        "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
+        "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
+        "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
+        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team.",
+        "FEITO": "Done. {nome} now works on the chosen channels."
+      },
+      "ONDE": {
+        "TITULO": "Where {nome} works",
+        "TITULO_SEM_NOME": "Where the agent you are creating works",
+        "RECEBE": "Receives when someone hands over",
+        "PRONTO_TITULO": "{nome} is already working",
+        "MUDAR": "Change",
+        "MUDAR_ARIA": "Change where {nome} works",
+        "AJUDA": "Helps: {agentes}",
+        "RECEBE_PESSOAS": "Served only by people; receives when someone hands over"
+      },
+      "AJUDANTE": {
+        "QUEM": {
+          "TITULO": "Who will {nome} help?",
+          "TITULO_SEM_NOME": "Who will the agent you are creating help?",
+          "TEXTO": "Pick one or more agents that talk to your customers.",
+          "VAZIO": "No agent talks to customers yet. First create an agent that answers in a channel, then come back.",
+          "COTACAO": "The Quote Agent does not get help from another agent.",
+          "CARREGANDO": "Reading the agents",
+          "ERRO_LER": "Could not read the agents right now.",
+          "ERRO_LER_GARANTIA": "Nothing changed. Try again in a moment."
+        },
+        "AVISO": "What {nome} knows and does may reach the customer through the main agent’s answers.",
+        "AVISO_SEM_NOME": "What the agent you are creating knows and does may reach the customer through the main agent’s answers.",
+        "QUANDO": {
+          "TITULO": "When to call {nome}?",
+          "TITULO_SEM_NOME": "When to call the agent you are creating?",
+          "TEXTO": "The chosen agents call {nome} in this situation. Write it in one sentence.",
+          "TEXTO_SEM_NOME": "The chosen agents call in this situation. Write it in one sentence.",
+          "ROTULO": "When to call",
+          "EXEMPLO": "E.g.: when the question is about exchanges and returns",
+          "RESUMO": "When to call: {quando}",
+          "SEM_LEITURA": "Could not read it now. Tap Change to see and edit it."
+        },
+        "COMECAR": "Start helping",
+        "COMECAR_TEXTO": "{nome} answers only when the chosen agents call. No channel needed.",
+        "QUEM_AJUDA": "Who {nome} helps",
+        "QUEM_AJUDA_SEM_NOME": "Who the agent you are creating helps",
+        "MUDAR_ARIA": "Change who {nome} helps",
+        "MUDAR_QUANDO_ARIA": "Change when to call {nome}",
+        "NINGUEM": "{nome} does not help any agent yet.",
+        "NUNCA_CLIENTE": "{nome} answers only these agents, never the customer.",
+        "ERRO": "Could not save who {nome} helps.",
+        "ERRO_GARANTIA": "Nothing changed in {nome}. Try again.",
+        "FEITO": "Done. {nome} now helps the chosen agents.",
+        "ESCOLHER_DE_NOVO": "Choose again",
+        "SEM_FASE2": "{nome} helps other agents, and that is not turned on for this account yet.",
+        "SEM_FASE2_GARANTIA": "Nothing was turned on. Talk to support to enable it.",
+        "INTERRUPTOR": {
+          "VOLTOU": "{nome} is helping again.",
+          "VOLTAR_ERRO": "Could not start helping again.",
+          "PARAR_TITULO": "Stop helping?",
+          "PARAR_TEXTO": "The agents {nome} helps keep answering on their own. You can turn it back on anytime.",
+          "PARAR_CONFIRMAR": "Stop helping",
+          "PARAR_ERRO": "Could not stop right now.",
+          "PARAR_ERRO_GARANTIA": "{nome} keeps helping.",
+          "PARAR_FEITO": "{nome} stopped helping. You can turn it back on anytime."
         }
       }
+    },
+    "CAIXA_AGENTE_IA": {
+      "ABA": "AI agent",
+      "TITULO": "AI agent",
+      "CARREGANDO": "Loading who answers on this channel",
+      "ATENDE_PRIMEIRO": "Answers first",
+      "ATENDE_PRIMEIRO_TEXTO": "Replies to new conversations on this channel.",
+      "TAMBEM_RECEBEM": "Also receive when someone hands over: {nomes}",
+      "NINGUEM": "Nobody answers first on this channel",
+      "NINGUEM_TEXTO": "New conversations go straight to the people on the team.",
+      "ABRIR": "Open agent",
+      "CAMPO": "Who answers first",
+      "CAMPO_AJUDA": "Choose one of the account's AI agents.",
+      "ESCOLHER": "Choose an AI agent",
+      "NINGUEM_OPCAO": "Nobody, people only",
+      "CONFIRMA_TROCA": "{antes} stops answering first on this channel. {depois} starts answering.",
+      "CONFIRMA_NOVO": "{depois} starts answering first on this channel.",
+      "CONFIRMA_TIRAR": "{antes} stops answering first on this channel. New conversations go straight to people.",
+      "TROCAR": "Switch",
+      "CONFIRMAR": "Confirm",
+      "CANCELAR": "Cancel",
+      "TROCOU": "Done. {nome} answers first on this channel.",
+      "TIROU": "Done. Nobody answers first on this channel.",
+      "FALHOU": "Could not switch right now. Nothing changed on this channel.",
+      "RECUSA": {
+        "AGENTE_INTERNO": "This agent only works inside the dashboard and does not answer customers.",
+        "AGENTE_RASCUNHO": "This agent is not finished yet. Finish creating this agent before choosing it.",
+        "AGENTE_PARADO": "This agent is stopped. Turn it on in the agent page before choosing it.",
+        "AGENTE_JA_E_DA_EQUIPE": "{nome} already receives conversations when someone hands them over in this channel. For {nome} to answer first, remove this agent from the channel team in CRM › Who handles what.",
+        "MUDOU_AGORA": "Someone changed this channel just now. Check who answers and try again."
+      }
+    },
+    "CAIXA_USUARIOS": {
+      "ABA": "Users"
+    },
+    "OUTRO_SISTEMA": {
+      "CONECTAR": "Connect an agent from another system",
+      "CONECTADO_POR": "Connected by webhook address",
+      "EXPLICA": "Use this when the agent was built in another system. Conversations reach it through a webhook address.",
+      "FOTO": "Photo",
+      "NOME": "Name",
+      "NOME_EXEMPLO": "E.g.: Sales Automation",
+      "DESCRICAO": "What it does",
+      "DESCRICAO_EXEMPLO": "E.g.: Answers price questions and hands over to the team.",
+      "ENDERECO": "Webhook address",
+      "ENDERECO_AJUDA": "Whoever built the agent knows it. It starts with https://",
+      "CHAVE": "Access key",
+      "CHAVE_AJUDA": "Paste this key in the other system. The agent uses it to reply here.",
+      "MOSTRAR": "Show",
+      "ESCONDER": "Hide",
+      "COPIAR": "Copy",
+      "COPIOU": "Key copied.",
+      "BOTAO_CONECTAR": "Connect",
+      "SALVAR": "Save",
+      "SALVOU": "Agent saved.",
+      "SALVAR_ERRO": "Could not save right now. Nothing changed.",
+      "APAGAR": "Delete agent",
+      "CONCLUIR": "Done",
+      "APAGAR_TITULO": "Delete {nome}?",
+      "APAGAR_TEXTO": "It stops answering on its channels. New conversations go to the people on the team.",
+      "APAGAR_CONFIRMAR": "Delete",
+      "APAGOU": "Agent deleted.",
+      "PAGINA": {
+        "CARREGANDO": "Loading the agent",
+        "BLOCO_FAZ": "What it does",
+        "FAZ_VAZIO": "No description yet.",
+        "BLOCO_CONEXAO": "How it connects",
+        "CONEXAO_TEXTO": "Conversations go to this address. The other system replies with the access key.",
+        "BLOCO_ONDE": "Where it answers",
+        "ONDE_TEXTO": "Answers new conversations first on these channels.",
+        "ONDE_NENHUM": "Does not answer first on any channel yet.",
+        "ONDE_COMO": "To change it, open the channel and use the AI agent tab.",
+        "ABRIR_CANAL": "Open channel",
+        "ALTERAR": "Change",
+        "MENU_NOME_FOTO": "Change name and photo",
+        "TITULO_FAZ": "What {nome} does",
+        "TITULO_CONEXAO": "How {nome} connects",
+        "TITULO_NOME_FOTO": "Name and photo",
+        "CANCELAR": "Cancel",
+        "APAGANDO": "Deleting…",
+        "APAGAR_ERRO": "Could not delete right now.",
+        "APAGAR_ERRO_GARANTIA": "{nome} stays as it was."
+      },
+      "CONECTAR_PAGINA": {
+        "VOLTAR": "Back to Agents",
+        "TITULO": "Connect an agent from another system",
+        "ETAPA_NOME": "Who",
+        "ETAPA_ENDERECO": "Address",
+        "ETAPA_CHAVE": "Key",
+        "PASSO1_TITULO": "Who the agent is",
+        "PASSO2_TITULO": "Where conversations go",
+        "PASSO2_TEXTO": "Paste the other system's webhook address. New conversations go there.",
+        "PASSO3_TITULO": "One step left: copy the key",
+        "PASSO3_TEXTO": "Paste the access key in the other system. Without it, {nome} cannot reply here.",
+        "PASSO3_DEPOIS": "For {nome} to start answering, choose this agent in a channel's AI agent tab.",
+        "CONTINUAR": "Continue",
+        "VOLTAR_PASSO": "Back",
+        "ERRO": "Could not connect right now. Try again."
+      },
+      "ESCOLHER_FOTO": "Choose photo"
     }
   }
 }

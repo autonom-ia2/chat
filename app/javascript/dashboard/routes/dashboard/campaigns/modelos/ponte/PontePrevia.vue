@@ -142,6 +142,10 @@ const conteudo = computed(() => {
     botoes: (base.botoes || []).map(botao =>
       botao.tipo === 'copiar_codigo' ? { ...botao, valor: cupom.value } : botao
     ),
+    // #1418: os produtos escolhidos na campanha, na ordem em que vão.
+    ...(base.produtos
+      ? { produtosEscolhidos: props.valores.produtos || [] }
+      : {}),
     ...(base.cartoes
       ? {
           cartoes: base.cartoes.map((cartao, indice) => ({

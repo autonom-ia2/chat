@@ -13,7 +13,7 @@ module Autonomia
         # `escolhas_incompletas` (#380): o Agente de Cotação emudeceu porque as escolhas da corretora no
         # config estão incompletas — o motivo fica no evento com o próprio nome, não colapsado em `other`.
         ALLOWED_REASONS = %w[low_confidence ai_unavailable human_requested missing_knowledge policy audience schedule
-                             escolhas_incompletas other].freeze
+                             escolhas_incompletas assunto_atrasou other].freeze
 
         # Porta de engajamento (#284 · Entrega 2a): a conversa foi passada DIRETO para humanos sem
         # resposta. `reason` ∈ audience | schedule -> event_type skipped_audience | skipped_schedule.
@@ -22,6 +22,20 @@ module Autonomia
             agent: agent, conversation: conversation, event_type: :"skipped_#{reason}",
             handoff_reason: curate_code(reason)
           )
+        end
+
+        # #1669: a IA calou porque uma pessoa da equipe respondeu a mensagem `message_id` do cliente. Ids e a etapa (rótulo
+        # nosso), nunca nome nem texto. Uma vez por mensagem do cliente, conferido antes de gravar; sem índice único (sem
+        # migration), uma duplicata rara na corrida é aceita.
+        def self.silenciado_pessoa_respondeu(agent:, conversation:, message_id:, etapa:)
+          return if message_id.blank?
+          return if agent.events.silenciado_pessoa_respondeu.exists?(conversation_id: conversation&.id, message_id: message_id)
+
+          create!(agent: agent, conversation: conversation, event_type: :silenciado_pessoa_respondeu,
+                  message_id: message_id, metadata: { 'etapa' => etapa.to_s })
+        rescue ActiveRecord::ActiveRecordError => e
+          Rails.logger.warn("[autonomia][events] log_skipped agent=#{agent&.id} #{e.class}")
+          nil
         end
 
         # `message` = a Message outgoing postada (liga o evento ao feedback do atendente).
@@ -52,9 +66,7 @@ module Autonomia
         def self.handed_off_by_inbox(conversation:, reason:)
           return if conversation.blank?
 
-          agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(
-            inbox_id: conversation.inbox_id, account_id: conversation.account_id
-          )
+          agent_inbox = ::Autonomia::Agents::QuemResponde.agent_inbox(conversation)
           return if agent_inbox&.agent.blank?
 
           handed_off(agent: agent_inbox.agent, conversation: conversation, result: nil, reason: reason)

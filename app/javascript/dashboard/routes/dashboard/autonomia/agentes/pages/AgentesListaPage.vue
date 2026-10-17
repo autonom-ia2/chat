@@ -5,23 +5,33 @@ import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
+import { useAgenteIaPorCaixa } from '../composables/useAgenteIaPorCaixa';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
 import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import {
+  ESTADO,
   canaisDoAgente,
   contarEstados,
+  estadoDoAgente,
   ordenarAgentes,
 } from '../utils/estadoDoAgente';
 import { fotoDoAgente } from '../utils/fotoDoCanal';
+import {
+  agentesDeOutroSistema,
+  canaisDoAgenteDeOutroSistema,
+} from '../utils/outroSistema';
+import { caixasDaEquipe } from '../utils/ondeTrabalha';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
+import { ATUACAO_INTERNA_NA_QUERY } from '../constants/criacao';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import AgenteCartao from '../components/AgenteCartao.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
 import AgenteBotao from '../components/AgenteBotao.vue';
 import AgenteErro from '../components/AgenteErro.vue';
-import AgenteGaveta from '../components/AgenteGaveta.vue';
 import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
+import AgenteOutroSistemaCartao from '../components/AgenteOutroSistemaCartao.vue';
 
 // #1181 — lista nova de Agentes (protótipo T01 e T02), atrás da flag autonomia_agents_journey.
 // T01 (nenhum agente): herói navy com a pergunta, os três modelos e "Do meu jeito".
@@ -29,6 +39,11 @@ import AgenteConfirmacao from '../components/AgenteConfirmacao.vue';
 // Cotação → Falta terminar. Números da semana (L1) e nomes dos canais (L2) chegam em paralelo e,
 // se falharem, o cartão só perde a linha correspondente. Quem só vê não tem ação de escrita.
 // "Usar este" e "Do meu jeito" vão ao Construtor com ?modelo=; "Continuar" leva ?agente= (PR2).
+// #1494 — "Copiloto da equipe", abaixo de "Do meu jeito" no herói T01, vai com ?atuacao=interno: o
+// agente ajuda a equipe dentro das conversas e nunca fala com cliente.
+// #1543 — com agentes, "Criar agente" (herói e barra do celular) e "Ver modelos prontos" abrem a
+// página inteira "Criar agente" (AgenteEscolherPage, na rota do Construtor sem query), no lugar
+// da gaveta.
 // #1369 — os cartões só aparecem quando a L1 e a L2 já responderam (ou falharam). Antes, eles
 // surgiam com a lista e cresciam depois: a linha da semana e o nome do canal chegavam e empurravam
 // para baixo os cartões seguintes — o rascunho fica por último —, e o primeiro clique em
@@ -41,15 +56,23 @@ const podeGerenciar = useCanManage('autonomia_manage');
 const { podeConectarCanal } = usePermissoesDaJornada();
 const semana = useNumerosDaSemana();
 const ocupacao = useCanaisOcupados();
+// A API de robôs só deixa o administrador criar, mudar e apagar (AgentBotPolicy).
+const { isAdmin } = useAdmin();
 
 const agentes = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
+// #1648 — agentes de outro sistema (agent_bot webhook) na mesma lista, sem seção à parte.
+const bots = useMapGetter('agentBots/getBots');
+// Só com a aba "Agente de IA" por caixa ligada na conta (piloto); desligada, a lista de sempre.
+const porCaixa = useAgenteIaPorCaixa();
+const outrosSistemas = computed(() =>
+  porCaixa.value ? agentesDeOutroSistema(bots.value) : []
+);
 
 const carregando = ref(true);
 const falhou = ref(false);
 const comecandoModelo = ref(null);
 const modeloQueFalhou = ref(null);
-const gaveta = ref(null);
 const confirmacao = ref(null);
 const pendenteExcluir = ref(null);
 const excluindo = ref(false);
@@ -64,10 +87,53 @@ let relogioDasLeituras = null;
 let relogioDoConstrutor = null;
 let tentativaDeContinuar = 0;
 
-const lista = computed(() => ordenarAgentes(agentes.value));
-const contagem = computed(() => contarEstados(agentes.value));
+// Caixas em que o agente de outro sistema atende primeiro (L2), ou null sem a leitura.
+const canaisDoOutro = bot =>
+  ocupacao.estado.value === 'pronto'
+    ? canaisDoAgenteDeOutroSistema(ocupacao.canais.value, bot.id).map(
+        canal => canal.name
+      )
+    : null;
+const outrosAtendendo = computed(() =>
+  outrosSistemas.value.filter(bot => canaisDoOutro(bot)?.length)
+);
+const outrosParados = computed(() =>
+  outrosSistemas.value.filter(bot => !canaisDoOutro(bot)?.length)
+);
+// Uma lista só, na ordem de sempre: quem atende (da plataforma e de outro sistema), na equipe,
+// parados, cotação e rascunho.
+const ULTIMOS = [ESTADO.COTACAO, ESTADO.FALTA_TERMINAR];
+const lista = computed(() => {
+  const ordenados = ordenarAgentes(agentes.value).map(agente => ({
+    tipo: 'plataforma',
+    agente,
+    estado: estadoDoAgente(agente),
+  }));
+  const outro = agente => ({ tipo: 'outro', agente });
+  return [
+    ...ordenados.filter(item => item.estado === ESTADO.ATENDENDO),
+    ...outrosAtendendo.value.map(outro),
+    ...ordenados.filter(
+      item => item.estado !== ESTADO.ATENDENDO && !ULTIMOS.includes(item.estado)
+    ),
+    ...outrosParados.value.map(outro),
+    ...ordenados.filter(item => ULTIMOS.includes(item.estado)),
+  ];
+});
+const contagem = computed(() => {
+  const daPlataforma = contarEstados(agentes.value);
+  return {
+    ...daPlataforma,
+    atendendo: daPlataforma.atendendo + outrosAtendendo.value.length,
+    parados: daPlataforma.parados + outrosParados.value.length,
+  };
+});
 const vazia = computed(
-  () => !carregando.value && !falhou.value && !agentes.value.length
+  () =>
+    !carregando.value &&
+    !falhou.value &&
+    !agentes.value.length &&
+    !outrosSistemas.value.length
 );
 const leiturasDosCartoes = computed(
   () =>
@@ -83,10 +149,22 @@ const esperando = computed(
 );
 const semCanal = computed(() => !(caixas.value || []).length);
 
-const contagemTexto = computed(
-  () =>
-    `${t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: contagem.value.atendendo }, contagem.value.atendendo)} · ${t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: contagem.value.parados }, contagem.value.parados)}`
-);
+// #1433: "N na equipe" só aparece quando há agente da equipe; tema 14 (#1434): "N ajudando", só com ajudante.
+const contagemTexto = computed(() => {
+  const { atendendo, naEquipe, ajudando, parados } = contagem.value;
+  return [
+    t('AGENTS.JORNADA.LISTA.CONTAGEM_ATENDENDO', { n: atendendo }, atendendo),
+    naEquipe
+      ? t('AGENTS.JORNADA.LISTA.CONTAGEM_NA_EQUIPE', { n: naEquipe }, naEquipe)
+      : '',
+    ajudando
+      ? t('AGENTS.JORNADA.LISTA.CONTAGEM_AJUDANDO', { n: ajudando }, ajudando)
+      : '',
+    t('AGENTS.JORNADA.LISTA.CONTAGEM_PARADOS', { n: parados }, parados),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+});
 
 const linkConectarCanal = computed(
   () => router.resolve({ name: 'settings_inbox_new' }).href
@@ -122,15 +200,14 @@ const tentarDeNovo = () => {
   ocupacao.carregar();
 };
 
-const usarModelo = async chave => {
+const COPILOTO = 'copiloto';
+
+const abrirCriacao = async (chave, query) => {
   if (comecandoModelo.value) return;
   comecandoModelo.value = chave;
   modeloQueFalhou.value = null;
   try {
-    await router.push({
-      name: 'autonomia_agents_builder',
-      query: { modelo: chave },
-    });
+    await router.push({ name: 'autonomia_agents_builder', query });
   } catch {
     modeloQueFalhou.value = chave;
   } finally {
@@ -138,13 +215,31 @@ const usarModelo = async chave => {
   }
 };
 
+const usarModelo = chave => abrirCriacao(chave, { modelo: chave });
+const usarCopiloto = () =>
+  abrirCriacao(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
+
+const abrirPaginaCriar = () =>
+  router.push({ name: 'autonomia_agents_builder' });
+
 const abrirAgente = agente =>
   router.push({
     name: 'autonomia_agent_panel',
     params: { agentId: agente.id },
   });
 
-const abrirCotacao = () => router.push({ name: 'autonomia_insurance_agent' });
+// #1525 — a cotação abre a página do agente, e não o módulo: de lá o "Abrir o agente" voltava para cá, e a
+// corretora não achava onde pôr a Lia num canal. Sem canal, já na escolha de canal (o `:tab` channels, o fluxo da
+// própria página); com canal, só a página.
+const rotaDaCotacao = agente => ({
+  name: 'autonomia_agent_panel',
+  params:
+    agente.tem_onde_trabalhar === false
+      ? { agentId: agente.id, tab: 'channels' }
+      : { agentId: agente.id },
+});
+
+const abrirCotacao = agente => router.push(rotaDaCotacao(agente));
 
 // O Construtor é carregado à parte: enquanto ele chega, o botão mostra que está indo (um clique só).
 // Se a navegação não termina em 8 s, o botão volta a responder (e um clique novo não é desfeito
@@ -177,7 +272,7 @@ const continuar = async agente => {
 const enderecoDe = agente =>
   router.resolve(
     agente.agent_type === 'insurance_quote'
-      ? { name: 'autonomia_insurance_agent' }
+      ? rotaDaCotacao(agente)
       : { name: 'autonomia_agent_panel', params: { agentId: agente.id } }
   ).href;
 
@@ -186,8 +281,28 @@ const canaisDe = agente =>
     ? canaisDoAgente(agente.id, ocupacao.canais.value)
     : null;
 
+// #1433: caixas em que o agente está na equipe (L2), ou null sem a leitura.
+const equipeDe = agente =>
+  ocupacao.estado.value === 'pronto'
+    ? caixasDaEquipe(agente.id, ocupacao.canais.value).map(canal => canal.name)
+    : null;
+
 // Externo aparece com a foto da caixa em que atende; sem ela (ou sem a L2), com a foto própria.
 const fotoDe = agente => fotoDoAgente(agente, canaisDe(agente), caixas.value);
+
+// A página do agente de outro sistema é a mesma rota dos nossos, com `?origem=webhook`.
+const rotaDoOutro = agente => ({
+  name: 'autonomia_agent_panel',
+  params: { agentId: agente.id },
+  query: { origem: 'webhook' },
+});
+const hrefDoOutro = agente => router.resolve(rotaDoOutro(agente)).href;
+const abrirOutro = agente => router.push(rotaDoOutro(agente));
+const conectarOutro = () =>
+  router.push({
+    name: 'autonomia_agents_builder',
+    query: { conectar: 'outro' },
+  });
 
 const pedirExclusao = agente => {
   pendenteExcluir.value = agente;
@@ -216,6 +331,7 @@ const excluir = async () => {
 
 onMounted(() => {
   carregar();
+  if (porCaixa.value) store.dispatch('agentBots/get');
   relogioDasLeituras = setTimeout(() => {
     esperaVencida.value = true;
   }, ESPERA_MAXIMA_DAS_LEITURAS_MS);
@@ -280,16 +396,35 @@ onBeforeUnmount(() => {
             {{ t('AGENTS.JORNADA.HEROI.SEM_CANAL_SEM_PERMISSAO') }}
           </p>
         </div>
-        <p v-if="podeGerenciar" class="pt-5 m-0 border-t border-white/15">
-          <button
-            data-do-meu-jeito
-            type="button"
-            class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-            @click="usarModelo(MODELO_DO_MEU_JEITO)"
-          >
-            {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-          </button>
-        </p>
+        <div
+          v-if="podeGerenciar"
+          class="flex flex-col gap-3 pt-5 border-t border-white/15"
+        >
+          <p class="m-0">
+            <button
+              data-do-meu-jeito
+              type="button"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarModelo(MODELO_DO_MEU_JEITO)"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
+            </button>
+          </p>
+          <p class="flex flex-col m-0">
+            <button
+              data-copiloto
+              type="button"
+              aria-describedby="copiloto-heroi-texto"
+              class="px-0 text-base font-semibold text-white underline text-start min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              @click="usarCopiloto"
+            >
+              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO') }}
+            </button>
+            <span id="copiloto-heroi-texto" class="text-sm text-white/80">
+              {{ t('AGENTS.JORNADA.MODELOS.COPILOTO_TEXTO') }}
+            </span>
+          </p>
+        </div>
       </AgentesHeroi>
 
       <!-- T02 · lista (também carregando e erro) -->
@@ -318,7 +453,7 @@ onBeforeUnmount(() => {
               tamanho="lg"
               icone="i-lucide-plus"
               class="hidden md:inline-flex"
-              @click="gaveta = 'criar'"
+              @click="abrirPaginaCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
             </AgenteBotao>
@@ -369,29 +504,50 @@ onBeforeUnmount(() => {
             :aria-label="t('AGENTS.JORNADA.LISTA.SEUS_AGENTES')"
             class="grid grid-cols-1 gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
           >
-            <AgenteCartao
-              v-for="agente in lista"
-              :key="agente.id"
-              :agente="agente"
-              :href="enderecoDe(agente)"
-              :numeros="semana.numerosDe(agente.id)"
-              :canais="canaisDe(agente)"
-              :foto="fotoDe(agente)"
-              :pode-gerenciar="podeGerenciar"
-              :continuando="continuando === agente.id"
-              @abrir="abrirAgente"
-              @abrir-cotacao="abrirCotacao"
-              @continuar="continuar"
-              @excluir="pedirExclusao"
-            />
+            <template
+              v-for="{ tipo, agente } in lista"
+              :key="`${tipo}-${agente.id}`"
+            >
+              <AgenteOutroSistemaCartao
+                v-if="tipo === 'outro'"
+                :agente="agente"
+                :canais="canaisDoOutro(agente)"
+                :href="hrefDoOutro(agente)"
+                @abrir="abrirOutro"
+              />
+              <AgenteCartao
+                v-else
+                :agente="agente"
+                :href="enderecoDe(agente)"
+                :numeros="semana.numerosDe(agente.id)"
+                :canais="canaisDe(agente)"
+                :equipe="equipeDe(agente)"
+                :foto="fotoDe(agente)"
+                :pode-gerenciar="podeGerenciar"
+                :continuando="continuando === agente.id"
+                @abrir="abrirAgente"
+                @abrir-cotacao="abrirCotacao"
+                @continuar="continuar"
+                @excluir="pedirExclusao"
+              />
+            </template>
           </ul>
-          <p v-if="podeGerenciar" class="m-0">
+          <p v-if="podeGerenciar" class="flex flex-wrap gap-2 m-0">
             <AgenteBotao
               data-ver-modelos
               variante="fantasma"
-              @click="gaveta = 'modelos'"
+              @click="abrirPaginaCriar"
             >
               {{ t('AGENTS.JORNADA.LISTA.VER_MODELOS') }}
+            </AgenteBotao>
+            <AgenteBotao
+              v-if="isAdmin && porCaixa"
+              data-conectar-outro
+              variante="fantasma"
+              icone="i-lucide-link"
+              @click="conectarOutro"
+            >
+              {{ t('AGENTS.OUTRO_SISTEMA.CONECTAR') }}
             </AgenteBotao>
           </p>
         </template>
@@ -401,51 +557,17 @@ onBeforeUnmount(() => {
           class="fixed inset-x-0 bottom-0 z-20 p-4 border-t md:hidden bg-n-solid-1 border-n-weak"
         >
           <AgenteBotao
+            data-criar-celular
             tamanho="xl"
             bloco
             icone="i-lucide-plus"
-            @click="gaveta = 'criar'"
+            @click="abrirPaginaCriar"
           >
             {{ t('AGENTS.JORNADA.LISTA.CRIAR') }}
           </AgenteBotao>
         </div>
       </template>
     </div>
-
-    <AgenteGaveta
-      v-if="gaveta"
-      :titulo="
-        gaveta === 'criar'
-          ? t('AGENTS.JORNADA.MENU.CRIAR_AGENTE')
-          : t('AGENTS.JORNADA.MODELOS.ROTULO')
-      "
-      @fechar="gaveta = null"
-    >
-      <p class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.MODELOS.ESCOLHA') }}
-      </p>
-      <ul class="flex flex-col gap-4 p-0 m-0 list-none">
-        <ModeloCartao
-          v-for="modelo in MODELOS"
-          :key="modelo.chave"
-          :modelo="modelo"
-          pode-usar
-          :comecando="comecandoModelo === modelo.chave"
-          :bloqueado="!!comecandoModelo && comecandoModelo !== modelo.chave"
-          :falhou="modeloQueFalhou === modelo.chave"
-          @usar="usarModelo"
-        />
-      </ul>
-      <p class="m-0">
-        <AgenteBotao
-          variante="fantasma"
-          icone-direita="i-lucide-arrow-right"
-          @click="usarModelo(MODELO_DO_MEU_JEITO)"
-        >
-          {{ t('AGENTS.JORNADA.MODELOS.DO_MEU_JEITO') }}
-        </AgenteBotao>
-      </p>
-    </AgenteGaveta>
 
     <AgenteConfirmacao
       ref="confirmacao"

@@ -1,0 +1,60 @@
+# Lembretes de Atender (#1498): a cada 15 minutos, cria os lembretes por data que venceram ou vão vencer e cancela os
+# que deixaram de valer (Crm::FollowUps::ServiceReminderScheduler). Quem manda é o Crm::FollowUpDueJob, de minuto em
+# minuto. Só funil de Atender com algum interruptor ligado; um card com problema não para os outros.
+#
+# Ligar o interruptor num funil cheio de cards parados não pode virar uma rajada de mensagens de IA (custo e incômodo
+# ao cliente): cada rodada cria no máximo MAX_NOVOS_POR_FUNIL lembretes por funil, espaçados de STAGGER; o resto
+# fica para as rodadas seguintes. Passado o teto, os cards ainda têm o que deixou de valer cancelado.
+class Crm::ServiceRemindersJob < ApplicationJob
+  queue_as :scheduled_jobs
+
+  # Resolvido há mais tempo que isto já não ganha "deu tudo certo?": o maior tempo que a tela oferece (1 semana, #1589)
+  # mais a folga do lembrete. Dá 10 dias.
+  RESOLVED_LOOKBACK = Crm::Ai::Config::SERVICE_REMINDER_HOURS['resolved_check'].max.hours +
+                      Crm::FollowUps::ServiceReminderScheduler::RESOLVED_CHECK_WINDOW
+  MAX_NOVOS_POR_FUNIL = 20
+  PRELOAD = [:account, :stage, :contact, :owner, { primary_conversation: [:inbox, :contact] }].freeze
+
+  def perform(now: Time.current)
+    return unless Crm::Ai::Config.enabled?
+
+    Crm::Pipeline.active.where(counts_as_sale: false).find_each { |pipeline| schedule_pipeline(pipeline, now) }
+  end
+
+  private
+
+  def schedule_pipeline(pipeline, now)
+    settings = Crm::Ai::Config.service_reminders_settings(pipeline)
+    opcoes = { now: now, config: { settings: settings, schedule_config: Crm::Ai::Config.auto_followup_settings(pipeline) } }
+    novos = 0
+    cards_for(pipeline, now, settings).find_each do |card|
+      card.association(:pipeline).target = pipeline
+      novos += schedule(card, opcoes.merge(atraso: novos * Crm::FollowUps::ServiceReminderScheduler::STAGGER,
+                                           criar: novos < MAX_NOVOS_POR_FUNIL))
+    end
+  end
+
+  # Com tudo desligado, ainda passa pelos cards que têm lembrete pendente, para cancelá-los. Resolvido (até 10 dias)
+  # entra todo só com o "deu certo?" ligado; desligado, só o que tem lembrete pendente, para cancelar.
+  def cards_for(pipeline, now, settings)
+    resolvidos = pipeline.cards.where(status: :resolved, closed_at: (now - RESOLVED_LOOKBACK)..)
+    resolvidos = resolvidos.where(id: pending_card_ids(pipeline)) unless settings[:resolved_check]
+    scope = pipeline.cards.where(status: :open).or(resolvidos).includes(*PRELOAD)
+    return scope if settings.slice(*Crm::Ai::Config::SERVICE_REMINDER_KINDS).values.any?
+
+    scope.where(id: pending_card_ids(pipeline))
+  end
+
+  def pending_card_ids(pipeline)
+    Crm::FollowUp.active.where(account_id: pipeline.account_id)
+                 .where("metadata ->> 'source' = ?", Crm::FollowUps::ServiceReminderScheduler::SOURCE)
+                 .where(card_id: pipeline.cards.select(:id)).select(:card_id)
+  end
+
+  def schedule(card, opcoes)
+    Crm::FollowUps::ServiceReminderScheduler.new(card: card, **opcoes).perform
+  rescue StandardError => e
+    Rails.logger.error("[crm][service_reminders] card_id=#{card.id} error_class=#{e.class.name} message=#{e.message.to_s[0, 160]}")
+    0
+  end
+end

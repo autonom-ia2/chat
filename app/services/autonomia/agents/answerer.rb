@@ -72,8 +72,11 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [])
+                     fixos: [], contexto_do_turno: nil)
         @agent = agent
+        # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
+        # nada muda.
+        @contexto_do_turno = contexto_do_turno
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
@@ -124,6 +127,8 @@ module Autonomia
 
       def answer_no_turno
         @conferencia_da_fala = conferencia_da_fala
+        # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
+        @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
         parsed = generate(snippets)
         return trust_instruction_result(conferir_fala(parsed), snippets) if @trust_instruction
@@ -296,8 +301,7 @@ module Autonomia
         return nil if credential.blank?
 
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
-        @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
-                                    images: @images, documents: @documents, audience: @audience)
+        @prompt = montar_prompt(snippets)
         @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
@@ -313,6 +317,11 @@ module Autonomia
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      def montar_prompt(snippets)
+        PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
+                          documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -361,8 +370,12 @@ module Autonomia
       # SÓ OS QUE ATENDEM NESTA CONTA (`Builder.disponivel?`): o especialista de um ramo que a corretora não cota
       # fica fora da lista da Lia, e não reserva nada. As ferramentas dele também ficam fora do catálogo do agente
       # (`Builder.ferramentas_mantidas`), e por isso a consulta de CEP não aparece para a Lia sem residencial.
+      # TEMA 14 (#1434): o vínculo com um ajudante (o especialista que aponta para outro agente) só entra quando
+      # `Ajudantes.disponivel?` deixa: Fase 2 ligada, ajudante ligado, interno e da mesma conta.
       def enabled_specialists
         @enabled_specialists ||= @agent.specialists.enabled.order(:id).select do |specialist|
+          next ::Autonomia::Agents::Ajudantes.disponivel?(specialist) if specialist.delegado?
+
           ::Autonomia::Insurance::QuoteAgent::Builder.disponivel?(specialist)
         end
       end
@@ -373,10 +386,41 @@ module Autonomia
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          recusas_antes = Tools::Recusa.registradas
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+          anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
           registrar_chamada(call, output, inicio)
           { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
         end
+      end
+
+      # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),
+      # nunca o texto da saída. A promessa da ferramenta assíncrona ("consulta iniciada") não é dado, e saída vazia
+      # ou com erro também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
+      def anotar_leitura(tool, output, recusou:)
+        @recusa_no_turno = true if recusou
+        return if recusou || tool&.async? || saida_sem_dado?(output)
+
+        @dado_de_sistema = true
+      end
+
+      # Vazia ("", "{}", "[]", "null") ou um JSON com `error` no topo: o formato da própria Recusa, que um
+      # sistema externo pode devolver com HTTP 200 sem passar pelo registro. A conferência é da estrutura.
+      def saida_sem_dado?(output)
+        texto = output.to_s.strip
+        return true if texto.empty?
+
+        dado = JSON.parse(texto)
+        dado.blank? || (dado.is_a?(Hash) && dado.key?('error'))
+      rescue JSON::ParserError
+        false
+      end
+
+      # O turno se apoia em dado que um sistema devolveu agora (agenda, estoque, especialista, HTTP) e nenhuma
+      # ferramenta recusou. Vale como base no portão do Testar e do Copiloto. O Guia (`operador`) fica fora: ele
+      # tem regra própria (`leu_a_conta?`, `guia_com_resposta?`).
+      def leu_dado_de_sistema?
+        @operador.nil? && @dado_de_sistema == true && @recusa_no_turno != true
       end
 
       # O registro de diagnóstico do Guia (#861): quem tem `operador` anota o que chamou. O atendimento
@@ -405,11 +449,26 @@ module Autonomia
       # o bilhete deixa de ser a única fonte do que o cliente disse.
       def run_specialist(specialist, call)
         args = JSON.parse(call['arguments'].presence || '{}')
+        return consultar_ajudante(specialist, args) if specialist.delegado?
+
         Specialists::Runner.new(specialist: specialist, request: args[Specialist::REQUEST_PARAM],
                                 delivery: @delivery, history: @history, documents: @documents).call
       rescue JSON::ParserError
         Tools::Recusa.para_modelo('invalid_tool_arguments', slug: call['name'], delivery: @delivery,
                                                             agente: @agent)
+      end
+
+      # TEMA 14 (#1434): a consulta ao ajudante é o MESMO Runner, com dois tetos por resposta (consultas e prazo,
+      # `Ajudantes::Orcamento`). Passou do teto, a consulta não roda e o modelo lê "responda com o que tem". A volta é a
+      # resposta do ajudante cercada como dado (`Specialists::Ajudante`).
+      def consultar_ajudante(vinculo, args)
+        limite = @orcamento_dos_ajudantes.reservar
+        return Ajudantes.recusar_por_limite(vinculo: vinculo, limite: limite, delivery: @delivery) if limite
+
+        prazo = [Ajudantes::PRAZO_DA_CONSULTA, @orcamento_dos_ajudantes.restante].min
+        runner = Specialists::Runner.new(specialist: vinculo, request: args[Specialist::REQUEST_PARAM], delivery: @delivery,
+                                         history: @history, documents: @documents, prazo: prazo)
+        Specialists::Ajudante.new(vinculo: vinculo, delivery: @delivery).consultar(runner)
       end
 
       def build_result(parsed, snippets)
@@ -467,6 +526,10 @@ module Autonomia
         claims_knowledge = parsed['answered_from_knowledge'] == true
         if used.empty? && refusal_no_info?(parsed)
           [self_conf, 0.29].min # "não achei" determinístico: nunca > 0.3 (resolve S01 frete 0.95)
+        elsif leu_dado_de_sistema?
+          # Dado que uma ferramenta devolveu neste turno (#1361): fica a confiança que o modelo declarou, sem os
+          # pisos da falta de base. O "não achei" acima continua valendo: é o modelo dizendo que não tem a resposta.
+          self_conf
         elsif !claims_knowledge
           # Recusa em banda (injeção/fora-de-escopo) E conhecimento geral do mundo: respeita o
           # self-report — SALVO fato do negócio afirmado sem base (cinto): piso da recusa (0.29).
@@ -576,7 +639,7 @@ module Autonomia
       end
 
       def improvised_specifics_without_kb?(snippets, reply_present, grounded_by_instruction, parsed)
-        reply_present && snippets.empty? && !grounded_by_instruction &&
+        reply_present && snippets.empty? && !grounded_by_instruction && !leu_dado_de_sistema? &&
           !agent_has_kb? && asks_for_specifics?(parsed)
       end
 
@@ -586,7 +649,7 @@ module Autonomia
       # <= 0.5 tornaria só o rebaixamento inócuo).
       def unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         reply_present && parsed['answered_from_knowledge'] != true &&
-          !grounded_by_instruction && used.empty? && !leu_a_conta? && business_claim?(parsed)
+          !grounded_by_instruction && used.empty? && !leu_a_conta? && !leu_dado_de_sistema? && business_claim?(parsed)
       end
 
       # O Guia (quem chama com `operador`) nunca tem a resposta trocada por "encaminhe ao

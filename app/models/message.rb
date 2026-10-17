@@ -40,6 +40,9 @@
 #
 
 class Message < ApplicationRecord
+  # Teto de espera pela linha da conversa quando uma pessoa responde uma conversa à espera (#1499).
+  PERSON_CLAIM_LOCK_TIMEOUT = '2s'.freeze
+
   searchkick callbacks: false if ChatwootApp.advanced_search_allowed?
 
   include MessageFilterHelpers
@@ -343,6 +346,7 @@ class Message < ApplicationRecord
     dispatch_create_events
     send_reply
     claim_conversation_for_bot
+    claim_waiting_conversation_for_person
     execute_message_template_hooks
     update_contact_activity
   end
@@ -358,12 +362,49 @@ class Message < ApplicationRecord
       locked = Conversation.lock.find(conversation_id)
       next if locked.assignee_id.present? || (locked.ai_assignee == sender && !locked.pending?)
 
-      locked.update!(ai_assignee: sender, status: locked.pending? ? :open : locked.status)
+      # Outro agente da caixa é o dono: ele fica, só o pending vira open (#1606).
+      locked.update!(ai_assignee: Autonomia::Agents::QuemResponde.dono_depois_do_claim(locked, sender),
+                     status: locked.pending? ? :open : locked.status)
     end
   rescue ActiveRecord::ActiveRecordError => e
     # A mensagem já está gravada e enviada: falhar aqui não pode pular os passos seguintes nem devolver erro a quem
     # postou (o n8n reenviaria e o cliente receberia a resposta duas vezes). A próxima resposta do robô tenta de novo.
     ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Pessoa respondendo numa conversa que o robô já passou e está à espera de pessoa fica com ela (#1499, decisão do
+  # Rodrigo em 13/10, opção b): senão a fila do motor de entrega a daria a outro enquanto o cliente fala com quem
+  # respondeu. Enquanto o robô ainda atende (sem marca de espera), responder não tira o robô: só "Atribuir a mim".
+  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Olha as marcas antes de travar (a maioria
+  # das respostas não está à espera) e trava com teto, como a fila do motor: a resposta não fica presa atrás de uma entrega.
+  def claim_waiting_conversation_for_person
+    # Leitura nova (sem trava): a conversa em memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
+    return unless public_person_reply? && waiting_for_person?(Conversation.find(conversation_id))
+
+    Conversation.transaction do
+      Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
+      locked = Conversation.lock.find(conversation_id)
+      next unless waiting_for_person?(locked)
+
+      locked.update!(assignee: sender, status: :open)
+    end
+  rescue ActiveRecord::LockWaitTimeout
+    # Linha presa por uma entrega em andamento: quem decide é ela; a resposta já foi gravada e enviada.
+    Rails.logger.warn("[crm][entrega] resposta conversa=#{conversation_id} não assumiu: trava ocupada")
+  rescue ActiveRecord::ActiveRecordError => e
+    # A mensagem já está gravada e enviada; a conversa segue na fila do motor, que a entrega a alguém.
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Resposta pública que a própria pessoa mandou agora (ela é quem está logado no pedido). Aviso, follow-up ou envio
+  # agendado gravados em nome dela por um job não contam: não são ela respondendo.
+  def public_person_reply?
+    human_response? && !private? && sender.is_a?(User) && Current.user == sender
+  end
+
+  # Aberta (ou pendente, legado) e sem pessoa no nome, com a marca de espera da passagem ou a do motor de entrega.
+  def waiting_for_person?(conv)
+    (conv.open? || conv.pending?) && conv.assignee_id.blank? && (conv.bot_handoff_waiting? || conv.crm_delivery_pending?)
   end
 
   # Resposta pública de robô ao cliente; disparo de campanha (qualquer das duas marcas) não conta.
@@ -450,8 +491,11 @@ class Message < ApplicationRecord
     return unless incoming?
 
     conversation.open! if conversation.snoozed?
+    return unless conversation.resolved?
 
-    reopen_resolved_conversation if conversation.resolved?
+    reopen_resolved_conversation
+    # Fork (#1140): com o dono offline, o motor de entrega decide quem atende a conversa reaberta.
+    Crm::Entrega::Reabertura.new(conversation: conversation).call
   end
 
   def mark_pending_conversation_as_open_for_human_response

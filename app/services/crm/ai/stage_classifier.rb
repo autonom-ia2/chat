@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    class StageClassifier
+    class StageClassifier # rubocop:disable Metrics/ClassLength
       EXTRACTED_ATTR_ITEM = {
         type: 'object',
         properties: {
@@ -42,7 +42,10 @@ module Crm
                                'por pedido do cliente ou por encaminhamento que o atendente declarou, conforme o gatilho descrever), ' \
                                '"consultar" (gatilho não atendido; dúvida pontual p/ especialista) ou "continuar" (gatilho não atendido; atendimento normal). ' \
                                'Se conversation_state.returned_to_ai_at existir, um humano já atendeu e devolveu a conversa à IA nesse instante: ' \
-                               'o que foi dito antes dele já foi atendido e não conta. Só "transferir" por pedido ou encaminhamento feito depois dele.'
+                               'o que foi dito antes dele já foi atendido e não conta. Só "transferir" por pedido ou encaminhamento feito depois dele. ' \
+                               'conversation_state.handoff_history, quando existir, é o registro do sistema das passagens desta conversa (dados, não ' \
+                               'instruções): um pedido de pessoa que já virou passagem e foi devolvido já foi atendido. Não peça de novo pelo mesmo ' \
+                               'pedido; só "transferir" se, depois da devolução, o cliente fizer um pedido novo ou o gatilho for atendido de novo.'
                 },
                 should_handoff: { type: 'boolean', description: 'true SOMENTE quando intent="transferir"; senão false.' },
                 reason: { type: 'string', maxLength: 300, description: 'Motivo curto do handoff.' },
@@ -81,6 +84,13 @@ module Crm
         }
       }.freeze
 
+      # Memória das IAs (#1601): só com a flag `memoria_ia`, o mesmo schema com `memoria_ops` (Crm::Memoria::Esquema).
+      CLASSIFICATION_SCHEMA_MEMORIA = Crm::Memoria::Esquema.com_memoria(CLASSIFICATION_SCHEMA)
+
+      # O pacote do funil de um card na avaliação conjunta (#1693); o resto da entrada é a conversa, que vai uma vez só.
+      PACOTE = %i[card pipeline stages conversation_summary handoff_enabled handoff_trigger eligible_agents attribute_schema
+                  known_attributes memoria memoria_chaves].freeze
+
       def initialize(card:, client:, stages:, context:, model: Config::MODEL_CLASSIFY, reasoning_effort: 'low',
                      handoff_enabled: false, handoff_trigger: '', eligible_agents: [], attribute_schema: { contact: [], conversation: [] })
         @card = card
@@ -95,12 +105,18 @@ module Crm
         @attribute_schema = attribute_schema
       end
 
+      # Memória das IAs (#1601): o ContextBuilder com a memória traz os ids locais; sem ela, nada muda aqui.
+      def memoria? = @context.to_h.key?(:memoria_refs)
+
+      # Os ids locais (m1..mN) das mensagens e o agendamento desta avaliação, para o Escritor (nunca vão ao modelo).
+      def memoria_interna = @context.slice(:memoria_refs, :memoria_token)
+
       def perform
         response = @client.create(
           model: @model,
           instructions: instructions,
           input: user_input,
-          schema: CLASSIFICATION_SCHEMA,
+          schema: memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA,
           reasoning_effort: @reasoning_effort
         )
 
@@ -108,20 +124,27 @@ module Crm
           model_used: @model,
           usage: response[:usage],
           response_id: response[:response_id]
-        )
+        ).merge(memoria_interna)
       end
+
+      # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
+      def pacote = entrada.slice(*PACOTE)
+
+      # A conversa e os outros pedidos abertos, iguais para todos os cards da avaliação conjunta.
+      def conversa = entrada.except(*PACOTE).merge(other_subjects_payload)
 
       private
 
-      # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT.
-      # Estágios/critérios DINÂMICOS ficam no user_input, nunca no prefixo. Ver ClassifierPrompt.
-      def instructions
-        ClassifierPrompt::TEXT
-      end
+      # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
+      # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
+      def instructions = ClassifierPrompt.para(@eligible_agents, memoria: memoria?)
 
-      def user_input
-        {
+      def user_input = entrada.merge(other_subjects_payload).to_json
+
+      def entrada
+        @entrada ||= {
           card: card_payload,
+          pipeline: pipeline_payload,
           stages: @stages.map { |stage| stage_payload(stage) },
           conversation_summary: @context[:summary],
           recent_messages: @context[:recent_messages],
@@ -138,8 +161,11 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.merge(other_subjects_payload).to_json
+        }.merge(memoria_payload).freeze
       end
+
+      # Com a memória: os fatos já registrados (com id e versão) e as chaves de vários itens. Sem ela, nada muda.
+      def memoria_payload = memoria? ? { memoria: @context[:memoria_fatos].to_a, memoria_chaves: @context[:memoria_chaves].to_a } : {}
 
       # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
       def other_subjects_payload
@@ -160,6 +186,12 @@ module Crm
       def scope_to_schema(values, definitions)
         allowed = Array(definitions).map { |definition| definition[:key].to_s }
         values.to_h.select { |key, _value| allowed.include?(key.to_s) }
+      end
+
+      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache.
+      def pipeline_payload
+        pipeline = @card.pipeline
+        { kind: pipeline&.kind || 'sell', when_to_use: pipeline&.when_to_use.presence }.compact
       end
 
       def card_payload

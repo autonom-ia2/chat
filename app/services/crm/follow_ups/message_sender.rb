@@ -21,7 +21,7 @@ class Crm::FollowUps::MessageSender
   OPTED_OUT_REASON = 'opt_out'.freeze
   # Gravado no metadata pelos runners de IA (nunca por follow-up manual): o texto livre sai pelo WhatsApp API
   # do Híbrido, fora das 24h (chat#1349). O envio só obedece se o Híbrido continuar pronto neste momento.
-  AI_SOURCES = %w[ai_followup ai_callback].freeze
+  AI_SOURCES = %w[ai_followup ai_callback service_reminder].freeze
   TRANSPORT_KEY = 'delivery_transport'.freeze
   WHATSAPP_API_TRANSPORT = 'whatsapp_api'.freeze
   WHATSAPP_API_UNAVAILABLE = 'whatsapp_api_unavailable'.freeze
@@ -45,9 +45,9 @@ class Crm::FollowUps::MessageSender
   end
 
   def delivery_precondition_error
-    return 'conversation_required' if @follow_up.conversation.blank?
-    return 'not_whatsapp_capable' unless whatsapp_window.whatsapp_capable?
-    return 'sender_required' if sender.blank?
+    return Crm::FollowUps::SendFailure::CONVERSATION_REQUIRED if @follow_up.conversation.blank?
+    return Crm::FollowUps::SendFailure::NOT_WHATSAPP_CAPABLE unless whatsapp_window.whatsapp_capable?
+    return Crm::FollowUps::SendFailure::SENDER_REQUIRED if sender.blank?
 
     # Nunca cai para template quando o texto era livre pelo WhatsApp API: falha clara e o runner recompõe.
     WHATSAPP_API_UNAVAILABLE if whatsapp_api_requested? && !whatsapp_api_available?
@@ -171,7 +171,7 @@ class Crm::FollowUps::MessageSender
     # pula a checagem de template para follow-up de IA (no create-time o template ainda não foi
     # escolhido). Sem esta barreira, um nome vazio viraria chamada inválida na API da Meta em vez de
     # erro nosso. Vira Result.failed pelo rescue do #perform, com motivo legível.
-    raise 'template_name_required' if metadata['template_name'].to_s.strip.blank?
+    raise Crm::FollowUps::SendFailure::TEMPLATE_NAME_REQUIRED if metadata['template_name'].to_s.strip.blank?
 
     # processed_params are final values written by the AI composer (template_processed_params), so they
     # stay literal (chat#1021). message_body keeps the Liquid pass: a person may have written it.
@@ -193,10 +193,10 @@ class Crm::FollowUps::MessageSender
 
   def load_api_template!(conversation)
     template_id = metadata['whatsapp_api_message_template_id'].presence
-    raise 'whatsapp_api_message_template_id is required outside the messaging window' if template_id.blank?
+    raise Crm::FollowUps::SendFailure::API_TEMPLATE_REQUIRED if template_id.blank?
 
     template = @follow_up.account.whatsapp_api_message_templates.active.find_by(id: template_id, inbox_id: conversation.inbox_id)
-    raise 'whatsapp_api_message_template is invalid for this conversation inbox' if template.blank?
+    raise Crm::FollowUps::SendFailure::API_TEMPLATE_INVALID if template.blank?
 
     template
   end
@@ -214,7 +214,10 @@ class Crm::FollowUps::MessageSender
       processed_params: template_variables
     }
     namespace = metadata['template_namespace'].to_s.strip
-    namespace.present? ? params.merge(namespace: namespace) : params
+    params = params.merge(namespace: namespace) if namespace.present?
+    # #1498: o modelo escolhido pelo Garantir vai com a categoria, como o contrato do upstream pede.
+    category = metadata['template_params_category'].to_s.strip
+    category.present? ? params.merge(category: category) : params
   end
 
   # Slot values composed by the AI follow-up composer (keys "1", "2", …). On the

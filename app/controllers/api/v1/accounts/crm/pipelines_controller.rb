@@ -1,8 +1,8 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
   PIXEL_ID_MAX_LENGTH = 20
-  OUTCOME_LABEL_MAX_LENGTH = 30
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
+  before_action :ensure_outcome_labels_format, only: [:update]
 
   def index
     authorize ::Crm::Pipeline
@@ -16,9 +16,12 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     @pipeline = Current.account.crm_pipelines.new(pipeline_params)
     @pipeline.created_by = Current.user
     authorize @pipeline
+    return render_outcome_labels_invalid unless outcome_labels_param_valid?
+
     @pipeline.save!
     update_goal!
     update_outcome_labels!
+    update_template!
     render :show, status: :created
   end
 
@@ -28,6 +31,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     update_outcome_labels!
     update_meta_sync!
     update_google_sync!
+    update_template!
     render :show
   end
 
@@ -41,6 +45,23 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])
     authorize @pipeline
+  end
+
+  # #1580: outcome_labels fora de { success:, failure: } em texto é recusado antes de gravar qualquer coisa (o create
+  # salva o funil antes de update_outcome_labels!), depois da autorização. O que chega por metadata['outcome_labels']
+  # o modelo confere.
+  def ensure_outcome_labels_format
+    render_outcome_labels_invalid unless outcome_labels_param_valid?
+  end
+
+  def outcome_labels_param_valid?
+    labels = params.dig(:pipeline, :outcome_labels)
+    labels.nil? || ::Crm::Pipeline.outcome_labels_valid?(labels)
+  end
+
+  def render_outcome_labels_invalid
+    render json: { message: I18n.t('crm.pipelines.outcome_labels_invalid'), attributes: ['outcome_labels'] },
+           status: :unprocessable_entity
   end
 
   def pipeline_params
@@ -73,13 +94,27 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     return if labels.nil?
 
     metadata = (@pipeline.metadata || {}).deep_dup
-    cleaned = %w[success failure].index_with { |key| labels[key].to_s.strip.first(OUTCOME_LABEL_MAX_LENGTH) }.compact_blank
+    cleaned = %w[success failure].index_with { |key| labels[key].to_s.strip.first(::Crm::Pipeline::OUTCOME_LABEL_MAX_LENGTH) }.compact_blank
     if cleaned.empty?
       metadata.delete('outcome_labels')
     else
       metadata['outcome_labels'] = cleaned
     end
     @pipeline.update!(metadata: metadata)
+  end
+
+  # Modelo do funil (#1498): Suporte, Cobrança… Só um dos modelos conhecidos; outro valor é ignorado. Fica em
+  # metadata['template'], gravado à parte como a meta, para não apagar o resto do metadata.
+  # O modelo que chega dentro de metadata passa pela mesma lista: desconhecido sai.
+  def update_template!
+    metadata = (@pipeline.metadata || {}).deep_dup
+    template = params.dig(:pipeline, :template).to_s
+    if ::Crm::Pipeline::TEMPLATES.include?(template)
+      metadata['template'] = template
+    elsif metadata.key?('template') && ::Crm::Pipeline::TEMPLATES.exclude?(metadata['template'])
+      metadata.delete('template')
+    end
+    @pipeline.update!(metadata: metadata) if metadata != @pipeline.metadata
   end
 
   # Meta CAPI sync config lives in metadata['meta_sync'] and is merged in

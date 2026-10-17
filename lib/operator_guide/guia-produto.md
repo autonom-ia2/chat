@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (216 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (226 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -16,9 +16,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; os passos ficam em tres etapas (Ligar a plataforma, Organizar as vendas, Crescer); passos opcionais trazem Pular por enquanto; o painel mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito) e o tempo estimado; passo que depende de outro mostra Precisa antes, sem bloquear; clicar num passo da lista abre ele no painel; Preciso de ajuda abre o Guia; a lista some do centro da tela quando o essencial termina, mas continua no menu.
 - nav_target: `first_steps`
 
+### Abrir a página inicial de Configurações (cartões)
+- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
+- onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
+- rota: `settings_inicio` - `/app/accounts/:accountId/settings/inicio`
+- gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `crm_manage_ai` ou `crm_admin`
+- pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
+- passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
+- gotchas: os cartões ficam em grupos (Sua empresa, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua empresa, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+- nav_target: `settings_inicio`
+
 ### Criar caixa de entrada
 - intent: Como crio uma caixa de entrada?; Onde adiciono um novo canal?; Quero conectar um WhatsApp, email, site ou API.; Como comeco um inbox novo?
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - cobre: settings_inbox_list, settings_inbox_finish, settings_inboxes_add_agents
@@ -30,7 +40,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Editar configuracoes da caixa
 - intent: Onde altero uma caixa existente?; Como mudo nome, saudacao ou configuracoes do inbox?; Onde vejo as abas de configuracao da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa de entrada ja criada
@@ -41,17 +51,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Gerenciar agentes da caixa
 - intent: Como coloco agentes em uma caixa?; Onde removo um agente do inbox?; Por que um agente nao ve uma caixa?; Como ajusto autoatribuicao da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Colaboradores (aba Usuarios nas contas com a aba Agente de IA por caixa)
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa criada; agentes convidados/ativos na conta
-- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores; 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
+- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Colaboradores (Usuarios nas contas com a aba Agente de IA por caixa); 3. Marque ou desmarque agentes; 4. Ajuste as opcoes de atribuicao quando necessario; 5. Salve.
 - gotchas: o agente precisa estar ativo na conta; sem estar associado a caixa, ele pode nao receber/visualizar conversas daquele canal.
 - nav_target: `settings_inbox_show`
 
 ### Ligar o rodízio para cada conversa nova ganhar um responsável
 - intent: Quero que cada lead chegue com um responsável; Como distribuo as conversas entre o time?; Liga o rodízio na caixa Comercial; Por que os leads ficam sem responsável?; Por que o card do CRM está sem dono?
-- onde_fica: Configurações > Caixas de entrada > selecionar caixa > Colaboradores > Atribuição automática (pela API: PATCH inboxes/:id com enable_auto_assignment). Na conta com atribuição avançada, a regra vem de Configurações > Atribuição de Agentes > Política de atribuição, vinculada à caixa.
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configurações > Caixas de entrada > selecionar caixa > Colaboradores > Atribuição automática (pela API: PATCH inboxes/:id com enable_auto_assignment). Na conta com atribuição avançada, a regra vem de Configurações > Atribuição de Agentes > Política de atribuição, vinculada à caixa.
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: administrador; a caixa com as pessoas certas como agentes (o rodízio só escolhe entre os agentes da caixa)
@@ -61,12 +71,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Definir horario de atendimento da caixa
 - intent: Onde configuro horario comercial?; Como mudo dias e horas de atendimento?; Como configuro disponibilidade da caixa?
-- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > Horario de atendimento
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configuracoes > Caixas de entrada > selecionar caixa > Horario de atendimento
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - pre_requisitos: caixa criada
-- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ative/ajuste os dias da semana; 4. Configure faixas de horario; 5. Salve.
-- gotchas: mensagens e automacoes podem considerar a disponibilidade da caixa; conta nova nasce no fuso da operacao (America/Sao_Paulo por padrao) e a caixa herda esse fuso ao ser criada; a tela mostra o fuso realmente salvo, inclusive UTC; confira fuso horario e intervalos antes de salvar.
+- passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba Horario de atendimento; 3. Ligue o horário de atendimento do canal e escreva a mensagem para quem chamar fora do horário; 4. Marque os dias e escolha as horas de abrir e fechar (ou o dia todo); 5. Salve o horário.
+- gotchas: a mensagem de fora do horário segue este horário; nas contas com o horário único (#1619), o agente de IA que atende "só no horário" e os prazos do SLA também usam este horário, no fuso da conta (que se muda em Configurações > Conta, só administrador), e a tela não tem campo de fuso; nas demais contas, a caixa usa o fuso escolhido nesta tela (a caixa herda o fuso da conta ao ser criada, e a tela mostra o fuso salvo, inclusive UTC), e o calendário de caixa do CRM SLA, se existir, vale antes deste horário para a IA e o SLA; sem horário ligado, o agente de IA atende a qualquer hora e o prazo do SLA conta o tempo corrido; cada dia tem uma faixa só, que fecha no máximo às 23:59.
 - leitura: horario
 - nav_target: `settings_inbox_show`
 
@@ -217,7 +227,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Convidar e gerenciar agentes
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
-- onde_fica: Configuracoes > Agentes
+- onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes
 - rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
 - gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
@@ -228,7 +238,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ajustar papel do agente
 - intent: Como faco alguem virar administrador?; Onde mudo papel de agente?; Como aplico um papel customizado a um usuario?
-- onde_fica: Configuracoes > Agentes > editar agente
+- onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes > editar agente
 - rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
 - gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
@@ -350,7 +360,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver relatorios
 - intent: Onde vejo relatorios?; Como acompanho volume e desempenho?; Onde vejo relatorio por agente, caixa, time ou etiqueta?
-- onde_fica: Relatorios > Visao geral / Conversas / Agentes / Caixas / Times / Etiquetas
+- onde_fica: No menu novo: Resultados > Relatórios > Visão geral. No menu antigo: Relatorios > Visao geral / Conversas / Agentes / Caixas / Times / Etiquetas
 - rota: `account_overview_reports` - `/app/accounts/:accountId/reports/overview`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas e eventos suficientes para gerar metricas
@@ -405,7 +415,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Consultar relatorio de SLA
 - intent: Onde vejo SLA?; Como acompanho violacoes de SLA?; Onde consulto conversas com prazo vencido?
-- onde_fica: Relatorios > SLA
+- onde_fica: No menu novo: Resultados > Relatórios > Prazos de resposta. No menu antigo: Relatorios > SLA
 - rota: `sla_reports` - `/app/accounts/:accountId/reports/sla`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: SLA configurado e aplicado a conversas; dados de atendimento no periodo escolhido
@@ -415,31 +425,31 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - highlight: `reports-download-sla`
 
 ### Abrir o CRM Kanban e filtrar oportunidades
-- intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Como alterno entre Kanban, lista e calendário?"
+- intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Onde vejo os atendimentos resolvidos ou cancelados?"; "Como alterno entre Kanban, lista e calendário?"
 - onde_fica: Sidebar > CRM > CRM Kanban
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, atenção da IA, responsável, time, caixa de entrada, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, atenção da IA, responsável, time, caixa de entrada, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar o que fechou (**ganhas/perdidas** num funil de Vender, **resolvidos/cancelados** num funil de Atender): use a visão **Lista** com filtros e veja os números no **Dashboard CRM**.
+- gotchas: fechar o card (Ganhou/Perdeu ou Resolvido/Cancelado) define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar caixas de entrada
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Canais de cada funil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixas de entrada já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa de entrada e escolha a etapa de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar caixas de entrada, ligar o CRM na caixa de entrada, escolher o funil e a etapa de entrada e salvar.
-- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
+- passos: Ao criar, responda primeiro **Para que serve este funil?** (**Vender** ou **Atender**) e escolha um modelo pronto. No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios (meta e anúncios só num funil de Vender) e, no fim, Caixas de entrada, que só mostra onde o funil está ligado (**Ligado em**). Para ligar uma caixa ao funil, abra Canais de cada funil, marque o funil na caixa e salve; o atalho **Mudar em Canais de cada funil** leva direto à caixa.
+- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; Anúncios só existe em funil de Vender; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; a caixa que alimenta mais de um funil também se configura em Canais de cada funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
 
-### Ver as caixas no CRM
+### Ver os canais de cada funil
 - intent: "Quais caixas estão no CRM?"; "Qual funil recebe as conversas do WhatsApp?"; "Quem cuida das conversas de cada caixa?"; "Por que esta caixa não cria cards?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Configurar caixas de entrada (com a tela nova ligada na conta)
+- onde_fica: No menu novo: Configurações > Canais de cada funil. No menu antigo: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil (com a tela nova ligada na conta)
 - rota: `crm_caixas` - `/app/accounts/:accountId/crm/caixas`
 - gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
 - pre_requisitos: administrador da conta ou função com crm_admin; ao menos uma caixa de entrada conectada.
@@ -449,21 +459,21 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Alterar o que chega numa caixa e quem cuida
 - intent: "Como ligo o CRM numa caixa?"; "Como faço a caixa atender mais de um funil?"; "Como faço um agente ver só as conversas dele?"; "Quem vê as conversas sem assunto?"; "Como a IA cria o card sozinha?"
-- onde_fica: Sidebar > CRM > Caixas no CRM > Alterar
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Canais de cada funil > Alterar
 - rota: `crm_caixa` - `/app/accounts/:accountId/crm/caixas/:inboxId`
 - gate: feature flag `crm_configurar_caixas`; papel `administrator` ou `crm_admin`
 - pre_requisitos: administrador da conta ou função com crm_admin; funis criados no CRM.
-- passos: São quatro etapas e um **Salvar** no fim. **O que chega**: marque os funis dos assuntos que chegam pela caixa; com um funil só, escolha também a etapa em que o card começa. **Quem cuida**: para cada pessoa, toque nos assuntos dela (**Sem assunto** e os funis) e escolha **Todas** ou **Só as que atende**; **Todos cuidam de tudo** marca tudo para todos. **O que é automático**: com um funil, criar o card assim que a conversa chega ou não fazer nada; com vários, criar o card quando o sistema entende o assunto, só sugerir para a equipe confirmar, ou não fazer nada. **Confira**: a caixa em frases, com o que muda ao salvar.
-- gotchas: com mais de um funil não existe card criado na chegada num funil fixo — a conversa fica sem assunto até o card nascer; com mais de um funil, alguém precisa ter **Sem assunto**, senão a tela não deixa continuar; criar ou sugerir pelo assunto só funciona nos funis com a IA do funil ligada, e a tela avisa quando algum está desligado; quem cuida de um assunto recebe as conversas novas dele no rodízio; "Só as que atende" = conversas em que a pessoa é atendente, participa ou é dona do card; tirar todos os funis tira a caixa do CRM; caixa que estava em "vê apenas atribuídos" mostra **Manter assim**, que deixa cada pessoa em "Só as que atende".
+- passos: São quatro etapas e um **Salvar** no fim. **O que chega**: marque os funis dos assuntos que chegam pela caixa; com um funil só, escolha também a etapa em que o card começa. **Quem cuida**: em **Agentes de IA** (contas com a fase 2 dos agentes), o agente que atende primeiro aparece no topo e cada agente de IA da caixa tem os seus funis — toque num funil para ele cuidar; **Mostrar outros agentes** traz os agentes da conta que ainda não estão na caixa, e marcar um funil num deles o põe na caixa (e liga, se estava parado) ao salvar; **Tirar desta caixa** o tira. Em **Pessoas**, para cada pessoa, toque nos assuntos dela (**Sem assunto** e os funis) e escolha **Todas** ou **Só as que atende**; **Todos cuidam de tudo** marca tudo para todos. **O que é automático**: com um funil, criar o card assim que a conversa chega ou não fazer nada (nas contas em que a IA de assunto vale também para um funil: criar o card assim que chega, com a IA dando o nome, ou criar quando o sistema entende o assunto); com vários, criar o card quando o sistema entende o assunto, só sugerir para a equipe confirmar, ou não fazer nada. **Confira**: a caixa em frases, com o que muda ao salvar.
+- gotchas: com mais de um funil não existe card criado na chegada num funil fixo — a conversa fica sem assunto até o card nascer; com mais de um funil, alguém precisa ter **Sem assunto**, senão a tela não deixa continuar; criar ou sugerir pelo assunto só funciona nos funis com a IA do funil ligada, e a tela avisa quando algum está desligado; quando o robô passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas (administradores da caixa também entram), com a atribuição automática da caixa ligada ou não; sem ninguém para receber agora, ela espera e vai para quem entrar primeiro; com a Atribuição do funil em convite, a pessoa é convidada em vez de receber direto; "Só as que atende" = conversas em que a pessoa é atendente, participa ou é dona do card; tirar todos os funis tira a caixa do CRM; caixa que estava em "vê apenas atribuídos" mostra **Manter assim**, que deixa cada pessoa em "Só as que atende"; um funil tem um agente de IA só por caixa, e funil sem agente marcado fica com o que atende primeiro; o agente de IA marcado num funil assume a conversa quando o assunto em atendimento é daquele funil, enquanto nenhuma pessoa atende; quem recebe quando o cliente pede uma pessoa continua sendo decidido pela Atribuição; tirar um agente da única caixa em que ele trabalha faz ele parar de atender, e a tela avisa antes; pôr ou tirar agente de IA pede também a permissão de gerenciar agentes.
 - nav_target: `crm_caixa`
 
 ### Criar card ou oportunidade no CRM
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade
+- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade (num funil de Atender, o botão se chama Novo atendimento)
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: CRM habilitado e permissão de criar oportunidades; funil e etapa disponíveis. Contato e empresa são opcionais.
-- passos: Clique em **Nova oportunidade**; em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o negócio** (Passo 2 de 2), escreva o **Nome do negócio** (único obrigatório), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
+- passos: Clique em **Nova oportunidade** (ou **Novo atendimento**, num funil de Atender); em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o negócio** (Passo 2 de 2), escreva o **Nome do negócio** (único obrigatório), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
 - gotchas: os cadastros são compartilhados com Relacionamentos, não cópias; reutilizar existente não altera a pessoa ou empresa; identidade/domínio repetidos pedem escolha explícita, nomes iguais não causam fusão; erro de gravação conserva o preenchimento; repetir a mesma solicitação recupera a oportunidade confirmada. Cards sem conversa podem ser ocultados pelo filtro vinculado; a caixa influencia a visibilidade para agentes.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
@@ -479,7 +489,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `contacts_edit`
 
 ### Consultar oportunidades na ficha do contato
-- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"
+- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"; "Quais atendimentos este contato já teve?"
 - onde_fica: Relacionamentos > Contatos > abrir contato > Acompanhamento > Oportunidades
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
@@ -494,18 +504,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: acesso para editar o contato.
-- passos: O contato vira cliente sozinho quando um card dele é ganho num funil que conta como venda. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
-- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Resolver um card de funil que não é de venda não promove. Desfazer volta o contato para lead e não mexe em cards nem conversas.
+- passos: O contato vira cliente sozinho quando um card dele é ganho num funil de Vender. Para quem comprou de outro jeito, clique em **Marcar como cliente** e confirme em **Sim, marcar**. Para desfazer um engano, **Não é cliente** e **Sim, tirar**.
+- gotchas: o selo **Cliente desde** guarda a primeira venda e aparece também no painel da conversa; ganhar de novo não muda a data. Fechar um card num funil de Atender (Resolvido ou Cancelado) não faz o contato virar cliente; mover esse card para um funil de Vender também não: ele entra lá Aberto. Desfazer volta o contato para lead e não mexe em cards nem conversas.
 - nav_target: `contacts_edit`
 
-### Mover card, ganhar, perder ou reabrir oportunidade
-- intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"
+### Mover card, ganhar, perder, resolver, cancelar ou reabrir
+- intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"; "Como marco um atendimento como resolvido?"; "Como cancelo um atendimento?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente em funil ativo.
-- passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Negócio**; quem cuida muda na linha "Fulano cuida deste cliente" do mesmo cartão, com **Salvar** no rodapé; para fechar, use **Ganhou** ou **Perdeu** na faixa do topo do card; informe o valor (**Marcar como ganho**) ou o motivo (**Marcar como perdido**); para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
-- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa; em funil com "Fechar com sucesso aqui conta como venda" desligado (Editar funil), os botões fecham como Resolvido/Cancelado (ou o nome que o funil der), não somam em vendas nem avisam anúncios.
+- passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Negócio** (num funil de Atender, cartão **Assunto**); quem cuida muda na mesma linha "Fulano cuida deste cliente", com **Salvar** no rodapé. Para fechar, use os botões da faixa do topo do card. Num funil de Vender: **Ganhou** (informe o valor e clique em **Marcar como ganho**) ou **Perdeu** (escolha o motivo e clique em **Marcar como perdido**). Num funil de Atender: **Resolvido** ou **Cancelado** (com motivo de cancelamento de atendimento); não pede valor. No modelo Cobrança, os botões são **Pago** e **Cancelado**. Para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
+- gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder, cancelar e arquivar não deletam contato nem conversa; Resolvido e Cancelado não somam em vendas nem avisam anúncios; card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); o tipo do funil (Vender ou Atender) muda em Editar funil > Para que serve > Alterar.
+- nav_target: `crm_kanban_index`
+
+### Escolher se o funil é de Vender ou de Atender
+- intent: "Como faço um funil de suporte?"; "Como faço um funil de pós-venda ou de cobrança?"; "Qual a diferença entre Vender e Atender?"; "Este funil conta como venda?"; "Como mudo o funil para atendimento?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Criar funil (primeira pergunta); num funil que já existe, Configurar > Editar funil > Para que serve > Alterar
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- pre_requisitos: permissão de gerenciar funis.
+- passos: Ao criar o funil, responda **Para que serve este funil?**. **Vender** é para conquistar um cliente novo: o card termina em Ganhou ou Perdeu, tem valor, entra na meta do mês e pode avisar os Anúncios. **Atender** é para resolver algo para quem já é cliente: o card termina em Resolvido ou Cancelado, sem valor, sem meta e sem Anúncios. Em Atender, escolha um modelo pronto: **Suporte**, **Pós-venda**, **Cobrança** ou **Agendamento**. Num funil que já existe, abra **Editar funil**; o primeiro cartão do resumo é **Para que serve**; clique em **Alterar**, escolha Vender ou Atender e salve.
+- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Nova oportunidade e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
@@ -517,6 +537,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: Abra o card; no cartão **Agenda**, clique em **Alterar** (ou **Marcar**, quando não há nada marcado); em **Marcar algo novo**, escolha **Lembrete** ou **Mensagem no dia** (o azul **Novo lembrete** do rodapé também abre um lembrete); escreva **O que é**, confira **O que fazer?** (**Me lembrar**, **Esconder a conversa até lá** ou **Mandar uma mensagem**), escolha **Quando?** e, se for mensagem, **Sua mensagem** ou a mensagem pronta; clique em **Salvar**. Em **Já marcado**, use **Feito**, **Adiar** ou **Cancelar**; o retorno atrasado também aparece em **Próximo passo** com **Marcar como feito**. Para ver o que aconteceu, **Mais detalhes > O que já aconteceu**, filtro **Retornos**.
 - gotchas: o card não tem mais abas: tudo de retorno fica no cartão Agenda; sem conversa ligada, **Mensagem no dia** e **Esconder a conversa até lá** ficam travados (aparece "Precisa de uma conversa ligada a este cliente."); WhatsApp fora da janela de 24 horas exige mensagem pronta, e o rodapé diz o que falta; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
 - nav_target: `crm_kanban_index`
+
+### Lembrete que repete, lembrete sem card e quem recebe o aviso
+- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem negócio?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
+- rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um negócio do funil.
+- passos: Em **É sobre quem?** escolha **Ninguém** (fica só no calendário), **Um cliente** ou **Um negócio do funil**; escreva **O que é** e escolha **Quando?** (a hora é no fuso da conta). Em **Repetir?** escolha **Uma vez só**, **Todo dia** (ou só de segunda a sexta), **Toda semana** (marque os dias), **Todo mês** ou **Todo ano**, e em **Até quando?** escolha sem data, até um dia ou um número de vezes; as **Próximas datas** aparecem logo abaixo. Em **Quem recebe o aviso?** escolha **Quem cuida do cliente**, **Só eu**, **Escolher pessoas** ou **Um time inteiro**; clique em **Salvar**. Para ver a repetição, no card use **Ver** em **Repetem**, ou clique numa data com o ícone de repetir no calendário: lá estão **Feito desta vez**, **Pausar**/**Retomar**, **Encerrar** e **Mudar** (só a próxima ou esta e as próximas).
+- gotchas: só o lembrete para a equipe repete; mensagem ao cliente que repete ainda não existe (#1528); "Quem cuida do cliente" segue o dono do card no momento do aviso; pausar não apaga as datas, elas ficam marcadas **Pausado** e ninguém é avisado até retomar; encerrar para de repetir e o que já passou fica no histórico; quem não vê o funil do card aparece desligado em **Escolher pessoas**; se ninguém sobrar para receber (time vazio, pessoa que saiu), o aviso vai para quem marcou; lembrete sem card só é visto por quem marcou, por quem recebe e pelo administrador; "Todo dia 31" cai no último dia nos meses mais curtos.
+- nav_target: `crm_calendar_index`
 
 ### Usar o card CRM a partir de uma conversa
 - intent: "Onde está o card CRM desta conversa?"; "Como vinculo atendimento a uma oportunidade?"; "Por que não vejo card no painel da conversa?"
@@ -530,28 +560,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar SLA do CRM
 - intent: "Onde configuro SLA do CRM?"; "Como defino horários de atendimento?"; "Por que a página de SLA está bloqueada?"
-- onde_fica: Sidebar > CRM > CRM SLA
+- onde_fica: No menu novo: Atender > Prazos de resposta. No menu antigo: Sidebar > CRM > CRM SLA
 - rota: `crm_sla_index` - `/app/accounts/:accountId/crm/sla`
-- gate: papel `administrator` ou `crm_admin`
+- gate: papel `administrator` ou `crm_admin` ou `sla_manage`
 - pre_requisitos: funis e caixas para associar políticas e agendas.
-- passos: Abra CRM SLA; crie/edite políticas de SLA por funil; configure agenda de caixas; salve as janelas de atendimento; volte ao CRM para validar impacto nos cards.
-- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; agenda incorreta gera leitura errada de prazo.
+- passos: Abra CRM SLA; crie/edite políticas de SLA por funil; nas contas com o horário único (#1619), use **Horário de cada pessoa** (**Alterar** ou **Definir horário**) para o horário de quem atende e **Horário dos canais** (**Ver horário do canal** ou **Definir horário do canal**) para ir à tela do canal; nas demais contas, configure a agenda de cada caixa em Calendários de atendimento; volte ao CRM para validar impacto nos cards.
+- gotchas: sem feature `sla`, a rota abre paywall e não chama APIs; permissões de relatório não bastam para gerenciar SLA; horário incorreto gera leitura errada de prazo; o prazo conta no horário do responsável da conversa e, sem horário próprio, no horário da caixa; nas contas com o horário único (#1619), o horário da caixa é o da tela do canal, no fuso da conta, e o horário da pessoa também usa o fuso da conta; nas demais, vale antes o calendário da caixa configurado aqui, no fuso escolhido nele; função só com `sla_manage` edita as políticas, mas os calendários (de pessoa ou de caixa) ficam para administrador ou `crm_admin`.
 - nav_target: `crm_sla_index`
 - highlight: `crm-new-sla`
 
 ### Ver dashboard CRM e métricas de funil
-- intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"
-- onde_fica: Sidebar > CRM > CRM Dashboard
+- intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"; "Quantos atendimentos resolvemos?"
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números. No menu antigo: Sidebar > CRM > CRM Dashboard
 - rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
 - gate: papel `administrator` ou `agent` ou `crm_view_reports`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
-- passos: Abra CRM Dashboard; selecione funil; escolha período; revise KPIs, funil, ganho/perdido, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram.
-- gotchas: moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
+- passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, ganhos, perdidos, valores e meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
 - nav_target: `crm_dashboard_index`
 
 ### Usar calendário CRM e agendar reunião
 - intent: "Onde fica o calendário CRM?"; "Como agendo uma reunião no card?"; "Como evitar conflito de agenda?"
-- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); ou CRM Kanban > visualização Calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); ou CRM Kanban > visualização Calendário
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixa de e-mail Google ou Microsoft conectada com calendário ativo; card CRM existente para a reunião.
@@ -569,7 +599,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar e publicar a página de agendamento
 - intent: Como crio uma página para o cliente marcar horário?; Onde fica o link de agendamento sem Google ou Microsoft?; Como mando o link ou o QR code de agendamento?; Como pauso a página de agendamento?; Por que não consigo publicar a página?; Como escolho para qual funil vai quem marcar?
-- onde_fica: CRM > Agendamento > Páginas e links (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); também pelo botão Agendamento no topo do CRM > Agendamento > Calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links (o subgrupo Agendamento vem fechado no menu: clique nele para abrir); também pelo botão Agendamento no topo do CRM > Agendamento > Calendário
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: criar, editar, publicar, pausar e excluir exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa vê as páginas, a prévia e o link (copiar, QR code, abrir), mas não vê Criar página, Editar, Pausar, Publicar, Excluir nem Alterar. Agente sem função e função sem o módulo Agendamento não veem o item no menu.
@@ -580,7 +610,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Avisar o cliente no WhatsApp sobre o horário marcado
 - intent: Como aviso o cliente no WhatsApp antes do horário?; Como escolho quando o cliente recebe o lembrete?; Como testo o link de agendamento no meu WhatsApp?; Por que o aviso no WhatsApp não saiu?; Como vejo se o cliente confirmou o horário?; O cliente pode cancelar ou mudar o horário sozinho?; Como o cliente para de receber os avisos?; Como mudo o texto do aviso que o cliente recebe?; A IA pode escrever o texto dos avisos?
-- onde_fica: CRM > Agendamento > Páginas e links > Editar a página > passo Avisos; o teste fica na prévia, com a página no ar; a resposta do cliente aparece no detalhe da reunião no CRM Calendar e no histórico do card
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > Editar a página > passo Avisos; o teste fica na prévia, com a página no ar; a resposta do cliente aparece no detalhe da reunião no CRM Calendar e no histórico do card
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: escolher os avisos e testar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase dos avisos na prévia. Para testar, a pessoa também precisa enxergar o WhatsApp de avisos. Conectar WhatsApp e criar mensagem aprovada na Meta continuam do administrador.
@@ -591,7 +621,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Atender no dia da reunião marcada pela página de agendamento
 - intent: Onde vejo as reuniões de hoje?; Como sei se o cliente confirmou a reunião?; Como lembro o cliente da reunião?; Como chamo o cliente no WhatsApp na hora da reunião?; Como faço a chamada de vídeo no WhatsApp?; O cliente faltou, como mando o link para marcar outro horário?; Como registro que a reunião aconteceu?
-- onde_fica: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a reunião de hoje aparece em Próximo passo (Ver a reunião) e as outras no cartão Agenda, onde a Próxima reunião mostra Chamar no WhatsApp e Lembrar
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > visão Agenda > Hoje (escolha Meus para ver só as suas); o detalhe abre ao clicar na reunião; no card, a reunião de hoje aparece em Próximo passo (Ver a reunião) e as outras no cartão Agenda, onde a Próxima reunião mostra Chamar no WhatsApp e Lembrar
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: quem vê o card vê a reunião; Lembrar e Enviar link mandam mensagem na conversa do cliente, então só funcionam para quem pode responder essa conversa (sem isso, aparece Copiar link); Enviar link para marcar outro horário também pede poder usar o link do cliente (o mesmo de O cliente escolhe pelo link, no cartão Agenda do card).
@@ -602,7 +632,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher para qual etapa o card vai depois da reunião
 - intent: Como faço o card mudar de etapa depois da reunião?; Como mover o card automaticamente quando a reunião acontece?; Por que o sistema pergunta se quero mover o card depois da reunião?; Como desligo a pergunta de mover o card?
-- onde_fica: CRM > Agendamento > Páginas e links > Editar a página > prévia (Ver como fica) > Depois da reunião
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > Editar a página > prévia (Ver como fica) > Depois da reunião
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: mudar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase.
@@ -613,7 +643,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Quem pode o quê no Agendamento
 - intent: Quem pode criar a página de agendamento?; Como deixo alguém só ver as páginas de agendamento?; Por que o atendente não vê CRM > Agendamento?; Qual função dá acesso ao Agendamento?
-- onde_fica: Configurações > Funções personalizadas > módulo Agendamento (Sem acesso, Ver, Editar); a tela fica em CRM > Agendamento > Páginas e links
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: Configurações > Funções personalizadas > módulo Agendamento (Sem acesso, Ver, Editar); a tela fica em CRM > Agendamento > Páginas e links
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: administrador faz tudo; função com Agendamento em Editar cria, edita, publica, pausa e exclui páginas e escolhe modelo, marca, locais, horários, funil e quem atende; função com Agendamento em Ver vê as páginas, a prévia e o link, sem botão de mudar; agente sem função e função sem o módulo não veem a tela e a API responde 401.
@@ -624,7 +654,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Passar as reuniões de uma pessoa para outra
 - intent: Como passo as reuniões de um vendedor para outro?; Alguém saiu de férias, como troco quem atende as reuniões marcadas?; Como mudo o responsável das reuniões futuras de uma vez?; Por que algumas reuniões não passaram para a outra pessoa?
-- onde_fica: CRM > Agendamento > Páginas e links > cartão da página > Passar reuniões
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > cartão da página > Passar reuniões
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: administrador ou função com Agendamento em Editar; com Agendamento em Ver o botão não aparece e a API responde 401.
@@ -635,7 +665,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Meus horários: escolher quando aceito reuniões e pausar a agenda
 - intent: Como escolho os dias e horas em que aceito reuniões?; Como pauso a minha agenda de agendamento?; Vou sair de férias, como paro de receber reuniões?; Por que não consigo marcar um horário fora do da página?; Onde ficam Meus horários?
-- onde_fica: Menu lateral > CRM > Agendamento > Meus horários
+- onde_fica: No menu novo: Acompanhar > Agenda > Meus horários. No menu antigo: Menu lateral > CRM > Agendamento > Meus horários
 - rota: `crm_my_booking_hours` - `/app/accounts/:accountId/crm/my-booking-hours`
 - gate: papel `administrator` ou `agent` ou `crm_view` ou `crm_admin`
 - perfil: cada pessoa que atende reuniões mexe só nos próprios horários; vale para administrador, agente sem função e função com acesso ao CRM, sem precisar do módulo Agendamento; função sem CRM não vê o item e a API responde 401.
@@ -646,7 +676,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os resultados do agendamento da equipe
 - intent: Quantos clientes marcaram horário pelo link?; Quantos abriram o link e não marcaram?; Quantos compareceram e quantos faltaram?; De onde vieram os agendamentos?; Como mando o link de novo para quem abriu e não marcou?
-- onde_fica: CRM > Agendamento > Páginas e links > aba Resultados
+- onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links > aba Resultados. No menu antigo: CRM > Agendamento > Páginas e links > aba Resultados
 - rota: `settings_booking_results` - `/app/accounts/:accountId/crm/booking/results`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: administrador e função com Agendamento em Ver ou Editar veem a equipe toda e podem trocar para Só os meus; Enviar de novo exige poder mandar o link de agenda (administrador, agente sem função ou função com acesso ao CRM); agente sem função usa CRM > Agendamento > Meus números; função sem CRM e sem Agendamento não vê e a API responde 401.
@@ -657,7 +687,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver meus números de agendamento
 - intent: Quantos dos meus links viraram horário marcado?; Quem abriu o meu link e não marcou?; Onde vejo meus números de agendamento?
-- onde_fica: Menu lateral > CRM > Agendamento > Meus números
+- onde_fica: No menu novo: Acompanhar > Agenda > Meus resultados. No menu antigo: Menu lateral > CRM > Agendamento > Meus números
 - rota: `crm_booking_results` - `/app/accounts/:accountId/crm/booking-results`
 - gate: papel `administrator` ou `agent` ou `crm_view` ou `crm_admin`
 - perfil: administrador, agente sem função e função com acesso ao CRM veem os próprios números (links que criaram e reuniões em que são responsáveis); quem pode ver a equipe troca para Equipe toda.
@@ -668,7 +698,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Sincronizar RSVP, reagendar e registrar no-show
 - intent: "Como vejo se o convidado da reunião aceitou ou recusou?"; "Onde vejo o RSVP / confirmação de presença dos convidados da reunião?"; "Como marco no-show (não compareceu)?"; "Como cancelo ou reagendo uma reunião?"; "Status de presença dos convidados da reunião no calendário."
-- onde_fica: Sidebar > CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > abrir evento de reunião
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário (com o agendamento novo ligado na conta: CRM > Agendamento > Calendário) > abrir evento de reunião
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: reunião criada pelo CRM ou pelo link público; calendário conectado ao provedor.
@@ -966,6 +996,36 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: agente interno não se conecta a caixa de entrada e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar as transferências para humano por falta de conhecimento.
 - nav_target: `autonomia_agents_builder`
 
+### Escolher como começar um agente novo
+- intent: "Como crio um agente?"; "Onde ficam os modelos prontos?"; "Como crio um copiloto para a equipe?"; "Tem outro tipo de agente além dos modelos?"
+- onde_fica: Agentes > Criar agente (botão do topo da lista, barra de baixo no celular ou Ver modelos prontos)
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); administrador ou função com autonomia_manage.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer comprar ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
+- gotchas: a maioria dos agentes começa por um modelo; o Copiloto da equipe nunca fala com cliente e não escolhe canal; Voltar para Agentes sai sem criar nada; quem só vê não tem o botão Criar agente; com a jornada desligada o mesmo endereço abre o Construtor antigo.
+- nav_target: `autonomia_agents_builder`
+
+### Criar um agente da equipe (recebe quando alguém passa)
+- intent: "Como crio um agente que recebe a conversa quando alguém passa?"; "Quero um segundo agente no mesmo WhatsApp"; "O que é agente da equipe?"; "Por que o canal aparece bloqueado para o agente da equipe?"
+- onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Agente da equipe
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um canal com um agente principal atendendo, atendido só por pessoas ou (com a aba Agente de IA por caixa ligada na conta) com um agente de outro sistema atendendo primeiro.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Agente da equipe; 3. Marque os canais em que ele fica na equipe (os que têm agente principal atendendo e os atendidos só por pessoas) e clique em Continuar; 4. Em Confira como fica, veja quem atende primeiro em cada canal, ou que o canal é atendido só por pessoas, e clique em Continuar; 5. Conte na conversa o que ele faz e teste, como num agente normal (Alterar, no topo, troca os canais); 6. Clique em Começar a trabalhar; 7. Na página do agente, em Onde e quando responde, Alterar troca os canais: ele fica em "Não, só quando alguém passar a conversa", com os canais marcados em "Recebe quando alguém passar em".
+- gotchas: o agente da equipe não atende primeiro: quem atende é o agente principal do canal, e ele recebe a conversa quando alguém (pessoa ou outro agente) passa; no canal atendido só por pessoas, conversa nova continua com as pessoas e ele só responde a conversa que alguém passar para ele, nunca começa sozinho; no canal com agente de outro sistema atendendo primeiro, só nas contas com a aba Agente de IA por caixa, conversa nova vai para ele e o agente da equipe responde a conversa que alguém passar (se o outro sistema não olhar quem é o dono da conversa, os dois podem responder); nas outras contas esse canal aparece bloqueado com o motivo, como o canal com o principal parado; na lista ele aparece como Na equipe, não como Atendendo; escolher de quais funis ele cuida ainda não está nesta tela.
+- nav_target: `autonomia_agents_builder`
+
+### Criar um agente que ajuda outros agentes (ajudante)
+- intent: "Como crio um agente que ajuda outro agente?"; "Quero um especialista que o agente principal consulta"; "O que é Ajuda outros agentes?"; "Como mudo quem o ajudante ajuda ou quando os agentes chamam o ajudante?"; "Por que o Agente de Cotação aparece bloqueado?"
+- onde_fica: Agentes > Criar agente > Precisa de outro tipo? > Ajuda outros agentes
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey) e a Fase 2 dos Agentes ligada (piloto); administrador ou função com autonomia_manage; pelo menos um agente que já converse com clientes.
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Em Precisa de outro tipo?, escolha Ajuda outros agentes; 3. Marque os agentes que ele vai ajudar (um ou mais) e clique em Continuar; 4. Em Quando chamar, escreva numa frase a situação em que os agentes escolhidos o chamam e clique em Continuar; 5. Conte na conversa o que ele sabe e teste como se fosse o agente principal (Alterar, no topo, troca a escolha); 6. Clique em Começar a ajudar; 7. Na página do agente, Mudar em Quem ele ajuda ou em Quando chamar reabre os passos.
+- gotchas: o ajudante nunca fala com o cliente e não escolhe canal: quem responde é o agente principal, que o consulta; o que o ajudante sabe e faz pode chegar ao cliente pelas respostas do principal; o Copiloto da equipe, outros ajudantes e rascunhos não aparecem para escolher, e o Agente de Cotação aparece bloqueado com o motivo; um Copiloto já existente não vira ajudante, só quem nasce como Ajuda outros agentes; na lista ele aparece como Ajudando; a página dele não tem Testar como cliente nem Quando passa para a equipe.
+- nav_target: `autonomia_agents_builder`
+
 ### Atualizar conhecimento e fontes do agente
 - intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
 - onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Conhecimento
@@ -1038,7 +1098,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Visao geral dos canais
 - intent: Qual canal devo conectar?; Como conecto WhatsApp, Instagram ou email?; Onde crio live-chat do site?; Como comeco com Telegram ou API?
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - perfil: `administrator` cria canais e conclui o wizard. Funcao personalizada com `inbox_manage` tambem cria: as telas do wizard aceitam `administrator` ou `inbox_manage`. `agent` sem essa funcao nao cria; diga para pedir a um administrator e, se ja houver caixa criada, orientar apenas como acessar conversas permitidas. O Guia nao monta a criacao para quem nao e administrator, mas isso e limite dele, nao da pessoa: ofereca o caminho na tela.
@@ -1102,7 +1162,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar CSAT da caixa
 - intent: Como ativo pesquisa de satisfacao?; Onde configuro CSAT?; Como escolho quando enviar avaliacao?; Como configuro CSAT no WhatsApp?
-- onde_fica: Sidebar > Configuracoes > Caixas de entrada > selecionar caixa > CSAT
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Sidebar > Configuracoes > Caixas de entrada > selecionar caixa > CSAT
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que configurar CSAT e uma configuracao de caixa e precisa de administrador; o usuario pode apenas consultar relatorios se tiver `report_manage`.
@@ -1113,7 +1173,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar widget do site
 - intent: Como configuro o live-chat do site?; Onde altero cor e texto do widget?; Como ativo formulario pre-chat?; Onde pego o script do widget?
-- onde_fica: Sidebar > Configuracoes > Caixas de entrada > caixa de website/live-chat
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Sidebar > Configuracoes > Caixas de entrada > caixa de website/live-chat
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que editar widget, pre-chat, disponibilidade e dominio permitido exige administrador da conta.
@@ -1122,17 +1182,50 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: as abas de widget so aparecem para caixas web widget; restringir dominios bloqueia embeds fora da lista; mobile apps podem precisar da opcao de webview; o script aparece no final da criacao e tambem no preview/configuracao da caixa.
 - nav_target: `settings_inbox_show`
 
-### Gerenciar agent bots nativos
-- intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?
-- onde_fica: Sidebar > Configuracoes > Agent Bots; para conectar na caixa: Configuracoes > Caixas de entrada > selecionar caixa > Bot Configuration
+### Gerenciar agentes de outro sistema (agent bots)
+- intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?; Como conecto um agente montado em outro sistema?
+- onde_fica: com a nova jornada de Agentes e a aba Agente de IA por caixa ligada na conta (piloto): Agentes > Conectar agente de outro sistema (e a pagina do agente pela lista de Agentes); sem ela: Sidebar > Configuracoes > Robos. Para escolher quem atende primeiro na caixa: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA (no piloto) ou aba Robo (nas outras contas)
 - rota: `agent_bots` - `/app/accounts/:accountId/settings/agent-bots`
 - gate: feature flag `agent_bots`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
-- passos: 1. Abra Agent Bots; 2. Crie ou edite um bot com nome, descricao, avatar e webhook URL; 3. Copie o access token e secret quando forem exibidos; 4. Abra a caixa desejada e entre em Bot Configuration; 5. Selecione o bot e salve; 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
-- gotchas: nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` aparecem na lista mas nao podem ser editados/excluidos; desconectar bot da caixa nao apaga o bot do catalogo.
+- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
+- gotchas: para quem usa, agente da plataforma e agente de outro sistema sao todos agentes de IA, na mesma lista e na mesma escolha da caixa; nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` nao aparecem na lista de Agentes; tirar o agente da caixa nao apaga o agente; os espelhos dos agentes da plataforma nao aparecem na lista de Robos nem se editam por ela; a troca pela aba Agente de IA e completa: quem atendia primeiro sai pelo caminho certo e as conversas dele vao para as pessoas; no canal em que um agente da plataforma atende primeiro, por o agente de outro sistema e pela aba Agente de IA do canal, que tira o agente da plataforma e poe o outro de uma vez; no canal so com agentes da equipe, o agente de outro sistema entra e os agentes da equipe continuam recebendo quando alguem passa.
 - nav_target: `agent_bots`
 - highlight: `settings-add-bot`
+
+### Trocar quem atende primeiro numa caixa (aba Agente de IA)
+- intent: Como troco o agente que atende esta caixa?; Como coloco um agente de IA no WhatsApp?; Como tiro a IA de uma caixa?; Quem atende primeiro neste canal?; Por que nao consigo escolher um agente de outro sistema nesta caixa?
+- onde_fica: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA
+- rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
+- gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
+- perfil: ver: quem abre as configuracoes da caixa; trocar: administrador ou funcao com inbox_manage
+- pre_requisitos: a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; caixa criada; o agente que vai atender ja criado (na plataforma, terminado e nao interno; ou conectado de outro sistema)
+- passos: 1. Abra a caixa em Configuracoes > Caixas de entrada; 2. Entre na aba Agente de IA; 3. Veja quem atende primeiro e quem tambem recebe quando alguem passar; 4. Em Quem atende primeiro, escolha outro agente de IA, ou Ninguem, so pessoas; 5. Leia o aviso de troca e clique em Trocar (ou Confirmar quando ninguem atendia); 6. Abrir agente leva a pagina do agente.
+- gotchas: a troca e completa e numa vez so: quem atendia primeiro sai (as conversas dele vao para as pessoas) e o novo entra; os agentes da equipe da caixa (recebem quando alguem passa) ficam, inclusive quando o novo e um agente de outro sistema; se o outro sistema nao olhar quem e o dono da conversa, ele e o agente da equipe podem responder a mesma conversa; agente que ja e da equipe desta caixa nao vira o primeiro direto, tire esse agente da equipe antes; agente parado de proposito, rascunho ou interno e recusado com o motivo; agente parado sem canal entra e passa a atender; enquanto a leitura nao chega a aba fica carregando e tenta de novo, sem tela de erro.
+- nav_target: `settings_inbox_show`
+
+### Conectar agente de outro sistema
+- intent: Como conecto um agente que fiz em outro sistema?; Onde coloco o endereco do webhook do meu agente?; Onde fica a chave de acesso do agente?; Como uso meu agente de outro sistema no WhatsApp?
+- onde_fica: Agentes > Conectar agente de outro sistema (pagina inteira, em tres etapas)
+- rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
+- gate: papel `administrator` ou `autonomia_manage`
+- perfil: somente `administrator`
+- pre_requisitos: nova jornada de agentes ligada na conta (autonomia_agents_journey); a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; endereco HTTPS do webhook do outro sistema
+- passos: 1. Abra Agentes e clique em Conectar agente de outro sistema; 2. Quem e: foto (opcional), nome e o que o agente faz, e Continuar; 3. Endereco: cole o endereco do webhook e clique em Conectar; 4. Chave: copie a chave de acesso e cole no outro sistema; 5. Clique em Concluir para abrir a pagina do agente; 6. Para o agente comecar a atender, escolha esse agente na aba Agente de IA de um canal.
+- gotchas: sem foto aparece a inicial do nome; sem a chave colada no outro sistema o agente nao consegue responder; recem-conectado, o agente aparece como Parado ate atender primeiro em algum canal; Voltar para Agentes nas duas primeiras etapas sai sem criar nada.
+- nav_target: `autonomia_agents_builder`
+
+### Pagina do agente de outro sistema
+- intent: Onde vejo o agente de outro sistema?; Como mudo o endereco do webhook?; Onde copio a chave de acesso de novo?; Como apago um agente de outro sistema?; Em quais canais o agente atende?
+- onde_fica: Agentes > clicar no cartao do agente de outro sistema (Conectado por endereco de webhook)
+- rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
+- gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
+- perfil: ver: quem abre Agentes; mudar, apagar e ver a chave: somente `administrator`
+- pre_requisitos: a aba Agente de IA por caixa ligada na conta (piloto: contas 1, 16 e 18); sem ela, a caixa tem a aba Robo de sempre e a lista de Agentes nao mostra agentes de outro sistema; agente de outro sistema conectado
+- passos: 1. Abra Agentes e clique no cartao do agente; 2. Em O que o agente faz e em Como o agente se conecta, use Alterar e depois Salvar; 3. Em Chave de acesso, use Mostrar e Copiar; 4. Em Onde atende, Abrir canal leva a aba Agente de IA do canal, onde se troca quem atende; 5. Em Mais opcoes, Mudar nome e foto ou Apagar agente.
+- gotchas: o selo Atendendo aparece quando o agente atende primeiro em algum canal ativo, senao Parado; apagar tira o agente de todos os canais e as conversas novas vao para as pessoas; trocar de canal nao e por esta pagina, e pela aba Agente de IA do canal; agente que nao existe mais volta para a lista.
+- nav_target: `autonomia_agent_panel`
 
 ### Usar busca global
 - intent: Como busco uma conversa?; Onde procuro mensagens antigas?; Como acho contato pela busca?; Como encontro artigo da Central de Ajuda?
@@ -1181,7 +1274,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver plano e cobranca
 - intent: Onde vejo meu plano?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
-- onde_fica: Sidebar > Configuracoes > Billing/Cobranca
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
 - rota: `billing_settings_index` - `/app/accounts/:accountId/settings/billing`
 - gate: papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
@@ -1209,12 +1302,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin` para analisar, aceitar, dispensar e atualizar resumo; custom role apenas com `crm_view` pode ser orientada a visualizar o card, mas nao a executar acoes de IA.
 - pre_requisitos: card existente; para resumo, card precisa estar vinculado a uma conversa visivel ao usuario.
 - passos: 1. Abra o card; 2. Em Próximo passo, leia "Lendo a conversa, achamos que..." (quando outra coisa é mais urgente, a sugestão vira uma linha no cartão Negócio); 3. Clique em **Mover para** a etapa sugerida para aceitar, ou em **Deixar como está** para dispensar; 4. Para pedir nova leitura, no cartão Negócio clique na linha "Etapa X, a Nª de N" e, em **Leitura da conversa**, clique em **Ler a conversa de novo**; 5. O resumo da conversa aparece em 2 linhas no cartão Conversa; para ver inteiro e regenerar, clique em "N conversas" e use **Atualizar** na tela Conversas.
-- gotchas: o card nao tem mais paineis nem abas de IA; abaixo do limiar a tela diz "A leitura não teve certeza de uma etapa melhor."; sem sugestao, "A leitura não achou nada para mudar."; resumo nao aparece para card sem conversa ("Nenhuma conversa ligada a este cliente."); aceitar sugestao move o card de etapa; Mover e Deixar como está pedem permissao de IA do CRM e poder mudar o card.
+- gotchas: num funil de Atender o cartao Negocio se chama **Assunto** e mostra a prioridade e ha quanto tempo o pedido esta aberto, sem valor; o card nao tem mais paineis nem abas de IA; abaixo do limiar a tela diz "A leitura não teve certeza de uma etapa melhor."; sem sugestao, "A leitura não achou nada para mudar."; resumo nao aparece para card sem conversa ("Nenhuma conversa ligada a este cliente."); aceitar sugestao move o card de etapa; Mover e Deixar como está pedem permissao de IA do CRM e poder mudar o card.
 - nav_target: `crm_kanban_index`
 
 ### Conectar ou autorizar calendario em uma caixa de e-mail
 - intent: "Como libero agenda Google no CRM?"; "Como autorizo calendario da Microsoft?"; "Por que nao aparece caixa para agendar reuniao?"; "Como reconecto calendario de uma inbox?"
-- onde_fica: Configuracoes > Caixas de entrada > Nova caixa > Email > Google ou Microsoft; para revisar caixa existente: Configuracoes > Caixas de entrada > selecionar caixa
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configuracoes > Caixas de entrada > Nova caixa > Email > Google ou Microsoft; para revisar caixa existente: Configuracoes > Caixas de entrada > selecionar caixa
 - rota: `settings_inboxes_page_channel` - `/app/accounts/:accountId/settings/inboxes/new/:sub_page`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - perfil: `administrator`; se o perfil nao puder, diga que conexao OAuth de e-mail/calendario e acao administrativa e peca a um administrador da conta para conectar ou reautorizar a caixa.
@@ -1225,7 +1318,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar pagina de agendamento em caixa compartilhada e links por agente
 - intent: "Como varios vendedores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
-- onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > CRM Calendar > Agendamento
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`; se o perfil nao puder, diga que a API de perfis de agendamento e administrativa. Custom role com `crm_manage_pipelines` pode ver controles de CRM, mas deve pedir a um administrador para salvar/gerar links de booking.
@@ -1261,13 +1354,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar CRM por caixa de entrada
 - intent: "Como faco conversas virarem cards automaticamente?"; "Como defino funil padrao por inbox?"; "Como restringo cards da caixa para o agente atribuido?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar caixas de entrada
+- onde_fica: Sidebar > CRM > CRM Kanban > Canais de cada funil
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
-- passos: 1. Abra CRM Kanban; 2. Clique em Configurar caixas de entrada; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
-- gotchas: card automatico cria card para todo e-mail, inclusive os que nao sao lead (newsletter, fornecedor, aviso de sistema): numa caixa de e-mail que recebe de tudo, o funil se enche de card que nao e venda; nesse caso o caminho e desligar o card automatico da caixa e criar o card por automacao com uma condicao que separe o que e lead (por exemplo, o remetente do formulario do site); se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
+- passos: 1. Abra CRM Kanban; 2. Clique em Canais de cada funil; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
+- gotchas: card automatico cria card para todo e-mail, inclusive os que nao sao lead (newsletter, fornecedor, aviso de sistema): numa caixa de e-mail que recebe de tudo, o funil se enche de card que nao e de cliente; nesse caso o caminho e desligar o card automatico da caixa e criar o card por automacao com uma condicao que separe o que e lead (por exemplo, o remetente do formulario do site); se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`
 
@@ -1383,7 +1476,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar relatório de agentes
 - intent: Como baixo o relatório de agentes?; Onde exporto o desempenho por agente?; Como gero o CSV de agentes?; Onde fica o download do relatório de agentes?
-- onde_fica: Relatorios > Agentes
+- onde_fica: No menu novo: Resultados > Relatórios > Usuários. No menu antigo: Relatorios > Agentes
 - rota: `agent_reports_index` - `/app/accounts/:accountId/reports/agents_overview`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas atribuídas a agentes no período escolhido
@@ -1394,7 +1487,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar relatório de caixas
 - intent: Como baixo o relatório por caixa de entrada?; Onde exporto o desempenho das caixas?; Como gero o CSV de caixas?; Onde fica o download do relatório de caixas?
-- onde_fica: Relatorios > Caixas
+- onde_fica: No menu novo: Resultados > Relatórios > Canais. No menu antigo: Relatorios > Caixas
 - rota: `inbox_reports_index` - `/app/accounts/:accountId/reports/inboxes_overview`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: conversas nas caixas no período escolhido
@@ -1405,7 +1498,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar relatório de times
 - intent: Como baixo o relatório por time?; Onde exporto o desempenho dos times?; Como gero o CSV de times?; Onde fica o download do relatório de times?
-- onde_fica: Relatorios > Times
+- onde_fica: No menu novo: Resultados > Relatórios > Times. No menu antigo: Relatorios > Times
 - rota: `team_reports_index` - `/app/accounts/:accountId/reports/teams_overview`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: times criados e conversas atribuídas no período
@@ -1416,7 +1509,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar relatório de etiquetas
 - intent: Como baixo o relatório por etiqueta?; Onde exporto o desempenho das etiquetas?; Como gero o CSV de etiquetas?; Onde fica o download do relatório de etiquetas?
-- onde_fica: Relatorios > Etiquetas
+- onde_fica: No menu novo: Resultados > Relatórios > Etiquetas. No menu antigo: Relatorios > Etiquetas
 - rota: `label_reports_index` - `/app/accounts/:accountId/reports/labels_overview`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: etiquetas aplicadas a conversas no período
@@ -1427,7 +1520,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar relatório de CSAT
 - intent: Onde vejo a satisfação do cliente (CSAT)?; Como exporto as respostas de CSAT?; Como baixo o relatório de CSAT?; Onde acompanho avaliações dos clientes?
-- onde_fica: Relatorios > CSAT
+- onde_fica: No menu novo: Resultados > Relatórios > CSAT. No menu antigo: Relatorios > CSAT
 - rota: `csat_reports` - `/app/accounts/:accountId/reports/csat`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: pesquisa de CSAT habilitada e respostas coletadas no período
@@ -1473,7 +1566,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Usar e filtrar o calendário CRM por tipo de evento
 - intent: Como filtro o calendário por tipo?; Como mostro só reuniões / só follow-ups no calendário?; Como escondo os eventos externos do calendário?; O que são os chips Lembretes, WhatsApp, Previsões, Reuniões e Externos?
-- onde_fica: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
+- onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > Calendário; com o agendamento novo ligado na conta, CRM > Agendamento > Calendário (ou CRM Kanban > visualização Calendário) > chips de tipo no cabeçalho do calendário
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil; para ver reuniões/externos, caixa Google ou Microsoft com calendário ativo.
@@ -1483,7 +1576,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar WhatsApp Oficial (Cloud API)
 - intent: Como conecto o WhatsApp Oficial?; Como crio uma caixa do WhatsApp oficial (Cloud API/Meta)?; Quero atender no WhatsApp oficial; Onde ligo o WhatsApp Business API oficial?
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp Oficial
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > WhatsApp Oficial
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1494,7 +1587,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar WhatsApp por QR Code (WhatsApp API)
 - intent: Como conecto o WhatsApp lendo um QR Code?; Como uso o WhatsApp API (não oficial)?; Conectar número de WhatsApp escaneando QR; WhatsApp via WAHA
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > WhatsApp API
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > WhatsApp API
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1504,19 +1597,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - highlight: `channel-whatsapp-api`
 
 ### Conectar o WhatsApp API na caixa oficial
-- intent: Como respondo o cliente depois de 24 horas sem modelo?; Quero ligar o WhatsApp API na minha caixa oficial; Onde fica a aba WhatsApp API da caixa?; O que quer dizer WhatsApp API na bolha da mensagem?; O que é WhatsApp API plano B?; O WhatsApp API da caixa desconectou, como reconecto?; Como desligo o envio pelo WhatsApp API?
-- onde_fica: Configurações > Caixas de entrada > selecionar a caixa de WhatsApp Oficial > aba WhatsApp API
+- intent: Como respondo o cliente depois de 24 horas sem modelo?; Quero ligar o WhatsApp API na minha caixa oficial; Onde fica a aba WhatsApp API da caixa?; O que quer dizer WhatsApp API na bolha da mensagem?; O que é WhatsApp API plano B?; O WhatsApp API da caixa desconectou, como reconecto?; Como desligo o envio pelo WhatsApp API?; Como pauso o WhatsApp API sem desconectar o celular?; Por que a aba avisa que o número está em outra caixa?
+- onde_fica: No menu novo: Configurações > Canais de atendimento > abrir o canal. No menu antigo: Configurações > Caixas de entrada > selecionar a caixa de WhatsApp Oficial > aba WhatsApp API
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: `administrator`, ou função personalizada com `inbox_manage`. Sem isso, diga que conectar, ajustar e desconectar o WhatsApp API da caixa fica com quem administra as caixas; quem atende só vê o resultado na conversa.
 - pre_requisitos: caixa de WhatsApp Oficial conectada pela Meta; o celular com o WhatsApp Business do mesmo número na mão; a aba só aparece nas contas em que o recurso foi liberado
-- passos: 1. Abra a caixa de WhatsApp Oficial em Configurações > Caixas de entrada; 2. Entre na aba WhatsApp API e clique em Conectar WhatsApp API; 3. No celular deste número, abra o WhatsApp Business, vá em Configurações > Dispositivos conectados > Conectar dispositivo e leia o QR Code (ou clique em Prefiro usar um código e, no celular, toque em Conectar com número de telefone e digite o código); 4. Espere a tela confirmar que é o mesmo número da caixa oficial; 5. Em Antes de ligar, marque o aceite do risco; 6. Confira o Envio automático (já vem ligado); 7. Em Quem pode enviar depois de 24 horas, deixe ligados só Atendentes, Robôs, Automações ou Campanhas que devem usar esse caminho; 8. Ajuste Mensagens por minuto pelo WhatsApp API (de 1 a 120; vem 20).
-- gotchas: o WhatsApp API não é canal oficial da Meta e o número oficial pode sofrer restrição ou banimento, por isso nada sai por ele antes do aceite do risco; é a mesma caixa e a mesma conversa, sem segunda caixa nem bolha repetida; dentro de 24 horas a mensagem sai pelo WhatsApp Oficial, depois de 24 horas sai pelo WhatsApp API; modelo aprovado sempre sai pelo oficial; botões, listas, carrossel e formulários nunca saem pelo WhatsApp API; com a aba conectada, o campo de resposta não trava mais depois de 24 horas; a bolha mostra WhatsApp API quando saiu por esse caminho e WhatsApp API · plano B quando a Meta recusou porque a janela tinha fechado e a mensagem foi reenviada com segurança; contato só com o código da Meta, sem telefone na ficha, nunca usa o WhatsApp API e continua precisando de modelo depois de 24 horas; se o celular conectado for outro número, a tela avisa e nada sai por ele: desconecte e conecte o celular certo; origem desligada em Quem pode enviar falha depois de 24 horas como antes; o que passa do limite por minuto espera a vez em vez de sair em rajada; se o celular desconectar, os administradores recebem aviso urgente do Guia e, até reconectar com Gerar novo QR Code, respostas depois de 24 horas voltam a precisar de modelo aprovado; falha com Confira no celular antes de reenviar quer dizer que não deu para saber se saiu, então olhe o celular antes de mandar de novo; desligar o Envio automático pausa sem desconectar; Desconectar WhatsApp API tira o aparelho do celular e a caixa volta a pedir modelo depois de 24 horas.
+- passos: 1. Abra a caixa de WhatsApp Oficial em Configurações > Caixas de entrada; 2. Entre na aba WhatsApp API e clique em Conectar WhatsApp API; 3. No celular deste número, abra o WhatsApp Business, vá em Configurações > Dispositivos conectados > Conectar dispositivo e leia o QR Code (ou clique em Prefiro usar um código e, no celular, toque em Conectar com número de telefone e digite o código); 4. Espere a tela confirmar que é o mesmo número da caixa oficial; 5. Em Antes de ligar, marque o aceite do risco; 6. Em Envio automático, confira Por onde a mensagem sai (o interruptor Usar o WhatsApp API depois de 24 horas já vem ligado); 7. Em Quem pode usar o WhatsApp API depois de 24 h, clique em Alterar e marque só quem deve usar esse caminho (Atendentes e Lembretes do CRM são os recomendados; Agentes de IA e agentes externos, Automações e Campanhas também podem; Campanhas têm risco maior de bloqueio) e clique em Salvar; 8. Em Ritmo, clique em Alterar e escolha 10, 20 ou 30 mensagens por minuto (20 é o recomendado) ou Outro, de 1 a 120; 9. Para parar por um tempo sem desconectar o celular, clique em Pausar WhatsApp API e confirme; para voltar, clique em Retomar.
+- gotchas: o WhatsApp API não é canal oficial da Meta e o número oficial pode sofrer restrição ou banimento, por isso nada sai por ele antes do aceite do risco; é a mesma caixa e a mesma conversa, sem segunda caixa nem bolha repetida; dentro de 24 horas a mensagem sai pelo WhatsApp Oficial, depois de 24 horas sai pelo WhatsApp API; modelo aprovado sempre sai pelo oficial; botões, listas, carrossel e formulários nunca saem pelo WhatsApp API; com a aba conectada, o campo de resposta não trava mais depois de 24 horas; a bolha mostra WhatsApp API quando saiu por esse caminho e WhatsApp API · plano B quando a Meta recusou porque a janela tinha fechado e a mensagem foi reenviada com segurança; contato só com o código da Meta, sem telefone na ficha, nunca usa o WhatsApp API e continua precisando de modelo depois de 24 horas; se o celular conectado for outro número, a tela avisa e nada sai por ele: desconecte e conecte o celular certo; quem não está marcado em Quem pode usar o WhatsApp API falha depois de 24 horas como antes; campanhas nunca passam de 10 por minuto; o que passa do limite por minuto espera a vez em vez de sair em rajada; se o celular desconectar, os administradores recebem aviso urgente do Guia e, até reconectar com Gerar novo QR Code, respostas depois de 24 horas voltam a precisar de modelo aprovado; falha com Confira no celular antes de reenviar quer dizer que não deu para saber se saiu, então olhe o celular antes de mandar de novo; desligar o Envio automático faz tudo sair pela API oficial, com o celular ainda conectado e a conexão ligada; Pausar WhatsApp API para a conexão sem tirar o aparelho do celular: enquanto pausado, tudo sai pela API oficial e, depois de 24 horas, só modelo aprovado, como caixa sem WhatsApp API; a pausa não gera aviso de queda e nada religa sozinho; Retomar volta sem novo QR Code, e só se o WhatsApp tiver desligado o aparelho nesse meio-tempo a tela pede o QR de novo; a ordem certa para conectar é a caixa oficial já conectada, depois o WhatsApp Business aberto no celular, depois o QR Code; o WhatsApp pede que o app WhatsApp Business seja aberto no celular ao menos a cada 14 dias, e a aba lembra disso (a plataforma não sabe quando o app foi aberto); se o mesmo número também estiver ligado em outra caixa WhatsApp API (não oficial) da conta, a aba avisa com o nome da caixa, porque duas conexões no mesmo número aumentam o risco de bloqueio, mas nada é bloqueado; Pausar e Desconectar ficam em Outras ações, no fim da aba, e os dois pedem confirmação; Desconectar WhatsApp API tira o aparelho do celular e a caixa volta a pedir modelo depois de 24 horas.
 - nav_target: `settings_inbox_show`
 
 ### Conectar caixa de e-mail
 - intent: Como conecto um e-mail?; Como integro Gmail/Outlook?; Quero atender por e-mail; Conectar caixa de e-mail (IMAP/SMTP)
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > E-mail
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > E-mail
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1527,7 +1620,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar Instagram
 - intent: Como conecto o Instagram?; Quero atender DMs do Instagram; Conectar conta do Instagram
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Instagram
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Instagram
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: perfil profissional do Instagram; acesso ao perfil para autorizar no Instagram Login; permissão de gerenciar caixas de entrada. Este fluxo de Instagram Login não exige Página do Facebook.
@@ -1538,7 +1631,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar página do Facebook
 - intent: Como conecto o Facebook/Messenger?; Quero atender mensagens da página do Facebook; Conectar página do Facebook
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Facebook
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Facebook
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1549,7 +1642,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar canal de chat ao vivo no site
 - intent: Como coloco o chat ao vivo no meu site?; Como crio um widget de site?; Conectar canal de website/live-chat
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Site
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Site
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1560,7 +1653,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar canal de SMS
 - intent: Como conecto SMS?; Quero atender por SMS; Conectar SMS com Twilio ou Bandwidth
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > SMS
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > SMS
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1571,7 +1664,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar canal do Telegram
 - intent: Como conecto o Telegram?; Quero atender pelo Telegram; Conectar bot do Telegram
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > Telegram
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > Telegram
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1582,7 +1675,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar canal personalizado via API
 - intent: Como crio um canal pela API?; Conectar canal personalizado; Quero integrar um canal próprio via API
-- onde_fica: Configurações > Caixas de entrada > Nova caixa > API
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Nova caixa > API
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: ter os dados/credenciais do canal escolhido
@@ -1593,7 +1686,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Diagnosticar conexão de canal (WhatsApp / e-mail / Instagram não conecta ou não recebe)
 - intent: Por que meu WhatsApp não conecta?; Por que não estou recebendo mensagens?; Minha caixa de e-mail parou de receber; Por que o Instagram não recebe mensagens?; Meu canal caiu ou desconectou; Diagnosticar conexão da caixa de entrada
-- onde_fica: Configurações > Caixas de entrada
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - passos: O Guia lê o estado real das suas caixas e aponta o que está faltando (autorização expirada, credenciais incompletas, IMAP/SMTP desligado, caixa sem agente etc.). Siga o conserto indicado para a caixa citada, nas Configurações daquela caixa de entrada.
@@ -1626,18 +1719,18 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Diagnosticar atribuição (conversas não são atribuídas a ninguém)
 - intent: Por que as conversas não são atribuídas?; As conversas ficam sem responsável; A atribuição automática não está funcionando; Ninguém recebe as novas conversas; Diagnosticar roteamento de conversas
-- onde_fica: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada > Colaboradores / Atribuição automática
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - passos: O Guia verifica, por caixa, se a atribuição automática está ligada, se há agentes vinculados, se algum agente está online, se há limite por agente e se o horário de funcionamento está fora do expediente — e aponta o que ajustar nas Configurações da caixa.
-- gotchas: a atribuição automática só envia conversas para agentes 'Online'; fora do horário comercial a atribuição cai ou zera.
+- gotchas: a atribuição automática só envia conversas para agentes 'Online' e não olha o horário; fora do horário sai a mensagem de fora do horário, mas a atribuição continua.
 - diagnostic: `routing`
 - nav_target: `—`
 - highlight: `—`
 
 ### Diagnosticar calendário/reuniões (não consigo agendar)
 - intent: Por que não consigo agendar reunião?; O calendário não conecta; Os horários disponíveis não aparecem; Falha ao criar reunião; Diagnosticar calendário ou reuniões
-- onde_fica: Configurações > Caixas de entrada (e-mail Google/Microsoft)
+- onde_fica: No menu novo: Configurações > Canais de atendimento > Novo canal. No menu antigo: Configurações > Caixas de entrada (e-mail Google/Microsoft)
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - passos: O Guia confere se o recurso de reuniões está ativo na instalação, se há caixa de e-mail Google/Microsoft conectada por OAuth, se o calendário foi autorizado (escopo) e se os tokens de acesso estão presentes — e indica o que reconectar.
@@ -1648,7 +1741,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver o volume e os tempos de atendimento da conta
 - intent: Quantas conversas entraram neste mês?; Nosso tempo de primeira resposta está piorando?; Quanto tempo o cliente espera entre respostas?; Quantas conversas foram resolvidas no período?; Como exporto esses números para planilha?
-- onde_fica: Relatórios > Conversas
+- onde_fica: No menu novo: Resultados > Relatórios > Conversas. No menu antigo: Relatórios > Conversas
 - rota: `conversation_reports` - `/app/accounts/:accountId/reports/conversation`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: nenhum, mas só aparecem números se houver conversas no período escolhido
@@ -1658,7 +1751,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Abrir o desempenho de um agente por dentro
 - intent: Por que o tempo de resposta desse agente subiu?; Quantas conversas essa pessoa resolveu no mês?; Em que dias ela atendeu mais?; Quais conversas entraram naquele pico do gráfico?; Como baixo isso em planilha?
-- onde_fica: Relatórios > Agentes > clicar no nome do agente
+- onde_fica: No menu novo: Resultados > Relatórios > Usuários. No menu antigo: Relatórios > Agentes > clicar no nome do agente
 - rota: `agent_reports_show` - `/app/accounts/:accountId/reports/agents/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - cobre: agent_reports
@@ -1669,7 +1762,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Abrir o desempenho de um canal por dentro
 - intent: O WhatsApp está demorando mais que o site para responder?; Quantas mensagens esse canal recebeu na semana?; Em que dia esse canal teve mais conversa?; Quais conversas geraram aquele pico?
-- onde_fica: Relatórios > Caixa de Entrada > clicar no nome da caixa
+- onde_fica: No menu novo: Resultados > Relatórios > Canais. No menu antigo: Relatórios > Caixa de Entrada > clicar no nome da caixa
 - rota: `inbox_reports_show` - `/app/accounts/:accountId/reports/inboxes/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - cobre: inbox_reports
@@ -1680,7 +1773,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Abrir o desempenho de um time por dentro
 - intent: O time de suporte está resolvendo mais rápido que o comercial?; Quantas conversas esse time atendeu no mês?; O tempo de espera do cliente nesse time caiu?; Quais conversas estão por trás desse número?
-- onde_fica: Relatórios > Time > clicar no nome do time
+- onde_fica: No menu novo: Resultados > Relatórios > Times. No menu antigo: Relatórios > Time > clicar no nome do time
 - rota: `team_reports_show` - `/app/accounts/:accountId/reports/teams/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - cobre: team_reports
@@ -1691,7 +1784,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Abrir o desempenho de uma etiqueta por dentro
 - intent: Quantas conversas tiveram essa etiqueta no mês?; Reclamações estão crescendo?; Conversas com essa etiqueta demoram mais para resolver?; Quais conversas receberam essa etiqueta naquele dia?
-- onde_fica: Relatórios > Etiquetas > clicar no nome da etiqueta
+- onde_fica: No menu novo: Resultados > Relatórios > Etiquetas. No menu antigo: Relatórios > Etiquetas > clicar no nome da etiqueta
 - rota: `label_reports_show` - `/app/accounts/:accountId/reports/labels/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - cobre: label_reports
@@ -1702,7 +1795,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Medir o quanto o robô resolve sozinho
 - intent: Quantas conversas o robô atendeu sem passar para ninguém?; Qual a taxa de transferência para os atendentes?; O robô está resolvendo mais do que no mês passado?; Quantas respostas o robô enviou?
-- onde_fica: Relatórios > Robôs
+- onde_fica: No menu novo: Resultados > Relatórios > Robôs. No menu antigo: Relatórios > Robôs
 - rota: `bot_reports` - `/app/accounts/:accountId/reports/bot`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
 - pre_requisitos: ter conversas atendidas por robô no período
@@ -1712,7 +1805,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher como as conversas são distribuídas
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
-- onde_fica: Configurações > Atribuição de Agentes
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
 - rota: `assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/index`
 - gate: feature flag `assignment_v2`; papel `administrator`
 - pre_requisitos: ser administrador da conta
@@ -1722,7 +1815,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver e organizar as políticas de atribuição
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
 - rota: `agent_assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/assignment`
 - gate: feature flag `assignment_v2`; papel `administrator`
 - pre_requisitos: ser administrador da conta
@@ -1732,7 +1825,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar uma regra nova de distribuição de conversas
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
 - rota: `agent_assignment_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/assignment/create`
 - gate: feature flag `assignment_v2`; papel `administrator`
 - pre_requisitos: ser administrador da conta
@@ -1742,7 +1835,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ajustar uma política existente e ligar as caixas de entrada
 - intent: Como coloco uma caixa de entrada nessa política?; Como mudo o limite de conversas por agente?; Como tiro uma caixa de entrada da política?; Por que a caixa saiu da outra política quando eu vinculei aqui?
-- onde_fica: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
 - rota: `agent_assignment_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/assignment/edit/:id`
 - gate: feature flag `assignment_v2`; papel `administrator`
 - pre_requisitos: ter uma política de atribuição já criada
@@ -1752,7 +1845,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver quanto cada pessoa aguenta de conversa
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
 - rota: `agent_capacity_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/capacity`
 - gate: feature flag `advanced_assignment`; papel `administrator`
 - pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
@@ -1762,7 +1855,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar uma regra de limite de conversas
 - intent: Como crio uma política de capacidade?; Como limito o número máximo de conversas por caixa?; Quais conversas não devem contar no limite do agente?; Onde adiciono os agentes nessa política?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
 - rota: `agent_capacity_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/capacity/create`
 - gate: feature flag `advanced_assignment`; papel `administrator`
 - pre_requisitos: ter atribuição avançada liberada no plano
@@ -1772,7 +1865,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Colocar agentes e limites numa política de capacidade
 - intent: Como adiciono agentes a uma política de capacidade?; Como defino o máximo de conversas por caixa de entrada?; Como mudo a capacidade de uma pessoa específica?; Por que o agente saiu da outra política de capacidade?
-- onde_fica: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
+- onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
 - rota: `agent_capacity_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/capacity/edit/:id`
 - gate: feature flag `advanced_assignment`; papel `administrator`
 - pre_requisitos: ter uma política de capacidade criada e os agentes cadastrados na conta
@@ -1782,7 +1875,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher o funil para configurar a passagem da IA
 - intent: Onde configuro a IA passando o atendimento para uma pessoa?; Em quais funis o handoff já está ligado?; Por que essa tela não aparece para mim?; Como reviso a passagem da IA de um funil específico?
-- onde_fica: Configurações > Transferir para humano (CRM)
+- onde_fica: No menu novo: Configurações > Atribuição > passagem para a pessoa (quem cuida da IA do CRM sem administrar: Configurações > Passar para uma pessoa). No menu antigo: Configurações > Transferir para humano (CRM)
 - rota: `crm_handoff_settings_index` - `/app/accounts/:accountId/settings/assignment-policy/handoff`
 - gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
 - pre_requisitos: CRM Kanban e IA do CRM ligados, pelo menos um funil criado, e permissão de administrador
@@ -1792,7 +1885,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Definir quando e para quem a IA passa a conversa
 - intent: Como faço a IA chamar um humano no meio do atendimento?; Qual a diferença entre transferir direto e por convite?; O que acontece se ninguém pegar a conversa?; Como coloco uma regra diferente só em uma etapa do funil?; Como escolho quem recebe a conversa?
-- onde_fica: Configurações > Transferir para humano (CRM) > nome do funil
+- onde_fica: No menu novo: Configurações > Atribuição > passagem para a pessoa. No menu antigo: Configurações > Transferir para humano (CRM) > nome do funil
 - rota: `crm_handoff_settings_edit` - `/app/accounts/:accountId/settings/assignment-policy/handoff/:pipelineId`
 - gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
 - pre_requisitos: um funil com a assistente ligada, pelo menos uma caixa de entrada ligada ao funil e pessoas nessas caixas
@@ -1812,7 +1905,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Acompanhar quanto a IA está custando
 - intent: Quanto gastei de IA esse mês?; Qual recurso de IA consome mais?; Como exporto o relatório de uso da IA?; Por que os valores apareceram em dólar?; Dá para ver o que foi conversado com a IA?
-- onde_fica: CRM > Gestão de IA
+- onde_fica: No menu novo: Resultados > Relatórios > Gasto com IA. No menu antigo: CRM > Gestão de IA
 - rota: `crm_ai_usage_index` - `/app/accounts/:accountId/crm/ai-usage`
 - gate: papel `administrator` ou `agent` ou `crm_view_reports`
 - pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
@@ -1822,7 +1915,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver o plano contratado e quanto está sendo cobrado
 - intent: Qual plano eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
-- onde_fica: Financeiro > Assinatura
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Assinatura
 - rota: `autonomia_financial_subscription` - `/app/accounts/:accountId/financial/subscription`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
@@ -1832,7 +1925,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conferir faturas emitidas e o que já foi pago
 - intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
-- onde_fica: Financeiro > Faturas
+- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
 - rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta
@@ -1874,7 +1967,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ajustar funil sugerido, pais da busca, cache e nota da prospeccao
 - intent: Onde coloco a chave do Google?; Por que o mapa nao aparece?; Por que o botao Enriquecer esta desligado?; Como mudo o funil sugerido?; Como mudo o peso da nota dos leads?; Como busco em outro pais?; Onde vejo o consumo?; Por que nao consigo editar os pesos?
-- onde_fica: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - cobre: autonomia_prospecting_settings
@@ -1985,7 +2078,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Editar e excluir as jogadas salvas
 - intent: Onde edito ou apago uma jogada salva?; Quantas jogadas posso salvar?
-- onde_fica: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
+- onde_fica: No menu novo: Acompanhar > Prospecção > Configurações (saiu da página de Configurações). No menu antigo: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve as jogadas salvas na grade da busca, mas nao edita nem exclui.
@@ -2157,7 +2250,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os modelos de mensagem do WhatsApp
 - intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
-- onde_fica: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp (o item saiu de Configurações). No menu antigo: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
 - rota: `settings_templates` - `/app/accounts/:accountId/settings/templates`
 - gate: papel `administrator`
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
@@ -2167,7 +2260,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os modelos do WhatsApp pela área de Campanhas
 - intent: Onde vejo os modelos antes de montar uma campanha do WhatsApp?; Quais modelos posso usar na campanha do WhatsApp Oficial?; Onde ficam os modelos do WhatsApp em Campanhas?
-- onde_fica: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
 - rota: `campaigns_templates_index` - `/app/accounts/:accountId/campaigns/templates`
 - gate: feature flag `campaigns`; papel `administrator`
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
@@ -2177,7 +2270,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os modelos de mensagem do WhatsApp e a situação de cada um
 - intent: Onde vejo os meus modelos de mensagem do WhatsApp?; Meu modelo foi aprovado?; Por que o WhatsApp recusou o meu modelo?; Por que o modelo está pausado?; Onde o modelo está sendo usado?; Quanto custa cada envio do modelo?; Quantas respostas grátis ainda tenho no mês?; Por que a minha campanha parou por causa do modelo?
-- onde_fica: Menu lateral > Campanhas > Modelos WhatsApp (com a nova tela de Modelos liberada na conta)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Menu lateral > Campanhas > Modelos WhatsApp (com a nova tela de Modelos liberada na conta)
 - rota: `modelos_whatsapp_lista` - `/app/accounts/:accountId/campaigns/modelos-whatsapp`
 - gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_view` ou `whatsapp_templates_manage`
 - cobre: modelos_whatsapp_modelo
@@ -2188,7 +2281,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar um modelo de mensagem do WhatsApp e mandar para aprovação
 - intent: Como crio um modelo de mensagem do WhatsApp?; Como mando um modelo para o WhatsApp aprovar?; Como ponho foto, botão ou rodapé no modelo?; Como faço um carrossel, uma oferta com prazo ou um código de verificação?; Como duplico um modelo?; Como crio um modelo sem sair da campanha?
-- onde_fica: Campanhas > Modelos WhatsApp > Criar modelo (ou, na Nova campanha, Criar modelo quando a caixa não tem modelo pronto)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > Criar modelo (ou, na Nova campanha, Criar modelo quando a caixa não tem modelo pronto)
 - rota: `modelos_whatsapp_novo` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/novo`
 - gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
 - cobre: modelos_whatsapp_enviado
@@ -2199,7 +2292,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Corrigir um modelo recusado ou alterar um modelo
 - intent: Como corrijo um modelo que o WhatsApp recusou?; Como altero o texto de um modelo aprovado?; Por que não consigo alterar o modelo?; Quantas vezes posso alterar um modelo?; Como peço revisão de uma recusa?
-- onde_fica: Campanhas > Modelos WhatsApp > abrir o modelo > Corrigir (recusado), Alterar o texto (pausado) ou Alterar (pronto)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > abrir o modelo > Corrigir (recusado), Alterar o texto (pausado) ou Alterar (pronto)
 - rota: `modelos_whatsapp_alterar` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/:id/alterar`
 - gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
 - pre_requisitos: ser administrador ou ter a função com Modelos do WhatsApp em editar; o modelo não pode estar em uso nem ser do sistema
@@ -2209,13 +2302,23 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Usar um modelo pronto em uma campanha
 - intent: Como uso um modelo aprovado numa campanha?; De qual número sai a campanha do modelo?; O que vai em cada campo do modelo na campanha?
-- onde_fica: Campanhas > Modelos WhatsApp > Usar em uma campanha (na lista ou no modelo)
+- onde_fica: No menu novo: Crescer > Campanhas > Modelos WhatsApp. No menu antigo: Campanhas > Modelos WhatsApp > Usar em uma campanha (na lista ou no modelo)
 - rota: `modelos_whatsapp_usar` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/:id/usar`
 - gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_view` ou `whatsapp_templates_manage`
 - pre_requisitos: modelo Pronto para usar; acesso a Campanhas para montar e enviar
 - passos: 1. Clique em Usar em uma campanha; 2. Com mais de um número, escolha de qual sai; 3. Confira o que vai em cada campo; 4. Clique em Continuar para a campanha e escolha o público; a caixa, o modelo e os campos já vêm escolhidos.
 - gotchas: Nome do cliente e Nome da empresa já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
 - nav_target: `modelos_whatsapp_usar`
+
+### Autorizar o Chat2You a criar modelos do WhatsApp sozinho
+- intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
+- onde_fica: No menu novo: Configurações > Custos do WhatsApp (ou Crescer > Campanhas > Modelos WhatsApp). No menu antigo: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
+- rota: `modelos_whatsapp_autorizacao` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/autorizacao`
+- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
+- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
+- passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
+- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
+- nav_target: `modelos_whatsapp_autorizacao`
 
 ### Trazer contatos e conversas de outra ferramenta
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?

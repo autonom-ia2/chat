@@ -5,12 +5,15 @@
 #   comportamento de sempre (InboxSetting + vínculo com auto_create_card).
 # - Vários funis: nenhum card nasce num funil fixo (R9). Quem cria é a IA de assunto ('auto' ou 'suggest') ou a
 #   equipe ('off').
+# - IA de assunto com 1 funil (#1676): Automática com a flag `crm_avaliar_toda_mensagem`; sem ela, desligada.
 # - Nenhum funil: a caixa sai do CRM. Os vínculos ficam, com a criação desligada, como o PipelineLinkSyncer faz.
 # - Caixa ainda em "Agente vê apenas atribuídos" (R6) só sai dele com escolha explícita ('manter' ou 'mudar'; com
 #   'manter' a tela já manda cada agente em "Só as que atende"). Sem escolha, nada é gravado.
 # - Funil arquivado não aparece na tela: seus vínculos e liberações ficam como estão.
 # - Pessoa que cuida de tudo (sem assunto, todos os funis, todas as conversas) fica sem linha de acesso: é o mesmo
 #   que não ter configuração (R5). Administrador e usuário de integração nunca ganham linha.
+# - Agentes de IA de área e os funis deles (#1447): só quando a tela manda `ai_agents` (Crm::Caixas::GravadorDeAgentes).
+#   Funil que sai da caixa leva junto o agente responsável por ele nela.
 class Crm::Caixas::Gravador
   class Invalida < StandardError
     attr_reader :code
@@ -38,11 +41,21 @@ class Crm::Caixas::Gravador
       funis_retirados = gravar_vinculos!
       gravar_configuracao!
       gravar_acessos!
+      gravar_agentes!(funis_retirados)
       expirar_sugestoes!(funis_retirados)
     end
   end
 
+  # Leitura (#1140): as linhas de acesso que `perform` gravaria para as pessoas da tela, sem gravar nada. Quem fica sem
+  # linha (cuida de tudo) vem como nil.
+  def acessos_previstos = (agentes.keys & pessoas.keys).index_with { |user_id| acesso_previsto(user_id) if restrito?(user_id) }
+
   private
+
+  def acesso_previsto(user_id)
+    Crm::InboxAgentAccess.new(all_pipelines: todos_os_funis?(user_id), triage: triagem?(user_id), only_own: so_as_suas?(user_id),
+                              agent_pipelines: funis_da_pessoa(user_id).map { |id| Crm::InboxAgentPipeline.new(pipeline_id: id) })
+  end
 
   def validar!
     erro = primeiro_erro
@@ -110,7 +123,7 @@ class Crm::Caixas::Gravador
       default_pipeline_id: um_funil? ? pipeline_ids.first : nil,
       default_stage_id: etapa&.id,
       auto_create_card: um_funil? && modo == 'chegou',
-      subject_ai_mode: um_funil? || pipeline_ids.empty? ? 'off' : modo,
+      subject_ai_mode: Crm::Caixas::IaDeAssunto.ao_gravar(account: @account, pipeline_ids: pipeline_ids, modo: modo),
       visibility_mode: :all_inbox_cards
     )
   end
@@ -138,6 +151,13 @@ class Crm::Caixas::Gravador
     vinculo.assign_attributes(auto_create_card: um_funil? && modo == 'chegou', default_stage_id: um_funil? ? etapa.id : nil)
     vinculo.created_by ||= @user
     vinculo.save!
+  end
+
+  def gravar_agentes!(funis_retirados)
+    Crm::InboxAiAgent.where(account_id: @account.id, inbox_id: @inbox.id, pipeline_id: funis_retirados).delete_all if funis_retirados.any?
+    return unless @dados.key?(:ai_agents)
+
+    Crm::Caixas::GravadorDeAgentes.new(account: @account, inbox: @inbox, lista: @dados[:ai_agents], pipeline_ids: pipeline_ids).perform
   end
 
   # Sugestão de assunto que esperava resposta num funil que saiu da caixa não pode mais ser aceita: sai da tela,

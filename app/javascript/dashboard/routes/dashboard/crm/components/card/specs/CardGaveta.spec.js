@@ -15,12 +15,15 @@ const { keyboard, alertSpy, dialogos, link, marcar, conta, despachar } =
       caixa: false,
     },
     despachar: { fn: null },
-    conta: { empresas: true },
+    conta: { empresas: true, mensagemMarcada: false },
   }));
 
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
-    isCloudFeatureEnabled: chave => chave === 'companies' && conta.empresas,
+    isCloudFeatureEnabled: chave =>
+      (chave === 'companies' && conta.empresas) ||
+      (chave === 'crm_mensagem_marcada' && conta.mensagemMarcada),
+    currentAccount: { value: { timezone: 'America/Sao_Paulo' } },
   }),
 }));
 vi.mock('../useJeitoDeMarcar', async () => {
@@ -220,6 +223,7 @@ describe('CardGaveta (#1423)', () => {
     enviarReuniao.mockClear();
     alertSpy.mockClear();
     conta.empresas = true;
+    conta.mensagemMarcada = false;
     despachar.fn = vi.fn().mockResolvedValue({});
   });
 
@@ -239,6 +243,44 @@ describe('CardGaveta (#1423)', () => {
     ).toEqual(['contato', 'negocio', 'agenda', 'conversa']);
     expect(wrapper.find('[data-card-mais]').attributes('open')).toBeUndefined();
     expect(wrapper.find('[data-card-faixa]').exists()).toBe(true);
+  });
+
+  // #1590: com a flag, "Mensagem" da Agenda abre a gaveta da Mensagem marcada,
+  // já com o cliente, quando a conversa do card está na caixa oficial.
+  it('com a flag, Mensagem da Agenda abre a Mensagem marcada no Quando', async () => {
+    conta.mensagemMarcada = true;
+    const wrapper = montar({
+      initialTab: 'followups',
+      card: { ...cardBase, conversation_id: 30, inbox_id: 9 },
+      inboxes: [
+        { id: 9, name: 'WhatsApp da loja', channel_type: 'Channel::Whatsapp' },
+      ],
+    });
+    await flushPromises();
+    await clicar(wrapper, '[data-agenda-opcao="mensagem"]');
+
+    expect(
+      wrapper.find('[data-mensagem-marcada]').attributes('data-passo-atual')
+    ).toBe('quando');
+    expect(wrapper.find('[data-card-gaveta]').attributes('data-tela')).toBe(
+      'agenda'
+    );
+  });
+
+  it('sem a flag, ou fora da caixa oficial, Mensagem segue no retorno do card', async () => {
+    conta.mensagemMarcada = true;
+    const wrapper = montar({
+      initialTab: 'followups',
+      card: { ...cardBase, conversation_id: 30, inbox_id: 8 },
+      inboxes: [{ id: 8, name: 'Campanhas', channel_type: 'Channel::Api' }],
+    });
+    await flushPromises();
+    await clicar(wrapper, '[data-agenda-opcao="mensagem"]');
+
+    expect(wrapper.find('[data-mensagem-marcada]').exists()).toBe(false);
+    expect(wrapper.find('[data-card-gaveta]').attributes('data-tela')).toBe(
+      'retorno-novo'
+    );
   });
 
   it('não tem abas nem rodapé no resumo: fechar fica no X do topo', async () => {
@@ -312,6 +354,69 @@ describe('CardGaveta (#1423)', () => {
     await flushPromises();
     await clicar(semVenda, '[data-card-ganhou]');
     expect(semVenda.emitted('closeDeal')).toEqual([[{ result: 'won' }]]);
+  });
+
+  it('fora de venda o card fala em Assunto, não em Negócio', async () => {
+    const semVenda = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    expect(semVenda.html()).toContain('CRM_CARD.RESUMO.ASSUNTO');
+    expect(semVenda.html()).not.toContain('CRM_CARD.RESUMO.NEGOCIO"');
+
+    const venda = montar();
+    await flushPromises();
+    expect(venda.html()).toContain('CRM_CARD.RESUMO.NEGOCIO');
+  });
+
+  // #1498 — achados do teste em produção (conta 16, funil trocado para Atender).
+  it('em Atender, Cancelado tem motivos e exemplo de atendimento', async () => {
+    const wrapper = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.DESFECHO.MOTIVO_ATENDER.NAO_PRECISA');
+    expect(html).toContain('CRM_CARD.DESFECHO.CANCELAR_EXEMPLO');
+    expect(html).not.toContain('CRM_CARD.DESFECHO.MOTIVO.PRECO');
+    expect(html).not.toContain('CRM_KANBAN.DRAWER.LOSE_REASON_PLACEHOLDER');
+  });
+
+  it('em Atender, editar o card fala de Assunto e não pede valor', async () => {
+    const wrapper = montar({
+      pipelines: [{ id: 1, name: 'Suporte', counts_as_sale: false }],
+    });
+    await flushPromises();
+    await wrapper.get('[data-card-abrir="negocio"]').trigger('click');
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.ASSUNTO.NOME');
+    expect(html).toContain('CRM_CARD.ASSUNTO.TITULO');
+    expect(html).not.toContain('CRM_CARD.NEGOCIO.NOME');
+    expect(wrapper.find('[data-campo-valor]').exists()).toBe(false);
+    expect(
+      wrapper.findComponent({ name: 'CrmCardCustomFields' }).props('atender')
+    ).toBe(true);
+  });
+
+  it('na Cobrança, editar o card pede valor a receber, vencimento e promessa', async () => {
+    const wrapper = montar({
+      pipelines: [
+        {
+          id: 1,
+          name: 'Cobrança',
+          counts_as_sale: false,
+          metadata: { template: 'COBRANCA' },
+        },
+      ],
+    });
+    await flushPromises();
+    await wrapper.get('[data-card-abrir="negocio"]').trigger('click');
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html).toContain('CRM_CARD.COBRANCA.VALOR');
+    expect(html).toContain('CRM_CARD.COBRANCA.FECHAR_ATE');
+    expect(wrapper.find('[data-campo-promessa]').exists()).toBe(true);
   });
 
   it('Arquivar pede confirmação antes de arquivar (OB-03)', async () => {

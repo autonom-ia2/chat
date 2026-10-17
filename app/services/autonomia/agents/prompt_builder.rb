@@ -78,8 +78,13 @@ module Autonomia
       # audience: :customer (operate/cliente final) | :attendant (copiloto do atendente) | :system (Guia).
       # A SUPERFÍCIE decide a audiência (não só agent.actuation). Agente de sistema (system_key) força
       # :system independentemente do que foi passado.
-      def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer)
+      # contexto_do_turno: texto de regra do sistema para ESTE turno (ex.: #1669, a equipe escreveu na conversa), que
+      #           entra como item `developer` (regra nossa, como a LEAN_TURN_NOTE do Construtor) logo antes da pergunta.
+      #           nil (padrão): o input fica byte a byte o de antes.
+      def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer,
+                     contexto_do_turno: nil)
         @agent = agent
+        @contexto_do_turno = contexto_do_turno.presence
         # C1 (custo): teto no que vai ao LLM — a query composta pode embutir transcrição+moldura do
         # copiloto, por isso o teto próprio (maior que MAX_QUERY_CHARS). Corta do FIM (mantém o começo).
         @query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_COMPOSED_QUERY_CHARS)
@@ -224,11 +229,12 @@ module Autonomia
           'atendimento" nem cite a fonte do conhecimento — comece pela resposta ou pelo passo a passo.'
       end
 
-      # input (array estilo Responses API): histórico + CONTEXTO + DOCUMENTOS anexados + pergunta.
+      # input (array estilo Responses API): SEGMENTO DA CONTA + histórico + CONTEXTO + DOCUMENTOS anexados + pergunta.
       def input
-        messages = history_messages
+        messages = [segmento_message].compact + history_messages
         messages << context_message if @snippets.any?
         messages << documents_message if @documents.any?
+        messages << message('developer', @contexto_do_turno) if @contexto_do_turno
         messages << user_message(@query)
         messages
       end
@@ -274,6 +280,16 @@ module Autonomia
       # sob o MESMO teto.
       def history_messages
         PromptParts::Historico.mensagens(@history)
+      end
+
+      # SEGMENTO DA CONTA (tema 8, #1429): primeira mensagem do input, logo depois de `instructions` e antes da
+      # conversa. Só depende da conta, então o começo do pedido fica o mesmo em todo turno dela (cache). nil sem a
+      # Fase 2 ou sem bloco: o input fica igual ao de antes. Fora do Guia (agente de sistema, com explicação
+      # própria) e do Agente de Cotação (a troca da Lia vem depois, na F3 do #1545).
+      def segmento_message
+        return if @agent.config.to_h['system_key'].present? || @agent.agent_type == 'insurance_quote'
+
+        PromptParts::SegmentoDaConta.mensagem(@agent.account)
       end
 
       def context_message

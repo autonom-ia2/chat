@@ -5,6 +5,10 @@ pt_BR:
       meta_failed: "A Meta não aceitou o pedido. Tente de novo em alguns minutos."
       not_found_or_no_access: "O WhatsApp não encontrou este modelo ou o número não tem acesso a ele. Atualize a lista; se continuar, reconecte o número."
       meta_unreachable: "A Meta não respondeu. Tente de novo em alguns minutos."
+      catalog_missing: "Esta conta do WhatsApp ainda não tem catálogo de produtos conectado."
+      catalog_not_found: "Não achamos o catálogo desta conta do WhatsApp, ou a conexão perdeu o acesso a ele. Confira o catálogo no Gerenciador de Comércio e reconecte a caixa em Configurações › Caixas de entrada."
+      catalog_permission_denied: "A conexão deste WhatsApp não tem permissão para ler o catálogo de produtos. Reconecte a caixa em Configurações › Caixas de entrada e tente de novo."
+      products_disabled: "Campanha com produtos do catálogo não está liberada para esta conta."
       sync_failed: "Não foi possível atualizar a lista de modelos agora. Tente de novo em alguns minutos."
       app_not_configured: "O app do WhatsApp não está configurado nesta instalação, então não dá para enviar arquivos à Meta."
       media_invalid: "Use JPG ou PNG de até 5 MB, MP4 de até 16 MB ou PDF de até 100 MB."
@@ -38,3 +42,27 @@ pt_BR:
       meta_text: "O WhatsApp não aceitou o pedido. Confira o texto, os exemplos e os botões e tente de novo."
       suggestion_unavailable: "Não consegui escrever agora. Tente de novo em instantes ou escreva do seu jeito."
       suggestion_invalid: "Confira o pedido: escreva o que a mensagem precisa fazer, ou um texto de até 1024 letras."
+      conversation_products: "Este modelo mostra produtos do catálogo, e o envio não disse quais. Mande por uma campanha, escolhendo os produtos, ou escolha outro modelo."
+      conversation_carousel: "Este modelo é um carrossel, e o envio não trouxe os cartões. Mande por uma campanha, montando os cartões, ou escolha outro modelo."
+      conversation_coupon: "Este modelo tem cupom, e o envio não trouxe o código (de 1 a 15 letras e números). Escreva o código e envie de novo."
+      conversation_offer_expiration: "Esta oferta mostra a contagem, e o envio não disse até quando ela vale. Escolha a data e a hora e envie de novo."
+      conversation_offer_expired: "A validade desta oferta já passou. Escolha uma data e hora à frente e envie de novo."
+      conversation_url_parameter: "Este modelo tem um link que termina com um dado deste cliente, e o envio não trouxe esse dado. Preencha o fim do link e envie de novo."
+    # Autorização do dono para o sistema criar modelos (#1586). O texto de ligar/desligar é o que a tela mostra na
+    # confirmação e o que o registro grava: mudou o texto, suba a VERSAO em Whatsapp::Templates::AvisoDeConsentimento.
+    consent:
+      formato_da_data: "%d/%m/%Y"
+      separador_decimal: ","
+      separador_milhar: "."
+      ligar:
+        utility: "Você autoriza o %{marca} a criar modelos de Aviso de serviço por conta própria e a enviá-los aos seus clientes, como o lembrete de pagamento. Os modelos que você já tem continuam como estão. A Meta cobra cada mensagem entregue, mesmo com a conversa aberta: %{preco} por Aviso de serviço (tabela da Meta para o Brasil, em vigor desde %{vigencia}). Exemplo: %{envios} avisos custam %{exemplo}."
+        marketing: "Você autoriza também o %{marca} a criar e enviar modelos de Divulgação: ofertas, promoções e convites para o cliente voltar a comprar. A Meta cobra %{preco} por mensagem de Divulgação entregue (tabela da Meta para o Brasil, em vigor desde %{vigencia}) e limita quantas divulgações cada pessoa recebe: algumas podem não ser entregues."
+      desligar:
+        utility: "O %{marca} para de criar modelos sozinho, de Aviso de serviço e de Divulgação. Os modelos que você já tem continuam como estão."
+        marketing: "O %{marca} para de criar e enviar modelos de Divulgação. O Aviso de serviço continua ligado."
+      errors:
+        acao_invalida: "Escolha ligar ou desligar."
+        marca_invalida: "Escolha Aviso de serviço ou Divulgação."
+        aviso_mudou: "Os preços da Meta mudaram enquanto você lia. Confira o aviso de novo e confirme."
+        utility_desligada: "A Divulgação só liga com o Aviso de serviço ligado."
+        somente_administrador: "Só quem administra a conta pode mudar."

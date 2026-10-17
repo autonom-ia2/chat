@@ -10,14 +10,23 @@ import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 import OndeQuandoEscolha from '../OndeQuandoEscolha.vue';
+import NotaHorarioDoCanal from '../NotaHorarioDoCanal.vue';
+import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 import DialogoAcao from './DialogoAcao.vue';
 import NotaQuemRecebe from './NotaQuemRecebe.vue';
+import TambemRecebe from '../onde/TambemRecebe.vue';
 import {
   MOTIVO,
   useComecarAAtender,
 } from '../../composables/useComecarAAtender';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
+import { useSalvarEquipe } from '../../composables/useSalvarEquipe';
 import { trocaNoCanal } from '../../utils/canais';
+import {
+  mudancaDaEquipe,
+  outrasCaixasDaEquipe,
+} from '../../utils/ondeTrabalha';
+import { useAgenteIaPorCaixa } from '../../composables/useAgenteIaPorCaixa';
 import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo T10 e "Voltar a atender") — onde e quando o agente responde.
@@ -32,6 +41,11 @@ import { QUANDO, quandoDoAgente } from '../../utils/pagina';
 // e a nota de Atribuição continuam (salvar grava só a janela). Enquanto as caixas chegam, um
 // carregando; se a leitura falhou, o erro padrão com "Tentar de novo" (`reler`), nunca o "não
 // conectou nenhum canal". A caixa atual entra marcada quando chega, se a pessoa ainda não escolheu.
+// #1433 (decisão do Rodrigo de 15/10, "a, para todos os agentes"): com `recebeEmOutras`, logo abaixo de
+// "Onde atende" vem "Também recebe quando alguém passar em:" (TambemRecebe), as outras caixas em que ele
+// fica como agente da equipe. Só no 'alterar' atendendo e com a leitura das caixas (L2): entrar numa
+// área liga o agente, então o agente parado não vê a seção. Salvar grava primeiro "Onde" e "Quando" e
+// depois entra/sai das outras caixas (useSalvarEquipe: POST channels com papel area, DELETE).
 const props = defineProps({
   agente: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -47,6 +61,11 @@ const props = defineProps({
   atuais: { type: Array, default: () => [] },
   semLeitura: { type: Boolean, default: false },
   horarios: { type: Object, default: () => ({}) },
+  // #1433: mostra "Também recebe quando alguém passar em:" (agente que fala com cliente, Fase 2 ligada).
+  recebeEmOutras: { type: Boolean, default: false },
+  // Ids das caixas em que ele já está na equipe (área), pela L2.
+  equipeAtual: { type: Array, default: () => [] },
+  caixas: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['fechar', 'pronto', 'voltarAAtender', 'reler']);
@@ -55,6 +74,7 @@ const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
 const { podeConectarCanal } = usePermissoesDaJornada();
+const { ligado: horarioUnico } = useHorarioUnicoCaixa();
 const { comecar, comecando } = useComecarAAtender();
 const NS = 'AGENTS.JORNADA.PAGINA.ONDE';
 
@@ -69,6 +89,20 @@ const escolherOnde = inboxId => {
   onde.value = inboxId;
 };
 const quando = ref(quandoDoAgente(props.agente));
+const salvarEquipe = useSalvarEquipe();
+// Outras caixas marcadas. A leitura pode chegar depois de abrir: até a pessoa mexer, acompanha a atual.
+const outras = ref([...props.equipeAtual]);
+const mexeuNasOutras = ref(false);
+watch(
+  () => props.equipeAtual.join(','),
+  () => {
+    if (!mexeuNasOutras.value) outras.value = [...props.equipeAtual];
+  }
+);
+const escolherOutras = valor => {
+  mexeuNasOutras.value = true;
+  outras.value = valor;
+};
 const salvando = ref(false);
 const erro = ref(null);
 const dialogoNaoAtender = ref(null);
@@ -84,6 +118,38 @@ const semCanal = computed(
   () => props.estadoCanais === 'pronto' && !props.canais.length
 );
 const semLista = computed(() => carregandoCanais.value || erroCanais.value);
+const mostrarOutras = computed(
+  () =>
+    props.recebeEmOutras &&
+    !voltar.value &&
+    !somenteLeitura.value &&
+    !props.semLeitura &&
+    !semLista.value &&
+    !semCanal.value
+);
+// #1648 — com a aba "Agente de IA" por caixa, o canal com agente de outro sistema aceita.
+const porCaixa = useAgenteIaPorCaixa();
+// Fora da lista: as caixas em que ele é o principal agora e a escolhida em "Onde atende".
+const foraDasOutras = computed(() =>
+  [...props.atuais.map(canal => canal.inbox_id), onde.value].filter(
+    id => id !== null && id !== undefined
+  )
+);
+// Só valem as marcadas que ainda podem ser escolhidas (e nunca a caixa principal escolhida).
+const outrasValidas = computed(() => {
+  const livres = outrasCaixasDaEquipe(
+    props.canais,
+    props.agente.id,
+    foraDasOutras.value,
+    { comOutroSistema: porCaixa.value }
+  )
+    .filter(({ bloqueio }) => !bloqueio)
+    .map(({ canal }) => canal.inbox_id);
+  return outras.value.filter(id => livres.includes(id));
+});
+const mudancaDasOutras = computed(() =>
+  mudancaDaEquipe(props.equipeAtual, outrasValidas.value)
+);
 const troca = computed(() =>
   trocaNoCanal(props.canais, onde.value, props.agente.id)
 );
@@ -145,7 +211,7 @@ const ERRO_DO_MOTIVO = {
   }),
 };
 
-const erroDeComecar = resultado => {
+const erroGeralDeComecar = resultado => {
   const doMotivo = ERRO_DO_MOTIVO[resultado.motivo];
   if (doMotivo) return doMotivo(resultado);
   if (!voltar.value) {
@@ -157,6 +223,12 @@ const erroDeComecar = resultado => {
       nome: props.nome,
     }),
   };
+};
+
+// #1366: o servidor explicou a recusa (422): a explicação dele no lugar do título geral.
+const erroDeComecar = resultado => {
+  const geral = erroGeralDeComecar(resultado);
+  return resultado.mensagem ? { ...geral, titulo: resultado.mensagem } : geral;
 };
 
 const erroDeSalvar = () => ({
@@ -208,6 +280,24 @@ const entrarNaCaixa = async () => {
   return resultado.ok;
 };
 
+// Entra e sai das outras caixas (só com a seção à vista). Falhando, mostra o erro do servidor e relê.
+const salvarOutras = async () => {
+  if (!mostrarOutras.value) return true;
+  const { entram, saem } = mudancaDasOutras.value;
+  if (!entram.length && !saem.length) return true;
+  const feito = await salvarEquipe.salvar({
+    agenteId: props.agente.id,
+    nome: props.nome,
+    entram,
+    saem,
+  });
+  if (!feito) {
+    erro.value = salvarEquipe.erro.value;
+    emit('pronto');
+  }
+  return feito;
+};
+
 const salvarAlteracao = async () => {
   if (!somenteLeitura.value && onde.value && onde.value !== inboxAtual.value) {
     if (!(await entrarNaCaixa())) return;
@@ -217,12 +307,10 @@ const salvarAlteracao = async () => {
       emit('fechar');
       return;
     }
-    terminar(t(`${NS}.PRONTO`));
-    return;
-  }
-  if (janelaMudou()) {
+  } else if (janelaMudou()) {
     await atualizar({ config: { response_window: quando.value } });
   }
+  if (!(await salvarOutras())) return;
   terminar(t(`${NS}.PRONTO`));
 };
 
@@ -280,9 +368,15 @@ const titulo = computed(() =>
     ? t('AGENTS.JORNADA.ONDE_QUANDO.TITULO', { nome: props.nome })
     : t(`${NS}.TITULO`, { nome: props.nome })
 );
-const rotuloVoltar = computed(() =>
-  troca.value ? t(`${NS}.TROCAR`) : t(`${NS}.VOLTAR`)
+// #1525 — quem não está em canal nenhum (a Lia que nasceu parada, um agente novo) começa a atender; quem
+// tem canal e foi parado volta a atender. Critério: nenhum canal atual, nem pela contagem do servidor.
+const semCanalAtual = computed(
+  () => !props.atuais.length && !props.agente.channels_count
 );
+const rotuloVoltar = computed(() => {
+  if (troca.value) return t(`${NS}.TROCAR`);
+  return semCanalAtual.value ? t(`${NS}.COMECAR`) : t(`${NS}.VOLTAR`);
+});
 </script>
 
 <template>
@@ -379,6 +473,11 @@ const rotuloVoltar = computed(() =>
             :rotulo="t(`${NS}.QUANDO_ROTULO`)"
             :opcoes="opcoesQuando"
           />
+          <NotaHorarioDoCanal
+            v-if="horarioUnico"
+            :inbox-id="inboxAtual"
+            :horario="horarioAtual"
+          />
         </section>
         <NotaQuemRecebe :nome="nome" />
       </template>
@@ -403,7 +502,19 @@ const rotuloVoltar = computed(() =>
           :horarios="horarios"
           :sem-leitura="semLeitura"
           @update:onde="escolherOnde"
-        />
+        >
+          <template v-if="mostrarOutras" #depoisDeOnde>
+            <TambemRecebe
+              :agente-id="agente.id"
+              :nome="nome"
+              :canais="canais"
+              :caixas="caixas"
+              :fora="foraDasOutras"
+              :model-value="outras"
+              @update:model-value="escolherOutras"
+            />
+          </template>
+        </OndeQuandoEscolha>
       </template>
     </div>
 

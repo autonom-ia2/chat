@@ -1,34 +1,61 @@
-import { computed, ref } from 'vue';
+import { computed, ref, unref } from 'vue';
 import * as Sentry from '@sentry/vue';
 import { useAlert } from 'dashboard/composables';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { FUNIL, MODELOS, corDaPosicao } from './funil';
+import {
+  FUNIL,
+  MODELOS,
+  categoriasDoModelo,
+  corDaPosicao,
+  modelosDoTipo,
+} from './funil';
 import { copiarEtapa } from './funilForm';
 
 // #1384 — os modelos de "Começar pronto" do funil novo: as etapas do modelo,
 // a frase padrão de cada uma (vinda do servidor) e a troca de modelo, que pede
 // confirmação quando a pessoa já mudou alguma etapa.
-export const useFunilModelo = ({ t, ia, form, editorSession }) => {
-  const modelo = ref('VENDAS');
+// #1498 — antes do modelo vem o tipo (Vender ou Atender). Sem tipo escolhido,
+// o funil novo ainda não tem etapas.
+// #1548 (passo 2) — `pacote`: o da conta (`autonomia_pacote`), que escolhe a
+// variante do modelo; funil que já existe não passa por aqui.
+export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
+  const tipo = ref('');
+  const modelo = ref('');
   const modeloPendente = ref('');
   // Frase padrão que o servidor deu para cada etapa, para saber se a pessoa
   // mudou a frase depois.
   const padroes = new WeakMap();
 
   const modeloAtual = computed(
-    () => MODELOS.find(item => item.chave === modelo.value) || MODELOS[0]
+    () => MODELOS.find(item => item.chave === modelo.value) || null
   );
+  const modelosDisponiveis = computed(() => modelosDoTipo(tipo.value));
   const nomesDeModelo = computed(() =>
     MODELOS.map(item => t(`${FUNIL}.MODELOS.${item.chave}.NOME`))
   );
 
-  const stagesDoModelo = item =>
-    item.etapas.map((chave, index) => ({
+  // #1548 — `modeloPosicao`: a etapa E<n> do modelo. Acompanha a etapa mesmo
+  // se ela mudar de lugar ou de nome; etapa criada pela pessoa não tem.
+  const stagesDoModelo = item => {
+    const categorias = categoriasDoModelo(item, unref(pacote));
+    return item.etapas.map((chave, index) => ({
       name: t(chave),
       color: corDaPosicao(index),
+      categoria: categorias?.[index] || '',
+      modeloPosicao: index + 1,
     }));
+  };
   const copiarEtapas = etapas =>
-    etapas.map((etapa, index) => copiarEtapa(etapa, corDaPosicao(index)));
+    etapas.map((etapa, index) => ({
+      ...copiarEtapa(etapa, corDaPosicao(index)),
+      categoria: etapa.categoria || '',
+      ...(etapa.modeloPosicao ? { modeloPosicao: etapa.modeloPosicao } : {}),
+    }));
+
+  const guardarPadrao = (stage, frase) => {
+    stage.aiCriteria = frase;
+    padroes.set(stage, frase);
+  };
 
   // O funil novo mostra a frase padrão de cada etapa, a mesma que o servidor
   // grava quando ela fica em branco (Crm::Ai::DefaultStageCriteria). Só
@@ -38,17 +65,22 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     const session = editorSession.value;
     const requested = form.stages.map(stage => ({ stage, name: stage.name }));
     try {
+      // #1548: com o modelo e a posição, o servidor acha a frase mesmo com o
+      // nome da etapa trocado; sem eles, acha pelo nome.
       const { data } = await CrmKanbanAPI.getStageCriteriaDefaults(
-        requested.map(item => item.name)
+        requested.map(item => item.name),
+        {
+          atender: !form.countsAsSale,
+          template: modelo.value,
+          positions: requested.map(item => item.stage.modeloPosicao || 0),
+        }
       );
       if (session !== editorSession.value) return;
       (data.payload || []).forEach((item, index) => {
         const { stage, name } = requested[index] || {};
         if (!stage || stage.name !== name || stage.aiCriteria !== undefined)
           return;
-        if (!item.criteria) return;
-        stage.aiCriteria = item.criteria;
-        padroes.set(stage, item.criteria);
+        if (item.criteria) guardarPadrao(stage, item.criteria);
       });
     } catch (error) {
       // A tela segue sem as frases prontas e o servidor ainda grava o padrão
@@ -58,11 +90,18 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     }
   };
 
+  // Nome do desfecho de sucesso que o modelo traz (Cobrança: "Pago"). Só
+  // troca o que a pessoa não escreveu.
+  const sucessoDo = item =>
+    item?.sucesso ? t(`${FUNIL}.MODELOS.${item.chave}.SUCESSO`) : '';
+
   // O modelo também traz pronto o "Quando usar este funil" (a primeira ideia).
-  const quandoUsarDo = item => t(`${FUNIL}.SOBRE.IDEIAS.${item.ideias[0]}`);
+  const quandoUsarDo = item =>
+    item ? t(`${FUNIL}.SOBRE.IDEIAS.${item.ideias[0]}`) : '';
 
   // A pessoa mudou alguma etapa do modelo: quantidade, nome, cor ou frase.
   const etapasMudaram = () => {
+    if (!modeloAtual.value) return false;
     const doModelo = stagesDoModelo(modeloAtual.value);
     if (form.stages.length !== doModelo.length) return true;
     return form.stages.some((stage, index) => {
@@ -78,6 +117,8 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
 
   const trocarModelo = item => {
     const quandoUsarAntigo = quandoUsarDo(modeloAtual.value);
+    const sucessoAntigo = sucessoDo(modeloAtual.value);
+    tipo.value = item.tipo;
     modelo.value = item.chave;
     modeloPendente.value = '';
     editorSession.value += 1;
@@ -86,6 +127,8 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     if (!form.whenToUse.trim() || form.whenToUse === quandoUsarAntigo)
       form.whenToUse = quandoUsarDo(item);
     form.countsAsSale = item.venda;
+    if (form.outcomeLabels.success.trim() === sucessoAntigo)
+      form.outcomeLabels = { ...form.outcomeLabels, success: sucessoDo(item) };
     form.stages = copiarEtapas(stagesDoModelo(item));
     loadDefaultCriteria();
   };
@@ -102,6 +145,12 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
     }
     trocarModelo(item);
   };
+  // Escolher o tipo já começa pelo primeiro modelo dele.
+  const escolherTipo = chave => {
+    if (chave === tipo.value) return;
+    const [primeiro] = modelosDoTipo(chave);
+    if (primeiro) escolherModelo(primeiro.chave);
+  };
   const confirmarModelo = () => {
     const item = MODELOS.find(opcao => opcao.chave === modeloPendente.value);
     if (item) trocarModelo(item);
@@ -111,18 +160,22 @@ export const useFunilModelo = ({ t, ia, form, editorSession }) => {
   };
 
   const reiniciarModelo = () => {
-    modelo.value = 'VENDAS';
+    tipo.value = '';
+    modelo.value = '';
     modeloPendente.value = '';
   };
 
   return {
+    tipo,
     modelo,
     modeloAtual,
+    modelosDisponiveis,
     modeloPendente,
     stagesDoModelo,
     copiarEtapas,
     loadDefaultCriteria,
     quandoUsarDo,
+    escolherTipo,
     escolherModelo,
     confirmarModelo,
     manterModelo,

@@ -35,7 +35,7 @@ module Crm::BookingPageNoticeTexts
     ::Ai::Redacao::Escrever.call(
       account: Current.account, feature: NOTICE_TEXT_FEATURE, canal: 'whatsapp_texto',
       proposito: "aviso de agendamento: #{::Crm::BookingV2::NoticeTemplates::Suggester::NOTICES.fetch(kind)}",
-      limites: { max_chars: custom::MAX_LENGTH }, chaves: { permitidas: custom::ALLOWED_KEYS, obrigatorias: custom::REQUIRED_KEYS },
+      limites: { max_chars: custom::MAX_LENGTH }, chaves: { permitidas: custom::AI_KEYS, obrigatorias: custom::REQUIRED_KEYS },
       tom: NOTICE_TEXT_TONES.include?(params[:tone].to_s) ? params[:tone].to_s : nil, opcoes: NOTICE_TEXT_OPTIONS,
       contexto: notice_text_context
     )

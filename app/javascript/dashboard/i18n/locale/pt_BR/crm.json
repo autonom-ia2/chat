@@ -497,7 +497,9 @@
         "OPEN_WORK_INFO": "Pessoas, conversas e cards abertos neste funil, contados à parte: uma conversa pode ter vários cards.",
         "OPEN_PEOPLE": "Pessoas",
         "OPEN_CONVERSATIONS": "Conversas",
-        "OPEN_CARDS": "Cards"
+        "OPEN_CARDS": "Cards",
+        "RESOLUTION_TIME": "Tempo de solução",
+        "RESOLUTION_TIME_INFO": "Média, do início do card até a última vez que ele foi marcado como Resolvido, sem o tempo em que esperamos o cliente."
       },
       "MEETINGS": {
         "TITLE": "Reuniões",
@@ -538,7 +540,16 @@
         "NONE": "Sem responsável",
         "CARDS": "cards",
         "EMPTY": "Nenhum card aberto."
-      }
+      },
+      "DURACAO": {
+        "DIAS": "{d} d {h} h",
+        "HORAS": "{h} h {m} min",
+        "MINUTOS": "{m} min",
+        "SEM_DADOS": "—",
+        "SO_DIAS": "{d} d",
+        "SO_HORAS": "{h} h"
+      },
+      "SUBTITLE_ATENDER": "Desempenho do funil: etapas, resolvidos e cancelados, tempo de solução e IA vs humano."
     },
     "ACTIONS": {
       "REFRESH": "Atualizar",
@@ -546,7 +557,7 @@
       "CREATE_PIPELINE": "Criar funil",
       "EDIT_PIPELINE": "Editar funil",
       "HANDOFF_SETTINGS": "Atribuição e transferência para humano",
-      "INBOX_SETTINGS": "Configurar caixas de entrada",
+      "INBOX_SETTINGS": "Canais de cada funil",
       "NEW_CARD": "Nova oportunidade",
       "FILTER": "Filtrar",
       "FILTERS": "Filtros",
@@ -564,7 +575,9 @@
       "EXPORT_TITLE": "Baixar a lista em Excel, com o funil, os filtros e a ordem atuais",
       "EXPORT_ERROR": "Não foi possível exportar a lista. Tente de novo.",
       "CREATE_INITIAL_PIPELINE": "Criar funil inicial",
-      "LOAD_MORE": "Carregar mais"
+      "LOAD_MORE": "Carregar mais",
+      "NEW_CARD_ATENDER": "Novo atendimento",
+      "VIEW_OPPORTUNITIES_ATENDER": "Ver atendimentos"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -633,7 +646,10 @@
       "LABELS": "Etiquetas",
       "LABELS_PLACEHOLDER": "Nenhuma etiqueta",
       "CAMPAIGN": "Campanha",
-      "CAMPAIGN_PLACEHOLDER": "Nenhuma campanha"
+      "CAMPAIGN_PLACEHOLDER": "Nenhuma campanha",
+      "SHORTCUT_MINE_ATENDER": "Meus atendimentos",
+      "SCORE_HELP_ATENDER": "Mede quanta atenção o cliente pede agora.",
+      "GROUP_ATTENTION_HELP_ATENDER": "Quanta atenção o cliente pede agora."
     },
     "RESPONSIBLE_FILTER": {
       "AGENT": "Qualquer agente",
@@ -661,9 +677,7 @@
       "URGENT": "Urgente"
     },
     "CARD_STATUS": {
-      "OPEN": "Aberto",
-      "WON": "Ganho",
-      "LOST": "Perdido"
+      "OPEN": "Aberto"
     },
     "FOLLOW_UP_FILTER": {
       "NONE": "Sem retorno",
@@ -1149,11 +1163,7 @@
       "PIPELINE_ARCHIVED": "Funil arquivado.",
       "PIPELINE_ARCHIVE_ERROR": "Não foi possível arquivar o funil.",
       "PIPELINE_CREATE_ERROR": "Não foi possível criar o funil inicial.",
-      "PIPELINE_INBOX_ADDED": "Caixa de entrada vinculada ao funil.",
-      "PIPELINE_INBOX_REMOVED": "Caixa de entrada removida do funil.",
       "PIPELINE_INBOX_LOAD_ERROR": "Não foi possível carregar as caixas de entrada vinculadas.",
-      "PIPELINE_INBOX_SAVE_ERROR": "Não foi possível vincular a caixa de entrada.",
-      "PIPELINE_INBOX_REMOVE_ERROR": "Não foi possível remover a caixa de entrada do funil.",
       "INBOX_SETTINGS_SAVED": "Configuração da caixa de entrada salva.",
       "INBOX_SETTINGS_LOAD_ERROR": "Não foi possível carregar as configurações das caixas de entrada.",
       "INBOX_SETTINGS_SAVE_ERROR": "Não foi possível salvar a configuração da caixa de entrada.",
@@ -1180,7 +1190,10 @@
       "FOLLOW_UP_CANCELED": "Retorno cancelado.",
       "FOLLOW_UP_SAVE_ERROR": "Não foi possível salvar o retorno.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Informe a mensagem livre para o envio automático.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial."
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial.",
+      "FOLLOW_UP_DUE_AT_PAST": "Esse horário já passou. Escolha um horário daqui para frente.",
+      "CARD_REOPENED_ATENDER": "Atendimento reaberto.",
+      "CARD_CLOSE_ERROR_ATENDER": "Não foi possível atualizar o status do atendimento."
     },
     "ERRORS": {
       "TITLE": "Não foi possível carregar o CRM",
@@ -1253,7 +1266,8 @@
         "UPDATE_SUCCESS": "Campo do card salvo",
         "UPDATE_ERROR": "Não foi possível salvar o campo do card",
         "DELETE_SUCCESS": "Campo do card limpo",
-        "DELETE_ERROR": "Não foi possível limpar o campo do card"
+        "DELETE_ERROR": "Não foi possível limpar o campo do card",
+        "HELP_ATENDER": "Informações próprias deste atendimento."
       },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
@@ -1334,6 +1348,7 @@
       "ACTIVITY_AI_HANDOFF_PICKUP": "Humano assumiu o atendimento da IA",
       "ACTIVITY_AI_HANDOFF_ESCALATION": "Transferência para humano escalada",
       "ACTIVITY_AI_HANDOFF_RENOTIFY": "Lembrete de transferência para humano enviado",
+      "ACTIVITY_ENTREGA_SEM_NINGUEM": "Não conseguimos chamar ninguém da equipe para esta conversa",
       "ACTIVITY_GENERIC": "Atividade registrada",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "De {from} para {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "Para {to}",
@@ -1412,18 +1427,9 @@
       "STATUS_ARCHIVED": "Arquivado",
       "STATUS_RESOLVED": "Resolvido",
       "STATUS_CANCELLED": "Cancelado",
-      "WIN_DEAL": "Ganhar",
-      "LOSE_DEAL": "Perder",
       "REOPEN_DEAL": "Reabrir",
-      "WIN_DIALOG_TITLE": "Ganhar este negócio",
       "VALUE_AI_FILLED": "Valor preenchido pela IA a partir da conversa. Edite se necessário.",
-      "WIN_VALUE_LABEL": "Valor do negócio",
-      "WIN_CURRENCY_LABEL": "Moeda",
-      "WIN_CONFIRM": "Marcar como ganho",
-      "LOSE_DIALOG_TITLE": "Perder este negócio",
-      "LOSE_REASON_LABEL": "Motivo (opcional)",
       "LOSE_REASON_PLACEHOLDER": "Por que o negócio foi perdido?",
-      "LOSE_CONFIRM": "Marcar como perdido",
       "CLOSE_AS_TITLE": "Fechar como {label}",
       "MARK_AS": "Marcar como {label}",
       "CANCEL": "Cancelar",
@@ -1533,6 +1539,15 @@
         "SUGGESTION_FOCUS_ACCEPT": "Tratar este assunto",
         "SUGGESTION_DISMISS": "Ignorar",
         "SUGGESTION_ERROR": "Não foi possível responder à sugestão. Ela pode ter mudado; veja os assuntos de novo."
+      },
+      "REPASSE": {
+        "TEXT": "O assunto virou {pipeline}. Quer passar para a equipe de {pipeline}?",
+        "PASS": "Passar para a equipe de {pipeline}",
+        "KEEP": "Ficar com a conversa",
+        "NOBODY_ONLINE": "Ninguém da equipe de {pipeline} está online; a conversa vai esperar alguém entrar.",
+        "PASS_ANYWAY": "Passar mesmo assim",
+        "DONE": "Conversa passada para a equipe de {pipeline}.",
+        "ERROR": "Não foi possível responder. O assunto pode ter mudado; veja de novo."
       }
     },
     "PIPELINE_DRAWER": {
@@ -1554,12 +1569,6 @@
       "WHEN_TO_USE": "Quando usar",
       "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais produtos ou casos entram aqui.",
       "WHEN_TO_USE_PLACEHOLDER": "Ex.: venda dos nossos dois produtos, Agentes de IA e Chat2You.",
-      "COUNTS_AS_SALE": "Fechar com sucesso aqui conta como venda",
-      "COUNTS_AS_SALE_ON": "Os cards fecham como Ganho ou Perdido, entram no total de vendas e podem avisar seus anúncios.",
-      "COUNTS_AS_SALE_OFF": "Os cards fecham como Resolvido ou Cancelado. Não entram no total de vendas nem avisam anúncios. Bom para pós-venda, sinistro, suporte.",
-      "OUTCOME_SUCCESS": "Nome para quando dá certo",
-      "OUTCOME_FAILURE": "Nome para quando não dá certo",
-      "OUTCOME_HELP": "Opcional. Ex.: \"Contratado\" e \"Desistiu\". Em branco, usa o nome padrão.",
       "MONTHLY_TARGET": "Meta mensal de vendas (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
@@ -1581,10 +1590,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "Em negociação",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "Quando um card for ganho, perdido ou mudar de etapa, a conversão volta para a Meta para otimizar seus anúncios de clique para WhatsApp por quem realmente fecha.",
-      "META_SYNC_EVENTS": "Quais eventos enviar",
-      "META_SYNC_EVENT_WON": "Ganho (Purchase, com valor)",
-      "META_SYNC_EVENT_LOST": "Perda (OrderCanceled)",
-      "META_SYNC_EVENT_MOVED": "Mudança de etapa (usa o mapeamento acima)",
       "META_SYNC_DATASET": "Dataset ID (avançado)",
       "META_SYNC_DATASET_PLACEHOLDER": "Deixe vazio para usar o da conexão do WhatsApp",
       "META_SYNC_DATASET_HELP": "Deixe vazio para derivar da conexão do WhatsApp. Só preencha se a Meta forneceu um dataset específico.",
@@ -1620,10 +1625,6 @@
       "TITLE": "Google Ads",
       "HELP": "Envie resultados do CRM ao Google Ads por um feed programado de conversões.",
       "TOGGLE": "Ativar conversões offline do Google Ads",
-      "EVENTS": "Quais eventos incluir",
-      "EVENT_WON": "Ganho",
-      "EVENT_LOST": "Perda",
-      "EVENT_MOVED": "Mudança de etapa",
       "CONVERSION_NAME_WON": "Nome da conversão para cards ganhos",
       "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Venda ganha",
       "CONVERSION_NAME_WON_HELP": "Perda e mudança de etapa usam os nomes de conversão padrão.",
@@ -2890,8 +2891,8 @@
       }
     },
     "ACCESS": {
-      "OWNER_WITHOUT_FUNNEL": "Essa pessoa não cuida do funil deste card nesta caixa. Escolha outra pessoa ou libere o funil para ela em Caixas no CRM.",
-      "CARD_FUNNEL_REQUIRED": "Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Caixas no CRM."
+      "OWNER_WITHOUT_FUNNEL": "Essa pessoa não cuida do funil deste card nesta caixa. Escolha outra pessoa ou libere o funil para ela em Canais de cada funil.",
+      "CARD_FUNNEL_REQUIRED": "Você não cuida do funil deste card. Peça a um administrador para liberar o funil para você em Canais de cada funil."
     },
     "PASSAGEM": {
       "CARREGANDO": "Abrindo as regras deste funil",
@@ -2964,7 +2965,10 @@
         "CITACAO": "“{frase}”",
         "DESLIGADA_SEM_IA": "{estado} A equipe não é chamada.",
         "QUEM_EQUIPE_ANTIGA": "Vai para {equipe}: quem estiver com menos conversas.",
-        "COMO_NA_HORA_ANTIGA": "{jeito}: a conversa vai direto para a pessoa."
+        "COMO_NA_HORA_ANTIGA": "{jeito}: a conversa vai direto para a pessoa.",
+        "QUEM_IA": "Vai para {nome} (Agente de IA) nas caixas em que atende; nas outras, para alguém da equipe.",
+        "QUEM_EQUIPE_NOME_IA": "Vai para {equipe}. Se o cliente pedir alguém pelo nome, pessoa ou agente de IA, vai para quem ele pediu.",
+        "COMO_IA": "Com {nome} (Agente de IA), a conversa passa na hora, sem convite e sem espera."
       },
       "ANTIGA": {
         "TEXTO": "Hoje, se ninguém estiver online, a conversa vai para quem está fora e o cliente fica sem resposta.",
@@ -2996,7 +3000,26 @@
         "PESSOA_CAMPO": "Pessoa que recebe",
         "ESCOLHA": "Escolha uma pessoa",
         "FORA_DA_EQUIPE": "{nome} (fora da equipe)",
-        "AVISO_FORA_DA_EQUIPE": "Esta pessoa não está em nenhuma caixa deste funil e não vai receber. Escolha alguém da equipe."
+        "AVISO_FORA_DA_EQUIPE": "Esta pessoa não está em nenhuma caixa deste funil e não vai receber. Escolha alguém da equipe.",
+        "EQUIPE_DESC_IA": "Quem estiver online e com menos conversas, entre as pessoas da caixa em que o cliente escreveu. Agente de IA não entra nessa vez.",
+        "PESSOA_DESC_IA": "Uma pessoa ou um agente de IA, sempre o mesmo. Se não atender a caixa da conversa, vai para alguém da equipe.",
+        "IA_NAS_CAIXAS": "{n} agente de IA nas caixas | {n} agentes de IA nas caixas",
+        "IA_FORA_DA_VEZ": "Agentes de IA não entram na vez: ela é só das pessoas online. Eles recebem quando o cliente pede pelo nome ou quando alguém passa a conversa para eles.",
+        "PELO_NOME_IA": "Se o cliente pedir alguém pelo nome, mandar para quem ele pediu",
+        "PELO_NOME_DESC_IA": "Vale para as pessoas e para os agentes de IA das caixas. A IA entende o pedido, como “quero falar com a Lia”.",
+        "PESSOA_CAMPO_IA": "Quem recebe",
+        "ESCOLHA_IA": "Escolha uma pessoa ou um agente",
+        "GRUPO_PESSOAS": "Pessoas",
+        "GRUPO_IA": "Agentes de IA",
+        "IA_OPCAO": "{nome} · Agente de IA",
+        "IA_OPCAO_PARADO": "{nome} · Agente de IA (parado)",
+        "IA_ASSUME": "Assume na hora, a qualquer hora do dia.",
+        "IA_PARADO": "{nome} está com o atendimento parado e não recebe conversas. Enquanto isso, elas vão para alguém da equipe. Escolha outro ou ligue {nome} de novo em Agentes.",
+        "IA_SEM_CAIXA": "{nome} não atende nenhuma caixa deste funil e não vai receber. Escolha outro ou coloque {nome} numa caixa em Caixas no CRM.",
+        "IA_ALGUMAS_CAIXAS": "{nome} atende só em {caixas}. Nas outras caixas, a conversa vai para alguém da equipe.",
+        "IA_TODAS_AS_CAIXAS": "Atende em todas as caixas deste funil.",
+        "IA_INDISPONIVEL": "Agente de IA (indisponível)",
+        "AVISO_IA_INDISPONIVEL": "Os agentes de IA não estão disponíveis nesta conta agora. Enquanto isso, a conversa vai para alguém da equipe. Escolha uma pessoa."
       },
       "COMO": {
         "TITULO": "Escolha o jeito",
@@ -3050,6 +3073,13 @@
         "BOTAO_FUNIL": "Abrir o funil",
         "BOTAO_CAIXA": "Ligar uma caixa"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "Esta regra não vale por completo:",
+        "SEM_IA": "A IA deste funil está desligada: ela não percebe quando o cliente pede uma pessoa. A regra continua valendo quando o robô ou o agente de IA da caixa passa a conversa e quando a conversa sai da triagem.",
+        "FIXA_FUNIL": "{nome} não pode receber conversas deste funil em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "FIXA_ETAPA": "Na etapa {etapa}, {nome} não pode receber conversas em {caixas}. Lá, a conversa vai para quem cuida do funil; sem ninguém para receber agora, ela espera.",
+        "ALGUEM": "A pessoa escolhida"
+      },
       "PREVIA": {
         "SELO": "Prévia",
         "SELO_AGORA": "Agora",
@@ -3094,7 +3124,8 @@
           "PESSOA_ESPERA": "Se {nome} estiver fora, a assistente segue com a Ana até {nome} entrar.",
           "PESSOA_CONVITE": "{nome} recebe o convite mesmo fora. A assistente segue com a Ana até {nome} aceitar.",
           "PESSOA_FORA": "Vai para {nome} mesmo fora, e a Ana fica sem resposta.",
-          "FALTA": "Escolha a pessoa para ver quem recebe."
+          "FALTA": "Escolha a pessoa para ver quem recebe.",
+          "IA": "{nome} é agente de IA: assume na hora, mesmo com a equipe fora."
         },
         "ETAPAS_TITULO": "Seu quadro",
         "ETAPAS_TEXTO": "O que acontece em cada coluna.",
@@ -3114,7 +3145,13 @@
         "PERCURSO_PROPRIAS": "Em {etapas}, cada uma chama a equipe do seu jeito.",
         "PERCURSO_NAO": "Em {etapas}, a assistente responde sozinha.",
         "PERCURSO_OUTRAS": "Nas outras etapas, {jeito}.",
-        "PERCURSO_TODAS": "Em todas as etapas, {jeito}."
+        "PERCURSO_TODAS": "Em todas as etapas, {jeito}.",
+        "PEDIU": "{cliente} pediu a {nome}",
+        "FILA_IA": "Vai para {nome} (Agente de IA), a qualquer hora, nas caixas em que atende. Nas outras, para alguém da equipe.",
+        "FILA_IA_PARADO": "{nome} está com o atendimento parado, então vai para alguém da equipe.",
+        "FILA_IA_INDISPONIVEL": "O agente de IA não está disponível, então vai para alguém da equipe.",
+        "FILA_EQUIPE_IA": "Quem estiver com menos conversas recebe primeiro. Agente de IA não entra nessa vez.",
+        "FILA_EQUIPE_NOME_IA": "Quem estiver com menos conversas recebe primeiro. Se o cliente pedir alguém pelo nome, pessoa ou agente de IA, vai para quem ele pediu."
       },
       "CENA": {
         "SABADO": "Sábado, 10h",
@@ -3149,7 +3186,8 @@
         "ACEITOU_LOGO": "Três minutos depois, {nome} aceitou.",
         "ASSUMIU": "{nome} assumiu. A assistente para de responder.",
         "VAI_ONLINE_OU_NAO": "A conversa vai para {nome}, esteja online ou não. Se estiver fora, a assistente para e a {cliente} fica sem resposta.",
-        "ROBO_CHAMA": "Claro! Já chamei a equipe."
+        "ROBO_CHAMA": "Claro! Já chamei a equipe.",
+        "IA_ASSUME": "{nome}, agente de IA, assumiu na hora e segue com a {cliente}."
       },
       "RODAPE": {
         "SALVAR": "Salvar",
@@ -3200,6 +3238,43 @@
           "JEITO_CONVITE": "com convite"
         }
       }
+    },
+    "PASSAR_PARA": {
+      "BOTAO": "Passar para…",
+      "TITULO": "Passar a conversa para…",
+      "DESCRICAO": "Quem você escolher assume a conversa.",
+      "CARREGANDO": "Carregando quem pode receber…",
+      "PESSOAS": "Pessoas desta caixa",
+      "AGENTES": "Agentes de IA desta caixa",
+      "VOCE": "{nome} (você)",
+      "COM_A_CONVERSA": "Está com a conversa",
+      "NINGUEM": "Não há mais ninguém nesta caixa para receber agora.",
+      "ERRO_LISTA": "Não deu para ver quem pode receber agora.",
+      "CONFIRMA_SAI": "{nome} assume a conversa e você sai dela.",
+      "CONFIRMA": "{nome} assume a conversa.",
+      "CANCELAR": "Cancelar",
+      "PASSAR_PARA": "Passar para {nome}",
+      "ESCOLHA": "Escolha quem recebe",
+      "PRONTO": "Pronto: {nome} está com a conversa.",
+      "COM_IA": "Com {nome} · Agente de IA",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} está com o atendimento parado. Escolha outra pessoa ou outro agente.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} não atende mais esta caixa. Escolha outra pessoa ou outro agente.",
+        "FASE2_DESLIGADA": "Os agentes de IA não estão ligados nesta conta. Escolha uma pessoa.",
+        "CONVERSA_RESOLVIDA": "Esta conversa já foi resolvida. Reabra para passar.",
+        "OUTRA_CONTA": "{nome} é de outra conta. Escolha alguém desta caixa.",
+        "PESSOA_ATRIBUIDA": "Uma pessoa da equipe já está com esta conversa. Abra a lista de novo.",
+        "PESSOA_FORA_DA_CAIXA": "{nome} não está mais nesta caixa. Escolha outra pessoa.",
+        "DESTINO_INVALIDO": "Esta opção não está mais disponível. Feche e abra a lista de novo.",
+        "ERRO": "Não deu para passar agora. Tente de novo."
+      },
+      "COM_IA_POR": "Com {nome} · passada por {por}",
+      "COM_IA_POR_EXTERNO": "Com {nome} · passada pelo agente externo {por}",
+      "DEVOLVER": "Devolver para {nome}",
+      "DEVOLVER_DESC": "{nome} passou a conversa para {agente}.",
+      "CONFIRMA_DEVOLVE": "{nome} assume a conversa de novo e {agente} sai dela.",
+      "CONFIRMA_NO_LUGAR": "{nome} assume a conversa no lugar de {agente}.",
+      "SEM_ROBO": "Nenhum agente atende esta caixa primeiro: o agente de IA só responde quando recebe a conversa."
     }
   },
   "crm": {
@@ -3407,6 +3482,8 @@
         "INBOX_TITLE": "Calendário da caixa de entrada — {name}",
         "AGENT_TITLE": "Calendário do agente — {name}",
         "TIMEZONE_LABEL": "Fuso horário",
+        "FUSO_DA_CONTA": "No fuso da conta: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "No fuso da conta.",
         "ENABLED_LABEL": "Calendário ativo",
         "DAYS": {
           "SUNDAY": "Domingo",
@@ -3421,6 +3498,7 @@
         "REMOVE_BLOCK": "Remover bloco",
         "START_LABEL": "Início",
         "END_LABEL": "Fim",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "O horário final deve ser depois do inicial",
         "NO_BLOCKS": "Fechado",
         "SAVE": "Salvar calendário",
@@ -3925,7 +4003,7 @@
   },
   "CRM_CAIXAS": {
     "LISTA": {
-      "TITULO": "Caixas no CRM",
+      "TITULO": "Canais de cada funil",
       "SUBTITULO": "Para cada caixa: o que chega, quem cuida e o que o sistema faz sozinho.",
       "CARREGANDO": "Carregando as caixas",
       "ERRO": "Não deu para carregar as caixas agora.",
@@ -3951,12 +4029,17 @@
       "SOZINHO": "O que acontece sozinho",
       "ALTERAR": "Alterar",
       "LIGAR": "Colocar no CRM",
-      "ROBO": "{nome} (agente de IA) atende primeiro"
+      "PORTA": "{nome} atende primeiro",
+      "AREA": "{nome} cuida de {funis}",
+      "ROBO": "{nome} (agente de IA) atende primeiro",
+      "ROBO_EXTERNO": "{nome} (agente externo) atende primeiro"
     },
     "MODO_RESUMO": {
       "AUTO": "O sistema cria o card quando entende o assunto.",
       "SUGGEST": "O sistema sugere o assunto e a equipe confirma.",
       "OFF": "Nada acontece sozinho: a equipe cria o card.",
+      "CHEGOU_IA": "O card nasce com a primeira mensagem, e a IA dá o nome.",
+      "AUTO_UM": "O sistema cria um card para cada pedido do cliente.",
       "CHEGOU": "O card nasce assim que a conversa chega."
     },
     "ETAPAS": {
@@ -3972,14 +4055,15 @@
     },
     "CUIDAM": {
       "TITULO": "Quem cuida do quê?",
-      "SUBTITULO": "Toque nos assuntos de cada pessoa. Ela só vê as conversas deles."
+      "SUBTITULO": "Toque nos assuntos de cada pessoa. Ela só vê as conversas deles.",
+      "SUBTITULO_COM_AGENTES": "Toque nos assuntos de cada agente de IA e de cada pessoa. A pessoa só vê as conversas deles."
     },
     "SOZINHO": {
       "TITULO": "O que o sistema faz sozinho?",
       "SUBTITULO": "Quando chega mensagem nova nesta caixa.",
       "AUTO": "Criar o card quando entender o assunto",
       "AUTO_TEXTO": "O sistema lê a conversa, escolhe o funil certo e cria o card.",
-      "AUTO_EXEMPLO": "O sistema entende que é {funil}, cria o card e entrega para {pessoa}, a próxima da vez.",
+      "AUTO_EXEMPLO": "O sistema entende que é {funil} e cria o card. Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
       "SUGGEST": "Sugerir o assunto e esperar a equipe",
       "SUGGEST_TEXTO": "O sistema mostra o funil que parece certo. Alguém confirma com um clique.",
       "SUGGEST_EXEMPLO": "Aparece para a equipe: “Parece {funil}”. Quem confirmar cria o card.",
@@ -3988,10 +4072,17 @@
       "OFF_EXEMPLO": "Nada acontece. Alguém da equipe lê e cria o card.",
       "CHEGOU": "Criar o card assim que a conversa chegar",
       "CHEGOU_TEXTO": "Toda conversa nova vira um card, sem esperar.",
-      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}, e vai para {pessoa}.",
+      "CHEGOU_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "CHEGOU_IA": "Criar o card assim que a conversa chegar",
+      "CHEGOU_IA_TEXTO": "O card nasce com a primeira mensagem, e a IA dá o nome.",
+      "CHEGOU_IA_EXEMPLO": "O card nasce em {funil}, na etapa {etapa}, e a IA dá o nome quando entende o pedido. Quando o agente passa a conversa, ela vai na hora para quem cuida de {funil} e tem menos conversas abertas, como {pessoa}. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro.",
+      "AUTO_UM": "Criar o card quando entender o assunto",
+      "AUTO_UM_TEXTO": "O sistema lê a conversa e cria um card para cada pedido do cliente.",
+      "AUTO_UM_EXEMPLO": "O cliente pede dois produtos diferentes: são dois cards em {funil}.",
       "RECOMENDADO": "Recomendado",
       "EXEMPLO": "Exemplo",
       "MENSAGEM": "Oi! Quanto custa?",
+      "MENSAGEM_DOIS_PEDIDOS": "Quero saber o preço do plano básico e também do plano completo.",
       "NAO_ENTENDEU": "Se não der para entender o assunto, a conversa fica sem assunto e vai para quem cuida dessas conversas.",
       "ALGUEM": "alguém da equipe",
       "SEM_IA": "A IA está desligada em {funis}. Ligue em Editar funil → IA do funil para ela reconhecer esse assunto."
@@ -4006,13 +4097,23 @@
       "SO_SUAS": "cuida de {assuntos}. Vê só as conversas que atende.",
       "SEM_ASSUNTO": "conversas sem assunto",
       "SEM_ASSUNTO_TITULO": "Sem assunto",
-      "RODIZIO": "Quem recebe as conversas novas, um de cada vez",
+      "RODIZIO": "Quem recebe quando o agente passa a conversa ou ela sai da triagem (na hora, quem tem menos conversas abertas; sem ninguém agora, quem entrar primeiro)",
       "NINGUEM": "ninguém ainda",
       "MUDA": "O que muda ao salvar",
       "NADA_MUDOU": "Nada mudou.",
       "SAI_DO_CRM": "Sem nenhum funil marcado, esta caixa sai do CRM. As conversas dela deixam de virar cards.",
       "RODIZIO_NOME": "{nome}:",
-      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo."
+      "AGENTE_CUIDA": "Cuida de: {funis}. Assume a conversa quando o assunto é desse funil. | Cuida de: {funis}. Assume a conversa quando o assunto é de um desses funis.",
+      "FICA_COM_A_PORTA": "{funis}: sem agente marcado, {porta} continua.",
+      "RODIZIO_AGENTE": "{nome} (agente de IA) assume quando o assunto é deste funil.",
+      "RODIZIO_PESSOAS": "Se o cliente pedir uma pessoa, vai para {nomes}. | Se o cliente pedir uma pessoa, vai para {nomes}, um de cada vez.",
+      "RODIZIO_SEM_PESSOA": "Se o cliente pedir uma pessoa, ainda não há ninguém.",
+      "SO_AS_DELE": "{nome} só vê as dele, não recebe.",
+      "NINGUEM_RECEBE": "Ninguém pode receber as conversas de {assuntos}. Elas esperam até alguém passar a cuidar do assunto.",
+      "CONFERINDO": "Conferindo quem recebe…",
+      "ERRO_QUEM_RECEBE": "Não deu para conferir quem recebe agora.",
+      "ROBO": "Primeiro atende {nome}, o agente de IA. Depois, as pessoas abaixo.",
+      "ROBO_EXTERNO": "Primeiro atende {nome}, o agente externo. Depois, as pessoas abaixo."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} passa a chegar por esta caixa.",
@@ -4021,7 +4122,13 @@
       "PESSOA_TODAS": "{nome} passa a ver todas as conversas dos assuntos de que cuida.",
       "MODO": "A partir de agora: {resumo}",
       "PESSOA_GANHA": "{nome} passa a cuidar de {assuntos}.",
-      "PESSOA_PERDE": "{nome} deixa de cuidar de {assuntos}."
+      "PESSOA_PERDE": "{nome} deixa de cuidar de {assuntos}.",
+      "AGENTE_ENTRA": "{nome} entra nesta caixa.",
+      "AGENTE_ENTRA_E_LIGA": "{nome} entra nesta caixa e passa a atender.",
+      "AGENTE_SAI": "{nome} sai desta caixa.",
+      "AGENTE_PARA": "{nome} sai desta caixa e para de atender. {nome} não trabalha em nenhuma outra caixa.",
+      "ABERTAS": "Há {n} conversa aberta em {funil} nesta caixa. | Há {n} conversas abertas em {funil} nesta caixa.",
+      "UM_FUNIL": "Com um funil só nesta caixa, quem cuida de {funil} e vê todas as conversas passa a cuidar também das que ainda não têm assunto. Quem só vê as dele continua assim."
     },
     "FUNIS": {
       "TIPO_SALES": "Vendas: termina em ganho ou perdido",
@@ -4043,11 +4150,32 @@
       "TODAS": "Todas",
       "SO_AS_QUE_ATENDE": "Só as que atende",
       "NAO_VE": "Não vê nada",
-      "RODIZIO": "Quem cuida de um assunto recebe as conversas novas dele, um de cada vez.",
+      "RODIZIO": "Quando o agente passa a conversa ou ela sai da triagem, ela vai na hora para quem cuida do assunto e tem menos conversas abertas. Sem ninguém para receber agora, ela espera e vai para quem entrar primeiro. Se a Atribuição do funil estiver em convite, a pessoa é convidada em vez de receber direto. Administradores também recebem.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Só as que atende”: conversas em que a pessoa é atendente, participa ou é dona do card.",
       "LEGADO_MUDAR": "Usar o que eu marcar",
       "LEGADO_CURTO": "Escolha se cada pessoa continua vendo só as atribuídas.",
-      "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui."
+      "AGENTES_TITULO": "Agentes de IA",
+      "PESSOAS_TITULO": "Pessoas",
+      "SELO_IA": "Agente de IA",
+      "PORTA": "Atende primeiro todas as conversas desta caixa.",
+      "AGENTE_CUIDA": "Cuida de: {funis}",
+      "AGENTE_NADA": "Não cuida de nenhum assunto nesta caixa.",
+      "FUNIL_COM": "· com {nome}",
+      "TROCOU": "{funil} era de {antes}. Agora é de {agora}.",
+      "DESFAZER": "Desfazer",
+      "REGRA": "O agente marcado num assunto assume a conversa; sem agente, {porta} continua.",
+      "REGRA_SEM_PORTA": "O agente marcado num assunto assume a conversa.",
+      "MOSTRAR_AGENTES": "Mostrar outros agentes ({n})",
+      "ROBO": "{nome}, o agente de IA desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
+      "ROBO_EXTERNO": "{nome}, o agente externo desta caixa, atende primeiro. Quando a conversa passa para uma pessoa, vale o que estiver marcado aqui.",
+      "TIRAR": "Tirar desta caixa",
+      "SAI": "Sai desta caixa ao salvar.",
+      "VAI_PARAR": "Esta é a única caixa em que {nome} trabalha. Ao salvar, {nome} para de atender.",
+      "ENTRA": "Entra nesta caixa ao salvar.",
+      "ENTRA_E_LIGA": "Entra nesta caixa e passa a atender ao salvar.",
+      "PARADO": "Parado",
+      "SO_QUEM_GERENCIA": "Só quem gerencia agentes de IA muda os agentes desta caixa.",
+      "EXTERNO": "Agente de IA: {nome}, atende primeiro"
     },
     "EDITOR": {
       "ERRO": "Não deu para abrir esta caixa agora.",
@@ -4055,13 +4183,23 @@
       "CONTINUAR": "Continuar",
       "SALVAR": "Salvar",
       "SALVOU": "Caixa salva.",
-      "FALHOU": "Não deu para salvar. Tente de novo."
+      "FALHOU": "Não deu para salvar. Tente de novo.",
+      "ERRO_AGENTES": "Não deu para salvar os agentes de IA. Recarregue a página e tente de novo.",
+      "AGENTE_NAO_LIGA": "Um agente de IA não conseguiu começar a atender. Abra o agente, termine o cadastro e tente de novo.",
+      "PRINCIPAL_PARADO": "O agente principal desta caixa não está atendendo. Para pôr um agente da equipe aqui, ligue o principal antes.",
+      "AGENTE_EXTERNO": "Um agente externo atende nesta caixa. O agente da equipe ainda não entra em caixa com agente externo.",
+      "AGENTE_RASCUNHO": "Este agente ainda é rascunho; termine de criar antes."
+    },
+    "AVISO_AGENTES": {
+      "TITULO": "Quem vê o quê no CRM fica em outro lugar",
+      "TEXTO": "Aqui você escolhe quem atende esta caixa. Que funis, cards e conversas cada pessoa e cada agente de IA vê no CRM é configurado em CRM → {lugar}.",
+      "LINK": "Configurar em {lugar}"
     }
   },
   "CRM_FUNIL": {
     "ROTULO": "Funis do CRM",
     "NOVO": "Novo funil",
-    "NOVO_TEXTO": "O caminho que cada cliente faz, do primeiro oi até fechar.",
+    "NOVO_TEXTO": "O caminho que cada cliente faz, do primeiro oi até o fim.",
     "EDITAR": "Editar funil",
     "NOME": "Nome do funil",
     "NOME_FALTA": "Dê um nome ao funil.",
@@ -4091,7 +4229,7 @@
         "E5": "Fechado"
       },
       "ATENDIMENTO": {
-        "NOME": "Atendimento",
+        "NOME": "Suporte",
         "E1": "Novo pedido",
         "E2": "Em atendimento",
         "E3": "Esperando o cliente",
@@ -4099,16 +4237,33 @@
         "TEXTO": "Do pedido de ajuda até resolver."
       },
       "AGENDAMENTOS": {
-        "NOME": "Agendamentos",
-        "E1": "Novo contato",
+        "NOME": "Agendamento",
+        "E1": "Pediu horário",
         "E2": "Horário marcado",
-        "E3": "Atendido",
-        "E4": "Não veio",
+        "E3": "Precisa remarcar",
+        "E4": "Atendido",
         "TEXTO": "Do pedido de horário até o atendimento."
       },
       "TROCAR_AVISO": "Trocar para {nome} apaga as mudanças que você fez nas etapas.",
       "TROCAR_SIM": "Trocar mesmo assim",
-      "TROCAR_NAO": "Manter minhas etapas"
+      "TROCAR_NAO": "Manter minhas etapas",
+      "POS_VENDA": {
+        "NOME": "Pós-venda",
+        "TEXTO": "Da compra até o cliente dizer que está tudo certo.",
+        "E1": "Compra feita",
+        "E2": "Acompanhando",
+        "E3": "Esperando o cliente",
+        "E4": "Tudo certo"
+      },
+      "COBRANCA": {
+        "NOME": "Cobrança",
+        "TEXTO": "Do aviso de pagamento até receber.",
+        "E1": "A vencer",
+        "E2": "Atrasado",
+        "E3": "Prometeu pagar",
+        "E4": "Pago",
+        "SUCESSO": "Pago"
+      }
     },
     "ETAPAS": {
       "ROTULO": "Etapas",
@@ -4161,7 +4316,8 @@
       "ACONTECE_1": "Aparece no Kanban o quadro {nome}, com {n} colunas.",
       "ACONTECE_2": "Dá para mudar qualquer parte depois, em Editar funil.",
       "ACONTECE_3": "Depois de criar, você liga as caixas de entrada, os lembretes e os anúncios.",
-      "HEROI": "Confira e crie. Dá para mudar tudo depois."
+      "HEROI": "Confira e crie. Dá para mudar tudo depois.",
+      "ACONTECE_3_ATENDER": "Depois de criar, você liga as caixas de entrada e confere os lembretes."
     },
     "RESUMO": {
       "TEXTO": "O que este funil faz hoje. Toque em Alterar para mudar uma parte.",
@@ -4169,10 +4325,8 @@
       "FALTA_FRASE": "Falta a frase de {nomes}. | Faltam as frases de {nomes}.",
       "SOBRE": "Use quando o cliente {texto}.",
       "SOBRE_FALTA": "Falta dizer que tipo de conversa entra aqui.",
-      "VENDA": "Cada venda fechada conta no painel.",
       "META": "Meta de {valor} por mês.",
       "SEM_META": "Ainda sem meta por mês.",
-      "NAO_VENDA": "Este funil não conta como venda.",
       "RETORNO": "Se o cliente some, chamamos de volta {vezes}.",
       "RETORNO_EQUIPE": "Se o cliente some, a equipe é avisada {vezes}.",
       "ATE_VEZES": "até {n} vez | até {n} vezes",
@@ -4183,7 +4337,14 @@
       "O_GOOGLE": "o Google",
       "ANUNCIOS_DESLIGADO": "Os anúncios ainda não sabem das suas vendas.",
       "O_FACEBOOK": "o Facebook",
-      "O_INSTAGRAM": "o Instagram"
+      "O_INSTAGRAM": "o Instagram",
+      "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada venda fechada conta no painel.",
+      "TIPO_ATENDER": "{tipo}: resolver algo para quem já é cliente. Termina em {sucesso} ou {fracasso}.",
+      "ATENDER_LEMBRETES": "Avisamos o andamento com {andamento} na mesma etapa e perguntamos se resolveu {resolveu} depois de {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "Avisamos o andamento com {andamento} na mesma etapa.",
+      "ATENDER_SO_RESOLVEU": "Perguntamos se resolveu {resolveu} depois de {sucesso}.",
+      "COBRAR_LEMBRETES": "Lembramos do pagamento antes, no dia e depois do vencimento.",
+      "ATENDER_SEM_LEMBRETES": "Nenhum lembrete ligado."
     },
     "SOBRE": {
       "ROTULO": "Quando usar este funil",
@@ -4202,18 +4363,20 @@
         "TROCAR": "quer trocar ou cancelar",
         "MARCAR": "quer marcar um horário",
         "REMARCAR": "quer mudar o horário",
-        "HORARIOS": "pergunta os horários livres"
+        "HORARIOS": "pergunta os horários livres",
+        "COMO_USAR": "pergunta como usar",
+        "ACABOU_DE_COMPRAR": "acabou de comprar",
+        "ENTREGA": "pergunta da entrega",
+        "PAGAR": "quer pagar",
+        "SEGUNDA_VIA": "pede a segunda via",
+        "ATRASADO": "está com o pagamento atrasado"
       },
       "NOTA": "Anotação da equipe (se quiser)",
       "NOTA_AJUDA": "Só para a sua equipe ler. Não muda nada no funil."
     },
     "VENDAS": {
-      "ROTULO": "Vendas e meta",
       "TITULO": "Saiba quanto este funil vende",
       "TEXTO": "As vendas fechadas aqui entram no painel, junto da meta do mês.",
-      "CONTA": "Conta como venda",
-      "CONTA_SIM": "Quando um cliente fecha, entra no total de vendas.",
-      "CONTA_NAO": "Bom para atendimento e pós-venda: o cliente termina como resolvido ou cancelado.",
       "META": "Meta de vendas por mês",
       "META_AJUDA": "Aparece no painel. Deixe vazio se não tiver meta.",
       "META_EXEMPLO": "50000",
@@ -4290,26 +4453,22 @@
       "DEPOIS_FRASE_MENSAGEM": "No dia combinado, a equipe recebe um lembrete e o cliente, uma mensagem.",
       "DEPOIS_EXEMPLO": "Ex.: “Pode me chamar na sexta?” vira um lembrete na sexta, às 9h.",
       "SEM_RESPOSTA_POR": "Sem resposta por",
-      "DEPOIS_PEDIDO": "“Pode me chamar na sexta?”"
+      "DEPOIS_PEDIDO": "“Pode me chamar na sexta?”",
+      "TEXTO_ATENDER": "O cliente fica sabendo do andamento, e ninguém fica sem resposta."
     },
     "CAIXAS": {
       "ROTULO": "Caixas de entrada",
       "TITULO": "Por onde os clientes chegam",
       "TEXTO": "De onde vêm as conversas deste funil e em que coluna elas começam.",
-      "NENHUMA": "Esta conta ainda não tem caixa de entrada.",
-      "TRAZ": "Traz conversas para este funil",
-      "NAO_TRAZ": "Não traz conversas para cá",
-      "LIGAR": "Ligar",
-      "LIGAR_ESTA": "Ligar esta caixa",
-      "DESLIGAR": "Desligar",
-      "DESLIGAR_NOME": "Desligar {nome} deste funil",
       "CONVERSA_NOVA": "Conversa nova",
       "SOZINHO": "O cliente aparece no quadro sozinho, com a conversa junto.",
-      "EQUIPE": "O cliente só entra no quadro quando a equipe pede.",
-      "COMECA": "Em que coluna o cliente começa",
-      "CRIAR_SOZINHO": "Toda conversa nova vira cartão no quadro",
-      "QUEM_ATENDE": "Quem atende cada caixa fica em Caixas no CRM",
-      "LIGANDO": "Ligando…"
+      "LIGADO_EM": "Ligado em",
+      "ESCOLHIDO": "O card nasce quando a IA ou a equipe escolhe este funil para a conversa.",
+      "MUDAR": "Mudar em {lugar}",
+      "MUDAR_NOME": "Mudar {nome} em {lugar}",
+      "ONDE_MUDA": "Que funis cada caixa alimenta, como o card nasce e quem vê o quê ficam em {lugar}, com um único Salvar.",
+      "ABRIR_CAIXAS": "Abrir {lugar}",
+      "VER": "Ver"
     },
     "ANUNCIOS": {
       "ROTULO": "Anúncios",
@@ -4403,7 +4562,6 @@
       "META_MES": "Meta do mês",
       "META_EXEMPLO": "{valor} vendidos até agora",
       "SEM_META": "Sem meta, o painel mostra só o total vendido.",
-      "NAO_VENDA": "Este funil fica fora do total de vendas.",
       "FIM": "Como o cliente termina",
       "RETORNO_TITULO": "Com a Ana, de exemplo",
       "RETORNO_TEXTO": "As mensagens de verdade são escritas olhando a conversa de cada cliente.",
@@ -4443,7 +4601,64 @@
       "CHEGOU_EM": "Quando chega em {nome}"
     },
     "CARREGANDO": "Carregando…",
-    "NOVO_TITULO": "Monte o caminho do cliente"
+    "NOVO_TITULO": "Monte o caminho do cliente",
+    "TIPO": {
+      "PERGUNTA": "Para que serve este funil?",
+      "AJUDA": "Escolha um. Depois vêm as etapas prontas.",
+      "VENDER": {
+        "NOME": "Vender",
+        "TEXTO": "Conquistar um cliente novo."
+      },
+      "ATENDER": {
+        "NOME": "Atender",
+        "TEXTO": "Resolver algo para quem já é cliente."
+      },
+      "MODELO": "Que tipo de atendimento?",
+      "PREVIA_TITULO": "Seu quadro aparece aqui",
+      "PREVIA_TEXTO": "Escolha para que serve o funil e mostramos as etapas prontas.",
+      "ROTULO": "Para que serve"
+    },
+    "ATENDER": {
+      "TITULO": "Como cada pedido termina",
+      "TEXTO": "Resolvido quando deu certo. Cancelado quando o cliente não precisa mais.",
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "TITULO": "Avisar o andamento",
+          "MSG": "Oi, {nome}! Seu pedido continua com a gente. Assim que tiver novidade, eu te aviso.",
+          "FRASE_TEMPO": "Se o pedido passa {tempo} na mesma etapa, avisamos o cliente que seguimos cuidando.",
+          "TEMPO_ROTULO": "Tempo na mesma etapa",
+          "QUANDO": "{tempo} na mesma etapa"
+        },
+        "RESOLVEU": {
+          "TITULO": "Perguntar se resolveu",
+          "MSG": "Oi, {nome}! Deu tudo certo? Se precisar de algo, é só responder aqui.",
+          "FRASE_TEMPO": "{tempo} depois de {sucesso}, perguntamos se deu tudo certo.",
+          "TEMPO_ROTULO": "Tempo depois de {sucesso}",
+          "QUANDO": "{tempo} depois de {sucesso}"
+        },
+        "COBRAR": {
+          "TITULO": "Lembrar do pagamento",
+          "FRASE": "Lembramos o cliente 3 dias antes, no dia e 3 dias depois do vencimento.",
+          "ANTES": "3 dias antes",
+          "NO_DIA": "No dia",
+          "DEPOIS": "3 dias depois",
+          "MSG_ANTES": "Oi, {nome}! Passando para lembrar que o pagamento de {valor} vence sexta.",
+          "MSG_NO_DIA": "Oi, {nome}! O pagamento de {valor} vence hoje. Se já pagou, pode ignorar.",
+          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento de {valor}. Posso te ajudar com alguma coisa?"
+        },
+        "PREVIA_TITULO": "Com a Ana, de exemplo",
+        "PREVIA_TEXTO": "Saem pelo WhatsApp, no horário de atendimento do funil. A mensagem de verdade é escrita olhando a conversa de cada cliente.",
+        "VALOR_EXEMPLO": "R$ 350",
+        "DESLIGADOS": "Nenhum lembrete ligado. Ninguém recebe mensagem sozinho.",
+        "TEMPOS": {
+          "H4": "4 horas",
+          "H24": "1 dia",
+          "H48": "2 dias",
+          "H72": "3 dias",
+          "H168": "1 semana"
+        }
+      }
+    }
   },
   "CRM_CARD": {
     "FECHAR": "Fechar",
@@ -4495,7 +4710,14 @@
         "NAO_ERA_HORA": "Não era a hora"
       },
       "GANHOU_TITULO_PADRAO": "Negócio ganho! Quanto ficou?",
-      "GANHOU_CONFIRMA_PADRAO": "Marcar como ganho"
+      "GANHOU_CONFIRMA_PADRAO": "Marcar como ganho",
+      "CANCELOU_TEXTO": "Contar o motivo é opcional, mas ajuda a entender o que aconteceu.",
+      "MOTIVO_ATENDER": {
+        "RESOLVEU": "Resolveu de outro jeito",
+        "SUMIU": "Parou de responder",
+        "NAO_PRECISA": "Não precisa mais"
+      },
+      "CANCELAR_EXEMPLO": "Por que foi cancelado?"
     },
     "ARQUIVAR": {
       "BOTAO": "Arquivar",
@@ -4512,7 +4734,8 @@
       "RETORNO": "o retorno que estava marcando",
       "CLIENTE": "as mudanças na pessoa ou na empresa",
       "CRIAR": "o cliente que estava criando",
-      "DONO": "a troca de quem cuida"
+      "DONO": "a troca de quem cuida",
+      "ASSUNTO": "as mudanças no assunto"
     },
     "PASSO": {
       "ROTULO": "Próximo passo",
@@ -4542,7 +4765,8 @@
         "REUNIAO_FUTURA": "Reunião {quando}",
         "RETORNO_FUTURO": "{quando}: {titulo}"
       },
-      "FECHADO": "Este negócio terminou: {status}. Se o cliente voltar, toque em Reabrir."
+      "FECHADO": "Este negócio terminou: {status}. Se o cliente voltar, toque em Reabrir.",
+      "FECHADO_ATENDER": "Este atendimento terminou: {status}. Se o cliente voltar, toque em Reabrir."
     },
     "RESUMO": {
       "ROTULO": "Cliente no funil",
@@ -4593,7 +4817,19 @@
       "EMPRESA_PARTE": "Empresa",
       "JA_COMPROU": "Já comprou de você.",
       "DESFAZER_CLIENTE": "Desfazer",
-      "MARCAR_CLIENTE": "Marcar como cliente"
+      "MARCAR_CLIENTE": "Marcar como cliente",
+      "ASSUNTO_DE": "Assunto: {titulo}",
+      "ASSUNTO": "Assunto",
+      "COBRANCA_FRASE": "{titulo}: {valor} a receber, vence {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} a receber, sem vencimento.",
+      "PROMESSA": "Prometeu pagar {dia}.",
+      "MAIS_ASSUNTO": "Mais do assunto",
+      "MAIS_DETALHES_DICA_ASSUNTO": "De onde veio, o que já aconteceu, mais do assunto e arquivar",
+      "COBRANCA_VENCEU": "{titulo}: {valor} a receber, venceu {vencimento}.",
+      "EM_DIA": "em {dia}",
+      "ASSUNTO_FRASE": "{titulo}. Prioridade {prioridade}, aberto há {tempo}.",
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}.",
+      "SEM_CONTATO_ATENDER": "Ainda não há uma pessoa ligada a este atendimento."
     },
     "ETAPA": {
       "TELA": "Etapa",
@@ -4765,7 +5001,9 @@
         "PRONTA_NOME": "escrever o nome da mensagem pronta",
         "PRONTA_IDIOMA": "escolher o idioma da mensagem pronta",
         "PRONTA_ESCOLHER": "escolher a mensagem pronta",
-        "NOME": "dar um nome ao retorno"
+        "NOME": "dar um nome ao retorno",
+        "QUEM": "escolher quem recebe o aviso",
+        "ULTIMO_DIA": "escolher o último dia"
       },
       "TITULO_LEMBRETE": "Novo lembrete",
       "TITULO_ESCONDER": "Esconder a conversa até um dia",
@@ -4867,7 +5105,8 @@
         "TUDO": "Tudo",
         "NEGOCIO": "Etapas e negócio",
         "RETORNOS": "Retornos",
-        "REUNIOES": "Reuniões"
+        "REUNIOES": "Reuniões",
+        "ASSUNTO": "Etapas e assunto"
       },
       "VAZIO": "Nada aconteceu ainda.",
       "VAZIO_FILTRO": "Nada deste tipo por aqui.",
@@ -4923,6 +5162,12 @@
         "ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT": "o cliente não quer receber mensagens automáticas",
         "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Passou para {time}",
         "BOOKED_BY_AI_DETAIL": "Marcada pelo assistente: {title}"
+      },
+      "EVENTO_ATENDER": {
+        "ACTIVITY_UPDATE": "Os dados do atendimento mudaram",
+        "ACTIVITY_LINK_CONTACT": "Uma pessoa foi ligada a este atendimento",
+        "ACTIVITY_UNLINK_CONTACT": "A pessoa foi tirada deste atendimento",
+        "ACTIVITY_REOPEN": "Atendimento reaberto"
       }
     },
     "CRIAR": {
@@ -5006,7 +5251,11 @@
           "SEARCH": "Procurar",
           "NO_COMPANIES": "Nenhuma empresa encontrada. Você pode cadastrar uma nova."
         }
-      }
+      },
+      "TITULO_2_ATENDER": "Sobre o atendimento",
+      "TEXTO_2_ATENDER": "Dê um nome ao assunto e diga em que etapa ele entra. O resto pode ficar para depois.",
+      "TITULO_2_COBRANCA": "Sobre a cobrança",
+      "TEXTO_2_COBRANCA": "Diga o que está sendo cobrado, o valor e o vencimento. O resto pode ficar para depois."
     },
     "QUANDO": {
       "OUTRO_DIA": "Escolher outro dia",
@@ -5152,6 +5401,515 @@
       "TITULO": "Mover para {etapa}?",
       "TEXTO": "{nome} muda de coluna no quadro agora.",
       "CONFIRMA": "Mover"
+    },
+    "ASSUNTO": {
+      "TELA": "Assunto",
+      "TITULO": "Sobre o pedido",
+      "TEXTO": "O que {nome} precisa e quanta pressa tem.",
+      "NOME": "Assunto",
+      "TITULO_EXEMPLO": "Ex.: Troca de tamanho",
+      "TITULO_FALTA": "Escreva o assunto.",
+      "URGENCIA": "Prioridade"
+    },
+    "COBRANCA": {
+      "TITULO": "Sobre a cobrança",
+      "TEXTO": "Quanto {nome} deve, quando vence e se prometeu pagar.",
+      "NOME": "O que está sendo cobrado",
+      "TITULO_EXEMPLO": "Ex.: Mensalidade de outubro",
+      "VALOR": "Valor a receber",
+      "FECHAR_ATE": "Vencimento",
+      "PROMESSA": "Prometeu pagar em",
+      "PROMESSA_DICA": "Se o cliente disse o dia, marque aqui. Os lembretes esperam até esse dia."
+    },
+    "TEMPO": {
+      "MINUTOS": "{n} minuto | {n} minutos",
+      "HORAS": "{n} hora | {n} horas",
+      "DIAS": "{n} dia | {n} dias"
+    },
+    "SERIE": {
+      "TELA": "Repetição"
     }
+  },
+  "CRM_LEMBRETE": {
+    "SALVO": "Pronto, lembrete marcado.",
+    "FUSO_DA_CONTA": "Horário de {fuso}, o fuso da sua conta.",
+    "REPETIR": {
+      "PERGUNTA": "Repetir?",
+      "OPCAO": {
+        "NUNCA": "Uma vez só",
+        "DIA": "Todo dia",
+        "SEMANA": "Toda semana",
+        "MES": "Todo mês",
+        "ANO": "Todo ano"
+      },
+      "SO_DIAS_UTEIS": "Só de segunda a sexta",
+      "QUAIS_DIAS": "Em quais dias?",
+      "MES_CURTO": "Nos meses que não têm dia {dia}, o aviso vem no último dia do mês.",
+      "ATE_QUANDO": "Até quando?",
+      "FIM": {
+        "NUNCA": "Sem data para acabar",
+        "DATA": "Até um dia",
+        "VEZES": "Um número de vezes"
+      },
+      "QUANTAS": "Quantas vezes?",
+      "N_VEZES": "{n} vezes",
+      "ULTIMO_DIA": "Último dia",
+      "PROXIMAS": "Próximas datas",
+      "TOTAL": "{n} vezes ao todo. A última é {ultima}.",
+      "SEM_FIM": "E assim por diante, até você pausar ou encerrar.",
+      "ESCOLHA_DIA": "Escolha o dia acima para ver as próximas datas.",
+      "FUSO": "Sempre no horário de {fuso}.",
+      "FRASE": {
+        "DIA": "Todo dia, às {hora}",
+        "DIA_UTIL": "De segunda a sexta, às {hora}",
+        "SEMANA": "Toda {dias}, às {hora}",
+        "MES": "Todo dia {dia} do mês, às {hora}",
+        "MES_FIM": "Todo dia {dia} do mês (ou o último dia), às {hora}",
+        "ANO": "Todo ano em {dia}, às {hora}",
+        "UMA_VEZ": "Uma vez só",
+        "SEMANA_FIM": "Todo {dias}, às {hora}"
+      }
+    },
+    "QUEM": {
+      "PERGUNTA": "Quem recebe o aviso?",
+      "DONO": "Quem cuida do cliente",
+      "DONO_TEXTO": "Hoje é {nome}. Se mudar quem cuida, o aviso vai junto.",
+      "EU": "Só eu",
+      "EU_TEXTO": "{nome}, você.",
+      "PESSOAS": "Escolher pessoas",
+      "PESSOAS_TEXTO": "Uma ou mais pessoas da equipe.",
+      "TIME": "Um time inteiro",
+      "TIME_TEXTO": "Todo mundo do time recebe.",
+      "TIME_NOME": "{nome} ({n} pessoas)",
+      "ESCOLHA_PESSOAS": "Marque quem recebe:",
+      "SEM_FUNIL": "Não vê o funil {funil}",
+      "QUAL_TIME": "Qual time?",
+      "ESCOLHA_TIME": "Escolha o time",
+      "RECEBEM": "Recebem: {nomes}.",
+      "CRIADOR_VE": "Você também vê este lembrete na sua agenda, porque foi você que marcou."
+    },
+    "PREVIA": {
+      "PROXIMAS": "Próximas: {datas}",
+      "AVISA": "Avisa: {nomes}",
+      "AVISA_DONO": "Avisa: {nomes}, quem cuida do cliente",
+      "AVISA_FALTA": "Escolha quem recebe o aviso.",
+      "ONDE_NADA": "Fica só no calendário.",
+      "ONDE_CONTATO": "Fica no calendário e na ficha de {nome}.",
+      "ONDE_CARD": "Fica no calendário e no card de {nome}.",
+      "ONDE_CONTATO_SEM": "Fica no calendário e na ficha do cliente.",
+      "ONDE_CARD_SEM": "Fica no calendário e no card do cliente.",
+      "ONDE_NADA_SEM": "Fica só no calendário.",
+      "ONDE_EMPRESA": "Fica no calendário e na ficha de {nome}.",
+      "ONDE_EMPRESA_SEM": "Fica no calendário e na ficha da empresa."
+    },
+    "LISTA": {
+      "TITULO": "Repetem",
+      "PROXIMA": "Próxima: {dia}, às {hora}",
+      "PAUSADA": "Pausado",
+      "AVISA": "Avisa: {nomes}",
+      "VER": "Ver"
+    },
+    "SERIE": {
+      "TELA": "Repetição",
+      "TEXTO": "Veja as próximas datas e quem recebe. Dá para pausar ou encerrar.",
+      "MUDAR": "Mudar",
+      "LIGADO_CARD": "Negócio: {nome}",
+      "LIGADO_CONTATO": "Cliente: {nome}",
+      "LIGADO_NADA": "Só no calendário",
+      "FUSO": "horário de {fuso}",
+      "QUEM_DONO": "{nomes}, quem cuida do cliente. Se mudar quem cuida, o aviso vai junto.",
+      "QUEM_TIME": "Time {time}: {nomes}.",
+      "SITUACAO": {
+        "ATIVA": "Repetindo",
+        "PAUSADA": "Pausado",
+        "ENCERRADA": "Encerrado"
+      },
+      "PAUSADA_DESDE": "Pausado desde {dia}. Ninguém recebe aviso até você retomar.",
+      "FEITO_ESTE": "Feito desta vez",
+      "PAUSAR": "Pausar",
+      "RETOMAR": "Retomar",
+      "ENCERRAR": "Encerrar",
+      "ENCERRAR_TITULO": "Encerrar este lembrete?",
+      "ENCERRAR_TEXTO": "Ele para de repetir e ninguém recebe mais aviso. O que já foi feito continua no histórico.",
+      "ENCERRAR_CONFIRMA": "Encerrar",
+      "CONTINUAR": "Voltar",
+      "MUDAR_TITULO": "O que você quer mudar?",
+      "MUDAR_TEXTO": "Escolha uma das duas.",
+      "SO_ESTA": "Só a próxima ({dia})",
+      "SO_ESTA_TEXTO": "As outras datas continuam como estão.",
+      "ESTA_E_PROXIMAS": "Esta e todas as próximas",
+      "ESTA_E_PROXIMAS_TEXTO": "O que já passou não muda.",
+      "PROXIMAS": "Próximas datas",
+      "DIA_HORA": "{dia}, às {hora}",
+      "A_PROXIMA": "A próxima",
+      "NAO_AVISA": "Pausado",
+      "QUEM_RECEBE": "Quem recebe o aviso",
+      "FEITO_OK": "Pronto, {dia} ficou como feito. A próxima continua marcada.",
+      "PAUSADA_OK": "Pronto, pausado.",
+      "RETOMADA_OK": "Pronto, voltou a repetir.",
+      "ENCERRADA_OK": "Pronto, encerrado.",
+      "LADO_TITULO": "O que cada botão faz",
+      "LADO_TEXTO": "Nada some sem você confirmar.",
+      "AJUDA": {
+        "FEITO": "Feito desta vez: marca só a data de agora. As próximas continuam.",
+        "PAUSAR": "Pausar: ninguém recebe aviso até você retomar. As datas não somem.",
+        "ENCERRAR": "Encerrar: para de repetir. O histórico fica guardado.",
+        "MUDAR": "Mudar: você escolhe se muda só a próxima ou todas daqui para a frente."
+      },
+      "ERRO": "Não deu certo. Tente de novo.",
+      "ERRO_CARREGAR": "Não deu para abrir este lembrete agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "PASSADAS": "Datas que já passaram ({n})",
+      "HISTORICO": {
+        "FEITA": "Feito",
+        "AVISADA": "Avisado",
+        "NAO_AVISADA": "Não avisado"
+      },
+      "LIGADO_EMPRESA": "Empresa: {nome}"
+    },
+    "LIGAR": {
+      "PERGUNTA": "É sobre quem?",
+      "NADA": "Ninguém",
+      "NADA_TEXTO": "Fica só no calendário. Ex.: pagar o aluguel.",
+      "CONTATO": "Um cliente",
+      "CONTATO_TEXTO": "Mesmo sem negócio aberto. Ex.: aniversário.",
+      "CARD": "Um negócio do funil",
+      "CARD_TEXTO": "Aparece também no card do cliente.",
+      "QUAL_CARD": "Qual negócio?",
+      "QUAL_CONTATO": "Qual cliente?",
+      "BUSCAR": "Escolha",
+      "BUSCAR_DICA": "Digite o nome",
+      "FALTA": "Falta escolher o cliente."
+    },
+    "GAVETA": {
+      "ROTULO": "Calendário",
+      "TITULO": "Novo lembrete",
+      "TEXTO": "Um aviso para você ou para a equipe, no dia e na hora certos."
+    },
+    "MUDADO": "Pronto, lembrete mudado.",
+    "MUDAR": {
+      "TITULO_ESTA": "Mudar só a próxima vez",
+      "TITULO_PROXIMAS": "Mudar esta e as próximas",
+      "TEXTO_ESTA": "As outras datas continuam como estão.",
+      "TEXTO_PROXIMAS": "O que já passou não muda."
+    },
+    "MODO_OUTROS": {
+      "TITULO": "Avisar na hora",
+      "TEXTO": "Aviso na hora marcada para {nomes}."
+    },
+    "UNICO": {
+      "TEXTO": "Um lembrete de uma vez só.",
+      "QUANDO": "{dia}, às {hora} (horário de {fuso})",
+      "FEITO_OK": "Pronto, marcado como feito.",
+      "CANCELADO_OK": "Pronto, cancelado.",
+      "EMPRESA": "Empresa: {nome}"
+    },
+    "FICHA": {
+      "NOVO": "Novo lembrete"
+    },
+    "CALENDARIO": {
+      "REPETE": "Lembrete que repete:",
+      "PAUSADO": "Lembrete pausado:"
+    },
+    "FALTA": {
+      "NOME": "dar um nome ao lembrete"
+    }
+  },
+  "CRM_CALENDARIO": {
+    "HEROI": {
+      "ROTULO": "Hoje é {data}",
+      "OI_MANHA": "Bom dia, {nome}",
+      "OI_TARDE": "Boa tarde, {nome}",
+      "OI_NOITE": "Boa noite, {nome}",
+      "OI_MANHA_SEM_NOME": "Bom dia",
+      "OI_TARDE_SEM_NOME": "Boa tarde",
+      "OI_NOITE_SEM_NOME": "Boa noite",
+      "HOJE": "Para hoje: {n} coisa. | Para hoje: {n} coisas.",
+      "HOJE_NADA": "Nada marcado para hoje.",
+      "ATRASADOS": "{n} ficou para trás. | {n} ficaram para trás.",
+      "EM_DIA": "Nada ficou para trás.",
+      "NOVO": "Novo"
+    },
+    "VISAO": {
+      "ROTULO": "Como ver o calendário",
+      "DIA": "Meu dia",
+      "SEMANA": "Semana",
+      "MES": "Mês"
+    },
+    "NAV": {
+      "ANTERIOR": "Antes",
+      "SEGUINTE": "Depois",
+      "VOLTAR_HOJE": "Voltar para hoje",
+      "HOJE_CURTO": "Hoje",
+      "SEMANA_DE": "{de} a {ate}",
+      "MES_ANTERIOR": "Mês anterior",
+      "MES_SEGUINTE": "Próximo mês",
+      "SEMANA_ANTERIOR": "Semana anterior",
+      "SEMANA_SEGUINTE": "Próxima semana"
+    },
+    "MOSTRAR": {
+      "BOTAO": "Mostrar",
+      "TITULO": "O que mostrar",
+      "DE_QUEM": "De quem",
+      "QUEM_TODOS": "De toda a equipe",
+      "QUEM_MEUS": "Só os meus",
+      "FUNIL": "De qual funil",
+      "TODOS_FUNIS": "Todos os funis",
+      "O_QUE": "O que aparece",
+      "FEITOS_TITULO": "Já feitos",
+      "FEITOS": "Mostrar o que já foi feito",
+      "PRONTO": "Pronto",
+      "CONFIG": "Configurações",
+      "CONFIG_AGENDAMENTO": "Agendamento",
+      "CONFIG_CAIXAS": "Canais de cada funil"
+    },
+    "TIPO": {
+      "LEMBRETE": "Lembrete",
+      "REUNIAO": "Reunião",
+      "MENSAGEM": "Mensagem marcada",
+      "FECHAR": "Data para fechar",
+      "AGENDA": "Da sua agenda"
+    },
+    "TIPO_LONGO": {
+      "LEMBRETE": "O que eu combinei",
+      "REUNIAO": "Reuniões",
+      "MENSAGEM": "Mensagens marcadas",
+      "FECHAR": "Datas para fechar",
+      "AGENDA": "Da sua agenda"
+    },
+    "EXEMPLO": {
+      "LEMBRETE": "Ex.: ligar para um cliente na sexta",
+      "REUNIAO": "Com link ou presencial, marcadas pelo CRM",
+      "MENSAGEM": "Saem sozinhas no WhatsApp, no dia e na hora",
+      "FECHAR": "O dia em que o negócio deve fechar",
+      "AGENDA": "Compromissos do seu Google ou Outlook"
+    },
+    "ITEM": {
+      "DIA_TODO": "Dia todo",
+      "ONTEM": "Ontem",
+      "HA_DIAS": "Há {n} dia | Há {n} dias",
+      "PARA": "Para {nome}",
+      "REPETE": "Repete",
+      "PAUSADO": "Pausado",
+      "CONCLUIR": "Marcar como feito: {titulo}",
+      "CONCLUIR_CURTO": "Marcar como feito",
+      "ACAO": {
+        "ENTRAR": "Entrar na reunião",
+        "VER_REUNIAO": "Ver reunião",
+        "VER_NEGOCIO": "Ver negócio",
+        "VER_MENSAGEM": "Ver mensagem",
+        "ABRIR_CONVERSA": "Abrir conversa",
+        "LIGAR": "Ligar",
+        "VER": "Ver"
+      }
+    },
+    "DIA": {
+      "HOJE": "Hoje",
+      "AMANHA": "Amanhã",
+      "PARA_HOJE": "Para hoje",
+      "ATRASADOS": "Ficou para trás",
+      "ADIAR_TODOS": "Passar tudo para amanhã",
+      "AGORA": "Agora, {hora}",
+      "PROXIMOS": "Próximos dias",
+      "PROXIMO": "Próximo: {dia} — {titulo}.",
+      "NADA_A_FRENTE": "Nada marcado para os próximos dias.",
+      "VAZIO_HOJE": "Tudo em dia por hoje",
+      "VAZIO_DIA": "Nada marcado para {dia}",
+      "VAZIO_DIA_TEXTO": "Esse dia está livre.",
+      "NOVO": "Marcar algo",
+      "NOVO_NO_DIA": "Marcar algo nesse dia",
+      "FEITO_TITULO": "Feito: {titulo}",
+      "FEITO_PERGUNTA": "Quer marcar o próximo passo?",
+      "ATALHO": {
+        "AMANHA": "Amanhã",
+        "TRES_DIAS": "Em 3 dias",
+        "SEMANA": "Semana que vem"
+      },
+      "NAO_PRECISA": "Não precisa",
+      "ANTIGOS": "E mais {n} antigo | E mais {n} antigos",
+      "VER_ANTIGOS": "Ver",
+      "ESCONDER_ANTIGOS": "Esconder"
+    },
+    "SEMANA": {
+      "VER_DIA": "Ver {dia}",
+      "MARCAR_EM": "Marcar algo em {dia}",
+      "LIVRE": "Livre"
+    },
+    "MES": {
+      "MAIS": "+{n} mais"
+    },
+    "NOVO": {
+      "TITULO": "O que você quer marcar?",
+      "LEMBRETE": "Lembrete",
+      "LEMBRETE_TEXTO": "Um aviso para você ou para a equipe, no dia e na hora.",
+      "REUNIAO": "Reunião com cliente",
+      "REUNIAO_TEXTO": "Marque uma conversa com o cliente, com dia e hora.",
+      "MENSAGEM": "Mensagem marcada",
+      "MENSAGEM_TEXTO": "Uma mensagem que sai sozinha no WhatsApp, no dia e na hora.",
+      "CANCELAR": "Cancelar",
+      "COM_QUEM": "Com quem é a reunião?",
+      "COM_QUEM_TEXTO": "Procure pelo nome do cliente ou do negócio.",
+      "BUSCA_ROTULO": "Nome do cliente ou do negócio",
+      "BUSCA_EXEMPLO": "Ex.: Mariana",
+      "BUSCA_DICA": "Digite pelo menos 2 letras.",
+      "BUSCANDO": "Procurando…",
+      "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
+      "BUSCA_VAZIA": "Ninguém com esse nome. Confira se está escrito certo.",
+      "VOLTAR": "Voltar",
+      "TITULO_TEXTO": "Escolha uma opção.",
+      "SEM_NEGOCIO": "Ainda sem negócio",
+      "SEM_NEGOCIO_TEXTO": "{nome} ainda não tem um negócio. A reunião é marcada no negócio do cliente. Por enquanto, marque um lembrete.",
+      "SEM_NEGOCIO_CURTO": "Sem negócio",
+      "MARCAR_LEMBRETE": "Marcar um lembrete",
+      "FALTA_PAGINA": "Para marcar reuniões, crie sua página de agendamento.",
+      "CRIAR_PAGINA": "Criar página",
+      "FALTA_PAGINA_SEM_PERMISSAO": "Para marcar reuniões, quem administra a conta precisa criar a página de agendamento."
+    },
+    "LEGENDA": {
+      "TITULO": "O que aparece aqui"
+    },
+    "FUSO": "Horários no fuso da conta: {fuso}",
+    "ERRO": "Não deu para carregar o calendário.",
+    "TENTAR": "Tentar de novo",
+    "ALERTA": {
+      "ADIADOS": "{n} lembrete passou para amanhã. | {n} lembretes passaram para amanhã.",
+      "PROXIMO_MARCADO": "Próximo passo marcado.",
+      "ADIADOS_PARCIAL": "{ok} de {total} passaram para amanhã. Os outros ficaram como estavam.",
+      "NAO_CONCLUIU": "Não deu para marcar como feito. Tente de novo."
+    },
+    "REUNIAO": {
+      "ROTULO": "Reunião com cliente",
+      "TITULO": "Reunião com {nome}",
+      "TITULO_SEM_NOME": "Reunião com cliente",
+      "TEXTO_PAGINA": "Escolha o dia e um horário livre da sua agenda.",
+      "TEXTO_EXTERNA": "O convite sai pela sua agenda do Google ou da Microsoft.",
+      "CANCELAR": "Cancelar",
+      "MARCAR": "Marcar reunião"
+    }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "ROTULO": "Mensagem marcada",
+    "MIGALHA": "Calendário",
+    "PASSO_DE": "Passo {numero} de {total}",
+    "TITULO_LEMBRETE": "Mensagem para {nome}",
+    "CANCELAR": "Cancelar",
+    "VOLTAR": "Voltar",
+    "CONTINUAR": "Continuar",
+    "MARCAR": "Marcar mensagem",
+    "FALTA": {
+      "PARA_QUEM": "Escolha quem recebe.",
+      "QUANDO": "Escolha o dia e a hora.",
+      "PASSADO": "Esse horário já passou.",
+      "CONFERINDO": "Conferindo o WhatsApp…",
+      "PRONTA": "Escolha uma mensagem pronta.",
+      "CAMPOS": "Complete a mensagem pronta.",
+      "TEXTO": "Escreva a mensagem.",
+      "JANELA": "Confira o WhatsApp de novo."
+    },
+    "PARA_QUEM": {
+      "TITULO": "Para quem é a mensagem?",
+      "ROTULO": "Procure o cliente ou o negócio",
+      "EXEMPLO": "Digite um nome",
+      "RECENTES": "Mexidos por último",
+      "ACHADOS": "Encontrados",
+      "BUSCANDO": "Procurando…",
+      "FALHOU": "Não deu para procurar agora. Tente de novo.",
+      "VAZIO": "Ninguém com esse nome.",
+      "SEM_WHATSAPP": "Ainda não conversou pelo WhatsApp",
+      "RESUMO": "Para quem",
+      "NEGOCIO": "· {negocio}",
+      "PELO_NEGOCIO": "Outro WhatsApp: marque pelo negócio"
+    },
+    "QUANDO": {
+      "TITULO": "Quando a mensagem sai?",
+      "DIA": "Que dia?",
+      "HORA": "Que horas?",
+      "HOJE": "Hoje",
+      "AMANHA": "Amanhã",
+      "OUTRO_DIA": "Outro dia",
+      "ESCOLHA_DIA": "Escolha o dia",
+      "OUTRA_HORA": "Outro horário",
+      "ESCOLHA_HORA": "Escolha o horário",
+      "NOME_HORA": {
+        "MANHA": "De manhã",
+        "ALMOCO": "No almoço",
+        "TARDE": "À tarde",
+        "FIM": "No fim do dia"
+      },
+      "PASSADO": "Esse horário já passou. Escolha outro.",
+      "FUSO": "Horário de {fuso}, o da conta.",
+      "RESUMO": "Quando",
+      "FRASE": "{dia}, às {hora}",
+      "HOJE_FRASE": "hoje",
+      "AMANHA_FRASE": "amanhã"
+    },
+    "MENSAGEM": {
+      "TITULO": "O que dizer para {nome}?",
+      "CONFERINDO": "Conferindo o que o WhatsApp deixa mandar nesse horário…",
+      "ERRO_JANELA": "Não deu para conferir o WhatsApp agora.",
+      "TENTAR": "Tentar de novo",
+      "LIVRE": "Nesse horário, {nome} pode receber o texto que você escrever.",
+      "SO_PRONTA": "Nesse horário, já terá passado mais de 1 dia desde a última mensagem de {nome}. Aí o WhatsApp só deixa mandar uma mensagem pronta aprovada.",
+      "PELO_CELULAR": "Já terá passado mais de 1 dia desde a última mensagem de {nome}, mas o WhatsApp do celular está conectado: a mensagem sai por ele, do jeito que você escrever.",
+      "ESCOLHA_PRONTA": "Escolha a mensagem pronta",
+      "RESUMO": "O que dizer",
+      "RESUMO_PRONTA": "Mensagem pronta",
+      "RESUMO_TEXTO": "“{inicio}”"
+    },
+    "CONFIRMAR": {
+      "TITULO": "Confira e marque",
+      "O_QUE_ACONTECE": "O que vai acontecer",
+      "SAI_POR": "Sai pela caixa “{caixa}”, na conversa que já existe.",
+      "SAI_PELO_CELULAR": "Sai pelo WhatsApp do celular ligado à caixa “{caixa}”.",
+      "SE_FALHAR": "Se não der para enviar, {nome} vê um aviso na tela e o motivo fica no negócio.",
+      "SE_FALHAR_SEM_DONO": "Se não der para enviar, quem cuida da conversa vê um aviso na tela e o motivo fica no negócio.",
+      "ONDE_APARECE": "Aparece no calendário e no negócio até sair.",
+      "ANOTAR": "Anotar algo para a equipe",
+      "ANOTACAO": "Anotação para a equipe",
+      "ANOTACAO_EXEMPLO": "O cliente não vê esta anotação",
+      "ERRO": {
+        "PASSADO": "Esse horário já passou. Volte e escolha outro.",
+        "PRONTA": "Nesse horário só dá para mandar mensagem pronta. Volte e escolha uma.",
+        "GERAL": "Não deu para marcar agora. Tente de novo."
+      }
+    },
+    "PRONTO": {
+      "TITULO": "Mensagem marcada para {nome}",
+      "TEXTO": "Sai {quando}.",
+      "FRASE": "Pronto. A mensagem sai {quando}.",
+      "ONDE": "Ela já está no calendário e no negócio. Dá para mudar ou cancelar até a hora de sair.",
+      "ABRIR_NEGOCIO": "Abrir o negócio",
+      "FECHAR": "Fechar"
+    },
+    "PREVIA": {
+      "TITULO": "Como {nome} vai ver",
+      "TITULO_SEM_NOME": "Como o cliente vai ver",
+      "TEXTO": "É exatamente isto que chega no WhatsApp.",
+      "FANTASMA": "A mensagem aparece aqui",
+      "SEM_HORA": "--:--",
+      "SEM_DIA": "Dia ainda não escolhido"
+    },
+    "FALHA": {
+      "TITULO": "Não saiu: {motivo}",
+      "sem_conversa": "o cliente não tem mais conversa no WhatsApp.",
+      "canal": "a conversa não é de WhatsApp.",
+      "sem_remetente": "ninguém da equipe ficou como responsável.",
+      "celular_desconectado": "o WhatsApp do celular estava desconectado.",
+      "sem_modelo": "já tinha passado 1 dia e faltou a mensagem pronta.",
+      "modelo_invalido": "a mensagem pronta não é desta caixa.",
+      "recusou": "o cliente pediu para não receber mensagens.",
+      "outro": "o WhatsApp recusou o envio."
+    }
+  },
+  "CONVERSATION_FUNNEL_FILTER": {
+    "LABEL": "Funil",
+    "ARIA_LABEL": "Mostrar conversas de qual funil",
+    "ALL": "Sem filtro de funil",
+    "NONE": "Sem assunto",
+    "NONE_HINT": "Conversas que ainda não têm assunto: a triagem.",
+    "EMPTY": "Nenhuma conversa neste funil."
+  },
+  "FORK_CONVERSATION_LIST": {
+    "PARTICIPATING": "Em que participo"
   }
 }

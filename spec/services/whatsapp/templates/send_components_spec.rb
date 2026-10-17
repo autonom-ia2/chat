@@ -134,6 +134,84 @@ RSpec.describe Whatsapp::Templates::SendComponents do
     end
   end
 
+  # #1473: o botão de resposta rápida no topo leva um payload estável; a Meta devolve o payload, não o texto do botão.
+  # Fonte oficial, lida em 14/10/2026: .../templates/marketing-templates/media-card-carousel-templates (botão
+  # sub_type quick_reply, parameters [{ type: 'payload', payload }], devolvido em messages.button.payload no webhook).
+  describe 'quick reply button with payload' do
+    let(:template) do
+      approved('aviso', { 'type' => 'BODY', 'text' => 'Oi {{1}}' },
+               { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://a.com/{{1}}' },
+                                                    { 'type' => 'QUICK_REPLY', 'text' => 'Não quero mais avisos' }] })
+    end
+    let(:processed) do
+      { 'body' => { '1' => 'Ana' },
+        'buttons' => [{ 'type' => 'url', 'parameter' => 'abc123' }, { 'type' => 'quick_reply', 'payload' => 'stop_notices' }] }
+    end
+
+    it 'sends the URL parameter once and the payload on the quick reply button' do
+      expect(components).to eq(
+        [{ type: 'body', parameters: [{ type: 'text', text: 'Ana' }] },
+         { type: 'button', sub_type: 'url', index: 0, parameters: [{ type: 'text', text: 'abc123' }] },
+         { type: 'button', sub_type: 'quick_reply', index: 1, parameters: [{ type: 'payload', payload: 'stop_notices' }] }]
+      )
+    end
+
+    it 'sends a lone quick reply, with nil in the positions that carry nothing' do
+      processed['buttons'] = [nil, { 'type' => 'quick_reply', 'payload' => 'stop_notices' }]
+
+      expect(components).to eq(
+        [{ type: 'body', parameters: [{ type: 'text', text: 'Ana' }] },
+         { type: 'button', sub_type: 'quick_reply', index: 1, parameters: [{ type: 'payload', payload: 'stop_notices' }] }]
+      )
+    end
+
+    it 'sends a lone quick reply with only buttons in processed_params' do
+      processed.replace('buttons' => [{ 'type' => 'static' }, { 'type' => 'quick_reply', 'payload' => 'stop_notices' }])
+
+      expect(components).to eq(
+        [{ type: 'button', sub_type: 'quick_reply', index: 1, parameters: [{ type: 'payload', payload: 'stop_notices' }] }]
+      )
+    end
+
+    it 'sends no quick reply component when the payload is empty' do
+      processed['buttons'][1] = { 'type' => 'quick_reply', 'payload' => ' ' }
+
+      expect(components.pluck(:sub_type).compact).to eq(%w[url])
+    end
+
+    it 'sends no quick reply component where the template has no QUICK_REPLY button' do
+      processed['buttons'] = [{ 'type' => 'quick_reply', 'payload' => 'stop_notices' }]
+
+      expect(components).to eq([{ type: 'body', parameters: [{ type: 'text', text: 'Ana' }] }])
+    end
+
+    it 'leaves a quick reply with parameter to the Chatwoot send, without a second component' do
+      processed['buttons'][1] = { 'type' => 'quick_reply', 'parameter' => 'p', 'payload' => 'stop_notices' }
+
+      expect(components.select { |component| component[:sub_type] == 'quick_reply' }).to eq(
+        [{ type: 'button', sub_type: 'quick_reply', index: 1, parameters: [{ type: 'text', text: 'p' }] }]
+      )
+    end
+  end
+
+  describe 'a campaign send without the new keys (static placeholder on the QUICK_REPLY button)' do
+    let(:template) do
+      approved('campanha', { 'type' => 'BODY', 'text' => 'Oi {{1}}' },
+               { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://a.com/{{1}}' },
+                                                    { 'type' => 'QUICK_REPLY', 'text' => 'Sair' }] })
+    end
+    let(:processed) do
+      { 'body' => { '1' => 'Ana' }, 'buttons' => [{ 'type' => 'url', 'parameter' => 'x1' }, { 'type' => 'static' }] }
+    end
+
+    it 'builds exactly the payload it built before #1473' do
+      expect(components).to eq(
+        [{ type: 'body', parameters: [{ type: 'text', text: 'Ana' }] },
+         { type: 'button', sub_type: 'url', index: 0, parameters: [{ type: 'text', text: 'x1' }] }]
+      )
+    end
+  end
+
   describe 'Flow and catalog buttons' do
     let(:template) do
       approved('form', { 'type' => 'BODY', 'text' => 'Responda' },
@@ -162,6 +240,58 @@ RSpec.describe Whatsapp::Templates::SendComponents do
 
         expect(components.last).to eq(type: 'button', sub_type: 'catalog', index: 0,
                                       parameters: [{ type: 'action', action: { thumbnail_product_retailer_id: 'sku-9' } }])
+      end
+    end
+  end
+
+  # #1418: produtos do catálogo. Fonte oficial, lida em 14/10/2026: developers.facebook.com/documentation/
+  # business-messaging/whatsapp/catalogs/{spm,mpm,product-card-carousel}-template-messages.
+  describe 'catalog products' do
+    let(:body) { { 'type' => 'BODY', 'text' => 'Oi {{1}}' } }
+    let(:product) { ->(id) { { type: 'product', product: { product_retailer_id: id, catalog_id: 'cat-1' } } } }
+
+    context 'with one product (SPM)' do
+      let(:template) do
+        approved('destaque', { 'type' => 'HEADER', 'format' => 'PRODUCT' }, body,
+                 { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM', 'text' => 'Ver' }] })
+      end
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => ['sku-1'], 'catalog_id' => 'cat-1' } } }
+
+      it 'puts the product header before the body, with the catalog of the inbox' do
+        expect(components).to eq([{ type: 'header', parameters: [product.call('sku-1')] },
+                                  { type: 'body', parameters: [{ type: 'text', text: 'Ana' }] }])
+      end
+    end
+
+    context 'with several products (MPM)' do
+      let(:template) do
+        approved('vitrine', { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Novidades' }, body,
+                 { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'MPM', 'text' => 'Ver itens' }] })
+      end
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => %w[a b] } } }
+
+      it 'ends with the MPM button: first product as the photo and one section' do
+        expect(components.pluck(:type)).to eq(%w[body button])
+        expect(components.last).to eq(
+          type: 'button', sub_type: 'mpm', index: 0,
+          parameters: [{ type: 'action', action: {
+            thumbnail_product_retailer_id: 'a',
+            sections: [{ title: 'Escolhidos para você', product_items: [{ product_retailer_id: 'a' }, { product_retailer_id: 'b' }] }]
+          } }]
+        )
+      end
+    end
+
+    context 'with a carousel of products' do
+      let(:card) { { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM' }] }] } }
+      let(:template) { approved('cartoes', body, { 'type' => 'CAROUSEL', 'cards' => [card, card] }) }
+      let(:processed) { { 'body' => { '1' => 'Ana' }, 'products' => { 'retailer_ids' => %w[a b c], 'catalog_id' => 'cat-1' } } }
+
+      it 'sends one card per chosen product after the body (the template has 2, the send up to 10)' do
+        expect(components.pluck(:type)).to eq(%w[body carousel])
+        expect(components.last[:cards]).to eq(
+          %w[a b c].each_with_index.map { |id, index| { card_index: index, components: [{ type: 'header', parameters: [product.call(id)] }] } }
+        )
       end
     end
   end

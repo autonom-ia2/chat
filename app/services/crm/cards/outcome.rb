@@ -6,6 +6,18 @@ module Crm::Cards::Outcome
   CLOSED_STATUSES = (SALE_STATUSES + NOT_SALE_STATUSES).freeze
   NOT_SALE = { 'won' => 'resolved', 'lost' => 'cancelled' }.freeze
   SALE = NOT_SALE.invert.freeze
+  # Grupo do desfecho, a chave do nome que o funil dá a ele (metadata['outcome_labels']); espelha outcomeGroup do painel.
+  GROUPS = { 'won' => 'success', 'resolved' => 'success', 'lost' => 'failure', 'cancelled' => 'failure' }.freeze
+
+  # Nome que o funil deu ao desfecho do status, ou nil (status aberto, arquivado ou funil sem nome próprio).
+  def self.custom_label(pipeline, status)
+    group = GROUPS[status.to_s]
+    return if group.nil? || pipeline.nil?
+
+    labels = (pipeline.metadata || {})['outcome_labels']
+    label = labels[group] if labels.is_a?(Hash)
+    label.presence if label.is_a?(String)
+  end
 
   def self.equivalent?(previous, current)
     NOT_SALE[previous] == current || SALE[previous] == current
@@ -16,5 +28,13 @@ module Crm::Cards::Outcome
     return status if pipeline.nil?
 
     pipeline.counts_as_sale? ? SALE.fetch(status, status) : NOT_SALE.fetch(status, status)
+  end
+
+  # Ao mudar de funil (#1498): atendimento fechado (Resolvido ou Cancelado) entra Aberto num funil de Vender. Virar
+  # Ganho promoveria o contato a cliente; virar Perdido mandaria conversão aos anúncios. O resto segue status_for.
+  def self.status_after_move(pipeline, status)
+    return 'open' if NOT_SALE_STATUSES.include?(status.to_s) && pipeline&.counts_as_sale?
+
+    status_for(pipeline, status)
   end
 end

@@ -3,12 +3,20 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
 import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
-import { MAX_ARQUIVO_BYTES } from '../constants/criacao';
+import {
+  ATUACAO,
+  MAX_ARQUIVO_BYTES,
+  PAPEL_AJUDANTE_NA_QUERY,
+} from '../constants/criacao';
+import { MAX_FONTES, ehSite, nomeDaFonte } from '../utils/pagina';
 
 // #1181 PR2 — a conversa da etapa Conte com o Construtor, pela store autonomiaBuildThreads (sem
 // editá-la): start/send/retry/completeMaterials, e stopPolling ao sair (a store tem um poll único).
-// - A IA fala primeiro: a conversa abre só com o modelo (`type`), atuação externa e com base
-//   (arquivos sempre opcionais; o rascunho nasce na primeira resposta e dá o agentId).
+// - A IA fala primeiro: a conversa abre só com o modelo (`type`), a atuação (externa; interna para o
+//   Copiloto da equipe, #1494) e com base (arquivos sempre opcionais; o rascunho nasce na primeira
+//   resposta e dá o agentId).
+// - Tema 14 (#1434): `papel` (função, lida ao abrir) devolve 'ajudante' para "Ajuda outros agentes": a
+//   abertura vai com `papel: 'ajudante'` e atuação interna (o agente nasce interno e com a marca de origem).
 // - Continuar um rascunho: com instrução, já está pronto para testar (sem abrir conversa até a
 //   pessoa escrever); sem instrução, abre a conversa ligada ao agente (o backend retoma a pergunta).
 // - A conversa fecha quando o Construtor gera o agente (fase `reviewing` com `agent_id` na thread;
@@ -19,12 +27,32 @@ import { MAX_ARQUIVO_BYTES } from '../constants/criacao';
 //   fotos); se a geração falhou ('failed'/'timeout'), pede o retry.
 // - Arquivos vão para a base (autonomiaSources); fotos vão no turno (builder_images), como no
 //   Construtor de hoje. Nenhum é obrigatório.
+// - #1503 — a base de conhecimento da criação (`base`): os arquivos e sites da mesma lista do clipe
+//   (fotos não entram, vão no turno). A caixa da etapa Conte e a conversa mexem nela pelas mesmas
+//   funções (anexarArquivo, anexarSite, tirar): o que entra por uma aparece na outra. Site, como
+//   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
+//   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
 // "Agora não" / sair com pelo menos duas respostas: fecha no servidor para o rascunho ter instrução
 // (mesma regra do Construtor de hoje e do protótipo: hasInstruction = closed || answers >= 2).
 const RESPOSTAS_PARA_FECHAR_AO_SAIR = 2;
 
 const ehFoto = arquivo => (arquivo?.type || '').startsWith('image/');
+
+// Material que ocupa uma das vagas da base no servidor (Source::MAX_KNOWLEDGE_SOURCES): o que está
+// lá ou a caminho. Grande demais, acima do limite ou que nem chegou a subir não ocupa.
+export const ocupaVaga = material =>
+  ['fila', 'enviando'].includes(material.estado) || Boolean(material.fonteId);
+
+// "https://www.loja.com.br/precos" vira "www.loja.com.br/precos": o endereço como a pessoa o lê.
+const nomeDoSite = endereco => {
+  try {
+    const url = new URL(endereco);
+    return url.pathname === '/' ? url.host : `${url.host}${url.pathname}`;
+  } catch {
+    return endereco;
+  }
+};
 
 // Estado do material lido da base (autonomiaSources): falhou ou o Revisor pediu outro = atenção;
 // pronto com veredito = pronto; o resto ainda está sendo lido.
@@ -40,7 +68,11 @@ const estadoDaFonte = fonte => {
   return 'lendo';
 };
 
-export function useConversaDeCriacao({ modelo }) {
+export function useConversaDeCriacao({
+  modelo,
+  atuacao = ATUACAO.EXTERNA,
+  papel = () => null,
+}) {
   const store = useStore();
   const { t } = useI18n();
 
@@ -58,6 +90,12 @@ export function useConversaDeCriacao({ modelo }) {
   // Falas do front antes das da store ("Vamos continuar de onde paramos.").
   const abertura = ref([]);
   const materiais = ref([]);
+  // A leitura da base de um rascunho continuado falhou (a caixa oferece "Tentar de novo").
+  const erroDaBase = ref(false);
+  // Tirar não deu certo no servidor: o item volta para a lista e a caixa avisa ({ nome }).
+  const falhaAoTirar = ref(null);
+  // Fontes tiradas (ou sendo tiradas): uma leitura da base em andamento não as traz de volta.
+  const tiradas = new Set();
   const aviso = ref(null);
   const demorando = ref(false);
   // Quantas vezes a conversa fechou de novo depois de fechada (o teste avisa "Atualizado").
@@ -108,6 +146,7 @@ export function useConversaDeCriacao({ modelo }) {
     // Material mandado com N turnos na tela aparece depois do turno N (0 = antes de todos).
     const materiaisEm = posicao =>
       materiais.value
+        .filter(m => m.naConversa !== false)
         .filter(m => Math.min(m.posicao, turnos.length) === posicao)
         .map(m => ({ de: 'material', material: m, chave: `m${m.id}` }));
     return turnos.reduce(
@@ -136,10 +175,16 @@ export function useConversaDeCriacao({ modelo }) {
     return estadosDasFontes.value[material.fonteId] || estadoDaFonte(null);
   };
 
-  const opcoesDeInicio = () =>
-    agenteExistente.value
-      ? { agentId: agenteExistente.value.id }
-      : { type: modelo, actuation: 'external', with_knowledge: true };
+  const opcoesDeInicio = () => {
+    if (agenteExistente.value) return { agentId: agenteExistente.value.id };
+    const ajudante = papel() === PAPEL_AJUDANTE_NA_QUERY;
+    return {
+      type: modelo,
+      actuation: ajudante ? ATUACAO.INTERNA : atuacao,
+      with_knowledge: true,
+      ...(ajudante ? { papel: PAPEL_AJUDANTE_NA_QUERY } : {}),
+    };
+  };
 
   const abrir = (extra = {}) =>
     store
@@ -151,8 +196,61 @@ export function useConversaDeCriacao({ modelo }) {
 
   const comecar = () => abrir();
 
+  const novoMaterial = (dados, extra) => {
+    proximoMaterial += 1;
+    const material = {
+      id: proximoMaterial,
+      ...dados,
+      posicao: abertura.value.length + (mensagensDaStore.value || []).length,
+      ...extra,
+    };
+    materiais.value = [...materiais.value, material];
+    return material;
+  };
+
+  // O que já estava na base do rascunho (de outra vez) entra na caixa, nunca na conversa.
+  // Uma leitura por vez: duas ao mesmo tempo poriam o mesmo arquivo duas vezes na caixa.
+  let lendoBase = null;
+  const lerBase = async id => {
+    erroDaBase.value = false;
+    try {
+      const lidas = await store.dispatch('autonomiaSources/fetch', {
+        agentId: id,
+      });
+      const conhecidas = materiais.value.map(m => m.fonteId);
+      (lidas || [])
+        .filter(fonte => (fonte.kind ?? 'knowledge') === 'knowledge')
+        .filter(fonte => !conhecidas.includes(fonte.id))
+        .filter(fonte => !tiradas.has(fonte.id))
+        .forEach(fonte =>
+          novoMaterial(
+            {
+              nome: ehSite(fonte)
+                ? nomeDoSite(nomeDaFonte(fonte))
+                : nomeDaFonte(fonte),
+              tipo: ehSite(fonte) ? 'site' : 'arquivo',
+            },
+            { estado: 'base', fonteId: fonte.id, naConversa: false }
+          )
+        );
+    } catch {
+      erroDaBase.value = true;
+    }
+  };
+  const carregarBase = () => {
+    const id = agenteId.value;
+    if (!id) return Promise.resolve();
+    if (!lendoBase) {
+      lendoBase = lerBase(id).finally(() => {
+        lendoBase = null;
+      });
+    }
+    return lendoBase;
+  };
+
   const continuar = agente => {
     agenteExistente.value = agente;
+    carregarBase();
     abertura.value = [t('AGENTS.JORNADA.CRIAR.CONTE.CONTINUAR')];
     if (agente.has_instruction) {
       abertura.value = [
@@ -173,60 +271,102 @@ export function useConversaDeCriacao({ modelo }) {
     );
   };
 
-  const novoMaterial = (arquivo, extra) => {
-    proximoMaterial += 1;
-    const material = {
-      id: proximoMaterial,
-      nome: arquivo.name,
-      tipo: ehFoto(arquivo) ? 'foto' : 'arquivo',
-      posicao: abertura.value.length + (mensagensDaStore.value || []).length,
-      ...extra,
-    };
-    materiais.value = [...materiais.value, material];
-    return material;
+  const doArquivo = arquivo => ({
+    nome: arquivo.name,
+    tipo: ehFoto(arquivo) ? 'foto' : 'arquivo',
+  });
+
+  // Se o servidor não tirou, o item volta (na ordem em que tinha entrado) e a caixa avisa.
+  const tirarDoServidor = async material => {
+    tiradas.add(material.fonteId);
+    try {
+      await store.dispatch('autonomiaSources/remove', {
+        agentId: agenteId.value,
+        sourceId: material.fonteId,
+      });
+    } catch {
+      tiradas.delete(material.fonteId);
+      materiais.value = [
+        ...materiais.value.filter(m => m.id !== material.id),
+        material,
+      ].sort((a, b) => a.id - b.id);
+      falhaAoTirar.value = { nome: material.nome };
+    }
   };
 
-  const mandarParaBase = async (material, arquivo) => {
+  // `descritor` é { file } ou { url }, como a store espera.
+  const mandarParaBase = async (material, descritor) => {
     trocarMaterial(material.id, { estado: 'enviando' });
     try {
       const fonte = await store.dispatch('autonomiaSources/create', {
         agentId: agenteId.value,
-        descriptor: { file: arquivo, kind: 'knowledge' },
+        descriptor: { ...descritor, kind: 'knowledge' },
       });
+      // Tirado enquanto subia: o servidor já guardou, então sai de lá também.
+      if (!materiais.value.some(m => m.id === material.id)) {
+        if (fonte?.id) {
+          await tirarDoServidor({
+            ...material,
+            estado: 'base',
+            fonteId: fonte.id,
+          });
+        }
+        return;
+      }
+      // A leitura da base pode ter trazido este mesmo arquivo antes da resposta: fica um só.
+      materiais.value = materiais.value.filter(
+        m => m.id === material.id || !fonte?.id || m.fonteId !== fonte.id
+      );
       trocarMaterial(material.id, { estado: 'base', fonteId: fonte?.id });
     } catch {
       trocarMaterial(material.id, { estado: 'atencao' });
     }
   };
 
-  // Arquivo antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
-  const filaDeArquivos = new Map();
+  // Arquivo ou site antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
+  const filaDaBase = new Map();
+  const paraBase = (dados, descritor) => {
+    if (!agenteId.value) {
+      const material = novoMaterial(dados, { estado: 'fila' });
+      filaDaBase.set(material.id, descritor);
+      return material;
+    }
+    const material = novoMaterial(dados, { estado: 'enviando' });
+    mandarParaBase(material, descritor);
+    return material;
+  };
+
+  const base = computed(() => materiais.value.filter(m => m.tipo !== 'foto'));
+  const semVaga = () => base.value.filter(ocupaVaga).length >= MAX_FONTES;
+
+  // Também pelo clipe da conversa: grande demais ou sem vaga não sobe (o material diz por quê).
   const anexarArquivo = arquivo => {
     if (arquivo.size > MAX_ARQUIVO_BYTES) {
-      novoMaterial(arquivo, { estado: 'grande' });
-      return;
+      return novoMaterial(doArquivo(arquivo), { estado: 'grande' });
     }
-    if (!agenteId.value) {
-      const material = novoMaterial(arquivo, { estado: 'fila' });
-      filaDeArquivos.set(material.id, arquivo);
-      return;
+    if (semVaga()) {
+      return novoMaterial(doArquivo(arquivo), { estado: 'limite' });
     }
-    mandarParaBase(novoMaterial(arquivo, { estado: 'enviando' }), arquivo);
+    return paraBase(doArquivo(arquivo), { file: arquivo });
   };
+
+  // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
+  const anexarSite = endereco =>
+    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
 
   watch(agenteId, id => {
     if (!id) return;
-    filaDeArquivos.forEach((arquivo, materialId) => {
+    filaDaBase.forEach((descritor, materialId) => {
       const material = materiais.value.find(m => m.id === materialId);
-      if (material) mandarParaBase(material, arquivo);
+      if (material) mandarParaBase(material, descritor);
     });
-    filaDeArquivos.clear();
+    filaDaBase.clear();
   });
 
   const enviarFotos = async fotos => {
     const enviadas = await Promise.all(
       fotos.map(async foto => {
-        const material = novoMaterial(foto, { estado: 'enviando' });
+        const material = novoMaterial(doArquivo(foto), { estado: 'enviando' });
         try {
           const { data } = await AutonomiaBuilderImagesAPI.upload(foto);
           trocarMaterial(material.id, { estado: 'pronto' });
@@ -366,16 +506,11 @@ export function useConversaDeCriacao({ modelo }) {
   };
 
   const tirar = material => {
-    filaDeArquivos.delete(material.id);
+    falhaAoTirar.value = null;
+    filaDaBase.delete(material.id);
     materiais.value = materiais.value.filter(m => m.id !== material.id);
-    if (material.fonteId && agenteId.value) {
-      store
-        .dispatch('autonomiaSources/remove', {
-          agentId: agenteId.value,
-          sourceId: material.fonteId,
-        })
-        .catch(() => null);
-    }
+    if (material.fonteId && agenteId.value) return tirarDoServidor(material);
+    return Promise.resolve();
   };
 
   // Fecha (ou conta mais uma atualização) uma vez por geração: observa a fase e o agent_id da
@@ -424,6 +559,10 @@ export function useConversaDeCriacao({ modelo }) {
   return {
     falas,
     materiais,
+    base,
+    erroDaBase,
+    falhaAoTirar,
+    carregarBase,
     estadoDoMaterial,
     agenteId,
     agenteGerado,
@@ -443,6 +582,8 @@ export function useConversaDeCriacao({ modelo }) {
     tentarDeNovo,
     testarAgora,
     encerrarAoSair,
+    anexarArquivo,
+    anexarSite,
     tirar,
   };
 }

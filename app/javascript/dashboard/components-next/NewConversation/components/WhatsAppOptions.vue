@@ -19,7 +19,7 @@ const emit = defineEmits(['sendMessage']);
 
 const { t } = useI18n();
 const getFilteredWhatsAppTemplates = useMapGetter(
-  'inboxes/getFilteredWhatsAppTemplates'
+  'inboxes/getConversationWhatsAppTemplates'
 );
 const inboxesUiFlags = useMapGetter('inboxes/getUIFlags');
 

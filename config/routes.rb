@@ -323,6 +323,14 @@ Rails.application.routes.draw do
                 post :reschedule
               end
             end
+            # #1460: lembrete que repete (ver, mudar esta e as próximas, pausar, retomar, encerrar).
+            resources :follow_up_series, only: [:show, :update] do
+              member do
+                post :pause
+                post :resume
+                post :end, action: :finish
+              end
+            end
             resources :meetings, only: [:index, :create, :show, :update, :destroy] do
               member do
                 post :sync
@@ -372,6 +380,9 @@ Rails.application.routes.draw do
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
             post 'conversations/:conversation_id/focus', to: 'conversation_cards#focus'
+            # Decisão "a" (#1606): o assunto mudou com uma pessoa no nome; passar para a equipe do assunto ou ficar.
+            post 'conversations/:conversation_id/repasse', to: 'conversation_cards#pass_subject'
+            post 'conversations/:conversation_id/repasse/manter', to: 'conversation_cards#keep_subject'
             # Multifunil 5b (#1145): responder à sugestão de assunto da IA.
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
@@ -394,9 +405,20 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            # Memória das IAs (#1601): o catálogo de chaves (admin) e os fatos do card com a procedência.
+            get 'memoria/chaves', to: 'memoria_chaves#index'
+            patch 'memoria/chaves/:id', to: 'memoria_chaves#update'
+            get 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#index'
+            post 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#create'
+            post 'memoria/cards/:card_id/fatos/:id/nao_vale_mais', to: 'memoria_fatos#nao_vale_mais'
+            post 'memoria/cards/:card_id/fatos/:id/aceitar', to: 'memoria_fatos#aceitar'
+            post 'memoria/cards/:card_id/fatos/:id/destravar', to: 'memoria_fatos#destravar'
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
+            # Leitura (#1140): quem receberia cada assunto com o que a tela marcou. POST porque leva a caixa inteira.
+            post 'caixas/:inbox_id/quem_recebe', to: 'caixas#quem_recebe'
+            get :meu_acesso, to: 'meu_acesso#show'
             resources :integration_tokens, only: [:index, :create, :destroy] do
               member do
                 post :rotate
@@ -470,6 +492,10 @@ Rails.application.routes.draw do
             # #1181 — leituras da nova jornada de Agentes (atrás da flag autonomia_agents_journey).
             get 'numeros_da_semana', to: 'numeros_da_semana#index'
             get 'canais_ocupados', to: 'canais_ocupados#index'
+            # #1648 — quem atende a caixa e a troca (aba "Agente de IA" da caixa). Sem a chave da conta
+            # autonomia_agente_ia_por_caixa (Autonomia::Agents::AgenteIaPorCaixa), 404.
+            get 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#show'
+            put 'inboxes/:inbox_id/quem_atende', to: 'quem_atende#update'
             resources :agents, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :test,    to: 'agents/playground#test'
@@ -483,6 +509,8 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
+              put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
@@ -500,6 +528,8 @@ Rails.application.routes.draw do
               resources :instruction_versions, only: [:index], controller: 'agents/instruction_versions'
               post 'instruction_versions/:version_id/restore',
                    to: 'agents/instruction_versions#restore'
+              # Tema 14 (#1434) — quem o ajudante ajuda e quando chamar (atrás da chave da Fase 2).
+              resource :ajuda, only: [:show, :update], controller: 'agents/ajuda'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
               member do
@@ -705,6 +735,7 @@ Rails.application.routes.draw do
               end
               resource :contact_info_request, only: [:create]
               resources :assignments, only: [:create]
+              resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
@@ -888,6 +919,8 @@ Rails.application.routes.draw do
               post :connect, action: :create
               post :request_code
               post :reconnect
+              post :pause
+              post :resume
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
@@ -928,12 +961,18 @@ Rails.application.routes.draw do
               end
               post :media, on: :collection
             end
+            # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
+            resource :whatsapp_catalog, only: [:show], module: :inboxes do
+              get :products
+            end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.
           resources :whatsapp_template_inboxes, only: [:index]
           resources :whatsapp_message_prices, only: [:index]
           # Criar com IA e Melhorar com IA na tela de Modelos (#1333): opções de texto, nada é salvo.
           resources :whatsapp_template_suggestions, only: [:create]
+          # Autorização do dono para o sistema criar modelos (#1586): estado, ligar e desligar.
+          resource :whatsapp_template_consent, only: [:show, :create]
 
           namespace :twitter do
             resource :authorization, only: [:create]

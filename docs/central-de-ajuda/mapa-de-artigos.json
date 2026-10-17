@@ -693,6 +693,28 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo, mas o Guia da Plataforma já tinha o conteúdo pronto — só precisou ser portado."
+    },
+    {
+     "id": "03.05",
+     "titulo": "Achar um ajuste na página de Configurações",
+     "para_que_serve": "Usar a página de cartões de Configurações (menu novo): grupos, busca, Comece por aqui e os selos de estado.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "settings_inicio"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_inicio",
+      "destaque": null
+     },
+     "requer": "menu_lateral_novo",
+     "prints": [],
+     "fontes": [
+      "porques: abrir_a_pagina_de_configuracoes"
+     ],
+     "revisar": false,
+     "nota": "Só com o menu novo (#1617)."
     }
    ]
   },
@@ -2716,7 +2738,7 @@
     },
     {
      "id": "10.18",
-     "titulo": "Caixas no CRM: o que chega e quem cuida",
+     "titulo": "Canais de cada funil: o que chega e quem cuida",
      "para_que_serve": "Decidir, por caixa de entrada, quais funis ela atende, quem cuida de cada assunto (inclusive das conversas ainda sem assunto) e o que o sistema faz sozinho quando chega mensagem.",
      "publico": "admin",
      "prioridade": "P1",
@@ -2732,7 +2754,7 @@
      "requer": "crm_configurar_caixas",
      "prints": [],
      "fontes": [
-      "porques: Ver as caixas no CRM",
+      "porques: Ver os canais de cada funil",
       "porques: Alterar o que chega numa caixa e quem cuida"
      ],
      "revisar": false,
@@ -3823,6 +3845,28 @@
      "prints": [],
      "fontes": [
       "porques: usar_modelo_do_whatsapp_em_campanha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.29",
+     "titulo": "Autorizar o Chat2You a criar modelos do WhatsApp sozinho",
+     "para_que_serve": "Deixar o Chat2You criar sozinho os modelos de Aviso de serviço (e, se quiser, de Divulgação) que ele precisa, sabendo quanto a Meta cobra por mensagem.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "modelos_whatsapp_autorizacao"
+     ],
+     "me_leve_ate_la": {
+      "rota": "modelos_whatsapp_autorizacao",
+      "destaque": null
+     },
+     "requer": "whatsapp_templates_journey",
+     "prints": [],
+     "fontes": [
+      "porques: autorizar_sistema_a_criar_modelos_do_whatsapp"
      ],
      "revisar": false,
      "nota": null

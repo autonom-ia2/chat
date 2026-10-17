@@ -37,9 +37,20 @@ json.topic_map Array(agent.topic_map)
 json.knowledge_confidence agent.knowledge_confidence
 json.knowledge_summary agent.knowledge_summary
 json.enabled agent.enabled
-# #647 — canais (inboxes) ligados ao agente, lido pelo cartão. `size` usa o preload da listagem
-# (index, sem N+1) e só faz um COUNT no detalhe.
-json.channels_count agent.agent_inboxes.size
+# #647 — canais (inboxes) ligados ao agente, lido pelo cartão. Conta sobre os vínculos carregados (o preload da
+# listagem, sem N+1). #1366: só os ativos — a área desmarcada fica arquivada (deleted_at) e não é canal.
+json.channels_count(agent.agent_inboxes.count { |vinculo| vinculo.deleted_at.nil? })
+# #1366 — a tela nunca mostra "Atendendo" para quem não tem onde trabalhar. O predicado é do servidor (Agent).
+json.tem_onde_trabalhar agent.tem_onde_trabalhar?
+# Tema 14 (#1434) — quem este agente ajuda, quando ele é ajudante (vazio nos demais). O "quando chamar" vem na rota /ajuda.
+json.ajuda(agent.vinculos_de_ajudante.filter_map { |vinculo| { id: vinculo.agent.id, name: vinculo.agent.name } unless vinculo.agent.deleted? })
+# Tema 14 (#1434), tela — nasceu como "Ajuda outros agentes" (a marca de origem). A tela distingue o ajudante do Copiloto
+# mesmo antes do vínculo (rascunho continuado, ajustes avançados) e esconde o que não é dele (Testar como cliente).
+json.ajudante agent.ajudante_de_origem?
+# #1433 (tema 13) — agente da equipe: tem vínculo ativo de área e nenhum de porta. A tela mostra "Na equipe" em vez de
+# "Atendendo" (ele recebe a conversa quando alguém passa; não atende primeiro). Lê os vínculos carregados (sem N+1).
+vinculos_ativos = agent.agent_inboxes.select { |vinculo| vinculo.deleted_at.nil? }
+json.na_equipe vinculos_ativos.any?(&:area?) && vinculos_ativos.none?(&:porta?)
 # IP oculto: `scaffold` JAMAIS é exposto. `instruction` só aparece em modo manual (texto do
 # próprio usuário, visível); em modo guiado a instrução é gerada pelo Construtor e permanece oculta.
 json.instruction agent.instruction if agent.manual?

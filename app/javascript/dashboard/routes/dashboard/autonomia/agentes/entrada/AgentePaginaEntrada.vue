@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent } from 'vue';
 import { useRoute } from 'vue-router';
 import AgentPanelPage from '../../pages/AgentPanelPage.vue';
 import { useJornadaAtiva } from '../composables/useJornadaAtiva';
+import { useAgenteIaPorCaixaNaEntrada } from '../composables/useAgenteIaPorCaixa';
 import { gavetaDaUrl } from '../utils/pagina';
 
 // #1181 (DECISOES.md item 1) — seletor da rota autonomia_agent_panel (mesmo nome, caminho, meta,
@@ -21,8 +22,14 @@ const props = defineProps({
 const AgentePage = defineAsyncComponent(
   () => import('../pages/AgentePage.vue')
 );
+// #1648 — agente de outro sistema (agent_bot webhook): a mesma página, pela mesma rota, com
+// `?origem=webhook` (o id é o do agent_bot). Só com a aba "Agente de IA" por caixa ligada na conta.
+const AgenteOutroSistemaPage = defineAsyncComponent(
+  () => import('../pages/AgenteOutroSistemaPage.vue')
+);
 
 const jornadaAtiva = useJornadaAtiva();
+const porCaixa = useAgenteIaPorCaixaNaEntrada();
 const route = useRoute();
 
 const gaveta = computed(() =>
@@ -31,8 +38,13 @@ const gaveta = computed(() =>
 </script>
 
 <template>
+  <AgenteOutroSistemaPage
+    v-if="jornadaAtiva && porCaixa && route.query?.origem === 'webhook'"
+    :key="`webhook-${agentId}`"
+    :bot-id="agentId"
+  />
   <AgentePage
-    v-if="jornadaAtiva"
+    v-else-if="jornadaAtiva"
     :key="agentId"
     :agent-id="agentId"
     :gaveta="gaveta"

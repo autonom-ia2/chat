@@ -26,6 +26,7 @@ import {
   CAMPAIGN_PERMISSIONS,
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
+  SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -45,6 +46,7 @@ import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
+import ForkSidebarNav from './fork/ForkSidebarNav.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import {
   SIDEBAR_SORT_SECTIONS,
@@ -247,13 +249,16 @@ const canViewCrmReports = computed(() => {
   );
 });
 
-// CRM SLA management is admin-grade (administrators or crm_admin custom-role seats)
+// CRM SLA management is admin-grade (administrators, crm_admin or sla_manage seats, #1618)
 // AND requires the enterprise `sla` feature (the backend gate 404s without it).
 const canManageCrmSla = computed(() => {
   if (!slaFeatureEnabled.value) return false;
   if (currentRole.value === 'administrator') return true;
   const permissions = getUserPermissions(currentUser.value, accountId.value);
-  return permissions.includes(CRM_ADMIN_PERMISSION);
+  return (
+    permissions.includes(CRM_ADMIN_PERMISSION) ||
+    permissions.includes(SLA_MANAGE_PERMISSION)
+  );
 });
 
 // Agendamento mora no CRM (#1212) como subgrupo (#1264): função só com
@@ -287,6 +292,14 @@ const hasFilteredUnreadCounts = computed(() => {
     )
   );
 });
+
+// Menu lateral novo do fork (#1617): reorganiza esta mesma lista; desligada, o menu de sempre.
+const forkMenuOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    accountId.value,
+    FEATURE_FLAGS.MENU_LATERAL_NOVO
+  )
+);
 
 const hasDataImport = computed(() => {
   return isFeatureEnabledonAccount.value(
@@ -625,7 +638,7 @@ const menuItems = computed(() => {
         },
         {
           name: 'Participating',
-          label: t('SIDEBAR.PARTICIPATING_CONVERSATIONS'),
+          label: t('FORK_CONVERSATION_LIST.PARTICIPATING'),
           icon: 'i-lucide-user-round-check',
           badgeCount: hasFilteredUnreadCounts.value
             ? participatingUnreadCount.value
@@ -1423,6 +1436,7 @@ const menuItems = computed(() => {
       {
         'sidebar-branded': hasBrandedSidebar,
         'shadow-lg md:shadow-none': isMobileSidebarOpen,
+        'max-md:!w-[min(85vw,20rem)] max-md:!z-50': forkMenuOn,
         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
         'transition-transform duration-200 ease-out md:transition-[width]':
           !isResizing,
@@ -1499,7 +1513,14 @@ const menuItems = computed(() => {
         </ComposeConversation>
       </div>
     </section>
+    <ForkSidebarNav
+      v-if="forkMenuOn"
+      :itens="menuItems"
+      :gaveta-aberta="isMobile && isMobileSidebarOpen"
+      @fechar="closeMobileSidebar"
+    />
     <nav
+      v-else
       ref="navRef"
       class="grid overflow-y-auto flex-grow gap-2 pb-5 sidebar-scrollbar min-w-0"
       :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"

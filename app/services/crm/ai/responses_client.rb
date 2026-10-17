@@ -56,8 +56,13 @@ module Crm
         @cache_key = cache_key
       end
 
-      def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT)
+      # `tool_choice:` (#1367) desliga as ferramentas de UMA chamada ('none') sem tirá-las da lista: a lista faz parte
+      # do prefixo em cache, e mudá-la faria a chamada seguinte, com as ferramentas, perder o cache. Ausente, o corpo
+      # é exatamente o de antes.
+      def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT,
+                 tool_choice: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
+        body[:tool_choice] = tool_choice if tool_choice.present? && tools.present?
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
         parse_response(response, model: model, requested_tools: tools, started_at: started_at, reasoning_effort: reasoning_effort)
@@ -109,6 +114,8 @@ module Crm
       # Background mode: a OpenAI aceita o pedido e processa do lado dela; retorna na hora um
       # response_id que buscamos depois com retrieve. EXIGE store:true (a resposta fica retida
       # p/ ser recuperada). Usado pela geração de e-mail (operação de vários minutos).
+      # Aqui e no retrieve NÃO se grava consumo, de propósito: quem grava é o PollJob do e-mail, uma vez,
+      # quando o pedido chega a completed.
       def create_background(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: true, background: true)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -162,10 +169,11 @@ module Crm
         [parse_raw(response, operation: 'responses.create', model: model, started_at: started_at), started_at]
       end
 
-      # O modelo parou de pedir ferramenta e respondeu: é esta a resposta.
+      # O modelo parou de pedir ferramenta e respondeu: é esta a resposta. O consumo desta ida o laço já gravou
+      # (#1656): gravar de novo aqui dobrava a rodada final no Gasto com IA.
       def respondido(payload, model, tools, started_at, reasoning_effort, usadas)
-        resultado = parse_response_payload(payload, model: model, requested_tools: tools,
-                                                    started_at: started_at, reasoning_effort: reasoning_effort)
+        resultado = parse_response_payload(payload, model: model, requested_tools: tools, started_at: started_at,
+                                                    reasoning_effort: reasoning_effort, registrar_uso: false)
         resultado[:tools_used] = (Array(resultado[:tools_used]) + usadas).uniq
         resultado
       end
@@ -224,6 +232,8 @@ module Crm
 
       # Até duas novas tentativas só do HTTP; nunca repete o executor de ferramentas.
       # Erros permanentes (400/401/403/404/422) seguem direto ao tratamento existente.
+      # Timeout e erro HTTP (aqui e no parse_raw) não gravam consumo: sem `usage` no payload não há
+      # número a gravar, e não se inventa um (#1656).
       def with_timeout_guard(operation: nil, model: nil, response_id: nil, started_at: nil)
         retries = 0
         loop do
@@ -295,7 +305,10 @@ module Crm
                                                          started_at: started_at, reasoning_effort: reasoning_effort)
       end
 
-      def parse_response_payload(payload, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil)
+      def parse_response_payload(payload, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil,
+                                 registrar_uso: true)
+        # Grava ANTES de checar o texto: a ida que volta vazia também foi cobrada (#1656).
+        record_usage(payload['usage'], model, reasoning_effort, started_at) if registrar_uso
         text = payload['output_text'].presence || extract_output_text(payload)
         if text.blank?
           log_failure(
@@ -311,7 +324,6 @@ module Crm
 
         used = tools_used(payload)
         log_call(model, requested_tools, used, started_at)
-        record_usage(payload['usage'], model, reasoning_effort, started_at)
         {
           text: text,
           usage: payload['usage'] || {},

@@ -102,7 +102,7 @@
         "IMAGE_UPLOAD": "Não deu para enviar a imagem. Tente outra.",
         "SHORT_NAME": "Confira o endereço da página.",
         "IMAGE_REMOVE": "Não deu para tirar a imagem. Tente de novo.",
-        "NOTICE_TEXTS": "Confira o texto dos avisos: falta o link ou o dia e a hora, ou passou do tamanho."
+        "NOTICE_TEXTS": "Confira o texto dos avisos: falta o dia e a hora, ou passou do tamanho."
       },
       "SERVER_ERRORS": {
         "CALENDAR_GONE": "Essa caixa de e-mail da agenda não está mais disponível. Escolha outra ou tire o Google Meet e o Teams.",
@@ -442,7 +442,8 @@
         "DEFAULT": "Texto padrão",
         "TEAM_BOOKED": "Quando alguém da equipe marca pelo painel, vai o texto padrão, que diz quem marcou.",
         "TEXT_LABEL": "Texto do aviso",
-        "FIELDS_HINT": "O que está entre colchetes o sistema preenche na hora. A frase para parar os avisos vai sempre no fim.",
+        "BUTTON_NOTE": "No WhatsApp oficial, quando a conversa com o cliente está aberta, o link vai num botão \"Ver meu horário\" e, em seguida, chega uma mensagem com o botão \"Parar avisos\". Senão, o link e a frase de parar vão no texto.",
+        "FIELDS_HINT": "O que está entre colchetes o sistema preenche na hora. A saída para parar os avisos o sistema sempre põe: a frase no fim do texto ou, no WhatsApp oficial com a conversa aberta, o botão \"Parar avisos\".",
         "INSERT": "+ {field}",
         "WRITE_AI": "Escrever com IA",
         "WRITING": "Escrevendo…",
@@ -456,7 +457,6 @@
           "MALFORMED": "Um campo está mal escrito. Apague e use os botões para pôr os campos.",
           "BRACKET": "Há colchetes que não são um campo. Tire os colchetes ou use os botões para pôr os campos.",
           "UNKNOWN_FIELD": "Este aviso não preenche um dos campos. Use só os botões abaixo.",
-          "MISSING_LINK": "Falta o link para confirmar, mudar ou cancelar.",
           "MISSING_WHEN": "Falta o dia e a hora do horário."
         }
       }

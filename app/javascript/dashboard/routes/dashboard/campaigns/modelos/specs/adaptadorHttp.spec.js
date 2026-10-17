@@ -17,6 +17,8 @@ const http = vi.hoisted(() => ({
   getCampaignPauses: vi.fn(),
   resumeCampaignPause: vi.fn(),
   suggest: vi.fn(),
+  getCatalog: vi.fn(),
+  getCatalogProducts: vi.fn(),
 }));
 vi.mock('dashboard/api/whatsappTemplates', () => ({ default: http }));
 
@@ -307,6 +309,7 @@ describe('adaptador HTTP de Modelos', () => {
         modeloId: '1001',
         modeloNome: 'boas_vindas',
         motivo: 'modelo_pausado',
+        produto: '',
         podeRetomar: true,
       },
     ]);
@@ -335,6 +338,10 @@ describe('adaptador HTTP de Modelos', () => {
     expect(motivo('template_media_missing')).toBe('arquivo_do_topo');
     // #1334: a validade da oferta passou antes do envio.
     expect(motivo('template_offer_expired')).toBe('oferta_vencida');
+    // #1418: produto esgotado ou fora do catálogo; catálogo desconectado.
+    expect(motivo('template_product_unavailable')).toBe('produto_indisponivel');
+    expect(motivo('template_catalog_missing')).toBe('sem_catalogo');
+    expect(motivo('template_products_disabled')).toBe('produtos_desligados');
   });
 
   it('shows usage the person can see and only a notice for the rest', () => {
@@ -393,9 +400,66 @@ describe('adaptador HTTP de Modelos', () => {
     });
   });
 
-  it('keeps catalog and forms closed (no backend yet)', async () => {
-    expect(await adaptador.obterCatalogo()).toBeNull();
+  it('keeps forms closed (no backend yet)', async () => {
     expect(await adaptador.listarFormularios()).toEqual([]);
+  });
+
+  // #1418: o catálogo de produtos da conta do WhatsApp da caixa.
+  it('reads the catalog of the inbox, null without one or with the flag off', async () => {
+    http.getCatalog.mockReturnValueOnce(
+      ok({ catalog: { name: 'Loja', product_count: 9 } })
+    );
+    expect(await adaptador.obterCatalogo(8)).toEqual({
+      nome: 'Loja',
+      produtos: 9,
+    });
+    expect(http.getCatalog).toHaveBeenCalledWith(8);
+
+    http.getCatalog.mockReturnValueOnce(ok({ catalog: null }));
+    expect(await adaptador.obterCatalogo(8)).toBeNull();
+
+    http.getCatalog.mockReturnValueOnce(
+      Promise.reject(
+        Object.assign(new Error('404'), { response: { status: 404, data: {} } })
+      )
+    );
+    expect(await adaptador.obterCatalogo(8)).toBeNull();
+  });
+
+  it('lists one page of products with the search and the next page', async () => {
+    http.getCatalogProducts.mockReturnValue(
+      ok({
+        payload: [
+          {
+            id: 'tenis',
+            name: 'Tênis',
+            price: 'R$299,90',
+            image_url: 'https://cdn/t.jpg',
+            available: false,
+          },
+        ],
+        meta: { after: 'c2' },
+      })
+    );
+
+    expect(
+      await adaptador.listarProdutos(8, { busca: ' tenis ', depois: 'c1' })
+    ).toEqual({
+      produtos: [
+        {
+          id: 'tenis',
+          nome: 'Tênis',
+          preco: 'R$299,90',
+          foto: 'https://cdn/t.jpg',
+          disponivel: false,
+        },
+      ],
+      depois: 'c2',
+    });
+    expect(http.getCatalogProducts).toHaveBeenCalledWith(8, {
+      search: 'tenis',
+      after: 'c1',
+    });
   });
 });
 

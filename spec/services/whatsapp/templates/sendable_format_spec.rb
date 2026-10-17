@@ -86,6 +86,8 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(offer, {}).reason_code).to eq('limited_time_offer')
         expect(check(offer, { 'limited_time_offer' => { 'expiration_time_ms' => (now - 1.minute).to_i * 1000 } }).reason_code)
           .to eq('offer_expired')
+        # #1705: a validade fora do formato (de quem chama pela API) é recusa, nunca erro.
+        expect(check(offer, { 'limited_time_offer' => '1792238400000' }).reason_code).to eq('limited_time_offer')
       end
 
       it 'accepts an offer without expiration details with nothing recorded' do
@@ -106,6 +108,21 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(carousel, { 'carousel' => { 'cards' => [linked] } }).reason_code).to eq('carousel')
         expect(check(carousel, { 'carousel' => { 'cards' => [linked, {}] } }).reason_code).to eq('carousel')
         expect(check(carousel, {}).reason_code).to eq('carousel')
+        # #1705: os cartões fora do formato (de quem chama pela API) são recusa, nunca erro.
+        expect(check(carousel, { 'carousel' => [linked, saved] }).reason_code).to eq('carousel')
+      end
+
+      it 'asks the end of a variable link only when the caller opts in (url_suffix, the conversation send, #1705)' do
+        link = template(body, buttons({ 'type' => 'QUICK_REPLY', 'text' => 'Sim' }, { 'type' => 'URL', 'url' => 'https://a.com/{{1}}' }))
+        filled = { 'buttons' => [nil, { 'type' => 'url', 'parameter' => 'AB12' }] }
+
+        expect(described_class.check(link, recorded: {})).to be_sendable
+        expect(described_class.check(link, recorded: {}, url_suffix: true).reason_code).to eq('url_parameter')
+        expect(described_class.check(link, recorded: { 'buttons' => [nil, { 'type' => 'url', 'parameter' => ' ' }] }, url_suffix: true)
+                              .reason_code).to eq('url_parameter')
+        expect(described_class.check(link, recorded: filled, url_suffix: true)).to be_sendable
+        expect(described_class.check(template(body, buttons({ 'type' => 'URL', 'url' => 'https://a.com' })), recorded: {}, url_suffix: true))
+          .to be_sendable
       end
 
       it 'accepts a catalog button when the send marks it, and keeps multi and single product refused' do
@@ -114,6 +131,19 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
         expect(check(catalog, { 'buttons' => [{ 'type' => 'catalog' }] })).to be_sendable
         expect(check(catalog, {}).reason_code).to eq('catalog')
         expect(check(template(body, buttons({ 'type' => 'MPM' })), { 'buttons' => [{ 'type' => 'catalog' }] }).reason_code).to eq('catalog')
+      end
+
+      # #1418: one product, several or a carousel of product cards go when the campaign recorded the products.
+      it 'accepts one product, several and a carousel of products only with the right number of chosen products' do
+        spm = template({ 'type' => 'HEADER', 'format' => 'PRODUCT' }, body, buttons({ 'type' => 'SPM', 'text' => 'Ver' }))
+        mpm = template({ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Novidades' }, body, buttons({ 'type' => 'MPM', 'text' => 'Ver itens' }))
+        card = { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, buttons({ 'type' => 'SPM' })] }
+        cards = template(body, { 'type' => 'CAROUSEL', 'cards' => [card, card] })
+        products = ->(count) { { 'products' => { 'retailer_ids' => Array.new(count) { |index| "sku-#{index}" } } } }
+
+        expect([check(spm, products.call(1)), check(mpm, products.call(30)), check(cards, products.call(10))]).to all(be_sendable)
+        expect([check(spm, {}), check(mpm, products.call(31)), check(cards, products.call(1))].map(&:reason_code))
+          .to eq(%w[catalog catalog catalog])
       end
 
       it 'drops the flow_without_token warning when the send carries the token' do
@@ -178,6 +208,12 @@ RSpec.describe Whatsapp::Templates::SendableFormat do
       expect(described_class.offer_format?(template(body, buttons({ 'type' => 'URL' }, { 'type' => 'copy_code' })))).to be(true)
       expect(described_class.offer_format?(template(offer, body))).to be(true)
       expect(described_class.offer_format?(template(body, carousel))).to be(true)
+    end
+
+    # #1418: whoever got the free text would lose the products.
+    it 'is true for one product and several products' do
+      expect(described_class.offer_format?(template(body, buttons({ 'type' => 'SPM' })))).to be(true)
+      expect(described_class.offer_format?(template(body, buttons({ 'type' => 'mpm' })))).to be(true)
     end
 
     it 'is false for other formats, a body that only mentions them and anything that is not a template' do

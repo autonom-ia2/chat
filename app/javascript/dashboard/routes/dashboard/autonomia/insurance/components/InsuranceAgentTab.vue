@@ -21,6 +21,9 @@ const { installationName } = useBranding();
 const brand = computed(() => ({ installationName: installationName.value }));
 const router = useRouter();
 const canManage = useCanManage('insurance_manage');
+// #1525 — escolher o canal e abrir o agente é da página do agente, que pede a permissão de agentes (o mesmo
+// gate da rota e da gaveta). Sem ela, a aba avisa a quem pedir em vez de levar a uma página sem a escolha.
+const canManageAgents = useCanManage('autonomia_manage');
 
 const BEHAVIORS = ['consultivo', 'objetivo'];
 const PILLARS = ['COLLECT', 'QUOTE', 'EXPLAIN', 'HANDOFF'];
@@ -43,6 +46,11 @@ const form = ref({
 const canSubmit = computed(
   () => form.value.name.trim() !== '' && form.value.brokerName.trim() !== ''
 );
+
+// #1525 — o agente nasce parado e sem canal (como todo agente externo): a aba convida a escolher onde ele
+// atende, e o botão leva à página do agente já na escolha de canal (o `:tab` channels, o fluxo da própria página).
+// Com canal, "Abrir o agente" leva só à página.
+const semCanal = computed(() => agent.value?.tem_onde_trabalhar === false);
 
 const branchNames = computed(() =>
   (agent.value?.specialists || []).map(s => s.name).join(', ')
@@ -104,6 +112,14 @@ const submit = async () => {
 const goToAgents = () => {
   router.push({ name: 'autonomia_agents_index' });
 };
+
+// Sem canal, a página do agente abre já na escolha de canal; com canal, só a página.
+const openAgent = () => {
+  const params = semCanal.value
+    ? { agentId: agent.value.id, tab: 'channels' }
+    : { agentId: agent.value.id };
+  router.push({ name: 'autonomia_agent_panel', params });
+};
 </script>
 
 <template>
@@ -156,6 +172,16 @@ const goToAgents = () => {
         <p v-if="branchNames" class="text-sm text-n-slate-11">
           {{ t('INSURANCE.AGENT.EXISTING.BRANCHES', { ramos: branchNames }) }}
         </p>
+        <p v-if="semCanal" data-sem-canal class="text-sm text-n-slate-12">
+          {{ t('INSURANCE.AGENT.EXISTING.NO_CHANNEL', { name: agent.name }) }}
+        </p>
+        <p
+          v-if="semCanal && !canManageAgents"
+          data-pedir-canal
+          class="text-sm text-n-slate-12"
+        >
+          {{ t('INSURANCE.AGENT.EXISTING.ASK_ADMIN', { name: agent.name }) }}
+        </p>
         <p class="text-xs text-n-slate-11">
           {{ t('INSURANCE.AGENT.EXISTING.NOTE') }}
         </p>
@@ -174,12 +200,18 @@ const goToAgents = () => {
           @click="openForm"
         />
         <NextButton
-          v-else-if="agent"
+          v-else-if="agent && canManageAgents"
           solid
           blue
-          icon="i-lucide-external-link"
-          :label="t('INSURANCE.AGENT.ACTIONS.OPEN_AGENT')"
-          @click="goToAgents"
+          :icon="semCanal ? 'i-lucide-radio' : 'i-lucide-external-link'"
+          :label="
+            semCanal
+              ? t('INSURANCE.AGENT.ACTIONS.CHOOSE_CHANNEL', {
+                  name: agent.name,
+                })
+              : t('INSURANCE.AGENT.ACTIONS.OPEN_AGENT')
+          "
+          @click="openAgent"
         />
         <NextButton
           faded

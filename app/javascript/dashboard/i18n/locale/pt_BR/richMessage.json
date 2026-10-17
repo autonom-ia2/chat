@@ -1,0 +1,38 @@
+{
+  "RICH_MESSAGE": {
+    "ACTION_ROW": {
+      "OPENS_IN_NEW_TAB": "(abre em outra aba)"
+    },
+    "CONTACT": {
+      "SHARED": "{sender} compartilhou um contato"
+    },
+    "FAILURE": {
+      "RETRY": "Enviar de novo",
+      "TITLE": "{title}."
+    },
+    "FLOW": {
+      "FORM": "Formulário do WhatsApp",
+      "FORM_NAMED": "Formulário: {name}",
+      "OPENS_ON_CUSTOMER_PHONE": "(abre o formulário no WhatsApp do cliente, não no painel)"
+    },
+    "LINK_BUTTON": {
+      "OPENS": "Abre: {url}"
+    },
+    "LOCATION": {
+      "SEE_ON_MAP": "Ver no mapa",
+      "SHARED": "{sender} compartilhou uma localização"
+    },
+    "LOCATION_REQUEST": {
+      "BUTTON": "Enviar localização",
+      "BUTTON_HINT": "(botão que aparece no WhatsApp do cliente)",
+      "CAPTION": "Pedimos ao cliente onde ele está"
+    },
+    "OPTIONS": {
+      "CHOSEN": "O cliente tocou em \"{title}\"",
+      "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
+    },
+    "SENT_AS_TEXT": {
+      "LABEL": "Enviado como texto"
+    }
+  }
+}

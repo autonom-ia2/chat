@@ -7,6 +7,7 @@ import PreviaEtapa from './previas/PreviaEtapa.vue';
 import PreviaSobre from './previas/PreviaSobre.vue';
 import PreviaVendas from './previas/PreviaVendas.vue';
 import PreviaLembretes from './previas/PreviaLembretes.vue';
+import PreviaLembretesAtender from './previas/PreviaLembretesAtender.vue';
 import PreviaCaixa from './previas/PreviaCaixa.vue';
 import PreviaAnuncios from './previas/PreviaAnuncios.vue';
 
@@ -36,6 +37,11 @@ const props = defineProps({
   metaSync: { type: Object, required: true },
   googleSync: { type: Object, required: true },
   etapaAvisada: { type: String, default: '' },
+  // #1498 — sem tipo escolhido, o funil novo ainda não tem quadro.
+  semTipo: { type: Boolean, default: false },
+  // #1498 — prévia dos lembretes de Atender.
+  lembretesAtender: { type: Object, default: null },
+  modelo: { type: String, default: '' },
 });
 
 const P = 'CRM_FUNIL.PREVIA';
@@ -77,9 +83,25 @@ const google = computed(() =>
       <PreviaSobre :nome="nome" :texto="quandoUsar" />
     </PreviaMoldura>
     <PreviaMoldura
+      v-else-if="em('nome') && semTipo"
+      :titulo="$t('CRM_FUNIL.TIPO.PREVIA_TITULO')"
+      :texto="$t('CRM_FUNIL.TIPO.PREVIA_TEXTO')"
+    >
+      <div
+        class="grid h-48 grid-cols-4 gap-2 rounded-2xl border-2 border-dashed border-n-slate-6 p-3"
+        aria-hidden="true"
+      >
+        <span
+          v-for="coluna in 4"
+          :key="coluna"
+          class="rounded-xl bg-n-alpha-2"
+        />
+      </div>
+    </PreviaMoldura>
+    <PreviaMoldura
       v-else-if="em('sales')"
-      :titulo="$t(`${P}.VENDAS_TITULO`)"
-      :texto="$t(`${P}.VENDAS_TEXTO`)"
+      :titulo="$t(venda ? `${P}.VENDAS_TITULO` : `${P}.FIM`)"
+      :texto="venda ? $t(`${P}.VENDAS_TEXTO`) : ''"
     >
       <PreviaVendas
         :venda="venda"
@@ -87,6 +109,17 @@ const google = computed(() =>
         :sucesso="sucesso"
         :fracasso="fracasso"
         :dinheiro="dinheiro"
+      />
+    </PreviaMoldura>
+    <PreviaMoldura
+      v-else-if="em('returns') && !venda"
+      :titulo="$t('CRM_FUNIL.ATENDER.LEMBRETES.PREVIA_TITULO')"
+      :texto="$t('CRM_FUNIL.ATENDER.LEMBRETES.PREVIA_TEXTO')"
+    >
+      <PreviaLembretesAtender
+        :modelo="modelo"
+        :sucesso="sucesso"
+        :ligados="lembretesAtender || {}"
       />
     </PreviaMoldura>
     <PreviaMoldura

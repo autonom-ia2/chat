@@ -2,8 +2,8 @@ module Crm
   module Ai
     # Seletor de membro humano para handoff — lógica de seleção EXTRAÍDA (verbatim)
     # do HandoffExecutor (round-robin por carga de conversas abertas, preferência por
-    # online, match direto por nome sugerido pela IA). Usado pelo Kanban
-    # (HandoffExecutor#select_agent delega aqui).
+    # online, match direto por nome sugerido pela IA). Usado pelo motor de entrega
+    # (Crm::Entrega, #1454).
     #
     # Parâmetros:
     #   inbox          -> Inbox cujos membros formam o pool elegível
@@ -14,9 +14,18 @@ module Crm
     #   suggested_name -> nome sugerido pela IA (apenas em mode 'direct')
     #   pool_type      -> 'inbox' (default) | 'user' (restringe a um membro da inbox)
     #   pool_id        -> id do usuário quando pool_type='user'
+    #   members        -> fila já montada (Crm::Entrega::QuemCuida, #1454); sem ela, os membros da caixa que o funil
+    #                     deixa ver
     #
     # Retorna User | nil (nil = sem membro elegível).
     class HandoffMemberSelector
+      # A presença (Redis) não respondeu.
+      class PresencaIndisponivel < StandardError; end
+
+      # Desempate do rodízio: quanto do registro de passagens é lido, e o lugar de quem não recebeu nesse prazo.
+      JANELA_DO_DESEMPATE = 30.days
+      NUNCA_RECEBEU = Time.zone.at(0)
+
       def initialize(
         inbox:,
         account_id:,
@@ -26,7 +35,8 @@ module Crm
         suggested_name: nil,
         pool_type: 'inbox',
         pool_id: nil,
-        conversation: nil
+        conversation: nil,
+        members: nil
       )
         @inbox = inbox
         @account_id = account_id
@@ -37,6 +47,7 @@ module Crm
         @pool_type = pool_type
         @pool_id = pool_id
         @conversation = conversation
+        @members = members
       end
 
       def perform
@@ -62,6 +73,8 @@ module Crm
 
       # Acesso por funil (#1148): a IA só passa a conversa para quem pode vê-la.
       def inbox_members
+        return @members.to_a if @members
+
         members = @inbox ? @inbox.members.to_a : []
         @conversation ? Crm::Access::Recipients.new(@conversation).filter(members) : members
       end
@@ -95,10 +108,32 @@ module Crm
         @require_online ? preferred_pool : eligible_members
       end
 
+      # Quem tem menos conversas abertas na caixa. Empate (#1140, decisão 10 do Rodrigo): quem recebeu há mais tempo,
+      # depois o menor id. Antes valia o primeiro de inbox.members (sem ORDER BY), quase sempre a mesma pessoa.
       def round_robin_agent
-        pool = preferred_pool
-        counts = @inbox.conversations.open.where(assignee_id: pool.map(&:id)).group(:assignee_id).count
-        pool.min_by { |user| counts[user.id] || 0 }
+        empatados = menor_carga(preferred_pool)
+        return empatados.first if empatados.one?
+
+        ultima = ultima_recebida(empatados)
+        empatados.min_by { |user| [ultima[user.id] || NUNCA_RECEBEU, user.id] }
+      end
+
+      # As pessoas com menos conversas abertas na caixa.
+      def menor_carga(pool)
+        abertas = @inbox.conversations.open.where(assignee_id: pool.map(&:id)).group(:assignee_id).count
+        carga = pool.index_with { |user| abertas[user.id] || 0 }
+        menor = carga.values.min
+        pool.select { |user| carga[user] == menor }
+      end
+
+      # Quando cada pessoa recebeu a última conversa na conta, pelo registro de passagens (Crm::Passagens, toda troca de
+      # pessoa: entrega, rodízio, "Atribuir a mim"). O convite não conta: a pessoa foi chamada, não recebeu. Só a janela
+      # recente (o índice da conta por data): quem não recebeu nela empata com quem nunca recebeu, e o id decide.
+      def ultima_recebida(pessoas)
+        Crm::Passagem.where(account_id: @account_id, para_type: 'User', para_id: pessoas.map(&:id))
+                     .where(created_at: JANELA_DO_DESEMPATE.ago..)
+                     .where('crm_passagens.motivo IS DISTINCT FROM ?', Crm::Passagens::CONVITE)
+                     .group(:para_id).maximum(:created_at)
       end
 
       # Prefer online agents; when online is required, keep only online agents.
@@ -115,11 +150,8 @@ module Crm
       end
 
       def online_agent_ids
-        @online_agent_ids ||= OnlineStatusTracker.get_available_users(@account_id)
-                                                 .select { |_id, status| status == 'online' }
-                                                 .keys.map(&:to_i)
-      rescue StandardError
-        []
+        # Falha vira PresencaIndisponivel no ponto único (Crm::Entrega::Presenca.online_ids!): quem chama segura.
+        @online_agent_ids ||= Crm::Entrega::Presenca.online_ids!(@account_id)
       end
     end
   end

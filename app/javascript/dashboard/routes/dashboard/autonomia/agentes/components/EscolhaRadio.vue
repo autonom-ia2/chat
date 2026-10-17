@@ -5,6 +5,7 @@ import { nextTick, ref } from 'vue';
 // item no Tab (o marcado, ou o primeiro disponível) e setas que andam e marcam, pulando opção
 // desabilitada. Opção desabilitada fica visível e anunciada (aria-disabled), com o motivo no texto.
 // opcoes: [{ valor, titulo, texto?, etiqueta?, desabilitada?, ambar? }]
+// Slot `depois-{valor}` (#1720): o que vem logo abaixo de uma opção (ex.: a lista de canais do "Sim").
 // `etiqueta` (#1369): selo curto ao lado do título, como o tipo de canal da caixa.
 const props = defineProps({
   rotulo: { type: String, required: true },
@@ -67,52 +68,53 @@ const aoTeclar = (evento, opcao) => {
 
 <template>
   <div role="radiogroup" :aria-label="rotulo" class="flex flex-col gap-2">
-    <button
-      v-for="opcao in opcoes"
-      :key="opcao.valor"
-      ref="botoes"
-      type="button"
-      role="radio"
-      :aria-checked="opcao.valor === modelValue ? 'true' : 'false'"
-      :aria-disabled="opcao.desabilitada ? 'true' : undefined"
-      :tabindex="comFoco(opcao) ? '0' : '-1'"
-      class="flex items-start w-full gap-3 px-4 py-3 text-start transition rounded-xl min-h-11 ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
-      :class="[
-        classeDaOpcao(opcao),
-        opcao.desabilitada ? 'cursor-not-allowed opacity-70' : '',
-      ]"
-      @click="escolher(opcao)"
-      @keydown="aoTeclar($event, opcao)"
-    >
-      <span
-        aria-hidden="true"
-        class="grid mt-0.5 rounded-full place-items-center size-5 shrink-0 ring-2 ring-inset"
-        :class="
-          opcao.valor === modelValue ? 'ring-n-blue-11' : 'ring-n-slate-8'
-        "
+    <template v-for="opcao in opcoes" :key="opcao.valor">
+      <button
+        ref="botoes"
+        type="button"
+        role="radio"
+        :aria-checked="opcao.valor === modelValue ? 'true' : 'false'"
+        :aria-disabled="opcao.desabilitada ? 'true' : undefined"
+        :tabindex="comFoco(opcao) ? '0' : '-1'"
+        class="flex items-start w-full gap-3 px-4 py-3 text-start transition rounded-xl min-h-11 ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
+        :class="[
+          classeDaOpcao(opcao),
+          opcao.desabilitada ? 'cursor-not-allowed opacity-70' : '',
+        ]"
+        @click="escolher(opcao)"
+        @keydown="aoTeclar($event, opcao)"
       >
         <span
-          v-if="opcao.valor === modelValue"
-          class="rounded-full size-2.5 bg-n-blue-11"
-        />
-      </span>
-      <span class="flex flex-col gap-0.5 grow">
-        <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span class="text-sm font-medium text-n-slate-12">{{
-            opcao.titulo
-          }}</span>
+          aria-hidden="true"
+          class="grid mt-0.5 rounded-full place-items-center size-5 shrink-0 ring-2 ring-inset"
+          :class="
+            opcao.valor === modelValue ? 'ring-n-blue-11' : 'ring-n-slate-8'
+          "
+        >
           <span
-            v-if="opcao.etiqueta"
-            data-etiqueta
-            class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-n-slate-3 text-n-slate-12"
-          >
-            {{ opcao.etiqueta }}
-          </span>
+            v-if="opcao.valor === modelValue"
+            class="rounded-full size-2.5 bg-n-blue-11"
+          />
         </span>
-        <span v-if="opcao.texto" class="text-sm text-n-slate-11">{{
-          opcao.texto
-        }}</span>
-      </span>
-    </button>
+        <span class="flex flex-col gap-0.5 grow">
+          <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="text-sm font-medium text-n-slate-12">{{
+              opcao.titulo
+            }}</span>
+            <span
+              v-if="opcao.etiqueta"
+              data-etiqueta
+              class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-n-slate-3 text-n-slate-12"
+            >
+              {{ opcao.etiqueta }}
+            </span>
+          </span>
+          <span v-if="opcao.texto" class="text-sm text-n-slate-11">{{
+            opcao.texto
+          }}</span>
+        </span>
+      </button>
+      <slot :name="`depois-${opcao.valor}`" />
+    </template>
   </div>
 </template>

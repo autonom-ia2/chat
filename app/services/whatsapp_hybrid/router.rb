@@ -8,16 +8,26 @@ class WhatsappHybrid::Router
     @conversation = conversation
   end
 
-  # Conversa pode receber texto livre pelo Web (usado para destravar o editor e pelo envio).
+  # Conversa pode receber texto livre pelo Web (usado para destravar o editor e pelo envio). Com o limite de
+  # conversas novas barrando o contato (chat#1486), não oferece o que o envio vai recusar.
   def web_reply_available?
-    web_ready? && !cloud_window_open?
+    web_ready? && !cloud_window_open? && reach_out.allowed?
   end
 
   def route_for(message)
     return :cloud if cloud_window_open?
-    return :cloud unless web_ready? && web_allowed_for?(message)
+    return :cloud unless web_ready? && web_allowed_for?(message) && reach_out.allowed?
 
     :web
+  end
+
+  # O WhatsApp API serviria, mas o limite de conversas novas do WhatsApp barrou este contato (chat#1486).
+  def reach_out_refused?(message)
+    web_ready? && web_allowed_for?(message) && !reach_out.allowed?
+  end
+
+  def reach_out
+    @reach_out ||= WhatsappHybrid::ReachOut.new(connection, @conversation.contact)
   end
 
   # Conexão pronta e contato com telefone, independente da janela (o plano B usa isto).
@@ -27,8 +37,11 @@ class WhatsappHybrid::Router
 
   # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
   # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
+  # Conexão pausada (#1487) nunca serve: tudo sai pela oficial, como caixa sem Híbrido.
   def web_allowed_for?(message)
-    message.content_type == 'text' && connection.origin_enabled?(origin_of(message))
+    return false if connection.nil? || connection.paused?
+
+    message.content_type == 'text' && connection.origin_enabled?(origin_of(message)) && RichMessages.text_capable?(message)
   end
 
   def cloud_window_open?

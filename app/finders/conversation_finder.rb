@@ -68,6 +68,7 @@ class ConversationFinder
     filter_by_labels
     filter_by_query
     filter_by_source_id
+    filter_by_crm_pipeline
   end
 
   def set_inboxes
@@ -159,6 +160,14 @@ class ConversationFinder
     return unless params[:labels]
 
     @conversations = @conversations.tagged_with(params[:labels], any: true)
+  end
+
+  # Filtro "Funil" (multifunil #1150): id do funil ou "none" (Sem assunto).
+  def filter_by_crm_pipeline
+    return if params[:crm_pipeline_id].blank?
+
+    filter = Crm::Conversations::PipelineFilter.new(user: current_user, account: current_account, value: params[:crm_pipeline_id])
+    @conversations = filter.apply(@conversations)
   end
 
   def filter_by_source_id

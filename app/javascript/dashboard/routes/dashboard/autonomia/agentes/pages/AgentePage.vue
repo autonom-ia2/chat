@@ -14,6 +14,7 @@ import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
 import GavetaOQueSabe from '../components/pagina/GavetaOQueSabe.vue';
 import GavetaOndeQuando from '../components/pagina/GavetaOndeQuando.vue';
+import GavetaOndeQuandoFase2 from '../components/pagina/GavetaOndeQuandoFase2.vue';
 import GavetaConversas from '../components/pagina/GavetaConversas.vue';
 import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
@@ -21,6 +22,9 @@ import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
+import AgenteGaveta from '../components/AgenteGaveta.vue';
+import EquipeCanais from '../components/onde/EquipeCanais.vue';
+import AjudantePassos from '../components/onde/AjudantePassos.vue';
 import {
   ESTADO_PAGINA,
   useAgenteDaPagina,
@@ -28,8 +32,14 @@ import {
 import { useCanaisDoAgente } from '../composables/useCanaisDoAgente';
 import { useNumerosDaSemana } from '../composables/useNumerosDaSemana';
 import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
-import { ESTADO } from '../utils/estadoDoAgente';
+import { useSalvarEquipe } from '../composables/useSalvarEquipe';
+import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
+import { useFase2 } from '../composables/useFase2';
+import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
+import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
+import { caixasDaEquipe, recebeEmOutrasCaixas } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
+import { resumoOnde } from '../utils/resumoOnde';
 import {
   GAVETA,
   chaveDoQuando,
@@ -50,6 +60,14 @@ import { caixaDaFoto, usaFotoDoCanal } from '../utils/fotoDoCanal';
 // uma gaveta (T08–T14); Mudar conversando (T11) troca o conteúdo da página. Parar (T15) e Excluir
 // (T16) pedem confirmação; voltar a atender passa pela confirmação de canal. Quem só vê lê e testa.
 // `gaveta` vem do seletor da rota (o :tab antigo traduzido) e abre a gaveta certa ao carregar.
+// #1433 (tema 13): o agente da equipe (`na_equipe`) aparece "Na equipe", com "Onde {nome} trabalha" (caixa e
+// papel) no lugar de "Onde e quando responde"; "Mudar" abre direto os passos do agente da equipe (EquipeCanais).
+// Ligar de novo um agente da equipe parado não pede canal: as caixas dele continuam.
+// #1720 (decisão do Rodrigo de 16/10) — SÓ COM A FASE 2: todo agente usa a gaveta nova (GavetaOndeQuandoFase2), inclusive o
+// da equipe (sem "Onde {nome} trabalha"), e o herói e o resumo dizem a mesma frase (utils/resumoOnde). Sem a Fase 2, a
+// página é a de antes, igual à main (textos, gaveta, "Onde {nome} trabalha").
+// Tema 14 (#1434): o ajudante aparece "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
+// equipe"; "Quem {nome} ajuda" e "Quando chamar" ("GET /ajuda") com "Mudar" abrindo os passos do ajudante.
 const props = defineProps({
   agentId: { type: [String, Number], required: true },
   gaveta: { type: String, default: null },
@@ -96,6 +114,52 @@ const nome = computed(
 );
 const estadoDaPagina = computed(() => estadoDeOperacao(agente.value));
 const atendendo = computed(() => estadoDaPagina.value === ESTADO.ATENDENDO);
+const trabalhando = computed(() => TRABALHANDO.includes(estadoDaPagina.value));
+const naEquipe = computed(() => agente.value?.na_equipe === true);
+const fase2 = useFase2();
+// Caixas em que ele está na equipe (L2), ou [] sem a leitura; null quando não é agente da equipe.
+const equipe = computed(() => {
+  if (fase2.value || !naEquipe.value) return null;
+  return canais.estado.value === 'pronto' && !canais.semLeitura.value
+    ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
+    : [];
+});
+// #1433 ("a, para todos os agentes"): quem atende primeiro também recebe em outras caixas quando alguém
+// passa. A gaveta "Onde e quando" mostra a escolha; o resumo, as caixas. Só com a Fase 2 e a leitura L2.
+// #1720: com a Fase 2, o agente da equipe também (a mesma gaveta para todos).
+const recebeEmOutras = computed(
+  () => fase2.value && recebeEmOutrasCaixas(agente.value)
+);
+const tambemRecebeEm = computed(() =>
+  recebeEmOutras.value &&
+  canais.estado.value === 'pronto' &&
+  !canais.semLeitura.value
+    ? caixasDaEquipe(Number(props.agentId), canais.canais.value)
+    : []
+);
+const salvarEquipe = useSalvarEquipe();
+const EQUIPE = 'equipe';
+const AJUDA = 'ajuda';
+const ajudante = computed(() => ehAjudante(agente.value));
+const ajudaDoAgente = useAjudaDoAgente();
+// Tema 14: ligar e parar o ajudante falam de ajudar outros agentes, nunca de atender nem de passar conversas
+// para a equipe. Os demais agentes seguem com os textos de sempre.
+const doInterruptor = (deSempre, doAjudante, valores = {}) =>
+  ajudante.value
+    ? t(`AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.${doAjudante}`, valores)
+    : t(deSempre, valores);
+const registros = useMapGetter('autonomiaAgents/getRecords');
+const leituraDosAgentes = ref('pronto');
+const passoDaAjuda = ref('quem');
+// Quem ele ajuda (do agente) e o "quando chamar" (da rota /ajuda), ou null quando não é ajudante.
+const ajuda = computed(() =>
+  ajudante.value
+    ? {
+        principais: quemAjuda(agente.value),
+        quando: ajudaDoAgente.quando.value,
+      }
+    : null
+);
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
@@ -115,10 +179,15 @@ const quando = computed(() =>
   t(`${NS}.QUANDO.${chaveDoQuando(quandoDoAgente(agente.value))}`)
 );
 const atuais = computed(() => canais.atuais.value);
+// Antes da leitura das caixas, a contagem do servidor (porta e área juntas). #1720, com a Fase 2: o agente só da
+// equipe não atende primeiro em nenhuma.
+const quantosAntesDaLeitura = computed(() =>
+  fase2.value && naEquipe.value ? 0 : agente.value?.channels_count || 0
+);
 const quantosCanais = computed(() =>
   canais.estado.value === 'pronto'
     ? atuais.value.length
-    : agente.value?.channels_count || 0
+    : quantosAntesDaLeitura.value
 );
 const temCanal = computed(() => quantosCanais.value > 0);
 const umCanal = computed(() =>
@@ -137,8 +206,35 @@ const foto = computed(
   () => canalDaFoto.value?.foto || agente.value?.avatar_url || ''
 );
 
+// #1720, só com a Fase 2: uma linha com onde atende primeiro e onde recebe quando alguém passar; parado, só os
+// canais. O agente da equipe sem a leitura das caixas diz só que recebe quando alguém passa.
+const resumoDaFase2 = computed(() => {
+  if (naEquipe.value && !tambemRecebeEm.value.length) {
+    return t('AGENTS.JORNADA.ONDE.RECEBE');
+  }
+  return resumoOnde(t, {
+    primeiro: umCanal.value,
+    quantosPrimeiro: quantosCanais.value,
+    recebe: tambemRecebeEm.value,
+    quando: quando.value,
+    parado: !trabalhando.value,
+  });
+});
+
 const ondeNoHeroi = computed(() => {
+  if (ajudante.value) {
+    const nomes = nomesQueAjuda(agente.value);
+    return nomes ? t('AGENTS.JORNADA.ONDE.AJUDA', { agentes: nomes }) : '';
+  }
   if (interno.value) return '';
+  if (fase2.value) return resumoDaFase2.value;
+  if (equipe.value) {
+    return equipe.value.length
+      ? t('AGENTS.JORNADA.CARTAO.RECEBE_EM', {
+          caixas: equipe.value.map(canal => canal.name).join(', '),
+        })
+      : t('AGENTS.JORNADA.ONDE.RECEBE');
+  }
   if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
   const ligado = atendendo.value;
   if (umCanal.value) {
@@ -156,6 +252,7 @@ const ondeNoHeroi = computed(() => {
 });
 
 const textoOnde = computed(() => {
+  if (fase2.value) return resumoDaFase2.value;
   if (umCanal.value) {
     return t(`${NS}.BLOCO_ONDE.TEXTO`, {
       canal: umCanal.value,
@@ -254,12 +351,21 @@ const tirarGavetaDaConsulta = () => {
   router.replace({ query: resto });
 };
 
+// Escolher o canal: atendendo, a gaveta de onde e quando; parado, a de voltar a atender (escolhe a caixa e
+// liga na mesma ação). #1525 — vale também para o :tab channels da URL, por onde o módulo de Cotação e o
+// cartão da lista trazem a Lia que nasceu parada: cair na gaveta só de leitura pediria mais um clique.
+// #1720, com a Fase 2: o agente da equipe ligado também abre a gaveta de onde e quando.
+const gavetaDoCanal = () =>
+  (fase2.value ? trabalhando.value : atendendo.value)
+    ? GAVETA.ONDE
+    : GAVETA.VOLTAR;
+
 const abrirDaUrl = () => {
   if (!pronto.value || !props.gaveta || props.gaveta === gavetaDaUrlAberta) {
     return;
   }
   gavetaDaUrlAberta = props.gaveta;
-  abrir(props.gaveta);
+  abrir(props.gaveta === GAVETA.ONDE ? gavetaDoCanal() : props.gaveta);
   tirarGavetaDaConsulta();
 };
 
@@ -315,6 +421,7 @@ const carregarTudo = async () => {
   canais.carregar();
   await carregar();
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
+  if (ajudante.value) ajudaDoAgente.carregar(Number(props.agentId));
   lerFontes();
   lerPerguntas();
 };
@@ -363,9 +470,26 @@ const escrever = () => {
   else dialogoEscrever.value?.abrir();
 };
 
-const escolherCanal = () =>
-  abrir(atendendo.value ? GAVETA.ONDE : GAVETA.VOLTAR);
+const escolherCanal = () => abrir(gavetaDoCanal());
 
+// #1433: "Mudar" de "Onde {nome} trabalha" do agente da equipe.
+const mudarEquipe = () => {
+  if (!podeGerenciar.value) return;
+  canais.carregar();
+  aberta.value = EQUIPE;
+};
+
+// Tema 14: "Mudar" de "Quem {nome} ajuda" (passo 1) ou de "Quando chamar" (passo 2). A página só leu este
+// agente: a lista da conta é lida ao abrir, para a escolha estar em dia.
+const lerAgentes = async () => {
+  leituraDosAgentes.value = 'carregando';
+  try {
+    await store.dispatch('autonomiaAgents/get');
+    leituraDosAgentes.value = 'pronto';
+  } catch {
+    leituraDosAgentes.value = 'erro';
+  }
+};
 const voltarInterno = async () => {
   alternando.value = true;
   try {
@@ -374,12 +498,76 @@ const voltarInterno = async () => {
       enabled: true,
       status: 'active',
     });
-    useAlert(t(`${NS}.VOLTAR_INTERNO.FEITO`, { nome: nome.value }));
+    useAlert(
+      doInterruptor(`${NS}.VOLTAR_INTERNO.FEITO`, 'VOLTOU', {
+        nome: nome.value,
+      })
+    );
   } catch {
-    useAlert(t(`${NS}.VOLTAR_INTERNO.ERRO`));
+    useAlert(doInterruptor(`${NS}.VOLTAR_INTERNO.ERRO`, 'VOLTAR_ERRO'));
   } finally {
     alternando.value = false;
   }
+};
+
+// Ligar um ajudante que não ajuda ninguém abre a escolha; salvando, ele já volta ligado.
+const ligarDepoisDeEscolher = ref(false);
+const mudarAjuda = (passo = 'quem', { ligar = false } = {}) => {
+  if (!podeGerenciar.value) return;
+  ligarDepoisDeEscolher.value = ligar;
+  lerAgentes();
+  ajudaDoAgente.erro.value = null;
+  passoDaAjuda.value = passo;
+  aberta.value = AJUDA;
+};
+const salvarMudancaDaAjuda = async ({ principais, quando: frase }) => {
+  const feito = await ajudaDoAgente.salvar({
+    agenteId: agente.value.id,
+    nome: nome.value,
+    principalIds: principais,
+    quando: frase,
+  });
+  if (!feito) return;
+  fechar();
+  if (ligarDepoisDeEscolher.value) {
+    ligarDepoisDeEscolher.value = false;
+    await voltarInterno();
+    return;
+  }
+  useAlert(t('AGENTS.JORNADA.AJUDANTE.FEITO', { nome: nome.value }));
+  try {
+    await store.dispatch('autonomiaAgents/show', agente.value.id);
+  } catch {
+    // O vínculo já foi gravado; a tela relê o agente ao abrir de novo.
+  }
+};
+
+// #1366 — tirar o agente do último canal o para no servidor: relê o agente junto com as caixas, para o
+// herói não continuar dizendo "Atendendo". A releitura é só para a tela; falhando, a próxima acerta.
+const depoisDeMudarOnde = async () => {
+  canais.carregar();
+  try {
+    await store.dispatch('autonomiaAgents/show', agente.value.id);
+  } catch {
+    // O canal já mudou; a tela relê o agente ao abrir de novo.
+  }
+};
+
+const salvarMudancaDaEquipe = async ({ entram, saem }) => {
+  const feito = await salvarEquipe.salvar({
+    agenteId: agente.value.id,
+    nome: nome.value,
+    entram,
+    saem,
+  });
+  // Falhou no meio: relê onde ele está, e a próxima tentativa manda só o que ainda falta.
+  if (!feito) {
+    canais.carregar();
+    return;
+  }
+  useAlert(t('AGENTS.JORNADA.EQUIPE.FEITO', { nome: nome.value }));
+  fechar();
+  depoisDeMudarOnde();
 };
 
 const alternar = ligar => {
@@ -387,7 +575,12 @@ const alternar = ligar => {
     dialogoParar.value?.abrir();
     return;
   }
-  if (interno.value) {
+  // Tema 14: ajudante sem ninguém para ajudar não liga "vazio": escolhe antes quem ele ajuda.
+  if (ajudante.value && !quemAjuda(agente.value).length) {
+    mudarAjuda('quem', { ligar: true });
+    return;
+  }
+  if (interno.value || naEquipe.value) {
     voltarInterno();
     return;
   }
@@ -410,7 +603,9 @@ const parar = async () => {
     id: agente.value.id,
     status: 'paused',
   });
-  useAlert(t(`${NS}.PARAR.FEITO`, { nome: nome.value }));
+  useAlert(
+    doInterruptor(`${NS}.PARAR.FEITO`, 'PARAR_FEITO', { nome: nome.value })
+  );
 };
 
 // A store tira o agente da lista antes de a promessa voltar: sem `excluindo`, a página cairia no
@@ -549,13 +744,14 @@ const tirarPergunta = id => {
           :acao-principal="acaoPrincipal"
           :itens-mais="itensMais"
           :alternando="alternando"
+          :ajudante="ajudante"
           @voltar-lista="irParaLista"
           @alternar="alternar"
           @acao-principal="acaoDoHeroi"
           @mais="escolherMais"
         />
         <p
-          v-if="!atendendo"
+          v-if="!trabalhando"
           data-faixa-parado
           class="flex items-start gap-3 p-4 m-0 text-sm rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
         >
@@ -591,13 +787,20 @@ const tirarPergunta = id => {
           :interno="interno"
           :tem-canal="temCanal"
           :texto-onde="textoOnde"
+          :tambem-recebe="tambemRecebeEm.map(canal => canal.name)"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
+          :equipe="equipe"
+          :fase2="fase2"
+          :caixas="caixas"
+          :ajuda="ajuda"
           @perguntar="perguntar"
           @abrir="abrir"
           @mudar="mudar"
           @escrever="escrever"
           @escolher-canal="escolherCanal"
+          @mudar-equipe="mudarEquipe"
+          @mudar-ajuda="mudarAjuda"
         />
       </template>
     </div>
@@ -607,7 +810,7 @@ const tirarPergunta = id => {
         v-if="aberta === GAVETA.TESTAR"
         :agente="agente"
         :nome="nome"
-        :atendendo="atendendo"
+        :atendendo="trabalhando"
         :pode-mudar="podeMudar"
         :pergunta="perguntaDoTeste"
         @fechar="fechar"
@@ -626,6 +829,28 @@ const tirarPergunta = id => {
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"
       />
+      <GavetaOndeQuandoFase2
+        v-else-if="
+          fase2 && (aberta === GAVETA.ONDE || aberta === GAVETA.VOLTAR)
+        "
+        :key="aberta"
+        :agente="agente"
+        :nome="nome"
+        :modo="aberta === GAVETA.VOLTAR ? 'voltar' : 'alterar'"
+        :atendendo="trabalhando"
+        :canais="canais.canais.value"
+        :estado-canais="canais.estado.value"
+        :atuais="atuais"
+        :sem-leitura="canais.semLeitura.value"
+        :horarios="horarios"
+        :recebe-em-outras="recebeEmOutras"
+        :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
+        :caixas="caixas"
+        @fechar="fechar"
+        @pronto="depoisDeMudarOnde"
+        @reler="canais.carregar()"
+        @voltar-a-atender="aberta = GAVETA.VOLTAR"
+      />
       <GavetaOndeQuando
         v-else-if="aberta === GAVETA.ONDE || aberta === GAVETA.VOLTAR"
         :key="aberta"
@@ -638,11 +863,65 @@ const tirarPergunta = id => {
         :atuais="atuais"
         :sem-leitura="canais.semLeitura.value"
         :horarios="horarios"
+        :recebe-em-outras="recebeEmOutras"
+        :equipe-atual="tambemRecebeEm.map(canal => canal.inbox_id)"
+        :caixas="caixas"
         @fechar="fechar"
-        @pronto="canais.carregar()"
+        @pronto="depoisDeMudarOnde"
         @reler="canais.carregar()"
         @voltar-a-atender="aberta = GAVETA.VOLTAR"
       />
+      <AgenteGaveta
+        v-else-if="aberta === EQUIPE"
+        :titulo="t('AGENTS.JORNADA.ONDE.TITULO', { nome })"
+        @fechar="fechar"
+      >
+        <EquipeCanais
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :canais="canais.canais.value"
+          :caixas="caixas"
+          :leitura="
+            canais.estado.value === 'pronto' && canais.semLeitura.value
+              ? 'erro'
+              : canais.estado.value
+          "
+          :inicial="(equipe || []).map(canal => canal.inbox_id)"
+          :salvando="salvarEquipe.salvando.value"
+          :erro="salvarEquipe.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="canais.carregar()"
+          @pronto="salvarMudancaDaEquipe"
+        />
+      </AgenteGaveta>
+      <AgenteGaveta
+        v-else-if="aberta === AJUDA"
+        :titulo="t('AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA', { nome })"
+        @fechar="fechar"
+      >
+        <AjudantePassos
+          modo="mudar"
+          :nome="nome"
+          :agente-id="agente.id"
+          :agentes="registros || []"
+          :leitura="leituraDosAgentes"
+          :inicial="{
+            principais: ajuda.principais.map(principal => principal.id),
+            quando: ajuda.quando,
+          }"
+          :comecar-em="passoDaAjuda"
+          :salvando="ajudaDoAgente.salvando.value"
+          :erro="ajudaDoAgente.erro.value"
+          :texto-final="t('AGENTS.JORNADA.EQUIPE.SALVAR')"
+          :rotulo-carregando="t('AGENTS.JORNADA.EQUIPE.SALVANDO')"
+          @voltar="fechar"
+          @reler="lerAgentes"
+          @pronto="salvarMudancaDaAjuda"
+        />
+      </AgenteGaveta>
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"
         :agent-id="agente.id"
@@ -691,12 +970,16 @@ const tirarPergunta = id => {
     <template v-if="(pronto || excluindo) && podeGerenciar">
       <DialogoAcao
         ref="dialogoParar"
-        :titulo="t(`${NS}.PARAR.TITULO`, { nome })"
-        :texto="t(`${NS}.PARAR.TEXTO`)"
-        :confirmar="t(`${NS}.PARAR.CONFIRMAR`)"
+        :titulo="doInterruptor(`${NS}.PARAR.TITULO`, 'PARAR_TITULO', { nome })"
+        :texto="doInterruptor(`${NS}.PARAR.TEXTO`, 'PARAR_TEXTO', { nome })"
+        :confirmar="doInterruptor(`${NS}.PARAR.CONFIRMAR`, 'PARAR_CONFIRMAR')"
         :rotulo-carregando="t(`${NS}.PARAR.PARANDO`)"
-        :erro-titulo="t(`${NS}.PARAR.ERRO`)"
-        :erro-garantia="t(`${NS}.PARAR.ERRO_GARANTIA`, { nome })"
+        :erro-titulo="doInterruptor(`${NS}.PARAR.ERRO`, 'PARAR_ERRO')"
+        :erro-garantia="
+          doInterruptor(`${NS}.PARAR.ERRO_GARANTIA`, 'PARAR_ERRO_GARANTIA', {
+            nome,
+          })
+        "
         :executar="parar"
       />
       <DialogoAcao
@@ -710,7 +993,7 @@ const tirarPergunta = id => {
         :erro-garantia="t(`${NS}.EXCLUIR.ERRO_GARANTIA`)"
         :executar="excluir"
       >
-        <p v-if="atendendo" data-extra class="m-0 text-sm text-n-slate-11">
+        <p v-if="trabalhando" data-extra class="m-0 text-sm text-n-slate-11">
           {{ t(`${NS}.EXCLUIR.EXTRA`) }}
           <button
             data-atalho-parar

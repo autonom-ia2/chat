@@ -272,6 +272,39 @@ RSpec.describe Crm::FollowUps::MessageSender do
     expect(follow_up.reload.metadata['send_mode']).to eq('template')
   end
 
+  # #1590: a Mensagem marcada manda os campos do modelo no formato da Nova conversa ({ body: { "1" => … } }). Eles
+  # chegam intactos à mensagem e viram o parâmetro do corpo que vai para a Meta.
+  it 'envia os campos da mensagem pronta no formato { body: … } até o componente da Meta' do
+    account, user = create_account_and_user
+    modelos = [{ 'name' => 'boas_vindas', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+                 'components' => [{ 'type' => 'BODY', 'text' => 'Olá, {{1}}!' }] }]
+    channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false,
+                                        message_templates: modelos)
+    inbox = channel.inbox
+    inbox.add_members([user.id])
+    contact = account.contacts.create!(name: 'Mariana', phone_number: '+5511987654321')
+    conversation = whatsapp_conversation(inbox: inbox, contact: contact, assignee: user)
+    create_incoming_message(conversation: conversation)
+    conversation.messages.incoming.last.update!(created_at: 30.hours.ago)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
+                                     primary_conversation: conversation, title: 'Plano anual')
+    follow_up = account.crm_follow_ups.create!(
+      card: card, conversation: conversation, title: 'Mensagem para Mariana', due_at: 10.minutes.ago, timezone: 'UTC',
+      automation_mode: :auto_send_message, created_by: user,
+      metadata: { message_body: 'Olá, Mariana!', template_name: 'boas_vindas', template_language: 'pt_BR',
+                  template_processed_params: { 'body' => { '1' => 'Mariana' } } }
+    )
+
+    result = described_class.new(follow_up: follow_up).perform
+
+    expect(result.status).to eq(:sent)
+    template_params = result.message.additional_attributes['template_params']
+    expect(template_params['processed_params']).to eq('body' => { '1' => 'Mariana' })
+    componentes = Whatsapp::TemplateProcessorService.new(channel: channel.reload, template_params: template_params).call.last
+    expect(componentes).to eq([{ type: 'body', parameters: [{ type: 'text', text: 'Mariana' }] }])
+  end
+
   # --- Ataque: shapes adversariais de metadata do template nativo -------------------------
 
   # O AutoSendValidator pula a checagem de template para follow-up de IA (no create-time o template

@@ -202,7 +202,18 @@ RSpec.describe Account do
         feature_crm_configurar_caixas: 1 << 17,
         feature_campaign_open_window_text: 1 << 18,
         feature_whatsapp_templates_ai: 1 << 19,
-        feature_nova_conversa_tela: 1 << 20
+        feature_nova_conversa_tela: 1 << 20,
+        feature_followup_template_real_values: 1 << 21,
+        feature_crm_lembretes_v2: 1 << 22,
+        feature_crm_calendario_ouro: 1 << 23,
+        feature_whatsapp_campaign_products: 1 << 24,
+        # #1617: bit = posição no features.yml; só acrescentar no fim (#1322).
+        feature_menu_lateral_novo: 1 << 25,
+        feature_horario_unico_caixa: 1 << 26,
+        feature_crm_outro_canal: 1 << 27,
+        feature_crm_mensagem_marcada: 1 << 28,
+        feature_crm_avaliar_toda_mensagem: 1 << 29,
+        feature_memoria_ia: 1 << 30
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

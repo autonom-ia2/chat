@@ -79,6 +79,16 @@ RSpec.describe 'Autonomia Insurance Quote Agent API', type: :request do
       expect(agente.instruction).to include('Corretora Exemplo')
     end
 
+    # #1525 — nasce parado e sem canal, como todo agente externo; a tela lê isso para convidar a escolher o canal.
+    it 'cria o agente parado e diz que ainda nao tem onde trabalhar' do
+      post base, params: dados, headers: admin.create_new_auth_token, as: :json
+
+      agente = Autonomia::Agents::Agent.find_by(account: account, agent_type: 'insurance_quote')
+      expect(agente).to have_attributes(status: 'paused', enabled: false)
+      payload = response.parsed_body['payload']
+      expect(payload).to include('status' => 'paused', 'enabled' => false, 'tem_onde_trabalhar' => false)
+    end
+
     # Clicar duas vezes não é erro do usuário: a tela mostra o que existe, em vez de uma mensagem
     # sobre algo que ela mesma pediu.
     it 'devolve o que existe quando ja ha um agente' do

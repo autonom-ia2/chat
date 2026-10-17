@@ -18,6 +18,8 @@ const props = defineProps({
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
   podeCriarPronta: { type: Boolean, default: false },
+  // #1505 — a mensagem entra numa conversa que já existe.
+  continuando: { type: Boolean, default: false },
 });
 
 defineEmits([
@@ -38,7 +40,7 @@ const modelo = defineModel('modelo', { type: Object, default: null });
 const P = 'NOVA_CONVERSA.MENSAGEM';
 const pronta = ref(null);
 
-const modelosDaCaixa = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
+const modelosDaCaixa = useMapGetter('inboxes/getConversationWhatsAppTemplates');
 const modelos = computed(() => modelosDaCaixa.value(props.canal.id));
 
 const livre = computed(() => props.tipo === TIPOS.WHATSAPP_LIVRE);
@@ -102,7 +104,9 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
         {{ $t(`${P}.SO_PRONTA_TITULO`) }}
       </h3>
       <p class="mb-0 text-[0.9375rem] leading-relaxed text-n-slate-11">
-        {{ $t(`${P}.SO_PRONTA_TEXTO`) }}
+        {{
+          $t(continuando ? `${P}.SO_PRONTA_CONVERSA` : `${P}.SO_PRONTA_TEXTO`)
+        }}
       </p>
     </header>
 
@@ -140,6 +144,7 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       :canal="canal"
       :assinatura="assinatura"
       :com-assinatura="comAssinatura"
+      :com-assunto="!continuando"
     />
 
     <NovaConversaAnexo

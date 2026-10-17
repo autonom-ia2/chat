@@ -368,12 +368,17 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
   # A coluna recebe o texto de hoje (retrato do nascimento); o que roda lê o arquivo do deploy com as
   # escolhas guardadas em `config` (ver `instrucao_do_principal`).
+  #
+  # #1525 — nasce PARADO (paused + enabled false), como todo agente externo: sem caixa ele não cota com ninguém
+  # (`Operate.authorized_agent_inbox`), e o banco não diz "ativo" para quem não atende. Liga ao entrar no canal, pelo
+  # `InboxConnector` com `ativar`, que cria o vínculo e liga o agente na mesma transação (#1366). O save no contexto
+  # :ativacao (o mesmo do AgentsController#create) recusa quem um dia mudar isto para nascer atendendo sem canal.
   def criar_agente
-    ::Autonomia::Agents::Agent.create!(
+    ::Autonomia::Agents::Agent.new(
       account: @account, name: @nome_agente, agent_type: 'insurance_quote',
-      status: :active, enabled: true, instruction: texto(ARQUIVO_DO_PRINCIPAL),
+      status: :paused, enabled: false, instruction: texto(ARQUIVO_DO_PRINCIPAL),
       config: { 'native_tool_slugs' => TODAS_AS_TOOLS, 'with_knowledge' => true, ESCOLHAS_DA_CORRETORA => escolhas }
-    )
+    ).tap { |agente| agente.save!(context: %i[create ativacao]) }
   end
 
   def criar_especialista(agente, dados)

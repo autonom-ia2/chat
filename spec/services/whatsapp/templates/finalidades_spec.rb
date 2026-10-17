@@ -1,0 +1,238 @@
+require 'rails_helper'
+
+# Os prontos de cada finalidade (#1518) passam pelas mesmas regras da tela de Modelos e do envio, e pelo que a Meta pede
+# do corpo: variável nunca no começo nem no fim, numeradas em ordem a partir de 1 e com um exemplo para cada uma.
+RSpec.describe Whatsapp::Templates::Finalidades do
+  let(:prontos) { described_class.prontos }
+  let(:cobranca) { described_class.pronto(:cobranca_vencimento, momento: :antes, com_valor: true) }
+
+  # Os avisos do agendamento (#1524) têm botão com a base do ambiente: sem FRONTEND_URL o corpo seria `SemBase`.
+  around { |example| with_modified_env(FRONTEND_URL: 'https://app.example.com') { example.run } }
+
+  def body_of(pronto)
+    pronto.corpo[:components].find { |component| component[:type] == 'BODY' }
+  end
+
+  it 'tem os 6 prontos da cobrança: antes, no dia e depois do vencimento, com e sem valor' do
+    variantes = %i[antes no_dia depois].product([true, false])
+    found = variantes.map { |momento, com_valor| described_class.pronto(:cobranca_vencimento, momento: momento, com_valor: com_valor) }
+
+    expect(found.map(&:nome).uniq.size).to eq(6)
+    expect(found.map(&:dono).uniq).to eq(['cobranca'])
+    expect(found.map(&:idioma).uniq).to eq(['pt_BR'])
+  end
+
+  it 'aceita a finalidade e o momento como texto' do
+    expect(described_class.pronto('cobranca_vencimento', momento: 'no_dia', com_valor: false).nome)
+      .to eq(described_class.pronto(:cobranca_vencimento, momento: :no_dia, com_valor: false).nome)
+  end
+
+  it 'recusa finalidade ou variante que não existe' do
+    expect { described_class.pronto(:boas_vindas) }.to raise_error(described_class::Desconhecida)
+    expect { described_class.pronto(:cobranca_vencimento, momento: :ontem, com_valor: true) }.to raise_error(described_class::Desconhecida)
+    expect { described_class.pronto(:cobranca_vencimento, momento: :antes) }.to raise_error(described_class::Desconhecida)
+  end
+
+  it 'só a variante com valor pede o valor' do
+    com = described_class.pronto(:cobranca_vencimento, momento: :antes, com_valor: true)
+    sem = described_class.pronto(:cobranca_vencimento, momento: :antes, com_valor: false)
+
+    expect(com.campos).to eq('1' => 'cliente.primeiro_nome', '2' => 'negocio.valor', '3' => 'negocio.titulo', '4' => 'negocio.prazo')
+    expect(sem.campos).to eq('1' => 'cliente.primeiro_nome', '2' => 'negocio.titulo', '3' => 'negocio.prazo')
+  end
+
+  it 'todo pronto é UTILITY e passa na conferência da Meta (SubmitFormat) e na do envio (SendableFormat)' do
+    prontos.each do |pronto|
+      template = pronto.corpo.deep_stringify_keys
+      expect(template['category']).to eq('UTILITY')
+      expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([]), pronto.nome
+      expect(Whatsapp::Templates::SendableFormat.sendable?(template)).to be(true), pronto.nome
+    end
+  end
+
+  # A extração do catálogo (#1524) não pode mudar um nome nem uma letra da cobrança que já está em produção (#1535).
+  it 'a cobrança segue com os mesmos nomes e textos' do
+    fim = 'Se o pagamento já foi feito, por favor desconsidere esta mensagem.'
+    depois = "Se precisar de ajuda com o pagamento, é só responder esta mensagem. #{fim}"
+    cobranca = prontos.select { |pronto| pronto.finalidade == 'cobranca_vencimento' }.to_h { |pronto| [pronto.nome, pronto.texto] }
+
+    expect(cobranca).to eq(
+      'cobranca_antes_vencimento_com_valor_v1' =>
+        "Olá, {{1}}! Passando para lembrar que o seu pagamento de {{2}} referente a {{3}} vence em {{4}}. #{fim}",
+      'cobranca_antes_vencimento_sem_valor_v1' =>
+        "Olá, {{1}}! Passando para lembrar que o seu pagamento referente a {{2}} vence em {{3}}. #{fim}",
+      'cobranca_dia_vencimento_com_valor_v1' => "Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} vence hoje, {{4}}. #{fim}",
+      'cobranca_dia_vencimento_sem_valor_v1' => "Olá, {{1}}! O seu pagamento referente a {{2}} vence hoje, {{3}}. #{fim}",
+      'cobranca_apos_vencimento_com_valor_v1' =>
+        "Olá, {{1}}! O seu pagamento de {{2}} referente a {{3}} venceu em {{4}} e ainda não consta como pago. #{depois}",
+      'cobranca_apos_vencimento_sem_valor_v1' =>
+        "Olá, {{1}}! O seu pagamento referente a {{2}} venceu em {{3}} e ainda não consta como pago. #{depois}"
+    )
+  end
+
+  it 'o catálogo junta as finalidades de cada arquivo de finalidades/' do
+    expect(described_class::CATALOGO['cobranca_vencimento']).to eq(described_class::Cobranca::FINALIDADES['cobranca_vencimento'])
+    expect(described_class::CATALOGO).to be_frozen
+  end
+
+  it 'todo campo de pronto e todo campo de horário tem exemplo' do
+    horario = TemplateFields::Catalog::FIELDS.keys.select { |campo| campo.start_with?('horario.') }
+    with_modified_env FRONTEND_URL: 'https://chat.hub2you.ai' do
+      (prontos.flat_map { |pronto| pronto.campos.values } + horario).uniq.each do |campo|
+        expect(described_class.exemplo(campo)).to be_present, campo
+      end
+      expect(described_class.exemplo('horario.link_gestao')).to eq('https://chat.hub2you.ai/b/AB3K9QXZ')
+    end
+    expect(described_class.exemplo('horario.data_hora')).to eq('14/10 às 15:00')
+  end
+
+  it 'todo campo é uma chave do catálogo de campos (quem envia sabe de onde vem o valor)' do
+    prontos.flat_map { |pronto| pronto.campos.values }.uniq.each do |campo|
+      expect(TemplateFields::Catalog.known?(campo)).to be(true), campo
+    end
+  end
+
+  it 'nenhum corpo começa ou termina com variável' do
+    prontos.each do |pronto|
+      text = body_of(pronto)[:text]
+      expect(text.lstrip.start_with?('{{')).to be(false), pronto.nome
+      expect(text.rstrip.end_with?('}}')).to be(false), pronto.nome
+    end
+  end
+
+  it 'as variáveis vão de 1 em diante, na ordem do texto, cada uma com exemplo e com campo' do
+    prontos.each do |pronto|
+      body = body_of(pronto)
+      numbers = body[:text].split('{{').drop(1).map { |piece| piece.split('}}').first }
+      expected = (1..pronto.campos.size).map(&:to_s)
+
+      expect(numbers).to eq(expected), pronto.nome
+      expect(pronto.campos.keys).to eq(expected), pronto.nome
+      examples = body.dig(:example, :body_text, 0)
+      expect(examples.size).to eq(expected.size), pronto.nome
+      expect(examples).to all(be_present)
+    end
+  end
+
+  it 'reconhece o dono pelo nome do pronto' do
+    expect(described_class.dono_de(cobranca.nome)).to eq('cobranca')
+    expect(described_class.dono_de('boas_vindas')).to be_nil
+  end
+
+  it 'os textos da cobrança falam de pagamento, sem "negócio" nem "compra" (pedido do Multifunnel)' do
+    prontos.select { |pronto| pronto.finalidade == 'cobranca_vencimento' }.each do |pronto|
+      expect(pronto.texto).to include('pagamento')
+      expect(pronto.texto.downcase).not_to include('negócio')
+      expect(pronto.texto.downcase).not_to include('compra')
+    end
+  end
+
+  # #1524: os 4 avisos do agendamento são FIXOS no catálogo; nome, texto e botões são o contrato com a Meta (um modelo
+  # aprovado com outro texto ou outros botões vira `texto_diferente`/`botoes_diferentes`) e com o envio.
+  describe 'avisos do agendamento (#1524)' do
+    let(:agendamento) { prontos.select { |pronto| pronto.dono == 'agendamento' } }
+
+    # Motivo: um por tipo de aviso (`Crm::MeetingNotice::KINDS`), com os nomes `_v2` que a tela de Modelos protege.
+    it 'tem os 4 prontos, um por tipo de aviso, UTILITY e pt_BR' do
+      expect(described_class::Agendamento::POR_TIPO.keys).to match_array(Crm::MeetingNotice::KINDS)
+      nomes = described_class::Agendamento::POR_TIPO.values.map { |finalidade| described_class.pronto(finalidade).nome }
+      expect(nomes).to eq(%w[agendamento_ao_marcar_v2 agendamento_horario_mudou_v2 agendamento_1_dia_antes_v2 agendamento_1_hora_antes_v2])
+      expect(agendamento.map(&:nome)).to match_array(nomes)
+      expect(agendamento.map { |pronto| pronto.corpo[:category] }.uniq).to eq(['UTILITY'])
+      expect(agendamento.map(&:idioma).uniq).to eq(['pt_BR'])
+    end
+
+    # Motivo: os quatro passam nas regras estruturais da Meta (SubmitFormat) e do envio (SendableFormat), com o botão
+    # de URL na base do ambiente, com exemplo, e a resposta rápida "Parar avisos".
+    it 'passam nas conferências, com "Ver meu horário" (URL do ambiente) e "Parar avisos"' do
+      agendamento.each do |pronto|
+        template = pronto.corpo.deep_stringify_keys
+        buttons = template['components'].find { |component| component['type'] == 'BUTTONS' }['buttons']
+
+        expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([]), pronto.nome
+        expect(Whatsapp::Templates::SendableFormat.sendable?(template)).to be(true), pronto.nome
+        expect(buttons).to eq([{ 'type' => 'URL', 'text' => 'Ver meu horário', 'url' => 'https://app.example.com/b/{{1}}',
+                                 'example' => ['https://app.example.com/b/AB3K9QXZ'] },
+                               { 'type' => 'QUICK_REPLY', 'text' => 'Parar avisos' }]), pronto.nome
+        expect(pronto.campos).to eq('1' => 'cliente.primeiro_nome', '2' => 'horario.data_hora')
+        expect(pronto.botoes_do_envio).to eq([{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' },
+                                              { 'indice' => 1, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' }])
+      end
+    end
+
+    # Motivo: redação de utilidade (#1585): cita o horário e o próximo passo, e diz como parar.
+    it 'citam o horário, o próximo passo e como parar' do
+      agendamento.each do |pronto|
+        expect(pronto.texto).to include('{{2}}', 'Ver meu horário', 'Parar avisos'), pronto.nome
+      end
+    end
+  end
+
+  # Estrutura para o lembrete do agendamento (#1524): ainda sem finalidade real, provada com uma de teste.
+  describe 'pronto com botões' do
+    let(:com_botoes) do
+      { 'teste_botoes' => { dono: 'agendamento', opcoes: [], variantes: { [] => {
+        nome: 'teste_botoes_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome negocio.prazo],
+        texto: 'Olá, {{1}}! Seu horário é {{2}}. Use os botões abaixo.',
+        botoes: [{ tipo: 'url', texto: 'Ver meu horário', url: 'https://chat.hub2you.ai/b/{{1}}', campo: 'horario.link_codigo',
+                   exemplo: 'AB3K9QXZ' },
+                 { tipo: 'quick_reply', texto: 'Parar avisos', payload: 'stop_notices' }]
+      } } } }
+    end
+
+    before { stub_const("#{described_class}::CATALOGO", described_class::CATALOGO.merge(com_botoes)) }
+
+    it 'manda à Meta o URL com exemplo e a resposta rápida, e passa nas duas conferências' do
+      template = described_class.pronto(:teste_botoes).corpo.deep_stringify_keys
+      buttons = template['components'].find { |component| component['type'] == 'BUTTONS' }['buttons']
+
+      expect(buttons).to eq([{ 'type' => 'URL', 'text' => 'Ver meu horário', 'url' => 'https://chat.hub2you.ai/b/{{1}}',
+                               'example' => ['https://chat.hub2you.ai/b/AB3K9QXZ'] },
+                             { 'type' => 'QUICK_REPLY', 'text' => 'Parar avisos' }])
+      expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([])
+      expect(Whatsapp::Templates::SendableFormat.sendable?(template)).to be(true)
+    end
+
+    it 'diz ao envio a posição, o tipo e o campo ou payload de cada botão' do
+      expect(described_class.pronto(:teste_botoes).botoes_do_envio).to eq(
+        [{ 'indice' => 0, 'tipo' => 'url', 'campo' => 'horario.link_codigo' },
+         { 'indice' => 1, 'tipo' => 'quick_reply', 'payload' => 'stop_notices' }]
+      )
+    end
+
+    # A base do link muda por ambiente (Hub2You, Autonom.ia): o catálogo guarda só a base nomeada e o caminho.
+    it 'URL com base do ambiente: o endereço e o exemplo usam o FRONTEND_URL da hora' do
+      dinamico = { 'teste_base' => { dono: 'agendamento', opcoes: [], variantes: { [] => {
+        nome: 'teste_base_v1', amigavel: 'Teste', campos: %w[cliente.primeiro_nome horario.data_hora],
+        texto: 'Olá, {{1}}! Seu horário é {{2}}. Use o botão abaixo.',
+        botoes: [{ tipo: 'url', texto: 'Ver meu horário', url: { base: :booking_invite, caminho: '/b/{{1}}' },
+                   campo: 'horario.link_codigo' }]
+      } } } }
+      stub_const("#{described_class}::CATALOGO", described_class::CATALOGO.merge(dinamico))
+      botao = lambda do
+        template = described_class.pronto(:teste_base).corpo.deep_stringify_keys
+        expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([])
+        template['components'].find { |component| component['type'] == 'BUTTONS' }['buttons'].sole
+      end
+
+      with_modified_env FRONTEND_URL: 'https://chat.hub2you.ai/' do
+        expect(botao.call).to include('url' => 'https://chat.hub2you.ai/b/{{1}}', 'example' => ['https://chat.hub2you.ai/b/AB3K9QXZ'])
+      end
+      with_modified_env FRONTEND_URL: 'https://app.autonomia.site' do
+        expect(botao.call).to include('url' => 'https://app.autonomia.site/b/{{1}}', 'example' => ['https://app.autonomia.site/b/AB3K9QXZ'])
+      end
+    end
+
+    it 'base de URL desconhecida é erro de quem escreveu o catálogo' do
+      expect { described_class.url_de(base: :outra, caminho: '/x') }.to raise_error(described_class::Desconhecida)
+      with_modified_env FRONTEND_URL: '' do
+        expect { described_class.url_de(base: :booking_invite, caminho: '/b/{{1}}') }.to raise_error(described_class::SemBase)
+      end
+    end
+
+    it 'pronto sem botões não manda o componente de botões' do
+      expect(cobranca.corpo[:components].map { |component| component[:type] }).to eq(['BODY'])
+      expect(cobranca.botoes_do_envio).to eq([])
+    end
+  end
+end

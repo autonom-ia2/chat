@@ -112,6 +112,10 @@
     "controller": "api/v1/accounts/autonomia/agents#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/ajuda": {
+    "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
@@ -202,6 +206,10 @@
   },
   "autonomia/financial/subscription": {
     "controller": "api/v1/accounts/autonomia/financial#subscription",
+    "parametros": []
+  },
+  "autonomia/inboxes/:inbox_id/quem_atende": {
+    "controller": "api/v1/accounts/autonomia/quem_atende#show",
     "parametros": []
   },
   "autonomia/insurance/connection": {
@@ -901,6 +909,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -932,6 +941,10 @@
     "controller": "api/v1/accounts/conversations/participants#show",
     "parametros": []
   },
+  "conversations/:conversation_id/passar_para": {
+    "controller": "api/v1/accounts/conversations/passar_para#show",
+    "parametros": []
+  },
   "conversations/:id": {
     "controller": "api/v1/accounts/conversations#show",
     "parametros": []
@@ -955,6 +968,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -971,6 +985,7 @@
     "parametros": [
       "assignee_type",
       "conversation_type",
+      "crm_pipeline_id",
       "inbox_id",
       "labels",
       "page",
@@ -1170,6 +1185,10 @@
       "conversation_ids"
     ]
   },
+  "crm/follow_up_series/:id": {
+    "controller": "api/v1/accounts/crm/follow_up_series#show",
+    "parametros": []
+  },
   "crm/follow_ups": {
     "controller": "api/v1/accounts/crm/follow_ups#index",
     "motivos": [
@@ -1217,6 +1236,14 @@
   },
   "crm/meetings/:id": {
     "controller": "api/v1/accounts/crm/meetings#show",
+    "parametros": []
+  },
+  "crm/memoria/cards/:card_id/fatos": {
+    "controller": "api/v1/accounts/crm/memoria_fatos#index",
+    "parametros": []
+  },
+  "crm/memoria/chaves": {
+    "controller": "api/v1/accounts/crm/memoria_chaves#index",
     "parametros": []
   },
   "crm/meta_ads_connection": {
@@ -1279,6 +1306,10 @@
       "until"
     ]
   },
+  "crm/meu_acesso": {
+    "controller": "api/v1/accounts/crm/meu_acesso#show",
+    "parametros": []
+  },
   "crm/my_booking_hours": {
     "controller": "api/v1/accounts/crm/my_booking_hours#show",
     "parametros": []
@@ -1293,7 +1324,9 @@
   },
   "crm/pipelines/:pipeline_id/ai_settings": {
     "controller": "api/v1/accounts/crm/ai_settings#show",
-    "parametros": []
+    "parametros": [
+      "quem_recebe"
+    ]
   },
   "crm/pipelines/:pipeline_id/inboxes": {
     "controller": "api/v1/accounts/crm/pipeline_inboxes#index",
@@ -1387,7 +1420,10 @@
   "crm/stage_criteria/defaults": {
     "controller": "api/v1/accounts/crm/stage_criteria#defaults",
     "parametros": [
-      "names"
+      "atender",
+      "names",
+      "positions",
+      "template"
     ]
   },
   "crm/stages/:stage_id/stage_automations": {
@@ -1656,6 +1692,17 @@
   "inboxes/:inbox_id/whatsapp_api_message_templates": {
     "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
     "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_catalog": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#show",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_catalog/products": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#products",
+    "parametros": [
+      "after",
+      "q"
+    ]
   },
   "inboxes/:inbox_id/whatsapp_templates": {
     "controller": "api/v1/accounts/inboxes/whatsapp_templates#index",
@@ -1982,6 +2029,10 @@
   },
   "whatsapp_message_prices": {
     "controller": "api/v1/accounts/whatsapp_message_prices#index",
+    "parametros": []
+  },
+  "whatsapp_template_consent": {
+    "controller": "api/v1/accounts/whatsapp_template_consents#show",
     "parametros": []
   },
   "whatsapp_template_inboxes": {

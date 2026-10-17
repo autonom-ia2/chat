@@ -25,9 +25,11 @@ class Crm::Cards::CalendarQuery
     @params[:owner_id].presence || @params[:assignee_id].presence
   end
 
+  # O vencimento é uma data gravada como 00:00 UTC (#1538): a janela vem em instantes do fuso de quem olha, então o
+  # filtro compara pelo dia UTC. Sem isso o vencimento do primeiro dia da janela ficava de fora a oeste de UTC.
   def apply_time_filters(scope)
-    scope = scope.where('crm_cards.expected_close_at >= ?', parsed_time(:from)) if parsed_time(:from).present?
-    scope = scope.where('crm_cards.expected_close_at <= ?', parsed_time(:to)) if parsed_time(:to).present?
+    scope = scope.where('crm_cards.expected_close_at >= ?', parsed_time(:from).utc.beginning_of_day) if parsed_time(:from).present?
+    scope = scope.where('crm_cards.expected_close_at <= ?', parsed_time(:to).utc.end_of_day) if parsed_time(:to).present?
     scope
   end
 

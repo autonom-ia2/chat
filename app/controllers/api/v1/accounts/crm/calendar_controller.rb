@@ -1,7 +1,8 @@
 class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseController
   def events
     authorize ::Crm::FollowUp, :index?
-    render json: { payload: follow_up_events + expected_close_events + meeting_events + external_events }
+    events = follow_up_events + series_events + expected_close_events + meeting_events + external_events
+    render json: { payload: Crm::Calendar::EventDetails.new(account: Current.account, events: events).perform }
   end
 
   # Read-only free/busy lookup for the meeting scheduler. Returns the busy
@@ -44,19 +45,18 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
 
   def follow_up_events
     due_follow_ups.map do |follow_up|
-      {
-        id: "follow_up_#{follow_up.id}",
-        event_type: "follow_up_#{follow_up.automation_mode}",
-        title: follow_up.title,
-        starts_at: follow_up.due_at&.iso8601,
-        status: follow_up.status,
-        card_id: follow_up.card_id,
-        conversation_id: visible_conversation_id(follow_up),
-        contact_id: follow_up.contact_id,
-        inbox_id: follow_up.inbox_id,
-        assignee_id: follow_up.assignee_id
-      }
+      Crm::FollowUps::SeriesCalendarEvents.follow_up_event(follow_up, conversation_id: visible_conversation_id(follow_up), account: Current.account)
     end
+  end
+
+  # #1460: as próximas vezes dos lembretes que repetem (calculadas; só a próxima existe como lembrete).
+  def series_events
+    return [] if owner_id.present? && owner_id.to_i != Current.user.id
+
+    Crm::FollowUps::SeriesCalendarEvents.new(
+      scope: policy_scope(::Crm::FollowUpSeries), from: meeting_filter_time(:from), to: meeting_filter_time(:to),
+      pipeline_id: params[:pipeline_id]
+    ).events
   end
 
   def expected_close_events
@@ -66,6 +66,9 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
         event_type: 'expected_close',
         title: card.title,
         starts_at: card.expected_close_at&.iso8601,
+        # O vencimento é uma data gravada como 00:00 UTC (#1538): o dia é a parte UTC, sem hora (#1568).
+        all_day: true,
+        date: card.expected_close_at&.utc&.to_date&.iso8601,
         status: card.status,
         card_id: card.id,
         conversation_id: visible_card_conversation_id(card),
@@ -133,7 +136,7 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
     scope = ::Crm::FollowUps::FilterQuery.new(
       scope: policy_scope(::Crm::FollowUp),
       params: params,
-      includes: [:card, { conversation: :conversation_participants }]
+      includes: [:card, :series, { conversation: :conversation_participants }]
     ).perform
     # Hide completed/canceled follow-ups by default — they crowd out upcoming
     # ones once the date-ordered cap is reached. The calendar passes
@@ -191,8 +194,10 @@ class Api::V1::Accounts::Crm::CalendarController < Api::V1::Accounts::Crm::BaseC
   end
 
   # Acesso por funil (#1148, parte C): cada lista do calendário pré-carrega a visibilidade das conversas numa consulta só.
+  # Passando do limite, ficam de fora os mais antigos, não os de hoje e os próximos (#1568: o Meu dia busca um ano para
+  # trás para mostrar o que atrasou). A lista volta em ordem de data.
   def due_follow_ups
-    follow_ups = filtered_follow_ups.order(:due_at, :id).limit(limit).to_a
+    follow_ups = filtered_follow_ups.order(due_at: :desc, id: :desc).limit(limit).to_a.reverse
     conversation_visibility.preload(follow_ups.map(&:conversation))
     follow_ups
   end

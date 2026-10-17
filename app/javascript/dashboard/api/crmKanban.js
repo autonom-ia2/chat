@@ -261,6 +261,10 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  getFollowUp(id) {
+    return axios.get(`${this.url}/follow_ups/${id}`);
+  }
+
   createFollowUp(payload) {
     return axios.post(`${this.url}/follow_ups`, { follow_up: payload });
   }
@@ -288,6 +292,20 @@ class CrmKanbanAPI extends ApiClient {
   // Assuntos da conversa (#1143): os cards dela, o assunto atual primeiro.
   getConversationSubjects(conversationId) {
     return axios.get(`${this.url}/conversations/${conversationId}/cards`);
+  }
+
+  // Decisão "a" (#1606): o assunto mudou depois que a pessoa recebeu; passar para a equipe do assunto ou ficar.
+  passSubjectToTeam(conversationId, cardId) {
+    return axios.post(`${this.url}/conversations/${conversationId}/repasse`, {
+      card_id: cardId,
+    });
+  }
+
+  keepSubjectWithMe(conversationId, cardId) {
+    return axios.post(
+      `${this.url}/conversations/${conversationId}/repasse/manter`,
+      { card_id: cardId }
+    );
   }
 
   focusConversationSubject(conversationId, cardId) {
@@ -325,9 +343,19 @@ class CrmKanbanAPI extends ApiClient {
   }
 
   // Funil ainda não salvo (#1384): critério padrão por nome de etapa e IA antes de salvar.
-  getStageCriteriaDefaults(names) {
+  // #1498 — `atender`: frases de funil de Atender ("Em atendimento" sem proposta).
+  // #1548 — `template` e `positions`: o modelo e a posição de cada etapa nele
+  // (0 = etapa criada pela pessoa), na ordem dos nomes.
+  getStageCriteriaDefaults(
+    names,
+    { atender = false, template, positions } = {}
+  ) {
     return axios.get(`${this.url}/stage_criteria/defaults`, {
-      params: { names },
+      params: {
+        names,
+        ...(atender ? { atender: true } : {}),
+        ...(template ? { template, positions } : {}),
+      },
     });
   }
 
@@ -337,8 +365,11 @@ class CrmKanbanAPI extends ApiClient {
     );
   }
 
-  getAiSettings(pipelineId) {
-    return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`);
+  // #1140: `quemRecebe` traz recebem_por_caixa (só a tela de Atribuição de um funil).
+  getAiSettings(pipelineId, { quemRecebe = false } = {}) {
+    return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`, {
+      params: quemRecebe ? { quem_recebe: 1 } : {},
+    });
   }
 
   updateAiSettings(pipelineId, payload) {

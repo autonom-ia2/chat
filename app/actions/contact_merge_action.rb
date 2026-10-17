@@ -9,6 +9,7 @@ class ContactMergeAction
   OPT_OUT_PRECEDENCE = %w[
     manual
     follow_up_reply
+    campaign_reply
     email_unsubscribe
     prospecting
   ].freeze
@@ -79,6 +80,12 @@ class ContactMergeAction
     merge_crm_meeting_guests
     merge_crm_booking_invites
     merge_crm_booking_notice_stops
+    merge_crm_memoria
+  end
+
+  # #1601 (C1): a memória das IAs do absorvido passa para o que fica antes do destroy!, que a apagaria em cascata.
+  def merge_crm_memoria
+    Crm::Memoria::Mescla.mesclar!(account: @account, absorvido: @mergee_contact, fica: @base_contact)
   end
 
   # #1192: "parar avisos" é da pessoa. Se só o absorvido tinha parado, a parada passa para o que fica; se os dois
@@ -130,7 +137,12 @@ class ContactMergeAction
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
                                                                            tokens: [@base_contact.contact_inboxes.filter_map(&:pubsub_token)])
-    @base_contact.update!(merged_attributes)
+    atualizar_contato_que_fica(merged_attributes)
+  end
+
+  # #1601: copiar os atributos do absorvido não é correção de uma pessoa na memória das IAs.
+  def atualizar_contato_que_fica(merged_attributes)
+    Crm::Memoria::Correcao.sem_correcao(@base_contact) { @base_contact.update!(merged_attributes) }
   end
 
   # #1144: cliente é da pessoa. Se um dos dois já era cliente, o que fica é cliente, com a data mais antiga.
@@ -143,8 +155,8 @@ class ContactMergeAction
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem
   # e autor) passa para o que fica. Se os dois recusaram, fica a origem mais firme (OPT_OUT_PRECEDENCE: a manual, o pedido
-  # de parar no follow-up, o descadastro de e-mail e, por último, a da Prospecção, que o "Desfazer" do lead solta sozinho)
-  # e a data mais antiga. Assim a mescla não apaga uma recusa manual atrás de uma da Prospecção.
+  # de parar no follow-up, o pedido de parar na resposta a campanha (#1449), o descadastro de e-mail e, por último, a da
+  # Prospecção, que o "Desfazer" do lead solta sozinho) e a data mais antiga. Assim a mescla não apaga uma recusa manual atrás de uma da Prospecção.
   def inherited_opt_out
     return {} unless @mergee_contact.opted_out?
     return opt_out_attributes(@mergee_contact) unless @base_contact.opted_out?

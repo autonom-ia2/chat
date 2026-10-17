@@ -10,6 +10,9 @@ import {
   trocaNoCanal,
 } from '../utils/canais';
 import EscolhaRadio from './EscolhaRadio.vue';
+import EscolhaDoCanal from './EscolhaDoCanal.vue';
+import NotaHorarioDoCanal from './NotaHorarioDoCanal.vue';
+import { useHorarioUnicoCaixa } from 'dashboard/composables/useHorarioUnicoCaixa';
 
 // #1181 — "Onde e quando {nome} atende" (protótipo T05 e T10). Onde: caixas da leitura L2 (livre,
 // já com outro agente — com troca — ou com outro sistema, que não dá para escolher). Quando: sempre,
@@ -17,6 +20,12 @@ import EscolhaRadio from './EscolhaRadio.vue';
 // quem usa, em `horarios` ({ [inbox_id]: texto | null }): texto mostra o horário, null quer dizer
 // "sem horário" (só "Sempre" fica disponível) e caixa ausente aparece sem horário, sem travar.
 // Sem lista suspensa nativa: tudo em cartões-rádio.
+// Slot `depoisDeOnde` (#1433): o que vem logo abaixo de "Onde atende" (a gaveta da página põe ali as
+// outras caixas em que ele também recebe quando alguém passar).
+// #1720 — com `primeiro` ('sim' | 'nao'), "Onde atende" vira a pergunta "{nome} atende primeiro as
+// conversas novas?": "Sim, no canal:" (com a lista de canais) ou "Não, só quando alguém passar a
+// conversa". Sem `primeiro` (null, a criação), segue a escolha de canal de sempre.
+// `horarioDeCada`: no "Não" com canais marcados em "Recebe quando…", o horário é o de cada um deles.
 const props = defineProps({
   canais: { type: Array, required: true },
   agenteId: { type: Number, default: null },
@@ -26,13 +35,20 @@ const props = defineProps({
   horarios: { type: Object, default: () => ({}) },
   // A L2 falhou e a lista veio só das caixas livres (eligible_inboxes).
   semLeitura: { type: Boolean, default: false },
+  primeiro: {
+    type: String,
+    default: null,
+    validator: v => [null, 'sim', 'nao'].includes(v),
+  },
+  horarioDeCada: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['update:onde', 'update:quando']);
+const emit = defineEmits(['update:onde', 'update:quando', 'update:primeiro']);
 
 const { t } = useI18n();
 const router = useRouter();
 const { podeEscolherQuemRecebe, crmLigado } = usePermissoesDaJornada();
+const { ligado: horarioUnico } = useHorarioUnicoCaixa();
 
 const NS = 'AGENTS.JORNADA.ONDE_QUANDO';
 const QUANDO = {
@@ -78,6 +94,17 @@ const opcaoDoCanal = canal => {
 
 const opcoesOnde = computed(() => props.canais.map(opcaoDoCanal));
 
+const comPergunta = computed(() => props.primeiro !== null);
+const soQuandoPassar = computed(() => props.primeiro === 'nao');
+const opcoesPrimeiro = computed(() => [
+  { valor: 'sim', titulo: t(`${NS}.PRIMEIRO_SIM`) },
+  { valor: 'nao', titulo: t(`${NS}.PRIMEIRO_NAO`) },
+]);
+// No "Não" não há canal escolhido: o horário de "Quando" não é o de uma caixa só.
+const ondeDoHorario = computed(() =>
+  soQuandoPassar.value ? null : props.onde
+);
+
 const todosOcupados = computed(
   () =>
     props.canais.length > 0 &&
@@ -95,11 +122,11 @@ const horarioDe = inboxId =>
   inboxId in props.horarios ? props.horarios[inboxId] : undefined;
 
 const semHorario = computed(
-  () => props.onde !== null && horarioDe(props.onde) === null
+  () => ondeDoHorario.value !== null && horarioDe(ondeDoHorario.value) === null
 );
 
 const opcoesQuando = computed(() => {
-  const horario = horarioDe(props.onde);
+  const horario = horarioDe(ondeDoHorario.value);
   return Object.entries(QUANDO).map(([valor, chave]) => {
     let texto = '';
     if (valor === 'always') {
@@ -130,41 +157,53 @@ const linkQuemRecebe = computed(
 
 <template>
   <div class="flex flex-col gap-5">
-    <section class="flex flex-col gap-2">
+    <section data-onde class="flex flex-col gap-2">
       <h3 class="m-0 text-sm font-semibold text-n-slate-12">
-        {{ t('AGENTS.JORNADA.ONDE_QUANDO.ONDE') }}
+        {{
+          comPergunta
+            ? t(`${NS}.PRIMEIRO_PERGUNTA`, { nome })
+            : t('AGENTS.JORNADA.ONDE_QUANDO.ONDE')
+        }}
       </h3>
-      <p v-if="todosOcupados" class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.ONDE_QUANDO.TODOS_OCUPADOS', { nome }) }}
-      </p>
       <EscolhaRadio
-        :rotulo="t('AGENTS.JORNADA.ONDE_QUANDO.ONDE')"
+        v-if="comPergunta"
+        data-primeiro
+        :rotulo="t(`${NS}.PRIMEIRO_PERGUNTA`, { nome })"
+        :opcoes="opcoesPrimeiro"
+        :model-value="primeiro"
+        @update:model-value="emit('update:primeiro', $event)"
+      >
+        <template #depois-sim>
+          <EscolhaDoCanal
+            v-if="primeiro === 'sim'"
+            recuada
+            :rotulo="t(`${NS}.PRIMEIRO_CANAL`, { nome })"
+            :opcoes="opcoesOnde"
+            :model-value="onde"
+            :nome="nome"
+            :troca="troca"
+            :todos-ocupados="todosOcupados"
+            :sem-leitura="semLeitura"
+            @update:model-value="escolherOnde"
+          />
+        </template>
+      </EscolhaRadio>
+      <EscolhaDoCanal
+        v-if="!comPergunta"
+        :rotulo="t(`${NS}.ONDE`)"
         :opcoes="opcoesOnde"
         :model-value="onde"
+        :nome="nome"
+        :troca="troca"
+        :todos-ocupados="todosOcupados"
+        :sem-leitura="semLeitura"
         @update:model-value="escolherOnde"
       />
-      <p
-        v-if="troca"
-        data-troca
-        class="flex items-start gap-2 p-3 m-0 text-sm rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
-      >
-        <span
-          class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
-          aria-hidden="true"
-        />
-        {{
-          t('AGENTS.JORNADA.ONDE_QUANDO.TROCA', {
-            outro: troca.nome,
-            canal: troca.canal,
-          })
-        }}
-      </p>
-      <p v-if="semLeitura" class="m-0 text-sm text-n-slate-11">
-        {{ t('AGENTS.JORNADA.ONDE_QUANDO.SEM_LEITURA') }}
-      </p>
     </section>
 
-    <section class="flex flex-col gap-2">
+    <slot name="depoisDeOnde" />
+
+    <section data-quando class="flex flex-col gap-2">
       <h3 class="m-0 text-sm font-semibold text-n-slate-12">
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.QUANDO') }}
       </h3>
@@ -177,6 +216,18 @@ const linkQuemRecebe = computed(
       <p v-if="semHorario" class="m-0 text-sm text-n-slate-11">
         {{ t('AGENTS.JORNADA.ONDE_QUANDO.SEM_HORARIO') }}
       </p>
+      <p
+        v-if="soQuandoPassar && horarioDeCada"
+        data-horario-de-cada
+        class="m-0 text-sm text-n-slate-11"
+      >
+        {{ t(`${NS}.HORARIO_DE_CADA`, { nome }) }}
+      </p>
+      <NotaHorarioDoCanal
+        v-if="horarioUnico"
+        :inbox-id="ondeDoHorario"
+        :horario="horarioDe(ondeDoHorario)"
+      />
     </section>
 
     <div class="flex flex-col gap-1 p-3 text-sm rounded-xl bg-n-blue-2">

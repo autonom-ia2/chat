@@ -1,4 +1,6 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
+import crmEn from 'dashboard/i18n/locale/en/crm.json';
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
@@ -6,8 +8,15 @@ import CrmPipelineDrawer from './CrmPipelineDrawer.vue';
 // The drawer pulls global config + permissions; stub them so we can mount it in
 // isolation and focus on the form-reset reactivity that the realtime-churn fix
 // changed.
+// #1548 (passo 2): o pacote da conta (`autonomia_pacote`) vem da conta atual.
+const conta = vi.hoisted(() => ({ autonomia_pacote: null }));
 vi.mock('vuex', () => ({
-  useStore: () => ({ getters: {} }),
+  useStore: () => ({
+    getters: {
+      getCurrentAccountId: 1,
+      'accounts/getAccount': () => conta,
+    },
+  }),
 }));
 vi.mock('../composables/useCrmPermissions', () => ({
   useCrmPermissions: () => ({ canManageAi: ref(false) }),
@@ -115,6 +124,7 @@ describe('CrmPipelineDrawer form reset vs realtime churn', () => {
 
   it('removes an unsaved stage from the footer and goes back', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="VENDER"]').trigger('click');
     wrapper.vm.view = 'etapas';
     const total = wrapper.vm.form.stages.length;
     wrapper.vm.addStage();
@@ -197,7 +207,14 @@ describe('CrmPipelineDrawer journey', () => {
   it('creates in three steps: name, stages, then review', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
     expect(wrapper.vm.view).toBe('nome');
+    // #1498: a primeira pergunta é o tipo; sem ela, nada de nome nem etapas.
+    expect(wrapper.find('[data-funil-nome]').exists()).toBe(false);
+    expect(wrapper.vm.form.stages).toHaveLength(0);
+    expect(principal(wrapper).attributes('disabled')).toBeDefined();
+    await wrapper.get('[data-tipo="VENDER"]').trigger('click');
     expect(wrapper.find('[data-funil-nome]').exists()).toBe(true);
+    // Vender tem um modelo só: nada de escolher modelo.
+    expect(wrapper.find('[data-modelo]').exists()).toBe(false);
     expect(principal(wrapper).text()).toContain('CRM_FUNIL.CONTINUAR');
 
     await principal(wrapper).trigger('click');
@@ -219,6 +236,14 @@ describe('CrmPipelineDrawer journey', () => {
 
   it('switches to a ready-made template with its own stages', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+    expect(
+      wrapper
+        .findAll('[data-modelo]')
+        .map(item => item.attributes('data-modelo'))
+    ).toEqual(['ATENDIMENTO', 'POS_VENDA', 'COBRANCA', 'AGENDAMENTOS']);
+    await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
+    expect(wrapper.vm.form.name).toBe('CRM_FUNIL.MODELOS.COBRANCA.NOME');
     await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
 
     expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual([
@@ -233,15 +258,16 @@ describe('CrmPipelineDrawer journey', () => {
 
   it('asks before a template switch throws away edited stages', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="VENDER"]').trigger('click');
     wrapper.vm.form.stages[0].name = 'Primeiro oi';
-    await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
+    await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
 
     expect(wrapper.vm.form.stages[0].name).toBe('Primeiro oi');
     await wrapper.get('[data-funil-manter-modelo]').trigger('click');
     expect(wrapper.find('[data-funil-trocar-modelo]').exists()).toBe(false);
     expect(wrapper.vm.form.stages[0].name).toBe('Primeiro oi');
 
-    await wrapper.get('[data-modelo="ATENDIMENTO"]').trigger('click');
+    await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
     await wrapper.get('[data-funil-confirmar-modelo]').trigger('click');
     expect(wrapper.vm.form.stages[0].name).toBe(
       'CRM_FUNIL.MODELOS.ATENDIMENTO.E1'
@@ -276,8 +302,9 @@ describe('CrmPipelineDrawer journey', () => {
     expect(wrapper.emitted('save')).toBeUndefined();
   });
 
-  it('starts the Sales template with the same stages the editor shows', () => {
+  it('starts the Sales template with the same stages the editor shows', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="VENDER"]').trigger('click');
     expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual(
       [1, 2, 3, 4, 5].map(n => `CRM_FUNIL.MODELOS.VENDAS.E${n}`)
     );
@@ -366,5 +393,172 @@ describe('CrmPipelineDrawer ads', () => {
     const fechar = wrapper.get('[data-funil-principal]');
     expect(fechar.text()).toContain('CRM_FUNIL.FECHAR');
     expect(fechar.classes().join(' ')).toContain('bg-n-slate-9/10');
+  });
+});
+
+// #1498 — Atender: sem Vendas e meta nem Anúncios; o resumo fala do jeito de atender.
+describe('CrmPipelineDrawer Atender', () => {
+  it('shows Sell or Serve first in the summary, and hides ads', () => {
+    const wrapper = mountDrawer({
+      pipeline: { id: 1, name: 'Suporte', counts_as_sale: false },
+    });
+    const [primeiro] = wrapper.findAll('[data-setting]');
+    expect(primeiro.attributes('data-setting')).toBe('sales');
+    expect(primeiro.text()).toContain('CRM_FUNIL.TIPO.ROTULO');
+    expect(primeiro.text()).toContain('CRM_FUNIL.RESUMO.TIPO_ATENDER');
+    expect(wrapper.find('[data-setting="ads"]').exists()).toBe(false);
+  });
+
+  it('switches an existing pipeline back to Sell from the same question', async () => {
+    const wrapper = mountDrawer({
+      pipeline: { id: 1, name: 'Suporte', counts_as_sale: false },
+    });
+    await wrapper
+      .get('[data-setting="sales"]')
+      .findComponent(Button)
+      .trigger('click');
+    await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+    await wrapper.get('[data-funil-principal]').trigger('click');
+    await flushPromises();
+    const [[payload]] = wrapper.emitted('save');
+    expect(payload.pipeline.counts_as_sale).toBe(true);
+    expect(payload.pipeline.template).toBeUndefined();
+  });
+
+  it('creates a Collections pipeline with its template, categories and "Paid"', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+    await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
+    expect(wrapper.vm.form.outcomeLabels.success).toBe(
+      'CRM_FUNIL.MODELOS.COBRANCA.SUCESSO'
+    );
+    wrapper.vm.view = 'confira';
+    await wrapper.vm.$nextTick();
+    await wrapper.get('[data-funil-principal]').trigger('click');
+    await flushPromises();
+    const [[payload]] = wrapper.emitted('save');
+    expect(payload.pipeline.template).toBe('COBRANCA');
+    expect(payload.pipeline.counts_as_sale).toBe(false);
+    expect(payload.pipeline.outcome_labels.success).toBe(
+      'CRM_FUNIL.MODELOS.COBRANCA.SUCESSO'
+    );
+    expect(payload.stages.map(stage => stage.category)).toEqual([
+      'novo',
+      'andamento',
+      'espera',
+      'resolvido',
+    ]);
+  });
+
+  describe('variant by account type (#1548)', () => {
+    afterEach(() => {
+      conta.autonomia_pacote = null;
+    });
+
+    const categoriasCriadas = async chave => {
+      const wrapper = mountDrawer({
+        mode: 'create',
+        pipeline: null,
+        stages: [],
+      });
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      await wrapper.get(`[data-modelo="${chave}"]`).trigger('click');
+      wrapper.vm.view = 'confira';
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-funil-principal]').trigger('click');
+      await flushPromises();
+      const [[payload]] = wrapper.emitted('save');
+      return payload.stages.map(stage => stage.category);
+    };
+
+    it('health account: Service E3 is in progress, not a pause', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'andamento',
+        'resolvido',
+      ]);
+    });
+
+    it('health account: other Serve templates keep today categories', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      expect(await categoriasCriadas('POS_VENDA')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+
+    it('broker account or no package: Service keeps today categories', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+      conta.autonomia_pacote = null;
+      expect(await categoriasCriadas('ATENDIMENTO')).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+  });
+
+  it('gives "Paid" back when leaving Collections for another template', async () => {
+    const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+    await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
+    await wrapper.get('[data-modelo="POS_VENDA"]').trigger('click');
+    expect(wrapper.vm.form.outcomeLabels.success).toBe('');
+  });
+});
+
+// #1149 (R16): caixa que saiu do CRM guarda o vínculo, mas não aparece como
+// ligada no funil (nem no resumo, nem em "Ligado em").
+describe('CrmPipelineDrawer — inboxes are read only', () => {
+  it('shows only the inboxes with the CRM on', async () => {
+    const wrapper = mount(CrmPipelineDrawer, {
+      props: {
+        show: true,
+        mode: 'edit',
+        pipeline: { id: 1, name: 'Funil' },
+        stages: makeStages(),
+        pipelineInboxes: [
+          { inbox_id: 2, inbox: { name: 'WhatsApp' }, caixa_no_crm: true },
+          {
+            inbox_id: 3,
+            inbox: { name: 'Old site chat' },
+            caixa_no_crm: false,
+          },
+        ],
+      },
+      global: {
+        plugins: [
+          createI18n({ legacy: false, locale: 'en', messages: { en: crmEn } }),
+        ],
+        stubs: {
+          CrmStageAutomationsPanel: true,
+          CrmAiSettingsPanel: true,
+          RouterLink: RouterLinkStub,
+        },
+      },
+    });
+
+    const resumo = wrapper.get('[data-setting="inboxes"]');
+    expect(resumo.text()).toContain('WhatsApp');
+    expect(resumo.text()).not.toContain('Old site chat');
+
+    await resumo.get('button').trigger('click');
+    await flushPromises();
+
+    expect(
+      wrapper.findAll('[data-caixa]').map(item => item.attributes('data-caixa'))
+    ).toEqual(['WhatsApp']);
+    wrapper.unmount();
   });
 });

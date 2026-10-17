@@ -1,5 +1,9 @@
 {
   "MODELOS_WHATSAPP": {
+    "BETA": {
+      "SELO": "Beta",
+      "AVISO": "Recurso novo: se algo não funcionar, fale com o suporte."
+    },
     "CARREGANDO": "Carregando os modelos…",
     "ERRO": "Não conseguimos abrir os modelos agora.",
     "TENTAR_DE_NOVO": "Tentar de novo",
@@ -172,6 +176,7 @@
       "SISTEMA": {
         "agendamento": "Usado pelo sistema nos avisos do agendamento.",
         "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
+        "cobranca": "Usado pelo sistema nos avisos de cobrança do funil.",
         "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."
       }
     },
@@ -494,7 +499,8 @@
         "SEM_CHAVES": "O texto e o rodapé não têm chaves duplas digitadas à mão",
         "FORMATO_DIVULGACAO": "Este formato vai como divulgação",
         "CARTOES_MESMA_MIDIA": "Todos os cartões têm o mesmo tipo de mídia (só foto ou só vídeo)",
-        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp"
+        "NOME_LIVRE": "O nome ainda não existe nesta conta do WhatsApp",
+        "PRODUTOS_TITULO": "A lista tem título de até 60 letras"
       },
       "LEMBRETE_ARQUIVO_IGUAL": "Esse arquivo vai igual para todos."
     },
@@ -519,7 +525,13 @@
       "VER_COMO_FICA": "Ver como fica",
       "OFERTA_CONTAGEM": "Termina em 2 dias (exemplo)",
       "VER_TODAS_AS_OPCOES": "Ver todas as opções",
-      "OFERTA_VALE_ATE": "Vale até {data}"
+      "OFERTA_VALE_ATE": "Vale até {data}",
+      "PRODUTOS": {
+        "EXEMPLO": "Produto do catálogo",
+        "LISTA": "Produtos",
+        "ITENS": "{n} item | {n} itens",
+        "AO_TOCAR": "Ao tocar em “{botao}”, o cliente vê:"
+      }
     },
     "ENVIADO": {
       "TITULO": {
@@ -616,6 +628,19 @@
         "NOME_PADRAO": "Cadastro rápido",
         "TEXTO": "Oi, [nome_cliente]! Leva 1 minuto: preencha o formulário para a gente te atender melhor.",
         "BOTAO": "Preencher formulário"
+      },
+      "produtos": {
+        "TITULO": "Produtos do catálogo",
+        "PARA": "Produtos do seu catálogo, com foto e preço. Você escolhe quais na hora da campanha.",
+        "ETAPA": "Produtos",
+        "NOME_PADRAO": "Produtos da loja",
+        "TEXTO": "Oi, [nome_cliente]! Separamos produtos que combinam com você. Veja e peça por aqui mesmo.",
+        "TITULO_EXEMPLO": "Novidades da semana",
+        "BOTOES": {
+          "um": "Ver",
+          "varios": "Ver itens",
+          "carrossel": "Ver"
+        }
       }
     },
     "CARTOES": {
@@ -675,7 +700,10 @@
         "nao_conferido": "Não conseguimos conferir o modelo “{modelo}” com o WhatsApp. Nada foi enviado.",
         "outro": "A campanha parou antes de enviar. Nada foi enviado.",
         "arquivo_do_topo": "O modelo “{modelo}” tem foto, vídeo ou documento no topo e o arquivo não está guardado. Escolha o arquivo de novo no modelo ou ponha o link na campanha.",
-        "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado."
+        "oferta_vencida": "O prazo da oferta passou antes do envio. Nada foi enviado.",
+        "produto_indisponivel": "O produto “{produto}” acabou ou saiu do catálogo. Nada foi enviado.",
+        "sem_catalogo": "A conta do WhatsApp não tem mais catálogo de produtos conectado. Nada foi enviado.",
+        "produtos_desligados": "Campanha com produtos do catálogo não está mais liberada para esta conta. Nada foi enviado."
       },
       "ACOES": {
         "ABRIR_MODELO": "Ver o modelo",
@@ -692,7 +720,10 @@
       "AGUARDE_CONFERENCIA": "Ainda não deu para conferir o modelo com o WhatsApp. Retomar libera quando a conferência passar.",
       "AGUARDE_LIBERAR": "Espere o WhatsApp liberar o modelo. Quando ele voltar, toque em Retomar.",
       "AGUARDE_APROVAR": "Espere o WhatsApp aprovar o modelo. Depois, toque em Retomar.",
-      "NOVA_DATA": "Crie a campanha de novo com uma data à frente."
+      "NOVA_DATA": "Crie a campanha de novo com uma data à frente.",
+      "AGUARDE_PRODUTO": "Quando o produto voltar ao catálogo, toque em Retomar. Ou crie a campanha de novo com outro produto.",
+      "FALE_COM_SUPORTE": "Fale com o suporte para liberar os produtos do catálogo e toque em Retomar.",
+      "CONECTE_CATALOGO": "Conecte o catálogo de novo no WhatsApp e toque em Retomar."
     },
     "PONTE": {
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
@@ -708,7 +739,8 @@
         "SEM_FONTE": "tem campo que a campanha não preenche",
         "NAO_VAI_CODIGO": "código de verificação não vai em campanha",
         "NAO_VAI_PRODUTOS": "produtos escolhidos não vão em campanha",
-        "NAO_VAI_CARTAO_COM_CAMPO": "cartão com campo ainda não vai em campanha"
+        "NAO_VAI_CARTAO_COM_CAMPO": "cartão com campo ainda não vai em campanha",
+        "NAO_VAI_SEM_CATALOGO": "sua conta do WhatsApp não tem catálogo de produtos"
       },
       "EM_ANALISE": "“{nome}” ainda está em análise no WhatsApp. Você pode montar e agendar a campanha; enviar agora libera quando ele for aprovado.",
       "ENVIAR_AGORA_BLOQUEADO": "Enviar agora libera quando o WhatsApp aprovar o modelo. Escolha uma data para agendar.",
@@ -720,7 +752,9 @@
         "POR_ENVIO": "{porEnvio} por envio",
         "CUPOM": "Cupom: {cupom}",
         "VALIDADE": "A oferta vale até {quando}",
-        "CARTOES": "{n} cartões com foto"
+        "CARTOES": "{n} cartões com foto",
+        "PRODUTOS": "{n} produto do catálogo: | {n} produtos do catálogo:",
+        "PRODUTOS_AJUDA": "Se um produto acabar ou sair do catálogo antes do envio, a campanha para e avisamos você. Ninguém recebe a mensagem sem o produto."
       },
       "GRUPO_CATALOGO": "Do cadastro",
       "SEM_MODELO_LIBERADO": "Nenhum modelo desta conta do WhatsApp pode ir em campanha agora: estão recusados, pausados ou num formato que a campanha ainda não envia.",
@@ -779,6 +813,47 @@
       "SINAL": {
         "ruim": "O WhatsApp está vendo muita gente bloquear ou denunciar o modelo \"{nome}\". Ele pode pausar o modelo a qualquer momento, e a campanha para junto. Dá para enviar, mas o melhor é mandar só para quem conhece a sua empresa.",
         "atencao": "Algumas pessoas bloquearam ou denunciaram o modelo \"{nome}\". Se piorar, o WhatsApp pausa o modelo e a campanha para junto. Dá para enviar, mas mande só para quem conhece a sua empresa."
+      },
+      "PRODUTOS": {
+        "TITULO": {
+          "um": "Produto da mensagem",
+          "varios": "Produtos da mensagem",
+          "carrossel": "Produtos dos cartões"
+        },
+        "AJUDA": {
+          "um": "Escolha 1 produto do seu catálogo. A foto, o nome e o preço vêm de lá.",
+          "varios": "Escolha até {maximo} produtos. A foto do primeiro aparece na mensagem.",
+          "carrossel": "Escolha de 2 a {maximo} produtos. Cada produto vira um cartão."
+        },
+        "ESCOLHER": {
+          "um": "Escolher produto",
+          "varios": "Escolher produtos",
+          "carrossel": "Escolher produtos"
+        },
+        "TROCAR": {
+          "um": "Trocar produto",
+          "varios": "Alterar produtos",
+          "carrossel": "Alterar produtos"
+        },
+        "GAVETA": {
+          "um": "Escolha o produto",
+          "varios": "Escolha os produtos",
+          "carrossel": "Escolha os produtos dos cartões"
+        },
+        "DO_CATALOGO": "Do catálogo {nome} · {n} produto | Do catálogo {nome} · {n} produtos",
+        "BUSCA": "Procurar pelo nome",
+        "BUSCA_EXEMPLO": "Ex.: camiseta",
+        "CARREGANDO": "Abrindo o catálogo…",
+        "ERRO": "Não deu para abrir o catálogo agora.",
+        "NENHUM": "Nenhum produto com esse nome.",
+        "ESGOTADO": "Esgotado",
+        "FALTAM": "Escolha mais {n} produto | Escolha mais {n} produtos",
+        "ESCOLHIDOS": "{n} escolhido, de até {maximo} | {n} escolhidos, de até {maximo}",
+        "USAR": "Usar estes produtos",
+        "FOTO_DA_MENSAGEM": "foto da mensagem",
+        "ACABOU": "Este produto acabou. Tire ou troque por outro.",
+        "TIRAR": "Tirar {nome}",
+        "VER_MAIS": "Ver mais produtos"
       }
     },
     "IA": {
@@ -848,7 +923,8 @@
         "data_hora": "Data e hora do horário",
         "data": "Data do horário",
         "hora": "Hora do horário",
-        "link_gestao": "Link para confirmar ou remarcar"
+        "link_gestao": "Link para confirmar ou remarcar",
+        "link_codigo": "Código do link para confirmar ou remarcar"
       },
       "negocio": {
         "titulo": "Título do negócio",
@@ -862,8 +938,9 @@
       "TITULO": "Respostas grátis do mês",
       "EXPLICA": "O WhatsApp dá {limite} respostas grátis por número a cada mês. Depois disso, cada resposta custa {valor}.",
       "EXPLICA_SEM_VALOR": "O WhatsApp dá {limite} respostas grátis por número a cada mês.",
-      "USADAS": "{n} de {limite}",
-      "PASSOU": "Passou das {limite} grátis"
+      "USADAS": "Cerca de {n} de {limite}",
+      "PASSOU": "Cerca de {n}, passou das {limite} grátis",
+      "ESTIMATIVA": "Estimativa: conta só as respostas que saíram pelo Chat2You. O que sai por outro aplicativo no mesmo número não entra. O mês vira à meia-noite no fuso da conta do WhatsApp."
     },
     "CONFERENCIA_AUTOMATICA": {
       "PRONTO": "“{nome}” ficou pronto para usar.",
@@ -928,8 +1005,8 @@
         "CONTEUDO_TEXTO": "Quem falou com você nas últimas 24 horas recebe: “{texto}”"
       },
       "CUSTO_ESCRITA": {
-        "gratis": "Grátis (dentro das {limite} do mês: sobram {sobram}).",
-        "passa": "{gratis} saem grátis (sobram {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
+        "gratis": "Grátis (dentro das {limite} do mês: sobram cerca de {sobram}).",
+        "passa": "{gratis} saem grátis (sobram cerca de {sobram} das {limite} do mês); as outras {pagas} custam {preco} cada: {valor}.",
         "sem_franquia": "Não conseguimos ver as grátis do mês: conte com até {valor} ({preco} cada)."
       },
       "CANAL_HINT": "Modelo aprovado pela Meta. Quem falou com você nas últimas 24 horas pode receber uma mensagem escrita por você.",
@@ -990,6 +1067,102 @@
         "RESPONDERAM": "{n}% responderam"
       },
       "USAR_MESMO_ASSIM": "Usar mesmo assim"
+    },
+    "PRODUTOS_NO_MODELO": {
+      "PERGUNTA": "Como os produtos aparecem?",
+      "JEITOS": {
+        "um": {
+          "TITULO": "Um produto",
+          "PARA": "Foto grande, nome e preço de um produto."
+        },
+        "varios": {
+          "TITULO": "Vários numa lista",
+          "PARA": "Até 30 produtos. O cliente toca e vê a lista."
+        },
+        "carrossel": {
+          "TITULO": "Cartões lado a lado",
+          "PARA": "De 2 a 10 produtos que o cliente passa para o lado."
+        }
+      },
+      "TITULO": "Título da lista",
+      "TITULO_AJUDA": "Aparece em cima da mensagem. Até {n} letras.",
+      "TITULO_ERRO": "Escreva um título de até {n} letras.",
+      "ESCOLHE_NA_CAMPANHA": "Os produtos você escolhe na hora de criar a campanha. Assim o mesmo modelo serve para várias ofertas."
+    },
+    "AUTORIZACAO": {
+      "TITULO": "Autorização para criar modelos",
+      "AVISO": "Você autoriza o {marca} a criar modelos por conta própria. Os modelos que você já tem continuam como estão.",
+      "SITUACAO": {
+        "LIGADA": "Ligada",
+        "DESLIGADA": "Desligada"
+      },
+      "OPCIONAL": "(opcional)",
+      "SERVICO": {
+        "ROTULO": "Aviso de serviço",
+        "EXPLICA": "Avisos sobre um pedido ou atendimento do cliente, como confirmação, lembrete e cobrança."
+      },
+      "DIVULGACAO": {
+        "ROTULO": "Divulgação",
+        "EXPLICA": "Ofertas, promoções e convites para o cliente voltar a comprar.",
+        "TRAVADA": "Marque o Aviso de serviço para liberar esta.",
+        "LIBERADA": "Divulgação também",
+        "NAO_LIBERADA": "Divulgação não liberada",
+        "LIGAR": "Ligar Divulgação",
+        "DESLIGAR": "Desligar Divulgação"
+      },
+      "PRECO": "{valor} por mensagem entregue",
+      "LIBERADO": "O que está liberado",
+      "META": {
+        "TITULO": "O que a Meta cobra e limita",
+        "COBRA": "A Meta cobra cada mensagem entregue, mesmo com a conversa aberta.",
+        "TABELA": "Preços da tabela da Meta para o Brasil, em vigor desde {data}.",
+        "LIMITE_MODELOS": "Cada conta do WhatsApp aceita até {modelos} modelos ({verificada} se a empresa for verificada na Meta) e até {porHora} novos por hora.",
+        "LIMITE_DIVULGACAO": "A Meta limita quantas divulgações cada pessoa recebe. Algumas podem não ser entregues."
+      },
+      "LIGADA_POR": "Ligada por {nome} em {dia} às {hora}, no fuso da conta ({fuso}).",
+      "LIGADA_POR_SEM_FUSO": "Ligada por {nome} em {dia} às {hora}, no fuso da sua conta.",
+      "DESLIGADA_POR": "Desligada por {nome} em {dia} às {hora}, no fuso da conta ({fuso}).",
+      "DESLIGADA_POR_SEM_FUSO": "Desligada por {nome} em {dia} às {hora}, no fuso da sua conta.",
+      "ALGUEM": "alguém que não está mais na conta",
+      "ACOES": {
+        "LIGAR": "Ligar autorização",
+        "DESLIGAR": "Desligar autorização"
+      },
+      "AGORA_NAO": "Agora não",
+      "CONFIRMAR_LIGAR": {
+        "TITULO": "Ligar a autorização?",
+        "SIM": "Sim, ligar"
+      },
+      "CONFIRMAR_DIVULGACAO": {
+        "TITULO": "Ligar a Divulgação?",
+        "SIM": "Sim, ligar"
+      },
+      "CONFIRMAR_DESLIGAR": {
+        "TITULO": "Desligar a autorização?",
+        "SIM": "Sim, desligar"
+      },
+      "CONFIRMAR_DESLIGAR_DIVULGACAO": {
+        "TITULO": "Desligar a Divulgação?",
+        "SIM": "Sim, desligar"
+      },
+      "FALHOU": "Não deu certo. Tente de novo.",
+      "RESUMO": {
+        "TITULO": "Autorização para o {marca} criar modelos",
+        "DESLIGADA": "Desligada. O {marca} não cria modelos sozinho.",
+        "LIGADA_SERVICO": "Ligada para Aviso de serviço.",
+        "LIGADA_TUDO": "Ligada para Aviso de serviço e Divulgação.",
+        "ABRIR": "Ver autorização"
+      },
+      "SO_ADMIN": "Só quem administra a conta pode mudar."
+    },
+    "CONVERSA": {
+      "CUPOM": "Código do cupom",
+      "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
+      "VALIDADE_AJUDA": "O cliente vê a contagem regressiva até essa hora.",
+      "VALIDADE_TITULO": "A oferta vale até",
+      "VALIDADE_SEM_FUSO": "A conta ainda não tem fuso horário. Quem administra a conta escolhe em Configurações > Conta, e aí dá para mandar esta oferta.",
+      "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
+      "CUPOM_FALTA": "Escreva o código do cupom, com até {n} letras e números, para enviar."
     }
   }
 }

@@ -563,8 +563,10 @@
     "YOU_ARE_WATCHING": "Você está participando",
     "API": {
       "ERROR_MESSAGE": "Não foi possível atualizar, tente novamente!",
-      "SUCCESS_MESSAGE": "Participantes atualizados!"
-    }
+      "SUCCESS_MESSAGE": "Participantes atualizados!",
+      "SELF_ADD_RESTRICTED": "Você não pode se adicionar nesta conversa. Peça a um administrador ou a quem está atendendo para adicionar você."
+    },
+    "SELF_ADD_RESTRICTED_HINT": "Outra pessoa pode adicionar você"
   },
   "TRANSLATE_MODAL": {
     "TITLE": "Ver conteúdo traduzido",

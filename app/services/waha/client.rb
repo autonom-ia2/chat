@@ -18,6 +18,9 @@ module Waha
     class Timeout < Error; end
     # O recurso não existe no motor (ex.: sessão já apagada).
     class NotFound < Error; end
+    # Resposta 2xx com corpo que não é JSON: o motor executou o pedido, mas o resultado não dá para ler (#1453). Continua
+    # sendo Error para quem já trata Error; o envio do WhatsApp API a trata como incerta.
+    class InvalidResponse < Error; end
 
     DEFAULT_TIMEOUT = 20
 
@@ -33,20 +36,29 @@ module Waha
       post('/api/sessions', payload)
     end
 
-    def get_session(name)
-      get("/api/sessions/#{name}")
+    def get_session(name, timeout: DEFAULT_TIMEOUT)
+      get("/api/sessions/#{name}", timeout: timeout)
     end
 
-    def update_session(name, config:, apps:)
-      put("/api/sessions/#{name}", { config: config, apps: apps })
+    # Sem `apps`, a chave não vai no corpo e o motor mantém os apps da sessão (verificado no motor em 14/10/2026).
+    # `apps: nil` também omite: null no JSON não é um pedido seguro.
+    def update_session(name, config:, apps: nil)
+      body = { config: config }
+      body[:apps] = apps unless apps.nil?
+      put("/api/sessions/#{name}", body)
     end
 
     def list_sessions(all: true)
       get("/api/sessions?all=#{all}")
     end
 
-    def start_session(name)
-      post("/api/sessions/#{name}/start")
+    def start_session(name, timeout: DEFAULT_TIMEOUT)
+      post("/api/sessions/#{name}/start", timeout: timeout)
+    end
+
+    # Para a sessão sem desvincular o aparelho (diferente de logout): o start depois religa sem novo QR.
+    def stop_session(name)
+      post("/api/sessions/#{name}/stop")
     end
 
     def restart_session(name)
@@ -192,14 +204,35 @@ module Waha
       )
       unless response.success?
         error_class = response.code == 404 ? NotFound : Error
-        raise error_class.new("WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}", status: response.code)
+        raise error_class.new("WAHA #{method.upcase} #{path} -> #{error_detail(response, body)}", status: response.code)
       end
 
       response.parsed_response
+    rescue JSON::ParserError
+      # A mensagem do erro de JSON traz um pedaço do corpo (pode ter credencial): só a classe.
+      raise InvalidResponse, "WAHA #{method.upcase} #{path} resposta inválida (JSON::ParserError)"
     rescue Net::ReadTimeout => e
-      raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{e.message}"
+      raise Timeout, "WAHA #{method.upcase} #{path} sem resposta: #{scrub(e.message, body)}"
     rescue HTTParty::Error, SocketError, Net::OpenTimeout, Errno::ECONNREFUSED => e
-      raise Error, "WAHA #{method.upcase} #{path} falhou: #{e.message}"
+      raise Error, "WAHA #{method.upcase} #{path} falhou: #{scrub(e.message, body)}"
+    end
+
+    def error_detail(response, body)
+      scrub(scrub("#{response.code}: #{response.body.to_s[0, 300]}", body), parsed_or_nil(response))
+    end
+
+    def parsed_or_nil(response)
+      response.parsed_response
+    rescue StandardError
+      nil
+    end
+
+    # A credencial do proxy da sessão (#1516) vai no corpo do pedido e volta em claro nas respostas do motor: se aparecer
+    # num erro (pedido ou resposta), não chega ao log.
+    def scrub(text, body)
+      proxy = body.is_a?(Hash) ? body.with_indifferent_access.dig(:config, :proxy) : nil
+      secrets = proxy.is_a?(Hash) ? proxy.values_at(:password, :username).compact_blank.map(&:to_s) : []
+      secrets.reduce(text.to_s) { |scrubbed, secret| scrubbed.gsub(secret, '[FILTERED]') }
     end
 
     # GET cru (bytes) para imagens.

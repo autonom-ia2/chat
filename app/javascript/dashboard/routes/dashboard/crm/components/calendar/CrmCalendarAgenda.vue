@@ -11,6 +11,7 @@ import {
   EVENT_TYPE_GROUP,
   EVENT_TYPE_META,
   eventStart,
+  isDateOnly,
   isOverdue,
   aggregateByGroup,
 } from './calendarEvents.js';
@@ -150,7 +151,9 @@ const dayLabel = date =>
   format(date, "EEEE, dd 'de' MMMM", { locale: dateFnsLocale.value });
 
 const timeLabel = event =>
-  format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
+  isDateOnly(event)
+    ? t('CRM_KANBAN.CALENDAR.ALL_DAY')
+    : format(eventStart(event), 'HH:mm', { locale: dateFnsLocale.value });
 
 const metaFor = event => EVENT_TYPE_META[EVENT_TYPE_GROUP(event.event_type)];
 
@@ -273,6 +276,26 @@ const onStart = () => {
                 <span
                   class="block truncate text-sm font-medium text-n-slate-12"
                 >
+                  <!-- #1460: lembrete que repete. -->
+                  <span
+                    v-if="event.recurring"
+                    class="me-0.5 inline-block size-3 align-[-1px]"
+                    :class="
+                      event.series_status === 'paused'
+                        ? 'i-lucide-pause text-n-amber-11'
+                        : 'i-lucide-repeat text-n-blue-11'
+                    "
+                    aria-hidden="true"
+                  />
+                  <span v-if="event.recurring" class="sr-only">
+                    {{
+                      $t(
+                        event.series_status === 'paused'
+                          ? 'CRM_LEMBRETE.CALENDARIO.PAUSADO'
+                          : 'CRM_LEMBRETE.CALENDARIO.REPETE'
+                      )
+                    }}
+                  </span>
                   {{ event.title }}
                 </span>
                 <span class="block truncate text-xs text-n-ruby-11">
@@ -353,6 +376,26 @@ const onStart = () => {
                   <span
                     class="block truncate text-sm font-medium text-n-slate-12"
                   >
+                    <!-- #1460: lembrete que repete. -->
+                    <span
+                      v-if="event.recurring"
+                      class="me-0.5 inline-block size-3 align-[-1px]"
+                      :class="
+                        event.series_status === 'paused'
+                          ? 'i-lucide-pause text-n-amber-11'
+                          : 'i-lucide-repeat text-n-blue-11'
+                      "
+                      aria-hidden="true"
+                    />
+                    <span v-if="event.recurring" class="sr-only">
+                      {{
+                        $t(
+                          event.series_status === 'paused'
+                            ? 'CRM_LEMBRETE.CALENDARIO.PAUSADO'
+                            : 'CRM_LEMBRETE.CALENDARIO.REPETE'
+                        )
+                      }}
+                    </span>
                     {{ event.title }}
                   </span>
                 </span>
@@ -418,6 +461,26 @@ const onStart = () => {
                 <span
                   class="block truncate text-sm font-medium text-n-slate-12"
                 >
+                  <!-- #1460: lembrete que repete. -->
+                  <span
+                    v-if="event.recurring"
+                    class="me-0.5 inline-block size-3 align-[-1px]"
+                    :class="
+                      event.series_status === 'paused'
+                        ? 'i-lucide-pause text-n-amber-11'
+                        : 'i-lucide-repeat text-n-blue-11'
+                    "
+                    aria-hidden="true"
+                  />
+                  <span v-if="event.recurring" class="sr-only">
+                    {{
+                      $t(
+                        event.series_status === 'paused'
+                          ? 'CRM_LEMBRETE.CALENDARIO.PAUSADO'
+                          : 'CRM_LEMBRETE.CALENDARIO.REPETE'
+                      )
+                    }}
+                  </span>
                   {{ event.title }}
                 </span>
                 <span class="block truncate text-xs text-n-slate-11">

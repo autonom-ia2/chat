@@ -11,6 +11,8 @@ const TELAS = {
   empresa: { chave: 'EMPRESA', icone: 'i-lucide-building-2' },
   conversas: { chave: 'CONVERSAS', icone: 'i-lucide-messages-square' },
   'retorno-novo': { chave: 'RETORNO', icone: 'i-lucide-bell-plus' },
+  // #1460: a repetição de um lembrete.
+  'retorno-serie': { chave: 'SERIE', icone: 'i-lucide-repeat' },
   agenda: { chave: 'AGENDA', icone: 'i-lucide-calendar-clock' },
   'reuniao-nova': { chave: 'REUNIAO_NOVA', icone: 'i-lucide-calendar-plus' },
   'link-agenda': { chave: 'LINK', icone: 'i-lucide-link' },
@@ -26,6 +28,7 @@ export const useCardMoldura = ({
   subtitulo,
   migalha,
   nome,
+  jeito,
   etapa,
   contatoInicial,
   permissoes,
@@ -36,7 +39,7 @@ export const useCardMoldura = ({
   const voltarPara = computed(() => {
     const de = anterior.value;
     if (!de || de === 'resumo') return titulo.value;
-    return t(`CRM_CARD.${TELAS[de]?.chave || 'RESUMO'}.TELA`);
+    return jeito.texto(`${TELAS[de]?.chave || 'RESUMO'}.TELA`);
   });
 
   // O título do retorno novo diz o que está sendo marcado.
@@ -59,6 +62,9 @@ export const useCardMoldura = ({
   const heroi = computed(() => {
     if (tela.value === 'criar-1' || tela.value === 'criar-2') {
       const primeiro = tela.value === 'criar-1';
+      // #1498 — num funil de Atender, "Sobre o atendimento".
+      let fim = jeito.atender.value ? '_ATENDER' : '';
+      if (jeito.cobranca.value) fim = '_COBRANCA';
       return {
         voltar: primeiro
           ? (contatoInicial.value &&
@@ -69,14 +75,33 @@ export const useCardMoldura = ({
         rotulo: t('CRM_CARD.CRIAR.ROTULO', { passo: primeiro ? 1 : 2 }),
         icone: primeiro ? 'i-lucide-user-plus' : 'i-lucide-briefcase-business',
         titulo: t(
-          primeiro ? 'CRM_CARD.CRIAR.TITULO_1' : 'CRM_CARD.CRIAR.TITULO_2'
+          primeiro ? 'CRM_CARD.CRIAR.TITULO_1' : `CRM_CARD.CRIAR.TITULO_2${fim}`
         ),
         texto: t(
-          primeiro ? 'CRM_CARD.CRIAR.TEXTO_1' : 'CRM_CARD.CRIAR.TEXTO_2'
+          primeiro ? 'CRM_CARD.CRIAR.TEXTO_1' : `CRM_CARD.CRIAR.TEXTO_2${fim}`
         ),
       };
     }
     const sub = TELAS[tela.value];
+    const mudando = estado.edicaoRetorno?.value;
+    if (tela.value === 'retorno-novo' && mudando)
+      return {
+        voltar: voltarPara.value,
+        migalha: [],
+        rotulo: t('CRM_LEMBRETE.SERIE.TELA'),
+        icone: 'i-lucide-pencil',
+        titulo: t(`CRM_LEMBRETE.MUDAR.TITULO_${mudando.toUpperCase()}`),
+        texto: t(`CRM_LEMBRETE.MUDAR.TEXTO_${mudando.toUpperCase()}`),
+      };
+    if (tela.value === 'retorno-serie')
+      return {
+        voltar: voltarPara.value,
+        migalha: [],
+        rotulo: t('CRM_LEMBRETE.SERIE.TELA'),
+        icone: sub.icone,
+        titulo: estado.serieTitulo.value || t('CRM_LEMBRETE.SERIE.TELA'),
+        texto: t('CRM_LEMBRETE.SERIE.TEXTO'),
+      };
     if (!sub)
       return {
         voltar: '',
@@ -91,12 +116,15 @@ export const useCardMoldura = ({
     return {
       voltar: voltarPara.value,
       migalha: [],
-      rotulo: t(`CRM_CARD.${sub.chave}.TELA`),
-      icone: sub.icone,
-      titulo: t(`CRM_CARD.${sub.chave}.${tituloDa(tela.value)}`, {
+      rotulo: jeito.texto(`${sub.chave}.TELA`),
+      icone:
+        jeito.atender.value && sub.chave === 'NEGOCIO'
+          ? 'i-lucide-message-square-text'
+          : sub.icone,
+      titulo: jeito.texto(`${sub.chave}.${tituloDa(tela.value)}`, {
         nome: nome.value,
       }),
-      texto: t(`CRM_CARD.${sub.chave}.${textoDa(tela.value)}`, {
+      texto: jeito.texto(`${sub.chave}.${textoDa(tela.value)}`, {
         nome: nome.value,
       }),
     };
@@ -213,6 +241,15 @@ export const useCardMoldura = ({
             acao: acoes.criarRetorno,
             carregando: e.salvandoRetorno.value,
             desabilitado: !e.retornoPronto.value || e.salvandoRetorno.value,
+          },
+        };
+      case 'retorno-serie':
+        return {
+          secundaria: { rotulo: t('CRM_CARD.VOLTAR'), acao: acoes.voltar },
+          principal: {
+            rotulo: t('CRM_LEMBRETE.SERIE.MUDAR'),
+            icone: 'i-lucide-pencil',
+            acao: acoes.abrirMudarSerie,
           },
         };
       case 'criar-1':

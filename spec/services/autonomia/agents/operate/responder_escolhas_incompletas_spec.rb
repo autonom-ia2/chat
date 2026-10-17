@@ -19,7 +19,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:chave) { Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA }
   let(:lia) { Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call }
   let(:agent_inbox) do
-    Autonomia::Agents::AgentInbox.create!(agent: lia, inbox: inbox, account: account, agent_bot: agent_bot)
+    lia_na_caixa(lia, inbox: inbox, agent_bot: agent_bot)
   end
   let(:cliente_de_ia) { instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: { text: '{}' }) }
 

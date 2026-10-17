@@ -143,7 +143,7 @@ const templates = computed(() => {
   if (isApiChannel.value) return apiTemplates.value;
   if (!inbox?.needs_templates) return [];
   return usableTemplates(
-    store.getters['inboxes/getFilteredWhatsAppTemplates'](inbox.id)
+    store.getters['inboxes/getConversationWhatsAppTemplates'](inbox.id)
   );
 });
 

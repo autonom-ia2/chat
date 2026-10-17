@@ -20,14 +20,21 @@ en:
       invite:
         default_text: 'Hi, {nome}! Pick the best time for you: {link}'
         default_text_without_name: 'Hi! Pick the best time for you: {link}'
+        button_text: 'Hi, {nome}! Pick the best time for you with the button below.'
+        button_text_without_name: 'Hi! Pick the best time for you with the button below.'
+        button_label: 'Pick a time'
       notices:
         when_format: "%m/%d at %H:%M"
-        booked: "Hi%{name}! Your appointment is booked for %{when}. To confirm, change or cancel: %{link}"
-        booked_by_team: "Hi%{name}! %{booker} booked your appointment for %{when}. To confirm, change or cancel: %{link}"
-        rescheduled: "Hi%{name}! Your appointment was moved to %{when}. To confirm, change or cancel: %{link}"
-        day_before: "Hi%{name}! Reminder: your appointment is tomorrow, %{when}. To confirm, change or cancel: %{link}"
-        hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when}). To confirm, change or cancel: %{link}"
+        booked: "Hi%{name}! Your appointment is booked for %{when}."
+        booked_by_team: "Hi%{name}! %{booker} booked your appointment for %{when}."
+        rescheduled: "Hi%{name}! Your appointment was moved to %{when}."
+        day_before: "Hi%{name}! Reminder: your appointment is tomorrow, %{when}."
+        hour_before: "Hi%{name}! Your appointment starts in 1 hour (%{when})."
+        manage_line: "To confirm, change or cancel: %{link}"
+        button_label: "See my appointment"
         stop_line: "To stop these messages: %{link}"
+        stop_prompt: "Don't want these reminders anymore?"
+        stop_button_label: "Stop reminders"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
       notice_templates:
         meta_failed: "Meta did not answer. Try again in a few minutes."
@@ -48,7 +55,6 @@ en:
           malformed: "The \"%{notice}\" message has a badly written field. Use the buttons to add fields."
           bracket: "The \"%{notice}\" message has brackets that are not a field. Remove the brackets or use the buttons to add fields."
           unknown_field: "The \"%{notice}\" message has a field this notice cannot fill."
-          missing_link: "The \"%{notice}\" message needs the link to confirm, change or cancel."
           missing_when: "The \"%{notice}\" message needs the day and time."
           stop_line: "Remove the line to stop messages from \"%{notice}\": we always add it at the end."
       remind:
@@ -59,6 +65,7 @@ en:
         rescheduled: "%{name} moved the appointment to %{when}"
         rebooked: "%{name} booked again, for %{when}"
         notice_failed: "The WhatsApp reminder to %{name} could not be sent. The appointment of %{when} stays booked: talk to the client."
+        notice_stop_failed: "The WhatsApp reminder to %{name} was sent, but the message with the \"Stop reminders\" button was not. If the client wants to stop the reminders for %{when}, talk to them."
         reasons:
           no_whatsapp: "The client's number has no WhatsApp."
           waha_unavailable: "The unofficial WhatsApp did not answer: check that it is connected."

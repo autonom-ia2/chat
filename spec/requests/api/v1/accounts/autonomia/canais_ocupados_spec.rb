@@ -69,9 +69,11 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['payload']).to eq([
                                                       { 'inbox_id' => alfa.id, 'name' => 'Alfa',
-                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil },
+                                                        'channel_type' => alfa.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'areas' => [] },
                                                       { 'inbox_id' => zeta.id, 'name' => 'Zeta',
-                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil }
+                                                        'channel_type' => zeta.channel_type, 'occupied_by' => nil, 'so_de_pessoas' => true,
+                                                        'areas' => [] }
                                                     ])
     end
 
@@ -85,8 +87,20 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
 
       get_canais
 
-      expect(occupied_by(atendendo)).to eq('kind' => 'agent', 'agent_id' => bia.id, 'agent_name' => 'Bia', 'operating' => true)
-      expect(occupied_by(parado)).to eq('kind' => 'agent', 'agent_id' => leo.id, 'agent_name' => 'Leo', 'operating' => false)
+      expect(occupied_by(atendendo)).to eq('kind' => 'agent', 'agent_id' => bia.id, 'agent_name' => 'Bia', 'operating' => true, 'caixas' => 1)
+      expect(occupied_by(parado)).to eq('kind' => 'agent', 'agent_id' => leo.id, 'agent_name' => 'Leo', 'operating' => false, 'caixas' => 1)
+    end
+
+    it 'counts every active link of the agent, so the screen can warn when it is the last one (#1366)' do
+      primeira = create(:inbox, account: account)
+      segunda = create(:inbox, account: account)
+      bia = create_agent('Bia')
+      link_native(bia, primeira)
+      link_native(bia, segunda)
+
+      get_canais
+
+      expect(occupied_by(primeira)).to include('agent_id' => bia.id, 'caixas' => 2)
     end
 
     it 'treats a disabled agent as not answering' do
@@ -98,22 +112,42 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       expect(occupied_by(inbox)).to include('kind' => 'agent', 'operating' => false)
     end
 
-    it 'marks an inbox held by an external webhook bot as external, without a name' do
+    # #1648: o agente de outro sistema diz qual é (a lista de Agentes e a página dele) e se atende (AgentBotInbox ativo).
+    it 'marks an inbox held by an agent from another system as external, with its agent_bot_id and whether it answers' do
       inbox = create(:inbox, account: account)
-      link_webhook(inbox)
+      parada = create(:inbox, account: account)
+      bot_inbox = link_webhook(inbox)
+      link_webhook(parada).update!(status: :inactive)
 
       get_canais
 
-      expect(occupied_by(inbox)).to eq('kind' => 'external')
+      expect(occupied_by(inbox)).to eq('kind' => 'external', 'agent_bot_id' => bot_inbox.agent_bot_id, 'operating' => true)
+      expect(occupied_by(parada)).to include('kind' => 'external', 'operating' => false)
+    end
+
+    # #1433: só a caixa sem principal e sem robô de fora é "só de pessoas" (pode receber o agente da equipe).
+    it 'says which inboxes are served only by people: no main agent and no external bot' do
+      livre = create(:inbox, account: account)
+      externa = create(:inbox, account: account)
+      com_principal = create(:inbox, account: account)
+      link_webhook(externa)
+      link_native(create_agent('Bia'), com_principal)
+
+      get_canais
+
+      por_caixa = response.parsed_body['payload'].index_by { |row| row['inbox_id'] }
+      expect(por_caixa.transform_values { |row| row['so_de_pessoas'] })
+        .to eq(livre.id => true, externa.id => false, com_principal.id => false)
     end
 
     it 'still sees the external bot when its agent_bot_inboxes row has no account_id' do
       inbox = create(:inbox, account: account)
-      link_webhook(inbox).update_column(:account_id, nil) # rubocop:disable Rails/SkipsModelValidations
+      bot_inbox = link_webhook(inbox)
+      bot_inbox.update_column(:account_id, nil) # rubocop:disable Rails/SkipsModelValidations
 
       get_canais
 
-      expect(occupied_by(inbox)).to eq('kind' => 'external')
+      expect(occupied_by(inbox)).to eq('kind' => 'external', 'agent_bot_id' => bot_inbox.agent_bot_id, 'operating' => true)
     end
 
     it 'frees the inbox of a deleted agent' do

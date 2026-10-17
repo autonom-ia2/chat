@@ -74,9 +74,12 @@ export const avisarEm = (etapas, chave) =>
 export const etapaDoAviso = etapas =>
   etapas.find(etapa => etapa.funnel_stage_type === TIPO_AVISO) || null;
 
-export const payloadDoFunil = ({ form, pipeline, editando, ia }) => ({
+// #1498 — `template` (o modelo escolhido) vai só ao criar; `category` de cada
+// etapa vem do modelo (Novo, Em andamento, Esperando o cliente, Resolvido).
+export const payloadDoFunil = ({ form, pipeline, editando, ia, modelo }) => ({
   pipeline: {
     id: pipeline?.id,
+    ...(!editando && modelo ? { template: modelo } : {}),
     name: form.name.trim(),
     description: form.description.trim(),
     when_to_use: form.whenToUse.trim(),
@@ -121,5 +124,10 @@ export const payloadDoFunil = ({ form, pipeline, editando, ia }) => ({
       : {}),
     position: index + 1,
     funnel_stage_type: stage.funnel_stage_type || null,
+    ...(stage.categoria ? { category: stage.categoria } : {}),
+    // #1548 — posição da etapa no modelo, para o critério padrão (só ao criar).
+    ...(!stage.id && stage.modeloPosicao
+      ? { template_position: stage.modeloPosicao }
+      : {}),
   })),
 });

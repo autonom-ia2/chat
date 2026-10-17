@@ -9,9 +9,10 @@ import RespostasRapidas from '../RespostasRapidas.vue';
 
 // #1181 PR2 (protótipo T04) — o celular vira teste de verdade: perguntas prontas do modelo ou
 // escritas, resposta em partes, "usou: <arquivo>" e a faixa de quando passaria para a equipe.
-// "Respondeu errado?" leva o pedido para a conversa. "Começar a atender no {canal}" só aparece
-// depois de uma resposta vista; sem canal, vira "Conectar seu WhatsApp ou outro canal" (ou o pedido
-// a um administrador). "Agora não, terminar depois" deixa o rascunho em Falta terminar.
+// "Respondeu errado?" leva o pedido para a conversa. #1504 — "Começar a atender no {canal}" aparece
+// assim que a conversa fecha: o teste é opcional ("Se quiser, teste antes"). Sem canal, vira
+// "Conectar seu WhatsApp ou outro canal" (ou o pedido a um administrador). "Fazer ajustes avançados"
+// pede à página para abrir o agente parado e sem canal; terminar depois é o "Voltar" do topo.
 const props = defineProps({
   nome: { type: String, required: true },
   empresa: { type: String, default: '' },
@@ -25,9 +26,19 @@ const props = defineProps({
   conversaPensando: { type: Boolean, default: false },
   // Rótulo do botão de começar ("Começar a atender no WhatsApp"), ou '' quando não há canal.
   rotuloComecar: { type: String, default: '' },
+  // #1433: o texto embaixo do botão quando ele não é o de sempre (agente da equipe).
+  textoComecar: { type: String, default: '' },
   podeConectarCanal: { type: Boolean, default: false },
   linkConectarCanal: { type: String, default: '' },
   celular: { type: Boolean, default: false },
+  // Copiloto da equipe (#1494): o teste é de alguém da equipe e o agente não responde clientes.
+  interno: { type: Boolean, default: false },
+  // Tema 14 (#1434): o ajudante (também interno) é testado como o agente principal o consultaria.
+  ajudante: { type: Boolean, default: false },
+  // "Fazer ajustes avançados" foi pedido e a página ainda está deixando o agente parado.
+  abrindoAjustes: { type: Boolean, default: false },
+  // As caixas ainda estão sendo lidas: Começar espera (sem teste, a pessoa chega aqui antes delas).
+  carregandoCanais: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -36,7 +47,7 @@ const emit = defineEmits([
   'limpar',
   'respondeuErrado',
   'comecar',
-  'depois',
+  'ajustes',
 ]);
 
 const { t } = useI18n();
@@ -53,16 +64,21 @@ watch(
 );
 
 // A última parte da resposta traz `passaria` quando o agente passaria a conversa para a equipe:
-// a faixa entra logo depois dela.
+// a faixa entra logo depois dela. O copiloto já fala com a equipe: sem faixa, e quem pergunta é
+// alguém da equipe, não um cliente.
 const celularMensagens = computed(() =>
-  props.mensagens.flatMap(mensagem =>
-    mensagem.passaria
+  props.mensagens.flatMap(mensagem => {
+    if (props.interno) {
+      const quem = props.ajudante ? 'principal' : 'equipe';
+      return [mensagem.de === 'cliente' ? { ...mensagem, de: quem } : mensagem];
+    }
+    return mensagem.passaria
       ? [
           mensagem,
           { de: 'aviso', texto: t(`${NS}.PASSARIA`, { nome: props.nome }) },
         ]
-      : [mensagem]
-  )
+      : [mensagem];
+  })
 );
 
 const textosDasPerguntas = computed(() =>
@@ -79,11 +95,19 @@ const podeDizerErrado = computed(
     ultima.value?.de === 'agente'
 );
 
-const estadoDoCabecalho = computed(() =>
-  props.digitando
-    ? t(`${NS}.ESCREVENDO`, { nome: props.nome })
-    : t(`${NS}.ATENDIDO_POR`, { nome: props.nome })
-);
+const tituloDoTeste = computed(() => {
+  if (props.ajudante) return t(`${NS}.TITULO_AJUDANTE`);
+  return props.interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`);
+});
+
+const estadoDoCabecalho = computed(() => {
+  const nome = { nome: props.nome };
+  if (props.digitando) return t(`${NS}.ESCREVENDO`, nome);
+  if (props.ajudante) return t(`${NS}.AJUDA_AOS_AGENTES`, nome);
+  return props.interno
+    ? t(`${NS}.AJUDA_DA_EQUIPE`, nome)
+    : t(`${NS}.ATENDIDO_POR`, nome);
+});
 
 const erro = computed(() => {
   const nome = { nome: props.nome };
@@ -91,7 +115,9 @@ const erro = computed(() => {
   const MAPA = {
     falha: {
       titulo: t(`${NS}.FALHA`, nome),
-      garantia: t(`${NS}.FALHA_GARANTIA`),
+      garantia: props.interno
+        ? t(`${NS}.FALHA_GARANTIA_COPILOTO`)
+        : t(`${NS}.FALHA_GARANTIA`),
       acao: tentar,
     },
     demora: { titulo: t(`${NS}.DEMORA`), tom: 'ambar', acao: tentar },
@@ -117,6 +143,10 @@ const enviar = ({ texto, anexos }) => {
   pergunta.value = '';
 };
 
+const pedirAjustes = () => {
+  if (!props.abrindoAjustes) emit('ajustes');
+};
+
 const respondeuErrado = () => {
   pediuCorrecao.value = true;
   emit('respondeuErrado');
@@ -128,7 +158,7 @@ const respondeuErrado = () => {
     data-confira
     aria-labelledby="confira-titulo"
     class="flex flex-col min-w-0 gap-4"
-    :class="celular ? 'pb-80' : ''"
+    :class="celular ? 'pb-[26rem]' : ''"
   >
     <div class="relative flex flex-col gap-1">
       <!-- No celular o título da tela já diz isso: aqui fica só para o leitor de tela. -->
@@ -137,15 +167,27 @@ const respondeuErrado = () => {
         class="m-0 text-lg font-semibold text-n-slate-12"
         :class="celular ? 'sr-only' : ''"
       >
-        {{ t(`${NS}.TITULO`) }}
+        {{ tituloDoTeste }}
       </h2>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
+      <!-- No celular a dica fica aqui em cima: a barra fixa embaixo já leva perguntas, campo e Começar. -->
+      <p
+        v-if="celular && !respondidas"
+        data-teste-opcional
+        class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
+      >
+        <span
+          class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
+      </p>
     </div>
 
     <CelularConversa
       :mensagens="celularMensagens"
       :digitando="digitando"
-      :nome="empresa || nome"
+      :nome="interno ? nome : empresa || nome"
       :estado="estadoDoCabecalho"
     >
       <template v-if="mensagens.length || atualizado" #acao>
@@ -243,23 +285,37 @@ const respondeuErrado = () => {
           @enviar="enviar"
         />
       </template>
-      <p v-if="!respondidas" data-pergunte class="m-0 text-sm text-n-slate-11">
-        {{ t(`${NS}.PERGUNTE`, { nome }) }}
+      <p
+        v-if="!celular && !respondidas"
+        data-teste-opcional
+        class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
+      >
+        <span
+          class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
       </p>
-      <div v-else-if="rotuloComecar" data-comecar class="flex flex-col gap-1">
+      <div v-if="rotuloComecar" data-comecar class="flex flex-col gap-1">
         <AgenteBotao
           tamanho="xl"
           bloco
           aria-describedby="confira-comecar-texto"
+          :carregando="carregandoCanais"
           @click="emit('comecar')"
         >
           {{ rotuloComecar }}
         </AgenteBotao>
         <p id="confira-comecar-texto" class="m-0 text-sm text-n-slate-11">
-          {{ t(`${NS}.COMECAR_TEXTO`, { nome }) }}
+          {{
+            textoComecar ||
+            (interno
+              ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
+              : t(`${NS}.COMECAR_TEXTO`, { nome }))
+          }}
         </p>
       </div>
-      <div v-else data-sem-canal class="flex flex-col gap-2">
+      <div v-else-if="!interno" data-sem-canal class="flex flex-col gap-2">
         <p class="m-0 text-sm text-n-slate-11">
           {{ t('AGENTS.JORNADA.ERRO.SEM_CANAL_GARANTIA', { nome }) }}
         </p>
@@ -281,15 +337,25 @@ const respondeuErrado = () => {
       </div>
     </div>
     <!-- Fora da barra fixa: no celular fica embaixo do teste, e a barra continua curta. -->
-    <p class="m-0">
+    <div data-ajustes class="flex flex-col items-start gap-0.5">
       <button
         type="button"
-        data-depois
-        class="px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-        @click="emit('depois')"
+        data-ajustes-botao
+        aria-describedby="confira-ajustes-texto"
+        :aria-busy="abrindoAjustes ? 'true' : undefined"
+        :aria-disabled="abrindoAjustes ? 'true' : undefined"
+        class="inline-flex items-center gap-1.5 px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 aria-disabled:cursor-wait aria-disabled:opacity-60"
+        @click="pedirAjustes"
       >
-        {{ t('AGENTS.JORNADA.CRIAR.SAIR.DEPOIS') }}
+        <span
+          class="i-lucide-sliders-horizontal size-4 shrink-0"
+          aria-hidden="true"
+        />
+        {{ t(`${NS}.AJUSTES`) }}
       </button>
-    </p>
+      <p id="confira-ajustes-texto" class="px-1 m-0 text-xs text-n-slate-11">
+        {{ t(`${NS}.AJUSTES_TEXTO`, { nome }) }}
+      </p>
+    </div>
   </section>
 </template>

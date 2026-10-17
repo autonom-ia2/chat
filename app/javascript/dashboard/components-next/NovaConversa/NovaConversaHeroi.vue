@@ -7,6 +7,8 @@ defineProps({
   migalha: { type: String, default: '' },
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
+  // #1505 — "Enviar mensagem" quando a mensagem entra numa conversa que já existe.
+  naExistente: { type: Boolean, default: false },
 });
 
 defineEmits(['fechar']);
@@ -36,10 +38,19 @@ defineEmits(['fechar']);
           class="inline-flex items-center gap-2 text-sm font-semibold text-n-blue-6"
         >
           <span
-            class="i-lucide-message-circle-plus size-4"
+            class="size-4"
+            :class="
+              naExistente
+                ? 'i-lucide-message-circle'
+                : 'i-lucide-message-circle-plus'
+            "
             aria-hidden="true"
           />
-          {{ $t('NOVA_CONVERSA.ROTULO') }}
+          {{
+            naExistente
+              ? $t('NOVA_CONVERSA.ROTULO_EXISTENTE')
+              : $t('NOVA_CONVERSA.ROTULO')
+          }}
         </span>
         <h2
           :id="tituloId"

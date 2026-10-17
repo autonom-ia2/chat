@@ -31,14 +31,23 @@ class Crm::Cards::Mover
   end
 
   # Card fechado que muda para funil de outro tipo leva o desfecho equivalente (ganho <-> resolvido, #1144).
+  # #1498: atendimento fechado que vai para um funil de Vender entra Aberto (Crm::Cards::Outcome.status_after_move).
   def move_card!
     @card.update!(
       pipeline: @target_stage.pipeline,
       stage: @target_stage,
-      status: Crm::Cards::Outcome.status_for(@target_stage.pipeline, @card.status),
+      status: target_status,
       entered_stage_at: Time.current,
       last_activity_at: Time.current
     )
+  end
+
+  # Troca de etapa no mesmo funil segue como antes; só a mudança de funil reabre o atendimento fechado.
+  def target_status
+    pipeline = @target_stage.pipeline
+    return Crm::Cards::Outcome.status_for(pipeline, @card.status) if @card.pipeline_id == pipeline.id
+
+    Crm::Cards::Outcome.status_after_move(pipeline, @card.status)
   end
 
   def log_move!(from_stage_id:, from_pipeline_id:)

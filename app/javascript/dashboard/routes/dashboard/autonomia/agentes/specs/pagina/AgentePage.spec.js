@@ -57,6 +57,8 @@ const agentesApi = vi.hoisted(() => ({
   show: vi.fn(),
   analyticsConversations: vi.fn(),
   getTools: vi.fn(),
+  getAjuda: vi.fn(),
+  updateAjuda: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/agents', () => ({ default: agentesApi }));
 const jornadaApi = vi.hoisted(() => ({
@@ -68,6 +70,7 @@ const canaisApi = vi.hoisted(() => ({
   get: vi.fn(),
   connect: vi.fn(),
   disconnect: vi.fn(),
+  ondeAtende: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/channels', () => ({ default: canaisApi }));
 const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
@@ -484,6 +487,58 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    // #1366 — ativo e ligado no servidor, sem canal (a Livia da conta 17): Parado, nunca Atendendo.
+    it('active with no channel: stopped, "not on any channel", and the switch goes to the channel choice', async () => {
+      preparar({
+        agente: bia({ channels_count: 0, tem_onde_trabalhar: false }),
+        canais: [{ inbox_id: 2, name: 'Instagram', occupied_by: null }],
+      });
+      const wrapper = await montar();
+      expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('false');
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.NENHUM_CANAL'
+      );
+      expect(texto()).not.toContain('PAGINA.RESPONDE_NO');
+
+      await clicar('[role="switch"]');
+      expect(no('[role="dialog"]').textContent).toContain('ONDE_QUANDO.TITULO');
+      expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
+        'PAGINA.ONDE.COMECAR'
+      );
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        'autonomiaAgents/update',
+        expect.anything()
+      );
+      wrapper.unmount();
+    });
+
+    it('reads the agent again after leaving the last channel (the server stopped it)', async () => {
+      canaisApi.disconnect.mockResolvedValue({});
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      await clicar('[data-nao-atender]');
+      await clicar('dialog[open] [data-botoes] [data-confirmar]');
+
+      expect(canaisApi.disconnect).toHaveBeenCalledWith(7, 1);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('active with no channel: a view only seat reads "Parado" in the pill', async () => {
+      estado.podeGerenciar = false;
+      preparar({
+        agente: bia({ channels_count: 0, tem_onde_trabalhar: false }),
+      });
+      const wrapper = await montar();
+      expect(no('[data-heroi]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.PARADO'
+      );
+      expect(no('[data-heroi]').textContent).not.toContain(
+        'AGENTS.JORNADA.STATUS.ATENDENDO'
+      );
+      wrapper.unmount();
+    });
+
     it('no channel: says so and offers to choose one (t07-semcanal)', async () => {
       preparar({
         agente: bia({ status: 'paused', channels_count: 0 }),
@@ -495,7 +550,7 @@ describe('AgentePage', () => {
       );
       await clicar('[data-escolher-canal]');
       expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
-        'PAGINA.ONDE.VOLTAR'
+        'PAGINA.ONDE.COMECAR'
       );
       wrapper.unmount();
     });
@@ -608,6 +663,42 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    // #1525 — o módulo de Cotação e o cartão da lista chegam por /channels com a Lia parada e sem canal:
+    // abre a escolha de canal que liga (a mesma do "Escolher canal"), não a gaveta só de leitura.
+    it('opens the channel choice that starts answering for a stopped agent on the old channels tab', async () => {
+      preparar({
+        agente: bia({
+          agent_type: 'insurance_quote',
+          status: 'paused',
+          enabled: false,
+          channels_count: 0,
+          tem_onde_trabalhar: false,
+        }),
+        canais: [{ inbox_id: 2, name: 'Instagram', occupied_by: null }],
+      });
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      expect(no('[role="dialog"] [data-confirmar]').textContent).toContain(
+        'PAGINA.ONDE.COMECAR'
+      );
+      wrapper.unmount();
+    });
+
+    it('keeps where and when for an answering agent on the old channels tab', async () => {
+      rota.params = { agentId: '7', tab: 'channels' };
+      const wrapper = await montar({ gaveta: 'onde' });
+      // A gaveta de onde e quando no modo 'alterar': o título dela (o modo 'voltar' usa ONDE_QUANDO.TITULO)
+      // e o "Salvar", nunca o começar/voltar a atender.
+      const gaveta = no('[role="dialog"]').textContent;
+      expect(gaveta).toContain('PAGINA.ONDE.TITULO');
+      expect(gaveta).not.toContain('ONDE_QUANDO.TITULO');
+      const confirmar = no('[role="dialog"] [data-confirmar]').textContent;
+      expect(confirmar).toContain('PAGINA.ONDE.SALVAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.VOLTAR');
+      expect(confirmar).not.toContain('PAGINA.ONDE.COMECAR');
+      wrapper.unmount();
+    });
+
     it('opens the conversations of the week for the old performance tab', async () => {
       agentesApi.analyticsConversations.mockResolvedValue({
         data: { payload: [] },
@@ -645,6 +736,20 @@ describe('AgentePage', () => {
       expect(no('[data-faixa-parado]')).toBeNull();
       await clicar('[role="switch"]');
       expect(no('dialog[open]').textContent).toContain('PARAR.TITULO');
+      wrapper.unmount();
+    });
+
+    it('keeps the Team copilot answering without a channel (#1366)', async () => {
+      preparar({
+        agente: bia({
+          actuation: 'internal',
+          channels_count: 0,
+          tem_onde_trabalhar: true,
+        }),
+      });
+      const wrapper = await montar();
+      expect(no('[role="switch"]').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-heroi] [data-onde]')).toBeNull();
       wrapper.unmount();
     });
 
@@ -964,6 +1069,538 @@ describe('AgentePage', () => {
       comoSuperAdmin();
       const wrapper = await montar({ gaveta: 'ferramentas' });
       expect(no('[role="dialog"] [data-ferramentas]')).not.toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1433 (tema 13) — agente da equipe: "Na equipe", "Onde {nome} trabalha" (caixa e papel) e "Mudar"
+  // direto nos passos do agente da equipe.
+  // #1433 ("a, para todos os agentes"): quem atende primeiro também recebe em outras caixas quando alguém
+  // passa — a seção na gaveta "Onde e quando" e a linha no resumo. Só com a Fase 2.
+  describe('também recebe em outras caixas', () => {
+    const COM_AREA = [
+      ...L2,
+      {
+        inbox_id: 3,
+        name: 'WhatsApp dos Jardins',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 9,
+          agent_name: 'Duda',
+          operating: true,
+        },
+        areas: [{ agent_id: 7, agent_name: 'Bia', operating: true }],
+      },
+      {
+        inbox_id: 4,
+        name: 'WhatsApp Recepção',
+        occupied_by: null,
+        so_de_pessoas: true,
+      },
+    ];
+    const ligarFase2 = ligada => {
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: ligada,
+      });
+    };
+
+    it('shows the other inboxes in the summary and the section in the drawer', async () => {
+      preparar({ canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      // #1720, com a Fase 2: uma linha só, a mesma do herói.
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.PRIMEIRO_E_RECEBE');
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'BLOCO_ONDE.PRIMEIRO_E_RECEBE'
+      );
+      await clicar('[data-alterar="onde"]');
+      const secao = no('aside[role="dialog"] [data-tambem-recebe]');
+      expect(secao).not.toBeNull();
+      expect(
+        secao.querySelector('[data-opcao="3"]').getAttribute('aria-checked')
+      ).toBe('true');
+      expect(
+        secao.querySelector('[data-opcao="4"]').getAttribute('aria-disabled')
+      ).toBeNull();
+      expect(secao.querySelector('[data-opcao="1"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('reads the agent again after saving where it answers (the server may have stopped it)', async () => {
+      canaisApi.ondeAtende.mockResolvedValue({});
+      preparar({ canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ primeiroInboxId: 1, manterPrimeiro: true })
+      );
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('with the Fase 2, a stopped agent hero lists the channels and never says "answers first"', async () => {
+      preparar({ agente: bia({ status: 'paused' }), canais: COM_AREA });
+      ligarFase2(true);
+      const wrapper = await montar();
+      const heroi = no('[data-heroi] [data-onde]').textContent;
+      expect(heroi).toContain('BLOCO_ONDE.PARADO');
+      expect(heroi).not.toContain('BLOCO_ONDE.PRIMEIRO');
+      expect(no('[data-resumo-onde]').textContent).toContain(
+        'BLOCO_ONDE.PARADO'
+      );
+      wrapper.unmount();
+    });
+
+    it('the quote agent (Lia) gets the section too', async () => {
+      preparar({
+        agente: bia({ name: 'Lia', agent_type: 'insurance_quote' }),
+        canais: COM_AREA,
+      });
+      ligarFase2(true);
+      const wrapper = await montar();
+      await clicar('[data-alterar="onde"]');
+      expect(no('aside[role="dialog"] [data-tambem-recebe]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2, nothing changes (no regression)', async () => {
+      preparar({ canais: COM_AREA });
+      ligarFase2(false);
+      const wrapper = await montar();
+      expect(no('[data-tambem-recebe]')).toBeNull();
+      // #1720: sem a Fase 2, os textos de antes (herói e resumo) e a gaveta de antes.
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.RESPONDE_NO'
+      );
+      expect(no('[data-linha="onde"]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.TEXTO'
+      );
+      expect(no('[data-resumo-onde]')).toBeNull();
+      await clicar('[data-alterar="onde"]');
+      expect(no('aside[role="dialog"]')).not.toBeNull();
+      expect(no('[data-tambem-recebe]')).toBeNull();
+      expect(no('aside[role="dialog"] [data-nao-atender]')).not.toBeNull();
+      expect(no('aside[role="dialog"] [data-primeiro]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  describe('agente da equipe', () => {
+    const L2_EQUIPE = [
+      {
+        inbox_id: 1,
+        name: 'WhatsApp do Centro',
+        channel_type: 'Channel::Whatsapp',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 3,
+          agent_name: 'Sofia',
+          operating: true,
+        },
+        areas: [{ agent_id: 7, agent_name: 'Bia', operating: true }],
+      },
+      {
+        inbox_id: 2,
+        name: 'Instagram',
+        channel_type: 'Channel::Instagram',
+        occupied_by: {
+          kind: 'agent',
+          agent_id: 4,
+          agent_name: 'Leo',
+          operating: true,
+        },
+        areas: [],
+      },
+      { inbox_id: 5, name: 'Site', occupied_by: null, areas: [] },
+    ];
+
+    const prepararEquipe = (extra = {}) =>
+      preparar({
+        agente: bia({ na_equipe: true, tem_onde_trabalhar: true, ...extra }),
+        canais: L2_EQUIPE,
+      });
+    const ligarFase2 = ligada => {
+      store.state.getCurrentAccountId = 1;
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: ligada,
+      });
+    };
+
+    it('says "Na equipe" (switch on), where it receives, and never the parked banner', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      expect(no('[data-interruptor]').getAttribute('aria-checked')).toBe(
+        'true'
+      );
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.NA_EQUIPE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.CARTAO.RECEBE_EM'
+      );
+      expect(no('[data-faixa-parado]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('swaps "Onde e quando responde" for "Onde {nome} trabalha", with only the inbox and the role', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      const bloco = no('[data-linha="onde-trabalha"]');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.TITULO');
+      expect(bloco.textContent).toContain('WhatsApp do Centro');
+      expect(bloco.textContent).toContain('AGENTS.JORNADA.ONDE.RECEBE');
+      expect(bloco.textContent).not.toContain('Instagram');
+      expect(no('[data-linha="onde"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('"Mudar" opens straight in the team steps, saves the change and reads the agent again', async () => {
+      prepararEquipe();
+      const wrapper = await montar();
+      await clicar('[data-mudar-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('canais');
+      expect(no('[data-opcao="1"]').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-opcao="5"]').getAttribute('aria-disabled')).toBe('true');
+
+      await clicar('[data-opcao="2"]');
+      await clicar('[data-seguir-equipe]');
+      expect(no('[data-equipe-canais]').dataset.passo).toBe('confira');
+      await clicar('[data-seguir-equipe]');
+
+      expect(canaisApi.connect).toHaveBeenCalledWith(7, 2, { papel: 'area' });
+      expect(canaisApi.disconnect).not.toHaveBeenCalled();
+      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.EQUIPE.FEITO');
+      expect(no('[data-equipe-canais]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('with the Fase 2, the hero says the same line: receives when someone hands over', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.NA_EQUIPE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'PAGINA.BLOCO_ONDE.RECEBE'
+      );
+      wrapper.unmount();
+    });
+
+    it('uses "Onde e quando responde" and the same drawer, answering "Não" with its team inboxes', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      const wrapper = await montar();
+      expect(no('[data-linha="onde-trabalha"]')).toBeNull();
+      expect(
+        no('[data-linha="onde"] [data-resumo-onde]').textContent
+      ).toContain('BLOCO_ONDE.RECEBE');
+      await clicar('[data-alterar="onde"]');
+      const gaveta = no('aside[role="dialog"]');
+      expect(gaveta.textContent).toContain('PAGINA.ONDE.TITULO');
+      const nao = [...gaveta.querySelectorAll('[role="radio"]')].find(item =>
+        item.textContent.includes('PRIMEIRO_NAO')
+      );
+      expect(nao.getAttribute('aria-checked')).toBe('true');
+      expect(
+        gaveta.querySelector('[data-opcao="1"]').getAttribute('aria-checked')
+      ).toBe('true');
+      await clicar('aside[role="dialog"] [data-confirmar]');
+      expect(canaisApi.ondeAtende).toHaveBeenCalledWith(7, {
+        primeiroInboxId: null,
+        manterPrimeiro: false,
+        areaInboxIds: [1],
+        responseWindow: 'always',
+        parar: false,
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('without the inbox reading, says only that it receives when someone hands over', async () => {
+      prepararEquipe();
+      ligarFase2(true);
+      canaisApi.get.mockRejectedValue(new Error('500'));
+      jornadaApi.canaisOcupados.mockRejectedValue(new Error('500'));
+      const wrapper = await montar();
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.ONDE.RECEBE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).not.toContain(
+        'NENHUM_LUGAR'
+      );
+      wrapper.unmount();
+    });
+
+    it('turning a stopped team agent back on does not ask for an inbox', async () => {
+      prepararEquipe({ status: 'paused', enabled: false });
+      const wrapper = await montar();
+      expect(no('[data-faixa-parado]')).not.toBeNull();
+      await clicar('[data-interruptor]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(no('aside[role="dialog"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps the main agent page as it was (no regression)', async () => {
+      const wrapper = await montar();
+      expect(no('[data-linha="onde"]')).not.toBeNull();
+      expect(no('[data-linha="onde-trabalha"]')).toBeNull();
+      expect(no('[data-interruptor]').textContent).toContain(
+        'AGENTS.JORNADA.STATUS.ATENDENDO'
+      );
+      wrapper.unmount();
+    });
+  });
+
+  // Tema 14 (#1434) — a página do ajudante: "Ajudando", sem "Testar" (como cliente) e sem "Quando passa para a
+  // equipe"; "Quem {nome} ajuda" e "Quando chamar", com "Mudar" abrindo direto os passos do ajudante.
+  describe('ajudante', () => {
+    const CLARA = { id: 3, name: 'Clara' };
+    const BRUNO = { id: 4, name: 'Bruno' };
+    const DA_CONTA = [
+      { ...bia({ id: 3, name: 'Clara' }) },
+      { ...bia({ id: 4, name: 'Bruno' }) },
+      bia({ id: 5, name: 'Ana', actuation: 'internal' }),
+      bia({ id: 6, name: 'Lia', agent_type: 'insurance_quote' }),
+    ];
+    const ajudanteBia = (extra = {}) =>
+      bia({
+        actuation: 'internal',
+        ajudante: true,
+        ajuda: [CLARA, BRUNO],
+        tem_onde_trabalhar: true,
+        channels_count: 0,
+        ...extra,
+      });
+
+    const prepararAjudante = (extra = {}) => {
+      preparar({ agente: ajudanteBia(extra), canais: [] });
+      agentesApi.getAjuda.mockResolvedValue({
+        data: { quando: 'Dúvidas de troca', principais: [CLARA, BRUNO] },
+      });
+      agentesApi.updateAjuda.mockReset();
+      agentesApi.updateAjuda.mockResolvedValue({
+        data: { quando: 'Dúvidas de prazo', principais: [CLARA] },
+      });
+      const original = store.dispatch.getMockImplementation();
+      store.dispatch.mockImplementation(async (acao, dados) => {
+        if (acao === 'autonomiaAgents/get') {
+          store.state['autonomiaAgents/getRecords'] = [
+            ...DA_CONTA,
+            ajudanteBia(extra),
+          ];
+          return null;
+        }
+        return original(acao, dados);
+      });
+    };
+
+    it('says "Ajudando" (switch on, named for helping agents) and who it helps in the hero', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      const interruptor = no('[data-interruptor]');
+      expect(interruptor.getAttribute('aria-checked')).toBe('true');
+      expect(interruptor.textContent).toContain(
+        'AGENTS.JORNADA.STATUS.AJUDANDO'
+      );
+      expect(interruptor.getAttribute('aria-label')).toBe(
+        'AGENTS.JORNADA.PAGINA.INTERRUPTOR_AJUDANTE'
+      );
+      expect(no('[data-heroi] [data-onde]').textContent).toContain(
+        'AGENTS.JORNADA.ONDE.AJUDA'
+      );
+      expect(no('[data-faixa-parado]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('hides "Testar" as a customer and "Quando passa para a equipe", and shows who it helps and when to call', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      expect(no('[data-bloco="testar"]')).toBeNull();
+      expect(no('[data-bloco="passa"]')).toBeNull();
+      expect(no('[data-linha="onde"]')).toBeNull();
+      expect(no('[data-linha="quem-ajuda"]').textContent).toContain(
+        'AGENTS.JORNADA.AJUDANTE.QUEM_AJUDA'
+      );
+      expect(no('[data-quem-ajuda]').textContent).toContain('Clara, Bruno');
+      expect(agentesApi.getAjuda).toHaveBeenCalledWith(7);
+      expect(no('[data-quando-chamar]').textContent).toContain(
+        'Dúvidas de troca'
+      );
+      // O que sabe e o jeito de falar continuam.
+      expect(no('[data-linha="sabe"]')).not.toBeNull();
+      expect(no('[data-linha="jeito"]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('"Mudar" on "Quando chamar" opens straight in the second step and saves with one PUT', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      await clicar('[data-mudar-ajuda="quando"]');
+      expect(no('[data-ajudante-passos]').dataset.passo).toBe('quando');
+      const campo = no('[data-quando]');
+      expect(campo.value).toBe('Dúvidas de troca');
+      campo.value = 'Dúvidas de prazo';
+      campo.dispatchEvent(new Event('input'));
+      await flushPromises();
+      await clicar('[data-seguir-ajudante]');
+
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(7, {
+        principalIds: [3, 4],
+        quando: 'Dúvidas de prazo',
+      });
+      expect(alerta).toHaveBeenCalledWith('AGENTS.JORNADA.AJUDANTE.FEITO');
+      expect(no('[data-ajudante-passos]')).toBeNull();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      wrapper.unmount();
+    });
+
+    it('"Mudar" on who it helps reads the account agents, keeps the copilot out and the quote agent locked with the reason', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      await clicar('[data-mudar-ajuda="quem"]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/get');
+      expect(no('[data-ajudante-passos]').dataset.passo).toBe('quem');
+      expect(no('[data-opcao="3"]').getAttribute('aria-checked')).toBe('true');
+      expect(no('[data-opcao="5"]')).toBeNull();
+      expect(no('[data-opcao="7"]')).toBeNull();
+      expect(no('[data-opcao="6"]').getAttribute('aria-disabled')).toBe('true');
+      expect(no('[data-aviso-ajudante]').textContent).toContain(
+        'AGENTS.JORNADA.AJUDANTE.AVISO'
+      );
+
+      await clicar('[data-opcao="4"]');
+      await clicar('[data-seguir-ajudante]');
+      await clicar('[data-seguir-ajudante]');
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(7, {
+        principalIds: [3],
+        quando: 'Dúvidas de troca',
+      });
+      wrapper.unmount();
+    });
+
+    it('keeps the drawer open with the server reason when the change is refused', async () => {
+      prepararAjudante();
+      agentesApi.updateAjuda.mockRejectedValue({
+        response: {
+          status: 422,
+          data: { error: 'Ajudante não chama outro ajudante.' },
+        },
+      });
+      const wrapper = await montar();
+      await clicar('[data-mudar-ajuda="quando"]');
+      await clicar('[data-seguir-ajudante]');
+      expect(no('[data-erro-salvar]').textContent).toContain(
+        'Ajudante não chama outro ajudante.'
+      );
+      expect(no('[data-ajudante-passos]')).not.toBeNull();
+      expect(alerta).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('stopping speaks of helping, never of answering nor of conversations going to the team', async () => {
+      prepararAjudante();
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      const dialogo = no('dialog[open]').textContent;
+      expect(dialogo).toContain(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TITULO'
+      );
+      expect(dialogo).toContain(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TEXTO'
+      );
+      expect(dialogo).not.toContain('PAGINA.PARAR.TEXTO');
+      await clicar('dialog[open] [data-confirmar]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        status: 'paused',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_FEITO'
+      );
+      wrapper.unmount();
+    });
+
+    it('turning a stopped helper back on says it helps again, without asking for an inbox', async () => {
+      prepararAjudante({ status: 'paused', enabled: false });
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTOU'
+      );
+      expect(no('[data-ajudante-passos]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('a stopped helper with nobody to help opens "who it helps" instead of turning on, and turns on after saving', async () => {
+      prepararAjudante({ status: 'paused', enabled: false, ajuda: [] });
+      const wrapper = await montar();
+      await clicar('[role="switch"]');
+      expect(no('[data-ajudante-passos]').dataset.passo).toBe('quem');
+      expect(
+        store.dispatch.mock.calls.some(
+          ([acao]) => acao === 'autonomiaAgents/update'
+        )
+      ).toBe(false);
+
+      await clicar('[data-opcao="3"]');
+      await clicar('[data-seguir-ajudante]');
+      await clicar('[data-seguir-ajudante]');
+      expect(agentesApi.updateAjuda).toHaveBeenCalledWith(7, {
+        principalIds: [3],
+        quando: 'Dúvidas de troca',
+      });
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/update', {
+        id: 7,
+        enabled: true,
+        status: 'active',
+      });
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTOU'
+      );
+      wrapper.unmount();
+    });
+
+    it('a view only seat reads who it helps without any "Mudar"', async () => {
+      estado.podeGerenciar = false;
+      prepararAjudante();
+      const wrapper = await montar();
+      expect(no('[data-quem-ajuda]').textContent).toContain('Clara, Bruno');
+      expect(no('[data-mudar-ajuda]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps the team copilot page as it was: testing, the hand over block and no "Quem ajuda"', async () => {
+      preparar({
+        agente: bia({ actuation: 'internal', ajudante: false, ajuda: [] }),
+        canais: [],
+      });
+      agentesApi.getAjuda.mockReset();
+      const wrapper = await montar();
+      expect(no('[data-bloco="testar"]')).not.toBeNull();
+      expect(no('[data-bloco="passa"]')).not.toBeNull();
+      expect(no('[data-linha="quem-ajuda"]')).toBeNull();
+      expect(agentesApi.getAjuda).not.toHaveBeenCalled();
+      expect(no('[data-interruptor]').getAttribute('aria-label')).toBe(
+        'AGENTS.JORNADA.PAGINA.INTERRUPTOR'
+      );
       wrapper.unmount();
     });
   });

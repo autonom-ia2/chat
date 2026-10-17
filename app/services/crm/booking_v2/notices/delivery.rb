@@ -6,17 +6,22 @@
 # Híbrido dá à mensagem (`automation` com remetente ausente, `human` com usuário) é escolha de quem chama (`sender:`):
 # o aviso automático do `Notices::Sender` manda sem remetente; o "Testar no meu WhatsApp" (`TestInvite`) manda com o
 # usuário, porque é uma ação manual do atendente.
-# Texto já pronto: sai literal (`LiteralMessageBuilder`, sem a passada de Liquid).
+# Texto já pronto: sai literal (`LiteralMessageBuilder`, sem a passada de Liquid). Botão "Ver meu horário" (#1517): o
+# `rich_message` que `Notices::Button` liberou vai em `content_attributes` só no caminho `:session`. `marks` (#1562):
+# marcas a mais em `content_attributes`, como as da mensagem 2 do aviso com botão (`crm_booking_notice_part: 'stop'` e
+# `crm_booking_notice_id`), que o `NoticeDispatchJob` usa para conferir a entrega dela.
 #
 # Modelo da Meta: variáveis posicionais do corpo {{1}} primeiro nome, {{2}} dia e hora, {{3}} link de gestão; só as
-# que o corpo do modelo usa. Modelo do canal API: o corpo do modelo (com as variáveis de contato) mais o dia, o link
-# de gestão e a linha de parar.
+# que o corpo do modelo usa. Modelo v2 com botões (#1524): `filled` (`Notices::TemplateFill`) traz o corpo e os
+# `buttons` prontos, que vão como estão no `processed_params`. Modelo do canal API: o corpo do modelo (com as variáveis
+# de contato) mais o dia, o link de gestão e a linha de parar.
 class Crm::BookingV2::Notices::Delivery
   PLACEHOLDER_COUNT = 3
 
   # values: os três valores do modelo (ver `Notices::Text#template_values`); appendix: o que vai depois do corpo do
-  # modelo do canal API.
-  def initialize(decision:, inbox:, contact:, sender:, content:, values: [], appendix: nil) # rubocop:disable Metrics/ParameterLists
+  # modelo do canal API; rich_message: o do botão (`Notices::Text#rich_message`), ou nil; marks: marcas a mais na
+  # mensagem; filled: o `{ body:, buttons: }` do modelo v2 (`Notices::TemplateFill`), ou nil.
+  def initialize(decision:, inbox:, contact:, sender:, content:, values: [], appendix: nil, rich_message: nil, marks: {}, filled: nil) # rubocop:disable Metrics/ParameterLists
     @decision = decision
     @inbox = inbox
     @contact = contact
@@ -24,12 +29,15 @@ class Crm::BookingV2::Notices::Delivery
     @content = content
     @values = values
     @appendix = appendix
+    @rich_message = rich_message
+    @marks = marks
+    @filled = filled
   end
 
   def perform
     conversation = decision.conversation || open_conversation!
     case decision.mode
-    when :session then build(conversation, content: @content)
+    when :session then build(conversation, content: @content, rich_message: @rich_message)
     when :native_template then build(conversation, content: native_content, template_params: native_params)
     when :api_template then build(conversation, content: api_content)
     end
@@ -45,9 +53,10 @@ class Crm::BookingV2::Notices::Delivery
     ConversationBuilder.new(params: ActionController::Parameters.new(status: 'open'), contact_inbox: contact_inbox).perform
   end
 
-  def build(conversation, content:, template_params: nil)
-    attributes = { crm_booking_notice: true }
+  def build(conversation, content:, template_params: nil, rich_message: nil)
+    attributes = { crm_booking_notice: true }.merge(@marks)
     attributes[:crm_booking_notice_via] = decision.via.to_s if decision.via
+    attributes[RichMessages::KEY] = rich_message if rich_message
     params = { content: content, private: false, message_type: 'outgoing', content_attributes: attributes }
     params[:template_params] = template_params if template_params
     Autonomia::LiteralMessageBuilder.new(sender, conversation, ActionController::Parameters.new(params),
@@ -63,13 +72,19 @@ class Crm::BookingV2::Notices::Delivery
   end
 
   def native_params
-    body = used_positions.to_h { |position| [position.to_s, @values[position - 1].to_s] }
-    { name: decision.template['name'], language: decision.template['language'], processed_params: { body: body } }
+    { name: decision.template['name'], language: decision.template['language'], processed_params: processed_params }
+  end
+
+  def processed_params
+    return { body: @filled[:body], buttons: @filled[:buttons] }.compact if @filled
+
+    { body: used_positions.to_h { |position| [position.to_s, @values[position - 1].to_s] } }
   end
 
   # O que o painel mostra: o corpo do modelo com os valores no lugar (troca de string, sem regex).
   def native_content
-    used_positions.reduce(native_body) { |text, position| text.gsub("{{#{position}}}") { @values[position - 1].to_s } }
+    body_values = processed_params[:body]
+    body_values.reduce(native_body) { |text, (position, value)| text.gsub("{{#{position}}}") { value } }
   end
 
   def api_content

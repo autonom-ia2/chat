@@ -15,8 +15,13 @@ module Crm
                      '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
                      'ou "external_agent" (bot ou automação externa).'.freeze
 
-      def initialize(card:)
+      # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
+      # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
+      # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
+      def initialize(card:, fora: [], memoria: false)
         @card = card
+        @fora = fora
+        @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
       end
 
       def perform
@@ -31,10 +36,14 @@ module Crm
           conversation_state: conversation_state,
           temporal: temporal_context,
           other_subjects: other_subjects
-        }
+        }.merge(memoria_payload)
       end
 
       private
+
+      def memoria_payload
+        @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}
+      end
 
       # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
       # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
@@ -42,7 +51,7 @@ module Crm
         account = @card.account
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
-               .where.not(id: @card.id).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
+               .where.not(id: [@card.id, *@fora]).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
                .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
       end
 
@@ -80,7 +89,18 @@ module Crm
           # Quando um humano devolveu a conversa à IA depois de uma passagem (DevolucaoAIa). O que foi dito antes
           # disso já foi atendido por gente e não pede humano de novo.
           returned_to_ai_at: DevolucaoAIa.em(@card, @card.conversa_em_atendimento)&.iso8601
-        }
+        }.merge(handoff_history)
+      end
+
+      # As passagens recentes da conversa (#1606), em qualquer modo (convite, sem regra do funil, atribuição pela tela):
+      # texto cercado como dado. Sem passagem, a entrada fica igual à de antes.
+      # Vale para todas as contas, com ou sem a Fase 2 dos Agentes (correção do pingue-pongue). Só a conversa da conta do
+      # card: account_id conferido aqui, como no #latest_conversation.
+      def handoff_history
+        conversa = @card.conversa_em_atendimento
+        conversa = nil unless conversa&.account_id == @card.account_id
+        texto = conversa ? Crm::Passagens.recentes(conversa) : ''
+        texto.present? ? { handoff_history: texto } : {}
       end
 
       # A conversa "corrente" do card quando há várias: a de atividade mais recente.
@@ -103,13 +123,16 @@ module Crm
       # json ("{\"crm_follow_up_id\":1}") e `content_attributes ->> 'chave'` devolve sempre NULL.
       # O filtro SQL que estava aqui não excluía nada — falha silenciosa, que é o pior tipo.
       # A varredura é limitada porque a cadência tem no máximo um punhado de toques seguidos.
+      # #1601: os mesmos papéis do #role_for — o eco do celular conta como fala humana; o follow-up, o convite e o aviso
+      # do Agendamento, não.
       def last_human_agent_at
-        Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
-                      sender_type: 'User', private: false)
-               .where.not(message_type: :activity)
+        Message.where(conversation_id: conversation_ids, account_id: @card.account_id, private: false)
+               .where(sender_type: 'User').or(Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
+                                                            private: false, sender_type: nil))
+               .outgoing
                .reorder(id: :desc)
                .limit(FOLLOW_UP_SCAN_LIMIT)
-               .find { |message| message.content_attributes.to_h['crm_follow_up_id'].blank? }
+               .find { |message| role_for(message) == 'human_agent' }
                &.created_at
       end
 
@@ -167,6 +190,7 @@ module Crm
 
       def format_message(message)
         payload = {
+          **(@numeracao ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
           content: message_content(message).truncate(2000),
           created_at: message.created_at.iso8601
@@ -186,7 +210,12 @@ module Crm
         # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
         # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
         # ScoreCalculator conhece só quatro.
-        return 'platform_agent' if message.content_attributes.to_h['crm_follow_up_id'].present?
+        # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
+        # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
+        # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
+        # casou a tempo vira mensagem nova e aparece aqui como pessoa.
+        return 'platform_agent' if envio_da_plataforma?(message)
+        return 'human_agent' if eco_do_celular?(message)
 
         case message.sender_type
         when 'User' then 'human_agent'
@@ -195,6 +224,18 @@ module Crm
         # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
         else 'external_agent'
         end
+      end
+
+      # As marcas que o Agendamento grava no convite e no aviso (Crm::BookingV2::InviteDeliverer / Notices).
+      MARCAS_DO_AGENDAMENTO = %w[crm_booking_invite_id crm_booking_notice].freeze
+
+      def envio_da_plataforma?(message)
+        atributos = message.content_attributes.to_h
+        atributos['crm_follow_up_id'].present? || MARCAS_DO_AGENDAMENTO.any? { |marca| atributos[marca].present? }
+      end
+
+      def eco_do_celular?(message)
+        message.sender_type.blank? && message.content_attributes.to_h['external_echo'].present?
       end
 
       # Bot da plataforma = AgentBot criado por um agente Autonom.ia (Operate::Responder posta com

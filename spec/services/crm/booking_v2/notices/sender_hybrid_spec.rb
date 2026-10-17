@@ -195,6 +195,8 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
       expect(message).to have_attributes(conversation_id: conversation.id, sender: nil, content_type: 'text')
       expect(message.additional_attributes.to_h['template_params']).to be_nil
       expect(message.content).to include(invite.url).and include("#{invite.url}?stop_notices=1")
+      # #1517: pelo Híbrido não há botão; o link vai no texto.
+      expect(message.content_attributes).not_to have_key('rich_message')
       expect(client).to have_received(:send_text).with(session: 'hybrid-aviso', chat_id: '5511912345678@c.us', text: message.content,
                                                        id: '3EB0AVISO')
       expect(message.content_attributes).to include(
@@ -205,6 +207,10 @@ RSpec.describe Crm::BookingV2::Notices::Sender do
 
     it 'fica sent, sem falha, sem alerta, e conta no teto do número' do
       notice, message = send_hybrid_notice!
+
+      # #1562: o "Parar avisos" em mensagem separada é só do oficial; pelo Híbrido segue UMA mensagem, com a linha.
+      expect(conversation.messages.outgoing.count).to eq(1)
+      expect(message.content).to end_with("\n\nPara parar estes avisos: #{invite.url}?stop_notices=1")
 
       expect(notice).to have_attributes(status: 'sent', skip_reason: nil, error_code: nil)
       expect(message.status).not_to eq('failed')

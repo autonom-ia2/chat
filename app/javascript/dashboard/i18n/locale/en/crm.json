@@ -497,7 +497,9 @@
         "OPEN_WORK_INFO": "People, conversations and open cards in this pipeline, counted apart: one conversation can hold several cards.",
         "OPEN_PEOPLE": "People",
         "OPEN_CONVERSATIONS": "Conversations",
-        "OPEN_CARDS": "Cards"
+        "OPEN_CARDS": "Cards",
+        "RESOLUTION_TIME": "Resolution time",
+        "RESOLUTION_TIME_INFO": "Average from when the card opened until it was last marked Resolved, without the time we waited for the customer."
       },
       "MEETINGS": {
         "TITLE": "Meetings",
@@ -538,7 +540,16 @@
         "NONE": "Unassigned",
         "CARDS": "cards",
         "EMPTY": "No open cards."
-      }
+      },
+      "DURACAO": {
+        "DIAS": "{d} d {h} h",
+        "HORAS": "{h} h {m} min",
+        "MINUTOS": "{m} min",
+        "SEM_DADOS": "—",
+        "SO_DIAS": "{d} d",
+        "SO_HORAS": "{h} h"
+      },
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -546,7 +557,7 @@
       "CREATE_PIPELINE": "Create pipeline",
       "EDIT_PIPELINE": "Edit pipeline",
       "HANDOFF_SETTINGS": "Assignment & handoff",
-      "INBOX_SETTINGS": "Configure inboxes",
+      "INBOX_SETTINGS": "Channels per pipeline",
       "NEW_CARD": "New opportunity",
       "FILTER": "Filter",
       "FILTERS": "Filters",
@@ -564,7 +575,9 @@
       "EXPORT_TITLE": "Download the list as Excel, with the current pipeline, filters and order",
       "EXPORT_ERROR": "Could not export the list. Please try again.",
       "CREATE_INITIAL_PIPELINE": "Create initial pipeline",
-      "LOAD_MORE": "Load more"
+      "LOAD_MORE": "Load more",
+      "NEW_CARD_ATENDER": "New request",
+      "VIEW_OPPORTUNITIES_ATENDER": "See requests"
     },
     "VIEWS": {
       "KANBAN": "Kanban",
@@ -595,7 +608,7 @@
       "NO_COMPANY": "No company",
       "SELECTED_COMPANY_FALLBACK": "Selected company #{id}",
       "SCORE_RANGE": "AI attention (0–100)",
-      "SCORE_HELP": "Attention needed, not probability of winning.",
+      "SCORE_HELP": "Attention needed, not chance of closing.",
       "SCORE_MIN": "Minimum",
       "SCORE_MAX": "Maximum",
       "SCORE_INVALID": "Use a whole number from 0 to 100.",
@@ -623,7 +636,7 @@
       "GROUP_OPPORTUNITY": "Labels, stage and outcome",
       "GROUP_OPPORTUNITY_HELP": "VIP, renewal and pipeline stages.",
       "GROUP_ATTENTION": "Attention and priority",
-      "GROUP_ATTENTION_HELP": "Attention level, without indicating win probability.",
+      "GROUP_ATTENTION_HELP": "Attention level, without indicating closing probability.",
       "GROUP_ACTIVITY": "Value, follow-up and activity",
       "GROUP_ACTIVITY_HELP": "Estimated value, follow-up and card activity.",
       "COMPANY": "Company",
@@ -633,7 +646,10 @@
       "LABELS": "Labels",
       "LABELS_PLACEHOLDER": "No labels yet",
       "CAMPAIGN": "Campaign",
-      "CAMPAIGN_PLACEHOLDER": "No campaigns yet"
+      "CAMPAIGN_PLACEHOLDER": "No campaigns yet",
+      "SHORTCUT_MINE_ATENDER": "My requests",
+      "SCORE_HELP_ATENDER": "Measures how much attention the customer needs now.",
+      "GROUP_ATTENTION_HELP_ATENDER": "How much attention the customer needs now."
     },
     "RESPONSIBLE_FILTER": {
       "AGENT": "Any agent",
@@ -661,9 +677,7 @@
       "URGENT": "Urgent"
     },
     "CARD_STATUS": {
-      "OPEN": "Open",
-      "WON": "Won",
-      "LOST": "Lost"
+      "OPEN": "Open"
     },
     "FOLLOW_UP_FILTER": {
       "NONE": "No follow-up",
@@ -1149,11 +1163,7 @@
       "PIPELINE_ARCHIVED": "Pipeline archived.",
       "PIPELINE_ARCHIVE_ERROR": "Could not archive the pipeline.",
       "PIPELINE_CREATE_ERROR": "Could not create the initial pipeline.",
-      "PIPELINE_INBOX_ADDED": "Inbox linked to the pipeline.",
-      "PIPELINE_INBOX_REMOVED": "Inbox removed from the pipeline.",
       "PIPELINE_INBOX_LOAD_ERROR": "Could not load linked inboxes.",
-      "PIPELINE_INBOX_SAVE_ERROR": "Could not link the inbox.",
-      "PIPELINE_INBOX_REMOVE_ERROR": "Could not remove the inbox from the pipeline.",
       "INBOX_SETTINGS_SAVED": "Inbox settings saved.",
       "INBOX_SETTINGS_LOAD_ERROR": "Could not load inbox settings.",
       "INBOX_SETTINGS_SAVE_ERROR": "Could not save inbox settings.",
@@ -1180,7 +1190,10 @@
       "FOLLOW_UP_CANCELED": "Follow-up canceled.",
       "FOLLOW_UP_SAVE_ERROR": "Could not save the follow-up.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Enter the free-form message for auto-send.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template."
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template.",
+      "FOLLOW_UP_DUE_AT_PAST": "This time has already passed. Pick a time from now on.",
+      "CARD_REOPENED_ATENDER": "Request reopened.",
+      "CARD_CLOSE_ERROR_ATENDER": "Could not update the request status."
     },
     "ERRORS": {
       "TITLE": "Could not load the CRM",
@@ -1253,7 +1266,8 @@
         "UPDATE_SUCCESS": "Card field saved",
         "UPDATE_ERROR": "Could not save the card field",
         "DELETE_SUCCESS": "Card field cleared",
-        "DELETE_ERROR": "Could not clear the card field"
+        "DELETE_ERROR": "Could not clear the card field",
+        "HELP_ATENDER": "Information specific to this request."
       },
       "MORE_DETAILS": "More details",
       "LOADING_DETAILS": "Loading updated details...",
@@ -1334,6 +1348,7 @@
       "ACTIVITY_AI_HANDOFF_PICKUP": "Human took over from AI",
       "ACTIVITY_AI_HANDOFF_ESCALATION": "AI handoff escalated",
       "ACTIVITY_AI_HANDOFF_RENOTIFY": "AI handoff reminder sent",
+      "ACTIVITY_ENTREGA_SEM_NINGUEM": "We could not reach anyone on the team for this conversation",
       "ACTIVITY_GENERIC": "Activity recorded",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "From {from} to {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "To {to}",
@@ -1412,18 +1427,9 @@
       "STATUS_ARCHIVED": "Archived",
       "STATUS_RESOLVED": "Resolved",
       "STATUS_CANCELLED": "Cancelled",
-      "WIN_DEAL": "Win",
-      "LOSE_DEAL": "Lose",
       "REOPEN_DEAL": "Reopen",
-      "WIN_DIALOG_TITLE": "Win this deal",
       "VALUE_AI_FILLED": "Value filled by AI from the conversation. Edit if needed.",
-      "WIN_VALUE_LABEL": "Deal value",
-      "WIN_CURRENCY_LABEL": "Currency",
-      "WIN_CONFIRM": "Mark as won",
-      "LOSE_DIALOG_TITLE": "Lose this deal",
-      "LOSE_REASON_LABEL": "Reason (optional)",
       "LOSE_REASON_PLACEHOLDER": "Why was the deal lost?",
-      "LOSE_CONFIRM": "Mark as lost",
       "CLOSE_AS_TITLE": "Close as {label}",
       "MARK_AS": "Mark as {label}",
       "CANCEL": "Cancel",
@@ -1533,6 +1539,15 @@
         "SUGGESTION_FOCUS_ACCEPT": "Handle this subject",
         "SUGGESTION_DISMISS": "Dismiss",
         "SUGGESTION_ERROR": "Could not answer the suggestion. It may have changed; check the subjects again."
+      },
+      "REPASSE": {
+        "TEXT": "The subject is now {pipeline}. Do you want to pass it to the {pipeline} team?",
+        "PASS": "Pass to the {pipeline} team",
+        "KEEP": "Keep the conversation",
+        "NOBODY_ONLINE": "Nobody from the {pipeline} team is online; the conversation will wait for someone to come in.",
+        "PASS_ANYWAY": "Pass anyway",
+        "DONE": "Conversation passed to the {pipeline} team.",
+        "ERROR": "Could not answer. The subject may have changed; check again."
       }
     },
     "PIPELINE_DRAWER": {
@@ -1554,12 +1569,6 @@
       "WHEN_TO_USE": "When to use",
       "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the products or cases that come here.",
       "WHEN_TO_USE_PLACEHOLDER": "E.g.: sales of our two products, AI Agents and Chat2You.",
-      "COUNTS_AS_SALE": "Closing successfully here counts as a sale",
-      "COUNTS_AS_SALE_ON": "Cards close as Won or Lost, count toward sales totals and can notify your ads.",
-      "COUNTS_AS_SALE_OFF": "Cards close as Resolved or Cancelled. They never count as sales nor notify ads. Good for after-sales, claims, support.",
-      "OUTCOME_SUCCESS": "Name when it works out",
-      "OUTCOME_FAILURE": "Name when it doesn't work out",
-      "OUTCOME_HELP": "Optional. E.g. \"Hired\" and \"Gave up\". Leave blank to use the default name.",
       "MONTHLY_TARGET": "Monthly sales target (R$)",
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
@@ -1581,10 +1590,6 @@
       "META_STAGE_TYPE_NEGOTIATION": "In negotiation",
       "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "When a card is won, lost or moved, send the conversion back to Meta so it optimizes your Click-to-WhatsApp ads by real closers.",
-      "META_SYNC_EVENTS": "Which events to send",
-      "META_SYNC_EVENT_WON": "Won (Purchase, with value)",
-      "META_SYNC_EVENT_LOST": "Lost (Order canceled)",
-      "META_SYNC_EVENT_MOVED": "Stage moved (uses the mapping above)",
       "META_SYNC_DATASET": "Dataset ID (advanced)",
       "META_SYNC_DATASET_PLACEHOLDER": "Leave empty to use the WhatsApp connection dataset",
       "META_SYNC_DATASET_HELP": "Leave empty to derive it from the WhatsApp connection. Only set this if Meta gave you a specific dataset.",
@@ -1620,10 +1625,6 @@
       "TITLE": "Google Ads",
       "HELP": "Send CRM outcomes to Google Ads through a scheduled conversion feed.",
       "TOGGLE": "Enable Google Ads offline conversions",
-      "EVENTS": "Which events to include",
-      "EVENT_WON": "Won",
-      "EVENT_LOST": "Lost",
-      "EVENT_MOVED": "Stage moved",
       "CONVERSION_NAME_WON": "Conversion name for won cards",
       "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Won deal",
       "CONVERSION_NAME_WON_HELP": "Lost and stage-moved events use their default conversion names.",
@@ -2889,8 +2890,8 @@
       }
     },
     "ACCESS": {
-      "OWNER_WITHOUT_FUNNEL": "This person doesn’t handle this card’s pipeline in this inbox. Choose someone else or give them the pipeline in Inboxes in CRM.",
-      "CARD_FUNNEL_REQUIRED": "You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Inboxes in CRM."
+      "OWNER_WITHOUT_FUNNEL": "This person doesn’t handle this card’s pipeline in this inbox. Choose someone else or give them the pipeline in Channels per pipeline.",
+      "CARD_FUNNEL_REQUIRED": "You don’t handle this card’s pipeline. Ask an administrator to give you the pipeline in Channels per pipeline."
     },
     "PASSAGEM": {
       "CARREGANDO": "Opening the rules for this pipeline",
@@ -2963,7 +2964,10 @@
         "CITACAO": "“{frase}”",
         "DESLIGADA_SEM_IA": "{estado} The team is not called.",
         "QUEM_EQUIPE_ANTIGA": "Goes to {equipe}: whoever has the fewest conversations.",
-        "COMO_NA_HORA_ANTIGA": "{jeito}: the conversation goes straight to the person."
+        "COMO_NA_HORA_ANTIGA": "{jeito}: the conversation goes straight to the person.",
+        "QUEM_IA": "Goes to {nome} (AI agent) in the inboxes they work; in the others, to someone on the team.",
+        "QUEM_EQUIPE_NOME_IA": "Goes to {equipe}. If the customer asks for someone by name, person or AI agent, it goes to who they asked for.",
+        "COMO_IA": "With {nome} (AI agent), the conversation passes right away, with no invite and no wait."
       },
       "ANTIGA": {
         "TEXTO": "Today, if nobody is online, the conversation goes to someone who is away and the customer gets no reply.",
@@ -2995,7 +2999,26 @@
         "PESSOA_CAMPO": "Person who receives",
         "ESCOLHA": "Choose a person",
         "FORA_DA_EQUIPE": "{nome} (not on the team)",
-        "AVISO_FORA_DA_EQUIPE": "This person is not in any inbox of this pipeline and will not receive. Choose someone on the team."
+        "AVISO_FORA_DA_EQUIPE": "This person is not in any inbox of this pipeline and will not receive. Choose someone on the team.",
+        "EQUIPE_DESC_IA": "Whoever is online and has the fewest conversations, among the people in the inbox the customer wrote to. AI agents are not part of this turn.",
+        "PESSOA_DESC_IA": "A person or an AI agent, always the same one. If they do not work the conversation inbox, it goes to someone on the team.",
+        "IA_NAS_CAIXAS": "{n} AI agent in the inboxes | {n} AI agents in the inboxes",
+        "IA_FORA_DA_VEZ": "AI agents are not part of the turn: it is only for people who are online. They receive when the customer asks for them by name or when someone passes the conversation to them.",
+        "PELO_NOME_IA": "If the customer asks for someone by name, send it to who they asked for",
+        "PELO_NOME_DESC_IA": "Works for people and for the AI agents in the inboxes. The AI understands the request, like “I want to talk to Lia”.",
+        "PESSOA_CAMPO_IA": "Who receives",
+        "ESCOLHA_IA": "Choose a person or an agent",
+        "GRUPO_PESSOAS": "People",
+        "GRUPO_IA": "AI agents",
+        "IA_OPCAO": "{nome} · AI agent",
+        "IA_OPCAO_PARADO": "{nome} · AI agent (paused)",
+        "IA_ASSUME": "Takes over right away, at any time of day.",
+        "IA_PARADO": "{nome} is paused and does not receive conversations. Meanwhile, they go to someone on the team. Choose another one or turn {nome} back on in Agents.",
+        "IA_SEM_CAIXA": "{nome} does not work any inbox of this pipeline and will not receive. Choose another one or add {nome} to an inbox in CRM Inboxes.",
+        "IA_ALGUMAS_CAIXAS": "{nome} only works in {caixas}. In the other inboxes, the conversation goes to someone on the team.",
+        "IA_TODAS_AS_CAIXAS": "Works in every inbox of this pipeline.",
+        "IA_INDISPONIVEL": "AI agent (unavailable)",
+        "AVISO_IA_INDISPONIVEL": "AI agents are not available in this account right now. Meanwhile, the conversation goes to someone on the team. Choose a person."
       },
       "COMO": {
         "TITULO": "Choose how",
@@ -3049,6 +3072,13 @@
         "BOTAO_FUNIL": "Open the pipeline",
         "BOTAO_CAIXA": "Connect an inbox"
       },
+      "REGRA_NAO_RODA": {
+        "TITULO": "This rule does not fully apply:",
+        "SEM_IA": "This pipeline's AI is turned off: it does not notice when the customer asks for a person. The rule still applies when the inbox bot or AI agent hands over the conversation and when the conversation leaves triage.",
+        "FIXA_FUNIL": "{nome} cannot receive conversations from this pipeline in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "FIXA_ETAPA": "In the {etapa} stage, {nome} cannot receive conversations in {caixas}. There, the conversation goes to whoever takes care of the pipeline; if nobody can receive it right now, it waits.",
+        "ALGUEM": "The chosen person"
+      },
       "PREVIA": {
         "SELO": "Preview",
         "SELO_AGORA": "Now",
@@ -3093,7 +3123,8 @@
           "PESSOA_ESPERA": "If {nome} is away, the assistant stays with Ana until {nome} comes online.",
           "PESSOA_CONVITE": "{nome} gets the invite even when away. The assistant stays with Ana until {nome} accepts.",
           "PESSOA_FORA": "Goes to {nome} even when away, and Ana gets no reply.",
-          "FALTA": "Choose the person to see who receives."
+          "FALTA": "Choose the person to see who receives.",
+          "IA": "{nome} is an AI agent: takes over right away, even with the team away."
         },
         "ETAPAS_TITULO": "Your board",
         "ETAPAS_TEXTO": "What happens in each column.",
@@ -3113,7 +3144,13 @@
         "PERCURSO_PROPRIAS": "In {etapas}, each one calls the team its own way.",
         "PERCURSO_NAO": "In {etapas}, the assistant replies alone.",
         "PERCURSO_OUTRAS": "In the other stages, {jeito}.",
-        "PERCURSO_TODAS": "In every stage, {jeito}."
+        "PERCURSO_TODAS": "In every stage, {jeito}.",
+        "PEDIU": "{cliente} asked for {nome}",
+        "FILA_IA": "Goes to {nome} (AI agent), at any time, in the inboxes they work. In the others, to someone on the team.",
+        "FILA_IA_PARADO": "{nome} is paused, so it goes to someone on the team.",
+        "FILA_IA_INDISPONIVEL": "The AI agent is not available, so it goes to someone on the team.",
+        "FILA_EQUIPE_IA": "Whoever has the fewest conversations receives first. AI agents are not part of this turn.",
+        "FILA_EQUIPE_NOME_IA": "Whoever has the fewest conversations receives first. If the customer asks for someone by name, person or AI agent, it goes to who they asked for."
       },
       "CENA": {
         "SABADO": "Saturday, 10am",
@@ -3148,7 +3185,8 @@
         "ACEITOU_LOGO": "Three minutes later, {nome} accepted.",
         "ASSUMIU": "{nome} took over. The assistant stops replying.",
         "VAI_ONLINE_OU_NAO": "The conversation goes to {nome}, online or not. If away, the assistant stops and {cliente} gets no reply.",
-        "ROBO_CHAMA": "Sure! I have called the team."
+        "ROBO_CHAMA": "Sure! I have called the team.",
+        "IA_ASSUME": "{nome}, an AI agent, took over right away and continues with {cliente}."
       },
       "RODAPE": {
         "SALVAR": "Save",
@@ -3199,6 +3237,43 @@
           "JEITO_CONVITE": "with an invite"
         }
       }
+    },
+    "PASSAR_PARA": {
+      "BOTAO": "Pass to…",
+      "TITULO": "Pass the conversation to…",
+      "DESCRICAO": "Whoever you choose takes over the conversation.",
+      "CARREGANDO": "Loading who can receive…",
+      "PESSOAS": "People in this inbox",
+      "AGENTES": "AI agents in this inbox",
+      "VOCE": "{nome} (you)",
+      "COM_A_CONVERSA": "Has the conversation",
+      "NINGUEM": "There is no one else in this inbox to receive right now.",
+      "ERRO_LISTA": "Could not see who can receive right now.",
+      "CONFIRMA_SAI": "{nome} takes over the conversation and you leave it.",
+      "CONFIRMA": "{nome} takes over the conversation.",
+      "CANCELAR": "Cancel",
+      "PASSAR_PARA": "Pass to {nome}",
+      "ESCOLHA": "Choose who receives",
+      "PRONTO": "Done: {nome} has the conversation.",
+      "COM_IA": "With {nome} · AI agent",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} is paused. Choose another person or another agent.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} no longer works this inbox. Choose another person or another agent.",
+        "FASE2_DESLIGADA": "AI agents are not turned on for this account. Choose a person.",
+        "CONVERSA_RESOLVIDA": "This conversation is already resolved. Reopen it to pass it.",
+        "OUTRA_CONTA": "{nome} belongs to another account. Choose someone from this inbox.",
+        "PESSOA_ATRIBUIDA": "Someone on the team already has this conversation. Open the list again.",
+        "PESSOA_FORA_DA_CAIXA": "{nome} is not in this inbox anymore. Choose someone else.",
+        "DESTINO_INVALIDO": "This option is no longer available. Close and open the list again.",
+        "ERRO": "Could not pass it right now. Try again."
+      },
+      "COM_IA_POR": "With {nome} · passed by {por}",
+      "COM_IA_POR_EXTERNO": "With {nome} · passed by external agent {por}",
+      "DEVOLVER": "Give back to {nome}",
+      "DEVOLVER_DESC": "{nome} passed the conversation to {agente}.",
+      "CONFIRMA_DEVOLVE": "{nome} takes the conversation back and {agente} leaves it.",
+      "CONFIRMA_NO_LUGAR": "{nome} takes over the conversation from {agente}.",
+      "SEM_ROBO": "No agent answers this inbox first: the AI agent only replies when it receives the conversation."
     }
   },
   "crm": {
@@ -3406,6 +3481,8 @@
         "INBOX_TITLE": "Inbox calendar — {name}",
         "AGENT_TITLE": "Agent calendar — {name}",
         "TIMEZONE_LABEL": "Timezone",
+        "FUSO_DA_CONTA": "In the account time zone: {fuso}",
+        "FUSO_DA_CONTA_SEM_NOME": "In the account time zone.",
         "ENABLED_LABEL": "Calendar enabled",
         "DAYS": {
           "SUNDAY": "Sunday",
@@ -3420,6 +3497,7 @@
         "REMOVE_BLOCK": "Remove block",
         "START_LABEL": "Start",
         "END_LABEL": "End",
+        "RANGE_SEPARATOR": "–",
         "BLOCK_INVALID": "End time must be after the start time",
         "NO_BLOCKS": "Closed",
         "SAVE": "Save calendar",
@@ -3924,7 +4002,7 @@
   },
   "CRM_CAIXAS": {
     "LISTA": {
-      "TITULO": "Inboxes in CRM",
+      "TITULO": "Channels per pipeline",
       "SUBTITULO": "For each inbox: what comes in, who handles it and what happens automatically.",
       "CARREGANDO": "Loading inboxes",
       "ERRO": "We couldn't load the inboxes right now.",
@@ -3950,12 +4028,17 @@
       "SOZINHO": "What happens automatically",
       "ALTERAR": "Change",
       "LIGAR": "Add to CRM",
-      "ROBO": "{nome} (AI agent) answers first"
+      "PORTA": "{nome} answers first",
+      "AREA": "{nome} handles {funis}",
+      "ROBO": "{nome} (AI agent) answers first",
+      "ROBO_EXTERNO": "{nome} (external agent) answers first"
     },
     "MODO_RESUMO": {
       "AUTO": "The system creates the card when it understands the subject.",
       "SUGGEST": "The system suggests the subject and the team confirms.",
       "OFF": "Nothing happens automatically: the team creates the card.",
+      "CHEGOU_IA": "The card is created with the first message, and the AI names it.",
+      "AUTO_UM": "The system creates a card for each customer request.",
       "CHEGOU": "The card is created as soon as the conversation arrives."
     },
     "ETAPAS": {
@@ -3971,14 +4054,15 @@
     },
     "CUIDAM": {
       "TITULO": "Who handles what?",
-      "SUBTITULO": "Tap each person's subjects. They only see those conversations."
+      "SUBTITULO": "Tap each person's subjects. They only see those conversations.",
+      "SUBTITULO_COM_AGENTES": "Tap the subjects of each AI agent and each person. A person only sees those conversations."
     },
     "SOZINHO": {
       "TITULO": "What does the system do on its own?",
       "SUBTITULO": "When a new message arrives in this inbox.",
       "AUTO": "Create the card when it understands the subject",
       "AUTO_TEXTO": "The system reads the conversation, picks the right pipeline and creates the card.",
-      "AUTO_EXEMPLO": "The system sees it's {funil}, creates the card and hands it to {pessoa}, who is next in line.",
+      "AUTO_EXEMPLO": "The system sees it's {funil} and creates the card. When the agent hands the conversation over or it leaves triage, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
       "SUGGEST": "Suggest the subject and wait for the team",
       "SUGGEST_TEXTO": "The system shows the pipeline that seems right. Someone confirms with one click.",
       "SUGGEST_EXEMPLO": "The team sees: “Looks like {funil}”. Whoever confirms creates the card.",
@@ -3987,10 +4071,17 @@
       "OFF_EXEMPLO": "Nothing happens. Someone on the team reads it and creates the card.",
       "CHEGOU": "Create the card as soon as the conversation arrives",
       "CHEGOU_TEXTO": "Every new conversation becomes a card right away.",
-      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}, and goes to {pessoa}.",
+      "CHEGOU_EXEMPLO": "The card starts in {funil}, at {etapa}. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "CHEGOU_IA": "Create the card as soon as the conversation arrives",
+      "CHEGOU_IA_TEXTO": "The card is created with the first message, and the AI names it.",
+      "CHEGOU_IA_EXEMPLO": "The card starts in {funil}, at {etapa}, and the AI names it once it understands the request. When the agent hands the conversation over, it goes right away to whoever handles {funil} and has the fewest open conversations, like {pessoa}. If nobody can take it now, it waits and goes to whoever comes online first.",
+      "AUTO_UM": "Create the card when it understands the subject",
+      "AUTO_UM_TEXTO": "The system reads the conversation and creates a card for each customer request.",
+      "AUTO_UM_EXEMPLO": "The customer asks for two different products: that makes two cards in {funil}.",
       "RECOMENDADO": "Recommended",
       "EXEMPLO": "Example",
       "MENSAGEM": "Hi! How much is it?",
+      "MENSAGEM_DOIS_PEDIDOS": "I want to know the price of the basic plan and also of the full plan.",
       "NAO_ENTENDEU": "If the subject isn't clear, the conversation stays without a subject and goes to whoever handles those.",
       "ALGUEM": "someone on the team",
       "SEM_IA": "AI is off in {funis}. Turn it on in Edit pipeline → Pipeline AI so it can recognize this subject."
@@ -4005,13 +4096,23 @@
       "SO_SUAS": "handles {assuntos}. Sees only the conversations they handle.",
       "SEM_ASSUNTO": "conversations without a subject",
       "SEM_ASSUNTO_TITULO": "No subject",
-      "RODIZIO": "Who gets new conversations, one at a time",
+      "RODIZIO": "Who gets it when the agent hands the conversation over or it leaves triage (right away, whoever has the fewest open conversations; if nobody can now, whoever comes online first)",
       "NINGUEM": "nobody yet",
       "MUDA": "What changes when you save",
       "NADA_MUDOU": "Nothing changed.",
       "SAI_DO_CRM": "With no pipeline selected, this inbox leaves the CRM. Its conversations stop becoming cards.",
       "RODIZIO_NOME": "{nome}:",
-      "ROBO": "{nome}, the AI agent, answers first. Then the people below."
+      "AGENTE_CUIDA": "Handles: {funis}. Takes over when the subject is this pipeline. | Handles: {funis}. Takes over when the subject is one of these pipelines.",
+      "FICA_COM_A_PORTA": "{funis}: no agent marked, so {porta} carries on.",
+      "RODIZIO_AGENTE": "{nome} (AI agent) takes over when the subject is this pipeline.",
+      "RODIZIO_PESSOAS": "If the customer asks for a person, it goes to {nomes}. | If the customer asks for a person, it goes to {nomes}, one at a time.",
+      "RODIZIO_SEM_PESSOA": "If the customer asks for a person, there is nobody yet.",
+      "SO_AS_DELE": "{nome} only sees their own conversations, so does not receive.",
+      "NINGUEM_RECEBE": "Nobody can receive conversations about {assuntos}. They wait until someone starts taking care of the subject.",
+      "CONFERINDO": "Checking who receives…",
+      "ERRO_QUEM_RECEBE": "Could not check who receives right now.",
+      "ROBO": "{nome}, the AI agent, answers first. Then the people below.",
+      "ROBO_EXTERNO": "{nome}, the external agent, answers first. Then the people below."
     },
     "MUDA": {
       "FUNIL_ENTRA": "{funil} starts coming in through this inbox.",
@@ -4020,7 +4121,13 @@
       "PESSOA_TODAS": "{nome} now sees all conversations of the subjects they handle.",
       "MODO": "From now on: {resumo}",
       "PESSOA_GANHA": "{nome} starts handling {assuntos}.",
-      "PESSOA_PERDE": "{nome} stops handling {assuntos}."
+      "PESSOA_PERDE": "{nome} stops handling {assuntos}.",
+      "AGENTE_ENTRA": "{nome} joins this inbox.",
+      "AGENTE_ENTRA_E_LIGA": "{nome} joins this inbox and starts answering.",
+      "AGENTE_SAI": "{nome} leaves this inbox.",
+      "AGENTE_PARA": "{nome} leaves this inbox and stops answering. {nome} works in no other inbox.",
+      "ABERTAS": "There is {n} open conversation in {funil} in this inbox. | There are {n} open conversations in {funil} in this inbox.",
+      "UM_FUNIL": "With a single funnel in this inbox, whoever takes care of {funil} and sees all conversations also takes care of the ones that have no subject yet. Whoever only sees their own stays that way."
     },
     "FUNIS": {
       "TIPO_SALES": "Sales: ends in won or lost",
@@ -4042,11 +4149,32 @@
       "TODAS": "All",
       "SO_AS_QUE_ATENDE": "Only theirs",
       "NAO_VE": "Sees nothing",
-      "RODIZIO": "Whoever handles a subject gets its new conversations, one at a time.",
+      "RODIZIO": "When the agent hands a conversation over or it leaves triage, it goes right away to whoever handles the subject and has the fewest open conversations. If nobody can take it now, it waits and goes to whoever comes online first. If the pipeline's Assignment is set to invite, the person is invited instead of getting it directly. Administrators get conversations too.",
       "SO_AS_QUE_ATENDE_EXPLICA": "“Only theirs”: conversations where the person is the agent, a participant or the card owner.",
       "LEGADO_MUDAR": "Use what I select",
       "LEGADO_CURTO": "Choose whether each person keeps seeing only assigned conversations.",
-      "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies."
+      "AGENTES_TITULO": "AI agents",
+      "PESSOAS_TITULO": "People",
+      "SELO_IA": "AI agent",
+      "PORTA": "Answers every conversation in this inbox first.",
+      "AGENTE_CUIDA": "Handles: {funis}",
+      "AGENTE_NADA": "Doesn't handle any subject in this inbox.",
+      "FUNIL_COM": "· with {nome}",
+      "TROCOU": "{funil} was with {antes}. Now it is with {agora}.",
+      "DESFAZER": "Undo",
+      "REGRA": "The agent marked on a subject takes over the conversation; with no agent, {porta} carries on.",
+      "REGRA_SEM_PORTA": "The agent marked on a subject takes over the conversation.",
+      "MOSTRAR_AGENTES": "Show other agents ({n})",
+      "ROBO": "{nome}, this inbox’s AI agent, answers first. When the conversation goes to a person, what is selected here applies.",
+      "ROBO_EXTERNO": "{nome}, this inbox’s external agent, answers first. When the conversation goes to a person, what is selected here applies.",
+      "TIRAR": "Remove from this inbox",
+      "SAI": "Leaves this inbox when you save.",
+      "VAI_PARAR": "This is the only inbox where {nome} works. After saving, {nome} stops answering.",
+      "ENTRA": "Joins this inbox when you save.",
+      "ENTRA_E_LIGA": "Joins this inbox and starts answering when you save.",
+      "PARADO": "Stopped",
+      "SO_QUEM_GERENCIA": "Only people who manage AI agents can change the agents of this inbox.",
+      "EXTERNO": "AI agent: {nome}, answers first"
     },
     "EDITOR": {
       "ERRO": "We couldn't open this inbox right now.",
@@ -4054,13 +4182,23 @@
       "CONTINUAR": "Continue",
       "SALVAR": "Save",
       "SALVOU": "Inbox saved.",
-      "FALHOU": "We couldn't save. Try again."
+      "FALHOU": "We couldn't save. Try again.",
+      "ERRO_AGENTES": "We couldn’t save the AI agents. Reload the page and try again.",
+      "AGENTE_NAO_LIGA": "An AI agent could not start answering. Open the agent, finish its setup and try again.",
+      "PRINCIPAL_PARADO": "The main agent of this inbox is not answering. To add a team agent here, turn the main agent on first.",
+      "AGENTE_EXTERNO": "An external agent answers on this inbox. A team agent cannot join an inbox with an external agent yet.",
+      "AGENTE_RASCUNHO": "This agent is still a draft; finish creating it first."
+    },
+    "AVISO_AGENTES": {
+      "TITULO": "Who sees what in the CRM is set somewhere else",
+      "TEXTO": "Here you choose who answers this inbox. Which pipelines, cards and conversations each person and each AI agent sees in the CRM is set in CRM → {lugar}.",
+      "LINK": "Set it in {lugar}"
     }
   },
   "CRM_FUNIL": {
     "ROTULO": "CRM pipelines",
     "NOVO": "New pipeline",
-    "NOVO_TEXTO": "The path each customer takes, from the first hello to closing.",
+    "NOVO_TEXTO": "The path each customer takes, from the first hello to the end.",
     "EDITAR": "Edit pipeline",
     "NOME": "Pipeline name",
     "NOME_FALTA": "Give the pipeline a name.",
@@ -4095,19 +4233,36 @@
         "E2": "In progress",
         "E3": "Waiting for customer",
         "E4": "Solved",
-        "TEXTO": "From the request for help to solving it."
+        "TEXTO": "From the request for help until it is solved."
       },
       "AGENDAMENTOS": {
         "NOME": "Appointments",
-        "E1": "New contact",
-        "E2": "Booked",
-        "E3": "Attended",
-        "E4": "No-show",
+        "E1": "Asked for a time",
+        "E2": "Time booked",
+        "E3": "Needs to reschedule",
+        "E4": "Attended",
         "TEXTO": "From the booking request to the visit."
       },
       "TROCAR_AVISO": "Switching to {nome} discards the changes you made to the stages.",
       "TROCAR_SIM": "Switch anyway",
-      "TROCAR_NAO": "Keep my stages"
+      "TROCAR_NAO": "Keep my stages",
+      "POS_VENDA": {
+        "NOME": "After-sales",
+        "TEXTO": "From the purchase until the customer says all is well.",
+        "E1": "Just bought",
+        "E2": "Following up",
+        "E3": "Waiting for the customer",
+        "E4": "All good"
+      },
+      "COBRANCA": {
+        "NOME": "Collections",
+        "TEXTO": "From the payment notice until it is paid.",
+        "E1": "Not due yet",
+        "E2": "Overdue",
+        "E3": "Promised to pay",
+        "E4": "Paid",
+        "SUCESSO": "Paid"
+      }
     },
     "ETAPAS": {
       "ROTULO": "Stages",
@@ -4160,7 +4315,8 @@
       "ACONTECE_1": "The {nome} board shows up in the Kanban, with {n} columns.",
       "ACONTECE_2": "You can change any part later, in Edit pipeline.",
       "ACONTECE_3": "After creating, you connect inboxes, reminders and ads.",
-      "HEROI": "Review and create. You can change everything later."
+      "HEROI": "Review and create. You can change everything later.",
+      "ACONTECE_3_ATENDER": "After creating it, you connect the inboxes and check the reminders."
     },
     "RESUMO": {
       "TEXTO": "What this pipeline does today. Tap Change to edit a part.",
@@ -4168,10 +4324,8 @@
       "FALTA_FRASE": "The sentence for {nomes} is missing. | The sentences for {nomes} are missing.",
       "SOBRE": "Use it when the customer {texto}.",
       "SOBRE_FALTA": "Say which kind of conversation belongs here.",
-      "VENDA": "Every closed sale counts on the dashboard.",
       "META": "Goal of {valor} a month.",
       "SEM_META": "No monthly goal yet.",
-      "NAO_VENDA": "This pipeline does not count as sales.",
       "RETORNO": "If the customer goes quiet, we reach out again {vezes}.",
       "RETORNO_EQUIPE": "If the customer goes quiet, the team is reminded {vezes}.",
       "ATE_VEZES": "up to {n} time | up to {n} times",
@@ -4182,7 +4336,14 @@
       "O_GOOGLE": "Google",
       "ANUNCIOS_DESLIGADO": "Your ads don't know about your sales yet.",
       "O_FACEBOOK": "Facebook",
-      "O_INSTAGRAM": "Instagram"
+      "O_INSTAGRAM": "Instagram",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each closed sale counts on the dashboard.",
+      "TIPO_ATENDER": "{tipo}: solve something for an existing customer. Ends as {sucesso} or {fracasso}.",
+      "ATENDER_LEMBRETES": "We share progress after {andamento} in the same stage and ask if it was solved {resolveu} after {sucesso}.",
+      "ATENDER_SO_ANDAMENTO": "We share progress after {andamento} in the same stage.",
+      "ATENDER_SO_RESOLVEU": "We ask if it was solved {resolveu} after {sucesso}.",
+      "COBRAR_LEMBRETES": "We send payment reminders before, on and after the due date.",
+      "ATENDER_SEM_LEMBRETES": "No reminder on."
     },
     "SOBRE": {
       "ROTULO": "When to use this pipeline",
@@ -4201,18 +4362,20 @@
         "TROCAR": "wants to exchange or cancel",
         "MARCAR": "wants to book a time",
         "REMARCAR": "wants to change the time",
-        "HORARIOS": "asks which times are free"
+        "HORARIOS": "asks which times are free",
+        "COMO_USAR": "asks how to use it",
+        "ACABOU_DE_COMPRAR": "just bought",
+        "ENTREGA": "asks about the delivery",
+        "PAGAR": "wants to pay",
+        "SEGUNDA_VIA": "asks for a copy of the bill",
+        "ATRASADO": "is late on a payment"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."
     },
     "VENDAS": {
-      "ROTULO": "Sales and goal",
       "TITULO": "Know how much this pipeline sells",
       "TEXTO": "Sales closed here go to the dashboard, next to the monthly goal.",
-      "CONTA": "Counts as a sale",
-      "CONTA_SIM": "When a customer closes, it adds to total sales.",
-      "CONTA_NAO": "Good for support and after-sales: the customer ends as solved or cancelled.",
       "META": "Monthly sales goal",
       "META_AJUDA": "Shows on the dashboard. Leave it empty if you have no goal.",
       "META_EXEMPLO": "50000",
@@ -4289,26 +4452,22 @@
       "DEPOIS_FRASE_MENSAGEM": "On the agreed day, the team gets a reminder and the customer gets a message.",
       "DEPOIS_EXEMPLO": "E.g. “Can you call me on Friday?” becomes a reminder on Friday at 9am.",
       "SEM_RESPOSTA_POR": "No reply for",
-      "DEPOIS_PEDIDO": "“Can you call me on Friday?”"
+      "DEPOIS_PEDIDO": "“Can you call me on Friday?”",
+      "TEXTO_ATENDER": "The customer hears about progress, and nobody is left without an answer."
     },
     "CAIXAS": {
       "ROTULO": "Inboxes",
       "TITULO": "Where customers come from",
       "TEXTO": "Where this pipeline’s conversations come from and which column they start in.",
-      "NENHUMA": "This account has no inbox yet.",
-      "TRAZ": "Brings conversations to this pipeline",
-      "NAO_TRAZ": "Doesn't bring conversations here",
-      "LIGAR": "Connect",
-      "LIGAR_ESTA": "Connect this inbox",
-      "DESLIGAR": "Disconnect",
-      "DESLIGAR_NOME": "Disconnect {nome} from this pipeline",
       "CONVERSA_NOVA": "New conversation",
       "SOZINHO": "The customer shows up on the board by itself, with the conversation attached.",
-      "EQUIPE": "The customer only joins the board when the team adds them.",
-      "COMECA": "Which column the customer starts in",
-      "CRIAR_SOZINHO": "Every new conversation becomes a card on the board",
-      "QUEM_ATENDE": "Who handles each inbox is set in CRM inboxes",
-      "LIGANDO": "Connecting…"
+      "LIGADO_EM": "Connected to",
+      "ESCOLHIDO": "The card is created when the AI or the team picks this pipeline for the conversation.",
+      "MUDAR": "Change in {lugar}",
+      "MUDAR_NOME": "Change {nome} in {lugar}",
+      "ONDE_MUDA": "Which pipelines each inbox brings conversations to, how cards are created and who sees what are all set in {lugar}, with a single Save.",
+      "ABRIR_CAIXAS": "Open {lugar}",
+      "VER": "See"
     },
     "ANUNCIOS": {
       "ROTULO": "Ads",
@@ -4402,7 +4561,6 @@
       "META_MES": "Monthly goal",
       "META_EXEMPLO": "{valor} sold so far",
       "SEM_META": "Without a goal, the dashboard shows only the total sold.",
-      "NAO_VENDA": "This pipeline stays out of total sales.",
       "FIM": "How the customer ends",
       "RETORNO_TITULO": "With Ana, as an example",
       "RETORNO_TEXTO": "Real messages are written from each customer's conversation.",
@@ -4442,7 +4600,64 @@
       "CHEGOU_EM": "When they reach {nome}"
     },
     "CARREGANDO": "Loading…",
-    "NOVO_TITULO": "Build the customer path"
+    "NOVO_TITULO": "Build the customer path",
+    "TIPO": {
+      "PERGUNTA": "What is this pipeline for?",
+      "AJUDA": "Pick one. The ready-made stages come next.",
+      "VENDER": {
+        "NOME": "Sell",
+        "TEXTO": "Get a new customer."
+      },
+      "ATENDER": {
+        "NOME": "Serve",
+        "TEXTO": "Solve something for an existing customer."
+      },
+      "MODELO": "What kind of service?",
+      "PREVIA_TITULO": "Your board shows up here",
+      "PREVIA_TEXTO": "Choose what the pipeline is for and we show the ready-made stages.",
+      "ROTULO": "What it is for"
+    },
+    "ATENDER": {
+      "TITULO": "How each request ends",
+      "TEXTO": "Resolved when it worked out. Cancelled when the customer no longer needs it.",
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "TITULO": "Share progress",
+          "MSG": "Hi, {nome}! Your request is still with us. I will let you know as soon as there is news.",
+          "FRASE_TEMPO": "If a request stays {tempo} in the same stage, we tell the customer we are still on it.",
+          "TEMPO_ROTULO": "Time in the same stage",
+          "QUANDO": "{tempo} in the same stage"
+        },
+        "RESOLVEU": {
+          "TITULO": "Ask if it was solved",
+          "MSG": "Hi, {nome}! Did everything work out? If you need anything, just reply here.",
+          "FRASE_TEMPO": "{tempo} after {sucesso}, we ask if everything worked out.",
+          "TEMPO_ROTULO": "Time after {sucesso}",
+          "QUANDO": "{tempo} after {sucesso}"
+        },
+        "COBRAR": {
+          "TITULO": "Payment reminders",
+          "FRASE": "We remind the customer 3 days before, on the day and 3 days after the due date.",
+          "ANTES": "3 days before",
+          "NO_DIA": "On the day",
+          "DEPOIS": "3 days after",
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that the payment of {valor} is due on Friday.",
+          "MSG_NO_DIA": "Hi, {nome}! The payment of {valor} is due today. If you already paid, please ignore this.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the payment of {valor} yet. Can I help with anything?"
+        },
+        "PREVIA_TITULO": "With Ana, as an example",
+        "PREVIA_TEXTO": "Sent on WhatsApp during the pipeline business hours. The real message is written from each customer conversation.",
+        "VALOR_EXEMPLO": "R$ 350",
+        "DESLIGADOS": "No reminder on. Nobody gets a message on their own.",
+        "TEMPOS": {
+          "H4": "4 hours",
+          "H24": "1 day",
+          "H48": "2 days",
+          "H72": "3 days",
+          "H168": "1 week"
+        }
+      }
+    }
   },
   "CRM_CARD": {
     "FECHAR": "Close",
@@ -4494,7 +4709,14 @@
         "NAO_ERA_HORA": "Not the right time"
       },
       "GANHOU_TITULO_PADRAO": "Deal won! How much was it?",
-      "GANHOU_CONFIRMA_PADRAO": "Mark as won"
+      "GANHOU_CONFIRMA_PADRAO": "Mark as won",
+      "CANCELOU_TEXTO": "Sharing the reason is optional, but it helps understand what happened.",
+      "MOTIVO_ATENDER": {
+        "RESOLVEU": "Solved another way",
+        "SUMIU": "Stopped replying",
+        "NAO_PRECISA": "No longer needed"
+      },
+      "CANCELAR_EXEMPLO": "Why was it cancelled?"
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
@@ -4511,7 +4733,8 @@
       "RETORNO": "the follow-up you were setting",
       "CLIENTE": "the changes to the person or company",
       "CRIAR": "the customer you were creating",
-      "DONO": "the change of who takes care"
+      "DONO": "the change of who takes care",
+      "ASSUNTO": "the changes to the subject"
     },
     "PASSO": {
       "ROTULO": "Next step",
@@ -4541,7 +4764,8 @@
         "REUNIAO_FUTURA": "Meeting {quando}",
         "RETORNO_FUTURO": "{quando}: {titulo}"
       },
-      "FECHADO": "This deal is over: {status}. If the customer comes back, tap Reopen."
+      "FECHADO": "This deal is over: {status}. If the customer comes back, tap Reopen.",
+      "FECHADO_ATENDER": "This request is over: {status}. If the customer comes back, tap Reopen."
     },
     "RESUMO": {
       "ROTULO": "Customer in the funnel",
@@ -4592,7 +4816,19 @@
       "EMPRESA_PARTE": "Company",
       "JA_COMPROU": "Already bought from you.",
       "DESFAZER_CLIENTE": "Undo",
-      "MARCAR_CLIENTE": "Mark as customer"
+      "MARCAR_CLIENTE": "Mark as customer",
+      "ASSUNTO_DE": "Subject: {titulo}",
+      "ASSUNTO": "Subject",
+      "COBRANCA_FRASE": "{titulo}: {valor} due {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} due, no due date.",
+      "PROMESSA": "Promised to pay {dia}.",
+      "MAIS_ASSUNTO": "More about the subject",
+      "MAIS_DETALHES_DICA_ASSUNTO": "Where it came from, what happened, more about the subject and archive",
+      "COBRANCA_VENCEU": "{titulo}: {valor} due, was due {vencimento}.",
+      "EM_DIA": "on {dia}",
+      "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
+      "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
+      "SEM_CONTATO_ATENDER": "No person is linked to this request yet."
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -4764,7 +5000,9 @@
         "PRONTA_NOME": "type the name of the ready message",
         "PRONTA_IDIOMA": "choose the language of the ready message",
         "PRONTA_ESCOLHER": "pick the ready message",
-        "NOME": "give the follow-up a name"
+        "NOME": "give the follow-up a name",
+        "QUEM": "choose who gets the reminder",
+        "ULTIMO_DIA": "choose the last day"
       },
       "TITULO_LEMBRETE": "New reminder",
       "TITULO_ESCONDER": "Hide the conversation until a day",
@@ -4866,7 +5104,8 @@
         "TUDO": "All",
         "NEGOCIO": "Stages and deal",
         "RETORNOS": "Follow-ups",
-        "REUNIOES": "Meetings"
+        "REUNIOES": "Meetings",
+        "ASSUNTO": "Stages and subject"
       },
       "VAZIO": "Nothing has happened yet.",
       "VAZIO_FILTRO": "Nothing of this kind here.",
@@ -4922,6 +5161,12 @@
         "ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT": "the customer does not want automatic messages",
         "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Moved to {time}",
         "BOOKED_BY_AI_DETAIL": "Set by the assistant: {title}"
+      },
+      "EVENTO_ATENDER": {
+        "ACTIVITY_UPDATE": "The request details changed",
+        "ACTIVITY_LINK_CONTACT": "A person was linked to this request",
+        "ACTIVITY_UNLINK_CONTACT": "The person was removed from this request",
+        "ACTIVITY_REOPEN": "Request reopened"
       }
     },
     "CRIAR": {
@@ -5005,7 +5250,11 @@
           "SEARCH": "Search",
           "NO_COMPANIES": "No company found. You can add a new one."
         }
-      }
+      },
+      "TITULO_2_ATENDER": "About the request",
+      "TEXTO_2_ATENDER": "Name the subject and choose the stage it starts in. The rest can wait.",
+      "TITULO_2_COBRANCA": "About the payment",
+      "TEXTO_2_COBRANCA": "Say what is being charged, the amount and the due date. The rest can wait."
     },
     "QUANDO": {
       "OUTRO_DIA": "Pick another day",
@@ -5151,6 +5400,515 @@
       "TITULO": "Move to {etapa}?",
       "TEXTO": "{nome} changes column on the board now.",
       "CONFIRMA": "Move"
+    },
+    "ASSUNTO": {
+      "TELA": "Subject",
+      "TITULO": "About the request",
+      "TEXTO": "What {nome} needs and how urgent it is.",
+      "NOME": "Subject",
+      "TITULO_EXEMPLO": "E.g. Size exchange",
+      "TITULO_FALTA": "Write the subject.",
+      "URGENCIA": "Priority"
+    },
+    "COBRANCA": {
+      "TITULO": "About the payment",
+      "TEXTO": "How much {nome} owes, when it is due and whether they promised to pay.",
+      "NOME": "What is being charged",
+      "TITULO_EXEMPLO": "E.g. October fee",
+      "VALOR": "Amount due",
+      "FECHAR_ATE": "Due date",
+      "PROMESSA": "Promised to pay on",
+      "PROMESSA_DICA": "If the customer named a day, mark it here. Reminders wait until that day."
+    },
+    "TEMPO": {
+      "MINUTOS": "{n} minute | {n} minutes",
+      "HORAS": "{n} hour | {n} hours",
+      "DIAS": "{n} day | {n} days"
+    },
+    "SERIE": {
+      "TELA": "Repeat"
     }
+  },
+  "CRM_LEMBRETE": {
+    "SALVO": "Done, reminder saved.",
+    "FUSO_DA_CONTA": "Time in {fuso}, your account time zone.",
+    "REPETIR": {
+      "PERGUNTA": "Repeat?",
+      "OPCAO": {
+        "NUNCA": "Just once",
+        "DIA": "Every day",
+        "SEMANA": "Every week",
+        "MES": "Every month",
+        "ANO": "Every year"
+      },
+      "SO_DIAS_UTEIS": "Only Monday to Friday",
+      "QUAIS_DIAS": "On which days?",
+      "MES_CURTO": "In months without day {dia}, the reminder comes on the last day of the month.",
+      "ATE_QUANDO": "Until when?",
+      "FIM": {
+        "NUNCA": "No end date",
+        "DATA": "Until a date",
+        "VEZES": "A number of times"
+      },
+      "QUANTAS": "How many times?",
+      "N_VEZES": "{n} times",
+      "ULTIMO_DIA": "Last day",
+      "PROXIMAS": "Next dates",
+      "TOTAL": "{n} times in total. The last one is {ultima}.",
+      "SEM_FIM": "And so on, until you pause or end it.",
+      "ESCOLHA_DIA": "Pick the day above to see the next dates.",
+      "FUSO": "Always in {fuso} time.",
+      "FRASE": {
+        "DIA": "Every day at {hora}",
+        "DIA_UTIL": "Monday to Friday at {hora}",
+        "SEMANA": "Every {dias} at {hora}",
+        "MES": "Every month on day {dia} at {hora}",
+        "MES_FIM": "Every month on day {dia} (or the last day) at {hora}",
+        "ANO": "Every year on {dia} at {hora}",
+        "UMA_VEZ": "Just once",
+        "SEMANA_FIM": "Every {dias} at {hora}"
+      }
+    },
+    "QUEM": {
+      "PERGUNTA": "Who gets the reminder?",
+      "DONO": "Whoever handles the customer",
+      "DONO_TEXTO": "Today it is {nome}. If the owner changes, the reminder follows.",
+      "EU": "Only me",
+      "EU_TEXTO": "{nome}, you.",
+      "PESSOAS": "Pick people",
+      "PESSOAS_TEXTO": "One or more people on the team.",
+      "TIME": "A whole team",
+      "TIME_TEXTO": "Everyone on the team gets it.",
+      "TIME_NOME": "{nome} ({n} people)",
+      "ESCOLHA_PESSOAS": "Check who gets it:",
+      "SEM_FUNIL": "Cannot see the {funil} pipeline",
+      "QUAL_TIME": "Which team?",
+      "ESCOLHA_TIME": "Choose the team",
+      "RECEBEM": "Getting it: {nomes}.",
+      "CRIADOR_VE": "You also see this reminder in your calendar, because you created it."
+    },
+    "PREVIA": {
+      "PROXIMAS": "Next: {datas}",
+      "AVISA": "Reminds: {nomes}",
+      "AVISA_DONO": "Reminds: {nomes}, who handles the customer",
+      "AVISA_FALTA": "Choose who gets the reminder.",
+      "ONDE_NADA": "Stays only in the calendar.",
+      "ONDE_CONTATO": "Stays in the calendar and on {nome}’s profile.",
+      "ONDE_CARD": "Stays in the calendar and on {nome}’s card.",
+      "ONDE_CONTATO_SEM": "Stays in the calendar and on the customer profile.",
+      "ONDE_CARD_SEM": "Stays in the calendar and on the customer card.",
+      "ONDE_NADA_SEM": "Stays only in the calendar.",
+      "ONDE_EMPRESA": "Stays in the calendar and on {nome}’s profile.",
+      "ONDE_EMPRESA_SEM": "Stays in the calendar and on the company profile."
+    },
+    "LISTA": {
+      "TITULO": "Repeating",
+      "PROXIMA": "Next: {dia} at {hora}",
+      "PAUSADA": "Paused",
+      "AVISA": "Reminds: {nomes}",
+      "VER": "View"
+    },
+    "SERIE": {
+      "TELA": "Repeat",
+      "TEXTO": "See the next dates and who gets it. You can pause or end it.",
+      "MUDAR": "Change",
+      "LIGADO_CARD": "Deal: {nome}",
+      "LIGADO_CONTATO": "Customer: {nome}",
+      "LIGADO_NADA": "Calendar only",
+      "FUSO": "{fuso} time",
+      "QUEM_DONO": "{nomes}, who handles the customer. If the owner changes, the reminder follows.",
+      "QUEM_TIME": "Team {time}: {nomes}.",
+      "SITUACAO": {
+        "ATIVA": "Repeating",
+        "PAUSADA": "Paused",
+        "ENCERRADA": "Ended"
+      },
+      "PAUSADA_DESDE": "Paused since {dia}. Nobody gets reminded until you resume.",
+      "FEITO_ESTE": "Done this time",
+      "PAUSAR": "Pause",
+      "RETOMAR": "Resume",
+      "ENCERRAR": "End",
+      "ENCERRAR_TITULO": "End this reminder?",
+      "ENCERRAR_TEXTO": "It stops repeating and nobody gets reminded again. What was already done stays in the history.",
+      "ENCERRAR_CONFIRMA": "End",
+      "CONTINUAR": "Go back",
+      "MUDAR_TITULO": "What do you want to change?",
+      "MUDAR_TEXTO": "Pick one of the two.",
+      "SO_ESTA": "Only the next one ({dia})",
+      "SO_ESTA_TEXTO": "The other dates stay as they are.",
+      "ESTA_E_PROXIMAS": "This one and all the next ones",
+      "ESTA_E_PROXIMAS_TEXTO": "What already happened does not change.",
+      "PROXIMAS": "Next dates",
+      "DIA_HORA": "{dia} at {hora}",
+      "A_PROXIMA": "Next",
+      "NAO_AVISA": "Paused",
+      "QUEM_RECEBE": "Who gets the reminder",
+      "FEITO_OK": "Done, {dia} is marked as done. The next one is still scheduled.",
+      "PAUSADA_OK": "Done, paused.",
+      "RETOMADA_OK": "Done, repeating again.",
+      "ENCERRADA_OK": "Done, ended.",
+      "LADO_TITULO": "What each button does",
+      "LADO_TEXTO": "Nothing disappears without your confirmation.",
+      "AJUDA": {
+        "FEITO": "Done this time: marks only the current date. The next ones stay.",
+        "PAUSAR": "Pause: nobody gets reminded until you resume. The dates stay.",
+        "ENCERRAR": "End: stops repeating. The history is kept.",
+        "MUDAR": "Change: you choose to change only the next one or all from now on."
+      },
+      "ERRO": "That did not work. Try again.",
+      "ERRO_CARREGAR": "Could not open this reminder right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "PASSADAS": "Dates already past ({n})",
+      "HISTORICO": {
+        "FEITA": "Done",
+        "AVISADA": "Reminded",
+        "NAO_AVISADA": "Not reminded"
+      },
+      "LIGADO_EMPRESA": "Company: {nome}"
+    },
+    "LIGAR": {
+      "PERGUNTA": "Who is it about?",
+      "NADA": "Nobody",
+      "NADA_TEXTO": "Stays only in the calendar. E.g. pay the rent.",
+      "CONTATO": "A customer",
+      "CONTATO_TEXTO": "Even without an open deal. E.g. birthday.",
+      "CARD": "A deal in the pipeline",
+      "CARD_TEXTO": "Also shows on the customer card.",
+      "QUAL_CARD": "Which deal?",
+      "QUAL_CONTATO": "Which customer?",
+      "BUSCAR": "Choose",
+      "BUSCAR_DICA": "Type the name",
+      "FALTA": "Choose the customer."
+    },
+    "GAVETA": {
+      "ROTULO": "Calendar",
+      "TITULO": "New reminder",
+      "TEXTO": "A reminder for you or the team, on the right day and time."
+    },
+    "MUDADO": "Done, reminder changed.",
+    "MUDAR": {
+      "TITULO_ESTA": "Change only the next time",
+      "TITULO_PROXIMAS": "Change this one and the next ones",
+      "TEXTO_ESTA": "The other dates stay as they are.",
+      "TEXTO_PROXIMAS": "What already happened does not change."
+    },
+    "MODO_OUTROS": {
+      "TITULO": "Remind at the time",
+      "TEXTO": "Reminder at the set time for {nomes}."
+    },
+    "UNICO": {
+      "TEXTO": "A one-time reminder.",
+      "QUANDO": "{dia} at {hora} ({fuso} time)",
+      "FEITO_OK": "Done, marked as done.",
+      "CANCELADO_OK": "Done, canceled.",
+      "EMPRESA": "Company: {nome}"
+    },
+    "FICHA": {
+      "NOVO": "New reminder"
+    },
+    "CALENDARIO": {
+      "REPETE": "Repeating reminder:",
+      "PAUSADO": "Paused reminder:"
+    },
+    "FALTA": {
+      "NOME": "give the reminder a name"
+    }
+  },
+  "CRM_CALENDARIO": {
+    "HEROI": {
+      "ROTULO": "Today is {data}",
+      "OI_MANHA": "Good morning, {nome}",
+      "OI_TARDE": "Good afternoon, {nome}",
+      "OI_NOITE": "Good evening, {nome}",
+      "OI_MANHA_SEM_NOME": "Good morning",
+      "OI_TARDE_SEM_NOME": "Good afternoon",
+      "OI_NOITE_SEM_NOME": "Good evening",
+      "HOJE": "For today: {n} thing. | For today: {n} things.",
+      "HOJE_NADA": "Nothing planned for today.",
+      "ATRASADOS": "{n} was left behind. | {n} were left behind.",
+      "EM_DIA": "Nothing was left behind.",
+      "NOVO": "New"
+    },
+    "VISAO": {
+      "ROTULO": "How to view the calendar",
+      "DIA": "My day",
+      "SEMANA": "Week",
+      "MES": "Month"
+    },
+    "NAV": {
+      "ANTERIOR": "Back",
+      "SEGUINTE": "Forward",
+      "VOLTAR_HOJE": "Back to today",
+      "HOJE_CURTO": "Today",
+      "SEMANA_DE": "{de} to {ate}",
+      "MES_ANTERIOR": "Previous month",
+      "MES_SEGUINTE": "Next month",
+      "SEMANA_ANTERIOR": "Previous week",
+      "SEMANA_SEGUINTE": "Next week"
+    },
+    "MOSTRAR": {
+      "BOTAO": "Show",
+      "TITULO": "What to show",
+      "DE_QUEM": "Whose",
+      "QUEM_TODOS": "The whole team",
+      "QUEM_MEUS": "Only mine",
+      "FUNIL": "Which pipeline",
+      "TODOS_FUNIS": "All pipelines",
+      "O_QUE": "What shows up",
+      "FEITOS_TITULO": "Already done",
+      "FEITOS": "Show what is already done",
+      "PRONTO": "Done",
+      "CONFIG": "Settings",
+      "CONFIG_AGENDAMENTO": "Scheduling",
+      "CONFIG_CAIXAS": "Channels per pipeline"
+    },
+    "TIPO": {
+      "LEMBRETE": "Reminder",
+      "REUNIAO": "Meeting",
+      "MENSAGEM": "Scheduled message",
+      "FECHAR": "Closing date",
+      "AGENDA": "From your calendar"
+    },
+    "TIPO_LONGO": {
+      "LEMBRETE": "What I agreed to do",
+      "REUNIAO": "Meetings",
+      "MENSAGEM": "Scheduled messages",
+      "FECHAR": "Closing dates",
+      "AGENDA": "From your calendar"
+    },
+    "EXEMPLO": {
+      "LEMBRETE": "E.g.: call a customer on Friday",
+      "REUNIAO": "Online or in person, booked through the CRM",
+      "MENSAGEM": "Sent on WhatsApp by themselves, on the day and time",
+      "FECHAR": "The day the deal should close",
+      "AGENDA": "Events from your Google or Outlook calendar"
+    },
+    "ITEM": {
+      "DIA_TODO": "All day",
+      "ONTEM": "Yesterday",
+      "HA_DIAS": "{n} day ago | {n} days ago",
+      "PARA": "For {nome}",
+      "REPETE": "Repeats",
+      "PAUSADO": "Paused",
+      "CONCLUIR": "Mark as done: {titulo}",
+      "CONCLUIR_CURTO": "Mark as done",
+      "ACAO": {
+        "ENTRAR": "Join meeting",
+        "VER_REUNIAO": "See meeting",
+        "VER_NEGOCIO": "See deal",
+        "VER_MENSAGEM": "See message",
+        "ABRIR_CONVERSA": "Open conversation",
+        "LIGAR": "Call",
+        "VER": "See"
+      }
+    },
+    "DIA": {
+      "HOJE": "Today",
+      "AMANHA": "Tomorrow",
+      "PARA_HOJE": "For today",
+      "ATRASADOS": "Left behind",
+      "ADIAR_TODOS": "Move all to tomorrow",
+      "AGORA": "Now, {hora}",
+      "PROXIMOS": "Next days",
+      "PROXIMO": "Next: {dia} — {titulo}.",
+      "NADA_A_FRENTE": "Nothing planned for the next days.",
+      "VAZIO_HOJE": "All caught up for today",
+      "VAZIO_DIA": "Nothing planned for {dia}",
+      "VAZIO_DIA_TEXTO": "This day is free.",
+      "NOVO": "Add something",
+      "NOVO_NO_DIA": "Add something on this day",
+      "FEITO_TITULO": "Done: {titulo}",
+      "FEITO_PERGUNTA": "Want to set the next step?",
+      "ATALHO": {
+        "AMANHA": "Tomorrow",
+        "TRES_DIAS": "In 3 days",
+        "SEMANA": "Next week"
+      },
+      "NAO_PRECISA": "No need",
+      "ANTIGOS": "And {n} older one | And {n} older ones",
+      "VER_ANTIGOS": "See",
+      "ESCONDER_ANTIGOS": "Hide"
+    },
+    "SEMANA": {
+      "VER_DIA": "See {dia}",
+      "MARCAR_EM": "Add something on {dia}",
+      "LIVRE": "Free"
+    },
+    "MES": {
+      "MAIS": "+{n} more"
+    },
+    "NOVO": {
+      "TITULO": "What do you want to add?",
+      "LEMBRETE": "Reminder",
+      "LEMBRETE_TEXTO": "A heads-up for you or the team, on the day and time.",
+      "REUNIAO": "Meeting with a customer",
+      "REUNIAO_TEXTO": "Book a talk with the customer, with day and time.",
+      "MENSAGEM": "Scheduled message",
+      "MENSAGEM_TEXTO": "A message that goes out by itself on WhatsApp, on the day and time.",
+      "CANCELAR": "Cancel",
+      "COM_QUEM": "Who is the meeting with?",
+      "COM_QUEM_TEXTO": "Search by the customer's or the deal's name.",
+      "BUSCA_ROTULO": "Customer or deal name",
+      "BUSCA_EXEMPLO": "E.g.: Mariana",
+      "BUSCA_DICA": "Type at least 2 letters.",
+      "BUSCANDO": "Searching…",
+      "BUSCA_FALHOU": "Could not search right now. Try again.",
+      "BUSCA_VAZIA": "No one with that name. Check the spelling.",
+      "VOLTAR": "Back",
+      "TITULO_TEXTO": "Pick one option.",
+      "SEM_NEGOCIO": "No deal yet",
+      "SEM_NEGOCIO_TEXTO": "{nome} has no deal yet. Meetings are booked on the customer's deal. For now, add a reminder.",
+      "SEM_NEGOCIO_CURTO": "No deal",
+      "MARCAR_LEMBRETE": "Add a reminder",
+      "FALTA_PAGINA": "To book meetings, create your scheduling page.",
+      "CRIAR_PAGINA": "Create page",
+      "FALTA_PAGINA_SEM_PERMISSAO": "To book meetings, an account admin needs to create the scheduling page."
+    },
+    "LEGENDA": {
+      "TITULO": "What shows up here"
+    },
+    "FUSO": "Times in the account time zone: {fuso}",
+    "ERRO": "Could not load the calendar.",
+    "TENTAR": "Try again",
+    "ALERTA": {
+      "ADIADOS": "{n} reminder moved to tomorrow. | {n} reminders moved to tomorrow.",
+      "PROXIMO_MARCADO": "Next step set.",
+      "ADIADOS_PARCIAL": "{ok} of {total} moved to tomorrow. The others stayed as they were.",
+      "NAO_CONCLUIU": "Could not mark it as done. Try again."
+    },
+    "REUNIAO": {
+      "ROTULO": "Meeting with a customer",
+      "TITULO": "Meeting with {nome}",
+      "TITULO_SEM_NOME": "Meeting with a customer",
+      "TEXTO_PAGINA": "Pick the day and a free time in your schedule.",
+      "TEXTO_EXTERNA": "The invite goes out through your Google or Microsoft calendar.",
+      "CANCELAR": "Cancel",
+      "MARCAR": "Book meeting"
+    }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "ROTULO": "Scheduled message",
+    "MIGALHA": "Calendar",
+    "PASSO_DE": "Step {numero} of {total}",
+    "TITULO_LEMBRETE": "Message to {nome}",
+    "CANCELAR": "Cancel",
+    "VOLTAR": "Back",
+    "CONTINUAR": "Continue",
+    "MARCAR": "Schedule message",
+    "FALTA": {
+      "PARA_QUEM": "Choose who gets it.",
+      "QUANDO": "Choose the day and time.",
+      "PASSADO": "That time has passed.",
+      "CONFERINDO": "Checking WhatsApp…",
+      "PRONTA": "Choose a ready-made message.",
+      "CAMPOS": "Fill in the ready-made message.",
+      "TEXTO": "Write the message.",
+      "JANELA": "Check WhatsApp again."
+    },
+    "PARA_QUEM": {
+      "TITULO": "Who is the message for?",
+      "ROTULO": "Search for the customer or the deal",
+      "EXEMPLO": "Type a name",
+      "RECENTES": "Recently updated",
+      "ACHADOS": "Found",
+      "BUSCANDO": "Searching…",
+      "FALHOU": "Could not search right now. Try again.",
+      "VAZIO": "No one with that name.",
+      "SEM_WHATSAPP": "Has not talked on WhatsApp yet",
+      "RESUMO": "To",
+      "NEGOCIO": "· {negocio}",
+      "PELO_NEGOCIO": "Another WhatsApp: schedule from the deal"
+    },
+    "QUANDO": {
+      "TITULO": "When does the message go out?",
+      "DIA": "Which day?",
+      "HORA": "What time?",
+      "HOJE": "Today",
+      "AMANHA": "Tomorrow",
+      "OUTRO_DIA": "Another day",
+      "ESCOLHA_DIA": "Choose the day",
+      "OUTRA_HORA": "Another time",
+      "ESCOLHA_HORA": "Choose the time",
+      "NOME_HORA": {
+        "MANHA": "Morning",
+        "ALMOCO": "Lunchtime",
+        "TARDE": "Afternoon",
+        "FIM": "End of day"
+      },
+      "PASSADO": "That time has passed. Choose another one.",
+      "FUSO": "Time in {fuso}, the account time zone.",
+      "RESUMO": "When",
+      "FRASE": "{dia} at {hora}",
+      "HOJE_FRASE": "today",
+      "AMANHA_FRASE": "tomorrow"
+    },
+    "MENSAGEM": {
+      "TITULO": "What should {nome} read?",
+      "CONFERINDO": "Checking what WhatsApp allows at that time…",
+      "ERRO_JANELA": "Could not check WhatsApp right now.",
+      "TENTAR": "Try again",
+      "LIVRE": "At that time, {nome} can get whatever you write.",
+      "SO_PRONTA": "By then, more than 1 day will have passed since the last message from {nome}. WhatsApp then only allows an approved ready-made message.",
+      "PELO_CELULAR": "More than 1 day will have passed since the last message from {nome}, but the phone WhatsApp is connected: the message goes out through it, as you write it.",
+      "ESCOLHA_PRONTA": "Choose the ready-made message",
+      "RESUMO": "What to say",
+      "RESUMO_PRONTA": "Ready-made message",
+      "RESUMO_TEXTO": "“{inicio}”"
+    },
+    "CONFIRMAR": {
+      "TITULO": "Review and schedule",
+      "O_QUE_ACONTECE": "What will happen",
+      "SAI_POR": "Goes out through the “{caixa}” inbox, in the existing conversation.",
+      "SAI_PELO_CELULAR": "Goes out through the phone WhatsApp linked to the “{caixa}” inbox.",
+      "SE_FALHAR": "If it cannot be sent, {nome} sees a notice on screen and the reason stays on the deal.",
+      "SE_FALHAR_SEM_DONO": "If it cannot be sent, whoever handles the conversation sees a notice on screen and the reason stays on the deal.",
+      "ONDE_APARECE": "Shows on the calendar and on the deal until it goes out.",
+      "ANOTAR": "Add a note for the team",
+      "ANOTACAO": "Note for the team",
+      "ANOTACAO_EXEMPLO": "The customer does not see this note",
+      "ERRO": {
+        "PASSADO": "That time has passed. Go back and choose another one.",
+        "PRONTA": "At that time only a ready-made message can go out. Go back and choose one.",
+        "GERAL": "Could not schedule right now. Try again."
+      }
+    },
+    "PRONTO": {
+      "TITULO": "Message scheduled for {nome}",
+      "TEXTO": "Goes out {quando}.",
+      "FRASE": "Done. The message goes out {quando}.",
+      "ONDE": "It is already on the calendar and on the deal. You can change or cancel it until it goes out.",
+      "ABRIR_NEGOCIO": "Open the deal",
+      "FECHAR": "Close"
+    },
+    "PREVIA": {
+      "TITULO": "How {nome} will see it",
+      "TITULO_SEM_NOME": "How the customer will see it",
+      "TEXTO": "This is exactly what arrives on WhatsApp.",
+      "FANTASMA": "The message shows up here",
+      "SEM_HORA": "--:--",
+      "SEM_DIA": "Day not chosen yet"
+    },
+    "FALHA": {
+      "TITULO": "Not sent: {motivo}",
+      "sem_conversa": "the customer no longer has a WhatsApp conversation.",
+      "canal": "the conversation is not on WhatsApp.",
+      "sem_remetente": "no one on the team was set as owner.",
+      "celular_desconectado": "the phone WhatsApp was disconnected.",
+      "sem_modelo": "more than 1 day had passed and the ready-made message was missing.",
+      "modelo_invalido": "the ready-made message is not from this inbox.",
+      "recusou": "the customer asked not to get messages.",
+      "outro": "WhatsApp refused to send it."
+    }
+  },
+  "CONVERSATION_FUNNEL_FILTER": {
+    "LABEL": "Funnel",
+    "ARIA_LABEL": "Show conversations from which funnel",
+    "ALL": "No funnel filter",
+    "NONE": "No subject",
+    "NONE_HINT": "Conversations that have no subject yet: triage.",
+    "EMPTY": "No conversation in this funnel."
+  },
+  "FORK_CONVERSATION_LIST": {
+    "PARTICIPATING": "Participating"
   }
 }

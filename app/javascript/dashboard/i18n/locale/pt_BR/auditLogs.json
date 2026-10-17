@@ -43,8 +43,8 @@
       "TITLE": "Gerenciar Logs de Auditoria",
       "DESC": "Logs de auditoria são rastros para eventos e ações em um Sistema de Chatwoot.",
       "TABLE_HEADER": {
-        "ACTIVITY": "Usuário",
-        "TIME": "Ação",
+        "ACTIVITY": "Atividade",
+        "TIME": "Horário",
         "LOCATION": "Local",
         "IP_ADDRESS": "Endereço IP"
       }

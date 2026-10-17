@@ -16,6 +16,13 @@ defineProps({
   // 'digitar' ou 'escolher' quando a mensagem pronta ainda falta.
   prontaFalta: { type: String, default: '' },
   cliente: { type: String, default: '' },
+  // #1460/#1462: como repete, as próximas datas e quem recebe.
+  repete: { type: String, default: '' },
+  proximas: { type: Array, default: () => [] },
+  quemRecebe: { type: String, default: '' },
+  quemRecebeTipo: { type: String, default: '' },
+  // Só com a flag crm_lembretes_v2: desligada, a prévia fica como antes.
+  mostrarQuem: { type: Boolean, default: false },
 });
 </script>
 
@@ -104,5 +111,42 @@ defineProps({
         </span>
       </span>
     </div>
+    <div
+      v-if="repete"
+      data-previa-repete
+      class="flex flex-col gap-1.5 rounded-xl bg-n-blue-2 p-3"
+    >
+      <p
+        class="mb-0 flex items-center gap-2 text-sm font-semibold text-n-blue-11"
+      >
+        <span class="i-lucide-repeat size-4" aria-hidden="true" />
+        {{ repete }}
+      </p>
+      <p v-if="proximas.length" class="mb-0 text-sm text-n-slate-12">
+        {{
+          $t('CRM_LEMBRETE.PREVIA.PROXIMAS', { datas: proximas.join(' · ') })
+        }}
+      </p>
+    </div>
+    <p
+      v-if="mostrarQuem && modo !== 'auto_send_message'"
+      data-previa-quem
+      class="mb-0 flex items-start gap-2 border-t border-n-weak pt-3 text-sm text-n-slate-12"
+    >
+      <span
+        class="i-lucide-bell-ring mt-0.5 size-4 shrink-0 text-n-amber-11"
+        aria-hidden="true"
+      />
+      {{
+        quemRecebe
+          ? $t(
+              quemRecebeTipo === 'dono'
+                ? 'CRM_LEMBRETE.PREVIA.AVISA_DONO'
+                : 'CRM_LEMBRETE.PREVIA.AVISA',
+              { nomes: quemRecebe }
+            )
+          : $t('CRM_LEMBRETE.PREVIA.AVISA_FALTA')
+      }}
+    </p>
   </section>
 </template>

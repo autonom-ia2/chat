@@ -38,6 +38,7 @@ class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::
     return recusa_sem_contexto if @operador.nil?
 
     acao = @params['acao'].to_s.strip
+    return ::Autonomia::Guide::Acoes.so_na_tela(acao) if ::Autonomia::Guide::Acoes::SO_NA_TELA.key?(acao)
     return fora_do_catalogo(acao) unless @operador.acoes.catalogo.include?(acao)
 
     formato = ::Autonomia::Guide::Formatos.resumo_para_o_modelo(acao, campo: @params['campo'].to_s.strip.presence)

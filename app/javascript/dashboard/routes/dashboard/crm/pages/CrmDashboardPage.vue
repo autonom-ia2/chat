@@ -1,4 +1,6 @@
 <script setup>
+import CrmVistasNumeros from '../components/numeros/CrmVistasNumeros.vue';
+import { useMenuNovo } from 'dashboard/components-next/sidebar/fork/useMenuNovo';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useLocale } from 'shared/composables/useLocale';
@@ -14,6 +16,7 @@ import BarChart from 'shared/components/charts/BarChart.vue';
 import {
   openWork,
   outcomeKpis,
+  duracao,
   showsSales,
   throughputDatasets,
 } from '../helpers/dashboardOutcomes';
@@ -92,6 +95,8 @@ const ORIGIN_FALLBACK = {
   barClass: 'bg-n-slate-8',
 };
 
+// Com o menu novo (#1617) a página se chama Números e ganha o seletor do CRM.
+const { ligado: menuNovo } = useMenuNovo();
 const pipelines = ref([]);
 const selectedPipelineId = ref('');
 const selectedPeriodKey = ref('LAST_30');
@@ -235,6 +240,12 @@ const hasAiActivity = computed(() => {
 // Funil de atendimento (#1151) mostra resolvidos e cancelados, nunca venda.
 const isSaleFunnel = computed(() => showsSales(summary.value));
 const outcomeCards = computed(() => outcomeKpis(summary.value));
+// #1498 — funil de Atender: tempo de solução (média), sem a espera do cliente.
+const tempoDeSolucao = computed(() => {
+  const segundos = summary.value?.resolution_time?.average_seconds;
+  const { chave, valores } = duracao(segundos ?? Number.NaN);
+  return t(`CRM_KANBAN.DASHBOARD.DURACAO.${chave}`, valores);
+});
 const openWorkItems = computed(() => openWork(summary.value));
 
 const throughputSets = computed(() => throughputDatasets(throughput.value));
@@ -449,11 +460,24 @@ onMounted(async () => {
       class="flex flex-col gap-4 px-6 py-5 border-b sm:flex-row sm:items-center sm:justify-between border-n-weak"
     >
       <div class="min-w-0">
-        <h1 class="mb-1 text-xl font-semibold text-n-slate-12">
-          {{ t('CRM_KANBAN.DASHBOARD.TITLE') }}
-        </h1>
+        <div class="flex flex-wrap items-center gap-4 mb-1">
+          <h1 class="m-0 text-xl font-semibold text-n-slate-12">
+            {{
+              menuNovo
+                ? t('FORK_SIDEBAR.CRM.TITULO_NUMEROS')
+                : t('CRM_KANBAN.DASHBOARD.TITLE')
+            }}
+          </h1>
+          <CrmVistasNumeros />
+        </div>
         <p class="m-0 text-sm text-n-slate-11">
-          {{ t('CRM_KANBAN.DASHBOARD.SUBTITLE') }}
+          {{
+            t(
+              isSaleFunnel
+                ? 'CRM_KANBAN.DASHBOARD.SUBTITLE'
+                : 'CRM_KANBAN.DASHBOARD.SUBTITLE_ATENDER'
+            )
+          }}
         </p>
       </div>
       <div v-if="hasPipelines" class="flex flex-wrap items-center gap-3">
@@ -555,6 +579,17 @@ onMounted(async () => {
               </dd>
             </div>
           </dl>
+        </div>
+        <div
+          v-if="!isSaleFunnel"
+          data-kpi-tempo-solucao
+          class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+        >
+          <ReportMetricCard
+            :label="t('CRM_KANBAN.DASHBOARD.KPI.RESOLUTION_TIME')"
+            :value="tempoDeSolucao"
+            :info-text="t('CRM_KANBAN.DASHBOARD.KPI.RESOLUTION_TIME_INFO')"
+          />
         </div>
         <div
           v-if="isSaleFunnel"
@@ -660,7 +695,7 @@ onMounted(async () => {
 
       <!-- Meta conversions (Ads) — gated by real CTWA ad activity -->
       <section
-        v-if="hasCtwaAds"
+        v-if="hasCtwaAds && isSaleFunnel"
         class="p-5 border rounded-xl border-n-weak bg-n-solid-1"
       >
         <h3 class="mb-1 text-sm font-medium text-n-slate-12">
@@ -700,8 +735,11 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- Origin performance -->
-      <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
+      <!-- Origin performance (#1498: só funil de Vender, é receita) -->
+      <section
+        v-if="isSaleFunnel"
+        class="p-5 border rounded-xl border-n-weak bg-n-solid-1"
+      >
         <h3 class="mb-1 text-sm font-medium text-n-slate-12">
           {{ t('CRM_DASHBOARD.ORIGIN.TITLE') }}
         </h3>
@@ -826,6 +864,7 @@ onMounted(async () => {
               {{ formatNumber(stage.count) }}
             </span>
             <span
+              v-if="isSaleFunnel"
               class="w-48 text-xs text-right truncate shrink-0 text-n-slate-11"
             >
               {{ formatCurrencyList(stage.value_by_currency) }}

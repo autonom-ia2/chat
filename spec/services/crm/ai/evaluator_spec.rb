@@ -14,6 +14,29 @@ RSpec.describe Crm::Ai::Evaluator do
     previous_attr.nil? ? ENV.delete('CRM_AI_ATTR_EXTRACTION') : ENV['CRM_AI_ATTR_EXTRACTION'] = previous_attr
   end
 
+  # #1498: funil de Atender não tem valor de venda; a IA não preenche.
+  describe 'valor achado na conversa' do
+    def preencher(card)
+      attributes = {}
+      ai = {}
+      described_class.new(card: card).send(:apply_ai_value!, ai, { amount_cents: 120_000, currency: 'BRL' }, attributes)
+      [attributes, ai]
+    end
+
+    it 'preenche num funil de Vender e não num de Atender' do
+      account, admin = create_account_and_user
+      venda, etapa_venda = create_crm_pipeline(account: account, user: admin)
+      atender, etapa_atender = create_crm_pipeline(account: account, user: admin, name: 'Suporte')
+      atender.update!(counts_as_sale: false)
+
+      card_venda = account.crm_cards.create!(pipeline: venda, stage: etapa_venda, title: 'Plano anual')
+      card_atender = account.crm_cards.create!(pipeline: atender, stage: etapa_atender, title: 'Troca')
+
+      expect(preencher(card_venda).first).to include(value_cents: 120_000)
+      expect(preencher(card_atender)).to eq([{}, {}])
+    end
+  end
+
   it 'skips when confidence is below suggestion threshold' do
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
@@ -312,5 +335,70 @@ RSpec.describe Crm::Ai::Evaluator do
       score_signals: {},
       model_used: 'gpt-5.4-mini'
     }
+  end
+
+  # #1711 (C36): a IA de assunto leva o card da chegada para outro funil enquanto uma avaliação antiga pensa.
+  describe 'card que mudou de funil' do
+    let(:account) { create_account_and_user.first }
+    let(:admin) { create(:user, account: account, role: :administrator) }
+    let(:comercial) { create_crm_pipeline(account: account, user: admin, name: 'Comercial') }
+    let(:sinistro) { create_crm_pipeline(account: account, user: admin, name: 'Sinistro') }
+    let(:fechamento) do
+      create_crm_stage(account: account, pipeline: comercial.first, name: 'Fechamento', position: 1).tap do |etapa|
+        etapa.update!(metadata: { 'ai_criteria' => 'Cliente fechou' })
+      end
+    end
+    let(:card) { account.crm_cards.create!(pipeline: comercial.first, stage: comercial.last, title: 'Lead', currency: 'BRL') }
+    let(:resposta) do
+      { suggested_stage_id: fechamento.id, confidence: 0.95, reasoning: 'Fechou', model_used: 'gpt-6-luna' }
+    end
+
+    before do
+      comercial.first.update!(metadata: { 'ai' => { 'auto_move_enabled' => true } })
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
+        instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test' })
+      )
+    end
+
+    it 'a resposta sobre as etapas do funil antigo é descartada: o card não volta e a avaliação não é carimbada' do
+      classificador = instance_double(Crm::Ai::StageClassifier)
+      allow(Crm::Ai::StageClassifier).to receive(:new).and_return(classificador)
+      allow(classificador).to receive(:perform) do
+        # Enquanto o modelo pensa, a IA de assunto leva o card para Sinistro (outro processo, outro objeto).
+        Crm::Card.find(card.id).update!(pipeline: sinistro.first, stage: sinistro.last)
+        resposta
+      end
+
+      result = described_class.new(card: card).perform
+
+      expect(result).to have_attributes(status: :skipped, error: 'pipeline_changed')
+      expect(card.reload).to have_attributes(pipeline_id: sinistro.first.id, stage_id: sinistro.last.id)
+      expect(card.metadata.to_h.dig('ai', 'last_evaluated_at')).to be_nil
+      expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
+    end
+
+    it 'a avaliação nova, no funil novo, não é pulada pela espera de 15 s da avaliação feita no funil antigo' do
+      card.update!(pipeline: sinistro.first, stage: sinistro.last,
+                   metadata: { 'ai' => { 'last_evaluated_at' => 5.seconds.ago.iso8601,
+                                         'last_evaluated_pipeline_id' => comercial.first.id } })
+      allow(Crm::Ai::StageClassifier).to receive(:new).and_return(
+        instance_double(Crm::Ai::StageClassifier, perform: resposta.merge(suggested_stage_id: sinistro.last.id))
+      )
+
+      result = described_class.new(card: card).perform
+
+      expect(result.error).not_to eq('debounced')
+      expect(Crm::Ai::StageClassifier).to have_received(:new)
+      expect(card.reload.metadata.dig('ai', 'last_evaluated_pipeline_id')).to eq(sinistro.first.id)
+    end
+
+    it 'no mesmo funil, a espera de 15 s continua valendo' do
+      card.update!(metadata: { 'ai' => { 'last_evaluated_at' => 5.seconds.ago.iso8601,
+                                         'last_evaluated_pipeline_id' => comercial.first.id } })
+      allow(Crm::Ai::StageClassifier).to receive(:new)
+
+      expect(described_class.new(card: card).perform.error).to eq('debounced')
+      expect(Crm::Ai::StageClassifier).not_to have_received(:new)
+    end
   end
 end

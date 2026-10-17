@@ -3,9 +3,17 @@
 # Uma decisão por mensagem: a linha é reservada (pending) antes de perguntar, e o índice único (conversa, mensagem)
 # impede que um retry do job pergunte e aplique de novo. A pergunta leva segundos (Jev e, às vezes, o modelo maior);
 # quem aplica confere de novo dentro do lock da conversa (Crm::Subjects::Applier).
+#
+# Vários assuntos numa mensagem (#1693, flag `crm_avaliar_toda_mensagem`): o Jev ganha a opção "vários assuntos", e o
+# modelo maior devolve a lista (um principal e os outros). Continua UMA decisão por mensagem: ela guarda o principal
+# (card_id, action, title) e a lista dos cards tocados (touched_card_ids), que a IA do CRM avalia numa chamada só
+# (Crm::Conversations::CardsTocados). Com a flag, um assunto só também grava a lista.
 class Crm::Subjects::Identifier
-  Escolha = Struct.new(:opcao, :titulo, :decided_by, keyword_init: true)
+  # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
+  # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao).
+  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, keyword_init: true)
   LEITURAS = %w[mensagens_com_respostas].freeze
+  SEM_MUDANCA = (Crm::Subjects::Applier::SEM_EFEITO + %w[kept doubt superseded]).freeze
 
   def initialize(conversation:, message:)
     @conversation = conversation
@@ -16,10 +24,12 @@ class Crm::Subjects::Identifier
   def perform
     setting = Crm::InboxSetting.find_by(account_id: @account.id, inbox_id: @conversation.inbox_id, crm_enabled: true)
     return if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
-    return existente if existente || pipelines.empty?
+
+    anterior = existente
+    return anterior if pipelines.empty?
 
     @mode = setting.subject_ai_mode
-    @decisao = reservar
+    @decisao = anterior ? reabrir(anterior) : reservar
     return existente if @decisao.nil?
 
     decidir
@@ -31,6 +41,13 @@ class Crm::Subjects::Identifier
 
   def existente
     Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
+  end
+
+  # Mensagem já decidida só volta a ser perguntada quando o Híbrido recuperou o texto real (#1638). O retrato é a
+  # decisão de antes: volta se der erro, e diz ao Applier qual card a IA já tinha nomeado.
+  def reabrir(anterior)
+    @retrato = Crm::Subjects::Reabertura.reabrir(anterior, @message, @mode)
+    anterior.reload if @retrato
   end
 
   # Outro job da mesma mensagem reservou primeiro: nil, e quem chamou devolve a linha dele.
@@ -57,45 +74,86 @@ class Crm::Subjects::Identifier
 
   # Erro inesperado (banco, card apagado no meio): antes de aplicar, a transação do lock já voltou atrás, então a
   # reserva sai e o retry do job pergunta de novo. Depois de aplicar, a decisão fica como falha: repetir criaria outro
-  # card.
+  # card. Decisão reaberta (#1638) nunca é apagada: volta ao que era antes.
   def desfazer_reserva(erro)
     Rails.logger.error("[crm][assunto] decisão #{@decisao.id} falhou: #{erro.class}")
-    @aplicado ? @decisao.update_columns(state: 'failed', reason: erro.class.name.first(120)) : @decisao.destroy # rubocop:disable Rails/SkipsModelValidations
+    return @decisao.update_columns(state: 'failed', reason: erro.class.name.first(120)) if @aplicado # rubocop:disable Rails/SkipsModelValidations
+
+    @retrato ? @decisao.update_columns(@retrato) : @decisao.destroy # rubocop:disable Rails/SkipsModelValidations
   end
 
   def perguntar
     @jev = TypesafeAi::Decisor.new(feature: Crm::Subjects::FEATURE).decidir(decisor: question, estado: estado)
     opcao = question.opcao(@jev.resposta)
     repetida = sugestao_repetida(opcao)
-    return concluir(state: 'kept', **alvo(opcao), reason: repetida) if repetida
+    return concluir(state: 'kept', **alvo(opcao), reason: repetida, **tocados_da_repetida(opcao)) if repetida
 
     escolha = revisar?(opcao) ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
     return if escolha.nil?
 
-    resultado = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao)
-                                      .aplicar(escolha.opcao, escolha.titulo)
+    resultado = aplicar(escolha)
     @aplicado = true
     @evento = resultado.delete(:evento)
-    concluir(**resultado, decided_by: escolha.decided_by)
+    tocados = lista_de_tocados(resultado)
+    concluir(**resultado, decided_by: escolha.decided_by, **tocados)
+  end
+
+  # A lista de cards tocados (#1693), tirada do resultado. Dúvida sem nenhum outro assunto aplicado fica sem lista: a
+  # IA do CRM relê o card em foco (#1675).
+  def lista_de_tocados(resultado)
+    tocados = resultado.delete(:tocados)
+    return {} if tocados.nil? || (resultado[:state] == 'doubt' && tocados.empty?)
+
+    { touched_card_ids: tocados.map(&:id) }
+  end
+
+  def aplicar(escolha)
+    applier = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao,
+                                         anterior: @retrato)
+    return applier.aplicar(escolha.opcao, escolha.titulo) unless question.varios?
+
+    applier.aplicar_varios((escolha if escolha.opcao), Array(escolha.outros), duvida: escolha.duvida)
+  end
+
+  # A mesma sugestão já espera uma pessoa (#1693): o card de volta ainda é o assunto da mensagem; o pedido novo não
+  # tem card. Sem a flag, nada (a IA do CRM relê o card em foco, como antes).
+  def tocados_da_repetida(opcao)
+    return {} unless question.varios?
+
+    { touched_card_ids: opcao.tipo == :card ? [opcao.card.id] : [] }
   end
 
   # O aviso em tempo real sai com a decisão já gravada: falhar aqui não desfaz nem repete nada.
   def avisar
+    return if mesmo_resultado?
+
     Crm::Cards::Broadcaster.broadcast(@decisao.card, @evento) if @evento && @decisao.card
     Crm::Subjects::Notifier.notify(@conversation) if %w[applied suggested].include?(@decisao&.state)
     avaliar_card_novo
   end
 
+  # Reaberta que chegou ao mesmo resultado de antes (#1638): a tela já mostra isso, nada a avisar. Voltar a um assunto
+  # só é igual se ele já era o atual antes desta decisão (a pessoa pode ter trocado o foco no meio-tempo).
+  def mesmo_resultado?
+    campos = %w[state action card_id title]
+    return false unless @retrato.present? && @decisao.attributes.slice(*campos) == @retrato.slice(*campos)
+
+    @decisao.action != 'focus' || question.atual&.id == @decisao.card_id
+  end
+
   # Card novo do pedido é o assunto atual: a IA avalia ele, não o anterior (#1147). A troca de foco agenda em Focus.
+  # Com a lista de cards tocados (#1693), a avaliação conjunta (Crm::Conversations::CardsTocados) deixa esta velha; se
+  # ela falhar, esta segue valendo.
   def avaliar_card_novo
     return unless @decisao&.state == 'applied' && @decisao.action == 'create'
 
     Crm::Ai::Observer.new(card: @decisao.card).schedule_evaluation
   end
 
-  # Jev inseguro, ou pedido novo (precisa de nome): o modelo maior decide. Inseguro também, nada muda.
+  # Jev inseguro, pedido novo (precisa de nome) ou vários assuntos (precisa da lista): o modelo maior decide. Inseguro
+  # também, nada muda.
   def revisar?(opcao)
-    @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || opcao.tipo == :novo
+    @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || %i[novo varios].include?(opcao.tipo)
   end
 
   # A mesma sugestão já espera uma pessoa, ou ela acabou de dispensá-la (#1260): nada a fazer, sem pagar o modelo maior.
@@ -127,11 +185,38 @@ class Crm::Subjects::Identifier
     veredito = Crm::Subjects::Reviewer.new(question).revisar(estado, @jev)
     opcao = question.opcao(veredito.resposta)
     duvida = !veredito.seguro || (opcao.tipo == :novo && veredito.titulo.blank?)
-    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review') unless duvida
+    outros = outros(veredito)
+    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros) unless duvida
 
-    concluir(state: 'doubt', decided_by: 'review', title: veredito.titulo.presence, pipeline: opcao.pipeline,
-             reason: veredito.motivo)
+    em_duvida = { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo }
+    # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27).
+    return Escolha.new(decided_by: 'review', outros: outros, duvida: em_duvida) if outros.any?
+
+    concluir(**em_duvida, decided_by: 'review')
     nil
+  end
+
+  # Os outros assuntos da lista (#1693), sem o principal: o mesmo assunto repetido sai (o card aberto, ou o pedido novo
+  # com o mesmo funil e o mesmo nome), pedido novo sem nome sai, assunto em dúvida sai (nada muda nele), e a lista
+  # inteira respeita MAX_ASSUNTOS.
+  def outros(veredito)
+    return [] if veredito.assuntos.blank?
+
+    vistos = [identidade(veredito.assuntos[veredito.principal])]
+    escolhas = veredito.assuntos.filter_map do |assunto|
+      identidade = identidade(assunto)
+      next if !assunto.seguro || vistos.include?(identidade) || (identidade.is_a?(Array) && assunto.titulo.blank?)
+
+      vistos << identidade
+      Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo)
+    end
+    escolhas.first(Crm::Subjects::MAX_ASSUNTOS - 1)
+  end
+
+  # O card do assunto aberto, ou [funil, nome] do pedido novo.
+  def identidade(assunto)
+    opcao = question.opcao(assunto.resposta)
+    opcao.tipo == :novo ? [opcao.chave, assunto.titulo] : opcao.card.id
   end
 
   def question
@@ -140,8 +225,13 @@ class Crm::Subjects::Identifier
       # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
       ids = pipelines.map(&:id)
       cards = abertos.select { |card| ids.include?(card.pipeline_id) }
-      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first)
+      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?)
     end
+  end
+
+  # Vários assuntos só com a flag e numa decisão nova: a reaberta pelo Híbrido (#1638) segue de um assunto só.
+  def varios?
+    @retrato.nil? && Crm::Conversations::CardEmFoco.ligada?(@account)
   end
 
   def estado
@@ -161,7 +251,14 @@ class Crm::Subjects::Identifier
                         .where.not(decided_by: nil).count >= Crm::Subjects::LIMITE_MENSAL
   end
 
+  # Reaberta (#1638) que não mudou nada (sem cota, Jev fora, nada para ler, dúvida, mantido, repetido ou vencido por
+  # uma mais nova) volta ao que era: o que valia antes continua valendo, e o card do aviso fica como estava. Com o
+  # horário de agora: já leu o texto real e não reabre outra vez.
   def concluir(**atributos)
+    if @retrato && SEM_MUDANCA.include?(atributos[:state])
+      return @decisao.update_columns(@retrato.merge('updated_at' => Time.current)) # rubocop:disable Rails/SkipsModelValidations
+    end
+
     padrao = { confidence: @jev&.certeza, decided_by: ('jev' if @jev) }
     @decisao.update!(padrao.merge(atributos))
   end

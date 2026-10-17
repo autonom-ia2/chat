@@ -173,6 +173,13 @@ describe('Autonomia API clients', () => {
         { inbox_id: 12 }
       );
 
+      // #1366: "Começar a atender neste canal" liga o agente junto com o vínculo.
+      channels.connect(7, 12, { ativar: true });
+      expect(axiosMock.post).toHaveBeenLastCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/channels',
+        { inbox_id: 12, ativar: true }
+      );
+
       channels.disconnect(7, 12);
       expect(axiosMock.delete).toHaveBeenCalledWith(
         '/api/v1/accounts/85/autonomia/agents/7/channels/12'

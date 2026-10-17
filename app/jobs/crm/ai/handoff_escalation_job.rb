@@ -68,7 +68,7 @@ class Crm::Ai::HandoffEscalationJob < ApplicationJob
 
     return unless assign_user(conversation, user)
 
-    conversation.bot_handoff!
+    conversation.dispatch_bot_handoff_event
     stamp_escalation!(card, cycle, user.id)
     log_activity!(
       card,
@@ -163,8 +163,11 @@ class Crm::Ai::HandoffEscalationJob < ApplicationJob
     invited_at.present? && invited_at <= threshold_seconds.to_i.seconds.ago ? cycle : nil
   end
 
+  # Uma gravação só (#1454): atribuir e depois "passar" na mesma transação fazia o after_commit perder o ASSIGNEE_CHANGED.
   def assign_user(conversation, user)
-    Conversations::AssignmentService.new(conversation: conversation, assignee_id: user.id).perform.present?
+    return false unless Crm::Entrega::Atribuicao.aplicar(conversation, user)
+
+    conversation.save!
   end
 
   def escalation_user(card, conversation, user_id)
