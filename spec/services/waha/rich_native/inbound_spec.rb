@@ -51,6 +51,63 @@ describe Waha::RichNative::Inbound do
       expect(message.content_attributes).not_to have_key('waha_call')
     end
 
+    # Item 10 (decisão do Rodrigo, 17/10): a ligação perdida ou recusada do cliente reabre a conversa resolvida, pelo
+    # caminho da mensagem recebida, sem virar turno da IA.
+    describe 'reopening a resolved conversation' do
+      it 'reopens on a missed call, and the AI gets no turn' do
+        flag_on!
+        conversation.resolved!
+
+        missed = call('rejected', reason: 'timeout')
+
+        expect(missed).to be_activity
+        expect(conversation.reload).to be_open
+        allow(Autonomia::Agents::Operate::ReplyJob).to receive(:perform_later)
+        Autonomia::Agents::Operate::MessageListener.instance.message_created(Events::Base.new('message.created', Time.zone.now, message: missed))
+        expect(Autonomia::Agents::Operate::ReplyJob).not_to have_received(:perform_later)
+      end
+
+      it 'reopens on a call declined on the company phone, and on a missed call after the ring line' do
+        flag_on!
+        conversation.resolved!
+        call('rejected', by_me: true)
+        expect(conversation.reload).to be_open
+
+        conversation.resolved!
+        call('received', call_id: 'C2')
+        expect(conversation.reload).to be_resolved
+        call('rejected', call_id: 'C2', reason: 'timeout')
+        expect(conversation.reload).to be_open
+      end
+
+      it 'takes a snoozed conversation out of snooze, as an incoming message does' do
+        flag_on!
+        conversation.snoozed!
+
+        call('rejected', reason: 'timeout')
+
+        expect(conversation.reload).to be_open
+      end
+
+      it 'does not touch a conversation already open' do
+        flag_on!
+        before = conversation.reload.attributes.slice('status', 'assignee_id', 'team_id')
+
+        call('rejected', reason: 'timeout')
+
+        expect(conversation.reload.attributes.slice('status', 'assignee_id', 'team_id')).to eq(before)
+      end
+
+      it 'keeps main without the flag (the call stays an incoming text, not a reopening activity)' do
+        conversation.resolved!
+
+        message = call('rejected', reason: 'timeout')
+
+        expect(message).to be_incoming
+        expect(Waha::RichNative::CallReopen.reopens?(message)).to be(false)
+      end
+    end
+
     it 'shows the ring as one call line and turns an unanswered call into a missed call on the same line' do
       flag_on!
       ring = call('received')

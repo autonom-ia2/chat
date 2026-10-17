@@ -154,3 +154,8 @@ Rails.application.config.to_prepare do
   # A bolha "abra no celular" e o aviso de visualização única não pedem a IA de assunto.
   Crm::Subjects.singleton_class.prepend(Waha::RichNative::SubjectsSkip) unless Crm::Subjects.singleton_class <= Waha::RichNative::SubjectsSkip
 end
+
+# A ligação perdida ou recusada do cliente reabre a conversa resolvida, pelo caminho da mensagem recebida.
+Rails.application.config.to_prepare do
+  Message.prepend(Waha::RichNative::CallReopen) unless Message <= Waha::RichNative::CallReopen
+end
