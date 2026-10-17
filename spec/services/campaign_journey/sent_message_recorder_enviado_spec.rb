@@ -152,4 +152,33 @@ RSpec.describe CampaignJourney::SentMessageRecorder, :aggregate_failures do
       expect(sent.to_json).not_to include('media_signed_id')
     end
   end
+
+  describe 'topo com documento guardado no perfil do modelo' do
+    let(:template) do
+      approved('proposta', { 'type' => 'HEADER', 'format' => 'DOCUMENT', 'example' => { 'header_handle' => ['4::cGRm'] } },
+               { 'type' => 'BODY', 'text' => 'Segue a proposta.' })
+    end
+
+    it 'o documento vai à Meta pelo link assinado e fica gravado pelo endereço permanente, com o nome' do
+      profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'proposta', language: 'pt_BR')
+      profile.header_file.attach(io: StringIO.new('%PDF'), filename: 'proposta.pdf', content_type: 'application/pdf')
+      sent = stub_graph_messages
+      conversation = open_conversation_for('Ana Souza', '5511987654321')
+
+      send_campaign(campaign_with(template, { 'header' => { 'media_url' => '', 'media_type' => 'document' }, 'body' => {} }))
+
+      topo = campaign_message_in(conversation).additional_attributes.dig('campaign_template_enviado', 'topo')
+      permanente = Rails.application.routes.url_helpers.rails_blob_url(profile.header_file.blob)
+      expect(topo).to eq('tipo' => 'document', 'url' => permanente, 'nome' => 'proposta.pdf')
+      link_da_meta = sent.first.dig('template', 'components').find { |c| c['type'] == 'header' }
+      link = link_da_meta.dig('parameters', 0, 'document')
+      expect(link['link']).not_to eq(permanente)
+      expect(link['filename']).to eq('proposta.pdf')
+      # O link é o assinado do disco (token com validade), da chave do arquivo do perfil.
+      caminho = URI.parse(link['link']).path.split('/')
+      expect(caminho[1..3]).to eq(%w[rails active_storage disk])
+      expect(ActiveStorage.verifier.verified(caminho[4], purpose: :blob_key)).to include(key: profile.header_file.blob.key)
+      expect(sent.to_json).not_to include('media_signed_id', profile.header_file.blob.signed_id)
+    end
+  end
 end

@@ -12,13 +12,13 @@
 # A foto nunca atrapalha o envio: se algo falhar ao montá-la, o envio segue sem ela e só a classe do erro vai ao log.
 module Whatsapp::Templates::FotoDoEnvio
   # A foto do que este envio leva, ou nil quando o envio não acha o modelo na lista da caixa.
-  def foto_do_envio(catalogo: :consultar)
+  def foto_do_envio(catalogo: :consultar, perfil: false)
     template = find_template if template_params.is_a?(Hash)
     return if template.blank?
 
     normalizado = Whatsapp::TemplateParameterConverterService.new(template_params.deep_dup, template).normalize_to_enhanced
     Whatsapp::Templates::Enviado.montar(template: template, processed: normalizado['processed_params'], inbox: channel.inbox,
-                                        catalogo: catalogo)
+                                        catalogo: catalogo, perfil: perfil)
   rescue StandardError => e
     Rails.logger.error("[whatsapp][templates][enviado] foto_nao_montada error=#{e.class}")
     nil

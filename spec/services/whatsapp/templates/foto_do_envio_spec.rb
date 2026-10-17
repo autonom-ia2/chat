@@ -65,7 +65,7 @@ RSpec.describe Whatsapp::Templates::FotoDoEnvio do
       Whatsapp::SendOnWhatsappService.new(message: message).perform
 
       expect(enviado_de(message)).to eq(
-        'versao' => 1, 'oferta' => { 'expira_em' => 1_798_761_600 },
+        'versao' => 1, 'oferta' => { 'texto' => 'Só hoje!', 'expira_em' => 1_798_761_600 },
         'botoes' => [{ 'tipo' => 'copy_code', 'texto' => 'Copiar código' },
                      { 'tipo' => 'url', 'texto' => 'Ver proposta', 'url' => 'https://loja.com.br/b/AB3K' }]
       )
