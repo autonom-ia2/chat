@@ -67,6 +67,9 @@
       "file": "richMessage.json"
     },
     {
+      "file": "conversaCanal.json"
+    },
+    {
       "file": "sidebarFork.json"
     }
   ],

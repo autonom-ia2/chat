@@ -61,6 +61,7 @@ export const FEATURE_FLAGS = {
   HORARIO_UNICO_CAIXA: 'horario_unico_caixa',
   CRM_MENSAGEM_MARCADA: 'crm_mensagem_marcada',
   MEMORIA_IA: 'memoria_ia',
+  CONVERSA_CARA_DO_CANAL: 'conversa_cara_do_canal',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

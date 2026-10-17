@@ -1,0 +1,160 @@
+{
+  "CONVERSA_CANAL": {
+    "DIA": {
+      "HOJE": "Hoje",
+      "ONTEM": "Ontem"
+    },
+    "REMETENTE": {
+      "AGENTE_COM_NOME": "Agente de IA · {nome}",
+      "AGENTE": "Agente de IA",
+      "AUTOMATICO": "{nome} · automático"
+    },
+    "MAIS": {
+      "ABRIR": "Mais jeitos de enviar",
+      "LOCALIZACAO": "Localização",
+      "PEDIR_LOCALIZACAO": "Pedir localização",
+      "CONTATO": "Contato",
+      "BOTAO_DE_LINK": "Botão de link",
+      "OPCOES": "Opções de resposta",
+      "FORMULARIO": "Formulário",
+      "DOCUMENTO": "Documento",
+      "FOTOS_E_VIDEOS": "Fotos e vídeos",
+      "SO_TEXTO": "Fora das 24 horas a resposta sai pelo número reserva e só em texto. Foto, áudio e documento não vão."
+    },
+    "JANELA": {
+      "PREVIA": "Como o cliente vai ver",
+      "CANCELAR": "Cancelar",
+      "ENVIAR": "Enviar",
+      "ERROS": {
+        "mensagem": "Escreva a mensagem.",
+        "nomeDoBotao": "Escreva o nome do botão.",
+        "endereco": "Cole o endereço do site.",
+        "opcoes": "Escreva pelo menos duas opções.",
+        "nomeDaLista": "Escreva o nome do botão que abre a lista.",
+        "coordenadas": "Não achei o lugar. Cole os números do Google Maps, como -23.5613, -46.6565.",
+        "nome": "Escreva o nome.",
+        "telefone": "Digite um telefone que exista no país escolhido, com DDD.",
+        "formulario": "Escolha o formulário.",
+        "textoDoBotao": "Escreva o texto do botão.",
+        "mensagemLonga": "A mensagem está longa demais para este formato. Encurte um pouco.",
+        "nomeDoBotaoLongo": "O nome do botão pode ter até 20 letras.",
+        "enderecoInvalido": "Cole o endereço completo do site, começando com https://",
+        "opcoesDemais": "Use no máximo 10 opções.",
+        "opcaoLonga": "Cada opção pode ter até 20 letras.",
+        "opcaoDaListaLonga": "Na lista, cada opção pode ter até 24 letras.",
+        "opcoesRepetidas": "Há opções iguais. Escreva cada uma de um jeito.",
+        "nomeDaListaLongo": "O nome do botão da lista pode ter até 20 letras.",
+        "nomeDoLugarLongo": "O nome do lugar pode ter até 100 letras.",
+        "enderecoDoLugarLongo": "O endereço pode ter até 300 letras.",
+        "nomeDoContatoLongo": "O nome pode ter até 100 letras.",
+        "textoDoBotaoLongo": "O texto do botão pode ter até 30 letras.",
+        "cabecalho": "Escreva o cabeçalho.",
+        "cabecalhoLongo": "O cabeçalho pode ter até 60 letras."
+      },
+      "BOTAO_DE_LINK": {
+        "TITULO": "Mandar um botão de link",
+        "AJUDA": "O cliente toca no botão e abre o site.",
+        "MENSAGEM": "Mensagem",
+        "NOME_DO_BOTAO": "Nome do botão (até 20 letras)",
+        "NOME_DO_BOTAO_EXEMPLO": "Ver proposta",
+        "ENDERECO": "Endereço do site"
+      },
+      "OPCOES": {
+        "TITULO": "Mandar opções de resposta",
+        "AJUDA": "O cliente responde com um toque. Até 3 opções viram botões; mais que isso, uma lista.",
+        "CABECALHO": "Cabeçalho (até 60 letras)",
+        "CABECALHO_AJUDA": "Aparece em destaque no alto da mensagem. É obrigatório: sem ele, alguns celulares não mostram as opções.",
+        "MENSAGEM": "Mensagem",
+        "OPCOES": "Opções",
+        "OPCAO_N": "Opção {n}",
+        "MAIS_UMA": "Mais uma opção",
+        "NOME_DA_LISTA": "Nome do botão da lista",
+        "NOME_DA_LISTA_AJUDA": "Com mais de 3 opções, o cliente toca neste botão para ver a lista.",
+        "LISTA_PADRAO": "Ver opções"
+      },
+      "LOCALIZACAO": {
+        "TITULO": "Mandar uma localização",
+        "AJUDA": "O cliente recebe o lugar no mapa.",
+        "COORDENADAS": "Onde fica no mapa",
+        "COORDENADAS_AJUDA": "No Google Maps, clique com o botão direito no lugar e clique nos números para copiar. Também vale colar o link do Google Maps.",
+        "NOME": "Nome do lugar (opcional)",
+        "ENDERECO": "Endereço (opcional)",
+        "BUSCAR": "Procure o endereço ou o nome do lugar",
+        "BUSCAR_EXEMPLO": "Ex.: Av. Paulista, 1000 ou Loja Exemplo",
+        "ESCOLHA_UM": "Escolha um endereço da lista.",
+        "TENHO_COORDENADAS": "Não achou? Usar as coordenadas do Google Maps",
+        "COORDENADAS_EXEMPLO": "-23.5613, -46.6565"
+      },
+      "PEDIDO_DE_LOCALIZACAO": {
+        "TITULO": "Pedir a localização do cliente",
+        "AJUDA": "O cliente recebe um botão para mandar onde está.",
+        "MENSAGEM": "Mensagem",
+        "PADRAO": "Pode me mandar a sua localização?"
+      },
+      "CONTATO": {
+        "TITULO": "Mandar um contato",
+        "AJUDA": "O cliente recebe o cartão e pode conversar com esse número.",
+        "NOME": "Nome",
+        "TELEFONE": "Telefone",
+        "TELEFONE_AJUDA": "Escolha o país e digite o número com DDD.",
+        "PAIS": "País do telefone",
+        "NOME_EXEMPLO": "Procure nos seus contatos ou escreva um nome",
+        "NOME_AJUDA": "Escolha um contato e o telefone vem junto."
+      },
+      "FORMULARIO": {
+        "TITULO": "Mandar um formulário",
+        "AJUDA": "O cliente toca no botão e preenche dentro do WhatsApp. Só aparecem os formulários já liberados. Não use formulário que pede senha: a resposta aparece na conversa.",
+        "QUAL": "Formulário",
+        "ESCOLHA": "Escolha o formulário",
+        "MENSAGEM": "Mensagem",
+        "TEXTO_DO_BOTAO": "Texto do botão (até 30 letras)",
+        "BOTAO_PADRAO": "Preencher",
+        "NENHUM": "Esta caixa ainda não tem formulário liberado na Meta."
+      },
+      "AJUDA_TEXTO": "Neste número o cliente recebe em texto. A prévia mostra como fica.",
+      "ERRO_GERAL": "Não deu para enviar agora. Tente de novo em instantes."
+    },
+    "PREVIA": {
+      "LUGAR": "Lugar",
+      "CONTATO": "Contato",
+      "SUA_MENSAGEM": "Sua mensagem aparece aqui",
+      "BOTAO": "Botão",
+      "ENVIAR_LOCALIZACAO": "Enviar localização",
+      "LISTA": "Ver opções",
+      "VIRA_TEXTO": "Neste número o cliente recebe em texto, assim:"
+    },
+    "JANELA_FECHADA": {
+      "TEXTO": "Já passaram 24 horas desde a última mensagem do cliente. Para voltar a falar com ele, mande um modelo.",
+      "ESCOLHER_MODELO": "Escolher modelo"
+    },
+    "CAIXA": {
+      "DIGITE": "Digite uma mensagem",
+      "SO_MODELO": "Escolha um modelo para responder"
+    },
+    "MODELO": {
+      "COPIAR_CODIGO": "Copiar código",
+      "VER_CATALOGO": "Ver catálogo",
+      "VER_ITENS": "Ver itens",
+      "VER_ITEM": "Ver",
+      "OFERTA": "Oferta por tempo limitado",
+      "CARROSSEL": "Cartões do modelo",
+      "PRODUTO": "Produto do catálogo",
+      "BOTOES": "Botões do modelo"
+    },
+    "GRAVACAO": {
+      "GRAVANDO": "Gravando áudio",
+      "CANCELAR": "Cancelar",
+      "PAUSAR": "Pausar",
+      "CONTINUAR": "Continuar gravando",
+      "ENVIAR": "Enviar áudio",
+      "SEM_MICROFONE": "O navegador não liberou o microfone. Clique no cadeado ao lado do endereço do site e permita o microfone."
+    },
+    "AUDIO": {
+      "TOCAR": "Tocar áudio",
+      "PAUSAR": "Pausar áudio",
+      "ONDA": "Posição do áudio",
+      "VELOCIDADE": "Mudar a velocidade",
+      "BAIXAR": "Baixar"
+    }
+  }
+}

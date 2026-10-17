@@ -484,6 +484,13 @@ Rails.application.routes.draw do
               post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
             end
           end
+          # #1702 — o "+" da conversa com a cara do canal: busca de endereço (Google) e formulários aprovados (Meta).
+          namespace :conversa_canal do
+            resources :lugares, only: [:index, :show]
+            resources :formularios, only: [:index] do
+              get :primeira_tela, on: :member
+            end
+          end
           namespace :autonomia do
             # #284 — feedback do ATENDENTE ("resposta errada") numa mensagem do agente. Aberto a qualquer
             # membro da conta (não é admin-only como o resto de agents/). Declarado ANTES de resources

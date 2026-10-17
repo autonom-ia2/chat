@@ -22,6 +22,7 @@ import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
+import { usePeleDoTopo } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 
 const props = defineProps({
   chat: {
@@ -38,6 +39,8 @@ const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
 const conversationHeader = ref(null);
+// #1702: faixa cinza do WhatsApp na conversa com a cara do canal.
+const classesDoTopo = usePeleDoTopo();
 const { width } = useElementSize(conversationHeader);
 const { isAWebWidgetInbox } = useInbox();
 
@@ -117,6 +120,7 @@ const copyConversationId = async () => {
   <div
     ref="conversationHeader"
     class="flex flex-col gap-3 items-center justify-between flex-1 w-full min-w-0 xl:flex-row px-3 pt-3 pb-2 h-24 xl:h-12"
+    :class="classesDoTopo"
   >
     <div
       class="flex items-center justify-start w-full xl:w-auto max-w-full min-w-0 xl:flex-1"

@@ -1,0 +1,14 @@
+# Conversation with the channel's look (#1702): messages for the reply box "+".
+en:
+  conversa_canal:
+    lugares:
+      sem_chave: 'Address search is not set up on the platform yet. Use the Google Maps coordinates.'
+      nao_encontrado: 'Place not found. Search again.'
+    formularios:
+      sem_conta: 'This number is not linked to a WhatsApp Business account yet. Check the channel connection.'
+      sem_permissao: 'This number does not allow listing forms. Ask whoever manages the WhatsApp account to grant access.'
+      nao_encontrado: 'This form is not among the approved ones for this number.'
+      so_oficial: 'Forms can only be sent through the official WhatsApp.'
+      meta_recusou: 'Meta did not return the forms for this account. Check the WhatsApp connection.'
+      meta_fora: 'Meta did not answer right now. Try again in a moment.'
+      sem_json: 'This form could not be opened. Check that it is published on Meta.'

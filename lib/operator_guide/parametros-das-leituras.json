@@ -904,6 +904,31 @@
     "controller": "api/v1/accounts/contacts#summary",
     "parametros": []
   },
+  "conversa_canal/formularios": {
+    "controller": "api/v1/accounts/conversa_canal/formularios#index",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
+  "conversa_canal/formularios/:id/primeira_tela": {
+    "controller": "api/v1/accounts/conversa_canal/formularios#primeira_tela",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
+  "conversa_canal/lugares": {
+    "controller": "api/v1/accounts/conversa_canal/lugares#index",
+    "parametros": [
+      "sessao",
+      "termo"
+    ]
+  },
+  "conversa_canal/lugares/:id": {
+    "controller": "api/v1/accounts/conversa_canal/lugares#show",
+    "parametros": [
+      "sessao"
+    ]
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [

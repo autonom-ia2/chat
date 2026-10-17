@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
 
 import MessageMeta from '../MessageMeta.vue';
 import CaptainGenerationDetails from '../CaptainGenerationDetails.vue';
@@ -11,6 +11,9 @@ import { useI18n } from 'vue-i18n';
 import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { MESSAGE_VARIANTS, ORIENTATION, SENDER_TYPES } from '../constants';
+import { usePeleDoBalao } from '../../conversa-canal/usePeleDoBalao';
+import BicoDoBalao from '../../conversa-canal/BicoDoBalao.vue';
+import BotoesDoModelo from '../../conversa-canal/BotoesDoModelo.vue';
 
 const props = defineProps({
   hideMeta: { type: Boolean, default: false },
@@ -26,16 +29,20 @@ const {
   senderType,
 } = useMessageContext();
 const { t } = useI18n();
+// #1702: com a pele do canal (WhatsApp), cor, cantos, bico, hora e remetente do app.
+const peleDoBalao = usePeleDoBalao(useAttrs()['data-bubble-name']);
 
 const isCaptainMessage = computed(
   () =>
     (sender.value?.type ?? senderType.value) === SENDER_TYPES.CAPTAIN_ASSISTANT
 );
 
-const metaColorClass = computed(() =>
-  variant.value === MESSAGE_VARIANTS.PRIVATE
-    ? 'text-n-amber-12/50'
-    : 'text-n-slate-11'
+const metaColorClass = computed(
+  () =>
+    peleDoBalao.classesDaHora.value ||
+    (variant.value === MESSAGE_VARIANTS.PRIVATE
+      ? 'text-n-amber-12/50'
+      : 'text-n-slate-11')
 );
 
 const emailMetaClass = computed(() =>
@@ -75,6 +82,9 @@ const flexOrientationClass = computed(() => {
 });
 
 const messageClass = computed(() => {
+  if (peleDoBalao.classesDoBalao.value)
+    return [peleDoBalao.classesDoBalao.value];
+
   const classToApply = [varaintBaseMap[variant.value]];
 
   if (variant.value !== MESSAGE_VARIANTS.ACTIVITY) {
@@ -95,7 +105,7 @@ const scrollToMessage = () => {
 const shouldShowMeta = computed(
   () =>
     !props.hideMeta &&
-    !shouldGroupWithNext.value &&
+    (peleDoBalao.ativa.value || !shouldGroupWithNext.value) &&
     variant.value !== MESSAGE_VARIANTS.ACTIVITY
 );
 
@@ -126,6 +136,18 @@ const replyToPreview = computed(() => {
       },
     ]"
   >
+    <BicoDoBalao
+      v-if="peleDoBalao.bico.value"
+      :lado="orientation"
+      :class="peleDoBalao.bico.value"
+    />
+    <div
+      v-if="peleDoBalao.remetente.value"
+      :class="peleDoBalao.classesDoRemetente"
+    >
+      {{ peleDoBalao.remetente.value }}
+    </div>
+    <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="topo" />
     <div
       v-if="inReplyTo"
       class="p-2 -mx-1 mb-2 rounded-lg cursor-pointer bg-n-alpha-black1"
@@ -149,9 +171,14 @@ const replyToPreview = computed(() => {
       </CaptainGenerationDetails>
       <MessageMeta
         v-else
-        :class="[flexOrientationClass, emailMetaClass, metaColorClass]"
-        class="mt-2"
+        :class="[
+          peleDoBalao.ativa.value ? '' : flexOrientationClass,
+          emailMetaClass,
+          metaColorClass,
+          peleDoBalao.ativa.value ? 'mt-0.5' : 'mt-2',
+        ]"
       />
     </template>
+    <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="botoes" />
   </div>
 </template>

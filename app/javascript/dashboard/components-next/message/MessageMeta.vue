@@ -8,6 +8,7 @@ import MessageStatus from './MessageStatus.vue';
 import Icon from 'next/icon/Icon.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useMessageContext } from './provider.js';
+import { useHoraDaPele } from '../conversa-canal/useHoraDaPele';
 
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
@@ -37,8 +38,10 @@ const {
   contentAttributes,
 } = useMessageContext();
 
-const readableTime = computed(() =>
-  messageTimestamp(createdAt.value, 'LLL d, h:mm a')
+// #1702: com a pele do canal, "14:32" no fuso da conta, como no app.
+const horaDaPele = useHoraDaPele(createdAt);
+const readableTime = computed(
+  () => horaDaPele.value || messageTimestamp(createdAt.value, 'LLL d, h:mm a')
 );
 
 const exactTime = computed(() => exactTimestamp(createdAt.value));
