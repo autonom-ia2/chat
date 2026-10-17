@@ -1,13 +1,132 @@
-# WAHA 2026.9.2 + patch c2y-rich-4, revisão 3d (autonom-ia2/chat#1709, rodada 2)
+# WAHA 2026.9.2 + patch c2y-rich-5 (autonom-ia2/chat#1709, rodada 2)
 
 Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
 
 - Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`.
-- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `d9b2f90fc2c4b568e99ef8fa9c00090c29b5bf377ef2dcbf6c3417dbe9449b47` (71 arquivos). Contém a 3c mais as ressalvas da revisão (**3d**, abaixo). Passa em `git apply --check` sobre a tag limpa.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `228ee41a1f5b4abc5fb9bcbe8c4b569d87397c4f60522f1f98138317437fb011` (74 arquivos). É a c2y-rich-4 (3d) mais a c2y-rich-5 (abaixo). Passa em `git apply --check` sobre a tag limpa (`git archive 2026.9.2`), e a árvore `src` aplicada é idêntica à do checkout do M2 (`diff -r` vazio).
 - Ficam **substituídas**, e não devem ir para deploy:
-  - 3c: patch `aaea2496…d8e6`, imagem `…:2026.9.2-c2y-rich-3c`, tarball `9ac5f91e…448c`. Guardada no M2 como `waha-2026.9.2-c2y-rich-3c.patch`, `build-waha-c2y-rich-3c.sh` e `dist-sha256-3c.txt`;
+  - c2y-rich-4 (3d): patch `d9b2f90f…9b47`, imagem `…:2026.9.2-c2y-rich-4`, tarball `bc115ade…e8ac`. Guardada no M2 como `waha-2026.9.2-c2y-rich-3d.patch`, `build-waha-c2y-rich-4.sh` e `dist-sha256-4.txt`. **A imagem tem 130 camadas** (ver "Camadas", abaixo);
+  - 3c: patch `aaea2496…d8e6`, imagem `…:2026.9.2-c2y-rich-3c` (128 camadas), tarball `9ac5f91e…448c`. Guardada no M2 como `waha-2026.9.2-c2y-rich-3c.patch`, `build-waha-c2y-rich-3c.sh` e `dist-sha256-3c.txt`;
   - 3b: patch `bd4668c1…eb19f`, tarball `d4172389…ed9a`. Guardada no M2 como `*-3b.*`.
-- `/api/server/version`: `autonomia.patch = 'c2y-rich-4'` e `autonomia.view_once_notice: true`. Os demais campos continuam iguais.
+- `/api/server/version`: `autonomia.patch = 'c2y-rich-5'`. Os demais campos continuam iguais (inclusive `view_once_notice: true`, que diz que o motor **sabe** criar o aviso; quem decide se cria é a configuração de cada caixa).
+
+## c2y-rich-5 (16/10/2026)
+
+### C1. Aviso de visualização única só na caixa que pediu
+
+- Opção nova no config do app `chatwoot` do WAHA: **`c2yViewOnceNotice`** (boolean, **padrão desligado**). Está no `ChatWootAppConfig` (`dto/config.dto.ts`), com `@IsOptional() @IsBoolean()`. Sem ela no DTO, o `WAHAValidationPipe` (`whitelist: true`) apagaria a chave no `PUT`.
+- **Desligada** (chave ausente, `false`, ou qualquer valor que não seja exatamente `true`): o mesmo que o WAHA da base. O motor faz o `logger.error` de sempre para o `UndecryptableMessage`, e nada chega ao Chatwoot: nenhum contato, conversa, mensagem ou mapeamento. Todas as caixas de hoje ficam assim até alguém ligar.
+- **Ligada**: o aviso da c2y-rich-4, sem mudança (mensagem do cliente, `waha_view_once_unavailable`, deduplicação e `waha_view_once_resolved`).
+- Onde fica a trava: no começo do consumidor `WAHAViewOnceUnavailableConsumer.Process`, antes de montar qualquer serviço do Chatwoot (`ViewOnceNoticeEnabled(container.ChatWootConfig())`). O valor é lido do app gravado no banco a cada job. Por isso ligar ou desligar vale para o próximo aviso, sem depender da escuta montada no início da sessão. O evento interno continua indo para a fila; com a opção desligada, o job termina sem fazer nada (só um `debug`).
+- O `waha_view_once_resolved` (mídia que chega depois do aviso) não muda. Sem aviso gravado, a chave não aparece.
+
+**Ligar nas caixas piloto (API de apps do WAHA, só com OK do Rodrigo).** A chave é a do motor (`X-Api-Key`, a mesma do `WAHA_API_KEY`), e nunca vai para o terminal nem para log.
+
+1. Ache o id do app da caixa: `GET /api/apps?session=<sessão>`. A resposta traz o `config` inteiro, **inclusive o `accountToken`** do Chatwoot. Não imprima: grave num arquivo temporário só no host e apague depois.
+2. Mande o app inteiro de volta com a chave nova: `PUT /api/apps/<id do app>`. O `PUT` **substitui** o app (`AppRepository.update`), então o corpo precisa ser o mesmo que o `GET` devolveu, só com a chave nova:
+
+   ```json
+   {
+     "id": "<id do app>",
+     "session": "<sessão>",
+     "app": "chatwoot",
+     "enabled": true,
+     "config": { "...": "todos os campos que o GET devolveu, sem mudar nenhum", "c2yViewOnceNotice": true }
+   }
+   ```
+
+3. Efeitos do `PUT`, já na base: o app do Chatwoot tem `restartOnChange: true`, então **a sessão reinicia** (o WhatsApp da caixa cai por alguns segundos), e o WAHA manda a nota "app atualizado" na conversa de comandos da caixa (`sendUpdatedMessage`). Faça fora do horário de pico.
+4. Confira com `GET /api/apps/<id>`: `config.c2yViewOnceNotice` precisa vir `true`. Para desligar, o mesmo `PUT` com `false` (ou sem a chave).
+
+**O que o chat2you faz com o aviso** (`Waha::RichNative::Inbound::ViewOnceUnavailable`, branch 1709):
+- com a flag `whatsapp_rich_native` na conta: vira mensagem **do cliente**, visível, com o texto "abra no celular" (`waha.view_once_unavailable`, no idioma da conta). A IA não lê nem responde o aviso (`AgentTurnGuard`). Se a mídia chegar depois (`waha_view_once_resolved`), o aviso sai;
+- sem a flag: atividade escondida, como se não existisse, que é o que a main vê.
+
+Por isso a ordem é: flag `whatsapp_rich_native` ligada na conta **e** `c2yViewOnceNotice: true` na caixa. Só a caixa não basta para o atendente ver o aviso. Só a flag não cria nada.
+
+### C2. Reação e edição na conversa da mensagem alvo
+
+- `MessageReactionHandler` e `MessageEditedHandler` passam a postar na conversa da mensagem reagida ou editada: `ConversationById(conversation_id do mapeamento do alvo)`, como já fazem voto (`poll.vote.ts`), resposta a evento (`event.response.ts`) e apagar (`message.revoked.ts`). Assim não nasce conversa nova vazia quando o alvo está numa conversa antiga (resolvida).
+- Sem o alvo no mapeamento (ou mapeamento sem `conversation_id`): a conversa do contato, como antes (`ConversationByContact`).
+- Como: um gancho na `MessageBaseHandler` (`c2yInTargetConversation`, `false` por padrão). Só reação e edição ligam o gancho; os outros handlers não mudam. A busca do alvo é a mesma do `in_reply_to` (`findReplyToMapping`, que o `getReplyToChatWootMessageID` também usa).
+- **`content_attributes.waha_edit.timestamp`**: a hora da edição no WhatsApp, em **epoch segundos** (número inteiro). Vem do próprio evento de edição (`payload.timestamp` do `message.edited`; no GOWS é o `Info.Timestamp` da mensagem de protocolo que traz a edição, via `parseTimestampToSeconds`), não da mensagem original. É o mesmo critério do `timestamp` do voto. Valor em milissegundos vira segundos (`EnsureSeconds`). Ausente, zero, negativo ou que não é número: **a chave não vai** (`EditTimestampSeconds`). O chat2you aplica a edição só se esse timestamp for igual ou mais novo que o `edited_at` guardado.
+- Formato agora: `waha_edit = {text, edited_wa_id, from_me, timestamp?}`.
+
+### Camadas da imagem (achado desta rodada)
+
+O README da c2y-rich-3 já avisava: "O limite do overlay2 é 128 … um pacote futuro com mais de 4 JS novos precisa juntar os COPY". O script continuou com um `COPY` por arquivo, e as imagens passaram do limite sem ninguém notar:
+
+| Imagem | Camadas |
+|---|---|
+| 2b | 96 |
+| 3 / 3b | 120 |
+| 3c | 128 |
+| 4 | **130** |
+| 5 | **29** (base 28 + 1) |
+
+O daemon do M2 (colima, containerd/overlayfs) aceitou as 130, mas não é o store de produção. O moby recusa imagem acima de 125 camadas (`maxLayerDepth`, erro "max depth exceeded"). **Isso não foi testado aqui com o store clássico**, mas é motivo bastante para não levar a 3c nem a 4 a lugar nenhum. A 2b (96) continua dentro do limite.
+
+Correção na raiz: o passo 3 do script agora faz **um `COPY dist/ /app/dist/`** do diretório preparado, que tem só os arquivos da tabela e os `.map` deles. O `COPY` de diretório acrescenta e troca arquivos em `/app/dist` e não apaga nenhum. Antes do build, o script confere que o diretório tem exatamente os arquivos esperados (106 = 52 JS + 52 `.map` + 2 YAML). Depois do build, confere que a imagem tem **base + 1** camadas, e falha se não tiver.
+
+### Arquivos que mudam na c2y-rich-5
+
+Fonte: `dto/config.dto.ts`, `consumers/waha/view_once.unavailable.ts`, `consumers/waha/base.ts`, `consumers/waha/message.reaction.ts`, `consumers/waha/message.edited.ts` (antes sem patch; agora exporta o handler), `messages/to/chatwoot/MessageEdited.ts`, `version.ts`, `structures/environment.dto.ts` e o teste novo `consumers/waha/c2y5.test.ts`.
+
+Dist: 54 arquivos (eram 52). Entram `apps/chatwoot/dto/config.dto.js` e `apps/chatwoot/consumers/waha/message.edited.js`, com os hashes de "antes" lidos do build da tag limpa e conferidos na base de produção pelo passo 1 do script. Mudam também `base.js`, `message.reaction.js`, `MessageEdited.js`, `view_once.unavailable.js`, `version.js` e `environment.dto.js`. Os outros 46 têm o mesmo hash da c2y-rich-4. O dist inteiro comparado com `dist-base` dá exatamente esses 54 (38 alterados e 16 novos), sem nenhum arquivo removido.
+
+### Validação c2y-rich-5 (M2)
+
+- `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos 9 arquivos tocados: 0 avisos, 0 erros.
+- Teste novo `c2y5.test.ts`: **24 de 24**, 0 falhas. Cobre:
+  - a opção desligada (ausente, `false`, `"true"` em texto, `1`): o consumidor não monta serviço do Chatwoot e não chama contato, conversa, mapeamento nem envio;
+  - a opção ligada: um aviso do cliente, mapeado no id `-C2YVO`;
+  - desligar e ligar sem reiniciar (lido a cada job);
+  - o DTO mantém a chave com `whitelist` e recusa valor que não é boolean;
+  - reação e edição com alvo mapeado numa conversa antiga (`ConversationById(42)`, sem `ConversationByContact`), sem alvo (conversa do contato) e com mapeamento sem `conversation_id`;
+  - um handler comum continua na conversa do contato, mesmo com `in_reply_to` mapeado;
+  - `waha_edit.timestamp` em segundos, ms convertido, e ausente/nulo/zero/negativo/texto/NaN sem a chave. O corpo que vai ao Chatwoot leva a chave.
+- Mutação: **9 de 9** quebras derrubaram testes (`mutation-r8.log` no M2). As quebras foram:
+  - trava do consumidor removida (5 falhas) e trava aceitando qualquer valor verdadeiro (2);
+  - reação fora da conversa do alvo (1) e edição fora da conversa do alvo (1);
+  - sem a guarda do `conversation_id` (2) e todo handler na conversa do alvo (1);
+  - timestamp nunca enviado (2), ms sem conversão (1), e zero/negativo aceitos (3).
+
+  Os arquivos foram restaurados e conferidos por sha256.
+- Suíte unit completa: **51 suítes, 712 testes. Falham 10**, os mesmos 10 da tag limpa (PixMessage, message.ack.utils, PhoneNumbersCacheRepository e session.abc; `diff` dos nomes contra `jest-base-failed.txt` vazio).
+- Baileys real sobre o dist: `r9-real-baileys.js` (o r8 com o handshake `c2y-rich-5`) deu 37 de 37, `r6-viewonce` 4 de 4 e `listreply` 8 de 8.
+- **Smoke de execução, pela primeira vez** (`smoke-r8.sh` no M2). O colima do M2 roda linux/amd64 emulado (`uname -m` = `x86_64` dentro do container). Rodou `--network none`, sem volume, com uma chave descartável:
+  - respondeu em 23 s;
+  - `/api/server/version` = `2026.9.2`, `GOWS`, `PLUS`, com o bloco `autonomia` da c2y-rich-5 completo;
+  - `/ping` 200, `/health` `{"status":"ok"}` 200, e sem chave 401;
+  - a chave e o header não aparecem no log;
+  - o container foi removido no fim.
+
+  O script de build continua pulando o próprio smoke quando o daemon não é x86_64. O smoke emulado foi rodado à parte, com as mesmas condições de isolamento.
+
+**Imagem c2y-rich-5** (`autonomia-waha-c2y-rich:2026.9.2-c2y-rich-5`, linux/amd64, sobre `devlikeapro/waha-plus@sha256:ac5d6c131155df16e4a29c29efdbdf977788a0a4908dbe9d8edf4366202e9598`, ID local da base `sha256:7179f432…aff4`):
+- passo 1: os 38 originais batem com "antes" na base e os 16 novos não existem nela;
+- **29 camadas** (base 28 + 1 de overlay);
+- ID local (índice OCI): `sha256:c20168aa74d56695bc7afca6c838693d0c4acc2a0e4f99c79aaad3a5df40d4a9`;
+- manifest amd64: `sha256:e3b3b8ea1b013324d35656b154d2c827f945c3a478bf94485007ff35af4a78cd`;
+- config (o image ID depois de um `docker load` com o store clássico): `sha256:3e3c081dfc459476b01da56153e2c3490a47cbb2d5203827f4dabbc85b1cafbd`;
+- LABELs `autonomia.patch=c2y-rich-5` e `autonomia.patch-sha256=228ee41a…b011`;
+- 54 arquivos de runtime conferidos dentro da imagem pelo script (`docker create` + `docker cp`), iguais ao `dist-sha256.txt`;
+- tarball `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-5.tar`: **2269783552 bytes**, sha256 `e4e5ed3c9bfa5a1873766f115a0685708e4ec8e44d8a67ffdb69ce19ed77b0c7` (conferido de novo com `shasum` à parte; mesmo valor em `autonomia-waha-c2y-rich_2026.9.2-c2y-rich-5.tar.sha256`).
+
+**Chamada:**
+
+```sh
+WAHA_C2Y_BASE=sha256:7179f432b837e5f902f49005ec5ca762bf5fbc09cf2b8538af95a077e6d5aff4 \
+WAHA_C2Y_BASE_SOURCE=devlikeapro/waha-plus@sha256:ac5d6c131155df16e4a29c29efdbdf977788a0a4908dbe9d8edf4366202e9598 \
+WAHA_C2Y_DIST_DIR=…/waha/dist WAHA_C2Y_OUT_DIR=…/out WAHA_C2Y_SKIP_SMOKE=1 \
+./build-waha-c2y-rich.sh autonomia-waha-c2y-rich:2026.9.2-c2y-rich-5
+```
+
+**Não validado na c2y-rich-5:** o mesmo da 3c e da 3d (abaixo). Também:
+- o `PUT /api/apps/<id>` de verdade com a chave nova. O DTO foi testado com `class-validator`, não por HTTP;
+- reação e edição de verdade numa conversa antiga resolvida. Não foi visto se o Chatwoot reabre a conversa ao receber a mensagem; é o mesmo caminho que voto e resposta a evento já usam;
+- o formato real do `timestamp` do `message.edited` no GOWS. Foi lido do código (`toWAMessage` → `parseTimestampToSeconds(Info.Timestamp)`), não visto em evento real;
+- o `docker load` da imagem num host com o store clássico. As 29 camadas ficam longe do limite.
 
 ## Revisão 3d: ressalvas da revisão da 3c (16/10/2026)
 
@@ -362,7 +481,7 @@ Mesmo processo do c2y-rich-1: base fixada por digest ou image ID (sem pull), con
 
 ## Ordem de deploy (do contrato)
 
-O PR A do chat2you (entrada e travas) precisa estar no ar **antes** da troca da imagem. Sem ele, um chat2you sem o PR recebe as chaves novas e não as tira (elas ficam gravadas em `content_attributes`, sem efeito na tela; o conteúdo continua igual). Rollback de código: voltar para a imagem c2y-rich-1 ou para a base (abaixo).
+O PR A do chat2you (entrada e travas) precisa estar no ar **antes** da troca da imagem. Sem ele, um chat2you sem o PR recebe as chaves novas e não as tira (elas ficam gravadas em `content_attributes`, sem efeito na tela; o conteúdo continua igual). Rollback de código: da c2y-rich-5 para a c2y-rich-2b ou para a base de produção, como na seção **ROLLBACK da imagem** (abaixo). A c2y-rich-1, a 3, a 3b, a 3c e a 4 não são destino de rollback (substituídas; a 3c e a 4 também estão no limite de camadas ou acima dele).
 
 ### Docker temporário no M2 (para remover depois)
 Tudo foi instalado em espaço de usuário, sem sudo:
@@ -398,6 +517,26 @@ docker service inspect waha_waha-plus > /tmp/waha_waha-plus_spec_$(date +%Y%m%d%
 
 O arquivo tem env, então ele fica só no host e não é impresso.
 
+**Passo 0 do rollback: no chat2you, antes do `docker service update`.** Sem ele, o chat2you continua achando que o motor manda nativo e tem reagir/editar: depois da troca, enquete, botão de link e evento seriam mandados a um motor que não os conhece, e a reação ou edição feita pelo painel se perderia.
+
+1. Tire o motor da lista **ou** desligue a flag:
+   - tirar a URL do motor de `WAHA_RICH_NATIVE_ENGINES` (env do chat2you, web **e** worker, nas duas stacks que usam o motor). Vale depois que os processos sobem com o env novo. Sem o motor na lista, `Waha::EngineCapabilities.engine_for` não acha motor, e a caixa sai em texto;
+   - ou desligar a flag `whatsapp_rich_native` nas contas que usam o motor.
+2. Apague no Redis do chat2you o cache de capacidade desse motor. As chaves do código (`app/services/waha/engine_capabilities.rb`) são `waha/engine_capabilities/<motor>` (`cache_key`) e `waha/engine_capabilities/actions/<motor>` (`actions_cache_key`). Duas observações:
+   - `<motor>` é a URL como está em `WAHA_RICH_NATIVE_ENGINES`, sempre **com a barra final** (`engines` faz `"#{url.chomp('/')}/"`). Exemplo: `waha/engine_capabilities/https://motor.exemplo/`;
+   - o `cache_store` de produção é `redis_cache_store` com `namespace: 'cache'` (`config/environments/production.rb`), então no Redis a chave real tem o prefixo `cache:`.
+
+   ```sh
+   # dentro de um container que já tem o REDIS_URL do chat2you; a senha nunca vai para o terminal
+   redis-cli -u "$REDIS_URL" DEL \
+     "cache:waha/engine_capabilities/<motor>/" \
+     "cache:waha/engine_capabilities/actions/<motor>/"
+   # precisa responder (integer) 2 na primeira vez; 0 = a chave não estava lá (confira a URL e a barra)
+   ```
+
+   Sem apagar, o valor antigo vale até o `CACHE_TTL` (10 min). Isso pesa sobretudo no rollback parcial, em que o motor **continua** na lista: o cache diria `link_button` e `event` até o próximo `EngineCapabilitiesRefreshJob` (a cada 5 min) ler a versão da 2b.
+3. Só então troque a imagem, abaixo.
+
 **Comando de rollback**, no manager do Swarm de cada motor:
 
 ```sh
@@ -408,7 +547,16 @@ docker service update \
 ```
 
 - O digest é fixo e a imagem já está no nó, então não há pull. O `--with-registry-auth` só cobre o caso de a tarefa cair em outro nó.
-- **Rollback parcial, da c2y-rich-3 para a c2y-rich-2b** (mantém lista, enquete, reações e edição; tira as chaves da rodada 2, o `event.response`, o link e o evento): `docker load -i autonomia-waha-c2y-rich_2026.9.2-c2y-rich-2b.tar` no nó (conferir antes o sha256 `bd57c4c7…7863`), depois `docker service update --image autonomia-waha-c2y-rich:2026.9.2-c2y-rich-2b waha_waha-plus`. Mesmo tempo de troca do rollback total. Um evento ou link já enviado continua no WhatsApp; respostas a eventos deixam de chegar.
+- Esse comando é o rollback **total, da c2y-rich-5 para a base**. Perde-se tudo do conector: nenhuma chave `waha_*` na entrada, nada nativo na saída (lista, localização, contato, enquete, link, evento), sem voto, sem resposta a evento, sem reagir/editar pelo painel, sem aviso de visualização única. O que já está no Chatwoot fica como está. Por isso o passo 0 tira o motor da lista **antes**. Na conferência, o `/api/server/version` da base não tem o campo `autonomia`. A opção `c2yViewOnceNotice` gravada no app fica no banco; a base não a lê.
+- **Rollback parcial, da c2y-rich-5 para a c2y-rich-2b** (96 camadas, dentro do limite): `docker load -i autonomia-waha-c2y-rich_2026.9.2-c2y-rich-2b.tar` no nó (conferir antes o sha256 `bd57c4c7…7863`), depois `docker service update --image autonomia-waha-c2y-rich:2026.9.2-c2y-rich-2b waha_waha-plus`. Mesmo tempo de troca do rollback total. Faça o passo 0 também, com o item 2 pelo menos: o motor pode continuar na lista, mas o cache precisa ser lido de novo.
+  - **Fica:** lista, localização e contato nativos e a resposta da lista; enquete e voto; reagir e editar pelo painel (com a assinatura HMAC); foto e vídeo como mídia; texto pré-formatado (`waha_text`); `waha_call`, `waha_unknown`, `waha_reaction` e `waha_edit` sem `timestamp`.
+  - **Perde-se:**
+    - as chaves da rodada 2 (`waha_media`, `waha_album`, `waha_location`, `waha_contacts`, `waha_quote`, `waha_media_failed`, `waha_revoke`, `waha_context`, `waha_order`, `waha_unknown.gif`, `waha_event_response`) e o `c2y_played_at`;
+    - o botão de link e o evento na saída. O `/api/server/version` da 2b diz `rich_native: ['options','location','contact','poll']`, e o chat2you deixa de oferecê-los quando o cache é lido de novo. Um evento ou link já enviado continua no WhatsApp, mas as respostas a eventos deixam de chegar;
+    - as correções da 3b: evento só se foi o conector que mandou, falha de download só com `media.error`, `from_me` sempre presente, e temporária `null` quando a mensagem não diz;
+    - o aviso de visualização única e o `waha_view_once_resolved`. Avisos já criados ficam no Chatwoot. A 2b não tem as guardas da 3d: reagir, editar ou apagar um aviso pelo painel, ou responder citando um, vai ao WhatsApp com o id `…-C2YVO`, que não existe lá. O efeito não foi testado: a resposta citando pode sair sem a citação ou falhar, e a reação ou edição deve gerar a nota de erro. Avise os atendentes das caixas piloto;
+    - da c2y-rich-5: o `waha_edit.timestamp` (o chat2you volta a aplicar a edição sem comparar a hora) e a reação e edição na conversa do alvo. Elas voltam para a conversa do contato, e numa conversa antiga resolvida podem abrir conversa nova vazia, como na main.
+- A c2y-rich-4 e a 3c **não** são destino de rollback: substituídas, e com 130 e 128 camadas (ver "Camadas da imagem").
 - Se a última mudança no serviço tiver sido justamente o deploy da c2y, `docker service rollback waha_waha-plus` volta ao spec anterior. O comando acima é preferível, porque não depende do histórico.
 - Portainer: se o stack `waha` é gerido pelo Portainer, volte também a linha `image:` do stack para o digest acima e salve sem "re-pull". Sem isso, o próximo "Update the stack" reinstala a imagem c2y.
 
@@ -425,6 +573,7 @@ docker exec "$CID" curl -fsS http://127.0.0.1:3000/ping
 # a chave fica dentro do container e nunca aparece no terminal
 docker exec "$CID" sh -c 'curl -fsS -H "X-Api-Key: $WAHA_API_KEY" http://127.0.0.1:3000/api/server/version'
 # precisa ter "version":"2026.9.2" e "tier":"PLUS", e NÃO pode ter o campo "autonomia"
+# (no rollback parcial para a 2b: "autonomia" com "patch":"c2y-rich-2")
 docker exec "$CID" sh -c 'curl -fsS -H "X-Api-Key: $WAHA_API_KEY" http://127.0.0.1:3000/api/sessions' \
   | grep -o '"status":"[A-Z_]*"' | sort | uniq -c
 # todas as sessões em WORKING
@@ -435,15 +584,9 @@ docker exec "$CID" sh -c 'curl -fsS -H "X-Api-Key: $WAHA_API_KEY" http://127.0.0
 
 ## O que NÃO foi validado
 
-- O smoke de execução (`/api/server/version`, vazamento no log) não rodou. Fica para o canário amd64.
-- O modo builder do script (node em container, `yarn install --immutable`) não foi executado. O caminho usado foi o `WAHA_C2Y_DIST_DIR`.
-- Não houve envio real ao WhatsApp nem teste com Chatwoot ou Redis de verdade. O handler e o reporter foram testados com dublês, e o caminho da BullMQ (UnrecoverableError sem retry) não foi exercitado.
-
-## O que NÃO foi validado
-
-- Smoke de execução amd64 (`/api/server/version`, vazamento no log): o daemon do M2 é aarch64. Fica para o canário.
-- Modo builder do script (node em container, `yarn install --immutable`): não executado; o caminho usado foi `WAHA_C2Y_DIST_DIR`.
-- Nada com WhatsApp, Chatwoot, Redis ou BullMQ de verdade. Os handlers foram testados com dublês. Em especial, falta ver em aparelho: o formato real do `poll.vote` do GOWS (lido do código-fonte: `poll.id` serializado e `selectedOptions` com títulos), reação a mensagem do cliente pelo `setReaction` do GOWS, edição pelo `editMessage`, GIF convertido pelo ffmpeg do motor e a citação (`reply_to`) na enquete.
+- Smoke de execução (`/api/server/version`, vazamento no log): até a c2y-rich-4 não rodou, porque o daemon do M2 é aarch64 e o script pula o smoke. Na c2y-rich-5 rodou com amd64 **emulado** no colima do M2 (ver "Validação c2y-rich-5"). Num host amd64 de verdade (o canário) ainda falta.
+- Modo builder do script (node em container, `yarn install --immutable`): não executado. O caminho usado foi o `WAHA_C2Y_DIST_DIR`.
+- Nada com WhatsApp, Chatwoot, Redis ou BullMQ de verdade. Os handlers e o reporter foram testados com dublês, e o caminho da BullMQ (UnrecoverableError sem retry) não foi exercitado. Em especial, falta ver em aparelho: o formato real do `poll.vote` do GOWS (lido do código-fonte: `poll.id` serializado e `selectedOptions` com títulos), reação a mensagem do cliente pelo `setReaction` do GOWS, edição pelo `editMessage`, GIF convertido pelo ffmpeg do motor e a citação (`reply_to`) na enquete.
 - `sharp` foi exercitado só no darwin do M2. Na imagem ele existe para linux-x64, mas não rodou. HEIC do iPhone: o libvips pré-compilado não decodifica HEVC, então a expectativa é cair no `sendFile` (registrado no log com a classe do erro).
 - Retry pelo `message_updated` (`external_error`): o chat2you só põe `waha_text` no `message_created`. Um reenvio pelo painel volta a usar o `MarkdownToWhatsApp`.
 - O log `File message sent: … <data_url>` já existia na main e continua. Os logs novos levam só ids (mensagem do Chatwoot, sessão) e classe de erro.
