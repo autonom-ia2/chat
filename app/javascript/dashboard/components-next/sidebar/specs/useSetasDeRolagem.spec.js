@@ -98,7 +98,7 @@ describe('useSetasDeRolagem', () => {
 });
 
 describe('ForkSidebarSeta', () => {
-  const pilula = props =>
+  const seta = props =>
     mount(ForkSidebarSeta, {
       props: {
         lado: 'abaixo',
@@ -109,28 +109,31 @@ describe('ForkSidebarSeta', () => {
       },
     });
 
-  it('mostra a contagem com plural e o rótulo completo', () => {
-    const botao = pilula({ contagem: 3 }).find('button');
-    expect(botao.text()).toBe('FORK_SIDEBAR.ITENS_ABAIXO:3');
+  it('só o chevron, sem texto nem fundo; o leitor de tela ouve a contagem', () => {
+    const botao = seta({ contagem: 3 }).find('button');
+    expect(botao.text()).toBe('');
     expect(botao.attributes('aria-label')).toBe(
       'FORK_SIDEBAR.ROLAR_ABAIXO_ITENS:3'
     );
-    expect(botao.html()).toContain('i-lucide-chevron-down');
-    expect(botao.html()).toContain('backdrop-blur-md');
+    expect(botao.classes()).toContain('size-11');
+    const chevron = botao.find('span');
+    expect(chevron.classes()).toEqual(
+      expect.arrayContaining([
+        'i-lucide-chevron-down',
+        'size-6',
+        'text-white/70',
+      ])
+    );
+    expect(botao.html()).not.toMatch(/ring-|bg-/);
   });
 
-  it('recolhido mostra só o chevron; acima usa o chevron para cima', () => {
-    const botao = pilula({ lado: 'acima', contagem: 2, recolhido: true }).find(
-      'button'
-    );
-    expect(botao.text()).toBe('');
-    expect(botao.attributes('aria-label')).toBe(
-      'FORK_SIDEBAR.ROLAR_ACIMA_ITENS:2'
-    );
-    expect(botao.html()).toContain('i-lucide-chevron-up');
+  it('acima usa o chevron para cima; sem contagem, rótulo curto', () => {
+    const botao = seta({ lado: 'acima' }).find('button');
+    expect(botao.attributes('aria-label')).toBe('FORK_SIDEBAR.ROLAR_ACIMA');
+    expect(botao.find('span').classes()).toContain('i-lucide-chevron-up');
   });
 
   it('invisível não renderiza o botão', () => {
-    expect(pilula({ visivel: false }).find('button').exists()).toBe(false);
+    expect(seta({ visivel: false }).find('button').exists()).toBe(false);
   });
 });

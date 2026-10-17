@@ -352,8 +352,8 @@ describe('ForkSidebarNav: rolagem (#1781)', () => {
     expect(ver('[data-esmaecido-baixo]')).toBe(true);
     const baixo = wrapper.find('[data-seta="abaixo"]');
     expect(baixo.attributes('aria-label')).toBe('FORK_SIDEBAR.ROLAR_ABAIXO');
-    expect(baixo.classes()).toContain('min-h-11');
-    expect(baixo.text()).toBe('FORK_SIDEBAR.MAIS_ABAIXO');
+    expect(baixo.classes()).toContain('size-11');
+    expect(baixo.text()).toBe('');
     const esmaecido = wrapper.find('[data-esmaecido-baixo]');
     expect(esmaecido.attributes('aria-hidden')).toBe('true');
     expect(esmaecido.classes()).toContain('pointer-events-none');

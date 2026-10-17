@@ -2,13 +2,12 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-// Pílula flutuante "3 itens abaixo"/"2 itens acima" do menu novo (#1781). Fica por cima da lista (absolute),
-// centrada, a ~10 px da borda; área de toque de 44 px. Recolhido, mostra só o chevron.
+// Seta flutuante do menu novo (#1781): só o chevron, sem fundo nem contorno, centrada a ~10 px da borda sobre o
+// esmaecido. O toque é um círculo invisível de 44 px; o leitor de tela ouve quantos itens estão fora da vista.
 const props = defineProps({
   lado: { type: String, required: true },
   visivel: { type: Boolean, default: false },
   contagem: { type: Number, default: 0 },
-  recolhido: { type: Boolean, default: false },
   respirando: { type: Boolean, default: false },
   controla: { type: String, required: true },
   tema: { type: Object, required: true },
@@ -18,18 +17,6 @@ const emit = defineEmits(['rolar']);
 
 const { t } = useI18n();
 const emCima = computed(() => props.lado === 'acima');
-
-const texto = computed(() => {
-  if (!props.contagem) {
-    return t(
-      emCima.value ? 'FORK_SIDEBAR.MAIS_ACIMA' : 'FORK_SIDEBAR.MAIS_ABAIXO'
-    );
-  }
-  const chave = emCima.value
-    ? 'FORK_SIDEBAR.ITENS_ACIMA'
-    : 'FORK_SIDEBAR.ITENS_ABAIXO';
-  return t(chave, { count: props.contagem }, props.contagem);
-});
 
 const rotulo = computed(() => {
   if (!props.contagem) {
@@ -63,28 +50,20 @@ const deslocamento = computed(() => {
       :data-seta="lado"
       :aria-label="rotulo"
       :aria-controls="controla"
-      class="group absolute inset-x-0 z-[2] flex items-center justify-center mx-auto w-fit min-h-11 min-w-11 rounded-full"
-      :class="[tema.foco, emCima ? 'top-1.5' : 'bottom-1.5']"
+      class="group absolute inset-x-0 z-[2] flex items-center justify-center mx-auto size-11 rounded-full"
+      :class="[tema.foco, emCima ? 'top-0' : 'bottom-0']"
       @click="emit('rolar')"
     >
       <span
-        class="flex items-center gap-1 h-8 rounded-full text-xs font-semibold transition duration-200 motion-reduce:transition-none"
+        class="size-6 transition duration-300 ease-in-out motion-reduce:transition-none"
         :class="[
-          tema.pilula,
-          tema.pilulaPassar,
-          recolhido ? 'w-8 justify-center' : 'px-3',
+          emCima ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down',
+          tema.seta,
+          tema.setaPassar,
+          deslocamento,
         ]"
-      >
-        <span
-          class="size-4 shrink-0 transition-transform duration-300 ease-in-out motion-reduce:transition-none"
-          :class="[
-            emCima ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down',
-            deslocamento,
-          ]"
-          aria-hidden="true"
-        />
-        <span v-if="!recolhido" aria-hidden="true">{{ texto }}</span>
-      </span>
+        aria-hidden="true"
+      />
     </button>
   </Transition>
 </template>
