@@ -47,7 +47,8 @@ class Crm::Ai::AttributeExtractorApplier
         apply_item(target, item, attribute_model, current, updates)
       end
 
-      record.update!(custom_attributes: current.merge(updates)) if updates.any?
+      # A gravação da IA não é correção de pessoa (Crm::Memoria::Correcao, A14), mesmo dentro de uma requisição.
+      Crm::Memoria::Correcao.sem_correcao(record) { record.update!(custom_attributes: current.merge(updates)) } if updates.any?
     end
   end
 
@@ -55,7 +56,7 @@ class Crm::Ai::AttributeExtractorApplier
     normalized = normalize_item(item)
     key = normalized[:key]
     definition = definitions_for(attribute_model)[key]
-    rejection = rejection_reason(normalized, definition, current.merge(updates))
+    rejection = rejection_reason(normalized, definition, current.merge(updates), [target, record_of(target)])
     return reject_item(target, key, rejection) if rejection.present?
 
     value = coerce_value(normalized[:value], definition)
@@ -75,14 +76,24 @@ class Crm::Ai::AttributeExtractorApplier
     }
   end
 
-  def rejection_reason(item, definition, current)
+  def rejection_reason(item, definition, current, alvo)
     return 'unknown_key' if definition.blank?
     # Prefixo vazio (default) = qualquer campo customizado cadastrado é elegível.
     return 'not_whitelisted' if @prefix.present? && !item[:key].start_with?(@prefix)
     return 'low_confidence' if item[:confidence] < @min_confidence
-    return 'already_filled' if filled?(current[item[:key]])
+    return 'already_filled' if filled?(current[item[:key]]) && !memoria_corrige?(alvo, item[:key])
 
     nil
+  end
+
+  # Memória das IAs (#1601): com a flag, o campo preenchido pode ser corrigido pela conversa (a correção vira versão na
+  # memória), a não ser que uma pessoa tenha travado o valor.
+  def memoria_corrige?(alvo, key)
+    Crm::Memoria.ligada?(@account) && !Crm::Memoria::Correcao.travado?(@card, *alvo, key)
+  end
+
+  def record_of(target)
+    { contact: @card.contact, conversation: @card.primary_conversation, card: @card }[target]
   end
 
   def filled?(value)

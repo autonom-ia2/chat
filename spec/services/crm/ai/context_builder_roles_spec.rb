@@ -51,6 +51,24 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(roles).to eq(%w[customer human_agent platform_agent external_agent])
   end
 
+  # #1601: o convite e o aviso do Agendamento saem em nome da pessoa, mas quem manda é a plataforma; o que a equipe
+  # manda pelo celular volta como eco sem remetente e é uma pessoa do time, não um robô de fora.
+  it 'labels booking notices as the platform agent and the phone echo as a human agent' do
+    aviso = add_message(content: 'Lembrete: sua reunião é amanhã', type: :outgoing, sender: admin)
+    aviso.update!(content_attributes: { 'crm_booking_notice' => 'lembrete_1d' })
+    convite = add_message(content: 'Escolha um horário', type: :outgoing, sender: admin)
+    convite.update!(content_attributes: { 'crm_booking_invite_id' => 7 })
+    eco = add_message(content: 'Te ligo em 5 min', type: :outgoing)
+    eco.update_columns(sender_type: nil, sender_id: nil, content_attributes: { 'external_echo' => true }) # rubocop:disable Rails/SkipsModelValidations
+    automacao = add_message(content: 'Mensagem da automação', type: :outgoing)
+    automacao.update_columns(sender_type: nil, sender_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+    roles = described_class.new(card: card).perform[:recent_messages].map { |m| m[:role] }
+
+    expect(roles).to eq(%w[platform_agent platform_agent human_agent external_agent])
+    expect(described_class.new(card: card).perform.dig(:conversation_state, :last_human_agent_at)).to eq(eco.reload.created_at.iso8601)
+  end
+
   it 'reads messages from linked conversations, not only the primary one' do
     other = create_crm_conversation(account: account, inbox: inbox, contact: contact)
     card.card_conversations.create!(account: account, conversation: other)

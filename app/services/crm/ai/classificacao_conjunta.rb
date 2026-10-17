@@ -23,6 +23,11 @@ class Crm::Ai::ClassificacaoConjunta
       additionalProperties: false
     }
   }.freeze
+  # Memória das IAs (#1601): o mesmo, com `memoria_ops` em cada card (Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA_MEMORIA).
+  ITEM_MEMORIA = Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA_MEMORIA[:schema].then do |schema|
+    schema.merge(properties: { card_id: { type: 'integer' } }.merge(schema[:properties]), required: ['card_id', *schema[:required]])
+  end.freeze
+  SCHEMA_MEMORIA = SCHEMA.merge(schema: SCHEMA[:schema].merge(properties: { cards: { type: 'array', items: ITEM_MEMORIA } })).freeze
 
   # principal_id: o card principal da mensagem; o pacote dele vai com "principal": true (onde fica o pedido de
   # atendente que o cliente não ligou a nenhum assunto).
@@ -35,7 +40,7 @@ class Crm::Ai::ClassificacaoConjunta
   end
 
   def perform
-    response = @client.create(model: @model, instructions: instructions, input: entrada.to_json, schema: SCHEMA,
+    response = @client.create(model: @model, instructions: instructions, input: entrada.to_json, schema: memoria? ? SCHEMA_MEMORIA : SCHEMA,
                               reasoning_effort: @reasoning_effort)
     por_card(JSON.parse(response[:text]), response)
   end
@@ -43,7 +48,21 @@ class Crm::Ai::ClassificacaoConjunta
   private
 
   def instructions
-    Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] })
+    Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
+                                          memoria: memoria?)
+  end
+
+  # A conversa e os ids locais (m1..mN) saem do primeiro classificador: são os dele que vão ao modelo. O agendamento é
+  # o de cada card.
+  def memoria?
+    @classificadores.first.memoria?
+  end
+
+  def memoria_de(card_id)
+    return {} unless memoria?
+
+    proprio = @classificadores.find { |classificador| classificador.pacote.dig(:card, :id) == card_id }
+    { memoria_refs: @classificadores.first.memoria_interna[:memoria_refs], memoria_token: proprio&.memoria_interna&.dig(:memoria_token) }
   end
 
   def entrada
@@ -64,7 +83,7 @@ class Crm::Ai::ClassificacaoConjunta
 
       classificacoes[item['card_id']] = item.with_indifferent_access.merge(
         model_used: @model, usage: response[:usage], response_id: response[:response_id]
-      )
+      ).merge(memoria_de(item['card_id']))
     end
   end
 end
