@@ -95,7 +95,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:30",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:45"
     ],
     "sem_corpo": true
   },
@@ -10527,7 +10527,7 @@
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:21",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:19",
       "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:40",
-      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:44"
+      "app/controllers/api/v1/accounts/autonomia/agents/channels_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -14226,9 +14226,9 @@
     "corpo_plano": true,
     "envelope": "caixa",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:69"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:80"
     ],
     "sem_corpo": false
   },
@@ -21640,17 +21640,17 @@
     "controller": "api/v1/accounts/autonomia/agents/onde_atende#update",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:20",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:80",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:59",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:23",
       "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:84",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:65",
       "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:36"
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:76",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:74",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:67",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:40"
     ],
     "sem_corpo": false
   },
@@ -23235,9 +23235,9 @@
     "corpo_plano": true,
     "envelope": "caixa",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:20",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:69"
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:21",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/caixas_controller.rb:80"
     ],
     "sem_corpo": false
   },

@@ -10,12 +10,14 @@
 #   `parado`: entrar na caixa liga o agente.
 # - externo (só com `detalhe`, #1648): o agente de outro sistema que atende primeiro, { id, name } ou nil.
 class Crm::Caixas::RetratoDosAgentes
-  # `detalhe: true` só na caixa aberta (#1570): a lista de caixas não consulta o leitor.
-  def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false)
+  # `detalhe: true` só na caixa aberta (#1570): a lista de caixas não consulta o leitor. `alcancavel` (regra G, #1788):
+  # sem alcançar a caixa, `pode_mudar` é false nela.
+  def initialize(account:, inbox_ids:, pode_mudar:, detalhe: false, alcancavel: nil)
     @account = account
     @inbox_ids = inbox_ids
     @pode_mudar = pode_mudar
     @detalhe = detalhe
+    @alcancavel = alcancavel
   end
 
   def ligado?
@@ -26,7 +28,7 @@ class Crm::Caixas::RetratoDosAgentes
 
   def caixa(inbox_id)
     porta = vinculos.fetch(inbox_id, []).find(&:porta?)
-    pode_mudar = @pode_mudar && aceita_area?(porta, inbox_id)
+    pode_mudar = @pode_mudar && alcanca?(inbox_id) && aceita_area?(porta, inbox_id)
     {
       porta: porta && { id: porta.agent.id, name: porta.agent.name },
       pode_mudar: pode_mudar,
@@ -36,6 +38,10 @@ class Crm::Caixas::RetratoDosAgentes
   end
 
   private
+
+  def alcanca?(inbox_id)
+    @alcancavel.nil? || @alcancavel.alcanca_id?(inbox_id)
+  end
 
   # #1648 — o agente externo (n8n, Zapier...) que atende primeiro: o AgentBotInbox ativo da caixa cujo robô não é
   # espelho de agente da plataforma. Espelho é qualquer agent_bot de autonomia_agent_inboxes, apagado ou não (a mesma
