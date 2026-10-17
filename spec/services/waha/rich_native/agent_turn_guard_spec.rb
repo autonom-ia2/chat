@@ -414,6 +414,35 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(Redis::Alfred.get(chave)).to be_present
     end
 
+    it 'silence 17 does not clear a waiting time a new customer message changed in the meantime (compare-and-clear)' do
+      conversation.update!(waiting_since: nil)
+      voto = voto_retirado
+      depois = 1.minute.from_now.change(usec: 0)
+      allow(Conversation).to receive(:where).and_call_original
+      allow(Conversation).to receive(:where).with(hash_including(:waiting_since)).and_wrap_original do |original, *args|
+        Conversation.where(id: conversation.id).update_all(waiting_since: depois) # rubocop:disable Rails/SkipsModelValidations
+        original.call(*args)
+      end
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(Autonomia::Agents::AgentEvent.skipped_escolha_retirada.count).to eq(1)
+      expect(conversation.reload.waiting_since).to eq(depois)
+    end
+
+    it 'tells the screen when silence 17 clears the waiting time' do
+      conversation.update!(waiting_since: nil)
+      voto = voto_retirado
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(Events::Types::CONVERSATION_UPDATED, anything, hash_including(changed_attributes: hash_including('waiting_since')))
+    end
+
     it 'silence 17 keeps a waiting time armed before the vote' do
       antes = 1.hour.ago.change(usec: 0)
       voto = voto_retirado
@@ -426,16 +455,20 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(conversation.reload.waiting_since).to eq(antes)
     end
 
-    it 'sends an unexpected guard error to the tracker and answers as in main' do
+    it 'sends an unexpected guard error to the tracker without its message, and answers as in main' do
       tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
-      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
-      allow(Waha::RichNative::TurnKinds).to receive(:turn_silence).and_raise(ActiveRecord::ConnectionNotEstablished)
+      reported = nil
+      allow(ChatwootExceptionTracker).to receive(:new) { |error, **| (reported = error) && tracker }
+      allow(Waha::RichNative::TurnKinds).to receive(:turn_silence)
+        .and_raise(ActiveRecord::ConnectionNotEstablished, 'texto do cliente: Quero cancelar')
       gatilho(cliente_escreve('Oi'))
 
       rodar_turno!
 
       expect(respostas.count).to eq(1)
       expect(tracker).to have_received(:capture_exception)
+      expect(reported).to be_a(ActiveRecord::ConnectionNotEstablished)
+      expect(reported.message).not_to include('Quero cancelar')
     end
 
     it 'does not lose the silence when checking the event fails' do

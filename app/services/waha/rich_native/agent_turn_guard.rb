@@ -18,9 +18,13 @@ module Waha::RichNative::AgentTurnGuard
   UNSUPPORTED_REASON = 'mensagem_sem_suporte'.freeze
   DELETED_REASON = 'mensagem_apagada'.freeze
   STALE_CHOICE_REASON = 'escolha_retirada'.freeze
-  # As marcas das mensagens do cliente que não contam como interação na janela do histórico. São a peneira barata do
-  # SQL (`content_attributes` é texto JSON); quem decide é Waha::RichNative::AiTurn.turn? e TurnKinds.kind.
-  UNCOUNTED_MARKERS = %w[c2y_hidden is_unsupported view_once_unavailable deleted_by_contact_at].freeze
+  # As marcas das mensagens do cliente que não contam como interação na janela do histórico, como aparecem no texto do
+  # JSON (aspas escapadas): o voto escondido (só recebido: o filtro já é `incoming`), a bolha, o aviso de visualização
+  # única e a apagada.
+  UNCOUNTED_PATTERNS = {
+    'c2y_hidden' => '%\\"c2y_hidden\\":true%', 'is_unsupported' => '%\\"is_unsupported\\":true%',
+    'view_once_unavailable' => '%\\"view_once_unavailable\\":true%', 'deleted_by_contact_at' => '%\\"deleted_by_contact_at\\":\\"%'
+  }.freeze
 
   def perform
     reason = c2y_turn_skip_reason
@@ -74,14 +78,13 @@ module Waha::RichNative::AgentTurnGuard
     desde ? chat.where(created_at: desde..) : chat
   end
 
+  # Só em SQL (sem carregar as mensagens): `content_attributes` é texto JSON gravado dentro de json, então no `::text` as
+  # aspas vêm escapadas (\"chave\":valor), e o LIKE casa a chave inteira com o valor que conta. ESCAPE '|' para a barra
+  # do JSON não ser o escape do LIKE.
   def c2y_uncounted_ids(chat)
-    sieve = UNCOUNTED_MARKERS.map { 'messages.content_attributes::text LIKE ?' }.join(' OR ')
-    chat.incoming.where(sieve, *UNCOUNTED_MARKERS.map { |marker| "%#{marker}%" })
-        .select { |message| c2y_uncounted?(message) }.map(&:id)
-  end
-
-  def c2y_uncounted?(message)
-    Waha::RichNative::AiTurn.turn?(message) || (c2y_waha_with_flag? && Waha::RichNative::TurnKinds.kind(message).present?)
+    markers = c2y_waha_with_flag? ? UNCOUNTED_PATTERNS.values : UNCOUNTED_PATTERNS.values_at('c2y_hidden')
+    sieve = markers.map { "messages.content_attributes::text LIKE ? ESCAPE '|'" }.join(' OR ')
+    chat.incoming.where(sieve, *markers).pluck(:id)
   end
 
   def c2y_stale_choice?(message)
@@ -97,9 +100,10 @@ module Waha::RichNative::AgentTurnGuard
     nil
   end
 
-  # Erro inesperado do guard: não derruba o turno (a IA segue como na main), mas vai ao rastreador e ao log.
+  # Erro inesperado do guard: não derruba o turno (a IA segue como na main), mas vai ao rastreador (sem a mensagem
+  # original, Waha::RichNative::SafeReport) e ao log (só a classe).
   def c2y_report(error, label)
-    ChatwootExceptionTracker.new(error, account: @conversation.account).capture_exception
+    Waha::RichNative::SafeReport.capture(error, account: @conversation.account)
     Rails.logger.warn("[autonomia][operate] #{label} conv=#{@conversation.id} #{error.class}")
   end
 
@@ -141,14 +145,24 @@ module Waha::RichNative::AgentTurnGuard
   # Silêncio 17 (só voto/resposta retirados no turno): a conversa não fica "esperando resposta" por causa deles. O
   # `waiting_since` só é armado por mensagem do cliente com ele vazio (Message#set_waiting_since_on_incoming_message);
   # se foi armado por uma escolha deste turno, volta a vazio. Armado antes (uma mensagem real anterior), fica.
+  # Compare-and-clear: só limpa se o `waiting_since` ainda é o que o voto armou (uma mensagem nova do cliente no meio
+  # não perde a espera). Limpo por update_all, sem os callbacks da conversa: os dois que importam para a tela rodam
+  # aqui, só quando limpou (a contagem de não lidas filtrada e o `conversation.updated`).
   def c2y_disarm_waiting!
-    waiting = @conversation.reload.waiting_since
+    waiting = Conversation.where(id: @conversation.id).pick(:waiting_since)
     return if waiting.nil?
     return unless c2y_turn_incoming.any? { |message| message.created_at.to_i == waiting.to_i && Waha::RichNative::AiTurn.turn?(message) }
 
-    @conversation.update!(waiting_since: nil)
+    cleared = Conversation.where(id: @conversation.id, waiting_since: waiting).update_all(waiting_since: nil) # rubocop:disable Rails/SkipsModelValidations
+    c2y_after_disarm(waiting) if cleared == 1
   rescue StandardError => e
     c2y_report(e, 'c2y_disarm_waiting_failed')
+  end
+
+  def c2y_after_disarm(waiting)
+    conversation = @conversation.reload
+    ::Conversations::UnreadCounts::FilteredCountInvalidator.new(conversation.account).conversation_changed!
+    conversation.dispatch_conversation_updated_event({ 'waiting_since' => [waiting, nil] })
   end
 
   # Uma vez por mensagem do cliente (sem índice único: uma duplicata rara na corrida é aceita, como no #1669). O
