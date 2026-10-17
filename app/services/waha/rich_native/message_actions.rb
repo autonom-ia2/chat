@@ -5,7 +5,8 @@
 # Um motor sem o patch ignora o evento (o conector original devolve null para evento desconhecido). A gravação não
 # manda `message_updated` ao conector (Waha::RichNative::SilentUpdate): o evento próprio é o único pedido.
 # Só com a flag `whatsapp_rich_native`, na caixa WAHA comum cujo motor declara a ação (Waha::EngineCapabilities.actions).
-# Cada método devolve nil quando gravou e mandou, ou o motivo da recusa (símbolo; o controller responde 403/422).
+# Cada método devolve nil quando gravou e pediu o envio, ou o motivo da recusa (símbolo; o controller responde 403/422).
+# O envio ao conector é assíncrono e com nova tentativa; se não chegar, fica uma nota privada na conversa.
 # - A reação é da EMPRESA (Waha::RichNative::Reactions): a de um atendente troca a de outro, como no WhatsApp.
 # - Editar: só quem enviou a mensagem, ou um administrador da conta (a do robô, da IA ou de outro atendente só pelo
 #   administrador); o histórico guarda quem editou.
@@ -63,12 +64,13 @@ module Waha::RichNative::MessageActions
     message.sender_type == 'User' && message.sender_id == user.id
   end
 
-  # O evento vai ao webhook da caixa com as mesmas travas da entrega de sempre (endereço e trava de transmissão).
+  # O evento vai ao webhook da caixa com as mesmas travas da entrega de sempre (endereço e trava de transmissão), por um
+  # job que tenta de novo e, se não chegar, deixa a nota na conversa (Waha::RichNative::MessageActionDeliveryJob).
   def deliver(message, event, extra)
     channel = message.inbox.channel
     return if channel.webhook_url.blank? || ::Autonomia::Channels::BroadcastGuard.blocked_conversation?(message.conversation)
 
-    WebhookJob.perform_later(channel.webhook_url, message.webhook_data.merge(event: event, **extra), :api_inbox_webhook,
-                             secret: channel.secret, delivery_id: SecureRandom.uuid)
+    payload = JSON.parse(message.webhook_data.merge(event: event, **extra).to_json)
+    Waha::RichNative::MessageActionDeliveryJob.perform_later(message.id, payload, SecureRandom.uuid)
   end
 end

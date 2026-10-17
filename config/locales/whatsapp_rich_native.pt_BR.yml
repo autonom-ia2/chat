@@ -51,6 +51,8 @@ pt_BR:
       reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
       edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."
       edit_not_author: "Só quem enviou a mensagem, ou um administrador, pode editá-la."
+      reaction_not_delivered: "A reação não chegou ao WhatsApp do cliente. Ela ficou registrada só aqui no chat2you."
+      edit_not_delivered: "A edição não chegou ao WhatsApp do cliente. O cliente continua vendo o texto anterior."
   whatsapp_hybrid:
     rich_native:
       restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."
