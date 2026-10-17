@@ -181,6 +181,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(historicos.sole.first[:content]).not_to include('escreveu ao cliente', codigo)
     end
 
+    it 'imagem com legenda da Ana continua só com a legenda (o anexo de mídia não vira resumo)' do
+      escreve(:incoming, 'Manda a foto do boleto?')
+      foto = escreve(:outgoing, 'Segue o boleto', sender: ana)
+      foto.attachments.create!(account_id: account.id, file_type: :image,
+                               file: fixture_file_upload(Rails.root.join('spec/assets/avatar.png'), 'image/png'))
+      responder(escreve(:incoming, 'Recebi'))
+
+      expect(historicos.sole.second).to eq(role: 'user', content: "#{moldura_da_ana}\nSegue o boleto")
+    end
+
     it 'imagem sem legenda da Ana continua vazia, sem moldura nem regra do turno' do
       escreve(:incoming, 'Manda a foto do boleto?')
       foto = escreve(:outgoing, '', sender: ana)

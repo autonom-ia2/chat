@@ -81,7 +81,8 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     { role: 'assistant', content: texto(message) }
   end
 
-  # O `content`, ou o resumo da localização/contato quando ele está vazio (ResumoDaMensagemRica).
+  # O texto da mensagem para o histórico: o resumo do contato em anexo, o `content`, ou o resumo da localização/contato
+  # quando ele está vazio (ResumoDaMensagemRica).
   def texto(message)
     ::Autonomia::Agents::Operate::ResumoDaMensagemRica.texto(message)
   end

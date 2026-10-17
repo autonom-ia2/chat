@@ -2,6 +2,8 @@
 # #1702) vão com `content` vazio; sem isto, o item saía vazio e o teto do histórico o descartava: a IA não sabia que a
 # equipe (ou o cliente) mandou uma localização ou um contato.
 #
+# O ANEXO DE CONTATO vem primeiro, mesmo com `content`: no WhatsApp (oficial, coexistência, Híbrido) o contato chega com
+# o nome em `content` (formatted_name) e o telefone só no anexo -> "Contato: nome — telefone".
 # Com `content` vazio, o resumo sai, na ordem, de:
 #   1. `content_attributes.rich_message` (o que o painel manda):
 #        { "type": "location", "name": "...", "address": "...", ... } -> "Localização: nome — endereço"
@@ -13,8 +15,7 @@
 #        anexo `contact`: nome em `meta` (`firstName`/`lastName` no WhatsApp, `first_name`/`last_name` no Telegram) e
 #                         o telefone em `fallback_title`, um anexo por telefone -> "Contato: nome — tel1, tel2"
 # Decisões do Rodrigo (17/10/2026): o TELEFONE do contato entra ("tudo"), venha da equipe ou do cliente; as COORDENADAS
-# não entram (sem nome nem endereço, o resumo diz só que foi uma localização). No WhatsApp oficial o contato já vem com
-# o nome em `content` (formatted_name), e o resumo não roda.
+# não entram (sem nome nem endereço, o resumo diz só que foi uma localização).
 # Limite conhecido: o eco do app em caixa que não é WhatsApp (Instagram/Facebook com `external_echo`) não ganha moldura
 # e vai como fala da IA (PessoaDaEquipe só reconhece o eco no WhatsApp).
 # Os outros tipos levam o texto em `content` e não passam por aqui. Só a Fase 2 chama (PessoaDaEquipe); a moldura
@@ -30,7 +31,7 @@ module Autonomia::Agents::Operate::ResumoDaMensagemRica
 
   module_function
 
-  # O `content` da mensagem, ou o resumo do formato quando ele está vazio; '' quando não há nem um nem outro.
+  # O resumo do contato em anexo (mesmo com `content`), senão o `content`, senão o resumo do formato; '' sem nenhum.
   # O contato vem primeiro porque no WhatsApp (oficial, coexistência, Híbrido) ele chega com o nome em `content`
   # (formatted_name) e o telefone só no anexo: sem isso o telefone nunca entraria.
   def texto(message)
