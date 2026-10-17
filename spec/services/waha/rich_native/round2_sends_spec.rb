@@ -132,6 +132,26 @@ describe 'WAHA rich native round 2 sends' do # rubocop:disable RSpec/DescribeCla
       expect(conversation.messages.incoming.pluck(:source_id)).to eq(%w[waha-event-response-R1 waha-event-response-R4])
     end
 
+    it 'only aggregates the reply on a resolved conversation when the contact has a newer open one (item 6)' do
+      event = native_event
+      conversation.resolved!
+      create(:conversation, inbox: inbox, account: account, contact: contact, contact_inbox: conversation.contact_inbox)
+
+      reply('going')
+
+      expect(event.reload.content_attributes['event_responses'].sole).to include('response' => 'going')
+      expect(conversation.messages.find_by(source_id: 'waha-event-response-R1')).to be_activity
+      expect(conversation.reload).to be_resolved
+    end
+
+    it 'keeps the event untouched when the record cannot be saved (one transaction, item 5)' do
+      event = native_event
+      allow(Waha::RichNative::InternalWrite).to receive(:mark!).and_raise(ActiveRecord::StatementInvalid, 'falhou')
+
+      expect { reply('going') }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(event.reload.content_attributes['event_responses']).to be_nil
+    end
+
     it 'aggregates one reply per person on our native event, once per reply id, as a hidden customer turn' do
       event = native_event
       expect(event.content_attributes['rich_message_sent_as']).to eq('native')

@@ -37,8 +37,11 @@ class WhatsappHybrid::RichNative::EventResponseJob < ApplicationJob
     message = event.conversation.messages.new(account_id: event.account_id, inbox_id: event.inbox_id, message_type: :incoming,
                                               sender: event.conversation.contact, source_id: source_id,
                                               additional_attributes: { WhatsappHybrid::RichNative::WindowNeutral::KEY => true })
-    Waha::RichNative::EventResponses.record_response!(message, event, response: fields['response'], extra_guests: fields['extra_guests'],
-                                                                      timestamp: fields['timestamp'])
-    Waha::RichNative::InternalWrite.mark!(message).save!
+    # A resposta agregada no evento e o registro dela, juntos (como o voto, WhatsappHybrid::RichNative::PollVoteJob).
+    ActiveRecord::Base.transaction do
+      Waha::RichNative::EventResponses.record_response!(message, event, response: fields['response'], extra_guests: fields['extra_guests'],
+                                                                        timestamp: fields['timestamp'])
+      Waha::RichNative::InternalWrite.mark!(message).save!(validate: false)
+    end
   end
 end

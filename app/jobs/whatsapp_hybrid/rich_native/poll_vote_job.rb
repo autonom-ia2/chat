@@ -44,7 +44,11 @@ class WhatsappHybrid::RichNative::PollVoteJob < ApplicationJob
     message = poll.conversation.messages.new(account_id: poll.account_id, inbox_id: poll.inbox_id, message_type: :incoming,
                                              sender: poll.conversation.contact, source_id: source_id,
                                              additional_attributes: { WhatsappHybrid::RichNative::WindowNeutral::KEY => true })
-    Waha::RichNative::PollVote.record_vote!(message, poll, selected, timestamp: fields['timestamp'])
-    Waha::RichNative::InternalWrite.mark!(message).save!
+    # O voto agregado na enquete e o registro dele, juntos: um sem o outro deixaria o voto contado sem registro (e o job
+    # refeito o contaria de novo como turno) ou o registro sem o voto. Sem as validações do modelo, como o resto do pacote.
+    ActiveRecord::Base.transaction do
+      Waha::RichNative::PollVote.record_vote!(message, poll, selected, timestamp: fields['timestamp'])
+      Waha::RichNative::InternalWrite.mark!(message).save!(validate: false)
+    end
   end
 end

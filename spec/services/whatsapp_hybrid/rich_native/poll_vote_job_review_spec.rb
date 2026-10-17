@@ -1,6 +1,8 @@
 require 'rails_helper'
 require_relative '../rich_native_context'
 
+RSpec::Matchers.define_negated_matcher :not_include, :include unless RSpec::Matchers.method_defined?(:not_include)
+
 # chat#1709 (fase 3, revisão): o voto do plano B não abre a janela da Cloud, é achado depois de o registro do ack
 # expirar e não vira bolha "não suportada" quando a Meta o entrega à Cloud; apagar pede ao motor uma vez só, e o erro do
 # motor não leva telefone ao rastreador.
@@ -65,6 +67,58 @@ describe WhatsappHybrid::RichNative::PollVoteJob do
     expect(conversation.messages.where(source_id: %w[waha-poll-vote-V2 waha-poll-vote-V3]).map { |message| message.content_attributes['c2y_hidden'] })
       .to all(be(true))
     expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq([])
+  end
+
+  # Rodada de correção, item 5: o voto agregado e o registro dele vão juntos, sem as validações do modelo.
+  describe 'the aggregation and its record in one transaction' do
+    it 'keeps the poll untouched when the record cannot be saved' do
+      poll_message = native_poll
+      allow(Waha::RichNative::InternalWrite).to receive(:mark!).and_raise(ActiveRecord::StatementInvalid, 'falhou')
+
+      expect { vote(['Sim']) }.to raise_error(ActiveRecord::StatementInvalid)
+
+      expect(poll_message.reload.content_attributes['poll_votes']).to be_nil
+      expect(conversation.messages.where(source_id: 'waha-poll-vote-V1')).to be_empty
+    end
+
+    it 'records the vote in a busy conversation (no flooding validation)' do
+      poll_message = native_poll
+      allow_any_instance_of(Message).to receive(:prevent_message_flooding) do |message| # rubocop:disable RSpec/AnyInstance
+        message.errors.add(:base, 'Too many messages') if message.source_id.to_s.start_with?('waha-poll-vote-')
+      end
+
+      vote(['Sim'])
+
+      expect(conversation.messages.where(source_id: 'waha-poll-vote-V1')).to exist
+      expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq(['Sim'])
+    end
+  end
+
+  # Rodada de correção, item 6: voto na conversa resolvida quando o contato já está numa conversa mais nova aberta.
+  describe 'a vote on a resolved conversation left behind' do
+    it 'only aggregates: a hidden activity, the old conversation stays resolved and there is no AI turn' do
+      poll_message = native_poll
+      conversation.resolved!
+      create(:conversation, inbox: inbox, account: account, contact: contact, contact_inbox: conversation.contact_inbox)
+
+      vote(['Sim'])
+
+      expect(poll_message.reload.content_attributes['poll_votes'].sole['options']).to eq(['Sim'])
+      record = conversation.messages.find_by(source_id: 'waha-poll-vote-V1')
+      # Atividade (não recebida): nem reabre a conversa nem vira turno da IA (o MessageListener só ouve recebida).
+      expect(record).to be_activity
+      expect(record.content_attributes).to include('c2y_hidden' => true).and(not_include('c2y_ai_turn'))
+      expect(conversation.reload).to be_resolved
+    end
+
+    it 'is still a turn on a resolved conversation without a newer one (it reopens, as any customer message)' do
+      native_poll
+      conversation.resolved!
+
+      vote(['Sim'])
+
+      expect(conversation.messages.find_by(source_id: 'waha-poll-vote-V1')).to be_incoming
+    end
   end
 
   describe 'the unsupported the Meta may send to the Cloud for the vote' do
