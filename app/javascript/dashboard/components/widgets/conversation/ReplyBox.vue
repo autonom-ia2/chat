@@ -63,6 +63,15 @@ import {
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
+import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
+import {
+  MODOS_DE_RESPOSTA,
+  RESPONDER_EMAIL,
+  useEmailDaConversa,
+} from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { montarRespostaDoEmail } from 'dashboard/components-next/conversa-canal/email/respostaDoEmail';
+import { idiomaDoPainel } from 'dashboard/components-next/conversa-canal/dataDaConversa';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -83,6 +92,7 @@ export default {
     AttachmentPreview,
     AudioRecorder,
     GravadorDoWhatsapp,
+    CabecaDaResposta,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
@@ -119,6 +129,8 @@ export default {
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
     // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
     const { classesDaResposta, textoDoCampo, ehWhatsapp } = usePeleDaResposta();
+    // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
+    const emailNovo = useEmailDaConversa().ligado;
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
@@ -168,6 +180,7 @@ export default {
       macroExecution,
       classesDaResposta,
       ehWhatsapp,
+      emailNovo,
       textoDoCampo,
     };
   },
@@ -202,6 +215,7 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      modoDoEmail: MODOS_DE_RESPOSTA.TODOS,
       // #1702: a seta do gravador do WhatsApp para e envia; o envio sai quando o áudio vira anexo.
       enviarAudioAoAnexar: false,
       copilotAcceptedMessages: {},
@@ -334,6 +348,10 @@ export default {
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
       if (!this.isPrivate && this.textoDoCampo) return this.textoDoCampo;
+      // #1786: no e-mail novo, uma frase simples no lugar do atalho técnico.
+      if (!this.isPrivate && this.emailNovo) {
+        return this.$t('CONVERSA_CANAL.EMAIL.ESCREVA');
+      }
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -660,6 +678,7 @@ export default {
     this.fetchAndSetReplyTo();
     emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.on(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
+    emitter.on(RESPONDER_EMAIL, this.responderEmail);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -674,6 +693,7 @@ export default {
     document.removeEventListener('paste', this.onPaste);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
+    emitter.off(RESPONDER_EMAIL, this.responderEmail);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -1348,6 +1368,37 @@ export default {
       }
       return messagePayload;
     },
+    // #1786: as ações da conversa de e-mail nova montam os destinatários (e o texto do
+    // encaminhado) a partir do e-mail escolhido, e o envio segue o de sempre.
+    responderEmail({ modo, mensagemId } = {}) {
+      const mensagem =
+        this.currentChat?.messages?.find(item => item.id === mensagemId) ||
+        this.lastEmail;
+      const resposta = montarRespostaDoEmail({
+        modo,
+        mensagem,
+        contato: this.currentChat?.meta?.sender?.email,
+        caixa: this.inbox,
+        t: this.$t,
+        fuso: fusoDaConta(
+          this.$store.getters['accounts/getAccount'](
+            this.$store.getters.getCurrentAccountId
+          )
+        ),
+        idioma: idiomaDoPainel(this.$i18n.locale),
+      });
+      this.modoDoEmail = modo;
+      this.setReplyMode(REPLY_EDITOR_MODES.REPLY);
+      this.toEmails = resposta.para;
+      this.ccEmails = resposta.cc;
+      this.bccEmails = resposta.cco;
+      // O encaminhado entra no fim do que já foi escrito, uma vez só.
+      const marca = this.$t('CONVERSA_CANAL.EMAIL.ENCAMINHADA');
+      if (resposta.texto && !String(this.message || '').includes(marca)) {
+        this.message = `${this.message || ''}${resposta.texto}`;
+      }
+      this.$nextTick(() => this.messageEditor?.focusEditorInputField('start'));
+    },
     setCcEmails(value) {
       this.bccEmails = value.bccEmails;
       this.ccEmails = value.ccEmails;
@@ -1510,8 +1561,16 @@ export default {
           }"
           @select="addIntoEditor($event.value)"
         />
+        <CabecaDaResposta
+          v-if="showReplyHead && isDefaultEditorMode && emailNovo"
+          v-model:cc-emails="ccEmails"
+          v-model:bcc-emails="bccEmails"
+          v-model:to-emails="toEmails"
+          :modo="modoDoEmail"
+          @trocar-modo="responderEmail({ modo: $event })"
+        />
         <ReplyEmailHead
-          v-if="showReplyHead && isDefaultEditorMode"
+          v-else-if="showReplyHead && isDefaultEditorMode"
           v-model:cc-emails="ccEmails"
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"

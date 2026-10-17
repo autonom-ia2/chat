@@ -42,6 +42,7 @@ import wootConstants, {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useConversaDeEmail } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -96,6 +97,11 @@ export default {
     provide('contextMenuElementTarget', conversationPanelRef);
     // #1702: conversa com a cara do canal (WhatsApp), atrás da chave da conta.
     const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
+    // #1786: conversa de e-mail com a cara do Gmail, atrás da chave própria.
+    const {
+      classesDaLista: classesDoEmail,
+      classesDaBarra: classesDaRespostaDoEmail,
+    } = useConversaDeEmail();
     // #1702: superadmin entrando como o usuário não marca a mensagem como lida no WhatsApp do cliente.
     const { isImpersonating } = useImpersonation();
 
@@ -115,6 +121,8 @@ export default {
       pele,
       classesDaLista,
       classesDaBarra,
+      classesDoEmail,
+      classesDaRespostaDoEmail,
       isImpersonating,
       selecaoParaEncaminhar,
     };
@@ -735,7 +743,7 @@ export default {
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
-      :class="classesDaLista"
+      :class="[classesDaLista, classesDoEmail]"
       :current-user-id="currentUserId"
       :first-unread-id="primeiraNaoLidaDaLista"
       :is-an-email-channel="isAnEmailChannel"
@@ -792,7 +800,10 @@ export default {
         />
       </template>
     </MessageList>
-    <div class="flex relative flex-col bg-n-surface-1" :class="classesDaBarra">
+    <div
+      class="flex relative flex-col bg-n-surface-1"
+      :class="[classesDaBarra, classesDaRespostaDoEmail]"
+    >
       <div
         v-if="isAnyoneTyping"
         class="absolute flex items-center w-full h-0 -top-7"

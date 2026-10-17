@@ -885,6 +885,15 @@ watch(
   }
 );
 
+// #1786: o texto do campo pode mudar depois de abrir (idioma carregado, chave da conta,
+// e-mail com a cara do Gmail); o ProseMirror só o lê ao montar o estado.
+watch(
+  computed(() => props.placeholder),
+  () => {
+    reloadState(props.modelValue);
+  }
+);
+
 watch(
   computed(() => props.disabled),
   () => editorView?.setProps({})

@@ -498,3 +498,16 @@
   display_name: WhatsApp API recupera mensagens "não suportadas"
   enabled: false
   column: feature_flags_ext_1
+
+# Conversa de e-mail com a cara do Gmail (#1786, #1809, épico #1701): na caixa de e-mail a conversa vira uma sequência
+# de cartões (foto, remetente real, para/cc, data, corpo limpo, citação em "…", anexos), com o assunto no topo e
+# Responder / Responder a todos / Encaminhar no fim. Separada da `conversa_cara_do_canal` para não ligar sozinha onde
+# o WhatsApp já está ligado. Posição 38 reservada pela Orquestração (bit 37, 137438953472), depois de
+# whatsapp_rich_native (#1741, 34), etiquetas (#1839, 35), tela_inicial_resumo (#1818, 36) e email_autoria (#1819, 37).
+# Enquanto eles não estão na main, fica no fim do que está lá (hoje bit 33, logo depois de `whatsapp_hybrid_recovery`,
+# bit 32, sem placeholder) e o bit é ajustado na hora da vaga (spec/models/account_spec.rb).
+# Desligada (padrão): a conversa de e-mail de sempre.
+- name: conversa_email_nova
+  display_name: Conversa de e-mail com a cara do Gmail
+  enabled: false
+  column: feature_flags_ext_1

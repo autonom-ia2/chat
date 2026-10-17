@@ -11,6 +11,9 @@ import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
 import { usePele } from '../conversa-canal/pele';
+import TopoDoEmail from '../conversa-canal/email/TopoDoEmail.vue';
+import AcoesDoEmail from '../conversa-canal/email/AcoesDoEmail.vue';
+import { useEmailDaConversa } from '../conversa-canal/email/useConversaDeEmail';
 import {
   ocultaNaPele,
   primeiraNaoLidaVisivel,
@@ -55,6 +58,8 @@ const emit = defineEmits(['retry']);
 // que o agente da Autonomia leu) sai da lista antes de tudo, para não quebrar
 // sequência, dia nem álbum.
 const peleDaLista = usePele();
+// #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
+const emailNovo = useEmailDaConversa().ligado;
 const allMessages = computed(() => {
   const mensagens = useCamelCase(props.messages, {
     deep: true,
@@ -196,6 +201,7 @@ const getInReplyToMessage = parentMessage => {
 <template>
   <ul class="px-4 bg-n-surface-1">
     <slot name="beforeAll" />
+    <TopoDoEmail v-if="emailNovo" />
     <template v-for="(message, index) in allMessages" :key="message.id">
       <SeparadorDeDia v-if="abreODia(index)" :quando="message.createdAt" />
       <slot
@@ -215,6 +221,7 @@ const getInReplyToMessage = parentMessage => {
       />
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
     </template>
+    <AcoesDoEmail v-if="emailNovo && allMessages.length" />
     <slot name="after" />
     <BotaoDeDescer
       v-if="pele"

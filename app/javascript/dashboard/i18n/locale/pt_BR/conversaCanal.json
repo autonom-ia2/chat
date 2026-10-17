@@ -346,6 +346,38 @@
       "DESTINO_FALHOU": "{nome}: {erro}",
       "NAO_FOI": "Não foi para estas conversas. Elas continuam marcadas para tentar de novo:",
       "FALHOU": "Não deu para encaminhar. Tente de novo."
+    },
+    "EMAIL": {
+      "MIM": "mim",
+      "PARA_RESUMO": "para {nomes}",
+      "ABRIR": "Abrir o e-mail de {nome}",
+      "SELO_CLIENTE": "Cliente",
+      "SELO_COPIA": "em cópia",
+      "SELO_COPIA_DICA": "Quem escreveu este e-mail não é o contato da conversa: é alguém que estava em cópia.",
+      "SELO_AVISO": "Aviso automático de agendamento",
+      "SELO_FALHA": "Não enviado",
+      "MOSTRAR_DETALHES": "Mostrar detalhes",
+      "DE": "De",
+      "PARA": "Para",
+      "CC": "Cc",
+      "CCO": "Cco",
+      "DATA": "Data",
+      "ASSUNTO": "Assunto",
+      "RESPONDER": "Responder",
+      "RESPONDER_TODOS": "Responder a todos",
+      "ENCAMINHAR": "Encaminhar",
+      "EXIBIR_TUDO": "Exibir toda a mensagem",
+      "MOSTRAR_CITACAO": "Mostrar o texto citado",
+      "ESCONDER_CITACAO": "Esconder o texto citado",
+      "ANEXOS": "Anexo | {total} anexos",
+      "SEM_ASSUNTO": "(sem assunto)",
+      "RECOLHER_ANTIGAS": "Recolher mensagens antigas",
+      "ABRIR_TODAS": "Abrir todas as mensagens",
+      "TIPO_DE_RESPOSTA": "Tipo de resposta",
+      "PARA_EXEMPLO": "Para quem vai este e-mail",
+      "ENDERECO_INVALIDO": "Confira os endereços: algum está escrito errado.",
+      "ENCAMINHADA": "---------- Mensagem encaminhada ----------",
+      "ESCREVA": "Escreva sua resposta"
     }
   }
 }

@@ -346,6 +346,38 @@
       "DESTINO_FALHOU": "{nome}: {erro}",
       "NAO_FOI": "These conversations didn't get it and are still selected to try again:",
       "FALHOU": "Could not forward. Try again."
+    },
+    "EMAIL": {
+      "MIM": "me",
+      "PARA_RESUMO": "to {nomes}",
+      "ABRIR": "Open the email from {nome}",
+      "SELO_CLIENTE": "Customer",
+      "SELO_COPIA": "in copy",
+      "SELO_COPIA_DICA": "This email was not written by the conversation contact: it is from someone who was in copy.",
+      "SELO_AVISO": "Automatic booking notice",
+      "SELO_FALHA": "Not sent",
+      "MOSTRAR_DETALHES": "Show details",
+      "DE": "From",
+      "PARA": "To",
+      "CC": "Cc",
+      "CCO": "Bcc",
+      "DATA": "Date",
+      "ASSUNTO": "Subject",
+      "RESPONDER": "Reply",
+      "RESPONDER_TODOS": "Reply all",
+      "ENCAMINHAR": "Forward",
+      "EXIBIR_TUDO": "View entire message",
+      "MOSTRAR_CITACAO": "Show quoted text",
+      "ESCONDER_CITACAO": "Hide quoted text",
+      "ANEXOS": "Attachment | {total} attachments",
+      "SEM_ASSUNTO": "(no subject)",
+      "RECOLHER_ANTIGAS": "Collapse older messages",
+      "ABRIR_TODAS": "Expand all messages",
+      "TIPO_DE_RESPOSTA": "Type of response",
+      "PARA_EXEMPLO": "Who this email is for",
+      "ENDERECO_INVALIDO": "Check the addresses: one of them is misspelled.",
+      "ENCAMINHADA": "---------- Forwarded message ----------",
+      "ESCREVA": "Write your reply"
     }
   }
 }
