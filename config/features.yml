@@ -466,3 +466,14 @@
   display_name: Toda mensagem do cliente avalia o card em foco
   enabled: false
   column: feature_flags_ext_1
+
+# Memória das IAs (#1601): os fatos do cliente e do pedido com procedência ("cliente informou" × "corrigido"), que a IA
+# lê pelo Crm::Memoria::Leitor e a equipe vê embaixo de cada campo do card. Bit 30 (1073741824):
+# a posição na lista é o bit, no fim do que está na main, logo depois de `crm_avaliar_toda_mensagem` (bit 29); outros
+# PRs abertos (#1724, #1726, #1741) também querem o 30, então o bit sobe conforme a ordem de merge (ajustar o
+# spec/models/account_spec.rb). Único ponto de leitura: Crm::Memoria.ligada?(account). Desligada (padrão): nada é
+# gravado nem lido, como antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: memoria_ia
+  display_name: Memória das IAs (fatos do cliente e do pedido com procedência)
+  enabled: false
+  column: feature_flags_ext_1
