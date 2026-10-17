@@ -13,6 +13,8 @@ describe ConversaCanal::AtualizacaoDaPele do
                      content: 'oi', content_attributes: { 'external_error' => nil })
   end
 
+  before { account.enable_features!('conversa_cara_do_canal') }
+
   def evento(mudancas)
     Events::Base.new('message.updated', Time.zone.now, message: message, previous_changes: mudancas)
   end
@@ -53,6 +55,13 @@ describe ConversaCanal::AtualizacaoDaPele do
       AgentBotListener.instance.message_updated(evento(reacao))
     end
 
+    it 'com a pele desligada, manda ao robô como na main' do
+      account.disable_features!('conversa_cara_do_canal')
+      expect(AgentBots::WebhookJob).to receive(:perform_later).once
+
+      AgentBotListener.instance.message_updated(evento(reacao))
+    end
+
     it 'manda ao robô a atualização de sempre' do
       expect(AgentBots::WebhookJob).to receive(:perform_later).once
 
@@ -69,6 +78,15 @@ describe ConversaCanal::AtualizacaoDaPele do
 
       expect(WebhookJob).not_to have_received(:perform_later).with('https://conector.test/chatwoot', any_args)
       expect(WebhookJob).to have_received(:perform_later).with(webhook.url, anything, :account_webhook, any_args)
+    end
+
+    it 'com a pele desligada, manda ao webhook da caixa API como na main' do
+      account.disable_features!('conversa_cara_do_canal')
+      allow(WebhookJob).to receive(:perform_later)
+
+      WebhookListener.instance.message_updated(evento(reacao))
+
+      expect(WebhookJob).to have_received(:perform_later).with('https://conector.test/chatwoot', anything, :api_inbox_webhook, any_args)
     end
 
     it 'a atualização de sempre continua indo ao webhook da caixa API' do

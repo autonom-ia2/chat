@@ -15,6 +15,12 @@ module ConversaCanal::AtualizacaoDaPele
 
   module_function
 
+  # Só com a pele ligada na conta: sem ela, robô e webhooks recebem tudo como na main (inclusive as marcas gravadas
+  # pelo WhatsApp Híbrido, que tem o próprio silêncio, Waha::RichNative::SilentUpdate).
+  def silenciar?(message, mudancas)
+    message.present? && ConversaCanal::Pele.ligada?(message.account) && so_da_pele?(mudancas)
+  end
+
   # `previous_changes` do evento: { 'coluna' => [antes, depois] }.
   def so_da_pele?(mudancas)
     return false unless mudancas.respond_to?(:keys)
