@@ -34,6 +34,8 @@
     "ABRIR_MENU": "Abrir menu",
     "ANUNCIO_RECOLHIDO": "Menu recolhido",
     "ANUNCIO_ABERTO": "Menu aberto",
+    "MAIS_ACIMA": "Mais acima",
+    "MAIS_ABAIXO": "Mais abaixo",
     "ATRIBUICAO": {
       "TEXTO": "Quem recebe cada conversa é definido em Atribuição.",
       "LINK": "Abrir Atribuição"

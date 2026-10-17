@@ -34,6 +34,8 @@
     "ABRIR_MENU": "Open menu",
     "ANUNCIO_RECOLHIDO": "Menu collapsed",
     "ANUNCIO_ABERTO": "Menu open",
+    "MAIS_ACIMA": "More above",
+    "MAIS_ABAIXO": "More below",
     "ATRIBUICAO": {
       "TEXTO": "Who gets each conversation is set in Assignment.",
       "LINK": "Open Assignment"

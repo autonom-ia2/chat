@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useWindowSize } from '@vueuse/core';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -15,7 +16,10 @@ import { temaDoMenu } from './tema';
 import ForkSidebarItem from './ForkSidebarItem.vue';
 import ForkSidebarIcone from './ForkSidebarIcone.vue';
 import ForkSidebarRecolher from './ForkSidebarRecolher.vue';
-import { useLarguraDoMenu } from './useLarguraDoMenu';
+import { TELA_MEDIA_DE, useLarguraDoMenu } from './useLarguraDoMenu';
+import { ehTelaDeTrabalho, useRecolherSozinho } from './useRecolherSozinho';
+import { usePainelDoContatoRecolhido } from './usePainelDoContatoRecolhido';
+import { useSetasDeRolagem } from './useSetasDeRolagem';
 
 // Menu lateral novo (#1617). Recebe a lista que o Sidebar.vue já monta e só reorganiza (forkSidebarMenu.js).
 // Fica no lugar da <nav> de sempre quando a flag `menu_lateral_novo` está ligada na conta.
@@ -115,12 +119,31 @@ const pendenciaDe = item =>
     : '';
 
 // Largura: 256px aberto, botão e atalho para recolher, recolhido sozinho em tela média sem escolha.
-const { alternar: alternarLargura, anuncio } = useLarguraDoMenu({
+// Nas telas de trabalho (#1781) o menu recolhe sozinho em 30 s; no celular vale a gaveta de sempre.
+const { width: larguraDaJanela } = useWindowSize();
+const telaDeTrabalho = computed(
+  () => larguraDaJanela.value >= TELA_MEDIA_DE && ehTelaDeTrabalho(route.name)
+);
+const {
+  alternar: alternarLargura,
+  anuncio,
+  recolherSemSalvar,
+  aplicar,
+} = useLarguraDoMenu({
   sidebarWidth,
   isCollapsed,
   uiSettings,
   updateUISettings,
+  telaDeTrabalho,
 });
+const recolherSozinho = useRecolherSozinho({
+  route,
+  telaDeTrabalho,
+  isCollapsed,
+  recolher: recolherSemSalvar,
+  restaurar: aplicar,
+});
+usePainelDoContatoRecolhido({ route, uiSettings, updateUISettings });
 
 // Gaveta do celular: foco preso, Esc fecha, foco volta para quem abriu.
 const raiz = ref(null);
@@ -163,20 +186,13 @@ watch(
 );
 onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar));
 
-// A tela aberta pelo endereço pode estar fora da área visível do menu: rola até ela.
+// O menu não rola sozinho na troca de tela (#1781): só a pessoa rola. A borda avisa quando tem mais.
 const lista = ref(null);
-watch(
-  () => route.fullPath,
-  async () => {
-    await nextTick();
-    lista.value
-      ?.querySelector('[aria-current="page"]')
-      ?.scrollIntoView?.({ block: 'nearest' });
-  },
-  { immediate: true }
-);
+const conteudo = ref(null);
+const setas = useSetasDeRolagem(lista, conteudo);
 
 const navegou = () => {
+  recolherSozinho.depoisDoClique();
   if (props.gavetaAberta) emit('fechar');
 };
 </script>
@@ -186,6 +202,10 @@ const navegou = () => {
     ref="raiz"
     data-menu-novo
     class="flex flex-col flex-grow min-h-0 min-w-0"
+    @mouseenter="recolherSozinho.entrar"
+    @mouseleave="recolherSozinho.sair"
+    @focusin="recolherSozinho.focoEntrou"
+    @focusout="recolherSozinho.focoSaiu"
   >
     <div v-if="gavetaAberta" class="flex justify-end px-3 pb-1">
       <button
@@ -199,85 +219,139 @@ const navegou = () => {
         {{ t('FORK_SIDEBAR.FECHAR_GAVETA') }}
       </button>
     </div>
-    <nav
-      :id="ID_DA_LISTA"
-      ref="lista"
-      :aria-label="t('FORK_SIDEBAR.MENU')"
-      class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
-      :class="isCollapsed ? 'px-1.5 pb-3' : 'ps-3 pe-1 pb-4'"
-    >
-      <ul
-        v-if="topo.length"
-        class="grid gap-0.5 m-0 p-0 mb-3 list-none"
-        :class="{ 'justify-items-center': isCollapsed }"
+    <div class="relative flex flex-col flex-grow min-h-0">
+      <nav
+        :id="ID_DA_LISTA"
+        ref="lista"
+        :aria-label="t('FORK_SIDEBAR.MENU')"
+        class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
+        :class="isCollapsed ? 'px-1.5 pb-3' : 'ps-3 pe-1 pb-4'"
       >
-        <template v-for="item in topo" :key="item.name">
-          <ForkSidebarIcone
-            v-if="isCollapsed"
-            :item="item"
-            :ativa="ativa"
-            :tema="tema"
-            :pendencia="pendenciaDe(item)"
-          />
-          <ForkSidebarItem
-            v-else
-            :item="item"
-            :ativa="ativa"
-            :tema="tema"
-            :aberto="abertoNome === item.name"
-            :pendencia="pendenciaDe(item)"
-            @alternar="alternar"
-            @navegou="navegou"
-          />
-        </template>
-      </ul>
-      <section
-        v-for="grupo in grupos"
-        :key="grupo.id"
-        :aria-labelledby="isCollapsed ? undefined : `fork-grupo-${grupo.id}`"
-        :aria-label="isCollapsed ? grupo.label : undefined"
-        class="grid gap-1 mt-4 first-of-type:mt-1"
-      >
-        <h2
-          v-if="!isCollapsed"
-          :id="`fork-grupo-${grupo.id}`"
-          class="m-0 px-3 pb-1 text-sm font-semibold leading-5"
-          :class="tema.tituloGrupo"
-        >
-          {{ grupo.label }}
-        </h2>
-        <hr
-          v-else
-          aria-hidden="true"
-          class="w-6 mx-auto my-1 border-t"
-          :class="tema.linha"
-        />
-        <ul
-          class="grid gap-0.5 m-0 p-0 list-none"
-          :class="{ 'justify-items-center': isCollapsed }"
-        >
-          <template v-for="item in grupo.itens" :key="item.name">
-            <ForkSidebarIcone
-              v-if="isCollapsed"
-              :item="item"
-              :ativa="ativa"
-              :tema="tema"
-              :contagem="contagemDe(item)"
-            />
-            <ForkSidebarItem
+        <div ref="conteudo">
+          <ul
+            v-if="topo.length"
+            class="grid gap-0.5 m-0 p-0 mb-3 list-none"
+            :class="{ 'justify-items-center': isCollapsed }"
+          >
+            <template v-for="item in topo" :key="item.name">
+              <ForkSidebarIcone
+                v-if="isCollapsed"
+                :item="item"
+                :ativa="ativa"
+                :tema="tema"
+                :pendencia="pendenciaDe(item)"
+              />
+              <ForkSidebarItem
+                v-else
+                :item="item"
+                :ativa="ativa"
+                :tema="tema"
+                :aberto="abertoNome === item.name"
+                :pendencia="pendenciaDe(item)"
+                @alternar="alternar"
+                @navegou="navegou"
+              />
+            </template>
+          </ul>
+          <section
+            v-for="grupo in grupos"
+            :key="grupo.id"
+            :aria-labelledby="
+              isCollapsed ? undefined : `fork-grupo-${grupo.id}`
+            "
+            :aria-label="isCollapsed ? grupo.label : undefined"
+            class="grid gap-1 mt-4 first-of-type:mt-1"
+          >
+            <h2
+              v-if="!isCollapsed"
+              :id="`fork-grupo-${grupo.id}`"
+              class="m-0 px-3 pb-1 text-sm font-semibold leading-5"
+              :class="tema.tituloGrupo"
+            >
+              {{ grupo.label }}
+            </h2>
+            <hr
               v-else
-              :item="item"
-              :ativa="ativa"
-              :tema="tema"
-              :aberto="abertoNome === item.name"
-              :contagem="contagemDe(item)"
-              @alternar="alternar"
-              @navegou="navegou"
+              aria-hidden="true"
+              class="w-6 mx-auto my-1 border-t"
+              :class="tema.linha"
             />
-          </template>
-        </ul>
-      </section>
-    </nav>
+            <ul
+              class="grid gap-0.5 m-0 p-0 list-none"
+              :class="{ 'justify-items-center': isCollapsed }"
+            >
+              <template v-for="item in grupo.itens" :key="item.name">
+                <ForkSidebarIcone
+                  v-if="isCollapsed"
+                  :item="item"
+                  :ativa="ativa"
+                  :tema="tema"
+                  :contagem="contagemDe(item)"
+                />
+                <ForkSidebarItem
+                  v-else
+                  :item="item"
+                  :ativa="ativa"
+                  :tema="tema"
+                  :aberto="abertoNome === item.name"
+                  :contagem="contagemDe(item)"
+                  @alternar="alternar"
+                  @navegou="navegou"
+                />
+              </template>
+            </ul>
+          </section>
+        </div>
+      </nav>
+      <div
+        v-if="setas.acima.value"
+        data-esmaecido-cima
+        aria-hidden="true"
+        class="absolute inset-x-0 top-0 h-10 to-transparent pointer-events-none z-[1]"
+        :class="tema.esmaecidoCima"
+      />
+      <div
+        v-if="setas.abaixo.value"
+        data-esmaecido-baixo
+        aria-hidden="true"
+        class="absolute inset-x-0 bottom-0 h-10 to-transparent pointer-events-none z-[1]"
+        :class="tema.esmaecidoBaixo"
+      />
+      <button
+        v-if="setas.acima.value"
+        type="button"
+        data-seta-cima
+        :aria-label="t('FORK_SIDEBAR.MAIS_ACIMA')"
+        :aria-controls="ID_DA_LISTA"
+        class="absolute top-0 z-[2] flex items-center justify-center size-11 rounded-full"
+        :class="[tema.foco, isCollapsed ? 'inset-x-0 mx-auto' : 'end-1']"
+        @click="setas.rolarParaCima"
+      >
+        <span
+          class="flex items-center justify-center rounded-full size-7"
+          :class="tema.seta"
+        >
+          <span class="i-lucide-chevron-up size-4" aria-hidden="true" />
+        </span>
+      </button>
+      <button
+        v-if="setas.abaixo.value"
+        type="button"
+        data-seta-baixo
+        :aria-label="t('FORK_SIDEBAR.MAIS_ABAIXO')"
+        :aria-controls="ID_DA_LISTA"
+        class="absolute bottom-0 z-[2] flex items-center justify-center size-11 rounded-full"
+        :class="[tema.foco, isCollapsed ? 'inset-x-0 mx-auto' : 'end-1']"
+        @click="setas.rolarParaBaixo"
+      >
+        <span
+          class="flex items-center justify-center rounded-full size-7"
+          :class="tema.seta"
+        >
+          <span class="i-lucide-chevron-down size-4" aria-hidden="true" />
+        </span>
+      </button>
+    </div>
     <ul
       v-if="rodape.length"
       data-menu-rodape
@@ -306,6 +380,8 @@ const navegou = () => {
         :recolhido="isCollapsed"
         :controla="ID_DA_LISTA"
         :tema="tema"
+        :progresso="recolherSozinho.progresso.value"
+        :sem-animacao="recolherSozinho.reduzido.value"
         @alternar="alternarLargura"
       />
     </ul>

@@ -296,3 +296,81 @@ describe('ForkSidebarNav', () => {
     });
   });
 });
+
+// #1781: o menu não rola sozinho na troca de tela, e a borda avisa quando há itens fora da área visível.
+describe('ForkSidebarNav: rolagem (#1781)', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const medidas = (el, { topo, altura = 400, total = 1000 }) => {
+    Object.defineProperty(el, 'clientHeight', {
+      value: altura,
+      configurable: true,
+    });
+    Object.defineProperty(el, 'scrollHeight', {
+      value: total,
+      configurable: true,
+    });
+    el.scrollTop = topo;
+    el.dispatchEvent(new Event('scroll'));
+  };
+
+  it('trocar de tela não rola o menu', async () => {
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    montar();
+    rota.name = 'crm_calendar_index';
+    rota.fullPath = '/crm_calendar_index';
+    await nextTick();
+    await nextTick();
+    expect(rolar).not.toHaveBeenCalled();
+    rota.name = 'crm_kanban_index';
+    rota.fullPath = '/crm_kanban_index';
+    delete Element.prototype.scrollIntoView;
+  });
+
+  it('setas e esmaecido aparecem e somem conforme a rolagem; clicar rola uma tela', async () => {
+    const { wrapper } = montar();
+    const nav = wrapper.find('nav').element;
+    nav.scrollBy = vi.fn();
+    const ver = seletor => wrapper.find(seletor).exists();
+
+    medidas(nav, { topo: 0, total: 400 });
+    await nextTick();
+    expect(ver('[data-seta-cima]') || ver('[data-seta-baixo]')).toBe(false);
+
+    medidas(nav, { topo: 0 });
+    await nextTick();
+    expect(ver('[data-seta-cima]')).toBe(false);
+    expect(ver('[data-seta-baixo]')).toBe(true);
+    expect(ver('[data-esmaecido-baixo]')).toBe(true);
+    const baixo = wrapper.find('[data-seta-baixo]');
+    expect(baixo.attributes('aria-label')).toBe('FORK_SIDEBAR.MAIS_ABAIXO');
+    expect(baixo.classes()).toContain('size-11');
+    const esmaecido = wrapper.find('[data-esmaecido-baixo]');
+    expect(esmaecido.attributes('aria-hidden')).toBe('true');
+    expect(esmaecido.classes()).toContain('pointer-events-none');
+
+    await baixo.trigger('click');
+    expect(nav.scrollBy).toHaveBeenCalledWith({ top: 352, behavior: 'smooth' });
+
+    medidas(nav, { topo: 300 });
+    await nextTick();
+    expect(ver('[data-seta-cima]')).toBe(true);
+    expect(ver('[data-seta-baixo]')).toBe(true);
+
+    medidas(nav, { topo: 600 });
+    await nextTick();
+    expect(ver('[data-seta-cima]')).toBe(true);
+    expect(ver('[data-seta-baixo]')).toBe(false);
+    expect(wrapper.find('[data-seta-cima]').attributes('aria-label')).toBe(
+      'FORK_SIDEBAR.MAIS_ACIMA'
+    );
+    await wrapper.find('[data-seta-cima]').trigger('click');
+    expect(nav.scrollBy).toHaveBeenLastCalledWith({
+      top: -352,
+      behavior: 'smooth',
+    });
+  });
+});
