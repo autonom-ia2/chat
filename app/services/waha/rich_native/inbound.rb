@@ -16,7 +16,8 @@
 #      apagada, por ora, marca a original e mantém a nota da main visível (Waha::RichNative::Inbound::Revoke);
 #   2. as que mudam o conteúdo (mídia que falhou, localização, contato, pedido, desconhecida);
 #   3. a mídia (`waha_media`); 4. a citação (`waha_quote`); 5. o contexto (`waha_context`: encaminhada, temporária).
-#   Erro num passo: só ele não vale (log com a classe do erro) e os outros seguem; a criação nunca é interrompida.
+#   Erro num passo: só ele não vale (log com a classe do erro; o que ele gravou no banco volta, ponto de salvamento) e os
+#   outros seguem; a criação nunca é interrompida.
 class Waha::RichNative::Inbound
   ABSORBING = {
     'waha_poll_vote' => 'Waha::RichNative::Inbound::PollVote',
@@ -98,8 +99,11 @@ class Waha::RichNative::Inbound
     hide!(message, 'view_once') if Waha::RichNative::Inbound::ViewOnceUnavailable.customer?(present['waha_view_once_unavailable'])
   end
 
+  # Cada passo num ponto de salvamento (`requires_new`): um erro de SQL num passo aborta a transação da criação no
+  # Postgres, e o `rescue` sozinho deixaria os passos seguintes e o próprio INSERT falharem. Com o ponto de salvamento, só
+  # o que o passo gravou volta, e a criação segue.
   def self.run(message, key, data)
-    HANDLERS.fetch(key).constantize.apply(message, data)
+    ActiveRecord::Base.transaction(requires_new: true) { HANDLERS.fetch(key).constantize.apply(message, data) }
   rescue StandardError => e
     Rails.logger.error("[waha] rich native inbound #{key} #{e.class}")
   end
