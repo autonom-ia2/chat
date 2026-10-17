@@ -1303,6 +1303,7 @@
           "VOCE": "You:",
           "CONVERSA": "Conversation",
           "FEITO": "Done. {nome} already uses what you told.",
+          "PARCIAL": "Part of what you asked already went in. {nome} already uses it.",
           "NOME_NOVO": "The name is now {nome}.",
           "VOLTAR_NOME": "Go back to {nome}",
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
