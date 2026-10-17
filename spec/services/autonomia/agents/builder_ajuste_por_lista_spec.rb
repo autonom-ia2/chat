@@ -115,6 +115,25 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(proxima.reload.state['pending_question']).to be_nil
       end
 
+      # Rodada 7 (BAIXO): o turno legado apaga o que o piloto deixou; religar não traz a pendência de volta.
+      it 'liga, pendência, desliga, turno legado, religa: nada volta' do
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
+        run_turn
+        Autonomia::Agents::Fase2.desligar!(account)
+        thread.append_message!('user', 'Troque a saudação')
+        respostas << saida('greeting' => 'Olá')
+        described_class.new(account: account.reload, build_thread: thread.reload).tap do |legado|
+          allow(legado).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+          legado.run!(thread.begin_build!)
+        end
+        expect(estado.keys).not_to include('pergunta_pendente', 'pendencia_turnos')
+
+        Autonomia::Agents::Fase2.ligar!(account)
+        religado = described_class.new(account: account.reload, build_thread: thread.reload)
+        expect(religado.send(:pending_question)).to eq('')
+        expect(religado.send(:pending_request_context)).to eq('')
+      end
+
       it 'liga, pendência, pergunta do dono, desliga, turno legado e sessão nova: nada fica preso' do
         respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
         run_turn

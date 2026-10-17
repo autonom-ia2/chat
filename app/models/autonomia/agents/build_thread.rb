@@ -140,6 +140,15 @@ module Autonomia
       end
       private :pending_question_of
 
+      # #1428 — tira chaves do `state` (guardado pelo token, sem mudar o status). No-op quando nenhuma existe: fora do
+      # piloto nada muda.
+      def esquecer_do_estado!(token, chaves)
+        atual = state || {}
+        return false unless chaves.any? { |chave| atual.key?(chave) }
+
+        guarded_update(token, state: atual.except(*chaves))
+      end
+
       # #1428 — grava chaves no `state` sem mudar o status, guardado pelo token. Toca o updated_at: o turno longo do
       # ajuste (conferência e correção) não passa por preso.
       def guardar_no_estado!(token, chaves)
@@ -202,7 +211,7 @@ module Autonomia
       def mark_failed!(token, message, fields: [])
         # #1428: o ajuste em curso (piloto) acaba com a falha; a chave só existe no piloto.
         atual = self.state || {}
-        new_state = atual.merge(atual.key?('ajuste_em_curso') ? { 'ajuste_em_curso' => nil } : {}).merge(
+        new_state = atual.merge(%w[ajuste_em_curso nao_pedido_anterior].select { |chave| atual.key?(chave) }.index_with(nil)).merge(
           'error' => message.to_s.truncate(500),
           'error_fields' => Array(fields).map(&:to_s).uniq,
           'applied' => false

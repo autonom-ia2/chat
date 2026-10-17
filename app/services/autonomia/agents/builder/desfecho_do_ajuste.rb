@@ -26,9 +26,16 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     itens = Array(conferencia['itens'])
     sem_pedido = itens_sem_pedido(itens)
     return conferencia if sem_pedido.empty?
-    return conferencia.merge('sem_pedido' => sem_pedido) if sem_pedido.size < itens.size
+    return conferencia.merge('sem_pedido' => so_o_que_mudou(dados, sem_pedido).presence).compact if sem_pedido.size < itens.size
 
     conferencia.merge('desfeito' => { 'campos' => regras_do_ajuste.campos(itens), 'ok' => desfazer!(token, dados, itens) })
+  end
+
+  # Só cita ao dono o campo não pedido que mudou de fato (o Construtor pode listar um campo e devolvê-lo igual).
+  def so_o_que_mudou(dados, itens)
+    antes = retrato_de_antes(dados)
+    depois = regras_do_ajuste.retrato(@thread.agent)
+    itens.reject { |item| antes[item['campo']] == depois[item['campo']] }
   end
 
   # Sem pedido do dono, sem o mesmo `pedido` de um item pedido e sem ser o destino secundário, pela tabela, de um item
@@ -82,6 +89,13 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     [[resposta['resposta_ao_dono'].to_s.strip, nao_pedido, aviso, texto].compact_blank, [texto, origem], aviso]
   end
 
+  # A referência (versão de antes e campos) do que o dono não pediu, para o turno seguinte: "tira isso" volta ao valor
+  # de antes, que o Construtor recebe como contexto interno. Nunca o texto cru.
+  def nao_pedido_anterior(dados, conferencia)
+    itens = Array(conferencia['sem_pedido'])
+    { 'versao_antes_id' => dados['versao_antes_id'], 'campos' => regras_do_ajuste.campos(itens) } if itens.any?
+  end
+
   def origem_da_pendencia(texto, do_modelo)
     return :mantida if texto.nil?
 
@@ -93,7 +107,7 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
   def estado_aplicado(dados, conferencia, resposta, pendencia)
     texto, origem = pendencia
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
-      'conferencia' => conferencia, 'ajuste_em_curso' => nil,
+      'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'nao_pedido_anterior' => nao_pedido_anterior(dados, conferencia),
       'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present? }
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end

@@ -145,7 +145,8 @@ module Autonomia::Agents::Builder::AjusteConferido
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false)
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
+                    'nao_pedido_anterior' => nil)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end

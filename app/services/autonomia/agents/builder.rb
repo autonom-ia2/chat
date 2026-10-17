@@ -758,6 +758,10 @@ module Autonomia
         # gravou (mesmo token) não chama o Construtor de novo: vai direto conferir e fechar.
         return retomar_ajuste!(token) if ajuste_da_fase2? && preparar_ajuste!(token) == :retomar
 
+        # Chave desligada depois do piloto: o que ele deixou no state (a pendência e o resto) sai antes do turno legado,
+        # para nada voltar se a chave for religada.
+        @thread.esquecer_do_estado!(token, CHAVES_DO_PILOTO) unless ajuste_da_fase2?
+
         text = single_full_call? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
         log_turn
@@ -805,7 +809,7 @@ module Autonomia
       # No ajuste do piloto (#1428), a tabela de destino vai num item developer antes do contexto: a instrução-mãe de
       # quem está fora do piloto não muda.
       def built_input
-        @built_input ||= ajuste_da_fase2? ? [AjustePorLista.item_da_tabela] + build_input : build_input
+        @built_input ||= ajuste_da_fase2? ? [AjustePorLista.item_da_tabela, *contexto_do_nao_pedido] + build_input : build_input
       end
 
       # Turno de UMA chamada completa, sem a enxuta: o AJUSTE inteiro (decisão do gestor, #1367: o "Mudar
@@ -997,6 +1001,9 @@ module Autonomia
           'pergunta em next_question (needs_more_info=true). Se a fala respondeu a pergunta, siga normal ' \
           "e não a repita.#{PENDENCIA_RESOLVIDA_NOTA if ajuste_da_fase2?}"
       end
+
+      # #1428 — o que o ajuste do piloto guarda no state entre turnos.
+      CHAVES_DO_PILOTO = %w[pergunta_pendente pendencia_turnos pendencia_no_teto nao_pedido_anterior].freeze
 
       # #1428 — ajuste do piloto: a resposta à pendência se marca, não se repete (senão ela volta todo turno).
       PENDENCIA_RESOLVIDA_NOTA = ' Se a fala respondeu esta pergunta, marque pendencia_resolvida=true em vez de repeti-la.'.freeze

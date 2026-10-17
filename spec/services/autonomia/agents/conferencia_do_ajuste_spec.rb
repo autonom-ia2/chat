@@ -84,6 +84,17 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
     expect(resultado['itens'].map { |item| item.values_at('atendido', 'pedido_pelo_dono') }).to eq([[true, true], [true, true]])
   end
 
+  # Rodada 7 (adversarial P3): item sem pedido nunca é falta, nem quando também vem como não atendido.
+  it 'o mesmo item nos dois (não atendido e sem pedido): não é falta' do
+    allow(fake_client).to receive(:create)
+      .and_return(text: saida.merge('nao_atendidos' => [1], 'sem_pedido_do_dono' => [1], 'conflito' => false).to_json)
+
+    resultado = conferir
+
+    expect(resultado).to include('falta' => false)
+    expect(resultado['itens'][1]).to include('atendido' => true, 'pedido_pelo_dono' => false)
+  end
+
   it 'pedido fora da lista também é falta' do
     allow(fake_client).to receive(:create).and_return(text: saida.merge('nao_atendidos' => [], 'faltou_fora_da_lista' => true).to_json)
 

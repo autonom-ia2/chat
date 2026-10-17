@@ -11,6 +11,7 @@ require 'rails_helper'
 # de palavras. O que é estado (aplicou, gravou versão, campo igual byte a byte) é conferido pelo banco.
 module AvaliacaoDoAjustePorLista
   JUIZ = 'gpt-5.4'.freeze
+  SAUDACAO_NAO_PEDIDA = 'Olá, sou o Hubber!'.freeze
   TETO_USD = 1.8
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
                          guardrails voice].freeze
@@ -26,7 +27,8 @@ module AvaliacaoDoAjustePorLista
   # conferência tem de dar como atendidos. `aplica: :nada`: nada visível muda (pergunta ou o desfeito do que ninguém
   # pediu). `nada_desfeito`: nenhum destino do pedido foi tratado como sem pedido. `pendente`: a pergunta aberta antes da
   # fala; `pendencia`: :resolvida (sai) ou :mantida (continua). `informa_sem_perguntar`: se a conferência achou algo
-  # que o dono não pediu, o turno só informa, sem pergunta nem pendência.
+  # que o dono não pediu, o turno só informa, sem pergunta nem pendência. `tambem_mudei`: o turno anterior mudou a
+  # saudação sem o dono pedir e o avisou; `saudacao`: :original (voltou) ou :nao_pedida (ficou).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
@@ -76,7 +78,18 @@ module AvaliacaoDoAjustePorLista
     # Rodada 6: o que o dono não pediu, quando é só parte, fica aplicado e é informado, sem pergunta.
     { nome: 'parcial_informa_sem_perguntar', fala: 'Deixe o tom mais caloroso.', aplica: true, informa_sem_perguntar: true,
       certo: 'O agente DEPOIS tem tom mais caloroso. Se algo mais mudou, a resposta ao dono só informa o que mudou, sem ' \
-             'perguntar se deve desfazer.' }
+             'perguntar se deve desfazer.' },
+    # Rodada 7: "também mudei" sem sobrar pendência; "tira isso" volta ao valor original; t6a com destinos protegidos.
+    { nome: 'tambem_mudei_sem_pendencia', fala: 'Agora responda em no máximo 2 frases.', aplica: true, tambem_mudei: true,
+      saudacao: :nao_pedida, pendencia: :resolvida,
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases; a resposta ao dono não pergunta nada sobre a saudação.' },
+    { nome: 'tambem_mudei_tira_isso', fala: 'Tira a saudação nova, deixa como era antes.', aplica: true, tambem_mudei: true,
+      saudacao: :original,
+      certo: 'A saudação volta a ser exatamente "Oi! Aqui é o Hubber, da Hub2You." e nada mais muda.' },
+    { nome: 't6a_destinos_protegidos', fala: 'Responda curtinho, no máximo 2 frases, e preço passe para a equipe.',
+      aplica: true, itens: 2, nada_desfeito: true,
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (tom e instrução) e passa para a equipe quando o ' \
+             'cliente pergunta preço, sem avisar que mudou algo que o dono não pediu.' }
   ].freeze
 
   VEREDITO = {
@@ -134,6 +147,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
+    preparar_tambem_mudei(agente, thread) if cena[:tambem_mudei]
     thread.append_message!('user', cena[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     [agente, antes, retrato(agente), thread.reload.state.to_h]
@@ -142,6 +156,19 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   def abrir_pendencia(thread, pergunta)
     thread.update!(state: thread.state.to_h.merge('needs_more_info' => true, 'next_question' => pergunta,
                                                   'pergunta_pendente' => pergunta))
+  end
+
+  # O turno anterior: entrou uma saudação que o dono não pediu, e ele foi avisado (o state guarda só a referência).
+  def preparar_tambem_mudei(agente, thread)
+    agente.record_instruction_version!(reason: 'base')
+    antes_id = agente.instruction_versions.order(:id).last.id
+    agente.update!(greeting: AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA)
+    agente.send(:gravar_versao!, 'builder_adjust', nil)
+    aviso = I18n.t('autonomia.agents.ajuste.tambem_mudei', resumos: 'Saudação nova', locale: :pt_BR)
+    thread.append_message!('user', 'Deixe o tom mais caloroso')
+    thread.append_message!('assistant', aviso)
+    referencia = { 'versao_antes_id' => antes_id, 'campos' => ['greeting'] }
+    thread.update!(state: thread.state.to_h.merge('nao_pedido_anterior' => referencia))
   end
 
   def julgar(cena, antes, depois, resposta)
@@ -164,12 +191,12 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
             when :nada then nada_visivel?(agente, antes, depois, estado)
             else estado['needs_more_info'] == true
             end
-    certo && extras_certos?(cena, antes, depois, estado)
+    certo && extras_certos?(cena, agente, antes, depois, estado)
   end
 
-  def extras_certos?(cena, antes, depois, estado)
+  def extras_certos?(cena, agente, antes, depois, estado)
     so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado) &&
-      informou_sem_perguntar?(cena, estado)
+      informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado)
   end
 
   # Nada mudou no agente e nenhuma versão do Construtor ficou na lista (pergunta, ou o desfeito do que ninguém pediu).
@@ -184,6 +211,14 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     when :mantida then estado['pergunta_pendente'] == cena[:pendente]
     else true
     end
+  end
+
+  # A referência do não pedido vale só para o turno seguinte; a saudação volta só se o dono pediu.
+  def saudacao_certa?(cena, agente, estado)
+    return true unless cena[:tambem_mudei]
+
+    esperada = cena[:saudacao] == :original ? 'Oi! Aqui é o Hubber, da Hub2You.' : AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA
+    estado['nao_pedido_anterior'].nil? && agente.reload.greeting == esperada
   end
 
   def informou_sem_perguntar?(cena, estado)

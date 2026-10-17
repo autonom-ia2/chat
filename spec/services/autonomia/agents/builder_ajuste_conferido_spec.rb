@@ -399,6 +399,45 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado.keys).not_to include('desfazer_pendente')
       expect(thread.messages.last).to include('content' => aviso)
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
+      referencia = estado['nao_pedido_anterior']
+      expect(referencia).to include('campos' => ['greeting'])
+      expect(agent.instruction_versions.find(referencia['versao_antes_id']).metadata.dig('agente', 'greeting'))
+        .to eq('Oi! Aqui é o Hubber.')
+    end
+
+    # Rodada 7 (adversarial P2): só se cita o que mudou de fato.
+    it 'campo não pedido que o Construtor devolveu igual: nenhum aviso' do
+      lista = [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')]
+      respostas << saida('tone' => 'curto', 'mudancas' => lista)
+      sem_pedido(1)
+
+      run_turn
+
+      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'nao_pedido_anterior' => nil)
+      expect(estado['conferencia'].keys).not_to include('sem_pedido')
+      expect(thread.messages.pluck('content')).not_to include(texto(:tambem_mudei, resumos: 'Saudação nova'))
+    end
+
+    # Rodada 7 (crítico MÉDIO): o "é só me dizer o que tirar" funciona: o turno seguinte recebe o valor de antes.
+    it 'o turno seguinte recebe o valor de antes do campo não pedido, e a chave sai depois' do
+      respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
+                         'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(1)
+      run_turn
+      expect(estado['nao_pedido_anterior'].to_json).not_to include('Oi! Aqui')
+      allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
+
+      thread.append_message!('user', 'Tira a saudação nova')
+      respostas << saida('greeting' => 'Oi! Aqui é o Hubber.', 'mudancas' => [mudanca('greeting', 'tira a saudação nova')])
+      described_class.new(account: account, build_thread: thread.reload).tap do |outro|
+        allow(outro).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+        outro.run!(thread.begin_build!)
+      end
+
+      contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+      expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
+      expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
+      expect(estado['nao_pedido_anterior']).to be_nil
     end
 
     # Rodada 5 (MÉDIO): o destino secundário pela tabela é protegido mesmo com o `pedido` escrito diferente.
@@ -483,13 +522,13 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(recebidas.sole[:antes]).to include('instruction' => 'Atenda o cliente da corretora com cordialidade.', 'tone' => 'cordial')
     end
 
-    it 'mark_failed! limpa o ajuste em curso' do
+    it 'mark_failed! limpa o ajuste em curso e a referência do não pedido' do
       token = thread.begin_build!
-      thread.guardar_no_estado!(token, 'ajuste_em_curso' => { 'token' => token })
+      thread.guardar_no_estado!(token, 'ajuste_em_curso' => { 'token' => token }, 'nao_pedido_anterior' => { 'campos' => ['tone'] })
 
       thread.mark_failed!(token, 'build_error')
 
-      expect(estado['ajuste_em_curso']).to be_nil
+      expect(estado.values_at('ajuste_em_curso', 'nao_pedido_anterior')).to eq([nil, nil])
     end
   end
 

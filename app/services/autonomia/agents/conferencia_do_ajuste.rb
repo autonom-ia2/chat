@@ -112,8 +112,9 @@ class Autonomia::Agents::ConferenciaDoAjuste
   def normalizar(saida, mudancas)
     raise Malformada, 'conferencia_malformada' unless saida.is_a?(Hash)
 
-    nao = indices(saida['nao_atendidos'], mudancas)
     sem_pedido = indices(saida['sem_pedido_do_dono'], mudancas)
+    # O que o dono não pediu nunca é falta nem é reaplicado na correção.
+    nao = indices(saida['nao_atendidos'], mudancas) - sem_pedido
     itens = mudancas.each_with_index.map do |item, indice|
       item.merge('atendido' => nao.exclude?(indice), 'pedido_pelo_dono' => sem_pedido.exclude?(indice))
     end
