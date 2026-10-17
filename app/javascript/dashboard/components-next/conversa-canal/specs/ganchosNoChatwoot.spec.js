@@ -8,7 +8,6 @@ import BaseAttachment from '../../message/bubbles/BaseAttachment.vue?raw';
 import Frame from '../../message/bubbles/RichMessage/Frame.vue?raw';
 import ActionRow from '../../message/bubbles/RichMessage/ActionRow.vue?raw';
 import LinkButton from '../../message/bubbles/RichMessage/types/LinkButton.vue?raw';
-import ChipImage from '../../message/chips/Image.vue?raw';
 import ChipAudio from '../../message/chips/Audio.vue?raw';
 import ReplyBottomPanel from '../../../components/widgets/WootWriter/ReplyBottomPanel.vue?raw';
 import ReplyTopPanel from '../../../components/widgets/WootWriter/ReplyTopPanel.vue?raw';
@@ -33,7 +32,6 @@ const GANCHOS = [
     LinkButton,
     ['break-all'],
   ],
-  ['message/chips/Image.vue', ChipImage, ['contain-content']],
   ['message/chips/Audio.vue', ChipAudio, ['border-n-container']],
   [
     'widgets/WootWriter/ReplyBottomPanel.vue',

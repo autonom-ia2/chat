@@ -26,6 +26,14 @@ vi.mock('dashboard/composables', () => ({
   useTrack: vi.fn(),
 }));
 
+// O "pai" do álbum que a Cloud entrega como não suportada, logo antes das fotos.
+const marcadorDoAlbum = primeira => ({
+  ...primeira,
+  id: -1,
+  attachments: [],
+  contentAttributes: { isUnsupported: true, unsupportedKind: 'unknown' },
+});
+
 const i18n = () =>
   createI18n({
     legacy: false,
@@ -229,7 +237,8 @@ describe('álbum (#1702)', () => {
     const Conversa = defineComponent({
       setup() {
         useAlbunsDaConversa(
-          computed(() => mensagens),
+          // O álbum recebido começa no marcador da Cloud (o "pai" não suportado).
+          computed(() => [marcadorDoAlbum(mensagens[0]), ...mensagens]),
           computed(() => null)
         );
         return () => h(Balao);

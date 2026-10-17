@@ -2,7 +2,8 @@
 // Opções (#1473) na conversa com a cara do WhatsApp (#1702), como no WhatsApp Web:
 // até 3 opções são linhas de botão dentro do balão, com a seta de resposta; mais que
 // isso é "Ver opções", que abre a janela da lista presa à esquerda da conversa. A
-// opção que o cliente tocou leva o visto (botão) ou o rádio marcado (lista).
+// opção que o cliente tocou leva o visto (botão) ou o rádio marcado (lista). Com uma
+// seção só, a janela não repete o título dela (teste do Rodrigo em 17/10, conta 16).
 import { nextTick, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
@@ -149,7 +150,7 @@ const LINHA_DO_BALAO =
             :aria-label="section.title || undefined"
           >
             <div
-              v-if="section.title"
+              v-if="section.title && sections.length > 1"
               aria-hidden="true"
               class="px-3 pt-5 pb-4 text-[13px] font-medium text-[#666666] dark:text-[#A7A8A8]"
             >

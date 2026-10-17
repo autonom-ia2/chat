@@ -150,7 +150,22 @@
       "OFERTA": "Oferta por tempo limitado",
       "CARROSSEL": "Cartões do modelo",
       "PRODUTO": "Produto do catálogo",
-      "BOTOES": "Botões do modelo"
+      "BOTOES": "Botões do modelo",
+      "ABRE_EM_OUTRA_ABA": "Abre em outra aba",
+      "SO_NO_CELULAR": "O cliente toca neste botão no celular. Aqui ele só aparece.",
+      "VER_TODAS": "Ver todas as opções",
+      "TODAS_AS_OPCOES": "Todas as opções",
+      "FECHAR": "Fechar",
+      "TOPO_FOTO": "Imagem do modelo",
+      "TOPO_VIDEO": "Vídeo do modelo",
+      "TOPO_DOCUMENTO": "Documento",
+      "OFERTA_TERMINA": "Termina em {data}"
+    },
+    "ORIGEM": {
+      "ANUNCIO": "Anúncio",
+      "ABRIR_ANUNCIO": "Abrir o anúncio em outra aba",
+      "PRODUTO": "Produto do catálogo",
+      "CODIGO": "Código {codigo}"
     },
     "GRAVACAO": {
       "GRAVANDO": "Gravando áudio",
@@ -165,7 +180,8 @@
       "PAUSAR": "Pausar áudio",
       "ONDA": "Posição do áudio",
       "VELOCIDADE": "Mudar a velocidade",
-      "BAIXAR": "Baixar"
+      "BAIXAR": "Baixar",
+      "ENVIANDO": "Enviando áudio"
     },
     "MIDIA": {
       "BAIXAR": "Baixar {nome}",
@@ -176,6 +192,11 @@
       "FECHAR": "Fechar",
       "VER_OPCOES": "Ver opções",
       "ESCOLHIDA": "Escolhida pelo cliente"
+    },
+    "ROLAGEM": {
+      "NAO_LIDAS": "{n} mensagem não lida | {n} mensagens não lidas",
+      "NOVAS": "{n} mensagem nova | {n} mensagens novas",
+      "CITADA_NAO_ENCONTRADA": "Não achamos a mensagem citada nesta conversa."
     },
     "ALBUM": {
       "ROTULO": "Álbum com {total} fotos e vídeos",
@@ -210,7 +231,14 @@
       "PELO_CLIENTE": "Apagada pelo cliente",
       "AJUDA": "O cliente apagou esta mensagem no WhatsApp. Ele não vê mais; a equipe continua vendo.",
       "ENVIADA": "Você apagou esta mensagem",
-      "RECEBIDA": "Esta mensagem foi apagada"
+      "RECEBIDA": "Esta mensagem foi apagada",
+      "ENVIADA_SO_AQUI": "Você apagou esta mensagem só aqui. O cliente ainda vê."
+    },
+    "FALHA": {
+      "NAO_ENVIADA": "Não enviada"
+    },
+    "TEXTO_LONGO": {
+      "LER_MAIS": "Ler mais"
     },
     "EDITADA": {
       "ROTULO": "Editada",
@@ -272,7 +300,8 @@
       "VOZ_RECUSADA": "Ligação de voz recusada",
       "VIDEO_RECUSADA": "Ligação de vídeo recusada",
       "VOZ": "Ligação de voz",
-      "VIDEO": "Ligação de vídeo"
+      "VIDEO": "Ligação de vídeo",
+      "VOZ_SEM_RESPOSTA": "Ligação de voz sem resposta"
     },
     "ENQUETE": {
       "UMA": "Selecione uma opção",
@@ -285,9 +314,9 @@
       "SEM_VOTOS": "Ninguém votou ainda"
     },
     "CONTATOS": {
-      "RESUMO": "{nome} e mais {n} contato | {nome} e mais {n} contatos",
+      "RESUMO": "{nome} e {n} outro contato | {nome} e {n} outros contatos",
       "VER_TODOS": "Ver todos",
-      "OCULTAR": "Ocultar",
+      "TITULO": "{n} contato | {n} contatos",
       "SEM_NOME": "Contato sem nome"
     },
     "PREVIA_DE_LINK": {

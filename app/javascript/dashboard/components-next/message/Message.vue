@@ -51,11 +51,19 @@ import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 import { useAudioParaBaixar } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
 import AlbumDoWhatsapp from 'dashboard/components-next/conversa-canal/album/AlbumDoWhatsapp.vue';
-import { useAlbumDaMensagem } from 'dashboard/components-next/conversa-canal/album/useAlbuns';
+import {
+  useAlbumDaMensagem,
+  useContatosDaMensagem,
+} from 'dashboard/components-next/conversa-canal/album/useAlbuns';
+import ContatosDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/ContatosDoWhatsapp.vue';
 import { usePele } from 'dashboard/components-next/conversa-canal/pele';
+import { mensagemDestacada } from 'dashboard/components-next/conversa-canal/destaqueDaCitada';
 import { balaoDaPele } from 'dashboard/components-next/conversa-canal/balaoDaPele';
 import LigacaoDoWhatsapp from 'dashboard/components-next/conversa-canal/ligacao/LigacaoDoWhatsapp.vue';
-import { resumoDaLigacao } from 'dashboard/components-next/conversa-canal/ligacao/ligacao';
+import {
+  ligacaoDaCloudNoCartao,
+  resumoDaLigacao,
+} from 'dashboard/components-next/conversa-canal/ligacao/ligacao';
 import AvisoDeTemporarias from 'dashboard/components-next/conversa-canal/temporarias/AvisoDeTemporarias.vue';
 import { avisoDeTemporarias } from 'dashboard/components-next/conversa-canal/temporarias/temporarias';
 import BotaoDeReagir from 'dashboard/components-next/conversa-canal/BotaoDeReagir.vue';
@@ -322,10 +330,16 @@ const shouldShowAvatar = computed(() => {
 const richMessageBubble = computed(() => richMessageBubbleFor(props));
 // #1702: com a pele do WhatsApp, fotos e vídeos mandados juntos viram um álbum.
 const album = useAlbumDaMensagem(computed(() => props.id));
+// #1702: contatos mandados de uma vez (uma mensagem por contato) viram um cartão só.
+const contatosJuntos = useContatosDaMensagem(computed(() => props.id));
 // #1702: enquete, pedido, vários contatos, só emoji e aviso por tipo (só com a pele).
 const pele = usePele();
 const balaoDoWhatsapp = computed(() =>
   pele.value ? balaoDaPele(props) : null
+);
+// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+const destacadaPelaCitacao = computed(
+  () => !!pele.value && mensagemDestacada.value === props.id
 );
 // #1702: o aviso de ligação vira o cartão de ligação do app (só com a pele).
 const ligacao = computed(
@@ -346,6 +360,8 @@ const componentToRender = computed(() => {
     return WhatsappFlowResponseBubble;
   }
 
+  if (contatosJuntos.value) return ContatosDoWhatsapp;
+
   if (balaoDoWhatsapp.value) return balaoDoWhatsapp.value;
 
   if (richMessageBubble.value) return richMessageBubble.value;
@@ -361,7 +377,15 @@ const componentToRender = computed(() => {
   }
 
   if (props.contentType === CONTENT_TYPES.VOICE_CALL) {
-    return VoiceCallBubble;
+    // #1702: com a pele, a ligação encerrada da Cloud vira o cartão do app (ligacao.js).
+    const noCartao =
+      pele.value &&
+      ligacaoDaCloudNoCartao({
+        chamada: props.call,
+        enviada: props.messageType === MESSAGE_TYPES.OUTGOING,
+        anexos: props.attachments,
+      });
+    return noCartao ? LigacaoDoWhatsapp : VoiceCallBubble;
   }
 
   if (props.contentType === CONTENT_TYPES.INCOMING_EMAIL) {
@@ -431,6 +455,16 @@ const shouldShowWhatsappReferral = computed(
     variant.value === MESSAGE_VARIANTS.USER &&
     !!props.contentAttributes?.referral
 );
+// #1702: com a pele, o anúncio é citação dentro do balão (OrigemDaMensagem), e o
+// cartão de fora some (sem ele, a linha não vira coluna e reagir/encaminhar ficam ao lado).
+// A citação mora no Base.vue: balão que não passa por ele (o cartão de ligação) não a
+// desenha, e o anúncio continua no cartão de fora para não sumir.
+const BALOES_SEM_ORIGEM = [LigacaoDoWhatsapp];
+const anuncioForaDoBalao = computed(
+  () =>
+    shouldShowWhatsappReferral.value &&
+    (!pele.value || BALOES_SEM_ORIGEM.includes(componentToRender.value))
+);
 
 // #1702: com a pele do WhatsApp, "Baixar" do áudio fica no menu da mensagem.
 const audioParaBaixar = useAudioParaBaixar(computed(() => props.attachments));
@@ -471,8 +505,9 @@ const encaminhar = useEncaminharDaMensagem(
 const payloadForContextMenu = computed(() => {
   return {
     audioParaBaixar: audioParaBaixar.value,
-    // #1702: no álbum, apagar age em todos os itens dele.
-    idsDoAlbum: album.value?.map(item => item.id) || null,
+    // #1702: no álbum (e nos contatos do mesmo envio), apagar age em todos os itens.
+    idsDoAlbum:
+      (album.value || contatosJuntos.value)?.map(item => item.id) || null,
     id: props.id,
     content_attributes: props.contentAttributes,
     content: props.content,
@@ -659,6 +694,8 @@ provideMessageContext({
         'bg-n-alpha-1': showBackgroundHighlight,
         'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
         'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
+        'transition-colors duration-500': pele,
+        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
       },
     ]"
   >
@@ -701,7 +738,7 @@ provideMessageContext({
         :class="{
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
-          'flex-col items-start gap-2': shouldShowWhatsappReferral,
+          'flex-col items-start gap-2': anuncioForaDoBalao,
           'flex-col gap-1': isCampaignMessage,
           'items-end': isCampaignMessage && orientation === ORIENTATION.RIGHT,
         }"
@@ -712,7 +749,7 @@ provideMessageContext({
           :additional-attributes="additionalAttributes"
         />
         <WhatsappReferral
-          v-if="shouldShowWhatsappReferral"
+          v-if="anuncioForaDoBalao"
           :referral="contentAttributes.referral"
         />
         <Component :is="componentToRender" />

@@ -46,6 +46,18 @@ import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
 import { selecao as selecaoParaEncaminhar } from 'dashboard/components-next/conversa-canal/encaminhar/selecaoParaEncaminhar';
+import FaixaDeNaoLidas from 'dashboard/components-next/conversa-canal/FaixaDeNaoLidas.vue';
+import { destacarMensagem } from 'dashboard/components-next/conversa-canal/destaqueDaCitada';
+import { semDuplicadasNaPele } from 'dashboard/components-next/conversa-canal/midia/contatos';
+import {
+  buscarAteAchar,
+  deveDescer,
+  marcoDeNaoLidas,
+  naoLidasCarregadas,
+  pertoDoFim,
+  topoDaFaixa,
+} from 'dashboard/components-next/conversa-canal/rolagemDaPele';
+import { useAlert } from 'dashboard/composables';
 
 export default {
   components: {
@@ -59,6 +71,7 @@ export default {
     ReferralBubble,
     AvisoJanelaFechada,
     EncaminharDaConversa,
+    FaixaDeNaoLidas,
   },
   mixins: [inboxMixin],
   setup() {
@@ -113,6 +126,9 @@ export default {
       isProgrammaticScroll: false,
       messageSentSinceOpened: false,
       labelSuggestions: [],
+      // #1702: faixa de não lidas da pele, parada enquanto a conversa está aberta.
+      naoLidasDaPele: null,
+      ultimaDaPele: null,
     };
   },
 
@@ -163,7 +179,10 @@ export default {
     getMessages() {
       const messages = this.currentChat.messages || [];
       if (this.isAWhatsAppChannel) {
-        return filterDuplicateSourceMessages(messages);
+        // #1702: com a pele, os contatos de um mesmo envio (mesmo source_id) ficam.
+        return this.pele
+          ? semDuplicadasNaPele(messages)
+          : filterDuplicateSourceMessages(messages);
       }
       return messages;
     },
@@ -265,6 +284,17 @@ export default {
     unreadMessageCount() {
       return this.currentChat.unread_count || 0;
     },
+    // #1702: com a pele, a faixa vem do retrato tirado ao abrir; sem ela, do Chatwoot.
+    faixaDaPele() {
+      const marco = this.naoLidasDaPele;
+      return marco?.pronta && marco.conversaId === this.currentChat.id
+        ? marco
+        : null;
+    },
+    primeiraNaoLidaDaLista() {
+      if (this.pele) return this.faixaDaPele?.primeiraNaoLida ?? null;
+      return this.unReadMessages[0]?.id;
+    },
     unreadMessageLabel() {
       const count =
         this.unreadMessageCount > 9 ? '9+' : this.unreadMessageCount;
@@ -307,6 +337,8 @@ export default {
 
   mounted() {
     this.addScrollListener();
+    // #1702: conversa já carregada não espera o aviso de abrir para achar a faixa.
+    if (this.pele) this.$nextTick(() => this.rolarNaPele());
     this.fetchAllAttachmentsFromCurrentChat();
     this.fetchSuggestions();
   },
@@ -346,7 +378,12 @@ export default {
 
         // only trigger the scroll to bottom if the user has not scrolled
         // and there's no active messageId that is selected in view
-        if (!messageId && !this.hasUserScrolled) {
+        // #1702: com a pele, a faixa de não lidas aberta perto do topo fica onde está.
+        if (
+          !messageId &&
+          !this.hasUserScrolled &&
+          !this.faixaDaPele?.primeiraNaoLida
+        ) {
           this.scrollToBottom();
         }
       });
@@ -365,6 +402,12 @@ export default {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
     },
     onScrollToMessage({ messageId = '' } = {}) {
+      // #1702: com a pele, a rolagem segue o app (rolarNaPele); sem ela, o Chatwoot.
+      if (this.pele) {
+        this.rolarNaPele(messageId);
+        this.makeMessagesRead();
+        return;
+      }
       this.$nextTick(() => {
         const messageElement = document.getElementById('message' + messageId);
         if (messageElement) {
@@ -376,6 +419,104 @@ export default {
         }
       });
       this.makeMessagesRead();
+    },
+    // #1702: rolagem com a pele. 1º aviso da conversa aberta: abre na faixa de não
+    // lidas; citação: busca a mensagem e a destaca; mensagem nova: só desce quem estava
+    // no fim ou quando o atendente enviou.
+    async rolarNaPele(messageId) {
+      if (this.naoLidasDaPele?.conversaId !== this.currentChat.id) {
+        // Antes das mensagens chegarem não há o que contar.
+        if (this.currentChat.dataFetched !== true) return;
+        await this.abrirNaPele(!messageId);
+        if (!messageId) return;
+      }
+      if (!this.faixaDaPele) return;
+      if (messageId) {
+        await this.irParaCitada(messageId);
+        return;
+      }
+      this.acompanharNovas();
+    },
+    async abrirNaPele(posicionar) {
+      const conversaId = this.currentChat.id;
+      // A leitura de antes de abrir: marcar como lida (logo depois) não muda a faixa.
+      const vistoEm = this.currentChat.agent_last_seen_at;
+      this.naoLidasDaPele = { conversaId, pronta: false };
+      try {
+        // Mais de uma página de não lidas: busca as anteriores para o número exato.
+        await buscarAteAchar({
+          achou: () => naoLidasCarregadas(this.currentChat.messages, vistoEm),
+          temMais: () => !this.listLoadingStatus,
+          carregarMais: this.carregarAnterioresNaPele,
+        });
+      } catch (error) {
+        // Sem as páginas antigas (rede), a faixa conta as não lidas que vieram.
+      }
+      if (this.currentChat.id !== conversaId) return;
+      const { messages } = this.currentChat;
+      this.naoLidasDaPele = marcoDeNaoLidas(conversaId, messages, vistoEm);
+      this.ultimaDaPele = messages[messages.length - 1]?.id;
+      if (!posicionar) return;
+      await this.esperarATela();
+      const faixa = this.conversationPanel.querySelector(
+        '[data-faixa-nao-lidas]'
+      );
+      this.isProgrammaticScroll = true;
+      if (faixa) {
+        this.conversationPanel.scrollTop = topoDaFaixa(faixa.offsetTop);
+      } else {
+        this.scrollToBottom();
+      }
+    },
+    esperarATela() {
+      return new Promise(resolve => {
+        this.$nextTick(resolve);
+      });
+    },
+    async carregarAnterioresNaPele() {
+      const [maisAntiga] = this.currentChat.messages;
+      if (!maisAntiga) return;
+      await this.$store.dispatch('fetchPreviousMessages', {
+        conversationId: this.currentChat.id,
+        before: maisAntiga.id,
+      });
+      await this.esperarATela();
+    },
+    acompanharNovas() {
+      const { messages } = this.currentChat;
+      const ultima = messages[messages.length - 1];
+      // Medido antes de a mensagem nova entrar na tela.
+      const descer = deveDescer({
+        estavaNoFim: pertoDoFim(this.conversationPanel),
+        ultimaAntes: this.ultimaDaPele,
+        ultima,
+      });
+      this.ultimaDaPele = ultima?.id;
+      if (descer) this.$nextTick(() => this.scrollToBottom());
+    },
+    // Citação de mensagem antiga que ainda não veio: busca as anteriores (com teto),
+    // rola até ela e a destaca, como no app.
+    async irParaCitada(messageId) {
+      const id = Number(messageId);
+      let carregada = false;
+      try {
+        carregada = await buscarAteAchar({
+          achou: () => this.currentChat.messages.some(item => item.id === id),
+          temMais: () => !this.listLoadingStatus,
+          carregarMais: this.carregarAnterioresNaPele,
+        });
+      } catch (error) {
+        carregada = false;
+      }
+      await this.esperarATela();
+      const alvo = carregada && document.getElementById(`message${id}`);
+      if (!alvo) {
+        useAlert(this.$t('CONVERSA_CANAL.ROLAGEM.CITADA_NAO_ENCONTRADA'));
+        return;
+      }
+      this.isProgrammaticScroll = true;
+      alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      destacarMensagem(id);
     },
     addScrollListener() {
       this.conversationPanel = this.$el.querySelector('.conversation-panel');
@@ -529,7 +670,7 @@ export default {
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
       :class="classesDaLista"
       :current-user-id="currentUserId"
-      :first-unread-id="unReadMessages[0]?.id"
+      :first-unread-id="primeiraNaoLidaDaLista"
       :is-an-email-channel="isAnEmailChannel"
       :inbox-supports-reply-to="inboxSupportsReplyTo"
       :messages="getMessages"
@@ -553,7 +694,12 @@ export default {
         <ReferralBubble v-if="referralData" :referral="referralData" />
       </template>
       <template #unreadBadge>
+        <FaixaDeNaoLidas
+          v-if="pele && faixaDaPele"
+          :quantidade="faixaDaPele.quantidade"
+        />
         <li
+          v-else
           v-show="unreadMessageCount != 0"
           class="list-none flex justify-center items-center"
         >
