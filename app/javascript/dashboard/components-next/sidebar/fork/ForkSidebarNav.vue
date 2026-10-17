@@ -16,6 +16,7 @@ import { temaDoMenu } from './tema';
 import ForkSidebarItem from './ForkSidebarItem.vue';
 import ForkSidebarIcone from './ForkSidebarIcone.vue';
 import ForkSidebarRecolher from './ForkSidebarRecolher.vue';
+import ForkSidebarSeta from './ForkSidebarSeta.vue';
 import { TELA_MEDIA_DE, useLarguraDoMenu } from './useLarguraDoMenu';
 import { ehTelaDeTrabalho, useRecolherSozinho } from './useRecolherSozinho';
 import { usePainelDoContatoRecolhido } from './usePainelDoContatoRecolhido';
@@ -189,7 +190,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar));
 // O menu não rola sozinho na troca de tela (#1781): só a pessoa rola. A borda avisa quando tem mais.
 const lista = ref(null);
 const conteudo = ref(null);
-const setas = useSetasDeRolagem(lista, conteudo);
+const setas = useSetasDeRolagem(lista, conteudo, () => route.path);
 
 const navegou = () => {
   recolherSozinho.depoisDoClique();
@@ -307,50 +308,36 @@ const navegou = () => {
         v-if="setas.acima.value"
         data-esmaecido-cima
         aria-hidden="true"
-        class="absolute inset-x-0 top-0 h-10 to-transparent pointer-events-none z-[1]"
+        class="absolute inset-x-0 top-0 h-10 to-transparent opacity-80 pointer-events-none z-[1]"
         :class="tema.esmaecidoCima"
       />
       <div
         v-if="setas.abaixo.value"
         data-esmaecido-baixo
         aria-hidden="true"
-        class="absolute inset-x-0 bottom-0 h-10 to-transparent pointer-events-none z-[1]"
+        class="absolute inset-x-0 bottom-0 h-10 to-transparent opacity-80 pointer-events-none z-[1]"
         :class="tema.esmaecidoBaixo"
       />
-      <button
-        v-if="setas.acima.value"
-        type="button"
-        data-seta-cima
-        :aria-label="t('FORK_SIDEBAR.MAIS_ACIMA')"
-        :aria-controls="ID_DA_LISTA"
-        class="absolute top-0 z-[2] flex items-center justify-center size-11 rounded-full"
-        :class="[tema.foco, isCollapsed ? 'inset-x-0 mx-auto' : 'end-1']"
-        @click="setas.rolarParaCima"
-      >
-        <span
-          class="flex items-center justify-center rounded-full size-7"
-          :class="tema.seta"
-        >
-          <span class="i-lucide-chevron-up size-4" aria-hidden="true" />
-        </span>
-      </button>
-      <button
-        v-if="setas.abaixo.value"
-        type="button"
-        data-seta-baixo
-        :aria-label="t('FORK_SIDEBAR.MAIS_ABAIXO')"
-        :aria-controls="ID_DA_LISTA"
-        class="absolute bottom-0 z-[2] flex items-center justify-center size-11 rounded-full"
-        :class="[tema.foco, isCollapsed ? 'inset-x-0 mx-auto' : 'end-1']"
-        @click="setas.rolarParaBaixo"
-      >
-        <span
-          class="flex items-center justify-center rounded-full size-7"
-          :class="tema.seta"
-        >
-          <span class="i-lucide-chevron-down size-4" aria-hidden="true" />
-        </span>
-      </button>
+      <ForkSidebarSeta
+        lado="acima"
+        :visivel="setas.acima.value"
+        :contagem="setas.itensAcima.value"
+        :respirando="setas.respirando.value.acima"
+        :recolhido="isCollapsed"
+        :controla="ID_DA_LISTA"
+        :tema="tema"
+        @rolar="setas.rolarParaCima"
+      />
+      <ForkSidebarSeta
+        lado="abaixo"
+        :visivel="setas.abaixo.value"
+        :contagem="setas.itensAbaixo.value"
+        :respirando="setas.respirando.value.abaixo"
+        :recolhido="isCollapsed"
+        :controla="ID_DA_LISTA"
+        :tema="tema"
+        @rolar="setas.rolarParaBaixo"
+      />
     </div>
     <ul
       v-if="rodape.length"

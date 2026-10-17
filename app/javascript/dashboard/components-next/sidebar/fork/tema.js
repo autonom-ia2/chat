@@ -22,7 +22,9 @@ const PADRAO = {
   progresso: 'bg-n-brand',
   esmaecidoCima: 'bg-gradient-to-b from-n-background',
   esmaecidoBaixo: 'bg-gradient-to-t from-n-background',
-  seta: 'bg-n-solid-3 text-n-slate-12 shadow-md ring-1 ring-n-strong',
+  pilula:
+    'bg-n-solid-1/80 backdrop-blur-md ring-1 ring-n-weak text-n-slate-12 shadow-lg',
+  pilulaPassar: 'group-hover:bg-n-solid-3 group-hover:-translate-y-0.5',
 };
 
 const MARCA = {
@@ -46,7 +48,9 @@ const MARCA = {
   progresso: 'bg-white/80',
   esmaecidoCima: 'bg-gradient-to-b from-[var(--sidebar-background-color)]',
   esmaecidoBaixo: 'bg-gradient-to-t from-[var(--sidebar-background-color)]',
-  seta: 'bg-white text-[var(--sidebar-background-color)] shadow-md',
+  pilula:
+    'bg-white/15 backdrop-blur-md ring-1 ring-white/25 text-white shadow-lg shadow-black/30',
+  pilulaPassar: 'group-hover:bg-white/25 group-hover:-translate-y-0.5',
 };
 
 export const temaDoMenu = comMarca => (comMarca ? MARCA : PADRAO);

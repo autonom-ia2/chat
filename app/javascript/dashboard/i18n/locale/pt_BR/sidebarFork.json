@@ -36,6 +36,12 @@
     "ANUNCIO_ABERTO": "Menu aberto",
     "MAIS_ACIMA": "Mais acima",
     "MAIS_ABAIXO": "Mais abaixo",
+    "ITENS_ACIMA": "1 item acima | {count} itens acima",
+    "ITENS_ABAIXO": "1 item abaixo | {count} itens abaixo",
+    "ROLAR_ACIMA": "Rolar o menu para cima",
+    "ROLAR_ABAIXO": "Rolar o menu para baixo",
+    "ROLAR_ACIMA_ITENS": "Rolar o menu para cima: 1 item | Rolar o menu para cima: {count} itens",
+    "ROLAR_ABAIXO_ITENS": "Rolar o menu para baixo: 1 item | Rolar o menu para baixo: {count} itens",
     "ATRIBUICAO": {
       "TEXTO": "Quem recebe cada conversa é definido em Atribuição.",
       "LINK": "Abrir Atribuição"

@@ -36,6 +36,12 @@
     "ANUNCIO_ABERTO": "Menu open",
     "MAIS_ACIMA": "More above",
     "MAIS_ABAIXO": "More below",
+    "ITENS_ACIMA": "1 item above | {count} items above",
+    "ITENS_ABAIXO": "1 item below | {count} items below",
+    "ROLAR_ACIMA": "Scroll the menu up",
+    "ROLAR_ABAIXO": "Scroll the menu down",
+    "ROLAR_ACIMA_ITENS": "Scroll the menu up: 1 item | Scroll the menu up: {count} items",
+    "ROLAR_ABAIXO_ITENS": "Scroll the menu down: 1 item | Scroll the menu down: {count} items",
     "ATRIBUICAO": {
       "TEXTO": "Who gets each conversation is set in Assignment.",
       "LINK": "Open Assignment"

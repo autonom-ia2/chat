@@ -151,7 +151,10 @@ const montar = () => {
           }),
         ]),
     }),
-    { attachTo: document.body, global: { components: { RouterLink } } }
+    {
+      attachTo: document.body,
+      global: { components: { RouterLink }, stubs: { transition: true } },
+    }
   );
   return { wrapper, fechar, gaveta };
 };
@@ -338,16 +341,19 @@ describe('ForkSidebarNav: rolagem (#1781)', () => {
 
     medidas(nav, { topo: 0, total: 400 });
     await nextTick();
-    expect(ver('[data-seta-cima]') || ver('[data-seta-baixo]')).toBe(false);
+    expect(ver('[data-seta="acima"]') || ver('[data-seta="abaixo"]')).toBe(
+      false
+    );
 
     medidas(nav, { topo: 0 });
     await nextTick();
-    expect(ver('[data-seta-cima]')).toBe(false);
-    expect(ver('[data-seta-baixo]')).toBe(true);
+    expect(ver('[data-seta="acima"]')).toBe(false);
+    expect(ver('[data-seta="abaixo"]')).toBe(true);
     expect(ver('[data-esmaecido-baixo]')).toBe(true);
-    const baixo = wrapper.find('[data-seta-baixo]');
-    expect(baixo.attributes('aria-label')).toBe('FORK_SIDEBAR.MAIS_ABAIXO');
-    expect(baixo.classes()).toContain('size-11');
+    const baixo = wrapper.find('[data-seta="abaixo"]');
+    expect(baixo.attributes('aria-label')).toBe('FORK_SIDEBAR.ROLAR_ABAIXO');
+    expect(baixo.classes()).toContain('min-h-11');
+    expect(baixo.text()).toBe('FORK_SIDEBAR.MAIS_ABAIXO');
     const esmaecido = wrapper.find('[data-esmaecido-baixo]');
     expect(esmaecido.attributes('aria-hidden')).toBe('true');
     expect(esmaecido.classes()).toContain('pointer-events-none');
@@ -357,17 +363,17 @@ describe('ForkSidebarNav: rolagem (#1781)', () => {
 
     medidas(nav, { topo: 300 });
     await nextTick();
-    expect(ver('[data-seta-cima]')).toBe(true);
-    expect(ver('[data-seta-baixo]')).toBe(true);
+    expect(ver('[data-seta="acima"]')).toBe(true);
+    expect(ver('[data-seta="abaixo"]')).toBe(true);
 
     medidas(nav, { topo: 600 });
     await nextTick();
-    expect(ver('[data-seta-cima]')).toBe(true);
-    expect(ver('[data-seta-baixo]')).toBe(false);
-    expect(wrapper.find('[data-seta-cima]').attributes('aria-label')).toBe(
-      'FORK_SIDEBAR.MAIS_ACIMA'
+    expect(ver('[data-seta="acima"]')).toBe(true);
+    expect(ver('[data-seta="abaixo"]')).toBe(false);
+    expect(wrapper.find('[data-seta="acima"]').attributes('aria-label')).toBe(
+      'FORK_SIDEBAR.ROLAR_ACIMA'
     );
-    await wrapper.find('[data-seta-cima]').trigger('click');
+    await wrapper.find('[data-seta="acima"]').trigger('click');
     expect(nav.scrollBy).toHaveBeenLastCalledWith({
       top: -352,
       behavior: 'smooth',
