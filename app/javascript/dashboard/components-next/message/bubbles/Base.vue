@@ -16,6 +16,18 @@ import BicoDoBalao from '../../conversa-canal/BicoDoBalao.vue';
 import BotoesDoModelo from '../../conversa-canal/BotoesDoModelo.vue';
 import BotaoDoMenu from '../../conversa-canal/BotaoDoMenu.vue';
 import CitacaoDoWhatsapp from '../../conversa-canal/CitacaoDoWhatsapp.vue';
+import SeloDeReacoes from '../../conversa-canal/SeloDeReacoes.vue';
+import SeloVisualizacaoUnica from '../../conversa-canal/SeloVisualizacaoUnica.vue';
+import { temVisualizacaoUnica } from '../../conversa-canal/visualizacaoUnica';
+import { useReacoesDoBalao } from '../../conversa-canal/useReacoesDoBalao';
+import RotuloEncaminhada from '../../conversa-canal/RotuloEncaminhada.vue';
+import SeloApagadaPeloCliente from '../../conversa-canal/SeloApagadaPeloCliente.vue';
+import {
+  apagadaPeloCliente,
+  encaminhamento,
+} from '../../conversa-canal/marcasDaMensagem';
+import { eFigurinha } from '../../conversa-canal/figurinha';
+import { citacaoSolta } from '../../conversa-canal/citacaoSolta';
 
 const props = defineProps({
   hideMeta: { type: Boolean, default: false },
@@ -29,10 +41,33 @@ const {
   id,
   sender,
   senderType,
+  attachments: anexosDoBalao,
+  contentAttributes: atributosDoBalao,
 } = useMessageContext();
 const { t } = useI18n();
 // #1702: com a pele do canal (WhatsApp), cor, cantos, bico, hora e remetente do app.
 const peleDoBalao = usePeleDoBalao(useAttrs()['data-bubble-name']);
+// #1702: reação do cliente = selo com o emoji embaixo do balão (só com a pele).
+const reacoesDoBalao = useReacoesDoBalao(peleDoBalao.ativa);
+// #1702: visualização única = rótulo em cima da mídia, que continua aparecendo.
+const visualizacaoUnica = computed(
+  () => peleDoBalao.ativa.value && temVisualizacaoUnica(anexosDoBalao?.value)
+);
+
+// #1702: "Encaminhada" e "Apagada pelo cliente" no topo do balão (só com a pele).
+const encaminhada = computed(() =>
+  peleDoBalao.ativa.value ? encaminhamento(atributosDoBalao?.value) : null
+);
+const apagada = computed(
+  () => peleDoBalao.ativa.value && apagadaPeloCliente(atributosDoBalao?.value)
+);
+
+// #1709: citação de mensagem que não está nesta conversa (quoted_message), só com a pele.
+const citacaoSoltaDoBalao = computed(() =>
+  peleDoBalao.ativa.value && !inReplyTo?.value
+    ? citacaoSolta(atributosDoBalao?.value)
+    : null
+);
 
 const isCaptainMessage = computed(
   () =>
@@ -120,6 +155,10 @@ const replyToPreview = computed(() => {
   if (attachments?.length) {
     const firstAttachment = attachments[0];
     const fileType = firstAttachment.fileType ?? firstAttachment.file_type;
+    // #1702: com a pele, a citação de figurinha diz "Figurinha", como no app.
+    if (peleDoBalao.ativa.value && eFigurinha(firstAttachment)) {
+      return t('CONVERSA_CANAL.MIDIA.FIGURINHA');
+    }
 
     return t(`CHAT_LIST.ATTACHMENTS.${fileType}.CONTENT`);
   }
@@ -135,6 +174,7 @@ const replyToPreview = computed(() => {
       messageClass,
       {
         'max-w-lg': variant !== MESSAGE_VARIANTS.EMAIL,
+        'mb-[18px]': reacoesDoBalao.temReacoes.value,
       },
     ]"
   >
@@ -150,6 +190,8 @@ const replyToPreview = computed(() => {
     >
       {{ peleDoBalao.remetente.value }}
     </div>
+    <SeloApagadaPeloCliente v-if="apagada" />
+    <RotuloEncaminhada v-if="encaminhada" :tipo="encaminhada" />
     <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="topo" />
     <CitacaoDoWhatsapp
       v-if="inReplyTo && peleDoBalao.ativa.value"
@@ -167,6 +209,12 @@ const replyToPreview = computed(() => {
         class="prose prose-bubble line-clamp-2"
       />
     </div>
+    <CitacaoDoWhatsapp
+      v-if="citacaoSoltaDoBalao"
+      :solta="citacaoSoltaDoBalao"
+      :nome-do-cliente="sender?.name || ''"
+    />
+    <SeloVisualizacaoUnica v-if="visualizacaoUnica" />
     <slot />
     <template v-if="shouldShowMeta">
       <CaptainGenerationDetails
@@ -189,5 +237,11 @@ const replyToPreview = computed(() => {
       />
     </template>
     <BotoesDoModelo v-if="peleDoBalao.ativa.value" parte="botoes" />
+    <SeloDeReacoes
+      v-if="reacoesDoBalao.temReacoes.value"
+      :reacoes="reacoesDoBalao.reacoes.value"
+      :lado="reacoesDoBalao.lado.value"
+      :nome-do-cliente="reacoesDoBalao.nomeDoCliente.value"
+    />
   </div>
 </template>

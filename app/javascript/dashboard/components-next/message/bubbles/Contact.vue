@@ -8,6 +8,7 @@ import BaseAttachmentBubble from './BaseAttachment.vue';
 import BaseBubble from './Base.vue';
 import ContatoDoWhatsapp from '../../conversa-canal/midia/ContatoDoWhatsapp.vue';
 import { usePele } from '../../conversa-canal/pele';
+import { numeroParaConversar } from '../../conversa-canal/midia/contatos';
 import NovaConversaEntrada from '../../NovaConversa/NovaConversaEntrada.vue';
 
 import {
@@ -15,7 +16,7 @@ import {
   ExceptionWithMessage,
 } from 'shared/helpers/CustomErrors';
 
-const { attachments } = useMessageContext();
+const { attachments, contentAttributes } = useMessageContext();
 // #1702: com a pele do WhatsApp, o cartão de contato do app.
 const pele = usePele();
 
@@ -48,10 +49,10 @@ const isContactInfoResponse = computed(() => {
   return attachment.value?.meta?.isContactInfoResponse;
 });
 
-function getContactObject() {
+function getContactObject(digits = rawPhoneNumber.value) {
   const contactItem = {
     name: contactName.value,
-    phone_number: `+${rawPhoneNumber.value}`,
+    phone_number: `+${digits}`,
   };
   return contactItem;
 }
@@ -85,23 +86,24 @@ const onlyDigits = text =>
     .join('');
 
 // Cadastro sem nome de verdade: vazio ou o próprio telefone no lugar do nome.
-const lacksName = contact =>
-  !contact.name?.trim() || onlyDigits(contact.name) === rawPhoneNumber.value;
+const lacksName = (contact, digits) =>
+  !contact.name?.trim() || onlyDigits(contact.name) === digits;
 
 // Procura o contato pelo telefone com "+" (como ele é gravado) e cria se não existir.
 // #1702: achou sem nome de verdade e o cartão traz o nome? Completa o cadastro; nome
 // que alguém já deu ao contato não é trocado.
-async function findOrCreateContact() {
-  const contact = await filterContactByNumber(`+${rawPhoneNumber.value}`);
+// #1709: "Conversar" passa o waId do contato compartilhado (o número que tem WhatsApp).
+async function findOrCreateContact(digits = rawPhoneNumber.value) {
+  const contact = await filterContactByNumber(`+${digits}`);
   if (!contact) {
     const created = await $store.dispatch(
       'contacts/create',
-      getContactObject()
+      getContactObject(digits)
     );
     useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
     return created;
   }
-  if (contactName.value && lacksName(contact)) {
+  if (contactName.value && lacksName(contact, digits)) {
     await $store.dispatch('contacts/update', {
       id: contact.id,
       name: contactName.value,
@@ -138,7 +140,9 @@ async function addContact() {
 const contactToTalk = ref(null);
 async function talkToContact() {
   try {
-    const contact = await findOrCreateContact();
+    const contact = await findOrCreateContact(
+      numeroParaConversar(phoneNumber.value, contentAttributes?.value)
+    );
     contactToTalk.value = String(contact.id);
   } catch (error) {
     alertContactError(error);

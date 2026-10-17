@@ -50,16 +50,29 @@ export const barrasDoAudio = (amostras, total = BARRAS) => {
 // Baixa e decodifica o áudio só para desenhar a onda. Se o navegador não puder
 // ler o arquivo (formato, rede, outro domínio sem permissão), devolve null e o
 // balão fica com as barras neutras: tocar continua funcionando pelo <audio>.
+// A onda de cada endereço fica guardada: o balão que sai e volta à tela (rolagem,
+// troca de conversa) não baixa o arquivo de novo. Só as últimas, para não crescer.
+const ONDAS_GUARDADAS = 60;
+const ondas = new Map();
+
+const guardar = (url, onda) => {
+  if (ondas.size >= ONDAS_GUARDADAS) ondas.delete(ondas.keys().next().value);
+  ondas.set(url, onda);
+};
+
 export const carregarOnda = async (url, { signal } = {}) => {
+  if (ondas.has(url)) return ondas.get(url);
   try {
     const resposta = await fetch(url, { signal });
     if (!resposta.ok) return null;
     const dados = await resposta.arrayBuffer();
     const audio = await Decoder.decode(dados, TAXA);
-    return {
+    const onda = {
       barras: barrasDoAudio(audio.getChannelData(0)),
       duracao: audio.duration,
     };
+    guardar(url, onda);
+    return onda;
   } catch {
     return null;
   }

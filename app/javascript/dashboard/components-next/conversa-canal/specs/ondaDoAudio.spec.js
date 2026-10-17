@@ -1,3 +1,4 @@
+import Decoder from 'wavesurfer.js/dist/decoder.js';
 import {
   BARRAS,
   NIVEIS,
@@ -45,6 +46,23 @@ describe('onda do áudio (#1702)', () => {
     expect(await carregarOnda('https://exemplo.com/a.ogg')).toBeNull();
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('rede'));
     expect(await carregarOnda('https://exemplo.com/a.ogg')).toBeNull();
+  });
+
+  it('a onda do mesmo endereço não baixa o arquivo de novo', async () => {
+    const decode = vi.spyOn(Decoder, 'decode').mockResolvedValue({
+      getChannelData: () => new Float32Array(10),
+      duration: 3,
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    });
+    const url = 'https://exemplo.com/guardada.ogg';
+    const primeira = await carregarOnda(url);
+    const segunda = await carregarOnda(url);
+    expect(segunda).toBe(primeira);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    decode.mockRestore();
   });
 
   it('tempo como no app', () => {

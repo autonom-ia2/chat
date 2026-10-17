@@ -5,6 +5,16 @@ import { MESSAGE_VARIANTS, ORIENTATION } from '../message/constants';
 
 const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
 
+// Nome do balão da figurinha (bubbles/Image.vue com a marca is_sticker).
+export const FIGURINHA = 'sticker';
+// Só emoji (1 a 3, sem texto): grande e sem balão, como a figurinha.
+export const EMOJI = 'emoji';
+const SEM_BALAO = [FIGURINHA, EMOJI];
+// Aviso de tipo que o WhatsApp não deixa ver (enquete, GIF…): balão comum do lado do cliente.
+export const NAO_SUPORTADA_COM_TIPO = 'nao-suportada-tipo';
+// Mídia do cliente que não baixou: aviso cinza no balão, com a hora no canto, como o texto.
+export const MIDIA_INDISPONIVEL = 'midia-indisponivel';
+
 // Papel de parede (medido no WhatsApp Web de out/2026): bege claro com desenhos de
 // traço fino (public/conversa-canal) ou cinza neutro no escuro. Fica parado enquanto
 // as mensagens rolam e continua atrás da caixa de resposta, sem emenda.
@@ -37,6 +47,9 @@ const COR = {
   naoSuportada:
     '!bg-[#FFF3C4] dark:!bg-[#3D3214] border border-dashed border-[#D9B44A] text-[#4A3B00] dark:text-[#F5E3A3]',
 };
+
+const corDoLado = lado =>
+  lado === ORIENTATION.RIGHT ? COR.enviada : COR.recebida;
 
 const COR_POR_VARIANTE = {
   [MESSAGE_VARIANTS.AGENT]: COR.enviada,
@@ -86,6 +99,8 @@ const RECHEIO = [
   // A foto inteira, na proporção dela (como no app), até 330 px de altura.
   '[&[data-bubble-name=text]_.contain-content_img]:!h-auto [&[data-bubble-name=text]_.contain-content_img]:max-h-[330px] [&[data-bubble-name=text]_.contain-content_img]:object-top',
   '[&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:block [&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:px-1.5',
+  // Editada: "Editada" entra antes da hora, e o espaço reservado na última linha cresce.
+  '[&[data-bubble-name=text]:has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[116px]',
 ].join(' ');
 
 // Citação (resposta a uma mensagem): faixa verde à esquerda e fundo levemente
@@ -111,17 +126,31 @@ const LOCALIZACAO = [
   // A miniatura do Google (MapaDoWhatsapp) cobre a grade; o pino fica por cima dela.
   '[&[data-bubble-name$=location]_.size-8]:relative [&[data-bubble-name$=location]_.size-8]:overflow-hidden [&[data-bubble-name$=location]_.size-8]:after:relative [&[data-bubble-name$=location]_.size-8]:after:z-[1]',
   "[&[data-bubble-name$=location]_.size-8>*:not([data-mapa-do-whatsapp])]:!hidden [&[data-bubble-name$=location]_.size-8]:after:size-5 [&[data-bubble-name$=location]_.size-8]:after:rounded-full [&[data-bubble-name$=location]_.size-8]:after:bg-[#E53935] [&[data-bubble-name$=location]_.size-8]:after:border-[3px] [&[data-bubble-name$=location]_.size-8]:after:border-white [&[data-bubble-name$=location]_.size-8]:after:shadow-md [&[data-bubble-name$=location]_.size-8]:after:content-['']",
-  '[&[data-bubble-name$=location]_.space-y-1]:!px-1.5 [&[data-bubble-name$=location]_.space-y-1>div:first-child]:hidden [&[data-bubble-name$=location]_.space-y-1>div:nth-child(2)]:font-medium',
+  '[&[data-bubble-name$=location]_.space-y-1]:!px-1.5 [&[data-bubble-name$=location]_.space-y-1>div:first-child:not([data-titulo-do-cartao])]:hidden [&[data-bubble-name$=location]_[data-titulo-do-cartao]]:font-medium [&[data-bubble-name$=location]_.space-y-1>div:nth-child(2)]:font-medium',
 ].join(' ');
 
 // Balão: cantos de 7,5 px em todos; o primeiro de cada sequência tem o canto de cima
 // reto do lado do bico, como no app.
-export const classesDoBalao = ({ variante, lado, primeira }) => {
+export const classesDoBalao = ({ variante, lado, primeira, nomeDoBalao }) => {
   if (variante === MESSAGE_VARIANTS.ACTIVITY) {
     return `!bg-white/95 dark:!bg-[#1D1F1F] text-[#3B3B3B] dark:text-[#A7A8A8] text-xs !rounded-lg text-center ${SOMBRA}`;
   }
-  const cor = COR_POR_VARIANTE[variante] || COR.recebida;
-  const cantos = ['group/balao relative !rounded-[10px]', SOMBRA];
+  // Figurinha e só emoji: soltos, sem fundo, sombra nem moldura, como no app. O emoji
+  // deixa embaixo o lugar do selo da hora.
+  if (SEM_BALAO.includes(nomeDoBalao)) {
+    const emoji = nomeDoBalao === EMOJI ? ' !pb-[22px]' : '';
+    return `group/balao relative !p-0 !bg-transparent !shadow-none ${TEXTO}${emoji}${primeira ? ' mt-[10px]' : ''}`;
+  }
+  const cor =
+    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
+      ? corDoLado(lado)
+      : COR_POR_VARIANTE[variante] || COR.recebida;
+  const cantos = [
+    'group/balao relative !rounded-[10px]',
+    SOMBRA,
+    // O selo de reações fica meio para fora do balão: nenhum balão o corta.
+    '[&:has(>[data-selo-de-reacoes])]:!overflow-visible',
+  ];
   // Quem abre a sequência ganha 10 px acima (12 px com os 2 px entre balões).
   if (primeira) cantos.push('mt-[10px]');
   if (primeira && lado === ORIENTATION.LEFT) {
@@ -142,22 +171,30 @@ export const classesDoBalao = ({ variante, lado, primeira }) => {
 };
 
 // Bico só no primeiro balão da sequência e só nos balões de conversa.
-export const temBico = ({ variante, primeira }) =>
+export const temBico = ({ variante, primeira, nomeDoBalao }) =>
   primeira &&
+  !SEM_BALAO.includes(nomeDoBalao) &&
   ![
     MESSAGE_VARIANTS.ACTIVITY,
     MESSAGE_VARIANTS.PRIVATE,
     MESSAGE_VARIANTS.EMAIL,
   ].includes(variante);
 
-export const corDoBico = ({ variante }) => {
-  if (variante === MESSAGE_VARIANTS.USER) {
+export const corDoBico = ({ variante, lado, nomeDoBalao }) => {
+  const doCliente =
+    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
+      ? lado !== ORIENTATION.RIGHT
+      : variante === MESSAGE_VARIANTS.USER;
+  if (doCliente) {
     return 'text-white dark:text-[#242626]';
   }
   if (variante === MESSAGE_VARIANTS.ERROR) {
     return 'text-[#FDE7E9] dark:text-[#3B1F24]';
   }
-  if (variante === MESSAGE_VARIANTS.UNSUPPORTED) {
+  if (
+    variante === MESSAGE_VARIANTS.UNSUPPORTED &&
+    nomeDoBalao !== NAO_SUPORTADA_COM_TIPO
+  ) {
     return 'text-[#FFF3C4] dark:text-[#3D3214]';
   }
   return 'text-[#D9FDD3] dark:text-[#144D37]';
@@ -178,20 +215,39 @@ const SOBRE_A_MIDIA = [
   'rounded-b-[8px] bg-gradient-to-t from-[#000]/45 to-transparent !text-white pointer-events-none',
 ].join(' ');
 
+// Figurinha: a hora num selo pequeno, da cor do balão, sobre o canto de baixo.
+const SELO_DA_FIGURINHA = `absolute bottom-[3px] ltr:right-[3px] rtl:left-[3px] justify-end !mt-0 px-[5px] rounded-[7.5px] pointer-events-none ${SOMBRA}`;
+const FUNDO_DO_SELO = {
+  recebida: 'bg-white dark:bg-[#242626]',
+  enviada: 'bg-[#D9FDD3] dark:bg-[#144D37]',
+};
+
 // Hora e tiques: 11 px, cinza. No texto, presos no canto de baixo à direita (por cima
 // do espaço reservado na última linha); nos outros balões, numa linha só deles.
 export const classesDaHora = ({ variante, nomeDoBalao }) => {
-  if (['image', 'video'].includes(nomeDoBalao)) {
+  if (['image', 'video', 'album'].includes(nomeDoBalao)) {
     return `${SOBRE_A_MIDIA} text-[11px] leading-[15px]`;
   }
   const cor = COR_DA_HORA[variante] || SECUNDARIO;
+  if (SEM_BALAO.includes(nomeDoBalao)) {
+    const fundo =
+      variante === MESSAGE_VARIANTS.USER
+        ? FUNDO_DO_SELO.recebida
+        : FUNDO_DO_SELO.enviada;
+    return `${SELO_DA_FIGURINHA} ${fundo} text-[11px] leading-[15px] ${cor}`;
+  }
   const ACIMA_DO_BOTAO = [
     'rich-link-button',
     'rich-location-request',
     'contact-acao',
+    'pedido',
+    'enquete',
+    'contatos',
   ];
   let lugar = 'justify-end !mt-0.5';
-  if (nomeDoBalao === 'text') {
+  if (
+    ['text', NAO_SUPORTADA_COM_TIPO, MIDIA_INDISPONIVEL].includes(nomeDoBalao)
+  ) {
     lugar = 'absolute bottom-[3px] ltr:right-[7px] rtl:left-[7px] !mt-0';
   } else if (nomeDoBalao === 'audio') {
     lugar = 'absolute bottom-[5px] ltr:right-[8px] rtl:left-[8px] !mt-0';
@@ -208,7 +264,7 @@ export const classesDaHora = ({ variante, nomeDoBalao }) => {
 export const CLASSES_DO_REMETENTE = [
   'text-[12.8px] leading-[22px] font-medium text-[#008069] dark:text-[#06CF9C]',
   // Em foto e localização o balão tem moldura fina: o nome ganha o recuo do texto.
-  '[[data-bubble-name=text]:has(.contain-content)_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5',
+  '[[data-bubble-name=text]:has(.contain-content)_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5 [[data-bubble-name=album]_&]:px-1.5 [[data-bubble-name=album-legenda]_&]:px-1.5',
 ].join(' ');
 
 export const CLASSES_DO_SEPARADOR_DE_DIA = `px-3 py-[5px] rounded-[7.5px] text-[12.5px] bg-white dark:bg-[#1D1F1F] ${SECUNDARIO} ${SOMBRA}`;

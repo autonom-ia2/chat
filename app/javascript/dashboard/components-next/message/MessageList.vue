@@ -9,6 +9,12 @@ import SeparadorDeDia from '../conversa-canal/SeparadorDeDia.vue';
 import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
 import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
+import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
+import { usePele } from '../conversa-canal/pele';
+import {
+  ocultaNaPele,
+  primeiraNaoLidaVisivel,
+} from '../conversa-canal/marcasDaMensagem';
 
 /**
  * Props definition for the component
@@ -45,15 +51,28 @@ const props = defineProps({
 
 const emit = defineEmits(['retry']);
 
+// #1702: com a pele, mensagem absorvida pela apresentação nova (c2y_hidden, reação
+// que o agente da Autonomia leu) sai da lista antes de tudo, para não quebrar
+// sequência, dia nem álbum.
+const peleDaLista = usePele();
 const allMessages = computed(() => {
-  return useCamelCase(props.messages, {
+  const mensagens = useCamelCase(props.messages, {
     deep: true,
     stopPaths: [
       'content_attributes.translations',
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
+  return peleDaLista.value
+    ? mensagens.filter(mensagem => !ocultaNaPele(mensagem))
+    : mensagens;
 });
+
+// A faixa de não lidas não pode sumir quando a 1ª não lida é uma das escondidas:
+// desce para a próxima que aparece.
+const naoLidaDaLista = computed(() =>
+  primeiraNaoLidaVisivel(props.messages, allMessages.value, props.firstUnreadId)
+);
 
 const currentChat = useMapGetter('getSelectedChat');
 
@@ -132,6 +151,8 @@ const shouldGroupWithNext = (index, searchList) => {
 
 // #1702: com a pele do canal, bico no 1º balão da sequência e etiqueta do dia.
 const { abreODia, pele } = useSequenciaDaConversa(allMessages);
+// #1702: fotos e vídeos mandados juntos aparecem no mosaico do 1º item.
+const { escondida } = useAlbunsDaConversa(allMessages, naoLidaDaLista);
 
 /**
  * Gets the message that was replied to
@@ -178,10 +199,11 @@ const getInReplyToMessage = parentMessage => {
     <template v-for="(message, index) in allMessages" :key="message.id">
       <SeparadorDeDia v-if="abreODia(index)" :quando="message.createdAt" />
       <slot
-        v-if="firstUnreadId && message.id === firstUnreadId"
+        v-if="naoLidaDaLista && message.id === naoLidaDaLista"
         name="unreadBadge"
       />
       <Message
+        v-if="!escondida(message.id)"
         v-bind="message"
         :is-email-inbox="isAnEmailChannel"
         :in-reply-to="getInReplyToMessage(message)"

@@ -1,5 +1,16 @@
 {
   "CONVERSA_CANAL": {
+    "FORMULARIO": {
+      "NOME": "Form: {nome}",
+      "SEM_NOME": "WhatsApp form",
+      "RESPONDIDO": "Answered",
+      "RESPOSTA_ENVIADA": "Response sent",
+      "VER_RESPOSTA": "View response",
+      "OCULTAR_RESPOSTA": "Hide response",
+      "ILEGIVEL": "Couldn't read the fields of this response. They are still available in the API and webhooks.",
+      "SIM": "Yes",
+      "NAO": "No"
+    },
     "DIA": {
       "HOJE": "Today",
       "ONTEM": "Yesterday"
@@ -155,14 +166,148 @@
     "MIDIA": {
       "BAIXAR": "Download {nome}",
       "VIDEO": "Video. Tap to open",
+      "FIGURINHA": "Sticker",
       "DESCER": "Go to the latest message",
       "MENU": "Message options",
       "FECHAR": "Close",
       "VER_OPCOES": "View options",
       "ESCOLHIDA": "Chosen by the customer"
     },
+    "ALBUM": {
+      "ROTULO": "Album with {total} photos and videos",
+      "FOTO": "Photo {n} of {total}. Tap to open",
+      "VIDEO": "Video {n} of {total}. Tap to open",
+      "MAIS": "{n} more photos and videos. Tap to open",
+      "MAIS_CURTO": "+{n}",
+      "APAGADAS_EM_PARTE": "{apagadas} of {total} photos deleted. Try again for the rest."
+    },
     "CONTATO": {
       "CONVERSAR": "Message"
+    },
+    "REACOES": {
+      "ROTULO": "{nome} reacted with {emoji}",
+      "CLIENTE": "Customer",
+      "EQUIPE": "Team"
+    },
+    "REAGIR": {
+      "BOTAO": "React",
+      "MENU": "React",
+      "BARRA": "Pick a reaction",
+      "COM": "React with {emoji}",
+      "TIRAR": "Remove reaction {emoji}",
+      "MAIS": "More emojis",
+      "FORA_DA_JANELA": "The customer has not written in the last 24 hours. Official WhatsApp only accepts reactions while the conversation is open.",
+      "FALHOU": "Could not send the reaction. Try again."
+    },
+    "VISUALIZACAO_UNICA": {
+      "ROTULO": "View once"
+    },
+    "APAGADA": {
+      "PELO_CLIENTE": "Deleted by the customer",
+      "AJUDA": "The customer deleted this message on WhatsApp. They no longer see it; your team still does."
+    },
+    "EDITADA": {
+      "ROTULO": "Edited",
+      "VER": "Edited. See previous versions",
+      "TITULO": "Previous versions",
+      "TROCADA_AS": "Changed at {hora}",
+      "SEM_VERSOES": "The previous text was not saved."
+    },
+    "ENCAMINHADA": {
+      "SIMPLES": "Forwarded",
+      "FREQUENTE": "Forwarded many times"
+    },
+    "NAO_SUPORTADA": {
+      "poll": "The customer sent a poll. Open WhatsApp on the phone to see it.",
+      "gif": "The customer sent a GIF. Open WhatsApp on the phone to see it.",
+      "pinned": "The customer pinned a message. Open WhatsApp on the phone to see which one.",
+      "edit": "The customer edited a message. Open WhatsApp on the phone to see the new text.",
+      "view_once": "You received a view once message. For added privacy, you can only open it on your phone.",
+      "unknown": "The customer sent a message WhatsApp does not show here. Open WhatsApp on the phone to see it."
+    },
+    "CITACAO": {
+      "VOCE": "You",
+      "OUTRA_CONVERSA": "From another conversation",
+      "NAO_CONFERIDA": "Snippet sent by the customer's device, not verified",
+      "FOTO": "Photo",
+      "VIDEO": "Video",
+      "AUDIO": "Audio",
+      "DOCUMENTO": "Document",
+      "LOCALIZACAO": "Location",
+      "CONTATO": "Contact",
+      "MIDIA": "Media",
+      "SEM_TEXTO": "Message"
+    },
+    "MIDIA_INDISPONIVEL": {
+      "voice": "Couldn't download this voice message",
+      "audio": "Couldn't download this audio",
+      "image": "Couldn't download this photo",
+      "video": "Couldn't download this video",
+      "document": "Couldn't download this document",
+      "sticker": "Couldn't download this sticker"
+    },
+    "LOCALIZACAO_AO_VIVO": "Live location · starting point only",
+    "TEMPORARIAS": {
+      "ATIVADAS": "Disappearing messages are on. New messages will disappear from this chat after {duracao}.",
+      "DESATIVADAS": "Disappearing messages are off.",
+      "GUARDADAS": "Your team still sees the messages here.",
+      "DIAS": "{n} day | {n} days",
+      "HORAS": "{n} hour | {n} hours"
+    },
+    "PEDIDO": {
+      "TITULO": "Order",
+      "ITENS": "{n} item | {n} items",
+      "VER": "View order",
+      "OCULTAR": "Hide items",
+      "ITEM": "{quantidade} × {codigo}"
+    },
+    "LIGACAO": {
+      "VOZ_PERDIDA": "Missed voice call",
+      "VIDEO_PERDIDA": "Missed video call",
+      "VOZ_RECUSADA": "Declined voice call",
+      "VIDEO_RECUSADA": "Declined video call",
+      "VOZ": "Voice call",
+      "VIDEO": "Video call"
+    },
+    "ENQUETE": {
+      "UMA": "Select one option",
+      "VARIAS": "Select one or more options",
+      "VOTOS": "{n} vote | {n} votes",
+      "OPCAO": "{titulo}: {votos}",
+      "TITULO_E_VOTOS": "{titulo} · {votos}",
+      "VER_VOTOS": "View votes",
+      "OCULTAR_VOTOS": "Hide votes",
+      "SEM_VOTOS": "No votes yet"
+    },
+    "CONTATOS": {
+      "RESUMO": "{nome} and {n} other contact | {nome} and {n} other contacts",
+      "VER_TODOS": "View all",
+      "OCULTAR": "Hide",
+      "SEM_NOME": "Unnamed contact"
+    },
+    "PREVIA_DE_LINK": {
+      "ABRIR": "Open {site} in a new tab"
+    },
+    "AUDIO_OUVIDO": "The customer listened to this audio",
+    "ENCAMINHAR": {
+      "MENU": "Forward",
+      "BOTAO": "Forward",
+      "MARCAR": "Select message to forward",
+      "SAIR": "Leave selection",
+      "SELECIONADAS": "{n} selected | {n} selected",
+      "ENVIAR_SELECAO": "Forward selected messages",
+      "TITULO": "Forward message to",
+      "FECHAR": "Close",
+      "BUSCAR": "Search name, number or {'@'}username",
+      "RECENTES": "Recent chats",
+      "NADA": "No conversations found",
+      "CARREGANDO": "Loading conversations…",
+      "ENVIAR": "Send",
+      "LIMITE_DESTINOS": "You can forward to up to {limite} conversations at a time.",
+      "LIMITE_MENSAGENS": "You can forward up to {limite} messages at a time.",
+      "ENVIADO": "Message forwarded | Messages forwarded",
+      "DESTINO_FALHOU": "{nome}: {erro}",
+      "FALHOU": "Could not forward. Try again."
     }
   }
 }

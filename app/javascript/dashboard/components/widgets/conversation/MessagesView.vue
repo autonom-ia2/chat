@@ -42,7 +42,10 @@ import wootConstants, {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
+import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
+import { selecao as selecaoParaEncaminhar } from 'dashboard/components-next/conversa-canal/encaminhar/selecaoParaEncaminhar';
 
 export default {
   components: {
@@ -55,6 +58,7 @@ export default {
     ResizableEditorWrapper,
     ReferralBubble,
     AvisoJanelaFechada,
+    EncaminharDaConversa,
   },
   mixins: [inboxMixin],
   setup() {
@@ -77,6 +81,8 @@ export default {
     provide('contextMenuElementTarget', conversationPanelRef);
     // #1702: conversa com a cara do canal (WhatsApp), atrás da chave da conta.
     const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
+    // #1702: superadmin entrando como o usuário não marca a mensagem como lida no WhatsApp do cliente.
+    const { isImpersonating } = useImpersonation();
 
     return {
       captainTasksEnabled,
@@ -94,6 +100,8 @@ export default {
       pele,
       classesDaLista,
       classesDaBarra,
+      isImpersonating,
+      selecaoParaEncaminhar,
     };
   },
   data() {
@@ -461,7 +469,10 @@ export default {
     },
 
     makeMessagesRead() {
-      this.$store.dispatch('markMessagesRead', { id: this.currentChat.id });
+      this.$store.dispatch('markMessagesRead', {
+        id: this.currentChat.id,
+        readReceipt: !this.isImpersonating,
+      });
     },
     async handleMessageRetry(message) {
       if (!message) return;
@@ -483,6 +494,7 @@ export default {
     ref="messagesViewRef"
     class="flex flex-col justify-between flex-grow h-full min-w-0 m-0"
     :class="{ relative: pele }"
+    :data-conversa-da-pele="pele ? '' : undefined"
   >
     <div ref="topBannerRef">
       <Banner
@@ -582,7 +594,10 @@ export default {
           />
         </div>
       </div>
+      <!-- #1702: modo seleção do encaminhar troca o campo de digitar pela barra. -->
+      <EncaminharDaConversa v-if="pele" :conversation-id="currentChat.id" />
       <ResizableEditorWrapper
+        v-show="!(pele && selecaoParaEncaminhar.ativa)"
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"
       >
