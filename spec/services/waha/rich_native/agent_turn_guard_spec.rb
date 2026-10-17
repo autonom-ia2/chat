@@ -362,4 +362,149 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(consultas.sole[:history].pluck(:content)).not_to include('Quero cancelar')
     end
   end
+
+  # Revisão do Agentes IA (sobre 0d2a9c6325): os pontos que valiam no HEAD.
+  describe 'review of the Agentes IA team' do
+    def bolha
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                       content: 'Mensagem não suportada', content_attributes: { 'is_unsupported' => true })
+    end
+
+    def voto_retirado
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => [] }] }) # rubocop:disable Rails/SkipsModelValidations
+      voto = turno_do_voto('Votou: Tarde')
+      voto.update_column(:content_attributes, voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, ['Tarde']))) # rubocop:disable Rails/SkipsModelValidations
+      voto
+    end
+
+    it 'counts only real interactions in the history window: 25 real messages stay with 3 hidden ones among them' do
+      inicio = 2.hours.ago
+      reais = (1..25).map do |numero|
+        message = cliente_escreve("real #{numero}")
+        message.update_column(:created_at, inicio + numero.minutes) # rubocop:disable Rails/SkipsModelValidations
+        message
+      end
+      escondidas = [bolha, turno_do_voto('Votou: Sim'), cliente_escreve('apagada')]
+      escondidas.last.update_column(:content_attributes, { 'deleted_by_contact_at' => Time.current.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+      escondidas.each_with_index { |message, index| message.update_column(:created_at, inicio + (20 + index).minutes + 30.seconds) } # rubocop:disable Rails/SkipsModelValidations
+      gatilho(reais.last)
+
+      rodar_turno!
+
+      conteudos = consultas.sole[:history].pluck(:content)
+      expect(conteudos).to include(*reais.map(&:content))
+    end
+
+    it 'silence 17 keeps the turn ownership and disarms the waiting time the hidden vote armed' do
+      conversation.update!(waiting_since: nil)
+      voto = voto_retirado
+      expect(conversation.reload.waiting_since).to be_present
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_escolha_retirada.pluck(:message_id)).to eq([voto.id])
+      expect(conversation.reload.waiting_since).to be_nil
+      chave = Autonomia::Agents::Operate::PosseDoTurno.chave(conversation.id, voto.id, vinculo_da_porta.id)
+      expect(Redis::Alfred.get(chave)).to be_present
+    end
+
+    it 'silence 17 keeps a waiting time armed before the vote' do
+      antes = 1.hour.ago.change(usec: 0)
+      voto = voto_retirado
+      # Armado antes do voto (uma mensagem real anterior): o voto não o trocou.
+      conversation.update!(waiting_since: antes)
+      gatilho(voto)
+
+      rodar_turno!
+
+      expect(conversation.reload.waiting_since).to eq(antes)
+    end
+
+    it 'sends an unexpected guard error to the tracker and answers as in main' do
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+      allow(Waha::RichNative::TurnKinds).to receive(:turn_silence).and_raise(ActiveRecord::ConnectionNotEstablished)
+      gatilho(cliente_escreve('Oi'))
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(tracker).to have_received(:capture_exception)
+    end
+
+    it 'does not lose the silence when checking the event fails' do
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+      allow_any_instance_of(Autonomia::Agents::Agent).to receive(:events).and_raise(ActiveRecord::ConnectionNotEstablished) # rubocop:disable RSpec/AnyInstance
+      gatilho(voto_retirado)
+
+      expect { rodar_turno! }.not_to raise_error
+      expect(respostas).to be_empty
+    end
+
+    it 'gives the AI the notice of a photo that failed to download, as the customer turn' do
+      aviso = Waha::RichNative::Inbound::MediaFailed.notice(account, 'image')
+      message = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                                 content: aviso, content_attributes: { 'media_unavailable' => { 'kind' => 'image', 'reason' => 'download_failed' } })
+      gatilho(message)
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(consultas.sole[:query]).to include(aviso)
+    end
+
+    it 'never answers nor records 15-17 in a conversation assigned to a person' do
+      conversation.update!(assignee: admin)
+      gatilho(bolha)
+      gatilho(voto_retirado)
+
+      rodar_turno!
+
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.where(conversation_id: conversation.id)
+                                          .where(event_type: %i[skipped_mensagem_sem_suporte skipped_mensagem_apagada skipped_escolha_retirada]))
+        .to be_empty
+    end
+
+    # Decisão documentada: a bolha sozinha não tem o que responder, também fora do horário; o guard cala o turno antes da
+    # porta de engajamento (sem passar a conversa às pessoas por causa da bolha).
+    it 'records silence 15 for a bubble-only turn even outside the schedule' do
+      agente_da_porta.update!(config: { 'response_window' => 'business_hours' })
+      inbox.update!(working_hours_enabled: true)
+      allow_any_instance_of(Inbox).to receive(:out_of_office?).and_return(true) # rubocop:disable RSpec/AnyInstance
+      sem = bolha
+      gatilho(sem)
+
+      rodar_turno!
+
+      expect(respostas).to be_empty
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+      expect(Autonomia::Agents::AgentEvent.skipped_schedule).to be_empty
+    end
+
+    context 'with the vote on the plan B of the Hybrid (Cloud inbox)' do
+      let(:inbox) do
+        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                  validate_provider_config: false).inbox
+      end
+
+      it 'answers the vote through the Responder, with the question in the history' do
+        poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+        votos = [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Tarde'] }]
+        poll.update_column(:content_attributes, { 'poll_votes' => votos }) # rubocop:disable Rails/SkipsModelValidations
+        voto = turno_do_voto(Waha::RichNative::AiTurn.poll_text(account, poll, ['Tarde']))
+        voto.update_column(:content_attributes, voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, ['Tarde']))) # rubocop:disable Rails/SkipsModelValidations
+        gatilho(voto)
+
+        rodar_turno!
+
+        expect(respostas.count).to eq(1)
+        completo = Waha::RichNative::AiTurn.full_text(account, voto.reload.content_attributes['c2y_ai_turn'])
+        expect(consultas.sole[:history].last[:content]).to eq(completo)
+      end
+    end
+  end
 end

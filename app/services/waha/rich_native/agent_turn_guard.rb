@@ -16,6 +16,9 @@ module Waha::RichNative::AgentTurnGuard
   UNSUPPORTED_REASON = 'mensagem_sem_suporte'.freeze
   DELETED_REASON = 'mensagem_apagada'.freeze
   STALE_CHOICE_REASON = 'escolha_retirada'.freeze
+  # As marcas das mensagens do cliente que não contam como interação na janela do histórico. São a peneira barata do
+  # SQL (`content_attributes` é texto JSON); quem decide é Waha::RichNative::AiTurn.turn? e TurnKinds.kind.
+  UNCOUNTED_MARKERS = %w[c2y_hidden is_unsupported view_once_unavailable deleted_by_contact_at].freeze
 
   def perform
     reason = c2y_turn_skip_reason
@@ -53,6 +56,29 @@ module Waha::RichNative::AgentTurnGuard
     recent_messages.reverse.find { |message| message.incoming? && Waha::RichNative::TurnKinds.kind(message).nil? }
   end
 
+  # A janela do histórico (as últimas HISTORY_MAX_INTERACOES mensagens do cliente) conta só as interações reais: o voto
+  # escondido, a bolha "abra no celular", o aviso de visualização única e a apagada saem da CONTAGEM antes do corte (sem
+  # isto, empurravam mensagens reais para fora da janela). Elas continuam na janela, para o guard ver o turno; o
+  # histórico as tira depois (c2y_out_of_history?).
+  def janela_do_historico
+    return super unless c2y_flag?
+
+    chat = @conversation.messages.chat
+    real = chat.incoming.where.not(id: c2y_uncounted_ids(chat))
+    desde = real.reorder(created_at: :desc).offset(::Autonomia::Agents::Config::HISTORY_MAX_INTERACOES - 1).pick(:created_at)
+    desde ? chat.where(created_at: desde..) : chat
+  end
+
+  def c2y_uncounted_ids(chat)
+    sieve = UNCOUNTED_MARKERS.map { 'messages.content_attributes::text LIKE ?' }.join(' OR ')
+    chat.incoming.where(sieve, *UNCOUNTED_MARKERS.map { |marker| "%#{marker}%" })
+        .select { |message| c2y_uncounted?(message) }.map(&:id)
+  end
+
+  def c2y_uncounted?(message)
+    Waha::RichNative::AiTurn.turn?(message) || (c2y_waha_with_flag? && Waha::RichNative::TurnKinds.kind(message).present?)
+  end
+
   def c2y_stale_choice?(message)
     @c2y_stale ||= {}
     @c2y_stale.fetch(message.id) { @c2y_stale[message.id] = !Waha::RichNative::TurnKinds.choice_current?(message) }
@@ -63,8 +89,14 @@ module Waha::RichNative::AgentTurnGuard
 
     Waha::RichNative::TurnKinds.turn_silence(c2y_turn_incoming, waha: c2y_waha_with_flag?)
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][operate] c2y_turn_guard_failed conv=#{@conversation.id} #{e.class}")
+    c2y_report(e, 'c2y_turn_guard_failed')
     nil
+  end
+
+  # Erro inesperado do guard: não derruba o turno (a IA segue como na main), mas vai ao rastreador e ao log.
+  def c2y_report(error, label)
+    ChatwootExceptionTracker.new(error, account: @conversation.account).capture_exception
+    Rails.logger.warn("[autonomia][operate] #{label} conv=#{@conversation.id} #{error.class}")
   end
 
   def c2y_turn_message
@@ -97,12 +129,26 @@ module Waha::RichNative::AgentTurnGuard
 
   def c2y_skip_turn!(reason)
     registrar_silencio(reason)
+    c2y_disarm_waiting! if reason == STALE_CHOICE_REASON
     c2y_log_event(reason)
     self.class::Result.silenced
   end
 
+  # Silêncio 17 (só voto/resposta retirados no turno): a conversa não fica "esperando resposta" por causa deles. O
+  # `waiting_since` só é armado por mensagem do cliente com ele vazio (Message#set_waiting_since_on_incoming_message);
+  # se foi armado por uma escolha deste turno, volta a vazio. Armado antes (uma mensagem real anterior), fica.
+  def c2y_disarm_waiting!
+    waiting = @conversation.reload.waiting_since
+    return if waiting.nil?
+    return unless c2y_turn_incoming.any? { |message| message.created_at.to_i == waiting.to_i && Waha::RichNative::AiTurn.turn?(message) }
+
+    @conversation.update!(waiting_since: nil)
+  rescue StandardError => e
+    c2y_report(e, 'c2y_disarm_waiting_failed')
+  end
+
   # Uma vez por mensagem do cliente (sem índice único: uma duplicata rara na corrida é aceita, como no #1669). O
-  # EventLogger nunca levanta.
+  # EventLogger nunca levanta; a consulta de antes também não pode derrubar o silêncio (o turno se perderia no retry).
   def c2y_log_event(reason)
     message_id = c2y_turn_message&.id || @reply_to_message_id
     event_type = :"skipped_#{reason}"
@@ -110,5 +156,7 @@ module Waha::RichNative::AgentTurnGuard
 
     ::Autonomia::Agents::Operate::EventLogger.create!(agent: @agent, conversation: @conversation, event_type: event_type,
                                                       message_id: message_id, handoff_reason: reason)
+  rescue StandardError => e
+    c2y_report(e, 'c2y_log_event_failed')
   end
 end

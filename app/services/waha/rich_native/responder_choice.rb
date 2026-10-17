@@ -27,6 +27,7 @@ module Waha::RichNative::ResponderChoice
 
     equipe.aplica? ? equipe.pergunta(text) : text
   rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @conversation.account).capture_exception
     Rails.logger.error("[waha] rich native choice text #{e.class}")
     nil
   end

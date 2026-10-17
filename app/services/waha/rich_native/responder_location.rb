@@ -34,6 +34,7 @@ module Waha::RichNative::ResponderLocation
 
     equipe.aplica? ? equipe.pergunta(text) : text
   rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @conversation.account).capture_exception
     Rails.logger.error("[waha] rich native location text #{e.class}")
     nil
   end
