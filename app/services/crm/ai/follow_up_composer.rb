@@ -191,7 +191,7 @@ module Crm
           PORTÃO ÚNICO — decida should_send (vale a pena dar follow agora?):
           - Encontre UM único loop aberto real na conversa: o cliente perguntou/pediu e não foi respondido; prometemos algo e não enviamos; havia uma decisão pendente e o cliente sumiu depois que perguntamos; ou ENTREGAMOS o que ele pediu (proposta, orçamento, valor, simulação, documento, link, opção de horário) e ele não voltou com a resposta.
           - Entrega sem pergunta explícita TAMBÉM é loop aberto: "segue a proposta, qualquer dúvida me chama" deixa a decisão com o cliente. Não exija que tenhamos feito uma pergunta em forma de pergunta.
-          - #{ContextBuilder::ROLES_LEGEND} "last_message_role" repete o papel da última mensagem. Quem falou por último NÃO define, sozinho, de quem é a pendência — leia a conversa.
+          - #{ContextBuilder::ROLES_LEGEND} "last_message_role" repete o papel da última mensagem. Quem falou por último NÃO define, sozinho, de quem é a pendência — leia a conversa. #{ContextBuilder::FORWARDED_LEGEND}
           - Use "temporal.now_local" (data e hora de agora, no fuso do contato) junto com o "created_at" de cada mensagem para saber há quanto tempo cada coisa aconteceu.
           - Use "conversation_state": "status" da conversa, "assigned_to_human" (há uma pessoa do time responsável) e "last_human_agent_at" (quando um humano falou por último).
           - DETECTE ENCERRAMENTO/SATISFAÇÃO: se a conversa mostra que já foi resolvida, o cliente agradeceu/comprou, disse que não tem interesse, ou pediu para não ser mais contatado (ex.: "obrigado por comprar, conte comigo", "não tenho interesse", compra concluída) → defina closure_detected=true e should_send=false.
