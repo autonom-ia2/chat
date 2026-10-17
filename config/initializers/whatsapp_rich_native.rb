@@ -138,6 +138,8 @@ Rails.application.config.to_prepare do
   unless Autonomia::Decisores::Estado <= Waha::RichNative::AiChoiceContext::Estado
     Autonomia::Decisores::Estado.prepend(Waha::RichNative::AiChoiceContext::Estado)
   end
+  # A bolha "abra no celular" e o aviso de visualização única não pedem a IA de assunto.
+  Crm::Subjects.singleton_class.prepend(Waha::RichNative::SubjectsSkip) unless Crm::Subjects.singleton_class <= Waha::RichNative::SubjectsSkip
   if Message._create_callbacks.none? { |callback| callback.filter == Waha::RichNative::PreviewImage }
     Message.before_create Waha::RichNative::PreviewImage, prepend: true
   end
