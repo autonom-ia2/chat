@@ -21,11 +21,45 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
       expect(message.content_attributes.keys & %w[c2y_hidden reaction_applied_to waha_call_summary]).to eq([])
     end
 
-    it 'drops them in the WAHA inbox when anyone other than the chat2you writes them' do
-      message = conversation.messages.create!(account: account, inbox: inbox, message_type: :incoming, content: 'oi',
-                                              sender: conversation.contact, content_attributes: { 'forwarded' => true })
+    # Rodada de correção, item 1: o recebimento da Cloud e o encaminhamento do #1702b gravam as chaves de nome genérico
+    # por dentro, na criação. O callback do modelo não as tira (só a API pública, Waha::RichNative::ForgeryGuard).
+    context 'when the chat2you itself creates the message (no public API)' do
+      let(:generic) do
+        Waha::RichNative::ContractGuard::SCOPED_KEYS.index_with { |key| "valor de #{key}" }
+                                                    .merge('is_unsupported' => true)
+      end
+      let(:cloud) do
+        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false).inbox
+      end
 
-      expect(message.reload.content_attributes).not_to have_key('forwarded')
+      def create_in(target_inbox, **attributes)
+        target = create(:conversation, inbox: target_inbox, account: account)
+        target.messages.create!(account: account, inbox: target_inbox, message_type: :incoming, content: 'oi', sender: target.contact,
+                                content_attributes: attributes)
+      end
+
+      it 'keeps every generic key, without the flag, as the main stores it (WAHA and WhatsApp inboxes)' do
+        expect(create_in(inbox, **generic).reload.content_attributes).to eq(generic)
+        expect(create_in(cloud, **generic).reload.content_attributes).to eq(generic)
+      end
+
+      it 'keeps them with the flag too, and keeps the forwarded mark of an outgoing message built by the MessageBuilder' do
+        flag_on!
+        expect(create_in(cloud, **generic).reload.content_attributes).to eq(generic)
+
+        target = create(:conversation, inbox: cloud, account: account)
+        params = ActionController::Parameters.new(content: 'encaminhada', message_type: 'outgoing', private: false,
+                                                  content_attributes: { 'forwarded' => true, 'forwarded_from' => { 'message_id' => 1 } })
+        message = Messages::MessageBuilder.new(agent, target, params).perform
+
+        expect(message.reload.content_attributes).to include('forwarded' => true, 'forwarded_from' => { 'message_id' => 1 })
+      end
+
+      it 'still drops the internal marks and the connector requests' do
+        message = create_in(cloud, 'c2y_hidden' => true, 'waha_native' => {}, 'c2y_ai_turn' => {}, 'forwarded' => true)
+
+        expect(message.reload.content_attributes).to eq('forwarded' => true)
+      end
     end
   end
 

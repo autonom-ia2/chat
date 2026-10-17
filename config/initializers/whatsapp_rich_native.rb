@@ -25,6 +25,9 @@ Rails.application.config.to_prepare do
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::ForgeryGuard
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::ForgeryGuard)
   end
+  unless Api::V1::Accounts::ConversationsController <= Waha::RichNative::ConversationForgeryGuard
+    Api::V1::Accounts::ConversationsController.prepend(Waha::RichNative::ConversationForgeryGuard)
+  end
   # Por cima de RichMessages::RetryKeepsFormat (prepend antes, em config/initializers/rich_messages.rb).
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::RetryAsText
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::RetryAsText)

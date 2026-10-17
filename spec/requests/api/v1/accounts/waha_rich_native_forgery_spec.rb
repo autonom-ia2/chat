@@ -57,6 +57,30 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes).to eq('outro' => 'fica')
   end
 
+  # Rodada de correção, item 1: o modelo não tira mais as chaves de nome genérico (o recebimento da Cloud as grava); a
+  # API pública continua barrando a forja delas, nas duas portas e na caixa do WhatsApp também.
+  it 'drops forged generic keys (forwarded, unsupported_kind) from a message created by the API' do
+    message = create_message(content: 'Oi', content_attributes: { forwarded: true, unsupported_kind: 'poll', outro: 'fica' })
+
+    expect(message.content_attributes).to eq('outro' => 'fica')
+  end
+
+  it 'drops forged generic keys from a conversation created with a message in a WhatsApp inbox' do
+    whatsapp = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                         validate_provider_config: false).inbox
+    contact_inbox = create(:contact_inbox, inbox: whatsapp, contact: create(:contact, account: account), source_id: '5511999990000')
+
+    post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
+                                                         params: { source_id: contact_inbox.source_id, inbox_id: whatsapp.id,
+                                                                   message: { content: 'Oi', content_attributes: {
+                                                                     forwarded: true, reactions: [{ emoji: '👍' }], c2y_hidden: true, outro: 'fica'
+                                                                   } } }
+
+    expect(response).to have_http_status(:success)
+    message = account.conversations.find_by(display_id: response.parsed_body['id']).messages.outgoing.first
+    expect(message.content_attributes).to eq('outro' => 'fica')
+  end
+
   it 'drops a forged view_once_unavailable from a message created by the API' do
     message = create_message(content: 'Oi', content_attributes: { view_once_unavailable: true, outro: 'fica' })
 

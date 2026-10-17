@@ -1,22 +1,20 @@
 # Callback `before_create` de Message (chat#1709, fases 2 e 3), o PRIMEIRO dos callbacks do contrato com o conector do
 # WAHA. Vale em qualquer caminho de criação (API de mensagens, criação de conversa com mensagem, job, console), com ou
-# sem a flag `whatsapp_rich_native`:
+# sem a flag `whatsapp_rich_native`, mas só tira chaves que NENHUM outro código grava (nomes `waha_*`, `c2y_*` e
+# `*_applied_to`, que só o chat2you e o conector usam):
 # - REQUEST_KEYS (pedido ao conector, só no payload do webhook da caixa): `waha_native` (Waha::RichNative::InboxWebhook),
 #   `waha_text` e `waha_media_as_media` (Waha::RichNative::OutgoingHints). Guardadas, iriam ao conector e o motor mandaria
 #   o que quem criou quisesse. Saem SEMPRE.
-# - STORED_KEYS (o que o próprio chat2you grava ao transformar a volta do conector, no formato da tela do Frontend
-#   geral, #1702): `c2y_hidden`, `reactions`, `edit_history`, `poll_votes` etc. Forjada, `c2y_hidden` esconderia do
-#   painel uma mensagem que foi ao cliente; as outras inventariam reação, edição, voto, apagada ou citação. Saem SEMPRE
-#   na entrada. Quem grava essas chaves (Waha::RichNative::Inbound e os módulos de gravação) roda DEPOIS deste callback,
-#   ou marca a mensagem como escrita interna (Waha::RichNative::InternalWrite, o voto do plano B do Híbrido, montado
-#   antes do `save!`). `shared_location` e `order` NÃO estão aqui: a Cloud os grava no próprio serviço de recebimento.
-#   Duas faixas (revisão da rodada 2):
-#   - INTERNAL_KEYS (marca interna e nomes `waha_*`/`*_applied_to`, que só o chat2you usa): saem em QUALQUER caixa;
-#   - SCOPED_KEYS (nomes genéricos: `reactions`, `forwarded`, `quoted_message`…): saem só onde o chat2you as grava, a
-#     caixa WAHA comum e a caixa do WhatsApp (Híbrido). Noutra caixa (Channel::Api de outro provedor, n8n, importador)
-#     a chave que alguém mandar fica, como na main.
+# - INTERNAL_KEYS (marca interna, como `c2y_hidden`, que esconderia do painel uma mensagem que foi ao cliente): saem
+#   SEMPRE na entrada. Quem as grava (Waha::RichNative::Inbound e os módulos de gravação) roda DEPOIS deste callback, ou
+#   marca a mensagem como escrita interna (Waha::RichNative::InternalWrite, montada antes do `save!`).
 # - INCOMING_ONLY_KEYS (`waha_list_reply`, `waha_poll_vote`, `waha_event_response`): a escolha, o voto e a resposta ao
 #   evento do cliente só existem em mensagem RECEBIDA, que é como o conector as cria. Em qualquer outra, saem.
+# As SCOPED_KEYS (nomes genéricos do formato da tela do Frontend geral, #1702: `reactions`, `forwarded`,
+# `unsupported_kind`, `quoted_message`…) NÃO saem aqui: o recebimento da Cloud e o encaminhamento do #1702b as gravam
+# na criação, por dentro. A forja delas só é barrada na API pública (Waha::RichNative::ForgeryGuard, criação de
+# mensagem, e Waha::RichNative::ConversationForgeryGuard, criação de conversa com mensagem), na caixa WAHA comum e na
+# do WhatsApp.
 class Waha::RichNative::ContractGuard
   REQUEST_KEYS = %w[waha_native waha_text waha_media_as_media].freeze
   INTERNAL_KEYS = %w[
@@ -42,12 +40,12 @@ class Waha::RichNative::ContractGuard
 
   def self.dropped_keys(message)
     keys = REQUEST_KEYS
-    keys += stored_keys_for(message.inbox) unless Waha::RichNative::InternalWrite.internal?(message)
+    keys += INTERNAL_KEYS unless Waha::RichNative::InternalWrite.internal?(message)
     keys += INCOMING_ONLY_KEYS unless message.incoming?
     keys
   end
 
-  # As chaves gravadas pelo chat2you que saem numa mensagem desta caixa.
+  # As chaves gravadas pelo chat2you que a API pública não aceita numa mensagem desta caixa.
   def self.stored_keys_for(inbox)
     scoped_inbox?(inbox) ? STORED_KEYS : INTERNAL_KEYS
   end
