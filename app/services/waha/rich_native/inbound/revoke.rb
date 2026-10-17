@@ -1,11 +1,14 @@
-# `waha_revoke` (chat#1709, rodada 2): o cliente apagou uma mensagem "para todos", { revoked_wa_id, from_me }. Na main
-# vira uma nota privada e a original continua sem marca. Com a flag, a original ganha `deleted_by_contact_at` (ISO
-# 8601) e o conteúdo fica INTACTO, como prova (decisão do Rodrigo): nunca `deleted`, que esconde o conteúdo. A gravação
-# não vai ao conector (Waha::RichNative::SilentUpdate). Apagada no celular da empresa (from_me): fica a nota da main.
-# A nota da main CONTINUA visível para a equipe, só ganha `revoke_applied_to` (revisão da rodada 2): quem mostra o selo
-# "apagada pelo cliente" na original é a tela do Frontend geral (#1702, PR #1724), que ainda não está no ar. Esconder a
-# nota antes dela faria a equipe e a IA perderem o aviso de que o cliente apagou. Quando a tela estiver no ar, a nota
-# passa a atividade escondida (Waha::RichNative::Inbound.hide!) em PR próprio.
+# `waha_revoke` (chat#1709, rodada 2): uma mensagem apagada "para todos", { revoked_wa_id, from_me }. O conector cria
+# uma nota privada ("Esta mensagem foi excluída no WhatsApp", com a miniatura quebrada quando era foto). Na main ela é
+# tudo o que fica. Com a flag:
+# - apagada pelo CLIENTE: a original ganha `deleted_by_contact_at` (ISO 8601) com o conteúdo INTACTO, como prova
+#   (decisão do Rodrigo: nunca `deleted`, que esconde o conteúdo; a gravação não vai ao conector,
+#   Waha::RichNative::SilentUpdate), e a nota do conector vira atividade escondida (`c2y_hidden`, `revoke_applied_to`):
+#   a informação já está na bolha da original (teste real, 17/10/2026: a nota duplicava o aviso);
+# - apagada pela EMPRESA (from_me): quando a original nossa já está marcada `deleted` (apagada pelo painel, que pediu ao
+#   motor), a nota também vira atividade escondida. Apagada direto no celular da empresa, sem a marca na original: a
+#   nota fica, como na main (é o único aviso).
+# Sem a original (nota, atividade, de outro contato): a nota fica, como na main.
 module Waha::RichNative::Inbound::Revoke
   KEY = 'deleted_by_contact_at'.freeze
   APPLIED_KEY = 'revoke_applied_to'.freeze
@@ -13,13 +16,31 @@ module Waha::RichNative::Inbound::Revoke
   module_function
 
   def apply(message, data)
-    return unless data.is_a?(Hash) && data['from_me'] != true
+    return unless data.is_a?(Hash)
+    return apply_from_me(message) if data['from_me'] == true
 
     target = Waha::RichNative::Inbound.target_of(message, message_type: :incoming)
     return if target.nil?
 
     mark!(target)
-    message.content_attributes = message.content_attributes.to_h.merge(APPLIED_KEY => target.id)
+    Waha::RichNative::Inbound.hide!(message, 'revoke', APPLIED_KEY => target.id)
+  end
+
+  # A original nossa já apagada pelo painel (`deleted`): o Waha::RichNative::Inbound.target_of não a devolve (ele recusa
+  # as apagadas), então a busca é a mesma, só que pedindo a apagada.
+  def apply_from_me(message)
+    target = deleted_outgoing(message)
+    Waha::RichNative::Inbound.hide!(message, 'revoke_business', APPLIED_KEY => target.id) if target
+  end
+
+  def deleted_outgoing(message)
+    target_id = Waha::RichNative::Inbound::ReplyTarget.target_id(message)
+    contact_id = message.conversation&.contact_id
+    return if target_id.blank? || contact_id.nil?
+
+    target = Message.joins(:conversation).where(conversations: { contact_id: contact_id }, private: false)
+                    .find_by(id: target_id, inbox_id: message.inbox_id, message_type: :outgoing)
+    target if target&.content_attributes.to_h['deleted']
   end
 
   def mark!(target)

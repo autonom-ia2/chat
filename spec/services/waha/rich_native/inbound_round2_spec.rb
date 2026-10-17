@@ -202,7 +202,7 @@ describe Waha::RichNative::Inbound do
       end
     end
 
-    it 'marks the message deleted by the customer, keeps its content as proof and keeps the note of main' do
+    it 'marks the message deleted by the customer, keeps its content as proof and hides the note of the connector' do
       original = create(:message, message_type: :incoming, content: 'Meu CPF é 1', conversation: conversation, inbox: inbox,
                                   account: account, sender: conversation.contact)
 
@@ -211,13 +211,14 @@ describe Waha::RichNative::Inbound do
       phone = from_connector({ in_reply_to: original.id, waha_revoke: { revoked_wa_id: 'W1', from_me: true } },
                              message_type: :outgoing, private: true, content: 'Esta mensagem foi excluída no WhatsApp')
 
-      expect(described_class.hidden?(note)).to be(false)
-      expect(note).to have_attributes(private: true, content: 'Esta mensagem foi excluída no WhatsApp')
+      # Teste real (17/10/2026): a nota duplicava o aviso que já está na bolha da original. Vira atividade escondida.
+      expect(described_class.hidden?(note)).to be(true)
       expect(note.content_attributes['revoke_applied_to']).to eq(original.id)
       original.reload
       expect(original.content).to eq('Meu CPF é 1')
       expect(original.content_attributes['deleted_by_contact_at']).to be_present
       expect(original.content_attributes).not_to have_key('deleted')
+      # Apagada no celular da empresa, sem a marca na original nossa: a nota fica (é o único aviso).
       expect(phone).to have_attributes(message_type: 'outgoing', private: true)
     end
 
@@ -291,6 +292,60 @@ describe Waha::RichNative::Inbound do
 
       expect(message.content).to eq('oi')
       expect(message.content_attributes.keys & %w[forwarded shared_location waha_context waha_location]).to eq([])
+    end
+  end
+
+  # Teste real (17/10/2026): a nota "Esta mensagem foi excluída no WhatsApp" do conector duplicava o aviso da bolha.
+  describe 'the note of the connector for a deleted message' do
+    let(:customer) do
+      create(:message, message_type: :incoming, content: 'Meu CPF é 1', conversation: conversation, inbox: inbox,
+                       account: account, sender: conversation.contact)
+    end
+    let(:ours) do
+      create(:message, message_type: :outgoing, content: 'Foto da apólice', conversation: conversation, inbox: inbox,
+                       account: account, sender: agent)
+    end
+
+    def note_for(target, from_me:)
+      from_connector({ in_reply_to: target.id, waha_revoke: { revoked_wa_id: 'W1', from_me: from_me } },
+                     message_type: :outgoing, private: true, content: 'Esta mensagem foi excluída no WhatsApp')
+    end
+
+    it 'hides it with the flag when the customer deleted (the bubble has deleted_by_contact_at)' do
+      flag_on!
+      note = note_for(customer, from_me: false)
+
+      expect(described_class.hidden?(note)).to be(true)
+      expect(note.content_attributes).to include('c2y_hidden' => true, 'revoke_applied_to' => customer.id)
+      expect(customer.reload.content_attributes['deleted_by_contact_at']).to be_present
+    end
+
+    it 'hides it with the flag when the company deleted from the panel (the bubble is deleted)' do
+      flag_on!
+      ours.update!(content: 'Esta mensagem foi apagada', content_attributes: { deleted: true })
+
+      note = note_for(ours, from_me: true)
+
+      expect(described_class.hidden?(note)).to be(true)
+      expect(note.content).to eq('Exclusão pela empresa registrada na mensagem')
+      expect(note.content_attributes['revoke_applied_to']).to eq(ours.id)
+    end
+
+    it 'keeps it with the flag when the company deleted on its phone and the bubble has no mark' do
+      flag_on!
+
+      note = note_for(ours, from_me: true)
+
+      expect(note).to have_attributes(message_type: 'outgoing', private: true, content: 'Esta mensagem foi excluída no WhatsApp')
+    end
+
+    it 'keeps both notes as in main without the flag' do
+      ours.update!(content: 'Esta mensagem foi apagada', content_attributes: { deleted: true })
+
+      notes = [note_for(customer, from_me: false), note_for(ours, from_me: true)]
+
+      expect(notes).to all(have_attributes(message_type: 'outgoing', private: true, content: 'Esta mensagem foi excluída no WhatsApp'))
+      expect(customer.reload.content_attributes).not_to have_key('deleted_by_contact_at')
     end
   end
 end

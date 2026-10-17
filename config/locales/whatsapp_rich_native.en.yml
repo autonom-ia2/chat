@@ -19,6 +19,7 @@ en:
       poll_vote: "Poll vote saved"
       album: "Album header saved (the photos come next)"
       revoke: "Customer deletion saved on the message"
+      revoke_business: "Company deletion saved on the message"
       event_response: "Event reply saved"
       view_once: "View once message saved"
     view_once_unavailable: "You received a view once message. For added privacy, you can only open it on your phone."

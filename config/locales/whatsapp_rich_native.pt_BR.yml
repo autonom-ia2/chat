@@ -19,6 +19,7 @@ pt_BR:
       poll_vote: "Voto na enquete registrado"
       album: "Cabeçalho do álbum registrado (as fotos vêm em seguida)"
       revoke: "Exclusão pelo cliente registrada na mensagem"
+      revoke_business: "Exclusão pela empresa registrada na mensagem"
       event_response: "Resposta ao evento registrada"
       view_once: "Visualização única registrada"
     view_once_unavailable: "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular."
