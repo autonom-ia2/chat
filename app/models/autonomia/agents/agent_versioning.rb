@@ -53,7 +53,7 @@ module Autonomia::Agents::AgentVersioning
       lock!
       gravar_versao!('antes_de_voltar', created_by&.id) if versao_completa? && !estado_atual_guardado?
       update_columns(atributos_da_versao(version).merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
-      gravar_versao!('rollback', created_by&.id, extra: { 'voltou_para' => version.id })
+      gravar_versao!('rollback', created_by&.id, extra: { 'voltou_para' => version.id, 'sem_andaime' => @volta_sem_andaime || nil }.compact)
     end
     true
   end
@@ -121,7 +121,23 @@ module Autonomia::Agents::AgentVersioning
   # depois também fica guiada, portanto oculta.
   def atributos_da_versao(version)
     atributos = atributos_guardados(version)
-    version.instrucao_visivel?(hashes_escritos_pelo_dono) ? atributos : atributos.merge('mode' => 'guided')
+    return atributos if version.instrucao_visivel?(hashes_escritos_pelo_dono)
+
+    atributos.merge('mode' => 'guided').merge(andaime_do_construtor(version).to_h)
+  end
+
+  # A volta que deixa o agente guiado devolve junto o andaime do Construtor guardado na versão (retrato guiado):
+  # num agente manual o andaime é o genérico do modo manual (revisão adversarial do #1492). Versão sem esse
+  # andaime (antiga, ou gravada em modo manual) volta assim mesmo, sem regressão para quem já voltava, e o fato fica
+  # registrado: `sem_andaime` na versão da volta e um aviso no log (só ids).
+  def andaime_do_construtor(version)
+    agente = version.metadata.to_h['agente']
+    andaime = agente['scaffold'] if agente.is_a?(Hash) && agente['mode'] == 'guided'
+    return { 'scaffold' => andaime } if andaime.present?
+
+    @volta_sem_andaime = manual?
+    Rails.logger.warn("[autonomia][agents] volta sem andaime agente=#{id} versao=#{version.id}") if @volta_sem_andaime
+    nil
   end
 
   # Fora do piloto, só a instrução (como antes das versões completas).

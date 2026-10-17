@@ -443,7 +443,9 @@
           "BUILDER": "Changed by chatting",
           "KB_REFRESH": "Knowledge base update",
           "MANUAL_EDIT": "Manual edit",
-          "ROLLBACK": "Restored version"
+          "ROLLBACK": "Restored version",
+          "BASE": "As it was before changing by chatting",
+          "BEFORE_ROLLBACK": "As it was before going back"
         },
         "LOAD_ERROR": "We couldn't load the agent history.",
         "RESTORE_SUCCESS": "Agent restored to how it was in this version.",

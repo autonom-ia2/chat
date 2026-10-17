@@ -24,6 +24,18 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
     end
   end
 
+  # Revisão adversarial do #1492: o enum aceita o inteiro 1 como 'manual'; a troca precisa descartar a instrução
+  # gerada mesmo assim, e a resposta não pode trazê-la.
+  it 'switching a guided agent to manual with mode as the integer 1 never exposes the generated instruction' do
+    patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}",
+          params: { agent: { mode: 1 } }, headers: administrator.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(guided_agent.reload).to be_manual
+    expect(guided_agent.instruction).to be_nil
+    expect(response.body).not_to include('guided v1')
+  end
+
   # Revisão crítica do #1492: o agente que nasce manual com a instrução no corpo registra o texto como do dono.
   it 'creating a manual agent with an instruction records it as written by the owner' do
     post "/api/v1/accounts/#{account.id}/autonomia/agents",

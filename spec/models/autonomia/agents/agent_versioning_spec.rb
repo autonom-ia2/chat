@@ -592,6 +592,32 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
   describe 'fora do piloto (sem a Fase 2): como antes' do
     let(:account) { conta_da_fase2(ligada: false) }
 
+    # Revisão adversarial do #1492: voltar um agente manual a uma versão oculta sem andaime guardado volta guiado (sem
+    # regressão), mas o fato fica registrado na versão da volta.
+    it 'agente manual volta a uma versão antiga oculta sem andaime: fica guiado e a volta registra sem_andaime' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
+                                               instruction: 'texto do dono', scaffold: 'andaime manual')
+      oculta = agent.instruction_versions.create!(account: account, instruction: 'GERADA', instruction_hash: 'h',
+                                                  reason: 'kb_refresh', metadata: {})
+
+      agent.restore_instruction!(oculta)
+
+      expect(agent.reload).to have_attributes(instruction: 'GERADA', mode: 'guided')
+      expect(agent.instruction_versions.find_by(reason: 'rollback').metadata).to include('sem_andaime' => true)
+    end
+
+    it 'agente manual volta a uma versão oculta com andaime guardado e recebe o andaime junto' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
+                                               instruction: 'texto do dono', scaffold: 'andaime manual')
+      oculta = agent.instruction_versions.create!(account: account, instruction: 'GERADA', instruction_hash: 'h',
+                                                  reason: 'kb_refresh',
+                                                  metadata: { 'agente' => { 'mode' => 'guided', 'scaffold' => 'andaime do Construtor' } })
+
+      agent.restore_instruction!(oculta)
+
+      expect(agent.reload).to have_attributes(instruction: 'GERADA', mode: 'guided', scaffold: 'andaime do Construtor')
+    end
+
     # Revisão crítica (17/10): versão antiga sem retrato com o texto do dono continua dele.
     it 'agente manual volta a uma versão antiga (sem retrato) com o texto do dono e continua manual, com o texto visível' do
       agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,

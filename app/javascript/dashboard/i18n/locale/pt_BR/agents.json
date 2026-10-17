@@ -443,7 +443,9 @@
           "BUILDER": "Mudado conversando",
           "KB_REFRESH": "Atualização da base de conhecimento",
           "MANUAL_EDIT": "Edição manual",
-          "ROLLBACK": "Versão restaurada"
+          "ROLLBACK": "Versão restaurada",
+          "BASE": "Como estava antes de mudar conversando",
+          "BEFORE_ROLLBACK": "Como estava antes de voltar"
         },
         "LOAD_ERROR": "Não foi possível carregar o histórico do agente.",
         "RESTORE_SUCCESS": "Agente restaurado como estava nesta versão.",
