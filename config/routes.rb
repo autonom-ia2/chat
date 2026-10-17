@@ -405,6 +405,9 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            # Memória das IAs (#1601): a configuração da conta (robôs de fora, caixas fora da memória).
+            get 'memoria/config', to: 'memoria_config#show'
+            put 'memoria/config', to: 'memoria_config#update'
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'

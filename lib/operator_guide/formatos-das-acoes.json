@@ -23336,6 +23336,24 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/memoria/config": {
+    "campos": {
+      "caixas_excluidas": {
+        "tipo": "lista"
+      },
+      "usuarios_robo_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/memoria_config#update",
+    "modelo": "Crm::MemoriaConfig",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/memoria_config_controller.rb:13",
+      "app/controllers/api/v1/accounts/crm/memoria_config_controller.rb:46"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/meta_ads_connection": {
     "campos": {
       "access_token": {

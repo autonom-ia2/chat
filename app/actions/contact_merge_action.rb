@@ -80,6 +80,12 @@ class ContactMergeAction
     merge_crm_meeting_guests
     merge_crm_booking_invites
     merge_crm_booking_notice_stops
+    merge_crm_memoria
+  end
+
+  # #1601 (C1): a memória das IAs do absorvido passa para o que fica antes do destroy!, que a apagaria em cascata.
+  def merge_crm_memoria
+    Crm::Memoria::Mescla.mesclar!(account: @account, absorvido: @mergee_contact, fica: @base_contact)
   end
 
   # #1192: "parar avisos" é da pessoa. Se só o absorvido tinha parado, a parada passa para o que fica; se os dois

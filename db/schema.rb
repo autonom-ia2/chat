@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_06_101731) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2436,6 +2436,39 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
     t.index ["reminder_id"], name: "index_crm_meetings_on_reminder_id"
   end
 
+  create_table "crm_memoria_configs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "usuarios_robo_ids", default: [], null: false, array: true
+    t.bigint "caixas_excluidas", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_memoria_configs_on_account_id", unique: true
+  end
+
+  create_table "crm_mensagem_origens", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "message_id", null: false
+    t.string "autor_tipo", null: false
+    t.string "autor_ref_type"
+    t.bigint "autor_ref_id"
+    t.boolean "foi_ao_cliente", default: false, null: false
+    t.bigint "duplicata_de_message_id"
+    t.boolean "indisponivel", default: false, null: false
+    t.boolean "sem_conteudo", default: false, null: false
+    t.boolean "encaminhada", default: false, null: false
+    t.string "conteudo_hash"
+    t.string "regra", null: false
+    t.integer "classificador_versao", null: false
+    t.bigint "corrigido_por_user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "contact_id"], name: "idx_crm_mensagem_origens_contato"
+    t.index ["account_id", "conversation_id", "message_id"], name: "idx_crm_mensagem_origens_conversa"
+    t.index ["message_id"], name: "index_crm_mensagem_origens_on_message_id", unique: true
+  end
+
   create_table "crm_meta_ad_frequency_windows", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "ad_account_id", null: false
@@ -4280,6 +4313,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_05_163000) do
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
+  add_foreign_key "crm_memoria_configs", "accounts", on_delete: :cascade
+  add_foreign_key "crm_mensagem_origens", "contacts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_frequency_windows", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_insights_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_links", "accounts", on_delete: :cascade
