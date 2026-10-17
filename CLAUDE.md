@@ -135,7 +135,15 @@ Practical checklist for any change impacting core logic or public APIs
 
 - Módulo novo que é só de admin: gate com `AccountUser#permission_granted?('<modulo>_view' | '<modulo>_manage')`. No OSS responde `administrator?`; o EE soma as chaves da função, e `_manage` implica `_view`. Agente comum sem função continua sem acesso.
 - Checklist de uma chave nova: `CustomRole::PERMISSIONS`, policy/controller, módulo em `settings/customRoles/permissionMatrix.js`, i18n `CUSTOM_ROLE.MATRIX` (en + pt_BR), `meta.permissions` da rota, entrada do menu e `useCanManage('<modulo>_manage')` nos botões de escrita.
-- Nunca delegar por função: usuários, funções, integrações/webhooks/tokens, conta, faturamento, financeiro, segurança.
+- Delegação em duas listas (regra do Rodrigo, 17/10/2026, #1782). Substitui o antigo "nunca delegar por função". "Administrador" aqui é o papel `administrator` da conta.
+  - **Só o administrador**, nunca vira chave de função: excluir ou transferir a conta; plano, forma de pagamento e cancelamento do contrato com a Hub2You; promover alguém a administrador.
+  - **Delegável só com chave própria e as quatro proteções (hoje: só o administrador)**: usuários, equipes e funções; financeiro e faturamento (ver faturas, custos e o módulo Financeiro); integrações, webhooks e tokens; login único (SAML) e leitura do histórico de auditoria; configurações gerais da conta (nome, idioma, fuso, horário). As quatro proteções, no servidor:
+    1. só o administrador entrega essas chaves;
+    2. quem entrega uma função só entrega função cujas chaves ele também tem;
+    3. ninguém edita a própria função nem o próprio acesso;
+    4. concessão, alteração e revogação de função ou chave ficam no histórico de auditoria da conta (audit log do Enterprise).
+  - Enquanto a chave de uma dessas áreas não existir com as quatro proteções, a área continua só do administrador. O que não está listado acima, em segurança e conta, também continua só do administrador.
+  - Por quê: em empresa estruturada, pessoas, financeiro e tecnologia têm dono que não é o CEO (CHRO, CFO, CTO). Sem delegar, a única saída era dar administrador, e com ele acesso a tudo.
 
 ## Guia da Plataforma — o mapa é gerado, a explicação é escrita
 
