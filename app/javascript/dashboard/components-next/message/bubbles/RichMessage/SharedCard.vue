@@ -14,6 +14,8 @@ defineProps({
   heading: { type: String, default: '' },
   title: { type: String, default: '' },
   detail: { type: String, default: '' },
+  // Texto livre de quem compartilhou (a legenda da localização ao vivo), abaixo do detalhe.
+  note: { type: String, default: '' },
   actionLabel: { type: String, default: '' },
   actionHref: { type: String, default: '' },
 });
@@ -38,6 +40,12 @@ defineProps({
           </div>
           <div v-if="detail" class="text-sm text-n-slate-11 break-words">
             {{ detail }}
+          </div>
+          <div
+            v-if="note"
+            class="text-sm text-n-slate-12 break-words whitespace-pre-line"
+          >
+            {{ note }}
           </div>
         </div>
       </div>

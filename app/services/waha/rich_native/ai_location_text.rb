@@ -3,8 +3,8 @@
 # anexo `location` (Waha::RichNative::Inbound::Location). O histórico e a pergunta da IA Autonomia leem só o `content`
 # (Waha::RichNative::ResponderLocation): sem este texto, ela receberia uma mensagem vazia do cliente e responderia a ela.
 # Monta "Localização compartilhada pelo cliente: <nome, endereço>. Mapa: <link>" (e o aviso da localização ao vivo) a
-# partir dos números gravados, sem regex. Fora da caixa WAHA comum, sem a flag, com `content` ou sem `shared_location`:
-# nil, e nada muda.
+# partir dos números gravados, sem regex. Com legenda no `content` (localização ao vivo), o texto vem junto dela. Fora
+# da caixa WAHA comum, sem a flag ou sem `shared_location`: nil, e nada muda.
 module Waha::RichNative::AiLocationText
   KEY = 'shared_location'.freeze
   MAP_URL = 'https://www.google.com/maps/search/?api=1&query='.freeze
@@ -12,7 +12,7 @@ module Waha::RichNative::AiLocationText
   module_function
 
   def for(message)
-    return if message.nil? || message.content.to_s.strip.present?
+    return if message.nil?
 
     shared = message.content_attributes.to_h[KEY]
     return unless shared.is_a?(Hash) && coordinates?(shared)

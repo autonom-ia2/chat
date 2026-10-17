@@ -1,6 +1,7 @@
 # Prepend em Autonomia::Agents::Operate::Responder (chat#1709, revisão da rodada 2): a localização do cliente que virou
 # cartão de mapa (`content` nil) chega à IA como texto (Waha::RichNative::AiLocationText), no histórico e na pergunta
-# do turno. Só preenche o item de mensagem SEM texto que tenha a localização gravada; qualquer outro fica igual. Com a
+# do turno. Só mexe no item de mensagem que tenha a localização gravada (com legenda, a localização vem depois dela);
+# qualquer outro fica igual. Com a
 # moldura da equipe (#1669), o texto passa pela mesma neutralização do texto do cliente.
 module Waha::RichNative::ResponderLocation
   private
@@ -19,11 +20,12 @@ module Waha::RichNative::ResponderLocation
     location ? [text.presence, location].compact.join("\n") : text
   end
 
+  # A legenda do cliente (localização ao vivo com texto) fica, e a localização vem depois dela.
   def with_location_text(item, message)
-    return item unless item.is_a?(Hash) && item[:content].to_s.strip.empty?
+    return item unless item.is_a?(Hash)
 
     location = location_text_for(message)
-    location ? item.merge(content: location) : item
+    location ? item.merge(content: [item[:content].to_s.strip.presence, location].compact.join("\n")) : item
   end
 
   def location_text_for(message)

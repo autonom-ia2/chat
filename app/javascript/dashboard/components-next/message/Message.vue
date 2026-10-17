@@ -388,6 +388,12 @@ const componentToRender = computed(() => {
     const fileType = props.attachments[0].fileType;
 
     if (fileType === ATTACHMENT_TYPES.FALLBACK) return FallbackBubble;
+    // fork chat#1709: a localização ao vivo do WhatsApp pode vir com legenda no content; o cartão de mapa a mostra.
+    if (
+      fileType === ATTACHMENT_TYPES.LOCATION &&
+      props.contentAttributes?.sharedLocation
+    )
+      return LocationBubble;
 
     if (!props.content) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;

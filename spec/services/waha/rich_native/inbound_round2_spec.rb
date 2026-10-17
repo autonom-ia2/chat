@@ -99,6 +99,16 @@ describe Waha::RichNative::Inbound do
       expect(live.content_attributes['shared_location']).to include('live' => true)
     end
 
+    # Demo integrada: a legenda da localização ao vivo ("Estou chegando") não pode sumir.
+    it 'keeps the caption of a live location in the content, next to the map card' do
+      live = from_connector({ waha_location: { latitude: -23.5, longitude: -46.6, live: true, caption: ' Estou chegando ' } },
+                            content: 'Localização ao vivo')
+
+      expect(live.content).to eq('Estou chegando')
+      expect(live.content_attributes['shared_location']).to include('live' => true)
+      expect(live.attachments.sole.file_type).to eq('location')
+    end
+
     it 'keeps the text when the coordinates are not valid' do
       message = from_connector({ waha_location: { latitude: 'x', longitude: 200 } }, content: 'Localização compartilhada')
 

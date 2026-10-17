@@ -289,6 +289,20 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
 
     before { responder.instance_variable_set(:@conversation, conversation) }
 
+    it 'keeps the caption of a live location and adds the place after it' do
+      flag_on!
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                                 content: 'Estou chegando', sender: conversation.contact,
+                                 content_attributes: { 'shared_location' => { 'latitude' => 1.5, 'longitude' => 2.5, 'live' => true } })
+      allow(responder).to receive_messages(recent_messages: [message], last_incoming_message: message,
+                                           equipe: instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: false),
+                                           media: Autonomia::Agents::Operate::MessageMedia::EMPTY)
+
+      content = responder.send(:history).sole[:content]
+      expect(content).to start_with("Estou chegando\nLocalização ao vivo compartilhada pelo cliente")
+      expect(responder.send(:query)).to eq(content)
+    end
+
     def location_message(shared)
       create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: nil,
                        sender: conversation.contact, content_attributes: { 'shared_location' => shared })

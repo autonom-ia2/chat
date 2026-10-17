@@ -9,7 +9,7 @@ import { useMessageContext } from '../../provider.js';
 import SharedCard from './SharedCard.vue';
 import { mapHrefOf } from './mapLink.js';
 
-const { contentAttributes, attachments, sender } = useMessageContext();
+const { contentAttributes, attachments, sender, content } = useMessageContext();
 const { t } = useI18n();
 
 // Vem do celular do cliente: só texto entra na tela (as coordenadas, o mapLink valida).
@@ -40,6 +40,7 @@ const heading = computed(() => {
     :heading="heading"
     :title="textOf(location.name)"
     :detail="textOf(location.address)"
+    :note="textOf(content)"
     :action-label="t('RICH_MESSAGE.LOCATION.SEE_ON_MAP')"
     :action-href="mapHref"
   />
