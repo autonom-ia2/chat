@@ -91,6 +91,10 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
 - [ ] Merges na ordem da Orquestração (#1729 → #1726 → #1724 → #1741), cada um com "ok merge N".
 - [ ] Deploy do chat2you com a flag desligada; conferência de que nada mudou.
 - [ ] Troca da imagem nos motores wa-hub e wa-autonomia, com cópia de segurança, volta escrita e conferência de saúde das sessões.
+- [ ] **Pré-requisito da flag:** o dono do token gravado em cada caixa WAHA das contas piloto
+  (`channel_api.additional_attributes.account_token_owner_user_id`, operação 8: `psql` com backup antes, OK do Rodrigo).
+  Com a flag ligada, a caixa sem esse registro não aceita evento do conector de ninguém, nem de administrador
+  (`Waha::RichNative::Inbound.from_connector?`): reação, edição, voto e o resto chegam como texto comum.
 - [ ] Motores habilitados (`WAHA_RICH_NATIVE_ENGINES`) e flag ligada nas contas piloto.
 - [ ] Teste final no piloto, em envio e recebimento, aprovado pelo Rodrigo.
 - [ ] Pendente, fora deste PR: prévia de link (`linkPreview`) na caixa WAHA, como operação separada com o OK do Rodrigo,

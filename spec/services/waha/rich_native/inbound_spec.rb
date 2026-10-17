@@ -361,14 +361,28 @@ describe Waha::RichNative::Inbound do
       expect(original.content_attributes).not_to have_key('reactions')
     end
 
-    it 'accepts an administrator when the inbox has no token owner recorded, never a plain agent' do
+    # Revisão da rodada de correção, risco 7: com a flag, sem o dono do token gravado na caixa, nem um administrador
+    # injeta evento do conector.
+    it 'with the flag, refuses even an administrator when the inbox has no token owner recorded' do
+      flag_on!
       channel.update!(additional_attributes: channel.additional_attributes.except('account_token_owner_user_id'))
       data = { in_reply_to: original.id, waha_edit: { text: 'Chego às 11', edited_wa_id: 'W', from_me: false } }
 
       expect(from_connector(data, user: agent)).to be_incoming
+      admin = from_connector(data, user: connector)
+
+      expect(admin).to be_incoming
+      expect(admin.content_attributes).not_to have_key('waha_edit')
       expect(original.reload.content).to eq('Chego às 10')
-      expect(from_connector(data, user: connector)).to be_activity
-      expect(original.reload.content).to eq('Chego às 11')
+    end
+
+    it 'without the flag, keeps accepting an administrator when the inbox has no token owner, never a plain agent' do
+      account.disable_features!(Waha::RichNative::FLAG)
+      channel.update!(additional_attributes: channel.additional_attributes.except('account_token_owner_user_id'))
+      vote = { waha_poll_vote: { poll_message_id: 1, options: ['Sim'] } }
+
+      expect(from_connector(vote, user: agent)).to be_incoming
+      expect(from_connector(vote, user: connector)).to be_activity
     end
   end
 

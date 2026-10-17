@@ -114,14 +114,19 @@ class Waha::RichNative::Inbound
     inbox&.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) ? true : false
   end
 
-  # O usuário desta requisição é o conector: o dono do token gravado na caixa pelo Waha::InboxProvisioner. Caixa sem
-  # esse registro (provisionada pelo SSO ou antes dele): um administrador da conta (é sempre o token de um).
+  # O usuário desta requisição é o conector: o dono do token gravado na caixa pelo Waha::InboxProvisioner.
+  # - Flag LIGADA: só o dono gravado. Sem o registro, ninguém: um administrador qualquer não injeta evento do conector
+  #   (reação, edição, voto, apagada) pela API. Gravar o dono nas caixas WAHA é PRÉ-REQUISITO para ligar a flag
+  #   (docs/1709-escopo-e-aceite.md).
+  # - Flag desligada (como antes): caixa sem o registro (provisionada pelo SSO ou antes dele) aceita um administrador da
+  #   conta (é sempre o token de um). Ali só o voto e a resposta ao evento viram atividade escondida, como na main.
   def self.from_connector?(message)
     user = Current.user
     return false unless user.is_a?(User)
 
     owner = message.inbox.channel.additional_attributes.to_h[OWNER_KEY]
     return owner.to_s == user.id.to_s if owner.present?
+    return false if Waha::RichNative.enabled?(message.account)
 
     message.account.account_users.find_by(user_id: user.id)&.administrator? == true
   end
