@@ -41,6 +41,7 @@ const preparar = () => {
     [`${ESTADO}getUIFlags`]: { sending: false, creating: false },
     [`${ESTADO}getThread`]: null,
     [`${ESTADO}getAgent`]: null,
+    [`${ESTADO}getPhase`]: null,
   });
   store.dispatch.mockImplementation(async acao => {
     if (acao === `${ESTADO}start`) {
@@ -217,18 +218,19 @@ describe('MudarConversando', () => {
 
   // #1428 — part of the request went in and the builder still asks about the
   // rest: the screen shows what went in, with the question open below it.
-  it('shows that something went in while the builder still asks a question', async () => {
+  it('shows that part of the request went in while the builder still asks a question', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getMessages`] = [
       { role: 'user', content: 'Curto e melhore a saudação' },
       { role: 'assistant', content: 'Como você quer a saudação?' },
     ];
     store.state[`${ESTADO}getStatus`] = 'open';
+    store.state[`${ESTADO}getPhase`] = 'interviewing';
     store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
     await nextTick();
 
-    expect(no('[data-feito]')).not.toBeNull();
-    expect(no('[data-jeito-novo]')).not.toBeNull();
+    expect(no('[data-parcial]').textContent).toContain('MUDAR_VISTA.PARCIAL');
+    expect(no('[data-feito]')).toBeNull();
     expect(todos('[data-mensagem="assistant"]').pop().textContent).toContain(
       'Como você quer a saudação?'
     );

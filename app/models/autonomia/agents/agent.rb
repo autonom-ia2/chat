@@ -245,7 +245,9 @@ module Autonomia
       # ainda for o token da geração corrente (idempotência anti-supersede). `attrs` já vem mapeado
       # do schema do Builder para colunas (incluindo instruction/scaffold ocultos). Retorna true se
       # esta geração ganhou a escrita.
-      def apply_builder_config!(build_token, attrs)
+      # `esperado` (#1428, correção do ajuste do piloto): o updated_at que a escrita espera achar, conferido sob a trava;
+      # se o agente mudou por outro caminho (uma volta de versão), não escreve e devolve :agente_mudou.
+      def apply_builder_config!(build_token, attrs, esperado: nil)
         recusar_se_instrucao_mantida!
         recusar_se_modo_manual!
         return false if build_token.blank?
@@ -266,7 +268,7 @@ module Autonomia
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
           # cada "Ajustar com IA". A versão da aplicação leva como autor quem conversava (#1428).
-          apply_builder_attributes!(attrs, thread.created_by_id)
+          apply_builder_attributes!(attrs, thread.created_by_id, esperado)
         end
       end
 
@@ -303,9 +305,10 @@ module Autonomia
 
       private
 
-      def apply_builder_attributes!(attrs, autor_id)
+      def apply_builder_attributes!(attrs, autor_id, esperado = nil)
         with_lock do
           next false if deleted?
+          next :agente_mudou if esperado && updated_at.iso8601(6) != esperado
 
           # Relido sob a trava: o agente pode ter passado a manual durante a geração (#1514).
           recusar_se_modo_manual!

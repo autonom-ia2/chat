@@ -43,6 +43,7 @@ const erroDaConversa = useMapGetter('autonomiaBuildThreads/getError');
 const flags = useMapGetter('autonomiaBuildThreads/getUIFlags');
 const thread = useMapGetter('autonomiaBuildThreads/getThread');
 const agenteGerado = useMapGetter('autonomiaBuildThreads/getAgent');
+const fase = useMapGetter('autonomiaBuildThreads/getPhase');
 
 const teste = useTesteDoAgente(toRef(props, 'agente'));
 const rascunho = ref('');
@@ -181,10 +182,12 @@ const tentarDeNovo = async () => {
 };
 
 // Quando o Construtor termina, a store relê o agente: compara com o de antes da conversa.
+// #1428 — se ele ainda pergunta (a conversa segue aberta), só parte do pedido entrou.
 watch(agenteGerado, novo => {
   if (!novo || novo.id !== props.agente.id) return;
   const nomeNovo = novo.name !== antes.value.name ? novo.name : null;
   feito.value = {
+    parcial: fase.value === 'interviewing',
     nomeNovo,
     nomeAntigo: nomeNovo ? antes.value.name : null,
     jeito: novo.tone !== antes.value.tone,
@@ -342,8 +345,19 @@ onBeforeUnmount(() => {
             :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
             @acao="tentarDeNovo"
           />
+          <p
+            v-if="feito?.parcial"
+            data-parcial
+            class="flex items-start gap-3 p-4 m-0 text-sm font-semibold rounded-2xl bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
+          >
+            <span
+              class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+              aria-hidden="true"
+            />
+            {{ t(`${NS}.PARCIAL`, { nome }) }}
+          </p>
           <div
-            v-if="feito"
+            v-else-if="feito"
             data-feito
             class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
           >

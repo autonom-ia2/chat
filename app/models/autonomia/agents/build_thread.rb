@@ -194,7 +194,9 @@ module Autonomia
       # troca o genérico "envie outra mensagem" por uma orientação real. `fields` são nomes de coluna,
       # nunca conteúdo.
       def mark_failed!(token, message, fields: [])
-        new_state = (self.state || {}).merge(
+        # #1428: o ajuste em curso (piloto) acaba com a falha; a chave só existe no piloto.
+        atual = self.state || {}
+        new_state = atual.merge(atual.key?('ajuste_em_curso') ? { 'ajuste_em_curso' => nil } : {}).merge(
           'error' => message.to_s.truncate(500),
           'error_fields' => Array(fields).map(&:to_s).uniq,
           'applied' => false

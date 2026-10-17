@@ -14,7 +14,7 @@
 class Autonomia::Agents::ConferenciaDoAjuste
   FEATURE = 'agente_builder_conferencia'.freeze
   TIMEOUT_S = 60
-  TENTATIVAS = 1
+  TENTATIVAS = 0
   INDISPONIVEL = { 'erro' => 'conferencia_indisponivel', 'itens' => [], 'falta' => false, 'conflito' => false,
                    'faltou_fora_da_lista' => false }.freeze
 

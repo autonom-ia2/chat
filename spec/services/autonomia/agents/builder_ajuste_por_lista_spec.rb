@@ -188,13 +188,15 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(thread.messages.last).to include('role' => 'assistant', 'content' => 'Hoje eu atendo os clientes.')
       end
 
-      it 'a resposta que o modelo pôs em next_question, sem pergunta dele, também chega ao dono' do
-        respostas << saida('tone' => 'curto', 'next_question' => 'Hoje eu atendo...', 'mudancas' => [mudanca('tone', 'curto')])
+      # Crítica (2ª rodada, ALTO): o next_question do modelo nunca chega ao dono como resposta; só o campo próprio.
+      it 'o next_question do modelo, sem pergunta dele, não chega ao dono (pode dizer "Pronto" do que não entrou)' do
+        respostas << saida('tone' => 'curto', 'next_question' => 'Pronto! Mudei o tom e a saudação.',
+                           'mudancas' => [mudanca('tone', 'curto')])
 
         run_turn
 
-        expect(estado).to include('needs_more_info' => false, 'applied' => true)
-        expect(thread.messages.last).to include('role' => 'assistant', 'content' => 'Hoje eu atendo...')
+        expect(estado).to include('needs_more_info' => false, 'applied' => true, 'next_question' => '')
+        expect(thread.messages.pluck('content')).not_to include('Pronto! Mudei o tom e a saudação.')
       end
     end
 
@@ -212,6 +214,77 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
         expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to be_empty
       end
+
+      # Prova B1 da 2ª rodada: o "Pronto, atualizei" do modelo não chega ao dono quando nada mudou.
+      it 'o texto do modelo que afirma aplicação não chega ao dono: só o texto fixo' do
+        respostas.replace([saida('next_question' => 'Pronto, atualizei o cartão do Hubber.',
+                                 'resposta_ao_dono' => 'Atualizei tudo.', 'mudancas' => [mudanca('human_card', 'explica')])])
+
+        run_turn
+
+        expect(estado['next_question']).to eq(texto(:sem_mudanca))
+        expect(thread.messages.pluck('content')).not_to include('Pronto, atualizei o cartão do Hubber.', 'Atualizei tudo.')
+      end
+
+      it 'com esclarecimento do modelo: o texto fixo e a pergunta dele, que vira pendência' do
+        respostas.replace([saida('needs_more_info' => true, 'next_question' => 'Quer um cartão mais curto?',
+                                 'mudancas' => [mudanca('human_card', 'explica')])])
+
+        run_turn
+
+        expect(ultimas_do_assistente(2)).to eq([['assistant', texto(:sem_mudanca)], ['assistant', 'Quer um cartão mais curto?']])
+        expect(estado).to include('next_question' => 'Quer um cartão mais curto?', 'pergunta_pendente' => 'Quer um cartão mais curto?')
+      end
+    end
+
+    # Crítica (2ª rodada, BAIXO): pergunta sem resposta do modelo ganha texto próprio.
+    it 'so_pergunta sem resposta: texto fixo de pergunta, não "Não encontrei uma mudança"' do
+      respostas << saida('so_pergunta' => true, 'next_question' => '', 'resposta_ao_dono' => '')
+
+      run_turn
+
+      expect(estado).to include('next_question' => texto(:sem_resposta), 'applied' => false, 'so_pergunta' => true)
+    end
+
+    # Crítica (2ª rodada, MÉDIO): o idioma é o de quem conversa; sem ele, o da conta (pt_BR no piloto).
+    describe 'o idioma dos textos ao dono' do
+      let(:account) { create(:account, locale: 'pt_BR', internal_attributes: { 'autonomia_agents_fase2' => true }) }
+
+      before { respostas << saida('greeting' => 'Olá', 'next_question' => 'Pronto!') }
+
+      it 'é o da conta quando a pessoa não escolheu um' do
+        run_turn
+
+        expect(estado['next_question']).to eq(I18n.t('autonomia.agents.ajuste.sem_pedido', locale: :pt_BR))
+      end
+
+      it 'é o da pessoa que abriu a conversa quando ela escolheu um' do
+        dono = create(:user, account: account, ui_settings: { 'locale' => 'en' })
+        thread.update!(created_by: dono)
+
+        run_turn
+
+        expect(estado['next_question']).to eq(I18n.t('autonomia.agents.ajuste.sem_pedido', locale: :en))
+      end
+    end
+
+    # Crítica (2ª rodada, BAIXO): o caminho do turno é decidido uma vez no começo.
+    it 'decide a Fase 2 uma vez: desligá-la no meio do turno não muda o caminho' do
+      respostas << saida('tone' => 'curto', 'mudancas' => [mudanca('tone')])
+      allow(conferente).to receive(:conferir) do |**kwargs|
+        Autonomia::Agents::Fase2.desligar!(account)
+        conferencia_de(kwargs[:mudancas])
+      end
+
+      run_turn
+
+      expect(estado).to include('applied' => true, 'conferencia' => hash_including('falta' => false))
+    end
+
+    # Adversarial (2ª rodada): o pedido do Construtor vai ao dono; curto.
+    it 'o pedido de cada item da lista é cortado em 200 caracteres' do
+      expect(described_class::AjustePorLista.mudancas('mudancas' => [mudanca('tone', 'a' * 500)]).sole['pedido'].size).to eq(200)
+      expect(described_class::AjustePorLista::MUDANCA[:properties][:pedido][:description]).to include('secao 11')
     end
 
     describe 'quando um campo essencial listado vem em branco' do

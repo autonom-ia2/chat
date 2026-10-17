@@ -70,6 +70,16 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
     expect(resultado['duracao_ms']).to be_a(Integer)
   end
 
+  it 'índice inválido (negativo, fora da faixa ou não inteiro) não conta: nada falta' do
+    invalidos = saida.merge('nao_atendidos' => [-1, 2, 7, '0', 1.5], 'sem_pedido_do_dono' => [-1, 9, '1'], 'conflito' => false)
+    allow(fake_client).to receive(:create).and_return(text: invalidos.to_json)
+
+    resultado = conferir
+
+    expect(resultado).to include('falta' => false)
+    expect(resultado['itens'].map { |item| item.values_at('atendido', 'pedido_pelo_dono') }).to eq([[true, true], [true, true]])
+  end
+
   it 'pedido fora da lista também é falta' do
     allow(fake_client).to receive(:create).and_return(text: saida.merge('nao_atendidos' => [], 'faltou_fora_da_lista' => true).to_json)
 

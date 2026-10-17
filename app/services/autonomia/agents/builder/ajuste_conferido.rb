@@ -13,15 +13,19 @@
 # A PENDÊNCIA de verdade fica em `pergunta_pendente`: a resposta a uma pergunta do dono e os avisos fixos nunca são
 # pendência, e a pendência anterior sobrevive a eles.
 #
-# IDEMPOTÊNCIA E TEMPO: depois que a primeira escrita vence, o state guarda `ajuste_em_curso` (o token, a lista, o
-# agente antes). Um re-run do mesmo token pula o Construtor e vai conferir e fechar. A conferência e a correção têm teto
-# menor, e a correção não roda depois de LIMITE_PARA_CORRIGIR_S: o job é síncrono e a thread presa vira stale em 5 min.
+# IDEMPOTÊNCIA E TEMPO: depois que a primeira escrita vence, o state guarda `ajuste_em_curso` (o token, a lista, o id
+# da versão de antes, nunca a instrução crua). Um re-run do mesmo token pula o Construtor e vai conferir e fechar. A
+# conferência e a correção têm teto menor, sem nova tentativa, e a correção não roda depois de LIMITE_PARA_CORRIGIR_S
+# desde o último toque na thread: o job é síncrono e a thread presa vira stale em 5 min.
 # Depois que a primeira escrita venceu, nenhuma falha da correção derruba o turno.
 module Autonomia::Agents::Builder::AjusteConferido
   private
 
+  # Decidido uma vez por turno (run! zera): o turno não muda de caminho no meio.
   def ajuste_da_fase2?
-    adjust_mode? && Autonomia::Agents::Fase2.ligada?(@account)
+    return @ajuste_da_fase2 unless @ajuste_da_fase2.nil?
+
+    @ajuste_da_fase2 = adjust_mode? && Autonomia::Agents::Fase2.ligada?(@account)
   end
 
   def builder_schema
@@ -33,7 +37,12 @@ module Autonomia::Agents::Builder::AjusteConferido
   end
 
   def texto_do_ajuste(chave, **)
-    Autonomia::Agents::Builder::TextosDoAjuste.texto(chave, @account, **)
+    Autonomia::Agents::Builder::TextosDoAjuste.texto(chave, idioma_do_ajuste, **)
+  end
+
+  # O idioma de quem conversa (a pessoa que abriu a conversa) e, sem ele, o da conta.
+  def idioma_do_ajuste
+    @idioma_do_ajuste ||= Autonomia::Agents::Builder::TextosDoAjuste.idioma(@thread.created_by, @account)
   end
 
   # Começo do turno: zera o estado do turno, resolve a credencial uma vez e diz se é a retomada de um turno que já
@@ -41,7 +50,7 @@ module Autonomia::Agents::Builder::AjusteConferido
   def preparar_ajuste!(token)
     @credential = nil
     credential
-    @inicio_do_ajuste = Time.current
+    @ultimo_toque = Time.current
     @conferencias_ms = []
     @campos_truncados = []
     @explicacao_da_correcao = nil
@@ -56,7 +65,7 @@ module Autonomia::Agents::Builder::AjusteConferido
 
   def retomar_ajuste!(token)
     dados = ajuste_em_curso(token)
-    @inicio_do_ajuste = Time.zone.parse(dados['inicio'].to_s) || Time.current
+    @ultimo_toque = @thread.updated_at
     Rails.logger.info("[autonomia][builder] ajuste retomado thread=#{@thread.id}")
     conferir_e_fechar(token, dados)
   end
@@ -66,13 +75,12 @@ module Autonomia::Agents::Builder::AjusteConferido
     motivo = motivo_para_nao_aplicar(parsed, mudancas)
     return responder_sem_aplicar(token, parsed, motivo) if motivo
 
-    antes = regras_do_ajuste.retrato(@thread.agent)
     antes_comparavel = regras_do_ajuste.comparavel(@thread.agent)
     declare_gaps!(parsed)
     return escrita_perdida!(token, parsed) unless aplicar_lista(token, parsed, mudancas)
     return sem_mudanca!(token, parsed) if regras_do_ajuste.comparavel(@thread.agent) == antes_comparavel
 
-    dados = registrar_aplicacao!(token, parsed, mudancas, antes)
+    dados = registrar_aplicacao!(token, parsed, mudancas)
     conferir_e_fechar(token, dados) if dados
   end
 
@@ -87,19 +95,20 @@ module Autonomia::Agents::Builder::AjusteConferido
   # A pergunta do modelo é a pendência nova; a resposta a uma pergunta do dono e os textos fixos mantêm a anterior.
   def responder_sem_aplicar(token, parsed, motivo)
     texto = case motivo
-            when :pergunta then parsed['next_question'].to_s.strip.presence || resposta_ao_dono(parsed)
+            when :pergunta then parsed['next_question'].to_s.strip.presence || texto_do_ajuste(:sem_resposta)
             when :esclarecimento then parsed['next_question'].to_s.strip.presence
             end
     texto ||= texto_do_ajuste(motivo == :incompleto ? :incompleto : :sem_pedido)
     pendencia = motivo == :esclarecimento ? texto : @pendencia_anterior
-    perguntar!(token, parsed, texto, 'so_pergunta' => motivo == :pergunta, 'pergunta_pendente' => pendencia)
+    perguntar!(token, parsed, [texto], 'so_pergunta' => motivo == :pergunta, 'pergunta_pendente' => pendencia)
   end
 
-  # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado.
-  def sem_mudanca!(token, parsed)
+  # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado. Ao dono, só o texto
+  # fixo e, se o modelo pediu esclarecimento, a pergunta dele: nunca um texto do modelo que afirme ter aplicado.
+  def sem_mudanca!(token, parsed, extra = {})
     pergunta = pergunta_do_modelo(parsed)
-    texto = resposta_ao_dono(parsed) || pergunta || texto_do_ajuste(:sem_mudanca)
-    perguntar!(token, parsed, texto, 'so_pergunta' => false, 'pergunta_pendente' => pergunta || @pendencia_anterior)
+    perguntar!(token, parsed, [texto_do_ajuste(:sem_mudanca), pergunta].compact,
+               { 'so_pergunta' => false, 'pergunta_pendente' => pergunta || @pendencia_anterior }.merge(extra))
   end
 
   # A primeira escrita não venceu. Token perdido: outra geração desta thread é dona do turno, nada a marcar.
@@ -108,7 +117,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     return if motivo == :token_perdido
 
     texto = texto_do_ajuste(motivo == :apagado ? :agente_apagado : :superado)
-    perguntar!(token, parsed, texto, 'so_pergunta' => false, 'pergunta_pendente' => @pendencia_anterior)
+    perguntar!(token, parsed, [texto], 'so_pergunta' => false, 'pergunta_pendente' => @pendencia_anterior)
   end
 
   def motivo_da_escrita_perdida(token)
@@ -120,14 +129,16 @@ module Autonomia::Agents::Builder::AjusteConferido
     :superado
   end
 
-  def perguntar!(token, parsed, texto, extra)
+  # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência.
+  def perguntar!(token, parsed, mensagens, extra)
     @closed = false
-    estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => texto))
+    estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
              .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil).merge(extra)
-    persist_assistant_turn!(texto) if @thread.mark_ready!(token, state: estado)
+    mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
 
-  def aplicar_lista(token, parsed, mudancas)
+  # `esperado` (só na correção): o updated_at do agente conferido sob a trava da escrita.
+  def aplicar_lista(token, parsed, mudancas, esperado: nil)
     agent = ensure_agent(token)
     return false if agent.nil?
 
@@ -135,19 +146,27 @@ module Autonomia::Agents::Builder::AjusteConferido
     @truncated_fields &= attrs.keys.map(&:to_s)
     @campos_truncados |= @truncated_fields
     log_truncation
-    agent.apply_builder_config!(token, attrs)
+    agent.apply_builder_config!(token, attrs, esperado: esperado)
   end
 
   # A primeira escrita venceu: o state guarda o que um re-run precisa para só conferir e fechar (e o updated_at da
   # thread é tocado). nil quando o token já não é o ativo.
-  def registrar_aplicacao!(token, parsed, mudancas, antes)
+  def registrar_aplicacao!(token, parsed, mudancas)
     @closed = true
     agent = @thread.agent
-    versao_id = agent.versao_do_construtor&.id
-    dados = { 'token' => token, 'inicio' => @inicio_do_ajuste.iso8601(3), 'mudancas' => mudancas, 'antes' => antes,
-              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono'), 'versao_id' => versao_id,
+    dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
+              'versao_antes_id' => agent.versao_antes_do_construtor&.id,
+              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono'),
               'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados }
-    dados if @thread.guardar_no_estado!(token, 'ajuste_em_curso' => dados, 'aplicado_em_token' => token)
+    dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })
+  end
+
+  # Grava o ajuste em curso no state (guardado pelo token) e marca o toque: o teto de tempo conta a partir dele.
+  def guardar_ajuste!(token, dados, extra = {}, marcar_toque: true)
+    return false unless @thread.guardar_no_estado!(token, { 'ajuste_em_curso' => dados }.merge(extra))
+
+    @ultimo_toque = Time.current if marcar_toque
+    true
   end
 
   # O state do turno, com o rascunho lido do AGENTE (o que de fato está gravado).

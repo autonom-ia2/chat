@@ -109,7 +109,50 @@ module Autonomia::Agents::AgentVersioning
     end
   end
 
+  # A versão que guarda o estado de ANTES da última aplicação do Construtor: a anterior a ela na lista (a 'base' que a
+  # aplicação gravou, ou a última versão, que já era o estado atual). nil sem a versão da aplicação.
+  def versao_antes_do_construtor
+    return if @versao_do_construtor.nil?
+
+    ultima_versao(instruction_versions.na_lista.where(id: ...@versao_do_construtor.id))
+  end
+
+  # #1428 — o que o dono não pediu fica idêntico: devolve, sob a trava, os campos dados ao valor da versão de antes.
+  # Só escreve se o agente ainda é o que a escrita do Construtor deixou (`esperado`, o updated_at) e segue guiado.
+  # `colunas` são nomes de coluna (a instrução volta da coluna da versão); `chaves`, do jsonb config.
+  def desfazer_do_construtor!(versao_antes_id, colunas:, chaves:, esperado:)
+    versao = instruction_versions.find_by(id: versao_antes_id)
+    return false if versao.nil?
+
+    with_lock do
+      next false if deleted? || manual? || updated_at.iso8601(6) != esperado
+
+      update_columns(atributos_para_desfazer(versao, colunas, chaves).merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
+      true
+    end
+  end
+
+  # Depois de desfazer: a versão da aplicação passa a guardar o agente como ficou; se ficou igual ao de antes, sai da
+  # lista (uma aplicação desfeita inteira não é versão nova).
+  def regravar_versao_do_construtor!(versao_id, versao_antes_id)
+    versao = instruction_versions.find_by(id: versao_id)
+    return if versao.nil?
+
+    antes = instruction_versions.find_by(id: versao_antes_id)
+    igual = antes && antes.instruction_hash == hash_da_instrucao && antes.metadata.to_h['agente'] == retrato_da_versao.as_json
+    extra = igual ? { 'fora_da_lista' => true, 'desfeita' => true } : {}
+    versao.update!(instruction: instruction.to_s, instruction_hash: hash_da_instrucao,
+                   metadata: versao.metadata.to_h.merge('agente' => retrato_da_versao).merge(extra))
+  end
+
   private
+
+  def atributos_para_desfazer(versao, colunas, chaves)
+    agente = versao.metadata.to_h['agente'].to_h
+    atributos = colunas.index_with { |coluna| coluna == 'instruction' ? versao.instruction : agente[coluna] }
+    atributos['config'] = config.to_h.merge(agente['config'].to_h.slice(*chaves)) if chaves.any?
+    atributos
+  end
 
   def gravar_versao_da_aplicacao!(criacao, antes, autor_id)
     extra = estado_versionado == antes ? { 'sem_mudanca' => true } : {}

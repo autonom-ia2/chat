@@ -11,6 +11,7 @@ module Autonomia
       # #1428 (tema 6, parte 2): o ajuste do piloto por lista de mudanças, com conferência. Fora do piloto não roda.
       include AjusteConferido
       include FechamentoDoAjuste
+      include DesfechoDoAjuste
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
@@ -750,6 +751,8 @@ module Autonomia
         @full_asked_to_close = nil
         @user_asked_to_close = nil
         @materials_gate_decision = nil
+        @ajuste_da_fase2 = nil
+        @idioma_do_ajuste = nil
         # #1428 — ajuste do piloto: credencial resolvida uma vez no começo do turno, e o re-run de um turno que já
         # gravou (mesmo token) não chama o Construtor de novo: vai direto conferir e fechar.
         return retomar_ajuste!(token) if ajuste_da_fase2? && preparar_ajuste!(token) == :retomar
