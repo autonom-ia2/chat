@@ -116,16 +116,21 @@ module Autonomia
                        .where.not(id: id).order(id: :desc).first
         return if previous.blank?
 
-        previous_state = previous.state.to_h
-        return unless previous_state['needs_more_info'] == true
-        # #1428: a resposta a uma pergunta do dono (so_pergunta, ajuste do piloto) não é pergunta pendente.
-        return if previous_state['so_pergunta'] == true
-
-        question = previous_state['next_question'].to_s.strip
+        question = pending_question_of(previous.state.to_h)
         return if question.blank?
 
         update!(state: state.to_h.merge('pending_question' => question))
       end
+
+      # A pergunta que ficou aberta numa thread anterior. #1428: a resposta a uma pergunta do dono (so_pergunta, ajuste
+      # do piloto) não é pergunta pendente.
+      def pending_question_of(previous_state)
+        return '' unless previous_state['needs_more_info'] == true
+        return '' if previous_state['so_pergunta'] == true && ::Autonomia::Agents::Fase2.ligada?(account)
+
+        previous_state['next_question'].to_s.strip
+      end
+      private :pending_question_of
 
       # E3 — janela de "geração presa": o SubmitJob é síncrono e leva segundos; se a thread ficou
       # `processing` por mais tempo que isto, o job morreu/perdeu-se sem mark_failed! (o token-guard

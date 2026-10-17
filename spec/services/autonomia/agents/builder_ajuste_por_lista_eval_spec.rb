@@ -22,7 +22,8 @@ module AvaliacaoDoAjustePorLista
   TXT
 
   # Cada cena: a fala do dono e o que é certo. `aplica`: se a cena deve gravar algo. `so` (opcional): os únicos campos
-  # que podem mudar. `itens` (opcional): quantos pedidos a conferência tem de dar como atendidos.
+  # que podem mudar. `historico` (opcional): as mensagens antes da fala. `itens` (opcional): quantos pedidos a
+  # conferência tem de dar como atendidos.
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
@@ -43,7 +44,11 @@ module AvaliacaoDoAjustePorLista
              'tendo a regra geral de não inventar valores.' },
     { nome: 'troca_a_saudacao', fala: 'Troque a saudação para: Olá! Aqui é o Hubber, da Hub2You. Em que posso ajudar?',
       aplica: true, so: %w[greeting],
-      certo: 'Só a saudação muda, para a frase pedida. Todo o resto do agente fica igual.' }
+      certo: 'Só a saudação muda, para a frase pedida. Todo o resto do agente fica igual.' },
+    # Revisão do #1428: o "sim" que responde a um esclarecimento é o pedido inteiro, não uma fala vazia.
+    { nome: 'responde_ao_esclarecimento', fala: 'sim', aplica: true,
+      historico: [['user', 'Deixe as respostas mais curtas'], ['assistant', 'Quer no máximo 2 frases por resposta?']],
+      certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases: o "sim" confirmou a pergunta anterior.' }
   ].freeze
 
   VEREDITO = {
@@ -99,6 +104,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     agente = criar_hubber
     antes = retrato(agente)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
+    Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     thread.append_message!('user', cena[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     [agente, antes, retrato(agente), thread.reload.state.to_h]

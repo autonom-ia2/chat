@@ -48,7 +48,10 @@ RSpec.describe Autonomia::Agents::Builder do
     allow(builder).to receive_messages(credential: { api_key: 'chave-de-teste' }, client: fake_client)
     allow(fake_client).to receive(:create) do |**params|
       calls << params
-      { text: (respostas.shift || saida).to_json, usage: {}, tools_used: [] }
+      resposta = respostas.shift || saida
+      raise Crm::Ai::ResponsesClient::Error, 'timeout' if resposta == :falha
+
+      { text: resposta.to_json, usage: {}, tools_used: [] }
     end
     allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new).and_return(conferente)
     allow(conferente).to receive(:conferir) { conferencias.shift || tudo_atendido }
@@ -142,31 +145,96 @@ RSpec.describe Autonomia::Agents::Builder do
       end
     end
 
-    describe 'quando o próprio modelo pergunta antes de mudar' do
+    describe 'quando o próprio modelo pergunta antes de mudar qualquer coisa' do
       before do
         respostas << saida('needs_more_info' => true, 'next_question' => 'Duas frases no total ou por mensagem?',
-                           'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'x' }], 'tone' => 'curto')
+                           'tone' => 'curto')
       end
 
       it 'não aplica e devolve a pergunta dele' do
         run_turn
 
         expect(agent.reload.tone).to eq('cordial')
-        expect(thread.reload.state).to include('needs_more_info' => true, 'so_pergunta' => false,
+        expect(thread.reload.state).to include('needs_more_info' => true, 'so_pergunta' => false, 'applied' => false,
                                                'next_question' => 'Duas frases no total ou por mensagem?')
       end
     end
 
-    describe 'quando a instrução listada vem em branco' do
+    describe 'quando o modelo aplica os pedidos claros e pergunta pelo vago' do
+      let(:fala) { 'Responda em no máximo 2 frases e melhore a saudação' }
+      let(:pergunta) { 'Como você quer a saudação nova?' }
+
       before do
-        respostas << saida('instruction' => '', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'instruction', 'resumo' => 'x' }])
+        respostas << saida('needs_more_info' => true, 'next_question' => pergunta, 'tone' => 'cordial e curto',
+                           'mudancas' => [{ 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'Curto.' }])
+        conferencias << faltou('melhore a saudação')
       end
 
+      it 'o claro entra, a pergunta dele segue para o dono e não há correção' do
+        run_turn
+
+        expect(agent.reload.tone).to eq('cordial e curto')
+        expect(calls.size).to eq(1)
+        expect(conferente).to have_received(:conferir).once
+        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta)
+        expect(thread.messages.last).to include('role' => 'assistant', 'content' => pergunta)
+      end
+    end
+
+    describe 'quando um campo essencial listado vem em branco' do
       it 'não grava instrução vazia: pede mais contexto' do
+        respostas << saida('instruction' => '', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'instruction', 'resumo' => 'x' }])
+
         run_turn
 
         expect(agent.reload.instruction).to eq('Atenda o cliente da corretora com cordialidade.')
         expect(thread.reload.state['next_question']).to eq(described_class::AjustePorLista::INCOMPLETO)
+      end
+
+      it 'não grava nome vazio' do
+        respostas << saida('name' => ' ', 'mudancas' => [{ 'pedido' => 'tira o nome', 'campo' => 'name', 'resumo' => 'x' }])
+
+        run_turn
+
+        expect(agent.reload.name).to eq('Hubber')
+        expect(thread.reload.state['next_question']).to eq(described_class::AjustePorLista::INCOMPLETO)
+      end
+    end
+
+    describe 'quando um ajuste mais novo do agente já começou' do
+      before do
+        respostas << saida('tone' => 'curto', 'mudancas' => [{ 'pedido' => fala, 'campo' => 'tone', 'resumo' => 'x' }])
+        thread
+        Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+      end
+
+      it 'nada entra, e a tela não ouve "Pronto"' do
+        run_turn
+
+        expect(agent.reload.tone).to eq('cordial')
+        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => false,
+                                               'next_question' => described_class::AjustePorLista::SUPERADO)
+        expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
+      end
+    end
+
+    describe 'quando a fala responde a uma pergunta do Construtor' do
+      let(:fala) { 'sim' }
+
+      before do
+        thread.update!(messages: [{ 'role' => 'user', 'content' => 'Deixe as respostas curtas' },
+                                  { 'role' => 'assistant', 'content' => 'No máximo 2 frases?' },
+                                  { 'role' => 'user', 'content' => 'sim' }])
+        mudanca = { 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'x' }
+        respostas << saida('tone' => 'curto', 'mudancas' => [mudanca])
+      end
+
+      it 'a conferência lê a pergunta anterior junto, e a versão guarda só a fala do dono' do
+        run_turn
+
+        expect(conferente).to have_received(:conferir)
+          .with(hash_including(pedido: "Mensagem anterior do Construtor: No máximo 2 frases?\nResposta do dono: sim"))
+        expect(versoes_do_construtor.sole.metadata['pedido']).to eq('sim')
       end
     end
 
@@ -307,8 +375,19 @@ RSpec.describe Autonomia::Agents::Builder do
 
         expect(conferente).to have_received(:conferir).once
         expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true)
-        expect(thread.state['next_question']).to start_with("Não consegui aplicar: #{preco}.")
+        expect(thread.state['next_question']).to eq("Não consegui aplicar: #{preco}. Qual equipe?")
         expect(thread.state['conferencia']).to include('correcao' => false)
+      end
+
+      it 'se a chamada da correção falhar, o que entrou fica aplicado e o turno não vira falha' do
+        respostas << :falha
+
+        run_turn
+
+        expect(agent.reload.tone).to eq('cordial e curto')
+        expect(thread.reload).to be_ready
+        expect(thread.state).to include('needs_more_info' => true, 'applied' => true)
+        expect(thread.state['next_question']).to start_with("Não consegui aplicar: #{preco}.")
       end
     end
 

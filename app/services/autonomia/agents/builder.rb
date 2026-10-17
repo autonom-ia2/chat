@@ -994,7 +994,7 @@ module Autonomia
         return inherited if inherited.present?
         return '' unless adjust_mode? && state['needs_more_info'] == true
         # #1428: a resposta a uma pergunta do dono (so_pergunta) não é pergunta pendente.
-        return '' if state['so_pergunta'] == true
+        return '' if state['so_pergunta'] == true && ajuste_da_fase2?
 
         state['next_question'].to_s.strip
       end
