@@ -24,9 +24,9 @@ module Waha::RichNative::JsonColumn
   end
 
   # A chave PRESENTE no mesmo sentido do `present?` do Ruby (Waha::RichNative::TurnKinds.deleted?): não nula, nem texto
-  # em branco, nem false, nem lista ou objeto vazios.
+  # em branco (espaço, tab, quebra de linha, como o `blank?`), nem false, nem lista ou objeto vazios.
   def present(column, type, key)
     value = text(column, type, key)
-    "(#{value} IS NOT NULL AND btrim(#{value}) NOT IN ('', 'false', '[]', '{}'))"
+    "(#{value} IS NOT NULL AND btrim(#{value}, E' \\t\\n\\r\\f') NOT IN ('', 'false', '[]', '{}'))"
   end
 end

@@ -63,4 +63,41 @@ describe Waha::RichNative::TurnKinds do
       expect(described_class.choice_current?(mine)).to be(true)
     end
   end
+
+  # Os consumidores do contrato esperam a regra nova (Tarde → Manhã → Tarde = [false, false, true]).
+  describe 'consumers of choice_current? with Tarde -> Manhã -> Tarde' do
+    let!(:votes) do
+      list = [vote('Tarde'), vote('Manhã'), vote('Tarde')]
+      stored!(['Tarde'])
+      list
+    end
+    let(:stale_mark) { 'não vale mais' }
+
+    it 'AiChoiceText marks only the superseded ones' do
+      texts = votes.map { |message| Waha::RichNative::AiChoiceText.for(message) }
+
+      expect(texts.first(2)).to all(include(stale_mark))
+      expect(texts.last).not_to include(stale_mark)
+    end
+
+    it 'the CRM ContextBuilder (prepend) reads the same' do
+      builder = Crm::Ai::ContextBuilder.new(card: nil)
+
+      expect(builder.send(:message_content, votes.first)).to include(stale_mark)
+      expect(builder.send(:message_content, votes.last)).not_to include(stale_mark)
+    end
+
+    it 'Decisores::Estado reads the same' do
+      flag_on!
+      messages = Autonomia::Decisores::Estado.new(conversation: conversation, leituras: %w[mensagens_recentes]).conversa[:messages]
+
+      expect(messages.first(2)).to all(include(stale_mark))
+      expect(messages.last).not_to include(stale_mark)
+    end
+
+    it 'turn_silence silences a turn with only superseded choices, and not one with the current choice' do
+      expect(described_class.turn_silence(votes.first(2), waha: false)).to eq(Waha::RichNative::AgentTurnGuard::STALE_CHOICE_REASON)
+      expect(described_class.turn_silence([votes.last], waha: false)).to be_nil
+    end
+  end
 end

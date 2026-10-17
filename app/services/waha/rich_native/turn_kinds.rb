@@ -35,8 +35,9 @@ module Waha::RichNative::TurnKinds
   # escolha retirada; na caixa WAHA com a flag (`waha`), o que sobra sem conteúdo (silent_reason). nil: responder.
   # `choices`: aplicar o filtro do voto retirado (só com a flag). Fora da caixa WAHA com a flag, só a regra da apagada
   # (`deleted_by_contact_at`, que só existe quando algo a gravou: #1702b na Cloud, o conector): turno só de apagadas.
-  def turn_silence(turn_messages, waha: true, choices: true)
-    remaining = choices ? turn_messages.select { |message| choice_current?(message) } : turn_messages
+  # `current`: quem decide se a escolha vale; o guard do Responder passa o dele, com o memo do turno.
+  def turn_silence(turn_messages, waha: true, choices: true, current: method(:choice_current?))
+    remaining = choices ? turn_messages.select { |message| current.call(message) } : turn_messages
     return Waha::RichNative::AgentTurnGuard::STALE_CHOICE_REASON if turn_messages.any? && remaining.empty?
 
     waha ? silent_reason(remaining) : deleted_reason(remaining)
@@ -50,15 +51,25 @@ module Waha::RichNative::TurnKinds
     message.content_attributes.to_h[DELETED_KEY].present?
   end
 
-  # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn): a escolha ainda vale? Mensagem que não é escolha:
-  # sempre. CONTRATO PÚBLICO (a memória da IA, #1601): nome, assinatura e semântica não mudam.
-  # Vale só a MAIS NOVA escolha daquele eleitor naquele alvo, e só se o valor ainda bate com o guardado: num Tarde →
-  # Manhã → Tarde, o primeiro "Tarde" tem o mesmo valor do atual, mas foi superado.
+  # Voto ou resposta ao convite do turno (Waha::RichNative::AiTurn). CONTRATO PÚBLICO: true para mensagem que não é
+  # escolha; para escolha, true só se for a mais nova do eleitor naquele alvo E o valor ainda bater com o guardado
+  # (Tarde → Manhã → Tarde = [false, false, true]). Contrato com a memória da IA (#1601, aceito pelo Multifunnel em
+  # 17/10). Chamada avulsa: uma consulta para "superada" e, só para a mais nova, a do alvo.
   def choice_current?(message)
-    choice = message.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY]
-    return true unless choice.is_a?(Hash)
+    choice = choice_of(message)
+    return true if choice.nil?
     return false if newer_choice?(message, choice)
 
+    stored_choice?(message, choice)
+  end
+
+  def choice_of(message)
+    choice = message.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY]
+    choice if choice.is_a?(Hash)
+  end
+
+  # O valor da escolha ainda é o guardado na enquete/no convite (sem olhar se há outra mais nova).
+  def stored_choice?(message, choice)
     target = Message.find_by(id: choice['target_id'], conversation_id: message.conversation_id)
     return false if target.nil?
 

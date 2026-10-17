@@ -649,4 +649,79 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
     votos = consultas.sole[:history].count { |item| item[:content].to_s.end_with?(': Tarde', ': Manhã') }
     expect(votos).to eq(1)
   end
+
+  # Revisão: uma consulta por turno para "superada", constante com o número de votos.
+  describe 'queries of the choice rule in the turn' do
+    def cenario!(quantos)
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      inicio = 3.hours.ago
+      (1..25).each { |numero| cliente_escreve("real #{numero}").update_column(:created_at, inicio + (numero * 2).minutes) } # rubocop:disable Rails/SkipsModelValidations
+      (1..quantos).each { |numero| voto_em!(poll, numero.even? ? 'Tarde' : 'Manhã', inicio + ((numero * 2) + 1).minutes) }
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Tarde'] }] }) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    def voto_em!(poll, titulo, quando)
+      voto = turno_do_voto("Votou: #{titulo}")
+      voto.update_columns(created_at: quando, # rubocop:disable Rails/SkipsModelValidations
+                          content_attributes: voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, [titulo])))
+    end
+
+    def choice_queries
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+        queries << payload[:sql] if payload[:sql].include?('c2y_ai_turn') && !payload[:cached]
+      end
+      yield
+      queries.size
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    it 'does not grow with the number of votes (26 votes + 25 real messages)' do
+      cenario!(26)
+      gatilho(cliente_escreve('E agora?'))
+
+      quantas = choice_queries { rodar_turno! }
+
+      expect(quantas).to eq(1)
+    end
+  end
+
+  # UnsupportedTurnJob segue a regra nova: a bolha com um voto superado no turno é silêncio; com o voto vigente, não.
+  describe 'the bubble trace with Tarde -> Manhã -> Tarde' do
+    def votos!
+      poll = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, content: 'Qual horário?')
+      lista = %w[Tarde Manhã Tarde].map do |titulo|
+        voto = turno_do_voto("Votou: #{titulo}")
+        voto.update_column(:content_attributes, voto.content_attributes.merge(Waha::RichNative::AiTurn.choice('poll_vote', poll, [titulo]))) # rubocop:disable Rails/SkipsModelValidations
+        voto
+      end
+      poll.update_column(:content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Tarde'] }] }) # rubocop:disable Rails/SkipsModelValidations
+      lista
+    end
+
+    it 'is not a silence: the current vote (the last Tarde) is in the turn with the bubble' do
+      votos!
+      sem = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                             content: 'Mensagem não suportada', content_attributes: { 'is_unsupported' => true })
+
+      Waha::RichNative::UnsupportedTurnJob.perform_now(conversation.id, sem.id, 'settle')
+
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte).to be_empty
+    end
+
+    it 'is a silence when no vote of the turn counts any more (the stored choice changed to Manhã)' do
+      lista = votos!
+      lista.first.conversation.messages.where(message_type: :outgoing).last.update_column( # rubocop:disable Rails/SkipsModelValidations
+        :content_attributes, { 'poll_votes' => [{ 'sender_type' => 'Contact', 'sender_id' => contact.id, 'options' => ['Manhã'] }] }
+      )
+      sem = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                             content: 'Mensagem não suportada', content_attributes: { 'is_unsupported' => true })
+
+      Waha::RichNative::UnsupportedTurnJob.perform_now(conversation.id, sem.id, 'settle')
+
+      expect(lista.map { |voto| Waha::RichNative::TurnKinds.choice_current?(voto) }).to eq([false, false, false])
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([sem.id])
+    end
+  end
 end

@@ -22,7 +22,8 @@ module Waha::RichNative::ResponderChoice
   end
 
   def c2y_choice_text(message)
-    text = Waha::RichNative::AiChoiceText.for(message)
+    # O guard (Waha::RichNative::AgentTurnGuard) já decidiu, com o memo do turno, se a escolha vale.
+    text = Waha::RichNative::AiChoiceText.for(message, current: !c2y_stale_choice?(message))
     return if text.nil?
 
     equipe.aplica? ? equipe.pergunta(text) : text

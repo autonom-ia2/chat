@@ -47,7 +47,7 @@ describe Waha::RichNative::JsonColumn do
 
     # Revisão: o SQL e o Ruby (TurnKinds.deleted?, `present?`) concordam sobre a apagada, nos dois formatos.
     it 'agrees with the Ruby predicate on what a present deleted_by_contact_at is' do
-      values = [nil, false, '', '   ', [], {}, true, 0, '2026-10-17T10:00:00Z', ['x'], { 'a' => 1 }]
+      values = [nil, false, '', '   ', "\t\n", " \r\n\t ", [], {}, true, 0, '2026-10-17T10:00:00Z', ['x'], { 'a' => 1 }, 'v']
       formats.each do |format|
         messages = values.map do |value|
           incoming.tap { |message| write!(message, :content_attributes, { 'deleted_by_contact_at' => value }, format: format) }
@@ -59,7 +59,7 @@ describe Waha::RichNative::JsonColumn do
         end
 
         expect(uncounted).to match_array(ruby), "format #{format}"
-        expect(ruby.size).to eq(5)
+        expect(ruby.size).to eq(6)
         Message.where(id: messages.map(&:id)).delete_all
       end
     end

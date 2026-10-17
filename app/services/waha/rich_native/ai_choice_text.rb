@@ -27,13 +27,13 @@ module Waha::RichNative::AiChoiceText
     message&.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY].is_a?(Hash)
   end
 
-  def for(message)
+  # current: quem já sabe se a escolha vale (o guard do Responder, com o memo do turno); nil = pergunta ao contrato.
+  def for(message, current: nil)
     return unless choice?(message)
 
     choice = message.content_attributes.to_h[Waha::RichNative::AiTurn::CHOICE_KEY]
-
     text = Waha::RichNative::AiTurn.full_text(message.account, choice)
-    return text if Waha::RichNative::TurnKinds.choice_current?(message)
+    return text if current.nil? ? Waha::RichNative::TurnKinds.choice_current?(message) : current
 
     "#{text} #{Waha::RichNative::AiTurn.translate(message.account, STALE_KEY)}"
   end
