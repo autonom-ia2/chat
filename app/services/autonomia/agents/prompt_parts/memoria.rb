@@ -15,7 +15,7 @@
 # restringir"); só o dado ANTIGO ou DIVERGENTE pede confirmação. A instrução da Lia sobre a passagem ("sem precisar
 # recomeçar") continua como está: a linha de quem retoma é só informação.
 #
-# Cada fato vai numa linha JSON (o valor nunca quebra a linha nem fecha a cerca: `script_safe` escapa U+2028/U+2029),
+# Cada fato vai numa linha JSON (o valor nunca quebra a linha nem fecha a cerca; U+2028, U+2029 e U+0085 viram espaço),
 # com o valor passado pela segunda camada contra moldura forjada (MolduraDaEquipe.neutralizar) e a data no fuso da
 # conta (o mesmo do Leitor). O cabeçalho leva o código HMAC da conversa (o mesmo da marca da equipe): o cliente não o
 # conhece, a segunda camada apaga do texto dele o código e o prefixo, e o corte da resposta tira os dois do que sai.
@@ -34,11 +34,12 @@ module Autonomia::Agents::PromptParts::Memoria
   ORIGENS = { cliente_informou: 'cliente informou', confirmado: 'confirmado pela equipe', equipe: 'equipe',
               ferramenta: 'resultado de ferramenta', sistema: 'sistema' }.freeze
   ORIGEM_DESCONHECIDA = 'não verificado'.freeze
+  SITUACAO_DESCONHECIDA = 'confirme se ainda vale'.freeze
   SITUACOES = { vigente: 'vigente', divergente: 'divergente', vencido: 'antigo' }.freeze
   FORMATO_DA_DATA = '%d/%m/%Y %H:%M'.freeze
   DONO_PREVISTO = 'dono_previsto'.freeze
   QUEM_RETOMA = 'Quem retoma se você passar'.freeze
-  MAXIMO_DA_LINHA_DO_SISTEMA = 200
+  MAXIMO_DO_NOME = 80
 
   REGRA = 'COMO USAR O QUE O CLIENTE JÁ DISSE: use direto o que está registrado, sem pedir de novo. Só o dado com ' \
           'situação "antigo" ou "divergente" você confirma com o cliente antes de usar numa ferramenta ou de afirmar. O ' \
@@ -73,17 +74,24 @@ module Autonomia::Agents::PromptParts::Memoria
   # "antigo" chegaria sem dizer como usá-lo.
   def sistema(linhas)
     itens = Array(linhas).select { |linha| linha.origem&.to_sym == :sistema }
-                         .map { |linha| "- #{rotulo_do_sistema(linha)}: #{texto_do_sistema(linha.valor)}" }
+                         .map { |linha| "- #{rotulo_do_sistema(linha)}: #{valor_do_sistema(linha)}" }
     ['ESTADO DESTA CONVERSA, dito pelo sistema:', *itens, REGRA].join("\n")
   end
 
   def rotulo_do_sistema(linha)
-    linha.chave.to_s == DONO_PREVISTO ? QUEM_RETOMA : texto_do_sistema(linha.rotulo)
+    linha.chave.to_s == DONO_PREVISTO ? QUEM_RETOMA : texto_do_sistema(linha.rotulo).truncate(MAXIMO_DO_NOME)
   end
 
-  # Uma linha só, sem colchetes (nada que imite cabeçalho) e com tamanho limitado.
+  # O nome do dono vem do cadastro (texto livre da pessoa): tamanho limitado. Os demais valores vêm do código e do catálogo
+  # (a lista do que falta pode ser longa) e não são cortados.
+  def valor_do_sistema(linha)
+    texto = texto_do_sistema(linha.valor)
+    linha.chave.to_s == DONO_PREVISTO ? texto.truncate(MAXIMO_DO_NOME) : texto
+  end
+
+  # Uma linha só e sem colchetes (nada que imite cabeçalho).
   def texto_do_sistema(valor)
-    valor.to_s.split.join(' ').delete('[]').truncate(MAXIMO_DA_LINHA_DO_SISTEMA)
+    valor.to_s.split.join(' ').delete('[]')
   end
 
   # O bloco com cerca: cabeçalho com o código da conversa e uma linha JSON por fato.
@@ -103,10 +111,10 @@ module Autonomia::Agents::PromptParts::Memoria
     end
 
     def json(linha)
-      valor = ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(linha.valor.to_s, marca).tr("\u0085", ' ')
+      valor = ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(linha.valor.to_s, marca).tr("\u0085\u2028\u2029", ' ')
       JSON.generate({ o_que: linha.rotulo.to_s, valor: valor, origem: rotulo(ORIGENS, linha.origem, ORIGEM_DESCONHECIDA),
                       em: linha.em&.in_time_zone(fuso)&.strftime(FORMATO_DA_DATA),
-                      situacao: rotulo(SITUACOES, linha.status, ORIGEM_DESCONHECIDA) }.compact, script_safe: true)
+                      situacao: rotulo(SITUACOES, linha.status, SITUACAO_DESCONHECIDA) }.compact)
     end
 
     # Valor fora do contrato combinado com o CRM vai como "não verificado" e é reportado (não some em silêncio).

@@ -66,8 +66,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(evento_replied.metadata).to eq('memoria_fact_ids' => [77, 812])
   end
 
-  it 'leitura vazia (flag desligada ou caixa fora da memória): o pedido fica como antes' do
+  it 'leitura vazia (flag desligada ou caixa fora da memória): o Answerer nem recebe memória, o pedido fica como antes' do
     memoria_do_crm(Crm::Memoria::Leitor::Leitura.vazia)
+    expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_excluding(:memoria)).and_call_original
     responder
     com_vazia = papeis_e_textos
 
@@ -86,6 +87,15 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(chamadas).to be_empty
       expect(papeis_e_textos.flatten.join).not_to include('REGISTRO#')
     end
+  end
+
+  it 'se o Leitor quebrar (erro de código do CRM), a IA responde assim mesmo e o erro vai ao rastreador' do
+    allow(Crm::Memoria::Leitor).to receive(:para).and_raise(NoMethodError, 'quebrou')
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+
+    responder
+
+    expect(conversation.messages.outgoing.where(sender_type: 'AgentBot').pick(:content)).to eq('Certo!')
   end
 
   it 'se a leitura falhar no banco, o turno segue sem memória e o erro vai ao rastreador com a conta' do

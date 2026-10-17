@@ -2,8 +2,9 @@
 # Só com a Fase 2. A flag `memoria_ia` e a caixa fora da memória são do CRM: o `Crm::Memoria::Leitor` chama
 # `Crm::Memoria.ativa?` por dentro e devolve a leitura vazia; com ela, o pedido ao modelo sai byte a byte como antes.
 #
-# Se a LEITURA falhar no banco, o turno segue sem memória (o cliente não fica sem resposta por causa dela) e o erro vai
-# ao rastreador com a conta. Erro de código ou de contrato (a montagem) não é engolido: aparece.
+# Se a LEITURA falhar (o Leitor é código do CRM: banco, dado inesperado), o turno segue sem memória e o erro vai ao
+# rastreador com a conta: a IA nunca fica muda nem a cotação some por causa da memória. A montagem do nosso lado
+# (PromptParts::Memoria) não tem rescue: erro nela aparece nos specs.
 module Autonomia::Agents::Operate::MemoriaDoTurno
   module_function
 
@@ -31,7 +32,7 @@ module Autonomia::Agents::Operate::MemoriaDoTurno
 
   def ler(conversation, agent, finalidade)
     ::Crm::Memoria::Leitor.para(finalidade: finalidade, account: conversation.account, conversation: conversation, agent: agent)
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
     nil
   end

@@ -14,8 +14,9 @@
 # é a defesa estrutural. Limite: uma chave partida por quebra de linha não é reconhecida (as quebras são preservadas).
 module Autonomia::Agents::Operate::MolduraDaEquipe
   PREFIXO_DA_MARCA = 'EQUIPE#'.freeze
-  # O prefixo do cabeçalho da memória do cliente (#1755, PromptParts::Memoria), com o mesmo código da conversa: o cliente
-  # não o forja (a segunda camada o troca) e a resposta não o leva (o corte o tira).
+  # O prefixo do cabeçalho da memória do cliente (#1755, PromptParts::Memoria), sempre seguido do código da conversa. A
+  # defesa é o CÓDIGO (que a segunda camada já troca no texto do cliente e o corte tira da resposta); o prefixo sozinho
+  # é texto comum ("registro#4471") e não é tocado.
   PREFIXO_DO_REGISTRO = 'REGISTRO#'.freeze
   TAMANHO_DA_MARCA = 10
   CHAVE_DA_MARCA = 'escreveu ao cliente'.freeze
@@ -97,7 +98,7 @@ module Autonomia::Agents::Operate::MolduraDaEquipe
   # As chaves que, no texto do cliente, viram CHAVE_NEUTRALIZADA: a da moldura, o começo da marca e o CÓDIGO DA PRÓPRIA
   # CONVERSA (assim, mesmo que a marca vaze, o cliente não a reusa).
   def chaves_do_cliente(marca)
-    [CHAVE_DA_MARCA, PREFIXO_DA_MARCA, PREFIXO_DO_REGISTRO, codigo(marca)]
+    [CHAVE_DA_MARCA, PREFIXO_DA_MARCA, codigo(marca)]
   end
 
   # Segunda camada no texto do CLIENTE, linha a linha (as quebras ficam): a linha sem chave fica como veio, byte a byte;
@@ -133,21 +134,20 @@ module Autonomia::Agents::Operate::MolduraDaEquipe
     return reply if tocadas.none?
 
     planos.zip(tocadas).filter_map do |(linha, plano), tocada|
-      tocada ? linha_tocada(plano, chaves) : linha
+      tocada ? linha_tocada(plano, chaves, marca) : linha
     end.join.strip
   end
 
-  # A linha da resposta que tem marca, código ou chave. A que ecoa o cabeçalho da memória (#1755) sai inteira: o resto
-  # dela é a cerca, não fala ao cliente.
-  def linha_tocada(plano, chaves)
-    return if texto_sem_disfarce.contem?(plano, PREFIXO_DO_REGISTRO)
+  # A linha da resposta que tem marca, código ou chave. A que ecoa o cabeçalho da memória (#1755: prefixo + código desta
+  # conversa) sai inteira: o resto dela é a cerca, não fala ao cliente.
+  def linha_tocada(plano, chaves, marca)
+    return if texto_sem_disfarce.contem?(plano, "#{PREFIXO_DO_REGISTRO}#{codigo(marca)}")
 
     linha_sem_cabecalho("#{texto_sem_disfarce.trocar(plano, chaves, '')}\n")
   end
 
   def chaves_da_resposta(marca)
-    [marca, "#{PREFIXO_DA_MARCA}#{codigo(marca)}", "#{PREFIXO_DO_REGISTRO}#{codigo(marca)}", codigo(marca), PREFIXO_DA_MARCA,
-     PREFIXO_DO_REGISTRO]
+    [marca, "#{PREFIXO_DA_MARCA}#{codigo(marca)}", codigo(marca), PREFIXO_DA_MARCA]
   end
 
   def linha_sem_cabecalho(linha)
