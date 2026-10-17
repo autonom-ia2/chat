@@ -154,6 +154,28 @@ describe Whatsapp::IncomingReactionExtension do
       expect { cloud_perform }.to change(Message, :count).by(1)
     end
 
+    # Combinado com os Agentes IA (17/10): a reação dá UM turno à IA, o da mensagem sintética. O selo é atualização da
+    # mensagem reagida (message.updated), que o Operate não ouve; nenhuma outra mensagem nasce.
+    it 'gera um único turno para a IA: só a mensagem sintética dispara message.created' do
+      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+
+      cloud_perform
+
+      synthetic = conversation.messages.find_by(source_id: 'wamid.EVENTO')
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(Events::Types::MESSAGE_CREATED, anything, hash_including(message: synthetic)).once
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(Events::Types::MESSAGE_CREATED, anything, anything).once
+      expect(reactions.pluck('emoji')).to eq(['👍'])
+    end
+
+    it 'com as reações do agente desligadas: só o selo, sem turno' do
+      allow(Autonomia::Agents::Config).to receive(:operate_reactions_enabled?).and_return(false)
+
+      expect { cloud_perform }.not_to change(Message, :count)
+      expect(reactions.pluck('emoji')).to eq(['👍'])
+    end
+
     it 'reação removida: o agente ignora e o selo some' do
       cloud_perform
 
