@@ -107,6 +107,21 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     end
   end
 
+  # Contrato da pele (#1793): só o RevokeJob grava revogada_no_canal; a API pública a descarta em qualquer caixa.
+  it 'drops a forged revogada_no_canal on messages#create and on a conversation created with a message' do
+    message = create_message(content: 'Oi', content_attributes: { revogada_no_canal: true, outro: 'fica' })
+    expect(message.content_attributes).to eq('outro' => 'fica')
+
+    plain = create(:channel_api, account: account).inbox
+    contact_inbox = create(:contact_inbox, inbox: plain, contact: create(:contact, account: account))
+    post "/api/v1/accounts/#{account.id}/conversations", headers: admin.create_new_auth_token, as: :json,
+                                                         params: { source_id: contact_inbox.source_id, inbox_id: plain.id,
+                                                                   message: { content: 'Oi', content_attributes: { revogada_no_canal: true } } }
+    expect(response).to have_http_status(:success)
+    created = account.conversations.find_by(display_id: response.parsed_body['id']).messages.first
+    expect(created.content_attributes).not_to have_key('revogada_no_canal')
+  end
+
   it 'drops a forged view_once_unavailable from a message created by the API' do
     message = create_message(content: 'Oi', content_attributes: { view_once_unavailable: true, outro: 'fica' })
 

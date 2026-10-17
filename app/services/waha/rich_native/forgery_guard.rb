@@ -26,8 +26,10 @@ module Waha::RichNative::ForgeryGuard
   # (Waha::RichNative::AgentTurnGuard), então ela sai da API pública em todas, também em Channel::Api comum (um
   # integrador com token calaria a IA). Quem grava por dentro (conector via Waha::RichNative::Inbound::Revoke, o #1702b)
   # continua gravando.
+  # `revogada_no_canal` (o motor confirmou o apagar para todos, WhatsappHybrid::RichNative::RevokeJob): a pele diz ao
+  # atendente que o cliente não vê mais a mensagem; ninguém com token pode forjá-la. Também em todas as caixas.
   ALWAYS_DROPPED = ['waha_native', 'waha_text', 'waha_media_as_media', RichMessages::SENT_AS_KEY,
-                    Waha::RichNative::TurnKinds::DELETED_KEY].freeze
+                    Waha::RichNative::TurnKinds::DELETED_KEY, WhatsappHybrid::RichNative::RevokeJob::REVOKED_KEY].freeze
   INCOMING_ONLY_KEYS = Waha::RichNative::ContractGuard::INCOMING_ONLY_KEYS
 
   def self.prepended(controller)
