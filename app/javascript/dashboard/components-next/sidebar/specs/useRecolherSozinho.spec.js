@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { computed, defineComponent, nextTick, reactive, ref } from 'vue';
+import { computed, defineComponent, h, nextTick, reactive, ref } from 'vue';
 import {
   LARGURA_PADRAO,
   LARGURA_RECOLHIDA,
@@ -16,14 +16,24 @@ import {
 // novo, clique num item de tela de trabalho recolhe em 0,6 s, e a escolha salva da pessoa fica intacta.
 const montar = ({ tela = 'inbox_conversation', salvo = {} } = {}) => {
   window.innerWidth = 1440;
-  const route = reactive({ name: tela, fullPath: `/${tela}`, params: {} });
+  const route = reactive({
+    name: tela,
+    path: `/${tela}`,
+    fullPath: `/${tela}`,
+    params: {},
+  });
+  const janela = ref(1440);
+  const raiz = ref(null);
   const sidebarWidth = ref(LARGURA_PADRAO);
   const uiSettings = ref({ ...salvo });
   const updateUISettings = vi.fn(novo => {
     uiSettings.value = { ...uiSettings.value, ...novo };
   });
   const isCollapsed = computed(() => sidebarWidth.value < 160);
-  const telaDeTrabalho = computed(() => ehTelaDeTrabalho(route.name));
+  const telaDeTrabalho = computed(
+    () => janela.value >= 768 && ehTelaDeTrabalho(route.name)
+  );
+  const restaurar = vi.fn();
   let api;
   let largura;
   const wrapper = mount(
@@ -41,14 +51,21 @@ const montar = ({ tela = 'inbox_conversation', salvo = {} } = {}) => {
           telaDeTrabalho,
           isCollapsed,
           recolher: largura.recolherSemSalvar,
-          restaurar: largura.aplicar,
+          restaurar: () => {
+            restaurar();
+            largura.aplicar();
+          },
+          raiz,
         });
-        return () => null;
+        return () =>
+          h('div', { ref: raiz }, [h('button', { id: 'item' }, 'Item')]);
       },
-    })
+    }),
+    { attachTo: document.body }
   );
   const irPara = async nome => {
     route.name = nome;
+    route.path = `/${nome}`;
     route.fullPath = `/${nome}`;
     await nextTick();
   };
@@ -60,6 +77,9 @@ const montar = ({ tela = 'inbox_conversation', salvo = {} } = {}) => {
     uiSettings,
     updateUISettings,
     irPara,
+    route,
+    janela,
+    restaurar,
   };
 };
 
@@ -172,5 +192,158 @@ describe('useRecolherSozinho', () => {
     vi.advanceTimersByTime(TEMPO_ABERTO);
     expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // Foco vindo do teclado: no jsdom o :focus-visible não existe, então o alvo diz que é.
+  const focoDeTeclado = el => {
+    el.matches = seletor => seletor === ':focus-visible';
+    el.focus();
+    return { target: el };
+  };
+  const atalho = () =>
+    document.body.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '\\', ctrlKey: true, bubbles: true })
+    );
+
+  it('filtro do CRM (query) ou âncora (hash) na mesma tela não reinicia os 30 s', async () => {
+    const { route, sidebarWidth, wrapper } = montar({
+      tela: 'crm_kanban_index',
+    });
+    vi.advanceTimersByTime(20000);
+    route.fullPath = '/crm_kanban_index?etapa=2#card-9';
+    await nextTick();
+    vi.advanceTimersByTime(10000);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('depois do clique, destino que não é de trabalho cancela: o menu nem pisca', async () => {
+    const { api, sidebarWidth, irPara, wrapper } = montar();
+    const larguras = [];
+    const espia = setInterval(() => larguras.push(sidebarWidth.value), 50);
+    api.depoisDoClique();
+    vi.advanceTimersByTime(300);
+    await irPara('settings_inicio');
+    vi.advanceTimersByTime(5000);
+    clearInterval(espia);
+    expect(larguras).not.toContain(LARGURA_RECOLHIDA);
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+    wrapper.unmount();
+  });
+
+  it('depois do clique, quem decide é o destino: chegou depois dos 0,6 s numa tela de trabalho, recolhe ao chegar', async () => {
+    const { api, sidebarWidth, irPara, wrapper } = montar({
+      tela: 'settings_inicio',
+    });
+    api.depoisDoClique();
+    vi.advanceTimersByTime(1500);
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+    await irPara('crm_calendar_index');
+    vi.advanceTimersByTime(100);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('clicar na tela já aberta não deixa nada pendente: a próxima tela de trabalho conta 30 s', async () => {
+    const { api, sidebarWidth, irPara, wrapper } = montar({
+      tela: 'settings_inicio',
+    });
+    api.depoisDoClique();
+    vi.advanceTimersByTime(4000);
+    await irPara('crm_kanban_index');
+    vi.advanceTimersByTime(1000);
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('foco de teclado pausa; foco de clique não; sair do menu retoma', async () => {
+    const { api, sidebarWidth, wrapper } = montar();
+    const botao = document.getElementById('item');
+    botao.matches = () => false;
+    botao.focus();
+    api.focoEntrou({ target: botao });
+    vi.advanceTimersByTime(5000);
+    expect(api.progresso.value).toBeLessThan(1);
+
+    api.focoEntrou(focoDeTeclado(botao));
+    const parado = api.progresso.value;
+    vi.advanceTimersByTime(60000);
+    expect(api.progresso.value).toBe(parado);
+
+    const raiz = botao.parentElement;
+    api.focoSaiu({ currentTarget: raiz, relatedTarget: botao });
+    vi.advanceTimersByTime(60000);
+    expect(api.progresso.value).toBe(parado);
+
+    api.focoSaiu({ currentTarget: raiz, relatedTarget: document.body });
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('repro: Tab, Enter, recolhe, Ctrl+\\ reabre e a contagem volta', async () => {
+    const { api, sidebarWidth, irPara, wrapper } = montar({
+      tela: 'settings_inicio',
+    });
+    const botao = document.getElementById('item');
+    api.focoEntrou(focoDeTeclado(botao));
+    api.depoisDoClique();
+    await irPara('inbox_conversation');
+    vi.advanceTimersByTime(TEMPO_APOS_CLIQUE);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    botao.remove();
+    await nextTick();
+
+    atalho();
+    await nextTick();
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+    expect(api.progresso.value).toBe(1);
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('foco num item que saiu da tela não pausa a contagem', () => {
+    const { api, sidebarWidth, wrapper } = montar();
+    const botao = document.getElementById('item');
+    api.focoEntrou(focoDeTeclado(botao));
+    botao.remove();
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
+  });
+
+  it('Ctrl+\\ em tela de trabalho recolhe e abre sem gravar a preferência', async () => {
+    const { sidebarWidth, updateUISettings, wrapper } = montar({
+      salvo: { sidebar_width: 256 },
+    });
+    atalho();
+    await nextTick();
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    atalho();
+    await nextTick();
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+    expect(updateUISettings).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('cruzar 768 px numa tela de trabalho reavalia o relógio', async () => {
+    const { api, janela, restaurar, sidebarWidth, wrapper } = montar();
+    vi.advanceTimersByTime(10000);
+    janela.value = 700;
+    await nextTick();
+    expect(restaurar).toHaveBeenCalledTimes(1);
+    expect(api.progresso.value).toBe(0);
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_PADRAO);
+
+    janela.value = 1440;
+    await nextTick();
+    expect(api.progresso.value).toBe(1);
+    vi.advanceTimersByTime(TEMPO_ABERTO);
+    expect(sidebarWidth.value).toBe(LARGURA_RECOLHIDA);
+    wrapper.unmount();
   });
 });

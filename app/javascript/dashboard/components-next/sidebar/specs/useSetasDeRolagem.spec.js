@@ -124,7 +124,8 @@ describe('ForkSidebarSeta', () => {
         'text-white/70',
       ])
     );
-    expect(botao.html()).not.toMatch(/ring-|bg-/);
+    expect(botao.html()).not.toContain('ring-');
+    expect(botao.html()).not.toContain('bg-');
   });
 
   it('acima usa o chevron para cima; sem contagem, rótulo curto', () => {

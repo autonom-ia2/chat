@@ -34,7 +34,8 @@ export function useLarguraDoMenu({
 }) {
   const { width: larguraDaJanela } = useWindowSize();
   const celular = computed(() => larguraDaJanela.value < TELA_MEDIA_DE);
-  // Escolha da pessoa: arrastou a borda, usou o botão ou o atalho (tudo grava `sidebar_width`).
+  // Escolha da pessoa: arrastou a borda, usou o botão ou o atalho (grava `sidebar_width`). Em tela de trabalho
+  // (#1781) o botão e o atalho não gravam: abrir ou recolher ali vale só naquela visita.
   const escolheu = computed(() => Boolean(uiSettings.value?.sidebar_width));
   const anuncio = ref('');
 

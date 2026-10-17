@@ -21,6 +21,7 @@ import { TELA_MEDIA_DE, useLarguraDoMenu } from './useLarguraDoMenu';
 import { ehTelaDeTrabalho, useRecolherSozinho } from './useRecolherSozinho';
 import { usePainelDoContatoRecolhido } from './usePainelDoContatoRecolhido';
 import { useSetasDeRolagem } from './useSetasDeRolagem';
+import { useFocoAoAlternar, useFocoDasSetas } from './useFocoNoMenu';
 
 // Menu lateral novo (#1617). Recebe a lista que o Sidebar.vue já monta e só reorganiza (forkSidebarMenu.js).
 // Fica no lugar da <nav> de sempre quando a flag `menu_lateral_novo` está ligada na conta.
@@ -137,17 +138,24 @@ const {
   updateUISettings,
   telaDeTrabalho,
 });
+const raiz = ref(null);
 const recolherSozinho = useRecolherSozinho({
   route,
   telaDeTrabalho,
   isCollapsed,
   recolher: recolherSemSalvar,
   restaurar: aplicar,
+  raiz,
 });
-usePainelDoContatoRecolhido({ route, uiSettings, updateUISettings });
+useFocoAoAlternar({ raiz, idDaLista: ID_DA_LISTA, isCollapsed });
+usePainelDoContatoRecolhido({
+  route,
+  uiSettings,
+  updateUISettings,
+  carregado: computed(() => Boolean(store.getters.getCurrentUser?.id)),
+});
 
 // Gaveta do celular: foco preso, Esc fecha, foco volta para quem abriu.
-const raiz = ref(null);
 let quemAbriu = null;
 const gaveta = () => raiz.value?.closest('aside');
 const aoTeclar = evento => {
@@ -191,6 +199,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar));
 const lista = ref(null);
 const conteudo = ref(null);
 const setas = useSetasDeRolagem(lista, conteudo, () => route.path);
+useFocoDasSetas({
+  raiz,
+  lista,
+  acima: setas.acima,
+  abaixo: setas.abaixo,
+});
 
 const navegou = () => {
   recolherSozinho.depoisDoClique();
@@ -203,7 +217,7 @@ const navegou = () => {
     ref="raiz"
     data-menu-novo
     class="flex flex-col flex-grow min-h-0 min-w-0"
-    @mouseenter="recolherSozinho.entrar"
+    @mouseover="recolherSozinho.entrar"
     @mouseleave="recolherSozinho.sair"
     @focusin="recolherSozinho.focoEntrou"
     @focusout="recolherSozinho.focoSaiu"
@@ -224,6 +238,7 @@ const navegou = () => {
       <nav
         :id="ID_DA_LISTA"
         ref="lista"
+        tabindex="-1"
         :aria-label="t('FORK_SIDEBAR.MENU')"
         class="flex-grow min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
         :class="isCollapsed ? 'px-1.5 pb-3' : 'ps-3 pe-1 pb-4'"

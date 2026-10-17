@@ -19,15 +19,15 @@ const { t } = useI18n();
 const emCima = computed(() => props.lado === 'acima');
 
 const rotulo = computed(() => {
-  if (!props.contagem) {
-    return t(
-      emCima.value ? 'FORK_SIDEBAR.ROLAR_ACIMA' : 'FORK_SIDEBAR.ROLAR_ABAIXO'
-    );
+  const n = props.contagem;
+  if (emCima.value) {
+    return n
+      ? t('FORK_SIDEBAR.ROLAR_ACIMA_ITENS', { count: n }, n)
+      : t('FORK_SIDEBAR.ROLAR_ACIMA');
   }
-  const chave = emCima.value
-    ? 'FORK_SIDEBAR.ROLAR_ACIMA_ITENS'
-    : 'FORK_SIDEBAR.ROLAR_ABAIXO_ITENS';
-  return t(chave, { count: props.contagem }, props.contagem);
+  return n
+    ? t('FORK_SIDEBAR.ROLAR_ABAIXO_ITENS', { count: n }, n)
+    : t('FORK_SIDEBAR.ROLAR_ABAIXO');
 });
 
 // O chevron desce (ou sobe) 2 px no respiro.

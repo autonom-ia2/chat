@@ -41,12 +41,16 @@ const focoDeTeclado = alvo => {
   }
 };
 
+// Depois do clique, espera a rota de destino até este limite; clicar na tela já aberta não deixa nada pendente.
+const ESPERA_DO_DESTINO = 3000;
+
 export function useRecolherSozinho({
   route,
   telaDeTrabalho,
   isCollapsed,
   recolher,
   restaurar,
+  raiz = ref(null),
 }) {
   // 1 = barra cheia, 0 = sem barra.
   const progresso = ref(0);
@@ -61,22 +65,53 @@ export function useRecolherSozinho({
   let restante = 0;
   let total = 0;
   let aposClique = false;
+  let caminhoNoClique = '';
 
   const parar = () => {
     clearInterval(relogio);
     relogio = null;
     aposClique = false;
     progresso.value = 0;
+    sobre.value = false;
+    focado.value = false;
+  };
+
+  // Foco que ficou num item que já saiu da tela (o recolher desmontou) não pausa mais.
+  const focoAindaNoMenu = () => {
+    const ativo = document.activeElement;
+    return Boolean(ativo?.isConnected && raiz.value?.contains(ativo));
+  };
+  const pausado = () => {
+    if (focado.value && !focoAindaNoMenu()) focado.value = false;
+    return sobre.value || focado.value;
+  };
+
+  const recolherAgora = () => {
+    parar();
+    if (!isCollapsed.value) recolher();
+  };
+
+  // Depois do clique a decisão é da rota de destino: tela de trabalho recolhe; outra tela cancela (no relógio de rota).
+  const tiqueAposClique = () => {
+    restante -= PASSO;
+    const chegou = route.path !== caminhoNoClique;
+    if (chegou && restante <= 0) {
+      if (telaDeTrabalho.value) recolherAgora();
+      else parar();
+      return;
+    }
+    if (restante <= -ESPERA_DO_DESTINO) parar();
   };
 
   const tique = () => {
-    if (!aposClique && (sobre.value || focado.value)) return;
+    if (aposClique) {
+      tiqueAposClique();
+      return;
+    }
+    if (pausado()) return;
     restante -= PASSO;
-    if (!aposClique) progresso.value = Math.max(restante, 0) / total;
-    if (restante > 0) return;
-    parar();
-    // Depois do clique, só recolhe se a tela que abriu é de trabalho.
-    if (telaDeTrabalho.value && !isCollapsed.value) recolher();
+    progresso.value = Math.max(restante, 0) / total;
+    if (restante <= 0) recolherAgora();
   };
 
   const iniciar = (ms, depoisDoClique = false) => {
@@ -93,15 +128,21 @@ export function useRecolherSozinho({
     else parar();
   };
 
-  // Saiu de uma tela de trabalho: volta a valer a largura que a pessoa escolheu.
-  let estavaNoTrabalho = false;
+  // Saiu da tela de trabalho (outra rota ou a janela passou para celular): volta a largura que a pessoa escolheu.
+  watch(telaDeTrabalho, (agora, antes) => {
+    if (antes && !agora) restaurar();
+    if (!aposClique) contarSeAberto();
+  });
+
+  // Só troca de tela reinicia a contagem: filtro do CRM (query) ou âncora (hash) não.
   watch(
-    () => route.fullPath,
+    () => route.path,
     () => {
-      const agora = telaDeTrabalho.value;
-      if (estavaNoTrabalho && !agora) restaurar();
-      estavaNoTrabalho = agora;
-      if (!aposClique) contarSeAberto();
+      if (!aposClique) {
+        contarSeAberto();
+        return;
+      }
+      if (!telaDeTrabalho.value) parar();
     },
     { immediate: true }
   );
@@ -112,7 +153,9 @@ export function useRecolherSozinho({
   });
 
   const depoisDoClique = () => {
-    if (!isCollapsed.value) iniciar(TEMPO_APOS_CLIQUE, true);
+    if (isCollapsed.value) return;
+    caminhoNoClique = route.path;
+    iniciar(TEMPO_APOS_CLIQUE, true);
   };
 
   const entrar = () => {
