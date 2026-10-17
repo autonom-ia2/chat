@@ -4665,7 +4665,7 @@
     "modelo": "User",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:8",
-      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:23",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:24",
       "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:11",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],

@@ -153,6 +153,18 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events.select { |event| event[:event] == 'c2y_message_edit' }).to be_empty
     end
 
+    it 'answers the same text without saving nor sending anything (revisão, risco 9)' do
+      message = ours('Até amanhã')
+
+      edit(message, 'Até amanhã')
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['content']).to eq('Até amanhã')
+      expect(message.reload.content_attributes).not_to have_key('edit_history')
+      expect(events).to be_empty
+      expect(Waha::RichNative::MessageActions.edit!(message, user: agent, content: 'Até amanhã')).to eq(:unchanged)
+    end
+
     it 'lets only the author edit; an administrator edits anyone, including the bot' do
       colleague = create(:user, account: account, role: :agent)
       create(:inbox_member, user: colleague, inbox: channel.inbox)

@@ -12,8 +12,9 @@ class Api::V1::Accounts::Conversations::MessageEditsController < Api::V1::Accoun
                                                             administrator: Current.account_user&.administrator? == true)
     return head :forbidden if error == :forbidden
     return render json: { error: I18n.t('waha.message_actions.edit_not_author') }, status: :forbidden if error == :not_author
-    return render json: { error: invalid_text }, status: :unprocessable_entity if error
+    return render json: { error: invalid_text }, status: :unprocessable_entity if error && error != :unchanged
 
+    # :unchanged (o mesmo texto): a mensagem como está, sem gravar nem mandar nada ao conector.
     render json: { id: message.id, content: message.content, content_attributes: message.content_attributes }
   end
 

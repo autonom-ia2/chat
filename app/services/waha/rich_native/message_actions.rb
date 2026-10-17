@@ -5,7 +5,8 @@
 # Um motor sem o patch ignora o evento (o conector original devolve null para evento desconhecido). A gravação não
 # manda `message_updated` ao conector (Waha::RichNative::SilentUpdate): o evento próprio é o único pedido.
 # Só com a flag `whatsapp_rich_native`, na caixa WAHA comum cujo motor declara a ação (Waha::EngineCapabilities.actions).
-# Cada método devolve nil quando gravou e pediu o envio, ou o motivo da recusa (símbolo; o controller responde 403/422).
+# Cada método devolve nil quando gravou e pediu o envio, :unchanged na edição com o mesmo texto (nada gravado nem
+# enviado), ou o motivo da recusa (símbolo; o controller responde 403/422).
 # O envio ao conector é assíncrono e com nova tentativa; se não chegar, fica uma nota privada na conversa.
 # - A reação é da EMPRESA (Waha::RichNative::Reactions): a de um atendente troca a de outro, como no WhatsApp.
 # - Editar: só quem enviou a mensagem, ou um administrador da conta (a do robô, da IA ou de outro atendente só pelo
@@ -35,7 +36,7 @@ module Waha::RichNative::MessageActions
     return :forbidden unless allowed?(message.conversation, 'edit')
     return :invalid unless editable?(message) && Waha::RichNative::Edits.valid_text?(content)
     return :not_author unless administrator || author?(message, user)
-    return nil unless Waha::RichNative::Edits.apply!(message, content: content, author: Waha::RichNative::Edits.user_author(user.id))
+    return :unchanged unless Waha::RichNative::Edits.apply!(message, content: content, author: Waha::RichNative::Edits.user_author(user.id))
 
     deliver(message, EDIT_EVENT, c2y_edit: { waha_text: Waha::RichNative::OutgoingHints.whatsapp_text(content, message) })
     nil
