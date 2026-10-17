@@ -33,7 +33,7 @@ describe Waha::RichNative::MessageActionDeliveryJob do
 
   it 'retries a failure and, when the attempts run out, leaves a private note and keeps the reaction' do
     message.update_column(:content_attributes, { 'reactions' => [{ 'emoji' => '👍', 'sender_type' => 'User' }] }) # rubocop:disable Rails/SkipsModelValidations
-    allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::HttpError.new('500 Internal Server Error'))
+    allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::HttpError.new('500 Internal Server Error', status: 500))
 
     perform_enqueued_jobs { described_class.perform_later(message.id, payload, 'D1') }
 
@@ -53,5 +53,29 @@ describe Waha::RichNative::MessageActionDeliveryJob do
 
     expect(conversation.messages.where(private: true).sole.content)
       .to eq('A edição não chegou ao WhatsApp do cliente. O cliente continua vendo o texto anterior.')
+  end
+
+  # Revisão da rodada de correção, itens 4 e 5: erro que não passa com o tempo vai direto ao aviso; caixa sem webhook
+  # também avisa, em vez de sair calada.
+  { 'endereço recusado' => SafeFetch::UnsafeUrlError.new('privado'), 'endereço inválido' => SafeFetch::InvalidUrlError.new('x'),
+    'recusa 4xx' => SafeFetch::HttpError.new('401 Unauthorized', status: 401) }.each do |caso, erro|
+    it "does not retry a permanent failure (#{caso}) and leaves the note at once" do
+      allow(SafeFetch).to receive(:fetch).and_raise(erro)
+
+      perform_enqueued_jobs { described_class.perform_later(message.id, payload, 'D3') }
+
+      expect(SafeFetch).to have_received(:fetch).with(channel.webhook_url, hash_including(body: payload.to_json)).once
+      expect(conversation.messages.where(private: true).count).to eq(1)
+    end
+  end
+
+  it 'leaves the note when the inbox has no webhook address' do
+    allow(SafeFetch).to receive(:fetch)
+    channel.update!(webhook_url: '')
+
+    described_class.perform_now(message.id, payload, 'D4')
+
+    expect(SafeFetch).not_to have_received(:fetch).with(anything, hash_including(body: payload.to_json))
+    expect(conversation.messages.where(private: true).sole.content).to start_with('A reação não chegou')
   end
 end
