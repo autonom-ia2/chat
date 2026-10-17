@@ -12,8 +12,9 @@ module WhatsappHybrid::RichNative::WindowNeutral
   # CONTRATO PÚBLICO (Followup IA, #1766: messaging_window.rb, service_window.rb, conversa_aberta): a relation de
   # mensagens recebidas sem as neutras (`additional_attributes.c2y_window_neutral`), as que abrem a janela de 24 h. A
   # regra mora só aqui; nome e assinatura não mudam.
+  # Lê a marca nos dois formatos da coluna (objeto e string JSON, Waha::RichNative::JsonColumn).
   def self.opening(relation)
-    relation.where('(messages.additional_attributes ->> ?) IS NULL', KEY)
+    relation.where("#{Waha::RichNative::JsonColumn.text('messages.additional_attributes', :jsonb, KEY)} IS NULL")
   end
 
   private

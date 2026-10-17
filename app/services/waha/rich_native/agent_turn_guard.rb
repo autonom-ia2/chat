@@ -18,13 +18,10 @@ module Waha::RichNative::AgentTurnGuard
   UNSUPPORTED_REASON = 'mensagem_sem_suporte'.freeze
   DELETED_REASON = 'mensagem_apagada'.freeze
   STALE_CHOICE_REASON = 'escolha_retirada'.freeze
-  # As marcas das mensagens do cliente que não contam como interação na janela do histórico, como aparecem no texto do
-  # JSON (aspas escapadas): o voto escondido (só recebido: o filtro já é `incoming`), a bolha, o aviso de visualização
-  # única e a apagada.
-  UNCOUNTED_PATTERNS = {
-    'c2y_hidden' => '%\\"c2y_hidden\\":true%', 'is_unsupported' => '%\\"is_unsupported\\":true%',
-    'view_once_unavailable' => '%\\"view_once_unavailable\\":true%', 'deleted_by_contact_at' => '%\\"deleted_by_contact_at\\":\\"%'
-  }.freeze
+  # As marcas (verdadeiras) das mensagens do cliente que não contam como interação na janela do histórico: o voto
+  # escondido (só recebido: o filtro já é `incoming`), a bolha e o aviso de visualização única; a apagada vai à parte
+  # (chave presente).
+  UNCOUNTED_FLAGS = %w[c2y_hidden is_unsupported view_once_unavailable].freeze
 
   def perform
     reason = c2y_turn_skip_reason
@@ -78,13 +75,15 @@ module Waha::RichNative::AgentTurnGuard
     desde ? chat.where(created_at: desde..) : chat
   end
 
-  # Só em SQL (sem carregar as mensagens): `content_attributes` é texto JSON gravado dentro de json, então no `::text` as
-  # aspas vêm escapadas (\"chave\":valor), e o LIKE casa a chave inteira com o valor que conta. ESCAPE '|' para a barra
-  # do JSON não ser o escape do LIKE.
+  # Só em SQL (sem carregar as mensagens), nos dois formatos da coluna (objeto e string JSON, Waha::RichNative::JsonColumn):
+  # o voto escondido (`c2y_hidden`, só com a flag) e, na caixa WAHA com a flag, a bolha, o aviso de visualização única e
+  # a apagada (`deleted_by_contact_at` presente).
   def c2y_uncounted_ids(chat)
-    markers = c2y_waha_with_flag? ? UNCOUNTED_PATTERNS.values : UNCOUNTED_PATTERNS.values_at('c2y_hidden')
-    sieve = markers.map { "messages.content_attributes::text LIKE ? ESCAPE '|'" }.join(' OR ')
-    chat.incoming.where(sieve, *markers).pluck(:id)
+    column = 'messages.content_attributes'
+    flags = c2y_waha_with_flag? ? UNCOUNTED_FLAGS : %w[c2y_hidden]
+    conditions = flags.map { |key| "#{Waha::RichNative::JsonColumn.text(column, :json, key)} = 'true'" }
+    conditions << "#{Waha::RichNative::JsonColumn.text(column, :json, 'deleted_by_contact_at')} IS NOT NULL" if c2y_waha_with_flag?
+    chat.incoming.where(conditions.join(' OR ')).pluck(:id)
   end
 
   def c2y_stale_choice?(message)
@@ -153,7 +152,8 @@ module Waha::RichNative::AgentTurnGuard
     return if waiting.nil?
     return unless c2y_turn_incoming.any? { |message| message.created_at.to_i == waiting.to_i && Waha::RichNative::AiTurn.turn?(message) }
 
-    cleared = Conversation.where(id: @conversation.id, waiting_since: waiting).update_all(waiting_since: nil) # rubocop:disable Rails/SkipsModelValidations
+    armed = Conversation.where(id: @conversation.id, waiting_since: waiting)
+    cleared = armed.update_all(waiting_since: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     c2y_after_disarm(waiting) if cleared == 1
   rescue StandardError => e
     c2y_report(e, 'c2y_disarm_waiting_failed')
