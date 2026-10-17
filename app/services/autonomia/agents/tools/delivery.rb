@@ -54,6 +54,16 @@ class Autonomia::Agents::Tools::Delivery
                end
   end
 
+  # Os ids dos fatos de memória que o especialista leu neste turno (#1755): o `replied` do principal registra, junto dos
+  # dele, o que a cotação leu.
+  def memoria_fact_ids
+    @memoria_fact_ids.to_a
+  end
+
+  def anotar_memoria(ids)
+    @memoria_fact_ids = (memoria_fact_ids + Array(ids)).uniq
+  end
+
   def register(run)
     @runs << run if run.present?
     run

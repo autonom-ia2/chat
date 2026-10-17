@@ -356,10 +356,11 @@ module Autonomia
                                                                            finalidade: :responder)
         end
 
-        # Os ids dos fatos que foram ao modelo neste turno, para o evento `replied` (só os enviados; o que o modelo diz
-        # ter usado não é prova). {} sem memória.
+        # Os ids dos fatos que foram ao modelo neste turno, do principal e do especialista (a cotação), para o evento
+        # `replied` (só os enviados; o que o modelo diz ter usado não é prova). {} sem memória.
         def metadata_da_memoria
-          @memoria.nil? || @memoria.ids.empty? ? {} : { 'memoria_fact_ids' => @memoria.ids }
+          ids = (@memoria&.ids.to_a + @delivery&.memoria_fact_ids.to_a).uniq
+          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
 
         # As rodadas do turno: as do principal com ajudante (tema 14, #1434) ou, sem ajudante, as de sempre — seis para a

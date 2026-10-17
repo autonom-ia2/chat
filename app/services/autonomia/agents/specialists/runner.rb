@@ -144,7 +144,7 @@ class Autonomia::Agents::Specialists::Runner
                                                           faixa: ::Autonomia::Insurance::QuoteAgent::Builder.ramo_do_especialista(@specialist))
     pedido = "PEDIDO DO ATENDENTE:\n#{Autonomia::Agents::Config.truncate_text(@request, MAX_REQUEST_CHARS)}"
     # A memória do cliente (#1755), a mesma do principal: a cotação não pede de novo o que o cliente já deu.
-    memoria = ::Autonomia::Agents::Operate::MemoriaDoTurno.itens_do_especialista(conversation: @delivery&.conversation, agent: @specialist.agent)
+    memoria = ::Autonomia::Agents::Operate::MemoriaDoTurno.itens_do_especialista(delivery: @delivery, agent: @specialist.agent)
     materia.mensagens + memoria + Array(@laco_do_ajudante&.base(@request)) + [Autonomia::Agents::PromptParts::Mensagem.montar('user', pedido)]
   end
 
