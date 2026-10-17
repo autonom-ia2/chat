@@ -5,7 +5,8 @@
 //   parte "botoes"   — dentro do balão, depois da hora: um botão por linha, separados
 //                      por um fio, na largura do balão;
 //   parte "carrossel"— fora do balão, embaixo: os cartões lado a lado.
-// Os botões só mostram (como no celular do cliente); tocar aqui não envia nada.
+// Botão de link abre o endereço que o cliente recebeu (B2, Rodrigo em 17/10); os
+// outros só mostram, com a dica de que o cliente toca no celular. Daqui não sai nada.
 // Dentro do balão lê a mensagem do contexto; na lista recebe a mensagem por prop.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -93,15 +94,32 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
     :aria-label="t('CONVERSA_CANAL.MODELO.BOTOES')"
     data-botoes-do-modelo
   >
-    <div
-      v-for="(botao, indice) in botoes"
-      :key="indice"
-      :class="LINHA"
-      :data-tipo-do-botao="botao.tipo"
-    >
-      <Icon :icon="botao.icone" class="size-4 flex-shrink-0" />
-      <span class="min-w-0 break-words">{{ botao.texto }}</span>
-    </div>
+    <template v-for="(botao, indice) in botoes" :key="indice">
+      <a
+        v-if="botao.endereco"
+        :href="botao.endereco"
+        target="_blank"
+        rel="noopener noreferrer"
+        :class="LINHA"
+        class="hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5"
+        :data-tipo-do-botao="botao.tipo"
+      >
+        <Icon :icon="botao.icone" class="size-4 flex-shrink-0" />
+        <span class="min-w-0 break-words">{{ botao.texto }}</span>
+        <span class="sr-only">{{
+          t('CONVERSA_CANAL.MODELO.ABRE_EM_OUTRA_ABA')
+        }}</span>
+      </a>
+      <div
+        v-else
+        :class="LINHA"
+        :title="t('CONVERSA_CANAL.MODELO.SO_NO_CELULAR')"
+        :data-tipo-do-botao="botao.tipo"
+      >
+        <Icon :icon="botao.icone" class="size-4 flex-shrink-0" />
+        <span class="min-w-0 break-words">{{ botao.texto }}</span>
+      </div>
+    </template>
   </div>
 
   <li

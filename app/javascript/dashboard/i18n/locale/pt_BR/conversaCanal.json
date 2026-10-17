@@ -150,7 +150,9 @@
       "OFERTA": "Oferta por tempo limitado",
       "CARROSSEL": "Cartões do modelo",
       "PRODUTO": "Produto do catálogo",
-      "BOTOES": "Botões do modelo"
+      "BOTOES": "Botões do modelo",
+      "ABRE_EM_OUTRA_ABA": "Abre em outra aba",
+      "SO_NO_CELULAR": "O cliente toca neste botão no celular. Aqui ele só aparece."
     },
     "GRAVACAO": {
       "GRAVANDO": "Gravando áudio",

@@ -33,6 +33,25 @@ const ICONE_DA_MIDIA = {
   PRODUCT: 'i-ph-storefront',
 };
 const PADRAO = 'i-ph-arrow-bend-up-left-bold';
+const VARIAVEL_DO_LINK = '{{1}}';
+
+// O endereço que o cliente abre ao tocar no botão de link (B2, teste do Rodrigo em
+// 17/10): o do modelo, com o final variável que foi na mensagem. Sem esse final, ou
+// fora de http(s), não há link: o botão só mostra.
+export const enderecoDoBotao = (modelo, parametro) => {
+  if (typeof modelo !== 'string' || !modelo) return '';
+  const variavel = modelo.includes(VARIAVEL_DO_LINK);
+  if (variavel && (typeof parametro !== 'string' || !parametro)) return '';
+  const endereco = variavel
+    ? modelo.split(VARIAVEL_DO_LINK).join(parametro)
+    : modelo;
+  try {
+    const { protocol } = new URL(endereco);
+    return ['https:', 'http:'].includes(protocol) ? endereco : '';
+  } catch {
+    return '';
+  }
+};
 
 // `mensagem`: computed com { additionalAttributes, inboxId }.
 export const useModeloDaMensagem = mensagem => {
@@ -54,15 +73,32 @@ export const useModeloDaMensagem = mensagem => {
   const componente = tipo =>
     (modelo.value?.components || []).find(c => c.type === tipo);
 
-  const botao = b => ({
+  const botao = (b, parametroDoLink) => ({
     tipo: b.type,
     texto: b.text || (TEXTO_DO_APP[b.type] ? t(TEXTO_DO_APP[b.type]) : ''),
     icone: ICONE[b.type] || PADRAO,
+    endereco: b.type === 'URL' ? enderecoDoBotao(b.url, parametroDoLink) : '',
   });
 
-  const botoes = computed(() =>
-    (componente('BUTTONS')?.buttons || []).map(botao)
+  // O final variável de cada botão de link, na ordem em que saiu na mensagem.
+  const parametrosDosLinks = computed(() =>
+    (
+      mensagem.value?.additionalAttributes?.templateParams?.processedParams
+        ?.buttons || []
+    )
+      .filter(b => b?.type === 'url')
+      .map(b => b.parameter)
   );
+
+  const botoes = computed(() => {
+    let links = 0;
+    return (componente('BUTTONS')?.buttons || []).map(b => {
+      if (b.type !== 'URL') return botao(b);
+      const parametro = parametrosDosLinks.value[links];
+      links += 1;
+      return botao(b, parametro);
+    });
+  });
 
   const cartoes = computed(() =>
     (componente('CAROUSEL')?.cards || []).map(cartao => {
@@ -71,8 +107,8 @@ export const useModeloDaMensagem = mensagem => {
       return {
         midia: ICONE_DA_MIDIA[topo?.format] || 'i-ph-image',
         texto: partes.find(c => c.type === 'BODY')?.text || '',
-        botoes: (partes.find(c => c.type === 'BUTTONS')?.buttons || []).map(
-          botao
+        botoes: (partes.find(c => c.type === 'BUTTONS')?.buttons || []).map(b =>
+          botao(b)
         ),
       };
     })

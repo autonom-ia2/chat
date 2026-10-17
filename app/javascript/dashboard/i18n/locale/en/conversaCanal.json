@@ -150,7 +150,9 @@
       "OFERTA": "Limited-time offer",
       "CARROSSEL": "Template cards",
       "PRODUTO": "Catalog product",
-      "BOTOES": "Template buttons"
+      "BOTOES": "Template buttons",
+      "ABRE_EM_OUTRA_ABA": "Opens in a new tab",
+      "SO_NO_CELULAR": "The customer taps this on their phone. Here it is only shown."
     },
     "GRAVACAO": {
       "GRAVANDO": "Recording audio",
