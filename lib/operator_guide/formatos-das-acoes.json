@@ -21485,6 +21485,52 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/agents/:agent_id/onde_atende": {
+    "campos": {
+      "area_inbox_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "uso"
+      },
+      "manter_primeiro": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "parar": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "primeiro_inbox_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "response_window": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso",
+        "um_de": [
+          "always",
+          "business_hours",
+          "outside_business_hours"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/onde_atende#update",
+    "modelo": "Autonomia::Agents::Agent",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:72",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:84",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:63",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:49",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/onde_atende_controller.rb:36"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/agents/:agent_id/tools/:id": {
     "campos": {
       "description": {

@@ -15,8 +15,10 @@ module Crm
                      '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
                      'ou "external_agent" (bot ou automação externa).'.freeze
 
-      def initialize(card:)
+      # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
+      def initialize(card:, fora: [])
         @card = card
+        @fora = fora
       end
 
       def perform
@@ -42,7 +44,7 @@ module Crm
         account = @card.account
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
-               .where.not(id: @card.id).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
+               .where.not(id: [@card.id, *@fora]).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
                .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
       end
 

@@ -7,13 +7,14 @@ import pt_BR from 'dashboard/i18n/locale/pt_BR/crm.json';
 // #1570 — "Quem cuida" mostra os agentes de IA só com a Fase 2 dos Agentes
 // ligada no payload da conta (`autonomia_agents_fase2`), a mesma fonte da tela
 // dos Agentes; a caixa trazer `ai_agents` não basta.
-const conta = vi.hoisted(() => ({ fase2: false, porCaixa: false }));
+const conta = vi.hoisted(() => ({ fase2: false, porCaixa: false, ia: false }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
   const getters = {
     'accounts/getAccount': () => () => ({
       autonomia_agents_fase2: conta.fase2,
       autonomia_agente_ia_por_caixa: conta.porCaixa,
+      features: { crm_avaliar_toda_mensagem: conta.ia },
     }),
     getCurrentAccountId: () => 1,
   };
@@ -69,7 +70,29 @@ describe('CaixaCartao', () => {
   beforeEach(() => {
     conta.fase2 = false;
     conta.porCaixa = false;
+    conta.ia = false;
   });
+
+  // O cartão diz o que a caixa faz hoje: vale a IA de assunto gravada, não a
+  // flag (caixa de antes da flag segue sem a IA até ser salva ou virada).
+  it.each([
+    ['off', true, 'O card nasce assim que a conversa chega.'],
+    ['auto', true, 'O card nasce com a primeira mensagem, e a IA dá o nome.'],
+    ['off', false, 'Nada acontece sozinho: a equipe cria o card.'],
+    ['auto', false, 'O sistema cria um card para cada pedido do cliente.'],
+  ])(
+    'one pipeline, saved subject AI %s, card on arrival %s: says what the system does (#1676)',
+    (modo, chegou, frase) => {
+      conta.ia = true;
+      const caixa = {
+        ...CAIXA,
+        subject_ai_mode: modo,
+        auto_create_card: chegou,
+      };
+
+      expect(render(caixa).text()).toContain(frase);
+    }
+  );
 
   it('with phase 2 on in the account shows the AI agents of the inbox', () => {
     conta.fase2 = true;

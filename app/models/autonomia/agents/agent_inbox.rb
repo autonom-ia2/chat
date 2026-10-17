@@ -69,7 +69,11 @@ module Autonomia
       # #1366 — o PONTO ÚNICO da parada automática: todo caminho que tira um vínculo da caixa passa por um destes dois
       # (arquivar: desvincular a área; destroy, abaixo: desconectar a porta, caixa apagada). Saiu o último, o agente
       # para. O SoftDelete arquiva sem callback: o agente apagado já sai parado. O destroy do próprio agente não conta.
-      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? }
+      # #1720 — `vira_porta`: a área sai só porque o agente vai atender primeiro nesta mesma caixa, na mesma transação
+      # (um vínculo por agente e caixa). Ele não fica sem onde trabalhar, então não para nem grava parado_sem_onde_trabalhar.
+      attr_accessor :vira_porta
+
+      after_update :parar_agente_sem_onde_trabalhar, if: -> { saved_change_to_deleted_at? && deleted_at.present? && !vira_porta }
 
       # Limpeza do espelho ao destruir o vínculo — centraliza o conserto de "caixa deletada"
       # E "agente deletado" num só lugar. Dispara quando o vínculo cai por:
@@ -130,7 +134,7 @@ module Autonomia
         pending = inbox.conversations.where(status: :pending, assignee_agent_bot_id: [nil, agent_bot_id])
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
         # Desligar não é passar a conversa: o robô sai de vez, sem ficar esperando pessoa (#1377).
-        pending.or(held_by_mirror).find_each { |conversation| conversation.bot_handoff!(keep_bot: false) }
+        pending.or(held_by_mirror).find_each { |conversation| passar_a_equipe!(conversation) }
       end
 
       # O turno desta mensagem ainda está em andamento: a marca do debounce do ReplyJob (a mesma que o settle confere)
@@ -141,6 +145,20 @@ module Autonomia
 
         janela = ::Autonomia::Agents::Config.debounce_seconds_for(agent) + FOLGA_DO_TURNO
         stamp['at'].to_f >= janela.ago.to_f
+      end
+
+      # Público (#1720): a área que vira porta (Autonomia::Agents::OndeAtende) refaz o turno pela porta nova do mesmo jeito.
+      # Desmarcar ou pausar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde).
+      # Só ESSE turno é refeito pela porta: a última mensagem pública é do cliente E a marca do debounce do ReplyJob
+      # (a mesma que o settle confere) aponta para ela e é recente. Mensagem antiga sem turno nunca vira resposta nova.
+      # Enfileira depois do commit; o debounce e o `already_replied?` do Responder seguram resposta dupla.
+      def responder_mensagem_pendente(conversation)
+        ultima = conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
+        return unless ultima&.incoming? && turno_em_andamento?(conversation, ultima)
+
+        ActiveRecord.after_all_transactions_commit do
+          ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
+        end
       end
 
       private
@@ -156,7 +174,7 @@ module Autonomia
         refaz_o_turno = refaz_o_turno_com?(robo_da_porta)
         inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id).find_each do |conversation|
           if robo_da_porta.nil? || conversation.bot_handoff_waiting?
-            conversation.bot_handoff!(keep_bot: false)
+            passar_a_equipe!(conversation)
           else
             ::Conversations::AssignmentService.new(conversation: conversation, assignee_id: robo_da_porta.id,
                                                    assignee_type: 'AgentBot').perform
@@ -165,23 +183,24 @@ module Autonomia
         end
       end
 
+      # #1720 — o robô sai de vez e a conversa vai para a equipe. O aviso de passagem (CONVERSATION_BOT_HANDOFF: a
+      # notificação da caixa, NotificationListener, e os relatórios) só sai depois do commit de TODAS as transações, como na
+      # troca da aba "Agente de IA" (TrocarQuemAtende#tirar_robo!): se quem chamou desfizer tudo
+      # (Autonomia::Agents::OndeAtende), ninguém é avisado de uma passagem que não houve. Sem transação aberta, sai na hora.
+      # A conversa que a regra da Atribuição passou a um agente de IA já não está com a equipe: o aviso não sai (o motor
+      # de entrega decide, como no bot_handoff!). Guarda só o id: a conversa apagada no meio não derruba os outros avisos.
+      def passar_a_equipe!(conversation)
+        conversation.bot_handoff!(keep_bot: false, dispatch_event: false)
+        id = conversation.id
+        ActiveRecord.after_all_transactions_commit do
+          Conversation.find_by(id: id)&.then { |conversa| conversa.dispatch_bot_handoff_event if conversa.ai_assignee.nil? }
+        end
+      end
+
       def refaz_o_turno_com?(robo_da_porta)
         return true unless ::Autonomia::Agents::AgenteIaPorCaixa.ligada_na_conta?(account_id)
 
         robo_da_porta.present? && self.class.espelhos.exists?(agent_bot_id: robo_da_porta.id)
-      end
-
-      # Desmarcar ou pausar a área no meio de um turno dela silencia esse turno (o Responder reconfere quem responde).
-      # Só ESSE turno é refeito pela porta: a última mensagem pública é do cliente E a marca do debounce do ReplyJob
-      # (a mesma que o settle confere) aponta para ela e é recente. Mensagem antiga sem turno nunca vira resposta nova.
-      # Enfileira depois do commit; o debounce e o `already_replied?` do Responder seguram resposta dupla.
-      def responder_mensagem_pendente(conversation)
-        ultima = conversation.messages.where(private: false, message_type: %i[incoming outgoing]).reorder(:created_at, :id).last
-        return unless ultima&.incoming? && turno_em_andamento?(conversation, ultima)
-
-        ActiveRecord.after_all_transactions_commit do
-          ::Autonomia::Agents::Operate::ReplyJob.perform_later(conversation.id, ultima.id)
-        end
       end
 
       # Caixa com porta ativa, ou sem porta e sem agente de outro sistema (#1433). Com a aba "Agente de IA" por caixa

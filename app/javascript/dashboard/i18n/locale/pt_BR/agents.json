@@ -756,9 +756,14 @@
         "QUEM_RECEBE": "Quando não souber, {nome} passa a conversa para a equipe. Quem recebe é definido em Atribuição.",
         "ESCOLHER_QUEM_RECEBE": "Escolher quem recebe",
         "QUEM_RECEBE_SEM_PERMISSAO": "Peça a um administrador para escolher quem recebe.",
-        "TAMBEM": "Também recebe quando alguém passar em:",
-        "TAMBEM_TEXTO": "Marque os outros canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
-        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher."
+        "TAMBEM": "Recebe quando alguém passar em:",
+        "TAMBEM_TEXTO": "Marque os canais em que {nome} recebe a conversa quando alguém passar. Neles, {nome} não atende primeiro.",
+        "TAMBEM_NENHUMA": "Ainda não há outro canal para escolher.",
+        "PRIMEIRO_PERGUNTA": "{nome} atende primeiro as conversas novas?",
+        "PRIMEIRO_SIM": "Sim, no canal:",
+        "PRIMEIRO_NAO": "Não, só quando alguém passar a conversa",
+        "PRIMEIRO_CANAL": "Canal em que {nome} atende primeiro",
+        "HORARIO_DE_CADA": "O horário é o de cada canal em que {nome} recebe a conversa."
       },
       "COMPOSITOR": {
         "ESCREVA": "Escreva sua resposta",
@@ -1056,10 +1061,6 @@
         "ERRO_ABRIR": "Não deu para abrir {nome} agora.",
         "ERRO_ABRIR_SEM_NOME": "Não deu para abrir este agente agora.",
         "ERRO_ABRIR_GARANTIA": "Nada foi mudado.",
-        "RESPONDE_NO": "Responde no {canal} · {quando}",
-        "PARADO_NO": "No {canal} · {quando}",
-        "RESPONDE_EM_N": "Responde em 1 canal · {quando} | Responde em {n} canais · {quando}",
-        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}",
         "NENHUM_CANAL": "Ainda não está em nenhum canal.",
         "QUANDO": {
           "ALWAYS": "sempre",
@@ -1094,10 +1095,18 @@
         },
         "BLOCO_ONDE": {
           "TITULO": "Onde e quando responde",
-          "TEXTO": "No {canal}, {quando}.",
-          "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "ALTERAR_ARIA": "Alterar onde e quando responde",
           "ESCOLHER_CANAL": "Escolher canal",
+          "PRIMEIRO": "Atende primeiro no {canal} · {quando}",
+          "PRIMEIRO_N": "Atende primeiro em 1 canal · {quando} | Atende primeiro em {n} canais · {quando}",
+          "PRIMEIRO_E_RECEBE": "Atende primeiro no {canal} e recebe no {caixas} quando alguém passar · {quando} | Atende primeiro no {canal} e recebe em {caixas} quando alguém passar · {quando}",
+          "PRIMEIRO_N_E_RECEBE": "Atende primeiro em 1 canal e recebe em {caixas} quando alguém passar · {quando} | Atende primeiro em {n} canais e recebe em {caixas} quando alguém passar · {quando}",
+          "RECEBE": "Recebe no {caixas} quando alguém passar a conversa · {quando} | Recebe em {caixas} quando alguém passar a conversa · {quando}",
+          "NENHUM_LUGAR": "Não atende em lugar nenhum.",
+          "PARADO": "No {canais} · {quando} | Em {canais} · {quando}",
+          "PARADO_N": "Em 1 canal · {quando} | Em {n} canais · {quando}",
+          "TEXTO": "No {canal}, {quando}.",
+          "TEXTO_N": "Em 1 canal, {quando}. | Em {n} canais, {quando}.",
           "TAMBEM": "Também recebe quando alguém passar em: {caixas}."
         },
         "BLOCO_JEITO": {
@@ -1241,10 +1250,6 @@
           "ONDE": "Onde",
           "QUANDO": "Quando",
           "QUANDO_ROTULO": "Quando responde",
-          "NAO_ATENDER": "Não atender em nenhum lugar",
-          "NAO_ATENDER_TITULO": "Não atender em nenhum lugar?",
-          "NAO_ATENDER_TEXTO": "{nome} sai do {canal}. As conversas de lá voltam para a equipe.",
-          "NAO_ATENDER_CONFIRMAR": "Não atender",
           "SEM_CANAL": "Você ainda não conectou nenhum canal.",
           "PARADO": "Para trocar o canal, {nome} precisa voltar a atender.",
           "VOLTAR": "Voltar a atender",
@@ -1257,10 +1262,17 @@
           "PRONTO": "Pronto. Já vale para as próximas conversas.",
           "ERRO": "Não deu para salvar.",
           "ERRO_GARANTIA": "Nada mudou.",
-          "CONTINUA_NO_ANTIGO": "{nome} começou a responder no {novo}, mas continua também no {antigo}.",
           "LER_ERRO": "Não deu para mostrar seus canais agora.",
           "LER_ERRO_GARANTIA": "Nada mudou.",
-          "CARREGANDO_CANAIS": "Carregando seus canais…"
+          "CARREGANDO_CANAIS": "Carregando seus canais…",
+          "PARADO_AVISO": "Assim, {nome} não vai receber conversa em nenhum canal.",
+          "PARADO_CONFIRMAR": "Confirmar",
+          "PARADO_VOLTAR": "Voltar",
+          "NAO_ATENDER": "Não atender em nenhum lugar",
+          "NAO_ATENDER_TITULO": "Não atender em nenhum lugar?",
+          "NAO_ATENDER_TEXTO": "{nome} sai do {canal}. As conversas de lá voltam para a equipe.",
+          "NAO_ATENDER_CONFIRMAR": "Não atender",
+          "CONTINUA_NO_ANTIGO": "{nome} começou a responder no {novo}, mas continua também no {antigo}."
         },
         "HORARIO": {
           "DIAS": {
@@ -1442,7 +1454,11 @@
             "NOTA": "É só um exemplo. {nome} escreve com as próprias palavras e mostra os horários livres de verdade na hora da conversa."
           }
         },
-        "INTERRUPTOR_AJUDANTE": "{nome} ajudando outros agentes"
+        "INTERRUPTOR_AJUDANTE": "{nome} ajudando outros agentes",
+        "RESPONDE_NO": "Responde no {canal} · {quando}",
+        "PARADO_NO": "No {canal} · {quando}",
+        "RESPONDE_EM_N": "Responde em 1 canal · {quando} | Responde em {n} canais · {quando}",
+        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}"
       },
       "CRIAR": {
         "TITULO": "Criar agente",
@@ -1664,7 +1680,6 @@
         "ERRO_LER_GARANTIA": "Nada mudou em {nome}. Tente de novo em instantes.",
         "ERRO": "Não deu para pôr {nome} na equipe.",
         "ERRO_GARANTIA": "Os canais que já estavam certos continuam. Tente de novo.",
-        "FEITO": "Pronto. {nome} já trabalha nos canais escolhidos.",
         "CARREGANDO": "Lendo os canais",
         "SALVANDO": "Salvando…",
         "COMECAR_TEXTO": "{nome} recebe a conversa quando alguém passar, nos canais que você escolher.",
@@ -1674,7 +1689,8 @@
         "OUTRO_ROBO": "Um agente externo atende neste canal. O agente da equipe ainda não entra em canal com agente externo.",
         "AVISO_PESSOAS": "Atendida só por pessoas; {nome} recebe quando alguém passar. Conversa nova continua com as pessoas.",
         "AVISO_PESSOAS_SEM_NOME": "Atendida só por pessoas; o agente que você está criando recebe quando alguém passar. Conversa nova continua com as pessoas.",
-        "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe."
+        "SAI_PESSOAS": "{nome} sai da equipe deste canal. As conversas que estavam com {nome} voltam para as pessoas da equipe.",
+        "FEITO": "Pronto. {nome} já trabalha nos canais escolhidos."
       },
       "ONDE": {
         "TITULO": "Onde {nome} trabalha",

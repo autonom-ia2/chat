@@ -5,6 +5,7 @@
 #   comportamento de sempre (InboxSetting + vínculo com auto_create_card).
 # - Vários funis: nenhum card nasce num funil fixo (R9). Quem cria é a IA de assunto ('auto' ou 'suggest') ou a
 #   equipe ('off').
+# - IA de assunto com 1 funil (#1676): Automática com a flag `crm_avaliar_toda_mensagem`; sem ela, desligada.
 # - Nenhum funil: a caixa sai do CRM. Os vínculos ficam, com a criação desligada, como o PipelineLinkSyncer faz.
 # - Caixa ainda em "Agente vê apenas atribuídos" (R6) só sai dele com escolha explícita ('manter' ou 'mudar'; com
 #   'manter' a tela já manda cada agente em "Só as que atende"). Sem escolha, nada é gravado.
@@ -122,7 +123,7 @@ class Crm::Caixas::Gravador
       default_pipeline_id: um_funil? ? pipeline_ids.first : nil,
       default_stage_id: etapa&.id,
       auto_create_card: um_funil? && modo == 'chegou',
-      subject_ai_mode: um_funil? || pipeline_ids.empty? ? 'off' : modo,
+      subject_ai_mode: Crm::Caixas::IaDeAssunto.ao_gravar(account: @account, pipeline_ids: pipeline_ids, modo: modo),
       visibility_mode: :all_inbox_cards
     )
   end

@@ -12,6 +12,12 @@ vi.mock(
     return { useAgenteIaPorCaixa: () => computed(() => false) };
   }
 );
+// #1676 — a flag da IA de assunto em 1 funil vem da conta (desligada aqui).
+vi.mock('../helpers/iaDeAssunto', async importOriginal => {
+  const { computed } = await import('vue');
+  const original = await importOriginal();
+  return { ...original, useIaDeAssunto: () => computed(() => false) };
+});
 
 const CAIXA = {
   inbox: { id: 7, name: 'WhatsApp', channel_type: 'Channel::Whatsapp' },

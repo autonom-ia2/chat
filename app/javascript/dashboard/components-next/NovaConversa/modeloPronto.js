@@ -1,10 +1,13 @@
-import { isWhatsAppComplete } from '@chatwoot/utils';
 import {
   COMPONENT_TYPES,
   buildTemplateParameters,
   findComponentByType,
   renderTemplatePreview,
 } from 'dashboard/helper/templateHelper';
+import {
+  envioCompleto,
+  pedeValidade,
+} from 'dashboard/components-next/whatsapp/envioNaConversa';
 
 // #1459 — a mensagem pronta (modelo aprovado pelo WhatsApp) em funções puras:
 // o texto com os campos variáveis à vista, os campos a preencher e o formato
@@ -162,11 +165,12 @@ const textoDoCabecalho = modelo =>
   cabecalho(modelo)?.format === 'TEXT' ? cabecalho(modelo)?.text || '' : '';
 
 // O preenchedor próprio cobre campos de texto (corpo e cabeçalho de texto).
-// Cabeçalho com mídia e botão com variável ficam com o preenchedor antigo.
+// Cabeçalho com mídia, botão com variável e oferta com validade (#1705) ficam
+// com o preenchedor antigo, que a conversa usa pelo PreenchedorDoModelo.
 export const preenchedorProprioCobre = modelo => {
   const params = buildTemplateParameters(modelo);
   const comMidia = params.header && 'media_url' in params.header;
-  return !comMidia && !params.buttons;
+  return !comMidia && !params.buttons && !pedeValidade(modelo);
 };
 
 // O exemplo que o próprio modelo traz para cada campo, quando traz.
@@ -206,8 +210,8 @@ export const comCampo = (params, { parte, chave }, valor) => ({
   [parte]: { ...params[parte], [chave]: valor },
 });
 
-export const modeloCompleto = (modelo, params) =>
-  isWhatsAppComplete(modelo, params);
+// #1705: com a regra do cupom e da validade, igual à do servidor.
+export const modeloCompleto = (modelo, params) => envioCompleto(modelo, params);
 
 export const previaDoModelo = (modelo, params) => ({
   cabecalho: renderTemplatePreview(
