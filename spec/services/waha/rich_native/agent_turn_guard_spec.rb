@@ -591,4 +591,37 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
         .to be_empty
     end
   end
+
+  # Item 8, decisão do Rodrigo: a edição do cliente NÃO é turno (a IA não responde a ela), mas a IA usa o texto novo.
+  describe 'the customer edit' do
+    it 'keeps the original in the history with the new text, opens no turn, and the next turn sees the new text' do
+      inbox.channel.update!(additional_attributes: inbox.channel.additional_attributes.merge('account_token_owner_user_id' => admin.id))
+      original = cliente_escreve('Meu carro é 2002')
+      Current.user = admin
+      edicao = conversation.messages.create!(account: account, inbox: inbox, message_type: :incoming, sender: contact,
+                                             content: "Meu carro é 2022\n\n✏️ *Editado no WhatsApp*",
+                                             content_attributes: { in_reply_to: original.id,
+                                                                   waha_edit: { text: 'Meu carro é 2022', edited_wa_id: 'W1', from_me: false } })
+      Current.user = nil
+
+      # (a) a original fica, com o texto novo, e não escondida; só o evento da edição vira atividade escondida.
+      expect(original.reload.content).to eq('Meu carro é 2022')
+      expect(original.content_attributes).not_to have_key('c2y_hidden')
+      expect(edicao.reload).to be_activity
+      expect(edicao.content_attributes).to include('c2y_hidden' => true, 'edit_applied_to' => original.id)
+
+      # (b) a edição não abre turno.
+      expect { ouvir(edicao) }.not_to have_enqueued_job(Autonomia::Agents::Operate::ReplyJob)
+
+      # (c) no turno seguinte, a IA lê o texto novo.
+      gatilho(cliente_escreve('Quanto custa o seguro?'))
+      rodar_turno!
+
+      historico = consultas.sole[:history].pluck(:content)
+      expect(historico).to include('Meu carro é 2022')
+      expect(historico.join).not_to include('2002')
+    ensure
+      Current.user = nil
+    end
+  end
 end
