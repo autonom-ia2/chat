@@ -31,7 +31,9 @@ class WhatsappHybrid::FallbackRetryJob < ApplicationJob
     message.with_lock do
       next false unless message.content_attributes.to_h[OUTCOME_KEY] == 'throttled'
 
-      message.update!(content_attributes: message.content_attributes.to_h.merge(OUTCOME_KEY => 'pending'))
+      # Sem validação: a trava de rajada da mensagem não pode fazer uma espera pelo limite por minuto virar falha.
+      message.assign_attributes(content_attributes: message.content_attributes.to_h.merge(OUTCOME_KEY => 'pending'))
+      message.save!(validate: false)
     end
   end
 
