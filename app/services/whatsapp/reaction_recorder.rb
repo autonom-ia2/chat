@@ -10,10 +10,16 @@
 # - Só mexe na mensagem reagida (achada pelo source_id na caixa). Não cria mensagem, não reabre conversa, não notifica
 #   e não conta para a janela de 24 h (que olha as mensagens recebidas). O painel atualiza pelo `message.updated`.
 # - Mensagem reagida que não está no banco: nada a fazer (log info).
+# - Reação tirada deixa uma lápide no Redis (autor + hora, por LAPIDE_VALIDADE): a reação mais antiga do mesmo autor
+#   que chegar atrasada depois dela não volta. Fica fora de `reactions`, que continua só com as reações vivas.
+# - Emoji com mais de MAXIMO_DE_BYTES é ignorado: um desenho só nunca passa disso.
 # - Caixa híbrida (#1067): mensagem que saiu pelo WhatsApp API e ainda não recebeu o eco da Meta guarda o id físico no
 #   source_id; o wamid da reação carrega esse mesmo id.
 class Whatsapp::ReactionRecorder
   KEY = 'reactions'.freeze
+  MAXIMO_DE_BYTES = 64
+  # A Meta reentrega webhook por até 7 dias.
+  LAPIDE_VALIDADE = 7.days
 
   def initialize(inbox:, reacted_source_id:, emoji:, reacted_at: nil, author: nil)
     @inbox = inbox
@@ -25,7 +31,7 @@ class Whatsapp::ReactionRecorder
 
   # -> a mensagem reagida (atualizada ou não), ou nil quando ela não existe aqui.
   def perform
-    return if @reacted_source_id.blank?
+    return if @reacted_source_id.blank? || @emoji.bytesize > MAXIMO_DE_BYTES
 
     message = reacted_message
     return log_missing if message.nil?
@@ -52,9 +58,10 @@ class Whatsapp::ReactionRecorder
     attrs = message.content_attributes.to_h
     current = Array(attrs[KEY]).select { |reaction| reaction.is_a?(Hash) }
     mine, others = current.partition { |reaction| author?(reaction, author) }
-    return if newer_than_this?(mine)
+    return if stale?(message, author, mine)
 
-    reactions = @emoji.present? ? others + [entry_for(author)] : others
+    remember_removal(message, author) if @emoji.empty?
+    reactions = next_reactions(others, author)
     return if reactions == current
 
     attrs = reactions.empty? ? attrs.except(KEY) : attrs.merge(KEY => reactions)
@@ -73,6 +80,31 @@ class Whatsapp::ReactionRecorder
     mine.any? { |reaction| reaction['at'].present? && Time.zone.parse(reaction['at'].to_s) > @reacted_at }
   rescue ArgumentError
     false
+  end
+
+  def stale?(message, author, mine)
+    newer_than_this?(mine) || removed_after_this?(message, author)
+  end
+
+  def next_reactions(others, author)
+    @emoji.present? ? others + [entry_for(author)] : others
+  end
+
+  def removed_after_this?(message, author)
+    removed_at = Redis::Alfred.get(tombstone_key(message, author))
+    removed_at.present? && Time.zone.parse(removed_at) > @reacted_at
+  rescue ArgumentError
+    false
+  end
+
+  def remember_removal(message, author)
+    Redis::Alfred.set(tombstone_key(message, author), @reacted_at.iso8601, ex: LAPIDE_VALIDADE.to_i)
+  end
+
+  # Atendente: uma reação do número da empresa, como em author?.
+  def tombstone_key(message, author)
+    who = author.is_a?(User) ? 'User' : "#{author.class.name}:#{author.id}"
+    "whatsapp:reaction_removed:#{message.id}:#{who}"
   end
 
   def entry_for(author)

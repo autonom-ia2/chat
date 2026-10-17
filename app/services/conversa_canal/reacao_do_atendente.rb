@@ -15,7 +15,8 @@ class ConversaCanal::ReacaoDoAtendente
   def initialize(message:, user:, emoji:)
     @message = message
     @user = user
-    @emoji = emoji.to_s.strip
+    # Só texto: lista ou objeto no lugar do emoji é recusado, nunca vira "tirar a reação".
+    @emoji = emoji.is_a?(String) ? emoji.strip : nil
   end
 
   # -> a mensagem reagida, com as reações gravadas. Levanta Recusa com a frase para a tela.
@@ -43,9 +44,13 @@ class ConversaCanal::ReacaoDoAtendente
     remetente.validar!
   end
 
-  # Um emoji só (um grafema: 👍🏽 e ❤️ têm mais de um código, mas são um desenho) ou vazio para tirar a reação.
+  # Um emoji só (um grafema: 👍🏽 e ❤️ têm mais de um código, mas são um desenho) ou vazio para tirar a reação. Letra,
+  # número e sinal do teclado (ASCII) não são emoji; o teto de bytes barra o grafema inflado com marcas combinantes.
   def um_emoji_ou_vazio?
-    @emoji.empty? || @emoji.grapheme_clusters.size == 1
+    return false if @emoji.nil?
+    return true if @emoji.empty?
+
+    @emoji.bytesize <= Whatsapp::ReactionRecorder::MAXIMO_DE_BYTES && !@emoji.ascii_only? && @emoji.grapheme_clusters.size == 1
   end
 
   def reagivel?

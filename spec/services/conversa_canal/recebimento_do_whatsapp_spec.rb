@@ -134,6 +134,18 @@ describe ConversaCanal::RecebimentoDoWhatsapp do
       expect(original.reload.content).to eq('Legenda nova')
     end
 
+    # Revisão de segurança: aviso fora do formato não derruba o webhook (a Meta reentregaria para sempre).
+    it 'aviso fora do formato (bloco em texto, hora em lista) não levanta nem mexe na original' do
+      original
+
+      [evento('edit', 'texto solto'), evento('revoke', 'texto solto'),
+       evento('edit', { original_message_id: 'wamid.ORIGINAL', message: { type: 'text', text: 'solto' } }),
+       evento('edit', { original_message_id: 'wamid.ORIGINAL', message: { type: 'text', text: { body: 'x' } } }, timestamp: [1])]
+        .each_with_index { |aviso, i| expect { receive(aviso.merge('id' => "wamid.MAL#{i}")) }.not_to raise_error }
+
+      expect(original.reload.content).to eq('x')
+    end
+
     it 'não muda nada quando a edição chega de novo com o mesmo texto' do
       original
       receive(editou('Meu CPF é 456'))
@@ -158,7 +170,7 @@ describe ConversaCanal::RecebimentoDoWhatsapp do
       receive(pedido)
       message = Message.find_by!(source_id: 'wamid.ORDER')
 
-      expect(message.content).to eq("🛒 Pedido do catálogo: 3 itens · total BRL 1.150,50\nQuero estes")
+      expect(message.content).to eq("🛒 Pedido do catálogo: 3 itens · total BRL 1.150,50\n• camisa-p × 2\n• bone × 1\nQuero estes")
       expect(message.content_attributes['order']).to eq(
         'catalog_id' => '194836987003835', 'text' => 'Quero estes',
         'items' => [
@@ -176,7 +188,17 @@ describe ConversaCanal::RecebimentoDoWhatsapp do
       ]
       receive(evento('order', { catalog_id: '1', product_items: itens }))
 
-      expect(Message.find_by!(source_id: 'wamid.ORDER').content).to eq('🛒 Pedido do catálogo: 2 itens')
+      expect(Message.find_by!(source_id: 'wamid.ORDER').content).to eq("🛒 Pedido do catálogo: 2 itens\n• a × 1\n• b × 1")
+    end
+
+    it 'pedido fora do formato entra só com o resumo, sem derrubar o recebimento' do
+      receive(evento('order', { catalog_id: '1', product_items: { a: 'b' } }, id: 'wamid.ORDER1'))
+      item_quebrado = { product_retailer_id: 'a', quantity: [2], item_price: 10, currency: 'BRL' }
+      receive(evento('order', { catalog_id: '1', product_items: [item_quebrado, 'texto'] }, id: 'wamid.ORDER2'))
+
+      expect(Message.find_by!(source_id: 'wamid.ORDER1').content).to start_with('🛒 Pedido do catálogo:')
+      expect(Message.find_by!(source_id: 'wamid.ORDER1').content).not_to include('total')
+      expect(Message.find_by!(source_id: 'wamid.ORDER2').content_attributes.dig('order', 'items').size).to eq(1)
     end
   end
 
@@ -199,6 +221,12 @@ describe ConversaCanal::RecebimentoDoWhatsapp do
         expect(attrs['unsupported_kind']).to eq(esperado)
         expect(attrs['is_unsupported']).to be(true)
       end
+    end
+
+    it 'unsupported em texto (fora do formato) não levanta e não chuta o tipo' do
+      receive(nao_suportada(nil).merge(id: 'wamid.UNSUP-TEXTO', unsupported: 'poll'))
+
+      expect(Message.find_by!(source_id: 'wamid.UNSUP-TEXTO').content_attributes).not_to have_key('unsupported_kind')
     end
 
     it 'não chuta o tipo quando a Meta não diz (ex.: 131060)' do

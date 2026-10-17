@@ -5,7 +5,10 @@ require 'rails_helper'
 describe ConversaCanal::AtualizacaoDaPele do
   let(:account) { create(:account) }
   let(:agent_bot) { create(:agent_bot) }
-  let(:canal) { create(:channel_api, account: account, webhook_url: 'https://conector.test/chatwoot') }
+  let(:canal) do
+    create(:channel_api, account: account, webhook_url: 'https://conector.test/chatwoot',
+                         additional_attributes: { 'provider' => 'waha', 'session' => '5511888880000' })
+  end
   let(:inbox) { canal.inbox }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }
   let!(:message) do
@@ -82,6 +85,15 @@ describe ConversaCanal::AtualizacaoDaPele do
 
     it 'com a pele desligada, manda ao webhook da caixa API como na main' do
       account.disable_features!('conversa_cara_do_canal')
+      allow(WebhookJob).to receive(:perform_later)
+
+      WebhookListener.instance.message_updated(evento(reacao))
+
+      expect(WebhookJob).to have_received(:perform_later).with('https://conector.test/chatwoot', anything, :api_inbox_webhook, any_args)
+    end
+
+    it 'caixa API de integração própria (sem WAHA) recebe a atualização da pele como na main' do
+      canal.update!(additional_attributes: {})
       allow(WebhookJob).to receive(:perform_later)
 
       WebhookListener.instance.message_updated(evento(reacao))

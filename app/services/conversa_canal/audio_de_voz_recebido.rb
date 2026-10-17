@@ -14,7 +14,8 @@ module ConversaCanal::AudioDeVozRecebido
     attachment = super
     return attachment unless message_type == TIPO && attachment.is_a?(Attachment) && ConversaCanal::Pele.ligada?(inbox.account)
 
-    voz = messages_data.first.dig(TIPO, 'voice')
+    audio = messages_data.first[TIPO]
+    voz = audio['voice'] if audio.is_a?(Hash)
     return attachment unless [true, false].include?(voz)
 
     attachment.meta = (attachment.meta || {}).merge(CHAVE => voz)

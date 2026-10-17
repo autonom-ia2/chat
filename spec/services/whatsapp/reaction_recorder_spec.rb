@@ -66,6 +66,25 @@ describe Whatsapp::ReactionRecorder do
     expect(reactions.pluck('emoji')).to eq(['❤️'])
   end
 
+  it 'reação tirada não volta com a reação mais antiga que chega atrasada' do
+    react('👍', at: Time.zone.parse('2026-10-16 10:00'))
+    react(nil, at: Time.zone.parse('2026-10-16 10:05'))
+    react('👍', at: Time.zone.parse('2026-10-16 10:00'))
+
+    expect(reactions).to be_nil
+  end
+
+  it 'reação nova depois de tirada entra' do
+    react(nil, at: Time.zone.parse('2026-10-16 10:05'))
+    react('❤️', at: Time.zone.parse('2026-10-16 10:06'))
+
+    expect(reactions.pluck('emoji')).to eq(['❤️'])
+  end
+
+  it 'ignora emoji inflado (um grafema com milhares de marcas combinantes)' do
+    expect { react("a#{"\u0301" * 5000}") }.not_to(change { reacted.reload.content_attributes })
+  end
+
   it 'não reabre nem mexe na conversa' do
     expect { react('👍') }.not_to(change { conversation.reload.status })
   end

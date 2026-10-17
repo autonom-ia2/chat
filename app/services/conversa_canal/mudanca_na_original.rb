@@ -39,8 +39,10 @@ class ConversaCanal::MudancaNaOriginal
     @data[:type]
   end
 
+  # Aviso fora do formato (bloco que não é objeto) não acha original nenhuma, em vez de derrubar o evento.
   def id_original
-    (tipo == APAGADA ? @data.dig(:revoke, :original_message_id) : @data.dig(:edit, :original_message_id)).to_s
+    bloco = @data[tipo == APAGADA ? :revoke : :edit]
+    bloco.is_a?(Hash) ? bloco[:original_message_id].to_s : ''
   end
 
   def mensagem_original
@@ -75,14 +77,20 @@ class ConversaCanal::MudancaNaOriginal
 
   # A edição traz a mensagem nova inteira; o texto fica em `text.body` ou na legenda da mídia.
   def texto_editado
-    nova = @data.dig(:edit, :message)
-    return unless nova.respond_to?(:dig)
+    bloco = @data[:edit]
+    nova = bloco[:message] if bloco.is_a?(Hash)
+    return unless nova.is_a?(Hash)
 
-    nova.dig(:text, :body).presence || nova.dig(nova[:type], :caption).presence
+    campo_do(nova[:text], :body) || campo_do(nova[nova[:type]], :caption)
+  end
+
+  def campo_do(bloco, campo)
+    bloco[campo].presence if bloco.is_a?(Hash)
   end
 
   def quando
-    segundos = @data[:timestamp].to_i
+    valor = @data[:timestamp]
+    segundos = valor.is_a?(String) || valor.is_a?(Integer) ? valor.to_i : 0
     segundos.positive? ? Time.zone.at(segundos) : Time.current
   end
 

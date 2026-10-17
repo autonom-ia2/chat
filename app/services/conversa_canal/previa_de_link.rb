@@ -28,8 +28,8 @@ module ConversaCanal::PreviaDeLink
   # Mensagem que ganha a prévia no painel: do cliente ou da empresa, nunca nota (o texto da nota não sai do
   # painel), texto puro sem anexo (no WhatsApp a legenda de foto não ganha prévia) e com endereço válido.
   def buscar?(message)
-    tipo_que_ganha_previa?(message) && sem_previa_ainda?(message) && texto_comum_ou_previa?(message) &&
-      cliente_viu_o_cartao?(message) && endereco(message.content).present? && ligada?(message.inbox)
+    ligada?(message.inbox) && tipo_que_ganha_previa?(message) && sem_previa_ainda?(message) &&
+      texto_comum_ou_previa?(message) && cliente_viu_o_cartao?(message) && endereco(message.content).present?
   end
 
   # O painel só mostra o cartão que o cliente também viu. A recebida traz o cartão do app de quem mandou. A enviada só

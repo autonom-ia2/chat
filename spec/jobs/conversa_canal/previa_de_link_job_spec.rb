@@ -132,6 +132,31 @@ describe ConversaCanal::PreviaDeLinkJob do
       expect(a_request(:get, url)).to have_been_made.once
     end
 
+    it 'a imagem também é baixada uma vez só: a próxima mensagem copia a nossa' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      primeira = mensagem
+      segunda = mensagem
+
+      described_class.perform_now(primeira.id)
+      described_class.perform_now(segunda.id)
+
+      expect(a_request(:get, imagem)).to have_been_made.once
+      expect(segunda.reload.previa_de_link_imagem).to be_attached
+      expect(segunda.previa_de_link_imagem.blob).not_to eq(primeira.reload.previa_de_link_imagem.blob)
+    end
+
+    it 'imagem recusada fica recusada: não é buscada de novo a cada mensagem' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      stub_request(:get, imagem).to_return(status: 404)
+
+      described_class.perform_now(mensagem.id)
+      m = mensagem
+      described_class.perform_now(m.id)
+
+      expect(a_request(:get, imagem)).to have_been_made.once
+      expect(m.reload.content_attributes['link_preview']).to include('title' => 'Seguro auto em 5 minutos')
+    end
+
     it 'passada a cota da conta no minuto, a mensagem fica sem prévia e a página não é lida' do
       stub_const("#{described_class}::COTA", 1)
       described_class.perform_now(mensagem.id)

@@ -91,6 +91,7 @@ class ConversaCanal::Encaminhamento
   # Qualquer falha fica naquele destino (transação desfeita); os outros seguem e cada um volta com o seu resultado.
   rescue StandardError => e
     Rails.logger.warn("[conversa_canal][encaminhar] origem=#{@origem.id} destino=#{destino.id} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: destino.account).capture_exception
     resultado(destino, erro: frase(:falhou))
   end
 

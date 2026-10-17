@@ -37,7 +37,7 @@ class ConversaCanal::PreviaDeLinkJob < ApplicationJob
     pagina = ConversaCanal::LeitorDeOpenGraph.ler(url) || SEM_PREVIA
     Rails.cache.write(chave, pagina, expires_in: CACHE_VALIDADE)
     pagina
-  rescue SafeFetch::Error, Nokogiri::SyntaxError, Encoding::Error => e
+  rescue SafeFetch::Error, Nokogiri::SyntaxError, EncodingError => e
     registrar(message.id, e)
     nil
   end

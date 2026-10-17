@@ -49,6 +49,13 @@ describe ConversaCanal::ReacaoDoAtendente do
       expect { reagir(recebida, '👍🏽') }.not_to raise_error
     end
 
+    it 'recusa letra, número, grafema inflado e emoji que não é texto, sem pedir à Meta' do
+      ['A', '1', "a#{"\u0301" * 5000}", ['👍'], { 'e' => '👍' }, nil].each do |invalido|
+        expect { reagir(recebida, invalido) }.to raise_error(described_class::Recusa)
+      end
+      expect(a_request(:post, 'https://graph.facebook.com/v24.0/123/messages')).not_to have_been_made
+    end
+
     it 'recusa mensagem enviada pela empresa (a Meta só reage à do cliente)' do
       enviada = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :outgoing, source_id: 'wamid.B')
 

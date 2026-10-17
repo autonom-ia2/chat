@@ -17,6 +17,7 @@ pt_BR:
       itens:
         one: '1 item'
         other: '%{count} itens'
+      item: '• %{codigo} × %{quantidade}'
       total: ' · total %{total}'
       separador_decimal: ','
       separador_de_milhar: '.'

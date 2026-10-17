@@ -21,7 +21,8 @@ module ConversaCanal::TipoNaoSuportado
 
   # -> um de TIPOS, ou nil sem sinal da Meta.
   def de(message)
-    tipo_da_meta = message.dig(:unsupported, :type).to_s
+    bloco = message[:unsupported]
+    tipo_da_meta = bloco.is_a?(Hash) ? bloco[:type].to_s : ''
     return if tipo_da_meta.blank?
 
     DA_META.fetch(tipo_da_meta) do
