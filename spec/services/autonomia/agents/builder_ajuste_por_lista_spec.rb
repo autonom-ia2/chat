@@ -40,7 +40,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       schema = calls.first[:schema]
       expect(schema).to equal(described_class::AjustePorLista::SCHEMA)
-      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono')
+      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono', 'pendencia_resolvida')
+      expect(schema[:schema][:properties][:pendencia_resolvida]).to include(type: 'boolean')
       expect(schema[:schema][:properties][:mudancas][:items][:properties][:campo][:enum])
         .to eq(%w[instruction tone handoff_rule greeting fallback_message starter_questions guardrails human_card name voice])
       expect(calls.first[:input].first).to eq(described_class::AjustePorLista.item_da_tabela)
@@ -119,6 +120,52 @@ RSpec.describe Autonomia::Agents::Builder do
         proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
         proxima.inherit_pending_question!
         expect(proxima.reload.state['pending_question']).to eq('Mais formal ou informal?')
+      end
+    end
+
+    # Prova E da 2ª rodada: o dono aplica outra coisa com um esclarecimento aberto. Quem diz se a pendência foi
+    # resolvida é o modelo (`pendencia_resolvida`); sem isso, o código a preserva.
+    describe 'quando há um esclarecimento aberto e o dono aplica outra coisa' do
+      let(:fala) { 'Mude o tom' }
+
+      def segundo_turno(saida_do_modelo)
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
+        run_turn
+        thread.append_message!('user', 'Troque a saudação para Olá')
+        respostas << saida_do_modelo
+        described_class.new(account: account, build_thread: thread.reload).tap do |segundo|
+          allow(segundo).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+          segundo.run!(thread.begin_build!)
+        end
+      end
+
+      it 'o modelo não resolve nem repete: a pendência anterior continua' do
+        segundo_turno(saida('greeting' => 'Olá', 'mudancas' => [mudanca('greeting', 'saudação Olá')]))
+
+        expect(agent.reload.greeting).to eq('Olá')
+        expect(estado).to include('applied' => true, 'pergunta_pendente' => 'Mais formal ou informal?')
+        proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+        proxima.inherit_pending_question!
+        expect(proxima.reload.state['pending_question']).to eq('Mais formal ou informal?')
+      end
+
+      it 'o modelo marca a pendência como resolvida: ela sai' do
+        segundo_turno(saida('greeting' => 'Olá', 'pendencia_resolvida' => true, 'mudancas' => [mudanca('greeting', 'saudação Olá')]))
+
+        expect(estado).to include('applied' => true, 'pergunta_pendente' => '')
+      end
+
+      it 'o modelo faz uma pergunta nova: ela substitui a anterior' do
+        segundo_turno(saida('greeting' => 'Olá', 'needs_more_info' => true, 'next_question' => 'E o tom, mais curto?',
+                            'mudancas' => [mudanca('greeting', 'saudação Olá')]))
+
+        expect(estado).to include('pergunta_pendente' => 'E o tom, mais curto?')
+      end
+
+      it 'nada muda e o modelo não resolve: a pendência anterior continua' do
+        segundo_turno(saida('next_question' => 'Pronto', 'mudancas' => [mudanca('greeting', 'saudação')]))
+
+        expect(estado).to include('applied' => false, 'pergunta_pendente' => 'Mais formal ou informal?')
       end
     end
 

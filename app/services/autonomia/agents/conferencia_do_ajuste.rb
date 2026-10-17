@@ -55,6 +55,20 @@ class Autonomia::Agents::ConferenciaDoAjuste
     }
   }.freeze
 
+  PEDIDO_MAX_CHARS = 2_000
+
+  def self.pedido(texto)
+    texto.to_s.strip.truncate(PEDIDO_MAX_CHARS, omission: '')
+  end
+
+  # O que a conferência lê como pedido: a fala do dono e, quando houver, a mensagem do Construtor a que ela responde.
+  def self.pedido_com_contexto(fala, anterior)
+    fala = '(o dono mandou so imagem, sem texto)' if fala.blank?
+    return fala if anterior.to_s.strip.blank?
+
+    "Mensagem anterior do Construtor: #{pedido(anterior)}\nResposta do dono: #{fala}"
+  end
+
   def initialize(account:, credential:)
     @account = account
     @credential = credential

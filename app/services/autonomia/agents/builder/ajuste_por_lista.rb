@@ -45,6 +45,12 @@ module Autonomia::Agents::Builder::AjustePorLista
     'simples. Ela vai ao dono junto com o que foi aplicado. Vazia quando nao ha pergunta. Nunca diga aqui que aplicou ' \
     'algo que nao esta em mudancas.'.freeze
 
+  PENDENCIA_RESOLVIDA_DESCRIPTION =
+    'So vale quando o contexto interno traz uma PERGUNTA PENDENTE sua. true quando a ultima fala do dono responde ' \
+    'essa pergunta, ou quando ela nao vale mais porque o dono mudou de assunto de vez ou a desfez. false quando ela ' \
+    'continua sem resposta (o dono pediu outra coisa sem responder) ou quando nao ha pergunta pendente. Se voce ' \
+    'repetir a pergunta em next_question, deixe false.'.freeze
+
   MUDANCA = {
     type: 'object', additionalProperties: false, required: %w[pedido campo resumo],
     properties: {
@@ -64,11 +70,12 @@ module Autonomia::Agents::Builder::AjustePorLista
                                     'curta e em portugues simples.' },
       so_pergunta: { type: 'boolean', description: SO_PERGUNTA_DESCRIPTION },
       mudancas: { type: 'array', items: MUDANCA, description: MUDANCAS_DESCRIPTION },
-      resposta_ao_dono: { type: 'string', description: RESPOSTA_AO_DONO_DESCRIPTION }
+      resposta_ao_dono: { type: 'string', description: RESPOSTA_AO_DONO_DESCRIPTION },
+      pendencia_resolvida: { type: 'boolean', description: PENDENCIA_RESOLVIDA_DESCRIPTION }
     )
     { name: 'autonomia_agent_build_ajuste',
       schema: base.merge(properties: propriedades,
-                         required: base[:required] + %w[so_pergunta mudancas resposta_ao_dono]) }.freeze
+                         required: base[:required] + %w[so_pergunta mudancas resposta_ao_dono pendencia_resolvida]) }.freeze
   end
 
   TABELA_DE_DESTINO = <<~TXT.freeze
@@ -84,6 +91,7 @@ module Autonomia::Agents::Builder::AjustePorLista
        gravado. O que nao estiver listado fica exatamente como esta, mesmo que voce o reescreva. Devolva os outros
        campos com o valor atual.
     3. Se ela traz pedido E pergunta: aplique o pedido (em mudancas) e responda a pergunta em resposta_ao_dono.
+       Se havia PERGUNTA PENDENTE sua, diga em pendencia_resolvida se esta fala a resolveu.
     4. Se um pedido e impossivel, contraditorio ou vago demais para aplicar com seguranca, nao o liste: pergunte em
        next_question (needs_more_info=true). Os pedidos claros da mesma fala voce lista e eles sao aplicados; a
        pergunta segue para o dono junto. Nunca diga em next_question que aplicou algo que nao esta em mudancas.
@@ -112,7 +120,6 @@ module Autonomia::Agents::Builder::AjustePorLista
     possivel aplicar, explique em next_question com needs_more_info=true.
   TXT
 
-  PEDIDO_MAX_CHARS = 2_000
   # O pedido de cada item da lista vai ao dono (na pergunta do que faltou): curto.
   ITEM_MAX_CHARS = 200
 
@@ -189,17 +196,5 @@ module Autonomia::Agents::Builder::AjustePorLista
   # listar não foi gravado, e a tela não pode mostrá-lo como se fosse.
   def rascunho_do_agente(agent)
     retrato(agent).except('instruction', 'voice').merge('agent_type' => agent.agent_type)
-  end
-
-  def pedido(texto)
-    texto.to_s.strip.truncate(PEDIDO_MAX_CHARS, omission: '')
-  end
-
-  # O que a conferência lê como pedido: a fala do dono e, quando houver, a mensagem do Construtor a que ela responde.
-  def pedido_com_contexto(fala, anterior)
-    fala = '(o dono mandou so imagem, sem texto)' if fala.blank?
-    return fala if anterior.to_s.strip.blank?
-
-    "Mensagem anterior do Construtor: #{pedido(anterior)}\nResposta do dono: #{fala}"
   end
 end

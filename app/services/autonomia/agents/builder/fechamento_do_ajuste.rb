@@ -80,9 +80,9 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
   # também a mensagem anterior do Construtor, para entender um "sim" ou "o segundo". O agente de antes vem da versão de
   # antes (o state não guarda a instrução crua).
   def conferir(mudancas, dados, versao_id)
-    fala = regras_do_ajuste.pedido(ultima_fala_do_dono)
+    fala = Autonomia::Agents::ConferenciaDoAjuste.pedido(ultima_fala_do_dono)
     conferencia = Autonomia::Agents::ConferenciaDoAjuste.new(account: @account, credential: credential).conferir(
-      pedido: regras_do_ajuste.pedido_com_contexto(fala, mensagem_anterior), mudancas: mudancas,
+      pedido: Autonomia::Agents::ConferenciaDoAjuste.pedido_com_contexto(fala, mensagem_anterior), mudancas: mudancas,
       antes: retrato_de_antes(dados), depois: regras_do_ajuste.retrato(@thread.agent)
     )
     @conferencias_ms << conferencia['duracao_ms']

@@ -99,7 +99,7 @@ module Autonomia::Agents::Builder::AjusteConferido
             when :esclarecimento then parsed['next_question'].to_s.strip.presence
             end
     texto ||= texto_do_ajuste(motivo == :incompleto ? :incompleto : :sem_pedido)
-    pendencia = motivo == :esclarecimento ? texto : @pendencia_anterior
+    pendencia = motivo == :esclarecimento ? texto : pendencia_mantida(parsed)
     perguntar!(token, parsed, [texto], 'so_pergunta' => motivo == :pergunta, 'pergunta_pendente' => pendencia)
   end
 
@@ -108,7 +108,7 @@ module Autonomia::Agents::Builder::AjusteConferido
   def sem_mudanca!(token, parsed, extra = {})
     pergunta = pergunta_do_modelo(parsed)
     perguntar!(token, parsed, [texto_do_ajuste(:sem_mudanca), pergunta].compact,
-               { 'so_pergunta' => false, 'pergunta_pendente' => pergunta || @pendencia_anterior }.merge(extra))
+               { 'so_pergunta' => false, 'pergunta_pendente' => pergunta || pendencia_mantida(parsed) }.merge(extra))
   end
 
   # A primeira escrita não venceu. Token perdido: outra geração desta thread é dona do turno, nada a marcar.
@@ -127,6 +127,12 @@ module Autonomia::Agents::Builder::AjusteConferido
     return :apagado if Autonomia::Agents::Agent.where(id: @thread.autonomia_agent_id).where.not(deleted_at: nil).exists?
 
     :superado
+  end
+
+  # A pendência de antes do turno, a menos que o MODELO diga que a fala a resolveu (`pendencia_resolvida`). Uma
+  # pergunta nova dele a substitui em quem chama; o código nunca a apaga por conta própria.
+  def pendencia_mantida(parsed)
+    parsed.to_h['pendencia_resolvida'] == true ? '' : @pendencia_anterior.to_s
   end
 
   # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência.
@@ -156,7 +162,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     agent = @thread.agent
     dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
               'versao_antes_id' => agent.versao_antes_do_construtor&.id,
-              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono'),
+              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida'),
               'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados }
     dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })
   end

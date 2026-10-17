@@ -56,7 +56,7 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     mensagens, pendencia, aviso = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia, aviso, conferencia),
                                              'next_question' => mensagens.last.to_s))
-             .merge(estado_aplicado(dados, conferencia, pendencia))
+             .merge(estado_aplicado(dados, conferencia, pendencia.presence || pendencia_mantida(resposta)))
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
     log_do_ajuste(conferencia, desfecho)
   end
