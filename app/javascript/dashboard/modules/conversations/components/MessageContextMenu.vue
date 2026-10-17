@@ -17,6 +17,7 @@ import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
 import ReportAgentMessageDialog from './ReportAgentMessageDialog.vue';
+import { baixarAudio } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
 
 export default {
   components: {
@@ -101,6 +102,11 @@ export default {
         `${fullConversationURL}?messageId=${this.messageId}`
       );
       useAlert(this.$t('CONVERSATION.CONTEXT_MENU.LINK_COPIED'));
+      this.handleClose();
+    },
+    // #1702: o áudio no balão do WhatsApp não tem botão de baixar; fica aqui.
+    handleBaixarAudio() {
+      baixarAudio(this.message.audioParaBaixar);
       this.handleClose();
     },
     async handleCopy() {
@@ -232,6 +238,15 @@ export default {
           }"
           variant="icon"
           @click.stop="handleCopy"
+        />
+        <MenuItem
+          v-if="enabledOptions['baixarAudio']"
+          :option="{
+            icon: 'arrow-download',
+            label: $t('CONVERSA_CANAL.AUDIO.BAIXAR'),
+          }"
+          variant="icon"
+          @click.stop="handleBaixarAudio"
         />
         <MenuItem
           v-if="enabledOptions['translate']"

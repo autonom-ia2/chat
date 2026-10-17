@@ -294,6 +294,34 @@ describe('ChoiceSelect', () => {
     );
   });
 
+  it('rótulo curto no botão e busca por outro texto (ex.: país do telefone)', async () => {
+    wrapper = mountSelect('BR', {
+      options: [
+        {
+          value: 'AR',
+          label: '🇦🇷 Argentina (+54)',
+          shortLabel: '🇦🇷 +54',
+          searchLabel: 'Argentina',
+        },
+        {
+          value: 'BR',
+          label: '🇧🇷 Brasil (+55)',
+          shortLabel: '🇧🇷 +55',
+          searchLabel: 'Brasil',
+        },
+      ],
+    });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.text()).toBe('🇧🇷 +55');
+    expect(wrapper.findAll('[role="option"]')[0].text()).toBe(
+      '🇦🇷 Argentina (+54)'
+    );
+    await trigger.trigger('keydown', { key: 'a' });
+    await trigger.trigger('keydown', { key: 'Enter' });
+    expect(wrapper.props('modelValue')).toBe('AR');
+    expect(trigger.text()).toBe('🇦🇷 +54');
+  });
+
   describe('lista na camada do topo (Popover API)', () => {
     const { showPopover, hidePopover } = HTMLElement.prototype;
 

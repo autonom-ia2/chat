@@ -26,7 +26,10 @@ class Whatsapp::Templates::DispatchProducts
     catalog = client.catalog(fresh: true)
     return stop('template_catalog_missing', {}) unless catalog
 
-    missing = unavailable(client.find(ids))
+    found = client.find(ids)
+    # #1717: cada envio da campanha grava nome, preço e foto do que o disparo acabou de ler, sem consultar a Meta de novo.
+    Whatsapp::Templates::Enviado::Produtos.lembrar(@inbox, found.values)
+    missing = unavailable(found)
     return stop('template_product_unavailable', product_ids: missing, product_names: missing.map { |id| name_of(id) }) if missing.any?
 
     Result.new(catalog_id: catalog.id, reason_code: nil, details: {})

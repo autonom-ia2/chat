@@ -128,4 +128,26 @@ RSpec.describe Whatsapp::Templates::CatalogClient do
       expect(sellable).to eq(['in stock', 'available for order', 'preorder'])
     end
   end
+
+  # #1717: a foto do envio não pode segurar o envio esperando a Meta.
+  describe 'consulta rápida (foto do envio)' do
+    let(:client) { described_class.new(inbox: inbox, timeout: 2, insistir: false) }
+
+    it 'pergunta com o prazo pedido e uma tentativa só' do
+      allow(HTTParty).to receive(:get).and_raise(Net::ReadTimeout)
+
+      expect { client.catalog }.to raise_error(Net::ReadTimeout)
+      expect(HTTParty).to have_received(:get).once.with(anything, hash_including(timeout: 2))
+      expect(client).not_to have_received(:sleep)
+    end
+
+    it 'o cliente normal continua insistindo três vezes com o prazo de sempre' do
+      normal = described_class.new(inbox: inbox)
+      allow(normal).to receive(:sleep)
+      allow(HTTParty).to receive(:get).and_raise(Net::ReadTimeout)
+
+      expect { normal.catalog }.to raise_error(Whatsapp::Templates::MetaClient::Unreachable)
+      expect(HTTParty).to have_received(:get).exactly(3).times.with(anything, hash_including(timeout: described_class::REQUEST_TIMEOUT))
+    end
+  end
 end

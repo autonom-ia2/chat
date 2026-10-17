@@ -1,0 +1,160 @@
+{
+  "CONVERSA_CANAL": {
+    "DIA": {
+      "HOJE": "Today",
+      "ONTEM": "Yesterday"
+    },
+    "REMETENTE": {
+      "AGENTE_COM_NOME": "AI agent · {nome}",
+      "AGENTE": "AI agent",
+      "AUTOMATICO": "{nome} · automatic"
+    },
+    "MAIS": {
+      "ABRIR": "More ways to send",
+      "LOCALIZACAO": "Location",
+      "PEDIR_LOCALIZACAO": "Ask for location",
+      "CONTATO": "Contact",
+      "BOTAO_DE_LINK": "Link button",
+      "OPCOES": "Reply options",
+      "FORMULARIO": "Form",
+      "DOCUMENTO": "Document",
+      "FOTOS_E_VIDEOS": "Photos & videos",
+      "SO_TEXTO": "Outside the 24 hours the reply goes through the backup number, as text only. Photos, audio and documents don't go."
+    },
+    "JANELA": {
+      "PREVIA": "What the customer will see",
+      "CANCELAR": "Cancel",
+      "ENVIAR": "Send",
+      "ERROS": {
+        "mensagem": "Write the message.",
+        "nomeDoBotao": "Write the button name.",
+        "endereco": "Paste the website address.",
+        "opcoes": "Write at least two options.",
+        "nomeDaLista": "Write the name of the button that opens the list.",
+        "coordenadas": "Place not found. Paste the numbers from Google Maps, like -23.5613, -46.6565.",
+        "nome": "Write the name.",
+        "telefone": "Type a phone number that exists in the chosen country, with area code.",
+        "formulario": "Choose the form.",
+        "textoDoBotao": "Write the button text.",
+        "mensagemLonga": "The message is too long for this format. Shorten it a bit.",
+        "nomeDoBotaoLongo": "The button name can have up to 20 characters.",
+        "enderecoInvalido": "Paste the full website address, starting with https://",
+        "opcoesDemais": "Use at most 10 options.",
+        "opcaoLonga": "Each option can have up to 20 characters.",
+        "opcaoDaListaLonga": "In a list, each option can have up to 24 characters.",
+        "opcoesRepetidas": "Some options are the same. Write each one differently.",
+        "nomeDaListaLongo": "The list button name can have up to 20 characters.",
+        "nomeDoLugarLongo": "The place name can have up to 100 characters.",
+        "enderecoDoLugarLongo": "The address can have up to 300 characters.",
+        "nomeDoContatoLongo": "The name can have up to 100 characters.",
+        "textoDoBotaoLongo": "The button text can have up to 30 characters.",
+        "cabecalho": "Write the header.",
+        "cabecalhoLongo": "The header can have up to 60 characters."
+      },
+      "BOTAO_DE_LINK": {
+        "TITULO": "Send a link button",
+        "AJUDA": "The customer taps the button and opens the website.",
+        "MENSAGEM": "Message",
+        "NOME_DO_BOTAO": "Button name (up to 20 letters)",
+        "NOME_DO_BOTAO_EXEMPLO": "See proposal",
+        "ENDERECO": "Website address"
+      },
+      "OPCOES": {
+        "TITULO": "Send reply options",
+        "AJUDA": "The customer replies with one tap. Up to 3 options become buttons; more than that, a list.",
+        "CABECALHO": "Header (up to 60 characters)",
+        "CABECALHO_AJUDA": "Shown in bold at the top of the message. Required: without it, some phones don't show the options.",
+        "MENSAGEM": "Message",
+        "OPCOES": "Options",
+        "OPCAO_N": "Option {n}",
+        "MAIS_UMA": "One more option",
+        "NOME_DA_LISTA": "List button name",
+        "NOME_DA_LISTA_AJUDA": "With more than 3 options, the customer taps this button to see the list.",
+        "LISTA_PADRAO": "See options"
+      },
+      "LOCALIZACAO": {
+        "TITULO": "Send a location",
+        "AJUDA": "The customer gets the place on a map.",
+        "COORDENADAS": "Where it is on the map",
+        "COORDENADAS_AJUDA": "In Google Maps, right-click the place and click the numbers to copy them. A Google Maps link also works.",
+        "NOME": "Place name (optional)",
+        "ENDERECO": "Address (optional)",
+        "BUSCAR": "Search the address or the place name",
+        "BUSCAR_EXEMPLO": "E.g.: 1000 Paulista Ave or Example Store",
+        "ESCOLHA_UM": "Pick an address from the list.",
+        "TENHO_COORDENADAS": "Not found? Use the Google Maps coordinates",
+        "COORDENADAS_EXEMPLO": "-23.5613, -46.6565"
+      },
+      "PEDIDO_DE_LOCALIZACAO": {
+        "TITULO": "Ask for the customer location",
+        "AJUDA": "The customer gets a button to send where they are.",
+        "MENSAGEM": "Message",
+        "PADRAO": "Could you send me your location?"
+      },
+      "CONTATO": {
+        "TITULO": "Send a contact",
+        "AJUDA": "The customer gets the card and can chat with this number.",
+        "NOME": "Name",
+        "TELEFONE": "Phone",
+        "TELEFONE_AJUDA": "Choose the country and type the number with area code.",
+        "PAIS": "Phone country",
+        "NOME_EXEMPLO": "Search your contacts or type a name",
+        "NOME_AJUDA": "Pick a contact and the phone comes along."
+      },
+      "FORMULARIO": {
+        "TITULO": "Send a form",
+        "AJUDA": "The customer taps the button and fills it in inside WhatsApp. Only released forms show up. Do not use a form that asks for a password: the answer shows in the conversation.",
+        "QUAL": "Form",
+        "ESCOLHA": "Choose the form",
+        "MENSAGEM": "Message",
+        "TEXTO_DO_BOTAO": "Button text (up to 30 letters)",
+        "BOTAO_PADRAO": "Fill in",
+        "NENHUM": "This inbox has no approved form on Meta yet."
+      },
+      "AJUDA_TEXTO": "On this number the customer gets it as text. The preview shows how it looks.",
+      "ERRO_GERAL": "Couldn't send right now. Try again in a moment."
+    },
+    "PREVIA": {
+      "LUGAR": "Place",
+      "CONTATO": "Contact",
+      "SUA_MENSAGEM": "Your message shows here",
+      "BOTAO": "Button",
+      "ENVIAR_LOCALIZACAO": "Send location",
+      "LISTA": "See options",
+      "VIRA_TEXTO": "On this number the customer gets it as text, like this:"
+    },
+    "JANELA_FECHADA": {
+      "TEXTO": "It has been 24 hours since the customer last wrote. To talk to them again, send a template.",
+      "ESCOLHER_MODELO": "Choose template"
+    },
+    "CAIXA": {
+      "DIGITE": "Type a message",
+      "SO_MODELO": "Choose a template to reply"
+    },
+    "MODELO": {
+      "COPIAR_CODIGO": "Copy code",
+      "VER_CATALOGO": "View catalog",
+      "VER_ITENS": "View items",
+      "VER_ITEM": "View",
+      "OFERTA": "Limited-time offer",
+      "CARROSSEL": "Template cards",
+      "PRODUTO": "Catalog product",
+      "BOTOES": "Template buttons"
+    },
+    "GRAVACAO": {
+      "GRAVANDO": "Recording audio",
+      "CANCELAR": "Cancel",
+      "PAUSAR": "Pause",
+      "CONTINUAR": "Keep recording",
+      "ENVIAR": "Send audio",
+      "SEM_MICROFONE": "The browser did not allow the microphone. Click the lock next to the site address and allow the microphone."
+    },
+    "AUDIO": {
+      "TOCAR": "Play audio",
+      "PAUSAR": "Pause audio",
+      "ONDA": "Audio position",
+      "VELOCIDADE": "Change speed",
+      "BAIXAR": "Download"
+    }
+  }
+}

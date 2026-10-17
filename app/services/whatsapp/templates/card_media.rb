@@ -51,7 +51,13 @@ module Whatsapp::Templates::CardMedia
     files = pending.index_with { |index| file_for(headers[index], profile, index) }
     return if files.values.any?(&:nil?)
 
-    files.transform_values { |file| Whatsapp::Templates::HeaderMedia.signed_media(file) }
+    files.transform_values { |file| dispatch_media(file) }
+  end
+
+  # O link assinado vai à Meta e a referência assinada fica para a foto do envio (#1717): `HeaderMedia.dispatch_file`.
+  # A Meta não a recebe (`SendComponents#card_payload`).
+  def dispatch_media(file)
+    Whatsapp::Templates::HeaderMedia.dispatch_file(file.is_a?(ActiveStorage::Blob) ? file : file.blob)
   end
 
   def headers_of(processed)

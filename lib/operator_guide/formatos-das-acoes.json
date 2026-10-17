@@ -15062,47 +15062,51 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/memoria_fatos#create",
+    "modelo": "Message",
     "motivos": [
       "leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:18",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:20",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:28",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:27",
       "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:25",
       "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:24",
       "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:20",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:57"
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:59"
     ],
     "sem_corpo": false
   },
   "POST crm/memoria/cards/:card_id/fatos/:id/aceitar": {
     "completo": true,
     "controller": "api/v1/accounts/crm/memoria_fatos#aceitar",
+    "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:57",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:65"
     ],
     "sem_corpo": true
   },
   "POST crm/memoria/cards/:card_id/fatos/:id/destravar": {
     "completo": true,
     "controller": "api/v1/accounts/crm/memoria_fatos#destravar",
+    "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:57",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:65"
     ],
     "sem_corpo": true
   },
   "POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais": {
     "completo": true,
     "controller": "api/v1/accounts/crm/memoria_fatos#nao_vale_mais",
+    "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:30",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:57",
-      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:63"
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/memoria_fatos_controller.rb:65"
     ],
     "sem_corpo": true
   },

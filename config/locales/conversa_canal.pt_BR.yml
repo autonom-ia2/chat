@@ -1,0 +1,14 @@
+# Conversa com a cara do canal (#1702): mensagens do "+" da caixa de resposta.
+pt_BR:
+  conversa_canal:
+    lugares:
+      sem_chave: 'A busca de endereço ainda não está ligada na plataforma. Use as coordenadas do Google Maps.'
+      nao_encontrado: 'Não achei este lugar. Procure de novo.'
+    formularios:
+      sem_conta: 'Este número ainda não está ligado a uma conta do WhatsApp Business. Confira a conexão do canal.'
+      sem_permissao: 'Este número não deixa listar formulários. Peça para quem cuida da conta do WhatsApp liberar o acesso.'
+      nao_encontrado: 'Este formulário não está entre os aprovados deste número.'
+      so_oficial: 'Formulário só pode ser enviado pelo WhatsApp oficial.'
+      meta_recusou: 'A Meta não entregou a lista de formulários desta conta. Confira a conexão do WhatsApp.'
+      meta_fora: 'A Meta não respondeu agora. Tente de novo em instantes.'
+      sem_json: 'Não deu para abrir este formulário. Confira se ele está publicado na Meta.'

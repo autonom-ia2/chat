@@ -5,6 +5,9 @@ import { MESSAGE_TYPES } from './constants.js';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
 import { useMapGetter } from 'dashboard/composables/store.js';
 import MessageApi from 'dashboard/api/inbox/message.js';
+import SeparadorDeDia from '../conversa-canal/SeparadorDeDia.vue';
+import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
+import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 
 /**
  * Props definition for the component
@@ -126,6 +129,12 @@ const shouldGroupWithNext = (index, searchList) => {
   return Math.floor(next.createdAt / 60) === Math.floor(current.createdAt / 60);
 };
 
+// #1702: com a pele do canal, bico no 1º balão da sequência e etiqueta do dia.
+const { abreODia, pele } = useSequenciaDaConversa(
+  allMessages,
+  shouldGroupWithNext
+);
+
 /**
  * Gets the message that was replied to
  * @param {Object} parentMessage - The message containing the reply reference
@@ -169,6 +178,7 @@ const getInReplyToMessage = parentMessage => {
   <ul class="px-4 bg-n-surface-1">
     <slot name="beforeAll" />
     <template v-for="(message, index) in allMessages" :key="message.id">
+      <SeparadorDeDia v-if="abreODia(index)" :quando="message.createdAt" />
       <slot
         v-if="firstUnreadId && message.id === firstUnreadId"
         name="unreadBadge"
@@ -183,6 +193,7 @@ const getInReplyToMessage = parentMessage => {
         data-clarity-mask="True"
         @retry="emit('retry', message)"
       />
+      <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
     </template>
     <slot name="after" />
   </ul>

@@ -477,3 +477,13 @@
   display_name: Memória das IAs (fatos do cliente e do pedido com procedência)
   enabled: false
   column: feature_flags_ext_1
+
+# Conversa com a cara do canal (#1702, épico #1701): na caixa de WhatsApp (oficial, WAHA e híbrida) a conversa e a
+# caixa de resposta ganham o visual do app — fundo, balões, hora e tiques, separador de dia, barra de digitar — e o
+# botão "+" para o atendente mandar localização, contato, botão de link e opções. Bit 31 (2147483648): a
+# posição na lista é o bit, no fim do que está na main, logo depois de `memoria_ia` (bit 30).
+# Desligada (padrão): a conversa de sempre. Liga primeiro na conta 1 da stack Hub2You (conferência), depois na 16 e na 18.
+- name: conversa_cara_do_canal
+  display_name: Conversa com a cara do canal (WhatsApp)
+  enabled: false
+  column: feature_flags_ext_1

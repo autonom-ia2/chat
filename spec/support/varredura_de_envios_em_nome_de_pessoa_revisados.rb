@@ -15,6 +15,8 @@ module VarreduraDeEnviosEmNomeDePessoa
     'app/services/macros/execution_service.rb#Macros::ExecutionService#send_attachment' => 'macro: a pessoa executa no painel',
     'app/services/whatsapp/contact_info_request_service.rb#Whatsapp::ContactInfoRequestService#perform' =>
       'pedido de dados: botão do painel (Current.user)',
+    'app/services/whatsapp/templates/reenvio_do_modelo.rb#Whatsapp::Templates::ReenvioDoModelo#criar' =>
+      'encaminhar (#1767): o atendente encaminha no painel; remetente é ele',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

@@ -17,7 +17,10 @@ import {
 } from 'dashboard/helper/choiceKeys';
 
 const props = defineProps({
-  // { value, label, disabled? }. value pode ser string, número, booleano ou null.
+  // { value, label, disabled?, shortLabel?, searchLabel? }. value pode ser
+  // string, número, booleano ou null. shortLabel: o que o botão mostra quando
+  // a opção está escolhida (ex.: "🇧🇷 +55"); searchLabel: o texto que a busca
+  // por digitação compara (ex.: "Brasil"). Sem eles, vale o label.
   options: { type: Array, default: () => [], validator: isChoiceList },
   // Alternativa a `options`, como <optgroup>: [{ label, options: [...] }].
   groups: {
@@ -105,15 +108,15 @@ const selected = computed(() =>
     sameChoice(option.value, modelValue.value)
   )
 );
-const selectedLabel = computed(
-  () => flatOptions.value[selected.value]?.label ?? props.placeholder
-);
+const textoNoBotao = option => option.shortLabel ?? option.label;
+const selectedLabel = computed(() => {
+  const option = flatOptions.value[selected.value];
+  return option ? textoNoBotao(option) : props.placeholder;
+});
 // Todos os textos que o botão pode mostrar: medidos invisíveis na mesma célula,
 // dão ao campo a largura do maior, estável como a do select nativo.
 const medidas = computed(() =>
-  [props.placeholder, ...flatOptions.value.map(option => option.label)].filter(
-    Boolean
-  )
+  [props.placeholder, ...flatOptions.value.map(textoNoBotao)].filter(Boolean)
 );
 // O <label> em volta, se houver: clicar nele com a lista aberta fecha pelo
 // próprio botão (ativação do label), sem o clique-fora fechar antes e o botão
@@ -213,7 +216,9 @@ const onTypeahead = event => {
   const from = typed.text.length === 1 ? typingStart : typed.from;
   // Rótulo vazio nunca casa: a busca por digitação pula as desabilitadas.
   const match = typeaheadIndex(
-    flatOptions.value.map(option => (option.disabled ? '' : option.label)),
+    flatOptions.value.map(option =>
+      option.disabled ? '' : (option.searchLabel ?? option.label)
+    ),
     typed.text,
     from
   );

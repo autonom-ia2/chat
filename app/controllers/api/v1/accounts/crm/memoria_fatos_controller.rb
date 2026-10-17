@@ -1,7 +1,8 @@
-# O que a IA sabe de um pedido e do cliente dele (#1601, W8), para a aba "O que a IA sabe" (a tela vem depois do
-# mockup): os fatos vivos com a procedência (de onde veio, quando, alegado ou confirmado), as sugestões e os
-# divergentes; e a correção da pessoa (corrigir, não vale mais, aceitar a sugestão, destravar). Quem vê o card vê; quem
-# pode editar o card corrige. Sem a flag, 404.
+# O que a IA sabe de um pedido e do cliente dele (#1601, W8): os fatos vivos com a procedência (de onde veio, quando,
+# alegado ou confirmado), as sugestões e os divergentes; e a correção da pessoa (corrigir, não vale mais, aceitar a
+# sugestão, destravar). Quem vê o card vê; quem pode editar o card corrige. Sem a flag, 404. A tela usa só a linha de
+# origem embaixo de cada campo em "Campos do card" (decisão do Rodrigo, 17/10): quem corrigiu (nome) e a mensagem de
+# prova (conversa e mensagem, para o "ver mensagem").
 class Api::V1::Accounts::Crm::MemoriaFatosController < Api::V1::Accounts::Crm::BaseController
   GRUPOS = %w[contato pedido conversa decisao].freeze
 
@@ -11,7 +12,8 @@ class Api::V1::Accounts::Crm::MemoriaFatosController < Api::V1::Accounts::Crm::B
 
   def index
     authorize @card, :show?
-    fatos = escopo_do_card.vivos.order(registrado_em: :desc).limit(200)
+    fatos = escopo_do_card.vivos.order(registrado_em: :desc).limit(200).to_a
+    carregar_procedencia(fatos)
     render json: { payload: fatos.map { |fato| payload(fato) } }
   end
 
@@ -78,8 +80,20 @@ class Api::V1::Accounts::Crm::MemoriaFatosController < Api::V1::Accounts::Crm::B
   end
 
   def payload(fato)
+    carregar_procedencia([fato]) if @nomes.nil?
+    prova = fato.prova_message_ids.last
     fato.slice(:id, :escopo, :tipo, :chave, :item_ref, :valor, :valor_json, :fonte, :status, :situacao, :divergente_de_id,
                :prova_message_ids, :prova_trecho, :valido_desde, :vence_em, :registrado_em, :expirado_em, :versao, :travado,
-               :travado_por_user_id).merge(vencido: fato.vencido?)
+               :travado_por_user_id)
+        .merge(vencido: fato.vencido?, corrigido_por_nome: @nomes[fato.travado_por_user_id], prova_message_id: prova,
+               prova_conversation_display_id: @conversas[prova])
+  end
+
+  # Numa consulta cada: o nome de quem corrigiu (o do cadastro) e a conversa (display_id) da mensagem de prova, da conta.
+  def carregar_procedencia(fatos)
+    @nomes = User.where(id: fatos.filter_map(&:travado_por_user_id)).pluck(:id, :name).to_h
+    provas = fatos.filter_map { |fato| fato.prova_message_ids.last }
+    @conversas = Message.where(id: provas, account_id: Current.account.id).joins(:conversation)
+                        .pluck('messages.id', 'conversations.display_id').to_h
   end
 end

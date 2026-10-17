@@ -180,8 +180,15 @@ module Autonomia
             confidence: meta['confidence'], answered_from_knowledge: meta['answered_from_knowledge'] || false,
             message_id: message.respond_to?(:id) ? message.id : nil,
             used_entry_ids: Array(meta['used_entry_ids']).select { |id| id.is_a?(Integer) },
-            model: ::Autonomia::Agents::Config::ANSWERER_MODEL
+            model: ::Autonomia::Agents::Config::ANSWERER_MODEL,
+            metadata: memoria_do_meta(meta)
           )
+        end
+
+        # Os ids dos fatos de memória enviados ao modelo (#1755), quando houve memória no turno.
+        def memoria_do_meta(meta)
+          ids = Array(meta['memoria_fact_ids']).select { |id| id.is_a?(Integer) }
+          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
       end
     end
