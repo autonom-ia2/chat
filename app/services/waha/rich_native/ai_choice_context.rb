@@ -28,14 +28,15 @@ module Waha::RichNative::AiChoiceContext
     end
   end
 
-  # Em Crm::Ai::OptOutClassifier (follow-up de IA e campanha do WhatsApp): voto numa enquete ou resposta a um convite não
-  # é pedido para parar, mesmo quando a escolha é "Não". A escolha é reconhecida pela marca estruturada `c2y_ai_turn`
-  # (nunca pelo texto), e o modelo nem é perguntado.
+  # Em Crm::Ai::OptOutClassifier (follow-up de IA e campanha do WhatsApp): quem decide se o cliente pediu para parar é o
+  # modelo, também num voto ("Sair" numa enquete de campanha é pedido de parar; "Não" a "Quer agendar?" não é). O que
+  # muda é o que ele lê: o texto completo, com a pergunta e a escolha, em vez de só "Votou: Não".
   module OptOut
-    def perform
-      return { decision: 'nao', motivo: 'resposta_ao_assunto' } if Waha::RichNative::AiChoiceText.choice?(@message)
+    private
 
-      super
+    def input
+      text = Waha::RichNative::AiChoiceText.for(@message)
+      text ? super.merge(reply: text.first(self.class::MAX_TEXT)) : super
     end
   end
 

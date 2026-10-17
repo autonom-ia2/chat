@@ -81,23 +81,38 @@ describe Waha::RichNative::AiChoiceText do
       expect(estado.conversa[:last_message]).to include("'Quer cancelar?'").and(include('não vale mais'))
     end
 
-    it 'never takes a vote "Não" as an opt-out, without asking the model (structured mark, not the text)' do
-      vote!(['Não'])
-      message = turn(['Não'])
-      allow(Crm::Ai::ResponsesClient).to receive(:new)
-
-      result = Crm::Ai::OptOutClassifier.new(account: account, message: message).perform
-
-      expect(result).to eq(decision: 'nao', motivo: 'resposta_ao_assunto')
-      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    # O modelo decide também no voto (revisão: "Sair" numa enquete de campanha é pedido de parar); ele recebe o texto
+    # completo, com a pergunta e a escolha. Modelo dublado, sem IA paga.
+    def classify(message)
+      inputs = []
+      client = instance_double(Crm::Ai::ResponsesClient)
+      allow(client).to receive(:create) do |input:, **|
+        inputs << JSON.parse(input)
+        { text: { pediu_para_parar: 'sim', motivo: 'pedido_explicito_de_parar' }.to_json }
+      end
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'chave-de-teste'))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+      [Crm::Ai::OptOutClassifier.new(account: account, message: message).perform, inputs.sole]
     end
 
-    it 'still asks the model for a real message' do
-      message = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'SAIR')
-      allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+    it 'asks the model about a vote with the question and the choice, and follows its decision' do
+      poll.update_column(:content, 'Quer continuar recebendo ofertas?') # rubocop:disable Rails/SkipsModelValidations
+      vote!(['Sair'])
+      message = turn(['Sair'])
 
-      expect { Crm::Ai::OptOutClassifier.new(account: account, message: message).perform }
-        .to raise_error(Crm::Ai::OptOutClassifier::Unavailable)
+      result, input = classify(message)
+
+      expect(input['reply']).to eq("Votou na enquete 'Quer continuar recebendo ofertas?': Sair")
+      expect(result).to eq(decision: 'sim', motivo: 'pedido_explicito_de_parar')
+    end
+
+    it 'sends a real message to the model as in main' do
+      message = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'SAIR')
+
+      _result, input = classify(message)
+
+      expect(input['reply']).to eq('SAIR')
     end
 
     it 'gives the attendant copilot the full text' do

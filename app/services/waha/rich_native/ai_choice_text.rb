@@ -4,7 +4,7 @@
 # mais (Waha::RichNative::TurnKinds.choice_current?, contrato público). Mensagem que não é escolha: nil (fica como está).
 # Quem usa: a resposta do agente (Waha::RichNative::ResponderChoice) e, por prepend (Waha::RichNative::AiChoiceContext),
 # a IA do CRM (Crm::Ai::ContextBuilder), a do assunto e os Decisores (Autonomia::Decisores::Estado), o classificador de
-# opt-out (Crm::Ai::OptOutClassifier, que nem pergunta ao modelo) e o copiloto do atendente.
+# opt-out (Crm::Ai::OptOutClassifier, que decide com o texto completo) e o copiloto do atendente.
 module Waha::RichNative::AiChoiceText
   STALE_KEY = 'waha.ai.choice_no_longer_valid'.freeze
 
