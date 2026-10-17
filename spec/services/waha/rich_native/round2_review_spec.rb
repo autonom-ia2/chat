@@ -102,6 +102,34 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
     end
   end
 
+  # Rodada de correção, item 7: o aviso grava só a chave do tempo, sem regravar o resto a partir de uma cópia velha.
+  describe 'the disappearing time on the conversation (Context.notify!)' do
+    it 'keeps what another writer stored on the conversation after it was loaded' do
+      stale = Conversation.find(conversation.id)
+      Conversation.where(id: conversation.id).update_all(additional_attributes: { 'autonomia_debounce' => { 'pending_message_id' => 9 } }) # rubocop:disable Rails/SkipsModelValidations
+
+      Waha::RichNative::Inbound::Context.notify!(stale, 86_400)
+
+      expect(conversation.reload.additional_attributes).to include('autonomia_debounce' => { 'pending_message_id' => 9 },
+                                                                   'c2y_ephemeral_expiration' => 86_400)
+    end
+  end
+
+  # Rodada de correção, item 8: um erro de SQL num passo não aborta a criação da mensagem do cliente.
+  describe 'a SQL error inside one step of the inbound' do
+    it 'rolls back only that step and still saves the message with the other steps' do
+      flag_on!
+      allow(Waha::RichNative::Inbound::Context).to receive(:apply) do
+        ActiveRecord::Base.connection.execute('SELECT * FROM c2y_tabela_que_nao_existe')
+      end
+
+      message = from_connector({ waha_context: { forwarded: true }, waha_unknown: { from_me: false, content_type: 'pollCreationMessage' } })
+
+      expect(message).to be_persisted
+      expect(message.content_attributes).to include('is_unsupported' => true, 'unsupported_kind' => 'poll')
+    end
+  end
+
   describe 'played receipt (PlayedReceipt.record!)' do
     it 'never raises when the lock fails' do
       message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing)

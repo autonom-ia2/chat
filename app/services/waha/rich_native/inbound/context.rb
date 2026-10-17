@@ -31,8 +31,10 @@ module Waha::RichNative::Inbound::Context
     message.content_attributes = message.content_attributes.to_h.merge(extra)
   end
 
+  # O tempo guardado é lido do banco, não da conversa carregada: quem grava é o store_expiration! (só a chave).
   def changed?(message, expiration)
-    previous = message.conversation&.additional_attributes.to_h[CONVERSATION_KEY]
+    conversation_id = message.conversation_id || message.conversation&.id
+    previous = conversation_id && Conversation.where(id: conversation_id).pick(:additional_attributes).to_h[CONVERSATION_KEY]
     previous.nil? ? expiration.positive? : previous != expiration
   end
 
@@ -51,13 +53,22 @@ module Waha::RichNative::Inbound::Context
 
   # Sem as validações do modelo (a de rajada recusaria o aviso numa conversa movimentada), como as outras gravações.
   def notify!(conversation, expiration)
-    conversation.additional_attributes = conversation.additional_attributes.to_h.merge(CONVERSATION_KEY => expiration)
-    conversation.save!(validate: false)
+    store_expiration!(conversation, expiration)
     activity = conversation.messages.new(account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :activity,
                                          content: notice(conversation.account, expiration),
                                          content_attributes: { ACTIVITY_KEY => { 'expiration_seconds' => expiration,
                                                                                  'at' => Time.current.iso8601 } })
     Waha::RichNative::InternalWrite.mark!(activity).save!(validate: false)
+  end
+
+  # Só a chave do tempo, no servidor (jsonb_set), como o debounce da IA (Autonomia::Agents::Operate::ReplyJob): regravar
+  # o `additional_attributes` inteiro a partir da cópia carregada apagaria o que outro processo gravou na conversa entre
+  # a leitura e a gravação (o debounce, o idioma, a fila do CRM).
+  def store_expiration!(conversation, expiration)
+    Conversation.where(id: conversation.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ["additional_attributes = jsonb_set(COALESCE(additional_attributes, '{}'::jsonb), ARRAY[?], ?::jsonb, true)",
+       CONVERSATION_KEY, expiration.to_json]
+    )
   end
 
   def notice(account, expiration)
