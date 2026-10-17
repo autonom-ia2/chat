@@ -9,12 +9,20 @@
 module WhatsappHybrid::RichNative::WindowNeutral
   KEY = 'c2y_window_neutral'.freeze
 
+  # CONTRATO PÚBLICO (Followup IA, #1766: messaging_window.rb, service_window.rb, conversa_aberta): a relation de
+  # mensagens recebidas sem as neutras (`additional_attributes.c2y_window_neutral`), as que abrem a janela de 24 h. A
+  # regra mora só aqui; nome e assinatura não mudam.
+  def self.opening(relation)
+    relation.where('(messages.additional_attributes ->> ?) IS NULL', KEY)
+  end
+
   private
 
   def last_incoming_message
     return super unless @conversation.inbox&.channel_type == 'Channel::Whatsapp'
 
-    @last_incoming_message ||= @conversation.messages.where(account_id: @conversation.account_id).incoming
-                                            .where("(messages.additional_attributes ->> '#{KEY}') IS NULL").last
+    @last_incoming_message ||= WhatsappHybrid::RichNative::WindowNeutral.opening(
+      @conversation.messages.where(account_id: @conversation.account_id).incoming
+    ).last
   end
 end
