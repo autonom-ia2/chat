@@ -140,8 +140,7 @@ const textoOriginal = computed(() =>
   )
 );
 const htmlOriginal = computed(
-  () =>
-    contentAttributes.value?.email?.htmlContent?.full || textoOriginal.value
+  () => contentAttributes.value?.email?.htmlContent?.full || textoOriginal.value
 );
 const temEmail = computed(
   () =>
@@ -165,7 +164,11 @@ const temCitacao = computed(() =>
   EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
 );
 const verCitacao = ref(false);
-const CSS_PERMITIDO = [...allowedCssProperties, 'transform', 'transform-origin'];
+const CSS_PERMITIDO = [
+  ...allowedCssProperties,
+  'transform',
+  'transform-origin',
+];
 
 const corpo = useTemplateRef('corpo');
 const longo = ref(false);
@@ -228,12 +231,13 @@ const responder = () =>
         rounded-full
       />
       <span
-        class="flex items-center gap-1.5 w-44 flex-shrink-0 min-w-0 text-sm font-semibold text-n-slate-12"
+        class="flex items-center gap-1.5 max-w-[40%] sm:max-w-none sm:w-44 flex-shrink-0 min-w-0 text-sm font-semibold text-n-slate-12"
       >
         <span class="truncate">{{ nomeMostrado }}</span>
         <span
           v-if="remetente.emCopia"
-          :class="[SELO, COR_DO_SELO.copia, 'font-medium']"
+          class="font-medium"
+          :class="[SELO, COR_DO_SELO.copia]"
         >
           {{ t('CONVERSA_CANAL.EMAIL.SELO_COPIA') }}
         </span>
@@ -299,7 +303,9 @@ const responder = () =>
               {{ resumoPara }}
             </span>
             <Icon
-              :icon="verDetalhes ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+              :icon="
+                verDetalhes ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'
+              "
               class="size-3.5 flex-shrink-0"
             />
           </button>
