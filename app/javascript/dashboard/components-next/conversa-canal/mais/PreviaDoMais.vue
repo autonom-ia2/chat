@@ -124,6 +124,12 @@ const vazio = texto => !String(texto || '').trim();
 
       <template v-else>
         <p
+          v-if="tipo === 'opcoes' && !viraTexto && !vazio(campos.cabecalho)"
+          class="px-2.5 pt-1.5 font-semibold break-words"
+        >
+          {{ campos.cabecalho }}
+        </p>
+        <p
           class="px-2.5 pt-1.5 pb-1 whitespace-pre-wrap break-words"
           :class="{
             'text-[#666666] dark:text-[#A7A8A8] italic': vazio(campos.mensagem),

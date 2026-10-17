@@ -58,7 +58,9 @@
         "nomeDoLugarLongo": "O nome do lugar pode ter até 100 letras.",
         "enderecoDoLugarLongo": "O endereço pode ter até 300 letras.",
         "nomeDoContatoLongo": "O nome pode ter até 100 letras.",
-        "textoDoBotaoLongo": "O texto do botão pode ter até 30 letras."
+        "textoDoBotaoLongo": "O texto do botão pode ter até 30 letras.",
+        "cabecalho": "Escreva o cabeçalho.",
+        "cabecalhoLongo": "O cabeçalho pode ter até 60 letras."
       },
       "BOTAO_DE_LINK": {
         "TITULO": "Mandar um botão de link",
@@ -71,6 +73,8 @@
       "OPCOES": {
         "TITULO": "Mandar opções de resposta",
         "AJUDA": "O cliente responde com um toque. Até 3 opções viram botões; mais que isso, uma lista.",
+        "CABECALHO": "Cabeçalho (até 60 letras)",
+        "CABECALHO_AJUDA": "Aparece em destaque no alto da mensagem. É obrigatório: sem ele, alguns celulares não mostram as opções.",
         "MENSAGEM": "Mensagem",
         "OPCOES": "Opções",
         "OPCAO_N": "Opção {n}",

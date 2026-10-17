@@ -100,12 +100,14 @@ describe('montarMensagem (#1702)', () => {
 
   it('opções: até 3 viram botões, mais que isso lista com o nome do botão', () => {
     const botoes = montarOpcoes({
+      cabecalho: 'Planos',
       mensagem: 'Qual plano?',
       opcoes: ['Básico', 'Completo', ''],
       nomeDaLista: 'Ver opções',
     });
     expect(botoes.pedido.richMessage).toEqual({
       type: 'options',
+      header: 'Planos',
       options: [
         { id: 'opcao_1', title: 'Básico' },
         { id: 'opcao_2', title: 'Completo' },
@@ -113,6 +115,7 @@ describe('montarMensagem (#1702)', () => {
     });
 
     const lista = montarOpcoes({
+      cabecalho: 'Agenda',
       mensagem: 'Qual dia?',
       opcoes: ['Seg', 'Ter', 'Qua', 'Qui'],
       nomeDaLista: 'Ver dias',
@@ -120,9 +123,33 @@ describe('montarMensagem (#1702)', () => {
     expect(lista.pedido.richMessage.button).toBe('Ver dias');
     expect(lista.pedido.richMessage.options).toHaveLength(4);
 
-    expect(montarOpcoes({ mensagem: 'x', opcoes: ['só uma'] })).toEqual({
+    expect(
+      montarOpcoes({ cabecalho: 'C', mensagem: 'x', opcoes: ['só uma'] })
+    ).toEqual({
       erros: { opcoes: 'opcoes' },
     });
+  });
+
+  it('opções exigem cabeçalho de até 60 letras, nos botões e na lista', () => {
+    const semCabecalho = { mensagem: 'Qual dia?', opcoes: ['Seg', 'Ter'] };
+    expect(montarOpcoes(semCabecalho).erros).toEqual({
+      cabecalho: 'cabecalho',
+    });
+    expect(
+      montarOpcoes({
+        ...semCabecalho,
+        opcoes: ['Seg', 'Ter', 'Qua', 'Qui'],
+        nomeDaLista: 'Ver dias',
+        cabecalho: '   ',
+      }).erros
+    ).toEqual({ cabecalho: 'cabecalho' });
+    expect(
+      montarOpcoes({ ...semCabecalho, cabecalho: 'x'.repeat(61) }).erros
+    ).toEqual({ cabecalho: 'cabecalhoLongo' });
+    expect(
+      montarOpcoes({ ...semCabecalho, cabecalho: ` ${'x'.repeat(60)} ` }).pedido
+        .richMessage.header
+    ).toBe('x'.repeat(60));
   });
 
   it('confere os limites da Meta antes de enviar', () => {
@@ -138,15 +165,18 @@ describe('montarMensagem (#1702)', () => {
     });
     expect(
       montarOpcoes({
+        cabecalho: 'C',
         mensagem: 'x',
         opcoes: ['Sim', 'Sim', 'Um título grande demais aqui'],
       }).erros
     ).toEqual({ opcoes: 'opcaoLonga' });
     expect(
-      montarOpcoes({ mensagem: 'x', opcoes: ['Sim', 'Sim'] }).erros
+      montarOpcoes({ cabecalho: 'C', mensagem: 'x', opcoes: ['Sim', 'Sim'] })
+        .erros
     ).toEqual({ opcoes: 'opcoesRepetidas' });
     expect(
       montarOpcoes({
+        cabecalho: 'C',
         mensagem: 'x',
         opcoes: ['a', 'b', 'c', 'd'],
         nomeDaLista: 'Um nome de lista comprido',
