@@ -1,0 +1,89 @@
+# Uma chamada da IA do CRM para todos os cards que a mensagem tocou (#1693). A conversa vai uma vez só; cada card vai
+# com o pacote do funil dele (StageClassifier#pacote); a resposta é uma por card, no mesmo formato da avaliação de um
+# card (StageClassifier::CLASSIFICATION_SCHEMA) mais o card_id.
+#
+#   Crm::Ai::ClassificacaoConjunta.new(client:, classificadores:, model:).perform
+#   # => { card_id => classificação (como StageClassifier#perform) }, só dos cards que a IA respondeu
+#
+# classificadores: um StageClassifier por card, o principal primeiro (a conversa e os outros pedidos saem dele).
+#
+# Card tocado ligado a outras conversas (outro canal, #1664): as mensagens delas vão no pacote dele, em
+# `other_conversations_messages` (Crm::Ai::OutrasConversas, com os limites por card e por chamada).
+class Crm::Ai::ClassificacaoConjunta
+  ITEM = Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA[:schema].then do |schema|
+    schema.merge(properties: { card_id: { type: 'integer' } }.merge(schema[:properties]),
+                 required: ['card_id', *schema[:required]])
+  end.freeze
+  SCHEMA = {
+    name: 'stage_classification_cards',
+    schema: {
+      type: 'object',
+      properties: { cards: { type: 'array', items: ITEM } },
+      required: %w[cards],
+      additionalProperties: false
+    }
+  }.freeze
+  # Memória das IAs (#1601): o mesmo, com `memoria_ops` em cada card (Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA_MEMORIA).
+  ITEM_MEMORIA = Crm::Ai::StageClassifier::CLASSIFICATION_SCHEMA_MEMORIA[:schema].then do |schema|
+    schema.merge(properties: { card_id: { type: 'integer' } }.merge(schema[:properties]), required: ['card_id', *schema[:required]])
+  end.freeze
+  SCHEMA_MEMORIA = SCHEMA.merge(schema: SCHEMA[:schema].merge(properties: { cards: { type: 'array', items: ITEM_MEMORIA } })).freeze
+
+  # principal_id: o card principal da mensagem; o pacote dele vai com "principal": true (onde fica o pedido de
+  # atendente que o cliente não ligou a nenhum assunto).
+  def initialize(client:, classificadores:, model:, principal_id: nil, reasoning_effort: Crm::Ai::Config::CLASSIFY_REASONING_EFFORT)
+    @client = client
+    @principal_id = principal_id
+    @classificadores = classificadores
+    @model = model
+    @reasoning_effort = reasoning_effort
+  end
+
+  def perform
+    response = @client.create(model: @model, instructions: instructions, input: entrada.to_json, schema: memoria? ? SCHEMA_MEMORIA : SCHEMA,
+                              reasoning_effort: @reasoning_effort)
+    por_card(JSON.parse(response[:text]), response)
+  end
+
+  private
+
+  def instructions
+    Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
+                                          memoria: memoria?)
+  end
+
+  # A conversa e os ids locais (m1..mN) saem do primeiro classificador: são os dele que vão ao modelo. O agendamento é
+  # o de cada card.
+  def memoria?
+    @classificadores.first.memoria?
+  end
+
+  def memoria_de(card_id)
+    return {} unless memoria?
+
+    proprio = @classificadores.find { |classificador| classificador.pacote.dig(:card, :id) == card_id }
+    { memoria_refs: @classificadores.first.memoria_interna[:memoria_refs], memoria_token: proprio&.memoria_interna&.dig(:memoria_token) }
+  end
+
+  def entrada
+    outras = Crm::Ai::OutrasConversas.por_card(@classificadores)
+    pacotes = @classificadores.map do |classificador|
+      id = classificador.pacote.dig(:card, :id)
+      pacote = classificador.pacote.merge(principal: id == @principal_id)
+      outras[id] ? pacote.merge(other_conversations_messages: outras[id]) : pacote
+    end
+    @classificadores.first.conversa.merge(cards: pacotes)
+  end
+
+  # Resposta sem um card, ou com card que não foi perguntado: aquele card fica sem avaliação nesta rodada.
+  def por_card(resposta, response)
+    ids = @classificadores.map { |classificador| classificador.pacote.dig(:card, :id) }
+    Array(resposta['cards']).each_with_object({}) do |item, classificacoes|
+      next unless item.is_a?(Hash) && ids.include?(item['card_id']) && !classificacoes.key?(item['card_id'])
+
+      classificacoes[item['card_id']] = item.with_indifferent_access.merge(
+        model_used: @model, usage: response[:usage], response_id: response[:response_id]
+      ).merge(memoria_de(item['card_id']))
+    end
+  end
+end

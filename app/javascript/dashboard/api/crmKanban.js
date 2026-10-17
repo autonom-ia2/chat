@@ -487,6 +487,11 @@ class CrmKanbanAPI extends ApiClient {
   getReportMeetings(params) {
     return axios.get(`${this.url}/reports/meetings`, { params });
   }
+
+  // #1601 — os fatos da memória das IAs do card (a origem de cada campo).
+  getMemoriaFatos(cardId) {
+    return axios.get(`${this.url}/memoria/cards/${cardId}/fatos`);
+  }
 }
 
 export default new CrmKanbanAPI();

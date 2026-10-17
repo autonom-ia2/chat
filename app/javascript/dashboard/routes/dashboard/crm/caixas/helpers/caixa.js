@@ -1,6 +1,8 @@
 // #1149 — regras da tela Caixas no CRM, sem Vue: o que cada pessoa vê, o que o
 // sistema faz sozinho e o que muda ao salvar. A tela só mostra.
 
+import { chaveDoModo, iaSalva } from './modoDoAssunto';
+
 export const CORES_DE_FUNIL = [
   'bg-n-blue-9',
   'bg-n-teal-9',
@@ -16,6 +18,10 @@ export const corDoFunil = (funis, funilId) => {
 
 export const funisDaCaixa = (caixa, funis) =>
   funis.filter(funil => caixa.pipeline_ids.includes(funil.id));
+
+// A mesma conta da tela (CaixaPage): só os funis que existem na lista.
+export const umFunilSo = (caixa, funis) =>
+  funisDaCaixa(caixa, funis).length === 1;
 
 export const modoDaCaixa = caixa => {
   if (caixa.pipeline_ids.length === 1) {
@@ -121,7 +127,12 @@ export const assuntosDe = (pessoa, funis, semAssunto) => [
 const diferenca = (primeira, segunda) =>
   primeira.filter(item => !segunda.includes(item));
 
-export const mudancas = (antes, depois, funis, { semAssunto, locale }) => {
+export const mudancas = (
+  antes,
+  depois,
+  funis,
+  { semAssunto, locale, iaDeAssunto = false }
+) => {
   const nomeDoFunil = id => funis.find(funil => funil.id === id)?.name || '';
   const marcados = funisDaCaixa(depois, funis);
   const lista = [];
@@ -167,7 +178,21 @@ export const mudancas = (antes, depois, funis, { semAssunto, locale }) => {
     }
   });
 
-  if (antes.modo !== depois.modo) {
+  // #1676: compara o que o sistema faz (a chave do texto), não o valor gravado.
+  // Com a IA de assunto em 1 funil, 'off' de 1 funil cria um card por pedido
+  // (AUTO_UM), diferente de 'off' de vários (à mão). Antes de salvar vale a IA
+  // de assunto gravada na caixa; depois, a flag da conta.
+  const modoAntes = chaveDoModo(
+    antes.modo,
+    umFunilSo(antes, funis),
+    iaSalva(antes)
+  );
+  const modoDepois = chaveDoModo(
+    depois.modo,
+    umFunilSo(depois, funis),
+    iaDeAssunto
+  );
+  if (modoAntes !== modoDepois) {
     lista.push({ chave: 'MODO', valores: { modo: depois.modo } });
   }
   return lista;

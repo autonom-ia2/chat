@@ -58,6 +58,7 @@ const camposVazios = () => ({
   endereco: '',
   opcoes: ['', '', ''],
   nomeDaLista: '',
+  cabecalho: '',
   coordenadas: '',
   nome: '',
   telefone: '',
@@ -284,6 +285,13 @@ defineExpose({ abrir });
         </template>
 
         <template v-else-if="tipo === 'opcoes'">
+          <Input
+            v-model="campos.cabecalho"
+            :label="rotulo('CABECALHO')"
+            :message="erroDe('cabecalho') || rotulo('CABECALHO_AJUDA')"
+            :message-type="erroDe('cabecalho') ? 'error' : 'info'"
+            wrap-message
+          />
           <TextArea
             v-model="campos.mensagem"
             :label="rotulo('MENSAGEM')"

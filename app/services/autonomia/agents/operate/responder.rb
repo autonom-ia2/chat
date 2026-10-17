@@ -63,9 +63,11 @@ module Autonomia
           # da chamada cara de IA. Config vazia -> nil -> segue exatamente como antes.
           blocked = ::Autonomia::Agents::Operate::EngagementGate.new(agent: @agent, conversation: @conversation).blocked_reason
           return skip_for_humans(blocked) if blocked
+          # #1669: uma pessoa da equipe já respondeu esta mensagem do cliente -> nem chama a IA (não gasta).
+          return silencio_por_pessoa('antes_da_ia').tap { evento_da_pessoa } if pessoa_respondeu?
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
-          result = answer
+          result = sem_marca_da_equipe(answer)
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
           # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
@@ -75,8 +77,7 @@ module Autonomia
           return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)
-          dispatch_async(replied: outcome.status == :replied)
-          handoff_if_signaled(result)
+          depois_da_entrega(result, outcome)
           outcome
         rescue ::Autonomia::Insurance::QuoteAgent::Builder::EscolhasIncompletas => e
           # ESCOLHAS INCOMPLETAS (#380): o Agente de Cotação não montou o prompt — a chave
@@ -207,15 +208,7 @@ module Autonomia
         # ROLLBACK e descartaria a mensagem recém-postada. Computa-se o Result numa variável.
         def classic_deliver(result)
           outcome = @conversation.with_lock do
-            if !still_eligible?
-              silencio_por_inelegibilidade
-            elsif turno_superado?
-              silencio_por_turno_superado
-            elsif already_replied?
-              Result.replied(nil)
-            else
-              Result.replied(post_reply!(result.reply))
-            end
+            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply))
           end
 
           # Fase F (ADITIVO/best-effort): só registra quando uma resposta NOVA foi postada
@@ -223,10 +216,22 @@ module Autonomia
           # o caso still_eligible?==false, que virou handoff). EventLogger nunca levanta.
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(
-              agent: @agent, conversation: @conversation, result: result, message: outcome.message
+              agent: @agent, conversation: @conversation, result: result, message: outcome.message,
+              metadata: metadata_da_memoria
             )
           end
           outcome
+        end
+
+        # As guardas da hora de postar, na ordem de sempre, chamadas DENTRO do lock (estado fresco). -> o Result de quem
+        # não posta (silêncio, ou `replied(nil)` quando um settle anterior já respondeu) ou nil para postar. É um método,
+        # não um bloco: o `return` aqui não sai do with_lock.
+        def parada_na_hora_de_postar
+          return silencio_por_inelegibilidade unless still_eligible?
+          return silencio_por_turno_superado if turno_superado?
+          return Result.replied(nil) if already_replied? # um settle anterior já entregou (retry): não é silêncio
+
+          silencio_por_pessoa('na_entrega') if pessoa_respondeu?
         end
 
         # ESPELHAMENTO DE ÁUDIO: só quando o cliente mandou áudio NESTE turno (media.transcripts) e o
@@ -240,21 +245,12 @@ module Autonomia
         def deliver_voice(result)
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
-            if !still_eligible?
-              silencio_por_inelegibilidade
-            elsif turno_superado?
-              silencio_por_turno_superado
-            elsif already_replied?
-              Result.replied(nil)
-            elsif audio.present?
-              Result.replied(post_audio_reply!(audio))
-            else
-              Result.replied(post_reply!(result.reply)) # fallback texto
-            end
+            # Sem áudio (falha na síntese) -> fallback texto.
+            parada_na_hora_de_postar || Result.replied(audio.present? ? post_audio_reply!(audio) : post_reply!(result.reply))
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
-                                                              message: outcome.message)
+                                                              message: outcome.message, metadata: metadata_da_memoria)
           end
           outcome
         end
@@ -303,8 +299,8 @@ module Autonomia
         # Guardas baratas aqui (idempotência/elegibilidade); as AUTORITATIVAS (lock + token + por-chunk)
         # vivem no ChunkedDeliveryJob. NÃO posta nada de forma síncrona.
         def deliver_humanized(result)
-          return Result.replied(nil) if already_replied?      # um settle anterior já entregou
-          return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
+          parada = parada_antes_dos_pedacos
+          return parada if parada
 
           chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
@@ -319,13 +315,21 @@ module Autonomia
           meta = {
             'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
             'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
-            'posse' => @posse
+            'posse' => @posse, **metadata_da_memoria
           }
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta)
           Result.replied(nil)
+        end
+
+        # As guardas baratas da entrega em pedaços, na ordem de sempre. -> o Result de quem não agenda, ou nil.
+        def parada_antes_dos_pedacos
+          return Result.replied(nil) if already_replied? # um settle anterior já entregou
+          return silencio_por_inelegibilidade unless still_eligible? # humano assumiu durante a IA -> não posta
+
+          silencio_por_pessoa('na_entrega') if pessoa_respondeu? # a pessoa respondeu durante a IA; o job reconfere a cada pedaço
         end
 
         # Motor de resposta em modo INSTRUÇÃO-DIRIGIDO: devolve a resposta do modelo como veio (sem
@@ -341,8 +345,22 @@ module Autonomia
             documents: media.documents,
             trust_instruction: true,
             delivery: delivery,
-            **rodadas_do_turno
+            **rodadas_do_turno,
+            **{ contexto_do_turno: contexto_do_turno, memoria: (memoria unless memoria.vazio?) }.compact
           ).answer
+        end
+
+        # A memória do turno (#1601/#1755): vazia sem a Fase 2 ou sem a flag `memoria_ia` (o pedido fica igual).
+        def memoria
+          @memoria ||= ::Autonomia::Agents::Operate::MemoriaDoTurno.blocos(conversation: @conversation, agent: @agent,
+                                                                           finalidade: :responder)
+        end
+
+        # Os ids dos fatos que foram ao modelo neste turno, para o evento `replied` (só os enviados; o que o modelo diz ter
+        # usado não é prova). {} sem memória.
+        def metadata_da_memoria
+          ids = @memoria&.ids.to_a
+          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
 
         # As rodadas do turno: as do principal com ajudante (tema 14, #1434) ou, sem ajudante, as de sempre — seis para a
@@ -363,6 +381,7 @@ module Autonomia
         #                    saiu do ar) durante a chamada de IA, e o texto foi descartado.
         #   Na hora de postar (#1606): `dono_mudou` (outro agente da caixa virou o dono) e `turno_superado` (o cliente
         #   escreveu de novo durante a IA; responde o settle da mensagem nova).
+        #   `pessoa_respondeu` (#1669): uma pessoa da equipe respondeu esta mensagem do cliente, antes ou durante a IA.
         def motivo_do_silencio(result)
           return 'sinal' if silence_signal?(result)
           return 'ia_falhou' if result.nil?
@@ -409,6 +428,53 @@ module Autonomia
         def silencio_por_turno_superado
           registrar_silencio('turno_superado')
           Result.silenced
+        end
+
+        # #1669: uma pessoa da equipe respondeu publicamente depois da mensagem do cliente deste turno. Só com a Fase 2
+        # (PessoaDaEquipe). A posse do turno fica: este turno foi respondido, pela pessoa. A IA segue na conversa.
+        def pessoa_respondeu?
+          ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(@conversation, @reply_to_message_id)
+        end
+
+        # `etapa`: onde calou (`antes_da_ia` | `na_entrega`). O evento é gravado FORA do lock (evento_da_pessoa), para que
+        # uma falha ao gravá-lo nunca contamine a transação da hora de postar.
+        def silencio_por_pessoa(etapa)
+          @calou_pela_pessoa = etapa
+          registrar_silencio('pessoa_respondeu')
+          Result.silenced
+        end
+
+        def evento_da_pessoa
+          return unless @calou_pela_pessoa
+
+          ::Autonomia::Agents::Operate::EventLogger.silenciado_pessoa_respondeu(
+            agent: @agent, conversation: @conversation, message_id: @reply_to_message_id, etapa: @calou_pela_pessoa
+          )
+        end
+
+        # Depois da entrega: despacha a consulta assíncrona aceita no turno e honra o handoff pedido pela instrução.
+        # #1669: se a resposta foi descartada porque uma pessoa da equipe respondeu (`pessoa_respondeu`), a pessoa já
+        # está atendendo. A consulta que já começou segue (como no `turno_superado`), mas SEM o aviso de começo ao
+        # cliente (`replied: true` = não avisa): o aviso seria a IA falando por cima da pessoa. E o handoff pedido pela IA
+        # não roda: passar a conversa para "humanos" com a pessoa já nela abriria a fila de espera à toa.
+        def depois_da_entrega(result, outcome)
+          dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
+          handoff_if_signaled(result) unless @calou_pela_pessoa
+          evento_da_pessoa
+        end
+
+        # #1669: se o modelo imitou a moldura da mensagem da equipe, ela sai da resposta antes de qualquer entrega. Só
+        # com a Fase 2 (fora dela a moldura nem entra no histórico). Resposta que fica vazia cai no silêncio `vazio`.
+        def sem_marca_da_equipe(result)
+          return result if result.nil? || !equipe.aplica?
+
+          limpa = equipe.resposta(result.reply)
+          return result if limpa == result.reply
+
+          ::Autonomia::Agents::AnswerResult.new(reply: limpa, confidence: result.confidence, handoff: result.handoff,
+                                                used_knowledge: result.used_knowledge,
+                                                answered_from_knowledge: result.answered_from_knowledge,
+                                                raw_reply: result.raw_reply, error: result.error)
         end
 
         # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou
@@ -518,7 +584,9 @@ module Autonomia
           message = last_incoming_message
           base = message&.content.to_s
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
-          [quoted_context(message), base.presence, *transcribed].compact.join("\n")
+          texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
+          # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
+          equipe.aplica? ? equipe.pergunta(texto) : texto
         end
 
         def last_incoming_message
@@ -556,11 +624,29 @@ module Autonomia
 
         # history = a janela de `recent_messages`, em ordem cronológica, mapeada para o formato do
         # Answerer: incoming -> user, outgoing -> assistant. Activity/private já são excluídas pelo
-        # scope `chat`.
+        # scope `chat`. Com a Fase 2 (#1669), o que uma pessoa da equipe escreveu vai marcado como dela
+        # (HistoricoDaEquipe); robô e sistema seguem como sempre.
         def history
+          return equipe.historico(recent_messages) if equipe.aplica?
+
           recent_messages.map do |message|
             { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
           end
+        end
+
+        # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. #1691: a conversa espera uma pessoa
+        # e a equipe está fora do horário da caixa (EsperaForaDoHorario). Vão como contexto do turno (`developer`), nunca
+        # na instrução do agente (que é do dono), e só com a Fase 2. nil sem nenhum dos dois: o Answerer nem recebe o
+        # argumento, e o pedido fica igual ao de antes.
+        def contexto_do_turno
+          return unless equipe.aplica?
+
+          espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
+          [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
+        end
+
+        def equipe
+          @equipe ||= ::Autonomia::Agents::Operate::HistoricoDaEquipe.new(conversation: @conversation)
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`

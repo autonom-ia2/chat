@@ -25,7 +25,9 @@
 # e sem isso o marco sairia antes do Sync e a cadência não pararia.
 #
 # Com a flag `crm_avaliar_toda_mensagem` (#1675), o último passo faz a IA do CRM reler o card em foco, já o do assunto
-# decidido (Crm::Conversations::CardEmFoco). Não repete o que a troca de foco ou o card novo já agendaram.
+# decidido (Crm::Conversations::CardEmFoco). Não repete o que a troca de foco ou o card novo já agendaram. Quando a
+# decisão traz a lista de cards que a mensagem tocou (#1693), a IA avalia esses cards numa chamada só
+# (Crm::Conversations::CardsTocados), e lista vazia ("obrigado!") não avalia nada.
 class Crm::Subjects::IdentifyJob < ApplicationJob
   EVENTO = 'crm.subject.decided'.freeze
 
@@ -82,7 +84,7 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
   def avaliar_card_em_foco(conversation, message)
     return unless Crm::Conversations::CardEmFoco.ligada?(conversation.account)
 
-    Crm::Conversations::CardEmFoco.new(conversation: conversation.reload, message: message).perform
+    Crm::Conversations::CardsTocados.new(conversation: conversation.reload, message: message).perform
   end
 
   def sincronizar_dono(conversation)

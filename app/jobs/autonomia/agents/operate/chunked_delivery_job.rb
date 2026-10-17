@@ -38,13 +38,14 @@ module Autonomia
 
           # Cliente mandou nova mensagem durante a entrega, ou um humano assumiu, ou acabaram os chunks:
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
-          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+          motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
           typing.off # parando, ou a pausa ANTES deste pedaço já passou e estamos prestes a postar
           posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s) if motivo.nil?
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
           return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta) if motivo == :dono_mudou
+          return avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index) if motivo == :pessoa_respondeu
           return unless posted
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
@@ -68,11 +69,26 @@ module Autonomia
                                                                posse_de_quem_perdeu: meta['posse'])
         end
 
-        # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou).
-        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
+        # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou, :ja_postado, :pessoa_respondeu).
+        # `ja_postado` vem antes de `pessoa_respondeu`: o retry de um pedaço que já entrou não é silêncio da pessoa.
+        # `pessoa_respondeu` (#1669, só com a Fase 2): uma pessoa da equipe respondeu a mensagem do cliente antes deste
+        # pedaço; o resto da cadeia não sai. A IA segue na conversa e responde a próxima mensagem do cliente.
+        def motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
           return :turno_mudou unless current_turn?(conversation, reply_to_message_id)
+          return :dono_mudou unless bot_in_command?(conversation, agent_inbox)
+          return :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
 
-          :dono_mudou unless bot_in_command?(conversation, agent_inbox)
+          :pessoa_respondeu if ::Autonomia::Agents::Operate::PessoaDaEquipe.respondeu_depois?(conversation, reply_to_message_id)
+        end
+
+        # Mesmo rastro do silêncio do Responder (ids e rótulo, nada do texto), com o pedaço em que a cadeia parou: o log e
+        # o evento (fora do lock; o post_chunk! já devolveu).
+        def avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
+          Rails.logger.info("[autonomia][operate] silencio agent=#{agent_inbox.agent.id} conv=#{conversation.id} " \
+                            "motivo=pessoa_respondeu pedaco=#{index}")
+          ::Autonomia::Agents::Operate::EventLogger.silenciado_pessoa_respondeu(
+            agent: agent_inbox.agent, conversation: conversation, message_id: reply_to_message_id, etapa: "pedaco_#{index}"
+          )
         end
 
         def dono_novo?(conversation, agent_inbox)
@@ -107,8 +123,7 @@ module Autonomia
             # Revalidação AUTORITATIVA com estado fresco DENTRO do lock (fecha a corrida entre o check
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
-            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id)
-            motivo ||= :ja_postado if chunk_posted?(conversation, reply_to_message_id, index)
+            motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
             posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text) if motivo.nil?
           end
           [posted, motivo]
@@ -165,8 +180,15 @@ module Autonomia
             confidence: meta['confidence'], answered_from_knowledge: meta['answered_from_knowledge'] || false,
             message_id: message.respond_to?(:id) ? message.id : nil,
             used_entry_ids: Array(meta['used_entry_ids']).select { |id| id.is_a?(Integer) },
-            model: ::Autonomia::Agents::Config::ANSWERER_MODEL
+            model: ::Autonomia::Agents::Config::ANSWERER_MODEL,
+            metadata: memoria_do_meta(meta)
           )
+        end
+
+        # Os ids dos fatos de memória enviados ao modelo (#1755), quando houve memória no turno.
+        def memoria_do_meta(meta)
+          ids = Array(meta['memoria_fact_ids']).select { |id| id.is_a?(Integer) }
+          ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
       end
     end

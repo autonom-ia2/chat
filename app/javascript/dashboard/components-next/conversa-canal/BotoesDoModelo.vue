@@ -138,4 +138,6 @@ const SOMBRA = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
       </div>
     </li>
   </template>
+  <!-- Sem a pele, ou com a mensagem que não saiu: não mostra nada. -->
+  <template v-else />
 </template>

@@ -100,7 +100,9 @@ export const useCardRetorno = ({
   const modelosNativos = computed(() => {
     if (!caixaOficial.value || !caixaId.value) return [];
     return (
-      store.getters['inboxes/getFilteredWhatsAppTemplates'](caixaId.value) || []
+      store.getters['inboxes/getConversationWhatsAppTemplates'](
+        caixaId.value
+      ) || []
     );
   });
 
