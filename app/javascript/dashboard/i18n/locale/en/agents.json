@@ -1160,6 +1160,17 @@
           "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversation and handed {m} to the team. | This week, {nome} answered {n} conversations and handed {m} to the team.",
           "NOTA_PASSADAS": "When it did not know how to answer."
         },
+        "SILENCIOS": {
+          "TITULO": "When {nome} did not answer",
+          "TEXTO": "This week, {nome} did not answer in these cases because there was nothing to answer. It did this on purpose.",
+          "VAZIO": "{nome} did not skip an answer even once this week.",
+          "VEZES": "{n} time | {n} times",
+          "MOTIVOS": {
+            "mensagem_sem_suporte": "The customer sent something the system cannot open",
+            "mensagem_apagada": "The customer deleted the message",
+            "escolha_retirada": "The customer undid their choice"
+          }
+        },
         "CONVERSAS": {
           "TITULO": "Conversations this week",
           "MOSTRAR": "Show",
