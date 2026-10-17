@@ -309,8 +309,7 @@
       "ENVIADO": "Mensagem encaminhada | Mensagens encaminhadas",
       "DESTINO_FALHOU": "{nome}: {erro}",
       "NAO_FOI": "Não foi para estas conversas. Elas continuam marcadas para tentar de novo:",
-      "FALHOU": "Não deu para encaminhar. Tente de novo.",
-      "MODELO": "Mensagem de modelo ou de campanha não pode ser encaminhada: o texto foi preenchido para este cliente e os botões não vão juntos."
+      "FALHOU": "Não deu para encaminhar. Tente de novo."
     }
   }
 }

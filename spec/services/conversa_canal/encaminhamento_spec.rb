@@ -133,22 +133,6 @@ describe ConversaCanal::Encaminhamento do
       expect { encaminhar([texto.id]) }.to raise_error(described_class::Recusa)
     end
 
-    it 'mensagem de modelo, com o motivo' do
-      modelo = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: 'Olá, Ana! Seu boleto',
-                                additional_attributes: { 'template_params' => { 'name' => 'boleto', 'language' => 'pt_BR' } })
-
-      expect { encaminhar([modelo.id]) }
-        .to raise_error(described_class::Recusa, I18n.t('conversa_canal.encaminhar.modelo'))
-      expect(copias_em(destino)).to be_empty
-    end
-
-    it 'mensagem de campanha' do
-      campanha = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: 'Promoção',
-                                  additional_attributes: { 'campaign_id' => 3 })
-
-      expect { encaminhar([campanha.id]) }.to raise_error(described_class::Recusa)
-    end
-
     it 'mídia de visualização única' do
       foto = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :incoming, content: nil)
       anexo(foto, :image, meta: { 'is_view_once' => true })
@@ -208,5 +192,29 @@ describe ConversaCanal::Encaminhamento do
     expect(resultado.first).to include(conversation_id: falha.display_id, ok: false)
     expect(resultado.first[:erro]).to eq(I18n.t('conversa_canal.encaminhar.falhou'))
     expect(resultado.last).to include(ok: true)
+  end
+
+  # Rodrigo, 17/10: encaminhar é da pessoa ("mandar ao meu chefe a cobrança que fiz para a Maria"). O modelo e a
+  # campanha vão como texto: a cópia não leva as marcas, então no destino não vira modelo (nem cobrança da Meta).
+  describe 'modelo e campanha' do
+    it 'encaminha o texto do modelo, sem virar modelo no destino' do
+      modelo = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: 'Olá, Ana! Seu boleto',
+                                additional_attributes: { 'template_params' => { 'name' => 'boleto', 'language' => 'pt_BR' } })
+
+      encaminhar([modelo.id])
+
+      copia = copias_em(destino).sole
+      expect(copia.content).to eq('Olá, Ana! Seu boleto')
+      expect(copia.additional_attributes.to_h.keys & ConversaCanal::Pele::MARCAS_DE_MODELO).to be_empty
+    end
+
+    it 'encaminha a mensagem de campanha' do
+      campanha = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: 'Promoção',
+                                  additional_attributes: { 'campaign_id' => 3 })
+
+      encaminhar([campanha.id])
+
+      expect(copias_em(destino).sole.additional_attributes.to_h).not_to have_key('campaign_id')
+    end
   end
 end

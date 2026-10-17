@@ -85,19 +85,17 @@ describe('o que se encaminha (a mesma regra do servidor)', () => {
       'visualização única',
       { attachments: [{ fileType: 'image', isViewOnce: true }] },
     ],
-    [
-      'de modelo',
-      {
-        messageType: 1,
-        additionalAttributes: { templateParams: { name: 'x' } },
-      },
-    ],
-    [
-      'de campanha',
-      { messageType: 1, additionalAttributes: { campaignId: 3 } },
-    ],
   ])('%s não', (_nome, extras) => {
     expect(encaminhavel(mensagem(extras))).toBe(false);
+  });
+
+  it.each([
+    ['de modelo', { templateParams: { name: 'x' } }],
+    ['de campanha', { campaignId: 3 }],
+  ])('%s sim (vai como texto)', (_nome, additionalAttributes) => {
+    expect(
+      encaminhavel(mensagem({ messageType: 1, additionalAttributes }))
+    ).toBe(true);
   });
 
   it('botão ao lado só em mídia (foto, vídeo, documento, localização, contato)', () => {
@@ -568,7 +566,7 @@ describe('álbum no encaminhar: só os itens encaminháveis vão', () => {
     expect(selecao.ids).toEqual([1, 3]);
   });
 
-  it('item de modelo fica fora da seleção', () => {
+  it('item de modelo também entra na seleção', () => {
     const primeira = foto({ id: 1, messageType: 1 });
     const modelo = foto({
       id: 2,
@@ -580,7 +578,7 @@ describe('álbum no encaminhar: só os itens encaminháveis vão', () => {
     comecarSelecao(9, [7]);
     expect(encaminhar.marcada.value).toBe(false);
     encaminhar.alternar();
-    expect(selecao.ids).toEqual([7, 1]);
+    expect(selecao.ids).toEqual([7, 1, 2]);
     expect(encaminhar.marcada.value).toBe(true);
   });
 });

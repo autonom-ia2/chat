@@ -40,6 +40,5 @@ en:
       mensagem_nao_encontrada: 'One of the selected messages is no longer in this conversation.'
       nao_encaminhavel: 'One of the selected messages cannot be forwarded (private note, deleted, unsupported or view once).'
       fora_da_janela: 'Outside the 24-hour window: use a template.'
-      modelo: 'Template or campaign messages cannot be forwarded: the text was filled in for this customer and the buttons do not go along.'
       falhou: 'Could not forward to this conversation. Try again.'
       so_pessoa: 'Forwarding is only done by a person, from the dashboard. WhatsApp treats automated forwarding as spam.'

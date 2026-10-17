@@ -8,7 +8,6 @@ import {
   LIMITE_DE_MENSAGENS,
   alternarMensagem,
   comecarSelecao,
-  deModeloOuCampanha,
   encaminhamentoDireto,
   encaminhavel,
   estaMarcada,
@@ -30,14 +29,7 @@ export const useEncaminharDaMensagem = (mensagem, itens) => {
   const podeEncaminhar = computed(
     () => pele.value === PELES.WHATSAPP && encaminhavel(mensagem.value)
   );
-  // Mensagem de modelo: o menu mostra "Encaminhar" e explica por que não dá.
-  const modeloNoMenu = computed(
-    () =>
-      pele.value === PELES.WHATSAPP &&
-      !mensagem.value.private &&
-      deModeloOuCampanha(mensagem.value)
-  );
-  const noMenu = computed(() => podeEncaminhar.value || modeloNoMenu.value);
+  const noMenu = computed(() => podeEncaminhar.value);
   const botaoAoLado = computed(
     () =>
       podeEncaminhar.value && !selecao.ativa && temBotaoAoLado(mensagem.value)
@@ -51,10 +43,6 @@ export const useEncaminharDaMensagem = (mensagem, itens) => {
   const marcada = computed(() => emSelecao.value && estaMarcada(ids.value));
 
   const iniciarSelecao = () => {
-    if (modeloNoMenu.value) {
-      useAlert(t('CONVERSA_CANAL.ENCAMINHAR.MODELO'));
-      return;
-    }
     comecarSelecao(mensagem.value.conversationId, ids.value);
   };
 

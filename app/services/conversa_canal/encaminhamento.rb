@@ -41,7 +41,6 @@ class ConversaCanal::Encaminhamento
   def validar!
     validar_quantidades!
     recusar!(:mensagem_nao_encontrada) if mensagens.size != @message_ids.size
-    recusar!(:modelo) if mensagens.any? { |mensagem| ConversaCanal::Pele.modelo_ou_campanha?(mensagem) }
     recusar!(:nao_encaminhavel) unless mensagens.all? { |mensagem| encaminhavel?(mensagem) }
   end
 
