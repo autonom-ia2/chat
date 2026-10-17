@@ -408,6 +408,7 @@ Rails.application.routes.draw do
             # Memória das IAs (#1601): a configuração da conta (robôs de fora, caixas fora da memória).
             get 'memoria/config', to: 'memoria_config#show'
             put 'memoria/config', to: 'memoria_config#update'
+            get 'memoria/conversations/:conversation_id/passagem', to: 'memoria_passagens#show'
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'

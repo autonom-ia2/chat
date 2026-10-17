@@ -24,7 +24,7 @@
 # da trava: em `call`, logo em seguida; na passagem do robô, o resultado sai `:para_ia` e o
 # ConversationBotHandoff chama `concluir_para_ia!` depois do commit. Recusada (o agente parou entre a leitura e a
 # passagem, por exemplo), a entrega roda de novo sem IA: alguém da equipe.
-class Crm::Entrega
+class Crm::Entrega # rubocop:disable Metrics/ClassLength
   Resultado = Struct.new(:status, :pessoa, :motivo, :card, :agente, keyword_init: true)
   Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, :agente, keyword_init: true)
   # Motivos em que quem pediu a passagem foi o robô que atendia.
@@ -231,6 +231,8 @@ class Crm::Entrega
                                 card: (plano.card if @pelo_card))
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
+    # Memória das IAs (#1601): a conversa segurada deve uma resposta ao cliente (a tarefa de retomar, depois do commit).
+    Crm::Memoria::Compromissos.depois_de_segurar(@conversation)
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)
   end
 

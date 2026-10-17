@@ -1,4 +1,5 @@
-# Memória das IAs (#1601): só confere a flag e enfileira; o trabalho é dos jobs de Crm::Memoria.
+# Memória das IAs (#1601): só confere a flag e enfileira; o trabalho é dos jobs de Crm::Memoria. A troca de
+# responsável e a conversa resolvida mexem na tarefa de retomar (Crm::Memoria::ConversaJob).
 #
 # Na mensagem mudada, só reage ao que muda a autoria ou a entrega: texto, nota privada, remetente, marcas do canal
 # (`content_attributes`, inclusive a mensagem apagada), `source_id` e o envio que falhou. O recibo de entregue e lido
@@ -28,7 +29,22 @@ class Crm::MemoriaListener < BaseListener
     Crm::Memoria::OrigemJob.perform_later(message.id)
   end
 
+  def assignee_changed(event)
+    enfileirar_da_conversa(event, 'dono')
+  end
+
+  def conversation_resolved(event)
+    enfileirar_da_conversa(event, 'resolvida')
+  end
+
   private
+
+  def enfileirar_da_conversa(event, evento)
+    conversation = event.data[:conversation]
+    return unless Crm::Memoria.ativa?(conversation)
+
+    Crm::Memoria::ConversaJob.perform_later(conversation.id, evento)
+  end
 
   def atividade_escondida?(message)
     message.present? && message.activity? && message.content_attributes.to_h['c2y_hidden'].present?

@@ -35,6 +35,9 @@ class Crm::Passagem < ApplicationRecord
   validates :pedida_por_type, :devolvida_por_type, inclusion: { in: CLASSES }, allow_nil: true
 
   scope :abertas, -> { where(devolvida_em: nil) }
+
+  # Memória das IAs (#1601): bilhete e tarefa de retomar, fora da transação de quem passou.
+  after_create_commit :memoria_da_passagem
   # A trava da conversa serializa as gravações: o id é a ordem real (o relógio de dois servidores pode divergir).
   scope :em_ordem, -> { order(id: :desc) }
 
@@ -59,6 +62,10 @@ class Crm::Passagem < ApplicationRecord
   end
 
   private
+
+  def memoria_da_passagem
+    Crm::Memoria::PassagemJob.perform_later(id) if Crm::Memoria.ativa?(conversation)
+  end
 
   def ponta(lado)
     classe = self["#{lado}_type"]

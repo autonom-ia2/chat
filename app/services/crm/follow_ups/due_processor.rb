@@ -6,8 +6,9 @@ class Crm::FollowUps::DueProcessor
     @now = now
   end
 
+  # A tarefa de retomar o atendimento da memória das IAs (#1601, D3) não tem prazo: não vence nem avisa por aqui.
   def perform
-    Crm::FollowUp.due(@now).find_each { |follow_up| process(follow_up) }
+    Crm::FollowUp.due(@now).where("crm_follow_ups.metadata -> 'memoria' IS NULL").find_each { |follow_up| process(follow_up) }
   end
 
   private

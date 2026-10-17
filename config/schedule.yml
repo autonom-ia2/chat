@@ -112,6 +112,19 @@ crm_service_reminders_job:
   class: 'Crm::ServiceRemindersJob'
   queue: scheduled_jobs
 
+# Memória das IAs (#1601): a cada 5 minutos, refaz a tarefa de retomar e o bilhete que faltarem (contas com a flag
+# memoria_ia, conferida dentro do job).
+crm_memoria_conciliacao_job:
+  cron: '*/5 * * * *'
+  class: 'Crm::Memoria::ConciliacaoJob'
+  queue: scheduled_jobs
+
+# Memória das IAs (#1601): uma vez por dia, apaga o bilhete que ficou sem contato.
+crm_memoria_varredura_job:
+  cron: '40 4 * * *'
+  class: 'Crm::Memoria::VarreduraJob'
+  queue: scheduled_jobs
+
 # executed every 6 hours; feature flags checked inside the job
 crm_ai_stale_cards_job:
   cron: '0 */6 * * *'

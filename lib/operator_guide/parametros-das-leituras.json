@@ -1242,6 +1242,10 @@
     "controller": "api/v1/accounts/crm/memoria_config#show",
     "parametros": []
   },
+  "crm/memoria/conversations/:conversation_id/passagem": {
+    "controller": "api/v1/accounts/crm/memoria_passagens#show",
+    "parametros": []
+  },
   "crm/meta_ads_connection": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#show",
     "parametros": []

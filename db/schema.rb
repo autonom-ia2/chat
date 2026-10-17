@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_06_101731) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_06_102948) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2244,6 +2244,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_06_101731) do
     t.index ["account_id", "assignee_id", "due_at", "status"], name: "idx_crm_followups_assignee_due"
     t.index ["account_id", "card_id"], name: "idx_crm_followups_card"
     t.index ["account_id", "conversation_id"], name: "idx_crm_followups_conversation"
+    t.index ["account_id", "conversation_id"], name: "idx_crm_followups_memoria_retomar_aberta", unique: true, where: "(((metadata #>> '{memoria,tipo}'::text[]) = 'retomar_atendimento'::text) AND (status = ANY (ARRAY[0, 3])))"
     t.index ["account_id", "status", "due_at"], name: "idx_crm_followups_status_due"
     t.index ["account_id"], name: "index_crm_follow_ups_on_account_id"
     t.index ["assignee_id"], name: "index_crm_follow_ups_on_assignee_id"
@@ -2687,6 +2688,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_06_101731) do
     t.string "devolvida_por_nome"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "bilhete"
+    t.bigint "bilhete_ate_message_id"
+    t.string "bilhete_status"
+    t.datetime "bilhete_reservado_em"
+    t.datetime "bilhete_gerado_em"
+    t.string "bilhete_modelo"
+    t.integer "bilhete_tentativas", default: 0, null: false
     t.index ["account_id", "created_at"], name: "idx_crm_passagens_account_created"
     t.index ["card_id"], name: "index_crm_passagens_on_card_id"
     t.index ["conversation_id", "id"], name: "idx_crm_passagens_conversation"
