@@ -122,6 +122,26 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
       end
 
+      it 'mesmo com uma lista junto, nada entra' do
+        respostas.replace([saida('so_pergunta' => true, 'next_question' => resposta, 'greeting' => 'Outra',
+                                 'mudancas' => [{ 'pedido' => 'x', 'campo' => 'greeting', 'resumo' => 'y' }])])
+
+        run_turn
+
+        expect(agent.reload.greeting).to eq('Oi! Aqui é o Hubber.')
+        expect(thread.reload.state).to include('applied' => false, 'next_question' => resposta)
+      end
+
+      it 'com a Fase 2 desligada depois, a chave antiga não muda nada: vale a herança de antes' do
+        run_turn
+        Autonomia::Agents::Fase2.desligar!(account)
+
+        proxima = Autonomia::Agents::BuildThread.create!(account: account.reload, agent: agent)
+        proxima.inherit_pending_question!
+
+        expect(proxima.reload.state['pending_question']).to eq(resposta)
+      end
+
       it 'a resposta não vira pergunta pendente no turno seguinte nem na próxima sessão' do
         run_turn
 
@@ -377,6 +397,36 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true)
         expect(thread.state['next_question']).to eq("Não consegui aplicar: #{preco}. Qual equipe?")
         expect(thread.state['conferencia']).to include('correcao' => false)
+      end
+
+      # A segunda aplicação (a da correção) falha; a primeira já venceu.
+      def falhar_na_correcao(erro)
+        vezes = 0
+        allow(builder).to receive(:aplicar_lista).and_wrap_original do |original, *args|
+          vezes += 1
+          raise erro if vezes == 2
+
+          original.call(*args)
+        end
+      end
+
+      it 'erro de banco na correção não vira falha: o que entrou fica aplicado' do
+        respostas << saida('handoff_rule' => 'x', 'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'x' }])
+        falhar_na_correcao(ActiveRecord::StatementInvalid.new('falhou'))
+
+        run_turn
+
+        expect(thread.reload.state).to include('needs_more_info' => true, 'applied' => true)
+        expect(agent.reload.tone).to eq('cordial e curto')
+      end
+
+      it 'agente que virou manual durante a correção: fecha sem pergunta ao dono' do
+        respostas << saida('handoff_rule' => 'x', 'mudancas' => [{ 'pedido' => preco, 'campo' => 'handoff_rule', 'resumo' => 'x' }])
+        falhar_na_correcao(Autonomia::Agents::Agent::ModoManual)
+
+        run_turn
+
+        expect(thread.reload.state).to include('needs_more_info' => false, 'next_question' => '', 'applied' => true)
       end
 
       it 'se a chamada da correção falhar, o que entrou fica aplicado e o turno não vira falha' do

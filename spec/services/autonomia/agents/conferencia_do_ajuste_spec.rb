@@ -37,12 +37,14 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
     )
   end
 
-  it 'manda a fala, a lista e o agente antes e depois' do
+  it 'manda a fala numa mensagem só dela, e a lista e o agente antes e depois em outra' do
     conferir
 
     expect(fake_client).to have_received(:create) do |**params|
-      texto = params[:input].first[:content].first[:text]
-      expect(texto).to include('preço passa para a equipe', '"campo": "tone"', '"tone": "cordial"', '"tone": "cordial e curto"')
+      fala, agente = params[:input].map { |mensagem| mensagem[:content].first[:text] }
+      expect(fala).to include('preço passa para a equipe')
+      expect(fala).not_to include('"tone"')
+      expect(agente).to include('"campo": "tone"', '"tone": "cordial"', '"tone": "cordial e curto"')
     end
   end
 

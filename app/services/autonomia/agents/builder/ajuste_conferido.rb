@@ -14,7 +14,7 @@
 # dizer que nada foi aplicado.
 module Autonomia::Agents::Builder::AjusteConferido
   # Erros da correção que não podem virar "falhou" depois de a primeira escrita ter vencido.
-  FALHAS_DA_CORRECAO = [Crm::Ai::ResponsesClient::Error, ActiveRecord::RecordInvalid,
+  FALHAS_DA_CORRECAO = [Crm::Ai::ResponsesClient::Error, ActiveRecord::ActiveRecordError,
                         Autonomia::Agents::Agent::ModoManual].freeze
 
   private
@@ -34,6 +34,7 @@ module Autonomia::Agents::Builder::AjusteConferido
   def ajustar_pela_lista(token, parsed)
     @campos_truncados = []
     @explicacao_da_correcao = nil
+    @sem_pergunta = false
     mudancas = regras_do_ajuste.mudancas(parsed)
     motivo = motivo_para_nao_aplicar(parsed, mudancas)
     return responder_sem_aplicar(token, parsed, motivo) if motivo
@@ -103,8 +104,15 @@ module Autonomia::Agents::Builder::AjusteConferido
                                                         .conferir(pedido: regras_do_ajuste.pedido_com_contexto(fala, mensagem_anterior),
                                                                   mudancas: mudancas, antes: antes,
                                                                   depois: regras_do_ajuste.retrato(@thread.agent))
-    @thread.agent.anotar_versao_do_construtor!('pedido' => fala, 'mudancas' => mudancas, 'conferencia' => conferencia)
+    anotar_versao(fala, mudancas, conferencia)
     conferencia
+  end
+
+  # A anotação é rastro para a tela; falhar nela não desfaz o que já entrou no agente.
+  def anotar_versao(fala, mudancas, conferencia)
+    @thread.agent.anotar_versao_do_construtor!('pedido' => fala, 'mudancas' => mudancas, 'conferencia' => conferencia)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn("[autonomia][builder] anotacao da versao falhou thread=#{@thread.id} #{e.class}")
   end
 
   # UMA tentativa: chamada completa do Construtor, com a configuração já aplicada no contexto e o aviso do que faltou.
@@ -126,6 +134,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     mudancas
   rescue *FALHAS_DA_CORRECAO => e
     Rails.logger.warn("[autonomia][builder] correcao indisponivel thread=#{@thread.id} #{e.class}")
+    # Agente que virou manual no meio do turno: o Construtor não fala mais com ele, então não há pergunta a fazer.
+    @sem_pergunta = e.is_a?(Autonomia::Agents::Agent::ModoManual)
     nil
   end
 
@@ -148,7 +158,7 @@ module Autonomia::Agents::Builder::AjusteConferido
   end
 
   def pergunta_da_conferencia(conferencia)
-    return if conferencia['pendencias'].blank?
+    return if conferencia['pendencias'].blank? || @sem_pergunta
 
     regras_do_ajuste.pergunta_do_que_faltou(conferencia, explicacao: @explicacao_da_correcao)
   end

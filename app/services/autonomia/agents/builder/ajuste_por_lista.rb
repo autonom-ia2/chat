@@ -177,8 +177,10 @@ module Autonomia::Agents::Builder::AjustePorLista
 
   # A pergunta ao dono quando a conferência achou falta depois da correção. A explicação da correção (por que não deu
   # para aplicar) vem antes da pergunta da conferência.
+  # Ao dono só vão os pedidos dele que faltaram (as palavras dele) e a pergunta; os conflitos ficam no state.
   def pergunta_do_que_faltou(conferencia, explicacao: nil)
-    faltou = Array(conferencia['pendencias']).join('; ')
+    faltaram = Array(conferencia['itens']).reject { |item| item['atendido'] == true }.pluck('pedido').compact_blank
+    faltou = faltaram.any? ? faltaram.join('; ') : 'tudo o que você pediu'
     pergunta = explicacao.to_s.strip.presence || conferencia['pergunta'].to_s.strip.presence ||
                'Pode me explicar melhor o que você quer?'
     "Não consegui aplicar: #{faltou}. #{pergunta}"
