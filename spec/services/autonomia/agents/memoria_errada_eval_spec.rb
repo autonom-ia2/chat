@@ -9,7 +9,7 @@ require 'rails_helper'
 # `MEMORIA_ERRADA_EVAL_SAIDA=<arquivo>` grava o relatório; `MEMORIA_ERRADA_EVAL_CENA=<letra>` roda só um cenário.
 module AvaliacaoDaMemoriaErrada
   JUIZ = 'gpt-5.4'.freeze
-  TETO_USD = 1.5
+  TETO_USD = 0.7
   REPETICOES = 5
 
   CLARA = <<~TXT.freeze

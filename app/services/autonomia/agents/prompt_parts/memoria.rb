@@ -40,6 +40,8 @@ module Autonomia::Agents::PromptParts::Memoria
   DONO_PREVISTO = 'dono_previsto'.freeze
   QUEM_RETOMA = 'Quem retoma se você passar'.freeze
   MAXIMO_DO_NOME = 80
+  MAXIMO_DA_LINHA = 300
+  FALTA = 'falta'.freeze
 
   REGRA = 'COMO USAR O QUE O CLIENTE JÁ DISSE: use direto o que está registrado, sem pedir de novo. Só o dado com ' \
           'situação "antigo" ou "divergente" você confirma com o cliente antes de usar numa ferramenta ou de afirmar. O ' \
@@ -82,11 +84,13 @@ module Autonomia::Agents::PromptParts::Memoria
     linha.chave.to_s == DONO_PREVISTO ? QUEM_RETOMA : texto_do_sistema(linha.rotulo).truncate(MAXIMO_DO_NOME)
   end
 
-  # O nome do dono vem do cadastro (texto livre da pessoa): tamanho limitado. Os demais valores vêm do código e do catálogo
-  # (a lista do que falta pode ser longa) e não são cortados.
+  # Nomes de pessoas (dono previsto, quem está com a conversa) vêm do cadastro, texto livre: tamanho limitado. Só a lista
+  # do que falta, que vem do catálogo e pode ser longa, não é cortada.
   def valor_do_sistema(linha)
     texto = texto_do_sistema(linha.valor)
-    linha.chave.to_s == DONO_PREVISTO ? texto.truncate(MAXIMO_DO_NOME) : texto
+    return texto if linha.chave.to_s == FALTA
+
+    texto.truncate(linha.chave.to_s == DONO_PREVISTO ? MAXIMO_DO_NOME : MAXIMO_DA_LINHA)
   end
 
   # Uma linha só e sem colchetes (nada que imite cabeçalho).
