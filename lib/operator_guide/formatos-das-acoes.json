@@ -13695,7 +13695,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
-      "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:25",
+      "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
       "app/controllers/api/v1/accounts/conversations_controller.rb:197"
     ],
     "sem_corpo": false
