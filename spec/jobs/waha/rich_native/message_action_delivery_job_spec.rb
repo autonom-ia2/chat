@@ -158,4 +158,63 @@ describe Waha::RichNative::MessageActionDeliveryJob do
     expect(SafeFetch).not_to have_received(:fetch)
     expect(notes.sole.content).to start_with('A reação não chegou')
   end
+
+  # Revisão: Redis fora, ação superada entre a montagem e o envio, e nenhuma nota numa ação já superada.
+  describe 'resilience of the latest mark' do
+    def react!(emoji)
+      Waha::RichNative::Reactions.apply!(message, emoji: emoji, author: Waha::RichNative::Reactions.business_author(agent.id))
+    end
+
+    it 'still enqueues (and delivers the current state) when Redis is down on request!' do
+      connector!
+      react!('👍')
+      allow(Redis::Alfred).to receive(:setex).and_raise(Redis::CannotConnectError)
+      allow(Rails.logger).to receive(:error)
+
+      expect { perform_enqueued_jobs { described_class.request!(message, reaction) } }.not_to raise_error
+
+      expect(delivered.sole.dig('c2y_reaction', 'emoji')).to eq('👍')
+      expect(Rails.logger).to have_received(:error)
+        .with("[waha] message action latest mark not saved message=#{message.id} Redis::CannotConnectError")
+    end
+
+    it 'treats a Redis error in perform as not superseded, so the retry and the note still work' do
+      connector!(failures: described_class::ATTEMPTS)
+      react!('👍')
+      allow(Redis::Alfred).to receive(:get).and_call_original
+      allow(Redis::Alfred).to receive(:get).with(described_class.latest_key(message.id, reaction)).and_raise(Redis::CannotConnectError)
+
+      perform_enqueued_jobs { described_class.request!(message, reaction) }
+
+      expect(attempts.size).to eq(described_class::ATTEMPTS)
+      expect(notes.count).to eq(1)
+    end
+
+    it 'does not send when a newer action arrives between reading the state and the request' do
+      connector!
+      react!('👍')
+      job = described_class.new(message.id, reaction, 'OLD')
+      Redis::Alfred.setex(described_class.latest_key(message.id, reaction), 'OLD', 60)
+      allow(job).to receive(:payload_for).and_wrap_original do |original, *args|
+        Redis::Alfred.setex(described_class.latest_key(message.id, reaction), 'NEW', 60)
+        original.call(*args)
+      end
+
+      job.perform(message.id, reaction, 'OLD')
+
+      expect(attempts).to be_empty
+    end
+
+    it 'leaves no note when the attempts run out on an action already superseded' do
+      connector!(failures: described_class::ATTEMPTS)
+      react!('👍')
+      first = described_class.request!(message, reaction)
+      Redis::Alfred.setex(described_class.latest_key(message.id, reaction), 'NEWER', 60)
+      job = described_class.new(*first.arguments)
+
+      job.not_delivered!(described_class::ServerError.new('status=503'))
+
+      expect(notes).to be_empty
+    end
+  end
 end

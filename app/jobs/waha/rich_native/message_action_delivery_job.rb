@@ -29,9 +29,15 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
   end
 
   # A ação do painel pede a entrega: esta passa a ser a mais nova daquela mensagem e daquele tipo.
+  # Com o Redis fora, enfileira sem a marca: a mudança já está gravada no banco, e o job manda o estado atual (enviar de
+  # novo o mesmo estado não faz mal). O painel não recebe 500 por isso.
   def self.request!(message, event)
     delivery_id = SecureRandom.uuid
-    ::Redis::Alfred.setex(latest_key(message.id, event), delivery_id, LATEST_TTL)
+    begin
+      ::Redis::Alfred.setex(latest_key(message.id, event), delivery_id, LATEST_TTL)
+    rescue Redis::BaseError => e
+      Rails.logger.error("[waha] message action latest mark not saved message=#{message.id} #{e.class}")
+    end
     perform_later(message.id, event, delivery_id)
   end
 
@@ -46,7 +52,7 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
     url = message.inbox.channel.try(:webhook_url)
     return not_delivered!(:no_webhook_url) if url.blank?
 
-    deliver(message.inbox.channel, payload_for(message, event), delivery_id)
+    deliver(message, event, payload_for(message, event), delivery_id)
   end
 
   # O evento com o estado de agora.
@@ -59,7 +65,11 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
     JSON.parse(message.webhook_data.merge(event: event, **extra).to_json)
   end
 
-  def deliver(channel, payload, delivery_id)
+  # O estado foi lido do banco; uma ação mais nova pode ter chegado nesse meio tempo: confere de novo logo antes do HTTP.
+  def deliver(message, event, payload, delivery_id)
+    return if superseded?(message.id, event, delivery_id)
+
+    channel = message.inbox.channel
     Waha::RichNative::MessageActionTrigger.new(channel.webhook_url, payload.deep_symbolize_keys, :api_inbox_webhook,
                                                secret: channel.secret, delivery_id: delivery_id).execute
   rescue SafeFetch::FetchError
@@ -74,7 +84,10 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
 
   # Nota privada, no idioma da conta, sem remetente (é o sistema avisando). O erro vai ao log só pela classe.
   def not_delivered!(error)
-    message_id, event, = arguments
+    message_id, event, delivery_id = arguments
+    # A ação já foi superada por uma mais nova, que entrega (ou avisa) por conta própria: sem nota falsa.
+    return if superseded?(message_id, event, delivery_id)
+
     message = Message.find_by(id: message_id)
     key = NOT_DELIVERED_KEYS[event]
     Rails.logger.error("[waha] message action not delivered message=#{message_id} #{error.is_a?(Symbol) ? error : error.class}")
@@ -87,9 +100,13 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
   private
 
   # Uma ação mais nova da mesma mensagem e tipo já pediu a entrega: ela manda o estado atual.
+  # Redis fora: não superada (melhor mandar o estado atual de novo que perder a entrega ou o aviso).
   def superseded?(message_id, event, delivery_id)
     latest = ::Redis::Alfred.get(self.class.latest_key(message_id, event))
     latest.present? && latest != delivery_id
+  rescue Redis::BaseError => e
+    Rails.logger.error("[waha] message action latest mark not read message=#{message_id} #{e.class}")
+    false
   end
 
   # A reação da empresa gravada agora ('' quando não há: remover).
