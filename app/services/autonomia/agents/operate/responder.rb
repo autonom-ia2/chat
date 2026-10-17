@@ -22,7 +22,8 @@ module Autonomia
         # via config['silence_tokens'] (lista). Match exato após normalizar (trim + minúsculas + markdown).
         SILENCE_TOKEN = 'conversation_closed_for_now'.freeze
         # Os silêncios que são falha (motivo_do_silencio): soltam a posse do turno, que pode ser retomado (#1606).
-        SILENCIOS_DE_FALHA = %w[ia_falhou vazio].freeze
+        # `so_contexto_interno` (#1489, RecoveredHeaderNote): a resposta era só a linha de contexto interno — vale como vazia.
+        SILENCIOS_DE_FALHA = %w[ia_falhou vazio so_contexto_interno].freeze
 
         Result = Struct.new(:status, :message, :error, keyword_init: true) do
           def self.replied(message)
@@ -67,13 +68,19 @@ module Autonomia
           return silencio_por_pessoa('antes_da_ia').tap { evento_da_pessoa } if pessoa_respondeu?
 
           # A chamada à IA (lenta) roda FORA do lock para não segurar a linha da conversa.
-          result = sem_marca_da_equipe(answer)
+          # chat#1489: a linha de contexto do histórico nunca vai ao cliente, mesmo se o modelo a repetir. As duas
+          # limpezas: a marca da equipe (#1669) e a linha de contexto da mensagem recuperada.
+          answered = answer
+          result = ::Autonomia::Agents::Operate::RecoveredHeaderNote.without_notes(sem_marca_da_equipe(answered))
           # SINAL DE SILÊNCIO da instrução -> não posta nada (IF-node "parar"). Anti-loop / automações.
           # O turno ficou mudo, mas a ferramenta assíncrona JÁ FOI ACEITA dentro dele: despacha assim
           # mesmo, com `replied: false`, para que o próprio job avise o cliente de que a consulta
           # começou. Descartar aqui deixaria o cliente sem cotação e sem explicação.
           # Sem texto utilizável (falha de IA / resposta vazia) -> SILÊNCIO, sem fallback de sistema.
-          motivo = motivo_do_silencio(result)
+          motivo = ::Autonomia::Agents::Operate::RecoveredHeaderNote.silence_reason(answered, result) || motivo_do_silencio(result)
+          ::Autonomia::Agents::Operate::RecoveredHeaderNote.registrar_silencio(
+            motivo, agent: @agent, conversation: @conversation, message_id: @reply_to_message_id
+          )
           return silence_with_async(result, motivo) if motivo.present?
 
           outcome = deliver(result)
@@ -613,11 +620,13 @@ module Autonomia
         # scope `chat`. Com a Fase 2 (#1669), o que uma pessoa da equipe escreveu vai marcado como dela
         # (HistoricoDaEquipe); robô e sistema seguem como sempre.
         def history
-          return equipe.historico(recent_messages) if equipe.aplica?
-
-          recent_messages.map do |message|
-            { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
-          end
+          itens = if equipe.aplica?
+                    equipe.historico(recent_messages)
+                  else
+                    recent_messages.map { |message| { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s } }
+                  end
+          # chat#1489: mensagem recuperada com arquivo que não foi lido ganha uma linha de contexto, nos dois caminhos.
+          ::Autonomia::Agents::Operate::RecoveredHeaderNote.com_contexto(itens, recent_messages)
         end
 
         # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. #1691: a conversa espera uma pessoa
