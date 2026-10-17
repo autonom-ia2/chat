@@ -403,9 +403,12 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       conversation.update!(waiting_since: nil)
       voto = voto_retirado
       expect(conversation.reload.waiting_since).to be_present
+      conversation.update_column(:updated_at, 1.hour.ago) # rubocop:disable Rails/SkipsModelValidations
       gatilho(voto)
 
       rodar_turno!
+
+      expect(conversation.reload.updated_at).to be > 1.minute.ago
 
       expect(respostas).to be_empty
       expect(Autonomia::Agents::AgentEvent.skipped_escolha_retirada.pluck(:message_id)).to eq([voto.id])

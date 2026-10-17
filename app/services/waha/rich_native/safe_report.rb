@@ -2,7 +2,7 @@
 # ou de parse pode carregar texto do cliente. Vai a mesma classe, com uma mensagem genérica e o backtrace; o log do
 # módulo registra só a classe.
 module Waha::RichNative::SafeReport
-  GENERIC = 'chat#1709: detalhe omitido (pode conter texto do cliente)'.freeze
+  GENERIC = 'chat#1709: mensagem original omitida'.freeze
 
   module_function
 

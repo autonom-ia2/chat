@@ -90,7 +90,7 @@ module Waha::RichNative
     true
   rescue StandardError => e
     Rails.logger.error("[waha] rich native mark failed message=#{message.id} #{e.class}")
-    ChatwootExceptionTracker.new(e, account: message.account).capture_exception
+    Waha::RichNative::SafeReport.capture(e, account: message.account)
     false
   end
 

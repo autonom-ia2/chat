@@ -322,14 +322,18 @@ describe WhatsappHybrid::RichNative::Transport do
     it 'logs and reports to the tracker when the write breaks, without raising' do
       message = outgoing(options)
       tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
-      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
-      allow(message).to receive(:save!).and_raise(ActiveRecord::Deadlocked)
+      reported = nil
+      allow(ChatwootExceptionTracker).to receive(:new) { |error, **| (reported = error) && tracker }
+      allow(message).to receive(:save!).and_raise(ActiveRecord::Deadlocked, 'texto do cliente')
       allow(Rails.logger).to receive(:error)
 
       expect(Waha::RichNative.mark_sent!(message, '3EB0MARK')).to be(false)
 
       expect(Rails.logger).to have_received(:error).with("[waha] rich native mark failed message=#{message.id} ActiveRecord::Deadlocked")
       expect(tracker).to have_received(:capture_exception)
+      # Revisão: ao rastreador vai a mesma classe sem a mensagem original (Waha::RichNative::SafeReport).
+      expect(reported).to be_a(ActiveRecord::Deadlocked)
+      expect(reported.message).not_to include('texto do cliente')
     end
   end
 end
