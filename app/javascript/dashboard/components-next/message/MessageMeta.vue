@@ -9,6 +9,9 @@ import Icon from 'next/icon/Icon.vue';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useMessageContext } from './provider.js';
 import { useHoraDaPele } from '../conversa-canal/useHoraDaPele';
+import { usePele } from '../conversa-canal/pele';
+import { foiEditada } from '../conversa-canal/marcasDaMensagem';
+import RotuloEditada from '../conversa-canal/RotuloEditada.vue';
 
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
@@ -45,6 +48,12 @@ const readableTime = computed(
 );
 
 const exactTime = computed(() => exactTimestamp(createdAt.value));
+
+// #1702: com a pele, "Editada" antes da hora, como no app (clique mostra as versões).
+const pele = usePele();
+const editada = computed(
+  () => Boolean(pele.value) && foiEditada(contentAttributes.value)
+);
 
 // WhatsApp Híbrido (chat#1067): mensagem que saiu pelo WhatsApp API em vez da conexão oficial.
 const transportLabel = computed(() => {
@@ -151,6 +160,7 @@ const statusToShow = computed(() => {
 
 <template>
   <div class="text-xs flex items-center gap-1.5">
+    <RotuloEditada v-if="editada" :atributos="contentAttributes" />
     <div class="inline">
       <time
         v-tooltip.top="{
@@ -163,7 +173,7 @@ const statusToShow = computed(() => {
       </time>
     </div>
     <Icon v-if="isPrivate" icon="i-lucide-lock-keyhole" class="size-3" />
-    <span v-if="transportLabel" class="whitespace-nowrap">
+    <span v-if="transportLabel" class="whitespace-nowrap" data-transporte>
       {{ transportLabel }}
     </span>
     <MessageStatus v-if="showStatusIndicator" :status="statusToShow" />

@@ -8,6 +8,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import Icon from 'next/icon/Icon.vue';
 import Button from 'next/button/Button.vue';
 import { ABRIR_MODELOS_DO_WHATSAPP } from './pele';
+import { sairDaSelecao } from './encaminhar/selecaoParaEncaminhar';
 
 const { t } = useI18n();
 // O botão só aparece quando a caixa tem modelo para escolher (a mesma regra do botão
@@ -17,7 +18,12 @@ const modelosDaCaixa = useMapGetter('inboxes/getWhatsAppTemplates');
 const temModelo = computed(
   () => (modelosDaCaixa.value(conversa.value?.inbox_id) || []).length > 0
 );
-const abrirModelos = () => emitter.emit(ABRIR_MODELOS_DO_WHATSAPP);
+// No modo seleção do encaminhar a caixa de resposta está escondida: sai dele antes,
+// senão a escolha de modelo abriria invisível.
+const abrirModelos = () => {
+  sairDaSelecao();
+  emitter.emit(ABRIR_MODELOS_DO_WHATSAPP);
+};
 </script>
 
 <template>

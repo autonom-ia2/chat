@@ -1,20 +1,57 @@
 // Para a lista de mensagens com pele (#1702): qual balão abre uma sequência (leva o
-// bico) e onde o dia muda (leva a etiqueta do dia). Sem pele, nada muda na lista.
+// bico, o nome de quem mandou e o respiro acima) e onde o dia muda (leva a etiqueta do
+// dia). Sem pele, nada muda na lista. Com pele, esta é a única regra de sequência: o
+// `group-with-next` do Chatwoot (por minuto) só esconde o avatar, que a pele já esconde.
 import { computed } from 'vue';
 import { fornecerPrimeiras, useFuso, usePele } from './pele';
 import { diaDaMensagem } from './dataDaConversa';
+import { MESSAGE_TYPES } from '../message/constants';
 
-export const useSequenciaDaConversa = (mensagens, agrupaComAProxima) => {
+// De que lado o balão fica: cliente, empresa, nota da equipe ou aviso do sistema.
+const ladoDoBalao = mensagem => {
+  if (mensagem.private) return 'nota';
+  if (mensagem.messageType === MESSAGE_TYPES.INCOMING) return 'cliente';
+  if (
+    [MESSAGE_TYPES.OUTGOING, MESSAGE_TYPES.TEMPLATE].includes(
+      mensagem.messageType
+    )
+  ) {
+    return 'empresa';
+  }
+  return 'aviso';
+};
+
+// Tipo e id: atendente 1 e robô 1 são pessoas diferentes.
+const quemMandou = mensagem =>
+  `${mensagem.sender?.type ?? mensagem.senderType ?? ''}:${mensagem.senderId ?? mensagem.sender?.id}`;
+
+// Como no app: a sequência segue enquanto a mesma pessoa fala no mesmo dia, sem
+// quebrar a cada minuto. Do lado da empresa, troca de atendente abre sequência nova
+// (o nome aparece no topo do balão). Mensagem que falhou abre sequência.
+export const continuaASequencia = (anterior, atual, fuso) => {
+  const lado = ladoDoBalao(atual);
+  if (lado === 'aviso' || lado !== ladoDoBalao(anterior)) return false;
+  if (atual.status === 'failed' || anterior.status === 'failed') return false;
+  if (quemMandou(atual) !== quemMandou(anterior)) return false;
+  return (
+    diaDaMensagem(atual.createdAt, fuso) ===
+    diaDaMensagem(anterior.createdAt, fuso)
+  );
+};
+
+export const useSequenciaDaConversa = mensagens => {
   const pele = usePele();
   const fuso = useFuso();
 
-  // A mensagem abre sequência quando a anterior não se agrupa com ela.
   const primeiras = computed(() => {
     if (!pele.value) return new Set();
     const lista = mensagens.value;
     return new Set(
       lista
-        .filter((_, i) => i === 0 || !agrupaComAProxima(i - 1, lista))
+        .filter(
+          (mensagem, i) =>
+            i === 0 || !continuaASequencia(lista[i - 1], mensagem, fuso.value)
+        )
         .map(mensagem => mensagem.id)
     );
   });

@@ -34,7 +34,8 @@ export const diaDaMensagem = (quando, fuso) =>
 const diasEntre = (diaA, diaB) =>
   Math.round((Date.parse(diaA) - Date.parse(diaB)) / 86400000);
 
-// "Hoje", "Ontem", o dia da semana nos últimos 7 dias, ou a data — como o app.
+// "Hoje", "Ontem", o dia da semana nos últimos 7 dias ("sábado", em minúsculas, como
+// o app escreve) ou a data curta ("07/10/2026").
 export const rotuloDoDia = ({ quando, agora, fuso, t, idioma = 'pt-BR' }) => {
   const dia = diaDaMensagem(quando, fuso);
   const diferenca = diasEntre(diaDaMensagem(agora, fuso), dia);
@@ -43,10 +44,8 @@ export const rotuloDoDia = ({ quando, agora, fuso, t, idioma = 'pt-BR' }) => {
   const opcoes =
     diferenca > 1 && diferenca < 7
       ? { weekday: 'long' }
-      : { day: 'numeric', month: 'long', year: 'numeric' };
-  const texto = formatador(idioma, {
-    timeZone: fuso,
-    ...opcoes,
-  }).format(new Date(quando * 1000));
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
+      : { day: '2-digit', month: '2-digit', year: 'numeric' };
+  return formatador(idioma, { timeZone: fuso, ...opcoes }).format(
+    new Date(quando * 1000)
+  );
 };

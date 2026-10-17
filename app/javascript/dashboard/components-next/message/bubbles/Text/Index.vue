@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import FormattedContent from './FormattedContent.vue';
+import PreviaDeLink from 'dashboard/components-next/conversa-canal/PreviaDeLink.vue';
+import { usePreviaDeLink } from 'dashboard/components-next/conversa-canal/usePreviaDeLink';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
 import { MESSAGE_TYPES } from '../../constants';
@@ -14,6 +16,8 @@ const { content, attachments, contentAttributes, messageType, status } =
 
 const { hasTranslations, translationContent } =
   useTranslations(contentAttributes);
+
+const previaDeLink = usePreviaDeLink();
 
 const renderOriginal = ref(false);
 
@@ -54,6 +58,7 @@ const handleSeeOriginal = () => {
       <span v-if="isEmpty" class="text-n-slate-11">
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
+      <PreviaDeLink v-if="previaDeLink" :previa="previaDeLink" />
       <FormattedContent v-if="renderContent" :content="renderContent" />
       <span
         v-if="contactInfoRequestState === 'pending'"

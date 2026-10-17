@@ -50,11 +50,9 @@ describe('hora e dia no fuso da conta (#1702)', () => {
     expect(rotuloDoDia({ quando, agora, fuso, t })).toBe('Ontem');
     const tresDias = Date.UTC(2026, 9, 13, 15, 0) / 1000;
     expect(rotuloDoDia({ quando: tresDias, agora, fuso, t })).toBe(
-      'Terça-feira'
+      'terça-feira'
     );
     const antigo = Date.UTC(2026, 8, 1, 15, 0) / 1000;
-    expect(rotuloDoDia({ quando: antigo, agora, fuso, t })).toBe(
-      '1 de setembro de 2026'
-    );
+    expect(rotuloDoDia({ quando: antigo, agora, fuso, t })).toBe('01/09/2026');
   });
 });

@@ -20,12 +20,17 @@ class SafeFetch::RequestOptions
     allowed_content_types: SafeFetch::DEFAULT_ALLOWED_CONTENT_TYPES,
     validate_content_type: true,
     # Esquemas aceitos em CADA salto (o ssrf_filter confere a lista a cada redirecionamento). nil = http e https.
-    schemes: nil
+    schemes: nil,
+    # Portas aceitas no endereço pedido e em CADA redirecionamento (ex. [80, 443]). nil = qualquer uma, como sempre.
+    allowed_ports: nil,
+    # true: o corpo acima de `max_bytes` é cortado no limite (o tempfile traz só o começo) em vez de recusado com
+    # `FileTooLargeError`, e o `Content-Length` anunciado não reprova. Para quem só precisa do começo (o <head>).
+    truncate_at_max_bytes: false
   }.freeze
 
   attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :error_body_bytes, :headers,
               :http_basic_authentication, :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :schemes,
-              :sensitive_headers, :total_timeout, :uri, :url
+              :sensitive_headers, :total_timeout, :uri, :url, :allowed_ports
 
   def initialize(url:, **options)
     config = DEFAULTS.merge(options)
@@ -75,13 +80,25 @@ class SafeFetch::RequestOptions
     @cross_origin_redirects
   end
 
-  # O destino de um 3xx é da mesma origem do endereço pedido? Caminho começando por "/" é: o
-  # ssrf_filter (e o `PrivateNetworkRequest`) o monta sobre o host do salto atual, que já passou por
-  # esta mesma conferência. Qualquer outro valor é lido como endereço e comparado.
-  def same_origin_location?(location)
-    return true if location.to_s.start_with?('/')
+  def truncate_at_max_bytes?
+    @truncate_at_max_bytes
+  end
 
-    destino = URI.parse(location.to_s)
+  # A porta do destino de um 3xx está na lista? O destino é lido sobre o endereço do salto atual, como o
+  # ssrf_filter o monta: caminho "/x" herda host e porta; "//host:porta/x" troca os dois. Sem lista,
+  # qualquer porta (o comportamento de sempre).
+  def allowed_port_location?(location)
+    return true if allowed_ports.nil?
+
+    allowed_ports.include?(resolve_location(location).port)
+  rescue URI::InvalidURIError
+    false
+  end
+
+  # O destino de um 3xx é da mesma origem do endereço pedido? Lido sobre o salto atual (ver acima), para
+  # que "//outro.host/x" (sem esquema, outro host) não passe por caminho relativo.
+  def same_origin_location?(location)
+    destino = resolve_location(location)
     # Host e esquema não diferenciam maiúsculas: `https://API.x.com` e `https://api.x.com` são a mesma origem.
     destino.scheme.to_s.casecmp?(uri.scheme.to_s) && destino.hostname.to_s.casecmp?(uri.hostname.to_s) &&
       destino.port == uri.port
@@ -91,6 +108,14 @@ class SafeFetch::RequestOptions
 
   private
 
+  # Caminho relativo sem barra ("outra") não é montado pelo ssrf_filter: recusado aqui, como antes do #1702.
+  def resolve_location(location)
+    destino = URI.parse(location.to_s)
+    raise URI::InvalidURIError, 'relative location without leading slash' if destino.relative? && !location.to_s.start_with?('/')
+
+    URI.join(uri.to_s, location.to_s)
+  end
+
   def apply_limits(config)
     @max_bytes = config[:max_bytes]
     @open_timeout = config[:open_timeout]
@@ -99,6 +124,9 @@ class SafeFetch::RequestOptions
     @max_redirects = normalize_max_redirects(config[:max_redirects])
     @cross_origin_redirects = config[:cross_origin_redirects] != false
     @error_body_bytes = [config[:error_body_bytes].to_i, 0].max
+    @allowed_ports = config[:allowed_ports]&.map(&:to_i)
+    @truncate_at_max_bytes = config[:truncate_at_max_bytes] == true
+    raise SafeFetch::UnsafeUrlError, "port #{uri.port} not allowed" if @allowed_ports&.exclude?(uri.port)
   end
 
   def apply_content_type_rules(config)

@@ -50,18 +50,76 @@ export const barrasDoAudio = (amostras, total = BARRAS) => {
 // Baixa e decodifica o áudio só para desenhar a onda. Se o navegador não puder
 // ler o arquivo (formato, rede, outro domínio sem permissão), devolve null e o
 // balão fica com as barras neutras: tocar continua funcionando pelo <audio>.
-export const carregarOnda = async (url, { signal } = {}) => {
-  try {
-    const resposta = await fetch(url, { signal });
-    if (!resposta.ok) return null;
-    const dados = await resposta.arrayBuffer();
-    const audio = await Decoder.decode(dados, TAXA);
-    return {
-      barras: barrasDoAudio(audio.getChannelData(0)),
-      duracao: audio.duration,
+// A onda de cada endereço fica guardada: o balão que sai e volta à tela (rolagem,
+// troca de conversa) não baixa o arquivo de novo. Só as últimas, para não crescer.
+const ONDAS_GUARDADAS = 60;
+const ondas = new Map();
+
+const guardar = (url, onda) => {
+  if (ondas.size >= ONDAS_GUARDADAS) ondas.delete(ondas.keys().next().value);
+  ondas.set(url, onda);
+};
+
+// Uma conversa cheia de áudios não baixa e decodifica todos ao mesmo tempo: no máximo
+// SIMULTANEAS por vez, e os outros esperam na fila. Quem sai da tela (signal
+// abortado) desiste da vez sem baixar nada.
+export const SIMULTANEAS = 2;
+let emAndamento = 0;
+const fila = [];
+
+const esperarAVez = signal =>
+  new Promise(resolve => {
+    if (emAndamento < SIMULTANEAS) {
+      emAndamento += 1;
+      resolve(true);
+      return;
+    }
+    let desistir = null;
+    const suaVez = () => {
+      signal?.removeEventListener('abort', desistir);
+      emAndamento += 1;
+      resolve(true);
     };
+    desistir = () => {
+      const posicao = fila.indexOf(suaVez);
+      if (posicao >= 0) fila.splice(posicao, 1);
+      resolve(false);
+    };
+    fila.push(suaVez);
+    signal?.addEventListener('abort', desistir, { once: true });
+  });
+
+const passarAVez = () => {
+  emAndamento -= 1;
+  fila.shift()?.();
+};
+
+const baixarEDecodificar = async (url, signal) => {
+  const resposta = await fetch(url, { signal });
+  if (!resposta.ok) return null;
+  const dados = await resposta.arrayBuffer();
+  const audio = await Decoder.decode(dados, TAXA);
+  const onda = {
+    barras: barrasDoAudio(audio.getChannelData(0)),
+    duracao: audio.duration,
+  };
+  guardar(url, onda);
+  return onda;
+};
+
+export const carregarOnda = async (url, { signal } = {}) => {
+  if (signal?.aborted) return null;
+  if (ondas.has(url)) return ondas.get(url);
+  if (!(await esperarAVez(signal))) return null;
+  try {
+    if (signal?.aborted) return null;
+    // Enquanto esperava, outro balão pode ter trazido a mesma onda.
+    if (ondas.has(url)) return ondas.get(url);
+    return await baixarEDecodificar(url, signal);
   } catch {
     return null;
+  } finally {
+    passarAVez();
   }
 };
 

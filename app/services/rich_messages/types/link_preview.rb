@@ -42,6 +42,17 @@ class RichMessages::Types::LinkPreview
     INVALID_FIRST_ADDRESS unless web_address?(candidate)
   end
 
+  # O endereço que ganha a prévia no WhatsApp: o primeiro do texto, se for válido; nil quando não há ou não vale.
+  # Usado também pela prévia de link do texto comum (#1702, ConversaCanal::PreviaDeLink), com a mesma regra.
+  def self.first_web_address(body)
+    new(nil).first_web_address(body)
+  end
+
+  def first_web_address(body)
+    candidate = first_candidate(body.to_s)
+    candidate if candidate && web_address?(candidate)
+  end
+
   # https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/text-messages
   def whatsapp_cloud_payload(body)
     { type: 'text', text: { body: body, preview_url: true } }

@@ -249,6 +249,7 @@ defineExpose({ abrir });
     :description="ajuda"
     width="2xl"
     position="top"
+    overflow-y-auto
     @confirm="enviar"
     @close="aoFechar"
   >

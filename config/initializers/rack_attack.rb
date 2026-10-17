@@ -75,6 +75,11 @@ class Rack::Attack
     req.ip if req.get? && req.path.include?('/conversa_canal/lugares')
   end
 
+  # Reagir e encaminhar (#1702) saem no WhatsApp do cliente: uma pessoa no painel não passa disso; script com token, sim.
+  throttle('conversa_canal_acoes/ip', limit: 60, period: 1.minute) do |req|
+    req.ip if req.post? && (req.path.include?('/conversa_canal/reacoes') || req.path.include?('/conversa_canal/encaminhamentos'))
+  end
+
   throttle('public_tracked_links/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path_without_extensions.start_with?('/l/')
   end

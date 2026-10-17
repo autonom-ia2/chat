@@ -94,7 +94,7 @@ const ITENS = [
     tipo: 'formulario',
     chave: 'FORMULARIO',
     icone: 'i-ph-note-pencil-fill',
-    cor: 'text-[#8696A0]',
+    cor: 'text-[#A7A8A8]',
     soOficial: true,
     separado: true,
   },
@@ -170,8 +170,8 @@ const aoTeclar = evento => {
     <button
       ref="botaoRef"
       type="button"
-      class="grid place-content-center size-11 rounded-full text-[#54656F] dark:text-[#AEBAC1] hover:bg-[#111B21]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00A884]"
-      :class="{ 'bg-[#111B21]/10 dark:bg-white/10': aberto }"
+      class="grid place-content-center size-11 rounded-full text-[#3B3B3B] dark:text-[#FAFAFA] hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00A884]"
+      :class="{ 'bg-[#0A0A0A]/10 dark:bg-white/10': aberto }"
       :aria-label="t('CONVERSA_CANAL.MAIS.ABRIR')"
       :aria-expanded="aberto"
       aria-haspopup="menu"
@@ -189,11 +189,11 @@ const aoTeclar = evento => {
       ref="menuRef"
       v-on-click-outside="[fechar, { ignore: [botaoRef] }]"
       role="menu"
-      class="absolute bottom-full mb-2 ltr:left-0 rtl:right-0 z-30 w-[17rem] p-2 rounded-[1.25rem] bg-white dark:bg-[#233138] shadow-[0_4px_24px_rgba(11,20,26,0.18),0_1px_4px_rgba(11,20,26,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/10"
+      class="absolute bottom-full mb-2 ltr:left-0 rtl:right-0 z-30 w-max min-w-[176px] py-2 px-1.5 rounded-2xl bg-white dark:bg-[#242626] shadow-[0_2px_8px_rgba(0,0,0,0.16)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/10"
     >
       <p
         v-if="soTexto"
-        class="px-3 pt-1 pb-2 text-[13px] leading-snug text-[#667781] dark:text-[#8696A0]"
+        class="px-3 pt-1 pb-2 text-[13px] leading-snug text-[#666666] dark:text-[#A7A8A8]"
         data-so-texto
       >
         {{ t('CONVERSA_CANAL.MAIS.SO_TEXTO') }}
@@ -201,19 +201,19 @@ const aoTeclar = evento => {
       <template v-for="item in itens" :key="item.chave">
         <hr
           v-if="item.separado"
-          class="my-1.5 mx-3 border-0 border-t border-[#111B21]/10 dark:border-white/15"
+          class="my-1.5 mx-3 border-0 border-t border-[#0A0A0A]/10 dark:border-white/15"
           aria-hidden="true"
         />
         <button
           type="button"
           role="menuitem"
-          class="flex items-center gap-4 w-full h-12 px-3 rounded-xl text-start text-base text-[#111B21] dark:text-[#E9EDEF] hover:bg-[#F5F6F6] dark:hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#111B21] dark:focus-visible:ring-[#E9EDEF]"
+          class="flex items-center gap-3 w-full h-9 ps-2.5 pe-4 rounded-lg text-start text-[15px] whitespace-nowrap text-[#0A0A0A] dark:text-[#FAFAFA] hover:bg-[#F5F6F6] dark:hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0A0A0A] dark:focus-visible:ring-[#FAFAFA]"
           :data-item="item.tipo"
           @click="escolher(item)"
         >
           <Icon
             :icon="item.icone"
-            class="size-6 flex-shrink-0"
+            class="size-5 flex-shrink-0"
             :class="item.cor"
           />
           {{ t(`CONVERSA_CANAL.MAIS.${item.chave}`) }}

@@ -6,8 +6,14 @@ import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { useMessageContext } from '../provider.js';
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
 import { ATTACHMENT_TYPES } from '../constants';
+import VideoDoWhatsapp from '../../conversa-canal/midia/VideoDoWhatsapp.vue';
+import { usePele } from '../../conversa-canal/pele';
 
 const emit = defineEmits(['error']);
+
+// #1702: com a pele do WhatsApp, a miniatura com o play do app (tocar abre a galeria).
+const pele = usePele();
+
 const hasError = ref(false);
 const showGallery = ref(false);
 const { filteredCurrentChatAttachments, attachments } = useMessageContext();
@@ -32,7 +38,8 @@ const isReel = computed(() => {
     data-bubble-name="video"
     @click="showGallery = true"
   >
-    <div class="relative group rounded-lg overflow-hidden">
+    <VideoDoWhatsapp v-if="pele && !isReel" :attachment="attachment" />
+    <div v-else class="relative group rounded-lg overflow-hidden">
       <div
         v-if="isReel"
         class="absolute p-2 flex items-start justify-end right-0 pointer-events-none"

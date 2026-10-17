@@ -27,6 +27,28 @@ class ConversaCanalAPI extends ApiClient {
     });
   }
 
+  // Reação do atendente (#1702): emoji '' tira a da empresa.
+  reagir(conversationId, messageId, emoji) {
+    return axios.post(`${this.url}/reacoes`, {
+      conversation_id: conversationId,
+      message_id: messageId,
+      emoji,
+    });
+  }
+
+  // Encaminhar (#1702): conversas que o usuário vê, e o envio para até 5 delas.
+  destinosParaEncaminhar(termo) {
+    return axios.get(`${this.url}/encaminhamentos`, { params: { termo } });
+  }
+
+  encaminhar(conversationId, messageIds, conversationIds) {
+    return axios.post(`${this.url}/encaminhamentos`, {
+      conversation_id: conversationId,
+      message_ids: messageIds,
+      conversation_ids: conversationIds,
+    });
+  }
+
   primeiraTela(inboxId, flowId) {
     return axios.get(
       `${this.url}/formularios/${encodeURIComponent(flowId)}/primeira_tela`,

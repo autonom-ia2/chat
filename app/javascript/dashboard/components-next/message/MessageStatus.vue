@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n';
 import { MESSAGE_STATUS } from './constants';
 
 import Icon from 'next/icon/Icon.vue';
+import TiquesDoWhatsapp from '../conversa-canal/TiquesDoWhatsapp.vue';
+import { usePele } from '../conversa-canal/pele';
 
 const { status } = defineProps({
   status: {
@@ -15,6 +17,8 @@ const { status } = defineProps({
 });
 
 const { t } = useI18n();
+// #1702: com a pele do WhatsApp, os tiques do app.
+const pele = usePele();
 
 const progresIconSequence = [
   'i-lucide-clock-1',
@@ -77,8 +81,14 @@ const tooltipText = computed(() => {
 </script>
 
 <template>
+  <TiquesDoWhatsapp
+    v-if="pele"
+    v-tooltip.top-start="tooltipText"
+    :status="status"
+    :rotulo="tooltipText"
+  />
   <Icon
-    v-if="status === MESSAGE_STATUS.PROGRESS"
+    v-else-if="status === MESSAGE_STATUS.PROGRESS"
     v-tooltip.top-start="tooltipText"
     :icon="progessIcon"
     class="text-n-slate-10"
