@@ -197,6 +197,27 @@ describe Waha::RichNative::Inbound do
       expect(conversation.messages.incoming).to be_empty
     end
 
+    # Estresse, item 2: a reação a uma mensagem que o chat2you não tem (mandada pelo celular, sem ligação).
+    it 'hides a reaction to an unknown message (no AI turn), keeping the connector text' do
+      flag_on!
+      message = from_connector({ waha_reaction: { emoji: '👍', reacted_wa_id: 'WX', from_me: false } }, content: '*Reagiu com* 👍')
+
+      # Atividade: nem bolha nem turno da IA (o MessageListener só ouve mensagem recebida).
+      expect(message).to be_activity
+      expect(message.content).to eq('*Reagiu com* 👍')
+      expect(message.content_attributes).to include('c2y_hidden' => true)
+      expect(message.content_attributes).not_to have_key('reaction_applied_to')
+    end
+
+    it 'keeps a vote on an unknown poll visible, as a customer turn' do
+      flag_on!
+      vote = from_connector({ waha_poll_vote: { poll_message_id: 999_999, options: ['Sim'] } }, content: 'Sim')
+
+      expect(vote).to be_incoming
+      expect(vote.content).to eq('Sim')
+      expect(vote.content_attributes).not_to have_key('c2y_hidden')
+    end
+
     it 'treats the company phone and the panel as the same author (one business reaction)' do
       flag_on!
       Waha::RichNative::Reactions.apply!(original, emoji: '👍', author: Waha::RichNative::Reactions.business_author(agent.id))
@@ -229,8 +250,11 @@ describe Waha::RichNative::Inbound do
                                 account: account, sender: agent, status: :failed,
                                 content_attributes: { external_error: 'timeout' })
 
+      # Sem alvo válido, a reação não toca em nada e fica atividade escondida (estresse, item 2), com o texto do conector.
       [foreign, note, failed].each do |target|
-        expect(reaction('👍', target: target)).to be_incoming
+        hidden = reaction('👍', target: target)
+        expect(hidden).to be_activity
+        expect(hidden.content).to eq('*Reagiu com* 👍')
         expect(target.reload.content_attributes).not_to have_key('reactions')
       end
     end
