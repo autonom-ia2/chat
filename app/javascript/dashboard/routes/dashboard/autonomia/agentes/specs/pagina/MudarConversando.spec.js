@@ -42,6 +42,7 @@ const preparar = () => {
     [`${ESTADO}getThread`]: null,
     [`${ESTADO}getAgent`]: null,
     [`${ESTADO}getPhase`]: null,
+    [`${ESTADO}getThreadState`]: {},
   });
   store.dispatch.mockImplementation(async acao => {
     if (acao === `${ESTADO}start`) {
@@ -226,6 +227,7 @@ describe('MudarConversando', () => {
     ];
     store.state[`${ESTADO}getStatus`] = 'open';
     store.state[`${ESTADO}getPhase`] = 'interviewing';
+    store.state[`${ESTADO}getThreadState`] = { parcial: true };
     store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
     await nextTick();
 
@@ -234,6 +236,28 @@ describe('MudarConversando', () => {
     expect(todos('[data-mensagem="assistant"]').pop().textContent).toContain(
       'Como você quer a saudação?'
     );
+    wrapper.unmount();
+  });
+
+  // #1428 — "também mudei X, quer que eu desfaça?": tudo entrou, então é FEITO, com a pergunta abaixo do cartão.
+  it('shows FEITO with the question below when everything went in and the builder offers to undo', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getMessages`] = [
+      { role: 'user', content: 'Responda curto' },
+      { role: 'assistant', content: 'Também mudei isto. Quer que eu desfaça?' },
+    ];
+    store.state[`${ESTADO}getStatus`] = 'open';
+    store.state[`${ESTADO}getPhase`] = 'interviewing';
+    store.state[`${ESTADO}getThreadState`] = { parcial: false };
+    store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
+    await nextTick();
+
+    expect(no('[data-parcial]')).toBeNull();
+    const cartao = no('[data-feito]');
+    const pergunta = todos('[data-mensagem="assistant"]').pop();
+    expect(pergunta.textContent).toContain('Quer que eu desfaça?');
+    const ordem = todos('[data-feito], [data-mensagem="assistant"]');
+    expect(ordem.indexOf(cartao)).toBeLessThan(ordem.indexOf(pergunta));
     wrapper.unmount();
   });
 

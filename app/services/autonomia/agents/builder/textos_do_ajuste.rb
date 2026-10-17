@@ -42,6 +42,11 @@ module Autonomia::Agents::Builder::TextosDoAjuste
     texto(:desfiz_nao_pedido, locale, resumos: lista(itens, 'resumo'))
   end
 
+  # O dono aceitou desfazer o que não tinha pedido, e o código desfez.
+  def desfiz(itens, locale)
+    texto(:desfiz, locale, resumos: lista(itens, 'resumo'))
+  end
+
   # O desfazer foi recusado (o agente mudou por outro caminho): o que não foi pedido ficou.
   def nao_desfiz(itens, locale)
     texto(:nao_desfiz, locale, resumos: lista(itens, 'resumo'))

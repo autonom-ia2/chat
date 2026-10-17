@@ -11,6 +11,7 @@ require 'rails_helper'
 # de palavras. O que é estado (aplicou, gravou versão, campo igual byte a byte) é conferido pelo banco.
 module AvaliacaoDoAjustePorLista
   JUIZ = 'gpt-5.4'.freeze
+  SAUDACAO_NAO_PEDIDA = 'Olá, sou o Hubber!'.freeze
   TETO_USD = 1.8
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
                          guardrails voice].freeze
@@ -25,7 +26,8 @@ module AvaliacaoDoAjustePorLista
   # que podem mudar. `historico` (opcional): as mensagens antes da fala. `itens` (opcional): quantos pedidos a
   # conferência tem de dar como atendidos. `aplica: :nada`: nada visível muda (pergunta ou o desfeito do que ninguém
   # pediu). `nada_desfeito`: nenhum destino do pedido foi tratado como sem pedido. `pendente`: a pergunta aberta antes da
-  # fala; `pendencia`: :resolvida (sai) ou :mantida (continua).
+  # fala; `pendencia`: :resolvida (sai) ou :mantida (continua). `tambem_mudei`: o turno anterior aplicou uma saudação
+  # que o dono não pediu e perguntou se desfaz; `desfazer`: :sim (o código desfaz) ou :nao (fica).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
@@ -48,7 +50,7 @@ module AvaliacaoDoAjustePorLista
       aplica: true, so: %w[greeting],
       certo: 'Só a saudação muda, para a frase pedida. Todo o resto do agente fica igual.' },
     # Revisão do #1428: o "sim" que responde a um esclarecimento é o pedido inteiro, não uma fala vazia.
-    { nome: 'responde_ao_esclarecimento', fala: 'sim', aplica: true,
+    { nome: 'responde_ao_esclarecimento', fala: 'sim', aplica: true, nada_desfeito: true,
       historico: [['user', 'Deixe as respostas mais curtas'], ['assistant', 'Quer no máximo 2 frases por resposta?']],
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases: o "sim" confirmou a pergunta anterior.' },
     # Revisão do #1428 (D): pedido claro e pergunta do dono no mesmo turno. O pedido entra e a resposta chega junto.
@@ -71,7 +73,12 @@ module AvaliacaoDoAjustePorLista
     { nome: 'pedido_novo_sem_responder', fala: 'Troque a saudação para: Olá! Aqui é o Hubber.', aplica: true, so: %w[greeting],
       pendente: 'Mais formal ou informal?', pendencia: :mantida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
-      certo: 'Só a saudação muda, para a frase pedida. O tom fica como estava (a pergunta sobre ele segue aberta).' }
+      certo: 'Só a saudação muda, para a frase pedida. O tom fica como estava (a pergunta sobre ele segue aberta).' },
+    # Rodada 5 (ALTO): o "sim" ao "também mudei, quer que eu desfaça?" desfaz; o "não" mantém. Nada se desfaz sozinho.
+    { nome: 'tambem_mudei_sim', fala: 'Sim, pode desfazer.', aplica: :qualquer, tambem_mudei: true, desfazer: :sim,
+      certo: 'A saudação volta a ser "Oi! Aqui é o Hubber, da Hub2You." e a resposta ao dono diz que desfez.' },
+    { nome: 'tambem_mudei_nao', fala: 'Não, pode deixar assim.', aplica: :qualquer, tambem_mudei: true, desfazer: :nao,
+      certo: 'A saudação continua "Olá, sou o Hubber!" e nada é desfeito.' }
   ].freeze
 
   VEREDITO = {
@@ -129,6 +136,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
+    preparar_tambem_mudei(agente, thread) if cena[:tambem_mudei]
     thread.append_message!('user', cena[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     [agente, antes, retrato(agente), thread.reload.state.to_h]
@@ -137,6 +145,23 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   def abrir_pendencia(thread, pergunta)
     thread.update!(state: thread.state.to_h.merge('needs_more_info' => true, 'next_question' => pergunta,
                                                   'pergunta_pendente' => pergunta))
+  end
+
+  # O turno anterior: entrou uma saudação que o dono não pediu, e o Construtor perguntou se desfaz.
+  def preparar_tambem_mudei(agente, thread)
+    agente.record_instruction_version!(reason: 'base')
+    antes_id = agente.instruction_versions.order(:id).last.id
+    agente.update!(greeting: AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA)
+    versao = agente.send(:gravar_versao!, 'builder_adjust', nil)
+    item = { 'pedido' => 'saudação', 'campo' => 'greeting', 'resumo' => 'Saudação nova' }
+    pergunta = I18n.t('autonomia.agents.ajuste.tambem_mudei', resumos: 'Saudação nova', locale: :pt_BR)
+    thread.append_message!('user', 'Responda em no máximo 2 frases')
+    thread.append_message!('assistant', pergunta)
+    thread.update!(state: thread.state.to_h.merge(
+      'needs_more_info' => true, 'next_question' => pergunta, 'pergunta_pendente' => pergunta,
+      'desfazer_pendente' => { 'versao_antes_id' => antes_id, 'versao_id' => versao.id, 'colunas' => ['greeting'], 'chaves' => [],
+                               'agente_updated_at' => agente.reload.updated_at.iso8601(6), 'itens' => [item] }
+    ))
   end
 
   def julgar(cena, antes, depois, resposta)
@@ -157,9 +182,15 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
             when false then nao_aplicou?(agente, antes, depois, estado)
             when true then aplicou_sem_falta?(cena, estado)
             when :nada then nada_visivel?(agente, antes, depois, estado)
+            when :qualquer then true
             else estado['needs_more_info'] == true
             end
-    certo && so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado)
+    certo && extras_certos?(cena, agente, antes, depois, estado)
+  end
+
+  def extras_certos?(cena, agente, antes, depois, estado)
+    so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado) &&
+      desfazer_certo?(cena, agente, estado)
   end
 
   # Nada mudou no agente e nenhuma versão do Construtor ficou na lista (pergunta, ou o desfeito do que ninguém pediu).
@@ -172,6 +203,15 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     case cena[:pendencia]
     when :resolvida then estado['pergunta_pendente'].to_s.empty?
     when :mantida then estado['pergunta_pendente'] == cena[:pendente]
+    else true
+    end
+  end
+
+  def desfazer_certo?(cena, agente, estado)
+    saudacao = agente.reload.greeting
+    case cena[:desfazer]
+    when :sim then saudacao == 'Oi! Aqui é o Hubber, da Hub2You.' && estado['desfazer_pendente'].nil?
+    when :nao then saudacao == AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA && estado['desfazer_pendente'].nil?
     else true
     end
   end

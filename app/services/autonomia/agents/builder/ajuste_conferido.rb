@@ -11,7 +11,7 @@
 #      `conferencia`). Com correção, a versão da primeira escrita sai da lista e a da correção leva `correcao_de`.
 #
 # A PENDÊNCIA de verdade fica em `pergunta_pendente`: a resposta a uma pergunta do dono e os avisos fixos nunca são
-# pendência, e a pendência anterior sobrevive a eles.
+# pendência, e a pendência anterior sobrevive a eles (PendenciaDoAjuste, com o teto e o "sim, desfaça").
 #
 # IDEMPOTÊNCIA E TEMPO: depois que a primeira escrita vence, o state guarda `ajuste_em_curso` (o token, a lista, o id
 # da versão de antes, nunca a instrução crua). Um re-run do mesmo token pula o Construtor e vai conferir e fechar. A
@@ -19,11 +19,6 @@
 # desde o último toque na thread: o job é síncrono e a thread presa vira stale em 5 min.
 # Depois que a primeira escrita venceu, nenhuma falha da correção derruba o turno.
 module Autonomia::Agents::Builder::AjusteConferido
-  # REDE DA PENDÊNCIA: a pergunta preservada sem o modelo resolvê-la sai depois de tantos turnos do dono. Escolhido em
-  # vez de "limpar quando um pedido sai sem falta na conferência", que apagaria a pergunta que o dono nunca respondeu
-  # (prova E: ele pede outra coisa, ela entra sem falta). O teto só encerra o laço de pergunta presa, sem adivinhar.
-  TETO_DE_TURNOS_DA_PENDENCIA = 3
-
   private
 
   # Decidido uma vez por turno (run! zera): o turno não muda de caminho no meio.
@@ -61,6 +56,9 @@ module Autonomia::Agents::Builder::AjusteConferido
     @explicacao_da_correcao = nil
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
+    @desfazer_pendente = @thread.state.to_h['desfazer_pendente']
+    @mensagens_iniciais = []
+    @resultado_do_desfazer = nil
     ajuste_em_curso(token) ? :retomar : :seguir
   end
 
@@ -77,8 +75,10 @@ module Autonomia::Agents::Builder::AjusteConferido
   end
 
   def ajustar_pela_lista(token, parsed)
+    desfazer_o_pendente!(token, parsed)
     mudancas = regras_do_ajuste.mudancas(parsed)
     motivo = motivo_para_nao_aplicar(parsed, mudancas)
+    return fechar_so_o_desfazer!(token, parsed) if @resultado_do_desfazer && motivo == :sem_pedido
     return responder_sem_aplicar(token, parsed, motivo) if motivo
 
     antes_comparavel = regras_do_ajuste.comparavel(@thread.agent)
@@ -105,16 +105,25 @@ module Autonomia::Agents::Builder::AjusteConferido
             when :esclarecimento then parsed['next_question'].to_s.strip.presence
             end
     texto ||= texto_do_ajuste(motivo == :incompleto ? :incompleto : :sem_pedido)
-    pendencia = motivo == :esclarecimento ? texto : pendencia_mantida(parsed)
-    perguntar!(token, parsed, [texto], 'so_pergunta' => motivo == :pergunta, 'pergunta_pendente' => pendencia)
+    pendencia = if motivo == :esclarecimento
+                  pendencia_no_estado(texto, parsed, origem: :modelo, laco: true)
+                else
+                  pendencia_no_estado(pendencia_mantida(parsed), parsed, origem: :mantida, laco: false)
+                end
+    perguntar!(token, parsed, [texto], { 'so_pergunta' => motivo == :pergunta }.merge(pendencia))
   end
 
   # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado. Ao dono, só o texto
   # fixo e, se o modelo pediu esclarecimento, a pergunta dele: nunca um texto do modelo que afirme ter aplicado.
   def sem_mudanca!(token, parsed, extra = {}, texto: nil)
     pergunta = pergunta_do_modelo(parsed)
+    pendencia = if pergunta
+                  pendencia_no_estado(pergunta, parsed, origem: :modelo, laco: true)
+                else
+                  pendencia_no_estado(pendencia_mantida(parsed), parsed, origem: :mantida, laco: false)
+                end
     perguntar!(token, parsed, [texto || texto_do_ajuste(:sem_mudanca), pergunta].compact,
-               { 'so_pergunta' => false, 'pergunta_pendente' => pergunta || pendencia_mantida(parsed) }.merge(extra))
+               { 'so_pergunta' => false }.merge(pendencia, extra))
   end
 
   # A primeira escrita não venceu. Token perdido: outra geração desta thread é dona do turno, nada a marcar.
@@ -123,7 +132,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     return if motivo == :token_perdido
 
     texto = texto_do_ajuste(motivo == :apagado ? :agente_apagado : :superado)
-    perguntar!(token, parsed, [texto], 'so_pergunta' => false, 'pergunta_pendente' => @pendencia_anterior)
+    perguntar!(token, parsed, [texto], { 'so_pergunta' => false }
+                                      .merge(pendencia_no_estado(@pendencia_anterior, {}, origem: :mantida, laco: false)))
   end
 
   def motivo_da_escrita_perdida(token)
@@ -135,30 +145,15 @@ module Autonomia::Agents::Builder::AjusteConferido
     :superado
   end
 
-  # A pendência de antes do turno, a menos que o MODELO diga que a fala a resolveu (`pendencia_resolvida`). Uma
-  # pergunta nova dele a substitui em quem chama; o código nunca a apaga por conta própria.
-  def pendencia_mantida(parsed)
-    parsed.to_h['pendencia_resolvida'] == true ? '' : @pendencia_anterior.to_s
-  end
-
-  # A pendência e há quantos turnos ela segue sem resposta. A mesma pergunta de antes conta um turno a mais; no teto,
-  # sai. Pergunta nova (ou nenhuma) zera.
-  def pendencia_no_estado(pendencia)
-    pendencia = pendencia.to_s
-    return { 'pergunta_pendente' => pendencia, 'pendencia_turnos' => 0 } if pendencia.blank? || pendencia != @pendencia_anterior.to_s
-
-    turnos = @turnos_da_pendencia + 1
-    return { 'pergunta_pendente' => '', 'pendencia_turnos' => 0 } if turnos >= TETO_DE_TURNOS_DA_PENDENCIA
-
-    { 'pergunta_pendente' => pendencia, 'pendencia_turnos' => turnos }
-  end
-
-  # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência.
+  # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência
+  # (que vem pronta em `extra`). O texto do "sim, desfaça" deste turno, se houve, vai antes.
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
+    mensagens = @mensagens_iniciais.to_a + mensagens
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil).merge(extra)
-    estado = estado.merge(pendencia_no_estado(estado['pergunta_pendente']))
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'desfazer_pendente' => nil,
+                    'parcial' => false)
+             .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
 

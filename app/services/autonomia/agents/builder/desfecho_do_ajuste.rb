@@ -14,6 +14,9 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
   # Desfechos da correção que só avisam o dono (nada a perguntar).
   AVISOS_DO_DESFECHO = { superado: :correcao_superada, apagado: :agente_apagado, agente_mudou: :agente_mudou }.freeze
   SEM_PENDENCIA = %i[manual superado apagado agente_mudou nao_conferido].freeze
+  # Pela tabela de destino: o campo da chave acompanha estes campos principais ("no maximo 2 frases" vai para o tom E
+  # a instrução; um limite, para guardrails E a instrução; a passagem, para handoff_rule E a instrução).
+  SECUNDARIO_DE = { 'instruction' => %w[tone guardrails handoff_rule] }.freeze
 
   private
 
@@ -28,10 +31,16 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     conferencia.merge('desfeito' => { 'campos' => regras_do_ajuste.campos(itens), 'ok' => desfazer!(token, dados, itens) })
   end
 
-  # Sem pedido do dono E sem o mesmo `pedido` de um item pedido (destino secundário do mesmo pedido conta como pedido).
+  # Sem pedido do dono, sem o mesmo `pedido` de um item pedido e sem ser o destino secundário, pela tabela, de um item
+  # pedido (a instrução acompanha o tom, os limites e a passagem). Na dúvida, conta como pedido: não se pergunta.
   def itens_sem_pedido(itens)
-    pedidos = itens.reject { |item| item['pedido_pelo_dono'] == false }.pluck('pedido')
-    itens.select { |item| item['pedido_pelo_dono'] == false && pedidos.exclude?(item['pedido']) }
+    pedidos = itens.reject { |item| item['pedido_pelo_dono'] == false }
+    textos = pedidos.pluck('pedido')
+    campos = pedidos.pluck('campo')
+    itens.select do |item|
+      item['pedido_pelo_dono'] == false && textos.exclude?(item['pedido']) &&
+        !SECUNDARIO_DE.fetch(item['campo'], []).intersect?(campos)
+    end
   end
 
   # As colunas e as chaves do config destes campos.
@@ -53,26 +62,40 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     return fechar_desfeito!(token, resposta, conferencia) if conferencia.dig('desfeito', 'ok') == true
 
     mensagens, pendencia, aviso = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
-    estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia, aviso, conferencia),
+    mensagens = @mensagens_iniciais.to_a + mensagens
+    estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia.first, aviso, conferencia),
                                              'next_question' => mensagens.last.to_s))
-             .merge(estado_aplicado(dados, conferencia, pendencia.presence || pendencia_mantida(resposta)))
+             .merge(estado_aplicado(dados, conferencia, resposta, pendencia))
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
     log_do_ajuste(conferencia, desfecho)
   end
 
-  # -> [mensagens ao dono, pendência, aviso]. A pergunta do que o dono não pediu soma-se à pendência do turno.
+  # -> [mensagens ao dono, [pendência, origem], aviso]. A pergunta do que o dono não pediu soma-se à pendência do
+  # turno; a que o código abre sobre o turno (:codigo) zera a contagem, a do modelo (:modelo) conta como laço.
   def conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     nao_pedido = conferencia['sem_pedido'].presence &&
                  Autonomia::Agents::Builder::TextosDoAjuste.pergunta_do_nao_pedido(conferencia['sem_pedido'], idioma_do_ajuste)
-    pendencia = [pergunta_do_modelo(resposta) || pendencia_da_conferencia(conferencia, desfecho), nao_pedido]
-                .compact_blank.join(' ').presence
+    do_modelo = pergunta_do_modelo(resposta)
+    texto = [do_modelo || pendencia_da_conferencia(conferencia, desfecho), nao_pedido].compact_blank.join(' ').presence
+    origem = origem_da_pendencia(texto, do_modelo, nao_pedido)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[resposta['resposta_ao_dono'].to_s.strip, aviso, pendencia].compact_blank, pendencia, aviso]
+    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso]
   end
 
-  def estado_aplicado(dados, conferencia, pendencia)
+  def origem_da_pendencia(texto, do_modelo, nao_pedido)
+    return :mantida if texto.nil?
+
+    do_modelo && nao_pedido.blank? ? :modelo : :codigo
+  end
+
+  # O turno aplicado conta como laço para a pendência que segue aberta. `parcial`: falta apontada ou pergunta do
+  # modelo (a tela diz "parte entrou"); o "também mudei" sozinho não é parcial.
+  def estado_aplicado(dados, conferencia, resposta, pendencia)
+    texto, origem = pendencia
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
-      'conferencia' => conferencia, 'ajuste_em_curso' => nil }.merge(pendencia_no_estado(pendencia))
+      'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'desfazer_pendente' => desfazer_pendente_de(dados, conferencia),
+      'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present? }
+      .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end
 
   # Com aviso de desfecho, pendência ou qualquer falta apontada, a conversa segue aberta.

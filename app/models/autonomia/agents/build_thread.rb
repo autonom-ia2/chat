@@ -120,17 +120,15 @@ module Autonomia
         question = pending_question_of(anterior)
         return if question.blank?
 
-        # #1428: no piloto, a contagem de turnos da pendência segue para a sessão nova (o teto vale entre sessões).
-        turnos = anterior.slice('pendencia_turnos').compact
+        # #1428: no piloto, a contagem de turnos da pendência e o teto seguem para a sessão nova.
+        turnos = anterior.slice('pendencia_turnos', 'pendencia_no_teto').compact
         update!(state: state.to_h.merge('pending_question' => question).merge(turnos))
       end
 
       # A pergunta que ficou aberta numa thread anterior. #1428: no ajuste do piloto o Builder grava a pendência de
       # verdade em `pergunta_pendente` (a resposta a uma pergunta do dono e os avisos fixos nunca são pendência).
       def pending_question_of(previous_state)
-        if previous_state.key?('pergunta_pendente') && ::Autonomia::Agents::Fase2.ligada?(account)
-          return previous_state['pergunta_pendente'].to_s.strip
-        end
+        return previous_state['pergunta_pendente'].to_s.strip if previous_state.key?('pergunta_pendente')
         return '' unless previous_state['needs_more_info'] == true
 
         previous_state['next_question'].to_s.strip

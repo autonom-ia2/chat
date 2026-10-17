@@ -397,6 +397,83 @@ RSpec.describe Autonomia::Agents::Builder do
                                 'pergunta_pendente' => pergunta)
       expect(thread.messages.last).to include('content' => pergunta)
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
+      expect(estado['desfazer_pendente']).to include('colunas' => ['greeting'], 'chaves' => [],
+                                                     'itens' => [mudanca('greeting', 'x', 'Saudação nova.')])
+      expect(estado).to include('parcial' => false)
+    end
+
+    # Rodada 5 (MÉDIO): o destino secundário pela tabela é protegido mesmo com o `pedido` escrito diferente.
+    it 'a instrução que acompanha o tom pela tabela não conta como sem pedido, mesmo com outro texto de pedido' do
+      respostas << saida('tone' => 'curto', 'instruction' => 'Responda em no máximo 2 frases.',
+                         'mudancas' => [mudanca('tone', 'no máximo 2 frases'), mudanca('instruction', 'limitar a duas frases')])
+      sem_pedido(1)
+
+      run_turn
+
+      expect(agent.reload).to have_attributes(tone: 'curto', instruction: 'Responda em no máximo 2 frases.')
+      expect(estado).to include('needs_more_info' => false, 'pergunta_pendente' => '', 'desfazer_pendente' => nil)
+    end
+
+    # Rodada 5 (ALTO): o "sim, desfaça" desfaz, pela trava, o que ficou guardado no turno anterior.
+    describe 'a resposta ao "também mudei, quer que eu desfaça?"' do
+      before do
+        respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
+                           'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
+        sem_pedido(1)
+        run_turn
+        allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
+      end
+
+      def responder(fala_do_dono, saida_do_modelo)
+        thread.append_message!('user', fala_do_dono)
+        respostas << saida_do_modelo
+        described_class.new(account: account, build_thread: thread.reload).tap do |outro|
+          allow(outro).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+          outro.run!(thread.begin_build!)
+        end
+      end
+
+      it 'sim: o código desfaz o que não foi pedido, o pedido fica, e o dono recebe "Desfiz …"' do
+        responder('sim, desfaça', saida('desfazer_o_nao_pedido' => true, 'pendencia_resolvida' => true))
+
+        expect(agent.reload).to have_attributes(greeting: 'Oi! Aqui é o Hubber.', tone: 'curto')
+        expect(estado).to include('applied' => true, 'pergunta_pendente' => '', 'desfazer_pendente' => nil,
+                                  'next_question' => texto(:desfiz, resumos: 'Saudação nova'))
+        expect(thread.messages.last).to include('content' => texto(:desfiz, resumos: 'Saudação nova'))
+      end
+
+      it 'sim com um pedido novo junto: desfaz e aplica o pedido, com o "Desfiz" antes' do
+        modelo = saida('desfazer_o_nao_pedido' => true, 'pendencia_resolvida' => true, 'fallback_message' => 'Já volto.',
+                       'mudancas' => [mudanca('fallback_message')])
+        responder('sim, e troque o fallback', modelo)
+
+        expect(agent.reload).to have_attributes(greeting: 'Oi! Aqui é o Hubber.', fallback_message: 'Já volto.')
+        expect(thread.messages.pluck('content')).to include(texto(:desfiz, resumos: 'Saudação nova'))
+        expect(estado['desfazer_pendente']).to be_nil
+      end
+
+      it 'não: nada é desfeito e a chave sai' do
+        responder('não, deixa assim', saida('desfazer_o_nao_pedido' => false, 'pendencia_resolvida' => true))
+
+        expect(agent.reload.greeting).to eq('Olá!')
+        expect(estado).to include('desfazer_pendente' => nil, 'pergunta_pendente' => '')
+      end
+
+      it 'pedido novo sem responder: nada é desfeito e a chave sai' do
+        responder('troque o fallback', saida('fallback_message' => 'Já volto.', 'mudancas' => [mudanca('fallback_message')]))
+
+        expect(agent.reload).to have_attributes(greeting: 'Olá!', fallback_message: 'Já volto.')
+        expect(estado['desfazer_pendente']).to be_nil
+      end
+
+      it 'o agente mudou entre os turnos: não desfaz e diz o que ficou' do
+        Autonomia::Agents::Agent.where(id: agent.id).update_all(updated_at: 1.minute.from_now) # rubocop:disable Rails/SkipsModelValidations
+        responder('sim, desfaça', saida('desfazer_o_nao_pedido' => true, 'pendencia_resolvida' => true))
+
+        expect(agent.reload.greeting).to eq('Olá!')
+        expect(estado['next_question']).to eq(texto(:nao_desfiz, resumos: 'Saudação nova'))
+        expect(estado['desfazer_pendente']).to be_nil
+      end
     end
 
     it 'o agente mudou por outro caminho antes de desfazer: não desfaz e diz o que ficou sem pedido' do
