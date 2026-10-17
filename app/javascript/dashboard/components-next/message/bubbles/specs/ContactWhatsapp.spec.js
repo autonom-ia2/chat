@@ -11,7 +11,7 @@ vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 // #1702: "Conversar" e "Salvar contato" acham o contato pelo telefone, criam quando
 // não existe e completam o nome quando o cadastro não tem um de verdade.
-const montar = achado => {
+const montar = (achado, { comPele = true } = {}) => {
   const despachos = [];
   const store = createStore({
     actions: {
@@ -27,7 +27,7 @@ const montar = achado => {
   });
   const Conversa = defineComponent({
     setup() {
-      fornecerPele(computed(() => PELES.WHATSAPP));
+      fornecerPele(computed(() => (comPele ? PELES.WHATSAPP : null)));
       provideMessageContext({
         attachments: ref([
           {
@@ -94,5 +94,33 @@ describe('Contato recebido com a pele do WhatsApp', () => {
     await wrapper.find('[data-conversar-com-contato]').trigger('click');
     await flushPromises();
     expect(window.open).not.toHaveBeenCalled();
+  });
+});
+
+describe('Contato recebido sem pele (como no main)', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+  });
+
+  it('Salvar contato só abre o cadastro achado, sem completar o nome', async () => {
+    const { wrapper, despachos } = montar(
+      { id: 5, name: '+55 11 98765-0042' },
+      { comPele: false }
+    );
+    expect(wrapper.find('[data-conversar-com-contato]').exists()).toBe(false);
+    await salvar(wrapper);
+    expect(despachos).toEqual([]);
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('/contacts/5'),
+      '_blank'
+    );
+  });
+
+  it('cria o contato quando não existe', async () => {
+    const { wrapper, despachos } = montar(null, { comPele: false });
+    await salvar(wrapper);
+    expect(despachos).toEqual([
+      ['create', { name: 'Juliana Prado', phone_number: '+5511987650042' }],
+    ]);
   });
 });

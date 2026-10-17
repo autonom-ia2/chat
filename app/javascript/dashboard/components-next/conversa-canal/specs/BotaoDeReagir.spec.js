@@ -6,6 +6,18 @@ import { ABRIR_REACOES } from '../reacaoDoAtendente';
 import { emitter } from 'shared/helpers/mitt';
 import en from '../../../i18n/locale/en/conversaCanal.json';
 
+// O seletor completo de emoji usa a lista virtual (virtua), que mede com ResizeObserver; o jsdom não tem.
+beforeAll(() => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    vi.fn(() => ({ observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() }))
+  );
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
+
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } });
 
 const montar = (props = {}) =>

@@ -210,7 +210,6 @@
     },
     "EDITADA": {
       "ROTULO": "Edited",
-      "VER": "Edited. See previous versions",
       "TITULO": "Previous versions",
       "TROCADA_AS": "Changed at {hora}",
       "SEM_VERSOES": "The previous text was not saved."
@@ -288,7 +287,7 @@
       "SEM_NOME": "Unnamed contact"
     },
     "PREVIA_DE_LINK": {
-      "ABRIR": "Open {site} in a new tab"
+      "ABRIR": "{titulo}. Opens {site} in a new tab"
     },
     "AUDIO_OUVIDO": "The customer listened to this audio",
     "ENCAMINHAR": {
@@ -309,6 +308,7 @@
       "LIMITE_MENSAGENS": "You can forward up to {limite} messages at a time.",
       "ENVIADO": "Message forwarded | Messages forwarded",
       "DESTINO_FALHOU": "{nome}: {erro}",
+      "NAO_FOI": "These conversations didn't get it and are still selected to try again:",
       "FALHOU": "Could not forward. Try again.",
       "MODELO": "Template or campaign messages can't be forwarded: the text was filled in for this customer and the buttons don't go along."
     }

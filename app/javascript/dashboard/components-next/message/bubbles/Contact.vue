@@ -125,9 +125,21 @@ function alertContactError(error) {
   }
 }
 
+// Sem pele, exatamente como no main (a busca recebe o computed, como lá).
+async function addContactAsInMain() {
+  let contact = await filterContactByNumber(rawPhoneNumber);
+  if (!contact) {
+    contact = await $store.dispatch('contacts/create', getContactObject());
+    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
+  }
+  return contact;
+}
+
 async function addContact() {
   try {
-    const contact = await findOrCreateContact();
+    const contact = pele.value
+      ? await findOrCreateContact()
+      : await addContactAsInMain();
     openContactNewTab(contact.id);
   } catch (error) {
     alertContactError(error);

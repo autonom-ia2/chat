@@ -3,8 +3,10 @@
 // busca com a borda verde, "Conversas recentes" com avatar, nome e a última linha,
 // caixinha em cada linha (até 5) e, com alguém marcado, o rodapé com os nomes e o
 // botão redondo de enviar. Cada destino volta com o seu resultado; fora da janela
-// de 24 h o servidor não manda e diz por quê. Teclado: o Tab fica dentro da janela
-// e, ao fechar (✕, Esc, clique fora ou envio), o foco volta para onde estava.
+// de 24 h o servidor não manda e diz por quê: a janela fica aberta só com os destinos
+// que falharam marcados, e o motivo de cada um aparece nela. Teclado: o Tab fica
+// dentro da janela e, ao fechar (✕, Esc, clique fora ou envio), o foco volta para
+// onde estava ou, se aquilo sumiu, para a caixa de resposta.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
@@ -26,6 +28,8 @@ const { t } = useI18n();
 const ESPERA_DA_BUSCA = 300;
 const FOCAVEIS =
   'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+// Ponto estável para o foco quando quem abriu a janela sumiu: a caixa de resposta.
+const CAIXA_DE_RESPOSTA = '[data-conversa-da-pele] [contenteditable="true"]';
 
 const termo = ref('');
 const conversas = ref([]);
@@ -34,6 +38,9 @@ const enviando = ref(false);
 const escolhidas = ref([]);
 const campo = ref(null);
 const janela = ref(null);
+// Destinos que falharam no último envio ({ id, nome, erro }) e se algum já foi.
+const falhas = ref([]);
+const algumJaFoi = ref(false);
 let pedidoAtual = 0;
 let focoAnterior = null;
 
@@ -52,7 +59,12 @@ const buscar = async () => {
     if (pedido === pedidoAtual) carregando.value = false;
   }
 };
-const buscarDepois = useDebounceFn(buscar, ESPERA_DA_BUSCA);
+// A busca adiada que venceria depois de a janela fechar não sai (o useDebounceFn
+// não tem cancelar).
+let fechada = false;
+const buscarDepois = useDebounceFn(() => {
+  if (!fechada) buscar();
+}, ESPERA_DA_BUSCA);
 
 const marcada = id => escolhidas.value.some(item => item.id === id);
 
@@ -76,6 +88,12 @@ const nomesEscolhidos = computed(() =>
   escolhidas.value.map(item => item.nome).join(', ')
 );
 
+// Fechar depois de um envio parcial conta como enviado: o que foi não volta à seleção.
+const fechar = () => {
+  if (algumJaFoi.value) emit('enviado');
+  else emit('fechar');
+};
+
 const enviar = async () => {
   if (enviando.value || !escolhidas.value.length) return;
   enviando.value = true;
@@ -86,19 +104,25 @@ const enviar = async () => {
       escolhidas.value.map(item => item.id)
     );
     const resumo = resumoDoEnvio(data.payload, escolhidas.value);
-    const falhas = resumo.falhas.map(falha =>
-      t('CONVERSA_CANAL.ENCAMINHAR.DESTINO_FALHOU', falha)
-    );
-    if (!resumo.algumEnviado) {
-      useAlert(falhas.join(' · ') || t('CONVERSA_CANAL.ENCAMINHAR.FALHOU'));
+    if (resumo.algumEnviado) {
+      algumJaFoi.value = true;
+      useAlert(t('CONVERSA_CANAL.ENCAMINHAR.ENVIADO', props.messageIds.length));
+    }
+    if (!resumo.falhas.length && resumo.algumEnviado) {
+      falhas.value = [];
+      emit('enviado');
       return;
     }
-    const enviado = t(
-      'CONVERSA_CANAL.ENCAMINHAR.ENVIADO',
-      props.messageIds.length
+    if (!resumo.falhas.length) {
+      useAlert(t('CONVERSA_CANAL.ENCAMINHAR.FALHOU'));
+      return;
+    }
+    // Só os que falharam continuam marcados, para tentar de novo.
+    const idsQueFalharam = resumo.falhas.map(falha => falha.id);
+    escolhidas.value = escolhidas.value.filter(item =>
+      idsQueFalharam.includes(item.id)
     );
-    useAlert([enviado, ...falhas].join(' · '));
-    emit('enviado');
+    falhas.value = resumo.falhas;
   } catch (erro) {
     useAlert(
       erro?.response?.data?.error || t('CONVERSA_CANAL.ENCAMINHAR.FALHOU')
@@ -127,9 +151,15 @@ onMounted(async () => {
   campo.value?.focus();
 });
 
-// Quem abriu a janela pode ter sumido (o envio fecha o modo seleção): aí não volta.
+// Quem abriu a janela pode ter sumido (o envio fecha o modo seleção): aí o foco vai
+// para a caixa de resposta, que reaparece no mesmo ciclo, e não cai no body.
 onBeforeUnmount(() => {
-  if (focoAnterior?.isConnected) focoAnterior.focus();
+  fechada = true;
+  if (focoAnterior?.isConnected) {
+    focoAnterior.focus();
+    return;
+  }
+  nextTick(() => document.querySelector(CAIXA_DE_RESPOSTA)?.focus());
 });
 </script>
 
@@ -138,8 +168,8 @@ onBeforeUnmount(() => {
     <div
       class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#000]/40"
       data-janela-de-encaminhar
-      @click.self="emit('fechar')"
-      @keydown.esc.stop="emit('fechar')"
+      @click.self="fechar"
+      @keydown.esc.stop="fechar"
     >
       <div
         ref="janela"
@@ -154,7 +184,7 @@ onBeforeUnmount(() => {
             type="button"
             class="grid place-content-center size-11 rounded-full text-[#54656F] dark:text-[#AEBAC1] hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5"
             :aria-label="t('CONVERSA_CANAL.ENCAMINHAR.FECHAR')"
-            @click="emit('fechar')"
+            @click="fechar"
           >
             <Icon icon="i-ph-x" class="size-6" />
           </button>
@@ -231,6 +261,22 @@ onBeforeUnmount(() => {
                   </span>
                 </span>
               </button>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          v-if="falhas.length"
+          role="alert"
+          class="px-6 py-3 text-sm bg-[#FDECEA] dark:bg-[#3A1D1D] text-[#8B1A10] dark:text-[#F5B7B1]"
+          data-falhas-do-encaminhar
+        >
+          <p class="m-0 font-medium">
+            {{ t('CONVERSA_CANAL.ENCAMINHAR.NAO_FOI') }}
+          </p>
+          <ul class="m-0 mt-1 ps-4 list-disc">
+            <li v-for="falha in falhas" :key="falha.id">
+              {{ t('CONVERSA_CANAL.ENCAMINHAR.DESTINO_FALHOU', falha) }}
             </li>
           </ul>
         </div>

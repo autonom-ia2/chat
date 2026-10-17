@@ -2,7 +2,7 @@
 // "Editada" antes da hora (#1702), como no WhatsApp. No app quem recebe não vê o texto
 // antigo; aqui a equipe vê: clicar abre as versões anteriores, da mais nova para a mais
 // antiga, cada uma com a hora em que foi trocada (no fuso da conta).
-import { computed, ref, useId, useTemplateRef } from 'vue';
+import { computed, nextTick, ref, useId, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onClickOutside } from '@vueuse/core';
 import { versoesAnteriores } from './marcasDaMensagem';
@@ -17,6 +17,8 @@ const { t, locale } = useI18n();
 const fuso = useFuso();
 const aberto = ref(false);
 const raiz = useTemplateRef('raiz');
+const botao = useTemplateRef('botao');
+const painel = useTemplateRef('painel');
 const idPainel = `versoes-${useId()}`;
 
 const versoes = computed(() =>
@@ -38,24 +40,44 @@ const fechar = () => {
   aberto.value = false;
 };
 onClickOutside(raiz, fechar);
+
+// Ao abrir, o foco vai para o painel (o leitor de tela lê as versões); o Esc devolve
+// o foco ao "Editada".
+const alternar = async () => {
+  aberto.value = !aberto.value;
+  if (!aberto.value) return;
+  await nextTick();
+  painel.value?.focus();
+};
+const fecharPeloTeclado = () => {
+  if (!aberto.value) return;
+  fechar();
+  botao.value?.focus();
+};
 </script>
 
 <template>
-  <span ref="raiz" class="relative inline-flex" @keydown.esc.stop="fechar">
+  <span
+    ref="raiz"
+    class="relative inline-flex"
+    @keydown.esc.stop="fecharPeloTeclado"
+  >
     <button
+      ref="botao"
       type="button"
       class="inline rounded-sm pointer-events-auto hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#53BDEB] skip-context-menu"
       :aria-expanded="aberto"
       :aria-controls="idPainel"
-      :aria-label="t('CONVERSA_CANAL.EDITADA.VER')"
       data-rotulo-editada
-      @click.stop="aberto = !aberto"
+      @click.stop="alternar"
     >
       {{ t('CONVERSA_CANAL.EDITADA.ROTULO') }}
     </button>
     <div
       v-if="aberto"
       :id="idPainel"
+      ref="painel"
+      tabindex="-1"
       role="dialog"
       :aria-label="t('CONVERSA_CANAL.EDITADA.TITULO')"
       class="absolute bottom-full ltr:right-0 rtl:left-0 z-10 mb-1 w-64 max-w-[80vw] p-3 rounded-[10px] text-start whitespace-normal bg-white dark:bg-[#242626] text-[#0A0A0A] dark:text-[#FAFAFA] shadow-[0_2px_8px_rgba(11,20,26,0.26)] pointer-events-auto"

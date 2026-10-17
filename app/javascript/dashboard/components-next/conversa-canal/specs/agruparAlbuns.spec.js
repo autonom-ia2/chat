@@ -69,6 +69,57 @@ describe('podeEntrarNoAlbum (#1702)', () => {
   });
 });
 
+describe('podeEntrarNoAlbum: o que não se encaminha fica solto', () => {
+  it('visualização única, modelo/campanha e atividade não entram', () => {
+    expect(
+      podeEntrarNoAlbum(
+        foto({ attachments: [{ fileType: 'image', isViewOnce: true }] })
+      )
+    ).toBe(false);
+    expect(
+      podeEntrarNoAlbum(
+        foto({
+          messageType: 1,
+          additionalAttributes: { templateParams: { name: 'x' } },
+        })
+      )
+    ).toBe(false);
+    expect(
+      podeEntrarNoAlbum(
+        foto({ messageType: 1, additionalAttributes: { campaignId: 3 } })
+      )
+    ).toBe(false);
+    expect(podeEntrarNoAlbum(foto({ messageType: 2 }))).toBe(false);
+    expect(podeEntrarNoAlbum(foto({ messageType: 3 }))).toBe(false);
+  });
+
+  it('foto de visualização única no meio corta o álbum', () => {
+    const lista = [
+      foto(),
+      foto({ createdAt: BASE + 1 }),
+      foto({
+        createdAt: BASE + 2,
+        attachments: [{ fileType: 'image', isViewOnce: true }],
+      }),
+      foto({ createdAt: BASE + 3 }),
+    ];
+    const albuns = agruparAlbuns(lista, { fuso: FUSO });
+    expect(ids(albuns)).toEqual([[lista[0].id, lista[1].id]]);
+  });
+
+  it('fotos de modelo da empresa não viram álbum', () => {
+    const modelo = extras =>
+      foto({
+        messageType: 1,
+        senderType: 'User',
+        additionalAttributes: { templateParams: { name: 'x' } },
+        ...extras,
+      });
+    const lista = [modelo(), modelo({ createdAt: BASE + 1 })];
+    expect(agruparAlbuns(lista, { fuso: FUSO }).size).toBe(0);
+  });
+});
+
 describe('agruparAlbuns (#1702)', () => {
   it('3 fotos do cliente em segundos viram um álbum só (o teste com a Meta)', () => {
     const lista = [

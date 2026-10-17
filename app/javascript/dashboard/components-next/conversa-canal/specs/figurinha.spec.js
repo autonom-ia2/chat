@@ -100,9 +100,16 @@ describe('visual da figurinha (#1702)', () => {
   });
 
   it('não entra em álbum', () => {
-    const mensagem = { attachments: [ANEXO_FIGURINHA], contentAttributes: {} };
+    const mensagem = {
+      messageType: 0,
+      attachments: [ANEXO_FIGURINHA],
+      contentAttributes: {},
+    };
     expect(podeEntrarNoAlbum(mensagem)).toBe(false);
-    const foto = { attachments: [{ ...ANEXO_FIGURINHA, isSticker: false }] };
+    const foto = {
+      messageType: 0,
+      attachments: [{ ...ANEXO_FIGURINHA, isSticker: false }],
+    };
     expect(podeEntrarNoAlbum(foto)).toBe(true);
   });
 });

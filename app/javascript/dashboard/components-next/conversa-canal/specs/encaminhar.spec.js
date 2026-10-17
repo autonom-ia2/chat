@@ -1,4 +1,5 @@
-import { nextTick } from 'vue';
+/* eslint-disable vue/one-component-per-file */
+import { computed, defineComponent, h, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ConversaCanalAPI from 'dashboard/api/conversaCanal';
@@ -20,6 +21,8 @@ import {
   temBotaoAoLado,
 } from '../encaminhar/selecaoParaEncaminhar';
 import { resumoDoEnvio } from '../encaminhar/resultadoDoEncaminhar';
+import { useEncaminharDaMensagem } from '../encaminhar/useEncaminharDaMensagem';
+import { PELES, fornecerPele } from '../pele';
 import en from '../../../i18n/locale/en/conversaCanal.json';
 
 vi.mock('dashboard/api/conversaCanal', () => ({
@@ -235,7 +238,78 @@ describe('JanelaDeEncaminhar', () => {
     wrapper.unmount();
   });
 
-  it('enviar manda as mensagens e os destinos e avisa a falha por destino', async () => {
+  const enviarPara = async (wrapper, posicoes) => {
+    const linhas = wrapper.findAll('[data-destino]');
+    await Promise.all(posicoes.map(i => linhas[i].trigger('click')));
+    await wrapper.find('[data-enviar-encaminhamento]').trigger('click');
+    await flushPromises();
+  };
+
+  it('tudo certo: manda mensagens e destinos e fecha como enviado', async () => {
+    ConversaCanalAPI.encaminhar.mockResolvedValue({
+      data: {
+        payload: [
+          { conversation_id: 11, ok: true, erro: null },
+          { conversation_id: 12, ok: true, erro: null },
+        ],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await enviarPara(wrapper, [0, 1]);
+
+    expect(ConversaCanalAPI.encaminhar).toHaveBeenCalledWith(
+      9,
+      [1, 2],
+      [11, 12]
+    );
+    expect(wrapper.emitted('enviado')).toHaveLength(1);
+    expect(wrapper.find('[data-falhas-do-encaminhar]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('envio parcial: a janela fica só com quem falhou marcado e diz por quê', async () => {
+    ConversaCanalAPI.encaminhar.mockResolvedValueOnce({
+      data: {
+        payload: [
+          { conversation_id: 11, ok: true, erro: null },
+          { conversation_id: 12, ok: false, erro: 'Fora da janela' },
+        ],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await enviarPara(wrapper, [0, 1]);
+
+    expect(wrapper.emitted('enviado')).toBeUndefined();
+    const falhas = wrapper.find('[data-falhas-do-encaminhar]');
+    expect(falhas.attributes('role')).toBe('alert');
+    expect(falhas.text()).toContain('Bruno Lima: Fora da janela');
+    expect(falhas.text()).not.toContain('Ana Souza');
+    const marcadas = wrapper
+      .findAll('[data-destino]')
+      .map(linha => linha.attributes('aria-checked'));
+    expect(marcadas.slice(0, 2)).toEqual(['false', 'true']);
+    expect(wrapper.find('[data-rodape-de-encaminhar]').text()).toBe(
+      'Bruno Lima'
+    );
+
+    // Tentar de novo só para quem falhou; deu certo: agora fecha.
+    ConversaCanalAPI.encaminhar.mockResolvedValueOnce({
+      data: { payload: [{ conversation_id: 12, ok: true, erro: null }] },
+    });
+    await wrapper.find('[data-enviar-encaminhamento]').trigger('click');
+    await flushPromises();
+    expect(ConversaCanalAPI.encaminhar).toHaveBeenLastCalledWith(
+      9,
+      [1, 2],
+      [12]
+    );
+    expect(wrapper.emitted('enviado')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('envio parcial e o atendente fecha: conta como enviado', async () => {
     ConversaCanalAPI.encaminhar.mockResolvedValue({
       data: {
         payload: [
@@ -246,22 +320,62 @@ describe('JanelaDeEncaminhar', () => {
     });
     const wrapper = montar();
     await flushPromises();
-    const linhas = wrapper.findAll('[data-destino]');
-    await linhas[0].trigger('click');
-    await linhas[1].trigger('click');
-    await wrapper.find('[data-enviar-encaminhamento]').trigger('click');
-    await flushPromises();
-
-    expect(ConversaCanalAPI.encaminhar).toHaveBeenCalledWith(
-      9,
-      [1, 2],
-      [11, 12]
-    );
-    expect(useAlert.mock.calls.at(-1)[0]).toContain(
-      'Bruno Lima: Fora da janela'
-    );
+    await enviarPara(wrapper, [0, 1]);
+    await wrapper.find('[role=dialog] button').trigger('click');
     expect(wrapper.emitted('enviado')).toHaveLength(1);
+    expect(wrapper.emitted('fechar')).toBeUndefined();
     wrapper.unmount();
+  });
+
+  it('nenhum foi: fica aberta com o motivo; fechar é só fechar', async () => {
+    ConversaCanalAPI.encaminhar.mockResolvedValue({
+      data: {
+        payload: [{ conversation_id: 11, ok: false, erro: 'Bloqueado' }],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await enviarPara(wrapper, [0]);
+    expect(wrapper.find('[data-falhas-do-encaminhar]').text()).toContain(
+      'Ana Souza: Bloqueado'
+    );
+    await wrapper.find('[role=dialog] button').trigger('click');
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    expect(wrapper.emitted('enviado')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('quem abriu sumiu: o foco vai para a caixa de resposta, não para o body', async () => {
+    const area = document.createElement('div');
+    area.setAttribute('data-conversa-da-pele', '');
+    const caixa = document.createElement('div');
+    caixa.setAttribute('contenteditable', 'true');
+    caixa.tabIndex = 0;
+    area.appendChild(caixa);
+    const abridor = document.createElement('button');
+    area.appendChild(abridor);
+    document.body.appendChild(area);
+    abridor.focus();
+    const wrapper = montar();
+    await flushPromises();
+    abridor.remove();
+    wrapper.unmount();
+    await nextTick();
+    expect(document.activeElement).toBe(caixa);
+    area.remove();
+  });
+
+  it('busca digitada e a janela fechada antes da espera: não busca', async () => {
+    vi.useFakeTimers();
+    const wrapper = montar();
+    await flushPromises();
+    ConversaCanalAPI.destinosParaEncaminhar.mockClear();
+    const campo = wrapper.find('input[type=search]');
+    await campo.setValue('ana');
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(ConversaCanalAPI.destinosParaEncaminhar).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('Tab dá a volta dentro da janela e, ao fechar, o foco volta', async () => {
@@ -308,8 +422,8 @@ describe('resumoDoEnvio', () => {
     );
     expect(resumo.algumEnviado).toBe(false);
     expect(resumo.falhas).toEqual([
-      { nome: 'Ana Souza', erro: 'x' },
-      { nome: '#99', erro: 'y' },
+      { id: 11, nome: 'Ana Souza', erro: 'x' },
+      { id: 99, nome: '#99', erro: 'y' },
     ]);
   });
 });
@@ -404,5 +518,69 @@ describe('EncaminharDaConversa', () => {
     await wrapper.setProps({ conversationId: 10 });
     expect(selecao.ativa).toBe(false);
     wrapper.unmount();
+  });
+});
+
+describe('álbum no encaminhar: só os itens encaminháveis vão', () => {
+  const montarComposable = (principal, itens) => {
+    let encaminhar;
+    const Balao = defineComponent({
+      setup() {
+        encaminhar = useEncaminharDaMensagem(
+          computed(() => principal),
+          computed(() => itens)
+        );
+        return () => null;
+      },
+    });
+    // A pele vem da tela da conversa (quem fornece é o pai).
+    const Conversa = defineComponent({
+      setup() {
+        fornecerPele(computed(() => PELES.WHATSAPP));
+        return () => h(Balao);
+      },
+    });
+    mount(Conversa, { global });
+    return encaminhar;
+  };
+  const foto = extras =>
+    mensagem({
+      content: null,
+      attachments: [{ fileType: 'image' }],
+      ...extras,
+    });
+
+  it('item de visualização única fica fora da seleção', () => {
+    const primeira = foto({ id: 1 });
+    const unica = foto({
+      id: 2,
+      attachments: [{ fileType: 'image', isViewOnce: true }],
+    });
+    const encaminhar = montarComposable(primeira, [
+      primeira,
+      unica,
+      foto({ id: 3 }),
+    ]);
+    encaminhar.iniciarSelecao();
+    expect(selecao.ids).toEqual([1, 3]);
+    sairDaSelecao();
+    encaminhar.encaminharDireto();
+    expect(selecao.ids).toEqual([1, 3]);
+  });
+
+  it('item de modelo fica fora da seleção', () => {
+    const primeira = foto({ id: 1, messageType: 1 });
+    const modelo = foto({
+      id: 2,
+      messageType: 1,
+      additionalAttributes: { templateParams: { name: 'x' } },
+    });
+    const encaminhar = montarComposable(primeira, [primeira, modelo]);
+    expect(encaminhar.podeEncaminhar.value).toBe(true);
+    comecarSelecao(9, [7]);
+    expect(encaminhar.marcada.value).toBe(false);
+    encaminhar.alternar();
+    expect(selecao.ids).toEqual([7, 1]);
+    expect(encaminhar.marcada.value).toBe(true);
   });
 });

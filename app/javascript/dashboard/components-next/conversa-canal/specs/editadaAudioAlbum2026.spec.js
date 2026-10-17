@@ -63,9 +63,8 @@ describe('editada (#1702)', () => {
     const wrapper = montarRotulo();
     const botao = wrapper.find('[data-rotulo-editada]');
     expect(botao.text()).toBe('Edited');
-    expect(botao.attributes('aria-label')).toBe(
-      'Edited. See previous versions'
-    );
+    // O nome é o texto que aparece: nada de aria-label por cima.
+    expect(botao.attributes('aria-label')).toBeUndefined();
     expect(botao.attributes('aria-expanded')).toBe('false');
     await botao.trigger('click');
     const versoes = wrapper.findAll('[data-versao-anterior]');
@@ -80,13 +79,16 @@ describe('editada (#1702)', () => {
     wrapper.unmount();
   });
 
-  it('Esc fecha', async () => {
+  it('abrir leva o foco ao painel; Esc fecha e devolve o foco ao "Editada"', async () => {
     const wrapper = montarRotulo();
-    await wrapper.find('[data-rotulo-editada]').trigger('click');
-    await wrapper.find('[data-versoes-anteriores]').trigger('keydown', {
-      key: 'Escape',
-    });
+    const botao = wrapper.find('[data-rotulo-editada]');
+    await botao.trigger('click');
+    await nextTick();
+    const painel = wrapper.find('[data-versoes-anteriores]');
+    expect(document.activeElement).toBe(painel.element);
+    await painel.trigger('keydown', { key: 'Escape' });
     expect(wrapper.find('[data-versoes-anteriores]').exists()).toBe(false);
+    expect(document.activeElement).toBe(botao.element);
     wrapper.unmount();
   });
 

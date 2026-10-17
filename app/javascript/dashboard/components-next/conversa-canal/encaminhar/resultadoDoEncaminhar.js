@@ -9,6 +9,10 @@ export const resumoDoEnvio = (resultados, escolhidas) => {
     algumEnviado: lista.some(item => item?.ok),
     falhas: lista
       .filter(item => item && !item.ok)
-      .map(item => ({ nome: nomeDe(item.conversation_id), erro: item.erro })),
+      .map(item => ({
+        id: item.conversation_id,
+        nome: nomeDe(item.conversation_id),
+        erro: item.erro,
+      })),
   };
 };

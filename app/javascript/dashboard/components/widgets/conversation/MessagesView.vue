@@ -471,7 +471,8 @@ export default {
     makeMessagesRead() {
       this.$store.dispatch('markMessagesRead', {
         id: this.currentChat.id,
-        readReceipt: !this.isImpersonating,
+        // Recibo de leitura no WhatsApp só com a pele (sem ela, como no main).
+        readReceipt: !this.isImpersonating && !!this.pele,
       });
     },
     async handleMessageRetry(message) {

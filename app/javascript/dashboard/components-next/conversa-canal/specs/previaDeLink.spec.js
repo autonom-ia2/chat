@@ -1,3 +1,7 @@
+import { mount } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
+import en from 'dashboard/i18n/locale/en/conversaCanal.json';
+import PreviaDeLink from '../PreviaDeLink.vue';
 import { previaDeLink } from '../previaDeLink';
 
 const base = {
@@ -35,7 +39,15 @@ describe('previaDeLink', () => {
   });
 
   it('endereço que não é web não vira link', () => {
-    ['ftp://exemplo.com.br/x', 'data:text/html,oi'].forEach(url => {
+    [
+      'ftp://exemplo.com.br/x',
+      'data:text/html,oi',
+      // eslint-disable-next-line no-script-url
+      'javascript:alert(1)',
+      // eslint-disable-next-line no-script-url
+      'JavaScript:alert(1)',
+      ' javascript:alert(1)',
+    ].forEach(url => {
       expect(
         previaDeLink({ linkPreview: { ...base.linkPreview, url } })
       ).toBeNull();
@@ -78,5 +90,20 @@ describe('previaDeLink', () => {
     });
 
     expect(previa.site).toBe('exemplo.com.br');
+  });
+});
+
+describe('PreviaDeLink', () => {
+  it('o nome do link começa pelo título que aparece (label-in-name)', () => {
+    const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } });
+    const wrapper = mount(PreviaDeLink, {
+      props: { previa: previaDeLink(base) },
+      global: { plugins: [i18n] },
+    });
+    const link = wrapper.find('a');
+    expect(link.attributes('aria-label')).toBe(
+      'Seguro auto. Opens Exemplo Seguros in a new tab'
+    );
+    expect(link.attributes('rel')).toBe('noopener noreferrer');
   });
 });

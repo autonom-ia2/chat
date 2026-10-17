@@ -1,7 +1,9 @@
+import { flushPromises } from '@vue/test-utils';
 import Decoder from 'wavesurfer.js/dist/decoder.js';
 import {
   BARRAS,
   NIVEIS,
+  SIMULTANEAS,
   barrasDoAudio,
   carregarOnda,
   tempoDoAudio,
@@ -62,6 +64,87 @@ describe('onda do áudio (#1702)', () => {
     const segunda = await carregarOnda(url);
     expect(segunda).toBe(primeira);
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    decode.mockRestore();
+  });
+
+  it(`no máximo ${SIMULTANEAS} áudios baixando ao mesmo tempo; os outros esperam`, async () => {
+    const decode = vi.spyOn(Decoder, 'decode').mockResolvedValue({
+      getChannelData: () => new Float32Array(10),
+      duration: 3,
+    });
+    const respostas = [];
+    globalThis.fetch = vi.fn(
+      () =>
+        new Promise(resolve => {
+          respostas.push(() =>
+            resolve({
+              ok: true,
+              arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+            })
+          );
+        })
+    );
+    const pedidos = [1, 2, 3, 4].map(n =>
+      carregarOnda(`https://exemplo.com/fila-${n}.ogg`)
+    );
+    await flushPromises();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(SIMULTANEAS);
+
+    respostas[0]();
+    await flushPromises();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(SIMULTANEAS + 1);
+
+    respostas.slice(1).forEach(responder => responder());
+    await flushPromises();
+    respostas.slice(SIMULTANEAS + 1).forEach(responder => responder());
+    const ondas = await Promise.all(pedidos);
+    expect(ondas.every(onda => onda?.duracao === 3)).toBe(true);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(4);
+    decode.mockRestore();
+  });
+
+  it('quem saiu da tela desiste da fila e não baixa nada', async () => {
+    const respostas = [];
+    globalThis.fetch = vi.fn(
+      () =>
+        new Promise(resolve => {
+          respostas.push(() => resolve({ ok: false }));
+        })
+    );
+    const ocupando = [1, 2].map(n =>
+      carregarOnda(`https://exemplo.com/ocupa-${n}.ogg`)
+    );
+    const saiu = new AbortController();
+    const naFila = carregarOnda('https://exemplo.com/saiu.ogg', {
+      signal: saiu.signal,
+    });
+    await flushPromises();
+    saiu.abort();
+    expect(await naFila).toBeNull();
+
+    respostas.forEach(responder => responder());
+    await Promise.all(ocupando);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      'https://exemplo.com/saiu.ogg',
+      expect.anything()
+    );
+  });
+
+  it('signal abortado devolve null mesmo com a onda guardada', async () => {
+    const decode = vi.spyOn(Decoder, 'decode').mockResolvedValue({
+      getChannelData: () => new Float32Array(10),
+      duration: 3,
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    });
+    const url = 'https://exemplo.com/guardada-e-abortada.ogg';
+    expect(await carregarOnda(url)).not.toBeNull();
+    const saiu = new AbortController();
+    saiu.abort();
+    expect(await carregarOnda(url, { signal: saiu.signal })).toBeNull();
     decode.mockRestore();
   });
 

@@ -128,7 +128,7 @@ const ir = () => {
         {{ nome }}
       </span>
       <span
-        class="flex items-start gap-1 text-[13px] leading-[18px] text-[#666666] dark:text-[#A7A8A8]"
+        class="flex items-start gap-1 text-[13px] leading-[18px] text-[#666666] dark:text-[#B5C2BC]"
       >
         <span
           v-if="icone"
@@ -143,14 +143,14 @@ const ir = () => {
       </span>
       <span
         v-if="solta?.outraConversa"
-        class="block text-[12px] leading-[16px] italic text-[#666666] dark:text-[#A7A8A8]"
+        class="block text-[12px] leading-[16px] italic text-[#666666] dark:text-[#B5C2BC]"
         data-citacao-de-outra-conversa
       >
         {{ t('CONVERSA_CANAL.CITACAO.OUTRA_CONVERSA') }}
       </span>
       <span
         v-if="naoConferida"
-        class="block text-[12px] leading-[16px] italic text-[#666666] dark:text-[#A7A8A8]"
+        class="block text-[12px] leading-[16px] italic text-[#666666] dark:text-[#B5C2BC]"
         data-citacao-nao-conferida
       >
         {{ t('CONVERSA_CANAL.CITACAO.NAO_CONFERIDA') }}

@@ -450,20 +450,22 @@ const reacaoDoAtendente = useReacaoDoAtendente(
 );
 
 // #1702: encaminhar como no WhatsApp Web (menu, botão ao lado da mídia, modo seleção).
+const mensagemParaEncaminhar = computed(() => ({
+  id: props.id,
+  conversationId: props.conversationId,
+  messageType: props.messageType,
+  contentType: props.contentType,
+  status: props.status,
+  private: props.private,
+  content: props.content,
+  contentAttributes: props.contentAttributes,
+  additionalAttributes: props.additionalAttributes,
+  attachments: props.attachments,
+}));
+// O álbum leva os itens dele; só os encaminháveis entram (o composable filtra).
 const encaminhar = useEncaminharDaMensagem(
-  computed(() => ({
-    id: props.id,
-    conversationId: props.conversationId,
-    messageType: props.messageType,
-    contentType: props.contentType,
-    status: props.status,
-    private: props.private,
-    content: props.content,
-    contentAttributes: props.contentAttributes,
-    additionalAttributes: props.additionalAttributes,
-    attachments: props.attachments,
-  })),
-  computed(() => album.value?.map(item => item.id) || [props.id])
+  mensagemParaEncaminhar,
+  computed(() => album.value || [mensagemParaEncaminhar.value])
 );
 
 const payloadForContextMenu = computed(() => {

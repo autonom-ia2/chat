@@ -210,7 +210,6 @@
     },
     "EDITADA": {
       "ROTULO": "Editada",
-      "VER": "Editada. Ver versões anteriores",
       "TITULO": "Versões anteriores",
       "TROCADA_AS": "Trocada às {hora}",
       "SEM_VERSOES": "O texto anterior não foi guardado."
@@ -288,7 +287,7 @@
       "SEM_NOME": "Contato sem nome"
     },
     "PREVIA_DE_LINK": {
-      "ABRIR": "Abrir {site} em uma nova aba"
+      "ABRIR": "{titulo}. Abre {site} em uma nova aba"
     },
     "AUDIO_OUVIDO": "O cliente ouviu este áudio",
     "ENCAMINHAR": {
@@ -309,6 +308,7 @@
       "LIMITE_MENSAGENS": "Dá para encaminhar até {limite} mensagens de uma vez.",
       "ENVIADO": "Mensagem encaminhada | Mensagens encaminhadas",
       "DESTINO_FALHOU": "{nome}: {erro}",
+      "NAO_FOI": "Não foi para estas conversas. Elas continuam marcadas para tentar de novo:",
       "FALHOU": "Não deu para encaminhar. Tente de novo.",
       "MODELO": "Mensagem de modelo ou de campanha não pode ser encaminhada: o texto foi preenchido para este cliente e os botões não vão juntos."
     }

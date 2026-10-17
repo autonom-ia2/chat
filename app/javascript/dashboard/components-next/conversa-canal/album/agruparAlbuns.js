@@ -3,9 +3,15 @@
 // app agrupa também com legenda: a legenda fica embaixo do mosaico (AlbumDoWhatsapp).
 // A regra exata do WhatsApp não é pública: o app já exigiu 4 itens e desde dez/2024
 // agrupa a partir de 2 (WABetaInfo, iOS 24.25.80). Ficamos com o observado em 2026.
-import { ATTACHMENT_TYPES, MESSAGE_STATUS } from '../../message/constants';
+import {
+  ATTACHMENT_TYPES,
+  MESSAGE_STATUS,
+  MESSAGE_TYPES,
+} from '../../message/constants';
 import { continuaASequencia } from '../useSequenciaDaConversa';
 import { eFigurinha } from '../figurinha';
+import { eVisualizacaoUnica } from '../visualizacaoUnica';
+import { deModeloOuCampanha } from '../encaminhar/selecaoParaEncaminhar';
 
 // Itens a partir dos quais a sequência vira álbum.
 export const MINIMO_DO_ALBUM = 2;
@@ -17,15 +23,23 @@ export const QUADROS_DO_MOSAICO = 4;
 
 const TIPOS_DO_ALBUM = [ATTACHMENT_TYPES.IMAGE, ATTACHMENT_TYPES.VIDEO];
 
-// Só foto ou vídeo sozinho (com ou sem legenda), sem resposta citada, que não falhou.
-// Apagada pelo cliente fica solta, com o selo dela.
+const LADOS_DO_ALBUM = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
+
+// Só foto ou vídeo sozinho (com ou sem legenda), do cliente ou da empresa, sem resposta
+// citada, que não falhou. Apagada pelo cliente fica solta, com o selo dela.
 export const podeEntrarNoAlbum = mensagem => {
   const anexos = mensagem.attachments || [];
   const atributos = mensagem.contentAttributes || {};
+  if (!LADOS_DO_ALBUM.includes(mensagem.messageType)) return false;
   if (anexos.length !== 1) return false;
   if (!TIPOS_DO_ALBUM.includes(anexos[0].fileType)) return false;
   // Figurinha fica sempre solta, como no app (é foto só no tipo do anexo).
   if (eFigurinha(anexos[0])) return false;
+  // Visualização única e modelo/campanha ficam soltos, com o rótulo e as regras deles
+  // (não se encaminham; no mosaico iriam junto).
+  if (eVisualizacaoUnica(anexos[0]) || deModeloOuCampanha(mensagem)) {
+    return false;
+  }
   if (mensagem.private || mensagem.status === MESSAGE_STATUS.FAILED) {
     return false;
   }
