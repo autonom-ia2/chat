@@ -40,8 +40,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       schema = calls.first[:schema]
       expect(schema).to equal(described_class::AjustePorLista::SCHEMA)
-      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono', 'pendencia_resolvida',
-                                                    'desfazer_o_nao_pedido')
+      expect(schema[:schema][:required]).to include('so_pergunta', 'mudancas', 'resposta_ao_dono', 'pendencia_resolvida')
+      expect(schema[:schema][:properties].keys).not_to include(:desfazer_o_nao_pedido)
       expect(schema[:schema][:properties][:mudancas][:items][:properties][:campo][:enum])
         .to eq(%w[instruction tone handoff_rule greeting fallback_message starter_questions guardrails human_card name voice])
       expect(calls.first[:input].first).to eq(described_class::AjustePorLista.item_da_tabela)
@@ -50,7 +50,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
     it 'os campos novos são booleanos, e o pedido manda usar o mesmo texto em todos os destinos' do
       propriedades = described_class::AjustePorLista::SCHEMA[:schema][:properties]
-      expect(propriedades.values_at(:pendencia_resolvida, :desfazer_o_nao_pedido).pluck(:type)).to eq(%w[boolean boolean])
+      expect(propriedades[:pendencia_resolvida][:type]).to eq('boolean')
       expect(described_class::AjustePorLista::MUDANCA.dig(:properties, :pedido, :description)).to include('mesmo pedido')
     end
 
@@ -92,18 +92,52 @@ RSpec.describe Autonomia::Agents::Builder do
         proxima.inherit_pending_question!
         expect(proxima.reload.state.to_h['pending_question']).to be_nil
       end
+    end
 
-      # Revisão da parte 2 (INFO): com a pendência de verdade gravada, ela vale mesmo com a chave desligada depois; a
-      # resposta à pergunta do dono nunca vira pendência.
-      it 'com a Fase 2 desligada depois, a resposta continua sem virar pendência' do
+    # Rodada 6 (MÉDIO): a pendência gravada vale só com a Fase 2. Desligada, vale o caminho de antes, e a resposta a uma
+    # pergunta do dono não fica presa como pendência.
+    describe 'quando a Fase 2 é desligada no meio' do
+      let(:fala) { 'Mude o tom' }
+
+      it 'desligada, a resposta à pergunta do dono não vira pendência (nem herdada)' do
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
         run_turn
+        thread.append_message!('user', 'O que você faz hoje?')
+        respostas << saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.')
+        described_class.new(account: account, build_thread: thread.reload).tap do |segundo|
+          allow(segundo).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+          segundo.run!(thread.begin_build!)
+        end
         Autonomia::Agents::Fase2.desligar!(account)
 
-        proxima = Autonomia::Agents::BuildThread.create!(account: account.reload, agent: agent)
+        proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
         proxima.inherit_pending_question!
-
         expect(proxima.reload.state['pending_question']).to be_nil
-        expect(described_class.new(account: account.reload, build_thread: thread.reload).send(:pending_question)).to eq('')
+      end
+
+      it 'liga, pendência, pergunta do dono, desliga, turno legado e sessão nova: nada fica preso' do
+        respostas << saida('needs_more_info' => true, 'next_question' => 'Mais formal ou informal?')
+        run_turn
+        thread.append_message!('user', 'O que você faz hoje?')
+        respostas << saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.')
+        described_class.new(account: account, build_thread: thread.reload).tap do |segundo|
+          allow(segundo).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+          segundo.run!(thread.begin_build!)
+        end
+        Autonomia::Agents::Fase2.desligar!(account)
+
+        legado = described_class.new(account: account.reload, build_thread: thread.reload)
+        expect(legado.send(:pending_question)).to eq('')
+
+        thread.append_message!('user', 'Troque a saudação')
+        respostas << saida('greeting' => 'Olá')
+        allow(legado).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+        legado.run!(thread.begin_build!)
+        expect(agent.reload.greeting).to eq('Olá')
+        expect(estado.slice('needs_more_info', 'applied')).to eq('needs_more_info' => false, 'applied' => true)
+        nova = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+        nova.inherit_pending_question!
+        expect(nova.reload.state['pending_question']).to be_nil
       end
     end
 
@@ -186,7 +220,7 @@ RSpec.describe Autonomia::Agents::Builder do
       end
 
       # Revisão da parte 2 (rodada 5, MÉDIO): os turnos em laço contam; no teto, a pendência fica, sem a ordem de repetir.
-      it 'turnos aplicados sem resolver chegam ao teto: a pendência fica como contexto, sem REPITA, e segue de sessão' do
+      it 'turnos aplicados sem resolver chegam ao teto: a pendência fica como contexto, sem REPITA, e não segue de sessão' do
         segundo_turno(saida('greeting' => 'Olá', 'mudancas' => [mudanca('greeting', 'saudação Olá')]))
         mais_um_turno('Mude o fallback', saida('fallback_message' => 'F2', 'mudancas' => [mudanca('fallback_message', 'f')]))
         ultimo = mais_um_turno('Mude o tom', saida('tone' => 'leve', 'mudancas' => [mudanca('tone', 't')]))
@@ -196,7 +230,7 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(contexto_do_proximo_turno).not_to include('REPITA')
         proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
         proxima.inherit_pending_question!
-        expect(proxima.reload.state).to include('pending_question' => 'Mais formal ou informal?', 'pendencia_no_teto' => true)
+        expect(proxima.reload.state['pending_question']).to be_nil
       end
 
       it 'pendência e três perguntas do dono: a pendência fica, e a pergunta dele não conta para o teto' do
@@ -219,6 +253,17 @@ RSpec.describe Autonomia::Agents::Builder do
 
         expect(estados.map { |linha| linha[1] }).to eq([1, 2, 3])
         expect(estados.last).to eq(['Qual tom você prefere?', 3, true])
+      end
+
+      # Rodada 6 (BAIXO): a pergunta que o código abre sobre o turno (origem :codigo) zera a contagem.
+      it 'a pergunta que o código abre sobre o turno substitui a pendência e zera a contagem' do
+        segundo_turno(saida('greeting' => 'Olá', 'mudancas' => [mudanca('greeting', 'saudação Olá')]))
+        expect(estado['pendencia_turnos']).to eq(1)
+        conferencias << { conflito: true }
+
+        ultimo = mais_um_turno('Responda curto', saida('tone' => 'curto', 'mudancas' => [mudanca('tone', 'curto')]))
+
+        expect(ultimo).to eq([texto(:conflito, pedidos: 'curto'), 0, false])
       end
 
       it 'o aviso de pendência do piloto manda marcar pendencia_resolvida em vez de repetir' do

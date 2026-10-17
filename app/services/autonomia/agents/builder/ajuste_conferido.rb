@@ -11,7 +11,7 @@
 #      `conferencia`). Com correção, a versão da primeira escrita sai da lista e a da correção leva `correcao_de`.
 #
 # A PENDÊNCIA de verdade fica em `pergunta_pendente`: a resposta a uma pergunta do dono e os avisos fixos nunca são
-# pendência, e a pendência anterior sobrevive a eles (PendenciaDoAjuste, com o teto e o "sim, desfaça").
+# pendência, e a pendência anterior sobrevive a eles (PendenciaDoAjuste, com o teto).
 #
 # IDEMPOTÊNCIA E TEMPO: depois que a primeira escrita vence, o state guarda `ajuste_em_curso` (o token, a lista, o id
 # da versão de antes, nunca a instrução crua). Um re-run do mesmo token pula o Construtor e vai conferir e fechar. A
@@ -56,9 +56,6 @@ module Autonomia::Agents::Builder::AjusteConferido
     @explicacao_da_correcao = nil
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
-    @desfazer_pendente = @thread.state.to_h['desfazer_pendente']
-    @mensagens_iniciais = []
-    @resultado_do_desfazer = nil
     ajuste_em_curso(token) ? :retomar : :seguir
   end
 
@@ -75,10 +72,8 @@ module Autonomia::Agents::Builder::AjusteConferido
   end
 
   def ajustar_pela_lista(token, parsed)
-    desfazer_o_pendente!(token, parsed)
     mudancas = regras_do_ajuste.mudancas(parsed)
     motivo = motivo_para_nao_aplicar(parsed, mudancas)
-    return fechar_so_o_desfazer!(token, parsed) if @resultado_do_desfazer && motivo == :sem_pedido
     return responder_sem_aplicar(token, parsed, motivo) if motivo
 
     antes_comparavel = regras_do_ajuste.comparavel(@thread.agent)
@@ -146,13 +141,11 @@ module Autonomia::Agents::Builder::AjusteConferido
   end
 
   # O turno termina sem nada aplicado: needs_more_info, as mensagens ao dono (a última é o next_question) e a pendência
-  # (que vem pronta em `extra`). O texto do "sim, desfaça" deste turno, se houve, vai antes.
+  # (que vem pronta em `extra`).
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
-    mensagens = @mensagens_iniciais.to_a + mensagens
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'desfazer_pendente' => nil,
-                    'parcial' => false)
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end

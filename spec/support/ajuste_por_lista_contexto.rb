@@ -31,8 +31,7 @@ RSpec.shared_context 'with ajuste por lista' do
       'fallback_message' => 'Vou confirmar com a equipe.', 'handoff_rule' => 'Passe para a equipe quando o cliente pedir.',
       'starter_questions' => ['Como funciona?'], 'tone' => 'cordial', 'guardrails' => ['Não invente valores.'],
       'voice' => 'masculina', 'needs_more_info' => false, 'next_question' => '', 'user_asked_to_close' => false,
-      'so_pergunta' => false, 'mudancas' => [], 'resposta_ao_dono' => '', 'pendencia_resolvida' => false,
-      'desfazer_o_nao_pedido' => false }.merge(overrides)
+      'so_pergunta' => false, 'mudancas' => [], 'resposta_ao_dono' => '', 'pendencia_resolvida' => false }.merge(overrides)
   end
 
   def mudanca(campo, pedido = fala, resumo = 'Mudou.')

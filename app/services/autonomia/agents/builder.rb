@@ -989,7 +989,7 @@ module Autonomia
         question = pending_question
         return '' if question.blank?
         # #1428: no teto de turnos, a pendência do piloto segue só como contexto, sem a ordem de repetir.
-        return pendencia_no_teto_context(question) if @thread.state.to_h['pendencia_no_teto'] == true
+        return pendencia_no_teto_context(question) if ajuste_da_fase2? && @thread.state.to_h['pendencia_no_teto'] == true
 
         'CONTEXTO INTERNO (não é fala do usuário). PERGUNTA PENDENTE, ainda sem resposta: ' \
           "\"#{question}\". Pedidos ACUMULAM: se a última fala do usuário trouxe um pedido NOVO sem " \
@@ -1008,10 +1008,12 @@ module Autonomia
         state = @thread.state.to_h
         inherited = state['pending_question'].to_s.strip
         return inherited if inherited.present?
-        # #1428: a pendência de verdade que o ajuste do piloto grava (a resposta a uma pergunta do dono e os avisos fixos
-        # nunca são pendência). Vale mesmo se a chave for desligada depois: a chave só existe onde o piloto rodou.
-        return state['pergunta_pendente'].to_s.strip if state.key?('pergunta_pendente')
+        # #1428: no ajuste do piloto, a pendência de verdade (a resposta a uma pergunta do dono e os avisos fixos nunca
+        # são pendência). Com a chave desligada, vale o caminho de antes, mas a resposta a uma pergunta do dono
+        # (so_pergunta) nunca é pendência.
+        return state['pergunta_pendente'].to_s.strip if ajuste_da_fase2? && state.key?('pergunta_pendente')
         return '' unless adjust_mode? && state['needs_more_info'] == true
+        return '' if state['so_pergunta'] == true
 
         state['next_question'].to_s.strip
       end

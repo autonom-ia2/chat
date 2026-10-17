@@ -233,31 +233,35 @@ describe('MudarConversando', () => {
 
     expect(no('[data-parcial]').textContent).toContain('MUDAR_VISTA.PARCIAL');
     expect(no('[data-feito]')).toBeNull();
+    const ordem = todos('[data-parcial], [data-mensagem="assistant"]');
+    expect(ordem.indexOf(no('[data-parcial]'))).toBeLessThan(
+      ordem.indexOf(todos('[data-mensagem="assistant"]').pop())
+    );
     expect(todos('[data-mensagem="assistant"]').pop().textContent).toContain(
       'Como você quer a saudação?'
     );
     wrapper.unmount();
   });
 
-  // #1428 — "também mudei X, quer que eu desfaça?": tudo entrou, então é FEITO, com a pergunta abaixo do cartão.
-  it('shows FEITO with the question below when everything went in and the builder offers to undo', async () => {
+  // #1428 — "também mudei isto, que você não pediu": tudo entrou, então é FEITO, com o aviso na conversa acima.
+  it('shows FEITO after the notice when everything went in and the builder only informs', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getMessages`] = [
       { role: 'user', content: 'Responda curto' },
-      { role: 'assistant', content: 'Também mudei isto. Quer que eu desfaça?' },
+      { role: 'assistant', content: 'Também mudei isto, que você não pediu.' },
     ];
-    store.state[`${ESTADO}getStatus`] = 'open';
-    store.state[`${ESTADO}getPhase`] = 'interviewing';
+    store.state[`${ESTADO}getStatus`] = 'ready';
+    store.state[`${ESTADO}getPhase`] = 'reviewing';
     store.state[`${ESTADO}getThreadState`] = { parcial: false };
     store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
     await nextTick();
 
     expect(no('[data-parcial]')).toBeNull();
     const cartao = no('[data-feito]');
-    const pergunta = todos('[data-mensagem="assistant"]').pop();
-    expect(pergunta.textContent).toContain('Quer que eu desfaça?');
+    const aviso = todos('[data-mensagem="assistant"]').pop();
+    expect(aviso.textContent).toContain('que você não pediu');
     const ordem = todos('[data-feito], [data-mensagem="assistant"]');
-    expect(ordem.indexOf(cartao)).toBeLessThan(ordem.indexOf(pergunta));
+    expect(ordem.indexOf(aviso)).toBeLessThan(ordem.indexOf(cartao));
     wrapper.unmount();
   });
 

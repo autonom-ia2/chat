@@ -5,8 +5,8 @@
 # sem ler linguagem). Um item com o mesmo `pedido` de um item pedido é destino secundário desse pedido (a tabela manda
 # "no máximo 2 frases" para o tom E a instrução) e nunca é desfeito. Só quando TODOS os itens estão sem pedido o código
 # desfaz sozinho, sob a trava, com o valor da versão de antes, e o turno fecha como não aplicado. Quando só parte está
-# sem pedido, tudo fica aplicado e o dono decide: "também mudei …, quer que eu desfaça?" vira pendência, e a resposta
-# dele desfaz pelo caminho normal do ajuste.
+# sem pedido, tudo fica aplicado e o dono é informado ("também mudei isto, que você não pediu: …"), sem pergunta: o
+# desfazer exato é o botão da versão (parte 3).
 #
 # Ao dono só vão textos do código e dos campos próprios do Construtor (`resposta_ao_dono`, a pergunta de esclarecimento
 # dele): nunca um `next_question` que afirme aplicação. Com aviso de desfecho ou com falta apontada, needs_more_info.
@@ -62,7 +62,6 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     return fechar_desfeito!(token, resposta, conferencia) if conferencia.dig('desfeito', 'ok') == true
 
     mensagens, pendencia, aviso = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
-    mensagens = @mensagens_iniciais.to_a + mensagens
     estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia.first, aviso, conferencia),
                                              'next_question' => mensagens.last.to_s))
              .merge(estado_aplicado(dados, conferencia, resposta, pendencia))
@@ -70,22 +69,23 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     log_do_ajuste(conferencia, desfecho)
   end
 
-  # -> [mensagens ao dono, [pendência, origem], aviso]. A pergunta do que o dono não pediu soma-se à pendência do
-  # turno; a que o código abre sobre o turno (:codigo) zera a contagem, a do modelo (:modelo) conta como laço.
+  # -> [mensagens ao dono, [pendência, origem], aviso]. A pergunta que o código abre sobre o turno (:codigo) zera a
+  # contagem da pendência; a do modelo (:modelo) conta como laço. O que o dono não pediu vira só um aviso, sem pergunta:
+  # o desfazer exato é o botão da versão (parte 3).
   def conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     nao_pedido = conferencia['sem_pedido'].presence &&
-                 Autonomia::Agents::Builder::TextosDoAjuste.pergunta_do_nao_pedido(conferencia['sem_pedido'], idioma_do_ajuste)
+                 Autonomia::Agents::Builder::TextosDoAjuste.aviso_do_nao_pedido(conferencia['sem_pedido'], idioma_do_ajuste)
     do_modelo = pergunta_do_modelo(resposta)
-    texto = [do_modelo || pendencia_da_conferencia(conferencia, desfecho), nao_pedido].compact_blank.join(' ').presence
-    origem = origem_da_pendencia(texto, do_modelo, nao_pedido)
+    texto = do_modelo || pendencia_da_conferencia(conferencia, desfecho)
+    origem = origem_da_pendencia(texto, do_modelo)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso]
+    [[resposta['resposta_ao_dono'].to_s.strip, nao_pedido, aviso, texto].compact_blank, [texto, origem], aviso]
   end
 
-  def origem_da_pendencia(texto, do_modelo, nao_pedido)
+  def origem_da_pendencia(texto, do_modelo)
     return :mantida if texto.nil?
 
-    do_modelo && nao_pedido.blank? ? :modelo : :codigo
+    do_modelo ? :modelo : :codigo
   end
 
   # O turno aplicado conta como laço para a pendência que segue aberta. `parcial`: falta apontada ou pergunta do
@@ -93,7 +93,7 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
   def estado_aplicado(dados, conferencia, resposta, pendencia)
     texto, origem = pendencia
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
-      'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'desfazer_pendente' => desfazer_pendente_de(dados, conferencia),
+      'conferencia' => conferencia, 'ajuste_em_curso' => nil,
       'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present? }
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end

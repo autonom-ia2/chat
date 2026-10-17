@@ -123,6 +123,7 @@ module Autonomia::Agents::AgentVersioning
   # um job antigo cujo token já foi tomado não desfaz nada. `colunas` são nomes de coluna (a instrução volta da coluna
   # da versão); `chaves`, do jsonb config.
   def desfazer_do_construtor!(versoes:, colunas:, chaves:, esperado:, geracao:)
+    recusar_se_instrucao_mantida!
     versao = instruction_versions.find_by(id: versoes[:antes])
     return false if versao.nil?
 

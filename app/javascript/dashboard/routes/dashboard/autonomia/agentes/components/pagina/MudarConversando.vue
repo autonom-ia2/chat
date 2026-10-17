@@ -197,8 +197,8 @@ const tentarDeNovo = async () => {
 };
 
 // Quando o Construtor termina, a store relê o agente: compara com o de antes da conversa.
-// #1428 — "parte entrou" só com falta ou esclarecimento (o state diz `parcial`); o "também mudei X" é FEITO com
-// a pergunta abaixo.
+// #1428 — "parte entrou" só com falta ou esclarecimento (o state diz `parcial`); o "também mudei isto" é FEITO,
+// com o aviso na conversa.
 watch(agenteGerado, novo => {
   if (!novo || novo.id !== props.agente.id) return;
   const nomeNovo = novo.name !== antes.value.name ? novo.name : null;
