@@ -122,18 +122,19 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       .with(anything, anything, anything, anything, 0, hash_including('memoria_fact_ids' => [77, 812]))
   end
 
-  describe 'a Lia (Agente de Cotação, sem segmento da conta)' do
+  describe 'a Lia (Agente de Cotação: construída à parte, fica de fora da memória)' do
     let(:agent) do
       Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :active,
                                        enabled: true, instruction: 'Cote seguro.')
     end
 
-    it 'o "antes" é o primeiro item do pedido' do
-      memoria_do_crm(leitura)
+    it 'o Leitor nem é chamado e o pedido dela fica como hoje' do
+      chamadas = memoria_do_crm(leitura)
 
       responder
 
-      expect(papeis_e_textos.first).to match(['user', a_string_including('ANTES DESTA CONVERSA')])
+      expect(chamadas).to be_empty
+      expect(papeis_e_textos.flatten.join).not_to include('REGISTRO#', 'ESTADO DESTA CONVERSA')
     end
   end
 end

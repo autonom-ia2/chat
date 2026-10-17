@@ -356,10 +356,10 @@ module Autonomia
                                                                            finalidade: :responder)
         end
 
-        # Os ids dos fatos que foram ao modelo neste turno, do principal e do especialista (a cotação), para o evento
-        # `replied` (só os enviados; o que o modelo diz ter usado não é prova). {} sem memória.
+        # Os ids dos fatos que foram ao modelo neste turno, para o evento `replied` (só os enviados; o que o modelo diz ter
+        # usado não é prova). {} sem memória.
         def metadata_da_memoria
-          ids = (@memoria&.ids.to_a + @delivery&.memoria_fact_ids.to_a).uniq
+          ids = @memoria&.ids.to_a
           ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
 
