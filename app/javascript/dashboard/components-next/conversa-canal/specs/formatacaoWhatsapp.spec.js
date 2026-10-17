@@ -240,6 +240,20 @@ describe('formatoDoTexto (#1732)', () => {
       null,
     ],
     ['nota privada recebida', { messageType: INCOMING, privada: true }, null],
+    [
+      'recebida na caixa WAHA (o conector já gravou em markdown)',
+      { messageType: INCOMING, caixaEmMarkdown: true },
+      null,
+    ],
+    [
+      'eco do celular na caixa WAHA',
+      {
+        messageType: OUTGOING,
+        caixaEmMarkdown: true,
+        contentAttributes: { externalEcho: true },
+      },
+      null,
+    ],
     ['atividade', { messageType: ACTIVITY }, null],
     ['template do Chatwoot', { messageType: TEMPLATE }, null],
   ])('%s', (_, mensagem, esperado) => {

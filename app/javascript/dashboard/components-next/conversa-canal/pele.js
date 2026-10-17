@@ -13,6 +13,7 @@ export const ABRIR_MODELOS_DO_WHATSAPP = 'conversaCanal:abrirModelos';
 const CHAVE_PELE = Symbol('peleDaConversa');
 const CHAVE_PRIMEIRAS = Symbol('primeirasDoGrupo');
 const CHAVE_FUSO = Symbol('fusoDaConversa');
+const CHAVE_MARKDOWN = Symbol('caixaGravaMarkdown');
 
 // WhatsApp oficial (inclui a caixa híbrida, que é uma oficial com conexão auxiliar)
 // e a caixa API ligada ao WAHA. O WhatsApp do Twilio fica de fora: outro fornecedor,
@@ -25,6 +26,20 @@ export const peleDaCaixa = (inbox, ligada) => {
   }
   return null;
 };
+
+// Caixa WAHA: quem grava a mensagem do aparelho é o conector do WAHA, que já converte o formato do WhatsApp para
+// markdown (src/apps/chatwoot/messages/to/chatwoot/utils/markdown.ts). Ler de novo como formato do WhatsApp quebra o
+// texto ("**x**" vira asterisco cru). Achado do teste real do WhatsApp Híbrido, 17/10.
+export const caixaGravaMarkdown = inbox =>
+  inbox?.channel_type === INBOX_TYPES.API && !!inbox?.waha_provider;
+
+export const fornecerCaixaEmMarkdown = valor => provide(CHAVE_MARKDOWN, valor);
+
+export const useCaixaEmMarkdown = () =>
+  inject(
+    CHAVE_MARKDOWN,
+    computed(() => false)
+  );
 
 export const fornecerPele = pele => provide(CHAVE_PELE, pele);
 

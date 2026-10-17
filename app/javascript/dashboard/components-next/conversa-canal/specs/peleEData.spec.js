@@ -1,4 +1,4 @@
-import { PELES, peleDaCaixa } from '../pele';
+import { PELES, caixaGravaMarkdown, peleDaCaixa } from '../pele';
 import { diaDaMensagem, horaDaMensagem, rotuloDoDia } from '../dataDaConversa';
 
 describe('peleDaCaixa (#1702)', () => {
@@ -56,5 +56,18 @@ describe('hora e dia no fuso da conta (#1702)', () => {
     expect(rotuloDoDia({ quando: antigo, agora, fuso, t })).toBe(
       '1 de setembro de 2026'
     );
+  });
+});
+
+describe('caixaGravaMarkdown', () => {
+  it('só a caixa API ligada ao WAHA grava o texto do aparelho em markdown', () => {
+    expect(
+      caixaGravaMarkdown({ channel_type: 'Channel::Api', waha_provider: true })
+    ).toBe(true);
+    expect(caixaGravaMarkdown({ channel_type: 'Channel::Whatsapp' })).toBe(
+      false
+    );
+    expect(caixaGravaMarkdown({ channel_type: 'Channel::Api' })).toBe(false);
+    expect(caixaGravaMarkdown(undefined)).toBe(false);
   });
 });

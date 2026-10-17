@@ -6,11 +6,12 @@
 // - Pessoa digitando no painel: guardado em markdown (o editor grava itálico como *x*) e
 //   convertido no envio. O markdown de sempre já mostra o que o cliente recebe.
 // - Nota privada: nunca sai para o cliente; markdown de sempre (com menções).
+// - Caixa WAHA: o conector já grava o que vem do aparelho (recebida e eco) em markdown; fica o de sempre.
 // Só muda a forma de mostrar; o texto gravado não muda.
 import { computed } from 'vue';
 import { useMessageContext } from '../message/provider.js';
 import { MESSAGE_TYPES, SENDER_TYPES } from '../message/constants';
-import { PELES, usePele } from './pele';
+import { PELES, useCaixaEmMarkdown, usePele } from './pele';
 import { formatarWhatsapp } from './formatacaoWhatsapp';
 
 // Remetente como vem no objeto `sender` (agent_bot) ou no `sender_type` cru (AgentBot).
@@ -42,16 +43,22 @@ export const envioAutomatico = ({
 
 // O formato do texto, ou null quando é markdown (o de sempre).
 export const formatoDoTexto = mensagem => {
-  const { messageType, privada, contentAttributes, additionalAttributes } =
-    mensagem;
+  const {
+    messageType,
+    privada,
+    caixaEmMarkdown,
+    contentAttributes,
+    additionalAttributes,
+  } = mensagem;
   if (privada) return null;
-  if (messageType === MESSAGE_TYPES.INCOMING) return FORMATOS.APP;
+  const doAparelho = caixaEmMarkdown ? null : FORMATOS.APP;
+  if (messageType === MESSAGE_TYPES.INCOMING) return doAparelho;
   if (messageType !== MESSAGE_TYPES.OUTGOING) return null;
   if (
     contentAttributes?.externalEcho ||
     additionalAttributes?.templateParams?.name
   ) {
-    return FORMATOS.APP;
+    return doAparelho;
   }
   return envioAutomatico(mensagem) ? FORMATOS.ROBO : null;
 };
@@ -59,6 +66,7 @@ export const formatoDoTexto = mensagem => {
 // Função que formata o texto no jeito do WhatsApp, ou null (fica o markdown de sempre).
 export const useFormatoDoWhatsapp = () => {
   const pele = usePele();
+  const caixaEmMarkdown = useCaixaEmMarkdown();
   const {
     messageType,
     private: privada,
@@ -73,6 +81,7 @@ export const useFormatoDoWhatsapp = () => {
     const formato = formatoDoTexto({
       messageType: messageType.value,
       privada: privada?.value,
+      caixaEmMarkdown: caixaEmMarkdown.value,
       tipoDoRemetente: sender?.value?.type ?? senderType?.value,
       contentAttributes: contentAttributes?.value,
       additionalAttributes: additionalAttributes?.value,

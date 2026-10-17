@@ -5,7 +5,14 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
-import { PELES, fornecerFuso, fornecerPele, peleDaCaixa } from './pele';
+import {
+  PELES,
+  caixaGravaMarkdown,
+  fornecerCaixaEmMarkdown,
+  fornecerFuso,
+  fornecerPele,
+  peleDaCaixa,
+} from './pele';
 import {
   CAIXA_DE_RESPOSTA,
   FUNDO_DA_CONVERSA,
@@ -30,6 +37,13 @@ export const usePeleDaConversaAberta = () => {
 export const usePeleDaConversa = () => {
   const pele = usePeleDaConversaAberta();
   fornecerPele(pele);
+  const conversa = useMapGetter('getSelectedChat');
+  const caixaPorId = useMapGetter('inboxes/getInbox');
+  fornecerCaixaEmMarkdown(
+    computed(() =>
+      caixaGravaMarkdown(caixaPorId.value(conversa.value?.inbox_id))
+    )
+  );
   const { currentAccount } = useAccount();
   fornecerFuso(computed(() => fusoDaConta(currentAccount.value)));
 
