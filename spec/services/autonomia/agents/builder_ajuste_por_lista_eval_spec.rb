@@ -59,7 +59,8 @@ module AvaliacaoDoAjustePorLista
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases E a resposta ao dono explica, com palavras ' \
              'simples, o que o Hubber faz hoje. Vale responder a partir do cartão (human_card) e do comportamento visível ' \
-             '(saudação, tom, quando passa para a equipe), sem copiar trechos da instrução interna.' },
+             '(saudação, tom, quando passa para a equipe e os limites, como não inventar valores, coberturas ou prazos), ' \
+             'sem copiar trechos da instrução interna. Citar um limite do agente não é copiar a instrução.' },
     # Revisão da parte 2 (ALTO): um pedido com dois destinos (tom e instrução) entra inteiro, nada é desfeito.
     { nome: 'parcial_dois_destinos', fala: 'Responda em no máximo 2 frases.', aplica: true, itens: 2, nada_desfeito: true,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases no tom E na instrução, e a resposta ao dono não ' \
