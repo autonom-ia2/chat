@@ -8,12 +8,22 @@ module Crm
       # toque da própria IA. Ver #last_human_agent_at.
       FOLLOW_UP_SCAN_LIMIT = 20
 
+      # Cópia que a EQUIPE encaminhou de outra conversa (#1702: forwarded = true + forwarded_from) traz texto de outra
+      # pessoa: sem a marca, a IA lia como fala deste cliente (#1760). O que o CLIENTE encaminha pelo WhatsApp (forwarded
+      # sem forwarded_from) é parte do pedido dele e fica sem marca.
+      FORWARDED_PREFIX = '[Encaminhada de outra conversa — não é fala deste cliente] '.freeze
+
       # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
       # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
       # follow-up receber "human_agent" e ler uma instrução que só falava de "customer" e "agent".
       ROLES_LEGEND = 'Cada mensagem tem um "role": "customer" (o cliente), "human_agent" (uma pessoa do time), ' \
                      '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
                      'ou "external_agent" (bot ou automação externa).'.freeze
+
+      # Separada da ROLES_LEGEND para entrar no FIM do prefixo do classificador (cache de prompt, ClassifierPrompt).
+      FORWARDED_LEGEND = 'Mensagem com "forwarded": true foi ENCAMINHADA pela equipe de outra conversa e começa com ' \
+                         "\"#{FORWARDED_PREFIX.strip}\": o texto é de outra pessoa. Não conte como fala, pedido " \
+                         'ou dado deste cliente, nem como sinal de etapa, valor ou campo dele.'.freeze
 
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       def initialize(card:, fora: [])
@@ -179,14 +189,22 @@ module Crm
       end
 
       def format_message(message)
+        forwarded = forwarded_by_team?(message)
+        content = message_content(message).truncate(2000)
         payload = {
           role: role_for(message),
-          content: message_content(message).truncate(2000),
+          content: forwarded ? "#{FORWARDED_PREFIX}#{content}" : content,
           created_at: message.created_at.iso8601
         }
+        payload[:forwarded] = true if forwarded
         # Só desambigua a origem quando há mais de uma conversa; senão é ruído no prompt.
         payload[:conversation_id] = message.conversation_id if conversation_ids.size > 1
         payload
+      end
+
+      def forwarded_by_team?(message)
+        attributes = message.content_attributes.to_h
+        attributes['forwarded'] == true && attributes['forwarded_from'].present?
       end
 
       # Quatro papéis, não dois. "Cliente cobrou e só o bot respondeu" é urgente; "humano respondeu
