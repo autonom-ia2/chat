@@ -71,6 +71,7 @@ module Autonomia::Agents::AgentVersioning
   # sobrescreve trabalho sem rastro. Depois, se a escrita venceu, grava 1 versão da aplicação — mesmo sem
   # mudança, porque é o rastro da aplicação.
   def versionar_aplicacao_do_construtor(autor_id)
+    @versao_do_construtor = nil
     return yield unless versao_completa?
 
     antes = estado_versionado
@@ -82,11 +83,20 @@ module Autonomia::Agents::AgentVersioning
     venceu
   end
 
+  # #1428 (tema 6, parte 2) — junta à versão que a última aplicação do Construtor gravou neste objeto o que o dono
+  # pediu e a conferência (`pedido`, `mudancas`, `conferencia`), para a tela da parte 3. No-op quando a aplicação não
+  # gravou versão (fora do piloto, escrita que não venceu).
+  def anotar_versao_do_construtor!(dados)
+    return if @versao_do_construtor.nil?
+
+    @versao_do_construtor.update!(metadata: @versao_do_construtor.metadata.to_h.merge(dados))
+  end
+
   private
 
   def gravar_versao_da_aplicacao!(criacao, antes, autor_id)
     extra = estado_versionado == antes ? { 'sem_mudanca' => true } : {}
-    gravar_versao!(criacao ? 'builder_create' : 'builder_adjust', autor_id, extra: extra)
+    @versao_do_construtor = gravar_versao!(criacao ? 'builder_create' : 'builder_adjust', autor_id, extra: extra)
   end
 
   # A versão do agente inteiro vale só no piloto (Fase 2 dos Agentes).

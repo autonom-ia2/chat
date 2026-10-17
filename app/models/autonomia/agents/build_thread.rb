@@ -118,6 +118,8 @@ module Autonomia
 
         previous_state = previous.state.to_h
         return unless previous_state['needs_more_info'] == true
+        # #1428: a resposta a uma pergunta do dono (so_pergunta, ajuste do piloto) não é pergunta pendente.
+        return if previous_state['so_pergunta'] == true
 
         question = previous_state['next_question'].to_s.strip
         return if question.blank?

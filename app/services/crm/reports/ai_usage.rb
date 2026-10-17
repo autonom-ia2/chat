@@ -10,7 +10,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
     'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
-    'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste],
+    'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia],
     'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao], 'Anúncios da Meta' => %w[anuncios_meta],
     'Guia da Plataforma' => %w[guia guia_midia], 'Modelos do WhatsApp' => %w[modelo_redacao modelo_fora_da_janela modelo_compativel]
   }.freeze

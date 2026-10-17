@@ -8,6 +8,9 @@ module Autonomia
     # busca, no fechamento — #1367), faz o parse do JSON estruturado e, no MESMO job, ou guarda a próxima pergunta da
     # entrevista (needs_more_info) ou cria/edita o Agent e marca a thread `ready`. Sem PollJob.
     class Builder
+      # #1428 (tema 6, parte 2): o ajuste do piloto por lista de mudanças, com conferência. Fora do piloto não roda.
+      include AjusteConferido
+
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
       # ApplicationRecord (255 em coluna string, 20.000 em text), derrubando o apply inteiro com
@@ -773,21 +776,25 @@ module Autonomia
       # deixa a completa ler do cache o que a enxuta acabou de escrever (#1367). A enxuta só acrescenta, no FIM, o
       # aviso LEAN_TURN_NOTE e desliga a busca por tool_choice 'none', que não mexe no prefixo (doc da OpenAI,
       # "Prompt caching": desligar ferramenta por tool_choice em vez de tirá-la da lista).
-      def call_model(phase, reasoning_effort, lean: false)
+      # `aviso` (#1428, só no ajuste do piloto): item developer no FIM do input, o da tentativa de correção.
+      def call_model(phase, reasoning_effort, lean: false, aviso: nil)
         tools = Crm::Ai::WebSearch.tools
         params = { model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
-                   schema: BUILDER_SCHEMA, reasoning_effort: reasoning_effort, tools: tools }
+                   schema: builder_schema, reasoning_effort: reasoning_effort, tools: tools }
         if lean
           params[:input] = built_input + [{ role: 'developer', content: [{ type: 'input_text', text: LEAN_TURN_NOTE }] }]
           params[:tool_choice] = 'none' if tools.present?
         end
+        params[:input] = built_input + [aviso] if aviso
         result = client(phase).create(**params)
         @calls << { phase: phase, lean: lean, tools: lean ? nil : tools, result: result }
         result[:text]
       end
 
+      # No ajuste do piloto (#1428), a tabela de destino vai num item developer antes do contexto: a instrução-mãe de
+      # quem está fora do piloto não muda.
       def built_input
-        @built_input ||= build_input
+        @built_input ||= ajuste_da_fase2? ? [AjustePorLista.item_da_tabela] + build_input : build_input
       end
 
       # Turno de UMA chamada completa, sem a enxuta: o AJUSTE inteiro (decisão do gestor, #1367: o "Mudar
@@ -986,6 +993,8 @@ module Autonomia
         inherited = state['pending_question'].to_s.strip
         return inherited if inherited.present?
         return '' unless adjust_mode? && state['needs_more_info'] == true
+        # #1428: a resposta a uma pergunta do dono (so_pergunta) não é pergunta pendente.
+        return '' if state['so_pergunta'] == true
 
         state['next_question'].to_s.strip
       end
@@ -1305,6 +1314,8 @@ module Autonomia
         # o log do turno (lean_asked/full_asked/lean_close) mede essa divergência em produção.
         @full_asked_to_close = parsed['user_asked_to_close'] == true unless @calls.last[:lean]
         @user_asked_to_close = parsed['user_asked_to_close'] == true || @lean_asked_to_close == true
+        # #1428 — ajuste do piloto: pergunta não é pedido, só o que foi pedido é gravado, e um segundo modelo confere.
+        return ajustar_pela_lista(token, parsed) if ajuste_da_fase2?
 
         # GATE (P0) + CONSTRUTOR (P1) — fechamento determinístico (defesa em profundidade): o modelo
         # PODE devolver needs_more_info=true mesmo quando deveria fechar (loop teimoso T01/T06/T08, em
