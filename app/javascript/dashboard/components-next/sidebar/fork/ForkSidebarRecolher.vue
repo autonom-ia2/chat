@@ -9,6 +9,9 @@ const props = defineProps({
   recolhido: { type: Boolean, default: false },
   controla: { type: String, required: true },
   tema: { type: Object, required: true },
+  // Recolher sozinho (#1781): 1 = barra cheia, 0 = sem barra. Com movimento reduzido a barra fica parada.
+  progresso: { type: Number, default: 0 },
+  semAnimacao: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['alternar']);
@@ -63,7 +66,7 @@ const alternar = () => {
       :aria-controls="controla"
       :aria-label="recolhido ? rotulo : undefined"
       :aria-describedby="idDaDica"
-      class="flex items-center gap-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl motion-reduce:transition-none"
+      class="relative flex items-center gap-3 text-[0.9375rem] leading-5 transition-colors duration-150 min-h-11 rounded-xl motion-reduce:transition-none"
       :class="[
         tema.foco,
         tema.textoFilho,
@@ -86,6 +89,24 @@ const alternar = () => {
       />
       <template v-if="!recolhido">
         <span class="flex-1 min-w-0 truncate text-start">{{ rotulo }}</span>
+        <span
+          v-if="progresso > 0"
+          data-barra-recolher
+          aria-hidden="true"
+          class="absolute bottom-1 h-0.5 overflow-hidden rounded-full pointer-events-none inset-x-3"
+          :class="tema.trilho"
+        >
+          <span
+            class="block h-full origin-left rtl:origin-right"
+            :class="[
+              tema.progresso,
+              semAnimacao
+                ? ''
+                : 'transition-transform duration-100 ease-linear',
+            ]"
+            :style="{ transform: `scaleX(${semAnimacao ? 1 : progresso})` }"
+          />
+        </span>
       </template>
     </button>
     <ForkDica

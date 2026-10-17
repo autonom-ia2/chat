@@ -34,6 +34,10 @@
     "ABRIR_MENU": "Open menu",
     "ANUNCIO_RECOLHIDO": "Menu collapsed",
     "ANUNCIO_ABERTO": "Menu open",
+    "ROLAR_ACIMA": "Scroll the menu up",
+    "ROLAR_ABAIXO": "Scroll the menu down",
+    "ROLAR_ACIMA_ITENS": "Scroll the menu up: 1 item | Scroll the menu up: {count} items",
+    "ROLAR_ABAIXO_ITENS": "Scroll the menu down: 1 item | Scroll the menu down: {count} items",
     "ATRIBUICAO": {
       "TEXTO": "Who gets each conversation is set in Assignment.",
       "LINK": "Open Assignment"
