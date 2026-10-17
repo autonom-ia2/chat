@@ -55,6 +55,37 @@ RSpec.describe MessageContentPresenter do
     end
   end
 
+  describe '#outgoing_content on WhatsApp (#1732)' do
+    let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:whatsapp_conversation) { create(:conversation, account: channel.account, inbox: channel.inbox) }
+    let(:content) { '*Olá* e **pedido**' }
+
+    def outgoing(**attributes)
+      base = { conversation: whatsapp_conversation, account: channel.account, inbox: channel.inbox, message_type: :outgoing }
+      message = create(:message, content: content, **base, **attributes)
+      described_class.new(message).outgoing_content
+    end
+
+    it 'reads *x* as bold for a robot (AgentBot) message' do
+      expect(outgoing(sender: create(:agent_bot))).to eq('*Olá* e *pedido*')
+    end
+
+    it 'reads *x* as bold for an automatic send recorded as a person (crm_follow_up_id)' do
+      user = create(:user, account: channel.account)
+      expect(outgoing(sender: user, content_attributes: { crm_follow_up_id: 7 })).to eq('*Olá* e *pedido*')
+    end
+
+    it 'reads *x* as bold for a campaign send' do
+      user = create(:user, account: channel.account)
+      expect(outgoing(sender: user, additional_attributes: { campaign_id: 3 })).to eq('*Olá* e *pedido*')
+    end
+
+    it 'keeps *x* as italic for a person typing in the editor' do
+      user = create(:user, account: channel.account)
+      expect(outgoing(sender: user)).to eq('_Olá_ e *pedido*')
+    end
+  end
+
   describe '#webhook_content' do
     context 'when message is not input_csat' do
       let(:content_type) { 'text' }
