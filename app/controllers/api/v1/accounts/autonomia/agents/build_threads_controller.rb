@@ -107,6 +107,9 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   def fetch_thread
     @thread = build_threads_scope.find(params[:id])
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if @thread.agent&.instrucao_mantida?
+    # #1514 — só recusa o que gastaria modelo (mensagem e nova tentativa); o `show` só lê, e a tela que consulta
+    # uma geração em andamento não recebe 422.
+    raise ::Autonomia::Agents::Agent::ModoManual if @thread.agent&.manual? && action_name != 'show'
   end
 
   # E3 — 409 Conflict com código estável (`build_in_progress`): o front distingue do erro genérico
@@ -154,6 +157,8 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     # #380 — o fechamento desta thread reescreveria instruction/scaffold/config (`apply_builder_config!`)
     # de um agente cuja instrução é mantida pela Autonom.ia. Recusa na porta, antes de gastar modelo.
     raise ::Autonomia::Agents::Agent::InstrucaoMantida if agent.instrucao_mantida?
+    # #1514 — agente manual: a instrução é do dono; o Construtor não a reescreve (recusa antes de gastar modelo).
+    raise ::Autonomia::Agents::Agent::ModoManual if agent.manual?
 
     { agent: agent }
   end

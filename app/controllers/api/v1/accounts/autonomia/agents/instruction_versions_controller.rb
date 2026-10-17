@@ -6,10 +6,11 @@ class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api:
   MAX_VERSIONS = 50
 
   def index
-    @versions = @agent.instruction_versions
+    @versions = @agent.instruction_versions.na_lista
                       .includes(:created_by)
                       .order(created_at: :desc, id: :desc)
                       .limit(MAX_VERSIONS)
+    @escritos_pelo_dono = @agent.hashes_escritos_pelo_dono
   end
 
   # Rollback atômico. A versão é buscada SEMPRE dentro de @agent.instruction_versions (agent já

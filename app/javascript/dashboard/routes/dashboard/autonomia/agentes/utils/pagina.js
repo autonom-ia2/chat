@@ -137,7 +137,11 @@ export const nomeDaFonte = fonte =>
   fonte?.reference || fonte?.external_link || '';
 
 // Frase de cada versão da instrução (DECISOES.md item 6): só o que a API tem.
+// #1428 — criar e ajustar conversando dizem o mesmo. As versões 'base' (o estado de antes da primeira
+// mudança conversando) e 'antes_de_voltar' (o estado de antes de uma volta) não têm frase: só data e hora.
 const MOTIVOS = {
+  builder_create: 'BUILDER',
+  builder_adjust: 'BUILDER',
   kb_refresh: 'KB_REFRESH',
   manual_edit: 'MANUAL_EDIT',
   rollback: 'ROLLBACK',
@@ -179,7 +183,12 @@ export const quandoFoi = (segundos, idioma, agora = new Date()) => {
 // escolhido, e sem nenhum o jeito já saiu da lista (a API guarda os 50 mais novos): null, e a tela
 // usa a frase genérica. `versoes` vem do mais novo para o mais antigo, como a API devolve.
 export const origemDaVolta = (versao, versoes) => {
-  if (versao?.reason !== 'rollback' || !versao.instruction_hash) return null;
+  if (versao?.reason !== 'rollback') return null;
+  // A volta gravada depois do #1428 diz para qual versão foi; a de antes, só pelo texto.
+  if (versao.voltou_para) {
+    return versoes.find(item => item.id === versao.voltou_para) || null;
+  }
+  if (!versao.instruction_hash) return null;
   const posicao = versoes.indexOf(versao);
   const iguais = versoes
     .slice(posicao + 1)
