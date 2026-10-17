@@ -24,11 +24,25 @@ const estado = reactive({
 
 export const selecao = readonly(estado);
 
+// Saiu de modelo ou de campanha (ConversaCanal::Pele::MARCAS_DE_MODELO): o texto foi
+// preenchido para aquele cliente e os botões não vão junto. Não se encaminha (Rodrigo, 16/10).
+const MARCAS_DE_MODELO = [
+  'templateParams',
+  'campaignId',
+  'whatsappApiCampaignId',
+  'campaignTemplateName',
+];
+export const deModeloOuCampanha = mensagem =>
+  MARCAS_DE_MODELO.some(marca =>
+    Boolean(mensagem?.additionalAttributes?.[marca])
+  );
+
 // A mesma regra do servidor (ConversaCanal::Encaminhamento): do cliente ou da
-// empresa, nunca nota, apagada (pela equipe ou pelo cliente), não suportada, com falha
-// ou de visualização única.
+// empresa, nunca nota, apagada (pela equipe ou pelo cliente), não suportada, com falha,
+// de visualização única ou de modelo.
 export const encaminhavel = mensagem => {
   if (!mensagem || mensagem.private) return false;
+  if (deModeloOuCampanha(mensagem)) return false;
   const tipos = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING];
   if (!tipos.includes(mensagem.messageType)) return false;
   if (!TIPOS_DE_CONTEUDO.includes(mensagem.contentType || 'text')) return false;

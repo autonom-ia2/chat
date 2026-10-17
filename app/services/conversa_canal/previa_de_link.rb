@@ -9,8 +9,6 @@ module ConversaCanal::PreviaDeLink
   CHAVE = 'link_preview'.freeze
   FLAG = ConversaCanal::Pele::FLAG
   TIPOS_DA_MENSAGEM = %w[incoming outgoing].freeze
-  # Marcas de envio que não leva a prévia: modelo, campanha e campanha da API do WhatsApp (Message#campaign_message?).
-  SEM_CARTAO_NO_ENVIO = %w[template_params campaign_id whatsapp_api_campaign_id campaign_template_name].freeze
 
   module_function
 
@@ -41,8 +39,7 @@ module ConversaCanal::PreviaDeLink
   def cliente_viu_o_cartao?(message)
     return true if message.incoming?
 
-    extras = message.additional_attributes.to_h
-    return false if extras.values_at(*SEM_CARTAO_NO_ENVIO).any?(&:present?)
+    return false if ConversaCanal::Pele.modelo_ou_campanha?(message)
 
     channel = message.inbox.channel
     channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud'

@@ -82,6 +82,17 @@ describe('o que se encaminha (a mesma regra do servidor)', () => {
       'visualização única',
       { attachments: [{ fileType: 'image', isViewOnce: true }] },
     ],
+    [
+      'de modelo',
+      {
+        messageType: 1,
+        additionalAttributes: { templateParams: { name: 'x' } },
+      },
+    ],
+    [
+      'de campanha',
+      { messageType: 1, additionalAttributes: { campaignId: 3 } },
+    ],
   ])('%s não', (_nome, extras) => {
     expect(encaminhavel(mensagem(extras))).toBe(false);
   });

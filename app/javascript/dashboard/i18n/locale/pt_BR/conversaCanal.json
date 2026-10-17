@@ -307,7 +307,8 @@
       "LIMITE_MENSAGENS": "Dá para encaminhar até {limite} mensagens de uma vez.",
       "ENVIADO": "Mensagem encaminhada | Mensagens encaminhadas",
       "DESTINO_FALHOU": "{nome}: {erro}",
-      "FALHOU": "Não deu para encaminhar. Tente de novo."
+      "FALHOU": "Não deu para encaminhar. Tente de novo.",
+      "MODELO": "Mensagem de modelo ou de campanha não pode ser encaminhada: o texto foi preenchido para este cliente e os botões não vão juntos."
     }
   }
 }

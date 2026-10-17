@@ -39,5 +39,6 @@ pt_BR:
       mensagem_nao_encontrada: 'Uma das mensagens marcadas não está mais nesta conversa.'
       nao_encaminhavel: 'Uma das mensagens marcadas não pode ser encaminhada (nota privada, apagada, não suportada ou de visualização única).'
       fora_da_janela: 'Fora da janela de 24 h: use um modelo.'
+      modelo: 'Mensagem de modelo ou de campanha não pode ser encaminhada: o texto foi preenchido para este cliente e os botões não vão juntos.'
       falhou: 'Não deu para encaminhar para esta conversa. Tente de novo.'
       so_pessoa: 'Encaminhar é só para pessoa, pelo painel. O WhatsApp trata encaminhamento automático como spam.'

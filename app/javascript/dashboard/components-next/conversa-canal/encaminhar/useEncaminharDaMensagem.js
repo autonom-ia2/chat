@@ -8,6 +8,7 @@ import {
   LIMITE_DE_MENSAGENS,
   alternarMensagem,
   comecarSelecao,
+  deModeloOuCampanha,
   encaminhamentoDireto,
   encaminhavel,
   estaMarcada,
@@ -16,7 +17,7 @@ import {
 } from './selecaoParaEncaminhar';
 
 // mensagem: computed com { id, conversationId, messageType, contentType, status,
-// private, content, contentAttributes, attachments }; ids: computed com os ids que
+// private, content, contentAttributes, additionalAttributes, attachments }; ids: computed com os ids que
 // vão juntos (o álbum leva todos os itens).
 export const useEncaminharDaMensagem = (mensagem, ids) => {
   const { t } = useI18n();
@@ -25,6 +26,14 @@ export const useEncaminharDaMensagem = (mensagem, ids) => {
   const podeEncaminhar = computed(
     () => pele.value === PELES.WHATSAPP && encaminhavel(mensagem.value)
   );
+  // Mensagem de modelo: o menu mostra "Encaminhar" e explica por que não dá.
+  const modeloNoMenu = computed(
+    () =>
+      pele.value === PELES.WHATSAPP &&
+      !mensagem.value.private &&
+      deModeloOuCampanha(mensagem.value)
+  );
+  const noMenu = computed(() => podeEncaminhar.value || modeloNoMenu.value);
   const botaoAoLado = computed(
     () =>
       podeEncaminhar.value && !selecao.ativa && temBotaoAoLado(mensagem.value)
@@ -37,8 +46,13 @@ export const useEncaminharDaMensagem = (mensagem, ids) => {
   );
   const marcada = computed(() => emSelecao.value && estaMarcada(ids.value));
 
-  const iniciarSelecao = () =>
+  const iniciarSelecao = () => {
+    if (modeloNoMenu.value) {
+      useAlert(t('CONVERSA_CANAL.ENCAMINHAR.MODELO'));
+      return;
+    }
     comecarSelecao(mensagem.value.conversationId, ids.value);
+  };
 
   const alternar = () => {
     if (alternarMensagem(ids.value)) return;
@@ -54,6 +68,7 @@ export const useEncaminharDaMensagem = (mensagem, ids) => {
 
   return {
     podeEncaminhar,
+    noMenu,
     botaoAoLado,
     emSelecao,
     marcada,

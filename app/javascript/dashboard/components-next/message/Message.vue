@@ -460,6 +460,7 @@ const encaminhar = useEncaminharDaMensagem(
     private: props.private,
     content: props.content,
     contentAttributes: props.contentAttributes,
+    additionalAttributes: props.additionalAttributes,
     attachments: props.attachments,
   })),
   computed(() => album.value?.map(item => item.id) || [props.id])
@@ -507,7 +508,7 @@ const contextMenuEnabledOptions = computed(() => {
     baixarAudio: !!audioParaBaixar.value && !isMessageDeleted.value,
     reagir:
       reacaoDoAtendente.visivel.value && !reacaoDoAtendente.bloqueado.value,
-    encaminhar: encaminhar.podeEncaminhar.value,
+    encaminhar: encaminhar.noMenu.value,
   };
 });
 
