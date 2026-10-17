@@ -45,7 +45,7 @@ NODE_VERSION="v24.11.0"
 WAHA_REPO="https://github.com/devlikeapro/waha.git"
 WAHA_TAG="2026.9.2"
 WAHA_SHA="90ba445a0e765701c8910f0fac08176250c3e0fd"
-PATCH_ID="c2y-rich-3"
+PATCH_ID="c2y-rich-4"
 ISSUE="chat#1709"
 PLATFORM="linux/amd64"
 SMOKE_KEY="c2y-rich-smoke-key-$$"
@@ -81,14 +81,15 @@ f2b920a68164eb5d2f032acd4a0ca021a93e0da703576760e59ca6643183173c 22564b80589c93b
 b95bb1438a2f83d5e33cd018df36af7bb939747886e80ac6ddd98090946a2333 23b46b616cc0fdf70eac6aae78de63100fd9df0a517ddf920cf2987fa0241074 apps/chatwoot/app.module.js
 857bc73880a485eec6d78b7b8c1f831e20e855bca884a999a6172aeb9d34484d cd628a7297f254b09c4295f13b0408694573845a0c9f557b138e1b7e7ff3ae9b apps/chatwoot/client/Conversation.js
 760fc9256f4ca924ddc696538fe92418fe92837795d89b7ce7f89e81c4b54c80 256ee917d010879b8bacc91f37f613e80ab6b546856ecdbf06099e6b5bbc3e11 apps/chatwoot/consumers/QueueName.js
-7417b6f049b87482de35e14ac4c43aff187ffb28a291edb5aff865120b4ac04a 1b65ad6e0d0ac99923e5fc36535612143a3b9ace5133c4cc72773fab6c8360e5 apps/chatwoot/consumers/inbox/message_created.js
-63475a6e0ac4f714d815e6fd07c27bc8849c6eabda1001faa007098709c39f10 087d0088637693a62f454d15e8497145010449c78cdf1efd3064d915c70467a5 apps/chatwoot/consumers/waha/base.js
+7417b6f049b87482de35e14ac4c43aff187ffb28a291edb5aff865120b4ac04a 2df4403238e913cce70ae5a9baac272f021a84b06a8f4ed10dc790f347709d05 apps/chatwoot/consumers/inbox/message_created.js
+df508d28a37dd944295d16cb07068e634d7b6c990636dacf55adc92857d439f5 6cf293caae44cdb71312d70aaf60b349f4ace440fd9a6e69abc7a97b14185ebd apps/chatwoot/consumers/inbox/message_deleted.js
+63475a6e0ac4f714d815e6fd07c27bc8849c6eabda1001faa007098709c39f10 275fe36f76c85a727a82af7e3527afe6863c7653bb48bc08a1bcd37e98275de1 apps/chatwoot/consumers/waha/base.js
 df4a6514754eeb5e851c9790c8a2aabe64470e963d55b7ca502d6cf020444ca0 bb02f2e999ffd7235151ac650b86ce603aed6e227c4cc416ec87c40e6ac2845e apps/chatwoot/consumers/waha/call.0.base.js
 e65fc6b87b7ab3c6ae5567f67274bc0ffb14d1b2256e6c0a68aff42de40614dc 577bdf04b578f86e8fc283cb8a877e191e6546f405b7904194dbf612f80541f7 apps/chatwoot/consumers/waha/call.accepted.js
 53202f31130b28d8be9a93467266216c9ca03e67158f52e9d0e114d4d02a3b34 d8402b23a20b2fb6b2beb0d144ac31b864589ed31123062ebc609e1972e3cf51 apps/chatwoot/consumers/waha/call.received.js
 73eab2dc7814bb6d31532f1921fd53e38122478666092d590d6c60a7620e1cbf f86576452e1ed56e84a765c93a57a07ac75500ea7ec8d42297b46cabb9adefb5 apps/chatwoot/consumers/waha/call.rejected.js
 894da6ec09c9072592f593f0003f89bd04f12e494b2f5694d0f16081088795fd 80d457e76c6f546e2ff2d67d8a22861fa990ccd07dac4a9913d6460c5f85972f apps/chatwoot/consumers/waha/message.ack.js
-92a084f4c0de30f514e19d964e145a9ad8d786e24dcbf3015205b03bcc5c4a19 52c6d5965cc7904ccfcdf74b95be9b5cbc6534ff4bd2aa690960fc186fa32bf9 apps/chatwoot/consumers/waha/message.any.js
+92a084f4c0de30f514e19d964e145a9ad8d786e24dcbf3015205b03bcc5c4a19 7c67af5a56be64a4b3f00dd578df637fbe4216112c3c6009b4eba1186abb25d7 apps/chatwoot/consumers/waha/message.any.js
 35cdb434a95bd70648b34116f950a70b1c752df53733a6632d2d2ed46b910361 71c0ea06809620c7d6354a30af0af9afdc23ea7698485e2db2420f264919b18b apps/chatwoot/consumers/waha/message.reaction.js
 608cf31ecff209302ae1b1c49b428ae42a364101ac4bb1008565593d5e3db8e5 6b19de72396fb11d9b66fe67bda7c682a85d36d80ac80674fecda9d97c8c4dda apps/chatwoot/consumers/waha/message.revoked.js
 f134da1e0d5a6153d997632876af48d038a4a2b0ee514129fdba101efe17d0ba 67856d5e3cbc58d1c0594ec2b7c8faed265ef9716dfb0f59ef939fbf28207dd1 apps/chatwoot/error/ChatWootErrorReporter.js
@@ -108,25 +109,25 @@ a0d42f54af317c7b9aea696aca9fa36b712849f64e63fbb29ee7f1697c95c020 6b4fdaa4de5cca5
 bd742b80ff13766a79196bbf6c79e5831d44f0296e9a0eb3317e8442bd728cd2 2392ec7d292e6dcb33a70b1b99746e5b616657401854e5e0d6f9f202a2d8dfd5 apps/chatwoot/services/QueueRegistry.js
 3306556bf6dc16c386d3667c93133abf4dfce93e36c866aefc4b6042fe3b4691 41f86dd260a12e4c505db4b24704dac0781d1f7a7773a6eb29924fe51c33b592 core/engines/gows/session.gows.core.js
 c558d676f8652e20202b3bf0ab48a59b70312ee56081f53f7cf99ff5e819dc01 277f27742b222dcda412edc23e09b9278f2cb295bbdcbd6869c96e94c02d29d4 main.js
-894a2d40227e711aa76d8e9c5d758febd4f9f7dab016aaeb2aefd5b3fc0edc62 e34beb9604e0cd105d62a71d0e2a1a475ac3307cb4f4238f83ca1f260adb8512 structures/environment.dto.js
+894a2d40227e711aa76d8e9c5d758febd4f9f7dab016aaeb2aefd5b3fc0edc62 085ba3cc4b401f2c6af8579959155313136ea4d1361f2bc14541188dba0bbf6a structures/environment.dto.js
 853308109c1a7dbbe4798c943bd578016d93bcb2f5a7727e3b18374bf749b97d 83be1f3d8b2f8194da698afd8d782969ec93575e1bb2777f2b999e8099ed5c52 utils/bull/BaseWorkerHost.js
-91859392794b5bfdfd633e7dce77a3749b0e8d8216d949493f15801ec2730e38 a7fa35e60bed75aebf83b40d238a8943c9097814f961dada276532e9d56a716e version.js
+91859392794b5bfdfd633e7dce77a3749b0e8d8216d949493f15801ec2730e38 c8fa8d6004c76279a46e31bb2992ef52753e518ad865377a6592f6f234d60b61 version.js
 NEW d9cb32f335bb638299ca8c10cd745848f0578e2e65490ffca4d25f37e3421dad apps/chatwoot/api/c2y.signature.js
 NEW c9440d517c67120480a4caf47d078fe4362693b093a7de856a3ac6201e809fc8 apps/chatwoot/api/rawbody.js
-NEW 643df1b5b250707a5831eaaea79c94936ede46d20ba15e4b3b1c37aef6db2392 apps/chatwoot/consumers/inbox/c2y_actions.js
+NEW 5ad164eb05c7a0e202e3355077a8a95da00812459501931e6068aa0ee7bceaca apps/chatwoot/consumers/inbox/c2y_actions.js
 NEW 4c1b15efeb1f810dec2fd54643f617237334e0134b34ba14c51a14c449b5f641 apps/chatwoot/consumers/waha/event.response.js
 NEW fd72feabdc6afbed81c9eed56ee70085971bc24522c22acfa92b69db0c63252f apps/chatwoot/consumers/waha/poll.vote.js
 NEW affdefe44c42cc9947e50dd11f27c828b10e6bacb28657ed536000b8d9d66362 apps/chatwoot/consumers/waha/view_once.unavailable.js
 NEW b6a3db7cdc83975140c496e968714b93c91e0c21976814236db204446772971b apps/chatwoot/messages/to/chatwoot/ListReply.js
 NEW 47582d74883edf1862708346e513cffc9ad23c7e1b97100c1deeb031b79374a4 apps/chatwoot/messages/to/chatwoot/UnknownContentType.js
-NEW e7cb6de266b99b001453ccf8799c89681440760daa1967bdc3816fa2074ac920 apps/chatwoot/messages/to/chatwoot/ViewOnceNotice.js
+NEW 0277ee22bde52f042f63b76fdc433fce6244825587b0d0b8c8163f7d090f4c57 apps/chatwoot/messages/to/chatwoot/ViewOnceNotice.js
 NEW 28b4e56f787edd498836e896e5cce38a0b49161861c18752549900f56d4c2b5c apps/chatwoot/messages/to/chatwoot/c2y3.js
 NEW c81af9f0fa253dd7802c790a6522183d6e76544cce2fcbb634a2717b43059768 apps/chatwoot/messages/to/chatwoot/c2y3.retry.js
 NEW 40b25e2d5d73fa86e396c2af6dbf1ba0ac5adc7fc034eaf7b23726766fd55529 apps/chatwoot/messages/to/whatsapp/actions.js
 NEW fe861eb58082bf9a993a9ea9a83ff06a16a86066b83867e489630e99c32a458a apps/chatwoot/messages/to/whatsapp/hints.js
 NEW 5a2d42b790708336f2547b63e49a0c10b3c534f54b1942cfac361a2b378d88f4 apps/chatwoot/messages/to/whatsapp/media.js
 NEW 640d45ab948407cabdb9d68337aa00ca61c1156cd9bbb23dc05dde4a8e8c2701 apps/chatwoot/messages/to/whatsapp/native.js
-NEW cf2978f4236331f749af82ce874f30ed302e62902d20bdf1bc8c032c7c5f7e57 core/engines/gows/c2y.viewonce.js
+NEW 11cbf501f3205f6e1e9e758afc9928f92b61a644875927297b5159e7e72d2622 core/engines/gows/c2y.viewonce.js
 EOF
 )
 
@@ -313,7 +314,7 @@ else
   [[ "$ok" == "1" ]] || { printf '%s\n' "$logs" | tail -50 >&2; fail "WAHA did not answer /api/server/version" 6; }
   version="$(docker exec "$SMOKE" cat /tmp/version.json)"
   [[ "$version" == *"\"version\":\"$WAHA_TAG\""* ]] || fail "unexpected WAHA version: $version" 7
-  expected_ext='"autonomia":{"patch":"c2y-rich-3","rich_native":["options","location","contact","poll","link_button","event"],"list_reply":true,"poll_vote":true,"reactions":true,"edit":true,"media_as_media":true,"format":"c2y-1","event_response":true,"view_once_notice":true}'
+  expected_ext='"autonomia":{"patch":"c2y-rich-4","rich_native":["options","location","contact","poll","link_button","event"],"list_reply":true,"poll_vote":true,"reactions":true,"edit":true,"media_as_media":true,"format":"c2y-1","event_response":true,"view_once_notice":true}'
   [[ "$version" == *"$expected_ext"* ]] || fail "autonomia handshake missing in /api/server/version: $version" 7
   # Leak check: the api key and the header name must never reach the log
   if printf '%s\n' "$logs" | grep -qiE "x-api-key|$SMOKE_KEY"; then

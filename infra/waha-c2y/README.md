@@ -1,11 +1,53 @@
-# WAHA 2026.9.2 + patch c2y-rich-3, revisão 3c (autonom-ia2/chat#1709, rodada 2)
+# WAHA 2026.9.2 + patch c2y-rich-4, revisão 3d (autonom-ia2/chat#1709, rodada 2)
 
 Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
 
 - Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`.
-- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `aaea2496821e796f1cfb40ff119f6bdada2e0d7d73ab58e0bcdb682a0746d8e6` (69 arquivos). Contém a 3b mais o aviso de visualização única (**3c**, abaixo). Passa em `git apply --check` sobre a tag limpa.
-- A 3b (patch `bd4668c1…eb19f`, imagem `…:2026.9.2-c2y-rich-3b`, tarball `d4172389…ed9a`) fica **substituída**: não usar em deploy. Guardada no M2 como `waha-2026.9.2-c2y-rich-3b.patch`, `build-waha-c2y-rich-3b.sh` e `dist-sha256-3b.txt`.
-- `/api/server/version`: `autonomia.patch` continua `'c2y-rich-3'`. A única mudança é o campo novo `autonomia.view_once_notice: true`, que é aditivo. O que diferencia as revisões é a label `autonomia.patch-sha256`.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `d9b2f90fc2c4b568e99ef8fa9c00090c29b5bf377ef2dcbf6c3417dbe9449b47` (71 arquivos). Contém a 3c mais as ressalvas da revisão (**3d**, abaixo). Passa em `git apply --check` sobre a tag limpa.
+- Ficam **substituídas**, e não devem ir para deploy:
+  - 3c: patch `aaea2496…d8e6`, imagem `…:2026.9.2-c2y-rich-3c`, tarball `9ac5f91e…448c`. Guardada no M2 como `waha-2026.9.2-c2y-rich-3c.patch`, `build-waha-c2y-rich-3c.sh` e `dist-sha256-3c.txt`;
+  - 3b: patch `bd4668c1…eb19f`, tarball `d4172389…ed9a`. Guardada no M2 como `*-3b.*`.
+- `/api/server/version`: `autonomia.patch = 'c2y-rich-4'` e `autonomia.view_once_notice: true`. Os demais campos continuam iguais.
+
+## Revisão 3d: ressalvas da revisão da 3c (16/10/2026)
+
+1. **Versão.** `version.ts` passa a `patch: 'c2y-rich-4'`. O exemplo e a descrição do Swagger (`environment.dto.ts`) foram atualizados com todos os campos atuais. O script e a label `autonomia.patch` também mudaram para `c2y-rich-4`, e a imagem tem a tag `…:2026.9.2-c2y-rich-4`.
+2. **`waha_view_once_resolved` decidido pelo protobuf.** Antes, o campo dependia de `waha_media.view_once`. Agora o `MessageBaseHandler` pergunta `c2yIsViewOnce(payload)`, e o `message.any` responde com o `IsViewOnce` do protobuf: o invólucro `viewOnceMessage*`, os flags `IsViewOnce*` do whatsmeow ou o `viewOnce` da mídia. Com isso, a mídia de visualização única **sem** download (falha, mimetype filtrado ou formato do GOWS só com flag) também resolve o aviso. Os outros handlers respondem `false`. A pergunta fica dentro do try/catch.
+3. **Job sem o evento bruto.** O payload do evento interno leva só `Info {Chat, ID, IsFromMe:false, IsGroup:false, Timestamp}`, `IsUnavailable` e `UnavailableType`. Nada de `PushName`, `Sender`, `SenderAlt` nem `DecryptFailMode`. Sem `SenderAlt`, um chat @lid acha o telefone por `findPNByLid`, como o conector já faz quando o motor não manda (`LidContactInfo`).
+4. **Ações do atendente sobre o aviso.** O id do aviso (`<ID>-C2YVO`) não existe no WhatsApp. Por isso:
+   - responder citando o aviso: o texto sai **sem** a citação;
+   - reagir, editar ou apagar o aviso: a ação é ignorada e nada vai ao WhatsApp. A reação e a edição devolvem `null` sem nota de erro;
+   - em todos esses casos sai um log curto só com `chatwoot_message_id`, sem telefone.
+
+   Guardas em `message_created.getReplyTo`, `C2yReactionHandler`, `C2yEditHandler` e `MessageDeletedHandler`, que agora é exportado para teste. A detecção fica em `IsViewOnceNoticeId` e `HasViewOnceNotice`, no `ViewOnceNotice.ts`.
+5. **Risco conhecido: reenvio com o chat em PN em vez de LID.** O aviso usa o chat do `UndecryptableMessage` (`Info.Chat`). Se o celular reenviar o conteúdo e o reenvio vier com o chat em outro formato (PN, `…@s.whatsapp.net`, em vez de `…@lid`, ou o contrário):
+   - a deduplicação e o `resolved` **continuam funcionando**, porque `getChatWootMessage` busca só por `app_pk` + `message_id` e ignora o `chat_id` (ver o item 4 da 3b);
+   - mas a mídia pode cair em **outra conversa** do Chatwoot, se o contato PN e o contato LID não estiverem unificados. Nesse caso o `waha_view_once_resolved.notice_message_id` aponta para uma mensagem de outra conversa, e o chat2you precisa trocar o aviso pelo id, não pela posição na conversa. Não foi visto em aparelho. É o mesmo comportamento de qualquer mensagem que chega ora como PN, ora como LID.
+
+   O consumidor do lado do chat2you já existe (commit `5c3d77c222`, branch 1709, `Waha::RichNative::Inbound`); a revisão leu uma versão anterior.
+
+**Validação 3d (M2):**
+- `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos 12 arquivos tocados: 0;
+- testes novos e atualizados:
+  - payload sem o evento bruto (o JSON do job não tem nome, `Sender`, `SenderAlt` nem `DecryptFailMode`);
+  - `resolved` com download que falhou, `resolved` no formato GOWS só com flag;
+  - 7 casos de `IsViewOnceNoticeId` e o `HasViewOnceNotice`;
+  - resposta citando o aviso sai sem citação, e citando mensagem real mantém a citação;
+  - reação, edição e exclusão do aviso ignoradas, e exclusão de mensagem real continua indo ao WhatsApp.
+  - As suítes ligadas (motor, aviso, ações, `message_created`) deram 136 de 136;
+- mutação: 9 de 9 quebras derrubaram testes. As quebras foram: `resolved` sem a guarda, `message.any` nunca visualização única, `message.any` só pelo flag da mídia, payload com o evento bruto, guarda de resposta desligada, de reação, de edição, de exclusão, e `IsViewOnceNoticeId` com `includes`;
+- suíte unit completa: 50 suítes, 688 testes. Falham 10, os mesmos 10 da tag limpa (nomes conferidos);
+- Baileys real sobre o dist: `r8-real-baileys.js` (handshake `c2y-rich-4`) deu 37 de 37, `r6-viewonce` 4 de 4 e `listreply` 8 de 8;
+- o passo 1 do script também conferiu o `message_deleted.js` original na base de produção, e bateu.
+
+**Imagem 3d** (`autonomia-waha-c2y-rich:2026.9.2-c2y-rich-4`, linux/amd64, mesma base e mesmo processo; o smoke de execução não rodou porque o daemon é aarch64):
+- ID local (índice OCI): `sha256:49b8c1f0da9a428d6a0a9739531dc8297e81da3a71d033dedc0c852ae236b431`;
+- manifest amd64: `sha256:33e6d9f11d3dd8b5bd58e58f06da6592d672bbbdcacca06b5c257dab3e660172`;
+- config (o image ID depois de um `docker load` com o store clássico): `sha256:1910b0cbc744132681dc2460415cda5e5b16d4173c73d9bdcbd77209a7e6117d`;
+- 52 arquivos de runtime conferidos dentro da imagem, iguais ao `dist-sha256.txt`;
+- tarball `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-4.tar`: 2269974016 bytes, sha256 `bc115ade475d265d8a15e237621a782275f94415626fed8b26a3e45e5be6e8ac`.
+
+**Não validado na 3d:** o mesmo da 3c (abaixo), mais o risco do item 5.
 
 ## Revisão 3c: aviso de visualização única (aprovado pelo Rodrigo, 16/10/2026)
 

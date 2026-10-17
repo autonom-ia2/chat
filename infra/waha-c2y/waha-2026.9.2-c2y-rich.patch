@@ -1367,15 +1367,16 @@ index 00000000..2e1516cf
 +});
 diff --git a/src/apps/chatwoot/consumers/inbox/c2y_actions.ts b/src/apps/chatwoot/consumers/inbox/c2y_actions.ts
 new file mode 100644
-index 00000000..d308366a
+index 00000000..aee3293b
 --- /dev/null
 +++ b/src/apps/chatwoot/consumers/inbox/c2y_actions.ts
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,213 @@
 +import { Processor } from '@nestjs/bullmq';
 +import { JOB_CONCURRENCY } from '@waha/apps/app_sdk/constants';
 +import { ILogger } from '@waha/apps/app_sdk/ILogger';
 +import { WAHASessionAPI } from '@waha/apps/app_sdk/waha/WAHASelf';
 +import { SerializeWhatsAppKey } from '@waha/apps/chatwoot/client/ids';
++import { HasViewOnceNotice } from '@waha/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice';
 +import { MessageType } from '@waha/apps/chatwoot/client/types';
 +import { ChatWootInboxMessageConsumer } from '@waha/apps/chatwoot/consumers/inbox/base';
 +import { QueueName } from '@waha/apps/chatwoot/consumers/QueueName';
@@ -1475,6 +1476,12 @@ index 00000000..d308366a
 +      return null;
 +    }
 +    const parts = await WhatsAppParts(this.mappingService, body);
++    if (HasViewOnceNotice(parts)) {
++      this.logger.warn(
++        `c2y_message_reaction on a view once notice ignored: chatwoot_message_id=${body.id}`,
++      );
++      return null;
++    }
 +    if (parts.length === 0) {
 +      throw new UnrecoverableError(
 +        `No WhatsApp message found for Chatwoot message '${body.id}', ` +
@@ -1546,6 +1553,12 @@ index 00000000..d308366a
 +      return null;
 +    }
 +    const parts = await WhatsAppParts(this.mappingService, body);
++    if (HasViewOnceNotice(parts)) {
++      this.logger.warn(
++        `c2y_message_edit on a view once notice ignored: chatwoot_message_id=${body.id}`,
++      );
++      return null;
++    }
 +    if (parts.length !== 1) {
 +      throw new UnrecoverableError(
 +        `Chatwoot message '${body.id}' has ${parts.length} WhatsApp parts; ` +
@@ -2659,10 +2672,10 @@ index 00000000..91471d6d
 +  });
 +});
 diff --git a/src/apps/chatwoot/consumers/inbox/message_created.ts b/src/apps/chatwoot/consumers/inbox/message_created.ts
-index b48d9328..27fd4fce 100644
+index b48d9328..7a3a0ba1 100644
 --- a/src/apps/chatwoot/consumers/inbox/message_created.ts
 +++ b/src/apps/chatwoot/consumers/inbox/message_created.ts
-@@ -20,12 +20,42 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
+@@ -20,17 +20,48 @@ import { parseMentionsFromText } from '@waha/apps/chatwoot/messages/to/whatsapp/
  import { SessionManager } from '@waha/core/abc/manager.abc';
  import { RMutexService } from '@waha/modules/rmutex/rmutex.service';
  import {
@@ -2705,7 +2718,13 @@ index b48d9328..27fd4fce 100644
  import { sleep } from '@waha/utils/promiseTimeout';
  import { Job } from 'bullmq';
  import { PinoLogger } from 'nestjs-pino';
-@@ -80,6 +110,7 @@ export class MessageHandler {
+ 
+ import { SerializeWhatsAppKey } from '../../client/ids';
++import { IsViewOnceNoticeId } from '@waha/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice';
+ import { TKey } from '@waha/apps/chatwoot/i18n/templates';
+ import {
+   ChatWootConfig,
+@@ -80,6 +111,7 @@ export class MessageHandler {
      private config: ChatWootConfig,
      private l: Locale,
      private statusService: MessageStatusService,
@@ -2713,7 +2732,7 @@ index b48d9328..27fd4fce 100644
    ) {}
  
    async handle(body: any) {
-@@ -95,16 +126,20 @@ export class MessageHandler {
+@@ -95,16 +127,20 @@ export class MessageHandler {
        return;
      }
  
@@ -2737,7 +2756,7 @@ index b48d9328..27fd4fce 100644
      const results = [];
      let part = 0; // Start from 0 and increment before each send/check
      const replyTo = await this.getReplyTo(message).catch((err) => {
-@@ -116,6 +151,17 @@ export class MessageHandler {
+@@ -116,6 +152,17 @@ export class MessageHandler {
  
      // Send text (Part 1 if present)
      const attachments = message.attachments || [];
@@ -2755,7 +2774,7 @@ index b48d9328..27fd4fce 100644
      const sendText = content && attachments.length !== 1;
      const parts = attachments.length + (sendText ? 1 : 0);
      if (sendText) {
-@@ -154,7 +200,14 @@ export class MessageHandler {
+@@ -154,7 +201,14 @@ export class MessageHandler {
          chatwoot: body,
          singleAttachment: attachments.length == 1,
        });
@@ -2771,7 +2790,7 @@ index b48d9328..27fd4fce 100644
        this.logger.info(
          `File message sent: ${msg.id} - ${file.data_url} - ${file.file_type}`,
        );
-@@ -167,6 +220,125 @@ export class MessageHandler {
+@@ -167,6 +221,125 @@ export class MessageHandler {
      return results;
    }
  
@@ -2897,7 +2916,21 @@ index b48d9328..27fd4fce 100644
    /**
     * Push acks that arrived before the last part was mapped, best effort
     */
-@@ -274,6 +446,7 @@ export class MessageHandler {
+@@ -226,6 +399,13 @@ export class MessageHandler {
+       return;
+     }
+     const whatsapp = messages[0];
++    // Autonom.ia c2y-rich-4: the view once notice has a fake WhatsApp id
++    if (IsViewOnceNoticeId(whatsapp.message_id)) {
++      this.logger.warn(
++        `ChatWoot => WhatsApp: reply to a view once notice sent without the quote: chatwoot_message_id=${message.id}`,
++      );
++      return;
++    }
+     return SerializeWhatsAppKey(whatsapp);
+   }
+ 
+@@ -274,6 +454,7 @@ export class MessageHandler {
      replyTo: string,
      mentions: string[] | null,
      file: MessageAttachment,
@@ -2905,7 +2938,7 @@ index b48d9328..27fd4fce 100644
    ) {
      const url = file.data_url;
      let filename = url.split('/').pop();
-@@ -286,6 +459,20 @@ export class MessageHandler {
+@@ -286,6 +467,20 @@ export class MessageHandler {
      switch (file.file_type) {
        case 'image':
          if (mimetype != 'image/jpeg' && mimetype != 'image/png') {
@@ -2926,7 +2959,7 @@ index b48d9328..27fd4fce 100644
            // Send it as a file
            break;
          }
-@@ -302,7 +489,8 @@ export class MessageHandler {
+@@ -302,7 +497,8 @@ export class MessageHandler {
          };
          return session.sendImage(imageRequest);
        case 'video':
@@ -2936,7 +2969,7 @@ index b48d9328..27fd4fce 100644
            break;
          }
          const videoRequest: MessageVideoRequest = {
-@@ -312,7 +500,7 @@ export class MessageHandler {
+@@ -312,7 +508,7 @@ export class MessageHandler {
            reply_to: replyTo,
            file: {
              url: url,
@@ -2945,7 +2978,7 @@ index b48d9328..27fd4fce 100644
              filename: filename,
            },
            convert: true,
-@@ -347,4 +535,63 @@ export class MessageHandler {
+@@ -347,4 +543,63 @@ export class MessageHandler {
      };
      return session.sendFile(fileRequest);
    }
@@ -3009,8 +3042,234 @@ index b48d9328..27fd4fce 100644
 +    return session.sendImage(imageRequest);
 +  }
  }
+diff --git a/src/apps/chatwoot/consumers/inbox/message_deleted.ts b/src/apps/chatwoot/consumers/inbox/message_deleted.ts
+index bd57299e..af3d31ec 100644
+--- a/src/apps/chatwoot/consumers/inbox/message_deleted.ts
++++ b/src/apps/chatwoot/consumers/inbox/message_deleted.ts
+@@ -2,6 +2,7 @@ import { Processor } from '@nestjs/bullmq';
+ import { JOB_CONCURRENCY } from '@waha/apps/app_sdk/constants';
+ import { ILogger } from '@waha/apps/app_sdk/ILogger';
+ import { SerializeWhatsAppKey } from '@waha/apps/chatwoot/client/ids';
++import { HasViewOnceNotice } from '@waha/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice';
+ import {
+   ChatWootInboxMessageConsumer,
+   LookupAndCheckChatId,
+@@ -42,7 +43,7 @@ export class ChatWootInboxMessageDeletedConsumer extends ChatWootInboxMessageCon
+   }
+ }
+ 
+-class MessageDeletedHandler {
++export class MessageDeletedHandler {
+   constructor(
+     private mappingService: MessageMappingService,
+     private logger: ILogger,
+@@ -68,6 +69,13 @@ class MessageDeletedHandler {
+       );
+     }
+ 
++    // Autonom.ia c2y-rich-4: the view once notice has a fake WhatsApp id
++    if (HasViewOnceNotice(messages)) {
++      this.logger.warn(
++        `Delete of a view once notice not sent to WhatsApp: chatwoot_message_id=${body.id}`,
++      );
++      return;
++    }
+     const session = this.session;
+     for (const whatsapp of messages) {
+       this.logger.debug(
+diff --git a/src/apps/chatwoot/consumers/inbox/view_once_notice.actions.test.ts b/src/apps/chatwoot/consumers/inbox/view_once_notice.actions.test.ts
+new file mode 100644
+index 00000000..68f5956e
+--- /dev/null
++++ b/src/apps/chatwoot/consumers/inbox/view_once_notice.actions.test.ts
+@@ -0,0 +1,185 @@
++jest.mock('@waha/utils/promiseTimeout', () => ({
++  sleep: jest.fn(() => Promise.resolve()),
++}));
++// The real helper pulls ESM-only Baileys, which jest can not load
++jest.mock('@waha/apps/chatwoot/waha', () => ({
++  EngineHelper: { WhatsAppMessageKeys: jest.fn() },
++}));
++
++import { JestLogger } from '@waha/apps/app_sdk/jest/JestLogger';
++import { AttributeKey } from '@waha/apps/chatwoot/const';
++import {
++  C2yEditHandler,
++  C2yReactionHandler,
++} from '@waha/apps/chatwoot/consumers/inbox/c2y_actions';
++import { MessageHandler } from '@waha/apps/chatwoot/consumers/inbox/message_created';
++import { MessageDeletedHandler } from '@waha/apps/chatwoot/consumers/inbox/message_deleted';
++import { i18n } from '@waha/apps/chatwoot/i18n';
++import {
++  HasViewOnceNotice,
++  IsViewOnceNoticeId,
++} from '@waha/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice';
++
++const CHAT_ID = '5511999999999@c.us';
++const NOTICE_PART = {
++  chat_id: CHAT_ID,
++  message_id: '3A0123456789ABCDEF-C2YVO',
++  from_me: false,
++  participant: null,
++};
++const REAL_PART = { ...NOTICE_PART, message_id: '3A0123456789ABCDEF' };
++
++function body(extra: any = {}) {
++  return {
++    id: 501,
++    message_type: 'outgoing',
++    content: 'texto',
++    content_type: 'text',
++    created_at: '2026-10-16T12:00:00Z',
++    attachments: [],
++    content_attributes: {},
++    conversation: {
++      id: 42,
++      meta: {
++        sender: { custom_attributes: { [AttributeKey.WA_CHAT_ID]: CHAT_ID } },
++      },
++    },
++    ...extra,
++  };
++}
++
++function session() {
++  return {
++    name: 'hub2you',
++    setReaction: jest.fn().mockResolvedValue({ id: 'R' }),
++    editMessage: jest.fn().mockResolvedValue({ id: 'E' }),
++    deleteMessage: jest.fn().mockResolvedValue(undefined),
++    contactCheckExists: jest.fn(),
++  } as any;
++}
++
++function mapping(parts: any[]) {
++  return {
++    getWhatsAppMessage: jest.fn().mockResolvedValue(parts),
++  } as any;
++}
++
++function logs(logger: any): string {
++  return ['fatal', 'error', 'warn', 'info', 'debug', 'trace']
++    .flatMap((level) => logger[level].mock.calls)
++    .map((args) => args.map((a) => String(a)).join(' '))
++    .join('\n');
++}
++
++afterEach(() => jest.clearAllMocks());
++
++describe('notice id helpers (c2y-rich-4)', () => {
++  it.each([
++    ['3A01-C2YVO', true],
++    ['3A01', false],
++    ['3A01-C2YVO-x', false],
++    ['', false],
++    [null, false],
++    [undefined, false],
++    [42, false],
++  ])('IsViewOnceNoticeId(%p) = %p', (id, expected) => {
++    expect(IsViewOnceNoticeId(id)).toBe(expected);
++  });
++
++  it('HasViewOnceNotice', () => {
++    expect(HasViewOnceNotice([REAL_PART, NOTICE_PART])).toBe(true);
++    expect(HasViewOnceNotice([REAL_PART])).toBe(false);
++    expect(HasViewOnceNotice([])).toBe(false);
++    expect(HasViewOnceNotice(null)).toBe(false);
++  });
++});
++
++describe('agent actions on the view once notice never reach WhatsApp (c2y-rich-4)', () => {
++  it('reply quoting the notice: text goes without the quote, short log', async () => {
++    const logger = JestLogger();
++    const handler = new MessageHandler(
++      mapping([NOTICE_PART]),
++      logger,
++      session(),
++      { conversations: {}, linkPreview: 'off' } as any,
++      i18n.locale('pt-BR'),
++      {} as any,
++    );
++    const replyTo = await handler.getReplyTo(
++      body({ content_attributes: { in_reply_to: 900 } }),
++    );
++    expect(replyTo).toBeUndefined();
++    expect(logger.warn).toHaveBeenCalledWith(
++      'ChatWoot => WhatsApp: reply to a view once notice sent without the quote: chatwoot_message_id=501',
++    );
++    expect(logs(logger)).not.toContain(CHAT_ID);
++  });
++
++  it('reply quoting a real message still sends the quote', async () => {
++    const handler = new MessageHandler(
++      mapping([REAL_PART]),
++      JestLogger(),
++      session(),
++      { conversations: {}, linkPreview: 'off' } as any,
++      i18n.locale('pt-BR'),
++      {} as any,
++    );
++    const replyTo = await handler.getReplyTo(
++      body({ content_attributes: { in_reply_to: 900 } }),
++    );
++    expect(replyTo).toBe(`false_${CHAT_ID}_3A0123456789ABCDEF`);
++  });
++
++  it('reaction on the notice: ignored, nothing sent', async () => {
++    const s = session();
++    const logger = JestLogger();
++    const handler = new C2yReactionHandler(mapping([NOTICE_PART]), logger, s);
++    const result = await handler.handle(
++      body({ c2y_reaction: { emoji: '👍' } }),
++    );
++    expect(result).toBeNull();
++    expect(s.setReaction).not.toHaveBeenCalled();
++    expect(logger.warn).toHaveBeenCalledWith(
++      'c2y_message_reaction on a view once notice ignored: chatwoot_message_id=501',
++    );
++  });
++
++  it('edit on the notice: ignored, nothing sent', async () => {
++    const s = session();
++    const handler = new C2yEditHandler(
++      mapping([NOTICE_PART]),
++      JestLogger(),
++      s,
++      { linkPreview: 'off' } as any,
++    );
++    const result = await handler.handle(body({ c2y_edit: { waha_text: 'novo' } }));
++    expect(result).toBeNull();
++    expect(s.editMessage).not.toHaveBeenCalled();
++  });
++
++  it('delete of the notice: not sent to WhatsApp, short log', async () => {
++    const s = session();
++    const logger = JestLogger();
++    const handler = new MessageDeletedHandler(mapping([NOTICE_PART]), logger, s);
++    await handler.handle(body({ message_type: 'incoming' }));
++    expect(s.deleteMessage).not.toHaveBeenCalled();
++    expect(logger.warn).toHaveBeenCalledWith(
++      'Delete of a view once notice not sent to WhatsApp: chatwoot_message_id=501',
++    );
++    expect(logs(logger)).not.toContain(CHAT_ID);
++  });
++
++  it('delete of a real message still deletes on WhatsApp', async () => {
++    const s = session();
++    const handler = new MessageDeletedHandler(
++      mapping([REAL_PART]),
++      JestLogger(),
++      s,
++    );
++    await handler.handle(body());
++    expect(s.deleteMessage).toHaveBeenCalledWith(
++      CHAT_ID,
++      `false_${CHAT_ID}_3A0123456789ABCDEF`,
++    );
++  });
++});
 diff --git a/src/apps/chatwoot/consumers/waha/base.ts b/src/apps/chatwoot/consumers/waha/base.ts
-index 0cf7fad8..0d269464 100644
+index 0cf7fad8..4172df0a 100644
 --- a/src/apps/chatwoot/consumers/waha/base.ts
 +++ b/src/apps/chatwoot/consumers/waha/base.ts
 @@ -41,6 +41,17 @@ import {
@@ -3068,7 +3327,7 @@ index 0cf7fad8..0d269464 100644
  
      // Send the message as a private note or as a regular message?
      let private_ = message.private;
-@@ -439,15 +466,108 @@ export abstract class MessageBaseHandler<
+@@ -439,15 +466,114 @@ export abstract class MessageBaseHandler<
        private: private_,
        attachments: message.attachments as any,
        content_attributes: {
@@ -3084,10 +3343,7 @@ index 0cf7fad8..0d269464 100644
 +      (body.content_attributes as any).waha_list_reply = listReply;
 +    }
 +    // Autonom.ia c2y-rich-4: the view once media arrived after the notice
-+    const resolved = await this.c2yViewOnceResolved(
-+      payload,
-+      body.content_attributes,
-+    );
++    const resolved = await this.c2yViewOnceResolved(payload);
 +    if (resolved) {
 +      (body.content_attributes as any).waha_view_once_resolved = resolved;
 +    }
@@ -3098,18 +3354,27 @@ index 0cf7fad8..0d269464 100644
    }
  
 +  /**
-+   * Autonom.ia c2y-rich-4: a view once message WITH media whose notice is
-+   * already in Chatwoot -> {id, notice_message_id}, so chat2you swaps the
-+   * notice for the media. Never throws: the message goes on without it.
++   * Autonom.ia c2y-rich-4: true when the WhatsApp message itself is view once
++   * (protobuf wrapper or flags). Only message.any knows the protobuf.
++   */
++  protected c2yIsViewOnce(payload: Payload): boolean {
++    void payload;
++    return false;
++  }
++
++  /**
++   * Autonom.ia c2y-rich-4: a view once message whose notice is already in
++   * Chatwoot -> {id, notice_message_id}, so chat2you swaps the notice for the
++   * message, with or without a downloaded media. Never throws: the message
++   * goes on without it.
 +   */
 +  private async c2yViewOnceResolved(
 +    payload: Payload,
-+    attrs: any,
 +  ): Promise<WahaViewOnceResolved | null> {
-+    if (attrs?.waha_media?.view_once !== true) {
-+      return null;
-+    }
 +    try {
++      if (!this.c2yIsViewOnce(payload)) {
++        return null;
++      }
 +      const notice = await this.mappingService.getChatWootMessage(
 +        NoticeMappingKey(payload.id),
 +      );
@@ -4971,16 +5236,18 @@ index 2978c4d2..b53cb954 100644
 +  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 +}
 diff --git a/src/apps/chatwoot/consumers/waha/message.any.ts b/src/apps/chatwoot/consumers/waha/message.any.ts
-index 7cee3394..f19e3fd3 100644
+index 7cee3394..2ddf79d9 100644
 --- a/src/apps/chatwoot/consumers/waha/message.any.ts
 +++ b/src/apps/chatwoot/consumers/waha/message.any.ts
-@@ -34,6 +34,16 @@ import {
+@@ -34,6 +34,18 @@ import {
  } from '@waha/apps/chatwoot/messages/to/chatwoot';
  import { EngineHelper } from '@waha/apps/chatwoot/waha';
  import { HasMediaWithNoMediaMessage } from '@waha/apps/chatwoot/messages/to/chatwoot/HasMediaWithNoMediaMessage';
 +import {
 +  BaileysProtoReader,
++  IsViewOnce,
 +  ProtoReader,
++  ReadProtoMessage,
 +  WahaContextOf,
 +} from '@waha/apps/chatwoot/messages/to/chatwoot/c2y3';
 +import {
@@ -4991,7 +5258,7 @@ index 7cee3394..f19e3fd3 100644
  
  @Processor(QueueName.WAHA_MESSAGE_ANY, { concurrency: JOB_CONCURRENCY })
  export class WAHAMessageAnyConsumer extends ChatWootWAHABaseConsumer {
-@@ -73,13 +83,48 @@ export class WAHAMessageAnyConsumer extends ChatWootWAHABaseConsumer {
+@@ -73,13 +85,56 @@ export class WAHAMessageAnyConsumer extends ChatWootWAHABaseConsumer {
  
  export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
    public shouldLogUnsupported: boolean = false;
@@ -5003,6 +5270,14 @@ index 7cee3394..f19e3fd3 100644
 +  protected c2yQuoteEnabled(payload: WAMessage): boolean {
 +    void payload;
 +    return !this.c2yStatusReply;
++  }
++
++  // Autonom.ia c2y-rich-4: view once by the protobuf (wrapper or flags),
++  // also when the media was not downloaded
++  protected c2yIsViewOnce(payload: WAMessage): boolean {
++    const protoMessage = resolveProtoMessage(payload._data);
++    const read = ReadProtoMessage(protoMessage, this.c2yReader);
++    return IsViewOnce(protoMessage, payload._data, read);
 +  }
  
    protected async getMessage(
@@ -5040,7 +5315,7 @@ index 7cee3394..f19e3fd3 100644
  
      // Check for Facebook Ad first - but let it use the normal flow later
      converter = new FacebookAdMessage(this.l, this.logger);
-@@ -97,22 +142,31 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+@@ -97,22 +152,31 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
      );
      msg = await converter.convert(payload, protoMessage);
      if (msg) {
@@ -5076,7 +5351,7 @@ index 7cee3394..f19e3fd3 100644
      msg = await converter.convert(payload, protoMessage);
      if (msg) {
        return msg;
-@@ -148,13 +202,23 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
+@@ -148,13 +212,23 @@ export class MessageAnyHandler extends MessageBaseHandler<WAMessage> {
        return msg;
      }
  
@@ -5694,10 +5969,10 @@ index 00000000..e9e03b2f
 +}
 diff --git a/src/apps/chatwoot/consumers/waha/view_once.c2y4.test.ts b/src/apps/chatwoot/consumers/waha/view_once.c2y4.test.ts
 new file mode 100644
-index 00000000..b5fd37ee
+index 00000000..ee3ad459
 --- /dev/null
 +++ b/src/apps/chatwoot/consumers/waha/view_once.c2y4.test.ts
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,305 @@
 +// The real helper pulls ESM-only Baileys, which jest can not load
 +jest.mock('@waha/apps/chatwoot/waha', () => ({
 +  EngineHelper: {
@@ -5932,6 +6207,39 @@ index 00000000..b5fd37ee
 +    const body = await handler.buildChatWootMessage(viewOnceImage());
 +    expect(body.attachments).toHaveLength(1);
 +    expect(body.content_attributes.waha_media.view_once).toBe(true);
++    expect(body.content_attributes.waha_view_once_resolved).toEqual({
++      id: REAL_ID,
++      notice_message_id: 901,
++    });
++  });
++
++  it('view once WITHOUT a downloaded media (download failed) also resolves the notice', async () => {
++    const { handler } = anySetup({ [rowKey(NoticeMappingKey(REAL_ID))]: 901 });
++    const payload = {
++      ...viewOnceImage(),
++      media: { url: null, mimetype: 'image/jpeg', filename: null, error: { name: 'Error' } },
++    };
++    const body = await handler.buildChatWootMessage(payload);
++    expect(body.content_attributes).not.toHaveProperty('waha_media');
++    expect(body.content_attributes.waha_view_once_resolved).toEqual({
++      id: REAL_ID,
++      notice_message_id: 901,
++    });
++  });
++
++  it('GOWS form (unwrapped message + IsViewOnce flag, no media) resolves the notice', async () => {
++    const { handler } = anySetup({ [rowKey(NoticeMappingKey(REAL_ID))]: 901 });
++    const payload = {
++      ...viewOnceImage(false),
++      hasMedia: false,
++      media: null,
++      _data: {
++        Info: { Chat: CUSTOMER },
++        IsViewOnceV2: true,
++        Message: { imageMessage: { mimetype: 'image/jpeg' } },
++      },
++    };
++    const body = await handler.buildChatWootMessage(payload);
 +    expect(body.content_attributes.waha_view_once_resolved).toEqual({
 +      id: REAL_ID,
 +      notice_message_id: 901,
@@ -6839,10 +7147,10 @@ index 79eb97f9..b14b21a6 100644
  }
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice.ts b/src/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice.ts
 new file mode 100644
-index 00000000..941aad0e
+index 00000000..f791f1d6
 --- /dev/null
 +++ b/src/apps/chatwoot/messages/to/chatwoot/ViewOnceNotice.ts
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,72 @@
 +import { parseMessageIdSerialized } from '@waha/core/utils/ids';
 +import { toCusFormat } from '@waha/core/utils/jids';
 +
@@ -6898,6 +7206,22 @@ index 00000000..941aad0e
 +export function RealMappingKey(serialized: string): MappingKey {
 +  const key = parseMessageIdSerialized(serialized);
 +  return { chat_id: toCusFormat(key.remoteJid), message_id: key.id };
++}
++
++/**
++ * The WhatsApp id mapped to a Chatwoot message is the notice's fake id: it
++ * does not exist on WhatsApp, so it must never be quoted, reacted to, edited
++ * or deleted there.
++ */
++export function IsViewOnceNoticeId(messageId: unknown): boolean {
++  return typeof messageId === 'string' && messageId.endsWith(NOTICE_SUFFIX);
++}
++
++/** Any mapped part of the Chatwoot message is the notice */
++export function HasViewOnceNotice(
++  parts: Array<{ message_id?: string | null }> | null | undefined,
++): boolean {
++  return (parts || []).some((part) => IsViewOnceNoticeId(part?.message_id));
 +}
 diff --git a/src/apps/chatwoot/messages/to/chatwoot/c2y3.retry.ts b/src/apps/chatwoot/messages/to/chatwoot/c2y3.retry.ts
 new file mode 100644
@@ -9244,10 +9568,10 @@ index fab10c11..f44b5999 100644
  
 diff --git a/src/core/engines/gows/c2y.viewonce.test.ts b/src/core/engines/gows/c2y.viewonce.test.ts
 new file mode 100644
-index 00000000..3f5badbc
+index 00000000..706cae85
 --- /dev/null
 +++ b/src/core/engines/gows/c2y.viewonce.test.ts
-@@ -0,0 +1,97 @@
+@@ -0,0 +1,119 @@
 +import {
 +  BuildViewOnceUnavailablePayload,
 +  C2Y_VIEW_ONCE_UNAVAILABLE,
@@ -9262,6 +9586,8 @@ index 00000000..3f5badbc
 +    Info: {
 +      Chat: '5511999999999@s.whatsapp.net',
 +      Sender: '5511999999999@s.whatsapp.net',
++      SenderAlt: '123456789@lid',
++      PushName: 'Maria Cliente',
 +      IsFromMe: false,
 +      IsGroup: false,
 +      ID: '3A0123456789ABCDEF',
@@ -9317,8 +9643,28 @@ index 00000000..3f5badbc
 +      participant: null,
 +      body: null,
 +      hasMedia: false,
-+      _data: data,
++      _data: {
++        Info: {
++          Chat: '5511999999999@s.whatsapp.net',
++          ID: '3A0123456789ABCDEF',
++          IsFromMe: false,
++          IsGroup: false,
++          Timestamp: '2026-10-16T12:00:00-03:00',
++        },
++        IsUnavailable: true,
++        UnavailableType: 'view_once',
++      },
 +    });
++  });
++
++  it('the job never carries the raw event (name, sender, alt address)', () => {
++    const payload = BuildViewOnceUnavailablePayload(undecryptable());
++    const json = JSON.stringify(payload);
++    expect(json).not.toContain('Maria Cliente');
++    expect(json).not.toContain('PushName');
++    expect(json).not.toContain('Sender');
++    expect(json).not.toContain('123456789@lid');
++    expect(json).not.toContain('DecryptFailMode');
 +  });
 +
 +  it('keeps a lid chat as lid', () => {
@@ -9347,10 +9693,10 @@ index 00000000..3f5badbc
 +});
 diff --git a/src/core/engines/gows/c2y.viewonce.ts b/src/core/engines/gows/c2y.viewonce.ts
 new file mode 100644
-index 00000000..04485edf
+index 00000000..bd7ac069
 --- /dev/null
 +++ b/src/core/engines/gows/c2y.viewonce.ts
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,108 @@
 +import {
 +  isJidBroadcast,
 +  isJidGroup,
@@ -9425,6 +9771,11 @@ index 00000000..04485edf
 +/**
 + * Same id and chat shape as a GOWS incoming message (toWAMessage), so the
 + * connector finds the same contact and conversation.
++ *
++ * The job keeps only what the connector reads: chat, id, direction and
++ * time. Never the raw event (PushName, Sender, SenderAlt...). Without
++ * SenderAlt, a @lid chat finds the phone through findPNByLid, as the
++ * connector already does when the engine does not send it.
 + */
 +export function BuildViewOnceUnavailablePayload(
 +  data: any,
@@ -9441,7 +9792,17 @@ index 00000000..04485edf
 +    participant: null,
 +    body: null,
 +    hasMedia: false,
-+    _data: data,
++    _data: {
++      Info: {
++        Chat: info.Chat,
++        ID: info.ID,
++        IsFromMe: false,
++        IsGroup: false,
++        Timestamp: info.Timestamp,
++      },
++      IsUnavailable: true,
++      UnavailableType: VIEW_ONCE,
++    },
 +  };
 +}
 diff --git a/src/core/engines/gows/session.gows.core.ts b/src/core/engines/gows/session.gows.core.ts
@@ -9504,28 +9865,37 @@ index 45f2230f..a1e7c4e9 100644
    app.useWebSocketAdapter(new WsAdapter(app));
  
 diff --git a/src/structures/environment.dto.ts b/src/structures/environment.dto.ts
-index 70e5cead..4563b62f 100644
+index 70e5cead..a6c0e370 100644
 --- a/src/structures/environment.dto.ts
 +++ b/src/structures/environment.dto.ts
-@@ -36,4 +36,35 @@ export class WAHAEnvironment {
+@@ -36,4 +36,44 @@ export class WAHAEnvironment {
    worker: {
      id: string | null;
    };
 +
 +  @ApiProperty({
 +    example: {
-+      patch: 'c2y-rich-2',
-+      rich_native: ['options', 'location', 'contact', 'poll'],
++      patch: 'c2y-rich-4',
++      rich_native: [
++        'options',
++        'location',
++        'contact',
++        'poll',
++        'link_button',
++        'event',
++      ],
 +      list_reply: true,
 +      poll_vote: true,
 +      reactions: true,
 +      edit: true,
 +      media_as_media: true,
 +      format: 'c2y-1',
++      event_response: true,
++      view_once_notice: true,
 +    },
 +    required: false,
 +    description:
-+      'Autonom.ia build patch (autonom-ia2/chat#1709): native list, location, contact and poll from Chatwoot; list replies, poll votes, calls, reactions, edits and unknown messages to Chatwoot as structured data; reactions and edits from Chatwoot; media as media; preformatted text.',
++      'Autonom.ia build patch (autonom-ia2/chat#1709): native list, location, contact and poll from Chatwoot; list replies, poll votes, calls, reactions, edits and unknown messages to Chatwoot as structured data; reactions and edits from Chatwoot; media as media; preformatted text; native event and event answers; view once notice (media that never reaches a linked device).',
 +  })
 +  autonomia?: {
 +    patch: string;
@@ -9567,7 +9937,7 @@ index 078d5d96..55d5e0c6 100644
      }
    }
 diff --git a/src/version.ts b/src/version.ts
-index 7a03361c..6bc9bd2b 100644
+index 7a03361c..5e81c789 100644
 --- a/src/version.ts
 +++ b/src/version.ts
 @@ -54,6 +54,26 @@ export const VERSION: WAHAEnvironment = {
@@ -9575,7 +9945,7 @@ index 7a03361c..6bc9bd2b 100644
    platform: getPlatform(),
    worker: getWorker(),
 +  autonomia: {
-+    patch: 'c2y-rich-3',
++    patch: 'c2y-rich-4',
 +    rich_native: [
 +      'options',
 +      'location',
