@@ -17,6 +17,8 @@ module VarreduraDeEnviosEmNomeDePessoa
       'pedido de dados: botão do painel (Current.user)',
     'app/services/conversa_canal/encaminhamento.rb#ConversaCanal::Encaminhamento#copiar' =>
       'encaminhar (#1702): a pessoa escolhe as mensagens e o destino no painel (Current.user)',
+    'app/services/whatsapp/templates/reenvio_do_modelo.rb#Whatsapp::Templates::ReenvioDoModelo#criar' =>
+      'encaminhar (#1767): o atendente encaminha no painel; remetente é ele',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

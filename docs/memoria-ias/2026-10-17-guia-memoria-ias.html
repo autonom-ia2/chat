@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guia da Memória das IAs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: coluna de leitura única com índice fixo no desktop; duas partes com cor própria (Agentes = azul-petróleo, CRM = âmbar). */
+:root{
+  --bg:#f5f7f6; --surface:#ffffff; --ink:#16201d; --muted:#5a6762; --line:#dde3e0;
+  --agentes:#0f6b6e; --agentes-soft:#e3f1f0; --crm:#9a5b06; --crm-soft:#f8eedd;
+  --ok:#2f7d4a; --ok-soft:#e5f3ea; --warn:#9b3d2d; --warn-soft:#f8e7e3;
+  --code-bg:#eef2f0;
+  --f-display:"Literata", Georgia, "Times New Roman", serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#18211e; --ink:#e6ece9; --muted:#9aa8a2; --line:#2b3733;
+  --agentes:#5cc3c4; --agentes-soft:#16302f; --crm:#e7a94a; --crm-soft:#33280f;
+  --ok:#6cc58b; --ok-soft:#173023; --warn:#ec8c78; --warn-soft:#3a1d17; --code-bg:#1f2a26; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111816; --surface:#18211e; --ink:#e6ece9; --muted:#9aa8a2; --line:#2b3733;
+  --agentes:#5cc3c4; --agentes-soft:#16302f; --crm:#e7a94a; --crm-soft:#33280f;
+  --ok:#6cc58b; --ok-soft:#173023; --warn:#ec8c78; --warn-soft:#3a1d17; --code-bg:#1f2a26; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:32px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:24px}.toc{position:static!important;max-height:none!important}}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+.toc b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-block:16px 6px}
+.toc a{display:block;color:var(--ink);text-decoration:none;padding:3px 0 3px 10px;border-left:2px solid var(--line)}
+.toc a:hover,.toc a:focus-visible{border-left-color:var(--ink);outline:none}
+.toc a.ag{border-left-color:var(--agentes)} .toc a.cr{border-left-color:var(--crm)}
+main{min-width:0}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.2}
+h1{font-size:clamp(30px,4.4vw,44px);margin:0 0 12px}
+h2{font-size:clamp(24px,3vw,30px);margin:56px 0 12px;padding-top:8px}
+h3{font-size:20px;margin:0}
+p{max-width:68ch;margin:0 0 12px}
+.lede{font-size:18px;color:var(--muted);max-width:62ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-block:16px 8px}
+.chip{font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.part{border-top:4px solid var(--line);margin-top:64px;padding-top:8px}
+.part.ag{border-top-color:var(--agentes)} .part.cr{border-top-color:var(--crm)}
+.eyebrow{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.ag .eyebrow{color:var(--agentes)} .cr .eyebrow{color:var(--crm)}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-block:16px;display:grid;gap:12px}
+.item header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.num{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--muted)}
+.row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px 16px}
+@media (max-width:560px){.row{grid-template-columns:minmax(0,1fr)}}
+.row dt{font-size:13px;font-weight:600;color:var(--muted);padding-top:2px}
+.row dd{margin:0}
+.ex{border-radius:8px;padding:12px 14px;font-size:15px}
+.ag .ex{background:var(--agentes-soft)} .cr .ex{background:var(--crm-soft)}
+.ex .who{font-weight:600}
+.compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.compare{grid-template-columns:minmax(0,1fr)}}
+.compare div{border-radius:8px;padding:10px 12px;font-size:15px}
+.antes{background:var(--warn-soft)} .depois{background:var(--ok-soft)}
+.compare b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.antes b{color:var(--warn)} .depois b{color:var(--ok)}
+.pr{font-family:var(--f-mono);font-size:13px}
+a{color:inherit}
+.pr a{color:var(--muted)}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-block:16px}
+.flow div{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;min-width:0}
+.flow div b{display:block;font-size:15px}
+.flow span{align-self:center;color:var(--muted)}
+.tbl{overflow-x:auto;margin-block:12px}
+table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);font-weight:600}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.b-cli{color:var(--crm)} .b-eq{color:var(--agentes)} .b-fer{color:var(--ok)}
+.fieldmock{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 16px;max-width:520px}
+.fieldmock .f{display:grid;grid-template-columns:140px minmax(0,1fr);gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.fieldmock .f:last-child{border-bottom:0}
+.fieldmock .orig{grid-column:2;font-size:13px;color:var(--muted)}
+.fieldmock .orig u{color:var(--agentes);text-decoration:none;font-weight:500}
+ul.clean{padding-left:20px;margin:0 0 12px;max-width:68ch}
+ul.clean li{margin-bottom:6px}
+.note{border-left:3px solid var(--line);padding:4px 0 4px 14px;color:var(--muted);font-size:15px;max-width:68ch}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:10px;max-width:72ch}
+.steps li{counter-increment:s;display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px}
+.steps li::before{content:counter(s);font-family:var(--f-mono);font-weight:500;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:13px;background:var(--surface)}
+code{font-family:var(--f-mono);font-size:.88em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+footer{margin-top:64px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="toc" aria-label="Índice">
+  <b>Começo</b>
+  <a href="#visao">Em uma frase</a>
+  <a href="#como">Como funciona</a>
+  <a href="#origem">De onde vem cada dado</a>
+  <b>Parte 1 · Agentes de IA</b>
+  <a class="ag" href="#a1">Cliente que volta</a>
+  <a class="ag" href="#a2">Dado dito há muito tempo</a>
+  <a class="ag" href="#a3">Correção da equipe</a>
+  <a class="ag" href="#a4">Pedido certo</a>
+  <a class="ag" href="#a5">Pedidos anteriores</a>
+  <a class="ag" href="#a6">Confirma só o duvidoso</a>
+  <a class="ag" href="#a7">Quem recebe a memória</a>
+  <a class="ag" href="#a8">Segurança</a>
+  <a class="ag" href="#a9">Resultados no teste</a>
+  <b>Parte 2 · IAs do CRM</b>
+  <a class="cr" href="#c1">Anota de carona</a>
+  <a class="cr" href="#c2">Correção da equipe vence</a>
+  <a class="cr" href="#c3">Mensagem editada</a>
+  <a class="cr" href="#c4">Mensagem apagada</a>
+  <a class="cr" href="#c5">Encaminhada</a>
+  <a class="cr" href="#c6">Contatos mesclados</a>
+  <a class="cr" href="#c7">Linha de origem no card</a>
+  <a class="cr" href="#c8">Quem escreveu</a>
+  <a class="cr" href="#c9">Voto em enquete</a>
+  <a class="cr" href="#c10">Resultados no teste</a>
+  <b>Depois</b>
+  <a href="#subir">Depois que subir</a>
+  <a href="#fora">O que ficou de fora</a>
+  <a href="#decisoes">Decisões do Rodrigo</a>
+  <a href="#prs">PRs e Issues</a>
+</nav>
+
+<main>
+<p class="eyebrow" style="color:var(--muted)">Chat2You · Issue #1601 · 17/10/2026</p>
+<h1>Memória das IAs</h1>
+<p class="lede">O que muda quando a IA passa a lembrar do cliente: o que ela guarda, de onde vem cada dado, quem usa essa memória e o que a equipe vê na tela.</p>
+<div class="meta">
+  <span class="chip">Flag <code>memoria_ia</code></span>
+  <span class="chip">Piloto: contas 1, 16 e 18 (Hub2You)</span>
+  <span class="chip">Sem chamada paga nova de IA</span>
+  <span class="chip">Status: aprovado, na fila de deploy</span>
+</div>
+
+<h2 id="visao">Em uma frase</h2>
+<p><strong>A IA para de perguntar o que o cliente já disse.</strong> Placa, CPF, carro, franquia, a cotação que já foi feita: o que o cliente contou numa conversa vale nas próximas, em qualquer funil, e cada dado diz de onde veio.</p>
+<div class="compare">
+  <div class="antes"><b>Hoje</b>João mandou a placa na terça. Na sexta ele volta numa conversa nova e a IA pergunta: "Qual a placa do veículo?"</div>
+  <div class="depois"><b>Com memória</b>Na sexta a IA responde: "Oi João, é sobre o Onix placa ABC1D23? Vamos continuar a renovação."</div>
+</div>
+
+<h2 id="como">Como funciona, por dentro</h2>
+<p>A memória não cria uma IA nova. Ela usa a avaliação do card, que já roda a cada mensagem do cliente, e pede a ela que anote os dados que encontrar. Por isso não há chamada paga nova.</p>
+<div class="flow" role="list">
+  <div role="listitem"><b>1. Cliente fala</b>"Meu CPF é 123.456.789-09 e a placa é ABC1D23."</div>
+  <span aria-hidden="true">→</span>
+  <div role="listitem"><b>2. Avaliação do card</b>A IA do CRM, que já roda, anota os dois dados junto com a mensagem de onde vieram.</div>
+  <span aria-hidden="true">→</span>
+  <div role="listitem"><b>3. Conferência</b>O código confere se o valor está mesmo escrito na mensagem. Se não estiver, não grava.</div>
+  <span aria-hidden="true">→</span>
+  <div role="listitem"><b>4. Leitura</b>Na hora de responder, o agente principal lê o que já se sabe do cliente.</div>
+</div>
+<p class="note">A conferência do passo 3 impede que a IA invente. O dado só vale se ele aparecer, de fato, na mensagem do cliente ou da equipe.</p>
+
+<h2 id="origem">De onde vem cada dado</h2>
+<p>Todo dado guardado tem uma origem. Ela aparece para a IA e, no card, para a equipe.</p>
+<div class="tbl"><table>
+  <thead><tr><th>Origem</th><th>Quando acontece</th><th>Exemplo</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge b-cli">cliente informou</span></td><td>O cliente escreveu o dado na conversa</td><td>"A placa é ABC1D23"</td></tr>
+    <tr><td><span class="badge b-eq">corrigido pela equipe</span></td><td>Uma pessoa editou o campo do card</td><td>Ana troca a franquia de "Normal" para "Reduzida"</td></tr>
+    <tr><td><span class="badge b-fer">resultado de ferramenta</span></td><td>Uma ferramenta do sistema trouxe o dado</td><td>A cotação retornou o valor do seguro</td></tr>
+  </tbody>
+</table></div>
+<p>A correção da equipe é a mais forte: depois dela, a IA não troca mais aquele dado sozinha. Ela só sugere.</p>
+
+<!-- ============ PARTE 1 ============ -->
+<section class="part ag" aria-labelledby="p1">
+<p class="eyebrow">Parte 1</p>
+<h2 id="p1" style="margin-top:4px">Agentes de IA</h2>
+<p>Os agentes que se criam na página <strong>Agentes</strong> (Clara, Caner, Hubber…) passam a receber a memória do cliente na hora de responder. PR <span class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1774">#1774</a></span>, que usa a leitura do <span class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1772">#1772</a></span>.</p>
+
+<article class="item" id="a1">
+  <header><span class="num">1.1</span><h3>O cliente volta numa conversa nova</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>O agente sabe o que o cliente disse em conversas anteriores, e não só na conversa aberta.</dd>
+  <dt>Ganho</dt><dd>O cliente não repete tudo cada vez que volta. A conversa começa de onde parou.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> Segunda: João conta o carro e a placa, e a conversa é resolvida. Quinta, conversa nova: "dá pra continuar aquela renovação?". A Clara segue a renovação daquele carro sem pedir a placa nem o modelo.</div>
+</article>
+
+<article class="item" id="a2">
+  <header><span class="num">1.2</span><h3>Dado dito há muito tempo na mesma conversa</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>O histórico que o agente lê tem um limite de mensagens. Um dado dito lá no começo ficava de fora. Agora ele vem pela memória.</dd>
+  <dt>Ganho</dt><dd>Conversa longa não faz a IA "esquecer".</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> A placa foi dita há 30 mensagens. Antes, a IA podia pedir de novo. Agora ela já sabe.</div>
+</article>
+
+<article class="item" id="a3">
+  <header><span class="num">1.3</span><h3>A correção da equipe vale para o agente</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Se a equipe corrigiu um dado no card, o agente usa o valor corrigido.</dd>
+  <dt>Ganho</dt><dd>O agente não repete um erro que a equipe já arrumou.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O cliente digitou o CEP errado e a Ana corrigiu no card para 04567-001. A Clara usa 04567-001.</div>
+</article>
+
+<article class="item" id="a4">
+  <header><span class="num">1.4</span><h3>Separa o pedido em foco dos outros pedidos</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>O agente recebe os dados <em>deste pedido</em> separados dos dados dos <em>outros pedidos</em> do mesmo cliente. Os dados do cliente valem em todos os funis.</dd>
+  <dt>Ganho</dt><dd>Não mistura o carro A com o carro B.</dd></dl>
+  <div class="ex"><span class="who">Exemplo real do garimpo.</span> O cliente cotava um Nivus e tinha outro pedido, do carro da esposa. Antes, a cotação do Nivus saiu com a placa da esposa. Agora o agente vê "placa deste pedido" separada de "placa de outro pedido do cliente".</div>
+</article>
+
+<article class="item" id="a5">
+  <header><span class="num">1.5</span><h3>Sabe dos pedidos anteriores</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Pedidos ganhos ou perdidos nos últimos <strong>360 dias</strong> aparecem para o agente como histórico. Ele sabe que existiram, mas não reabre nenhum.</dd>
+  <dt>Ganho</dt><dd>Atendimento com contexto: "vi que você fez o seguro da casa com a gente em março".</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> Maria fechou o seguro da casa em março e volta em outubro para cotar o carro. O agente sabe que ela já é cliente.</div>
+</article>
+
+<article class="item" id="a6">
+  <header><span class="num">1.6</span><h3>Usa o que o cliente disse e confirma só o duvidoso</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>O que o cliente contou é usado direto. O agente só confirma antes de usar quando o dado é antigo ou quando há dois valores diferentes.</dd>
+  <dt>Ganho</dt><dd>Menos perguntas, sem arriscar dado errado.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O João disse "só passeio" e, semanas depois, "agora uso para trabalhar". O agente pergunta: "Só para confirmar: o carro agora é para passeio e trabalho?"</div>
+</article>
+
+<article class="item" id="a7">
+  <header><span class="num">1.7</span><h3>Quem recebe a memória</h3></header>
+  <dl class="row"><dt>Recebe</dt><dd>O <strong>agente principal</strong> criado na página Agentes.</dd>
+  <dt>Não recebe</dt><dd>Especialistas e ajudantes (recebem o que o principal passa para eles) e a <strong>Lia</strong>, de cotação de seguro. A estrutura da Lia não muda (decisão do Rodrigo, 17/10).</dd>
+  <dt>Nada muda quando</dt><dd>A conta não está na Fase 2 dos agentes, a flag <code>memoria_ia</code> está desligada, ou a caixa foi tirada da memória.</dd></dl>
+  <p class="note">Por causa disso, três problemas do garimpo que aconteciam na Lia continuam como estão: pedidos misturados, CPF esquecido e recotação. Se um dia a Lia for ligada à memória, é um trabalho separado.</p>
+</article>
+
+<article class="item" id="a8">
+  <header><span class="num">1.8</span><h3>Segurança</h3></header>
+  <ul class="clean">
+    <li><strong>Texto do cliente não vira ordem.</strong> A memória vai num bloco cercado, marcado como "dados". Se o cliente escrever algo como "ignore as regras", isso continua sendo só um dado.</li>
+    <li><strong>Nada interno vaza.</strong> Título interno do card, notas privadas e nomes de tabela não vão para o cliente.</li>
+    <li><strong>Se a memória falhar, a IA responde sem ela.</strong> A falha vai para o rastreador de erros. A IA nunca fica muda por causa da memória.</li>
+    <li><strong>Sem a flag, nada muda.</strong> O pedido ao modelo sai exatamente igual ao de hoje (coberto por teste).</li>
+  </ul>
+</article>
+
+<article class="item" id="a9">
+  <header><span class="num">1.9</span><h3>Resultados no teste com IA paga</h3></header>
+  <p>Teste pelo caminho real, com a mesma leitura que vai para produção (17/10).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Cenário</th><th>Acertos</th></tr></thead>
+    <tbody>
+      <tr><td>Sem memória (como é hoje)</td><td>13 de 35</td></tr>
+      <tr><td>Com memória</td><td><strong>35 de 35</strong></td></tr>
+      <tr><td>Com memória bagunçada de propósito</td><td>38 de 40 · os 2 erros foram do lado seguro (deixou de usar, não usou errado)</td></tr>
+    </tbody>
+  </table></div>
+  <p>Nenhum cenário piorou com a memória. Custo do teste: US$ 0,90. Relatório: <code>docs/audit/2026-10-17-1755-eval-memoria/</code>.</p>
+</article>
+</section>
+
+<!-- ============ PARTE 2 ============ -->
+<section class="part cr" aria-labelledby="p2">
+<p class="eyebrow">Parte 2</p>
+<h2 id="p2" style="margin-top:4px">IAs do CRM</h2>
+<p>As IAs que trabalham no card (avaliação, movimentação, resumo, follow-up) são a fonte da memória e também passam a ler melhor quem escreveu cada mensagem. PRs <span class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1772">#1772</a>, <a href="https://github.com/autonom-ia2/chat/pull/1773">#1773</a>, <a href="https://github.com/autonom-ia2/chat/pull/1771">#1771</a> e <a href="https://github.com/autonom-ia2/chat/pull/1761">#1761</a></span>.</p>
+
+<article class="item" id="c1">
+  <header><span class="num">2.1</span><h3>A avaliação do card anota os dados de carona</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>A avaliação do card, que já roda, passa a anotar os dados do cliente e do pedido: CPF, e-mail, placa (um registro por veículo), franquia, decisões e o resultado da cotação. Cada dado leva a mensagem de onde veio.</dd>
+  <dt>Ganho</dt><dd>A memória nasce sem custo novo de IA e sem trabalho para a equipe.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O cliente escreve: "tenho um Onix ABC1D23 e um HB20 XYZ9W87". Ficam dois veículos, cada um com a sua placa. Se a IA não tiver certeza de qual modelo é de qual placa, o modelo fica como <em>sugestão</em>, não como dado valendo.</div>
+</article>
+
+<article class="item" id="c2">
+  <header><span class="num">2.2</span><h3>A correção da equipe vence</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Quando alguém edita o campo do card, aquele valor fica travado como "corrigido pela equipe". Se depois a IA achar outro valor, ela só sugere e não troca.</dd>
+  <dt>Ganho</dt><dd>A equipe manda. A IA não desfaz o trabalho de uma pessoa.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> A Ana corrige a placa para ABC1D23. Dias depois, o cliente cita outra placa de passagem. A placa do card continua ABC1D23. A outra fica só como sugestão.</div>
+</article>
+
+<article class="item" id="c3">
+  <header><span class="num">2.3</span><h3>Mensagem editada pelo cliente</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Se o cliente edita uma mensagem, o dado que vinha dela é conferido de novo. Se o valor sumiu do texto, ele deixa de valer na hora e o card é avaliado de novo (opção A do Rodrigo). A edição não faz a IA responder ao cliente.</dd>
+  <dt>Ganho</dt><dd>A IA usa o valor certo, sem ninguém precisar avisar.</dd>
+  <dt>Custo</dt><dd>Uma avaliação a mais por edição que muda um dado, igual ao custo de uma mensagem nova.</dd></dl>
+  <div class="compare">
+    <div class="antes"><b>Mensagem original</b>"Meu carro é de 2002"</div>
+    <div class="depois"><b>Depois da edição</b>"Meu carro é de 2022". O 2002 sai e o 2022 entra.</div>
+  </div>
+  <p class="note">As edições do WhatsApp passam a chegar à plataforma com os PRs do WhatsApp (1702b e #1709). A memória já está pronta para elas.</p>
+</article>
+
+<article class="item" id="c4">
+  <header><span class="num">2.4</span><h3>Mensagem apagada</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Se a mensagem de onde veio um dado é apagada, ela deixa de servir de prova. Se era a única prova, o dado deixa de valer.</dd>
+  <dt>Ganho</dt><dd>A IA não usa o que o cliente quis desfazer.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O cliente manda um CPF errado e apaga a mensagem. O CPF errado sai da memória.</div>
+</article>
+
+<article class="item" id="c5">
+  <header><span class="num">2.5</span><h3>Mensagem encaminhada</h3></header>
+  <dl class="row"><dt>Quando a equipe encaminha</dt><dd><strong>Conta como resposta de pessoa</strong>: assume a conversa, conta para o SLA e cala a IA naquele turno (decisão do Rodrigo, 17/10). Mas o texto encaminhado <strong>não é fala do cliente</strong>, então a IA não tira dados do cliente dele.</dd>
+  <dt>Quando o cliente encaminha</dt><dd>É fala do cliente e vale como qualquer mensagem dele.</dd>
+  <dt>Ganho</dt><dd>A IA não confunde o texto de outra pessoa com o pedido do cliente.</dd></dl>
+  <div class="compare">
+    <div class="depois"><b>Equipe encaminha</b>A Maria encaminha ao João a resposta da seguradora sobre outro cliente. Isso conta como resposta da Maria, mas os dados daquele texto não viram dados do João.</div>
+    <div class="depois"><b>Cliente encaminha</b>O João encaminha a mensagem da esposa com a placa do carro dela. A placa entra no pedido do João.</div>
+  </div>
+  <p class="note">A marca "encaminhada de outra conversa" no contexto da IA do CRM é o PR #1761. Ele entra depois do 1702b, que cria o encaminhamento.</p>
+</article>
+
+<article class="item" id="c6">
+  <header><span class="num">2.6</span><h3>Contatos mesclados</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Quando dois contatos do mesmo cliente são mesclados, os dados do contato que some passam para o que fica, inclusive as correções da equipe.</dd>
+  <dt>Ganho</dt><dd>Mesclar não apaga a memória.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O João tinha um contato pelo WhatsApp e outro pelo e-mail. A equipe mescla os dois e o CPF e a placa continuam lá.</div>
+</article>
+
+<article class="item" id="c7">
+  <header><span class="num">2.7</span><h3>Linha de origem nos campos do card</h3></header>
+  <dl class="row"><dt>Onde</dt><dd>Card → aba <strong>Negócio</strong> → bloco <strong>Campos do card</strong>. Não tem página nova nem botão novo.</dd>
+  <dt>O que muda</dt><dd>Embaixo de cada campo aparece uma linha pequena dizendo de onde veio o valor. "Ver mensagem" abre a conversa na mensagem de prova. A hora sai no fuso da conta.</dd>
+  <dt>Ganho</dt><dd>A equipe confere o dado antes de usar numa cotação e sabe quem mudou o quê.</dd></dl>
+  <div class="fieldmock" aria-label="Exemplo da tela">
+    <div class="f"><span>Placa do veículo</span><span>ABC1D23</span><span class="orig">cliente informou em 17/10, 14:02 · <u>ver mensagem</u></span></div>
+    <div class="f"><span>Franquia</span><span>Reduzida</span><span class="orig">corrigido por Ana Souza em 17/10, 15:10</span></div>
+    <div class="f"><span>CEP de pernoite</span><span>01310-100</span></div>
+  </div>
+  <p class="note">O CEP fica sem linha porque não se sabe de onde ele veio (foi digitado antes da memória, por exemplo). A linha aparece só quando o valor do campo é o mesmo que a memória guardou.</p>
+</article>
+
+<article class="item" id="c8">
+  <header><span class="num">2.8</span><h3>A IA do CRM sabe quem escreveu</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>Duas mensagens que a avaliação do card lia errado passam a ser lidas certo (PR #1771):
+    <ul class="clean" style="margin-top:6px"><li>a resposta da equipe pelo <strong>celular</strong> agora é "pessoa da equipe", e não "robô de fora";</li>
+    <li>o convite e o aviso do <strong>Agendamento</strong>, enviados em nome de uma pessoa, agora são "plataforma", como o follow-up automático.</li></ul></dd>
+  <dt>Ganho</dt><dd>O card não acusa "cliente sem resposta de pessoa" quando a Maria respondeu pelo celular. E não acha que a Ana atendeu quando foi só o lembrete automático.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> Às 10h a Maria responde o João pelo WhatsApp do celular. Antes, a avaliação via isso como robô e continuava tratando o card como "esperando pessoa". Agora vê que a Maria respondeu às 10h.</div>
+</article>
+
+<article class="item" id="c9">
+  <header><span class="num">2.9</span><h3>Voto em enquete e escolha de lista</h3></header>
+  <dl class="row"><dt>O que muda</dt><dd>O voto do cliente numa enquete vira dado. Vale só o voto mais recente de cada pessoa.</dd>
+  <dt>Quando</dt><dd>Depois que o PR #1741, do WhatsApp Híbrido, estiver no ar.</dd></dl>
+  <div class="ex"><span class="who">Exemplo.</span> O cliente vota "Tarde", troca para "Manhã" e volta para "Tarde". Fica valendo só o último "Tarde". Nunca dois votos ao mesmo tempo.</div>
+</article>
+
+<article class="item" id="c10">
+  <header><span class="num">2.10</span><h3>Resultados no teste com IA paga</h3></header>
+  <p>Teste do extrator (a parte que anota os dados) em 28 conversas inventadas, 3 rodadas.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Medida</th><th>Resultado (versão final)</th></tr></thead>
+    <tbody>
+      <tr><td>Dados certos</td><td><strong>26 de 26</strong></td></tr>
+      <tr><td>Dados inventados</td><td>0</td></tr>
+      <tr><td>Placa ou modelo no veículo errado</td><td>0</td></tr>
+      <tr><td>Custo das 3 rodadas</td><td>US$ 0,036</td></tr>
+    </tbody>
+  </table></div>
+  <p>Quando erra, o extrator erra para o lado seguro: deixa de anotar, mas não anota errado.</p>
+</article>
+</section>
+
+<!-- ============ DEPOIS ============ -->
+<h2 id="subir">Como vai funcionar depois que subir</h2>
+<ol class="steps">
+  <li><div><strong>#1771 entra primeiro.</strong> Não tem flag: a IA do CRM passa a ler certo o celular e o Agendamento em todas as contas.</div></li>
+  <li><div><strong>#1772, a memória.</strong> Entra sozinho, com cópia de segurança do banco antes. Cria as tabelas, mas fica desligado.</div></li>
+  <li><div><strong>#1773 e #1774.</strong> Entram a linha de origem no card e a memória nos agentes.</div></li>
+  <li><div><strong>Liga a flag <code>memoria_ia</code></strong> nas contas 1, 16 e 18 da Hub2You. A Orquestração confere a flag pelo nome antes de ligar.</div></li>
+  <li><div><strong>A memória começa a aprender a partir daí.</strong> Ela não lê conversas antigas: só o que for dito depois de ligada.</div></li>
+  <li><div><strong>#1761</strong> entra depois do 1702b (encaminhamento).</div></li>
+</ol>
+<h3 style="margin-top:24px">Roteiro para testar na conta 16</h3>
+<ol class="steps" style="margin-top:10px">
+  <li><div>Numa conversa, o cliente diz o carro, a placa e o CPF. Resolva a conversa.</div></li>
+  <li><div>Abra o card → Negócio → Campos do card: a placa mostra "cliente informou em … · ver mensagem".</div></li>
+  <li><div>O cliente volta em conversa nova: "vamos continuar a renovação?". A Clara não pede placa nem carro.</div></li>
+  <li><div>Edite a franquia no card. A linha vira "corrigido por (seu nome)" e a IA passa a usar esse valor.</div></li>
+</ol>
+<h3 style="margin-top:24px">Se algo der errado</h3>
+<p>Desligar a flag <code>memoria_ia</code> na conta faz tudo voltar a ser como hoje: o pedido ao modelo sai igual ao atual e a linha de origem some. Os dados guardados ficam no banco e voltam quando a flag é religada.</p>
+
+<h2 id="fora">O que ficou de fora, e por quê</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Item</th><th>Por quê</th></tr></thead>
+  <tbody>
+    <tr><td>Faixa do bilhete no topo da conversa</td><td>A caixa de conversas já é o lugar principal; a faixa só repetiria o histórico (Rodrigo, 17/10)</td></tr>
+    <tr><td>Tarefa "Retomar o atendimento" na Agenda</td><td>Quando a pessoa fica online, a conversa já está na caixa dela (Rodrigo, 17/10)</td></tr>
+    <tr><td>Página "O que a IA sabe"</td><td>Não é para criar mais uma página. Quem quiser um dado à vista cria um atributo personalizado (Rodrigo, 17/10)</td></tr>
+    <tr><td>Tabela própria de "quem escreveu"</td><td>A própria mensagem já diz isso desde as correções do eco do celular (16/10) e do token do robô do n8n</td></tr>
+    <tr><td>Lia (cotação de seguro)</td><td>"Não mexer na estrutura da Lia" (Rodrigo, 17/10)</td></tr>
+    <tr><td>Linha de origem nos campos do contato e da conversa</td><td>Só os campos do card foram aprovados</td></tr>
+    <tr><td>Correção feita pela API mudar o campo do card</td><td>A correção pela API vale para a IA, mas não reescreve o campo na tela</td></tr>
+    <tr><td>Ler conversas antigas</td><td>A memória aprende a partir de quando é ligada</td></tr>
+    <tr><td>Aviso automático ao cliente, prazo para responder, detector de robô em laço</td><td>Recusados nas decisões D2, D3 e D4 (16/10)</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="decisoes">Decisões do Rodrigo</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Data</th><th>Decisão</th></tr></thead>
+  <tbody>
+    <tr><td>16/10</td><td>Os dados do cliente valem em todos os funis e conversas, sem restrição (D5)</td></tr>
+    <tr><td>16/10</td><td>Pedido encerrado fica na memória por 360 dias, sem prazo para apagar de vez (D6)</td></tr>
+    <tr><td>16/10</td><td>Sem aviso automático ao cliente (D2), sem prazo (D3), sem mexer no detector de robô (D4)</td></tr>
+    <tr><td>17/10</td><td>Encaminhada pela equipe conta como resposta de pessoa</td></tr>
+    <tr><td>17/10</td><td>Ligação perdida reabre a conversa resolvida (#1709)</td></tr>
+    <tr><td>17/10</td><td>Cortar a faixa, a tarefa e a página; manter só a linha de origem no card</td></tr>
+    <tr><td>17/10</td><td>Mensagem editada reavalia o card na hora (opção A)</td></tr>
+    <tr><td>17/10</td><td>Memória só no agente principal; a Lia fica de fora</td></tr>
+    <tr><td>17/10</td><td>Adiantar o #1772 sem esperar a cadeia do WhatsApp</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="prs">PRs e Issues</h2>
+<div class="tbl"><table>
+  <thead><tr><th>PR</th><th>Parte</th><th>O que é</th></tr></thead>
+  <tbody>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1772">#1772</a></td><td>CRM</td><td>Memória: dados com origem, edição, apagada, mescla, leitura para os agentes</td></tr>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1773">#1773</a></td><td>CRM</td><td>Linha de origem nos campos do card</td></tr>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1771">#1771</a></td><td>CRM</td><td>Papel certo do celular e do Agendamento (Issue #1769)</td></tr>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1761">#1761</a></td><td>CRM</td><td>Marca da mensagem encaminhada (Issue #1760)</td></tr>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/pull/1774">#1774</a></td><td>Agentes</td><td>Memória no agente principal (Issue #1755)</td></tr>
+    <tr><td class="pr"><a href="https://github.com/autonom-ia2/chat/issues/1759">#1759</a></td><td>—</td><td>Issue para ligar a flag nas contas 1, 16 e 18</td></tr>
+  </tbody>
+</table></div>
+<p class="note">Fechados e substituídos: #1762, #1763 e #1764 (versão maior, antes dos cortes de 17/10) e #1770 (refeito como #1774).</p>
+
+<footer>Issue <a href="https://github.com/autonom-ia2/chat/issues/1601">#1601</a> · versão de 17/10/2026 · chat Multifunnel, com Agentes IA, WhatsApp Híbrido, Frontend geral Max e Orquestração Deploy.</footer>
+</main>
+</div>
+
+</body>
+</html>

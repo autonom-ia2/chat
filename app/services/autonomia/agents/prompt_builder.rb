@@ -81,10 +81,14 @@ module Autonomia
       # contexto_do_turno: texto de regra do sistema para ESTE turno (ex.: #1669, a equipe escreveu na conversa), que
       #           entra como item `developer` (regra nossa, como a LEAN_TURN_NOTE do Construtor) logo antes da pergunta.
       #           nil (padrão): o input fica byte a byte o de antes.
+      # memoria:  PromptParts::Memoria::Blocos (#1601/#1755): "antes desta conversa" logo depois do segmento, o estado
+      #           dito pelo sistema (`developer`) e os fatos (`user`, com cerca) logo antes da pergunta. Vazio (padrão):
+      #           o input fica byte a byte o de antes.
       def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer,
-                     contexto_do_turno: nil)
+                     contexto_do_turno: nil, memoria: nil)
         @agent = agent
         @contexto_do_turno = contexto_do_turno.presence
+        @memoria = memoria || PromptParts::Memoria::Blocos.vazio
         # C1 (custo): teto no que vai ao LLM — a query composta pode embutir transcrição+moldura do
         # copiloto, por isso o teto próprio (maior que MAX_QUERY_CHARS). Corta do FIM (mantém o começo).
         @query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_COMPOSED_QUERY_CHARS)
@@ -229,12 +233,14 @@ module Autonomia
           'atendimento" nem cite a fonte do conhecimento — comece pela resposta ou pelo passo a passo.'
       end
 
-      # input (array estilo Responses API): SEGMENTO DA CONTA + histórico + CONTEXTO + DOCUMENTOS anexados + pergunta.
+      # input (array estilo Responses API): SEGMENTO DA CONTA + memória de antes + histórico + CONTEXTO + DOCUMENTOS
+      # anexados + regra do turno + estado e fatos da memória + pergunta.
       def input
-        messages = [segmento_message].compact + history_messages
+        messages = [segmento_message, memoria_message('user', @memoria.antes)].compact + history_messages
         messages << context_message if @snippets.any?
         messages << documents_message if @documents.any?
         messages << message('developer', @contexto_do_turno) if @contexto_do_turno
+        messages.concat([memoria_message('developer', @memoria.sistema), memoria_message('user', @memoria.fatos)].compact)
         messages << user_message(@query)
         messages
       end
@@ -316,6 +322,10 @@ module Autonomia
 
       def message(role, text)
         PromptParts::Mensagem.montar(role, text)
+      end
+
+      def memoria_message(role, text)
+        message(role, text) if text.present?
       end
 
       # Bloco de CONTEXTO: cada trecho com seu id real (p/ casar com used_snippet_ids).

@@ -66,3 +66,19 @@ en:
         aviso_mudou: "Meta prices changed while you were reading. Check the notice again and confirm."
         utility_desligada: "Promotion can only be turned on with Service notice on."
         somente_administrador: "Only account administrators can change this."
+    # Resending the same template to another conversation (#1767, Whatsapp::Templates::ReenvioDoModelo): why it did not go.
+    reenvio:
+      motivos:
+        conta_diferente: "This conversation belongs to another account."
+        caixa_nao_oficial: "This conversation is not on an official WhatsApp inbox, which is the only one that can send templates."
+        nao_e_modelo: "This message is not a WhatsApp template, so it cannot be sent again as a template."
+        sem_parametros: "We could not find the data of this campaign send to rebuild the message."
+        modelo_indisponivel: "This template is not approved on the inbox of this conversation anymore."
+        modelo_mudou: "This template was edited after the send and the original values no longer fit it."
+        oferta_vencida: "The validity of this offer has already passed."
+        produto_indisponivel: "A product of this template is out of stock or no longer in the catalog."
+        formato_nao_suportado: "This template uses a format we cannot send yet."
+        midia_indisponivel: "The file of this template (top or card) is no longer available."
+        produtos_desligados: "Templates with catalog products are not turned on for this account."
+        nao_aceito_pela_meta: "WhatsApp does not accept an authentication template for this contact, who has no phone number."
+        erro: "Could not send it right now. Try again in a moment."
