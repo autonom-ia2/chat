@@ -72,9 +72,11 @@ class CreateCrmMemoriaFatos < ActiveRecord::Migration[7.2]
   end
 
   def add_fatos_checks
-    add_check_constraint :crm_memoria_fatos, "status IN ('alegado', 'confirmado')", name: 'crm_memoria_fatos_status'
+    # Os valores fixos como array de text ('{...}'::text[]): o Postgres imprime a constraint do mesmo jeito depois de
+    # migrar e depois de carregar o schema.rb (com `IN (...)`, o texto muda na volta e o schema.rb do CI não bate).
+    add_check_constraint :crm_memoria_fatos, "status::text = ANY ('{alegado,confirmado}'::text[])", name: 'crm_memoria_fatos_status'
     add_check_constraint :crm_memoria_fatos,
-                         "status <> 'confirmado' OR fonte IN ('ferramenta_resultado', 'sistema', 'pessoa_corrigiu')",
+                         "status::text <> 'confirmado'::text OR fonte::text = ANY ('{ferramenta_resultado,sistema,pessoa_corrigiu}'::text[])",
                          name: 'crm_memoria_fatos_so_codigo_confirma'
     add_check_constraint :crm_memoria_fatos,
                          "(escopo = 'card' AND card_id IS NOT NULL AND conversation_id IS NULL) OR " \
@@ -82,7 +84,7 @@ class CreateCrmMemoriaFatos < ActiveRecord::Migration[7.2]
                          "(escopo = 'contato' AND card_id IS NULL AND conversation_id IS NULL)",
                          name: 'crm_memoria_fatos_escopo'
     add_check_constraint :crm_memoria_fatos,
-                         "cardinality(prova_message_ids) > 0 OR fonte IN ('pessoa_corrigiu', 'sistema', 'ferramenta_resultado')",
+                         "cardinality(prova_message_ids) > 0 OR fonte::text = ANY ('{pessoa_corrigiu,sistema,ferramenta_resultado}'::text[])",
                          name: 'crm_memoria_fatos_prova'
     add_check_constraint :crm_memoria_fatos, 'char_length(valor) <= 300 AND char_length(prova_trecho) <= 300',
                          name: 'crm_memoria_fatos_tamanho'
