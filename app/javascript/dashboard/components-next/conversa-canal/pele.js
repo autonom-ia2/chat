@@ -33,12 +33,23 @@ export const peleDaCaixa = (inbox, ligada) => {
 export const caixaGravaMarkdown = inbox =>
   inbox?.channel_type === INBOX_TYPES.API && !!inbox?.waha_provider;
 
+// O envio da empresa na caixa WAHA: sem a chave `whatsapp_rich_native` (#1709) o conector converte o markdown para o
+// formato do WhatsApp, então o "*x*" do robô chega em itálico; com a chave, o chat2you já manda no formato do WhatsApp
+// (Waha::RichNative::OutgoingHints) e o "*x*" chega em negrito, como na Cloud.
+export const CHAVE_WAHA_NATIVO = 'whatsapp_rich_native';
+
+// { aparelho, robo }: qual texto a caixa guarda em markdown (e não no formato do WhatsApp).
+export const markdownDaCaixa = (inbox, wahaNativo) => {
+  const waha = caixaGravaMarkdown(inbox);
+  return { aparelho: waha, robo: waha && !wahaNativo };
+};
+
 export const fornecerCaixaEmMarkdown = valor => provide(CHAVE_MARKDOWN, valor);
 
 export const useCaixaEmMarkdown = () =>
   inject(
     CHAVE_MARKDOWN,
-    computed(() => false)
+    computed(() => ({ aparelho: false, robo: false }))
   );
 
 export const fornecerPele = pele => provide(CHAVE_PELE, pele);

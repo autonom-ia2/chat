@@ -1,4 +1,9 @@
-import { PELES, caixaGravaMarkdown, peleDaCaixa } from '../pele';
+import {
+  PELES,
+  caixaGravaMarkdown,
+  markdownDaCaixa,
+  peleDaCaixa,
+} from '../pele';
 import { diaDaMensagem, horaDaMensagem, rotuloDoDia } from '../dataDaConversa';
 
 describe('peleDaCaixa (#1702)', () => {
@@ -69,5 +74,29 @@ describe('caixaGravaMarkdown', () => {
     );
     expect(caixaGravaMarkdown({ channel_type: 'Channel::Api' })).toBe(false);
     expect(caixaGravaMarkdown(undefined)).toBe(false);
+  });
+});
+
+describe('markdownDaCaixa', () => {
+  const waha = { channel_type: 'Channel::Api', waha_provider: true };
+
+  it('WAHA sem a chave nativa: aparelho e robô em markdown (o conector converte)', () => {
+    expect(markdownDaCaixa(waha, false)).toEqual({
+      aparelho: true,
+      robo: true,
+    });
+  });
+
+  it('WAHA com a chave nativa: o robô sai no formato do WhatsApp', () => {
+    expect(markdownDaCaixa(waha, true)).toEqual({
+      aparelho: true,
+      robo: false,
+    });
+  });
+
+  it('Cloud: nada em markdown', () => {
+    expect(
+      markdownDaCaixa({ channel_type: 'Channel::Whatsapp' }, false)
+    ).toEqual({ aparelho: false, robo: false });
   });
 });

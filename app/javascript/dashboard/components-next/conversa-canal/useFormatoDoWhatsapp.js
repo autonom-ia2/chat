@@ -7,6 +7,7 @@
 //   convertido no envio. O markdown de sempre já mostra o que o cliente recebe.
 // - Nota privada: nunca sai para o cliente; markdown de sempre (com menções).
 // - Caixa WAHA: o conector já grava o que vem do aparelho (recebida e eco) em markdown; fica o de sempre.
+//   O robô só é lido no formato do WhatsApp com a chave whatsapp_rich_native (sem ela o conector converte).
 // Só muda a forma de mostrar; o texto gravado não muda.
 import { computed } from 'vue';
 import { useMessageContext } from '../message/provider.js';
@@ -47,6 +48,7 @@ export const formatoDoTexto = mensagem => {
     messageType,
     privada,
     caixaEmMarkdown,
+    roboEmMarkdown,
     contentAttributes,
     additionalAttributes,
   } = mensagem;
@@ -60,7 +62,7 @@ export const formatoDoTexto = mensagem => {
   ) {
     return doAparelho;
   }
-  return envioAutomatico(mensagem) ? FORMATOS.ROBO : null;
+  return envioAutomatico(mensagem) && !roboEmMarkdown ? FORMATOS.ROBO : null;
 };
 
 // Função que formata o texto no jeito do WhatsApp, ou null (fica o markdown de sempre).
@@ -81,7 +83,8 @@ export const useFormatoDoWhatsapp = () => {
     const formato = formatoDoTexto({
       messageType: messageType.value,
       privada: privada?.value,
-      caixaEmMarkdown: caixaEmMarkdown.value,
+      caixaEmMarkdown: caixaEmMarkdown.value.aparelho,
+      roboEmMarkdown: caixaEmMarkdown.value.robo,
       tipoDoRemetente: sender?.value?.type ?? senderType?.value,
       contentAttributes: contentAttributes?.value,
       additionalAttributes: additionalAttributes?.value,

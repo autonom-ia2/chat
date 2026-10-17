@@ -7,10 +7,11 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import {
   PELES,
-  caixaGravaMarkdown,
+  CHAVE_WAHA_NATIVO,
   fornecerCaixaEmMarkdown,
   fornecerFuso,
   fornecerPele,
+  markdownDaCaixa,
   peleDaCaixa,
 } from './pele';
 import {
@@ -39,12 +40,15 @@ export const usePeleDaConversa = () => {
   fornecerPele(pele);
   const conversa = useMapGetter('getSelectedChat');
   const caixaPorId = useMapGetter('inboxes/getInbox');
+  const { isCloudFeatureEnabled, currentAccount } = useAccount();
   fornecerCaixaEmMarkdown(
     computed(() =>
-      caixaGravaMarkdown(caixaPorId.value(conversa.value?.inbox_id))
+      markdownDaCaixa(
+        caixaPorId.value(conversa.value?.inbox_id),
+        isCloudFeatureEnabled(CHAVE_WAHA_NATIVO)
+      )
     )
   );
-  const { currentAccount } = useAccount();
   fornecerFuso(computed(() => fusoDaConta(currentAccount.value)));
 
   const ehWhatsapp = computed(() => pele.value === PELES.WHATSAPP);

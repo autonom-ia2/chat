@@ -254,6 +254,25 @@ describe('formatoDoTexto (#1732)', () => {
       },
       null,
     ],
+    [
+      'robô na caixa WAHA sem a chave nativa (o conector converte)',
+      {
+        messageType: OUTGOING,
+        tipoDoRemetente: 'agent_bot',
+        roboEmMarkdown: true,
+      },
+      null,
+    ],
+    [
+      'robô na caixa WAHA com a chave nativa',
+      {
+        messageType: OUTGOING,
+        tipoDoRemetente: 'agent_bot',
+        caixaEmMarkdown: true,
+        roboEmMarkdown: false,
+      },
+      ROBO,
+    ],
     ['atividade', { messageType: ACTIVITY }, null],
     ['template do Chatwoot', { messageType: TEMPLATE }, null],
   ])('%s', (_, mensagem, esperado) => {
