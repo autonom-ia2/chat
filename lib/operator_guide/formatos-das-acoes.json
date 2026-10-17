@@ -3487,6 +3487,7 @@
         "tipo": "string"
       },
       "mode": {
+        "nao_pode_ficar_vazio": true,
         "padrao": "guided",
         "tipo": "string",
         "um_de": [
@@ -10461,6 +10462,7 @@
         "tipo": "string"
       },
       "mode": {
+        "obrigatorio": "pelo_modelo",
         "padrao": "guided",
         "tipo": "string",
         "um_de": [
@@ -21710,6 +21712,7 @@
         "tipo": "string"
       },
       "mode": {
+        "nao_pode_ficar_vazio": true,
         "padrao": "guided",
         "tipo": "string",
         "um_de": [

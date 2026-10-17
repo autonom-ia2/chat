@@ -36,6 +36,18 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
     expect(response.body).not_to include('guided v1')
   end
 
+  # Revisão adversarial do #1492: modo vazio virava erro do banco com a linha inteira (instrução oculta) no log.
+  [[:blank, ''], [:null, nil]].each do |nome, valor|
+    it "refuses an empty mode (#{nome}) with 422, without touching the agent" do
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{guided_agent.id}",
+            params: { agent: { mode: valor } }, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).not_to include('guided v1')
+      expect(guided_agent.reload).to have_attributes(mode: 'guided', instruction: 'guided v1')
+    end
+  end
+
   # Revisão crítica do #1492: o agente que nasce manual com a instrução no corpo registra o texto como do dono.
   it 'creating a manual agent with an instruction records it as written by the owner' do
     post "/api/v1/accounts/#{account.id}/autonomia/agents",

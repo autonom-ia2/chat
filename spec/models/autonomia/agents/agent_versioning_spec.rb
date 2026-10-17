@@ -609,9 +609,9 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
     it 'agente manual volta a uma versão oculta com andaime guardado e recebe o andaime junto' do
       agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
                                                instruction: 'texto do dono', scaffold: 'andaime manual')
+      retrato = agent.send(:retrato_da_versao).merge('mode' => 'guided', 'scaffold' => 'andaime do Construtor')
       oculta = agent.instruction_versions.create!(account: account, instruction: 'GERADA', instruction_hash: 'h',
-                                                  reason: 'kb_refresh',
-                                                  metadata: { 'agente' => { 'mode' => 'guided', 'scaffold' => 'andaime do Construtor' } })
+                                                  reason: 'kb_refresh', metadata: { 'agente' => retrato })
 
       agent.restore_instruction!(oculta)
 
