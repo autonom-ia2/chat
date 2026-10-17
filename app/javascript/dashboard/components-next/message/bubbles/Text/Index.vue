@@ -4,9 +4,11 @@ import BaseBubble from 'next/message/bubbles/Base.vue';
 import FormattedContent from './FormattedContent.vue';
 import PreviaDeLink from 'dashboard/components-next/conversa-canal/PreviaDeLink.vue';
 import { usePreviaDeLink } from 'dashboard/components-next/conversa-canal/usePreviaDeLink';
+import DocumentoDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/DocumentoDoWhatsapp.vue';
+import { usePele } from 'dashboard/components-next/conversa-canal/pele';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
-import { MESSAGE_TYPES } from '../../constants';
+import { ATTACHMENT_TYPES, MESSAGE_TYPES } from '../../constants';
 import { MESSAGE_STATUS } from 'shared/constants/messages';
 import { useMessageContext } from '../../provider.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
@@ -18,6 +20,19 @@ const { hasTranslations, translationContent } =
   useTranslations(contentAttributes);
 
 const previaDeLink = usePreviaDeLink();
+
+// #1702: com a pele, documento com legenda vira o cartão do app em cima da legenda; os
+// outros anexos seguem nos chips de sempre.
+const pele = usePele();
+const ehDocumento = anexo => anexo.fileType === ATTACHMENT_TYPES.FILE;
+const documentos = computed(() =>
+  pele.value ? (attachments.value || []).filter(ehDocumento) : []
+);
+const outrosAnexos = computed(() =>
+  pele.value
+    ? (attachments.value || []).filter(anexo => !ehDocumento(anexo))
+    : attachments.value
+);
 
 const renderOriginal = ref(false);
 
@@ -58,6 +73,11 @@ const handleSeeOriginal = () => {
       <span v-if="isEmpty" class="text-n-slate-11">
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
+      <DocumentoDoWhatsapp
+        v-for="documento in documentos"
+        :key="documento.id"
+        :anexo="documento"
+      />
       <PreviaDeLink v-if="previaDeLink" :previa="previaDeLink" />
       <FormattedContent v-if="renderContent" :content="renderContent" />
       <span
@@ -84,7 +104,7 @@ const handleSeeOriginal = () => {
         :showing-original="renderOriginal"
         @toggle="handleSeeOriginal"
       />
-      <AttachmentChips :attachments="attachments" class="gap-2" />
+      <AttachmentChips :attachments="outrosAnexos" class="gap-2" />
       <template v-if="isTemplate">
         <div
           v-if="contentAttributes.submittedEmail"

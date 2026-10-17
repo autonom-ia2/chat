@@ -14,10 +14,13 @@ import {
 } from './tamanhoDoArquivo';
 import { baixarArquivo } from './baixarArquivo';
 
+// `anexo`: o documento de uma legenda (balão de texto); sem ele, o primeiro do balão.
+const props = defineProps({ anexo: { type: Object, default: null } });
+
 const { t, locale } = useI18n();
 const { attachments, orientation } = useMessageContext();
 
-const anexo = computed(() => attachments.value?.[0] || {});
+const anexo = computed(() => props.anexo || attachments.value?.[0] || {});
 const nome = computed(
   () => nomeDoArquivo(anexo.value) || t('CONVERSATION.UNKNOWN_FILE_TYPE')
 );
@@ -26,6 +29,13 @@ const resumo = computed(() =>
   resumoDoArquivo(anexo.value, idiomaDoPainel(locale.value))
 );
 const ehPdf = computed(() => extensao.value === 'PDF');
+// Foto mandada como documento: o app mostra a miniatura dela no lugar do ícone.
+const IMAGENS = ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'];
+const miniatura = computed(() =>
+  IMAGENS.includes(extensao.value)
+    ? anexo.value.thumbUrl || anexo.value.dataUrl
+    : null
+);
 const enviada = computed(() => orientation?.value === 'right');
 
 const baixando = ref(false);
@@ -44,15 +54,24 @@ const baixar = async () => {
 
 <template>
   <div
-    class="flex items-center gap-3 w-full min-w-0 px-3 py-[13px] rounded-[8px]"
-    :class="
+    class="flex items-center gap-3 w-full min-w-0 rounded-[8px] overflow-hidden"
+    :class="[
       enviada
         ? 'bg-[#D1F4CC] dark:bg-[#103E2A]'
-        : 'bg-[#F5F5F5] dark:bg-[#1D1F1F]'
-    "
+        : 'bg-[#F5F5F5] dark:bg-[#1D1F1F]',
+      miniatura ? 'pe-3' : 'px-3 py-[13px]',
+    ]"
     data-documento-do-whatsapp
   >
+    <img
+      v-if="miniatura"
+      :src="miniatura"
+      alt=""
+      class="size-[78px] flex-shrink-0 object-cover skip-context-menu"
+      data-miniatura-do-documento
+    />
     <svg
+      v-else
       viewBox="0 0 26 32"
       class="w-[26px] h-8 flex-shrink-0"
       aria-hidden="true"

@@ -98,6 +98,10 @@ const RECHEIO = [
   // A foto inteira, na proporção dela (como no app), até 330 px de altura.
   '[&[data-bubble-name=text]_.contain-content_img]:!h-auto [&[data-bubble-name=text]_.contain-content_img]:max-h-[330px] [&[data-bubble-name=text]_.contain-content_img]:object-top',
   '[&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:block [&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:px-1.5',
+  // Documento com legenda: o cartão em cima, com a moldura de 3 px, e a legenda embaixo, como no app.
+  '[&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pt-[3px] [&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pl-[3px] [&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pr-[3px]',
+  '[&[data-bubble-name=text]>div:has([data-documento-do-whatsapp])]:!gap-1.5 [&[data-bubble-name=text]_[data-documento-do-whatsapp]]:w-[320px] [&[data-bubble-name=text]_[data-documento-do-whatsapp]]:max-w-full',
+  '[&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:block [&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:px-1.5',
   // Editada: "Editada" entra antes da hora, e o espaço reservado na última linha cresce.
   '[&[data-bubble-name=text]:has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[116px]',
   // Caixa híbrida: o rótulo do transporte ("WhatsApp API · plano B") também fica na
@@ -267,7 +271,7 @@ export const classesDaHora = ({ variante, nomeDoBalao }) => {
 export const CLASSES_DO_REMETENTE = [
   'text-[12.8px] leading-[22px] font-medium text-[#008069] dark:text-[#06CF9C]',
   // Em foto e localização o balão tem moldura fina: o nome ganha o recuo do texto.
-  '[[data-bubble-name=text]:has(.contain-content)_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5 [[data-bubble-name=album]_&]:px-1.5 [[data-bubble-name=album-legenda]_&]:px-1.5',
+  '[[data-bubble-name=text]:has(.contain-content)_&]:px-1.5 [[data-bubble-name=text]:has([data-documento-do-whatsapp])_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5 [[data-bubble-name=album]_&]:px-1.5 [[data-bubble-name=album-legenda]_&]:px-1.5',
 ].join(' ');
 
 export const CLASSES_DO_SEPARADOR_DE_DIA = `px-3 py-[5px] rounded-[7.5px] text-[12.5px] bg-white dark:bg-[#1D1F1F] ${SECUNDARIO} ${SOMBRA}`;
