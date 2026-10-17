@@ -1,11 +1,84 @@
-# WAHA 2026.9.2 + patch c2y-rich-3, revisão 3b (autonom-ia2/chat#1709, rodada 2)
+# WAHA 2026.9.2 + patch c2y-rich-3, revisão 3c (autonom-ia2/chat#1709, rodada 2)
 
 Este pacote é só código e build local. Não houve deploy, push nem contato com os motores de produção.
 
 - Base do patch: WAHA tag `2026.9.2` = commit `90ba445a0e765701c8910f0fac08176250c3e0fd`.
-- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `bd4668c1109f24284537c678704872c93b302f4a7128a9b57b675986ba8eb19f` (63 arquivos). Contém a c2y-rich-3 mais as correções da revisão do conector (**3b**, abaixo). Passa em `git apply --check` sobre a tag limpa (`git archive 90ba445a`).
-- A c2y-rich-3 sem as correções (patch `980e37b8…a9d2`, imagem `…:2026.9.2-c2y-rich-3`, tarball `5a566498…88b4`) fica **substituída**: não usar em deploy. Guardada no M2 como `waha-2026.9.2-c2y-rich-3.patch`, `build-waha-c2y-rich-3.sh` e `dist-sha256-3.txt`.
-- `/api/server/version` não muda: `autonomia.patch` continua `'c2y-rich-3'`, como a 2b continuou `'c2y-rich-2'`. A label `autonomia.patch-sha256` é o que diferencia as duas.
+- Patch: `waha-2026.9.2-c2y-rich.patch`, sha256 `aaea2496821e796f1cfb40ff119f6bdada2e0d7d73ab58e0bcdb682a0746d8e6` (69 arquivos). Contém a 3b mais o aviso de visualização única (**3c**, abaixo). Passa em `git apply --check` sobre a tag limpa.
+- A 3b (patch `bd4668c1…eb19f`, imagem `…:2026.9.2-c2y-rich-3b`, tarball `d4172389…ed9a`) fica **substituída**: não usar em deploy. Guardada no M2 como `waha-2026.9.2-c2y-rich-3b.patch`, `build-waha-c2y-rich-3b.sh` e `dist-sha256-3b.txt`.
+- `/api/server/version`: `autonomia.patch` continua `'c2y-rich-3'`. A única mudança é o campo novo `autonomia.view_once_notice: true`, que é aditivo. O que diferencia as revisões é a label `autonomia.patch-sha256`.
+
+## Revisão 3c: aviso de visualização única (aprovado pelo Rodrigo, 16/10/2026)
+
+**O que faz.** Quando um contato manda visualização única numa conversa individual, o WhatsApp não entrega a mídia ao aparelho vinculado (investigação abaixo). O motor passa a avisar o conector, e o conector cria no Chatwoot uma mensagem **do cliente** (incoming, não privada):
+- `content`: "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular." É a chave i18n `whatsapp.to.chatwoot.message.view_once.unavailable`, em pt-BR e en-US, como o WhatsApp Web mostra;
+- `content_attributes.waha_view_once_unavailable = {from_me: false, id: "false_<chat>_<ID>"}`, onde `id` é o id serializado real da mensagem no WhatsApp.
+
+**Motor** (`session.gows.core.ts`, `subscribeEngineEvents2`):
+- o `events.UndecryptableMessage` vira o evento **interno** `c2y.message.view_once.unavailable`, quando todas estas condições valem: `IsUnavailable === true`, `UnavailableType === "view_once"`, não é `IsFromMe`, não é `IsGroup`, o chat não é grupo, broadcast nem newsletter, e há `ID` e `Chat`. A guarda e o payload ficam em `core/engines/gows/c2y.viewonce.ts`;
+- o payload tem o mesmo id e o mesmo formato de chat de uma mensagem recebida do GOWS, então o conector acha o mesmo contato e a mesma conversa;
+- esse evento **não** é um valor de `WAHAEvents`, então nenhum webhook o recebe, nem com `*` (há teste para isso);
+- o `logger.error` original da linha ~509 continua como estava. Só o GOWS emite esse evento.
+
+**Conector:**
+- tem fila nova, `chatwoot.waha | c2y.view_once.unavailable`, registrada em `app.module`, `QueueRegistry`, `QueueManager` e `ChatWootWAHAQueueService`;
+- o consumidor `consumers/waha/view_once.unavailable.ts` usa o `MessageBaseHandler`, o mesmo caminho de toda mensagem recebida, e trava pela mesma chave de chat do `message.any`.
+
+**Deduplicação e troca pela mídia** (`messages/to/chatwoot/ViewOnceNotice.ts`):
+- o aviso é mapeado com um id próprio, `<ID>-C2YVO`, como o upstream já faz com as chamadas (`BuildFakeCallMessageId`). Ids do WhatsApp são alfanuméricos, então o `-` impede colisão;
+- o whatsmeow pode emitir o mesmo id de novo depois do pedido de reenvio. Nesse caso o conector acha o aviso já mapeado e não cria outro;
+- se a mensagem real já estiver no Chatwoot (o conteúdo chegou antes), o conector não cria aviso;
+- se o conteúdo chegar **depois** do aviso, o caminho normal baixa a mídia com `waha_media.view_once = true` (prova abaixo). O conector então soma `content_attributes.waha_view_once_resolved = {id, notice_message_id}`, e o chat2you troca o aviso pela mídia. A mídia não é descartada como duplicata, porque o aviso não ocupa o id real;
+- a busca do aviso fica dentro de um try/catch. Se falhar, sai um `warn` curto com a classe do erro e a mídia segue sem a chave.
+
+**Contrato para o chat2you.** `waha_view_once_unavailable` mostra o aviso. `waha_view_once_resolved.notice_message_id` aponta para a mensagem do aviso, que deve ser trocada ou escondida. Para saber se o motor tem o recurso, use `autonomia.view_once_notice === true`.
+
+**Validação 3c (M2):**
+- `tsc --noEmit`: 0 erros. `yarn build`: ok. `oxlint --deny-warnings` nos 14 arquivos tocados: 0;
+- testes novos: 29 de 29. São `c2y.viewonce.test.ts` (20: guarda, payload, lid, timestamp e evento fora de `WAHAEvents`) e `view_once.c2y4.test.ts` (9: aviso do cliente com o texto pt-BR, mapeamento só no id do aviso, mesmo id duas vezes gera um aviso, mensagem real já existente não gera aviso, texto en-US, payload, e na mídia depois do aviso: `resolved` presente, ausente sem aviso, ausente sem visualização única, e falha de busca sem quebrar e sem telefone no log);
+- mutação: 9 de 9 quebras derrubaram testes. As quebras foram: sem `fromMe`, sem `IsGroup`, sem grupo pelo jid, qualquer `UnavailableType`, falha de decriptação comum, deduplicação ignorando a mensagem real, deduplicação ignorando o aviso, `resolved` sem a guarda de visualização única, e `resolved` relançando o erro;
+- suíte unit completa: 49 suítes, 671 testes. Falham 10, os mesmos 10 da tag limpa (nomes conferidos);
+- Baileys real sobre o dist: `r7-real-baileys.js` (o r5 com o handshake novo) deu 37 de 37, `r6-viewonce-real-baileys.js` 4 de 4 e `listreply-real-baileys.js` 8 de 8. O `r5` e o `r2` falham só no handshake exato, que agora tem `view_once_notice`. O `r4` é de uma rodada anterior e também falha em `defaults` e `order`, que a rodada 5 mudou de propósito;
+- o passo 1 do script também conferiu o `core/engines/gows/session.gows.core.js` original na base de produção (`3306556b…`), e bateu.
+
+**Imagem 3c** (`autonomia-waha-c2y-rich:2026.9.2-c2y-rich-3c`, linux/amd64, mesma base e mesmo processo; o smoke de execução não rodou porque o daemon é aarch64):
+- ID local (índice OCI): `sha256:9c6665aad0590f146c035196b64a1bbf7ad48fb67367c81c65bddd759a6ae499`;
+- manifest amd64: `sha256:eac6f703849683947703e16650e9e4bd891011388118ab6adead59147d395a13`;
+- config (o image ID depois de um `docker load` com o store clássico): `sha256:9c85c0081c1100709e5c0f2f2d1d615a0da503614e87af750111adc67eb74746`;
+- 51 arquivos de runtime conferidos dentro da imagem com `docker create` + `docker cp`, iguais ao `dist-sha256.txt`;
+- tarball `out/autonomia-waha-c2y-rich_2026.9.2-c2y-rich-3c.tar`: 2269967872 bytes, sha256 `9ac5f91efb223d25ecb0a366c3ca023f6b4c50ed541d457c239ca34ee342448c`.
+
+**Não validado na 3c:**
+- um `UndecryptableMessage` real vindo do GOWS. Os nomes dos campos (`Info.Chat`, `IsUnavailable`, `UnavailableType`) foram lidos do struct do whatsmeow, que não tem tags json, e batem com o log existente, que já lê `data.Info.Chat`. O GOWS-plus é privado e não foi lido;
+- o pipeline rxjs dentro da sessão (testei a guarda e o payload, não a sessão rodando);
+- se o celular reenvia o conteúdo, e portanto o `resolved` de ponta a ponta;
+- a fila nova com Redis e BullMQ de verdade, e o smoke `/api/server/version` (fica para o canário).
+
+## Visualização única no motor: investigação (16/10/2026)
+
+**Conclusão: o aparelho vinculado (o WAHA) não recebe a chave da mídia de visualização única.** Não há o que baixar. Por isso a 3c cria o aviso, e não um download.
+
+**Protocolo.** Para dispositivo vinculado, o servidor do WhatsApp entrega a mensagem de visualização única sem nenhum `<enc>`. No lugar vem um nó `<unavailable type="view_once"/>`. Sem ciphertext não há `Message`, e portanto não há `mediaKey`, `directPath` nem `url`. As duas bibliotecas de protocolo modelam isso de propósito:
+- **whatsmeow** (base do GOWS; clone `0b0a1cda`, de 16/10/2026):
+  - `message.go:324-333`: com `unavailable` e sem `enc`, emite `events.UndecryptableMessage{IsUnavailable: true, UnavailableType: "view_once"}` e retorna;
+  - `types/events/events.go:288-308`: o campo vem com o comentário *"Some message types are intentionally unavailable"* e com a constante `UnavailableTypeViewOnce = "view_once"`;
+  - nesse caminho, o whatsmeow também pede a mensagem ao celular (`immediateRequestMessageFromPhone`, que faz um `PLACEHOLDER_MESSAGE_RESEND`). Se o celular respondesse com o conteúdo, ele chegaria como um `events.Message` normal.
+- **Baileys** (NOWEB), em `lib/Utils/decode-wa-message.js:223-225` e `311`: o mesmo nó vira `key.isViewOnce = true`, sem conteúdo. O comentário em `session.noweb.core.ts:3220` diz o mesmo: *"View-once messages arrive with key.isViewOnce=true but no message content"*.
+
+**O WAHA hoje.**
+- `session.gows.core.ts:509-513`: o `events.UndecryptableMessage` só gera um `logger.error`, com chat e remetente. A mensagem não vira evento `message`/`message.any` e não chega ao Chatwoot.
+- Não existe hoje nenhum caminho do GOWS para o Chatwoot quando a mensagem é de visualização única que não veio. A bolha "abra no celular" não está nesta imagem: procurei nos i18n e no conector e não achei. Portanto ela nunca dispara a partir do GOWS. O evento interno `c2y.message.unavailable` (citado na rodada 2) também não existe.
+
+**Se a chave chegar** (mensagem antiga, cliente antigo, ou uma resposta do celular ao pedido de reenvio), o WAHA já baixa a mídia como comum e manda `waha_media.view_once = true`, sem precisar de patch:
+- o `shouldProcessIncomingMessage` deixa passar, porque o `normalizeMessageContent` desembrulha `viewOnce*`;
+- o `extractMediaContent` acha a mídia, e o `GOWSEngineMediaProcessor` baixa pelo `DownloadMedia`.
+
+Prova sobre o dist da 3b, com o Baileys real: `validate/r6-viewonce-real-baileys.js`, 4 de 4 (`viewOnceMessage`, `V2`, `V2Extension` com PTT, e o formato já desembrulhado com `IsViewOnce`).
+
+**Decisão do Rodrigo (16/10).** Criar o aviso como o WhatsApp Web mostra. Está implementado na 3c, acima.
+
+**Não validado.**
+- Comportamento em aparelho real: se o celular responde ao pedido de reenvio com o conteúdo de visualização única. A expectativa, pela regra do WhatsApp de que a visualização única só abre no celular, é que não responda.
+- O código do GOWS-plus `v1.0.48` (repositório privado) não foi lido. A leitura foi do whatsmeow público.
 
 ## Revisão 3b: achados da revisão do conector
 
