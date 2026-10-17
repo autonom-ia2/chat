@@ -16,6 +16,7 @@ export const LIMITES = {
   opcaoBotao: 20,
   opcaoLista: 24,
   nomeDaLista: 20,
+  cabecalho: 60,
   opcoes: 10,
   botoes: 3,
   nomeDoLugar: 100,
@@ -180,6 +181,10 @@ export const montarOpcoes = campos => {
   const maximoDoTitulo = lista ? LIMITES.opcaoLista : LIMITES.opcaoBotao;
   const maximoDaMensagem = lista ? LIMITES.mensagemDaLista : LIMITES.mensagem;
   const erros = conferir([
+    // Cabeçalho obrigatório (regra do Rodrigo, 17/10): no WhatsApp API (WAHA) a lista sem cabeçalho chega e o app não
+    // mostra. A API continua com `header` opcional; quem exige é a tela.
+    ['cabecalho', 'cabecalho', vazio(campos.cabecalho)],
+    ['cabecalho', 'cabecalhoLongo', passa(campos.cabecalho, LIMITES.cabecalho)],
     ['mensagem', 'mensagem', vazio(campos.mensagem)],
     ['mensagem', 'mensagemLonga', passa(campos.mensagem, maximoDaMensagem)],
     ['opcoes', 'opcoes', opcoes.length < 2],
@@ -201,6 +206,7 @@ export const montarOpcoes = campos => {
     content: limpo(campos.mensagem),
     richMessage: {
       type: 'options',
+      header: limpo(campos.cabecalho),
       options: opcoes.map((title, indice) => ({
         id: `opcao_${indice + 1}`,
         title,
