@@ -121,6 +121,25 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
   (descartar a edição que chega depois de uma mais nova) usa só a hora do WhatsApp, guardada em `source_at` na entrada do
   `edit_history` (`Waha::RichNative::Edits`).
 
+### Riscos aceitos
+
+- **Termos do WhatsApp para número não oficial.** Os Termos de Serviço do WhatsApp proíbem o uso por "automated or
+  other means" (envio automatizado) em conta que não é da API oficial
+  (https://www.whatsapp.com/legal/terms-of-service). Usar o motor WAHA tem risco de restrição ou bloqueio do número. A
+  blindagem do #1725 é o que mitiga esse risco.
+- **Lista pelo motor não oficial é frágil.** A documentação do WAHA diz que "List Messages are fragile... may stop
+  working at any time" (https://waha.devlike.pro/docs/how-to/send-messages/). Por isso, quando o motor recusa a lista
+  (4xx), ela sai como texto, uma vez, sem duplicar.
+
+### Pré-requisitos para LIGAR a flag `whatsapp_rich_native`
+
+- [ ] #1740 (renderer do WhatsApp) e #1702b (tela do Frontend geral) no ar.
+- [ ] #1765 e #1766 do Followup no ar.
+- [ ] Dono do token gravado em todas as caixas WAHA das contas piloto (operação 8, `psql` com backup), conferido com a
+  consulta da seção E (0 linhas).
+- [ ] `c2yViewOnceNotice` ligado só nas caixas piloto (app chatwoot do WAHA; operação no README do conector,
+  `infra/waha-c2y/README.md`).
+
 ### F. Fechamento
 - [ ] Documentação atualizada: resumo do Híbrido, README do motor, rotina para reaplicar o ajuste em cada versão nova do WAHA.
 - [ ] Limpeza feita: worktrees, snapshots e bancos de teste; Docker temporário do M2 removido.
