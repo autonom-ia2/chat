@@ -29,17 +29,26 @@ module Waha::RichNative::Edits
     { 'sender_type' => 'User', 'sender_id' => user_id }
   end
 
-  # author: contact_author ou user_author. Devolve false quando o texto é o mesmo (nada a gravar).
-  def apply!(message, content:, author:)
+  # author: contact_author ou user_author. timestamp: a hora da edição no WhatsApp (segundos, `waha_edit.timestamp` do
+  # conector c2y-rich-5), quando veio. Devolve false quando o texto é o mesmo ou a edição chegou fora de ordem (mais velha
+  # que a última guardada, Waha::RichNative::EventTime.replaces?): nada a gravar.
+  def apply!(message, content:, author:, timestamp: nil)
     message.with_lock do
-      next false if message.content.to_s == content
+      next false if message.content.to_s == content || out_of_order?(message, timestamp)
 
-      edited_at = Time.current.iso8601
+      edited_at = Waha::RichNative::EventTime.iso8601(timestamp)
       history = Array(message.content_attributes.to_h[HISTORY_KEY])
       history = (history + [{ 'content' => message.content.to_s, 'edited_at' => edited_at }.merge(author)]).last(HISTORY_LIMIT)
       message.content = content
       message.content_attributes = message.content_attributes.to_h.merge(HISTORY_KEY => history, EDITED_AT_KEY => edited_at)
       message.save!(validate: false)
     end
+  end
+
+  # Sem a hora do WhatsApp (edição pelo painel, conector antigo), a ordem de chegada vale, como antes.
+  def out_of_order?(message, timestamp)
+    return false if Waha::RichNative::EventTime.at(timestamp).nil?
+
+    !Waha::RichNative::EventTime.replaces?(Waha::RichNative::EventTime.iso8601(timestamp), message.content_attributes.to_h[EDITED_AT_KEY])
   end
 end

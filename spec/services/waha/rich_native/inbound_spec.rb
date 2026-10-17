@@ -268,6 +268,29 @@ describe Waha::RichNative::Inbound do
       expect(original.content_attributes['edited_at']).to be_present
     end
 
+    # Rodada de correção, item 17 (com o C2 do conector c2y-rich-5): a edição traz a hora do WhatsApp; uma que chega
+    # depois de outra mais nova não volta o texto.
+    it 'applies an edit only when its WhatsApp time is not older than the last stored one' do
+      flag_on!
+      at = Time.zone.parse('2026-10-16 10:00:00')
+      edit = lambda do |text, time|
+        from_connector({ in_reply_to: original.id, waha_edit: { text: text, edited_wa_id: 'W2', from_me: false, timestamp: time.to_i } },
+                       content: text)
+      end
+
+      edit.call('Chego às 12', at + 60)
+      late = edit.call('Chego às 11', at)
+
+      expect(late).to be_activity
+      original.reload
+      expect(original.content).to eq('Chego às 12')
+      expect(original.content_attributes['edited_at']).to eq((at + 60).iso8601)
+      expect(original.content_attributes['edit_history'].pluck('content')).to eq(['Chego às 10'])
+
+      edit.call('Chego às 13', at + 120)
+      expect(original.reload.content).to eq('Chego às 13')
+    end
+
     it 'records an edit from the company phone as User without sender_id' do
       flag_on!
       ours = create(:message, message_type: :outgoing, content: 'Até 10h', conversation: conversation, inbox: inbox, account: account,
