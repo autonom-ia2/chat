@@ -211,8 +211,8 @@ module Autonomia
         raise InstrucaoMantida if instrucao_mantida?
       end
 
-      # A guarda do Construtor contra agente manual (#1514): na porta (build_threads) e no fechamento, que é o
-      # último lugar antes da escrita (o agente pode ter passado a manual durante a geração).
+      # A guarda do Construtor contra agente manual (#1514): na porta (build_threads), no fechamento e de novo
+      # sob a trava do agente, que é o último lugar antes da escrita (pode ter passado a manual durante a geração).
       def recusar_se_modo_manual!
         raise ModoManual if manual?
       end
@@ -303,6 +303,8 @@ module Autonomia
         with_lock do
           next false if deleted?
 
+          # Relido sob a trava: o agente pode ter passado a manual durante a geração (#1514).
+          recusar_se_modo_manual!
           versionar_aplicacao_do_construtor(autor_id) do
             merged = attrs.dup
             merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)

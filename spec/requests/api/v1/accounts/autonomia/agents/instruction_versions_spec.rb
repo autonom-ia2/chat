@@ -24,6 +24,17 @@ RSpec.describe 'Autonomia agent instruction versions', type: :request do
     end
   end
 
+  # Revisão crítica do #1492: o agente que nasce manual com a instrução no corpo registra o texto como do dono.
+  it 'creating a manual agent with an instruction records it as written by the owner' do
+    post "/api/v1/accounts/#{account.id}/autonomia/agents",
+         params: { agent: { name: 'Dono', agent_type: 'custom', mode: 'manual', instruction: 'escrevi eu' } },
+         headers: administrator.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:created)
+    agente = Autonomia::Agents::Agent.find(response.parsed_body['id'])
+    expect(agente.instruction_versions.pluck(:reason)).to eq(['manual_edit'])
+  end
+
   describe 'GET .../instruction_versions' do
     it 'lists versions scoped to the account, newest first' do
       # Arrange

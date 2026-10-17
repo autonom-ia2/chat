@@ -48,8 +48,9 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
     merge_config!(attrs[:config]) if attrs.key?(:config)
     @agent.created_by = Current.user
     apply_manual_scaffold
-    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?).
-    @agent.save!(context: %i[create ativacao])
+    # :ativacao (#1366): nascer atendendo também exige onde trabalhar (Agent#tem_onde_trabalhar?). Nascendo manual com
+    # instrução, o texto é do dono e vira a primeira versão manual_edit (#1484).
+    @agent.save!(context: %i[create ativacao]) && record_manual_instruction_version(nil)
     render :show, status: :created
   end
 

@@ -154,6 +154,15 @@ RSpec.describe 'Autonomia journeys - builder threads', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.modo_manual', raise: true))
     end
 
+    it 'deixa a tela consultar a conversa de ajuste (show só lê)' do
+      thread = Autonomia::Agents::BuildThread.create!(account: account, agent: manual, status: :ready)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{thread.id}",
+          headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
     it 'recusa mensagem nova numa conversa de ajuste aberta antes de o agente virar manual' do
       thread = Autonomia::Agents::BuildThread.create!(account: account, agent: manual, status: :ready)
 

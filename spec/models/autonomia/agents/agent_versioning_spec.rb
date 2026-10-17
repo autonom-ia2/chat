@@ -517,6 +517,15 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
   end
 
   describe '#1514: o Construtor não aplica em agente manual' do
+    it 'recusa sob a trava quando o agente passou a manual durante a geração (objeto em memória ainda guiado)' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'G', agent_type: 'custom', instruction: 'antes')
+      desatualizado = Autonomia::Agents::Agent.find(agent.id)
+      agent.update!(mode: :manual)
+
+      expect { aplicar(desatualizado, gerado('v1')) }.to raise_error(Autonomia::Agents::Agent::ModoManual)
+      expect(agent.reload.instruction).to eq('antes')
+    end
+
     it 'recusa no fechamento e não grava nada' do
       agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
                                                instruction: 'texto do dono')
@@ -582,6 +591,22 @@ RSpec.describe Autonomia::Agents::AgentVersioning do
 
   describe 'fora do piloto (sem a Fase 2): como antes' do
     let(:account) { conta_da_fase2(ligada: false) }
+
+    # Revisão crítica (17/10): versão antiga sem retrato com o texto do dono continua dele.
+    it 'agente manual volta a uma versão antiga (sem retrato) com o texto do dono e continua manual, com o texto visível' do
+      agent = Autonomia::Agents::Agent.create!(account: account, name: 'M', agent_type: 'custom', mode: :manual,
+                                               instruction: 'texto do dono')
+      agent.record_instruction_version!(reason: 'manual_edit', created_by: user)
+      antiga = agent.instruction_versions.create!(account: account, instruction: 'texto do dono',
+                                                  instruction_hash: Digest::SHA256.hexdigest('texto do dono'),
+                                                  reason: 'rollback', metadata: {})
+      agent.update!(instruction: 'outro texto do dono')
+
+      agent.restore_instruction!(antiga)
+
+      expect(antiga.instrucao_visivel?).to be(true)
+      expect(agent.reload).to have_attributes(instruction: 'texto do dono', mode: 'manual')
+    end
 
     it 'o Construtor não grava versão' do
       aplicar(rascunho, gerado('v1'))
