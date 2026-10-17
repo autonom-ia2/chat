@@ -52,13 +52,17 @@ module Waha::RichNative::Inbound::Context
   end
 
   # Sem as validações do modelo (a de rajada recusaria o aviso numa conversa movimentada), como as outras gravações.
+  # O tempo guardado e o aviso, juntos (transação): um sem o outro deixaria o tempo novo sem aviso (o próximo não avisa
+  # de novo) ou o aviso sem o tempo (avisa outra vez).
   def notify!(conversation, expiration)
-    store_expiration!(conversation, expiration)
     activity = conversation.messages.new(account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :activity,
                                          content: notice(conversation.account, expiration),
                                          content_attributes: { ACTIVITY_KEY => { 'expiration_seconds' => expiration,
                                                                                  'at' => Time.current.iso8601 } })
-    Waha::RichNative::InternalWrite.mark!(activity).save!(validate: false)
+    ActiveRecord::Base.transaction do
+      store_expiration!(conversation, expiration)
+      Waha::RichNative::InternalWrite.mark!(activity).save!(validate: false)
+    end
   end
 
   # Só a chave do tempo, no servidor (jsonb_set), como o debounce da IA (Autonomia::Agents::Operate::ReplyJob): regravar

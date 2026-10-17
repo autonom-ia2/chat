@@ -115,6 +115,17 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
     end
   end
 
+  # Revisão da rodada de correção, item 3: o tempo e o aviso vão juntos.
+  describe 'the disappearing time and its notice in one transaction' do
+    it 'does not store the new time when the notice cannot be saved' do
+      allow(Waha::RichNative::InternalWrite).to receive(:mark!).and_raise(ActiveRecord::StatementInvalid, 'falhou')
+
+      expect { Waha::RichNative::Inbound::Context.notify!(conversation, 86_400) }.to raise_error(ActiveRecord::StatementInvalid)
+
+      expect(conversation.reload.additional_attributes).not_to have_key('c2y_ephemeral_expiration')
+    end
+  end
+
   # Rodada de correção, item 8: um erro de SQL num passo não aborta a criação da mensagem do cliente.
   describe 'a SQL error inside one step of the inbound' do
     it 'rolls back only that step and still saves the message with the other steps' do
