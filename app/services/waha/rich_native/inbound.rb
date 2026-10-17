@@ -126,9 +126,22 @@ class Waha::RichNative::Inbound
 
     owner = message.inbox.channel.additional_attributes.to_h[OWNER_KEY]
     return owner.to_s == user.id.to_s if owner.present?
-    return false if Waha::RichNative.enabled?(message.account)
+    return warn_missing_owner(message) if Waha::RichNative.enabled?(message.account)
 
     message.account.account_users.find_by(user_id: user.id)&.administrator? == true
+  end
+
+  OWNER_WARNING_TTL = 1.hour
+
+  # Com a flag, a caixa sem o dono gravado perde os pacotes do conector: não em silêncio. Um aviso no log por caixa por
+  # hora (Rails.cache), só com os ids. Devolve false (ninguém é o conector).
+  def self.warn_missing_owner(message)
+    key = "waha/rich_native/missing_token_owner/#{message.inbox_id}"
+    if Rails.cache.write(key, true, expires_in: OWNER_WARNING_TTL, unless_exist: true)
+      Rails.logger.error("[waha] rich native connector keys dropped: inbox without #{OWNER_KEY} " \
+                         "account=#{message.account_id} inbox=#{message.inbox_id}")
+    end
+    false
   end
 
   # A mensagem citada pelo conector (`in_reply_to`), na mesma caixa e do MESMO contato: o conector pode criar a reação

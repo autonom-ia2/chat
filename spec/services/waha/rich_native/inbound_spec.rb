@@ -388,6 +388,23 @@ describe Waha::RichNative::Inbound do
       expect(original.reload.content).to eq('Chego às 10')
     end
 
+    it 'with the flag, logs the dropped keys of an inbox without owner once per hour, only with ids' do
+      flag_on!
+      channel.update!(additional_attributes: channel.additional_attributes.except('account_token_owner_user_id'))
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      allow(Rails.logger).to receive(:error)
+      data = { in_reply_to: original.id, waha_edit: { text: 'Chego às 11', edited_wa_id: 'W', from_me: false } }
+      line = "[waha] rich native connector keys dropped: inbox without account_token_owner_user_id account=#{account.id} inbox=#{inbox.id}"
+
+      2.times { from_connector(data, user: connector) }
+      expect(Rails.logger).to have_received(:error).with(line).once
+
+      travel 61.minutes do
+        from_connector(data, user: connector)
+      end
+      expect(Rails.logger).to have_received(:error).with(line).twice
+    end
+
     it 'without the flag, keeps accepting an administrator when the inbox has no token owner, never a plain agent' do
       account.disable_features!(Waha::RichNative::FLAG)
       channel.update!(additional_attributes: channel.additional_attributes.except('account_token_owner_user_id'))

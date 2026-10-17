@@ -368,7 +368,20 @@ Dist (47; eram 35): lista em `dist-sha256.txt`. Mudam 34 e surgem 13 (os 10 novo
 - **Pré-requisito no chat2you, antes de ligar a flag `whatsapp_rich_native`:** gravar o dono do token em cada caixa WAHA
   da conta (`account_token_owner_user_id` em `channel_api.additional_attributes`; operação 8, `psql` com backup antes).
   Com a flag ligada, o chat2you só aceita as chaves `waha_*` de quem é esse dono; sem o registro, não aceita de
-  ninguém, nem de administrador, e tudo chega como texto comum.
+  ninguém, nem de administrador, e tudo chega como texto comum (com um `Rails.logger.error` por caixa por hora, só com
+  os ids). Consulta para rodar antes de ligar:
+  ```sql
+  -- só leitura, só ids: caixas WAHA das contas piloto sem o dono do token (troque a lista de contas se for outra)
+  SELECT i.account_id, i.id AS inbox_id, c.id AS channel_api_id
+  FROM inboxes i
+  JOIN channel_api c ON c.id = i.channel_id
+  WHERE i.channel_type = 'Channel::Api'
+    AND i.account_id IN (1, 16, 18)
+    AND c.additional_attributes ->> 'provider' = 'waha'
+    AND COALESCE(c.additional_attributes ->> 'account_token_owner_user_id', '') = ''
+  ORDER BY i.account_id, i.id;
+  -- precisa voltar 0 linhas antes de ligar a flag nessas contas
+  ```
 
 - Ordem: primeiro o PR do chat2you que tira e transforma as chaves novas; depois a troca da imagem. Um chat2you sem o PR guarda as chaves `waha_*` em `content_attributes` sem efeito na tela.
 - `WAHA_C2Y_MEDIA_RETRY=true` só depois da decisão (b). Sem a variável, o motor se comporta como a 2b nesse ponto.

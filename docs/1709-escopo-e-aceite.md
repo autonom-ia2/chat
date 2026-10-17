@@ -94,12 +94,32 @@ Motor de teste ou número descartável, nunca número de cliente. Para cada linh
 - [ ] **Pré-requisito da flag:** o dono do token gravado em cada caixa WAHA das contas piloto
   (`channel_api.additional_attributes.account_token_owner_user_id`, operação 8: `psql` com backup antes, OK do Rodrigo).
   Com a flag ligada, a caixa sem esse registro não aceita evento do conector de ninguém, nem de administrador
-  (`Waha::RichNative::Inbound.from_connector?`): reação, edição, voto e o resto chegam como texto comum.
+  (`Waha::RichNative::Inbound.from_connector?`): reação, edição, voto e o resto chegam como texto comum, e o log
+  registra `[waha] rich native connector keys dropped: inbox without account_token_owner_user_id account=… inbox=…`
+  (uma vez por caixa por hora). Consulta para rodar antes de ligar:
+  ```sql
+  -- só leitura, só ids: caixas WAHA das contas piloto sem o dono do token (troque a lista de contas se for outra)
+  SELECT i.account_id, i.id AS inbox_id, c.id AS channel_api_id
+  FROM inboxes i
+  JOIN channel_api c ON c.id = i.channel_id
+  WHERE i.channel_type = 'Channel::Api'
+    AND i.account_id IN (1, 16, 18)
+    AND c.additional_attributes ->> 'provider' = 'waha'
+    AND COALESCE(c.additional_attributes ->> 'account_token_owner_user_id', '') = ''
+  ORDER BY i.account_id, i.id;
+  -- precisa voltar 0 linhas antes de ligar a flag nessas contas
+  ```
 - [ ] Motores habilitados (`WAHA_RICH_NATIVE_ENGINES`) e flag ligada nas contas piloto.
 - [ ] Teste final no piloto, em envio e recebimento, aprovado pelo Rodrigo.
 - [ ] Pendente, fora deste PR: prévia de link (`linkPreview`) na caixa WAHA, como operação separada com o OK do Rodrigo,
   só depois de confirmar no código do GOWS como o motor busca a página (rede, proxy, bloqueio de IP privado; risco de
   SSRF se o robô repetir um link do cliente).
+
+### Nota técnica: edição
+
+- `content_attributes.edited_at` é a hora do SERVIDOR (o que a tela mostra). A ordem das edições que vêm do WhatsApp
+  (descartar a edição que chega depois de uma mais nova) usa só a hora do WhatsApp, guardada em `source_at` na entrada do
+  `edit_history` (`Waha::RichNative::Edits`).
 
 ### F. Fechamento
 - [ ] Documentação atualizada: resumo do Híbrido, README do motor, rotina para reaplicar o ajuste em cada versão nova do WAHA.
