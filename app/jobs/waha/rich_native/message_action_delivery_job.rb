@@ -4,8 +4,12 @@
 # - Falha passageira (sem resposta do motor, 5xx): o job tenta de novo, com espera crescente, ATTEMPTS vezes.
 # - Falha que não passa com o tempo (endereço inválido ou recusado, 4xx, caixa sem webhook): direto para o aviso.
 # Sem entrega, fica uma nota privada na conversa ("a reação/edição não chegou ao WhatsApp"): a mudança continua gravada
-# aqui, à vista, e nada é desfeito em silêncio. `payload` é o evento montado na hora da ação; `delivery_id`, o mesmo em
-# todas as tentativas.
+# aqui, à vista, e nada é desfeito em silêncio.
+# O evento é montado NA HORA DA ENTREGA, do estado atual da mensagem: a reação da empresa que está gravada agora (vazia =
+# remover) e o texto atual. Montado na hora da ação, uma tentativa refeita depois de um 503 levava o estado velho por
+# cima do novo (o conector recebia ❤️ e depois 👍; o painel ficava com ❤️ e o cliente com 👍). A ação mais nova da
+# mesma mensagem (reação ou edição) supera as anteriores: só ela entrega (o registro `latest_key` guarda o
+# `delivery_id` dela), e como manda o estado atual, o último estado sempre chega, também depois de falha passageira.
 class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
   queue_as :medium
   ATTEMPTS = 5
@@ -17,18 +21,42 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
   # O 5xx do motor, para o retry (o 4xx não volta).
   class ServerError < StandardError; end
 
+  # Cobre as tentativas do job com folga (espera polinomial).
+  LATEST_TTL = 1.day.to_i
+
   retry_on SafeFetch::FetchError, ServerError, wait: :polynomially_longer, attempts: ATTEMPTS do |job, error|
     job.not_delivered!(error)
   end
 
-  def perform(message_id, payload, delivery_id)
+  # A ação do painel pede a entrega: esta passa a ser a mais nova daquela mensagem e daquele tipo.
+  def self.request!(message, event)
+    delivery_id = SecureRandom.uuid
+    ::Redis::Alfred.setex(latest_key(message.id, event), delivery_id, LATEST_TTL)
+    perform_later(message.id, event, delivery_id)
+  end
+
+  def self.latest_key(message_id, event)
+    "waha:message_action:latest:#{event}:#{message_id}"
+  end
+
+  def perform(message_id, event, delivery_id)
     message = Message.find_by(id: message_id)
-    return if message.nil?
+    return if message.nil? || superseded?(message_id, event, delivery_id)
 
     url = message.inbox.channel.try(:webhook_url)
     return not_delivered!(:no_webhook_url) if url.blank?
 
-    deliver(message.inbox.channel, payload, delivery_id)
+    deliver(message.inbox.channel, payload_for(message, event), delivery_id)
+  end
+
+  # O evento com o estado de agora.
+  def payload_for(message, event)
+    extra = if event == Waha::RichNative::MessageActions::REACTION_EVENT
+              { c2y_reaction: { emoji: business_emoji(message) } }
+            else
+              { c2y_edit: { waha_text: Waha::RichNative::OutgoingHints.whatsapp_text(message.content.to_s, message) } }
+            end
+    JSON.parse(message.webhook_data.merge(event: event, **extra).to_json)
   end
 
   def deliver(channel, payload, delivery_id)
@@ -46,9 +74,9 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
 
   # Nota privada, no idioma da conta, sem remetente (é o sistema avisando). O erro vai ao log só pela classe.
   def not_delivered!(error)
-    message_id, payload, = arguments
+    message_id, event, = arguments
     message = Message.find_by(id: message_id)
-    key = NOT_DELIVERED_KEYS[payload.to_h.with_indifferent_access[:event]]
+    key = NOT_DELIVERED_KEYS[event]
     Rails.logger.error("[waha] message action not delivered message=#{message_id} #{error.is_a?(Symbol) ? error : error.class}")
     return if message.nil? || key.nil?
 
@@ -57,6 +85,20 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
   end
 
   private
+
+  # Uma ação mais nova da mesma mensagem e tipo já pediu a entrega: ela manda o estado atual.
+  def superseded?(message_id, event, delivery_id)
+    latest = ::Redis::Alfred.get(self.class.latest_key(message_id, event))
+    latest.present? && latest != delivery_id
+  end
+
+  # A reação da empresa gravada agora ('' quando não há: remover).
+  def business_emoji(message)
+    reaction = Array(message.content_attributes.to_h[Waha::RichNative::Reactions::KEY]).find do |entry|
+      entry.is_a?(Hash) && entry['sender_type'] == Waha::RichNative::Reactions::USER_TYPE
+    end
+    reaction&.dig('emoji').to_s
+  end
 
   def note_text(account, key)
     I18n.t(key, locale: account.locale, default: I18n.t(key))

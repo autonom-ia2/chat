@@ -22,7 +22,10 @@ RSpec.describe 'WAHA message actions API', type: :request do
     allow(Waha::RichNative::OutgoingHints).to receive(:whatsapp_text) { |text, _message = nil| "WA[#{text}]" }
     allow(WebhookJob).to receive(:perform_later) { |_url, payload, kind, **| events << payload if kind == :api_inbox_webhook }
     # A reação e a edição vão pelo job próprio, que tenta de novo (rodada de correção, item 12).
-    allow(Waha::RichNative::MessageActionDeliveryJob).to receive(:perform_later) { |_id, payload, _delivery| events << payload.deep_symbolize_keys }
+    # O evento é montado na hora da entrega, do estado atual (revisão do estresse, C5): aqui, logo ao pedir.
+    allow(Waha::RichNative::MessageActionDeliveryJob).to receive(:perform_later) do |id, event, _delivery|
+      events << Waha::RichNative::MessageActionDeliveryJob.new.payload_for(Message.find(id), event).deep_symbolize_keys
+    end
     account.enable_features!(Waha::RichNative::FLAG)
   end
 

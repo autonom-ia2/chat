@@ -28,7 +28,7 @@ module Waha::RichNative::MessageActions
     return :invalid unless reactable?(message) && Waha::RichNative::Reactions.valid_emoji?(emoji)
 
     Waha::RichNative::Reactions.apply!(message, emoji: emoji, author: Waha::RichNative::Reactions.business_author(user.id))
-    deliver(message, REACTION_EVENT, c2y_reaction: { emoji: emoji })
+    deliver(message, REACTION_EVENT)
     nil
   end
 
@@ -38,7 +38,7 @@ module Waha::RichNative::MessageActions
     return :not_author unless administrator || author?(message, user)
     return :unchanged unless Waha::RichNative::Edits.apply!(message, content: content, author: Waha::RichNative::Edits.user_author(user.id))
 
-    deliver(message, EDIT_EVENT, c2y_edit: { waha_text: Waha::RichNative::OutgoingHints.whatsapp_text(content, message) })
+    deliver(message, EDIT_EVENT)
     nil
   end
 
@@ -67,11 +67,11 @@ module Waha::RichNative::MessageActions
 
   # O evento vai ao webhook da caixa com as mesmas travas da entrega de sempre (endereço e trava de transmissão), por um
   # job que tenta de novo e, se não chegar, deixa a nota na conversa (Waha::RichNative::MessageActionDeliveryJob).
-  def deliver(message, event, extra)
+  # O job monta o evento na hora da entrega, do estado atual da mensagem.
+  def deliver(message, event)
     channel = message.inbox.channel
     return if channel.webhook_url.blank? || ::Autonomia::Channels::BroadcastGuard.blocked_conversation?(message.conversation)
 
-    payload = JSON.parse(message.webhook_data.merge(event: event, **extra).to_json)
-    Waha::RichNative::MessageActionDeliveryJob.perform_later(message.id, payload, SecureRandom.uuid)
+    Waha::RichNative::MessageActionDeliveryJob.request!(message, event)
   end
 end
