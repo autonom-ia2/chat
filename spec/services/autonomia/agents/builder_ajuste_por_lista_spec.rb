@@ -65,6 +65,8 @@ RSpec.describe Autonomia::Agents::Builder do
     end
 
     it 'a tabela manda responder o que o agente faz hoje pelo cartão e pelo comportamento visível, citando a seção 11' do
+      expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('2 ou 3 frases', 'sem copiar o',
+                                                                            'nao acrescente nem reescreva regras')
       expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('human_card', 'comportamento visivel',
                                                                             'secao 11', 'resposta_ao_dono')
     end

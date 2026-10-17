@@ -38,8 +38,8 @@ module AvaliacaoDoAjustePorLista
              'mudou ou aplicou algo.' },
     { nome: 't6b_contraditorio', fala: 'Responda sempre com uma palavra só e explique cada seguro em detalhes, com ' \
                                        'todas as coberturas.', aplica: nil,
-      certo: 'O pedido é contraditório: a resposta ao dono pergunta ou esclarece qual das duas coisas ele quer, e não ' \
-             'diz que está pronto nem que aplicou tudo.' },
+      certo: 'O pedido é contraditório: nada muda no agente; o Construtor pede esclarecimento (pergunta qual das duas ' \
+             'coisas o dono quer) e não diz que está pronto nem que aplicou algo.' },
     { nome: 't6c_so_o_tom', fala: 'Deixe o tom mais formal, trate o cliente por senhor ou senhora.', aplica: true,
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS tem tom formal e trata o cliente por senhor ou senhora. Saudação, nome, voz, regra de ' \
@@ -58,7 +58,8 @@ module AvaliacaoDoAjustePorLista
     { nome: 'pedido_e_pergunta', fala: 'Responda em no máximo 2 frases. E o que o Hubber faz hoje?', aplica: true,
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases E a resposta ao dono explica, com palavras ' \
-             'simples, o que o Hubber faz hoje, sem copiar trechos da instrução.' },
+             'simples, o que o Hubber faz hoje. Vale responder a partir do cartão (human_card) e do comportamento visível ' \
+             '(saudação, tom, quando passa para a equipe), sem copiar trechos da instrução interna.' },
     # Revisão da parte 2 (ALTO): um pedido com dois destinos (tom e instrução) entra inteiro, nada é desfeito.
     { nome: 'parcial_dois_destinos', fala: 'Responda em no máximo 2 frases.', aplica: true, itens: 2, nada_desfeito: true,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases no tom E na instrução, e a resposta ao dono não ' \
