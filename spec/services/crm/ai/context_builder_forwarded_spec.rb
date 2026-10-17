@@ -19,7 +19,7 @@ RSpec.describe Crm::Ai::ContextBuilder do
                      message_type: type, sender: sender, content_attributes: attributes)
   end
 
-  it 'marks a forwarded copy and leaves a normal message untouched' do
+  it 'marks the copy the team forwarded from another conversation and leaves a normal message untouched' do
     add_message(content: 'quero cotar o seguro do caminhão', type: :incoming, sender: contact)
     add_message(content: 'tenho 3 carretas e pago 900 por mês', type: :outgoing, sender: admin,
                 attributes: { 'forwarded' => true, 'forwarded_from' => { 'conversation_id' => 7, 'message_id' => 99 } })
@@ -33,7 +33,28 @@ RSpec.describe Crm::Ai::ContextBuilder do
     expect(normal[:content]).to eq('quero cotar o seguro do caminhão')
   end
 
-  it 'explains the marker to the classifier, the summary, the follow-up and the quote suggester', :aggregate_failures do
+  # O cliente encaminhou pelo WhatsApp (a placa que a esposa mandou, a cotação do concorrente): é parte do pedido dele.
+  it 'leaves an incoming message the customer forwarded without any marker' do
+    add_message(content: 'placa ABC1D23', type: :incoming, sender: contact, attributes: { 'forwarded' => true })
+
+    message = described_class.new(card: card).perform[:recent_messages].sole
+
+    expect(message).not_to have_key(:forwarded)
+    expect(message[:content]).to eq('placa ABC1D23')
+    expect(message[:role]).to eq('customer')
+  end
+
+  # Citação tirada da cópia encaminhada não prova pendência desta conversa; a mesma citação numa fala normal prova.
+  it 'does not accept a follow-up quote taken from a forwarded copy', :aggregate_failures do
+    quote = 'tenho 3 carretas e pago 900 por mês'
+    forwarded = { role: 'human_agent', content: "#{described_class::FORWARDED_PREFIX}#{quote}", forwarded: true }
+
+    expect(Crm::Ai::QuoteVerifier.new(quote: quote, messages: [forwarded]).verified?).to be(false)
+    expect(Crm::Ai::QuoteVerifier.new(quote: described_class::FORWARDED_PREFIX.strip, messages: [forwarded]).verified?).to be(false)
+    expect(Crm::Ai::QuoteVerifier.new(quote: quote, messages: [{ role: 'customer', content: quote }]).verified?).to be(true)
+  end
+
+  it 'explains the marker to the classifier, the summary and the follow-up', :aggregate_failures do
     expect(described_class::FORWARDED_LEGEND).to include('"forwarded": true', described_class::FORWARDED_PREFIX.strip)
     expect(Crm::Ai::ClassifierPrompt::TEXT).to include(described_class::FORWARDED_LEGEND)
     expect(Crm::Ai::ClassifierPrompt::TEXT_COM_AGENTES_IA).to include(described_class::FORWARDED_LEGEND)

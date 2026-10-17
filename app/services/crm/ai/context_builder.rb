@@ -8,8 +8,9 @@ module Crm
       # toque da própria IA. Ver #last_human_agent_at.
       FOLLOW_UP_SCAN_LIMIT = 20
 
-      # Cópia encaminhada (#1702, content_attributes.forwarded) traz texto de outra pessoa: sem a marca, a IA
-      # lia como fala deste cliente (#1760). Os agentes de IA usam o mesmo texto no histórico deles.
+      # Cópia que a EQUIPE encaminhou de outra conversa (#1702: forwarded = true + forwarded_from) traz texto de outra
+      # pessoa: sem a marca, a IA lia como fala deste cliente (#1760). O que o CLIENTE encaminha pelo WhatsApp (forwarded
+      # sem forwarded_from) é parte do pedido dele e fica sem marca.
       FORWARDED_PREFIX = '[Encaminhada de outra conversa — não é fala deste cliente] '.freeze
 
       # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
@@ -20,7 +21,7 @@ module Crm
                      'ou "external_agent" (bot ou automação externa).'.freeze
 
       # Separada da ROLES_LEGEND para entrar no FIM do prefixo do classificador (cache de prompt, ClassifierPrompt).
-      FORWARDED_LEGEND = 'Mensagem com "forwarded": true foi ENCAMINHADA de outra conversa e começa com ' \
+      FORWARDED_LEGEND = 'Mensagem com "forwarded": true foi ENCAMINHADA pela equipe de outra conversa e começa com ' \
                          "\"#{FORWARDED_PREFIX.strip}\": o texto é de outra pessoa. Não conte como fala, pedido " \
                          'ou dado deste cliente, nem como sinal de etapa, valor ou campo dele.'.freeze
 
@@ -188,7 +189,7 @@ module Crm
       end
 
       def format_message(message)
-        forwarded = message.content_attributes.to_h['forwarded'] == true
+        forwarded = forwarded_by_team?(message)
         content = message_content(message).truncate(2000)
         payload = {
           role: role_for(message),
@@ -199,6 +200,11 @@ module Crm
         # Só desambigua a origem quando há mais de uma conversa; senão é ruído no prompt.
         payload[:conversation_id] = message.conversation_id if conversation_ids.size > 1
         payload
+      end
+
+      def forwarded_by_team?(message)
+        attributes = message.content_attributes.to_h
+        attributes['forwarded'] == true && attributes['forwarded_from'].present?
       end
 
       # Quatro papéis, não dois. "Cliente cobrou e só o bot respondeu" é urgente; "humano respondeu
