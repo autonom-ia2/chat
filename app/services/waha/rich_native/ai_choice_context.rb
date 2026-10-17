@@ -6,8 +6,12 @@ module Waha::RichNative::AiChoiceContext
   module ContextBuilder
     private
 
+    # Memo por chamada (Waha::RichNative::ChoiceMemo): o contexto pergunta por todas as mensagens do card.
     def message_content(message)
-      Waha::RichNative::AiChoiceText.for(message) || super
+      return super unless Waha::RichNative::AiChoiceText.choice?(message)
+
+      @c2y_choice_memo ||= Waha::RichNative::ChoiceMemo.new
+      Waha::RichNative::AiChoiceText.for(message, current: @c2y_choice_memo.current?(message)) || super
     end
   end
 
@@ -16,8 +20,15 @@ module Waha::RichNative::AiChoiceContext
   module Estado
     private
 
+    # Memo por chamada (Waha::RichNative::ChoiceMemo), uma consulta de superadas para a lista toda.
     def textos(lista, com_autor: false)
-      super(Array(lista).map { |mensagem| Waha::RichNative::AiChoiceText.wrap(mensagem) }, com_autor: com_autor)
+      memo = Waha::RichNative::ChoiceMemo.new
+      lidas = Array(lista).map do |mensagem|
+        next mensagem unless Waha::RichNative::AiChoiceText.choice?(mensagem)
+
+        Waha::RichNative::AiChoiceText.wrap(mensagem, current: memo.current?(mensagem))
+      end
+      super(lidas, com_autor: com_autor)
     end
 
     def ler_ultima_mensagem

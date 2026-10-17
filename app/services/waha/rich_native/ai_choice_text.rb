@@ -38,8 +38,8 @@ module Waha::RichNative::AiChoiceText
     "#{text} #{Waha::RichNative::AiTurn.translate(message.account, STALE_KEY)}"
   end
 
-  def wrap(message)
-    text = self.for(message)
+  def wrap(message, current: nil)
+    text = self.for(message, current: current)
     text ? WithText.new(message, text) : message
   end
 end

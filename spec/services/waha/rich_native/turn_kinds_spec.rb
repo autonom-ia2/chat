@@ -100,4 +100,63 @@ describe Waha::RichNative::TurnKinds do
       expect(described_class.turn_silence([votes.last], waha: false)).to be_nil
     end
   end
+
+  # Revisão: os leitores avulsos usam o memo por chamada; as consultas de "superada" não crescem com N escolhas.
+  describe 'queries of the readers outside the Responder' do
+    def choice_queries
+      queries = 0
+      subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, payload|
+        queries += 1 if payload[:sql].include?('c2y_ai_turn') && !payload[:cached]
+      end
+      yield
+      queries
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    def votes!(count)
+      list = (1..count).map { |numero| vote(numero.even? ? 'Tarde' : 'Manhã') }
+      stored!([list.last.content_attributes.dig('c2y_ai_turn', 'choice', 0)])
+      list
+    end
+
+    [5, 20].each do |count|
+      it "the CRM ContextBuilder makes one query for #{count} choices" do
+        list = votes!(count)
+        builder = Crm::Ai::ContextBuilder.new(card: nil)
+
+        expect(choice_queries { list.each { |message| builder.send(:message_content, message) } }).to eq(1)
+      end
+
+      it "Decisores::Estado makes one query for #{count} choices" do
+        votes!(count)
+        estado = Autonomia::Decisores::Estado.new(conversation: conversation, leituras: %w[mensagens_recentes])
+
+        expect(choice_queries { estado.conversa }).to eq(1)
+      end
+    end
+  end
+
+  # Revisão: o ResponderChoice passa ao AiChoiceText o que o guard já decidiu (memo do turno), sem perguntar de novo.
+  describe 'ResponderChoice with the memo of the guard' do
+    it 'passes current: explicitly to the history text' do
+      superseded = vote('Tarde')
+      current = vote('Tarde')
+      stored!(['Tarde'])
+      responder = Autonomia::Agents::Operate::Responder.allocate
+      responder.instance_variable_set(:@conversation, conversation)
+      allow(responder).to receive_messages(recent_messages: [superseded, current],
+                                           equipe: instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: false))
+      allow(Waha::RichNative::AiChoiceText).to receive(:for).and_call_original
+      allow(described_class).to receive(:choice_current?).and_call_original
+
+      history = responder.send(:history)
+
+      expect(Waha::RichNative::AiChoiceText).to have_received(:for).with(superseded, current: false)
+      expect(Waha::RichNative::AiChoiceText).to have_received(:for).with(current, current: true)
+      expect(described_class).not_to have_received(:choice_current?)
+      expect(history.first[:content]).to include('não vale mais')
+      expect(history.last[:content]).not_to include('não vale mais')
+    end
+  end
 end

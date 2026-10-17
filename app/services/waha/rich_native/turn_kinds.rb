@@ -98,10 +98,11 @@ module Waha::RichNative::TurnKinds
     Waha::RichNative::JsonColumn.path_text(CHOICE_COLUMN, :json, [Waha::RichNative::AiTurn::CHOICE_KEY, 'target_id'])
   end
 
-  # { [sender_type, sender_id, target_id] => id da escolha mais nova } da conversa, numa consulta só (o histórico do
-  # agente pergunta por todas as mensagens: Waha::RichNative::AgentTurnGuard).
+  # { [sender_type, sender_id, target_id] => id da escolha mais nova } da conversa (a conversa ou o id), numa consulta só
+  # (Waha::RichNative::ChoiceMemo).
   def latest_choice_ids(conversation)
-    rows = Message.where(conversation_id: conversation.id, message_type: :incoming)
+    conversation_id = conversation.respond_to?(:id) ? conversation.id : conversation
+    rows = Message.where(conversation_id: conversation_id, message_type: :incoming)
                   .where("#{target_sql} IS NOT NULL").pluck(:id, :sender_type, :sender_id, Arel.sql(target_sql))
     rows.each_with_object({}) do |(id, sender_type, sender_id, target_id), latest|
       key = [sender_type, sender_id, target_id]

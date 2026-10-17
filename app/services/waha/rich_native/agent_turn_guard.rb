@@ -86,27 +86,11 @@ module Waha::RichNative::AgentTurnGuard
     chat.incoming.where(conditions.join(' OR ')).pluck(:id)
   end
 
-  # Memo por turno: a escolha superada por outra mais nova do mesmo eleitor no mesmo alvo sai pela consulta única
-  # (TurnKinds.latest_choice_ids); só a mais nova pergunta à enquete/ao convite se o valor ainda bate.
-  # A mesma regra do TurnKinds.choice_current?, com o memo do turno: "superada" pelo mapa da conversa (uma consulta por
-  # turno) e o valor guardado (alvo + PollVotes/EventResponses.current?) só para a mais nova.
+  # Memo por turno (Waha::RichNative::ChoiceMemo, a regra do TurnKinds.choice_current?): 1 consulta para o mapa de
+  # superadas + 1 por escolha vigente distinta (o alvo e o valor guardado); a superada sai pelo mapa.
   def c2y_stale_choice?(message)
-    @c2y_stale ||= {}
-    @c2y_stale.fetch(message.id) { @c2y_stale[message.id] = !c2y_choice_current?(message) }
-  end
-
-  def c2y_choice_current?(message)
-    choice = Waha::RichNative::TurnKinds.choice_of(message)
-    return true if choice.nil?
-    return false if c2y_superseded_choice?(message, choice)
-
-    Waha::RichNative::TurnKinds.stored_choice?(message, choice)
-  end
-
-  def c2y_superseded_choice?(message, choice)
-    @c2y_latest_choices ||= Waha::RichNative::TurnKinds.latest_choice_ids(@conversation)
-    latest = @c2y_latest_choices[[message.sender_type, message.sender_id, choice['target_id'].to_s]]
-    latest.present? && latest != message.id
+    @c2y_choice_memo ||= Waha::RichNative::ChoiceMemo.new
+    !@c2y_choice_memo.current?(message)
   end
 
   # Com a flag, as regras do guard; sem ela (ou fora da caixa WAHA), só a da apagada, que vale em qualquer caixa.
