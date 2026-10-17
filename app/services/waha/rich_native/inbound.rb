@@ -33,7 +33,9 @@ class Waha::RichNative::Inbound
     'waha_contacts' => 'Waha::RichNative::Inbound::Contacts',
     'waha_order' => 'Waha::RichNative::Inbound::Order',
     'waha_unknown' => 'Waha::RichNative::Inbound::Unknown',
+    'waha_view_once_unavailable' => 'Waha::RichNative::Inbound::ViewOnceUnavailable',
     'waha_media' => 'Waha::RichNative::Inbound::Media',
+    'waha_view_once_resolved' => 'Waha::RichNative::Inbound::ViewOnceResolved',
     'waha_quote' => 'Waha::RichNative::Inbound::Quote',
     'waha_context' => 'Waha::RichNative::Inbound::Context'
   }.freeze
@@ -90,7 +92,10 @@ class Waha::RichNative::Inbound
     key = HIDDEN_WITHOUT_FLAG.keys.find { |candidate| present.key?(candidate) }
     return hide!(message, HIDDEN_WITHOUT_FLAG[key]) if key
 
-    hide!(message, 'view_once') if Waha::RichNative::Inbound::Unknown.unavailable_view_once?(present['waha_unknown'])
+    return hide!(message, 'view_once') if Waha::RichNative::Inbound::Unknown.unavailable_view_once?(present['waha_unknown'])
+
+    # O aviso de visualização única que o aparelho vinculado não abre: a main nunca recebe essa mensagem.
+    hide!(message, 'view_once') if Waha::RichNative::Inbound::ViewOnceUnavailable.customer?(present['waha_view_once_unavailable'])
   end
 
   def self.run(message, key, data)

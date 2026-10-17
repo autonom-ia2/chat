@@ -26,6 +26,7 @@ class Waha::RichNative::ContractGuard
   SCOPED_KEYS = %w[
     reactions edit_history edited_at selected_options poll_votes event_responses deleted_by_contact_at unsupported_kind
     forwarded frequently_forwarded played_at quoted_message media_unavailable shared_contacts
+    view_once_unavailable view_once_id view_once_resolved_by
   ].freeze
   STORED_KEYS = (INTERNAL_KEYS + SCOPED_KEYS).freeze
   # As caixas onde o chat2you grava as SCOPED_KEYS: a WAHA comum (Channel::Api com provider 'waha') e a do WhatsApp

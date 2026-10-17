@@ -109,6 +109,9 @@ Rails.application.config.to_prepare do
   unless Api::V1::Accounts::Conversations::MessagesController <= Waha::RichNative::PlayedReceipt
     Api::V1::Accounts::Conversations::MessagesController.prepend(Waha::RichNative::PlayedReceipt)
   end
+  if Message._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::ViewOnceResolved }
+    Message.after_create_commit Waha::RichNative::Inbound::ViewOnceResolved
+  end
   if Message._commit_callbacks.none? { |callback| callback.filter == Waha::RichNative::Inbound::Context }
     Message.after_create_commit Waha::RichNative::Inbound::Context
   end

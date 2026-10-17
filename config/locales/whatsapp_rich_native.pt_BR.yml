@@ -21,6 +21,7 @@ pt_BR:
       revoke: "Exclusão pelo cliente registrada na mensagem"
       event_response: "Resposta ao evento registrada"
       view_once: "Visualização única registrada"
+    view_once_unavailable: "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular."
     media_unavailable:
       voice: "Mensagem de voz não recebida (o download falhou)"
       audio: "Áudio não recebido (o download falhou)"

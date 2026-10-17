@@ -205,3 +205,18 @@ Cada achado, a correção e onde está o spec (`spec/services/waha/rich_native/r
   (`Waha::RichNative::AgentTurnGuard`).
 - Edição só pelo autor ou administrador: já coberta (spec de ações de mensagem). Contato só como cartão: já coberto
   (o .vcf sai). Nova tentativa de download: sem mudança.
+
+## Visualização única que o aparelho vinculado não abre (decisão do Rodrigo, 16/10/2026; conector c2y-rich-3c)
+
+- O conector cria o aviso (mensagem recebida) com `waha_view_once_unavailable = { from_me: false, id }`. Com a flag:
+  mensagem visível do cliente, `content` = aviso do WhatsApp Web no idioma da conta (`waha.view_once_unavailable`),
+  `view_once_unavailable: true` e `view_once_id`; a chave `waha_*` sai. A IA não responde (evento
+  `skipped_mensagem_sem_suporte`, o mesmo da bolha "abra no celular") e o aviso sai do histórico. Sem a flag: atividade
+  escondida (`c2y_hidden`), o mesmo padrão das outras mensagens que a main nunca recebe (a tela e a IA já ignoram);
+  não uso nota privada porque a tela não esconde nota privada.
+- Se a mídia chegar depois (`waha_view_once_resolved = { id, notice_message_id }` + `waha_media.view_once`): a mídia
+  ganha `meta.is_view_once` e o aviso (achado por `notice_message_id`, ou pelo `id`) ganha `c2y_hidden` e
+  `view_once_resolved_by`. Tolerante: sem aviso, só a mídia.
+- `view_once_unavailable`, `view_once_id` e `view_once_resolved_by` entram nas chaves que a API não forja; as `waha_*`
+  só valem do conector. A capacidade `autonomia.view_once_notice` do motor não é lida: a chave só vem de motor com o
+  patch.

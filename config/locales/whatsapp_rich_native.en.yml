@@ -21,6 +21,7 @@ en:
       revoke: "Customer deletion saved on the message"
       event_response: "Event reply saved"
       view_once: "View once message saved"
+    view_once_unavailable: "You received a view once message. For added privacy, you can only open it on your phone."
     media_unavailable:
       voice: "Voice message not received (download failed)"
       audio: "Audio not received (download failed)"

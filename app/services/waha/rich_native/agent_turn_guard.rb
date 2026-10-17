@@ -4,12 +4,15 @@
 #   comum com a flag `whatsapp_rich_native`: se ela é a mensagem do turno, a IA fica calada (não há o que responder) e o
 #   painel de Desempenho ganha o evento `skipped_mensagem_sem_suporte`, uma vez por mensagem. Noutra caixa, ou sem a
 #   flag, como na main.
+# - O aviso de visualização única que o aparelho vinculado não abre (`view_once_unavailable`), na mesma caixa e com a
+#   flag: calada, com o mesmo evento da bolha "abra no celular", e fora do histórico.
 # - Mensagem apagada pelo cliente (`deleted_by_contact_at`, gravada só pelo recebimento WAHA): se ela é a do turno, a IA
 #   fica calada; e ela sai do histórico que vai à IA, para não ser lida como atual.
 # Só depois da elegibilidade de sempre: turno que deixou de ser da IA segue o caminho original (sem evento).
 module Waha::RichNative::AgentTurnGuard
   UNSUPPORTED_KEY = 'is_unsupported'.freeze
   DELETED_KEY = 'deleted_by_contact_at'.freeze
+  VIEW_ONCE_KEY = Waha::RichNative::Inbound::ViewOnceUnavailable::KEY
   UNSUPPORTED_REASON = 'mensagem_sem_suporte'.freeze
   DELETED_REASON = 'apagada_pelo_cliente'.freeze
 
@@ -24,7 +27,13 @@ module Waha::RichNative::AgentTurnGuard
 
   # O mesmo memo do original: a primeira chamada pega a janela dele e guarda já sem as apagadas.
   def recent_messages
-    @recent_messages ||= super.reject { |message| message.content_attributes.to_h[DELETED_KEY].present? }
+    @recent_messages ||= super.reject { |message| c2y_out_of_history?(message) }
+  end
+
+  # Apagada pelo cliente, ou o aviso de visualização única (não há conteúdo para a IA ler).
+  def c2y_out_of_history?(message)
+    attributes = message.content_attributes.to_h
+    attributes[DELETED_KEY].present? || attributes[VIEW_ONCE_KEY] == true
   end
 
   def c2y_turn_message
@@ -40,7 +49,7 @@ module Waha::RichNative::AgentTurnGuard
     attributes = turn.content_attributes.to_h
     return DELETED_REASON if attributes[DELETED_KEY].present?
 
-    UNSUPPORTED_REASON if attributes[UNSUPPORTED_KEY] == true && c2y_waha_with_flag?(turn)
+    UNSUPPORTED_REASON if (attributes[UNSUPPORTED_KEY] == true || attributes[VIEW_ONCE_KEY] == true) && c2y_waha_with_flag?(turn)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] c2y_turn_guard_failed conv=#{@conversation.id} #{e.class}")
     nil

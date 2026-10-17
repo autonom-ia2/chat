@@ -101,6 +101,21 @@ RSpec.describe Waha::RichNative::AgentTurnGuard, :um_turno do
       expect(Autonomia::Agents::AgentEvent::NAO_ATENDIMENTO_TYPES).to include('skipped_mensagem_sem_suporte')
     end
 
+    it 'keeps the AI quiet on the view once notice and leaves it out of the history' do
+      aviso = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, sender: contact,
+                               content: 'Você recebeu uma mensagem de visualização única.', content_attributes: {})
+      aviso.update_column(:content_attributes, { 'view_once_unavailable' => true }) # rubocop:disable Rails/SkipsModelValidations
+      gatilho(aviso)
+      rodar_turno!
+
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      expect(Autonomia::Agents::AgentEvent.skipped_mensagem_sem_suporte.pluck(:message_id)).to eq([aviso.id])
+
+      gatilho(cliente_escreve('Recebeu?'))
+      rodar_turno!
+      expect(consultas.sole[:history].pluck(:content)).not_to include('Você recebeu uma mensagem de visualização única.')
+    end
+
     it 'answers as in main without the flag' do
       account.disable_features!(Waha::RichNative::FLAG)
       gatilho(sem_suporte)

@@ -57,6 +57,12 @@ RSpec.describe 'Messages API and the WAHA rich native contract', type: :request 
     expect(message.content_attributes).to eq('outro' => 'fica')
   end
 
+  it 'drops a forged view_once_unavailable from a message created by the API' do
+    message = create_message(content: 'Oi', content_attributes: { view_once_unavailable: true, outro: 'fica' })
+
+    expect(message.content_attributes).to eq('outro' => 'fica')
+  end
+
   it 'drops them also when content_attributes comes as JSON text' do
     message = create_message(content: 'Oi', content_attributes: { waha_native: { kind: 'sendList' }, outro: 'fica' }.to_json)
 
