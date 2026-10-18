@@ -13,6 +13,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import ClientErrorsAPI from 'dashboard/api/clientErrors';
 import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImportPolling';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 import EmailRecipientStep from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailRecipientStep.vue';
@@ -188,6 +189,40 @@ const getEditorBodyPayload = () => {
   };
 };
 
+// A failed save keeps its real error (#1824). The console gets the status and the stack (a print of F12
+// shows the cause) but not the error object, whose request carries the e-mail body and auth headers.
+// Our own server log (#1841) gets what has no server answer (the editor breaking before the request) or a
+// 5xx; a 422 is the server refusing the content, already shown to the person.
+const warnLogFailed = failure => {
+  // eslint-disable-next-line no-console
+  console.warn('[EmailBuilderPage] could not log the error', failure?.message);
+};
+
+// Logging never gets in the way of the alert the person sees: any failure here only warns.
+const logSaveError = (error, flow) => {
+  try {
+    const status = error?.response?.status;
+    // eslint-disable-next-line no-console
+    console.error(
+      `[EmailBuilderPage] ${flow} failed`,
+      status ?? '',
+      error?.stack || String(error)
+    );
+    if (!status || status >= 500) {
+      ClientErrorsAPI.report({ flow: `email_builder_${flow}`, error }).catch(
+        warnLogFailed
+      );
+    }
+  } catch (failure) {
+    warnLogFailed(failure);
+  }
+};
+
+const reportSaveError = error => {
+  logSaveError(error, 'save');
+  useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+};
+
 const persist = async extra => {
   await store.dispatch('emailCampaigns/update', {
     id: campaignId.value,
@@ -219,7 +254,7 @@ const persistSubject = async () => {
     await persist({ subject: subjectInput.value.trim() });
     saved = true;
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   } finally {
     isPersistingSubject.value = false;
   }
@@ -238,7 +273,7 @@ const save = async () => {
     });
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_SUCCESS'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   }
 };
 
@@ -257,6 +292,7 @@ const sendTest = async toEmails => {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUCCESS'));
     showTestPopover.value = false;
   } catch (error) {
+    logSaveError(error, 'test_send');
     const { key, params } = testSendErrorMessage(error);
     testSendError.value = t(key, params);
   } finally {
@@ -279,6 +315,7 @@ const saveTemplate = async () => {
     showSaveTemplatePopover.value = false;
     templateName.value = '';
   } catch (error) {
+    logSaveError(error, 'save_template');
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_ERROR'));
   } finally {
     isSavingTemplate.value = false;
@@ -377,7 +414,7 @@ const persistBody = async () => {
   try {
     await persist();
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   }
 };
 
@@ -630,10 +667,11 @@ const openReview = async () => {
         preheader: preheaderInput.value.trim() || null,
       });
     }
-    await setStep('review');
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
+    return;
   }
+  await setStep('review');
 };
 const openRecipients = (problems = false) => {
   problemsOnly.value = problems;

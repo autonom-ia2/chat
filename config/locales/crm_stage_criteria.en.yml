@@ -30,6 +30,23 @@ en:
         e2: 'The customer picked a day and time and the appointment is booked. It has not happened yet.'
         e3: 'The customer could not come or asked for another day. The new time still needs to be picked.'
         e4: 'The customer came at the booked time and was attended.'
+      # #1802: broker templates (seguros/corretora layer). The text lives here, in the base catalog.
+      renovacao:
+        e1: 'We talked to the customer about renewing the policy that is about to expire, but we have not started quoting.'
+        e2: 'The team told the customer it is quoting the renewal. It has not sent the options yet.'
+        e3: 'The team sent the renewal options and the customer has not chosen yet.'
+        e4: 'The customer wants to renew, but is settling details: discount, coverage or payment method.'
+        e5: 'The customer said they accept the renewal: picked an option, sent the payment details or asked us to issue it.'
+      sinistro:
+        e1: 'The customer said they had a claim (crash, theft or damage) and the team has not said it opened the claim yet.'
+        e2: 'The team told the customer it opened the claim (gave a protocol or number) and the insurer is reviewing it. Now it is up to the insurer.'
+        e3: 'The team asked the customer for a document, a photo or a police report and they have not sent it yet.'
+        e4: 'The team told the customer the insurer''s answer about the claim.'
+      endosso:
+        e1: 'The customer asked for an endorsement (a change in the policy) and the team has not said it asked the insurer yet.'
+        e2: 'The team told the customer it asked the insurer for the change and is waiting for its answer.'
+        e3: 'The team asked the customer for a document or a detail and they have not sent it yet.'
+        e4: 'The team told the customer the change was made or sent the new policy.'
       legado:
         novo: 'First contact or newly created lead. The customer showed initial interest, asked a first question or replied for the first time. There is no needs assessment or proposal yet.'
         em_atendimento: 'Active conversation with qualification in progress: an agent or the AI is understanding the need, collecting details, answering questions or scheduling. No formal proposal, quote or commercial terms have been sent yet.'

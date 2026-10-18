@@ -18,6 +18,11 @@ class Api::V1::Accounts::Conversations::DraftMessagesController < Api::V1::Accou
 
   private
 
+  # O rascunho é da conversa, não da pessoa: é a resposta que quem atende ainda vai mandar. Quem só lê não vê (#1800).
+  def reading?
+    false
+  end
+
   def draft_redis_key
     format(Redis::Alfred::CONVERSATION_DRAFT_MESSAGE, id: @conversation.id)
   end

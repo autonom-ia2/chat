@@ -57,7 +57,7 @@ module Autonomia::Agents::Builder::AjustePorLista
     }
   }.freeze
 
-  NOVOS_CAMPOS = %w[so_pergunta mudancas resposta_ao_dono pendencia_resolvida].freeze
+  NOVOS_CAMPOS = %w[so_pergunta mudancas resposta_ao_dono pendencia_resolvida perguntas_de_prova].freeze
 
   # O schema do Construtor com os campos novos. `next_question` ganha a descrição do que ela leva no ajuste.
   SCHEMA = begin
@@ -70,7 +70,8 @@ module Autonomia::Agents::Builder::AjustePorLista
       so_pergunta: { type: 'boolean', description: SO_PERGUNTA_DESCRIPTION },
       mudancas: { type: 'array', items: MUDANCA, description: MUDANCAS_DESCRIPTION },
       resposta_ao_dono: { type: 'string', description: RESPOSTA_AO_DONO_DESCRIPTION },
-      pendencia_resolvida: { type: 'boolean', description: pendencia::PENDENCIA_RESOLVIDA_DESCRIPTION }
+      pendencia_resolvida: { type: 'boolean', description: pendencia::PENDENCIA_RESOLVIDA_DESCRIPTION },
+      perguntas_de_prova: { type: 'array', items: { type: 'string' }, description: Autonomia::Agents::ProvaDoAjuste::PERGUNTAS_DESCRIPTION }
     )
     { name: 'autonomia_agent_build_ajuste',
       schema: base.merge(properties: propriedades,
@@ -94,6 +95,7 @@ module Autonomia::Agents::Builder::AjustePorLista
     4. Se um pedido e impossivel, contraditorio ou vago demais para aplicar com seguranca, nao o liste: pergunte em
        next_question (needs_more_info=true). Os pedidos claros da mesma fala voce lista e eles sao aplicados; a
        pergunta segue para o dono junto. Nunca diga em next_question que aplicou algo que nao esta em mudancas.
+    Sempre que listar mudancas, escreva em perguntas_de_prova ate 3 mensagens de cliente que mostrem a mudanca.
     ONDE CADA PEDIDO ENTRA:
     - tamanho, formato ou estilo da resposta (ex.: "responda em no maximo 2 frases", "sem emoji"): tone E instruction,
       um item para cada.

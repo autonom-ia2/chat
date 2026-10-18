@@ -69,11 +69,20 @@ module Autonomia
         /\bcusta\s+R?\$?\s?\d/i
       ].freeze
 
+      # A prova do ajuste: o teto de cada resposta (entrega B do #1428).
+      PROVA_TIMEOUT_S = 30
+      # Na prova o agente roda sem ferramenta: ele é avisado para não afirmar o que não fez.
+      AVISO_DA_PROVA = 'Isto é um teste sem ferramentas: não diga que agendou, enviou ou registrou algo; diga o que faria.'.freeze
+
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil, memoria: nil)
+                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false)
         @agent = agent
+        # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
+        # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
+        # curto e sem nova tentativa: roda num job, e a tela espera.
+        @prova = prova
         # Os blocos de memória do turno (#1601/#1755), repassados ao PromptBuilder. nil: nada muda.
         @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
@@ -304,21 +313,29 @@ module Autonomia
 
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
         @prompt = montar_prompt(snippets)
-        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
+        tentativas = @prova ? { max_retries: 0 } : {}
+        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account, **tentativas)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
-          input: @prompt.input,
+          input: entrada_do_modelo,
           schema: schema_da_resposta,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
           max_rodadas: @max_rodadas,
-          **{ max_segundos: @max_segundos }.compact
+          **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova) }.compact
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.
+      def entrada_do_modelo
+        return @prompt.input unless @prova
+
+        @prompt.input + [PromptParts::Mensagem.montar('developer', AVISO_DA_PROVA)]
       end
 
       def montar_prompt(snippets)
@@ -341,6 +358,8 @@ module Autonomia
       end
 
       def answer_tools
+        return if @prova
+
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?
         tools.concat(enabled_agent_tools.map(&:openai_schema))
@@ -366,7 +385,9 @@ module Autonomia
       def enabled_agent_tools
         @enabled_agent_tools ||= begin
           reserved = enabled_specialists.flat_map(&:ferramentas_do_sistema).map(&:to_s).to_set
-          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) }
+          # #1630: o turno da passagem não recebe as ferramentas que passam a conversa adiante.
+          sem_passar = @delivery.try(:turno_da_passagem?)
+          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) || (sem_passar && tool.passa_a_conversa?) }
         end
       end
 

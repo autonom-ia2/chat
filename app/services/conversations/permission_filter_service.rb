@@ -1,11 +1,14 @@
 class Conversations::PermissionFilterService
   attr_reader :conversations, :user, :account
 
-  def initialize(conversations, user, account, plan_hint_selective_filter: false)
+  # for_reading: a lista que só mostra conversas. Com ela, o EE inclui quem só lê (conversation_view); sem ela, o
+  # resultado é o que a pessoa pode operar — o padrão, para quem alimenta escrita (ações em massa, encaminhar) (#1800).
+  def initialize(conversations, user, account, plan_hint_selective_filter: false, for_reading: false)
     @conversations = conversations
     @user = user
     @account = account
     @plan_hint_selective_filter = plan_hint_selective_filter
+    @for_reading = for_reading
   end
 
   def perform

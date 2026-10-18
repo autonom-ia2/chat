@@ -150,4 +150,25 @@ RSpec.describe Crm::FollowUp, type: :model do
 
     expect(follow_up).to be_valid
   end
+
+  describe '.due_within' do
+    let(:account) { create(:account) }
+    let(:user) { create(:user, account: account) }
+
+    def follow_up_at(due_at, **attrs)
+      account.crm_follow_ups.create!(title: 'Lembrar', due_at: due_at, timezone: 'UTC', created_by: user, **attrs)
+    end
+
+    it 'traz o que vence depois de agora e até o fim da janela; o que já venceu é do DueProcessor' do
+      agora = Time.utc(2026, 10, 16, 14)
+      dentro = follow_up_at(agora + 5.minutes)
+      no_limite = follow_up_at(agora + 10.minutes)
+      follow_up_at(agora)
+      follow_up_at(agora - 1.minute)
+      follow_up_at(agora + 11.minutes)
+      follow_up_at(agora + 5.minutes, status: :canceled, canceled_at: agora)
+
+      expect(described_class.due_within(agora, agora + 10.minutes)).to contain_exactly(dentro, no_limite)
+    end
+  end
 end
