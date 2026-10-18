@@ -5,6 +5,12 @@ import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../provider.js';
 import BaseAttachmentBubble from './BaseAttachment.vue';
 import FileIcon from 'next/icon/FileIcon.vue';
+import BaseBubble from './Base.vue';
+import DocumentoDoWhatsapp from '../../conversa-canal/midia/DocumentoDoWhatsapp.vue';
+import { usePele } from '../../conversa-canal/pele';
+
+// #1702: com a pele do WhatsApp, o cartão de documento do app.
+const pele = usePele();
 
 const { attachments } = useMessageContext();
 
@@ -28,7 +34,11 @@ const fileType = computed(() => {
 </script>
 
 <template>
+  <BaseBubble v-if="pele" data-bubble-name="attachment">
+    <DocumentoDoWhatsapp />
+  </BaseBubble>
   <BaseAttachmentBubble
+    v-else
     icon="i-teenyicons-user-circle-solid"
     icon-bg-color="bg-n-alpha-3 dark:bg-n-alpha-white"
     sender-translation-key="CONVERSATION.SHARED_ATTACHMENT.FILE"

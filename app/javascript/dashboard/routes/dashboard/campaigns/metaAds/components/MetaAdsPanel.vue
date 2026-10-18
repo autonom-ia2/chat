@@ -27,6 +27,10 @@ import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 // F5 (#1110): "O que fazer hoje" vira a lista de até 3 ações do consultor (panel.advice); Conversas, Propostas e
 // Vendas abrem a lista da etapa ali mesmo (MetaAdsPathList, uma por vez, fora do endereço); a etapa Conversas
 // mostra o tempo de resposta; "Quanto confiar" ganha o número da Meta ao lado do nosso.
+defineProps({
+  // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
+  readOnly: { type: Boolean, default: false },
+});
 const emit = defineEmits(['open']);
 
 const { t, locale } = useI18n();
@@ -324,6 +328,7 @@ onMounted(() => live.start());
           :days="days"
           :currency="panel.currency"
           :expanded="expandedTargets"
+          :read-only="readOnly"
           @act="onAdvice"
           @changed="live.reload()"
         />
@@ -347,6 +352,13 @@ onMounted(() => live.start());
             )
           }}
         </h4>
+        <p
+          v-if="readOnly"
+          data-panel-stalled-scope
+          class="m-0 text-xs text-n-slate-11"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
+        </p>
         <ul class="flex flex-col gap-2 p-0 m-0 list-none">
           <li
             v-for="card in stalled"
@@ -534,6 +546,13 @@ onMounted(() => live.start());
           :days="listDays"
           :currency="panel.currency"
         />
+        <p
+          v-if="openList && readOnly"
+          data-panel-list-scope
+          class="m-0 text-xs text-n-slate-11"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
+        </p>
       </div>
 
       <div
@@ -666,6 +685,7 @@ onMounted(() => live.start());
         v-if="panel.confidence"
         :confidence="panel.confidence"
         :comparison="panel.meta_comparison || null"
+        :can-fix="!readOnly"
         @fix="emit('open', 3)"
       />
     </template>

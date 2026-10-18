@@ -1,0 +1,74 @@
+// O atendente reage à mensagem (#1702), só com a pele do WhatsApp. O selo se
+// atualiza pelo `message.updated` que o servidor emite ao gravar a reação. Até o eco
+// chegar, vale a reação que acabou de sair (clicar de novo no mesmo emoji tira, em
+// vez de mandar o mesmo outra vez).
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
+import { useMapGetter } from 'dashboard/composables/store';
+import ConversaCanalAPI from 'dashboard/api/conversaCanal';
+import { PELES, usePele } from './pele';
+import { reacoesDaMensagem } from './reacoes';
+import {
+  emojiParaEnviar,
+  estadoDaReacao,
+  reacaoDaEquipe,
+} from './reacaoDoAtendente';
+
+// mensagem: computed com { id, messageType, isPrivate, status, sourceId,
+// contentAttributes, conversationId, inboxId }.
+export const useReacaoDoAtendente = mensagem => {
+  const { t } = useI18n();
+  const pele = usePele();
+  const conversa = useMapGetter('getSelectedChat');
+  const caixaPorId = useMapGetter('inboxes/getInbox');
+  const enviando = ref(false);
+
+  const estado = computed(() => {
+    if (pele.value !== PELES.WHATSAPP) return { visivel: false };
+    const dados = mensagem.value;
+    return estadoDaReacao({
+      caixa: caixaPorId.value(dados.inboxId),
+      conversa: conversa.value,
+      mensagem: { ...dados, deleted: dados.contentAttributes?.deleted },
+    });
+  });
+
+  const daConversa = computed(() =>
+    reacaoDaEquipe(reacoesDaMensagem(mensagem.value.contentAttributes))
+  );
+  // null = sem envio esperando eco; '' = a reação foi tirada.
+  const enviada = ref(null);
+  watch(daConversa, () => {
+    enviada.value = null;
+  });
+  const atual = computed(() =>
+    enviada.value === null ? daConversa.value : enviada.value
+  );
+
+  const reagir = async escolhido => {
+    if (enviando.value || estado.value.bloqueado) return;
+    enviando.value = true;
+    const { conversationId, id } = mensagem.value;
+    const emoji = emojiParaEnviar(atual.value, escolhido);
+    try {
+      await ConversaCanalAPI.reagir(conversationId, id, emoji);
+      // O eco (message.updated) confirma; até lá, a tela já conta com esta.
+      enviada.value = emoji;
+    } catch (erro) {
+      useAlert(
+        erro?.response?.data?.error || t('CONVERSA_CANAL.REAGIR.FALHOU')
+      );
+    } finally {
+      enviando.value = false;
+    }
+  };
+
+  return {
+    visivel: computed(() => Boolean(estado.value.visivel)),
+    bloqueado: computed(() => Boolean(estado.value.bloqueado)),
+    atual,
+    enviando,
+    reagir,
+  };
+};

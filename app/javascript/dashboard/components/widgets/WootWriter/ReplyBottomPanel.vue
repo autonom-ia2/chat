@@ -12,10 +12,16 @@ import RequestContactInfoButton from '../RequestContactInfoButton.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDoWhatsapp.vue';
+import {
+  anexarArquivos,
+  usePeleDaResposta,
+} from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 
 export default {
   name: 'ReplyBottomPanel',
   components: {
+    MaisDoWhatsapp,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -30,6 +36,16 @@ export default {
     onSend: {
       type: Function,
       default: () => {},
+    },
+    // #1702: envio do "+" do WhatsApp; devolve a promessa para a janela esperar.
+    enviarRico: {
+      type: Function,
+      default: () => Promise.resolve(),
+    },
+    // #1702: sem texto de verdade (a assinatura não conta) e sem anexo, a direita é o microfone.
+    campoVazio: {
+      type: Boolean,
+      default: false,
     },
     sendButtonText: {
       type: String,
@@ -165,8 +181,14 @@ export default {
     };
 
     useKeyboardEvents(keyboardEvents);
+    // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
+    const { ehWhatsapp, soTexto, classesDaResposta } = usePeleDaResposta();
 
     return {
+      ehWhatsapp,
+      soTexto,
+      classesDaResposta,
+      anexarArquivos,
       setSignatureFlagForInbox,
       fetchSignatureFlagFromUISettings,
       uploadRef,
@@ -178,6 +200,18 @@ export default {
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       uiFlags: 'integrations/getUIFlags',
     }),
+    // #1702: com o campo vazio, o botão redondo da direita é o microfone (como no app).
+    // No número reserva (fora das 24 h) áudio não vai: fica o Enviar.
+    microfoneNaDireita() {
+      return (
+        this.ehWhatsapp &&
+        !this.isNote &&
+        !this.isEditorDisabled &&
+        !this.soTexto &&
+        this.showAudioRecorderButton &&
+        this.campoVazio
+      );
+    },
     wrapClass() {
       return {
         'is-note-mode': this.isNote,
@@ -283,8 +317,17 @@ export default {
 </script>
 
 <template>
-  <div class="flex justify-between p-3" :class="wrapClass">
+  <div
+    class="flex justify-between p-3"
+    :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
+  >
     <div class="left-wrap">
+      <MaisDoWhatsapp
+        v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
+        :caixa="inbox"
+        :enviar="enviarRico"
+        @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
+      />
       <NextButton
         v-if="!isEditorDisabled"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
@@ -408,13 +451,31 @@ export default {
       />
     </div>
     <div class="right-wrap">
+      <button
+        v-if="microfoneNaDireita"
+        type="button"
+        :class="classesDaResposta.microfone"
+        :aria-label="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
+        :title="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
+        data-microfone-do-whatsapp
+        @click="toggleAudioRecorder"
+      >
+        <span class="i-ph-microphone size-6" />
+      </button>
       <NextButton
-        :label="sendButtonText"
+        v-else
+        v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
+        :label="ehWhatsapp ? '' : sendButtonText"
+        :icon="ehWhatsapp ? classesDaResposta.iconeEnviar : ''"
+        :aria-label="sendButtonText"
         type="submit"
         sm
         :color="isNote ? 'amber' : 'blue'"
         :disabled="isSendDisabled"
         class="flex-shrink-0"
+        :class="
+          isNote ? classesDaResposta.enviarNota : classesDaResposta.enviar
+        "
         @click="onSend"
       />
     </div>

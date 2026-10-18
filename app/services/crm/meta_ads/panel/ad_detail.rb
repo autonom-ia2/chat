@@ -3,12 +3,14 @@
 #
 # Os números (gasto, conversas, propostas, vendas, veredito, média da conta) saem do próprio Panel::Report: a
 # tela do anúncio nunca pode mostrar um número diferente do cartão em que a pessoa clicou. Anúncio sem gasto nem
-# conversa no período — ou de outra conta — devolve nil. Só banco, nunca a Meta.
+# conversa no período — ou de outra conta — devolve nil. Só banco, nunca a Meta. Com `visible`
+# (Crm::MetaAds::VisibleConversations, #1794), a lista de propostas traz só as conversas que a pessoa já veria.
 class Crm::MetaAds::Panel::AdDetail
   QUOTES_LIMIT = 20
 
-  def initialize(connection, ad_id:, days:)
+  def initialize(connection, ad_id:, days:, visible: nil)
     @connection = connection
+    @visible = visible
     @ad_id = ad_id.to_s
     @report = Crm::MetaAds::Panel::Report.new(connection, days: days)
   end
@@ -59,10 +61,17 @@ class Crm::MetaAds::Panel::AdDetail
 
   # Abertas primeiro, a que espera há mais tempo no topo — é quem pede retomada; depois as vendas.
   def quotes_list
-    cards = @report.cohort.cards.select { |card| card.ad_id == @ad_id && card.quote? }
+    cards = only_visible(@report.cohort.cards.select { |card| card.ad_id == @ad_id && card.quote? })
     cards.sort_by { |card| [card.sale? ? 1 : 0, card.waiting_since || Time.current] }.first(QUOTES_LIMIT).map do |card|
       { card_id: card.id, title: card.title, value: card.value, status: card.status, stage_name: card.stage_name,
         conversation_id: card.conversation_id, waiting_since: card.waiting_since }
     end
+  end
+
+  def only_visible(cards)
+    return cards if @visible.nil?
+
+    ids = @visible.ids(cards.map(&:conversation_id))
+    cards.select { |card| ids.include?(card.conversation_id) }
   end
 end

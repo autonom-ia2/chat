@@ -1,11 +1,12 @@
 <script setup>
 // Localização enviada: `{ type: 'location', latitude, longitude, name?, address? }`, sem corpo.
-// Nome e endereço por extenso, sem carregar mapa de fora; o atendente pode abrir o ponto no mapa em outra aba.
+// Nome e endereço por extenso; o atendente pode abrir o ponto no mapa em outra aba. Com a pele do WhatsApp
+// (#1702), a miniatura do Google Maps entra no lugar do ícone.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../../../provider.js';
 import SharedCard from '../SharedCard.vue';
-import { mapHrefOf } from '../mapLink.js';
+import { mapHrefOf, pointOf } from '../mapLink.js';
 
 const { contentAttributes, sender } = useMessageContext();
 const { t } = useI18n();
@@ -17,6 +18,10 @@ const richMessage = computed(() => contentAttributes.value?.richMessage ?? {});
 
 const mapHref = computed(() =>
   mapHrefOf(richMessage.value.latitude, richMessage.value.longitude)
+);
+
+const point = computed(() =>
+  pointOf(richMessage.value.latitude, richMessage.value.longitude)
 );
 
 const heading = computed(() => {
@@ -35,5 +40,6 @@ const heading = computed(() => {
     :detail="textOf(richMessage.address)"
     :action-label="t('RICH_MESSAGE.LOCATION.SEE_ON_MAP')"
     :action-href="mapHref"
+    :mapa="point"
   />
 </template>

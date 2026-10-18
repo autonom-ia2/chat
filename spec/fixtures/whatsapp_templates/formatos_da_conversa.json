@@ -1,5 +1,5 @@
 {
-  "_sobre": "#1705: a mesma lista de modelos lida pelos dois lados. Formato real da Meta (GET /message_templates, como a caixa guarda; envio em developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/limited-time-offer-templates, Updated Jun 17, 2026). Cada caso diz o veredito esperado: conversa = o seletor da conversa oferece o modelo (inboxes/getConversationWhatsAppTemplates); produtos = leva produtos do catálogo (produtosNaCampanha.levaProdutos); pronto = o envio da conversa libera o botão com esse processed_params (só quando conversa = true); envio = motivo do Whatsapp::Templates::SendableFormat com url_suffix: true, como a guarda chama (null = vai); guarda = chave do texto da recusa do Whatsapp::Templates::ConversationSendGuard (null = segue para a Meta). Spec do Ruby: spec/services/whatsapp/templates/conversation_send_guard_formatos_spec.rb; do front: app/javascript/dashboard/components-next/whatsapp/specs/formatosDaConversa.spec.js. Mudou a regra de um lado só, um dos dois falha.",
+  "_sobre": "#1705: a mesma lista de modelos lida pelos dois lados. Formato real da Meta (GET /message_templates, como a caixa guarda; envio em developers.facebook.com/documentation/business-messaging/whatsapp/templates/marketing-templates/limited-time-offer-templates, Updated Jun 17, 2026). Cada caso diz o veredito esperado: conversa = o seletor da conversa do WhatsApp oficial oferece o modelo (inboxes/getConversationWhatsAppTemplates com completa { fotos, produtos }, a flag whatsapp_campaign_products ligada); conversa_sem_a_flag = o mesmo com a flag desligada (ausente = igual a conversa); tipo = o que a conversa completa (#1716, modeloNaConversa.tipoNaConversa: um, varios, carrossel, cartoes; ausente = modelo comum, que as outras telas também oferecem); produtos = leva produtos do catálogo (produtosNaCampanha.levaProdutos); pronto = o envio da conversa libera o botão com esse processed_params (só quando conversa = true; no modelo comum, envioNaConversa.envioCompleto; com tipo, o processed_params é o que modeloNaConversa.montarEnvio monta com a tela, e só existe tela no pedido completo; FOTO_n = o arquivo escolhido, que o Ruby troca pelo signed_id de uma foto da conta); envio = motivo do Whatsapp::Templates::SendableFormat com url_suffix: true, como a guarda chama (null = vai); guarda = chave do texto da recusa do Whatsapp::Templates::ConversationSendGuard (null = segue para a Meta). Spec do Ruby: spec/services/whatsapp/templates/conversation_send_guard_formatos_spec.rb; do front: app/javascript/dashboard/components-next/whatsapp/specs/formatosDaConversa.spec.js. guarda_sem_a_flag = a recusa do pedido completo de produto com a flag desligada. Mudou a regra de um lado só, um dos dois falha.",
   "agora_ms": 1792152000000,
   "casos": [
     {
@@ -159,7 +159,7 @@
         ]
       },
       "processed_params": {},
-      "conversa": false, "produtos": false, "envio": "carousel", "guarda": "conversation_carousel"
+      "tipo": "cartoes", "conversa": true, "produtos": false, "pronto": false, "envio": "carousel", "guarda": "conversation_carousel"
     },
     {
       "nome": "um_produto",
@@ -172,7 +172,8 @@
         ]
       },
       "processed_params": {},
-      "conversa": false, "produtos": true, "envio": "catalog", "guarda": "conversation_products"
+      "tipo": "um", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
     },
     {
       "nome": "varios_produtos",
@@ -185,7 +186,8 @@
         ]
       },
       "processed_params": {},
-      "conversa": false, "produtos": true, "envio": "catalog", "guarda": "conversation_products"
+      "tipo": "varios", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
     },
     {
       "nome": "carrossel_de_produtos",
@@ -200,7 +202,8 @@
         ]
       },
       "processed_params": {},
-      "conversa": false, "produtos": true, "envio": "catalog", "guarda": "conversation_products"
+      "tipo": "carrossel", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": false,
+      "envio": "catalog", "guarda": "conversation_products"
     },
     {
       "nome": "botao_de_catalogo",
@@ -213,6 +216,78 @@
       },
       "processed_params": {},
       "conversa": false, "produtos": false, "envio": "catalog", "guarda": "conversation_products"
+    },
+    {
+      "nome": "um_produto_escolhido",
+      "template": {
+        "name": "produto_unico", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "PRODUCT" },
+          { "type": "BODY", "text": "Separamos este produto para você." },
+          { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-1", "nome": "Tênis" }] },
+      "processed_params": { "body": {}, "products": { "retailer_ids": ["sku-1"], "names": { "sku-1": "Tênis" } } },
+      "tipo": "um", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "varios_produtos_escolhidos",
+      "template": {
+        "name": "lista_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "HEADER", "format": "TEXT", "text": "Novidades" },
+          { "type": "BODY", "text": "Separamos estes produtos." },
+          { "type": "BUTTONS", "buttons": [{ "type": "MPM", "text": "Ver itens" }] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-2", "nome": "Mochila" }, { "id": "sku-1", "nome": "Tênis" }] },
+      "processed_params": {
+        "body": {},
+        "products": { "retailer_ids": ["sku-2", "sku-1"], "names": { "sku-2": "Mochila", "sku-1": "Tênis" } }
+      },
+      "tipo": "varios", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "carrossel_de_produtos_escolhidos",
+      "template": {
+        "name": "carrossel_de_produtos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja os destaques." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] },
+            { "components": [{ "type": "HEADER", "format": "PRODUCT" }, { "type": "BUTTONS", "buttons": [{ "type": "SPM", "text": "Ver" }] }] }
+          ] }
+        ]
+      },
+      "tela": { "corpo": {}, "produtos": [{ "id": "sku-1", "nome": "Tênis" }, { "id": "sku-2", "nome": "Mochila" }] },
+      "processed_params": {
+        "body": {},
+        "products": { "retailer_ids": ["sku-1", "sku-2"], "names": { "sku-1": "Tênis", "sku-2": "Mochila" } }
+      },
+      "tipo": "carrossel", "conversa": true, "conversa_sem_a_flag": false, "produtos": true, "pronto": true,
+      "envio": null, "guarda": null, "guarda_sem_a_flag": "conversation_products_disabled"
+    },
+    {
+      "nome": "carrossel_de_fotos_com_as_fotos",
+      "template": {
+        "name": "carrossel_de_fotos", "language": "pt_BR", "status": "APPROVED", "category": "MARKETING",
+        "components": [
+          { "type": "BODY", "text": "Veja as novidades." },
+          { "type": "CAROUSEL", "cards": [
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Primeiro" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] },
+            { "components": [{ "type": "HEADER", "format": "IMAGE" }, { "type": "BODY", "text": "Segundo" }, { "type": "BUTTONS", "buttons": [{ "type": "QUICK_REPLY", "text": "Quero" }] }] }
+          ] }
+        ]
+      },
+      "tela": { "corpo": {}, "cartoes": { "0": { "referencia": "FOTO_1", "campos": {} }, "1": { "referencia": "FOTO_2", "campos": {} } } },
+      "processed_params": {
+        "body": {},
+        "carousel": { "cards": [{ "header": { "media_blob": "FOTO_1" }, "body": {} }, { "header": { "media_blob": "FOTO_2" }, "body": {} }] }
+      },
+      "tipo": "cartoes", "conversa": true, "produtos": false, "pronto": true, "envio": null, "guarda": null
     }
   ]
 }

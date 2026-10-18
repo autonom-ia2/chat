@@ -3,7 +3,8 @@ class MessageContentPresenter < SimpleDelegator
     Messages::MarkdownRendererService.new(
       content_with_survey_link,
       conversation.inbox.channel_type,
-      conversation.inbox.channel
+      conversation.inbox.channel,
+      **formato_do_whatsapp
     ).render
   end
 
@@ -12,6 +13,13 @@ class MessageContentPresenter < SimpleDelegator
   end
 
   private
+
+  # Com a pele desligada na conta, nenhum argumento novo: o envio fica igual ao do Chatwoot (#1702).
+  def formato_do_whatsapp
+    return {} unless ConversaCanal::Pele.ligada?(conversation.account)
+
+    { pele: true, automatico: Messages::EnvioAutomatico.automatico?(__getobj__) }
+  end
 
   def content_with_survey_link
     if should_append_survey_link?

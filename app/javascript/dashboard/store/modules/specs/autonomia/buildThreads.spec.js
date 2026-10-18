@@ -183,6 +183,56 @@ describe('#autonomiaBuildThreads store', () => {
       );
     });
 
+    // #1428 — the adjustment applied part of the request and asks about the
+    // rest: the agent is read again while the conversation stays open.
+    it('onSettled re-reads the agent when ready + needs_more_info + applied', async () => {
+      const commit = vi.fn();
+      const dispatch = vi.fn().mockResolvedValue({ id: 9, tone: 'curto' });
+
+      await actions.onSettled(
+        { commit, dispatch, state: { messages: [] } },
+        {
+          status: 'ready',
+          agent_id: 9,
+          state: {
+            needs_more_info: true,
+            next_question: 'Como você quer a saudação?',
+            applied: true,
+          },
+        }
+      );
+
+      expect(commit).toHaveBeenCalledWith('SET_PHASE', 'interviewing');
+      expect(commit).toHaveBeenCalledWith('SET_STATUS', 'open');
+      expect(dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 9, {
+        root: true,
+      });
+      expect(commit).toHaveBeenCalledWith('SET_AGENT', {
+        id: 9,
+        tone: 'curto',
+      });
+    });
+
+    it('onSettled does not re-read the agent for a question when nothing was applied', async () => {
+      const commit = vi.fn();
+      const dispatch = vi.fn();
+
+      await actions.onSettled(
+        { commit, dispatch, state: { messages: [] } },
+        {
+          status: 'ready',
+          agent_id: 9,
+          state: {
+            needs_more_info: true,
+            next_question: 'O quê?',
+            applied: false,
+          },
+        }
+      );
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
     it('onSettled skips the fallback bubble when the merge already delivered the question as the last turn', async () => {
       const commit = vi.fn();
       const dispatch = vi.fn();

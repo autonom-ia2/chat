@@ -93,6 +93,9 @@ class Crm::Card < ApplicationRecord
   has_many :follow_ups, class_name: 'Crm::FollowUp', dependent: :destroy, inverse_of: :card
   has_many :ai_stage_suggestions, class_name: 'Crm::AiStageSuggestion', dependent: :destroy, inverse_of: :card
 
+  # Memória das IAs (#1601): campo editado à mão e pedido encerrado.
+  include Crm::CardMemoria
+
   enum status: { open: 0, won: 1, lost: 2, archived: 3, resolved: 4, cancelled: 5 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
 

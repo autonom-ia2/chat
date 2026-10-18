@@ -4,7 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import CampoMemoria from './CampoMemoria.vue';
+import { origemDoCampo } from './memoriaDoCampo';
 import ListAttribute from 'dashboard/components-next/CustomAttributes/ListAttribute.vue';
 import CheckboxAttribute from 'dashboard/components-next/CustomAttributes/CheckboxAttribute.vue';
 import DateAttribute from 'dashboard/components-next/CustomAttributes/DateAttribute.vue';
@@ -17,9 +23,32 @@ const props = defineProps({
   atender: { type: Boolean, default: false },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const store = useStore();
 const route = useRoute();
+const { currentAccount, isCloudFeatureEnabled } = useAccount();
+
+// #1601 — com a memória das IAs ligada, cada campo mostra de onde veio o valor.
+const memoriaLigada = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.MEMORIA_IA)
+);
+const fatos = ref([]);
+const carregarFatos = async () => {
+  if (!memoriaLigada.value) return;
+  try {
+    const { data } = await CrmKanbanAPI.getMemoriaFatos(props.card.id);
+    fatos.value = data.payload || [];
+  } catch {
+    fatos.value = [];
+  }
+};
+const origemDe = field =>
+  memoriaLigada.value
+    ? origemDoCampo(fatos.value, field.attributeKey, field.value, {
+        fuso: fusoDaConta(currentAccount.value),
+        idioma: locale.value.replace('_', '-'),
+      })
+    : null;
 
 const NUMERIC_TYPES = ['number', 'currency', 'percent'];
 const componentMap = {
@@ -93,6 +122,7 @@ const persist = async (field, value, messages) => {
     });
     values.value = { ...(updated?.custom_attributes || {}) };
     useAlert(messages.success);
+    carregarFatos();
   } catch {
     useAlert(messages.error);
   }
@@ -110,8 +140,11 @@ const clearField = field =>
     error: t('CRM_KANBAN.DRAWER.CARD_FIELDS.DELETE_ERROR'),
   });
 
+watch(() => props.card.id, carregarFatos);
+
 onMounted(() => {
   store.dispatch('attributes/get');
+  carregarFatos();
 });
 </script>
 
@@ -161,6 +194,11 @@ onMounted(() => {
         <span v-else class="break-words text-sm text-n-slate-12">
           {{ readOnlyValue(field) }}
         </span>
+        <CampoMemoria
+          v-if="origemDe(field)"
+          class="col-start-2"
+          :origem="origemDe(field)"
+        />
       </div>
     </div>
 

@@ -53,6 +53,7 @@ class Contact < ApplicationRecord
   include LlmFormattable
   include ContactOptOut
   include ContactCustomer
+  include ContactMemoria
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },

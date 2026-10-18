@@ -4,9 +4,13 @@ import { useI18n } from 'vue-i18n';
 import BaseBubble from './Base.vue';
 import { useMessageContext } from '../provider.js';
 import { buildFlowResponseEntries } from '../helpers/whatsappFlowResponse.js';
+import RespostaDoFormulario from '../../conversa-canal/formulario/RespostaDoFormulario.vue';
+import { usePele } from '../../conversa-canal/pele';
 
 const { content, contentAttributes } = useMessageContext();
 const { t } = useI18n();
+// #1702: na conversa com a cara do WhatsApp, o balão "Resposta enviada" do app.
+const pele = usePele();
 
 const responseEntries = computed(() => {
   const response =
@@ -17,7 +21,9 @@ const responseEntries = computed(() => {
 </script>
 
 <template>
+  <RespostaDoFormulario v-if="pele" />
   <BaseBubble
+    v-else
     class="px-4 py-3 min-w-64 max-w-lg"
     data-bubble-name="whatsapp-flow-response"
   >

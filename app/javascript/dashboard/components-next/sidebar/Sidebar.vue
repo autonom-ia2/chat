@@ -27,6 +27,7 @@ import {
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
+  META_ADS_VIEW_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -128,7 +129,7 @@ const slaFeatureEnabled = computed(() =>
 const whatsappApiCampaignsEnabled = computed(
   () => globalConfig.value?.whatsappApiCampaignsEnabled === true
 );
-// Anúncios da Meta (#1047): por conta, só administrador (a conexão é dele).
+// Anúncios da Meta (#1047): por conta. Vê o item o administrador ou quem tem meta_ads_view (#1794).
 const metaAdsHubEnabled = computed(() =>
   isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
 );
@@ -1121,7 +1122,7 @@ const menuItems = computed(() => {
           : []),
         ...(crmKanbanEnabled.value &&
         metaAdsHubEnabled.value &&
-        isAdministrator.value
+        (isAdministrator.value || hasAnyPermission([META_ADS_VIEW_PERMISSION]))
           ? [
               {
                 name: 'Campaign Meta Ads',
