@@ -30,4 +30,14 @@ class ConversaCanal::PastaDoEmail < ApplicationRecord
 
   validates :pasta, inclusion: { in: PASTAS }
   validates :conversation_id, uniqueness: true
+
+  # Conversa de e-mail no Spam do painel, com a chave `conversa_email_nova` (#1809, opção (b) do Rodrigo, 18/10): a
+  # pesquisa de satisfação, o robô da caixa e as automações não reagem a ela (ConversaCanal::*ForaDoSpam). Lê a pasta já
+  # gravada: quem põe no Spam grava a pasta antes de resolver, e os listeners rodam depois do commit.
+  def self.no_spam?(conversation)
+    return false unless conversation.is_a?(Conversation) && conversation.inbox&.email?
+    return false unless conversation.account.feature_enabled?('conversa_email_nova')
+
+    exists?(conversation_id: conversation.id, pasta: 'spam')
+  end
 end

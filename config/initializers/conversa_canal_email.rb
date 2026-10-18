@@ -8,7 +8,9 @@
 # - Spam e Lixeira do painel nas listas de conversa, conversa nova de bloqueado direto no Spam e resposta do cliente
 #   tirando a conversa da Lixeira (#1809);
 # - "Encaminhar sem Para" na criação da conversa pela API devolve 422, não 500
-#   (app/controllers/concerns/conversa_canal/recusa_do_email_na_api.rb).
+#   (app/controllers/concerns/conversa_canal/recusa_do_email_na_api.rb);
+# - conversa no Spam sem pesquisa de satisfação, sem o robô da caixa e sem automações (app/listeners/conversa_canal/
+#   *_fora_do_spam.rb; opção (b) do Rodrigo, 18/10). Relatórios, CRM, webhooks da conta e LeadSquared seguem normais.
 Rails.application.config.to_prepare do
   Messages::MessageBuilder.prepend(ConversaCanal::MessageBuilderComCitacao) unless Messages::MessageBuilder <= ConversaCanal::MessageBuilderComCitacao
   ConversationReplyMailer.prepend(ConversaCanal::EncaminhadoNoMailer) unless ConversationReplyMailer <= ConversaCanal::EncaminhadoNoMailer
@@ -19,4 +21,7 @@ Rails.application.config.to_prepare do
   Message.prepend(ConversaCanal::PastaNaMensagemDoCliente) unless Message <= ConversaCanal::PastaNaMensagemDoCliente
   conversas = Api::V1::Accounts::ConversationsController
   conversas.include(ConversaCanal::RecusaDoEmailNaApi) unless conversas <= ConversaCanal::RecusaDoEmailNaApi
+  CsatSurveyListener.prepend(ConversaCanal::PesquisaForaDoSpam) unless CsatSurveyListener <= ConversaCanal::PesquisaForaDoSpam
+  AgentBotListener.prepend(ConversaCanal::RoboForaDoSpam) unless AgentBotListener <= ConversaCanal::RoboForaDoSpam
+  AutomationRuleListener.prepend(ConversaCanal::AutomacaoForaDoSpam) unless AutomationRuleListener <= ConversaCanal::AutomacaoForaDoSpam
 end
