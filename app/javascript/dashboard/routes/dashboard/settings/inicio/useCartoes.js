@@ -6,6 +6,10 @@ import { useOnboardingTrail } from 'dashboard/composables/useOnboardingTrail';
 import { useMenuPublicado } from 'dashboard/components-next/sidebar/fork/menuPublicado';
 import { FILHOS_CONHECIDOS } from 'dashboard/components-next/sidebar/forkSidebarMenu';
 import { GRUPOS_DE_CARTOES } from './cartoes';
+import {
+  basicoDaTrilhaConcluido,
+  passosPendentes,
+} from 'dashboard/components-next/sidebar/fork/trilhaBasica';
 import { agenteIaPorCaixaLigado } from 'dashboard/routes/dashboard/autonomia/agentes/composables/useAgenteIaPorCaixa';
 
 // Os cartões da página inicial de Configurações (#1617): quais a pessoa vê, para onde levam, e o estado de
@@ -36,6 +40,7 @@ const EXIGENCIAS = {
   campanhasPorEmail: () =>
     window.globalConfig?.EMAIL_CAMPAIGN_ENABLED === 'true' &&
     window.globalConfig?.CRM_KANBAN_ENABLED === 'true',
+  basicoConcluido: (_store, passos) => basicoDaTrilhaConcluido(passos),
   semAgenteIaPorCaixa: store =>
     !agenteIaPorCaixaLigado(
       store.getters['accounts/getAccount']?.(store.getters.getCurrentAccountId)
@@ -88,6 +93,19 @@ export function useCartoes() {
 
   // Estado do cartão: o que falta (âmbar), erro (vermelho), pronto (verde) ou só um dado (neutro).
   const estadoDe = cartao => {
+    if (cartao.trilha) {
+      const faltam = passosPendentes(trilha.passos.value);
+      return faltam > 0
+        ? {
+            tipo: 'falta',
+            texto: t(
+              'SETTINGS_INICIO.PASSOS_FALTAM',
+              { count: faltam },
+              faltam
+            ),
+          }
+        : { tipo: 'pronto', texto: t('SETTINGS_INICIO.TUDO_PRONTO') };
+    }
     const passo = cartao.passo ? passoDe(cartao.passo) : null;
     const quebradas = cartao.saude ? paraReconectar() : 0;
     if (quebradas > 0) {
@@ -130,7 +148,8 @@ export function useCartoes() {
   };
 
   const montarCartao = (cartao, grupo) => {
-    if (cartao.exige && !EXIGENCIAS[cartao.exige](store)) return null;
+    if (cartao.exige && !EXIGENCIAS[cartao.exige](store, trilha.passos.value))
+      return null;
     const to = destinoDoCartao(cartao);
     if (!to || !podeAbrir(to)) return null;
     return {
