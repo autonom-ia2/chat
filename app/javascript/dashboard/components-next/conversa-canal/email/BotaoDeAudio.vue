@@ -5,7 +5,7 @@
 // (GravadorDoWhatsapp): lixeira, ponto vermelho com o tempo, a onda ao vivo e
 // pausar/continuar. Sem áudio anexado no e-mail (Rodrigo, 18/10: em e-mail ninguém
 // manda gravação). Sem IA de transcrição na conta, o botão não aparece.
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { emitter } from 'shared/helpers/mitt';
@@ -13,7 +13,8 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useRecursosDoEmail } from './recursosDoEmail';
-import { useDitado } from './useDitado';
+import { LIMITE_DO_DITADO, useDitado } from './useDitado';
+import { useEmailDaConversa } from './useConversaDeEmail';
 import OndaAoVivo from './OndaAoVivo.vue';
 
 // Para onde vai o texto ditado. Padrão: o editor da resposta (enable-insert-events).
@@ -54,6 +55,17 @@ const pararEInserir = async () => {
     );
   }
 };
+
+// No teto de tempo o ditado para e o texto entra, como no "Pronto".
+watch(ditado.segundos, valor => {
+  if (valor >= LIMITE_DO_DITADO) pararEInserir();
+});
+// Fechar a resposta (ou trocar de conversa, que fecha) não deixa o microfone ligado
+// escondido: o que estava sendo ditado é descartado.
+const { respostaAberta } = useEmailDaConversa();
+watch(respostaAberta, aberta => {
+  if (!aberta) ditado.cancelar();
+});
 
 const pausado = computed(() => ditado.estado.value === 'pausado');
 const gravando = computed(() =>

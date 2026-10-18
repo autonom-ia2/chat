@@ -10,6 +10,8 @@ import CampoDeEnderecos from './CampoDeEnderecos.vue';
 import { assuntoDaResposta } from './dadosDoEmail';
 import { useEmailDaConversa } from './useConversaDeEmail';
 
+// No Encaminhar o assunto é "Enc:" (o servidor monta) e o Para vazio trava o envio.
+const props = defineProps({ encaminhar: { type: Boolean, default: false } });
 const para = defineModel('toEmails', { type: String, default: '' });
 const cc = defineModel('ccEmails', { type: String, default: '' });
 const cco = defineModel('bccEmails', { type: String, default: '' });
@@ -35,7 +37,14 @@ watch(cco, valor => {
     Boolean(valor) || (verCco.value && comFoco('[data-campo-cco]'));
 });
 
-const assunto = computed(() => assuntoDaResposta(email.assunto.value));
+const assunto = computed(() =>
+  props.encaminhar && email.assunto.value
+    ? `${t('CONVERSA_CANAL.EMAIL.PREFIXO_ENCAMINHADO')} ${email.assunto.value}`
+    : assuntoDaResposta(email.assunto.value)
+);
+const semPara = computed(
+  () => props.encaminhar && !String(para.value || '').trim()
+);
 
 const LINK =
   'min-h-9 px-2 rounded-full text-sm text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
@@ -70,6 +79,13 @@ const LINK =
         </button>
       </div>
     </CampoDeEnderecos>
+    <p
+      v-if="semPara"
+      class="px-1 pt-1 text-xs text-n-slate-11"
+      data-encaminhar-sem-para
+    >
+      {{ t('CONVERSA_CANAL.EMAIL.ENCAMINHAR_SEM_PARA') }}
+    </p>
     <CampoDeEnderecos
       v-if="verCc"
       v-model="cc"

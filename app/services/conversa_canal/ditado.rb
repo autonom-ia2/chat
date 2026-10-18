@@ -1,13 +1,27 @@
 # Ditado da resposta de e-mail (#1786): a pessoa fala e o texto entra na caixa de resposta para revisar antes de
 # enviar ("como no Claude"). Usa o mesmo motor que transcreve os áudios do atendimento (Crm::Ai::TranscriptionClient,
-# em português, com a chave de IA da conta ou da instalação, via Crm::Ai::CredentialResolver). O áudio vira um blob
-# temporário só pelo tempo da transcrição e é apagado em seguida; nada fica guardado na conversa.
+# em português, com a chave de IA da conta ou da instalação, via Crm::Ai::CredentialResolver). O transcritor lê o
+# próprio arquivo recebido, sem subir para o armazenamento e baixar de volta dentro da requisição; nada fica guardado.
+# O navegador para o ditado sozinho no teto de tempo (useDitado), para a transcrição caber nos 15 s da requisição.
 class ConversaCanal::Ditado
   class Falha < StandardError; end
 
-  # O transcritor lê `attachment.file.blob`, como num anexo de conversa.
+  # O transcritor lê `attachment.file.blob`, como num anexo de conversa. Aqui o "blob" é o arquivo da requisição.
   Anexo = Struct.new(:file, :id)
   Arquivo = Struct.new(:blob)
+  BlobDoAudio = Struct.new(:tempfile, :content_type, :key) do
+    def filename
+      ActiveStorage::Filename.new('ditado')
+    end
+
+    def byte_size
+      tempfile.size
+    end
+
+    def open(&)
+      File.open(tempfile.path, 'rb', &)
+    end
+  end
 
   def self.disponivel?(account)
     Crm::Ai::CredentialResolver.new(account: account).configured?
@@ -37,10 +51,8 @@ class ConversaCanal::Ditado
   private
 
   def transcrever(credencial)
-    blob = ActiveStorage::Blob.create_and_upload!(io: @audio.tempfile, filename: 'ditado', content_type: @audio.content_type)
+    blob = BlobDoAudio.new(@audio.tempfile, @audio.content_type, "ditado-#{SecureRandom.hex(8)}")
     Crm::Ai::TranscriptionClient.new(credential: credencial).transcribe(Anexo.new(Arquivo.new(blob), nil)).to_s.strip
-  ensure
-    blob&.purge
   end
 
   def conferir_audio!

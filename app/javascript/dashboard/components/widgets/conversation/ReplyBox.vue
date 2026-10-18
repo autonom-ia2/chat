@@ -86,6 +86,7 @@ import {
 } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { lerEndereco } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 import { montarRespostaDoEmail } from 'dashboard/components-next/conversa-canal/email/respostaDoEmail';
+import { validEmailsByComma } from './helpers/emailHeadHelper';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -244,6 +245,10 @@ export default {
       // #1786: modelo de e-mail das Campanhas escolhido no "+" e os valores dos campos.
       modeloDoEmail: null,
       valoresDoModelo: {},
+      // #1786: o último pedido de modelo (descarta resposta atrasada) e os destinatários
+      // que a resposta montou (para a troca de tipo não apagar o que foi editado à mão).
+      pedidoDoModelo: 0,
+      destinatariosMontados: {},
       // #1702: a seta do gravador do WhatsApp para e envia; o envio sai quando o áudio vira anexo.
       enviarAudioAoAnexar: false,
       copilotAcceptedMessages: {},
@@ -393,6 +398,9 @@ export default {
     isReplyButtonDisabled() {
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
+      // #1786: endereço errado, ou Encaminhar sem Para (o envio cairia no cliente).
+      if (this.emailNovo && !this.isPrivate && !this.destinatariosDoEmailOk)
+        return true;
       if (this.hasAttachments || this.hasRecordedAudio) return false;
       // #1786: com um modelo de e-mail, dá para enviar só o modelo.
       if (this.emailNovo && this.modeloDoEmail && !this.isPrivate) {
@@ -404,6 +412,18 @@ export default {
         this.message.length === 0 ||
         this.message.length > this.maxLength
       );
+    },
+    encaminhandoEmail() {
+      return this.modoDoEmail === MODOS_DE_RESPOSTA.ENCAMINHAR;
+    },
+    destinatariosDoEmailOk() {
+      const campos = [this.toEmails, this.ccEmails, this.bccEmails];
+      if (!campos.every(campo => validEmailsByComma(String(campo || ''))))
+        return false;
+      if (!this.encaminhandoEmail) return true;
+      return String(this.toEmails || '')
+        .split(',')
+        .some(item => item.trim());
     },
     sender() {
       return {
@@ -694,7 +714,9 @@ export default {
     // 2. Fixes and issue where CC/BCC fields could be reset/lost after assignment/activity actions or message mutations that did not represent a true email context change.
     lastEmail: {
       handler(lastEmail) {
-        if (!lastEmail) return;
+        // #1786: no e-mail novo quem monta os destinatários é só o responderEmail; um
+        // e-mail novo do cliente no meio da resposta não troca o Para.
+        if (!lastEmail || this.emailNovo) return;
         this.setCCAndToEmailsFromLastChat();
       },
       deep: true,
@@ -703,6 +725,7 @@ export default {
       if (conversationId !== oldConversationId) {
         this.switchDraftContext(conversationId, this.effectiveReplyMode);
         this.resetRecorderAndClearAttachments();
+        this.zerarRespostaDoEmail();
       }
     },
     message() {
@@ -1452,7 +1475,7 @@ export default {
     },
     // #1786: as ações da conversa de e-mail nova montam os destinatários (e o texto do
     // encaminhado) a partir do e-mail escolhido, e o envio segue o de sempre.
-    responderEmail({ modo, mensagemId } = {}) {
+    responderEmail({ modo, mensagemId, trocaDeTipo = false } = {}) {
       // A caixa acabou de aparecer: o foco vem depois de ela ser desenhada.
       const focar = () => {
         this.$nextTick(() => {
@@ -1461,8 +1484,10 @@ export default {
           );
         });
       };
+      // Trocar só entre nota e resposta: o Chatwoot tira os anexos nessa troca (regras
+      // de envio diferentes); reabrir no mesmo modo mantém os anexos.
       if (modo === MODOS_DE_RESPOSTA.NOTA) {
-        this.setReplyMode(REPLY_EDITOR_MODES.NOTE);
+        if (!this.isPrivate) this.setReplyMode(REPLY_EDITOR_MODES.NOTE);
         focar();
         return;
       }
@@ -1476,10 +1501,8 @@ export default {
         caixa: this.inbox,
       });
       this.modoDoEmail = modo;
-      this.setReplyMode(REPLY_EDITOR_MODES.REPLY);
-      this.toEmails = resposta.para;
-      this.ccEmails = resposta.cc;
-      this.bccEmails = resposta.cco;
+      if (this.isPrivate) this.setReplyMode(REPLY_EDITOR_MODES.REPLY);
+      this.aplicarDestinatarios(resposta, trocaDeTipo);
       // O histórico vai junto por padrão; o encaminhado mostra o original embaixo.
       // O servidor monta o HTML (ConversaCanal::CitacaoDoEmail).
       this.citacaoDoEmail = mensagem?.id
@@ -1491,8 +1514,43 @@ export default {
             mensagemId: mensagem.id,
           }
         : null;
-      this.historicoDesligado = false;
+      if (!trocaDeTipo) this.historicoDesligado = false;
       focar();
+    },
+    // #1786: o menu do topo troca o tipo da MESMA resposta: continua no e-mail que
+    // estava sendo respondido, e o que o atendente escreveu nos endereços fica.
+    trocarTipoDoEmail(modo) {
+      this.responderEmail({
+        modo,
+        mensagemId: this.citacaoDoEmail?.mensagemId,
+        trocaDeTipo: true,
+      });
+    },
+    // Na troca de tipo, um campo editado à mão (diferente do que foi montado) fica.
+    aplicarDestinatarios(resposta, preservarEditados) {
+      const novos = {
+        toEmails: resposta.para,
+        ccEmails: resposta.cc,
+        bccEmails: resposta.cco,
+      };
+      const montados = this.destinatariosMontados;
+      Object.entries(novos).forEach(([campo, valor]) => {
+        const editado = (this[campo] || '') !== (montados[campo] || '');
+        if (preservarEditados && editado) return;
+        this[campo] = valor;
+      });
+      this.destinatariosMontados = novos;
+    },
+    // #1786: o estado da resposta de e-mail é da conversa: ao trocar, nada passa para a
+    // outra (o modelo preenchido com os dados de um contato iria para outro).
+    zerarRespostaDoEmail() {
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
+      this.citacaoDoEmail = null;
+      this.modoDoEmail = MODOS_DE_RESPOSTA.TODOS;
+      this.historicoDesligado = false;
+      this.destinatariosMontados = {};
+      this.pedidoDoModelo += 1;
     },
     // #1786: pede ao servidor o histórico ou o encaminhado formatado junto da resposta.
     comCitacaoDoEmail(payload) {
@@ -1510,10 +1568,18 @@ export default {
     },
     // #1786: o modelo escolhido no "+" chega com os campos já preenchidos pelo contato e
     // pela IA; o navegador compila o MJML sem o rodapé de descadastro.
+    // Só vale a resposta do último pedido, na mesma conversa: trocar de modelo ou de
+    // conversa no meio do caminho descarta a que chegar atrasada.
     async carregarModeloDeCampanha(id) {
+      this.pedidoDoModelo += 1;
+      const pedido = this.pedidoDoModelo;
+      const conversaId = this.currentChat.id;
+      const valeAinda = () =>
+        pedido === this.pedidoDoModelo && this.currentChat?.id === conversaId;
       try {
-        const { data } = await ModelosDeEmailAPI.abrir(id, this.currentChat.id);
+        const { data } = await ModelosDeEmailAPI.abrir(id, conversaId);
         const html = await montarModelo({ mjml: data.mjml, html: data.html });
+        if (!valeAinda()) return;
         if (!html) throw new Error('modelo vazio');
         this.modeloDoEmail = {
           id: data.id,
@@ -1525,7 +1591,8 @@ export default {
           data.campos.map(campo => [campo.chave, campo.valor])
         );
       } catch {
-        useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
+        if (valeAinda())
+          useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
       }
     },
     // #1786: a janela de emojis do e-mail abre em cima da barra de baixo da caixa.
@@ -1679,7 +1746,7 @@ export default {
     <TopoDaResposta
       v-if="emailNovo"
       :modo="modoDoTopoDoEmail"
-      @trocar-modo="responderEmail({ modo: $event })"
+      @trocar-modo="trocarTipoDoEmail"
     />
     <ReplyTopPanel
       v-else
@@ -1758,6 +1825,7 @@ export default {
           v-model:cc-emails="ccEmails"
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
+          :encaminhar="encaminhandoEmail"
         />
         <ReplyEmailHead
           v-else-if="showReplyHead && isDefaultEditorMode"

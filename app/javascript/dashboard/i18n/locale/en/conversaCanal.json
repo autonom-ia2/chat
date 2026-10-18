@@ -386,6 +386,8 @@
       "ABRIR_EM_JANELA": "Open in a window",
       "VOLTAR_PARA_A_CONVERSA": "Back to the conversation",
       "REMOVER_ENDERECO": "Remove {endereco}",
+      "ENCAMINHAR_SEM_PARA": "Add who will receive the forwarded email in To.",
+      "PREFIXO_ENCAMINHADO": "Fwd:",
       "ASSUNTO_CURTO": "Subject",
       "FORMATACAO": "Formatting",
       "MODELOS": "Canned responses",

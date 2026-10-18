@@ -40,6 +40,8 @@ const nomes = ref({});
 const rotuloDaEtiqueta = endereco =>
   nomes.value[endereco.toLowerCase()] || lerEndereco(endereco).endereco;
 const valido = endereco => validEmailsByComma(endereco);
+// Errado não fica só na cor: ícone na etiqueta e a frase embaixo, ligada ao campo.
+const temInvalido = computed(() => enderecos.value.some(e => !valido(e)));
 
 const digitado = ref('');
 const sugestoes = ref([]);
@@ -160,10 +162,16 @@ const aoTeclar = evento => {
         :title="endereco"
         data-etiqueta-de-endereco
       >
+        <Icon
+          v-if="!valido(endereco)"
+          icon="i-lucide-circle-alert"
+          class="size-3.5 flex-shrink-0"
+        />
         <span class="truncate">{{ rotuloDaEtiqueta(endereco) }}</span>
+        <!-- O círculo é de 24 px; a área de toque vai a 44 px (after:-inset-2.5). -->
         <button
           type="button"
-          class="grid place-content-center size-6 rounded-full hover:bg-n-alpha-3"
+          class="relative grid place-content-center size-6 rounded-full hover:bg-n-alpha-3 after:absolute after:-inset-2.5 after:content-['']"
           :aria-label="t('CONVERSA_CANAL.EMAIL.REMOVER_ENDERECO', { endereco })"
           @click="remover(endereco)"
         >
@@ -179,16 +187,28 @@ const aoTeclar = evento => {
         :aria-expanded="aberta"
         :aria-controls="`${id}-lista`"
         :aria-activedescendant="ativa >= 0 ? `${id}-op-${ativa}` : undefined"
+        :aria-invalid="temInvalido || undefined"
+        :aria-describedby="temInvalido ? `${id}-erro` : undefined"
         :placeholder="enderecos.length ? '' : placeholder"
         class="reset-base flex-1 min-w-[6rem] h-8 bg-transparent border-0 outline-none text-sm text-n-slate-12 placeholder:text-n-slate-10"
         @input="aoDigitar"
         @keydown="aoTeclar"
         @blur="confirmarDigitado"
       />
+      <p
+        v-if="temInvalido"
+        :id="`${id}-erro`"
+        role="alert"
+        class="w-full text-xs text-n-ruby-11"
+        data-erro-de-endereco
+      >
+        {{ t('CONVERSA_CANAL.EMAIL.ENDERECO_INVALIDO') }}
+      </p>
     </div>
     <slot />
+    <!-- v-if: a lista fechada não fica no DOM (o Esc da resposta procura listas abertas). -->
     <ul
-      v-show="aberta"
+      v-if="aberta"
       :id="`${id}-lista`"
       role="listbox"
       class="reset-base list-none absolute top-full start-12 z-40 mt-1 w-[min(24rem,calc(100%-3rem))] py-1 rounded-xl bg-n-alpha-3 backdrop-blur-[100px] border border-n-weak shadow-lg"

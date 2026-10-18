@@ -30,6 +30,23 @@ RSpec.describe 'Ditado da resposta de e-mail' do
       expect(response.parsed_body['texto']).to eq('Oi, Marina, segue a proposta.')
     end
 
+    it 'o transcritor lê o próprio arquivo recebido, sem subir para o armazenamento' do
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: credencial))
+      lido = nil
+      cliente = instance_double(Crm::Ai::TranscriptionClient)
+      allow(cliente).to receive(:transcribe) do |anexo|
+        anexo.file.blob.open { |arquivo| lido = arquivo.read.bytesize }
+        'ok'
+      end
+      allow(Crm::Ai::TranscriptionClient).to receive(:new).and_return(cliente)
+      allow(ActiveStorage::Blob).to receive(:create_and_upload!)
+
+      ditar
+
+      expect(lido).to eq(File.size(Rails.root.join('spec/assets/sample.ogg')))
+      expect(ActiveStorage::Blob).not_to have_received(:create_and_upload!)
+    end
+
     it 'sem IA na conta, explica em português' do
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
       ditar

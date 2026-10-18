@@ -386,6 +386,8 @@
       "ABRIR_EM_JANELA": "Abrir em janela",
       "VOLTAR_PARA_A_CONVERSA": "Voltar para a conversa",
       "REMOVER_ENDERECO": "Tirar {endereco}",
+      "ENCAMINHAR_SEM_PARA": "Coloque em Para quem vai receber o encaminhado.",
+      "PREFIXO_ENCAMINHADO": "Enc:",
       "ASSUNTO_CURTO": "Assunto",
       "FORMATACAO": "Formatação",
       "MODELOS": "Respostas prontas",

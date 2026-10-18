@@ -37,7 +37,11 @@ const MODOS = [
     chave: 'ENCAMINHAR',
     icone: 'i-lucide-forward',
   },
-  { modo: MODOS_DE_RESPOSTA.NOTA, chave: 'NOTA_PRIVADA', icone: 'i-lucide-lock' },
+  {
+    modo: MODOS_DE_RESPOSTA.NOTA,
+    chave: 'NOTA_PRIVADA',
+    icone: 'i-lucide-lock',
+  },
 ];
 const atual = computed(
   () => MODOS.find(item => item.modo === props.modo) || MODOS[1]
@@ -53,10 +57,14 @@ const alternar = async () => {
   await nextTick();
   menu.value?.querySelector('[aria-checked=true]')?.focus();
 };
-const escolher = modo => {
+const fechar = () => {
   aberto.value = false;
   botao.value?.focus();
-  emit('trocarModo', modo);
+};
+// Esc e o tipo que já está escolhido só fecham o menu: a resposta montada fica como está.
+const escolher = modo => {
+  fechar();
+  if (modo !== props.modo) emit('trocarModo', modo);
 };
 
 const expandida = computed(() => email.tamanho.value === TAMANHOS.EXPANDIDA);
@@ -99,7 +107,7 @@ const ICONE =
         v-on-click-outside="[() => (aberto = false), { ignore: [botao] }]"
         role="menu"
         class="reset-base list-none absolute top-full start-0 mt-1 z-40 w-60 py-1 rounded-xl bg-n-alpha-3 backdrop-blur-[100px] border border-n-weak shadow-lg"
-        @keydown.esc.prevent.stop="escolher(modo)"
+        @keydown.esc.prevent.stop="fechar"
       >
         <li
           v-for="item in MODOS"
@@ -153,7 +161,8 @@ const ICONE =
       </button>
       <button
         type="button"
-        :class="[ICONE, 'hidden sm:grid']"
+        class="hidden sm:grid"
+        :class="[ICONE]"
         :aria-label="
           emJanela
             ? t('CONVERSA_CANAL.EMAIL.VOLTAR_PARA_A_CONVERSA')
