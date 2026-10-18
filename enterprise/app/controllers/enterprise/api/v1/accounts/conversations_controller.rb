@@ -1,6 +1,12 @@
 module Enterprise::Api::V1::Accounts::ConversationsController
   extend ActiveSupport::Concern
 
+  # Quem só lê (conversation_view sem o trio) não começa conversa (#1800).
+  def create
+    authorize Conversation, :create?
+    super
+  end
+
   def inbox_assistant
     assistant = @conversation.inbox.captain_assistant
 
