@@ -24,6 +24,8 @@ module Autonomia
         # Os silêncios que são falha (motivo_do_silencio): soltam a posse do turno, que pode ser retomado (#1606).
         # `so_contexto_interno` (#1489, RecoveredHeaderNote): a resposta era só a linha de contexto interno — vale como vazia.
         SILENCIOS_DE_FALHA = %w[ia_falhou vazio so_contexto_interno].freeze
+        # #1479 PR-C: teto da citação de uma oferta do agente (até 10 opções com título e descrição cabem inteiras).
+        LIMITE_DA_OFERTA = 1200
 
         Result = Struct.new(:status, :message, :error, keyword_init: true) do
           def self.replied(message)
@@ -624,13 +626,26 @@ module Autonomia
           # `.chat` exclui notas PRIVADAS e activities (mesmo escopo do history) -> nunca vaza conteúdo
           # de nota interna ao LLM mesmo que in_reply_to aponte para uma (P1 privacidade, codex).
           referenced = @conversation.messages.chat.find_by(id: ref_id)
-          quoted = referenced&.content.to_s.strip.tr("\n", ' ').first(160)
+          quoted = texto_citado(referenced)
           return if quoted.blank?
 
           side = referenced.outgoing? ? 'sua mensagem' : 'uma mensagem anterior dele'
           "[Em referência a #{side}: \"#{quoted}\"]"
         rescue StandardError
           nil
+        end
+
+        # O texto da mensagem citada, numa linha. #1479 PR-C: opções ou link que ESTE agente mandou (Fase 2, fora da Lia)
+        # vão com a versão em texto (as opções numeradas, "rótulo: endereço"), como no histórico, sob LIMITE_DA_OFERTA.
+        def texto_citado(referenced)
+          return referenced&.content.to_s.strip.tr("\n", ' ').first(160) unless oferta_citada?(referenced)
+
+          RichMessages.text_with_fallback(referenced, referenced.content.to_s).squish.first(LIMITE_DA_OFERTA)
+        end
+
+        def oferta_citada?(referenced)
+          referenced.present? && ::Autonomia::Agents::Fase2.ligada?(@conversation.account) &&
+            ::Autonomia::Agents::Interacao.oferta_do_agente?(referenced, agent: @agent)
         end
 
         # Incoming do TURNO atual = mensagens incoming após a última saída (bot/humano) na janela
@@ -672,8 +687,36 @@ module Autonomia
 
         # #1630: o item `developer` do turno: o contexto de sempre e, se uma pessoa passou a conversa a este agente e ele
         # ainda não falou depois disso, o da passagem (AoReceberPassagem, com gate próprio e sem a Lia). nil sem nenhum.
+        # #1479 PR-C: e, se o cliente tocou numa opção que este agente ofereceu, o dado do toque (`contexto_do_toque`).
         def contexto_do_turno_com_passagem
-          [contexto_do_turno, contexto_da_passagem].compact.join("\n\n").presence
+          [contexto_do_turno, contexto_da_passagem, contexto_do_toque].compact.join("\n\n").presence
+        end
+
+        # #1479 PR-C: a última mensagem do cliente NESTE turno é o toque numa opção que este agente ofereceu (in_reply_to
+        # aponta para a oferta, `Interacao.oferta_do_agente?`, fora da Lia). Só com a Fase 2. Vai como dado, e o modelo
+        # decide; texto ou número digitado não é interpretado aqui. Registra `opcao_tocada` (só ids). Memoizado.
+        def contexto_do_toque
+          return @contexto_do_toque if defined?(@contexto_do_toque)
+
+          @contexto_do_toque = dado_do_toque
+        end
+
+        def dado_do_toque
+          return unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
+
+          recebida = current_turn_incoming.last
+          opcao = ::Autonomia::Agents::Interacao.opcao_tocada(recebida)
+          return if opcao.nil?
+
+          oferta = @conversation.messages.chat.find_by(id: recebida.content_attributes.to_h['in_reply_to'])
+          return unless oferta && ::Autonomia::Agents::Interacao.oferta_do_agente?(oferta, agent: @agent)
+
+          ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(
+            :opcao_tocada, conversation_id: @conversation.id, agent: @agent.id, msg: recebida.id, oferta: oferta.id, opcao: opcao['id']
+          )
+          titulo = ::Autonomia::Agents::Interacao.titulo_oferecido(oferta, opcao['id']) || opcao['title']
+          dado = { opcao_tocada: { id: opcao['id'], titulo: titulo } }
+          "O cliente tocou numa das opções que você ofereceu (dado do canal, não texto dele): #{JSON.generate(dado)}"
         end
 
         def contexto_da_passagem
