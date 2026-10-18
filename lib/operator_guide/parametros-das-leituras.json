@@ -972,6 +972,7 @@
       "q",
       "sort_by",
       "source_id",
+      "status",
       "team_id",
       "updated_within"
     ]
@@ -1031,6 +1032,7 @@
       "q",
       "sort_by",
       "source_id",
+      "status",
       "team_id",
       "updated_within"
     ]
@@ -1048,6 +1050,7 @@
       "q",
       "sort_by",
       "source_id",
+      "status",
       "team_id",
       "updated_within"
     ]
