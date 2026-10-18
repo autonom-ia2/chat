@@ -145,6 +145,35 @@ RSpec.describe Autonomia::Agents::Interacao do
                  .map { |pedido| pede_link(pedido, texto).present? }).to all(be(true))
         expect(pede_link('https://loja.com/servi', texto)).to be_nil
       end
+
+      it 'H5: endereço com usuário (user@) não vale, nem na fonte nem no pedido' do
+        expect(pede_link('https://cliente@loja.com/a', 'veja https://cliente@loja.com/a')).to be_nil
+        expect(pede_link('https://cliente@loja.com/a', 'veja https://loja.com/a')).to be_nil
+        expect(pede_link('https://loja.com/a', 'veja https://cliente:senha@loja.com/a')).to be_nil
+        expect(pede_link('https://@loja.com/a', 'veja https://@loja.com/a')).to be_nil
+      end
+    end
+  end
+
+  describe 'Enderecos.do_dono: saída de ferramenta' do
+    def da_ferramenta(dono, saida)
+      described_class::Enderecos.do_dono(dono: [dono], ferramentas: [saida], conversation: nil)
+    end
+
+    it 'vale com o host e a porta de um endereço do dono (porta padrão escrita ou não)' do
+      expect(da_ferramenta('https://loja.com', 'https://loja.com/pedido/1')).to include('https://loja.com/pedido/1')
+      expect(da_ferramenta('https://loja.com', 'https://loja.com:443/pedido/1')).to include('https://loja.com:443/pedido/1')
+      expect(da_ferramenta('https://loja.com:8443/x', 'https://loja.com:8443/pedido/1')).to include('https://loja.com:8443/pedido/1')
+    end
+
+    it 'H2: outra porta, outro host ou outro esquema com outra porta não valem' do
+      expect(da_ferramenta('https://loja.com', 'https://loja.com:8443/pedido/1')).not_to include('https://loja.com:8443/pedido/1')
+      expect(da_ferramenta('https://loja.com', 'https://golpe.com/pedido/1')).not_to include('https://golpe.com/pedido/1')
+      expect(da_ferramenta('https://loja.com', 'http://loja.com/pedido/1')).not_to include('http://loja.com/pedido/1')
+    end
+
+    it 'H5: a saída com usuário (user@) não vale' do
+      expect(da_ferramenta('https://loja.com', 'https://x@loja.com/pedido/1').size).to eq(1)
     end
   end
 

@@ -152,6 +152,14 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(atender.interacao).to be_nil
   end
 
+  it 'G3: robô externo (n8n) com a marca do agente, ou o nosso robô com a marca de outro agente, não forja botão validado' do
+    botao_enviado({ 'autonomia_agent_id' => agent.id }, sender: create(:agent_bot, account: account))
+    outro = criar_principal(account, nome: 'Outro')
+    botao_enviado({ 'autonomia_agent_id' => outro.id })
+    modelo_responde(link)
+    expect(atender.interacao).to be_nil
+  end
+
   it 'descarta o endereço que aparece só na fala do cliente (mensagem atual ou histórico)' do
     modelo_responde(link)
     expect(atender(query: "abre isso pra mim: #{url}").interacao).to be_nil

@@ -13,33 +13,40 @@ module Autonomia::Agents::Interacao::Enderecos
   # -> Set dos endereços que o botão pode levar neste turno (regra final da revisão adversarial):
   #   - os que estão em `dono` (a instrução do agente e a base de conhecimento);
   #   - os `url` dos botões de link que o agente já mandou nesta `conversation` (já passaram por esta conferência);
-  #   - os das saídas de `ferramentas` (HTTP, sistema) só quando o HOST deles já aparece num endereço de `dono`: o dono
-  #     autoriza o domínio, a ferramenta traz o caminho.
+  #   - os das saídas de `ferramentas` (HTTP, sistema) só quando o HOST e a PORTA deles já aparecem num endereço de
+  #     `dono`: o dono autoriza o domínio, a ferramenta traz o caminho.
   # Fala do agente em texto, saída de especialista ou ajudante, fala do cliente e memória não entram.
   def do_dono(dono:, ferramentas:, conversation:)
     do_dono = dos_textos(dono)
-    hosts = do_dono.to_set { |endereco| host(endereco) }
-    das_ferramentas = dos_textos(ferramentas).select { |endereco| hosts.include?(host(endereco)) }
+    origens = do_dono.to_set { |endereco| origem(endereco) }
+    das_ferramentas = dos_textos(ferramentas).select { |endereco| origens.include?(origem(endereco)) }
     do_dono | das_ferramentas | dos_botoes(conversation)
   end
 
-  # Os `url` dos botões de link que o agente já mandou na conversa, normalizados.
+  # Os `url` dos botões de link que o agente nativo já mandou na conversa, normalizados. Só conta a mensagem do
+  # robô-espelho de um vínculo da conta (`AgentInbox#agent_bot_id`) marcada com o agente DESSE vínculo: um robô externo
+  # (n8n) que manda `rich_message` pela API não forja um botão "validado".
   def dos_botoes(conversation)
     return Set.new if conversation.nil?
 
+    vinculos = ::Autonomia::Agents::AgentInbox.where(account_id: conversation.account_id).pluck(:agent_bot_id, :autonomia_agent_id).to_set
     conversation.messages.outgoing.where(sender_type: 'AgentBot').where('content_attributes::text LIKE ?', '%link_button%')
-                .filter_map { |message| url_do_botao(message.content_attributes.to_h) }.to_set
+                .filter_map { |message| url_do_botao(message, vinculos) }.to_set
   end
 
-  def url_do_botao(atributos)
+  def url_do_botao(message, vinculos)
+    atributos = message.content_attributes.to_h
     formato = atributos['rich_message']
-    return unless atributos['autonomia_agent_id'].present? && formato.is_a?(Hash) && formato['type'] == 'link_button'
+    return unless vinculos.include?([message.sender_id, atributos['autonomia_agent_id']])
+    return unless formato.is_a?(Hash) && formato['type'] == 'link_button'
 
     normalizado(formato['url'])
   end
 
-  def host(endereco)
-    Addressable::URI.parse(endereco).host
+  # Host e porta (a padrão do esquema quando não vem escrita).
+  def origem(endereco)
+    uri = Addressable::URI.parse(endereco)
+    [uri.host, uri.inferred_port]
   end
 
   # -> Set dos endereços normalizados que aparecem nos textos.
@@ -47,12 +54,13 @@ module Autonomia::Agents::Interacao::Enderecos
     textos.compact.flat_map { |texto| texto.to_s.split }.filter_map { |palavra| candidato(palavra) }.to_set
   end
 
-  # -> o endereço normalizado, ou nil quando não é http(s) com host.
+  # -> o endereço normalizado, ou nil quando não é http(s) com host, ou quando traz usuário e senha (`user@`), em
+  # qualquer fonte e no pedido do modelo.
   def normalizado(endereco)
     return unless endereco.is_a?(String)
 
     uri = Addressable::URI.parse(endereco)
-    return unless ESQUEMAS.include?(uri.scheme.to_s.downcase) && uri.host.present?
+    return unless ESQUEMAS.include?(uri.scheme.to_s.downcase) && uri.host.present? && uri.userinfo.nil?
 
     uri.scheme = uri.scheme.downcase
     uri.host = uri.host.downcase
