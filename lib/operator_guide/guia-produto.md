@@ -2384,7 +2384,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como mando um e-mail para o spam?; Como paro de receber e-mail de um remetente?; Onde fica o Spam da caixa de e-mail?; Marquei como spam sem querer, como desfaço?
 - onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Spam no topo do e-mail; a pasta Spam fica no menu lateral, embaixo da caixa de e-mail
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
 - passos: 1. Abra a conversa de e-mail; 2. Toque em Spam no topo; 3. A conversa sai da Entrada, fica resolvida e vai para a pasta Spam; 4. Para desfazer, abra a pasta Spam no menu, abra a conversa e toque em Não é spam.
 - gotchas: o Spam vale só para aquele remetente naquela caixa de e-mail: e-mail novo dele nessa caixa cai direto no Spam, já resolvido; o contato não fica bloqueado, e o WhatsApp e as outras caixas dele seguem normais; Não é spam devolve a conversa à Entrada, reabre e o remetente volta a chegar; nada muda na conta de e-mail do cliente (Gmail, Outlook); voltar de uma conversa aberta pelo Spam volta para a lista do Spam.
@@ -2394,7 +2394,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como apago um e-mail?; Onde fica a Lixeira do e-mail?; Como restauro uma conversa da Lixeira?; Como excluo uma conversa de e-mail para sempre?
 - onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Lixeira no topo do e-mail; a pasta Lixeira fica no menu lateral, embaixo da caixa de e-mail
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
 - passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
 - gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
@@ -2404,7 +2404,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?
 - onde_fica: Menu lateral > caixa de e-mail > Escrever (acima de Spam e Lixeira); abre a gaveta de nova conversa já nessa caixa
 - rota: `inbox_dashboard` - `/app/accounts/:accountId/inbox/:inbox_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
 - passos: 1. Toque em Escrever, embaixo da caixa de e-mail no menu; 2. Em Para quem, procure o contato ou, se não achar, crie no cartão Criar contato com nome e e-mail; 3. Escreva o assunto e a mensagem; pelo + dá para pôr um modelo de e-mail das Campanhas, anexo, emoji ou ditar; 4. Clique em Enviar mensagem.
 - gotchas: o e-mail sai pela caixa de onde você tocou em Escrever, mesmo que um rascunho de outra caixa tenha ficado guardado; o contato novo pela caixa de e-mail precisa de e-mail; se o contato já tem conversa nessa caixa, a tela oferece continuar aquela conversa, com o histórico e o Re: do assunto.
