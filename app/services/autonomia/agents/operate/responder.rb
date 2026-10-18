@@ -281,7 +281,7 @@ module Autonomia
         # no corpo). -> a mensagem de áudio.
         def post_voz!(audio_bytes, interacao)
           audio = post_audio_reply!(audio_bytes)
-          post_reply!((interacao['rotulo'] if interacao['tipo'] == 'link'), interacao) if interacao
+          post_reply!(nil, interacao) if interacao
           audio
         end
 
@@ -653,6 +653,8 @@ module Autonomia
                   else
                     recent_messages.map { |message| { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s } }
                   end
+          # #1479: as opções e o link que o agente mandou entram com a versão em texto (o modelo sabe o que ofereceu).
+          itens = ::Autonomia::Agents::Interacao.no_historico(itens, recent_messages, agent: @agent)
           # chat#1489: mensagem recuperada com arquivo que não foi lido ganha uma linha de contexto, nos dois caminhos.
           ::Autonomia::Agents::Operate::RecoveredHeaderNote.com_contexto(itens, recent_messages)
         end

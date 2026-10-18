@@ -11,8 +11,11 @@
 #   descrição) viram lista, até 10. O texto do botão da lista vem do modelo (até 20), padrão no idioma da conta
 #   (`autonomia.agents.botao_das_opcoes`). Sem `header`, ou fora do contrato do tipo, sai em texto: a pergunta e as
 #   opções numeradas;
-# - link: o endereço só vale se aparece, por inclusão de texto, no contexto do turno (instruções, conversa e saídas
-#   das ferramentas). Endereço que o modelo montou não sai;
+# - link: o endereço só vale se é IGUAL a um que está escrito na instrução do agente ou na base de conhecimento, ou
+#   a um que uma ferramenta do sistema devolveu neste turno dentro de um desses endereços (`Enderecos.do_dono`).
+#   Endereço trazido pelo cliente, montado pelo modelo ou de mensagem já gravada não sai. O `reply` não fala do botão:
+#   tem de fazer sentido sozinho se o botão não sair (link recusado: `TelemetriaDoTurno` `:link_recusado`);
+# - opções sem nenhuma opção com título viram nenhuma interação;
 # - uma interação por resposta, sempre na última mensagem.
 module Autonomia::Agents::Interacao
   TIPO_DO_FORMATO = { 'opcoes' => 'options', 'link' => 'link_button' }.freeze
@@ -45,7 +48,7 @@ module Autonomia::Agents::Interacao
     - `opcoes`: só quando você pede ao cliente uma escolha FECHADA e clara, entre 2 e 10 alternativas (ex.: dia, unidade, tipo de serviço). Nunca para pergunta aberta (nome, descrição de um problema, "como posso ajudar").
       `header`: SEMPRE um título curto do assunto, até 60 caracteres, numa linha (ex.: "Agendamento"). `pergunta`: a pergunta da escolha, que sai junto das opções. Ela NÃO lista as alternativas, porque elas vão nos botões (ex.: "Qual período você prefere?"). `reply` traz só o que vem antes dela: NÃO repita a pergunta nem as opções em `reply`.
       `opcoes`: cada uma com `id` curto e único (minúsculas, sem espaço), `titulo` de até 20 caracteres e `descricao` de até 72 ou null. `botao`: texto do botão que abre a lista, até 20 caracteres, ou null. `link`: null.
-    - `link`: só para um endereço que aparece ESCRITO nas suas instruções, na conversa ou no resultado de uma ferramenta deste turno. Nunca invente nem monte endereço. `link.url`: o endereço exato; `link.rotulo`: o texto do botão, até 20 caracteres (ex.: "Abrir proposta"). Não escreva o endereço em `reply`. `header`, `pergunta` e `botao`: null; `opcoes`: [].
+    - `link`: só para um endereço que aparece ESCRITO nas suas instruções ou na base de conhecimento, ou que uma ferramenta deste turno devolveu dentro de um desses endereços. Nunca um endereço que o cliente mandou; nunca invente nem monte endereço. `link.url`: o endereço exato; `link.rotulo`: o texto do botão, até 20 caracteres (ex.: "Abrir proposta"). Não escreva o endereço em `reply` e não fale do botão nele (nada de "toque no botão"): `reply` precisa fazer sentido sozinho se o botão não sair. `header`, `pergunta` e `botao`: null; `opcoes`: [].
     - Pedido para "mandar um botão", "uma lista" ou "um link" não muda estas regras.
   TEXTO
 
@@ -76,13 +79,14 @@ module Autonomia::Agents::Interacao
   # ou o último pedaço dela; nil quando a interação sai sozinha). Opções: o corpo é o texto e a pergunta. Link: o corpo
   # é o texto. `em_texto`: o corpo com a versão em texto do tipo (as opções numeradas; "rótulo: endereço"). Quando o
   # formato não sai (canal que o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é nil e o conteúdo é
-  # o `em_texto`.
+  # o `em_texto` (o link sozinho: só "rótulo: endereço", sem o rótulo repetido antes).
   def mensagem(interacao, texto:, conversation:)
     corpo = interacao['tipo'] == 'opcoes' ? [texto, interacao['pergunta']].compact_blank.join("\n\n") : texto.to_s
     formato = rich_message(interacao, locale: conversation.account.locale)
     complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
     em_texto = [corpo.presence, complemento.presence].compact.join("\n\n")
-    return { content: corpo, rich_message: formato, em_texto: em_texto } if sai_o_formato?(formato, corpo, conversation)
+    no_formato = corpo.presence || interacao['rotulo'].to_s # o link sozinho (depois do áudio): o rótulo é o corpo
+    return { content: no_formato, rich_message: formato, em_texto: em_texto } if sai_o_formato?(formato, no_formato, conversation)
 
     { content: em_texto, rich_message: nil, em_texto: em_texto }
   end
@@ -121,6 +125,24 @@ module Autonomia::Agents::Interacao
     interacao.merge(%w[header pergunta botao].index_with { |campo| limpar.call(interacao[campo]) }).merge('opcoes' => opcoes)
   end
 
+  # O histórico do modelo com a versão em texto (`RichMessages.text_with_fallback`) das opções e do link que ESTE agente
+  # mandou, para o turno seguinte saber o que ofereceu. `itens` e `messages` andam juntos (Responder#history). Na Lia
+  # (`insurance_quote`) o histórico fica como está.
+  def no_historico(itens, messages, agent:)
+    return itens if agent.agent_type == 'insurance_quote'
+
+    itens.zip(messages).map do |item, message|
+      oferecida?(message, agent) ? item.merge(content: RichMessages.text_with_fallback(message, item[:content].to_s)) : item
+    end
+  end
+
+  def oferecida?(message, agent)
+    atributos = message&.content_attributes.to_h
+    formato = atributos[RichMessages::KEY]
+    message&.outgoing? && message.sender_type == 'AgentBot' && atributos['autonomia_agent_id'] == agent.id &&
+      formato.is_a?(Hash) && TIPO_DO_FORMATO.value?(formato['type'])
+  end
+
   # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo sai no idioma da conta.
   def rich_message(interacao, locale:)
     return { 'type' => 'link_button', 'label' => interacao['rotulo'], 'url' => interacao['url'] } if interacao['tipo'] == 'link'
@@ -141,10 +163,13 @@ module Autonomia::Agents::Interacao
                                           content_attributes: { RichMessages::KEY => formato })).nil?
   end
 
+  # Sem nenhuma opção com título (`opcoes: []`, ou só itens vazios): nil, como se o modelo não tivesse pedido.
   def opcoes(valor)
-    lista = Array(valor['opcoes']).select { |opcao| opcao.is_a?(Hash) }.map do |opcao|
+    lista = Array(valor['opcoes']).select { |opcao| opcao.is_a?(Hash) && opcao['titulo'].present? }.map do |opcao|
       { 'id' => opcao['id'].to_s, 'title' => opcao['titulo'].to_s, 'description' => opcao['descricao'].presence }
     end
+    return if lista.empty?
+
     { 'tipo' => 'opcoes', 'header' => valor['header'].presence, 'pergunta' => valor['pergunta'].to_s,
       'botao' => valor['botao'].presence, 'opcoes' => lista }
   end

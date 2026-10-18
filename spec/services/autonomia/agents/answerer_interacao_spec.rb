@@ -132,30 +132,18 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(segundo.interacao).to be_nil
   end
 
-  def botao_enviado(atributos, tipo: 'link_button', sender: agent_inbox.agent_bot)
+  def botao_gravado(**extras)
     create(:message, account: account, conversation: conversation, inbox: cloud.inbox, message_type: :outgoing,
-                     sender: sender, content: 'Seu pedido',
-                     content_attributes: atributos.merge('rich_message' => { 'type' => tipo, 'label' => 'Ver', 'url' => url }))
+                     sender: agent_inbox.agent_bot, content: 'Seu pedido',
+                     content_attributes: { 'autonomia_agent_id' => agent.id,
+                                           'rich_message' => { 'type' => 'link_button', 'label' => 'Ver', 'url' => url } }, **extras)
   end
 
-  it 'botão de link que o agente já mandou (validado) é fonte' do
-    botao_enviado({ 'autonomia_agent_id' => agent.id })
-    modelo_responde(link)
-    expect(atender.interacao).to include('url' => url)
-  end
-
-  it 'botão que não saiu do agente nativo (sem a marca, ou de uma pessoa, ou de outro formato) não é fonte' do
-    botao_enviado({})
-    botao_enviado({ 'autonomia_agent_id' => agent.id }, sender: create(:user, account: account))
-    botao_enviado({ 'autonomia_agent_id' => agent.id, 'nota' => 'link_button' }, tipo: 'options')
-    modelo_responde(link)
-    expect(atender.interacao).to be_nil
-  end
-
-  it 'G3: robô externo (n8n) com a marca do agente, ou o nosso robô com a marca de outro agente, não forja botão validado' do
-    botao_enviado({ 'autonomia_agent_id' => agent.id }, sender: create(:agent_bot, account: account))
-    outro = criar_principal(account, nome: 'Outro')
-    botao_enviado({ 'autonomia_agent_id' => outro.id })
+  # Adversarial 1: `content_attributes` e o remetente são graváveis pela API (e uma nota privada também os leva). Nem a
+  # mensagem com a marca exata do nosso robô e do agente autoriza o endereço.
+  it 'mensagem gravada com botão de link (pública com a marca do agente, ou nota privada) não autoriza o link' do
+    botao_gravado
+    botao_gravado(private: true)
     modelo_responde(link)
     expect(atender.interacao).to be_nil
   end
@@ -177,11 +165,24 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(resultado.interacao).to be_nil
   end
 
-  it 'descarta o link que o modelo montou (fora do texto do turno), e a resposta segue' do
+  it 'descarta o link que o modelo montou (fora do texto do turno), e a resposta segue; o recusado vai à telemetria sem o endereço' do
     modelo_responde(link)
+    allow(Rails.logger).to receive(:info).and_call_original
     resultado = atender
     expect(resultado.interacao).to be_nil
     expect(resultado.reply).to eq('Pronto.')
+    expect(Rails.logger).to have_received(:info).with("[autonomia][turno] link_recusado conv=#{conversation.id} agent=#{agent.id}").once
+    expect(Rails.logger).not_to have_received(:info).with(a_string_including('loja.exemplo.com'))
+  end
+
+  it 'interação nula, opções e link aceito não vão à telemetria de link recusado' do
+    allow(Autonomia::Agents::Operate::TelemetriaDoTurno).to receive(:registrar)
+    agent.update!(instruction: "Atenda. Pedidos: #{url}.")
+    [nil, opcoes, link].each do |interacao|
+      modelo_responde(interacao)
+      atender
+    end
+    expect(Autonomia::Agents::Operate::TelemetriaDoTurno).not_to have_received(:registrar).with(:link_recusado, any_args)
   end
 
   it 'interação nula fica nula' do

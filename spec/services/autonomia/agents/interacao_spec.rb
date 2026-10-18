@@ -83,7 +83,16 @@ RSpec.describe Autonomia::Agents::Interacao do
     it 'mantém as regras do cabeçalho, do reply sem repetição e do link só com endereço escrito' do
       expect(described_class::INSTRUCAO).to include('`header`: SEMPRE um título curto do assunto',
                                                     'NÃO repita a pergunta nem as opções em `reply`',
-                                                    'Nunca invente nem monte endereço')
+                                                    'nunca invente nem monte endereço')
+    end
+
+    it 'link: só da instrução e da base (ou ferramenta dentro delas), nunca do cliente, e o reply não promete o botão' do
+      expect(described_class::INSTRUCAO).to include('ESCRITO nas suas instruções ou na base de conhecimento',
+                                                    'devolveu dentro de um desses endereços',
+                                                    'Nunca um endereço que o cliente mandou',
+                                                    'não fale do botão nele (nada de "toque no botão")',
+                                                    '`reply` precisa fazer sentido sozinho se o botão não sair')
+      expect(described_class::INSTRUCAO).not_to include('na conversa ou no resultado')
     end
   end
 
@@ -97,6 +106,13 @@ RSpec.describe Autonomia::Agents::Interacao do
                            'opcoes' => [{ 'id' => 'manha', 'title' => 'Manhã', 'description' => nil },
                                         { 'id' => 'tarde', 'title' => 'Tarde', 'description' => nil },
                                         { 'id' => 'noite', 'title' => 'Noite', 'description' => nil }])
+    end
+
+    it 'opções sem nenhuma opção com título viram nenhuma interação' do
+      vazias = [[], [{}], [{ 'id' => 'a', 'titulo' => '', 'descricao' => nil }, { 'id' => 'b', 'titulo' => ' ', 'descricao' => nil }], ['x']]
+      expect(vazias.map { |lista| described_class.do_modelo(pedido.merge('opcoes' => lista), enderecos: Set.new) }).to all(be_nil)
+      com_uma = described_class.do_modelo(pedido.merge('opcoes' => [{ 'id' => 'a', 'titulo' => '' }, tres.first]), enderecos: Set.new)
+      expect(com_uma['opcoes']).to eq([{ 'id' => 'manha', 'title' => 'Manhã', 'description' => nil }])
     end
 
     it 'usa o botão da lista escolhido pelo modelo' do
@@ -157,19 +173,36 @@ RSpec.describe Autonomia::Agents::Interacao do
 
   describe 'Enderecos.do_dono: saída de ferramenta' do
     def da_ferramenta(dono, saida)
-      described_class::Enderecos.do_dono(dono: [dono], ferramentas: [saida], conversation: nil)
+      described_class::Enderecos.do_dono(dono: [dono], ferramentas: [saida])
     end
 
-    it 'vale com o host e a porta de um endereço do dono (porta padrão escrita ou não)' do
+    it 'endereço do dono só com host libera o host inteiro, no mesmo esquema e porta (padrão escrita ou não)' do
       expect(da_ferramenta('https://loja.com', 'https://loja.com/pedido/1')).to include('https://loja.com/pedido/1')
+      expect(da_ferramenta('https://loja.com/', 'https://loja.com/pedido/1')).to include('https://loja.com/pedido/1')
       expect(da_ferramenta('https://loja.com', 'https://loja.com:443/pedido/1')).to include('https://loja.com:443/pedido/1')
-      expect(da_ferramenta('https://loja.com:8443/x', 'https://loja.com:8443/pedido/1')).to include('https://loja.com:8443/pedido/1')
+      expect(da_ferramenta('https://loja.com:8443', 'https://loja.com:8443/pedido/1')).to include('https://loja.com:8443/pedido/1')
+    end
+
+    it 'endereço do dono com caminho: a saída precisa começar por ele, em segmento inteiro' do
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/42')).to include('https://loja.com/pedidos/42')
+      expect(da_ferramenta('https://loja.com/pedidos/', 'https://loja.com/pedidos/42')).to include('https://loja.com/pedidos/42')
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos?id=1')).to include('https://loja.com/pedidos?id=1')
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos-falsos/42')).to eq(Set['https://loja.com/pedidos'])
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/conta/42')).to eq(Set['https://loja.com/pedidos'])
+      expect(da_ferramenta('https://loja.com/pedidos/42', 'https://loja.com/pedidos')).to eq(Set['https://loja.com/pedidos/42'])
+    end
+
+    it 'caminho com `..` ou `.` (também codificado) conta depois de resolvido' do
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/../conta')).to eq(Set['https://loja.com/pedidos'])
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/%2e%2e/conta')).to eq(Set['https://loja.com/pedidos'])
+      expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/x/../pedidos/1')).to include('https://loja.com/x/../pedidos/1')
     end
 
     it 'H2: outra porta, outro host ou outro esquema com outra porta não valem' do
       expect(da_ferramenta('https://loja.com', 'https://loja.com:8443/pedido/1')).not_to include('https://loja.com:8443/pedido/1')
       expect(da_ferramenta('https://loja.com', 'https://golpe.com/pedido/1')).not_to include('https://golpe.com/pedido/1')
       expect(da_ferramenta('https://loja.com', 'http://loja.com/pedido/1')).not_to include('http://loja.com/pedido/1')
+      expect(da_ferramenta('https://loja.com:8443', 'http://loja.com:8443/pedido/1')).not_to include('http://loja.com:8443/pedido/1')
     end
 
     it 'H5: a saída com usuário (user@) não vale' do
@@ -277,6 +310,15 @@ RSpec.describe Autonomia::Agents::Interacao do
       janela_aberta
       final = described_class.mensagem(link.merge('rotulo' => 'a' * 21), texto: 'Sua proposta.', conversation: conversation)
       expect(final).to eq(content: "Sua proposta.\n\n#{'a' * 21}: #{url}", rich_message: nil, em_texto: "Sua proposta.\n\n#{'a' * 21}: #{url}")
+    end
+
+    it 'link sozinho (depois do áudio): o rótulo é o corpo do botão; sem o formato, só "rótulo: endereço", sem repetir' do
+      janela_aberta
+      expect(described_class.mensagem(link, texto: nil, conversation: conversation))
+        .to include(content: 'Abrir proposta', rich_message: hash_including('type' => 'link_button'))
+      email = conversa_em(create(:channel_email, account: account))
+      expect(described_class.mensagem(link, texto: nil, conversation: email))
+        .to eq(content: "Abrir proposta: #{url}", rich_message: nil, em_texto: "Abrir proposta: #{url}")
     end
 
     it 'não grava nem acrescenta mensagem à conversa ao conferir' do

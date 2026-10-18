@@ -177,16 +177,20 @@ module Autonomia
       private
 
       # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
-      # (`Interacao::Enderecos.do_dono`): a instrução e a base, os botões de link que já saíram validados, e a saída de
-      # ferramenta só com host que a instrução ou a base já trazem.
+      # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
+      # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele.
       def interacao_do_turno(parsed, snippets)
         return unless @interacao
 
-        enderecos = Interacao::Enderecos.do_dono(
-          dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
-          ferramentas: @saidas_do_turno.to_a, conversation: @delivery&.conversation
-        )
-        Interacao.do_modelo(parsed['interacao'], enderecos: enderecos)
+        enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
+                                                 ferramentas: @saidas_do_turno.to_a)
+        interacao = Interacao.do_modelo(parsed['interacao'], enderecos: enderecos)
+        link_recusado if interacao.nil? && parsed['interacao'].is_a?(Hash) && parsed['interacao']['tipo'] == 'link'
+        interacao
+      end
+
+      def link_recusado
+        ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:link_recusado, conversation_id: @delivery.conversation.id, agent: @agent.id)
       end
 
       # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a

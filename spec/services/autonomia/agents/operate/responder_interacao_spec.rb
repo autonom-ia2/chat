@@ -179,6 +179,18 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(enviadas.size).to eq(1)
       expect(enviadas.last.content).to eq("Temos vaga amanhã.\n\nQual período?")
     end
+
+    context 'when the inbox does not take the format (site chat)' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:contact_inbox) { create(:contact_inbox, inbox: inbox) }
+
+      it 'link depois do áudio: só a versão em texto do link, sem repetir o rótulo' do
+        responde('Seu pedido saiu.', link)
+        perform
+        expect(enviadas.last.content).to eq("Ver pedido: #{url}")
+        expect(enviadas.last.content_attributes).not_to have_key('rich_message')
+      end
+    end
   end
 
   it 'só a pergunta das opções, sem texto antes, ainda é resposta' do
@@ -192,6 +204,64 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     responde('', nil)
     expect(perform.status).to eq(:silenced)
     expect(enviadas).to be_empty
+  end
+
+  it 'opções sem nenhuma opção com título e texto vazio: silêncio "vazio"' do
+    vazias = Autonomia::Agents::Interacao.do_modelo({ 'tipo' => 'opcoes', 'pergunta' => 'Qual?', 'opcoes' => [] }, enderecos: Set.new)
+    responde('', vazias)
+    expect(perform.status).to eq(:silenced)
+    expect(enviadas).to be_empty
+  end
+
+  describe 'histórico do modelo' do
+    let(:historicos) { [] }
+    let(:formato_das_opcoes) do
+      { 'type' => 'options', 'header' => 'Agendamento', 'button' => 'Ver opções',
+        'options' => [{ 'id' => 'manha', 'title' => 'Manhã' }, { 'id' => 'tarde', 'title' => 'Tarde' }] }
+    end
+
+    before do
+      resultado = Autonomia::Agents::AnswerResult.new(reply: 'Certo.', confidence: 0.9, handoff: { should: false, reason: nil })
+      allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
+        historicos << kwargs[:history]
+        instance_double(Autonomia::Agents::Answerer, answer: resultado)
+      end
+    end
+
+    def enviada_com(formato, agente_id: agent.id, sender: agent_inbox.agent_bot)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, sender: sender,
+                       content: 'Temos vaga.', content_attributes: { 'autonomia_agent_id' => agente_id, 'rich_message' => formato })
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'a segunda')
+    end
+
+    def conteudos
+      historicos.last.map { |item| item[:content] }
+    end
+
+    it 'as opções e o link que o agente mandou entram com a versão em texto' do
+      enviada_com(formato_das_opcoes)
+      enviada_com({ 'type' => 'link_button', 'label' => 'Ver pedido', 'url' => url })
+      perform
+      expect(conteudos).to include("Temos vaga.\n\n1. Manhã\n2. Tarde", "Temos vaga.\n\nVer pedido: #{url}")
+    end
+
+    it 'mensagem de outro agente ou de outro remetente fica como está' do
+      outro = criar_principal(account, nome: 'Outro')
+      enviada_com(formato_das_opcoes, agente_id: outro.id)
+      enviada_com(formato_das_opcoes, sender: create(:user, account: account))
+      perform
+      expect(conteudos.count { |conteudo| conteudo.to_s.include?('Temos vaga.') }).to eq(2)
+      expect(conteudos.join).not_to include('1. Manhã')
+    end
+
+    it 'na Lia o histórico fica como está' do
+      enviada_com(formato_das_opcoes)
+      enviada = conversation.messages.outgoing.last
+      itens = [{ role: 'assistant', content: 'Temos vaga.' }]
+      lia = instance_double(Autonomia::Agents::Agent, agent_type: 'insurance_quote', id: agent.id)
+      expect(Autonomia::Agents::Interacao.no_historico(itens, [enviada], agent: lia)).to eq(itens)
+      expect(Autonomia::Agents::Interacao.no_historico(itens, [enviada], agent: agent).sole[:content]).to include('1. Manhã')
+    end
   end
 
   it 'a limpeza da marca da equipe e da linha de contexto mantém a interação' do

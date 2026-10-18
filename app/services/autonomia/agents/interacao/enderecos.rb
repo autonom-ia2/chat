@@ -10,43 +10,30 @@ module Autonomia::Agents::Interacao::Enderecos
 
   module_function
 
-  # -> Set dos endereços que o botão pode levar neste turno (regra final da revisão adversarial):
+  # -> Set dos endereços que o botão pode levar neste turno:
   #   - os que estão em `dono` (a instrução do agente e a base de conhecimento);
-  #   - os `url` dos botões de link que o agente já mandou nesta `conversation` (já passaram por esta conferência);
-  #   - os das saídas de `ferramentas` (HTTP, sistema) só quando o HOST e a PORTA deles já aparecem num endereço de
-  #     `dono`: o dono autoriza o domínio, a ferramenta traz o caminho.
-  # Fala do agente em texto, saída de especialista ou ajudante, fala do cliente e memória não entram.
-  def do_dono(dono:, ferramentas:, conversation:)
+  #   - os das saídas de `ferramentas` (HTTP, sistema) que ficam DENTRO de um endereço do dono (`dentro?`): o dono
+  #     autoriza o endereço, a ferramenta traz o resto do caminho.
+  # Mensagem já gravada na conversa não entra, nem a do próprio agente: `content_attributes` e o remetente de uma
+  # mensagem podem ser gravados pela API, e uma nota privada também os leva. Fala do cliente, saída de especialista ou
+  # ajudante e memória também não entram.
+  def do_dono(dono:, ferramentas:)
     do_dono = dos_textos(dono)
-    origens = do_dono.to_set { |endereco| origem(endereco) }
-    das_ferramentas = dos_textos(ferramentas).select { |endereco| origens.include?(origem(endereco)) }
-    do_dono | das_ferramentas | dos_botoes(conversation)
+    das_ferramentas = dos_textos(ferramentas).select { |endereco| do_dono.any? { |base| dentro?(endereco, base) } }
+    do_dono | das_ferramentas
   end
 
-  # Os `url` dos botões de link que o agente nativo já mandou na conversa, normalizados. Só conta a mensagem do
-  # robô-espelho de um vínculo da conta (`AgentInbox#agent_bot_id`) marcada com o agente DESSE vínculo: um robô externo
-  # (n8n) que manda `rich_message` pela API não forja um botão "validado".
-  def dos_botoes(conversation)
-    return Set.new if conversation.nil?
+  # O `endereco` começa pelo endereço do dono (`base`): o mesmo esquema, host e porta (a padrão do esquema quando não
+  # vem escrita), e o caminho do dono como prefixo em segmento inteiro (`/a` cobre `/a` e `/a/b`, nunca `/ab`).
+  # Endereço do dono só com host (sem caminho, ou só "/") libera o host inteiro naquele esquema e porta. A consulta
+  # (`?`) e o fragmento (`#`) do endereço do dono não restringem.
+  def dentro?(endereco, base)
+    uri = Addressable::URI.parse(endereco).normalize # sem `..` e `.` no caminho: `/a/../b` é `/b`
+    dono = Addressable::URI.parse(base).normalize
+    return false unless [uri.scheme, uri.host, uri.inferred_port] == [dono.scheme, dono.host, dono.inferred_port]
 
-    vinculos = ::Autonomia::Agents::AgentInbox.where(account_id: conversation.account_id).pluck(:agent_bot_id, :autonomia_agent_id).to_set
-    conversation.messages.outgoing.where(sender_type: 'AgentBot').where('content_attributes::text LIKE ?', '%link_button%')
-                .filter_map { |message| url_do_botao(message, vinculos) }.to_set
-  end
-
-  def url_do_botao(message, vinculos)
-    atributos = message.content_attributes.to_h
-    formato = atributos['rich_message']
-    return unless vinculos.include?([message.sender_id, atributos['autonomia_agent_id']])
-    return unless formato.is_a?(Hash) && formato['type'] == 'link_button'
-
-    normalizado(formato['url'])
-  end
-
-  # Host e porta (a padrão do esquema quando não vem escrita).
-  def origem(endereco)
-    uri = Addressable::URI.parse(endereco)
-    [uri.host, uri.inferred_port]
+    prefixo = dono.path.delete_suffix('/')
+    prefixo.empty? || uri.path == prefixo || uri.path.start_with?("#{prefixo}/")
   end
 
   # -> Set dos endereços normalizados que aparecem nos textos.
