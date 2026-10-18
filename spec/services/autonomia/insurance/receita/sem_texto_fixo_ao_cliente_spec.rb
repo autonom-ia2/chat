@@ -35,6 +35,8 @@ module TextoAoCliente
       { tipo: :anexo_sem_texto, motivo: 'o áudio sintetizado da resposta do modelo, sem texto junto' },
     'app/services/autonomia/agents/operate/responder.rb::Autonomia::Agents::Operate::Responder#post_reply!' =>
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno' },
+    'app/services/autonomia/agents/operate/responder_a_passagem.rb::Autonomia::Agents::Operate::ResponderAPassagem#post_reply!' =>
+      { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno aberto pela passagem de uma pessoa (#1630)' },
     'app/services/autonomia/agents/operate/responder_ao_evento.rb::Autonomia::Agents::Operate::ResponderAoEvento#post_reply!' =>
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno acionado por um evento da cotação' },
     'app/services/autonomia/agents/tools/async_publisher.rb::Autonomia::Agents::Tools::AsyncPublisher#build_message!' =>

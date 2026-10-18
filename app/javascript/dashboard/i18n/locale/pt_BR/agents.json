@@ -1350,7 +1350,15 @@
             "MUDOU_DEPOIS": "{nome} mudou depois desta conversa, então não dá para desfazer daqui. Para voltar, use “Jeitos anteriores de responder”.",
             "ERRO": "Não consegui desfazer agora. Tente de novo.",
             "ULTIMA_MUDANCA": "Última mudança: {lista}.",
-            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando."
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando.",
+            "PROVA_TESTANDO": "Testando com {n} pergunta de prova… | Testando com {n} perguntas de prova…",
+            "PROVA": "{ok} de {total} pergunta de prova ok | {ok} de {total} perguntas de prova ok",
+            "PROVA_INDISPONIVEL": "Não consegui testar agora. Use o teste ao lado para ver como ficou.",
+            "PROVA_SEM_TESTE": "As perguntas não testaram a mudança.",
+            "VER_PROVA": "Ver as perguntas",
+            "ESCONDER_PROVA": "Esconder as perguntas",
+            "CLIENTE": "Cliente:",
+            "PROVA_EQUIPE": "Passaria a conversa para a equipe."
           }
         },
         "FOTO": {

@@ -75,9 +75,10 @@ class Crm::FollowUps::DueProcessor
       .include?(follow_up.metadata.to_h['source'])
   end
 
-  # Lembrete de Atender que não saiu (#1498): a equipe lê o porquê em linguagem simples, na agenda e no aviso.
+  # Lembrete de Atender ou retorno combinado que não saiu (#1498, #1624): a equipe lê o porquê em linguagem simples, na
+  # agenda e no aviso.
   def aviso_para_a_equipe(follow_up, motivo)
-    return {} unless service_reminder?(follow_up)
+    return {} unless ai_callback?(follow_up)
 
     texto = I18n.with_locale(follow_up.account.locale) { Crm::FollowUps::EnvioForaDaJanela.aviso(motivo) }
     { description: texto }
@@ -137,7 +138,8 @@ class Crm::FollowUps::DueProcessor
       return cancel_obsolete_service_reminder(follow_up, result.error) if lembrete_sem_destino?(follow_up, result.error)
 
       follow_up.update!(automation_mode: Crm::FollowUp.automation_modes[:reminder_only],
-                        metadata: follow_up.metadata.merge('callback_fallback' => result.error.to_s),
+                        metadata: follow_up.metadata.merge(Crm::FollowUps::CallbackFallback::FALLBACK_KEY => result.error.to_s,
+                                                           **Crm::FollowUps::CallbackFallback.original_of(follow_up)),
                         **aviso_para_a_equipe(follow_up, result.error))
       process_overdue(follow_up) # status overdue + reopen + notify popup + finalize
     when :failed

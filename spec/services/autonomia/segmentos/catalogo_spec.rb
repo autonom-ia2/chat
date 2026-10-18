@@ -233,4 +233,30 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
       expect(described_class.dados.dig('seguros', :pt_BR, :crm)).to be_frozen
     end
   end
+
+  # #1802: a camada seguros/corretora troca as frases da IA do Vendas e dos funis antigos; o resto segue de cima.
+  describe 'camada da corretora' do
+    let(:criterio) { 'crm.stage_criteria' }
+
+    it 'troca as frases do Vendas e dos funis antigos só para a corretora' do
+      base = I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)
+
+      pacotes.with(corretora) do
+        expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to include('a equipe disse que está cotando')
+        expect(I18n.t("#{criterio}.legado.em_atendimento", locale: :pt_BR)).to include('CEP de pernoite')
+        expect(I18n.t("#{criterio}.vendas.e2", locale: :en)).to include('the team said it is quoting')
+      end
+      pacotes.with(saude) { expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to eq(base) }
+      expect(I18n.t("#{criterio}.vendas.e2", locale: :pt_BR)).to eq(base)
+    end
+
+    it 'deixa o perdido dos funis antigos com o texto da camada seguros (F1) e os modelos novos com a base' do
+      seguros = described_class.dados.dig('seguros', :pt_BR, :crm, :stage_criteria, :legado, :perdido)
+
+      pacotes.with(corretora) do
+        expect(I18n.t("#{criterio}.legado.perdido", locale: :pt_BR)).to eq(seguros)
+        expect(I18n.t("#{criterio}.renovacao.e1", locale: :pt_BR)).to include('renovação do seguro que vai vencer')
+      end
+    end
+  end
 end

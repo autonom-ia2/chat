@@ -1,0 +1,49 @@
+{
+  "CRM_FUNIL": {
+    "MODELOS": {
+      "VENDAS": {
+        "NOME": "Venda de seguro",
+        "TEXTO": "Da cotação até o seguro fechar.",
+        "E1": "Novo contato",
+        "E2": "Cotando",
+        "E3": "Opções enviadas",
+        "E4": "Negociação",
+        "E5": "Fechado"
+      }
+    },
+    "SOBRE": {
+      "IDEIAS": {
+        "PRECO": "pede uma cotação",
+        "COMPRAR": "quer saber quanto fica o seguro",
+        "COMO_FUNCIONA": "quer fazer o seguro do carro, da casa ou da empresa"
+      }
+    },
+    "TIPO": {
+      "VENDER": {
+        "TEXTO": "Fechar um seguro novo ou renovar."
+      }
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "MOTIVO": {
+        "PRECO": "Achou caro",
+        "SUMIU": "Parou de responder",
+        "OUTRO_LUGAR": "Fechou com outra corretora",
+        "NAO_ERA_HORA": "A seguradora recusou"
+      },
+      "PERDEU_TEXTO": "Contar o motivo é opcional, mas ajuda a fechar mais da próxima vez."
+    },
+    "PASSO": {
+      "FECHADO": "Este card terminou: {status}. Se o cliente voltar, toque em Reabrir."
+    },
+    "RESUMO": {
+      "SEM_CONTATO": "Ainda não há uma pessoa ligada a este card."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "Uma pessoa foi ligada a este card"
+      }
+    }
+  }
+}

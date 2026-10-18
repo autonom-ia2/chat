@@ -193,9 +193,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     end
   end
 
+  # GET só lê (view?, inclui quem tem conversation_view); o resto escreve e segue em show? (#1800).
   def conversation
     @conversation ||= Current.account.conversations.find_by!(display_id: params[:id])
-    authorize @conversation, :show?
+    authorize @conversation, request.get? ? :view? : :show?
   end
 
   def inbox

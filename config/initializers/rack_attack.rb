@@ -110,6 +110,11 @@ class Rack::Attack
     req.ip if req.get? && req.path.start_with?('/google_conversions/')
   end
 
+  # Browser errors (#1841): a loop in a broken page must not flood the log.
+  throttle('client_errors/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path_without_extensions.end_with?('/client_errors')
+  end
+
   ###-----------------------------------------------###
   ###-----Authentication Related Throttling---------###
   ###-----------------------------------------------###

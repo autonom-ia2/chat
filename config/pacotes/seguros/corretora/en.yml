@@ -1,0 +1,18 @@
+# Per-account text pack (#1550), seguros/corretora layer (#1802). Only leaves that exist in config/locales;
+# see docs/segmentos/README.md and docs/segmentos/funis-corretora-f2.md.
+en:
+  crm:
+    stage_criteria:
+      # "Insurance sale" is the Sales template in the broker's words (same vendas.e<n> keys).
+      vendas:
+        e1: 'The customer just arrived and wants insurance. They have not said the line or sent the details to quote yet.'
+        e2: 'The customer is sending the details to quote, or the team said it is quoting. It has not sent the options yet.'
+        e3: 'The team sent the quote options and the customer is thinking or comparing. They have not chosen yet.'
+        e4: 'The customer wants to close, but is settling details: discount, deductible, coverage, payment method or installments.'
+        e5: 'The customer picked an option and said yes: sent the payment details or asked us to issue the policy.'
+      # Older pipelines (by stage name): the names stay, only the sentence changes. "perdido" keeps the seguros layer (F1).
+      legado:
+        novo: 'The customer just arrived: sent the first message or asked for a quote. They have not said the line or sent the policy details yet.'
+        em_atendimento: 'The customer is sending the details to quote (line, plate or address, overnight ZIP code, driver, current insurer), or the team said it is quoting. It has not sent the options yet.'
+        proposta: 'The team already sent the quote options and the customer is comparing or thinking. They have not said which one they will take.'
+        fechamento: 'The customer picked an option and said they want to close: asked for the payment link, sent the card details or asked us to issue the policy.'
