@@ -26,4 +26,5 @@ const podeComecar = usePodeComecarConversa();
       <slot name="trigger" v-bind="escopo" />
     </template>
   </component>
+  <template v-else />
 </template>

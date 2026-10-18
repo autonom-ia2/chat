@@ -83,7 +83,7 @@ RSpec.describe ConversaCanal::CitacaoDoEmail do
 
     it 'leva os anexos do original, sai com "Enc:" e fora do fio do cliente' do
       mensagem = responder('encaminhado', to_emails: 'juridico@loja.com.br')
-      email = ConversationReplyMailer.email_reply(mensagem).deliver_now
+      email = ConversationReplyMailer.email_reply(mensagem).message
 
       expect(mensagem.attachments.map { |a| a.file.filename.to_s }).to eq(['cotacao.png'])
       expect(email.subject).to eq('Enc: Proposta')
@@ -97,7 +97,7 @@ RSpec.describe ConversaCanal::CitacaoDoEmail do
       original.update!(content_attributes: original.content_attributes.merge('email' => original.content_attributes['email']
                                                                                   .merge('message_id' => 'abc@cliente.com')))
       create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'antes')
-      email = ConversationReplyMailer.email_reply(responder('historico')).deliver_now
+      email = ConversationReplyMailer.email_reply(responder('historico')).message
 
       expect(email.subject).to eq('Re: Proposta')
       expect(email.in_reply_to).to eq('abc@cliente.com')
