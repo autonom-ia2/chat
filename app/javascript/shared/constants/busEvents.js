@@ -31,4 +31,6 @@ export const BUS_EVENTS = {
   // agendamento, #1291). Fora do quadro vale a URL com `card_id`.
   CRM_OPEN_CARD: 'CRM_OPEN_CARD',
   MFA_STATE_CHANGED: 'MFA_STATE_CHANGED',
+  // Tela inicial da caixa (#1801): um número clicado troca a aba da lista (Minhas, Sem responsável, Todas).
+  TELA_INICIAL_ABA: 'TELA_INICIAL_ABA',
 };

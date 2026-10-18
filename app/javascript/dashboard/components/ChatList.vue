@@ -39,6 +39,7 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
 
 import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 import wootConstants from 'dashboard/constants/globals';
 import advancedFilterOptions from './widgets/conversation/advancedFilterItems';
@@ -834,6 +835,9 @@ function allSelectedConversationsStatus(status) {
 function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
+
+// A tela inicial (#1801) pede outra aba quando a pessoa clica num número dela.
+useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, updateAssigneeTab);
 
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;

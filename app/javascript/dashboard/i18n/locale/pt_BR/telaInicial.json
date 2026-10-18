@@ -1,0 +1,41 @@
+{
+  "TELA_INICIAL": {
+    "SAUDACAO": {
+      "MANHA": "Bom dia, {nome}",
+      "TARDE": "Boa tarde, {nome}",
+      "NOITE": "Boa noite, {nome}"
+    },
+    "TEMPO": {
+      "MINUTOS": "1 minuto | {count} minutos",
+      "HORAS": "1 hora | {count} horas",
+      "DIAS": "1 dia | {count} dias"
+    },
+    "ABRIR_PROXIMA": "Abrir a próxima",
+    "PROXIMA_ESPERA": "{nome} espera há {tempo}",
+    "TUDO_EM_DIA": "Tudo em dia",
+    "VER_SEM_RESPONSAVEL": "Ver as sem responsável",
+    "VER_TODAS": "Ver todas as conversas",
+    "OPCAO_1": {
+      "ESPERAM": "conversa espera a sua resposta | conversas esperam a sua resposta",
+      "TUDO_EM_DIA": "Tudo respondido por aqui."
+    },
+    "OPCAO_2": {
+      "TITULO": "Resumo de hoje",
+      "COM_VOCE": "Nenhuma conversa com você | 1 conversa com você | {count} conversas com você",
+      "NUMEROS": {
+        "ESPERAM": "Esperam você",
+        "SEM_RESPONSAVEL": "Sem responsável",
+        "FORA_DO_PRAZO": "Fora do prazo"
+      }
+    },
+    "OPCAO_3": {
+      "ACOLHIDA": "Que bom ver você, {nome}",
+      "TEXTO": "Comece pela conversa que espera há mais tempo.",
+      "TUDO_EM_DIA_TEXTO": "Ninguém está esperando você agora.",
+      "ATALHOS": {
+        "BUSCAR": "buscar",
+        "VER_ATALHOS": "ver atalhos"
+      }
+    }
+  }
+}

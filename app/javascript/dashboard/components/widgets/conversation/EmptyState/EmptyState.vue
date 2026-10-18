@@ -4,11 +4,14 @@ import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useAccount } from 'dashboard/composables/useAccount';
 import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 import EmptyStateMessage from './EmptyStateMessage.vue';
+import TelaInicial from 'dashboard/components-next/tela-inicial/TelaInicial.vue';
+import { opcaoDaTela } from 'dashboard/components-next/tela-inicial/telaInicial';
 
 export default {
   components: {
     FirstSteps,
     EmptyStateMessage,
+    TelaInicial,
   },
   props: {
     isOnExpandedLayout: {
@@ -46,6 +49,12 @@ export default {
       }
       return this.$t('CONVERSATION.404');
     },
+    // #1801: com ?inicio=1|2|3 na URL, a tela inicial nova no lugar do aviso.
+    temTelaInicial() {
+      return (
+        !this.isOnExpandedLayout && Boolean(opcaoDaTela(this.$route.query))
+      );
+    },
     newInboxURL() {
       return this.accountScopedUrl('settings/inboxes/new');
     },
@@ -82,11 +91,12 @@ export default {
 
     <div
       v-else-if="!uiFlags.isFetching && !loadingChatList"
-      class="flex flex-col items-center justify-center h-full"
+      class="flex flex-col items-center justify-center w-full h-full"
     >
+      <TelaInicial v-if="temTelaInicial" />
       <!-- No conversations available -->
       <EmptyStateMessage
-        v-if="!allConversations.length"
+        v-else-if="!allConversations.length"
         :message="$t('CONVERSATION.NO_MESSAGE_1')"
       />
       <EmptyStateMessage
