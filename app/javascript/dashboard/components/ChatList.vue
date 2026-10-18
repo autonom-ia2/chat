@@ -259,12 +259,12 @@ const conversationCustomAttributes = useFunctionGetter(
   'conversation_attribute'
 );
 
-const activeAssigneeTabCount = computed(() => {
-  const count = assigneeTabItems.value.find(
-    item => item.key === activeAssigneeTab.value
-  ).count;
-  return count;
-});
+// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800).
+const activeAssigneeTabCount = computed(
+  () =>
+    assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
+      ?.count || 0
+);
 
 const conversationListPagination = computed(() => {
   const conversationsPerPage = 25;

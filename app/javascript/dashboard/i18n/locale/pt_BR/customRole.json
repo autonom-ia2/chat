@@ -100,7 +100,7 @@
           "HINT": "Quais conversas a pessoa atende",
           "LEVEL_LIMITED": "Vê as conversas atribuídas a ela e as que participa.",
           "LEVEL_ALL": "Vê e atende todas as conversas da conta.",
-          "SLOT_VIEW": "Ler",
+          "SLOT_VIEW": "Ver",
           "SLOT_MANAGE": "Atender",
           "REACH": "Atende:",
           "LEVEL_VIEW": "Lê as conversas das caixas dela, sem responder nem mudar nada."

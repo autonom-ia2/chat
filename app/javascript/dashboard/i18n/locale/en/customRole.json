@@ -100,7 +100,7 @@
           "HINT": "Which conversations this person handles",
           "LEVEL_LIMITED": "Sees conversations assigned to them and the ones they take part in.",
           "LEVEL_ALL": "Sees and answers every conversation in the account.",
-          "SLOT_VIEW": "Read",
+          "SLOT_VIEW": "View",
           "SLOT_MANAGE": "Handle",
           "REACH": "Handles:",
           "LEVEL_VIEW": "Reads the conversations of their inboxes, without replying or changing anything."
