@@ -3,6 +3,7 @@
 // os contatos mandados de uma vez (mesmo sourceId, uma mensagem por contato) viram um
 // cartão só, desenhado pela 1ª mensagem.
 import { computed, inject, provide } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useFuso, usePele } from '../pele';
 import { agruparDaConversa } from './agruparAlbuns';
 import { agruparContatos } from '../midia/contatos';
@@ -15,12 +16,14 @@ const VAZIO = { albuns: new Map(), marcadores: new Set() };
 export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
   const pele = usePele();
   const fuso = useFuso();
+  const conversa = useMapGetter('getSelectedChat');
 
   const agrupados = computed(() => {
     if (!pele.value) return VAZIO;
     return agruparDaConversa(mensagens.value, {
       fuso: fuso.value,
       abreBloco: mensagem => mensagem.id === primeiraNaoLida?.value,
+      grupo: conversa.value?.whatsapp_api_group === true,
     });
   });
   const albuns = computed(() => agrupados.value.albuns);

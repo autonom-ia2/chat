@@ -8,10 +8,11 @@
 //   marcador some da lista. Sem marcador, cada foto fica solta.
 // - Recebido pelo WAHA (#1709): o conector cria antes das mídias um marcador com
 //   content_attributes.waha_album = { expected_images, expected_videos }. Com a flag
-//   `whatsapp_rich_native` ele chega como atividade escondida (c2y_hidden, com a mesma
-//   chave); sem ela, como recebida comum ("Mensagem de Álbum Recebida"). Nos dois casos
-//   o marcador some e junta até a quantidade anunciada, do mesmo cliente, na mesma
-//   janela de 30 s.
+//   `whatsapp_rich_native` ele chega como atividade escondida (que guarda a chave);
+//   sem ela, como recebida comum ("Mensagem de Álbum Recebida"). Nos dois casos o
+//   marcador some e junta até a quantidade anunciada, do mesmo cliente, na mesma janela
+//   de 30 s. Em grupo não junta: toda recebida vem com o contato do grupo, e a foto de
+//   outro participante entraria no álbum (`whatsapp_api_group` da conversa, #1741).
 // - Enviado pela plataforma: várias fotos do mesmo envio são criadas quase juntas
 //   (até 3 s entre uma e outra) e seguem em álbum, como o app faz para quem manda junto.
 import {
@@ -158,10 +159,14 @@ const abreEnvio = mensagem =>
 // Devolve os álbuns (Map: id do 1º item -> mensagens, na ordem da conversa) e os ids
 // dos marcadores que abriram álbum (somem da lista). `abreBloco` (opcional) diz quem
 // não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
-// etiqueta "não lidas" acima dela.
+// etiqueta "não lidas" acima dela. `grupo`: conversa de grupo do WAHA, o marcador dele
+// só some (não abre álbum).
+const abreAlbum = (mensagem, grupo) =>
+  grupo ? eMarcadorDaCloud(mensagem) : eMarcadorDeAlbum(mensagem);
+
 export const agruparDaConversa = (
   lista,
-  { fuso, abreBloco = () => false } = {}
+  { fuso, abreBloco = () => false, grupo = false } = {}
 ) => {
   const albuns = new Map();
   const marcadores = new Set();
@@ -170,7 +175,7 @@ export const agruparDaConversa = (
   while (i < lista.length) {
     const mensagem = lista[i];
     let itens = [];
-    if (eMarcadorDeAlbum(mensagem)) itens = itensDoMarcador(lista, i, opcoes);
+    if (abreAlbum(mensagem, grupo)) itens = itensDoMarcador(lista, i, opcoes);
     else if (abreEnvio(mensagem)) itens = itensDoEnvio(lista, i, opcoes);
     // Os itens vêm logo depois do marcador (ou a partir do próprio envio).
     const doMarcador = itens[0] !== mensagem;

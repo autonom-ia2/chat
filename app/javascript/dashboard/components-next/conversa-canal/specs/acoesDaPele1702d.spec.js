@@ -284,9 +284,8 @@ describe('álbum anunciado pelo marcador do WAHA (#1709)', () => {
   const marcadorEscondido = (total = 2) =>
     foto({
       createdAt: BASE,
+      // Em produção o marcador fica com o contato da conversa (MessageBuilder#sender).
       messageType: 2,
-      senderId: null,
-      senderType: null,
       content: 'Mensagem de Álbum Recebida',
       attachments: [],
       contentAttributes: {
@@ -326,6 +325,17 @@ describe('álbum anunciado pelo marcador do WAHA (#1709)', () => {
     const marcador = marcadorRecebido(2);
     const sozinha = foto();
     const { albuns, marcadores } = agrupar([marcador, sozinha]);
+    expect(albuns.size).toBe(0);
+    expect(marcadores.has(marcador.id)).toBe(true);
+  });
+
+  it('em grupo o marcador só some: não junta fotos de participantes', () => {
+    const marcador = marcadorEscondido(2);
+    const [a, b] = [foto(), foto()];
+    const { albuns, marcadores } = agruparDaConversa([marcador, a, b], {
+      fuso: FUSO,
+      grupo: true,
+    });
     expect(albuns.size).toBe(0);
     expect(marcadores.has(marcador.id)).toBe(true);
   });

@@ -25,7 +25,9 @@ vi.mock('dashboard/composables/store', async () => {
   return { useMapGetter: nome => calculado(() => getters[nome]) };
 });
 
-const montar = () => {
+// Mesmo formato que o Message.vue passa: isPrivate vem de props.private e a apagada
+// de contentAttributes.deleted (o hook a leva para o topo).
+const montar = (extras = {}) => {
   let reacao;
   const Balao = defineComponent({
     setup() {
@@ -39,6 +41,7 @@ const montar = () => {
           status: 'sent',
           sourceId: null,
           contentAttributes: { reactions: [] },
+          ...extras,
         }))
       );
       return () => null;
@@ -70,6 +73,17 @@ describe('useReacaoDoAtendente pela caixa (#1709)', () => {
     expect(ConversaCanalAPI.reagirPelaCaixa).toHaveBeenCalledWith(9, 5, '👍');
     expect(ConversaCanalAPI.reagir).not.toHaveBeenCalled();
     expect(reacao.atual.value).toBe('👍');
+  });
+
+  it('nota privada não tem botão de reagir', () => {
+    expect(montar({ isPrivate: true }).visivel.value).toBe(false);
+  });
+
+  it('mensagem apagada (contentAttributes.deleted) não tem botão de reagir', () => {
+    const reacao = montar({
+      contentAttributes: { reactions: [], deleted: true },
+    });
+    expect(reacao.visivel.value).toBe(false);
   });
 
   it('recusa (422) vira aviso com o motivo do servidor', async () => {
