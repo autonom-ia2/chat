@@ -37,10 +37,21 @@ describe('ResultadoDoAjuste', () => {
       'Não consegui aplicar: “preço com a equipe”.'
     );
     expect(wrapper.find('[data-sem-pedido]').text()).toBe(
-      'Também mudei, sem você pedir: Saudação nova.'
+      'Também mudei, sem você pedir: Saudação nova. Se não quiser, é só me dizer o que tirar.'
     );
     expect(wrapper.find('[data-conferido]').classes()).toContain(
       'bg-n-amber-2'
+    );
+  });
+
+  it('never says Pronto in green with zero requests', () => {
+    const wrapper = montar({
+      itens: [{ estado: 'sem_pedido', texto: 'Saudação nova' }],
+    });
+
+    expect(wrapper.text()).not.toContain('Pronto');
+    expect(wrapper.find('[data-conferido]').classes()).not.toContain(
+      'bg-n-teal-2'
     );
   });
 

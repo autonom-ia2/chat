@@ -390,7 +390,7 @@ describe('MudarConversando', () => {
       semUltima.unmount();
     });
 
-    it('goes away when the agent changes, and once a new conversation starts', async () => {
+    it('goes away when the agent changes, while thinking and behind the result card', async () => {
       const wrapper = comUltima();
       await nextTick();
       await wrapper.setProps({ agente: { ...AGENTE } });
@@ -399,9 +399,28 @@ describe('MudarConversando', () => {
       await wrapper.setProps({
         agente: { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA },
       });
-      store.state[`${ESTADO}getMessages`] = [{ role: 'user', content: 'Oi' }];
+      store.state[`${ESTADO}getStatus`] = 'processing';
       await nextTick();
       expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      store.state[`${ESTADO}getStatus`] = 'ready';
+      store.state[`${ESTADO}getThreadState`] = {
+        resultado: { itens: [], conferido: true, pode_desfazer: true },
+      };
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('stays after a question in the same conversation (no result card)', async () => {
+      const wrapper = comUltima();
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'O que ele faz?' },
+        { role: 'assistant', content: 'Ele atende os clientes.' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).not.toBeNull();
       wrapper.unmount();
     });
 

@@ -20,8 +20,7 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
   before do
     token = thread.begin_build!
     agent.apply_builder_config!(token, { instruction: 'Instrução nova.', tone: 'curto' })
-    ultimo = { 'versao_antes_id' => agent.versao_antes_do_construtor.id, 'versao_id' => agent.versao_do_construtor.id,
-               'agente_updated_at' => agent.reload.updated_at.iso8601(6) }
+    ultimo = { 'versao_antes_id' => agent.versao_antes_do_construtor.id, 'versao_id' => agent.versao_do_construtor.id }
     itens = [{ 'campo' => 'tone', 'pedido' => 'mais curto', 'resumo' => 'Respostas curtas.', 'atendido' => true,
                'pedido_pelo_dono' => true }]
     thread.mark_ready!(token, state: { 'applied' => true, 'conferencia' => { 'itens' => itens }, 'ultimo_ajuste' => ultimo })
@@ -76,10 +75,12 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
       expect(ultima_mudanca).to be_nil
     end
 
-    it 'some quando há uma conversa mais nova do agente' do
-      Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: administrator)
+    it 'continua depois de abrir uma conversa nova, de ligar e de desligar' do
+      Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: administrator, status: :ready)
+      agent.update!(enabled: false)
+      agent.update!(enabled: true)
 
-      expect(ultima_mudanca).to be_nil
+      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'])
     end
 
     it 'some enquanto a conversa gera um turno novo' do

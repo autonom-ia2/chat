@@ -32,7 +32,9 @@ const semPedido = computed(() =>
 const aplicados = computed(
   () => pedidos.value.filter(item => item.estado === 'aplicado').length
 );
-const tudoAplicado = computed(() => aplicados.value === pedidos.value.length);
+const tudoAplicado = computed(
+  () => pedidos.value.length > 0 && aplicados.value === pedidos.value.length
+);
 const conferido = computed(() => props.resultado.conferido === true);
 const titulo = computed(() => {
   if (!conferido.value) return t(`${NS}.NAO_CONFERIDO`, { nome: props.nome });

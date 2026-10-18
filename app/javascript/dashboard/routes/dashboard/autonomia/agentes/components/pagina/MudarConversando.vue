@@ -58,6 +58,9 @@ const dialogoSair = ref(null);
 const antes = ref({ name: props.agente.name, tone: props.agente.tone });
 const desfazendo = ref(false);
 const erroDoDesfazer = ref('');
+const desfazendoUltima = ref(false);
+const erroDaUltima = ref('');
+const ultimaDesfeita = ref(false);
 // Saiu da tela com o start/send ainda em voo: quando ele voltar, a store refaria a conversa e o
 // poll. `saiu` faz a limpeza de novo nessa hora.
 let saiu = false;
@@ -201,6 +204,7 @@ const enviar = async ({ texto, anexos }) => {
   rascunho.value = '';
   feito.value = null;
   erroDoDesfazer.value = '';
+  ultimaDesfeita.value = false;
   await guardarArquivos(arquivos);
   ultimoEnvio.value = { conteudo, imagens };
   await tentarMandar(ultimoEnvio.value);
@@ -256,16 +260,15 @@ const desfazer = async () => {
   }
 };
 
-// #1428 (parte 3) — a faixa "Última mudança" da tela nova (depois do RESET ou de recarregar): o
-// servidor diz, no agente, se a última mudança feita conversando ainda dá para desfazer. Só antes de
-// começar uma conversa nova (que passa a ser a mais nova do agente). Desfeita, o agente é relido e a
-// faixa some sozinha; fica o aviso de desfeito.
+// #1428 (parte 3) — a faixa "Última mudança": o servidor diz, no agente, se a última mudança feita
+// conversando ainda dá para desfazer (mesmo depois de recarregar ou de uma pergunta). Fica escondida
+// enquanto o Construtor pensa e quando o cartão do resultado, que já tem o Desfazer, está na tela.
+// Desfeita, o agente é relido e a faixa some sozinha; fica o aviso de desfeito.
 const ultimaMudanca = computed(() =>
-  comecou.value ? null : props.agente.ultima_mudanca_desfazivel || null
+  resultado.value || pensando.value
+    ? null
+    : props.agente.ultima_mudanca_desfazivel || null
 );
-const desfazendoUltima = ref(false);
-const erroDaUltima = ref('');
-const ultimaDesfeita = ref(false);
 
 const relerAgente = async () => {
   try {
@@ -362,7 +365,7 @@ onBeforeUnmount(() => {
         class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
       >
         <p
-          v-if="ultimaDesfeita && !comecou"
+          v-if="ultimaDesfeita && !resultado && !pensando"
           data-ultima-desfeita
           role="status"
           class="flex items-center gap-3 px-4 py-2 m-0 text-sm rounded-xl bg-n-slate-2 text-n-slate-12"

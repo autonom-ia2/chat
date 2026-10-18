@@ -8,7 +8,10 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     Autonomia::Agents::Agent.create!(account: account, name: 'Hubber', agent_type: 'support', instruction: 'Instrução secreta.',
                                      scaffold: 'andaime secreto')
   end
-  let(:ultimo) { { 'versao_antes_id' => 1, 'versao_id' => 2, 'agente_updated_at' => agent.reload.updated_at.iso8601(6) } }
+  # A versão de antes e a da aplicação (o agente como está agora).
+  let(:ultimo) do
+    { 'versao_antes_id' => agent.send(:gravar_versao!, 'base', nil).id, 'versao_id' => agent.send(:gravar_versao!, 'builder_adjust', nil).id }
+  end
 
   def item(campo, pedido, resumo, atendido: true, pedido_pelo_dono: true)
     { 'campo' => campo, 'pedido' => pedido, 'resumo' => resumo, 'atendido' => atendido, 'pedido_pelo_dono' => pedido_pelo_dono }
@@ -62,6 +65,7 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     saida = resultado('itens' => [nao_pedido], 'desfeito' => { 'campos' => ['greeting'], 'ok' => false })
 
     expect(saida).to include(itens: [{ estado: 'sem_pedido', texto: 'Saudação nova' }], desfeito_sozinho: false)
+    expect(described_class.mostrar?(agent.build_threads.last)).to be(false)
   end
 
   it 'sem a conferência (provedor falhou), não diz que conferiu' do
@@ -122,6 +126,13 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
 
       expect(described_class.ultima_mudanca_desfazivel(agent.reload))
         .to eq(thread_id: thread.id, linhas: %w[Um Três Quatro])
+    end
+
+    it 'depois de uma pergunta na conversa, lê o que entrou na versão da aplicação' do
+      resultado(nil)
+      agent.anotar_versao!(ultimo['versao_id'], 'conferencia' => { 'itens' => [item('tone', 'a', 'Curto.')] })
+
+      expect(described_class.ultima_mudanca_desfazivel(agent.reload)[:linhas]).to eq(['Curto'])
     end
   end
 

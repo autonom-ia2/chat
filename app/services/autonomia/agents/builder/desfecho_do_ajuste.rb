@@ -5,8 +5,8 @@
 # sem ler linguagem). Um item com o mesmo `pedido` de um item pedido é destino secundário desse pedido (a tabela manda
 # "no máximo 2 frases" para o tom E a instrução) e nunca é desfeito. Só quando TODOS os itens estão sem pedido o código
 # desfaz sozinho, sob a trava, com o valor da versão de antes, e o turno fecha como não aplicado. Quando só parte está
-# sem pedido, tudo fica aplicado e o dono é informado ("também mudei isto, que você não pediu: …"), sem pergunta: o
-# desfazer exato é o botão da versão (parte 3).
+# sem pedido, tudo fica aplicado e o dono é informado pelo cartão do resultado na tela (parte 3, uma linha à parte,
+# sem bolha na conversa), sem pergunta: o desfazer exato é o botão Desfazer.
 #
 # Ao dono só vão textos do código e dos campos próprios do Construtor (`resposta_ao_dono`, a pergunta de esclarecimento
 # dele): nunca um `next_question` que afirme aplicação. Com aviso de desfecho ou com falta apontada, needs_more_info.
@@ -82,16 +82,14 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
   end
 
   # -> [mensagens ao dono, [pendência, origem], aviso]. A pergunta que o código abre sobre o turno (:codigo) zera a
-  # contagem da pendência; a do modelo (:modelo) conta como laço. O que o dono não pediu vira só um aviso, sem pergunta:
-  # o desfazer exato é o botão da versão (parte 3).
+  # contagem da pendência; a do modelo (:modelo) conta como laço. O que o dono não pediu não vira bolha: o cartão do
+  # resultado na tela mostra (parte 3).
   def conversa_do_fechamento(dados, conferencia, desfecho, resposta)
-    nao_pedido = conferencia['sem_pedido'].presence &&
-                 Autonomia::Agents::Builder::TextosDoAjuste.aviso_do_nao_pedido(conferencia['sem_pedido'], idioma_do_ajuste)
     do_modelo = pergunta_do_modelo(resposta)
     texto = do_modelo || pendencia_da_conferencia(conferencia, desfecho)
     origem = origem_da_pendencia(texto, do_modelo)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[resposta['resposta_ao_dono'].to_s.strip, nao_pedido, aviso, texto].compact_blank, [texto, origem], aviso]
+    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso]
   end
 
   # A referência (versão de antes e campos) do que o dono não pediu, para o turno seguinte: "tira isso" volta ao valor
@@ -118,11 +116,10 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end
 
-  # #1428 (parte 3) — o que o Desfazer da tela precisa: a versão de antes, a da aplicação (a da correção, se houve) e o
-  # updated_at que a escrita do Construtor deixou no agente. Só ids e horário; a API não expõe esta chave.
+  # #1428 (parte 3) — o que o Desfazer da tela precisa: a versão de antes e a da aplicação (a da correção, se houve). Só
+  # ids; a API não expõe esta chave.
   def ultimo_ajuste(dados)
-    { 'versao_antes_id' => dados['versao_antes_id'], 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'],
-      'agente_updated_at' => dados['agente_updated_at'] }
+    { 'versao_antes_id' => dados['versao_antes_id'], 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'] }
   end
 
   # Com aviso de desfecho, pendência ou qualquer falta apontada, a conversa segue aberta.

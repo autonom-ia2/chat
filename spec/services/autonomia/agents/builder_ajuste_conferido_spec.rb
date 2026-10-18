@@ -384,20 +384,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado['conferencia'].keys).not_to include('desfeito', 'sem_pedido')
     end
 
-    # Rodada 6: sem oferta de desfazer pela conversa. O desfazer exato é o botão da versão (parte 3).
-    it 'parte sem pedido: tudo fica aplicado e o dono é informado, sem pergunta nem pendência' do
+    # Rodada 6: sem oferta de desfazer pela conversa. Parte 3: o dono é informado pelo cartão da tela (linha sem_pedido),
+    # sem bolha "também mudei" na conversa; o desfazer exato é o botão Desfazer.
+    it 'parte sem pedido: tudo fica aplicado, o cartão informa e a conversa não ganha bolha, sem pergunta nem pendência' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
                          'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
       sem_pedido(1)
 
       run_turn
 
-      aviso = texto(:tambem_mudei, resumos: 'Saudação nova')
       expect(agent.reload).to have_attributes(tone: 'curto', greeting: 'Olá!')
-      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'next_question' => aviso,
+      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'next_question' => '',
                                 'pergunta_pendente' => '', 'parcial' => false)
-      expect(estado.keys).not_to include('desfazer_pendente')
-      expect(thread.messages.last).to include('content' => aviso)
+      expect(estado['conferencia']['sem_pedido'].pluck('resumo')).to eq(['Saudação nova.'])
+      expect([estado.key?('desfazer_pendente'), thread.messages.pluck('role')]).to eq([false, ['user']])
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
       referencia = estado['nao_pedido_anterior']
       expect(referencia).to include('campos' => ['greeting'])
@@ -415,7 +415,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado).to include('applied' => true, 'needs_more_info' => false, 'nao_pedido_anterior' => nil)
       expect(estado['conferencia'].keys).not_to include('sem_pedido')
-      expect(thread.messages.pluck('content')).not_to include(texto(:tambem_mudei, resumos: 'Saudação nova'))
+      expect(thread.messages.pluck('role')).to eq(['user'])
     end
 
     def turno_seguinte(fala_do_dono, saida_do_modelo)

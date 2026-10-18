@@ -29,12 +29,11 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
   before { agent.update!(config: agent.config.merge('model' => 'gpt-x', 'topic_map' => { 'a' => 1 })) }
 
   describe 'o fechamento do ajuste' do
-    it 'guarda no state as versões e o updated_at que a escrita deixou' do
+    it 'guarda no state a versão de antes e a da aplicação' do
       aplicar_ajuste
 
       base = agent.instruction_versions.find_by!(reason: 'base')
-      expect(estado['ultimo_ajuste']).to eq('versao_antes_id' => base.id, 'versao_id' => versoes_do_construtor.sole.id,
-                                            'agente_updated_at' => agent.reload.updated_at.iso8601(6))
+      expect(estado['ultimo_ajuste']).to eq('versao_antes_id' => base.id, 'versao_id' => versoes_do_construtor.sole.id)
     end
 
     it 'com correção, a versão do Desfazer é a da correção' do
@@ -46,17 +45,36 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       run_turn
 
       expect(estado['ultimo_ajuste']['versao_id']).to eq(versoes_do_construtor.last.id)
-      expect(estado['ultimo_ajuste']['agente_updated_at']).to eq(agent.reload.updated_at.iso8601(6))
+      expect(agent.reload.conversa_desfazivel).to eq(thread)
     end
 
-    it 'o turno seguinte que não aplica esquece o Desfazer' do
+    it 'uma pergunta na mesma conversa não tira o Desfazer' do
       aplicar_ajuste
       thread.append_message!('user', 'O que ele responde sobre preço?')
       respostas << saida('so_pergunta' => true, 'next_question' => 'Ele passa para a equipe.')
 
       run_turn
 
-      expect(estado).to include('ultimo_ajuste' => nil, 'conferencia' => nil)
+      expect(estado).to include('conferencia' => nil)
+      expect(estado['ultimo_ajuste']).to be_present
+      expect(agent.reload.conversa_desfazivel).to eq(thread)
+      expect(desfazer).to be(true)
+      expect(agent.reload.tone).to eq('cordial')
+    end
+
+    it 'uma pergunta numa sessão nova não tira o Desfazer' do
+      aplicar_ajuste
+      nova = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+      nova.append_message!('user', 'O que ele responde sobre preço?')
+      respostas << saida('so_pergunta' => true, 'next_question' => 'Ele passa para a equipe.')
+      outro = Autonomia::Agents::Builder.new(account: account, build_thread: nova)
+      allow(outro).to receive_messages(credential: { api_key: 'k' }, client: fake_client, cliente_da_correcao: fake_client)
+
+      outro.run!(nova.begin_build!)
+
+      expect(nova.reload).to be_ready
+      expect(agent.reload.conversa_desfazivel).to eq(thread)
+      expect(desfazer).to be(true)
     end
   end
 
@@ -94,12 +112,62 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(agent.instruction_versions.where(reason: 'rollback')).to be_empty
     end
 
-    it 'recusa quando há uma conversa mais nova do agente' do
+    # A instrução é campo versionado: voltar ao antes apagaria a reescrita da base. O Desfazer sai (o caminho é Versões).
+    it 'a base reescrevendo a instrução tira o Desfazer' do
       aplicar_ajuste
-      Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+      agent.reload.refresh_instruction!('Instrução nova pela base.', expected_instruction: agent.instruction)
+
+      expect(agent.reload.conversa_desfazivel).to be_nil
+    end
+
+    it 'uma volta de versão tira o Desfazer' do
+      aplicar_ajuste
+      agent.reload.restore_instruction!(agent.instruction_versions.find_by!(reason: 'base'), created_by: user)
+
+      expect(agent.reload.conversa_desfazivel).to be_nil
+      expect { desfazer }.to raise_error(described_class::AjusteMudou)
+    end
+
+    it 'voltar depois para a versão desfeita tira a marca desfeita' do
+      aplicar_ajuste
+      aplicada = versoes_do_construtor.sole
+      desfazer
+
+      agent.reload.restore_instruction!(aplicada.reload, created_by: user)
+
+      expect(aplicada.reload.metadata).not_to have_key('desfeita')
+      expect(agent.reload.tone).to eq('cordial e curto')
+    end
+
+    it 'ligar, desligar e mexer no que não é versionado não tiram o Desfazer; a restauração não mexe nisso' do
+      aplicar_ajuste
+      agent.reload.update!(enabled: false, config: agent.config.merge('topic_map' => { 'b' => 2 }))
+
+      expect(desfazer).to be(true)
+      expect(agent.reload).to have_attributes(enabled: false, tone: 'cordial')
+      expect(agent.config['topic_map']).to eq('b' => 2)
+    end
+
+    it 'outra conversa gerando agora segura o Desfazer; uma presa além da janela não' do
+      aplicar_ajuste
+      outra = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+      outra.begin_build!
 
       expect { desfazer }.to raise_error(described_class::AjusteMudou)
-      expect(agent.reload.tone).to eq('cordial e curto')
+
+      outra.update_columns(updated_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(desfazer).to be(true)
+    end
+
+    it 'a chave do config que não existia antes sai, em vez de ficar nil' do
+      agent.update!(config: agent.config.except('voice'))
+      respostas << saida('voice' => 'feminina', 'mudancas' => [mudanca('voice', fala, 'Voz feminina.')])
+      run_turn
+      expect(agent.reload.config['voice']).to eq('feminina')
+
+      desfazer
+
+      expect(agent.reload.config).not_to have_key('voice')
     end
 
     it 'recusa a conversa antiga mesmo quando a mais nova também poderia desfazer' do

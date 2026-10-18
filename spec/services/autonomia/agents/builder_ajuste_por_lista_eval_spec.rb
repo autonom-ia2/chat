@@ -27,8 +27,9 @@ module AvaliacaoDoAjustePorLista
   # conferência tem de dar como atendidos. `aplica: :nada`: nada visível muda (pergunta ou o desfeito do que ninguém
   # pediu). `nada_desfeito`: nenhum destino do pedido foi tratado como sem pedido. `pendente`: a pergunta aberta antes da
   # fala; `pendencia`: :resolvida (sai) ou :mantida (continua). `informa_sem_perguntar`: se a conferência achou algo
-  # que o dono não pediu, o turno só informa, sem pergunta nem pendência. `tambem_mudei`: o turno anterior mudou a
-  # saudação sem o dono pedir e o avisou; `saudacao`: :original (voltou) ou :nao_pedida (ficou).
+  # que o dono não pediu, o turno só informa (pelo cartão da tela, parte 3), sem pergunta nem pendência. `tambem_mudei`:
+  # o turno anterior mudou a saudação sem o dono pedir e o cartão da tela o avisou (sem bolha na conversa); `saudacao`:
+  # :original (voltou) ou :nao_pedida (ficou).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
@@ -81,8 +82,8 @@ module AvaliacaoDoAjustePorLista
              'pergunta que ficou aberta ("Mais formal ou informal?"): repetir essa pergunta é o certo.' },
     # Rodada 6: o que o dono não pediu, quando é só parte, fica aplicado e é informado, sem pergunta.
     { nome: 'parcial_informa_sem_perguntar', fala: 'Deixe o tom mais caloroso.', aplica: true, informa_sem_perguntar: true,
-      certo: 'O agente DEPOIS tem tom mais caloroso. Se algo mais mudou, a resposta ao dono só informa o que mudou, sem ' \
-             'perguntar se deve desfazer.' },
+      certo: 'O agente DEPOIS tem tom mais caloroso. A resposta ao dono não pergunta se deve desfazer nada: o que mudou ' \
+             'sem pedido aparece no cartão da tela, não na conversa.' },
     # Rodada 7: "também mudei" sem sobrar pendência; "tira isso" volta ao valor original; t6a com destinos protegidos.
     { nome: 'tambem_mudei_sem_pendencia', fala: 'Agora responda em no máximo 2 frases.', aplica: true, tambem_mudei: true,
       saudacao: :nao_pedida, pendencia: :resolvida,
@@ -147,11 +148,12 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
 
   def ajustar(cena)
     agente = criar_hubber
-    antes = retrato(agente)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
     preparar_tambem_mudei(agente, thread) if cena[:tambem_mudei]
+    # O agente ANTES da fala (depois do turno anterior preparado): o juiz compara com ele.
+    antes = retrato(agente)
     thread.append_message!('user', cena[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     [agente, antes, retrato(agente), thread.reload.state.to_h]
@@ -162,15 +164,14 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
                                                   'pergunta_pendente' => pergunta))
   end
 
-  # O turno anterior: entrou uma saudação que o dono não pediu, e ele foi avisado (o state guarda só a referência).
+  # O turno anterior: entrou uma saudação que o dono não pediu, e o cartão da tela o avisou (parte 3: sem bolha na
+  # conversa; o state guarda só a referência).
   def preparar_tambem_mudei(agente, thread)
     agente.record_instruction_version!(reason: 'base')
     antes_id = agente.instruction_versions.order(:id).last.id
     agente.update!(greeting: AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA)
     agente.send(:gravar_versao!, 'builder_adjust', nil)
-    aviso = I18n.t('autonomia.agents.ajuste.tambem_mudei', resumos: 'Saudação nova', locale: :pt_BR)
     thread.append_message!('user', 'Deixe o tom mais caloroso')
-    thread.append_message!('assistant', aviso)
     referencia = { 'versao_antes_id' => antes_id, 'campos' => ['greeting'] }
     thread.update!(state: thread.state.to_h.merge('nao_pedido_anterior' => referencia))
   end

@@ -1335,7 +1335,7 @@
             "NAO_CONFERIDO": "I changed {nome}, but could not double-check it. Test it on the side to see if it is how you want.",
             "APLICADO": "Applied:",
             "DUVIDA": "I could not apply: “{pedido}”.",
-            "SEM_PEDIDO": "I also changed, without you asking: {lista}.",
+            "SEM_PEDIDO": "I also changed, without you asking: {lista}. If you do not want it, just tell me what to remove.",
             "FALTOU_FORA": "Part of what you asked did not go in. See the question right below.",
             "DESFAZER": "Undo",
             "DESFAZENDO": "Undoing…",
