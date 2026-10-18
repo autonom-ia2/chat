@@ -68,7 +68,8 @@ class EmailCampaign < ApplicationRecord
   has_many :email_campaign_recipients, dependent: :destroy
   has_many :email_events, through: :email_campaign_recipients, source: :email_events
 
-  has_many_attached :builder_assets
+  # Images the body shows stay attached here, wherever they were uploaded (#1822).
+  include RetainsEmailImages
 
   enum status: {
     draft: 0, scheduled: 1, sending: 2, sent: 3, paused: 4, canceled: 5, failed: 6
@@ -377,10 +378,17 @@ class EmailCampaign < ApplicationRecord
   def ai_guarded_update(token, attrs)
     return false if token.blank?
 
-    rows = EmailCampaign.where(id: id, ai_generation_token: token, ai_status: self.class.ai_statuses[:processing])
-                        .update_all(attrs.merge(updated_at: Time.current))
-    reload if rows.positive?
-    rows.positive?
+    # update_all skips callbacks: the AI body (brand logo, uploaded images) is retained in the same
+    # transaction (#1822), so a failure rolls the write back and the job's retry still finds it processing.
+    transaction do
+      rows = EmailCampaign.where(id: id, ai_generation_token: token, ai_status: self.class.ai_statuses[:processing])
+                          .update_all(attrs.merge(updated_at: Time.current))
+      next false unless rows.positive?
+
+      reload
+      retain_email_images if attrs.key?(:body_mjml) || attrs.key?(:body_html)
+      true
+    end
   end
 
   # Event-derived counters. Opens are deduped per recipient (Apple MPP inflation — the report
