@@ -422,5 +422,183 @@
       "ONDE": "It is already on the calendar and on the card. You can change or cancel it until it goes out.",
       "ABRIR_NEGOCIO": "Open the card"
     }
+  },
+  "CONVERSA_CANAL": {
+    "JANELA": {
+      "BOTAO_DE_LINK": {
+        "AJUDA": "The customer taps the button and opens the website. E.g.: the inspection link or the link to sign the proposal."
+      },
+      "OPCOES": {
+        "AJUDA": "The customer replies with one tap. E.g.: Car insurance, Home insurance, Life insurance. Up to 3 options become buttons; more than that, a list."
+      },
+      "LOCALIZACAO": {
+        "AJUDA": "The customer gets the place on a map. E.g.: the brokerage address or the inspection site.",
+        "BUSCAR_EXEMPLO": "E.g.: 1000 Paulista Ave or Example Office"
+      },
+      "CONTATO": {
+        "AJUDA": "The customer gets the card and can chat with this number. E.g.: the insurer's 24-hour assistance line."
+      }
+    }
+  },
+  "NOVA_CONVERSA": {
+    "MENSAGEM": {
+      "PLACEHOLDER": "E.g.: Hi, how are you? I've put together the options for your quote.",
+      "ASSUNTO_PLACEHOLDER": "E.g.: Car insurance quote"
+    }
+  },
+  "CONVERSATION": {
+    "FOOTER": {
+      "PRIVATE_MSG_INPUT": "Only your team sees this. E.g.: customer prefers to pay by card in 10 installments."
+    },
+    "NO_MESSAGE_1": "No conversations yet. When a customer asks for a quote, the conversation shows up here."
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ACCORDION": {
+      "CONTACT_ATTRIBUTES": "Customer details"
+    }
+  },
+  "CANNED_MGMT": {
+    "DESCRIPTION": "Canned responses are the messages you send the most, saved to use in one tap. In the conversation, type '/' and the shortcut. E.g.: /quote sends \"Here is your quote with the options. Which one do you prefer?\"",
+    "ADD": {
+      "DESC": "Save a message you send all the time. E.g.: \"Can you send me your driver's license and the car document?\"",
+      "FORM": {
+        "SHORT_CODE": {
+          "PLACEHOLDER": "E.g.: quote"
+        },
+        "CONTENT": {
+          "PLACEHOLDER": "E.g.: Here is your quote with the options. Which one do you prefer?"
+        }
+      }
+    },
+    "LIST": {
+      "404": "No canned responses yet. Start with the messages you send the most, like \"Do you prefer bank slip or card?\""
+    },
+    "EDIT": {
+      "FORM": {
+        "SHORT_CODE": {
+          "PLACEHOLDER": "E.g.: quote"
+        },
+        "CONTENT": {
+          "PLACEHOLDER": "E.g.: Here is your quote with the options. Which one do you prefer?"
+        }
+      }
+    }
+  },
+  "MACROS": {
+    "DESCRIPTION": "A macro runs several actions at once, in one click. E.g.: add the \"inspection pending\" label, send the inspection link and mark the conversation as pending.",
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Ask for car documents"
+        }
+      }
+    }
+  },
+  "SEARCH": {
+    "EMPTY_STATE_DEFAULT": "Search by the customer's name, phone or email, the conversation number, or a word from the message, like \"policy\" or the car plate."
+  },
+  "CONTACTS_LAYOUT": {
+    "EMPTY_STATE": {
+      "SUBTITLE": "Add your first client with the button below. To bring in your whole client book, use Import contacts."
+    },
+    "HEADER": {
+      "ACTIONS": {
+        "IMPORT_CONTACT": {
+          "DESCRIPTION": "Import your client book spreadsheet (CSV file)."
+        },
+        "FILTERS": {
+          "CREATE_SEGMENT": {
+            "PLACEHOLDER": "E.g.: Clients with car insurance"
+          }
+        }
+      }
+    },
+    "FILTER": {
+      "SEGMENT": {
+        "INPUT_PLACEHOLDER": "E.g.: Clients with car insurance"
+      }
+    },
+    "CARD": {
+      "EDIT_DETAILS_FORM": {
+        "FORM": {
+          "BIO": {
+            "PLACEHOLDER": "E.g.: has car insurance with us and wants a home insurance quote"
+          }
+        }
+      }
+    },
+    "SIDEBAR": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "This account has no client fields yet. In settings, create fields such as Current insurer, Policy expiry and Plate."
+      },
+      "NOTES": {
+        "PLACEHOLDER": "E.g.: prefers to pay by card in 10 installments",
+        "EMPTY_STATE": "No notes for this contact yet. Use the box above for what the team needs to remember, like how they pay or a car change."
+      }
+    },
+    "DETAILS": {
+      "CUSTOMER": {
+        "DESCRIPTION": "Becomes a customer on its own when insurance closes in a sales funnel. Mark it here if they already bought insurance from you outside the funnel."
+      }
+    }
+  },
+  "CONTACT_FORM": {
+    "FORM": {
+      "BIO": {
+        "PLACEHOLDER": "E.g.: has car insurance with us and wants a home insurance quote"
+      }
+    }
+  },
+  "COMPOSE_NEW_CONVERSATION": {
+    "FORM": {
+      "EMAIL_OPTIONS": {
+        "SUBJECT_PLACEHOLDER": "E.g.: Car insurance quote"
+      }
+    }
+  },
+  "COMPANIES": {
+    "DETAIL": {
+      "PROFILE": {
+        "DESCRIPTION_PLACEHOLDER": "E.g.: carrier with its own fleet; wants a cargo insurance quote"
+      },
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "This account has no company fields yet. In settings, create fields such as Tax ID (CNPJ), Line of insurance and Policy expiry."
+      }
+    }
+  },
+  "RELATIONSHIPS": {
+    "SUBTITLE": "Your clients, the companies you serve and each policy's details, all in one place.",
+    "HOME_SUPPORT_TITLE": "Well-served clients renew and refer others",
+    "HOME_SUPPORT_DESCRIPTION": "Keep details like insurer and expiry date up to date, so you get to the renewal first.",
+    "CARD_DETAILS": {
+      "CONTACTS": {
+        "SUBTITLE": "Look after your client book",
+        "DESCRIPTION": "Add your clients and see, for each one, the conversations, the files (like the policy and payment slip) and the policy fields.",
+        "BASIC_DESCRIPTION": "Add your clients and see each one's conversation history."
+      },
+      "COMPANIES": {
+        "DESCRIPTION": "Organize the companies you serve, like fleets and condominiums, and link each one to its contacts and files.",
+        "BASIC_DESCRIPTION": "Organize the companies you serve, like fleets and condominiums, and link each one to its contacts."
+      },
+      "ATTRIBUTES": {
+        "DESCRIPTION": "Create fields like Current insurer, Policy expiry and Plate, and choose where they show up.",
+        "BASIC_DESCRIPTION": "Create the fields your brokerage uses, like Current insurer and Policy expiry."
+      }
+    },
+    "DESCRIPTION_HINT": "Say what the field is for and how to fill it in. E.g.: the date the current policy expires.",
+    "MEDIA": {
+      "SUBTITLE": "Policies, payment slips, documents and photos shared in conversations.",
+      "EMPTY_HINT": "Files from this company's authorized conversations, like policies and payment slips, show up here.",
+      "CONTACT_EMPTY_HINT": "Files from this contact's authorized conversations, like the policy, payment slip and driver's license, show up here."
+    }
+  },
+  "CONTACT_IMPORT_JOURNEY": {
+    "SUBTITLE": "Upload your client book spreadsheet. We find the columns, the companies and the extra information, like insurer and expiry date.",
+    "UPLOAD": {
+      "HINT": "CSV or Excel · up to {size} MB · name and mobile or e-mail; company, insurer, expiry date and other columns are welcome"
+    },
+    "ATTRIBUTES": {
+      "HINT": "They become contact fields, like insurer and plate"
+    }
   }
 }

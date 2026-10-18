@@ -422,5 +422,183 @@
       "ONDE": "Ela já está no calendário e no card. Dá para mudar ou cancelar até a hora de sair.",
       "ABRIR_NEGOCIO": "Abrir o card"
     }
+  },
+  "CONVERSA_CANAL": {
+    "JANELA": {
+      "BOTAO_DE_LINK": {
+        "AJUDA": "O cliente toca no botão e abre o site. Ex.: o link da vistoria ou da assinatura da proposta."
+      },
+      "OPCOES": {
+        "AJUDA": "O cliente responde com um toque. Ex.: Seguro do carro, Seguro da casa, Seguro de vida. Até 3 opções viram botões; mais que isso, uma lista."
+      },
+      "LOCALIZACAO": {
+        "AJUDA": "O cliente recebe o lugar no mapa. Ex.: o endereço da corretora ou do posto de vistoria.",
+        "BUSCAR_EXEMPLO": "Ex.: Av. Paulista, 1000 ou Escritório Exemplo"
+      },
+      "CONTATO": {
+        "AJUDA": "O cliente recebe o cartão e pode conversar com esse número. Ex.: a assistência 24 horas da seguradora."
+      }
+    }
+  },
+  "NOVA_CONVERSA": {
+    "MENSAGEM": {
+      "PLACEHOLDER": "Ex.: Oi, tudo bem? Separei as opções da sua cotação.",
+      "ASSUNTO_PLACEHOLDER": "Ex.: Cotação do seguro do carro"
+    }
+  },
+  "CONVERSATION": {
+    "FOOTER": {
+      "PRIVATE_MSG_INPUT": "Só a equipe vê. Ex.: cliente prefere pagar no cartão em 10x."
+    },
+    "NO_MESSAGE_1": "Nenhuma conversa ainda. Quando um cliente pedir uma cotação, a conversa aparece aqui."
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ACCORDION": {
+      "CONTACT_ATTRIBUTES": "Dados do cliente"
+    }
+  },
+  "CANNED_MGMT": {
+    "DESCRIPTION": "Respostas prontas são as frases que você mais manda, salvas para usar num toque. Na conversa, digite '/' e o atalho. Ex.: /cotacao manda \"Segue a cotação com as opções. Qual você prefere?\"",
+    "ADD": {
+      "DESC": "Salve uma frase que você manda sempre. Ex.: \"Pode me mandar a CNH e o documento do carro?\"",
+      "FORM": {
+        "SHORT_CODE": {
+          "PLACEHOLDER": "Ex.: cotacao"
+        },
+        "CONTENT": {
+          "PLACEHOLDER": "Ex.: Segue a cotação com as opções. Qual você prefere?"
+        }
+      }
+    },
+    "LIST": {
+      "404": "Nenhuma resposta pronta ainda. Comece pelas frases que você mais manda, como \"Prefere boleto ou cartão?\""
+    },
+    "EDIT": {
+      "FORM": {
+        "SHORT_CODE": {
+          "PLACEHOLDER": "Ex.: cotacao"
+        },
+        "CONTENT": {
+          "PLACEHOLDER": "Ex.: Segue a cotação com as opções. Qual você prefere?"
+        }
+      }
+    }
+  },
+  "MACROS": {
+    "DESCRIPTION": "Uma macro faz várias ações de uma vez, com um clique. Ex.: pôr a etiqueta \"vistoria pendente\", mandar o link da vistoria e deixar a conversa pendente.",
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Pedir documentos do carro"
+        }
+      }
+    }
+  },
+  "SEARCH": {
+    "EMPTY_STATE_DEFAULT": "Procure pelo nome, telefone ou e-mail do cliente, pelo número da conversa ou por uma palavra da mensagem, como \"apólice\" ou a placa do carro."
+  },
+  "CONTACTS_LAYOUT": {
+    "EMPTY_STATE": {
+      "SUBTITLE": "Adicione seu primeiro cliente no botão abaixo. Para trazer a carteira toda, use Importar contatos."
+    },
+    "HEADER": {
+      "ACTIONS": {
+        "IMPORT_CONTACT": {
+          "DESCRIPTION": "Importe a planilha da sua carteira de clientes (arquivo CSV)."
+        },
+        "FILTERS": {
+          "CREATE_SEGMENT": {
+            "PLACEHOLDER": "Ex.: Clientes com seguro do carro"
+          }
+        }
+      }
+    },
+    "FILTER": {
+      "SEGMENT": {
+        "INPUT_PLACEHOLDER": "Ex.: Clientes com seguro do carro"
+      }
+    },
+    "CARD": {
+      "EDIT_DETAILS_FORM": {
+        "FORM": {
+          "BIO": {
+            "PLACEHOLDER": "Ex.: tem o seguro do carro com a gente e quer cotar o da casa"
+          }
+        }
+      }
+    },
+    "SIDEBAR": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "Esta conta ainda não tem campos do cliente. Crie nas configurações campos como Seguradora atual, Vencimento do seguro e Placa."
+      },
+      "NOTES": {
+        "PLACEHOLDER": "Ex.: prefere pagar no cartão em 10x",
+        "EMPTY_STATE": "Ainda não há notas deste contato. Anote na caixa acima o que a equipe precisa lembrar, como a forma de pagamento ou a troca do carro."
+      }
+    },
+    "DETAILS": {
+      "CUSTOMER": {
+        "DESCRIPTION": "Vira cliente sozinho quando um seguro fecha num funil de venda. Marque aqui se ele já fechou seguro com você fora do funil."
+      }
+    }
+  },
+  "CONTACT_FORM": {
+    "FORM": {
+      "BIO": {
+        "PLACEHOLDER": "Ex.: tem o seguro do carro com a gente e quer cotar o da casa"
+      }
+    }
+  },
+  "COMPOSE_NEW_CONVERSATION": {
+    "FORM": {
+      "EMAIL_OPTIONS": {
+        "SUBJECT_PLACEHOLDER": "Ex.: Cotação do seguro do carro"
+      }
+    }
+  },
+  "COMPANIES": {
+    "DETAIL": {
+      "PROFILE": {
+        "DESCRIPTION_PLACEHOLDER": "Ex.: transportadora com frota própria; quer cotar o seguro de carga"
+      },
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "Esta conta ainda não tem campos da empresa. Crie nas configurações campos como CNPJ, Ramo e Vencimento do seguro."
+      }
+    }
+  },
+  "RELATIONSHIPS": {
+    "SUBTITLE": "Seus clientes, as empresas que você atende e os dados de cada seguro, num lugar só.",
+    "HOME_SUPPORT_TITLE": "Cliente bem cuidado renova e indica",
+    "HOME_SUPPORT_DESCRIPTION": "Mantenha em dia dados como seguradora e vencimento, para chegar antes na renovação.",
+    "CARD_DETAILS": {
+      "CONTACTS": {
+        "SUBTITLE": "Cuide da sua carteira",
+        "DESCRIPTION": "Cadastre seus clientes e veja, de cada um, as conversas, os arquivos (como apólice e boleto) e os campos do seguro.",
+        "BASIC_DESCRIPTION": "Cadastre seus clientes e veja o histórico de conversa de cada um."
+      },
+      "COMPANIES": {
+        "DESCRIPTION": "Organize as empresas que você atende, como frotas e condomínios, e ligue cada uma aos seus contatos e arquivos.",
+        "BASIC_DESCRIPTION": "Organize as empresas que você atende, como frotas e condomínios, e ligue cada uma aos seus contatos."
+      },
+      "ATTRIBUTES": {
+        "DESCRIPTION": "Crie campos como Seguradora atual, Vencimento do seguro e Placa, e escolha onde eles aparecem.",
+        "BASIC_DESCRIPTION": "Crie os campos que a sua corretora usa, como Seguradora atual e Vencimento do seguro."
+      }
+    },
+    "DESCRIPTION_HINT": "Diga para que serve o campo e como preencher. Ex.: data em que o seguro atual vence.",
+    "MEDIA": {
+      "SUBTITLE": "Apólices, boletos, documentos e fotos trocados nas conversas.",
+      "EMPTY_HINT": "Os arquivos das conversas autorizadas desta empresa, como apólices e boletos, aparecem aqui.",
+      "CONTACT_EMPTY_HINT": "Os arquivos das conversas autorizadas deste contato, como apólice, boleto e CNH, aparecem aqui."
+    }
+  },
+  "CONTACT_IMPORT_JOURNEY": {
+    "SUBTITLE": "Suba a planilha da sua carteira. A gente acha as colunas, as empresas e as outras informações, como seguradora e vencimento.",
+    "UPLOAD": {
+      "HINT": "CSV ou Excel · até {size} MB · nome e celular ou e-mail; empresa, seguradora, vencimento e outras colunas são bem-vindas"
+    },
+    "ATTRIBUTES": {
+      "HINT": "Viram campos do contato, como seguradora e placa"
+    }
   }
 }
