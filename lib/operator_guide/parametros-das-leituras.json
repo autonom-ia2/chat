@@ -953,6 +953,10 @@
     "controller": "api/v1/accounts/conversa_canal/modelos_de_email#previa",
     "parametros": []
   },
+  "conversa_canal/pastas_do_email/:conversation_id": {
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#show",
+    "parametros": []
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [
@@ -962,10 +966,10 @@
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",
-      "status",
       "team_id",
       "updated_within"
     ]
@@ -1021,10 +1025,10 @@
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",
-      "status",
       "team_id",
       "updated_within"
     ]
@@ -1038,10 +1042,10 @@
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",
-      "status",
       "team_id",
       "updated_within"
     ]

@@ -41,6 +41,8 @@ const props = defineProps({
   // A gaveta abre sempre do mesmo lado; `align` fica pela compatibilidade.
   // eslint-disable-next-line vue/no-unused-properties
   align: { type: String, default: 'end' },
+  // #1809: "Escrever" da caixa de e-mail abre a gaveta já nesta caixa.
+  caixaId: { type: [Number, String], default: null },
 });
 
 const emit = defineEmits(['close']);
@@ -75,7 +77,7 @@ const {
   limparContato,
   mudarTermo,
   criarContato,
-} = useNovaConversaContato();
+} = useNovaConversaContato({ caixaPreferida: () => props.caixaId });
 
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
 const continuar = useContinuarConversa({ contato, canal });

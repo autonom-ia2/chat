@@ -473,6 +473,25 @@
         "IMAGEM_NO_TEXTO": "Image in the text",
         "DESFAZER": "Undo",
         "REFAZER": "Redo"
+      },
+      "PASTA": {
+        "DA_CAIXA": "Folders of {nome}",
+        "ESCREVER": "Compose",
+        "ENTRADA": "Inbox",
+        "SPAM": "Spam",
+        "LIXEIRA": "Trash",
+        "MARCAR_SPAM": "Spam",
+        "MARCAR_SPAM_DICA": "Move to Spam and block the sender",
+        "MOVER_LIXEIRA": "Trash",
+        "MOVER_LIXEIRA_DICA": "Move to Trash (nothing is deleted)",
+        "NAO_E_SPAM": "Not spam",
+        "NAO_E_SPAM_DICA": "Back to the Inbox and unblock the sender",
+        "RESTAURAR": "Restore",
+        "RESTAURAR_DICA": "Back to the Inbox",
+        "FOI_PARA_SPAM": "Moved to Spam. The sender is blocked.",
+        "FOI_PARA_LIXEIRA": "Moved to Trash. You can restore it there.",
+        "VOLTOU": "Back in the Inbox.",
+        "FALHOU": "Could not move this conversation. Try again."
       }
     }
   }

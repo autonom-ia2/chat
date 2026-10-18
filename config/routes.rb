@@ -491,6 +491,7 @@ Rails.application.routes.draw do
             resources :modelos_de_email, only: [:index, :show] do
               get :previa, on: :member
             end
+            resources :pastas_do_email, only: [:show, :update], param: :conversation_id
             resources :reacoes, only: [:create]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do

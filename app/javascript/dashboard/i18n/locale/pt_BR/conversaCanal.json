@@ -473,6 +473,25 @@
         "IMAGEM_NO_TEXTO": "Imagem no texto",
         "DESFAZER": "Desfazer",
         "REFAZER": "Refazer"
+      },
+      "PASTA": {
+        "DA_CAIXA": "Pastas de {nome}",
+        "ESCREVER": "Escrever",
+        "ENTRADA": "Entrada",
+        "SPAM": "Spam",
+        "LIXEIRA": "Lixeira",
+        "MARCAR_SPAM": "Spam",
+        "MARCAR_SPAM_DICA": "Mover para o Spam e bloquear quem enviou",
+        "MOVER_LIXEIRA": "Lixeira",
+        "MOVER_LIXEIRA_DICA": "Mover para a Lixeira (nada é apagado)",
+        "NAO_E_SPAM": "Não é spam",
+        "NAO_E_SPAM_DICA": "Voltar para a Entrada e desbloquear quem enviou",
+        "RESTAURAR": "Restaurar",
+        "RESTAURAR_DICA": "Voltar para a Entrada",
+        "FOI_PARA_SPAM": "Foi para o Spam. Quem enviou ficou bloqueado.",
+        "FOI_PARA_LIXEIRA": "Foi para a Lixeira. Dá para restaurar lá.",
+        "VOLTOU": "Voltou para a Entrada.",
+        "FALHOU": "Não deu para mover esta conversa. Tente de novo."
       }
     }
   }

@@ -15,7 +15,9 @@ import { ordenarCanais } from './novaConversa';
 // que é quem diz se o WhatsApp aceita texto livre).
 const ESPERA_DA_BUSCA = 400;
 
-export function useNovaConversaContato() {
+// `caixaPreferida` (#1809): quem abre a gaveta de uma caixa (o "Escrever" do e-mail)
+// começa com ela marcada, se o contato alcança essa caixa.
+export function useNovaConversaContato({ caixaPreferida = () => null } = {}) {
   const buscar = createContactSearcher();
   const caixas = useMapGetter('inboxes/getInboxes');
   const contatoPorId = useMapGetter('contacts/getContactById');
@@ -49,7 +51,10 @@ export function useNovaConversaContato() {
     // "Começar pronto": o primeiro da ordem já vem marcado. Recarregando os
     // canais do mesmo contato, o que a pessoa escolheu continua escolhido.
     const mantem = canais.value.some(item => item.id === canalId.value);
-    if (!mantem) canalId.value = canais.value[0]?.id ?? null;
+    const preferida = canais.value.find(
+      item => String(item.id) === String(caixaPreferida() ?? '')
+    );
+    if (!mantem) canalId.value = (preferida || canais.value[0])?.id ?? null;
   };
 
   const carregarCanais = async () => {

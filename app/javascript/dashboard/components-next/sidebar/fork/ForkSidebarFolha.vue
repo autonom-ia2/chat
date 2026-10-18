@@ -2,6 +2,7 @@
 import { computed, isVNode } from 'vue';
 import Icon from 'next/icon/Icon.vue';
 import ForkContador from './ForkContador.vue';
+import PastasDoEmailNoMenu from 'dashboard/components-next/conversa-canal/email/PastasDoEmailNoMenu.vue';
 
 // Um link de dentro de um item aberto do menu novo (#1617): Todas as conversas, Kanban, uma caixa…
 // O `component` do upstream (ChannelLeaf, por exemplo) continua desenhando a linha quando existe.
@@ -69,5 +70,12 @@ const ir = (navegar, evento) => {
         </template>
       </a>
     </RouterLink>
+    <!-- #1809: na caixa de e-mail aberta, Escrever, Entrada, Spam e Lixeira embaixo dela. -->
+    <PastasDoEmailNoMenu
+      v-if="folha.to?.params?.inbox_id"
+      :folha="folha"
+      :tema="tema"
+      @navegou="emit('navegou')"
+    />
   </li>
 </template>

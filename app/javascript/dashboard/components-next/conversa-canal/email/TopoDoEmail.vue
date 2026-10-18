@@ -12,6 +12,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { MESSAGE_TYPES } from '../../message/constants.js';
 import { useEmailDaConversa } from './useConversaDeEmail';
 import { remetenteDoEmail } from './dadosDoEmail';
+import AcoesDaPasta from './AcoesDaPasta.vue';
 
 const props = defineProps({
   // As mensagens da lista, já em camelCase.
@@ -113,6 +114,8 @@ const DADO = 'inline-flex items-center gap-1.5 text-xs text-n-slate-11';
         </span>
       </div>
     </div>
+    <div class="flex flex-wrap items-center gap-1">
+    <AcoesDaPasta />
     <button
       v-if="emails.length > 1"
       type="button"
@@ -135,5 +138,6 @@ const DADO = 'inline-flex items-center gap-1.5 text-xs text-n-slate-11';
           : t('CONVERSA_CANAL.EMAIL.RECOLHER_ANTIGAS')
       }}
     </button>
+    </div>
   </li>
 </template>
