@@ -63,6 +63,52 @@ RSpec.describe Crm::Email::SaidaDaCopia do
     expect(saiu).to eq([])
   end
 
+  # Pega: o card levado para outro funil na mesma avaliação perder o pedido (a resposta de etapas é descartada, a saída não).
+  it 'o card que muda de funil na mesma avaliação ainda grava a saída', :aggregate_failures do
+    recebido!(from: 'ana@familia.com.br', content: 'me tirem da cópia')
+    outro_funil = create_crm_pipeline(account: account, user: admin, name: 'Sinistro')
+    allow(Crm::Ai::CredentialResolver).to receive(:new)
+      .and_return(instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'x', api_base: 'https://api.openai.com' }))
+    classificador = instance_double(Crm::Ai::StageClassifier)
+    allow(Crm::Ai::StageClassifier).to receive(:new).and_return(classificador)
+    allow(classificador).to receive(:perform) do
+      Crm::Card.find(card.id).update!(pipeline: outro_funil.first, stage: outro_funil.last)
+      { suggested_stage_id: card.stage_id, confidence: 0.95, reasoning: 'x', model_used: 'gpt-6-luna', saida_da_copia: ['ana@familia.com.br'] }
+    end
+
+    result = Crm::Ai::Evaluator.new(card: card, trigger: 'manual').perform
+
+    expect(result.error).to eq('pipeline_changed')
+    expect(saiu).to eq(['ana@familia.com.br'])
+  end
+
+  # Pega: na avaliação conjunta, o campo do topo não chegar aos cards, ou a saída ser gravada na conversa de outro card.
+  it 'na avaliação conjunta, a saída chega aos cards e só vale na conversa de quem escreveu', :aggregate_failures do
+    recebido!(from: 'ana@familia.com.br', content: 'me tirem da cópia')
+    outra_conversa = create(:conversation, account: account, inbox: inbox, contact: joao)
+    outro_card = account.crm_cards.create!(pipeline: pipeline, stage: pipeline.stages.first, title: 'Outro', contact: joao,
+                                           primary_conversation: outra_conversa, inbox: inbox, currency: 'BRL')
+    classificadores = [card, outro_card].map do |alvo|
+      instance_double(Crm::Ai::StageClassifier, pacote: { card: { id: alvo.id }, eligible_agents: [] }, conversa: { recent_messages: [] },
+                                                memoria?: false, email_autoria?: true)
+    end
+    allow(Crm::Ai::OutrasConversas).to receive(:por_card).and_return({})
+    item = ->(alvo) { { card_id: alvo.id, suggested_stage_id: alvo.stage_id, confidence: 0.2, reasoning: 'x' } }
+    cliente = instance_double(Crm::Ai::ResponsesClient)
+    allow(cliente).to receive(:create)
+      .and_return(text: { saida_da_copia: ['ana@familia.com.br'], cards: [item.call(card), item.call(outro_card)] }.to_json)
+
+    resultado = Crm::Ai::ClassificacaoConjunta.new(client: cliente, classificadores: classificadores, model: 'gpt-6-luna',
+                                                   principal_id: card.id).perform
+    expect(resultado.values.map { |classificacao| classificacao[:saida_da_copia] }).to all(eq(['ana@familia.com.br']))
+    expect(cliente).to have_received(:create).with(hash_including(schema: satisfy { |schema| schema[:schema][:required].include?('saida_da_copia') }))
+
+    resultado.each { |id, classificacao| described_class.aplicar!(Crm::Card.find(id), classificacao[:saida_da_copia]) }
+
+    expect(saiu).to eq(['ana@familia.com.br'])
+    expect(Crm::Email::Destinatarios.saiu_da_copia(outra_conversa.reload)).to eq([])
+  end
+
   # Pega: o cliente sair da cópia, ou um endereço que não escreveu na conversa entrar na lista.
   it 'o João (o cliente) e um endereço que não escreveu não saem', :aggregate_failures do
     recebido!(from: 'joao@empresa.com.br', content: 'não me copiem mais')
