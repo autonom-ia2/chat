@@ -122,7 +122,9 @@ describe('getter canOperateConversation', () => {
       rootGetters(permissions, participantes)
     )(alvo);
 
-  it('sem conversation_view, nada se esconde (o servidor só entrega o que ela opera)', () => {
+  // De propósito: sem conversation_view, tudo fica como antes do #1804. O servidor segue a porta (show?), e ninguém que
+  // opera vê o aviso piscar enquanto a lista de participantes carrega.
+  it('sem conversation_view, nada se esconde, como antes do #1804', () => {
     expect(pode(['conversation_participating_manage'])).toBe(true);
     expect(pode(['conversation_participating_manage'], [], {})).toBe(true);
   });

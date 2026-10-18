@@ -496,9 +496,10 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
   end
 
-  # #1800: quem só lê vê a conversa da caixa que espera resposta; sem a chave, um cargo sem o trio segue zerado.
+  # #1800: quem só lê conta a não atendida da caixa mesmo com outra pessoa responsável; sem a chave, um cargo sem o trio
+  # segue zerado.
   [[%w[conversation_view], 1], [%w[crm_view], 0]].each do |permissions, expected|
-    it "counts #{expected} unattended conversation of the inbox for a role with #{permissions.join}" do
+    it "counts #{expected} unattended conversation(s) assigned to someone else for a role with #{permissions.join(', ')}" do
       role = CustomRole.create!(account: account, name: 'Leitura', permissions: permissions)
       agent.account_users.find_by(account: account).update!(custom_role: role)
       create_visible_unread_conversation(unattended: true).update!(assignee: create(:user, account: account))

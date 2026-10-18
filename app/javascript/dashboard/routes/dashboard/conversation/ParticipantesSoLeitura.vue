@@ -1,9 +1,10 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useStore } from 'dashboard/composables/store';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 
-// Quem só lê (#1800) vê quem participa, sem adicionar nem tirar ninguém.
+// Quem só lê (#1800) vê quem participa, sem adicionar nem tirar ninguém. A lista vem do MessagesView, que a busca ao
+// abrir a conversa de quem ainda não opera.
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
 });
@@ -13,13 +14,6 @@ const participants = computed(() =>
   store.getters['conversationWatchers/getByConversationId'](
     props.conversationId
   )
-);
-
-watch(
-  () => props.conversationId,
-  conversationId =>
-    store.dispatch('conversationWatchers/show', { conversationId }),
-  { immediate: true }
 );
 </script>
 

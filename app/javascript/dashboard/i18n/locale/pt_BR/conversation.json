@@ -421,8 +421,7 @@
       "GO_TO_CONVERSATION": "Ir para a conversa"
     },
     "SO_LEITURA": {
-      "TITULO": "Você só pode ler esta conversa.",
-      "TEXTO": "Para responder, fale com quem cuida da sua equipe.",
+      "TEXTO": "Você pode ler esta conversa, mas não responder. Para responder, peça a quem cuida da sua equipe.",
       "RESUMO": "Resumo da conversa",
       "QUEM_ATENDE": "Quem atende",
       "NINGUEM": "Ninguém ainda",

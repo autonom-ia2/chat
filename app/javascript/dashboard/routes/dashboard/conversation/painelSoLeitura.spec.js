@@ -64,8 +64,8 @@ describe('painel de quem só lê (#1804)', () => {
     expect(wrapper.find('dd').text()).toBe('Ninguém ainda');
   });
 
-  it('busca e lista os participantes, sem botão de participar', async () => {
-    const { wrapper, show } = montar(ParticipantesSoLeitura, {
+  it('lista os participantes, sem botão de participar', async () => {
+    const { wrapper } = montar(ParticipantesSoLeitura, {
       participantes: [
         { id: 2, name: 'Ana Atendente' },
         { id: 7, name: 'Leitora' },
@@ -73,7 +73,6 @@ describe('painel de quem só lê (#1804)', () => {
     });
     await flushPromises();
 
-    expect(show).toHaveBeenCalledWith(expect.anything(), { conversationId: 9 });
     expect(wrapper.findAll('li').map(li => li.text())).toEqual([
       'Ana Atendente',
       'Leitora',

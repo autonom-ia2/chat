@@ -44,7 +44,6 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
-import AvisoSoLeitura from 'dashboard/components-next/Conversation/AvisoSoLeitura.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
 import { selecao as selecaoParaEncaminhar } from 'dashboard/components-next/conversa-canal/encaminhar/selecaoParaEncaminhar';
 import FaixaDeNaoLidas from 'dashboard/components-next/conversa-canal/FaixaDeNaoLidas.vue';
@@ -71,7 +70,6 @@ export default {
     ResizableEditorWrapper,
     ReferralBubble,
     AvisoJanelaFechada,
-    AvisoSoLeitura,
     EncaminharDaConversa,
     FaixaDeNaoLidas,
   },
@@ -331,6 +329,10 @@ export default {
       this.fetchParticipantsForReading();
       this.messageSentSinceOpened = false;
       this.resetReplyEditorHeight();
+    },
+    // A lista de participantes chegou e liberou responder: marca como lida o que ficou para trás (#1800).
+    canOperate(pode, podia) {
+      if (pode && !podia) this.makeMessagesRead();
     },
   },
 
@@ -681,6 +683,14 @@ export default {
         :href-link="replyWindowLink"
         :href-link-text="replyWindowLinkText"
       />
+      <!-- Quem só lê (#1800): a regra do cargo, em tom neutro, junto dos outros avisos de "não dá para responder". -->
+      <Banner
+        v-if="!canOperate"
+        color-scheme="secondary"
+        class="ms-2 me-16 mt-2 min-h-12 !h-auto overflow-hidden rounded-lg"
+        :banner-message="$t('CONVERSATION.SO_LEITURA.TEXTO')"
+        data-aviso-so-leitura
+      />
       <Banner
         v-if="hasDuplicateInstagramInbox"
         color-scheme="alert"
@@ -765,7 +775,6 @@ export default {
         </div>
       </div>
       <!-- #1702: modo seleção do encaminhar troca o campo de digitar pela barra. -->
-      <AvisoSoLeitura v-if="!canOperate" />
       <EncaminharDaConversa
         v-if="canOperate && pele"
         :conversation-id="currentChat.id"
