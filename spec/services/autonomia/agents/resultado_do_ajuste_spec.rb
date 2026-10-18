@@ -151,4 +151,36 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
       expect(described_class.mostrar?(thread.reload)).to be(false)
     end
   end
+
+  # #1428 (entrega B) — a prova só é a do ajuste no cartão, não desfeito; pendente velha vira indisponível.
+  describe '#prova' do
+    let(:conferencia) { { 'itens' => [item('tone', 'mais curto', 'Respostas curtas.')] } }
+
+    def prova_com(dados, extra = {})
+      resultado(conferencia, { 'prova' => { 'versao_id' => ultimo['versao_id'], 'perguntas' => [{ 'pergunta' => 'Oi?' }] }.merge(dados) }
+                               .merge(extra))[:prova]
+    end
+
+    it 'pendente recente: pendente com o total' do
+      expect(prova_com('status' => 'pendente', 'desde' => 1.minute.ago.iso8601)).to eq(status: 'pendente', total: 1)
+    end
+
+    it 'pendente há mais que a validade: indisponível' do
+      expect(prova_com('status' => 'pendente', 'desde' => 4.minutes.ago.iso8601)).to eq(status: 'indisponivel', total: 1)
+    end
+
+    it 'de outro ajuste: sem prova' do
+      expect(prova_com('status' => 'pendente', 'versao_id' => -1)).to be_nil
+    end
+
+    it 'com o ajuste desfeito sozinho pelo código: sem prova' do
+      conferencia['desfeito'] = { 'ok' => true }
+
+      expect(prova_com('status' => 'pendente')).to be_nil
+    end
+
+    it 'sem a chave: nil' do
+      expect(resultado(conferencia)[:prova]).to be_nil
+    end
+  end
 end

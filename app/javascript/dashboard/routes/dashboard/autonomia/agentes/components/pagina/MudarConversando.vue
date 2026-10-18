@@ -98,6 +98,17 @@ const visiveis = computed(() =>
 // #1428 (parte 3, piloto) — o resultado do último ajuste, pedido por pedido, com o Desfazer. Sem ele
 // (fora do piloto, ou turno sem conferência), o aviso de sempre: FEITO ou PARCIAL.
 const resultado = computed(() => estadoDaConversa.value?.resultado || null);
+// #1428 (parte 3, entrega B) — o cartão sai na hora; as perguntas de prova chegam segundos depois. Enquanto
+// a prova estiver pendente, a store acompanha só ela (limparConversa para o acompanhamento ao sair).
+watch(
+  () => resultado.value?.prova?.status === 'pendente' && thread.value?.id,
+  threadId => {
+    if (threadId) {
+      store.dispatch('autonomiaBuildThreads/acompanharProva', { threadId });
+    }
+  },
+  { immediate: true }
+);
 // "Pronto" em destaque só quando tudo o que foi pedido entrou e foi conferido.
 const tudoEntrou = computed(() => {
   const atual = resultado.value;

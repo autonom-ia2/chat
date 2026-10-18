@@ -6,7 +6,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Lembretes de retorno' => %w[follow_up follow_up_saida],
     'Criação de e-mail' => %w[email],
     'Resumos' => %w[resumo resumo_reuniao],
-    'Assistente de respostas' => %w[copilot agente_resposta agente_teste],
+    'Assistente de respostas' => %w[copilot agente_resposta agente_teste agente_prova_do_ajuste],
     'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
     'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],

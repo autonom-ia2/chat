@@ -77,7 +77,11 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia.first, aviso, conferencia),
                                              'next_question' => mensagens.last.to_s))
              .merge(estado_aplicado(dados, conferencia, resposta, pendencia))
-    mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
+    if @thread.mark_ready!(token, state: estado)
+      mensagens.each { |mensagem| persist_assistant_turn!(mensagem) }
+      # #1428 (parte 3, entrega B): o cartão sai agora; a prova chega segundos depois, pelo job.
+      Autonomia::Agents::ProvaDoAjusteJob.perform_later(@thread.id, estado.dig('prova', 'versao_id')) if estado['prova']
+    end
     log_do_ajuste(conferencia, desfecho)
   end
 
@@ -112,7 +116,8 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
       'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'nao_pedido_anterior' => nao_pedido_anterior(dados, conferencia),
       'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present?,
-      'ultimo_ajuste' => ultimo_ajuste(dados, conferencia) }
+      'ultimo_ajuste' => ultimo_ajuste(dados, conferencia),
+      'prova' => Autonomia::Agents::ProvaDoAjuste.pendente(@thread.agent, dados) }
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end
 
