@@ -28,6 +28,8 @@ const props = defineProps({
   showAssignee: { type: Boolean, default: false },
   showInboxName: { type: Boolean, default: false },
   hideThumbnail: { type: Boolean, default: false },
+  // Quem só lê a conversa (#1800) não seleciona para ação em massa.
+  selectable: { type: Boolean, default: true },
   compact: { type: Boolean, default: false },
 });
 
@@ -167,7 +169,7 @@ watch(
       >
         <template #overlay="{ size }">
           <label
-            v-if="hovered || selected"
+            v-if="selectable && (hovered || selected)"
             class="flex items-center justify-center rounded-full cursor-pointer absolute inset-0 z-10 backdrop-blur-[2px]"
             :style="{ width: `${size}px`, height: `${size}px` }"
             @click.stop

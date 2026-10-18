@@ -7,12 +7,15 @@ import {
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
 import ConversationAction from './ConversationAction.vue';
 import ConversationParticipant from './ConversationParticipant.vue';
+import AcoesSoLeitura from './AcoesSoLeitura.vue';
+import ParticipantesSoLeitura from './ParticipantesSoLeitura.vue';
 import ContactInfo from './contact/ContactInfo.vue';
 import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
@@ -78,6 +81,8 @@ const isLinearConnected = computed(
 
 const store = useStore();
 const currentChat = useMapGetter('getSelectedChat');
+// Quem só lê (#1800) não atribui, não mexe em participantes nem roda macro.
+const canOperate = useCanOperateConversation(currentChat);
 const conversationId = computed(() => props.conversationId);
 const conversationMetadataGetter = useMapGetter(
   'conversationMetadata/getConversationMetadata'
@@ -169,16 +174,22 @@ onMounted(() => {
             class="conversation--actions"
           >
             <AccordionItem
-              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')"
+              :title="
+                canOperate
+                  ? $t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')
+                  : $t('CONVERSATION.SO_LEITURA.RESUMO')
+              "
               :is-open="isContactSidebarItemOpen('is_conv_actions_open')"
               @toggle="
                 value => toggleSidebarUIState('is_conv_actions_open', value)
               "
             >
               <ConversationAction
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
               />
+              <AcoesSoLeitura v-else />
             </AccordionItem>
           </div>
           <div
@@ -194,8 +205,13 @@ onMounted(() => {
               "
             >
               <ConversationParticipant
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
+              />
+              <ParticipantesSoLeitura
+                v-else
+                :conversation-id="conversationId"
               />
             </AccordionItem>
           </div>
@@ -257,7 +273,7 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <woot-feature-toggle
-            v-else-if="element.name === 'macros'"
+            v-else-if="element.name === 'macros' && canOperate"
             feature-key="macros"
           >
             <AccordionItem

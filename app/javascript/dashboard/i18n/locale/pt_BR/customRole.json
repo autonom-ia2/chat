@@ -69,7 +69,8 @@
       "LABEL_MANAGE": "Editar etiquetas",
       "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
       "MACRO_MANAGE": "Editar macros da equipe",
-      "SLA_MANAGE": "Editar políticas de SLA"
+      "SLA_MANAGE": "Editar políticas de SLA",
+      "CONVERSATION_VIEW": "Lê as outras conversas da caixa"
     },
     "MATRIX": {
       "GROUPS": {
@@ -98,7 +99,11 @@
           "NAME": "Conversas",
           "HINT": "Quais conversas a pessoa atende",
           "LEVEL_LIMITED": "Vê as conversas atribuídas a ela e as que participa.",
-          "LEVEL_ALL": "Vê e atende todas as conversas da conta."
+          "LEVEL_ALL": "Vê e atende todas as conversas da conta.",
+          "SLOT_VIEW": "Ver",
+          "SLOT_MANAGE": "Atender",
+          "REACH": "Atende:",
+          "LEVEL_VIEW": "Lê as conversas das caixas dela, sem responder nem mudar nada."
         },
         "CONTACTS": {
           "NAME": "Contatos e empresas",
@@ -269,7 +274,8 @@
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
-      "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas."
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
+      "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
@@ -291,7 +297,7 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Agentes, times, atribuição, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
+        "ITEMS": "Agentes, times, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {

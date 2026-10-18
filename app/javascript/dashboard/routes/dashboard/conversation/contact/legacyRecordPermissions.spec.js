@@ -86,6 +86,7 @@ function mountPanel(component, props = {}) {
         custom_attributes: { seats: 0, active: false },
       }),
       getCurrentUser: () => ({ id: 1 }),
+      canOperateConversation: () => () => true,
       getCurrentAccountId: () => 1,
       'contactNotes/getUIFlags': () => ({}),
       'contactNotes/getAllNotesByContactId': () => () => [

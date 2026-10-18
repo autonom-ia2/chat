@@ -3,8 +3,11 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
+// Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
+// últimas dividem a posição "Atender" e a escolha entre elas aparece embaixo.
 export const CONVERSATION_LEVELS = {
   NONE: 'none',
+  VIEW: 'view',
   LIMITED: 'limited',
   ALL: 'all',
 };
@@ -12,6 +15,7 @@ export const CONVERSATION_LEVELS = {
 const CONVERSATION_ALL = 'conversation_manage';
 const CONVERSATION_UNASSIGNED = 'conversation_unassigned_manage';
 const CONVERSATION_PARTICIPATING = 'conversation_participating_manage';
+const CONVERSATION_VIEW = 'conversation_view';
 const CONVERSATION_KEYS = [
   CONVERSATION_ALL,
   CONVERSATION_UNASSIGNED,
@@ -41,7 +45,11 @@ export const MODULE_GROUPS = [
         key: 'CONVERSATIONS',
         type: 'conversations',
         icon: 'i-lucide-message-circle',
-        extras: [CONVERSATION_UNASSIGNED, CONVERSATION_PARTICIPATING],
+        extras: [
+          CONVERSATION_UNASSIGNED,
+          CONVERSATION_PARTICIPATING,
+          CONVERSATION_VIEW,
+        ],
       },
       {
         key: 'CONTACTS',
@@ -237,12 +245,21 @@ export const levelOptions = module => {
 const SLOT_BY_LEVEL = {
   [LEVELS.NONE]: 0,
   [LEVELS.VIEW]: 1,
-  [CONVERSATION_LEVELS.LIMITED]: 1,
   [LEVELS.MANAGE]: 2,
-  [CONVERSATION_LEVELS.ALL]: 2,
 };
 
+const isConversationManaging = level =>
+  level === CONVERSATION_LEVELS.LIMITED || level === CONVERSATION_LEVELS.ALL;
+
+// The position a level lights up. Conversas: as próprias e todas acendem "Atender".
+export const slotLevel = (module, level) =>
+  module.type === 'conversations' && isConversationManaging(level)
+    ? LEVELS.MANAGE
+    : level;
+
 export const levelSlots = module => {
+  if (module.type === 'conversations')
+    return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
   levelOptions(module).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
@@ -253,8 +270,10 @@ export const levelSlots = module => {
 export const getLevel = (module, permissions) => {
   if (module.type === 'conversations') {
     if (permissions.includes(CONVERSATION_ALL)) return CONVERSATION_LEVELS.ALL;
-    return CONVERSATION_KEYS.some(key => permissions.includes(key))
-      ? CONVERSATION_LEVELS.LIMITED
+    if (CONVERSATION_KEYS.some(key => permissions.includes(key)))
+      return CONVERSATION_LEVELS.LIMITED;
+    return permissions.includes(CONVERSATION_VIEW)
+      ? CONVERSATION_LEVELS.VIEW
       : CONVERSATION_LEVELS.NONE;
   }
   const { view, manage } = module.levels;
@@ -272,15 +291,28 @@ export const getLevel = (module, permissions) => {
 export const hasAccess = (module, permissions) =>
   getLevel(module, permissions) !== LEVELS.NONE;
 
+// "Atender" sem dizer quais começa pelas próprias, a escolha mais estreita; quem já atende fica como está.
 const setConversationLevel = (level, permissions) => {
-  const rest = withoutKeys(permissions, CONVERSATION_KEYS);
+  const rest = withoutKeys(permissions, [
+    ...CONVERSATION_KEYS,
+    CONVERSATION_VIEW,
+  ]);
   if (level === CONVERSATION_LEVELS.ALL) return [...rest, ...CONVERSATION_KEYS];
-  if (level === CONVERSATION_LEVELS.LIMITED) {
-    const kept = permissions.filter(
-      key =>
-        key === CONVERSATION_UNASSIGNED || key === CONVERSATION_PARTICIPATING
-    );
-    return [...rest, ...(kept.length ? kept : [CONVERSATION_PARTICIPATING])];
+  if (level === CONVERSATION_LEVELS.VIEW) return [...rest, CONVERSATION_VIEW];
+  if (level === CONVERSATION_LEVELS.LIMITED || level === LEVELS.MANAGE) {
+    if (
+      isConversationManaging(getLevel({ type: 'conversations' }, permissions))
+    )
+      return level === LEVELS.MANAGE
+        ? permissions
+        : withoutKeys(permissions, [CONVERSATION_ALL]);
+    // Quem só olhava passa a atender as próprias e continua lendo as outras.
+    const keepsReading = permissions.includes(CONVERSATION_VIEW);
+    return [
+      ...rest,
+      CONVERSATION_PARTICIPATING,
+      ...(keepsReading ? [CONVERSATION_VIEW] : []),
+    ];
   }
   return rest;
 };
