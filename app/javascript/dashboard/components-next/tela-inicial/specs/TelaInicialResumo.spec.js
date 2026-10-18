@@ -1,9 +1,7 @@
 import { mount } from '@vue/test-utils';
-import TelaInicialSaudacao from '../TelaInicialSaudacao.vue';
 import TelaInicialResumo from '../TelaInicialResumo.vue';
-import TelaInicialMarca from '../TelaInicialMarca.vue';
 
-// #1801 — cada opção tem uma ação principal; sem nada esperando, troca pela ação do vazio.
+// #1801 — uma ação principal; sem nada esperando, troca pela ação do vazio.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, valores) => `${key}=${valores?.count}`,
@@ -13,11 +11,7 @@ vi.mock('vue-i18n', () => ({
 const proxima = { displayId: 12, nome: 'Marina', desde: 1 };
 
 const dadosCom = (extra = {}) => ({
-  nome: 'John',
-  saudacao: 'Boa tarde, John',
   hoje: 'sábado, 18 de outubro',
-  nomeDaConta: 'Acme',
-  logo: '',
   estado: 'pronto',
   pronto: true,
   esperamVoce: 1,
@@ -48,14 +42,10 @@ const montar = (componente, dados) =>
     },
   });
 
-describe.each([
-  ['opção 1', TelaInicialSaudacao],
-  ['opção 2', TelaInicialResumo],
-  ['opção 3', TelaInicialMarca],
-])('%s', (_nome, componente) => {
+describe('ação principal', () => {
   it('abre a conversa que espera há mais tempo', async () => {
     const dados = dadosCom();
-    const wrapper = montar(componente, dados);
+    const wrapper = montar(TelaInicialResumo, dados);
     await wrapper.find('[data-abrir-proxima]').trigger('click');
     expect(dados.abrir).toHaveBeenCalledWith(proxima);
     expect(wrapper.find('[data-acao-do-vazio]').exists()).toBe(false);
@@ -63,14 +53,14 @@ describe.each([
 
   it('sem nada esperando, mostra só a ação do vazio', async () => {
     const dados = dadosCom({ esperamVoce: 0, proxima: null, tudoEmDia: true });
-    const wrapper = montar(componente, dados);
+    const wrapper = montar(TelaInicialResumo, dados);
     expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
     await wrapper.find('[data-acao-do-vazio]').trigger('click');
     expect(dados.acaoDoVazio.fazer).toHaveBeenCalled();
   });
 });
 
-describe('opção 2: números', () => {
+describe('números', () => {
   it('sem prazo de resposta na conta, mostra dois números', () => {
     const wrapper = montar(TelaInicialResumo, dadosCom());
     expect(wrapper.findAll('[data-numero]')).toHaveLength(2);
@@ -107,7 +97,7 @@ describe('opção 2: números', () => {
   });
 });
 
-describe('opção 2: equipe', () => {
+describe('equipe', () => {
   it('agente comum não vê a linha da equipe', () => {
     const wrapper = montar(TelaInicialResumo, dadosCom());
     expect(wrapper.find('[data-equipe]').exists()).toBe(false);
@@ -119,9 +109,9 @@ describe('opção 2: equipe', () => {
     });
     const wrapper = montar(TelaInicialResumo, dados);
     const linha = wrapper.find('[data-equipe]');
-    expect(linha.text()).toContain('TELA_INICIAL.OPCAO_2.EQUIPE.ESPERAM=12');
+    expect(linha.text()).toContain('TELA_INICIAL.RESUMO.EQUIPE.ESPERAM=12');
     expect(linha.text()).toContain(
-      'TELA_INICIAL.OPCAO_2.EQUIPE.FORA_DO_PRAZO=3'
+      'TELA_INICIAL.RESUMO.EQUIPE.FORA_DO_PRAZO=3'
     );
     await linha.trigger('click');
     expect(dados.verTodas).toHaveBeenCalled();
@@ -140,13 +130,15 @@ describe('opção 2: equipe', () => {
   });
 });
 
-describe('opção 2: carregando e erro', () => {
+describe('carregando e erro', () => {
   it('enquanto carrega, mostra traço e nenhuma ação', () => {
     const wrapper = montar(
       TelaInicialResumo,
       dadosCom({ estado: 'carregando', pronto: false })
     );
-    expect(wrapper.find('[data-numero="ESPERAM"]').text()).toContain('–');
+    expect(wrapper.find('[data-numero="ESPERAM"]').text()).toContain(
+      'TELA_INICIAL.RESUMO.CARREGANDO'
+    );
     expect(wrapper.find('[data-numero="ESPERAM"]').element.tagName).toBe('DIV');
     expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
     expect(wrapper.find('[data-acao-do-vazio]').exists()).toBe(false);

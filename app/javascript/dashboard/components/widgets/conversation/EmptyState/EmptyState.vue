@@ -5,7 +5,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 import EmptyStateMessage from './EmptyStateMessage.vue';
 import TelaInicial from 'dashboard/components-next/tela-inicial/TelaInicial.vue';
-import { opcaoDaTela } from 'dashboard/components-next/tela-inicial/telaInicial';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 export default {
   components: {
@@ -22,11 +22,12 @@ export default {
   setup() {
     const { isAdmin } = useAdmin();
 
-    const { accountScopedUrl } = useAccount();
+    const { accountScopedUrl, isCloudFeatureEnabled } = useAccount();
 
     return {
       isAdmin,
       accountScopedUrl,
+      isCloudFeatureEnabled,
     };
   },
   computed: {
@@ -49,10 +50,11 @@ export default {
       }
       return this.$t('CONVERSATION.404');
     },
-    // #1801: com ?inicio=1|2|3 na URL, a tela inicial nova no lugar do aviso.
+    // #1801: com a flag ligada na conta, o resumo do dia no lugar do aviso.
     temTelaInicial() {
       return (
-        !this.isOnExpandedLayout && Boolean(opcaoDaTela(this.$route.query))
+        !this.isOnExpandedLayout &&
+        this.isCloudFeatureEnabled(FEATURE_FLAGS.TELA_INICIAL_RESUMO)
       );
     },
     newInboxURL() {

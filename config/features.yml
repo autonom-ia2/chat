@@ -487,3 +487,14 @@
   display_name: Conversa com a cara do canal (WhatsApp)
   enabled: false
   column: feature_flags_ext_1
+
+# Tela inicial da caixa de conversas (#1801): sem conversa aberta, o painel da direita mostra o resumo do dia —
+# esperam você, sem responsável, fora do prazo (só com SLA), a próxima conversa e, para quem tem report_manage, a
+# linha da equipe — contados no servidor (GET tela_inicial/resumo). Bit 32 (4294967296): a posição na lista é o bit,
+# no fim do que está na main, logo depois de `conversa_cara_do_canal` (bit 31); se outra flag entrar antes na main,
+# esta vai para o fim e o bit sobe. Desligada (padrão): o aviso "selecione uma conversa" de sempre. Sem migration.
+# Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: tela_inicial_resumo
+  display_name: Tela inicial com o resumo do dia
+  enabled: false
+  column: feature_flags_ext_1

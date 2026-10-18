@@ -1,5 +1,5 @@
 import TelaInicialAPI from 'dashboard/api/telaInicial';
-import { buscarResumo, lerResumo, resumoVazio } from '../resumoDoServidor';
+import { buscarResumo, lerResumo } from '../resumoDoServidor';
 
 vi.mock('dashboard/api/telaInicial', () => ({
   default: { resumo: vi.fn() },
@@ -53,21 +53,5 @@ describe('resumoDoServidor', () => {
   it('erro da api sobe para quem chamou', async () => {
     TelaInicialAPI.resumo.mockRejectedValue(new Error('rede'));
     await expect(buscarResumo()).rejects.toThrow('rede');
-  });
-
-  it('o vazio de demonstração zera e mantém o que a conta não usa', () => {
-    const vazio = resumoVazio(
-      lerResumo({
-        ...doServidor,
-        equipe: { ...doServidor.equipe, fora_do_prazo: null },
-      })
-    );
-    expect(vazio).toMatchObject({
-      esperamVoce: 0,
-      semResponsavel: 0,
-      foraDoPrazo: 0,
-      proxima: null,
-      equipe: { esperam: 0, semResponsavel: 0, foraDoPrazo: null },
-    });
   });
 });

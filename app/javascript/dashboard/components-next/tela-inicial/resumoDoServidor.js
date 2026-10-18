@@ -36,19 +36,3 @@ export const buscarResumo = async () => {
   const { data } = await TelaInicialAPI.resumo();
   return lerResumo(data);
 };
-
-// ?vazio=1: o mesmo resumo com tudo respondido (demonstração do estado "Tudo em dia").
-export const resumoVazio = resumo => ({
-  ...resumo,
-  esperamVoce: 0,
-  semResponsavel: 0,
-  foraDoPrazo: resumo.foraDoPrazo === null ? null : 0,
-  proxima: null,
-  equipe: resumo.equipe
-    ? {
-        esperam: 0,
-        semResponsavel: 0,
-        foraDoPrazo: resumo.equipe.foraDoPrazo === null ? null : 0,
-      }
-    : null,
-});

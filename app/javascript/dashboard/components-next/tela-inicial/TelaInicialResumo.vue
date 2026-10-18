@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-// #1801, opção 2 — o resumo do dia num herói escuro (o mesmo de Automações). Os números vêm
+// #1801 — o resumo do dia num herói escuro (o mesmo de Automações). Os números vêm
 // do servidor; o número maior que zero leva à lista certa; zero não é clicável. Quem vê os
 // totais da conta ganha uma linha discreta da equipe. Uma ação: abrir a próxima conversa.
 const props = defineProps({
@@ -40,7 +40,7 @@ const linhaDaEquipe = computed(() => {
   if (!equipe || !props.dados.pronto) return '';
   const partes = [
     t(
-      'TELA_INICIAL.OPCAO_2.EQUIPE.ESPERAM',
+      'TELA_INICIAL.RESUMO.EQUIPE.ESPERAM',
       { count: equipe.esperam },
       equipe.esperam
     ),
@@ -48,7 +48,7 @@ const linhaDaEquipe = computed(() => {
   if (equipe.foraDoPrazo !== null) {
     partes.push(
       t(
-        'TELA_INICIAL.OPCAO_2.EQUIPE.FORA_DO_PRAZO',
+        'TELA_INICIAL.RESUMO.EQUIPE.FORA_DO_PRAZO',
         { count: equipe.foraDoPrazo },
         equipe.foraDoPrazo
       )
@@ -60,7 +60,7 @@ const linhaDaEquipe = computed(() => {
 
 <template>
   <section
-    data-tela-inicial="2"
+    data-tela-inicial
     class="flex items-center justify-center w-full h-full p-4 overflow-auto bg-n-surface-1 md:p-10"
   >
     <div
@@ -87,13 +87,13 @@ const linhaDaEquipe = computed(() => {
             {{
               dados.tudoEmDia
                 ? $t('TELA_INICIAL.TUDO_EM_DIA')
-                : $t('TELA_INICIAL.OPCAO_2.TITULO')
+                : $t('TELA_INICIAL.RESUMO.TITULO')
             }}
           </h1>
           <p class="mb-0 text-base text-white/75">
             {{
               $t(
-                'TELA_INICIAL.OPCAO_2.COM_VOCE',
+                'TELA_INICIAL.RESUMO.COM_VOCE',
                 { count: dados.comVoce },
                 dados.comVoce
               )
@@ -123,10 +123,14 @@ const linhaDaEquipe = computed(() => {
                 class="text-4xl font-semibold leading-none tabular-nums"
                 :class="numero.alerta ? 'text-n-amber-9' : 'text-white'"
               >
-                {{ dados.pronto ? numero.valor : '–' }}
+                {{
+                  dados.pronto
+                    ? numero.valor
+                    : $t('TELA_INICIAL.RESUMO.CARREGANDO')
+                }}
               </span>
               <span class="flex items-center gap-1 text-sm text-white/75">
-                {{ $t(`TELA_INICIAL.OPCAO_2.NUMEROS.${numero.chave}`) }}
+                {{ $t(`TELA_INICIAL.RESUMO.NUMEROS.${numero.chave}`) }}
                 <span
                   v-if="clicavel(numero)"
                   class="i-lucide-chevron-right size-4 text-white/40 rtl:rotate-180"
@@ -142,7 +146,7 @@ const linhaDaEquipe = computed(() => {
           data-erro
           class="mb-0 text-sm text-white/75"
         >
-          {{ $t('TELA_INICIAL.OPCAO_2.ERRO') }}
+          {{ $t('TELA_INICIAL.RESUMO.ERRO') }}
         </p>
         <div
           v-else-if="dados.pronto && !dados.tudoEmDia"
