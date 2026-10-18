@@ -16,3 +16,10 @@ pt_BR:
         em_atendimento: 'O cliente está mandando os dados para cotar (ramo, placa ou endereço, CEP de pernoite, condutor, seguradora atual), ou a equipe disse que está cotando. Ainda não mandou as opções.'
         proposta: 'A equipe já mandou as opções da cotação e o cliente está comparando ou pensando. Ainda não disse qual vai fechar.'
         fechamento: 'O cliente escolheu a opção e disse que quer fechar: pediu o link de pagamento, mandou os dados do cartão ou pediu para emitir.'
+    # Planilha do CRM e e-mail de lembrete (Lote 1 da F2).
+    export:
+      columns:
+        value: 'Valor do seguro'
+        next_follow_up_at: 'Próximo retorno'
+    follow_up_reminder:
+      card: 'Card: %{card}'

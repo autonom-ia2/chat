@@ -15,12 +15,56 @@
       "IDEIAS": {
         "PRECO": "asks for a quote",
         "COMPRAR": "wants to know how much the insurance costs",
-        "COMO_FUNCIONA": "wants to insure a car, a home or a business"
-      }
+        "COMO_FUNCIONA": "wants to insure a car, a home or a business",
+        "PAGAR": "wants to pay the installment",
+        "SEGUNDA_VIA": "asks for a copy of the bill",
+        "ATRASADO": "is late on an installment"
+      },
+      "EXEMPLO": "E.g.: asks for an insurance quote"
     },
     "TIPO": {
       "VENDER": {
         "TEXTO": "Close a new policy or renew one."
+      }
+    },
+    "ETAPA": {
+      "EXEMPLO": "E.g.: the customer got the quote options and is thinking about it."
+    },
+    "VENDAS": {
+      "TITULO": "Know how many policies this pipeline closes",
+      "TEXTO": "Policies closed here go to the dashboard, next to the monthly goal.",
+      "META": "Monthly production goal"
+    },
+    "RESUMO": {
+      "TIPO_VENDER": "{tipo}: get a new customer. Each closed policy counts on the dashboard.",
+      "META": "Production goal of {valor} a month.",
+      "COBRAR_LEMBRETES": "We send installment reminders before, on and after the due date."
+    },
+    "ANUNCIOS": {
+      "GOOGLE": {
+        "NOME_EXEMPLO": "E.g. Policy closed"
+      }
+    },
+    "PREVIA": {
+      "VENDAS_TEXTO": "Example with 40% of the goal already closed.",
+      "META_EXEMPLO": "{valor} closed so far",
+      "SEM_META": "Without a goal, the dashboard shows only the total closed.",
+      "MSG_NOSSA": "Here is the quote with the options. Any questions, just ask.",
+      "MSG_RETORNO": "Hi, Ana! Did you get a chance to look at the quote options? If you want, we can quote another coverage for you.",
+      "LEMBRETE_TEXTO": "Ana hasn't replied since Monday. Next step: ask if anything about the quote is unclear.",
+      "ANUNCIO_FECHOU": "Ana closed a {valor} policy."
+    },
+    "ATENDER": {
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "MSG": "Hi, {nome}! We are still handling your request with the insurer. I will let you know as soon as there is news."
+        },
+        "COBRAR": {
+          "TITULO": "Installment reminders",
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that your insurance installment of {valor} is due on Friday.",
+          "MSG_NO_DIA": "Hi, {nome}! Your insurance installment of {valor} is due today. If you already paid, please ignore this.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the {valor} installment payment yet. Do you want us to send a copy of the bill?"
+        }
       }
     }
   },
@@ -32,18 +76,358 @@
         "OUTRO_LUGAR": "Went with another broker",
         "NAO_ERA_HORA": "The insurer declined"
       },
-      "PERDEU_TEXTO": "The reason is optional, but it helps you close more next time."
+      "PERDEU_TEXTO": "The reason is optional, but it helps you close more next time.",
+      "GANHOU_TEXTO": "Check the value. It goes into the closed policies dashboard."
     },
     "PASSO": {
       "FECHADO": "This card is over: {status}. If the customer comes back, tap Reopen."
     },
     "RESUMO": {
-      "SEM_CONTATO": "No person is linked to this card yet."
+      "SEM_CONTATO": "No person is linked to this card yet.",
+      "NEGOCIO_DE": "Insurance: {titulo}",
+      "NEGOCIO": "Insurance",
+      "AVISO_FACEBOOK": "When the card moves, we tell Facebook and Instagram.",
+      "MAIS_DETALHES_DICA": "Where it came from, what happened, more about the insurance and archive",
+      "MAIS_NEGOCIO": "More about the insurance",
+      "JA_COMPROU": "Already bought insurance from you.",
+      "COBRANCA_FRASE": "{titulo}: {valor} installment, due {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} installment, no due date.",
+      "COBRANCA_VENCEU": "{titulo}: {valor} installment, was due {vencimento}."
     },
     "HISTORICO": {
       "EVENTO": {
-        "ACTIVITY_LINK_CONTACT": "A person was added to this card"
+        "ACTIVITY_LINK_CONTACT": "A person was added to this card",
+        "ACTIVITY_UPDATE": "The insurance details changed",
+        "ACTIVITY_UNLINK_CONTACT": "The person was removed from this insurance"
+      },
+      "GRUPO": {
+        "NEGOCIO": "Stages and insurance"
       }
+    },
+    "SAIR": {
+      "NEGOCIO": "the changes to the insurance"
+    },
+    "NEGOCIO": {
+      "TELA": "Insurance",
+      "TITULO": "About the insurance",
+      "TEXTO": "Which insurance {nome} wants, how much it costs and how urgent it is.",
+      "NOME": "Which insurance",
+      "TITULO_EXEMPLO": "E.g.: Car insurance",
+      "TITULO_FALTA": "Write which insurance it is.",
+      "VALOR": "Insurance value",
+      "OBSERVACOES_EXEMPLO": "E.g.: prefers to pay by card in 10 installments"
+    },
+    "RETORNO": {
+      "SEU_TEXTO_EXEMPLO": "Hi! Did you see the quote options?",
+      "TITULO_EXEMPLO": "E.g.: Chase the insurer for the policy · Ask for the driver's license"
+    },
+    "AGENDA": {
+      "LEMBRETE_EXEMPLO": "E.g.: Chase the insurer for the policy · Ask for the driver's license"
+    },
+    "ORIGEM": {
+      "AVISO_TEXTO": "When the card moves, we tell the ads so they bring similar customers."
+    },
+    "CRIAR": {
+      "TITULO_2": "About the insurance",
+      "TEXTO_2": "Say which insurance it is and which stage it starts in. The rest can wait.",
+      "TITULO_2_COBRANCA": "About the installment",
+      "TEXTO_2_COBRANCA": "Say which policy the installment is for, the amount and the due date. The rest can wait."
+    },
+    "PESSOA": {
+      "LINKED_CONTACT": "Person on this card",
+      "EMPTY_TITLE": "This card has no person yet",
+      "EDIT_HELP": "What you change here applies to this person everywhere. The card does not change."
+    },
+    "CHAMAR": {
+      "REACTIVATE_CONFIRM_BODY": "This customer asked not to get automatic messages. If you turn it back on, they go out again. If another card of theirs is still stopped by the same request, or the request came from somewhere else (team, prospecting or email), it stays stopped until that is undone there. Your name is recorded.",
+      "RESET_KEPT_OTHER_CARDS": "Turned back on. The customer request still holds because of another card of theirs."
+    },
+    "CONTATO": {
+      "TEXTO": "The person: name, phone, email and fields. Applies to all of their policies."
+    },
+    "ASSUNTO": {
+      "TITULO_EXEMPLO": "E.g.: Endorsement to change the car"
+    },
+    "COBRANCA": {
+      "TITULO": "About the installment",
+      "TEXTO": "How much {nome}'s installment is, when it is due and whether they promised to pay.",
+      "NOME": "Which policy the installment is for",
+      "TITULO_EXEMPLO": "E.g.: Car insurance · installment 3 of 10",
+      "VALOR": "Installment amount"
+    }
+  },
+  "CRM_DASHBOARD": {
+    "ORIGIN": {
+      "TITLE": "Production by source",
+      "REVENUE": "Production"
+    }
+  },
+  "CRM_KANBAN": {
+    "DASHBOARD": {
+      "META_SYNC": {
+        "REVENUE": "Value sent"
+      },
+      "KPI": {
+        "GOAL": "Monthly production goal"
+      }
+    },
+    "ACTIONS": {
+      "NEW_CARD": "New quote",
+      "VIEW_OPPORTUNITIES": "View quotes"
+    },
+    "FILTERS": {
+      "SHORTCUT_MINE": "My quotes",
+      "VALUE_RANGE": "Insurance value",
+      "GROUP_ACTIVITY_HELP": "Insurance value, follow-up and card activity."
+    },
+    "LIST": {
+      "COLUMNS": {
+        "VALUE": "Insurance value"
+      }
+    },
+    "DRAWER": {
+      "CARD_FIELDS": {
+        "HELP": "Details specific to this insurance.",
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card. E.g.: Current insurer, Policy expiry date, Plate."
+      }
+    },
+    "CALENDAR": {
+      "QUICK_ADD": {
+        "TITLE_PLACEHOLDER": "E.g.: Send the quote options",
+        "CONTACT_LABEL": "Contact / card",
+        "DEAL_LABEL": "Card",
+        "DEAL_PLACEHOLDER": "Search a card…",
+        "ADVANCED_HINT": "Pick the card and click Continue. We open the card so you can set the details.",
+        "MEETING_HINT": "Pick the card and click Continue to set up the meeting (mailbox, guests, time).",
+        "MEETING_HINT_AGENDA": "Pick the card and tap Continue to see the free days and times."
+      },
+      "EVENT": {
+        "OPEN_DEAL": "Open card"
+      },
+      "MEETING_SCHEDULER": {
+        "SUBTITLE": "Schedule a meeting about this insurance and send calendar invites to guests.",
+        "DEAL": "Card: {deal}",
+        "DEAL_FALLBACK": "Card #{id}",
+        "TITLE_PLACEHOLDER": "E.g.: Go over the quote options"
+      },
+      "MEETING_DETAIL": {
+        "DEAL_LABEL": "Card"
+      }
+    },
+    "CONVERSATION": {
+      "SUBJECTS": {
+        "TITLE_PLACEHOLDER": "E.g.: Car insurance quote"
+      }
+    },
+    "PIPELINE_DRAWER": {
+      "NAME_PLACEHOLDER": "E.g.: Insurance sale, Renewal, Claim",
+      "STAGE_NAME_PLACEHOLDER": "E.g.: Waiting for the policy",
+      "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the insurance types or cases that come here.",
+      "WHEN_TO_USE_PLACEHOLDER": "E.g.: car, home and life insurance quotes."
+    },
+    "STAGE_AUTOMATIONS": {
+      "RULE_NAME_PLACEHOLDER": "E.g.: Remind to chase the policy issuance"
+    },
+    "AI_SETTINGS": {
+      "ATTRIBUTE_EXTRACTION_HELP": "Extracts data such as plate, overnight ZIP code, current insurer and expiry date, then fills any empty custom field of the contact or conversation. A filled field is never overwritten.",
+      "AUTO_FOLLOWUP": {
+        "TONE_PLACEHOLDER": "informal, address as 'você', remind that the quote is valid for a few days…"
+      }
+    },
+    "PIPELINE_EDITOR": {
+      "CRITERIA_TIP": "Use concrete signs, such as “sent the quote options”.",
+      "META_PROGRESS": {
+        "INTEREST": {
+          "HELP": "The customer asked for a quote or information."
+        },
+        "QUALIFIED": {
+          "HELP": "We know which insurance the customer wants and have the data to quote."
+        },
+        "PROPOSAL": {
+          "TITLE": "Quote under review",
+          "HELP": "The customer got the quote options and is choosing."
+        },
+        "NEGOTIATION": {
+          "HELP": "The customer is settling price, coverage or payment method."
+        }
+      }
+    },
+    "TRACKED_LINKS": {
+      "SUBTITLE": "Create a link or QR per campaign, broker or office. Conversations started through it arrive attributed in the CRM.",
+      "NAME_PLACEHOLDER": "E.g.: Office QR · Downtown",
+      "PREFILLED_PLACEHOLDER": "E.g.: Hi! I want a quote for my car insurance",
+      "EMPTY": "No trackable links yet. Create the first one to attribute office, broker or bio conversations.",
+      "PAGE": {
+        "NAME_PLACEHOLDER": "Example: Downtown office · front desk",
+        "MESSAGE_PLACEHOLDER": "Hello! I would like an insurance quote.",
+        "ATTRIBUTION_HINT": "Use one source per office, broker, partner, promotion or website page. When the conversation starts, the source is recorded in your CRM.",
+        "USAGE_DIRECT_HINT": "Office, broker, bio and printed material.",
+        "WEBSITE_NAME_PLACEHOLDER": "Example: Car insurance page"
+      }
+    },
+    "META_ADS_HUB": {
+      "PANEL": {
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
+            "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "BUTTON": "See the quote | See the {count} quotes"
+          }
+        },
+        "PATH": {
+          "QUOTES": "quote | quotes"
+        },
+        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "AD_QUOTES": "1 open quote | {count} open quotes",
+        "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
+        "PATH_LIST": {
+          "TITLE_QUOTES": "Quotes",
+          "TOTAL_QUOTES": "1 quote | {count} quotes"
+        }
+      },
+      "AD_DETAIL": {
+        "TILES": {
+          "QUOTES": "Quotes"
+        },
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "WON": "Insurance closed"
+      }
+    },
+    "BOOKING": {
+      "ADMIN": {
+        "SUBTITLE": "Let customers book a time on a calendar-enabled inbox. Share the public link, no login needed.",
+        "TITLE_PLACEHOLDER": "E.g.: Talk about your insurance",
+        "PIPELINE": "Customer pipeline",
+        "STAGE": "Customer stage"
+      }
+    },
+    "BOOKING_AGENDA": {
+      "ERRORS": {
+        "NO_CONTACT": "This card has no client. Link a contact first."
+      }
+    },
+    "PASSAGEM": {
+      "QUANDO": {
+        "IDEIA_2": "When the customer picks an option and wants to close the insurance",
+        "IDEIA_3": "When the customer reports a claim or complains"
+      },
+      "PREVIA": {
+        "QUANDO_SIM_MSG": "I did not understand the price in the quote. I want to talk to someone."
+      }
+    },
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Policies and requests of contacts linked to this company. Only the ones you can access."
+    },
+    "CONTACT_OPPORTUNITIES": {
+      "TAB": "Policies",
+      "TITLE": "Policies in the CRM",
+      "HELP": "This contact's policies and requests across pipelines. Only the ones you can access.",
+      "SEARCH": "Search policy",
+      "SEARCH_HINT": "Card name. E.g.: car insurance",
+      "EMPTY": "No policies in this query"
+    },
+    "OPPORTUNITY": {
+      "CONTEXT": {
+        "LABEL": "New quote",
+        "OPEN_NEW_TAB": "New quote: opens CRM in a new tab",
+        "UNAVAILABLE": "You do not have permission to create quotes here.",
+        "LOADING": "Loading the contact for the new quote…",
+        "READY": "The contact is ready. Open the quote to continue.",
+        "OPEN": "Open quote"
+      }
+    },
+    "RELATIONSHIP": {
+      "SAME_OPPORTUNITY": "The contact will be linked to this card. The insurance details stay as they are.",
+      "DEAL_COMPANY_LABEL": "Company for this insurance",
+      "SAVE_CONFLICT": "Unable to link the contact. Check whether it already exists or this card has another person’s conversations.",
+      "OPPORTUNITY_DETAILS": "Card details",
+      "FIELDS_SHARED": "The same fields and values as the Relationships profile. Each change is saved separately from the card.",
+      "COMPANY_FORM": {
+        "UNLINK_CONTEXT": "The company link will be removed from {name} and their cards. The insurance details stay.",
+        "EDIT_HELP": "This is the shared company record. Changes also appear in Relationships without changing the insurance details.",
+        "LINK_HELP": "The company will be linked to {name} and used on all cards for this contact.",
+        "UNLINK_HELP": "The contact will have no company. No contacts, companies, cards, conversations or files will be deleted. Company media follows the current link."
+      }
+    }
+  },
+  "CRM_SLA": {
+    "POLICIES": {
+      "DIALOG": {
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Fast reply for claims"
+        }
+      }
+    }
+  },
+  "AUTOMACOES": {
+    "MODELOS": {
+      "ORCAMENTO": {
+        "TITULO": "Tag quote requests",
+        "TEXTO": "Quote requests get a label and are never forgotten in the queue.",
+        "QUANDO": "The customer asks for a quote",
+        "FAZ": "Adds the quote label",
+        "PEDIDO": "I want an automation: when a customer message asks for an insurance quote, add the quote label to the conversation."
+      }
+    },
+    "HEROI": {
+      "EXEMPLO": "E.g.: when a customer reports a claim, pass it to whoever handles claims",
+      "IDEIAS": {
+        "ORCAMENTO": "Tag quote requests"
+      }
+    }
+  },
+  "CRM_CAIXAS": {
+    "SOZINHO": {
+      "AUTO_UM_EXEMPLO": "The customer asks for two different insurances: that makes two cards in {funil}.",
+      "MENSAGEM": "Hi! How much is my car insurance?",
+      "MENSAGEM_DOIS_PEDIDOS": "I want a quote for my car insurance and also for my home."
+    }
+  },
+  "CRM_LEMBRETE": {
+    "SERIE": {
+      "LIGADO_CARD": "Card: {nome}"
+    },
+    "LIGAR": {
+      "NADA_TEXTO": "Stays only on the calendar. E.g.: check this week's renewals.",
+      "CONTATO_TEXTO": "Even with no open card. E.g.: birthday.",
+      "CARD": "A pipeline card",
+      "QUAL_CARD": "Which card?"
+    }
+  },
+  "CRM_CALENDARIO": {
+    "EXEMPLO": {
+      "LEMBRETE": "E.g.: call the customer about the renewal on Friday",
+      "FECHAR": "The day the insurance should close"
+    },
+    "ITEM": {
+      "ACAO": {
+        "VER_NEGOCIO": "See card"
+      }
+    },
+    "NOVO": {
+      "COM_QUEM_TEXTO": "Search by the customer's or the card's name.",
+      "BUSCA_ROTULO": "Customer or card name",
+      "SEM_NEGOCIO": "No card yet",
+      "SEM_NEGOCIO_TEXTO": "{nome} has no card yet. The meeting is booked on the customer's card. For now, set a reminder.",
+      "SEM_NEGOCIO_CURTO": "No card"
+    }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "PARA_QUEM": {
+      "ROTULO": "Search for the customer or the card",
+      "PELO_NEGOCIO": "Another WhatsApp: schedule from the card"
+    },
+    "CONFIRMAR": {
+      "SE_FALHAR": "If it can't be sent, {nome} sees a notice on screen and the reason stays on the card.",
+      "SE_FALHAR_SEM_DONO": "If it can't be sent, whoever handles the conversation sees a notice and the reason stays on the card.",
+      "ONDE_APARECE": "Shows on the calendar and on the card until it goes out."
+    },
+    "PRONTO": {
+      "ONDE": "It is already on the calendar and on the card. You can change or cancel it until it goes out.",
+      "ABRIR_NEGOCIO": "Open the card"
     }
   }
 }
