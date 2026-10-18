@@ -88,12 +88,12 @@ module Autonomia
         end
 
         # Fase 'passagem' (#1630): o turno sem mensagem nova do cliente, ancorado na passagem (`passagem_id`). Só se a
-        # passagem ainda é a aberta e quem responde ainda é o vínculo que a recebeu (`posse`); senão, nada.
+        # passagem segue aberta e quem responde ainda é o vínculo que a recebeu (`posse`); senão, nada.
         def passagem(conversation, agent_inbox, passagem_id, posse)
           return unless ::Autonomia::Agents::Operate::AoReceberPassagem.ligada?(conversation.account)
 
-          passagem = ::Crm::Passagens.ultima_aberta(conversation)
-          return unless passagem&.id == passagem_id.to_i && agent_inbox.id == posse.to_i
+          passagem = ::Crm::Passagem.abertas.find_by(id: passagem_id, conversation_id: conversation.id)
+          return unless passagem && agent_inbox.id == posse.to_i
 
           ::Autonomia::Agents::Operate::ResponderAPassagem.new(conversation: conversation, agent_inbox: agent_inbox,
                                                                passagem: passagem).perform

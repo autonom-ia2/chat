@@ -13,6 +13,8 @@
 module Autonomia::Agents::Operate::AoReceberPassagem
   LIGADA_KEY = 'autonomia_agents_ao_receber_passagem'.freeze
   TTL = 1.day
+  # Até quando o turno normal recebe o contexto da passagem ("logo após a passagem"), se o agente ainda não falou.
+  JANELA_DO_CONTEXTO = 1.hour
   FASE = 'passagem'.freeze
 
   module_function
@@ -69,7 +71,7 @@ module Autonomia::Agents::Operate::AoReceberPassagem
     return unless ligada?(conversation.account) && aplica_ao_agente?(agent)
 
     passagem = ::Crm::Passagens.ultima_aberta(conversation)
-    return unless recebida_de_pessoa?(passagem, agent)
+    return unless recebida_de_pessoa?(passagem, agent) && passagem.em >= JANELA_DO_CONTEXTO.ago
     return if conversation.messages.outgoing.where(sender_type: 'AgentBot', sender_id: agent_inbox.agent_bot_id)
                           .exists?(['created_at > ?', passagem.em])
 
@@ -91,7 +93,7 @@ module Autonomia::Agents::Operate::AoReceberPassagem
   end
 
   def turno_sem_mensagem_nova(silencio)
-    'O cliente não escreveu nada depois da passagem: a última mensagem dele, abaixo, já estava na conversa. Decida se ' \
+    'O cliente não escreveu nada depois da passagem: a última mensagem dele, se houver, já estava na conversa. Decida se ' \
       'há algo útil a dizer agora, como responder o que ficou sem resposta ou continuar de onde a pessoa parou. Se não ' \
       "houver nada útil a dizer agora, responda exatamente `#{silencio}` e nada mais."
   end

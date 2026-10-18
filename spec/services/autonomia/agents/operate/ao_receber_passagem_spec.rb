@@ -8,6 +8,7 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
 
   let(:ana) { create(:user, account: account, role: :agent, name: 'Ana Souza') }
   let(:pedidos) { [] }
+  let(:vinculo_area) { Autonomia::Agents::Areas.vincular!(agent: area, inbox: inbox) }
   let(:resposta_da_ia) { 'Oi, Joana! Sou da Área Suporte e sigo daqui.' }
 
   around do |example|
@@ -27,13 +28,17 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
   end
 
   # A IA dublada guarda o que recebeu (para conferir o contexto e o histórico) e responde `resposta_da_ia`.
-  def ia_grava!(texto = nil)
+  # `durante` roda no meio da chamada (quem escreve durante a IA); `passar_a_humanos` é o pedido de handoff do modelo.
+  def ia_grava!(texto = nil, durante: nil, passar_a_humanos: false)
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       pedidos << kwargs
-      instance_double(Autonomia::Agents::Answerer, answer: Autonomia::Agents::AnswerResult.new(
-        reply: texto || resposta_da_ia, confidence: 0.9, handoff: { should: false, reason: nil }, used_knowledge: [],
-        answered_from_knowledge: false
-      ))
+      resposta = instance_double(Autonomia::Agents::Answerer)
+      allow(resposta).to receive(:answer) do
+        durante&.call
+        Autonomia::Agents::AnswerResult.new(reply: texto || resposta_da_ia, confidence: 0.9, used_knowledge: [],
+                                            handoff: { should: passar_a_humanos, reason: nil }, answered_from_knowledge: false)
+      end
+      resposta
     end
   end
 
@@ -160,6 +165,104 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
       rodar_turno!
 
       expect(respostas.count).to eq(2)
+      expect(contexto).not_to include('passou esta conversa para você')
+    end
+  end
+
+  describe 'guardas do turno da passagem' do
+    before do
+      ia_grava!
+      cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
+    end
+
+    it 'o cliente escreve durante a IA: a resposta da passagem é descartada (responde o turno da mensagem nova)' do
+      ia_grava!(durante: -> { cliente_escreve('Alguém aí?') })
+      ana_passa!
+
+      linhas = linhas_do_log { rodar_rodada! }
+
+      expect(respostas).to be_empty
+      expect(silencios(linhas, 'turno_superado').size).to eq(1)
+    end
+
+    it 'a Ana escreve durante a IA: a resposta da passagem é descartada' do
+      ia_grava!(durante: -> { ana_escreve('Esqueci: a vistoria é amanhã.') })
+      ana_passa!
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(respostas).to be_empty
+      expect(silencios(linhas, 'pessoa_respondeu').size).to eq(1)
+    end
+
+    it 'a chave da conta desligada entre enfileirar e rodar: o turno não roda' do
+      ana_passa!
+      ligar!(valor: false)
+
+      rodar_turno!
+
+      expect(pedidos).to be_empty
+      expect(respostas).to be_empty
+    end
+
+    it 'fora do horário/público do agente: só cala, sem devolver a conversa a humanos' do
+      allow(Autonomia::Agents::Operate::EngagementGate).to receive(:new)
+        .and_return(instance_double(Autonomia::Agents::Operate::EngagementGate, blocked_reason: 'schedule'))
+      ana_passa!
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(respostas).to be_empty
+      expect(silencios(linhas, 'fora_do_engajamento').size).to eq(1)
+      expect(conversation.reload).to have_attributes(ai_assignee: espelho_area, bot_handoff_waiting?: false)
+    end
+
+    it 'o modelo pede passar a humanos: a resposta sai, mas a conversa fica com o agente' do
+      ia_grava!(passar_a_humanos: true)
+      ana_passa!
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(conversation.reload).to have_attributes(ai_assignee: espelho_area, bot_handoff_waiting?: false)
+    end
+
+    it 'o settle atrasado da última mensagem do cliente não responde depois do turno da passagem (uma resposta só)' do
+      mensagem = conversation.messages.incoming.last
+      gatilho(mensagem) # a porta marcou o debounce; o settle dela fica preso na fila
+      clear_enqueued_jobs
+      travel 10.minutes # passou da janela: a troca de dono não refaz o turno
+      ana_passa!
+      expect(turnos_da_passagem.size).to eq(1)
+      rodar_turno!
+
+      linhas = linhas_do_log { settle(mensagem) }
+
+      expect(respostas.count).to eq(1)
+      expect(linhas.grep(/turno_em_curso conv=#{conversation.id} msg=#{mensagem.id}/).size).to eq(1)
+    end
+
+    it 'o settle da última mensagem chegou antes: o turno da passagem desiste' do
+      mensagem = conversation.messages.incoming.last
+      ana_passa!
+      Autonomia::Agents::Operate::PosseDoTurno.tomar?(conversation.id, mensagem.id, vinculo_area.id, dono: 'job-do-settle')
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(respostas).to be_empty
+      expect(silencios(linhas, 'turno_em_curso').size).to eq(1)
+    end
+
+    it 'passada a janela do contexto, o turno normal não recebe mais o contexto da passagem' do
+      ia_grava!('conversation_closed_for_now')
+      ana_passa!
+      rodar_turno!
+      travel described_class::JANELA_DO_CONTEXTO + 1.minute
+      ia_grava!
+      gatilho(cliente_escreve('Voltei, e aí?'))
+
+      rodar_turno!
+
       expect(contexto).not_to include('passou esta conversa para você')
     end
   end

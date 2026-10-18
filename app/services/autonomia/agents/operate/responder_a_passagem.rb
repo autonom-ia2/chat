@@ -1,16 +1,18 @@
 # #1630: o RESPONDER no turno da passagem de uma pessoa para a IA (Operate::AoReceberPassagem), sem mensagem nova do
-# cliente. É o mesmo turno do atendimento (a mesma instrução, o mesmo histórico público — nota privada nunca vai ao
-# modelo —, a mesma pergunta, a mesma elegibilidade conferida com estado fresco e a mesma postagem sob o lock), com
-# estas diferenças, e cada uma tem motivo:
+# cliente. É o mesmo turno do atendimento, pelo mesmo `perform` (a mesma instrução, o mesmo histórico público — nota
+# privada nunca vai ao modelo —, a mesma pergunta, as mesmas limpezas da resposta, a mesma elegibilidade conferida com
+# estado fresco e a mesma postagem sob o lock), com estas diferenças, e cada uma tem motivo:
 #
 #   1. O contexto do turno diz ao modelo que a conversa acabou de ser passada por uma pessoa, e ensina o sinal de
 #      silêncio: o agente pode não ter nada útil a dizer (a pessoa já resolveu tudo). O silêncio aqui é decisão.
 #   2. A âncora é a passagem, não uma mensagem: a resposta leva `autonomia_passagem_id` (CHAVE), e é isso que impede
-#      responder duas vezes à mesma passagem (`already_replied?`).
+#      responder duas vezes à mesma passagem (`already_replied?`). Contra o settle atrasado da última mensagem do
+#      cliente, este turno toma a posse dela (PosseDoTurno) antes da IA: quem chegar primeiro responde, o outro cala.
 #   3. Desiste se o cliente escreveu depois da passagem (o turno normal da mensagem responde, com o contexto da
-#      passagem) ou se uma pessoa voltou a escrever ao cliente depois dela (atendente responde, não assume: ela está
-#      atendendo). As duas conferidas antes da IA e de novo na hora de postar.
-#   4. A porta de engajamento que bloqueia NÃO devolve a conversa a humanos: uma pessoa acabou de passá-la à IA. Só cala.
+#      passagem) ou se uma pessoa voltou a escrever ao cliente depois dela (atendente responde, não assume). As duas
+#      conferidas antes da IA e de novo na hora de postar.
+#   4. Não devolve a conversa a humanos: nem pela porta de engajamento (fora do público ou do horário, só cala) nem
+#      pelo pedido de passar a humanos do modelo. Uma pessoa acabou de passá-la à IA, e sem mensagem nova do cliente.
 #   5. Entrega numa mensagem (o caminho clássico): a humanizada e a de voz dependem de uma mensagem de origem.
 class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operate::Responder
   CHAVE = 'autonomia_passagem_id'.freeze
@@ -22,43 +24,35 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
 
   # -> Result
   def perform
-    return silencio_da_passagem('nao_elegivel') unless still_eligible?
+    return silencio_da_passagem('cliente_escreveu') if cliente_escreveu_depois?
+    return silencio_da_passagem('turno_em_curso') unless posse_da_ultima_mensagem?
 
-    motivo = motivo_antes_da_ia
-    return silencio_da_passagem(motivo) if motivo
-
-    result = sem_marca_da_equipe(answer)
-    motivo = motivo_do_silencio(result)
-    return silencio_decidido(result, motivo) if motivo
-
-    outcome = classic_deliver(result)
-    depois_da_entrega(result, outcome)
-    outcome
-  rescue StandardError => e
-    falha_no_turno(e)
+    super
   end
 
   private
-
-  def motivo_antes_da_ia
-    return 'cliente_escreveu' if cliente_escreveu_depois?
-    return 'pessoa_respondeu' if pessoa_respondeu?
-
-    'fora_do_engajamento' if ::Autonomia::Agents::Operate::EngagementGate.new(agent: @agent, conversation: @conversation).blocked_reason
-  end
 
   def silencio_da_passagem(motivo)
     registrar_silencio(motivo)
     Result.silenced
   end
 
-  # O silêncio depois da IA: o `sinal` é a decisão do modelo (o que este turno existe para permitir) e vai à telemetria.
-  def silencio_decidido(result, motivo)
-    if motivo == 'sinal'
-      ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:sinal_na_passagem, conversation_id: @conversation.id,
-                                                                                    passagem: @passagem.id, agent_inbox: @agent_inbox.id)
-    end
-    silence_with_async(result, motivo)
+  # O sinal é a decisão do modelo (o que este turno existe para permitir) e vai também à telemetria do turno.
+  def registrar_silencio(motivo)
+    super
+    return unless motivo == 'sinal'
+
+    ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:sinal_na_passagem, conversation_id: @conversation.id,
+                                                                                  passagem: @passagem.id, agent_inbox: @agent_inbox.id)
+  end
+
+  # A posse do turno da última mensagem do cliente (se houver), com valor próprio desta passagem: o mesmo job rodando de
+  # novo a reconhece; o settle dessa mensagem que chegar depois não a toma (e vice-versa).
+  def posse_da_ultima_mensagem?
+    ultima = @conversation.messages.chat.incoming.reorder(:created_at, :id).last
+    return true if ultima.nil?
+
+    ::Autonomia::Agents::Operate::PosseDoTurno.tomar?(@conversation.id, ultima.id, @agent_inbox.id, dono: "passagem:#{@passagem.id}")
   end
 
   # A passagem deste turno, com o sinal de silêncio (no turno normal ela vem sem ele).
@@ -79,6 +73,19 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
   # Na hora de postar (dentro do lock): o cliente escreveu durante a IA. Responde o turno da mensagem nova.
   def turno_superado?
     cliente_escreveu_depois?
+  end
+
+  def skip_for_humans(reason)
+    registrar_silencio('fora_do_engajamento')
+    Result.skipped(reason)
+  end
+
+  def handoff_if_signaled(_result)
+    nil
+  end
+
+  def deliver(result)
+    classic_deliver(result)
   end
 
   def media
