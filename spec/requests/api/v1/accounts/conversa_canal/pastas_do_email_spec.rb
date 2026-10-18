@@ -25,6 +25,27 @@ RSpec.describe 'Pastas do e-mail' do
       expect(response.parsed_body).to eq('pasta' => 'lixeira')
     end
 
+    it 'excluir para sempre: o atendente da caixa exclui o que está na Lixeira' do
+      create(:inbox_member, user: agent, inbox: inbox)
+      ConversaCanal::PastaDoEmail.create!(account: account, conversation: conversa, pasta: 'lixeira')
+      allow(DeleteObjectJob).to receive(:perform_later)
+
+      delete caminho, headers: agent.create_new_auth_token
+
+      expect(response).to have_http_status(:ok)
+      expect(DeleteObjectJob).to have_received(:perform_later).with(conversa, agent, anything)
+    end
+
+    it 'fora da Lixeira não exclui' do
+      create(:inbox_member, user: agent, inbox: inbox)
+      allow(DeleteObjectJob).to receive(:perform_later)
+
+      delete caminho, headers: agent.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(DeleteObjectJob).not_to have_received(:perform_later)
+    end
+
     it 'quem não vê a conversa: 401' do
       put caminho, params: { pasta: 'spam' }, headers: agent.create_new_auth_token
       expect(response).to have_http_status(:unauthorized)

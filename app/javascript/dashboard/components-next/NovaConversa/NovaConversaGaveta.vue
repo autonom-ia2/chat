@@ -2,7 +2,8 @@
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { emitter } from 'shared/helpers/mitt';
@@ -78,6 +79,13 @@ const {
   mudarTermo,
   criarContato,
 } = useNovaConversaContato({ caixaPreferida: () => props.caixaId });
+// #1809: aberta do "Escrever" da caixa de e-mail, o contato novo precisa de e-mail.
+const caixaPorId = useMapGetter('inboxes/getInbox');
+const caixaPreferidaEhEmail = computed(
+  () =>
+    Boolean(props.caixaId) &&
+    caixaPorId.value(Number(props.caixaId))?.channel_type === INBOX_TYPES.EMAIL
+);
 
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
 const continuar = useContinuarConversa({ contato, canal });
@@ -351,6 +359,7 @@ useFixedPanelPresence(aberta);
                 :erro-na-busca="erroNaBusca"
                 :criando="criando"
                 :erro-ao-criar="erroAoCriar"
+                :exige-email="caixaPreferidaEhEmail"
                 @buscar="mudarTermo"
                 @escolher="escolherContato"
                 @criar="criarContato"

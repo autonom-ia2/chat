@@ -4,6 +4,7 @@ en:
     pastas:
       so_email: Spam and Trash only exist in email conversations.
       pasta_invalida: This folder does not exist. Use Spam or Trash.
+      so_na_lixeira: To delete for good, move the conversation to Trash first.
     ditado:
       sem_ia: 'To dictate, AI must be turned on. Ask an account admin to connect the OpenAI key in Settings.'
       sem_audio: 'The audio did not arrive. Record again.'

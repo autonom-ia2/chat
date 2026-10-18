@@ -2,7 +2,12 @@
 import { computed, isVNode } from 'vue';
 import Icon from 'next/icon/Icon.vue';
 import ForkContador from './ForkContador.vue';
+import { useRoute } from 'vue-router';
 import PastasDoEmailNoMenu from 'dashboard/components-next/conversa-canal/email/PastasDoEmailNoMenu.vue';
+import {
+  caixaDaFolha,
+  useCaixaDeEmailNova,
+} from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
 
 // Um link de dentro de um item aberto do menu novo (#1617): Todas as conversas, Kanban, uma caixa…
 // O `component` do upstream (ChannelLeaf, por exemplo) continua desenhando a linha quando existe.
@@ -14,6 +19,19 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['navegou']);
+
+// #1809: caixa de e-mail aberta mostra as pastas embaixo; aí só a pasta acende, como
+// no Gmail, e a linha da caixa fica como as outras.
+const route = useRoute();
+const ehEmailNova = useCaixaDeEmailNova();
+const destacada = computed(() => {
+  if (!props.ativa) return false;
+  const caixa = caixaDaFolha(props.folha);
+  const abertaComPastas =
+    ehEmailNova(caixa) &&
+    String(route.params.inbox_id || '') === String(caixa || '');
+  return !abertaComPastas;
+});
 
 const temComponente = computed(
   () =>
@@ -38,7 +56,7 @@ const ir = (navegar, evento) => {
         :class="[
           neta ? 'ps-12' : 'ps-11',
           tema.foco,
-          ativa ? tema.ativo : [tema.textoFilho, tema.passar],
+          destacada ? tema.ativo : [tema.textoFilho, tema.passar],
         ]"
         @click="ir(navigate, $event)"
       >
@@ -48,7 +66,7 @@ const ir = (navegar, evento) => {
           v-bind="{
             label: folha.label,
             icon: folha.icon,
-            active: ativa,
+            active: destacada,
             badgeCount: folha.badgeCount,
           }"
         />

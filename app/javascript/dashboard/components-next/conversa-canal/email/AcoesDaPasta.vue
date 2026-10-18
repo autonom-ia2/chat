@@ -1,12 +1,14 @@
 <script setup>
 // Spam e Lixeira no topo da conversa de e-mail (#1809, fase 1), como os botões do
 // Gmail em cima do assunto. Na Entrada: "Spam" e "Lixeira". No Spam: "Não é spam". Na
-// Lixeira: "Restaurar". Nada é apagado e nada muda na conta de e-mail do cliente; ao
-// mover, a tela volta para a lista em que a pessoa estava.
-import { computed, ref, watch } from 'vue';
+// Lixeira: "Restaurar" e "Excluir para sempre" (com confirmação; quem tem acesso à caixa
+// pode, decisão do Rodrigo 18/10). Fora da Lixeira nada é apagado, e nada muda na conta
+// de e-mail do cliente; depois da ação, a tela volta para a lista em que a pessoa estava.
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Icon from 'next/icon/Icon.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAlert } from 'dashboard/composables';
 import PastasDoEmailAPI from 'dashboard/api/pastasDoEmail';
 import { PASTAS, usePastaDoEmail } from './pastaDoEmail';
@@ -14,7 +16,13 @@ import { PASTAS, usePastaDoEmail } from './pastaDoEmail';
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const { pasta: pastaDaLista, abrirPasta, moverConversa } = usePastaDoEmail();
+const {
+  pasta: pastaDaLista,
+  abrirPasta,
+  moverConversa,
+  excluirConversa,
+} = usePastaDoEmail();
+const confirmar = useTemplateRef('confirmar');
 
 // De qual lista a conversa foi aberta, para voltar para ela depois de mover.
 const LISTA_DA_ROTA = {
@@ -88,6 +96,20 @@ const acoes = computed(() => {
   ];
 });
 
+const excluir = async () => {
+  confirmar.value?.close();
+  movendo.value = true;
+  try {
+    await excluirConversa(conversaId.value);
+    useAlert(t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIDA'));
+    await voltarParaALista();
+  } catch {
+    useAlert(t('CONVERSA_CANAL.EMAIL.PASTA.FALHOU_EXCLUIR'));
+  } finally {
+    movendo.value = false;
+  }
+};
+
 const mover = async acao => {
   if (movendo.value) return;
   movendo.value = true;
@@ -120,5 +142,28 @@ const mover = async acao => {
         {{ t(`CONVERSA_CANAL.EMAIL.PASTA.${acao.chave}`) }}
       </span>
     </button>
+    <button
+      v-if="pastaDaConversa === PASTAS.LIXEIRA"
+      type="button"
+      class="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-full text-sm text-n-ruby-11 hover:bg-n-ruby-3 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-ruby-9"
+      :disabled="movendo"
+      :title="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_PARA_SEMPRE_DICA')"
+      data-excluir-para-sempre
+      @click="confirmar?.open()"
+    >
+      <Icon icon="i-lucide-trash" class="size-4" />
+      <span class="max-sm:sr-only">
+        {{ t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_PARA_SEMPRE') }}
+      </span>
+    </button>
+    <Dialog
+      ref="confirmar"
+      type="alert"
+      :title="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_TITULO')"
+      :description="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_TEXTO')"
+      :confirm-button-label="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_PARA_SEMPRE')"
+      :cancel-button-label="t('CONVERSA_CANAL.EMAIL.CANCELAR')"
+      @confirm="excluir"
+    />
   </div>
 </template>

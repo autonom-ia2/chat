@@ -491,7 +491,13 @@
         "FOI_PARA_SPAM": "Moved to Spam. The sender is blocked.",
         "FOI_PARA_LIXEIRA": "Moved to Trash. You can restore it there.",
         "VOLTOU": "Back in the Inbox.",
-        "FALHOU": "Could not move this conversation. Try again."
+        "FALHOU": "Could not move this conversation. Try again.",
+        "EXCLUIR_PARA_SEMPRE": "Delete forever",
+        "EXCLUIR_PARA_SEMPRE_DICA": "Delete this conversation for good. It cannot be undone.",
+        "EXCLUIR_TITULO": "Delete this conversation forever?",
+        "EXCLUIR_TEXTO": "The emails, notes and attachments of this conversation are deleted for the whole team. It cannot be undone. The customer keeps their own copy.",
+        "EXCLUIDA": "Conversation deleted forever.",
+        "FALHOU_EXCLUIR": "Could not delete this conversation. Try again."
       }
     }
   }

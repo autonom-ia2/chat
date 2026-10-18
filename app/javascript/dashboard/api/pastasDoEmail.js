@@ -11,6 +11,10 @@ class PastasDoEmailAPI extends ApiClient {
     return axios.get(`${this.url}/${conversaId}`);
   }
 
+  excluir(conversaId) {
+    return axios.delete(`${this.url}/${conversaId}`);
+  }
+
   mover(conversaId, pasta) {
     return axios.put(`${this.url}/${conversaId}`, { pasta });
   }

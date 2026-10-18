@@ -1,6 +1,8 @@
 import { computed, ref } from 'vue';
 import { debounce } from '@chatwoot/utils';
 import { useMapGetter } from 'dashboard/composables/store';
+import ContactAPI from 'dashboard/api/contacts';
+import camelcaseKeys from 'camelcase-keys';
 import {
   buildContactableInboxesList,
   createContactSearcher,
@@ -143,11 +145,27 @@ export function useNovaConversaContato({ caixaPreferida = () => null } = {}) {
     procurar(texto, ultimaBusca);
   };
 
-  const criarContato = async () => {
+  // #1809: o contato novo vem com nome, e-mail e telefone conferidos no formulário
+  // (NovaConversaContatoNovo). Sem os dados (outros pontos de entrada), como antes: o
+  // nome sai do e-mail ou do telefone digitado.
+  const criarComDados = async ({ nome, email, telefone }) => {
+    const { data } = await ContactAPI.create({
+      name: nome,
+      ...(email ? { email } : {}),
+      ...(telefone ? { phone_number: telefone } : {}),
+    });
+    return camelcaseKeys(data.payload.contact, { deep: true });
+  };
+
+  const criarContato = async dados => {
     criando.value = true;
     erroAoCriar.value = false;
     try {
-      await escolherContato(await createNewContact(termo.value.trim()));
+      await escolherContato(
+        dados?.nome
+          ? await criarComDados(dados)
+          : await createNewContact(termo.value.trim())
+      );
     } catch (error) {
       erroAoCriar.value = true;
     } finally {

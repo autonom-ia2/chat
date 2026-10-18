@@ -427,6 +427,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE conversa_canal/pastas_do_email/:conversation_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#destroy",
+    "modelo": "ConversaCanal::PastaDoEmail",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:25",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:36"
+    ],
+    "sem_corpo": true
+  },
   "DELETE conversations/:conversation_id/draft_messages": {
     "completo": true,
     "controller": "api/v1/accounts/conversations/draft_messages#destroy",
@@ -4659,9 +4669,9 @@
       "leitura crua sem tipo: pasta (repassada a ConversaCanal::MoverParaPasta.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:14",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:15",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:24"
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:18",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:36"
     ],
     "sem_corpo": false
   },
@@ -22949,9 +22959,9 @@
       "leitura crua sem tipo: pasta (repassada a ConversaCanal::MoverParaPasta.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:14",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:15",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:24"
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:18",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:36"
     ],
     "sem_corpo": false
   },

@@ -4,6 +4,7 @@ pt_BR:
     pastas:
       so_email: Spam e Lixeira existem só nas conversas de e-mail.
       pasta_invalida: Essa pasta não existe. Use Spam ou Lixeira.
+      so_na_lixeira: Para excluir de vez, mova a conversa para a Lixeira primeiro.
     ditado:
       sem_ia: 'Para ditar, a IA precisa estar ligada. Peça para quem administra a conta conectar a chave da OpenAI em Configurações.'
       sem_audio: 'Não chegou o áudio. Grave de novo.'

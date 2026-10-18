@@ -59,5 +59,17 @@ export const usePastaDoEmail = () => {
     return data.pasta;
   };
 
-  return { pasta: pastaAtiva, versao, abrirPasta, moverConversa };
+  // Só para o que já está na Lixeira (o servidor confere).
+  const excluirConversa = async conversaId => {
+    await ConversaEmailPastasAPI.excluir(conversaId);
+    versao.value += 1;
+  };
+
+  return {
+    pasta: pastaAtiva,
+    versao,
+    abrirPasta,
+    moverConversa,
+    excluirConversa,
+  };
 };
