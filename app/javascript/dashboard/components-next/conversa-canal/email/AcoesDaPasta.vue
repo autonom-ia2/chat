@@ -161,7 +161,9 @@ const mover = async acao => {
       type="alert"
       :title="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_TITULO')"
       :description="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_TEXTO')"
-      :confirm-button-label="t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_PARA_SEMPRE')"
+      :confirm-button-label="
+        t('CONVERSA_CANAL.EMAIL.PASTA.EXCLUIR_PARA_SEMPRE')
+      "
       :cancel-button-label="t('CONVERSA_CANAL.EMAIL.CANCELAR')"
       @confirm="excluir"
     />

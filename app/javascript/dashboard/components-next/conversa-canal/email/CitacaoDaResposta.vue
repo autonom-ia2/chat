@@ -43,7 +43,11 @@ const texto = computed(
   () => dados.value.text_content?.full || props.mensagem?.content || ''
 );
 const ehEncaminhado = computed(() => props.tipo === 'encaminhado');
-const CSS_PERMITIDO = [...allowedCssProperties, 'transform', 'transform-origin'];
+const CSS_PERMITIDO = [
+  ...allowedCssProperties,
+  'transform',
+  'transform-origin',
+];
 
 const LINK =
   'inline-flex items-center gap-1 min-h-9 px-3 rounded-full text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
@@ -100,7 +104,8 @@ const LINK =
         <button
           v-if="!desligado"
           type="button"
-          :class="[LINK, 'text-n-slate-11 hover:bg-n-alpha-2']"
+          class="text-n-slate-11 hover:bg-n-alpha-2"
+          :class="[LINK]"
           :aria-expanded="aberto"
           data-ver-citacao
           @click="aberto = !aberto"

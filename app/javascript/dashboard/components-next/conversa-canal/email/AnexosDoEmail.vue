@@ -139,7 +139,9 @@ const comoFoto = item =>
           v-if="comoFoto(item)"
           type="button"
           class="block aspect-[16/10] w-full overflow-hidden bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
-          :aria-label="t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })"
+          :aria-label="
+            t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })
+          "
           @click="naGaleria = item.anexo"
         >
           <img
@@ -157,7 +159,9 @@ const comoFoto = item =>
           rel="noopener noreferrer"
           class="grid place-content-center aspect-[16/10] w-full focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
           :class="item.cor"
-          :aria-label="t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })"
+          :aria-label="
+            t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })
+          "
         >
           <FileIcon :file-type="item.tipo" class="size-9" />
         </a>
@@ -177,7 +181,9 @@ const comoFoto = item =>
             :href="item.anexo.dataUrl"
             download
             class="grid place-content-center flex-shrink-0 size-9 rounded-full text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            :aria-label="t('CONVERSA_CANAL.EMAIL.BAIXAR_ANEXO', { nome: item.nome })"
+            :aria-label="
+              t('CONVERSA_CANAL.EMAIL.BAIXAR_ANEXO', { nome: item.nome })
+            "
             :title="t('CONVERSA_CANAL.EMAIL.BAIXAR')"
             data-baixar-anexo
           >

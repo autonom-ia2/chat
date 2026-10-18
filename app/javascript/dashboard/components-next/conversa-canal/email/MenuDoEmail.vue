@@ -19,8 +19,16 @@ const { t } = useI18n();
 const grupos = computed(() =>
   [
     [
-      { resposta: 'todos', chave: 'RESPONDER_TODOS', icone: 'i-lucide-reply-all' },
-      { resposta: 'encaminhar', chave: 'ENCAMINHAR', icone: 'i-lucide-forward' },
+      {
+        resposta: 'todos',
+        chave: 'RESPONDER_TODOS',
+        icone: 'i-lucide-reply-all',
+      },
+      {
+        resposta: 'encaminhar',
+        chave: 'ENCAMINHAR',
+        icone: 'i-lucide-forward',
+      },
     ],
     [
       props.podeTraduzir && {
@@ -30,11 +38,22 @@ const grupos = computed(() =>
       },
       { acao: 'copiar-link', chave: 'COPIAR_LINK', icone: 'i-lucide-link' },
       { acao: 'imprimir', chave: 'IMPRIMIR', icone: 'i-lucide-printer' },
-      { acao: 'original', chave: 'MOSTRAR_ORIGINAL', icone: 'i-lucide-file-code-2' },
+      {
+        acao: 'original',
+        chave: 'MOSTRAR_ORIGINAL',
+        icone: 'i-lucide-file-code-2',
+      },
     ].filter(Boolean),
     [{ acao: 'nao-lida', chave: 'MARCAR_NAO_LIDA', icone: 'i-lucide-mail' }],
     props.podeExcluir
-      ? [{ acao: 'excluir', chave: 'EXCLUIR', icone: 'i-lucide-trash-2', perigo: true }]
+      ? [
+          {
+            acao: 'excluir',
+            chave: 'EXCLUIR',
+            icone: 'i-lucide-trash-2',
+            perigo: true,
+          },
+        ]
       : [],
   ].filter(grupo => grupo.length)
 );
@@ -104,11 +123,7 @@ const mover = evento => {
       @keydown="mover"
     >
       <template v-for="(grupo, indice) in grupos" :key="indice">
-        <div
-          v-if="indice > 0"
-          role="separator"
-          class="my-1 h-px bg-n-weak"
-        />
+        <div v-if="indice > 0" role="separator" class="my-1 h-px bg-n-weak" />
         <button
           v-for="item in grupo"
           :key="item.chave"

@@ -115,29 +115,29 @@ const DADO = 'inline-flex items-center gap-1.5 text-xs text-n-slate-11';
       </div>
     </div>
     <div class="flex flex-wrap items-center gap-1">
-    <AcoesDaPasta />
-    <button
-      v-if="emails.length > 1"
-      type="button"
-      class="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-full text-sm text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      :aria-pressed="email.recolher.value"
-      data-recolher-antigas
-      @click="email.alternarRecolher"
-    >
-      <Icon
-        :icon="
+      <AcoesDaPasta />
+      <button
+        v-if="emails.length > 1"
+        type="button"
+        class="inline-flex items-center gap-1.5 min-h-10 px-3 rounded-full text-sm text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        :aria-pressed="email.recolher.value"
+        data-recolher-antigas
+        @click="email.alternarRecolher"
+      >
+        <Icon
+          :icon="
+            email.recolher.value
+              ? 'i-lucide-unfold-vertical'
+              : 'i-lucide-fold-vertical'
+          "
+          class="size-4"
+        />
+        {{
           email.recolher.value
-            ? 'i-lucide-unfold-vertical'
-            : 'i-lucide-fold-vertical'
-        "
-        class="size-4"
-      />
-      {{
-        email.recolher.value
-          ? t('CONVERSA_CANAL.EMAIL.ABRIR_TODAS')
-          : t('CONVERSA_CANAL.EMAIL.RECOLHER_ANTIGAS')
-      }}
-    </button>
+            ? t('CONVERSA_CANAL.EMAIL.ABRIR_TODAS')
+            : t('CONVERSA_CANAL.EMAIL.RECOLHER_ANTIGAS')
+        }}
+      </button>
     </div>
   </li>
 </template>

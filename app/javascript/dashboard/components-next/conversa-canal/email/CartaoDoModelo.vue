@@ -57,12 +57,12 @@ onMounted(async () => {
         tabindex="-1"
         aria-hidden="true"
         class="absolute top-0 start-0 h-[1100px] border-0 pointer-events-none origin-top-left bg-white"
-        :style="{ width: `${LARGURA_DO_EMAIL}px`, transform: `scale(${escala})` }"
+        :style="{
+          width: `${LARGURA_DO_EMAIL}px`,
+          transform: `scale(${escala})`,
+        }"
       />
-      <span
-        v-else
-        class="grid place-content-center size-full text-n-teal-10"
-      >
+      <span v-else class="grid place-content-center size-full text-n-teal-10">
         <Icon
           :icon="falhou ? 'i-ph-layout-fill' : 'i-lucide-loader-circle'"
           class="size-8"

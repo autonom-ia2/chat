@@ -254,8 +254,7 @@ const podeTraduzir = computed(
 );
 const podeExcluir = computed(
   () =>
-    !emProcesso.value &&
-    (temTexto.value || Boolean(attachments.value?.length))
+    !emProcesso.value && (temTexto.value || Boolean(attachments.value?.length))
 );
 const assuntoDoEmail = computed(
   () => contentAttributes.value?.email?.subject || email.assunto.value || ''

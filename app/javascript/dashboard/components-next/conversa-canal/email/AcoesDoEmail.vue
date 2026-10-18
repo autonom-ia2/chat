@@ -55,7 +55,8 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
       v-for="acao in ACOES"
       :key="acao.modo"
       type="button"
-      :class="[acao.nota ? PILULA_NOTA : PILULA, 'justify-center sm:justify-start']"
+      class="justify-center sm:justify-start"
+      :class="[acao.nota ? PILULA_NOTA : PILULA]"
       :data-acao-do-email="acao.modo"
       @click="agir(acao.modo)"
     >
