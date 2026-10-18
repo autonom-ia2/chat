@@ -174,7 +174,11 @@ onMounted(() => {
             class="conversation--actions"
           >
             <AccordionItem
-              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')"
+              :title="
+                canOperate
+                  ? $t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')
+                  : $t('CONVERSATION.SO_LEITURA.RESUMO')
+              "
               :is-open="isContactSidebarItemOpen('is_conv_actions_open')"
               @toggle="
                 value => toggleSidebarUIState('is_conv_actions_open', value)

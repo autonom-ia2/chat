@@ -12,6 +12,7 @@ import {
   getUserRole,
 } from '../../../helper/permissionsHelper';
 import camelcaseKeys from 'camelcase-keys';
+import { CONVERSATION_VIEW_PERMISSION } from 'dashboard/constants/permissions';
 
 export const getSelectedChatConversation = ({
   allConversations,
@@ -55,16 +56,25 @@ const getters = {
         sortComparator(a, b, appliedFiltersSortBy || chatSortFilter)
       );
   },
-  // Quem só lê (conversation_view) vê a conversa mas não responde, atribui nem muda status (#1800).
+  // Quem só lê (conversation_view) vê a conversa mas não responde, atribui nem muda status (#1800). Sem
+  // conversation_view, o servidor só entrega conversa que a pessoa opera: nada a esconder. Com ela, a mesma regra do
+  // ConversationPolicy#show?; o participante sai dos participantes da conversa aberta.
   canOperateConversation: (_state, _, __, rootGetters) => conversation => {
-    if (!conversation?.meta) return false;
     const currentUser = rootGetters.getCurrentUser;
     const currentAccountId = rootGetters.getCurrentAccountId;
+    const permissions = getUserPermissions(currentUser, currentAccountId);
+    if (!permissions.includes(CONVERSATION_VIEW_PERMISSION)) return true;
+    if (!conversation?.meta) return false;
+    const participants =
+      rootGetters['conversationWatchers/getByConversationId'](
+        conversation.id
+      ) || [];
     return canOperateConversation(
       conversation,
       getUserRole(currentUser, currentAccountId),
-      getUserPermissions(currentUser, currentAccountId),
-      currentUser.id
+      permissions,
+      currentUser.id,
+      participants.some(participant => participant.id === currentUser.id)
     );
   },
   getSelectedChat: ({ selectedChatId, allConversations }) => {

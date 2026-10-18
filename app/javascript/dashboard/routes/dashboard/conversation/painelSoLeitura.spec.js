@@ -36,7 +36,7 @@ const montar = (componente, { chat, labels = [], participantes = [] } = {}) => {
 };
 
 describe('painel de quem só lê (#1804)', () => {
-  it('mostra responsável, time, prioridade e etiquetas sem controles', () => {
+  it('mostra quem atende, time, prioridade e etiquetas sem controles', () => {
     const { wrapper } = montar(AcoesSoLeitura, {
       chat: {
         id: 9,
@@ -46,6 +46,8 @@ describe('painel de quem só lê (#1804)', () => {
       labels: ['vip'],
     });
 
+    const linhas = wrapper.findAll('dt').map(dt => dt.text());
+    expect(linhas).toEqual(['Quem atende', 'Time', 'Prioridade', 'Etiquetas']);
     const texto = wrapper.text();
     expect(texto).toContain('Ana Atendente');
     expect(texto).toContain('Vendas');
@@ -55,13 +57,11 @@ describe('painel de quem só lê (#1804)', () => {
     expect(wrapper.findAll('button, input')).toHaveLength(0);
   });
 
-  it('diz "Ninguém" e "Nenhuma etiqueta" quando não há', () => {
+  it('sem nada preenchido, mostra só "Quem atende: Ninguém ainda"', () => {
     const { wrapper } = montar(AcoesSoLeitura, { chat: { id: 9, meta: {} } });
 
-    const texto = wrapper.text();
-    expect(texto).toContain('Ninguém');
-    expect(texto).toContain('Nenhuma');
-    expect(texto).toContain('Nenhuma etiqueta');
+    expect(wrapper.findAll('dt').map(dt => dt.text())).toEqual(['Quem atende']);
+    expect(wrapper.find('dd').text()).toBe('Ninguém ainda');
   });
 
   it('busca e lista os participantes, sem botão de participar', async () => {

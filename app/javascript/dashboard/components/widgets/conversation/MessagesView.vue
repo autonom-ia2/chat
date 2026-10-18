@@ -328,6 +328,7 @@ export default {
       }
       this.fetchAllAttachmentsFromCurrentChat();
       this.fetchSuggestions();
+      this.fetchParticipantsForReading();
       this.messageSentSinceOpened = false;
       this.resetReplyEditorHeight();
     },
@@ -348,6 +349,7 @@ export default {
     if (this.pele) this.$nextTick(() => this.rolarNaPele());
     this.fetchAllAttachmentsFromCurrentChat();
     this.fetchSuggestions();
+    this.fetchParticipantsForReading();
   },
 
   unmounted() {
@@ -356,6 +358,13 @@ export default {
   },
 
   methods: {
+    // Quem só lê e também atende as em que participa (#1800): a lista de participantes decide se responde aqui.
+    fetchParticipantsForReading() {
+      if (this.canOperate || !this.currentChat.id) return;
+      this.$store.dispatch('conversationWatchers/show', {
+        conversationId: this.currentChat.id,
+      });
+    },
     async fetchSuggestions() {
       // start empty, this ensures that the label suggestions are not shown
       this.labelSuggestions = [];

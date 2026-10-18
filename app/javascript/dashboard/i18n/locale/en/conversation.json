@@ -423,8 +423,11 @@
     "SO_LEITURA": {
       "TITULO": "You can only read this conversation.",
       "TEXTO": "To reply, talk to whoever manages your team.",
-      "NINGUEM": "No one",
-      "SEM_ETIQUETAS": "No labels",
+      "RESUMO": "Conversation summary",
+      "QUEM_ATENDE": "Handled by",
+      "NINGUEM": "No one yet",
+      "TIME": "Team",
+      "ETIQUETAS": "Labels",
       "SEM_PARTICIPANTES": "No participants"
     }
   },

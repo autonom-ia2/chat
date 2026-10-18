@@ -423,8 +423,11 @@
     "SO_LEITURA": {
       "TITULO": "Você só pode ler esta conversa.",
       "TEXTO": "Para responder, fale com quem cuida da sua equipe.",
-      "NINGUEM": "Ninguém",
-      "SEM_ETIQUETAS": "Nenhuma etiqueta",
+      "RESUMO": "Resumo da conversa",
+      "QUEM_ATENDE": "Quem atende",
+      "NINGUEM": "Ninguém ainda",
+      "TIME": "Time",
+      "ETIQUETAS": "Etiquetas",
       "SEM_PARTICIPANTES": "Ninguém participa"
     }
   },
