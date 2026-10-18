@@ -6,6 +6,9 @@ module Crm::Email::BlocoCitado
   CITACAO = [EmailReplyTrimmer::EMBEDDED, EmailReplyTrimmer::QUOTE].freeze
   DENTRO_DA_CITACAO = [EmailReplyTrimmer::EMPTY, EmailReplyTrimmer::EMAIL_HEADER].freeze
   CABECALHOS_DO_ENCAMINHADO = 3
+  # Linhas que não são texto de quem mandou: vazia, separador ("____", "--") e marcador ("---------- Forwarded message
+  # ---------", "-----Original Message-----"). Se só sobram estas, o corte é vazio (encaminhou sem escrever nada).
+  SEM_TEXTO = [EmailReplyTrimmer::EMPTY, EmailReplyTrimmer::DELIMITER, EmailReplyTrimmer::EMBEDDED].freeze
 
   # Linha a linha, pela classificação do EmailReplyTrimmer: some o marcador da citação ("On ... wrote:"), as linhas
   # citadas (">") e o que fica entre elas. Some tudo a partir do e-mail anterior colado SEM ">" (#inicio_do_historico).
@@ -16,19 +19,22 @@ module Crm::Email::BlocoCitado
     linhas = conteudo.dup.tap { |texto| EmailReplyTrimmer.preprocess!(texto) }.split("\n")
     tipos = marcadores_de_verdade(linhas, linhas.map { |linha| EmailReplyTrimmer.identify_line_content(linha) })
     fim = inicio_do_historico(linhas, tipos) || linhas.size
-    fora_da_citacao(linhas.first(fim), tipos).join("\n").strip
+    mantidas = fora_da_citacao(tipos.first(fim))
+    return '' if mantidas.all? { |indice| SEM_TEXTO.include?(tipos[indice]) }
+
+    mantidas.map { |indice| linhas[indice] }.join("\n").strip
   end
 
-  # As linhas que não estão num bloco citado: o bloco abre no marcador ou na linha citada e segue nas vazias e nos
-  # cabeçalhos; a próxima linha de texto (ou separador, assinatura) o fecha.
-  def self.fora_da_citacao(linhas, tipos)
+  # Os índices das linhas que não estão num bloco citado: o bloco abre no marcador ou na linha citada e segue nas vazias
+  # e nos cabeçalhos; a próxima linha de texto (ou separador, assinatura) o fecha.
+  def self.fora_da_citacao(tipos)
     dentro = false
-    linhas.each_with_index.filter_map do |linha, indice|
+    tipos.each_index.select do |indice|
       dentro = true if CITACAO.include?(tipos[indice])
-      next if dentro && (CITACAO + DENTRO_DA_CITACAO).include?(tipos[indice])
+      next false if dentro && (CITACAO + DENTRO_DA_CITACAO).include?(tipos[indice])
 
       dentro = false
-      linha
+      true
     end
   end
 
@@ -57,8 +63,9 @@ module Crm::Email::BlocoCitado
     cheias[posicao] if linhas[cheias[posicao]].include?('@')
   end
 
-  # O marcador ("On ... wrote:") só vale como marcador se traz um endereço ("<x@y>") ou se a próxima linha cheia é
-  # citada; senão é texto ("On Monday my wife said:" escrito pelo cliente, que cortaria o resto da mensagem).
+  # O marcador ("On ... wrote:", "---------- Forwarded message ---------") só vale como marcador se traz um endereço
+  # ("<x@y>") ou se a próxima linha cheia é citada ou um cabeçalho do e-mail encaminhado; senão é texto ("On Monday my
+  # wife said:" escrito pelo cliente, que cortaria o resto da mensagem).
   def self.marcadores_de_verdade(linhas, tipos)
     cheias = tipos.each_index.reject { |indice| tipos[indice] == EmailReplyTrimmer::EMPTY }
     tipos.each_with_index.map do |tipo, indice|
@@ -70,7 +77,7 @@ module Crm::Email::BlocoCitado
   end
 
   def self.marcador?(linha, tipo_seguinte)
-    linha.include?('@') || tipo_seguinte == EmailReplyTrimmer::QUOTE
+    linha.include?('@') || [EmailReplyTrimmer::QUOTE, EmailReplyTrimmer::EMAIL_HEADER].include?(tipo_seguinte)
   end
 
   def self.bloco_de_cabecalhos?(tipos, cheias, posicao)
