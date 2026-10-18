@@ -39,11 +39,17 @@ module WhatsappHybrid::UnsupportedMessageExtension
     super.merge(unsupported_details(message))
   end
 
+  # `unsupported` e `errors` fora do formato da Meta (texto no lugar do objeto) não derrubam o recebimento: sem tipo
+  # nem código, como o ConversaCanal::TipoNaoSuportado.
   def unsupported_details(message)
-    type = message.dig(:unsupported, :type)
-    details = { 'unsupported_type' => type, 'unsupported_error_code' => Array(message[:errors]).first&.dig(:code) }.compact
+    type = hash_value(message[:unsupported], :type)
+    details = { 'unsupported_type' => type, 'unsupported_error_code' => hash_value(Array(message[:errors]).first, :code) }.compact
     return details if outgoing_echo
 
     details.merge(WhatsappHybrid::UnsupportedRecovery.initial_attributes(inbox, message[:id], type))
+  end
+
+  def hash_value(value, key)
+    value[key] if value.is_a?(Hash)
   end
 end
