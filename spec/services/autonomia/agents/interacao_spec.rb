@@ -63,6 +63,19 @@ RSpec.describe Autonomia::Agents::Interacao do
     end
   end
 
+  describe 'INSTRUCAO' do
+    it 'diz que a pergunta das opções não lista as alternativas, que vão nos botões' do
+      expect(described_class::INSTRUCAO).to include('Ela NÃO lista as alternativas, porque elas vão nos botões ' \
+                                                    '(ex.: "Qual período você prefere?").')
+    end
+
+    it 'mantém as regras do cabeçalho, do reply sem repetição e do link só com endereço escrito' do
+      expect(described_class::INSTRUCAO).to include('`header`: SEMPRE um título curto do assunto',
+                                                    'NÃO repita a pergunta nem as opções em `reply`',
+                                                    'Nunca invente nem monte endereço')
+    end
+  end
+
   describe '.do_modelo' do
     it 'ignora o que não é interação' do
       expect([nil, 'opcoes', { 'tipo' => 'mapa' }].map { |valor| described_class.do_modelo(valor, contexto: '') }).to all(be_nil)

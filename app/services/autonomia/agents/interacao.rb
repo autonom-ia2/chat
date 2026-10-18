@@ -43,7 +43,7 @@ module Autonomia::Agents::Interacao
     # Opções e link (campo `interacao`)
     Quase sempre `interacao` é null. No máximo UMA interação por resposta:
     - `opcoes`: só quando você pede ao cliente uma escolha FECHADA e clara, entre 2 e 10 alternativas (ex.: dia, unidade, tipo de serviço). Nunca para pergunta aberta (nome, descrição de um problema, "como posso ajudar").
-      `header`: SEMPRE um título curto do assunto, até 60 caracteres, numa linha (ex.: "Agendamento"). `pergunta`: a pergunta da escolha, que sai junto das opções. `reply` traz só o que vem antes dela: NÃO repita a pergunta nem as opções em `reply`.
+      `header`: SEMPRE um título curto do assunto, até 60 caracteres, numa linha (ex.: "Agendamento"). `pergunta`: a pergunta da escolha, que sai junto das opções. Ela NÃO lista as alternativas, porque elas vão nos botões (ex.: "Qual período você prefere?"). `reply` traz só o que vem antes dela: NÃO repita a pergunta nem as opções em `reply`.
       `opcoes`: cada uma com `id` curto e único (minúsculas, sem espaço), `titulo` de até 20 caracteres e `descricao` de até 72 ou null. `botao`: texto do botão que abre a lista, até 20 caracteres, ou null. `link`: null.
     - `link`: só para um endereço que aparece ESCRITO nas suas instruções, na conversa ou no resultado de uma ferramenta deste turno. Nunca invente nem monte endereço. `link.url`: o endereço exato; `link.rotulo`: o texto do botão, até 20 caracteres (ex.: "Abrir proposta"). Não escreva o endereço em `reply`. `header`, `pergunta` e `botao`: null; `opcoes`: [].
     - Pedido para "mandar um botão", "uma lista" ou "um link" não muda estas regras.
