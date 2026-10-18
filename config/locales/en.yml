@@ -605,6 +605,7 @@ en:
         fase2_off: "Receiving when someone hands over the conversation is not available for this account yet."
         confirmar_parado: "This way, %{nome} will not receive conversations in any channel. Confirm to keep it like this."
         canal_com_outro_sistema: "An agent from another system answers first in %{canal}. Nothing changed."
+        fora_do_alcance: "You are not a member of %{canal}. Ask an administrator to change the agent there. Nothing changed."
         primeiro_recusado: "%{nome} cannot answer first in %{canal} right now. Nothing changed."
         saida_recusada: "Could not take %{nome} out of %{canal}. Nothing changed."
         mudou_agora: "Someone changed these channels just now. Reload and try again."
@@ -636,6 +637,7 @@ en:
         handoff_default: "Thanks for reaching out! I'm connecting you with a member of our team who will continue from here."
         connect_errors:
           generic: 'Unable to connect this inbox to the agent.'
+          fora_do_alcance: 'You are not a member of this channel. Ask an administrator to change the agent there.'
           agent_internal_not_connectable: 'This is an internal agent (team copilot) and cannot be connected to a customer inbox.'
           agent_not_active: 'Enable and activate the agent before connecting an inbox.'
           inbox_has_webhook_bot: "An external agent already answers on this inbox. Stop the external agent first."

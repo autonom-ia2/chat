@@ -83,6 +83,7 @@ const porCaixa = useAgenteIaPorCaixa();
 const MOTIVO = {
   [BLOQUEIO.SEM_PRINCIPAL]: () => t(`${NS}.SEM_PRINCIPAL`),
   [BLOQUEIO.OUTRO_ROBO]: () => t(`${NS}.OUTRO_ROBO`),
+  [BLOQUEIO.FORA_DO_ALCANCE]: () => t(`${NS}.FORA_DO_ALCANCE`),
   [BLOQUEIO.PRINCIPAL_PARADO]: canal =>
     t(`${NS}.PRINCIPAL_PARADO`, {
       outro: principalDaCaixa(canal).agent_name,
@@ -92,13 +93,17 @@ const MOTIVO = {
 const opcoes = computed(() =>
   props.canais.map(canal => {
     const caixa = caixaPeloId(props.caixas, canal.inbox_id);
-    // No Mudar, onde ele já está continua escolhível mesmo se o principal parou (para poder sair).
+    // No Mudar, onde ele já está continua escolhível mesmo se o principal parou (para poder sair),
+    // menos na caixa que a pessoa não alcança (regra G, #1788): lá o servidor recusa a mudança.
+    const bloqueioDaLista = bloqueioDaCaixa(canal, props.agenteId, {
+      comOutroSistema: porCaixa.value,
+    });
     const bloqueio =
-      mudando && props.inicial.includes(canal.inbox_id)
+      mudando &&
+      props.inicial.includes(canal.inbox_id) &&
+      bloqueioDaLista !== BLOQUEIO.FORA_DO_ALCANCE
         ? null
-        : bloqueioDaCaixa(canal, props.agenteId, {
-            comOutroSistema: porCaixa.value,
-          });
+        : bloqueioDaLista;
     const principal = principalDaCaixa(canal);
     let texto = enderecoDaCaixa(caixa);
     if (soDePessoas(canal)) texto = comNome('SO_PESSOAS');
@@ -143,8 +148,14 @@ const linhaDaCaixa = (inboxId, chaveDoPapel) => {
   };
 };
 
+// A caixa fora do alcance (regra G, #1788) não entra nem sai: o servidor a mantém como está.
+const inicialAlcancavel = computed(() =>
+  props.inicial.filter(
+    id => props.canais.find(canal => canal.inbox_id === id)?.alcanca !== false
+  )
+);
 const mudanca = computed(() =>
-  mudancaDaEquipe(mudando ? props.inicial : [], validas.value)
+  mudancaDaEquipe(mudando ? inicialAlcancavel.value : [], validas.value)
 );
 const linhasDoConfira = computed(() => [
   ...validas.value.map(id => ({ ...linhaDaCaixa(id, 'AVISO'), sai: false })),

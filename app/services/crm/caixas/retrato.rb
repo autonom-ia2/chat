@@ -3,11 +3,13 @@
 # Com a Fase 2 dos Agentes, cada caixa leva também `ai_agents` (Crm::Caixas::RetratoDosAgentes, #1447).
 class Crm::Caixas::Retrato
   # `detalhe: true` (a caixa aberta, #1570): consulta se a caixa aceita agente de área novo. A lista não consulta.
-  def initialize(account:, inboxes:, pode_mudar_agentes: false, detalhe: false)
+  # `alcancavel` (regra G, #1788): só oferece mexer nos agentes das caixas que quem pede alcança.
+  def initialize(account:, inboxes:, pode_mudar_agentes: false, detalhe: false, alcancavel: nil)
     @account = account
     @inboxes = inboxes.to_a
     @pode_mudar_agentes = pode_mudar_agentes
     @detalhe = detalhe
+    @alcancavel = alcancavel
   end
 
   def caixas
@@ -108,7 +110,7 @@ class Crm::Caixas::Retrato
 
   def agentes_de_ia
     @agentes_de_ia ||= Crm::Caixas::RetratoDosAgentes.new(
-      account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes, detalhe: @detalhe
+      account: @account, inbox_ids: inbox_ids, pode_mudar: @pode_mudar_agentes, detalhe: @detalhe, alcancavel: @alcancavel
     )
   end
 
