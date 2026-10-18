@@ -11,7 +11,7 @@
 #   `category_change_not_allowed`, sem chamada à Graph; trocar de tipo é criar um modelo novo;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
 #   modelo criado/alterado até o próximo sync trazer a versão da Meta, gravado por `ChannelList` (trava na linha do
-#   canal; o mesmo escritor do sync e do `NoticeTemplates::Creator`, #1382).
+#   canal; o mesmo escritor do sync e do `Garantir`, #1382).
 class Whatsapp::Templates::Manager
   # Pedido recusado por regra nossa: `code` vai para a tela traduzido; `details` completa (o uso, o modelo que já existe).
   class Refused < StandardError
