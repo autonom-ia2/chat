@@ -5,11 +5,14 @@
 # lê como pedido de reenvio) e o aviso de visualização única (não é mensagem do cliente no WhatsApp).
 module Whatsapp::MensagemReagivel
   MARCAS_QUE_TIRAM = %w[deleted deleted_by_contact_at external_error].freeze
+  # O aviso de visualização única que o aparelho vinculado não abre (gravado pelo recebimento do WAHA, chat#1709).
+  # Lido pela chave, sem depender de quem a grava.
+  AVISO_DE_VISUALIZACAO_UNICA = 'view_once_unavailable'.freeze
 
   module_function
 
   def reagivel?(message)
-    da_conversa?(message) && !marcada?(message) && !Waha::RichNative::Inbound::ViewOnceUnavailable.notice?(message)
+    da_conversa?(message) && !marcada?(message) && message.content_attributes.to_h[AVISO_DE_VISUALIZACAO_UNICA] != true
   end
 
   # Recebida ou enviada ao cliente: nem atividade, nem modelo, nem nota, nem falhada.

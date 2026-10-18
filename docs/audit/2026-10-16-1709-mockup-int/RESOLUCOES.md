@@ -118,3 +118,9 @@ Integração (passos 8 a 11 da demo, com o que mudou):
 - `MessageActions.deliver`: pedido que nem sai (sem webhook, trava de transmissão) deixa a nota "não chegou".
 
 Pendência da demo resolvida na main: o `webhook_sem_atualizacao_da_pele` já só corta a caixa WAHA (o n8n recebe).
+
+Mudança de comportamento na pele (revisão do merge): a regra de "reagível" é uma só, `Whatsapp::MensagemReagivel`, no
+`ConversaCanal::ReacaoDoAtendente` e no `MessageActions.react!`. Com isso a reação pela pele passa a recusar também
+mensagem falhada, mensagem com `external_error` e o aviso de visualização única (antes recusava só nota, atividade,
+modelo e apagada). A regra lê o aviso pela chave `view_once_unavailable`, sem depender do código do WAHA. No painel, o
+"Reagir" do #1709 some também na apagada pelo cliente; o "Editar" segue o `editable?` do servidor.

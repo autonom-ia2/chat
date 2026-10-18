@@ -59,6 +59,22 @@ describe('quando o painel oferece reagir e editar', () => {
     ).toBe(false);
   });
 
+  // Editar segue o `editable?` do servidor: a marca de apagada pelo cliente não tira o "Editar" da nossa.
+  it('a marca de apagada pelo cliente não muda a regra de editar', () => {
+    const marcada = nossa({
+      contentAttributes: { deletedByContactAt: '2026-10-18T10:00:00Z' },
+    });
+    expect(canEdit(conversa(['edit']), marcada, AGORA, AUTOR)).toBe(true);
+    expect(
+      canEdit(
+        conversa(['edit']),
+        nossa({ contentAttributes: { deleted: true } }),
+        AGORA,
+        AUTOR
+      )
+    ).toBe(false);
+  });
+
   it('não reage a nota, atividade, mensagem apagada nem falhada', () => {
     const acoes = conversa(['react']);
     expect(canReact(acoes, nossa({ private: true }))).toBe(false);

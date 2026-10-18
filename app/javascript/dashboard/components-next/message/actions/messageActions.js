@@ -20,12 +20,11 @@ const actionsOf = conversation =>
     ? conversation.whatsapp_api_message_actions
     : [];
 
-// Apagada pelo painel ou pelo cliente (Whatsapp::MensagemReagivel, a regra do servidor).
-const isDeleted = message =>
-  Boolean(
-    message.contentAttributes?.deleted ||
-      message.contentAttributes?.deletedByContactAt
-  );
+const isDeleted = message => Boolean(message.contentAttributes?.deleted);
+// Reagir: apagada pelo painel ou pelo cliente (Whatsapp::MensagemReagivel, a regra do servidor). Editar segue o
+// `editable?` do servidor, que só olha a apagada pelo painel.
+const isDeletedForReaction = message =>
+  isDeleted(message) || Boolean(message.contentAttributes?.deletedByContactAt);
 
 // Mensagem que falhou (gravar nela mandaria o erro de volta ao conector, que reenviaria).
 const isFailed = message =>
@@ -43,7 +42,7 @@ export const canReact = (conversation, message) =>
   ) &&
   !message.private &&
   !isFailed(message) &&
-  !isDeleted(message) &&
+  !isDeletedForReaction(message) &&
   !isViewOnceNotice(message);
 
 // Quem pode editar, como o servidor (author? ou administrador): `viewer` = { userId, isAdmin }.
