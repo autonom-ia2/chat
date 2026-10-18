@@ -94,6 +94,23 @@ RSpec.describe Crm::Email::Autoria do
       expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: no_fim))).to eq('Segue.')
     end
 
+    # Pega: o encaminhado puro (mensagem 17296, "lead Meta encaminhado") devolver a linha do marcador como se fosse texto.
+    it 'encaminhado sem nada escrito: corte vazio (nil com sem_fallback; o texto inteiro no padrão)', :aggregate_failures do
+      cabecalho = "De: Lead Meta <lead@meta.com>\nDate: qui., 16 de out. de 2026\nSubject: Novo lead\nTo: <corretora@example.com>\n\n" \
+                  'Nome: Maria'
+      gmail = "---------- Forwarded message ---------\n#{cabecalho}"
+      outlook = "-----Original Message-----\n#{cabecalho}"
+      outlook_linha = "________________________________\n#{cabecalho}"
+
+      [gmail, outlook, outlook_linha].each do |encaminhado|
+        message = email!(from: 'joao@empresa.com.br', content: encaminhado)
+        expect(described_class.texto_novo(message, sem_fallback: true)).to be_nil
+        expect(described_class.texto_novo(message)).to eq(encaminhado)
+      end
+      com_nota = email!(from: 'joao@empresa.com.br', content: "Veja este lead.\n\n#{gmail}")
+      expect(described_class.texto_novo(com_nota)).to eq('Veja este lead.')
+    end
+
     # Pega: resposta escrita embaixo da citação (bottom-posting) sumir junto com o histórico.
     it 'mantém o que foi escrito depois do bloco citado' do
       embaixo = "On Wed, Oct 15, 2026 at 9:00 AM Corretora <corretora@example.com> wrote:\n> qual o CPF?\n\n123.456.789-00, o meu"
