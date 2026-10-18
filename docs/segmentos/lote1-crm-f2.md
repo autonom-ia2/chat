@@ -16,7 +16,7 @@ autonom-ia2/chat#1802, 18/10/2026. Continua o #1832, que trouxe os funis da corr
   - "parcela" no card de Cobrança. O funil leva o nome do processo, e o card o nome do item cobrado.
 - **Calendário, lembretes e mensagem marcada:** "card" no lugar de "negócio".
 - **Links e QR, e Anúncios da Meta:** cotação, corretor e escritório.
-- **Ficha do contato e da empresa:** a aba "Seguros" e o botão "Nova cotação".
+- **Ficha do contato e da empresa:** a aba "Seguros" e o botão "Novo card". O botão abre o funil em que o CRM estiver, que pode ser de Atender.
 - **Automações:** o modelo "Marcar quem pede cotação".
 - **Servidor:**
   - na planilha do CRM, a coluna "Próximo retorno";
@@ -46,6 +46,7 @@ autonom-ia2/chat#1802, 18/10/2026. Continua o #1832, que trouxe os funis da corr
   - a prévia do lembrete de parcela não oferece segunda via, que o fluxo não manda;
   - o exemplo de tom da IA não traz prazo de validade da cotação.
 - Multifunnel: "A pessoa foi tirada deste card", para casar com "ligada a este card".
+- Base de Clientes: "card" nos textos de vínculo de contato e empresa, que abrem no card de qualquer funil.
 
 **Pelo revisor:**
 - O texto de "Fechou" é neutro ("entra no painel do CRM"), porque aparece também ao resolver um card de Atender.
@@ -80,7 +81,7 @@ autonom-ia2/chat#1802, 18/10/2026. Continua o #1832, que trouxe os funis da corr
 | Chave | Hoje (geral) | Corretora |
 |---|---|---|
 | `CRM_CARD.RESUMO.JA_COMPROU` | Já comprou de você. | Já fechou seguro com você. |
-| `CRM_CARD.CONTATO.TEXTO` | A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela. | A pessoa: nome, telefone, e-mail e campos. Vale para todos os seguros dela. |
+| `CRM_CARD.CONTATO.TEXTO` | A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela. | A pessoa: nome, telefone, e-mail e campos. Vale para todos os cards dela. |
 | `CRM_KANBAN.COMPANY_OPPORTUNITIES.HELP` | Negociações dos contatos vinculados a esta empresa. Apenas oportunidades que você pode acessar. | Seguros e atendimentos dos contatos ligados a esta empresa. Só os que você pode acessar. |
 | `CRM_KANBAN.CONTACT_OPPORTUNITIES.TAB` | Oportunidades | Seguros |
 | `CRM_KANBAN.CONTACT_OPPORTUNITIES.TITLE` | Oportunidades no CRM | Seguros no CRM |
@@ -88,18 +89,18 @@ autonom-ia2/chat#1802, 18/10/2026. Continua o #1832, que trouxe os funis da corr
 | `CRM_KANBAN.CONTACT_OPPORTUNITIES.SEARCH` | Buscar oportunidade | Buscar seguro |
 | `CRM_KANBAN.CONTACT_OPPORTUNITIES.SEARCH_HINT` | Título da negociação | Nome do card. Ex.: seguro do carro |
 | `CRM_KANBAN.CONTACT_OPPORTUNITIES.EMPTY` | Nenhuma oportunidade nesta consulta | Nenhum seguro nesta consulta |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.LABEL` | Nova oportunidade | Nova cotação |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.OPEN_NEW_TAB` | Nova oportunidade — abre o CRM em outra aba | Nova cotação: abre o CRM em outra aba |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.UNAVAILABLE` | Você não tem permissão para criar oportunidades aqui. | Você não tem permissão para criar cotações aqui. |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.LOADING` | Carregando o contato para a nova oportunidade… | Carregando o contato para a nova cotação… |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.READY` | O contato está pronto. Abra a oportunidade para continuar. | O contato está pronto. Abra a cotação para continuar. |
-| `CRM_KANBAN.OPPORTUNITY.CONTEXT.OPEN` | Abrir oportunidade | Abrir cotação |
-| `CRM_KANBAN.RELATIONSHIP.SAME_OPPORTUNITY` | O contato será vinculado a esta oportunidade. Os dados da negociação serão preservados. | O contato será ligado a este card. Os dados do seguro continuam como estão. |
-| `CRM_KANBAN.RELATIONSHIP.DEAL_COMPANY_LABEL` | Empresa deste negócio | Empresa deste seguro |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.LABEL` | Nova oportunidade | Novo card |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.OPEN_NEW_TAB` | Nova oportunidade — abre o CRM em outra aba | Novo card: abre o CRM em outra aba |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.UNAVAILABLE` | Você não tem permissão para criar oportunidades aqui. | Você não tem permissão para criar cards aqui. |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.LOADING` | Carregando o contato para a nova oportunidade… | Carregando o contato para o novo card… |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.READY` | O contato está pronto. Abra a oportunidade para continuar. | O contato está pronto. Abra o card para continuar. |
+| `CRM_KANBAN.OPPORTUNITY.CONTEXT.OPEN` | Abrir oportunidade | Abrir card |
+| `CRM_KANBAN.RELATIONSHIP.SAME_OPPORTUNITY` | O contato será vinculado a esta oportunidade. Os dados da negociação serão preservados. | O contato será ligado a este card. Os dados do card continuam como estão. |
+| `CRM_KANBAN.RELATIONSHIP.DEAL_COMPANY_LABEL` | Empresa deste negócio | Empresa deste card |
 | `CRM_KANBAN.RELATIONSHIP.SAVE_CONFLICT` | Não foi possível concluir o vínculo. Confira se o contato já existe ou se esta oportunidade tem conversas de outra pessoa. | Não foi possível concluir o vínculo. Confira se o contato já existe ou se este card tem conversas de outra pessoa. |
 | `CRM_KANBAN.RELATIONSHIP.FIELDS_SHARED` | Mesmos campos e valores da ficha em Relacionamentos. Cada alteração é salva separadamente da oportunidade. | Mesmos campos e valores da ficha em Relacionamentos. Cada alteração é salva separada do card. |
-| `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.UNLINK_CONTEXT` | O vínculo será removido do cadastro de {name} e de suas oportunidades. Os dados comerciais serão mantidos. | O vínculo será removido do cadastro de {name} e dos cards dele. Os dados dos seguros continuam. |
-| `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_HELP` | Este é o cadastro compartilhado da empresa. As alterações também aparecem em Relacionamentos, sem alterar os dados da negociação. | Este é o cadastro compartilhado da empresa. As alterações também aparecem em Relacionamentos, sem mudar os dados do seguro. |
+| `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.UNLINK_CONTEXT` | O vínculo será removido do cadastro de {name} e de suas oportunidades. Os dados comerciais serão mantidos. | O vínculo será removido do cadastro de {name} e dos cards desse contato. Os dados dos cards continuam. |
+| `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_HELP` | Este é o cadastro compartilhado da empresa. As alterações também aparecem em Relacionamentos, sem alterar os dados da negociação. | Este é o cadastro compartilhado da empresa. As alterações também aparecem em Relacionamentos, sem mudar os dados do card. |
 | `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.LINK_HELP` | A empresa será vinculada ao cadastro de {name} e será usada em todas as oportunidades desse contato. | A empresa será ligada ao cadastro de {name} e usada em todos os cards desse contato. |
 | `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.UNLINK_HELP` | O contato ficará sem empresa. Nenhum contato, empresa, oportunidade, conversa ou arquivo será excluído. As mídias da empresa seguem o vínculo atual. | O contato ficará sem empresa. Nenhum contato, empresa, card, conversa ou arquivo será excluído. As mídias da empresa seguem o vínculo atual. |
 

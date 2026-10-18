@@ -143,7 +143,7 @@
       "RESET_KEPT_OTHER_CARDS": "Turned back on. The customer request still holds because of another card of theirs."
     },
     "CONTATO": {
-      "TEXTO": "The person: name, phone, email and fields. Applies to all of their policies."
+      "TEXTO": "The person: name, phone, email and fields. Applies to all of their cards."
     },
     "ASSUNTO": {
       "TITULO_EXEMPLO": "E.g.: Endorsement to change the car"
@@ -324,23 +324,23 @@
     },
     "OPPORTUNITY": {
       "CONTEXT": {
-        "LABEL": "New quote",
-        "OPEN_NEW_TAB": "New quote: opens CRM in a new tab",
-        "UNAVAILABLE": "You do not have permission to create quotes here.",
-        "LOADING": "Loading the contact for the new quote…",
-        "READY": "The contact is ready. Open the quote to continue.",
-        "OPEN": "Open quote"
+        "LABEL": "New card",
+        "OPEN_NEW_TAB": "New card: opens the CRM in another tab",
+        "UNAVAILABLE": "You do not have permission to create cards here.",
+        "LOADING": "Loading the contact for the new card…",
+        "READY": "The contact is ready. Open the card to continue.",
+        "OPEN": "Open card"
       }
     },
     "RELATIONSHIP": {
-      "SAME_OPPORTUNITY": "The contact will be linked to this card. The insurance details stay as they are.",
-      "DEAL_COMPANY_LABEL": "Company for this insurance",
+      "SAME_OPPORTUNITY": "The contact will be linked to this card. The card details stay as they are.",
+      "DEAL_COMPANY_LABEL": "Company for this card",
       "SAVE_CONFLICT": "Unable to link the contact. Check whether it already exists or this card has another person's conversations.",
       "OPPORTUNITY_DETAILS": "Card details",
       "FIELDS_SHARED": "The same fields and values as the Relationships profile. Each change is saved separately from the card.",
       "COMPANY_FORM": {
-        "UNLINK_CONTEXT": "The company link will be removed from {name} and their cards. The insurance details stay.",
-        "EDIT_HELP": "This is the shared company record. Changes also appear in Relationships without changing the insurance details.",
+        "UNLINK_CONTEXT": "The company link will be removed from {name} and the cards for this contact. The card details stay.",
+        "EDIT_HELP": "This is the shared company record. Changes also appear in Relationships without changing the card details.",
         "LINK_HELP": "The company will be linked to {name} and used on all cards for this contact.",
         "UNLINK_HELP": "The contact will have no company. No contacts, companies, cards, conversations or files will be deleted. Company media follows the current link."
       }
