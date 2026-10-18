@@ -64,6 +64,15 @@ describe Whatsapp::IncomingMessageShapeExtension do
       )
     end
 
+    # WhatsappHybrid::UnsupportedMessageExtension (#1726) reconhece a mensagem por identidade (`equal?`).
+    it 'hands the core the same message object' do
+      service = Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: params_with(valid_message))
+      payload = valid_message.merge(interactive: { type: 'button_reply', button_reply: { id: 'sim', title: 'Sim' } })
+                             .with_indifferent_access
+
+      expect(service.send(:well_formed_message, payload)).to equal(payload)
+    end
+
     it 'keeps the selected option as before' do
       message = receive(valid_message.except(:text).merge(type: 'interactive',
                                                           interactive: { type: 'button_reply', button_reply: { id: 'sim', title: 'Sim' } }))
