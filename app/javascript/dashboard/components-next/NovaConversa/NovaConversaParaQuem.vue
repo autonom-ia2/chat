@@ -4,7 +4,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import NovaConversaCartao from './NovaConversaCartao.vue';
 import NovaConversaContatoNovo from './NovaConversaContatoNovo.vue';
-import { contatoLegivel } from './novaConversa';
+import { contatoLegivel, podeCriarContato } from './novaConversa';
 import { SINAIS } from './modeloPronto';
 
 // #1459 — "Para quem": um campo grande de busca e os achados como linhas
@@ -19,6 +19,9 @@ const props = defineProps({
   erroAoCriar: { type: Boolean, default: false },
   // #1809: gaveta aberta do "Escrever" da caixa de e-mail: o contato novo precisa de e-mail.
   exigeEmail: { type: Boolean, default: false },
+  // #1809 (decisão do Rodrigo, 18/10): o cartão com nome, e-mail e telefone só com a
+  // chave conversa_email_nova; sem ela, o "Criar contato <valor>" de antes.
+  contatoNovoCompleto: { type: Boolean, default: false },
 });
 
 defineEmits(['buscar', 'escolher', 'criar', 'alterar']);
@@ -27,6 +30,9 @@ const P = 'NOVA_CONVERSA.PARA_QUEM';
 const digitou = computed(() => props.termo.trim().length > 1);
 const semAchados = computed(
   () => digitou.value && !props.buscando && !props.resultados.length
+);
+const podeCriar = computed(
+  () => semAchados.value && !props.erroNaBusca && podeCriarContato(props.termo)
 );
 </script>
 
@@ -113,7 +119,10 @@ const semAchados = computed(
           </button>
         </li>
       </ul>
-      <div v-else-if="semAchados" class="flex flex-col items-start gap-3 px-1">
+      <div
+        v-else-if="semAchados && contatoNovoCompleto"
+        class="flex flex-col items-start gap-3 px-1"
+      >
         <p class="mb-0 text-[0.9375rem] text-n-slate-11">
           {{ $t(`${P}.NADA_CRIAR`) }}
         </p>
@@ -127,6 +136,29 @@ const semAchados = computed(
           :exige-email="exigeEmail"
           @criar="dados => $emit('criar', dados)"
         />
+      </div>
+      <div v-else-if="semAchados" class="flex flex-col items-start gap-3 px-1">
+        <p class="mb-0 text-[0.9375rem] text-n-slate-11">
+          {{ $t(podeCriar ? `${P}.NADA_CRIAR` : `${P}.NADA`) }}
+        </p>
+        <Button
+          v-if="podeCriar"
+          :label="$t(`${P}.CRIAR`, { valor: termo.trim() })"
+          icon="i-lucide-user-round-plus"
+          slate
+          faded
+          class="!min-h-11 max-w-full"
+          :is-loading="criando"
+          :disabled="criando"
+          @click="$emit('criar')"
+        />
+        <p
+          v-if="erroAoCriar"
+          role="alert"
+          class="mb-0 text-[0.9375rem] text-n-amber-11"
+        >
+          {{ $t(`${P}.ERRO_CRIAR`) }}
+        </p>
       </div>
     </div>
   </section>

@@ -96,6 +96,15 @@ const caixaPreferidaEhEmail = computed(
     caixaPorId.value(Number(props.caixaId))?.channel_type === INBOX_TYPES.EMAIL
 );
 
+// #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
+// telefone só nas contas com a chave conversa_email_nova; sem ela, o "Criar contato"
+// de antes.
+const contaAtual = useMapGetter('getCurrentAccountId');
+const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
+const contatoNovoCompleto = computed(() =>
+  Boolean(temChave.value(contaAtual.value, 'conversa_email_nova'))
+);
+
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
 const continuar = useContinuarConversa({ contato, canal });
 const {
@@ -397,6 +406,7 @@ useFixedPanelPresence(aberta);
                 :criando="criando"
                 :erro-ao-criar="erroAoCriar"
                 :exige-email="caixaPreferidaEhEmail"
+                :contato-novo-completo="contatoNovoCompleto"
                 @buscar="mudarTermo"
                 @escolher="escolherContato"
                 @criar="criarContato"
