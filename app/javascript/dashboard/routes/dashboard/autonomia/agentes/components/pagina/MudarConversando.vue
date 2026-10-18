@@ -138,6 +138,10 @@ const pensando = computed(
     status.value === 'processing'
 );
 const falhou = computed(() => Boolean(erroDaConversa.value) && !pensando.value);
+// #1428 (parte 3): o Desfazer cancelou este pedido em voo (o servidor tomou o token). Pedir de novo é escrever de novo.
+const canceladoPeloDesfazer = computed(
+  () => estadoDaConversa.value?.error === 'superada_pelo_desfazer'
+);
 const noMeio = computed(
   () => pensando.value || (comecou.value && !feito.value && !resultado.value)
 );
@@ -529,9 +533,19 @@ onBeforeUnmount(() => {
           <AgenteErro
             v-if="falhou"
             data-erro
-            :titulo="t(`${NS}.ERRO`)"
-            :garantia="t(`${NS}.ERRO_GARANTIA`, { nome })"
-            :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+            :titulo="
+              canceladoPeloDesfazer
+                ? t(`${NS}.CANCELADO_PELO_DESFAZER`)
+                : t(`${NS}.ERRO`)
+            "
+            :garantia="
+              canceladoPeloDesfazer ? '' : t(`${NS}.ERRO_GARANTIA`, { nome })
+            "
+            :acao="
+              canceladoPeloDesfazer
+                ? ''
+                : t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')
+            "
             @acao="tentarDeNovo"
           />
         </div>

@@ -20,7 +20,7 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
   def resultado(conferencia, extra = {})
     thread = Autonomia::Agents::BuildThread.create!(account: account, agent: agent, status: :ready,
                                                     state: { 'applied' => true, 'conferencia' => conferencia,
-                                                             'ultimo_ajuste' => ultimo }.merge(extra))
+                                                             'ultimo_ajuste' => ultimo.merge('conferencia' => conferencia) }.merge(extra))
     described_class.new(thread).to_h
   end
 
@@ -125,14 +125,15 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
       thread = agent.build_threads.last
 
       expect(described_class.ultima_mudanca_desfazivel(agent.reload))
-        .to eq(thread_id: thread.id, linhas: %w[Um Três Quatro])
+        .to eq(thread_id: thread.id, linhas: %w[Um Três Quatro], sem_pedido: [])
     end
 
-    it 'depois de uma pergunta na conversa, lê o que entrou na versão da aplicação' do
-      resultado(nil)
-      agent.anotar_versao!(ultimo['versao_id'], 'conferencia' => { 'itens' => [item('tone', 'a', 'Curto.')] })
+    it 'depois de uma pergunta na conversa (sem conferência no state), lê o ajuste guardado, com o não pedido' do
+      nao_pedido = item('greeting', 'saudação', 'Saudação nova.', pedido_pelo_dono: false)
+      guardada = { 'itens' => [item('tone', 'a', 'Curto.'), nao_pedido], 'sem_pedido' => [nao_pedido] }
+      resultado(nil, 'ultimo_ajuste' => ultimo.merge('conferencia' => guardada))
 
-      expect(described_class.ultima_mudanca_desfazivel(agent.reload)[:linhas]).to eq(['Curto'])
+      expect(described_class.ultima_mudanca_desfazivel(agent.reload)).to include(linhas: ['Curto'], sem_pedido: ['Saudação nova'])
     end
   end
 

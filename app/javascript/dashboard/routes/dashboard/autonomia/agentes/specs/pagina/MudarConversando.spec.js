@@ -460,6 +460,24 @@ describe('MudarConversando', () => {
     });
   });
 
+  // #1428 (parte 3, F3): o Desfazer cancelou o pedido em voo desta conversa.
+  it('says the request was canceled by the undo, without a retry', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getThread`] = { id: 55 };
+    store.state[`${ESTADO}getStatus`] = 'failed';
+    store.state[`${ESTADO}getError`] = 'failed';
+    store.state[`${ESTADO}getThreadState`] = {
+      error: 'superada_pelo_desfazer',
+    };
+    await nextTick();
+
+    const erro = no('[data-erro]');
+    expect(erro.textContent).toContain('MUDAR_VISTA.CANCELADO_PELO_DESFAZER');
+    expect(erro.textContent).not.toContain('MUDAR_VISTA.ERRO_GARANTIA');
+    expect(erro.querySelector('button')).toBeNull();
+    wrapper.unmount();
+  });
+
   it('says nothing about the name when it did not change', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getAgent`] = { ...AGENTE };

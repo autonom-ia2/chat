@@ -20,9 +20,10 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
   before do
     token = thread.begin_build!
     agent.apply_builder_config!(token, { instruction: 'Instrução nova.', tone: 'curto' })
-    ultimo = { 'versao_antes_id' => agent.versao_antes_do_construtor.id, 'versao_id' => agent.versao_do_construtor.id }
     itens = [{ 'campo' => 'tone', 'pedido' => 'mais curto', 'resumo' => 'Respostas curtas.', 'atendido' => true,
                'pedido_pelo_dono' => true }]
+    ultimo = { 'versao_antes_id' => agent.versao_antes_do_construtor.id, 'versao_id' => agent.versao_do_construtor.id,
+               'conferencia' => { 'itens' => itens } }
     thread.mark_ready!(token, state: { 'applied' => true, 'conferencia' => { 'itens' => itens }, 'ultimo_ajuste' => ultimo })
   end
 
@@ -59,7 +60,7 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
     end
 
     it 'traz a conversa e os resumos do que entrou, sem campo, instrução nem andaime' do
-      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'])
+      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'], 'sem_pedido' => [])
       expect(response.body).not_to include('campo', 'Instrução', 'andaime', 'ultimo_ajuste', 'versao_antes_id')
     end
 
@@ -80,13 +81,19 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
       agent.update!(enabled: false)
       agent.update!(enabled: true)
 
-      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'])
+      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'], 'sem_pedido' => [])
     end
 
-    it 'some enquanto a conversa gera um turno novo' do
-      thread.begin_build!
+    it 'continua enquanto outra conversa gera; o Desfazer cancela esse pedido' do
+      outra = Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: administrator)
+      outra.begin_build!
+      expect(ultima_mudanca).to include('thread_id' => thread.id)
 
-      expect(ultima_mudanca).to be_nil
+      post "#{url}/desfazer", headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{outra.id}", headers: administrator.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('payload', 'state')).to include('error' => 'superada_pelo_desfazer')
     end
 
     it 'fora do piloto não vem' do

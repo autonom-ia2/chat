@@ -144,9 +144,10 @@ module Autonomia::Agents::Builder::AjusteConferido
   # (que vem pronta em `extra`).
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
+    # O Desfazer (`ultimo_ajuste`) e o "tira isso" (`nao_pedido_anterior`) sobrevivem ao turno sem mudança: duram até o
+    # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
-                    'nao_pedido_anterior' => nil)
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end

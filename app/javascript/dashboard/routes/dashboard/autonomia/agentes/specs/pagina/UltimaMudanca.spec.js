@@ -17,6 +17,18 @@ describe('UltimaMudanca', () => {
     expect(wrapper.emitted('desfazer')).toHaveLength(1);
   });
 
+  it('shows what the owner did not ask with the same text as the card', () => {
+    const wrapper = montar({
+      thread_id: 4,
+      linhas: ['Curto'],
+      sem_pedido: ['Saudação nova'],
+    });
+
+    expect(wrapper.find('[data-ultima-sem-pedido]').text()).toBe(
+      'Também mudei, sem você pedir: Saudação nova. Se não quiser, é só me dizer o que tirar.'
+    );
+  });
+
   it('has a plain text when there is no summary', () => {
     expect(montar({ thread_id: 4, linhas: [] }).text()).toContain(
       'Última mudança feita conversando.'

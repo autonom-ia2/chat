@@ -72,7 +72,8 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
 
   # #1428 — o turno anterior mudou campos que o dono não pediu e o avisou ("é só me dizer o que tirar"). O Construtor
   # recebe, como CONTEXTO INTERNO, o valor de antes desses campos, lido da versão: um "tira isso" volta ao original. A
-  # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale só para este turno.
+  # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale até o próximo ajuste
+  # aplicado ou o Desfazer (parte 3).
   def contexto_do_nao_pedido
     valores = valores_de_antes(com_andaime: true)
     return [] if valores.empty?

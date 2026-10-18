@@ -56,7 +56,7 @@ module Autonomia::Agents::AgentVersioning
       sem_andaime = atributos.delete('sem_andaime')
       update_columns(atributos.merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
       gravar_versao!('rollback', created_by&.id, extra: { 'voltou_para' => version.id, 'sem_andaime' => sem_andaime }.compact)
-      tirar_marca_desfeita!(version) # #1428 (parte 3), em DesfazerAjuste
+      depois_de_voltar_por_versoes!(version) # #1428 (parte 3), em DesfazerAjuste
     end
     true
   end

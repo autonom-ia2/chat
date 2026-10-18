@@ -29,11 +29,12 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
   before { agent.update!(config: agent.config.merge('model' => 'gpt-x', 'topic_map' => { 'a' => 1 })) }
 
   describe 'o fechamento do ajuste' do
-    it 'guarda no state a versão de antes e a da aplicação' do
+    it 'guarda no state a versão de antes, a da aplicação e a conferência do turno' do
       aplicar_ajuste
 
       base = agent.instruction_versions.find_by!(reason: 'base')
-      expect(estado['ultimo_ajuste']).to eq('versao_antes_id' => base.id, 'versao_id' => versoes_do_construtor.sole.id)
+      expect(estado['ultimo_ajuste']).to eq('versao_antes_id' => base.id, 'versao_id' => versoes_do_construtor.sole.id,
+                                            'conferencia' => estado['conferencia'])
     end
 
     it 'com correção, a versão do Desfazer é a da correção' do
@@ -137,6 +138,8 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
 
       expect(aplicada.reload.metadata).not_to have_key('desfeita')
       expect(agent.reload.tone).to eq('cordial e curto')
+      # Revisão adversarial F4: o agente não está mais no antes; pedir o Desfazer de novo não responde "desfeito".
+      expect { desfazer }.to raise_error(described_class::AjusteMudou)
     end
 
     it 'ligar, desligar e mexer no que não é versionado não tiram o Desfazer; a restauração não mexe nisso' do
@@ -148,15 +151,19 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(agent.config['topic_map']).to eq('b' => 2)
     end
 
-    it 'outra conversa gerando agora segura o Desfazer; uma presa além da janela não' do
+    # Revisão adversarial F3: o job em voo, de qualquer idade, perde o token; a escrita atrasada é recusada na guarda.
+    it 'job em voo: o Desfazer toma o token e a escrita atrasada não regrava por cima' do
       aplicar_ajuste
       outra = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
-      outra.begin_build!
-
-      expect { desfazer }.to raise_error(described_class::AjusteMudou)
-
+      token = outra.begin_build!
       outra.update_columns(updated_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
+
       expect(desfazer).to be(true)
+
+      expect(outra.reload).to be_failed
+      expect(outra.state['error']).to eq(described_class::SUPERADA)
+      expect(agent.reload.apply_builder_config!(token, { tone: 'escrita atrasada' })).to be(false)
+      expect(agent.reload.tone).to eq('cordial')
     end
 
     it 'a chave do config que não existia antes sai, em vez de ficar nil' do
@@ -178,11 +185,22 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(agent.reload.tone).to eq('cordial e curto')
     end
 
-    it 'recusa enquanto a conversa está gerando' do
+    it 'a própria conversa gerando um turno novo: o Desfazer cancela o turno' do
       aplicar_ajuste
       thread.begin_build!
 
-      expect { desfazer }.to raise_error(described_class::AjusteMudou)
+      expect(desfazer).to be(true)
+      expect(thread.reload).to be_failed
+      expect(thread.state['ultimo_ajuste']).to include('desfeito' => true)
+    end
+
+    it 'o Desfazer encerra o "tira isso" da conversa' do
+      aplicar_ajuste
+      thread.update_columns(state: thread.reload.state.merge('nao_pedido_anterior' => { 'campos' => ['greeting'] })) # rubocop:disable Rails/SkipsModelValidations
+
+      desfazer
+
+      expect(estado).not_to have_key('nao_pedido_anterior')
     end
 
     it 'recusa agente manual sem mexer em nada' do

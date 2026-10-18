@@ -447,17 +447,25 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(a_conferencia_le).not_to include('scaffold')
     end
 
-    # Revisão crítica do 66d97ac642 (BAIXO, mutante u5): o turno seguinte que não aplica nada também limpa a referência.
-    it 'o turno seguinte só com pergunta do dono limpa a referência do não pedido' do
+    # Parte 3 (crítico Q3): o "tira isso" e o aviso do não pedido sobrevivem a uma pergunta; duram até o próximo ajuste
+    # aplicado ou o Desfazer.
+    it 'depois de uma pergunta, a faixa mostra o não pedido e o "tira isso" ainda recebe o valor de antes' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
                          'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
       sem_pedido(1)
       run_turn
-      expect(estado['nao_pedido_anterior']).to be_present
 
       turno_seguinte('O que você faz hoje?', saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.'))
 
-      expect(estado).to include('applied' => false, 'nao_pedido_anterior' => nil)
+      expect(estado).to include('applied' => false, 'nao_pedido_anterior' => hash_including('campos' => ['greeting']))
+      expect(Autonomia::Agents::ResultadoDoAjuste.ultima_mudanca_desfazivel(agent.reload))
+        .to include(thread_id: thread.id, linhas: ['Respostas curtas'], sem_pedido: ['Saudação nova'])
+
+      tira = saida('greeting' => 'Oi! Aqui é o Hubber.', 'mudancas' => [mudanca('greeting', 'tira a saudação nova')])
+      turno_seguinte('Tira a saudação nova', tira)
+
+      contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+      expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
     end
 
     # Rodada 7 (crítico MÉDIO): o "é só me dizer o que tirar" funciona: o turno seguinte recebe o valor de antes.

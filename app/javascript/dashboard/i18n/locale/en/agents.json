@@ -1310,6 +1310,7 @@
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
           "ERRO": "I could not answer right now.",
           "ERRO_GARANTIA": "Nothing changed in {nome}.",
+          "CANCELADO_PELO_DESFAZER": "I undid the change; this request was canceled. Ask again if you want.",
           "SAIR_TITULO": "Leave without finishing?",
           "SAIR_TEXTO": "Nothing changes in {nome}.",
           "CONTINUAR_AQUI": "Stay here",

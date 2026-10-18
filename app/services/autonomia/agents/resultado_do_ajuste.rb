@@ -20,23 +20,21 @@ class Autonomia::Agents::ResultadoDoAjuste
 
   LINHAS_DA_ULTIMA_MUDANCA = 3
 
-  # A faixa "Última mudança" da tela do agente (sem a conversa aberta, mesmo depois de recarregar): a conversa e até 3
-  # resumos do que entrou. nil quando já não dá para desfazer (a mesma regra do Desfazer, Agent#conversa_desfazivel).
+  # A faixa "Última mudança" da tela do agente (sem o cartão na tela, mesmo depois de recarregar ou de uma pergunta): a
+  # conversa, até 3 resumos do que entrou e até 3 do que o dono não pediu (o mesmo texto do cartão), lidos da conferência
+  # do turno do ajuste. nil quando já não dá para desfazer (a mesma regra do Desfazer, Agent#conversa_desfazivel).
   def self.ultima_mudanca_desfazivel(agent)
     thread = agent.conversa_desfazivel
     return if thread.nil?
 
-    aplicadas = new(thread, conferencia_da_aplicacao(agent, thread)).linhas.select { |linha| linha[:estado] == 'aplicado' }
-    { thread_id: thread.id, linhas: aplicadas.first(LINHAS_DA_ULTIMA_MUDANCA).map { |linha| sem_ponto(linha[:texto]) } }
+    linhas = new(thread, thread.state.dig('ultimo_ajuste', 'conferencia')).linhas
+    { thread_id: thread.id, linhas: textos(linhas, 'aplicado'), sem_pedido: textos(linhas, 'sem_pedido') }
   end
 
-  # A conferência gravada na versão da aplicação (a do turno do ajuste, mesmo depois de uma pergunta na conversa), ou a
-  # do state quando a versão não foi anotada.
-  def self.conferencia_da_aplicacao(agent, thread)
-    versao = agent.instruction_versions.find_by(id: thread.state.dig('ultimo_ajuste', 'versao_id'))
-    versao&.metadata.to_h['conferencia'] || thread.state['conferencia']
+  def self.textos(linhas, estado)
+    linhas.select { |linha| linha[:estado] == estado }.first(LINHAS_DA_ULTIMA_MUDANCA).map { |linha| sem_ponto(linha[:texto]) }
   end
-  private_class_method :conferencia_da_aplicacao
+  private_class_method :textos
 
   # O texto que a tela põe dentro de uma frase dela (entre aspas, ou numa lista) vai sem o ponto final.
   def self.sem_ponto(texto)

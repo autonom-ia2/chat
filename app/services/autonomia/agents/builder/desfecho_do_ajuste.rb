@@ -112,14 +112,16 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
       'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'nao_pedido_anterior' => nao_pedido_anterior(dados, conferencia),
       'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present?,
-      'ultimo_ajuste' => ultimo_ajuste(dados) }
+      'ultimo_ajuste' => ultimo_ajuste(dados, conferencia) }
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
   end
 
-  # #1428 (parte 3) — o que o Desfazer da tela precisa: a versão de antes e a da aplicação (a da correção, se houve). Só
-  # ids; a API não expõe esta chave.
-  def ultimo_ajuste(dados)
-    { 'versao_antes_id' => dados['versao_antes_id'], 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'] }
+  # #1428 (parte 3) — o que o Desfazer da tela precisa: a versão de antes, a da aplicação (a da correção, se houve) e a
+  # conferência do turno (a faixa "Última mudança" lê dela o que entrou e o que não foi pedido, mesmo depois de uma
+  # pergunta). A API não expõe esta chave; o que vai à tela passa pelo ResultadoDoAjuste.
+  def ultimo_ajuste(dados, conferencia)
+    { 'versao_antes_id' => dados['versao_antes_id'], 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'],
+      'conferencia' => conferencia }
   end
 
   # Com aviso de desfecho, pendência ou qualquer falta apontada, a conversa segue aberta.

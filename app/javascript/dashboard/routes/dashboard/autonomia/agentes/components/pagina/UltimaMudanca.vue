@@ -25,6 +25,12 @@ const texto = computed(() =>
     ? t(`${NS}.ULTIMA_MUDANCA`, { lista: props.ultima.linhas.join('; ') })
     : t(`${NS}.ULTIMA_MUDANCA_SEM_RESUMO`)
 );
+// O que o dono não pediu, com o mesmo texto do cartão.
+const semPedido = computed(() =>
+  props.ultima.sem_pedido?.length
+    ? t(`${NS}.SEM_PEDIDO`, { lista: props.ultima.sem_pedido.join('; ') })
+    : ''
+);
 </script>
 
 <template>
@@ -36,7 +42,10 @@ const texto = computed(() =>
       class="i-lucide-history size-4 shrink-0 text-n-slate-11"
       aria-hidden="true"
     />
-    <span class="grow">{{ texto }}</span>
+    <span class="flex flex-col gap-1 grow">
+      <span>{{ texto }}</span>
+      <span v-if="semPedido" data-ultima-sem-pedido>{{ semPedido }}</span>
+    </span>
     <AgenteBotao
       v-if="erro !== 'mudou'"
       data-desfazer-ultima

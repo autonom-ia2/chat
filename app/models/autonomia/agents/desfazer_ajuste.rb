@@ -8,7 +8,12 @@
 # Vale até a próxima MUDANÇA de verdade no agente (decisão do Rodrigo, 18/10): enquanto os campos versionados forem os
 # que a aplicação gravou na versão dela. Ligar ou desligar, materiais e uma pergunta ao Construtor não tiram o Desfazer;
 # mudar o comportamento pela gaveta, voltar a uma versão ou outro ajuste tiram. Sob a trava, a mesma regra decide; se
-# não vale mais, AjusteMudou (409) e o caminho é Versões. Pedir de novo depois de desfeito responde igual, sem versão nova.
+# não vale mais, AjusteMudou (409) e o caminho é Versões. Pedir de novo depois de desfeito responde igual, sem versão nova
+# (a volta por Versões apaga o ajuste guardado: aí o pedido repetido é 409).
+#
+# JOB EM VOO (revisão adversarial F3): o Desfazer toma o token de toda conversa do agente gerando agora, de qualquer
+# idade, sob a mesma ordem de travas da escrita do Construtor (a conversa, depois o agente). A escrita atrasada falha na
+# guarda do token, e a conversa superada mostra ao dono que o pedido foi cancelado.
 #
 # Não reusa restore_instruction! (passa um agente manual a guiado) nem desfazer_do_construtor! (exige a geração em
 # andamento).
@@ -21,13 +26,13 @@ module Autonomia::Agents::DesfazerAjuste
   FORA_DA_COMPARACAO = Autonomia::Agents::AgentVersioning::SO_PARA_COMPARAR
   CHAVES_VERSIONADAS_DO_CONFIG = Autonomia::Agents::AgentVersioning::CHAVES_DA_CONFIG
 
+  SUPERADA = 'superada_pelo_desfazer'.freeze
+
   # A REGRA ÚNICA do Desfazer: a conversa mais nova do agente com um ajuste guardado (`ultimo_ajuste`), ainda não
-  # desfeito, sem nenhuma conversa do agente gerando agora, e o agente ainda com os campos que a aplicação gravou. nil
-  # sem ela. A tela usa (o cartão da conversa e a faixa "Última mudança", mesmo depois de recarregar) e o desfazer
-  # confere de novo sob a trava.
+  # desfeito, e o agente ainda com os campos que a aplicação gravou. nil sem ela. A tela usa (o cartão da conversa e a
+  # faixa "Última mudança", mesmo depois de recarregar) e o desfazer confere de novo sob as travas.
   def conversa_desfazivel
     return unless versao_completa? && guided?
-    return if build_threads.processing.exists?(['updated_at >= ?', Autonomia::Agents::BuildThread::STALE_PROCESSING_AFTER.ago])
 
     thread = build_threads.where(account_id: account_id).where("jsonb_typeof(state->'ultimo_ajuste') = 'object'")
                           .order(id: :desc).first
@@ -39,17 +44,23 @@ module Autonomia::Agents::DesfazerAjuste
     recusar_se_modo_manual!
     raise ActiveRecord::RecordNotFound unless versao_completa? && thread.autonomia_agent_id == id
 
-    # Sob a trava, tudo relido: o agente pode ter passado a manual ou mudado depois que a tela mostrou o botão.
-    with_lock do
-      ultimo = thread.reload.state.to_h['ultimo_ajuste'].to_h
-      next true if ultimo['desfeito'] == true
-      raise AjusteMudou unless conversa_desfazivel&.id == thread.id
-
-      voltar_ao_antes_do_ajuste!(thread, ultimo, created_by)
-    end
+    # Sob as travas, tudo relido: o agente pode ter passado a manual ou mudado depois que a tela mostrou o botão. As
+    # conversas em voo travam antes do agente, na mesma ordem da escrita do Construtor (sem deadlock).
+    transaction { desfazer_sob_as_travas!(thread, created_by) }
   end
 
   private
+
+  def desfazer_sob_as_travas!(thread, autor)
+    em_voo = build_threads.processing.lock.to_a
+    lock!
+    ultimo = thread.reload.state.to_h['ultimo_ajuste'].to_h
+    return true if ultimo['desfeito'] == true
+    raise AjusteMudou unless conversa_desfazivel&.id == thread.id
+
+    em_voo.each { |conversa| conversa.mark_failed!(conversa.build_token, SUPERADA) }
+    voltar_ao_antes_do_ajuste!(thread, ultimo, autor)
+  end
 
   # Não desfeito, e os campos versionados do agente são os que a aplicação gravou na versão dela.
   def ajuste_aberto?(ultimo)
@@ -66,14 +77,17 @@ module Autonomia::Agents::DesfazerAjuste
     gravar_versao!('rollback', autor&.id, extra: { 'voltou_para' => antes.id, 'desfez_ajuste' => ultimo['versao_id'] }.compact)
     aplicada = instruction_versions.find_by(id: ultimo['versao_id'])
     aplicada&.update!(metadata: aplicada.metadata.to_h.merge('desfeita' => true))
-    # Só a marca, sem regravar o state inteiro (uma mensagem nova pode estar entrando na conversa).
-    marca = "state = jsonb_set(state, '{ultimo_ajuste,desfeito}', 'true'::jsonb)"
+    # Só a marca (e o "tira isso", que não vale mais), sem regravar o state inteiro.
+    marca = "state = jsonb_set(state - 'nao_pedido_anterior', '{ultimo_ajuste,desfeito}', 'true'::jsonb)"
     Autonomia::Agents::BuildThread.where(id: thread.id).update_all(marca) # rubocop:disable Rails/SkipsModelValidations
     true
   end
 
-  # Voltar (por Versões) a uma versão desfeita a põe de novo no agente: a marca `desfeita` não fica mentindo.
-  def tirar_marca_desfeita!(version)
+  # A volta por Versões encerra o Desfazer pela conversa: o ajuste guardado sai das conversas do agente (um Desfazer
+  # repetido depois dela é 409, nunca um "desfeito" com o agente em outro estado), e a versão desfeita a que se voltou
+  # perde a marca `desfeita` (ela está de novo no agente).
+  def depois_de_voltar_por_versoes!(version)
+    build_threads.where("state ? 'ultimo_ajuste'").update_all("state = state - 'ultimo_ajuste'") # rubocop:disable Rails/SkipsModelValidations
     return unless version.metadata.to_h.key?('desfeita')
 
     version.update!(metadata: version.metadata.except('desfeita'))
