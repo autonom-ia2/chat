@@ -6,9 +6,9 @@
 # destroyed (draft deleted, import expired, logo replaced). Callers attach these blobs to themselves:
 # ActiveStorage never purges a blob that is still attached to another record.
 #
-# Only images already attached to an e-mail record of the same account count (by attachment name, so an
-# import's original file never does); a pasted URL from another account is ignored. Plain string
-# scanning, no regex.
+# Only files already attached to an e-mail record of the same account count (by attachment name, so an
+# import's original file never does); a pasted URL from another account or a malformed one is ignored.
+# Plain string scanning, no regex.
 class EmailCampaigns::ReferencedBlobs
   BLOBS_PATH = '/rails/active_storage/blobs/'.freeze
   ROUTE_PREFIXES = %w[redirect/ proxy/].freeze

@@ -97,6 +97,52 @@ RSpec.describe RetainsEmailImages do
     expect(template.reload.builder_assets.attachments.count).to eq(1)
   end
 
+  it 'also keeps a file shown through the proxy route' do
+    blob = campaign_image
+    proxied = image_url(blob).sub('/blobs/redirect/', '/blobs/proxy/')
+
+    template = EmailCampaignTemplate.create!(account: account, name: 'Proxy', body_html: %(<img src="#{proxied}">))
+
+    expect(template.reload.builder_assets.blobs).to contain_exactly(blob)
+  end
+
+  it 'ignores malformed blob links and still saves the body' do
+    blob = campaign_image
+    links = ['{{logo_url}}/x.png', '', 'abcd/x.png', 'eyJmb28iOjF9--d/x.png'].map do |tail|
+      %(<img src="https://chat.example.com/rails/active_storage/blobs/redirect/#{tail}">)
+    end
+
+    template = EmailCampaignTemplate.create!(account: account, name: 'Quebrado', body_html: links.join + image_html(blob))
+
+    expect(template.reload.builder_assets.blobs).to contain_exactly(blob)
+  end
+
+  it 'retries once without a blob purged between the check and the insert' do
+    blob = campaign_image
+    calls = 0
+    allow(EmailCampaigns::ReferencedBlobs).to receive(:new).and_wrap_original do |original, *args|
+      calls += 1
+      finder = original.call(*args)
+      calls == 1 ? instance_double(EmailCampaigns::ReferencedBlobs, blob_ids: finder.blob_ids + [999_999_999]) : finder
+    end
+
+    template = EmailCampaignTemplate.create!(account: account, name: 'Corrida', body_html: image_html(blob))
+
+    expect(calls).to eq(2)
+    expect(template.reload.builder_assets.blobs).to contain_exactly(blob)
+  end
+
+  it 'does not touch the body or the files when the AI generation is no longer the active one' do
+    blob = campaign_image
+    source.ai_begin!
+
+    won = source.ai_succeed!('stale-token', { subject: 'Oi', body_mjml: %(<mj-image src="#{image_url(blob)}" />) })
+
+    expect(won).to be(false)
+    expect(source.reload.body_mjml).to be_nil
+    expect(source.builder_assets.blobs).to contain_exactly(blob)
+  end
+
   it 'leaves global gallery templates alone' do
     blob = campaign_image
 
