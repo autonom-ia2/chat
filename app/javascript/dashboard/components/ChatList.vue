@@ -287,14 +287,15 @@ const conversationListPagination = computed(() => {
   return currentPage.value + 1;
 });
 
-// #1809: Spam e Lixeira da caixa de e-mail (estado da tela, não do endereço).
+// #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
 const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
     assigneeType: activeAssigneeTab.value,
-    status: activeStatus.value,
+    // #1809: Spam e Lixeira resolvem a conversa; dentro da pasta, todos os status.
+    status: pastaDoEmail.value ? 'all' : activeStatus.value,
     sortBy: activeSortBy.value,
     page: conversationListPagination.value,
     labels: props.label ? [props.label] : undefined,
