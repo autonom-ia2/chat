@@ -448,17 +448,17 @@
   },
   "CONVERSATION": {
     "FOOTER": {
-      "PRIVATE_MSG_INPUT": "Só a equipe vê. Ex.: cliente prefere pagar no cartão em 10x."
+      "PRIVATE_MSG_INPUT": "Só a equipe vê. Ex.: cliente prefere pagar no cartão em 10x. Shift + Enter para nova linha."
     },
     "NO_MESSAGE_1": "Nenhuma conversa ainda. Quando um cliente pedir uma cotação, a conversa aparece aqui."
   },
   "CONVERSATION_SIDEBAR": {
     "ACCORDION": {
-      "CONTACT_ATTRIBUTES": "Dados do cliente"
+      "CONTACT_ATTRIBUTES": "Dados do contato"
     }
   },
   "CANNED_MGMT": {
-    "DESCRIPTION": "Respostas prontas são as frases que você mais manda, salvas para usar num toque. Na conversa, digite '/' e o atalho. Ex.: /cotacao manda \"Segue a cotação com as opções. Qual você prefere?\"",
+    "DESCRIPTION": "Respostas prontas são as frases que você mais manda, salvas para usar num toque. Na conversa, digite '/' e o atalho. Ex.: se você criar o atalho /cotacao, ele manda \"Segue a cotação com as opções. Qual você prefere?\"",
     "ADD": {
       "DESC": "Salve uma frase que você manda sempre. Ex.: \"Pode me mandar a CNH e o documento do carro?\"",
       "FORM": {
@@ -485,7 +485,7 @@
     }
   },
   "MACROS": {
-    "DESCRIPTION": "Uma macro faz várias ações de uma vez, com um clique. Ex.: pôr a etiqueta \"vistoria pendente\", mandar o link da vistoria e deixar a conversa pendente.",
+    "DESCRIPTION": "Uma macro faz várias ações de uma vez, com um clique. Ex.: pôr a etiqueta Vistoria pendente, mandar o link da vistoria e deixar a conversa pendente.",
     "ADD": {
       "FORM": {
         "NAME": {
@@ -495,11 +495,11 @@
     }
   },
   "SEARCH": {
-    "EMPTY_STATE_DEFAULT": "Procure pelo nome, telefone ou e-mail do cliente, pelo número da conversa ou por uma palavra da mensagem, como \"apólice\" ou a placa do carro."
+    "EMPTY_STATE_DEFAULT": "Procure pelo nome, telefone ou e-mail do cliente, pelo número da conversa ou por uma palavra de mensagens dos últimos 3 meses, como \"apólice\" ou a placa do carro."
   },
   "CONTACTS_LAYOUT": {
     "EMPTY_STATE": {
-      "SUBTITLE": "Adicione seu primeiro cliente no botão abaixo. Para trazer a carteira toda, use Importar contatos."
+      "SUBTITLE": "Adicione seu primeiro contato no botão abaixo. Para trazer a carteira toda, use Importar contatos."
     },
     "HEADER": {
       "ACTIONS": {
@@ -529,7 +529,7 @@
     },
     "SIDEBAR": {
       "ATTRIBUTES": {
-        "EMPTY_STATE": "Esta conta ainda não tem campos do cliente. Crie nas configurações campos como Seguradora atual, Vencimento do seguro e Placa."
+        "EMPTY_STATE": "Esta conta ainda não tem campos do contato. Crie nas configurações campos como Seguradora atual, Vencimento do seguro e Placa."
       },
       "NOTES": {
         "PLACEHOLDER": "Ex.: prefere pagar no cartão em 10x",
@@ -538,7 +538,7 @@
     },
     "DETAILS": {
       "CUSTOMER": {
-        "DESCRIPTION": "Vira cliente sozinho quando um seguro fecha num funil de venda. Marque aqui se ele já fechou seguro com você fora do funil."
+        "DESCRIPTION": "Vira cliente sozinho quando um seguro fecha num funil de venda. Marque aqui se a pessoa já fechou seguro com você fora do funil."
       }
     }
   },
@@ -567,14 +567,14 @@
     }
   },
   "RELATIONSHIPS": {
-    "SUBTITLE": "Seus clientes, as empresas que você atende e os dados de cada seguro, num lugar só.",
+    "SUBTITLE": "Seus clientes e quem ainda está cotando, as empresas que você atende e os dados de cada um, num lugar só.",
     "HOME_SUPPORT_TITLE": "Cliente bem cuidado renova e indica",
     "HOME_SUPPORT_DESCRIPTION": "Mantenha em dia dados como seguradora e vencimento, para chegar antes na renovação.",
     "CARD_DETAILS": {
       "CONTACTS": {
         "SUBTITLE": "Cuide da sua carteira",
-        "DESCRIPTION": "Cadastre seus clientes e veja, de cada um, as conversas, os arquivos (como apólice e boleto) e os campos do seguro.",
-        "BASIC_DESCRIPTION": "Cadastre seus clientes e veja o histórico de conversa de cada um."
+        "DESCRIPTION": "Cadastre seus contatos e veja, de cada um, as conversas, os arquivos (como apólice e boleto) e os campos.",
+        "BASIC_DESCRIPTION": "Cadastre seus contatos e veja o histórico de conversa de cada um."
       },
       "COMPANIES": {
         "DESCRIPTION": "Organize as empresas que você atende, como frotas e condomínios, e ligue cada uma aos seus contatos e arquivos.",
@@ -593,12 +593,12 @@
     }
   },
   "CONTACT_IMPORT_JOURNEY": {
-    "SUBTITLE": "Suba a planilha da sua carteira. A gente acha as colunas, as empresas e as outras informações, como seguradora e vencimento.",
+    "SUBTITLE": "Suba a planilha da sua carteira. A gente acha as colunas e as empresas. Cada coluna extra, como seguradora ou vencimento, vira um atributo do contato.",
     "UPLOAD": {
       "HINT": "CSV ou Excel · até {size} MB · nome e celular ou e-mail; empresa, seguradora, vencimento e outras colunas são bem-vindas"
     },
     "ATTRIBUTES": {
-      "HINT": "Viram campos do contato, como seguradora e placa"
+      "HINT": "Viram atributos do contato, como seguradora e placa"
     }
   }
 }

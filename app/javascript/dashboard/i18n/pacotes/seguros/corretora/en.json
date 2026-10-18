@@ -448,17 +448,17 @@
   },
   "CONVERSATION": {
     "FOOTER": {
-      "PRIVATE_MSG_INPUT": "Only your team sees this. E.g.: customer prefers to pay by card in 10 installments."
+      "PRIVATE_MSG_INPUT": "Only your team sees this. E.g.: customer prefers to pay by card in 10 installments. Shift + Enter for new line."
     },
     "NO_MESSAGE_1": "No conversations yet. When a customer asks for a quote, the conversation shows up here."
   },
   "CONVERSATION_SIDEBAR": {
     "ACCORDION": {
-      "CONTACT_ATTRIBUTES": "Customer details"
+      "CONTACT_ATTRIBUTES": "Contact details"
     }
   },
   "CANNED_MGMT": {
-    "DESCRIPTION": "Canned responses are the messages you send the most, saved to use in one tap. In the conversation, type '/' and the shortcut. E.g.: /quote sends \"Here is your quote with the options. Which one do you prefer?\"",
+    "DESCRIPTION": "Canned responses are the messages you send the most, saved to use in one tap. In the conversation, type '/' and the shortcut. E.g.: if you create the /quote shortcut, it sends \"Here is your quote with the options. Which one do you prefer?\"",
     "ADD": {
       "DESC": "Save a message you send all the time. E.g.: \"Can you send me your driver's license and the car document?\"",
       "FORM": {
@@ -485,7 +485,7 @@
     }
   },
   "MACROS": {
-    "DESCRIPTION": "A macro runs several actions at once, in one click. E.g.: add the \"inspection pending\" label, send the inspection link and mark the conversation as pending.",
+    "DESCRIPTION": "A macro runs several actions at once, in one click. E.g.: add the Inspection pending label, send the inspection link and mark the conversation as pending.",
     "ADD": {
       "FORM": {
         "NAME": {
@@ -495,11 +495,11 @@
     }
   },
   "SEARCH": {
-    "EMPTY_STATE_DEFAULT": "Search by the customer's name, phone or email, the conversation number, or a word from the message, like \"policy\" or the car plate."
+    "EMPTY_STATE_DEFAULT": "Search by the customer's name, phone or email, the conversation number, or a word from messages of the last 3 months, like \"policy\" or the car plate."
   },
   "CONTACTS_LAYOUT": {
     "EMPTY_STATE": {
-      "SUBTITLE": "Add your first client with the button below. To bring in your whole client book, use Import contacts."
+      "SUBTITLE": "Add your first contact with the button below. To bring in your whole client book, use Import contacts."
     },
     "HEADER": {
       "ACTIONS": {
@@ -529,7 +529,7 @@
     },
     "SIDEBAR": {
       "ATTRIBUTES": {
-        "EMPTY_STATE": "This account has no client fields yet. In settings, create fields such as Current insurer, Policy expiry and Plate."
+        "EMPTY_STATE": "This account has no contact fields yet. In settings, create fields such as Current insurer, Policy expiry and Plate."
       },
       "NOTES": {
         "PLACEHOLDER": "E.g.: prefers to pay by card in 10 installments",
@@ -538,7 +538,7 @@
     },
     "DETAILS": {
       "CUSTOMER": {
-        "DESCRIPTION": "Becomes a customer on its own when insurance closes in a sales funnel. Mark it here if they already bought insurance from you outside the funnel."
+        "DESCRIPTION": "Becomes a customer on its own when insurance closes in a sales funnel. Mark it here if the person already bought insurance from you outside the funnel."
       }
     }
   },
@@ -567,14 +567,14 @@
     }
   },
   "RELATIONSHIPS": {
-    "SUBTITLE": "Your clients, the companies you serve and each policy's details, all in one place.",
+    "SUBTITLE": "Your clients and the people still getting a quote, the companies you serve and the details of each one, all in one place.",
     "HOME_SUPPORT_TITLE": "Well-served clients renew and refer others",
     "HOME_SUPPORT_DESCRIPTION": "Keep details like insurer and expiry date up to date, so you get to the renewal first.",
     "CARD_DETAILS": {
       "CONTACTS": {
         "SUBTITLE": "Look after your client book",
-        "DESCRIPTION": "Add your clients and see, for each one, the conversations, the files (like the policy and payment slip) and the policy fields.",
-        "BASIC_DESCRIPTION": "Add your clients and see each one's conversation history."
+        "DESCRIPTION": "Add your contacts and see, for each one, the conversations, the files (like the policy and payment slip) and the fields.",
+        "BASIC_DESCRIPTION": "Add your contacts and see each one's conversation history."
       },
       "COMPANIES": {
         "DESCRIPTION": "Organize the companies you serve, like fleets and condominiums, and link each one to its contacts and files.",
@@ -593,12 +593,12 @@
     }
   },
   "CONTACT_IMPORT_JOURNEY": {
-    "SUBTITLE": "Upload your client book spreadsheet. We find the columns, the companies and the extra information, like insurer and expiry date.",
+    "SUBTITLE": "Upload your client book spreadsheet. We find the columns and the companies. Each extra column, like insurer or expiry date, becomes a contact attribute.",
     "UPLOAD": {
       "HINT": "CSV or Excel · up to {size} MB · name and mobile or e-mail; company, insurer, expiry date and other columns are welcome"
     },
     "ATTRIBUTES": {
-      "HINT": "They become contact fields, like insurer and plate"
+      "HINT": "They become contact attributes, like insurer and plate"
     }
   }
 }
