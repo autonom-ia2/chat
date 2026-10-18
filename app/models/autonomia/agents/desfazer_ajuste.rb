@@ -52,7 +52,9 @@ module Autonomia::Agents::DesfazerAjuste
   private
 
   def desfazer_sob_as_travas!(thread, autor)
-    em_voo = build_threads.processing.lock.to_a
+    # Todas as conversas do agente (inclusive a deste Desfazer, que recebe a marca), não só as em voo: uma conversa parada
+    # que começasse a gerar no meio pegaria a trava dela antes de nós e esperaria o agente.
+    em_voo = travar_conversas!.select(&:processing?)
     lock!
     ultimo = thread.reload.state.to_h['ultimo_ajuste'].to_h
     return true if ultimo['desfeito'] == true
@@ -83,11 +85,18 @@ module Autonomia::Agents::DesfazerAjuste
     true
   end
 
-  # A volta por Versões encerra o Desfazer pela conversa: o ajuste guardado sai das conversas do agente (um Desfazer
-  # repetido depois dela é 409, nunca um "desfeito" com o agente em outro estado), e a versão desfeita a que se voltou
-  # perde a marca `desfeita` (ela está de novo no agente).
+  # A ORDEM DAS TRAVAS, a mesma da escrita do Construtor: as conversas do agente primeiro (só as da conta, por id),
+  # depois o agente. O Desfazer e a volta por Versões seguem esta ordem; ninguém trava o agente e depois a conversa.
+  def travar_conversas!
+    build_threads.where(account_id: account_id).order(:id).lock.to_a
+  end
+
+  # A volta por Versões encerra o Desfazer pela conversa: o ajuste guardado e o "tira isso" saem das conversas do agente
+  # (um Desfazer repetido depois dela é 409, nunca um "desfeito" com o agente em outro estado), e a versão desfeita
+  # a que se voltou perde a marca `desfeita` (ela está de novo no agente).
   def depois_de_voltar_por_versoes!(version)
-    build_threads.where("state ? 'ultimo_ajuste'").update_all("state = state - 'ultimo_ajuste'") # rubocop:disable Rails/SkipsModelValidations
+    build_threads.where("state ?| array['ultimo_ajuste', 'nao_pedido_anterior']")
+                 .update_all("state = state - 'ultimo_ajuste' - 'nao_pedido_anterior'") # rubocop:disable Rails/SkipsModelValidations
     return unless version.metadata.to_h.key?('desfeita')
 
     version.update!(metadata: version.metadata.except('desfeita'))

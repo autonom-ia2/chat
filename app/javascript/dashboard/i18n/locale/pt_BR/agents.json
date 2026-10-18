@@ -1310,7 +1310,7 @@
           "JEITO_NOVO": "O jeito de falar também mudou. Teste ao lado.",
           "ERRO": "Não consegui responder agora.",
           "ERRO_GARANTIA": "Nada mudou em {nome}.",
-          "CANCELADO_PELO_DESFAZER": "Desfiz a mudança; esse pedido foi cancelado. Peça de novo se quiser.",
+          "CANCELADO_PELO_DESFAZER": "Esta mudança foi desfeita enquanto eu trabalhava; esse pedido foi cancelado. Peça de novo se quiser.",
           "SAIR_TITULO": "Sair sem terminar?",
           "SAIR_TEXTO": "Nada muda em {nome}.",
           "CONTINUAR_AQUI": "Continuar aqui",

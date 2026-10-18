@@ -50,6 +50,7 @@ module Autonomia::Agents::AgentVersioning
     return false if version.blank? || version.autonomia_agent_id != id
 
     transaction do
+      travar_conversas! # #1428 (parte 3): as conversas antes do agente, a ordem do Construtor (sem deadlock)
       lock!
       gravar_versao!('antes_de_voltar', created_by&.id) if versao_completa? && !estado_atual_guardado?
       atributos = atributos_da_versao(version)

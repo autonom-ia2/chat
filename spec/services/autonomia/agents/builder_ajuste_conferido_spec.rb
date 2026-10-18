@@ -436,7 +436,10 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
       allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
 
-      a_conferencia_le = described_class.new(account: account, build_thread: thread.reload).send(:valores_antes_do_nao_pedido)
+      leitor = described_class.new(account: account, build_thread: thread.reload)
+      allow(leitor).to receive(:credential).and_return(api_key: 'k')
+      leitor.send(:preparar_ajuste!, 'outro-token')
+      a_conferencia_le = leitor.send(:valores_antes_do_nao_pedido)
       turno_seguinte('Tira o que você mudou na instrução', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
 
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
@@ -466,6 +469,32 @@ RSpec.describe Autonomia::Agents::Builder do
 
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
       expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
+    end
+
+    # Parte 3 (crítico 3): o contexto do "tira isso" só vai enquanto o Desfazer ainda vale.
+    def contexto_do_tira_isso_depois
+      respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
+                         'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(1)
+      run_turn
+      yield
+      turno_seguinte('Tira a saudação nova', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
+      calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+    end
+
+    it 'V1: depois de uma volta por Versões, o "tira isso" sai do state e não vai ao Construtor' do
+      contexto = contexto_do_tira_isso_depois do
+        agent.reload.restore_instruction!(agent.instruction_versions.find_by!(reason: 'base'))
+        expect(estado.keys).not_to include('nao_pedido_anterior', 'ultimo_ajuste')
+      end
+
+      expect(contexto).to be_nil
+    end
+
+    it 'V2: depois de uma mudança pela gaveta, o "tira isso" não vai ao Construtor' do
+      contexto = contexto_do_tira_isso_depois { agent.reload.update!(handoff_rule: 'Mudado pela gaveta.') }
+
+      expect(contexto).to be_nil
     end
 
     # Rodada 7 (crítico MÉDIO): o "é só me dizer o que tirar" funciona: o turno seguinte recebe o valor de antes.

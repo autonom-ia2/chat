@@ -156,6 +156,39 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
       expect(agent.reload.tone).to eq('curto')
     end
 
+    it '409 com o texto de tentar de novo quando duas escritas se travam (Deadlocked), não 500' do
+      allow_any_instance_of(Autonomia::Agents::Agent).to receive(:desfazer_ajuste!).and_raise(ActiveRecord::Deadlocked) # rubocop:disable RSpec/AnyInstance
+
+      desfazer
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body).to include('code' => 'conflito_de_trava', 'error' => I18n.t('autonomia.agents.conflito_de_trava'))
+    end
+
+    it 'a volta por Versões também responde 409 num Deadlocked' do
+      allow_any_instance_of(Autonomia::Agents::Agent).to receive(:restore_instruction!).and_raise(ActiveRecord::Deadlocked) # rubocop:disable RSpec/AnyInstance
+
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/instruction_versions/#{agent.instruction_versions.first.id}/restore",
+           headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body['code']).to eq('conflito_de_trava')
+    end
+
+    it 'o retry de um pedido cancelado pelo Desfazer é recusado (pedir de novo escrevendo)' do
+      outra = Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: administrator)
+      outra.begin_build!
+      desfazer
+      allow(Autonomia::Agents::Builder::SubmitJob).to receive(:perform_later)
+
+      retry_url = "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{outra.id}/retry"
+      post retry_url, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.build_thread.pedir_de_novo'))
+      expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
+    end
+
     it '404 fora do piloto' do
       Autonomia::Agents::Fase2.desligar!(account)
 

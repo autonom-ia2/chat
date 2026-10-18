@@ -165,15 +165,16 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   # O turno anterior: entrou uma saudação que o dono não pediu, e o cartão da tela o avisou (parte 3: sem bolha na
-  # conversa; o state guarda só a referência).
+  # conversa; o state guarda só a referência e o ajuste, cujo Desfazer ainda vale: só assim o "tira isso" vai).
   def preparar_tambem_mudei(agente, thread)
     agente.record_instruction_version!(reason: 'base')
     antes_id = agente.instruction_versions.order(:id).last.id
     agente.update!(greeting: AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA)
-    agente.send(:gravar_versao!, 'builder_adjust', nil)
+    aplicada = agente.send(:gravar_versao!, 'builder_adjust', nil)
     thread.append_message!('user', 'Deixe o tom mais caloroso')
     referencia = { 'versao_antes_id' => antes_id, 'campos' => ['greeting'] }
-    thread.update!(state: thread.state.to_h.merge('nao_pedido_anterior' => referencia))
+    ajuste = { 'versao_antes_id' => antes_id, 'versao_id' => aplicada.id }
+    thread.update!(state: thread.state.to_h.merge('nao_pedido_anterior' => referencia, 'ultimo_ajuste' => ajuste))
   end
 
   def julgar(cena, antes, depois, resposta)

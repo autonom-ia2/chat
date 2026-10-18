@@ -56,6 +56,9 @@ module Autonomia::Agents::Builder::AjusteConferido
     @explicacao_da_correcao = nil
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
+    # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita
+    # dele (a retomada do mesmo token já passou por aqui antes de escrever).
+    @nao_pedido_vale = ajuste_em_curso(token).present? || @thread.agent&.conversa_desfazivel&.id == @thread.id
     ajuste_em_curso(token) ? :retomar : :seguir
   end
 

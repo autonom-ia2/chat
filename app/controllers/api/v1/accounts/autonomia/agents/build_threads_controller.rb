@@ -1,6 +1,7 @@
 class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer]
   rescue_from ::Autonomia::Agents::DesfazerAjuste::AjusteMudou, with: :render_ajuste_mudou
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   def show; end
 
@@ -65,6 +66,10 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # retry_build porque `retry` é palavra reservada do Ruby; a rota expõe POST :retry.
   def retry_build
     return render_unprocessable(I18n.t('autonomia.build_thread.retry_unavailable')) unless @thread.failed? || @thread.processing?
+    # #1428 (parte 3): o Desfazer cancelou este pedido; refazer a geração o aplicaria sem a pessoa pedir de novo.
+    if @thread.state.to_h['error'] == ::Autonomia::Agents::DesfazerAjuste::SUPERADA
+      return render_unprocessable(I18n.t('autonomia.build_thread.pedir_de_novo'))
+    end
 
     claim_build_and_enqueue
   end
