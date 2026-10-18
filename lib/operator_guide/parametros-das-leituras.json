@@ -939,6 +939,16 @@
       "sessao"
     ]
   },
+  "conversa_canal/modelos_de_email": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#index",
+    "parametros": []
+  },
+  "conversa_canal/modelos_de_email/:id": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#show",
+    "parametros": [
+      "conversation_id"
+    ]
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [

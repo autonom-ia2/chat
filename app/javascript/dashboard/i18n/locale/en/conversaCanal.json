@@ -436,7 +436,29 @@
       "ANEXAR": "Attach",
       "DOCUMENTO": "Document",
       "FOTOS_E_VIDEOS": "Photos and videos",
-      "TRADUCAO_FALHOU": "Could not translate this email now. Try again."
+      "TRADUCAO_FALHOU": "Could not translate this email now. Try again.",
+      "MODELO_DE_EMAIL": "Email template",
+      "MODELO_DICA": "Templates saved in Campaigns. The customer data fills in by itself; you check it before sending.",
+      "BUSCAR_MODELO_DE_EMAIL": "Search templates",
+      "CARREGANDO_MODELOS": "Loading templates…",
+      "NENHUM_MODELO_NA_BUSCA": "No template with this name",
+      "SEM_MODELOS_DE_EMAIL": "No template saved in Campaigns yet",
+      "VAI_O_MODELO": "Template going out: {nome}",
+      "CAMPOS_FALTANDO": "1 field to fill | {total} fields to fill",
+      "TIRAR_MODELO": "Remove template",
+      "DO_CONTATO": "From contact",
+      "SUGERIDO_PELA_IA": "Suggested by AI",
+      "PREENCHA": "Fill in",
+      "PREVIA_DO_MODELO": "Template preview",
+      "MODELO_FALHOU": "Could not open this template. Try again.",
+      "CAMPO": {
+        "NOME": "Name",
+        "PRIMEIRO_NOME": "First name",
+        "EMAIL": "Email",
+        "TELEFONE": "Phone",
+        "EMPRESA": "Company",
+        "ATENDENTE": "Agent"
+      }
     }
   }
 }

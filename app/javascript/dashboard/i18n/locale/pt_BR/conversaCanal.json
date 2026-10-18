@@ -436,7 +436,29 @@
       "ANEXAR": "Anexar",
       "DOCUMENTO": "Documento",
       "FOTOS_E_VIDEOS": "Fotos e vídeos",
-      "TRADUCAO_FALHOU": "Não deu para traduzir este e-mail agora. Tente de novo."
+      "TRADUCAO_FALHOU": "Não deu para traduzir este e-mail agora. Tente de novo.",
+      "MODELO_DE_EMAIL": "Modelo de e-mail",
+      "MODELO_DICA": "Modelos salvos em Campanhas. Os dados do cliente entram sozinhos; você confere antes de enviar.",
+      "BUSCAR_MODELO_DE_EMAIL": "Buscar modelo",
+      "CARREGANDO_MODELOS": "Carregando os modelos…",
+      "NENHUM_MODELO_NA_BUSCA": "Nenhum modelo com esse nome",
+      "SEM_MODELOS_DE_EMAIL": "Ainda não há modelo salvo em Campanhas",
+      "VAI_O_MODELO": "Vai este modelo: {nome}",
+      "CAMPOS_FALTANDO": "1 campo para preencher | {total} campos para preencher",
+      "TIRAR_MODELO": "Tirar o modelo",
+      "DO_CONTATO": "Do contato",
+      "SUGERIDO_PELA_IA": "Sugerido pela IA",
+      "PREENCHA": "Preencha",
+      "PREVIA_DO_MODELO": "Prévia do modelo",
+      "MODELO_FALHOU": "Não deu para abrir este modelo. Tente de novo.",
+      "CAMPO": {
+        "NOME": "Nome",
+        "PRIMEIRO_NOME": "Primeiro nome",
+        "EMAIL": "E-mail",
+        "TELEFONE": "Telefone",
+        "EMPRESA": "Empresa",
+        "ATENDENTE": "Atendente"
+      }
     }
   }
 }

@@ -41,6 +41,8 @@ export const TAMANHOS = {
 // pronta no texto (leva o conteúdo).
 export const DESCARTAR_EMAIL = 'conversaCanal:descartarEmail';
 export const MODELOS_DO_EMAIL = 'conversaCanal:modelosDoEmail';
+// Modelo de e-mail das Campanhas escolhido no "+" (leva o id).
+export const MODELO_DE_CAMPANHA = 'conversaCanal:modeloDeCampanha';
 
 const CHAVE = Symbol('conversaDeEmail');
 // Escolha de cada atendente (Rodrigo, 17/10): por padrão as mensagens antigas ficam

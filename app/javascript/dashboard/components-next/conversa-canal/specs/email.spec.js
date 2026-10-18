@@ -11,6 +11,12 @@ import {
 import { montarRespostaDoEmail } from '../email/respostaDoEmail';
 import { semCitacaoDosLeitores } from '../email/citacaoDosLeitores';
 import {
+  htmlSemRodape,
+  mjmlSemRodape,
+  preencherModelo,
+  textoDoModelo,
+} from '../email/modeloDeEmail';
+import {
   MODOS_DE_RESPOSTA,
   emailNovoNaCaixa,
 } from '../email/useConversaDeEmail';
@@ -230,6 +236,55 @@ describe('conversa de e-mail (#1786)', () => {
       const { html, achou } = semCitacaoDosLeitores('<p>Oi, tudo bem?</p>');
       expect(achou).toBe(false);
       expect(html).toBe('<p>Oi, tudo bem?</p>');
+    });
+  });
+
+  describe('modelo de e-mail das Campanhas', () => {
+    it('tira a seção do rodapé de descadastro do MJML', () => {
+      const mjml = mjmlSemRodape(
+        '<mjml><mj-body><mj-section><mj-column><mj-text>Oi</mj-text></mj-column></mj-section><mj-section css-class="x footer-locked"><mj-column><mj-text>{{ unsubscribe_url }}</mj-text></mj-column></mj-section></mj-body></mjml>'
+      );
+      expect(mjml).toContain('Oi');
+      expect(mjml).not.toContain('unsubscribe_url');
+    });
+
+    it('tira o rodapé também do HTML salvo', () => {
+      const html = htmlSemRodape(
+        '<html><body><p>Oi</p><div class="footer-locked">Sair da lista</div></body></html>'
+      );
+      expect(html).toContain('Oi');
+      expect(html).not.toContain('Sair da lista');
+    });
+
+    it('preenche as variáveis, com filtro, escapando o valor', () => {
+      expect(
+        preencherModelo(
+          '<p>Olá, {{ contact.name }}! {{ cidade | default: "SP" }}</p>',
+          {
+            'contact.name': 'Ana <b>',
+            cidade: 'Recife',
+          }
+        )
+      ).toBe('<p>Olá, Ana &lt;b&gt;! Recife</p>');
+    });
+
+    it('na prévia, campo vazio aparece marcado com o nome', () => {
+      const html = preencherModelo(
+        '<p>{{ cotacao }}</p>',
+        { cotacao: ' ' },
+        { marcar: true }
+      );
+      expect(html).toContain('<mark');
+      expect(html).toContain('cotacao');
+      expect(preencherModelo('<p>{{ cotacao }}</p>', {})).toBe('<p></p>');
+    });
+
+    it('texto do modelo sem estilos, uma linha por bloco', () => {
+      expect(
+        textoDoModelo(
+          '<html><head><style>p{}</style></head><body><p>Oi</p><p> Ana </p></body></html>'
+        )
+      ).toBe('Oi\nAna');
     });
   });
 });

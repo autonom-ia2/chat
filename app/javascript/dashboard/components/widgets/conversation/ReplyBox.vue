@@ -68,8 +68,16 @@ import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/Gravado
 import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
 import TopoDaResposta from 'dashboard/components-next/conversa-canal/email/TopoDaResposta.vue';
 import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
+import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
+import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
+import {
+  montarModelo,
+  preencherModelo,
+  textoDoModelo,
+} from 'dashboard/components-next/conversa-canal/email/modeloDeEmail';
 import {
   DESCARTAR_EMAIL,
+  MODELO_DE_CAMPANHA,
   MODELOS_DO_EMAIL,
   MODOS_DE_RESPOSTA,
   RESPONDER_EMAIL,
@@ -100,6 +108,7 @@ export default {
     CabecaDaResposta,
     TopoDaResposta,
     CitacaoDaResposta,
+    ModeloDaResposta,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
@@ -230,6 +239,9 @@ export default {
       // escolha de não mandar o histórico, só desta resposta.
       citacaoDoEmail: null,
       historicoDesligado: false,
+      // #1786: modelo de e-mail das Campanhas escolhido no "+" e os valores dos campos.
+      modeloDoEmail: null,
+      valoresDoModelo: {},
       // #1702: a seta do gravador do WhatsApp para e envia; o envio sai quando o áudio vira anexo.
       enviarAudioAoAnexar: false,
       copilotAcceptedMessages: {},
@@ -380,6 +392,10 @@ export default {
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
       if (this.hasAttachments || this.hasRecordedAudio) return false;
+      // #1786: com um modelo de e-mail, dá para enviar só o modelo.
+      if (this.emailNovo && this.modeloDoEmail && !this.isPrivate) {
+        return this.message.length > this.maxLength;
+      }
 
       return (
         this.isMessageEmpty ||
@@ -735,6 +751,7 @@ export default {
     emitter.on(RESPONDER_EMAIL, this.responderEmail);
     emitter.on(DESCARTAR_EMAIL, this.descartarEmail);
     emitter.on(MODELOS_DO_EMAIL, this.inserirModeloDoEmail);
+    emitter.on(MODELO_DE_CAMPANHA, this.carregarModeloDeCampanha);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -752,6 +769,7 @@ export default {
     emitter.off(RESPONDER_EMAIL, this.responderEmail);
     emitter.off(DESCARTAR_EMAIL, this.descartarEmail);
     emitter.off(MODELOS_DO_EMAIL, this.inserirModeloDoEmail);
+    emitter.off(MODELO_DE_CAMPANHA, this.carregarModeloDeCampanha);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -1179,6 +1197,8 @@ export default {
     },
     clearMessage() {
       this.message = '';
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
       this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
@@ -1426,7 +1446,7 @@ export default {
       if (this.toEmails && !this.isOnPrivateNote) {
         messagePayload.toEmails = this.toEmails;
       }
-      return this.comCitacaoDoEmail(messagePayload);
+      return this.comModeloDoEmail(this.comCitacaoDoEmail(messagePayload));
     },
     // #1786: as ações da conversa de e-mail nova montam os destinatários (e o texto do
     // encaminhado) a partir do e-mail escolhido, e o envio segue o de sempre.
@@ -1483,6 +1503,56 @@ export default {
         contentAttributes: {
           ...payload.contentAttributes,
           email_citacao: { tipo: citacao.tipo, message_id: citacao.mensagemId },
+        },
+      };
+    },
+    // #1786: o modelo escolhido no "+" chega com os campos já preenchidos pelo contato e
+    // pela IA; o navegador compila o MJML sem o rodapé de descadastro.
+    async carregarModeloDeCampanha(id) {
+      try {
+        const { data } = await ModelosDeEmailAPI.abrir(id, this.currentChat.id);
+        const html = await montarModelo({ mjml: data.mjml, html: data.html });
+        if (!html) throw new Error('modelo vazio');
+        this.modeloDoEmail = {
+          id: data.id,
+          nome: data.nome,
+          html,
+          campos: data.campos,
+        };
+        this.valoresDoModelo = Object.fromEntries(
+          data.campos.map(campo => [campo.chave, campo.valor])
+        );
+      } catch {
+        useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
+      }
+    },
+    atualizarCampoDoModelo(chave, valor) {
+      this.valoresDoModelo = { ...this.valoresDoModelo, [chave]: valor };
+    },
+    tirarModeloDoEmail() {
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
+    },
+    // #1786: o modelo preenchido vai junto; sem texto do atendente, sai só o modelo (o
+    // conteúdo da mensagem vira o texto do modelo, que o CRM e a IA leem).
+    comModeloDoEmail(payload) {
+      if (!this.emailNovo || this.isPrivate || !this.modeloDoEmail)
+        return payload;
+      const html = preencherModelo(
+        this.modeloDoEmail.html,
+        this.valoresDoModelo
+      );
+      const soModelo = !String(payload.message || '').trim();
+      return {
+        ...payload,
+        message: soModelo ? textoDoModelo(html) : payload.message,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          email_modelo: {
+            template_id: this.modeloDoEmail.id,
+            html,
+            so_modelo: soModelo,
+          },
         },
       };
     },
@@ -1749,6 +1819,13 @@ export default {
           @execute-copilot-action="executeCopilotAction"
         />
 
+        <ModeloDaResposta
+          v-if="emailNovo && !isPrivate && modeloDoEmail && isDefaultEditorMode"
+          :modelo="modeloDoEmail"
+          :valores="valoresDoModelo"
+          @campo="atualizarCampoDoModelo"
+          @tirar="tirarModeloDoEmail"
+        />
         <CitacaoDaResposta
           v-if="
             emailNovo &&
