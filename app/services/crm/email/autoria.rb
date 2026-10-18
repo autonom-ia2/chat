@@ -106,6 +106,22 @@ class Crm::Email::Autoria
     resultado
   end
 
+  # #1813: o e-mail recebido saiu de um endereço do próprio cliente (o From/Reply-To é um dos endereços dele). Ao
+  # contrário de `de`, não depende da flag e responde "sim" de forma positiva: sem remetente ou sem endereço do cliente
+  # para comparar, é false (quem completa o contato não pode ler e-mail de quem está em cópia como sendo do dono).
+  def do_cliente?(message)
+    return false unless email_recebido?(message)
+
+    remetentes_de(message).intersect?(enderecos_do_cliente(message))
+  end
+
+  # #1813: o endereço (escrito num formulário, por exemplo) é um dos endereços do cliente desta mensagem; mesma
+  # normalização (Mail::Address, minúsculas) do resto da classe.
+  def endereco_do_cliente?(message, endereco)
+    normalizado = normalizar(endereco)
+    normalizado.present? && enderecos_do_cliente(message).include?(normalizado)
+  end
+
   # O texto do e-mail recebido sem o histórico citado; qualquer outra mensagem, o texto de sempre (o do bloco, ou o
   # content).
   def texto(message)

@@ -511,3 +511,16 @@
   display_name: Quem escreveu cada e-mail, para as IAs
   enabled: false
   column: feature_flags_ext_1
+
+# Contato pelo e-mail recebido (#1813, parte do #1701): quando chega um e-mail escrito pelo próprio contato (From é
+# endereço dele, pela Crm::Email::Autoria do #1807), o modelo do resumo (MODEL_SUMMARY) lê só o texto novo, com a
+# assinatura, classifica (pessoa, formulário de site ou automático) e completa o contato com nome, e-mail e telefone —
+# só o que falta, pela regra do Decisores::Aplicador. Paga a chave de IA da conta ou da instalação; sem chave, nada
+# acontece. Posição 38 reservada pela Orquestração (bit 37, 137438953472), depois de email_autoria (#1819, posição 36)
+# e conversa_email_nova (#1786, posição 37). Enquanto #1741, #1818 e #1786 não estão na main, fica no fim do que está
+# lá (hoje bit 34, sem placeholder) e o bit é ajustado na hora da vaga (spec/models/account_spec.rb). Desligada
+# (padrão): nada é lido. Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: contato_pelo_email
+  display_name: Contato completado pela leitura do e-mail recebido
+  enabled: false
+  column: feature_flags_ext_1
