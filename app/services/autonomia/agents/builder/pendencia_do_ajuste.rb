@@ -59,7 +59,7 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
   # Os valores de antes, lidos da versão, dos campos que o último ajuste mudou sem o dono pedir.
   def valores_de_antes(com_andaime:)
     dados = @thread.state.to_h['nao_pedido_anterior']
-    return {} unless dados.is_a?(Hash)
+    return {} unless @nao_pedido_vale && dados.is_a?(Hash)
 
     versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
     return {} if versao.nil?
@@ -72,7 +72,8 @@ module Autonomia::Agents::Builder::PendenciaDoAjuste
 
   # #1428 — o turno anterior mudou campos que o dono não pediu e o avisou ("é só me dizer o que tirar"). O Construtor
   # recebe, como CONTEXTO INTERNO, o valor de antes desses campos, lido da versão: um "tira isso" volta ao original. A
-  # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale só para este turno.
+  # instrução vai como já vai a configuração atual no contexto do ajuste (mesmo sigilo, §11). Vale até o próximo ajuste
+  # aplicado ou o Desfazer (parte 3).
   def contexto_do_nao_pedido
     valores = valores_de_antes(com_andaime: true)
     return [] if valores.empty?
