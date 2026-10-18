@@ -1,40 +1,55 @@
 # F2 corretora · Lote 1: o resto do CRM
 
-autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só texto: muda o pacote `seguros/corretora`
-(painel e servidor) e nenhum código. A conta geral não muda.
+autonom-ia2/chat#1802, 18/10/2026. Continua o #1832, que trouxe os funis da corretora.
+
+É só texto: muda o pacote `seguros/corretora` (painel e servidor) e nenhum código. A conta geral não muda.
 
 ## O que entra
 
-- 190 textos novos no painel e 3 no servidor, tirados do inventário do CRM da F2 e conferidos contra as decisões do Rodrigo.
-- Painel do CRM: "Produção" no lugar de "Receita" e "Meta de produção do mês".
-- Botão e atalhos do funil de Vender: "Nova cotação", "Ver cotações", "Minhas cotações".
-- Card:
-  - "Seguro" na tela do funil de Vender e "card" onde a tela mistura funis;
-  - "parcela" no card de Cobrança.
-- Calendário, lembretes e mensagem marcada: "card" no lugar de "negócio".
-- Links e QR, e Anúncios da Meta: cotação, corretor, escritório.
-- Ficha do contato: a aba "Seguros" e "Nova cotação".
-- Automações: o modelo "Marcar quem pede cotação".
-- Servidor:
-  - a planilha do CRM: "Valor do seguro" e "Próximo retorno";
-  - o e-mail de lembrete: "Card:" no lugar de "Negócio:".
+187 textos novos no painel e 2 no servidor. Saíram do inventário do CRM da F2 e foram conferidos contra as decisões do Rodrigo e com os donos de cada área.
 
-## O que ficou de fora, e por quê
+- **Painel do CRM:** "Produção" no lugar de "Receita", e "Meta de produção do mês".
+- **Funil de Vender:** o botão e os atalhos dizem "Nova cotação", "Ver cotações" e "Minhas cotações". O Atender tem chave própria e não muda.
+- **Card:**
+  - "Seguro" nas telas que só existem no funil de Vender;
+  - "card" nas telas que servem aos dois tipos de funil;
+  - "parcela" no card de Cobrança. O funil leva o nome do processo, e o card o nome do item cobrado.
+- **Calendário, lembretes e mensagem marcada:** "card" no lugar de "negócio".
+- **Links e QR, e Anúncios da Meta:** cotação, corretor e escritório.
+- **Ficha do contato e da empresa:** a aba "Seguros" e o botão "Nova cotação".
+- **Automações:** o modelo "Marcar quem pede cotação".
+- **Servidor:**
+  - na planilha do CRM, a coluna "Próximo retorno";
+  - no e-mail de lembrete, "Card:" no lugar de "Negócio:".
 
-- **Os modelos de funil que já existem (Suporte, Pós-venda, Cobrança):** os nomes, as etapas, as ideias e as frases da IA
-  não mudam. Foi decisão do Rodrigo: o funil padrão não muda, a corretora ganhou modelos próprios no #1832 (Renovação,
-  Sinistro, Endosso).
+## O que fica como está, e por quê
+
+- **Os modelos Suporte, Pós-venda e Cobrança:** o nome, as etapas, as ideias de Suporte e Pós-venda e as frases da IA não mudam. O Rodrigo decidiu que o funil padrão fica como está. A corretora já ganhou modelos próprios no #1832: Venda de seguro, Renovação, Sinistro e Endosso.
+  - As ideias de Cobrança mudam para falar da parcela, assim como o card.
+- **O valor do card nas telas que servem a todo funil** (filtro, coluna da lista, planilha): continua "Valor". "Valor do seguro" ficaria errado num card de parcela ou de sinistro.
 - **O painel do Guia (`AUTONOMIA_GUIDE.*`):** vai no Lote 6, junto com o Guia e a Central.
-- **`crm.service_reminders.*` ("Lembrar da parcela"):** o título é gravado no banco fora do pacote
-  (`service_reminder_scheduler.rb`). Precisa de código do Followup, depois do #1734.
-- **As etapas de Vendas e de Agendamento, os nomes de evento da Meta e o Financeiro da assinatura:** ficam como estão.
+- **`crm.service_reminders.*` ("Lembrar da parcela"):** o título é gravado no banco fora do pacote, em `service_reminder_scheduler.rb`. O Followup vai pôr o pacote nessa gravação depois do #1734, e então as chaves entram.
+- **Não mudam:** os nomes de evento da Meta, o Agendamento ("horário", avisos e modelos aprovados) e o Financeiro da assinatura.
 
 ## Ajustes sobre o inventário
 
-- "Seguro ativo" virou "Seguro fechado". Sem a data de vencimento não dá para saber se a apólice está em vigor.
-- "Já tem seguro com você" virou "Já fechou seguro com você", pelo mesmo motivo.
-- O exemplo de assunto virou "Endosso para trocar o carro". O Rodrigo pediu o nome certo para a alteração na apólice.
+**Pelas decisões do Rodrigo:**
+- "Seguro ativo" virou "Seguro fechado", e "Já tem seguro com você" virou "Já fechou seguro com você". Sem a data de vencimento, não dá para saber se a apólice está em vigor.
+- O exemplo de assunto virou "Endosso para trocar o carro", porque alteração na apólice se chama endosso.
 - O exemplo de nomes de funil segue os modelos reais: "Venda de seguro, Renovação, Sinistro".
+
+**Pedidos pelos donos:**
+- Campanhas:
+  - "Quando a cotação avança, avisamos…" no lugar de "Quando o card anda";
+  - "Seguros a fechar: N cotações abertas".
+- Followup:
+  - a prévia do lembrete de parcela não oferece segunda via, que o fluxo não manda;
+  - o exemplo de tom da IA não traz prazo de validade da cotação.
+- Multifunnel: "A pessoa foi tirada deste card", para casar com "ligada a este card".
+
+**Pelo revisor:**
+- O texto de "Fechou" é neutro ("entra no painel do CRM"), porque aparece também ao resolver um card de Atender.
+- O exemplo de "quando usar" serve a qualquer funil: "pede uma cotação ou avisa um sinistro".
 
 ## Os textos, por dono
 
@@ -94,8 +109,8 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 |---|---|---|
 | `CRM_FUNIL.ANUNCIOS.GOOGLE.NOME_EXEMPLO` | Ex.: Venda | Ex.: Seguro fechado |
 | `CRM_FUNIL.PREVIA.ANUNCIO_FECHOU` | A Ana fechou a compra de {valor}. | A Ana fechou o seguro de {valor}. |
-| `CRM_CARD.RESUMO.AVISO_FACEBOOK` | Quando o negócio anda, avisamos o Facebook e o Instagram. | Quando o card anda, avisamos o Facebook e o Instagram. |
-| `CRM_CARD.ORIGEM.AVISO_TEXTO` | Quando o negócio anda, avisamos os anúncios para trazerem clientes parecidos. | Quando o card anda, avisamos os anúncios para trazerem clientes parecidos. |
+| `CRM_CARD.RESUMO.AVISO_FACEBOOK` | Quando o negócio anda, avisamos o Facebook e o Instagram. | Quando a cotação avança, avisamos o Facebook e o Instagram. |
+| `CRM_CARD.ORIGEM.AVISO_TEXTO` | Quando o negócio anda, avisamos os anúncios para trazerem clientes parecidos. | Quando a cotação avança, avisamos os anúncios para trazerem clientes parecidos. |
 | `CRM_KANBAN.DASHBOARD.META_SYNC.REVENUE` | Receita enviada | Valor enviado |
 | `CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS.INTEREST.HELP` | O cliente iniciou contato ou pediu informações. | O cliente pediu uma cotação ou informação. |
 | `CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS.QUALIFIED.HELP` | A necessidade foi entendida e o cliente combina com a oferta. | Já sabemos qual seguro o cliente quer e temos os dados para cotar. |
@@ -115,7 +130,7 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.STALLED_QUOTES.WHY` | Por quê: somam {value} em negociação. Retomar quem já pediu proposta custa menos que anunciar de novo. | Por quê: somam {value} em negociação. Retomar quem já pediu cotação custa menos que anunciar de novo. |
 | `CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.STALLED_QUOTES.BUTTON` | Ver a proposta \| Ver as {count} propostas | Ver a cotação \| Ver as {count} cotações |
 | `CRM_KANBAN.META_ADS_HUB.PANEL.PATH.QUOTES` | proposta \| propostas | cotação \| cotações |
-| `CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_QUOTES` | Vendas chegando: 1 proposta aberta \| Vendas chegando: {count} propostas abertas | Vendas chegando: 1 cotação aberta \| Vendas chegando: {count} cotações abertas |
+| `CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_QUOTES` | Vendas chegando: 1 proposta aberta \| Vendas chegando: {count} propostas abertas | Seguros a fechar: 1 cotação aberta \| Seguros a fechar: {count} cotações abertas |
 | `CRM_KANBAN.META_ADS_HUB.PANEL.AD_QUOTES` | 1 proposta aberta \| {count} propostas abertas | 1 cotação aberta \| {count} cotações abertas |
 | `CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_TITLE` | 1 proposta parada \| {count} propostas paradas | 1 cotação parada \| {count} cotações paradas |
 | `CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.TITLE_QUOTES` | Propostas | Cotações |
@@ -136,7 +151,7 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_FUNIL.ATENDER.LEMBRETES.COBRAR.TITULO` | Lembrar do pagamento | Lembrar da parcela |
 | `CRM_FUNIL.ATENDER.LEMBRETES.COBRAR.MSG_ANTES` | Oi, {nome}! Passando para lembrar que o pagamento de {valor} vence sexta. | Oi, {nome}! Passando para lembrar que a parcela do seu seguro, de {valor}, vence sexta. |
 | `CRM_FUNIL.ATENDER.LEMBRETES.COBRAR.MSG_NO_DIA` | Oi, {nome}! O pagamento de {valor} vence hoje. Se já pagou, pode ignorar. | Oi, {nome}! A parcela do seu seguro, de {valor}, vence hoje. Se já pagou, pode ignorar. |
-| `CRM_FUNIL.ATENDER.LEMBRETES.COBRAR.MSG_DEPOIS` | Oi, {nome}! Ainda não vimos o pagamento de {valor}. Posso te ajudar com alguma coisa? | Oi, {nome}! Ainda não vimos o pagamento da parcela de {valor}. Quer que a gente mande a segunda via? |
+| `CRM_FUNIL.ATENDER.LEMBRETES.COBRAR.MSG_DEPOIS` | Oi, {nome}! Ainda não vimos o pagamento de {valor}. Posso te ajudar com alguma coisa? | Oi, {nome}! Ainda não vimos o pagamento da parcela de {valor}. Posso te ajudar com alguma coisa? |
 | `CRM_CARD.RETORNO.SEU_TEXTO_EXEMPLO` | Oi! Passando para saber se ficou alguma dúvida. | Oi! Conseguiu ver as opções da cotação? |
 | `CRM_CARD.RETORNO.TITULO_EXEMPLO` | Ex.: Ligar dia 30 às 10h · Aniversário do cliente | Ex.: Cobrar a emissão da seguradora · Pedir a CNH |
 | `CRM_CARD.AGENDA.LEMBRETE_EXEMPLO` | Ex.: Ligar dia 30 às 10h · Aniversário do cliente | Ex.: Cobrar a emissão da seguradora · Pedir a CNH |
@@ -148,7 +163,7 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_KANBAN.CALENDAR.QUICK_ADD.DEAL_PLACEHOLDER` | Buscar negócio… | Buscar card… |
 | `CRM_KANBAN.CALENDAR.QUICK_ADD.ADVANCED_HINT` | Escolha o negócio e clique em Continuar — abriremos o card dele para configurar os detalhes. | Escolha o card e clique em Continuar. Abrimos o card para você ajustar os detalhes. |
 | `CRM_KANBAN.CALENDAR.EVENT.OPEN_DEAL` | Abrir negócio | Abrir card |
-| `CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TONE_PLACEHOLDER` | informal, trate por você, foque em seguro viagem… | informal, trate por você, lembre que a cotação vale poucos dias… |
+| `CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TONE_PLACEHOLDER` | informal, trate por você, foque em seguro viagem… | informal, trate por você, seja breve… |
 | `CRM_LEMBRETE.SERIE.LIGADO_CARD` | Negócio: {nome} | Card: {nome} |
 | `CRM_LEMBRETE.LIGAR.NADA_TEXTO` | Fica só no calendário. Ex.: pagar o aluguel. | Fica só no calendário. Ex.: conferir as renovações da semana. |
 | `CRM_LEMBRETE.LIGAR.CONTATO_TEXTO` | Mesmo sem negócio aberto. Ex.: aniversário. | Mesmo sem card aberto. Ex.: aniversário. |
@@ -165,25 +180,14 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_MENSAGEM_MARCADA.PRONTO.ONDE` | Ela já está no calendário e no negócio. Dá para mudar ou cancelar até a hora de sair. | Ela já está no calendário e no card. Dá para mudar ou cancelar até a hora de sair. |
 | `CRM_MENSAGEM_MARCADA.PRONTO.ABRIR_NEGOCIO` | Abrir o negócio | Abrir o card |
 
-### Multifunnel (86)
+### Multifunnel (64)
 
 | Chave | Hoje (geral) | Corretora |
 |---|---|---|
-| `CRM_FUNIL.MODELOS.VENDAS.NOME` | Vendas | Venda de seguro |
-| `CRM_FUNIL.MODELOS.VENDAS.TEXTO` | Do primeiro contato até fechar a venda. | Da cotação até o seguro fechar. |
-| `CRM_FUNIL.MODELOS.VENDAS.E1` | Novo contato | Novo contato |
-| `CRM_FUNIL.MODELOS.VENDAS.E2` | Em conversa | Cotando |
-| `CRM_FUNIL.MODELOS.VENDAS.E3` | Proposta enviada | Opções enviadas |
-| `CRM_FUNIL.MODELOS.VENDAS.E4` | Negociação | Negociação |
-| `CRM_FUNIL.MODELOS.VENDAS.E5` | Fechado | Fechado |
-| `CRM_FUNIL.SOBRE.IDEIAS.PRECO` | pede preço ou orçamento | pede uma cotação |
-| `CRM_FUNIL.SOBRE.IDEIAS.COMPRAR` | quer comprar | quer saber quanto fica o seguro |
-| `CRM_FUNIL.SOBRE.IDEIAS.COMO_FUNCIONA` | pergunta como funciona | quer fazer o seguro do carro, da casa ou da empresa |
 | `CRM_FUNIL.SOBRE.IDEIAS.PAGAR` | quer pagar | quer pagar a parcela |
 | `CRM_FUNIL.SOBRE.IDEIAS.SEGUNDA_VIA` | pede a segunda via | pede a segunda via do boleto |
 | `CRM_FUNIL.SOBRE.IDEIAS.ATRASADO` | está com o pagamento atrasado | está com a parcela atrasada |
-| `CRM_FUNIL.SOBRE.EXEMPLO` | Ex.: pede preço ou orçamento | Ex.: pede uma cotação de seguro |
-| `CRM_FUNIL.TIPO.VENDER.TEXTO` | Conquistar um cliente novo. | Fechar um seguro novo ou renovar. |
+| `CRM_FUNIL.SOBRE.EXEMPLO` | Ex.: pede preço ou orçamento | Ex.: pede uma cotação ou avisa um sinistro |
 | `CRM_FUNIL.ETAPA.EXEMPLO` | Ex.: o cliente recebeu o orçamento e está pensando. | Ex.: o cliente recebeu as opções da cotação e está pensando. |
 | `CRM_FUNIL.VENDAS.TITULO` | Saiba quanto este funil vende | Saiba quantos seguros este funil fecha |
 | `CRM_FUNIL.VENDAS.TEXTO` | As vendas fechadas aqui entram no painel, junto da meta do mês. | Os seguros fechados aqui entram no painel, junto da meta do mês. |
@@ -196,20 +200,12 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_FUNIL.PREVIA.MSG_NOSSA` | Segue o orçamento que combinamos. Qualquer dúvida, é só chamar. | Segue a cotação com as opções. Qualquer dúvida, é só chamar. |
 | `CRM_FUNIL.PREVIA.MSG_RETORNO` | Oi, Ana! Conseguiu olhar o orçamento? Se quiser, ajusto algum ponto para você. | Oi, Ana! Conseguiu olhar as opções da cotação? Se quiser, cotamos outra cobertura para você. |
 | `CRM_FUNIL.PREVIA.LEMBRETE_TEXTO` | A Ana não responde desde segunda. Próximo passo: perguntar se ficou alguma dúvida no orçamento. | A Ana não responde desde segunda. Próximo passo: perguntar se ficou alguma dúvida na cotação. |
-| `CRM_CARD.DESFECHO.MOTIVO.PRECO` | Achou caro | Achou caro |
-| `CRM_CARD.DESFECHO.MOTIVO.SUMIU` | Parou de responder | Parou de responder |
-| `CRM_CARD.DESFECHO.MOTIVO.OUTRO_LUGAR` | Fechou com outro | Fechou com outra corretora |
-| `CRM_CARD.DESFECHO.MOTIVO.NAO_ERA_HORA` | Não era a hora | A seguradora recusou |
-| `CRM_CARD.DESFECHO.PERDEU_TEXTO` | Contar o motivo é opcional, mas ajuda a vender melhor da próxima vez. | Contar o motivo é opcional, mas ajuda a fechar mais da próxima vez. |
-| `CRM_CARD.DESFECHO.GANHOU_TEXTO` | Confira o valor. Ele vai para os relatórios de vendas. | Confira o valor. Ele entra no painel de seguros fechados. |
-| `CRM_CARD.PASSO.FECHADO` | Este negócio terminou: {status}. Se o cliente voltar, toque em Reabrir. | Este card terminou: {status}. Se o cliente voltar, toque em Reabrir. |
-| `CRM_CARD.RESUMO.SEM_CONTATO` | Ainda não há uma pessoa ligada a este negócio. | Ainda não há uma pessoa ligada a este card. |
+| `CRM_CARD.DESFECHO.GANHOU_TEXTO` | Confira o valor. Ele vai para os relatórios de vendas. | Confira o valor. Ele entra no painel do CRM. |
 | `CRM_CARD.RESUMO.NEGOCIO` | Negócio | Seguro |
 | `CRM_CARD.RESUMO.MAIS_DETALHES_DICA` | De onde veio, o que já aconteceu, mais do negócio e arquivar | De onde veio, o que já aconteceu, mais do seguro e arquivar |
 | `CRM_CARD.RESUMO.MAIS_NEGOCIO` | Mais do negócio | Mais do seguro |
-| `CRM_CARD.HISTORICO.EVENTO.ACTIVITY_LINK_CONTACT` | Uma pessoa foi ligada a este negócio | Uma pessoa foi ligada a este card |
 | `CRM_CARD.HISTORICO.EVENTO.ACTIVITY_UPDATE` | Os dados do negócio mudaram | Os dados do seguro mudaram |
-| `CRM_CARD.HISTORICO.EVENTO.ACTIVITY_UNLINK_CONTACT` | A pessoa foi tirada deste negócio | A pessoa foi tirada deste seguro |
+| `CRM_CARD.HISTORICO.EVENTO.ACTIVITY_UNLINK_CONTACT` | A pessoa foi tirada deste negócio | A pessoa foi tirada deste card |
 | `CRM_CARD.HISTORICO.GRUPO.NEGOCIO` | Etapas e negócio | Etapas e seguro |
 | `CRM_CARD.SAIR.NEGOCIO` | as mudanças no negócio | as mudanças no seguro |
 | `CRM_CARD.NEGOCIO.TELA` | Negócio | Seguro |
@@ -234,9 +230,6 @@ autonom-ia2/chat#1802 · 18/10/2026. Continua o #1832 (funis da corretora). Só 
 | `CRM_KANBAN.ACTIONS.NEW_CARD` | Nova oportunidade | Nova cotação |
 | `CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES` | Ver oportunidades | Ver cotações |
 | `CRM_KANBAN.FILTERS.SHORTCUT_MINE` | Minhas oportunidades | Minhas cotações |
-| `CRM_KANBAN.FILTERS.VALUE_RANGE` | Valor | Valor do seguro |
-| `CRM_KANBAN.FILTERS.GROUP_ACTIVITY_HELP` | Valor estimado, retorno e atividade do card. | Valor do seguro, retorno e atividade do card. |
-| `CRM_KANBAN.LIST.COLUMNS.VALUE` | Valor | Valor do seguro |
 | `CRM_KANBAN.DRAWER.CARD_FIELDS.HELP` | Informações próprias deste negócio. | Informações próprias deste seguro. |
 | `CRM_KANBAN.DRAWER.CARD_FIELDS.EMPTY_ADMIN` | Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card. | Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card. Ex.: Seguradora atual, Vencimento do seguro, Placa. |
 | `CRM_KANBAN.CONVERSATION.SUBJECTS.TITLE_PLACEHOLDER` | Ex.: Cotação — Onix 2021 | Ex.: Cotação do seguro do carro |

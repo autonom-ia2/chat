@@ -19,7 +19,6 @@ pt_BR:
     # Planilha do CRM e e-mail de lembrete (Lote 1 da F2).
     export:
       columns:
-        value: 'Valor do seguro'
         next_follow_up_at: 'Próximo retorno'
     follow_up_reminder:
       card: 'Card: %{card}'

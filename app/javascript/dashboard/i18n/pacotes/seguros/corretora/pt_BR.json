@@ -20,7 +20,7 @@
         "SEGUNDA_VIA": "pede a segunda via do boleto",
         "ATRASADO": "está com a parcela atrasada"
       },
-      "EXEMPLO": "Ex.: pede uma cotação de seguro"
+      "EXEMPLO": "Ex.: pede uma cotação ou avisa um sinistro"
     },
     "TIPO": {
       "VENDER": {
@@ -63,7 +63,7 @@
           "TITULO": "Lembrar da parcela",
           "MSG_ANTES": "Oi, {nome}! Passando para lembrar que a parcela do seu seguro, de {valor}, vence sexta.",
           "MSG_NO_DIA": "Oi, {nome}! A parcela do seu seguro, de {valor}, vence hoje. Se já pagou, pode ignorar.",
-          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento da parcela de {valor}. Quer que a gente mande a segunda via?"
+          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento da parcela de {valor}. Posso te ajudar com alguma coisa?"
         }
       }
     }
@@ -77,7 +77,7 @@
         "NAO_ERA_HORA": "A seguradora recusou"
       },
       "PERDEU_TEXTO": "Contar o motivo é opcional, mas ajuda a fechar mais da próxima vez.",
-      "GANHOU_TEXTO": "Confira o valor. Ele entra no painel de seguros fechados."
+      "GANHOU_TEXTO": "Confira o valor. Ele entra no painel do CRM."
     },
     "PASSO": {
       "FECHADO": "Este card terminou: {status}. Se o cliente voltar, toque em Reabrir."
@@ -86,7 +86,7 @@
       "SEM_CONTATO": "Ainda não há uma pessoa ligada a este card.",
       "NEGOCIO_DE": "Seguro: {titulo}",
       "NEGOCIO": "Seguro",
-      "AVISO_FACEBOOK": "Quando o card anda, avisamos o Facebook e o Instagram.",
+      "AVISO_FACEBOOK": "Quando a cotação avança, avisamos o Facebook e o Instagram.",
       "MAIS_DETALHES_DICA": "De onde veio, o que já aconteceu, mais do seguro e arquivar",
       "MAIS_NEGOCIO": "Mais do seguro",
       "JA_COMPROU": "Já fechou seguro com você.",
@@ -98,7 +98,7 @@
       "EVENTO": {
         "ACTIVITY_LINK_CONTACT": "Uma pessoa foi ligada a este card",
         "ACTIVITY_UPDATE": "Os dados do seguro mudaram",
-        "ACTIVITY_UNLINK_CONTACT": "A pessoa foi tirada deste seguro"
+        "ACTIVITY_UNLINK_CONTACT": "A pessoa foi tirada deste card"
       },
       "GRUPO": {
         "NEGOCIO": "Etapas e seguro"
@@ -125,7 +125,7 @@
       "LEMBRETE_EXEMPLO": "Ex.: Cobrar a emissão da seguradora · Pedir a CNH"
     },
     "ORIGEM": {
-      "AVISO_TEXTO": "Quando o card anda, avisamos os anúncios para trazerem clientes parecidos."
+      "AVISO_TEXTO": "Quando a cotação avança, avisamos os anúncios para trazerem clientes parecidos."
     },
     "CRIAR": {
       "TITULO_2": "Sobre o seguro",
@@ -176,14 +176,7 @@
       "VIEW_OPPORTUNITIES": "Ver cotações"
     },
     "FILTERS": {
-      "SHORTCUT_MINE": "Minhas cotações",
-      "VALUE_RANGE": "Valor do seguro",
-      "GROUP_ACTIVITY_HELP": "Valor do seguro, retorno e atividade do card."
-    },
-    "LIST": {
-      "COLUMNS": {
-        "VALUE": "Valor do seguro"
-      }
+      "SHORTCUT_MINE": "Minhas cotações"
     },
     "DRAWER": {
       "CARD_FIELDS": {
@@ -231,7 +224,7 @@
     "AI_SETTINGS": {
       "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados da conversa (placa, CEP de pernoite, seguradora atual, vencimento e afins) e preenche qualquer campo customizado vazio do contato ou da conversa. Campo já preenchido nunca é sobrescrito.",
       "AUTO_FOLLOWUP": {
-        "TONE_PLACEHOLDER": "informal, trate por você, lembre que a cotação vale poucos dias…"
+        "TONE_PLACEHOLDER": "informal, trate por você, seja breve…"
       }
     },
     "PIPELINE_EDITOR": {
@@ -277,7 +270,7 @@
         "PATH": {
           "QUOTES": "cotação | cotações"
         },
-        "OPEN_QUOTES": "Vendas chegando: 1 cotação aberta | Vendas chegando: {count} cotações abertas",
+        "OPEN_QUOTES": "Seguros a fechar: 1 cotação aberta | Seguros a fechar: {count} cotações abertas",
         "AD_QUOTES": "1 cotação aberta | {count} cotações abertas",
         "STALLED_TITLE": "1 cotação parada | {count} cotações paradas",
         "PATH_LIST": {

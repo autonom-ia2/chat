@@ -19,7 +19,6 @@ en:
     # CRM spreadsheet and reminder email (F2 lot 1).
     export:
       columns:
-        value: 'Insurance value'
         next_follow_up_at: 'Next follow-up'
     follow_up_reminder:
       card: 'Card: %{card}'

@@ -3,7 +3,7 @@
     "MODELOS": {
       "VENDAS": {
         "NOME": "Insurance sale",
-        "TEXTO": "From the quote until the policy closes.",
+        "TEXTO": "From the quote until the insurance is closed.",
         "E1": "New contact",
         "E2": "Quoting",
         "E3": "Options sent",
@@ -20,29 +20,29 @@
         "SEGUNDA_VIA": "asks for a copy of the bill",
         "ATRASADO": "is late on an installment"
       },
-      "EXEMPLO": "E.g.: asks for an insurance quote"
+      "EXEMPLO": "E.g.: asks for a quote or reports a claim"
     },
     "TIPO": {
       "VENDER": {
-        "TEXTO": "Close a new policy or renew one."
+        "TEXTO": "Close new insurance or renew it."
       }
     },
     "ETAPA": {
       "EXEMPLO": "E.g.: the customer got the quote options and is thinking about it."
     },
     "VENDAS": {
-      "TITULO": "Know how many policies this pipeline closes",
-      "TEXTO": "Policies closed here go to the dashboard, next to the monthly goal.",
+      "TITULO": "Know how much insurance this pipeline closes",
+      "TEXTO": "Insurance closed here goes to the dashboard, next to the monthly goal.",
       "META": "Monthly production goal"
     },
     "RESUMO": {
-      "TIPO_VENDER": "{tipo}: get a new customer. Each closed policy counts on the dashboard.",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each insurance closed counts on the dashboard.",
       "META": "Production goal of {valor} a month.",
       "COBRAR_LEMBRETES": "We send installment reminders before, on and after the due date."
     },
     "ANUNCIOS": {
       "GOOGLE": {
-        "NOME_EXEMPLO": "E.g. Policy closed"
+        "NOME_EXEMPLO": "E.g.: Insurance closed"
       }
     },
     "PREVIA": {
@@ -52,7 +52,7 @@
       "MSG_NOSSA": "Here is the quote with the options. Any questions, just ask.",
       "MSG_RETORNO": "Hi, Ana! Did you get a chance to look at the quote options? If you want, we can quote another coverage for you.",
       "LEMBRETE_TEXTO": "Ana hasn't replied since Monday. Next step: ask if anything about the quote is unclear.",
-      "ANUNCIO_FECHOU": "Ana closed a {valor} policy."
+      "ANUNCIO_FECHOU": "Ana closed {valor} insurance."
     },
     "ATENDER": {
       "LEMBRETES": {
@@ -63,7 +63,7 @@
           "TITULO": "Installment reminders",
           "MSG_ANTES": "Hi, {nome}! Just a reminder that your insurance installment of {valor} is due on Friday.",
           "MSG_NO_DIA": "Hi, {nome}! Your insurance installment of {valor} is due today. If you already paid, please ignore this.",
-          "MSG_DEPOIS": "Hi, {nome}! We have not seen the {valor} installment payment yet. Do you want us to send a copy of the bill?"
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the {valor} installment payment yet. Can I help with anything?"
         }
       }
     }
@@ -77,7 +77,7 @@
         "NAO_ERA_HORA": "The insurer declined"
       },
       "PERDEU_TEXTO": "The reason is optional, but it helps you close more next time.",
-      "GANHOU_TEXTO": "Check the value. It goes into the closed policies dashboard."
+      "GANHOU_TEXTO": "Check the value. It goes into the CRM dashboard."
     },
     "PASSO": {
       "FECHADO": "This card is over: {status}. If the customer comes back, tap Reopen."
@@ -86,7 +86,7 @@
       "SEM_CONTATO": "No person is linked to this card yet.",
       "NEGOCIO_DE": "Insurance: {titulo}",
       "NEGOCIO": "Insurance",
-      "AVISO_FACEBOOK": "When the card moves, we tell Facebook and Instagram.",
+      "AVISO_FACEBOOK": "When the quote moves forward, we tell Facebook and Instagram.",
       "MAIS_DETALHES_DICA": "Where it came from, what happened, more about the insurance and archive",
       "MAIS_NEGOCIO": "More about the insurance",
       "JA_COMPROU": "Already bought insurance from you.",
@@ -98,7 +98,7 @@
       "EVENTO": {
         "ACTIVITY_LINK_CONTACT": "A person was added to this card",
         "ACTIVITY_UPDATE": "The insurance details changed",
-        "ACTIVITY_UNLINK_CONTACT": "The person was removed from this insurance"
+        "ACTIVITY_UNLINK_CONTACT": "The person was removed from this card"
       },
       "GRUPO": {
         "NEGOCIO": "Stages and insurance"
@@ -125,7 +125,7 @@
       "LEMBRETE_EXEMPLO": "E.g.: Chase the insurer for the policy · Ask for the driver's license"
     },
     "ORIGEM": {
-      "AVISO_TEXTO": "When the card moves, we tell the ads so they bring similar customers."
+      "AVISO_TEXTO": "When the quote moves forward, we tell the ads so they bring similar customers."
     },
     "CRIAR": {
       "TITULO_2": "About the insurance",
@@ -176,14 +176,7 @@
       "VIEW_OPPORTUNITIES": "View quotes"
     },
     "FILTERS": {
-      "SHORTCUT_MINE": "My quotes",
-      "VALUE_RANGE": "Insurance value",
-      "GROUP_ACTIVITY_HELP": "Insurance value, follow-up and card activity."
-    },
-    "LIST": {
-      "COLUMNS": {
-        "VALUE": "Insurance value"
-      }
+      "SHORTCUT_MINE": "My quotes"
     },
     "DRAWER": {
       "CARD_FIELDS": {
@@ -231,7 +224,7 @@
     "AI_SETTINGS": {
       "ATTRIBUTE_EXTRACTION_HELP": "Extracts data such as plate, overnight ZIP code, current insurer and expiry date, then fills any empty custom field of the contact or conversation. A filled field is never overwritten.",
       "AUTO_FOLLOWUP": {
-        "TONE_PLACEHOLDER": "informal, address as 'você', remind that the quote is valid for a few days…"
+        "TONE_PLACEHOLDER": "informal, address as 'você', keep it short…"
       }
     },
     "PIPELINE_EDITOR": {
@@ -277,7 +270,7 @@
         "PATH": {
           "QUOTES": "quote | quotes"
         },
-        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "OPEN_QUOTES": "Insurance to close: 1 open quote | Insurance to close: {count} open quotes",
         "AD_QUOTES": "1 open quote | {count} open quotes",
         "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
         "PATH_LIST": {
@@ -319,15 +312,15 @@
       }
     },
     "COMPANY_OPPORTUNITIES": {
-      "HELP": "Policies and requests of contacts linked to this company. Only the ones you can access."
+      "HELP": "Insurance and requests of contacts linked to this company. Only the ones you can access."
     },
     "CONTACT_OPPORTUNITIES": {
-      "TAB": "Policies",
-      "TITLE": "Policies in the CRM",
-      "HELP": "This contact's policies and requests across pipelines. Only the ones you can access.",
-      "SEARCH": "Search policy",
+      "TAB": "Insurance",
+      "TITLE": "Insurance in the CRM",
+      "HELP": "This contact's insurance and requests across pipelines. Only the ones you can access.",
+      "SEARCH": "Search insurance",
       "SEARCH_HINT": "Card name. E.g.: car insurance",
-      "EMPTY": "No policies in this query"
+      "EMPTY": "No insurance in this query"
     },
     "OPPORTUNITY": {
       "CONTEXT": {
@@ -342,7 +335,7 @@
     "RELATIONSHIP": {
       "SAME_OPPORTUNITY": "The contact will be linked to this card. The insurance details stay as they are.",
       "DEAL_COMPANY_LABEL": "Company for this insurance",
-      "SAVE_CONFLICT": "Unable to link the contact. Check whether it already exists or this card has another person’s conversations.",
+      "SAVE_CONFLICT": "Unable to link the contact. Check whether it already exists or this card has another person's conversations.",
       "OPPORTUNITY_DETAILS": "Card details",
       "FIELDS_SHARED": "The same fields and values as the Relationships profile. Each change is saved separately from the card.",
       "COMPANY_FORM": {
