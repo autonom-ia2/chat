@@ -5,8 +5,13 @@
 //   'unknown') logo antes das fotos (22 de 22 em produção, out/2026, seguidos de 2+
 //   mídias em até 30 s). O álbum começa nesse marcador, junta as fotos/vídeos do mesmo
 //   cliente que vêm logo depois, até 30 s do marcador, e para no 1º que não entra. O
-//   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA (caixa híbrida)
-//   não grava sinal de álbum por aqui (o conector é de fora deste repositório): solta.
+//   marcador some da lista. Sem marcador, cada foto fica solta.
+// - Recebido pelo WAHA (#1709): o conector cria antes das mídias um marcador com
+//   content_attributes.waha_album = { expected_images, expected_videos }. Com a flag
+//   `whatsapp_rich_native` ele chega como atividade escondida (c2y_hidden, com a mesma
+//   chave); sem ela, como recebida comum ("Mensagem de Álbum Recebida"). Nos dois casos
+//   o marcador some e junta até a quantidade anunciada, do mesmo cliente, na mesma
+//   janela de 30 s.
 // - Enviado pela plataforma: várias fotos do mesmo envio são criadas quase juntas
 //   (até 3 s entre uma e outra) e seguem em álbum, como o app faz para quem manda junto.
 import {
@@ -60,11 +65,48 @@ export const podeEntrarNoAlbum = mensagem => {
 };
 
 // O "pai" do álbum que a Cloud entrega como não suportada, do cliente.
-export const eMarcadorDeAlbum = mensagem =>
+const eMarcadorDaCloud = mensagem =>
   mensagem?.messageType === MESSAGE_TYPES.INCOMING &&
   !mensagem.private &&
   mensagem.contentAttributes?.isUnsupported === true &&
   mensagem.contentAttributes?.unsupportedKind === 'unknown';
+
+// O marcador do WAHA: recebida (sem a flag) ou atividade escondida (com ela).
+const LADOS_DO_MARCADOR_DO_WAHA = [
+  MESSAGE_TYPES.INCOMING,
+  MESSAGE_TYPES.ACTIVITY,
+];
+const albumDoWaha = mensagem => {
+  const album = mensagem?.contentAttributes?.wahaAlbum;
+  return album && typeof album === 'object' ? album : null;
+};
+
+export const eMarcadorDoWaha = mensagem =>
+  Boolean(albumDoWaha(mensagem)) &&
+  !mensagem.private &&
+  LADOS_DO_MARCADOR_DO_WAHA.includes(mensagem.messageType);
+
+export const eMarcadorDeAlbum = mensagem =>
+  eMarcadorDaCloud(mensagem) || eMarcadorDoWaha(mensagem);
+
+// Quantas mídias o marcador do WAHA anuncia; 0 quando não diz (sem teto).
+export const itensAnunciados = mensagem => {
+  const album = albumDoWaha(mensagem) || {};
+  const total =
+    Number(album.expectedImages || 0) + Number(album.expectedVideos || 0);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
+// Com quem o item é comparado para seguir a sequência: o próprio marcador, ou, se ele
+// é a atividade do WAHA (não tem lado de cliente), o 1º item, que precisa ser recebido.
+const referenciaDoItem = (marcador, itens) =>
+  marcador.messageType === MESSAGE_TYPES.ACTIVITY ? itens[0] : marcador;
+
+const segueOMarcador = (marcador, itens, atual, fuso) => {
+  const referencia = referenciaDoItem(marcador, itens);
+  if (!referencia) return atual.messageType === MESSAGE_TYPES.INCOMING;
+  return continuaASequencia(referencia, atual, fuso);
+};
 
 const dentroDaJanela = (desde, atual, janela) => {
   const espera = atual.createdAt - desde.createdAt;
@@ -72,17 +114,19 @@ const dentroDaJanela = (desde, atual, janela) => {
 };
 
 // Recebido: do marcador em diante, enquanto o item entra, é da mesma pessoa e chega
-// até 30 s depois do marcador.
+// até 30 s depois do marcador. O do WAHA para na quantidade que anunciou.
 const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
   const marcador = lista[inicio];
+  const teto = itensAnunciados(marcador);
   const itens = [];
   for (let i = inicio + 1; i < lista.length; i += 1) {
+    if (teto && itens.length >= teto) break;
     const atual = lista[i];
     const entra =
       podeEntrarNoAlbum(atual) &&
       !(itens.length && abreBloco(atual)) &&
       dentroDaJanela(marcador, atual, JANELA_DO_ALBUM_EM_SEGUNDOS) &&
-      continuaASequencia(marcador, atual, fuso);
+      segueOMarcador(marcador, itens, atual, fuso);
     if (!entra) break;
     itens.push(atual);
   }
@@ -135,6 +179,8 @@ export const agruparDaConversa = (
       if (doMarcador) marcadores.add(mensagem.id);
       i += itens.length + (doMarcador ? 1 : 0);
     } else {
+      // O marcador do WAHA é só sinal: some mesmo quando o álbum não se forma.
+      if (eMarcadorDoWaha(mensagem)) marcadores.add(mensagem.id);
       i += 1;
     }
   }

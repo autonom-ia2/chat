@@ -1,7 +1,8 @@
 // O atendente reage à mensagem (#1702), só com a pele do WhatsApp. O selo se
 // atualiza pelo `message.updated` que o servidor emite ao gravar a reação. Até o eco
 // chegar, vale a reação que acabou de sair (clicar de novo no mesmo emoji tira, em
-// vez de mandar o mesmo outra vez).
+// vez de mandar o mesmo outra vez). Na caixa WAHA cujo motor reage (`react` nas ações
+// da conversa, #1709), o envio vai pela rota da mensagem; no resto, pela de sempre.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -52,7 +53,11 @@ export const useReacaoDoAtendente = mensagem => {
     const { conversationId, id } = mensagem.value;
     const emoji = emojiParaEnviar(atual.value, escolhido);
     try {
-      await ConversaCanalAPI.reagir(conversationId, id, emoji);
+      if (estado.value.pelaCaixa) {
+        await ConversaCanalAPI.reagirPelaCaixa(conversationId, id, emoji);
+      } else {
+        await ConversaCanalAPI.reagir(conversationId, id, emoji);
+      }
       // O eco (message.updated) confirma; até lá, a tela já conta com esta.
       enviada.value = emoji;
     } catch (erro) {
