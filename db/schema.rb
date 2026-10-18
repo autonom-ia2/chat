@@ -1790,7 +1790,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_131500) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "pasta"], name: "index_conversa_canal_pastas_do_email_on_account_id_and_pasta"
     t.index ["conversation_id"], name: "index_conversa_canal_pastas_do_email_on_conversation_id", unique: true
-    t.check_constraint "pasta::text = ANY (ARRAY['spam'::character varying, 'lixeira'::character varying]::text[])", name: "conversa_canal_pastas_do_email_pasta"
+    t.check_constraint "pasta::text = ANY (ARRAY['spam'::character varying::text, 'lixeira'::character varying::text])", name: "conversa_canal_pastas_do_email_pasta"
   end
 
   create_table "conversa_canal_remetentes_no_spam", force: :cascade do |t|
@@ -1800,6 +1800,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_131500) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_conversa_canal_remetentes_no_spam_on_account_id"
     t.index ["inbox_id", "email"], name: "index_conversa_canal_remetentes_no_spam_on_inbox_id_and_email", unique: true
   end
 
@@ -4276,6 +4277,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_131500) do
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "conversa_canal_pastas_do_email", "conversations", on_delete: :cascade
+  add_foreign_key "conversa_canal_remetentes_no_spam", "accounts", on_delete: :cascade
   add_foreign_key "conversa_canal_remetentes_no_spam", "inboxes", on_delete: :cascade
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade

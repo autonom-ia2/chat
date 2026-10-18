@@ -151,6 +151,85 @@ RSpec.describe ConversaCanal::MoverParaPasta do
     expect(lista(status: 'all')[:conversations]).to contain_exactly(conversa, outra)
   end
 
+  describe 'reabrir pelas pastas é o "Reabrir" do painel' do
+    let(:robo) { create(:agent_bot, account: account) }
+    let(:agente) { create(:user, account: account, role: :agent) }
+
+    before do
+      create(:inbox_member, user: agente, inbox: inbox)
+      conversa.update!(ai_assignee: robo)
+    end
+
+    it 'conversa com robô vai ao Spam e volta pelo "Não é spam": o robô não fica atribuído' do
+      mover('spam')
+      mover('')
+
+      expect(conversa.reload).to be_open
+      expect(conversa.ai_assignee).to be_nil
+    end
+
+    it 'o agente que restaura da Lixeira fica com a conversa' do
+      described_class.new(conversation: conversa, pasta: 'lixeira', user: agente).perform
+      described_class.new(conversation: conversa, pasta: nil, user: agente).perform
+
+      expect(conversa.reload).to be_open
+      expect(conversa.assignee).to eq(agente)
+      expect(conversa.ai_assignee).to be_nil
+    end
+  end
+
+  it 'voltar para a Entrada sem estar numa pasta não reabre a conversa resolvida' do
+    conversa.update!(status: :resolved)
+
+    mover('')
+
+    expect(conversa.reload).to be_resolved
+  end
+
+  describe 'remetente no Spam escreve numa conversa que já existia' do
+    let!(:antiga) { create(:conversation, account: account, inbox: inbox, contact: contato) }
+
+    def escrever(alvo)
+      create(:message, account: account, inbox: inbox, conversation: alvo, message_type: :incoming, content: 'Re: oferta')
+    end
+
+    it 'aberta na Entrada (resposta com In-Reply-To): vai para o Spam, resolvida' do
+      mover('spam')
+      escrever(antiga)
+
+      expect(ConversaCanal::PastaDoEmail.find_by(conversation_id: antiga.id)&.pasta).to eq('spam')
+      expect(antiga.reload).to be_resolved
+      expect(lista[:conversations]).to eq([outra])
+    end
+
+    it 'resolvida na Entrada: não reabre e vai para o Spam' do
+      antiga.update!(status: :resolved)
+      mover('spam')
+      escrever(antiga)
+
+      expect(antiga.reload).to be_resolved
+      expect(lista(pasta: 'spam')[:conversations]).to contain_exactly(conversa, antiga)
+    end
+
+    it 'na Lixeira: vai para o Spam, não para a Entrada' do
+      described_class.new(conversation: antiga, pasta: 'lixeira', user: user).perform
+      mover('spam')
+      escrever(antiga)
+
+      expect(ConversaCanal::PastaDoEmail.where(conversation_id: antiga.id).pluck(:pasta)).to eq(['spam'])
+      expect(antiga.reload).to be_resolved
+    end
+
+    it 'depois do "Não é spam", a resposta dele fica na Entrada' do
+      mover('spam')
+      mover('')
+      escrever(antiga)
+
+      expect(ConversaCanal::PastaDoEmail.exists?(conversation_id: antiga.id)).to be(false)
+      expect(antiga.reload).to be_open
+    end
+  end
+
   it 'recusa caixa que não é de e-mail e pasta que não existe' do
     api = create(:conversation, account: account, inbox: create(:inbox, account: account))
 

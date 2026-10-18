@@ -3,8 +3,10 @@
 #   decisão do Rodrigo, 18/10: "só a caixa de email"). E-mail novo dele nesta caixa cai direto no Spam
 #   (ConversaCanal::SpamDoBloqueado). O contato (contacts.blocked) e os outros canais dele não mudam;
 # - lixeira: sai da Entrada e fica resolvida, sem apagar; dá para restaurar;
-# - entrada (pasta nil): volta e é reaberta. Saindo do Spam, o remetente volta a chegar nesta caixa ("Não é spam").
-# Resolver e reabrir usam o status da conversa, como o botão Resolver: os eventos e a atividade são os de sempre.
+# - entrada (pasta nil): volta e é reaberta, só se estava numa pasta. Saindo do Spam, o remetente volta a chegar nesta
+#   caixa ("Não é spam").
+# Resolver usa o status da conversa, como o botão Resolver; reabrir é o "Reabrir" do painel (ConversaCanal::ReabrirComoPessoa:
+# o robô sai do nome e o agente fica com a conversa). Os eventos e a atividade são os de sempre.
 class ConversaCanal::MoverParaPasta
   class Recusa < StandardError; end
 
@@ -22,7 +24,7 @@ class ConversaCanal::MoverParaPasta
       anterior = ConversaCanal::PastaDoEmail.find_by(conversation_id: @conversation.id)&.pasta
       @pasta ? mover : restaurar
       ajustar_remetente(anterior)
-      ajustar_status
+      ajustar_status(anterior)
     end
     @pasta
   end
@@ -55,11 +57,12 @@ class ConversaCanal::MoverParaPasta
     end
   end
 
-  def ajustar_status
+  # Voltar para a Entrada só reabre a conversa que estava numa pasta: na Entrada, resolvida, ela fica como está.
+  def ajustar_status(anterior)
     if @pasta
       @conversation.update!(status: :resolved) unless @conversation.resolved?
-    elsif @conversation.resolved?
-      @conversation.update!(status: :open)
+    elsif anterior.present? && @conversation.resolved?
+      ConversaCanal::ReabrirComoPessoa.new(conversation: @conversation, user: @user).perform
     end
   end
 end
