@@ -28,6 +28,30 @@ export const LISTA_DO_EMAIL = [
   "[&_.message-bubble-container:has([data-cartao-do-email])_[class*='grid-area:bubble']]:!mx-0",
 ].join(' ');
 
+// Os botões redondos da barra de baixo do e-mail (#1786), no padrão da caixa do
+// WhatsApp: sem fundo, ícone de 22 px, círculo ao passar o mouse, contorno só no
+// teclado e azul quando ligado. Valem para a `.left-wrap` da resposta e para a da
+// gaveta "Escrever" (#1809); o tamanho do botão fica com cada uma.
+export const BOTOES_DA_BARRA = [
+  '[&_.left-wrap]:!gap-0.5',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!p-0',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!rounded-full',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!bg-transparent',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!text-n-slate-12',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre]):hover]:!bg-n-alpha-2',
+  "[&_.left-wrap_button:not([role=menuitem]):not([data-livre])_span[class*='i-']]:!size-[22px]",
+  // Contorno só no teclado (o clique não deixa anel), como na caixa do WhatsApp.
+  '[&_.left-wrap_button:focus]:!outline-none',
+  '[&_.left-wrap_button:focus-visible]:!outline',
+  '[&_.left-wrap_button:focus-visible]:!outline-2',
+  '[&_.left-wrap_button:focus-visible]:!outline-offset-1',
+  '[&_.left-wrap_button:focus-visible]:!outline-n-brand',
+  // Botão que liga e desliga (assinatura, formatação) mostra quando está ligado. O
+  // seletor repete os :not() de cima: com menos peso, o fundo transparente ganhava.
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])[data-ligado]]:!bg-n-blue-3',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])[data-ligado]]:!text-n-blue-11',
+].join(' ');
+
 // A caixa de resposta do e-mail (#1786, desenho aprovado em 18/10): o cartão do
 // Chatwoot alinhado aos e-mails, com os botões de baixo no padrão da caixa do WhatsApp
 // (redondos de 40 px, ícone maior, círculo ao passar o mouse) e o Enviar em pílula.
@@ -53,24 +77,9 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box_div:has(>.left-wrap)]:border-t',
   '[&_.reply-box_div:has(>.left-wrap)]:border-n-weak',
   '[&_.reply-box_div:has(>.left-wrap)]:rounded-b-2xl',
-  // Botões da barra de baixo.
-  '[&_.left-wrap]:!gap-0.5',
+  // Botões da barra de baixo: o desenho comum e o tamanho desta caixa.
+  BOTOES_DA_BARRA,
   '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!size-10',
-  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!p-0',
-  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!rounded-full',
-  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!bg-transparent',
-  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!text-n-slate-12',
-  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre]):hover]:!bg-n-alpha-2',
-  "[&_.left-wrap_button:not([role=menuitem]):not([data-livre])_span[class*='i-']]:!size-[22px]",
-  // Contorno só no teclado (o clique não deixa anel), como na caixa do WhatsApp.
-  '[&_.left-wrap_button:focus]:!outline-none',
-  '[&_.left-wrap_button:focus-visible]:!outline',
-  '[&_.left-wrap_button:focus-visible]:!outline-2',
-  '[&_.left-wrap_button:focus-visible]:!outline-offset-1',
-  '[&_.left-wrap_button:focus-visible]:!outline-n-brand',
-  // Botão que liga e desliga (assinatura, formatação) mostra quando está ligado.
-  '[&_.left-wrap_button[data-ligado]]:!bg-n-blue-3',
-  '[&_.left-wrap_button[data-ligado]]:!text-n-blue-11',
   // No celular o fio que separa os grupos sobra.
   'max-sm:[&_[data-separador-da-barra]]:!hidden',
   // No celular o botão redondo do painel do contato flutua sobre o canto da caixa.

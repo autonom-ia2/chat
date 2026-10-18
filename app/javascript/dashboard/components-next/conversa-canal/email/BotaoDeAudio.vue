@@ -16,6 +16,15 @@ import { useRecursosDoEmail } from './recursosDoEmail';
 import { useDitado } from './useDitado';
 import OndaAoVivo from './OndaAoVivo.vue';
 
+// Para onde vai o texto ditado. Padrão: o editor da resposta (enable-insert-events).
+// A gaveta "Escrever" (#1809) passa o dela, para não cair na resposta aberta por trás.
+const props = defineProps({
+  inserir: {
+    type: Function,
+    default: texto => emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, texto),
+  },
+});
+
 const { t } = useI18n();
 const ditado = useDitado();
 const { recursos } = useRecursosDoEmail(
@@ -33,9 +42,8 @@ const ditar = async () => {
 const pararEInserir = async () => {
   const texto = await ditado.parar();
   if (texto) {
-    // Entra no ponto do cursor, no editor da resposta (enable-insert-events), com um
-    // espaço no fim para o que vier depois não grudar.
-    emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, `${texto} `);
+    // Entra no ponto do cursor, com um espaço no fim para o que vier depois não grudar.
+    props.inserir(`${texto} `);
     return;
   }
   if (ditado.erro.value) {

@@ -26,9 +26,15 @@ const props = defineProps({
   sendWithSignature: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   medium: { type: String, default: '' },
+  // #1809: emoji e ditado da gaveta "Escrever" entram no ponto do cursor.
+  updateSelectionWith: { type: String, default: '' },
 });
 
-const emit = defineEmits(['update:modelValue', 'executeCopilotAction']);
+const emit = defineEmits([
+  'update:modelValue',
+  'executeCopilotAction',
+  'clearSelection',
+]);
 
 const slots = useSlots();
 
@@ -110,7 +116,9 @@ watch(
         :send-with-signature="sendWithSignature"
         :channel-type="channelType"
         :medium="medium"
+        :update-selection-with="updateSelectionWith"
         @input="handleInput"
+        @clear-selection="emit('clearSelection')"
         @focus="handleFocus"
         @blur="handleBlur"
         @execute-copilot-action="

@@ -15,6 +15,9 @@ import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
 import EscolherModeloDoEmail from './EscolherModeloDoEmail.vue';
 import { MODELO_DE_CAMPANHA } from './useConversaDeEmail';
 
+// Fora de uma conversa (gaveta "Escrever", #1809) não há modelo: o modelo de e-mail
+// preenche os campos pela conversa (`GET modelos_de_email/:id?conversation_id=`).
+const props = defineProps({ comModelos: { type: Boolean, default: true } });
 const emit = defineEmits(['arquivos']);
 const { t } = useI18n();
 
@@ -39,6 +42,7 @@ const modelos = ref([]);
 const carregando = ref(false);
 const janela = useTemplateRef('janela');
 onMounted(async () => {
+  if (!props.comModelos) return;
   carregando.value = true;
   try {
     const { data } = await ModelosDeEmailAPI.listar();
@@ -92,12 +96,12 @@ const escolheu = evento => {
   if (arquivos.length) emit('arquivos', { arquivos, comoDocumento: false });
 };
 const mover = evento => {
-  const itens = [...(lista.value?.querySelectorAll('[role=menuitem]') || [])];
-  const atual = itens.indexOf(document.activeElement);
+  const opcoes = [...(lista.value?.querySelectorAll('[role=menuitem]') || [])];
+  const atual = opcoes.indexOf(document.activeElement);
   const destino = { ArrowDown: atual + 1, ArrowUp: atual - 1 }[evento.key];
   if (destino === undefined) return;
   evento.preventDefault();
-  itens[(destino + itens.length) % itens.length]?.focus();
+  opcoes[(destino + opcoes.length) % opcoes.length]?.focus();
 };
 </script>
 
@@ -129,17 +133,21 @@ const mover = evento => {
       @keydown="mover"
     >
       <template v-for="item in itens" :key="item.tipo">
-      <div v-if="item.separado" role="separator" class="my-1 h-px bg-n-weak" />
-      <button
-        type="button"
-        role="menuitem"
-        class="flex items-center gap-3 w-full min-h-11 px-3 rounded-xl text-[15px] text-n-slate-12 text-start outline-none hover:bg-n-alpha-1 focus-visible:bg-n-alpha-1 focus-visible:ring-2 focus-visible:ring-n-brand"
-        :data-item-do-mais="item.tipo"
-        @click="escolher(item)"
-      >
-        <Icon :icon="item.icone" class="size-6" :class="item.cor" />
-        {{ t(`CONVERSA_CANAL.EMAIL.${item.chave}`) }}
-      </button>
+        <div
+          v-if="item.separado"
+          role="separator"
+          class="my-1 h-px bg-n-weak"
+        />
+        <button
+          type="button"
+          role="menuitem"
+          class="flex items-center gap-3 w-full min-h-11 px-3 rounded-xl text-[15px] text-n-slate-12 text-start outline-none hover:bg-n-alpha-1 focus-visible:bg-n-alpha-1 focus-visible:ring-2 focus-visible:ring-n-brand"
+          :data-item-do-mais="item.tipo"
+          @click="escolher(item)"
+        >
+          <Icon :icon="item.icone" class="size-6" :class="item.cor" />
+          {{ t(`CONVERSA_CANAL.EMAIL.${item.chave}`) }}
+        </button>
       </template>
     </div>
     <input
@@ -152,6 +160,7 @@ const mover = evento => {
       @change="escolheu"
     />
     <EscolherModeloDoEmail
+      v-if="comModelos"
       ref="janela"
       :modelos="modelos"
       :carregando="carregando"
