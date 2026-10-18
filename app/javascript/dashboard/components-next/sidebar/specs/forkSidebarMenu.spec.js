@@ -188,7 +188,7 @@ describe('organizeForkMenu', () => {
   });
 
   it('trilha concluída tira Primeiros passos do topo', () => {
-    const menu = organizeForkMenu(upstream, { ...ctx, trilhaConcluida: true });
+    const menu = organizeForkMenu(upstream, { ...ctx, basicoConcluido: true });
     expect(menu.topo).toEqual([]);
   });
 

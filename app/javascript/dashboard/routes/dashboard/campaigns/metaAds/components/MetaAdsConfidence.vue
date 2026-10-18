@@ -14,6 +14,8 @@ const props = defineProps({
   // panel.meta_comparison: { days, until, rows: [{ destination, meta, meta_visits, ours, explanation }],
   // explanation }. undefined fora do painel; null no painel quando não há linha.
   comparison: { type: Object, default: undefined },
+  // Quem só tem meta_ads_view (#1794) não abre o passo da conexão: sem o "corrigir".
+  canFix: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['fix']);
@@ -156,7 +158,7 @@ const confidenceGap = computed(
       </p>
     </div>
     <button
-      v-if="confidenceGap"
+      v-if="confidenceGap && canFix"
       type="button"
       data-summary-confidence-fix
       class="self-start p-0 text-[13px] font-460 text-left bg-transparent border-0 min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"

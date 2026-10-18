@@ -904,7 +904,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como conecto meus anúncios da Meta ao Chat2You?; Como entro com o Facebook para conectar os anúncios?; Como compartilho a conta de anúncios com a Hub2You?; Qual conta de anúncios e qual Pixel escolher?; Como faço a Meta receber as minhas vendas?; Como a Meta entende as etapas do meu funil?; Meus anúncios levam para o WhatsApp e para o site, o que marco?; O que quer dizer A Meta ainda está liberando?
 - onde_fica: Menu lateral > Campanhas > Anúncios da Meta
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
-- gate: feature flag `meta_ads_hub`; papel `administrator`
+- gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta; a página aparece quando Anúncios da Meta está ligado para a conta; para compartilhar sem token, a conta precisa de um WhatsApp oficial conectado à Meta.
 - passos: 1. Em Anúncios da Meta, clique em Conectar a Meta; 2. Se aparecer Entrar com o Facebook, clique, entre no Facebook e, na janela do Facebook, deixe tudo marcado e toque em Continuar até o fim (a janela fecha sozinha e a tela segue para a escolha da conta); senão, ou em Prefere outro jeito de conectar? > Ver os passos, vá em Compartilhar com a Hub2You, siga os três passos no Gerenciador de Negócios (Parceiros > Adicionar > Conceder a um parceiro acesso aos seus ativos, cole o código mostrado e marque a conta de anúncios com Ver desempenho e o Pixel; Abrir a Meta já abre a tela de Parceiros da empresa certa) e clique em Já compartilhei — ou use Colar token; 3. Escolha a conta de anúncios (a mais usada vem marcada) e o Pixel do site, e clique em Usar esta conta; 4. Marque para onde os anúncios levam: Direto para o WhatsApp, Para uma página do site, ou os dois, e clique em Continuar; se marcou o site, use Enviar por WhatsApp para mandar a quem cuida do site a página com o código pronto, e Testar agora para confirmar o clique; 5. Em Avisar a Meta sobre o seu funil, confira cada funil ligado ao WhatsApp, revise o que cada etapa significa para a Meta (a IA sugere quando nenhuma etapa tem) e clique em Gravar no funil.
 - gotchas: Entrar com o Facebook só aparece quando a plataforma tem essa entrada configurada, e só lista as contas de anúncios marcadas no Facebook; se a janela do Facebook não abrir, a tela explica como liberar a janela no navegador; se o Facebook não der a permissão de ver anúncios ou nenhuma conta for marcada, a tela pede para entrar de novo e deixar tudo marcado; o passo 2 diz por onde a conta é lida (pela parceira, pela entrada com o Facebook ou pela sua chave de acesso) e Trocar volta ao passo 1 — recarregar a página não troca o caminho escolhido; se a escolha da conta falhar, o motivo fica escrito embaixo do botão; a conexão só fica pronta depois que o Chat2You lê a conta de anúncios de verdade (nome, gasto dos últimos 30 dias e Pixel); A Meta ainda está liberando aparece logo depois de compartilhar e some em alguns minutos — clique em Usar esta conta de novo; a conta de anúncios precisa ser do mesmo portfólio da Meta do WhatsApp da conta: de outro portfólio, ou com um número de WhatsApp registrado no portfólio de um revendedor, use Colar token; uma conta de anúncios fica ligada a uma conta do Chat2You só; o passo 4 mostra só os funis ligados a um WhatsApp oficial e grava no próprio funil o mesmo que Editar funil (Como a Meta entende esta etapa e o envio de venda e mudança de etapa); a perda e o dataset continuam como estavam, e o Pixel escolhido só entra no funil que não tem um; Parar de avisar desliga só aquele funil e guarda as escolhas; número de WhatsApp fora de qualquer funil aparece em aviso, porque os clientes dele não chegam à Meta; para anúncios que levam ao site, as páginas são ligadas em Links e QR codes e o texto de Parâmetros de URL é copiado aqui; com Anúncios da Meta ligado, o bloco antigo Nomes das campanhas da Meta sai de Links e QR codes e vira um atalho para esta página; o card do CRM mostra Ver anúncio com a miniatura quando a Meta entrega a prévia do anúncio.
@@ -915,10 +915,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
 - onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
-- gate: feature flag `meta_ads_hub`; papel `administrator`
-- pre_requisitos: ser administrador da conta; a conta de anúncios conectada em Anúncios da Meta.
+- gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).
 - passos: 1. Na aba Resultado, escolha o período: 7 ou 30 dias; 2. Leia O que fazer hoje: até 3 ações, da mais importante para a menos, cada uma com o porquê; 3. Clique no botão da ação para ir ao trabalho (as propostas paradas, as conversas mais demoradas, o passo 3 da conexão, o anúncio por dentro ou o anúncio no Gerenciador da Meta); 4. Depois de fazer, clique em Feito: a ação fica marcada Feita; se não for fazer, clique em Dispensar e ela sai até amanhã; 5. No caminho do dinheiro, clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa e Abrir no CRM em cada linha; 6. Confira em Quanto confiar nos números o número da Meta ao lado do nosso.
-- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe.
+- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe; quem só olha (cargo com Anúncios da Meta em Só olha) vê o painel e as listas, sem Feito, Dispensar, Entendi nem a aba Conexão, e as listas mostram só as conversas que essa pessoa já vê na caixa de conversas (sem permissão de conversas, a lista vem vazia), enquanto os números do painel são da conta toda.
 - leitura: campanhas
 - nav_target: `campaigns_meta_ads_index`
 
@@ -1807,8 +1807,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
 - rota: `assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/index`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
 - gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
 - nav_target: `assignment_policy_index`
@@ -1817,8 +1817,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
 - rota: `agent_assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/assignment`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
 - nav_target: `agent_assignment_policy_index`
@@ -1827,8 +1827,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
 - rota: `agent_assignment_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/assignment/create`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
 - gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
 - nav_target: `agent_assignment_policy_create`
@@ -1837,7 +1837,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como coloco uma caixa de entrada nessa política?; Como mudo o limite de conversas por agente?; Como tiro uma caixa de entrada da política?; Por que a caixa saiu da outra política quando eu vinculei aqui?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
 - rota: `agent_assignment_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/assignment/edit/:id`
-- gate: feature flag `assignment_v2`; papel `administrator`
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter uma política de atribuição já criada
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Ajuste ordem, prioridade, distribuição justa e descarte de inativas; 3. Clique em Atualizar política para gravar esses campos; 4. Em Caixas de entrada adicionadas, vincule e desvincule as caixas.
 - gotchas: esta é a única tela com a seção de caixas de entrada, e já vem preenchida com a política existente; uma caixa só pode estar em uma política, e vincular aqui desvincula da anterior, com aviso antes; vincular e desvincular caixa vale na hora, enquanto os demais campos só valem depois do botão Atualizar política; o intervalo de conversas inativas aceita de 1 hora a 999 dias, e em branco desliga o descarte.
@@ -1847,8 +1847,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
 - rota: `agent_capacity_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/capacity`
-- gate: feature flag `advanced_assignment`; papel `administrator`
-- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
 - nav_target: `agent_capacity_policy_index`
@@ -1857,7 +1857,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio uma política de capacidade?; Como limito o número máximo de conversas por caixa?; Quais conversas não devem contar no limite do agente?; Onde adiciono os agentes nessa política?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
 - rota: `agent_capacity_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/capacity/create`
-- gate: feature flag `advanced_assignment`; papel `administrator`
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter atribuição avançada liberada no plano
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Defina as regras de exclusão, escolhendo as etiquetas e o tempo que não contam na capacidade; 4. Clique em Criar política.
 - gotchas: a política nasce sem ninguém dentro, porque as seções de limite por caixa e de agentes só existem na tela de edição, para onde o sistema leva ao salvar; as etiquetas de exclusão precisam já existir na conta para poderem ser escolhidas.
@@ -1867,7 +1867,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como adiciono agentes a uma política de capacidade?; Como defino o máximo de conversas por caixa de entrada?; Como mudo a capacidade de uma pessoa específica?; Por que o agente saiu da outra política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
 - rota: `agent_capacity_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/capacity/edit/:id`
-- gate: feature flag `advanced_assignment`; papel `administrator`
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter uma política de capacidade criada e os agentes cadastrados na conta
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Em limites por caixa de entrada, escolha a caixa e o máximo de conversas; 3. Em agentes atribuídos, use Adicionar agente; 4. Ajuste nome, descrição e regras de exclusão e clique em Atualizar política.
 - gotchas: todo agente entra com capacidade 20 por padrão, então ajuste se o time não for homogêneo; um agente só pode estar em uma política de capacidade, e vincular aqui tira ele da anterior; mexer em agente e em limite por caixa vale na hora, enquanto nome, descrição e exclusões só valem depois do botão Atualizar política.
