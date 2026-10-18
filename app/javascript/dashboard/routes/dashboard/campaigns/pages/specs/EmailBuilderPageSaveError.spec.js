@@ -1,7 +1,7 @@
 import { shallowMount, config, flushPromises } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { ref } from 'vue';
-import * as Sentry from '@sentry/vue';
+import ClientErrorsAPI from 'dashboard/api/clientErrors';
 import { useAlert } from 'dashboard/composables';
 import en from 'dashboard/i18n/locale/en/campaign.json';
 
@@ -24,7 +24,9 @@ vi.mock('dashboard/composables/store', async () => {
       }),
   };
 });
-vi.mock('@sentry/vue', () => ({ captureException: vi.fn() }));
+vi.mock('dashboard/api/clientErrors', () => ({
+  default: { report: vi.fn(() => Promise.resolve()) },
+}));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref: vueRef } = await import('vue');
@@ -120,15 +122,31 @@ describe('EmailBuilderPage — failed save', () => {
       '',
       failure.stack
     );
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { flow: 'email_builder_save' },
+    expect(ClientErrorsAPI.report).toHaveBeenCalledWith({
+      flow: 'email_builder_save',
+      error: failure,
     });
     expect(useAlert).toHaveBeenCalledWith(
       'Could not save the campaign, try again'
     );
   });
 
-  it('logs a refused save (422) without sending it to Sentry', async () => {
+  it('still shows the alert when even logging the error fails', async () => {
+    const wrapper = mountWith(
+      vi.fn(() => {
+        throw Object.create(null);
+      })
+    );
+
+    await button(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Could not save the campaign, try again'
+    );
+  });
+
+  it('logs a refused save (422) without reporting it to the server', async () => {
     dispatch.mockImplementation(() => Promise.reject(serverError(422)));
     const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
 
@@ -140,7 +158,7 @@ describe('EmailBuilderPage — failed save', () => {
       422,
       expect.stringContaining('status code 422')
     );
-    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(ClientErrorsAPI.report).not.toHaveBeenCalled();
   });
 
   it('reports a server failure from "Review and send" and stays on the editor', async () => {
@@ -151,8 +169,9 @@ describe('EmailBuilderPage — failed save', () => {
     await button(wrapper, 'Review and send').trigger('click');
     await flushPromises();
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { flow: 'email_builder_save' },
+    expect(ClientErrorsAPI.report).toHaveBeenCalledWith({
+      flow: 'email_builder_save',
+      error: failure,
     });
     expect(useAlert).toHaveBeenCalledWith(
       'Could not save the campaign, try again'
