@@ -12,6 +12,8 @@
 #   https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/unsupported.md
 # - `context.forwarded` / `context.frequently_forwarded`: marca de encaminhada.
 #   https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/text.md
+# - `context.referred_product` (pergunta sobre um produto do catálogo): `referred_product` com o código e, quando o
+#   catálogo responde, nome, preço e foto (ConversaCanal::ProdutoCitado).
 # - status `played` (áudio ouvido): `played_at` na mensagem enviada, sem mexer no enum de status do Chatwoot.
 #   https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/reference/messages/status.md
 #
@@ -26,9 +28,17 @@ module ConversaCanal::RecebimentoDoWhatsapp
   private
 
   # Apagada e editada mexem na mensagem que já existe: não passam pela trava de id nem criam contato ou conversa.
+  # O produto citado (`context.referred_product`) é lido aqui, antes da transação que cria a mensagem: a consulta ao
+  # catálogo nunca segura o banco.
   def process_messages
-    return super unless pele? && messages_data.present? && NA_ORIGINAL.include?(message_type)
+    return super unless pele? && messages_data.present?
+    return mudar_a_original if NA_ORIGINAL.include?(message_type)
 
+    @produto_citado = ConversaCanal::ProdutoCitado.de(messages_data.first[:context], inbox) unless outgoing_echo
+    super
+  end
+
+  def mudar_a_original
     ConversaCanal::MudancaNaOriginal.new(inbox: inbox, data: messages_data.first, outgoing_echo: outgoing_echo).perform
   end
 
@@ -43,6 +53,7 @@ module ConversaCanal::RecebimentoDoWhatsapp
     return attrs unless pele?
 
     attrs = attrs.merge(encaminhada(message))
+    attrs = attrs.merge(referred_product: @produto_citado) if @produto_citado
     attrs = attrs.merge(order: ConversaCanal::PedidoRecebido.new(message[:order]).atributos) if message[:type] == PEDIDO
     kind = message[:type] == NAO_SUPORTADA ? ConversaCanal::TipoNaoSuportado.de(message) : nil
     kind ? attrs.merge(unsupported_kind: kind) : attrs

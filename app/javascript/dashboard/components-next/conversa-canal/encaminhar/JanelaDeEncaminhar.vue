@@ -3,7 +3,8 @@
 // busca com a borda verde, "Conversas recentes" com avatar, nome e a última linha,
 // caixinha em cada linha (até 5) e, com alguém marcado, o rodapé com os nomes e o
 // botão redondo de enviar. Cada destino volta com o seu resultado; fora da janela
-// de 24 h o servidor não manda e diz por quê: a janela fica aberta só com os destinos
+// de 24 h o servidor reenvia modelo como modelo (#1768) e, se não dá, não manda e diz
+// por quê: a janela fica aberta só com os destinos
 // que falharam marcados, e o motivo de cada um aparece nela. Teclado: o Tab fica
 // dentro da janela e, ao fechar (✕, Esc, clique fora ou envio), o foco volta para
 // onde estava ou, se aquilo sumiu, para a caixa de resposta.

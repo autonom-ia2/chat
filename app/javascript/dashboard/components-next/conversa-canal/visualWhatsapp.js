@@ -43,7 +43,6 @@ const COR = {
   recebida: `!bg-white dark:!bg-[#242626] ${TEXTO}`,
   // Nota só para a equipe: nada parecido com o WhatsApp, para ninguém achar que o cliente viu.
   nota: '!bg-[#FFF3C4] dark:!bg-[#3D3214] text-[#4A3B00] dark:text-[#F5E3A3] border border-dashed border-[#D9B44A] dark:border-[#8C7426]',
-  erro: '!bg-[#FDE7E9] dark:!bg-[#3B1F24] text-[#7A1F2B] dark:text-[#F4C7CD]',
   naoSuportada:
     '!bg-[#FFF3C4] dark:!bg-[#3D3214] border border-dashed border-[#D9B44A] text-[#4A3B00] dark:text-[#F5E3A3]',
 };
@@ -57,9 +56,14 @@ const COR_POR_VARIANTE = {
   [MESSAGE_VARIANTS.TEMPLATE]: COR.enviada,
   [MESSAGE_VARIANTS.USER]: COR.recebida,
   [MESSAGE_VARIANTS.PRIVATE]: COR.nota,
-  [MESSAGE_VARIANTS.ERROR]: COR.erro,
   [MESSAGE_VARIANTS.UNSUPPORTED]: COR.naoSuportada,
 };
+
+// Cor pelo lado, não pelo tipo: o aviso de tipo do cliente e a mensagem que falhou.
+// No app a que falhou é um balão enviado comum; a falha aparece no ícone vermelho ao
+// lado da hora (MessageMeta), não na cor do balão.
+const corPeloLado = ({ variante, nomeDoBalao }) =>
+  nomeDoBalao === NAO_SUPORTADA_COM_TIPO || variante === MESSAGE_VARIANTS.ERROR;
 
 // Botões das mensagens ricas (botão de link, opções): no app eles ficam dentro do
 // balão, separados por uma linha fina, com o texto azul no meio.
@@ -88,17 +92,21 @@ const RECHEIO = [
   '[&[data-bubble-name=image]]:!p-[3px] [&[data-bubble-name=video]]:!p-[3px]',
   // Foto: canto de 6 px por dentro e sem os botões do painel por cima (abrir é tocar na foto).
   '[&[data-bubble-name=image]_.rounded-lg]:!rounded-[8px] [&[data-bubble-name=image]_.inset-0]:!hidden [&[data-bubble-name=image]_.right-2]:!hidden',
-  // Foto até 330 px de lado; a retrato é cortada embaixo, como no app.
-  '[&[data-bubble-name=image]_img]:!w-[330px] [&[data-bubble-name=image]_img]:max-w-full [&[data-bubble-name=image]_img]:!h-auto [&[data-bubble-name=image]_img]:max-h-[330px] [&[data-bubble-name=image]_img]:object-cover [&[data-bubble-name=image]_img]:object-top',
+  // O tamanho da foto vem do próprio balão (midia/proporcaoDaMidia), pela proporção dela.
   // Documento: o cartão com 3 px de moldura, 320 px, e a hora embaixo.
   '[&[data-bubble-name=attachment]]:!p-[3px] [&[data-bubble-name=attachment]]:w-[320px] [&[data-bubble-name=attachment]]:max-w-full [&[data-bubble-name=attachment]>[class*=mt-]]:!px-[5px] [&[data-bubble-name=attachment]>[class*=mt-]]:!pb-[2px]',
-  // Foto com legenda: a foto grande em cima e a legenda embaixo, como no app.
-  '[&[data-bubble-name=text]>div:has(.contain-content)]:!flex-col-reverse [&[data-bubble-name=text]>div:has(.contain-content)]:!gap-1.5',
-  '[&[data-bubble-name=text]:has(.contain-content)]:!pt-[3px] [&[data-bubble-name=text]:has(.contain-content)]:!pl-[3px] [&[data-bubble-name=text]:has(.contain-content)]:!pr-[3px]',
-  '[&[data-bubble-name=text]_.contain-content]:!w-[330px] [&[data-bubble-name=text]_.contain-content]:!max-w-full [&[data-bubble-name=text]_.contain-content]:!h-auto [&[data-bubble-name=text]_.contain-content]:!rounded-[8px]',
-  // A foto inteira, na proporção dela (como no app), até 330 px de altura.
-  '[&[data-bubble-name=text]_.contain-content_img]:!h-auto [&[data-bubble-name=text]_.contain-content_img]:max-h-[330px] [&[data-bubble-name=text]_.contain-content_img]:object-top',
-  '[&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:block [&[data-bubble-name=text]:has(.contain-content)_.prose-bubble]:px-1.5',
+  // Foto ou vídeo com legenda: a mídia em cima, no tamanho do app (MidiaComLegenda), com a
+  // moldura de 3 px, e a legenda embaixo.
+  '[&[data-bubble-name=text]:has([data-midia-do-whatsapp])]:!pt-[3px] [&[data-bubble-name=text]:has([data-midia-do-whatsapp])]:!pl-[3px] [&[data-bubble-name=text]:has([data-midia-do-whatsapp])]:!pr-[3px]',
+  '[&[data-bubble-name=text]>div:has([data-midia-do-whatsapp])]:!gap-1.5',
+  '[&[data-bubble-name=text]:has([data-midia-do-whatsapp])_.prose-bubble]:block [&[data-bubble-name=text]:has([data-midia-do-whatsapp])_.prose-bubble]:px-1.5',
+  // A legenda não alarga o balão: quebra na largura da mídia (w-0 + min-w-full), como no app.
+  '[&[data-bubble-name=text]:has([data-midia-do-whatsapp])_.prose-bubble]:w-0 [&[data-bubble-name=text]:has([data-midia-do-whatsapp])_.prose-bubble]:min-w-full',
+  // Documento com legenda: o cartão em cima, com a moldura de 3 px, e a legenda embaixo, como no app.
+  '[&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pt-[3px] [&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pl-[3px] [&[data-bubble-name=text]:has([data-documento-do-whatsapp])]:!pr-[3px]',
+  '[&[data-bubble-name=text]>div:has([data-documento-do-whatsapp])]:!gap-1.5 [&[data-bubble-name=text]_[data-documento-do-whatsapp]]:w-[320px] [&[data-bubble-name=text]_[data-documento-do-whatsapp]]:max-w-full',
+  '[&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:block [&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:px-1.5',
+  '[&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:w-0 [&[data-bubble-name=text]:has([data-documento-do-whatsapp])_.prose-bubble]:min-w-full',
   // Editada: "Editada" entra antes da hora, e o espaço reservado na última linha cresce.
   '[&[data-bubble-name=text]:has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[116px]',
   // Caixa híbrida: o rótulo do transporte ("WhatsApp API · plano B") também fica na
@@ -145,10 +153,9 @@ export const classesDoBalao = ({ variante, lado, primeira, nomeDoBalao }) => {
     const emoji = nomeDoBalao === EMOJI ? ' !pb-[22px]' : '';
     return `group/balao relative !p-0 !bg-transparent !shadow-none ${TEXTO}${emoji}${primeira ? ' mt-[10px]' : ''}`;
   }
-  const cor =
-    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
-      ? corDoLado(lado)
-      : COR_POR_VARIANTE[variante] || COR.recebida;
+  const cor = corPeloLado({ variante, nomeDoBalao })
+    ? corDoLado(lado)
+    : COR_POR_VARIANTE[variante] || COR.recebida;
   const cantos = [
     'group/balao relative !rounded-[10px]',
     SOMBRA,
@@ -185,15 +192,11 @@ export const temBico = ({ variante, primeira, nomeDoBalao }) =>
   ].includes(variante);
 
 export const corDoBico = ({ variante, lado, nomeDoBalao }) => {
-  const doCliente =
-    nomeDoBalao === NAO_SUPORTADA_COM_TIPO
-      ? lado !== ORIENTATION.RIGHT
-      : variante === MESSAGE_VARIANTS.USER;
+  const doCliente = corPeloLado({ variante, nomeDoBalao })
+    ? lado !== ORIENTATION.RIGHT
+    : variante === MESSAGE_VARIANTS.USER;
   if (doCliente) {
     return 'text-white dark:text-[#242626]';
-  }
-  if (variante === MESSAGE_VARIANTS.ERROR) {
-    return 'text-[#FDE7E9] dark:text-[#3B1F24]';
   }
   if (
     variante === MESSAGE_VARIANTS.UNSUPPORTED &&
@@ -211,6 +214,7 @@ const COR_DA_HORA = {
   [MESSAGE_VARIANTS.AGENT]: HORA_NO_ENVIADO,
   [MESSAGE_VARIANTS.BOT]: HORA_NO_ENVIADO,
   [MESSAGE_VARIANTS.TEMPLATE]: HORA_NO_ENVIADO,
+  [MESSAGE_VARIANTS.ERROR]: HORA_NO_ENVIADO,
 };
 
 // Foto e vídeo sem legenda: hora e tiques brancos por cima da mídia, num degradê.
@@ -268,7 +272,7 @@ export const classesDaHora = ({ variante, nomeDoBalao }) => {
 export const CLASSES_DO_REMETENTE = [
   'text-[12.8px] leading-[22px] font-medium text-[#008069] dark:text-[#06CF9C]',
   // Em foto e localização o balão tem moldura fina: o nome ganha o recuo do texto.
-  '[[data-bubble-name=text]:has(.contain-content)_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5 [[data-bubble-name=album]_&]:px-1.5 [[data-bubble-name=album-legenda]_&]:px-1.5',
+  '[[data-bubble-name=text]:has([data-midia-do-whatsapp])_&]:px-1.5 [[data-bubble-name=text]:has([data-documento-do-whatsapp])_&]:px-1.5 [[data-bubble-name$=location]_&]:px-1.5 [[data-bubble-name=album]_&]:px-1.5 [[data-bubble-name=album-legenda]_&]:px-1.5',
 ].join(' ');
 
 export const CLASSES_DO_SEPARADOR_DE_DIA = `px-3 py-[5px] rounded-[7.5px] text-[12.5px] bg-white dark:bg-[#1D1F1F] ${SECUNDARIO} ${SOMBRA}`;
@@ -310,7 +314,8 @@ export const CAIXA_DE_RESPOSTA = {
     '[&_button:has(.i-lucide-maximize-2)]:!hidden',
   ].join(' '),
   campo: [
-    'order-2 flex-1 min-w-0 !mx-0 !px-2 !py-[14px] min-h-[52px] flex items-center rounded-none !bg-white dark:!bg-[#242626]',
+    // flex-wrap: a citação e o assunto do CRM ocupam uma linha inteira em cima do texto.
+    'order-2 flex-1 min-w-0 !mx-0 !px-2 !py-[14px] min-h-[52px] flex flex-wrap content-center items-center rounded-none !bg-white dark:!bg-[#242626]',
     'max-md:ltr:rounded-l-[26px] max-md:rtl:rounded-r-[26px] max-md:!ps-4',
     'text-[15px] text-[#0A0A0A] dark:text-[#FAFAFA]',
     '[&_.resizable-editor-body]:!h-auto [&_.resizable-editor-body]:!min-h-[24px] [&_.resizable-editor-body]:!max-h-[40vh] [&>*]:w-full',

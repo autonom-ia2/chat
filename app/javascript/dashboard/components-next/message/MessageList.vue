@@ -216,6 +216,10 @@ const getInReplyToMessage = parentMessage => {
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
     </template>
     <slot name="after" />
-    <BotaoDeDescer v-if="pele" />
+    <BotaoDeDescer
+      v-if="pele"
+      :mensagens="allMessages"
+      :primeira-nao-lida="naoLidaDaLista"
+    />
   </ul>
 </template>

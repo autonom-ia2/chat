@@ -7,6 +7,7 @@ import { useTrack } from 'dashboard/composables';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
+import CitacaoNaResposta from 'dashboard/components-next/conversa-canal/CitacaoNaResposta.vue';
 import CrmReplySubject from './CrmReplySubject.vue';
 import CrmRepasseDoAssunto from './CrmRepasseDoAssunto.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
@@ -89,6 +90,7 @@ export default {
     ReplyBottomPanel,
     ReplyEmailHead,
     ReplyToMessage,
+    CitacaoNaResposta,
     CrmReplySubject,
     CrmRepasseDoAssunto,
     ReplyTopPanel,
@@ -116,7 +118,7 @@ export default {
     const macroExecution = useMacroExecution();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
     // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
-    const { classesDaResposta, textoDoCampo } = usePeleDaResposta();
+    const { classesDaResposta, textoDoCampo, ehWhatsapp } = usePeleDaResposta();
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
@@ -165,6 +167,7 @@ export default {
       shortcutKey,
       macroExecution,
       classesDaResposta,
+      ehWhatsapp,
       textoDoCampo,
     };
   },
@@ -1486,8 +1489,14 @@ export default {
           v-model:card-id="crmSubjectCardId"
           :conversation-id="currentChat.id"
         />
+        <!-- #1702: com a pele, a citação do WhatsApp em cima do campo. -->
+        <CitacaoNaResposta
+          v-if="shouldShowReplyToMessage && ehWhatsapp"
+          :message="inReplyTo"
+          @dismiss="resetReplyToMessage"
+        />
         <ReplyToMessage
-          v-if="shouldShowReplyToMessage"
+          v-else-if="shouldShowReplyToMessage"
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />

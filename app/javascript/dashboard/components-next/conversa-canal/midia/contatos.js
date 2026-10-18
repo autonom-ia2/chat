@@ -77,3 +77,113 @@ export const numeroParaConversar = (telefone, atributos) => {
     ) || (compartilhados.length === 1 ? compartilhados[0] : null);
   return soDigitos(dono?.waId) || digitos;
 };
+
+// Vários contatos numa mensagem da Cloud (#1702): o cliente manda 2+ contatos de uma
+// vez e o Chatwoot cria UMA mensagem por contato, todas com o mesmo source_id
+// (Whatsapp::IncomingContactMessageHandler). Como no álbum, a 1ª desenha o cartão
+// "Fulano e N outros contatos" e as outras somem da lista.
+const soContatos = mensagem =>
+  Array.isArray(mensagem?.attachments) &&
+  mensagem.attachments.length > 0 &&
+  mensagem.attachments.every(
+    anexo => anexo?.fileType === ATTACHMENT_TYPES.CONTACT
+  );
+
+const doMesmoEnvio = (anterior, atual) =>
+  Boolean(atual.sourceId) &&
+  atual.sourceId === anterior.sourceId &&
+  atual.messageType === anterior.messageType &&
+  !atual.private &&
+  !anterior.private;
+
+// O Chatwoot descarta, no WhatsApp, mensagem com source_id repetido (eco duplicado do
+// webhook: filterDuplicateSourceMessages). Os contatos de um mesmo envio repetem o
+// source_id de propósito (uma mensagem por contato, mesmo quando o cliente manda o mesmo
+// contato duas vezes), e o 2º, 3º… sumiam antes de chegar ao cartão. Com a pele, a
+// mensagem só de contatos fica sempre; o resto segue o filtro do Chatwoot. Lista crua
+// do servidor (snake_case).
+const soContatosCru = mensagem =>
+  Array.isArray(mensagem?.attachments) &&
+  mensagem.attachments.length > 0 &&
+  mensagem.attachments.every(
+    anexo => anexo?.file_type === ATTACHMENT_TYPES.CONTACT
+  );
+
+export const semDuplicadasNaPele = (mensagens = []) => {
+  const vistas = new Set();
+  return mensagens.filter(mensagem => {
+    if (!mensagem.source_id || soContatosCru(mensagem)) return true;
+    if (vistas.has(mensagem.source_id)) return false;
+    vistas.add(mensagem.source_id);
+    return true;
+  });
+};
+
+// Map: id da 1ª mensagem -> mensagens de contato seguidas com o mesmo sourceId, na
+// ordem do envio (id crescente: o 1º contato que o cliente escolheu abre o cartão).
+export const agruparContatos = lista => {
+  const grupos = new Map();
+  let bloco = [];
+  const fechar = () => {
+    if (bloco.length > 1) {
+      grupos.set(
+        bloco[0].id,
+        [...bloco].sort((a, b) => a.id - b.id)
+      );
+    }
+    bloco = [];
+  };
+  lista.forEach(mensagem => {
+    const anterior = bloco.at(-1);
+    if (!soContatos(mensagem)) {
+      fechar();
+      return;
+    }
+    if (anterior && !doMesmoEnvio(anterior, mensagem)) fechar();
+    bloco.push(mensagem);
+  });
+  fechar();
+  return grupos;
+};
+
+// Os contatos de uma mensagem do grupo. Na Cloud cada mensagem é UM contato, com um
+// anexo por telefone; com shared_contacts (#1709), a lista dela.
+const contatosDeUmaMensagem = mensagem => {
+  const atributos = mensagem.contentAttributes || {};
+  if (listaCompartilhada(atributos)?.length) {
+    return contatosDoBalao(mensagem.attachments, atributos);
+  }
+  const [primeiro] = contatosDoBalao(mensagem.attachments, atributos);
+  const telefones = mensagem.attachments
+    .map(anexo => anexo?.fallbackTitle || '')
+    .filter(Boolean);
+  return [{ ...primeiro, telefone: telefones[0] || '', telefones }];
+};
+
+// Cada contato com o número para "Conversar" e se leva as ações (resposta a pedido de
+// contato não leva, como no cartão de um contato).
+const comAcoes = (contato, mensagem) => ({
+  ...contato,
+  paraConversar: numeroParaConversar(
+    contato.telefone,
+    mensagem.contentAttributes
+  ),
+  comAcoes:
+    Boolean(soDigitos(contato.telefone)) &&
+    !mensagem.attachments?.[0]?.meta?.isContactInfoResponse,
+});
+
+// Os contatos do cartão: de uma mensagem só (vários anexos ou shared_contacts) ou do
+// grupo de mensagens com o mesmo sourceId (um contato por mensagem).
+export const contatosDoCartao = mensagens => {
+  if (mensagens.length === 1) {
+    const [mensagem] = mensagens;
+    return contatosDoBalao(
+      mensagem.attachments,
+      mensagem.contentAttributes
+    ).map(contato => comAcoes(contato, mensagem));
+  }
+  return mensagens.flatMap(mensagem =>
+    contatosDeUmaMensagem(mensagem).map(contato => comAcoes(contato, mensagem))
+  );
+};

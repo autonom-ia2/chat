@@ -273,6 +273,66 @@ describe ConversaCanal::RecebimentoDoWhatsapp do
     end
   end
 
+  describe 'pergunta sobre produto do catálogo (context.referred_product)' do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+    let(:graph) { 'https://graph.facebook.com/v22.0' }
+    let(:json) { { 'Content-Type' => 'application/json' } }
+    let(:citado) { { referred_product: { catalog_id: 'cat-1', product_retailer_id: 'SKU1' } } }
+
+    # `receive` deste arquivo é o recebimento do webhook: o dublê usa receive_messages.
+    before { allow(Rails).to receive_messages(cache: cache) }
+
+    def pergunta(id, context)
+      { id: id, timestamp: '1792141200', type: 'text', text: { body: 'Tem no tamanho 40?' }, context: context }
+    end
+
+    def stub_catalogo(status:, produtos: [])
+      stub_request(:get, "#{graph}/#{channel.waba_id}/product_catalogs").with(query: hash_including({}))
+                                                                        .to_return(status: 200, headers: json,
+                                                                                   body: { data: [{ id: 'cat-1' }] }.to_json)
+      stub_request(:get, "#{graph}/cat-1/products").with(query: hash_including({}))
+                                                   .to_return(status: status, headers: json, body: { data: produtos }.to_json)
+    end
+
+    it 'grava o código e o nome, preço e foto do catálogo da caixa' do
+      stub_catalogo(status: 200, produtos: [{ retailer_id: 'SKU1', name: 'Tênis Run', price: 'R$ 199,90',
+                                              image_url: 'https://cdn.loja.test/tenis.jpg', availability: 'in stock' }])
+
+      receive(pergunta('wamid.PROD', citado))
+      message = Message.find_by!(source_id: 'wamid.PROD')
+
+      expect(message.content).to eq('Tem no tamanho 40?')
+      expect(message.content_attributes['referred_product']).to eq(
+        'catalog_id' => 'cat-1', 'product_retailer_id' => 'SKU1', 'nome' => 'Tênis Run', 'preco' => 'R$ 199,90',
+        'foto_url' => 'https://cdn.loja.test/tenis.jpg'
+      )
+    end
+
+    it 'catálogo fora do ar: grava só o código, sem derrubar o recebimento' do
+      stub_catalogo(status: 500)
+
+      receive(pergunta('wamid.PROD-500', citado))
+
+      expect(Message.find_by!(source_id: 'wamid.PROD-500').content_attributes['referred_product'])
+        .to eq('catalog_id' => 'cat-1', 'product_retailer_id' => 'SKU1')
+    end
+
+    it 'sem o código do produto, não grava nada' do
+      receive(pergunta('wamid.PROD-SEM', { referred_product: { catalog_id: 'cat-1' } }))
+
+      expect(Message.find_by!(source_id: 'wamid.PROD-SEM').content_attributes).not_to have_key('referred_product')
+    end
+
+    it 'com a chave desligada, sai sem o produto e sem perguntar ao catálogo (Chatwoot de sempre)' do
+      inbox.account.disable_features!('conversa_cara_do_canal')
+
+      # Sem stub: uma pergunta ao catálogo faria o WebMock levantar.
+      receive(pergunta('wamid.PROD-OFF', citado))
+
+      expect(Message.find_by!(source_id: 'wamid.PROD-OFF').content_attributes).not_to have_key('referred_product')
+    end
+  end
+
   describe 'áudio ouvido (status played)' do
     let!(:audio) do
       create(:message, message_type: :outgoing, content: nil, conversation: conversation, account: inbox.account,
