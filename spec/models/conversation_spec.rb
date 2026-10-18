@@ -741,6 +741,7 @@ RSpec.describe Conversation do
         whatsapp_api_reply: false,
         whatsapp_api_rich_native: [],
         whatsapp_api_message_actions: [],
+        whatsapp_api_group: false,
         channel: 'Channel::WebWidget',
         snoozed_until: conversation.snoozed_until,
         custom_attributes: conversation.custom_attributes,

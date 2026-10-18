@@ -39,7 +39,8 @@ class Conversations::EventDataPresenter < SimpleDelegator
     {
       whatsapp_api_reply: api_reply,
       whatsapp_api_rich_native: Waha::RichNative.types_for(__getobj__, api_reply: api_reply),
-      whatsapp_api_message_actions: Waha::RichNative::WahaInbox.message_actions_for(__getobj__)
+      whatsapp_api_message_actions: Waha::RichNative::WahaInbox.message_actions_for(__getobj__),
+      whatsapp_api_group: Waha::RichNative.api_group?(__getobj__)
     }
   end
 

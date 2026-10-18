@@ -38,6 +38,15 @@ module Waha::RichNative
     conversation&.contact&.identifier.to_s.end_with?(GROUP_SUFFIX)
   end
 
+  # Campo `whatsapp_api_group` da conversa (chat#1709): conversa de grupo na caixa WAHA comum ou na híbrida, pelo mesmo
+  # `group_conversation?`. Nas outras caixas, false. O contato vem primeiro (a lista já o traz carregado).
+  def api_group?(conversation)
+    return false unless group_conversation?(conversation)
+
+    inbox = conversation.inbox
+    (inbox.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?)) || WhatsappHybrid::RichNative.hybrid?(inbox) ? true : false
+  end
+
   # "<opção>|<mensagem>" quando cabe em `max`; senão, só a opção (a volta cai na busca pela última lista). Lista com id de
   # opção que tem o separador nunca sai nativa (Waha::RichPayload): todo `rowId` nativo com "|" é nosso, com a
   # referência numérica no fim.
