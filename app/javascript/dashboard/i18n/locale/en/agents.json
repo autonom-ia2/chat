@@ -1350,7 +1350,15 @@
             "MUDOU_DEPOIS": "{nome} changed after this conversation, so it cannot be undone from here. To go back, use “Previous ways of answering”.",
             "ERRO": "I could not undo it now. Try again.",
             "ULTIMA_MUDANCA": "Last change: {lista}.",
-            "ULTIMA_MUDANCA_SEM_RESUMO": "Last change made by chatting."
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Last change made by chatting.",
+            "PROVA_TESTANDO": "Testing with {n} proof question… | Testing with {n} proof questions…",
+            "PROVA": "{ok} of {total} proof question ok | {ok} of {total} proof questions ok",
+            "PROVA_INDISPONIVEL": "I couldn't test it now. Use the test on the side to see how it turned out.",
+            "PROVA_SEM_TESTE": "The questions did not test the change.",
+            "VER_PROVA": "See the questions",
+            "ESCONDER_PROVA": "Hide the questions",
+            "CLIENTE": "Customer:",
+            "PROVA_EQUIPE": "Would hand the conversation to the team."
           }
         },
         "FOTO": {
