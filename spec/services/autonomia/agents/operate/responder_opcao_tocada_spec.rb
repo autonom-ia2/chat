@@ -67,9 +67,30 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(contexto).to include(dado)
   end
 
-  it 'id que a oferta não tem: vai o título do toque' do
+  it 'o título do toque nunca é usado: vale o da oferta' do
+    toque(oferta, opcao: { 'id' => 'tarde', 'title' => 'Outro título' })
+    expect(contexto).to include(dado)
+    expect(contexto).not_to include('Outro título')
+  end
+
+  it 'id que a oferta não tem: nenhum dado e nenhuma linha' do
     toque(oferta, opcao: { 'id' => 'noite', 'title' => 'Noite' })
-    expect(contexto).to include('{"opcao_tocada":{"id":"noite","titulo":"Noite"}}')
+    log = linhas_do_log { expect(contexto).not_to include('opcao_tocada') }
+    expect(log).not_to include('opcao_tocada')
+  end
+
+  it 'id maior que o da Meta: nenhum dado, mesmo se a oferta o tivesse' do
+    longo = 'a' * (RichMessages::Types::Options::BUTTONS[:id] + 1)
+    toque(oferta(formato_das_opcoes.merge('options' => [{ 'id' => longo, 'title' => 'Longa' }])), opcao: { 'id' => longo })
+    expect(contexto).not_to include('opcao_tocada')
+  end
+
+  it 'aspas e quebra de linha no id e no título da oferta saem escapadas no JSON, numa linha' do
+    id = "ta\"r\nde"
+    toque(oferta(formato_das_opcoes.merge('options' => [{ 'id' => id, 'title' => "Tarde \"boa\"\nfim" }])), opcao: { 'id' => id })
+    linha = contexto.lines.find { |texto| texto.include?('opcao_tocada') }
+    expect(linha).to end_with('{"opcao_tocada":{"id":"ta\\"r\\nde","titulo":"Tarde \\"boa\\"\\nfim"}}')
+    expect(JSON.parse(linha[linha.index('{')..])).to eq('opcao_tocada' => { 'id' => id, 'titulo' => "Tarde \"boa\"\nfim" })
   end
 
   it 'a mensagem recebida fica como está (conteúdo e in_reply_to)' do
@@ -140,18 +161,37 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     linha = log.lines.find { |texto| texto.include?('opcao_tocada') }
     expect(linha.strip).to eq("[autonomia][turno] opcao_tocada conv=#{conversation.id} agent=#{agent.id} msg=#{recebida.id} " \
                               "oferta=#{referenciada.id} opcao=tarde")
-    expect(log).not_to include('TituloSecreto', 'TextoDoCliente')
+    expect(log).not_to include('TituloSecreto', 'TextoDoCliente', 'Tarde')
+  end
+
+  # A citação e o toque leem a mesma oferta: uma busca dela e uma dos robôs do agente no turno.
+  it 'a oferta e os robôs do agente são buscados uma vez no turno' do
+    referenciada = oferta
+    toque(referenciada)
+    allow(Autonomia::Agents::Interacao).to receive(:robos).and_call_original
+    buscas = 0
+    contar = lambda do |*, payload|
+      buscas += 1 if payload[:sql].include?('"messages"."id" =') && payload[:binds].to_a.map { |bind| bind.try(:value) }.include?(referenciada.id)
+    end
+    resultado = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { contexto }
+
+    expect(resultado).to include(dado)
+    expect(pedidos.last[:query]).to include('1. Manhã')
+    expect(buscas).to eq(1)
+    expect(Autonomia::Agents::Interacao).to have_received(:robos).once
   end
 
   describe 'Interacao.opcao_tocada' do
-    it 'lê selected_option: id e título' do
-      mensagem = toque(oferta)
-      expect(Autonomia::Agents::Interacao.opcao_tocada(mensagem)).to eq('id' => 'tarde', 'title' => 'Tarde')
+    it 'lê selected_option: só o id' do
+      expect(Autonomia::Agents::Interacao.opcao_tocada(toque(oferta))).to eq('tarde')
     end
 
-    it 'sem selected_option, ou sem id: nil' do
+    it 'sem selected_option, sem id ou id maior que o da Meta: nil' do
+      longo = 'a' * (RichMessages::Types::Options::BUTTONS[:id] + 1)
       expect(Autonomia::Agents::Interacao.opcao_tocada(toque(oferta, opcao: nil))).to be_nil
       expect(Autonomia::Agents::Interacao.opcao_tocada(toque(oferta, opcao: { 'title' => 'Tarde' }))).to be_nil
+      expect(Autonomia::Agents::Interacao.opcao_tocada(toque(oferta, opcao: { 'id' => longo }))).to be_nil
+      expect(Autonomia::Agents::Interacao.opcao_tocada(toque(oferta, opcao: { 'id' => 'a' * 256 }))).to eq('a' * 256)
       expect(Autonomia::Agents::Interacao.opcao_tocada(nil)).to be_nil
     end
   end

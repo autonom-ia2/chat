@@ -92,6 +92,21 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
+  it 'a versão em texto da oferta falhou: a citação de sempre e uma linha só com a classe do erro' do
+    allow(Autonomia::Agents::Interacao).to receive(:oferta_do_agente?).and_raise(ArgumentError, 'conteudo-secreto')
+    responde_a(oferta(formato_das_opcoes))
+    saida = StringIO.new
+    original = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(saida)
+    begin
+      expect(query).to eq("[Em referência a sua mensagem: \"Qual período?\"]\nTarde")
+    ensure
+      Rails.logger = original
+    end
+    expect(saida.string).to include("citacao_da_oferta_falhou conv=#{conversation.id} erro=ArgumentError")
+    expect(saida.string).not_to include('conteudo-secreto')
+  end
+
   it 'na Lia a oferta não conta' do
     referenciada = oferta(formato_das_opcoes)
     lia = instance_double(Autonomia::Agents::Agent, agent_type: 'insurance_quote', id: agent.id, account_id: account.id)

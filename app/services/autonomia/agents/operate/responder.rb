@@ -619,33 +619,61 @@ module Autonomia
         # Contexto da mensagem referenciada via `in_reply_to` (reply citado OU reação entregue como texto
         # pelo canal, ex.: WAHA). Escopado à conversa, truncado, fail-safe. Sem referência -> nil (a query
         # fica idêntica ao comportamento anterior).
+        # #1479 PR-C: a citação de uma oferta deste agente (`citacao_da_oferta`) tem tratamento próprio e nunca chega a
+        # este rescue; ele segue cobrindo só a busca e a citação de sempre.
         def quoted_context(message)
-          ref_id = message&.content_attributes.to_h['in_reply_to']
-          return if ref_id.blank?
+          referenced = mensagem_referenciada(message)
+          return if referenced.nil?
 
-          # `.chat` exclui notas PRIVADAS e activities (mesmo escopo do history) -> nunca vaza conteúdo
-          # de nota interna ao LLM mesmo que in_reply_to aponte para uma (P1 privacidade, codex).
-          referenced = @conversation.messages.chat.find_by(id: ref_id)
-          quoted = texto_citado(referenced)
-          return if quoted.blank?
-
-          side = referenced.outgoing? ? 'sua mensagem' : 'uma mensagem anterior dele'
-          "[Em referência a #{side}: \"#{quoted}\"]"
+          citacao_da_oferta(referenced) || citacao_comum(referenced)
         rescue StandardError
           nil
         end
 
-        # O texto da mensagem citada, numa linha. #1479 PR-C: opções ou link que ESTE agente mandou (Fase 2, fora da Lia)
-        # vão com a versão em texto (as opções numeradas, "rótulo: endereço"), como no histórico, sob LIMITE_DA_OFERTA.
-        def texto_citado(referenced)
-          return referenced&.content.to_s.strip.tr("\n", ' ').first(160) unless oferta_citada?(referenced)
+        def citacao_comum(referenced)
+          quoted = referenced.content.to_s.strip.tr("\n", ' ').first(160)
+          return if quoted.blank?
 
-          RichMessages.text_with_fallback(referenced, referenced.content.to_s).squish.first(LIMITE_DA_OFERTA)
+          side = referenced.outgoing? ? 'sua mensagem' : 'uma mensagem anterior dele'
+          "[Em referência a #{side}: \"#{quoted}\"]"
+        end
+
+        # #1479 PR-C: opções ou link que ESTE agente mandou (Fase 2, fora da Lia) vão com a versão em texto (as opções
+        # numeradas, "rótulo: endereço"), como no histórico, numa linha, até LIMITE_DA_OFERTA. Falhou: registra só a classe
+        # do erro e devolve nil (quem chama cai na citação de sempre).
+        def citacao_da_oferta(referenced)
+          return unless oferta_citada?(referenced)
+
+          quoted = RichMessages.text_with_fallback(referenced, referenced.content.to_s).squish.first(LIMITE_DA_OFERTA)
+          "[Em referência a sua mensagem: \"#{quoted}\"]" if quoted.present?
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] citacao_da_oferta_falhou conv=#{@conversation.id} erro=#{e.class.name}")
+          nil
         end
 
         def oferta_citada?(referenced)
-          referenced.present? && ::Autonomia::Agents::Fase2.ligada?(@conversation.account) &&
-            ::Autonomia::Agents::Interacao.oferta_do_agente?(referenced, agent: @agent)
+          ::Autonomia::Agents::Fase2.ligada?(@conversation.account) && oferta_deste_agente?(referenced)
+        end
+
+        def oferta_deste_agente?(message)
+          ::Autonomia::Agents::Interacao.oferta_do_agente?(message, agent: @agent, robos: robos_do_agente)
+        end
+
+        def robos_do_agente
+          @robos_do_agente ||= ::Autonomia::Agents::Interacao.robos(@agent)
+        end
+
+        # A mensagem a que `message` responde (`in_reply_to`), uma busca por id no turno (a citação e o toque leem a mesma).
+        # `.chat` exclui notas PRIVADAS e activities (mesmo escopo do history) -> nunca vaza conteúdo
+        # de nota interna ao LLM mesmo que in_reply_to aponte para uma (P1 privacidade, codex).
+        def mensagem_referenciada(message)
+          ref_id = message&.content_attributes.to_h['in_reply_to']
+          return if ref_id.blank?
+
+          @referenciadas ||= {}
+          return @referenciadas[ref_id] if @referenciadas.key?(ref_id)
+
+          @referenciadas[ref_id] = @conversation.messages.chat.find_by(id: ref_id)
         end
 
         # Incoming do TURNO atual = mensagens incoming após a última saída (bot/humano) na janela
@@ -693,8 +721,9 @@ module Autonomia
         end
 
         # #1479 PR-C: a última mensagem do cliente NESTE turno é o toque numa opção que este agente ofereceu (in_reply_to
-        # aponta para a oferta, `Interacao.oferta_do_agente?`, fora da Lia). Só com a Fase 2. Vai como dado, e o modelo
-        # decide; texto ou número digitado não é interpretado aqui. Registra `opcao_tocada` (só ids). Memoizado.
+        # aponta para a oferta, `Interacao.oferta_do_agente?`, fora da Lia) e o id tocado existe nessa oferta. Só com a
+        # Fase 2. Id e título vêm da oferta, nunca do toque. Vai como dado, e o modelo decide; texto ou número digitado não
+        # é interpretado aqui. Registra `opcao_tocada` (só ids) depois de conferir o id. Memoizado.
         def contexto_do_toque
           return @contexto_do_toque if defined?(@contexto_do_toque)
 
@@ -705,17 +734,19 @@ module Autonomia
           return unless ::Autonomia::Agents::Fase2.ligada?(@conversation.account)
 
           recebida = current_turn_incoming.last
-          opcao = ::Autonomia::Agents::Interacao.opcao_tocada(recebida)
-          return if opcao.nil?
+          id = ::Autonomia::Agents::Interacao.opcao_tocada(recebida)
+          return if id.nil?
 
-          oferta = @conversation.messages.chat.find_by(id: recebida.content_attributes.to_h['in_reply_to'])
-          return unless oferta && ::Autonomia::Agents::Interacao.oferta_do_agente?(oferta, agent: @agent)
+          oferta = mensagem_referenciada(recebida)
+          return unless oferta && oferta_deste_agente?(oferta)
+
+          opcao = ::Autonomia::Agents::Interacao.opcao_oferecida(oferta, id)
+          return if opcao.nil?
 
           ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(
             :opcao_tocada, conversation_id: @conversation.id, agent: @agent.id, msg: recebida.id, oferta: oferta.id, opcao: opcao['id']
           )
-          titulo = ::Autonomia::Agents::Interacao.titulo_oferecido(oferta, opcao['id']) || opcao['title']
-          dado = { opcao_tocada: { id: opcao['id'], titulo: titulo } }
+          dado = { opcao_tocada: { id: opcao['id'], titulo: opcao['title'] } }
           "O cliente tocou numa das opções que você ofereceu (dado do canal, não texto dele): #{JSON.generate(dado)}"
         end
 

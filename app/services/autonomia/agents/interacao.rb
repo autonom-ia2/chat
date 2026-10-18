@@ -145,34 +145,36 @@ module Autonomia::Agents::Interacao
   def no_historico(itens, messages, agent:)
     return itens if agent.agent_type == 'insurance_quote'
 
-    robos = robos(agent)
+    robos = ::Autonomia::Agents::AgentInbox.where(account_id: agent.account_id, autonomia_agent_id: agent.id)
+                                           .pluck(:agent_bot_id).to_set
     itens.zip(messages).map do |item, message|
       oferecida?(message, agent, robos) ? item.merge(content: RichMessages.text_with_fallback(message, item[:content].to_s)) : item
     end
   end
 
-  # A mensagem é opções ou link que ESTE agente mandou (a mesma regra do histórico)? Na Lia, nunca. Usado pela citação
-  # da mensagem a que o cliente respondeu (Responder#texto_citado, PR-C).
-  def oferta_do_agente?(message, agent:)
+  # A mensagem é opções ou link que ESTE agente mandou (a mesma regra do histórico)? Na Lia, nunca. `robos`: os de
+  # `robos(agent)`, para quem chama mais de uma vez no turno não buscar de novo. Usado pelo Responder (PR-C).
+  def oferta_do_agente?(message, agent:, robos: nil)
     return false if agent.agent_type == 'insurance_quote'
 
-    oferecida?(message, agent, robos(agent))
+    oferecida?(message, agent, robos || robos(agent))
   end
 
-  # A opção que o cliente tocou nesta mensagem, ou nil. A ÚNICA leitura do toque (PR-C): nos três caminhos (Cloud, caixa
-  # WAHA e Híbrido) ele grava `content_attributes.selected_option` {id da opção oferecida, title (opcional)}, com a
-  # oferta em `in_reply_to`. -> { 'id', 'title' } (sem 'title' quando o canal não manda).
+  # O id da opção que o cliente tocou nesta mensagem, ou nil. A ÚNICA leitura do toque (PR-C): a Cloud grava
+  # `content_attributes.selected_option` {id da opção oferecida, title} e a oferta em `in_reply_to` (WAHA e Híbrido
+  # gravam a mesma chave depois do #1741). Só o id: quem lê confere contra a oferta, e o título vem dela, nunca do toque.
+  # Id maior que o maior aceito pela Meta (o do botão, `RichMessages::Types::Options::BUTTONS[:id]`) não é de opção.
   def opcao_tocada(message)
     escolha = message&.content_attributes.to_h['selected_option']
-    return unless escolha.is_a?(Hash) && escolha['id'].present?
-
-    { 'id' => escolha['id'].to_s, 'title' => escolha['title'].presence }.compact
+    id = escolha['id'] if escolha.is_a?(Hash)
+    id.to_s if id.present? && id.to_s.length <= RichMessages::Types::Options::BUTTONS[:id]
   end
 
-  # O título da opção `id` na oferta (o que o agente escreveu), ou nil.
-  def titulo_oferecido(oferta, id)
+  # A opção `id` na oferta, como o agente a escreveu ({ 'id', 'title' }), ou nil quando a oferta não tem esse id.
+  def opcao_oferecida(oferta, id)
     opcoes = oferta.content_attributes.to_h.dig(RichMessages::KEY, 'options')
-    Array(opcoes).find { |opcao| opcao.is_a?(Hash) && opcao['id'].to_s == id }&.dig('title')
+    opcao = Array(opcoes).find { |item| item.is_a?(Hash) && item['id'].to_s == id }
+    { 'id' => opcao['id'].to_s, 'title' => opcao['title'] } if opcao
   end
 
   # Os robôs-espelho dos vínculos deste agente (`AgentInbox#agent_bot_id`).

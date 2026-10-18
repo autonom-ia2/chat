@@ -111,6 +111,28 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
       expect(linhas.grep(/sinal_na_passagem conv=#{conversation.id}/).size).to eq(1)
     end
 
+    # #1479 PR-C: o turno da passagem não tem mensagem nova do cliente. Um toque antigo numa oferta do agente, já
+    # respondido, não vira o dado `opcao_tocada` neste turno.
+    it 'toque antigo numa oferta do agente, já respondido: o turno da passagem não leva o dado do toque' do
+      oferta = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing,
+                                sender: espelho_area, content: 'Qual período?',
+                                content_attributes: { 'autonomia_agent_id' => area.id,
+                                                      'rich_message' => { 'type' => 'options', 'header' => 'Agendamento',
+                                                                          'options' => [{ 'id' => 'tarde', 'title' => 'Tarde' }] } })
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'Tarde',
+                       content_attributes: { 'in_reply_to' => oferta.id, 'selected_option' => { 'id' => 'tarde', 'title' => 'Tarde' } })
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, sender: espelho_area,
+                       content: 'Anotado, à tarde.', content_attributes: { 'autonomia_agent_id' => area.id })
+      ana_passa!
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(pedidos).not_to be_empty
+      expect(contexto).to include('passou esta conversa para você')
+      expect(contexto).not_to include('opcao_tocada')
+      expect(linhas.grep(/opcao_tocada/)).to be_empty
+    end
+
     it 'nota privada nunca vai ao modelo; o que a Ana escreveu em público vai, marcado como dela' do
       cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
       ana_escreve('Cliente pediu 10% de desconto, não oferecer', private: true)
