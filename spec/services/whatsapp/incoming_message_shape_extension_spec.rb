@@ -32,8 +32,12 @@ describe Whatsapp::IncomingMessageShapeExtension do
     Redis::Alfred.scan_each(match: 'MESSAGE_SOURCE_KEY::*') { |key| Redis::Alfred.delete(key) }
   end
 
-  it 'is prepended to the incoming message base service' do
-    expect(Whatsapp::IncomingMessageBaseService.ancestors).to include(described_class)
+  # RichMessages::SelectedOption lê interactive e button sem checar o tipo: só é seguro porque roda por dentro desta extensão.
+  it 'wraps the fork extensions that read the same fields' do
+    ancestors = Whatsapp::IncomingMessageBaseService.ancestors
+
+    expect(ancestors.index(described_class)).to be < ancestors.index(RichMessages::SelectedOption)
+    expect(ancestors.index(described_class)).to be < ancestors.index(ConversaCanal::RecebimentoDoWhatsapp)
   end
 
   context 'with a well-formed payload' do
@@ -56,11 +60,12 @@ describe Whatsapp::IncomingMessageShapeExtension do
       )
     end
 
-    it 'hands the payload to the core unchanged' do
-      service = Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: params_with(valid_message))
-      payload = valid_message.merge(interactive: { type: 'button_reply', button_reply: { id: '1', title: 'Sim' } }).with_indifferent_access
+    it 'keeps the selected option as before' do
+      message = receive(valid_message.except(:text).merge(type: 'interactive',
+                                                          interactive: { type: 'button_reply', button_reply: { id: 'sim', title: 'Sim' } }))
 
-      expect(service.send(:well_formed_message, payload)).to eq(payload)
+      expect(message.content).to eq('Sim')
+      expect(message.content_attributes['selected_option']).to eq('id' => 'sim', 'title' => 'Sim')
     end
   end
 
@@ -80,15 +85,23 @@ describe Whatsapp::IncomingMessageShapeExtension do
 
       expect(message.content).to eq('Olá')
       expect(message.content_attributes).not_to have_key('referral')
+      expect(message.conversation.additional_attributes).not_to have_key('campaign')
     end
 
-    it 'receives button and name as strings' do
+    it 'receives button as a string' do
       message = nil
-      payload = valid_message.except(:text).merge(type: 'button', button: 'Sim', name: 'Cliente')
-      expect { message = receive(payload) }.not_to raise_error
+      expect { message = receive(valid_message.except(:text).merge(type: 'button', button: 'Sim')) }.not_to raise_error
 
       expect(message.source_id).to eq('wamid.shape-guard')
       expect(message.content).to be_nil
+      expect(message.content_attributes).not_to have_key('selected_option')
+    end
+
+    it 'receives name as a string' do
+      message = nil
+      expect { message = receive(valid_message.except(:text).merge(name: 'Cliente')) }.not_to raise_error
+
+      expect(message.source_id).to eq('wamid.shape-guard')
     end
 
     it 'receives interactive as a string' do
@@ -108,14 +121,25 @@ describe Whatsapp::IncomingMessageShapeExtension do
       expect(message.content_attributes).not_to have_key('whatsapp_flow_response')
     end
 
-    it 'receives button_reply and list_reply as strings' do
-      message = nil
-      payload = valid_message.except(:text).merge(type: 'interactive',
-                                                  interactive: { type: 'button_reply', button_reply: 'Sim', list_reply: 'Opção' })
-      expect { message = receive(payload) }.not_to raise_error
+    %i[button_reply list_reply].each do |reply|
+      it "receives #{reply} as a string" do
+        message = nil
+        payload = valid_message.except(:text).merge(type: 'interactive', interactive: { 'type' => reply.to_s, reply.to_s => 'Sim' })
+        expect { message = receive(payload) }.not_to raise_error
 
-      expect(message.source_id).to eq('wamid.shape-guard')
-      expect(message.content).to be_nil
+        expect(message.source_id).to eq('wamid.shape-guard')
+        expect(message.content).to be_nil
+        expect(message.content_attributes).not_to have_key('selected_option')
+      end
+    end
+
+    it 'does not change the message it reads' do
+      service = Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: inbox, params: params_with(valid_message))
+      payload = valid_message.merge(text: 'Olá', interactive: { type: 'nfm_reply', nfm_reply: 'x' }).with_indifferent_access
+      original = payload.deep_dup
+
+      expect(service.message_content(payload)).to be_nil
+      expect(payload).to eq(original)
     end
   end
 end
