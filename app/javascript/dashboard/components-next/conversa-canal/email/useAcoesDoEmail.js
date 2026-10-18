@@ -24,6 +24,9 @@ const ESTILO_DA_IMPRESSAO = `
   blockquote { margin: 0 0 0 .8ex; border-left: 1px solid #ccc; padding-left: 1ex; }
 `;
 
+const TRADUZINDO_NO_SERVIDOR = 202;
+const PRAZO_DA_TRADUCAO = 120000;
+
 const escapar = texto => {
   const div = document.createElement('div');
   div.textContent = String(texto ?? '');
@@ -41,9 +44,13 @@ export const useAcoesDoEmail = ({ conversationId, messageId }) => {
 
   // Põe a tradução na mensagem do painel na hora, sem esperar o aviso em tempo real
   // (que pode atrasar ou não vir): o cartão troca para o texto traduzido.
+  const mensagemNaTela = () =>
+    store.getters.getSelectedChat?.messages?.find(
+      m => m.id === messageId.value
+    );
+
   const guardarTraducao = (idioma, conteudo) => {
-    const conversa = store.getters.getSelectedChat;
-    const mensagem = conversa?.messages?.find(m => m.id === messageId.value);
+    const mensagem = mensagemNaTela();
     if (!mensagem) return;
     const atributos = mensagem.content_attributes || {};
     store.dispatch('updateMessage', {
@@ -55,17 +62,33 @@ export const useAcoesDoEmail = ({ conversationId, messageId }) => {
     });
   };
 
+  // Sem o Google, a IA da conta traduz num job (202): a tradução chega pelo aviso em
+  // tempo real (message.updated). Se não chegar no prazo, avisa que não deu.
+  const esperarTraducao = idioma => {
+    useAlert(t('CONVERSA_CANAL.EMAIL.TRADUZINDO'));
+    setTimeout(() => {
+      const mensagem = mensagemNaTela();
+      if (mensagem && !mensagem.content_attributes?.translations?.[idioma]) {
+        useAlert(t('CONVERSA_CANAL.EMAIL.TRADUCAO_FALHOU'));
+      }
+    }, PRAZO_DA_TRADUCAO);
+  };
+
   const traduzir = async () => {
     const idiomaDaConta = contaPorId.value(contaAtual.value)?.locale;
     const idioma = uiSettings.value?.locale || idiomaDaConta || 'en';
     try {
       // Resposta `{ content: null }` = o tradutor não devolveu nada: avisa.
-      const { data } = await MessageApi.translateMessage(
+      const { data, status } = await MessageApi.translateMessage(
         conversationId.value,
         messageId.value,
         idioma
       );
       useTrack(CONVERSATION_EVENTS.TRANSLATE_A_MESSAGE);
+      if (status === TRADUZINDO_NO_SERVIDOR) {
+        esperarTraducao(idioma);
+        return;
+      }
       if (data?.content) guardarTraducao(idioma, data.content);
       else if (data && typeof data === 'object') {
         useAlert(t('CONVERSA_CANAL.EMAIL.TRADUCAO_FALHOU'));

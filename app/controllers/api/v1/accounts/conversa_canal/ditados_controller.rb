@@ -1,6 +1,6 @@
 # Ditado da resposta de e-mail (#1786). Atrás da chave `conversa_email_nova` (não da do WhatsApp).
 #   GET  disponivel → { disponivel:, traducao: } (a conta tem IA para transcrever? e algo que traduza: o Google
-#        Tradutor ligado ou a IA da conta, ConversaCanal::TraducaoSemGoogle)
+#        Tradutor ligado ou a IA da conta, ConversaCanal::TraduzirEmailJob)
 #   POST (multipart, campo `audio`) → { texto } ou 422 { error } com a frase para a pessoa
 class Api::V1::Accounts::ConversaCanal::DitadosController < Api::V1::Accounts::ConversaCanal::BaseController
   skip_before_action :exigir_chave

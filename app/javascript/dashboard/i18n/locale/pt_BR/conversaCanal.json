@@ -437,6 +437,7 @@
       "DOCUMENTO": "Documento",
       "FOTOS_E_VIDEOS": "Fotos e vídeos",
       "TRADUCAO_FALHOU": "Não deu para traduzir este e-mail agora. Tente de novo.",
+      "TRADUZINDO": "Traduzindo. O e-mail troca para a tradução quando ela ficar pronta.",
       "MODELO_DE_EMAIL": "Modelo de e-mail",
       "MODELO_DICA": "Modelos salvos em Campanhas. Os dados do cliente entram sozinhos; você confere antes de enviar.",
       "BUSCAR_MODELO_DE_EMAIL": "Buscar modelo",

@@ -59,6 +59,16 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
     end
   end
 
+  it 'na requisição: uma tentativa só e prazo abaixo dos 15 s do rack-timeout' do
+    allow(cliente).to receive(:create).and_return(text: { campos: [] }.to_json)
+
+    campos(com_ia: true)
+
+    expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 0))
+    expect(cliente).to have_received(:create).with(hash_including(timeout: described_class::PRAZO_DA_IA))
+    expect(described_class::PRAZO_DA_IA).to be < 15
+  end
+
   describe 'o que vai para a IA (decisão de 03/10)' do
     before do
       contato.update!(phone_number: '+5511999990000', custom_attributes: { 'plano' => 'Empresarial', 'cpf' => '123.456.789-00' })

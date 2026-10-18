@@ -437,6 +437,7 @@
       "DOCUMENTO": "Document",
       "FOTOS_E_VIDEOS": "Photos and videos",
       "TRADUCAO_FALHOU": "Could not translate this email now. Try again.",
+      "TRADUZINDO": "Translating. The email switches to the translation when it is ready.",
       "MODELO_DE_EMAIL": "Email template",
       "MODELO_DICA": "Templates saved in Campaigns. The customer data fills in by itself; you check it before sending.",
       "BUSCAR_MODELO_DE_EMAIL": "Search templates",

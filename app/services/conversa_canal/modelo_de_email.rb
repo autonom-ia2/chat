@@ -12,6 +12,10 @@ class ConversaCanal::ModeloDeEmail
   IGNORADAS = %w[unsubscribe_url].freeze
   LIMITE_DE_CAMPOS_PARA_IA = 12
   LIMITE_DA_CONVERSA = 6_000
+  # Abrir o modelo é na requisição (15 s do rack-timeout): uma tentativa só, com prazo abaixo do teto. A sugestão fica
+  # guardada enquanto o modelo e a conversa não mudam, para reabrir o mesmo modelo não pagar a IA de novo.
+  PRAZO_DA_IA = 10
+  VALIDADE_DA_SUGESTAO = 30.minutes
   ESQUEMA = {
     name: 'campos_do_modelo',
     schema: {
@@ -127,17 +131,31 @@ class ConversaCanal::ModeloDeEmail
   def sugestoes_da_ia(chaves)
     return {} if @conversation.blank? || chaves.empty? || !credencial.configured?
 
-    campos = JSON.parse(perguntar_a_ia(chaves.first(LIMITE_DE_CAMPOS_PARA_IA)))['campos'].to_a
-    campos.to_h { |campo| [campo['chave'], campo['valor'].to_s.strip] }.slice(*chaves)
+    chave_do_cache = chave_da_sugestao(chaves)
+    Rails.cache.read(chave_do_cache) || perguntar_e_guardar(chaves, chave_do_cache)
   rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
     Rails.logger.warn("[ConversaCanal::ModeloDeEmail] conversation_id=#{@conversation.id} erro=#{e.class.name}")
     {}
   end
 
+  # Só a resposta boa fica guardada: falha da IA pergunta de novo na próxima abertura.
+  def perguntar_e_guardar(chaves, chave_do_cache)
+    campos = JSON.parse(perguntar_a_ia(chaves.first(LIMITE_DE_CAMPOS_PARA_IA)))['campos'].to_a
+    sugestao = campos.to_h { |campo| [campo['chave'], campo['valor'].to_s.strip] }.slice(*chaves)
+    Rails.cache.write(chave_do_cache, sugestao, expires_in: VALIDADE_DA_SUGESTAO)
+    sugestao
+  end
+
+  # Muda o modelo, chega mensagem nova ou muda o que falta: pergunta de novo.
+  def chave_da_sugestao(chaves)
+    ultima = @conversation.messages.maximum(:id)
+    ['conversa_canal/modelo_de_email', @modelo.id, @modelo.updated_at.to_i, @conversation.id, ultima, chaves.join('|')].join('/')
+  end
+
   def perguntar_a_ia(chaves)
-    cliente = Crm::Ai::ResponsesClient.new(credential: credencial.resolve, feature: 'modelo_email', account: @account)
+    cliente = Crm::Ai::ResponsesClient.new(credential: credencial.resolve, feature: 'modelo_email', account: @account, max_retries: 0)
     cliente.create(model: Crm::Ai::Config::MODEL_SUMMARY, instructions: INSTRUCOES, input: entrada(chaves).to_json,
-                   schema: ESQUEMA, reasoning_effort: 'low')[:text]
+                   schema: ESQUEMA, reasoning_effort: 'low', timeout: PRAZO_DA_IA)[:text]
   end
 
   INSTRUCOES = <<~PROMPT.strip.freeze
@@ -156,10 +174,11 @@ class ConversaCanal::ModeloDeEmail
 
   # A mesma regra de Autonomia::Decisores::Aplicador#nome_provisorio?: vazio, o e-mail, o começo dele ou o telefone.
   def nome_para_a_ia
-    nome = @contato&.name.to_s.strip
-    email = @contato&.email.to_s
-    provisorio = nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) ||
-                 nome == @contato&.phone_number.to_s
+    return if @contato.blank?
+
+    nome = @contato.name.to_s.strip
+    email = @contato.email.to_s
+    provisorio = nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) || nome == @contato.phone_number.to_s
     nome unless provisorio
   end
 

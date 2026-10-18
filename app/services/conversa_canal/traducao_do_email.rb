@@ -2,9 +2,12 @@
 # "IA da conta, Google se houver"). Mesma chave do ditado e do CRM (Crm::Ai::CredentialResolver). Traduz o HTML do
 # e-mail mantendo a marcação (tabelas, listas, links, imagens), para a tela mostrar a tradução com a mesma cara.
 # Só para a conversa de e-mail nova (chave `conversa_email_nova`); os outros canais seguem só com o Google.
+# Roda num job (ConversaCanal::TraduzirEmailJob): o HTML vai e volta inteiro e passa dos 15 s da requisição.
 class ConversaCanal::TraducaoDoEmail
   # E-mail muito grande (newsletter com HTML pesado) não vai para a IA: custo e tempo sem retorno.
   LIMITE_DE_CARACTERES = 60_000
+  # Os idiomas que o painel oferece (os mesmos da troca de idioma do perfil e da conta).
+  IDIOMAS_DO_PAINEL = LANGUAGES_CONFIG.values.pluck(:iso_639_1_code).freeze
   ESQUEMA = {
     name: 'traducao_do_email',
     schema: {
@@ -21,6 +24,15 @@ class ConversaCanal::TraducaoDoEmail
       Crm::Ai::CredentialResolver.new(account: message.account).configured?
   end
 
+  # Sem o Google Tradutor ligado na conta: com ele, o Chatwoot traduz como sempre, na requisição.
+  def self.em_segundo_plano?(message)
+    aplica?(message) && !message.account.hooks.exists?(app_id: 'google_translate')
+  end
+
+  def self.idioma_do_painel?(idioma)
+    IDIOMAS_DO_PAINEL.include?(idioma.to_s)
+  end
+
   def initialize(message:, target_language:)
     @message = message
     @idioma = target_language.to_s.tr('_', '-')
@@ -35,6 +47,7 @@ class ConversaCanal::TraducaoDoEmail
     JSON.parse(resposta[:text])['traducao'].to_s.presence
   rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
     Rails.logger.warn("[ConversaCanal::TraducaoDoEmail] message_id=#{@message.id} erro=#{e.class.name}")
+    ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
     nil
   end
 

@@ -80,6 +80,11 @@ class Rack::Attack
     req.ip if req.post? && req.path.include?('/conversa_canal/ditados')
   end
 
+  # Traduzir mensagem: sem o Google, o e-mail novo (#1786) traduz pela IA da conta, uma chamada paga por pedido.
+  throttle('conversa_canal_traducoes/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/messages/') && req.path.end_with?('/translate')
+  end
+
   # Abrir um modelo de e-mail (#1786) pode chamar a IA da conta para sugerir os campos. A prévia (miniatura) não chama.
   throttle('conversa_canal_modelos_de_email/ip', limit: 30, period: 1.minute) do |req|
     req.ip if req.get? && req.path.include?('/conversa_canal/modelos_de_email/') && !req.path.end_with?('/previa')
