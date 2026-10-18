@@ -119,6 +119,32 @@ RSpec.describe 'Ler conversa sem operar com conversation_view', type: :request d
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it 'não cria o vínculo do contato com a caixa ao tentar começar conversa' do
+      contato = create(:contact, account: account)
+
+      expect do
+        post "#{base}/conversations", params: { contact_id: contato.id, inbox_id: dela.id }, headers: headers, as: :json
+      end.not_to change(ContactInbox, :count)
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'não lê o rascunho de quem atende' do
+      Redis::Alfred.set(format(Redis::Alfred::CONVERSATION_DRAFT_MESSAGE, id: conversa.id), 'proposta em preparo')
+
+      get "#{base}/conversations/#{conversa.display_id}/draft_messages", headers: headers, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'não lê conversa de outra conta' do
+      outra_conta = create(:account)
+      de_outra = create(:conversation, account: outra_conta, inbox: create(:inbox, account: outra_conta))
+
+      get "/api/v1/accounts/#{outra_conta.id}/conversations/#{de_outra.display_id}", headers: headers, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     it 'não resolve em massa; quem opera, resolve' do
       resolver = lambda do |auth|
         perform_enqueued_jobs do

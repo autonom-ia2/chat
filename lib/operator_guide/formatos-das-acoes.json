@@ -4623,7 +4623,7 @@
     "controller": "api/v1/accounts/conversations/draft_messages#update",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:31",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -4689,7 +4689,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:47",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:29",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
@@ -13369,7 +13369,7 @@
       "leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)"
     ],
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:5",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:40",
       "app/controllers/api/v1/accounts/conversations_controller.rb:43",
       "app/controllers/api/v1/accounts/conversations_controller.rb:205",
       "app/controllers/api/v1/accounts/conversations_controller.rb:203",
@@ -13619,7 +13619,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:109",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:29",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
@@ -22827,7 +22827,7 @@
     "controller": "api/v1/accounts/conversations/draft_messages#update",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:31",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -22893,7 +22893,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:47",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:29",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
