@@ -509,6 +509,144 @@ describe('CrmPipelineDrawer Atender', () => {
     });
   });
 
+  // #1802 — os funis da corretora.
+  describe('broker templates (#1802)', () => {
+    afterEach(() => {
+      conta.autonomia_pacote = null;
+    });
+
+    const criar = () =>
+      mountDrawer({ mode: 'create', pipeline: null, stages: [] });
+    const modelos = wrapper =>
+      wrapper
+        .findAll('[data-modelo]')
+        .map(item => item.attributes('data-modelo'));
+    const salvar = async wrapper => {
+      wrapper.vm.view = 'confira';
+      await wrapper.vm.$nextTick();
+      await wrapper.get('[data-funil-principal]').trigger('click');
+      await flushPromises();
+      return wrapper.emitted('save')[0][0];
+    };
+
+    it('broker: Sell offers Sales and Renewal; Serve starts at Claim', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      const wrapper = criar();
+      await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+      expect(modelos(wrapper)).toEqual(['VENDAS', 'RENOVACAO']);
+      expect(wrapper.vm.modelo).toBe('VENDAS');
+      expect(wrapper.get('#funil-modelos-titulo').text()).toBe(
+        'CRM_FUNIL.TIPO.MODELO_VENDER'
+      );
+
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      expect(modelos(wrapper)).toEqual([
+        'SINISTRO',
+        'ALTERACAO',
+        'ATENDIMENTO',
+        'POS_VENDA',
+        'COBRANCA',
+        'AGENDAMENTOS',
+      ]);
+      expect(wrapper.vm.modelo).toBe('SINISTRO');
+      expect(wrapper.get('#funil-modelos-titulo').text()).toBe(
+        'CRM_FUNIL.TIPO.MODELO'
+      );
+    });
+
+    it('broker: Renewal saves its template, five stages and "Renewed / Not renewed"', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      const wrapper = criar();
+      await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+      await wrapper.get('[data-modelo="RENOVACAO"]').trigger('click');
+      const payload = await salvar(wrapper);
+
+      expect(payload.pipeline.template).toBe('RENOVACAO');
+      expect(payload.pipeline.counts_as_sale).toBe(true);
+      expect(payload.pipeline.name).toBe('CRM_FUNIL.MODELOS.RENOVACAO.NOME');
+      expect(payload.pipeline.outcome_labels).toEqual({
+        success: 'CRM_FUNIL.MODELOS.RENOVACAO.SUCESSO',
+        failure: 'CRM_FUNIL.MODELOS.RENOVACAO.FALHA',
+      });
+      expect(payload.stages.map(stage => stage.name)).toEqual(
+        [1, 2, 3, 4, 5].map(n => `CRM_FUNIL.MODELOS.RENOVACAO.E${n}`)
+      );
+    });
+
+    it('broker: leaving Renewal gives both outcome names back, but keeps a typed one', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      const wrapper = criar();
+      await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+      await wrapper.get('[data-modelo="RENOVACAO"]').trigger('click');
+      wrapper.vm.form.outcomeLabels.success = 'Apólice renovada';
+      await wrapper.get('[data-modelo="VENDAS"]').trigger('click');
+      expect(wrapper.vm.form.outcomeLabels).toEqual({
+        success: 'Apólice renovada',
+        failure: '',
+      });
+    });
+
+    it.each([null, 'seguros.corretora'])(
+      'account %j: a failure name with only spaces stays when switching templates without one',
+      async pacote => {
+        conta.autonomia_pacote = pacote;
+        const wrapper = criar();
+        await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+        wrapper.vm.form.outcomeLabels.failure = '   ';
+        await wrapper.get('[data-modelo="COBRANCA"]').trigger('click');
+        await wrapper.get('[data-modelo="POS_VENDA"]').trigger('click');
+        expect(wrapper.vm.form.outcomeLabels.failure).toBe('   ');
+      }
+    );
+
+    it('broker: Claim is Serve, with positional categories and only its success name', async () => {
+      conta.autonomia_pacote = 'seguros.corretora';
+      const wrapper = criar();
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      const payload = await salvar(wrapper);
+
+      expect(payload.pipeline.template).toBe('SINISTRO');
+      expect(payload.pipeline.counts_as_sale).toBe(false);
+      expect(payload.pipeline.outcome_labels).toEqual({
+        success: 'CRM_FUNIL.MODELOS.SINISTRO.SUCESSO',
+        failure: '',
+      });
+      expect(payload.stages.map(stage => stage.category)).toEqual([
+        'novo',
+        'andamento',
+        'espera',
+        'resolvido',
+      ]);
+    });
+
+    it.each([null, 'seguros', 'seguros.saude_beneficios'])(
+      'account %j: same journey as today, no broker template anywhere',
+      async pacote => {
+        conta.autonomia_pacote = pacote;
+        const wrapper = criar();
+        await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+        expect(wrapper.find('[data-modelo]').exists()).toBe(false);
+        expect(wrapper.vm.modelo).toBe('VENDAS');
+        await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+        expect(modelos(wrapper)).toEqual([
+          'ATENDIMENTO',
+          'POS_VENDA',
+          'COBRANCA',
+          'AGENDAMENTOS',
+        ]);
+        expect(wrapper.vm.modelo).toBe('ATENDIMENTO');
+        expect(wrapper.vm.form.name).toBe('CRM_FUNIL.MODELOS.ATENDIMENTO.NOME');
+        await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+        const payload = await salvar(wrapper);
+        expect(payload.pipeline.template).toBe('VENDAS');
+        expect(payload.pipeline.outcome_labels).toEqual({
+          success: '',
+          failure: '',
+        });
+      }
+    );
+  });
+
   it('gives "Paid" back when leaving Collections for another template', async () => {
     const wrapper = mountDrawer({ mode: 'create', pipeline: null, stages: [] });
     await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
