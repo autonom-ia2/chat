@@ -23,6 +23,14 @@ export const GRUPOS_DE_CARTOES = [
     id: 'SUA_EMPRESA',
     cartoes: [
       {
+        // Sai do menu e vem para cá quando o básico da trilha está feito (trilhaBasica.js).
+        id: 'PRIMEIROS_PASSOS',
+        rota: 'first_steps',
+        icone: 'i-lucide-list-checks',
+        exige: 'basicoConcluido',
+        trilha: true,
+      },
+      {
         id: 'DADOS_EMPRESA',
         origem: 'Settings Account Settings',
         icone: 'i-lucide-building-2',

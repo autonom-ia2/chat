@@ -1041,8 +1041,11 @@ pt_BR:
       message_blank: 'Escreva uma mensagem para falar com o construtor de agentes.'
       build_in_progress: 'O construtor ainda está processando sua mensagem anterior. Aguarde um instante e tente de novo.'
       retry_unavailable: 'Não é possível reexecutar esta geração agora.'
+      ajuste_mudou: 'O agente mudou depois deste ajuste, então ele não pode mais ser desfeito aqui. Para voltar, use “Jeitos anteriores de responder”.'
+      pedir_de_novo: 'Peça de novo escrevendo a mensagem.'
     agents:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
+      conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       # #1428 — "Mudar conversando" (piloto): as mensagens que o Construtor mostra ao dono depois de um ajuste.
       ajuste:
@@ -1058,7 +1061,6 @@ pt_BR:
         correcao_superada: 'Parte do que você pediu ficou de fora: um ajuste mais novo deste agente começou enquanto eu conferia. Confira o agente quando ele terminar.'
         agente_mudou: 'O agente mudou por outro caminho enquanto eu conferia, então não corrigi o que faltou. Confira o agente e me diga o que ainda quer mudar.'
         sem_resposta: 'Não consegui responder agora. Pode perguntar de outro jeito?'
-        tambem_mudei: 'Também mudei isto, que você não pediu: %{resumos}. Se não quiser, é só me dizer o que tirar.'
         desfiz_nao_pedido: 'Desfiz o que você não tinha pedido: %{resumos}. O que você quer mudar?'
         nao_desfiz: 'O agente mudou por outro caminho enquanto eu conferia, então não desfiz o que você não tinha pedido: %{resumos}. Confira o agente e me diga o que quer.'
         nao_conferido: 'Tentei aplicar de novo o que faltou, mas não deu tempo de conferir. Confira o agente: %{pedidos}.'

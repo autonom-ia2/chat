@@ -32,11 +32,6 @@ module Autonomia::Agents::Builder::TextosDoAjuste
     texto(:conflito, locale, pedidos: lista(mudancas, 'pedido'))
   end
 
-  # Parte do que entrou o dono não pediu: fica aplicado, e ele é informado, sem pergunta.
-  def aviso_do_nao_pedido(itens, locale)
-    texto(:tambem_mudei, locale, resumos: lista(itens, 'resumo'))
-  end
-
   # Tudo o que entrou não tinha sido pedido e foi desfeito.
   def desfiz_o_nao_pedido(itens, locale)
     texto(:desfiz_nao_pedido, locale, resumos: lista(itens, 'resumo'))

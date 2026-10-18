@@ -88,6 +88,10 @@
     },
     "OUTRO_ITEM": "Another platform setting.",
     "CARTOES": {
+      "PRIMEIROS_PASSOS": {
+        "TITULO": "First steps",
+        "TEXTO": "What's already set up in your account and the next steps to grow."
+      },
       "DADOS_EMPRESA": {
         "TITULO": "Company details",
         "TEXTO": "Your account name, language and time zone."
@@ -177,6 +181,8 @@
         "TEXTO": "The address people see on your email campaigns."
       }
     },
-    "RECONECTAR": "Needs reconnecting: 1 channel | Needs reconnecting: {count} channels"
+    "RECONECTAR": "Needs reconnecting: 1 channel | Needs reconnecting: {count} channels",
+    "PASSOS_FALTAM": "1 step left | {count} steps left",
+    "TUDO_PRONTO": "All set"
   }
 }

@@ -1315,6 +1315,7 @@
           "JEITO_NOVO": "O jeito de falar também mudou. Teste ao lado.",
           "ERRO": "Não consegui responder agora.",
           "ERRO_GARANTIA": "Nada mudou em {nome}.",
+          "CANCELADO_PELO_DESFAZER": "Esta mudança foi desfeita enquanto eu trabalhava; esse pedido foi cancelado. Peça de novo se quiser.",
           "SAIR_TITULO": "Sair sem terminar?",
           "SAIR_TEXTO": "Nada muda em {nome}.",
           "CONTINUAR_AQUI": "Continuar aqui",
@@ -1332,6 +1333,24 @@
             "B": "Mais formal",
             "C": "Mais descontraído",
             "D": "Respostas mais curtas"
+          },
+          "CONFERIDO": {
+            "TITULO_TUDO": "Pronto. Mudei {n} coisa em {nome}. | Pronto. Mudei {n} coisas em {nome}.",
+            "TITULO_MUDEI": "Mudei {n} coisa em {nome}. | Mudei {n} coisas em {nome}.",
+            "TITULO_PARTE": "Mudei {ok} de {total} pedidos em {nome}.",
+            "NAO_CONFERIDO": "Mudei {nome}, mas não consegui conferir. Teste ao lado para ver se ficou como você quer.",
+            "APLICADO": "Aplicado:",
+            "DUVIDA": "Não consegui aplicar: “{pedido}”.",
+            "SEM_PEDIDO": "Também mudei, sem você pedir: {lista}. Se não quiser, é só me dizer o que tirar.",
+            "FALTOU_FORA": "Uma parte do que você pediu não entrou. Veja a pergunta logo abaixo.",
+            "DESFAZER": "Desfazer",
+            "DESFAZENDO": "Desfazendo…",
+            "DESFEITO": "Desfeito. {nome} voltou a ser como antes.",
+            "DESFEITO_SOZINHO": "Desfiz o que você não tinha pedido. {nome} continua como antes.",
+            "MUDOU_DEPOIS": "{nome} mudou depois desta conversa, então não dá para desfazer daqui. Para voltar, use “Jeitos anteriores de responder”.",
+            "ERRO": "Não consegui desfazer agora. Tente de novo.",
+            "ULTIMA_MUDANCA": "Última mudança: {lista}.",
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando."
           }
         },
         "FOTO": {

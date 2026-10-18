@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
+import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -11,6 +12,8 @@ import CompositorAA from '../CompositorAA.vue';
 import RespostasRapidas from '../RespostasRapidas.vue';
 import TesteDoAgente from './TesteDoAgente.vue';
 import DialogoAcao from './DialogoAcao.vue';
+import ResultadoDoAjuste from './ResultadoDoAjuste.vue';
+import UltimaMudanca from './UltimaMudanca.vue';
 import { useTesteDoAgente } from '../../composables/useTesteDoAgente';
 import { fecharFrase } from '../../utils/pagina';
 
@@ -53,6 +56,11 @@ const ultimoEnvio = ref(null);
 const celularAberto = ref(false);
 const dialogoSair = ref(null);
 const antes = ref({ name: props.agente.name, tone: props.agente.tone });
+const desfazendo = ref(false);
+const erroDoDesfazer = ref('');
+const desfazendoUltima = ref(false);
+const erroDaUltima = ref('');
+const ultimaDesfeita = ref(false);
 // Saiu da tela com o start/send ainda em voo: quando ele voltar, a store refaria a conversa e o
 // poll. `saiu` faz a limpeza de novo nessa hora.
 let saiu = false;
@@ -87,13 +95,33 @@ const visiveis = computed(() =>
     mensagem => mensagem.role === 'user' || mensagem.role === 'assistant'
   )
 );
+// #1428 (parte 3, piloto) — o resultado do último ajuste, pedido por pedido, com o Desfazer. Sem ele
+// (fora do piloto, ou turno sem conferência), o aviso de sempre: FEITO ou PARCIAL.
+const resultado = computed(() => estadoDaConversa.value?.resultado || null);
+// "Pronto" em destaque só quando tudo o que foi pedido entrou e foi conferido.
+const tudoEntrou = computed(() => {
+  const atual = resultado.value;
+  if (!atual) return Boolean(feito.value);
+  const pedidos = (atual.itens || []).filter(
+    item => item.estado !== 'sem_pedido'
+  );
+  return (
+    atual.conferido === true &&
+    !atual.faltou_fora &&
+    !atual.desfeito &&
+    !atual.desfeito_sozinho &&
+    pedidos.length > 0 &&
+    pedidos.every(item => item.estado === 'aplicado')
+  );
+});
+
 // #1428 — o aviso do que entrou vem antes da pergunta que o Construtor ainda faz (a conversa segue aberta).
 const conversa = computed(() => {
   const itens = visiveis.value.map((mensagem, indice) => ({
     chave: `m${indice}`,
     mensagem,
   }));
-  if (!feito.value) return itens;
+  if (!feito.value && !resultado.value) return itens;
   const aviso = { chave: 'feito', feito: true };
   const ultima = visiveis.value[visiveis.value.length - 1];
   const perguntaAberta =
@@ -110,8 +138,12 @@ const pensando = computed(
     status.value === 'processing'
 );
 const falhou = computed(() => Boolean(erroDaConversa.value) && !pensando.value);
+// #1428 (parte 3): o Desfazer cancelou este pedido em voo (o servidor tomou o token). Pedir de novo é escrever de novo.
+const canceladoPeloDesfazer = computed(
+  () => estadoDaConversa.value?.error === 'superada_pelo_desfazer'
+);
 const noMeio = computed(
-  () => pensando.value || (comecou.value && !feito.value)
+  () => pensando.value || (comecou.value && !feito.value && !resultado.value)
 );
 
 const subirImagens = async imagens => {
@@ -175,6 +207,8 @@ const enviar = async ({ texto, anexos }) => {
   const conteudo = texto || anexos.map(arquivo => arquivo.name).join(', ');
   rascunho.value = '';
   feito.value = null;
+  erroDoDesfazer.value = '';
+  ultimaDesfeita.value = false;
   await guardarArquivos(arquivos);
   ultimoEnvio.value = { conteudo, imagens };
   await tentarMandar(ultimoEnvio.value);
@@ -212,6 +246,59 @@ watch(agenteGerado, novo => {
   antes.value = { name: novo.name, tone: novo.tone };
   teste.marcarAtualizado();
 });
+
+// #1428 (parte 3) — o servidor decide qual versão volta; a store relê a conversa e o agente.
+const desfazer = async () => {
+  if (desfazendo.value || !thread.value?.id) return;
+  desfazendo.value = true;
+  erroDoDesfazer.value = '';
+  try {
+    await store.dispatch('autonomiaBuildThreads/desfazerAjuste', {
+      threadId: thread.value.id,
+    });
+    teste.marcarAtualizado();
+  } catch (error) {
+    erroDoDesfazer.value = error?.response?.status === 409 ? 'mudou' : 'falhou';
+  } finally {
+    desfazendo.value = false;
+  }
+};
+
+// #1428 (parte 3) — a faixa "Última mudança": o servidor diz, no agente, se a última mudança feita
+// conversando ainda dá para desfazer (mesmo depois de recarregar ou de uma pergunta). Fica escondida
+// enquanto o Construtor pensa e quando o cartão do resultado, que já tem o Desfazer, está na tela.
+// Desfeita, o agente é relido e a faixa some sozinha; fica o aviso de desfeito.
+const ultimaMudanca = computed(() =>
+  resultado.value || pensando.value
+    ? null
+    : props.agente.ultima_mudanca_desfazivel || null
+);
+
+const relerAgente = async () => {
+  try {
+    await store.dispatch('autonomiaAgents/show', props.agente.id);
+    antes.value = { name: props.agente.name, tone: props.agente.tone };
+  } catch {
+    // Já desfeito no servidor; a página relê o agente ao abrir de novo.
+  }
+};
+
+const desfazerUltima = async () => {
+  if (desfazendoUltima.value || !ultimaMudanca.value) return;
+  desfazendoUltima.value = true;
+  erroDaUltima.value = '';
+  try {
+    await AutonomiaBuildThreadsAPI.desfazer(ultimaMudanca.value.thread_id);
+  } catch (error) {
+    erroDaUltima.value = error?.response?.status === 409 ? 'mudou' : 'falhou';
+    desfazendoUltima.value = false;
+    return;
+  }
+  ultimaDesfeita.value = true;
+  teste.marcarAtualizado();
+  await relerAgente();
+  desfazendoUltima.value = false;
+};
 
 const usarIdeia = ideia => {
   rascunho.value = ideia;
@@ -267,8 +354,8 @@ onBeforeUnmount(() => {
         <AgenteBotao
           data-pronto
           tamanho="lg"
-          :variante="feito ? 'primario' : 'contorno'"
-          :icone="feito ? 'i-lucide-check' : ''"
+          :variante="tudoEntrou ? 'primario' : 'contorno'"
+          :icone="tudoEntrou ? 'i-lucide-check' : ''"
           @click="pedirSaida"
         >
           {{ t(`${NS}.PRONTO`) }}
@@ -281,6 +368,26 @@ onBeforeUnmount(() => {
         aria-labelledby="mudar-titulo"
         class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
       >
+        <p
+          v-if="ultimaDesfeita && !resultado && !pensando"
+          data-ultima-desfeita
+          role="status"
+          class="flex items-center gap-3 px-4 py-2 m-0 text-sm rounded-xl bg-n-slate-2 text-n-slate-12"
+        >
+          <span
+            class="i-lucide-undo-2 size-4 shrink-0 text-n-slate-11"
+            aria-hidden="true"
+          />
+          {{ t(`${NS}.CONFERIDO.DESFEITO`, { nome }) }}
+        </p>
+        <UltimaMudanca
+          v-else-if="ultimaMudanca"
+          :ultima="ultimaMudanca"
+          :nome="nome"
+          :desfazendo="desfazendoUltima"
+          :erro="erroDaUltima"
+          @desfazer="desfazerUltima"
+        />
         <div
           data-conversa
           :aria-label="t(`${NS}.CONVERSA`)"
@@ -313,8 +420,32 @@ onBeforeUnmount(() => {
           </div>
           <template v-for="item in conversa" :key="item.chave">
             <template v-if="item.feito">
+              <ResultadoDoAjuste
+                v-if="resultado"
+                :resultado="resultado"
+                :nome="nome"
+                :desfazendo="desfazendo"
+                :erro="erroDoDesfazer"
+                @desfazer="desfazer"
+              >
+                <p
+                  v-if="feito?.nomeNovo && !resultado.desfeito"
+                  data-nome-novo
+                  class="m-0 text-sm text-n-slate-12"
+                >
+                  {{ t(`${NS}.NOME_NOVO`, { nome: feito.nomeNovo }) }}
+                  <button
+                    data-voltar-nome
+                    type="button"
+                    class="font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+                    @click="emit('voltarNome', feito.nomeAntigo)"
+                  >
+                    {{ t(`${NS}.VOLTAR_NOME`, { nome: feito.nomeAntigo }) }}
+                  </button>
+                </p>
+              </ResultadoDoAjuste>
               <p
-                v-if="feito.parcial"
+                v-else-if="feito.parcial"
                 data-parcial
                 class="flex items-start gap-3 p-4 m-0 text-sm font-semibold rounded-2xl bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
               >
@@ -402,15 +533,25 @@ onBeforeUnmount(() => {
           <AgenteErro
             v-if="falhou"
             data-erro
-            :titulo="t(`${NS}.ERRO`)"
-            :garantia="t(`${NS}.ERRO_GARANTIA`, { nome })"
-            :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+            :titulo="
+              canceladoPeloDesfazer
+                ? t(`${NS}.CANCELADO_PELO_DESFAZER`)
+                : t(`${NS}.ERRO`)
+            "
+            :garantia="
+              canceladoPeloDesfazer ? '' : t(`${NS}.ERRO_GARANTIA`, { nome })
+            "
+            :acao="
+              canceladoPeloDesfazer
+                ? ''
+                : t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')
+            "
             @acao="tentarDeNovo"
           />
         </div>
 
         <p
-          v-if="!feito"
+          v-if="!feito && !resultado"
           class="flex items-center gap-2 m-0 text-sm text-n-slate-11"
         >
           <span class="i-lucide-info size-4 shrink-0" aria-hidden="true" />
