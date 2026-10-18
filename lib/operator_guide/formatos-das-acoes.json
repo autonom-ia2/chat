@@ -10836,20 +10836,29 @@
       "leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:91",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:24",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:110",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:99",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:97",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:89",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:33",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:82",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:80",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:100",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:15",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:153"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:27",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:170"
     ],
     "sem_corpo": false
+  },
+  "POST autonomia/build_threads/:id/desfazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/build_threads#desfazer",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:10",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:125"
+    ],
+    "sem_corpo": true
   },
   "POST autonomia/build_threads/:id/messages": {
     "campos": {
@@ -10877,17 +10886,17 @@
       "leitura crua sem tipo: message (repassada a @thread.append_message!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:91",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:82",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:80",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:100",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:142",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:34",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:110",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:99",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:97",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:89",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:159",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:46",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:125"
     ],
     "sem_corpo": false
   },
@@ -10895,8 +10904,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#retry_build",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:54",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:108"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:66",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:125"
     ],
     "sem_corpo": true
   },

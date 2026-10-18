@@ -270,6 +270,18 @@ export const actions = {
     }
   },
 
+  // #1428 (pilot) — undo the last adjustment. The answer is the thread itself
+  // (its `resultado` now says undone); the agent is read again so the page and
+  // the test phone see it as it was. Errors go back raw: the page tells a 409
+  // (the agent changed after) from a generic failure.
+  desfazerAjuste: async ({ commit, dispatch }, { threadId } = {}) => {
+    if (!threadId) return null;
+    const { data } = await AutonomiaBuildThreadsAPI.desfazer(threadId);
+    const payload = applyThreadResponse(commit, data);
+    await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
+    return payload;
+  },
+
   // The user reached Materiais and has nothing to upload: send a short signal
   // turn with `no_materials: true` so the backend gate can close the
   // instruction without waiting on sources. Not echoed as a visible bubble.

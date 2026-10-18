@@ -18,6 +18,19 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
   # a instrução; um limite, para guardrails E a instrução; a passagem, para handoff_rule E a instrução).
   SECUNDARIO_DE = { 'instruction' => %w[tone guardrails handoff_rule] }.freeze
 
+  # Sem pedido do dono, sem o mesmo `pedido` de um item pedido e sem ser o destino secundário, pela tabela, de um item
+  # pedido (a instrução acompanha o tom, os limites e a passagem). Na dúvida, conta como pedido: não se pergunta.
+  # Público: o resultado na tela (ResultadoDoAjuste, parte 3) separa os itens pela mesma regra.
+  def self.sem_pedido(itens)
+    pedidos = itens.reject { |item| item['pedido_pelo_dono'] == false }
+    textos = pedidos.pluck('pedido')
+    campos = pedidos.pluck('campo')
+    itens.select do |item|
+      item['pedido_pelo_dono'] == false && textos.exclude?(item['pedido']) &&
+        !SECUNDARIO_DE.fetch(item['campo'], []).intersect?(campos)
+    end
+  end
+
   private
 
   # -> a conferência com `sem_pedido` (os itens que o dono não pediu, quando é só parte) ou `desfeito`
@@ -38,16 +51,8 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     itens.reject { |item| antes[item['campo']] == depois[item['campo']] }
   end
 
-  # Sem pedido do dono, sem o mesmo `pedido` de um item pedido e sem ser o destino secundário, pela tabela, de um item
-  # pedido (a instrução acompanha o tom, os limites e a passagem). Na dúvida, conta como pedido: não se pergunta.
   def itens_sem_pedido(itens)
-    pedidos = itens.reject { |item| item['pedido_pelo_dono'] == false }
-    textos = pedidos.pluck('pedido')
-    campos = pedidos.pluck('campo')
-    itens.select do |item|
-      item['pedido_pelo_dono'] == false && textos.exclude?(item['pedido']) &&
-        !SECUNDARIO_DE.fetch(item['campo'], []).intersect?(campos)
-    end
+    Autonomia::Agents::Builder::DesfechoDoAjuste.sem_pedido(itens)
   end
 
   # As colunas e as chaves do config destes campos.
@@ -108,8 +113,16 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     texto, origem = pendencia
     { 'applied' => true, 'truncated_fields' => Array(dados['campos_truncados']) | @campos_truncados, 'so_pergunta' => false,
       'conferencia' => conferencia, 'ajuste_em_curso' => nil, 'nao_pedido_anterior' => nao_pedido_anterior(dados, conferencia),
-      'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present? }
+      'parcial' => conferencia['falta'] == true || pergunta_do_modelo(resposta).present?,
+      'ultimo_ajuste' => ultimo_ajuste(dados) }
       .merge(pendencia_no_estado(texto || pendencia_mantida(resposta), resposta, origem: origem, laco: true))
+  end
+
+  # #1428 (parte 3) — o que o Desfazer da tela precisa: a versão de antes, a da aplicação (a da correção, se houve) e o
+  # updated_at que a escrita do Construtor deixou no agente. Só ids e horário; a API não expõe esta chave.
+  def ultimo_ajuste(dados)
+    { 'versao_antes_id' => dados['versao_antes_id'], 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'],
+      'agente_updated_at' => dados['agente_updated_at'] }
   end
 
   # Com aviso de desfecho, pendência ou qualquer falta apontada, a conversa segue aberta.

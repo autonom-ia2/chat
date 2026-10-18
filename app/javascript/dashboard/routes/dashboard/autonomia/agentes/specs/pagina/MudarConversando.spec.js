@@ -265,6 +265,103 @@ describe('MudarConversando', () => {
     wrapper.unmount();
   });
 
+  // #1428 (parte 3, piloto) — com o resultado do servidor, o cartão pedido por pedido no lugar do FEITO.
+  describe('with the result of the adjustment (pilot)', () => {
+    const RESULTADO = {
+      itens: [
+        { estado: 'aplicado', texto: 'Respostas curtas.' },
+        { estado: 'nao_aplicado', texto: 'preço com a equipe' },
+      ],
+      faltou_fora: false,
+      conferido: true,
+      desfeito: false,
+      desfeito_sozinho: false,
+      pode_desfazer: true,
+    };
+
+    const comResultado = async (resultado = RESULTADO, agente = AGENTE) => {
+      const wrapper = montar();
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Curto e preço com a equipe' },
+        { role: 'assistant', content: 'Qual equipe?' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getThreadState`] = { parcial: true, resultado };
+      store.state[`${ESTADO}getAgent`] = agente && { ...agente, tone: 'curto' };
+      await nextTick();
+      return wrapper;
+    };
+
+    it('shows the card before the open question, and Pronto stays plain while something is missing', async () => {
+      const wrapper = await comResultado();
+
+      expect(no('[data-feito]')).toBeNull();
+      expect(no('[data-parcial]')).toBeNull();
+      const cartao = no('[data-conferido]');
+      const pergunta = todos('[data-mensagem="assistant"]').pop();
+      const ordem = todos('[data-conferido], [data-mensagem="assistant"]');
+      expect(ordem.indexOf(cartao)).toBeLessThan(ordem.indexOf(pergunta));
+      expect(todos('[data-item]').map(item => item.dataset.item)).toEqual([
+        'aplicado',
+        'nao_aplicado',
+      ]);
+      expect(no('[data-pronto]').className).not.toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    it('makes Pronto primary when everything asked went in', async () => {
+      const wrapper = await comResultado({
+        ...RESULTADO,
+        itens: [
+          { estado: 'aplicado', texto: 'Curto.' },
+          { estado: 'sem_pedido', texto: 'Saudação nova' },
+        ],
+      });
+
+      expect(no('[data-pronto]').className).toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    it('undoes through the store and starts the test phone over', async () => {
+      // Sem o agente relido (a leitura dele pode falhar), o celular recomeça pelo próprio Desfazer.
+      const wrapper = await comResultado(RESULTADO, null);
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}desfazerAjuste`, {
+        threadId: 55,
+      });
+      expect(no('[data-atualizado]')).not.toBeNull();
+      expect(no('[data-erro-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      const wrapper = await comResultado();
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}desfazerAjuste`) {
+          throw Object.assign(new Error('conflito'), {
+            response: { status: 409 },
+          });
+        }
+        return null;
+      });
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
   it('says nothing about the name when it did not change', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getAgent`] = { ...AGENTE };

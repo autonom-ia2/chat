@@ -51,6 +51,8 @@ module Autonomia
       include Avatarable
       # #1428 — versões do agente inteiro (gravar, voltar, versão da aplicação do Construtor).
       include Autonomia::Agents::AgentVersioning
+      # #1428 (parte 3) — o Desfazer do último ajuste do "Mudar conversando" (piloto).
+      include Autonomia::Agents::DesfazerAjuste
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
