@@ -88,7 +88,15 @@ const montar = () => {
     global: {
       plugins: [store],
       mocks: { $t: chave => chave },
-      stubs: { transition: false },
+      stubs: {
+        transition: false,
+        // O ReplyBox foca o editor num requestAnimationFrame depois de abrir a resposta;
+        // o stub raso não teria o método e o erro estouraria depois do teste.
+        WootMessageEditor: {
+          template: '<div />',
+          methods: { focusEditorInputField: vi.fn() },
+        },
+      },
     },
   });
   return { wrapper, store };
