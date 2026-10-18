@@ -377,16 +377,7 @@
       "AUTO": {
         "SUGGESTED": "Suggested",
         "SUGGESTING": "Looking for the best message for each notice…",
-        "CREATE_HINT": "Some notices have no approved message that fits. We can send ready messages to Meta for approval.",
-        "CREATE_BUTTON": "Create the templates on Meta",
-        "CREATING": "Sending to Meta…",
-        "SENDING": "Sending to Meta…",
-        "PENDING": "Waiting for Meta approval",
-        "APPROVED": "Approved",
-        "REJECTED": "Refused: {reason}",
-        "FAILED": "Not sent: {reason}",
-        "RETRY": "Try again",
-        "CREATE_FAILED": "Could not send to Meta right now. Try again."
+        "SYSTEM_TEMPLATES_HINT": "With the authorization for {marca} to create templates turned on, {marca} asks Meta for the notice messages, with the “See my appointment” and “Stop reminders” buttons. Once Meta approves them, they go out instead of the ones chosen here."
       },
       "KINDS": {
         "BOOKED": "When booked",

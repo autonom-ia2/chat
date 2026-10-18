@@ -244,8 +244,11 @@ RSpec.describe 'Api::V1::Accounts::Inboxes::WhatsappTemplates', type: :request d
       # A lista devolve os arquivos guardados de cada cartão: a campanha mostra "vai a foto aprovada".
       call(:get, base)
       row = response.parsed_body['payload'].find { |item| item['name'] == 'vitrine' }
-      expect(row['card_media']).to eq([{ 'card_index' => 0, 'file_name' => 'cartao-1.png' },
-                                       { 'card_index' => 1, 'file_name' => 'cartao-2.png' }])
+      expect(row['card_media'].map { |media| media.slice('card_index', 'file_name') })
+        .to eq([{ 'card_index' => 0, 'file_name' => 'cartao-1.png' }, { 'card_index' => 1, 'file_name' => 'cartao-2.png' }])
+      # #1716: a galeria da conversa mostra a foto e manda a referência do arquivo, conferida no envio como escolhida.
+      expect(row['card_media'].map { |media| ActiveStorage::Blob.find_signed(media['blob_signed_id']) }).to eq(blobs)
+      expect(row['card_media']).to all(include('preview_url' => a_string_starting_with('http')))
 
       foreign = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('x'), filename: 'a.png', metadata: { 'account_id' => account.id + 1 })
       call(:post, base, { template: template.merge(name: 'vitrine_2', card_media: [{ card_index: 0, blob_signed_id: foreign.signed_id }]) })

@@ -14,7 +14,8 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
   end
 
   def historico(messages)
-    ActiveRecord::Associations::Preloader.new(records: messages, associations: :sender).call
+    # Anexos: o resumo de localização/contato que chega como anexo (#1715) lê `attachments` de cada mensagem sem texto.
+    ActiveRecord::Associations::Preloader.new(records: messages, associations: %i[sender attachments]).call
     messages.map { |message| pessoa.item_do_historico(message, marca: marca, whatsapp: whatsapp?) }
   end
 

@@ -23,6 +23,16 @@ describe Waha::RichNative::SilentUpdate do
     payloads
   end
 
+  # Merge com o #1702 (pele): as chaves silenciadas são as mesmas nos dois; a edição (content junto) segue só aqui.
+  it 'keeps the same silent keys as ConversaCanal::AtualizacaoDaPele, and still silences the edit that it does not accept' do
+    expect(described_class::SILENT_KEYS).to match_array(ConversaCanal::AtualizacaoDaPele::CHAVES)
+
+    edit = { 'content' => ['Até', 'Até logo'], 'processed_message_content' => ['Até', 'Até logo'],
+             'content_attributes' => [{}, { 'edit_history' => [{ 'content' => 'Até' }], 'edited_at' => 'agora' }] }
+    expect(ConversaCanal::AtualizacaoDaPele.so_da_pele?(edit)).to be(false)
+    expect(described_class.silent?(edit)).to be(true)
+  end
+
   it 'does not send the update of a reaction or an edit to the connector' do
     reaction = { 'content_attributes' => [{ 'external_error' => nil }, { 'external_error' => nil, 'reactions' => [{ 'emoji' => '👍' }] }],
                  'updated_at' => [1.minute.ago, Time.current] }

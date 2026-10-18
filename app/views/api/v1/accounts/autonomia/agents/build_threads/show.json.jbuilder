@@ -20,6 +20,8 @@ json.payload do
     json.error_fields Array(@thread.state['error_fields'])
     json.truncated_fields Array(@thread.state['truncated_fields'])
     json.applied @thread.state['applied']
+    # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
+    json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
   end
   json.created_at @thread.created_at
   json.updated_at @thread.updated_at

@@ -7,7 +7,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../../provider.js';
 import SharedCard from './SharedCard.vue';
-import { mapHrefOf } from './mapLink.js';
+import { mapHrefOf, pointOf } from './mapLink.js';
+import { usePele } from '../../../conversa-canal/pele';
 
 const { contentAttributes, attachments, sender, content } = useMessageContext();
 const { t } = useI18n();
@@ -26,6 +27,24 @@ const mapHref = computed(() => {
   );
 });
 
+// O mesmo ponto do link, para a miniatura do mapa (#1702).
+const point = computed(() => {
+  const attachment = attachments.value?.[0] ?? {};
+  return (
+    pointOf(location.value.latitude, location.value.longitude) ||
+    pointOf(attachment.coordinatesLat, attachment.coordinatesLong)
+  );
+});
+
+// #1709: localização em tempo real (live) chega só com o ponto inicial; com a pele, o
+// cartão avisa, para ninguém achar que o ponto acompanha o cliente.
+const pele = usePele();
+const aviso = computed(() =>
+  pele.value && location.value.live === true
+    ? t('CONVERSA_CANAL.LOCALIZACAO_AO_VIVO')
+    : ''
+);
+
 const heading = computed(() => {
   const name = sender?.value?.name;
   return name ? t('RICH_MESSAGE.LOCATION.SHARED', { sender: name }) : '';
@@ -43,5 +62,7 @@ const heading = computed(() => {
     :note="textOf(content)"
     :action-label="t('RICH_MESSAGE.LOCATION.SEE_ON_MAP')"
     :action-href="mapHref"
+    :mapa="point"
+    :aviso="aviso"
   />
 </template>

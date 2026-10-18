@@ -47,7 +47,8 @@ module Autonomia
 
       response_json = nfm_reply[:response_json] || nfm_reply['response_json']
       flow_token = nfm_reply[:flow_token] || nfm_reply['flow_token'] ||
-                   interactive[:flow_token] || interactive['flow_token']
+                   interactive[:flow_token] || interactive['flow_token'] ||
+                   autonomia_flow_token_from_pele(response_json)
 
       {
         'type' => 'nfm_reply',
@@ -55,6 +56,18 @@ module Autonomia
         'response_json' => response_json,
         'raw' => interactive
       }.compact
+    end
+
+    # No Cloud o flow_token vem DENTRO de response_json, não ao lado dele (#1702):
+    # https://developers.facebook.com/docs/whatsapp/flows/guides/receiveflowresponse
+    # Só com a chave `conversa_cara_do_canal`: sem ela o n8n recebe o contrato de sempre (revisão dos Agentes IA).
+    def autonomia_flow_token_from_pele(response_json)
+      return unless ConversaCanal::Pele.ligada?(inbox.account)
+
+      parsed = response_json.is_a?(String) ? JSON.parse(response_json) : response_json
+      parsed['flow_token'] if parsed.is_a?(Hash)
+    rescue JSON::ParserError
+      nil
     end
   end
 end

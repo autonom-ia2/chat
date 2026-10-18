@@ -10,10 +10,11 @@
 # webhooks da conta, a tela (ActionCable) e o robô seguem recebendo a atualização. Qualquer outra
 # mudança (status, apagar, erro de envio) vai ao conector como sempre.
 module Waha::RichNative::SilentUpdate
-  # EXATAMENTE a lista combinada com o Frontend geral (#1702b, `ConversaCanal::AtualizacaoDaPele::CHAVES`): o que a tela
-  # grava na "pele" da mensagem e nunca pode chegar ao conector (ele reenvia a mensagem em todo `message_updated` com
-  # `external_error`, mesmo nulo). Quando o #1702b estiver na main, isto delega para
-  # `ConversaCanal::AtualizacaoDaPele.so_da_pele?`, e a lista sai daqui.
+  # EXATAMENTE a lista do `ConversaCanal::AtualizacaoDaPele::CHAVES` (#1702, na main): o que a tela grava na "pele" da
+  # mensagem e nunca pode chegar ao conector (ele reenvia a mensagem em todo `message_updated` com `external_error`,
+  # mesmo nulo). Não delega para `ConversaCanal::AtualizacaoDaPele.so_da_pele?`: ela só aceita `content_attributes` e
+  # `updated_at`, e a edição daqui muda também `content` e `processed_message_content` junto com o `edit_history`. O
+  # spec confere que as duas listas seguem iguais.
   # `c2y_hidden` e `view_once_resolved_by`: o aviso de visualização única que sai da tela quando a mídia chega
   # (Waha::RichNative::Inbound::ViewOnceResolved). Também na lista do #1702b.
   SILENT_KEYS = %w[reactions read_receipt_sent_at link_preview played_at deleted_by_contact_at poll_votes event_responses

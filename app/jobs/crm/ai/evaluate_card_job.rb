@@ -7,6 +7,10 @@ class Crm::Ai::EvaluateCardJob < ApplicationJob
     card = Crm::Card.find_by(id: card_id)
     return if card.blank?
 
+    # Memória das IAs (#1601): o que uma avaliação paga deixou pendente (o job caiu depois da chamada) é aplicado aqui,
+    # sem chamar o modelo de novo.
+    Crm::Memoria::Pendente.aplicar!(card)
+
     return if debounce_stale?(card, debounce_token)
 
     wait_seconds = evaluate_wait_seconds(card)

@@ -1,5 +1,5 @@
 # Cliente da Graph API para os modelos de mensagem do WhatsApp oficial (Cloud) de UMA caixa (#1330, épico #1320).
-# Mesmo molde do `Crm::BookingV2::NoticeTemplates::Creator` (#1280): não duplica pelo nome, tenta de novo quando a Meta
+# Herdou o molde do antigo criador dos avisos v1 do agendamento (#1280, retirado em #1612): não duplica pelo nome, tenta de novo quando a Meta
 # está fora do ar ou pede calma (5xx/429), reconhece falta de permissão pelo código numérico da Meta e nunca devolve o
 # token no texto do erro.
 #

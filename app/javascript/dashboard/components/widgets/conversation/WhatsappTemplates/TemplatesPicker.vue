@@ -9,6 +9,9 @@ import {
 } from 'dashboard/helper/templateHelper';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { useI18n } from 'vue-i18n';
+// Fork #1716: produto e carrossel voltam quando a conversa sabe completá-los.
+import { useCompletaNaConversa } from 'dashboard/routes/dashboard/campaigns/modelos/conversa/useCompletaNaConversa';
+import SeloDaConversa from 'dashboard/routes/dashboard/campaigns/modelos/conversa/SeloDaConversa.vue';
 
 const props = defineProps({
   inboxId: {
@@ -28,9 +31,13 @@ const store = useStore();
 const query = ref('');
 const isRefreshing = ref(false);
 
+const { opcoes: opcoesDaConversa } = useCompletaNaConversa(
+  toRef(props, 'inboxId')
+);
 const whatsAppTemplateMessages = useFunctionGetter(
   'inboxes/getConversationWhatsAppTemplates',
-  toRef(props, 'inboxId')
+  toRef(props, 'inboxId'),
+  opcoesDaConversa
 );
 
 const hasRequestContactInfoButton = template => {
@@ -122,14 +129,18 @@ const refreshTemplates = async () => {
         >
           <div>
             <div class="flex justify-between items-center mb-2.5">
-              <p class="text-sm">
+              <p class="flex flex-wrap items-center gap-2 text-sm">
                 {{ template.name }}
+                <SeloDaConversa :template="template" />
               </p>
               <span
                 class="inline-block px-2 py-1 text-xs leading-none rounded-lg cursor-default bg-n-slate-3 text-n-slate-12"
               >
-                {{ t('WHATSAPP_TEMPLATES.PICKER.LABELS.LANGUAGE') }}:
-                {{ template.language }}
+                {{
+                  t('MODELOS_WHATSAPP.CONVERSA.IDIOMA', {
+                    idioma: template.language,
+                  })
+                }}
               </span>
             </div>
             <!-- Header -->

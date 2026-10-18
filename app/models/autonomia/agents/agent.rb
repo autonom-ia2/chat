@@ -49,6 +49,8 @@ module Autonomia
       end
 
       include Avatarable
+      # #1428 — versões do agente inteiro (gravar, voltar, versão da aplicação do Construtor).
+      include Autonomia::Agents::AgentVersioning
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
@@ -89,6 +91,10 @@ module Autonomia
 
       enum status: { draft: 0, active: 1, paused: 2 }
       enum mode:   { guided: 0, manual: 1 }
+      # Modo vazio (`""`/`null` na API) virava erro do banco, e a mensagem do Postgres levava a linha inteira (com a
+      # instrução e o andaime ocultos) ao log e ao Sentry. Validado aqui, vira 422 sem a linha (revisão adversarial
+      # do #1492).
+      validates :mode, presence: true
       # V2.1 — onde o agente atua. external (atende clientes, comportamento atual) /
       # internal (copiloto da equipe, nunca fala com cliente) / both. Default external.
       enum actuation: { external: 0, internal: 1, both: 2 }, _prefix: :actuation
@@ -103,6 +109,11 @@ module Autonomia
       # Levantado por qualquer caminho que tente escrever a instrução de um agente cuja instrução é
       # mantida pela Autonom.ia. A API devolve 422 com `autonomia.agents.instrucao_mantida`.
       class InstrucaoMantida < StandardError; end
+
+      # #1514 (decisão do Rodrigo, 17/10/2026) — o Construtor ("Mudar conversando") não aplica em agente MANUAL: a
+      # instrução dele é a que o dono escreveu, e a gerada pelo Construtor ficaria visível no GET e no histórico.
+      # A API devolve 422 com `autonomia.agents.modo_manual`.
+      class ModoManual < StandardError; end
 
       # Tetos PRÓPRIOS de `tone` e `instruction`. O ApplicationRecord aplica um teto genérico
       # anti-DOS a toda coluna de texto (255 para string, 20.000 para text) e só sai da frente
@@ -204,6 +215,12 @@ module Autonomia
         raise InstrucaoMantida if instrucao_mantida?
       end
 
+      # A guarda do Construtor contra agente manual (#1514): na porta (build_threads), no fechamento e de novo
+      # sob a trava do agente, que é o último lugar antes da escrita (pode ter passado a manual durante a geração).
+      def recusar_se_modo_manual!
+        raise ModoManual if manual?
+      end
+
       # A INSTRUÇÃO QUE VAI AO MODELO (#380). Para o Agente de Cotação é o arquivo do deploy com as
       # escolhas da corretora guardadas em `config` (`QuoteAgent::Builder.instrucao_do_principal`):
       # um agente já criado recebe o texto novo sem ser recriado, como o especialista desde a
@@ -228,8 +245,11 @@ module Autonomia
       # ainda for o token da geração corrente (idempotência anti-supersede). `attrs` já vem mapeado
       # do schema do Builder para colunas (incluindo instruction/scaffold ocultos). Retorna true se
       # esta geração ganhou a escrita.
-      def apply_builder_config!(build_token, attrs)
+      # `esperado` (#1428, correção do ajuste do piloto): o updated_at que a escrita espera achar, conferido sob a trava;
+      # se o agente mudou por outro caminho (uma volta de versão), não escreve e devolve :agente_mudou.
+      def apply_builder_config!(build_token, attrs, esperado: nil)
         recusar_se_instrucao_mantida!
+        recusar_se_modo_manual!
         return false if build_token.blank?
 
         transaction do
@@ -247,8 +267,8 @@ module Autonomia
 
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
-          # cada "Ajustar com IA".
-          apply_builder_attributes!(attrs)
+          # cada "Ajustar com IA". A versão da aplicação leva como autor quem conversava (#1428).
+          apply_builder_attributes!(attrs, thread.created_by_id, esperado)
         end
       end
 
@@ -283,53 +303,21 @@ module Autonomia
         token
       end
 
-      # G2 — grava um snapshot da instrução ATUAL persistida (auditoria best-effort). IDEMPOTENTE:
-      # no-op (retorna nil) se a base ainda não tem instrução OU se a última versão gravada já tem
-      # o mesmo hash — evita duplicatas quando o refresh produz texto idêntico. `reason` classifica
-      # a origem (kb_refresh/manual_edit/rollback); `created_by` = usuário que editou (nil = sistema).
-      def record_instruction_version!(reason:, created_by: nil)
-        current = instruction.to_s
-        return if current.blank?
-
-        digest = Digest::SHA256.hexdigest(current)
-        last = instruction_versions.order(created_at: :desc, id: :desc).first
-        return if last&.instruction_hash == digest
-
-        write_instruction_version!(current, digest, reason, created_by)
-      end
-
-      # G2 — ROLLBACK ATÔMICO: restaura `instruction` para o texto de `version` e grava um novo
-      # snapshot (reason 'rollback'). O agente não tem callbacks → update_columns é seguro e evita
-      # validações tocarem outros campos; setamos updated_at à mão. Guarda de tenancy: a versão TEM
-      # de pertencer a este agente (retorna false caso contrário). O snapshot de rollback é gravado
-      # SEM o dedup por hash: restaurar para um texto igual ao head atual ainda é um evento de
-      # auditoria distinto (o usuário pediu o rollback). Retorna truthy no sucesso.
-      def restore_instruction!(version, created_by: nil)
-        recusar_se_instrucao_mantida!
-        return false if version.blank? || version.autonomia_agent_id != id
-
-        # Atômico: restaurar a instrução e gravar o snapshot 'rollback' vivem na MESMA transação —
-        # se o insert do snapshot falhar, o update da instrução reverte junto (nunca fica restaurado
-        # sem versão correspondente).
-        transaction do
-          update_columns(instruction: version.instruction, updated_at: Time.current)
-          write_instruction_version!(
-            version.instruction, Digest::SHA256.hexdigest(version.instruction), 'rollback', created_by
-          )
-        end
-        true
-      end
-
       private
 
-      def apply_builder_attributes!(attrs)
+      def apply_builder_attributes!(attrs, autor_id, esperado = nil)
         with_lock do
           next false if deleted?
+          next :agente_mudou if esperado && updated_at.iso8601(6) != esperado
 
-          merged = attrs.dup
-          merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
-          update!(merged)
-          true
+          # Relido sob a trava: o agente pode ter passado a manual durante a geração (#1514).
+          recusar_se_modo_manual!
+          versionar_aplicacao_do_construtor(autor_id) do
+            merged = attrs.dup
+            merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
+            update!(merged)
+            true
+          end
         end
       end
 
@@ -374,14 +362,6 @@ module Autonomia
         return unless [agent_type_was, agent_type].include?('insurance_quote')
 
         errors.add(:agent_type, I18n.t('autonomia.agents.instrucao_mantida'))
-      end
-
-      # Cria a linha de versão (sem dedup — o dedup é responsabilidade do chamador público).
-      def write_instruction_version!(text, digest, reason, created_by)
-        instruction_versions.create!(
-          account_id: account_id, instruction: text, instruction_hash: digest,
-          reason: reason, created_by: created_by
-        )
       end
     end
   end

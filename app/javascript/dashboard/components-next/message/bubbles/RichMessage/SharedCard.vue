@@ -6,6 +6,7 @@
 import Icon from 'next/icon/Icon.vue';
 import BaseBubble from '../Base.vue';
 import ActionRow from './ActionRow.vue';
+import MapaDoWhatsapp from '../../../conversa-canal/midia/MapaDoWhatsapp.vue';
 
 defineProps({
   bubbleName: { type: String, required: true },
@@ -18,6 +19,10 @@ defineProps({
   note: { type: String, default: '' },
   actionLabel: { type: String, default: '' },
   actionHref: { type: String, default: '' },
+  // #1702: "lat,long" da localização; com a pele do WhatsApp, vira a miniatura do mapa.
+  mapa: { type: String, default: '' },
+  // #1709: uma linha a mais embaixo do detalhe (ex.: "Localização em tempo real"), só com a pele.
+  aviso: { type: String, default: '' },
 });
 </script>
 
@@ -30,16 +35,29 @@ defineProps({
           :class="iconBgColor"
         >
           <Icon :icon="icon" class="text-white size-4" />
+          <MapaDoWhatsapp v-if="mapa" :ponto="mapa" />
         </div>
         <div class="space-y-1 min-w-0">
           <div v-if="heading" class="text-sm text-n-slate-12 break-words">
             {{ heading }}
           </div>
-          <div v-if="title" class="text-sm text-n-slate-12 break-words">
+          <div
+            v-if="title"
+            class="text-sm text-n-slate-12 break-words"
+            data-titulo-do-cartao
+          >
             {{ title }}
           </div>
           <div v-if="detail" class="text-sm text-n-slate-11 break-words">
             {{ detail }}
+          </div>
+          <div
+            v-if="aviso"
+            class="flex items-center gap-1 text-[13px] text-[#666666] dark:text-[#A7A8A8]"
+            data-aviso-do-cartao
+          >
+            <span class="i-ph-broadcast size-4 shrink-0" aria-hidden="true" />
+            {{ aviso }}
           </div>
           <div
             v-if="note"

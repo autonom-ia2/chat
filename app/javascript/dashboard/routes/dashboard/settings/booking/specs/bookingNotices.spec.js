@@ -28,6 +28,13 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
 vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({
   default: { get: vi.fn() },
 }));
+// O bloco da autorização (#1612) tem spec própria (BookingNoticeAutorizacao.spec.js).
+vi.mock('../components/BookingNoticeAutorizacao.vue', async () => {
+  const { h } = await import('vue');
+  return {
+    default: { render: () => h('div', { 'data-notice-autorizacao': '' }) },
+  };
+});
 
 const body = text => ({ type: 'BODY', text });
 const template = (name, extra = {}) => ({

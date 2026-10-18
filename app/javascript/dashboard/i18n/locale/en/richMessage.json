@@ -59,6 +59,8 @@
     "REACT_WITH": "React with {emoji}",
     "MORE_EMOJIS": "More emojis",
     "REMOVE_REACTION": "Remove the business reaction",
+    "DELETE_FOR_EVERYONE": "Delete for everyone",
+    "DELETE_FOR_EVERYONE_CONFIRMATION": "The message will also disappear from the customer's WhatsApp. You cannot undo this action",
     "EDIT": "Edit",
     "EDIT_TITLE": "Edit message",
     "EDIT_DESCRIPTION": "The customer sees the message marked as edited on WhatsApp. You can edit for up to {minutes} minutes after sending.",

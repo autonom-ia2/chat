@@ -1,6 +1,6 @@
 # A lista de modelos guardada na caixa (`channel_whatsapp.message_templates`) tem vários escritores (#1382): o sync, a
-# tela de Modelos (`Manager`), os avisos do agendamento (`NoticeTemplates::Creator`) e a conferência no disparo da
-# campanha (`CampaignPauses::WhatsappDispatchGate`). Cada um lia a lista, esperava a Meta e gravava a lista inteira:
+# tela de Modelos (`Manager`), a criação pelo sistema (`Garantir`, também os modelos v2 dos avisos do agendamento) e
+# a conferência no disparo da campanha (`CampaignPauses::WhatsappDispatchGate`). Cada um lia a lista, esperava a Meta e gravava a lista inteira:
 # o último apagava o que os outros tinham gravado no meio. Aqui todos gravam do mesmo jeito: trava na linha do canal
 # (`SELECT … FOR UPDATE`, que também relê a lista; nenhuma chamada à Meta com a trava aberta) e troca só da entrada
 # do modelo, achada pelo id da Meta ou, sem id, pelo nome + idioma.
@@ -58,8 +58,8 @@ module Whatsapp::Templates::ChannelList
     end
   end
 
-  # A chave que a Meta garante única na WABA é nome + idioma (idioma sem diferenciar maiúscula, como o
-  # `Catalog.listed`): com nome dos dois lados, só ela decide. Assim um modelo apagado e criado de novo (outro id) troca
+  # A chave que a Meta garante única na WABA é nome + idioma (idioma sem diferenciar maiúscula, como faz a
+  # Meta): com nome dos dois lados, só ela decide. Assim um modelo apagado e criado de novo (outro id) troca
   # a entrada antiga, e um id repetido com outro nome (#1383: o stub da Graph devolvia o mesmo id para dois avisos)
   # nunca apaga outro modelo. Id só casa quando um dos lados vem sem nome e os dois têm id.
   def same?(entry, item)

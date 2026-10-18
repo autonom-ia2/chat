@@ -433,19 +433,22 @@
       "CONFIDENCE_HIGH": "Alta (transfere com frequência)",
       "CONFIDENCE_HINT": "Abaixo de {pct}% de confiança, o agente transfere a conversa para um humano em vez de arriscar.",
       "HISTORY": {
-        "TITLE": "Histórico da instrução",
-        "HINT": "Toda atualização automática e toda edição manual ficam salvas. Se algo sair errado, volte para uma versão anterior.",
+        "TITLE": "Histórico do agente",
+        "HINT": "O agente inteiro (instrução, tom, saudação e o resto) fica salvo quando você muda conversando, edita a instrução ou volta a uma versão, e quando os arquivos o atualizam. Se algo sair errado, volte para uma versão anterior.",
         "LOADING": "Carregando histórico…",
         "EMPTY": "Ainda não há versões.",
         "META": "{date} · {author}",
         "RESTORE": "Restaurar",
         "REASON": {
+          "BUILDER": "Mudado conversando",
           "KB_REFRESH": "Atualização da base de conhecimento",
           "MANUAL_EDIT": "Edição manual",
-          "ROLLBACK": "Versão restaurada"
+          "ROLLBACK": "Versão restaurada",
+          "BASE": "Como estava antes de mudar conversando",
+          "BEFORE_ROLLBACK": "Como estava antes de voltar"
         },
-        "LOAD_ERROR": "Não foi possível carregar o histórico da instrução.",
-        "RESTORE_SUCCESS": "Instrução restaurada.",
+        "LOAD_ERROR": "Não foi possível carregar o histórico do agente.",
+        "RESTORE_SUCCESS": "Agente restaurado como estava nesta versão.",
         "RESTORE_ERROR": "Não foi possível restaurar esta versão. Tente de novo."
       }
     },
@@ -1319,6 +1322,7 @@
           "VOCE": "Você:",
           "CONVERSA": "Conversa",
           "FEITO": "Pronto. {nome} já usa o que você contou.",
+          "PARCIAL": "Parte do que você pediu já entrou. {nome} já usa essa parte.",
           "NOME_NOVO": "O nome agora é {nome}.",
           "VOLTAR_NOME": "Voltar para {nome}",
           "JEITO_NOVO": "O jeito de falar também mudou. Teste ao lado.",
@@ -1369,7 +1373,8 @@
           "LISTA": "Jeitos de responder, do mais novo para o mais antigo",
           "CARREGANDO": "Carregando os jeitos anteriores",
           "MOTIVO": {
-            "KB_REFRESH": "Mudou sozinho quando os arquivos e sites mudaram",
+            "BUILDER": "Mudado conversando",
+            "KB_REFRESH": "Atualizado pelos arquivos e sites",
             "MANUAL_EDIT": "Escrito por você",
             "ROLLBACK": "Voltou a um jeito anterior",
             "ROLLBACK_DE": "Voltou ao jeito de {quando}"

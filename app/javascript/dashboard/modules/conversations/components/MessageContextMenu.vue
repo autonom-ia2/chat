@@ -17,6 +17,9 @@ import { useTrack } from 'dashboard/composables';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import ReportCaptainMessageDialog from './ReportCaptainMessageDialog.vue';
 import ReportAgentMessageDialog from './ReportAgentMessageDialog.vue';
+import { baixarAudio } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
+import { ABRIR_REACOES } from 'dashboard/components-next/conversa-canal/reacaoDoAtendente';
+import { emitter } from 'shared/helpers/mitt';
 
 export default {
   components: {
@@ -49,7 +52,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open', 'close', 'replyTo', 'react', 'edit'],
+  emits: ['open', 'close', 'replyTo', 'encaminhar', 'react', 'edit'],
   setup() {
     const { getPlainText } = useMessageFormatter();
 
@@ -81,6 +84,20 @@ export default {
     messageContent() {
       return this.message.content;
     },
+    // chat#1709: apagar no painel apaga também no WhatsApp do cliente.
+    isRevocable() {
+      return (this.message.c2y_revocable ?? this.message.c2yRevocable) === true;
+    },
+    deleteLabel() {
+      return this.isRevocable
+        ? this.$t('MESSAGE_ACTIONS.DELETE_FOR_EVERYONE')
+        : this.$t('CONVERSATION.CONTEXT_MENU.DELETE');
+    },
+    deleteConfirmationMessage() {
+      return this.isRevocable
+        ? this.$t('MESSAGE_ACTIONS.DELETE_FOR_EVERYONE_CONFIRMATION')
+        : this.$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.MESSAGE');
+    },
     contentAttributes() {
       return useSnakeCase(
         this.message.content_attributes ?? this.message.contentAttributes
@@ -102,6 +119,16 @@ export default {
       );
       useAlert(this.$t('CONVERSATION.CONTEXT_MENU.LINK_COPIED'));
       this.handleClose();
+    },
+    // #1702: o áudio no balão do WhatsApp não tem botão de baixar; fica aqui.
+    handleBaixarAudio() {
+      baixarAudio(this.message.audioParaBaixar);
+      this.handleClose();
+    },
+    // #1702: abre a barra de reações ao lado do balão (BotaoDeReagir).
+    handleReagir() {
+      this.handleClose();
+      emitter.emit(ABRIR_REACOES, { messageId: this.messageId });
     },
     async handleCopy() {
       await copyTextToClipboard(this.plainTextContent);
@@ -138,6 +165,11 @@ export default {
       }
       this.handleClose();
     },
+    // #1702: entra no modo seleção do encaminhar, com esta mensagem marcada.
+    handleEncaminhar() {
+      this.handleClose();
+      this.$emit('encaminhar');
+    },
     handleReplyTo() {
       this.$emit('replyTo', this.message);
       this.handleClose();
@@ -156,15 +188,33 @@ export default {
       this.showDeleteModal = true;
     },
     async confirmDeletion() {
-      try {
-        await this.$store.dispatch('deleteMessage', {
-          conversationId: this.conversationId,
-          messageId: this.messageId,
-        });
+      // #1702: no álbum da pele do WhatsApp, apagar leva todos os itens dele.
+      const ids = this.message.idsDoAlbum?.length
+        ? this.message.idsDoAlbum
+        : [this.messageId];
+      // Cada item à parte: se um falhar, os outros não ficam "em voo" sem aviso.
+      const resultados = await Promise.allSettled(
+        ids.map(messageId =>
+          this.$store.dispatch('deleteMessage', {
+            conversationId: this.conversationId,
+            messageId,
+          })
+        )
+      );
+      const falhas = resultados.filter(r => r.status === 'rejected').length;
+      if (falhas === 0) {
         useAlert(this.$t('CONVERSATION.SUCCESS_DELETE_MESSAGE'));
         this.handleClose();
-      } catch (error) {
+      } else if (falhas === ids.length) {
         useAlert(this.$t('CONVERSATION.FAIL_DELETE_MESSSAGE'));
+      } else {
+        useAlert(
+          this.$t('CONVERSA_CANAL.ALBUM.APAGADAS_EM_PARTE', {
+            apagadas: ids.length - falhas,
+            total: ids.length,
+          })
+        );
+        this.handleClose();
       }
     },
     closeDeleteModal() {
@@ -204,7 +254,7 @@ export default {
       :on-close="closeDeleteModal"
       :on-confirm="confirmDeletion"
       :title="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.TITLE')"
-      :message="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.MESSAGE')"
+      :message="deleteConfirmationMessage"
       :confirm-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.DELETE')"
       :reject-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.CANCEL')"
     />
@@ -234,6 +284,24 @@ export default {
           @click.stop="handleReplyTo"
         />
         <MenuItem
+          v-if="enabledOptions['reagir']"
+          :option="{
+            icon: 'emoji-add',
+            label: $t('CONVERSA_CANAL.REAGIR.MENU'),
+          }"
+          variant="icon"
+          @click.stop="handleReagir"
+        />
+        <MenuItem
+          v-if="enabledOptions['encaminhar']"
+          :option="{
+            icon: 'share',
+            label: $t('CONVERSA_CANAL.ENCAMINHAR.MENU'),
+          }"
+          variant="icon"
+          @click.stop="handleEncaminhar"
+        />
+        <MenuItem
           v-if="enabledOptions['react']"
           :option="{
             icon: 'emoji-add',
@@ -259,6 +327,15 @@ export default {
           }"
           variant="icon"
           @click.stop="handleCopy"
+        />
+        <MenuItem
+          v-if="enabledOptions['baixarAudio']"
+          :option="{
+            icon: 'arrow-download',
+            label: $t('CONVERSA_CANAL.AUDIO.BAIXAR'),
+          }"
+          variant="icon"
+          @click.stop="handleBaixarAudio"
         />
         <MenuItem
           v-if="enabledOptions['translate']"
@@ -313,7 +390,7 @@ export default {
           v-if="enabledOptions['delete']"
           :option="{
             icon: 'delete',
-            label: $t('CONVERSATION.CONTEXT_MENU.DELETE'),
+            label: deleteLabel,
           }"
           variant="icon"
           @click.stop="openDeleteModal"

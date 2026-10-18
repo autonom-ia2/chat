@@ -54,6 +54,28 @@ import MessageReactions from './actions/MessageReactions.vue';
 import EditedMark from './actions/EditedMark.vue';
 import MessageActionDialogs from './actions/MessageActionDialogs.vue';
 import { canEdit, canReact } from './actions/messageActions.js';
+import { useAudioParaBaixar } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
+import AlbumDoWhatsapp from 'dashboard/components-next/conversa-canal/album/AlbumDoWhatsapp.vue';
+import {
+  useAlbumDaMensagem,
+  useContatosDaMensagem,
+} from 'dashboard/components-next/conversa-canal/album/useAlbuns';
+import ContatosDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/ContatosDoWhatsapp.vue';
+import { usePele } from 'dashboard/components-next/conversa-canal/pele';
+import { mensagemDestacada } from 'dashboard/components-next/conversa-canal/destaqueDaCitada';
+import { balaoDaPele } from 'dashboard/components-next/conversa-canal/balaoDaPele';
+import LigacaoDoWhatsapp from 'dashboard/components-next/conversa-canal/ligacao/LigacaoDoWhatsapp.vue';
+import {
+  ligacaoDaCloudNoCartao,
+  resumoDaLigacao,
+} from 'dashboard/components-next/conversa-canal/ligacao/ligacao';
+import AvisoDeTemporarias from 'dashboard/components-next/conversa-canal/temporarias/AvisoDeTemporarias.vue';
+import { avisoDeTemporarias } from 'dashboard/components-next/conversa-canal/temporarias/temporarias';
+import BotaoDeReagir from 'dashboard/components-next/conversa-canal/BotaoDeReagir.vue';
+import { useReacaoDoAtendente } from 'dashboard/components-next/conversa-canal/useReacaoDoAtendente';
+import BotaoDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/BotaoDeEncaminhar.vue';
+import MarcaDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/MarcaDeEncaminhar.vue';
+import { useEncaminharDaMensagem } from 'dashboard/components-next/conversa-canal/encaminhar/useEncaminharDaMensagem';
 import { useBranding } from 'shared/composables/useBranding';
 
 /**
@@ -127,6 +149,8 @@ const props = defineProps({
   call: { type: Object, default: null }, // eslint-disable-line vue/no-unused-properties
   content: { type: String, default: null },
   contentAttributes: { type: Object, default: () => ({}) },
+  // chat#1709: apagar no painel apaga também no WhatsApp do cliente ("Apagar para todos").
+  c2yRevocable: { type: Boolean, default: false },
   contentType: {
     type: String,
     default: 'text',
@@ -335,6 +359,27 @@ const shouldShowAvatar = computed(() => {
 // chat#1473: formato rico enviado ao cliente (botão de link e os próximos tipos).
 // Tipo sem bolha própria devolve null e a mensagem segue pelo caminho de antes.
 const richMessageBubble = computed(() => richMessageBubbleFor(props));
+// #1702: com a pele do WhatsApp, fotos e vídeos mandados juntos viram um álbum.
+const album = useAlbumDaMensagem(computed(() => props.id));
+// #1702: contatos mandados de uma vez (uma mensagem por contato) viram um cartão só.
+const contatosJuntos = useContatosDaMensagem(computed(() => props.id));
+// #1702: enquete, pedido, vários contatos, só emoji e aviso por tipo (só com a pele).
+const pele = usePele();
+const balaoDoWhatsapp = computed(() =>
+  pele.value ? balaoDaPele(props) : null
+);
+// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+const destacadaPelaCitacao = computed(
+  () => !!pele.value && mensagemDestacada.value === props.id
+);
+// #1702: o aviso de ligação vira o cartão de ligação do app (só com a pele).
+const ligacao = computed(
+  () => !!pele.value && !!resumoDaLigacao(props.contentAttributes)
+);
+// #1709: o aviso de mensagens temporárias vira a frase do app (só com a pele).
+const temporarias = computed(
+  () => !!pele.value && !!avisoDeTemporarias(props.contentAttributes)
+);
 
 const componentToRender = computed(() => {
   if (props.isEmailInbox && !props.private) {
@@ -345,6 +390,10 @@ const componentToRender = computed(() => {
   if (props.contentAttributes?.whatsappFlowResponse) {
     return WhatsappFlowResponseBubble;
   }
+
+  if (contatosJuntos.value) return ContatosDoWhatsapp;
+
+  if (balaoDoWhatsapp.value) return balaoDoWhatsapp.value;
 
   if (richMessageBubble.value) return richMessageBubble.value;
 
@@ -359,7 +408,15 @@ const componentToRender = computed(() => {
   }
 
   if (props.contentType === CONTENT_TYPES.VOICE_CALL) {
-    return VoiceCallBubble;
+    // #1702: com a pele, a ligação encerrada da Cloud vira o cartão do app (ligacao.js).
+    const noCartao =
+      pele.value &&
+      ligacaoDaCloudNoCartao({
+        chamada: props.call,
+        enviada: props.messageType === MESSAGE_TYPES.OUTGOING,
+        anexos: props.attachments,
+      });
+    return noCartao ? LigacaoDoWhatsapp : VoiceCallBubble;
   }
 
   if (props.contentType === CONTENT_TYPES.INCOMING_EMAIL) {
@@ -383,6 +440,8 @@ const componentToRender = computed(() => {
   if (instagramSharedTypes.includes(props.contentAttributes.imageType)) {
     return InstagramStoryBubble;
   }
+
+  if (album.value) return AlbumDoWhatsapp;
 
   if (Array.isArray(props.attachments) && props.attachments.length === 1) {
     const fileType = props.attachments[0].fileType;
@@ -433,13 +492,64 @@ const shouldShowWhatsappReferral = computed(
     variant.value === MESSAGE_VARIANTS.USER &&
     !!props.contentAttributes?.referral
 );
+// #1702: com a pele, o anúncio é citação dentro do balão (OrigemDaMensagem), e o
+// cartão de fora some (sem ele, a linha não vira coluna e reagir/encaminhar ficam ao lado).
+// A citação mora no Base.vue: balão que não passa por ele (o cartão de ligação) não a
+// desenha, e o anúncio continua no cartão de fora para não sumir.
+const BALOES_SEM_ORIGEM = [LigacaoDoWhatsapp];
+const anuncioForaDoBalao = computed(
+  () =>
+    shouldShowWhatsappReferral.value &&
+    (!pele.value || BALOES_SEM_ORIGEM.includes(componentToRender.value))
+);
+
+// #1702: com a pele do WhatsApp, "Baixar" do áudio fica no menu da mensagem.
+const audioParaBaixar = useAudioParaBaixar(computed(() => props.attachments));
+
+// #1702: com a pele do WhatsApp, o atendente reage ao balão (botão ao lado e menu).
+const reacaoDoAtendente = useReacaoDoAtendente(
+  computed(() => ({
+    id: props.id,
+    messageType: props.messageType,
+    isPrivate: props.private,
+    status: props.status,
+    sourceId: props.sourceId,
+    contentAttributes: props.contentAttributes,
+    conversationId: props.conversationId,
+    inboxId: props.inboxId,
+  }))
+);
+
+// #1702: encaminhar como no WhatsApp Web (menu, botão ao lado da mídia, modo seleção).
+const mensagemParaEncaminhar = computed(() => ({
+  id: props.id,
+  conversationId: props.conversationId,
+  messageType: props.messageType,
+  contentType: props.contentType,
+  status: props.status,
+  private: props.private,
+  content: props.content,
+  contentAttributes: props.contentAttributes,
+  additionalAttributes: props.additionalAttributes,
+  attachments: props.attachments,
+}));
+// O álbum leva os itens dele; só os encaminháveis entram (o composable filtra).
+const encaminhar = useEncaminharDaMensagem(
+  mensagemParaEncaminhar,
+  computed(() => album.value || [mensagemParaEncaminhar.value])
+);
 
 const payloadForContextMenu = computed(() => {
   return {
+    audioParaBaixar: audioParaBaixar.value,
+    // #1702: no álbum (e nos contatos do mesmo envio), apagar age em todos os itens.
+    idsDoAlbum:
+      (album.value || contatosJuntos.value)?.map(item => item.id) || null,
     id: props.id,
     content_attributes: props.contentAttributes,
     content: props.content,
     conversation_id: props.conversationId,
+    c2y_revocable: props.c2yRevocable,
   };
 });
 
@@ -470,7 +580,12 @@ const contextMenuEnabledOptions = computed(() => {
       isCaptainMessage.value &&
       !isMessageDeleted.value,
     reportAgent: isAutonomiaAgentMessage.value && !isMessageDeleted.value,
-    react: isReactable.value,
+    baixarAudio: !!audioParaBaixar.value && !isMessageDeleted.value,
+    reagir:
+      reacaoDoAtendente.visivel.value && !reacaoDoAtendente.bloqueado.value,
+    encaminhar: encaminhar.noMenu.value,
+    // #1709: com a pele vale o "Reagir" dela (acima); o "Editar" do #1709 vale sempre.
+    react: isReactable.value && !pele.value,
     edit: isEditable.value,
   };
 });
@@ -494,6 +609,7 @@ const shouldRenderMessage = computed(() => {
     isAnIntegrationMessage ||
     hasWhatsappFlowResponse ||
     !!richMessageBubble.value ||
+    !!balaoDoWhatsapp.value ||
     shouldShowWhatsappReferral.value ||
     isFailedMessage ||
     hasExternalError
@@ -618,11 +734,25 @@ provideMessageContext({
       {
         'group-with-next': shouldGroupWithNext,
         'bg-n-alpha-1': showBackgroundHighlight,
+        'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
+        'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
+        'transition-colors duration-500': pele,
+        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
       },
     ]"
   >
-    <div v-if="variant === MESSAGE_VARIANTS.ACTIVITY">
-      <ActivityBubble :content="content" />
+    <MarcaDeEncaminhar
+      v-if="encaminhar.emSelecao.value && encaminhar.podeEncaminhar.value"
+      :marcada="encaminhar.marcada.value"
+      @alternar="encaminhar.alternar"
+    />
+    <div
+      v-if="variant === MESSAGE_VARIANTS.ACTIVITY"
+      :class="{ 'flex w-full justify-start': ligacao }"
+    >
+      <LigacaoDoWhatsapp v-if="ligacao" />
+      <AvisoDeTemporarias v-else-if="temporarias" />
+      <ActivityBubble v-else :content="content" />
     </div>
     <div
       v-else
@@ -646,14 +776,14 @@ provideMessageContext({
         <Avatar v-bind="avatarInfo" :size="24" />
       </div>
       <div
-        class="[grid-area:bubble] flex min-w-0"
+        class="[grid-area:bubble] flex min-w-0 group/linha"
         :class="{
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
-          'flex-col items-start gap-2': shouldShowWhatsappReferral,
-          'flex-col gap-1': isCampaignMessage || hasMessageExtras,
+          'flex-col items-start gap-2': anuncioForaDoBalao,
+          'flex-col gap-1': isCampaignMessage || (hasMessageExtras && !pele),
           'items-end':
-            (isCampaignMessage || hasMessageExtras) &&
+            (isCampaignMessage || (hasMessageExtras && !pele)) &&
             orientation === ORIENTATION.RIGHT,
         }"
         @contextmenu="openContextMenu($event)"
@@ -663,17 +793,32 @@ provideMessageContext({
           :additional-attributes="additionalAttributes"
         />
         <WhatsappReferral
-          v-if="shouldShowWhatsappReferral"
+          v-if="anuncioForaDoBalao"
           :referral="contentAttributes.referral"
         />
         <Component :is="componentToRender" />
+        <BotaoDeReagir
+          v-if="reacaoDoAtendente.visivel.value"
+          :mensagem-id="id"
+          :lado="orientation"
+          :atual="reacaoDoAtendente.atual.value"
+          :bloqueado="reacaoDoAtendente.bloqueado.value"
+          :enviando="reacaoDoAtendente.enviando.value"
+          @reagir="reacaoDoAtendente.reagir"
+        />
+        <BotaoDeEncaminhar
+          v-if="encaminhar.botaoAoLado.value"
+          :lado="orientation"
+          @encaminhar="encaminhar.encaminharDireto"
+        />
+        <!-- #1709: com a pele valem o RotuloEditada e o SeloDeReacoes dela. -->
         <EditedMark
-          v-if="isEdited"
+          v-if="isEdited && !pele"
           :history="contentAttributes.editHistory"
           :current-user-id="currentUserId"
         />
         <MessageReactions
-          v-if="messageReactions.length"
+          v-if="messageReactions.length && !pele"
           :reactions="messageReactions"
           :current-user-id="currentUserId"
         />
@@ -697,6 +842,7 @@ provideMessageContext({
         @open="openContextMenu"
         @close="closeContextMenu"
         @reply-to="handleReplyTo"
+        @encaminhar="encaminhar.iniciarSelecao"
         @react="messageActionDialogs?.openReaction()"
         @edit="messageActionDialogs?.openEdit()"
       />

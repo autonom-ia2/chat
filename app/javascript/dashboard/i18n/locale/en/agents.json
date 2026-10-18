@@ -433,19 +433,22 @@
       "CONFIDENCE_HIGH": "High (hands off often)",
       "CONFIDENCE_HINT": "Below {pct}% confidence, the agent hands the conversation to a human instead of guessing.",
       "HISTORY": {
-        "TITLE": "Instruction history",
-        "HINT": "Every automatic refresh and manual edit is saved. Restore a previous version if something goes wrong.",
+        "TITLE": "Agent history",
+        "HINT": "The whole agent (instruction, tone, greeting and the rest) is saved when you change it by chatting, edit the instruction or go back to a version, and when the files update it. Restore a previous version if something goes wrong.",
         "LOADING": "Loading history…",
         "EMPTY": "No versions yet.",
         "META": "{date} · {author}",
         "RESTORE": "Restore",
         "REASON": {
+          "BUILDER": "Changed by chatting",
           "KB_REFRESH": "Knowledge base update",
           "MANUAL_EDIT": "Manual edit",
-          "ROLLBACK": "Restored version"
+          "ROLLBACK": "Restored version",
+          "BASE": "As it was before changing by chatting",
+          "BEFORE_ROLLBACK": "As it was before going back"
         },
-        "LOAD_ERROR": "We couldn't load the instruction history.",
-        "RESTORE_SUCCESS": "Instruction restored.",
+        "LOAD_ERROR": "We couldn't load the agent history.",
+        "RESTORE_SUCCESS": "Agent restored to how it was in this version.",
         "RESTORE_ERROR": "We couldn't restore this version. Please try again."
       }
     },
@@ -1319,6 +1322,7 @@
           "VOCE": "You:",
           "CONVERSA": "Conversation",
           "FEITO": "Done. {nome} already uses what you told.",
+          "PARCIAL": "Part of what you asked already went in. {nome} already uses it.",
           "NOME_NOVO": "The name is now {nome}.",
           "VOLTAR_NOME": "Go back to {nome}",
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
@@ -1369,7 +1373,8 @@
           "LISTA": "Ways of answering, newest first",
           "CARREGANDO": "Loading the previous ways",
           "MOTIVO": {
-            "KB_REFRESH": "Changed on its own when the files and websites changed",
+            "BUILDER": "Changed by chatting",
+            "KB_REFRESH": "Updated from the files and websites",
             "MANUAL_EDIT": "Written by you",
             "ROLLBACK": "Went back to a previous way",
             "ROLLBACK_DE": "Went back to the way from {quando}"

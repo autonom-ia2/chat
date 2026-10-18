@@ -72,9 +72,12 @@ export const getters = {
     // Sendable-template filtering is shared with the mobile app via @chatwoot/utils.
     return templates.filter(isSendableTemplate);
   },
-  // Fork #1703: envio a uma pessoa, sem produto nem carrossel.
-  getConversationWhatsAppTemplates: (_state, $getters) => inboxId =>
-    $getters.getFilteredWhatsAppTemplates(inboxId).filter(vaiNaConversa),
+  // Fork #1703: envio a uma pessoa, sem produto nem carrossel; #1716: a conversa
+  // pede os que ela sabe completar (`opcoes.completa`).
+  getConversationWhatsAppTemplates: (_state, $getters) => (inboxId, opcoes) =>
+    $getters
+      .getFilteredWhatsAppTemplates(inboxId)
+      .filter(template => vaiNaConversa(template, opcoes)),
   getNewConversationInboxes($state) {
     return $state.records.filter(inbox => {
       const { channel_type: channelType, phone_number: phoneNumber = '' } =

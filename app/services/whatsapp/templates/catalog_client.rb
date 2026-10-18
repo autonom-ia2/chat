@@ -17,23 +17,32 @@ class Whatsapp::Templates::CatalogClient
   class NoCatalog < StandardError; end
 
   Catalog = Data.define(:id, :name, :product_count)
-  Product = Data.define(:id, :name, :price, :image_url, :available)
+  # sale_price: o preço de promoção que o cliente vê agora; '' sem promoção ou fora do período dela (#1716).
+  Product = Data.define(:id, :name, :price, :sale_price, :image_url, :available)
   Page = Data.define(:products, :after)
 
   REQUEST_TIMEOUT = 10
   PAGE_SIZE = 50
   FIND_LIMIT = 100
   CATALOG_TTL = 5.minutes
-  PRODUCT_FIELDS = 'retailer_id,name,price,image_url,availability'.freeze
+  PRODUCT_FIELDS = 'retailer_id,name,price,sale_price,sale_price_start_date,sale_price_end_date,image_url,availability'.freeze
   # Vendável: `availability` da Meta (enum: in stock, out of stock, preorder, available for order, discontinued, pending,
   # mark_as_sold, mark_as_expired — developers.facebook.com/docs/marketing-api/reference/product-item/, lido em
   # 15/10/2026). Encomenda e pré-venda também se compram; o resto fica de fora.
   SELLABLE = ['in stock', 'available for order', 'preorder'].freeze
+  # Promoção (#1716): o catálogo guarda o período em `sale_price_effective_date` (dois horários ISO-8601, "início/fim";
+  # sem ele, a promoção vale até ser tirada — developers.facebook.com/docs/commerce-platform/catalog/fields/, página
+  # atualizada em 05/10/2026, lida em 16/10/2026). A Graph devolve o período em `sale_price_start_date` e
+  # `sale_price_end_date` (developers.facebook.com/docs/marketing-api/reference/product-item/, lida em 16/10/2026).
+  # Fora do período, o cliente vê o preço cheio; data que não se lê também deixa o preço cheio (nunca promete promoção).
 
-  def initialize(inbox:)
+  # timeout/insistir: a foto do envio (#1717) pergunta com prazo curto e uma tentativa só, para não segurar o envio.
+  def initialize(inbox:, timeout: REQUEST_TIMEOUT, insistir: true)
     raise Whatsapp::Templates::MetaClient::Unsupported unless Whatsapp::Templates::MetaClient.supported?(inbox)
 
     @inbox = inbox
+    @timeout = timeout
+    @insistir = insistir
   end
 
   # O catálogo da WABA da caixa, ou nil. Guardado por alguns minutos para a tela; o disparo pede `fresh: true`.
@@ -53,10 +62,11 @@ class Whatsapp::Templates::CatalogClient
 
   # Os produtos aprovados, pelo código (retailer_id), para conferir no disparo: o que não volta não está aprovado ou
   # saiu do catálogo. { código => Product }.
-  def find(ids)
+  # catalog_id: o catálogo já conhecido (a foto do envio, #1717) poupa a leitura do catálogo da WABA.
+  def find(ids, catalog_id: nil)
     filter = { retailer_id: { is_any: Array(ids).map(&:to_s) } }.to_json
     query = { fields: PRODUCT_FIELDS, limit: FIND_LIMIT, filter: filter, return_only_approved_products: true }
-    items(get("#{catalog_id!}/products", query)).index_by(&:id)
+    items(get("#{catalog_id || catalog_id!}/products", query)).index_by(&:id)
   end
 
   private
@@ -80,19 +90,49 @@ class Whatsapp::Templates::CatalogClient
 
   def items(body)
     Array(body['data']).select { |row| row.is_a?(Hash) && row['retailer_id'].present? }.map do |row|
-      Product.new(id: row['retailer_id'].to_s, name: row['name'].to_s, price: row['price'].to_s, image_url: row['image_url'].to_s,
-                  available: SELLABLE.include?(row['availability'].to_s.strip.downcase))
+      Product.new(id: row['retailer_id'].to_s, name: row['name'].to_s, price: row['price'].to_s, sale_price: sale_price(row),
+                  image_url: row['image_url'].to_s, available: SELLABLE.include?(row['availability'].to_s.strip.downcase))
     end
   end
 
-  def get(path, query)
-    with_retry do
-      response = HTTParty.get(graph_url(path), query: query, headers: headers, timeout: REQUEST_TIMEOUT)
-      next payload(response) if response.success?
+  def sale_price(row)
+    price = row['sale_price'].to_s.strip
+    price.present? && on_sale?(row, Time.current) ? price : ''
+  end
 
-      retry_later!(response)
-      fail_with(response)
-    end
+  def on_sale?(row, now)
+    start = sale_date(row['sale_price_start_date'])
+    finish = sale_date(row['sale_price_end_date'], last_moment: true)
+    return false if [start, finish].include?(:unreadable)
+
+    (start.nil? || now >= start) && (finish.nil? || now <= finish)
+  end
+
+  # nil sem data (sem limite); :unreadable quando a data não se lê. O fim só com o dia vale o dia inteiro.
+  def sale_date(value, last_moment: false)
+    text = value.to_s.strip
+    return if text.empty?
+
+    time = Time.zone.parse(text)
+    return :unreadable unless time
+
+    last_moment && text.exclude?('T') ? time.end_of_day : time
+  rescue ArgumentError
+    :unreadable
+  end
+
+  def get(path, query)
+    return request(path, query) unless @insistir
+
+    with_retry { request(path, query) }
+  end
+
+  def request(path, query)
+    response = HTTParty.get(graph_url(path), query: query, headers: headers, timeout: @timeout)
+    return payload(response) if response.success?
+
+    retry_later!(response)
+    fail_with(response)
   end
 
   def cache_key

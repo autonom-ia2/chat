@@ -14,6 +14,8 @@
     "CALLS_PAGE.FILTERS.MISSED": "Ligação perdida (não atendida).",
     "CALLS_PAGE.STATUS.MISSED": "Ligação perdida (não atendida).",
     "CONVERSATION.VOICE_CALL.MISSED_CALL": "Ligação perdida (não atendida).",
+    "CONVERSA_CANAL.LIGACAO.VOZ_PERDIDA": "Ligação perdida (não atendida), no cartão de ligação da pele do WhatsApp.",
+    "CONVERSA_CANAL.LIGACAO.VIDEO_PERDIDA": "Ligação perdida (não atendida), no cartão de ligação da pele do WhatsApp.",
     "CONVERSATION.HEADER.SLA_STATUS.MISSED": "Prazo de SLA perdido; atendimento, não venda.",
     "INBOX.TYPES.SLA_MISSED_FIRST_RESPONSE": "Prazo de SLA perdido; atendimento, não venda.",
     "INBOX.TYPES.SLA_MISSED_NEXT_RESPONSE": "Prazo de SLA perdido; atendimento, não venda.",

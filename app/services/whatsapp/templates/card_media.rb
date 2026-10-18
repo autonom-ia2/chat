@@ -51,7 +51,29 @@ module Whatsapp::Templates::CardMedia
     files = pending.index_with { |index| file_for(headers[index], profile, index) }
     return if files.values.any?(&:nil?)
 
-    files.transform_values { |file| Whatsapp::Templates::HeaderMedia.signed_media(file) }
+    files.transform_values { |file| dispatch_media(file) }
+  end
+
+  # O link assinado vai à Meta e a referência assinada fica para a foto do envio (#1717): `HeaderMedia.dispatch_file`.
+  # A Meta não a recebe (`SendComponents#card_payload`).
+  def dispatch_media(file)
+    Whatsapp::Templates::HeaderMedia.dispatch_file(file.is_a?(ActiveStorage::Blob) ? file : file.blob)
+  end
+
+  # Os arquivos guardados no perfil do modelo, na ordem dos cartões, para a lista de Modelos (#1334). Foto também leva a
+  # miniatura (link de leitura assinado, que expira) e a referência do arquivo (#1716), que também expira: a conversa
+  # monta a galeria do modelo e manda a referência como um arquivo escolhido (`media_blob`), conferido em `header` como
+  # qualquer outro (só desta conta, do tipo e do tamanho certos).
+  def listed(profile)
+    profile.card_files.map { |file| listed_file(file) }.sort_by { |media| media['card_index'] }
+  end
+
+  def listed_file(file)
+    row = { 'card_index' => file.blob.metadata['card_index'].to_i, 'file_name' => file.filename.to_s }
+    return row unless file.content_type.to_s.start_with?('image/')
+
+    row.merge('preview_url' => Whatsapp::Templates::HeaderMedia.signed_media(file)['media_url'],
+              'blob_signed_id' => file.blob.signed_id(expires_in: Whatsapp::Templates::HeaderMedia::URL_TTL))
   end
 
   def headers_of(processed)

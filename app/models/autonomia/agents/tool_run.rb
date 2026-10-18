@@ -128,6 +128,8 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
       create!(account: agent.account, agent: agent, slug: slug, faixa: faixa, status: 'pending',
               conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
               origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
+              # Memória das IAs (#1601, W5): o card em foco na abertura recebe o resultado (só com a flag).
+              card_id: Crm::Memoria::DaFerramenta.card_da_abertura(agent.account, scope[:conversation_id]),
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
     end
   rescue ActiveRecord::RecordNotUnique
@@ -295,6 +297,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
     return false if updated.zero?
 
     reload
+    Crm::Memoria::DaFerramenta.depois_de_concluir(self)
     true
   end
 

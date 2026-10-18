@@ -45,8 +45,10 @@ module Crm
         @passar = passar
         @pelo_card = pelo_card
         regra = handoff_config.slice(:enabled, :trigger) if conjunta
+        # Memória das IAs (#1601): `memoria_ops` gravado no card ANTES de aplicar; o retry do job aplica sem pagar de novo.
+        Crm::Memoria::Pendente.guardar!(card: @card, classificacao: classification)
         result = apply_classification(classification)
-        return result if @pipeline_mudou
+        return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -54,6 +56,7 @@ module Crm
         run_callback(classification)
         attribute_extraction.apply(classification[:extracted_attributes])
         ScoreApplier.new(card: @card, signals: classification[:score_signals]).perform
+        Crm::Memoria::Pendente.aplicar!(@card)
         result
       end
 
@@ -63,7 +66,7 @@ module Crm
         # O funil do card no começo: a resposta do modelo é sobre as etapas DELE (#1711).
         @pipeline_inicial ||= @card.pipeline_id
         StageClassifier.new(
-          card: @card, client: client, stages: stages, context: ContextBuilder.new(card: @card, fora: fora).perform,
+          card: @card, client: client, stages: stages, context: contexto(fora),
           model: modelo, reasoning_effort: Config::CLASSIFY_REASONING_EFFORT,
           handoff_enabled: handoff_config[:enabled], handoff_trigger: handoff_config[:trigger],
           eligible_agents: eligible_agent_names, attribute_schema: attribute_extraction.schema
@@ -80,6 +83,9 @@ module Crm
       end
 
       private
+
+      # Memória das IAs (#1601): de carona nesta avaliação, só com a flag e num card com contato (ids locais e fatos).
+      def contexto(fora) = ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card)).perform
 
       def credential_resolver
         @credential_resolver ||= CredentialResolver.new(account: @account)

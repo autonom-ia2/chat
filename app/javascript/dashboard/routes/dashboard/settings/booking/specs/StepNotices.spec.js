@@ -2,11 +2,10 @@ import { config, mount, flushPromises } from '@vue/test-utils';
 import BookingPagesAPI from 'dashboard/api/crmBookingPages';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import StepNotices from '../components/steps/StepNotices.vue';
-import { POLL_MS } from '../useNoticeTemplateSuggestions';
 
 // Modelos de aviso do WhatsApp oficial (#1272): a sugestão da IA entra só nos
-// avisos vazios e mostra "Sugerido"; criar na Meta só no clique de quem pode,
-// com o estado de cada aviso (enviando, em aprovação, aprovado, recusado).
+// avisos vazios e mostra "Sugerido". O "Criar os modelos na Meta" (v1) saiu em
+// #1612: no Cloud, a tela mostra o que vale agora (BookingNoticeAutorizacao).
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, values) =>
@@ -16,13 +15,18 @@ vi.mock('vue-i18n', () => ({
 vi.mock('dashboard/api/crmBookingPages', () => ({
   default: {
     noticeTemplateSuggestions: vi.fn(),
-    noticeTemplateRequests: vi.fn(),
-    createNoticeTemplates: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({
   default: { get: vi.fn(() => Promise.resolve({ data: { payload: [] } })) },
 }));
+// O bloco da autorização tem spec própria (BookingNoticeAutorizacao.spec.js).
+vi.mock('../components/BookingNoticeAutorizacao.vue', async () => {
+  const { h } = await import('vue');
+  return {
+    default: { render: () => h('div', { 'data-notice-autorizacao': '' }) },
+  };
+});
 
 const approved = (name, text) => ({
   name,
@@ -64,35 +68,21 @@ const form = (extra = {}) => ({
 
 const reply = payload => Promise.resolve({ data: { payload } });
 const suggestionsReply = payload =>
-  reply({
-    suggestions: {},
-    requests: {},
-    can_create: false,
-    ai_failed: false,
-    ...payload,
-  });
+  reply({ suggestions: {}, ai_failed: false, ...payload });
 
-const mountStep = async (formValue = form()) => {
+const mountStep = async (formValue = form(), inboxOptions = [OFFICIAL]) => {
   const wrapper = mount(StepNotices, {
-    props: { form: formValue, inboxOptions: [OFFICIAL], pageId: PAGE_ID },
+    props: { form: formValue, inboxOptions, pageId: PAGE_ID },
   });
   await flushPromises();
   return wrapper;
 };
 
 const changes = wrapper => wrapper.emitted('change') || [];
-const stateText = (wrapper, kind) =>
-  wrapper.find(`[data-template-kind="${kind}"] [data-request-state]`);
 
-describe('StepNotices — modelos sugeridos e criados na Meta (#1272)', () => {
+describe('StepNotices — modelos sugeridos (#1272), sem criar na Meta (#1612)', () => {
   beforeEach(() => {
     BookingPagesAPI.noticeTemplateSuggestions.mockReset();
-    BookingPagesAPI.noticeTemplateRequests.mockReset();
-    BookingPagesAPI.createNoticeTemplates.mockReset();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   it('pede a sugestão dos avisos vazios e pré-seleciona sem sobrescrever a escolha da pessoa', async () => {
@@ -183,7 +173,6 @@ describe('StepNotices — modelos sugeridos e criados na Meta (#1272)', () => {
 
     expect(changes(wrapper)).toEqual([]);
     expect(wrapper.find('[data-suggested]').exists()).toBe(false);
-    expect(wrapper.find('[data-create-templates]').exists()).toBe(false);
   });
 
   it('não pede sugestão para caixa que não é oficial', async () => {
@@ -205,159 +194,33 @@ describe('StepNotices — modelos sugeridos e criados na Meta (#1272)', () => {
     expect(BookingPagesAPI.noticeTemplateSuggestions).not.toHaveBeenCalled();
   });
 
-  it('botão de criar só para quem pode e só com aviso sem mensagem que sirva', async () => {
-    BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({ can_create: false })
-    );
-    const manager = await mountStep();
-    expect(manager.find('[data-create-templates]').exists()).toBe(false);
-
-    BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({ can_create: true })
-    );
-    const admin = await mountStep();
-    expect(admin.find('[data-create-templates-button]').exists()).toBe(true);
-  });
-
-  it('cria só no clique e acompanha: enviando → em aprovação, sem recarregar', async () => {
-    vi.useFakeTimers();
-    BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({ can_create: true })
-    );
-    BookingPagesAPI.createNoticeTemplates.mockImplementation(() =>
-      reply({
-        queued: true,
-        requests: {
-          booked: { state: 'sending' },
-          rescheduled: { state: 'sending' },
-        },
-      })
-    );
-    BookingPagesAPI.noticeTemplateRequests.mockImplementation(() =>
-      reply({
-        requests: {
-          booked: { state: 'pending' },
-          rescheduled: { state: 'failed', reason: 'Reconecte a caixa.' },
-        },
-      })
-    );
-    const wrapper = await mountStep();
-    expect(BookingPagesAPI.createNoticeTemplates).not.toHaveBeenCalled();
-
-    await wrapper.find('[data-create-templates-button]').trigger('click');
-    await flushPromises();
-
-    expect(BookingPagesAPI.createNoticeTemplates).toHaveBeenCalledWith(
-      PAGE_ID,
-      9,
-      ['booked', 'rescheduled']
-    );
-    expect(stateText(wrapper, 'booked').text()).toContain(
-      'BOOKING.NOTICES.AUTO.SENDING'
-    );
-    expect(wrapper.find('[data-create-templates]').exists()).toBe(false);
-    expect(wrapper.find('[data-retry]').exists()).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(POLL_MS);
-    await flushPromises();
-
-    expect(BookingPagesAPI.noticeTemplateRequests).toHaveBeenCalledWith(
-      PAGE_ID,
-      9
-    );
-    expect(stateText(wrapper, 'booked').text()).toContain(
-      'BOOKING.NOTICES.AUTO.PENDING'
-    );
-    expect(stateText(wrapper, 'rescheduled').text()).toBe(
-      'BOOKING.NOTICES.AUTO.FAILED {"reason":"Reconecte a caixa."}'
-    );
-
-    // Sem nada "enviando", a consulta para.
-    await vi.advanceTimersByTimeAsync(POLL_MS * 3);
-    expect(BookingPagesAPI.noticeTemplateRequests).toHaveBeenCalledTimes(1);
-    wrapper.unmount();
-  });
-
-  it('"Tentar de novo" só no aviso recusado na criação, e reenvia só ele', async () => {
+  it('não tem botão de criar na Meta nem estado de pedido, nem com resposta antiga do servidor', async () => {
     BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
       suggestionsReply({
         can_create: true,
-        requests: {
-          booked: { state: 'failed', reason: 'Sem permissão.' },
-          rescheduled: { state: 'pending' },
-        },
-      })
-    );
-    BookingPagesAPI.createNoticeTemplates.mockImplementation(() =>
-      reply({ queued: true, requests: { rescheduled: { state: 'pending' } } })
-    );
-    const wrapper = await mountStep();
-
-    expect(
-      wrapper.find('[data-template-kind="rescheduled"] [data-retry]').exists()
-    ).toBe(false);
-    await wrapper
-      .find('[data-template-kind="booked"] [data-retry]')
-      .trigger('click');
-    await flushPromises();
-
-    expect(BookingPagesAPI.createNoticeTemplates).toHaveBeenCalledWith(
-      PAGE_ID,
-      9,
-      ['booked']
-    );
-  });
-
-  it('quem não pode criar vê o recusado, sem "Tentar de novo"', async () => {
-    BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({
-        can_create: false,
         requests: { booked: { state: 'failed', reason: 'Sem permissão.' } },
       })
     );
     const wrapper = await mountStep();
 
-    expect(stateText(wrapper, 'booked').exists()).toBe(true);
+    expect(wrapper.find('[data-create-templates]').exists()).toBe(false);
+    expect(wrapper.find('[data-create-templates-button]').exists()).toBe(false);
+    expect(wrapper.find('[data-request-state]').exists()).toBe(false);
     expect(wrapper.find('[data-retry]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('BOOKING.NOTICES.AUTO.CREATE');
+    expect(changes(wrapper)).toEqual([]);
   });
 
-  it('aprovado: o modelo fica escolhido no aviso vazio e a linha de estado some', async () => {
-    const ready = {
-      state: 'approved',
-      name: 'agendamento_ao_marcar_v1',
-      language: 'pt_BR',
-    };
+  it('no WhatsApp oficial Cloud mostra o bloco da autorização; no 360dialog, não', async () => {
     BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({ can_create: true, requests: { booked: ready } })
+      suggestionsReply()
     );
-    const wrapper = await mountStep();
+    const cloud = await mountStep();
+    expect(cloud.find('[data-notice-autorizacao]').exists()).toBe(true);
 
-    const [last] = changes(wrapper).at(-1);
-    expect(last.noticeTemplates.booked).toEqual({
-      name: 'agendamento_ao_marcar_v1',
-      language: 'pt_BR',
-    });
-
-    await wrapper.setProps({
-      form: form({ noticeTemplates: last.noticeTemplates }),
-    });
-    expect(stateText(wrapper, 'booked').exists()).toBe(false);
-  });
-
-  it('se o pedido de criar falhar, avisa em texto simples', async () => {
-    BookingPagesAPI.noticeTemplateSuggestions.mockImplementation(() =>
-      suggestionsReply({ can_create: true })
-    );
-    BookingPagesAPI.createNoticeTemplates.mockImplementation(() =>
-      Promise.reject(new Error('500'))
-    );
-    const wrapper = await mountStep();
-
-    await wrapper.find('[data-create-templates-button]').trigger('click');
-    await flushPromises();
-
-    expect(wrapper.find('[data-create-error]').text()).toBe(
-      'BOOKING.NOTICES.AUTO.CREATE_FAILED'
-    );
+    const dialog = { ...OFFICIAL, provider: '360dialog' };
+    const other = await mountStep(form(), [dialog]);
+    expect(other.find('[data-notice-templates]').exists()).toBe(true);
+    expect(other.find('[data-notice-autorizacao]').exists()).toBe(false);
   });
 });

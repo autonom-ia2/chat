@@ -1,0 +1,348 @@
+{
+  "CONVERSA_CANAL": {
+    "FORMULARIO": {
+      "NOME": "Form: {nome}",
+      "SEM_NOME": "WhatsApp form",
+      "RESPONDIDO": "Answered",
+      "RESPOSTA_ENVIADA": "Response sent",
+      "VER_RESPOSTA": "View response",
+      "OCULTAR_RESPOSTA": "Hide response",
+      "ILEGIVEL": "Couldn't read the fields of this response. They are still available in the API and webhooks.",
+      "SIM": "Yes",
+      "NAO": "No"
+    },
+    "DIA": {
+      "HOJE": "Today",
+      "ONTEM": "Yesterday"
+    },
+    "REMETENTE": {
+      "AGENTE_COM_NOME": "AI agent · {nome}",
+      "AGENTE": "AI agent",
+      "AUTOMATICO": "{nome} · automatic"
+    },
+    "MAIS": {
+      "ABRIR": "More ways to send",
+      "LOCALIZACAO": "Location",
+      "PEDIR_LOCALIZACAO": "Ask for location",
+      "CONTATO": "Contact",
+      "BOTAO_DE_LINK": "Link button",
+      "OPCOES": "Reply options",
+      "FORMULARIO": "Form",
+      "DOCUMENTO": "Document",
+      "FOTOS_E_VIDEOS": "Photos & videos",
+      "SO_TEXTO": "Outside the 24 hours the reply goes through the backup number, as text only. Photos, audio and documents don't go."
+    },
+    "JANELA": {
+      "PREVIA": "What the customer will see",
+      "CANCELAR": "Cancel",
+      "ENVIAR": "Send",
+      "ERROS": {
+        "mensagem": "Write the message.",
+        "nomeDoBotao": "Write the button name.",
+        "endereco": "Paste the website address.",
+        "opcoes": "Write at least two options.",
+        "nomeDaLista": "Write the name of the button that opens the list.",
+        "coordenadas": "Place not found. Paste the numbers from Google Maps, like -23.5613, -46.6565.",
+        "nome": "Write the name.",
+        "telefone": "Type a phone number that exists in the chosen country, with area code.",
+        "formulario": "Choose the form.",
+        "textoDoBotao": "Write the button text.",
+        "mensagemLonga": "The message is too long for this format. Shorten it a bit.",
+        "nomeDoBotaoLongo": "The button name can have up to 20 characters.",
+        "enderecoInvalido": "Paste the full website address, starting with https://",
+        "opcoesDemais": "Use at most 10 options.",
+        "opcaoLonga": "Each option can have up to 20 characters.",
+        "opcaoDaListaLonga": "In a list, each option can have up to 24 characters.",
+        "opcoesRepetidas": "Some options are the same. Write each one differently.",
+        "nomeDaListaLongo": "The list button name can have up to 20 characters.",
+        "nomeDoLugarLongo": "The place name can have up to 100 characters.",
+        "enderecoDoLugarLongo": "The address can have up to 300 characters.",
+        "nomeDoContatoLongo": "The name can have up to 100 characters.",
+        "textoDoBotaoLongo": "The button text can have up to 30 characters.",
+        "cabecalho": "Write the header.",
+        "cabecalhoLongo": "The header can have up to 60 characters."
+      },
+      "BOTAO_DE_LINK": {
+        "TITULO": "Send a link button",
+        "AJUDA": "The customer taps the button and opens the website.",
+        "MENSAGEM": "Message",
+        "NOME_DO_BOTAO": "Button name (up to 20 letters)",
+        "NOME_DO_BOTAO_EXEMPLO": "See proposal",
+        "ENDERECO": "Website address"
+      },
+      "OPCOES": {
+        "TITULO": "Send reply options",
+        "AJUDA": "The customer replies with one tap. Up to 3 options become buttons; more than that, a list.",
+        "CABECALHO": "Header (up to 60 characters)",
+        "CABECALHO_AJUDA": "Shown in bold at the top of the message. Required: without it, some phones don't show the options.",
+        "MENSAGEM": "Message",
+        "OPCOES": "Options",
+        "OPCAO_N": "Option {n}",
+        "MAIS_UMA": "One more option",
+        "NOME_DA_LISTA": "List button name",
+        "NOME_DA_LISTA_AJUDA": "With more than 3 options, the customer taps this button to see the list.",
+        "LISTA_PADRAO": "See options"
+      },
+      "LOCALIZACAO": {
+        "TITULO": "Send a location",
+        "AJUDA": "The customer gets the place on a map.",
+        "COORDENADAS": "Where it is on the map",
+        "COORDENADAS_AJUDA": "In Google Maps, right-click the place and click the numbers to copy them. A Google Maps link also works.",
+        "NOME": "Place name (optional)",
+        "ENDERECO": "Address (optional)",
+        "BUSCAR": "Search the address or the place name",
+        "BUSCAR_EXEMPLO": "E.g.: 1000 Paulista Ave or Example Store",
+        "ESCOLHA_UM": "Pick an address from the list.",
+        "TENHO_COORDENADAS": "Not found? Use the Google Maps coordinates",
+        "COORDENADAS_EXEMPLO": "-23.5613, -46.6565"
+      },
+      "PEDIDO_DE_LOCALIZACAO": {
+        "TITULO": "Ask for the customer location",
+        "AJUDA": "The customer gets a button to send where they are.",
+        "MENSAGEM": "Message",
+        "PADRAO": "Could you send me your location?"
+      },
+      "CONTATO": {
+        "TITULO": "Send a contact",
+        "AJUDA": "The customer gets the card and can chat with this number.",
+        "NOME": "Name",
+        "TELEFONE": "Phone",
+        "TELEFONE_AJUDA": "Choose the country and type the number with area code.",
+        "PAIS": "Phone country",
+        "NOME_EXEMPLO": "Search your contacts or type a name",
+        "NOME_AJUDA": "Pick a contact and the phone comes along."
+      },
+      "FORMULARIO": {
+        "TITULO": "Send a form",
+        "AJUDA": "The customer taps the button and fills it in inside WhatsApp. Only released forms show up. Do not use a form that asks for a password: the answer shows in the conversation.",
+        "QUAL": "Form",
+        "ESCOLHA": "Choose the form",
+        "MENSAGEM": "Message",
+        "TEXTO_DO_BOTAO": "Button text (up to 30 letters)",
+        "BOTAO_PADRAO": "Fill in",
+        "NENHUM": "This inbox has no approved form on Meta yet."
+      },
+      "AJUDA_TEXTO": "On this number the customer gets it as text. The preview shows how it looks.",
+      "ERRO_GERAL": "Couldn't send right now. Try again in a moment."
+    },
+    "PREVIA": {
+      "LUGAR": "Place",
+      "CONTATO": "Contact",
+      "SUA_MENSAGEM": "Your message shows here",
+      "BOTAO": "Button",
+      "ENVIAR_LOCALIZACAO": "Send location",
+      "LISTA": "See options",
+      "VIRA_TEXTO": "On this number the customer gets it as text, like this:"
+    },
+    "JANELA_FECHADA": {
+      "TEXTO": "It has been 24 hours since the customer last wrote. To talk to them again, send a template.",
+      "ESCOLHER_MODELO": "Choose template"
+    },
+    "CAIXA": {
+      "DIGITE": "Type a message",
+      "SO_MODELO": "Choose a template to reply"
+    },
+    "MODELO": {
+      "COPIAR_CODIGO": "Copy code",
+      "VER_CATALOGO": "View catalog",
+      "VER_ITENS": "View items",
+      "VER_ITEM": "View",
+      "OFERTA": "Limited-time offer",
+      "CARROSSEL": "Template cards",
+      "PRODUTO": "Catalog product",
+      "BOTOES": "Template buttons",
+      "ABRE_EM_OUTRA_ABA": "Opens in a new tab",
+      "SO_NO_CELULAR": "The customer taps this on their phone. Here it is only shown.",
+      "VER_TODAS": "See all options",
+      "TODAS_AS_OPCOES": "All options",
+      "FECHAR": "Close",
+      "TOPO_FOTO": "Template image",
+      "TOPO_VIDEO": "Template video",
+      "TOPO_DOCUMENTO": "Document",
+      "OFERTA_TERMINA": "Ends {data}"
+    },
+    "ORIGEM": {
+      "ANUNCIO": "Ad",
+      "ABRIR_ANUNCIO": "Open the ad in a new tab",
+      "PRODUTO": "Catalog product",
+      "CODIGO": "Code {codigo}"
+    },
+    "GRAVACAO": {
+      "GRAVANDO": "Recording audio",
+      "CANCELAR": "Cancel",
+      "PAUSAR": "Pause",
+      "CONTINUAR": "Keep recording",
+      "ENVIAR": "Send audio",
+      "SEM_MICROFONE": "The browser did not allow the microphone. Click the lock next to the site address and allow the microphone."
+    },
+    "AUDIO": {
+      "TOCAR": "Play audio",
+      "PAUSAR": "Pause audio",
+      "ONDA": "Audio position",
+      "VELOCIDADE": "Change speed",
+      "BAIXAR": "Download",
+      "ENVIANDO": "Sending audio"
+    },
+    "MIDIA": {
+      "BAIXAR": "Download {nome}",
+      "VIDEO": "Video. Tap to open",
+      "FIGURINHA": "Sticker",
+      "DESCER": "Go to the latest message",
+      "MENU": "Message options",
+      "FECHAR": "Close",
+      "VER_OPCOES": "View options",
+      "ESCOLHIDA": "Chosen by the customer"
+    },
+    "ROLAGEM": {
+      "NAO_LIDAS": "{n} unread message | {n} unread messages",
+      "NOVAS": "{n} new message | {n} new messages",
+      "CITADA_NAO_ENCONTRADA": "We couldn't find the quoted message in this conversation."
+    },
+    "ALBUM": {
+      "ROTULO": "Album with {total} photos and videos",
+      "FOTO": "Photo {n} of {total}. Tap to open",
+      "VIDEO": "Video {n} of {total}. Tap to open",
+      "MAIS": "{n} more photos and videos. Tap to open",
+      "MAIS_CURTO": "+{n}",
+      "APAGADAS_EM_PARTE": "{apagadas} of {total} photos deleted. Try again for the rest."
+    },
+    "CONTATO": {
+      "CONVERSAR": "Message"
+    },
+    "REACOES": {
+      "ROTULO": "{nome} reacted with {emoji}",
+      "CLIENTE": "Customer",
+      "EQUIPE": "Team"
+    },
+    "REAGIR": {
+      "BOTAO": "React",
+      "MENU": "React",
+      "BARRA": "Pick a reaction",
+      "COM": "React with {emoji}",
+      "TIRAR": "Remove reaction {emoji}",
+      "MAIS": "More emojis",
+      "FORA_DA_JANELA": "The customer has not written in the last 24 hours. Official WhatsApp only accepts reactions while the conversation is open.",
+      "FALHOU": "Could not send the reaction. Try again."
+    },
+    "VISUALIZACAO_UNICA": {
+      "ROTULO": "View once"
+    },
+    "APAGADA": {
+      "PELO_CLIENTE": "Deleted by the customer",
+      "AJUDA": "The customer deleted this message on WhatsApp. They no longer see it; your team still does.",
+      "ENVIADA": "You deleted this message",
+      "RECEBIDA": "This message was deleted",
+      "ENVIADA_SO_AQUI": "You deleted this message only here. The customer still sees it."
+    },
+    "FALHA": {
+      "NAO_ENVIADA": "Not sent"
+    },
+    "TEXTO_LONGO": {
+      "LER_MAIS": "Read more"
+    },
+    "EDITADA": {
+      "ROTULO": "Edited",
+      "TITULO": "Previous versions",
+      "TROCADA_AS": "Changed at {hora}",
+      "SEM_VERSOES": "The previous text was not saved."
+    },
+    "ENCAMINHADA": {
+      "SIMPLES": "Forwarded",
+      "FREQUENTE": "Forwarded many times"
+    },
+    "NAO_SUPORTADA": {
+      "poll": "The customer sent a poll. Open WhatsApp on the phone to see it.",
+      "gif": "The customer sent a GIF. Open WhatsApp on the phone to see it.",
+      "pinned": "The customer pinned a message. Open WhatsApp on the phone to see which one.",
+      "edit": "The customer edited a message. Open WhatsApp on the phone to see the new text.",
+      "view_once": "You received a view once message. For added privacy, you can only open it on your phone.",
+      "unknown": "The customer sent a message WhatsApp does not show here. Open WhatsApp on the phone to see it."
+    },
+    "CITACAO": {
+      "VOCE": "You",
+      "OUTRA_CONVERSA": "From another conversation",
+      "NAO_CONFERIDA": "Snippet sent by the customer's device, not verified",
+      "FOTO": "Photo",
+      "VIDEO": "Video",
+      "AUDIO": "Audio",
+      "DOCUMENTO": "Document",
+      "LOCALIZACAO": "Location",
+      "CONTATO": "Contact",
+      "MIDIA": "Media",
+      "SEM_TEXTO": "Message"
+    },
+    "MIDIA_INDISPONIVEL": {
+      "voice": "Couldn't download this voice message",
+      "audio": "Couldn't download this audio",
+      "image": "Couldn't download this photo",
+      "video": "Couldn't download this video",
+      "document": "Couldn't download this document",
+      "sticker": "Couldn't download this sticker"
+    },
+    "LOCALIZACAO_AO_VIVO": "Live location · starting point only",
+    "TEMPORARIAS": {
+      "ATIVADAS": "Disappearing messages are on. New messages will disappear from this chat after {duracao}.",
+      "DESATIVADAS": "Disappearing messages are off.",
+      "GUARDADAS": "Your team still sees the messages here.",
+      "DIAS": "{n} day | {n} days",
+      "HORAS": "{n} hour | {n} hours"
+    },
+    "PEDIDO": {
+      "TITULO": "Order",
+      "ITENS": "{n} item | {n} items",
+      "VER": "View order",
+      "OCULTAR": "Hide items",
+      "ITEM": "{quantidade} × {codigo}"
+    },
+    "LIGACAO": {
+      "VOZ_PERDIDA": "Missed voice call",
+      "VIDEO_PERDIDA": "Missed video call",
+      "VOZ_RECUSADA": "Declined voice call",
+      "VIDEO_RECUSADA": "Declined video call",
+      "VOZ": "Voice call",
+      "VIDEO": "Video call",
+      "VOZ_SEM_RESPOSTA": "Voice call, no answer"
+    },
+    "ENQUETE": {
+      "UMA": "Select one option",
+      "VARIAS": "Select one or more options",
+      "VOTOS": "{n} vote | {n} votes",
+      "OPCAO": "{titulo}: {votos}",
+      "TITULO_E_VOTOS": "{titulo} · {votos}",
+      "VER_VOTOS": "View votes",
+      "OCULTAR_VOTOS": "Hide votes",
+      "SEM_VOTOS": "No votes yet"
+    },
+    "CONTATOS": {
+      "RESUMO": "{nome} and {n} other contact | {nome} and {n} other contacts",
+      "VER_TODOS": "View all",
+      "TITULO": "{n} contact | {n} contacts",
+      "SEM_NOME": "Unnamed contact"
+    },
+    "PREVIA_DE_LINK": {
+      "ABRIR": "{titulo}. Opens {site} in a new tab"
+    },
+    "AUDIO_OUVIDO": "The customer listened to this audio",
+    "ENCAMINHAR": {
+      "MENU": "Forward",
+      "BOTAO": "Forward",
+      "MARCAR": "Select message to forward",
+      "SAIR": "Leave selection",
+      "SELECIONADAS": "{n} selected | {n} selected",
+      "ENVIAR_SELECAO": "Forward selected messages",
+      "TITULO": "Forward message to",
+      "FECHAR": "Close",
+      "BUSCAR": "Search name, number or {'@'}username",
+      "RECENTES": "Recent chats",
+      "NADA": "No conversations found",
+      "CARREGANDO": "Loading conversations…",
+      "ENVIAR": "Send",
+      "LIMITE_DESTINOS": "You can forward to up to {limite} conversations at a time.",
+      "LIMITE_MENSAGENS": "You can forward up to {limite} messages at a time.",
+      "ENVIADO": "Message forwarded | Messages forwarded",
+      "DESTINO_FALHOU": "{nome}: {erro}",
+      "NAO_FOI": "These conversations didn't get it and are still selected to try again:",
+      "FALHOU": "Could not forward. Try again."
+    }
+  }
+}

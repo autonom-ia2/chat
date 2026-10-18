@@ -361,6 +361,20 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
       expect(ai_reads(message)).not_to include('not available')
     end
 
+    # Merge com o #1753: com a Fase 2, o histórico já sai do ResumoDaMensagemRica.texto; o resumo não entra duas vezes.
+    it 'does not repeat the summary the team history (ResumoDaMensagemRica) already wrote; keeps adding it after a caption' do
+      flag_on!
+      resumo = Autonomia::Agents::Operate::ResumoDaMensagemRica
+      sem_legenda = location_message({ 'latitude' => 1.5, 'longitude' => 2.5, 'name' => 'Casa' })
+      com_legenda = location_message({ 'latitude' => 1.5, 'longitude' => 2.5, 'live' => true, 'name' => 'Casa' }, content: 'Chegando')
+      equipe = instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: true)
+      allow(equipe).to receive(:historico) { |messages| messages.map { |m| { role: 'user', content: resumo.texto(m) } } }
+      allow(equipe).to receive(:pergunta) { |text| text }
+      allow(responder).to receive_messages(recent_messages: [sem_legenda, com_legenda], equipe: equipe)
+
+      expect(responder.send(:history).pluck(:content)).to eq(['Localização: Casa', "Chegando\nLocalização: Casa"])
+    end
+
     it 'leaves the contact card as in main without the flag' do
       contacts = [{ 'full_name' => 'Ana', 'phones' => ['+5511'] }]
       message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Ana',
