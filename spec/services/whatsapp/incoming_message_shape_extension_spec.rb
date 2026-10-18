@@ -32,12 +32,16 @@ describe Whatsapp::IncomingMessageShapeExtension do
     Redis::Alfred.scan_each(match: 'MESSAGE_SOURCE_KEY::*') { |key| Redis::Alfred.delete(key) }
   end
 
-  # RichMessages::SelectedOption lê interactive e button sem checar o tipo: só é seguro porque roda por dentro desta extensão.
-  it 'wraps the fork extensions that read the same fields' do
-    ancestors = Whatsapp::IncomingMessageBaseService.ancestors
+  # Extensões do fork nesses métodos (RichMessages::SelectedOption lê interactive e button sem checar o tipo) só ficam
+  # seguras rodando por dentro desta. Vale para as que entrarem depois, sem precisar listá-las aqui.
+  it 'wraps every extension of the methods it guards' do
+    guarded = %i[message_content message_content_attributes referral_attributes]
+    overriders = Whatsapp::IncomingMessageBaseService.ancestors.select do |mod|
+      (mod.instance_methods(false) + mod.private_instance_methods(false)).intersect?(guarded)
+    end
 
-    expect(ancestors.index(described_class)).to be < ancestors.index(RichMessages::SelectedOption)
-    expect(ancestors.index(described_class)).to be < ancestors.index(ConversaCanal::RecebimentoDoWhatsapp)
+    expect(overriders.first).to eq(described_class)
+    expect(overriders).to include(RichMessages::SelectedOption, ConversaCanal::RecebimentoDoWhatsapp)
   end
 
   context 'with a well-formed payload' do
