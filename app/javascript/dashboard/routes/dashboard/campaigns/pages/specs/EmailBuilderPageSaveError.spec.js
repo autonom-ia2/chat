@@ -80,25 +80,35 @@ const mountWith = getMjml => {
   });
 };
 
-const saveButton = wrapper =>
-  wrapper.findAll('button').find(button => button.text() === 'Save');
+const button = (wrapper, label) =>
+  wrapper.findAll('button').find(item => item.text() === label);
 
-afterEach(() => vi.clearAllMocks());
+const serverError = status =>
+  Object.assign(new Error(`Request failed with status code ${status}`), {
+    response: { status },
+  });
+
+let consoleError;
+beforeEach(() => {
+  consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
+  dispatch.mockImplementation(() => Promise.resolve({}));
+});
 
 // #1824: the save used to swallow the real error; the 13/10 failure (account 17) left no trace.
 describe('EmailBuilderPage — failed save', () => {
   it('keeps the real error when the editor export throws before the request', async () => {
     const failure = new Error('export failed');
-    const consoleError = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
     const wrapper = mountWith(
       vi.fn(() => {
         throw failure;
       })
     );
 
-    await saveButton(wrapper).trigger('click');
+    await button(wrapper, 'Save').trigger('click');
     await flushPromises();
 
     expect(dispatch).not.toHaveBeenCalledWith(
@@ -107,12 +117,45 @@ describe('EmailBuilderPage — failed save', () => {
     );
     expect(consoleError).toHaveBeenCalledWith(
       '[EmailBuilderPage] save failed',
-      failure
+      '',
+      failure.stack
     );
-    expect(Sentry.captureException).toHaveBeenCalledWith(failure);
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { flow: 'email_builder_save' },
+    });
     expect(useAlert).toHaveBeenCalledWith(
       'Could not save the campaign, try again'
     );
-    consoleError.mockRestore();
+  });
+
+  it('logs a refused save (422) without sending it to Sentry', async () => {
+    dispatch.mockImplementation(() => Promise.reject(serverError(422)));
+    const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
+
+    await button(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith(
+      '[EmailBuilderPage] save failed',
+      422,
+      expect.stringContaining('status code 422')
+    );
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it('reports a server failure from "Review and send" and stays on the editor', async () => {
+    const failure = serverError(500);
+    dispatch.mockImplementation(() => Promise.reject(failure));
+    const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
+
+    await button(wrapper, 'Review and send').trigger('click');
+    await flushPromises();
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { flow: 'email_builder_save' },
+    });
+    expect(useAlert).toHaveBeenCalledWith(
+      'Could not save the campaign, try again'
+    );
   });
 });

@@ -189,12 +189,25 @@ const getEditorBodyPayload = () => {
   };
 };
 
-// A failed save keeps its real error (#1824): the alert stays generic, the cause goes to the console
-// (a print of F12 shows it) and to Sentry.
-const reportSaveError = error => {
+// A failed save keeps its real error (#1824). The console gets the status and the stack (a print of F12
+// shows the cause) but not the error object, whose request carries the e-mail body and auth headers.
+// Sentry gets what has no server answer (the editor breaking before the request) or a 5xx; a 422 is the
+// server refusing the content, already shown to the person.
+const logSaveError = (error, flow) => {
+  const status = error?.response?.status;
   // eslint-disable-next-line no-console
-  console.error('[EmailBuilderPage] save failed', error);
-  Sentry.captureException(error);
+  console.error(
+    `[EmailBuilderPage] ${flow} failed`,
+    status ?? '',
+    error?.stack || String(error)
+  );
+  if (!status || status >= 500) {
+    Sentry.captureException(error, { tags: { flow: `email_builder_${flow}` } });
+  }
+};
+
+const reportSaveError = error => {
+  logSaveError(error, 'save');
   useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
 };
 
@@ -267,6 +280,7 @@ const sendTest = async toEmails => {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUCCESS'));
     showTestPopover.value = false;
   } catch (error) {
+    logSaveError(error, 'test_send');
     const { key, params } = testSendErrorMessage(error);
     testSendError.value = t(key, params);
   } finally {
@@ -289,6 +303,7 @@ const saveTemplate = async () => {
     showSaveTemplatePopover.value = false;
     templateName.value = '';
   } catch (error) {
+    logSaveError(error, 'save_template');
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_ERROR'));
   } finally {
     isSavingTemplate.value = false;
@@ -640,10 +655,11 @@ const openReview = async () => {
         preheader: preheaderInput.value.trim() || null,
       });
     }
-    await setStep('review');
   } catch (error) {
     reportSaveError(error);
+    return;
   }
+  await setStep('review');
 };
 const openRecipients = (problems = false) => {
   problemsOnly.value = problems;
