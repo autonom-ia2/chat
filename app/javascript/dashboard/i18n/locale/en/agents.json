@@ -1310,6 +1310,7 @@
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
           "ERRO": "I could not answer right now.",
           "ERRO_GARANTIA": "Nothing changed in {nome}.",
+          "CANCELADO_PELO_DESFAZER": "This change was undone while I was working; this request was canceled. Ask again if you want.",
           "SAIR_TITULO": "Leave without finishing?",
           "SAIR_TEXTO": "Nothing changes in {nome}.",
           "CONTINUAR_AQUI": "Stay here",
@@ -1327,6 +1328,24 @@
             "B": "More formal",
             "C": "More relaxed",
             "D": "Shorter answers"
+          },
+          "CONFERIDO": {
+            "TITULO_TUDO": "Done. I changed {n} thing in {nome}. | Done. I changed {n} things in {nome}.",
+            "TITULO_MUDEI": "I changed {n} thing in {nome}. | I changed {n} things in {nome}.",
+            "TITULO_PARTE": "I changed {ok} of {total} requests in {nome}.",
+            "NAO_CONFERIDO": "I changed {nome}, but could not double-check it. Test it on the side to see if it is how you want.",
+            "APLICADO": "Applied:",
+            "DUVIDA": "I could not apply: “{pedido}”.",
+            "SEM_PEDIDO": "I also changed, without you asking: {lista}. If you do not want it, just tell me what to remove.",
+            "FALTOU_FORA": "Part of what you asked did not go in. See the question right below.",
+            "DESFAZER": "Undo",
+            "DESFAZENDO": "Undoing…",
+            "DESFEITO": "Undone. {nome} is back to how it was.",
+            "DESFEITO_SOZINHO": "I undid what you had not asked for. {nome} stays as before.",
+            "MUDOU_DEPOIS": "{nome} changed after this conversation, so it cannot be undone from here. To go back, use “Previous ways of answering”.",
+            "ERRO": "I could not undo it now. Try again.",
+            "ULTIMA_MUDANCA": "Last change: {lista}.",
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Last change made by chatting."
           }
         },
         "FOTO": {

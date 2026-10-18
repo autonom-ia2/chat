@@ -62,6 +62,13 @@ class AutonomiaBuildThreadsAPI extends ApiClient {
   retryBuild(threadId) {
     return axios.post(`${this.url}/${threadId}/retry`);
   }
+
+  // #1428 (pilot) — undoes the last adjustment of this conversation. No version
+  // id goes from here: the backend reads it from the thread. 409 when the agent
+  // changed after the adjustment (the way back is the versions list).
+  desfazer(threadId) {
+    return axios.post(`${this.url}/${threadId}/desfazer`);
+  }
 }
 
 export default new AutonomiaBuildThreadsAPI();

@@ -6,6 +6,7 @@ vi.mock('../../../../api/autonomia/buildThreads', () => ({
     create: vi.fn(),
     show: vi.fn(),
     sendMessage: vi.fn(),
+    desfazer: vi.fn(),
   },
 }));
 
@@ -302,6 +303,37 @@ describe('#autonomiaBuildThreads store', () => {
         id: 9,
         name: 'Suporte',
       });
+    });
+
+    // #1428 (pilot) — undo answers with the thread itself; the agent is read again.
+    it('desfazerAjuste posts the undo, applies the thread and re-reads the agent', async () => {
+      const commit = vi.fn();
+      const dispatch = vi.fn().mockResolvedValue({ id: 9, name: 'Bia' });
+      const state = { resultado: { desfeito: true } };
+      AutonomiaBuildThreadsAPI.desfazer.mockResolvedValue({
+        data: { payload: { id: 4, agent_id: 9, status: 'ready', state } },
+      });
+
+      await actions.desfazerAjuste({ commit, dispatch }, { threadId: 4 });
+
+      expect(AutonomiaBuildThreadsAPI.desfazer).toHaveBeenCalledWith(4);
+      expect(commit).toHaveBeenCalledWith('SET_THREAD_STATE', state);
+      expect(dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 9, {
+        root: true,
+      });
+      expect(commit).toHaveBeenCalledWith('SET_AGENT', { id: 9, name: 'Bia' });
+    });
+
+    it('desfazerAjuste rethrows the raw error so the page can tell a 409', async () => {
+      const erro = { response: { status: 409 } };
+      AutonomiaBuildThreadsAPI.desfazer.mockRejectedValue(erro);
+
+      await expect(
+        actions.desfazerAjuste(
+          { commit: vi.fn(), dispatch: vi.fn() },
+          { threadId: 4 }
+        )
+      ).rejects.toBe(erro);
     });
 
     it('onSettled surfaces a visible error when the build failed', async () => {

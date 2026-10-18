@@ -67,6 +67,12 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
                                     .left_joins(:agent).where(autonomia_agents: { deleted_at: nil })
   end
 
+  # #1428 (parte 3): duas escritas no mesmo agente ao mesmo tempo (o Desfazer ou a volta de versão e o Construtor). Nada
+  # mudou por esta; a pessoa tenta de novo.
+  def render_conflito_de_trava
+    render json: { error: I18n.t('autonomia.agents.conflito_de_trava'), code: 'conflito_de_trava' }, status: :conflict
+  end
+
   def render_unprocessable(message)
     render json: { error: message }, status: :unprocessable_entity
   end

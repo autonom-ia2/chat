@@ -546,6 +546,8 @@ Rails.application.routes.draw do
                 # E2 — reexecuta a geração de uma thread failed/presa (novo build_token + SubmitJob).
                 # Action retry_build porque `retry` é palavra reservada do Ruby.
                 post :retry, action: :retry_build
+                # #1428 (parte 3, piloto) — desfaz o último ajuste desta conversa (sem id de versão do cliente).
+                post :desfazer
               end
             end
             # MULTIMODAL (Construtor/Ajustar): upload de imagem do builder (image-only, retorna signed_id;
