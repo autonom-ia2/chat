@@ -42,15 +42,6 @@ const ehMinha = (conversa, usuarioId) =>
   Boolean(usuarioId) &&
   conversa.meta?.assignee?.id === usuarioId;
 
-// As conversas com a pessoa em que o cliente espera resposta, da que espera há mais tempo.
-export const esperandoResposta = (conversas, usuarioId) =>
-  (conversas || [])
-    .filter(
-      conversa =>
-        ehMinha(conversa, usuarioId) && Number(conversa.waiting_since) > 0
-    )
-    .sort((a, b) => a.waiting_since - b.waiting_since);
-
 // As conversas da pessoa que passaram do prazo de resposta. Sem nenhum prazo nas conversas
 // (a conta não usa prazos), devolve null: a tela não mostra o número.
 export const foraDoPrazo = (conversas, usuarioId) => {

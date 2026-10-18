@@ -8,16 +8,16 @@ const props = defineProps({
 });
 
 const numeros = computed(() => {
-  const { esperando, semResponsavel, atrasadas } = props.dados;
+  const { esperamVoce, esperamAlguem, atrasadas } = props.dados;
   const lista = [
     {
       chave: 'ESPERAM',
-      valor: esperando.length,
+      valor: esperamVoce,
       fazer: props.dados.verMinhas,
     },
     {
-      chave: 'SEM_RESPONSAVEL',
-      valor: semResponsavel,
+      chave: 'ESPERAM_ALGUEM',
+      valor: esperamAlguem,
       fazer: props.dados.verSemResponsavel,
     },
   ];
@@ -95,7 +95,7 @@ const numeros = computed(() => {
                 class="text-4xl font-semibold leading-none tabular-nums"
                 :class="numero.alerta ? 'text-n-amber-9' : 'text-white'"
               >
-                {{ numero.valor }}
+                {{ dados.pronto ? numero.valor : '–' }}
               </span>
               <span class="flex items-center gap-1 text-sm text-white/75">
                 {{ $t(`TELA_INICIAL.OPCAO_2.NUMEROS.${numero.chave}`) }}
@@ -108,8 +108,15 @@ const numeros = computed(() => {
           </li>
         </ul>
 
+        <p
+          v-if="dados.estado === 'erro'"
+          data-erro
+          class="mb-0 text-sm text-white/75"
+        >
+          {{ $t('TELA_INICIAL.OPCAO_2.ERRO') }}
+        </p>
         <div
-          v-if="!dados.tudoEmDia"
+          v-else-if="dados.pronto && !dados.tudoEmDia"
           class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5"
         >
           <button
@@ -133,7 +140,10 @@ const numeros = computed(() => {
             }}
           </p>
         </div>
-        <div v-else class="flex flex-col items-start gap-3">
+        <div
+          v-else-if="dados.tudoEmDia"
+          class="flex flex-col items-start gap-3"
+        >
           <button
             type="button"
             data-acao-do-vazio

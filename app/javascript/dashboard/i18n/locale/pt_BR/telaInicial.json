@@ -24,9 +24,10 @@
       "COM_VOCE": "Nenhuma conversa com você | 1 conversa com você | {count} conversas com você",
       "NUMEROS": {
         "ESPERAM": "Esperam você",
-        "SEM_RESPONSAVEL": "Sem responsável",
+        "ESPERAM_ALGUEM": "Esperam alguém",
         "FORA_DO_PRAZO": "Fora do prazo"
-      }
+      },
+      "ERRO": "Não deu para carregar os números agora."
     },
     "OPCAO_3": {
       "ACOLHIDA": "Que bom ver você, {nome}",

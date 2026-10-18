@@ -16,11 +16,13 @@ const dadosCom = (extra = {}) => ({
   hoje: 'sábado, 18 de outubro',
   nomeDaConta: 'Acme',
   logo: '',
-  esperando: [proxima],
+  estado: 'pronto',
+  pronto: true,
+  esperamVoce: 1,
   proxima,
   atrasadas: null,
   comVoce: 4,
-  semResponsavel: 2,
+  esperamAlguem: 2,
   tudoEmDia: false,
   nomeDoCliente: conversa => conversa?.meta?.sender?.name || '',
   esperaHa: () => '3 horas',
@@ -56,7 +58,7 @@ describe.each([
   });
 
   it('sem nada esperando, mostra só a ação do vazio', async () => {
-    const dados = dadosCom({ esperando: [], proxima: null, tudoEmDia: true });
+    const dados = dadosCom({ esperamVoce: 0, proxima: null, tudoEmDia: true });
     const wrapper = montar(componente, dados);
     expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
     await wrapper.find('[data-acao-do-vazio]').trigger('click');
@@ -75,10 +77,31 @@ describe('opção 2: números', () => {
     const dados = dadosCom({ atrasadas: [atrasada] });
     const wrapper = montar(TelaInicialResumo, dados);
     await wrapper.find('[data-numero="ESPERAM"]').trigger('click');
-    await wrapper.find('[data-numero="SEM_RESPONSAVEL"]').trigger('click');
+    await wrapper.find('[data-numero="ESPERAM_ALGUEM"]').trigger('click');
     await wrapper.find('[data-numero="FORA_DO_PRAZO"]').trigger('click');
     expect(dados.verMinhas).toHaveBeenCalled();
     expect(dados.verSemResponsavel).toHaveBeenCalled();
     expect(dados.abrir).toHaveBeenCalledWith(atrasada);
+  });
+});
+
+describe('opção 2: carregando e erro', () => {
+  it('enquanto carrega, mostra traço e nenhuma ação', () => {
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ estado: 'carregando', pronto: false })
+    );
+    expect(wrapper.find('[data-numero="ESPERAM"]').text()).toContain('–');
+    expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
+    expect(wrapper.find('[data-acao-do-vazio]').exists()).toBe(false);
+  });
+
+  it('sem conseguir carregar, avisa', () => {
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ estado: 'erro', pronto: false })
+    );
+    expect(wrapper.find('[data-erro]').exists()).toBe(true);
+    expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
   });
 });

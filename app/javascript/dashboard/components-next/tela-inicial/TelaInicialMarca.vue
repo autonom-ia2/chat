@@ -63,7 +63,7 @@ const ATALHOS = [
       </div>
 
       <button
-        v-if="!dados.tudoEmDia"
+        v-if="dados.pronto && !dados.tudoEmDia"
         type="button"
         data-abrir-proxima
         class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold text-white transition shadow-lg min-h-12 rounded-xl bg-n-brand shadow-n-brand/20 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
@@ -76,7 +76,7 @@ const ATALHOS = [
         />
       </button>
       <button
-        v-else
+        v-else-if="dados.tudoEmDia"
         type="button"
         data-acao-do-vazio
         class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold transition min-h-12 rounded-xl text-n-slate-12 bg-n-solid-1 ring-1 ring-inset ring-n-strong hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"

@@ -9,8 +9,9 @@ import { idiomaDoPainel } from 'dashboard/components-next/conversa-canal/dataDaC
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import wootConstants from 'dashboard/constants/globals';
+import { esperaDesde } from './filaDoServidor';
+import { useFilaDoServidor } from './useFilaDoServidor';
 import {
-  esperandoResposta,
   foraDoPrazo,
   horaNoFuso,
   periodoDoDia,
@@ -21,8 +22,8 @@ import {
 
 const UM_MINUTO = 60 * 1000;
 
-// Os dados das três opções da tela inicial (#1801), todos do que o painel já carregou:
-// usuário, conta, conversas da lista e os contadores das abas.
+// Os dados da tela inicial (#1801). Esperam você, esperam alguém e a próxima vêm do servidor
+// (useFilaDoServidor); "fora do prazo" ainda sai da lista carregada; o resto, do store.
 export const useTelaInicial = () => {
   const route = useRoute();
   const router = useRouter();
@@ -58,29 +59,35 @@ export const useTelaInicial = () => {
     }).format(agora.value)
   );
 
-  const esperando = computed(() =>
-    simulandoVazio.value
-      ? []
-      : esperandoResposta(conversas.value, usuario.value?.id)
+  const { fila, estado } = useFilaDoServidor();
+  const pronto = computed(() => estado.value === 'pronto');
+  const esperamVoce = computed(() =>
+    simulandoVazio.value ? 0 : fila.value.esperamVoce
   );
-  const proxima = computed(() => esperando.value[0] || null);
-  // null = a conta não usa prazo de resposta; a tela esconde o número.
+  const proxima = computed(() =>
+    simulandoVazio.value ? null : fila.value.proxima
+  );
+  // Ainda da lista carregada (o relatório de prazos pede permissão de relatório e conta o
+  // histórico). null = a conta não usa prazo de resposta; a tela esconde o número.
   const atrasadas = computed(() => {
     const lista = foraDoPrazo(conversas.value, usuario.value?.id);
     if (lista === null) return null;
     return simulandoVazio.value ? [] : lista;
   });
   const comVoce = computed(() => contadores.value?.mineCount || 0);
-  const semResponsavel = computed(() =>
-    simulandoVazio.value ? 0 : contadores.value?.unAssignedCount || 0
+  // Sem responsável E com o cliente esperando: quem precisa que alguém pegue agora.
+  const esperamAlguem = computed(() =>
+    simulandoVazio.value ? 0 : fila.value.esperamAlguem
   );
-  const tudoEmDia = computed(() => esperando.value.length === 0);
+  const tudoEmDia = computed(
+    () => pronto.value && (simulandoVazio.value || esperamVoce.value === 0)
+  );
 
   const nomeDoCliente = conversa => conversa?.meta?.sender?.name || '';
   const esperaHa = conversa => {
     if (!conversa) return '';
     const { unidade, valor } = tempoDeEspera(
-      conversa.waiting_since,
+      esperaDesde(conversa),
       Math.floor(agora.value.getTime() / 1000)
     );
     return t(`TELA_INICIAL.TEMPO.${unidade}`, { count: valor }, valor);
@@ -100,7 +107,7 @@ export const useTelaInicial = () => {
   const verSemResponsavel = () => verAba(UNASSIGNED);
   // Com tudo respondido, a ação leva a quem ainda não tem ninguém cuidando; sem elas, a todas.
   const acaoDoVazio = computed(() =>
-    semResponsavel.value > 0
+    esperamAlguem.value > 0
       ? { rotulo: 'VER_SEM_RESPONSAVEL', fazer: verSemResponsavel }
       : { rotulo: 'VER_TODAS', fazer: () => verAba(ALL) }
   );
@@ -111,11 +118,13 @@ export const useTelaInicial = () => {
     nome,
     saudacao,
     hoje,
-    esperando,
+    estado,
+    pronto,
+    esperamVoce,
     proxima,
     atrasadas,
     comVoce,
-    semResponsavel,
+    esperamAlguem,
     tudoEmDia,
     nomeDoCliente,
     esperaHa,

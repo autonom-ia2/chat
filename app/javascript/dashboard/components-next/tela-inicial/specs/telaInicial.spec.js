@@ -1,5 +1,4 @@
 import {
-  esperandoResposta,
   foraDoPrazo,
   horaNoFuso,
   opcaoDaTela,
@@ -42,22 +41,6 @@ describe('telaInicial', () => {
   it('pega o primeiro nome', () => {
     expect(primeiroNome('  John Doe ')).toBe('John');
     expect(primeiroNome(undefined)).toBe('');
-  });
-
-  it('lista as minhas que esperam resposta, da mais antiga', () => {
-    const lista = [
-      conversa(1, { waiting_since: 300 }),
-      conversa(2, { waiting_since: 100 }),
-      conversa(3),
-      conversa(4, { waiting_since: 50, status: 'resolved' }),
-      conversa(5, { waiting_since: 10, meta: { assignee: { id: 8 } } }),
-      conversa(6, {
-        waiting_since: 5,
-        meta: { assignee: { id: 7 }, assignee_type: 'AgentBot' },
-      }),
-    ];
-    expect(esperandoResposta(lista, 7).map(item => item.id)).toEqual([2, 1]);
-    expect(esperandoResposta(lista, undefined)).toEqual([]);
   });
 
   it('sem prazo nas conversas, não conta fora do prazo', () => {

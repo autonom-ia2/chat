@@ -7,7 +7,7 @@ const props = defineProps({
   dados: { type: Object, required: true },
 });
 
-const quantas = computed(() => props.dados.esperando.length);
+const quantas = computed(() => props.dados.esperamVoce);
 </script>
 
 <template>
@@ -30,7 +30,7 @@ const quantas = computed(() => props.dados.esperando.length);
         </h1>
       </header>
 
-      <div v-if="!dados.tudoEmDia" class="flex flex-col gap-8">
+      <div v-if="dados.pronto && !dados.tudoEmDia" class="flex flex-col gap-8">
         <p class="mb-0 text-xl leading-relaxed md:text-2xl text-n-slate-11">
           <span class="font-semibold tabular-nums text-n-brand">
             {{ quantas }}
@@ -62,7 +62,7 @@ const quantas = computed(() => props.dados.esperando.length);
         </div>
       </div>
 
-      <div v-else class="flex flex-col items-start gap-8">
+      <div v-else-if="dados.tudoEmDia" class="flex flex-col items-start gap-8">
         <p
           class="flex items-center gap-3 mb-0 text-xl leading-relaxed md:text-2xl text-n-slate-11"
         >

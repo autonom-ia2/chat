@@ -24,9 +24,10 @@
       "COM_VOCE": "No conversations with you | 1 conversation with you | {count} conversations with you",
       "NUMEROS": {
         "ESPERAM": "Waiting for you",
-        "SEM_RESPONSAVEL": "Unassigned",
+        "ESPERAM_ALGUEM": "Waiting for anyone",
         "FORA_DO_PRAZO": "Past due"
-      }
+      },
+      "ERRO": "Could not load the numbers right now."
     },
     "OPCAO_3": {
       "ACOLHIDA": "Good to see you, {nome}",
