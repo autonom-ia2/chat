@@ -73,6 +73,39 @@ RSpec.describe ConversaCanal::MoverParaPasta do
     expect(nova.reload).to be_resolved
   end
 
+  it 'o cliente respondeu na conversa da Lixeira: ela volta para a Entrada' do
+    mover('lixeira')
+    create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, content: 'Ainda quero')
+
+    expect(lista[:conversations]).to contain_exactly(conversa, outra)
+    expect(ConversaCanal::PastaDoEmail.exists?(conversation_id: conversa.id)).to be(false)
+  end
+
+  it 'resposta do atendente não tira da Lixeira, e o Spam fica no Spam' do
+    mover('lixeira')
+    create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :outgoing, content: 'Oi')
+    expect(lista(pasta: 'lixeira')[:conversations]).to eq([conversa])
+
+    mover('spam')
+    create(:message, account: account, inbox: inbox, conversation: conversa, message_type: :incoming, content: 'compre já')
+    expect(lista(pasta: 'spam')[:conversations]).to eq([conversa])
+  end
+
+  it 'mover de novo para a mesma pasta, ou trocar de pasta, grava uma linha só' do
+    mover('lixeira')
+    mover('lixeira')
+    mover('spam')
+
+    expect(ConversaCanal::PastaDoEmail.where(conversation_id: conversa.id).pluck(:pasta)).to eq(['spam'])
+  end
+
+  it 'contato antigo com dado fora do formato de hoje também vai para o Spam' do
+    contato.update_column(:email, 'sem-arroba') # rubocop:disable Rails/SkipsModelValidations
+
+    expect { mover('spam') }.not_to raise_error
+    expect(contato.reload).to be_blocked
+  end
+
   it 'sem a chave conversa_email_nova as listas não mudam' do
     mover('lixeira')
     account.disable_features!('conversa_email_nova')

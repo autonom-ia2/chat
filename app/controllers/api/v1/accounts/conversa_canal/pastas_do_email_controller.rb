@@ -16,7 +16,8 @@ class Api::V1::Accounts::ConversaCanal::PastasDoEmailController < Api::V1::Accou
   end
 
   def update
-    pasta = ConversaCanal::MoverParaPasta.new(conversation: @conversa, pasta: params[:pasta], user: Current.user).perform
+    autorizar_bloqueio
+    pasta = ConversaCanal::MoverParaPasta.new(conversation: @conversa, pasta: pasta_pedida, user: Current.user).perform
     render json: { pasta: pasta }
   rescue ConversaCanal::MoverParaPasta::Recusa => e
     recusar(e.message)
@@ -31,6 +32,20 @@ class Api::V1::Accounts::ConversaCanal::PastasDoEmailController < Api::V1::Accou
   end
 
   private
+
+  def pasta_pedida
+    params.permit(:pasta)[:pasta]
+  end
+
+  # Spam e "Não é spam" mexem no bloqueio do contato: valem as permissões de editar o contato (no EE, a função
+  # personalizada sem `contact_manage` recebe 401, como na tela de contatos). Lixeira e Entrada não mexem.
+  def autorizar_bloqueio
+    contato = @conversa.contact
+    return if contato.blank?
+
+    sai_do_spam = ConversaCanal::PastaDoEmail.exists?(conversation_id: @conversa.id, pasta: 'spam')
+    authorize contato, :update? if pasta_pedida == 'spam' || sai_do_spam
+  end
 
   def carregar_conversa
     @conversa = Current.account.conversations.find_by!(display_id: params[:conversation_id])

@@ -30,23 +30,27 @@ class ConversaCanal::MoverParaPasta
     @atual ||= ConversaCanal::PastaDoEmail.find_by(conversation_id: @conversation.id)
   end
 
+  # Upsert pela conversa: dois toques ao mesmo tempo gravam a mesma linha, sem esbarrar no índice único (era 500).
   def mover
-    registro = atual || ConversaCanal::PastaDoEmail.new(account_id: @conversation.account_id, conversation: @conversation)
-    registro.update!(pasta: @pasta, user: @user)
+    ConversaCanal::PastaDoEmail.upsert( # rubocop:disable Rails/SkipsModelValidations -- a pasta já foi conferida no perform
+      { account_id: @conversation.account_id, conversation_id: @conversation.id, pasta: @pasta, user_id: @user&.id },
+      unique_by: :conversation_id, update_only: %i[pasta user_id]
+    )
   end
 
   def restaurar
-    atual&.destroy!
+    ConversaCanal::PastaDoEmail.where(conversation_id: @conversation.id).delete_all
   end
 
+  # `update_attribute` grava só o bloqueio: contato antigo com algum dado fora do formato de hoje não trava o Spam.
   def ajustar_bloqueio(anterior)
     contato = @conversation.contact
     return if contato.blank?
 
     if @pasta == 'spam'
-      contato.update!(blocked: true) unless contato.blocked?
+      contato.update_attribute(:blocked, true) unless contato.blocked? # rubocop:disable Rails/SkipsModelValidations
     elsif anterior == 'spam' && contato.blocked?
-      contato.update!(blocked: false)
+      contato.update_attribute(:blocked, false) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

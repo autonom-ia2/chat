@@ -46,6 +46,42 @@ RSpec.describe 'Pastas do e-mail' do
       expect(DeleteObjectJob).not_to have_received(:perform_later)
     end
 
+    it 'aceita só o campo pasta do pedido' do
+      create(:inbox_member, user: agent, inbox: inbox)
+
+      put caminho, params: { pasta: 'lixeira', user_id: 999 }, headers: agent.create_new_auth_token
+
+      expect(ConversaCanal::PastaDoEmail.find_by(conversation_id: conversa.id).user_id).to eq(agent.id)
+    end
+
+    describe 'função personalizada sem contact_manage' do
+      let(:funcao) { create(:custom_role, account: account, permissions: ['conversation_manage']) }
+
+      before do
+        create(:inbox_member, user: agent, inbox: inbox)
+        agent.account_users.find_by(account: account).update!(custom_role: funcao)
+      end
+
+      it 'Spam mexe no bloqueio do contato: 401, como na tela de contatos' do
+        put caminho, params: { pasta: 'spam' }, headers: agent.create_new_auth_token
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversa.contact.reload).not_to be_blocked
+        expect(ConversaCanal::PastaDoEmail.exists?(conversation_id: conversa.id)).to be(false)
+      end
+
+      it '"Não é spam" também; a Lixeira, que não mexe no contato, segue liberada' do
+        ConversaCanal::PastaDoEmail.create!(account: account, conversation: conversa, pasta: 'spam')
+
+        put caminho, params: { pasta: '' }, headers: agent.create_new_auth_token
+        expect(response).to have_http_status(:unauthorized)
+
+        ConversaCanal::PastaDoEmail.where(conversation_id: conversa.id).delete_all
+        put caminho, params: { pasta: 'lixeira' }, headers: agent.create_new_auth_token
+        expect(response.parsed_body).to eq('pasta' => 'lixeira')
+      end
+    end
+
     it 'quem não vê a conversa: 401' do
       put caminho, params: { pasta: 'spam' }, headers: agent.create_new_auth_token
       expect(response).to have_http_status(:unauthorized)
