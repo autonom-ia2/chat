@@ -1,8 +1,9 @@
-# Credencial de leitura de anúncios da Meta (#1034): só administrador da conta vê e edita. Não
-# delega por função personalizada (tokens de integração ficam fora das funções, ver CLAUDE.md).
+# Anúncios da Meta (#1034). Ver o painel, a conexão e a IA do painel: administrador ou função com `meta_ads_view`
+# (funções personalizadas, lote 2, #1794). Conectar, configurar, desconectar e os gestos do consultor seguem só do
+# administrador: viram `meta_ads_manage`, chave protegida, no lote das protegidas (#1784, modelo seção 5.6).
 class Crm::MetaAdsConnectionPolicy < ApplicationPolicy
   def show?
-    administrator?
+    account_user&.permission_granted?('meta_ads_view') || false
   end
 
   def update?
