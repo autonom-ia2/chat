@@ -370,6 +370,12 @@ describe('permissionMatrix', () => {
       ]);
     });
 
+    it('mostra excluir já ligado num cargo que só vê, para dar para desligar', () => {
+      expect(
+        visibleExtras(contacts, ['contact_view', 'contact_delete'])
+      ).toEqual(['contact_export', 'contact_delete']);
+    });
+
     it('voltar para ver tira excluir e mantém exportar', () => {
       const permissions = [
         'contact_manage',

@@ -359,8 +359,11 @@ export const visibleExtras = (module, permissions) => {
   // Editing cards already includes moving them.
   if (level === LEVELS.MANAGE)
     return module.extras.filter(key => key !== CRM_MOVE_CARDS);
+  // Um ajuste só de quem edita fica visível enquanto estiver ligado, para dar para desligar.
   return module.extras.filter(
-    key => !(module.manageOnlyExtras || []).includes(key)
+    key =>
+      !(module.manageOnlyExtras || []).includes(key) ||
+      permissions.includes(key)
   );
 };
 
