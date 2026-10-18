@@ -40,6 +40,11 @@ RSpec.describe Ctwa::CampaignBuilder do
       expect(described_class.build({})).to be_nil
     end
 
+    it 'returns nil for a referral sent as text instead of an object' do
+      expect(described_class.build('ad')).to be_nil
+      expect(described_class.build(['ad'])).to be_nil
+    end
+
     it 'attributes on a click id alone (no source id)' do
       expect(described_class.build(ctwa_clid: 'Afxyz')).to include('source' => 'meta_ctwa', 'ctwa_clid' => 'Afxyz')
     end

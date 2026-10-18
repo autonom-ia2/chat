@@ -28,9 +28,10 @@ module Ctwa::CampaignBuilder
   ].freeze
 
   # Builds the unified campaign attribution hash, or nil when the referral carries no
-  # usable attribution signal.
+  # usable attribution signal. A referral that is not an object (text where the provider
+  # should send a hash, chat#1816) carries no signal either.
   def build(referral)
-    return if referral.blank?
+    return unless referral.is_a?(Hash) && referral.present?
 
     ref = referral.to_h.symbolize_keys
     ref = bound_source_url(ref)
