@@ -8,7 +8,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Resumos' => %w[resumo resumo_reuniao],
     'Assistente de respostas' => %w[copilot agente_resposta agente_teste],
     'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
-    'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out],
+    'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out], 'Contato pelo e-mail' => %w[contato_pelo_email],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
     'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia],
     'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao], 'Anúncios da Meta' => %w[anuncios_meta],

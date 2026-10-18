@@ -11,7 +11,9 @@
 # hub2you em 18/10: todos os leads com o nome igual ao começo do e-mail), e o formulário traz o nome de verdade.
 #
 # Formulário de site: o e-mail sai do endereço fixo do site, que é o contato. Só grava quando o e-mail escrito no
-# formulário é um endereço do próprio contato; senão juntaria vários clientes num contato só.
+# formulário é um endereço do próprio contato; senão juntaria vários clientes num contato só. No e-mail de pessoa, o
+# e-mail da assinatura diferente do From NÃO trava: é comum (quem escreve do gmail e assina com o da empresa, ou a
+# assinatura com o "comercial@" da empresa), e travar perderia o telefone dessa gente (revisão do #1813, item 34).
 #
 # A IA só é chamada quando há o que completar, há texto novo, há credencial e os freios deixam (Freios). Sem
 # credencial: nada acontece, sem erro. O log leva só chaves e motivos, nunca o nome, o telefone ou o e-mail.
@@ -21,6 +23,8 @@ class Autonomia::ContatoPeloEmail::Completar
   Campos = Struct.new(:id, :account, :campos, keyword_init: true)
   CAMPOS = Leitor::CAMPOS.map { |chave, destino| { 'chave' => chave, 'destino' => destino } }.freeze
   LOG = '[autonomia][contato_pelo_email]'.freeze
+  # O que o Aplicador pode mudar no contato: a comparação antes/depois diz se a leitura trouxe algo novo.
+  FICHA = %w[name email phone_number additional_attributes custom_attributes].freeze
   DE_NOVO_EM = 1.minute
 
   def initialize(message)
@@ -49,7 +53,7 @@ class Autonomia::ContatoPeloEmail::Completar
 
   # Tudo o que se confere sem gastar: a flag, o From do contato, a pausa, o que falta e o texto novo.
   def vale_ler?
-    Autonomia::ContatoPeloEmail.ligado?(@account) && do_contato? && !freios.pausado? && falta_algo? &&
+    Autonomia::ContatoPeloEmail.ligado?(@account) && do_contato? && !freios.pausado?(@message.created_at) && falta_algo? &&
       Leitor.texto(@message).present?
   end
 
@@ -76,10 +80,18 @@ class Autonomia::ContatoPeloEmail::Completar
     end
   end
 
+  # O teto vem antes da marca "lido": o e-mail barrado pelo teto não fica marcado como lido sem ter sido.
   def ler_e_gravar(credencial)
-    return motivo('ja_lido') unless freios.primeira_leitura?(@message.id)
     return motivo('teto_diario', nivel: :warn) unless freios.dentro_do_teto?
+    return motivo('ja_lido') unless freios.primeira_leitura?(@message.id)
 
+    ler_pago(credencial)
+  end
+
+  # Daqui em diante a marca "lido" está posta e a IA pode ter sido paga: a nova tentativa do job sai como `ja_lido` (não
+  # paga de novo), então o erro inesperado vai ao rastreador agora, antes de subir — senão ninguém o veria. A falha da
+  # própria leitura (Leitor::Error) não é bug e segue para o log de #perform.
+  def ler_pago(credencial)
     leitura = Leitor.new(account: @account, credencial: credencial).ler(@message)
     return if leitura.nil?
     return automatico if leitura.tipo == Leitor::AUTOMATICO
@@ -88,6 +100,12 @@ class Autonomia::ContatoPeloEmail::Completar
     return nada_novo('formulario_de_outro_endereco') if formulario_de_outro_endereco?(leitura)
 
     gravar(leitura)
+  rescue Leitor::Error
+    raise
+  rescue StandardError => e
+    motivo("erro_depois_da_marca erro=#{e.class.name}", nivel: :error)
+    ChatwootExceptionTracker.new(e, account: @account).capture_exception
+    raise
   end
 
   def automatico
@@ -100,14 +118,20 @@ class Autonomia::ContatoPeloEmail::Completar
   end
 
   # A IA leva segundos: a ficha é relida sob trava (with_lock relê o registro) para não gravar por cima de quem a
-  # editou nesse meio-tempo.
+  # editou nesse meio-tempo. "Nada novo" é o contato igual antes e depois: o Aplicador devolve `gravado` também para o
+  # valor igual ao que já estava, e isso não pode anular a pausa.
   def gravar(leitura)
-    resultado, ignorados = contato.with_lock do
+    resultado, ignorados, mudou = contato.with_lock do
+      antes = ficha
       fora = leitura.valores.key?('nome') && !nome_trocavel? ? ['nome'] : []
-      [aplicador.aplicar(leitura.valores.except(*fora)), fora]
+      [aplicador.aplicar(leitura.valores.except(*fora)), fora, ficha != antes]
     end
     registrar(leitura.tipo, resultado, ignorados)
-    freios.pausar_por_nada_novo if resultado.aplicados.empty?
+    freios.pausar_por_nada_novo unless mudou
+  end
+
+  def ficha
+    contato.attributes.slice(*FICHA).deep_dup
   end
 
   def nada_novo(razao)

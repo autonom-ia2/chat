@@ -213,6 +213,15 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
       expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(24.hours.to_i)
     end
 
+    # Pega (item 34): formulário em que a IA não achou e-mail nenhum gravar o lead no contato do site.
+    it 'sem e-mail lido: não grava nada' do
+      responde(tipo: 'formulario', nome: 'Carlos Lima', telefone: '(21) 97777-6666')
+
+      described_class.new(message).perform
+
+      expect(contact.reload).to have_attributes(name: 'maria.souza@cliente.com.br', phone_number: nil)
+    end
+
     # Pega: o formulário que o próprio contato preencheu (com o e-mail dele) ser descartado; e caixa/espaço no e-mail.
     it 'com o e-mail do contato: grava nome e telefone' do
       responde(tipo: 'formulario', nome: 'Maria Souza', email: ' Maria.Souza@Cliente.com.br ', telefone: '(11) 98765-4321')
@@ -325,6 +334,79 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     linha = logs.find { |texto| texto.to_s.include?('[autonomia][contato_pelo_email]') }
     expect(linha).to include('tipo=pessoa', 'gravados=nome', 'recusados=email,telefone')
     expect(logs.map(&:to_s).join("\n")).not_to include('Maria', 'maria.souza', '98765', '5511987654321', "##{outro.id}")
+  end
+
+  # Pega (revisão do #1813, item 32): o erro depois da marca "lido" sumir sem chegar ao Sentry, porque a nova tentativa
+  # sai como ja_lido; e a nova tentativa pagar a IA de novo.
+  it 'erro depois da leitura (deadlock no Aplicador): vai ao rastreador, sobe, e a nova tentativa não paga a IA', :aggregate_failures do
+    responde(nome: 'Maria Souza', telefone: '(11) 98765-4321')
+    aplicador = instance_double(Autonomia::Decisores::Aplicador)
+    allow(aplicador).to receive(:aplicar).and_raise(ActiveRecord::Deadlocked)
+    allow(Autonomia::Decisores::Aplicador).to receive(:new).and_return(aplicador)
+    rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
+
+    expect { described_class.new(message).perform }.to raise_error(ActiveRecord::Deadlocked)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(kind_of(ActiveRecord::Deadlocked), account: account)
+    expect(rastreador).to have_received(:capture_exception).once
+
+    expect { described_class.new(message).perform }.not_to raise_error
+    expect(cliente).to have_received(:create).once
+    expect(Redis::Alfred.exists?(chave('trava', contact.id))).to be(false)
+  end
+
+  # Pega (item 32): o e-mail barrado pelo teto ficar marcado como lido sem ter sido.
+  it 'barrado pelo teto diário: o e-mail não fica marcado como lido' do
+    dia = Time.now.utc.to_date.iso8601
+    Redis::Alfred.set(chave('teto', "#{account.id}:#{dia}"), Autonomia::ContatoPeloEmail::Freios::TETO_DIARIO, ex: 60)
+
+    described_class.new(message).perform
+
+    expect(Redis::Alfred.exists?(chave('lido', message.id))).to be(false)
+  end
+
+  # Pega (item 33): a IA ler o mesmo nome provisório que já está no contato, isso contar como "gravado" e cada e-mail
+  # pagar uma leitura, sem a pausa de 24 horas.
+  it 'leu só o valor que o contato já tinha: conta como nada novo e pausa 24 horas', :aggregate_failures do
+    contact.update!(name: 'maria.souza')
+    responde(nome: 'maria.souza')
+
+    described_class.new(message).perform
+    described_class.new(email!).perform
+
+    expect(cliente).to have_received(:create).once
+    expect(contact.reload.name).to eq('maria.souza')
+    expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(24.hours.to_i)
+  end
+
+  # Pega (item 34, decisão): travar todo e-mail cuja assinatura traz outro endereço perderia o telefone de quem escreve
+  # do próprio e-mail e assina com o da empresa — caso comum. Só o formulário trava pelo e-mail lido.
+  it 'pessoa que assina com outro e-mail (o da empresa): grava nome e telefone, sem trocar o e-mail', :aggregate_failures do
+    responde(nome: 'Maria Souza', email: 'comercial@empresa.com.br', telefone: '(11) 98765-4321')
+
+    described_class.new(message).perform
+
+    expect(contact.reload).to have_attributes(name: 'Maria Souza', phone_number: '+5511987654321', email: 'maria.souza@cliente.com.br')
+  end
+
+  # Pega (LOW do #1813): o segundo e-mail do lead, que chegou enquanto o primeiro era lido, cair na pausa que o primeiro
+  # pôs — e ele pode ser justamente o que traz o telefone. O e-mail que chega depois da pausa continua barrado.
+  it 'a pausa vale para o e-mail que chega depois dela, não para o que já estava na fila', :aggregate_failures do
+    segundo = email!
+    segundo.update!(created_at: 10.seconds.ago)
+    responde(tipo: 'pessoa')
+    described_class.new(message).perform
+    expect(Redis::Alfred.exists?(chave('pausa', contact.id))).to be(true)
+
+    responde(telefone: '(11) 98765-4321')
+    described_class.new(segundo).perform
+    expect(contact.reload.phone_number).to eq('+5511987654321')
+    expect(cliente).to have_received(:create).twice
+  end
+
+  # Pega (LOW): o recurso aparecer em "Outros" na Gestão de IA.
+  it 'o gasto aparece com o nome do recurso na Gestão de IA' do
+    expect(Crm::Reports::AiUsage.resource_for_feature(Autonomia::ContatoPeloEmail::Leitor::FEATURE)).to eq('Contato pelo e-mail')
   end
 
   context 'without an AI credential' do

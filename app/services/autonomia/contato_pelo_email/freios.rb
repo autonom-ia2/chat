@@ -1,7 +1,9 @@
 # Contato pelo e-mail recebido (#1813): os freios de custo e de corrida, todos no Redis, por contato e por conta.
 #
 # - Pausa: o contato fica um tempo sem passar pela IA. 30 dias depois de 3 leituras `automatico` SEGUIDAS (a
-#   newsletter que chega toda semana não paga a IA toda semana); 24 horas quando a IA leu e nada foi gravado.
+#   newsletter que chega toda semana não paga a IA toda semana); 24 horas quando a IA leu e nada mudou no contato. A
+#   pausa vale para o e-mail que chegou depois dela: o que já estava na fila (esperando a trava, por exemplo) é lido,
+#   porque pode ser justamente o que traz o telefone.
 # - Contador de automáticos: zera numa leitura `pessoa` ou `formulario`; expira sozinho.
 # - Trava: uma leitura por contato de cada vez (dois e-mails seguidos não pagam duas leituras que gravam por cima).
 # - Leitura única por mensagem: a nova tentativa do job não paga a IA de novo pelo mesmo e-mail.
@@ -15,14 +17,19 @@ class Autonomia::ContatoPeloEmail::Freios
   TETO_DIARIO = 500
   TRAVA_POR = 5.minutes
   LIDO_POR = 1.day
+  SEPARADOR = ':'.freeze
 
   def initialize(account_id:, contato_id:)
     @account_id = account_id
     @contato_id = contato_id
   end
 
-  def pausado?
-    Redis::Alfred.exists?(chave('pausa', @contato_id))
+  # O e-mail que chegou em `chegou_em` cai na pausa? Só quando chegou depois de ela começar.
+  def pausado?(chegou_em)
+    valor = Redis::Alfred.get(chave('pausa', @contato_id))
+    return false if valor.nil?
+
+    chegou_em.to_i >= valor.to_s.split(SEPARADOR).last.to_i
   end
 
   def pausar_por_nada_novo
@@ -66,15 +73,20 @@ class Autonomia::ContatoPeloEmail::Freios
 
   private
 
-  # O prazo nasce junto com a chave (SET NX EX) e o INCR o mantém: nenhum contador fica sem expirar se o processo cair
-  # entre os dois comandos.
+  # O prazo nasce junto com a chave (SET NX EX) e o INCR o mantém, os dois numa transação (MULTI): nenhum contador fica
+  # sem expirar, nem se o processo cair entre os dois, nem se a chave expirar entre eles.
   def contar(contador, prazo)
-    Redis::Alfred.set(contador, 0, nx: true, ex: prazo.to_i)
-    Redis::Alfred.incr(contador)
+    Redis::Alfred.with do |conn|
+      conn.multi do |transacao|
+        transacao.set(contador, 0, nx: true, ex: prazo.to_i)
+        transacao.incr(contador)
+      end.last
+    end
   end
 
+  # Guarda o motivo e o começo da pausa (segundos), para #pausado? saber quais e-mails chegaram antes dela.
   def pausar(tempo, motivo)
-    Redis::Alfred.setex(chave('pausa', @contato_id), motivo, tempo.to_i)
+    Redis::Alfred.setex(chave('pausa', @contato_id), [motivo, Time.current.to_i].join(SEPARADOR), tempo.to_i)
   end
 
   def chave(tipo, id)

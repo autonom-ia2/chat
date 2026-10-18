@@ -219,7 +219,7 @@ RSpec.describe Account do
         feature_whatsapp_hybrid_recovery: 1 << 32,
         # #1807: posição 36 reservada (1 << 35); até o #1741 e o #1818 entrarem, fica no fim do que está na main.
         feature_email_autoria: 1 << 33,
-        # #1813: posição 38 reservada (1 << 37); até #1741, #1818 e #1786 entrarem, fica no fim do que está na main.
+        # #1813: posição 39 reservada (1 << 38, tabela v3); até #1741, #1818 e #1786 entrarem, fica no fim do que está na main.
         feature_contato_pelo_email: 1 << 34
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
