@@ -111,6 +111,21 @@ RSpec.describe Crm::Email::Autoria do
       expect(described_class.texto_novo(com_nota)).to eq('Veja este lead.')
     end
 
+    # Pega: o separador do encaminhado em português sobrar como texto, e a linha de traços do cliente sumir.
+    it 'separador do encaminhado em qualquer língua, pelo formato da linha', :aggregate_failures do
+      cabecalho = "De: Lead Meta <lead@meta.com>\nData: qui., 16 de out. de 2026\nAssunto: Novo lead\nPara: <corretora@example.com>\n\n" \
+                  'Nome: Maria'
+      pt_gmail = "---------- Mensagem encaminhada ---------\n#{cabecalho}"
+      pt_outlook = "-----Mensagem original-----\n#{cabecalho}"
+
+      [pt_gmail, pt_outlook].each do |encaminhado|
+        expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: encaminhado), sem_fallback: true)).to be_nil
+      end
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: "Veja este lead.\n\n#{pt_gmail}"))).to eq('Veja este lead.')
+      tracos = "Primeiro ponto\n----- ok -----\nSegundo ponto"
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: tracos))).to eq(tracos)
+    end
+
     # Pega: resposta escrita embaixo da citação (bottom-posting) sumir junto com o histórico.
     it 'mantém o que foi escrito depois do bloco citado' do
       embaixo = "On Wed, Oct 15, 2026 at 9:00 AM Corretora <corretora@example.com> wrote:\n> qual o CPF?\n\n123.456.789-00, o meu"
