@@ -93,6 +93,8 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
         '<div class="footer-locked">Sair da lista</div></body></html>'
     end
 
+    before { account.enable_features!('conversa_email_nova') }
+
     def responder(conteudo, modelo_id: modelo.id, so_modelo: false, citacao: nil)
       atributos = { email_modelo: { template_id: modelo_id, html: html_do_modelo, so_modelo: so_modelo } }
       atributos[:email_citacao] = citacao if citacao
@@ -121,6 +123,22 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
       html = responder('Modelo para Marina', so_modelo: true).content_attributes.dig('email', 'html_content', 'reply')
 
       expect(html.scan('Modelo para Marina').size).to eq(1)
+    end
+
+    it 'modelo sem texto do atendente (só o banner) também monta o corpo do e-mail' do
+      mensagem = responder('')
+      html = mensagem.content_attributes.dig('email', 'html_content', 'reply')
+
+      expect(html).to include('Modelo para Marina')
+      expect(mensagem.content_attributes.dig('email', 'text_content', 'reply')).to include('Modelo para Marina')
+    end
+
+    it 'com a chave conversa_email_nova desligada, o pedido do modelo é ignorado, como no Chatwoot' do
+      account.disable_features!('conversa_email_nova')
+
+      html = responder('Oi').content_attributes.dig('email', 'html_content', 'reply')
+
+      expect(html).not_to include('Modelo para Marina')
     end
 
     it 'histórico vai depois do modelo' do

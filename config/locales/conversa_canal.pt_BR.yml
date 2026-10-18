@@ -13,6 +13,8 @@ pt_BR:
       falhou: 'Não deu para transcrever agora. Tente de novo em instantes.'
     email:
       escreveu: 'Em %{data}, %{remetente} escreveu:'
+      prefixo_encaminhado: 'Enc:'
+      encaminhar_sem_para: 'Coloque em Para quem vai receber o encaminhado.'
       encaminhada: '---------- Mensagem encaminhada ----------'
       de: 'De'
       data: 'Data'

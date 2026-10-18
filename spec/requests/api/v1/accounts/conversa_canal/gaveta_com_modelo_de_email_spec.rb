@@ -14,7 +14,10 @@ RSpec.describe 'Gaveta Escrever com modelo de e-mail' do
       '<script>alert(1)</script><div class="footer-locked">Sair da lista</div></body></html>'
   end
 
-  before { create(:inbox_member, user: agent, inbox: inbox) }
+  before do
+    account.enable_features!('conversa_email_nova')
+    create(:inbox_member, user: agent, inbox: inbox)
+  end
 
   def criar(pedido, conteudo: 'Segue a proposta.')
     post "/api/v1/accounts/#{account.id}/conversations",

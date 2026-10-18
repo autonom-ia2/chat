@@ -20,6 +20,24 @@ class ConversaCanal::CitacaoDoEmail
     TIPOS.include?(tipo) && original.present?
   end
 
+  # O pedido é de encaminhar (mesmo que a mensagem citada não valha): sem Para, o builder recusa.
+  def encaminhado?
+    tipo == 'encaminhado'
+  end
+
+  # O encaminhado leva os arquivos do original, como no Gmail. O mesmo arquivo guardado, sem cópia.
+  def anexos_assinados
+    return [] unless valida? && encaminhado?
+
+    original.attachments.filter_map { |anexo| anexo.file.blob&.signed_id }
+  end
+
+  # "Enc: Proposta" no idioma da conta. O encaminhado é um fio novo para quem recebe, não "Re:" do fio do cliente.
+  def assunto_do_encaminhado
+    assunto = dados['subject'].presence || @conversation.additional_attributes.to_h['mail_subject'].to_s
+    no_idioma_da_conta { "#{I18n.t('conversa_canal.email.prefixo_encaminhado')} #{assunto}".strip }
+  end
+
   # Palavras e data no idioma da conta: quem lê é o cliente, não quem está logado.
   def html
     return '' unless valida?
@@ -94,12 +112,24 @@ class ConversaCanal::CitacaoDoEmail
     @dados ||= (original.content_attributes || {}).with_indifferent_access[:email] || {}
   end
 
+  # O que veio do cliente: o From dele. O que saiu da plataforma não tem From gravado: vale o endereço da caixa (o que o
+  # cliente viu), nunca o e-mail de login do atendente; o nome é o do atendente ou, de robô e automação, o da caixa.
   def remetente
-    endereco = Array(dados['from']).first.presence || original.sender.try(:email)
-    nome = original.sender.try(:name)
+    endereco, nome = original.outgoing? ? remetente_da_caixa : remetente_do_cliente
     return endereco.to_s if nome.blank? || nome == endereco
+    return nome.to_s if endereco.blank?
 
     "#{nome} <#{endereco}>"
+  end
+
+  def remetente_do_cliente
+    [Array(dados['from']).first.presence || original.sender.try(:email), original.sender.try(:name)]
+  end
+
+  def remetente_da_caixa
+    caixa = @conversation.inbox
+    nome = original.sender.is_a?(User) ? original.sender.available_name : caixa.name
+    [Array(dados['from']).first.presence || caixa.channel.try(:email), nome]
   end
 
   # "sáb., 17 de out. de 2026 às 10:15", no fuso da conta.

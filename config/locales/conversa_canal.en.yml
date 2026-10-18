@@ -13,6 +13,8 @@ en:
       falhou: 'Could not transcribe right now. Try again in a moment.'
     email:
       escreveu: 'On %{data}, %{remetente} wrote:'
+      prefixo_encaminhado: 'Fwd:'
+      encaminhar_sem_para: 'Add who will receive the forwarded email in To.'
       encaminhada: '---------- Forwarded message ---------'
       de: 'From'
       data: 'Date'
