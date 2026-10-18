@@ -662,6 +662,8 @@ Rails.application.routes.draw do
             post :restore, on: :member
           end
           resources :brand_kit_imports, only: [:create, :show]
+          # Browser errors written to our own log (#1841), no external service.
+          resources :client_errors, only: [:create]
           namespace :email_campaigns do
             post 'maintenance/backfills', to: 'maintenance#create'
             get 'maintenance/backfills/:id', to: 'maintenance#show'

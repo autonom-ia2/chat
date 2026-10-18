@@ -210,7 +210,7 @@ RSpec.describe Crm::FollowUps::CallbackRunner do
         result = run_callback
 
         expect(result.status).to eq(:fallback)
-        expect(result.error).to eq('modelo_em_analise')
+        expect(result.error).to eq('em_analise')
         expect(ai_calls).to be_empty
       end
     end

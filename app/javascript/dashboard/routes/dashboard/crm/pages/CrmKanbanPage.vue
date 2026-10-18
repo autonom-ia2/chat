@@ -66,6 +66,7 @@ import {
   countsAsSale,
   outcomeLabels,
   outcomeStatuses,
+  avisoDoDesfecho,
 } from '../helpers/cardOutcome';
 import { ehCobranca } from '../components/funil/funil';
 import {
@@ -1519,15 +1520,6 @@ const archiveCard = async () => {
   }
 };
 
-// Keyed on the status the server actually wrote: a non-sale funnel turns "won" into resolved (#1144).
-const CLOSE_ALERT_KEYS = {
-  won: 'CARD_WON',
-  lost: 'CARD_LOST',
-  resolved: 'CARD_RESOLVED',
-  cancelled: 'CARD_CANCELLED',
-  open: 'CARD_REOPENED',
-};
-
 const closeCardDeal = async payload => {
   const cardId = selectedCard.value?.id;
   if (!cardId) return;
@@ -1538,15 +1530,7 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
-    // #1498 — reabrir num funil de Atender diz "Atendimento reaberto".
-    const reaberto = funilDeVenda.value
-      ? 'CARD_REOPENED'
-      : 'CARD_REOPENED_ATENDER';
-    useAlert(
-      t(
-        `CRM_KANBAN.ALERTS.${detailedCard?.status === 'open' ? reaberto : CLOSE_ALERT_KEYS[detailedCard?.status] || reaberto}`
-      )
-    );
+    useAlert(avisoDoDesfecho(t, detailedCard?.status, selectedPipeline.value));
   } catch (error) {
     avisarErro(
       error,

@@ -5,6 +5,7 @@ import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useRoute } from 'vue-router';
 import { emitter } from 'shared/helpers/mitt';
 import { useConversationLabels } from 'dashboard/composables/useConversationLabels';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useAgentsList } from 'dashboard/composables/useAgentsList';
 import { CMD_AI_ASSIST } from 'dashboard/helper/commandbar/events';
@@ -395,7 +396,11 @@ export function useConversationHotKeys() {
     return defaultConversationHotKeys;
   });
 
+  // Quem só lê a conversa (#1800) não tem atalho de resolver, atribuir, etiquetar nem prioridade.
+  const canOperate = useCanOperateConversation(currentChat);
+
   const conversationHotKeys = computed(() => {
+    if (!canOperate.value) return [];
     if (shouldShowSnoozeOption.value) {
       return prepareActions(SNOOZE_CONVERSATION_ACTIONS, t);
     }

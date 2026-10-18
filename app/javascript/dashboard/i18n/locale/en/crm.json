@@ -1181,6 +1181,7 @@
       "CARD_LOST": "Deal marked as lost.",
       "CARD_RESOLVED": "Card marked as resolved.",
       "CARD_CANCELLED": "Card marked as cancelled.",
+      "CARD_MARKED_AS": "Marked: {label}.",
       "CARD_REOPENED": "Deal reopened.",
       "CARD_CLOSE_ERROR": "Could not update the deal status.",
       "CARD_MOVED": "Card moved.",
@@ -4273,6 +4274,35 @@
         "E3": "Promised to pay",
         "E4": "Paid",
         "SUCESSO": "Paid"
+      },
+      "RENOVACAO": {
+        "NOME": "Renewal",
+        "TEXTO": "From the expiry notice to the renewed policy.",
+        "E1": "Expiring soon",
+        "E2": "Quoting",
+        "E3": "Options sent",
+        "E4": "Negotiation",
+        "E5": "Renewed",
+        "SUCESSO": "Renewed",
+        "FALHA": "Not renewed"
+      },
+      "SINISTRO": {
+        "NOME": "Claim",
+        "TEXTO": "From the customer's notice to the insurer's answer.",
+        "E1": "Opened",
+        "E2": "Under review",
+        "E3": "Missing document",
+        "E4": "Closed",
+        "SUCESSO": "Closed"
+      },
+      "ENDOSSO": {
+        "NOME": "Endorsement",
+        "TEXTO": "From the endorsement request to the new policy.",
+        "E1": "Requested",
+        "E2": "With the insurer",
+        "E3": "Missing document",
+        "E4": "Done",
+        "SUCESSO": "Done"
       }
     },
     "ETAPAS": {
@@ -4379,7 +4409,16 @@
         "ENTREGA": "asks about the delivery",
         "PAGAR": "wants to pay",
         "SEGUNDA_VIA": "asks for a copy of the bill",
-        "ATRASADO": "is late on a payment"
+        "ATRASADO": "is late on a payment",
+        "VAI_VENCER": "has a policy about to expire",
+        "RENOVAR": "wants to renew the policy",
+        "AVISO_RENOVACAO": "got the renewal notice",
+        "BATEU": "had a car crash or some damage",
+        "ROUBO": "was robbed",
+        "ACIONAR": "wants to file a claim",
+        "TROCOU_CARRO": "changed cars",
+        "MUDOU_ENDERECO": "moved to a new address",
+        "INCLUIR_MOTORISTA": "wants to add a driver"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."
@@ -4624,6 +4663,7 @@
         "TEXTO": "Solve something for an existing customer."
       },
       "MODELO": "What kind of service?",
+      "MODELO_VENDER": "What kind of sale?",
       "PREVIA_TITULO": "Your board shows up here",
       "PREVIA_TEXTO": "Choose what the pipeline is for and we show the ready-made stages.",
       "ROTULO": "What it is for"
@@ -4727,7 +4767,9 @@
         "SUMIU": "Stopped replying",
         "NAO_PRECISA": "No longer needed"
       },
-      "CANCELAR_EXEMPLO": "Why was it cancelled?"
+      "CANCELAR_EXEMPLO": "Why was it cancelled?",
+      "PERDEU_TITULO_ROTULO": "{rotulo}: what happened?",
+      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}"
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",

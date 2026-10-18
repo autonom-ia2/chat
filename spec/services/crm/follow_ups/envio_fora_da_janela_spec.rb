@@ -1,145 +1,186 @@
 require 'rails_helper'
 
-# Lembrete de Atender fora das 24h (#1498): só com modelo aprovado do Garantir (#1518). Sem ele, avisa a equipe.
+# Lembrete de cobrança fora das 24h e retorno (#1498, #1624): o elo do Followup com o ponto único (Whatsapp::Templates::EnvioForaDaJanela).
+# O ponto único roda de verdade (planejar e enviar, com os prontos da cobrança); só a conferência na Meta (DispatchCheck) é dublê.
 RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
-  let(:account) { create(:account, locale: 'pt_BR') }
-  let(:user) { create(:user, account: account) }
-  let(:channel) do
-    create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
-  end
-  let(:contact) { account.contacts.create!(name: 'Júlia Ramos', phone_number: '+5511955554444') }
-  let(:conversation) do
-    contact_inbox = ContactInbox.create!(contact: contact, inbox: channel.inbox, source_id: '5511955554444')
-    account.conversations.create!(inbox: channel.inbox, contact: contact, contact_inbox: contact_inbox, assignee: user)
-  end
-  let(:card) do
-    pipeline, stage = create_crm_pipeline(account: account, user: user, name: 'Cobrança')
-    pipeline.update!(counts_as_sale: false)
-    account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Mensalidade de outubro',
-                              value_cents: 35_000, expected_close_at: Date.new(2026, 10, 20))
-  end
+  include CrmHybridHelpers
+
+  before { travel_to Time.utc(2026, 10, 16, 14) }
+
+  let(:pronto) { Whatsapp::Templates::Finalidades.pronto(:cobranca_vencimento, momento: :no_dia, com_valor: true) }
+  let(:modelo) { pronto.corpo.deep_stringify_keys.merge('id' => '9', 'status' => 'APPROVED', 'language' => 'pt_BR') }
+  let(:checagem) { instance_double(Whatsapp::Templates::DispatchCheck) }
   let(:kind) { 'payment_due' }
-  let(:follow_up) do
-    account.crm_follow_ups.create!(card: card, conversation: conversation, contact: contact, title: 'Lembrar do pagamento',
-                                   due_at: 1.hour.from_now, metadata: { 'source' => 'service_reminder', 'kind' => kind })
-  end
-  let(:pronto) do
-    { status: :pronto, nome: 'cobranca_vencimento', idioma: 'pt_BR', categoria: 'UTILITY',
-      campos: { '2' => 'negocio.valor', '1' => 'cliente.primeiro_nome', '3' => 'negocio.titulo' } }
+  let!(:scenario) { build_crm_hybrid_scenario(templates: [modelo], hybrid: false) }
+  let(:card) { scenario[:card].tap { |created| created.update!(value_cents: 35_000, expected_close_at: Date.new(2026, 10, 16)) } }
+  let!(:follow_up) do
+    card
+    create_crm_hybrid_follow_up(scenario, source: 'service_reminder', metadata: { 'kind' => kind, 'key' => "#{kind}:2026-10-16" })
   end
 
-  def envio
-    described_class.new(follow_up: follow_up, card: card).call
+  def envio(**opcoes)
+    described_class.new(follow_up: follow_up.reload, card: card, **opcoes).call
   end
 
-  # Dublê do Garantir (#1518) com a assinatura combinada; guarda o que recebeu.
-  def com_garantir(resposta)
-    chamadas = []
-    garantir = Class.new do
-      define_singleton_method(:call) do |inbox:, finalidade:, momento:, com_valor:, idioma:|
-        chamadas << { inbox: inbox, finalidade: finalidade, momento: momento, com_valor: com_valor, idioma: idioma }
-        resposta
-      end
+  def conferencia(categoria: 'UTILITY', motivo: nil)
+    template = modelo.merge('category' => categoria)
+    verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: motivo, source: nil, template: template,
+                                                              details: { lookup_source: 'meta' })
+    allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_return(checagem)
+    allow(checagem).to receive(:call).and_return(verdict)
+  end
+
+  def marca(plano:, due_at: Crm::FollowUps::Preflight.horario(follow_up))
+    follow_up.update!(metadata: follow_up.metadata.merge('preflight' => { 'estado' => 'pronto', 'due_at' => due_at, 'plano' => plano }))
+  end
+
+  def plano_do_pronto
+    Whatsapp::Templates::EnvioForaDaJanela.planejar(inbox: scenario[:inbox], tipo: 'cobranca_no_dia', com_valor: true, criar: false)
+  end
+
+  describe '.tipo_de' do
+    it 'mapeia o momento da cobrança e o retorno; o resto não tem modelo' do
+      expect(described_class.tipo_de(follow_up)).to eq('cobranca_no_dia')
+      follow_up.update!(metadata: follow_up.metadata.merge('kind' => 'payment_before'))
+      expect(described_class.tipo_de(follow_up)).to eq('cobranca_antes')
+      follow_up.update!(metadata: follow_up.metadata.merge('kind' => 'payment_after'))
+      expect(described_class.tipo_de(follow_up)).to eq('cobranca_depois')
+      follow_up.update!(metadata: follow_up.metadata.merge('source' => 'ai_callback'))
+      expect(described_class.tipo_de(follow_up)).to eq('retorno')
+      follow_up.update!(metadata: follow_up.metadata.merge('source' => 'service_reminder', 'kind' => 'progress'))
+      expect(described_class.tipo_de(follow_up)).to be_nil
     end
-    stub_const('Whatsapp::Templates::Garantir', garantir)
-    chamadas
   end
 
-  it 'com o modelo pronto e enviável, preenche os campos com os dados do card' do
-    chamadas = com_garantir(pronto)
-    verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: nil, source: 'meta', details: {})
-    allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_return(instance_double(Whatsapp::Templates::DispatchCheck, call: verdict))
-
-    result = envio
-
-    expect(chamadas.sole).to eq(inbox: channel.inbox, finalidade: :cobranca_vencimento, momento: :no_dia, com_valor: true,
-                                idioma: nil)
-    expect(result).to be_enviar
-    expect(result.metadata).to include(
-      'template_name' => 'cobranca_vencimento', 'template_language' => 'pt_BR', 'template_params_category' => 'UTILITY',
-      'template_processed_params' => {
-        'body' => { '2' => 'R$ 350,00', '1' => 'Júlia', '3' => 'Mensalidade de outubro' }
-      }
-    )
-  end
-
-  # O prazo ('4' => 'negocio.prazo') entra no catálogo junto com o Garantir (#1518); aqui só os campos que já existem.
-  it 'sem valor, pede o modelo sem valor e segue a numeração que o Garantir devolve' do
-    card.update!(value_cents: 0)
-    chamadas = com_garantir(pronto.merge(campos: { '1' => 'cliente.primeiro_nome', '2' => 'negocio.titulo' }))
-    verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: nil, source: 'meta', details: {})
-    allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_return(instance_double(Whatsapp::Templates::DispatchCheck, call: verdict))
-
-    result = envio
-
-    expect(chamadas.sole).to include(com_valor: false, idioma: nil)
-    expect(result.metadata['template_processed_params']).to eq('body' => { '1' => 'Júlia', '2' => 'Mensalidade de outubro' })
-  end
-
-  it 'modelo em análise ou que não passa na conferência: avisa a equipe' do
-    com_garantir(status: :em_analise, nome: 'cobranca_vencimento', idioma: 'pt_BR')
-    expect(envio.motivo).to eq('modelo_em_analise')
-
-    com_garantir(status: :indisponivel, motivo: 'recusado')
-    expect(envio.motivo).to eq('modelo_indisponivel:recusado')
-
-    com_garantir(pronto)
-    verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: 'template_not_approved', source: 'meta', details: {})
-    allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_return(instance_double(Whatsapp::Templates::DispatchCheck, call: verdict))
-    expect(envio.motivo).to eq('modelo_template_not_approved')
-  end
-
-  it 'modelo que a Meta classificou como propaganda: não manda, avisa a equipe' do
-    com_garantir(pronto.merge(categoria: 'MARKETING'))
-    expect(envio.motivo).to eq('categoria_propaganda')
-
-    com_garantir(pronto)
-    verdict = Whatsapp::Templates::DispatchCheck::Verdict.new(reason_code: nil, source: 'meta', details: {},
-                                                              template: { 'category' => 'MARKETING' })
-    allow(Whatsapp::Templates::DispatchCheck).to receive(:new).and_return(instance_double(Whatsapp::Templates::DispatchCheck, call: verdict))
-    expect(envio.motivo).to eq('categoria_propaganda')
-  end
-
-  it 'campo sem valor (ou fora do catálogo) não manda nada' do
-    com_garantir(pronto.merge(campos: { '1' => 'cliente.cpf' }))
-    expect(envio.motivo).to eq('campo_sem_valor')
-  end
-
-  # Com o Garantir de verdade (#1586): criar o modelo da cobrança depende da autorização do dono. A Meta é um dublê.
-  describe 'autorização do dono para criar o modelo' do
-    let(:client) { instance_double(Whatsapp::Templates::MetaClient) }
-
-    before { allow(Whatsapp::Templates::MetaClient).to receive(:new).and_return(client) }
-
-    it 'sem autorização: nada é criado na Meta e a equipe é lembrada, com o motivo' do
-      allow(client).to receive(:create)
+  describe 'cobrança sem pré-voo' do
+    it 'planeja sem criar, preenche os campos com os dados do card de agora e devolve o metadata de envio com o registro' do
+      conferencia
+      allow(Whatsapp::Templates::EnvioForaDaJanela).to receive(:planejar).and_call_original
 
       result = envio
 
-      expect(result.status).to eq(:lembrar_equipe)
-      expect(result.motivo).to eq('modelo_indisponivel:sem_consentimento')
-      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
-      I18n.with_locale(:pt_BR) { expect(described_class.aviso(result.motivo)).to include('não autorizou') }
+      expect(Whatsapp::Templates::EnvioForaDaJanela).to have_received(:planejar)
+        .with(hash_including(tipo: 'cobranca_no_dia', com_valor: true, criar: false, ja_recusado: false))
+      expect(result).to be_enviar
+      expect(result.metadata).to include('template_name' => pronto.nome, 'template_language' => 'pt_BR', 'template_params_category' => 'UTILITY')
+      expect(result.metadata['template_processed_params']['body']).to include('2' => 'R$ 350,00', '1' => 'Lead')
+      expect(result.metadata['envio_fora_da_janela']).to include('tipo' => 'cobranca_no_dia', 'modelo' => pronto.nome, 'categoria' => 'UTILITY')
     end
 
-    it 'com autorização: o Garantir cria o modelo e o lembrete espera a análise da Meta' do
-      WhatsappTemplateConsent.create!(account: account, user: user, marca: 'utility', acao: WhatsappTemplateConsent::LIGOU,
-                                      versao_aviso: 'v1', texto_aviso: 'Aviso.')
-      pronto = Whatsapp::Templates::Finalidades.pronto(:cobranca_vencimento, momento: :no_dia, com_valor: true)
-      criado = pronto.corpo.deep_stringify_keys.merge('id' => '901', 'status' => 'PENDING')
-      allow(client).to receive(:create).and_return(Whatsapp::Templates::MetaClient::Outcome.new(template: criado, created: true))
+    it 'sem valor no card, pede o pronto sem valor' do
+      card.update!(value_cents: 0)
+      allow(Whatsapp::Templates::EnvioForaDaJanela).to receive(:planejar).and_call_original
 
-      expect(envio.motivo).to eq('modelo_em_analise')
-      expect(client).to have_received(:create).with(pronto.corpo.deep_stringify_keys)
+      envio
+
+      expect(Whatsapp::Templates::EnvioForaDaJanela).to have_received(:planejar).with(hash_including(com_valor: false)).at_least(:once)
+    end
+
+    it 'o modelo ainda não existe na caixa e não houve pré-voo: nunca cria no horário, avisa a equipe' do
+      scenario[:inbox].channel.update_columns(message_templates: []) # rubocop:disable Rails/SkipsModelValidations
+      allow(Whatsapp::Templates::MetaClient).to receive(:new)
+
+      result = envio
+
+      expect(result).to have_attributes(status: :lembrar_equipe, motivo: 'no_template')
+      expect(Whatsapp::Templates::MetaClient).not_to have_received(:new)
     end
   end
 
-  context 'when it is the progress reminder (no template purpose)' do
-    let(:kind) { 'progress' }
+  describe 'plano gravado pelo pré-voo' do
+    it 'usa o plano gravado, sem planejar de novo' do
+      conferencia
+      marca(plano: plano_do_pronto)
+      allow(Whatsapp::Templates::EnvioForaDaJanela).to receive(:planejar)
 
-    it 'avisa a equipe' do
-      com_garantir(pronto)
-      expect(envio.motivo).to eq('sem_finalidade_de_modelo')
+      expect(envio).to be_enviar
+      expect(Whatsapp::Templates::EnvioForaDaJanela).not_to have_received(:planejar)
+    end
+
+    it 'o plano é de outro horário (o follow-up foi remarcado): ignora e planeja de novo' do
+      conferencia
+      marca(plano: plano_do_pronto, due_at: '2026-10-15T14:00:00.000000Z')
+      allow(Whatsapp::Templates::EnvioForaDaJanela).to receive(:planejar).and_call_original
+
+      expect(envio).to be_enviar
+      expect(Whatsapp::Templates::EnvioForaDaJanela).to have_received(:planejar)
+    end
+
+    it 'o plano gravado ainda estava criando (formato real, sem campos) e a Meta já aprovou: replaneja e envia com os campos do modelo de agora' do
+      conferencia
+      marca(plano: plano_do_pronto.except('campos', 'texto').merge('caminho' => 'criando'))
+
+      result = envio
+
+      expect(result).to be_enviar
+      expect(result.metadata['template_processed_params']['body'].keys).to match_array(pronto.campos.keys)
+    end
+
+    it 'o plano gravado era de outro modelo (campos diferentes): os valores saem do modelo do plano de agora, nunca trocados' do
+      conferencia
+      marca(plano: plano_do_pronto.merge('caminho' => 'criando', 'campos' => { '1' => 'negocio.titulo', '2' => 'cliente.primeiro_nome' }))
+
+      body = envio.metadata['template_processed_params']['body']
+
+      expect(body).to include('1' => 'Lead')
+      expect(body.keys).to match_array(pronto.campos.keys)
+      expect(pronto.campos.values).to include('negocio.valor')
+      expect(body.values).to include('R$ 350,00')
+    end
+
+    it 'plano da equipe gravado pelo pré-voo (sem campos) e o modelo já aprovado no horário: envia, sem motivo falso de campo sem valor' do
+      conferencia
+      marca(plano: { 'versao' => 1, 'tipo' => 'cobranca_no_dia', 'caminho' => 'equipe', 'motivo' => 'meta_fora', 'ja_recusado' => false })
+
+      expect(envio).to be_enviar
+    end
+
+    it 'sem modelo no horário e o pré-voo tinha o motivo de autorização: o aviso conserva o motivo mais específico' do
+      scenario[:inbox].channel.update_columns(message_templates: []) # rubocop:disable Rails/SkipsModelValidations
+      marca(plano: { 'versao' => 1, 'tipo' => 'cobranca_no_dia', 'caminho' => 'equipe', 'motivo' => 'sem_consentimento', 'ja_recusado' => false })
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'sem_consentimento')
+    end
+
+    it 'campo do plano sem valor (ou fora do catálogo): não manda nada' do
+      marca(plano: plano_do_pronto.merge('campos' => { '1' => 'cliente.cpf' }))
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'campo_sem_valor')
+    end
+  end
+
+  describe 'o que não vai ao cliente' do
+    it 'conferência na Meta recusa o modelo: avisa a equipe com o motivo' do
+      conferencia(motivo: 'template_not_approved')
+      marca(plano: plano_do_pronto)
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'template_not_approved')
+    end
+
+    it 'modelo que a Meta classificou como propaganda: não manda, avisa a equipe' do
+      conferencia(categoria: 'MARKETING')
+      marca(plano: plano_do_pronto.merge('nome' => 'modelo_da_conta', 'categoria' => 'MARKETING', 'origem' => 'conta'))
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'categoria_propaganda')
+    end
+
+    it 'lembrete que não é de cobrança (andamento): sem modelo, avisa a equipe' do
+      follow_up.update!(metadata: follow_up.metadata.merge('kind' => 'progress'))
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'sem_finalidade_de_modelo')
+    end
+
+    it 'o número não é o oficial: avisa a equipe' do
+      scenario[:inbox].update_columns(channel_type: 'Channel::Api') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'canal_sem_modelo_oficial')
+    end
+
+    it 'a Meta fora do ar levanta erro: avisa a equipe em vez de repetir a cada minuto' do
+      marca(plano: plano_do_pronto)
+      allow(Whatsapp::Templates::EnvioForaDaJanela).to receive(:enviar).and_raise(Faraday::ConnectionFailed, 'meta fora')
+
+      expect(envio).to have_attributes(status: :lembrar_equipe, motivo: 'meta_fora')
     end
   end
 
@@ -147,17 +188,16 @@ RSpec.describe Crm::FollowUps::EnvioForaDaJanela do
     I18n.with_locale(:pt_BR) do
       expect(described_class.aviso('modelo_indisponivel:recusado')).to include('O WhatsApp recusou o modelo')
       expect(described_class.aviso('modelo_em_analise')).to include('está em análise')
+      expect(described_class.aviso('em_analise')).to include('está em análise')
       expect(described_class.aviso('motivo_novo')).to eq('A mensagem ao cliente não saiu sozinha: fale com ele.')
-      %w[modelo_em_analise sem_finalidade_de_modelo canal_sem_modelo_oficial campo_sem_valor meta_fora
+      %w[sem_finalidade_de_modelo canal_sem_modelo_oficial campo_sem_valor meta_fora
          closure no_template not_composable send_failed_3 unverified_quote_2 whatsapp_api_unavailable
          modelo_template_missing modelo_template_not_approved modelo_template_category_changed
          modelo_template_structure_changed modelo_template_format_unsupported modelo_templates_not_synced
          modelo_template_unverifiable categoria_propaganda modelo_template_offer_expired no_conversation].each do |motivo|
         expect(described_class.aviso(motivo)).not_to eq('A mensagem ao cliente não saiu sozinha: fale com ele.'), motivo
       end
-      %w[sem_whatsapp_oficial idioma_sem_pronto formato recusado pausado desativado situacao_desconhecida meta_fora
-         sem_permissao meta_recusou texto_diferente perfil_invalido sem_consentimento].each do |motivo|
-        expect(described_class.aviso("modelo_indisponivel:#{motivo}")).to include(' '), motivo
+      Whatsapp::Templates::EnvioForaDaJanela::MOTIVOS.each do |motivo|
         expect(I18n.t("crm.service_reminders.aviso.#{motivo}", default: nil)).to be_present, motivo
       end
     end

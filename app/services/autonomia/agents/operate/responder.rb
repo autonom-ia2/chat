@@ -353,7 +353,7 @@ module Autonomia
             trust_instruction: true,
             delivery: delivery,
             **rodadas_do_turno,
-            **{ contexto_do_turno: contexto_do_turno, memoria: (memoria unless memoria.vazio?) }.compact
+            **{ contexto_do_turno: contexto_do_turno_com_passagem, memoria: (memoria unless memoria.vazio?) }.compact
           ).answer
         end
 
@@ -652,6 +652,17 @@ module Autonomia
 
           espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
           [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
+        end
+
+        # #1630: o item `developer` do turno: o contexto de sempre e, se uma pessoa passou a conversa a este agente e ele
+        # ainda não falou depois disso, o da passagem (AoReceberPassagem, com gate próprio e sem a Lia). nil sem nenhum.
+        def contexto_do_turno_com_passagem
+          [contexto_do_turno, contexto_da_passagem].compact.join("\n\n").presence
+        end
+
+        def contexto_da_passagem
+          passagem = ::Autonomia::Agents::Operate::AoReceberPassagem.pendente(@conversation, @agent_inbox)
+          ::Autonomia::Agents::Operate::AoReceberPassagem.contexto(passagem) if passagem
         end
 
         def equipe

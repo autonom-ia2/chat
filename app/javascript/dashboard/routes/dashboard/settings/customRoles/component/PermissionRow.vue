@@ -2,11 +2,13 @@
 import { computed } from 'vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import {
+  CONVERSATION_LEVELS,
   LEVELS,
   SENSITIVE_EXTRAS,
   getLevel,
   isExtraLocked,
   levelSlots,
+  slotLevel,
   visibleExtras,
   unmetSuggestion,
   suggestedLevel,
@@ -27,6 +29,13 @@ const emit = defineEmits([
 
 const level = computed(() => getLevel(props.module, props.permissions));
 const hasAccess = computed(() => level.value !== LEVELS.NONE);
+const activeSlot = computed(() => slotLevel(props.module, level.value));
+// Conversas em "Atender": escolher entre as próprias e todas (#1800).
+const isConversations = props.module.type === 'conversations';
+const reachOptions = [CONVERSATION_LEVELS.LIMITED, CONVERSATION_LEVELS.ALL];
+const showReach = computed(
+  () => isConversations && activeSlot.value === LEVELS.MANAGE
+);
 const slots = computed(() => levelSlots(props.module));
 const extras = computed(() => visibleExtras(props.module, props.permissions));
 const extrasOn = computed(
@@ -37,10 +46,13 @@ const suggestion = computed(() =>
 );
 
 const moduleKey = props.module.key;
-const levelLabelKey = option =>
-  option === LEVELS.NONE && props.module.baseline
-    ? `CUSTOM_ROLE.MATRIX.BASELINE.${props.module.baseline}`
-    : `CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`;
+const levelLabelKey = option => {
+  if (option === LEVELS.NONE && props.module.baseline)
+    return `CUSTOM_ROLE.MATRIX.BASELINE.${props.module.baseline}`;
+  if (isConversations && option !== LEVELS.NONE)
+    return `CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.SLOT_${option.toUpperCase()}`;
+  return `CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`;
+};
 const descriptionKey = computed(() =>
   hasAccess.value
     ? `CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.LEVEL_${level.value.toUpperCase()}`
@@ -94,11 +106,11 @@ const onArrow = (event, option) => {
             type="button"
             role="radio"
             :data-level="option"
-            :aria-checked="option === level"
-            :tabindex="option === level ? 0 : -1"
+            :aria-checked="option === activeSlot"
+            :tabindex="option === activeSlot ? 0 : -1"
             class="h-8 px-2 truncate rounded-md text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand/60"
             :class="
-              option !== level
+              option !== activeSlot
                 ? 'font-460 text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
                 : option === LEVELS.NONE
                   ? 'font-semibold shadow-sm ring-1 ring-inset ring-n-strong bg-n-solid-active dark:bg-n-solid-3 text-n-slate-12 motion-safe:animate-segment-select'
@@ -119,6 +131,34 @@ const onArrow = (event, option) => {
           </span>
         </template>
       </div>
+    </div>
+
+    <div
+      v-if="showReach"
+      role="radiogroup"
+      :aria-label="$t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.REACH`)"
+      class="flex flex-wrap items-center gap-2 mt-2 ps-11"
+    >
+      <span class="text-label-small text-n-slate-11">
+        {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.REACH`) }}
+      </span>
+      <button
+        v-for="option in reachOptions"
+        :key="option"
+        type="button"
+        role="radio"
+        :data-reach="option"
+        :aria-checked="option === level"
+        class="h-8 px-3 rounded-md text-[13px] ring-1 ring-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand/60"
+        :class="
+          option === level
+            ? 'font-semibold ring-n-brand/40 bg-n-brand/15 text-n-blue-11'
+            : 'font-460 ring-n-weak text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
+        "
+        @click="emit('selectLevel', option)"
+      >
+        {{ $t(`CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`) }}
+      </button>
     </div>
 
     <div

@@ -18,6 +18,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { ROTAS_DA_JORNADA as MODELOS_WHATSAPP_ROTAS } from 'dashboard/routes/dashboard/campaigns/modelos/constants';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
+import { readsOnlyConversations } from 'dashboard/store/modules/conversations/helpers';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -186,6 +187,13 @@ const currentRole = useMapGetter('getCurrentRole');
 const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 
 const isAdministrator = computed(() => currentRole.value === 'administrator');
+// Quem só lê conversas (#1800) não começa conversa nova.
+const canStartConversation = computed(
+  () =>
+    !readsOnlyConversations(
+      getUserPermissions(currentUser.value, accountId.value)
+    )
+);
 const hasAnyPermission = keys => {
   const permissions = getUserPermissions(currentUser.value, accountId.value);
   return keys.some(key => permissions.includes(key));
@@ -1498,7 +1506,7 @@ const menuItems = computed(() => {
         >
           <span class="i-lucide-search size-4 text-n-slate-11" />
         </RouterLink>
-        <ComposeConversation align="start">
+        <ComposeConversation v-if="canStartConversation" align="start">
           <template #trigger="{ isOpen }">
             <Button
               icon="i-lucide-pen-line"

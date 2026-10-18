@@ -7,6 +7,7 @@ import {
 import {
   ROLES,
   CONVERSATION_PERMISSIONS,
+  CONVERSATION_VIEW_PERMISSION,
   CONTACT_PERMISSIONS,
   CONTACT_VIEW_PERMISSION,
   REPORTS_PERMISSIONS,
@@ -30,7 +31,14 @@ export const isCrmKanbanEnabled = () =>
 // reports, help center. Each entry's permissions must open the destination
 // route's meta.permissions — routeHelpersLanding.spec.js checks it against the real routes.
 const LANDING_PAGES = [
-  { path: 'dashboard', permissions: [...ROLES, ...CONVERSATION_PERMISSIONS] },
+  {
+    path: 'dashboard',
+    permissions: [
+      ...ROLES,
+      ...CONVERSATION_PERMISSIONS,
+      CONVERSATION_VIEW_PERMISSION,
+    ],
+  },
   {
     path: 'contacts',
     permissions: [CONTACT_PERMISSIONS, CONTACT_VIEW_PERMISSION],
