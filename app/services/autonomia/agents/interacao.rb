@@ -8,14 +8,15 @@
 #
 # Regras do formato (decisões do Rodrigo na Issue):
 # - opções: `header` obrigatório (até 60, uma linha), a `pergunta` é o corpo; até 3 viram botões, mais de 3 (ou com
-#   descrição) viram lista, até 10. O texto do botão da lista vem do modelo (até 20), padrão "Ver opções". Sem
-#   `header`, ou fora do contrato do tipo, sai em texto: a pergunta e as opções numeradas;
+#   descrição) viram lista, até 10. O texto do botão da lista vem do modelo (até 20), padrão no idioma da conta
+#   (`autonomia.agents.botao_das_opcoes`). Sem `header`, ou fora do contrato do tipo, sai em texto: a pergunta e as
+#   opções numeradas;
 # - link: o endereço só vale se aparece, por inclusão de texto, no contexto do turno (instruções, conversa e saídas
 #   das ferramentas). Endereço que o modelo montou não sai;
 # - uma interação por resposta, sempre na última mensagem.
 module Autonomia::Agents::Interacao
   TIPO_DO_FORMATO = { 'opcoes' => 'options', 'link' => 'link_button' }.freeze
-  BOTAO_PADRAO = 'Ver opções'.freeze
+  BOTAO_PADRAO = 'autonomia.agents.botao_das_opcoes'.freeze
 
   TEXTO_OU_NULO = { type: %w[string null] }.freeze
   OPCAO = {
@@ -76,7 +77,7 @@ module Autonomia::Agents::Interacao
   # nil e o conteúdo é o corpo com a versão em texto do tipo.
   def mensagem(interacao, texto:, conversation:)
     corpo = interacao['tipo'] == 'opcoes' ? [texto, interacao['pergunta']].compact_blank.join("\n\n") : texto.to_s
-    formato = rich_message(interacao)
+    formato = rich_message(interacao, locale: conversation.account.locale)
     return { content: corpo, rich_message: formato } if sai_o_formato?(formato, corpo, conversation)
 
     complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
@@ -98,11 +99,11 @@ module Autonomia::Agents::Interacao
     base + [ultimo.merge('text' => final[:content], 'rich_message' => final[:rich_message]).compact]
   end
 
-  # O `rich_message` (chaves em texto) da interação.
-  def rich_message(interacao)
+  # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo sai no idioma da conta.
+  def rich_message(interacao, locale:)
     return { 'type' => 'link_button', 'label' => interacao['rotulo'], 'url' => interacao['url'] } if interacao['tipo'] == 'link'
 
-    { 'type' => 'options', 'header' => interacao['header'], 'button' => interacao['botao'],
+    { 'type' => 'options', 'header' => interacao['header'], 'button' => interacao['botao'] || I18n.t(BOTAO_PADRAO, locale: locale),
       'options' => interacao['opcoes'].map(&:compact) }.compact
   end
 
@@ -123,7 +124,7 @@ module Autonomia::Agents::Interacao
       { 'id' => opcao['id'].to_s, 'title' => opcao['titulo'].to_s, 'description' => opcao['descricao'].presence }
     end
     { 'tipo' => 'opcoes', 'header' => valor['header'].presence, 'pergunta' => valor['pergunta'].to_s,
-      'botao' => valor['botao'].presence || BOTAO_PADRAO, 'opcoes' => lista }
+      'botao' => valor['botao'].presence, 'opcoes' => lista }
   end
 
   def link(valor, contexto)

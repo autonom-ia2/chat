@@ -68,8 +68,8 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect([nil, 'opcoes', { 'tipo' => 'mapa' }].map { |valor| described_class.do_modelo(valor, contexto: '') }).to all(be_nil)
     end
 
-    it 'guarda as opções com o botão padrão da lista' do
-      expect(opcoes).to eq('tipo' => 'opcoes', 'header' => 'Agendamento', 'pergunta' => 'Qual período?', 'botao' => 'Ver opções',
+    it 'guarda as opções; sem texto do modelo, o botão da lista fica para a entrega' do
+      expect(opcoes).to eq('tipo' => 'opcoes', 'header' => 'Agendamento', 'pergunta' => 'Qual período?', 'botao' => nil,
                            'opcoes' => [{ 'id' => 'manha', 'title' => 'Manhã', 'description' => nil },
                                         { 'id' => 'tarde', 'title' => 'Tarde', 'description' => nil },
                                         { 'id' => 'noite', 'title' => 'Noite', 'description' => nil }])
@@ -99,10 +99,26 @@ RSpec.describe Autonomia::Agents::Interacao do
       janela_aberta
       final = described_class.mensagem(opcoes, texto: 'Temos vaga amanhã.', conversation: conversation)
       expect(final[:content]).to eq("Temos vaga amanhã.\n\nQual período?")
-      expect(final[:rich_message]).to eq('type' => 'options', 'header' => 'Agendamento', 'button' => 'Ver opções',
+      expect(final[:rich_message]).to eq('type' => 'options', 'header' => 'Agendamento', 'button' => 'See options',
                                          'options' => [{ 'id' => 'manha', 'title' => 'Manhã' }, { 'id' => 'tarde', 'title' => 'Tarde' },
                                                        { 'id' => 'noite', 'title' => 'Noite' }])
       expect(RichMessages.delivery_mode(inbox: inbox, type: 'options', conversation: conversation)).to eq(:native)
+    end
+
+    it 'o botão da lista sem texto do modelo sai no idioma da conta (en e pt_BR)' do
+      janela_aberta
+      botoes = %w[en pt_BR].map do |idioma|
+        account.update!(locale: idioma)
+        described_class.mensagem(opcoes, texto: nil, conversation: conversation.reload)[:rich_message]['button']
+      end
+      expect(botoes).to eq(['See options', 'Ver opções'])
+    end
+
+    it 'o botão escolhido pelo modelo vale em qualquer idioma' do
+      janela_aberta
+      account.update!(locale: 'pt_BR')
+      final = described_class.mensagem(opcoes.merge('botao' => 'Ver horários'), texto: nil, conversation: conversation.reload)
+      expect(final[:rich_message]['button']).to eq('Ver horários')
     end
 
     it 'mais de 3 opções sai como lista, até 10' do
