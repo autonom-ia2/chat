@@ -107,7 +107,9 @@ const levelLabel = module => {
         @select-level="level => emit('selectLevel', module, level)"
         @toggle-extra="key => emit('toggleExtra', module, key)"
         @toggle-open="emit('toggleRow', module.key)"
-        @grant-suggested="target => emit('grantSuggested', target)"
+        @grant-suggested="
+          (target, level) => emit('grantSuggested', target, level)
+        "
       />
     </template>
   </section>
