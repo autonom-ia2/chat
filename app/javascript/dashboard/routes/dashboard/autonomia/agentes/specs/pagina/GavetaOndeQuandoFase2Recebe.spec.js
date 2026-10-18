@@ -231,6 +231,20 @@ describe('GavetaOndeQuandoFase2 · Recebe quando alguém passar', () => {
     expect(wrapper.emitted('fechar')).toBeTruthy();
   });
 
+  // Regra G (#1788): a equipe numa caixa fora do alcance fica no servidor, então ela não para.
+  it('(c) "Não" with only a team inbox out of reach: saves without the stop warning', async () => {
+    montar({
+      canais: CANAIS.map(canal =>
+        canal.inbox_id === 3 ? { ...canal, alcanca: false } : canal
+      ),
+    });
+    await clicar(radio('PRIMEIRO_NAO'));
+    await clicar(no('[data-confirmar]'));
+
+    expect(no('[data-aviso-parado]')).toBeNull();
+    expect(pedido()[1]).toMatchObject({ areaInboxIds: [], parar: false });
+  });
+
   it('(c) a re-read of the inboxes with the same choice keeps the warning open', async () => {
     const wrapper = montar();
     await clicar(radio('PRIMEIRO_NAO'));

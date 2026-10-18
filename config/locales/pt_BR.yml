@@ -1075,6 +1075,7 @@ pt_BR:
         fase2_off: "Receber quando alguém passar a conversa ainda não está disponível nesta conta."
         confirmar_parado: "Assim, %{nome} não vai receber conversa em nenhum canal. Confirme para deixar assim."
         canal_com_outro_sistema: "Um agente de outro sistema atende primeiro em %{canal}. Nada mudou."
+        fora_do_alcance: "Você não faz parte de %{canal}. Peça a um administrador para mudar o agente lá. Nada mudou."
         primeiro_recusado: "%{nome} não pode atender primeiro em %{canal} agora. Nada mudou."
         saida_recusada: "Não deu para tirar %{nome} de %{canal}. Nada mudou."
         mudou_agora: "Alguém mudou estes canais agora. Recarregue e tente de novo."
@@ -1110,6 +1111,7 @@ pt_BR:
           - 'Para manter a resposta segura, vou trazer alguém do nosso time para continuar por aqui.'
         connect_errors:
           generic: "Não foi possível conectar esta caixa de entrada ao agente."
+          fora_do_alcance: "Você não faz parte deste canal. Peça a um administrador para mudar o agente nele."
           agent_internal_not_connectable: "Este é um agente interno (copiloto da equipe) e não pode ser conectado a uma caixa de entrada de clientes."
           agent_not_active: "Ative o agente antes de conectar uma caixa de entrada."
           inbox_has_webhook_bot: "Um agente externo já atende nesta caixa de entrada. Pare o agente externo primeiro."

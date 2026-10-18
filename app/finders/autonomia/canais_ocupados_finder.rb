@@ -15,23 +15,26 @@
 #   caixa só de pessoas.
 # `so_de_pessoas` (#1433): sem porta e sem robô de fora (o `occupied_by` nil), a mesma regra do AgentInbox. O agente da
 #   equipe entra e só responde a conversa que alguém passar para ele.
+# `alcanca` (regra G, #1788): quem pede pode pôr ou tirar agente desta caixa (membro ou inbox_manage). Sem `alcancavel`,
+#   true em todas.
 class Autonomia::CanaisOcupadosFinder
   EXTERNO = { kind: 'external' }.freeze
 
-  def initialize(account:, agents_scope:)
+  def initialize(account:, agents_scope:, alcancavel: nil)
     @account = account
     @agents_scope = agents_scope
+    @alcancavel = alcancavel
   end
 
-  # [{ inbox_id:, name:, channel_type:, occupied_by:, so_de_pessoas:, areas: }] por nome da caixa; no máximo 7 consultas, seja qual for o número
-  # de caixas.
+  # [{ inbox_id:, name:, channel_type:, occupied_by:, so_de_pessoas:, areas:, alcanca: }] por nome da caixa; no máximo 7 consultas (mais 2
+  # do alcance para quem não é administrador), seja qual for o número de caixas.
   def call
     com_bot = caixas_com_bot
     robos_de_outro_sistema # sempre, para o número de consultas não depender das caixas
     @account.inboxes.order(:name, :id).pluck(:id, :name, :channel_type).map do |inbox_id, name, channel_type|
       ocupado_por = ocupante(inbox_id, com_bot)
       { inbox_id: inbox_id, name: name, channel_type: channel_type, occupied_by: ocupado_por, so_de_pessoas: ocupado_por.nil?,
-        areas: areas_por_caixa.fetch(inbox_id, []) }
+        areas: areas_por_caixa.fetch(inbox_id, []), alcanca: @alcancavel.nil? || @alcancavel.alcanca_id?(inbox_id) }
     end
   end
 

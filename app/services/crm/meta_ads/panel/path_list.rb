@@ -8,22 +8,24 @@
 #   SLOW_SECONDS (a mais lenta primeiro), pelo Panel::ResponseTime do mesmo período.
 #
 # Cada linha leva à conversa e ao card no CRM. No máximo LIST_LIMIT linhas; `total` é a lista inteira. Título do
-# card ou, sem card, o nome do contato: a policy do painel é de administrador, que já vê os dois.
+# card ou, sem card, o nome do contato. Com `visible` (Crm::MetaAds::VisibleConversations, #1794), só as conversas
+# que a pessoa já veria na lista de conversas; o total conta essas.
 class Crm::MetaAds::Panel::PathList
   STEPS = %w[conversations quotes sales slow_replies].freeze
   LIST_LIMIT = 50
   SLOW_SECONDS = 300
 
-  def initialize(connection, step:, days:)
+  def initialize(connection, step:, days:, visible: nil)
     raise ArgumentError, "unknown step #{step}" unless STEPS.include?(step)
 
     @connection = connection
     @step = step
+    @visible = visible
     @report = Crm::MetaAds::Panel::Report.new(connection, days: days)
   end
 
   def payload
-    rows = send(:"#{@step}_rows")
+    rows = only_visible(send(:"#{@step}_rows"))
     shown = rows.first(LIST_LIMIT)
     names = contact_names(shown.reject { |_id, card| card&.title.present? }.map(&:first))
     { step: @step, days: @report.days, total: rows.size, items: shown.map { |id, card| item(id, card, names) } }
@@ -53,6 +55,13 @@ class Crm::MetaAds::Panel::PathList
 
   def cohort
     @report.cohort
+  end
+
+  def only_visible(rows)
+    return rows if @visible.nil?
+
+    ids = @visible.ids(rows.map(&:first))
+    rows.select { |row| ids.include?(row.first) }
   end
 
   def item(conversation_id, card, names)
