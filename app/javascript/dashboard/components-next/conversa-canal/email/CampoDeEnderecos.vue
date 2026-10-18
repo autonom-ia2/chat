@@ -180,7 +180,7 @@ const aoTeclar = evento => {
         :aria-controls="`${id}-lista`"
         :aria-activedescendant="ativa >= 0 ? `${id}-op-${ativa}` : undefined"
         :placeholder="enderecos.length ? '' : placeholder"
-        class="reset-base flex-1 min-w-[10rem] h-8 bg-transparent border-0 outline-none text-sm text-n-slate-12 placeholder:text-n-slate-10"
+        class="reset-base flex-1 min-w-[6rem] h-8 bg-transparent border-0 outline-none text-sm text-n-slate-12 placeholder:text-n-slate-10"
         @input="aoDigitar"
         @keydown="aoTeclar"
         @blur="confirmarDigitado"

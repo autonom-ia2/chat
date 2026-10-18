@@ -46,6 +46,13 @@ export const RESPOSTA_DO_EMAIL = [
   "[&_.left-wrap_button:not([role=menuitem])_span[class*='i-']]:!size-[22px]",
   '[&_.right-wrap]:!items-center',
   '[&_.right-wrap]:!gap-1',
+  // No celular a barra de baixo quebra em duas linhas: ferramentas em cima, Enviar
+  // inteiro embaixo, à direita.
+  'max-sm:[&_div:has(>.left-wrap)]:!flex-wrap',
+  'max-sm:[&_div:has(>.left-wrap)]:!gap-y-2',
+  'max-sm:[&_.left-wrap]:!flex-wrap',
+  'max-sm:[&_.right-wrap]:!w-full',
+  'max-sm:[&_.right-wrap]:!justify-end',
   // Enviar: pílula de 40 px com o destino escrito ("Enviar para Marina").
   '[&_.right-wrap_button[type=submit]]:!h-10',
   '[&_.right-wrap_button[type=submit]]:!px-5',
@@ -62,7 +69,7 @@ export const RESPOSTA_EXPANDIDA = [
   '[&_.resizable-editor-body]:!h-[calc(100vh-30rem)]',
   '[&_.resizable-editor-body]:!min-h-[8rem]',
   // O botão redondo do painel do contato flutua no canto direito.
-  'sm:[&_.reply-box]:!me-16',
+  'sm:!pe-16',
   '[&_.resizable-editor-body]:!max-h-none',
 ].join(' ');
 
