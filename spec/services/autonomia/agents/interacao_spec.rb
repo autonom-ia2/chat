@@ -214,6 +214,22 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(da_ferramenta('https://loja.com', "ver #{invalido} e https://loja.com/p")).to include('https://loja.com/p')
     end
 
+    it 'host com mais de 253 caracteres não vale, e o Punycode que recusa não quebra' do
+      longo = "https://#{'á' * 500}.com/x"
+      expect(described_class::Enderecos.normalizado(longo)).to be_nil
+      expect(described_class::Enderecos.normalizado("https://#{'a' * 253}/x")).to eq("https://#{'a' * 253}/x")
+      expect(described_class::Enderecos.normalizado("https://#{'a' * 254}/x")).to be_nil
+      expect(described_class::Enderecos.completo(longo)).to be_nil
+      expect(described_class::Enderecos.dentro?(longo, longo)).to be(false)
+      expect(da_ferramenta('https://loja.com', "#{longo} https://loja.com/p")).to eq(Set['https://loja.com', 'https://loja.com/p'])
+    end
+
+    it 'texto em UTF-16LE ou ISO-8859-1 vira UTF-8; UTF-8 válido fica igual' do
+      expect(da_ferramenta('https://loja.com', 'veja https://loja.com/p'.encode('UTF-16LE'))).to include('https://loja.com/p')
+      expect(da_ferramenta('https://loja.com', 'café https://loja.com/ç'.encode('ISO-8859-1'))).to include('https://loja.com/ç')
+      expect(da_ferramenta('https://loja.com', 'café https://loja.com/ç')).to include('https://loja.com/ç')
+    end
+
     it 'caminho com `..` ou `.` (também codificado) conta depois de resolvido' do
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/../conta')).to eq(Set['https://loja.com/pedidos'])
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/%2e%2e/conta')).to eq(Set['https://loja.com/pedidos'])

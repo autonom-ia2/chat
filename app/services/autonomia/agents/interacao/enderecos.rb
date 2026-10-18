@@ -9,6 +9,11 @@ module Autonomia::Agents::Interacao::Enderecos
   PONTUACAO_DO_FIM = ['.', ',', ';', ':', '!', '?', ')', ']', '}', '>', '"', "'", '*', '_'].freeze
   # Barra invertida (o navegador a trata como `/`) e barra codificada: com elas o prefixo do caminho do dono não prova nada.
   BARRAS_DISFARCADAS = %w[%5C %2F].freeze
+  # O que o Addressable (2.9, IDNA em Ruby puro) lança com endereço inválido: `%E0` no host, bytes inválidos, host
+  # internacional que o Punycode recusa. Endereço assim não vale (falso/nil), e o turno segue.
+  INVALIDO = [Addressable::URI::InvalidURIError, ArgumentError, Addressable::IDNA::PunycodeBigOutput,
+              Addressable::IDNA::PunycodeBadInput, Addressable::IDNA::PunycodeOverflow, Encoding::CompatibilityError].freeze
+  HOST_MAXIMO = 253 # o maior nome de host do DNS
 
   module_function
 
@@ -38,35 +43,37 @@ module Autonomia::Agents::Interacao::Enderecos
 
     prefixo = dono.path.delete_suffix('/')
     prefixo.empty? || uri.path == prefixo || uri.path.start_with?("#{prefixo}/")
-  rescue Addressable::URI::InvalidURIError, ArgumentError # `%E0` no host: o normalize recusa a sequência de bytes
+  rescue *INVALIDO
     false
   end
 
-  # -> Set dos endereços normalizados que aparecem nos textos. Bytes inválidos (saída de ferramenta) viram o caractere
-  # de substituição (`scrub`) antes de separar as palavras.
+  # -> Set dos endereços normalizados que aparecem nos textos. O texto vira UTF-8 antes de separar as palavras (saída
+  # de ferramenta em UTF-16 ou ISO-8859-1; byte inválido vira o caractere de substituição); UTF-8 válido fica igual.
   def dos_textos(textos)
-    textos.compact.flat_map { |texto| texto.to_s.scrub.split }.filter_map { |palavra| candidato(palavra) }.to_set
+    palavras = textos.compact.flat_map { |texto| texto.to_s.encode('UTF-8', invalid: :replace, undef: :replace).split }
+    palavras.filter_map { |palavra| candidato(palavra) }.to_set
   end
 
-  # -> o endereço normalizado, ou nil quando não é http(s) com host, ou quando traz usuário e senha (`user@`), em
-  # qualquer fonte e no pedido do modelo.
+  # -> o endereço normalizado, ou nil quando não é http(s) com host, quando o host passa de `HOST_MAXIMO` caracteres
+  # (antes de qualquer normalize), ou quando traz usuário e senha (`user@`), em qualquer fonte e no pedido do modelo.
   def normalizado(endereco)
     return unless endereco.is_a?(String)
 
     uri = Addressable::URI.parse(endereco)
     return unless ESQUEMAS.include?(uri.scheme.to_s.downcase) && uri.host.present? && uri.userinfo.nil?
+    return if uri.host.length > HOST_MAXIMO
 
     uri.scheme = uri.scheme.downcase
     uri.host = uri.host.downcase
     uri.to_s
-  rescue Addressable::URI::InvalidURIError, ArgumentError
+  rescue *INVALIDO
     nil
   end
 
   # -> o endereço inteiro normalizado (`Addressable::URI#normalize`), ou nil quando o normalize o recusa.
   def completo(endereco)
     Addressable::URI.parse(endereco).normalize.to_s
-  rescue Addressable::URI::InvalidURIError, ArgumentError
+  rescue *INVALIDO
     nil
   end
 

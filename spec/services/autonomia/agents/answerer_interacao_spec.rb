@@ -230,6 +230,53 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
+  describe 'host internacional longo (500 × "á"): o Punycode o recusaria' do
+    let(:longo) { "https://#{'á' * 500}.com/x" }
+
+    before { allow(Autonomia::Agents::Operate::TelemetriaDoTurno).to receive(:registrar) }
+
+    def link_longo
+      link.merge(link: { rotulo: 'Abrir', url: longo })
+    end
+
+    def expect_recusado_e_respondido(resultado)
+      expect(resultado.reply).to eq('Pronto.')
+      expect(resultado.interacao).to be_nil
+      expect(Autonomia::Agents::Operate::TelemetriaDoTurno).to have_received(:registrar)
+        .with(:link_recusado, conversation_id: conversation.id, agent: agent.id)
+    end
+
+    it 'na saída da ferramenta: o turno responde e o link é recusado' do
+      agent.update!(instruction: "Atenda. Loja: https://#{'á' * 500}.com")
+      ferramenta_devolve({ link: longo }.to_json)
+      modelo_responde(link_longo, chamadas: [chamada('pedido')])
+      expect_recusado_e_respondido(atender)
+    end
+
+    it 'na instrução: o turno responde e o link é recusado' do
+      agent.update!(instruction: "Atenda. Site: #{longo}")
+      modelo_responde(link_longo)
+      expect_recusado_e_respondido(atender)
+    end
+
+    it 'na base de conhecimento: o turno responde e o link é recusado' do
+      agent.update!(config: {})
+      trecho = Autonomia::Agents::KnowledgeEntry.new(id: 9, content: "Site: #{longo}")
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: [trecho]))
+      modelo_responde(link_longo)
+      expect_recusado_e_respondido(atender)
+    end
+  end
+
+  it 'saída da ferramenta em UTF-16LE não derruba o turno, e o endereço dentro do do dono vale' do
+    agent.update!(instruction: 'Atenda. Loja: https://loja.exemplo.com')
+    ferramenta_devolve("pedido em #{url}".encode('UTF-16LE'))
+    modelo_responde(link, chamadas: [chamada('pedido')])
+    resultado = atender
+    expect(resultado.reply).to eq('Pronto.')
+    expect(resultado.interacao).to include('url' => url)
+  end
+
   it 'turno sem pedido de link não lê os endereços do dono' do
     allow(Autonomia::Agents::Interacao::Enderecos).to receive(:do_dono).and_call_original
     [nil, opcoes].each do |interacao|
