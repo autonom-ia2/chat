@@ -270,6 +270,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(conteudos.join).not_to include('1. Manhã')
     end
 
+    it 'robô que não é o espelho de um vínculo deste agente, mesmo com a marca dele, fica como está' do
+      enviada_com(formato_das_opcoes, sender: create(:agent_bot, account: account))
+      outro = criar_principal(account, nome: 'Outro')
+      vinculo_do_outro = { agent: outro, inbox: create(:inbox, account: account), account: account, agent_bot: create(:agent_bot, account: account) }
+      espelho_do_outro = Autonomia::Agents::AgentInbox.create!(vinculo_do_outro).agent_bot
+      enviada_com(formato_das_opcoes, sender: espelho_do_outro)
+      perform
+      expect(conteudos.count('Temos vaga.')).to eq(2)
+      expect(conteudos.join).not_to include('1. Manhã')
+    end
+
     it 'na Lia o histórico fica como está' do
       enviada_com(formato_das_opcoes)
       enviada = conversation.messages.outgoing.last

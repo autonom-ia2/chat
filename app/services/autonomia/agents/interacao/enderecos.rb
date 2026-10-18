@@ -7,6 +7,8 @@
 module Autonomia::Agents::Interacao::Enderecos
   ESQUEMAS = %w[http https].freeze
   PONTUACAO_DO_FIM = ['.', ',', ';', ':', '!', '?', ')', ']', '}', '>', '"', "'", '*', '_'].freeze
+  # Barra invertida (o navegador a trata como `/`) e barra codificada: com elas o prefixo do caminho do dono não prova nada.
+  BARRAS_DISFARCADAS = %w[%5C %2F].freeze
 
   module_function
 
@@ -24,13 +26,15 @@ module Autonomia::Agents::Interacao::Enderecos
   end
 
   # O `endereco` começa pelo endereço do dono (`base`): o mesmo esquema, host e porta (a padrão do esquema quando não
-  # vem escrita), e o caminho do dono como prefixo em segmento inteiro (`/a` cobre `/a` e `/a/b`, nunca `/ab`).
+  # vem escrita), e o caminho do dono como prefixo em segmento inteiro (`/a` cobre `/a` e `/a/b`, nunca `/ab`); caminho com
+  # barra invertida ou barra codificada (`BARRAS_DISFARCADAS`, depois de normalizar) não vale.
   # Endereço do dono só com host (sem caminho, ou só "/") libera o host inteiro naquele esquema e porta. A consulta
   # (`?`) e o fragmento (`#`) do endereço do dono não restringem.
   def dentro?(endereco, base)
     uri = Addressable::URI.parse(endereco).normalize # sem `..` e `.` no caminho: `/a/../b` é `/b`
     dono = Addressable::URI.parse(base).normalize
     return false unless [uri.scheme, uri.host, uri.inferred_port] == [dono.scheme, dono.host, dono.inferred_port]
+    return false if BARRAS_DISFARCADAS.any? { |barra| uri.path.upcase.include?(barra) }
 
     prefixo = dono.path.delete_suffix('/')
     prefixo.empty? || uri.path == prefixo || uri.path.start_with?("#{prefixo}/")

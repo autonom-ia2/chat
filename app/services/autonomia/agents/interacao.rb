@@ -76,50 +76,49 @@ module Autonomia::Agents::Interacao
   end
 
   # -> { content:, rich_message:, em_texto: } da mensagem que leva a interação. `texto`: o que vai antes (a resposta,
-  # ou o último pedaço dela; nil quando a interação sai sozinha). Opções: o corpo é o texto e a pergunta. Link: o corpo
-  # é o texto. `em_texto`: a versão em texto (`versao_em_texto`). Quando o formato não sai (opções sem nenhuma opção, canal que
-  # o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é nil e o conteúdo é o `em_texto`: a pergunta das
-  # opções nunca se perde. `antes`: o texto que o cliente lê logo antes (o próprio `texto`, ou o último pedaço).
-  def mensagem(interacao, texto:, conversation:, antes: texto)
-    corpo = interacao['tipo'] == 'opcoes' ? [texto, interacao['pergunta']].compact_blank.join("\n\n") : texto.to_s
+  # ou o último pedaço dela; nil quando a interação sai sozinha). O corpo sai de `corpo`. `em_texto`: o corpo com a versão em
+  # texto do tipo (as opções numeradas; "rótulo: endereço" — o link sozinho, depois do áudio, sem o rótulo repetido
+  # antes). Quando o formato não sai (opções sem nenhuma opção, canal que o recusa, sem cabeçalho, fora do contrato do
+  # tipo), `rich_message` é nil e o conteúdo é o `em_texto`: a pergunta das opções nunca se perde.
+  def mensagem(interacao, texto:, conversation:)
+    corpo = corpo(interacao, texto)
     formato = rich_message(interacao, locale: conversation.account.locale)
-    em_texto = versao_em_texto(interacao, formato, texto, antes)
+    complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
+    em_texto = [corpo.presence, complemento.presence].compact.join("\n\n")
     no_formato = corpo.presence || interacao['rotulo'].to_s # o link sozinho (depois do áudio): o rótulo é o corpo
     return { content: no_formato, rich_message: formato, em_texto: em_texto } if sai_o_formato?(formato, no_formato, conversation)
 
     { content: em_texto, rich_message: nil, em_texto: em_texto }
   end
 
-  # O texto e a pergunta (sem ela quando `antes` já termina com ela, comparadas depois de strip), mais a versão em texto
-  # do tipo (as opções numeradas; "rótulo: endereço" — o link sozinho, depois do áudio, sem o rótulo repetido antes).
-  def versao_em_texto(interacao, formato, texto, antes)
-    pergunta = interacao['pergunta'] unless repetida?(antes, interacao['pergunta'])
-    corpo = interacao['tipo'] == 'opcoes' ? [texto, pergunta].compact_blank.join("\n\n") : texto.to_s
-    complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
-    [corpo.presence, complemento.presence].compact.join("\n\n")
+  # Opções: o texto e a pergunta, sem ela quando o texto já termina com ela (comparadas depois de strip). Link: o texto.
+  def corpo(interacao, texto)
+    return texto.to_s unless interacao['tipo'] == 'opcoes'
+
+    pergunta = interacao['pergunta'] unless repetida?(texto, interacao['pergunta'])
+    [texto, pergunta].compact_blank.join("\n\n")
   end
 
-  def repetida?(antes, pergunta)
-    pergunta.present? && antes.to_s.strip.end_with?(pergunta.strip)
+  def repetida?(texto, pergunta)
+    pergunta.present? && texto.to_s.strip.end_with?(pergunta.strip)
   end
 
   # Os pedaços da entrega humanizada com a interação no último: as opções num pedaço a mais (a pergunta, com o ritmo de
-  # um pedaço seguinte), o link no último pedaço da resposta. Sem pedaço nenhum, nada muda (quem chama vai ao clássico).
+  # um pedaço seguinte), o link no último pedaço da resposta. Opções cuja pergunta o último pedaço já traz vão nele,
+  # como o link. Sem pedaço nenhum, nada muda (quem chama vai ao clássico).
   # DEPLOY COM AS STACKS MISTURADAS: o `text` do último pedaço é sempre a versão em texto inteira (as opções numeradas,
   # o "rótulo: endereço"), que um worker antigo manda como está; o corpo que vai junto do formato fica em `corpo`, que
   # só o worker novo lê (ChunkedDeliveryJob#build_message!).
   def nos_pedacos(pedacos, interacao, conversation:)
     return pedacos if interacao.nil? || pedacos.empty?
 
-    base, ultimo = if interacao['tipo'] == 'opcoes'
+    base, ultimo = if interacao['tipo'] == 'opcoes' && !repetida?(pedacos.last['text'], interacao['pergunta'])
                      [pedacos, { 'text' => nil, 'type' => 'text',
                                  'delay_ms' => ::Autonomia::Agents::Operate::ReplyChunker.delay_seguinte(interacao['pergunta']) }]
                    else
                      [pedacos[0...-1], pedacos.last]
                    end
-    final = mensagem(interacao, texto: ultimo['text'], conversation: conversation, antes: pedacos.last['text'])
-    return pedacos if final[:content].blank? # só a pergunta, que o último pedaço já traz, e nenhuma opção
-
+    final = mensagem(interacao, texto: ultimo['text'], conversation: conversation)
     com_formato = final[:rich_message] ? { 'corpo' => final[:content], 'rich_message' => final[:rich_message] } : {}
     base + [ultimo.merge('text' => final[:em_texto]).merge(com_formato)]
   end
@@ -141,20 +140,23 @@ module Autonomia::Agents::Interacao
 
   # O histórico do modelo com a versão em texto (`RichMessages.text_with_fallback`) das opções e do link que ESTE agente
   # mandou, para o turno seguinte saber o que ofereceu. `itens` e `messages` andam juntos (Responder#history). Na Lia
-  # (`insurance_quote`) o histórico fica como está.
+  # (`insurance_quote`) o histórico fica como está. Só conta a mensagem do robô-espelho de um vínculo DESTE agente
+  # (`AgentInbox#agent_bot_id`), com a marca dele: texto de outro remetente não entra como fala do agente.
   def no_historico(itens, messages, agent:)
     return itens if agent.agent_type == 'insurance_quote'
 
+    robos = ::Autonomia::Agents::AgentInbox.where(account_id: agent.account_id, autonomia_agent_id: agent.id)
+                                           .pluck(:agent_bot_id).to_set
     itens.zip(messages).map do |item, message|
-      oferecida?(message, agent) ? item.merge(content: RichMessages.text_with_fallback(message, item[:content].to_s)) : item
+      oferecida?(message, agent, robos) ? item.merge(content: RichMessages.text_with_fallback(message, item[:content].to_s)) : item
     end
   end
 
-  def oferecida?(message, agent)
+  def oferecida?(message, agent, robos)
     atributos = message&.content_attributes.to_h
     formato = atributos[RichMessages::KEY]
-    message&.outgoing? && message.sender_type == 'AgentBot' && atributos['autonomia_agent_id'] == agent.id &&
-      formato.is_a?(Hash) && TIPO_DO_FORMATO.value?(formato['type'])
+    message&.outgoing? && message.sender_type == 'AgentBot' && robos.include?(message.sender_id) &&
+      atributos['autonomia_agent_id'] == agent.id && formato.is_a?(Hash) && TIPO_DO_FORMATO.value?(formato['type'])
   end
 
   # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo sai no idioma da conta.
@@ -193,6 +195,7 @@ module Autonomia::Agents::Interacao
     endereco = Enderecos.normalizado(valor['url']) if valor.is_a?(Hash)
     return unless endereco && enderecos.include?(endereco)
 
-    { 'tipo' => 'link', 'rotulo' => valor['rotulo'].to_s, 'url' => valor['url'] }
+    # O endereço conferido, normalizado (`Addressable::URI#normalize`), vai ao botão e à versão em texto.
+    { 'tipo' => 'link', 'rotulo' => valor['rotulo'].to_s, 'url' => Addressable::URI.parse(endereco).normalize.to_s }
   end
 end

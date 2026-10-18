@@ -195,6 +195,15 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(da_ferramenta('https://loja.com/pedidos/42', 'https://loja.com/pedidos')).to eq(Set['https://loja.com/pedidos/42'])
     end
 
+    it 'barra invertida ou barra codificada no caminho não vale (o navegador trata \ como /)' do
+      dono = 'https://loja.com/pedidos'
+      ['https://loja.com/pedidos/..\..\admin', 'https://loja.com/pedidos/%5c..%5cadmin', 'https://loja.com/pedidos/%5C..%5Cadmin',
+       'https://loja.com/pedidos/%2f..%2fadmin', 'https://loja.com/pedidos/a%2Fb'].each do |saida|
+        expect(da_ferramenta(dono, saida)).to eq(Set[dono])
+      end
+      expect(da_ferramenta('https://loja.com', 'https://loja.com/a\b')).to eq(Set['https://loja.com'])
+    end
+
     it 'caminho com `..` ou `.` (também codificado) conta depois de resolvido' do
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/../conta')).to eq(Set['https://loja.com/pedidos'])
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/%2e%2e/conta')).to eq(Set['https://loja.com/pedidos'])
@@ -343,6 +352,24 @@ RSpec.describe Autonomia::Agents::Interacao do
         .to eq(content: "Abrir proposta: #{url}", rich_message: nil, em_texto: "Abrir proposta: #{url}")
     end
 
+    it 'o link guarda o endereço conferido normalizado, no botão e na versão em texto' do
+      janela_aberta
+      normalizado = pede_link('HTTPS://Exemplo.com.br/x/../proposta', 'veja https://exemplo.com.br/x/../proposta')
+      expect(normalizado['url']).to eq('https://exemplo.com.br/proposta')
+      expect(described_class.mensagem(normalizado, texto: 'Pronto.', conversation: conversation)[:rich_message]['url'])
+        .to eq('https://exemplo.com.br/proposta')
+      email = conversa_em(create(:channel_email, account: account))
+      expect(described_class.mensagem(normalizado, texto: 'Pronto.', conversation: email)[:content])
+        .to eq("Pronto.\n\nAbrir proposta: https://exemplo.com.br/proposta")
+    end
+
+    it 'com o formato, a pergunta também não se repete no corpo quando a resposta já termina com ela' do
+      janela_aberta
+      final = described_class.mensagem(opcoes, texto: 'Temos vaga. Qual período?', conversation: conversation)
+      expect(final[:content]).to eq('Temos vaga. Qual período?')
+      expect(final[:rich_message]).to include('type' => 'options')
+    end
+
     it 'não grava nem acrescenta mensagem à conversa ao conferir' do
       janela_aberta
       expect { described_class.mensagem(opcoes, texto: 'x', conversation: conversation) }.not_to change(Message, :count)
@@ -391,6 +418,13 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(novos.last).not_to have_key('rich_message')
       repetida = [pedacos.first, pedacos.last.merge('text' => 'Amanhã. Qual período?')]
       expect(described_class.nos_pedacos(repetida, vazias, conversation: conversation)).to eq(repetida)
+    end
+
+    it 'opções cuja pergunta o último pedaço já traz: o formato vai nele, sem pedaço a mais' do
+      repetida = [pedacos.first, pedacos.last.merge('text' => 'Amanhã. Qual período?')]
+      novos = described_class.nos_pedacos(repetida, opcoes, conversation: conversation)
+      expect(novos.size).to eq(2)
+      expect(novos.last).to include('corpo' => 'Amanhã. Qual período?', 'rich_message' => hash_including('type' => 'options'))
     end
 
     it 'sem interação ou sem pedaço, nada muda' do
