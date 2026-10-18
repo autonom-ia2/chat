@@ -1,25 +1,44 @@
 // Pasta aberta na caixa de e-mail (#1809, fase 1): Entrada, Spam ou Lixeira do painel.
-// Fica num estado da tela, não no endereço: abrir uma conversa a partir do Spam não
-// pode jogar a lista de volta para a Entrada. Vale para a caixa em que foi escolhida;
-// em outra caixa, ou ao voltar para a lista pelo menu (link da caixa), é a Entrada.
+// A lista guarda a pasta no endereço (`?pasta=lixeira`): voltar de uma conversa (Voltar
+// do navegador ou do app) cai na mesma pasta, e recarregar também. Abrir a conversa
+// mantém a pasta da lista ao lado. Vale para a caixa em que foi escolhida; em outra
+// caixa, ou ao voltar para a lista pelo menu (link da caixa, sem `pasta`), é a Entrada.
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ConversaEmailPastasAPI from 'dashboard/api/pastasDoEmail';
 
 export const PASTAS = { SPAM: 'spam', LIXEIRA: 'lixeira' };
+const VALIDAS = Object.values(PASTAS);
+const LISTA = 'inbox_dashboard';
+
+export const pastaDoEndereco = destino => {
+  const valor = destino?.query?.pasta;
+  return VALIDAS.includes(valor) ? valor : null;
+};
 
 const pasta = ref(null);
 const caixaDaPasta = ref(null);
-// Navegação feita por nós (escolher pasta): o observador da rota não zera a pasta.
-let navegandoParaPasta = false;
 // Um observador só, no roteador (vive o tempo todo, não depende de quem montou).
 let observando = false;
 // Avisa a lista e o topo do e-mail que uma conversa mudou de pasta.
 const versao = ref(0);
 
+const lerDaLista = destino => {
+  pasta.value = pastaDoEndereco(destino);
+  caixaDaPasta.value = destino.params?.inbox_id ?? null;
+};
+
 export const usePastaDoEmail = () => {
   const route = useRoute();
   const router = useRouter();
+
+  if (!observando) {
+    observando = true;
+    if (route.name === LISTA) lerDaLista(route);
+    router.afterEach(destino => {
+      if (destino.name === LISTA) lerDaLista(destino);
+    });
+  }
 
   const pastaAtiva = computed(() =>
     pasta.value && String(route.params.inbox_id) === String(caixaDaPasta.value)
@@ -27,30 +46,18 @@ export const usePastaDoEmail = () => {
       : null
   );
 
-  // Voltou para a lista da caixa por outro caminho (o link da caixa): Entrada.
-  if (!observando) {
-    observando = true;
-    router.afterEach(destino => {
-      if (navegandoParaPasta) {
-        navegandoParaPasta = false;
-        return;
-      }
-      if (destino.name === 'inbox_dashboard') pasta.value = null;
-    });
-  }
-
   const abrirPasta = async (caixaId, nome = null) => {
-    pasta.value = nome;
-    caixaDaPasta.value = caixaId;
-    const naLista =
-      route.name === 'inbox_dashboard' &&
-      String(route.params.inbox_id) === String(caixaId);
-    if (naLista) return;
-    navegandoParaPasta = true;
-    await router.push({
-      name: 'inbox_dashboard',
+    const destino = {
+      name: LISTA,
       params: { accountId: route.params.accountId, inbox_id: caixaId },
-    });
+      query: nome ? { pasta: nome } : {},
+    };
+    const mesmaLista =
+      route.name === LISTA &&
+      String(route.params.inbox_id) === String(caixaId) &&
+      pastaDoEndereco(route) === nome;
+    if (mesmaLista) return;
+    await router.push(destino);
   };
 
   const moverConversa = async (conversaId, nome) => {

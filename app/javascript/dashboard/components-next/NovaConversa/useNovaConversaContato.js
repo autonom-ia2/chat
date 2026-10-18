@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { debounce } from '@chatwoot/utils';
 import { useMapGetter } from 'dashboard/composables/store';
 import ContactAPI from 'dashboard/api/contacts';
@@ -172,6 +172,13 @@ export function useNovaConversaContato({ caixaPreferida = () => null } = {}) {
       criando.value = false;
     }
   };
+
+  // #1809: a gaveta guarda o contato e a caixa ao fechar sem enviar. Aberta de novo
+  // pelo "Escrever" de OUTRA caixa, vale a caixa nova (senão o e-mail sairia pela antiga).
+  watch(caixaPreferida, nova => {
+    const achada = canais.value.find(item => String(item.id) === String(nova));
+    if (achada) canalId.value = achada.id;
+  });
 
   return {
     contato,

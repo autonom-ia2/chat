@@ -161,3 +161,14 @@ describe('campo de endereços (CampoDeEnderecos)', () => {
     expect(campo.find('[data-erro-de-endereco]').exists()).toBe(false);
   });
 });
+
+describe('pasta da lista no endereço (#1809)', () => {
+  it('lê só Spam e Lixeira da query; o resto é a Entrada', async () => {
+    const { pastaDoEndereco } = await import('../email/pastaDoEmail');
+
+    expect(pastaDoEndereco({ query: { pasta: 'lixeira' } })).toBe('lixeira');
+    expect(pastaDoEndereco({ query: { pasta: 'spam' } })).toBe('spam');
+    expect(pastaDoEndereco({ query: { pasta: 'arquivo' } })).toBeNull();
+    expect(pastaDoEndereco({ query: {} })).toBeNull();
+  });
+});
