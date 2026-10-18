@@ -41,6 +41,8 @@ const preparar = () => {
     [`${ESTADO}getUIFlags`]: { sending: false, creating: false },
     [`${ESTADO}getThread`]: null,
     [`${ESTADO}getAgent`]: null,
+    [`${ESTADO}getPhase`]: null,
+    [`${ESTADO}getThreadState`]: {},
   });
   store.dispatch.mockImplementation(async acao => {
     if (acao === `${ESTADO}start`) {
@@ -212,6 +214,54 @@ describe('MudarConversando', () => {
     expect(no('[data-atualizado]')).not.toBeNull();
     no('[data-voltar-nome]').click();
     expect(wrapper.emitted('voltarNome')).toEqual([['Bia']]);
+    wrapper.unmount();
+  });
+
+  // #1428 — part of the request went in and the builder still asks about the
+  // rest: the screen shows what went in, with the question open below it.
+  it('shows that part of the request went in while the builder still asks a question', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getMessages`] = [
+      { role: 'user', content: 'Curto e melhore a saudação' },
+      { role: 'assistant', content: 'Como você quer a saudação?' },
+    ];
+    store.state[`${ESTADO}getStatus`] = 'open';
+    store.state[`${ESTADO}getPhase`] = 'interviewing';
+    store.state[`${ESTADO}getThreadState`] = { parcial: true };
+    store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
+    await nextTick();
+
+    expect(no('[data-parcial]').textContent).toContain('MUDAR_VISTA.PARCIAL');
+    expect(no('[data-feito]')).toBeNull();
+    const ordem = todos('[data-parcial], [data-mensagem="assistant"]');
+    expect(ordem.indexOf(no('[data-parcial]'))).toBeLessThan(
+      ordem.indexOf(todos('[data-mensagem="assistant"]').pop())
+    );
+    expect(todos('[data-mensagem="assistant"]').pop().textContent).toContain(
+      'Como você quer a saudação?'
+    );
+    wrapper.unmount();
+  });
+
+  // #1428 — "também mudei isto, que você não pediu": tudo entrou, então é FEITO, com o aviso na conversa acima.
+  it('shows FEITO after the notice when everything went in and the builder only informs', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getMessages`] = [
+      { role: 'user', content: 'Responda curto' },
+      { role: 'assistant', content: 'Também mudei isto, que você não pediu.' },
+    ];
+    store.state[`${ESTADO}getStatus`] = 'ready';
+    store.state[`${ESTADO}getPhase`] = 'reviewing';
+    store.state[`${ESTADO}getThreadState`] = { parcial: false };
+    store.state[`${ESTADO}getAgent`] = { ...AGENTE, tone: 'curto' };
+    await nextTick();
+
+    expect(no('[data-parcial]')).toBeNull();
+    const cartao = no('[data-feito]');
+    const aviso = todos('[data-mensagem="assistant"]').pop();
+    expect(aviso.textContent).toContain('que você não pediu');
+    const ordem = todos('[data-feito], [data-mensagem="assistant"]');
+    expect(ordem.indexOf(aviso)).toBeLessThan(ordem.indexOf(cartao));
     wrapper.unmount();
   });
 

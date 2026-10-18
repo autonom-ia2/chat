@@ -1,13 +1,14 @@
 # A foto do que um envio de modelo levou (#1717, épico #1320), gravada em
 # `message.additional_attributes.template_params.enviado` para a conversa mostrar a mensagem como ela saiu, mesmo depois
 # de o modelo ser editado, apagado ou trocado. Contrato versão 1, combinado com o Frontend geral em 16/10/2026 (`oferta.texto`
-# e `topo` somados em 17/10, opcionais):
+# e `topo` somados em 17/10, opcionais; `rodape` somado em 17/10, opcional):
 #   versao    1
 #   oferta    { texto, expira_em? }                            sempre que o modelo tem a oferta: o título dela. A presença de
 #                                                              `oferta` NÃO é contagem: ela só existe com `expira_em` (epoch
 #                                                              em segundos; modelo com has_expiration e envio com a validade)
 #   topo      { tipo: 'text', texto }                          topo de texto, com os valores
 #             { tipo: 'image'|'video'|'document', url, nome }  topo de mídia; url só de arquivo nosso, nome só de documento
+#   rodape    texto                                            o rodapé cinza do modelo (fixo: a Meta não aceita variável nele)
 #   produto   { retailer_id, nome, preco, foto_url }           topo de produto (SPM); não se repete em `topo`
 #   produtos  [{ retailer_id, nome, preco, foto_url }]         lista (MPM) e carrossel de produtos; até 30
 #   botoes    [{ tipo, texto, url? }]                          url só no botão de link, com a variável resolvida
@@ -22,6 +23,8 @@ module Whatsapp::Templates::Enviado
   VERSAO = 1
   # A Meta aceita até 16 caracteres no título da oferta.
   OFERTA_TEXTO_MAX = 16
+  # A Meta aceita até 60 caracteres no rodapé.
+  RODAPE_MAX = 60
 
   module_function
 
@@ -32,6 +35,7 @@ module Whatsapp::Templates::Enviado
     partes = {
       'oferta' => oferta(template, processed),
       'topo' => Whatsapp::Templates::Enviado::Topo.de(template, processed, inbox, perfil: perfil),
+      'rodape' => rodape(template),
       'botoes' => Whatsapp::Templates::Enviado::Botoes.de(Whatsapp::Templates::SendParams.template_buttons(template),
                                                           processed['buttons']).presence,
       'cartoes' => Whatsapp::Templates::Enviado::Cartoes.de(template, processed, inbox).presence
@@ -50,6 +54,11 @@ module Whatsapp::Templates::Enviado
     return oferta unless Whatsapp::Templates::SendParams.offer_with_expiration?(template)
 
     milissegundos&.positive? ? oferta.merge('expira_em' => milissegundos / 1000) : oferta
+  end
+
+  # O rodapé que o cliente viu: o texto do modelo na hora do envio (modelo editado depois não muda a mensagem).
+  def rodape(template)
+    Whatsapp::Templates::SendParams.component(template, 'FOOTER')&.dig('text').to_s.strip.first(RODAPE_MAX).presence
   end
 
   def as_hash(value)

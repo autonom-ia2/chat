@@ -10,42 +10,29 @@
 // aviso embaixo, porque o autor que veio junto pode ter sido forjado.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { MESSAGE_TYPES } from '../message/constants';
+import { formatarWhatsapp } from './formatacaoWhatsapp';
+import {
+  ICONES_DO_ANEXO,
+  NOMES_DO_ANEXO,
+  iconeDoAnexoCitado,
+  miniaturaDoAnexoCitado,
+} from './citacaoDoAnexo';
 
 const props = defineProps({
   mensagem: { type: Object, default: null },
   previa: { type: String, default: '' },
   // Resultado de citacaoSolta(); no lugar de `mensagem` e `previa`.
   solta: { type: Object, default: null },
+  // Sem ir a lugar nenhum (a citação em cima da caixa de resposta): sem papel de botão.
+  inerte: { type: Boolean, default: false },
   // Nome do cliente da conversa, para a citação solta de mensagem dele.
   nomeDoCliente: { type: String, default: '' },
 });
 const emit = defineEmits(['ir']);
 const { t } = useI18n();
 
-const ICONES = {
-  image: 'i-ph-camera-fill',
-  video: 'i-ph-video-camera-fill',
-  audio: 'i-ph-microphone-fill',
-  file: 'i-ph-file-fill',
-  location: 'i-ph-map-pin-fill',
-  contact: 'i-ph-user-fill',
-  midia: 'i-ph-paperclip',
-};
-
-// Chaves escritas por extenso: a trava de i18n confere cada uma.
-const NOMES_DO_ANEXO = {
-  image: 'CONVERSA_CANAL.CITACAO.FOTO',
-  video: 'CONVERSA_CANAL.CITACAO.VIDEO',
-  audio: 'CONVERSA_CANAL.CITACAO.AUDIO',
-  file: 'CONVERSA_CANAL.CITACAO.DOCUMENTO',
-  location: 'CONVERSA_CANAL.CITACAO.LOCALIZACAO',
-  contact: 'CONVERSA_CANAL.CITACAO.CONTATO',
-  midia: 'CONVERSA_CANAL.CITACAO.MIDIA',
-};
-
-const clicavel = computed(() => !props.solta);
+const clicavel = computed(() => !props.solta && !props.inerte);
 const naoConferida = computed(() => Boolean(props.solta?.naoConferida));
 const doCliente = computed(() =>
   props.solta
@@ -73,11 +60,17 @@ const nome = computed(() => {
     ? t('CONVERSA_CANAL.CITACAO.VOCE')
     : props.nomeDoCliente;
 });
-const icone = computed(() => ICONES[props.solta?.anexo] || '');
+// Ícone do anexo citado ("📷 Foto"), na solta e na desta conversa.
+const icone = computed(() =>
+  props.solta
+    ? ICONES_DO_ANEXO[props.solta.anexo] || ''
+    : iconeDoAnexoCitado(props.mensagem)
+);
 
 const previaDaSolta = computed(() => {
   const { texto, anexo } = props.solta;
-  if (texto) return new MessageFormatter(texto).formattedMessage;
+  // O trecho é o que o WhatsApp mostrou (#1740): formatação do app, não markdown.
+  if (texto) return formatarWhatsapp(texto);
   if (anexo) return t(NOMES_DO_ANEXO[anexo]);
   return t('CONVERSA_CANAL.CITACAO.SEM_TEXTO');
 });
@@ -92,12 +85,7 @@ const previaSemLinks = computed(() => {
     .forEach(link => link.replaceWith(...link.childNodes));
   return documento.body.innerHTML;
 });
-const foto = computed(() => {
-  const anexo = props.mensagem?.attachments?.[0];
-  const tipo = anexo?.fileType ?? anexo?.file_type;
-  if (tipo !== 'image') return '';
-  return anexo.thumbUrl ?? anexo.thumb_url ?? anexo.dataUrl ?? anexo.data_url;
-});
+const foto = computed(() => miniaturaDoAnexoCitado(props.mensagem));
 
 const ir = () => {
   if (clicavel.value) emit('ir');

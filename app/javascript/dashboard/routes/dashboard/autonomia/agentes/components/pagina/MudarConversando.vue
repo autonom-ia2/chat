@@ -43,6 +43,8 @@ const erroDaConversa = useMapGetter('autonomiaBuildThreads/getError');
 const flags = useMapGetter('autonomiaBuildThreads/getUIFlags');
 const thread = useMapGetter('autonomiaBuildThreads/getThread');
 const agenteGerado = useMapGetter('autonomiaBuildThreads/getAgent');
+const fase = useMapGetter('autonomiaBuildThreads/getPhase');
+const estadoDaConversa = useMapGetter('autonomiaBuildThreads/getThreadState');
 
 const teste = useTesteDoAgente(toRef(props, 'agente'));
 const rascunho = ref('');
@@ -85,6 +87,20 @@ const visiveis = computed(() =>
     mensagem => mensagem.role === 'user' || mensagem.role === 'assistant'
   )
 );
+// #1428 — o aviso do que entrou vem antes da pergunta que o Construtor ainda faz (a conversa segue aberta).
+const conversa = computed(() => {
+  const itens = visiveis.value.map((mensagem, indice) => ({
+    chave: `m${indice}`,
+    mensagem,
+  }));
+  if (!feito.value) return itens;
+  const aviso = { chave: 'feito', feito: true };
+  const ultima = visiveis.value[visiveis.value.length - 1];
+  const perguntaAberta =
+    fase.value === 'interviewing' && ultima?.role === 'assistant';
+  if (!perguntaAberta) return [...itens, aviso];
+  return [...itens.slice(0, -1), aviso, itens[itens.length - 1]];
+});
 const comecou = computed(() =>
   visiveis.value.some(mensagem => mensagem.role === 'user')
 );
@@ -181,10 +197,14 @@ const tentarDeNovo = async () => {
 };
 
 // Quando o Construtor termina, a store relê o agente: compara com o de antes da conversa.
+// #1428 — "parte entrou" só com falta ou esclarecimento (o state diz `parcial`); o "também mudei isto" é FEITO,
+// com o aviso na conversa.
 watch(agenteGerado, novo => {
   if (!novo || novo.id !== props.agente.id) return;
   const nomeNovo = novo.name !== antes.value.name ? novo.name : null;
   feito.value = {
+    parcial:
+      fase.value === 'interviewing' && estadoDaConversa.value?.parcial === true,
     nomeNovo,
     nomeAntigo: nomeNovo ? antes.value.name : null,
     jeito: novo.tone !== antes.value.tone,
@@ -291,38 +311,83 @@ onBeforeUnmount(() => {
               />
             </div>
           </div>
-          <div
-            v-for="(mensagem, indice) in visiveis"
-            :key="indice"
-            :data-mensagem="mensagem.role"
-            class="flex"
-            :class="
-              mensagem.role === 'user' ? 'justify-end' : 'items-start gap-2'
-            "
-          >
-            <span
-              v-if="mensagem.role === 'assistant'"
-              aria-hidden="true"
-              class="grid rounded-full place-items-center size-8 shrink-0 bg-n-blue-3 text-n-blue-11"
-            >
-              <span class="i-lucide-sparkles size-4" />
-            </span>
-            <p
-              class="relative px-4 py-3 m-0 text-sm whitespace-pre-line rounded-2xl max-w-[85%]"
+          <template v-for="item in conversa" :key="item.chave">
+            <template v-if="item.feito">
+              <p
+                v-if="feito.parcial"
+                data-parcial
+                class="flex items-start gap-3 p-4 m-0 text-sm font-semibold rounded-2xl bg-n-teal-2 text-n-slate-12 ring-1 ring-inset ring-n-teal-6"
+              >
+                <span
+                  class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+                  aria-hidden="true"
+                />
+                {{ t(`${NS}.PARCIAL`, { nome }) }}
+              </p>
+              <div
+                v-else
+                data-feito
+                class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
+              >
+                <span
+                  class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+                  aria-hidden="true"
+                />
+                <div class="flex flex-col gap-2 text-sm text-n-slate-12">
+                  <p class="m-0 font-semibold">
+                    {{ t(`${NS}.FEITO`, { nome }) }}
+                  </p>
+                  <p v-if="feito.nomeNovo" data-nome-novo class="m-0">
+                    {{ t(`${NS}.NOME_NOVO`, { nome: feito.nomeNovo }) }}
+                    <button
+                      data-voltar-nome
+                      type="button"
+                      class="font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+                      @click="emit('voltarNome', feito.nomeAntigo)"
+                    >
+                      {{ t(`${NS}.VOLTAR_NOME`, { nome: feito.nomeAntigo }) }}
+                    </button>
+                  </p>
+                  <p v-if="feito.jeito" data-jeito-novo class="m-0">
+                    {{ t(`${NS}.JEITO_NOVO`) }}
+                  </p>
+                </div>
+              </div>
+            </template>
+            <div
+              v-else
+              :data-mensagem="item.mensagem.role"
+              class="flex"
               :class="
-                mensagem.role === 'user'
-                  ? 'bg-n-blue-3 text-n-slate-12 rounded-ee-md'
-                  : 'bg-n-slate-2 text-n-slate-12 rounded-es-md'
+                item.mensagem.role === 'user'
+                  ? 'justify-end'
+                  : 'items-start gap-2'
               "
             >
-              <span class="sr-only">{{
-                mensagem.role === 'user'
-                  ? t(`${NS}.VOCE`)
-                  : t(`${NS}.ASSISTENTE`)
-              }}</span>
-              {{ mensagem.content }}
-            </p>
-          </div>
+              <span
+                v-if="item.mensagem.role === 'assistant'"
+                aria-hidden="true"
+                class="grid rounded-full place-items-center size-8 shrink-0 bg-n-blue-3 text-n-blue-11"
+              >
+                <span class="i-lucide-sparkles size-4" />
+              </span>
+              <p
+                class="relative px-4 py-3 m-0 text-sm whitespace-pre-line rounded-2xl max-w-[85%]"
+                :class="
+                  item.mensagem.role === 'user'
+                    ? 'bg-n-blue-3 text-n-slate-12 rounded-ee-md'
+                    : 'bg-n-slate-2 text-n-slate-12 rounded-es-md'
+                "
+              >
+                <span class="sr-only">{{
+                  item.mensagem.role === 'user'
+                    ? t(`${NS}.VOCE`)
+                    : t(`${NS}.ASSISTENTE`)
+                }}</span>
+                {{ item.mensagem.content }}
+              </p>
+            </div>
+          </template>
           <p
             v-if="pensando"
             data-pensando
@@ -342,33 +407,6 @@ onBeforeUnmount(() => {
             :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
             @acao="tentarDeNovo"
           />
-          <div
-            v-if="feito"
-            data-feito
-            class="flex items-start gap-3 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
-          >
-            <span
-              class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
-              aria-hidden="true"
-            />
-            <div class="flex flex-col gap-2 text-sm text-n-slate-12">
-              <p class="m-0 font-semibold">{{ t(`${NS}.FEITO`, { nome }) }}</p>
-              <p v-if="feito.nomeNovo" data-nome-novo class="m-0">
-                {{ t(`${NS}.NOME_NOVO`, { nome: feito.nomeNovo }) }}
-                <button
-                  data-voltar-nome
-                  type="button"
-                  class="font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-                  @click="emit('voltarNome', feito.nomeAntigo)"
-                >
-                  {{ t(`${NS}.VOLTAR_NOME`, { nome: feito.nomeAntigo }) }}
-                </button>
-              </p>
-              <p v-if="feito.jeito" data-jeito-novo class="m-0">
-                {{ t(`${NS}.JEITO_NOVO`) }}
-              </p>
-            </div>
-          </div>
         </div>
 
         <p

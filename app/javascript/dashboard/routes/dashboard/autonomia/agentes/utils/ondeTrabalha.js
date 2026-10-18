@@ -8,6 +8,8 @@ export const BLOQUEIO = {
   SEM_PRINCIPAL: 'sem_principal',
   PRINCIPAL_PARADO: 'principal_parado',
   OUTRO_ROBO: 'outro_robo',
+  // Regra G (#1788): a pessoa não é membro da caixa nem tem inbox_manage (o backend diz, em `alcanca`).
+  FORA_DO_ALCANCE: 'fora_do_alcance',
 };
 
 // Caixa atendida só por pessoas: sem principal e sem outro robô (o backend diz, em `so_de_pessoas`).
@@ -25,6 +27,7 @@ export const bloqueioDaCaixa = (
   agenteId,
   { comOutroSistema = false } = {}
 ) => {
+  if (canal?.alcanca === false) return BLOQUEIO.FORA_DO_ALCANCE;
   if (soDePessoas(canal)) return null;
   const principal = principalDaCaixa(canal);
   if (canal?.occupied_by?.kind === 'external') {
@@ -67,7 +70,8 @@ export const recebeEmOutrasCaixas = agente =>
 
 // As outras caixas da seção "Também recebe quando alguém passar em": fora as em que ele é o principal e a
 // escolhida em "Onde atende" (`fora`). [{ canal, bloqueio }], na ordem da leitura. Onde ele já está na
-// equipe continua escolhível mesmo bloqueada, para poder sair.
+// equipe continua escolhível mesmo bloqueada, para poder sair, menos na caixa fora do alcance (regra G, #1788):
+// ali a pessoa não mexe, e a área fica como está no servidor.
 export const outrasCaixasDaEquipe = (
   canais,
   agenteId,
@@ -84,8 +88,10 @@ export const outrasCaixasDaEquipe = (
       const naEquipe = (canal.areas || []).some(
         area => area.agent_id === agenteId
       );
+      const bloqueio = bloqueioDaCaixa(canal, agenteId, opcoes);
       return {
         canal,
-        bloqueio: naEquipe ? null : bloqueioDaCaixa(canal, agenteId, opcoes),
+        bloqueio:
+          naEquipe && bloqueio !== BLOQUEIO.FORA_DO_ALCANCE ? null : bloqueio,
       };
     });

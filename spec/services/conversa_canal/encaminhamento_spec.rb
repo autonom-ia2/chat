@@ -189,6 +189,130 @@ describe ConversaCanal::Encaminhamento do
       expect(resultado.last).to include(ok: true)
       expect(copias_em(fechado)).to be_empty
     end
+
+    # #1768: modelo fora da janela vai como o MESMO modelo (ReenvioDoModelo), sem aviso.
+    describe 'modelo reenviado como modelo' do
+      let(:reenvio) { Whatsapp::Templates::ReenvioDoModelo }
+
+      def modelo(conteudo = 'Seu boleto')
+        create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: conteudo,
+                         additional_attributes: { 'template_params' => { 'name' => 'boleto', 'language' => 'pt_BR' } })
+      end
+
+      def nova_em(conversa, conteudo)
+        create(:message, account: account, inbox: conversa.inbox, conversation: conversa, message_type: :outgoing, content: conteudo)
+      end
+
+      before do
+        create(:message, account: account, inbox: canal_oficial.inbox, conversation: fechado, message_type: :incoming,
+                         created_at: 2.days.ago)
+      end
+
+      # O conferido grava só quando pedido (criar_conferido), como o ReenvioDoModelo de verdade.
+      def conferido(destino, conteudo, gravacoes = nil)
+        gravar = instance_double(reenvio)
+        allow(gravar).to receive(:criar_conferido) do
+          gravacoes&.push(ActiveRecord::Base.connection.open_transactions)
+          { status: :criado, message: nova_em(destino, conteudo) }
+        end
+        { status: :conferido, reenvio: gravar }
+      end
+
+      it 'reenvia cada modelo pelo ReenvioDoModelo, com o atendente como remetente' do
+        boleto = modelo
+        campanha = create(:message, account: account, inbox: caixa, conversation: origem, message_type: :outgoing, content: 'Promo',
+                                    additional_attributes: { 'campaign_id' => 3 })
+        allow(reenvio).to receive(:conferir) do |message_original:, destino:, remetente:|
+          conferido(destino, "#{message_original.content} #{remetente.id}")
+        end
+
+        resultado = encaminhar([boleto.id, campanha.id], [fechado])
+
+        expect(resultado).to eq([{ conversation_id: fechado.display_id, ok: true, erro: nil }])
+        expect(reenvio).to have_received(:conferir).with(message_original: boleto, destino: fechado, remetente: agente)
+        expect(reenvio).to have_received(:conferir).with(message_original: campanha, destino: fechado, remetente: agente)
+        expect(fechado.messages.outgoing.pluck(:content)).to eq(["Seu boleto #{agente.id}", "Promo #{agente.id}"])
+      end
+
+      it 'confere com a Meta fora da transação e grava dentro dela' do
+        conferencias = []
+        gravacoes = []
+        allow(reenvio).to receive(:conferir) do |message_original:, destino:, **|
+          conferencias << ActiveRecord::Base.connection.open_transactions
+          conferido(destino, message_original.content, gravacoes)
+        end
+
+        encaminhar([modelo('Primeiro').id, modelo('Segundo').id], [fechado])
+
+        expect(conferencias.size).to eq(2)
+        expect(gravacoes.size).to eq(2)
+        expect(gravacoes.min).to eq(conferencias.max + 1)
+      end
+
+      it 'recusa de uma conferência: nada é gravado e devolve o motivo do reenvio' do
+        primeiro = modelo('Primeiro')
+        segundo = modelo('Segundo')
+        terceiro = modelo('Terceiro')
+        gravacoes = []
+        allow(reenvio).to receive(:conferir) do |message_original:, destino:, **|
+          next { status: :falhou, motivo: 'modelo_indisponivel' } if message_original == segundo
+
+          conferido(destino, message_original.content, gravacoes)
+        end
+
+        resultado = encaminhar([primeiro.id, segundo.id, terceiro.id], [fechado])
+
+        expect(resultado.sole).to include(ok: false, erro: reenvio.texto('modelo_indisponivel'))
+        expect(gravacoes).to be_empty
+        expect(reenvio).not_to have_received(:conferir).with(hash_including(message_original: terceiro))
+        expect(fechado.messages.outgoing).to be_empty
+      end
+
+      it 'falha ao gravar um reenvio desfaz os anteriores do destino' do
+        primeiro = modelo('Primeiro')
+        segundo = modelo('Segundo')
+        allow(reenvio).to receive(:conferir) do |message_original:, destino:, **|
+          next conferido(destino, message_original.content) unless message_original == segundo
+
+          quebrado = instance_double(reenvio)
+          allow(quebrado).to receive(:criar_conferido).and_raise(ActiveRecord::RecordInvalid)
+          { status: :conferido, reenvio: quebrado }
+        end
+
+        resultado = encaminhar([primeiro.id, segundo.id], [fechado])
+
+        expect(resultado.sole).to include(ok: false, erro: I18n.t('conversa_canal.encaminhar.falhou'))
+        expect(fechado.messages.outgoing).to be_empty
+      end
+
+      it 'com uma mensagem que não é modelo, nada sai: fora da janela' do
+        allow(reenvio).to receive(:conferir)
+
+        resultado = encaminhar([modelo.id, texto.id], [fechado])
+
+        expect(resultado.sole).to include(ok: false, erro: I18n.t('conversa_canal.encaminhar.fora_da_janela'))
+        expect(reenvio).not_to have_received(:conferir)
+      end
+
+      it 'destino com a janela aberta continua recebendo a cópia, não o modelo' do
+        allow(reenvio).to receive(:conferir)
+
+        expect(encaminhar([modelo.id], [destino]).sole).to include(ok: true)
+        expect(reenvio).not_to have_received(:conferir)
+        expect(copias_em(destino).count).to eq(1)
+      end
+
+      it 'pelo caminho real: o modelo que a Meta não tem na caixa de destino volta com o motivo, sem mensagem nova' do
+        stub_request(:get, "https://graph.facebook.com/v22.0/#{canal_oficial.provider_config['business_account_id']}/message_templates")
+          .with(query: hash_including({}))
+          .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+        resultado = encaminhar([modelo.id], [fechado])
+
+        expect(resultado.sole).to include(ok: false, erro: reenvio.texto('modelo_indisponivel'))
+        expect(fechado.messages.outgoing).to be_empty
+      end
+    end
   end
 
   # Teste de estresse do #1702 (17/10): a cópia desfeita fica pendurada em destino.messages (autosave) e um save

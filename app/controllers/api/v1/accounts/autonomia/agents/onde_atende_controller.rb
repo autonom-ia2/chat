@@ -10,6 +10,9 @@
 #   response_window:   always | business_hours | outside_business_hours (opcional);
 #   parar:             true quando a tela confirmou que o agente fica sem receber conversa em nenhum canal.
 # 204 quando gravou; 422 { error, code } quando recusou (nada mudou). Caixa fora da conta: 404.
+# Regra G (#1788): só mexe em caixa que a pessoa alcança (membro ou inbox_manage; administrador sempre). Caixa que entra,
+# ou porta que sai, fora do alcance: 422 fora_do_alcance. Área de hoje numa caixa fora do alcance, mesmo fora do pedido,
+# fica como está (a pessoa não vê essa caixa); o agente continua atendendo lá.
 class Api::V1::Accounts::Autonomia::Agents::OndeAtendeController < Api::V1::Accounts::Autonomia::BaseController
   # O recurso é o agente: sem envelope no corpo (format: []), mas o Guia lê dele o formato de `response_window`
   # (a validação de inclusão do Agent: always | business_hours | outside_business_hours), em formatos-das-acoes.json.
@@ -22,7 +25,8 @@ class Api::V1::Accounts::Autonomia::Agents::OndeAtendeController < Api::V1::Acco
     return recusar(:pedido_invalido) unless pedido_valido?
 
     pedido = ::Autonomia::Agents::OndeAtende::Pedido.new(
-      primeiro: caixa_primeiro, manter_primeiro: manter_primeiro?, areas: caixas_das_areas, response_window: janela, parar: parar?
+      primeiro: caixa_primeiro, manter_primeiro: manter_primeiro?, areas: caixas_das_areas, response_window: janela, parar: parar?,
+      alcancavel: ::Autonomia::Agents::CaixaAlcancavel.new(account_user: Current.account_user)
     )
     resultado = ::Autonomia::Agents::OndeAtende.new(agent: @agent, pedido: pedido).perform
     return recusar(resultado.code, inbox: resultado.inbox, motivo_da_area: resultado.motivo_da_area) unless resultado.ok?

@@ -85,23 +85,14 @@ describe('#CrmBookingPagesAPI', () => {
     expect(axiosMock.post.mock.calls[1][0]).toBe(`${BASE}/4/photo`);
   });
 
-  it('pede sugestão, cria e acompanha os modelos de aviso da página (#1272)', () => {
+  it('pede sugestão dos modelos de aviso da página (#1272); criar na Meta saiu (#1612)', () => {
     crmBookingPages.noticeTemplateSuggestions(4, 9, ['booked']);
-    crmBookingPages.createNoticeTemplates(4, 9, ['day_before']);
-    crmBookingPages.noticeTemplateRequests(4, 9);
-    expect(axiosMock.post).toHaveBeenNthCalledWith(
-      1,
+    expect(axiosMock.post).toHaveBeenCalledWith(
       `${BASE}/4/notice_template_suggestions`,
       { inbox_id: 9, kinds: ['booked'] }
     );
-    expect(axiosMock.post).toHaveBeenNthCalledWith(
-      2,
-      `${BASE}/4/notice_templates/create`,
-      { inbox_id: 9, kinds: ['day_before'] }
-    );
-    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/4/notice_templates`, {
-      params: { inbox_id: 9 },
-    });
+    expect(crmBookingPages.createNoticeTemplates).toBeUndefined();
+    expect(crmBookingPages.noticeTemplateRequests).toBeUndefined();
   });
 
   it('lê e troca quem atende', () => {

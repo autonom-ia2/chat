@@ -14,6 +14,7 @@ import GalleryView from 'dashboard/components/widgets/conversation/components/Ga
 import FigurinhaDoWhatsapp from '../../conversa-canal/midia/FigurinhaDoWhatsapp.vue';
 import { usePele } from '../../conversa-canal/pele';
 import { eFigurinha } from '../../conversa-canal/figurinha';
+import { formatoDaMidia } from '../../conversa-canal/midia/proporcaoDaMidia';
 
 const { t } = useI18n();
 
@@ -28,6 +29,22 @@ const pele = usePele();
 const figurinha = computed(
   () => Boolean(pele.value) && eFigurinha(attachment.value)
 );
+
+// #1702: com a pele, a foto no tamanho do app, pela proporção dela (medidas do anexo ou,
+// sem elas, as da imagem carregada).
+const medidasCarregadas = ref({ largura: 0, altura: 0 });
+const formatoDaFoto = computed(() => {
+  if (!pele.value) return '';
+  const largura = attachment.value?.width || medidasCarregadas.value.largura;
+  const altura = attachment.value?.height || medidasCarregadas.value.altura;
+  return formatoDaMidia(largura, altura);
+});
+const lerMedidas = ({ target }) => {
+  medidasCarregadas.value = {
+    largura: target.naturalWidth,
+    altura: target.naturalHeight,
+  };
+};
 
 const { isLoaded, hasError, loadWithRetry } = useLoadWithRetry();
 
@@ -78,9 +95,11 @@ const handleImageError = () => {
     <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
       <img
         class="skip-context-menu"
+        :class="formatoDaFoto"
         :src="attachment.dataUrl"
         :width="attachment.width"
         :height="attachment.height"
+        @load="lerMedidas"
       />
       <div
         class="inset-0 p-2 pointer-events-none absolute bg-gradient-to-tl from-n-slate-12/30 dark:from-n-slate-1/50 via-transparent to-transparent hidden group-hover:flex"

@@ -19,6 +19,7 @@ import { timeStampAppendedURL } from 'dashboard/helper/URLHelper';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../../message/provider.js';
+import { MESSAGE_STATUS } from '../../message/constants';
 import { BARRAS, carregarOnda, tempoDoAudio } from './ondaDoAudio';
 import { audioArquivo, audioDeVoz, audioOuvido } from '../marcasDaMensagem';
 
@@ -27,7 +28,10 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const { sender, orientation, contentAttributes } = useMessageContext();
+const { sender, orientation, contentAttributes, status } = useMessageContext();
+// Ainda subindo (status `progress`): no lugar do play, o anel girando com o relógio,
+// como o app mostra o áudio que está sendo enviado. O relógio da hora vem da meta.
+const enviando = computed(() => status?.value === MESSAGE_STATUS.PROGRESS);
 // Enviada (direita): a foto fica à esquerda, como no app; recebida: à direita.
 const enviada = computed(() => orientation?.value === 'right');
 const { uid } = getCurrentInstance();
@@ -237,7 +241,21 @@ const nome = computed(() => sender.value?.name || '');
         class="flex items-center flex-1 min-w-0 gap-1.5"
         :class="enviada ? 'pe-1' : 'ps-1'"
       >
+        <span
+          v-if="enviando"
+          role="status"
+          class="relative grid place-content-center size-11 flex-shrink-0 text-[#3B3B3B] dark:text-[#FAFAFA]"
+          :aria-label="t('CONVERSA_CANAL.AUDIO.ENVIANDO')"
+          data-audio-enviando
+        >
+          <span
+            class="absolute inset-1.5 rounded-full border-2 border-current border-t-transparent opacity-60 animate-spin"
+            aria-hidden="true"
+          />
+          <Icon icon="i-ph-clock" class="size-4" aria-hidden="true" />
+        </span>
         <button
+          v-else
           type="button"
           class="grid place-content-center size-11 flex-shrink-0 rounded-full text-[#3B3B3B] dark:text-[#FAFAFA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#53BDEB]"
           :aria-label="

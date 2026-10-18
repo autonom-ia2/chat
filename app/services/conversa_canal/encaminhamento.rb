@@ -10,7 +10,10 @@
 # - nota privada, atividade, apagada, não suportada, com falha, de visualização única (o app não deixa encaminhar) e
 #   formato sem envio (formulário, CSAT, e-mail) não se encaminham: o pedido inteiro é recusado (422).
 # - destino fora da janela de 24 h na API oficial (Conversation#can_reply?, que já conta o Híbrido): não sai mensagem
-#   livre, então a cópia não é criada e o destino volta com "fora da janela: use um modelo".
+#   livre. Se todas as marcadas são modelo (ou de campanha), vai o MESMO modelo com os mesmos valores
+#   (Whatsapp::Templates::ReenvioDoModelo, #1767; a Meta cobra), sem aviso: decisão do Rodrigo, 17/10, "encaminhar é
+#   livre". Se alguma não é modelo, nada sai e o destino volta com "fora da janela: use um modelo"; se o reenvio de uma
+#   delas falha, nenhuma sai e o destino volta com o motivo do reenvio.
 # - cada destino é tudo ou nada (transação): se uma cópia não grava, nenhuma daquele destino fica.
 # - só pessoa (User): encaminhamento automatizado é sinal de spam para o WhatsApp; robô e automação são recusados.
 # Quem pode o quê é do controller: ver a origem e responder em cada destino (ConversationPolicy#show?).
@@ -81,7 +84,7 @@ class ConversaCanal::Encaminhamento
   end
 
   def encaminhar_para(destino)
-    return resultado(destino, erro: frase(:fora_da_janela)) unless destino.can_reply?
+    return reenviar_como_modelo(destino) unless destino.can_reply?
 
     ActiveRecord::Base.transaction do
       mensagens.each { |mensagem| copiar(mensagem, destino) }
@@ -89,11 +92,46 @@ class ConversaCanal::Encaminhamento
     resultado(destino)
   # Qualquer falha fica naquele destino (transação desfeita); os outros seguem e cada um volta com o seu resultado.
   rescue StandardError => e
+    falhou_no_destino(destino, e)
+  end
+
+  # Fora da janela: só modelo aprovado sai. Tudo ou nada, como a cópia: a conferência com a Meta (consulta do modelo,
+  # lista da caixa) roda antes, FORA da transação; se uma falha, nada é gravado. Dentro, só a gravação das mensagens
+  # (a mensagem nova só vai à fila de envio no commit).
+  def reenviar_como_modelo(destino)
+    return resultado(destino, erro: frase(:fora_da_janela)) unless mensagens.all? { |mensagem| modelo?(mensagem) }
+
+    conferidos = conferir_modelos(destino)
+    recusado = conferidos.find { |conferido| conferido[:status] != :conferido }
+    return resultado(destino, erro: Whatsapp::Templates::ReenvioDoModelo.texto(recusado[:motivo])) if recusado
+
+    ActiveRecord::Base.transaction { conferidos.each { |conferido| conferido[:reenvio].criar_conferido } }
+    resultado(destino)
+  rescue StandardError => e
+    falhou_no_destino(destino, e)
+  end
+
+  # Para na primeira recusa: as seguintes nem consultam a Meta.
+  def conferir_modelos(destino)
+    mensagens.each_with_object([]) do |mensagem, conferidos|
+      conferidos << Whatsapp::Templates::ReenvioDoModelo.conferir(message_original: mensagem, destino: destino, remetente: @user)
+      break conferidos unless conferidos.last[:status] == :conferido
+    end
+  end
+
+  # O que o ReenvioDoModelo sabe remontar: `template_params` com nome (conversa, agendamento, follow-up) ou campanha.
+  def modelo?(mensagem)
+    atributos = mensagem.additional_attributes.to_h
+    modelo = atributos['template_params']
+    (modelo.is_a?(Hash) && modelo['name'].present?) || atributos['campaign_id'].present?
+  end
+
+  def falhou_no_destino(destino, erro)
     # As cópias desfeitas continuam penduradas em destino.messages (o MessageBuilder as monta ali), e
     # Conversation#messages é autosave: um save futuro do destino as gravaria sem validação.
     destino.association(:messages).reset
-    Rails.logger.warn("[conversa_canal][encaminhar] origem=#{@origem.id} destino=#{destino.id} #{e.class}")
-    ChatwootExceptionTracker.new(e, account: destino.account).capture_exception
+    Rails.logger.warn("[conversa_canal][encaminhar] origem=#{@origem.id} destino=#{destino.id} #{erro.class}")
+    ChatwootExceptionTracker.new(erro, account: destino.account).capture_exception
     resultado(destino, erro: frase(:falhou))
   end
 

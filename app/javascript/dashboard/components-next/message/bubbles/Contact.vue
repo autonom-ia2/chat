@@ -9,12 +9,8 @@ import BaseBubble from './Base.vue';
 import ContatoDoWhatsapp from '../../conversa-canal/midia/ContatoDoWhatsapp.vue';
 import { usePele } from '../../conversa-canal/pele';
 import { numeroParaConversar } from '../../conversa-canal/midia/contatos';
+import { useAcoesDoContato } from '../../conversa-canal/midia/useAcoesDoContato';
 import NovaConversaEntrada from '../../NovaConversa/NovaConversaEntrada.vue';
-
-import {
-  DuplicateContactException,
-  ExceptionWithMessage,
-} from 'shared/helpers/CustomErrors';
 
 const { attachments, contentAttributes } = useMessageContext();
 // #1702: com a pele do WhatsApp, o cartão de contato do app.
@@ -22,6 +18,9 @@ const pele = usePele();
 
 const $store = useStore();
 const { t } = useI18n();
+// #1702: "Salvar contato" e "Conversar" da pele (também usados em "Ver todos").
+const { buscarPorTelefone, abrirContato, avisarErro, salvar, paraConversar } =
+  useAcoesDoContato();
 
 const attachment = computed(() => {
   return attachments.value[0];
@@ -49,116 +48,39 @@ const isContactInfoResponse = computed(() => {
   return attachment.value?.meta?.isContactInfoResponse;
 });
 
-function getContactObject(digits = rawPhoneNumber.value) {
-  const contactItem = {
-    name: contactName.value,
-    phone_number: `+${digits}`,
-  };
-  return contactItem;
-}
-
-async function filterContactByNumber(searchCandidate) {
-  const query = {
-    attribute_key: 'phone_number',
-    filter_operator: 'equal_to',
-    values: [searchCandidate],
-    attribute_model: 'standard',
-    custom_attribute_type: '',
-  };
-
-  const queryPayload = { payload: [query] };
-  const contacts = await $store.dispatch('contacts/filter', {
-    queryPayload,
-    resetState: false,
-  });
-  return contacts.shift();
-}
-
-function openContactNewTab(contactId) {
-  const accountId = window.location.pathname.split('/')[3];
-  const url = `/app/accounts/${accountId}/contacts/${contactId}`;
-  window.open(url, '_blank');
-}
-
-const onlyDigits = text =>
-  Array.from(text || '')
-    .filter(char => char >= '0' && char <= '9')
-    .join('');
-
-// Cadastro sem nome de verdade: vazio ou o próprio telefone no lugar do nome.
-const lacksName = (contact, digits) =>
-  !contact.name?.trim() || onlyDigits(contact.name) === digits;
-
-// Procura o contato pelo telefone com "+" (como ele é gravado) e cria se não existir.
-// #1702: achou sem nome de verdade e o cartão traz o nome? Completa o cadastro; nome
-// que alguém já deu ao contato não é trocado.
-// #1709: "Conversar" passa o waId do contato compartilhado (o número que tem WhatsApp).
-async function findOrCreateContact(digits = rawPhoneNumber.value) {
-  const contact = await filterContactByNumber(`+${digits}`);
-  if (!contact) {
-    const created = await $store.dispatch(
-      'contacts/create',
-      getContactObject(digits)
-    );
-    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
-    return created;
-  }
-  if (contactName.value && lacksName(contact, digits)) {
-    await $store.dispatch('contacts/update', {
-      id: contact.id,
-      name: contactName.value,
-    });
-    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
-  }
-  return contact;
-}
-
-function alertContactError(error) {
-  if (error instanceof DuplicateContactException) {
-    if (error.data.includes('phone_number')) {
-      useAlert(t('CONTACT_FORM.FORM.PHONE_NUMBER.DUPLICATE'));
-    }
-  } else if (error instanceof ExceptionWithMessage) {
-    useAlert(error.data);
-  } else {
-    useAlert(t('CONTACT_FORM.ERROR_MESSAGE'));
-  }
-}
-
 // Sem pele, exatamente como no main (a busca recebe o computed, como lá).
 async function addContactAsInMain() {
-  let contact = await filterContactByNumber(rawPhoneNumber);
-  if (!contact) {
-    contact = await $store.dispatch('contacts/create', getContactObject());
-    useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
+  try {
+    let contact = await buscarPorTelefone(rawPhoneNumber);
+    if (!contact) {
+      contact = await $store.dispatch('contacts/create', {
+        name: contactName.value,
+        phone_number: `+${rawPhoneNumber.value}`,
+      });
+      useAlert(t('CONTACT_FORM.SUCCESS_MESSAGE'));
+    }
+    abrirContato(contact.id);
+  } catch (error) {
+    avisarErro(error);
   }
-  return contact;
 }
 
-async function addContact() {
-  try {
-    const contact = pele.value
-      ? await findOrCreateContact()
-      : await addContactAsInMain();
-    openContactNewTab(contact.id);
-  } catch (error) {
-    alertContactError(error);
-  }
+function addContact() {
+  if (!pele.value) return addContactAsInMain();
+  return salvar(rawPhoneNumber.value, contactName.value);
 }
 
 // #1702: "Conversar", como no WhatsApp: a Nova conversa abre e recebe o contato assim
 // que ele é achado ou criado. Contato que nunca falou com a caixa começa por modelo
 // aprovado, e quem conduz isso é a própria Nova conversa.
+// #1709: "Conversar" passa o waId do contato compartilhado (o número que tem WhatsApp).
 const contactToTalk = ref(null);
 async function talkToContact() {
-  try {
-    const contact = await findOrCreateContact(
-      numeroParaConversar(phoneNumber.value, contentAttributes?.value)
-    );
-    contactToTalk.value = String(contact.id);
-  } catch (error) {
-    alertContactError(error);
-  }
+  const id = await paraConversar(
+    numeroParaConversar(phoneNumber.value, contentAttributes?.value),
+    contactName.value
+  );
+  if (id) contactToTalk.value = id;
 }
 
 const temAcao = computed(

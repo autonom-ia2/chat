@@ -49,14 +49,14 @@ RSpec.describe Crm::BookingPagePolicy, type: :policy do
     expect(policy_for(admin, other_page).save_identity?).to be(false)
   end
 
-  it 'lets whoever manages pages ask for notice template suggestions, but only the administrator create them on Meta' do
+  it 'lets whoever manages pages ask for notice template suggestions; creating them on Meta from the page is gone (#1612)' do
     manager = create(:user, account: account, role: :agent)
     manager.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account, permissions: %w[agendamento_manage]))
 
     expect(policy_for(manager, Crm::AgentBookingProfile).notice_template_suggestions?).to be(true)
-    expect(policy_for(manager, Crm::AgentBookingProfile).create_notice_templates?).to be(false)
-    expect(policy_for(admin, Crm::AgentBookingProfile).create_notice_templates?).to be(true)
     expect(policy_for(agent, Crm::AgentBookingProfile).notice_template_suggestions?).to be(false)
+    expect(described_class.method_defined?(:create_notice_templates?)).to be(false)
+    expect(described_class.method_defined?(:notice_templates?)).to be(false)
   end
 
   it 'scopes to new pages of the current account only' do

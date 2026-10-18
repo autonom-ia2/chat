@@ -42,6 +42,12 @@ class Whatsapp::Templates::ReenvioDoModelo
     new(message_original: message_original, destino: destino, remetente: remetente).call
   end
 
+  # Em duas etapas, para quem grava vários reenvios numa transação (encaminhamento, #1702): `conferir` fala com a Meta
+  # FORA dela e devolve { status: :conferido, reenvio: } ou a falha; depois, dentro, `reenvio.criar_conferido` só grava.
+  def self.conferir(message_original:, destino:, remetente: nil)
+    new(message_original: message_original, destino: destino, remetente: remetente).conferir
+  end
+
   def self.texto(motivo)
     I18n.t("whatsapp_templates.reenvio.motivos.#{motivo}")
   end
@@ -53,16 +59,29 @@ class Whatsapp::Templates::ReenvioDoModelo
   end
 
   def call
+    conferido = conferir
+    return conferido unless conferido[:status] == :conferido
+
+    criar_conferido
+  rescue StandardError => e
+    erro_inesperado(e)
+  end
+
+  def conferir
     motivo = impedimento
     return falhou(motivo) if motivo
 
     params = parametros
     return falhou(@campanha ? @campanha.motivo : 'nao_e_modelo') if params.nil?
 
-    conferir_e_criar(params)
+    conferir_params(params)
   rescue StandardError => e
-    Rails.logger.error("[whatsapp_templates][reenvio] original=#{@original&.id} destino=#{@destino&.id} erro=#{e.class.name}")
-    falhou('erro')
+    erro_inesperado(e)
+  end
+
+  # Só grava (sem Meta): levanta se a gravação falhar, para a transação de quem chama desfazer.
+  def criar_conferido
+    { status: :criado, message: criar(@conferidos) }
   end
 
   private
@@ -88,7 +107,7 @@ class Whatsapp::Templates::ReenvioDoModelo
     @campanha.parametros
   end
 
-  def conferir_e_criar(params)
+  def conferir_params(params)
     veredito = conferencia(params)
     return falhou(VEREDITOS.fetch(veredito.reason_code, 'modelo_indisponivel'), params) unless veredito.ok?
 
@@ -98,7 +117,13 @@ class Whatsapp::Templates::ReenvioDoModelo
     return falhou('modelo_indisponivel', params) unless na_lista?(params)
     return falhou('nao_aceito_pela_meta', params) if autenticacao_recusada?(params)
 
-    { status: :criado, message: criar(params) }
+    @conferidos = params
+    { status: :conferido, reenvio: self }
+  end
+
+  def erro_inesperado(erro)
+    Rails.logger.error("[whatsapp_templates][reenvio] original=#{@original&.id} destino=#{@destino&.id} erro=#{erro.class.name}")
+    falhou('erro')
   end
 
   # Sem a categoria gravada: categoria mudada não impede o reenvio (a Meta aceita o mesmo modelo).

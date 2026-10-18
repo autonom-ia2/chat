@@ -105,7 +105,8 @@ describe('apagada pela equipe (#1702)', () => {
       montar({
         messageType: MESSAGE_TYPES.OUTGOING,
         sender: { id: 1, name: 'Ana', type: 'User' },
-        contentAttributes: { deleted: true },
+        // O texto do app só quando o canal confirmou que revogou (balaoDetalhes1702.spec).
+        contentAttributes: { deleted: true, revogadaNoCanal: true },
       }),
       'apagada'
     );

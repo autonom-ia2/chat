@@ -81,7 +81,8 @@ describe('1. citação de mensagem fora da conversa (quoted_message)', () => {
   const deOutraConversa = {
     messageId: 90,
     conversationId: 12,
-    content: 'Olha a **foto**',
+    // Escrito no app do cliente: *x* é negrito (#1740).
+    content: 'Olha a *foto*',
     senderType: 'Contact',
     attachmentType: 'image',
   };
@@ -177,7 +178,7 @@ describe('1. citação de mensagem fora da conversa (quoted_message)', () => {
     expect(citacaoSolta({ quotedMessage: deOutraConversa })).toEqual({
       naoConferida: false,
       daEmpresa: false,
-      texto: 'Olha a **foto**',
+      texto: 'Olha a *foto*',
       anexo: 'image',
       outraConversa: true,
     });
