@@ -7,8 +7,10 @@
 class Autonomia::ContatoPeloEmailJob < ApplicationJob
   queue_as :low
 
+  # Depois da última tentativa o erro vai ao rastreador (um bug não pode ficar só numa linha de log).
   retry_on StandardError, wait: 30.seconds, attempts: 3 do |job, erro|
     Rails.logger.error("[autonomia][contato_pelo_email] desistiu message=#{job.arguments.first} erro=#{erro.class}")
+    ChatwootExceptionTracker.new(erro, account: Message.find_by(id: job.arguments.first)&.account).capture_exception
   end
 
   def perform(message_id)

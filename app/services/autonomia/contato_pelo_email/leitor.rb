@@ -74,7 +74,8 @@ class Autonomia::ContatoPeloEmail::Leitor
   private
 
   def cliente
-    Crm::Ai::ResponsesClient.new(credential: @credencial, feature: FEATURE, account: @account)
+    # Sem nova tentativa HTTP: cada tentativa é paga e o teto diário conta uma chamada por e-mail.
+    Crm::Ai::ResponsesClient.new(credential: @credencial, feature: FEATURE, account: @account, max_retries: 0)
   end
 
   def assunto(message)

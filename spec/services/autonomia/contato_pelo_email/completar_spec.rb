@@ -247,18 +247,28 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(7.days.to_i)
   end
 
-  # Pega: dois e-mails ao mesmo tempo pagarem duas leituras; e a trava ficar presa depois da leitura.
-  it 'com a trava do contato tomada, sai sem chamar a IA; a própria trava é solta no fim', :aggregate_failures do
+  # Pega: dois e-mails ao mesmo tempo pagarem duas leituras; o segundo e-mail se perder; e a trava ficar presa.
+  it 'com a trava do contato tomada, não chama a IA e volta para a fila; a própria trava é solta no fim', :aggregate_failures do
     responde(telefone: '(11) 98765-4321')
     Redis::Alfred.set(chave('trava', contact.id), 'outro', nx: true, ex: 60)
 
-    described_class.new(message).perform
+    expect { described_class.new(message).perform }
+      .to have_enqueued_job(Autonomia::ContatoPeloEmailJob).with(message.id).at(a_value_within(5.seconds).of(1.minute.from_now))
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
 
     Redis::Alfred.delete(chave('trava', contact.id))
     described_class.new(message).perform
     expect(cliente).to have_received(:create).once
     expect(Redis::Alfred.exists?(chave('trava', contact.id))).to be(false)
+  end
+
+  # Pega: a nova tentativa HTTP pagar a IA de novo fora do teto diário.
+  it 'chama a IA sem novas tentativas HTTP' do
+    responde(telefone: '(11) 98765-4321')
+
+    described_class.new(message).perform
+
+    expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 0))
   end
 
   # Pega: a nova tentativa do job pagar a IA de novo pelo mesmo e-mail.

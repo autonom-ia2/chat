@@ -33,6 +33,13 @@ class Autonomia::Decisores::Aplicador
   BIOGRAFIA = 'description'.freeze
   NOTA_DE_TELEFONE = 'Telefone informado: %<numero>s (já cadastrado no contato #%<contato>s)'.freeze
 
+  # O nome que a plataforma pôs por falta de outro: o e-mail, o começo dele, ou o telefone.
+  def self.nome_provisorio?(contato)
+    nome = contato.name.to_s.strip
+    email = contato.email.to_s
+    nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) || nome == contato.phone_number.to_s
+  end
+
   def initialize(decisor:, conversation: nil, card: nil)
     @decisor = decisor
     @conversation = conversation
@@ -119,9 +126,7 @@ class Autonomia::Decisores::Aplicador
 
   # O nome que a plataforma pôs por falta de outro: o e-mail, o começo dele, ou o telefone.
   def nome_provisorio?
-    nome = contato.name.to_s.strip
-    email = contato.email.to_s
-    nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) || nome == contato.phone_number.to_s
+    self.class.nome_provisorio?(contato)
   end
 
   def gravar_telefone(valor)

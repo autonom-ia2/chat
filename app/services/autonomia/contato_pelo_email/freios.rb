@@ -32,9 +32,7 @@ class Autonomia::ContatoPeloEmail::Freios
   # Mais uma leitura automática seguida; na terceira, a pausa de 30 dias. -> true quando pausou.
   def automatico!
     contador = chave('automaticos', @contato_id)
-    seguidos = Redis::Alfred.incr(contador)
-    Redis::Alfred.expire(contador, AUTOMATICOS_POR.to_i)
-    return false if seguidos < AUTOMATICOS_PARA_PAUSAR
+    return false if contar(contador, AUTOMATICOS_POR) < AUTOMATICOS_PARA_PAUSAR
 
     pausar(PAUSA_AUTOMATICOS, 'automatico')
     Redis::Alfred.delete(contador)
@@ -63,12 +61,17 @@ class Autonomia::ContatoPeloEmail::Freios
   # Conta mais uma chamada da conta hoje (UTC). -> false quando passou do teto.
   def dentro_do_teto?
     chave_do_dia = chave('teto', "#{@account_id}:#{Time.now.utc.to_date.iso8601}")
-    chamadas = Redis::Alfred.incr(chave_do_dia)
-    Redis::Alfred.expire(chave_do_dia, (1.day + 1.hour).to_i) if chamadas == 1
-    chamadas <= TETO_DIARIO
+    contar(chave_do_dia, 1.day + 1.hour) <= TETO_DIARIO
   end
 
   private
+
+  # O prazo nasce junto com a chave (SET NX EX) e o INCR o mantém: nenhum contador fica sem expirar se o processo cair
+  # entre os dois comandos.
+  def contar(contador, prazo)
+    Redis::Alfred.set(contador, 0, nx: true, ex: prazo.to_i)
+    Redis::Alfred.incr(contador)
+  end
 
   def pausar(tempo, motivo)
     Redis::Alfred.setex(chave('pausa', @contato_id), motivo, tempo.to_i)

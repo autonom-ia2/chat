@@ -21,6 +21,7 @@ class Autonomia::ContatoPeloEmail::Completar
   Campos = Struct.new(:id, :account, :campos, keyword_init: true)
   CAMPOS = Leitor::CAMPOS.map { |chave, destino| { 'chave' => chave, 'destino' => destino } }.freeze
   LOG = '[autonomia][contato_pelo_email]'.freeze
+  DE_NOVO_EM = 1.minute
 
   def initialize(message)
     @message = message
@@ -61,14 +62,12 @@ class Autonomia::ContatoPeloEmail::Completar
   end
 
   def nome_trocavel?
-    nome = contato.name.to_s.strip
-    email = contato.email.to_s
-    nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) || nome == contato.phone_number.to_s
+    Autonomia::Decisores::Aplicador.nome_provisorio?(contato)
   end
 
   def travado(credencial)
     token = freios.travar
-    return motivo('em_andamento') if token.nil?
+    return de_novo_depois if token.nil?
 
     begin
       ler_e_gravar(credencial)
@@ -123,6 +122,13 @@ class Autonomia::ContatoPeloEmail::Completar
 
   def freios
     @freios ||= Autonomia::ContatoPeloEmail::Freios.new(account_id: @account.id, contato_id: contato.id)
+  end
+
+  # Outro e-mail do mesmo contato está sendo lido: este volta para a fila depois, em vez de se perder (o segundo e-mail
+  # pode ser o que traz o telefone). A trava expira sozinha (Freios::TRAVA_POR), então a volta sempre termina.
+  def de_novo_depois
+    Autonomia::ContatoPeloEmailJob.set(wait: DE_NOVO_EM).perform_later(@message.id)
+    motivo('em_andamento')
   end
 
   def motivo(razao, nivel: :info)

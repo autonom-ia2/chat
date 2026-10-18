@@ -66,6 +66,8 @@ RSpec.describe Autonomia::ContatoPeloEmailJob do
     it 'erro antes da leitura: no máximo 2 novas tentativas, e desiste registrando só a classe', :aggregate_failures do
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_raise(ActiveRecord::Deadlocked)
       allow(Rails.logger).to receive(:error)
+      rastreador = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
       mensagem = email
 
       expect { perform_enqueued_jobs { described_class.perform_later(mensagem.id) } }.not_to raise_error
@@ -73,6 +75,7 @@ RSpec.describe Autonomia::ContatoPeloEmailJob do
       expect(Crm::Ai::CredentialResolver).to have_received(:new).exactly(3).times
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
       expect(Rails.logger).to have_received(:error).with(include('desistiu', 'erro=ActiveRecord::Deadlocked')).once
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::Deadlocked), account: mensagem.account).once
     end
 
     # Pega: a nova tentativa pagar a IA de novo pelo mesmo e-mail.
