@@ -58,6 +58,8 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.left-wrap_button[data-ligado]]:!text-n-blue-11',
   // No celular o fio que separa os grupos sobra.
   'max-sm:[&_[data-separador-da-barra]]:!hidden',
+  // No celular o botão redondo do painel do contato flutua sobre o canto da caixa.
+  'max-sm:[&_[data-cabeca-da-resposta]]:!pe-12',
   '[&_.right-wrap]:!items-center',
   '[&_.right-wrap]:!gap-1',
   // No celular a barra de baixo quebra em duas linhas: ferramentas em cima, Enviar

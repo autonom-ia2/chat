@@ -33,8 +33,9 @@ const ditar = async () => {
 const pararEInserir = async () => {
   const texto = await ditado.parar();
   if (texto) {
-    // Entra no ponto do cursor, no editor da resposta (enable-insert-events).
-    emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, texto);
+    // Entra no ponto do cursor, no editor da resposta (enable-insert-events), com um
+    // espaço no fim para o que vier depois não grudar.
+    emitter.emit(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, `${texto} `);
     return;
   }
   if (ditado.erro.value) {
