@@ -46,7 +46,12 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box_div:has(>.left-wrap)]:sticky',
   '[&_.reply-box_div:has(>.left-wrap)]:bottom-0',
   '[&_.reply-box_div:has(>.left-wrap)]:z-10',
-  '[&_.reply-box_div:has(>.left-wrap)]:!bg-inherit',
+  // Rodapé fixo de verdade: fundo sólido (o que rola por baixo não aparece através)
+  // e um fio em cima, na cor da caixa (resposta ou nota amarela).
+  '[&_.reply-box:not(.is-private)_div:has(>.left-wrap)]:!bg-n-surface-1',
+  '[&_.reply-box.is-private_div:has(>.left-wrap)]:!bg-n-solid-amber',
+  '[&_.reply-box_div:has(>.left-wrap)]:border-t',
+  '[&_.reply-box_div:has(>.left-wrap)]:border-n-weak',
   '[&_.reply-box_div:has(>.left-wrap)]:rounded-b-2xl',
   // Botões da barra de baixo.
   '[&_.left-wrap]:!gap-0.5',
