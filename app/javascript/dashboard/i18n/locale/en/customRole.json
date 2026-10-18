@@ -297,7 +297,7 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Agents, teams, assignment, bots, integrations, account settings, security, billing, audit logs and custom roles.",
+        "ITEMS": "Agents, teams, bots, integrations, account settings, security, billing, audit logs and custom roles.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {

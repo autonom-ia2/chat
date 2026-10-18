@@ -297,7 +297,7 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Agentes, times, atribuição, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
+        "ITEMS": "Agentes, times, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {
