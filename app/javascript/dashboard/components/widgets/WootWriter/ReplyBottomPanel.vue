@@ -13,6 +13,8 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDoWhatsapp.vue';
+import BotoesDoEmail from 'dashboard/components-next/conversa-canal/email/BotoesDoEmail.vue';
+import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import {
   anexarArquivos,
   usePeleDaResposta,
@@ -22,6 +24,7 @@ export default {
   name: 'ReplyBottomPanel',
   components: {
     MaisDoWhatsapp,
+    BotoesDoEmail,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -183,9 +186,12 @@ export default {
     useKeyboardEvents(keyboardEvents);
     // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
     const { ehWhatsapp, soTexto, classesDaResposta } = usePeleDaResposta();
+    // #1786: Aa, Modelos e Descartar na resposta da conversa de e-mail nova.
+    const emailNovo = useEmailDaConversa().ligado;
 
     return {
       ehWhatsapp,
+      emailNovo,
       soTexto,
       classesDaResposta,
       anexarArquivos,
@@ -322,6 +328,7 @@ export default {
     :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
   >
     <div class="left-wrap">
+      <BotoesDoEmail v-if="emailNovo && !isNote" parte="esquerda" />
       <MaisDoWhatsapp
         v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
         :caixa="inbox"
@@ -451,6 +458,7 @@ export default {
       />
     </div>
     <div class="right-wrap">
+      <BotoesDoEmail v-if="emailNovo" parte="direita" />
       <button
         v-if="microfoneNaDireita"
         type="button"

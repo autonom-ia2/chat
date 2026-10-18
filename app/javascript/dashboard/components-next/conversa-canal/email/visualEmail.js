@@ -25,8 +25,9 @@ export const LISTA_DO_EMAIL = [
   "[&_.message-bubble-container:has([data-cartao-do-email])_[class*='grid-area:bubble']]:!mx-0",
 ].join(' ');
 
-// A caixa de resposta: o mesmo cartão do Chatwoot, alinhado com os e-mails, mais
-// largo e com a sombra leve do leitor de e-mail.
+// A caixa de resposta do e-mail (#1786, desenho aprovado em 18/10): o cartão do
+// Chatwoot alinhado aos e-mails, com os botões de baixo no padrão da caixa do WhatsApp
+// (redondos de 40 px, ícone maior, círculo ao passar o mouse) e o Enviar em pílula.
 export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box]:!mx-auto',
   '[&_.reply-box]:w-[calc(100%-1rem)]',
@@ -34,6 +35,69 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box]:!rounded-2xl',
   '[&_.reply-box:not(.is-private)]:!bg-n-surface-1',
   '[&_.reply-box]:shadow-[0_1px_2px_rgba(0,0,0,0.12),0_1px_3px_1px_rgba(0,0,0,0.06)]',
+  // Botões da barra de baixo.
+  '[&_.left-wrap]:!gap-0.5',
+  '[&_.left-wrap_button:not([role=menuitem])]:!size-10',
+  '[&_.left-wrap_button:not([role=menuitem])]:!p-0',
+  '[&_.left-wrap_button:not([role=menuitem])]:!rounded-full',
+  '[&_.left-wrap_button:not([role=menuitem])]:!bg-transparent',
+  '[&_.left-wrap_button:not([role=menuitem])]:!text-n-slate-12',
+  '[&_.left-wrap_button:not([role=menuitem]):hover]:!bg-n-alpha-2',
+  "[&_.left-wrap_button:not([role=menuitem])_span[class*='i-']]:!size-[22px]",
+  '[&_.right-wrap]:!items-center',
+  '[&_.right-wrap]:!gap-1',
+  // Enviar: pílula de 40 px com o destino escrito ("Enviar para Marina").
+  '[&_.right-wrap_button[type=submit]]:!h-10',
+  '[&_.right-wrap_button[type=submit]]:!px-5',
+  '[&_.right-wrap_button[type=submit]]:!rounded-full',
+  '[&_.right-wrap_button[type=submit]]:!text-sm',
+  '[&_.right-wrap_button[type=submit]]:!font-medium',
+].join(' ');
+
+// Aumentar: a resposta ocupa o lugar da conversa (a lista some), com o texto alto.
+export const RESPOSTA_EXPANDIDA = [
+  '!flex-1',
+  '[&_.cursor-row-resize]:!hidden',
+  // Altura do texto = tela menos topo do painel, cabeçalho da caixa e barra de baixo.
+  '[&_.resizable-editor-body]:!h-[calc(100vh-30rem)]',
+  '[&_.resizable-editor-body]:!min-h-[8rem]',
+  // O botão redondo do painel do contato flutua no canto direito.
+  'sm:[&_.reply-box]:!me-16',
+  '[&_.resizable-editor-body]:!max-h-none',
+].join(' ');
+
+// Janela: a resposta flutua no canto, e a conversa fica à vista e rolável por trás.
+export const RESPOSTA_EM_JANELA = [
+  '!fixed',
+  '!z-40',
+  '!bottom-4',
+  '!end-4',
+  '!w-[min(720px,calc(100vw-2rem))]',
+  '!bg-transparent',
+  '[&_.reply-box]:!w-full',
+  '[&_.reply-box]:!shadow-[0_8px_30px_rgba(0,0,0,0.25)]',
+  '[&_.cursor-row-resize]:!hidden',
+  '[&_.resizable-editor-body]:!h-[40vh]',
+  '[&_.resizable-editor-body]:!max-h-none',
+].join(' ');
+
+// "Aa": a barra de formatação do editor, que o Chatwoot só mostra sobre o texto
+// selecionado, vira uma linha fixa acima do texto.
+export const FORMATACAO_FIXA = [
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!static',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!w-full',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!shadow-none',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline-0',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!bg-n-alpha-1',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!rounded-xl',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!gap-1',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!px-1.5',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!py-1',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!mb-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!size-9',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!rounded-lg',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:hover]:!bg-n-alpha-2',
 ].join(' ');
 
 export const CARTAO = 'w-full max-w-[960px] mx-auto border-b border-n-weak';

@@ -380,7 +380,21 @@
       "ESCREVA": "Write your reply",
       "MAIS_OPCOES": "More options",
       "NOTA_PRIVADA": "Private note",
-      "FECHAR_RESPOSTA": "Close"
+      "FECHAR_RESPOSTA": "Close",
+      "SO_A_EQUIPE": "Only your team sees this",
+      "AUMENTAR": "Expand",
+      "DIMINUIR": "Shrink",
+      "ABRIR_EM_JANELA": "Open in a window",
+      "VOLTAR_PARA_A_CONVERSA": "Back to the conversation",
+      "REMOVER_ENDERECO": "Remove {endereco}",
+      "ASSUNTO_CURTO": "Subject",
+      "FORMATACAO": "Formatting",
+      "MODELOS": "Canned responses",
+      "DESCARTAR": "Discard",
+      "CONFIRMAR_DESCARTE": "Delete the draft?",
+      "SALVAR_NOTA": "Save note",
+      "ENVIAR": "Send",
+      "ENVIAR_PARA": "Send to {nome}"
     }
   }
 }

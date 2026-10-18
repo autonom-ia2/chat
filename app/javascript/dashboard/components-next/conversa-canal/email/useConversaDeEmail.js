@@ -6,6 +6,7 @@
 // Sem a chave, nada é fornecido e a conversa de e-mail é a de sempre.
 import { computed, inject, provide, ref, watch } from 'vue';
 import { useEmitter } from 'dashboard/composables/emitter';
+import { useEventListener } from '@vueuse/core';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -14,7 +15,13 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { MESSAGE_TYPES } from '../../message/constants';
-import { LISTA_DO_EMAIL, RESPOSTA_DO_EMAIL } from './visualEmail';
+import {
+  FORMATACAO_FIXA,
+  LISTA_DO_EMAIL,
+  RESPOSTA_DO_EMAIL,
+  RESPOSTA_EXPANDIDA,
+  RESPOSTA_EM_JANELA,
+} from './visualEmail';
 
 // Evento das ações do fim da conversa para a caixa de resposta.
 export const RESPONDER_EMAIL = 'conversaCanal:responderEmail';
@@ -24,6 +31,15 @@ export const MODOS_DE_RESPOSTA = {
   ENCAMINHAR: 'encaminhar',
   NOTA: 'nota',
 };
+// Tamanho da caixa de resposta: embaixo da conversa, ocupando a conversa ou em janela.
+export const TAMANHOS = {
+  NORMAL: 'normal',
+  EXPANDIDA: 'expandida',
+  JANELA: 'janela',
+};
+// Pedidos da caixa de resposta do e-mail para o ReplyBox (descartar, respostas prontas).
+export const DESCARTAR_EMAIL = 'conversaCanal:descartarEmail';
+export const MODELOS_DO_EMAIL = 'conversaCanal:modelosDoEmail';
 
 const CHAVE = Symbol('conversaDeEmail');
 // Escolha de cada atendente (Rodrigo, 17/10): por padrão as mensagens antigas ficam
@@ -48,6 +64,10 @@ const SEM_EMAIL = {
   ultimoEmailId: computed(() => null),
   respostaAberta: computed(() => false),
   fecharResposta: () => {},
+  tamanho: computed(() => TAMANHOS.NORMAL),
+  alternarTamanho: () => {},
+  formatacao: computed(() => false),
+  alternarFormatacao: () => {},
 };
 
 export const useConversaDeEmail = () => {
@@ -82,9 +102,26 @@ export const useConversaDeEmail = () => {
   // depois do envio, ao trocar de conversa ou no "Fechar". O rascunho continua
   // guardado pelo Chatwoot.
   const respostaAberta = ref(false);
+  const tamanho = ref(TAMANHOS.NORMAL);
+  const formatacao = ref(false);
   const fecharResposta = () => {
     respostaAberta.value = false;
+    tamanho.value = TAMANHOS.NORMAL;
   };
+  // Aumentar e Janela alternam: apertar de novo volta ao tamanho normal.
+  const alternarTamanho = novo => {
+    tamanho.value = tamanho.value === novo ? TAMANHOS.NORMAL : novo;
+  };
+  const alternarFormatacao = () => {
+    formatacao.value = !formatacao.value;
+  };
+  // Esc fecha a caixa (o rascunho fica), menos quando um menu ou lista está aberto.
+  useEventListener(document, 'keydown', evento => {
+    if (evento.key !== 'Escape' || !respostaAberta.value) return;
+    if (document.querySelector('[role=menu], [role=listbox]')) return;
+    if (!document.activeElement?.closest('.reply-box')) return;
+    fecharResposta();
+  });
   useEmitter(RESPONDER_EMAIL, () => {
     respostaAberta.value = true;
   });
@@ -95,6 +132,10 @@ export const useConversaDeEmail = () => {
     ligado,
     respostaAberta,
     fecharResposta,
+    tamanho,
+    alternarTamanho,
+    formatacao,
+    alternarFormatacao,
     recolher,
     alternarRecolher,
     fuso: computed(() => fusoDaConta(currentAccount.value)),
@@ -105,10 +146,22 @@ export const useConversaDeEmail = () => {
 
   return {
     ...contexto,
-    classesDaLista: computed(() => (ligado.value ? LISTA_DO_EMAIL : '')),
+    classesDaLista: computed(() => {
+      if (!ligado.value) return '';
+      // Expandida: a resposta ocupa o lugar da conversa.
+      const expandida =
+        respostaAberta.value && tamanho.value === TAMANHOS.EXPANDIDA;
+      return expandida ? `${LISTA_DO_EMAIL} !hidden` : LISTA_DO_EMAIL;
+    }),
     classesDaBarra: computed(() => {
       if (!ligado.value) return '';
-      return respostaAberta.value ? RESPOSTA_DO_EMAIL : '!hidden';
+      if (!respostaAberta.value) return '!hidden';
+      return [
+        RESPOSTA_DO_EMAIL,
+        tamanho.value === TAMANHOS.EXPANDIDA ? RESPOSTA_EXPANDIDA : '',
+        tamanho.value === TAMANHOS.JANELA ? RESPOSTA_EM_JANELA : '',
+        formatacao.value ? FORMATACAO_FIXA : '',
+      ].join(' ');
     }),
   };
 };

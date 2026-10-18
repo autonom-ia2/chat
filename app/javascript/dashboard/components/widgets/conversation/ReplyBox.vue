@@ -64,11 +64,15 @@ import {
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
+import TopoDaResposta from 'dashboard/components-next/conversa-canal/email/TopoDaResposta.vue';
 import {
+  DESCARTAR_EMAIL,
+  MODELOS_DO_EMAIL,
   MODOS_DE_RESPOSTA,
   RESPONDER_EMAIL,
   useEmailDaConversa,
 } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { lerEndereco } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 import { montarRespostaDoEmail } from 'dashboard/components-next/conversa-canal/email/respostaDoEmail';
 import { idiomaDoPainel } from 'dashboard/components-next/conversa-canal/dataDaConversa';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
@@ -93,6 +97,7 @@ export default {
     AudioRecorder,
     GravadorDoWhatsapp,
     CabecaDaResposta,
+    TopoDaResposta,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
@@ -130,7 +135,8 @@ export default {
     // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
     const { classesDaResposta, textoDoCampo, ehWhatsapp } = usePeleDaResposta();
     // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
-    const emailNovo = useEmailDaConversa().ligado;
+    const { ligado: emailNovo, fecharResposta: fecharRespostaDoEmail } =
+      useEmailDaConversa();
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
@@ -181,6 +187,7 @@ export default {
       classesDaResposta,
       ehWhatsapp,
       emailNovo,
+      fecharRespostaDoEmail,
       textoDoCampo,
     };
   },
@@ -439,6 +446,8 @@ export default {
       );
     },
     replyButtonLabel() {
+      // #1786: no e-mail novo o botão diz o destino ("Enviar para Marina") ou "Salvar nota".
+      if (this.emailNovo) return this.rotuloDoEnvioDoEmail;
       let sendMessageText = this.$t('CONVERSATION.REPLYBOX.SEND');
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
@@ -447,6 +456,23 @@ export default {
         ? `(${this.shortcutKey})`
         : '(↵)';
       return `${sendMessageText} ${keyLabel}`;
+    },
+    modoDoTopoDoEmail() {
+      return this.isPrivate ? MODOS_DE_RESPOSTA.NOTA : this.modoDoEmail;
+    },
+    rotuloDoEnvioDoEmail() {
+      if (this.isPrivate) return this.$t('CONVERSA_CANAL.EMAIL.SALVAR_NOTA');
+      const primeiro = String(this.toEmails || '')
+        .split(',')[0]
+        ?.trim();
+      if (!primeiro) return this.$t('CONVERSA_CANAL.EMAIL.ENVIAR');
+      const contato = this.currentChat?.meta?.sender || {};
+      const { endereco } = lerEndereco(primeiro);
+      const nome =
+        endereco.toLowerCase() === String(contato.email || '').toLowerCase()
+          ? String(contato.name || '').split(' ')[0]
+          : endereco;
+      return this.$t('CONVERSA_CANAL.EMAIL.ENVIAR_PARA', { nome });
     },
     replyBoxClass() {
       return {
@@ -679,6 +705,8 @@ export default {
     emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.on(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
     emitter.on(RESPONDER_EMAIL, this.responderEmail);
+    emitter.on(DESCARTAR_EMAIL, this.descartarEmail);
+    emitter.on(MODELOS_DO_EMAIL, this.abrirModelosDoEmail);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -694,6 +722,8 @@ export default {
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
     emitter.off(RESPONDER_EMAIL, this.responderEmail);
+    emitter.off(DESCARTAR_EMAIL, this.descartarEmail);
+    emitter.off(MODELOS_DO_EMAIL, this.abrirModelosDoEmail);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -1412,6 +1442,17 @@ export default {
       }
       focar();
     },
+    // #1786: Descartar apaga o rascunho e os anexos e fecha a caixa do e-mail novo.
+    descartarEmail() {
+      this.clearMessage();
+      this.attachedFiles = [];
+      this.removeFromDraft();
+      this.fecharRespostaDoEmail();
+    },
+    // #1786: Modelos abre as respostas prontas, como digitar "/" no começo do texto.
+    abrirModelosDoEmail() {
+      this.addIntoEditor('/');
+    },
     setCcEmails(value) {
       this.bccEmails = value.bccEmails;
       this.ccEmails = value.ccEmails;
@@ -1510,7 +1551,13 @@ export default {
     :is-on-private-note="isOnPrivateNote"
   />
   <div class="reply-box" :class="replyBoxClass">
+    <TopoDaResposta
+      v-if="emailNovo"
+      :modo="modoDoTopoDoEmail"
+      @trocar-modo="responderEmail({ modo: $event })"
+    />
     <ReplyTopPanel
+      v-else
       :mode="replyType"
       :conversation-id="conversationId"
       :is-reply-restricted="!canSendPublicReply"
@@ -1579,8 +1626,6 @@ export default {
           v-model:cc-emails="ccEmails"
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
-          :modo="modoDoEmail"
-          @trocar-modo="responderEmail({ modo: $event })"
         />
         <ReplyEmailHead
           v-else-if="showReplyHead && isDefaultEditorMode"

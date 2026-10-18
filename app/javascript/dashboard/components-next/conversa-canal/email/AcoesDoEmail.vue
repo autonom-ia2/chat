@@ -6,10 +6,16 @@
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { emitter } from 'shared/helpers/mitt';
-import { MODOS_DE_RESPOSTA, RESPONDER_EMAIL } from './useConversaDeEmail';
+import {
+  MODOS_DE_RESPOSTA,
+  RESPONDER_EMAIL,
+  useEmailDaConversa,
+} from './useConversaDeEmail';
 import { PILULA, PILULA_NOTA } from './visualEmail';
 
 const { t } = useI18n();
+// Com a caixa de resposta aberta, a barra sai: os botões estão no topo da caixa.
+const email = useEmailDaConversa();
 
 const ACOES = [
   {
@@ -41,6 +47,7 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
 
 <template>
   <li
+    v-show="!email.respostaAberta.value"
     class="list-none sticky bottom-0 z-10 w-full max-w-[960px] mx-auto grid grid-cols-2 sm:flex sm:flex-wrap gap-3 py-3 px-2 sm:ps-[68px] bg-n-surface-1 border-t border-n-weak"
     data-acoes-do-email
   >

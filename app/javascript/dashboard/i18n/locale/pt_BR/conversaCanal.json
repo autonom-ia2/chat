@@ -380,7 +380,21 @@
       "ESCREVA": "Escreva sua resposta",
       "MAIS_OPCOES": "Mais opções",
       "NOTA_PRIVADA": "Nota privada",
-      "FECHAR_RESPOSTA": "Fechar"
+      "FECHAR_RESPOSTA": "Fechar",
+      "SO_A_EQUIPE": "Só a sua equipe vê isto",
+      "AUMENTAR": "Aumentar",
+      "DIMINUIR": "Diminuir",
+      "ABRIR_EM_JANELA": "Abrir em janela",
+      "VOLTAR_PARA_A_CONVERSA": "Voltar para a conversa",
+      "REMOVER_ENDERECO": "Tirar {endereco}",
+      "ASSUNTO_CURTO": "Assunto",
+      "FORMATACAO": "Formatação",
+      "MODELOS": "Respostas prontas",
+      "DESCARTAR": "Descartar",
+      "CONFIRMAR_DESCARTE": "Apagar o rascunho?",
+      "SALVAR_NOTA": "Salvar nota",
+      "ENVIAR": "Enviar",
+      "ENVIAR_PARA": "Enviar para {nome}"
     }
   }
 }

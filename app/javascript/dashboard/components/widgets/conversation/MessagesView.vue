@@ -43,7 +43,6 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 import { useConversaDeEmail } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
-import FecharResposta from 'dashboard/components-next/conversa-canal/email/FecharResposta.vue';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -76,7 +75,6 @@ export default {
     AvisoJanelaFechada,
     EncaminharDaConversa,
     FaixaDeNaoLidas,
-    FecharResposta,
   },
   mixins: [inboxMixin],
   setup() {
@@ -826,9 +824,6 @@ export default {
         v-if="canOperate && pele"
         :conversation-id="currentChat.id"
       />
-      <!-- #1786: no e-mail novo, a caixa só aparece quando pedida, com "Fechar". -->
-      <FecharResposta />
-
       <ResizableEditorWrapper
         v-if="canOperate"
         v-show="!(pele && selecaoParaEncaminhar.ativa)"
