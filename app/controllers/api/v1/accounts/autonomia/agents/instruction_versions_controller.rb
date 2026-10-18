@@ -1,5 +1,7 @@
 class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent
+  # #1428 (parte 3): a volta e o Construtor no mesmo agente ao mesmo tempo viram 409, não 500.
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   # Cap defensivo: o histórico é um safety net, não uma auditoria infinita — as 50 versões mais
   # recentes bastam para a UI de rollback e mantêm o payload previsível.

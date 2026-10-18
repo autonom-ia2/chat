@@ -46,6 +46,8 @@
 #   manage creates, publishes and pauses pages. Hosting a booking or scheduling for a client needs no key.
 # - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
 #   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
+# - 'meta_ads_view': Meta Ads panel, connection state and the panel AI (#1794). Lists that lead to a conversation show
+#   only the conversations the person already sees. Connecting and configuring stay with administrators.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 
@@ -92,6 +94,7 @@ class CustomRole < ApplicationRecord
     agendamento_manage
     whatsapp_templates_view
     whatsapp_templates_manage
+    meta_ads_view
     label_manage
     attribute_manage
     macro_manage

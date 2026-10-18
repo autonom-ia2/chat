@@ -130,6 +130,13 @@ export const MODULE_GROUPS = [
           manage: 'whatsapp_templates_manage',
         },
       },
+      {
+        // Anúncios da Meta (#1794): só ver o painel. Conectar e configurar seguem do
+        // administrador até a chave protegida meta_ads_manage.
+        key: 'META_ADS',
+        icon: 'i-lucide-chart-no-axes-combined',
+        levels: { view: 'meta_ads_view' },
+      },
     ],
   },
   {

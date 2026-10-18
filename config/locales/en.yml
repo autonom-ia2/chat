@@ -564,6 +564,8 @@ en:
       message_blank: 'A message is required to talk to the agent builder.'
       build_in_progress: 'The builder is still working on your previous message. Wait a moment and try again.'
       retry_unavailable: 'This build cannot be retried right now.'
+      ajuste_mudou: 'The agent changed after this adjustment, so it can no longer be undone here. To go back, use “Previous ways of answering”.'
+      pedir_de_novo: 'Ask again by writing the message.'
     faq:
       not_pending: 'This suggestion was already reviewed.'
       embedding_failed: 'Could not add this FAQ to the knowledge base: the AI credential is missing or failed. Try again.'
@@ -573,6 +575,7 @@ en:
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
+      conflito_de_trava: 'The agent changed at the same time. Try again.'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       # #1428 — "Change by chatting" (pilot): messages the builder shows the owner after an adjustment.
       ajuste:
@@ -588,7 +591,6 @@ en:
         correcao_superada: 'Part of what you asked was left out: a newer adjustment of this agent started while I was checking. Review the agent when it finishes.'
         agente_mudou: 'The agent was changed some other way while I was checking, so I did not fix what was missing. Review the agent and tell me what you still want to change.'
         sem_resposta: 'I could not answer that right now. Can you ask in another way?'
-        tambem_mudei: 'I also changed this, which you did not ask for: %{resumos}. If you do not want it, just tell me what to remove.'
         desfiz_nao_pedido: 'I undid what you had not asked for: %{resumos}. What do you want to change?'
         nao_desfiz: 'The agent was changed some other way while I was checking, so I did not undo what you had not asked for: %{resumos}. Review the agent and tell me what you want.'
         nao_conferido: 'I tried again to apply what was missing, but there was no time left to check it. Review the agent: %{pedidos}.'
@@ -605,6 +607,7 @@ en:
         fase2_off: "Receiving when someone hands over the conversation is not available for this account yet."
         confirmar_parado: "This way, %{nome} will not receive conversations in any channel. Confirm to keep it like this."
         canal_com_outro_sistema: "An agent from another system answers first in %{canal}. Nothing changed."
+        fora_do_alcance: "You are not a member of %{canal}. Ask an administrator to change the agent there. Nothing changed."
         primeiro_recusado: "%{nome} cannot answer first in %{canal} right now. Nothing changed."
         saida_recusada: "Could not take %{nome} out of %{canal}. Nothing changed."
         mudou_agora: "Someone changed these channels just now. Reload and try again."
@@ -636,6 +639,7 @@ en:
         handoff_default: "Thanks for reaching out! I'm connecting you with a member of our team who will continue from here."
         connect_errors:
           generic: 'Unable to connect this inbox to the agent.'
+          fora_do_alcance: 'You are not a member of this channel. Ask an administrator to change the agent there.'
           agent_internal_not_connectable: 'This is an internal agent (team copilot) and cannot be connected to a customer inbox.'
           agent_not_active: 'Enable and activate the agent before connecting an inbox.'
           inbox_has_webhook_bot: "An external agent already answers on this inbox. Stop the external agent first."

@@ -159,6 +159,11 @@
           "LEVEL_VIEW": "Vê os modelos e onde estão em uso.",
           "LEVEL_MANAGE": "Cria, altera e apaga modelos no WhatsApp."
         },
+        "META_ADS": {
+          "NAME": "Anúncios da Meta",
+          "HINT": "Painel dos anúncios do Facebook e do Instagram",
+          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar fica com o administrador."
+        },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",
