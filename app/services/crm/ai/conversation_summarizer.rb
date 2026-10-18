@@ -102,6 +102,7 @@ module Crm
           Você resume conversas de atendimento/vendas em português do Brasil para um card de CRM.
           Produza um resumo objetivo (3 a 5 frases) com o contexto, o que o cliente quer, decisões e próximos passos.
           #{ContextBuilder::ROLES_LEGEND}
+          #{ContextBuilder::FORWARDED_LEGEND}
           "temporal.now_local" é a data e a hora de agora no fuso do contato, e cada mensagem traz "created_at".
           "conversation_state" diz o status da conversa, se há uma pessoa do time responsável e quando um humano
           falou por último. Situe as pendências no tempo: "aguarda orçamento desde ontem" e "aguarda orçamento há
