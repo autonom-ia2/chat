@@ -19,10 +19,29 @@ module Crm::Email::BlocoCitado
     linhas = conteudo.dup.tap { |texto| EmailReplyTrimmer.preprocess!(texto) }.split("\n")
     tipos = marcadores_de_verdade(linhas, linhas.map { |linha| EmailReplyTrimmer.identify_line_content(linha) })
     fim = inicio_do_historico(linhas, tipos) || linhas.size
-    mantidas = fora_da_citacao(tipos.first(fim))
+    mantidas = sem_separador_do_encaminhado(linhas, tipos, fora_da_citacao(tipos.first(fim)))
     return '' if mantidas.all? { |indice| SEM_TEXTO.include?(tipos[indice]) }
 
     mantidas.map { |indice| linhas[indice] }.join("\n").strip
+  end
+
+  # Sem a linha de traços (ou de "_") logo antes de um bloco cortado: é o separador do encaminhado em qualquer língua
+  # ("---------- Mensagem encaminhada ---------", "-----Mensagem original-----"), reconhecido pelo FORMATO, nunca pelas
+  # palavras do meio. A mesma linha no meio do texto do cliente, sem bloco cortado depois, fica.
+  def self.sem_separador_do_encaminhado(linhas, tipos, mantidas)
+    cortadas = (tipos.each_index.to_a - mantidas).to_set
+    mantidas.reject do |indice|
+      next false unless formato_de_separador?(linhas[indice].strip)
+
+      seguinte = tipos.each_index.find { |outro| outro > indice && tipos[outro] != EmailReplyTrimmer::EMPTY }
+      seguinte && cortadas.include?(seguinte)
+    end
+  end
+
+  TRACOS = '-----'.freeze
+
+  def self.formato_de_separador?(linha)
+    (linha.start_with?(TRACOS) && linha.end_with?(TRACOS)) || (linha.present? && linha.delete('_').empty?)
   end
 
   # Os índices das linhas que não estão num bloco citado: o bloco abre no marcador ou na linha citada e segue nas vazias
