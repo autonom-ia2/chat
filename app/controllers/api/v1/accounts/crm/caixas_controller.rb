@@ -9,7 +9,8 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
 
   def index
     inboxes = Current.account.inboxes.includes(agent_bot_inbox: :agent_bot).order(:name)
-    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: inboxes, pode_mudar_agentes: pode_mudar_agentes?)
+    retrato = ::Crm::Caixas::Retrato.new(account: Current.account, inboxes: inboxes, pode_mudar_agentes: pode_mudar_agentes?,
+                                         alcancavel: caixa_alcancavel)
     render json: { payload: { caixas: retrato.caixas, funis: retrato.funis } }
   end
 
@@ -18,7 +19,7 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def update
-    return render_sem_permissao_de_agentes if caixa_params.key?(:ai_agents) && !pode_mudar_agentes?
+    return render_sem_permissao_de_agentes if caixa_params.key?(:ai_agents) && !pode_mudar_agentes_da_caixa?
 
     ::Crm::Caixas::Gravador.new(account: Current.account, inbox: @inbox, user: Current.user, dados: caixa_params).perform
     render_caixa
@@ -54,13 +55,23 @@ class Api::V1::Accounts::Crm::CaixasController < Api::V1::Accounts::Crm::BaseCon
     Current.account_user&.permission_granted?('autonomia_manage') || false
   end
 
+  # Regra G (#1788): mexer no agente da caixa pede também alcançar a caixa (membro ou inbox_manage). Funis e pessoas da
+  # caixa seguem só com crm_admin.
+  def pode_mudar_agentes_da_caixa?
+    pode_mudar_agentes? && caixa_alcancavel.alcanca?(@inbox)
+  end
+
+  def caixa_alcancavel
+    @caixa_alcancavel ||= ::Autonomia::Agents::CaixaAlcancavel.new(account_user: Current.account_user)
+  end
+
   def render_sem_permissao_de_agentes
     render json: { error: { code: 'crm.caixas.agentes_sem_permissao' } }, status: :forbidden
   end
 
   def render_caixa
     retrato = ::Crm::Caixas::Retrato.new(
-      account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?, detalhe: true
+      account: Current.account, inboxes: [@inbox], pode_mudar_agentes: pode_mudar_agentes?, detalhe: true, alcancavel: caixa_alcancavel
     )
     render json: { payload: { caixa: retrato.caixa(@inbox), funis: retrato.funis } }
   end

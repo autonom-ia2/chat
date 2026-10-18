@@ -179,9 +179,20 @@ const faltaCanal = computed(
     !soQuandoPassar.value &&
     !onde.value
 );
-// No "Não", sem caixa marcada em "Recebe quando…", ele não fica em lugar nenhum.
+// Regra G (#1788): a equipe numa caixa que a pessoa não alcança fica, mesmo fora da lista marcada.
+const temAreaEscondida = computed(() =>
+  props.canais.some(
+    canal =>
+      canal.alcanca === false &&
+      (canal.areas || []).some(area => area.agent_id === props.agente.id)
+  )
+);
+// No "Não", sem caixa marcada em "Recebe quando…" (nem escondida), ele não fica em lugar nenhum.
 const ficaParado = computed(
-  () => soQuandoPassar.value && !outrasValidas.value.length
+  () =>
+    soQuandoPassar.value &&
+    !outrasValidas.value.length &&
+    !temAreaEscondida.value
 );
 const nomeDoCanal = inboxId =>
   props.canais.find(canal => canal.inbox_id === inboxId)?.name || '';

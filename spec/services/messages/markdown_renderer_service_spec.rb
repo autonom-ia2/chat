@@ -110,6 +110,189 @@ RSpec.describe Messages::MarkdownRendererService, type: :service do
       end
     end
 
+    context 'when channel is Channel::Whatsapp with the pele on (#1702, #1732)' do
+      def render_pele(content)
+        described_class.new(content, 'Channel::Whatsapp', nil, pele: true).render
+      end
+
+      it 'renders fenced code blocks as WhatsApp monospace' do
+        content = "```\ncode here\n```"
+        result = render_pele(content)
+        expect(result).to eq('```code here```')
+      end
+
+      it 'keeps multi-line fenced code blocks inside one monospace block' do
+        content = "Antes\n\n```ruby\nx = 1\ny = 2\n```\n\nDepois"
+        result = render_pele(content)
+        expect(result).to eq("Antes\n\n```x = 1\ny = 2```\n\nDepois")
+      end
+
+      it 'keeps blank lines inside a fenced code block and between two blocks' do
+        content = "```\na\n\n\nb\n```\n\n\n```\nc\n```"
+        result = render_pele(content)
+        expect(result).to eq("```a\n\n\nb```\n\n\n```c```")
+      end
+
+      it 'keeps triple backticks typed inside a line as monospace' do
+        content = 'x ```mono``` e `cod` e **negrito**'
+        result = render_pele(content)
+        expect(result).to eq('x ```mono``` e `cod` e *negrito*')
+      end
+
+      it 'keeps triple backticks after accented text (byte columns)' do
+        content = 'Olá, código: ```x``` e `y`'
+        result = render_pele(content)
+        expect(result).to eq('Olá, código: ```x``` e `y`')
+      end
+
+      it 'keeps an indented code block that starts with backticks as plain text' do
+        content = "Texto\n\n    ```\n    x"
+        result = render_pele(content)
+        expect(result).to eq("Texto\n\n```\nx")
+      end
+
+      it 'keeps markers glued to letters or digits as typed' do
+        content = '2*3*4 e a**b**c e olá*x* e **ok**!'
+        result = render_pele(content)
+        expect(result).to eq('2*3*4 e a**b**c e olá*x* e *ok*!')
+      end
+
+      it 'renders tilde fenced code blocks as WhatsApp monospace' do
+        content = "~~~\ncode here\n~~~"
+        result = render_pele(content)
+        expect(result).to eq('```code here```')
+      end
+
+      it 'converts strikethrough to single tilde' do
+        content = '~~riscado~~'
+        result = render_pele(content)
+        expect(result).to eq('~riscado~')
+      end
+
+      it 'keeps single tilde strikethrough as typed' do
+        content = 'a ~x~ e ~~y~~'
+        result = render_pele(content)
+        expect(result).to eq('a ~x~ e ~y~')
+      end
+
+      it 'converts markdown italic with asterisk to underscore' do
+        content = '*itálico*'
+        result = render_pele(content)
+        expect(result).to eq('_itálico_')
+      end
+
+      it 'combines bold, italic and strikethrough' do
+        content = '**negrito _itálico_ ~~riscado~~**'
+        result = render_pele(content)
+        expect(result).to eq('*negrito _itálico_ ~riscado~*')
+      end
+
+      it 'keeps underscores inside words as text' do
+        content = 'arquivo snake_case_name.txt'
+        result = render_pele(content)
+        expect(result).to eq('arquivo snake_case_name.txt')
+      end
+
+      it 'renders a one-line quote' do
+        content = '> citação'
+        result = render_pele(content)
+        expect(result).to eq('> citação')
+      end
+
+      it 'prefixes every line of a multi-line quote' do
+        content = "> linha 1\n> linha 2"
+        result = render_pele(content)
+        expect(result).to eq("> linha 1\n> linha 2")
+      end
+
+      it 'prefixes every paragraph of a quote' do
+        content = "> a\n>\n> b"
+        result = render_pele(content)
+        expect(result).to eq("> a\n> b")
+      end
+
+      it 'keeps blank lines around loose lists' do
+        content = "Texto\n\n- a\n\n- b\n\n\nfim"
+        result = render_pele(content)
+        expect(result).to eq("Texto\n\n- a\n\n- b\n\n\nfim")
+      end
+
+      it 'keeps fenced code inside a list item' do
+        content = "- item\n\n    ```\n    x\n    ```"
+        result = render_pele(content)
+        expect(result).to eq("- item\n\n```x```")
+      end
+
+      it 'ends the quote before the next paragraph' do
+        content = "> citação\n\ndepois"
+        result = render_pele(content)
+        expect(result).to eq("> citação\n\ndepois")
+      end
+    end
+
+    context 'when channel is Channel::Whatsapp with the pele off (Chatwoot output, #1702)' do
+      # Saída do Chatwoot como está na main, inclusive a cerca solta depois da linha em branco.
+      it 'keeps ~~x~~, fenced code and *x* as before, even for an automatic message' do
+        content = "~~riscado~~ *x*\n\n```\ncode here\n```"
+        expect(described_class.new(content, 'Channel::Whatsapp', nil, automatico: true).render).to eq("~~riscado~~ _x_\n\n```\ncode here")
+      end
+
+      it 'keeps a multi-line quote with a single marker, as before' do
+        expect(described_class.new("> linha 1\n> linha 2", 'Channel::Whatsapp').render).to eq("> linha 1\nlinha 2")
+      end
+    end
+
+    context 'when channel is Channel::Whatsapp and the message is automatic (robot, AI, automation)' do
+      def render_automatic(content)
+        described_class.new(content, 'Channel::Whatsapp', nil, pele: true, automatico: true).render
+      end
+
+      it 'reads *x* as bold, like WhatsApp' do
+        expect(render_automatic('*negrito*')).to eq('*negrito*')
+      end
+
+      it 'reads **x** as bold too' do
+        expect(render_automatic('**negrito**')).to eq('*negrito*')
+      end
+
+      it 'keeps _x_ as italic' do
+        expect(render_automatic('_itálico_')).to eq('_itálico_')
+      end
+
+      it 'reads ~x~ and ~~x~~ as strikethrough' do
+        expect(render_automatic('~a~ e ~~b~~')).to eq('~a~ e ~b~')
+      end
+
+      it 'keeps mono and inline code' do
+        expect(render_automatic('```mono``` e `cod`')).to eq('```mono``` e `cod`')
+      end
+
+      it 'merges nested bold into one' do
+        expect(render_automatic('***tudo***')).to eq('*tudo*')
+      end
+
+      it 'combines bold and italic' do
+        expect(render_automatic('*Olá*, _tudo bem_? **Seu pedido**: ~cancelado~')).to eq('*Olá*, _tudo bem_? *Seu pedido*: ~cancelado~')
+      end
+
+      it 'keeps markers glued to letters or digits as typed' do
+        expect(render_automatic('2*3*4 e a**b**c e nome_do_arquivo')).to eq('2*3*4 e a**b**c e nome_do_arquivo')
+      end
+
+      it 'keeps lists' do
+        expect(render_automatic("Itens:\n- *um*\n- dois")).to eq("Itens:\n- *um*\n- dois")
+      end
+
+      it 'still reads *x* as italic for a message typed in the editor' do
+        expect(described_class.new('*itálico*', 'Channel::Whatsapp', nil, pele: true).render).to eq('_itálico_')
+      end
+
+      it 'does not change other channels' do
+        result = described_class.new('*x*', 'Channel::Instagram', nil, pele: true, automatico: true).render
+        expect(result).to eq(described_class.new('*x*', 'Channel::Instagram').render)
+      end
+    end
+
     context 'when channel is Channel::Instagram' do
       let(:channel_type) { 'Channel::Instagram' }
 

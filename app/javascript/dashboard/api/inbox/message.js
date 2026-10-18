@@ -13,6 +13,7 @@ export const buildCreatePayload = ({
   toEmails = '',
   templateParams,
   isVoiceMessage = false,
+  documentIndexes = [],
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -37,6 +38,11 @@ export const buildCreatePayload = ({
     if (isVoiceMessage) {
       payload.append('is_voice_message', true);
     }
+    // #1702: "Documento" do "+" — esses anexos (pela posição em files) vão como
+    // documento, mesmo sendo foto ou vídeo.
+    documentIndexes.forEach(indice => {
+      payload.append('document_indexes[]', indice);
+    });
   } else {
     payload = {
       content: message,
@@ -69,6 +75,7 @@ class MessageApi extends ApiClient {
     toEmails = '',
     templateParams,
     isVoiceMessage = false,
+    documentIndexes = [],
   }) {
     return axios({
       method: 'post',
@@ -84,6 +91,7 @@ class MessageApi extends ApiClient {
         toEmails,
         templateParams,
         isVoiceMessage,
+        documentIndexes,
       }),
     });
   }

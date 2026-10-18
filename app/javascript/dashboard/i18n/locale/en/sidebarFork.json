@@ -34,6 +34,10 @@
     "ABRIR_MENU": "Open menu",
     "ANUNCIO_RECOLHIDO": "Menu collapsed",
     "ANUNCIO_ABERTO": "Menu open",
+    "ROLAR_ACIMA": "Scroll the menu up",
+    "ROLAR_ABAIXO": "Scroll the menu down",
+    "ROLAR_ACIMA_ITENS": "Scroll the menu up: 1 item | Scroll the menu up: {count} items",
+    "ROLAR_ABAIXO_ITENS": "Scroll the menu down: 1 item | Scroll the menu down: {count} items",
     "ATRIBUICAO": {
       "TEXTO": "Who gets each conversation is set in Assignment.",
       "LINK": "Open Assignment"
@@ -84,6 +88,10 @@
     },
     "OUTRO_ITEM": "Another platform setting.",
     "CARTOES": {
+      "PRIMEIROS_PASSOS": {
+        "TITULO": "First steps",
+        "TEXTO": "What's already set up in your account and the next steps to grow."
+      },
       "DADOS_EMPRESA": {
         "TITULO": "Company details",
         "TEXTO": "Your account name, language and time zone."
@@ -173,6 +181,8 @@
         "TEXTO": "The address people see on your email campaigns."
       }
     },
-    "RECONECTAR": "Needs reconnecting: 1 channel | Needs reconnecting: {count} channels"
+    "RECONECTAR": "Needs reconnecting: 1 channel | Needs reconnecting: {count} channels",
+    "PASSOS_FALTAM": "1 step left | {count} steps left",
+    "TUDO_PRONTO": "All set"
   }
 }

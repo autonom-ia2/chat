@@ -20,6 +20,11 @@ json.payload do
     json.error_fields Array(@thread.state['error_fields'])
     json.truncated_fields Array(@thread.state['truncated_fields'])
     json.applied @thread.state['applied']
+    # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
+    json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
+    # #1428 (parte 3, piloto): o último ajuste pedido por pedido e se ainda dá para desfazer. Só textos que o Construtor
+    # escreveu para o dono (`pedido`, `resumo`); nunca o campo, a conferência, a instrução ou o andaime.
+    json.resultado Autonomia::Agents::ResultadoDoAjuste.new(@thread).to_h if Autonomia::Agents::ResultadoDoAjuste.mostrar?(@thread)
   end
   json.created_at @thread.created_at
   json.updated_at @thread.updated_at

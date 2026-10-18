@@ -377,16 +377,7 @@
       "AUTO": {
         "SUGGESTED": "Sugerido",
         "SUGGESTING": "Procurando a melhor mensagem para cada aviso…",
-        "CREATE_HINT": "Alguns avisos não têm mensagem aprovada que sirva. Podemos mandar mensagens prontas para a Meta aprovar.",
-        "CREATE_BUTTON": "Criar os modelos na Meta",
-        "CREATING": "Enviando para a Meta…",
-        "SENDING": "Enviando para a Meta…",
-        "PENDING": "Em aprovação na Meta",
-        "APPROVED": "Aprovado",
-        "REJECTED": "Recusado: {reason}",
-        "FAILED": "Não foi enviado: {reason}",
-        "RETRY": "Tentar de novo",
-        "CREATE_FAILED": "Não deu para enviar para a Meta agora. Tente de novo."
+        "SYSTEM_TEMPLATES_HINT": "Com a autorização para o {marca} criar modelos ligada, o {marca} pede à Meta as mensagens dos avisos, com os botões “Ver meu horário” e “Parar avisos”. Depois que a Meta aprova, elas saem no lugar das escolhidas aqui."
       },
       "KINDS": {
         "BOOKED": "Ao marcar",

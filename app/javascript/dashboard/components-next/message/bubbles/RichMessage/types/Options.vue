@@ -10,12 +10,16 @@ import Frame from '../Frame.vue';
 import ActionRow from '../ActionRow.vue';
 import OptionsList from '../OptionsList.vue';
 import { selectedOptionFor } from '../optionsAnswer.js';
+import OpcoesDoWhatsapp from '../../../../conversa-canal/OpcoesDoWhatsapp.vue';
+import { usePele } from '../../../../conversa-canal/pele';
 
 const BUTTONS_MAX = 3;
 
 const { id, contentAttributes } = useMessageContext();
 const { t } = useI18n();
 const currentChat = useMapGetter('getSelectedChat');
+// #1702: na conversa com a cara do WhatsApp, os botões ficam soltos embaixo do balão.
+const pele = usePele();
 
 // Tudo vem de quem chamou a API: só texto entra na tela.
 const textOf = value => (typeof value === 'string' ? value : '');
@@ -79,7 +83,19 @@ const chosenLine = computed(() =>
 </script>
 
 <template>
+  <OpcoesDoWhatsapp
+    v-if="pele"
+    :header="textOf(richMessage.header)"
+    :footer="textOf(richMessage.footer)"
+    :is-list="isList"
+    :list-button="textOf(richMessage.button)"
+    :options="allOptions"
+    :sections="sentSections"
+    :chosen-id="chosenId"
+    :chosen-line="chosenLine"
+  />
   <Frame
+    v-else
     bubble-name="rich-options"
     :header="textOf(richMessage.header)"
     :footer="textOf(richMessage.footer)"

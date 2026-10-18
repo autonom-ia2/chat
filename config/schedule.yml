@@ -87,6 +87,12 @@ purge_expired_campaign_import_files_job:
   class: 'CampaignImports::PurgeExpiredFilesJob'
   queue: scheduled_jobs
 
+# #1716: foto do computador da conversa que nunca foi enviada sai depois de um dia (às 23h45 UTC).
+purge_whatsapp_conversation_uploads_job:
+  cron: '45 23 * * *'
+  class: 'Whatsapp::Templates::PurgeConversationUploadsJob'
+  queue: scheduled_jobs
+
 # executed every minute; feature flag checked inside the job
 crm_follow_up_due_job:
   cron: '*/1 * * * *'

@@ -2,6 +2,9 @@
 import { MESSAGE_TYPE } from 'widget/helpers/constants';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { ATTACHMENT_ICONS } from 'shared/constants/messages';
+import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
+import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
+import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 
 export default {
   name: 'MessagePreview',
@@ -19,10 +22,13 @@ export default {
       default: '',
     },
   },
-  setup() {
+  setup(props) {
     const { getPlainText } = useMessageFormatter();
+    // #1702: os rótulos do WhatsApp só com a pele; sem ela, a prévia de sempre.
+    const pele = usePeleDaMensagem(() => props.message);
     return {
       getPlainText,
+      pele,
     };
   },
   computed: {
@@ -51,6 +57,14 @@ export default {
       return ATTACHMENT_ICONS[this.lastMessageFileType];
     },
     attachmentMessageContent() {
+      // #1702: figurinha do WhatsApp aparece como "Figurinha", não como foto.
+      if (this.pele && ultimaEFigurinha(this.message)) {
+        return 'CONVERSA_CANAL.MIDIA.FIGURINHA';
+      }
+      // #1702: visualização única aparece assim na lista, como no WhatsApp.
+      if (this.pele && ultimaEVisualizacaoUnica(this.message)) {
+        return 'CONVERSA_CANAL.VISUALIZACAO_UNICA.ROTULO';
+      }
       return `CHAT_LIST.ATTACHMENTS.${this.lastMessageFileType}.CONTENT`;
     },
     isMessageSticker() {

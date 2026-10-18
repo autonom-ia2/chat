@@ -268,6 +268,37 @@ describe('useCartoes', () => {
     delete listas.getCurrentAccountId;
   });
 
+  it('Primeiros passos vira cartão só quando o básico da trilha está feito, com o que falta', () => {
+    publicar([...CONFIGURACOES]);
+    const ids = () =>
+      montar().grupos.value.flatMap(grupo => grupo.cartoes.map(c => c.id));
+    const basico = ['perfil', 'chave_ia', 'canal', 'primeira_resposta'].map(
+      id => ({ id, etapa: 'ligar', status: 'feito', pulavel: false })
+    );
+    estado.passos = [
+      ...basico,
+      { id: 'funil', etapa: 'organizar', status: 'pendente', pulavel: false },
+    ];
+    expect(ids()).not.toContain('PRIMEIROS_PASSOS');
+    estado.passos = [
+      ...basico,
+      { id: 'funil', etapa: 'organizar', status: 'feito', pulavel: false },
+      {
+        id: 'agente_ia',
+        etapa: 'organizar',
+        status: 'pendente',
+        pulavel: true,
+      },
+    ];
+    const cartao = montar()
+      .grupos.value.flatMap(grupo => grupo.cartoes)
+      .find(c => c.id === 'PRIMEIROS_PASSOS');
+    expect(cartao).toMatchObject({
+      grupo: 'SUA_EMPRESA',
+      estado: { tipo: 'falta' },
+    });
+  });
+
   it('configuração nova sem cartão aparece em "Outros"', () => {
     publicar([...CONFIGURACOES, folha('Settings Coisa Nova', 'coisa_nova')]);
     const grupos = montar().grupos.value;

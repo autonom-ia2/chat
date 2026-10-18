@@ -105,7 +105,13 @@ const initWaveSurfer = () => {
       });
       if (recordedAudioUrl.value) URL.revokeObjectURL(recordedAudioUrl.value);
       recordedAudioUrl.value = URL.createObjectURL(audioBlob);
-      wavesurfer.value.load(recordedAudioUrl.value);
+      // Prévia do áudio gravado. Enviar logo depois de parar (a seta do #1702)
+      // fecha o gravador e o destroy() cancela este carregamento: isso é
+      // esperado e não é erro. Qualquer outra falha continua aparecendo.
+      wavesurfer.value.load(recordedAudioUrl.value).catch(error => {
+        if (isUnmounted) return;
+        throw error;
+      });
       emit('finishRecord', {
         name: file.name,
         type: file.type,

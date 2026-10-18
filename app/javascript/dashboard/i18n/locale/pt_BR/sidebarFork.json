@@ -34,6 +34,10 @@
     "ABRIR_MENU": "Abrir menu",
     "ANUNCIO_RECOLHIDO": "Menu recolhido",
     "ANUNCIO_ABERTO": "Menu aberto",
+    "ROLAR_ACIMA": "Rolar o menu para cima",
+    "ROLAR_ABAIXO": "Rolar o menu para baixo",
+    "ROLAR_ACIMA_ITENS": "Rolar o menu para cima: 1 item | Rolar o menu para cima: {count} itens",
+    "ROLAR_ABAIXO_ITENS": "Rolar o menu para baixo: 1 item | Rolar o menu para baixo: {count} itens",
     "ATRIBUICAO": {
       "TEXTO": "Quem recebe cada conversa é definido em Atribuição.",
       "LINK": "Abrir Atribuição"
@@ -84,6 +88,10 @@
     },
     "OUTRO_ITEM": "Outra configuração da plataforma.",
     "CARTOES": {
+      "PRIMEIROS_PASSOS": {
+        "TITULO": "Primeiros passos",
+        "TEXTO": "O que já está pronto na sua conta e os próximos passos para crescer."
+      },
       "DADOS_EMPRESA": {
         "TITULO": "Dados da empresa",
         "TEXTO": "Nome, idioma e fuso da sua conta."
@@ -173,6 +181,8 @@
         "TEXTO": "O endereço que aparece para quem recebe suas campanhas por e-mail."
       }
     },
-    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais"
+    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais",
+    "PASSOS_FALTAM": "Falta 1 passo | Faltam {count} passos",
+    "TUDO_PRONTO": "Tudo pronto"
   }
 }

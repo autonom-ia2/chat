@@ -72,12 +72,19 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
 
   # O item do histórico para o Answerer. Da equipe -> moldura com a `marca`; da equipe que falhou -> sai (conteúdo
   # vazio, que o teto do histórico descarta); do cliente -> segunda camada contra moldura forjada; o resto, como sempre.
+  # Localização e contato sem `content` entram pelo resumo (#1715), na moldura ou no papel de quem enviou.
   def item_do_historico(message, marca:, whatsapp: false)
     da_equipe = conteudo_da_equipe(message, marca, whatsapp)
     return { role: 'user', content: da_equipe } unless da_equipe.nil?
-    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(message.content.to_s, marca) } if message.incoming?
+    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(texto(message), marca) } if message.incoming?
 
-    { role: 'assistant', content: message.content.to_s }
+    { role: 'assistant', content: texto(message) }
+  end
+
+  # O texto da mensagem para o histórico: o resumo do contato em anexo, o `content`, ou o resumo da localização/contato
+  # quando ele está vazio (ResumoDaMensagemRica).
+  def texto(message)
+    ::Autonomia::Agents::Operate::ResumoDaMensagemRica.texto(message)
   end
 
   # O conteúdo com moldura (ou '' quando falhou no envio) de uma mensagem da equipe ou automática do canal; nil quando
@@ -88,11 +95,10 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     return '' if message.failed?
 
     moldura = ::Autonomia::Agents::Operate::MolduraDaEquipe
-    texto = message.content.to_s
     case tipo
-    when :pessoa then moldura.da_pessoa(texto, message.sender, marca)
-    when :celular then moldura.do_celular(texto, marca)
-    else moldura.automatica(texto, marca)
+    when :pessoa then moldura.da_pessoa(texto(message), message.sender, marca)
+    when :celular then moldura.do_celular(texto(message), marca)
+    else moldura.automatica(texto(message), marca)
     end
   end
 
@@ -109,10 +115,10 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
     envio_automatico?(message) || (message.sender_type.blank? && message.content_attributes.to_h['external_echo'].blank?)
   end
 
-  # As regras do turno para as mensagens com moldura que chegaram ao cliente (com texto): a da equipe e/ou a da mensagem
-  # automática; nil sem nenhuma (o pedido fica igual ao de antes).
+  # As regras do turno para as mensagens com moldura que chegaram ao cliente (com texto ou com o resumo da
+  # localização/contato, #1715): a da equipe e/ou a da mensagem automática; nil sem nenhuma (o pedido fica igual).
   def regra_do_turno(messages, marca:, whatsapp: false)
-    tipos = Array(messages).select { |message| message.content.present? && !message.failed? }
+    tipos = Array(messages).select { |message| texto(message).present? && !message.failed? }
                            .map { |message| moldura_de(message, whatsapp) }
     moldura = ::Autonomia::Agents::Operate::MolduraDaEquipe
     regras = []

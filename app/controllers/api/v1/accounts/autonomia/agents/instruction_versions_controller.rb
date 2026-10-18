@@ -1,15 +1,18 @@
 class Api::V1::Accounts::Autonomia::Agents::InstructionVersionsController < Api::V1::Accounts::Autonomia::BaseController
   before_action :fetch_agent
+  # #1428 (parte 3): a volta e o Construtor no mesmo agente ao mesmo tempo viram 409, não 500.
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   # Cap defensivo: o histórico é um safety net, não uma auditoria infinita — as 50 versões mais
   # recentes bastam para a UI de rollback e mantêm o payload previsível.
   MAX_VERSIONS = 50
 
   def index
-    @versions = @agent.instruction_versions
+    @versions = @agent.instruction_versions.na_lista
                       .includes(:created_by)
                       .order(created_at: :desc, id: :desc)
                       .limit(MAX_VERSIONS)
+    @escritos_pelo_dono = @agent.hashes_escritos_pelo_dono
   end
 
   # Rollback atômico. A versão é buscada SEMPRE dentro de @agent.instruction_versions (agent já

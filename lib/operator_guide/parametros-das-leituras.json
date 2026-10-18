@@ -904,6 +904,37 @@
     "controller": "api/v1/accounts/contacts#summary",
     "parametros": []
   },
+  "conversa_canal/encaminhamentos": {
+    "controller": "api/v1/accounts/conversa_canal/encaminhamentos#index",
+    "parametros": [
+      "termo"
+    ]
+  },
+  "conversa_canal/formularios": {
+    "controller": "api/v1/accounts/conversa_canal/formularios#index",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
+  "conversa_canal/formularios/:id/primeira_tela": {
+    "controller": "api/v1/accounts/conversa_canal/formularios#primeira_tela",
+    "parametros": [
+      "inbox_id"
+    ]
+  },
+  "conversa_canal/lugares": {
+    "controller": "api/v1/accounts/conversa_canal/lugares#index",
+    "parametros": [
+      "sessao",
+      "termo"
+    ]
+  },
+  "conversa_canal/lugares/:id": {
+    "controller": "api/v1/accounts/conversa_canal/lugares#show",
+    "parametros": [
+      "sessao"
+    ]
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [
@@ -1037,12 +1068,6 @@
   "crm/booking_pages/:id": {
     "controller": "api/v1/accounts/crm/booking_pages#show",
     "parametros": []
-  },
-  "crm/booking_pages/:id/notice_templates": {
-    "controller": "api/v1/accounts/crm/booking_pages#notice_templates",
-    "parametros": [
-      "inbox_id"
-    ]
   },
   "crm/booking_pages/:id/people": {
     "controller": "api/v1/accounts/crm/booking_pages#people",
@@ -1236,6 +1261,14 @@
   },
   "crm/meetings/:id": {
     "controller": "api/v1/accounts/crm/meetings#show",
+    "parametros": []
+  },
+  "crm/memoria/cards/:card_id/fatos": {
+    "controller": "api/v1/accounts/crm/memoria_fatos#index",
+    "parametros": []
+  },
+  "crm/memoria/chaves": {
+    "controller": "api/v1/accounts/crm/memoria_chaves#index",
     "parametros": []
   },
   "crm/meta_ads_connection": {
@@ -1693,7 +1726,27 @@
     "controller": "api/v1/accounts/inboxes/whatsapp_catalogs#products",
     "parametros": [
       "after",
+      "ids",
       "q"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/catalog": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#catalog",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/products": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#products",
+    "parametros": [
+      "after",
+      "ids",
+      "q"
+    ]
+  },
+  "inboxes/:inbox_id/whatsapp_conversation_assets/template": {
+    "controller": "api/v1/accounts/inboxes/whatsapp_conversation_assets#template",
+    "parametros": [
+      "language",
+      "name"
     ]
   },
   "inboxes/:inbox_id/whatsapp_templates": {

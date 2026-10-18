@@ -22,8 +22,10 @@ module WhatsappHybrid::UnexpectedErrorOutcome
       next 'accepted' if attributes[OUTCOME_KEY] == 'accepted'
 
       outcome = final_outcome(attributes)
-      message.update!(status: :failed, content_attributes: attributes.merge(OUTCOME_KEY => outcome,
-                                                                            'external_error' => error_text(attributes, outcome, external_error)))
+      # Sem validação: a trava de rajada da mensagem não pode impedir o registro de um envio que já aconteceu.
+      closed = attributes.merge(OUTCOME_KEY => outcome, 'external_error' => error_text(attributes, outcome, external_error))
+      message.assign_attributes(status: :failed, content_attributes: closed)
+      message.save!(validate: false)
       outcome
     end
   end

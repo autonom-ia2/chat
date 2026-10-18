@@ -17,11 +17,11 @@ class Api::V1::Accounts::Autonomia::Agents::AnalyticsController < Api::V1::Accou
     return render_unprocessable('unknown metric') unless ::Autonomia::Agents::Analytics::OUTCOME_METRICS.include?(metric)
 
     analytics = ::Autonomia::Agents::Analytics.new(agent: @agent, range: params[:range])
-    fetched = analytics.outcome_scope(metric)
-                       .includes(:assignee, :contact, :inbox)
-                       .order(last_activity_at: :desc)
-                       .limit(DRILLDOWN_LIMIT + 1)
-                       .to_a
+    fetched = visiveis(analytics.outcome_scope(metric))
+              .includes(:assignee, :contact, :inbox)
+              .order(last_activity_at: :desc)
+              .limit(DRILLDOWN_LIMIT + 1)
+              .to_a
     records = fetched.first(DRILLDOWN_LIMIT)
     serializer = ::V2::Reports::DrilldownRecordSerializer.new(Current.account, metric, false, records)
 
@@ -33,6 +33,12 @@ class Api::V1::Accounts::Autonomia::Agents::AnalyticsController < Api::V1::Accou
   end
 
   private
+
+  # #1788: a lista abre conversas, então segue a regra da lista de conversas (caixa, funil e função). Os totais do
+  # painel (index) continuam da conta.
+  def visiveis(conversas)
+    ::Conversations::PermissionFilterService.new(conversas, Current.user, Current.account).perform
+  end
 
   def fetch_agent
     @agent = agents_scope.find(params[:id]) # agents_scope = conta corrente -> isolamento

@@ -1267,7 +1267,15 @@
         "UPDATE_ERROR": "Não foi possível salvar o campo do card",
         "DELETE_SUCCESS": "Campo do card limpo",
         "DELETE_ERROR": "Não foi possível limpar o campo do card",
-        "HELP_ATENDER": "Informações próprias deste atendimento."
+        "HELP_ATENDER": "Informações próprias deste atendimento.",
+        "ORIGEM": {
+          "CLIENTE": "cliente informou em {quando}",
+          "EQUIPE": "equipe informou em {quando}",
+          "FERRAMENTA": "resultado de ferramenta em {quando}",
+          "CORRIGIDO": "corrigido por {nome} em {quando}",
+          "VER_MENSAGEM": "ver mensagem",
+          "SEPARADOR": "·"
+        }
       },
       "MORE_DETAILS": "Mais detalhes",
       "LOADING_DETAILS": "Carregando detalhes atualizados...",
@@ -2244,7 +2252,9 @@
         "LOAD_ERROR": "Não deu para carregar a conexão com a Meta.",
         "RETRY": "Tentar de novo",
         "GROUP": "Campanhas",
-        "BREADCRUMB": "Você está aqui"
+        "BREADCRUMB": "Você está aqui",
+        "NOT_CONNECTED_TITLE": "Os anúncios ainda não estão conectados",
+        "NOT_CONNECTED_TEXT": "Peça a um administrador para conectar os anúncios da Meta. Depois, os resultados aparecem aqui."
       },
       "EMPTY": {
         "EYEBROW": "Campanhas",
@@ -2629,6 +2639,7 @@
           "EARLY": "Ainda é cedo"
         },
         "STALLED_TITLE": "1 proposta parada | {count} propostas paradas",
+        "LIST_SCOPE": "Aqui aparecem só as conversas que você pode ver.",
         "STALLED_SINCE": "Sem resposta {time}",
         "OPEN_CONVERSATION": "Abrir conversa",
         "COUNT": {

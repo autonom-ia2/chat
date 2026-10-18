@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Whatsapp::Templates::DispatchProducts do
   subject(:result) { described_class.new(inbox: inbox, template: template, processed: processed).call }
 
-  let(:inbox) { instance_double(Inbox) }
+  let(:inbox) { instance_double(Inbox, id: 7) }
   let(:client) { instance_double(Whatsapp::Templates::CatalogClient) }
   let(:card) { { 'components' => [{ 'type' => 'HEADER', 'format' => 'PRODUCT' }, { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'SPM' }] }] } }
   let(:template) do
@@ -15,7 +15,8 @@ RSpec.describe Whatsapp::Templates::DispatchProducts do
   let(:catalog) { Whatsapp::Templates::CatalogClient::Catalog.new(id: 'cat-1', name: 'Loja', product_count: 2) }
 
   def product(id, available: true)
-    Whatsapp::Templates::CatalogClient::Product.new(id: id, name: "Nome #{id}", price: 'R$1', image_url: '', available: available)
+    Whatsapp::Templates::CatalogClient::Product.new(id: id, name: "Nome #{id}", price: 'R$1', sale_price: '', image_url: '',
+                                                    available: available)
   end
 
   before { allow(Whatsapp::Templates::CatalogClient).to receive(:new).with(inbox: inbox).and_return(client) }
@@ -26,6 +27,18 @@ RSpec.describe Whatsapp::Templates::DispatchProducts do
     expect(result).to be_ok
     expect(client).to have_received(:catalog).with(fresh: true)
     expect(result.catalog_id).to eq('cat-1')
+  end
+
+  # #1717: cada envio da campanha grava nome, preço e foto na foto do envio sem perguntar à Meta de novo.
+  it 'leaves the products it read for the photo of each send' do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    allow(client).to receive_messages(catalog: catalog, find: { 'a' => product('a'), 'b' => product('b') })
+
+    result
+
+    expect(Whatsapp::Templates::Enviado::Produtos.guardados(inbox, %w[a b])).to eq(
+      'a' => { 'name' => 'Nome a', 'price' => 'R$1', 'image_url' => '' }, 'b' => { 'name' => 'Nome b', 'price' => 'R$1', 'image_url' => '' }
+    )
   end
 
   it 'stops with the name of the product that is out of stock or left the catalog' do

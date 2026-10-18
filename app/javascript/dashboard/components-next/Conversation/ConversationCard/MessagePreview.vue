@@ -3,6 +3,9 @@ import { computed } from 'vue';
 import { MESSAGE_TYPE } from 'widget/helpers/constants';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
+import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
+import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 
 const props = defineProps({
   message: {
@@ -60,11 +63,24 @@ const lastMessageFileType = computed(() => {
   return fileType;
 });
 
+// #1702: com a pele do WhatsApp, figurinha aparece como "Figurinha", não como foto,
+// e visualização única com o rótulo dela. Sem a pele, a prévia de sempre.
+const pele = usePeleDaMensagem(() => props.message);
+
+const lastMessageIsSticker = computed(
+  () => Boolean(pele.value) && ultimaEFigurinha(props.message)
+);
+
 const attachmentIcon = computed(() => {
+  if (lastMessageIsSticker.value) return 'i-lucide-sticker';
   return attachmentIcons[lastMessageFileType.value];
 });
 
 const attachmentMessageContent = computed(() => {
+  if (lastMessageIsSticker.value) return 'CONVERSA_CANAL.MIDIA.FIGURINHA';
+  if (pele.value && ultimaEVisualizacaoUnica(props.message)) {
+    return 'CONVERSA_CANAL.VISUALIZACAO_UNICA.ROTULO';
+  }
   return `CHAT_LIST.ATTACHMENTS.${lastMessageFileType.value}.CONTENT`;
 });
 

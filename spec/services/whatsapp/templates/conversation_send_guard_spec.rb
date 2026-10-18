@@ -54,6 +54,10 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
       sent << JSON.parse(request.body).dig('template', 'components')
       { status: 200, body: { messages: [{ id: 'wamid.1' }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
     end
+    # A foto do envio (#1717) lê o catálogo para nome, preço e foto do produto; sem catálogo, guarda só o retailer_id.
+    stub_request(:get, 'https://graph.facebook.com/v22.0/123456789/product_catalogs')
+      .with(query: hash_including({}))
+      .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
   it 'is prepended into the Chatwoot send service by the initializer' do
@@ -84,16 +88,6 @@ RSpec.describe Whatsapp::Templates::ConversationSendGuard do
 
       expect(message).to have_attributes(source_id: 'wamid.1', external_error: nil)
       expect(sent.last).to eq([{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] }])
-    end
-
-    it 'a product template when the send carries the products (API caller)' do
-      message = send_message(template_message(one_product, { 'body' => { '1' => 'Ana' },
-                                                             'products' => { 'retailer_ids' => ['sku-1'] } }))
-
-      expect(message.external_error).to be_nil
-      expect(sent.last.first).to eq(
-        'type' => 'header', 'parameters' => [{ 'type' => 'product', 'product' => { 'product_retailer_id' => 'sku-1' } }]
-      )
     end
 
     it 'a coupon with its code, as the composer sends it' do

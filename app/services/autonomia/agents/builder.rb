@@ -8,6 +8,12 @@ module Autonomia
     # busca, no fechamento — #1367), faz o parse do JSON estruturado e, no MESMO job, ou guarda a próxima pergunta da
     # entrevista (needs_more_info) ou cria/edita o Agent e marca a thread `ready`. Sem PollJob.
     class Builder
+      # #1428 (tema 6, parte 2): o ajuste do piloto por lista de mudanças, com conferência. Fora do piloto não roda.
+      include AjusteConferido
+      include FechamentoDoAjuste
+      include DesfechoDoAjuste
+      include PendenciaDoAjuste
+
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
       # ApplicationRecord (255 em coluna string, 20.000 em text), derrubando o apply inteiro com
@@ -746,6 +752,22 @@ module Autonomia
         @full_asked_to_close = nil
         @user_asked_to_close = nil
         @materials_gate_decision = nil
+        @ajuste_da_fase2 = nil
+        @idioma_do_ajuste = nil
+        # #1428 — o re-run de um ajuste do piloto que já gravou (mesmo token) não chama o Construtor de novo: vai direto
+        # conferir e fechar, ANTES de olhar a chave. O turno nasceu no piloto; se a chave desligou no meio, voltar pelo
+        # caminho legado aplicaria de novo. No ajuste do piloto, a credencial é resolvida uma vez no começo do turno.
+        if ajuste_em_curso(token)
+          @ajuste_da_fase2 = true
+          preparar_ajuste!(token)
+          return retomar_ajuste!(token)
+        end
+        preparar_ajuste!(token) if ajuste_da_fase2?
+
+        # Chave desligada depois do piloto: o que ele deixou no state (a pendência e o resto) sai antes do turno legado,
+        # para nada voltar se a chave for religada.
+        @thread.esquecer_do_estado!(token, chaves_do_piloto_a_esquecer(token)) unless ajuste_da_fase2?
+
         text = single_full_call? ? full_call : lean_then_full_call
         outcome = apply_result(token, text)
         log_turn
@@ -773,21 +795,31 @@ module Autonomia
       # deixa a completa ler do cache o que a enxuta acabou de escrever (#1367). A enxuta só acrescenta, no FIM, o
       # aviso LEAN_TURN_NOTE e desliga a busca por tool_choice 'none', que não mexe no prefixo (doc da OpenAI,
       # "Prompt caching": desligar ferramenta por tool_choice em vez de tirá-la da lista).
-      def call_model(phase, reasoning_effort, lean: false)
+      # `aviso` e `correcao` (#1428, só no ajuste do piloto): os itens da tentativa de correção no FIM do input, com o
+      # cliente de teto menor.
+      def call_model(phase, reasoning_effort, lean: false, aviso: nil, correcao: false)
         tools = Crm::Ai::WebSearch.tools
         params = { model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: MOTHER_INSTRUCTION, input: built_input,
-                   schema: BUILDER_SCHEMA, reasoning_effort: reasoning_effort, tools: tools }
+                   schema: builder_schema, reasoning_effort: reasoning_effort, tools: tools }
         if lean
           params[:input] = built_input + [{ role: 'developer', content: [{ type: 'input_text', text: LEAN_TURN_NOTE }] }]
           params[:tool_choice] = 'none' if tools.present?
         end
-        result = client(phase).create(**params)
+        params[:input] = built_input + Array.wrap(aviso) if aviso
+        params[:timeout] = FechamentoDoAjuste::TIMEOUT_DA_CORRECAO_S if correcao
+        result = (correcao ? cliente_da_correcao : client(phase)).create(**params)
         @calls << { phase: phase, lean: lean, tools: lean ? nil : tools, result: result }
         result[:text]
       end
 
+      # No ajuste do piloto (#1428), a tabela de destino vai num item developer antes do contexto: a instrução-mãe de
+      # quem está fora do piloto não muda.
       def built_input
-        @built_input ||= build_input
+        @built_input ||= if ajuste_da_fase2?
+                           [AjustePorLista.item_da_tabela, contexto_do_cartao, *contexto_do_nao_pedido] + build_input
+                         else
+                           build_input
+                         end
       end
 
       # Turno de UMA chamada completa, sem a enxuta: o AJUSTE inteiro (decisão do gestor, #1367: o "Mudar
@@ -970,13 +1002,31 @@ module Autonomia
       def pending_request_context
         question = pending_question
         return '' if question.blank?
+        # #1428: no teto de turnos, a pendência do piloto segue só como contexto, sem a ordem de repetir.
+        return pendencia_no_teto_context(question) if ajuste_da_fase2? && @thread.state.to_h['pendencia_no_teto'] == true
 
         'CONTEXTO INTERNO (não é fala do usuário). PERGUNTA PENDENTE, ainda sem resposta: ' \
           "\"#{question}\". Pedidos ACUMULAM: se a última fala do usuário trouxe um pedido NOVO sem " \
           'responder esta pergunta, isso NÃO é ordem de fechar. APLIQUE o pedido novo E REPITA esta ' \
           'pergunta em next_question (needs_more_info=true). Se a fala respondeu a pergunta, siga normal ' \
-          'e não a repita.'
+          "e não a repita.#{PENDENCIA_RESOLVIDA_NOTA if ajuste_da_fase2?}"
       end
+
+      # #1428 — o que o ajuste do piloto guarda no state entre turnos.
+      CHAVES_DO_PILOTO = %w[pergunta_pendente pendencia_turnos pendencia_no_teto nao_pedido_anterior so_pergunta conferencia
+                            parcial].freeze
+      # As que protegem a idempotência de um ajuste do piloto em voo (o re-run do mesmo token só confere e fecha).
+      CHAVES_DO_AJUSTE_EM_CURSO = %w[ajuste_em_curso aplicado_em_token].freeze
+
+      # O turno legado esquece o que o piloto deixou, inclusive o ajuste em curso: o do mesmo token já foi retomado no
+      # começo do run! (nunca chega aqui), e o de outra geração perdeu o token para o begin_build! deste turno, então não
+      # escreve mais nem pode ser retomado.
+      def chaves_do_piloto_a_esquecer(_token)
+        CHAVES_DO_PILOTO + CHAVES_DO_AJUSTE_EM_CURSO
+      end
+
+      # #1428 — ajuste do piloto: a resposta à pendência se marca, não se repete (senão ela volta todo turno).
+      PENDENCIA_RESOLVIDA_NOTA = ' Se a fala respondeu esta pergunta, marque pendencia_resolvida=true em vez de repeti-la.'.freeze
 
       # A pendência a repetir: primeiro a HERDADA da sessão anterior; senão, a pergunta viva desta thread
       # — e esta só em AJUSTE. Na entrevista de CRIAÇÃO uma pergunta aberta por turno é o fluxo normal, e
@@ -985,7 +1035,12 @@ module Autonomia
         state = @thread.state.to_h
         inherited = state['pending_question'].to_s.strip
         return inherited if inherited.present?
+        # #1428: no ajuste do piloto, a pendência de verdade (a resposta a uma pergunta do dono e os avisos fixos nunca
+        # são pendência). Com a chave desligada, vale o caminho de antes, mas a resposta a uma pergunta do dono
+        # (so_pergunta) nunca é pendência.
+        return state['pergunta_pendente'].to_s.strip if ajuste_da_fase2? && state.key?('pergunta_pendente')
         return '' unless adjust_mode? && state['needs_more_info'] == true
+        return '' if state['so_pergunta'] == true
 
         state['next_question'].to_s.strip
       end
@@ -1305,6 +1360,8 @@ module Autonomia
         # o log do turno (lean_asked/full_asked/lean_close) mede essa divergência em produção.
         @full_asked_to_close = parsed['user_asked_to_close'] == true unless @calls.last[:lean]
         @user_asked_to_close = parsed['user_asked_to_close'] == true || @lean_asked_to_close == true
+        # #1428 — ajuste do piloto: pergunta não é pedido, só o que foi pedido é gravado, e um segundo modelo confere.
+        return ajustar_pela_lista(token, parsed) if ajuste_da_fase2?
 
         # GATE (P0) + CONSTRUTOR (P1) — fechamento determinístico (defesa em profundidade): o modelo
         # PODE devolver needs_more_info=true mesmo quando deveria fechar (loop teimoso T01/T06/T08, em
@@ -1794,11 +1851,14 @@ module Autonomia
                                                          account: @account, cache_key: "agente_builder:#{@account.id}")
       end
 
+      # Resolvida uma vez por turno (#1428): as chamadas do turno usam a mesma credencial.
       def credential
-        cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
-        raise Crm::Ai::ResponsesClient::Error, 'ai_not_configured' if cred.blank?
+        @credential ||= begin
+          cred = Crm::Ai::CredentialResolver.new(account: @account).resolve
+          raise Crm::Ai::ResponsesClient::Error, 'ai_not_configured' if cred.blank?
 
-        cred
+          cred
+        end
       end
     end
   end

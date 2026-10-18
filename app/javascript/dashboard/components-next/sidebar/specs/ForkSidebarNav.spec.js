@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file -- RouterLink de mentira e o embrulho do teste vivem aqui */
 import { mount } from '@vue/test-utils';
 import { computed, defineComponent, h, nextTick, reactive, ref } from 'vue';
 import { hasPermissions } from 'dashboard/helper/permissionsHelper';
@@ -14,7 +15,11 @@ const rota = reactive({
   params: {},
 });
 const estado = { chaves: ['administrator'] };
-const larguras = vi.hoisted(() => ({ salva: 240, atual: null }));
+const larguras = vi.hoisted(() => ({
+  salva: 240,
+  atual: null,
+  recolhido: null,
+}));
 
 // Permissão de cada tela; settings_inicio vem da rota real.
 const META = {
@@ -67,14 +72,21 @@ vi.mock('../provider', async () => {
   return {
     useSidebarContext: () => {
       larguras.atual = valor(larguras.salva);
+      larguras.recolhido = valor(false);
       return {
         isAllowed: to => hasPermissions(META[to.name] || [], estado.chaves),
         resolvePath: to => `/${to.name}`,
-        isCollapsed: valor(false),
+        isCollapsed: larguras.recolhido,
         sidebarWidth: larguras.atual,
       };
     },
-    usePopoverState: () => ({}),
+    usePopoverState: () => ({
+      activePopover: valor(null),
+      setActivePopover: () => {},
+      closeActivePopover: () => {},
+      scheduleClose: () => {},
+      cancelClose: () => {},
+    }),
   };
 });
 
@@ -137,7 +149,7 @@ const ITENS = [
   },
 ];
 
-const montar = () => {
+const montar = ({ transicao = false } = {}) => {
   const fechar = vi.fn();
   const gaveta = ref(false);
   const wrapper = mount(
@@ -151,7 +163,14 @@ const montar = () => {
           }),
         ]),
     }),
-    { attachTo: document.body, global: { components: { RouterLink } } }
+    {
+      attachTo: document.body,
+      global: {
+        components: { RouterLink },
+        // Só o bloco de rolagem: a seta some na hora, sem esperar o fim da transição.
+        ...(transicao ? { stubs: { transition: true } } : {}),
+      },
+    }
   );
   return { wrapper, fechar, gaveta };
 };
@@ -294,5 +313,120 @@ describe('ForkSidebarNav', () => {
       await botao(wrapper, 'Agenda').trigger('click');
       expect(aberto(wrapper, 'Agenda')).toBe('true');
     });
+  });
+});
+
+// #1781: o menu não rola sozinho na troca de tela, e a borda avisa quando há itens fora da área visível.
+const scrollIntoViewOriginal = Element.prototype.scrollIntoView;
+
+describe('ForkSidebarNav: rolagem (#1781)', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    Element.prototype.scrollIntoView = scrollIntoViewOriginal;
+  });
+
+  const medidas = (el, { topo, altura = 400, total = 1000 }) => {
+    Object.defineProperty(el, 'clientHeight', {
+      value: altura,
+      configurable: true,
+    });
+    Object.defineProperty(el, 'scrollHeight', {
+      value: total,
+      configurable: true,
+    });
+    el.scrollTop = topo;
+    el.dispatchEvent(new Event('scroll'));
+  };
+
+  it('trocar de tela não rola o menu', async () => {
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    montar();
+    rota.name = 'crm_calendar_index';
+    rota.fullPath = '/crm_calendar_index';
+    await nextTick();
+    await nextTick();
+    expect(rolar).not.toHaveBeenCalled();
+    rota.name = 'crm_kanban_index';
+    rota.fullPath = '/crm_kanban_index';
+  });
+
+  it('setas e esmaecido aparecem e somem conforme a rolagem; clicar rola uma tela', async () => {
+    const { wrapper } = montar({ transicao: true });
+    const nav = wrapper.find('nav').element;
+    nav.scrollBy = vi.fn();
+    const ver = seletor => wrapper.find(seletor).exists();
+
+    medidas(nav, { topo: 0, total: 400 });
+    await nextTick();
+    expect(ver('[data-seta="acima"]')).toBe(false);
+    expect(ver('[data-seta="abaixo"]')).toBe(false);
+
+    medidas(nav, { topo: 0 });
+    await nextTick();
+    expect(ver('[data-seta="acima"]')).toBe(false);
+    expect(ver('[data-seta="abaixo"]')).toBe(true);
+    expect(ver('[data-esmaecido-baixo]')).toBe(true);
+    const baixo = wrapper.find('[data-seta="abaixo"]');
+    expect(baixo.attributes('aria-label')).toBe('FORK_SIDEBAR.ROLAR_ABAIXO');
+    expect(baixo.classes()).toContain('size-11');
+    expect(baixo.text()).toBe('');
+    const esmaecido = wrapper.find('[data-esmaecido-baixo]');
+    expect(esmaecido.attributes('aria-hidden')).toBe('true');
+    expect(esmaecido.classes()).toContain('pointer-events-none');
+
+    await baixo.trigger('click');
+    expect(nav.scrollBy).toHaveBeenCalledWith({ top: 352, behavior: 'smooth' });
+
+    medidas(nav, { topo: 300 });
+    await nextTick();
+    expect(ver('[data-seta="acima"]')).toBe(true);
+    expect(ver('[data-seta="abaixo"]')).toBe(true);
+
+    medidas(nav, { topo: 600 });
+    await nextTick();
+    expect(ver('[data-seta="acima"]')).toBe(true);
+    expect(ver('[data-seta="abaixo"]')).toBe(false);
+    expect(wrapper.find('[data-seta="acima"]').attributes('aria-label')).toBe(
+      'FORK_SIDEBAR.ROLAR_ACIMA'
+    );
+    await wrapper.find('[data-seta="acima"]').trigger('click');
+    expect(nav.scrollBy).toHaveBeenLastCalledWith({
+      top: -352,
+      behavior: 'smooth',
+    });
+  });
+  it('seta focada que some: o foco vai para a do outro lado ou, sem nenhuma, para a lista', async () => {
+    const { wrapper } = montar({ transicao: true });
+    const nav = wrapper.find('nav').element;
+    const seta = lado => document.querySelector(`[data-seta="${lado}"]`);
+    await nextTick();
+
+    medidas(nav, { topo: 300 });
+    await nextTick();
+    seta('abaixo').focus();
+    medidas(nav, { topo: 600 });
+    await nextTick();
+    await nextTick();
+    expect(document.activeElement).toBe(seta('acima'));
+
+    medidas(nav, { topo: 0, total: 400 });
+    await nextTick();
+    await nextTick();
+    expect(document.activeElement).toBe(nav);
+  });
+
+  it('recolher com o foco num item devolve o foco ao ícone equivalente no trilho', async () => {
+    const { wrapper } = montar();
+    wrapper.find('button[data-menu-item="Conversation"]').element.focus();
+    larguras.recolhido.value = true;
+    await nextTick();
+    await nextTick();
+    expect(document.activeElement.getAttribute('data-menu-item')).toBe(
+      'Conversation'
+    );
+    expect(wrapper.find('button[data-menu-item="Conversation"]').exists()).toBe(
+      false
+    );
   });
 });

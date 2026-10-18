@@ -134,6 +134,19 @@ const clearPoll = () => {
   }
 };
 
+// The agent lives in the agents API, not the thread payload.
+const fetchGeneratedAgent = async (commit, dispatch, agentId) => {
+  if (!agentId) return;
+  try {
+    const agent = await dispatch('autonomiaAgents/show', agentId, {
+      root: true,
+    });
+    if (agent) commit('SET_AGENT', agent);
+  } catch (error) {
+    // The hub/panel can still fetch the agent on navigation; swallow here.
+  }
+};
+
 export const actions = {
   // Opens (or re-opens) a Builder thread and begins polling. `agentId` (optional)
   // ties the thread to an existing agent for guided re-tuning. The remaining
@@ -255,6 +268,18 @@ export const actions = {
     } catch (error) {
       return throwErrorMessage(error);
     }
+  },
+
+  // #1428 (pilot) — undo the last adjustment. The answer is the thread itself
+  // (its `resultado` now says undone); the agent is read again so the page and
+  // the test phone see it as it was. Errors go back raw: the page tells a 409
+  // (the agent changed after) from a generic failure.
+  desfazerAjuste: async ({ commit, dispatch }, { threadId } = {}) => {
+    if (!threadId) return null;
+    const { data } = await AutonomiaBuildThreadsAPI.desfazer(threadId);
+    const payload = applyThreadResponse(commit, data);
+    await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
+    return payload;
   },
 
   // The user reached Materiais and has nothing to upload: send a short signal
@@ -383,20 +408,18 @@ export const actions = {
       commit('SET_PHASE', 'interviewing');
       // Re-open so the input is enabled for the next answer.
       commit('SET_STATUS', 'open');
+      // #1428 — an adjustment can apply part of the request AND ask about the
+      // rest: the agent changed, so read it again (the "Change by chatting"
+      // screen shows what went in) while the conversation stays open.
+      if (payload.state?.applied === true) {
+        await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
+      }
       return;
     }
 
     // Build complete: the agent lives in the agents API, not the thread payload.
     commit('SET_PHASE', 'reviewing');
-    if (!payload.agent_id) return;
-    try {
-      const agent = await dispatch('autonomiaAgents/show', payload.agent_id, {
-        root: true,
-      });
-      if (agent) commit('SET_AGENT', agent);
-    } catch (error) {
-      // The hub/panel can still fetch the agent on navigation; swallow here.
-    }
+    await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
   },
 
   stopPolling: () => {

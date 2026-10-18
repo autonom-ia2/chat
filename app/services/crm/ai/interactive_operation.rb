@@ -140,7 +140,8 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   def meta_ads_daily_action
     run = ::Crm::MetaAdvisorRun.find_by!(id: @inputs.fetch(:run_id), account_id: @account.id)
     Crm::MetaAds::Advisor::Analysis.write!(run)
-    { daily_action: Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language)) }
+    advice = Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language))
+    { daily_action: Crm::MetaAds::VisibleConversations.new(account: @account, account_user: @account_user).advice(advice) }
   end
 
   def meta_ads_quote_message

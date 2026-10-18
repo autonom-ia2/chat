@@ -7,6 +7,8 @@ class Crm::Ai::EvaluateCardsJob < ApplicationJob
     return unless Crm::Ai::Config.enabled?
 
     cards = Crm::Card.where(id: card_ids).index_by(&:id).values_at(*card_ids).compact
+    # Memória das IAs (#1601): a memória pendente de uma avaliação já paga (ver EvaluateCardJob).
+    cards.each { |card| Crm::Memoria::Pendente.aplicar!(card) }
     cards = cards.reject { |card| card.metadata.to_h.dig('ai', 'evaluate_token').to_f > token.to_f }
     return if cards.empty?
 

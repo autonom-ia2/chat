@@ -175,6 +175,11 @@ describe('regras da página do agente', () => {
     expect(chaveDoMotivo('kb_refresh')).toBe('KB_REFRESH');
     expect(chaveDoMotivo('manual_edit')).toBe('MANUAL_EDIT');
     expect(chaveDoMotivo('rollback')).toBe('ROLLBACK');
+    // #1428 — criar e ajustar conversando são a mesma frase; a versão base (o estado de antes) não tem frase.
+    expect(chaveDoMotivo('builder_create')).toBe('BUILDER');
+    expect(chaveDoMotivo('builder_adjust')).toBe('BUILDER');
+    expect(chaveDoMotivo('base')).toBeNull();
+    expect(chaveDoMotivo('antes_de_voltar')).toBeNull();
     expect(chaveDoMotivo('outro')).toBeNull();
   });
 
@@ -291,6 +296,19 @@ describe('#1369 — quando foi e de onde veio', () => {
     expect(origemDaVolta(versoes[1], versoes)).toBeNull();
     expect(
       origemDaVolta({ id: 9, reason: 'rollback', instruction_hash: 'z' }, [])
+    ).toBeNull();
+  });
+
+  it('uses the version the rollback recorded, even when the text repeats (#1428)', () => {
+    const versoes = [
+      { id: 5, reason: 'rollback', instruction_hash: 'a', voltou_para: 1 },
+      { id: 4, reason: 'base', instruction_hash: 'a' },
+      { id: 1, reason: 'builder_adjust', instruction_hash: 'a' },
+    ];
+    expect(origemDaVolta(versoes[0], versoes)).toBe(versoes[2]);
+    // A versão de destino já saiu da lista: a frase genérica.
+    expect(
+      origemDaVolta({ ...versoes[0], voltou_para: 99 }, versoes)
     ).toBeNull();
   });
 });
