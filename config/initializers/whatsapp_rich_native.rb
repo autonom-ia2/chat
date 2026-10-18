@@ -65,6 +65,8 @@ Rails.application.config.to_prepare do
   WebhookListener.prepend(Waha::RichNative::SilentUpdate) unless WebhookListener <= Waha::RichNative::SilentUpdate
   # A atividade escondida (`c2y_hidden`) não sobe a conversa na lista nem vai às integrações da conta.
   Message.prepend(Waha::RichNative::HiddenActivity) unless Message <= Waha::RichNative::HiddenActivity
+  # "Apagar para todos": o sinal `c2y_revocable` no evento da tela (Waha::RichNative::Revocable).
+  Message.prepend(Waha::RichNative::RevocableEventData) unless Message <= Waha::RichNative::RevocableEventData
   HookListener.prepend(Waha::RichNative::HiddenActivityHooks) unless HookListener <= Waha::RichNative::HiddenActivityHooks
 end
 
