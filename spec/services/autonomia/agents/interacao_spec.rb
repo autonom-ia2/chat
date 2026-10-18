@@ -204,6 +204,16 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(da_ferramenta('https://loja.com', 'https://loja.com/a\b')).to eq(Set['https://loja.com'])
     end
 
+    it 'endereço que o normalize recusa (`%E0` no host) não vale nem quebra' do
+      expect(da_ferramenta('https://loja.com', 'https://%E0.com/x')).to eq(Set['https://loja.com'])
+      expect { described_class::Enderecos.dentro?('https://%E0.com/x', 'https://%E0.com') }.not_to raise_error
+      expect(described_class::Enderecos.dentro?('https://%E0.com/x', 'https://%E0.com')).to be(false)
+      expect(pede_link('https://%E0.com/x', 'veja https://%E0.com/x')).to be_nil
+      invalido = "https://x.com/\xff".b.force_encoding('UTF-8')
+      expect(described_class::Enderecos.normalizado(invalido)).to be_nil
+      expect(da_ferramenta('https://loja.com', "ver #{invalido} e https://loja.com/p")).to include('https://loja.com/p')
+    end
+
     it 'caminho com `..` ou `.` (também codificado) conta depois de resolvido' do
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/../conta')).to eq(Set['https://loja.com/pedidos'])
       expect(da_ferramenta('https://loja.com/pedidos', 'https://loja.com/pedidos/%2e%2e/conta')).to eq(Set['https://loja.com/pedidos'])

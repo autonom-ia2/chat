@@ -178,15 +178,17 @@ module Autonomia
 
       # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
       # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
-      # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele.
+      # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele. Os endereços do dono só são
+      # lidos quando o modelo pediu um link.
       def interacao_do_turno(parsed, snippets)
         return unless @interacao
 
+        pedido = parsed['interacao']
+        return Interacao.do_modelo(pedido, enderecos: Set.new) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
+
         enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
                                                  ferramentas: @saidas_do_turno.to_a)
-        interacao = Interacao.do_modelo(parsed['interacao'], enderecos: enderecos)
-        link_recusado if interacao.nil? && parsed['interacao'].is_a?(Hash) && parsed['interacao']['tipo'] == 'link'
-        interacao
+        Interacao.do_modelo(pedido, enderecos: enderecos).tap { |interacao| link_recusado if interacao.nil? }
       end
 
       def link_recusado

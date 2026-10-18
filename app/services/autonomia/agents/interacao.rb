@@ -193,9 +193,11 @@ module Autonomia::Agents::Interacao
 
   def link(valor, enderecos)
     endereco = Enderecos.normalizado(valor['url']) if valor.is_a?(Hash)
-    return unless endereco && enderecos.include?(endereco)
+    url = Enderecos.completo(endereco) if endereco && enderecos.include?(endereco)
+    return if url.nil?
 
-    # O endereço conferido, normalizado (`Addressable::URI#normalize`), vai ao botão e à versão em texto.
-    { 'tipo' => 'link', 'rotulo' => valor['rotulo'].to_s, 'url' => Addressable::URI.parse(endereco).normalize.to_s }
+    # O endereço conferido, normalizado (`Enderecos.completo`), vai ao botão e à versão em texto; o que o normalize
+    # recusa é link recusado.
+    { 'tipo' => 'link', 'rotulo' => valor['rotulo'].to_s, 'url' => url }
   end
 end

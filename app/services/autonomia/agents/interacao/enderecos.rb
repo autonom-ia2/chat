@@ -38,11 +38,14 @@ module Autonomia::Agents::Interacao::Enderecos
 
     prefixo = dono.path.delete_suffix('/')
     prefixo.empty? || uri.path == prefixo || uri.path.start_with?("#{prefixo}/")
+  rescue Addressable::URI::InvalidURIError, ArgumentError # `%E0` no host: o normalize recusa a sequência de bytes
+    false
   end
 
-  # -> Set dos endereços normalizados que aparecem nos textos.
+  # -> Set dos endereços normalizados que aparecem nos textos. Bytes inválidos (saída de ferramenta) viram o caractere
+  # de substituição (`scrub`) antes de separar as palavras.
   def dos_textos(textos)
-    textos.compact.flat_map { |texto| texto.to_s.split }.filter_map { |palavra| candidato(palavra) }.to_set
+    textos.compact.flat_map { |texto| texto.to_s.scrub.split }.filter_map { |palavra| candidato(palavra) }.to_set
   end
 
   # -> o endereço normalizado, ou nil quando não é http(s) com host, ou quando traz usuário e senha (`user@`), em
@@ -56,7 +59,14 @@ module Autonomia::Agents::Interacao::Enderecos
     uri.scheme = uri.scheme.downcase
     uri.host = uri.host.downcase
     uri.to_s
-  rescue Addressable::URI::InvalidURIError
+  rescue Addressable::URI::InvalidURIError, ArgumentError
+    nil
+  end
+
+  # -> o endereço inteiro normalizado (`Addressable::URI#normalize`), ou nil quando o normalize o recusa.
+  def completo(endereco)
+    Addressable::URI.parse(endereco).normalize.to_s
+  rescue Addressable::URI::InvalidURIError, ArgumentError
     nil
   end
 

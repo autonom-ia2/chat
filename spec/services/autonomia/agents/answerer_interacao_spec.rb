@@ -185,6 +185,63 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(Autonomia::Agents::Operate::TelemetriaDoTurno).not_to have_received(:registrar).with(:link_recusado, any_args)
   end
 
+  describe 'endereço que o normalize recusa (`%E0` no host)' do
+    let(:quebrado) { 'https://%E0.com/x' }
+
+    before { allow(Autonomia::Agents::Operate::TelemetriaDoTurno).to receive(:registrar) }
+
+    def link_quebrado
+      link.merge(link: { rotulo: 'Abrir', url: quebrado })
+    end
+
+    def expect_recusado_e_respondido(resultado)
+      expect(resultado.reply).to eq('Pronto.')
+      expect(resultado.interacao).to be_nil
+      expect(Autonomia::Agents::Operate::TelemetriaDoTurno).to have_received(:registrar)
+        .with(:link_recusado, conversation_id: conversation.id, agent: agent.id)
+    end
+
+    it 'na saída da ferramenta: o turno responde e o link é recusado' do
+      agent.update!(instruction: 'Atenda. Loja: https://loja.exemplo.com')
+      ferramenta_devolve({ link: quebrado }.to_json)
+      modelo_responde(link_quebrado, chamadas: [chamada('pedido')])
+      expect_recusado_e_respondido(atender)
+    end
+
+    it 'na saída da ferramenta, com um link válido da instrução pedido: o link válido sai' do
+      agent.update!(instruction: "Atenda. Pedidos: #{url}.")
+      ferramenta_devolve({ outro: quebrado }.to_json)
+      modelo_responde(link, chamadas: [chamada('pedido')])
+      expect(atender.interacao).to include('url' => url)
+    end
+
+    it 'na instrução: o turno responde e o link é recusado' do
+      agent.update!(instruction: "Atenda. Site: #{quebrado}")
+      modelo_responde(link_quebrado)
+      expect_recusado_e_respondido(atender)
+    end
+
+    it 'na base de conhecimento: o turno responde e o link é recusado' do
+      agent.update!(config: {})
+      trecho = Autonomia::Agents::KnowledgeEntry.new(id: 9, content: "Site: #{quebrado}")
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: [trecho]))
+      modelo_responde(link_quebrado)
+      expect_recusado_e_respondido(atender)
+    end
+  end
+
+  it 'turno sem pedido de link não lê os endereços do dono' do
+    allow(Autonomia::Agents::Interacao::Enderecos).to receive(:do_dono).and_call_original
+    [nil, opcoes].each do |interacao|
+      modelo_responde(interacao)
+      atender
+    end
+    expect(Autonomia::Agents::Interacao::Enderecos).not_to have_received(:do_dono)
+    modelo_responde(link)
+    atender
+    expect(Autonomia::Agents::Interacao::Enderecos).to have_received(:do_dono).once
+  end
+
   it 'interação nula fica nula' do
     modelo_responde(nil)
     expect(atender.interacao).to be_nil
