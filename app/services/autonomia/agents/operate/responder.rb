@@ -706,9 +706,19 @@ module Autonomia
               content_attributes: {
                 autonomia_agent_id: @agent.id,
                 autonomia_reply_to_message_id: @reply_to_message_id
-              }
+              },
+              **destinatarios_do_email
             )
           ).perform
+        end
+
+        # #1828 (flag `email_autoria`): no e-mail, a resposta da IA mantém a cópia como o "Responder a todos" do painel
+        # (Crm::Email::Destinatarios), sem quem pediu para sair. Sem a flag, ou fora do e-mail, nada muda: a resposta vai
+        # só ao cliente, como antes.
+        def destinatarios_do_email
+          return {} unless @conversation.inbox&.email? && email_autoria.ligada?
+
+          ::Crm::Email::Destinatarios.new(@conversation).para_a_ia.to_h { |campo, enderecos| [:"#{campo}_emails", enderecos.join(',')] }
         end
       end
     end
