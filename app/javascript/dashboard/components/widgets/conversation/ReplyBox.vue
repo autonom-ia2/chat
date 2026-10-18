@@ -69,6 +69,7 @@ import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/Cab
 import TopoDaResposta from 'dashboard/components-next/conversa-canal/email/TopoDaResposta.vue';
 import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
 import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
+import JanelaDeEmojis from 'dashboard/components-next/conversa-canal/email/JanelaDeEmojis.vue';
 import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
 import {
   montarModelo,
@@ -109,6 +110,7 @@ export default {
     TopoDaResposta,
     CitacaoDaResposta,
     ModeloDaResposta,
+    JanelaDeEmojis,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
@@ -1526,6 +1528,11 @@ export default {
         useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
       }
     },
+    // #1786: a janela de emojis do e-mail abre em cima da barra de baixo da caixa.
+    ancoraDosEmojis() {
+      // O ReplyBox tem mais de uma raiz ($el não é a caixa): procura a barra na página.
+      return document.querySelector('.reply-box .left-wrap');
+    },
     atualizarCampoDoModelo(chave, valor) {
       this.valoresDoModelo = { ...this.valoresDoModelo, [chave]: valor };
     },
@@ -1729,8 +1736,15 @@ export default {
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
+        <!-- #1786: no e-mail novo, a janela própria (flutua; a caixa com rolagem cortava a do Chatwoot). -->
+        <JanelaDeEmojis
+          v-if="showEmojiPicker && emailNovo"
+          :ancora="ancoraDosEmojis()"
+          @escolher="addIntoEditor"
+          @fechar="hideEmojiPicker"
+        />
         <EmojiIconPicker
-          v-if="showEmojiPicker"
+          v-else-if="showEmojiPicker"
           v-on-clickaway="hideEmojiPicker"
           mode="emoji"
           class="emoji-dialog"

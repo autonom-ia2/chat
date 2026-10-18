@@ -498,6 +498,23 @@
         "EXCLUIR_TEXTO": "The emails, notes and attachments of this conversation are deleted for the whole team. It cannot be undone. The customer keeps their own copy.",
         "EXCLUIDA": "Conversation deleted forever.",
         "FALHOU_EXCLUIR": "Could not delete this conversation. Try again."
+      },
+      "EMOJIS": {
+        "TITULO": "Emojis",
+        "BUSCAR": "Search emoji (in English)",
+        "CATEGORIAS": "Categories",
+        "RECENTES": "Recent",
+        "SMILEYS_EMOTION": "Smileys",
+        "PEOPLE_BODY": "People",
+        "ANIMALS_NATURE": "Nature",
+        "FOOD_DRINK": "Food",
+        "TRAVEL_PLACES": "Travel",
+        "ACTIVITIES": "Activities",
+        "OBJECTS": "Objects",
+        "SYMBOLS": "Symbols",
+        "FLAGS": "Flags",
+        "NADA": "No emoji with this name",
+        "DICA": "Pick an emoji"
       }
     }
   }

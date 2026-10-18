@@ -498,6 +498,23 @@
         "EXCLUIR_TEXTO": "Os e-mails, as notas e os anexos desta conversa somem para toda a equipe. Não dá para desfazer. O cliente continua com a cópia dele.",
         "EXCLUIDA": "Conversa excluída para sempre.",
         "FALHOU_EXCLUIR": "Não deu para excluir esta conversa. Tente de novo."
+      },
+      "EMOJIS": {
+        "TITULO": "Emojis",
+        "BUSCAR": "Buscar emoji (em inglês: smile, heart…)",
+        "CATEGORIAS": "Categorias",
+        "RECENTES": "Recentes",
+        "SMILEYS_EMOTION": "Rostos",
+        "PEOPLE_BODY": "Pessoas",
+        "ANIMALS_NATURE": "Natureza",
+        "FOOD_DRINK": "Comida",
+        "TRAVEL_PLACES": "Viagem",
+        "ACTIVITIES": "Atividades",
+        "OBJECTS": "Objetos",
+        "SYMBOLS": "Símbolos",
+        "FLAGS": "Bandeiras",
+        "NADA": "Nenhum emoji com esse nome",
+        "DICA": "Escolha um emoji"
       }
     }
   }

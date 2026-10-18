@@ -132,15 +132,18 @@
       "NOME_EXEMPLO": "For example: Marina Costa",
       "EMAIL": "Email",
       "EMAIL_EXEMPLO": "name{'@'}company.com",
-      "TELEFONE": "Phone",
-      "OPCIONAL": "(optional, helps for WhatsApp)",
-      "TELEFONE_EXEMPLO": "(11) 98765-4321",
+      "TELEFONE": "Phone (optional)",
       "FALTA_NOME": "Type the contact name.",
       "FALTA_EMAIL": "Type the email: the email goes to this address.",
       "EMAIL_INVALIDO": "Check the email: it looks incomplete.",
       "TELEFONE_INVALIDO": "Check the phone: use the area code, like (11) 98765-4321.",
       "FALTA_CONTATO": "Type an email or a phone.",
-      "CRIAR": "Create contact"
+      "CRIAR": "Create contact and continue",
+      "SUBTITULO": "Saved in Contacts and added to this conversation.",
+      "EMAIL_OPCIONAL": "Email (optional)",
+      "EMAIL_DICA": "The email goes to this address.",
+      "TELEFONE_DICA": "Helps when this person also writes on WhatsApp.",
+      "PAIS": "Country"
     }
   }
 }

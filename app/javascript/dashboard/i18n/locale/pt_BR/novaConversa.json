@@ -132,15 +132,18 @@
       "NOME_EXEMPLO": "Por exemplo: Marina Costa",
       "EMAIL": "E-mail",
       "EMAIL_EXEMPLO": "nome{'@'}empresa.com.br",
-      "TELEFONE": "Telefone",
-      "OPCIONAL": "(opcional, ajuda no WhatsApp)",
-      "TELEFONE_EXEMPLO": "(11) 98765-4321",
+      "TELEFONE": "Telefone (opcional)",
       "FALTA_NOME": "Escreva o nome do contato.",
       "FALTA_EMAIL": "Escreva o e-mail: é para ele que o e-mail vai.",
       "EMAIL_INVALIDO": "Confira o e-mail: parece incompleto.",
       "TELEFONE_INVALIDO": "Confira o telefone: use o DDD, como (11) 98765-4321.",
       "FALTA_CONTATO": "Escreva um e-mail ou um telefone.",
-      "CRIAR": "Criar contato"
+      "CRIAR": "Criar contato e continuar",
+      "SUBTITULO": "Fica salvo nos Contatos e já entra nesta conversa.",
+      "EMAIL_OPCIONAL": "E-mail (opcional)",
+      "EMAIL_DICA": "É para este endereço que o e-mail vai.",
+      "TELEFONE_DICA": "Ajuda quando a pessoa também fala pelo WhatsApp.",
+      "PAIS": "País"
     }
   }
 }

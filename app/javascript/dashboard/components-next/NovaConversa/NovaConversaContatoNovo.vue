@@ -1,10 +1,22 @@
 <script setup>
-// #1809 — contato novo dentro da gaveta, quando a busca não acha ninguém: Nome
-// (obrigatório), E-mail (obrigatório quando a gaveta abriu do "Escrever" da caixa de
-// e-mail, que só envia para e-mail) e Telefone (opcional; já serve para o WhatsApp).
-// O que a pessoa digitou na busca entra no campo certo.
+// #1809 — contato novo dentro da gaveta, quando a busca não acha ninguém. Um cartão
+// com a foto (as iniciais aparecem enquanto o nome é digitado), Nome (obrigatório),
+// E-mail (obrigatório quando a gaveta abriu do "Escrever" da caixa de e-mail, que só
+// envia para e-mail) e Telefone (opcional; já serve para o WhatsApp). O telefone usa
+// o campo padrão do painel (CampoDeTelefone: bandeira, DDI, Brasil por padrão, regra
+// do CLAUDE.md). O que a pessoa digitou na busca entra no campo certo.
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import Avatar from 'next/avatar/Avatar.vue';
+import Icon from 'next/icon/Icon.vue';
+import Input from 'next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
+import {
+  PAIS_PADRAO,
+  soDigitosDoTelefone,
+  telefoneCompleto,
+} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { podeCriarContato } from './novaConversa';
 
 const props = defineProps({
@@ -15,10 +27,14 @@ const props = defineProps({
 });
 const emit = defineEmits(['criar']);
 
+const { t } = useI18n();
 const P = 'NOVA_CONVERSA.CONTATO_NOVO';
 const nome = ref('');
 const email = ref('');
+// E.164 (+5511987654321) quando o número está completo; vazio enquanto não está.
 const telefone = ref('');
+// Algo foi digitado no telefone (mesmo incompleto): para avisar, em vez de sumir calado.
+const digitouTelefone = ref(false);
 
 watch(
   () => props.termo,
@@ -29,41 +45,42 @@ watch(
       !ehEmail && [...valor].some(letra => letra >= '0' && letra <= '9');
     nome.value = ehEmail || ehTelefone ? '' : valor;
     email.value = ehEmail ? valor : '';
-    telefone.value = ehTelefone ? valor : '';
+    // O campo de telefone recebe o número completo; sem "+", vale o país padrão.
+    let completo = '';
+    if (ehTelefone) {
+      completo = valor.startsWith('+')
+        ? `+${soDigitosDoTelefone(valor)}`
+        : telefoneCompleto(soDigitosDoTelefone(valor), PAIS_PADRAO);
+    }
+    telefone.value = completo;
+    digitouTelefone.value = ehTelefone;
   },
   { immediate: true }
 );
 
-// Telefone como a pessoa escreve: "(11) 98765-0001" vira "+5511987650001" (DDD do
-// Brasil, sem o +55); com "+" na frente, vale o país digitado.
-const SO_DIGITOS = texto => [...texto].filter(c => c >= '0' && c <= '9').join('');
-const DIGITOS_COM_DDD = [10, 11];
-const telefoneE164 = computed(() => {
-  const valor = telefone.value.trim();
-  if (!valor) return '';
-  const digitos = SO_DIGITOS(valor);
-  if (valor.startsWith('+')) return `+${digitos}`;
-  return DIGITOS_COM_DDD.includes(digitos.length) ? `+55${digitos}` : `+${digitos}`;
-});
+const aoDigitarTelefone = evento => {
+  digitouTelefone.value = Boolean(String(evento.target?.value || '').trim());
+};
 
-const emailValido = computed(() => podeCriarContato(email.value));
-const telefoneValido = computed(
-  () => !telefone.value.trim() || podeCriarContato(telefoneE164.value)
-);
-const erros = computed(() => ({
-  nome: !nome.value.trim(),
-  email: email.value.trim() ? !emailValido.value : props.exigeEmail,
-  telefone: !telefoneValido.value,
-  contato: !email.value.trim() && !telefone.value.trim(),
-}));
-const pronto = computed(
-  () =>
-    !erros.value.nome &&
-    !erros.value.email &&
-    !erros.value.telefone &&
-    !erros.value.contato
-);
+const erros = computed(() => {
+  const temEmail = Boolean(email.value.trim());
+  const telefoneIncompleto = digitouTelefone.value && !telefone.value;
+  return {
+    nome: nome.value.trim() ? '' : t(`${P}.FALTA_NOME`),
+    email:
+      (temEmail && !podeCriarContato(email.value) && t(`${P}.EMAIL_INVALIDO`)) ||
+      (!temEmail && props.exigeEmail && t(`${P}.FALTA_EMAIL`)) ||
+      '',
+    telefone: telefoneIncompleto ? t(`${P}.TELEFONE_INVALIDO`) : '',
+    contato:
+      !temEmail && !telefone.value && !props.exigeEmail
+        ? t(`${P}.FALTA_CONTATO`)
+        : '',
+  };
+});
+const pronto = computed(() => !Object.values(erros.value).some(Boolean));
 const tentou = ref(false);
+const mostrar = campo => (tentou.value ? erros.value[campo] : '');
 
 const criar = () => {
   tentou.value = true;
@@ -71,96 +88,104 @@ const criar = () => {
   emit('criar', {
     nome: nome.value.trim(),
     email: email.value.trim(),
-    telefone: telefoneE164.value,
+    telefone: telefone.value,
   });
 };
-
-const CAMPO =
-  'reset-base !mb-0 min-h-12 w-full rounded-2xl border bg-n-solid-1 px-4 text-base text-n-slate-12 outline-none transition placeholder:text-n-slate-10 hover:border-n-slate-7 focus:border-n-blue-8';
 </script>
 
 <template>
   <form
-    class="flex w-full flex-col gap-4 rounded-2xl border border-n-weak bg-n-alpha-1 p-4"
+    class="w-full overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm"
     data-contato-novo
     novalidate
     @submit.prevent="criar"
   >
-    <p class="mb-0 text-[0.9375rem] font-semibold text-n-slate-12">
-      {{ $t(`${P}.TITULO`) }}
-    </p>
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-n-slate-12">
-        {{ $t(`${P}.NOME`) }}
-        <span class="text-n-ruby-11" aria-hidden="true">*</span>
+    <header
+      class="flex items-center gap-3 border-b border-n-weak bg-n-alpha-1 px-5 py-4"
+    >
+      <Avatar
+        v-if="nome.trim()"
+        :name="nome.trim()"
+        :size="44"
+        rounded-full
+        class="shrink-0"
+      />
+      <span
+        v-else
+        class="grid size-11 shrink-0 place-content-center rounded-full bg-n-alpha-2 text-n-slate-10"
+        aria-hidden="true"
+      >
+        <Icon icon="i-lucide-user-round" class="size-5" />
       </span>
-      <input
+      <div class="min-w-0">
+        <p class="mb-0 text-base font-semibold text-n-slate-12">
+          {{ nome.trim() || t(`${P}.TITULO`) }}
+        </p>
+        <p class="mb-0 text-sm text-n-slate-11">{{ t(`${P}.SUBTITULO`) }}</p>
+      </div>
+    </header>
+
+    <div class="flex flex-col gap-4 px-5 py-5">
+      <Input
         v-model="nome"
-        type="text"
+        :label="t(`${P}.NOME`)"
+        :placeholder="t(`${P}.NOME_EXEMPLO`)"
+        :message="mostrar('nome')"
+        :message-type="mostrar('nome') ? 'error' : 'info'"
         autocomplete="off"
-        required
-        :placeholder="$t(`${P}.NOME_EXEMPLO`)"
-        :class="[CAMPO, tentou && erros.nome ? 'border-n-ruby-8' : 'border-n-weak']"
-        :aria-invalid="tentou && erros.nome"
         data-campo-nome
       />
-    </label>
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-n-slate-12">
-        {{ $t(`${P}.EMAIL`) }}
-        <span v-if="exigeEmail" class="text-n-ruby-11" aria-hidden="true">*</span>
-      </span>
-      <input
+      <Input
         v-model="email"
         type="email"
+        :label="
+          exigeEmail ? t(`${P}.EMAIL`) : t(`${P}.EMAIL_OPCIONAL`)
+        "
+        :placeholder="t(`${P}.EMAIL_EXEMPLO`)"
+        :message="mostrar('email') || (exigeEmail ? t(`${P}.EMAIL_DICA`) : '')"
+        :message-type="mostrar('email') ? 'error' : 'info'"
         autocomplete="off"
-        :required="exigeEmail"
-        :placeholder="$t(`${P}.EMAIL_EXEMPLO`)"
-        :class="[CAMPO, tentou && erros.email ? 'border-n-ruby-8' : 'border-n-weak']"
-        :aria-invalid="tentou && erros.email"
         data-campo-email
       />
-    </label>
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-n-slate-12">
-        {{ $t(`${P}.TELEFONE`) }}
-        <span class="font-normal text-n-slate-11">{{ $t(`${P}.OPCIONAL`) }}</span>
-      </span>
-      <input
-        v-model="telefone"
-        type="tel"
-        autocomplete="off"
-        :placeholder="$t(`${P}.TELEFONE_EXEMPLO`)"
-        :class="[CAMPO, tentou && erros.telefone ? 'border-n-ruby-8' : 'border-n-weak']"
-        :aria-invalid="tentou && erros.telefone"
-        data-campo-telefone
-      />
-    </label>
-    <p
-      v-if="tentou && !pronto"
-      role="alert"
-      class="mb-0 text-[0.9375rem] text-n-amber-11"
+      <div data-campo-telefone @input="aoDigitarTelefone">
+        <CampoDeTelefone
+          v-model="telefone"
+          :label="t(`${P}.TELEFONE`)"
+          :rotulo-do-pais="t(`${P}.PAIS`)"
+          :ajuda="t(`${P}.TELEFONE_DICA`)"
+          :erro="mostrar('telefone')"
+        />
+      </div>
+      <p
+        v-if="tentou && erros.contato"
+        role="alert"
+        class="mb-0 flex items-center gap-2 text-sm text-n-amber-11"
+      >
+        <Icon icon="i-lucide-info" class="size-4 shrink-0" />
+        {{ erros.contato }}
+      </p>
+      <p
+        v-if="erroAoCriar"
+        role="alert"
+        class="mb-0 flex items-center gap-2 text-sm text-n-ruby-11"
+      >
+        <Icon icon="i-lucide-circle-alert" class="size-4 shrink-0" />
+        {{ t('NOVA_CONVERSA.PARA_QUEM.ERRO_CRIAR') }}
+      </p>
+    </div>
+
+    <footer
+      class="flex justify-end border-t border-n-weak bg-n-alpha-1 px-5 py-3"
     >
-      {{
-        erros.nome
-          ? $t(`${P}.FALTA_NOME`)
-          : erros.email
-            ? $t(exigeEmail && !email.trim() ? `${P}.FALTA_EMAIL` : `${P}.EMAIL_INVALIDO`)
-            : erros.telefone
-              ? $t(`${P}.TELEFONE_INVALIDO`)
-              : $t(`${P}.FALTA_CONTATO`)
-      }}
-    </p>
-    <p v-if="erroAoCriar" role="alert" class="mb-0 text-[0.9375rem] text-n-amber-11">
-      {{ $t('NOVA_CONVERSA.PARA_QUEM.ERRO_CRIAR') }}
-    </p>
-    <Button
-      type="submit"
-      :label="$t(`${P}.CRIAR`)"
-      icon="i-lucide-user-round-plus"
-      class="!min-h-11 self-start"
-      :is-loading="criando"
-      :disabled="criando"
-    />
+      <Button
+        type="submit"
+        :label="t(`${P}.CRIAR`)"
+        icon="i-lucide-user-round-plus"
+        class="!min-h-11"
+        :is-loading="criando"
+        :disabled="criando"
+        data-criar-contato
+      />
+    </footer>
   </form>
 </template>
