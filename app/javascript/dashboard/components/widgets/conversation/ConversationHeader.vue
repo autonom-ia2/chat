@@ -23,6 +23,7 @@ import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 import { usePeleDoTopo } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 
 const props = defineProps({
   chat: {
@@ -45,6 +46,8 @@ const { width } = useElementSize(conversationHeader);
 const { isAWebWidgetInbox } = useInbox();
 
 const currentChat = computed(() => store.getters.getSelectedChat);
+// Quem só lê (#1800) não liga, não abre o card, não agenda, não passa e não resolve: o servidor recusa tudo isso.
+const canOperate = useCanOperateConversation(currentChat);
 const accountId = computed(() => store.getters.getCurrentAccountId);
 
 const chatMetadata = computed(() => props.chat.meta);
@@ -188,11 +191,13 @@ const copyConversationId = async () => {
         :parent-width="width"
         class="hidden md:flex"
       />
-      <ConversationCallButton :inbox="inbox" :chat="currentChat" />
-      <CrmConversationCardButton :chat="currentChat" />
-      <BookingInviteButton :conversation="currentChat" />
-      <PassarParaButton :conversation="currentChat" />
-      <MoreActions :conversation-id="currentChat.id" />
+      <template v-if="canOperate">
+        <ConversationCallButton :inbox="inbox" :chat="currentChat" />
+        <CrmConversationCardButton :chat="currentChat" />
+        <BookingInviteButton :conversation="currentChat" />
+        <PassarParaButton :conversation="currentChat" />
+        <MoreActions :conversation-id="currentChat.id" />
+      </template>
     </div>
   </div>
 </template>

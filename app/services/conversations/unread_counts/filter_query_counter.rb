@@ -37,7 +37,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   def base_relation
     Conversations::PermissionFilterService.new(
       unread_conversations, @user, @account,
-      plan_hint_selective_filter: label_filter_present?
+      plan_hint_selective_filter: label_filter_present?, for_reading: true
     ).perform
   end
 

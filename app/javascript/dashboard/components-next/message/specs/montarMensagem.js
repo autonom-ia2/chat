@@ -6,20 +6,21 @@ import { MESSAGE_TYPES, MESSAGE_STATUS } from '../constants';
 // Monta a mensagem inteira (Message.vue) como a conversa do painel faz, com a loja e a rota mínimas.
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
 
-const store = createStore({
-  getters: {
-    'inboxes/getInbox': () => () => ({}),
-    'inboxes/getInboxById': () => () => ({}),
-    'globalConfig/get': () => ({}),
-    'globalConfig/isOnChatwootCloud': () => false,
-    'accounts/getAccount': () => () => ({}),
-    getSelectedChat: () => ({}),
-    getSelectedChatAttachments: () => [],
-    getCurrentAccountId: () => 1,
-    getCurrentUser: () => ({}),
-    getUISettings: () => ({}),
-  },
-});
+export const gettersDaMontagem = {
+  'inboxes/getInbox': () => () => ({}),
+  'inboxes/getInboxById': () => () => ({}),
+  'globalConfig/get': () => ({}),
+  'globalConfig/isOnChatwootCloud': () => false,
+  'accounts/getAccount': () => () => ({}),
+  getSelectedChat: () => ({}),
+  canOperateConversation: () => () => true,
+  getSelectedChatAttachments: () => [],
+  getCurrentAccountId: () => 1,
+  getCurrentUser: () => ({}),
+  getUISettings: () => ({}),
+};
+
+const store = createStore({ getters: gettersDaMontagem });
 
 export const AGORA = Math.floor(Date.now() / 1000);
 
