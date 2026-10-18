@@ -1,5 +1,12 @@
 import { computed, ref, watch } from 'vue';
 import ConversationAPI from 'dashboard/api/inbox/conversation';
+import MessageAPI from 'dashboard/api/inbox/message';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
+import {
+  assuntoDaConversa,
+  ehEmail,
+} from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 import {
   DESTINOS,
   chaveDaEscolha,
@@ -16,9 +23,11 @@ import {
 export function useContinuarConversa({ contato, canal }) {
   const destino = ref(DESTINOS.CONTINUAR);
   const podeResponder = ref(false);
-  // #1809: a última mensagem da conversa, para o histórico ir junto do modelo de
-  // e-mail (o servidor só cita se for e-mail de entrada ou saída, não privado).
-  const ultimaMensagemId = ref(null);
+  // #1809 — conversa de e-mail: o assunto dela (a resposta sai com "Re: ...") e o
+  // último e-mail, que vai como histórico no fim, como na resposta.
+  const assunto = ref('');
+  const ultimoEmail = ref(null);
+  const ehCaixaDeEmailNova = useCaixaDeEmailNova();
   const carregando = ref(false);
   const erro = ref(false);
 
@@ -49,15 +58,31 @@ export function useContinuarConversa({ contato, canal }) {
     const pedido = ultimoPedido;
     const alvo = existente.value?.visible ? existente.value : null;
     podeResponder.value = false;
-    ultimaMensagemId.value = null;
+    assunto.value = '';
+    ultimoEmail.value = null;
     erro.value = false;
     carregando.value = Boolean(alvo);
     if (!alvo) return;
     try {
-      const { data } = await ConversationAPI.show(alvo.displayId);
+      const email = canal.value?.channelType === INBOX_TYPES.EMAIL;
+      // O histórico só existe na conversa de e-mail nova (chave conversa_email_nova).
+      const comHistorico = email && ehCaixaDeEmailNova(canal.value?.id);
+      // O histórico é extra: se as mensagens não vierem, o e-mail sai sem ele, mas sai.
+      const [{ data }, mensagens] = await Promise.all([
+        ConversationAPI.show(alvo.displayId),
+        comHistorico
+          ? MessageAPI.getPreviousMessages({
+              conversationId: alvo.displayId,
+            }).catch(() => null)
+          : null,
+      ]);
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
-      ultimaMensagemId.value = data?.last_non_activity_message?.id ?? null;
+      const emails = (mensagens?.data?.payload || []).filter(ehEmail);
+      assunto.value = email
+        ? assuntoDaConversa({ conversa: data, emails })
+        : '';
+      ultimoEmail.value = emails.at(-1) || null;
     } catch (error) {
       if (pedido === ultimoPedido) erro.value = true;
     } finally {
@@ -84,6 +109,7 @@ export function useContinuarConversa({ contato, canal }) {
     erro,
     esperando,
     carregar,
-    ultimaMensagemId,
+    assunto,
+    ultimoEmail,
   };
 }

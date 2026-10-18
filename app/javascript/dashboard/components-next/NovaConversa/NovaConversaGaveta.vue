@@ -122,6 +122,9 @@ const {
   enviar,
   enviarPronta,
   modeloDoEmail,
+  historico,
+  comHistorico,
+  assuntoNaPrevia,
 } = useNovaConversa({ contato, canal, continuar });
 
 // #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
@@ -136,6 +139,12 @@ provide(EMAIL_DA_GAVETA, {
   escolher: modeloDoEmail.escolher,
   campo: modeloDoEmail.campo,
   tirar: modeloDoEmail.tirar,
+  // O histórico ao continuar uma conversa de e-mail (CitacaoDaResposta).
+  historico,
+  historicoDesligado: computed(() => form.historicoDesligado),
+  alternarHistorico: () => {
+    form.historicoDesligado = !form.historicoDesligado;
+  },
 });
 const continuando = computed(() => Boolean(conversaDaMensagem.value));
 // Entra numa conversa que já existe: a que vai continuar, ou a oculta da
@@ -452,7 +461,8 @@ useFixedPanelPresence(aberta);
                 :modelo-html="
                   tipo === TIPOS.EMAIL ? modeloDoEmail.htmlDaPrevia.value : ''
                 "
-                :assunto="continuando ? '' : form.assunto"
+                :assunto="assuntoNaPrevia"
+                :historico="comHistorico ? historico : null"
                 :remetente="canal?.name || ''"
                 :endereco-do-remetente="linhaDoCanal(canal)"
               />

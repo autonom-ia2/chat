@@ -14,7 +14,6 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
-import { MESSAGE_TYPES } from '../../message/constants';
 import {
   FORMATACAO_FIXA,
   LISTA_DO_EMAIL,
@@ -22,6 +21,7 @@ import {
   RESPOSTA_EXPANDIDA,
   RESPOSTA_EM_JANELA,
 } from './visualEmail';
+import { assuntoDaConversa, ehEmail } from './dadosDoEmail';
 
 // Evento das ações do fim da conversa para a caixa de resposta.
 export const RESPONDER_EMAIL = 'conversaCanal:responderEmail';
@@ -51,12 +51,6 @@ const RECOLHER = 'conversa_email_recolher_antigas';
 
 export const emailNovoNaCaixa = (caixa, ligada) =>
   Boolean(ligada && caixa?.channel_type === INBOX_TYPES.EMAIL);
-
-const ehEmail = mensagem =>
-  !mensagem.private &&
-  [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING].includes(
-    mensagem.message_type
-  );
 
 const SEM_EMAIL = {
   ligado: computed(() => false),
@@ -92,12 +86,8 @@ export const useConversaDeEmail = () => {
   const emails = computed(() =>
     (conversa.value?.messages || []).filter(ehEmail)
   );
-  const assunto = computed(
-    () =>
-      conversa.value?.additional_attributes?.mail_subject ||
-      emails.value.find(m => m.content_attributes?.email?.subject)
-        ?.content_attributes.email.subject ||
-      ''
+  const assunto = computed(() =>
+    assuntoDaConversa({ conversa: conversa.value, emails: emails.value })
   );
 
   // Como no leitor de e-mail (Rodrigo, 18/10): a caixa de resposta só aparece quando

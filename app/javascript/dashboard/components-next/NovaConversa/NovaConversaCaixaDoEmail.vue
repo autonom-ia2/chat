@@ -2,7 +2,8 @@
 // #1809 — a caixa "Mensagem" do e-mail na gaveta "Escrever", no padrão da resposta de
 // e-mail nova (#1786): no topo, para quem vai e Cc/Cco num toque (CampoDeEnderecos);
 // o texto, que nasce compacto e cresce com o conteúdo; o modelo de e-mail escolhido no
-// "+" (ModeloDaResposta), embaixo do texto; os anexos; e no pé, fixa, a barra (com o
+// "+" (ModeloDaResposta), embaixo do texto; o histórico, ao continuar uma conversa
+// (CitacaoDaResposta, como na resposta); os anexos; e no pé, fixa, a barra (com o
 // aviso de assinatura logo acima). Passando do teto, o conteúdo rola por dentro, sem levar
 // a gaveta junto, e a barra fica fora da rolagem: sempre à vista e sem cobrir o cursor.
 // A régua de formatação fica atrás do "Aa".
@@ -12,6 +13,7 @@ import AttachmentPreviews from 'dashboard/components-next/NewConversation/compon
 import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import CampoDeEnderecos from 'dashboard/components-next/conversa-canal/email/CampoDeEnderecos.vue';
 import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
+import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
 import { FORMATACAO_FIXA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
 import NovaConversaBarraDoEmail from './NovaConversaBarraDoEmail.vue';
 
@@ -21,8 +23,8 @@ const props = defineProps({
   comAssinatura: { type: Boolean, default: false },
   // { nome, email } do contato escolhido.
   para: { type: Object, default: null },
-  // O modelo de e-mail da gaveta (useModeloDoEmailNaGaveta); null: sem modelos.
-  modelo: { type: Object, default: null },
+  // O que vem da gaveta (EMAIL_DA_GAVETA): o modelo de e-mail e o histórico; null fora dela.
+  daGaveta: { type: Object, default: null },
 });
 
 const mensagem = defineModel('mensagem', { type: String, default: '' });
@@ -127,12 +129,20 @@ const EDITOR =
         />
       </div>
 
-      <div v-if="modelo?.modelo.value" class="px-3">
+      <div v-if="daGaveta?.modelo.value" class="px-3">
         <ModeloDaResposta
-          :modelo="modelo.modelo.value"
-          :valores="modelo.valores.value"
-          @campo="modelo.campo"
-          @tirar="modelo.tirar"
+          :modelo="daGaveta.modelo.value"
+          :valores="daGaveta.valores.value"
+          @campo="daGaveta.campo"
+          @tirar="daGaveta.tirar"
+        />
+      </div>
+      <div v-if="daGaveta?.historico.value" class="px-3 pb-2">
+        <CitacaoDaResposta
+          :mensagem="daGaveta.historico.value"
+          tipo="historico"
+          :desligado="daGaveta.historicoDesligado.value"
+          @alternar="daGaveta.alternarHistorico"
         />
       </div>
 
@@ -156,9 +166,9 @@ const EDITOR =
         v-model:formatacao="formatacao"
         :canal="canal"
         :com-assinatura="comAssinatura"
-        :com-modelos="Boolean(modelo)"
+        :com-modelos="Boolean(daGaveta)"
         @inserir="texto => (inserir = texto)"
-        @modelo="id => modelo?.escolher(id)"
+        @modelo="id => daGaveta?.escolher(id)"
       />
     </div>
   </div>

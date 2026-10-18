@@ -15,6 +15,9 @@ vi.mock('dashboard/composables/store', () => ({
       getCurrentUser: { id: 3 },
       'globalConfig/get': { directUploadsEnabled: false },
       getMessageSignature: '',
+      // #1809: caixa sem a conversa de e-mail nova (sem histórico).
+      'inboxes/getInbox': () => ({}),
+      'accounts/isFeatureEnabledonAccount': () => false,
     };
     return ref(getters[nome]);
   },
@@ -65,6 +68,7 @@ const VAZIO = {
   textoDoModelo: '',
   modeloDoEmail: null,
   valoresDoModelo: {},
+  historicoDesligado: false,
 };
 
 describe('useNovaConversa', () => {

@@ -25,13 +25,11 @@ const montar = ({ conversa = null } = {}) => {
   const contato = ref({ id: 9 });
   const canal = ref({ id: 4 });
   const destino = ref(conversa);
-  const ultimaMensagemId = ref(conversa ? 300 : null);
   const modelo = useModeloDoEmailNaGaveta({
     form,
     contato,
     canal,
     destino,
-    ultimaMensagemId,
   });
   return { form, contato, modelo };
 };
@@ -42,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('useModeloDoEmailNaGaveta', () => {
-  it('continuando, abre pela conversa e manda o histórico junto', async () => {
+  it('continuando, abre pela conversa (o histórico fica no useNovaConversa)', async () => {
     const { form, modelo } = montar({ conversa: { displayId: 31 } });
     await modelo.escolher(5);
     await flushPromises();
@@ -51,14 +49,11 @@ describe('useModeloDoEmailNaGaveta', () => {
     expect(api.abrirParaContato).not.toHaveBeenCalled();
     expect(form.valoresDoModelo).toEqual({ nome: 'Ana' });
     const { atributos } = modelo.noEnvio('Bom dia');
-    expect(atributos.email_citacao).toEqual({
-      tipo: 'historico',
-      message_id: 300,
-    });
+    expect(atributos.email_citacao).toBeUndefined();
     expect(atributos.email_modelo.html).toContain('Oi Ana');
   });
 
-  it('conversa nova: pelo contato, sem histórico', async () => {
+  it('conversa nova: pelo contato', async () => {
     const { modelo } = montar();
     await modelo.escolher(5);
     await flushPromises();

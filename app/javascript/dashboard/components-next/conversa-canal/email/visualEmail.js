@@ -131,14 +131,21 @@ export const RESPOSTA_EM_JANELA = [
 // "Aa": a barra de formatação do editor, que o Chatwoot só mostra sobre o texto
 // selecionado, vira uma régua fixa acima do texto, no padrão dos botões da caixa: em
 // grupos (IA | negrito, itálico, código | link | listas | imagem | desfazer, refazer),
-// com fio entre eles, botão ativo em azul e desligado apagado.
+// com fio entre eles, botão ativo em azul e desligado apagado. Presa no topo da área que
+// rola, com fundo sólido e borda, na resposta e na gaveta "Escrever".
 export const FORMATACAO_FIXA = [
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex-wrap',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!items-center',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!static',
+  // Fixa no topo da área que rola (#1809): o texto passa por baixo, a régua fica.
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!sticky',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!top-0',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!z-20',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!w-full',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline-0',
+  // Presa no topo, um aro da cor da caixa esconde o texto que passa por trás dos cantos.
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline-[6px]',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline-n-surface-1',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!bg-n-surface-1',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!border',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!border-solid',

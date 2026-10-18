@@ -94,7 +94,8 @@
       "AGORA": "agora",
       "DE": "De",
       "ASSUNTO": "Assunto",
-      "SEM_ASSUNTO": "Sem assunto"
+      "SEM_ASSUNTO": "Sem assunto",
+      "HISTORICO": "{nome} escreveu:"
     },
     "RODAPE": {
       "CANCELAR": "Cancelar",

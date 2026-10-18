@@ -14,17 +14,11 @@ import {
 // - Conversa nova: o servidor preenche pelo CONTATO escolhido (contact_id +
 //   inbox_id); sem conversa a IA não tem o que ler, e o resto vem vazio para a
 //   pessoa preencher.
-// - Continuando uma conversa (#1505): pela conversa, como na resposta, e o
-//   histórico vai no fim do e-mail.
+// - Continuando uma conversa (#1505): pela conversa, como na resposta. O histórico
+//   (com ou sem modelo) fica no useNovaConversa.
 // No envio vai o mesmo `email_modelo` da resposta; o servidor monta e limpa o
 // HTML (ConversaCanal::ModeloNaResposta).
-export function useModeloDoEmailNaGaveta({
-  form,
-  contato,
-  canal,
-  destino,
-  ultimaMensagemId,
-}) {
+export function useModeloDoEmailNaGaveta({ form, contato, canal, destino }) {
   const { t } = useI18n();
 
   const abrir = id =>
@@ -91,15 +85,6 @@ export function useModeloDoEmailNaGaveta({
     if (!form.modeloDoEmail) return { mensagem, atributos: null };
     const html = preencherModelo(form.modeloDoEmail.html, form.valoresDoModelo);
     const soModelo = !String(mensagem || '').trim();
-    const historico =
-      destino.value && ultimaMensagemId?.value
-        ? {
-            email_citacao: {
-              tipo: 'historico',
-              message_id: ultimaMensagemId.value,
-            },
-          }
-        : {};
     return {
       mensagem: soModelo ? textoDoModelo(html) : mensagem,
       atributos: {
@@ -108,7 +93,6 @@ export function useModeloDoEmailNaGaveta({
           html,
           so_modelo: soModelo,
         },
-        ...historico,
       },
     };
   };

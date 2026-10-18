@@ -73,7 +73,7 @@ const maisOpcoes = ref(Boolean(cc.value || bcc.value));
         :assinatura="assinatura"
         :com-assinatura="comAssinatura"
         :para="para"
-        :modelo="daGaveta"
+        :da-gaveta="daGaveta"
       />
       <div
         v-else

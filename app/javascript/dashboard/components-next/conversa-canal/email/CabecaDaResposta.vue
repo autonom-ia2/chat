@@ -7,6 +7,7 @@
 import { computed, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampoDeEnderecos from './CampoDeEnderecos.vue';
+import { assuntoDaResposta } from './dadosDoEmail';
 import { useEmailDaConversa } from './useConversaDeEmail';
 
 const para = defineModel('toEmails', { type: String, default: '' });
@@ -23,17 +24,18 @@ const verCc = ref(Boolean(cc.value));
 const verCco = ref(Boolean(cco.value));
 const cabeca = useTemplateRef('cabeca');
 const comFoco = seletor =>
-  Boolean(cabeca.value?.querySelector(seletor)?.contains(document.activeElement));
+  Boolean(
+    cabeca.value?.querySelector(seletor)?.contains(document.activeElement)
+  );
 watch(cc, valor => {
   verCc.value = Boolean(valor) || (verCc.value && comFoco('[data-campo-cc]'));
 });
 watch(cco, valor => {
-  verCco.value = Boolean(valor) || (verCco.value && comFoco('[data-campo-cco]'));
+  verCco.value =
+    Boolean(valor) || (verCco.value && comFoco('[data-campo-cco]'));
 });
 
-const assunto = computed(() =>
-  email.assunto.value ? `Re: ${email.assunto.value}` : ''
-);
+const assunto = computed(() => assuntoDaResposta(email.assunto.value));
 
 const LINK =
   'min-h-9 px-2 rounded-full text-sm text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';

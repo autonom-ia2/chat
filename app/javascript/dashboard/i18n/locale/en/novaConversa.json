@@ -94,7 +94,8 @@
       "AGORA": "now",
       "DE": "From",
       "ASSUNTO": "Subject",
-      "SEM_ASSUNTO": "No subject"
+      "SEM_ASSUNTO": "No subject",
+      "HISTORICO": "{nome} wrote:"
     },
     "RODAPE": {
       "CANCELAR": "Cancel",

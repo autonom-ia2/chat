@@ -14,6 +14,8 @@ defineProps({
   enderecoDoRemetente: { type: String, default: '' },
   // #1809: o modelo de e-mail preenchido (campo vazio destacado), embaixo do texto.
   modeloHtml: { type: String, default: '' },
+  // #1809: o e-mail citado no fim, ao continuar a conversa (null: sem histórico).
+  historico: { type: Object, default: null },
 });
 
 const P = 'NOVA_CONVERSA.PREVIA';
@@ -32,6 +34,7 @@ const P = 'NOVA_CONVERSA.PREVIA';
       :corpo="texto"
       :fantasma="$t(`${P}.FANTASMA`)"
       :modelo-html="modeloHtml"
+      :historico="historico"
     />
     <PreviaWhatsapp
       v-else

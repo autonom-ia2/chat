@@ -1,6 +1,7 @@
 // Dados do cartão de e-mail (#1786): quem escreveu de verdade, para quem, a data como
 // o leitor de e-mail mostra e o bloqueio do rastreio das nossas campanhas.
 // Funções puras, testáveis sem tela.
+import { MESSAGE_TYPES } from '../../message/constants';
 
 const minusculo = texto =>
   String(texto || '')
@@ -133,3 +134,21 @@ const RASTREIO_DE_CAMPANHA = '/email_campaigns/t/';
 export const ehRastreioDeCampanha = url =>
   String(url || '').includes(RASTREIO_DE_CAMPANHA);
 export const semRastreio = url => (ehRastreioDeCampanha(url) ? '' : url);
+
+// E-mail de verdade da conversa (entrada ou saída, não nota privada nem aviso).
+export const ehEmail = mensagem =>
+  !mensagem.private &&
+  [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING].includes(
+    mensagem.message_type
+  );
+
+// O assunto da conversa: o gravado na conversa (o mesmo que o servidor usa no envio,
+// ConversationReplyMailer#mail_subject) ou, na falta, o do primeiro e-mail que tiver.
+export const assuntoDaConversa = ({ conversa, emails = [] }) =>
+  conversa?.additional_attributes?.mail_subject ||
+  emails.find(m => m.content_attributes?.email?.subject)?.content_attributes
+    .email.subject ||
+  '';
+
+// A resposta numa conversa que já existe sai com "Re: <assunto>" (#1786, #1809).
+export const assuntoDaResposta = assunto => (assunto ? `Re: ${assunto}` : '');
