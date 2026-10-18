@@ -384,20 +384,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado['conferencia'].keys).not_to include('desfeito', 'sem_pedido')
     end
 
-    # Rodada 6: sem oferta de desfazer pela conversa. O desfazer exato é o botão da versão (parte 3).
-    it 'parte sem pedido: tudo fica aplicado e o dono é informado, sem pergunta nem pendência' do
+    # Rodada 6: sem oferta de desfazer pela conversa. Parte 3: o dono é informado pelo cartão da tela (linha sem_pedido),
+    # sem bolha "também mudei" na conversa; o desfazer exato é o botão Desfazer.
+    it 'parte sem pedido: tudo fica aplicado, o cartão informa e a conversa não ganha bolha, sem pergunta nem pendência' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
                          'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
       sem_pedido(1)
 
       run_turn
 
-      aviso = texto(:tambem_mudei, resumos: 'Saudação nova')
       expect(agent.reload).to have_attributes(tone: 'curto', greeting: 'Olá!')
-      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'next_question' => aviso,
+      expect(estado).to include('applied' => true, 'needs_more_info' => false, 'next_question' => '',
                                 'pergunta_pendente' => '', 'parcial' => false)
-      expect(estado.keys).not_to include('desfazer_pendente')
-      expect(thread.messages.last).to include('content' => aviso)
+      expect(estado['conferencia']['sem_pedido'].pluck('resumo')).to eq(['Saudação nova.'])
+      expect([estado.key?('desfazer_pendente'), thread.messages.pluck('role')]).to eq([false, ['user']])
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
       referencia = estado['nao_pedido_anterior']
       expect(referencia).to include('campos' => ['greeting'])
@@ -415,7 +415,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado).to include('applied' => true, 'needs_more_info' => false, 'nao_pedido_anterior' => nil)
       expect(estado['conferencia'].keys).not_to include('sem_pedido')
-      expect(thread.messages.pluck('content')).not_to include(texto(:tambem_mudei, resumos: 'Saudação nova'))
+      expect(thread.messages.pluck('role')).to eq(['user'])
     end
 
     def turno_seguinte(fala_do_dono, saida_do_modelo)
@@ -436,7 +436,10 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
       allow(conferente).to receive(:conferir) { |**kwargs| conferencia_de(kwargs[:mudancas]) }
 
-      a_conferencia_le = described_class.new(account: account, build_thread: thread.reload).send(:valores_antes_do_nao_pedido)
+      leitor = described_class.new(account: account, build_thread: thread.reload)
+      allow(leitor).to receive(:credential).and_return(api_key: 'k')
+      leitor.send(:preparar_ajuste!, 'outro-token')
+      a_conferencia_le = leitor.send(:valores_antes_do_nao_pedido)
       turno_seguinte('Tira o que você mudou na instrução', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
 
       contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
@@ -447,17 +450,51 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(a_conferencia_le).not_to include('scaffold')
     end
 
-    # Revisão crítica do 66d97ac642 (BAIXO, mutante u5): o turno seguinte que não aplica nada também limpa a referência.
-    it 'o turno seguinte só com pergunta do dono limpa a referência do não pedido' do
+    # Parte 3 (crítico Q3): o "tira isso" e o aviso do não pedido sobrevivem a uma pergunta; duram até o próximo ajuste
+    # aplicado ou o Desfazer.
+    it 'depois de uma pergunta, a faixa mostra o não pedido e o "tira isso" ainda recebe o valor de antes' do
       respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
                          'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
       sem_pedido(1)
       run_turn
-      expect(estado['nao_pedido_anterior']).to be_present
 
       turno_seguinte('O que você faz hoje?', saida('so_pergunta' => true, 'next_question' => 'Hoje eu atendo.'))
 
-      expect(estado).to include('applied' => false, 'nao_pedido_anterior' => nil)
+      expect(estado).to include('applied' => false, 'nao_pedido_anterior' => hash_including('campos' => ['greeting']))
+      expect(Autonomia::Agents::ResultadoDoAjuste.ultima_mudanca_desfazivel(agent.reload))
+        .to include(thread_id: thread.id, linhas: ['Respostas curtas'], sem_pedido: ['Saudação nova'])
+
+      tira = saida('greeting' => 'Oi! Aqui é o Hubber.', 'mudancas' => [mudanca('greeting', 'tira a saudação nova')])
+      turno_seguinte('Tira a saudação nova', tira)
+
+      contexto = calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+      expect(contexto).to include('greeting: Oi! Aqui é o Hubber.')
+    end
+
+    # Parte 3 (crítico 3): o contexto do "tira isso" só vai enquanto o Desfazer ainda vale.
+    def contexto_do_tira_isso_depois
+      respostas << saida('tone' => 'curto', 'greeting' => 'Olá!',
+                         'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('greeting', 'x', 'Saudação nova.')])
+      sem_pedido(1)
+      run_turn
+      yield
+      turno_seguinte('Tira a saudação nova', saida('so_pergunta' => true, 'next_question' => 'Ok.'))
+      calls.last[:input].map { |item| item[:content].first[:text] }.find { |texto| texto.include?('antes do ultimo ajuste') }
+    end
+
+    it 'V1: depois de uma volta por Versões, o "tira isso" sai do state e não vai ao Construtor' do
+      contexto = contexto_do_tira_isso_depois do
+        agent.reload.restore_instruction!(agent.instruction_versions.find_by!(reason: 'base'))
+        expect(estado.keys).not_to include('nao_pedido_anterior', 'ultimo_ajuste')
+      end
+
+      expect(contexto).to be_nil
+    end
+
+    it 'V2: depois de uma mudança pela gaveta, o "tira isso" não vai ao Construtor' do
+      contexto = contexto_do_tira_isso_depois { agent.reload.update!(handoff_rule: 'Mudado pela gaveta.') }
+
+      expect(contexto).to be_nil
     end
 
     # Rodada 7 (crítico MÉDIO): o "é só me dizer o que tirar" funciona: o turno seguinte recebe o valor de antes.
