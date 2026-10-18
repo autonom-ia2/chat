@@ -13,6 +13,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import * as Sentry from '@sentry/vue';
 import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImportPolling';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 import EmailRecipientStep from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailRecipientStep.vue';
@@ -188,6 +189,15 @@ const getEditorBodyPayload = () => {
   };
 };
 
+// A failed save keeps its real error (#1824): the alert stays generic, the cause goes to the console
+// (a print of F12 shows it) and to Sentry.
+const reportSaveError = error => {
+  // eslint-disable-next-line no-console
+  console.error('[EmailBuilderPage] save failed', error);
+  Sentry.captureException(error);
+  useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+};
+
 const persist = async extra => {
   await store.dispatch('emailCampaigns/update', {
     id: campaignId.value,
@@ -219,7 +229,7 @@ const persistSubject = async () => {
     await persist({ subject: subjectInput.value.trim() });
     saved = true;
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   } finally {
     isPersistingSubject.value = false;
   }
@@ -238,7 +248,7 @@ const save = async () => {
     });
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_SUCCESS'));
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   }
 };
 
@@ -377,7 +387,7 @@ const persistBody = async () => {
   try {
     await persist();
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   }
 };
 
@@ -632,7 +642,7 @@ const openReview = async () => {
     }
     await setStep('review');
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+    reportSaveError(error);
   }
 };
 const openRecipients = (problems = false) => {
