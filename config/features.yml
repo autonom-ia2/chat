@@ -422,7 +422,7 @@
 # No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
 - name: menu_lateral_novo
   display_name: Menu lateral novo e Configurações em cartões
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Horário único da caixa (#1619, flag #1649). A posição na lista é o bit: entra no FIM, e a Orquestração confere a
