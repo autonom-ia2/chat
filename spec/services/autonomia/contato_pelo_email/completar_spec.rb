@@ -190,7 +190,7 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
 
       expect(contact.reload).to have_attributes(name: 'maria.souza@cliente.com.br', phone_number: nil)
       expect(Rails.logger).to have_received(:info).with(include('motivo=formulario_de_outro_endereco'))
-      expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(7.days.to_i)
+      expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(24.hours.to_i)
     end
 
     # Pega: o formulário que o próprio contato preencheu (com o e-mail dele) ser descartado; e caixa/espaço no e-mail.
@@ -237,14 +237,14 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
   end
 
   # Pega: o contato sem nada novo pagar a IA a cada e-mail.
-  it 'leu e nada foi gravado: 7 dias sem IA para o contato', :aggregate_failures do
+  it 'leu e nada foi gravado: 24 horas sem IA para o contato', :aggregate_failures do
     responde(tipo: 'pessoa')
 
     described_class.new(message).perform
     described_class.new(email!).perform
 
     expect(cliente).to have_received(:create).once
-    expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(7.days.to_i)
+    expect(Redis::Alfred.ttl(chave('pausa', contact.id))).to be_within(60).of(24.hours.to_i)
   end
 
   # Pega: dois e-mails ao mesmo tempo pagarem duas leituras; o segundo e-mail se perder; e a trava ficar presa.

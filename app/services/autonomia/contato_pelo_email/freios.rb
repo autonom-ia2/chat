@@ -1,7 +1,7 @@
 # Contato pelo e-mail recebido (#1813): os freios de custo e de corrida, todos no Redis, por contato e por conta.
 #
 # - Pausa: o contato fica um tempo sem passar pela IA. 30 dias depois de 3 leituras `automatico` SEGUIDAS (a
-#   newsletter que chega toda semana não paga a IA toda semana); 7 dias quando a IA leu e nada foi gravado.
+#   newsletter que chega toda semana não paga a IA toda semana); 24 horas quando a IA leu e nada foi gravado.
 # - Contador de automáticos: zera numa leitura `pessoa` ou `formulario`; expira sozinho.
 # - Trava: uma leitura por contato de cada vez (dois e-mails seguidos não pagam duas leituras que gravam por cima).
 # - Leitura única por mensagem: a nova tentativa do job não paga a IA de novo pelo mesmo e-mail.
@@ -11,7 +11,7 @@ class Autonomia::ContatoPeloEmail::Freios
   AUTOMATICOS_PARA_PAUSAR = 3
   AUTOMATICOS_POR = 30.days
   PAUSA_AUTOMATICOS = 30.days
-  PAUSA_NADA_NOVO = 7.days
+  PAUSA_NADA_NOVO = 24.hours
   TETO_DIARIO = 500
   TRAVA_POR = 5.minutes
   LIDO_POR = 1.day
