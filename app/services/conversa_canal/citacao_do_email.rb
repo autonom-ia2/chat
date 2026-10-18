@@ -123,7 +123,15 @@ class ConversaCanal::CitacaoDoEmail
   def html_original
     bruto = dados.dig('html_content', 'full').presence ||
             ChatwootMarkdownRenderer.new(original.content.to_s).render_message.to_s
-    Rails::HTML5::SafeListSanitizer.new.sanitize(bruto, tags: TAGS_PERMITIDAS, attributes: ATRIBUTOS_PERMITIDOS)
+    Rails::HTML5::SafeListSanitizer.new.sanitize(sem_cabeca(bruto), tags: TAGS_PERMITIDAS, attributes: ATRIBUTOS_PERMITIDOS)
+  end
+
+  # O sanitizador tira a tag, mas deixa o texto de dentro: o CSS do Outlook (`/* Font Definitions */ @font-face …`),
+  # o título e o script apareceriam na citação. Aqui eles saem inteiros, com o conteúdo.
+  def sem_cabeca(bruto)
+    documento = Nokogiri::HTML5(bruto.to_s)
+    documento.css('head, style, title, script, noscript, template').each(&:remove)
+    documento.at('body')&.inner_html.to_s
   end
 
   def texto_original

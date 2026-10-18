@@ -47,6 +47,22 @@ RSpec.describe ConversaCanal::CitacaoDoEmail do
     expect(texto).to include('Mensagem encaminhada', "Segue a lista:\n- incêndio")
   end
 
+  it 'e-mail do Outlook: o CSS, o título e o script do original não aparecem na citação, só o corpo' do
+    outlook = <<~HTML
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+      <title>Proposta da Marina</title><style><!-- /* Font Definitions */ @font-face {font-family:"Cambria Math";}
+      p.MsoNormal {margin:0cm;} --></style><!--[if gte mso 9]><xml><o:shapedefaults v:ext="edit" spidmax="1026" /></xml><![endif]-->
+      </head><body lang="PT-BR"><div class="WordSection1"><p class="MsoNormal">Segue a <b>cotação</b> anexa.</p></div>
+      <script>alert(1)</script></body></html>
+    HTML
+    original.update!(content_attributes: { email: { from: ['marina@exemplo.com.br'], html_content: { full: outlook } } })
+
+    html = responder('historico').content_attributes.dig('email', 'html_content', 'reply')
+
+    expect(html).to include('Segue a <b>cotação</b> anexa.')
+    expect(html).not_to include('Font Definitions', '@font-face', 'MsoNormal {', 'Proposta da Marina', 'alert(1)', 'shapedefaults')
+  end
+
   it 'o content continua só com o que o atendente escreveu (o CRM e a IA leem só isso)' do
     expect(responder('historico').content).to eq('Oi, Marina!')
   end
