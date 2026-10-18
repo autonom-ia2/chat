@@ -15,8 +15,9 @@ class Crm::FollowUps::MetadataSanitizer
   ].freeze
 
   # Escritas só pelo servidor (runners de IA): o cliente nunca as define (chat#1349).
-  # `preflight` (#1624) e `envio_fora_da_janela` (#1585) são provas do servidor: o cliente não as grava.
-  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason preflight envio_fora_da_janela].freeze
+  # `preflight` (#1624) e `envio_fora_da_janela` (#1585) são provas do servidor: o cliente não as grava. O mesmo vale para
+  # `callback_original`, o que o aviso da equipe trocou e o reagendar devolve (CallbackFallback).
+  SERVER_OWNED_KEYS = %w[delivery_transport hybrid_free_form_reason preflight envio_fora_da_janela callback_original].freeze
 
   def self.without_server_keys(metadata)
     metadata.to_h.stringify_keys.except(*SERVER_OWNED_KEYS)

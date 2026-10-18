@@ -43,8 +43,10 @@ class Crm::FollowUps::Rescheduler
     return @follow_up if unchanged?
 
     @follow_up.transaction do
+      restoring = restoring_automatic_send?
       @follow_up.update!(due_at: @due_at)
       @follow_up.update!(status: :pending) if @follow_up.overdue?
+      @follow_up.update!(Crm::FollowUps::CallbackFallback.restoring_attributes(@follow_up)) if restoring
       Crm::FollowUps::SnoozeHandler.apply(@follow_up) if @follow_up.pending?
       Crm::FollowUps::CardNextDueUpdater.update(@follow_up.card)
       log_activity
@@ -70,10 +72,15 @@ class Crm::FollowUps::Rescheduler
     # WhatsApp auto-send cannot be scheduled in the past — there is no way to
     # send a message at a time that has already elapsed. Mirrors the
     # server-side guard called out in the manifest (R5).
-    return unless @follow_up.auto_send_message?
+    return unless @follow_up.auto_send_message? || restoring_automatic_send?
     return if @due_at.future?
 
     raise PastDueError, 'due_at must be in the future for auto-send follow-ups'
+  end
+
+  # Aviso da equipe que caiu por falha passageira da Meta (CallbackFallback): reagendar tenta o envio automático de novo.
+  def restoring_automatic_send?
+    Crm::FollowUps::CallbackFallback.restorable?(@follow_up)
   end
 
   def unchanged?
