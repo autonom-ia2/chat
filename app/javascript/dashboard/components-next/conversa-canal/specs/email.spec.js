@@ -11,6 +11,7 @@ import {
 import { montarRespostaDoEmail } from '../email/respostaDoEmail';
 import { semCitacaoDosLeitores } from '../email/citacaoDosLeitores';
 import {
+  htmlDePrevia,
   htmlSemRodape,
   mjmlSemRodape,
   preencherModelo,
@@ -266,6 +267,25 @@ describe('conversa de e-mail (#1786)', () => {
           }
         )
       ).toBe('<p>Olá, Ana &lt;b&gt;! Recife</p>');
+    });
+
+    it('valor dentro de atributo não abre outro atributo (aspas escapadas)', () => {
+      expect(
+        preencherModelo('<a title="{{ nome }}">x</a>', {
+          nome: 'Ana" onmouseover="x',
+        })
+      ).toBe('<a title="Ana&quot; onmouseover=&quot;x">x</a>');
+    });
+
+    it('prévia sem script, base e meta refresh, e links sem clique', () => {
+      const html = htmlDePrevia(
+        '<html><head><meta http-equiv="refresh" content="0;url=https://x.test"><base href="https://x.test/"></head><body><p>Oi</p><script>1</script></body></html>'
+      );
+      expect(html).not.toContain('refresh');
+      expect(html).not.toContain('<base');
+      expect(html).not.toContain('<script');
+      expect(html).toContain('pointer-events:none');
+      expect(html).toContain('<p>Oi</p>');
     });
 
     it('na prévia, campo vazio aparece marcado com o nome', () => {

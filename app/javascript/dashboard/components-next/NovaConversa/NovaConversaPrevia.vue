@@ -12,6 +12,8 @@ defineProps({
   assunto: { type: String, default: '' },
   remetente: { type: String, default: '' },
   enderecoDoRemetente: { type: String, default: '' },
+  // #1809: o modelo de e-mail preenchido (campo vazio destacado), embaixo do texto.
+  modeloHtml: { type: String, default: '' },
 });
 
 const P = 'NOVA_CONVERSA.PREVIA';
@@ -29,6 +31,7 @@ const P = 'NOVA_CONVERSA.PREVIA';
       :assunto="assunto"
       :corpo="texto"
       :fantasma="$t(`${P}.FANTASMA`)"
+      :modelo-html="modeloHtml"
     />
     <PreviaWhatsapp
       v-else

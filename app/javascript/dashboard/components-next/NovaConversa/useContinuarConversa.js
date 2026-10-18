@@ -16,6 +16,9 @@ import {
 export function useContinuarConversa({ contato, canal }) {
   const destino = ref(DESTINOS.CONTINUAR);
   const podeResponder = ref(false);
+  // #1809: a última mensagem da conversa, para o histórico ir junto do modelo de
+  // e-mail (o servidor só cita se for e-mail de entrada ou saída, não privado).
+  const ultimaMensagemId = ref(null);
   const carregando = ref(false);
   const erro = ref(false);
 
@@ -46,13 +49,15 @@ export function useContinuarConversa({ contato, canal }) {
     const pedido = ultimoPedido;
     const alvo = existente.value?.visible ? existente.value : null;
     podeResponder.value = false;
+    ultimaMensagemId.value = null;
     erro.value = false;
     carregando.value = Boolean(alvo);
     if (!alvo) return;
     try {
       const { data } = await ConversationAPI.show(alvo.displayId);
-      if (pedido === ultimoPedido)
-        podeResponder.value = data?.can_reply === true;
+      if (pedido !== ultimoPedido) return;
+      podeResponder.value = data?.can_reply === true;
+      ultimaMensagemId.value = data?.last_non_activity_message?.id ?? null;
     } catch (error) {
       if (pedido === ultimoPedido) erro.value = true;
     } finally {
@@ -79,5 +84,6 @@ export function useContinuarConversa({ contato, canal }) {
     erro,
     esperando,
     carregar,
+    ultimaMensagemId,
   };
 }

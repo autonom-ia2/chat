@@ -55,7 +55,10 @@ vi.mock('dashboard/api/conversaEmail', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useRoute: () => ({ params: {}, name: '' }),
+}));
 
 const EMAIL = {
   id: 4,
@@ -88,13 +91,15 @@ beforeEach(() => {
 });
 
 describe('NovaConversaBarraDoEmail (#1809)', () => {
-  it('tem +, emoji, microfone e assinatura, nessa ordem, como na resposta', async () => {
+  it('tem Aa, +, emoji, microfone e assinatura, nessa ordem, como na resposta', async () => {
     const wrapper = montarBarra();
     await flushPromises();
     const ordem = wrapper
       .findAll('[role=toolbar] > *')
       .map(item =>
         [
+          'data-formatacao-do-email',
+          'data-separador-da-barra',
           'data-mais-do-email',
           'data-emoji-do-email',
           'data-ditar',
@@ -106,6 +111,8 @@ describe('NovaConversaBarraDoEmail (#1809)', () => {
         )
       );
     expect(ordem).toEqual([
+      'data-formatacao-do-email',
+      'data-separador-da-barra',
       'data-mais-do-email',
       'data-emoji-do-email',
       'data-ditar',
@@ -113,7 +120,7 @@ describe('NovaConversaBarraDoEmail (#1809)', () => {
     ]);
   });
 
-  it('o "+" não oferece Modelo de e-mail nem busca os modelos (não há conversa)', async () => {
+  it('sem modelos da gaveta, o "+" não oferece Modelo de e-mail nem busca os modelos', async () => {
     const wrapper = montarBarra();
     await flushPromises();
     await wrapper.find('[data-mais-do-email]').trigger('click');
@@ -237,16 +244,16 @@ describe('NovaConversaMensagem: a barra só no e-mail com a chave (#1809)', () =
           ...GLOBAL.stubs,
           MessageEditor: true,
           EmailOptions: true,
-          NovaConversaBarraDoEmail: true,
+          NovaConversaCaixaDoEmail: true,
           NovaConversaAnexo: true,
         },
       },
     });
 
-  it('com a chave: a barra da resposta, sem o "Anexar arquivo" solto', () => {
+  it('com a chave: a caixa da resposta (com a barra), sem o "Anexar arquivo" solto', () => {
     const wrapper = montarMensagem();
     expect(
-      wrapper.findComponent({ name: 'NovaConversaBarraDoEmail' }).exists()
+      wrapper.findComponent({ name: 'NovaConversaCaixaDoEmail' }).exists()
     ).toBe(true);
     expect(wrapper.findComponent({ name: 'NovaConversaAnexo' }).exists()).toBe(
       false
@@ -257,7 +264,7 @@ describe('NovaConversaMensagem: a barra só no e-mail com a chave (#1809)', () =
     estado.chave = false;
     const wrapper = montarMensagem();
     expect(
-      wrapper.findComponent({ name: 'NovaConversaBarraDoEmail' }).exists()
+      wrapper.findComponent({ name: 'NovaConversaCaixaDoEmail' }).exists()
     ).toBe(false);
     expect(wrapper.findComponent({ name: 'NovaConversaAnexo' }).exists()).toBe(
       true

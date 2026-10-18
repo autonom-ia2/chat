@@ -63,6 +63,8 @@ const VAZIO = {
   modelo: null,
   camposProntos: false,
   textoDoModelo: '',
+  modeloDoEmail: null,
+  valoresDoModelo: {},
 };
 
 describe('useNovaConversa', () => {

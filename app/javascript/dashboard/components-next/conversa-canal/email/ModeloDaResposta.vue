@@ -7,7 +7,11 @@
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
-import { chaveDoNomeDoCampo, preencherModelo } from './modeloDeEmail';
+import {
+  chaveDoNomeDoCampo,
+  htmlDePrevia,
+  preencherModelo,
+} from './modeloDeEmail';
 
 const props = defineProps({
   // { nome, html, campos: [{ chave, valor, origem }] }
@@ -62,16 +66,11 @@ const faltam = computed(
 );
 
 // Prévia sem script (sandbox) e sem clique nos links do modelo.
-const previa = computed(() => {
-  const html = preencherModelo(props.modelo.html || '', props.valores, {
-    marcar: true,
-  });
-  const estilo = '<style>a{pointer-events:none}body{margin:0}</style>';
-  const fimDoHead = html.indexOf('</head>');
-  return fimDoHead < 0
-    ? `${estilo}${html}`
-    : `${html.slice(0, fimDoHead)}${estilo}${html.slice(fimDoHead)}`;
-});
+const previa = computed(() =>
+  htmlDePrevia(
+    preencherModelo(props.modelo.html || '', props.valores, { marcar: true })
+  )
+);
 // Imagem do modelo que não abre (arquivo apagado em Campanhas, link de outra stack):
 // avisa antes de enviar, em vez de o cliente receber o e-mail quebrado.
 const imagensQuebradas = ref(0);

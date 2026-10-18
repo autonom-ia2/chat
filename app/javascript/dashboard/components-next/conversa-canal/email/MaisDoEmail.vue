@@ -15,10 +15,15 @@ import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
 import EscolherModeloDoEmail from './EscolherModeloDoEmail.vue';
 import { MODELO_DE_CAMPANHA } from './useConversaDeEmail';
 
-// Fora de uma conversa (gaveta "Escrever", #1809) não há modelo: o modelo de e-mail
-// preenche os campos pela conversa (`GET modelos_de_email/:id?conversation_id=`).
-const props = defineProps({ comModelos: { type: Boolean, default: true } });
-const emit = defineEmits(['arquivos']);
+// Na gaveta "Escrever" (#1809), `local`: o modelo escolhido sai pelo evento `modelo`,
+// para a gaveta (e não a caixa de resposta da conversa aberta por trás) recebê-lo.
+const props = defineProps({
+  comModelos: { type: Boolean, default: true },
+  local: { type: Boolean, default: false },
+});
+const emit = defineEmits(['arquivos', 'modelo']);
+const escolheuModelo = id =>
+  props.local ? emit('modelo', id) : emitter.emit(MODELO_DE_CAMPANHA, id);
 const { t } = useI18n();
 
 const ITENS = [
@@ -164,7 +169,7 @@ const mover = evento => {
       ref="janela"
       :modelos="modelos"
       :carregando="carregando"
-      @escolher="id => emitter.emit(MODELO_DE_CAMPANHA, id)"
+      @escolher="escolheuModelo"
     />
   </div>
 </template>

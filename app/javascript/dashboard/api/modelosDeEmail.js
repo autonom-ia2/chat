@@ -20,6 +20,13 @@ class ModelosDeEmailAPI extends ApiClient {
       params: { conversation_id: conversationId },
     });
   }
+
+  // #1809: sem conversa (gaveta "Escrever"), os campos saem do contato escolhido.
+  abrirParaContato(id, { contactId, inboxId }) {
+    return axios.get(`${this.url}/${id}`, {
+      params: { contact_id: contactId, inbox_id: inboxId },
+    });
+  }
 }
 
 export default new ModelosDeEmailAPI();

@@ -24,6 +24,7 @@ import {
   tipoDeMensagem,
   usaModelo,
 } from './novaConversa';
+import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
 
 // #1459 — a mensagem e o envio. Conversa nova: a mesma chamada da tela antiga
 // (`contactConversations/create`), com os mesmos formatos de payload.
@@ -40,6 +41,9 @@ const formVazio = () => ({
   modelo: null,
   camposProntos: false,
   textoDoModelo: '',
+  // #1809: modelo de e-mail do "+" (useModeloDoEmailNaGaveta).
+  modeloDoEmail: null,
+  valoresDoModelo: {},
 });
 
 const formatoDe = canal =>
@@ -94,8 +98,18 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   const previa = computed(() =>
     comModelo.value ? form.textoDoModelo : form.mensagem
   );
+  const modeloDoEmail = useModeloDoEmailNaGaveta({
+    form,
+    contato,
+    canal,
+    destino,
+    ultimaMensagemId: continuar?.ultimaMensagemId,
+  });
 
-  const limpar = () => Object.assign(form, formVazio());
+  const limpar = () => {
+    modeloDoEmail.cancelar();
+    Object.assign(form, formVazio());
+  };
 
   // Trocar de canal muda o que a mensagem pode ter: a assinatura só vale no
   // e-mail, a formatação que o canal novo não aceita sai, e a mensagem
@@ -223,25 +237,38 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       form.textoDoModelo || pronta.pendingMessageContent || pronta.message
     );
 
-  const criarComEscrita = () =>
+  // #1809: com modelo de e-mail, a mensagem leva o `email_modelo` (o servidor monta
+  // e limpa o HTML no MessageBuilder, como na resposta).
+  const comAtributos = (params, atributos) =>
+    atributos
+      ? {
+          ...params,
+          message: { ...params.message, content_attributes: atributos },
+        }
+      : params;
+
+  const criarComEscrita = ({ mensagem, atributos }) =>
     criarConversa(
-      prepareNewMessagePayload({
-        targetInbox: canal.value,
-        selectedContact: contato.value,
-        message: form.mensagem,
-        subject: tipo.value === TIPOS.EMAIL ? form.assunto : '',
-        ccEmails: tipo.value === TIPOS.EMAIL ? form.cc : '',
-        bccEmails: tipo.value === TIPOS.EMAIL ? form.bcc : '',
-        currentUser: usuario.value,
-        attachedFiles: form.anexos,
-        directUploadsEnabled: Boolean(config.value.directUploadsEnabled),
-      }),
+      comAtributos(
+        prepareNewMessagePayload({
+          targetInbox: canal.value,
+          selectedContact: contato.value,
+          message: mensagem,
+          subject: tipo.value === TIPOS.EMAIL ? form.assunto : '',
+          ccEmails: tipo.value === TIPOS.EMAIL ? form.cc : '',
+          bccEmails: tipo.value === TIPOS.EMAIL ? form.bcc : '',
+          currentUser: usuario.value,
+          attachedFiles: form.anexos,
+          directUploadsEnabled: Boolean(config.value.directUploadsEnabled),
+        }),
+        atributos
+      ),
       false
     );
 
   // Mesmo formato da caixa de resposta: texto, anexos e cópias do e-mail. O
   // assunto é o da conversa, que já existe.
-  const responderComEscrita = () => {
+  const responderComEscrita = ({ mensagem, atributos }) => {
     const email = tipo.value === TIPOS.EMAIL;
     const anexos = form.anexos.length
       ? {
@@ -252,18 +279,24 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         }
       : {};
     return responderNaConversa({
-      message: form.mensagem,
+      message: mensagem,
       ccEmails: email ? form.cc : '',
       bccEmails: email ? form.bcc : '',
       ...anexos,
+      ...(atributos ? { contentAttributes: atributos } : {}),
     });
   };
 
-  const enviarEscrita = () =>
-    despachar(
-      destino.value ? responderComEscrita() : criarComEscrita(),
-      form.mensagem
+  const enviarEscrita = () => {
+    const envio =
+      tipo.value === TIPOS.EMAIL
+        ? modeloDoEmail.noEnvio(form.mensagem)
+        : { mensagem: form.mensagem, atributos: null };
+    return despachar(
+      destino.value ? responderComEscrita(envio) : criarComEscrita(envio),
+      envio.mensagem
     );
+  };
 
   // `montarPronta` devolve o modelo preenchido (ou null se faltar campo).
   const enviar = montarPronta => {
@@ -278,6 +311,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     tipo,
     destino,
     comModelo,
+    modeloDoEmail,
     comAssinatura,
     assinatura,
     falta,

@@ -2,7 +2,8 @@
 # salvo, ele pode usar" — qualquer atendente da conversa usa os modelos salvos da conta (não os da galeria global).
 # Entrega o MJML/HTML do modelo e os campos (variáveis Liquid {{ ... }}) já preenchidos com o que se sabe:
 #   1. dados do contato e da conta (nome, primeiro nome, e-mail, telefone, empresa, atributos personalizados);
-#   2. o que faltar, a IA da conta tenta achar na conversa — só o que estiver escrito lá; senão fica vazio;
+#   2. o que faltar, a IA da conta tenta achar na conversa — só o que estiver escrito lá; senão fica vazio (sem
+#      conversa, como na gaveta "Escrever" #1809, a IA não é chamada e o resto vem vazio para a pessoa preencher);
 #   3. o atendente confere e muda na tela antes de enviar.
 # O rodapé de descadastro sai no navegador, que é quem compila o MJML (mjml-browser); `unsubscribe_url` nunca vira campo.
 class ConversaCanal::ModeloDeEmail
@@ -52,10 +53,13 @@ class ConversaCanal::ModeloDeEmail
     achadas.uniq
   end
 
-  def initialize(modelo:, conversation:, user:)
+  # Sem conversa (gaveta "Escrever", #1809): o contato escolhido e a caixa por onde vai sair. A IA não é chamada.
+  def initialize(modelo:, user:, conversation: nil, contato: nil, inbox: nil)
     @modelo = modelo
     @conversation = conversation
-    @contato = conversation.contact
+    @contato = conversation&.contact || contato
+    @inbox = conversation&.inbox || inbox
+    @account = @inbox.account
     @user = user
   end
 
@@ -116,12 +120,12 @@ class ConversaCanal::ModeloDeEmail
   def valor_da_conta(chave)
     {
       'agent.name' => @user&.name, 'atendente' => @user&.name, 'agent.first_name' => @user&.name.to_s.split.first,
-      'account.name' => @conversation.account.name, 'inbox.name' => @conversation.inbox&.name
+      'account.name' => @account.name, 'inbox.name' => @inbox.name
     }[chave].presence
   end
 
   def sugestoes_da_ia(chaves)
-    return {} if chaves.empty? || !credencial.configured?
+    return {} if @conversation.blank? || chaves.empty? || !credencial.configured?
 
     campos = JSON.parse(perguntar_a_ia(chaves.first(LIMITE_DE_CAMPOS_PARA_IA)))['campos'].to_a
     campos.to_h { |campo| [campo['chave'], campo['valor'].to_s.strip] }.slice(*chaves)
@@ -131,7 +135,7 @@ class ConversaCanal::ModeloDeEmail
   end
 
   def perguntar_a_ia(chaves)
-    cliente = Crm::Ai::ResponsesClient.new(credential: credencial.resolve, feature: 'modelo_email', account: @conversation.account)
+    cliente = Crm::Ai::ResponsesClient.new(credential: credencial.resolve, feature: 'modelo_email', account: @account)
     cliente.create(model: Crm::Ai::Config::MODEL_SUMMARY, instructions: INSTRUCOES, input: entrada(chaves).to_json,
                    schema: ESQUEMA, reasoning_effort: 'low')[:text]
   end
@@ -160,6 +164,6 @@ class ConversaCanal::ModeloDeEmail
   end
 
   def credencial
-    @credencial ||= Crm::Ai::CredentialResolver.new(account: @conversation.account)
+    @credencial ||= Crm::Ai::CredentialResolver.new(account: @account)
   end
 end

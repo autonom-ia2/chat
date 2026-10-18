@@ -42,10 +42,11 @@ export const montarModelo = async ({ mjml, html }) => {
   return htmlSemRodape(compilado || html || '');
 };
 
+// O valor pode cair dentro de um atributo (href, alt): aspas também viram entidade.
 const escapar = texto => {
   const div = document.createElement('div');
   div.textContent = String(texto ?? '');
-  return div.innerHTML;
+  return div.innerHTML.split('"').join('&quot;').split("'").join('&#39;');
 };
 
 // Troca cada {{ chave }} (com ou sem filtro "| ...") pelo valor. `marcar`: na prévia,
@@ -104,3 +105,16 @@ const NOMES = {
   'agent.name': 'ATENDENTE',
 };
 export const chaveDoNomeDoCampo = chave => NOMES[String(chave).toLowerCase()];
+
+// Prévia do modelo numa moldura (iframe sandbox, sem script): links sem clique, e sem o que
+// navega a moldura sozinho (meta refresh, base) — o servidor tira os mesmos no envio.
+export const htmlDePrevia = html => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc
+    .querySelectorAll('script, base, meta[http-equiv]')
+    .forEach(no => no.remove());
+  const estilo = doc.createElement('style');
+  estilo.textContent = 'a{pointer-events:none}body{margin:0}';
+  doc.head.append(estilo);
+  return `<!doctype html>${doc.documentElement.outerHTML}`;
+};

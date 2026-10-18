@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { SINAIS } from './modeloPronto';
+import { htmlDePrevia } from 'dashboard/components-next/conversa-canal/email/modeloDeEmail';
 
 // #1459 — um e-mail como cartão: de quem, assunto e corpo. Serve à prévia e à
 // confirmação. O editor entrega o corpo com marcação de formatação; aqui ele
@@ -14,6 +15,8 @@ const props = defineProps({
   corpo: { type: String, default: '' },
   // O que mostrar, apagado, enquanto o corpo está vazio.
   fantasma: { type: String, default: '' },
+  // #1809: o modelo de e-mail, como o cliente vai ver (sem script, links sem clique).
+  modeloHtml: { type: String, default: '' },
 });
 
 const P = 'NOVA_CONVERSA.PREVIA';
@@ -23,6 +26,16 @@ const texto = computed(() => getPlainText(props.corpo).trim());
 const enderecoEntreParenteses = computed(
   () => `${SINAIS.abreParenteses}${props.endereco}${SINAIS.fechaParenteses}`
 );
+
+const ALTURA_MAXIMA = 520;
+const moldura = useTemplateRef('moldura');
+const altura = ref(320);
+const modeloSemClique = computed(() => htmlDePrevia(props.modeloHtml));
+const medir = () => {
+  const total =
+    moldura.value?.contentDocument?.documentElement?.scrollHeight || 0;
+  if (total) altura.value = Math.min(ALTURA_MAXIMA, total);
+};
 </script>
 
 <template>
@@ -60,7 +73,18 @@ const enderecoEntreParenteses = computed(
       class="mb-0 min-h-24 whitespace-pre-wrap break-words p-4 text-sm leading-relaxed"
       :class="texto ? 'text-n-slate-12' : 'text-n-slate-10'"
     >
-      {{ texto || fantasma }}
+      {{ texto || (modeloHtml ? '' : fantasma) }}
     </p>
+    <iframe
+      v-if="modeloHtml"
+      ref="moldura"
+      :srcdoc="modeloSemClique"
+      sandbox="allow-same-origin"
+      class="block w-full rounded-b-2xl border-0 border-t border-solid border-n-weak bg-white"
+      :style="{ height: `${altura}px` }"
+      :title="$t('CONVERSA_CANAL.EMAIL.PREVIA_DO_MODELO')"
+      data-previa-do-modelo-na-gaveta
+      @load="medir"
+    />
   </article>
 </template>

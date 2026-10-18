@@ -1,5 +1,13 @@
 <script setup>
-import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onUnmounted,
+  provide,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
@@ -24,6 +32,7 @@ import { useNovaConversa } from './useNovaConversa';
 import { useContinuarConversa } from './useContinuarConversa';
 import { useFocoPreso } from './useFocoPreso';
 import { useCriarMensagemPronta } from './useCriarMensagemPronta';
+import { EMAIL_DA_GAVETA } from './useModeloDoEmailNaGaveta';
 import {
   TELAS,
   TIPOS,
@@ -112,7 +121,22 @@ const {
   limpar,
   enviar,
   enviarPronta,
+  modeloDoEmail,
 } = useNovaConversa({ contato, canal, continuar });
+
+// #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
+provide(EMAIL_DA_GAVETA, {
+  para: computed(() =>
+    contato.value
+      ? { nome: contato.value.name || '', email: contato.value.email || '' }
+      : null
+  ),
+  modelo: computed(() => form.modeloDoEmail),
+  valores: computed(() => form.valoresDoModelo),
+  escolher: modeloDoEmail.escolher,
+  campo: modeloDoEmail.campo,
+  tirar: modeloDoEmail.tirar,
+});
 const continuando = computed(() => Boolean(conversaDaMensagem.value));
 // Entra numa conversa que já existe: a que vai continuar, ou a oculta da
 // caixa com "Reabrir a mesma conversa", onde a criação cai sozinha.
@@ -264,11 +288,15 @@ watch(carregandoCanais, carregando => {
 // de e-mail) trata o próprio Esc; a gaveta não fecha por baixo dele.
 const SOBREPOSTOS =
   '[data-popover-content], dialog.ProseMirror-prompt-backdrop';
+// Um <dialog> aberto por cima (a janela "Modelo de e-mail", #1809) trata o Esc; vale
+// mesmo com o foco fora dele.
+const comJanelaPorCima = () => Boolean(document.querySelector('dialog[open]'));
 
 useKeyboardEvents({
   Escape: {
     action: evento => {
       if (!aberta.value || evento.target?.closest?.(SOBREPOSTOS)) return;
+      if (comJanelaPorCima()) return;
       fechar();
     },
     allowOnFocusedInput: true,
@@ -421,6 +449,9 @@ useFixedPanelPresence(aberta);
                 :nome="nome"
                 :email="tipo === TIPOS.EMAIL"
                 :texto="previa"
+                :modelo-html="
+                  tipo === TIPOS.EMAIL ? modeloDoEmail.htmlDaPrevia.value : ''
+                "
                 :assunto="continuando ? '' : form.assunto"
                 :remetente="canal?.name || ''"
                 :endereco-do-remetente="linhaDoCanal(canal)"

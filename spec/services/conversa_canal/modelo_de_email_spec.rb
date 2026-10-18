@@ -105,6 +105,17 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
       expect(html.index('Modelo para Marina')).to be < html.index('Pedido original')
     end
 
+    it 'link com o esquema quebrado por tab ou quebra de linha também sai' do
+      atributos = { email_modelo: { template_id: modelo.id, so_modelo: false,
+                                    html: '<body><p>Modelo para Marina</p><a href="java&#x09;script:alert(1)">a</a>' \
+                                          '<a href=" JAVA&#x0A;SCRIPT:alert(2)">b</a><a href="https://loja.com">c</a></body>' } }
+      html = Messages::MessageBuilder.new(user, conversation, { content: 'Oi', content_attributes: atributos })
+                                     .perform.content_attributes.dig('email', 'html_content', 'reply')
+
+      expect(html).not_to include('alert(1)', 'alert(2)')
+      expect(html).to include('https://loja.com')
+    end
+
     it 'modelo de outra conta é ignorado: sai só o texto' do
       outro = EmailCampaignTemplate.create!(account: create(:account), name: 'Alheio', body_html: '<p>x</p>')
       html = responder('Oi, só texto', modelo_id: outro.id).content_attributes.dig('email', 'html_content', 'reply')

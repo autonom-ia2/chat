@@ -8,6 +8,7 @@ class ConversaCanal::ModeloNaResposta
   LIMITE = EmailCampaignTemplate::BODY_MAX
   PROIBIDAS = %w[script iframe object embed form input button base meta[http-equiv]].freeze
   RASTREIO = '/email_campaigns/t/'.freeze
+  ESQUEMAS_PROIBIDOS = %w[javascript: vbscript:].freeze
   ESTILO_DO_TEXTO = 'font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1f1f1f;' \
                     'max-width:600px;margin:0 auto;padding:16px 12px'.freeze
 
@@ -67,8 +68,9 @@ class ConversaCanal::ModeloNaResposta
     doc.css('a[href]').each { |no| no.remove if endereco_proibido?(no['href']) }
   end
 
+  # O navegador ignora espaço, tab e quebra de linha dentro do esquema ("java\tscript:"): saem antes de olhar.
   def endereco_proibido?(endereco)
-    endereco = endereco.to_s.strip.downcase
-    endereco.include?(RASTREIO) || endereco.start_with?('javascript:')
+    endereco = endereco.to_s.each_char.reject { |letra| letra.ord <= 32 }.join.downcase
+    endereco.include?(RASTREIO) || ESQUEMAS_PROIBIDOS.any? { |esquema| endereco.start_with?(esquema) }
   end
 end

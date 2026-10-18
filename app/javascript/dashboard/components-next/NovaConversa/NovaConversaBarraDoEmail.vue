@@ -3,14 +3,16 @@
 // e-mail nova (ReplyBottomPanel), com os mesmos componentes, o mesmo desenho e a
 // mesma ordem. "+" (Documento, Fotos e vídeos) anexa; o emoji abre a janela de
 // emojis em cima da barra; o microfone dita e o texto entra no editor; a assinatura
-// liga e desliga para a caixa (a mesma chave da resposta). Fora da conversa não há
-// "Modelo de e-mail" no "+": ele preenche os campos pela conversa.
+// liga e desliga para a caixa (a mesma chave da resposta). O "Aa" mostra a régua de
+// formatação, como na resposta. Com `comModelos`, o "+" oferece "Modelo de e-mail" e o
+// escolhido sai pelo evento `modelo` (a gaveta preenche pelo contato escolhido).
 import { ref, useTemplateRef } from 'vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
 import JanelaDeEmojis from 'dashboard/components-next/conversa-canal/email/JanelaDeEmojis.vue';
 import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
+import BotaoDaRegua from 'dashboard/components-next/conversa-canal/email/BotaoDaRegua.vue';
 import { BOTOES_DA_BARRA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
 import { anexarArquivos } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 import { useAnexarNaNovaConversa } from './useAnexarNaNovaConversa';
@@ -18,10 +20,12 @@ import { useAnexarNaNovaConversa } from './useAnexarNaNovaConversa';
 const props = defineProps({
   canal: { type: Object, required: true },
   comAssinatura: { type: Boolean, default: false },
+  comModelos: { type: Boolean, default: false },
 });
-const emit = defineEmits(['inserir']);
+const emit = defineEmits(['inserir', 'modelo']);
 
 const anexos = defineModel('anexos', { type: Array, default: () => [] });
+const formatacao = defineModel('formatacao', { type: Boolean, default: false });
 
 const { onFileUpload } = useAnexarNaNovaConversa(anexos);
 const { setSignatureFlagForInbox } = useUISettings();
@@ -37,7 +41,7 @@ const alternarAssinatura = () =>
 <template>
   <!-- Toque de 44 px na gaveta (a resposta usa 40). -->
   <div
-    class="flex items-center border-t border-n-weak px-3 py-2 [&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!size-11"
+    class="flex items-center px-3 py-2 [&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!size-11"
     :class="BOTOES_DA_BARRA"
     data-barra-do-email
   >
@@ -47,9 +51,21 @@ const alternarAssinatura = () =>
       :aria-label="$t('NOVA_CONVERSA.MENSAGEM.FERRAMENTAS')"
       class="left-wrap flex flex-wrap items-center"
     >
+      <BotaoDaRegua
+        :ligada="formatacao"
+        raiz="[data-caixa-do-email]"
+        @alternar="formatacao = !formatacao"
+      />
+      <span
+        class="w-px h-6 mx-1.5 bg-n-weak flex-shrink-0"
+        aria-hidden="true"
+        data-separador-da-barra
+      />
       <MaisDoEmail
-        :com-modelos="false"
+        :com-modelos="comModelos"
+        local
         @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
+        @modelo="id => emit('modelo', id)"
       />
       <NextButton
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"

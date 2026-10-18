@@ -946,7 +946,9 @@
   "conversa_canal/modelos_de_email/:id": {
     "controller": "api/v1/accounts/conversa_canal/modelos_de_email#show",
     "parametros": [
-      "conversation_id"
+      "contact_id",
+      "conversation_id",
+      "inbox_id"
     ]
   },
   "conversa_canal/modelos_de_email/:id/previa": {
