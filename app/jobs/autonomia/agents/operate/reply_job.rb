@@ -45,6 +45,7 @@ module Autonomia
           agent_inbox = eligible_agent_inbox(conversation)
           return if agent_inbox.blank?
 
+          return passagem(conversation, agent_inbox, message_id, posse) if phase == ::Autonomia::Agents::Operate::AoReceberPassagem::FASE
           return trigger(conversation, agent_inbox, message_id) unless phase == 'settle'
 
           settle(conversation, agent_inbox, message_id, posse)
@@ -84,6 +85,18 @@ module Autonomia
             reply_to_message_id: message_id,
             posse: ::Autonomia::Agents::Operate::PosseDoTurno.valor(job_id: job_id, posse: posse, agent_inbox: agent_inbox)
           ).perform
+        end
+
+        # Fase 'passagem' (#1630): o turno sem mensagem nova do cliente, ancorado na passagem (`passagem_id`). Só se a
+        # passagem ainda é a aberta e quem responde ainda é o vínculo que a recebeu (`posse`); senão, nada.
+        def passagem(conversation, agent_inbox, passagem_id, posse)
+          return unless ::Autonomia::Agents::Operate::AoReceberPassagem.ligada?(conversation.account)
+
+          passagem = ::Crm::Passagens.ultima_aberta(conversation)
+          return unless passagem&.id == passagem_id.to_i && agent_inbox.id == posse.to_i
+
+          ::Autonomia::Agents::Operate::ResponderAPassagem.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                               passagem: passagem).perform
         end
 
         def esperar_o_assunto?(conversation, agent_inbox, message_id)

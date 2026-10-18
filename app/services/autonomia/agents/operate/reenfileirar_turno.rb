@@ -12,22 +12,34 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
   ORIGENS = %i[responder evento_troca].freeze
 
   # O assinante do evento de troca (config/initializers/autonomia_turno.rb). A Fase 2 vem antes de qualquer leitura: conta
-  # fora dela não consulta nem a última mensagem.
+  # fora dela não consulta nem a última mensagem. #1630: passagem de uma pessoa sem turno em andamento refeito abre o
+  # turno da passagem (AoReceberPassagem, com gate próprio); fora do gate, tudo como antes.
   def self.ao_trocar_dono(payload)
     conversation = payload.to_h[:conversation]
     return if conversation.blank?
     return false unless fase2?(conversation.account)
 
-    ultima = ultima_mensagem_publica(conversation)
-    return unless ultima&.incoming?
+    refez = refazer_em_andamento(conversation)
+    return refez if refez || !passagem_de_pessoa?(conversation, payload)
 
-    call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
+    ::Autonomia::Agents::Operate::AoReceberPassagem.abrir(conversation)
   # Roda depois do commit de quem trocou o dono (o Sync do CRM, o PassarParaIa), dentro do instrument dele: propagar não
   # desfaz a troca já gravada, só derrubaria quem chamou e os outros assinantes do evento. Fica no log e no rastreador.
   rescue StandardError => e
     Rails.logger.warn("[autonomia][turno] reenfileirar_falhou conv=#{conversation&.id} #{e.class}")
     ChatwootExceptionTracker.new(e, account: conversation&.account).capture_exception
     nil
+  end
+
+  def self.refazer_em_andamento(conversation)
+    ultima = ultima_mensagem_publica(conversation)
+    return unless ultima&.incoming?
+
+    call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
+  end
+
+  def self.passagem_de_pessoa?(conversation, payload)
+    payload.to_h[:por] == :pessoa && ::Autonomia::Agents::Operate::AoReceberPassagem.ligada?(conversation.account)
   end
 
   def self.fase2?(account)

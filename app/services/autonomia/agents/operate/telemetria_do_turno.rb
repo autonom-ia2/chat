@@ -3,7 +3,7 @@
 # modelo — por isso o evento precisa estar em EVENTOS e cada valor tem de ser número, símbolo ou rótulo curto sem espaço.
 module Autonomia::Agents::Operate::TelemetriaDoTurno
   EVENTOS = %w[assunto_esperou assunto_atrasou turno_reenfileirado reenfileiramento_barrado turno_em_curso claim_barrado
-               devolucao passagem passagem_recusada].freeze
+               devolucao passagem passagem_recusada turno_da_passagem sinal_na_passagem].freeze
 
   module_function
 
