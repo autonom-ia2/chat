@@ -42,13 +42,10 @@ module Waha::RichNative::MessageActions
     nil
   end
 
-  # Mensagem da conversa que foi ao cliente: nem nota, nem atividade, nem apagada, nem falhada (gravar numa falhada
-  # mandaria o `external_error` de volta ao conector, que o lê como pedido de reenvio), nem o aviso de visualização única
-  # (não é mensagem do cliente no WhatsApp: não há onde a reação cair).
+  # A regra única do Whatsapp::MensagemReagivel (a mesma da reação pela pele): nem nota, atividade, modelo, apagada
+  # (pelo painel ou pelo cliente), falhada, nem o aviso de visualização única.
   def reactable?(message)
-    (message.incoming? || message.outgoing?) && !message.private? && !message.failed? &&
-      !message.content_attributes.to_h['deleted'] && message.content_attributes.to_h['external_error'].blank? &&
-      !Waha::RichNative::Inbound::ViewOnceUnavailable.notice?(message)
+    Whatsapp::MensagemReagivel.reagivel?(message)
   end
 
   # Só texto nosso, sem anexo nem formato, que não falhou, dentro da janela do WhatsApp.

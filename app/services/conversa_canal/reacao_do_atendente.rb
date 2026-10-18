@@ -57,13 +57,9 @@ class ConversaCanal::ReacaoDoAtendente
     Whatsapp::EmojiDeReacao.valido?(@emoji)
   end
 
+  # A regra única do Whatsapp::MensagemReagivel (a mesma do painel na caixa WAHA).
   def reagivel?
-    return false if @message.private? || @message.activity? || @message.template?
-
-    atributos = @message.content_attributes.to_h
-    return false if atributos['deleted'] || atributos['deleted_by_contact_at']
-
-    @message.incoming? || @message.outgoing?
+    Whatsapp::MensagemReagivel.reagivel?(@message)
   end
 
   def remetente

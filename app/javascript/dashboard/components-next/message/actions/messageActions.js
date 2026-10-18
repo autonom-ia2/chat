@@ -20,7 +20,12 @@ const actionsOf = conversation =>
     ? conversation.whatsapp_api_message_actions
     : [];
 
-const isDeleted = message => Boolean(message.contentAttributes?.deleted);
+// Apagada pelo painel ou pelo cliente (Whatsapp::MensagemReagivel, a regra do servidor).
+const isDeleted = message =>
+  Boolean(
+    message.contentAttributes?.deleted ||
+      message.contentAttributes?.deletedByContactAt
+  );
 
 // Mensagem que falhou (gravar nela mandaria o erro de volta ao conector, que reenviaria).
 const isFailed = message =>

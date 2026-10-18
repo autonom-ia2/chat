@@ -69,6 +69,13 @@ describe ConversaCanal::ReacaoDoAtendente do
       expect(a_request(:post, 'https://graph.facebook.com/v24.0/123/messages')).not_to have_been_made
     end
 
+    it 'recusa mensagem de modelo, sem pedir à Meta' do
+      modelo = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :template, source_id: 'wamid.T')
+
+      expect { reagir(modelo, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect(a_request(:post, 'https://graph.facebook.com/v24.0/123/messages')).not_to have_been_made
+    end
+
     it 'recusa nota privada' do
       nota = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :outgoing, private: true,
                               source_id: 'wamid.C')
@@ -207,10 +214,13 @@ describe ConversaCanal::ReacaoDoAtendente do
       expect(Waha::Client).to have_received(:new).with(config: have_attributes(api_url: engine))
     end
 
-    it 'pelo conector, recusa mensagem de modelo e letra no lugar do emoji, sem pedir o envio' do
+    it 'pelo conector, recusa modelo, apagada pelo cliente e letra no lugar do emoji, sem pedir o envio' do
       modelo = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :template, content: 'm')
+      apagada = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :incoming, content: 'x',
+                                 content_attributes: { 'deleted_by_contact_at' => Time.current.iso8601 })
 
       expect { reagir(modelo, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect { reagir(apagada, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
       expect { reagir(recebida, '1') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.emoji_invalido'))
       expect(Waha::RichNative::MessageActionDeliveryJob).not_to have_received(:request!)
     end

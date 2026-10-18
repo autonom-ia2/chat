@@ -493,8 +493,10 @@
 # é ligada à pergunta. Bit 32 (4294967296), logo depois de `conversa_cara_do_canal` (bit 31, já na main): a posição
 # na lista é o bit, no fim do que está na main (a coluna `feature_flags_ext_1` é bigint, o 32 cabe); outros PRs
 # abertos (#1726) também querem o fim, então o bit sobe conforme a ordem de merge.
-# Desligada (padrão): o envio é o de antes (tudo como texto, motor padrão, reação e edição pelo painel só com ela) e o
-# webhook da caixa WAHA recebe todo `message_updated` (com a pele ligada, a pele silencia as marcas dela). O que vale
+# Desligada (padrão): o envio é o de antes (tudo como texto, motor padrão; o "Reagir" e o "Editar" do #1709 só com ela).
+# A reação pela pele (`conversa_cara_do_canal`) existe sem ela, pelo PUT /api/reaction do motor padrão. Com as duas
+# desligadas, o webhook da caixa WAHA recebe todo `message_updated`; com a pele ligada e esta desligada, o
+# Waha::RichNative::SilentUpdate silencia as marcas da pele (reação, lida, prévia, áudio ouvido...). O que vale
 # mesmo sem ela: as chaves do contrato com o conector não são aceitas pela API pública (ContractGuard e
 # ForgeryGuard); do conector, o voto de enquete nativa, a resposta a evento nativo e o aviso de visualização única
 # viram atividade escondida, e o cabeçalho de álbum guarda `waha_album`; a conversa ganha `whatsapp_api_group` e a

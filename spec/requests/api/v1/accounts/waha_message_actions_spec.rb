@@ -98,6 +98,22 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events).to be_empty
     end
 
+    # A mesma regra de "reagível" da pele (Whatsapp::MensagemReagivel): nem modelo nem apagada pelo cliente.
+    it 'refuses a template and a message deleted by the customer (422, nothing stored)' do
+      template = ours('modelo', message_type: :template)
+      deleted = create(:message, message_type: :incoming, content: 'oi', conversation: conversation, inbox: channel.inbox,
+                                 account: account)
+      deleted.update_column(:content_attributes, { 'deleted_by_contact_at' => Time.current.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+      events.clear
+
+      [template, deleted].each do |message|
+        react(message, '👍')
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(message.reload.content_attributes).not_to have_key('reactions')
+      end
+      expect(events).to be_empty
+    end
+
     # A mesma regra da reação pela pele (Whatsapp::EmojiDeReacao): letra, número e sinal do teclado não são emoji.
     it 'refuses ASCII in place of the emoji (422, nothing stored)' do
       message = ours

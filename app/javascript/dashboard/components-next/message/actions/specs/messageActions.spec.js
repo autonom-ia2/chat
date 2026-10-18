@@ -42,6 +42,23 @@ describe('quando o painel oferece reagir e editar', () => {
     expect(canReact(undefined, nossa())).toBe(false);
   });
 
+  // A regra do servidor (Whatsapp::MensagemReagivel): nem modelo nem apagada pelo cliente.
+  it('não reage a modelo nem a mensagem apagada pelo cliente', () => {
+    const acoes = conversa(['react']);
+    expect(
+      canReact(acoes, nossa({ messageType: MESSAGE_TYPES.TEMPLATE }))
+    ).toBe(false);
+    expect(
+      canReact(
+        acoes,
+        nossa({
+          messageType: MESSAGE_TYPES.INCOMING,
+          contentAttributes: { deletedByContactAt: '2026-10-18T10:00:00Z' },
+        })
+      )
+    ).toBe(false);
+  });
+
   it('não reage a nota, atividade, mensagem apagada nem falhada', () => {
     const acoes = conversa(['react']);
     expect(canReact(acoes, nossa({ private: true }))).toBe(false);

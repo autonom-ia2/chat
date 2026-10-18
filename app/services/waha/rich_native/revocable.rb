@@ -6,9 +6,9 @@
 # - caixa híbrida com a flag: mensagem nossa, não nota, com id físico do motor, a mesma regra do
 #   WhatsappHybrid::RichNative::RevokeOnDelete (é ele que pede o apagar ao motor);
 # - mensagem que falhou (nunca chegou ao cliente) e fora disso, false: apagar some só do painel.
-# Custo (roda em todo evento e em toda mensagem da lista): primeiro os campos da própria mensagem, depois a flag da
-# conta; inbox e conta vêm pela conversa, que a lista de mensagens já tem carregada (a mensagem aponta a mesma
-# conversa), então a lista não busca uma caixa nem uma conta por mensagem (spec conta as consultas).
+# Custo (roda em todo evento e em toda mensagem da lista): primeiro os campos da própria mensagem, depois a flag (pela
+# conta da requisição, sem carregar a conversa); só então a caixa, pela conversa, que a lista de mensagens já tem
+# carregada (a mensagem aponta a mesma conversa): a lista não busca uma caixa nem uma conta por mensagem (spec conta).
 module Waha::RichNative::Revocable
   KEY = :c2y_revocable
 
@@ -18,14 +18,20 @@ module Waha::RichNative::Revocable
     # A que falhou nunca chegou ao cliente: apagar some só do painel.
     return false unless message.outgoing? && !message.private? && !message.failed?
 
-    conversation = message.conversation
-    return false unless Waha::RichNative.enabled?(conversation.account)
+    account = account_of(message)
+    return false unless Waha::RichNative.enabled?(account)
 
-    waha_inbox?(conversation.inbox) || hybrid_revocable?(message, conversation.inbox, conversation.account)
+    conversation = message.conversation
+    waha_inbox?(conversation.inbox) || hybrid_revocable?(message, conversation.inbox, account)
   rescue StandardError => e
     # Sinal de tela: um erro aqui não pode derrubar a lista de mensagens; fica o rótulo de sempre.
     Rails.logger.error("[waha] rich native revocable message=#{message.id} #{e.class}")
     false
+  end
+
+  # A flag antes da conversa: a conta da requisição (Current.account, a mesma da mensagem na lista) ou a da mensagem.
+  def account_of(message)
+    Current.account&.id == message.account_id ? Current.account : message.account
   end
 
   def waha_inbox?(inbox)
