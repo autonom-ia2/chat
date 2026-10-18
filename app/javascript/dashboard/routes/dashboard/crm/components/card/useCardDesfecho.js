@@ -4,6 +4,7 @@ import {
   cardStatusLabel,
   countsAsSale,
 } from '../../helpers/cardOutcome';
+import { usaNomeDoDesfecho } from '../funil/funil';
 
 // #1423 — o desfecho do card (ST-01 a ST-07): o selo de status e os rótulos de
 // Ganhou/Perdeu, com o nome próprio do desfecho quando o funil tem um (#1144)
@@ -24,6 +25,11 @@ export const useCardDesfecho = ({ t, card, funil }) => {
       ? t('CRM_CARD.DESFECHO.PERDEU')
       : cardStatusLabel(t, venda.value ? 'lost' : 'cancelled', funil.value)
   );
+  // #1802 — o diálogo de "não deu certo" usa o nome próprio só no funil de
+  // modelo da corretora; os outros ficam com o texto de sempre.
+  const perdaPadrao = computed(
+    () => !(usaNomeDoDesfecho(funil.value) && rotulosProprios.value.failure)
+  );
   const desfecho = computed(() => ({
     aberto: status.value === 'open',
     status: cardStatusLabel(t, status.value, funil.value),
@@ -35,6 +41,7 @@ export const useCardDesfecho = ({ t, card, funil }) => {
     rotulosProprios,
     rotuloGanhar,
     rotuloPerder,
+    perdaPadrao,
     desfecho,
   };
 };

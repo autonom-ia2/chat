@@ -29,7 +29,10 @@ export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
   const modeloAtual = computed(
     () => MODELOS.find(item => item.chave === modelo.value) || null
   );
-  const modelosDisponiveis = computed(() => modelosDoTipo(tipo.value));
+  // #1802 — a corretora vê também os modelos da camada dela.
+  const modelosDisponiveis = computed(() =>
+    modelosDoTipo(tipo.value, unref(pacote))
+  );
   const nomesDeModelo = computed(() =>
     MODELOS.map(item => t(`${FUNIL}.MODELOS.${item.chave}.NOME`))
   );
@@ -90,10 +93,12 @@ export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
     }
   };
 
-  // Nome do desfecho de sucesso que o modelo traz (Cobrança: "Pago"). Só
-  // troca o que a pessoa não escreveu.
+  // Nome dos desfechos que o modelo traz (Cobrança: "Pago"; Renovação:
+  // "Renovou" e "Não renovou"). Só troca o que a pessoa não escreveu.
   const sucessoDo = item =>
     item?.sucesso ? t(`${FUNIL}.MODELOS.${item.chave}.SUCESSO`) : '';
+  const falhaDo = item =>
+    item?.falha ? t(`${FUNIL}.MODELOS.${item.chave}.FALHA`) : '';
 
   // O modelo também traz pronto o "Quando usar este funil" (a primeira ideia).
   const quandoUsarDo = item =>
@@ -118,6 +123,7 @@ export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
   const trocarModelo = item => {
     const quandoUsarAntigo = quandoUsarDo(modeloAtual.value);
     const sucessoAntigo = sucessoDo(modeloAtual.value);
+    const falhaAntiga = falhaDo(modeloAtual.value);
     tipo.value = item.tipo;
     modelo.value = item.chave;
     modeloPendente.value = '';
@@ -127,8 +133,16 @@ export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
     if (!form.whenToUse.trim() || form.whenToUse === quandoUsarAntigo)
       form.whenToUse = quandoUsarDo(item);
     form.countsAsSale = item.venda;
-    if (form.outcomeLabels.success.trim() === sucessoAntigo)
-      form.outcomeLabels = { ...form.outcomeLabels, success: sucessoDo(item) };
+    const { success, failure } = form.outcomeLabels;
+    form.outcomeLabels = {
+      success: success.trim() === sucessoAntigo ? sucessoDo(item) : success,
+      // Só modelo com nome de falha (Renovação) mexe nela; nos outros o
+      // "Quando não dá certo" fica como a pessoa deixou, como sempre.
+      failure:
+        (falhaAntiga || item.falha) && failure.trim() === falhaAntiga
+          ? falhaDo(item)
+          : failure,
+    };
     form.stages = copiarEtapas(stagesDoModelo(item));
     loadDefaultCriteria();
   };
@@ -148,7 +162,7 @@ export const useFunilModelo = ({ t, ia, form, editorSession, pacote }) => {
   // Escolher o tipo já começa pelo primeiro modelo dele.
   const escolherTipo = chave => {
     if (chave === tipo.value) return;
-    const [primeiro] = modelosDoTipo(chave);
+    const [primeiro] = modelosDoTipo(chave, unref(pacote));
     if (primeiro) escolherModelo(primeiro.chave);
   };
   const confirmarModelo = () => {
