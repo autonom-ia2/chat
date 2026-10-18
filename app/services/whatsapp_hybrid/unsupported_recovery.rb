@@ -199,9 +199,11 @@ class WhatsappHybrid::UnsupportedRecovery
       next false unless attrs[STATE_KEY] == PENDING && attrs[WEB_ID_KEY] == web_id
 
       content, new_attrs = yield(attrs)
-      changes = { content_attributes: new_attrs }
-      changes[:content] = content if content
-      @message.update!(changes)
+      @message.content_attributes = new_attrs
+      @message.content = content if content
+      # Sem validação: a da enxurrada (prevent_message_flooding) conta as mensagens da conversa e, numa rajada, barraria
+      # a gravação de uma mensagem que já existe. Os callbacks de save e o message_updated da tela continuam.
+      @message.save!(validate: false)
       true
     end
   end

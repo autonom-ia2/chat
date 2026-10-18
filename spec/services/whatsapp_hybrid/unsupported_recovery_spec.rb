@@ -49,6 +49,19 @@ describe WhatsappHybrid::UnsupportedRecovery do
       expect(attributes).to include('hybrid_recovery' => 'recovered', 'hybrid_recovery_header' => 'image')
     end
 
+    it 'grava mesmo com o limite de enxurrada da conversa estourado (rajada de mensagens)' do
+      message
+      stub_engine
+
+      with_modified_env('CONVERSATION_MESSAGE_PER_MINUTE_LIMIT' => '1') do
+        expect(message.valid?).to be(false)
+        expect(attempt!).to eq(:done)
+      end
+
+      expect(message.reload.content).to eq("#{template_body}\n\n1. Já paguei")
+      expect(attributes['hybrid_recovery']).to eq('recovered')
+    end
+
     it 'sem arquivo no cabeçalho, não grava a marca' do
       stub_engine
 

@@ -73,6 +73,13 @@ describe WhatsappHybrid::UnsupportedMessageExtension do
       expect(received.content_attributes.keys & %w[hybrid_recovery whatsapp_web_id unsupported_type]).to be_empty
     end
 
+    it 'unsupported null explícito é como ausente (131060): nasce pendente' do
+      received = deliver(incoming.merge(unsupported: nil, errors: [{ code: 131_060, title: 'unavailable' }]))
+
+      expect(received.content_attributes).to include('hybrid_recovery' => 'pending', 'unsupported_error_code' => 131_060)
+      expect(received.content_attributes).not_to have_key('unsupported_type')
+    end
+
     it 'a nossa IA não é chamada pelo message_created do aviso' do
       allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
       event = Events::Base.new('message.created', Time.zone.now, message: deliver)

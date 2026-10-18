@@ -49,10 +49,10 @@ module WhatsappHybrid::UnsupportedMessageExtension
     details.merge(WhatsappHybrid::UnsupportedRecovery.initial_attributes(inbox, message[:id], type))
   end
 
-  # Sem tipo só quando a Meta não manda `unsupported` (o erro 131060). Com `unsupported` fora do formato não dá para
-  # saber se é mensagem nova ou edição, reação, voto: não recupera (fica o aviso).
+  # Sem tipo só quando a Meta não manda `unsupported` (ausente ou null: o erro 131060). Com `unsupported` fora do formato
+  # não dá para saber se é mensagem nova ou edição, reação, voto: não recupera (fica o aviso).
   def unreadable_unsupported?(message)
-    message.key?(:unsupported) && !message[:unsupported].is_a?(Hash)
+    !message[:unsupported].nil? && !message[:unsupported].is_a?(Hash)
   end
 
   def hash_value(value, key)
