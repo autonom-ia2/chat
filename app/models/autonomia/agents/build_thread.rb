@@ -116,13 +116,43 @@ module Autonomia
                        .where.not(id: id).order(id: :desc).first
         return if previous.blank?
 
-        previous_state = previous.state.to_h
-        return unless previous_state['needs_more_info'] == true
-
-        question = previous_state['next_question'].to_s.strip
+        anterior = previous.state.to_h
+        question = pending_question_of(anterior)
         return if question.blank?
 
-        update!(state: state.to_h.merge('pending_question' => question))
+        # #1428: no piloto, a contagem de turnos da pendência segue para a sessão nova.
+        turnos = anterior.slice('pendencia_turnos').compact
+        update!(state: state.to_h.merge('pending_question' => question).merge(turnos))
+      end
+
+      # A pergunta que ficou aberta numa thread anterior. #1428: no ajuste do piloto o Builder grava a pendência de
+      # verdade em `pergunta_pendente` (a resposta a uma pergunta do dono e os avisos fixos nunca são pendência); com a
+      # chave desligada, vale o caminho de antes, sem a resposta a uma pergunta do dono.
+      def pending_question_of(previous_state)
+        if previous_state.key?('pergunta_pendente') && ::Autonomia::Agents::Fase2.ligada?(account)
+          # No teto, a pendência fica só como contexto da sessão em que estava: não segue para a nova.
+          return previous_state['pendencia_no_teto'] == true ? '' : previous_state['pergunta_pendente'].to_s.strip
+        end
+        return '' unless previous_state['needs_more_info'] == true
+        return '' if previous_state['so_pergunta'] == true
+
+        previous_state['next_question'].to_s.strip
+      end
+      private :pending_question_of
+
+      # #1428 — tira chaves do `state` (guardado pelo token, sem mudar o status). No-op quando nenhuma existe: fora do
+      # piloto nada muda.
+      def esquecer_do_estado!(token, chaves)
+        atual = state || {}
+        return false unless chaves.any? { |chave| atual.key?(chave) }
+
+        guarded_update(token, state: atual.except(*chaves))
+      end
+
+      # #1428 — grava chaves no `state` sem mudar o status, guardado pelo token. Toca o updated_at: o turno longo do
+      # ajuste (conferência e correção) não passa por preso.
+      def guardar_no_estado!(token, chaves)
+        guarded_update(token, state: (state || {}).merge(chaves))
       end
 
       # E3 — janela de "geração presa": o SubmitJob é síncrono e leva segundos; se a thread ficou
@@ -179,7 +209,9 @@ module Autonomia
       # troca o genérico "envie outra mensagem" por uma orientação real. `fields` são nomes de coluna,
       # nunca conteúdo.
       def mark_failed!(token, message, fields: [])
-        new_state = (self.state || {}).merge(
+        # #1428: o ajuste em curso (piloto) acaba com a falha; a chave só existe no piloto.
+        atual = self.state || {}
+        new_state = atual.merge(%w[ajuste_em_curso nao_pedido_anterior].select { |chave| atual.key?(chave) }.index_with(nil)).merge(
           'error' => message.to_s.truncate(500),
           'error_fields' => Array(fields).map(&:to_s).uniq,
           'applied' => false
