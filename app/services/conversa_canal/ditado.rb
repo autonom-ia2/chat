@@ -9,9 +9,19 @@ class ConversaCanal::Ditado
   # O transcritor lê `attachment.file.blob`, como num anexo de conversa. Aqui o "blob" é o arquivo da requisição.
   Anexo = Struct.new(:file, :id)
   Arquivo = Struct.new(:blob)
-  BlobDoAudio = Struct.new(:tempfile, :content_type, :key) do
+  # O whisper decide o formato pela extensão do arquivo. O navegador manda o tipo da gravação, e o Safari grava em
+  # `audio/mp4`, que levou 400 da OpenAI com a extensão .mp4 (testado no demo, 18/10); como m4a, passa. Cada tipo de
+  # gravação vira um tipo e uma extensão que o whisper aceita. O tipo vem sem os parâmetros (`;codecs=opus`).
+  FORMATOS = {
+    'audio/mp4' => %w[audio/x-m4a m4a], 'audio/x-m4a' => %w[audio/x-m4a m4a], 'audio/m4a' => %w[audio/x-m4a m4a],
+    'audio/aac' => %w[audio/x-m4a m4a], 'audio/webm' => %w[audio/webm webm], 'audio/ogg' => %w[audio/ogg ogg],
+    'audio/wav' => %w[audio/wav wav], 'audio/x-wav' => %w[audio/wav wav], 'audio/wave' => %w[audio/wav wav],
+    'audio/mpeg' => %w[audio/mpeg mp3], 'audio/flac' => %w[audio/flac flac]
+  }.freeze
+
+  BlobDoAudio = Struct.new(:tempfile, :content_type, :key, :extensao) do
     def filename
-      ActiveStorage::Filename.new('ditado')
+      ActiveStorage::Filename.new("ditado.#{extensao}")
     end
 
     def byte_size
@@ -51,12 +61,17 @@ class ConversaCanal::Ditado
   private
 
   def transcrever(credencial)
-    blob = BlobDoAudio.new(@audio.tempfile, @audio.content_type, "ditado-#{SecureRandom.hex(8)}")
+    tipo, extensao = formato
+    blob = BlobDoAudio.new(@audio.tempfile, tipo, "ditado-#{SecureRandom.hex(8)}", extensao)
     Crm::Ai::TranscriptionClient.new(credential: credencial).transcribe(Anexo.new(Arquivo.new(blob), nil)).to_s.strip
   end
 
+  def formato
+    FORMATOS[@audio.content_type.to_s.split(';').first.to_s.strip.downcase]
+  end
+
   def conferir_audio!
-    valido = @audio.respond_to?(:tempfile) && @audio.content_type.to_s.start_with?('audio/')
+    valido = @audio.respond_to?(:tempfile) && formato.present?
     raise Falha, I18n.t('conversa_canal.ditado.sem_audio') unless valido
     raise Falha, I18n.t('conversa_canal.ditado.grande') if @audio.size > Crm::Ai::Config::TRANSCRIPTION_BYTE_LIMIT
   end

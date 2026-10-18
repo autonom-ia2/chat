@@ -47,6 +47,34 @@ RSpec.describe 'Ditado da resposta de e-mail' do
       expect(ActiveStorage::Blob).not_to have_received(:create_and_upload!)
     end
 
+    it 'gravação do Safari (audio/mp4) vai ao whisper como m4a; webm e ogg seguem com a extensão deles' do
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: credencial))
+      enviados = []
+      cliente = instance_double(Crm::Ai::TranscriptionClient)
+      allow(cliente).to receive(:transcribe) do |anexo|
+        enviados << [anexo.file.blob.content_type, anexo.file.blob.filename.to_s]
+        'ok'
+      end
+      allow(Crm::Ai::TranscriptionClient).to receive(:new).and_return(cliente)
+      arquivo = Rails.root.join('spec/assets/sample.ogg')
+
+      ['audio/mp4', 'audio/webm;codecs=opus', 'audio/ogg; codecs=opus', 'audio/x-wav'].each do |tipo|
+        ditar(Rack::Test::UploadedFile.new(arquivo, tipo))
+      end
+
+      expect(enviados).to eq([%w[audio/x-m4a ditado.m4a], %w[audio/webm ditado.webm], %w[audio/ogg ditado.ogg], %w[audio/wav ditado.wav]])
+    end
+
+    it 'áudio num formato que o whisper não lê é recusado antes da chamada paga' do
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: credencial))
+      allow(Crm::Ai::TranscriptionClient).to receive(:new)
+
+      ditar(Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.ogg'), 'audio/3gpp'))
+
+      expect(response.parsed_body['error']).to eq(I18n.t('conversa_canal.ditado.sem_audio'))
+      expect(Crm::Ai::TranscriptionClient).not_to have_received(:new)
+    end
+
     it 'sem IA na conta, explica em português' do
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
       ditar
