@@ -1,6 +1,7 @@
 # Modelos de e-mail das Campanhas no "+" da resposta de e-mail (#1786). Atrás da chave `conversa_email_nova`.
 #   GET            → { payload: [{ id, nome, categoria, miniatura }] } (modelos salvos da conta)
 #   GET :id?conversation_id= → { id, nome, mjml, html, campos: [{ chave, valor, origem }] } (origem: contato | ia | vazio)
+#   GET :id/previa           → { id, mjml, html } (miniatura na janela de escolher; sem campos e sem IA)
 # Quem responde a conversa usa (ConversationPolicy#show?), sem precisar da permissão de Campanhas: "se o modelo está
 # salvo, ele pode usar" (Rodrigo, 18/10).
 class Api::V1::Accounts::ConversaCanal::ModelosDeEmailController < Api::V1::Accounts::ConversaCanal::BaseController
@@ -17,6 +18,11 @@ class Api::V1::Accounts::ConversaCanal::ModelosDeEmailController < Api::V1::Acco
     authorize conversa, :show?
     modelo = ConversaCanal::ModeloDeEmail.da_conta(Current.account).find(params[:id])
     render json: ConversaCanal::ModeloDeEmail.new(modelo: modelo, conversation: conversa, user: Current.user).como_json
+  end
+
+  def previa
+    modelo = ConversaCanal::ModeloDeEmail.da_conta(Current.account).find(params[:id])
+    render json: { id: modelo.id, mjml: modelo.body_mjml, html: modelo.body_html }
   end
 
   private

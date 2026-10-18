@@ -458,6 +458,21 @@
         "TELEFONE": "Telefone",
         "EMPRESA": "Empresa",
         "ATENDENTE": "Atendente"
+      },
+      "USAR_ESTE": "Usar este",
+      "CATEGORIAS": "Categorias",
+      "TODAS": "Todas",
+      "REGUA": {
+        "ESCREVER_COM_IA": "Escrever com IA",
+        "NEGRITO": "Negrito",
+        "ITALICO": "Itálico",
+        "CODIGO": "Código",
+        "LINK": "Link",
+        "LISTA": "Lista",
+        "LISTA_NUMERADA": "Lista numerada",
+        "IMAGEM_NO_TEXTO": "Imagem no texto",
+        "DESFAZER": "Desfazer",
+        "REFAZER": "Refazer"
       }
     }
   }

@@ -458,6 +458,21 @@
         "TELEFONE": "Phone",
         "EMPRESA": "Company",
         "ATENDENTE": "Agent"
+      },
+      "USAR_ESTE": "Use this one",
+      "CATEGORIAS": "Categories",
+      "TODAS": "All",
+      "REGUA": {
+        "ESCREVER_COM_IA": "Write with AI",
+        "NEGRITO": "Bold",
+        "ITALICO": "Italic",
+        "CODIGO": "Code",
+        "LINK": "Link",
+        "LISTA": "Bulleted list",
+        "LISTA_NUMERADA": "Numbered list",
+        "IMAGEM_NO_TEXTO": "Image in the text",
+        "DESFAZER": "Undo",
+        "REFAZER": "Redo"
       }
     }
   }

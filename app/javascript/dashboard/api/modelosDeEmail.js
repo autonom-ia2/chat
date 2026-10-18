@@ -11,6 +11,10 @@ class ModelosDeEmailAPI extends ApiClient {
     return axios.get(this.url);
   }
 
+  previa(id) {
+    return axios.get(`${this.url}/${id}/previa`);
+  }
+
   abrir(id, conversationId) {
     return axios.get(`${this.url}/${id}`, {
       params: { conversation_id: conversationId },

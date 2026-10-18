@@ -949,6 +949,10 @@
       "conversation_id"
     ]
   },
+  "conversa_canal/modelos_de_email/:id/previa": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#previa",
+    "parametros": []
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [

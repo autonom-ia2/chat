@@ -488,7 +488,9 @@ Rails.application.routes.draw do
             resources :ditados, only: [:create] do
               get :disponivel, on: :collection
             end
-            resources :modelos_de_email, only: [:index, :show]
+            resources :modelos_de_email, only: [:index, :show] do
+              get :previa, on: :member
+            end
             resources :reacoes, only: [:create]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do

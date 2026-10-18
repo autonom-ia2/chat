@@ -4,7 +4,7 @@
 // prontas (lista com busca, sem escrever "/" no texto); Descartar apaga o rascunho
 // (com confirmação) e fecha a caixa. Um fio separa os nossos dos botões do Chatwoot.
 // `parte` escolhe o grupo: "esquerda" (Aa e Modelos) ou "direita" (Descartar).
-import { ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { emitter } from 'shared/helpers/mitt';
@@ -22,6 +22,38 @@ defineProps({
 const { t } = useI18n();
 const email = useEmailDaConversa();
 const confirmando = ref(false);
+
+// A régua de formatação vem do editor do Chatwoot com as dicas em inglês; no e-mail
+// novo elas viram português (troca pelo texto exato da dica).
+const DICAS = {
+  Copilot: 'ESCREVER_COM_IA',
+  'Toggle strong style': 'NEGRITO',
+  'Toggle emphasis': 'ITALICO',
+  'Toggle code font': 'CODIGO',
+  'Add or remove link': 'LINK',
+  'Wrap in bullet list': 'LISTA',
+  'Wrap in ordered list': 'LISTA_NUMERADA',
+  'Upload image': 'IMAGEM_NO_TEXTO',
+  'Undo last change': 'DESFAZER',
+  'Redo last undone change': 'REFAZER',
+};
+const traduzirDicas = async () => {
+  await nextTick();
+  document
+    .querySelectorAll('.reply-box .ProseMirror-menubar [title]')
+    .forEach(item => {
+      const chave = DICAS[item.getAttribute('title')];
+      if (!chave) return;
+      const dica = t(`CONVERSA_CANAL.EMAIL.REGUA.${chave}`);
+      item.setAttribute('title', dica);
+      item.setAttribute('aria-label', dica);
+    });
+};
+watch(
+  () => email.formatacao.value,
+  ligada => ligada && traduzirDicas(),
+  { immediate: true }
+);
 
 const descartar = () => {
   if (!confirmando.value) {

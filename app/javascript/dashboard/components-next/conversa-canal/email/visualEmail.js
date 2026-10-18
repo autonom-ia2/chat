@@ -38,6 +38,16 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box]:!rounded-2xl',
   '[&_.reply-box:not(.is-private)]:!bg-n-surface-1',
   '[&_.reply-box]:shadow-[0_1px_2px_rgba(0,0,0,0.12),0_1px_3px_1px_rgba(0,0,0,0.06)]',
+  // Caixa alta (modelo, histórico aberto) rola por dentro, sem levar a conversa de
+  // trás junto, e a barra de baixo (Enviar) fica sempre à vista.
+  '[&_.reply-box]:max-h-[calc(100dvh-5rem)]',
+  '[&_.reply-box]:overflow-y-auto',
+  '[&_.reply-box]:overscroll-contain',
+  '[&_.reply-box_div:has(>.left-wrap)]:sticky',
+  '[&_.reply-box_div:has(>.left-wrap)]:bottom-0',
+  '[&_.reply-box_div:has(>.left-wrap)]:z-10',
+  '[&_.reply-box_div:has(>.left-wrap)]:!bg-inherit',
+  '[&_.reply-box_div:has(>.left-wrap)]:rounded-b-2xl',
   // Botões da barra de baixo.
   '[&_.left-wrap]:!gap-0.5',
   '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!size-10',
@@ -105,22 +115,46 @@ export const RESPOSTA_EM_JANELA = [
 ].join(' ');
 
 // "Aa": a barra de formatação do editor, que o Chatwoot só mostra sobre o texto
-// selecionado, vira uma linha fixa acima do texto.
+// selecionado, vira uma régua fixa acima do texto, no padrão dos botões da caixa: em
+// grupos (IA | negrito, itálico, código | link | listas | imagem | desfazer, refazer),
+// com fio entre eles, botão ativo em azul e desligado apagado.
 export const FORMATACAO_FIXA = [
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex-wrap',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!items-center',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!static',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!w-full',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!shadow-none',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!outline-0',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!bg-n-alpha-1',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!rounded-xl',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!gap-1',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!px-1.5',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!py-1',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!mb-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!bg-n-surface-1',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!border',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!border-solid',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!border-n-weak',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!rounded-2xl',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!shadow-[0_1px_2px_rgba(0,0,0,0.06)]',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!gap-0.5',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!px-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!py-1.5',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!mb-3',
   '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!size-9',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!rounded-lg',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!grid',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!place-content-center',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!rounded-full',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem]:!text-n-slate-11',
   '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:hover]:!bg-n-alpha-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:hover]:!text-n-slate-12',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem_svg]:!size-[18px]',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:!ms-3',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:relative',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:absolute',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:-start-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:top-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:bottom-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:w-px',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:bg-n-weak',
+  "[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:content-['']",
+  '[&_.popover-prosemirror-menu_.ProseMirror-menu-active]:!bg-n-blue-3',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menu-active]:!text-n-blue-11',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menu-disabled]:!opacity-40',
 ].join(' ');
 
 export const CARTAO = 'w-full max-w-[960px] mx-auto border-b border-n-weak';

@@ -37,6 +37,11 @@ RSpec.describe 'Modelos de e-mail na resposta' do
       expect(response.parsed_body['campos'].first['valor']).to eq(conversation.contact.name)
     end
 
+    it 'prévia do modelo, sem campos (miniatura da janela)' do
+      get "#{base}/#{modelo.id}/previa", headers: agent.create_new_auth_token
+      expect(response.parsed_body).to eq('id' => modelo.id, 'mjml' => '<mjml>{{ nome }}</mjml>', 'html' => nil)
+    end
+
     it 'conversa que o atendente não vê: 401' do
       get "#{base}/#{modelo.id}", params: { conversation_id: conversation.display_id }, headers: agent.create_new_auth_token
       expect(response).to have_http_status(:unauthorized)
