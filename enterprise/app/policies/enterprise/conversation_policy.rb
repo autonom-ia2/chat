@@ -1,4 +1,6 @@
 module Enterprise::ConversationPolicy
+  OPERATING_KEYS = %w[conversation_manage conversation_unassigned_manage conversation_participating_manage].freeze
+
   def show?
     return false unless super
     return true unless custom_role_permissions?
@@ -10,7 +12,23 @@ module Enterprise::ConversationPolicy
     permits_participating?(permissions)
   end
 
+  # conversation_view lê toda conversa que a pessoa alcança pela caixa, time e funil, sem operar: as escritas seguem
+  # em show?, que só olha o trio conversation_* (#1800).
+  def view?
+    return super unless reads_by_role?
+
+    member_access?
+  end
+
+  def create?
+    super && !(reads_by_role? && !custom_role_permissions.intersect?(OPERATING_KEYS))
+  end
+
   private
+
+  def reads_by_role?
+    custom_role_permissions? && custom_role_permissions.include?('conversation_view')
+  end
 
   def manage_all_conversations?(permissions)
     permissions.include?('conversation_manage')
